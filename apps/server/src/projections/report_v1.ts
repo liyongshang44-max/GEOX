@@ -66,6 +66,7 @@ export type OperationReportV1 = {
   type: "operation_report_v1";
   version: "v1";
   generated_at: string;
+  field_name: string | null;
   approval: {
     status: string | null;
     actor_id: string | null;
@@ -361,6 +362,7 @@ export function projectOperationReportV1(input: {
   tenant: TenantTriple;
   operation_plan_id: string;
   operation_state: OperationStateV1;
+  field_name?: unknown;
   evidence_bundle: EvidenceBundleInput;
   acceptance: AcceptanceInput;
   receipt: ReceiptInput;
@@ -530,6 +532,7 @@ export function projectOperationReportV1(input: {
     type: "operation_report_v1",
     version: "v1",
     generated_at: now.toISOString(),
+    field_name: toText(input.field_name),
     approval: {
       status: toText(input.approval?.status),
       actor_id: toText(input.approval?.actor_id),

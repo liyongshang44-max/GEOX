@@ -1,0 +1,183 @@
+.customerDrawerOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(15, 23, 42, 0.42);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.customerDrawer {
+  width: min(520px, 100%);
+  height: 100%;
+  background: #fff;
+  box-shadow: -18px 0 48px rgba(15, 23, 42, 0.22);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.customerDrawerHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 24px;
+  border-bottom: 1px solid var(--customer-border, #e5e7eb);
+}
+
+.customerDrawerHeader h2 {
+  margin: 4px 0 0;
+  font-size: 26px;
+  line-height: 1.15;
+  color: var(--customer-title, #0f172a);
+}
+
+.customerDrawerHeader p {
+  margin: 6px 0 0;
+  color: var(--customer-muted, #64748b);
+  font-size: 14px;
+}
+
+.customerDrawerClose {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid var(--customer-border, #e5e7eb);
+  background: #fff;
+  color: #334155;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.customerDrawerBody {
+  flex: 1;
+  overflow: auto;
+  padding: 18px 24px 28px;
+}
+
+.customerDrawerMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.customerDrawerMeta span {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--customer-border, #e5e7eb);
+  border-radius: 999px;
+  padding: 4px 9px;
+  background: #f8fafc;
+  color: var(--customer-muted, #64748b);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.customerDrawerRows {
+  display: grid;
+  gap: 10px;
+}
+
+.customerDrawerRow {
+  display: grid;
+  gap: 5px;
+  padding: 13px 14px;
+  border: 1px solid var(--customer-border, #e5e7eb);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.customerDrawerRow span {
+  color: var(--customer-muted, #64748b);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.customerDrawerRow strong {
+  color: var(--customer-title, #0f172a);
+  font-size: 15px;
+  line-height: 1.55;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.customerDrawerEmpty {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid #fde68a;
+  border-radius: 16px;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.customerDrawerEmpty strong {
+  font-size: 18px;
+}
+
+.customerDrawerEmpty p,
+.customerDrawerEmpty small {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.operationCardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.customerRoiRows {
+  display: grid;
+  gap: 14px;
+}
+
+.customerRoiRow {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--customer-border, #e5e7eb);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.customerRoiRowHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.customerRoiRowHead strong {
+  color: var(--customer-title, #0f172a);
+  font-size: 17px;
+  line-height: 1.35;
+}
+
+.customerRoiRowHead span {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  border: 1px solid var(--customer-border, #e5e7eb);
+  background: #f8fafc;
+  color: var(--customer-muted, #64748b);
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.customerRoiValue {
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 900;
+  color: var(--customer-title, #0f172a);
+  letter-spacing: -0.035em;
+}
+
+@media (max-width: 700px) {
+  .customerDrawer {
+    width: 100%;
+  }
+}

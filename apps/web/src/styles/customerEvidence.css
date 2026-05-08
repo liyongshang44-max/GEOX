@@ -1,0 +1,29 @@
+.operationEvidenceMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.operationEvidenceMeta span {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--customer-border, #e5e7eb);
+  background: #f8fafc;
+  color: var(--customer-muted, #64748b);
+  padding: 3px 8px;
+  font-size: 12px;
+  font-weight: 800;
+  max-width: 100%;
+}
+
+.operationEvidencePrivacy {
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #1e40af;
+  padding: 9px 10px;
+  font-size: 13px;
+  line-height: 1.5;
+}

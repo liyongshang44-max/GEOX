@@ -3,21 +3,19 @@ import { Link, useParams } from "react-router-dom";
 import { fetchOperationReport, type OperationReportV1 } from "../api/customerReports";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ErrorState from "../components/common/ErrorState";
+import EvidencePackSummaryPanel from "../components/customer/EvidencePackSummaryPanel";
+import FieldMemoryPanel from "../components/customer/FieldMemoryPanel";
+import PrescriptionContractDrawer from "../components/customer/PrescriptionContractDrawer";
+import RoiLedgerDrawer from "../components/customer/RoiLedgerDrawer";
 import { buildOperationReportVm } from "../viewmodels/operationReportVm";
-import { customerTimelineStatusLabel } from "../lib/customerLabels";
+import { customerTimelineStatusLabel, labelCustomerTechnicalField } from "../lib/customerLabels";
 
 const MAIN_VIEW_BLOCK_PATTERNS = [
   /skill\s*run/i,
   /skill_run/i,
   /skill_trace/i,
   /irrigation_soil_moisture_threshold/i,
-  /\bSUCCESS\b/i,
-  /\bFAILED\b/i,
-  /\bPASS\b/i,
-  /\bDONE\b/i,
-  /\bMISSING\b/i,
-  /\bAVAILABLE\b/i,
-  /\bPENDING\b/i,
+  /\b[A-Z][A-Z0-9_]{3,}\b/,
 ];
 
 function customerText(value: unknown, fallback = "暂无可展示信息"): string {
@@ -44,8 +42,16 @@ function shortOperationLabel(value: string): string {
   if (/approval|审批/i.test(text)) return "审批";
   if (/evidence|证据/i.test(text)) return "证据";
   if (/acceptance|验收/i.test(text)) return "验收";
-  if (/roi/i.test(text)) return "ROI";
+  if (/roi|价值记录/i.test(text)) return "价值";
   return text;
+}
+
+function firstUsableId(...values: unknown[]): string {
+  for (const value of values) {
+    const text = String(value ?? "").trim();
+    if (text && text !== "--" && text !== "暂无记录") return text;
+  }
+  return "";
 }
 
 export default function OperationReportPage(): React.ReactElement {
@@ -54,6 +60,8 @@ export default function OperationReportPage(): React.ReactElement {
   const [error, setError] = React.useState<string>("");
   const [report, setReport] = React.useState<OperationReportV1 | null>(null);
   const [expandedKey, setExpandedKey] = React.useState<string | null>(null);
+  const [prescriptionDrawerOpen, setPrescriptionDrawerOpen] = React.useState(false);
+  const [roiDrawerOpen, setRoiDrawerOpen] = React.useState(false);
 
   React.useEffect(() => {
     let alive = true;
@@ -83,6 +91,14 @@ export default function OperationReportPage(): React.ReactElement {
   const vm = buildOperationReportVm(report);
   const canExport = Boolean(operationId.trim());
   const canBackToField = Boolean(vm.operation.fieldId && vm.operation.fieldId !== "--");
+  const reportAny = report as any;
+  const identifiersAny = reportAny.identifiers ?? {};
+  const prescriptionId = firstUsableId(identifiersAny.prescription_id, reportAny.prescription?.prescription_id, reportAny.prescription_id);
+  const recommendationId = firstUsableId(identifiersAny.recommendation_id, reportAny.recommendation?.recommendation_id, reportAny.recommendation_id);
+  const drawerOperationId = firstUsableId(operationId, vm.operation.operationId, identifiersAny.operation_id, identifiersAny.operation_plan_id);
+  const drawerFieldId = firstUsableId(vm.operation.fieldId, reportAny.field_id, identifiersAny.field_id);
+  const embeddedRoi = reportAny.roi_ledger ?? reportAny.roi ?? reportAny.value_summary;
+  const embeddedMemory = reportAny.field_memory ?? reportAny.field_memory_summary ?? reportAny.memory;
 
   return (
     <div className="customerReportCanvas">
@@ -104,14 +120,20 @@ export default function OperationReportPage(): React.ReactElement {
         </header>
 
         <section className="customerCard operationTimelineStrip">
-          {vm.timeline.map((item) => <span key={item.key} className="customerPill">{shortOperationLabel(item.label)}：{customerTimelineStatusLabel(item.status)}</span>)}
+          {vm.timeline.map((item) => <span key={item.key} className="customerPill">{shortOperationLabel(item.label)}：{item.key === "EVIDENCE" ? vm.evidenceSummary.statusText : customerTimelineStatusLabel(item.status)}</span>)}
         </section>
 
         <section className="operationClosedLoopGrid">
           {vm.sections.map((section, index) => {
             const isExpanded = expandedKey === section.key;
+            const isEvidenceSection = section.key === "EVIDENCE";
+            const isPrescriptionSection = section.key === "PRESCRIPTION";
+            const isRoiSection = section.key === "ROI";
+            const isMemorySection = section.key === "MEMORY";
             const displayItems = section.items.filter((item) => !shouldHideMainViewText(`${item.label} ${item.value}`));
             const title = shortOperationLabel(section.title);
+            const statusText = isEvidenceSection ? vm.evidenceSummary.statusText : (section.statusText || customerTimelineStatusLabel(section.status));
+            const detailText = section.emptyState?.description || (displayItems[0] ? `${displayItems[0].label}：${displayItems[0].value}` : "暂无摘要");
             return (
               <article
                 key={section.key}
@@ -129,26 +151,60 @@ export default function OperationReportPage(): React.ReactElement {
                 <div className="operationClosedLoopHead">
                   <span className="operationStepNo">{index + 1}</span>
                   <h3 className="customerCardTitle">{title}</h3>
-                  <span className="operationStatusBadge">{section.statusText || customerTimelineStatusLabel(section.status)}</span>
+                  <span className="operationStatusBadge">{statusText}</span>
                 </div>
-                <div className="operationOneLiner">{safeMainViewText(section.summary)}</div>
-                <div className="operationOneLiner muted">{safeMainViewText(section.emptyState?.description || (displayItems[0] ? `${displayItems[0].label}：${displayItems[0].value}` : "暂无摘要"))}</div>
-                <button
-                  type="button"
-                  className="customerLinkButton customerSpacingTopXs"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setExpandedKey((prev) => prev === section.key ? null : section.key);
-                  }}
-                >
-                  {isExpanded ? "收起详情" : "查看详情"}
-                </button>
-                {isExpanded ? (
-                  <div className="customerGrid2 customerSpacingTopXs">
-                    {displayItems.map((item) => <div key={`${section.key}-${item.label}`}><strong>{item.label}：</strong>{safeMainViewText(item.value, "--")}</div>)}
-                    {!displayItems.length && section.emptyState ? <div className="muted">{section.emptyState.title}：{section.emptyState.description}</div> : null}
-                  </div>
-                ) : null}
+                {isEvidenceSection ? (
+                  <EvidencePackSummaryPanel vm={vm.evidenceSummary} expanded={isExpanded} />
+                ) : isMemorySection && isExpanded ? (
+                  <FieldMemoryPanel fieldId={drawerFieldId} operationId={drawerOperationId} embeddedMemory={embeddedMemory} compact />
+                ) : (
+                  <>
+                    <div className="operationOneLiner">{safeMainViewText(section.summary)}</div>
+                    <div className="operationOneLiner muted">{safeMainViewText(detailText)}</div>
+                    {isExpanded ? (
+                      <div className="customerGrid2 customerSpacingTopXs">
+                        {displayItems.map((item) => <div key={`${section.key}-${item.label}`}><strong>{item.label}：</strong>{safeMainViewText(item.value, "--")}</div>)}
+                        {!displayItems.length && section.emptyState ? <div className="muted">{section.emptyState.title}：{section.emptyState.description}</div> : null}
+                      </div>
+                    ) : null}
+                  </>
+                )}
+                <div className="operationCardActions">
+                  <button
+                    type="button"
+                    className="customerLinkButton customerSpacingTopXs"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setExpandedKey((prev) => prev === section.key ? null : section.key);
+                    }}
+                  >
+                    {isExpanded ? "收起详情" : "查看详情"}
+                  </button>
+                  {isPrescriptionSection ? (
+                    <button
+                      type="button"
+                      className="customerLinkButton customerSpacingTopXs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPrescriptionDrawerOpen(true);
+                      }}
+                    >
+                      查看处方详情
+                    </button>
+                  ) : null}
+                  {isRoiSection ? (
+                    <button
+                      type="button"
+                      className="customerLinkButton customerSpacingTopXs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setRoiDrawerOpen(true);
+                      }}
+                    >
+                      查看价值记录明细
+                    </button>
+                  ) : null}
+                </div>
               </article>
             );
           })}
@@ -160,12 +216,25 @@ export default function OperationReportPage(): React.ReactElement {
             <div className="operationTechDetailsTitle">技术详情（默认关闭）</div>
             <div className="operationTechDetailsGrid">
               {(vm.technicalFoldout?.rows ?? []).map((row) => (
-                <div key={row.label}><strong>{row.label}：</strong>{row.value}</div>
+                <div key={row.label}><strong>{labelCustomerTechnicalField(row.label)}：</strong>{row.value}</div>
               ))}
             </div>
           </details>
         </section>
       </div>
+      <PrescriptionContractDrawer
+        open={prescriptionDrawerOpen}
+        prescriptionId={prescriptionId}
+        recommendationId={recommendationId}
+        onClose={() => setPrescriptionDrawerOpen(false)}
+      />
+      <RoiLedgerDrawer
+        open={roiDrawerOpen}
+        fieldId={drawerFieldId}
+        operationId={drawerOperationId}
+        embeddedRoi={embeddedRoi}
+        onClose={() => setRoiDrawerOpen(false)}
+      />
     </div>
   );
 }

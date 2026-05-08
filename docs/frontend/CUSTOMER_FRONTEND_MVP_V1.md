@@ -1,386 +1,155 @@
 # CUSTOMER_FRONTEND_MVP_V1
 
-> 状态：CURRENT / P0 交付基线  
-> 适用范围：GEOX Customer 前端产品化收口  
-> 目标读者：前端开发、测试、交付、销售演示负责人  
-> 最近核对：以 `main` 当前 Customer P0 路由、ViewModel、export 同源与 boundary gate 为准
+状态：P1-A0 / customer frontend governance baseline.
+适用范围：`apps/web/src/layouts/CustomerLayout.tsx`、`apps/web/src/views/*Customer*`、`FieldReportPage`、`OperationReportPage`、customer export pages、customer viewmodels、`components/customer`。
 
-## 1. 文档目的
+## 1. 产品定位
 
-本文定义 GEOX Customer 前端 P0 的最终可交付范围。
+GEOX Customer Frontend 的 P1 MVP 不是后台管理台，不是遥感大屏，也不是 raw data explorer。
 
-P0 的目标不是完成完整客户 SaaS，也不是完成 operator 工作台，而是把现有 customer 前端收口成一个可用于试点销售演示、客户交付说明和内部验收的最小正式产品面。
-
-P0 客户前端必须做到：
-
-- 客户能看懂当前地块风险、待处理事项、近期作业、设备异常和价值记录。
-- 客户能从总览进入地块报告和作业报告。
-- 客户能导出总览、地块、作业报告。
-- 页面和导出同源，不出现页面一套结论、导出另一套结论。
-- 不展示 raw/debug/admin/healthz/OpenAPI/legacy/control 等内部能力。
-- 不伪造未接入的数据能力，例如真实天气、卫星地图、Field Memory、证据包摘要、ROI 明细。
-
-## 2. P0 产品定位
-
-P0 Customer 前端定位为：
-
-**远程土地经营驾驶舱 + 地块病历 + 作业闭环证明 + 同源导出报告。**
-
-它不是：
-
-- 普通后台管理系统。
-- Operator 调度中心。
-- 设备管理平台。
-- 农业 BI 大屏。
-- 完整地图系统。
-- 完整天气系统。
-- 完整 Field Memory / ROI / Evidence Pack 下钻系统。
-
-P0 要表达的是 GEOX 的主产品叙事：
+它的最小产品定位是：
 
 ```text
-发现风险 → 给出建议 → 形成作业闭环 → 收集证据 → 生成验收与价值报告
+客户能从经营总览进入地块病历，再进入作业闭环报告，并导出同源客户报告。
 ```
 
-## 3. P0 页面范围
-
-P0 只承认以下 customer 页面族。
-
-| 路由 | 页面组件 | P0 定位 | 是否可直接访问 | 备注 |
-|---|---|---|---|---|
-| `/customer/dashboard` | `CustomerDashboardPage` | 客户经营驾驶舱 / cockpit-lite | 是 | 客户主入口 |
-| `/customer/export` | `CustomerDashboardExportPage` | 总览导出 | 是 | 与 Dashboard 同源 |
-| `/customer/fields/:fieldId` | `FieldReportPage` | 地块病历 | 是，需有效 `fieldId` | 不做地块列表 |
-| `/customer/fields/:fieldId/export` | `FieldReportExportPage` | 地块报告导出 | 是，需有效 `fieldId` | 与 FieldReport 同源 |
-| `/customer/operations/:operationId` | `OperationReportPage` | 作业八段闭环证明 | 是，需有效 `operationId` | 不做作业列表 |
-| `/customer/operations/:operationId/export` | `CustomerReportExportPage` | 作业报告导出 | 是，需有效 `operationId` | 与 OperationReport 同源 |
-
-P0 不包含：
+客户可理解主链：
 
 ```text
-/customer/fields
-/customer/operations
-/customer/reports
-/operator/*
+发现风险 -> 形成建议 -> 审批 -> 执行 -> 证据 -> 验收 -> 价值记录 -> 田块记忆
 ```
 
-未知 `/customer/*` 必须回退到 `/customer/dashboard`。
+## 2. P1-A0 冻结范围
 
-## 4. P0 导航与 CustomerShell
+P1-A0 只做前端治理基线，不扩业务能力：
 
-CustomerShell 必须表达 4 类客户概念：
+- CustomerShell 客户文案与占位清理。
+- FieldReport 客户文案与空态清理。
+- Operation Evidence 三态表达修复。
+- 技术折叠字段 label 客户化。
+- docs/frontend 治理文档补齐。
+- API readiness matrix 建立。
+- customer route / raw enum 检查脚本准备。
 
-```text
-总览
-地块
-作业
-报告
-```
+## 3. 当前客户页面
 
-P0 可点击入口仅限：
+| 页面 | 当前路由 | 组件 | 当前定位 |
+|---|---|---|---|
+| 客户总览 | `/customer/dashboard` | `CustomerDashboardPage` | 客户经营总览 |
+| 总览导出 | `/customer/export` | `CustomerDashboardExportPage` | 总览报告导出 |
+| 地块病历 | `/customer/fields/:fieldId` | `FieldReportPage` | 单地块报告 |
+| 地块导出 | `/customer/fields/:fieldId/export` | `FieldReportExportPage` | 单地块报告导出 |
+| 作业报告 | `/customer/operations/:operationId` | `OperationReportPage` | 单作业闭环报告 |
+| 作业导出 | `/customer/operations/:operationId/export` | `CustomerReportExportPage` | 单作业报告导出 |
 
-```text
-/customer/dashboard
-/customer/export
-```
+临时 index 路由 `/customer/fields/index`、`/customer/operations/index` 如存在，只能作为 P1-A 迁移过渡，不得长期作为正式客户 URL。
 
-“地块”和“作业”可以作为当前详情页归属或 disabled 导航项，不得跳转到不存在的 `/customer/fields` 或 `/customer/operations`。
+## 4. P1 目标客户页面
 
-CustomerShell 必须避免暴露：
+| 页面 | 目标路由 | 阶段 | 要求 |
+|---|---|---|---|
+| 客户总览 | `/customer/dashboard` | P1-A0 | 已有，继续收口 |
+| 地块列表 | `/customer/fields` | P1-A | 替代 `/customer/fields/index` |
+| 作业列表 | `/customer/operations` | P1-A | 替代 `/customer/operations/index` |
+| 报告中心 | `/customer/reports` | P1-A | 汇总总览/地块/作业报告入口 |
+| 地块病历 | `/customer/fields/:fieldId` | P1-A0/P1-A | field_name 优先，field_id 不作主标题 |
+| 作业报告 | `/customer/operations/:operationId` | P1-A0/P1-A | 八段闭环，证据三态 |
+
+## 5. 客户层禁止直接调用
+
+客户层禁止直接调用：
 
 ```text
 admin
-legacy
 debug
+legacy
 healthz
-OpenAPI
-skill registry
-devtools
+raw telemetry
 raw facts
-raw telemetry
-migration
+device credentials
+skill registry write APIs
 ```
 
-顶部上下文允许使用保守文案：
+## 6. 客户主界面禁止显示
+
+客户主界面禁止显示：
 
 ```text
-当前角色：客户视图
-当前范围：授权地块
-```
-
-禁止伪造租户名、项目名、地块数量、在线率。
-
-## 5. P0 数据源白名单
-
-Customer 页面只允许通过 customer report API adapter 进入数据：
-
-| 页面 | ViewModel | API adapter | 后端接口 |
-|---|---|---|---|
-| `CustomerDashboardPage` | `buildCustomerDashboardVm` | `fetchCustomerDashboardAggregate` | `/api/v1/reports/customer-dashboard/aggregate` |
-| `FieldReportPage` | `buildFieldReportVm` | `fetchFieldReport` | `/api/v1/reports/field/:fieldId` |
-| `OperationReportPage` | `buildOperationReportVm` | `fetchOperationReport` | `/api/v1/reports/operation/:operationId` |
-
-禁止 customer 页面直接调用：
-
-```text
-/api/v1/facts
-/api/admin
-/healthz
-/openapi
-legacy/control
-raw telemetry
-debug API
-devtools
-```
-
-## 6. CustomerDashboardPage P0 要求
-
-Dashboard 是 cockpit-lite，不是真实地图大屏。
-
-必须包含：
-
-- 客户经营总览标题。
-- 3–5 个可信 KPI。
-- 地块风险分布面板。
-- 今日建议与待处理事项。
-- 设备状态摘要。
-- 价值结果摘要。
-- 近期作业摘要。
-- 总览导出入口。
-
-P0 允许 KPI：
-
-```text
-待处理事项
-风险地块
-待验收作业
-离线设备
-价值记录
-近期作业
-```
-
-禁止 KPI：
-
-```text
-在线地块 / 总地块
-18 / 24 在线地块
-今日待决策
-执行中作业
-待审批处方
-```
-
-除非后续 P1 引入正式 cockpit aggregate 并冻结计算口径。
-
-Dashboard 地图位必须实现为：
-
-```text
-CockpitFieldRiskPanel
-```
-
-允许展示风险地块列表、简化 SVG 状态矩阵和无数据空态。禁止展示假卫星图、假真实地块边界、假热力图、假实时轨迹、假天气图层。
-
-## 7. FieldReportPage P0 要求
-
-FieldReportPage 是“地块病历”P0。
-
-必须包含：
-
-- 地块名称优先，field_id 次要。
-- 当前风险。
-- 诊断结论。
-- 当前建议。
-- 近期作业 Top 5。
-- 设备与监测摘要。
-- ROI 摘要或空态。
-- Field Memory 摘要或空态。
-- 地块报告导出入口。
-
-Field Memory 规则：
-
-- 只有 report payload 中存在显式 `field_memory_summary` / `field_memory` 等可识别字段时，才允许展示 Field Memory 摘要。
-- 没有显式 Field Memory 时，必须显示“暂无可展示的地块记忆”。
-- 不得用 operation count、device count、ROI count 推导 Field Memory。
-- 不得伪造“系统已学习”“历史响应良好”“技能表现稳定”。
-
-ROI 规则：
-
-- 有 report value summary 时展示。
-- 没有 ROI 时显示“暂无可量化价值记录”。
-- 不得伪造节水、节人工、验收通过率。
-
-天气规则：
-
-- P0 不展示天气卡。
-- open alerts 只能表达为“外部扰动”或“待处理事项”，不得表达为天气判断。
-
-地图规则：
-
-- 没有 geometry 时不得展示真实地图。
-- P0 不展示卫星图和真实 GIS 图层。
-
-## 8. OperationReportPage P0 要求
-
-OperationReportPage 是“作业闭环证明页”。
-
-必须固定展示 8 段：
-
-```text
-建议
-处方合同
-审批
-执行 / as-executed
-证据
-验收
-ROI
-田块记忆
-```
-
-每段必须有：
-
-```text
-status
-title
-summary
-items
-emptyState（缺失时）
-```
-
-缺失数据不能隐藏整段，必须显示客户可理解的空态。
-
-客户主视图禁止出现：
-
-```text
-DONE
-MISSING
-PENDING
-AVAILABLE
-NOT_APPLICABLE
-Skill trace
-skill_run_id
-raw JSON
-operation_plan_id
-receipt_id
+operation_id
 recommendation_id
+prescription_id
+approval_request_id
+act_task_id
+receipt_id
+evidence_id
+acceptance_id
+skill_run_id
+skill_trace_id
+roi_id
+field_memory_id
+raw JSON
+stack trace
+SUCCESS
+FAILED
+PENDING
+MISSING
+AVAILABLE
+PASS
+DONE
+INVALID_EXECUTION
+PENDING_ACCEPTANCE
 ```
 
-如需排障，这些内容只能进入“技术详情”折叠区，默认关闭。
-
-## 9. Export P0 要求
-
-Export 页面必须与页面同源。
-
-| Export 页面 | 必须复用 VM |
-|---|---|
-| `CustomerDashboardExportPage` | `buildCustomerDashboardVm` |
-| `FieldReportExportPage` | `buildFieldReportVm` |
-| `CustomerReportExportPage` | `buildOperationReportVm` |
-
-Export 页面禁止：
-
-- 自定义 `STATUS_MAP`。
-- 自定义 `RISK_MAP`。
-- 自定义 `ACCEPTANCE_MAP`。
-- 重新计算风险。
-- 重新计算 ROI。
-- 重新拼 Field Memory。
-- 直接请求 raw/debug/admin API。
-
-兼容文件 `OperationReportExportPage.tsx` 如存在，必须是：
-
-```ts
-export { default } from "./CustomerReportExportPage";
-```
-
-## 10. 组件与 ViewModel 边界
-
-P0 原则：
+技术折叠区可以保留排障信息，但必须默认关闭，并使用客户可理解 label，例如：
 
 ```text
-ViewModel 负责业务判断。
-组件只负责渲染。
-页面只负责取数、加载态、错误态和布局。
+作业编号（技术排障）
+处方编号（技术排障）
+技能追踪编号（技术排障）
+原始状态码（技术排障）
+错误堆栈（技术排障）
 ```
 
-Customer 组件目录：
+## 7. ViewModel 原则
 
 ```text
-apps/web/src/components/customer/
+API adapter -> ViewModel -> Page -> Component
 ```
 
-Cockpit 组件目录：
+页面只负责加载、错误态和布局。业务翻译、空态、状态收敛必须在 ViewModel 或 shared label 层完成。
 
-```text
-apps/web/src/components/cockpit/
-```
+## 8. Export 同源原则
 
-组件禁止直接请求 API、直接 import admin/debug/devtools、自行判断业务状态、硬编码 fake sample 数据、根据 raw enum 直接显示客户文案。
+导出页面必须复用同源 API 与同源 VM：
 
-## 11. Boundary / Gate
+| 页面 | 导出 | VM |
+|---|---|---|
+| Dashboard | `CustomerDashboardExportPage` | `buildCustomerDashboardVm` |
+| FieldReport | `FieldReportExportPage` | `buildFieldReportVm` |
+| OperationReport | `CustomerReportExportPage` | `buildOperationReportVm` |
 
-P0 必须通过以下 gate：
+禁止导出页重新定义状态映射、重新计算风险、伪造 ROI、伪造田块记忆、伪造证据包摘要。
 
-```bash
-pnpm --filter @geox/web run typecheck
-pnpm --filter @geox/web run build
-pnpm --filter @geox/web run lint
-pnpm --filter @geox/web run check:customer-boundary
-pnpm --filter @geox/web run lint:operation-status-convergence
-pnpm --filter @geox/web run check:customer-export-same-source
-```
+## 9. P1-A0 Done 标准
 
-`check:customer-boundary` 必须覆盖 Customer 页面、FieldReportPage、OperationReportPage、Export 页面、viewmodels、components/customer、components/cockpit。
+P1-A0 可标记 Done 必须满足：
 
-`lint:operation-status-convergence` 必须防止：
+- CustomerShell 无工程阶段文案、硬编码客户名和假数据。
+- FieldReport 无 `FieldReport`、`Field Memory` 英文直出。
+- 无 geometry 时不显示假地图，显示正式空态。
+- OperationReport 证据段三态可区分。
+- 技术折叠区 label 客户化且默认关闭。
+- docs/frontend 七份文档齐全。
+- API readiness matrix 不把未接入 API 写成当前已有。
 
-```text
-receipt exists → SUCCESS / PASS
-task completed → PASS
-no error → SUCCESS
-```
+## 10. 非目标
 
-`check:customer-export-same-source` 必须防止 Export 页面不复用 VM、Export 页面自定义状态映射、OperationReportExportPage 不是 CustomerReportExportPage re-export。
+P1-A0 不做：
 
-## 12. P1/P2 明确不属于 P0
-
-P1：
-
-```text
-/customer/fields
-/customer/operations
-/customer/reports
-/api/v1/customer/cockpit/overview
-/api/v1/operations/:id/evidence-pack-summary
-独立 Field Memory 查询与详情
-ROI 明细 Drawer / Page
-真实地块地图
-```
-
-P2：
-
-```text
-/operator/*
-天气源
-卫星底图
-As-applied 地图覆盖
-变量处方图层
-完整设备管理中心
-完整告警规则管理
-Skill registry 客户可视化
-```
-
-P0 不允许为了视觉效果提前伪造这些能力。
-
-## 13. 完成定义
-
-P0 完成后，必须满足：
-
-- `/customer/dashboard` 可作为客户演示入口。
-- `/customer/fields/:fieldId` 可解释单地块状态。
-- `/customer/operations/:operationId` 可解释单作业闭环。
-- 三类 export 与页面同源。
-- 客户页不暴露内部工程信息。
-- 没有假天气、假地图、假 Field Memory、假 ROI。
-- P1/P2 缺口在 Gap Baseline 中明确记录。
-- 所有 web gate 通过。
-
-通过后可进入客户视觉验收、销售演示脚本验收、试点交付样例链验收。
+- operator 工作台完整开发。
+- evidence package 下载。
+- recommendation 生成 API 新接入。
+- device credential 管理。
+- raw facts / raw telemetry 客户展示。
+- 地图 geometry 伪造。
+- 天气数据伪造。

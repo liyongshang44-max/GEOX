@@ -1,17 +1,17 @@
 import type { OperationReportV1 } from "../api/customerReports";
 import {
   CUSTOMER_LABELS,
-  labelAcceptanceStatus,
+  customerTimelineStatusLabel,
   labelApprovalStatus,
   labelBooleanYesNo,
   labelConfidenceHint,
-  labelEvidenceQuality,
   labelEmptyFallback,
   labelFinalStatus,
   labelMemoryCode,
+  labelOperationType,
   labelRiskLevel,
   labelValueType,
-  customerTimelineStatusLabel,
+  sanitizeCustomerText,
 } from "../lib/customerLabels";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 
@@ -22,20 +22,31 @@ const MAIN_VIEW_BLOCK_PATTERNS = [
   /skill_run/i,
   /skill_trace/i,
   /irrigation_soil_moisture_threshold/i,
-  /\bSUCCESS\b/i,
-  /\bFAILED\b/i,
-  /\bPASS\b/i,
-  /\bDONE\b/i,
-  /\bMISSING\b/i,
-  /\bAVAILABLE\b/i,
-  /\bPENDING\b/i,
+  /\b[A-Z][A-Z0-9_]{3,}\b/,
 ];
 
-function isEngineeringOnlyText(value: unknown): boolean {
-  const text = String(value ?? "").trim();
-  if (!text) return false;
-  return MAIN_VIEW_BLOCK_PATTERNS.some((pattern) => pattern.test(text));
-}
+const EVIDENCE_PRIVATE_TEXT_PATTERNS = [
+  /\bsha256\b/i,
+  /\bmanifest\b/i,
+  /\bdownload\b/i,
+  /s3:\/\//i,
+  /minio:\/\//i,
+  /https?:\/\//i,
+  /(^|\s)\/[\w./-]+/,
+  /[A-Z]:\\[\w\\.-]+/i,
+];
+
+export type OperationEvidenceSummaryState = "NO_EVIDENCE" | "RECORDS_WITHOUT_SUMMARY" | "PACK_SUMMARY";
+
+export type OperationEvidenceSummaryVm = {
+  state: OperationEvidenceSummaryState;
+  statusText: string;
+  summary: string;
+  detail: string;
+  sourceText: string;
+  privacyText: string;
+  items: Array<{ label: string; value: string }>;
+};
 
 export type OperationReportPageVm = {
   generatedAtText: string;
@@ -44,30 +55,10 @@ export type OperationReportPageVm = {
   timeline: Array<{ key: string; label: string; status: "DONE" | "AVAILABLE" | "PENDING" | "MISSING" | "NOT_APPLICABLE"; timeText?: string }>;
   exportHref: string;
   technicalFoldout?: { rows: Array<{ label: string; value: string }> };
-  header: {
-    title: string;
-    subtitle: string;
-    internalId: string;
-  };
-  why: {
-    summary: string;
-    riskLabel: string;
-    reasonText: string;
-  };
-  approval: {
-    statusText: string;
-    actorText: string;
-    timeText: string;
-    noteText: string;
-    available: boolean;
-  };
-  execution: {
-    ownerText: string;
-    startedAtText: string;
-    finishedAtText: string;
-    invalidExecutionText: string;
-    statusText: string;
-  };
+  header: { title: string; subtitle: string; internalId: string };
+  why: { summary: string; riskLabel: string; reasonText: string };
+  approval: { statusText: string; actorText: string; timeText: string; noteText: string; available: boolean };
+  execution: { ownerText: string; startedAtText: string; finishedAtText: string; invalidExecutionText: string; statusText: string };
   evidence: {
     executionReceipt: string;
     executionRecord: string;
@@ -80,37 +71,16 @@ export type OperationReportPageVm = {
     mediaText: string;
     metricsText: string;
   };
-  acceptance: {
-    statusText: string;
-    verdictText: string;
-    missingEvidenceText: string;
-    generatedAtText: string;
-  };
-  value: {
-    valueText: string;
-    methodText: string;
-    evidenceText: string;
-    confidenceText: string;
-    fallbackText: string;
-    useFallback: boolean;
-  };
-  conclusion: {
-    finalStatusText: string;
-    resultText: string;
-  };
-  fieldMemory: {
-    title: string;
-    items: string[];
-  };
-  roiLedger: {
-    title: string;
-    items: string[];
-    confidenceText: string;
-  };
+  evidenceSummary: OperationEvidenceSummaryVm;
+  acceptance: { statusText: string; verdictText: string; missingEvidenceText: string; generatedAtText: string };
+  value: { valueText: string; methodText: string; evidenceText: string; confidenceText: string; fallbackText: string; useFallback: boolean };
+  conclusion: { finalStatusText: string; resultText: string };
+  fieldMemory: { title: string; items: string[] };
+  roiLedger: { title: string; items: string[]; confidenceText: string };
   // customer-boundary-allow: debug 字段仅用于导出技术折叠，不进入主叙事
   debug: {
     operationPlanId: string; operationId: string; actTaskId: string; receiptId: string; recommendationId: string; workflowOwnerId: string; workflowOwnerName: string; workflowUpdatedAt: string; workflowLastNote: string;
-    sla: { responseTimeMs: string; dispatchLatency: string; executionDuration: string; acceptanceLatency: string; invalidReasons: string; };
+    sla: { responseTimeMs: string; dispatchLatency: string; executionDuration: string; acceptanceLatency: string; invalidReasons: string };
   };
 };
 
@@ -126,6 +96,12 @@ export type CustomerReportSectionVm = {
   technical?: { title: string; rows: Array<{ label: string; value: string }> };
 };
 
+function isEngineeringOnlyText(value: unknown): boolean {
+  const text = String(value ?? "").trim();
+  if (!text) return false;
+  return MAIN_VIEW_BLOCK_PATTERNS.some((pattern) => pattern.test(text));
+}
+
 function kv(value: unknown, fallback = "暂无记录"): string {
   const text = labelEmptyFallback(value, fallback);
   if (["--", "NaN", "undefined", "null"].includes(text)) return fallback;
@@ -134,10 +110,46 @@ function kv(value: unknown, fallback = "暂无记录"): string {
   if (Number.isFinite(ms) && new Date(ms).getUTCFullYear() <= 1970) return "暂无更新时间";
   return text;
 }
+
 function toNum(v: unknown): number | null {
   const n = typeof v === "number" ? v : Number(v);
   return Number.isFinite(n) ? n : null;
 }
+
+function positiveCount(v: unknown): number {
+  const n = toNum(v);
+  return n != null && n > 0 ? n : 0;
+}
+
+function countStatus(value: unknown): string {
+  return positiveCount(value) > 0 ? "已采集" : "暂无记录";
+}
+
+function evidenceObjectSummary(value: unknown): string {
+  if (!value || typeof value !== "object") return "";
+  const obj = value as Record<string, unknown>;
+  const candidate = obj.customer_text ?? obj.summary_text ?? obj.summary ?? obj.text ?? obj.description;
+  if (candidate != null) return sanitizeEvidenceText(candidate);
+  return "";
+}
+
+function sanitizeEvidenceText(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeEvidenceText(item)).filter(Boolean).join("；");
+  }
+  if (value && typeof value === "object") return evidenceObjectSummary(value);
+  const text = String(value ?? "").trim();
+  if (!text || text === "--" || text === "[object Object]") return "";
+  if (EVIDENCE_PRIVATE_TEXT_PATTERNS.some((pattern) => pattern.test(text))) {
+    return "证据包摘要已形成，文件明细已隐藏。";
+  }
+  return sanitizeCustomerText(text, "");
+}
+
+function evidenceTextOrFallback(value: unknown, fallback: string): string {
+  return sanitizeEvidenceText(value) || fallback;
+}
+
 function mapEvidenceStatusLabel(value: unknown): string {
   const count = toNum(value);
   if (count == null) return "需复核";
@@ -145,12 +157,73 @@ function mapEvidenceStatusLabel(value: unknown): string {
   return "已采集";
 }
 
+export function buildOperationEvidenceSummaryVm(report: OperationReportV1): OperationEvidenceSummaryVm {
+  const evidence = report.evidence ?? {
+    artifacts_count: 0,
+    logs_count: 0,
+    media_count: 0,
+    metrics_count: 0,
+    receipt_present: false,
+    acceptance_present: false,
+  };
+  const recordCount = positiveCount(evidence.artifacts_count) + positiveCount(evidence.logs_count) + positiveCount(evidence.media_count) + positiveCount(evidence.metrics_count);
+  const hasEvidenceRecords = recordCount > 0 || Boolean(evidence.receipt_present || evidence.acceptance_present);
+  const packSummary = (report as unknown as { evidence_pack_summary?: { summary?: unknown; photos_logs_metrics_trace_summary?: unknown; status?: unknown; insufficient_reason?: unknown } }).evidence_pack_summary;
+  const summaryText = sanitizeEvidenceText(packSummary?.photos_logs_metrics_trace_summary ?? packSummary?.summary);
+  const sourceText = "Operation Report 内嵌 evidence 字段";
+  const privacyText = "客户层仅展示证据摘要，不展示内部存储路径或文件校验信息。";
+
+  if (!hasEvidenceRecords && !summaryText) {
+    return {
+      state: "NO_EVIDENCE",
+      statusText: "暂无证据",
+      summary: "暂无有效证据。",
+      detail: "当前未查询到可用于验收的证据记录。",
+      sourceText,
+      privacyText,
+      items: [],
+    };
+  }
+
+  if (!summaryText) {
+    return {
+      state: "RECORDS_WITHOUT_SUMMARY",
+      statusText: "证据已记录",
+      summary: "已有证据记录，暂无证据包摘要。",
+      detail: "证据包摘要能力尚未接入，当前只展示报告内嵌证据记录。",
+      sourceText,
+      privacyText,
+      items: [
+        { label: "执行回执", value: evidence.receipt_present ? "已记录" : countStatus(evidence.artifacts_count) },
+        { label: "执行记录", value: countStatus(evidence.logs_count) },
+        { label: "现场照片", value: countStatus(evidence.media_count) },
+        { label: "监测数据", value: countStatus(evidence.metrics_count) },
+        { label: "验收记录", value: evidence.acceptance_present ? "已记录" : "暂无记录" },
+      ],
+    };
+  }
+
+  return {
+    state: "PACK_SUMMARY",
+    statusText: "证据包已形成",
+    summary: "证据包已形成，可查看摘要。",
+    detail: "当前展示客户可读证据包摘要，不提供文件下载入口。",
+    sourceText,
+    privacyText,
+    items: [
+      { label: "证据包摘要", value: summaryText },
+      { label: "证据状态", value: evidenceTextOrFallback(packSummary?.status, "已形成") },
+      { label: "证据不足说明", value: evidenceTextOrFallback(packSummary?.insufficient_reason, "暂无补充说明") },
+    ],
+  };
+}
+
 export function mapOperationStatusToCustomerLabel(value: unknown): string {
   const status = String(value ?? "").trim().toUpperCase();
   if (!status) return "待确认";
   if (["SUCCESS", "DONE", "COMPLETED", "APPROVED", "PASS", "VALID"].includes(status)) return "已完成";
-  if (["FAILED", "REJECTED", "ERROR", "INVALID"].includes(status)) return "异常";
-  if (["PENDING", "WAITING", "QUEUED", "RUNNING", "IN_PROGRESS"].includes(status)) return "进行中";
+  if (["FAILED", "REJECTED", "ERROR", "INVALID", "INVALID_EXECUTION"].includes(status)) return "异常";
+  if (["PENDING", "WAITING", "QUEUED", "RUNNING", "IN_PROGRESS", "PENDING_ACCEPTANCE"].includes(status)) return "进行中";
   return "待确认";
 }
 
@@ -158,6 +231,7 @@ function joinReasonTexts(reasons: string[]): string {
   if (!Array.isArray(reasons) || reasons.length === 0) return "暂无明确风险原因";
   return reasons.map((item) => labelEmptyFallback(item)).join("、");
 }
+
 function formatMemoryLine(item: any): string {
   const before = toNum(item?.before_value);
   const after = toNum(item?.after_value);
@@ -174,14 +248,6 @@ function formatMemoryLine(item: any): string {
   }
   return `${labelMemoryCode(item?.memory_code ?? item?.code ?? item?.memory_type)}：${labelEmptyFallback(item?.summary_text, "地块响应记录")}（灌前${before ?? "待生成"} → 灌后${after ?? "待生成"}，${statusText}）`;
 }
-
-function formatRoiLine(item: any): string {
-  const baseline = toNum(item?.baseline_value);
-  const delta = toNum(item?.delta_value);
-  const unit = labelEmptyFallback(item?.unit, "不适用");
-  return `${labelEmptyFallback(item?.customer_text, "价值记录")}（${labelValueType(item?.value_type)}，数值${delta ?? "待生成"}${unit}，baseline ${baseline ?? "待生成"}）`;
-}
-
 
 function mapAcceptanceCopy(value: unknown): string {
   const status = String(value ?? "").trim().toUpperCase();
@@ -219,9 +285,6 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
   const recommendationData = (report as any).recommendation ?? null;
   const recommendationReason = kv(recommendationData?.reason ?? reportWhy?.objective_text, "--");
   const explainText = kv(recommendationData?.explain ?? reportWhy?.explain_human, "--");
-  const sourceFactRefs = Array.isArray(recommendationData?.source_fact_refs)
-    ? recommendationData.source_fact_refs.map((item: unknown) => labelEmptyFallback(item)).filter(Boolean).join("、")
-    : "--";
   const recommendationSummary = kv(recommendationData?.data_summary ?? recommendationData?.summary ?? reportWhy?.objective_text, "--");
   const hasRecommendationData = [recommendationReason, explainText, riskLabel, recommendationSummary].some((value) => value !== "--");
 
@@ -254,22 +317,14 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
     : kv(asAppliedData?.summary ?? asAppliedData?.coverage_summary, "暂无覆盖记录");
   const hasAsExecuted = Boolean(report.execution.execution_started_at || asExecutedData);
 
-  const evidencePackSummary = (report as any).evidence_pack_summary ?? null;
-  const evidenceMediaSummary = kv(evidencePackSummary?.photos_logs_metrics_trace_summary ?? evidencePackSummary?.summary, "--");
-  const evidenceStatus = kv(evidencePackSummary?.status ?? ((toNum(report.evidence.artifacts_count) ?? 0) > 0 || (toNum(report.evidence.logs_count) ?? 0) > 0 || (toNum(report.evidence.media_count) ?? 0) > 0 || (toNum(report.evidence.metrics_count) ?? 0) > 0 ? "已采集" : "--"), "--");
-  const evidenceInsufficientReason = Array.isArray(report.acceptance.missing_items) && report.acceptance.missing_items.length
-    ? report.acceptance.missing_items.map((item) => labelEmptyFallback(item)).join("、")
-    : kv(evidencePackSummary?.insufficient_reason, "--");
-  const hasEvidencePackSummary = Boolean(evidencePackSummary && evidenceMediaSummary !== "--");
-
-  // customer-boundary-allow: 兼容 operation_plan_id 作为历史内部标识回退
-  const internalId = kv(report.identifiers.operation_id || report.identifiers.operation_plan_id);
+  const evidenceSummary = buildOperationEvidenceSummaryVm(report);
 
   const valueItems = [
     ...((roi.water_saved ?? []).slice(0, 1)),
     ...((roi.labor_saved ?? []).slice(0, 1)),
     ...((roi.early_warning_lead_time ?? []).slice(0, 1)),
     ...((roi.first_pass_acceptance_rate ?? []).slice(0, 1)),
+    ...((roi.items ?? []).slice(0, 1)),
   ];
   const valueItem = valueItems[0] ?? null;
   const valueNumber = toNum(valueItem?.delta_value);
@@ -277,9 +332,9 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
   const baselineValue = toNum(valueItem?.baseline_value);
   const evidenceNote = kv(valueItem?.customer_text, "--");
   const hasEvidenceNote = evidenceNote !== "--";
-  const roiValueType = labelValueType(valueItem?.value_type);
+  const roiValueType = labelValueType(valueItem?.value_type ?? valueItem?.value_kind);
   const confidenceText = labelConfidenceHint((roi.low_confidence_items ?? [])[0]?.confidence?.score ?? valueItem?.confidence?.score);
-  const isAssumption = /假设|assumption/i.test(String(valueItem?.value_type ?? "")) || /假设|可信度有限/.test(confidenceText);
+  const isAssumption = /假设|assumption/i.test(String(valueItem?.value_type ?? valueItem?.value_kind ?? "")) || /假设|可信度有限/.test(confidenceText);
   const isMeasured = baselineValue != null && hasEvidenceNote && !isAssumption;
   const roiNatureText = isMeasured ? "实测" : (isAssumption ? "假设" : "估算");
   const valueText = valueNumber == null ? REVIEW_NEEDED_TEXT : `${valueNumber}${valueUnit}`;
@@ -301,74 +356,55 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
       { label: "技能表现摘要", value: sanitizedSkillPerformanceSummary },
     ]
     : [];
-  const noEvidence = [report.evidence.artifacts_count, report.evidence.logs_count, report.evidence.media_count, report.evidence.metrics_count]
-    .every((value) => (toNum(value) ?? 0) <= 0);
+
   const rawSections: CustomerReportSectionVm[] = [
-    { key: "RECOMMENDATION", status: hasRecommendationData ? "AVAILABLE" : "MISSING", title: "建议", summary: hasRecommendationData ? recommendationReason : "暂无正式建议记录", items: hasRecommendationData ? [{ label: "建议原因", value: recommendationReason }, { label: "农艺解释", value: explainText }, { label: "风险等级", value: riskLabel }, { label: "数据依据摘要", value: recommendationSummary }] : [], emptyState: hasRecommendationData ? undefined : { title: "暂无正式建议记录", description: "当前缺少 recommendation/explain/risk 字段。" } },
-    { key: "PRESCRIPTION", status: hasPrescriptionData ? "AVAILABLE" : "MISSING", title: "处方合同", summary: hasPrescriptionData ? "已形成正式处方" : "未形成正式处方", items: prescriptionItems, emptyState: hasPrescriptionData ? undefined : { title: "未形成正式处方", description: "当前没有处方记录。" } },
-    { key: "APPROVAL", status: reportApproval ? "AVAILABLE" : "MISSING", title: "审批", summary: reportApproval ? mapApprovalStatusForCustomer(reportApproval?.status) : "审批记录暂不可用", items: reportApproval ? [{ label: "审批状态", value: mapApprovalStatusForCustomer(reportApproval?.status) }, { label: "审批人客户化名称", value: kv(reportApproval?.actor_name, "--") }, { label: "审批时间", value: kv(reportApproval?.approved_at || reportApproval?.generated_at, "--") }, { label: "审批意见", value: kv(reportApproval?.note, "--") }, { label: "权限提示", value: kv(reportApproval?.permission_hint || reportApproval?.permission_note, "--") }] : [], emptyState: reportApproval ? undefined : { title: "审批记录暂不可用", description: "当前尚未生成可展示的审批记录。" } },
-    { key: "EXECUTION", status: hasAsExecuted ? "AVAILABLE" : "MISSING", title: "执行 / as-executed", summary: hasAsExecuted ? mapOperationStatusToCustomerLabel(report.execution.final_status) : "暂无实际执行记录", items: hasAsExecuted ? [{ label: "执行对象", value: executionTarget }, { label: "人/设备", value: executorText }, { label: "开始时间", value: kv(report.execution.execution_started_at, "--") }, { label: "结束时间", value: kv(report.execution.execution_finished_at, "--") }, { label: "执行参数", value: executionParamsText }, { label: "As-executed 摘要", value: asExecutedSummary }, { label: "As-applied 空态或摘要", value: asAppliedSummary }] : [], emptyState: hasAsExecuted ? undefined : { title: "暂无实际执行记录", description: "当前尚无 as-executed 记录。" } },
-    { key: "EVIDENCE", status: hasEvidencePackSummary ? "AVAILABLE" : "MISSING", title: "证据", summary: hasEvidencePackSummary ? evidenceStatus : "暂无证据包摘要", items: hasEvidencePackSummary ? [{ label: "照片/日志/指标/轨迹摘要", value: evidenceMediaSummary }, { label: "证据状态", value: evidenceStatus }, { label: "证据不足原因", value: evidenceInsufficientReason }] : [], emptyState: hasEvidencePackSummary ? undefined : { title: "暂无证据包摘要", description: "当前没有 evidence-pack-summary。" } },
+    { key: "RECOMMENDATION", status: hasRecommendationData ? "AVAILABLE" : "MISSING", title: "建议", summary: hasRecommendationData ? recommendationReason : "暂无正式建议记录", items: hasRecommendationData ? [{ label: "建议原因", value: recommendationReason }, { label: "农艺解释", value: explainText }, { label: "风险等级", value: riskLabel }, { label: "数据依据摘要", value: recommendationSummary }] : [], emptyState: hasRecommendationData ? undefined : { title: "暂无正式建议记录", description: "当前缺少建议、解释或风险依据。" } },
+    { key: "PRESCRIPTION", status: hasPrescriptionData ? "AVAILABLE" : "MISSING", title: "处方", summary: hasPrescriptionData ? "已形成正式处方" : "未形成正式处方", items: prescriptionItems, emptyState: hasPrescriptionData ? undefined : { title: "未形成正式处方", description: "当前没有正式处方记录。" } },
+    { key: "APPROVAL", status: reportApproval ? "AVAILABLE" : "MISSING", title: "审批", summary: reportApproval ? mapApprovalStatusForCustomer(reportApproval?.status) : "审批记录暂不可用", items: reportApproval ? [{ label: "审批状态", value: mapApprovalStatusForCustomer(reportApproval?.status) }, { label: "审批人", value: kv(reportApproval?.actor_name, "--") }, { label: "审批时间", value: kv(reportApproval?.approved_at || reportApproval?.generated_at, "--") }, { label: "审批意见", value: kv(reportApproval?.note, "--") }] : [], emptyState: reportApproval ? undefined : { title: "审批记录暂不可用", description: "当前尚未生成可展示的审批记录。" } },
+    { key: "EXECUTION", status: hasAsExecuted ? "AVAILABLE" : "MISSING", title: "执行", summary: hasAsExecuted ? mapOperationStatusToCustomerLabel(report.execution.final_status) : "暂无实际执行记录", items: hasAsExecuted ? [{ label: "执行对象", value: executionTarget }, { label: "人/设备", value: executorText }, { label: "开始时间", value: kv(report.execution.execution_started_at, "--") }, { label: "结束时间", value: kv(report.execution.execution_finished_at, "--") }, { label: "执行参数", value: executionParamsText }, { label: "执行摘要", value: asExecutedSummary }, { label: "覆盖记录", value: asAppliedSummary }] : [], emptyState: hasAsExecuted ? undefined : { title: "暂无实际执行记录", description: "当前尚无实际执行记录。" } },
+    { key: "EVIDENCE", status: evidenceSummary.state === "PACK_SUMMARY" ? "AVAILABLE" : (evidenceSummary.state === "RECORDS_WITHOUT_SUMMARY" ? "PENDING" : "MISSING"), title: "证据", summary: evidenceSummary.summary, items: evidenceSummary.items, emptyState: evidenceSummary.state === "PACK_SUMMARY" ? undefined : { title: evidenceSummary.summary, description: evidenceSummary.detail } },
     { key: "ACCEPTANCE", status: report.acceptance.generated_at ? "AVAILABLE" : "PENDING", title: "验收", summary: acceptanceStatusText, items: report.acceptance.generated_at ? [{ label: "验收结论", value: acceptanceStatusText }, { label: "验收依据", value: kv(report.acceptance.verdict, "--") }, { label: "未通过原因", value: report.acceptance.status === "FAIL" ? kv(report.execution.invalid_reason, "--") : "--" }, { label: "证据不足原因", value: Array.isArray(report.acceptance.missing_items) && report.acceptance.missing_items.length ? report.acceptance.missing_items.map((item) => labelEmptyFallback(item)).join("、") : "--" }, { label: "复核提示", value: report.acceptance.missing_evidence ? "证据不足，建议补齐后复核" : "--" }] : [], emptyState: report.acceptance.generated_at ? undefined : { title: "验收结果尚未生成", description: "当前验收结论待生成。" } },
-    { key: "ROI", status: valueNumber == null ? "MISSING" : "AVAILABLE", title: "ROI", summary: valueNumber == null ? "暂无可量化价值记录" : `${roiNatureText} · ${valueText}`, items: valueNumber == null ? [] : [{ label: "价值类型", value: roiValueType }, { label: "实测/估算/假设", value: roiNatureText }, { label: "数值摘要", value: valueText }, { label: "confidence", value: confidenceText }, { label: "evidence note", value: evidenceNote }], emptyState: valueNumber == null ? { title: "暂无可量化价值记录", description: "当前未形成可审计 ROI。" } : undefined },
-    { key: "MEMORY", status: hasMemoryData ? "AVAILABLE" : "MISSING", title: "田块记忆", summary: hasMemoryData ? "已生成记忆摘要" : "暂无可展示的地块记忆", items: memoryItems, emptyState: hasMemoryData ? undefined : { title: "暂无可展示的地块记忆", description: "当前没有可复用记忆条目。" } },
+    { key: "ROI", status: valueNumber == null ? "MISSING" : "AVAILABLE", title: "价值记录", summary: valueNumber == null ? "暂无可量化价值记录" : `${roiNatureText} · ${valueText}`, items: valueNumber == null ? [] : [{ label: "价值类型", value: roiValueType }, { label: "实测/估算/假设", value: roiNatureText }, { label: "数值摘要", value: valueText }, { label: "可信度", value: confidenceText }, { label: "证据说明", value: evidenceNote }], emptyState: valueNumber == null ? { title: "暂无可量化价值记录", description: "当前未形成可审计价值记录。" } : undefined },
+    { key: "MEMORY", status: hasMemoryData ? "AVAILABLE" : "MISSING", title: "记忆", summary: hasMemoryData ? "已生成记忆摘要" : "暂无可展示的田块记忆", items: memoryItems, emptyState: hasMemoryData ? undefined : { title: "暂无可展示的田块记忆", description: "当前没有可复用记忆条目。" } },
   ];
   const sections = rawSections.map((section) => ({ ...section, statusText: customerTimelineStatusLabel(section.status) }));
   const timeline = sections.map((s) => ({ key: s.key, label: s.title, status: s.status === "AVAILABLE" ? "DONE" as const : (s.status === "PENDING" ? "PENDING" as const : s.status === "MISSING" ? "MISSING" as const : "NOT_APPLICABLE" as const) }));
+  const internalId = kv(report.identifiers.operation_id || report.identifiers.operation_plan_id);
+  const operationTitle = kv((report as any).customer_title || (report as any).operation_title || labelOperationType((report as any).operation_type), CUSTOMER_LABELS.operationReportTitle);
 
   return {
     generatedAtText: kv(report.generated_at),
     operation: {
-      operationId: kv(report.identifiers.operation_id || report.identifiers.operation_plan_id), // customer-boundary-allow: operation_plan_id 兼容历史数据
-      title: kv((report as any).customer_title || (report as any).operation_title, CUSTOMER_LABELS.operationReportTitle),
+      operationId: kv(report.identifiers.operation_id || report.identifiers.operation_plan_id),
+      title: operationTitle,
       fieldName: kv((report as any).field_name, "地块"),
-      fieldId: kv((report as any).field_id, "--"),
+      fieldId: kv((report as any).field_id ?? report.identifiers.field_id, "--"),
       finalStatusLabel: finalStatusText,
       finalStatusTone: /异常|失败/.test(finalStatusText) ? "danger" : (/等待|进行中/.test(finalStatusText) ? "warning" : "neutral"),
       updatedAtText: kv(report.workflow.updated_at),
     },
     sections,
     timeline,
-    exportHref: `/customer/operations/${encodeURIComponent(kv(report.identifiers.operation_id || report.identifiers.operation_plan_id))}/export`, // customer-boundary-allow: operation_plan_id 兼容历史导出路由
+    exportHref: `/customer/operations/${encodeURIComponent(kv(report.identifiers.operation_id || report.identifiers.operation_plan_id))}/export`,
     technicalFoldout: { rows: [
       { label: "operation_id", value: kv(report.identifiers.operation_id) },
-      { label: "recommendation_id", value: kv(report.identifiers.recommendation_id) }, // customer-boundary-allow: 技术折叠保留审计标识 recommendation_id
-      { label: "prescription_id", value: kv(report.identifiers.prescription_id ?? prescriptionData?.prescription_id) },
+      { label: "recommendation_id", value: kv(report.identifiers.recommendation_id) },
+      { label: "prescription_id", value: kv((report.identifiers as any).prescription_id ?? prescriptionData?.prescription_id) },
       { label: "approval_request_id", value: kv(report.identifiers.approval_id ?? reportApproval?.request_id) },
       { label: "act_task_id", value: kv(report.identifiers.act_task_id) },
-      { label: "receipt_id", value: kv(report.identifiers.receipt_id) }, // customer-boundary-allow: 技术折叠保留审计标识 receipt_id
+      { label: "receipt_id", value: kv(report.identifiers.receipt_id) },
       { label: "acceptance_id", value: kv((report as any).acceptance?.acceptance_id ?? (report as any).acceptance_id) },
       { label: "roi_id", value: kv((report as any).roi_ledger?.roi_id ?? valueItem?.roi_id) },
       { label: "memory_id", value: kv((report as any).field_memory?.memory_id) },
-      { label: "skill_trace_ref", value: kv(recommendationData?.skill_trace_ref ?? recommendationData?.skillTraceRef ?? report.identifiers.skill_trace_id ?? (report as any).field_memory?.skill_trace_ref) }, // customer-boundary-allow: trace_id 仅用于技术折叠追溯
+      { label: "skill_trace_ref", value: kv(recommendationData?.skill_trace_ref ?? recommendationData?.skillTraceRef ?? report.identifiers.skill_trace_id ?? (report as any).field_memory?.skill_trace_ref) },
       { label: "skill_run_id", value: kv(recommendationData?.skill_run_id ?? recommendationData?.skillRunId ?? (report as any).skill_run_id) },
       { label: "skill_output", value: kv(recommendationData?.skill_output ?? (report as any).skill_output) },
       { label: "raw_enum", value: kv((report as any).raw_enum ?? (report as any).status_enum ?? report.execution.final_status) },
     ] },
-    header: {
-      title: kv((report as any).customer_title || (report as any).operation_title, CUSTOMER_LABELS.operationReportTitle),
-      subtitle: finalStatusText,
-      internalId,
-    },
-    why: {
-      summary: kv(reportWhy?.explain_human, `当前作业用于处理本次地块作业需求，目标是降低${riskLabel}相关问题并完成闭环处置。`),
-      riskLabel,
-      reasonText: kv(reportWhy?.objective_text, reasonText),
-    },
-    approval: {
-      statusText: reportApproval ? mapApprovalStatusForCustomer(reportApproval?.status) : "待确认",
-      actorText: kv(reportApproval?.actor_name, "--"),
-      timeText: kv(reportApproval?.approved_at || reportApproval?.generated_at, "--"),
-      noteText: kv(reportApproval?.note, "--"),
-      available: Boolean(reportApproval),
-    },
-    execution: {
-      ownerText: kv(report.workflow.owner_name || report.workflow.owner_actor_id),
-      startedAtText: kv(report.execution.execution_started_at),
-      finishedAtText: kv(report.execution.execution_finished_at),
-      invalidExecutionText: labelBooleanYesNo(report.execution.invalid_execution),
-      statusText: mapOperationStatusToCustomerLabel(report.execution.final_status),
-    },
+    header: { title: operationTitle, subtitle: finalStatusText, internalId },
+    why: { summary: kv(reportWhy?.explain_human, `当前作业用于处理本次地块作业需求，目标是降低${riskLabel}相关问题并完成闭环处置。`), riskLabel, reasonText: kv(reportWhy?.objective_text, reasonText) },
+    approval: { statusText: reportApproval ? mapApprovalStatusForCustomer(reportApproval?.status) : "待确认", actorText: kv(reportApproval?.actor_name, "--"), timeText: kv(reportApproval?.approved_at || reportApproval?.generated_at, "--"), noteText: kv(reportApproval?.note, "--"), available: Boolean(reportApproval) },
+    execution: { ownerText: kv(report.workflow.owner_name || report.workflow.owner_actor_id), startedAtText: kv(report.execution.execution_started_at), finishedAtText: kv(report.execution.execution_finished_at), invalidExecutionText: labelBooleanYesNo(report.execution.invalid_execution), statusText: mapOperationStatusToCustomerLabel(report.execution.final_status) },
     evidence: {
       executionReceipt: mapEvidenceStatusLabel(report.evidence.artifacts_count),
       executionRecord: mapEvidenceStatusLabel(report.evidence.logs_count),
@@ -381,33 +417,14 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
       mediaText: mapEvidenceStatusLabel(report.evidence.media_count),
       metricsText: mapEvidenceStatusLabel(report.evidence.metrics_count),
     },
-    acceptance: {
-      statusText: acceptanceStatusText,
-      verdictText: kv(report.acceptance.verdict, "--"),
-      missingEvidenceText: report.acceptance.missing_evidence ? REVIEW_NEEDED_TEXT : "无",
-      generatedAtText: kv(report.acceptance.generated_at),
-    },
-    value: {
-      valueText,
-      methodText,
-      evidenceText: evidenceNote,
-      confidenceText,
-      fallbackText: "本次作业的量化价值仍在积累中，当前可确认价值为：作业完成并完成验收。",
-      useFallback,
-    },
-    conclusion: {
-      finalStatusText,
-      resultText: finalStatusText,
-    },
-    fieldMemory: {
-      title: "田块记忆",
-      items: hasMemoryData ? memoryItems.map((item) => item.value) : [getCustomerEmptyState("NO_FIELD_MEMORY").title],
-    },
+    evidenceSummary,
+    acceptance: { statusText: acceptanceStatusText, verdictText: kv(report.acceptance.verdict, "--"), missingEvidenceText: report.acceptance.missing_evidence ? REVIEW_NEEDED_TEXT : "无", generatedAtText: kv(report.acceptance.generated_at) },
+    value: { valueText, methodText, evidenceText: evidenceNote, confidenceText, fallbackText: "本次作业的量化价值仍在积累中，当前可确认价值为：作业完成并完成验收。", useFallback },
+    conclusion: { finalStatusText, resultText: finalStatusText },
+    fieldMemory: { title: "田块记忆", items: hasMemoryData ? memoryItems.map((item) => item.value) : [getCustomerEmptyState("NO_FIELD_MEMORY").title] },
     roiLedger: { title: "", items: [], confidenceText },
-    // customer-boundary-allow: debug 字段仅用于导出技术折叠，不进入主叙事
-  debug: {
-      // customer-boundary-allow: 调试字段用于审计追溯，含 operation_plan_id/receipt_id/recommendation_id
-    operationPlanId: kv(report.identifiers.operation_plan_id), operationId: kv(report.identifiers.operation_id), actTaskId: kv(report.identifiers.act_task_id), receiptId: kv(report.identifiers.receipt_id), recommendationId: kv(report.identifiers.recommendation_id), workflowOwnerId: kv(report.workflow.owner_actor_id), workflowOwnerName: kv(report.workflow.owner_name), workflowUpdatedAt: kv(report.workflow.updated_at), workflowLastNote: kv(report.workflow.last_note),
+    debug: {
+      operationPlanId: kv(report.identifiers.operation_plan_id), operationId: kv(report.identifiers.operation_id), actTaskId: kv(report.identifiers.act_task_id), receiptId: kv(report.identifiers.receipt_id), recommendationId: kv(report.identifiers.recommendation_id), workflowOwnerId: kv(report.workflow.owner_actor_id), workflowOwnerName: kv(report.workflow.owner_name), workflowUpdatedAt: kv(report.workflow.updated_at), workflowLastNote: kv(report.workflow.last_note),
       sla: { responseTimeMs: kv(report.sla.response_time_ms), dispatchLatency: mapSlaQuality(report.sla.dispatch_latency_quality, report.sla.dispatch_latency_ms), executionDuration: mapSlaQuality(report.sla.execution_duration_quality, report.sla.execution_duration_ms), acceptanceLatency: mapSlaQuality(report.sla.acceptance_latency_quality, report.sla.acceptance_latency_ms), invalidReasons: Array.isArray(report.sla.invalid_reasons) && report.sla.invalid_reasons.length ? report.sla.invalid_reasons.map((item) => labelEmptyFallback(item)).join(" / ") : "--" },
     },
   };

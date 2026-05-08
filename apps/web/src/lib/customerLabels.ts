@@ -1,3 +1,16 @@
+export const CUSTOMER_SHELL_LABELS = {
+  brand: "GEOX",
+  navDashboard: "总览",
+  navFields: "地块",
+  navOperations: "作业",
+  navReports: "报告",
+  shellRole: "客户视图",
+  accountFallback: "客户账户",
+  scopePending: "授权范围待确认",
+  searchPlaceholder: "搜索功能暂未开放",
+  sidebarFooter: "客户报告入口",
+} as const;
+
 export const CUSTOMER_LABELS = {
   dashboardTitle: "客户看板",
   fieldReportTitle: "地块报告",
@@ -19,6 +32,30 @@ export const CUSTOMER_LABELS = {
   offlineDevices: "离线",
 } as const;
 
+const CUSTOMER_TECHNICAL_FIELD_LABELS: Record<string, string> = {
+  operation_plan_id: "作业计划编号（技术排障）",
+  operation_id: "作业编号（技术排障）",
+  recommendation_id: "建议编号（技术排障）",
+  prescription_id: "处方编号（技术排障）",
+  approval_request_id: "审批请求编号（技术排障）",
+  approval_id: "审批编号（技术排障）",
+  act_task_id: "任务编号（技术排障）",
+  receipt_id: "回执编号（技术排障）",
+  acceptance_id: "验收编号（技术排障）",
+  roi_id: "价值记录编号（技术排障）",
+  memory_id: "田块记忆编号（技术排障）",
+  field_memory_id: "田块记忆编号（技术排障）",
+  skill_trace_id: "技能追踪编号（技术排障）",
+  skill_trace_ref: "技能追踪编号（技术排障）",
+  skill_run_id: "技能运行编号（技术排障）",
+  skill_output: "技能输出摘要（技术排障）",
+  raw_enum: "原始状态码（技术排障）",
+  status_enum: "原始状态码（技术排障）",
+  stack_trace: "错误堆栈（技术排障）",
+  stacktrace: "错误堆栈（技术排障）",
+  stack: "错误堆栈（技术排障）",
+};
+
 const CUSTOMER_STATUS_LABELS: Record<string, string> = {
   PENDING_ACCEPTANCE: "作业已完成，等待验收",
   SUCCESS: "验收通过",
@@ -34,7 +71,7 @@ const CUSTOMER_STATUS_LABELS: Record<string, string> = {
 
 const CUSTOMER_EMPTY_STATE_LABELS: Record<string, string> = {
   ROI_UNAVAILABLE: "暂无可量化价值记录",
-  FIELD_MEMORY_UNAVAILABLE: "暂无可展示的地块记忆",
+  FIELD_MEMORY_UNAVAILABLE: "暂无可展示的田块记忆",
   PRESCRIPTION_MISSING: "未形成正式处方",
   AS_EXECUTED_MISSING: "暂无实际执行记录",
   AS_APPLIED_MISSING: "暂无覆盖记录",
@@ -129,6 +166,13 @@ export function customerSectionStatusLabel(raw: unknown): string {
   return customerStatusLabel(raw);
 }
 
+export function labelCustomerTechnicalField(raw: unknown): string {
+  const original = String(raw ?? "").trim();
+  if (!original) return "技术字段（技术排障）";
+  const key = original.toLowerCase().replace(/[\s-]+/g, "_");
+  return CUSTOMER_TECHNICAL_FIELD_LABELS[key] ?? `${original}（技术排障）`;
+}
+
 function textOrFallback(raw: unknown, fallback = "暂无记录"): string {
   if (raw === null || raw === undefined) return fallback;
   const text = String(raw).trim();
@@ -166,9 +210,9 @@ export function labelRawCode(raw: unknown, fallback = "暂无记录"): string {
 
 export function labelMemoryCode(raw: unknown): string {
   const key = normalizeKey(raw);
-  if (!key) return "地块记忆待补充";
+  if (!key) return "田块记忆待补充";
   if (key.startsWith("FIELD_MEMORY_")) return labelEvidenceQuality(key);
-  return labelRawCode(raw, labelEmptyFallback(raw, "地块记忆待补充"));
+  return labelRawCode(raw, labelEmptyFallback(raw, "田块记忆待补充"));
 }
 
 export function labelValueType(raw: unknown): string {
