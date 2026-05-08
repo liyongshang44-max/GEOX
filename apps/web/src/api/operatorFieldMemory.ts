@@ -33,6 +33,9 @@ export type OperatorFieldMemoryResponse = {
 
 type AnyRecord = Record<string, any>;
 
+const ENABLE_OPERATOR_FIELD_MEMORY_API = String((import.meta as any)?.env?.VITE_ENABLE_OPERATOR_FIELD_MEMORY_API ?? "").toLowerCase() === "true";
+const ENABLE_GLOBAL_FIELD_MEMORY_FALLBACK = String((import.meta as any)?.env?.VITE_ENABLE_GLOBAL_FIELD_MEMORY_FALLBACK ?? "").toLowerCase() === "true";
+
 function text(value: unknown, fallback = ""): string {
   const raw = String(value ?? "").trim();
   if (!raw || raw === "--" || raw === "undefined" || raw === "null") return fallback;
@@ -141,57 +144,61 @@ export async function fetchOperatorFieldMemory(args: { fieldId?: unknown; operat
   if (operationId) query.operation_id = operationId;
   if (memoryType) query.memory_type = memoryType;
 
-  const official = await fetchOptional(withQuery("/api/v1/operator/field-memory", query));
-  if (official.denied) {
-    return {
-      source: "permission_denied",
-      dataScope: "PERMISSION_DENIED",
-      generated_at: new Date().toISOString(),
-      items: [],
-      filters,
-      message: "当前身份无权查看运营田块记忆明细。",
-    };
-  }
-  const officialItems = filterItems(normalizeRows(official.data, "operator_field_memory_api", filters), filters);
-  if (officialItems.length > 0) {
-    return {
-      source: "operator_field_memory_api",
-      dataScope: "OFFICIAL_OPERATOR_API",
-      generated_at: new Date().toISOString(),
-      items: officialItems,
-      filters,
-    };
+  if (ENABLE_OPERATOR_FIELD_MEMORY_API) {
+    const official = await fetchOptional(withQuery("/api/v1/operator/field-memory", query));
+    if (official.denied) {
+      return {
+        source: "permission_denied",
+        dataScope: "PERMISSION_DENIED",
+        generated_at: new Date().toISOString(),
+        items: [],
+        filters,
+        message: "当前身份无权查看运营田块记忆明细。",
+      };
+    }
+    const officialItems = filterItems(normalizeRows(official.data, "operator_field_memory_api", filters), filters);
+    if (officialItems.length > 0) {
+      return {
+        source: "operator_field_memory_api",
+        dataScope: "OFFICIAL_OPERATOR_API",
+        generated_at: new Date().toISOString(),
+        items: officialItems,
+        filters,
+      };
+    }
   }
 
   const fallbackCalls: Promise<{ status: number; data: unknown | null; denied: boolean }>[] = [];
   if (fieldId) fallbackCalls.push(fetchOptional(withQuery(`/api/v1/fields/${encodeURIComponent(fieldId)}/memory`, memoryType ? { memory_type: memoryType } : {})));
   if (operationId) fallbackCalls.push(fetchOptional(withQuery(`/api/v1/operations/${encodeURIComponent(operationId)}/field-memory`, memoryType ? { memory_type: memoryType } : {})));
-  fallbackCalls.push(fetchOptional(withQuery("/api/v1/field-memory", query)));
+  if (ENABLE_GLOBAL_FIELD_MEMORY_FALLBACK) fallbackCalls.push(fetchOptional(withQuery("/api/v1/field-memory", query)));
 
-  const fallbackResults = await Promise.all(fallbackCalls);
-  if (fallbackResults.some((item) => item.denied)) {
-    return {
-      source: "permission_denied",
-      dataScope: "PERMISSION_DENIED",
-      generated_at: new Date().toISOString(),
-      items: [],
-      filters,
-      message: "当前身份无权查看运营田块记忆明细。",
-    };
-  }
+  if (fallbackCalls.length > 0) {
+    const fallbackResults = await Promise.all(fallbackCalls);
+    if (fallbackResults.some((item) => item.denied)) {
+      return {
+        source: "permission_denied",
+        dataScope: "PERMISSION_DENIED",
+        generated_at: new Date().toISOString(),
+        items: [],
+        filters,
+        message: "当前身份无权查看运营田块记忆明细。",
+      };
+    }
 
-  const fallbackItems = filterItems(fallbackResults.flatMap((result) => normalizeRows(result.data, operationId ? "operation_field_memory_api" : "field_memory_api", filters)), filters)
-    .filter((item, index, all) => all.findIndex((x) => x.memoryId === item.memoryId) === index);
+    const fallbackItems = filterItems(fallbackResults.flatMap((result) => normalizeRows(result.data, operationId ? "operation_field_memory_api" : "field_memory_api", filters)), filters)
+      .filter((item, index, all) => all.findIndex((x) => x.memoryId === item.memoryId) === index);
 
-  if (fallbackItems.length > 0) {
-    return {
-      source: "fallback_existing_sources",
-      dataScope: "FALLBACK_LIMITED",
-      generated_at: new Date().toISOString(),
-      items: fallbackItems,
-      filters,
-      message: "当前展示 field-memory 现有接口包装后的有限运营记忆明细，非完整 operator field-memory。",
-    };
+    if (fallbackItems.length > 0) {
+      return {
+        source: "fallback_existing_sources",
+        dataScope: "FALLBACK_LIMITED",
+        generated_at: new Date().toISOString(),
+        items: fallbackItems,
+        filters,
+        message: "当前展示 field-memory 现有接口包装后的有限运营记忆明细，非完整 operator field-memory。",
+      };
+    }
   }
 
   return {
@@ -200,6 +207,8 @@ export async function fetchOperatorFieldMemory(args: { fieldId?: unknown; operat
     generated_at: new Date().toISOString(),
     items: [],
     filters,
-    message: "暂无田块记忆明细。",
+    message: ENABLE_OPERATOR_FIELD_MEMORY_API || ENABLE_GLOBAL_FIELD_MEMORY_FALLBACK || fieldId || operationId
+      ? "暂无田块记忆明细。"
+      : "田块记忆明细接口未接入，当前不探测未 ready API；可输入 field_id 或 operation_id 查看已有详情 fallback。",
   };
 }
