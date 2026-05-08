@@ -4,6 +4,7 @@ import { fetchFieldReport, type FieldReportDetailV1 } from "../api/customerRepor
 import ErrorState from "../components/common/ErrorState";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import CustomerEmptyState from "../components/customer/CustomerEmptyState";
+import FieldMemoryPanel from "../components/customer/FieldMemoryPanel";
 import RoiLedgerDrawer from "../components/customer/RoiLedgerDrawer";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 import { buildFieldReportVm } from "../viewmodels/fieldReportVm";
@@ -41,6 +42,7 @@ export default function FieldReportPage(): React.ReactElement {
   if (error || !report) return <ErrorState title="地块病历加载失败" message={error || "暂无地块病历"} onRetry={() => window.location.reload()} />;
 
   const vm = buildFieldReportVm(report);
+  const reportAny = report as any;
   const canExport = Boolean(fieldId.trim());
   const geometry = (report as { field?: { geometry?: unknown } }).field?.geometry;
   const hasGeometry = Boolean(geometry);
@@ -49,9 +51,8 @@ export default function FieldReportPage(): React.ReactElement {
   const evidenceSummaryExists = vm.diagnosis.evidenceLines.some((line) => line && !line.includes("暂无"));
   const suggestionOperation = vm.recentOperations.find((item) => Boolean(item.operationId));
   const hasRoiSummary = "lines" in vm.roiSummary && Array.isArray(vm.roiSummary.lines) && vm.roiSummary.lines.length > 0;
-  const hasFieldMemory = "lines" in vm.fieldMemory && Array.isArray(vm.fieldMemory.lines) && vm.fieldMemory.lines.length > 0;
+  const embeddedMemory = reportAny.field_memory_summary ?? reportAny.field_memory ?? reportAny.memory;
   const roiEmptyState = getCustomerEmptyState("NO_ROI");
-  const fieldMemoryEmptyState = getCustomerEmptyState("NO_FIELD_MEMORY");
   const mapEmptyState = getCustomerEmptyState("MAP_UNAVAILABLE");
   const noRecentOperationsState = getCustomerEmptyState("NO_RECENT_OPERATIONS");
   const noPendingActionsState = getCustomerEmptyState("NO_PENDING_ACTIONS");
@@ -135,7 +136,7 @@ export default function FieldReportPage(): React.ReactElement {
           </article>
           <article className="customerCard">
             <h3 className="customerCardTitle">田块记忆</h3>
-            {hasFieldMemory ? <div>{vm.fieldMemory.displayText}</div> : <CustomerEmptyState vm={fieldMemoryEmptyState} />}
+            <FieldMemoryPanel fieldId={vm.field.fieldId} embeddedMemory={embeddedMemory} compact />
           </article>
           <article className="customerCard mapPlaceholderCard" aria-disabled="true">
             <h3 className="customerCardTitle">地块范围</h3>
@@ -146,7 +147,7 @@ export default function FieldReportPage(): React.ReactElement {
       <RoiLedgerDrawer
         open={roiDrawerOpen}
         fieldId={vm.field.fieldId}
-        embeddedRoi={(report as any).roi_ledger ?? (report as any).roi ?? (report as any).value_summary}
+        embeddedRoi={reportAny.roi_ledger ?? reportAny.roi ?? reportAny.value_summary}
         onClose={() => setRoiDrawerOpen(false)}
       />
     </div>
