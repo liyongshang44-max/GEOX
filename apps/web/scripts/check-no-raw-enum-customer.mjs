@@ -59,7 +59,7 @@ const VM_ALLOWED_CONTEXTS = [
   /MAIN_VIEW_BLOCK_PATTERNS/,
 ];
 
-const VM_FORBIDDEN_CUSTOMER_TEXT_FIELDS = /\b(title|summary|description|detail|label|value|displayText|headline|subtitle|placeholder)\s*:/;
+const CUSTOMER_TEXT_FIELD_NAMES = ["title", "summary", "description", "detail", "label", "value", "displayText", "headline", "subtitle", "placeholder"];
 const ALLOW_COMMENT = /no-raw-enum-customer-allow:\s*(.+)$/;
 
 const offenders = [];
@@ -111,8 +111,16 @@ function isVmFile(relativeFile) {
   return VM_PATTERNS.some((pattern) => pattern.test(relativeFile));
 }
 
-function isVmAllowedContext(line) {
-  if (VM_FORBIDDEN_CUSTOMER_TEXT_FIELDS.test(line)) return false;
+function enumAppearsInCustomerTextField(line, token) {
+  for (const field of CUSTOMER_TEXT_FIELD_NAMES) {
+    const re = new RegExp(`\\b${field}\\s*:\\s*[\"'][^\"']*\\b${token}\\b[^\"']*[\"']`);
+    if (re.test(line)) return true;
+  }
+  return false;
+}
+
+function isVmAllowedContext(line, token) {
+  if (enumAppearsInCustomerTextField(line, token)) return false;
   return VM_ALLOWED_CONTEXTS.some((pattern) => pattern.test(line));
 }
 
@@ -139,7 +147,7 @@ function scanFile(relativeFile) {
         continue;
       }
 
-      if (vm && isVmAllowedContext(line)) continue;
+      if (vm && isVmAllowedContext(line, token)) continue;
       addOffender(relativeFile, index + 1, token, line);
     }
   });
