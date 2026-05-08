@@ -1,0 +1,96 @@
+import type { CustomerFieldsListResponse, CustomerFieldListItem, CustomerFieldRiskLevel } from "../api/customerFields";
+import { labelRiskLevel, sanitizeCustomerText } from "../lib/customerLabels";
+import { getCustomerEmptyState } from "../lib/customerEmptyStates";
+
+export type CustomerFieldRiskFilter = "ALL" | "HIGH" | "MEDIUM" | "LOW";
+
+export type CustomerFieldsIndexCardVm = {
+  fieldId: string;
+  fieldName: string;
+  riskLevel: CustomerFieldRiskFilter | "UNKNOWN";
+  riskLabel: string;
+  riskTone: "danger" | "warning" | "neutral";
+  reasons: string[];
+  updatedAtText: string;
+  cropStageText: string;
+  recentOperationText: string;
+  href: string;
+};
+
+export type CustomerFieldsIndexVm = {
+  title: string;
+  subtitle: string;
+  generatedAtText: string;
+  isFallback: boolean;
+  dataScopeNote?: string;
+  filters: Array<{ key: CustomerFieldRiskFilter; label: string; count: number }>;
+  cards: CustomerFieldsIndexCardVm[];
+  emptyState: { title: string; description: string; severity: "neutral" | "info" | "warning" };
+};
+
+function toDateTimeText(raw: unknown): string {
+  const text = String(raw ?? "").trim();
+  if (!text) return "暂无更新时间";
+  const ms = Date.parse(text);
+  if (!Number.isFinite(ms) || ms <= 0) return "暂无更新时间";
+  const date = new Date(ms);
+  if (date.getUTCFullYear() <= 1970) return "暂无更新时间";
+  return date.toLocaleString("zh-CN", { hour12: false });
+}
+
+function normalizeRisk(raw: unknown): CustomerFieldRiskFilter | "UNKNOWN" {
+  const value = String(raw ?? "").trim().toUpperCase();
+  if (value === "HIGH" || value === "MEDIUM" || value === "LOW") return value;
+  return "UNKNOWN";
+}
+
+function riskTone(risk: CustomerFieldRiskFilter | "UNKNOWN"): "danger" | "warning" | "neutral" {
+  if (risk === "HIGH") return "danger";
+  if (risk === "MEDIUM") return "warning";
+  return "neutral";
+}
+
+function buildCard(item: CustomerFieldListItem): CustomerFieldsIndexCardVm {
+  const fieldId = String(item.field_id ?? "").trim();
+  const risk = normalizeRisk(item.risk_level as CustomerFieldRiskLevel | string | null | undefined);
+  const cropText = sanitizeCustomerText(item.crop_name, "作物信息待补充");
+  const stageText = sanitizeCustomerText(item.stage_name, "生育期待补充");
+  const recentOperationTitle = sanitizeCustomerText(item.recent_operation_title, "暂无近期作业");
+  return {
+    fieldId,
+    fieldName: sanitizeCustomerText(item.field_name, "地块名称待补充"),
+    riskLevel: risk,
+    riskLabel: risk === "UNKNOWN" ? "风险待确认" : labelRiskLevel(risk),
+    riskTone: riskTone(risk),
+    reasons: Array.isArray(item.risk_reasons) ? item.risk_reasons.map((x) => sanitizeCustomerText(x)).filter(Boolean) : [],
+    updatedAtText: toDateTimeText(item.updated_at),
+    cropStageText: `${cropText} / ${stageText}`,
+    recentOperationText: recentOperationTitle,
+    href: fieldId ? `/customer/fields/${encodeURIComponent(fieldId)}` : "/customer/fields",
+  };
+}
+
+export function filterCustomerFields(cards: CustomerFieldsIndexCardVm[], risk: CustomerFieldRiskFilter): CustomerFieldsIndexCardVm[] {
+  if (risk === "ALL") return cards;
+  return cards.filter((card) => card.riskLevel === risk);
+}
+
+export function buildCustomerFieldsIndexVm(response: CustomerFieldsListResponse): CustomerFieldsIndexVm {
+  const cards = (response.fields ?? []).map(buildCard).filter((card) => card.fieldId);
+  const countByRisk = (risk: CustomerFieldRiskFilter) => risk === "ALL" ? cards.length : cards.filter((card) => card.riskLevel === risk).length;
+  return {
+    title: "授权地块",
+    subtitle: response.is_fallback ? "P1-A Preview：当前展示近期/可见地块，非完整授权列表。" : "查看授权地块、风险状态与地块报告入口。",
+    generatedAtText: toDateTimeText(response.generated_at),
+    isFallback: response.is_fallback,
+    dataScopeNote: response.data_scope_note,
+    filters: [
+      { key: "ALL", label: "全部", count: countByRisk("ALL") },
+      { key: "HIGH", label: "高风险", count: countByRisk("HIGH") },
+      { key: "MEDIUM", label: "中风险", count: countByRisk("MEDIUM") },
+      { key: "LOW", label: "低风险", count: countByRisk("LOW") },
+    ],
+    cards,
+    emptyState: getCustomerEmptyState("NO_RISK_FIELDS"),
+  };
+}
