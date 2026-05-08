@@ -21,6 +21,16 @@ export type CustomerFieldMemoryVm = {
   emptyDescription: string;
 };
 
+const INTERNAL_ID_PATTERN = /\b(?:act|opl|op|rec|apr|tsk|rcp|evd|acc|roi|mem|skill|trace)_[A-Za-z0-9-]{8,}\b/g;
+const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi;
+const RAW_MEMORY_TITLE_MAP: Record<string, string> = {
+  FIELD_RESPONSE_MEMORY: "地块响应记忆",
+  DEVICE_RELIABILITY_MEMORY: "设备可靠性记忆",
+  SKILL_PERFORMANCE_MEMORY: "诊断能力记忆",
+  OPERATION_DECISION_MEMORY: "作业决策记忆",
+  AGRONOMY_DECISION_MEMORY: "农艺决策记忆",
+};
+
 function toDateTimeText(raw: unknown): string {
   const text = String(raw ?? "").trim();
   if (!text) return "暂无更新时间";
@@ -31,14 +41,24 @@ function toDateTimeText(raw: unknown): string {
   return date.toLocaleString("zh-CN", { hour12: false });
 }
 
+function cleanCustomerMemoryText(value: unknown, fallback = "暂无摘要"): string {
+  const raw = String(value ?? "").trim();
+  if (!raw || raw === "--" || raw === "[object Object]") return fallback;
+  const withoutIds = raw.replace(INTERNAL_ID_PATTERN, "相关作业").replace(UUID_PATTERN, "相关记录");
+  if (/valve response confirmed/i.test(withoutIds)) return "系统确认设备响应已被记录，后续调度会参考该设备可靠性。";
+  if (/skill.*performance/i.test(withoutIds)) return "系统记录了本次诊断能力表现，后续建议会参考该结果。";
+  if (/field response/i.test(withoutIds)) return "系统记录了地块对本次作业的响应，后续处方会参考该地块表现。";
+  return sanitizeCustomerText(withoutIds, fallback);
+}
+
 function readableText(value: unknown, fallback = "暂无摘要"): string {
   if (Array.isArray(value)) return value.map((item) => readableText(item, "")).filter(Boolean).join("；") || fallback;
   if (value && typeof value === "object") {
     const obj = value as Record<string, unknown>;
     const candidate = obj.customer_text ?? obj.learned_text ?? obj.summary_text ?? obj.text ?? obj.title ?? obj.label;
-    return candidate != null ? sanitizeCustomerText(candidate, fallback) : fallback;
+    return candidate != null ? cleanCustomerMemoryText(candidate, fallback) : fallback;
   }
-  return sanitizeCustomerText(value, fallback);
+  return cleanCustomerMemoryText(value, fallback);
 }
 
 function confidenceText(item: CustomerFieldMemoryItem): string {
@@ -48,7 +68,13 @@ function confidenceText(item: CustomerFieldMemoryItem): string {
 }
 
 function memoryTitle(item: CustomerFieldMemoryItem): string {
-  return sanitizeCustomerText(item.title || item.memory_type || item.memory_code, "田块记忆");
+  const raw = String(item.title || item.memory_type || item.memory_code || "").trim();
+  const normalized = raw.toUpperCase();
+  if (RAW_MEMORY_TITLE_MAP[normalized]) return RAW_MEMORY_TITLE_MAP[normalized];
+  if (/SKILL/.test(normalized)) return "诊断能力记忆";
+  if (/DEVICE|VALVE|PUMP/.test(normalized)) return "设备可靠性记忆";
+  if (/FIELD|RESPONSE/.test(normalized)) return "地块响应记忆";
+  return cleanCustomerMemoryText(raw, "田块记忆");
 }
 
 function learnedText(item: CustomerFieldMemoryItem): string {
