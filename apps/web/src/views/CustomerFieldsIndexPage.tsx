@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { fetchCustomerFields } from "../api/customerFields";
 import { CustomerEmptyState } from "../components/customer";
 import { buildCustomerFieldsIndexVm, filterCustomerFields, type CustomerFieldRiskFilter, type CustomerFieldsIndexVm } from "../viewmodels/customerFieldsIndexVm";
+import "../styles/customerFields.css";
 
 export default function CustomerFieldsIndexPage(): React.ReactElement {
   const [vm, setVm] = React.useState<CustomerFieldsIndexVm | null>(null);
