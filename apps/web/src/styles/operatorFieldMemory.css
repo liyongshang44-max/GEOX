@@ -1,0 +1,249 @@
+.operatorFieldMemoryPage {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.operatorFieldMemoryFilters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 12px;
+  align-items: end;
+  padding: 16px;
+  border-radius: 20px;
+  background: #ffffff;
+  border: 1px solid #e2e8d8;
+  min-width: 0;
+}
+
+.operatorFieldMemoryFilters label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.operatorFieldMemoryFilters span {
+  color: #64715f;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.operatorFieldMemoryFilters input {
+  min-width: 0;
+  border: 1px solid #d8e0ce;
+  border-radius: 12px;
+  padding: 9px 11px;
+  color: #132016;
+  background: #fbfcf8;
+}
+
+.operatorFieldMemoryFilterActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.operatorFieldMemoryFilterActions button,
+.operatorFieldMemoryActions a {
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.operatorFieldMemoryFilterActions button {
+  border: 1px solid #132016;
+  background: #132016;
+  color: #ffffff;
+}
+
+.operatorFieldMemoryFilterActions button + button {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #bbf7d0;
+}
+
+.operatorFieldMemoryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(320px, 1fr));
+  gap: 14px;
+  min-width: 0;
+}
+
+.operatorFieldMemoryGroup {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 20px;
+  background: #ffffff;
+  border: 1px solid #e2e8d8;
+  min-width: 0;
+}
+
+.operatorFieldMemoryGroupHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.operatorFieldMemoryGroupHead h2 {
+  margin: 0 0 5px;
+  font-size: 20px;
+  color: #132016;
+}
+
+.operatorFieldMemoryGroupHead p {
+  margin: 0;
+  color: #64715f;
+  line-height: 1.45;
+}
+
+.operatorFieldMemoryGroupHead > span {
+  flex: 0 0 auto;
+  min-width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #132016;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.operatorFieldMemoryList {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.operatorFieldMemoryRow {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid #edf2e5;
+  background: #fbfcf8;
+  min-width: 0;
+}
+
+.operatorFieldMemoryRowHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.operatorFieldMemoryRowHead h3 {
+  margin: 0 0 5px;
+  color: #132016;
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+
+.operatorFieldMemoryRowHead p {
+  margin: 0;
+  color: #455246;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.operatorFieldMemoryRowHead > span {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  border: 1px solid #dbeafe;
+  background: #eff6ff;
+  color: #1e40af;
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.operatorFieldMemoryMeta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.operatorFieldMemoryMeta > div {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #edf2e5;
+  min-width: 0;
+}
+
+.operatorFieldMemoryMeta span {
+  color: #64715f;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.operatorFieldMemoryMeta strong {
+  color: #132016;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.operatorFieldMemoryNotice,
+.operatorFieldMemoryError {
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.operatorFieldMemoryNotice {
+  border: 1px solid #dbeafe;
+  background: #eff6ff;
+  color: #1e40af;
+}
+
+.operatorFieldMemoryError {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.operatorFieldMemoryActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.operatorFieldMemoryActions a {
+  background: #132016;
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.operatorFieldMemoryActions a + a {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #bbf7d0;
+}
+
+@media (max-width: 1100px) {
+  .operatorFieldMemoryGrid,
+  .operatorFieldMemoryFilters {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .operatorFieldMemoryMeta {
+    grid-template-columns: 1fr;
+  }
+}
