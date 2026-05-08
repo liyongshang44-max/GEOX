@@ -42,3 +42,29 @@
   min-height: 190px;
   gap: 10px;
 }
+
+.customerOperationRow {
+  grid-template-columns: minmax(220px, 1.25fr) minmax(96px, .6fr) minmax(112px, .65fr) minmax(120px, .7fr) minmax(160px, .85fr) auto;
+}
+
+.customerOperationRow span {
+  color: var(--customer-title);
+  font-weight: 800;
+}
+
+@media (max-width: 1180px) {
+  .customerOperationRow {
+    grid-template-columns: minmax(220px, 1.35fr) minmax(120px, .8fr) minmax(120px, .8fr) auto;
+  }
+
+  .customerOperationRow > div:nth-of-type(4),
+  .customerOperationRow > div:nth-of-type(5) {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 960px) {
+  .customerOperationRow {
+    grid-template-columns: 1fr;
+  }
+}
