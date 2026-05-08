@@ -7,22 +7,14 @@ import "../styles/customerFields.css";
 
 export default function CustomerOperationsIndexPage(): React.ReactElement {
   const [vm, setVm] = React.useState<CustomerOperationsIndexVm | null>(null);
-  const [error, setError] = React.useState("");
   const [selectedStatus, setSelectedStatus] = React.useState<CustomerOperationStatusFilter>("ALL");
 
   React.useEffect(() => {
     let alive = true;
-    void fetchCustomerOperations()
-      .then((response) => {
-        if (!alive) return;
-        setVm(buildCustomerOperationsIndexVm(response));
-        setError("");
-      })
-      .catch(() => {
-        if (!alive) return;
-        setVm(null);
-        setError("暂未获取到可展示的作业数据，请稍后刷新。");
-      });
+    void fetchCustomerOperations().then((response) => {
+      if (!alive) return;
+      setVm(buildCustomerOperationsIndexVm(response));
+    });
     return () => {
       alive = false;
     };
@@ -36,9 +28,9 @@ export default function CustomerOperationsIndexPage(): React.ReactElement {
         <div>
           <div className="customerEyebrow">GEOX / 作业列表</div>
           <h2 className="customerTitle">作业列表</h2>
-          <p className="customerSubtitle">{vm?.subtitle ?? "查看授权范围内作业、验收进展与报告入口。"}</p>
+          <p className="customerSubtitle">{vm?.subtitle ?? "作业列表加载中。"}</p>
           <p className="customerMetricLabel">数据更新时间：{vm?.generatedAtText ?? "暂无更新时间"}</p>
-          {vm?.isFallback ? <p className="customerScopeWarning">{vm.dataScopeNote || "当前仅展示近期作业，非全部作业列表"}</p> : null}
+          {vm?.dataScopeNote ? <p className="customerScopeWarning">{vm.dataScopeNote}</p> : null}
         </div>
         <Link className="customerButton" to="/customer/dashboard">返回总览</Link>
       </section>
@@ -49,7 +41,7 @@ export default function CustomerOperationsIndexPage(): React.ReactElement {
             <h3 className="customerCardTitle">作业进展</h3>
             <p className="customerMetricLabel">点击作业进入作业闭环报告。</p>
           </div>
-          {vm?.isFallback ? <span className="customerPill">P1-A Preview</span> : <span className="customerPill">正式列表</span>}
+          {vm ? <span className="customerPill">{vm.scopeBadgeText}</span> : null}
         </div>
 
         {vm ? (
@@ -98,7 +90,6 @@ export default function CustomerOperationsIndexPage(): React.ReactElement {
         ) : vm ? (
           <CustomerEmptyState vm={vm.emptyState} />
         ) : null}
-        {error ? <p className="muted customerSpacingTopMd">{error}</p> : null}
       </section>
     </div>
   );
