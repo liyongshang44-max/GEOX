@@ -1,4 +1,4 @@
-import type { CustomerFieldsListResponse, CustomerFieldListItem, CustomerFieldRiskLevel } from "../api/customerFields";
+import type { CustomerFieldsListResponse, CustomerFieldListItem, CustomerFieldRiskLevel, CustomerDataScope } from "../api/customerFields";
 import { labelRiskLevel, sanitizeCustomerText } from "../lib/customerLabels";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 
@@ -21,7 +21,10 @@ export type CustomerFieldsIndexVm = {
   title: string;
   subtitle: string;
   generatedAtText: string;
+  dataScope: CustomerDataScope;
   isFallback: boolean;
+  isPreview: boolean;
+  scopeBadgeText: string;
   dataScopeNote?: string;
   filters: Array<{ key: CustomerFieldRiskFilter; label: string; count: number }>;
   cards: CustomerFieldsIndexCardVm[];
@@ -70,6 +73,30 @@ function buildCard(item: CustomerFieldListItem): CustomerFieldsIndexCardVm {
   };
 }
 
+function scopeCopy(response: CustomerFieldsListResponse): { subtitle: string; badge: string; note?: string; isPreview: boolean } {
+  if (response.dataScope === "FALLBACK_RECENT_ONLY") {
+    return {
+      subtitle: "P1-A Preview：当前展示近期/可见地块，非完整授权列表。",
+      badge: "P1-A Preview",
+      note: response.data_scope_note || "当前展示近期/可见地块，非完整授权列表",
+      isPreview: true,
+    };
+  }
+  if (response.dataScope === "ERROR_EMPTY") {
+    return {
+      subtitle: "地块列表暂不可用，请稍后刷新。",
+      badge: "暂不可用",
+      note: response.data_scope_note || "地块列表暂不可用，请稍后刷新",
+      isPreview: true,
+    };
+  }
+  return {
+    subtitle: "查看授权地块、风险状态与地块报告入口。",
+    badge: "正式列表",
+    isPreview: false,
+  };
+}
+
 export function filterCustomerFields(cards: CustomerFieldsIndexCardVm[], risk: CustomerFieldRiskFilter): CustomerFieldsIndexCardVm[] {
   if (risk === "ALL") return cards;
   return cards.filter((card) => card.riskLevel === risk);
@@ -78,12 +105,16 @@ export function filterCustomerFields(cards: CustomerFieldsIndexCardVm[], risk: C
 export function buildCustomerFieldsIndexVm(response: CustomerFieldsListResponse): CustomerFieldsIndexVm {
   const cards = (response.fields ?? []).map(buildCard).filter((card) => card.fieldId);
   const countByRisk = (risk: CustomerFieldRiskFilter) => risk === "ALL" ? cards.length : cards.filter((card) => card.riskLevel === risk).length;
+  const scope = scopeCopy(response);
   return {
     title: "授权地块",
-    subtitle: response.is_fallback ? "P1-A Preview：当前展示近期/可见地块，非完整授权列表。" : "查看授权地块、风险状态与地块报告入口。",
+    subtitle: scope.subtitle,
     generatedAtText: toDateTimeText(response.generated_at),
-    isFallback: response.is_fallback,
-    dataScopeNote: response.data_scope_note,
+    dataScope: response.dataScope,
+    isFallback: response.dataScope !== "OFFICIAL_CUSTOMER_API",
+    isPreview: scope.isPreview,
+    scopeBadgeText: scope.badge,
+    dataScopeNote: scope.note,
     filters: [
       { key: "ALL", label: "全部", count: countByRisk("ALL") },
       { key: "HIGH", label: "高风险", count: countByRisk("HIGH") },
