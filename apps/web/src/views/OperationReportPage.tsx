@@ -4,6 +4,7 @@ import { fetchOperationReport, type OperationReportV1 } from "../api/customerRep
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ErrorState from "../components/common/ErrorState";
 import EvidencePackSummaryPanel from "../components/customer/EvidencePackSummaryPanel";
+import PrescriptionContractDrawer from "../components/customer/PrescriptionContractDrawer";
 import { buildOperationReportVm } from "../viewmodels/operationReportVm";
 import { customerTimelineStatusLabel, labelCustomerTechnicalField } from "../lib/customerLabels";
 
@@ -43,12 +44,21 @@ function shortOperationLabel(value: string): string {
   return text;
 }
 
+function firstUsableId(...values: unknown[]): string {
+  for (const value of values) {
+    const text = String(value ?? "").trim();
+    if (text && text !== "--" && text !== "暂无记录") return text;
+  }
+  return "";
+}
+
 export default function OperationReportPage(): React.ReactElement {
   const { operationId = "" } = useParams();
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string>("");
   const [report, setReport] = React.useState<OperationReportV1 | null>(null);
   const [expandedKey, setExpandedKey] = React.useState<string | null>(null);
+  const [prescriptionDrawerOpen, setPrescriptionDrawerOpen] = React.useState(false);
 
   React.useEffect(() => {
     let alive = true;
@@ -78,6 +88,9 @@ export default function OperationReportPage(): React.ReactElement {
   const vm = buildOperationReportVm(report);
   const canExport = Boolean(operationId.trim());
   const canBackToField = Boolean(vm.operation.fieldId && vm.operation.fieldId !== "--");
+  const reportAny = report as any;
+  const prescriptionId = firstUsableId(report.identifiers?.prescription_id, reportAny.prescription?.prescription_id, reportAny.prescription_id);
+  const recommendationId = firstUsableId(report.identifiers?.recommendation_id, reportAny.recommendation?.recommendation_id, reportAny.recommendation_id);
 
   return (
     <div className="customerReportCanvas">
@@ -106,6 +119,7 @@ export default function OperationReportPage(): React.ReactElement {
           {vm.sections.map((section, index) => {
             const isExpanded = expandedKey === section.key;
             const isEvidenceSection = section.key === "EVIDENCE";
+            const isPrescriptionSection = section.key === "PRESCRIPTION";
             const displayItems = section.items.filter((item) => !shouldHideMainViewText(`${item.label} ${item.value}`));
             const title = shortOperationLabel(section.title);
             const statusText = isEvidenceSection ? vm.evidenceSummary.statusText : (section.statusText || customerTimelineStatusLabel(section.status));
@@ -143,16 +157,30 @@ export default function OperationReportPage(): React.ReactElement {
                     ) : null}
                   </>
                 )}
-                <button
-                  type="button"
-                  className="customerLinkButton customerSpacingTopXs"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setExpandedKey((prev) => prev === section.key ? null : section.key);
-                  }}
-                >
-                  {isExpanded ? "收起详情" : "查看详情"}
-                </button>
+                <div className="operationCardActions">
+                  <button
+                    type="button"
+                    className="customerLinkButton customerSpacingTopXs"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setExpandedKey((prev) => prev === section.key ? null : section.key);
+                    }}
+                  >
+                    {isExpanded ? "收起详情" : "查看详情"}
+                  </button>
+                  {isPrescriptionSection ? (
+                    <button
+                      type="button"
+                      className="customerLinkButton customerSpacingTopXs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPrescriptionDrawerOpen(true);
+                      }}
+                    >
+                      查看处方详情
+                    </button>
+                  ) : null}
+                </div>
               </article>
             );
           })}
@@ -170,6 +198,12 @@ export default function OperationReportPage(): React.ReactElement {
           </details>
         </section>
       </div>
+      <PrescriptionContractDrawer
+        open={prescriptionDrawerOpen}
+        prescriptionId={prescriptionId}
+        recommendationId={recommendationId}
+        onClose={() => setPrescriptionDrawerOpen(false)}
+      />
     </div>
   );
 }
