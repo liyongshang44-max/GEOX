@@ -74,9 +74,30 @@ function unwrapCustomerDashboardAggregate(payload: unknown): CustomerDashboardAg
   return candidate as CustomerDashboardAggregateV1;
 }
 
+function existingOperationFieldName(report: OperationReportV1): string {
+  return String((report as any).field_name ?? "").trim();
+}
+
+function operationFieldId(report: OperationReportV1): string {
+  return String((report as any).field_id ?? report.identifiers?.field_id ?? "").trim();
+}
+
+async function hydrateOperationFieldName(report: OperationReportV1): Promise<OperationReportV1> {
+  if (existingOperationFieldName(report)) return report;
+  const fieldId = operationFieldId(report);
+  if (!fieldId) return report;
+  try {
+    const fieldReport = await fetchFieldReport(fieldId);
+    const fieldName = String(fieldReport.field?.field_name ?? "").trim();
+    return fieldName ? ({ ...report, field_name: fieldName } as OperationReportV1) : report;
+  } catch {
+    return report;
+  }
+}
+
 export async function fetchOperationReport(operationId: string): Promise<OperationReportV1> {
   const res = await apiRequest<OperationReportSingleResponseV1 | OperationReportV1>(withQuery(`/api/v1/reports/operation/${encodeURIComponent(operationId)}`));
-  return unwrapOperationReport(res);
+  return hydrateOperationFieldName(unwrapOperationReport(res));
 }
 
 export async function fetchFieldReport(fieldId: string): Promise<FieldReportDetailV1> {
