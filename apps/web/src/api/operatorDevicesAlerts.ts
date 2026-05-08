@@ -66,6 +66,8 @@ export type OperatorAlertActionResult = {
 
 type AnyRecord = Record<string, any>;
 
+let operatorDevicesAlertsApiUnavailable = false;
+
 function text(value: unknown, fallback = ""): string {
   const raw = String(value ?? "").trim();
   if (!raw || raw === "--" || raw === "undefined" || raw === "null") return fallback;
@@ -252,6 +254,18 @@ async function fetchOptional(path: string): Promise<unknown | null> {
   }
 }
 
+async function fetchOfficialDevicesAlertsOptional(): Promise<unknown | null> {
+  if (operatorDevicesAlertsApiUnavailable) return null;
+  try {
+    const result = await apiRequestWithPolicy<unknown>(withQuery("/api/v1/operator/devices-alerts"), undefined, { allowedStatuses: [403, 404, 405, 422], silent: true, timeoutMs: 10000 });
+    if (result.ok) return result.data;
+    operatorDevicesAlertsApiUnavailable = true;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function parseActionFailure(status: number, bodyText: string): string {
   try {
     const parsed = JSON.parse(bodyText) as { message?: string; error?: string; reason?: string; code?: string };
@@ -286,7 +300,7 @@ export async function closeOperatorAlert(alertId: string): Promise<OperatorAlert
 }
 
 export async function fetchOperatorDevicesAlerts(): Promise<OperatorDevicesAlertsResponse> {
-  const official = await fetchOptional(withQuery("/api/v1/operator/devices-alerts"));
+  const official = await fetchOfficialDevicesAlertsOptional();
   const officialDevices = normalizeOfficialDevices(official);
   const officialAlerts = normalizeOfficialAlerts(official);
   if (officialDevices.length > 0 || officialAlerts.length > 0) {
@@ -325,7 +339,7 @@ export async function fetchOperatorDevicesAlerts(): Promise<OperatorDevicesAlert
       alerts: fallbackAlerts,
       ackCloseReady: false,
       revokeVisible: false,
-      message: "当前展示 devices / alerts / reports aggregate 包装后的有限设备与告警中心，非完整 operator devices-alerts；ACK/close 只读。",
+      message: "operator devices-alerts 未接入，当前展示 devices / alerts / reports aggregate 包装后的有限设备与告警中心；ACK/close 只读。",
     };
   }
 
@@ -337,6 +351,6 @@ export async function fetchOperatorDevicesAlerts(): Promise<OperatorDevicesAlert
     alerts: [],
     ackCloseReady: false,
     revokeVisible: false,
-    message: "暂无设备或告警数据。",
+    message: operatorDevicesAlertsApiUnavailable ? "operator devices-alerts 未接入，且暂无 fallback 设备或告警数据。" : "暂无设备或告警数据。",
   };
 }
