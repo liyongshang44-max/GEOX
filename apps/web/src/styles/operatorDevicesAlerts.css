@@ -1,0 +1,225 @@
+.operatorDevicesAlertsPage {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.operatorDevicesGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(320px, 1fr));
+  gap: 14px;
+  min-width: 0;
+}
+
+.operatorDevicesSection {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 20px;
+  background: #ffffff;
+  border: 1px solid #e2e8d8;
+  min-width: 0;
+}
+
+.operatorDevicesSectionHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.operatorDevicesSectionHead h2 {
+  margin: 0 0 5px;
+  font-size: 20px;
+  color: #132016;
+}
+
+.operatorDevicesSectionHead p {
+  margin: 0;
+  color: #64715f;
+  line-height: 1.45;
+}
+
+.operatorDevicesSectionHead > span {
+  flex: 0 0 auto;
+  min-width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #132016;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.operatorDevicesList {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.operatorDeviceCard,
+.operatorAlertCard {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid #edf2e5;
+  background: #fbfcf8;
+  min-width: 0;
+}
+
+.operatorDeviceHead,
+.operatorAlertHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.operatorDeviceHead h3,
+.operatorAlertHead h3 {
+  margin: 0 0 5px;
+  color: #132016;
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+
+.operatorDeviceHead p,
+.operatorAlertHead p {
+  margin: 0;
+  color: #455246;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.operatorDeviceStatus,
+.operatorAlertStatus {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  border: 1px solid #dbeafe;
+  background: #eff6ff;
+  color: #1e40af;
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.operatorDeviceStatus.success,
+.operatorAlertStatus.success {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #047857;
+}
+
+.operatorDeviceStatus.warning,
+.operatorAlertStatus.warning {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.operatorDeviceStatus.danger,
+.operatorAlertStatus.danger {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.operatorDeviceMeta,
+.operatorAlertMeta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.operatorDeviceMeta > div,
+.operatorAlertMeta > div {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #edf2e5;
+  min-width: 0;
+}
+
+.operatorDeviceMeta span,
+.operatorAlertMeta span {
+  color: #64715f;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.operatorDeviceMeta strong,
+.operatorAlertMeta strong {
+  color: #132016;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.operatorDevicesNotice {
+  border-radius: 12px;
+  border: 1px solid #dbeafe;
+  background: #eff6ff;
+  color: #1e40af;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.operatorDevicesActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.operatorDevicesActions a,
+.operatorDevicesActions button {
+  border-radius: 999px;
+  padding: 7px 11px;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.operatorDevicesActions a {
+  background: #132016;
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.operatorDevicesActions button {
+  border: 1px solid #132016;
+  background: #132016;
+  color: #ffffff;
+}
+
+.operatorDevicesActions button:disabled {
+  cursor: not-allowed;
+  border-color: #d6ddcf;
+  background: #eef2e8;
+  color: #8a9689;
+}
+
+@media (max-width: 1100px) {
+  .operatorDevicesGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .operatorDeviceMeta,
+  .operatorAlertMeta {
+    grid-template-columns: 1fr;
+  }
+}
