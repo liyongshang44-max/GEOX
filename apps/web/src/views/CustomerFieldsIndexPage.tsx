@@ -7,22 +7,14 @@ import "../styles/customerFields.css";
 
 export default function CustomerFieldsIndexPage(): React.ReactElement {
   const [vm, setVm] = React.useState<CustomerFieldsIndexVm | null>(null);
-  const [error, setError] = React.useState("");
   const [selectedRisk, setSelectedRisk] = React.useState<CustomerFieldRiskFilter>("ALL");
 
   React.useEffect(() => {
     let alive = true;
-    void fetchCustomerFields()
-      .then((response) => {
-        if (!alive) return;
-        setVm(buildCustomerFieldsIndexVm(response));
-        setError("");
-      })
-      .catch(() => {
-        if (!alive) return;
-        setVm(null);
-        setError("暂未获取到可展示的地块数据，请稍后刷新。");
-      });
+    void fetchCustomerFields().then((response) => {
+      if (!alive) return;
+      setVm(buildCustomerFieldsIndexVm(response));
+    });
     return () => {
       alive = false;
     };
@@ -36,9 +28,9 @@ export default function CustomerFieldsIndexPage(): React.ReactElement {
         <div>
           <div className="customerEyebrow">GEOX / 地块列表</div>
           <h2 className="customerTitle">授权地块</h2>
-          <p className="customerSubtitle">{vm?.subtitle ?? "查看授权地块、风险状态与地块报告入口。"}</p>
+          <p className="customerSubtitle">{vm?.subtitle ?? "地块列表加载中。"}</p>
           <p className="customerMetricLabel">数据更新时间：{vm?.generatedAtText ?? "暂无更新时间"}</p>
-          {vm?.isFallback ? <p className="customerScopeWarning">{vm.dataScopeNote || "当前展示近期/可见地块，非完整授权列表"}</p> : null}
+          {vm?.dataScopeNote ? <p className="customerScopeWarning">{vm.dataScopeNote}</p> : null}
         </div>
         <Link className="customerButton" to="/customer/dashboard">返回总览</Link>
       </section>
@@ -49,7 +41,7 @@ export default function CustomerFieldsIndexPage(): React.ReactElement {
             <h3 className="customerCardTitle">地块风险列表</h3>
             <p className="customerMetricLabel">点击地块卡片进入地块病历。</p>
           </div>
-          {vm?.isFallback ? <span className="customerPill">P1-A Preview</span> : <span className="customerPill">正式列表</span>}
+          {vm ? <span className="customerPill">{vm.scopeBadgeText}</span> : null}
         </div>
 
         {vm ? (
@@ -86,7 +78,6 @@ export default function CustomerFieldsIndexPage(): React.ReactElement {
         ) : vm ? (
           <CustomerEmptyState vm={vm.emptyState} />
         ) : null}
-        {error ? <p className="muted customerSpacingTopMd">{error}</p> : null}
       </section>
     </div>
   );
