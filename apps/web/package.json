@@ -7,7 +7,7 @@
     "dev": "vite --config vite.config.ts --host 0.0.0.0 --port 5173",
     "build": "vite build --config vite.config.ts",
     "typecheck": "pnpm -w exec tsc --noEmit -p apps/web/tsconfig.json",
-    "lint": "pnpm run lint:views-boundary && pnpm run lint:customer-facing-boundary && pnpm run lint:operation-status-convergence",
+    "lint": "pnpm run lint:views-boundary && pnpm run lint:customer-facing-boundary && pnpm run lint:operation-status-convergence && pnpm run check:operator-boundary",
     "lint:views-boundary": "node ./scripts/check-views-boundary.mjs",
     "lint:operation-status-convergence": "node ./scripts/check-operation-status-convergence.mjs",
     "lint:operation-detail-hooks": "pnpm exec eslint --max-warnings 0 --rule \"@typescript-eslint/no-explicit-any: off\" --rule \"@typescript-eslint/no-unused-vars: off\" src/features/operations/pages/OperationDetailPage.tsx",
@@ -15,7 +15,8 @@
     "check:customer-boundary": "node ./scripts/check-customer-boundary.mjs",
     "check:customer-export-same-source": "node ./scripts/check-customer-export-same-source.mjs",
     "check:customer-routes": "node ./scripts/check-customer-routes.mjs",
-    "check:no-raw-enum-customer": "node ./scripts/check-no-raw-enum-customer.mjs"
+    "check:no-raw-enum-customer": "node ./scripts/check-no-raw-enum-customer.mjs",
+    "check:operator-boundary": "node ./scripts/check-operator-boundary.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

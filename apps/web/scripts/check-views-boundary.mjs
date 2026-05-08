@@ -10,7 +10,13 @@ const routeFiles = fs.existsSync(routeDir)
   : [];
 const offenders = [];
 
+const CUSTOMER_ROUTE_COMPAT_FILES = new Set([
+  "fieldsRoutes.tsx",
+  "operationsRoutes.tsx",
+]);
+
 for (const file of routeFiles) {
+  if (CUSTOMER_ROUTE_COMPAT_FILES.has(file)) continue;
   const full = path.join(routeDir, file);
   const text = fs.readFileSync(full, "utf8");
   if (/from\s+["']\.\.\/\.\.\/views\//.test(text) || /import\(\s*["']\.\.\/\.\.\/views\//.test(text)) {

@@ -1,0 +1,615 @@
+.operatorShell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  background: #f6f7f4;
+  color: #132016;
+}
+
+.operatorSidebar {
+  min-height: 100vh;
+  padding: 22px 18px;
+  background: #132016;
+  color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.operatorBrand {
+  display: grid;
+  gap: 4px;
+  padding: 10px 8px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.operatorBrand span {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  color: #8fd6a3;
+}
+
+.operatorBrand strong {
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.operatorNav {
+  display: grid;
+  gap: 8px;
+}
+
+.operatorNavItem {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 14px;
+  color: rgba(248, 250, 252, 0.82);
+  text-decoration: none;
+  border: 1px solid transparent;
+}
+
+.operatorNavItem:hover,
+.operatorNavItem.isActive {
+  color: #ffffff;
+  background: rgba(143, 214, 163, 0.14);
+  border-color: rgba(143, 214, 163, 0.32);
+}
+
+.operatorNavItem span {
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.operatorNavItem small {
+  color: rgba(248, 250, 252, 0.62);
+  line-height: 1.4;
+}
+
+.operatorBoundaryNote {
+  margin-top: auto;
+  padding: 13px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(248, 250, 252, 0.72);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.operatorMain {
+  min-width: 0;
+  padding: 28px;
+  display: grid;
+  align-content: start;
+  gap: 18px;
+}
+
+.operatorHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 24px;
+  border-radius: 24px;
+  background: #ffffff;
+  border: 1px solid #e2e8d8;
+  box-shadow: 0 16px 48px rgba(19, 32, 22, 0.08);
+}
+
+.operatorEyebrow {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #047857;
+}
+
+.operatorHeader h1 {
+  margin: 8px 0 6px;
+  font-size: clamp(28px, 3.2vw, 44px);
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+
+.operatorHeader p {
+  margin: 0;
+  color: #56645a;
+  line-height: 1.55;
+  max-width: 780px;
+}
+
+.operatorHeaderBadge {
+  align-self: flex-start;
+  border-radius: 999px;
+  padding: 7px 11px;
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #047857;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.operatorContent {
+  min-width: 0;
+}
+
+.operatorEmptyState {
+  display: grid;
+  gap: 8px;
+  padding: 22px;
+  border-radius: 22px;
+  background: #ffffff;
+  border: 1px solid #e2e8d8;
+  box-shadow: 0 12px 36px rgba(19, 32, 22, 0.06);
+}
+
+.operatorEmptyState strong {
+  font-size: 20px;
+  color: #132016;
+}
+
+.operatorEmptyState p,
+.operatorEmptyState small {
+  margin: 0;
+  color: #56645a;
+  line-height: 1.55;
+}
+
+.operatorEmptyState small {
+  color: #047857;
+  font-weight: 800;
+}
+
+.operatorWorkbench,
+.operatorApprovalsPage,
+.operatorDispatchPage {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.operatorWorkbenchSummary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.operatorWorkbenchSummary > div {
+  display: grid;
+  gap: 5px;
+  padding: 16px;
+  border-radius: 18px;
+  background: #ffffff;
+  border: 1px solid #e2e8d8;
+  min-width: 0;
+}
+
+.operatorWorkbenchSummary span {
+  color: #64715f;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.operatorWorkbenchSummary strong {
+  font-size: 22px;
+  line-height: 1.1;
+  color: #132016;
+  overflow-wrap: anywhere;
+}
+
+.operatorScopeWarning {
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.operatorQueueGrid,
+.operatorApprovalGrid,
+.operatorDispatchGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(320px, 1fr));
+  gap: 14px;
+  min-width: 0;
+}
+
+.operatorQueueCard,
+.operatorApprovalSection,
+.operatorDispatchGroup {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 20px;
+  background: #ffffff;
+  border: 1px solid #e2e8d8;
+  min-width: 0;
+}
+
+.operatorQueueCard.hasItems {
+  border-color: #bbf7d0;
+}
+
+.operatorQueueHead,
+.operatorApprovalSectionHead,
+.operatorDispatchGroupHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.operatorQueueHead h2,
+.operatorApprovalSectionHead h2,
+.operatorDispatchGroupHead h2 {
+  margin: 0 0 5px;
+  font-size: 20px;
+  color: #132016;
+}
+
+.operatorQueueHead p,
+.operatorApprovalSectionHead p,
+.operatorDispatchGroupHead p {
+  margin: 0;
+  color: #64715f;
+  line-height: 1.45;
+}
+
+.operatorQueueHead > span,
+.operatorApprovalSectionHead > span,
+.operatorDispatchGroupHead > span {
+  flex: 0 0 auto;
+  min-width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #132016;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.operatorTodoList,
+.operatorApprovalList,
+.operatorDispatchList {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.operatorTodoItem,
+.operatorApprovalCard,
+.operatorDispatchRow {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid #edf2e5;
+  background: #fbfcf8;
+  min-width: 0;
+}
+
+.operatorTodoItem {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.operatorTodoMain {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.operatorTodoMain strong,
+.operatorTodoMain p,
+.operatorTodoMain small,
+.operatorApprovalCard h3,
+.operatorApprovalCard p,
+.operatorApprovalCard strong,
+.operatorApprovalCard small,
+.operatorDispatchRow h3,
+.operatorDispatchRow p,
+.operatorDispatchRow strong,
+.operatorDispatchRow small {
+  overflow-wrap: anywhere;
+}
+
+.operatorTodoMain strong {
+  color: #132016;
+}
+
+.operatorTodoMain p {
+  margin: 0;
+  color: #455246;
+  line-height: 1.45;
+}
+
+.operatorTodoMain small {
+  color: #64715f;
+  line-height: 1.45;
+}
+
+.operatorTodoActions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.operatorTodoActions a {
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #132016;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.operatorTodoActions a + a {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #bbf7d0;
+}
+
+.operatorQueueEmpty {
+  padding: 12px;
+  border-radius: 14px;
+  background: #f8faf5;
+  color: #64715f;
+  font-size: 13px;
+}
+
+.operatorApprovalCardHead,
+.operatorDispatchRowHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.operatorApprovalCardHead h3,
+.operatorDispatchRowHead h3 {
+  margin: 0 0 5px;
+  color: #132016;
+  font-size: 17px;
+}
+
+.operatorApprovalCardHead p,
+.operatorDispatchRowHead p {
+  margin: 0;
+  color: #455246;
+  line-height: 1.45;
+}
+
+.operatorRiskBadge,
+.operatorDispatchStatus {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  border: 1px solid #dbeafe;
+  background: #eff6ff;
+  color: #1e40af;
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.operatorRiskBadge.warning,
+.operatorDispatchStatus.warning {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.operatorRiskBadge.danger,
+.operatorDispatchStatus.danger {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.operatorDispatchStatus.success {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #047857;
+}
+
+.operatorApprovalMetaGrid,
+.operatorDispatchMeta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.operatorApprovalMetaGrid > div,
+.operatorDispatchMeta > div,
+.operatorDispatchFlow > div {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #edf2e5;
+  min-width: 0;
+}
+
+.operatorApprovalMetaGrid span,
+.operatorPrescriptionBox span,
+.operatorDispatchMeta span,
+.operatorDispatchFlow span {
+  color: #64715f;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.operatorApprovalMetaGrid strong,
+.operatorPrescriptionBox strong,
+.operatorDispatchMeta strong,
+.operatorDispatchFlow strong {
+  color: #132016;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.operatorPrescriptionBox {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid #edf2e5;
+  min-width: 0;
+}
+
+.operatorPrescriptionBox > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.operatorPrescriptionBox small {
+  color: #64715f;
+}
+
+.operatorPrescriptionBox button,
+.operatorApprovalDecisionActions button,
+.operatorDispatchActions button {
+  border-radius: 999px;
+  border: 1px solid #132016;
+  background: #132016;
+  color: #ffffff;
+  padding: 7px 11px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.operatorPrescriptionBox button:disabled,
+.operatorApprovalDecisionActions button:disabled,
+.operatorDispatchActions button:disabled {
+  cursor: not-allowed;
+  border-color: #d6ddcf;
+  background: #eef2e8;
+  color: #8a9689;
+}
+
+.operatorApprovalDecisionPanel {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid #e2e8d8;
+  background: #ffffff;
+}
+
+.operatorApprovalDecisionNotice {
+  border-radius: 12px;
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.operatorApprovalDecisionActions,
+.operatorDispatchActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.operatorApprovalDecisionPanel small {
+  color: #64715f;
+  line-height: 1.45;
+}
+
+.operatorDispatchFlow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.operatorDispatchNotice {
+  border-radius: 12px;
+  border: 1px solid #dbeafe;
+  background: #eff6ff;
+  color: #1e40af;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.operatorDispatchActions a {
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: #132016;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.operatorDispatchActions a + a {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #bbf7d0;
+}
+
+@media (max-width: 1100px) {
+  .operatorQueueGrid,
+  .operatorApprovalGrid,
+  .operatorDispatchGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .operatorDispatchFlow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .operatorShell {
+    grid-template-columns: 1fr;
+  }
+
+  .operatorSidebar {
+    min-height: auto;
+  }
+
+  .operatorHeader {
+    flex-direction: column;
+  }
+
+  .operatorWorkbenchSummary,
+  .operatorApprovalMetaGrid,
+  .operatorDispatchMeta,
+  .operatorDispatchFlow {
+    grid-template-columns: 1fr;
+  }
+
+  .operatorTodoItem,
+  .operatorPrescriptionBox {
+    grid-template-columns: 1fr;
+  }
+
+  .operatorTodoActions {
+    align-items: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}

@@ -1,4 +1,5 @@
 import React from "react";
+import { useLocation } from "react-router-dom";
 import SideNav from "./SideNav";
 import TopBar, { type TopBarProps } from "./TopBar";
 
@@ -8,6 +9,11 @@ type AppShellProps = {
 };
 
 export default function AppShell({ topBar, children }: AppShellProps): React.ReactElement {
+  const location = useLocation();
+  if (location.pathname.startsWith("/operator")) {
+    return <>{children}</>;
+  }
+
   return (
     <div className="newAppShell">
       <SideNav />

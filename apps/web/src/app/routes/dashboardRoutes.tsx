@@ -1,6 +1,7 @@
 import React from "react";
 import { Navigate, Route } from "react-router-dom";
 import RouteErrorBoundary from "../errors/RouteErrorBoundary";
+import { renderOperatorRoutes } from "./operatorRoutes";
 
 const CommercialDashboardPage = React.lazy(() => import("../../features/dashboard/pages/CommercialDashboardPage"));
 const ManualExecutionQualityAnalysisPage = React.lazy(() => import("../../features/dashboard/pages/ManualExecutionQualityAnalysisPage"));
@@ -26,5 +27,6 @@ export function renderDashboardRoutes(expert: boolean): React.ReactElement[] {
         </RouteErrorBoundary>
       }
     />,
+    ...renderOperatorRoutes(),
   ];
 }
