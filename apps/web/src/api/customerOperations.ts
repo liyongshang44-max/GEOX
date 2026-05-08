@@ -1,6 +1,8 @@
 import { apiRequestWithPolicy, withQuery } from "./client";
 import { fetchCustomerDashboardAggregate, type CustomerDashboardAggregateV1 } from "./customerReports";
 
+export type CustomerOperationsDataScope = "OFFICIAL_CUSTOMER_API" | "FALLBACK_RECENT_ONLY" | "ERROR_EMPTY";
+
 export type CustomerOperationListItem = {
   operation_id?: string | null;
   operation_plan_id?: string | null;
@@ -20,7 +22,8 @@ export type CustomerOperationListItem = {
 
 export type CustomerOperationsListResponse = {
   ok?: boolean;
-  source: "customer_operations_api" | "dashboard_aggregate_fallback";
+  source: "customer_operations_api" | "dashboard_aggregate_fallback" | "empty_error_state";
+  dataScope: CustomerOperationsDataScope;
   is_fallback: boolean;
   generated_at?: string | null;
   operations: CustomerOperationListItem[];
@@ -72,28 +75,41 @@ function toFallbackOperations(aggregate: CustomerDashboardAggregateV1): Customer
 }
 
 export async function fetchCustomerOperations(): Promise<CustomerOperationsListResponse> {
-  const direct = await apiRequestWithPolicy<CustomerOperationsApiEnvelope>(
-    withQuery("/api/v1/customer/operations"),
-    undefined,
-    { allowedStatuses: [404, 405, 422], silent: true, timeoutMs: 10000 }
-  );
+  try {
+    const direct = await apiRequestWithPolicy<CustomerOperationsApiEnvelope>(
+      withQuery("/api/v1/customer/operations"),
+      undefined,
+      { allowedStatuses: [404, 405, 422], silent: true, timeoutMs: 10000 }
+    );
 
-  if (direct.ok) {
-    const normalized = normalizeOperationsPayload(direct.data);
+    if (direct.ok) {
+      const normalized = normalizeOperationsPayload(direct.data);
+      return {
+        source: "customer_operations_api",
+        dataScope: "OFFICIAL_CUSTOMER_API",
+        is_fallback: false,
+        generated_at: normalized.generatedAt ?? new Date().toISOString(),
+        operations: normalized.operations,
+      };
+    }
+
+    const aggregate = await fetchCustomerDashboardAggregate({ timeRange: "30d" });
     return {
-      source: "customer_operations_api",
-      is_fallback: false,
-      generated_at: normalized.generatedAt ?? new Date().toISOString(),
-      operations: normalized.operations,
+      source: "dashboard_aggregate_fallback",
+      dataScope: "FALLBACK_RECENT_ONLY",
+      is_fallback: true,
+      generated_at: (aggregate as any).generated_at ?? new Date().toISOString(),
+      operations: toFallbackOperations(aggregate),
+      data_scope_note: "当前仅展示近期作业，非全部作业列表",
+    };
+  } catch {
+    return {
+      source: "empty_error_state",
+      dataScope: "ERROR_EMPTY",
+      is_fallback: true,
+      generated_at: new Date().toISOString(),
+      operations: [],
+      data_scope_note: "作业列表暂不可用，请稍后刷新",
     };
   }
-
-  const aggregate = await fetchCustomerDashboardAggregate({ timeRange: "30d" });
-  return {
-    source: "dashboard_aggregate_fallback",
-    is_fallback: true,
-    generated_at: (aggregate as any).generated_at ?? new Date().toISOString(),
-    operations: toFallbackOperations(aggregate),
-    data_scope_note: "当前仅展示近期作业，非全部作业列表",
-  };
 }
