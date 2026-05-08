@@ -1,162 +1,108 @@
 # CUSTOMER_EXPORT_SAME_SOURCE_CHECK_V1
 
-> 状态：CURRENT / P0 Gate 说明  
-> 适用范围：GEOX Customer export 页面与客户页面同源验收  
-> 目标读者：前端开发、测试、交付负责人
+状态：P1-A0 export same-source governance baseline.
+目的：确保客户页面与导出报告使用同一 API、同一 ViewModel、同一 label、同一空态，避免导出页形成第二套业务结论。
 
-## 1. 文档目的
-
-本文定义 GEOX Customer 前端 P0 的导出同源规则。
-
-P0 要求：
+## 1. 核心原则
 
 ```text
-页面看到什么，导出报告就应表达同一套结论。
-页面和导出必须使用同一 ViewModel、同一 label、同一空态、同一数据源。
+页面看到什么，导出报告就表达同一套客户结论。
 ```
 
 禁止出现：
 
 ```text
-页面一套状态判断，导出一套状态判断。
-页面显示“验收通过”，导出显示 raw SUCCESS/PASS。
-页面显示“暂无 ROI”，导出伪造节水收益。
-页面显示“暂无地块记忆”，导出写“系统已学习”。
+页面显示“暂无可量化价值记录”，导出伪造节水收益。
+页面显示“暂无可展示的田块记忆”，导出写“系统已学习”。
+页面显示“已有证据记录，暂无证据包摘要”，导出写“证据包已下载”。
+页面显示客户化状态，导出显示 SUCCESS / PASS / PENDING raw enum。
 ```
 
 ## 2. 同源对象
 
-P0 有三类 export。
+| 页面 | Export 页面 | 必须复用 API | 必须复用 ViewModel | 当前状态 |
+|---|---|---|---|---|
+| `CustomerDashboardPage` | `CustomerDashboardExportPage` | `fetchCustomerDashboardAggregate` | `buildCustomerDashboardVm` | 已存在 |
+| `FieldReportPage` | `FieldReportExportPage` | `fetchFieldReport` | `buildFieldReportVm` | 已存在 |
+| `OperationReportPage` | `CustomerReportExportPage` | `fetchOperationReport` | `buildOperationReportVm` | 已存在 |
 
-| 页面 | Export 页面 | 必须复用 ViewModel | 数据源 |
-|---|---|---|---|
-| `CustomerDashboardPage` | `CustomerDashboardExportPage` | `buildCustomerDashboardVm` | `fetchCustomerDashboardAggregate` |
-| `FieldReportPage` | `FieldReportExportPage` | `buildFieldReportVm` | `fetchFieldReport` |
-| `OperationReportPage` | `CustomerReportExportPage` | `buildOperationReportVm` | `fetchOperationReport` |
-
-说明：
-
-- `/customer/operations/:operationId/export` 的正式 export 文件是 `CustomerReportExportPage.tsx`。
-- `OperationReportExportPage.tsx` 如存在，只能作为兼容 re-export：
+兼容文件 `OperationReportExportPage.tsx` 如存在，只能作为薄 re-export：
 
 ```ts
 export { default } from "./CustomerReportExportPage";
 ```
 
-## 3. Dashboard Export 同源规则
+## 3. Dashboard Export 要求
 
-`CustomerDashboardExportPage` 必须：
+Dashboard export 必须：
 
-```text
-调用 fetchCustomerDashboardAggregate()
-调用 buildCustomerDashboardVm()
-使用 DashboardExportBlocks 或等价同源渲染组件
-```
+- 与 `/customer/dashboard` 使用同一 aggregate API。
+- 与页面使用同一 VM。
+- 与页面使用同一客户标签和空态。
 
 禁止：
 
 ```text
 重新计算 KPI
-重新命名 open alerts 为“待审批处方”
-显示“在线地块 / 总地块”
-显示“今日待决策”
-直接调用 /api/v1/reports/customer-dashboard/aggregate 之外的调试接口
-直接调用 raw facts / admin / healthz / openapi
+重新拼风险地块
+显示未在页面中出现的假地图、假天气、假设备在线率
+直接调用 admin/debug/raw facts/raw telemetry
 ```
 
-Dashboard 页面和 export 必须保持一致：
+## 4. Field Export 要求
 
-```text
-KPI 文案一致
-风险地块一致
-待处理事项一致
-设备摘要一致
-ROI 空态一致
-近期作业摘要一致
-```
+Field export 必须：
 
-## 4. Field Export 同源规则
-
-`FieldReportExportPage` 必须：
-
-```text
-调用 fetchFieldReport(fieldId)
-调用 buildFieldReportVm(report)
-使用 FieldExportBlocks 或等价同源渲染组件
-```
+- 与 `/customer/fields/:fieldId` 使用同一 field report API。
+- 与页面使用 `buildFieldReportVm`。
+- field_name 优先。
+- 无 ROI / 田块记忆 / geometry 时使用同一正式空态。
 
 禁止：
 
 ```text
-重新计算风险等级
-重新拼 recent operations
-批量请求 operation reports 拼 Field Memory
-用 operation count / device count / ROI count 推导 Field Memory
-显示假地图
-显示假天气
+用 field_id 作为主标题
+伪造 geometry
+伪造地图
 伪造 ROI
+伪造田块记忆
+显示 FieldReport / Field Memory 英文工程直出
 ```
 
-Field 页面和 export 必须保持一致：
+## 5. Operation Export 要求
 
-```text
-地块名称一致
-风险等级一致
-诊断结论一致
-近期作业一致
-设备摘要一致
-ROI 摘要或空态一致
-Field Memory 摘要或空态一致
-```
-
-## 5. Operation Export 同源规则
-
-`CustomerReportExportPage` 在 operation 模式下必须：
-
-```text
-调用 fetchOperationReport(operationId)
-调用 buildOperationReportVm(report)
-使用 OperationExportBlocks 或等价同源渲染组件
-```
-
-OperationReport export 必须展示与页面同源的八段闭环：
+Operation export 必须与 `/customer/operations/:operationId` 保持八段闭环一致：
 
 ```text
 建议
-处方合同
+处方
 审批
-执行 / as-executed
+执行
 证据
 验收
-ROI
-田块记忆
+价值记录
+记忆
 ```
+
+证据段必须遵守三态：
+
+| 状态 | 文案 |
+|---|---|
+| 无证据 | 暂无有效证据。 |
+| 有证据但无证据包摘要 | 已有证据记录，暂无证据包摘要。 |
+| 有证据包摘要 | 证据包已形成，可查看摘要。 |
 
 禁止：
 
 ```text
-回退到旧六段结构
-重新写 “为什么做 / 谁批准 / 怎么执行 / 有什么证据 / 验收结果 / 最终结论” 的旧导出
-直接显示 DONE / MISSING / PENDING / AVAILABLE
-主视图显示 Skill trace
-伪造 evidence-pack-summary
-伪造 ROI
-伪造 Field Memory
+伪造 manifest
+伪造 sha256
+显示裸文件路径
+显示假下载按钮
+operation evidence summary API 未接入前显示“下载证据包”
 ```
 
-如缺数据，必须显示同源空态：
-
-```text
-未形成正式处方
-审批记录暂不可用
-暂无实际执行记录
-暂无证据包摘要
-验收结果尚未生成
-暂无可量化价值记录
-暂无可展示的地块记忆
-```
-
-## 6. Label 同源规则
+## 6. Label 同源要求
 
 页面和导出必须共用：
 
@@ -165,23 +111,7 @@ apps/web/src/lib/customerLabels.ts
 apps/web/src/lib/customerEmptyStates.ts
 ```
 
-必须共用或等价复用：
-
-```text
-customerStatusLabel
-customerRiskLabel
-customerAcceptanceLabel
-customerEvidenceLabel
-customerRoiLabel
-customerFieldMemoryLabel
-customerPrescriptionLabel
-customerExecutionLabel
-customerSectionStatusLabel
-customerTimelineStatusLabel
-getCustomerEmptyState
-```
-
-禁止在 export 页面定义：
+禁止 export 页面自定义：
 
 ```text
 STATUS_MAP
@@ -191,9 +121,11 @@ ROI_MAP
 FIELD_MEMORY_MAP
 ```
 
-## 7. API 同源规则
+技术折叠字段如进入导出或技术附录，必须使用 `labelCustomerTechnicalField(...)` 或等价映射，不能直接显示 raw key。
 
-Export 页面只能使用 customer API adapter：
+## 7. API 同源要求
+
+Export 页面只允许通过客户 adapter 取数：
 
 ```text
 fetchCustomerDashboardAggregate
@@ -201,150 +133,46 @@ fetchFieldReport
 fetchOperationReport
 ```
 
-禁止 export 页面 import：
+禁止 export 页面直接调用：
 
 ```text
-../api/reports
-../api/admin
-../api/debug
-../api/devtools
-```
-
-禁止 export 页面直接引用：
-
-```text
-/api/v1/facts
-/api/admin
+/api/admin/*
+/api/debug/*
+/api/v1/facts/*
+/api/v1/raw-telemetry/*
 /healthz
-/openapi
-legacy/control
-raw_telemetry
-raw facts
+/api/v1/openapi.json
+legacy control API
+device credential APIs
 ```
 
-## 8. Gate 脚本
+## 8. Gate 脚本要求
 
-脚本：
+脚本目标文件：
 
 ```text
 apps/web/scripts/check-customer-export-same-source.mjs
 ```
 
-package script：
+建议 package script：
 
 ```bash
 pnpm --filter @geox/web run check:customer-export-same-source
 ```
 
-脚本必须检查：
+脚本至少检查：
 
-```text
-CustomerDashboardExportPage 必须 import buildCustomerDashboardVm
-FieldReportExportPage 必须 import buildFieldReportVm
-CustomerReportExportPage 必须 import buildOperationReportVm
-Export 页面不得定义 STATUS_MAP / RISK_MAP / ACCEPTANCE_MAP
-Export 页面不得 import raw/debug/admin/devtools API
-OperationReportExportPage 如存在，必须纯 re-export 到 CustomerReportExportPage
-```
+- Dashboard export import `buildCustomerDashboardVm`。
+- Field export import `buildFieldReportVm`。
+- Operation export import `buildOperationReportVm`。
+- Export 页面不得定义 `STATUS_MAP` / `RISK_MAP` / `ACCEPTANCE_MAP`。
+- Export 页面不得 import admin/debug/devtools/raw API。
+- `OperationReportExportPage.tsx` 如存在，必须 re-export 到 `CustomerReportExportPage`。
 
-## 9. 推荐脚本逻辑
+## 9. P1-A0 验收标准
 
-`check-customer-export-same-source.mjs` 至少应包含以下检查：
-
-```text
-requiredImports:
-  src/views/CustomerDashboardExportPage.tsx → buildCustomerDashboardVm
-  src/views/FieldReportExportPage.tsx → buildFieldReportVm
-  src/views/CustomerReportExportPage.tsx → buildOperationReportVm
-
-forbiddenMapSymbols:
-  STATUS_MAP
-  RISK_MAP
-  ACCEPTANCE_MAP
-
-forbiddenApiTokens:
-  ../api/reports
-  ../api/admin
-  ../api/debug
-  ../api/devtools
-  raw_telemetry
-  legacy/control
-
-optionalCompatOperationExport:
-  src/views/OperationReportExportPage.tsx
-  if exists, must be pure:
-    export { default } from "./CustomerReportExportPage";
-```
-
-脚本发现违规必须 `process.exit(1)`。
-
-## 10. 人工验收清单
-
-Dashboard export：
-
-```text
-/customer/dashboard 与 /customer/export KPI 一致
-不显示“在线地块 / 总地块”
-不显示“今日待决策”
-不显示假天气
-不显示假地图
-```
-
-Field export：
-
-```text
-/customer/fields/:fieldId 与 /customer/fields/:fieldId/export 风险一致
-ROI 有则一致，无则同为空态
-Field Memory 有则一致，无则同为空态
-不出现天气卡
-不出现 fake map
-```
-
-Operation export：
-
-```text
-/customer/operations/:operationId 与 /customer/operations/:operationId/export 均为八段闭环
-八段标题一致
-八段状态一致
-八段空态一致
-技术详情不抢主视图
-不出现旧六段 export 文件逻辑
-```
-
-## 11. 失败示例
-
-以下情况必须判失败：
-
-```text
-Export 页面 import ../api/reports
-Export 页面定义 STATUS_MAP
-Export 页面定义 RISK_MAP
-Export 页面定义 ACCEPTANCE_MAP
-OperationReportExportPage 是旧六段完整实现
-Dashboard export 显示 P0 不允许 KPI
-Field export 显示假 Field Memory
-Operation export 显示 DONE / MISSING / PENDING raw 状态
-```
-
-## 12. 通过标准
-
-同源检查通过必须同时满足：
-
-```bash
-pnpm --filter @geox/web run check:customer-export-same-source
-pnpm --filter @geox/web run check:customer-boundary
-pnpm --filter @geox/web run lint:operation-status-convergence
-pnpm --filter @geox/web run typecheck
-pnpm --filter @geox/web run build
-```
-
-并且人工确认：
-
-```text
-页面与导出的客户文案一致
-页面与导出的空态一致
-页面与导出的客户结论一致
-Export 不暴露 raw/debug/admin/healthz/OpenAPI
-```
-
-满足以上条件后，P0 customer export 可判定为交付通过。
+- 三类 export 文档同源要求明确。
+- 未接入 evidence package summary/download API 时不得写成现有能力。
+- 导出页不得出现 raw enum、raw JSON、stack trace。
+- 页面和导出的客户空态一致。
+- 页面和导出的状态文案一致。
