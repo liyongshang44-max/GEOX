@@ -52,6 +52,74 @@
   font-weight: 800;
 }
 
+.customerReportsCenterGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.customerReportsGroupCard {
+  min-height: 260px;
+}
+
+.customerReportEntryList {
+  display: grid;
+  gap: 10px;
+}
+
+.customerReportEntry {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 14px;
+  border: 1px solid var(--customer-border);
+  border-radius: 16px;
+  background: #fff;
+  color: var(--customer-text);
+  text-decoration: none;
+}
+
+.customerReportEntry strong {
+  color: var(--customer-title);
+  font-size: 16px;
+}
+
+.customerReportEntry p {
+  margin: 6px 0 0;
+  color: var(--customer-muted);
+  line-height: 1.5;
+}
+
+.customerReportEntry small {
+  display: inline-flex;
+  margin-top: 6px;
+  color: var(--customer-muted);
+  font-size: 12px;
+}
+
+.customerReportEntry span {
+  flex: 0 0 auto;
+  border: 1px solid var(--customer-border);
+  border-radius: 999px;
+  padding: 4px 9px;
+  color: #047857;
+  background: #ecfdf5;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.customerReportEntry.isDisabled {
+  background: #f8fafc;
+  color: var(--customer-muted);
+}
+
+.customerReportEntry.isDisabled span {
+  color: #92400e;
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
 @media (max-width: 1180px) {
   .customerOperationRow {
     grid-template-columns: minmax(220px, 1.35fr) minmax(120px, .8fr) minmax(120px, .8fr) auto;
@@ -64,7 +132,8 @@
 }
 
 @media (max-width: 960px) {
-  .customerOperationRow {
+  .customerOperationRow,
+  .customerReportsCenterGrid {
     grid-template-columns: 1fr;
   }
 }
