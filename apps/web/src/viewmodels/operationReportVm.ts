@@ -2,7 +2,6 @@ import type { OperationReportV1 } from "../api/customerReports";
 import {
   CUSTOMER_LABELS,
   customerTimelineStatusLabel,
-  labelAcceptanceStatus,
   labelApprovalStatus,
   labelBooleanYesNo,
   labelConfidenceHint,
