@@ -29,7 +29,7 @@ const STRICT_CUSTOMER_PATTERNS = [
 ];
 
 const VM_PATTERNS = [
-  /^src\/viewmodels\/(customerDashboardVm|fieldReportVm|operationReportVm)\.ts$/,
+  /^src\/viewmodels\/(customerDashboardVm|customerFieldsIndexVm|fieldReportVm|operationReportVm)\.ts$/,
 ];
 
 const ALLOWED_FILES = [
