@@ -2,11 +2,11 @@ import React from "react";
 import { Navigate, Route } from "react-router-dom";
 import RouteErrorBoundary from "../errors/RouteErrorBoundary";
 
-const OperatorWorkbenchPage = React.lazy(() => import("../../views/operator/OperatorWorkbenchPage"));
-const OperatorApprovalsPage = React.lazy(() => import("../../views/operator/OperatorApprovalsPage"));
-const OperatorDispatchPage = React.lazy(() => import("../../views/operator/OperatorDispatchPage"));
-const OperatorAcceptancePage = React.lazy(() => import("../../views/operator/OperatorAcceptancePage"));
-const OperatorEvidencePage = React.lazy(() => import("../../views/operator/OperatorEvidencePage"));
+const OperatorWorkbenchPage = React.lazy(() => import("../../features/operator/pages/OperatorWorkbenchPage"));
+const OperatorApprovalsPage = React.lazy(() => import("../../features/operator/pages/OperatorApprovalsPage"));
+const OperatorDispatchPage = React.lazy(() => import("../../features/operator/pages/OperatorDispatchPage"));
+const OperatorAcceptancePage = React.lazy(() => import("../../features/operator/pages/OperatorAcceptancePage"));
+const OperatorEvidencePage = React.lazy(() => import("../../features/operator/pages/OperatorEvidencePage"));
 
 export function renderOperatorRoutes(): React.ReactElement[] {
   return [
