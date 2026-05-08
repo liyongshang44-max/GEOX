@@ -9,6 +9,7 @@ const OperatorAcceptancePage = React.lazy(() => import("../../features/operator/
 const OperatorEvidencePage = React.lazy(() => import("../../features/operator/pages/OperatorEvidencePage"));
 const OperatorDevicesAlertsPage = React.lazy(() => import("../../features/operator/pages/OperatorDevicesAlertsPage"));
 const OperatorRoiLedgerPage = React.lazy(() => import("../../features/operator/pages/OperatorRoiLedgerPage"));
+const OperatorFieldMemoryPage = React.lazy(() => import("../../features/operator/pages/OperatorFieldMemoryPage"));
 
 export function renderOperatorRoutes(): React.ReactElement[] {
   return [
@@ -20,5 +21,6 @@ export function renderOperatorRoutes(): React.ReactElement[] {
     <Route key="operator-evidence" path="/operator/evidence" element={<RouteErrorBoundary><OperatorEvidencePage /></RouteErrorBoundary>} />,
     <Route key="operator-devices-alerts" path="/operator/devices-alerts" element={<RouteErrorBoundary><OperatorDevicesAlertsPage /></RouteErrorBoundary>} />,
     <Route key="operator-roi-ledger" path="/operator/roi-ledger" element={<RouteErrorBoundary><OperatorRoiLedgerPage /></RouteErrorBoundary>} />,
+    <Route key="operator-field-memory" path="/operator/field-memory" element={<RouteErrorBoundary><OperatorFieldMemoryPage /></RouteErrorBoundary>} />,
   ];
 }
