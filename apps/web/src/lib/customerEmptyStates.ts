@@ -36,7 +36,7 @@ const EMPTY_STATES: Record<CustomerEmptyStateKey, CustomerEmptyState> = {
   NO_EVIDENCE: { title: "暂无有效证据", description: "当前缺少可用于验收的证据条目。", severity: "warning" },
   NO_ACCEPTANCE: { title: "暂无验收结论", description: "当前验收结果尚未形成。", severity: "warning" },
   WEATHER_UNAVAILABLE: { title: "天气数据不可用", description: "当前不展示天气卡，避免伪造天气信息。", severity: "info" },
-  MAP_UNAVAILABLE: { title: "暂无地块范围图", description: "暂无地块 geometry，当前以列表方式展示。", severity: "info" },
+  MAP_UNAVAILABLE: { title: "暂无地块范围图", description: "暂无地块范围数据，当前以列表方式展示。", severity: "info" },
 };
 
 export function getCustomerEmptyState(key: CustomerEmptyStateKey): CustomerEmptyState {
