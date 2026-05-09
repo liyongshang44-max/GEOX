@@ -409,6 +409,91 @@ function sanitizeStructured(value: unknown): unknown {
 }
 
 
+
+
+type DispatchStatus =
+  | "TASK_CREATED"
+  | "DISPATCH_PENDING"
+  | "DISPATCHED"
+  | "ACKED"
+  | "RECEIPT_PENDING"
+  | "EXECUTION_FAILED"
+  | "RECEIPT_RECEIVED"
+  | "UNKNOWN";
+
+function normalizeExecutionMode(value: unknown): "HUMAN" | "DEVICE" | "UNKNOWN" {
+  const raw = safeText(value).toUpperCase();
+  if (raw.includes("HUMAN") || raw.includes("MANUAL")) return "HUMAN";
+  if (raw.includes("DEVICE") || raw.includes("AUTO")) return "DEVICE";
+  return "UNKNOWN";
+}
+
+function normalizeDispatchStatus(task: Row, receipt: Row | null): DispatchStatus {
+  const raw = safeText(task.status ?? task.task_status ?? task.dispatch_status ?? task.state ?? task.final_status).toUpperCase();
+  const receiptStatus = safeText(receipt?.status ?? receipt?.result ?? receipt?.execution_status).toUpperCase();
+  if (receipt && ["FAILED", "FAIL", "ERROR"].some((x) => receiptStatus.includes(x))) return "EXECUTION_FAILED";
+  if (receipt) return "RECEIPT_RECEIVED";
+  if (["FAILED", "FAIL", "ERROR"].some((x) => raw.includes(x))) return "EXECUTION_FAILED";
+  if (raw.includes("ACK")) return "ACKED";
+  if (raw.includes("DISPATCHED") || raw.includes("ISSUED") || raw.includes("SENT")) return "DISPATCHED";
+  if (raw.includes("PENDING") && raw.includes("DISPATCH")) return "DISPATCH_PENDING";
+  if (raw.includes("CREATED") || raw.includes("NEW")) return "TASK_CREATED";
+  if (raw.includes("RECEIPT") && raw.includes("PENDING")) return "RECEIPT_PENDING";
+  return "UNKNOWN";
+}
+
+async function readMultiRows(pool: Pool, tables: string[], limit = 300): Promise<Row[]> {
+  const chunks = await Promise.all(tables.map((t) => readTenantRows(pool, t, limit)));
+  return chunks.flat();
+}
+
+async function buildOperatorDispatch(pool: Pool, limit: number): Promise<Row[]> {
+  const [taskRows, receiptRows, operationRows] = await Promise.all([
+    readMultiRows(pool, ["act_task", "action_task_index_v1", "act_task_index_v1"], limit),
+    readMultiRows(pool, ["receipt", "receipt_index_v1", "execution_receipt", "action_receipt_index_v1"], limit),
+    readTenantRows(pool, "operation_state_v1", limit),
+  ]);
+
+  const opById = new Map(operationRows.map((row) => [safeText(row.operation_id ?? row.operation_plan_id ?? row.id), row]));
+  const receiptByTask = new Map<string, Row>();
+  for (const row of receiptRows) {
+    const taskId = safeText(row.task_id ?? row.act_task_id ?? row.action_task_id);
+    if (taskId && !receiptByTask.has(taskId)) receiptByTask.set(taskId, row);
+  }
+
+  const items: Row[] = [];
+  for (const task of taskRows) {
+    const taskId = safeText(task.task_id ?? task.act_task_id ?? task.action_task_id ?? task.id);
+    if (!taskId) continue;
+    const operationId = safeText(task.operation_id ?? task.operation_plan_id ?? task.op_id);
+    const op = opById.get(operationId) ?? {};
+    const receipt = receiptByTask.get(taskId) ?? null;
+    const status = normalizeDispatchStatus(task, receipt);
+    const receiptId = safeText(receipt?.receipt_id ?? receipt?.id);
+    items.push({
+      task_id: taskId,
+      receipt_id: receiptId || null,
+      operation_id: operationId || null,
+      field_name: nullableText(task.field_name ?? op.field_name),
+      operation_name: nullableText(task.operation_name ?? op.operation_name),
+      status,
+      execution_mode: normalizeExecutionMode(task.execution_mode ?? task.executor_type ?? task.mode),
+      task_created_at: toIsoAny(task.created_at ?? task.created_ts_ms),
+      dispatched_at: toIsoAny(task.dispatched_at ?? task.dispatch_ts_ms ?? task.updated_at),
+      acked_at: toIsoAny(task.acked_at ?? task.ack_ts_ms),
+      receipt_received_at: toIsoAny(receipt?.received_at ?? receipt?.created_at ?? receipt?.created_ts_ms),
+      executor_text: nullableText(task.executor_text ?? task.executor_id ?? task.device_id ?? task.actor_id),
+      failure_reason: nullableText(receipt?.failure_reason ?? task.failure_reason ?? receipt?.error_message),
+      task_href: operationId ? `/customer/operations/${operationId}` : null,
+      receipt_href: receiptId ? `/api/v1/receipts/${receiptId}` : null,
+    });
+  }
+
+  return items
+    .sort((a, b) => new Date(String(b.dispatched_at ?? b.task_created_at ?? 0)).getTime() - new Date(String(a.dispatched_at ?? a.task_created_at ?? 0)).getTime())
+    .slice(0, limit);
+}
+
 function buildReadonlyFacadePayload(source: string, message: string) {
   return {
     ...basePayload(source),
@@ -535,8 +620,23 @@ export function registerOperatorV1FacadeRoutes(app: FastifyInstance, pool: Pool)
     });
   });
 
-  app.get("/api/v1/operator/dispatch", async (_req, reply) => {
-    return reply.send(buildReadonlyFacadePayload("operator_dispatch_api", "operator dispatch read-only facade"));
+  app.get("/api/v1/operator/dispatch", async (req: any, reply) => {
+    const query = (req.query ?? {}) as { limit?: string | number; tenant_id?: string; project_id?: string; group_id?: string };
+    const parsedLimit = Number(query.limit);
+    const limit = Number.isFinite(parsedLimit) ? Math.min(300, Math.max(1, Math.floor(parsedLimit))) : 100;
+    const items = await buildOperatorDispatch(pool, limit);
+    return reply.send({
+      ...basePayload("operator_dispatch_api"),
+      writeReady: false,
+      items,
+      filters: {
+        tenant_id: safeText(query.tenant_id),
+        project_id: safeText(query.project_id),
+        group_id: safeText(query.group_id),
+        limit,
+      },
+      message: "operator dispatch read-only facade",
+    });
   });
 
   app.get("/api/v1/operator/acceptance", async (_req, reply) => {
