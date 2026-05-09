@@ -47,9 +47,12 @@ P1 前端分为两类正式产品界面：
 | `/operator/dispatch` | P1-B | 已存在，只读 facade | B-04 | 派发状态页 |
 | `/operator/acceptance` | P1-B | 已存在，只读 facade | B-05 | 验收中心 |
 | `/operator/evidence` | P1-B | 已存在，只读 facade | B-06 | 证据中心 |
+| `/api/v1/evidence/export-jobs` | P1-B | 已存在，只读 facade | B-06-compat | 证据导出兼容只读入口 |
 | `/operator/devices-alerts` | P1-C | 已存在，只读 facade | C-01 | 设备与告警中心（支持 limit/field_id/device_id/online_status；ACK/close 写操作未 ready；revoke 写操作未 ready） |
 | `/operator/roi-ledger` | P1-C | 已存在，只读 facade | C-02 | ROI 运营明细（evidence_ref 已规范化；无证据不得 MEASURED；approval 写操作未 ready） |
 | `/operator/field-memory` | P1-C | 已存在，只读 facade | C-03 | 田块记忆运营中心；需要认证且合法状态 200/401/403（acceptance evaluate 写操作未 ready） |
+
+只读写操作未 ready 统一口径：operator approval 写操作未 ready；operator acceptance evaluate 写操作未 ready；operator evidence export 写操作未 ready；alert ACK/close 写操作未 ready；device revoke 写操作未 ready。
 
 field-memory 鉴权口径：
 - `200`：认证通过且有 `field_memory.read` 或 `ao_act.index.read`。

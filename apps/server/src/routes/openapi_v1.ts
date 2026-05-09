@@ -1383,7 +1383,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           tags: ["operations"],
           summary: "Operator read-only facade: workbench",
           responses: {
-            "200": { description: "Operator workbench read-only facade payload" },
+            "200": { description: "Operator workbench read-only facade payload (approval write not ready)" },
             "401": { description: "Unauthenticated" },
             "403": { description: "Forbidden" }
           }
@@ -1394,7 +1394,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           tags: ["operations"],
           summary: "Operator read-only facade: dispatch",
           responses: {
-            "200": { description: "Operator dispatch read-only facade payload" },
+            "200": { description: "Operator dispatch read-only facade payload (alert ack/close and device revoke writes not ready)" },
             "401": { description: "Unauthenticated" },
             "403": { description: "Forbidden" }
           }
@@ -1405,7 +1405,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           tags: ["acceptance"],
           summary: "Operator read-only facade: acceptance",
           responses: {
-            "200": { description: "Operator acceptance read-only facade payload" },
+            "200": { description: "Operator acceptance read-only facade payload (acceptance evaluate write not ready)" },
             "401": { description: "Unauthenticated" },
             "403": { description: "Forbidden" }
           }
@@ -1416,7 +1416,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           tags: ["exports"],
           summary: "Operator read-only facade: evidence",
           responses: {
-            "200": { description: "Operator evidence read-only facade payload" },
+            "200": { description: "Operator evidence read-only facade payload (evidence export write not ready)" },
             "401": { description: "Unauthenticated" },
             "403": { description: "Forbidden" }
           }
@@ -1427,7 +1427,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           tags: ["exports"],
           summary: "Evidence compatibility read-only facade: export jobs",
           responses: {
-            "200": { description: "Evidence export-jobs read-only facade payload" },
+            "200": { description: "Evidence export-jobs read-only facade payload (evidence export write not ready)" },
             "401": { description: "Unauthenticated" },
             "403": { description: "Forbidden" }
           }
