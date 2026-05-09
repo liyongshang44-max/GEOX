@@ -1381,7 +1381,13 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
       "/api/v1/operator/devices-alerts": {
         get: {
           tags: ["operations"],
-          summary: "Operator read-only devices and alerts facade",
+          summary: "Operator 已存在，只读 facade: devices-alerts",
+          parameters: [
+            { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 300, default: 100 } },
+            { name: "field_id", in: "query", required: false, schema: { type: "string" } },
+            { name: "device_id", in: "query", required: false, schema: { type: "string" } },
+            { name: "online_status", in: "query", required: false, schema: { type: "string", enum: ["ONLINE", "OFFLINE", "DELAYED", "UNKNOWN"] } }
+          ],
           responses: {
             "200": { description: "Operator devices-alerts facade payload" }
           }
@@ -1390,28 +1396,29 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
       "/api/v1/operator/field-memory": {
         get: {
           tags: ["operations"],
-          summary: "Operator read-only field-memory facade",
+          summary: "Operator 已存在，只读 facade: field-memory (auth required)",
           parameters: [
             { name: "field_id", in: "query", required: false, schema: { type: "string" } },
             { name: "operation_id", in: "query", required: false, schema: { type: "string" } },
             { name: "memory_type", in: "query", required: false, schema: { type: "string" } }
           ],
           responses: {
-            "200": { description: "Operator field-memory facade payload" },
-            "403": { description: "Forbidden" }
+            "200": { description: "Authenticated and authorized read payload" },
+            "401": { description: "Legal auth status: unauthenticated/missing token (AUTH_MISSING)" },
+            "403": { description: "Legal auth status: authenticated but missing scope (FORBIDDEN)" }
           }
         }
       },
       "/api/v1/operator/roi-ledger": {
         get: {
           tags: ["operations"],
-          summary: "Operator read-only roi-ledger facade",
+          summary: "Operator 已存在，只读 facade: roi-ledger",
           parameters: [
             { name: "field_id", in: "query", required: false, schema: { type: "string" } },
             { name: "operation_id", in: "query", required: false, schema: { type: "string" } }
           ],
           responses: {
-            "200": { description: "Operator roi-ledger facade payload" }
+            "200": { description: "ROI ledger read payload (normalized evidence_ref; rows without evidence must not be MEASURED)" }
           }
         }
       },
