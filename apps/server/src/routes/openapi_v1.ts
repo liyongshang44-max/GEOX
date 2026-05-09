@@ -1021,6 +1021,196 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             }
           }
         },
+        OperatorActionErrorCodeV1: {
+          type: "string",
+          enum: [
+            "AUTH_MISSING",
+            "FORBIDDEN",
+            "ACTION_NOT_READY",
+            "INVALID_STATE",
+            "SELF_APPROVAL_BLOCKED",
+            "TARGET_NOT_FOUND",
+            "EVIDENCE_INSUFFICIENT",
+            "AUDIT_WRITE_FAILED",
+            "STATE_WRITE_FAILED"
+          ]
+        },
+        OperatorActionResponseV1: {
+          type: "object",
+          required: ["ok", "action_id", "audit_id", "action_type", "target_type", "target_id", "status_before", "status_after", "permission", "message", "updated_at"],
+          properties: {
+            ok: { type: "boolean" },
+            action_id: { type: "string" },
+            audit_id: { type: "string" },
+            action_type: { type: "string" },
+            target_type: { type: "string" },
+            target_id: { type: "string" },
+            status_before: { type: "string", nullable: true },
+            status_after: { type: "string", nullable: true },
+            permission: {
+              type: "object",
+              required: ["allowed", "role", "reason"],
+              properties: {
+                allowed: { type: "boolean" },
+                role: { type: "string", nullable: true },
+                reason: { type: "string", nullable: true }
+              },
+              additionalProperties: false
+            },
+            message: { type: "string" },
+            error_code: { "$ref": "#/components/schemas/OperatorActionErrorCodeV1" },
+            updated_at: { type: "string", format: "date-time" }
+          },
+          additionalProperties: false
+        },
+        OperatorApprovalItemV1: {
+          type: "object",
+          required: ["approval_request_id", "request_id", "status", "title", "description", "risk_level", "self_approval_risk", "permission", "can_approve", "permission_reason"],
+          properties: {
+            approval_request_id: { type: "string" },
+            request_id: { type: "string" },
+            status: { type: "string", enum: ["PENDING", "APPROVED", "REJECTED", "RETURNED", "UNKNOWN"] },
+            title: { type: "string" },
+            description: { type: "string" },
+            field_name: { type: "string", nullable: true },
+            operation_name: { type: "string", nullable: true },
+            operation_id: { type: "string", nullable: true },
+            operation_plan_id: { type: "string", nullable: true },
+            prescription_id: { type: "string", nullable: true },
+            recommendation_id: { type: "string", nullable: true },
+            risk_level: { type: "string", enum: ["HIGH", "MEDIUM", "LOW", "UNKNOWN"] },
+            requested_by: { type: "string", nullable: true },
+            requested_by_actor_id: { type: "string", nullable: true },
+            approver_id: { type: "string", nullable: true },
+            updated_at: { type: "string", format: "date-time", nullable: true },
+            created_at: { type: "string", format: "date-time", nullable: true },
+            self_approval_risk: { type: "boolean" },
+            permission: {
+              type: "object",
+              required: ["allowed", "role", "reason"],
+              properties: {
+                allowed: { type: "boolean" },
+                role: { type: "string", nullable: true },
+                reason: { type: "string", nullable: true }
+              },
+              additionalProperties: false
+            },
+            can_approve: { type: "boolean" },
+            permission_reason: { type: "string", nullable: true }
+          },
+          additionalProperties: false
+        },
+        OperatorApprovalsResponseV1: {
+          type: "object",
+          required: ["source", "dataScope", "generated_at", "items", "writeReady", "message"],
+          properties: {
+            source: { type: "string", enum: ["operator_approvals_api"] },
+            dataScope: { type: "string", enum: ["OFFICIAL_OPERATOR_API"] },
+            generated_at: { type: "string", format: "date-time" },
+            items: { type: "array", items: { "$ref": "#/components/schemas/OperatorApprovalItemV1" } },
+            writeReady: { type: "boolean" },
+            message: { type: "string" }
+          },
+          additionalProperties: false
+        },
+        OperatorAcceptanceItemV1: {
+          type: "object",
+          required: ["operation_id", "operation_plan_id", "acceptance_status", "operation_state_status", "evidence_insufficient", "can_evaluate", "can_request_review", "permissions"],
+          properties: {
+            operation_id: { type: "string" },
+            operation_plan_id: { type: "string", nullable: true },
+            acceptance_id: { type: "string", nullable: true },
+            field_id: { type: "string", nullable: true },
+            field_name: { type: "string", nullable: true },
+            operation_name: { type: "string", nullable: true },
+            acceptance_status: { type: "string", enum: ["PENDING", "EVIDENCE_INSUFFICIENT", "FAILED", "REVIEW_REQUIRED", "PASSED", "UNKNOWN"] },
+            operation_state_status: { type: "string", nullable: true },
+            evidence_insufficient: { type: "boolean" },
+            failure_reason: { type: "string", nullable: true },
+            review_reason: { type: "string", nullable: true },
+            acceptance_verdict: { type: "string", nullable: true },
+            generated_at: { type: "string", format: "date-time", nullable: true },
+            updated_at: { type: "string", format: "date-time", nullable: true },
+            can_evaluate: { type: "boolean" },
+            can_request_review: { type: "boolean" },
+            permission_reason: { type: "string", nullable: true },
+            permissions: {
+              type: "object",
+              required: ["can_evaluate", "can_request_review", "reason", "role"],
+              properties: {
+                can_evaluate: { type: "boolean" },
+                can_request_review: { type: "boolean" },
+                reason: { type: "string", nullable: true },
+                role: { type: "string", nullable: true }
+              },
+              additionalProperties: false
+            }
+          },
+          additionalProperties: false
+        },
+        OperatorAcceptanceWorklistResponseV1: {
+          type: "object",
+          required: ["source", "dataScope", "generated_at", "items", "writeReady", "message"],
+          properties: {
+            source: { type: "string", enum: ["operator_acceptance_api"] },
+            dataScope: { type: "string", enum: ["OFFICIAL_OPERATOR_API"] },
+            generated_at: { type: "string", format: "date-time" },
+            items: { type: "array", items: { "$ref": "#/components/schemas/OperatorAcceptanceItemV1" } },
+            writeReady: { type: "boolean" },
+            message: { type: "string" }
+          },
+          additionalProperties: false
+        },
+        OperatorDispatchItemV1: {
+          type: "object",
+          required: ["task_id", "act_task_id", "status", "can_dispatch", "can_retry", "permissions"],
+          properties: {
+            task_id: { type: "string" },
+            act_task_id: { type: "string" },
+            receipt_id: { type: "string", nullable: true },
+            operation_id: { type: "string", nullable: true },
+            operation_plan_id: { type: "string", nullable: true },
+            field_id: { type: "string", nullable: true },
+            field_name: { type: "string", nullable: true },
+            operation_name: { type: "string", nullable: true },
+            status: { type: "string", enum: ["TASK_CREATED", "DISPATCH_PENDING", "DISPATCHED", "RETRY_DISPATCHED", "ACKED", "RECEIPT_PENDING", "EXECUTION_FAILED", "RECEIPT_RECEIVED", "COMPLETED", "UNKNOWN"] },
+            execution_mode: { type: "string", nullable: true },
+            task_created_at: { type: "string", format: "date-time", nullable: true },
+            dispatched_at: { type: "string", format: "date-time", nullable: true },
+            acked_at: { type: "string", format: "date-time", nullable: true },
+            receipt_received_at: { type: "string", format: "date-time", nullable: true },
+            executor_text: { type: "string", nullable: true },
+            failure_reason: { type: "string", nullable: true },
+            can_dispatch: { type: "boolean" },
+            can_retry: { type: "boolean" },
+            permission_reason: { type: "string", nullable: true },
+            permissions: {
+              type: "object",
+              required: ["can_dispatch", "can_retry", "reason", "role"],
+              properties: {
+                can_dispatch: { type: "boolean" },
+                can_retry: { type: "boolean" },
+                reason: { type: "string", nullable: true },
+                role: { type: "string", nullable: true }
+              },
+              additionalProperties: false
+            }
+          },
+          additionalProperties: false
+        },
+        OperatorDispatchWorklistResponseV1: {
+          type: "object",
+          required: ["source", "dataScope", "generated_at", "items", "writeReady", "message"],
+          properties: {
+            source: { type: "string", enum: ["operator_dispatch_api"] },
+            dataScope: { type: "string", enum: ["OFFICIAL_OPERATOR_API"] },
+            generated_at: { type: "string", format: "date-time" },
+            items: { type: "array", items: { "$ref": "#/components/schemas/OperatorDispatchItemV1" } },
+            writeReady: { type: "boolean" },
+            message: { type: "string" }
+          },
+          additionalProperties: false
+        },
         ManagementZoneV1: {
           type: "object",
           required: ["zone_id", "tenant_id", "project_id", "group_id", "field_id", "zone_type", "geometry", "risk_tags", "agronomy_tags", "source_refs", "created_at", "updated_at"],
@@ -1453,6 +1643,122 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           }
         }
       },
+      "/api/v1/operator/dispatch/worklist": {
+        get: {
+          tags: ["operations"],
+          summary: "Operator dispatch worklist",
+          description: "返回 operator 派发工作队列。数据来源为后端 AO-ACT task 与 dispatch facts；前端不得自行推断可派发/可重试状态。",
+          parameters: [
+            { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1 } }
+          ],
+          responses: {
+            "200": {
+              description: "Operator dispatch worklist payload",
+              content: {
+                "application/json": {
+                  schema: { "$ref": "#/components/schemas/OperatorDispatchWorklistResponseV1" }
+                }
+              }
+            },
+            "401": { description: "Unauthenticated (AUTH_MISSING)" },
+            "403": { description: "Forbidden (FORBIDDEN)" }
+          }
+        }
+      },
+      "/api/v1/operator/dispatch/{taskId}/dispatch": {
+        post: {
+          tags: ["operations"],
+          summary: "Dispatch task",
+          parameters: [
+            { name: "taskId", in: "path", required: true, schema: { type: "string" } }
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    note: { type: "string" },
+                    reason: { type: "string" }
+                  },
+                  additionalProperties: false
+                }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Operator action response", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "400": { description: "ACTION_NOT_READY", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "403": { description: "FORBIDDEN", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "404": { description: "TARGET_NOT_FOUND", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "409": { description: "INVALID_STATE", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "500": { description: "AUDIT_WRITE_FAILED or STATE_WRITE_FAILED", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } }
+          }
+        }
+      },
+      "/api/v1/operator/dispatch/{taskId}/retry": {
+        post: {
+          tags: ["operations"],
+          summary: "Retry dispatch task",
+          parameters: [
+            { name: "taskId", in: "path", required: true, schema: { type: "string" } }
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    note: { type: "string" },
+                    reason: { type: "string" }
+                  },
+                  additionalProperties: false
+                }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Operator action response", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "400": { description: "ACTION_NOT_READY", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "403": { description: "FORBIDDEN", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "404": { description: "TARGET_NOT_FOUND", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "409": { description: "INVALID_STATE", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "500": { description: "AUDIT_WRITE_FAILED or STATE_WRITE_FAILED", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } }
+          }
+        }
+      },
+      "/api/v1/operator/alerts/{alertId}/ack": {
+        post: {
+          tags: ["operations"],
+          summary: "Operator ACK alert",
+          parameters: [
+            { name: "alertId", in: "path", required: true, schema: { type: "string" } }
+          ],
+          responses: {
+            "200": { description: "Operator action response", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "403": { description: "FORBIDDEN", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "404": { description: "TARGET_NOT_FOUND", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "409": { description: "INVALID_STATE", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } }
+          }
+        }
+      },
+      "/api/v1/operator/alerts/{alertId}/close": {
+        post: {
+          tags: ["operations"],
+          summary: "Operator close alert",
+          parameters: [
+            { name: "alertId", in: "path", required: true, schema: { type: "string" } }
+          ],
+          responses: {
+            "200": { description: "Operator action response", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "403": { description: "FORBIDDEN", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "404": { description: "TARGET_NOT_FOUND", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "409": { description: "INVALID_STATE", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } }
+          }
+        }
+      },
       "/api/v1/operator/acceptance": {
         get: {
           tags: ["acceptance"],
@@ -1472,6 +1778,197 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             "200": { description: "Operator evidence read-only facade payload (evidence export write not ready)" },
             "401": { description: "Unauthenticated" },
             "403": { description: "Forbidden" }
+          }
+        }
+      },
+      "/api/v1/operator/approvals": {
+        get: {
+          tags: ["operations"],
+          summary: "Operator approvals list",
+          responses: {
+            "200": {
+              description: "Operator approvals list payload",
+              content: {
+                "application/json": {
+                  schema: { "$ref": "#/components/schemas/OperatorApprovalsResponseV1" }
+                }
+              }
+            },
+            "401": { description: "Unauthenticated (AUTH_MISSING)" },
+            "403": { description: "Forbidden (FORBIDDEN)" }
+          }
+        }
+      },
+      "/api/v1/operator/approvals/{approvalRequestId}/approve": {
+        post: {
+          tags: ["operations"],
+          summary: "Approve an approval request",
+          parameters: [
+            { name: "approvalRequestId", in: "path", required: true, schema: { type: "string" } }
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    note: { type: "string" }
+                  },
+                  additionalProperties: false
+                }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Operator action response", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "400": { description: "ACTION_NOT_READY or INVALID_STATE", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "403": { description: "FORBIDDEN or SELF_APPROVAL_BLOCKED", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "404": { description: "TARGET_NOT_FOUND", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "500": { description: "AUDIT_WRITE_FAILED or STATE_WRITE_FAILED", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } }
+          }
+        }
+      },
+      "/api/v1/operator/approvals/{approvalRequestId}/reject": {
+        post: {
+          tags: ["operations"],
+          summary: "Reject an approval request",
+          parameters: [
+            { name: "approvalRequestId", in: "path", required: true, schema: { type: "string" } }
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    note: { type: "string" }
+                  },
+                  additionalProperties: false
+                }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Operator action response", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "400": { description: "ACTION_NOT_READY or INVALID_STATE", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "403": { description: "FORBIDDEN or SELF_APPROVAL_BLOCKED", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "404": { description: "TARGET_NOT_FOUND", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "500": { description: "AUDIT_WRITE_FAILED or STATE_WRITE_FAILED", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } }
+          }
+        }
+      },
+      "/api/v1/operator/approvals/{approvalRequestId}/return": {
+        post: {
+          tags: ["operations"],
+          summary: "Return an approval request",
+          parameters: [
+            { name: "approvalRequestId", in: "path", required: true, schema: { type: "string" } }
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    note: { type: "string" }
+                  },
+                  additionalProperties: false
+                }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Operator action response", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "400": { description: "ACTION_NOT_READY or INVALID_STATE", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "403": { description: "FORBIDDEN or SELF_APPROVAL_BLOCKED", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "404": { description: "TARGET_NOT_FOUND", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "500": { description: "AUDIT_WRITE_FAILED or STATE_WRITE_FAILED", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } }
+          }
+        }
+      },
+      "/api/v1/operator/acceptance/worklist": {
+        get: {
+          tags: ["acceptance"],
+          summary: "Operator acceptance worklist",
+          responses: {
+            "200": {
+              description: "Operator acceptance worklist payload",
+              content: {
+                "application/json": {
+                  schema: { "$ref": "#/components/schemas/OperatorAcceptanceWorklistResponseV1" }
+                }
+              }
+            },
+            "401": { description: "Unauthenticated (AUTH_MISSING)" },
+            "403": { description: "Forbidden (FORBIDDEN)" }
+          }
+        }
+      },
+      "/api/v1/operator/acceptance/{operationId}/evaluate": {
+        post: {
+          tags: ["acceptance"],
+          summary: "Evaluate acceptance result for operation",
+          parameters: [
+            { name: "operationId", in: "path", required: true, schema: { type: "string" } }
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    judge_result_ids: { type: "array", items: { type: "string" } },
+                    execution_judge_id: { type: "string" },
+                    note: { type: "string" }
+                  },
+                  additionalProperties: false
+                }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Operator action response", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "400": { description: "ACTION_NOT_READY or INVALID_STATE", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "403": { description: "FORBIDDEN", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "404": { description: "TARGET_NOT_FOUND", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "422": { description: "EVIDENCE_INSUFFICIENT", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "500": { description: "AUDIT_WRITE_FAILED or STATE_WRITE_FAILED", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } }
+          }
+        }
+      },
+      "/api/v1/operator/acceptance/{operationId}/request-review": {
+        post: {
+          tags: ["acceptance"],
+          summary: "Request acceptance review for operation",
+          parameters: [
+            { name: "operationId", in: "path", required: true, schema: { type: "string" } }
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    reason: { type: "string" },
+                    note: { type: "string" }
+                  },
+                  additionalProperties: false
+                }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Operator action response", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "400": { description: "ACTION_NOT_READY or INVALID_STATE", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "403": { description: "FORBIDDEN", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "404": { description: "TARGET_NOT_FOUND", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "422": { description: "EVIDENCE_INSUFFICIENT", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "500": { description: "AUDIT_WRITE_FAILED or STATE_WRITE_FAILED", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } }
           }
         }
       },

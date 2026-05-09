@@ -341,9 +341,9 @@ async function buildDevicesAlerts(pool: Pool): Promise<{ devices: Row[]; alerts:
       overdue: false,
       created_at: toIsoFromMs(event.raised_ts_ms),
       updated_at: toIsoFromMs(action.acted_at ?? event.closed_ts_ms ?? event.acked_ts_ms ?? event.raised_ts_ms),
-      can_ack: false,
-      can_close: false,
-      permission_reason: "写操作未开放",
+      can_ack: status === "OPEN" || status === "OVERDUE",
+      can_close: status === "OPEN" || status === "OVERDUE" || status === "ACKED",
+      permission_reason: null,
       audit_id: null,
       status_source: "alert_event_projection",
     };
@@ -859,7 +859,7 @@ export function registerOperatorV1FacadeRoutes(app: FastifyInstance, pool: Pool)
 
     return reply.send({
       ...basePayload("operator_devices_alerts_api"),
-      ackCloseReady: false,
+      ackCloseReady: true,
       revokeVisible: false,
       total_devices: filteredDevices.length,
       returned_devices: limitedDevices.length,
@@ -871,8 +871,49 @@ export function registerOperatorV1FacadeRoutes(app: FastifyInstance, pool: Pool)
       },
       devices: limitedDevices,
       alerts,
-      message: "operator devices-alerts read-only facade",
+      message: "operator devices-alerts facade",
     });
+  });
+
+  const buildAction = (action: "ack" | "close", alertId: string, before: string | null, after: string | null, ok: boolean, message: string, errorCode?: string) => ({
+    ok,
+    action_id: `operator_alert_${action}_${Date.now()}`,
+    audit_id: `audit_${Date.now()}`,
+    action_type: action === "ack" ? "alert_ack" : "alert_close",
+    target_type: "alert",
+    target_id: alertId,
+    status_before: before,
+    status_after: after,
+    permission: { allowed: ok || errorCode !== "FORBIDDEN", role: null, reason: ok ? null : message },
+    message,
+    error_code: errorCode,
+    updated_at: new Date().toISOString(),
+  });
+
+  app.post("/api/v1/operator/alerts/:alertId/ack", async (req: any, reply) => {
+    const auth = requireAoActAnyScopeV0(req, reply, ["alerts.write"]);
+    const alertId = safeText(req.params?.alertId);
+    if (!auth) return reply.code(403).send(buildAction("ack", alertId, null, null, false, "FORBIDDEN", "FORBIDDEN"));
+    const rows = await readTenantRows(pool, "alert_event_index_v1", 1000);
+    const target = rows.find((row) => safeText(row.event_id ?? row.alert_id ?? row.id) === alertId);
+    if (!target) return reply.code(404).send(buildAction("ack", alertId, null, null, false, "TARGET_NOT_FOUND", "TARGET_NOT_FOUND"));
+    const before = safeText(target.status).toUpperCase() || "OPEN";
+    if (before === "CLOSED") return reply.code(409).send(buildAction("ack", alertId, before, before, false, "INVALID_STATE", "INVALID_STATE"));
+    await pool.query("UPDATE alert_event_index_v1 SET status='ACKED', acked_ts_ms=$1, updated_at=NOW() WHERE COALESCE(event_id, alert_id, id)::text=$2", [Date.now(), alertId]);
+    return reply.send(buildAction("ack", alertId, before, "ACKED", true, "ACK 成功"));
+  });
+
+  app.post("/api/v1/operator/alerts/:alertId/close", async (req: any, reply) => {
+    const auth = requireAoActAnyScopeV0(req, reply, ["alerts.write"]);
+    const alertId = safeText(req.params?.alertId);
+    if (!auth) return reply.code(403).send(buildAction("close", alertId, null, null, false, "FORBIDDEN", "FORBIDDEN"));
+    const rows = await readTenantRows(pool, "alert_event_index_v1", 1000);
+    const target = rows.find((row) => safeText(row.event_id ?? row.alert_id ?? row.id) === alertId);
+    if (!target) return reply.code(404).send(buildAction("close", alertId, null, null, false, "TARGET_NOT_FOUND", "TARGET_NOT_FOUND"));
+    const before = safeText(target.status).toUpperCase() || "OPEN";
+    if (before === "CLOSED") return reply.code(409).send(buildAction("close", alertId, before, before, false, "INVALID_STATE", "INVALID_STATE"));
+    await pool.query("UPDATE alert_event_index_v1 SET status='CLOSED', closed_ts_ms=$1, updated_at=NOW() WHERE COALESCE(event_id, alert_id, id)::text=$2", [Date.now(), alertId]);
+    return reply.send(buildAction("close", alertId, before, "CLOSED", true, "关闭成功"));
   });
 
   app.get("/api/v1/operator/field-memory", async (req: any, reply) => {
