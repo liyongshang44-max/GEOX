@@ -68,11 +68,15 @@ async function main() {
   if (roiLedger.status === 200) {
     assert(!hasMeasuredWithoutBaseline(roiLedger.json?.items), "roi-ledger has MEASURED item without baseline_present");
     assert(!deepHasObjectObjectString(roiLedger.json?.items), "roi-ledger string fields must not contain [object Object]");
+    const unitOnlyPattern = /^[a-zA-Z%³㎡]+$/;
     for (const [idx, item] of (roiLedger.json?.items ?? []).entries()) {
       assert(
         item?.evidence_ref === null || typeof item?.evidence_ref === "string",
         `roi-ledger item[${idx}] evidence_ref must be string or null`,
       );
+      if (item?.value_text) {
+        assert(!unitOnlyPattern.test(String(item.value_text)), `roi-ledger item[${idx}] value_text must not be unit-only`);
+      }
     }
   }
 

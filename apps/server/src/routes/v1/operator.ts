@@ -25,6 +25,11 @@ function safeText(value: unknown): string {
   return valueText;
 }
 
+function nullableText(value: unknown): string | null {
+  const normalized = safeText(value);
+  return normalized || null;
+}
+
 function normalizeRef(value: unknown): string | null {
   if (value === null || value === undefined) return null;
   if (typeof value === "string") return safeText(value) || null;
@@ -46,6 +51,32 @@ function normalizeRef(value: unknown): string | null {
     return null;
   }
   return null;
+}
+
+function normalizeRoiId(row: Row): string | null {
+  return nullableText(row.roi_id ?? row.ledger_id ?? row.id ?? row.record_id);
+}
+
+function normalizeOperationId(row: Row): string | null {
+  return nullableText(row.operation_id ?? row.operationId ?? row.operation_plan_id ?? row.operationPlanId ?? row.op_id);
+}
+
+function normalizeMetricName(row: Row): string | null {
+  return nullableText(row.metric_name ?? row.roi_metric ?? row.metric ?? row.value_metric);
+}
+
+function normalizeValueText(row: Row): string | null {
+  const rawValueText = safeText(row.value_text);
+  const unit = safeText(row.unit);
+  const unitOnlyPattern = /^(?:[a-zA-Z%³㎡]+|元)$/;
+
+  if (rawValueText && !unitOnlyPattern.test(rawValueText)) return rawValueText;
+
+  const valueCandidate = row.value ?? row.roi_value ?? row.delta_value ?? row.actual_value;
+  const valueText = safeText(valueCandidate);
+  if (!valueText) return null;
+  if (!unit) return valueText;
+  return `${valueText} ${unit}`.trim();
 }
 
 function toIsoFromMs(value: unknown): string | null {
@@ -283,10 +314,10 @@ async function buildRoiLedger(pool: Pool, query: { field_id?: string; operation_
     const evidencePresent = Boolean(normalizedEvidenceRef);
     const valueKind = normalizeValueKind(row.value_kind ?? row.roi_type, baselinePresent, actualPresent, evidencePresent, confidenceLevel);
     return {
-      roi_id: safeText(row.roi_id),
-      field_id: safeText(row.field_id),
-      operation_id: safeText(row.operation_id),
-      prescription_id: safeText(row.prescription_id),
+      roi_id: normalizeRoiId(row),
+      field_id: nullableText(row.field_id),
+      operation_id: normalizeOperationId(row),
+      prescription_id: nullableText(row.prescription_id),
       evidence_ref: normalizedEvidenceRef,
       calculation_method: safeText(row.calculation_method ?? row.method),
       confidence: confidence,
@@ -296,8 +327,8 @@ async function buildRoiLedger(pool: Pool, query: { field_id?: string; operation_
       actual_present: actualPresent,
       evidence_present: evidencePresent,
       value_kind: valueKind,
-      metric_name: safeText(row.metric_name ?? row.roi_metric),
-      value_text: safeText(row.value_text ?? row.unit),
+      metric_name: normalizeMetricName(row),
+      value_text: normalizeValueText(row),
     };
   });
 }
