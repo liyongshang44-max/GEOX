@@ -1,9 +1,40 @@
-import { apiRequestWithPolicy, withQuery } from "./client";
+import { apiRequestWithPolicy, withQuery, ApiError } from "./client";
 
 export type OperatorApprovalDataScope = "OFFICIAL_OPERATOR_API" | "FALLBACK_LIMITED" | "EMPTY" | "ERROR_EMPTY";
 
 export type OperatorApprovalRiskLevel = "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
 export type OperatorApprovalStatus = "PENDING" | "APPROVED" | "REJECTED" | "RETURNED" | "UNKNOWN";
+
+export type OperatorApprovalActionKind = "approve" | "reject" | "return";
+export type OperatorActionErrorCodeV1 =
+  | "AUTH_MISSING"
+  | "FORBIDDEN"
+  | "ACTION_NOT_READY"
+  | "INVALID_STATE"
+  | "SELF_APPROVAL_BLOCKED"
+  | "TARGET_NOT_FOUND"
+  | "EVIDENCE_INSUFFICIENT"
+  | "AUDIT_WRITE_FAILED"
+  | "STATE_WRITE_FAILED";
+
+export type OperatorActionResponseV1 = {
+  ok: boolean;
+  action_id: string;
+  audit_id: string;
+  action_type: string;
+  target_type: string;
+  target_id: string;
+  status_before: string | null;
+  status_after: string | null;
+  permission: {
+    allowed: boolean;
+    role: string | null;
+    reason: string | null;
+  };
+  message: string;
+  error_code?: OperatorActionErrorCodeV1;
+  updated_at: string;
+};
 
 export type OperatorApprovalItem = {
   approvalRequestId: string;
@@ -20,6 +51,8 @@ export type OperatorApprovalItem = {
   updatedAt?: string | null;
   createdAt?: string | null;
   canApprove: boolean;
+  permissionAllowed: boolean;
+  permissionRole?: string | null;
   permissionReason?: string | null;
   selfApprovalRisk: boolean;
   source: "operator_approvals_api" | "approvals_api";
@@ -39,6 +72,7 @@ type AnyRecord = Record<string, any>;
 function text(value: unknown, fallback = ""): string {
   const raw = String(value ?? "").trim();
   if (!raw || raw === "--" || raw === "undefined" || raw === "null") return fallback;
+  if (/token|secret|credential|private\s*key|password|stack\s*trace|debug\s*json/i.test(raw)) return fallback;
   return raw;
 }
 
@@ -55,6 +89,11 @@ function arrayFrom(payload: unknown, keys: string[]): AnyRecord[] {
   return [];
 }
 
+function boolOrNull(value: unknown): boolean | null {
+  if (typeof value === "boolean") return value;
+  return null;
+}
+
 function normalizeRisk(value: unknown): OperatorApprovalRiskLevel {
   const raw = text(value, "UNKNOWN").toUpperCase();
   if (raw === "HIGH" || raw.includes("高")) return "HIGH";
@@ -68,21 +107,25 @@ function normalizeStatus(value: unknown): OperatorApprovalStatus {
   if (raw === "APPROVED" || raw === "APPROVE" || raw === "PASS") return "APPROVED";
   if (raw === "REJECTED" || raw === "REJECT" || raw === "DENIED") return "REJECTED";
   if (raw === "RETURNED" || raw === "RETURN" || raw === "NEEDS_CHANGES") return "RETURNED";
-  if (raw === "PENDING" || raw === "WAITING" || raw === "REQUESTED") return "PENDING";
+  if (raw === "PENDING" || raw === "WAITING" || raw === "REQUESTED" || raw === "OPEN") return "PENDING";
   return "UNKNOWN";
 }
 
-function normalizePermission(row: AnyRecord, readOnlyFallback: boolean): { canApprove: boolean; permissionReason: string | null } {
-  if (readOnlyFallback) return { canApprove: false, permissionReason: "写操作未接入，当前只读。" };
-  if (row.can_approve === true || row.permission?.can_approve === true) return { canApprove: true, permissionReason: null };
-  const reason = text(row.permission_reason ?? row.permission?.reason ?? row.deny_reason, "当前身份无审批权限。") || "当前身份无审批权限。";
-  return { canApprove: false, permissionReason: reason };
+function normalizePermission(row: AnyRecord, readOnlyFallback: boolean): { allowed: boolean; role: string | null; reason: string | null } {
+  if (readOnlyFallback) return { allowed: false, role: null, reason: "写操作未接入，当前只读。" };
+  const permission = row.permission && typeof row.permission === "object" ? row.permission as AnyRecord : null;
+  const allowed = boolOrNull(permission?.allowed) ?? boolOrNull(permission?.can_approve) ?? boolOrNull(row.can_approve) ?? false;
+  const role = text(permission?.role ?? row.permission_role, "") || null;
+  const reason = allowed
+    ? null
+    : (text(permission?.reason ?? row.permission_reason ?? row.deny_reason, "当前身份无审批权限。") || "当前身份无审批权限。");
+  return { allowed, role, reason };
 }
 
 function normalizeSelfRisk(row: AnyRecord): boolean {
   if (typeof row.self_approval_risk === "boolean") return row.self_approval_risk;
   if (typeof row.is_self_approval === "boolean") return row.is_self_approval;
-  const requestedBy = text(row.requested_by ?? row.requester_id ?? row.created_by);
+  const requestedBy = text(row.requested_by_actor_id ?? row.requested_by ?? row.requester_id ?? row.created_by);
   const currentApprover = text(row.current_actor_id ?? row.approver_id ?? row.actor_id);
   return Boolean(requestedBy && currentApprover && requestedBy === currentApprover);
 }
@@ -106,8 +149,10 @@ function normalizeItems(payload: unknown, source: OperatorApprovalItem["source"]
       approver: text(row.approver_name ?? row.approver_id ?? row.actor_name, ""),
       updatedAt: text(row.updated_at ?? row.approved_at ?? row.generated_at, ""),
       createdAt: text(row.created_at ?? row.requested_at ?? row.generated_at, ""),
-      canApprove: permission.canApprove && !selfApprovalRisk,
-      permissionReason: selfApprovalRisk ? "存在自审批风险，当前阻断审批动作。" : permission.permissionReason,
+      canApprove: permission.allowed && !selfApprovalRisk,
+      permissionAllowed: permission.allowed,
+      permissionRole: permission.role,
+      permissionReason: selfApprovalRisk ? "存在自审批风险，当前阻断审批动作。" : permission.reason,
       selfApprovalRisk,
       source,
     };
@@ -123,17 +168,21 @@ async function fetchOptional(path: string): Promise<unknown | null> {
   }
 }
 
+function writeReadyFromPayload(payload: unknown): boolean {
+  return Boolean(payload && typeof payload === "object" && (payload as AnyRecord).writeReady === true);
+}
+
 export async function fetchOperatorApprovals(): Promise<OperatorApprovalsResponse> {
   const official = await fetchOptional(withQuery("/api/v1/operator/approvals"));
   const officialItems = normalizeItems(official, "operator_approvals_api", false);
-  if (officialItems.length > 0) {
+  if (officialItems.length > 0 || writeReadyFromPayload(official)) {
     return {
       source: "operator_approvals_api",
       dataScope: "OFFICIAL_OPERATOR_API",
-      generated_at: new Date().toISOString(),
+      generated_at: text((official as AnyRecord | null)?.generated_at, new Date().toISOString()),
       items: officialItems,
-      writeReady: false,
-      message: "审批写操作需等待后端权限、审计和错误码 ready 后开放。",
+      writeReady: writeReadyFromPayload(official),
+      message: text((official as AnyRecord | null)?.message, "审批写操作由后端 permission.allowed 控制。"),
     };
   }
 
@@ -158,4 +207,43 @@ export async function fetchOperatorApprovals(): Promise<OperatorApprovalsRespons
     writeReady: false,
     message: "暂无审批事项。",
   };
+}
+
+function actionPath(approvalRequestId: string, action: OperatorApprovalActionKind): string {
+  return `/api/v1/operator/approvals/${encodeURIComponent(approvalRequestId)}/${action}`;
+}
+
+function parseActionError(error: unknown): OperatorActionResponseV1 | null {
+  if (!(error instanceof ApiError)) return null;
+  try {
+    const parsed = JSON.parse(error.bodyText) as OperatorActionResponseV1;
+    if (parsed && typeof parsed === "object" && typeof parsed.message === "string") return parsed;
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+export async function submitOperatorApprovalAction(
+  approvalRequestId: string,
+  action: OperatorApprovalActionKind,
+  note?: string,
+): Promise<OperatorActionResponseV1> {
+  try {
+    return await (async () => {
+      const result = await apiRequestWithPolicy<OperatorActionResponseV1>(
+        withQuery(actionPath(approvalRequestId, action)),
+        {
+          method: "POST",
+          body: JSON.stringify({ note: text(note, "") || undefined }),
+        },
+      );
+      if (!result.ok) throw new ApiError(result.status, result.bodyText, result.url);
+      return result.data;
+    })();
+  } catch (error) {
+    const parsed = parseActionError(error);
+    if (parsed) return parsed;
+    throw error;
+  }
 }
