@@ -183,12 +183,12 @@ async function buildDevicesAlerts(pool: Pool): Promise<{ devices: Row[]; alerts:
 
     return {
       device_id: safeText(deviceId),
-      display_name: safeText(device.display_name ?? device.name),
+      display_name: nullableText(device.display_name ?? device.name),
       online_status: onlineStatus,
       last_heartbeat_at: heartbeat,
       last_telemetry_at: lastTelemetry,
-      field_id: fieldId,
-      field_name: fieldId ? safeText(fieldNameById.get(fieldId)) : "",
+      field_id: nullableText(fieldId),
+      field_name: nullableText(fieldId ? fieldNameById.get(fieldId) : null),
       capabilities,
       credential_status: normalizeCredentialStatus(device.last_credential_status ?? credential.status),
       credential_last_issued_at: toIsoFromMs(credential.issued_ts_ms ?? credential.created_ts_ms),
