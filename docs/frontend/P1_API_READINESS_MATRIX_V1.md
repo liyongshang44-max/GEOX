@@ -19,9 +19,9 @@
 | API 路径 | 当前状态 | 阻塞阶段 | fallback 策略 | fallback 是否可标记 Done | 备注 |
 |---|---|---|---|---|---|
 | `GET /api/v1/customer/cockpit/overview` | 需新增 | P1-A / cockpit 正式聚合 | 使用 `GET /api/v1/reports/customer-dashboard/aggregate` 做 Preview 展示 | 否，Preview 不能替代正式 cockpit API Done | 目标 cockpit API，不得误写为当前已有 |
-| `GET /api/v1/customer/fields` | adapter 可包 | P1-A-01 / P1-A-04 | 临时 `/customer/fields/index` 或正式空态 | 否，正式路由和 adapter 未落地前不能 Done | 用于正式 `/customer/fields` |
-| `GET /api/v1/customer/operations` | adapter 可包 | P1-A-02 / P1-A-04 | 临时 `/customer/operations/index` 或正式空态 | 否，正式路由和 adapter 未落地前不能 Done | 用于正式 `/customer/operations` |
-| `GET /api/v1/customer/reports` | 需新增 | P1-A-03 / P1-A-04 | 报告中心显示正式空态 | 否 | 用于 `/customer/reports` 报告中心 |
+| `GET /api/v1/customer/fields` | 已存在（P2-A customer facade） | P1-A-01 / P1-A-04 | 临时 `/customer/fields/index` 或正式空态 | 是（只读 facade 范围内） | 用于正式 `/customer/fields` |
+| `GET /api/v1/customer/operations` | 已存在（P2-A customer facade） | P1-A-02 / P1-A-04 | 临时 `/customer/operations/index` 或正式空态 | 是（只读 facade 范围内） | 用于正式 `/customer/operations` |
+| `GET /api/v1/customer/reports` | 已存在（P2-A customer facade） | P1-A-03 / P1-A-04 | 报告中心显示正式空态 | 是（只读 facade 范围内） | 用于 `/customer/reports` 报告中心 |
 | `GET /api/v1/customer/roi-ledger?field_id=&operation_id=` | 未接入 | P1-A-07 / P1-C-02 | 显示“暂无可量化价值记录” | 否，除非任务目标仅为只读入口空态 | 不得伪造节水、节人工、收益金额 |
 | `GET /api/v1/customer/fields/:fieldId/memory` | 未接入 | P1-A-08 / P1-C-03 | 显示“暂无可展示的田块记忆” | 否，除非任务目标仅为空态收口 | 不得用 operation count / device count / ROI count 推导记忆 |
 
