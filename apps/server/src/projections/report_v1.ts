@@ -171,6 +171,12 @@ export type OperationReportV1 = {
     first_pass_acceptance_rate: RoiLedgerSummary[];
     low_confidence_items: RoiLedgerSummary[];
   };
+  planned: {
+    planned_area: Record<string, unknown> | null;
+    planned_path: Record<string, unknown> | null;
+    planned_rate: number | null;
+    planned_amount: number | null;
+  };
   workflow: {
     owner_actor_id: string | null;
     owner_name: string | null;
@@ -227,6 +233,17 @@ function toMs(v: unknown): number | null {
   if (!t) return null;
   const ms = Date.parse(t);
   return Number.isFinite(ms) ? ms : null;
+}
+
+
+function toObject(v: unknown): Record<string, unknown> | null {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return null;
+  return v as Record<string, unknown>;
+}
+
+function toNullableNumber(v: unknown): number | null {
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
 }
 
 function toFiniteNumber(v: unknown, fallback = 0): number {
@@ -521,6 +538,14 @@ export function projectOperationReportV1(input: {
     low_confidence_items: roiSummaries.filter((x) => String((x.confidence as any)?.level ?? "").toUpperCase() === "LOW").length,
     has_customer_visible_value: roiSummaries.some((x) => x.estimated_money_value != null || String(x.customer_text ?? "").trim().length > 0),
   };
+  const operationStateAny = input.operation_state as any;
+  const planned = {
+    planned_area: toObject(operationStateAny?.planned_area ?? operationStateAny?.execution_plan?.planned_area ?? operationStateAny?.spatial_scope ?? null),
+    planned_path: toObject(operationStateAny?.planned_path ?? operationStateAny?.execution_plan?.planned_path ?? null),
+    planned_rate: toNullableNumber(operationStateAny?.planned_rate ?? operationStateAny?.operation_amount?.rate ?? operationStateAny?.execution_plan?.planned_rate),
+    planned_amount: toNullableNumber(operationStateAny?.planned_amount ?? operationStateAny?.operation_amount?.amount ?? operationStateAny?.execution_plan?.planned_amount),
+  };
+
   const computedRisk = evaluateRisk({
     final_status: finalStatus,
     missing_evidence: missingEvidence,
@@ -650,6 +675,7 @@ export function projectOperationReportV1(input: {
       first_pass_acceptance_rate: roiSummaries.filter((x) => x.roi_type === "FIRST_PASS_ACCEPTANCE_RATE"),
       low_confidence_items: roiSummaries.filter((x) => String((x.confidence as any)?.level ?? "").toUpperCase() === "LOW"),
     },
+    planned,
     workflow: {
       owner_actor_id: toText(input.operation_workflow?.owner_actor_id),
       owner_name: toText(input.operation_workflow?.owner_name),
