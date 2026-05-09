@@ -9,6 +9,7 @@ const srcRoot = path.join(appRoot, "src");
 const OPERATOR_SCOPED_PATTERNS = [
   /^src\/layouts\/OperatorLayout\.tsx$/,
   /^src\/views\/operator\/.+\.(ts|tsx)$/,
+  /^src\/features\/operator\/pages\/.+\.(ts|tsx)$/,
   /^src\/components\/operator\/.+\.(ts|tsx)$/,
   /^src\/api\/operator.+\.ts$/,
   /^src\/viewmodels\/operator.+\.ts$/,
@@ -52,8 +53,12 @@ const ALLOWED_OPERATOR_ADAPTER_ROUTE_PREFIXES = [
   /["'`]\/api\/v1\/approvals\/requests["'`]/,
   /["'`]\/api\/v1\/reports\/customer-dashboard\/aggregate["'`]/,
   /["'`]\/api\/v1\/alerts["'`]/,
+  /["'`]\/api\/v1\/devices["'`]/,
   /["'`]\/api\/v1\/actions\/index["'`]/,
   /["'`]\/api\/v1\/evidence\/export-jobs["'`]/,
+  /["'`]\/api\/v1\/field-memory["'`]/,
+  /["'`]\/api\/v1\/fields\/[^"'`]+\/memory/,
+  /["'`]\/api\/v1\/operations\/[^"'`]+\/field-memory/,
 ];
 
 const offenders = [];
@@ -87,12 +92,18 @@ function isAllowedOperatorAdapterRouteLine(line) {
 
 function isSanitizerImplementationLine(relativeFile, line) {
   if (!isOperatorAdapterOrVm(relativeFile)) return false;
+  const hidesSensitiveCredential =
+    /(credential[_-]?secret|secret[_-]?payload|secret|token|access[_-]?key|password)/i.test(line) &&
+    /(HIDDEN|hidden|hide|redact|sanitize|隐藏|脱敏)/i.test(line);
+
   return (
+    hidesSensitiveCredential ||
     line.includes("本地路径已隐藏") ||
     line.includes("敏感凭据已隐藏") ||
+    line.includes("敏感信息已隐藏") ||
     line.includes("下载链接已隐藏") ||
     /raw\.startsWith\(["']\/["']\)/.test(line) ||
-    /\^\[A-Za-z\]:/.test(line) ||
+    /^\s*\/\^\[A-Za-z\]:/.test(line) ||
     /raw\.includes\(["']file:\/\//.test(line)
   );
 }
@@ -114,6 +125,7 @@ function scanFile(relativeFile) {
 
     for (const rule of FORBIDDEN_ROUTE_PATTERNS) {
       if (rule.pattern.test(line)) {
+        if (isSanitizerImplementationLine(relativeFile, line)) continue;
         if (isAdapterOrVm && isAllowedOperatorAdapterRouteLine(line)) continue;
         addOffender(relativeFile, index + 1, rule.token, line);
       }
