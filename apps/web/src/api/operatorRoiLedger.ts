@@ -2,7 +2,7 @@ import { apiRequestWithPolicy, withQuery } from "./client";
 import { fetchOperationReport } from "./reports";
 
 export type OperatorRoiLedgerDataScope = "OFFICIAL_OPERATOR_API" | "FALLBACK_LIMITED" | "EMPTY" | "ERROR_EMPTY";
-export type OperatorRoiValueKind = "MEASURED" | "ESTIMATED" | "ASSUMPTION_BASED" | "INSUFFICIENT_EVIDENCE" | "UNKNOWN";
+export type OperatorRoiValueKind = "MEASURED" | "ESTIMATED" | "ASSUMPTION" | "UNKNOWN";
 
 export type OperatorRoiLedgerItem = {
   roiId: string;
@@ -59,8 +59,7 @@ function normalizeValueKind(value: unknown): OperatorRoiValueKind {
   const raw = text(value, "UNKNOWN").toUpperCase();
   if (raw === "MEASURED") return "MEASURED";
   if (raw === "ESTIMATED") return "ESTIMATED";
-  if (raw === "ASSUMPTION_BASED" || raw === "ASSUMPTION") return "ASSUMPTION_BASED";
-  if (raw === "INSUFFICIENT_EVIDENCE" || raw === "INSUFFICIENT") return "INSUFFICIENT_EVIDENCE";
+  if (raw === "ASSUMPTION_BASED" || raw === "ASSUMPTION") return "ASSUMPTION";
   return "UNKNOWN";
 }
 

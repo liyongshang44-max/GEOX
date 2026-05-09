@@ -692,13 +692,12 @@ async function buildFieldMemory(pool: Pool, query: { field_id?: string; operatio
   }));
 }
 
-function normalizeValueKind(input: unknown, baselinePresent: boolean, actualPresent: boolean, evidencePresent: boolean, confidenceLevel: string): string {
+function normalizeValueKind(input: unknown, baselinePresent: boolean, actualPresent: boolean, evidencePresent: boolean, confidenceLevel: string): "MEASURED" | "ESTIMATED" | "ASSUMPTION" {
   const raw = safeText(input).toUpperCase();
   const measuredAllowed = baselinePresent && actualPresent && evidencePresent && ["HIGH", "MEDIUM"].includes(confidenceLevel);
-  if (measuredAllowed) return raw === "MEASURED" ? "MEASURED" : (raw || "MEASURED");
-  if (!evidencePresent) return "INSUFFICIENT_EVIDENCE";
-  if (!baselinePresent || !actualPresent) return "ESTIMATED";
-  return "ASSUMPTION_BASED";
+  if (measuredAllowed && raw === "MEASURED") return "MEASURED";
+  if (raw === "ASSUMPTION" || raw === "ASSUMPTION_BASED") return "ASSUMPTION";
+  return "ESTIMATED";
 }
 
 async function buildRoiLedger(pool: Pool, query: { field_id?: string; operation_id?: string }): Promise<Row[]> {
@@ -729,7 +728,7 @@ async function buildRoiLedger(pool: Pool, query: { field_id?: string; operation_
       operation_id: normalizeOperationId(row),
       prescription_id: nullableText(row.prescription_id),
       evidence_ref: normalizedEvidenceRef,
-      calculation_method: safeText(row.calculation_method ?? row.method),
+      method: safeText(row.calculation_method ?? row.method),
       confidence: confidence,
       assumption: jsonObjectOrNull(row.assumptions),
       created_at: toIsoAny(row.created_at),
@@ -737,6 +736,10 @@ async function buildRoiLedger(pool: Pool, query: { field_id?: string; operation_
       actual_present: actualPresent,
       evidence_present: evidencePresent,
       value_kind: valueKind,
+      baseline: jsonObjectOrNull(row.baseline),
+      actual: jsonObjectOrNull(row.actual),
+      delta: jsonObjectOrNull(row.delta),
+      as_executed_id: nullableText(row.as_executed_id),
       metric_name: normalizeMetricName(row),
       value_text: normalizeValueText(row),
     };
