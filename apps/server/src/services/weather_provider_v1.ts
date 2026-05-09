@@ -8,6 +8,7 @@ export type WeatherEventV1 = {
 };
 
 export type WeatherHistoryV1 = {
+  status?: "ok" | "unavailable";
   source: string;
   field_id: string;
   from: string;
@@ -132,6 +133,7 @@ async function fetchOpenMeteoRainfall(params: {
   }
 
   return {
+    status: "ok",
     source: "open_meteo_v1",
     field_id: params.field_id,
     from: params.from,
@@ -139,25 +141,6 @@ async function fetchOpenMeteoRainfall(params: {
     rainfall_mm: Number(totalRainfall.toFixed(2)),
     confidence: events.length > 0 ? 0.8 : 0.6,
     events,
-  };
-}
-
-function buildStubEnvelope(input: { field_id: string; from: string; to: string; source: string; event_type: WeatherEventType }): WeatherHistoryV1 {
-  return {
-    source: input.source,
-    field_id: input.field_id,
-    from: input.from,
-    to: input.to,
-    rainfall_mm: 0,
-    confidence: 0.3,
-    events: [
-      {
-        event_type: input.event_type,
-        started_at: input.from,
-        ended_at: input.to,
-        rainfall_mm: 0,
-      },
-    ],
   };
 }
 
@@ -170,9 +153,8 @@ export function createWeatherProviderV1(): WeatherProviderV1 {
       const cached = getCached(key);
       if (cached) return cached;
 
-      const result = config.provider === "open_meteo"
-        ? await fetchOpenMeteoRainfall({ ...input, eventType: "RAIN", config })
-        : buildStubEnvelope({ ...input, source: "weather_history_stub_v1", event_type: "RAIN" });
+      if (config.provider !== "open_meteo") throw new Error(`weather provider unsupported: ${config.provider}`);
+      const result = await fetchOpenMeteoRainfall({ ...input, eventType: "RAIN", config });
       setCached(key, result, config.cacheTtlSeconds);
       return result;
     },
@@ -184,9 +166,8 @@ export function createWeatherProviderV1(): WeatherProviderV1 {
       const cached = getCached(key);
       if (cached) return cached;
 
-      const result = config.provider === "open_meteo"
-        ? await fetchOpenMeteoRainfall({ ...base, eventType: "FORECAST_RAIN", config })
-        : buildStubEnvelope({ ...base, source: "weather_forecast_stub_v1", event_type: "FORECAST_RAIN" });
+      if (config.provider !== "open_meteo") throw new Error(`weather provider unsupported: ${config.provider}`);
+      const result = await fetchOpenMeteoRainfall({ ...base, eventType: "FORECAST_RAIN", config, location: input.location });
       setCached(key, result, config.cacheTtlSeconds);
       return result;
     },
@@ -219,6 +200,7 @@ export function computeGeometryCentroidV1(geometry: unknown): WeatherLocationV1 
 
 export function buildUnavailableWeatherV1(input: { field_id: string; from: string; to: string; reason: string }): WeatherHistoryV1 {
   return {
+    status: "unavailable",
     source: `weather_unavailable_v1:${input.reason}`,
     field_id: input.field_id,
     from: input.from,

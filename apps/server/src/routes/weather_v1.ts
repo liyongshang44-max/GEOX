@@ -45,8 +45,12 @@ export function registerWeatherV1Routes(app: FastifyInstance, _pool: Pool): void
 
     const location = await resolveFieldLocation(field_id);
     if (!location) return reply.code(200).send(buildUnavailableWeatherV1({ field_id, from, to, reason: "location_unavailable" }));
-    const weather = await provider.getHistory({ field_id, from, to, location });
-    return reply.code(200).send(weather);
+    try {
+      const weather = await provider.getHistory({ field_id, from, to, location });
+      return reply.code(200).send(weather);
+    } catch {
+      return reply.code(200).send(buildUnavailableWeatherV1({ field_id, from, to, reason: "provider_error" }));
+    }
   });
 
   app.get("/api/v1/weather/forecast", async (req, reply) => {
@@ -60,7 +64,11 @@ export function registerWeatherV1Routes(app: FastifyInstance, _pool: Pool): void
     const to = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
     const location = await resolveFieldLocation(field_id);
     if (!location) return reply.code(200).send(buildUnavailableWeatherV1({ field_id, from: now, to, reason: "location_unavailable" }));
-    const weather = await provider.getForecast({ field_id, location });
-    return reply.code(200).send(weather);
+    try {
+      const weather = await provider.getForecast({ field_id, location });
+      return reply.code(200).send(weather);
+    } catch {
+      return reply.code(200).send(buildUnavailableWeatherV1({ field_id, from: now, to, reason: "provider_error" }));
+    }
   });
 }
