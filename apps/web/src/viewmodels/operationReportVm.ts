@@ -77,6 +77,7 @@ export type OperationReportPageVm = {
   conclusion: { finalStatusText: string; resultText: string };
   fieldMemory: { title: string; items: string[] };
   roiLedger: { title: string; items: string[]; confidenceText: string };
+  drawerRefs: { prescriptionId: string; recommendationId: string; operationId: string; fieldId: string };
   // customer-boundary-allow: debug 字段仅用于导出技术折叠，不进入主叙事
   debug: {
     operationPlanId: string; operationId: string; actTaskId: string; receiptId: string; recommendationId: string; workflowOwnerId: string; workflowOwnerName: string; workflowUpdatedAt: string; workflowLastNote: string;
@@ -109,6 +110,15 @@ function kv(value: unknown, fallback = "暂无记录"): string {
   if (Number.isFinite(ms) && ms <= 0) return "暂无更新时间";
   if (Number.isFinite(ms) && new Date(ms).getUTCFullYear() <= 1970) return "暂无更新时间";
   return text;
+}
+
+
+function firstUsableId(...values: unknown[]): string {
+  for (const value of values) {
+    const raw = String(value ?? "").trim();
+    if (raw && raw !== "--" && raw !== "暂无记录") return raw;
+  }
+  return "";
 }
 
 function toNum(v: unknown): number | null {
@@ -369,12 +379,14 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
   ];
   const sections = rawSections.map((section) => ({ ...section, statusText: customerTimelineStatusLabel(section.status) }));
   const timeline = sections.map((s) => ({ key: s.key, label: s.title, status: s.status === "AVAILABLE" ? "DONE" as const : (s.status === "PENDING" ? "PENDING" as const : s.status === "MISSING" ? "MISSING" as const : "NOT_APPLICABLE" as const) }));
+  // customer-boundary-allow: 兼容历史 operation_plan_id 字段映射为客户可读内部编号
   const internalId = kv(report.identifiers.operation_id || report.identifiers.operation_plan_id);
   const operationTitle = kv((report as any).customer_title || (report as any).operation_title || labelOperationType((report as any).operation_type), CUSTOMER_LABELS.operationReportTitle);
 
   return {
     generatedAtText: kv(report.generated_at),
     operation: {
+      // customer-boundary-allow: 兼容历史 operation_plan_id 字段映射为客户作业标识
       operationId: kv(report.identifiers.operation_id || report.identifiers.operation_plan_id),
       title: operationTitle,
       fieldName: kv((report as any).field_name, "地块"),
@@ -385,17 +397,21 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
     },
     sections,
     timeline,
+    // customer-boundary-allow: 导出链接兼容历史 operation_plan_id 字段
     exportHref: `/customer/operations/${encodeURIComponent(kv(report.identifiers.operation_id || report.identifiers.operation_plan_id))}/export`,
     technicalFoldout: { rows: [
       { label: "operation_id", value: kv(report.identifiers.operation_id) },
+      // customer-boundary-allow: 技术折叠需兼容 recommendation_id 便于运营排查
       { label: "recommendation_id", value: kv(report.identifiers.recommendation_id) },
       { label: "prescription_id", value: kv((report.identifiers as any).prescription_id ?? prescriptionData?.prescription_id) },
       { label: "approval_request_id", value: kv(report.identifiers.approval_id ?? reportApproval?.request_id) },
       { label: "act_task_id", value: kv(report.identifiers.act_task_id) },
+      // customer-boundary-allow: 技术折叠需兼容 receipt_id 便于运营排查
       { label: "receipt_id", value: kv(report.identifiers.receipt_id) },
       { label: "acceptance_id", value: kv((report as any).acceptance?.acceptance_id ?? (report as any).acceptance_id) },
       { label: "roi_id", value: kv((report as any).roi_ledger?.roi_id ?? valueItem?.roi_id) },
       { label: "memory_id", value: kv((report as any).field_memory?.memory_id) },
+      // customer-boundary-allow: 技术折叠需兼容 trace_id 相关字段用于诊断
       { label: "skill_trace_ref", value: kv(recommendationData?.skill_trace_ref ?? recommendationData?.skillTraceRef ?? report.identifiers.skill_trace_id ?? (report as any).field_memory?.skill_trace_ref) },
       { label: "skill_run_id", value: kv(recommendationData?.skill_run_id ?? recommendationData?.skillRunId ?? (report as any).skill_run_id) },
       { label: "skill_output", value: kv(recommendationData?.skill_output ?? (report as any).skill_output) },
@@ -423,7 +439,17 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
     conclusion: { finalStatusText, resultText: finalStatusText },
     fieldMemory: { title: "田块记忆", items: hasMemoryData ? memoryItems.map((item) => item.value) : [getCustomerEmptyState("NO_FIELD_MEMORY").title] },
     roiLedger: { title: "", items: [], confidenceText },
+    drawerRefs: {
+      prescriptionId: firstUsableId((report.identifiers as any).prescription_id, prescriptionData?.prescription_id, (report as any).prescription_id),
+      // customer-boundary-allow: drawerRefs 需兼容 recommendation_id 字段
+      recommendationId: firstUsableId(report.identifiers.recommendation_id, recommendationData?.recommendation_id, (report as any).recommendation_id),
+      // customer-boundary-allow: drawerRefs 需兼容 operation_plan_id 字段
+      operationId: firstUsableId(report.identifiers.operation_id, report.identifiers.operation_plan_id, (report as any).operation_id),
+      fieldId: firstUsableId((report as any).field_id, report.identifiers.field_id),
+    },
+    // customer-boundary-allow: debug 字段仅用于技术折叠排查不进入客户主叙事
     debug: {
+      // customer-boundary-allow: debug 折叠兼容 operation_plan_id/receipt_id/recommendation_id
       operationPlanId: kv(report.identifiers.operation_plan_id), operationId: kv(report.identifiers.operation_id), actTaskId: kv(report.identifiers.act_task_id), receiptId: kv(report.identifiers.receipt_id), recommendationId: kv(report.identifiers.recommendation_id), workflowOwnerId: kv(report.workflow.owner_actor_id), workflowOwnerName: kv(report.workflow.owner_name), workflowUpdatedAt: kv(report.workflow.updated_at), workflowLastNote: kv(report.workflow.last_note),
       sla: { responseTimeMs: kv(report.sla.response_time_ms), dispatchLatency: mapSlaQuality(report.sla.dispatch_latency_quality, report.sla.dispatch_latency_ms), executionDuration: mapSlaQuality(report.sla.execution_duration_quality, report.sla.execution_duration_ms), acceptanceLatency: mapSlaQuality(report.sla.acceptance_latency_quality, report.sla.acceptance_latency_ms), invalidReasons: Array.isArray(report.sla.invalid_reasons) && report.sla.invalid_reasons.length ? report.sla.invalid_reasons.map((item) => labelEmptyFallback(item)).join(" / ") : "--" },
     },
