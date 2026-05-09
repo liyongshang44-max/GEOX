@@ -560,6 +560,84 @@ async function buildOperatorAcceptance(pool: Pool, limit: number): Promise<Row[]
     .slice(0, limit);
 }
 
+
+
+type EvidenceJobStatus = "PENDING" | "RUNNING" | "DONE" | "FAILED" | "UNKNOWN";
+type EvidenceStorageMode = "OBJECT_STORE" | "LOCAL" | "INLINE" | "NOT_READY" | "UNKNOWN";
+type EvidenceScopeStatus = "READY" | "NOT_READY" | "UNKNOWN";
+
+function normalizeEvidenceStatus(value: unknown): EvidenceJobStatus {
+  const raw = safeText(value).toUpperCase();
+  if (["PENDING", "QUEUED"].some((x) => raw.includes(x))) return "PENDING";
+  if (["RUNNING", "PROCESSING"].some((x) => raw.includes(x))) return "RUNNING";
+  if (["DONE", "SUCCESS", "COMPLETED"].some((x) => raw.includes(x))) return "DONE";
+  if (["FAILED", "ERROR"].some((x) => raw.includes(x))) return "FAILED";
+  return "UNKNOWN";
+}
+
+function normalizeStorageMode(value: unknown): EvidenceStorageMode {
+  const raw = safeText(value).toUpperCase();
+  if (raw.includes("OBJECT") || raw.includes("S3") || raw.includes("OSS")) return "OBJECT_STORE";
+  if (raw.includes("LOCAL")) return "LOCAL";
+  if (raw.includes("INLINE")) return "INLINE";
+  if (raw.includes("NOT_READY")) return "NOT_READY";
+  return "UNKNOWN";
+}
+
+function normalizeScopeStatus(value: unknown): EvidenceScopeStatus {
+  const raw = safeText(value).toUpperCase();
+  if (raw.includes("READY")) return raw.includes("NOT") ? "NOT_READY" : "READY";
+  return "UNKNOWN";
+}
+
+function sanitizeArtifact(value: unknown): string | null {
+  const v = safeText(value);
+  if (!v) return null;
+  if (v.startsWith("/") || /^[a-zA-Z]:\\/.test(v)) return "local_path_redacted";
+  return v.replace(/https?:\/\/[^\s]+/gi, "redacted_link");
+}
+
+async function buildOperatorEvidence(pool: Pool, limit: number): Promise<Row[]> {
+  const [exportRows, bundleRows, summaryRows, operationRows] = await Promise.all([
+    readMultiRows(pool, ["evidence_export_job", "evidence_export_jobs", "evidence_export_job_v1"], limit),
+    readMultiRows(pool, ["evidence_bundle", "evidence_manifest", "evidence_bundle_v1"], limit),
+    readMultiRows(pool, ["operation_evidence_summary", "evidence_summary", "evidence_bundle_summary_v1"], limit),
+    readTenantRows(pool, "operation_state_v1", limit),
+  ]);
+
+  const opById = new Map(operationRows.map((x) => [safeText(x.operation_id ?? x.operation_plan_id ?? x.id), x]));
+  const summaryByOp = new Map(summaryRows.map((x) => [safeText(x.operation_id ?? x.operation_plan_id ?? x.scope_id), x]));
+  const bundleByOp = new Map(bundleRows.map((x) => [safeText(x.operation_id ?? x.operation_plan_id ?? x.scope_id), x]));
+
+  const items = exportRows.map((job, idx) => {
+    const operationId = safeText(job.operation_id ?? job.operation_plan_id ?? job.scope_id);
+    const summary = summaryByOp.get(operationId) ?? {};
+    const bundle = bundleByOp.get(operationId) ?? {};
+    const op = opById.get(operationId) ?? {};
+    const status = normalizeEvidenceStatus(job.status ?? job.job_status);
+    const storageMode = normalizeStorageMode(job.storage_mode ?? job.artifact_mode ?? bundle.storage_mode);
+    return {
+      job_id: safeText(job.job_id ?? job.id ?? `job_${idx}`),
+      operation_id: operationId || null,
+      scope_type: safeText(job.scope_type ?? "operation").toLowerCase() || "operation",
+      scope_id: nullableText(job.scope_id ?? operationId),
+      scope_status: normalizeScopeStatus(job.scope_status ?? summary.scope_status ?? (op.operation_id ? "READY" : "UNKNOWN")),
+      status,
+      manifest: nullableText(job.manifest ?? bundle.manifest ?? summary.manifest),
+      sha256: nullableText(job.sha256 ?? bundle.sha256 ?? summary.sha256),
+      artifact: sanitizeArtifact(job.artifact ?? job.artifact_key ?? bundle.artifact_key),
+      format: nullableText(job.format ?? job.export_format ?? "zip"),
+      storage_mode: storageMode,
+      download_status: status === "DONE" ? "可由后端授权下载" : "尚不可下载",
+      created_at: toIsoAny(job.created_at ?? job.created_ts_ms),
+      completed_at: toIsoAny(job.completed_at ?? job.finished_at ?? job.updated_at),
+      failure_reason: nullableText(job.failure_reason ?? job.error_message),
+    };
+  });
+
+  return items.slice(0, limit);
+}
+
 function buildReadonlyFacadePayload(source: string, message: string) {
   return {
     ...basePayload(source),
@@ -724,12 +802,36 @@ export function registerOperatorV1FacadeRoutes(app: FastifyInstance, pool: Pool)
     });
   });
 
-  app.get("/api/v1/operator/evidence", async (_req, reply) => {
-    return reply.send(buildReadonlyFacadePayload("operator_evidence_api", "operator evidence read-only facade"));
+  app.get("/api/v1/operator/evidence", async (req: any, reply) => {
+    const query = (req.query ?? {}) as { limit?: string | number; tenant_id?: string; project_id?: string; group_id?: string };
+    const parsedLimit = Number(query.limit);
+    const limit = Number.isFinite(parsedLimit) ? Math.min(300, Math.max(1, Math.floor(parsedLimit))) : 100;
+    const items = await buildOperatorEvidence(pool, limit);
+    return reply.send({
+      ...basePayload("operator_evidence_api"),
+      exportReady: false,
+      items,
+      filters: {
+        tenant_id: safeText(query.tenant_id),
+        project_id: safeText(query.project_id),
+        group_id: safeText(query.group_id),
+        limit,
+      },
+      message: "operator evidence read-only facade",
+    });
   });
 
-  app.get("/api/v1/evidence/export-jobs", async (_req, reply) => {
-    return reply.send(buildReadonlyFacadePayload("operator_evidence_export_jobs_api", "operator evidence export-jobs read-only facade"));
+  app.get("/api/v1/evidence/export-jobs", async (req: any, reply) => {
+    const query = (req.query ?? {}) as { limit?: string | number };
+    const parsedLimit = Number(query.limit);
+    const limit = Number.isFinite(parsedLimit) ? Math.min(300, Math.max(1, Math.floor(parsedLimit))) : 100;
+    const items = await buildOperatorEvidence(pool, limit);
+    return reply.send({
+      ...basePayload("operator_evidence_export_jobs_api"),
+      exportReady: false,
+      items,
+      message: "operator evidence export-jobs read-only facade",
+    });
   });
 
   app.get("/api/v1/operator/devices-alerts", async (req: any, reply) => {
