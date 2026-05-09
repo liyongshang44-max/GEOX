@@ -1378,6 +1378,43 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           }
         }
       },
+      "/api/v1/operator/devices-alerts": {
+        get: {
+          tags: ["operations"],
+          summary: "Operator read-only devices and alerts facade",
+          responses: {
+            "200": { description: "Operator devices-alerts facade payload" }
+          }
+        }
+      },
+      "/api/v1/operator/field-memory": {
+        get: {
+          tags: ["operations"],
+          summary: "Operator read-only field-memory facade",
+          parameters: [
+            { name: "field_id", in: "query", required: false, schema: { type: "string" } },
+            { name: "operation_id", in: "query", required: false, schema: { type: "string" } },
+            { name: "memory_type", in: "query", required: false, schema: { type: "string" } }
+          ],
+          responses: {
+            "200": { description: "Operator field-memory facade payload" },
+            "403": { description: "Forbidden" }
+          }
+        }
+      },
+      "/api/v1/operator/roi-ledger": {
+        get: {
+          tags: ["operations"],
+          summary: "Operator read-only roi-ledger facade",
+          parameters: [
+            { name: "field_id", in: "query", required: false, schema: { type: "string" } },
+            { name: "operation_id", in: "query", required: false, schema: { type: "string" } }
+          ],
+          responses: {
+            "200": { description: "Operator roi-ledger facade payload" }
+          }
+        }
+      },
       "/api/v1/fields/portfolio": {
         get: {
           tags: ["fields"],

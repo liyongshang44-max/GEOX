@@ -48,7 +48,9 @@
 | `GET /api/v1/operator/dispatch` | adapter 可包 | P1-B-04 | 派发状态空态 | 否 | 不直连 legacy control API without adapter |
 | `GET /api/v1/operator/acceptance` | adapter 可包 | P1-B-05 | 验收队列空态 | 否 | 以 operation_state_v1 / final_status / report 投影为准 |
 | `GET /api/v1/operator/evidence` | adapter 可包 | P1-B-06 | 证据中心空态 | 否 | 不展示裸文件路径，不展示内部存储路径 |
-| `GET /api/v1/operator/devices-alerts` | adapter 可包或需新增 | P1-C-01 | 设备与告警中心空态 | 否 | 不展示 device credential secret payload |
+| `GET /api/v1/operator/devices-alerts` | 已存在（只读 facade） | P1-C-01 | 使用正式 API，不再依赖 fallback | 是（只读 facade 范围内） | ACK/close 写操作仍未 ready；不展示 device credential secret payload |
+| `GET /api/v1/operator/field-memory` | 已存在（只读 facade） | P1-C-03 | 使用正式 API，不再依赖 fallback | 是（只读 facade 范围内） | 仅只读明细；acceptance evaluate/request-review 写操作仍未 ready |
+| `GET /api/v1/operator/roi-ledger?field_id=&operation_id=` | 已存在（只读 facade） | P1-C-02 | 使用正式 API，不再依赖 fallback | 是（只读 facade 范围内） | approval 写操作仍未 ready；无 baseline 不得标记实测收益 |
 
 ## 6. 推荐 API 防误用规则
 
@@ -79,7 +81,7 @@ POST /api/v1/decision/recommendations/generate
 | 有证据包摘要 | 是 | 仅当 report 内嵌 summary 存在 | 不代表 evidence-pack-summary API 已接入 |
 | 无 ROI ledger API | 是 | 仅只读入口/空态任务可通过 | 不得伪造 ROI 明细 |
 | 无 Field Memory API | 是 | 仅只读入口/空态任务可通过 | 不得伪造田块记忆 |
-| operator API 未接入 | 是 | 不能 Done | 只能显示运营空态，不得直连 debug/healthz/raw facts |
+| operator API（除 devices-alerts/field-memory/roi-ledger）未接入 | 是 | 不能 Done | 只能显示运营空态，不得直连 debug/healthz/raw facts |
 
 ## 8. 禁止误判为已存在的能力
 
