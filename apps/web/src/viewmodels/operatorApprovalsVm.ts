@@ -1,5 +1,12 @@
 import type { OperatorApprovalItem, OperatorApprovalsResponse, OperatorApprovalRiskLevel, OperatorApprovalStatus } from "../api/operatorApprovals";
 
+export type OperatorActionButtonStateV1 = {
+  canAction: boolean;
+  disabledReason: string | null;
+  pending: boolean;
+  lastError: string | null;
+};
+
 export type OperatorApprovalRowVm = {
   approvalRequestId: string;
   title: string;
@@ -16,7 +23,9 @@ export type OperatorApprovalRowVm = {
   recommendationText: string;
   canApprove: boolean;
   permissionReason: string;
+  permissionAllowed: boolean;
   selfApprovalRisk: boolean;
+  actionButtonState: OperatorActionButtonStateV1;
   sourceText: string;
 };
 
@@ -40,6 +49,7 @@ export type OperatorApprovalsVm = {
 function text(value: unknown, fallback = ""): string {
   const raw = String(value ?? "").trim();
   if (!raw || raw === "--" || raw === "undefined" || raw === "null") return fallback;
+  if (/token|secret|credential|private\s*key|password|stack\s*trace|debug\s*json/i.test(raw)) return fallback;
   return raw;
 }
 
@@ -87,7 +97,41 @@ function prescriptionHref(item: OperatorApprovalItem): string | null {
   return null;
 }
 
+function buildActionButtonState(item: OperatorApprovalItem): OperatorActionButtonStateV1 {
+  if (item.selfApprovalRisk) {
+    return {
+      canAction: false,
+      disabledReason: "存在自审批风险，审批动作已阻断。",
+      pending: false,
+      lastError: null,
+    };
+  }
+  if (item.status !== "PENDING") {
+    return {
+      canAction: false,
+      disabledReason: "审批请求当前状态不可再次处理。",
+      pending: false,
+      lastError: null,
+    };
+  }
+  if (!item.permissionAllowed) {
+    return {
+      canAction: false,
+      disabledReason: text(item.permissionReason, "当前身份无审批权限。"),
+      pending: false,
+      lastError: null,
+    };
+  }
+  return {
+    canAction: true,
+    disabledReason: null,
+    pending: false,
+    lastError: null,
+  };
+}
+
 function buildRow(item: OperatorApprovalItem): OperatorApprovalRowVm {
+  const actionButtonState = buildActionButtonState(item);
   return {
     approvalRequestId: item.approvalRequestId,
     title: text(item.title, "审批事项"),
@@ -102,9 +146,11 @@ function buildRow(item: OperatorApprovalItem): OperatorApprovalRowVm {
     prescriptionText: text(item.prescriptionId, "未关联正式处方"),
     prescriptionHref: prescriptionHref(item),
     recommendationText: text(item.recommendationId, "未关联建议"),
-    canApprove: item.canApprove,
-    permissionReason: text(item.permissionReason, item.canApprove ? "具备审批权限" : "当前不可审批"),
+    canApprove: actionButtonState.canAction,
+    permissionReason: text(actionButtonState.disabledReason ?? item.permissionReason, item.canApprove ? "具备审批权限" : "当前不可审批"),
+    permissionAllowed: item.permissionAllowed,
     selfApprovalRisk: item.selfApprovalRisk,
+    actionButtonState,
     sourceText: sourceText(item.source),
   };
 }
@@ -123,7 +169,7 @@ export function buildOperatorApprovalsVm(response: OperatorApprovalsResponse): O
     const original = response.items.filter((item) => item.status === "PENDING")[index];
     return original?.riskLevel === "HIGH" && Boolean(original?.prescriptionId);
   });
-  const noPermission = pending.filter((row) => !row.canApprove && !row.selfApprovalRisk);
+  const noPermission = pending.filter((row) => !row.actionButtonState.canAction && !row.selfApprovalRisk);
   const selfApprovalRisk = pending.filter((row) => row.selfApprovalRisk);
   const history = rows.filter((row, index) => response.items[index]?.status !== "PENDING");
 
