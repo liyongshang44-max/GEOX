@@ -91,6 +91,7 @@ POST /api/v1/decision/recommendations/generate
 即使后端存在相邻数据，也不得在 P1-A0 标记为当前已有：
 
 ```text
+（注：已在第 5 节明确标注“已存在，只读 facade”的 operator API，不属于本节禁止误判范围。）
 GET /api/v1/customer/cockpit/overview
 GET /api/v1/customer/fields
 GET /api/v1/customer/operations
@@ -98,13 +99,7 @@ GET /api/v1/customer/reports
 GET /api/v1/customer/roi-ledger?field_id=&operation_id=
 GET /api/v1/customer/fields/:fieldId/memory
 GET /api/v1/operations/:operationId/evidence-pack-summary
-GET /api/v1/operator/workbench
 GET /api/v1/operator/approvals
-GET /api/v1/operator/dispatch
-GET /api/v1/operator/acceptance
-GET /api/v1/operator/evidence
-GET /api/v1/evidence/export-jobs
-GET /api/v1/operator/devices-alerts
 推荐生成 API
 证据包下载 API
 ```
