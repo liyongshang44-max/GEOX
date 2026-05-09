@@ -25,9 +25,9 @@ function assert(condition, message) {
 
 function deepHasSensitive(value) {
   if (value == null) return false;
-  if (typeof value === "string") return /(token|secret|access[_-]?key)/i.test(value);
+  if (typeof value === "string") return /(token|secret|access[_-]?key|credential_payload|password|private\s*key)/i.test(value);
   if (Array.isArray(value)) return value.some(deepHasSensitive);
-  if (typeof value === "object") return Object.entries(value).some(([k, v]) => /(token|secret|access[_-]?key)/i.test(k) || deepHasSensitive(v));
+  if (typeof value === "object") return Object.entries(value).some(([k, v]) => /(token|secret|access[_-]?key|credential_payload|password|private\s*key)/i.test(k) || deepHasSensitive(v));
   return false;
 }
 
@@ -46,6 +46,7 @@ function deepHasObjectObjectString(value) {
 async function main() {
   const authToken = process.env.OPERATOR_FACADE_AUTH_TOKEN;
   const devicesAlerts = await getJson("/api/v1/operator/devices-alerts");
+  const devicesAlertsLimit5 = await getJson("/api/v1/operator/devices-alerts?limit=5");
   const fieldMemory = await getJson("/api/v1/operator/field-memory");
   const roiLedger = await getJson("/api/v1/operator/roi-ledger");
 
@@ -61,13 +62,18 @@ async function main() {
   assert(fieldMemory.status !== 500, "field-memory must not return 500");
   assert(fieldMemory.status === 200 || fieldMemory.status === 401 || fieldMemory.status === 403, "field-memory must return 200, 401, or 403");
 
-  if (devicesAlerts.status === 200) {
-    assert(!deepHasSensitive(devicesAlerts.json), "devices-alerts payload contains token/secret/access_key");
+  for (const [name, resp] of [["devices-alerts", devicesAlerts], ["devices-alerts(limit=5)", devicesAlertsLimit5], ["field-memory", fieldMemory], ["roi-ledger", roiLedger]]) {
+    assert(!deepHasSensitive(resp.json), `${name} payload contains sensitive fields`);
+    assert(!deepHasObjectObjectString(resp.json), `${name} payload contains [object Object]`);
+  }
+
+  if (devicesAlertsLimit5.status === 200) {
+    assert(Array.isArray(devicesAlertsLimit5.json?.devices), "devices-alerts(limit=5) devices must be an array");
+    assert(devicesAlertsLimit5.json.devices.length <= 5, "devices-alerts(limit=5) devices.length must be <= 5");
   }
 
   if (roiLedger.status === 200) {
     assert(!hasMeasuredWithoutBaseline(roiLedger.json?.items), "roi-ledger has MEASURED item without baseline_present");
-    assert(!deepHasObjectObjectString(roiLedger.json?.items), "roi-ledger string fields must not contain [object Object]");
     const unitOnlyPattern = /^[a-zA-Z%³㎡]+$/;
     for (const [idx, item] of (roiLedger.json?.items ?? []).entries()) {
       assert(
