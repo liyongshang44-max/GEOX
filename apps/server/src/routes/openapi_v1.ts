@@ -654,7 +654,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         },
         OperationReportV1: {
           type: "object",
-          required: ["type", "version", "generated_at", "approval", "why", "operation_title", "customer_title", "identifiers", "execution", "acceptance", "evidence", "cost", "sla", "field_memory", "risk", "roi_ledger", "workflow", "evidence_pack_summary"],
+          required: ["type", "version", "generated_at", "approval", "why", "operation_title", "customer_title", "identifiers", "as_executed", "execution", "acceptance", "evidence", "cost", "sla", "field_memory", "risk", "roi_ledger", "workflow", "evidence_pack_summary"],
           properties: {
             type: { type: "string", enum: ["operation_report_v1"] },
             version: { type: "string", enum: ["v1"] },
@@ -694,6 +694,21 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
                 recommendation_id: { type: "string", nullable: true },
                 act_task_id: { type: "string", nullable: true },
                 receipt_id: { type: "string", nullable: true }
+              }
+            },
+            as_executed: {
+              type: "object",
+              required: ["operation_id", "execution_mode", "started_at", "finished_at", "actual_params", "receipt_id", "device_id", "operator_id", "deviation_summary"],
+              properties: {
+                operation_id: { type: "string" },
+                execution_mode: { type: "string", enum: ["DEVICE", "HUMAN"] },
+                started_at: { type: "string", format: "date-time", nullable: true },
+                finished_at: { type: "string", format: "date-time", nullable: true },
+                actual_params: { type: "object", additionalProperties: true },
+                receipt_id: { type: "string", nullable: true },
+                device_id: { type: "string", nullable: true },
+                operator_id: { type: "string", nullable: true },
+                deviation_summary: { type: "string", nullable: true }
               }
             },
             execution: {

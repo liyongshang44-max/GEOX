@@ -98,11 +98,14 @@ export type OperationReportV1 = {
     receipt_id: string | null;
   };
   as_executed: {
+    operation_id: string;
     execution_mode: "DEVICE" | "HUMAN";
     started_at: string | null;
     finished_at: string | null;
     actual_params: Record<string, unknown>;
     receipt_id: string | null;
+    device_id: string | null;
+    operator_id: string | null;
     deviation_summary: string | null;
   };
   execution: {
@@ -586,11 +589,25 @@ export function projectOperationReportV1(input: {
   };
 
   const asExecuted = {
+    operation_id: input.operation_state.operation_id,
     execution_mode: normalizeExecutionMode((input.operation_state as any)?.execution_mode ?? (input.operation_state as any)?.executor_type),
     started_at: toText(input.receipt?.execution_started_at ?? (input.operation_state as any)?.execution_started_at),
     finished_at: toText(input.receipt?.execution_finished_at ?? (input.operation_state as any)?.execution_finished_at),
     actual_params: pickActualParams(input.operation_state as any, input.receipt as any),
     receipt_id: toText(input.operation_state.receipt_id),
+    device_id: toText(
+      input.operation_state.device_id
+      ?? (input.receipt as any)?.device_id
+      ?? (input.receipt as any)?.executor?.device_id
+      ?? (input.receipt as any)?.operator?.device_id,
+    ),
+    operator_id: toText(
+      (input.operation_state as any)?.operator_id
+      ?? (input.receipt as any)?.operator_id
+      ?? (input.receipt as any)?.operator?.operator_id
+      ?? (input.receipt as any)?.executor?.operator_id
+      ?? (input.receipt as any)?.executor_id,
+    ),
     deviation_summary: toText((input.operation_state as any)?.deviation_summary ?? (input.receipt as any)?.deviation_summary),
   };
 

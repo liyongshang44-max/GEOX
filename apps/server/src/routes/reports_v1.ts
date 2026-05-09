@@ -136,6 +136,17 @@ function ensureReportV1ExtendedFields(report: OperationReportV1): OperationRepor
     },
     operation_title: report.operation_title ?? null,
     customer_title: report.customer_title ?? report.operation_title ?? null,
+    as_executed: (report as any).as_executed ?? {
+      operation_id: report.identifiers.operation_id,
+      execution_mode: "HUMAN",
+      started_at: null,
+      finished_at: null,
+      actual_params: {},
+      receipt_id: report.identifiers.receipt_id ?? null,
+      device_id: null,
+      operator_id: null,
+      deviation_summary: null,
+    },
     field_memory: (report as any).field_memory ?? {
       field_response_memory: [],
       device_reliability_memory: [],
