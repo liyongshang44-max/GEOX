@@ -61,6 +61,21 @@ export function registerAuthV1Routes(app: FastifyInstance): void {
     });
   });
 
+  app.get("/api/v1/session/me", async (req, reply) => {
+    const auth = requireAoActAuthV0(req, reply);
+    if (!auth) return;
+    return reply.send({
+      user_id: auth.actor_id,
+      display_name: null,
+      tenant_id: auth.tenant_id,
+      project_id: auth.project_id,
+      group_id: auth.group_id,
+      roles: [auth.role],
+      scopes: auth.scopes,
+      allowed_field_ids: auth.allowed_field_ids
+    });
+  });
+
   app.post("/api/v1/auth/login", async (req, reply) => {
     const body: any = (req as any).body ?? {};
 

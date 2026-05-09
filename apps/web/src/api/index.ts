@@ -20,3 +20,5 @@ export {
 } from "./fieldPortfolio";
 
 export * from "./deviceSimulator";
+
+export * from "./session";
