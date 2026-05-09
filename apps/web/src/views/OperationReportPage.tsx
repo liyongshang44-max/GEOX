@@ -46,14 +46,6 @@ function shortOperationLabel(value: string): string {
   return text;
 }
 
-function firstUsableId(...values: unknown[]): string {
-  for (const value of values) {
-    const text = String(value ?? "").trim();
-    if (text && text !== "--" && text !== "暂无记录") return text;
-  }
-  return "";
-}
-
 export default function OperationReportPage(): React.ReactElement {
   const { operationId = "" } = useParams();
   const [loading, setLoading] = React.useState(true);
@@ -92,11 +84,10 @@ export default function OperationReportPage(): React.ReactElement {
   const canExport = Boolean(operationId.trim());
   const canBackToField = Boolean(vm.operation.fieldId && vm.operation.fieldId !== "--");
   const reportAny = report as any;
-  const identifiersAny = reportAny.identifiers ?? {};
-  const prescriptionId = firstUsableId(identifiersAny.prescription_id, reportAny.prescription?.prescription_id, reportAny.prescription_id);
-  const recommendationId = firstUsableId(identifiersAny.recommendation_id, reportAny.recommendation?.recommendation_id, reportAny.recommendation_id);
-  const drawerOperationId = firstUsableId(operationId, vm.operation.operationId, identifiersAny.operation_id, identifiersAny.operation_plan_id);
-  const drawerFieldId = firstUsableId(vm.operation.fieldId, reportAny.field_id, identifiersAny.field_id);
+  const prescriptionId = vm.drawerRefs.prescriptionId;
+  const recommendationId = vm.drawerRefs.recommendationId;
+  const drawerOperationId = vm.drawerRefs.operationId;
+  const drawerFieldId = vm.drawerRefs.fieldId;
   const embeddedRoi = reportAny.roi_ledger ?? reportAny.roi ?? reportAny.value_summary;
   const embeddedMemory = reportAny.field_memory ?? reportAny.field_memory_summary ?? reportAny.memory;
 

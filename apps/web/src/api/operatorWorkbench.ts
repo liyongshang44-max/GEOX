@@ -214,19 +214,30 @@ function buildAlertsFallback(payload: unknown): OperatorWorkbenchItem[] {
   });
 }
 
-async function fetchOptional(path: string): Promise<unknown | null> {
+type OptionalApiResult = { ok: boolean; status: number; data: unknown | null };
+
+async function fetchOptional(path: string): Promise<OptionalApiResult> {
   try {
-    const result = await apiRequestWithPolicy<unknown>(path, undefined, { allowedStatuses: [403, 404, 405, 422], silent: true, timeoutMs: 10000 });
-    return result.ok ? result.data : null;
+    const result = await apiRequestWithPolicy<unknown>(path, undefined, { allowedStatuses: [403, 404, 405, 422, 501], silent: true, timeoutMs: 10000 });
+    return { ok: Boolean(result.ok), status: Number(result.status ?? 0), data: result.data ?? null };
   } catch {
-    return null;
+    return { ok: false, status: 0, data: null };
   }
 }
 
 export async function fetchOperatorWorkbench(): Promise<OperatorWorkbenchResponse> {
   const official = await fetchOptional(withQuery("/api/v1/operator/workbench"));
-  const officialItems = normalizeOfficial(official);
-  if (officialItems.length > 0) {
+  const officialItems = normalizeOfficial(official.data);
+  if (official.ok || (official.data && typeof official.data === "object" && ((official.data as AnyRecord).dataScope === "OFFICIAL_OPERATOR_API" || text((official.data as AnyRecord).source).includes("operator_workbench")))) {
+    return {
+      source: "operator_workbench_api",
+      dataScope: "OFFICIAL_OPERATOR_API",
+      generated_at: new Date().toISOString(),
+      items: officialItems,
+    };
+  }
+
+  if (![404, 405, 501].includes(official.status)) {
     return {
       source: "operator_workbench_api",
       dataScope: "OFFICIAL_OPERATOR_API",
@@ -242,9 +253,9 @@ export async function fetchOperatorWorkbench(): Promise<OperatorWorkbenchRespons
   ]);
 
   const fallbackItems = [
-    ...buildApprovalFallback(approvals),
-    ...buildReportFallback(aggregate),
-    ...buildAlertsFallback(alerts),
+    ...buildApprovalFallback(approvals.data),
+    ...buildReportFallback(aggregate.data),
+    ...buildAlertsFallback(alerts.data),
   ];
 
   if (fallbackItems.length > 0) {

@@ -171,19 +171,32 @@ function normalizeReportFallback(payload: unknown): OperatorEvidenceItem[] {
   });
 }
 
-async function fetchOptional(path: string): Promise<unknown | null> {
+type OptionalApiResult = { ok: boolean; status: number; data: unknown | null };
+
+async function fetchOptional(path: string): Promise<OptionalApiResult> {
   try {
-    const result = await apiRequestWithPolicy<unknown>(path, undefined, { allowedStatuses: [403, 404, 405, 422], silent: true, timeoutMs: 10000 });
-    return result.ok ? result.data : null;
+    const result = await apiRequestWithPolicy<unknown>(path, undefined, { allowedStatuses: [403, 404, 405, 422, 501], silent: true, timeoutMs: 10000 });
+    return { ok: Boolean(result.ok), status: Number(result.status ?? 0), data: result.data ?? null };
   } catch {
-    return null;
+    return { ok: false, status: 0, data: null };
   }
 }
 
 export async function fetchOperatorEvidence(): Promise<OperatorEvidenceResponse> {
   const official = await fetchOptional(withQuery("/api/v1/operator/evidence"));
-  const officialItems = normalizeOperator(official);
-  if (officialItems.length > 0) {
+  const officialItems = normalizeOperator(official.data);
+  if (official.ok || (official.data && typeof official.data === "object" && ((official.data as AnyRecord).dataScope === "OFFICIAL_OPERATOR_API" || text((official.data as AnyRecord).source).includes("operator_evidence")))) {
+    return {
+      source: "operator_evidence_api",
+      dataScope: "OFFICIAL_OPERATOR_API",
+      generated_at: new Date().toISOString(),
+      items: officialItems,
+      exportReady: false,
+      message: "证据导出写操作需等待后端权限、审计和错误码 ready 后开放。",
+    };
+  }
+
+  if (![404, 405, 501].includes(official.status)) {
     return {
       source: "operator_evidence_api",
       dataScope: "OFFICIAL_OPERATOR_API",
@@ -199,8 +212,8 @@ export async function fetchOperatorEvidence(): Promise<OperatorEvidenceResponse>
     fetchOptional(withQuery("/api/v1/reports/customer-dashboard/aggregate")),
   ]);
   const fallbackItems = [
-    ...normalizeExportJobs(exportJobs),
-    ...normalizeReportFallback(aggregate),
+    ...normalizeExportJobs(exportJobs.data),
+    ...normalizeReportFallback(aggregate.data),
   ].filter((item, index, all) => all.findIndex((x) => x.jobId === item.jobId) === index);
 
   if (fallbackItems.length > 0) {

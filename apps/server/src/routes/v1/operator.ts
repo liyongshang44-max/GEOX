@@ -6,6 +6,121 @@ const DATA_SCOPE = "OFFICIAL_OPERATOR_API";
 
 type Row = Record<string, unknown>;
 
+type WorkbenchQueue =
+  | "APPROVAL_PENDING"
+  | "DISPATCH_PENDING"
+  | "EXECUTION_EXCEPTION"
+  | "ACCEPTANCE_PENDING"
+  | "EVIDENCE_INSUFFICIENT"
+  | "ACCEPTANCE_FAILED"
+  | "DEVICE_OFFLINE"
+  | "ALERT_OVERDUE";
+
+function normalizePriority(value: unknown): "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" {
+  const raw = safeText(value).toUpperCase();
+  if (raw === "LOW" || raw === "MEDIUM" || raw === "HIGH" || raw === "CRITICAL") return raw;
+  return "MEDIUM";
+}
+
+function asIsoOrNow(value: unknown): string {
+  return toIsoAny(value) ?? new Date().toISOString();
+}
+
+async function buildOperatorWorkbench(pool: Pool, limit: number): Promise<Row[]> {
+  const [
+    approvalRows,
+    approvalRowsV1,
+    operationRows,
+    deviceStatusRows,
+    alertRows,
+  ] = await Promise.all([
+    readTenantRows(pool, "approval_request", limit),
+    readTenantRows(pool, "approval_requests_v1", limit),
+    readTenantRows(pool, "operation_state_v1", limit),
+    readTenantRows(pool, "device_status_index_v1", limit),
+    readTenantRows(pool, "alert_event_index_v1", limit),
+  ]);
+
+  const items: Row[] = [];
+  const pushItem = (id: string, queue: WorkbenchQueue, title: string, description: string, updatedAt: unknown, operationId?: string) => {
+    items.push({
+      id,
+      queue,
+      title,
+      description,
+      field_name: null,
+      operation_name: nullableText(operationId),
+      priority: "MEDIUM",
+      updated_at: asIsoOrNow(updatedAt),
+      action_href: queue === "APPROVAL_PENDING" ? "/operator/approvals" : "/operator/workbench",
+      related_href: operationId ? `/customer/operations/${operationId}` : null,
+    });
+  };
+
+  for (const row of [...approvalRows, ...approvalRowsV1]) {
+    const status = safeText(row.status ?? row.approval_status).toUpperCase();
+    if (!["PENDING", "OPEN", "WAITING"].some((x) => status.includes(x))) continue;
+    const id = safeText(row.request_id ?? row.approval_request_id ?? row.id);
+    if (!id) continue;
+    const opId = safeText(row.operation_id ?? row.operation_plan_id);
+    pushItem(`approval_${id}`, "APPROVAL_PENDING", "待审批事项", "建议或处方等待审批。", row.updated_at ?? row.created_at ?? row.requested_at, opId);
+  }
+
+  for (const row of operationRows) {
+    const status = safeText(row.final_status).toUpperCase();
+    const opId = safeText(row.operation_id ?? row.operation_plan_id ?? row.id);
+    const updatedAt = row.updated_at ?? row.updated_ts_ms ?? row.created_at;
+    if (status === "PENDING_ACCEPTANCE") pushItem(`acceptance_${opId || items.length}`, "ACCEPTANCE_PENDING", "待验收作业", "作业已执行，等待验收。", updatedAt, opId);
+    if (status === "INVALID_EXECUTION") pushItem(`execution_${opId || items.length}`, "EXECUTION_EXCEPTION", "执行异常", "作业执行结果异常，需运营介入。", updatedAt, opId);
+  }
+
+  for (const row of deviceStatusRows) {
+    const deviceId = safeText(row.device_id);
+    if (!deviceId) continue;
+    const lastHeartbeatMs = Number(row.last_heartbeat_ts_ms ?? 0);
+    if (!Number.isFinite(lastHeartbeatMs) || lastHeartbeatMs <= 0) continue;
+    if (Date.now() - lastHeartbeatMs <= 15 * 60 * 1000) continue;
+    items.push({
+      id: `device_offline_${deviceId}`,
+      queue: "DEVICE_OFFLINE",
+      title: "设备离线",
+      description: "设备心跳超时，请排查在线状态。",
+      field_name: null,
+      operation_name: null,
+      priority: normalizePriority(row.priority),
+      updated_at: asIsoOrNow(lastHeartbeatMs),
+      action_href: "/operator/devices-alerts",
+      related_href: null,
+    });
+  }
+
+  for (const row of alertRows) {
+    const alertId = safeText(row.event_id ?? row.alert_id ?? row.id);
+    if (!alertId) continue;
+    const status = safeText(row.status).toUpperCase();
+    if (status && status.includes("CLOSED")) continue;
+    const overdue = Boolean(row.overdue) || (Number(row.raised_ts_ms ?? 0) > 0 && Date.now() - Number(row.raised_ts_ms) > 24 * 60 * 60 * 1000);
+    if (!overdue) continue;
+    items.push({
+      id: `alert_overdue_${alertId}`,
+      queue: "ALERT_OVERDUE",
+      title: "告警超时未处理",
+      description: "存在超时未处理告警。",
+      field_name: null,
+      operation_name: nullableText(row.operation_id ?? row.operation_plan_id),
+      priority: normalizePriority(row.severity),
+      updated_at: asIsoOrNow(row.updated_at ?? row.raised_ts_ms),
+      action_href: "/operator/devices-alerts",
+      related_href: null,
+    });
+  }
+
+  return items
+    .sort((a, b) => new Date(String(b.updated_at ?? 0)).getTime() - new Date(String(a.updated_at ?? 0)).getTime())
+    .slice(0, limit);
+}
+
+
 function basePayload(source: string) {
   return {
     source,
@@ -293,6 +408,246 @@ function sanitizeStructured(value: unknown): unknown {
   return value;
 }
 
+
+
+
+type DispatchStatus =
+  | "TASK_CREATED"
+  | "DISPATCH_PENDING"
+  | "DISPATCHED"
+  | "ACKED"
+  | "RECEIPT_PENDING"
+  | "EXECUTION_FAILED"
+  | "RECEIPT_RECEIVED"
+  | "UNKNOWN";
+
+function normalizeExecutionMode(value: unknown): "HUMAN" | "DEVICE" | "UNKNOWN" {
+  const raw = safeText(value).toUpperCase();
+  if (raw.includes("HUMAN") || raw.includes("MANUAL")) return "HUMAN";
+  if (raw.includes("DEVICE") || raw.includes("AUTO")) return "DEVICE";
+  return "UNKNOWN";
+}
+
+function normalizeDispatchStatus(task: Row, receipt: Row | null): DispatchStatus {
+  const raw = safeText(task.status ?? task.task_status ?? task.dispatch_status ?? task.state ?? task.final_status).toUpperCase();
+  const receiptStatus = safeText(receipt?.status ?? receipt?.result ?? receipt?.execution_status).toUpperCase();
+  if (receipt && ["FAILED", "FAIL", "ERROR"].some((x) => receiptStatus.includes(x))) return "EXECUTION_FAILED";
+  if (receipt) return "RECEIPT_RECEIVED";
+  if (["FAILED", "FAIL", "ERROR"].some((x) => raw.includes(x))) return "EXECUTION_FAILED";
+  if (raw.includes("ACK")) return "ACKED";
+  if (raw.includes("DISPATCHED") || raw.includes("ISSUED") || raw.includes("SENT")) return "DISPATCHED";
+  if (raw.includes("PENDING") && raw.includes("DISPATCH")) return "DISPATCH_PENDING";
+  if (raw.includes("CREATED") || raw.includes("NEW")) return "TASK_CREATED";
+  if (raw.includes("RECEIPT") && raw.includes("PENDING")) return "RECEIPT_PENDING";
+  return "UNKNOWN";
+}
+
+async function readMultiRows(pool: Pool, tables: string[], limit = 300): Promise<Row[]> {
+  const chunks = await Promise.all(tables.map((t) => readTenantRows(pool, t, limit)));
+  return chunks.flat();
+}
+
+async function buildOperatorDispatch(pool: Pool, limit: number): Promise<Row[]> {
+  const [taskRows, receiptRows, operationRows] = await Promise.all([
+    readMultiRows(pool, ["act_task", "action_task_index_v1", "act_task_index_v1"], limit),
+    readMultiRows(pool, ["receipt", "receipt_index_v1", "execution_receipt", "action_receipt_index_v1"], limit),
+    readTenantRows(pool, "operation_state_v1", limit),
+  ]);
+
+  const opById = new Map(operationRows.map((row) => [safeText(row.operation_id ?? row.operation_plan_id ?? row.id), row]));
+  const receiptByTask = new Map<string, Row>();
+  for (const row of receiptRows) {
+    const taskId = safeText(row.task_id ?? row.act_task_id ?? row.action_task_id);
+    if (taskId && !receiptByTask.has(taskId)) receiptByTask.set(taskId, row);
+  }
+
+  const items: Row[] = [];
+  for (const task of taskRows) {
+    const taskId = safeText(task.task_id ?? task.act_task_id ?? task.action_task_id ?? task.id);
+    if (!taskId) continue;
+    const operationId = safeText(task.operation_id ?? task.operation_plan_id ?? task.op_id);
+    const op = opById.get(operationId) ?? {};
+    const receipt = receiptByTask.get(taskId) ?? null;
+    const status = normalizeDispatchStatus(task, receipt);
+    const receiptId = safeText(receipt?.receipt_id ?? receipt?.id);
+    items.push({
+      task_id: taskId,
+      receipt_id: receiptId || null,
+      operation_id: operationId || null,
+      field_name: nullableText(task.field_name ?? op.field_name),
+      operation_name: nullableText(task.operation_name ?? op.operation_name),
+      status,
+      execution_mode: normalizeExecutionMode(task.execution_mode ?? task.executor_type ?? task.mode),
+      task_created_at: toIsoAny(task.created_at ?? task.created_ts_ms),
+      dispatched_at: toIsoAny(task.dispatched_at ?? task.dispatch_ts_ms ?? task.updated_at),
+      acked_at: toIsoAny(task.acked_at ?? task.ack_ts_ms),
+      receipt_received_at: toIsoAny(receipt?.received_at ?? receipt?.created_at ?? receipt?.created_ts_ms),
+      executor_text: nullableText(task.executor_text ?? task.executor_id ?? task.device_id ?? task.actor_id),
+      failure_reason: nullableText(receipt?.failure_reason ?? task.failure_reason ?? receipt?.error_message),
+      task_href: operationId ? `/customer/operations/${operationId}` : null,
+      receipt_href: receiptId ? `/api/v1/receipts/${receiptId}` : null,
+    });
+  }
+
+  return items
+    .sort((a, b) => new Date(String(b.dispatched_at ?? b.task_created_at ?? 0)).getTime() - new Date(String(a.dispatched_at ?? a.task_created_at ?? 0)).getTime())
+    .slice(0, limit);
+}
+
+
+
+type AcceptanceStatus = "PENDING" | "EVIDENCE_INSUFFICIENT" | "FAILED" | "REVIEW_REQUIRED" | "PASSED" | "UNKNOWN";
+
+function normalizeAcceptanceStatus(acceptance: Row | null, operation: Row): AcceptanceStatus {
+  const verdict = safeText(acceptance?.verdict ?? acceptance?.acceptance_verdict).toUpperCase();
+  const raw = safeText(acceptance?.status ?? acceptance?.acceptance_status ?? operation.final_status ?? operation.acceptance_status).toUpperCase();
+  const missingEvidence = Boolean(acceptance?.missing_evidence) || raw.includes("EVIDENCE_INSUFFICIENT") || raw.includes("INSUFFICIENT_EVIDENCE");
+  if (missingEvidence) return "EVIDENCE_INSUFFICIENT";
+  if (verdict.includes("PASS") || raw.includes("PASS")) return "PASSED";
+  if (verdict.includes("FAIL") || raw.includes("FAIL") || raw.includes("INVALID_EXECUTION")) return "FAILED";
+  if (raw.includes("REVIEW")) return "REVIEW_REQUIRED";
+  if (raw.includes("PENDING_ACCEPTANCE") || raw.includes("PENDING")) return "PENDING";
+  return "UNKNOWN";
+}
+
+async function buildOperatorAcceptance(pool: Pool, limit: number): Promise<Row[]> {
+  const [operationRows, acceptanceRows, acceptanceResultRows, evidenceRows] = await Promise.all([
+    readTenantRows(pool, "operation_state_v1", limit),
+    readMultiRows(pool, ["acceptance", "acceptance_index_v1"], limit),
+    readMultiRows(pool, ["acceptance_result", "acceptance_result_v1"], limit),
+    readMultiRows(pool, ["evidence_summary", "evidence_bundle_summary_v1"], limit),
+  ]);
+
+  const acceptanceByOperation = new Map<string, Row>();
+  for (const row of [...acceptanceRows, ...acceptanceResultRows]) {
+    const operationId = safeText(row.operation_id ?? row.operation_plan_id ?? row.op_id ?? row.task_id);
+    if (!operationId || acceptanceByOperation.has(operationId)) continue;
+    acceptanceByOperation.set(operationId, row);
+  }
+  const evidenceByOperation = new Map<string, Row>();
+  for (const row of evidenceRows) {
+    const operationId = safeText(row.operation_id ?? row.operation_plan_id ?? row.op_id);
+    if (operationId && !evidenceByOperation.has(operationId)) evidenceByOperation.set(operationId, row);
+  }
+
+  const items = operationRows.map((op) => {
+    const operationId = safeText(op.operation_id ?? op.operation_plan_id ?? op.id);
+    const acceptance = acceptanceByOperation.get(operationId) ?? null;
+    const evidence = evidenceByOperation.get(operationId) ?? null;
+    const acceptanceStatus = normalizeAcceptanceStatus(acceptance, op);
+    const evidenceInsufficient = acceptanceStatus === "EVIDENCE_INSUFFICIENT" || Boolean(evidence?.insufficient) || Number(evidence?.evidence_count ?? 1) <= 0;
+    return {
+      operation_id: operationId || null,
+      acceptance_id: nullableText(acceptance?.acceptance_id ?? acceptance?.id),
+      field_name: nullableText(op.field_name),
+      operation_name: nullableText(op.operation_name),
+      acceptance_status: acceptanceStatus,
+      operation_state_status: nullableText(op.final_status ?? op.status),
+      evidence_insufficient: evidenceInsufficient,
+      failure_reason: nullableText(acceptance?.failure_reason ?? op.failure_reason),
+      review_reason: nullableText(acceptance?.review_reason),
+      acceptance_verdict: nullableText(acceptance?.verdict ?? acceptance?.acceptance_verdict),
+      generated_at: toIsoAny(acceptance?.generated_at ?? acceptance?.created_at ?? op.created_at),
+      updated_at: toIsoAny(acceptance?.updated_at ?? op.updated_at ?? op.updated_ts_ms),
+      can_evaluate: false,
+      can_request_review: false,
+      permission_reason: "验收写操作未接入，当前只读。",
+    };
+  });
+
+  return items
+    .sort((a, b) => new Date(String(b.updated_at ?? b.generated_at ?? 0)).getTime() - new Date(String(a.updated_at ?? a.generated_at ?? 0)).getTime())
+    .slice(0, limit);
+}
+
+
+
+type EvidenceJobStatus = "PENDING" | "RUNNING" | "DONE" | "FAILED" | "UNKNOWN";
+type EvidenceStorageMode = "OBJECT_STORE" | "LOCAL" | "INLINE" | "NOT_READY" | "UNKNOWN";
+type EvidenceScopeStatus = "READY" | "NOT_READY" | "UNKNOWN";
+
+function normalizeEvidenceStatus(value: unknown): EvidenceJobStatus {
+  const raw = safeText(value).toUpperCase();
+  if (["PENDING", "QUEUED"].some((x) => raw.includes(x))) return "PENDING";
+  if (["RUNNING", "PROCESSING"].some((x) => raw.includes(x))) return "RUNNING";
+  if (["DONE", "SUCCESS", "COMPLETED"].some((x) => raw.includes(x))) return "DONE";
+  if (["FAILED", "ERROR"].some((x) => raw.includes(x))) return "FAILED";
+  return "UNKNOWN";
+}
+
+function normalizeStorageMode(value: unknown): EvidenceStorageMode {
+  const raw = safeText(value).toUpperCase();
+  if (raw.includes("OBJECT") || raw.includes("S3") || raw.includes("OSS")) return "OBJECT_STORE";
+  if (raw.includes("LOCAL")) return "LOCAL";
+  if (raw.includes("INLINE")) return "INLINE";
+  if (raw.includes("NOT_READY")) return "NOT_READY";
+  return "UNKNOWN";
+}
+
+function normalizeScopeStatus(value: unknown): EvidenceScopeStatus {
+  const raw = safeText(value).toUpperCase();
+  if (raw.includes("READY")) return raw.includes("NOT") ? "NOT_READY" : "READY";
+  return "UNKNOWN";
+}
+
+function sanitizeArtifact(value: unknown): string | null {
+  const v = safeText(value);
+  if (!v) return null;
+  if (v.startsWith("/") || /^[a-zA-Z]:\\/.test(v)) return "local_path_redacted";
+  return v.replace(/https?:\/\/[^\s]+/gi, "redacted_link");
+}
+
+async function buildOperatorEvidence(pool: Pool, limit: number): Promise<Row[]> {
+  const [exportRows, bundleRows, summaryRows, operationRows] = await Promise.all([
+    readMultiRows(pool, ["evidence_export_job", "evidence_export_jobs", "evidence_export_job_v1"], limit),
+    readMultiRows(pool, ["evidence_bundle", "evidence_manifest", "evidence_bundle_v1"], limit),
+    readMultiRows(pool, ["operation_evidence_summary", "evidence_summary", "evidence_bundle_summary_v1"], limit),
+    readTenantRows(pool, "operation_state_v1", limit),
+  ]);
+
+  const opById = new Map(operationRows.map((x) => [safeText(x.operation_id ?? x.operation_plan_id ?? x.id), x]));
+  const summaryByOp = new Map(summaryRows.map((x) => [safeText(x.operation_id ?? x.operation_plan_id ?? x.scope_id), x]));
+  const bundleByOp = new Map(bundleRows.map((x) => [safeText(x.operation_id ?? x.operation_plan_id ?? x.scope_id), x]));
+
+  const items = exportRows.map((job, idx) => {
+    const operationId = safeText(job.operation_id ?? job.operation_plan_id ?? job.scope_id);
+    const summary = summaryByOp.get(operationId) ?? {};
+    const bundle = bundleByOp.get(operationId) ?? {};
+    const op = opById.get(operationId) ?? {};
+    const status = normalizeEvidenceStatus(job.status ?? job.job_status);
+    const storageMode = normalizeStorageMode(job.storage_mode ?? job.artifact_mode ?? bundle.storage_mode);
+    return {
+      job_id: safeText(job.job_id ?? job.id ?? `job_${idx}`),
+      operation_id: operationId || null,
+      scope_type: safeText(job.scope_type ?? "operation").toLowerCase() || "operation",
+      scope_id: nullableText(job.scope_id ?? operationId),
+      scope_status: normalizeScopeStatus(job.scope_status ?? summary.scope_status ?? (op.operation_id ? "READY" : "UNKNOWN")),
+      status,
+      manifest: nullableText(job.manifest ?? bundle.manifest ?? summary.manifest),
+      sha256: nullableText(job.sha256 ?? bundle.sha256 ?? summary.sha256),
+      artifact: sanitizeArtifact(job.artifact ?? job.artifact_key ?? bundle.artifact_key),
+      format: nullableText(job.format ?? job.export_format ?? "zip"),
+      storage_mode: storageMode,
+      download_status: status === "DONE" ? "可由后端授权下载" : "尚不可下载",
+      created_at: toIsoAny(job.created_at ?? job.created_ts_ms),
+      completed_at: toIsoAny(job.completed_at ?? job.finished_at ?? job.updated_at),
+      failure_reason: nullableText(job.failure_reason ?? job.error_message),
+    };
+  });
+
+  return items.slice(0, limit);
+}
+
+function buildReadonlyFacadePayload(source: string, message: string) {
+  return {
+    ...basePayload(source),
+    writeReady: false,
+    exportReady: false,
+    items: [],
+    message,
+  };
+}
+
 function toIsoAny(value: unknown): string | null {
   const fromMs = toIsoFromMs(value);
   if (fromMs) return fromMs;
@@ -388,6 +743,102 @@ async function buildRoiLedger(pool: Pool, query: { field_id?: string; operation_
   });
 }
 export function registerOperatorV1FacadeRoutes(app: FastifyInstance, pool: Pool): void {
+
+  app.get("/api/v1/operator/workbench", async (req: any, reply) => {
+    const query = (req.query ?? {}) as { limit?: string | number; tenant_id?: string; project_id?: string; group_id?: string };
+    const parsedLimit = Number(query.limit);
+    const limit = Number.isFinite(parsedLimit) ? Math.min(300, Math.max(1, Math.floor(parsedLimit))) : 100;
+    const items = await buildOperatorWorkbench(pool, limit);
+    return reply.send({
+      ...basePayload("operator_workbench_api"),
+      items,
+      filters: {
+        tenant_id: safeText(query.tenant_id),
+        project_id: safeText(query.project_id),
+        group_id: safeText(query.group_id),
+        limit,
+      },
+      writeReady: false,
+      exportReady: false,
+      message: "operator workbench read-only facade",
+    });
+  });
+
+  app.get("/api/v1/operator/dispatch", async (req: any, reply) => {
+    const query = (req.query ?? {}) as { limit?: string | number; tenant_id?: string; project_id?: string; group_id?: string };
+    const parsedLimit = Number(query.limit);
+    const limit = Number.isFinite(parsedLimit) ? Math.min(300, Math.max(1, Math.floor(parsedLimit))) : 100;
+    const items = await buildOperatorDispatch(pool, limit);
+    return reply.send({
+      ...basePayload("operator_dispatch_api"),
+      writeReady: false,
+      items,
+      filters: {
+        tenant_id: safeText(query.tenant_id),
+        project_id: safeText(query.project_id),
+        group_id: safeText(query.group_id),
+        limit,
+      },
+      message: "operator dispatch read-only facade",
+    });
+  });
+
+  app.get("/api/v1/operator/acceptance", async (req: any, reply) => {
+    const query = (req.query ?? {}) as { limit?: string | number; tenant_id?: string; project_id?: string; group_id?: string };
+    const parsedLimit = Number(query.limit);
+    const limit = Number.isFinite(parsedLimit) ? Math.min(300, Math.max(1, Math.floor(parsedLimit))) : 100;
+    const items = await buildOperatorAcceptance(pool, limit);
+    return reply.send({
+      ...basePayload("operator_acceptance_api"),
+      writeReady: false,
+      items,
+      filters: {
+        tenant_id: safeText(query.tenant_id),
+        project_id: safeText(query.project_id),
+        group_id: safeText(query.group_id),
+        limit,
+      },
+      message: "operator acceptance read-only facade",
+    });
+  });
+
+  app.get("/api/v1/operator/evidence", async (req: any, reply) => {
+    const query = (req.query ?? {}) as { limit?: string | number; tenant_id?: string; project_id?: string; group_id?: string };
+    const parsedLimit = Number(query.limit);
+    const limit = Number.isFinite(parsedLimit) ? Math.min(300, Math.max(1, Math.floor(parsedLimit))) : 100;
+    const items = await buildOperatorEvidence(pool, limit);
+    return reply.send({
+      ...basePayload("operator_evidence_api"),
+      exportReady: false,
+      items,
+      filters: {
+        tenant_id: safeText(query.tenant_id),
+        project_id: safeText(query.project_id),
+        group_id: safeText(query.group_id),
+        limit,
+      },
+      message: "operator evidence read-only facade",
+    });
+  });
+
+  app.get("/api/v1/evidence/export-jobs", async (req: any, reply) => {
+    const query = (req.query ?? {}) as { limit?: string | number; tenant_id?: string; project_id?: string; group_id?: string };
+    const parsedLimit = Number(query.limit);
+    const limit = Number.isFinite(parsedLimit) ? Math.min(300, Math.max(1, Math.floor(parsedLimit))) : 100;
+    const items = await buildOperatorEvidence(pool, limit);
+    return reply.send({
+      ...basePayload("evidence_export_jobs_api"),
+      items,
+      filters: {
+        tenant_id: safeText(query.tenant_id),
+        project_id: safeText(query.project_id),
+        group_id: safeText(query.group_id),
+        limit,
+      },
+      message: "evidence export-jobs read-only facade",
+    });
+  });
+
   app.get("/api/v1/operator/devices-alerts", async (req: any, reply) => {
     const query = (req.query ?? {}) as { limit?: string | number; field_id?: string; device_id?: string; online_status?: string };
     const parsedLimit = Number(query.limit);
