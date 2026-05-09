@@ -126,6 +126,13 @@ function buildResponse(params: {
   };
 }
 
+function buildInternalBaseUrl(req: any): string {
+  const proto = String((req.headers as any)?.["x-forwarded-proto"] ?? "http");
+  const localPortRaw = Number((req.socket as any)?.localPort ?? 3000);
+  const localPort = Number.isFinite(localPortRaw) && localPortRaw > 0 ? localPortRaw : 3000;
+  return `${proto}://127.0.0.1:${localPort}`;
+}
+
 async function findApprovalRequest(pool: Pool, auth: AoActAuthContextV0, requestId: string): Promise<FactRow | null> {
   const res = await pool.query(
     `SELECT fact_id, occurred_at, record_json
@@ -208,18 +215,17 @@ async function writeAuditFact(pool: Pool, auth: AoActAuthContextV0, result: Appr
   );
 }
 
-async function writeApprovalDecisionFacts(params: {
+async function writeNonApproveDecisionFacts(params: {
   pool: Pool;
   auth: AoActAuthContextV0;
   requestPayload: any;
   requestId: string;
-  decision: OperatorApprovalDecision;
-  actionType: OperatorApprovalActionType;
+  decision: Exclude<OperatorApprovalDecision, "APPROVED">;
+  actionType: Exclude<OperatorApprovalActionType, "APPROVAL_APPROVE">;
   note: string | null;
 }): Promise<void> {
   const { pool, auth, requestPayload, requestId, decision, actionType, note } = params;
   const ts = Date.now();
-  const statusField = decision;
   const updatedRequestRecord = {
     type: "approval_request_v1",
     payload: {
@@ -228,7 +234,7 @@ async function writeApprovalDecisionFacts(params: {
       project_id: auth.project_id,
       group_id: auth.group_id,
       request_id: requestId,
-      status: statusField,
+      status: decision,
       operator_action_type: actionType,
       decided_at_ts: ts,
       decided_by_actor_id: auth.actor_id,
@@ -274,6 +280,31 @@ async function writeApprovalDecisionFacts(params: {
     await pool.query("ROLLBACK");
     throw err;
   }
+}
+
+async function callMainApprovalApprove(req: any, requestId: string): Promise<{ ok: boolean; status: number; body: any }> {
+  const resp = await fetch(`${buildInternalBaseUrl(req)}/api/v1/approvals/approve`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "authorization": String((req.headers as any)["authorization"] ?? ""),
+    },
+    body: JSON.stringify({
+      ...((req.body ?? {}) as Record<string, unknown>),
+      request_id: requestId,
+    }),
+  });
+  const body = await resp.json().catch(() => null);
+  return { ok: resp.ok && Boolean(body?.ok), status: resp.status, body };
+}
+
+function mapMainApprovalError(value: unknown): OperatorActionErrorCode {
+  const raw = safeText(value).toUpperCase();
+  if (raw.includes("SELF")) return "SELF_APPROVAL_BLOCKED";
+  if (raw.includes("NOT_FOUND")) return "TARGET_NOT_FOUND";
+  if (raw.includes("ROLE") || raw.includes("SCOPE") || raw.includes("FORBIDDEN") || raw.includes("DENIED")) return "FORBIDDEN";
+  if (raw.includes("NOT_PENDING") || raw.includes("INVALID")) return "INVALID_STATE";
+  return "STATE_WRITE_FAILED";
 }
 
 function httpStatusFor(code: OperatorActionErrorCode): number {
@@ -413,6 +444,62 @@ async function handleOperatorApprovalAction(req: any, reply: any, pool: Pool, co
     return sendFailure(reply, pool, auth, result);
   }
 
+  if (config.actionType === "APPROVAL_APPROVE") {
+    const main = await callMainApprovalApprove(req, requestId);
+    if (!main.ok) {
+      const errorCode = mapMainApprovalError(main.body?.error ?? main.body?.message);
+      const failure = buildResponse({
+        ok: false,
+        action_id: aid,
+        audit_id: auid,
+        action_type: config.actionType,
+        target_id: requestId,
+        status_before: statusBefore,
+        status_after: statusBefore,
+        role,
+        allowed: errorCode !== "FORBIDDEN" && errorCode !== "SELF_APPROVAL_BLOCKED",
+        reason: safeText(main.body?.error ?? main.body?.message) || "主审批链处理失败。",
+        message: safeText(main.body?.error ?? main.body?.message) || "主审批链处理失败。",
+        error_code: errorCode,
+      });
+      return sendFailure(reply, pool, auth, failure);
+    }
+
+    const success = buildResponse({
+      ok: true,
+      action_id: aid,
+      audit_id: auid,
+      action_type: config.actionType,
+      target_id: requestId,
+      status_before: statusBefore,
+      status_after: "APPROVED",
+      role,
+      allowed: true,
+      reason: null,
+      message: config.successMessage,
+    });
+    try {
+      await writeAuditFact(pool, auth, success);
+    } catch {
+      const auditFailed = buildResponse({
+        ok: false,
+        action_id: aid,
+        audit_id: auid,
+        action_type: config.actionType,
+        target_id: requestId,
+        status_before: statusBefore,
+        status_after: "APPROVED",
+        role,
+        allowed: false,
+        reason: "审批已进入主链，但审计写入失败。",
+        message: "审批已进入主链，但审计写入失败。",
+        error_code: "AUDIT_WRITE_FAILED",
+      });
+      return reply.status(500).send(auditFailed);
+    }
+    return reply.send(success);
+  }
+
   const success = buildResponse({
     ok: true,
     action_id: aid,
@@ -448,13 +535,13 @@ async function handleOperatorApprovalAction(req: any, reply: any, pool: Pool, co
   }
 
   try {
-    await writeApprovalDecisionFacts({
+    await writeNonApproveDecisionFacts({
       pool,
       auth,
       requestPayload: payload,
       requestId,
-      decision: config.decision,
-      actionType: config.actionType,
+      decision: config.decision as Exclude<OperatorApprovalDecision, "APPROVED">,
+      actionType: config.actionType as Exclude<OperatorApprovalActionType, "APPROVAL_APPROVE">,
       note,
     });
   } catch {
