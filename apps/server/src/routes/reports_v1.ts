@@ -8,6 +8,7 @@ import {
   type OperationReportSingleResponseV1,
   type OperationReportV1,
 } from "../projections/report_v1.js";
+import { buildOperationEvidencePackSummaryV1 } from "../projections/operation_evidence_summary_v1.js";
 import { projectFieldReportDetailV1, type FieldReportDetailV1 } from "../projections/report_dashboard_v1.js";
 import { normalizeReceiptEvidence } from "../services/receipt_evidence.js";
 import { computeOperationCostV1 } from "../domain/cost_model.js";
@@ -97,6 +98,11 @@ async function queryFactsByTypeAndPayloadKey(
 
 function latestByType(facts: FactRow[], type: string): FactRow | null {
   return [...facts].reverse().find((item) => String(item.record_json?.type ?? "") === type) ?? null;
+}
+
+function latestEvidenceSummaryFact(facts: FactRow[]): FactRow | null {
+  const types = new Set(["operation_evidence_summary_v1", "evidence_pack_summary_v1"]);
+  return [...facts].reverse().find((item) => types.has(String(item.record_json?.type ?? ""))) ?? null;
 }
 
 function normalizeApprovalStatus(rawDecision: unknown, hasRequest: boolean): string {
@@ -237,6 +243,8 @@ export async function projectReportV1(params: {
   const recommendationFact = latestByType(allFacts, "decision_recommendation_v1");
   const approvalRequestFact = latestByType(allFacts, "approval_request_v1");
   const approvalDecisionFact = latestByType(allFacts, "approval_decision_v1");
+  const evidenceSummaryFact = latestEvidenceSummaryFact(allFacts);
+  const artifactFacts = allFacts.filter((x) => String(x.record_json?.type ?? "") === "evidence_artifact_v1");
   const normalizedReceipt = receiptFact
     ? normalizeReceiptEvidence(receiptFact, String(receiptFact.record_json?.type ?? ""))
     : null;
@@ -246,6 +254,16 @@ export async function projectReportV1(params: {
   const metrics = Array.isArray(receiptPayload?.metrics) ? receiptPayload.metrics : [];
   const photos = Array.isArray(receiptPayload?.photo_refs) ? receiptPayload.photo_refs : [];
   const media = photos.map((ref: unknown) => ({ kind: "photo", ref }));
+  const artifacts = artifactFacts.map((fact) => ({
+    kind: toText(fact.record_json?.payload?.kind) ?? "artifact",
+    ref: toText(fact.record_json?.payload?.artifact_id ?? fact.fact_id),
+  }));
+  const evidenceBundle = {
+    artifacts,
+    logs,
+    media,
+    metrics,
+  };
 
   const estimatedCost = computeOperationCostV1(operationState.action_type, {
     water_l: normalizedReceipt?.water_l,
@@ -263,27 +281,24 @@ export async function projectReportV1(params: {
   );
   const approvalStatus = normalizeApprovalStatus(approvalDecisionFact?.record_json?.payload?.decision, Boolean(approvalRequestFact));
   const operationTitle = deriveOperationTitle(operationState.action_type ?? recommendationPayload?.suggested_action?.action_type);
+  const acceptanceForReport = acceptanceFact ? {
+    verdict: acceptanceFact.record_json?.payload?.verdict,
+    missing_evidence: acceptanceFact.record_json?.payload?.missing_evidence,
+    generated_at: acceptanceFact.record_json?.payload?.generated_at ?? acceptanceFact.occurred_at,
+    status: operationState.acceptance?.status,
+  } : null;
+  const receiptForReport = normalizedReceipt ? {
+    execution_started_at: normalizedReceipt.execution_started_at,
+    execution_finished_at: normalizedReceipt.execution_finished_at,
+  } : null;
 
-  return projectOperationReportV1({
+  const operationReport = projectOperationReportV1({
     tenant,
     operation_plan_id: operationPlanId,
     operation_state: operationState,
-    evidence_bundle: {
-      artifacts: [],
-      logs,
-      media,
-      metrics,
-    },
-    acceptance: acceptanceFact ? {
-      verdict: acceptanceFact.record_json?.payload?.verdict,
-      missing_evidence: acceptanceFact.record_json?.payload?.missing_evidence,
-      generated_at: acceptanceFact.record_json?.payload?.generated_at ?? acceptanceFact.occurred_at,
-      status: operationState.acceptance?.status,
-    } : null,
-    receipt: normalizedReceipt ? {
-      execution_started_at: normalizedReceipt.execution_started_at,
-      execution_finished_at: normalizedReceipt.execution_finished_at,
-    } : null,
+    evidence_bundle: evidenceBundle,
+    acceptance: acceptanceForReport,
+    receipt: receiptForReport,
     cost: {
       estimated_total: estimatedCost.estimated_total,
       estimated_water_cost: estimatedCost.estimated_water_cost,
@@ -319,6 +334,18 @@ export async function projectReportV1(params: {
     operation_title: operationTitle,
     customer_title: operationTitle,
   });
+
+  return {
+    ...operationReport,
+    evidence_pack_summary: buildOperationEvidencePackSummaryV1({
+      receipt: receiptFact ?? receiptForReport,
+      evidence_bundle: evidenceBundle,
+      evidence_summary: evidenceSummaryFact?.record_json?.payload ?? null,
+      acceptance: acceptanceFact ?? acceptanceForReport,
+      operation_state: operationState,
+      now: new Date(operationReport.generated_at),
+    }),
+  } as OperationReportV1;
 }
 
 export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void {
