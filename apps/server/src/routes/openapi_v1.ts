@@ -2098,6 +2098,70 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           }
         }
       },
+      "/api/v1/operator/skill-traces": {
+        get: {
+          tags: ["operations"],
+          summary: "Operator skill traces by operation",
+          parameters: [
+            { name: "operation_id", in: "query", required: true, schema: { type: "string" } },
+            { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 200, default: 50 } },
+          ],
+          responses: {
+            "200": { description: "Operator skill traces read payload" },
+            "400": { description: "MISSING_OPERATION_ID" },
+          },
+        },
+      },
+      "/api/v1/operator/skill-performance": {
+        get: {
+          tags: ["operations"],
+          summary: "Operator skill performance view",
+          parameters: [
+            { name: "skill_id", in: "query", required: false, schema: { type: "string" } },
+            { name: "field_id", in: "query", required: false, schema: { type: "string" } },
+            { name: "operation_id", in: "query", required: false, schema: { type: "string" } },
+            { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 200, default: 100 } },
+          ],
+          responses: {
+            "200": { description: "Operator skill performance payload" },
+          },
+        },
+      },
+      "/api/v1/operator/learning-closure": {
+        get: {
+          tags: ["operations"],
+          summary: "Unified learning closure by operation",
+          parameters: [
+            { name: "operation_id", in: "query", required: true, schema: { type: "string" } },
+          ],
+          responses: {
+            "200": { description: "Unified learning closure payload" },
+            "400": { description: "MISSING_OPERATION_ID" },
+          },
+        },
+      },
+      "/api/v1/operator/evidence/by-operation/{operationId}": {
+        get: {
+          tags: ["operations"],
+          summary: "Operator evidence by operation",
+          parameters: [pathParam("operationId")],
+          responses: {
+            "200": { description: "Evidence list by operation" },
+            "404": { description: "Operation/evidence not found" },
+          },
+        },
+      },
+      "/api/v1/operations/{operationId}/environment-context": {
+        get: {
+          tags: ["operations"],
+          summary: "Operation environment context",
+          parameters: [pathParam("operationId")],
+          responses: {
+            "200": { description: "Environment context payload" },
+            "404": { description: "Operation not found" },
+          },
+        },
+      },
       "/api/v1/fields/portfolio": {
         get: {
           tags: ["fields"],
