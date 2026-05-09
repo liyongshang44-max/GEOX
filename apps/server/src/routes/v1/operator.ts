@@ -333,13 +333,37 @@ async function buildRoiLedger(pool: Pool, query: { field_id?: string; operation_
   });
 }
 export function registerOperatorV1FacadeRoutes(app: FastifyInstance, pool: Pool): void {
-  app.get("/api/v1/operator/devices-alerts", async (_req, reply) => {
+  app.get("/api/v1/operator/devices-alerts", async (req: any, reply) => {
+    const query = (req.query ?? {}) as { limit?: string | number; field_id?: string; device_id?: string; online_status?: string };
+    const parsedLimit = Number(query.limit);
+    const limit = Number.isFinite(parsedLimit) ? Math.min(300, Math.max(1, Math.floor(parsedLimit))) : 100;
+    const fieldIdFilter = safeText(query.field_id);
+    const deviceIdFilter = safeText(query.device_id);
+    const onlineStatusRaw = safeText(query.online_status).toUpperCase();
+    const onlineStatusFilter = ["ONLINE", "OFFLINE", "DELAYED", "UNKNOWN"].includes(onlineStatusRaw) ? onlineStatusRaw : "";
+
     const { devices, alerts } = await buildDevicesAlerts(pool);
+    const filteredDevices = devices.filter((device) => {
+      if (fieldIdFilter && safeText(device.field_id) !== fieldIdFilter) return false;
+      if (deviceIdFilter && safeText(device.device_id) !== deviceIdFilter) return false;
+      if (onlineStatusFilter && safeText(device.online_status).toUpperCase() !== onlineStatusFilter) return false;
+      return true;
+    });
+    const limitedDevices = filteredDevices.slice(0, limit);
+
     return reply.send({
       ...basePayload("operator_devices_alerts_api"),
       ackCloseReady: false,
       revokeVisible: false,
-      devices,
+      total_devices: filteredDevices.length,
+      returned_devices: limitedDevices.length,
+      filters: {
+        limit,
+        fieldId: fieldIdFilter,
+        deviceId: deviceIdFilter,
+        onlineStatus: onlineStatusFilter,
+      },
+      devices: limitedDevices,
       alerts,
       message: "operator devices-alerts read-only facade",
     });

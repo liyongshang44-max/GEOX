@@ -1382,6 +1382,12 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         get: {
           tags: ["operations"],
           summary: "Operator read-only devices and alerts facade",
+          parameters: [
+            { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 300, default: 100 } },
+            { name: "field_id", in: "query", required: false, schema: { type: "string" } },
+            { name: "device_id", in: "query", required: false, schema: { type: "string" } },
+            { name: "online_status", in: "query", required: false, schema: { type: "string", enum: ["ONLINE", "OFFLINE", "DELAYED", "UNKNOWN"] } }
+          ],
           responses: {
             "200": { description: "Operator devices-alerts facade payload" }
           }
