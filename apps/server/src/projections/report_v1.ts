@@ -179,6 +179,13 @@ export type OperationReportV1 = {
     first_pass_acceptance_rate: RoiLedgerSummary[];
     low_confidence_items: RoiLedgerSummary[];
   };
+  as_applied: {
+    coverage_status: "AVAILABLE" | "MISSING" | "NOT_APPLICABLE";
+    coverage_geojson: Record<string, unknown> | null;
+    applied_amount_summary: string | null;
+    planned_vs_actual_deviation: string | null;
+    evidence_ref: string | null;
+  };
   planned: {
     planned_area: Record<string, unknown> | null;
     planned_path: Record<string, unknown> | null;
@@ -269,6 +276,13 @@ function pickActualParams(operationState: any, receipt: any): Record<string, unk
     ?? {};
   if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return {};
   return candidate as Record<string, unknown>;
+}
+
+
+function normalizeCoverageStatus(v: unknown): "AVAILABLE" | "MISSING" | "NOT_APPLICABLE" {
+  const s = String(v ?? "").trim().toUpperCase();
+  if (s === "AVAILABLE" || s === "MISSING" || s === "NOT_APPLICABLE") return s;
+  return "MISSING";
 }
 
 function toFiniteNumber(v: unknown, fallback = 0): number {
@@ -580,6 +594,16 @@ export function projectOperationReportV1(input: {
     deviation_summary: toText((input.operation_state as any)?.deviation_summary ?? (input.receipt as any)?.deviation_summary),
   };
 
+  const asAppliedRaw = (input.operation_state as any)?.as_applied ?? {};
+  const asAppliedGeojson = toObject(asAppliedRaw?.coverage_geojson ?? asAppliedRaw?.geojson ?? asAppliedRaw?.coverage ?? null);
+  const asApplied = {
+    coverage_status: normalizeCoverageStatus(asAppliedRaw?.coverage_status ?? (asAppliedGeojson ? "AVAILABLE" : "MISSING")),
+    coverage_geojson: asAppliedGeojson,
+    applied_amount_summary: toText(asAppliedRaw?.applied_amount_summary ?? asAppliedRaw?.amount_summary),
+    planned_vs_actual_deviation: toText(asAppliedRaw?.planned_vs_actual_deviation ?? asAppliedRaw?.deviation_summary),
+    evidence_ref: toText(asAppliedRaw?.evidence_ref ?? asAppliedRaw?.evidence_id ?? asAppliedRaw?.trace_id),
+  };
+
   const computedRisk = evaluateRisk({
     final_status: finalStatus,
     missing_evidence: missingEvidence,
@@ -710,6 +734,7 @@ export function projectOperationReportV1(input: {
       first_pass_acceptance_rate: roiSummaries.filter((x) => x.roi_type === "FIRST_PASS_ACCEPTANCE_RATE"),
       low_confidence_items: roiSummaries.filter((x) => String((x.confidence as any)?.level ?? "").toUpperCase() === "LOW"),
     },
+    as_applied: asApplied,
     planned,
     workflow: {
       owner_actor_id: toText(input.operation_workflow?.owner_actor_id),
