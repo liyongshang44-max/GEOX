@@ -26,6 +26,15 @@ function PrintTable({ headers, rows, emptyText }: { headers: string[]; rows: Row
   );
 }
 
+function safeExportText(value: unknown, fallback = "暂无记录"): string {
+  const text = String(value ?? "").trim();
+  if (!text || text === "--" || text === "[object Object]") return fallback;
+  if (/s3:\/\//i.test(text) || /minio:\/\//i.test(text) || /https?:\/\//i.test(text)) return fallback;
+  if (/(^|\s)\/[\w./-]+/.test(text) || /[A-Z]:\\[\w\\.-]+/i.test(text)) return fallback;
+  if (/\b(secret|token|credential)\b/i.test(text) || /stack\s*trace/i.test(text) || /debug\s*json/i.test(text) || /\{\s*"/.test(text)) return fallback;
+  return text;
+}
+
 export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): React.ReactElement {
   const dashboardKpis = vm.kpis.slice(0, 5);
   const nextActionTitles = vm.actionItems.map((item) => item.title).join(" · ") || "暂无待处理事项";
@@ -103,6 +112,9 @@ export function FieldExportBlocks({ vm }: { vm: FieldReportPageVm }): React.Reac
 
 export function OperationExportBlocks({ vm }: { vm: OperationReportPageVm }): React.ReactElement {
   const sections = vm.sections;
+  const evidenceItems = vm.evidenceSummary.items
+    .map((item) => [safeExportText(item.label), safeExportText(item.value)] as [string, string])
+    .filter(([label, value]) => label !== "暂无记录" && value !== "暂无记录");
   return (
     <div className="customerCompactReport">
       <section className="customerCard">
@@ -120,17 +132,27 @@ export function OperationExportBlocks({ vm }: { vm: OperationReportPageVm }): Re
               <h2 className="customerCardTitle">{item.title}</h2>
               <span className="operationStatusBadge">{item.statusText ?? item.status}</span>
             </div>
-            <p className="customerSpacingTopSm">{item.summary}</p>
-            {item.emptyState ? <p className="customerMetricLabel">{item.emptyState.title}：{item.emptyState.description}</p> : null}
+            <p className="customerSpacingTopSm">{safeExportText(item.summary, "暂无摘要")}</p>
+            {item.emptyState ? <p className="customerMetricLabel">{safeExportText(item.emptyState.title)}：{safeExportText(item.emptyState.description)}</p> : null}
           </article>
         ))}
+      </section>
+      <section className="customerCard">
+        <h2 className="customerCardTitle">证据包摘要</h2>
+        <p className="customerSpacingTopSm">{safeExportText(vm.evidenceSummary.summary, "暂无有效证据。")}</p>
+        <p className="customerMetricLabel customerSpacingTopXs">{safeExportText(vm.evidenceSummary.detail, "暂无补充说明")}</p>
+        {evidenceItems.length ? (
+          <div className="customerGrid2 customerSpacingTopXs">
+            {evidenceItems.map(([label, value]) => <div key={label}><strong>{label}：</strong>{value}</div>)}
+          </div>
+        ) : null}
       </section>
       {vm.technicalFoldout?.rows?.length ? (
         <details className="operationTechDetailsMuted">
           <summary className="operationTechDetailsSummary">技术附录（默认关闭）</summary>
           <p className="customerMetricLabel customerSpacingTopSm">默认客户版不突出内部技术字段，仅排障时查看。</p>
           <div className="operationTechDetailsGrid">
-            {vm.technicalFoldout.rows.map((row) => <div key={row.label} className="customerMetricLabel"><strong>{row.label}：</strong>{row.value}</div>)}
+            {vm.technicalFoldout.rows.map((row) => <div key={row.label} className="customerMetricLabel"><strong>{safeExportText(row.label)}：</strong>{safeExportText(row.value)}</div>)}
           </div>
         </details>
       ) : null}
