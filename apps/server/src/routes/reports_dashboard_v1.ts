@@ -22,6 +22,27 @@ type TenantTriple = {
 const DASHBOARD_REPORT_CONCURRENCY_LIMIT = 12;
 const DEVICE_OFFLINE_THRESHOLD_MS = 15 * 60 * 1000;
 
+type CustomerFieldListItem = {
+  field_id: string;
+  field_name: string | null;
+  risk_level: "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
+  risk_reasons: string[];
+  updated_at: string | null;
+  crop_name: string | null;
+  stage_name: string | null;
+  recent_operation_id: string | null;
+  recent_operation_title: string | null;
+  open_alerts_count: number;
+  pending_acceptance_count: number;
+};
+
+function toRiskLevel(value: unknown): "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN" {
+  const v = String(value ?? "").trim().toUpperCase();
+  if (v === "HIGH" || v === "MEDIUM" || v === "LOW") return v;
+  return "UNKNOWN";
+}
+
+
 function normalizeFieldIds(raw: unknown): string[] {
   if (Array.isArray(raw)) return raw.map((x) => String(x ?? "").trim()).filter(Boolean);
   if (typeof raw === "string") {
@@ -242,6 +263,83 @@ async function queryDeviceSummary(pool: Pool, tenant: TenantTriple, fieldIds: st
 }
 
 export function registerReportsDashboardV1Routes(app: FastifyInstance, pool: Pool): void {
+
+  app.get("/api/v1/customer/fields", async (req, reply) => {
+    if (!enforceRouteRoleAuth(req, reply, "summary")) return;
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+
+    const tenant: TenantTriple = {
+      tenant_id: String(auth.tenant_id),
+      project_id: String(auth.project_id),
+      group_id: String(auth.group_id),
+    };
+
+    const allowedFieldIds = Array.isArray(auth.allowed_field_ids)
+      ? Array.from(new Set(auth.allowed_field_ids.map((x) => String(x ?? "").trim()).filter(Boolean)))
+      : [];
+
+    const states = await projectOperationStateV1(pool, tenant);
+    const scopedStates = states.filter((state) => allowedFieldIds.includes(String(state.field_id ?? "").trim()));
+    const fieldIds = allowedFieldIds.length > 0
+      ? allowedFieldIds
+      : Array.from(new Set(scopedStates.map((state) => String(state.field_id ?? "").trim()).filter(Boolean)));
+
+    const [fieldNameById, openAlertsByField] = await Promise.all([
+      queryFieldNameMap(pool, tenant, fieldIds),
+      queryOpenAlertCountByField(pool, tenant, fieldIds),
+    ]);
+
+    const byField = new Map<string, { latestTs: number; latestOperationId: string | null; pendingAcceptanceCount: number; riskLevel: string; riskReasons: string[] }>();
+    for (const state of scopedStates) {
+      const fieldId = String(state.field_id ?? "").trim();
+      if (!fieldId) continue;
+      const updatedTs = Number((state as any).updated_at ?? 0);
+      const eventTs = Number.isFinite(updatedTs) && updatedTs > 0
+        ? updatedTs
+        : Math.max(...(state.timeline ?? []).map((item) => Number(item.ts ?? 0)).filter((n) => Number.isFinite(n) && n > 0), 0);
+      const existing = byField.get(fieldId);
+      const pending = String(state.acceptance?.status ?? "").toUpperCase() === "PENDING" ? 1 : 0;
+      const riskLevel = String((state as any).risk?.level ?? (state as any).risk_level ?? "UNKNOWN");
+      const riskReasons = Array.isArray((state as any).risk?.reasons) ? (state as any).risk.reasons.map((x: unknown) => String(x ?? "").trim()).filter(Boolean) : [];
+      if (!existing) {
+        byField.set(fieldId, { latestTs: eventTs, latestOperationId: String(state.operation_id ?? state.operation_plan_id ?? "").trim() || null, pendingAcceptanceCount: pending, riskLevel, riskReasons });
+      } else {
+        existing.pendingAcceptanceCount += pending;
+        if (eventTs > existing.latestTs) {
+          existing.latestTs = eventTs;
+          existing.latestOperationId = String(state.operation_id ?? state.operation_plan_id ?? "").trim() || null;
+          existing.riskLevel = riskLevel;
+          existing.riskReasons = riskReasons;
+        }
+      }
+    }
+
+    const fields: CustomerFieldListItem[] = fieldIds.map((fieldId) => {
+      const agg = byField.get(fieldId);
+      return {
+        field_id: fieldId,
+        field_name: fieldNameById.get(fieldId) ?? null,
+        risk_level: toRiskLevel(agg?.riskLevel),
+        risk_reasons: agg?.riskReasons ?? [],
+        updated_at: agg?.latestTs && agg.latestTs > 0 ? new Date(agg.latestTs).toISOString() : null,
+        crop_name: null,
+        stage_name: null,
+        recent_operation_id: agg?.latestOperationId ?? null,
+        recent_operation_title: null,
+        open_alerts_count: Number(openAlertsByField.get(fieldId) ?? 0),
+        pending_acceptance_count: Number(agg?.pendingAcceptanceCount ?? 0),
+      };
+    });
+
+    return reply.send({
+      ok: true,
+      source: "customer_fields_api",
+      dataScope: "OFFICIAL_CUSTOMER_API",
+      generated_at: new Date().toISOString(),
+      fields,
+    });
+  });
   app.get("/api/v1/reports/customer-dashboard/field-portfolio-summary", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
