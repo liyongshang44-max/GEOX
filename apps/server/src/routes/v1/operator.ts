@@ -494,6 +494,72 @@ async function buildOperatorDispatch(pool: Pool, limit: number): Promise<Row[]> 
     .slice(0, limit);
 }
 
+
+
+type AcceptanceStatus = "PENDING" | "EVIDENCE_INSUFFICIENT" | "FAILED" | "REVIEW_REQUIRED" | "PASSED" | "UNKNOWN";
+
+function normalizeAcceptanceStatus(acceptance: Row | null, operation: Row): AcceptanceStatus {
+  const verdict = safeText(acceptance?.verdict ?? acceptance?.acceptance_verdict).toUpperCase();
+  const raw = safeText(acceptance?.status ?? acceptance?.acceptance_status ?? operation.final_status ?? operation.acceptance_status).toUpperCase();
+  const missingEvidence = Boolean(acceptance?.missing_evidence) || raw.includes("EVIDENCE_INSUFFICIENT") || raw.includes("INSUFFICIENT_EVIDENCE");
+  if (missingEvidence) return "EVIDENCE_INSUFFICIENT";
+  if (verdict.includes("PASS") || raw.includes("PASS")) return "PASSED";
+  if (verdict.includes("FAIL") || raw.includes("FAIL") || raw.includes("INVALID_EXECUTION")) return "FAILED";
+  if (raw.includes("REVIEW")) return "REVIEW_REQUIRED";
+  if (raw.includes("PENDING_ACCEPTANCE") || raw.includes("PENDING")) return "PENDING";
+  return "UNKNOWN";
+}
+
+async function buildOperatorAcceptance(pool: Pool, limit: number): Promise<Row[]> {
+  const [operationRows, acceptanceRows, acceptanceResultRows, evidenceRows] = await Promise.all([
+    readTenantRows(pool, "operation_state_v1", limit),
+    readMultiRows(pool, ["acceptance", "acceptance_index_v1"], limit),
+    readMultiRows(pool, ["acceptance_result", "acceptance_result_v1"], limit),
+    readMultiRows(pool, ["evidence_summary", "evidence_bundle_summary_v1"], limit),
+  ]);
+
+  const acceptanceByOperation = new Map<string, Row>();
+  for (const row of [...acceptanceRows, ...acceptanceResultRows]) {
+    const operationId = safeText(row.operation_id ?? row.operation_plan_id ?? row.op_id ?? row.task_id);
+    if (!operationId || acceptanceByOperation.has(operationId)) continue;
+    acceptanceByOperation.set(operationId, row);
+  }
+  const evidenceByOperation = new Map<string, Row>();
+  for (const row of evidenceRows) {
+    const operationId = safeText(row.operation_id ?? row.operation_plan_id ?? row.op_id);
+    if (operationId && !evidenceByOperation.has(operationId)) evidenceByOperation.set(operationId, row);
+  }
+
+  const items = operationRows.map((op) => {
+    const operationId = safeText(op.operation_id ?? op.operation_plan_id ?? op.id);
+    const acceptance = acceptanceByOperation.get(operationId) ?? null;
+    const evidence = evidenceByOperation.get(operationId) ?? null;
+    const acceptanceStatus = normalizeAcceptanceStatus(acceptance, op);
+    const evidenceInsufficient = acceptanceStatus === "EVIDENCE_INSUFFICIENT" || Boolean(evidence?.insufficient) || Number(evidence?.evidence_count ?? 1) <= 0;
+    return {
+      operation_id: operationId || null,
+      acceptance_id: nullableText(acceptance?.acceptance_id ?? acceptance?.id),
+      field_name: nullableText(op.field_name),
+      operation_name: nullableText(op.operation_name),
+      acceptance_status: acceptanceStatus,
+      operation_state_status: nullableText(op.final_status ?? op.status),
+      evidence_insufficient: evidenceInsufficient,
+      failure_reason: nullableText(acceptance?.failure_reason ?? op.failure_reason),
+      review_reason: nullableText(acceptance?.review_reason),
+      acceptance_verdict: nullableText(acceptance?.verdict ?? acceptance?.acceptance_verdict),
+      generated_at: toIsoAny(acceptance?.generated_at ?? acceptance?.created_at ?? op.created_at),
+      updated_at: toIsoAny(acceptance?.updated_at ?? op.updated_at ?? op.updated_ts_ms),
+      can_evaluate: false,
+      can_request_review: false,
+      permission_reason: "验收写操作未接入，当前只读。",
+    };
+  });
+
+  return items
+    .sort((a, b) => new Date(String(b.updated_at ?? b.generated_at ?? 0)).getTime() - new Date(String(a.updated_at ?? a.generated_at ?? 0)).getTime())
+    .slice(0, limit);
+}
+
 function buildReadonlyFacadePayload(source: string, message: string) {
   return {
     ...basePayload(source),
@@ -639,8 +705,23 @@ export function registerOperatorV1FacadeRoutes(app: FastifyInstance, pool: Pool)
     });
   });
 
-  app.get("/api/v1/operator/acceptance", async (_req, reply) => {
-    return reply.send(buildReadonlyFacadePayload("operator_acceptance_api", "operator acceptance read-only facade"));
+  app.get("/api/v1/operator/acceptance", async (req: any, reply) => {
+    const query = (req.query ?? {}) as { limit?: string | number; tenant_id?: string; project_id?: string; group_id?: string };
+    const parsedLimit = Number(query.limit);
+    const limit = Number.isFinite(parsedLimit) ? Math.min(300, Math.max(1, Math.floor(parsedLimit))) : 100;
+    const items = await buildOperatorAcceptance(pool, limit);
+    return reply.send({
+      ...basePayload("operator_acceptance_api"),
+      writeReady: false,
+      items,
+      filters: {
+        tenant_id: safeText(query.tenant_id),
+        project_id: safeText(query.project_id),
+        group_id: safeText(query.group_id),
+        limit,
+      },
+      message: "operator acceptance read-only facade",
+    });
   });
 
   app.get("/api/v1/operator/evidence", async (_req, reply) => {
