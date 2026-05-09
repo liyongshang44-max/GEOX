@@ -227,6 +227,56 @@ async function buildFieldMemory(pool: Pool, query: { field_id?: string; operatio
     updated_at: toIsoAny(row.updated_at ?? row.occurred_at),
   }));
 }
+
+function normalizeValueKind(input: unknown, baselinePresent: boolean, actualPresent: boolean, evidencePresent: boolean, confidenceLevel: string): string {
+  const raw = safeText(input).toUpperCase();
+  const measuredAllowed = baselinePresent && actualPresent && evidencePresent && ["HIGH", "MEDIUM"].includes(confidenceLevel);
+  if (measuredAllowed) return raw === "MEASURED" ? "MEASURED" : (raw || "MEASURED");
+  if (!evidencePresent) return "INSUFFICIENT_EVIDENCE";
+  if (!baselinePresent || !actualPresent) return "ESTIMATED";
+  return "ASSUMPTION_BASED";
+}
+
+async function buildRoiLedger(pool: Pool, query: { field_id?: string; operation_id?: string }): Promise<Row[]> {
+  if (!(await tableExists(pool, "roi_ledger_v1"))) return [];
+  const where: string[] = [];
+  const values: unknown[] = [];
+  const add = (col: string, val?: string) => {
+    const normalized = text(val);
+    if (!normalized) return;
+    values.push(normalized);
+    where.push(`${col} = $${values.length}`);
+  };
+  add("field_id", query.field_id);
+  add("operation_id", query.operation_id);
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  const result = await pool.query(`SELECT * FROM roi_ledger_v1 ${whereSql} ORDER BY created_at DESC LIMIT 200`, values);
+  return (result.rows ?? []).map((row: Row) => {
+    const confidence = jsonObjectOrNull(row.confidence) ?? {};
+    const confidenceLevel = safeText((confidence as Record<string, unknown>).level).toUpperCase();
+    const baselinePresent = row.baseline_value !== null && row.baseline_value !== undefined;
+    const actualPresent = row.actual_value !== null && row.actual_value !== undefined;
+    const evidencePresent = Boolean(safeText(row.evidence_ref) || (Array.isArray(row.evidence_refs) && row.evidence_refs.length > 0));
+    const valueKind = normalizeValueKind(row.value_kind ?? row.roi_type, baselinePresent, actualPresent, evidencePresent, confidenceLevel);
+    return {
+      roi_id: safeText(row.roi_id),
+      field_id: safeText(row.field_id),
+      operation_id: safeText(row.operation_id),
+      prescription_id: safeText(row.prescription_id),
+      evidence_ref: safeText(row.evidence_ref ?? (Array.isArray(row.evidence_refs) ? row.evidence_refs[0] : "")),
+      calculation_method: safeText(row.calculation_method ?? row.method),
+      confidence: confidence,
+      assumption: jsonObjectOrNull(row.assumptions),
+      created_at: toIsoAny(row.created_at),
+      baseline_present: baselinePresent,
+      actual_present: actualPresent,
+      evidence_present: evidencePresent,
+      value_kind: valueKind,
+      metric_name: safeText(row.metric_name ?? row.roi_metric),
+      value_text: safeText(row.value_text ?? row.unit),
+    };
+  });
+}
 export function registerOperatorV1FacadeRoutes(app: FastifyInstance, pool: Pool): void {
   app.get("/api/v1/operator/devices-alerts", async (_req, reply) => {
     const { devices, alerts } = await buildDevicesAlerts(pool);
@@ -260,5 +310,17 @@ export function registerOperatorV1FacadeRoutes(app: FastifyInstance, pool: Pool)
     });
   });
 
-  app.get("/api/v1/operator/roi-ledger", async (_req, reply) => reply.send({ ...basePayload("operator_roi_ledger_api"), items: [] }));
+  app.get("/api/v1/operator/roi-ledger", async (req: any, reply) => {
+    const query = (req.query ?? {}) as { field_id?: string; operation_id?: string };
+    const items = await buildRoiLedger(pool, query);
+    return reply.send({
+      ...basePayload("operator_roi_ledger_api"),
+      filters: {
+        fieldId: safeText(query.field_id),
+        operationId: safeText(query.operation_id),
+      },
+      items,
+      message: "operator roi-ledger read-only facade",
+    });
+  });
 }
