@@ -24,6 +24,7 @@ type QueryInput = {
   field_id?: string;
   operation_id?: string;
   memory_type?: string;
+  skill_id?: string;
   limit?: string | number;
 };
 
@@ -333,6 +334,211 @@ async function buildOperatorRoiLedger(pool: Pool, tenant: TenantTriple, query: Q
   });
 }
 
+function mapSkillClassification(raw: unknown): "sensing" | "agronomy" | "device" | "acceptance" {
+  const t = text(raw, "").toUpperCase();
+  if (t.includes("ACCEPT")) return "acceptance";
+  if (t.includes("DEVICE") || t.includes("CONTROL") || t.includes("OPS")) return "device";
+  if (t.includes("SENS")) return "sensing";
+  return "agronomy";
+}
+
+async function buildOperatorSkillTracesByOperation(pool: Pool, tenant: TenantTriple, operationId: string, limit: number): Promise<AnyRecord[]> {
+  const operation_id = text(operationId, "");
+  if (!operation_id) return [];
+  const q = await pool.query(
+    `SELECT fact_id, occurred_at, record_json::jsonb AS record_json
+       FROM facts
+      WHERE (record_json::jsonb->>'type') IN ('skill_run_v1','skill_trace_v1')
+        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+        AND (record_json::jsonb#>>'{payload,project_id}') = $2
+        AND (record_json::jsonb#>>'{payload,group_id}') = $3
+        AND (record_json::jsonb#>>'{payload,operation_id}') = $4
+      ORDER BY occurred_at DESC
+      LIMIT $5`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, operation_id, Math.max(1, Math.min(200, limit))]
+  );
+  return (q.rows ?? []).map((row: any) => {
+    const payload = row.record_json?.payload ?? {};
+    const trace = normalizeJson(payload.skill_trace, {});
+    const skillId = text(payload.skill_id ?? trace.skill_id, "");
+    const version = text(payload.version ?? payload.skill_version ?? trace.skill_version, "v1");
+    const traceId = text(payload.trace_id ?? trace.trace_id, text(payload.run_id, text(row.fact_id, "")));
+    const evidenceRefs = Array.from(new Set([
+      ...arrayFromJson(payload.evidence_refs),
+      ...arrayFromJson(trace.evidence_refs),
+    ].map((x) => text(x, "")).filter(Boolean)));
+    const status = text(payload.status ?? payload.result_status ?? trace.result_status, "").toUpperCase();
+    const lastRunStatus: "SUCCESS" | "FAILED" | "SKIPPED" = status === "FAILED" ? "FAILED" : (status === "SKIPPED" ? "SKIPPED" : "SUCCESS");
+    return {
+      skill_trace_id: traceId,
+      operation_id,
+      skill_id: skillId,
+      skill_version: version,
+      classification: mapSkillClassification(payload.category ?? payload.skill_category ?? trace.skill_category),
+      binding_scope: text(payload.scope_type ?? payload.bind_target ?? payload.binding_scope, "operation"),
+      input_summary: sanitizeText(payload.input_digest ?? trace.input_summary ?? JSON.stringify(trace.inputs ?? {}), ""),
+      output_summary: sanitizeText(payload.output_digest ?? trace.output_summary ?? JSON.stringify(trace.outputs ?? {}), ""),
+      last_run_status: lastRunStatus,
+      failure_reason: lastRunStatus === "FAILED" ? text(payload.error_code ?? payload.failure_reason ?? trace.error_code, "") || null : null,
+      evidence_refs: evidenceRefs,
+    };
+  });
+}
+
+async function buildOperatorSkillPerformance(pool: Pool, tenant: TenantTriple, query: QueryInput): Promise<AnyRecord[]> {
+  if (!(await tableExists(pool, "field_memory_v1"))) return [];
+  const where: string[] = [
+    "tenant_id = $1",
+    "project_id = $2",
+    "group_id = $3",
+    "memory_type = 'SKILL_PERFORMANCE_MEMORY'",
+  ];
+  const values: unknown[] = [tenant.tenant_id, tenant.project_id, tenant.group_id];
+  const skillId = text(query.skill_id, "");
+  const fieldId = text(query.field_id, "");
+  const operationId = text(query.operation_id, "");
+  if (skillId) { values.push(skillId); where.push(`skill_id = $${values.length}`); }
+  if (fieldId) { values.push(fieldId); where.push(`field_id = $${values.length}`); }
+  if (operationId) { values.push(operationId); where.push(`operation_id = $${values.length}`); }
+  values.push(limitFromQuery(query.limit, 100, 200));
+  const fm = await pool.query(
+    `SELECT skill_id, field_id, operation_id, confidence, delta_value, weather_interference_detected, learning_excluded_reason, occurred_at
+       FROM field_memory_v1
+      WHERE ${where.join(" AND ")}
+      ORDER BY occurred_at DESC
+      LIMIT $${values.length}`,
+    values
+  );
+  const rows = fm.rows ?? [];
+  const acceptanceMap = new Map<string, string>();
+  const roiMap = new Map<string, string | null>();
+  const memoryMap = new Map<string, string | null>();
+  const confidenceMap = new Map<string, number | null>();
+  const weatherMap = new Map<string, boolean>();
+  const excludedMap = new Map<string, string | null>();
+  for (const row of rows) {
+    const key = `${text(row.skill_id)}|${text(row.field_id)}|${text(row.operation_id)}`;
+    if (!text(row.skill_id) || !text(row.field_id) || !text(row.operation_id) || acceptanceMap.has(key)) continue;
+    const confObj = normalizeJson(row.confidence, null);
+    const confScore = Number((confObj as any)?.score ?? (confObj as any)?.value ?? NaN);
+    confidenceMap.set(key, Number.isFinite(confScore) ? confScore : null);
+    const delta = row.delta_value == null ? null : sanitizeText(typeof row.delta_value === "string" ? row.delta_value : JSON.stringify(row.delta_value), "");
+    memoryMap.set(key, delta || null);
+    weatherMap.set(key, Boolean(row.weather_interference_detected));
+    excludedMap.set(key, text(row.learning_excluded_reason, "") || null);
+    acceptanceMap.set(key, "UNKNOWN");
+    roiMap.set(key, null);
+  }
+
+  if (acceptanceMap.size > 0) {
+    const opIds = Array.from(new Set(Array.from(acceptanceMap.keys()).map((x) => x.split("|")[2])));
+    const acc = await pool.query(
+      `SELECT operation_id, result
+         FROM acceptance_result_v1
+        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND operation_id = ANY($4::text[])
+        ORDER BY created_at DESC`,
+      [tenant.tenant_id, tenant.project_id, tenant.group_id, opIds]
+    ).catch(() => ({ rows: [] as any[] }));
+    const accByOp = new Map<string, string>();
+    for (const row of acc.rows ?? []) if (!accByOp.has(text(row.operation_id))) accByOp.set(text(row.operation_id), text(row.result, "UNKNOWN"));
+    for (const key of acceptanceMap.keys()) acceptanceMap.set(key, accByOp.get(key.split("|")[2]) ?? "UNKNOWN");
+
+    const roi = await pool.query(
+      `SELECT operation_id, skill_id, delta_value, confidence
+         FROM roi_ledger_v1
+        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND operation_id = ANY($4::text[])
+        ORDER BY created_at DESC`,
+      [tenant.tenant_id, tenant.project_id, tenant.group_id, opIds]
+    ).catch(() => ({ rows: [] as any[] }));
+    const roiByOpSkill = new Map<string, string | null>();
+    for (const row of roi.rows ?? []) {
+      const k = `${text(row.operation_id)}|${text(row.skill_id)}`;
+      if (roiByOpSkill.has(k)) continue;
+      roiByOpSkill.set(k, row.delta_value == null ? null : sanitizeText(String(row.delta_value), ""));
+    }
+    for (const key of roiMap.keys()) {
+      const [skill, , op] = key.split("|");
+      roiMap.set(key, roiByOpSkill.get(`${op}|${skill}`) ?? null);
+    }
+  }
+
+  return Array.from(acceptanceMap.keys()).map((key) => {
+    const [skill_id, field_id, operation_id] = key.split("|");
+    return {
+      skill_id,
+      field_id,
+      operation_id,
+      acceptance_result: acceptanceMap.get(key) ?? "UNKNOWN",
+      roi_result: roiMap.get(key) ?? null,
+      memory_delta: memoryMap.get(key) ?? null,
+      weather_interference_detected: weatherMap.get(key) ?? false,
+      learning_excluded_reason: excludedMap.get(key) ?? null,
+      confidence: confidenceMap.get(key) ?? null,
+    };
+  });
+}
+
+async function buildUnifiedLearningClosureByOperation(pool: Pool, tenant: TenantTriple, operationId: string): Promise<AnyRecord> {
+  const operation_id = text(operationId, "");
+  const [skillTraces, skillPerfRows] = await Promise.all([
+    buildOperatorSkillTracesByOperation(pool, tenant, operation_id, 200),
+    buildOperatorSkillPerformance(pool, tenant, { operation_id, limit: 200 }),
+  ]);
+  const roiRows = await buildOperatorRoiLedger(pool, tenant, { operation_id, limit: 200 });
+  const memoryRows = await buildOperatorFieldMemory(pool, tenant, { operation_id, limit: 200 });
+  const evidenceRows = await selectTenantRows(pool, "evidence_index_v1", tenant.tenant_id, 500);
+  const acceptanceRows = await selectTenantRows(pool, "acceptance_result_v1", tenant.tenant_id, 200);
+  const acceptance = acceptanceRows.find((x) => text(x.operation_id) === operation_id) ?? null;
+  const evidence = evidenceRows.filter((x) => text(x.operation_id) === operation_id).slice(0, 50).map((x) => ({
+    evidence_id: sanitizeText(x.evidence_id ?? x.id ?? ""),
+    evidence_type: sanitizeText(x.evidence_type ?? x.type ?? "UNKNOWN"),
+    created_at: dateToIso(x.created_at ?? x.occurred_at),
+  }));
+  const weatherExcluded = memoryRows.some((x) => Boolean(x.weather_interference_detected) && /IRRIGATION|WATER/i.test(String(x.memory_type ?? "")));
+  const weakLearningSignals = skillPerfRows.filter((x) => x.learning_excluded_reason || x.acceptance_result === "UNKNOWN" || x.confidence == null);
+  const hasAcceptance = Boolean(acceptance);
+  return {
+    operation_id,
+    operation_evidence: evidence,
+    acceptance_result: acceptance ? sanitizeText(acceptance.result ?? acceptance.status ?? "UNKNOWN") : "UNKNOWN",
+    roi_result: roiRows.map((x) => ({
+      roi_ledger_id: sanitizeText(x.roi_ledger_id ?? x.roi_id ?? ""),
+      delta_value: x.delta_value ?? null,
+      evidence_refs: x.evidence_refs ?? [],
+      acceptance_ref: sanitizeText(x.acceptance_id ?? x.acceptance_ref ?? ""),
+    })),
+    field_memory_delta: memoryRows.map((x) => ({
+      memory_id: sanitizeText(x.memory_id ?? ""),
+      before: x.before ?? null,
+      after: x.after ?? null,
+      delta: x.delta ?? null,
+      confidence: x.confidence ?? null,
+      weather_interference_detected: Boolean(x.weather_interference_detected),
+      learning_excluded_reason: x.learning_excluded_reason ?? null,
+    })),
+    rule_performance: memoryRows.filter((x) => String(x.memory_type ?? "").includes("RULE")).slice(0, 20),
+    skill_performance: skillPerfRows,
+    learning_exclusion_reason: weakLearningSignals.map((x) => x.learning_excluded_reason).filter(Boolean),
+    acceptance_gates: {
+      weather_interference_detected: weatherExcluded,
+      no_evidence_no_formal_learning: memoryRows.some((x) => Array.isArray(x.evidence_refs) && x.evidence_refs.length === 0),
+      unaccepted_no_formal_learning: !hasAcceptance,
+      low_confidence_no_formal_learning: skillPerfRows.some((x) => x.confidence == null),
+    },
+    customer_summary: {
+      learned: skillPerfRows.length > 0
+        ? `系统学到了 ${skillPerfRows.length} 条技能表现记录；${weatherExcluded ? "天气干扰样本已排除。" : "未发现天气干扰排除。"}`
+        : "系统尚未形成可展示的学习记录。",
+      excluded_data: weakLearningSignals.length > 0
+        ? `已排除 ${weakLearningSignals.length} 条记录（无证据/未验收/置信度不足/天气干扰）。`
+        : "当前无被排除学习数据。",
+      no_learning_reason: skillPerfRows.length === 0 ? "暂无满足证据与验收门槛的数据，未写入正式学习记录。" : null,
+      acceptance: hasAcceptance ? `验收结果：${sanitizeText(acceptance?.result ?? acceptance?.status ?? "UNKNOWN")}` : "验收尚未完成。",
+    },
+    skill_traces: skillTraces,
+  };
+}
+
 function authTenant(req: any, reply: any, scopes: any[]): { auth: any; tenant: TenantTriple } | null {
   const auth = requireAoActAnyScopeV0(req, reply, scopes);
   if (!auth) return null;
@@ -395,5 +601,50 @@ export function registerOperatorDiagnosticsV1Routes(app: FastifyInstance, pool: 
         operation_id: text(query.operation_id, ""),
       },
     });
+  });
+
+  app.get("/api/v1/operator/skill-traces", async (req: any, reply) => {
+    const ctx = authTenant(req, reply, ["skill.read", "ao_act.index.read"]);
+    if (!ctx) return;
+    const query = (req.query ?? {}) as QueryInput;
+    const operation_id = text(query.operation_id, "");
+    if (!operation_id) return reply.code(400).send({ ok: false, error: "MISSING_OPERATION_ID" });
+    const items = await buildOperatorSkillTracesByOperation(pool, ctx.tenant, operation_id, limitFromQuery(query.limit, 50, 200));
+    return reply.send({
+      ok: true,
+      source: "operator_skill_traces_facade",
+      generated_at: new Date().toISOString(),
+      items,
+      filters: { operation_id },
+    });
+  });
+
+  app.get("/api/v1/operator/skill-performance", async (req: any, reply) => {
+    const ctx = authTenant(req, reply, ["skill.read", "field_memory.read", "roi_ledger.read", "acceptance.read", "ao_act.index.read"]);
+    if (!ctx) return;
+    const query = (req.query ?? {}) as QueryInput;
+    if (query.field_id && !requireFieldAllowedOr404V1(reply, ctx.auth, query.field_id)) return;
+    const items = await buildOperatorSkillPerformance(pool, ctx.tenant, query);
+    return reply.send({
+      ok: true,
+      source: "operator_skill_performance_facade",
+      generated_at: new Date().toISOString(),
+      items,
+      filters: {
+        skill_id: text(query.skill_id, ""),
+        field_id: text(query.field_id, ""),
+        operation_id: text(query.operation_id, ""),
+      },
+    });
+  });
+
+  app.get("/api/v1/operator/learning-closure", async (req: any, reply) => {
+    const ctx = authTenant(req, reply, ["skill.read", "field_memory.read", "roi_ledger.read", "acceptance.read", "evidence.read", "ao_act.index.read"]);
+    if (!ctx) return;
+    const query = (req.query ?? {}) as QueryInput;
+    const operation_id = text(query.operation_id, "");
+    if (!operation_id) return reply.code(400).send({ ok: false, error: "MISSING_OPERATION_ID" });
+    const view = await buildUnifiedLearningClosureByOperation(pool, ctx.tenant, operation_id);
+    return reply.send({ ok: true, source: "operator_learning_closure_facade", generated_at: new Date().toISOString(), ...view });
   });
 }
