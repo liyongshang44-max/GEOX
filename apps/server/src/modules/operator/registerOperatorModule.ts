@@ -1,8 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 
-import { registerOperatorDiagnosticsV1Routes } from "../../routes/operator_diagnostics_v1.js";
+import { registerOperatorV1FacadeRoutes } from "../../routes/v1/operator.js";
 
 export function registerOperatorModule(app: FastifyInstance, pool: Pool): void {
-  registerOperatorDiagnosticsV1Routes(app, pool);
+  registerOperatorV1FacadeRoutes(app, pool);
 }

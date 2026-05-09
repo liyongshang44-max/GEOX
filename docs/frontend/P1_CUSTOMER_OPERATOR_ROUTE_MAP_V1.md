@@ -47,9 +47,9 @@ P1 前端分为两类正式产品界面：
 | `/operator/dispatch` | P1-B | 待新增 | B-04 | 派发状态页 |
 | `/operator/acceptance` | P1-B | 待新增 | B-05 | 验收中心 |
 | `/operator/evidence` | P1-B | 待新增 | B-06 | 证据中心 |
-| `/operator/devices-alerts` | P1-C | 待新增 | C-01 | 设备与告警中心 |
-| `/operator/roi-ledger` | P1-C | 待新增 | C-02 | ROI 运营明细 |
-| `/operator/field-memory` | P1-C | 待新增 | C-03 | 田块记忆运营中心 |
+| `/operator/devices-alerts` | P1-C | 已存在（只读 facade） | C-01 | 设备与告警中心（ACK/close 写操作未 ready） |
+| `/operator/roi-ledger` | P1-C | 已存在（只读 facade） | C-02 | ROI 运营明细（approval 写操作未 ready） |
+| `/operator/field-memory` | P1-C | 已存在（只读 facade） | C-03 | 田块记忆运营中心（acceptance evaluate/request-review 未 ready） |
 
 ## 5. Customer 禁止路由
 
