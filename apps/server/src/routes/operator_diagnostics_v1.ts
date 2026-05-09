@@ -333,6 +333,57 @@ async function buildOperatorRoiLedger(pool: Pool, tenant: TenantTriple, query: Q
   });
 }
 
+function mapSkillClassification(raw: unknown): "sensing" | "agronomy" | "device" | "acceptance" {
+  const t = text(raw, "").toUpperCase();
+  if (t.includes("ACCEPT")) return "acceptance";
+  if (t.includes("DEVICE") || t.includes("CONTROL") || t.includes("OPS")) return "device";
+  if (t.includes("SENS")) return "sensing";
+  return "agronomy";
+}
+
+async function buildOperatorSkillTracesByOperation(pool: Pool, tenant: TenantTriple, operationId: string, limit: number): Promise<AnyRecord[]> {
+  const operation_id = text(operationId, "");
+  if (!operation_id) return [];
+  const q = await pool.query(
+    `SELECT fact_id, occurred_at, record_json::jsonb AS record_json
+       FROM facts
+      WHERE (record_json::jsonb->>'type') IN ('skill_run_v1','skill_trace_v1')
+        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+        AND (record_json::jsonb#>>'{payload,project_id}') = $2
+        AND (record_json::jsonb#>>'{payload,group_id}') = $3
+        AND (record_json::jsonb#>>'{payload,operation_id}') = $4
+      ORDER BY occurred_at DESC
+      LIMIT $5`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, operation_id, Math.max(1, Math.min(200, limit))]
+  );
+  return (q.rows ?? []).map((row: any) => {
+    const payload = row.record_json?.payload ?? {};
+    const trace = normalizeJson(payload.skill_trace, {});
+    const skillId = text(payload.skill_id ?? trace.skill_id, "");
+    const version = text(payload.version ?? payload.skill_version ?? trace.skill_version, "v1");
+    const traceId = text(payload.trace_id ?? trace.trace_id, text(payload.run_id, text(row.fact_id, "")));
+    const evidenceRefs = Array.from(new Set([
+      ...arrayFromJson(payload.evidence_refs),
+      ...arrayFromJson(trace.evidence_refs),
+    ].map((x) => text(x, "")).filter(Boolean)));
+    const status = text(payload.status ?? payload.result_status ?? trace.result_status, "").toUpperCase();
+    const lastRunStatus: "SUCCESS" | "FAILED" | "SKIPPED" = status === "FAILED" ? "FAILED" : (status === "SKIPPED" ? "SKIPPED" : "SUCCESS");
+    return {
+      skill_trace_id: traceId,
+      operation_id,
+      skill_id: skillId,
+      skill_version: version,
+      classification: mapSkillClassification(payload.category ?? payload.skill_category ?? trace.skill_category),
+      binding_scope: text(payload.scope_type ?? payload.bind_target ?? payload.binding_scope, "operation"),
+      input_summary: sanitizeText(payload.input_digest ?? trace.input_summary ?? JSON.stringify(trace.inputs ?? {}), ""),
+      output_summary: sanitizeText(payload.output_digest ?? trace.output_summary ?? JSON.stringify(trace.outputs ?? {}), ""),
+      last_run_status: lastRunStatus,
+      failure_reason: lastRunStatus === "FAILED" ? text(payload.error_code ?? payload.failure_reason ?? trace.error_code, "") || null : null,
+      evidence_refs: evidenceRefs,
+    };
+  });
+}
+
 function authTenant(req: any, reply: any, scopes: any[]): { auth: any; tenant: TenantTriple } | null {
   const auth = requireAoActAnyScopeV0(req, reply, scopes);
   if (!auth) return null;
@@ -394,6 +445,22 @@ export function registerOperatorDiagnosticsV1Routes(app: FastifyInstance, pool: 
         field_id: text(query.field_id, ""),
         operation_id: text(query.operation_id, ""),
       },
+    });
+  });
+
+  app.get("/api/v1/operator/skill-traces", async (req: any, reply) => {
+    const ctx = authTenant(req, reply, ["skill.read", "ao_act.index.read"]);
+    if (!ctx) return;
+    const query = (req.query ?? {}) as QueryInput;
+    const operation_id = text(query.operation_id, "");
+    if (!operation_id) return reply.code(400).send({ ok: false, error: "MISSING_OPERATION_ID" });
+    const items = await buildOperatorSkillTracesByOperation(pool, ctx.tenant, operation_id, limitFromQuery(query.limit, 50, 200));
+    return reply.send({
+      ok: true,
+      source: "operator_skill_traces_facade",
+      generated_at: new Date().toISOString(),
+      items,
+      filters: { operation_id },
     });
   });
 }
