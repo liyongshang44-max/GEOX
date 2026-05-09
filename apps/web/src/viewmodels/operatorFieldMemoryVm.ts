@@ -17,6 +17,7 @@ export type OperatorFieldMemoryRowVm = {
   createdAtText: string;
   updatedAtText: string;
   sourceText: string;
+  learnedText: string;
   operationHref?: string | null;
   fieldHref?: string | null;
 };
@@ -81,6 +82,13 @@ function objectText(item: OperatorFieldMemoryItem): string {
   return parts.length ? parts.join(" · ") : "对象范围待确认";
 }
 
+function learnedText(item: OperatorFieldMemoryItem): string {
+  if (item.learned === false) return text(item.learningExcludedReason, "未纳入学习");
+  if (item.learnedWhat) return item.learnedWhat;
+  if ((item.evidenceRefs ?? []).length === 0) return "无证据，不学习";
+  return "已学习：before/after/delta 已更新";
+}
+
 function buildRow(item: OperatorFieldMemoryItem): OperatorFieldMemoryRowVm {
   return {
     memoryId: text(item.memoryId, "memory_id 待确认"),
@@ -99,6 +107,7 @@ function buildRow(item: OperatorFieldMemoryItem): OperatorFieldMemoryRowVm {
     createdAtText: dateText(item.createdAt),
     updatedAtText: dateText(item.updatedAt),
     sourceText: sourceText(item.source),
+    learnedText: learnedText(item),
     operationHref: operationHref(item.operationId),
     fieldHref: fieldHref(item.fieldId),
   };
@@ -134,7 +143,7 @@ export function buildOperatorFieldMemoryVm(response: OperatorFieldMemoryResponse
   const permissionDenied = response.dataScope === "PERMISSION_DENIED";
   return {
     title: "田块记忆中心",
-    lead: "按 field / operation / memory_type 查看田块记忆详情，和客户层摘要保持分离。",
+    lead: "按 field / operation / memory_type 查看田块记忆详情，明确“学到了什么”，并标注证据与排除原因。",
     generatedAtText: dateText(response.generated_at),
     dataScopeText: dataScopeText(response),
     dataScopeWarning: response.dataScope === "FALLBACK_LIMITED" || permissionDenied ? response.message : undefined,

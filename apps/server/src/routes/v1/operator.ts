@@ -657,6 +657,11 @@ function toIsoAny(value: unknown): string | null {
   return Number.isFinite(d.getTime()) ? d.toISOString() : null;
 }
 
+
+function isIrrigationMemoryType(memoryType: string): boolean {
+  return /IRRIGATION|WATER/i.test(memoryType);
+}
+
 async function buildFieldMemory(pool: Pool, query: { field_id?: string; operation_id?: string; memory_type?: string }): Promise<Row[]> {
   if (!(await tableExists(pool, "field_memory_v1"))) return [];
   const where: string[] = [];
@@ -672,24 +677,38 @@ async function buildFieldMemory(pool: Pool, query: { field_id?: string; operatio
   add("memory_type", query.memory_type);
   const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
   const result = await pool.query(`SELECT * FROM field_memory_v1 ${whereSql} ORDER BY occurred_at DESC LIMIT 200`, values);
-  return (result.rows ?? []).map((row: Row) => ({
-    memory_id: safeText(row.memory_id),
-    field_id: safeText(row.field_id),
-    operation_id: safeText(row.operation_id),
-    memory_type: safeText(row.memory_type),
-    before: parseObjectLike(row.before_value, "value"),
-    after: parseObjectLike(row.after_value ?? row.metric_value, "value"),
-    delta: parseObjectLike(row.delta_value, "value"),
-    confidence: parseObjectLike(row.confidence, "level"),
-    skill_refs: [...new Set([...normalizeRefList(row.skill_refs), ...normalizeRefList([row.skill_id, row.skill_trace_ref])])],
-    evidence_refs: normalizeRefList(row.evidence_refs),
-    recommendation_id: safeText(row.recommendation_id),
-    task_id: safeText(row.task_id),
-    acceptance_id: safeText(row.acceptance_id),
-    roi_id: safeText(row.roi_id),
-    created_at: toIsoAny(row.created_at ?? row.occurred_at),
-    updated_at: toIsoAny(row.updated_at ?? row.occurred_at),
-  }));
+  return (result.rows ?? []).map((row: Row) => {
+    const memoryType = safeText(row.memory_type);
+    const evidenceRefs = normalizeRefList(row.evidence_refs);
+    const weatherInterferenceDetected = Boolean(row.weather_interference_detected);
+    const irrigationBlocked = weatherInterferenceDetected && isIrrigationMemoryType(memoryType);
+    const excludedReason = safeText(row.learning_excluded_reason)
+      || (evidenceRefs.length === 0 ? "EVIDENCE_REQUIRED" : "")
+      || (irrigationBlocked ? "RAIN_INTERFERENCE_EXCLUDED" : "");
+    const learned = evidenceRefs.length > 0 && !irrigationBlocked;
+    return {
+      memory_id: safeText(row.memory_id),
+      field_id: safeText(row.field_id),
+      operation_id: safeText(row.operation_id),
+      memory_type: memoryType,
+      before: parseObjectLike(row.before_value, "value"),
+      after: parseObjectLike(row.after_value ?? row.metric_value, "value"),
+      delta: parseObjectLike(row.delta_value, "value"),
+      confidence: parseObjectLike(row.confidence, "level"),
+      skill_refs: [...new Set([...normalizeRefList(row.skill_refs), ...normalizeRefList([row.skill_id, row.skill_trace_ref])])],
+      evidence_refs: evidenceRefs,
+      learned,
+      learned_what: learned ? `learned ${memoryType}: delta updated with evidence` : null,
+      weather_interference_detected: weatherInterferenceDetected,
+      learning_excluded_reason: excludedReason || null,
+      recommendation_id: safeText(row.recommendation_id),
+      task_id: safeText(row.task_id),
+      acceptance_id: safeText(row.acceptance_id),
+      roi_id: safeText(row.roi_id),
+      created_at: toIsoAny(row.created_at ?? row.occurred_at),
+      updated_at: toIsoAny(row.updated_at ?? row.occurred_at),
+    };
+  });
 }
 
 function normalizeValueKind(input: unknown, baselinePresent: boolean, actualPresent: boolean, evidencePresent: boolean, confidenceLevel: string): "MEASURED" | "ESTIMATED" | "ASSUMPTION" {
