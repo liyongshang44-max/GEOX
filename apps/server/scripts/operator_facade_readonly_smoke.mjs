@@ -35,6 +35,14 @@ function hasMeasuredWithoutBaseline(items) {
   return (items ?? []).some((x) => x && x.baseline_present === false && String(x.value_kind ?? "").toUpperCase() === "MEASURED");
 }
 
+function deepHasObjectObjectString(value) {
+  if (value == null) return false;
+  if (typeof value === "string") return value.includes("[object Object]");
+  if (Array.isArray(value)) return value.some(deepHasObjectObjectString);
+  if (typeof value === "object") return Object.values(value).some(deepHasObjectObjectString);
+  return false;
+}
+
 async function main() {
   const authToken = process.env.OPERATOR_FACADE_AUTH_TOKEN;
   const devicesAlerts = await getJson("/api/v1/operator/devices-alerts");
@@ -59,6 +67,13 @@ async function main() {
 
   if (roiLedger.status === 200) {
     assert(!hasMeasuredWithoutBaseline(roiLedger.json?.items), "roi-ledger has MEASURED item without baseline_present");
+    assert(!deepHasObjectObjectString(roiLedger.json?.items), "roi-ledger string fields must not contain [object Object]");
+    for (const [idx, item] of (roiLedger.json?.items ?? []).entries()) {
+      assert(
+        item?.evidence_ref === null || typeof item?.evidence_ref === "string",
+        `roi-ledger item[${idx}] evidence_ref must be string or null`,
+      );
+    }
   }
 
   if (fieldMemory.status === 401) {

@@ -25,6 +25,29 @@ function safeText(value: unknown): string {
   return valueText;
 }
 
+function normalizeRef(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") return safeText(value) || null;
+  if (typeof value === "number") return Number.isFinite(value) ? String(value) : null;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const normalized = normalizeRef(item);
+      if (normalized) return normalized;
+    }
+    return null;
+  }
+  if (typeof value === "object") {
+    const source = value as Record<string, unknown>;
+    const keys = ["evidence_id", "evidenceId", "evidence_ref", "evidenceRef", "bundle_id", "bundleId", "artifact_id", "artifactId", "id", "ref"];
+    for (const key of keys) {
+      const normalized = normalizeRef(source[key]);
+      if (normalized) return normalized;
+    }
+    return null;
+  }
+  return null;
+}
+
 function toIsoFromMs(value: unknown): string | null {
   const n = Number(value);
   if (!Number.isFinite(n) || n <= 0) return null;
@@ -256,14 +279,15 @@ async function buildRoiLedger(pool: Pool, query: { field_id?: string; operation_
     const confidenceLevel = safeText((confidence as Record<string, unknown>).level).toUpperCase();
     const baselinePresent = row.baseline_value !== null && row.baseline_value !== undefined;
     const actualPresent = row.actual_value !== null && row.actual_value !== undefined;
-    const evidencePresent = Boolean(safeText(row.evidence_ref) || (Array.isArray(row.evidence_refs) && row.evidence_refs.length > 0));
+    const normalizedEvidenceRef = normalizeRef(row.evidence_ref ?? row.evidence_refs);
+    const evidencePresent = Boolean(normalizedEvidenceRef);
     const valueKind = normalizeValueKind(row.value_kind ?? row.roi_type, baselinePresent, actualPresent, evidencePresent, confidenceLevel);
     return {
       roi_id: safeText(row.roi_id),
       field_id: safeText(row.field_id),
       operation_id: safeText(row.operation_id),
       prescription_id: safeText(row.prescription_id),
-      evidence_ref: safeText(row.evidence_ref ?? (Array.isArray(row.evidence_refs) ? row.evidence_refs[0] : "")),
+      evidence_ref: normalizedEvidenceRef,
       calculation_method: safeText(row.calculation_method ?? row.method),
       confidence: confidence,
       assumption: jsonObjectOrNull(row.assumptions),
