@@ -822,15 +822,20 @@ export function registerOperatorV1FacadeRoutes(app: FastifyInstance, pool: Pool)
   });
 
   app.get("/api/v1/evidence/export-jobs", async (req: any, reply) => {
-    const query = (req.query ?? {}) as { limit?: string | number };
+    const query = (req.query ?? {}) as { limit?: string | number; tenant_id?: string; project_id?: string; group_id?: string };
     const parsedLimit = Number(query.limit);
     const limit = Number.isFinite(parsedLimit) ? Math.min(300, Math.max(1, Math.floor(parsedLimit))) : 100;
     const items = await buildOperatorEvidence(pool, limit);
     return reply.send({
-      ...basePayload("operator_evidence_export_jobs_api"),
-      exportReady: false,
+      ...basePayload("evidence_export_jobs_api"),
       items,
-      message: "operator evidence export-jobs read-only facade",
+      filters: {
+        tenant_id: safeText(query.tenant_id),
+        project_id: safeText(query.project_id),
+        group_id: safeText(query.group_id),
+        limit,
+      },
+      message: "evidence export-jobs read-only facade",
     });
   });
 
