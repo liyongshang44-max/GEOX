@@ -1,5 +1,12 @@
 import type { OperatorAcceptanceItem, OperatorAcceptanceResponse, OperatorAcceptanceStatus } from "../api/operatorAcceptance";
 
+export type OperatorActionButtonStateV1 = {
+  canAction: boolean;
+  disabledReason: string | null;
+  pending: boolean;
+  lastError: string | null;
+};
+
 export type OperatorAcceptanceRowVm = {
   operationId: string;
   title: string;
@@ -16,6 +23,8 @@ export type OperatorAcceptanceRowVm = {
   sourceText: string;
   canEvaluate: boolean;
   canRequestReview: boolean;
+  evaluateButtonState: OperatorActionButtonStateV1;
+  reviewButtonState: OperatorActionButtonStateV1;
   disabledReason: string;
   operationHref: string;
 };
@@ -55,6 +64,7 @@ const GROUP_META: Record<OperatorAcceptanceStatus, { title: string; description:
 function text(value: unknown, fallback = ""): string {
   const raw = String(value ?? "").trim();
   if (!raw || raw === "--" || raw === "undefined" || raw === "null") return fallback;
+  if (/token|secret|credential|private\s*key|password|stack\s*trace|debug\s*json/i.test(raw)) return fallback;
   return raw;
 }
 
@@ -96,14 +106,28 @@ function operationHref(operationId: string): string {
   return `/customer/operations/${encodeURIComponent(operationId)}`;
 }
 
+function buildEvaluateButtonState(item: OperatorAcceptanceItem, writeReady: boolean): OperatorActionButtonStateV1 {
+  if (!writeReady) return { canAction: false, disabledReason: "验收写操作未 ready，当前只读。", pending: false, lastError: null };
+  if (item.evidenceInsufficient) return { canAction: false, disabledReason: "证据不足，不能直接包装成验收通过。", pending: false, lastError: null };
+  if (!item.canEvaluate) return { canAction: false, disabledReason: text(item.permissionReason, "当前身份无验收操作权限。"), pending: false, lastError: null };
+  return { canAction: true, disabledReason: null, pending: false, lastError: null };
+}
+
+function buildReviewButtonState(item: OperatorAcceptanceItem, writeReady: boolean): OperatorActionButtonStateV1 {
+  if (!writeReady) return { canAction: false, disabledReason: "验收写操作未 ready，当前只读。", pending: false, lastError: null };
+  if (!item.canRequestReview) return { canAction: false, disabledReason: text(item.permissionReason, "当前作业暂不能进入复核。"), pending: false, lastError: null };
+  return { canAction: true, disabledReason: null, pending: false, lastError: null };
+}
+
 function disabledReason(item: OperatorAcceptanceItem, writeReady: boolean): string {
-  if (!writeReady) return "验收写操作未 ready，当前只读。";
-  if (item.evidenceInsufficient) return "证据不足，不能直接包装成验收通过。";
-  if (!item.canEvaluate && !item.canRequestReview) return text(item.permissionReason, "当前身份无验收操作权限。");
-  return "";
+  const evaluateState = buildEvaluateButtonState(item, writeReady);
+  const reviewState = buildReviewButtonState(item, writeReady);
+  return evaluateState.disabledReason || reviewState.disabledReason || "";
 }
 
 function buildRow(item: OperatorAcceptanceItem, writeReady: boolean): OperatorAcceptanceRowVm {
+  const evaluateButtonState = buildEvaluateButtonState(item, writeReady);
+  const reviewButtonState = buildReviewButtonState(item, writeReady);
   return {
     operationId: item.operationId,
     title: text(item.operationName, "验收作业"),
@@ -118,8 +142,10 @@ function buildRow(item: OperatorAcceptanceItem, writeReady: boolean): OperatorAc
     generatedAtText: dateText(item.generatedAt),
     updatedAtText: dateText(item.updatedAt),
     sourceText: sourceText(item.source),
-    canEvaluate: item.canEvaluate && writeReady && !item.evidenceInsufficient,
-    canRequestReview: item.canRequestReview && writeReady,
+    canEvaluate: evaluateButtonState.canAction,
+    canRequestReview: reviewButtonState.canAction,
+    evaluateButtonState,
+    reviewButtonState,
     disabledReason: disabledReason(item, writeReady),
     operationHref: operationHref(item.operationId),
   };
