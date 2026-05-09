@@ -264,6 +264,15 @@ export async function projectReportV1(params: {
     media,
     metrics,
   };
+  const relationQ = await pool.query(
+    `SELECT evidence_export_job_id, status, manifest, sha256, download_url, failed_reason
+       FROM operation_evidence_export_relation_v1
+      WHERE tenant_id = $1 AND operation_id = $2
+      ORDER BY created_at DESC
+      LIMIT 1`,
+    [tenant.tenant_id, operationPlanId]
+  ).catch(() => ({ rows: [] as any[] }));
+  const relation = relationQ.rows?.[0] ?? null;
 
   const estimatedCost = computeOperationCostV1(operationState.action_type, {
     water_l: normalizedReceipt?.water_l,
@@ -343,6 +352,16 @@ export async function projectReportV1(params: {
       evidence_summary: evidenceSummaryFact?.record_json?.payload ?? null,
       acceptance: acceptanceFact ?? acceptanceForReport,
       operation_state: operationState,
+      evidence_export_job: relation ? {
+        job_id: relation.evidence_export_job_id,
+        status: relation.status,
+        artifact_sha256: relation.sha256,
+        error: relation.failed_reason,
+        evidence_pack: {
+          files: [{ name: relation.manifest, download_part: "manifest" }, { sha256: relation.sha256, download_part: "bundle" }],
+          delivery: { object_store_download_url: relation.download_url },
+        },
+      } : null,
       now: new Date(operationReport.generated_at),
     }),
   } as OperationReportV1;

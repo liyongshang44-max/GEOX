@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { fetchOperatorEvidence } from "../../api/operatorEvidence";
 import OperatorEmptyState from "../../components/operator/OperatorEmptyState";
 import OperatorLayout from "../../layouts/OperatorLayout";
@@ -43,6 +43,8 @@ function EvidenceRow({ row, exportReady }: { row: OperatorEvidenceRowVm; exportR
 }
 
 export default function OperatorEvidencePage(): React.ReactElement {
+  const [searchParams] = useSearchParams();
+  const operationId = searchParams.get("operation_id") ?? "";
   const meta = OPERATOR_PAGE_META.evidence;
   const [loading, setLoading] = React.useState(true);
   const [vm, setVm] = React.useState<OperatorEvidenceVm | null>(null);
@@ -50,7 +52,7 @@ export default function OperatorEvidencePage(): React.ReactElement {
   React.useEffect(() => {
     let alive = true;
     setLoading(true);
-    void fetchOperatorEvidence()
+    void fetchOperatorEvidence(operationId)
       .then((response) => {
         if (!alive) return;
         setVm(buildOperatorEvidenceVm(response));
@@ -62,7 +64,7 @@ export default function OperatorEvidencePage(): React.ReactElement {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [operationId]);
 
   return (
     <OperatorLayout title={meta.title} lead={meta.lead}>

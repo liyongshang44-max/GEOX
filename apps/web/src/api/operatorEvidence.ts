@@ -182,7 +182,20 @@ async function fetchOptional(path: string): Promise<OptionalApiResult> {
   }
 }
 
-export async function fetchOperatorEvidence(): Promise<OperatorEvidenceResponse> {
+export async function fetchOperatorEvidence(operationId?: string): Promise<OperatorEvidenceResponse> {
+  const op = text(operationId, "");
+  if (op) {
+    const byOperation = await fetchOptional(withQuery(`/api/v1/operator/evidence/by-operation/${encodeURIComponent(op)}`));
+    const items = normalizeOperator(byOperation.data);
+    return {
+      source: "operator_evidence_api",
+      dataScope: byOperation.ok ? "OFFICIAL_OPERATOR_API" : "ERROR_EMPTY",
+      generated_at: new Date().toISOString(),
+      items,
+      exportReady: false,
+      message: byOperation.ok ? `已按 operation_id=${op} 查询证据导出任务。` : "按作业查询证据任务失败。",
+    };
+  }
   const official = await fetchOptional(withQuery("/api/v1/operator/evidence"));
   const officialItems = normalizeOperator(official.data);
   if (official.ok || (official.data && typeof official.data === "object" && ((official.data as AnyRecord).dataScope === "OFFICIAL_OPERATOR_API" || text((official.data as AnyRecord).source).includes("operator_evidence")))) {

@@ -140,6 +140,28 @@ function safeText(value: unknown): string {
   return valueText;
 }
 
+async function ensureOperationEvidenceExportRelationV1(pool: Pool): Promise<void> {
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS operation_evidence_export_relation_v1 (
+      relation_id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
+      operation_id TEXT NOT NULL,
+      field_id TEXT NULL,
+      evidence_export_job_id TEXT NOT NULL,
+      status TEXT NOT NULL,
+      manifest TEXT NULL,
+      sha256 TEXT NULL,
+      artifact_ref TEXT NULL,
+      download_url TEXT NULL,
+      failed_reason TEXT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      completed_at TIMESTAMPTZ NULL
+    );`
+  );
+  await pool.query(`CREATE INDEX IF NOT EXISTS op_evidence_rel_tenant_operation_idx ON operation_evidence_export_relation_v1(tenant_id, operation_id, created_at DESC);`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS op_evidence_rel_tenant_job_idx ON operation_evidence_export_relation_v1(tenant_id, evidence_export_job_id);`);
+}
+
 function nullableText(value: unknown): string | null {
   const normalized = safeText(value);
   return normalized || null;
@@ -765,6 +787,7 @@ async function buildRoiLedger(pool: Pool, query: { field_id?: string; operation_
   });
 }
 export function registerOperatorV1FacadeRoutes(app: FastifyInstance, pool: Pool): void {
+  void ensureOperationEvidenceExportRelationV1(pool);
 
   app.get("/api/v1/operator/workbench", async (req: any, reply) => {
     const query = (req.query ?? {}) as { limit?: string | number; tenant_id?: string; project_id?: string; group_id?: string };
@@ -849,13 +872,25 @@ export function registerOperatorV1FacadeRoutes(app: FastifyInstance, pool: Pool)
       if (!reply.sent) return reply.code(403).send({ error: "FORBIDDEN", message: "当前身份无创建证据导出任务权限。" });
       return;
     }
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const operationId = safeText(body.operation_id);
     const proxied = await app.inject({
       method: "POST",
       url: "/api/v1/evidence-export/jobs",
       headers: req.headers as Record<string, string>,
-      payload: req.body ?? {},
+      payload: body,
     });
-    return reply.code(proxied.statusCode).send(proxied.json());
+    const payload = proxied.json();
+    const jobId = safeText(payload?.job_id);
+    if (proxied.statusCode < 300 && operationId && jobId && auth.tenant_id) {
+      await pool.query(
+        `INSERT INTO operation_evidence_export_relation_v1
+          (relation_id, tenant_id, operation_id, field_id, evidence_export_job_id, status, created_at)
+         VALUES ($1,$2,$3,$4,$5,'QUEUED', now())`,
+        [`rel_${Date.now()}_${Math.random().toString(16).slice(2, 10)}`, auth.tenant_id, operationId, safeText(body.field_id) || null, jobId]
+      ).catch(() => void 0);
+    }
+    return reply.code(proxied.statusCode).send(payload);
   });
 
   app.get("/api/v1/operator/evidence/export-jobs/:jobId", async (req: any, reply) => {
@@ -870,7 +905,42 @@ export function registerOperatorV1FacadeRoutes(app: FastifyInstance, pool: Pool)
       url: `/api/v1/evidence-export/jobs/${jobId}`,
       headers: req.headers as Record<string, string>,
     });
-    return reply.code(proxied.statusCode).send(proxied.json());
+    const payload = proxied.json();
+    if (proxied.statusCode < 300 && auth.tenant_id) {
+      const status = safeText(payload?.job?.status ?? payload?.status).toUpperCase();
+      const manifest = safeText(payload?.job?.evidence_pack?.manifest ?? payload?.job?.manifest);
+      const sha256 = safeText(payload?.job?.artifact_sha256 ?? payload?.job?.evidence_pack?.bundle_sha256);
+      const downloadUrl = safeText(payload?.job?.evidence_pack?.delivery?.object_store_download_url ?? payload?.job?.download_url);
+      const failedReason = safeText(payload?.job?.error ?? payload?.error);
+      await pool.query(
+        `UPDATE operation_evidence_export_relation_v1
+            SET status = COALESCE(NULLIF($3,''), status),
+                manifest = COALESCE(NULLIF($4,''), manifest),
+                sha256 = COALESCE(NULLIF($5,''), sha256),
+                download_url = CASE WHEN $6 LIKE '/api/v1/%' OR $6 LIKE '/customer/%' THEN $6 ELSE download_url END,
+                failed_reason = COALESCE(NULLIF($7,''), failed_reason),
+                completed_at = CASE WHEN UPPER($3) IN ('DONE','ERROR','FAILED') THEN now() ELSE completed_at END
+          WHERE tenant_id = $1 AND evidence_export_job_id = $2`,
+        [auth.tenant_id, safeText(req.params?.jobId), status, manifest, sha256, downloadUrl, failedReason]
+      ).catch(() => void 0);
+    }
+    return reply.code(proxied.statusCode).send(payload);
+  });
+
+  app.get("/api/v1/operator/evidence/by-operation/:operationId", async (req: any, reply) => {
+    const auth = requireAoActAnyScopeV0(req, reply, ["evidence_export.read", "evidence_export.write"]);
+    if (!auth) return;
+    const operationId = safeText(req.params?.operationId);
+    if (!operationId) return reply.code(400).send({ ok: false, error: "MISSING_OPERATION_ID" });
+    const q = await pool.query(
+      `SELECT relation_id, operation_id, field_id, evidence_export_job_id, status, manifest, sha256, artifact_ref, download_url, failed_reason, created_at, completed_at
+         FROM operation_evidence_export_relation_v1
+        WHERE tenant_id = $1 AND operation_id = $2
+        ORDER BY created_at DESC
+        LIMIT 100`,
+      [auth.tenant_id, operationId]
+    );
+    return reply.send({ ...basePayload("operator_evidence_by_operation_api"), items: q.rows ?? [] });
   });
 
   app.get("/api/v1/evidence/export-jobs", async (req: any, reply) => {
