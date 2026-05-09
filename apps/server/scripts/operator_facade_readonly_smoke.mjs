@@ -2,9 +2,13 @@
 
 const baseUrl = process.env.OPERATOR_FACADE_BASE_URL ?? "http://127.0.0.1:3001";
 
-async function getJson(pathname) {
+async function getJson(pathname, token) {
+  const headers = { accept: "application/json" };
+  if (token) {
+    headers.authorization = `Bearer ${token}`;
+  }
   const res = await fetch(`${baseUrl}${pathname}`, {
-    headers: { accept: "application/json" },
+    headers,
   });
   let json = null;
   try {
@@ -32,15 +36,22 @@ function hasMeasuredWithoutBaseline(items) {
 }
 
 async function main() {
+  const authToken = process.env.OPERATOR_FACADE_AUTH_TOKEN;
   const devicesAlerts = await getJson("/api/v1/operator/devices-alerts");
   const fieldMemory = await getJson("/api/v1/operator/field-memory");
   const roiLedger = await getJson("/api/v1/operator/roi-ledger");
 
-  for (const [name, resp] of [["devices-alerts", devicesAlerts], ["field-memory", fieldMemory], ["roi-ledger", roiLedger]]) {
-    assert(resp.status !== 404, `${name} must not return 404`);
-    assert(resp.status !== 500, `${name} must not return 500`);
-    assert(resp.status === 200 || resp.status === 403, `${name} must return 200 or 403`);
-  }
+  assert(devicesAlerts.status !== 404, "devices-alerts must not return 404");
+  assert(devicesAlerts.status !== 500, "devices-alerts must not return 500");
+  assert(devicesAlerts.status === 200, "devices-alerts must return 200");
+
+  assert(roiLedger.status !== 404, "roi-ledger must not return 404");
+  assert(roiLedger.status !== 500, "roi-ledger must not return 500");
+  assert(roiLedger.status === 200, "roi-ledger must return 200");
+
+  assert(fieldMemory.status !== 404, "field-memory must not return 404");
+  assert(fieldMemory.status !== 500, "field-memory must not return 500");
+  assert(fieldMemory.status === 200 || fieldMemory.status === 401 || fieldMemory.status === 403, "field-memory must return 200, 401, or 403");
 
   if (devicesAlerts.status === 200) {
     assert(!deepHasSensitive(devicesAlerts.json), "devices-alerts payload contains token/secret/access_key");
@@ -50,9 +61,33 @@ async function main() {
     assert(!hasMeasuredWithoutBaseline(roiLedger.json?.items), "roi-ledger has MEASURED item without baseline_present");
   }
 
+  if (fieldMemory.status === 401) {
+    assert(
+      fieldMemory.json?.error === "AUTH_MISSING" || fieldMemory.json?.ok === false,
+      "field-memory 401 must return error=AUTH_MISSING or ok=false",
+    );
+  }
+
   if (fieldMemory.status === 403) {
     assert(fieldMemory.json?.error === "FORBIDDEN", "field-memory 403 must return error=FORBIDDEN");
     assert(typeof fieldMemory.json?.message === "string" && fieldMemory.json.message.length > 0, "field-memory 403 must include message");
+  }
+
+  let fieldMemoryWithToken = null;
+  if (authToken) {
+    fieldMemoryWithToken = await getJson("/api/v1/operator/field-memory", authToken);
+    assert(fieldMemoryWithToken.status !== 404, "field-memory(with token) must not return 404");
+    assert(fieldMemoryWithToken.status !== 500, "field-memory(with token) must not return 500");
+    assert(fieldMemoryWithToken.status !== 401, "field-memory(with token) must not return 401");
+    assert(fieldMemoryWithToken.status === 200 || fieldMemoryWithToken.status === 403, "field-memory(with token) must return 200 or 403");
+
+    if (fieldMemoryWithToken.status === 403) {
+      assert(fieldMemoryWithToken.json?.error === "FORBIDDEN", "field-memory(with token) 403 must return error=FORBIDDEN");
+      assert(
+        typeof fieldMemoryWithToken.json?.message === "string" && fieldMemoryWithToken.json.message.length > 0,
+        "field-memory(with token) 403 must include message",
+      );
+    }
   }
 
   console.log("operator facade readonly smoke passed", {
@@ -61,6 +96,7 @@ async function main() {
       devices_alerts: devicesAlerts.status,
       field_memory: fieldMemory.status,
       roi_ledger: roiLedger.status,
+      field_memory_with_token: fieldMemoryWithToken?.status ?? null,
     },
   });
 }
