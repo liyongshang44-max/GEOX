@@ -52,15 +52,14 @@ function dateText(value: unknown): string {
 function valueKindText(kind: OperatorRoiValueKind, baselinePresent: boolean, actualPresent: boolean): string {
   if (kind === "MEASURED") return baselinePresent && actualPresent ? "实测" : "实测条件不足";
   if (kind === "ESTIMATED") return "估算";
-  if (kind === "ASSUMPTION_BASED") return "基于假设";
-  if (kind === "INSUFFICIENT_EVIDENCE") return "证据不足";
+  if (kind === "ASSUMPTION") return "基于假设";
   return "类型待确认";
 }
 
 function valueKindTone(kind: OperatorRoiValueKind, baselinePresent: boolean, actualPresent: boolean): OperatorRoiLedgerRowVm["valueKindTone"] {
   if (kind === "MEASURED" && baselinePresent && actualPresent) return "success";
-  if (kind === "ESTIMATED" || kind === "ASSUMPTION_BASED") return "warning";
-  if (kind === "INSUFFICIENT_EVIDENCE" || (kind === "MEASURED" && (!baselinePresent || !actualPresent))) return "danger";
+  if (kind === "ESTIMATED" || kind === "ASSUMPTION") return "warning";
+  if (kind === "MEASURED" && (!baselinePresent || !actualPresent)) return "danger";
   return "neutral";
 }
 

@@ -22,6 +22,8 @@ export type OperatorFieldMemoryItem = {
   weatherInterferenceDetected?: boolean | null;
   learningExcludedReason?: string | null;
   operatorHint?: string | null;
+  learned?: boolean | null;
+  learnedWhat?: string | null;
   source: "operator_field_memory_api" | "field_memory_api" | "operation_field_memory_api";
 };
 
@@ -96,9 +98,14 @@ function refs(value: unknown): string[] {
 function normalizeItem(row: AnyRecord, index: number, source: OperatorFieldMemoryItem["source"], filters: { fieldId?: string; operationId?: string; memoryType?: string }): OperatorFieldMemoryItem {
   const weatherInterferenceDetected = row.weather_interference_detected == null ? null : Boolean(row.weather_interference_detected);
   const learningExcludedReason = text(row.learning_excluded_reason, "") || null;
+  const evidenceRefs = refs(row.evidence_refs ?? row.evidence_ref ?? row.evidence_ids);
+  const learned = row.learned == null ? null : Boolean(row.learned);
+  const learnedWhat = text(row.learned_what ?? row.learnedWhat, "") || null;
   const operatorHint = weatherInterferenceDetected
     ? "该次湿度变化可能受降雨影响，暂不计入灌溉学习。"
-    : null;
+    : evidenceRefs.length === 0
+      ? "无证据引用，不纳入学习。"
+      : null;
   return {
     memoryId: safeText(row.memory_id ?? row.field_memory_id ?? row.id, `memory-${index}`),
     fieldId: safeText(row.field_id ?? row.fieldId, filters.fieldId ?? ""),
@@ -109,7 +116,7 @@ function normalizeItem(row: AnyRecord, index: number, source: OperatorFieldMemor
     deltaText: summarizeValue(row.delta ?? row.change ?? row.diff ?? row.delta_value, "delta 未提供"),
     confidenceText: summarizeValue(row.confidence ?? row.confidence_text ?? row.confidence_score, "confidence 待确认"),
     skillRefs: refs(row.skill_refs ?? row.skill_trace_refs ?? row.skill_runs ?? row.skills),
-    evidenceRefs: refs(row.evidence_refs ?? row.evidence_ref ?? row.evidence_ids),
+    evidenceRefs,
     recommendationId: safeText(row.recommendation_id ?? row.recommendationId, ""),
     taskId: safeText(row.task_id ?? row.act_task_id ?? row.taskId, ""),
     acceptanceId: safeText(row.acceptance_id ?? row.acceptanceId, ""),
@@ -119,6 +126,8 @@ function normalizeItem(row: AnyRecord, index: number, source: OperatorFieldMemor
     weatherInterferenceDetected,
     learningExcludedReason,
     operatorHint,
+    learned,
+    learnedWhat,
     source,
   };
 }
