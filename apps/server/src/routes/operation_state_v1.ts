@@ -38,6 +38,7 @@ import {
   operationStatusLabelV1,
   resolveCustomerViewStatusV1,
 } from "../domain/operation_state/customer_status_mapping_v1.js";
+import { buildUnavailableWeatherV1, computeGeometryCentroidV1, createWeatherProviderV1, type WeatherLocationV1 } from "../services/weather_provider_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; source: string | null; record_json: any };
@@ -969,6 +970,24 @@ async function queryFactsForOperation(pool: Pool, tenant: TenantTriple, operatio
 
 // 新流必须走本路由：operation 详情主口径是 operation_state_v1 的 `/api/v1/operations/*`，并且禁止新代码依赖 legacy/deprecated route。
 export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool): void {
+  const weatherProvider = createWeatherProviderV1();
+
+  async function resolveFieldLocationForWeather(fieldId: string): Promise<WeatherLocationV1 | null> {
+    const q = await pool.query(`SELECT geojson FROM field_polygon_v1 WHERE field_id = $1 ORDER BY updated_ts_ms DESC LIMIT 1`, [fieldId]);
+    const raw = q.rows?.[0]?.geojson;
+    let parsed: unknown = raw;
+    if (typeof raw === "string") {
+      try { parsed = JSON.parse(raw); } catch { parsed = raw; }
+    }
+    const centroid = computeGeometryCentroidV1(parsed);
+    if (centroid) return centroid;
+    const policy = String(process.env.WEATHER_DEFAULT_LOCATION_POLICY ?? "").trim();
+    const [latText, lonText] = policy.split(",").map((v) => v.trim());
+    const latitude = Number(latText);
+    const longitude = Number(lonText);
+    if (Number.isFinite(latitude) && Number.isFinite(longitude)) return { latitude, longitude };
+    return null;
+  }
   app.addHook("onReady", async () => {
     await ensureRulePerformanceTable(pool);
   });
@@ -1302,6 +1321,67 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       effect_verdict: effectVerdict,
       timeline
     });
+  });
+
+  app.get("/api/v1/operations/:operationId/environment-context", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant = tenantFromReq(req as any, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const operationId = String((req.params as any)?.operationId ?? "").trim();
+    if (!operationId) return reply.status(400).send({ ok: false, error: "MISSING_OPERATION_ID" });
+
+    const items = await projectOperationStateV1(pool, tenant);
+    const item = items.find((x) => x.operation_id === operationId || x.operation_plan_id === operationId);
+    if (!item) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+
+    const fieldId = String(item.field_id ?? "").trim();
+    const operationTs = Date.now();
+    const from = new Date(operationTs).toISOString();
+    const to = new Date(operationTs + 2 * 60 * 60 * 1000).toISOString();
+    const location = fieldId ? await resolveFieldLocationForWeather(fieldId) : null;
+    if (!location) {
+      const unavailable = buildUnavailableWeatherV1({ field_id: fieldId || "unknown", from, to, reason: "location_unavailable" });
+      return reply.send({
+        ok: true,
+        operation_id: operationId,
+        status: "unavailable",
+        rainfall_window_overlap: null,
+        weather_interference_detected: false,
+        learning_excluded_reason: "RAIN_LOCATION_UNAVAILABLE",
+        confidence: null,
+        weather: unavailable,
+      });
+    }
+
+    try {
+      const weather = await weatherProvider.getHistory({ field_id: fieldId, from, to, location });
+      const rainfall = Number(weather.rainfall_mm ?? 0);
+      const overlap = rainfall > 0;
+      return reply.send({
+        ok: true,
+        operation_id: operationId,
+        status: "ok",
+        rainfall_window_overlap: overlap,
+        weather_interference_detected: overlap,
+        learning_excluded_reason: overlap ? "RAIN_INTERFERENCE_EXCLUDED" : null,
+        confidence: weather.confidence,
+        weather,
+        customer_explanation: overlap ? "作业后湿度变化窗口内出现降雨，可能干扰本次效果归因。" : "窗口内未检测到降雨干扰。",
+      });
+    } catch {
+      const unavailable = buildUnavailableWeatherV1({ field_id: fieldId, from, to, reason: "provider_error" });
+      return reply.send({
+        ok: true,
+        operation_id: operationId,
+        status: "unavailable",
+        rainfall_window_overlap: null,
+        weather_interference_detected: false,
+        learning_excluded_reason: "RAIN_PROVIDER_UNAVAILABLE",
+        confidence: null,
+        weather: unavailable,
+      });
+    }
   });
 
   app.get("/api/v1/operations/:operationPlanId/detail", async (req, reply) => {
