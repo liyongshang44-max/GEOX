@@ -32,9 +32,9 @@ type ApprovalActionResult = {
   status_before: string | null;
   status_after: string | null;
   permission: {
-    allowed: boolean;
-    role: string | null;
-    reason: string | null;
+    allowed?: boolean;
+    role?: string | null;
+    reason?: string | null;
   };
   message: string;
   error_code?: OperatorActionErrorCode;
@@ -99,9 +99,9 @@ function buildResponse(params: {
   target_id: string;
   status_before: string | null;
   status_after: string | null;
-  role: string | null;
-  allowed: boolean;
-  reason: string | null;
+  role?: string | null;
+  allowed?: boolean;
+  reason?: string | null;
   message: string;
   error_code?: OperatorActionErrorCode;
   updated_at?: string;
@@ -116,9 +116,9 @@ function buildResponse(params: {
     status_before: params.status_before,
     status_after: params.status_after,
     permission: {
-      allowed: params.allowed,
-      role: params.role,
-      reason: params.reason,
+      allowed: params.allowed ?? (params as any).permission?.allowed ?? false,
+      role: params.role ?? (params as any).permission?.role ?? null,
+      reason: params.reason ?? (params as any).permission?.reason ?? null,
     },
     message: params.message,
     ...(params.error_code ? { error_code: params.error_code } : {}),
@@ -294,7 +294,7 @@ async function callMainApprovalApprove(req: any, requestId: string): Promise<{ o
       request_id: requestId,
     }),
   });
-  const body = await resp.json().catch(() => null);
+  const body: any = await resp.json().catch(() => null);
   return { ok: resp.ok && Boolean(body?.ok), status: resp.status, body };
 }
 
