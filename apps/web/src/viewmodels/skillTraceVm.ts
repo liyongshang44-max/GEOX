@@ -20,6 +20,9 @@ export type OperatorSkillTraceRunVm = {
   bindingScope: string;
   lastRunStatus: string;
   failureReason: string;
+  inputSummary: string;
+  outputSummary: string;
+  traceRef: string;
 };
 
 export type OperatorSkillTracePanelVm = {
@@ -116,6 +119,18 @@ function bindingScope(row: AnyRecord): string {
   return parts.length ? parts.join(" · ") : "绑定范围待确认";
 }
 
+
+function summaryText(value: unknown, fallback: string): string {
+  if (value == null) return fallback;
+  if (typeof value === "string") return text(value, fallback);
+  if (Array.isArray(value)) return value.length ? value.slice(0, 3).map((x) => text(x)).join("；") : fallback;
+  if (isRecord(value)) {
+    const parts = Object.entries(value).slice(0, 4).map(([k,v]) => `${k}:${text(v)}`);
+    return parts.length ? parts.join("；") : fallback;
+  }
+  return fallback;
+}
+
 function failureReason(row: AnyRecord): string {
   const reason = text(row.failure_reason ?? row.error_reason ?? row.error_message ?? row.last_error ?? row.reason, "");
   if (!reason) return "无失败原因";
@@ -136,6 +151,9 @@ function operatorRun(row: AnyRecord, index: number): OperatorSkillTraceRunVm {
     bindingScope: bindingScope(row),
     lastRunStatus,
     failureReason: failureReason(row),
+    inputSummary: summaryText(row.input_summary ?? row.input ?? row.request_input, "输入摘要待确认"),
+    outputSummary: summaryText(row.output_summary ?? row.output ?? row.response_output, "输出摘要待确认"),
+    traceRef: text(row.trace_ref ?? row.skill_trace_ref ?? row.trace_id ?? row.run_id, "trace_ref 待确认"),
   };
 }
 

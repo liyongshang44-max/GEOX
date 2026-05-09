@@ -14,8 +14,11 @@ function buildTraceInput(row: OperatorFieldMemoryRowVm) {
     skill_version: "版本待确认",
     classification: row.memoryTypeText,
     binding_scope: row.objectText,
-    last_run_status: row.confidenceText.includes("失败") ? "FAILED" : "UNKNOWN",
-    failure_reason: row.confidenceText.includes("失败") ? row.confidenceText : "",
+    last_run_status: /失败|超时|异常/.test(row.confidenceText) ? "FAILED" : "SUCCESS",
+    failure_reason: /失败|超时|异常/.test(row.confidenceText) ? row.confidenceText : "",
+    input_summary: row.beforeText,
+    output_summary: row.afterText,
+    trace_ref: `${row.memoryId}:${skillId}`,
   }));
 }
 

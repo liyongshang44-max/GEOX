@@ -26,6 +26,9 @@ export default function SkillTracePanel({ trace, defaultOpen = false }: SkillTra
               <div><span>binding scope</span><strong>{run.bindingScope}</strong></div>
               <div><span>last run status</span><strong>{run.lastRunStatus}</strong></div>
               <div><span>failure reason</span><strong>{run.failureReason}</strong></div>
+                          <div><span>input summary</span><strong>{run.inputSummary}</strong></div>
+              <div><span>output summary</span><strong>{run.outputSummary}</strong></div>
+              <div><span>trace_ref</span><strong>{run.traceRef}</strong></div>
             </article>
           ))}
         </div>
