@@ -11,8 +11,13 @@ export function registerWeatherV1Routes(app: FastifyInstance, _pool: Pool): void
   const pool = _pool;
 
   async function resolveFieldLocation(field_id: string): Promise<WeatherLocationV1 | null> {
-    const q = await pool.query(`SELECT geojson FROM field_polygon_v1 WHERE field_id = $1 ORDER BY updated_ts_ms DESC LIMIT 1`, [field_id]);
-    const raw = q.rows?.[0]?.geojson;
+    let raw: unknown = null;
+    try {
+      const q = await pool.query(`SELECT polygon_geojson_json AS geojson FROM field_polygon_v1 WHERE field_id = $1 ORDER BY updated_ts_ms DESC LIMIT 1`, [field_id]);
+      raw = q.rows?.[0]?.geojson ?? null;
+    } catch {
+      raw = null;
+    }
     let parsed: unknown = raw;
     if (typeof raw === "string") {
       try { parsed = JSON.parse(raw); } catch { parsed = raw; }
