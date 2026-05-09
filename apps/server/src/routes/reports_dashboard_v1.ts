@@ -22,6 +22,21 @@ type TenantTriple = {
 const DASHBOARD_REPORT_CONCURRENCY_LIMIT = 12;
 const DEVICE_OFFLINE_THRESHOLD_MS = 15 * 60 * 1000;
 
+type CustomerReportListItem = {
+  report_id?: string | null;
+  report_type: "OVERVIEW" | "FIELD" | "OPERATION" | "EVIDENCE_VALUE";
+  title: string;
+  subtitle?: string | null;
+  href?: string | null;
+  field_id?: string | null;
+  field_name?: string | null;
+  operation_id?: string | null;
+  operation_title?: string | null;
+  updated_at?: string | null;
+  status_text?: string | null;
+  capability_status?: "AVAILABLE" | "PENDING" | "UNAVAILABLE";
+};
+
 type CustomerOperationListItem = {
   operation_id: string;
   operation_plan_id: string | null;
@@ -280,6 +295,97 @@ async function queryDeviceSummary(pool: Pool, tenant: TenantTriple, fieldIds: st
 
 export function registerReportsDashboardV1Routes(app: FastifyInstance, pool: Pool): void {
 
+
+
+  app.get("/api/v1/customer/reports", async (req, reply) => {
+    if (!enforceRouteRoleAuth(req, reply, "summary")) return;
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+
+    const tenant: TenantTriple = {
+      tenant_id: String(auth.tenant_id),
+      project_id: String(auth.project_id),
+      group_id: String(auth.group_id),
+    };
+
+    const generatedAt = new Date().toISOString();
+    const allowedFieldIds = Array.isArray(auth.allowed_field_ids)
+      ? Array.from(new Set(auth.allowed_field_ids.map((x) => String(x ?? "").trim()).filter(Boolean)))
+      : [];
+    const states = await projectOperationStateV1(pool, tenant);
+    const scopedStates = states.filter((state) => allowedFieldIds.includes(String(state.field_id ?? "").trim()));
+    const fieldIds = Array.from(new Set(scopedStates.map((state) => String(state.field_id ?? "").trim()).filter(Boolean)));
+    const fieldNameById = await queryFieldNameMap(pool, tenant, fieldIds);
+
+    const reports: CustomerReportListItem[] = [
+      {
+        report_type: "OVERVIEW",
+        title: "经营总览报告",
+        subtitle: "基于当前客户驾驶舱可见数据生成",
+        href: "/customer/export",
+        updated_at: generatedAt,
+        status_text: "可导出",
+        capability_status: "AVAILABLE",
+      },
+    ];
+
+    for (const fieldId of fieldIds.slice(0, 20)) {
+      reports.push({
+        report_type: "FIELD",
+        title: `${fieldNameById.get(fieldId) ?? "地块"} · 地块报告`,
+        subtitle: "基于当前可见地块数据生成",
+        href: `/customer/fields/${encodeURIComponent(fieldId)}`,
+        field_id: fieldId,
+        field_name: fieldNameById.get(fieldId) ?? null,
+        updated_at: generatedAt,
+        status_text: "可查看",
+        capability_status: "AVAILABLE",
+      });
+    }
+
+    const operationSeen = new Set<string>();
+    for (const state of scopedStates) {
+      const operationId = String(state.operation_id ?? state.operation_plan_id ?? "").trim();
+      if (!operationId || operationSeen.has(operationId)) continue;
+      operationSeen.add(operationId);
+      const fieldId = String(state.field_id ?? "").trim() || null;
+      const operationTitle = String(state.action_type ?? "").trim() || "作业";
+      const updatedTs = Number((state as any).updated_at ?? 0);
+      const timelineTs = Math.max(...(state.timeline ?? []).map((item) => Number(item.ts ?? 0)).filter((n) => Number.isFinite(n) && n > 0), 0);
+      reports.push({
+        report_type: "OPERATION",
+        title: `${operationTitle} · 作业报告`,
+        subtitle: "基于当前近期作业生成",
+        href: `/customer/operations/${encodeURIComponent(operationId)}`,
+        operation_id: operationId,
+        operation_title: operationTitle,
+        field_id: fieldId,
+        field_name: fieldId ? (fieldNameById.get(fieldId) ?? null) : null,
+        updated_at: updatedTs > 0 ? new Date(updatedTs).toISOString() : (timelineTs > 0 ? new Date(timelineTs).toISOString() : generatedAt),
+        status_text: "可查看",
+        capability_status: "AVAILABLE",
+      });
+      if (operationSeen.size >= 30) break;
+    }
+
+    reports.push({
+      report_type: "EVIDENCE_VALUE",
+      title: "证据与价值报告",
+      subtitle: "证据包生成能力待接入",
+      href: null,
+      updated_at: generatedAt,
+      status_text: "待接入",
+      capability_status: "PENDING",
+    });
+
+    return reply.send({
+      ok: true,
+      source: "customer_reports_api",
+      dataScope: "OFFICIAL_CUSTOMER_API",
+      generated_at: generatedAt,
+      reports,
+    });
+  });
 
   app.get("/api/v1/customer/operations", async (req, reply) => {
     if (!enforceRouteRoleAuth(req, reply, "summary")) return;
