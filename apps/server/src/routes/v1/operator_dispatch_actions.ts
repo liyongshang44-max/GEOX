@@ -28,7 +28,7 @@ type OperatorActionResponse = {
   target_id: string;
   status_before: string | null;
   status_after: string | null;
-  permission: { allowed: boolean; role: string | null; reason: string | null };
+  permission: { allowed?: boolean; role?: string | null; reason: string | null };
   message: string;
   error_code?: OperatorActionErrorCode;
   updated_at: string;
@@ -67,8 +67,8 @@ function statusOfTask(task: TaskFact | null, state: OperationStateV1 | null, dis
   return safeText(payload?.status ?? payload?.task_status ?? payload?.dispatch_status) || "TASK_CREATED";
 }
 
-function buildResponse(params: { ok: boolean; action_id: string; audit_id: string; action_type: OperatorDispatchActionType; target_id: string; status_before: string | null; status_after: string | null; role: string | null; allowed: boolean; reason: string | null; message: string; error_code?: OperatorActionErrorCode; updated_at?: string }): OperatorActionResponse {
-  return { ok: params.ok, action_id: params.action_id, audit_id: params.audit_id, action_type: params.action_type, target_type: "TASK", target_id: params.target_id, status_before: params.status_before, status_after: params.status_after, permission: { allowed: params.allowed, role: params.role, reason: params.reason }, message: params.message, ...(params.error_code ? { error_code: params.error_code } : {}), updated_at: params.updated_at ?? nowIso() };
+function buildResponse(params: { ok: boolean; action_id: string; audit_id: string; action_type: OperatorDispatchActionType; target_id: string; status_before: string | null; status_after: string | null; role?: string | null; allowed?: boolean; reason?: string | null; message: string; error_code?: OperatorActionErrorCode; updated_at?: string }): OperatorActionResponse {
+  return { ok: params.ok, action_id: params.action_id, audit_id: params.audit_id, action_type: params.action_type, target_type: "TASK", target_id: params.target_id, status_before: params.status_before, status_after: params.status_after, permission: { allowed: params.allowed ?? (params as any).permission?.allowed ?? false, role: params.role ?? (params as any).permission?.role ?? null, reason: params.reason ?? (params as any).permission?.reason ?? null }, message: params.message, ...(params.error_code ? { error_code: params.error_code } : {}), updated_at: params.updated_at ?? nowIso() };
 }
 async function writeAuditFact(pool: Pool, auth: AoActAuthContextV0, result: OperatorActionResponse): Promise<void> {
   const record = { type: "operator_action_audit_v1", payload: { audit_id: result.audit_id, action_id: result.action_id, action_type: result.action_type, target_type: result.target_type, target_id: result.target_id, actor_id: auth.actor_id, token_id: auth.token_id, role: auth.role, tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id, status_before: result.status_before, status_after: result.status_after, result: result.ok ? "SUCCESS" : "FAILED", error_code: result.error_code ?? null, reason: result.permission.reason ?? result.message, created_at: result.updated_at } };
@@ -96,7 +96,7 @@ async function readLatestDispatchFacts(pool: Pool, auth: AoActAuthContextV0, tas
 }
 async function readStatesByTask(pool: Pool, auth: AoActAuthContextV0): Promise<Map<string, OperationStateV1>> { const states = await projectOperationStateV1(pool, { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id }); const out = new Map<string, OperationStateV1>(); for (const state of states) { if (state.act_task_id) out.set(state.act_task_id, state); } return out; }
 
-function buildPermission(auth: AoActAuthContextV0, task: TaskFact | null, state: OperationStateV1 | null, dispatch: DispatchFact | null, action: OperatorDispatchActionType): { allowed: boolean; role: string | null; reason: string | null } {
+function buildPermission(auth: AoActAuthContextV0, task: TaskFact | null, state: OperationStateV1 | null, dispatch: DispatchFact | null, action: OperatorDispatchActionType): { allowed?: boolean; role?: string | null; reason: string | null } {
   const role = safeText(auth.role) || null;
   if (!roleAllowsDispatch(auth.role)) return { allowed: false, role, reason: "当前角色无派发操作权限。" };
   if (!task) return { allowed: false, role, reason: "AO-ACT task 未生成，不能派发。" };

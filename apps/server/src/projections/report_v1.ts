@@ -97,6 +97,14 @@ export type OperationReportV1 = {
     act_task_id: string | null;
     receipt_id: string | null;
   };
+  as_executed: {
+    execution_mode: "DEVICE" | "HUMAN";
+    started_at: string | null;
+    finished_at: string | null;
+    actual_params: Record<string, unknown>;
+    receipt_id: string | null;
+    deviation_summary: string | null;
+  };
   execution: {
     final_status: string;
     invalid_execution: boolean;
@@ -171,6 +179,19 @@ export type OperationReportV1 = {
     first_pass_acceptance_rate: RoiLedgerSummary[];
     low_confidence_items: RoiLedgerSummary[];
   };
+  as_applied: {
+    coverage_status: "AVAILABLE" | "MISSING" | "NOT_APPLICABLE";
+    coverage_geojson: Record<string, unknown> | null;
+    applied_amount_summary: string | null;
+    planned_vs_actual_deviation: string | null;
+    evidence_ref: string | null;
+  };
+  planned: {
+    planned_area: Record<string, unknown> | null;
+    planned_path: Record<string, unknown> | null;
+    planned_rate: number | null;
+    planned_amount: number | null;
+  };
   workflow: {
     owner_actor_id: string | null;
     owner_name: string | null;
@@ -227,6 +248,41 @@ function toMs(v: unknown): number | null {
   if (!t) return null;
   const ms = Date.parse(t);
   return Number.isFinite(ms) ? ms : null;
+}
+
+
+function toObject(v: unknown): Record<string, unknown> | null {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return null;
+  return v as Record<string, unknown>;
+}
+
+function toNullableNumber(v: unknown): number | null {
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+
+function normalizeExecutionMode(v: unknown): "DEVICE" | "HUMAN" {
+  const mode = String(v ?? "").trim().toUpperCase();
+  if (["DEVICE", "AUTO", "AUTOMATIC"].includes(mode)) return "DEVICE";
+  return "HUMAN";
+}
+
+function pickActualParams(operationState: any, receipt: any): Record<string, unknown> {
+  const candidate = operationState?.actual_params
+    ?? receipt?.actual_params
+    ?? receipt?.params
+    ?? receipt?.metrics
+    ?? {};
+  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return {};
+  return candidate as Record<string, unknown>;
+}
+
+
+function normalizeCoverageStatus(v: unknown): "AVAILABLE" | "MISSING" | "NOT_APPLICABLE" {
+  const s = String(v ?? "").trim().toUpperCase();
+  if (s === "AVAILABLE" || s === "MISSING" || s === "NOT_APPLICABLE") return s;
+  return "MISSING";
 }
 
 function toFiniteNumber(v: unknown, fallback = 0): number {
@@ -521,6 +577,33 @@ export function projectOperationReportV1(input: {
     low_confidence_items: roiSummaries.filter((x) => String((x.confidence as any)?.level ?? "").toUpperCase() === "LOW").length,
     has_customer_visible_value: roiSummaries.some((x) => x.estimated_money_value != null || String(x.customer_text ?? "").trim().length > 0),
   };
+  const operationStateAny = input.operation_state as any;
+  const planned = {
+    planned_area: toObject(operationStateAny?.planned_area ?? operationStateAny?.execution_plan?.planned_area ?? operationStateAny?.spatial_scope ?? null),
+    planned_path: toObject(operationStateAny?.planned_path ?? operationStateAny?.execution_plan?.planned_path ?? null),
+    planned_rate: toNullableNumber(operationStateAny?.planned_rate ?? operationStateAny?.operation_amount?.rate ?? operationStateAny?.execution_plan?.planned_rate),
+    planned_amount: toNullableNumber(operationStateAny?.planned_amount ?? operationStateAny?.operation_amount?.amount ?? operationStateAny?.execution_plan?.planned_amount),
+  };
+
+  const asExecuted = {
+    execution_mode: normalizeExecutionMode((input.operation_state as any)?.execution_mode ?? (input.operation_state as any)?.executor_type),
+    started_at: toText(input.receipt?.execution_started_at ?? (input.operation_state as any)?.execution_started_at),
+    finished_at: toText(input.receipt?.execution_finished_at ?? (input.operation_state as any)?.execution_finished_at),
+    actual_params: pickActualParams(input.operation_state as any, input.receipt as any),
+    receipt_id: toText(input.operation_state.receipt_id),
+    deviation_summary: toText((input.operation_state as any)?.deviation_summary ?? (input.receipt as any)?.deviation_summary),
+  };
+
+  const asAppliedRaw = (input.operation_state as any)?.as_applied ?? {};
+  const asAppliedGeojson = toObject(asAppliedRaw?.coverage_geojson ?? asAppliedRaw?.geojson ?? asAppliedRaw?.coverage ?? null);
+  const asApplied = {
+    coverage_status: normalizeCoverageStatus(asAppliedRaw?.coverage_status ?? (asAppliedGeojson ? "AVAILABLE" : "MISSING")),
+    coverage_geojson: asAppliedGeojson,
+    applied_amount_summary: toText(asAppliedRaw?.applied_amount_summary ?? asAppliedRaw?.amount_summary),
+    planned_vs_actual_deviation: toText(asAppliedRaw?.planned_vs_actual_deviation ?? asAppliedRaw?.deviation_summary),
+    evidence_ref: toText(asAppliedRaw?.evidence_ref ?? asAppliedRaw?.evidence_id ?? asAppliedRaw?.trace_id),
+  };
+
   const computedRisk = evaluateRisk({
     final_status: finalStatus,
     missing_evidence: missingEvidence,
@@ -563,6 +646,7 @@ export function projectOperationReportV1(input: {
       act_task_id: toText(input.operation_state.act_task_id ?? input.operation_state.task_id),
       receipt_id: toText(input.operation_state.receipt_id),
     },
+    as_executed: asExecuted,
     execution: {
       final_status: finalStatus,
       invalid_execution: isInvalidExecution,
@@ -650,6 +734,8 @@ export function projectOperationReportV1(input: {
       first_pass_acceptance_rate: roiSummaries.filter((x) => x.roi_type === "FIRST_PASS_ACCEPTANCE_RATE"),
       low_confidence_items: roiSummaries.filter((x) => String((x.confidence as any)?.level ?? "").toUpperCase() === "LOW"),
     },
+    as_applied: asApplied,
+    planned,
     workflow: {
       owner_actor_id: toText(input.operation_workflow?.owner_actor_id),
       owner_name: toText(input.operation_workflow?.owner_name),

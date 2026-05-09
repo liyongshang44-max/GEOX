@@ -18,6 +18,28 @@ function badRequest(reply: FastifyReply, error: string) {
   return reply.status(400).send({ ok: false, error });
 }
 
+
+function toNumOrNull(v: unknown): number | null {
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function toObjOrNull(v: unknown): Record<string, unknown> | null {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return null;
+  return v as Record<string, unknown>;
+}
+
+function withPlannedFields(prescription: any): any {
+  const operationAmount = prescription?.operation_amount ?? {};
+  return {
+    ...prescription,
+    planned_area: toObjOrNull(prescription?.planned_area ?? prescription?.spatial_scope ?? null),
+    planned_path: toObjOrNull(prescription?.planned_path ?? operationAmount?.parameters?.planned_path ?? null),
+    planned_rate: toNumOrNull(prescription?.planned_rate ?? operationAmount?.rate ?? operationAmount?.parameters?.planned_rate),
+    planned_amount: toNumOrNull(prescription?.planned_amount ?? operationAmount?.amount ?? operationAmount?.parameters?.planned_amount),
+  };
+}
+
 function deriveApprovalActionType(operationType: string): string {
   if (operationType === "IRRIGATION") return "IRRIGATE";
   if (operationType === "FERTILIZATION") return "FERTILIZE";
@@ -58,7 +80,7 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
       created_by: auth.actor_id,
     }, recFact.payload);
 
-    return reply.send({ ok: true, idempotent: result.idempotent, prescription: result.prescription });
+    return reply.send({ ok: true, idempotent: result.idempotent, prescription: withPlannedFields(result.prescription) });
   });
 
   app.post("/api/v1/prescriptions/variable/from-recommendation", async (req, reply) => {
@@ -101,7 +123,7 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
         variable_plan,
       }, recFact.payload);
 
-      return reply.send({ ok: true, idempotent: result.idempotent, prescription: result.prescription });
+      return reply.send({ ok: true, idempotent: result.idempotent, prescription: withPlannedFields(result.prescription) });
     } catch (error: any) {
       const code = String(error?.message ?? "");
       if (
@@ -133,7 +155,7 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
     const prescription = await getPrescriptionById(pool, prescription_id, tenant);
     if (!prescription) return reply.status(404).send({ ok: false, error: "PRESCRIPTION_NOT_FOUND" });
     if (!requireFieldAllowedOr404V1(reply, auth, String((prescription as any)?.field_id ?? ""))) return;
-    return reply.send({ ok: true, prescription });
+    return reply.send({ ok: true, prescription: withPlannedFields(prescription) });
   });
 
   app.get("/api/v1/prescriptions/by-recommendation/:recommendation_id", async (req, reply) => {
@@ -149,7 +171,7 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
     const prescription = await getPrescriptionByRecommendationId(pool, recommendation_id, tenant);
     if (!prescription) return reply.status(404).send({ ok: false, error: "PRESCRIPTION_NOT_FOUND" });
     if (!requireFieldAllowedOr404V1(reply, auth, String((prescription as any)?.field_id ?? ""))) return;
-    return reply.send({ ok: true, prescription });
+    return reply.send({ ok: true, prescription: withPlannedFields(prescription) });
   });
 
   app.post("/api/v1/prescriptions/:prescription_id/submit-approval", async (req, reply) => {
