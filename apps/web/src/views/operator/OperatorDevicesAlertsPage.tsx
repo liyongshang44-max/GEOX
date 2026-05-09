@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { ackOperatorAlert, closeOperatorAlert, fetchOperatorDevicesAlerts } from "../../api/operatorDevicesAlerts";
 import OperatorEmptyState from "../../components/operator/OperatorEmptyState";
 import OperatorLayout from "../../layouts/OperatorLayout";
+import { fetchSessionMe, type SessionMe } from "../../api/session";
+import { hasOperatorPermission } from "../../lib/permissions";
 import "../../styles/operatorDevicesAlerts.css";
 import { buildOperatorDevicesAlertsVm, type OperatorAlertRowVm, type OperatorDeviceRowVm, type OperatorDevicesAlertsVm } from "../../viewmodels/operatorDevicesAlertsVm";
 
@@ -144,12 +146,19 @@ export default function OperatorDevicesAlertsPage(): React.ReactElement {
   const [loading, setLoading] = React.useState(true);
   const [vm, setVm] = React.useState<OperatorDevicesAlertsVm | null>(null);
   const [actionState, setActionState] = React.useState<AlertActionState>({});
+  const [session, setSession] = React.useState<SessionMe | null>(null);
 
   const reload = React.useCallback(() => {
     setLoading(true);
     return fetchOperatorDevicesAlerts()
       .then((response) => setVm(buildOperatorDevicesAlertsVm(response)))
       .finally(() => setLoading(false));
+  }, []);
+
+  React.useEffect(() => {
+    let alive = true;
+    void fetchSessionMe().then((resp) => { if (alive) setSession(resp); }).catch(() => { if (alive) setSession(null); });
+    return () => { alive = false; };
   }, []);
 
   React.useEffect(() => {
@@ -168,6 +177,8 @@ export default function OperatorDevicesAlertsPage(): React.ReactElement {
       alive = false;
     };
   }, []);
+
+  const revokeVisibleForSession = hasOperatorPermission(session, "revoke_device_credential");
 
   async function runAlertAction(alertId: string, action: "ack" | "close") {
     setActionState({ busyKey: `${alertId}:${action}` });
@@ -199,10 +210,10 @@ export default function OperatorDevicesAlertsPage(): React.ReactElement {
           {vm.totalDevices === 0 && vm.totalAlerts === 0 ? <OperatorEmptyState title={vm.emptyTitle} description={vm.emptyDescription} reason="没有设备或告警数据时不伪造状态、通知或 ACK/close 结果。" /> : null}
 
           <section className="operatorDevicesGrid" aria-label="设备状态">
-            <DeviceSection title="在线设备" description="当前在线或活跃的设备。" rows={vm.onlineDevices} revokeVisible={vm.revokeVisible} />
-            <DeviceSection title="离线设备" description="离线设备需要追溯最近心跳和绑定地块。" rows={vm.offlineDevices} revokeVisible={vm.revokeVisible} />
-            <DeviceSection title="数据延迟" description="telemetry 或心跳存在延迟的设备。" rows={vm.delayedDevices} revokeVisible={vm.revokeVisible} />
-            <DeviceSection title="低电量" description="电量不足，需要运维关注。" rows={vm.lowBatteryDevices} revokeVisible={vm.revokeVisible} />
+            <DeviceSection title="在线设备" description="当前在线或活跃的设备。" rows={vm.onlineDevices} revokeVisible={vm.revokeVisible && revokeVisibleForSession} />
+            <DeviceSection title="离线设备" description="离线设备需要追溯最近心跳和绑定地块。" rows={vm.offlineDevices} revokeVisible={vm.revokeVisible && revokeVisibleForSession} />
+            <DeviceSection title="数据延迟" description="telemetry 或心跳存在延迟的设备。" rows={vm.delayedDevices} revokeVisible={vm.revokeVisible && revokeVisibleForSession} />
+            <DeviceSection title="低电量" description="电量不足，需要运维关注。" rows={vm.lowBatteryDevices} revokeVisible={vm.revokeVisible && revokeVisibleForSession} />
           </section>
 
           <section className="operatorDevicesGrid" aria-label="告警事件">

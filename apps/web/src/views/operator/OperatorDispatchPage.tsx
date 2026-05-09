@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { fetchOperatorDispatch, submitOperatorDispatchAction, type OperatorDispatchActionKind } from "../../api/operatorDispatch";
 import OperatorEmptyState from "../../components/operator/OperatorEmptyState";
 import OperatorLayout from "../../layouts/OperatorLayout";
+import { fetchSessionMe, type SessionMe } from "../../api/session";
+import { hasOperatorPermission } from "../../lib/permissions";
 import { buildOperatorDispatchVm, type OperatorDispatchGroupVm, type OperatorDispatchRowVm, type OperatorDispatchVm } from "../../viewmodels/operatorDispatchVm";
 import { OPERATOR_PAGE_META } from "./operatorPageMeta";
 
@@ -18,15 +20,17 @@ function DispatchRow({
   writeReady,
   actionState,
   onAction,
+  sessionAllowed,
 }: {
   row: OperatorDispatchRowVm;
   writeReady: boolean;
   actionState: { pending: boolean; lastError: string | null };
   onAction: (row: OperatorDispatchRowVm, action: OperatorDispatchActionKind) => void;
+  sessionAllowed: boolean;
 }): React.ReactElement {
-  const dispatchDisabled = !writeReady || !row.dispatchButtonState.canAction || actionState.pending;
-  const retryDisabled = !writeReady || !row.retryButtonState.canAction || actionState.pending;
-  const notice = row.dispatchButtonState.disabledReason || row.retryButtonState.disabledReason || row.disabledReason;
+  const dispatchDisabled = !sessionAllowed || !writeReady || !row.dispatchButtonState.canAction || actionState.pending;
+  const retryDisabled = !sessionAllowed || !writeReady || !row.retryButtonState.canAction || actionState.pending;
+  const notice = (!sessionAllowed ? "会话权限不足：operator_dispatch" : "") || row.dispatchButtonState.disabledReason || row.retryButtonState.disabledReason || row.disabledReason;
 
   return (
     <article className="operatorDispatchRow">
@@ -71,11 +75,13 @@ function DispatchGroup({
   writeReady,
   getActionState,
   onAction,
+  sessionAllowed,
 }: {
   group: OperatorDispatchGroupVm;
   writeReady: boolean;
   getActionState: (taskId: string) => { pending: boolean; lastError: string | null };
   onAction: (row: OperatorDispatchRowVm, action: OperatorDispatchActionKind) => void;
+  sessionAllowed: boolean;
 }): React.ReactElement {
   return (
     <section className="operatorDispatchGroup">
@@ -95,6 +101,7 @@ function DispatchGroup({
               writeReady={writeReady}
               actionState={getActionState(row.taskId)}
               onAction={onAction}
+              sessionAllowed={sessionAllowed}
             />
           ))}
         </div>
@@ -108,6 +115,7 @@ export default function OperatorDispatchPage(): React.ReactElement {
   const [loading, setLoading] = React.useState(true);
   const [vm, setVm] = React.useState<OperatorDispatchVm | null>(null);
   const [actionStateByTask, setActionStateByTask] = React.useState<Record<string, { pending: boolean; lastError: string | null }>>({});
+  const [session, setSession] = React.useState<SessionMe | null>(null);
 
   const loadDispatch = React.useCallback(() => {
     setLoading(true);
@@ -119,6 +127,13 @@ export default function OperatorDispatchPage(): React.ReactElement {
         setLoading(false);
       });
   }, []);
+
+  React.useEffect(() => {
+    let alive = true;
+    void fetchSessionMe().then((resp) => { if (alive) setSession(resp); }).catch(() => { if (alive) setSession(null); });
+    return () => { alive = false; };
+  }, []);
+  const sessionAllowed = hasOperatorPermission(session, "dispatch");
 
   React.useEffect(() => {
     let alive = true;
@@ -143,7 +158,7 @@ export default function OperatorDispatchPage(): React.ReactElement {
 
   const onAction = React.useCallback((row: OperatorDispatchRowVm, action: OperatorDispatchActionKind) => {
     const allowed = action === "dispatch" ? row.dispatchButtonState.canAction : row.retryButtonState.canAction;
-    if (!allowed) return;
+    if (!sessionAllowed || !allowed) return;
     setActionStateByTask((prev) => ({
       ...prev,
       [row.taskId]: { pending: true, lastError: null },
@@ -171,7 +186,7 @@ export default function OperatorDispatchPage(): React.ReactElement {
           [row.taskId]: { pending: false, lastError: safeMessage(error instanceof Error ? error.message : error) },
         }));
       });
-  }, [loadDispatch]);
+  }, [loadDispatch, sessionAllowed]);
 
   return (
     <OperatorLayout title={meta.title} lead={meta.lead}>
@@ -197,6 +212,7 @@ export default function OperatorDispatchPage(): React.ReactElement {
                 writeReady={vm.writeReady}
                 getActionState={getActionState}
                 onAction={onAction}
+                sessionAllowed={sessionAllowed}
               />
             ))}
           </section>

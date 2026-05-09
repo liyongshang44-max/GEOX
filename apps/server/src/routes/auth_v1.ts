@@ -29,6 +29,32 @@ type TokenRecord = {
   revoked?: boolean;
 };
 
+type SessionPermissions = {
+  customer_read: boolean;
+  operator_read: boolean;
+  operator_approve: boolean;
+  operator_dispatch: boolean;
+  operator_acceptance: boolean;
+  operator_evidence_export: boolean;
+  operator_alert_ack_close: boolean;
+  admin_device_revoke: boolean;
+};
+
+function buildSessionPermissions(scopes: string[]): SessionPermissions {
+  const normalized = new Set((scopes ?? []).map((v) => String(v ?? "").trim()).filter(Boolean));
+  const hasAny = (keys: string[]): boolean => keys.some((k) => normalized.has(k));
+  return {
+    customer_read: hasAny(["fields.read"]),
+    operator_read: hasAny(["alerts.read", "approval.read", "ao_act.index.read"]),
+    operator_approve: hasAny(["approval.decide"]),
+    operator_dispatch: hasAny(["ao_act.task.write", "action.task.dispatch"]),
+    operator_acceptance: hasAny(["acceptance.evaluate"]),
+    operator_evidence_export: hasAny(["evidence_export.read", "evidence_export.write"]),
+    operator_alert_ack_close: hasAny(["action.receipt.submit", "ao_act.receipt.write", "alerts.write"]),
+    admin_device_revoke: hasAny(["devices.credentials.revoke"])
+  };
+}
+
 function isNonEmptyString(v: unknown): v is string {
   return typeof v === "string" && v.trim().length > 0;
 }
@@ -72,7 +98,8 @@ export function registerAuthV1Routes(app: FastifyInstance): void {
       group_id: auth.group_id,
       roles: [auth.role],
       scopes: auth.scopes,
-      allowed_field_ids: auth.allowed_field_ids
+      allowed_field_ids: auth.allowed_field_ids,
+      permissions: buildSessionPermissions(auth.scopes)
     });
   });
 

@@ -2,6 +2,8 @@ import React from "react";
 import { fetchOperatorApprovals, submitOperatorApprovalAction, type OperatorApprovalActionKind } from "../../api/operatorApprovals";
 import OperatorEmptyState from "../../components/operator/OperatorEmptyState";
 import OperatorLayout from "../../layouts/OperatorLayout";
+import { fetchSessionMe, type SessionMe } from "../../api/session";
+import { hasOperatorPermission } from "../../lib/permissions";
 import { buildOperatorApprovalsVm, type OperatorApprovalRowVm, type OperatorApprovalsVm } from "../../viewmodels/operatorApprovalsVm";
 import { OPERATOR_PAGE_META } from "./operatorPageMeta";
 
@@ -12,6 +14,7 @@ type ApprovalSectionProps = {
   writeReady: boolean;
   getActionState: (approvalRequestId: string) => { pending: boolean; lastError: string | null };
   onAction: (row: OperatorApprovalRowVm, action: OperatorApprovalActionKind) => void;
+  sessionAllowed: boolean;
 };
 
 function safeMessage(value: unknown, fallback = "操作失败，请稍后重试。") {
@@ -27,18 +30,23 @@ function ApprovalDecisionActions({
   pending,
   lastError,
   onAction,
+  sessionAllowed,
 }: {
   row: OperatorApprovalRowVm;
   writeReady: boolean;
   pending: boolean;
   lastError: string | null;
   onAction: (action: OperatorApprovalActionKind) => void;
+  sessionAllowed: boolean;
 }): React.ReactElement {
+  const sessionDeniedReason = sessionAllowed ? null : "会话权限不足：operator_approve";
   const disabledReason = row.selfApprovalRisk
     ? "存在自审批风险，审批动作已阻断。"
     : (!writeReady
       ? "审批写操作未 ready，当前只读。"
-      : (!row.actionButtonState.canAction ? row.actionButtonState.disabledReason || row.permissionReason : null));
+      : (sessionDeniedReason
+        ? sessionDeniedReason
+        : (!row.actionButtonState.canAction ? row.actionButtonState.disabledReason || row.permissionReason : null)));
   const disabled = Boolean(disabledReason) || pending;
 
   return (
@@ -60,11 +68,13 @@ function ApprovalCard({
   writeReady,
   actionState,
   onAction,
+  sessionAllowed,
 }: {
   row: OperatorApprovalRowVm;
   writeReady: boolean;
   actionState: { pending: boolean; lastError: string | null };
   onAction: (row: OperatorApprovalRowVm, action: OperatorApprovalActionKind) => void;
+  sessionAllowed: boolean;
 }): React.ReactElement {
   return (
     <article className="operatorApprovalCard">
@@ -100,12 +110,13 @@ function ApprovalCard({
         pending={actionState.pending}
         lastError={actionState.lastError}
         onAction={(action) => onAction(row, action)}
+        sessionAllowed={sessionAllowed}
       />
     </article>
   );
 }
 
-function ApprovalSection({ title, description, rows, writeReady, getActionState, onAction }: ApprovalSectionProps): React.ReactElement {
+function ApprovalSection({ title, description, rows, writeReady, getActionState, onAction, sessionAllowed }: ApprovalSectionProps): React.ReactElement {
   return (
     <section className="operatorApprovalSection">
       <header className="operatorApprovalSectionHead">
@@ -124,6 +135,7 @@ function ApprovalSection({ title, description, rows, writeReady, getActionState,
               writeReady={writeReady}
               actionState={getActionState(row.approvalRequestId)}
               onAction={onAction}
+              sessionAllowed={sessionAllowed}
             />
           ))}
         </div>
@@ -137,6 +149,7 @@ export default function OperatorApprovalsPage(): React.ReactElement {
   const [loading, setLoading] = React.useState(true);
   const [vm, setVm] = React.useState<OperatorApprovalsVm | null>(null);
   const [actionStateById, setActionStateById] = React.useState<Record<string, { pending: boolean; lastError: string | null }>>({});
+  const [session, setSession] = React.useState<SessionMe | null>(null);
 
   const loadApprovals = React.useCallback(() => {
     setLoading(true);
@@ -148,6 +161,14 @@ export default function OperatorApprovalsPage(): React.ReactElement {
         setLoading(false);
       });
   }, []);
+
+  React.useEffect(() => {
+    let alive = true;
+    void fetchSessionMe().then((resp) => { if (alive) setSession(resp); }).catch(() => { if (alive) setSession(null); });
+    return () => { alive = false; };
+  }, []);
+
+  const sessionAllowed = hasOperatorPermission(session, "approve");
 
   React.useEffect(() => {
     let alive = true;
@@ -171,7 +192,7 @@ export default function OperatorApprovalsPage(): React.ReactElement {
   }, [actionStateById]);
 
   const onAction = React.useCallback((row: OperatorApprovalRowVm, action: OperatorApprovalActionKind) => {
-    if (!row.actionButtonState.canAction || row.selfApprovalRisk) return;
+    if (!sessionAllowed || !row.actionButtonState.canAction || row.selfApprovalRisk) return;
     setActionStateById((prev) => ({
       ...prev,
       [row.approvalRequestId]: { pending: true, lastError: null },
@@ -199,7 +220,7 @@ export default function OperatorApprovalsPage(): React.ReactElement {
           [row.approvalRequestId]: { pending: false, lastError: safeMessage(error instanceof Error ? error.message : error) },
         }));
       });
-  }, [loadApprovals]);
+  }, [loadApprovals, sessionAllowed]);
 
   return (
     <OperatorLayout title={meta.title} lead={meta.lead}>
@@ -218,11 +239,11 @@ export default function OperatorApprovalsPage(): React.ReactElement {
           {vm.totalCount === 0 ? <OperatorEmptyState title={vm.emptyTitle} description={vm.emptyDescription} reason="没有审批数据时不伪造审批事项。" /> : null}
 
           <div className="operatorApprovalGrid">
-            <ApprovalSection title="待审批列表" description="当前需要运营人员处理的审批请求。" rows={vm.pending} writeReady={vm.writeReady} getActionState={getActionState} onAction={onAction} />
-            <ApprovalSection title="高风险处方" description="高风险且关联正式处方的审批事项。" rows={vm.highRiskPrescriptions} writeReady={vm.writeReady} getActionState={getActionState} onAction={onAction} />
-            <ApprovalSection title="无权限审批" description="当前身份不可执行审批动作的事项。" rows={vm.noPermission} writeReady={vm.writeReady} getActionState={getActionState} onAction={onAction} />
-            <ApprovalSection title="自审批风险" description="发起人与审批人存在重合风险的事项。" rows={vm.selfApprovalRisk} writeReady={vm.writeReady} getActionState={getActionState} onAction={onAction} />
-            <ApprovalSection title="审批历史" description="已通过、已拒绝或已退回的审批记录。" rows={vm.history} writeReady={vm.writeReady} getActionState={getActionState} onAction={onAction} />
+            <ApprovalSection title="待审批列表" description="当前需要运营人员处理的审批请求。" rows={vm.pending} writeReady={vm.writeReady} getActionState={getActionState} onAction={onAction} sessionAllowed={sessionAllowed} />
+            <ApprovalSection title="高风险处方" description="高风险且关联正式处方的审批事项。" rows={vm.highRiskPrescriptions} writeReady={vm.writeReady} getActionState={getActionState} onAction={onAction} sessionAllowed={sessionAllowed} />
+            <ApprovalSection title="无权限审批" description="当前身份不可执行审批动作的事项。" rows={vm.noPermission} writeReady={vm.writeReady} getActionState={getActionState} onAction={onAction} sessionAllowed={sessionAllowed} />
+            <ApprovalSection title="自审批风险" description="发起人与审批人存在重合风险的事项。" rows={vm.selfApprovalRisk} writeReady={vm.writeReady} getActionState={getActionState} onAction={onAction} sessionAllowed={sessionAllowed} />
+            <ApprovalSection title="审批历史" description="已通过、已拒绝或已退回的审批记录。" rows={vm.history} writeReady={vm.writeReady} getActionState={getActionState} onAction={onAction} sessionAllowed={sessionAllowed} />
           </div>
         </div>
       ) : null}
