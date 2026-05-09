@@ -105,6 +105,17 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             export_language: { type: "string", enum: ["zh-CN", "en-US"] }
           }
         },
+
+        EvidencePackSummaryV1: {
+          type: "object",
+          required: ["status", "summary", "photos_logs_metrics_trace_summary", "insufficient_reason"],
+          properties: {
+            status: { type: "string", example: "PACK_SUMMARY" },
+            summary: { type: "string", nullable: true, example: "证据包已形成，可查看摘要。" },
+            photos_logs_metrics_trace_summary: { type: "string", nullable: true, example: "已采集现场照片、执行日志和关键监测指标摘要。" },
+            insufficient_reason: { type: "string", nullable: true, example: "暂无补充说明" }
+          }
+        },
         AlertRuleRequest: {
           type: "object",
           required: ["rule_id", "metric_key", "operator", "threshold_value"],
