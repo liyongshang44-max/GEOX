@@ -93,7 +93,7 @@ export function FieldExportBlocks({ vm }: { vm: FieldReportPageVm }): React.Reac
           <div><strong>待验收：</strong>{vm.overview.pendingAcceptanceText}</div>
         </div>
       </section>
-      <section className="customerCard"><h2 className="customerCardTitle">风险/诊断</h2><p className="customerSpacingTopSm">{vm.explain.human}；当前风险 {vm.risk.levelLabel}</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">风险/诊断</h2><p className="customerSpacingTopSm">{vm.explain.human}当前风险：{vm.risk.levelLabel}。</p></section>
       <section className="customerCard"><h2 className="customerCardTitle">下一步建议</h2><p className="customerSpacingTopSm">{vm.nextAction?.objectiveText ?? "暂无新的处理建议"}</p></section>
       <section className="customerCard"><h2 className="customerCardTitle">价值与记忆</h2><div className="customerGrid2 customerSpacingTopSm"><div>{vm.roiSummary.displayText}</div><div>{vm.fieldMemory.displayText}</div></div></section>
       <section className="customerCard"><h2 className="customerCardTitle">最终结论</h2><p className="customerSpacingTopSm">{vm.currentStatus.summary}</p></section>
