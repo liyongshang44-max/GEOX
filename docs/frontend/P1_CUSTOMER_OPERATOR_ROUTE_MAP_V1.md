@@ -49,7 +49,13 @@ P1 前端分为两类正式产品界面：
 | `/operator/evidence` | P1-B | 待新增 | B-06 | 证据中心 |
 | `/operator/devices-alerts` | P1-C | 已存在（只读 facade） | C-01 | 设备与告警中心（ACK/close 写操作未 ready） |
 | `/operator/roi-ledger` | P1-C | 已存在（只读 facade） | C-02 | ROI 运营明细（approval 写操作未 ready） |
-| `/operator/field-memory` | P1-C | 已存在（只读 facade） | C-03 | 田块记忆运营中心（acceptance evaluate/request-review 未 ready） |
+| `/operator/field-memory` | P1-C | 已存在（只读 facade） | C-03 | 田块记忆运营中心；合法状态 200/401/403（acceptance evaluate/request-review 未 ready） |
+
+field-memory 鉴权口径：
+- `200`：认证通过且有 `field_memory.read` 或 `ao_act.index.read`。
+- `401`：未认证或缺少 token（典型返回：`{"ok":false,"error":"AUTH_MISSING"}`）。
+- `403`：已认证但无权限（返回：`{"error":"FORBIDDEN","message":"当前身份无权查看运营田块记忆明细。"}`）。
+- 前端 adapter/VM 必须将 `401/403` 统一进入“未登录或权限不足”正式错误态，不得回退到 customer 摘要、不得伪装 empty。
 
 ## 5. Customer 禁止路由
 

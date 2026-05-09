@@ -1404,6 +1404,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           ],
           responses: {
             "200": { description: "Operator field-memory facade payload" },
+            "401": { description: "Unauthenticated (AUTH_MISSING)" },
             "403": { description: "Forbidden" }
           }
         }
