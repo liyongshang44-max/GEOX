@@ -126,19 +126,32 @@ function normalizeReportFallback(payload: unknown): OperatorAcceptanceItem[] {
   }).filter((item) => item.acceptanceStatus !== "UNKNOWN");
 }
 
-async function fetchOptional(path: string): Promise<unknown | null> {
+type OptionalApiResult = { ok: boolean; status: number; data: unknown | null };
+
+async function fetchOptional(path: string): Promise<OptionalApiResult> {
   try {
-    const result = await apiRequestWithPolicy<unknown>(path, undefined, { allowedStatuses: [403, 404, 405, 422], silent: true, timeoutMs: 10000 });
-    return result.ok ? result.data : null;
+    const result = await apiRequestWithPolicy<unknown>(path, undefined, { allowedStatuses: [403, 404, 405, 422, 501], silent: true, timeoutMs: 10000 });
+    return { ok: Boolean(result.ok), status: Number(result.status ?? 0), data: result.data ?? null };
   } catch {
-    return null;
+    return { ok: false, status: 0, data: null };
   }
 }
 
 export async function fetchOperatorAcceptance(): Promise<OperatorAcceptanceResponse> {
   const official = await fetchOptional(withQuery("/api/v1/operator/acceptance"));
-  const officialItems = normalizeOfficial(official);
-  if (officialItems.length > 0) {
+  const officialItems = normalizeOfficial(official.data);
+  if (official.ok || (official.data && typeof official.data === "object" && ((official.data as AnyRecord).dataScope === "OFFICIAL_OPERATOR_API" || text((official.data as AnyRecord).source).includes("operator_acceptance")))) {
+    return {
+      source: "operator_acceptance_api",
+      dataScope: "OFFICIAL_OPERATOR_API",
+      generated_at: new Date().toISOString(),
+      items: officialItems,
+      writeReady: false,
+      message: "验收写操作需等待后端权限、审计和错误码 ready 后开放。",
+    };
+  }
+
+  if (![404, 405, 501].includes(official.status)) {
     return {
       source: "operator_acceptance_api",
       dataScope: "OFFICIAL_OPERATOR_API",
@@ -150,7 +163,7 @@ export async function fetchOperatorAcceptance(): Promise<OperatorAcceptanceRespo
   }
 
   const aggregate = await fetchOptional(withQuery("/api/v1/reports/customer-dashboard/aggregate"));
-  const fallbackItems = normalizeReportFallback(aggregate);
+  const fallbackItems = normalizeReportFallback(aggregate.data);
   if (fallbackItems.length > 0) {
     return {
       source: "fallback_reports_aggregate",
