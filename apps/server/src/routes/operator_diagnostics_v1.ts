@@ -24,6 +24,7 @@ type QueryInput = {
   field_id?: string;
   operation_id?: string;
   memory_type?: string;
+  skill_id?: string;
   limit?: string | number;
 };
 
@@ -384,6 +385,99 @@ async function buildOperatorSkillTracesByOperation(pool: Pool, tenant: TenantTri
   });
 }
 
+async function buildOperatorSkillPerformance(pool: Pool, tenant: TenantTriple, query: QueryInput): Promise<AnyRecord[]> {
+  if (!(await tableExists(pool, "field_memory_v1"))) return [];
+  const where: string[] = [
+    "tenant_id = $1",
+    "project_id = $2",
+    "group_id = $3",
+    "memory_type = 'SKILL_PERFORMANCE_MEMORY'",
+  ];
+  const values: unknown[] = [tenant.tenant_id, tenant.project_id, tenant.group_id];
+  const skillId = text(query.skill_id, "");
+  const fieldId = text(query.field_id, "");
+  const operationId = text(query.operation_id, "");
+  if (skillId) { values.push(skillId); where.push(`skill_id = $${values.length}`); }
+  if (fieldId) { values.push(fieldId); where.push(`field_id = $${values.length}`); }
+  if (operationId) { values.push(operationId); where.push(`operation_id = $${values.length}`); }
+  values.push(limitFromQuery(query.limit, 100, 200));
+  const fm = await pool.query(
+    `SELECT skill_id, field_id, operation_id, confidence, delta_value, weather_interference_detected, learning_excluded_reason, occurred_at
+       FROM field_memory_v1
+      WHERE ${where.join(" AND ")}
+      ORDER BY occurred_at DESC
+      LIMIT $${values.length}`,
+    values
+  );
+  const rows = fm.rows ?? [];
+  const acceptanceMap = new Map<string, string>();
+  const roiMap = new Map<string, string | null>();
+  const memoryMap = new Map<string, string | null>();
+  const confidenceMap = new Map<string, number | null>();
+  const weatherMap = new Map<string, boolean>();
+  const excludedMap = new Map<string, string | null>();
+  for (const row of rows) {
+    const key = `${text(row.skill_id)}|${text(row.field_id)}|${text(row.operation_id)}`;
+    if (!text(row.skill_id) || !text(row.field_id) || !text(row.operation_id) || acceptanceMap.has(key)) continue;
+    const confObj = normalizeJson(row.confidence, null);
+    const confScore = Number((confObj as any)?.score ?? (confObj as any)?.value ?? NaN);
+    confidenceMap.set(key, Number.isFinite(confScore) ? confScore : null);
+    const delta = row.delta_value == null ? null : sanitizeText(typeof row.delta_value === "string" ? row.delta_value : JSON.stringify(row.delta_value), "");
+    memoryMap.set(key, delta || null);
+    weatherMap.set(key, Boolean(row.weather_interference_detected));
+    excludedMap.set(key, text(row.learning_excluded_reason, "") || null);
+    acceptanceMap.set(key, "UNKNOWN");
+    roiMap.set(key, null);
+  }
+
+  if (acceptanceMap.size > 0) {
+    const opIds = Array.from(new Set(Array.from(acceptanceMap.keys()).map((x) => x.split("|")[2])));
+    const acc = await pool.query(
+      `SELECT operation_id, result
+         FROM acceptance_result_v1
+        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND operation_id = ANY($4::text[])
+        ORDER BY created_at DESC`,
+      [tenant.tenant_id, tenant.project_id, tenant.group_id, opIds]
+    ).catch(() => ({ rows: [] as any[] }));
+    const accByOp = new Map<string, string>();
+    for (const row of acc.rows ?? []) if (!accByOp.has(text(row.operation_id))) accByOp.set(text(row.operation_id), text(row.result, "UNKNOWN"));
+    for (const key of acceptanceMap.keys()) acceptanceMap.set(key, accByOp.get(key.split("|")[2]) ?? "UNKNOWN");
+
+    const roi = await pool.query(
+      `SELECT operation_id, skill_id, delta_value, confidence
+         FROM roi_ledger_v1
+        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND operation_id = ANY($4::text[])
+        ORDER BY created_at DESC`,
+      [tenant.tenant_id, tenant.project_id, tenant.group_id, opIds]
+    ).catch(() => ({ rows: [] as any[] }));
+    const roiByOpSkill = new Map<string, string | null>();
+    for (const row of roi.rows ?? []) {
+      const k = `${text(row.operation_id)}|${text(row.skill_id)}`;
+      if (roiByOpSkill.has(k)) continue;
+      roiByOpSkill.set(k, row.delta_value == null ? null : sanitizeText(String(row.delta_value), ""));
+    }
+    for (const key of roiMap.keys()) {
+      const [skill, , op] = key.split("|");
+      roiMap.set(key, roiByOpSkill.get(`${op}|${skill}`) ?? null);
+    }
+  }
+
+  return Array.from(acceptanceMap.keys()).map((key) => {
+    const [skill_id, field_id, operation_id] = key.split("|");
+    return {
+      skill_id,
+      field_id,
+      operation_id,
+      acceptance_result: acceptanceMap.get(key) ?? "UNKNOWN",
+      roi_result: roiMap.get(key) ?? null,
+      memory_delta: memoryMap.get(key) ?? null,
+      weather_interference_detected: weatherMap.get(key) ?? false,
+      learning_excluded_reason: excludedMap.get(key) ?? null,
+      confidence: confidenceMap.get(key) ?? null,
+    };
+  });
+}
+
 function authTenant(req: any, reply: any, scopes: any[]): { auth: any; tenant: TenantTriple } | null {
   const auth = requireAoActAnyScopeV0(req, reply, scopes);
   if (!auth) return null;
@@ -461,6 +555,25 @@ export function registerOperatorDiagnosticsV1Routes(app: FastifyInstance, pool: 
       generated_at: new Date().toISOString(),
       items,
       filters: { operation_id },
+    });
+  });
+
+  app.get("/api/v1/operator/skill-performance", async (req: any, reply) => {
+    const ctx = authTenant(req, reply, ["skill.read", "field_memory.read", "roi_ledger.read", "acceptance.read", "ao_act.index.read"]);
+    if (!ctx) return;
+    const query = (req.query ?? {}) as QueryInput;
+    if (query.field_id && !requireFieldAllowedOr404V1(reply, ctx.auth, query.field_id)) return;
+    const items = await buildOperatorSkillPerformance(pool, ctx.tenant, query);
+    return reply.send({
+      ok: true,
+      source: "operator_skill_performance_facade",
+      generated_at: new Date().toISOString(),
+      items,
+      filters: {
+        skill_id: text(query.skill_id, ""),
+        field_id: text(query.field_id, ""),
+        operation_id: text(query.operation_id, ""),
+      },
     });
   });
 }
