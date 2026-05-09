@@ -173,6 +173,7 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
     // no-raw-enum-customer-allow: internal source code, rendered title/summary are customer-facing
     {
       id: "accept",
+      // no-raw-enum-customer-allow: internal source enum for action routing, not customer-facing copy
       source: "PENDING_ACCEPTANCE",
       title: "完成待验收作业并回写结果",
       riskLabel: pendingAcceptance > 0 ? "待验收" : "已完成",
