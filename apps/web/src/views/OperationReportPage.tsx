@@ -179,6 +179,7 @@ export default function OperationReportPage(): React.ReactElement {
               <Link className="customerButton" to="/customer/dashboard">返回总览</Link>
               {canBackToField ? <Link className="customerButton" to={`/customer/fields/${encodeURIComponent(vm.operation.fieldId)}`}>返回地块</Link> : <span className="muted">返回地块不可用：缺少地块标识</span>}
               {canExport ? <Link className="customerButton" to={vm.exportHref}>导出报告</Link> : <span className="muted">导出不可用：缺少作业标识</span>}
+              {canExport ? <Link className="customerButton" to={`/operator/evidence?operation_id=${encodeURIComponent(operationId)}`}>查看证据导出</Link> : null}
             </div>
           </div>
         </header>
