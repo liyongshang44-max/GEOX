@@ -147,6 +147,15 @@ function ensureReportV1ExtendedFields(report: OperationReportV1): OperationRepor
       operator_id: null,
       deviation_summary: null,
     },
+    as_applied: (report as any).as_applied ?? {
+      operation_id: report.identifiers.operation_id,
+      coverage_status: "MISSING",
+      coverage_geojson: null,
+      planned_geojson: null,
+      applied_amount_summary: null,
+      planned_vs_actual_deviation: null,
+      evidence_ref: null,
+    },
     field_memory: (report as any).field_memory ?? {
       field_response_memory: [],
       device_reliability_memory: [],

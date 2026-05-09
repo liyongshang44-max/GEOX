@@ -654,7 +654,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         },
         OperationReportV1: {
           type: "object",
-          required: ["type", "version", "generated_at", "approval", "why", "operation_title", "customer_title", "identifiers", "as_executed", "execution", "acceptance", "evidence", "cost", "sla", "field_memory", "risk", "roi_ledger", "workflow", "evidence_pack_summary"],
+          required: ["type", "version", "generated_at", "approval", "why", "operation_title", "customer_title", "identifiers", "as_executed", "as_applied", "execution", "acceptance", "evidence", "cost", "sla", "field_memory", "risk", "roi_ledger", "workflow", "evidence_pack_summary"],
           properties: {
             type: { type: "string", enum: ["operation_report_v1"] },
             version: { type: "string", enum: ["v1"] },
@@ -709,6 +709,19 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
                 device_id: { type: "string", nullable: true },
                 operator_id: { type: "string", nullable: true },
                 deviation_summary: { type: "string", nullable: true }
+              }
+            },
+            as_applied: {
+              type: "object",
+              required: ["operation_id", "coverage_status", "coverage_geojson", "planned_geojson", "applied_amount_summary", "planned_vs_actual_deviation", "evidence_ref"],
+              properties: {
+                operation_id: { type: "string" },
+                coverage_status: { type: "string", enum: ["AVAILABLE", "MISSING", "NOT_APPLICABLE"] },
+                coverage_geojson: { type: "object", nullable: true, additionalProperties: true },
+                planned_geojson: { type: "object", nullable: true, additionalProperties: true },
+                applied_amount_summary: { type: "string", nullable: true },
+                planned_vs_actual_deviation: { type: "string", nullable: true },
+                evidence_ref: { type: "string", nullable: true }
               }
             },
             execution: {

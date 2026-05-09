@@ -183,8 +183,10 @@ export type OperationReportV1 = {
     low_confidence_items: RoiLedgerSummary[];
   };
   as_applied: {
+    operation_id: string;
     coverage_status: "AVAILABLE" | "MISSING" | "NOT_APPLICABLE";
     coverage_geojson: Record<string, unknown> | null;
+    planned_geojson: Record<string, unknown> | null;
     applied_amount_summary: string | null;
     planned_vs_actual_deviation: string | null;
     evidence_ref: string | null;
@@ -613,9 +615,18 @@ export function projectOperationReportV1(input: {
 
   const asAppliedRaw = (input.operation_state as any)?.as_applied ?? {};
   const asAppliedGeojson = toObject(asAppliedRaw?.coverage_geojson ?? asAppliedRaw?.geojson ?? asAppliedRaw?.coverage ?? null);
+  const plannedGeojson = toObject(
+    asAppliedRaw?.planned_geojson
+    ?? asAppliedRaw?.planned
+    ?? planned.planned_area
+    ?? planned.planned_path
+    ?? null,
+  );
   const asApplied = {
+    operation_id: input.operation_state.operation_id,
     coverage_status: normalizeCoverageStatus(asAppliedRaw?.coverage_status ?? (asAppliedGeojson ? "AVAILABLE" : "MISSING")),
     coverage_geojson: asAppliedGeojson,
+    planned_geojson: plannedGeojson,
     applied_amount_summary: toText(asAppliedRaw?.applied_amount_summary ?? asAppliedRaw?.amount_summary),
     planned_vs_actual_deviation: toText(asAppliedRaw?.planned_vs_actual_deviation ?? asAppliedRaw?.deviation_summary),
     evidence_ref: toText(asAppliedRaw?.evidence_ref ?? asAppliedRaw?.evidence_id ?? asAppliedRaw?.trace_id),
