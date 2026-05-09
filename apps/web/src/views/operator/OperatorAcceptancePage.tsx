@@ -4,6 +4,8 @@ import { fetchOperatorAcceptance, submitOperatorAcceptanceAction, type OperatorA
 import OperatorEmptyState from "../../components/operator/OperatorEmptyState";
 import OperatorLayout from "../../layouts/OperatorLayout";
 import "../../styles/operatorAcceptance.css";
+import { fetchSessionMe, type SessionMe } from "../../api/session";
+import { hasOperatorPermission } from "../../lib/permissions";
 import { buildOperatorAcceptanceVm, type OperatorAcceptanceGroupVm, type OperatorAcceptanceRowVm, type OperatorAcceptanceVm } from "../../viewmodels/operatorAcceptanceVm";
 import { OPERATOR_PAGE_META } from "./operatorPageMeta";
 
@@ -19,15 +21,17 @@ function AcceptanceRow({
   writeReady,
   actionState,
   onAction,
+  sessionAllowed,
 }: {
   row: OperatorAcceptanceRowVm;
   writeReady: boolean;
   actionState: { pending: boolean; lastError: string | null };
   onAction: (row: OperatorAcceptanceRowVm, action: OperatorAcceptanceActionKind) => void;
+  sessionAllowed: boolean;
 }): React.ReactElement {
-  const evaluateDisabled = !writeReady || !row.evaluateButtonState.canAction || actionState.pending;
-  const reviewDisabled = !writeReady || !row.reviewButtonState.canAction || actionState.pending;
-  const notice = row.evaluateButtonState.disabledReason || row.reviewButtonState.disabledReason || row.disabledReason;
+  const evaluateDisabled = !sessionAllowed || !writeReady || !row.evaluateButtonState.canAction || actionState.pending;
+  const reviewDisabled = !sessionAllowed || !writeReady || !row.reviewButtonState.canAction || actionState.pending;
+  const notice = (!sessionAllowed ? "会话权限不足：operator_acceptance" : "") || row.evaluateButtonState.disabledReason || row.reviewButtonState.disabledReason || row.disabledReason;
 
   return (
     <article className="operatorAcceptanceRow">
@@ -69,11 +73,13 @@ function AcceptanceGroup({
   writeReady,
   getActionState,
   onAction,
+  sessionAllowed,
 }: {
   group: OperatorAcceptanceGroupVm;
   writeReady: boolean;
   getActionState: (operationId: string) => { pending: boolean; lastError: string | null };
   onAction: (row: OperatorAcceptanceRowVm, action: OperatorAcceptanceActionKind) => void;
+  sessionAllowed: boolean;
 }): React.ReactElement {
   return (
     <section className="operatorAcceptanceGroup">
@@ -93,6 +99,7 @@ function AcceptanceGroup({
               writeReady={writeReady}
               actionState={getActionState(row.operationId)}
               onAction={onAction}
+              sessionAllowed={sessionAllowed}
             />
           ))}
         </div>
@@ -106,6 +113,7 @@ export default function OperatorAcceptancePage(): React.ReactElement {
   const [loading, setLoading] = React.useState(true);
   const [vm, setVm] = React.useState<OperatorAcceptanceVm | null>(null);
   const [actionStateByOperation, setActionStateByOperation] = React.useState<Record<string, { pending: boolean; lastError: string | null }>>({});
+  const [session, setSession] = React.useState<SessionMe | null>(null);
 
   const loadAcceptance = React.useCallback(() => {
     setLoading(true);
@@ -117,6 +125,13 @@ export default function OperatorAcceptancePage(): React.ReactElement {
         setLoading(false);
       });
   }, []);
+
+  React.useEffect(() => {
+    let alive = true;
+    void fetchSessionMe().then((resp) => { if (alive) setSession(resp); }).catch(() => { if (alive) setSession(null); });
+    return () => { alive = false; };
+  }, []);
+  const sessionAllowed = hasOperatorPermission(session, "acceptance");
 
   React.useEffect(() => {
     let alive = true;
@@ -141,7 +156,7 @@ export default function OperatorAcceptancePage(): React.ReactElement {
 
   const onAction = React.useCallback((row: OperatorAcceptanceRowVm, action: OperatorAcceptanceActionKind) => {
     const allowed = action === "evaluate" ? row.evaluateButtonState.canAction : row.reviewButtonState.canAction;
-    if (!allowed) return;
+    if (!sessionAllowed || !allowed) return;
     setActionStateByOperation((prev) => ({
       ...prev,
       [row.operationId]: { pending: true, lastError: null },
@@ -169,7 +184,7 @@ export default function OperatorAcceptancePage(): React.ReactElement {
           [row.operationId]: { pending: false, lastError: safeMessage(error instanceof Error ? error.message : error) },
         }));
       });
-  }, [loadAcceptance]);
+  }, [loadAcceptance, sessionAllowed]);
 
   return (
     <OperatorLayout title={meta.title} lead={meta.lead}>
@@ -195,6 +210,7 @@ export default function OperatorAcceptancePage(): React.ReactElement {
                 writeReady={vm.writeReady}
                 getActionState={getActionState}
                 onAction={onAction}
+                sessionAllowed={sessionAllowed}
               />
             ))}
           </section>
