@@ -28,6 +28,7 @@ const CUSTOMER_EVIDENCE_BLOCK_PATTERNS = [
   /\btoken\b/i,
   /\bcredential\b/i,
   /stack\s*trace/i,
+  // customer-boundary-allow: customer evidence sanitizer blocks unsafe structured metadata from report payload
   /debug\s*json/i,
   /\{\s*"/,
 ];
