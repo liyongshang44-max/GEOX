@@ -19,6 +19,9 @@ export type OperatorFieldMemoryItem = {
   roiId?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
+  weatherInterferenceDetected?: boolean | null;
+  learningExcludedReason?: string | null;
+  operatorHint?: string | null;
   source: "operator_field_memory_api" | "field_memory_api" | "operation_field_memory_api";
 };
 
@@ -91,6 +94,11 @@ function refs(value: unknown): string[] {
 }
 
 function normalizeItem(row: AnyRecord, index: number, source: OperatorFieldMemoryItem["source"], filters: { fieldId?: string; operationId?: string; memoryType?: string }): OperatorFieldMemoryItem {
+  const weatherInterferenceDetected = row.weather_interference_detected == null ? null : Boolean(row.weather_interference_detected);
+  const learningExcludedReason = text(row.learning_excluded_reason, "") || null;
+  const operatorHint = weatherInterferenceDetected
+    ? "该次湿度变化可能受降雨影响，暂不计入灌溉学习。"
+    : null;
   return {
     memoryId: safeText(row.memory_id ?? row.field_memory_id ?? row.id, `memory-${index}`),
     fieldId: safeText(row.field_id ?? row.fieldId, filters.fieldId ?? ""),
@@ -98,7 +106,7 @@ function normalizeItem(row: AnyRecord, index: number, source: OperatorFieldMemor
     memoryType: safeText(row.memory_type ?? row.type ?? row.category, filters.memoryType ?? "类型待确认"),
     beforeText: summarizeValue(row.before ?? row.before_state ?? row.previous ?? row.from, "before 未提供"),
     afterText: summarizeValue(row.after ?? row.after_state ?? row.current ?? row.to, "after 未提供"),
-    deltaText: summarizeValue(row.delta ?? row.change ?? row.diff, "delta 未提供"),
+    deltaText: summarizeValue(row.delta ?? row.change ?? row.diff ?? row.delta_value, "delta 未提供"),
     confidenceText: summarizeValue(row.confidence ?? row.confidence_text ?? row.confidence_score, "confidence 待确认"),
     skillRefs: refs(row.skill_refs ?? row.skill_trace_refs ?? row.skill_runs ?? row.skills),
     evidenceRefs: refs(row.evidence_refs ?? row.evidence_ref ?? row.evidence_ids),
@@ -108,6 +116,9 @@ function normalizeItem(row: AnyRecord, index: number, source: OperatorFieldMemor
     roiId: safeText(row.roi_id ?? row.roi_ledger_id ?? row.roiId, ""),
     createdAt: text(row.created_at ?? row.generated_at, ""),
     updatedAt: text(row.updated_at ?? row.last_updated_at ?? row.generated_at, ""),
+    weatherInterferenceDetected,
+    learningExcludedReason,
+    operatorHint,
     source,
   };
 }

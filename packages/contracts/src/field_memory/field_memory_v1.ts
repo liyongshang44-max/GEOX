@@ -39,6 +39,8 @@ export type FieldMemoryV1 = {
   skill_trace_ref?: string;
   evidence_refs: unknown[];
   summary_text: string;
+  weather_interference_detected?: boolean;
+  learning_excluded_reason?: string;
   occurred_at: string;
   created_at: string;
 };
