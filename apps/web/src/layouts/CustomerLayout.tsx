@@ -1,6 +1,7 @@
 import React from "react";
 import { Navigate, NavLink, useLocation } from "react-router-dom";
 import { CUSTOMER_SHELL_LABELS } from "../lib/customerLabels";
+import { fetchSessionMe, type SessionMe } from "../api/session";
 
 const CustomerFieldsIndexPage = React.lazy(() => import("../views/CustomerFieldsIndexPage"));
 const CustomerOperationsIndexPage = React.lazy(() => import("../views/CustomerOperationsIndexPage"));
@@ -49,6 +50,16 @@ function isItemActive(pathname: string, key: string): boolean {
 export default function CustomerLayout({ children }: CustomerLayoutProps): React.ReactElement {
   const location = useLocation();
   const title = resolvePageTitle(location.pathname);
+  const [session, setSession] = React.useState<SessionMe | null>(null);
+  React.useEffect(() => {
+    let alive = true;
+    fetchSessionMe().then((x) => { if (alive) setSession(x); }).catch(() => { if (alive) setSession(null); });
+    return () => { alive = false; };
+  }, []);
+  const scopeConfirmed = Boolean(session && session.allowed_field_ids.length > 0);
+  const authorizedFieldsCount = session?.allowed_field_ids.length ?? 0;
+  const accountName = session?.display_name || session?.user_id || CUSTOMER_SHELL_LABELS.accountFallback;
+
   const isExportRoute = location.pathname === "/customer/export" || location.pathname.endsWith("/export");
   const mainContent = location.pathname === "/customer/fields" ? (
     <React.Suspense fallback={<div className="customerCard">页面加载中...</div>}>
@@ -87,8 +98,10 @@ export default function CustomerLayout({ children }: CustomerLayoutProps): React
           ))}
         </nav>
         <div className="customerShellMeta">
-          <div>{CUSTOMER_SHELL_LABELS.shellRole}</div>
-          <strong>{CUSTOMER_SHELL_LABELS.scopePending}</strong>
+          <div>客户账户</div>
+          <strong>{accountName}</strong>
+          <div>授权地块 {authorizedFieldsCount} 块</div>
+          <strong>{scopeConfirmed ? "授权范围已确认" : "授权范围待确认"}</strong>
         </div>
         <div className="customerShellFooterNote">{CUSTOMER_SHELL_LABELS.sidebarFooter}</div>
       </aside>
@@ -108,7 +121,7 @@ export default function CustomerLayout({ children }: CustomerLayoutProps): React
             <span className="customerShellAccountBadge" aria-hidden="true" />
             <span className="customerShellUserMuted">
               {CUSTOMER_SHELL_LABELS.accountFallback}<br />
-              <small>{CUSTOMER_SHELL_LABELS.scopePending}</small>
+              <small>{scopeConfirmed ? "授权范围已确认" : "授权范围待确认"}</small>
             </span>
           </div>
         </header>

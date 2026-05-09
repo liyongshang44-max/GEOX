@@ -1315,6 +1315,15 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           }
         }
       },
+      "/api/v1/session/me": {
+        get: {
+          tags: ["auth"],
+          summary: "Read current formalized session identity/role/scope context",
+          responses: {
+            "200": { description: "Formal session context returned successfully" }
+          }
+        }
+      },
       "/api/v1/skill-runs": {
         get: {
           tags: ["operations"],
