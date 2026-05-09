@@ -110,7 +110,7 @@ function dataScopeText(response: OperatorRoiLedgerResponse): string {
 }
 
 function filterText(response: OperatorRoiLedgerResponse): string {
-  const parts = [];
+  const parts: string[] = [];
   if (response.filters.fieldId) parts.push(`field=${response.filters.fieldId}`);
   if (response.filters.operationId) parts.push(`operation=${response.filters.operationId}`);
   return parts.length ? parts.join(" · ") : "未设置过滤条件，展示当前可见 ROI 明细。";

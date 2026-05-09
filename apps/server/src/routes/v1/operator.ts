@@ -25,6 +25,60 @@ function safeText(value: unknown): string {
   return valueText;
 }
 
+function nullableText(value: unknown): string | null {
+  const normalized = safeText(value);
+  return normalized || null;
+}
+
+function normalizeRef(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") return safeText(value) || null;
+  if (typeof value === "number") return Number.isFinite(value) ? String(value) : null;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const normalized = normalizeRef(item);
+      if (normalized) return normalized;
+    }
+    return null;
+  }
+  if (typeof value === "object") {
+    const source = value as Record<string, unknown>;
+    const keys = ["evidence_id", "evidenceId", "evidence_ref", "evidenceRef", "bundle_id", "bundleId", "artifact_id", "artifactId", "id", "ref"];
+    for (const key of keys) {
+      const normalized = normalizeRef(source[key]);
+      if (normalized) return normalized;
+    }
+    return null;
+  }
+  return null;
+}
+
+function normalizeRoiId(row: Row): string | null {
+  return nullableText(row.roi_id ?? row.ledger_id ?? row.id ?? row.record_id);
+}
+
+function normalizeOperationId(row: Row): string | null {
+  return nullableText(row.operation_id ?? row.operationId ?? row.operation_plan_id ?? row.operationPlanId ?? row.op_id);
+}
+
+function normalizeMetricName(row: Row): string | null {
+  return nullableText(row.metric_name ?? row.roi_metric ?? row.metric ?? row.value_metric);
+}
+
+function normalizeValueText(row: Row): string | null {
+  const rawValueText = safeText(row.value_text);
+  const unit = safeText(row.unit);
+  const unitOnlyPattern = /^(?:[a-zA-Z%³㎡]+|元)$/;
+
+  if (rawValueText && !unitOnlyPattern.test(rawValueText)) return rawValueText;
+
+  const valueCandidate = row.value ?? row.roi_value ?? row.delta_value ?? row.actual_value;
+  const valueText = safeText(valueCandidate);
+  if (!valueText) return null;
+  if (!unit) return valueText;
+  return `${valueText} ${unit}`.trim();
+}
+
 function toIsoFromMs(value: unknown): string | null {
   const n = Number(value);
   if (!Number.isFinite(n) || n <= 0) return null;
@@ -36,6 +90,20 @@ function normalizeCredentialStatus(value: unknown): "ACTIVE" | "REVOKED" | "UNKN
   if (raw.includes("ACTIVE")) return "ACTIVE";
   if (raw.includes("REVOKED")) return "REVOKED";
   return "UNKNOWN";
+}
+
+function buildTelemetryDelayText(lastTelemetryAt: string | null): string {
+  if (!lastTelemetryAt) return "telemetry 待上报";
+  const telemetryMs = new Date(lastTelemetryAt).getTime();
+  if (!Number.isFinite(telemetryMs)) return "telemetry 待上报";
+  const diffMs = Math.max(0, Date.now() - telemetryMs);
+  const diffMin = Math.floor(diffMs / (60 * 1000));
+  if (diffMin <= 15) return "telemetry 15 分钟内";
+  if (diffMin < 60) return `telemetry 延迟 ${diffMin} 分钟`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `telemetry 延迟 ${diffHours} 小时`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `telemetry 延迟 ${diffDays} 天`;
 }
 
 async function tableExists(pool: Pool, table: string): Promise<boolean> {
@@ -115,12 +183,12 @@ async function buildDevicesAlerts(pool: Pool): Promise<{ devices: Row[]; alerts:
 
     return {
       device_id: safeText(deviceId),
-      display_name: safeText(device.display_name ?? device.name),
+      display_name: nullableText(device.display_name ?? device.name),
       online_status: onlineStatus,
       last_heartbeat_at: heartbeat,
       last_telemetry_at: lastTelemetry,
-      field_id: fieldId,
-      field_name: fieldId ? safeText(fieldNameById.get(fieldId)) : "",
+      field_id: nullableText(fieldId),
+      field_name: nullableText(fieldId ? fieldNameById.get(fieldId) : null),
       capabilities,
       credential_status: normalizeCredentialStatus(device.last_credential_status ?? credential.status),
       credential_last_issued_at: toIsoFromMs(credential.issued_ts_ms ?? credential.created_ts_ms),
@@ -128,7 +196,7 @@ async function buildDevicesAlerts(pool: Pool): Promise<{ devices: Row[]; alerts:
       revoke_status: "read_only",
       can_revoke: false,
       battery_percent: Number.isFinite(Number(status.battery_percent)) ? Number(status.battery_percent) : null,
-      data_delay_text: lastTelemetry ? "telemetry 已上报" : "telemetry 待上报",
+      data_delay_text: buildTelemetryDelayText(lastTelemetry),
     };
   });
 
@@ -184,6 +252,47 @@ function jsonObjectOrNull(value: unknown): Record<string, unknown> | null {
   return null;
 }
 
+function parseObjectLike(value: unknown, scalarKey: string): Record<string, unknown> | null {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value === "object" && !Array.isArray(value)) return sanitizeStructured(value) as Record<string, unknown>;
+  if (typeof value === "string") {
+    const normalized = safeText(value);
+    if (!normalized) return null;
+    try {
+      const parsed = JSON.parse(normalized);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return sanitizeStructured(parsed) as Record<string, unknown>;
+    } catch {
+      // not JSON object, fallback to scalar wrapper
+    }
+    return { [scalarKey]: normalized };
+  }
+  const normalizedScalar = safeText(value);
+  if (!normalizedScalar) return null;
+  return { [scalarKey]: normalizedScalar };
+}
+
+function normalizeRefList(value: unknown): string[] {
+  if (value === null || value === undefined || value === "") return [];
+  if (Array.isArray(value)) return value.map((item) => normalizeRef(item)).filter((x): x is string => Boolean(x));
+  const normalized = normalizeRef(value);
+  return normalized ? [normalized] : [];
+}
+
+function sanitizeStructured(value: unknown): unknown {
+  if (value === null || value === undefined) return value;
+  if (typeof value === "string") return safeText(value);
+  if (Array.isArray(value)) return value.map((item) => sanitizeStructured(item));
+  if (typeof value === "object") {
+    const output: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      if (/token|secret|access[_-]?key|credential_payload|password|private\s*key/i.test(k)) continue;
+      output[k] = sanitizeStructured(v);
+    }
+    return output;
+  }
+  return value;
+}
+
 function toIsoAny(value: unknown): string | null {
   const fromMs = toIsoFromMs(value);
   if (fromMs) return fromMs;
@@ -213,12 +322,12 @@ async function buildFieldMemory(pool: Pool, query: { field_id?: string; operatio
     field_id: safeText(row.field_id),
     operation_id: safeText(row.operation_id),
     memory_type: safeText(row.memory_type),
-    before: jsonObjectOrNull(row.before_value),
-    after: jsonObjectOrNull(row.after_value ?? row.metric_value),
-    delta: jsonObjectOrNull(row.delta_value),
-    confidence: jsonObjectOrNull(row.confidence),
-    skill_refs: [safeText(row.skill_id), safeText(row.skill_trace_ref)].filter(Boolean),
-    evidence_refs: Array.isArray(row.evidence_refs) ? row.evidence_refs.map((x) => safeText(x)).filter(Boolean) : [],
+    before: parseObjectLike(row.before_value, "value"),
+    after: parseObjectLike(row.after_value ?? row.metric_value, "value"),
+    delta: parseObjectLike(row.delta_value, "value"),
+    confidence: parseObjectLike(row.confidence, "level"),
+    skill_refs: [...new Set([...normalizeRefList(row.skill_refs), ...normalizeRefList([row.skill_id, row.skill_trace_ref])])],
+    evidence_refs: normalizeRefList(row.evidence_refs),
     recommendation_id: safeText(row.recommendation_id),
     task_id: safeText(row.task_id),
     acceptance_id: safeText(row.acceptance_id),
@@ -256,14 +365,15 @@ async function buildRoiLedger(pool: Pool, query: { field_id?: string; operation_
     const confidenceLevel = safeText((confidence as Record<string, unknown>).level).toUpperCase();
     const baselinePresent = row.baseline_value !== null && row.baseline_value !== undefined;
     const actualPresent = row.actual_value !== null && row.actual_value !== undefined;
-    const evidencePresent = Boolean(safeText(row.evidence_ref) || (Array.isArray(row.evidence_refs) && row.evidence_refs.length > 0));
+    const normalizedEvidenceRef = normalizeRef(row.evidence_ref ?? row.evidence_refs);
+    const evidencePresent = Boolean(normalizedEvidenceRef);
     const valueKind = normalizeValueKind(row.value_kind ?? row.roi_type, baselinePresent, actualPresent, evidencePresent, confidenceLevel);
     return {
-      roi_id: safeText(row.roi_id),
-      field_id: safeText(row.field_id),
-      operation_id: safeText(row.operation_id),
-      prescription_id: safeText(row.prescription_id),
-      evidence_ref: safeText(row.evidence_ref ?? (Array.isArray(row.evidence_refs) ? row.evidence_refs[0] : "")),
+      roi_id: normalizeRoiId(row),
+      field_id: nullableText(row.field_id),
+      operation_id: normalizeOperationId(row),
+      prescription_id: nullableText(row.prescription_id),
+      evidence_ref: normalizedEvidenceRef,
       calculation_method: safeText(row.calculation_method ?? row.method),
       confidence: confidence,
       assumption: jsonObjectOrNull(row.assumptions),
@@ -272,19 +382,43 @@ async function buildRoiLedger(pool: Pool, query: { field_id?: string; operation_
       actual_present: actualPresent,
       evidence_present: evidencePresent,
       value_kind: valueKind,
-      metric_name: safeText(row.metric_name ?? row.roi_metric),
-      value_text: safeText(row.value_text ?? row.unit),
+      metric_name: normalizeMetricName(row),
+      value_text: normalizeValueText(row),
     };
   });
 }
 export function registerOperatorV1FacadeRoutes(app: FastifyInstance, pool: Pool): void {
-  app.get("/api/v1/operator/devices-alerts", async (_req, reply) => {
+  app.get("/api/v1/operator/devices-alerts", async (req: any, reply) => {
+    const query = (req.query ?? {}) as { limit?: string | number; field_id?: string; device_id?: string; online_status?: string };
+    const parsedLimit = Number(query.limit);
+    const limit = Number.isFinite(parsedLimit) ? Math.min(300, Math.max(1, Math.floor(parsedLimit))) : 100;
+    const fieldIdFilter = safeText(query.field_id);
+    const deviceIdFilter = safeText(query.device_id);
+    const onlineStatusRaw = safeText(query.online_status).toUpperCase();
+    const onlineStatusFilter = ["ONLINE", "OFFLINE", "DELAYED", "UNKNOWN"].includes(onlineStatusRaw) ? onlineStatusRaw : "";
+
     const { devices, alerts } = await buildDevicesAlerts(pool);
+    const filteredDevices = devices.filter((device) => {
+      if (fieldIdFilter && safeText(device.field_id) !== fieldIdFilter) return false;
+      if (deviceIdFilter && safeText(device.device_id) !== deviceIdFilter) return false;
+      if (onlineStatusFilter && safeText(device.online_status).toUpperCase() !== onlineStatusFilter) return false;
+      return true;
+    });
+    const limitedDevices = filteredDevices.slice(0, limit);
+
     return reply.send({
       ...basePayload("operator_devices_alerts_api"),
       ackCloseReady: false,
       revokeVisible: false,
-      devices,
+      total_devices: filteredDevices.length,
+      returned_devices: limitedDevices.length,
+      filters: {
+        limit,
+        fieldId: fieldIdFilter,
+        deviceId: deviceIdFilter,
+        onlineStatus: onlineStatusFilter,
+      },
+      devices: limitedDevices,
       alerts,
       message: "operator devices-alerts read-only facade",
     });

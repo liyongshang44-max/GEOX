@@ -113,7 +113,7 @@ function dataScopeText(response: OperatorFieldMemoryResponse): string {
 }
 
 function filterText(response: OperatorFieldMemoryResponse): string {
-  const parts = [];
+  const parts: string[] = [];
   if (response.filters.fieldId) parts.push(`field=${response.filters.fieldId}`);
   if (response.filters.operationId) parts.push(`operation=${response.filters.operationId}`);
   if (response.filters.memoryType) parts.push(`memory_type=${response.filters.memoryType}`);
