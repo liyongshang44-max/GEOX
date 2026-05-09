@@ -77,6 +77,16 @@ async function main() {
       if (item?.value_text) {
         assert(!unitOnlyPattern.test(String(item.value_text)), `roi-ledger item[${idx}] value_text must not be unit-only`);
       }
+      if (String(item?.value_kind ?? "").toUpperCase() === "MEASURED") {
+        assert(item?.baseline_present === true, `roi-ledger item[${idx}] MEASURED requires baseline_present=true`);
+        assert(item?.actual_present === true, `roi-ledger item[${idx}] MEASURED requires actual_present=true`);
+        assert(item?.evidence_present === true, `roi-ledger item[${idx}] MEASURED requires evidence_present=true`);
+        const confidenceLevel = String(item?.confidence?.level ?? "").toUpperCase();
+        assert(
+          confidenceLevel === "HIGH" || confidenceLevel === "MEDIUM",
+          `roi-ledger item[${idx}] MEASURED requires confidence.level in HIGH|MEDIUM`,
+        );
+      }
     }
   }
 
