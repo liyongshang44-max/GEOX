@@ -4510,6 +4510,38 @@ function applyP13OpenApiAlignment(spec: any) {
         responses: { "200": { description: "Customer fields list" } }
       }
     },
+
+    "/api/v1/customer/fields/{fieldId}/geometry": {
+      get: {
+        tags: ["customer"],
+        summary: "Read customer field geometry",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: "fieldId", in: "path", required: true, schema: { type: "string" } }],
+        responses: { "200": { description: "Customer field geometry" } }
+      }
+    },
+    "/api/v1/weather/history": {
+      get: {
+        tags: ["sensing"],
+        summary: "Read weather rainfall history by field/time window",
+        parameters: [
+          { name: "field_id", in: "query", required: true, schema: { type: "string" } },
+          { name: "from", in: "query", required: true, schema: { type: "string", format: "date-time" } },
+          { name: "to", in: "query", required: true, schema: { type: "string", format: "date-time" } }
+        ],
+        responses: { "200": { description: "Weather history envelope" } }
+      }
+    },
+    "/api/v1/weather/forecast": {
+      get: {
+        tags: ["sensing"],
+        summary: "Read weather rainfall forecast by field",
+        parameters: [
+          { name: "field_id", in: "query", required: true, schema: { type: "string" } }
+        ],
+        responses: { "200": { description: "Weather forecast envelope" } }
+      }
+    },
     "/api/v1/customer/operations": {
       get: {
         tags: ["customer"],
