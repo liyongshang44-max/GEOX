@@ -9,7 +9,7 @@ export type SessionMe = {
   roles: string[];
   scopes: string[];
   allowed_field_ids: string[];
-  permissions: {
+  permissions?: {
     customer_read: boolean;
     operator_read: boolean;
     operator_approve: boolean;
