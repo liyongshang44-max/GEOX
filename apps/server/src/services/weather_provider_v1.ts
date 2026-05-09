@@ -23,16 +23,20 @@ export type WeatherProviderHistoryInput = {
   field_id: string;
   from: string;
   to: string;
+  location?: WeatherLocationV1 | null;
 };
 
 export type WeatherProviderForecastInput = {
   field_id: string;
+  location?: WeatherLocationV1 | null;
 };
 
 export type WeatherProviderV1 = {
   getHistory(input: WeatherProviderHistoryInput): Promise<WeatherHistoryV1>;
   getForecast(input: WeatherProviderForecastInput): Promise<WeatherForecastV1>;
 };
+
+export type WeatherLocationV1 = { latitude: number; longitude: number };
 
 type ProviderConfig = {
   provider: string;
@@ -63,8 +67,8 @@ function getDefaultLocation(_fieldId: string, policy: string): { latitude: numbe
   return { latitude: 41.8781, longitude: -93.0977 };
 }
 
-function buildCacheKey(kind: string, input: Record<string, string>): string {
-  return `${kind}:${input.field_id}:${Object.values(input).join(":")}`;
+function buildCacheKey(kind: string, fieldId: string, from: string, to: string): string {
+  return `${kind}:${fieldId}:${from}:${to}`;
 }
 
 function getCached(key: string): WeatherHistoryV1 | null {
@@ -88,8 +92,9 @@ async function fetchOpenMeteoRainfall(params: {
   to: string;
   eventType: WeatherEventType;
   config: ProviderConfig;
+  location?: WeatherLocationV1 | null;
 }): Promise<WeatherHistoryV1> {
-  const location = getDefaultLocation(params.field_id, params.config.defaultLocationPolicy);
+  const location = params.location ?? getDefaultLocation(params.field_id, params.config.defaultLocationPolicy);
   const url = new URL("https://api.open-meteo.com/v1/forecast");
   url.searchParams.set("latitude", String(location.latitude));
   url.searchParams.set("longitude", String(location.longitude));
@@ -161,7 +166,7 @@ export function createWeatherProviderV1(): WeatherProviderV1 {
 
   return {
     async getHistory(input) {
-      const key = buildCacheKey("history", input);
+      const key = buildCacheKey("history", input.field_id, input.from, input.to);
       const cached = getCached(key);
       if (cached) return cached;
 
@@ -175,7 +180,7 @@ export function createWeatherProviderV1(): WeatherProviderV1 {
       const now = new Date();
       const to = new Date(now.getTime() + 24 * 60 * 60 * 1000);
       const base = { field_id: input.field_id, from: now.toISOString(), to: to.toISOString() };
-      const key = buildCacheKey("forecast", base);
+      const key = buildCacheKey("forecast", base.field_id, base.from, base.to);
       const cached = getCached(key);
       if (cached) return cached;
 
@@ -185,5 +190,41 @@ export function createWeatherProviderV1(): WeatherProviderV1 {
       setCached(key, result, config.cacheTtlSeconds);
       return result;
     },
+  };
+}
+
+export function computeGeometryCentroidV1(geometry: unknown): WeatherLocationV1 | null {
+  const points: Array<{ lat: number; lon: number }> = [];
+  const collect = (node: unknown): void => {
+    if (!Array.isArray(node)) return;
+    if (node.length >= 2 && typeof node[0] === "number" && typeof node[1] === "number") {
+      const lon = Number(node[0]);
+      const lat = Number(node[1]);
+      if (Number.isFinite(lat) && Number.isFinite(lon)) points.push({ lat, lon });
+      return;
+    }
+    for (const child of node) collect(child);
+  };
+
+  const raw = geometry as Record<string, unknown> | null;
+  if (!raw || typeof raw !== "object") return null;
+  if (String(raw.type ?? "").toUpperCase() === "FEATURE") {
+    return computeGeometryCentroidV1(raw.geometry);
+  }
+  collect(raw.coordinates);
+  if (points.length === 0) return null;
+  const sums = points.reduce((acc, p) => ({ lat: acc.lat + p.lat, lon: acc.lon + p.lon }), { lat: 0, lon: 0 });
+  return { latitude: sums.lat / points.length, longitude: sums.lon / points.length };
+}
+
+export function buildUnavailableWeatherV1(input: { field_id: string; from: string; to: string; reason: string }): WeatherHistoryV1 {
+  return {
+    source: `weather_unavailable_v1:${input.reason}`,
+    field_id: input.field_id,
+    from: input.from,
+    to: input.to,
+    rainfall_mm: null,
+    confidence: null,
+    events: [],
   };
 }
