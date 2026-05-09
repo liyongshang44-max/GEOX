@@ -1021,6 +1021,146 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             }
           }
         },
+        OperatorActionErrorCodeV1: {
+          type: "string",
+          enum: [
+            "AUTH_MISSING",
+            "FORBIDDEN",
+            "ACTION_NOT_READY",
+            "INVALID_STATE",
+            "SELF_APPROVAL_BLOCKED",
+            "TARGET_NOT_FOUND",
+            "EVIDENCE_INSUFFICIENT",
+            "AUDIT_WRITE_FAILED",
+            "STATE_WRITE_FAILED"
+          ]
+        },
+        OperatorActionResponseV1: {
+          type: "object",
+          required: ["ok", "action_id", "audit_id", "action_type", "target_type", "target_id", "status_before", "status_after", "permission", "message", "updated_at"],
+          properties: {
+            ok: { type: "boolean" },
+            action_id: { type: "string" },
+            audit_id: { type: "string" },
+            action_type: { type: "string" },
+            target_type: { type: "string" },
+            target_id: { type: "string" },
+            status_before: { type: "string", nullable: true },
+            status_after: { type: "string", nullable: true },
+            permission: {
+              type: "object",
+              required: ["allowed", "role", "reason"],
+              properties: {
+                allowed: { type: "boolean" },
+                role: { type: "string", nullable: true },
+                reason: { type: "string", nullable: true }
+              },
+              additionalProperties: false
+            },
+            message: { type: "string" },
+            error_code: { "$ref": "#/components/schemas/OperatorActionErrorCodeV1" },
+            updated_at: { type: "string", format: "date-time" }
+          },
+          additionalProperties: false
+        },
+        OperatorApprovalItemV1: {
+          type: "object",
+          required: ["approval_request_id", "request_id", "status", "title", "description", "risk_level", "self_approval_risk", "permission", "can_approve", "permission_reason"],
+          properties: {
+            approval_request_id: { type: "string" },
+            request_id: { type: "string" },
+            status: { type: "string", enum: ["PENDING", "APPROVED", "REJECTED", "RETURNED", "UNKNOWN"] },
+            title: { type: "string" },
+            description: { type: "string" },
+            field_name: { type: "string", nullable: true },
+            operation_name: { type: "string", nullable: true },
+            operation_id: { type: "string", nullable: true },
+            operation_plan_id: { type: "string", nullable: true },
+            prescription_id: { type: "string", nullable: true },
+            recommendation_id: { type: "string", nullable: true },
+            risk_level: { type: "string", enum: ["HIGH", "MEDIUM", "LOW", "UNKNOWN"] },
+            requested_by: { type: "string", nullable: true },
+            requested_by_actor_id: { type: "string", nullable: true },
+            approver_id: { type: "string", nullable: true },
+            updated_at: { type: "string", format: "date-time", nullable: true },
+            created_at: { type: "string", format: "date-time", nullable: true },
+            self_approval_risk: { type: "boolean" },
+            permission: {
+              type: "object",
+              required: ["allowed", "role", "reason"],
+              properties: {
+                allowed: { type: "boolean" },
+                role: { type: "string", nullable: true },
+                reason: { type: "string", nullable: true }
+              },
+              additionalProperties: false
+            },
+            can_approve: { type: "boolean" },
+            permission_reason: { type: "string", nullable: true }
+          },
+          additionalProperties: false
+        },
+        OperatorApprovalsResponseV1: {
+          type: "object",
+          required: ["source", "dataScope", "generated_at", "items", "writeReady", "message"],
+          properties: {
+            source: { type: "string", enum: ["operator_approvals_api"] },
+            dataScope: { type: "string", enum: ["OFFICIAL_OPERATOR_API"] },
+            generated_at: { type: "string", format: "date-time" },
+            items: { type: "array", items: { "$ref": "#/components/schemas/OperatorApprovalItemV1" } },
+            writeReady: { type: "boolean" },
+            message: { type: "string" }
+          },
+          additionalProperties: false
+        },
+        OperatorAcceptanceItemV1: {
+          type: "object",
+          required: ["operation_id", "operation_plan_id", "acceptance_status", "operation_state_status", "evidence_insufficient", "can_evaluate", "can_request_review", "permissions"],
+          properties: {
+            operation_id: { type: "string" },
+            operation_plan_id: { type: "string", nullable: true },
+            acceptance_id: { type: "string", nullable: true },
+            field_id: { type: "string", nullable: true },
+            field_name: { type: "string", nullable: true },
+            operation_name: { type: "string", nullable: true },
+            acceptance_status: { type: "string", enum: ["PENDING", "EVIDENCE_INSUFFICIENT", "FAILED", "REVIEW_REQUIRED", "PASSED", "UNKNOWN"] },
+            operation_state_status: { type: "string", nullable: true },
+            evidence_insufficient: { type: "boolean" },
+            failure_reason: { type: "string", nullable: true },
+            review_reason: { type: "string", nullable: true },
+            acceptance_verdict: { type: "string", nullable: true },
+            generated_at: { type: "string", format: "date-time", nullable: true },
+            updated_at: { type: "string", format: "date-time", nullable: true },
+            can_evaluate: { type: "boolean" },
+            can_request_review: { type: "boolean" },
+            permission_reason: { type: "string", nullable: true },
+            permissions: {
+              type: "object",
+              required: ["can_evaluate", "can_request_review", "reason", "role"],
+              properties: {
+                can_evaluate: { type: "boolean" },
+                can_request_review: { type: "boolean" },
+                reason: { type: "string", nullable: true },
+                role: { type: "string", nullable: true }
+              },
+              additionalProperties: false
+            }
+          },
+          additionalProperties: false
+        },
+        OperatorAcceptanceWorklistResponseV1: {
+          type: "object",
+          required: ["source", "dataScope", "generated_at", "items", "writeReady", "message"],
+          properties: {
+            source: { type: "string", enum: ["operator_acceptance_api"] },
+            dataScope: { type: "string", enum: ["OFFICIAL_OPERATOR_API"] },
+            generated_at: { type: "string", format: "date-time" },
+            items: { type: "array", items: { "$ref": "#/components/schemas/OperatorAcceptanceItemV1" } },
+            writeReady: { type: "boolean" },
+            message: { type: "string" }
+          },
+          additionalProperties: false
+        },
         ManagementZoneV1: {
           type: "object",
           required: ["zone_id", "tenant_id", "project_id", "group_id", "field_id", "zone_type", "geometry", "risk_tags", "agronomy_tags", "source_refs", "created_at", "updated_at"],
