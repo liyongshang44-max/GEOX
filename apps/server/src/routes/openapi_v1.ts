@@ -1729,6 +1729,36 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           }
         }
       },
+      "/api/v1/operator/alerts/{alertId}/ack": {
+        post: {
+          tags: ["operations"],
+          summary: "Operator ACK alert",
+          parameters: [
+            { name: "alertId", in: "path", required: true, schema: { type: "string" } }
+          ],
+          responses: {
+            "200": { description: "Operator action response", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "403": { description: "FORBIDDEN", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "404": { description: "TARGET_NOT_FOUND", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "409": { description: "INVALID_STATE", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } }
+          }
+        }
+      },
+      "/api/v1/operator/alerts/{alertId}/close": {
+        post: {
+          tags: ["operations"],
+          summary: "Operator close alert",
+          parameters: [
+            { name: "alertId", in: "path", required: true, schema: { type: "string" } }
+          ],
+          responses: {
+            "200": { description: "Operator action response", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "403": { description: "FORBIDDEN", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "404": { description: "TARGET_NOT_FOUND", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "409": { description: "INVALID_STATE", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } }
+          }
+        }
+      },
       "/api/v1/operator/acceptance": {
         get: {
           tags: ["acceptance"],
@@ -1748,6 +1778,40 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             "200": { description: "Operator evidence read-only facade payload (evidence export write not ready)" },
             "401": { description: "Unauthenticated" },
             "403": { description: "Forbidden" }
+          }
+        }
+      },
+      "/api/v1/operator/evidence/export-jobs": {
+        post: {
+          tags: ["exports"],
+          summary: "Create operator evidence export job",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { "$ref": "#/components/schemas/EvidenceExportCreateRequest" }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Evidence export job created successfully" },
+            "400": { description: "Operation scope not ready or invalid export scope" },
+            "403": { description: "FORBIDDEN" },
+            "500": { description: "Evidence export job create failed" }
+          }
+        }
+      },
+      "/api/v1/operator/evidence/export-jobs/{jobId}": {
+        get: {
+          tags: ["exports"],
+          summary: "Read operator evidence export job detail",
+          parameters: [
+            { name: "jobId", in: "path", required: true, schema: { type: "string" } }
+          ],
+          responses: {
+            "200": { description: "Evidence export job detail returned successfully" },
+            "403": { description: "FORBIDDEN" },
+            "404": { description: "Export job not found" }
           }
         }
       },
