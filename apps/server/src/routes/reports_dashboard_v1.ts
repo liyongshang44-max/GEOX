@@ -22,6 +22,22 @@ type TenantTriple = {
 const DASHBOARD_REPORT_CONCURRENCY_LIMIT = 12;
 const DEVICE_OFFLINE_THRESHOLD_MS = 15 * 60 * 1000;
 
+type CustomerOperationListItem = {
+  operation_id: string;
+  operation_plan_id: string | null;
+  field_id: string | null;
+  field_name: string | null;
+  title: string | null;
+  customer_title: string | null;
+  operation_type: string | null;
+  final_status: string | null;
+  acceptance_status: string | null;
+  evidence_status: string | null;
+  evidence_summary_status: string | null;
+  updated_at: string | null;
+  executed_at: string | null;
+};
+
 type CustomerFieldListItem = {
   field_id: string;
   field_name: string | null;
@@ -263,6 +279,69 @@ async function queryDeviceSummary(pool: Pool, tenant: TenantTriple, fieldIds: st
 }
 
 export function registerReportsDashboardV1Routes(app: FastifyInstance, pool: Pool): void {
+
+
+  app.get("/api/v1/customer/operations", async (req, reply) => {
+    if (!enforceRouteRoleAuth(req, reply, "summary")) return;
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+
+    const tenant: TenantTriple = {
+      tenant_id: String(auth.tenant_id),
+      project_id: String(auth.project_id),
+      group_id: String(auth.group_id),
+    };
+
+    const allowedFieldIds = Array.isArray(auth.allowed_field_ids)
+      ? Array.from(new Set(auth.allowed_field_ids.map((x) => String(x ?? "").trim()).filter(Boolean)))
+      : [];
+
+    const states = await projectOperationStateV1(pool, tenant);
+    const scopedStates = states.filter((state) => allowedFieldIds.includes(String(state.field_id ?? "").trim()));
+    const fieldIds = Array.from(new Set(scopedStates.map((state) => String(state.field_id ?? "").trim()).filter(Boolean)));
+    const fieldNameById = await queryFieldNameMap(pool, tenant, fieldIds);
+
+    const operations = scopedStates
+      .map((state): CustomerOperationListItem | null => {
+        const fieldId = String(state.field_id ?? "").trim() || null;
+        const operationId = String(state.operation_id ?? state.operation_plan_id ?? "").trim();
+        if (!operationId) return null;
+        const operationPlanId = String(state.operation_plan_id ?? "").trim() || null;
+        const timelineTs = Math.max(...(state.timeline ?? []).map((item) => Number(item.ts ?? 0)).filter((n) => Number.isFinite(n) && n > 0), 0);
+        const updatedTs = Number((state as any).updated_at ?? 0);
+        const executedTs = Number((state as any).execution_finished_at ?? (state as any).execution_started_at ?? 0);
+        const operationType = String(state.action_type ?? "").trim() || null;
+        const finalStatus = String(state.final_status ?? "").trim() || null;
+        const acceptanceStatus = String(state.acceptance?.status ?? "").trim() || null;
+        const evidenceStatus = String((state as any).evidence?.status ?? "").trim() || null;
+        const evidenceSummaryStatus = String((state as any).evidence_summary?.status ?? "").trim() || null;
+        return {
+          operation_id: operationId,
+          operation_plan_id: operationPlanId,
+          field_id: fieldId,
+          field_name: fieldId ? (fieldNameById.get(fieldId) ?? null) : null,
+          title: operationType ? `${operationType}作业` : null,
+          customer_title: operationType ? `${operationType}作业` : null,
+          operation_type: operationType,
+          final_status: finalStatus,
+          acceptance_status: acceptanceStatus,
+          evidence_status: evidenceStatus,
+          evidence_summary_status: evidenceSummaryStatus,
+          updated_at: updatedTs > 0 ? new Date(updatedTs).toISOString() : (timelineTs > 0 ? new Date(timelineTs).toISOString() : null),
+          executed_at: executedTs > 0 ? new Date(executedTs).toISOString() : null,
+        };
+      })
+      .filter((item): item is CustomerOperationListItem => item != null)
+      .sort((a, b) => Date.parse(b.updated_at ?? "") - Date.parse(a.updated_at ?? ""));
+
+    return reply.send({
+      ok: true,
+      source: "customer_operations_api",
+      dataScope: "OFFICIAL_CUSTOMER_API",
+      generated_at: new Date().toISOString(),
+      operations,
+    });
+  });
 
   app.get("/api/v1/customer/fields", async (req, reply) => {
     if (!enforceRouteRoleAuth(req, reply, "summary")) return;
