@@ -159,6 +159,9 @@ export default function OperationReportPage(): React.ReactElement {
   const embeddedRoi = reportAny.roi_ledger ?? reportAny.roi ?? reportAny.value_summary;
   const embeddedMemory = reportAny.field_memory ?? reportAny.field_memory_summary ?? reportAny.memory;
   const evidenceMetadata = evidencePackSafeMetadata(report);
+  const displayEvidenceSummary = evidenceMetadata.downloadUrl && vm.evidenceSummary.detail === "当前展示客户可读证据包摘要，不提供文件下载入口。"
+    ? { ...vm.evidenceSummary, detail: "当前展示客户可读证据包摘要。" }
+    : vm.evidenceSummary;
 
   return (
     <div className="customerReportCanvas">
@@ -180,7 +183,7 @@ export default function OperationReportPage(): React.ReactElement {
         </header>
 
         <section className="customerCard operationTimelineStrip">
-          {vm.timeline.map((item) => <span key={item.key} className="customerPill">{shortOperationLabel(item.label)}：{item.key === "EVIDENCE" ? vm.evidenceSummary.statusText : customerTimelineStatusLabel(item.status)}</span>)}
+          {vm.timeline.map((item) => <span key={item.key} className="customerPill">{shortOperationLabel(item.label)}：{item.key === "EVIDENCE" ? displayEvidenceSummary.statusText : customerTimelineStatusLabel(item.status)}</span>)}
         </section>
 
         <section className="operationClosedLoopGrid">
@@ -192,7 +195,7 @@ export default function OperationReportPage(): React.ReactElement {
             const isMemorySection = section.key === "MEMORY";
             const displayItems = section.items.filter((item) => !shouldHideMainViewText(`${item.label} ${item.value}`));
             const title = shortOperationLabel(section.title);
-            const statusText = isEvidenceSection ? vm.evidenceSummary.statusText : (section.statusText || customerTimelineStatusLabel(section.status));
+            const statusText = isEvidenceSection ? displayEvidenceSummary.statusText : (section.statusText || customerTimelineStatusLabel(section.status));
             const detailText = section.emptyState?.description || (displayItems[0] ? `${displayItems[0].label}：${displayItems[0].value}` : "暂无摘要");
             return (
               <article
@@ -215,7 +218,7 @@ export default function OperationReportPage(): React.ReactElement {
                 </div>
                 {isEvidenceSection ? (
                   <>
-                    <EvidencePackSummaryPanel vm={vm.evidenceSummary} expanded={isExpanded} />
+                    <EvidencePackSummaryPanel vm={displayEvidenceSummary} expanded={isExpanded} />
                     {isExpanded ? <EvidencePackMetadataBlock metadata={evidenceMetadata} /> : null}
                   </>
                 ) : isMemorySection && isExpanded ? (
