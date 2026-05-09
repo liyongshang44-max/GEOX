@@ -2,6 +2,8 @@ import type { Pool } from "pg";
 
 export type EffectVerdict = "SUCCESS" | "PARTIAL" | "FAILED" | "NO_DATA";
 export type RulePerformanceItem = {
+  weather_interference_detected?: boolean | null;
+  learning_excluded_reason?: string | null;
   rule_id: string;
   crop_code: string;
   crop_stage: string;
@@ -38,7 +40,11 @@ export function computeEffect(before: any, after: any) {
 export function evaluateEffectVerdict(input: {
   expectedEffect?: { type: string; value: number } | null;
   actualEffect?: { metric?: string; delta?: number; type?: string; value?: number } | null;
+  weatherInterferenceDetected?: boolean | null;
+  learningExcludedReason?: string | null;
 }): EffectVerdict {
+  if (input.weatherInterferenceDetected) return "NO_DATA";
+
   const expectedRaw = Number(input.expectedEffect?.value ?? NaN);
   const expectedLowerBound = Number.isFinite(expectedRaw) ? expectedRaw : 0;
   const actual = Number.isFinite(Number(input.actualEffect?.delta))
@@ -91,6 +97,8 @@ export async function recordRulePerformance(input: {
   cropCode: string;
   cropStage: string;
   verdict: EffectVerdict;
+  weatherInterferenceDetected?: boolean | null;
+  learningExcludedReason?: string | null;
 }): Promise<void> {
   const ruleId = String(input.ruleId ?? "").trim();
   const cropCode = String(input.cropCode ?? "").trim();
@@ -102,7 +110,7 @@ export async function recordRulePerformance(input: {
   const upsert = await input.pool.query(
     `INSERT INTO agronomy_rule_performance (
        rule_id, crop_code, crop_stage,
-       total_count, success_count, partial_count, failed_count, no_data_count, score, last_updated_at
+       total_count, success_count, partial_count, failed_count, no_data_count, score, weather_interference_detected, learning_excluded_reason, last_updated_at
      )
      VALUES (
        $1, $2, $3,
@@ -112,6 +120,8 @@ export async function recordRulePerformance(input: {
        CASE WHEN $4 = 'FAILED' THEN 1 ELSE 0 END,
        CASE WHEN $4 = 'NO_DATA' THEN 1 ELSE 0 END,
        0,
+       $5,
+       $6,
        NOW()
      )
      ON CONFLICT (rule_id, crop_code, crop_stage) DO UPDATE SET
@@ -120,9 +130,11 @@ export async function recordRulePerformance(input: {
        partial_count = agronomy_rule_performance.partial_count + CASE WHEN $4 = 'PARTIAL' THEN 1 ELSE 0 END,
        failed_count = agronomy_rule_performance.failed_count + CASE WHEN $4 = 'FAILED' THEN 1 ELSE 0 END,
        no_data_count = agronomy_rule_performance.no_data_count + CASE WHEN $4 = 'NO_DATA' THEN 1 ELSE 0 END,
+       weather_interference_detected = COALESCE($5, agronomy_rule_performance.weather_interference_detected),
+       learning_excluded_reason = COALESCE($6, agronomy_rule_performance.learning_excluded_reason),
        last_updated_at = NOW()
      RETURNING total_count, success_count, partial_count`,
-    [ruleId, cropCode, cropStage, input.verdict]
+    [ruleId, cropCode, cropStage, input.verdict, input.weatherInterferenceDetected ?? null, input.learningExcludedReason ?? null]
   );
   const row = upsert.rows?.[0];
   const total = Number(row?.total_count ?? 0);
@@ -149,11 +161,16 @@ export async function ensureRulePerformanceTable(pool: Pool): Promise<void> {
       failed_count INT NOT NULL DEFAULT 0,
       no_data_count INT NOT NULL DEFAULT 0,
       score NUMERIC NOT NULL DEFAULT 0,
+      weather_interference_detected BOOLEAN,
+      learning_excluded_reason TEXT,
       last_updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
       PRIMARY KEY (rule_id, crop_code, crop_stage)
     )
   `);
+  await pool.query(`ALTER TABLE agronomy_rule_performance ADD COLUMN IF NOT EXISTS weather_interference_detected BOOLEAN`);
+  await pool.query(`ALTER TABLE agronomy_rule_performance ADD COLUMN IF NOT EXISTS learning_excluded_reason TEXT`);
 }
+
 
 function toRulePerformanceItem(row: any): RulePerformanceItem {
   return {
@@ -165,6 +182,8 @@ function toRulePerformanceItem(row: any): RulePerformanceItem {
     partial_count: Number(row?.partial_count ?? 0),
     failed_count: Number(row?.failed_count ?? 0),
     no_data_count: Number(row?.no_data_count ?? 0),
+    weather_interference_detected: row?.weather_interference_detected == null ? null : Boolean(row.weather_interference_detected),
+    learning_excluded_reason: row?.learning_excluded_reason == null ? null : String(row.learning_excluded_reason),
     last_updated_at: String(row?.last_updated_at ?? ""),
   };
 }
@@ -184,7 +203,7 @@ export async function listRulePerformance(input: {
     where.push(`rule_id = $${params.length}`);
   }
   params.push(limit);
-  const sql = `SELECT rule_id, crop_code, crop_stage, total_count, success_count, partial_count, failed_count, no_data_count, last_updated_at
+  const sql = `SELECT rule_id, crop_code, crop_stage, total_count, success_count, partial_count, failed_count, no_data_count, weather_interference_detected, learning_excluded_reason, last_updated_at
                FROM agronomy_rule_performance
                ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
                ORDER BY last_updated_at DESC, rule_id ASC, crop_code ASC, crop_stage ASC

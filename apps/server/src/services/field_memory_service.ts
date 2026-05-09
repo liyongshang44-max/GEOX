@@ -23,6 +23,8 @@ type RecordMemoryInput = {
   acceptance_id?: string;
   roi_id?: string;
   skill_trace_ref?: string;
+  weather_interference_detected?: boolean;
+  learning_excluded_reason?: string;
 };
 
 export function normalizeMemoryType(type: string): FieldMemoryTypeV1 {
@@ -67,12 +69,12 @@ export async function recordMemoryV1(db: DbConn, tenant_id: string, input: Recor
       memory_id, tenant_id, project_id, group_id, field_id, season_id, crop_id, memory_type, metric_key, metric_value, metric_unit,
       before_value, after_value, baseline_value, delta_value, target_range, confidence, source_type, source_id,
       operation_id, recommendation_id, prescription_id, task_id, acceptance_id, roi_id, skill_id, skill_trace_ref,
-      evidence_refs, summary_text, occurred_at
+      evidence_refs, summary_text, weather_interference_detected, learning_excluded_reason, occurred_at
     ) VALUES (
       $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,
       $12,$13,$14,$15,$16::jsonb,$17,$18,$19,
       $20,$21,$22,$23,$24,$25,$26,$27,
-      $28::jsonb,$29,$30
+      $28::jsonb,$29,$30,$31,$32
     )`,
     [
       memory_id, tenant_id, input.project_id ?? "projectA", input.group_id ?? "groupA", input.field_id, input.season_id ?? null, null,
@@ -80,7 +82,8 @@ export async function recordMemoryV1(db: DbConn, tenant_id: string, input: Recor
       JSON.stringify((metrics as any).target_range ?? null), confidence, memory_type === "DEVICE_RELIABILITY_MEMORY" ? "skill_run" : "acceptance",
       input.acceptance_id ?? input.operation_id ?? memory_id, input.operation_id ?? null, input.recommendation_id ?? null,
       input.prescription_id ?? null, input.task_id ?? null, input.acceptance_id ?? null, input.roi_id ?? null, skill_id,
-      skill_trace_ref, JSON.stringify(input.evidence_refs ?? []), summary_text, occurred_at,
+      skill_trace_ref, JSON.stringify(input.evidence_refs ?? []), summary_text,
+      input.weather_interference_detected ?? null, input.learning_excluded_reason ?? null, occurred_at,
     ],
   );
 
@@ -91,6 +94,9 @@ export async function recordMemoryV1(db: DbConn, tenant_id: string, input: Recor
     source_id: input.acceptance_id ?? input.operation_id ?? memory_id,
     operation_id: input.operation_id, recommendation_id: input.recommendation_id, prescription_id: input.prescription_id,
     task_id: input.task_id, acceptance_id: input.acceptance_id, roi_id: input.roi_id,
-    skill_id, skill_trace_ref, evidence_refs: input.evidence_refs ?? [], summary_text, occurred_at, created_at: occurred_at,
+    skill_id, skill_trace_ref, evidence_refs: input.evidence_refs ?? [], summary_text,
+    weather_interference_detected: input.weather_interference_detected,
+    learning_excluded_reason: input.learning_excluded_reason,
+    occurred_at, created_at: occurred_at,
   };
 }
