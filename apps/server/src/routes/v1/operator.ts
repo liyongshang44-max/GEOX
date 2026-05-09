@@ -252,6 +252,47 @@ function jsonObjectOrNull(value: unknown): Record<string, unknown> | null {
   return null;
 }
 
+function parseObjectLike(value: unknown, scalarKey: string): Record<string, unknown> | null {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value === "object" && !Array.isArray(value)) return sanitizeStructured(value) as Record<string, unknown>;
+  if (typeof value === "string") {
+    const normalized = safeText(value);
+    if (!normalized) return null;
+    try {
+      const parsed = JSON.parse(normalized);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return sanitizeStructured(parsed) as Record<string, unknown>;
+    } catch {
+      // not JSON object, fallback to scalar wrapper
+    }
+    return { [scalarKey]: normalized };
+  }
+  const normalizedScalar = safeText(value);
+  if (!normalizedScalar) return null;
+  return { [scalarKey]: normalizedScalar };
+}
+
+function normalizeRefList(value: unknown): string[] {
+  if (value === null || value === undefined || value === "") return [];
+  if (Array.isArray(value)) return value.map((item) => normalizeRef(item)).filter((x): x is string => Boolean(x));
+  const normalized = normalizeRef(value);
+  return normalized ? [normalized] : [];
+}
+
+function sanitizeStructured(value: unknown): unknown {
+  if (value === null || value === undefined) return value;
+  if (typeof value === "string") return safeText(value);
+  if (Array.isArray(value)) return value.map((item) => sanitizeStructured(item));
+  if (typeof value === "object") {
+    const output: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      if (/token|secret|access[_-]?key|credential_payload|password|private\s*key/i.test(k)) continue;
+      output[k] = sanitizeStructured(v);
+    }
+    return output;
+  }
+  return value;
+}
+
 function toIsoAny(value: unknown): string | null {
   const fromMs = toIsoFromMs(value);
   if (fromMs) return fromMs;
@@ -281,12 +322,12 @@ async function buildFieldMemory(pool: Pool, query: { field_id?: string; operatio
     field_id: safeText(row.field_id),
     operation_id: safeText(row.operation_id),
     memory_type: safeText(row.memory_type),
-    before: jsonObjectOrNull(row.before_value),
-    after: jsonObjectOrNull(row.after_value ?? row.metric_value),
-    delta: jsonObjectOrNull(row.delta_value),
-    confidence: jsonObjectOrNull(row.confidence),
-    skill_refs: [safeText(row.skill_id), safeText(row.skill_trace_ref)].filter(Boolean),
-    evidence_refs: Array.isArray(row.evidence_refs) ? row.evidence_refs.map((x) => safeText(x)).filter(Boolean) : [],
+    before: parseObjectLike(row.before_value, "value"),
+    after: parseObjectLike(row.after_value ?? row.metric_value, "value"),
+    delta: parseObjectLike(row.delta_value, "value"),
+    confidence: parseObjectLike(row.confidence, "level"),
+    skill_refs: [...new Set([...normalizeRefList(row.skill_refs), ...normalizeRefList([row.skill_id, row.skill_trace_ref])])],
+    evidence_refs: normalizeRefList(row.evidence_refs),
     recommendation_id: safeText(row.recommendation_id),
     task_id: safeText(row.task_id),
     acceptance_id: safeText(row.acceptance_id),
