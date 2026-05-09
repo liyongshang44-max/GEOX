@@ -39,6 +39,7 @@
     "test:p1:selfcheck": "node scripts/p1_skill_loop_minimal_selfcheck.mjs",
     "test:p1:openapi-selfcheck": "node scripts/p1_3_openapi_alignment_selfcheck.mjs",
     "acceptance:release-audit:evidence-bundle:v1": "node ../../scripts/agronomy_acceptance/ACCEPTANCE_RELEASE_AUDIT_EVIDENCE_BUNDLE_V1.cjs",
-    "smoke:operator-facade-readonly": "node scripts/operator_facade_readonly_smoke.mjs"
+    "smoke:operator-facade-readonly": "node scripts/operator_facade_readonly_smoke.mjs",
+    "smoke:operator-b-readonly": "node scripts/operator_b_readonly_facade_smoke.mjs"
   }
 }

@@ -159,19 +159,32 @@ function normalizeReportFallback(payload: unknown): OperatorDispatchItem[] {
   });
 }
 
-async function fetchOptional(path: string): Promise<unknown | null> {
+type OptionalApiResult = { ok: boolean; status: number; data: unknown | null };
+
+async function fetchOptional(path: string): Promise<OptionalApiResult> {
   try {
-    const result = await apiRequestWithPolicy<unknown>(path, undefined, { allowedStatuses: [403, 404, 405, 422], silent: true, timeoutMs: 10000 });
-    return result.ok ? result.data : null;
+    const result = await apiRequestWithPolicy<unknown>(path, undefined, { allowedStatuses: [403, 404, 405, 422, 501], silent: true, timeoutMs: 10000 });
+    return { ok: Boolean(result.ok), status: Number(result.status ?? 0), data: result.data ?? null };
   } catch {
-    return null;
+    return { ok: false, status: 0, data: null };
   }
 }
 
 export async function fetchOperatorDispatch(): Promise<OperatorDispatchResponse> {
   const official = await fetchOptional(withQuery("/api/v1/operator/dispatch"));
-  const officialItems = normalizeOfficial(official);
-  if (officialItems.length > 0) {
+  const officialItems = normalizeOfficial(official.data);
+  if (official.ok || (official.data && typeof official.data === "object" && ((official.data as AnyRecord).dataScope === "OFFICIAL_OPERATOR_API" || text((official.data as AnyRecord).source).includes("operator_dispatch")))) {
+    return {
+      source: "operator_dispatch_api",
+      dataScope: "OFFICIAL_OPERATOR_API",
+      generated_at: new Date().toISOString(),
+      items: officialItems,
+      writeReady: false,
+      message: "派发写操作需等待后端权限、审计和错误码 ready 后开放。",
+    };
+  }
+
+  if (![404, 405, 501].includes(official.status)) {
     return {
       source: "operator_dispatch_api",
       dataScope: "OFFICIAL_OPERATOR_API",
@@ -188,8 +201,8 @@ export async function fetchOperatorDispatch(): Promise<OperatorDispatchResponse>
   ]);
 
   const fallbackItems = [
-    ...normalizeActionsFallback(actions),
-    ...normalizeReportFallback(aggregate),
+    ...normalizeActionsFallback(actions.data),
+    ...normalizeReportFallback(aggregate.data),
   ].filter((item, index, all) => all.findIndex((x) => x.taskId === item.taskId && x.operationId === item.operationId) === index);
 
   if (fallbackItems.length > 0) {
