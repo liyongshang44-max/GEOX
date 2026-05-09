@@ -478,6 +478,67 @@ async function buildOperatorSkillPerformance(pool: Pool, tenant: TenantTriple, q
   });
 }
 
+async function buildUnifiedLearningClosureByOperation(pool: Pool, tenant: TenantTriple, operationId: string): Promise<AnyRecord> {
+  const operation_id = text(operationId, "");
+  const [skillTraces, skillPerfRows] = await Promise.all([
+    buildOperatorSkillTracesByOperation(pool, tenant, operation_id, 200),
+    buildOperatorSkillPerformance(pool, tenant, { operation_id, limit: 200 }),
+  ]);
+  const roiRows = await buildOperatorRoiLedger(pool, tenant, { operation_id, limit: 200 });
+  const memoryRows = await buildOperatorFieldMemory(pool, tenant, { operation_id, limit: 200 });
+  const evidenceRows = await selectTenantRows(pool, "evidence_index_v1", tenant.tenant_id, 500);
+  const acceptanceRows = await selectTenantRows(pool, "acceptance_result_v1", tenant.tenant_id, 200);
+  const acceptance = acceptanceRows.find((x) => text(x.operation_id) === operation_id) ?? null;
+  const evidence = evidenceRows.filter((x) => text(x.operation_id) === operation_id).slice(0, 50).map((x) => ({
+    evidence_id: sanitizeText(x.evidence_id ?? x.id ?? ""),
+    evidence_type: sanitizeText(x.evidence_type ?? x.type ?? "UNKNOWN"),
+    created_at: dateToIso(x.created_at ?? x.occurred_at),
+  }));
+  const weatherExcluded = memoryRows.some((x) => Boolean(x.weather_interference_detected) && /IRRIGATION|WATER/i.test(String(x.memory_type ?? "")));
+  const weakLearningSignals = skillPerfRows.filter((x) => x.learning_excluded_reason || x.acceptance_result === "UNKNOWN" || x.confidence == null);
+  const hasAcceptance = Boolean(acceptance);
+  return {
+    operation_id,
+    operation_evidence: evidence,
+    acceptance_result: acceptance ? sanitizeText(acceptance.result ?? acceptance.status ?? "UNKNOWN") : "UNKNOWN",
+    roi_result: roiRows.map((x) => ({
+      roi_ledger_id: sanitizeText(x.roi_ledger_id ?? x.roi_id ?? ""),
+      delta_value: x.delta_value ?? null,
+      evidence_refs: x.evidence_refs ?? [],
+      acceptance_ref: sanitizeText(x.acceptance_id ?? x.acceptance_ref ?? ""),
+    })),
+    field_memory_delta: memoryRows.map((x) => ({
+      memory_id: sanitizeText(x.memory_id ?? ""),
+      before: x.before ?? null,
+      after: x.after ?? null,
+      delta: x.delta ?? null,
+      confidence: x.confidence ?? null,
+      weather_interference_detected: Boolean(x.weather_interference_detected),
+      learning_excluded_reason: x.learning_excluded_reason ?? null,
+    })),
+    rule_performance: memoryRows.filter((x) => String(x.memory_type ?? "").includes("RULE")).slice(0, 20),
+    skill_performance: skillPerfRows,
+    learning_exclusion_reason: weakLearningSignals.map((x) => x.learning_excluded_reason).filter(Boolean),
+    acceptance_gates: {
+      weather_interference_detected: weatherExcluded,
+      no_evidence_no_formal_learning: memoryRows.some((x) => Array.isArray(x.evidence_refs) && x.evidence_refs.length === 0),
+      unaccepted_no_formal_learning: !hasAcceptance,
+      low_confidence_no_formal_learning: skillPerfRows.some((x) => x.confidence == null),
+    },
+    customer_summary: {
+      learned: skillPerfRows.length > 0
+        ? `系统学到了 ${skillPerfRows.length} 条技能表现记录；${weatherExcluded ? "天气干扰样本已排除。" : "未发现天气干扰排除。"}`
+        : "系统尚未形成可展示的学习记录。",
+      excluded_data: weakLearningSignals.length > 0
+        ? `已排除 ${weakLearningSignals.length} 条记录（无证据/未验收/置信度不足/天气干扰）。`
+        : "当前无被排除学习数据。",
+      no_learning_reason: skillPerfRows.length === 0 ? "暂无满足证据与验收门槛的数据，未写入正式学习记录。" : null,
+      acceptance: hasAcceptance ? `验收结果：${sanitizeText(acceptance?.result ?? acceptance?.status ?? "UNKNOWN")}` : "验收尚未完成。",
+    },
+    skill_traces: skillTraces,
+  };
+}
+
 function authTenant(req: any, reply: any, scopes: any[]): { auth: any; tenant: TenantTriple } | null {
   const auth = requireAoActAnyScopeV0(req, reply, scopes);
   if (!auth) return null;
@@ -575,5 +636,15 @@ export function registerOperatorDiagnosticsV1Routes(app: FastifyInstance, pool: 
         operation_id: text(query.operation_id, ""),
       },
     });
+  });
+
+  app.get("/api/v1/operator/learning-closure", async (req: any, reply) => {
+    const ctx = authTenant(req, reply, ["skill.read", "field_memory.read", "roi_ledger.read", "acceptance.read", "evidence.read", "ao_act.index.read"]);
+    if (!ctx) return;
+    const query = (req.query ?? {}) as QueryInput;
+    const operation_id = text(query.operation_id, "");
+    if (!operation_id) return reply.code(400).send({ ok: false, error: "MISSING_OPERATION_ID" });
+    const view = await buildUnifiedLearningClosureByOperation(pool, ctx.tenant, operation_id);
+    return reply.send({ ok: true, source: "operator_learning_closure_facade", generated_at: new Date().toISOString(), ...view });
   });
 }
