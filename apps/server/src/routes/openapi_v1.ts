@@ -1615,6 +1615,197 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           }
         }
       },
+      "/api/v1/operator/approvals": {
+        get: {
+          tags: ["operations"],
+          summary: "Operator approvals list",
+          responses: {
+            "200": {
+              description: "Operator approvals list payload",
+              content: {
+                "application/json": {
+                  schema: { "$ref": "#/components/schemas/OperatorApprovalsResponseV1" }
+                }
+              }
+            },
+            "401": { description: "Unauthenticated (AUTH_MISSING)" },
+            "403": { description: "Forbidden (FORBIDDEN)" }
+          }
+        }
+      },
+      "/api/v1/operator/approvals/{approvalRequestId}/approve": {
+        post: {
+          tags: ["operations"],
+          summary: "Approve an approval request",
+          parameters: [
+            { name: "approvalRequestId", in: "path", required: true, schema: { type: "string" } }
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    note: { type: "string" }
+                  },
+                  additionalProperties: false
+                }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Operator action response", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "400": { description: "ACTION_NOT_READY or INVALID_STATE" },
+            "403": { description: "FORBIDDEN or SELF_APPROVAL_BLOCKED" },
+            "404": { description: "TARGET_NOT_FOUND" },
+            "500": { description: "AUDIT_WRITE_FAILED or STATE_WRITE_FAILED" }
+          }
+        }
+      },
+      "/api/v1/operator/approvals/{approvalRequestId}/reject": {
+        post: {
+          tags: ["operations"],
+          summary: "Reject an approval request",
+          parameters: [
+            { name: "approvalRequestId", in: "path", required: true, schema: { type: "string" } }
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    note: { type: "string" }
+                  },
+                  additionalProperties: false
+                }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Operator action response", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "400": { description: "ACTION_NOT_READY or INVALID_STATE" },
+            "403": { description: "FORBIDDEN or SELF_APPROVAL_BLOCKED" },
+            "404": { description: "TARGET_NOT_FOUND" },
+            "500": { description: "AUDIT_WRITE_FAILED or STATE_WRITE_FAILED" }
+          }
+        }
+      },
+      "/api/v1/operator/approvals/{approvalRequestId}/return": {
+        post: {
+          tags: ["operations"],
+          summary: "Return an approval request",
+          parameters: [
+            { name: "approvalRequestId", in: "path", required: true, schema: { type: "string" } }
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    note: { type: "string" }
+                  },
+                  additionalProperties: false
+                }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Operator action response", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "400": { description: "ACTION_NOT_READY or INVALID_STATE" },
+            "403": { description: "FORBIDDEN or SELF_APPROVAL_BLOCKED" },
+            "404": { description: "TARGET_NOT_FOUND" },
+            "500": { description: "AUDIT_WRITE_FAILED or STATE_WRITE_FAILED" }
+          }
+        }
+      },
+      "/api/v1/operator/acceptance/worklist": {
+        get: {
+          tags: ["acceptance"],
+          summary: "Operator acceptance worklist",
+          responses: {
+            "200": {
+              description: "Operator acceptance worklist payload",
+              content: {
+                "application/json": {
+                  schema: { "$ref": "#/components/schemas/OperatorAcceptanceWorklistResponseV1" }
+                }
+              }
+            },
+            "401": { description: "Unauthenticated (AUTH_MISSING)" },
+            "403": { description: "Forbidden (FORBIDDEN)" }
+          }
+        }
+      },
+      "/api/v1/operator/acceptance/{operationId}/evaluate": {
+        post: {
+          tags: ["acceptance"],
+          summary: "Evaluate acceptance result for operation",
+          parameters: [
+            { name: "operationId", in: "path", required: true, schema: { type: "string" } }
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    judge_result_ids: { type: "array", items: { type: "string" } },
+                    execution_judge_id: { type: "string" },
+                    note: { type: "string" }
+                  },
+                  additionalProperties: false
+                }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Operator action response", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "400": { description: "ACTION_NOT_READY or INVALID_STATE" },
+            "403": { description: "FORBIDDEN" },
+            "404": { description: "TARGET_NOT_FOUND" },
+            "422": { description: "EVIDENCE_INSUFFICIENT" },
+            "500": { description: "AUDIT_WRITE_FAILED or STATE_WRITE_FAILED" }
+          }
+        }
+      },
+      "/api/v1/operator/acceptance/{operationId}/request-review": {
+        post: {
+          tags: ["acceptance"],
+          summary: "Request acceptance review for operation",
+          parameters: [
+            { name: "operationId", in: "path", required: true, schema: { type: "string" } }
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    reason: { type: "string" },
+                    note: { type: "string" }
+                  },
+                  additionalProperties: false
+                }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Operator action response", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "400": { description: "ACTION_NOT_READY or INVALID_STATE" },
+            "403": { description: "FORBIDDEN" },
+            "404": { description: "TARGET_NOT_FOUND" },
+            "422": { description: "EVIDENCE_INSUFFICIENT" },
+            "500": { description: "AUDIT_WRITE_FAILED or STATE_WRITE_FAILED" }
+          }
+        }
+      },
       "/api/v1/evidence/export-jobs": {
         get: {
           tags: ["exports"],
