@@ -169,8 +169,29 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
   const actionItems: CustomerActionItemVm[] = [
     { id: "risk", source: "RECOMMENDATION", title: "集中处理高风险地块", riskLabel: "高风险", riskTone: "danger", fieldId: String((aggregate.top_risk_fields ?? [])[0]?.field_id ?? ""), primaryAction: { label: "查看地块", href: (aggregate.top_risk_fields ?? [])[0]?.field_id ? `/customer/fields/${encodeURIComponent(String((aggregate.top_risk_fields ?? [])[0]?.field_id) )}` : undefined, disabledReason: (aggregate.top_risk_fields ?? [])[0]?.field_id ? undefined : "暂无可跳转地块" }, summary: "按风险等级推进复核，避免问题扩大。" },
     // customer-boundary-allow: 兼容旧 recent_operations.operation_plan_id 字段用于客户跳转
+    // customer-boundary-allow: accept action 兼容旧 operation_plan_id，保持历史数据可跳转
     // no-raw-enum-customer-allow: internal source code, rendered title/summary are customer-facing
-    { id: "accept", source: "PENDING_ACCEPTANCE", title: "完成待验收作业并回写结果", riskLabel: pendingAcceptance > 0 ? "待验收" : "已完成", riskTone: pendingAcceptance > 0 ? "warning" : "neutral", operationId: String((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id ?? ""), primaryAction: { label: "查看作业", href: ((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id) ? `/customer/operations/${encodeURIComponent(String((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id))}` : undefined, disabledReason: ((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id) ? undefined : "暂无可跳转作业" }, summary: "确保作业闭环，提升验收及时率。" },
+    {
+      id: "accept",
+      // no-raw-enum-customer-allow: internal source enum for action routing, not customer-facing copy
+      source: "PENDING_ACCEPTANCE",
+      title: "完成待验收作业并回写结果",
+      riskLabel: pendingAcceptance > 0 ? "待验收" : "已完成",
+      riskTone: pendingAcceptance > 0 ? "warning" : "neutral",
+      // customer-boundary-allow: 兼容旧 recent_operations.operation_plan_id，保障历史作业跳转
+      operationId: String((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id ?? ""),
+      primaryAction: {
+        label: "查看作业",
+        // customer-boundary-allow: 跳转链接兼容旧 recent_operations.operation_plan_id
+        href: ((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id)
+          ? `/customer/operations/${encodeURIComponent(String((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id))}`
+          : undefined,
+        disabledReason: ((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id)
+          ? undefined
+          : "暂无可跳转作业"
+      },
+      summary: "确保作业闭环，提升验收及时率。"
+    },
     { id: "device", source: "DEVICE_OFFLINE", title: "排查离线设备并恢复数据", riskLabel: offlineDevices > 0 ? "需复核" : "稳定", riskTone: offlineDevices > 0 ? "warning" : "neutral", primaryAction: { label: "P0 不开放设备中心", disabledReason: "P0 不开放设备中心" }, summary: "优先恢复离线地块数据采集能力。" },
     { id: "general", source: "GENERAL", title: "处理待办事项", riskLabel: pendingActions > 0 ? "待处理" : "已清空", riskTone: pendingActions > 0 ? "warning" : "neutral", primaryAction: { label: "当前页查看", disabledReason: "请在当前看板处理待办事项" }, summary: "优先关闭待处理事项，保障关键风险先处置。" },
   ];

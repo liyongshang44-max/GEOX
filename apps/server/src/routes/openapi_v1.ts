@@ -3917,6 +3917,31 @@ function applyP13OpenApiAlignment(spec: any) {
         }
       }
     },
+
+    "/api/v1/customer/fields": {
+      get: {
+        tags: ["dashboard"],
+        summary: "List customer-scoped fields",
+        security: [{ bearerAuth: [] }],
+        responses: { "200": { description: "Customer fields list" } }
+      }
+    },
+    "/api/v1/customer/operations": {
+      get: {
+        tags: ["dashboard"],
+        summary: "List customer-scoped operations",
+        security: [{ bearerAuth: [] }],
+        responses: { "200": { description: "Customer operations list" } }
+      }
+    },
+    "/api/v1/customer/reports": {
+      get: {
+        tags: ["dashboard"],
+        summary: "List customer report entries",
+        security: [{ bearerAuth: [] }],
+        responses: { "200": { description: "Customer reports list" } }
+      }
+    },
     "/api/v1/devices": { post: { tags: ["devices"], summary: "Register or upsert device", requestBody: { required: true, content: { "application/json": { schema: ref("DeviceUpsertRequest") } } }, responses: { "200": jsonResponse(ref("DeviceUpsertResponse"), "Device upsert result") } }, get: { tags: ["devices"], summary: "List devices", responses: { "200": jsonResponse(ref("DevicesListResponse"), "Devices list") } } },
     "/api/v1/devices/{device_id}": { get: { tags: ["devices"], summary: "Read device detail", parameters: [pathParam("device_id")], responses: { "200": jsonResponse(ref("DeviceDetailResponse"), "Device detail") } }, post: { tags: ["devices"], summary: "Update device metadata", parameters: [pathParam("device_id")], requestBody: { required: true, content: { "application/json": { schema: ref("DeviceUpsertRequest") } } }, responses: { "200": jsonResponse(ref("DeviceUpsertResponse"), "Device updated") } } },
     "/api/v1/devices/{device_id}/capabilities": { get: { tags: ["devices"], summary: "Read device capabilities", parameters: [pathParam("device_id")], responses: { "200": jsonResponse(ref("DeviceCapabilitiesResponse"), "Device capabilities") } }, put: { tags: ["devices"], summary: "Update device capabilities", parameters: [pathParam("device_id")], requestBody: { required: true, content: { "application/json": { schema: ref("DeviceCapabilitiesRequest") } } }, responses: { "200": jsonResponse(ref("DeviceCapabilitiesResponse"), "Device capabilities updated") } } },

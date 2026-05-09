@@ -19,9 +19,9 @@
 | API 路径 | 当前状态 | 阻塞阶段 | fallback 策略 | fallback 是否可标记 Done | 备注 |
 |---|---|---|---|---|---|
 | `GET /api/v1/customer/cockpit/overview` | 需新增 | P1-A / cockpit 正式聚合 | 使用 `GET /api/v1/reports/customer-dashboard/aggregate` 做 Preview 展示 | 否，Preview 不能替代正式 cockpit API Done | 目标 cockpit API，不得误写为当前已有 |
-| `GET /api/v1/customer/fields` | adapter 可包 | P1-A-01 / P1-A-04 | 临时 `/customer/fields/index` 或正式空态 | 否，正式路由和 adapter 未落地前不能 Done | 用于正式 `/customer/fields` |
-| `GET /api/v1/customer/operations` | adapter 可包 | P1-A-02 / P1-A-04 | 临时 `/customer/operations/index` 或正式空态 | 否，正式路由和 adapter 未落地前不能 Done | 用于正式 `/customer/operations` |
-| `GET /api/v1/customer/reports` | 需新增 | P1-A-03 / P1-A-04 | 报告中心显示正式空态 | 否 | 用于 `/customer/reports` 报告中心 |
+| `GET /api/v1/customer/fields` | 已存在（P2-A customer facade） | P1-A-01 / P1-A-04 | 临时 `/customer/fields/index` 或正式空态 | 是（只读 facade 范围内） | 用于正式 `/customer/fields` |
+| `GET /api/v1/customer/operations` | 已存在（P2-A customer facade） | P1-A-02 / P1-A-04 | 临时 `/customer/operations/index` 或正式空态 | 是（只读 facade 范围内） | 用于正式 `/customer/operations` |
+| `GET /api/v1/customer/reports` | 已存在（P2-A customer facade） | P1-A-03 / P1-A-04 | 报告中心显示正式空态 | 是（只读 facade 范围内） | 用于 `/customer/reports` 报告中心 |
 | `GET /api/v1/customer/roi-ledger?field_id=&operation_id=` | 未接入 | P1-A-07 / P1-C-02 | 显示“暂无可量化价值记录” | 否，除非任务目标仅为只读入口空态 | 不得伪造节水、节人工、收益金额 |
 | `GET /api/v1/customer/fields/:fieldId/memory` | 未接入 | P1-A-08 / P1-C-03 | 显示“暂无可展示的田块记忆” | 否，除非任务目标仅为空态收口 | 不得用 operation count / device count / ROI count 推导记忆 |
 
@@ -51,9 +51,9 @@
 | `GET /api/v1/evidence/export-jobs` | 已存在，只读 facade | P1-B-06 | 作为 operator evidence 兼容只读入口 | 是（只读 facade 范围内） | export-jobs 兼容只读门面；无数据返回 200+items:[]；operator evidence export 写操作未 ready |
 | `GET /api/v1/operator/devices-alerts?limit=&field_id=&device_id=&online_status=` | 已存在，只读 facade | P1-C-01 | 使用正式 API，不再依赖 fallback | 是（只读 facade 范围内） | 支持 limit(默认 100，最大 300) + in-memory 过滤；ACK/close 写操作未 ready；revoke 写操作未 ready；不展示 device credential secret payload |
 | `GET /api/v1/operator/field-memory` | 已存在，只读 facade | P1-C-03 | 使用正式 API，不再依赖 fallback | 是（只读 facade 范围内） | 需要认证；200(已认证且有读权限)/401(未认证 AUTH_MISSING)/403(已认证但无 field_memory.read 或 ao_act.index.read) 均为合法口径；acceptance evaluate 写操作未 ready |
-| `GET /api/v1/operator/roi-ledger?field_id=&operation_id=` | 已存在，只读 facade | P1-C-02 | 使用正式 API，不再依赖 fallback | 是（只读 facade 范围内） | evidence_ref 已规范化；无证据不得 MEASURED；approval 写操作未 ready |
+| `GET /api/v1/operator/roi-ledger` | 已存在，只读 facade | P1-C-02 | 使用正式 API，不再依赖 fallback | 是（只读 facade 范围内） | evidence_ref 已规范化；无证据不得 MEASURED；approval 写操作未 ready |
 
-写操作未 ready 统一口径：operator approval 写操作未 ready；operator acceptance evaluate 写操作未 ready；operator evidence export 写操作未 ready；alert ACK/close 写操作未 ready；device revoke 写操作未 ready。
+写操作未 ready 统一口径：operator approval 写操作未 ready；operator dispatch/retry 写操作未 ready；operator acceptance evaluate 写操作未 ready；operator evidence export 写操作未 ready；alert ACK/close 写操作未 ready；device revoke 写操作未 ready。
 
 ## 6. 推荐 API 防误用规则
 
@@ -91,6 +91,7 @@ POST /api/v1/decision/recommendations/generate
 即使后端存在相邻数据，也不得在 P1-A0 标记为当前已有：
 
 ```text
+（注：已在第 5 节明确标注“已存在，只读 facade”的 operator API，不属于本节禁止误判范围。）
 GET /api/v1/customer/cockpit/overview
 GET /api/v1/customer/fields
 GET /api/v1/customer/operations
@@ -98,13 +99,7 @@ GET /api/v1/customer/reports
 GET /api/v1/customer/roi-ledger?field_id=&operation_id=
 GET /api/v1/customer/fields/:fieldId/memory
 GET /api/v1/operations/:operationId/evidence-pack-summary
-GET /api/v1/operator/workbench
 GET /api/v1/operator/approvals
-GET /api/v1/operator/dispatch
-GET /api/v1/operator/acceptance
-GET /api/v1/operator/evidence
-GET /api/v1/evidence/export-jobs
-GET /api/v1/operator/devices-alerts
 推荐生成 API
 证据包下载 API
 ```
