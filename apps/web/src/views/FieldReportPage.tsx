@@ -4,6 +4,7 @@ import { fetchFieldReport, type FieldReportDetailV1 } from "../api/customerRepor
 import ErrorState from "../components/common/ErrorState";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import CustomerEmptyState from "../components/customer/CustomerEmptyState";
+import FieldGisMap from "../components/FieldGisMap";
 import FieldMemoryPanel from "../components/customer/FieldMemoryPanel";
 import RoiLedgerDrawer from "../components/customer/RoiLedgerDrawer";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
@@ -138,9 +139,11 @@ export default function FieldReportPage(): React.ReactElement {
             <h3 className="customerCardTitle">田块记忆</h3>
             <FieldMemoryPanel fieldId={vm.field.fieldId} embeddedMemory={embeddedMemory} compact />
           </article>
-          <article className="customerCard mapPlaceholderCard" aria-disabled="true">
+          <article className="customerCard mapPlaceholderCard">
             <h3 className="customerCardTitle">地块范围</h3>
-            {hasGeometry ? <div className="muted">已接入地块范围数据，当前以列表方式展示。</div> : <CustomerEmptyState vm={mapEmptyState} />}
+            {hasGeometry
+              ? <FieldGisMap polygonGeoJson={geometry} heatGeoJson={null} markers={[]} trajectorySegments={[]} acceptancePoints={[]} />
+              : <CustomerEmptyState vm={mapEmptyState} />}
           </article>
         </section>
       </div>

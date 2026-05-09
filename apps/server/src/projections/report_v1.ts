@@ -98,11 +98,14 @@ export type OperationReportV1 = {
     receipt_id: string | null;
   };
   as_executed: {
+    operation_id: string;
     execution_mode: "DEVICE" | "HUMAN";
     started_at: string | null;
     finished_at: string | null;
     actual_params: Record<string, unknown>;
     receipt_id: string | null;
+    device_id: string | null;
+    operator_id: string | null;
     deviation_summary: string | null;
   };
   execution: {
@@ -180,8 +183,10 @@ export type OperationReportV1 = {
     low_confidence_items: RoiLedgerSummary[];
   };
   as_applied: {
+    operation_id: string;
     coverage_status: "AVAILABLE" | "MISSING" | "NOT_APPLICABLE";
     coverage_geojson: Record<string, unknown> | null;
+    planned_geojson: Record<string, unknown> | null;
     applied_amount_summary: string | null;
     planned_vs_actual_deviation: string | null;
     evidence_ref: string | null;
@@ -586,19 +591,42 @@ export function projectOperationReportV1(input: {
   };
 
   const asExecuted = {
+    operation_id: input.operation_state.operation_id,
     execution_mode: normalizeExecutionMode((input.operation_state as any)?.execution_mode ?? (input.operation_state as any)?.executor_type),
     started_at: toText(input.receipt?.execution_started_at ?? (input.operation_state as any)?.execution_started_at),
     finished_at: toText(input.receipt?.execution_finished_at ?? (input.operation_state as any)?.execution_finished_at),
     actual_params: pickActualParams(input.operation_state as any, input.receipt as any),
     receipt_id: toText(input.operation_state.receipt_id),
+    device_id: toText(
+      input.operation_state.device_id
+      ?? (input.receipt as any)?.device_id
+      ?? (input.receipt as any)?.executor?.device_id
+      ?? (input.receipt as any)?.operator?.device_id,
+    ),
+    operator_id: toText(
+      (input.operation_state as any)?.operator_id
+      ?? (input.receipt as any)?.operator_id
+      ?? (input.receipt as any)?.operator?.operator_id
+      ?? (input.receipt as any)?.executor?.operator_id
+      ?? (input.receipt as any)?.executor_id,
+    ),
     deviation_summary: toText((input.operation_state as any)?.deviation_summary ?? (input.receipt as any)?.deviation_summary),
   };
 
   const asAppliedRaw = (input.operation_state as any)?.as_applied ?? {};
   const asAppliedGeojson = toObject(asAppliedRaw?.coverage_geojson ?? asAppliedRaw?.geojson ?? asAppliedRaw?.coverage ?? null);
+  const plannedGeojson = toObject(
+    asAppliedRaw?.planned_geojson
+    ?? asAppliedRaw?.planned
+    ?? planned.planned_area
+    ?? planned.planned_path
+    ?? null,
+  );
   const asApplied = {
+    operation_id: input.operation_state.operation_id,
     coverage_status: normalizeCoverageStatus(asAppliedRaw?.coverage_status ?? (asAppliedGeojson ? "AVAILABLE" : "MISSING")),
     coverage_geojson: asAppliedGeojson,
+    planned_geojson: plannedGeojson,
     applied_amount_summary: toText(asAppliedRaw?.applied_amount_summary ?? asAppliedRaw?.amount_summary),
     planned_vs_actual_deviation: toText(asAppliedRaw?.planned_vs_actual_deviation ?? asAppliedRaw?.deviation_summary),
     evidence_ref: toText(asAppliedRaw?.evidence_ref ?? asAppliedRaw?.evidence_id ?? asAppliedRaw?.trace_id),
