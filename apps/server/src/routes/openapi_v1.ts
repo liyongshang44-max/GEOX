@@ -1161,6 +1161,56 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           },
           additionalProperties: false
         },
+        OperatorDispatchItemV1: {
+          type: "object",
+          required: ["task_id", "act_task_id", "status", "can_dispatch", "can_retry", "permissions"],
+          properties: {
+            task_id: { type: "string" },
+            act_task_id: { type: "string" },
+            receipt_id: { type: "string", nullable: true },
+            operation_id: { type: "string", nullable: true },
+            operation_plan_id: { type: "string", nullable: true },
+            field_id: { type: "string", nullable: true },
+            field_name: { type: "string", nullable: true },
+            operation_name: { type: "string", nullable: true },
+            status: { type: "string", enum: ["TASK_CREATED", "DISPATCH_PENDING", "DISPATCHED", "RETRY_DISPATCHED", "ACKED", "RECEIPT_PENDING", "EXECUTION_FAILED", "RECEIPT_RECEIVED", "COMPLETED", "UNKNOWN"] },
+            execution_mode: { type: "string", nullable: true },
+            task_created_at: { type: "string", format: "date-time", nullable: true },
+            dispatched_at: { type: "string", format: "date-time", nullable: true },
+            acked_at: { type: "string", format: "date-time", nullable: true },
+            receipt_received_at: { type: "string", format: "date-time", nullable: true },
+            executor_text: { type: "string", nullable: true },
+            failure_reason: { type: "string", nullable: true },
+            can_dispatch: { type: "boolean" },
+            can_retry: { type: "boolean" },
+            permission_reason: { type: "string", nullable: true },
+            permissions: {
+              type: "object",
+              required: ["can_dispatch", "can_retry", "reason", "role"],
+              properties: {
+                can_dispatch: { type: "boolean" },
+                can_retry: { type: "boolean" },
+                reason: { type: "string", nullable: true },
+                role: { type: "string", nullable: true }
+              },
+              additionalProperties: false
+            }
+          },
+          additionalProperties: false
+        },
+        OperatorDispatchWorklistResponseV1: {
+          type: "object",
+          required: ["source", "dataScope", "generated_at", "items", "writeReady", "message"],
+          properties: {
+            source: { type: "string", enum: ["operator_dispatch_api"] },
+            dataScope: { type: "string", enum: ["OFFICIAL_OPERATOR_API"] },
+            generated_at: { type: "string", format: "date-time" },
+            items: { type: "array", items: { "$ref": "#/components/schemas/OperatorDispatchItemV1" } },
+            writeReady: { type: "boolean" },
+            message: { type: "string" }
+          },
+          additionalProperties: false
+        },
         ManagementZoneV1: {
           type: "object",
           required: ["zone_id", "tenant_id", "project_id", "group_id", "field_id", "zone_type", "geometry", "risk_tags", "agronomy_tags", "source_refs", "created_at", "updated_at"],
@@ -1590,6 +1640,92 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             "200": { description: "Operator dispatch read-only facade payload (alert ack/close and device revoke writes not ready)" },
             "401": { description: "Unauthenticated" },
             "403": { description: "Forbidden" }
+          }
+        }
+      },
+      "/api/v1/operator/dispatch/worklist": {
+        get: {
+          tags: ["operations"],
+          summary: "Operator dispatch worklist",
+          description: "返回 operator 派发工作队列。数据来源为后端 AO-ACT task 与 dispatch facts；前端不得自行推断可派发/可重试状态。",
+          parameters: [
+            { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1 } }
+          ],
+          responses: {
+            "200": {
+              description: "Operator dispatch worklist payload",
+              content: {
+                "application/json": {
+                  schema: { "$ref": "#/components/schemas/OperatorDispatchWorklistResponseV1" }
+                }
+              }
+            },
+            "401": { description: "Unauthenticated (AUTH_MISSING)" },
+            "403": { description: "Forbidden (FORBIDDEN)" }
+          }
+        }
+      },
+      "/api/v1/operator/dispatch/{taskId}/dispatch": {
+        post: {
+          tags: ["operations"],
+          summary: "Dispatch task",
+          parameters: [
+            { name: "taskId", in: "path", required: true, schema: { type: "string" } }
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    note: { type: "string" },
+                    reason: { type: "string" }
+                  },
+                  additionalProperties: false
+                }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Operator action response", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "400": { description: "ACTION_NOT_READY", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "403": { description: "FORBIDDEN", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "404": { description: "TARGET_NOT_FOUND", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "409": { description: "INVALID_STATE", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "500": { description: "AUDIT_WRITE_FAILED or STATE_WRITE_FAILED", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } }
+          }
+        }
+      },
+      "/api/v1/operator/dispatch/{taskId}/retry": {
+        post: {
+          tags: ["operations"],
+          summary: "Retry dispatch task",
+          parameters: [
+            { name: "taskId", in: "path", required: true, schema: { type: "string" } }
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    note: { type: "string" },
+                    reason: { type: "string" }
+                  },
+                  additionalProperties: false
+                }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Operator action response", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "400": { description: "ACTION_NOT_READY", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "403": { description: "FORBIDDEN", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "404": { description: "TARGET_NOT_FOUND", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "409": { description: "INVALID_STATE", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "500": { description: "AUDIT_WRITE_FAILED or STATE_WRITE_FAILED", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } }
           }
         }
       },
