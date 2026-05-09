@@ -97,6 +97,14 @@ export type OperationReportV1 = {
     act_task_id: string | null;
     receipt_id: string | null;
   };
+  as_executed: {
+    execution_mode: "DEVICE" | "HUMAN";
+    started_at: string | null;
+    finished_at: string | null;
+    actual_params: Record<string, unknown>;
+    receipt_id: string | null;
+    deviation_summary: string | null;
+  };
   execution: {
     final_status: string;
     invalid_execution: boolean;
@@ -244,6 +252,23 @@ function toObject(v: unknown): Record<string, unknown> | null {
 function toNullableNumber(v: unknown): number | null {
   const n = typeof v === "number" ? v : Number(v);
   return Number.isFinite(n) ? n : null;
+}
+
+
+function normalizeExecutionMode(v: unknown): "DEVICE" | "HUMAN" {
+  const mode = String(v ?? "").trim().toUpperCase();
+  if (["DEVICE", "AUTO", "AUTOMATIC"].includes(mode)) return "DEVICE";
+  return "HUMAN";
+}
+
+function pickActualParams(operationState: any, receipt: any): Record<string, unknown> {
+  const candidate = operationState?.actual_params
+    ?? receipt?.actual_params
+    ?? receipt?.params
+    ?? receipt?.metrics
+    ?? {};
+  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return {};
+  return candidate as Record<string, unknown>;
 }
 
 function toFiniteNumber(v: unknown, fallback = 0): number {
@@ -546,6 +571,15 @@ export function projectOperationReportV1(input: {
     planned_amount: toNullableNumber(operationStateAny?.planned_amount ?? operationStateAny?.operation_amount?.amount ?? operationStateAny?.execution_plan?.planned_amount),
   };
 
+  const asExecuted = {
+    execution_mode: normalizeExecutionMode((input.operation_state as any)?.execution_mode ?? (input.operation_state as any)?.executor_type),
+    started_at: toText(input.receipt?.execution_started_at ?? (input.operation_state as any)?.execution_started_at),
+    finished_at: toText(input.receipt?.execution_finished_at ?? (input.operation_state as any)?.execution_finished_at),
+    actual_params: pickActualParams(input.operation_state as any, input.receipt as any),
+    receipt_id: toText(input.operation_state.receipt_id),
+    deviation_summary: toText((input.operation_state as any)?.deviation_summary ?? (input.receipt as any)?.deviation_summary),
+  };
+
   const computedRisk = evaluateRisk({
     final_status: finalStatus,
     missing_evidence: missingEvidence,
@@ -588,6 +622,7 @@ export function projectOperationReportV1(input: {
       act_task_id: toText(input.operation_state.act_task_id ?? input.operation_state.task_id),
       receipt_id: toText(input.operation_state.receipt_id),
     },
+    as_executed: asExecuted,
     execution: {
       final_status: finalStatus,
       invalid_execution: isInvalidExecution,
