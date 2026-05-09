@@ -1781,6 +1781,40 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           }
         }
       },
+      "/api/v1/operator/evidence/export-jobs": {
+        post: {
+          tags: ["exports"],
+          summary: "Create operator evidence export job",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { "$ref": "#/components/schemas/EvidenceExportCreateRequest" }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Evidence export job created successfully" },
+            "400": { description: "Operation scope not ready or invalid export scope" },
+            "403": { description: "FORBIDDEN" },
+            "500": { description: "Evidence export job create failed" }
+          }
+        }
+      },
+      "/api/v1/operator/evidence/export-jobs/{jobId}": {
+        get: {
+          tags: ["exports"],
+          summary: "Read operator evidence export job detail",
+          parameters: [
+            { name: "jobId", in: "path", required: true, schema: { type: "string" } }
+          ],
+          responses: {
+            "200": { description: "Evidence export job detail returned successfully" },
+            "403": { description: "FORBIDDEN" },
+            "404": { description: "Export job not found" }
+          }
+        }
+      },
       "/api/v1/operator/approvals": {
         get: {
           tags: ["operations"],

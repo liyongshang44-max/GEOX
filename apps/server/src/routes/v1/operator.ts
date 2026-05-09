@@ -821,6 +821,36 @@ export function registerOperatorV1FacadeRoutes(app: FastifyInstance, pool: Pool)
     });
   });
 
+  app.post("/api/v1/operator/evidence/export-jobs", async (req: any, reply) => {
+    const auth = requireAoActAnyScopeV0(req, reply, ["evidence_export.write"]);
+    if (!auth) {
+      if (!reply.sent) return reply.code(403).send({ error: "FORBIDDEN", message: "当前身份无创建证据导出任务权限。" });
+      return;
+    }
+    const proxied = await app.inject({
+      method: "POST",
+      url: "/api/v1/evidence-export/jobs",
+      headers: req.headers as Record<string, string>,
+      payload: req.body ?? {},
+    });
+    return reply.code(proxied.statusCode).send(proxied.json());
+  });
+
+  app.get("/api/v1/operator/evidence/export-jobs/:jobId", async (req: any, reply) => {
+    const auth = requireAoActAnyScopeV0(req, reply, ["evidence_export.read", "evidence_export.write"]);
+    if (!auth) {
+      if (!reply.sent) return reply.code(403).send({ error: "FORBIDDEN", message: "当前身份无查看证据导出任务权限。" });
+      return;
+    }
+    const jobId = encodeURIComponent(safeText(req.params?.jobId));
+    const proxied = await app.inject({
+      method: "GET",
+      url: `/api/v1/evidence-export/jobs/${jobId}`,
+      headers: req.headers as Record<string, string>,
+    });
+    return reply.code(proxied.statusCode).send(proxied.json());
+  });
+
   app.get("/api/v1/evidence/export-jobs", async (req: any, reply) => {
     const query = (req.query ?? {}) as { limit?: string | number; tenant_id?: string; project_id?: string; group_id?: string };
     const parsedLimit = Number(query.limit);
