@@ -92,6 +92,20 @@ function normalizeCredentialStatus(value: unknown): "ACTIVE" | "REVOKED" | "UNKN
   return "UNKNOWN";
 }
 
+function buildTelemetryDelayText(lastTelemetryAt: string | null): string {
+  if (!lastTelemetryAt) return "telemetry 待上报";
+  const telemetryMs = new Date(lastTelemetryAt).getTime();
+  if (!Number.isFinite(telemetryMs)) return "telemetry 待上报";
+  const diffMs = Math.max(0, Date.now() - telemetryMs);
+  const diffMin = Math.floor(diffMs / (60 * 1000));
+  if (diffMin <= 15) return "telemetry 15 分钟内";
+  if (diffMin < 60) return `telemetry 延迟 ${diffMin} 分钟`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `telemetry 延迟 ${diffHours} 小时`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `telemetry 延迟 ${diffDays} 天`;
+}
+
 async function tableExists(pool: Pool, table: string): Promise<boolean> {
   const result = await pool.query("SELECT to_regclass($1)::text AS table_name", [`public.${table}`]);
   return Boolean(result.rows?.[0]?.table_name);
@@ -182,7 +196,7 @@ async function buildDevicesAlerts(pool: Pool): Promise<{ devices: Row[]; alerts:
       revoke_status: "read_only",
       can_revoke: false,
       battery_percent: Number.isFinite(Number(status.battery_percent)) ? Number(status.battery_percent) : null,
-      data_delay_text: lastTelemetry ? "telemetry 已上报" : "telemetry 待上报",
+      data_delay_text: buildTelemetryDelayText(lastTelemetry),
     };
   });
 
