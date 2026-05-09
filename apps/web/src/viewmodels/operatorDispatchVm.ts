@@ -52,7 +52,7 @@ export type OperatorDispatchVm = {
   emptyDescription: string;
 };
 
-type DispatchGroupKey = "TASK_CREATED" | "DISPATCH_PENDING" | "DISPATCHED" | "RETRY_DISPATCHED" | "ACKED" | "RECEIPT_PENDING" | "EXECUTION_FAILED" | "HUMAN" | "DEVICE";
+type DispatchGroupKey = "TASK_CREATED" | "DISPATCH_PENDING" | "DISPATCHED" | "RETRY_DISPATCHED" | "ACKED" | "RECEIPT_PENDING" | "EXECUTION_FAILED" | "COMPLETED" | "HUMAN" | "DEVICE";
 
 const GROUP_META: Record<DispatchGroupKey, { title: string; description: string }> = {
   TASK_CREATED: { title: "已生成任务", description: "AO-ACT task 已生成，需要关注后续派发。" },
@@ -62,11 +62,12 @@ const GROUP_META: Record<DispatchGroupKey, { title: string; description: string 
   ACKED: { title: "ACKED", description: "执行方已确认接收任务。" },
   RECEIPT_PENDING: { title: "回执待收", description: "任务执行状态尚未形成回执；执行完成不等于验收通过。" },
   EXECUTION_FAILED: { title: "执行失败", description: "任务执行失败或被判定为无效执行，必须展示失败原因。" },
+  COMPLETED: { title: "已完成任务", description: "任务已完成或已有回执，不能重试；验收通过仍以验收中心和作业报告为准。" },
   HUMAN: { title: "人工执行任务", description: "由人工或服务队执行的任务。" },
   DEVICE: { title: "设备执行任务", description: "由设备、阀门、泵站或自动化执行器执行的任务。" },
 };
 
-const GROUP_ORDER: DispatchGroupKey[] = ["TASK_CREATED", "DISPATCH_PENDING", "DISPATCHED", "RETRY_DISPATCHED", "ACKED", "RECEIPT_PENDING", "EXECUTION_FAILED", "HUMAN", "DEVICE"];
+const GROUP_ORDER: DispatchGroupKey[] = ["TASK_CREATED", "DISPATCH_PENDING", "DISPATCHED", "RETRY_DISPATCHED", "ACKED", "RECEIPT_PENDING", "EXECUTION_FAILED", "COMPLETED", "HUMAN", "DEVICE"];
 
 function text(value: unknown, fallback = ""): string {
   const raw = String(value ?? "").trim();
