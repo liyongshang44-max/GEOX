@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
+import { requireAoActAnyScopeV0 } from "../../auth/ao_act_authz_v0.js";
 
 const DATA_SCOPE = "OFFICIAL_OPERATOR_API";
 
@@ -168,6 +169,64 @@ async function buildDevicesAlerts(pool: Pool): Promise<{ devices: Row[]; alerts:
   return { devices, alerts };
 }
 
+
+function jsonObjectOrNull(value: unknown): Record<string, unknown> | null {
+  if (!value) return null;
+  if (typeof value === "object" && !Array.isArray(value)) return value as Record<string, unknown>;
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Record<string, unknown> : null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function toIsoAny(value: unknown): string | null {
+  const fromMs = toIsoFromMs(value);
+  if (fromMs) return fromMs;
+  const raw = text(value);
+  if (!raw) return null;
+  const d = new Date(raw);
+  return Number.isFinite(d.getTime()) ? d.toISOString() : null;
+}
+
+async function buildFieldMemory(pool: Pool, query: { field_id?: string; operation_id?: string; memory_type?: string }): Promise<Row[]> {
+  if (!(await tableExists(pool, "field_memory_v1"))) return [];
+  const where: string[] = [];
+  const values: unknown[] = [];
+  const add = (col: string, val?: string) => {
+    const normalized = text(val);
+    if (!normalized) return;
+    values.push(normalized);
+    where.push(`${col} = $${values.length}`);
+  };
+  add("field_id", query.field_id);
+  add("operation_id", query.operation_id);
+  add("memory_type", query.memory_type);
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  const result = await pool.query(`SELECT * FROM field_memory_v1 ${whereSql} ORDER BY occurred_at DESC LIMIT 200`, values);
+  return (result.rows ?? []).map((row: Row) => ({
+    memory_id: safeText(row.memory_id),
+    field_id: safeText(row.field_id),
+    operation_id: safeText(row.operation_id),
+    memory_type: safeText(row.memory_type),
+    before: jsonObjectOrNull(row.before_value),
+    after: jsonObjectOrNull(row.after_value ?? row.metric_value),
+    delta: jsonObjectOrNull(row.delta_value),
+    confidence: jsonObjectOrNull(row.confidence),
+    skill_refs: [safeText(row.skill_id), safeText(row.skill_trace_ref)].filter(Boolean),
+    evidence_refs: Array.isArray(row.evidence_refs) ? row.evidence_refs.map((x) => safeText(x)).filter(Boolean) : [],
+    recommendation_id: safeText(row.recommendation_id),
+    task_id: safeText(row.task_id),
+    acceptance_id: safeText(row.acceptance_id),
+    roi_id: safeText(row.roi_id),
+    created_at: toIsoAny(row.created_at ?? row.occurred_at),
+    updated_at: toIsoAny(row.updated_at ?? row.occurred_at),
+  }));
+}
 export function registerOperatorV1FacadeRoutes(app: FastifyInstance, pool: Pool): void {
   app.get("/api/v1/operator/devices-alerts", async (_req, reply) => {
     const { devices, alerts } = await buildDevicesAlerts(pool);
@@ -181,7 +240,25 @@ export function registerOperatorV1FacadeRoutes(app: FastifyInstance, pool: Pool)
     });
   });
 
-  app.get("/api/v1/operator/field-memory", async (_req, reply) => reply.send({ ...basePayload("operator_field_memory_api"), items: [] }));
+  app.get("/api/v1/operator/field-memory", async (req: any, reply) => {
+    const auth = requireAoActAnyScopeV0(req, reply, ["field_memory.read", "ao_act.index.read"]);
+    if (!auth) {
+      if (!reply.sent) return reply.code(403).send({ error: "FORBIDDEN", message: "当前身份无权查看运营田块记忆明细。" });
+      return;
+    }
+    const query = (req.query ?? {}) as { field_id?: string; operation_id?: string; memory_type?: string };
+    const items = await buildFieldMemory(pool, query);
+    return reply.send({
+      ...basePayload("operator_field_memory_api"),
+      filters: {
+        fieldId: safeText(query.field_id),
+        operationId: safeText(query.operation_id),
+        memoryType: safeText(query.memory_type),
+      },
+      items,
+      message: "operator field-memory read-only facade",
+    });
+  });
 
   app.get("/api/v1/operator/roi-ledger", async (_req, reply) => reply.send({ ...basePayload("operator_roi_ledger_api"), items: [] }));
 }
