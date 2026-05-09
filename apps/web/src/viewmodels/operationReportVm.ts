@@ -97,6 +97,17 @@ export type CustomerReportSectionVm = {
   technical?: { title: string; rows: Array<{ label: string; value: string }> };
 };
 
+
+function formatCustomerDateTime(value: unknown, fallback = "暂无更新时间"): string {
+  const raw = String(value ?? "").trim();
+  if (!raw) return fallback;
+  const ms = Date.parse(raw);
+  if (!Number.isFinite(ms) || ms <= 0) return fallback;
+  const d = new Date(ms);
+  if (d.getUTCFullYear() <= 1970) return fallback;
+  return d.toLocaleString("zh-CN", { hour12: false });
+}
+
 function isEngineeringOnlyText(value: unknown): boolean {
   const text = String(value ?? "").trim();
   if (!text) return false;
@@ -180,7 +191,7 @@ export function buildOperationEvidenceSummaryVm(report: OperationReportV1): Oper
   const hasEvidenceRecords = recordCount > 0 || Boolean(evidence.receipt_present || evidence.acceptance_present);
   const packSummary = (report as unknown as { evidence_pack_summary?: { summary?: unknown; photos_logs_metrics_trace_summary?: unknown; status?: unknown; insufficient_reason?: unknown } }).evidence_pack_summary;
   const summaryText = sanitizeEvidenceText(packSummary?.photos_logs_metrics_trace_summary ?? packSummary?.summary);
-  const sourceText = "Operation Report 内嵌 evidence 字段";
+  const sourceText = "证据来源：作业报告摘要";
   const privacyText = "客户层仅展示证据摘要，不展示内部存储路径或文件校验信息。";
 
   if (!hasEvidenceRecords && !summaryText) {
@@ -384,7 +395,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
   const operationTitle = kv((report as any).customer_title || (report as any).operation_title || labelOperationType((report as any).operation_type), CUSTOMER_LABELS.operationReportTitle);
 
   return {
-    generatedAtText: kv(report.generated_at),
+    generatedAtText: formatCustomerDateTime(report.generated_at),
     operation: {
       // customer-boundary-allow: 兼容历史 operation_plan_id 字段映射为客户作业标识
       operationId: kv(report.identifiers.operation_id || report.identifiers.operation_plan_id),
@@ -434,7 +445,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
       metricsText: mapEvidenceStatusLabel(report.evidence.metrics_count),
     },
     evidenceSummary,
-    acceptance: { statusText: acceptanceStatusText, verdictText: kv(report.acceptance.verdict, "--"), missingEvidenceText: report.acceptance.missing_evidence ? REVIEW_NEEDED_TEXT : "无", generatedAtText: kv(report.acceptance.generated_at) },
+    acceptance: { statusText: acceptanceStatusText, verdictText: kv(report.acceptance.verdict, "--"), missingEvidenceText: report.acceptance.missing_evidence ? REVIEW_NEEDED_TEXT : "无", generatedAtText: formatCustomerDateTime(report.acceptance.generated_at) },
     value: { valueText, methodText, evidenceText: evidenceNote, confidenceText, fallbackText: "本次作业的量化价值仍在积累中，当前可确认价值为：作业完成并完成验收。", useFallback },
     conclusion: { finalStatusText, resultText: finalStatusText },
     fieldMemory: { title: "田块记忆", items: hasMemoryData ? memoryItems.map((item) => item.value) : [getCustomerEmptyState("NO_FIELD_MEMORY").title] },

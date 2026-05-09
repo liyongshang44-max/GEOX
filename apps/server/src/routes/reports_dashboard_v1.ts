@@ -22,6 +22,58 @@ type TenantTriple = {
 const DASHBOARD_REPORT_CONCURRENCY_LIMIT = 12;
 const DEVICE_OFFLINE_THRESHOLD_MS = 15 * 60 * 1000;
 
+type CustomerReportListItem = {
+  report_id?: string | null;
+  report_type: "OVERVIEW" | "FIELD" | "OPERATION" | "EVIDENCE_VALUE";
+  title: string;
+  subtitle?: string | null;
+  href?: string | null;
+  field_id?: string | null;
+  field_name?: string | null;
+  operation_id?: string | null;
+  operation_title?: string | null;
+  updated_at?: string | null;
+  status_text?: string | null;
+  capability_status?: "AVAILABLE" | "PENDING" | "UNAVAILABLE";
+};
+
+type CustomerOperationListItem = {
+  operation_id: string;
+  operation_plan_id: string | null;
+  field_id: string | null;
+  field_name: string | null;
+  title: string | null;
+  customer_title: string | null;
+  operation_type: string | null;
+  final_status: string | null;
+  acceptance_status: string | null;
+  evidence_status: string | null;
+  evidence_summary_status: string | null;
+  updated_at: string | null;
+  executed_at: string | null;
+};
+
+type CustomerFieldListItem = {
+  field_id: string;
+  field_name: string | null;
+  risk_level: "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
+  risk_reasons: string[];
+  updated_at: string | null;
+  crop_name: string | null;
+  stage_name: string | null;
+  recent_operation_id: string | null;
+  recent_operation_title: string | null;
+  open_alerts_count: number;
+  pending_acceptance_count: number;
+};
+
+function toRiskLevel(value: unknown): "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN" {
+  const v = String(value ?? "").trim().toUpperCase();
+  if (v === "HIGH" || v === "MEDIUM" || v === "LOW") return v;
+  return "UNKNOWN";
+}
+
+
 function normalizeFieldIds(raw: unknown): string[] {
   if (Array.isArray(raw)) return raw.map((x) => String(x ?? "").trim()).filter(Boolean);
   if (typeof raw === "string") {
@@ -242,6 +294,9 @@ async function queryDeviceSummary(pool: Pool, tenant: TenantTriple, fieldIds: st
 }
 
 export function registerReportsDashboardV1Routes(app: FastifyInstance, pool: Pool): void {
+
+
+
   app.get("/api/v1/reports/customer-dashboard/field-portfolio-summary", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;

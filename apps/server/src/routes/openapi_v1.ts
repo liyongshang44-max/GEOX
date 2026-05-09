@@ -24,7 +24,8 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
       { name: "acceptance", description: "Acceptance evaluation and execution verification" },
       { name: "security", description: "Security audit, fail-safe, and manual takeover" },
       { name: "judge", description: "Judge V2 evaluation and result query" },
-      { name: "dashboard", description: "Commercial dashboard overview" }
+      { name: "dashboard", description: "Commercial dashboard overview" },
+      { name: "customer", description: "Customer facade read-only APIs" }
     ],
     components: {
       securitySchemes: {
@@ -102,6 +103,17 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             device_id: { type: "string" },
             export_format: { type: "string", enum: ["JSON", "CSV", "PDF"] },
             export_language: { type: "string", enum: ["zh-CN", "en-US"] }
+          }
+        },
+
+        EvidencePackSummaryV1: {
+          type: "object",
+          required: ["status", "summary", "photos_logs_metrics_trace_summary", "insufficient_reason"],
+          properties: {
+            status: { type: "string", example: "PACK_SUMMARY" },
+            summary: { type: "string", nullable: true, example: "证据包已形成，可查看摘要。" },
+            photos_logs_metrics_trace_summary: { type: "string", nullable: true, example: "已采集现场照片、执行日志和关键监测指标摘要。" },
+            insufficient_reason: { type: "string", nullable: true, example: "暂无补充说明" }
           }
         },
         AlertRuleRequest: {
@@ -3915,6 +3927,31 @@ function applyP13OpenApiAlignment(spec: any) {
             }
           }
         }
+      }
+    },
+
+    "/api/v1/customer/fields": {
+      get: {
+        tags: ["customer"],
+        summary: "List customer-scoped fields (official facade)",
+        security: [{ bearerAuth: [] }],
+        responses: { "200": { description: "Customer fields list" } }
+      }
+    },
+    "/api/v1/customer/operations": {
+      get: {
+        tags: ["customer"],
+        summary: "List customer-scoped operations (official facade)",
+        security: [{ bearerAuth: [] }],
+        responses: { "200": { description: "Customer operations list" } }
+      }
+    },
+    "/api/v1/customer/reports": {
+      get: {
+        tags: ["customer"],
+        summary: "List customer report entries (official facade)",
+        security: [{ bearerAuth: [] }],
+        responses: { "200": { description: "Customer reports list" } }
       }
     },
     "/api/v1/devices": { post: { tags: ["devices"], summary: "Register or upsert device", requestBody: { required: true, content: { "application/json": { schema: ref("DeviceUpsertRequest") } } }, responses: { "200": jsonResponse(ref("DeviceUpsertResponse"), "Device upsert result") } }, get: { tags: ["devices"], summary: "List devices", responses: { "200": jsonResponse(ref("DevicesListResponse"), "Devices list") } } },
