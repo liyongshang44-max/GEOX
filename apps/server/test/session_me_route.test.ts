@@ -19,7 +19,7 @@ test("GET /api/v1/session/me returns formalized identity/role/scope payload", as
       project_id: "project_1",
       group_id: "group_1",
       role: "operator",
-      scopes: ["fields.read", "alerts.read"],
+      scopes: ["fields.read", "alerts.read", "evidence_export.read"],
       allowed_field_ids: ["field_1", "field_2"],
       revoked: false
     }]
@@ -42,7 +42,7 @@ test("GET /api/v1/session/me returns formalized identity/role/scope payload", as
     project_id: "project_1",
     group_id: "group_1",
     roles: ["operator"],
-    scopes: ["fields.read", "alerts.read"],
+    scopes: ["fields.read", "alerts.read", "evidence_export.read"],
     allowed_field_ids: ["field_1", "field_2"],
     permissions: {
       customer_read: true,
@@ -50,7 +50,7 @@ test("GET /api/v1/session/me returns formalized identity/role/scope payload", as
       operator_approve: false,
       operator_dispatch: false,
       operator_acceptance: false,
-      operator_evidence_export: false,
+      operator_evidence_export: true,
       operator_alert_ack_close: false,
       admin_device_revoke: false
     }

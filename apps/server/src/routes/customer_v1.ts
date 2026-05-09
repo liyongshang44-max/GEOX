@@ -138,7 +138,7 @@ export function registerCustomerV1Routes(app: FastifyInstance, pool: Pool): void
     const fieldQ = await pool.query(`SELECT field_id FROM field_index_v1 WHERE tenant_id = $1 AND field_id = $2 LIMIT 1`, [tenant.tenant_id, fieldId]);
     if (fieldQ.rowCount === 0) return reply.code(404).send({ ok: false, error: "NOT_FOUND" });
 
-    const geoQ = await pool.query(`SELECT geojson, updated_ts_ms FROM field_polygon_v1 WHERE tenant_id = $1 AND field_id = $2 LIMIT 1`, [tenant.tenant_id, fieldId]);
+    const geoQ = await pool.query(`SELECT polygon_geojson_json AS geojson, updated_ts_ms FROM field_polygon_v1 WHERE tenant_id = $1 AND field_id = $2 LIMIT 1`, [tenant.tenant_id, fieldId]);
     const raw = safeJsonParse(geoQ.rows?.[0]?.geojson ?? null);
     const geometry = normalizeGeometry(raw);
     const centroid = geometryCentroid(geometry);
