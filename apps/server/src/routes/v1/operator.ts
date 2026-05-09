@@ -293,6 +293,17 @@ function sanitizeStructured(value: unknown): unknown {
   return value;
 }
 
+
+function buildReadonlyFacadePayload(source: string, message: string) {
+  return {
+    ...basePayload(source),
+    writeReady: false,
+    exportReady: false,
+    items: [],
+    message,
+  };
+}
+
 function toIsoAny(value: unknown): string | null {
   const fromMs = toIsoFromMs(value);
   if (fromMs) return fromMs;
@@ -388,6 +399,27 @@ async function buildRoiLedger(pool: Pool, query: { field_id?: string; operation_
   });
 }
 export function registerOperatorV1FacadeRoutes(app: FastifyInstance, pool: Pool): void {
+
+  app.get("/api/v1/operator/workbench", async (_req, reply) => {
+    return reply.send(buildReadonlyFacadePayload("operator_workbench_api", "operator workbench read-only facade"));
+  });
+
+  app.get("/api/v1/operator/dispatch", async (_req, reply) => {
+    return reply.send(buildReadonlyFacadePayload("operator_dispatch_api", "operator dispatch read-only facade"));
+  });
+
+  app.get("/api/v1/operator/acceptance", async (_req, reply) => {
+    return reply.send(buildReadonlyFacadePayload("operator_acceptance_api", "operator acceptance read-only facade"));
+  });
+
+  app.get("/api/v1/operator/evidence", async (_req, reply) => {
+    return reply.send(buildReadonlyFacadePayload("operator_evidence_api", "operator evidence read-only facade"));
+  });
+
+  app.get("/api/v1/evidence/export-jobs", async (_req, reply) => {
+    return reply.send(buildReadonlyFacadePayload("operator_evidence_export_jobs_api", "operator evidence export-jobs read-only facade"));
+  });
+
   app.get("/api/v1/operator/devices-alerts", async (req: any, reply) => {
     const query = (req.query ?? {}) as { limit?: string | number; field_id?: string; device_id?: string; online_status?: string };
     const parsedLimit = Number(query.limit);
