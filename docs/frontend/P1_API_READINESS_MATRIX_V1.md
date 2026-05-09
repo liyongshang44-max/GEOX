@@ -48,9 +48,9 @@
 | `GET /api/v1/operator/dispatch` | adapter 可包 | P1-B-04 | 派发状态空态 | 否 | 不直连 legacy control API without adapter |
 | `GET /api/v1/operator/acceptance` | adapter 可包 | P1-B-05 | 验收队列空态 | 否 | 以 operation_state_v1 / final_status / report 投影为准 |
 | `GET /api/v1/operator/evidence` | adapter 可包 | P1-B-06 | 证据中心空态 | 否 | 不展示裸文件路径，不展示内部存储路径 |
-| `GET /api/v1/operator/devices-alerts?limit=&field_id=&device_id=&online_status=` | 已存在（只读 facade） | P1-C-01 | 使用正式 API，不再依赖 fallback | 是（只读 facade 范围内） | 支持 limit(默认 100，最大 300) + in-memory 过滤；ACK/close 写操作仍未 ready；不展示 device credential secret payload |
-| `GET /api/v1/operator/field-memory` | 已存在（只读 facade） | P1-C-03 | 使用正式 API，不再依赖 fallback | 是（只读 facade 范围内） | 合法状态：200(已认证且有读权限)/401(未认证 AUTH_MISSING)/403(已认证但无 field_memory.read 或 ao_act.index.read)；acceptance evaluate/request-review 写操作仍未 ready |
-| `GET /api/v1/operator/roi-ledger?field_id=&operation_id=` | 已存在（只读 facade） | P1-C-02 | 使用正式 API，不再依赖 fallback | 是（只读 facade 范围内） | approval 写操作仍未 ready；无 baseline 不得标记实测收益 |
+| `GET /api/v1/operator/devices-alerts?limit=&field_id=&device_id=&online_status=` | 已存在，只读 facade | P1-C-01 | 使用正式 API，不再依赖 fallback | 是（只读 facade 范围内） | 支持 limit(默认 100，最大 300) + in-memory 过滤；ACK/close 写操作未 ready；revoke 写操作未 ready；不展示 device credential secret payload |
+| `GET /api/v1/operator/field-memory` | 已存在，只读 facade | P1-C-03 | 使用正式 API，不再依赖 fallback | 是（只读 facade 范围内） | 需要认证；200(已认证且有读权限)/401(未认证 AUTH_MISSING)/403(已认证但无 field_memory.read 或 ao_act.index.read) 均为合法口径；acceptance evaluate 写操作未 ready |
+| `GET /api/v1/operator/roi-ledger?field_id=&operation_id=` | 已存在，只读 facade | P1-C-02 | 使用正式 API，不再依赖 fallback | 是（只读 facade 范围内） | evidence_ref 已规范化；无证据不得 MEASURED；approval 写操作未 ready |
 
 ## 6. 推荐 API 防误用规则
 
