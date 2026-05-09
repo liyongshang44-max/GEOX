@@ -1656,10 +1656,10 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           },
           responses: {
             "200": { description: "Operator action response", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
-            "400": { description: "ACTION_NOT_READY or INVALID_STATE" },
-            "403": { description: "FORBIDDEN or SELF_APPROVAL_BLOCKED" },
-            "404": { description: "TARGET_NOT_FOUND" },
-            "500": { description: "AUDIT_WRITE_FAILED or STATE_WRITE_FAILED" }
+            "400": { description: "ACTION_NOT_READY or INVALID_STATE", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "403": { description: "FORBIDDEN or SELF_APPROVAL_BLOCKED", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "404": { description: "TARGET_NOT_FOUND", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "500": { description: "AUDIT_WRITE_FAILED or STATE_WRITE_FAILED", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } }
           }
         }
       },
@@ -1686,10 +1686,10 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           },
           responses: {
             "200": { description: "Operator action response", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
-            "400": { description: "ACTION_NOT_READY or INVALID_STATE" },
-            "403": { description: "FORBIDDEN or SELF_APPROVAL_BLOCKED" },
-            "404": { description: "TARGET_NOT_FOUND" },
-            "500": { description: "AUDIT_WRITE_FAILED or STATE_WRITE_FAILED" }
+            "400": { description: "ACTION_NOT_READY or INVALID_STATE", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "403": { description: "FORBIDDEN or SELF_APPROVAL_BLOCKED", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "404": { description: "TARGET_NOT_FOUND", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "500": { description: "AUDIT_WRITE_FAILED or STATE_WRITE_FAILED", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } }
           }
         }
       },
@@ -1716,10 +1716,10 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           },
           responses: {
             "200": { description: "Operator action response", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
-            "400": { description: "ACTION_NOT_READY or INVALID_STATE" },
-            "403": { description: "FORBIDDEN or SELF_APPROVAL_BLOCKED" },
-            "404": { description: "TARGET_NOT_FOUND" },
-            "500": { description: "AUDIT_WRITE_FAILED or STATE_WRITE_FAILED" }
+            "400": { description: "ACTION_NOT_READY or INVALID_STATE", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "403": { description: "FORBIDDEN or SELF_APPROVAL_BLOCKED", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "404": { description: "TARGET_NOT_FOUND", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "500": { description: "AUDIT_WRITE_FAILED or STATE_WRITE_FAILED", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } }
           }
         }
       },
@@ -1766,11 +1766,11 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           },
           responses: {
             "200": { description: "Operator action response", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
-            "400": { description: "ACTION_NOT_READY or INVALID_STATE" },
-            "403": { description: "FORBIDDEN" },
-            "404": { description: "TARGET_NOT_FOUND" },
-            "422": { description: "EVIDENCE_INSUFFICIENT" },
-            "500": { description: "AUDIT_WRITE_FAILED or STATE_WRITE_FAILED" }
+            "400": { description: "ACTION_NOT_READY or INVALID_STATE", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "403": { description: "FORBIDDEN", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "404": { description: "TARGET_NOT_FOUND", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "422": { description: "EVIDENCE_INSUFFICIENT", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "500": { description: "AUDIT_WRITE_FAILED or STATE_WRITE_FAILED", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } }
           }
         }
       },
@@ -1798,11 +1798,11 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           },
           responses: {
             "200": { description: "Operator action response", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
-            "400": { description: "ACTION_NOT_READY or INVALID_STATE" },
-            "403": { description: "FORBIDDEN" },
-            "404": { description: "TARGET_NOT_FOUND" },
-            "422": { description: "EVIDENCE_INSUFFICIENT" },
-            "500": { description: "AUDIT_WRITE_FAILED or STATE_WRITE_FAILED" }
+            "400": { description: "ACTION_NOT_READY or INVALID_STATE", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "403": { description: "FORBIDDEN", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "404": { description: "TARGET_NOT_FOUND", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "422": { description: "EVIDENCE_INSUFFICIENT", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } },
+            "500": { description: "AUDIT_WRITE_FAILED or STATE_WRITE_FAILED", content: { "application/json": { schema: { "$ref": "#/components/schemas/OperatorActionResponseV1" } } } }
           }
         }
       },
