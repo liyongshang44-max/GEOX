@@ -51,9 +51,9 @@
 | `GET /api/v1/evidence/export-jobs` | 已存在，只读 facade | P1-B-06 | 作为 operator evidence 兼容只读入口 | 是（只读 facade 范围内） | export-jobs 兼容只读门面；无数据返回 200+items:[]；operator evidence export 写操作未 ready |
 | `GET /api/v1/operator/devices-alerts?limit=&field_id=&device_id=&online_status=` | 已存在，只读 facade | P1-C-01 | 使用正式 API，不再依赖 fallback | 是（只读 facade 范围内） | 支持 limit(默认 100，最大 300) + in-memory 过滤；ACK/close 写操作未 ready；revoke 写操作未 ready；不展示 device credential secret payload |
 | `GET /api/v1/operator/field-memory` | 已存在，只读 facade | P1-C-03 | 使用正式 API，不再依赖 fallback | 是（只读 facade 范围内） | 需要认证；200(已认证且有读权限)/401(未认证 AUTH_MISSING)/403(已认证但无 field_memory.read 或 ao_act.index.read) 均为合法口径；acceptance evaluate 写操作未 ready |
-| `GET /api/v1/operator/roi-ledger?field_id=&operation_id=` | 已存在，只读 facade | P1-C-02 | 使用正式 API，不再依赖 fallback | 是（只读 facade 范围内） | evidence_ref 已规范化；无证据不得 MEASURED；approval 写操作未 ready |
+| `GET /api/v1/operator/roi-ledger` | 已存在，只读 facade | P1-C-02 | 使用正式 API，不再依赖 fallback | 是（只读 facade 范围内） | evidence_ref 已规范化；无证据不得 MEASURED；approval 写操作未 ready |
 
-写操作未 ready 统一口径：operator approval 写操作未 ready；operator acceptance evaluate 写操作未 ready；operator evidence export 写操作未 ready；alert ACK/close 写操作未 ready；device revoke 写操作未 ready。
+写操作未 ready 统一口径：operator approval 写操作未 ready；operator dispatch/retry 写操作未 ready；operator acceptance evaluate 写操作未 ready；operator evidence export 写操作未 ready；alert ACK/close 写操作未 ready；device revoke 写操作未 ready。
 
 ## 6. 推荐 API 防误用规则
 
