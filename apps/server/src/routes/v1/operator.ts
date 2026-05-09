@@ -6,6 +6,121 @@ const DATA_SCOPE = "OFFICIAL_OPERATOR_API";
 
 type Row = Record<string, unknown>;
 
+type WorkbenchQueue =
+  | "APPROVAL_PENDING"
+  | "DISPATCH_PENDING"
+  | "EXECUTION_EXCEPTION"
+  | "ACCEPTANCE_PENDING"
+  | "EVIDENCE_INSUFFICIENT"
+  | "ACCEPTANCE_FAILED"
+  | "DEVICE_OFFLINE"
+  | "ALERT_OVERDUE";
+
+function normalizePriority(value: unknown): "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" {
+  const raw = safeText(value).toUpperCase();
+  if (raw === "LOW" || raw === "MEDIUM" || raw === "HIGH" || raw === "CRITICAL") return raw;
+  return "MEDIUM";
+}
+
+function asIsoOrNow(value: unknown): string {
+  return toIsoAny(value) ?? new Date().toISOString();
+}
+
+async function buildOperatorWorkbench(pool: Pool, limit: number): Promise<Row[]> {
+  const [
+    approvalRows,
+    approvalRowsV1,
+    operationRows,
+    deviceStatusRows,
+    alertRows,
+  ] = await Promise.all([
+    readTenantRows(pool, "approval_request", limit),
+    readTenantRows(pool, "approval_requests_v1", limit),
+    readTenantRows(pool, "operation_state_v1", limit),
+    readTenantRows(pool, "device_status_index_v1", limit),
+    readTenantRows(pool, "alert_event_index_v1", limit),
+  ]);
+
+  const items: Row[] = [];
+  const pushItem = (id: string, queue: WorkbenchQueue, title: string, description: string, updatedAt: unknown, operationId?: string) => {
+    items.push({
+      id,
+      queue,
+      title,
+      description,
+      field_name: null,
+      operation_name: nullableText(operationId),
+      priority: "MEDIUM",
+      updated_at: asIsoOrNow(updatedAt),
+      action_href: queue === "APPROVAL_PENDING" ? "/operator/approvals" : "/operator/workbench",
+      related_href: operationId ? `/customer/operations/${operationId}` : null,
+    });
+  };
+
+  for (const row of [...approvalRows, ...approvalRowsV1]) {
+    const status = safeText(row.status ?? row.approval_status).toUpperCase();
+    if (!["PENDING", "OPEN", "WAITING"].some((x) => status.includes(x))) continue;
+    const id = safeText(row.request_id ?? row.approval_request_id ?? row.id);
+    if (!id) continue;
+    const opId = safeText(row.operation_id ?? row.operation_plan_id);
+    pushItem(`approval_${id}`, "APPROVAL_PENDING", "待审批事项", "建议或处方等待审批。", row.updated_at ?? row.created_at ?? row.requested_at, opId);
+  }
+
+  for (const row of operationRows) {
+    const status = safeText(row.final_status).toUpperCase();
+    const opId = safeText(row.operation_id ?? row.operation_plan_id ?? row.id);
+    const updatedAt = row.updated_at ?? row.updated_ts_ms ?? row.created_at;
+    if (status === "PENDING_ACCEPTANCE") pushItem(`acceptance_${opId || items.length}`, "ACCEPTANCE_PENDING", "待验收作业", "作业已执行，等待验收。", updatedAt, opId);
+    if (status === "INVALID_EXECUTION") pushItem(`execution_${opId || items.length}`, "EXECUTION_EXCEPTION", "执行异常", "作业执行结果异常，需运营介入。", updatedAt, opId);
+  }
+
+  for (const row of deviceStatusRows) {
+    const deviceId = safeText(row.device_id);
+    if (!deviceId) continue;
+    const lastHeartbeatMs = Number(row.last_heartbeat_ts_ms ?? 0);
+    if (!Number.isFinite(lastHeartbeatMs) || lastHeartbeatMs <= 0) continue;
+    if (Date.now() - lastHeartbeatMs <= 15 * 60 * 1000) continue;
+    items.push({
+      id: `device_offline_${deviceId}`,
+      queue: "DEVICE_OFFLINE",
+      title: "设备离线",
+      description: "设备心跳超时，请排查在线状态。",
+      field_name: null,
+      operation_name: null,
+      priority: normalizePriority(row.priority),
+      updated_at: asIsoOrNow(lastHeartbeatMs),
+      action_href: "/operator/devices-alerts",
+      related_href: null,
+    });
+  }
+
+  for (const row of alertRows) {
+    const alertId = safeText(row.event_id ?? row.alert_id ?? row.id);
+    if (!alertId) continue;
+    const status = safeText(row.status).toUpperCase();
+    if (status && status.includes("CLOSED")) continue;
+    const overdue = Boolean(row.overdue) || (Number(row.raised_ts_ms ?? 0) > 0 && Date.now() - Number(row.raised_ts_ms) > 24 * 60 * 60 * 1000);
+    if (!overdue) continue;
+    items.push({
+      id: `alert_overdue_${alertId}`,
+      queue: "ALERT_OVERDUE",
+      title: "告警超时未处理",
+      description: "存在超时未处理告警。",
+      field_name: null,
+      operation_name: nullableText(row.operation_id ?? row.operation_plan_id),
+      priority: normalizePriority(row.severity),
+      updated_at: asIsoOrNow(row.updated_at ?? row.raised_ts_ms),
+      action_href: "/operator/devices-alerts",
+      related_href: null,
+    });
+  }
+
+  return items
+    .sort((a, b) => new Date(String(b.updated_at ?? 0)).getTime() - new Date(String(a.updated_at ?? 0)).getTime())
+    .slice(0, limit);
+}
+
+
 function basePayload(source: string) {
   return {
     source,
@@ -400,8 +515,24 @@ async function buildRoiLedger(pool: Pool, query: { field_id?: string; operation_
 }
 export function registerOperatorV1FacadeRoutes(app: FastifyInstance, pool: Pool): void {
 
-  app.get("/api/v1/operator/workbench", async (_req, reply) => {
-    return reply.send(buildReadonlyFacadePayload("operator_workbench_api", "operator workbench read-only facade"));
+  app.get("/api/v1/operator/workbench", async (req: any, reply) => {
+    const query = (req.query ?? {}) as { limit?: string | number; tenant_id?: string; project_id?: string; group_id?: string };
+    const parsedLimit = Number(query.limit);
+    const limit = Number.isFinite(parsedLimit) ? Math.min(300, Math.max(1, Math.floor(parsedLimit))) : 100;
+    const items = await buildOperatorWorkbench(pool, limit);
+    return reply.send({
+      ...basePayload("operator_workbench_api"),
+      items,
+      filters: {
+        tenant_id: safeText(query.tenant_id),
+        project_id: safeText(query.project_id),
+        group_id: safeText(query.group_id),
+        limit,
+      },
+      writeReady: false,
+      exportReady: false,
+      message: "operator workbench read-only facade",
+    });
   });
 
   app.get("/api/v1/operator/dispatch", async (_req, reply) => {
