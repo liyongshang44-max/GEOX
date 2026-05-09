@@ -1,7 +1,37 @@
-import { apiRequestWithPolicy, withQuery } from "./client";
+import { apiRequestWithPolicy, withQuery, ApiError } from "./client";
 
 export type OperatorAcceptanceDataScope = "OFFICIAL_OPERATOR_API" | "FALLBACK_LIMITED" | "EMPTY" | "ERROR_EMPTY";
 export type OperatorAcceptanceStatus = "PENDING" | "EVIDENCE_INSUFFICIENT" | "FAILED" | "REVIEW_REQUIRED" | "PASSED" | "UNKNOWN";
+export type OperatorAcceptanceActionKind = "evaluate" | "request-review";
+export type OperatorActionErrorCodeV1 =
+  | "AUTH_MISSING"
+  | "FORBIDDEN"
+  | "ACTION_NOT_READY"
+  | "INVALID_STATE"
+  | "SELF_APPROVAL_BLOCKED"
+  | "TARGET_NOT_FOUND"
+  | "EVIDENCE_INSUFFICIENT"
+  | "AUDIT_WRITE_FAILED"
+  | "STATE_WRITE_FAILED";
+
+export type OperatorActionResponseV1 = {
+  ok: boolean;
+  action_id: string;
+  audit_id: string;
+  action_type: string;
+  target_type: string;
+  target_id: string;
+  status_before: string | null;
+  status_after: string | null;
+  permission: {
+    allowed: boolean;
+    role: string | null;
+    reason: string | null;
+  };
+  message: string;
+  error_code?: OperatorActionErrorCodeV1;
+  updated_at: string;
+};
 
 export type OperatorAcceptanceItem = {
   operationId: string;
@@ -19,6 +49,7 @@ export type OperatorAcceptanceItem = {
   canEvaluate: boolean;
   canRequestReview: boolean;
   permissionReason?: string | null;
+  permissionRole?: string | null;
   source: "operator_acceptance_api" | "reports_aggregate";
 };
 
@@ -36,6 +67,7 @@ type AnyRecord = Record<string, any>;
 function text(value: unknown, fallback = ""): string {
   const raw = String(value ?? "").trim();
   if (!raw || raw === "--" || raw === "undefined" || raw === "null") return fallback;
+  if (/token|secret|credential|private\s*key|password|stack\s*trace|debug\s*json/i.test(raw)) return fallback;
   return raw;
 }
 
@@ -67,6 +99,7 @@ function normalizeStatusFromSource(row: AnyRecord): OperatorAcceptanceStatus {
 
 function evidenceInsufficient(row: AnyRecord, status: OperatorAcceptanceStatus): boolean {
   if (status === "EVIDENCE_INSUFFICIENT") return true;
+  if (typeof row.evidence_insufficient === "boolean") return row.evidence_insufficient;
   if (typeof row.missing_evidence === "boolean") return row.missing_evidence;
   if (typeof row.acceptance?.missing_evidence === "boolean") return row.acceptance.missing_evidence;
   const textValue = `${row.evidence_status ?? ""} ${row.evidence_summary ?? ""} ${row.missing_items ?? ""}`;
@@ -78,6 +111,7 @@ function normalizeOfficial(payload: unknown): OperatorAcceptanceItem[] {
   return rows.map((row, index) => {
     const status = normalizeStatusFromSource(row);
     const missingEvidence = evidenceInsufficient(row, status);
+    const permissions = row.permissions && typeof row.permissions === "object" ? row.permissions as AnyRecord : {};
     return {
       operationId: text(row.operation_id ?? row.operationId ?? row.operation_plan_id ?? row.id, `operation-${index}`),
       acceptanceId: text(row.acceptance_id ?? row.acceptance?.acceptance_id, ""),
@@ -91,9 +125,10 @@ function normalizeOfficial(payload: unknown): OperatorAcceptanceItem[] {
       acceptanceVerdict: text(row.acceptance_verdict ?? row.verdict ?? row.acceptance?.verdict, ""),
       generatedAt: text(row.generated_at ?? row.acceptance?.generated_at, ""),
       updatedAt: text(row.updated_at ?? row.finished_at ?? row.generated_at, ""),
-      canEvaluate: Boolean(row.can_evaluate ?? row.permissions?.can_evaluate ?? false) && !missingEvidence,
-      canRequestReview: Boolean(row.can_request_review ?? row.permissions?.can_request_review ?? false),
-      permissionReason: text(row.permission_reason ?? row.permissions?.reason, ""),
+      canEvaluate: Boolean(row.can_evaluate ?? permissions.can_evaluate ?? false) && !missingEvidence,
+      canRequestReview: Boolean(row.can_request_review ?? permissions.can_request_review ?? false),
+      permissionReason: text(row.permission_reason ?? permissions.reason, ""),
+      permissionRole: text(permissions.role, ""),
       source: "operator_acceptance_api" as const,
     };
   });
@@ -137,7 +172,24 @@ async function fetchOptional(path: string): Promise<OptionalApiResult> {
   }
 }
 
+function writeReadyFromPayload(payload: unknown): boolean {
+  return Boolean(payload && typeof payload === "object" && (payload as AnyRecord).writeReady === true);
+}
+
 export async function fetchOperatorAcceptance(): Promise<OperatorAcceptanceResponse> {
+  const officialWorklist = await fetchOptional(withQuery("/api/v1/operator/acceptance/worklist"));
+  const officialWorklistItems = normalizeOfficial(officialWorklist.data);
+  if (officialWorklist.ok || writeReadyFromPayload(officialWorklist.data)) {
+    return {
+      source: "operator_acceptance_api",
+      dataScope: "OFFICIAL_OPERATOR_API",
+      generated_at: text((officialWorklist.data as AnyRecord | null)?.generated_at, new Date().toISOString()),
+      items: officialWorklistItems,
+      writeReady: writeReadyFromPayload(officialWorklist.data),
+      message: text((officialWorklist.data as AnyRecord | null)?.message, "验收写操作由后端 operation_state 与证据状态控制。"),
+    };
+  }
+
   const official = await fetchOptional(withQuery("/api/v1/operator/acceptance"));
   const officialItems = normalizeOfficial(official.data);
   if (official.ok || (official.data && typeof official.data === "object" && ((official.data as AnyRecord).dataScope === "OFFICIAL_OPERATOR_API" || text((official.data as AnyRecord).source).includes("operator_acceptance")))) {
@@ -146,8 +198,8 @@ export async function fetchOperatorAcceptance(): Promise<OperatorAcceptanceRespo
       dataScope: "OFFICIAL_OPERATOR_API",
       generated_at: new Date().toISOString(),
       items: officialItems,
-      writeReady: false,
-      message: "验收写操作需等待后端权限、审计和错误码 ready 后开放。",
+      writeReady: writeReadyFromPayload(official.data),
+      message: "验收写操作由后端 operation_state 与证据状态控制。",
     };
   }
 
@@ -183,4 +235,41 @@ export async function fetchOperatorAcceptance(): Promise<OperatorAcceptanceRespo
     writeReady: false,
     message: "暂无验收事项。",
   };
+}
+
+function actionPath(operationId: string, action: OperatorAcceptanceActionKind): string {
+  return `/api/v1/operator/acceptance/${encodeURIComponent(operationId)}/${action}`;
+}
+
+function parseActionError(error: unknown): OperatorActionResponseV1 | null {
+  if (!(error instanceof ApiError)) return null;
+  try {
+    const parsed = JSON.parse(error.bodyText) as OperatorActionResponseV1;
+    if (parsed && typeof parsed === "object" && typeof parsed.message === "string") return parsed;
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+export async function submitOperatorAcceptanceAction(
+  operationId: string,
+  action: OperatorAcceptanceActionKind,
+  note?: string,
+): Promise<OperatorActionResponseV1> {
+  try {
+    const result = await apiRequestWithPolicy<OperatorActionResponseV1>(
+      withQuery(actionPath(operationId, action)),
+      {
+        method: "POST",
+        body: JSON.stringify({ note: text(note, "") || undefined, reason: text(note, "") || undefined }),
+      },
+    );
+    if (!result.ok) throw new ApiError(result.status, result.bodyText, result.url);
+    return result.data;
+  } catch (error) {
+    const parsed = parseActionError(error);
+    if (parsed) return parsed;
+    throw error;
+  }
 }
