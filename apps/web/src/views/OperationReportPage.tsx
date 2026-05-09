@@ -18,6 +18,26 @@ const MAIN_VIEW_BLOCK_PATTERNS = [
   /\b[A-Z][A-Z0-9_]{3,}\b/,
 ];
 
+const CUSTOMER_EVIDENCE_BLOCK_PATTERNS = [
+  /s3:\/\//i,
+  /minio:\/\//i,
+  /https?:\/\//i,
+  /(^|\s)\/[\w./-]+/,
+  /[A-Z]:\\[\w\\.-]+/i,
+  /\bsecret\b/i,
+  /\btoken\b/i,
+  /\bcredential\b/i,
+  /stack\s*trace/i,
+  /debug\s*json/i,
+  /\{\s*"/,
+];
+
+type EvidencePackSafeMetadata = {
+  manifest: string | null;
+  sha256: string | null;
+  downloadUrl: string | null;
+};
+
 function customerText(value: unknown, fallback = "暂无可展示信息"): string {
   const text = String(value ?? "").trim();
   if (!text || text === "--" || text === "0/0" || /1970\s*[\/-]/.test(text)) return fallback;
@@ -31,6 +51,54 @@ function shouldHideMainViewText(value: unknown): boolean {
 
 function safeMainViewText(value: unknown, fallback = "暂无摘要"): string {
   return shouldHideMainViewText(value) ? fallback : String(value ?? "").trim() || fallback;
+}
+
+function toSafeText(value: unknown): string | null {
+  const text = String(value ?? "").trim();
+  if (!text || text === "--" || text === "[object Object]") return null;
+  if (CUSTOMER_EVIDENCE_BLOCK_PATTERNS.some((pattern) => pattern.test(text))) return null;
+  return text;
+}
+
+function safeManifest(value: unknown): string | null {
+  const text = toSafeText(value);
+  if (!text) return null;
+  if (text.includes("/") || text.includes("\\")) return null;
+  return text.length <= 120 ? text : null;
+}
+
+function safeSha256(value: unknown): string | null {
+  const text = String(value ?? "").trim();
+  return /^[a-fA-F0-9]{64}$/.test(text) ? text.toLowerCase() : null;
+}
+
+function safeDownloadUrl(value: unknown): string | null {
+  const text = String(value ?? "").trim();
+  if (!text) return null;
+  if (!text.startsWith("/api/v1/") && !text.startsWith("/customer/")) return null;
+  if (text.includes("//") || text.includes("\\")) return null;
+  if (CUSTOMER_EVIDENCE_BLOCK_PATTERNS.some((pattern) => pattern.test(text.replace(/^\/api\/v1\//, "api/v1/").replace(/^\/customer\//, "customer/")))) return null;
+  return text;
+}
+
+function evidencePackSafeMetadata(report: OperationReportV1): EvidencePackSafeMetadata {
+  const pack = (report as unknown as { evidence_pack_summary?: Record<string, unknown> }).evidence_pack_summary ?? {};
+  return {
+    manifest: safeManifest(pack.manifest),
+    sha256: safeSha256(pack.sha256),
+    downloadUrl: safeDownloadUrl(pack.download_url),
+  };
+}
+
+function EvidencePackMetadataBlock({ metadata }: { metadata: EvidencePackSafeMetadata }): React.ReactElement | null {
+  if (!metadata.manifest && !metadata.sha256 && !metadata.downloadUrl) return null;
+  return (
+    <div className="customerGrid2 customerSpacingTopXs">
+      {metadata.manifest ? <div><strong>证据清单：</strong>{metadata.manifest}</div> : null}
+      {metadata.sha256 ? <div><strong>校验值：</strong>{metadata.sha256}</div> : null}
+      {metadata.downloadUrl ? <div><strong>下载入口：</strong><a className="customerLinkButton" href={metadata.downloadUrl}>下载证据包</a></div> : null}
+    </div>
+  );
 }
 
 function shortOperationLabel(value: string): string {
@@ -90,6 +158,7 @@ export default function OperationReportPage(): React.ReactElement {
   const drawerFieldId = vm.drawerRefs.fieldId;
   const embeddedRoi = reportAny.roi_ledger ?? reportAny.roi ?? reportAny.value_summary;
   const embeddedMemory = reportAny.field_memory ?? reportAny.field_memory_summary ?? reportAny.memory;
+  const evidenceMetadata = evidencePackSafeMetadata(report);
 
   return (
     <div className="customerReportCanvas">
@@ -145,7 +214,10 @@ export default function OperationReportPage(): React.ReactElement {
                   <span className="operationStatusBadge">{statusText}</span>
                 </div>
                 {isEvidenceSection ? (
-                  <EvidencePackSummaryPanel vm={vm.evidenceSummary} expanded={isExpanded} />
+                  <>
+                    <EvidencePackSummaryPanel vm={vm.evidenceSummary} expanded={isExpanded} />
+                    {isExpanded ? <EvidencePackMetadataBlock metadata={evidenceMetadata} /> : null}
+                  </>
                 ) : isMemorySection && isExpanded ? (
                   <FieldMemoryPanel fieldId={drawerFieldId} operationId={drawerOperationId} embeddedMemory={embeddedMemory} compact />
                 ) : (
