@@ -1,13 +1,16 @@
 import React from "react";
 import {
+  bindFlightTableSkills,
   cleanFlightTableRun,
   createFlightTableDevices,
   createFlightTableField,
   createFlightTableGeometry,
   createFlightTableRun,
+  failOneFlightTableSkill,
   fetchFlightTableApiSnapshots,
   fetchFlightTableDeviceTemplates,
   fetchFlightTableRuns,
+  restoreFlightTableSkills,
   retryFlightTableStep,
   verifyFlightTableRun,
   type CreateFlightTableGeometryResponseV1,
@@ -16,6 +19,8 @@ import {
   type FlightTableDeviceTemplateV1,
   type FlightTableLaneV1,
   type FlightTableRunV1,
+  type FlightTableSkillAssemblyResponseV1,
+  type FlightTableSkillFailureTypeV1,
 } from "../../api/flightTable";
 import { ApiError } from "../../api/client";
 import { readTenantContext } from "../../auth/authStorage";
@@ -80,6 +85,7 @@ export default function FlightTablePage(): React.ReactElement {
   const [snapshots, setSnapshots] = React.useState<FlightTableApiSnapshotV1[]>([]);
   const [runIdDraft, setRunIdDraft] = React.useState(defaultFlightTableRunId);
   const [laneDraft, setLaneDraft] = React.useState<FlightTableLaneV1>("success");
+  const [skillFailureType, setSkillFailureType] = React.useState<FlightTableSkillFailureTypeV1>("missing_sensing_skill");
   const [fieldDraft, setFieldDraft] = React.useState<FieldAssemblyDraftV1>(defaultFieldDraft);
   const [spatialDraft, setSpatialDraft] = React.useState<FieldSpatialDraftV1>(() => defaultSpatialDraft());
   const [deviceDraft, setDeviceDraft] = React.useState<DeviceOnboardingDraftV1>(defaultDeviceDraft);
@@ -89,9 +95,12 @@ export default function FlightTablePage(): React.ReactElement {
   const [spatialError, setSpatialError] = React.useState<string | null>(null);
   const [deviceLoading, setDeviceLoading] = React.useState(false);
   const [deviceError, setDeviceError] = React.useState<string | null>(null);
+  const [skillLoading, setSkillLoading] = React.useState(false);
+  const [skillError, setSkillError] = React.useState<string | null>(null);
   const [geometryResult, setGeometryResult] = React.useState<CreateFlightTableGeometryResponseV1 | null>(null);
   const [deviceTemplates, setDeviceTemplates] = React.useState<FlightTableDeviceTemplateV1[]>([]);
   const [onboardedDevices, setOnboardedDevices] = React.useState<FlightTableDeviceSummaryV1[]>([]);
+  const [skillResult, setSkillResult] = React.useState<FlightTableSkillAssemblyResponseV1 | null>(null);
   const [customerVisible, setCustomerVisible] = React.useState(false);
   const [reportVisible, setReportVisible] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
@@ -285,6 +294,60 @@ export default function FlightTablePage(): React.ReactElement {
     }
   }, [applyRun, deviceDraft, fieldDraft.field_id, run]);
 
+  const handleBindSkills = React.useCallback(async () => {
+    if (!run) {
+      setSkillError("请先创建 run");
+      return;
+    }
+    setSkillLoading(true);
+    setSkillError(null);
+    try {
+      const res = await bindFlightTableSkills(run.run_id);
+      setSkillResult(res);
+      applyRun(res.run);
+    } catch (err) {
+      setSkillError(errorToText(err));
+    } finally {
+      setSkillLoading(false);
+    }
+  }, [applyRun, run]);
+
+  const handleFailOneSkill = React.useCallback(async () => {
+    if (!run) {
+      setSkillError("请先创建 run");
+      return;
+    }
+    setSkillLoading(true);
+    setSkillError(null);
+    try {
+      const res = await failOneFlightTableSkill(run.run_id, skillFailureType);
+      setSkillResult(res);
+      applyRun(res.run);
+    } catch (err) {
+      setSkillError(errorToText(err));
+    } finally {
+      setSkillLoading(false);
+    }
+  }, [applyRun, run, skillFailureType]);
+
+  const handleRestoreSkills = React.useCallback(async () => {
+    if (!run) {
+      setSkillError("请先创建 run");
+      return;
+    }
+    setSkillLoading(true);
+    setSkillError(null);
+    try {
+      const res = await restoreFlightTableSkills(run.run_id);
+      setSkillResult(res);
+      applyRun(res.run);
+    } catch (err) {
+      setSkillError(errorToText(err));
+    } finally {
+      setSkillLoading(false);
+    }
+  }, [applyRun, run]);
+
   const handleVerify = React.useCallback(async () => {
     if (!run) return;
     setLoading(true);
@@ -306,6 +369,7 @@ export default function FlightTablePage(): React.ReactElement {
       setReportVisible(false);
       setGeometryResult(null);
       setOnboardedDevices([]);
+      setSkillResult(null);
       setSpatialDraft(defaultSpatialDraft());
       applyRun(next);
     } catch (err) {
@@ -333,6 +397,7 @@ export default function FlightTablePage(): React.ReactElement {
       snapshots={snapshots}
       runIdDraft={runIdDraft}
       laneDraft={laneDraft}
+      skillFailureType={skillFailureType}
       fieldDraft={fieldDraft}
       fieldLoading={fieldLoading}
       fieldError={fieldError}
@@ -347,8 +412,12 @@ export default function FlightTablePage(): React.ReactElement {
       deviceError={deviceError}
       deviceTemplates={deviceTemplates}
       onboardedDevices={onboardedDevices}
+      skillResult={skillResult}
+      skillLoading={skillLoading}
+      skillError={skillError}
       onRunIdDraftChange={setRunIdDraft}
       onLaneDraftChange={setLaneDraft}
+      onSkillFailureTypeChange={setSkillFailureType}
       onFieldDraftChange={(patch) => setFieldDraft((draft) => ({ ...draft, ...patch }))}
       onSpatialDraftChange={(patch) => setSpatialDraft((draft) => ({ ...draft, ...patch }))}
       onDeviceDraftChange={(patch) => setDeviceDraft((draft) => ({ ...draft, ...patch }))}
@@ -358,6 +427,9 @@ export default function FlightTablePage(): React.ReactElement {
       onSubmitGeometry={handleSubmitGeometry}
       onOnboardDevice={handleOnboardDevice}
       onRetryDevice={handleOnboardDevice}
+      onBindSkills={handleBindSkills}
+      onFailOneSkill={handleFailOneSkill}
+      onRestoreSkills={handleRestoreSkills}
       onVerify={handleVerify}
       onClean={handleClean}
       onRetryStep={handleRetryStep}
