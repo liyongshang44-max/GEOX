@@ -150,6 +150,48 @@ export type FlightTableDevicesResponseV1 = {
   run: FlightTableRunV1;
 };
 
+export type FlightTableSkillFailureTypeV1 = "missing_sensing_skill" | "device_skill_disabled" | "acceptance_skill_failed";
+export type FlightTableSkillClassificationV1 = "sensing" | "agronomy" | "device" | "acceptance";
+
+export type FlightTableSkillAssemblyItemV1 = {
+  skill_id: string;
+  version: string;
+  classification: FlightTableSkillClassificationV1;
+  bind_target: string;
+  scope_type: "TENANT" | "FIELD" | "DEVICE" | "OPERATION";
+  trigger_stage: string;
+  required_for: string;
+  binding_id: string;
+  status: "ACTIVE" | "DISABLED" | "MISSING" | "FAILED";
+  binding_scope: string;
+  missing_reason: string | null;
+  source: "FORMAL_SKILL_BINDING" | "DEV_FAILURE_INJECTION";
+};
+
+export type FlightTableSkillAssemblyResponseV1 = {
+  ok: boolean;
+  operation_id: string;
+  items: FlightTableSkillAssemblyItemV1[];
+  binding_ids: string[];
+  skill_run_ids: string[];
+  missing_required_observation_skills: string[];
+  failure?: {
+    failure_type: FlightTableSkillFailureTypeV1;
+    failure_reason: "binding_invalid" | "skill_run_failed" | "missing_required_observation_skill";
+    failed_skill_id: string;
+    trace_visible: boolean;
+    performance_visible: boolean;
+  };
+  verify: {
+    bindings_visible: boolean;
+    trace_visible: boolean;
+    performance_visible: boolean;
+    operator_trace_url: string;
+    operator_performance_url: string;
+  };
+  run: FlightTableRunV1;
+};
+
 export type CreateFlightTableRunRequestV1 = {
   run_id: string;
   tenant_id: string;
@@ -238,6 +280,27 @@ export async function createFlightTableDevices(runId: string, body: CreateFlight
   return apiRequest<FlightTableDevicesResponseV1>(`/api/v1/dev/flight-table/runs/${encodeURIComponent(runId)}/devices`, {
     method: "POST",
     body: JSON.stringify(body),
+  });
+}
+
+export async function bindFlightTableSkills(runId: string): Promise<FlightTableSkillAssemblyResponseV1> {
+  return apiRequest<FlightTableSkillAssemblyResponseV1>(`/api/v1/dev/flight-table/runs/${encodeURIComponent(runId)}/skills/bind`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export async function failOneFlightTableSkill(runId: string, failureType: FlightTableSkillFailureTypeV1): Promise<FlightTableSkillAssemblyResponseV1> {
+  return apiRequest<FlightTableSkillAssemblyResponseV1>(`/api/v1/dev/flight-table/runs/${encodeURIComponent(runId)}/skills/fail-one`, {
+    method: "POST",
+    body: JSON.stringify({ failure_type: failureType }),
+  });
+}
+
+export async function restoreFlightTableSkills(runId: string): Promise<FlightTableSkillAssemblyResponseV1> {
+  return apiRequest<FlightTableSkillAssemblyResponseV1>(`/api/v1/dev/flight-table/runs/${encodeURIComponent(runId)}/skills/restore`, {
+    method: "POST",
+    body: JSON.stringify({}),
   });
 }
 
