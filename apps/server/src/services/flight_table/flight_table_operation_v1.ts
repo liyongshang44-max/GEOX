@@ -300,7 +300,7 @@ export async function runFlightTableOperationAoActReceiptV1(args: {
   const prescriptionRead = await callJson(`${baseUrl}/api/v1/prescriptions/${encodeURIComponent(prescription_id)}?tenant_id=${encodeURIComponent(run.tenant_id)}&project_id=${encodeURIComponent(run.project_id)}&group_id=${encodeURIComponent(run.group_id)}`, "GET", bearerToken);
   if (!prescriptionRead.ok) throw new Error(`FLIGHT_TABLE_PRESCRIPTION_READ_FAILED:${prescriptionRead.status}:${safeText(prescriptionRead.json?.error)}`);
   const prescription = prescriptionRead.json?.prescription ?? {};
-  const field_id = normalizeId(input.field_id) ?? safeText(prescription.field_id) ?? run.manifest.field_id;
+  const field_id = normalizeId(input.field_id) ?? normalizeId(prescription.field_id) ?? run.manifest.field_id;
   const device_id = normalizeId(input.device_id) ?? run.manifest.device_ids[0] ?? `ft_irrigation_controller_${run.run_id}`;
   if (!field_id) throw new Error("FLIGHT_TABLE_FIELD_NOT_FOUND");
   const approval_status = await latestApprovalStatus(pool, run, approval_request_id);
