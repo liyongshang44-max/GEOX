@@ -1,5 +1,5 @@
 import React from "react";
-import type { OperationReportV1 } from "../../api/customerReports";
+import type { FieldReportDetailV1, OperationReportV1 } from "../../api/customerReports";
 import type { CustomerDashboardPageVm } from "../../viewmodels/customerDashboardVm";
 import type { FieldReportPageVm } from "../../viewmodels/fieldReportVm";
 import type { OperationReportPageVm } from "../../viewmodels/operationReportVm";
@@ -14,6 +14,14 @@ type OperationSameSourceExportSummary = {
   weatherInterferenceSummary: string;
   roiNature: string;
   fieldMemoryLearningSummary: string;
+};
+
+type FieldSameSourceExportSummary = {
+  geometryStatus: string;
+  recentOperationCoverageStatus: string;
+  weatherSummary: string;
+  roiSummary: string;
+  fieldMemorySummary: string;
 };
 
 function PrintTable({ headers, rows, emptyText }: { headers: string[]; rows: Row[]; emptyText: string }): React.ReactElement {
@@ -51,6 +59,26 @@ function safeSha256(value: unknown, fallback = "后端未返回 sha256"): string
   return /^[a-fA-F0-9]{64}$/.test(text) ? text.toLowerCase() : fallback;
 }
 
+function isObject(value: unknown): value is Record<string, any> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function isGeoJsonLike(value: unknown): boolean {
+  if (!isObject(value)) return false;
+  const type = String(value.type ?? "");
+  if (type === "FeatureCollection") return Array.isArray(value.features) && value.features.length > 0;
+  if (type === "Feature") return isGeoJsonLike(value.geometry);
+  if (["Polygon", "MultiPolygon", "LineString", "MultiLineString", "Point", "MultiPoint"].includes(type)) return Array.isArray(value.coordinates);
+  return false;
+}
+
+function featureCount(value: unknown): number {
+  if (!isObject(value)) return 0;
+  const type = String(value.type ?? "");
+  if (type === "FeatureCollection") return Array.isArray(value.features) ? value.features.filter(isGeoJsonLike).length : 0;
+  return isGeoJsonLike(value) ? 1 : 0;
+}
+
 function sectionItemValue(vm: OperationReportPageVm, key: OperationReportPageVm["sections"][number]["key"], label: string, fallback = "暂无记录"): string {
   const section = vm.sections.find((item) => item.key === key);
   const row = section?.items.find((item) => item.label === label || item.label.includes(label));
@@ -61,19 +89,35 @@ function operationReportObject(report?: OperationReportV1 | null): Record<string
   return report && typeof report === "object" ? report as unknown as Record<string, any> : {};
 }
 
+function fieldReportObject(report?: FieldReportDetailV1 | null): Record<string, any> {
+  return report && typeof report === "object" ? report as unknown as Record<string, any> : {};
+}
+
 function weatherSummaryFromReport(reportAny: Record<string, any>): string {
   const weather = reportAny.weather_interference
     ?? reportAny.weatherInterference
+    ?? reportAny.weather_summary
+    ?? reportAny.weatherSummary
+    ?? reportAny.field_weather_summary
+    ?? reportAny.fieldWeatherSummary
     ?? reportAny.operation_environment_context
     ?? reportAny.environment_context
     ?? reportAny.environment
     ?? reportAny.weather
     ?? null;
-  if (!weather || typeof weather !== "object") return "天气干扰摘要未接入报告同源数据。";
+  if (!weather || typeof weather !== "object") return "天气摘要未接入报告同源数据。";
 
   const status = String(weather.status ?? weather.source_status ?? weather.weather_source_status ?? "").trim().toLowerCase();
   const explanation = safeExportText(weather.explanation ?? weather.summary ?? weather.summary_text ?? weather.interference_summary, "");
   if (explanation) return explanation;
+
+  const rainfall = Number(weather.rainfall_mm ?? weather.rainfallMm ?? weather.total_rainfall_mm ?? weather.totalRainfallMm ?? weather.rain_mm);
+  const futureRainfall = Number(weather.forecast_rainfall_mm ?? weather.forecastRainfallMm ?? weather.next_24h_rainfall_mm ?? weather.future_24h_rainfall_mm);
+  if (Number.isFinite(rainfall) || Number.isFinite(futureRainfall)) {
+    const rainText = Number.isFinite(rainfall) ? `${rainfall.toFixed(2)} mm` : "暂无记录";
+    const forecastText = Number.isFinite(futureRainfall) ? `${futureRainfall.toFixed(2)} mm` : "暂无记录";
+    return `24h 降雨：${rainText}；未来 24h 降雨预测：${forecastText}。天气仅用于辅助解释和学习排除。`;
+  }
 
   const learningExcluded = Boolean(
     weather.learningWeatherInterferenceExcluded
@@ -94,7 +138,7 @@ function weatherSummaryFromReport(reportAny: Record<string, any>): string {
 
   if (["unavailable", "location_unavailable", "provider_error"].includes(status)) return "天气源未接入或当前位置不可用，当前不参与验收判断。";
   if (status === "ok") return "未发现明确天气干扰；天气仅用于辅助解释和学习排除，不直接替代验收结论。";
-  return "暂无天气干扰摘要。";
+  return "暂无天气摘要。";
 }
 
 function buildOperationSameSourceExportSummary(vm: OperationReportPageVm, report?: OperationReportV1 | null): OperationSameSourceExportSummary {
@@ -138,6 +182,34 @@ function buildOperationSameSourceExportSummary(vm: OperationReportPageVm, report
     weatherInterferenceSummary: weatherSummaryFromReport(reportAny),
     roiNature: sectionItemValue(vm, "ROI", "实测/估算/假设", "暂无 ROI 性质。"),
     fieldMemoryLearningSummary: memoryLearning,
+  };
+}
+
+function buildFieldSameSourceExportSummary(vm: FieldReportPageVm, report?: FieldReportDetailV1 | null): FieldSameSourceExportSummary {
+  const reportAny = fieldReportObject(report);
+  const field = reportAny.field ?? {};
+  const geometry = field.geometry ?? reportAny.geometry ?? reportAny.field_geometry ?? reportAny.fieldGeometry;
+  const geometryStatus = isGeoJsonLike(geometry)
+    ? `地块 geometry 已接入（${featureCount(geometry)} 个空间对象）。`
+    : "暂无地块 geometry，导出版不绘制或伪造地块范围。";
+
+  const layerParts = [
+    vm.mapLayers.plannedGeoJson ? "计划区域已接入" : "暂无计划区域",
+    vm.mapLayers.coverageGeoJson ? "实际覆盖已接入" : "暂无实际覆盖",
+    vm.mapLayers.trajectorySegments.length ? `${vm.mapLayers.trajectorySegments.length} 条执行轨迹` : "暂无执行轨迹",
+    vm.mapLayers.acceptancePoints.length ? `${vm.mapLayers.acceptancePoints.length} 个验收点` : "暂无验收点",
+    vm.mapLayers.deviceMarkers.length ? `${vm.mapLayers.deviceMarkers.length} 个设备点` : "暂无设备点",
+  ];
+  const recentOperationCoverageStatus = vm.mapLayers.hasAnyOperationLayer
+    ? `${safeExportText(vm.mapLayers.summaryText, "已接入作业空间图层。")}；${layerParts.join("；")}。`
+    : "暂无近期作业覆盖图层，导出版不伪造覆盖、轨迹或验收点。";
+
+  return {
+    geometryStatus,
+    recentOperationCoverageStatus,
+    weatherSummary: weatherSummaryFromReport(reportAny),
+    roiSummary: safeExportText(vm.roiSummary.displayText, "暂无 ROI 摘要。"),
+    fieldMemorySummary: safeExportText(vm.fieldMemory.displayText, "暂无 Field Memory 摘要。"),
   };
 }
 
@@ -196,7 +268,8 @@ export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): 
   );
 }
 
-export function FieldExportBlocks({ vm }: { vm: FieldReportPageVm }): React.ReactElement {
+export function FieldExportBlocks({ vm, report }: { vm: FieldReportPageVm; report?: FieldReportDetailV1 | null }): React.ReactElement {
+  const sameSource = buildFieldSameSourceExportSummary(vm, report);
   return (
     <div className="customerCompactReport">
       <section className="customerCard">
@@ -207,6 +280,20 @@ export function FieldExportBlocks({ vm }: { vm: FieldReportPageVm }): React.Reac
           <div><strong>当前风险：</strong>{vm.risk.levelLabel}</div>
           <div><strong>待验收：</strong>{vm.overview.pendingAcceptanceText}</div>
         </div>
+      </section>
+      <section className="customerCard">
+        <h2 className="customerCardTitle">P2.2 地块同源增强摘要</h2>
+        <PrintTable
+          headers={["项目", "导出内容"]}
+          rows={[
+            ["地块 geometry 状态", sameSource.geometryStatus],
+            ["近期作业覆盖状态", sameSource.recentOperationCoverageStatus],
+            ["天气摘要", sameSource.weatherSummary],
+            ["ROI 摘要", sameSource.roiSummary],
+            ["Field Memory 摘要", sameSource.fieldMemorySummary],
+          ]}
+          emptyText="暂无地块同源增强摘要。"
+        />
       </section>
       <section className="customerCard"><h2 className="customerCardTitle">风险/诊断</h2><p className="customerSpacingTopSm">{vm.explain.human}当前风险：{vm.risk.levelLabel}。</p></section>
       <section className="customerCard"><h2 className="customerCardTitle">下一步建议</h2><p className="customerSpacingTopSm">{vm.nextAction?.objectiveText ?? "暂无新的处理建议"}</p></section>
