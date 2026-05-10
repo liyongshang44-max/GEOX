@@ -81,6 +81,7 @@ function actionLinks(operationId: string, fieldId: string): Array<{ label: strin
   if (fieldId) query.set("field_id", fieldId);
   return [
     { label: "查看作业", href: `/customer/operations/${encodeURIComponent(operationId)}` },
+    { label: "查看 Skill Trace", href: `/customer/operations/${encodeURIComponent(operationId)}#operation-skill-trace` },
     { label: "查看 Field Memory", href: `/operator/field-memory?${query.toString()}` },
     { label: "查看 ROI", href: `/operator/roi-ledger?${query.toString()}` },
     { label: "查看证据中心", href: `/operator/evidence?operation_id=${encodeURIComponent(operationId)}` },
