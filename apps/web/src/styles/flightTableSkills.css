@@ -1,0 +1,99 @@
+.flight-skill-card {
+  grid-column: span 3;
+}
+
+.flight-skill-controls {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.35fr) minmax(0, 0.65fr);
+  gap: 12px;
+  align-items: end;
+  margin: 12px 0 16px;
+}
+
+.flight-skill-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #475569;
+  font-size: 13px;
+}
+
+.flight-skill-controls select {
+  min-height: 38px;
+  border: 1px solid rgba(15, 23, 42, 0.16);
+  border-radius: 10px;
+  padding: 0 10px;
+  background: white;
+}
+
+.flight-skill-groups {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.flight-skill-group {
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(248, 250, 252, 0.72);
+  min-width: 0;
+}
+
+.flight-skill-group h4 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
+.flight-skill-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px;
+  border-radius: 12px;
+  background: white;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  margin-bottom: 8px;
+}
+
+.flight-skill-item strong,
+.flight-skill-item span {
+  word-break: break-word;
+}
+
+.flight-skill-item span {
+  color: #475569;
+  font-size: 13px;
+}
+
+.flight-skill-failure-picker {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(15, 23, 42, 0.10);
+}
+
+.flight-skill-failure-picker > strong {
+  display: block;
+  margin-bottom: 10px;
+}
+
+@media (max-width: 1100px) {
+  .flight-skill-card {
+    grid-column: span 2;
+  }
+  .flight-skill-controls,
+  .flight-skill-groups {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .flight-skill-card {
+    grid-column: span 1;
+  }
+  .flight-skill-controls,
+  .flight-skill-groups {
+    grid-template-columns: 1fr;
+  }
+}
