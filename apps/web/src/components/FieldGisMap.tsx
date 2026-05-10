@@ -112,6 +112,19 @@ function swatchStyle(color: string, active: boolean): React.CSSProperties {
   };
 }
 
+function mapShellStyle(): React.CSSProperties {
+  return {
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+    borderRadius: 12,
+    overflow: "hidden",
+    border: "1px solid #e5e7eb",
+    background: "#f8fafc",
+    boxSizing: "border-box",
+  };
+}
+
 export default function FieldGisMap({
   polygonGeoJson,
   plannedGeoJson,
@@ -136,13 +149,17 @@ export default function FieldGisMap({
   onSelectObject?: (obj: any) => void;
 }): React.ReactElement {
   const markerPoints = markers.map((m) => ({ lon: Number(m.lon), lat: Number(m.lat) })).filter((p) => Number.isFinite(p.lon) && Number.isFinite(p.lat));
-  const segmentPoints = trajectorySegments.flatMap((s) => s.coordinates.map(([lon, lat]) => ({ lon, lat })));
+  const validMarkers = markers.filter((m) => Number.isFinite(Number(m.lon)) && Number.isFinite(Number(m.lat)));
+  const validTrajectorySegments = trajectorySegments.filter((segment) => segment.coordinates.some(([lon, lat]) => Number.isFinite(Number(lon)) && Number.isFinite(Number(lat))));
+  const segmentPoints = validTrajectorySegments.flatMap((s) => s.coordinates.map(([lon, lat]) => ({ lon: Number(lon), lat: Number(lat) })).filter((p) => Number.isFinite(p.lon) && Number.isFinite(p.lat)));
   const heatFeatures = Array.isArray(heatGeoJson?.features) ? heatGeoJson.features : [];
-  const heatPoints = heatFeatures.map((f: any) => ({ lon: Number(f?.geometry?.coordinates?.[0]), lat: Number(f?.geometry?.coordinates?.[1]) })).filter((p: any) => Number.isFinite(p.lon) && Number.isFinite(p.lat));
-  const polygonPoints = extractPolygonRings(polygonGeoJson).flat().map(([lon, lat]) => ({ lon: Number(lon), lat: Number(lat) }));
-  const plannedPoints = extractPolygonRings(plannedGeoJson).flat().map(([lon, lat]) => ({ lon: Number(lon), lat: Number(lat) }));
-  const coveragePoints = extractPolygonRings(coverageGeoJson).flat().map(([lon, lat]) => ({ lon: Number(lon), lat: Number(lat) }));
-  const acceptanceGeoPoints = acceptancePoints.map((p) => ({ lon: Number(p.lon), lat: Number(p.lat) })).filter((p) => Number.isFinite(p.lon) && Number.isFinite(p.lat));
+  const validHeatFeatures = heatFeatures.filter((f: any) => Number.isFinite(Number(f?.geometry?.coordinates?.[0])) && Number.isFinite(Number(f?.geometry?.coordinates?.[1])));
+  const heatPoints = validHeatFeatures.map((f: any) => ({ lon: Number(f?.geometry?.coordinates?.[0]), lat: Number(f?.geometry?.coordinates?.[1]) }));
+  const polygonPoints = extractPolygonRings(polygonGeoJson).flat().map(([lon, lat]) => ({ lon: Number(lon), lat: Number(lat) })).filter((p) => Number.isFinite(p.lon) && Number.isFinite(p.lat));
+  const plannedPoints = extractPolygonRings(plannedGeoJson).flat().map(([lon, lat]) => ({ lon: Number(lon), lat: Number(lat) })).filter((p) => Number.isFinite(p.lon) && Number.isFinite(p.lat));
+  const coveragePoints = extractPolygonRings(coverageGeoJson).flat().map(([lon, lat]) => ({ lon: Number(lon), lat: Number(lat) })).filter((p) => Number.isFinite(p.lon) && Number.isFinite(p.lat));
+  const validAcceptancePoints = acceptancePoints.filter((p) => Number.isFinite(Number(p.lon)) && Number.isFinite(Number(p.lat)));
+  const acceptanceGeoPoints = validAcceptancePoints.map((p) => ({ lon: Number(p.lon), lat: Number(p.lat) }));
   const computedBounds = toBounds([...polygonPoints, ...plannedPoints, ...coveragePoints, ...markerPoints, ...segmentPoints, ...heatPoints, ...acceptanceGeoPoints]);
   const bounds = computedBounds ? expandBounds(computedBounds) : { minLon: 120.9, maxLon: 121.1, minLat: 31.1, maxLat: 31.3 };
 
@@ -158,6 +175,7 @@ export default function FieldGisMap({
     };
   };
 
+  // 防伪造规则：没有真实 geometry / coverage / trajectory / acceptance points 时，不生成对应图形。
   const polygonPaths = extractPolygonRings(polygonGeoJson).map((ring) => {
     return ring.map((pt, i) => {
       const p = proj(Number(pt[0]), Number(pt[1]));
@@ -194,16 +212,16 @@ export default function FieldGisMap({
     { key: "boundary", label: labels?.fieldBoundary || "地块边界", swatch: "#0284c7", hasData: polygonPaths.length > 0 },
     { key: "planned", label: labels?.plannedLayer || "计划区域", swatch: "#d97706", hasData: plannedPaths.length > 0 },
     { key: "coverage", label: labels?.coverageLayer || "实际覆盖", swatch: "#16a34a", hasData: coveragePaths.length > 0 },
-    { key: "trajectory", label: labels?.operationTrack || "设备轨迹", swatch: "#2563eb", hasData: trajectorySegments.length > 0 },
-    { key: "device", label: labels?.devicePosition || "设备位置", swatch: "#16a34a", hasData: markerPoints.length > 0 },
-    { key: "acceptance", label: labels?.layerAcceptance || "验收点", swatch: "#7c3aed", hasData: acceptanceGeoPoints.length > 0 },
-    { key: "heat", label: labels?.alertLocation || "告警/热区", swatch: "#dc2626", hasData: heatPoints.length > 0 },
+    { key: "trajectory", label: labels?.operationTrack || "设备轨迹", swatch: "#2563eb", hasData: validTrajectorySegments.length > 0 && segmentPoints.length > 0 },
+    { key: "device", label: labels?.devicePosition || "设备位置", swatch: "#16a34a", hasData: validMarkers.length > 0 && markerPoints.length > 0 },
+    { key: "acceptance", label: labels?.layerAcceptance || "验收点", swatch: "#7c3aed", hasData: validAcceptancePoints.length > 0 && acceptanceGeoPoints.length > 0 },
+    { key: "heat", label: labels?.alertLocation || "告警/热区", swatch: "#dc2626", hasData: validHeatFeatures.length > 0 && heatPoints.length > 0 },
   ].filter((item) => item.hasData);
 
   const primarySegment = useMemo(() => {
-    if (!trajectorySegments.length) return null;
-    return trajectorySegments.find((s) => s.id === activeSegmentId) || trajectorySegments[0];
-  }, [trajectorySegments, activeSegmentId]);
+    if (!validTrajectorySegments.length) return null;
+    return validTrajectorySegments.find((s) => s.id === activeSegmentId) || validTrajectorySegments[0];
+  }, [validTrajectorySegments, activeSegmentId]);
 
   const [cursorIndex, setCursorIndex] = useState(0);
 
@@ -230,29 +248,38 @@ export default function FieldGisMap({
   const currentPoint = primarySegment ? pointAt(primarySegment.coordinates, cursorIndex) : null;
   const currentMarkerPoint = currentPoint ? proj(Number(currentPoint[0]), Number(currentPoint[1])) : null;
 
-  return (
-    <div style={{ width: "100%", borderRadius: 12, overflow: "hidden", border: "1px solid #e5e7eb", background: "#f8fafc" }}>
-      {layerOptions.length > 0 ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", padding: "10px 12px", borderBottom: "1px solid #e5e7eb", background: "#ffffff" }} aria-label="GIS 图层开关">
-          <span style={{ color: "#4b5563", fontSize: 12, fontWeight: 900 }}>图层</span>
-          {layerOptions.map((layer) => {
-            const active = isLayerVisible(layer.key);
-            return (
-              <button
-                key={layer.key}
-                type="button"
-                aria-pressed={active}
-                onClick={() => setVisibleLayers((prev) => ({ ...prev, [layer.key]: !active }))}
-                style={layerButtonStyle(active)}
-              >
-                <span style={swatchStyle(layer.swatch, active)} />
-                {layer.label}
-              </button>
-            );
-          })}
+  if (layerOptions.length === 0) {
+    return (
+      <div style={mapShellStyle()}>
+        <div style={{ padding: 16, minHeight: 120, display: "grid", alignContent: "center", gap: 6 }}>
+          <strong style={{ color: "#111827", fontSize: 14 }}>暂无可渲染空间图层。</strong>
+          <span style={{ color: "#64748b", fontSize: 13, lineHeight: 1.5 }}>未收到地块边界、计划区域、实际覆盖、设备轨迹、验收点或告警/热区数据；系统不会绘制示意地图或伪造空间对象。</span>
         </div>
-      ) : null}
-      <svg viewBox={`0 0 ${w} ${h}`} style={{ width: "100%", height: 420 }}>
+      </div>
+    );
+  }
+
+  return (
+    <div style={mapShellStyle()}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", padding: "10px 12px", borderBottom: "1px solid #e5e7eb", background: "#ffffff" }} aria-label="GIS 图层开关">
+        <span style={{ color: "#4b5563", fontSize: 12, fontWeight: 900 }}>图层</span>
+        {layerOptions.map((layer) => {
+          const active = isLayerVisible(layer.key);
+          return (
+            <button
+              key={layer.key}
+              type="button"
+              aria-pressed={active}
+              onClick={() => setVisibleLayers((prev) => ({ ...prev, [layer.key]: !active }))}
+              style={layerButtonStyle(active)}
+            >
+              <span style={swatchStyle(layer.swatch, active)} />
+              {layer.label}
+            </button>
+          );
+        })}
+      </div>
+      <svg viewBox={`0 0 ${w} ${h}`} style={{ width: "100%", maxWidth: "100%", height: 420, display: "block" }}>
         <rect x="0" y="0" width={w} height={h} fill="#f8fafc" />
 
         {isLayerVisible("boundary") ? polygonPaths.map((path, i) => (
@@ -290,7 +317,7 @@ export default function FieldGisMap({
           />
         )) : null}
 
-        {isLayerVisible("trajectory") ? trajectorySegments.map((segment) => {
+        {isLayerVisible("trajectory") ? validTrajectorySegments.map((segment) => {
           const isPrimary = primarySegment?.id === segment.id;
           const basePath = buildPath(segment.coordinates, proj);
           if (!basePath) return null;
@@ -319,7 +346,7 @@ export default function FieldGisMap({
           );
         }) : null}
 
-        {isLayerVisible("heat") ? heatFeatures.map((f: any, i: number) => {
+        {isLayerVisible("heat") ? validHeatFeatures.map((f: any, i: number) => {
           const c = f?.geometry?.coordinates || [];
           const p = proj(Number(c[0]), Number(c[1]));
           const intensity = Number(f?.properties?.intensity ?? 1);
@@ -337,7 +364,7 @@ export default function FieldGisMap({
           );
         }) : null}
 
-        {isLayerVisible("device") ? markers.map((m) => {
+        {isLayerVisible("device") ? validMarkers.map((m) => {
           const p = proj(Number(m.lon), Number(m.lat));
           return (
             <g key={`${m.device_id}_${m.ts_ms || 0}`} onClick={() => onSelectObject?.({ kind: labels?.devicePosition || "Device Position", name: m.device_id, time: m.ts_ms ? new Date(m.ts_ms).toLocaleString() : "-", status: "-" })}>
@@ -347,7 +374,7 @@ export default function FieldGisMap({
           );
         }) : null}
 
-        {isLayerVisible("acceptance") ? acceptancePoints.map((a) => {
+        {isLayerVisible("acceptance") ? validAcceptancePoints.map((a) => {
           const p = proj(Number(a.lon), Number(a.lat));
           const fill = String(a.status).toUpperCase().includes("FAIL") ? "#dc2626" : "#7c3aed";
           return (
