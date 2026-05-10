@@ -364,6 +364,8 @@
 .riskBadgewarning { background: var(--customer-medium-bg); color: var(--customer-medium-text); }
 .riskBadgedanger { background: var(--customer-high-bg); color: var(--customer-high-text); }
 .mapPlaceholderCard { pointer-events: none; }
+.fieldMapLayerCard { pointer-events: auto; }
+.fieldMapLayerCard .muted { max-width: 100%; overflow-wrap: anywhere; }
 
 .operationTimelineStrip {
   display: flex;
