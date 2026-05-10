@@ -195,7 +195,8 @@
 }
 
 .flight-field-card,
-.flight-spatial-card {
+.flight-spatial-card,
+.flight-device-card {
   grid-column: span 3;
 }
 
@@ -228,7 +229,8 @@
 }
 
 .flight-form-grid label,
-.flight-spatial-editor label {
+.flight-spatial-editor label,
+.flight-device-controls label {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -237,7 +239,9 @@
 }
 
 .flight-form-grid input,
-.flight-spatial-editor input {
+.flight-spatial-editor input,
+.flight-device-controls input,
+.flight-device-controls select {
   min-height: 38px;
   border: 1px solid rgba(15, 23, 42, 0.16);
   border-radius: 10px;
@@ -338,6 +342,27 @@
   stroke-width: 2;
 }
 
+.flight-device-controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.flight-template-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.05);
+}
+
+.flight-template-summary span {
+  color: #475569;
+  font-size: 13px;
+}
+
 .flight-wizard {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -349,6 +374,7 @@
   border: 1px solid rgba(15, 23, 42, 0.12);
   padding: 10px;
   font-size: 13px;
+  min-height: 88px;
 }
 
 .flight-wizard-step span {
@@ -356,6 +382,81 @@
   color: #64748b;
   font-size: 11px;
   margin-bottom: 4px;
+}
+
+.flight-wizard-step strong {
+  display: block;
+}
+
+.flight-wizard-step small {
+  display: block;
+  color: #64748b;
+  margin-top: 5px;
+  line-height: 1.35;
+}
+
+.flight-wizard-step-pass {
+  border-color: rgba(22, 101, 52, 0.25);
+  background: rgba(240, 253, 244, 0.72);
+}
+
+.flight-wizard-step-fail {
+  border-color: rgba(153, 27, 27, 0.25);
+  background: rgba(254, 242, 242, 0.72);
+}
+
+.flight-wizard-step-running {
+  border-color: rgba(37, 99, 235, 0.25);
+  background: rgba(239, 246, 255, 0.72);
+}
+
+.flight-device-list {
+  margin-top: 16px;
+}
+
+.flight-device-table {
+  overflow-x: auto;
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  border-radius: 14px;
+}
+
+.flight-device-row {
+  display: grid;
+  grid-template-columns: 120px 190px 90px 220px 90px 180px 180px 150px minmax(240px, 1fr);
+  gap: 10px;
+  width: 100%;
+  min-width: 1460px;
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  background: white;
+  text-align: left;
+  cursor: pointer;
+}
+
+.flight-device-row:last-child {
+  border-bottom: 0;
+}
+
+.flight-device-row span {
+  color: #334155;
+  font-size: 13px;
+  word-break: break-word;
+}
+
+.flight-device-row-head {
+  background: rgba(248, 250, 252, 0.92);
+  cursor: default;
+  font-weight: 700;
+}
+
+.flight-device-detail {
+  display: block;
+  margin-top: 16px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(248, 250, 252, 0.75);
 }
 
 .flight-lane-grid {
@@ -438,11 +539,13 @@
   .flight-lane-grid,
   .flight-wizard,
   .flight-form-grid,
-  .flight-spatial-editor {
+  .flight-spatial-editor,
+  .flight-device-controls {
     grid-template-columns: 1fr 1fr;
   }
   .flight-field-card,
-  .flight-spatial-card {
+  .flight-spatial-card,
+  .flight-device-card {
     grid-column: span 2;
   }
 }
@@ -453,11 +556,13 @@
   .flight-lane-grid,
   .flight-wizard,
   .flight-form-grid,
-  .flight-spatial-editor {
+  .flight-spatial-editor,
+  .flight-device-controls {
     grid-template-columns: 1fr;
   }
   .flight-field-card,
-  .flight-spatial-card {
+  .flight-spatial-card,
+  .flight-device-card {
     grid-column: span 1;
   }
 }
