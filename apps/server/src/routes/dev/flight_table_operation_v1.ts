@@ -41,7 +41,9 @@ function routeError(reply: FastifyReply, err: unknown) {
   if (message.startsWith("FLIGHT_TABLE_APPROVAL_NOT_APPROVED")) return reply.status(409).send({ ok: false, error: "FLIGHT_TABLE_APPROVAL_NOT_APPROVED", message });
   if (message.startsWith("FLIGHT_TABLE_PRESCRIPTION_READ_FAILED")) return reply.status(502).send({ ok: false, error: "FLIGHT_TABLE_PRESCRIPTION_READ_FAILED", message });
   if (message.startsWith("FLIGHT_TABLE_ACTION_TASK_FAILED")) return reply.status(502).send({ ok: false, error: "FLIGHT_TABLE_ACTION_TASK_FAILED", message });
+  if (message === "FLIGHT_TABLE_ACT_TASK_ID_MISSING") return reply.status(502).send({ ok: false, error: message });
   if (message.startsWith("FLIGHT_TABLE_ACTION_RECEIPT_FAILED")) return reply.status(502).send({ ok: false, error: "FLIGHT_TABLE_ACTION_RECEIPT_FAILED", message });
+  if (message === "FLIGHT_TABLE_RECEIPT_ID_MISSING") return reply.status(502).send({ ok: false, error: message });
   return reply.status(500).send({ ok: false, error: "FLIGHT_TABLE_OPERATION_INTERNAL_ERROR", message });
 }
 
