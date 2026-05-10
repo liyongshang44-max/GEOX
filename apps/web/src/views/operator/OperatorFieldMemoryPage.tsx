@@ -27,7 +27,27 @@ function buildTraceInput(row: OperatorFieldMemoryRowVm) {
   }));
 }
 
+function decodeLastPathSegment(href?: string | null): string {
+  if (!href) return "";
+  const segment = href.split("/").filter(Boolean).pop() ?? "";
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
+
+function fieldMemoryOperatorQuery(row: OperatorFieldMemoryRowVm): string {
+  const params = new URLSearchParams();
+  const operationId = decodeLastPathSegment(row.operationHref);
+  const fieldId = decodeLastPathSegment(row.fieldHref);
+  if (fieldId) params.set("field_id", fieldId);
+  if (operationId) params.set("operation_id", operationId);
+  return params.toString();
+}
+
 function FieldMemoryRow({ row }: { row: OperatorFieldMemoryRowVm }): React.ReactElement {
+  const operatorQuery = fieldMemoryOperatorQuery(row);
   return (
     <article className="operatorFieldMemoryRow">
       <header className="operatorFieldMemoryRowHead">
@@ -61,6 +81,8 @@ function FieldMemoryRow({ row }: { row: OperatorFieldMemoryRowVm }): React.React
       <div className="operatorFieldMemoryActions">
         {row.fieldHref ? <Link to={row.fieldHref}>查看地块</Link> : null}
         {row.operationHref ? <Link to={row.operationHref}>查看作业</Link> : null}
+        {operatorQuery ? <Link to={`/operator/roi-ledger?${operatorQuery}`}>查看关联 ROI</Link> : null}
+        {operatorQuery ? <Link to={`/operator/evidence?${operatorQuery}`}>查看关联证据</Link> : null}
       </div>
     </article>
   );
@@ -169,6 +191,7 @@ export default function OperatorFieldMemoryPage(): React.ReactElement {
 
   const closureVm = buildOperatorLearningClosureVm({
     operationId,
+    fieldId,
     fieldMemoryRows: vm?.rows ?? [],
     roiRows: roiVm?.rows ?? [],
     skillTrace,
