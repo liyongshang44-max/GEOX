@@ -4,6 +4,8 @@ import type {
   FlightTableDeviceSummaryV1,
   FlightTableDeviceTemplateV1,
   FlightTableManifestV1,
+  FlightTableSkillAssemblyResponseV1,
+  FlightTableSkillFailureTypeV1,
 } from "../../../api/flightTable";
 import FieldAssemblyCard, { type FieldAssemblyDraftV1 } from "./FieldAssemblyCard";
 import FieldSpatialCard, { type FieldSpatialDraftV1 } from "./FieldSpatialCard";
@@ -26,6 +28,10 @@ type Props = {
   deviceError: string | null;
   deviceTemplates: FlightTableDeviceTemplateV1[];
   onboardedDevices: FlightTableDeviceSummaryV1[];
+  skillResult: FlightTableSkillAssemblyResponseV1 | null;
+  skillFailureType: FlightTableSkillFailureTypeV1;
+  skillLoading: boolean;
+  skillError: string | null;
   onFieldDraftChange: (patch: Partial<FieldAssemblyDraftV1>) => void;
   onCreateField: () => void;
   onVerifyField: () => void;
@@ -34,6 +40,10 @@ type Props = {
   onDeviceDraftChange: (patch: Partial<DeviceOnboardingDraftV1>) => void;
   onOnboardDevice: () => void;
   onRetryDevice: () => void;
+  onSkillFailureTypeChange: (next: FlightTableSkillFailureTypeV1) => void;
+  onBindSkills: () => void;
+  onFailOneSkill: () => void;
+  onRestoreSkills: () => void;
 };
 
 export default function FlightAssemblyPanel(props: Props): React.ReactElement {
@@ -77,7 +87,18 @@ export default function FlightAssemblyPanel(props: Props): React.ReactElement {
         onOnboardDevice={props.onOnboardDevice}
         onRetry={props.onRetryDevice}
       />
-      <SkillAssemblyCard skillBindingIds={manifest?.skill_binding_ids ?? []} skillRunIds={manifest?.skill_run_ids ?? []} />
+      <SkillAssemblyCard
+        skillBindingIds={manifest?.skill_binding_ids ?? []}
+        skillRunIds={manifest?.skill_run_ids ?? []}
+        skillResult={props.skillResult}
+        failureType={props.skillFailureType}
+        loading={props.skillLoading}
+        error={props.skillError}
+        onFailureTypeChange={props.onSkillFailureTypeChange}
+        onBindSkills={props.onBindSkills}
+        onFailOne={props.onFailOneSkill}
+        onRestore={props.onRestoreSkills}
+      />
     </div>
   );
 }
