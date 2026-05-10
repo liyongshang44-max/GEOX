@@ -94,6 +94,11 @@ export type FlightTableApiSnapshotV1 = FlightTableApiSnapshotRefV1 & {
   error?: string;
 };
 
+export type FlightTableWeatherLocationV1 = {
+  lat: number;
+  lng: number;
+};
+
 export type CreateFlightTableRunRequestV1 = {
   run_id: string;
   tenant_id: string;
@@ -120,6 +125,29 @@ export type CreateFlightTableFieldResponseV1 = {
   run: FlightTableRunV1;
 };
 
+export type CreateFlightTableGeometryRequestV1 = {
+  field_id: string;
+  geometry_format: "GEOJSON";
+  geometry: unknown;
+  weather_location?: FlightTableWeatherLocationV1 | null;
+};
+
+export type CreateFlightTableGeometryResponseV1 = {
+  ok: boolean;
+  field_id: string;
+  geometry_id: string;
+  geometry_status: "AVAILABLE" | "MISSING" | "INVALID";
+  geometry_format: "GEOJSON";
+  geometry: Record<string, unknown>;
+  centroid: { lat: number; lng: number };
+  area_m2: number | null;
+  area_mu: number | null;
+  weather_location: FlightTableWeatherLocationV1 | null;
+  weather_provider_status: "UNAVAILABLE";
+  weather_location_status: "LOCATION_RECORDED" | "LOCATION_UNAVAILABLE";
+  run: FlightTableRunV1;
+};
+
 export async function createFlightTableRun(body: CreateFlightTableRunRequestV1): Promise<FlightTableRunV1> {
   const res = await apiRequest<{ ok: boolean; run: FlightTableRunV1 }>("/api/v1/dev/flight-table/runs", {
     method: "POST",
@@ -130,6 +158,13 @@ export async function createFlightTableRun(body: CreateFlightTableRunRequestV1):
 
 export async function createFlightTableField(runId: string, body: CreateFlightTableFieldRequestV1): Promise<CreateFlightTableFieldResponseV1> {
   return apiRequest<CreateFlightTableFieldResponseV1>(`/api/v1/dev/flight-table/runs/${encodeURIComponent(runId)}/field`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function createFlightTableGeometry(runId: string, body: CreateFlightTableGeometryRequestV1): Promise<CreateFlightTableGeometryResponseV1> {
+  return apiRequest<CreateFlightTableGeometryResponseV1>(`/api/v1/dev/flight-table/runs/${encodeURIComponent(runId)}/field-geometry`, {
     method: "POST",
     body: JSON.stringify(body),
   });
