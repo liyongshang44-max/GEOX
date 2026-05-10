@@ -7,8 +7,9 @@ import EvidencePackSummaryPanel from "../components/customer/EvidencePackSummary
 import FieldMemoryPanel from "../components/customer/FieldMemoryPanel";
 import PrescriptionContractDrawer from "../components/customer/PrescriptionContractDrawer";
 import RoiLedgerDrawer from "../components/customer/RoiLedgerDrawer";
-import { buildOperationReportVm } from "../viewmodels/operationReportVm";
 import { customerTimelineStatusLabel, labelCustomerTechnicalField } from "../lib/customerLabels";
+import { safeEvidenceDownloadUrl } from "../lib/evidenceDownloadSafety";
+import { buildOperationReportVm } from "../viewmodels/operationReportVm";
 
 const MAIN_VIEW_BLOCK_PATTERNS = [
   /skill\s*run/i,
@@ -73,21 +74,12 @@ function safeSha256(value: unknown): string | null {
   return /^[a-fA-F0-9]{64}$/.test(text) ? text.toLowerCase() : null;
 }
 
-function safeDownloadUrl(value: unknown): string | null {
-  const text = String(value ?? "").trim();
-  if (!text) return null;
-  if (!text.startsWith("/api/v1/") && !text.startsWith("/customer/")) return null;
-  if (text.includes("//") || text.includes("\\")) return null;
-  if (CUSTOMER_EVIDENCE_BLOCK_PATTERNS.some((pattern) => pattern.test(text.replace(/^\/api\/v1\//, "api/v1/").replace(/^\/customer\//, "customer/")))) return null;
-  return text;
-}
-
 function evidencePackSafeMetadata(report: OperationReportV1): EvidencePackSafeMetadata {
   const pack = (report as unknown as { evidence_pack_summary?: Record<string, unknown> }).evidence_pack_summary ?? {};
   return {
     manifest: safeManifest(pack.manifest),
     sha256: safeSha256(pack.sha256),
-    downloadUrl: safeDownloadUrl(pack.download_url),
+    downloadUrl: safeEvidenceDownloadUrl(pack.download_url),
   };
 }
 
