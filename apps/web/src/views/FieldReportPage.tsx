@@ -40,12 +40,12 @@ function fieldWeatherStatusText(weather: FieldWeatherState): string {
 }
 
 function fieldWeatherSuggestionText(weather: FieldWeatherState): string {
-  if (weather.loading) return "正在判断天气是否影响当前建议。";
+  if (weather.loading) return "正在判断天气是否需要作为当前建议的解释背景。";
   if (weather.history?.unavailableReason === "location_unavailable" || weather.forecast?.unavailableReason === "location_unavailable") return "暂无地块位置，天气源不可用。";
-  if (!weather.history && !weather.forecast) return "天气源未接入，当前建议未使用天气干扰信息。";
-  if (hasRain(weather.history) || hasRain(weather.forecast)) return "可能影响当前建议：需复核灌溉、验收与学习置信度。";
-  if (weather.history?.status === "ok" || weather.forecast?.status === "ok") return "未发现明显降雨干扰，当前建议暂不因天气调整。";
-  return "天气源未接入，当前建议未使用天气干扰信息。";
+  if (!weather.history && !weather.forecast) return "天气源未接入，当前建议不使用天气干扰信息。";
+  if (hasRain(weather.history) || hasRain(weather.forecast)) return "可能影响当前建议的解释与学习置信度；不直接替代处方或验收结论。";
+  if (weather.history?.status === "ok" || weather.forecast?.status === "ok") return "未发现明显降雨干扰；天气仅作为辅助解释，不直接改变当前建议。";
+  return "天气源未接入，当前建议不使用天气干扰信息。";
 }
 
 function fieldWeatherSourceText(weather: FieldWeatherState): string {
@@ -69,6 +69,7 @@ function FieldWeatherSummaryCard({ weather }: { weather: FieldWeatherState }): R
         <div><strong>是否影响当前建议</strong><span>{fieldWeatherSuggestionText(weather)}</span></div>
         <div><strong>数据来源</strong><span>{fieldWeatherSourceText(weather)}</span></div>
       </div>
+      <div className="weatherInterferenceBoundaryNote">天气用于辅助解释和学习排除，不直接替代处方、验收或执行决策。</div>
     </article>
   );
 }
