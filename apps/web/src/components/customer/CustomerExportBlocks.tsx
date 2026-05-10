@@ -1,9 +1,20 @@
 import React from "react";
+import type { OperationReportV1 } from "../../api/customerReports";
 import type { CustomerDashboardPageVm } from "../../viewmodels/customerDashboardVm";
 import type { FieldReportPageVm } from "../../viewmodels/fieldReportVm";
 import type { OperationReportPageVm } from "../../viewmodels/operationReportVm";
 
 type Row = Array<string | number | undefined>;
+
+type OperationSameSourceExportSummary = {
+  evidencePackStatus: string;
+  evidencePackSha256: string;
+  asExecutedSummary: string;
+  asAppliedCoverageStatus: string;
+  weatherInterferenceSummary: string;
+  roiNature: string;
+  fieldMemoryLearningSummary: string;
+};
 
 function PrintTable({ headers, rows, emptyText }: { headers: string[]; rows: Row[]; emptyText: string }): React.ReactElement {
   if (!rows.length) {
@@ -33,6 +44,101 @@ function safeExportText(value: unknown, fallback = "暂无记录"): string {
   if (/(^|\s)\/[\w./-]+/.test(text) || /[A-Z]:\\[\w\\.-]+/i.test(text)) return fallback;
   if (/\b(secret|token|credential)\b/i.test(text) || /stack\s*trace/i.test(text) || /debug\s*json/i.test(text) || /\{\s*"/.test(text)) return fallback;
   return text;
+}
+
+function safeSha256(value: unknown, fallback = "后端未返回 sha256"): string {
+  const text = String(value ?? "").trim();
+  return /^[a-fA-F0-9]{64}$/.test(text) ? text.toLowerCase() : fallback;
+}
+
+function sectionItemValue(vm: OperationReportPageVm, key: OperationReportPageVm["sections"][number]["key"], label: string, fallback = "暂无记录"): string {
+  const section = vm.sections.find((item) => item.key === key);
+  const row = section?.items.find((item) => item.label === label || item.label.includes(label));
+  return safeExportText(row?.value, fallback);
+}
+
+function operationReportObject(report?: OperationReportV1 | null): Record<string, any> {
+  return report && typeof report === "object" ? report as unknown as Record<string, any> : {};
+}
+
+function weatherSummaryFromReport(reportAny: Record<string, any>): string {
+  const weather = reportAny.weather_interference
+    ?? reportAny.weatherInterference
+    ?? reportAny.operation_environment_context
+    ?? reportAny.environment_context
+    ?? reportAny.environment
+    ?? reportAny.weather
+    ?? null;
+  if (!weather || typeof weather !== "object") return "天气干扰摘要未接入报告同源数据。";
+
+  const status = String(weather.status ?? weather.source_status ?? weather.weather_source_status ?? "").trim().toLowerCase();
+  const explanation = safeExportText(weather.explanation ?? weather.summary ?? weather.summary_text ?? weather.interference_summary, "");
+  if (explanation) return explanation;
+
+  const learningExcluded = Boolean(
+    weather.learningWeatherInterferenceExcluded
+    ?? weather.learning_weather_interference_excluded
+    ?? weather.learning_excluded
+    ?? weather.exclude_learning
+    ?? weather.excluded_from_learning,
+  );
+  if (learningExcluded) return "因降雨干扰，本次结果未进入灌溉效果学习。";
+
+  const rainfallMayExplain = Boolean(
+    weather.rainfallMayExplainSoilMoistureChange
+    ?? weather.rainfall_may_explain_soil_moisture_change
+    ?? weather.rainfall_interference
+    ?? weather.rainfall_detected,
+  );
+  if (rainfallMayExplain) return "检测到降雨事件，本次土壤湿度变化可能受天气影响；相关学习结论需排除或降低置信度。";
+
+  if (["unavailable", "location_unavailable", "provider_error"].includes(status)) return "天气源未接入或当前位置不可用，当前不参与验收判断。";
+  if (status === "ok") return "未发现明确天气干扰；天气仅用于辅助解释和学习排除，不直接替代验收结论。";
+  return "暂无天气干扰摘要。";
+}
+
+function buildOperationSameSourceExportSummary(vm: OperationReportPageVm, report?: OperationReportV1 | null): OperationSameSourceExportSummary {
+  const reportAny = operationReportObject(report);
+  const pack = reportAny.evidence_pack_summary ?? reportAny.evidencePackSummary ?? {};
+  const asExecuted = reportAny.as_executed ?? reportAny.asExecuted ?? {};
+  const asApplied = reportAny.as_applied ?? reportAny.asApplied ?? {};
+  const memory = reportAny.field_memory ?? reportAny.fieldMemory ?? {};
+
+  const evidenceStatus = safeExportText(
+    pack.status ?? pack.export_status ?? sectionItemValue(vm, "EVIDENCE", "证据状态", ""),
+    "证据包状态未返回",
+  );
+
+  const asExecutedSummary = safeExportText(
+    asExecuted.summary ?? asExecuted.result_summary ?? asExecuted.deviation_summary ?? sectionItemValue(vm, "EXECUTION", "执行摘要", ""),
+    "暂无实际执行摘要。",
+  );
+
+  const coverageStatus = safeExportText(
+    asApplied.coverage_status ?? asApplied.coverageStatus ?? sectionItemValue(vm, "EXECUTION", "覆盖状态", ""),
+    "暂无实际覆盖状态。",
+  );
+
+  const memoryLearning = safeExportText(
+    memory.learning_summary
+      ?? memory.learningSummary
+      ?? memory.summary_text
+      ?? memory.ingested
+      ?? memory.recorded
+      ?? memory.entered
+      ?? sectionItemValue(vm, "MEMORY", "本次结果是否进入田块记忆", ""),
+    "暂无 Field Memory 学习摘要。",
+  );
+
+  return {
+    evidencePackStatus: evidenceStatus,
+    evidencePackSha256: safeSha256(pack.sha256 ?? pack.checksum_sha256 ?? pack.checksum),
+    asExecutedSummary,
+    asAppliedCoverageStatus: coverageStatus,
+    weatherInterferenceSummary: weatherSummaryFromReport(reportAny),
+    roiNature: sectionItemValue(vm, "ROI", "实测/估算/假设", "暂无 ROI 性质。"),
+    fieldMemoryLearningSummary: memoryLearning,
+  };
 }
 
 export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): React.ReactElement {
@@ -110,8 +216,9 @@ export function FieldExportBlocks({ vm }: { vm: FieldReportPageVm }): React.Reac
   );
 }
 
-export function OperationExportBlocks({ vm }: { vm: OperationReportPageVm }): React.ReactElement {
+export function OperationExportBlocks({ vm, report }: { vm: OperationReportPageVm; report?: OperationReportV1 | null }): React.ReactElement {
   const sections = vm.sections;
+  const sameSource = buildOperationSameSourceExportSummary(vm, report);
   const evidenceItems = vm.evidenceSummary.items
     .map((item) => [safeExportText(item.label), safeExportText(item.value)] as [string, string])
     .filter(([label, value]) => label !== "暂无记录" && value !== "暂无记录");
@@ -136,6 +243,22 @@ export function OperationExportBlocks({ vm }: { vm: OperationReportPageVm }): Re
             {item.emptyState ? <p className="customerMetricLabel">{safeExportText(item.emptyState.title)}：{safeExportText(item.emptyState.description)}</p> : null}
           </article>
         ))}
+      </section>
+      <section className="customerCard">
+        <h2 className="customerCardTitle">P2.2 同源增强摘要</h2>
+        <PrintTable
+          headers={["项目", "导出内容"]}
+          rows={[
+            ["证据包状态", sameSource.evidencePackStatus],
+            ["sha256", sameSource.evidencePackSha256],
+            ["实际执行摘要", sameSource.asExecutedSummary],
+            ["实际覆盖状态", sameSource.asAppliedCoverageStatus],
+            ["天气干扰", sameSource.weatherInterferenceSummary],
+            ["ROI 性质", sameSource.roiNature],
+            ["Field Memory 学习摘要", sameSource.fieldMemoryLearningSummary],
+          ]}
+          emptyText="暂无 P2.2 同源增强摘要。"
+        />
       </section>
       <section className="customerCard">
         <h2 className="customerCardTitle">证据包摘要</h2>
