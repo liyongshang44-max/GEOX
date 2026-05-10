@@ -19,6 +19,7 @@ import {
   writeFlightTableApiSnapshotV1,
 } from "./flight_table_snapshots_v1.js";
 import { cleanFlightTableRunStorageV1 } from "./flight_table_cleanup_v1.js";
+import type { FlightTableDevicesResponseV1 } from "./flight_table_devices_v1.js";
 
 export type CreateFlightTableRunInputV1 = {
   run_id?: string;
@@ -84,6 +85,10 @@ function assertScopeMatchesAuth(input: CreateFlightTableRunInputV1, auth: AoActA
   if (tenant_id !== auth.tenant_id || project_id !== auth.project_id || group_id !== auth.group_id) {
     throw new Error("FLIGHT_TABLE_SCOPE_MISMATCH");
   }
+}
+
+function uniqueStrings(input: string[]): string[] {
+  return Array.from(new Set(input.map((v) => String(v ?? "").trim()).filter(Boolean)));
 }
 
 function sanitizeRun(raw: any): FlightTableRunV1 {
@@ -340,6 +345,63 @@ export async function updateFlightTableRunAfterGeometryV1(
   });
 }
 
+export async function updateFlightTableRunAfterDevicesV1(
+  run_id: string,
+  result: FlightTableDevicesResponseV1,
+): Promise<FlightTableRunV1 | null> {
+  return mutateFlightTableRunV1(run_id, async (run) => {
+    const nowIso = new Date().toISOString();
+    const ok = result.devices.length > 0 && result.devices.every((d) => d.projection_status === "READY");
+    const snapshot = await writeFlightTableApiSnapshotV1({
+      run_id: run.run_id,
+      method: "POST",
+      path: `/api/v1/dev/flight-table/runs/${encodeURIComponent(run.run_id)}/devices`,
+      ok,
+      status_code: 200,
+      label: "onboard real-device flow",
+      request: { field_id: result.field_id },
+      response: {
+        device_ids: result.devices.map((d) => d.device_id),
+        credential_ids: result.devices.map((d) => d.credential_id),
+        verify: result.verify,
+        sources: Array.from(new Set(result.devices.flatMap((d) => d.sources))),
+      },
+    });
+    const deviceIds = result.devices.map((d) => d.device_id);
+    const credentialRefs = result.devices.map((d) => ({
+      credential_id: d.credential_id,
+      status: d.credential_status,
+      issued_at: d.last_heartbeat ?? new Date().toISOString(),
+      masked_secret: "****" as const,
+    }));
+    const skillRefs = result.devices.flatMap((d) => d.required_observation_skills.map((skill) => `${d.device_id}:${skill}`));
+    const steps = run.steps.map((step) => step.step_key === "B"
+      ? {
+        ...step,
+        status: ok ? "PASS" as const : "FAIL" as const,
+        verify_result: ok ? "PASS" as const : "FAIL" as const,
+        message: `devices=${deviceIds.join(',')}; raw=${result.verify.raw_telemetry_visible}; observation=${result.verify.observation_visible}; sensing=${result.verify.sensing_visible}; helper=${result.verify.source_notes.join('|') || 'none'}`,
+        finished_at: nowIso,
+        updated_at: nowIso,
+      }
+      : step);
+    const next = {
+      ...run,
+      current_step: "C0",
+      steps,
+      manifest: {
+        ...run.manifest,
+        field_id: run.manifest.field_id ?? result.field_id,
+        device_ids: uniqueStrings([...run.manifest.device_ids, ...deviceIds]),
+        credential_ids: [...run.manifest.credential_ids.filter((cred) => !credentialRefs.some((nextCred) => nextCred.credential_id === cred.credential_id)), ...credentialRefs],
+        skill_binding_ids: uniqueStrings([...run.manifest.skill_binding_ids, ...skillRefs]),
+        api_snapshot_refs: [...run.manifest.api_snapshot_refs, snapshotRefFromSnapshotV1(snapshot)],
+      },
+    };
+    return { ...next, verify_summary: buildFlightVerifySummaryV1(next) };
+  });
+}
+
 export async function retryFlightTableStepV1(run_id: string, step_key: string): Promise<FlightTableRunV1 | null> {
   const normalizedStep = String(step_key ?? "").trim();
   return mutateFlightTableRunV1(run_id, async (run) => {
@@ -349,7 +411,7 @@ export async function retryFlightTableStepV1(run_id: string, step_key: string): 
         ...step,
         status: "PENDING" as const,
         verify_result: "PENDING" as const,
-        message: "Step reset by FT-A0 retry control. Execution is implemented in later FT phases.",
+        message: "Step reset by FT retry control. Execution is implemented by the corresponding FT phase.",
         started_at: undefined,
         finished_at: undefined,
         updated_at: nowIso,
