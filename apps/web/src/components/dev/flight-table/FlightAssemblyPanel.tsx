@@ -7,6 +7,10 @@ import type {
   FlightTableSkillAssemblyResponseV1,
   FlightTableSkillFailureTypeV1,
 } from "../../../api/flightTable";
+import type {
+  FlightTableTelemetryResponseV1,
+  FlightTableTelemetryScenarioKeyV1,
+} from "../../../api/flightTableTelemetry";
 import FieldAssemblyCard, { type FieldAssemblyDraftV1 } from "./FieldAssemblyCard";
 import FieldSpatialCard, { type FieldSpatialDraftV1 } from "./FieldSpatialCard";
 import DeviceOnboardingWizard, { type DeviceOnboardingDraftV1 } from "./DeviceOnboardingWizard";
@@ -28,6 +32,11 @@ type Props = {
   deviceError: string | null;
   deviceTemplates: FlightTableDeviceTemplateV1[];
   onboardedDevices: FlightTableDeviceSummaryV1[];
+  telemetryScenarios: FlightTableTelemetryScenarioKeyV1[];
+  selectedTelemetryScenarios: FlightTableTelemetryScenarioKeyV1[];
+  telemetryResult: FlightTableTelemetryResponseV1 | null;
+  telemetryLoading: boolean;
+  telemetryError: string | null;
   skillResult: FlightTableSkillAssemblyResponseV1 | null;
   skillFailureType: FlightTableSkillFailureTypeV1;
   skillLoading: boolean;
@@ -40,6 +49,9 @@ type Props = {
   onDeviceDraftChange: (patch: Partial<DeviceOnboardingDraftV1>) => void;
   onOnboardDevice: () => void;
   onRetryDevice: () => void;
+  onTelemetryScenarioToggle: (scenario: FlightTableTelemetryScenarioKeyV1) => void;
+  onPublishTelemetry: (deviceId?: string | null) => void;
+  onVerifyTelemetry: (deviceId?: string | null) => void;
   onSkillFailureTypeChange: (next: FlightTableSkillFailureTypeV1) => void;
   onBindSkills: () => void;
   onFailOneSkill: () => void;
@@ -83,9 +95,17 @@ export default function FlightAssemblyPanel(props: Props): React.ReactElement {
         draft={props.deviceDraft}
         loading={props.deviceLoading}
         error={props.deviceError}
+        telemetryScenarios={props.telemetryScenarios}
+        selectedTelemetryScenarios={props.selectedTelemetryScenarios}
+        telemetryResult={props.telemetryResult}
+        telemetryLoading={props.telemetryLoading}
+        telemetryError={props.telemetryError}
         onDraftChange={props.onDeviceDraftChange}
         onOnboardDevice={props.onOnboardDevice}
         onRetry={props.onRetryDevice}
+        onTelemetryScenarioToggle={props.onTelemetryScenarioToggle}
+        onPublishTelemetry={props.onPublishTelemetry}
+        onVerifyTelemetry={props.onVerifyTelemetry}
       />
       <SkillAssemblyCard
         skillBindingIds={manifest?.skill_binding_ids ?? []}
