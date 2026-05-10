@@ -1,10 +1,18 @@
 import React from "react";
-import type { CreateFlightTableGeometryResponseV1, FlightTableApiSnapshotV1, FlightTableLaneV1, FlightTableRunV1 } from "../../../api/flightTable";
+import type {
+  CreateFlightTableGeometryResponseV1,
+  FlightTableApiSnapshotV1,
+  FlightTableDeviceSummaryV1,
+  FlightTableDeviceTemplateV1,
+  FlightTableLaneV1,
+  FlightTableRunV1,
+} from "../../../api/flightTable";
 import { summarizeFlightTableManifest } from "../../../viewmodels/flightTableVm";
 import FlightRunHeader from "./FlightRunHeader";
 import FlightAssemblyPanel from "./FlightAssemblyPanel";
 import type { FieldAssemblyDraftV1 } from "./FieldAssemblyCard";
 import type { FieldSpatialDraftV1 } from "./FieldSpatialCard";
+import type { DeviceOnboardingDraftV1 } from "./DeviceOnboardingWizard";
 import LaneComposer from "./LaneComposer";
 import FlightMatrix from "./FlightMatrix";
 import ManifestPanel from "./ManifestPanel";
@@ -26,14 +34,22 @@ type Props = {
   spatialLoading: boolean;
   spatialError: string | null;
   geometryResult: CreateFlightTableGeometryResponseV1 | null;
+  deviceDraft: DeviceOnboardingDraftV1;
+  deviceLoading: boolean;
+  deviceError: string | null;
+  deviceTemplates: FlightTableDeviceTemplateV1[];
+  onboardedDevices: FlightTableDeviceSummaryV1[];
   onRunIdDraftChange: (next: string) => void;
   onLaneDraftChange: (next: FlightTableLaneV1) => void;
   onFieldDraftChange: (patch: Partial<FieldAssemblyDraftV1>) => void;
   onSpatialDraftChange: (patch: Partial<FieldSpatialDraftV1>) => void;
+  onDeviceDraftChange: (patch: Partial<DeviceOnboardingDraftV1>) => void;
   onCreateRun: () => void;
   onCreateField: () => void;
   onVerifyField: () => void;
   onSubmitGeometry: () => void;
+  onOnboardDevice: () => void;
+  onRetryDevice: () => void;
   onVerify: () => void;
   onClean: () => void;
   onRetryStep: (stepKey: string) => void;
@@ -107,11 +123,19 @@ export default function FlightTableShell(props: Props): React.ReactElement {
             spatialLoading={props.spatialLoading}
             spatialError={props.spatialError}
             geometryResult={props.geometryResult}
+            deviceDraft={props.deviceDraft}
+            deviceLoading={props.deviceLoading}
+            deviceError={props.deviceError}
+            deviceTemplates={props.deviceTemplates}
+            onboardedDevices={props.onboardedDevices}
             onFieldDraftChange={props.onFieldDraftChange}
             onCreateField={props.onCreateField}
             onVerifyField={props.onVerifyField}
             onSpatialDraftChange={props.onSpatialDraftChange}
             onSubmitGeometry={props.onSubmitGeometry}
+            onDeviceDraftChange={props.onDeviceDraftChange}
+            onOnboardDevice={props.onOnboardDevice}
+            onRetryDevice={props.onRetryDevice}
           />
         ) : null}
         {activeTab === "lane" ? <LaneComposer selectedLane={props.laneDraft} onLaneChange={props.onLaneDraftChange} /> : null}

@@ -15,6 +15,8 @@ const projectId = String(process.env.GEOX_PROJECT_ID || "projectA");
 const groupId = String(process.env.GEOX_GROUP_ID || "groupA");
 const fieldId = String(process.env.FLIGHT_TABLE_FIELD_ID || `ft_field_${stamp}`);
 const seasonId = String(process.env.FLIGHT_TABLE_SEASON_ID || `ft_season_${stamp}`);
+const deviceTemplate = String(process.env.FLIGHT_TABLE_DEVICE_TEMPLATE || "soil_probe");
+const deviceId = String(process.env.FLIGHT_TABLE_DEVICE_ID || `ft_${deviceTemplate}_${stamp}`);
 
 async function request(pathname, init = {}) {
   const headers = new Headers(init.headers || {});
@@ -67,6 +69,20 @@ const geometryCreated = await request(`/api/v1/dev/flight-table/runs/${encodeURI
 console.log(JSON.stringify({ step: "field-geometry", run_id: runId, field_id: fieldId, result: geometryCreated }, null, 2));
 
 if (!geometryCreated.ok) process.exit(1);
+
+const devicesCreated = await request(`/api/v1/dev/flight-table/runs/${encodeURIComponent(runId)}/devices`, {
+  method: "POST",
+  body: JSON.stringify({
+    field_id: fieldId,
+    template_code: deviceTemplate,
+    device_id: deviceId,
+    mode: "simulator",
+    telemetry_mode: "fast",
+  }),
+});
+console.log(JSON.stringify({ step: "devices", run_id: runId, field_id: fieldId, device_id: deviceId, result: devicesCreated }, null, 2));
+
+if (!devicesCreated.ok) process.exit(1);
 
 const verified = await request(`/api/v1/dev/flight-table/runs/${encodeURIComponent(runId)}/verify`, {
   method: "POST",
