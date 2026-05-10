@@ -10,6 +10,7 @@ import type {
   FlightTableSkillFailureTypeV1,
 } from "../../../api/flightTable";
 import type { FlightTableDecisionRunResultV1 } from "../../../api/flightTableDecision";
+import type { FlightTableEvidenceRunResultV1 } from "../../../api/flightTableEvidence";
 import type { FlightTableOperationRunResultV1 } from "../../../api/flightTableOperation";
 import type {
   FlightTableTelemetryResponseV1,
@@ -62,6 +63,9 @@ type Props = {
   operationResult: FlightTableOperationRunResultV1 | null;
   operationLoading: boolean;
   operationError: string | null;
+  evidenceResult: FlightTableEvidenceRunResultV1 | null;
+  evidenceLoading: boolean;
+  evidenceError: string | null;
   onRunIdDraftChange: (next: string) => void;
   onLaneDraftChange: (next: FlightTableLaneV1) => void;
   onSkillFailureTypeChange: (next: FlightTableSkillFailureTypeV1) => void;
@@ -83,6 +87,7 @@ type Props = {
   onRestoreSkills: () => void;
   onRunDecision: () => void;
   onRunOperation: () => void;
+  onRunEvidence: () => void;
   onVerify: () => void;
   onRetryFailedStep: () => void;
   onClean: () => void;
@@ -198,14 +203,18 @@ export default function FlightTableShell(props: Props): React.ReactElement {
             run={props.run}
             decisionResult={props.decisionResult}
             operationResult={props.operationResult}
+            evidenceResult={props.evidenceResult}
             onRetryStep={props.onRetryStep}
             onRunDecision={props.onRunDecision}
             onRunOperation={props.onRunOperation}
+            onRunEvidence={props.onRunEvidence}
             loading={props.loading}
             decisionLoading={props.decisionLoading}
             operationLoading={props.operationLoading}
+            evidenceLoading={props.evidenceLoading}
             decisionError={props.decisionError}
             operationError={props.operationError}
+            evidenceError={props.evidenceError}
           />
         ) : null}
         {activeTab === "replay" ? <><UiReplayLinks run={props.run} /><ManifestPanel manifest={props.run?.manifest ?? null} /><ApiSnapshotPanel snapshots={props.snapshots} /></> : null}
