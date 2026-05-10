@@ -427,7 +427,7 @@ export async function runFlightTableOperationAoActReceiptV1(args: {
     },
   });
 
-  const stepPass = Boolean(operation.operation_plan_id && act_task_id && receipt_id && worklistItem);
+  const stepPass = Boolean(operation.operation_plan_id && act_task_id && dispatchResp.ok && receipt_id && worklistItem);
   const steps = updateStep(run.steps, "F", stepPass ? "PASS" : "FAIL", `operation=${operation.operation_plan_id}; task=${act_task_id}; dispatch=${dispatch_status}; receipt=${receipt_id}; as_applied=${asExec.as_applied_status}; receipt_is_acceptance=false`);
   const customerUrl = `/customer/operations/${encodeURIComponent(operation.operation_plan_id)}`;
   const dispatchUrl = `/operator/dispatch?operation_id=${encodeURIComponent(operation.operation_plan_id)}`;
