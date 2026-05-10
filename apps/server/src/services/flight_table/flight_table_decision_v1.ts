@@ -138,11 +138,12 @@ async function ensureStage1TriggerSeed(pool: Pool, run: FlightTableRunV1, params
   );
 }
 
-function findApproverToken(currentToken: string): { token: string; actor_id: string; role: string } | null {
+function findApproverToken(currentToken: string, auth: AoActAuthContextV0): { token: string; actor_id: string; role: string } | null {
   const tokenFile = readTokenFileV0();
   for (const rec of tokenFile.tokens as any[]) {
     const token = safeText(rec?.token);
     if (!token || token === currentToken || rec?.revoked) continue;
+    if (safeText(rec?.tenant_id) !== auth.tenant_id || safeText(rec?.project_id) !== auth.project_id || safeText(rec?.group_id) !== auth.group_id) continue;
     const role = safeText(rec?.role).toLowerCase();
     const scopes = Array.isArray(rec?.scopes) ? rec.scopes.map((x: unknown) => safeText(x)) : [];
     if ((role === "approver" || role === "admin") && scopes.includes("approval.decide")) {
@@ -268,7 +269,7 @@ export async function runFlightTableDecisionPrescriptionApprovalV1(args: {
   if (!approval_request_id) throw new Error("FLIGHT_TABLE_APPROVAL_REQUEST_ID_MISSING");
 
   const operatorList = await callJson(`${baseUrl}/api/v1/operator/approvals`, "GET", bearerToken);
-  const approver = findApproverToken(bearerToken);
+  const approver = findApproverToken(bearerToken, auth);
   const approvalAction = input.approval_action === "reject" || input.approval_action === "return" ? input.approval_action : "approve";
   let approval_status = "REQUESTED";
   let approvalAudit: Record<string, unknown> = { submitted: submit.json, operator_list_visible: operatorList.ok, approver_found: Boolean(approver) };
