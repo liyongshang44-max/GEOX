@@ -1,3 +1,4 @@
+import { safeEvidenceDownloadUrl } from "../lib/evidenceDownloadSafety";
 import { apiRequestWithPolicy, withQuery } from "./client";
 
 export type OperatorEvidenceDataScope = "OFFICIAL_OPERATOR_API" | "FALLBACK_LIMITED" | "EMPTY" | "ERROR_EMPTY";
@@ -91,26 +92,9 @@ function maskInternal(value: unknown, fallback = "未提供"): string {
   if (!raw) return fallback;
   if (/^[A-Za-z]:\\/.test(raw) || raw.startsWith("/") || raw.includes("\\") || raw.includes("file://")) return "本地路径已隐藏";
   if (/access[_-]?key|secret|token|password/i.test(raw)) return "敏感凭据已隐藏";
-  if (/s3:\/\//i.test(raw)) return raw.replace(/s3:\/\/([^/]+)\/(.+)/i, (_m, bucket, key) => `对象存储：${String(bucket).slice(0, 3)}*** / ${maskObjectKey(key)}`);
+  if (/s3:\/\//i.test(raw)) return "对象存储地址已隐藏";
   if (/https?:\/\//i.test(raw)) return "下载链接已隐藏";
   return raw.length > 96 ? `${raw.slice(0, 48)}...${raw.slice(-16)}` : raw;
-}
-
-function maskObjectKey(value: unknown): string {
-  const raw = text(value, "");
-  if (!raw) return "对象标识未提供";
-  const safe = raw.replace(/access[_-]?key|secret|token|password/gi, "credential");
-  const parts = safe.split("/").filter(Boolean);
-  const last = parts[parts.length - 1] || safe;
-  return last.length > 48 ? `${last.slice(0, 24)}...${last.slice(-12)}` : last;
-}
-
-function safeDownloadUrl(value: unknown): string {
-  const raw = text(value, "");
-  if (!raw) return "";
-  if (!/^https?:\/\//i.test(raw)) return "";
-  if (/\s|[\r\n]/.test(raw)) return "";
-  return raw;
 }
 
 function normalizeStatus(value: unknown): OperatorEvidenceJobStatus {
@@ -161,7 +145,7 @@ function normalizeItem(row: AnyRecord, index: number, source: OperatorEvidenceIt
   const operationId = text(row.operation_id ?? row.operationId ?? row.scope?.operation_id, "");
   const status = normalizeStatus(row.status ?? row.job_status ?? row.export_status);
   const failureReason = text(row.failed_reason ?? row.failure_reason ?? row.error_message ?? row.error, "");
-  const downloadUrl = safeDownloadUrl(row.download_url ?? row.downloadUrl ?? row.download?.url ?? row.artifact?.download_url);
+  const downloadUrl = safeEvidenceDownloadUrl(row.download_url ?? row.downloadUrl ?? row.download?.url ?? row.artifact?.download_url) ?? "";
   return {
     jobId: text(row.job_id ?? row.export_job_id ?? row.evidence_export_job_id ?? row.id, `${source}-${index}`),
     operationId,
@@ -174,7 +158,7 @@ function normalizeItem(row: AnyRecord, index: number, source: OperatorEvidenceIt
     artifactText: artifactText(row),
     format: text(row.format ?? row.export_format ?? row.bundle_format ?? row.content_type, "未提供"),
     storageMode: normalizeStorageMode(row.storage_mode ?? row.storage?.mode ?? row.object_store_mode),
-    downloadStatus: downloadUrl ? "可下载：后端授权链接" : text(row.download_status ?? row.presign_status ?? row.download?.status, status === "DONE" ? "可由后端授权下载" : "不可下载"),
+    downloadStatus: downloadUrl ? "可下载：后端授权入口" : text(row.download_status ?? row.presign_status ?? row.download?.status, status === "DONE" ? "后端未返回安全下载入口" : "不可下载"),
     downloadUrl,
     createdAt: text(row.created_at ?? row.createdAt ?? row.generated_at, ""),
     completedAt: text(row.completed_at ?? row.completedAt ?? row.finished_at, ""),
