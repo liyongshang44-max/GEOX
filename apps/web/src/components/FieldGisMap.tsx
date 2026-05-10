@@ -78,6 +78,7 @@ function pointAt(points: Array<[number, number]>, idx: number): [number, number]
 
 export default function FieldGisMap({
   polygonGeoJson,
+  plannedGeoJson,
   coverageGeoJson,
   heatGeoJson,
   markers,
@@ -88,6 +89,7 @@ export default function FieldGisMap({
   onSelectObject,
 }: {
   polygonGeoJson: any;
+  plannedGeoJson?: any;
   coverageGeoJson?: any;
   heatGeoJson: any;
   markers: Marker[];
@@ -101,9 +103,10 @@ export default function FieldGisMap({
   const segmentPoints = trajectorySegments.flatMap((s) => s.coordinates.map(([lon, lat]) => ({ lon, lat })));
   const heatPoints = (heatGeoJson?.features || []).map((f: any) => ({ lon: Number(f?.geometry?.coordinates?.[0]), lat: Number(f?.geometry?.coordinates?.[1]) })).filter((p: any) => Number.isFinite(p.lon) && Number.isFinite(p.lat));
   const polygonPoints = extractPolygonRings(polygonGeoJson).flat().map(([lon, lat]) => ({ lon: Number(lon), lat: Number(lat) }));
+  const plannedPoints = extractPolygonRings(plannedGeoJson).flat().map(([lon, lat]) => ({ lon: Number(lon), lat: Number(lat) }));
   const coveragePoints = extractPolygonRings(coverageGeoJson).flat().map(([lon, lat]) => ({ lon: Number(lon), lat: Number(lat) }));
   const acceptanceGeoPoints = acceptancePoints.map((p) => ({ lon: Number(p.lon), lat: Number(p.lat) })).filter((p) => Number.isFinite(p.lon) && Number.isFinite(p.lat));
-  const computedBounds = toBounds([...polygonPoints, ...coveragePoints, ...markerPoints, ...segmentPoints, ...heatPoints, ...acceptanceGeoPoints]);
+  const computedBounds = toBounds([...polygonPoints, ...plannedPoints, ...coveragePoints, ...markerPoints, ...segmentPoints, ...heatPoints, ...acceptanceGeoPoints]);
   const bounds = computedBounds ? expandBounds(computedBounds) : { minLon: 120.9, maxLon: 121.1, minLat: 31.1, maxLat: 31.3 };
 
   const w = 820;
@@ -119,6 +122,13 @@ export default function FieldGisMap({
   };
 
   const polygonPaths = extractPolygonRings(polygonGeoJson).map((ring) => {
+    return ring.map((pt, i) => {
+      const p = proj(Number(pt[0]), Number(pt[1]));
+      return `${i === 0 ? "M" : "L"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+    }).join(" ") + " Z";
+  }).filter(Boolean);
+
+  const plannedPaths = extractPolygonRings(plannedGeoJson).map((ring) => {
     return ring.map((pt, i) => {
       const p = proj(Number(pt[0]), Number(pt[1]));
       return `${i === 0 ? "M" : "L"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
@@ -175,6 +185,18 @@ export default function FieldGisMap({
             stroke="#0284c7"
             strokeWidth="2"
             onClick={() => onSelectObject?.({ kind: labels?.fieldBoundary || "Field Boundary", name: `#${i + 1}`, status: "-" })}
+          />
+        ))}
+
+        {plannedPaths.map((path, i) => (
+          <path
+            key={`planned_${i}`}
+            d={path}
+            fill="rgba(245,158,11,0.12)"
+            stroke="#d97706"
+            strokeWidth="2"
+            strokeDasharray="8 5"
+            onClick={() => onSelectObject?.({ kind: labels?.plannedLayer || "Planned Layer", name: `#${i + 1}`, status: "planned" })}
           />
         ))}
 
