@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import type { OperatorLearningClosureVm } from "../../viewmodels/operatorLearningClosureVm";
 import "../../styles/operatorLearningClosure.css";
 
@@ -20,6 +21,11 @@ export default function LearningClosurePanel({ vm }: { vm: OperatorLearningClosu
           </div>
         ))}
       </div>
+      {vm.actions.length ? (
+        <div className="operatorLearningClosureActions">
+          {vm.actions.map((action) => <Link key={action.label} to={action.href}>{action.label}</Link>)}
+        </div>
+      ) : null}
       <div className="operatorLearningClosureNotice">{vm.learningExcludedReasonText}</div>
     </section>
   );
