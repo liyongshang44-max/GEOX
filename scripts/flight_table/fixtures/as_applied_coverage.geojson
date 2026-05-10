@@ -1,0 +1,20 @@
+{
+  "type": "Feature",
+  "properties": {
+    "fixture": "as_applied_coverage",
+    "operation_type": "irrigation",
+    "coverage_status": "PARTIAL_SAMPLE"
+  },
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [121.56705, 31.23405],
+        [121.56795, 31.23420],
+        [121.56772, 31.23482],
+        [121.56690, 31.23470],
+        [121.56705, 31.23405]
+      ]
+    ]
+  }
+}
