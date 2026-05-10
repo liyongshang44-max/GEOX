@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -42,6 +43,21 @@ function expectFiles(files) {
   for (const file of files) read(file);
 }
 
+function runNestedCheck(label, scriptName) {
+  const result = spawnSync(process.execPath, [path.join(scriptDir, scriptName)], {
+    cwd: appRoot,
+    encoding: "utf8",
+    stdio: "pipe",
+  });
+  if (result.status !== 0) {
+    failures.push({
+      file: `scripts/${scriptName}`,
+      rule: `${label}-failed`,
+      detail: `${label} failed. ${String(result.stderr || result.stdout || "").trim()}`,
+    });
+  }
+}
+
 expectFiles([
   "src/api/operatorEvidence.ts",
   "src/api/weather.ts",
@@ -72,8 +88,9 @@ expectPatterns("src/api/operatorEvidence.ts", [
 ], "evidence-export-api-incomplete");
 
 expectPatterns("src/views/operator/OperatorEvidencePage.tsx", [
-  { pattern: /createOperatorEvidenceExportJob/, detail: "Evidence page must be able to create export jobs." },
-  { pattern: /fetchSessionMe/, detail: "Evidence page must read the session before write actions." },
+  { pattern: /createOperatorEvidenceExportJob/, detail: "OperatorEvidencePage must reference createOperatorEvidenceExportJob." },
+  { pattern: /fetchSessionMe/, detail: "OperatorEvidencePage must reference fetchSessionMe before write actions." },
+  { pattern: /hasOperatorPermission/, detail: "OperatorEvidencePage must reference hasOperatorPermission for session permission checks." },
   { pattern: /PermissionGate/, detail: "Evidence export action must use PermissionGate." },
   { pattern: /permissionKey=["']export_evidence["']/, detail: "Evidence export action must be gated by export_evidence." },
   { pattern: /缺少会话权限：operator_evidence_export/, detail: "Evidence export permission denial must use the standard text." },
@@ -92,31 +109,37 @@ expectPatterns("src/components/FieldGisMap.tsx", [
 ], "spatial-gis-ui-incomplete");
 
 expectPatterns("src/views/OperationReportPage.tsx", [
+  { pattern: /EvidencePackMetadataBlock/, detail: "OperationReportPage must reference EvidencePackMetadataBlock for evidence download/checksum state." },
   { pattern: /OperationSpatialExecutionPanel/, detail: "Operation report must render a spatial execution panel." },
+  { pattern: /asApplied|as_applied/, detail: "Operation report must keep as-applied display logic." },
   { pattern: /plannedGeoJson/, detail: "Operation spatial panel must support planned geometry." },
   { pattern: /coverageGeoJson/, detail: "Operation spatial panel must support actual coverage geometry." },
   { pattern: /trajectorySegments/, detail: "Operation spatial panel must support execution trajectory." },
   { pattern: /计划-实际偏差待补充证据来源/, detail: "Operation spatial deviation must not be treated as evidence without evidence_ref." },
-  { pattern: /WeatherInterferencePanel/, detail: "Operation report must render weather interference panel." },
+  { pattern: /WeatherInterferencePanel/, detail: "OperationReportPage must reference WeatherInterferencePanel." },
+  { pattern: /FieldMemoryPanel/, detail: "OperationReportPage must reference FieldMemoryPanel." },
   { pattern: /fetchOperationEnvironmentContext/, detail: "Operation report must read operation environment context through the adapter." },
   { pattern: /operation-skill-trace/, detail: "Operation report must expose a skill trace technical anchor." },
 ], "operation-closure-ui-incomplete");
 
 expectPatterns("src/views/FieldReportPage.tsx", [
-  { pattern: /FieldGisMap/, detail: "Field report must render FieldGisMap." },
-  { pattern: /plannedGeoJson=\{vm\.mapLayers\.plannedGeoJson\}/, detail: "Field report must pass operation planned layer to the map." },
-  { pattern: /coverageGeoJson=\{vm\.mapLayers\.coverageGeoJson\}/, detail: "Field report must pass as-applied coverage layer to the map." },
-  { pattern: /trajectorySegments=\{vm\.mapLayers\.trajectorySegments\}/, detail: "Field report must pass trajectory segments to the map." },
-  { pattern: /acceptancePoints=\{vm\.mapLayers\.acceptancePoints\}/, detail: "Field report must pass acceptance points to the map." },
+  { pattern: /FieldGisMap/, detail: "FieldReportPage must reference FieldGisMap." },
+  { pattern: /plannedGeoJson=\{vm\.mapLayers\.plannedGeoJson\}/, detail: "Field report must pass operation planned layer to the map from VM adapter." },
+  { pattern: /coverageGeoJson=\{vm\.mapLayers\.coverageGeoJson\}/, detail: "Field report must pass as-applied coverage layer to the map from VM adapter." },
+  { pattern: /markers=\{vm\.mapLayers\.deviceMarkers\}/, detail: "Field report must pass device markers from VM adapter." },
+  { pattern: /trajectorySegments=\{vm\.mapLayers\.trajectorySegments\}/, detail: "Field report must pass trajectory segments from VM adapter." },
+  { pattern: /acceptancePoints=\{vm\.mapLayers\.acceptancePoints\}/, detail: "Field report must pass acceptance points from VM adapter." },
   { pattern: /FieldWeatherSummaryCard/, detail: "Field report must render a weather summary card." },
 ], "field-closure-ui-incomplete");
 
+expectNotPattern("src/views/FieldReportPage.tsx", /plannedGeoJson=\{null\}|coverageGeoJson=\{null\}|markers=\{\[\]\}|trajectorySegments=\{\[\]\}|acceptancePoints=\{\[\]\}/, "field-map-fixed-empty-layer", "FieldReportPage must not pass fixed empty planned/coverage/device/trajectory/acceptance layers to FieldGisMap.");
+
 expectPatterns("src/api/weather.ts", [
-  { pattern: /fetchWeatherHistory/, detail: "Weather adapter must expose fetchWeatherHistory." },
-  { pattern: /fetchWeatherForecast/, detail: "Weather adapter must expose fetchWeatherForecast." },
-  { pattern: /fetchOperationEnvironmentContext/, detail: "Weather adapter must expose operation environment context." },
+  { pattern: /fetchWeatherHistory/, detail: "Weather API client must expose fetchWeatherHistory." },
+  { pattern: /fetchWeatherForecast/, detail: "Weather API client must expose fetchWeatherForecast." },
+  { pattern: /fetchOperationEnvironmentContext/, detail: "Weather API client must expose operation environment context." },
   { pattern: /unavailable/, detail: "Weather adapter must preserve unavailable as a formal state." },
-], "weather-adapter-incomplete");
+], "weather-api-client-incomplete");
 
 expectPatterns("src/components/customer/WeatherInterferencePanel.tsx", [
   { pattern: /天气用于辅助解释和学习排除/, detail: "Weather panel must state its decision boundary." },
@@ -209,6 +232,7 @@ expectPatterns("scripts/check-customer-export-same-source.mjs", [
 
 expectPatterns("package.json", [
   { pattern: /"check:customer-export-same-source"/, detail: "Package scripts must expose customer export same-source check." },
+  { pattern: /"check:p2-full-closure-ui"/, detail: "Package scripts must expose check:p2-full-closure-ui." },
 ], "package-script-incomplete");
 
 const exportFiles = [
@@ -223,6 +247,8 @@ for (const file of exportFiles) {
   expectNotPattern(file, /FieldGisMap/, "export-must-not-render-map", `${file} must not render maps in export mode; it should render same-source status text only.`);
   expectNotPattern(file, /type:\s*["']FeatureCollection["']/, "export-must-not-fabricate-geojson", `${file} must not fabricate GeoJSON.`);
 }
+
+runNestedCheck("customer export same-source", "check-customer-export-same-source.mjs");
 
 if (failures.length > 0) {
   console.error("❌ P2 full closure UI gate failed:");
