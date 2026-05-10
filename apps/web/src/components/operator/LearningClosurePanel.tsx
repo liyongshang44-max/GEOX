@@ -1,0 +1,26 @@
+import React from "react";
+import type { OperatorLearningClosureVm } from "../../viewmodels/operatorLearningClosureVm";
+import "../../styles/operatorLearningClosure.css";
+
+export default function LearningClosurePanel({ vm }: { vm: OperatorLearningClosureVm }): React.ReactElement {
+  return (
+    <section className="operatorLearningClosurePanel" aria-label="运营学习闭环">
+      <header className="operatorLearningClosureHead">
+        <div>
+          <h2>学习闭环</h2>
+          <p>作业结果 → 证据 → 验收 → ROI → Field Memory → Skill / Rule Performance</p>
+        </div>
+        <span className={`operatorLearningClosureBadge ${vm.learningEffectiveTone}`}>{vm.learningEffectiveText}</span>
+      </header>
+      <div className="operatorLearningClosureGrid">
+        {vm.rows.map((row) => (
+          <div key={row.label}>
+            <span>{row.label}</span>
+            <strong>{row.value}</strong>
+          </div>
+        ))}
+      </div>
+      <div className="operatorLearningClosureNotice">{vm.learningExcludedReasonText}</div>
+    </section>
+  );
+}
