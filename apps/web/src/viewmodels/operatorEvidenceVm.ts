@@ -13,6 +13,7 @@ export type OperatorEvidenceRowVm = {
   scopeText: string;
   storageText: string;
   downloadText: string;
+  downloadUrl?: string | null;
   createdAtText: string;
   completedAtText: string;
   failureReasonText: string;
@@ -104,6 +105,7 @@ function buildRow(item: OperatorEvidenceItem): OperatorEvidenceRowVm {
     scopeText: scope,
     storageText: storageText(item.storageMode),
     downloadText: text(item.downloadStatus, "下载状态待确认"),
+    downloadUrl: text(item.downloadUrl, "") || null,
     createdAtText: dateText(item.createdAt),
     completedAtText: dateText(item.completedAt),
     failureReasonText: text(item.failureReason, item.status === "FAILED" ? "失败原因待补充" : "无失败原因"),
