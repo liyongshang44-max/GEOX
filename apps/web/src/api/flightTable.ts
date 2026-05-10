@@ -102,12 +102,37 @@ export type CreateFlightTableRunRequestV1 = {
   lane: FlightTableLaneV1;
 };
 
+export type CreateFlightTableFieldRequestV1 = {
+  field_id: string;
+  field_name: string;
+  crop: string;
+  crop_stage: string;
+  season_id: string;
+};
+
+export type CreateFlightTableFieldResponseV1 = {
+  ok: boolean;
+  field_id: string;
+  field_name: string;
+  customer_visible: boolean;
+  report_visible: boolean;
+  customer_scope: "FALLBACK_OR_UNCONFIRMED" | "CONFIRMED";
+  run: FlightTableRunV1;
+};
+
 export async function createFlightTableRun(body: CreateFlightTableRunRequestV1): Promise<FlightTableRunV1> {
   const res = await apiRequest<{ ok: boolean; run: FlightTableRunV1 }>("/api/v1/dev/flight-table/runs", {
     method: "POST",
     body: JSON.stringify(body),
   });
   return res.run;
+}
+
+export async function createFlightTableField(runId: string, body: CreateFlightTableFieldRequestV1): Promise<CreateFlightTableFieldResponseV1> {
+  return apiRequest<CreateFlightTableFieldResponseV1>(`/api/v1/dev/flight-table/runs/${encodeURIComponent(runId)}/field`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 export async function fetchFlightTableRuns(): Promise<FlightTableRunV1[]> {

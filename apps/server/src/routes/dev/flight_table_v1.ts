@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Pool } from "pg";
 
-import { requireAoActScopeV0, type AoActAuthContextV0 } from "../../auth/ao_act_authz_v0.js";
+import { readTokenFileV0, requireAoActScopeV0, type AoActAuthContextV0 } from "../../auth/ao_act_authz_v0.js";
 import {
   cleanFlightTableRunV1,
   createFlightTableRunV1,
@@ -9,10 +9,12 @@ import {
   normalizeFlightTableRunIdV1,
   readFlightTableRunV1,
   retryFlightTableStepV1,
+  updateFlightTableRunAfterFieldV1,
   verifyFlightTableRunV1,
 } from "../../services/flight_table/flight_table_orchestrator_v1.js";
 import { buildFlightVerifyReportV1 } from "../../services/flight_table/flight_table_verify_v1.js";
 import { listFlightTableApiSnapshotsV1 } from "../../services/flight_table/flight_table_snapshots_v1.js";
+import { createFlightTableFieldV1, normalizeFlightTableFieldInputV1 } from "../../services/flight_table/flight_table_field_v1.js";
 
 function flightTableEnabled(): boolean {
   return String(process.env.ENABLE_FLIGHT_TABLE_API ?? "").trim().toLowerCase() === "true";
@@ -46,12 +48,89 @@ function routeError(reply: FastifyReply, err: unknown) {
   const message = String((err as any)?.message ?? err ?? "UNKNOWN_ERROR");
   if (message === "FLIGHT_TABLE_SCOPE_MISMATCH") return reply.status(403).send({ ok: false, error: message });
   if (message === "FLIGHT_TABLE_INVALID_RUN_ID") return badRequest(reply, message);
+  if (message === "FLIGHT_TABLE_INVALID_FIELD_ID") return badRequest(reply, message);
+  if (message === "FLIGHT_TABLE_INVALID_SEASON_ID") return badRequest(reply, message);
   if (message === "FLIGHT_TABLE_RUN_EXISTS") return reply.status(409).send({ ok: false, error: message });
   if (message === "FLIGHT_TABLE_STEP_NOT_FOUND") return reply.status(404).send({ ok: false, error: message });
   return reply.status(500).send({ ok: false, error: "FLIGHT_TABLE_INTERNAL_ERROR", message });
 }
 
-export function registerFlightTableV1Routes(app: FastifyInstance, _pool: Pool): void {
+function silentAdminAuth(req: FastifyRequest): AoActAuthContextV0 | null {
+  const header = req.headers.authorization;
+  if (typeof header !== "string") return null;
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  const bearer = String(match?.[1] ?? "").trim();
+  if (!bearer) return null;
+  const tokenFile = readTokenFileV0();
+  const rec: any = tokenFile.tokens.find((item: any) => item?.token === bearer) ?? null;
+  if (!rec || rec.revoked) return null;
+  if (rec.role !== "admin") return null;
+  if (!Array.isArray(rec.scopes) || !rec.scopes.includes("security.admin")) return null;
+  if (!rec.tenant_id || !rec.project_id || !rec.group_id) return null;
+  return {
+    actor_id: String(rec.actor_id ?? ""),
+    token_id: String(rec.token_id ?? ""),
+    tenant_id: String(rec.tenant_id),
+    project_id: String(rec.project_id),
+    group_id: String(rec.group_id),
+    role: "admin",
+    scopes: rec.scopes,
+    allowed_field_ids: Array.isArray(rec.allowed_field_ids) ? rec.allowed_field_ids.map((x: unknown) => String(x ?? "").trim()).filter(Boolean) : [],
+  };
+}
+
+function registerCustomerFieldVisibilityFallback(app: FastifyInstance, pool: Pool): void {
+  app.addHook("onRequest", async (req, reply) => {
+    if (!flightTableEnabled()) return;
+    const pathOnly = String(req.url ?? "").split("?")[0];
+    if (req.method !== "GET" || pathOnly !== "/api/v1/customer/fields") return;
+    const auth = silentAdminAuth(req);
+    if (!auth) return;
+    const q = await pool.query(
+      `SELECT f.field_id, f.name AS field_name, f.updated_ts_ms, s.crop
+         FROM field_index_v1 f
+         LEFT JOIN LATERAL (
+           SELECT crop
+             FROM field_season_index_v1
+            WHERE tenant_id = f.tenant_id AND field_id = f.field_id
+            ORDER BY updated_ts_ms DESC
+            LIMIT 1
+         ) s ON true
+        WHERE f.tenant_id = $1
+        ORDER BY f.updated_ts_ms DESC, f.field_id ASC
+        LIMIT 200`,
+      [auth.tenant_id],
+    ).catch(() => ({ rows: [] as any[] }));
+    const fields = (q.rows ?? []).map((row: any) => {
+      const updatedTs = Number(row.updated_ts_ms ?? 0);
+      return {
+        field_id: String(row.field_id ?? ""),
+        field_name: String(row.field_name ?? "").trim() || null,
+        risk_level: "UNKNOWN",
+        risk_reasons: [],
+        updated_at: updatedTs > 0 ? new Date(updatedTs).toISOString() : null,
+        crop_name: String(row.crop ?? "").trim() || null,
+        stage_name: null,
+        recent_operation_id: null,
+        recent_operation_title: null,
+        open_alerts_count: 0,
+        pending_acceptance_count: 0,
+      };
+    });
+    return reply.send({
+      ok: true,
+      source: "customer_fields_api",
+      dataScope: "OFFICIAL_CUSTOMER_API",
+      customer_scope: "FALLBACK_OR_UNCONFIRMED",
+      generated_at: new Date().toISOString(),
+      fields,
+    });
+  });
+}
+
+export function registerFlightTableV1Routes(app: FastifyInstance, pool: Pool): void {
+  registerCustomerFieldVisibilityFallback(app, pool);
+
   app.post("/api/v1/dev/flight-table/runs", async (req, reply) => {
     const auth = requireFlightTableAdmin(req, reply);
     if (!auth) return;
@@ -85,6 +164,40 @@ export function registerFlightTableV1Routes(app: FastifyInstance, _pool: Pool): 
     const run = await readFlightTableRunV1(runId);
     if (!run || !assertRunScope(run, auth)) return notFound(reply);
     return reply.send({ ok: true, run });
+  });
+
+  app.post("/api/v1/dev/flight-table/runs/:runId/field", async (req, reply) => {
+    const auth = requireFlightTableAdmin(req, reply);
+    if (!auth) return;
+    const runId = normalizeFlightTableRunIdV1((req.params as any)?.runId);
+    if (!runId) return badRequest(reply, "FLIGHT_TABLE_INVALID_RUN_ID");
+    try {
+      const run = await readFlightTableRunV1(runId);
+      if (!run || !assertRunScope(run, auth)) return notFound(reply);
+      const input = normalizeFlightTableFieldInputV1(req.body as any);
+      const fieldResult = await createFlightTableFieldV1(pool, run, input, auth);
+      const nextRun = await updateFlightTableRunAfterFieldV1(runId, {
+        field_id: input.field_id,
+        field_name: input.field_name,
+        season_id: input.season_id,
+        crop: input.crop,
+        crop_stage: input.crop_stage,
+        customer_visible: fieldResult.customer_visible,
+        report_visible: fieldResult.report_visible,
+        customer_scope: fieldResult.customer_scope,
+      });
+      return reply.send({
+        ok: true,
+        field_id: fieldResult.field_id,
+        field_name: fieldResult.field_name,
+        customer_visible: fieldResult.customer_visible,
+        report_visible: fieldResult.report_visible,
+        customer_scope: fieldResult.customer_scope,
+        run: nextRun,
+      });
+    } catch (err) {
+      return routeError(reply, err);
+    }
   });
 
   app.post("/api/v1/dev/flight-table/runs/:runId/verify", async (req, reply) => {

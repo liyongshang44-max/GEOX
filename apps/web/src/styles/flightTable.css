@@ -94,12 +94,16 @@
 .flight-actions button,
 .flight-tabs button,
 .flight-step button,
-.flight-lane {
+.flight-lane,
+.flight-link-button {
   border: 1px solid rgba(15, 23, 42, 0.14);
   background: #fff;
   border-radius: 999px;
   padding: 9px 13px;
   cursor: pointer;
+  text-decoration: none;
+  color: #0f172a;
+  font-size: 14px;
 }
 
 .flight-actions button:disabled,
@@ -177,22 +181,61 @@
   min-width: 0;
 }
 
+.flight-field-card {
+  grid-column: span 3;
+}
+
 .flight-mini-card dl,
-.flight-diagnostics {
+.flight-diagnostics,
+.flight-field-state {
   display: grid;
-  grid-template-columns: 110px minmax(0, 1fr);
+  grid-template-columns: 150px minmax(0, 1fr);
   gap: 8px 12px;
 }
 
 .flight-mini-card dt,
-.flight-diagnostics dt {
+.flight-diagnostics dt,
+.flight-field-state dt {
   color: #64748b;
 }
 
 .flight-mini-card dd,
-.flight-diagnostics dd {
+.flight-diagnostics dd,
+.flight-field-state dd {
   margin: 0;
   word-break: break-word;
+}
+
+.flight-form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.flight-form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #475569;
+  font-size: 13px;
+}
+
+.flight-form-grid input {
+  min-height: 38px;
+  border: 1px solid rgba(15, 23, 42, 0.16);
+  border-radius: 10px;
+  padding: 0 10px;
+  background: white;
+}
+
+.flight-card-actions {
+  margin: 8px 0 14px;
+}
+
+.flight-error-text {
+  color: #991b1b;
+  margin: 10px 0 0;
 }
 
 .flight-card-head {
@@ -203,7 +246,8 @@
   margin-bottom: 12px;
 }
 
-.flight-card-head h2 {
+.flight-card-head h2,
+.flight-card-head h3 {
   margin: 0;
   font-size: 18px;
 }
@@ -320,8 +364,12 @@
   .flight-summary-grid,
   .flight-assembly-grid,
   .flight-lane-grid,
-  .flight-wizard {
+  .flight-wizard,
+  .flight-form-grid {
     grid-template-columns: 1fr 1fr;
+  }
+  .flight-field-card {
+    grid-column: span 2;
   }
 }
 
@@ -329,7 +377,11 @@
   .flight-summary-grid,
   .flight-assembly-grid,
   .flight-lane-grid,
-  .flight-wizard {
+  .flight-wizard,
+  .flight-form-grid {
     grid-template-columns: 1fr;
+  }
+  .flight-field-card {
+    grid-column: span 1;
   }
 }

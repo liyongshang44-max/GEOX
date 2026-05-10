@@ -3,6 +3,7 @@ import type { FlightTableApiSnapshotV1, FlightTableLaneV1, FlightTableRunV1 } fr
 import { summarizeFlightTableManifest } from "../../../viewmodels/flightTableVm";
 import FlightRunHeader from "./FlightRunHeader";
 import FlightAssemblyPanel from "./FlightAssemblyPanel";
+import type { FieldAssemblyDraftV1 } from "./FieldAssemblyCard";
 import LaneComposer from "./LaneComposer";
 import FlightMatrix from "./FlightMatrix";
 import ManifestPanel from "./ManifestPanel";
@@ -15,9 +16,17 @@ type Props = {
   snapshots: FlightTableApiSnapshotV1[];
   runIdDraft: string;
   laneDraft: FlightTableLaneV1;
+  fieldDraft: FieldAssemblyDraftV1;
+  fieldLoading: boolean;
+  fieldError: string | null;
+  customerVisible: boolean;
+  reportVisible: boolean;
   onRunIdDraftChange: (next: string) => void;
   onLaneDraftChange: (next: FlightTableLaneV1) => void;
+  onFieldDraftChange: (patch: Partial<FieldAssemblyDraftV1>) => void;
   onCreateRun: () => void;
+  onCreateField: () => void;
+  onVerifyField: () => void;
   onVerify: () => void;
   onClean: () => void;
   onRetryStep: (stepKey: string) => void;
@@ -79,7 +88,19 @@ export default function FlightTableShell(props: Props): React.ReactElement {
             <button key={tab.key} type="button" className={activeTab === tab.key ? "active" : ""} onClick={() => setActiveTab(tab.key)}>{tab.label}</button>
           ))}
         </nav>
-        {activeTab === "assembly" ? <FlightAssemblyPanel manifest={props.run?.manifest ?? null} /> : null}
+        {activeTab === "assembly" ? (
+          <FlightAssemblyPanel
+            manifest={props.run?.manifest ?? null}
+            fieldDraft={props.fieldDraft}
+            fieldLoading={props.fieldLoading}
+            fieldError={props.fieldError}
+            customerVisible={props.customerVisible}
+            reportVisible={props.reportVisible}
+            onFieldDraftChange={props.onFieldDraftChange}
+            onCreateField={props.onCreateField}
+            onVerifyField={props.onVerifyField}
+          />
+        ) : null}
         {activeTab === "lane" ? <LaneComposer selectedLane={props.laneDraft} onLaneChange={props.onLaneDraftChange} /> : null}
         {activeTab === "monitor" ? <FlightMatrix run={props.run} onRetryStep={props.onRetryStep} loading={props.loading} /> : null}
         {activeTab === "replay" ? <><UiReplayLinks run={props.run} /><ManifestPanel manifest={props.run?.manifest ?? null} /><ApiSnapshotPanel snapshots={props.snapshots} /></> : null}
