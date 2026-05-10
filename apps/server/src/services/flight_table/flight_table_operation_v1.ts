@@ -304,6 +304,7 @@ export async function runFlightTableOperationAoActReceiptV1(args: {
   const device_id = normalizeId(input.device_id) ?? run.manifest.device_ids[0] ?? `ft_irrigation_controller_${run.run_id}`;
   if (!field_id) throw new Error("FLIGHT_TABLE_FIELD_NOT_FOUND");
   const approval_status = await latestApprovalStatus(pool, run, approval_request_id);
+  if (approval_status !== "APPROVED") throw new Error(`FLIGHT_TABLE_APPROVAL_NOT_APPROVED:${approval_status ?? "UNKNOWN"}`);
   const operation_plan_id = normalizeId(input.operation_plan_id)
     ?? run.manifest.operation_plan_ids.at(-1)
     ?? `op_${shortHash(`${run.run_id}|${prescription_id}|${approval_request_id}`)}`;
