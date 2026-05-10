@@ -340,14 +340,29 @@ function learningText(value: boolean | null): string {
   return "学习状态待确认";
 }
 
-function OperationSkillTraceTechnicalBlock({ trace, loading }: { trace: OperatorSkillTraceResponse | null; loading: boolean }): React.ReactElement {
-  if (loading) return <div className="operationTechDetailsTitle">技能运行详情加载中...</div>;
+function operatorQuery(operationId: string, fieldId?: string | null): string {
+  const params = new URLSearchParams();
+  if (operationId.trim()) params.set("operation_id", operationId.trim());
+  if (fieldId && fieldId !== "--") params.set("field_id", fieldId);
+  return params.toString();
+}
+
+function OperationSkillTraceTechnicalBlock({ trace, loading, operationId, fieldId }: { trace: OperatorSkillTraceResponse | null; loading: boolean; operationId: string; fieldId?: string | null }): React.ReactElement {
+  if (loading) return <div id="operation-skill-trace" className="operationTechDetailsTitle">技能运行详情加载中...</div>;
   if (!trace || trace.notReady || trace.items.length === 0) {
-    return <div className="operationTechDetailsTitle">技能运行详情：{trace?.message || "skill trace 查询接口未接入。"}</div>;
+    return <div id="operation-skill-trace" className="operationTechDetailsTitle">技能运行详情：{trace?.message || "skill trace 查询接口未接入。"}</div>;
   }
+  const query = operatorQuery(operationId, fieldId);
   return (
-    <div className="operationSkillTraceTechBlock">
+    <div id="operation-skill-trace" className="operationSkillTraceTechBlock">
       <div className="operationTechDetailsTitle">技能运行详情</div>
+      {query ? (
+        <div className="operationSkillTraceTechActions">
+          <Link to={`/operator/field-memory?${query}`}>查看 Field Memory</Link>
+          <Link to={`/operator/roi-ledger?${query}`}>查看 ROI</Link>
+          <Link to={`/operator/evidence?operation_id=${encodeURIComponent(operationId)}`}>查看证据中心</Link>
+        </div>
+      ) : null}
       {trace.items.map((item) => (
         <div key={`${item.skillId}-${item.traceRef ?? item.createdAt ?? item.runStage}`} className="operationSkillTraceTechCard">
           <div><strong>技能名称：</strong>{item.skillName}</div>
@@ -618,7 +633,7 @@ export default function OperationReportPage(): React.ReactElement {
                 <div key={row.label}><strong>{labelCustomerTechnicalField(row.label)}：</strong>{row.value}</div>
               ))}
             </div>
-            <OperationSkillTraceTechnicalBlock trace={skillTrace} loading={skillTraceLoading} />
+            <OperationSkillTraceTechnicalBlock trace={skillTrace} loading={skillTraceLoading} operationId={operationId} fieldId={drawerFieldId} />
           </details>
         </section>
       </div>
