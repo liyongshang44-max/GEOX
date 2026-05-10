@@ -30,6 +30,10 @@ import {
   type FlightTableDecisionRunResultV1,
 } from "../../api/flightTableDecision";
 import {
+  runFlightTableOperation,
+  type FlightTableOperationRunResultV1,
+} from "../../api/flightTableOperation";
+import {
   fetchFlightTableTelemetryScenarios,
   publishFlightTableTelemetry,
   verifyFlightTableTelemetry,
@@ -154,6 +158,9 @@ export default function FlightTablePage(): React.ReactElement {
   const [decisionResult, setDecisionResult] = React.useState<FlightTableDecisionRunResultV1 | null>(null);
   const [decisionLoading, setDecisionLoading] = React.useState(false);
   const [decisionError, setDecisionError] = React.useState<string | null>(null);
+  const [operationResult, setOperationResult] = React.useState<FlightTableOperationRunResultV1 | null>(null);
+  const [operationLoading, setOperationLoading] = React.useState(false);
+  const [operationError, setOperationError] = React.useState<string | null>(null);
   const [geometryResult, setGeometryResult] = React.useState<CreateFlightTableGeometryResponseV1 | null>(null);
   const [deviceTemplates, setDeviceTemplates] = React.useState<FlightTableDeviceTemplateV1[]>([]);
   const [onboardedDevices, setOnboardedDevices] = React.useState<FlightTableDeviceSummaryV1[]>([]);
@@ -553,6 +560,37 @@ export default function FlightTablePage(): React.ReactElement {
     }
   }, [applyRun, deviceDraft.device_id, fieldDraft.crop, fieldDraft.field_id, fieldDraft.season_id, onboardedDevices, run]);
 
+  const handleRunOperation = React.useCallback(async () => {
+    if (!run) {
+      setOperationError("请先创建 run");
+      return;
+    }
+    const prescriptionId = run.manifest.prescription_ids.at(-1) ?? decisionResult?.prescription_id;
+    const approvalRequestId = run.manifest.approval_request_ids.at(-1) ?? decisionResult?.approval_request_id;
+    const fieldId = run.manifest.field_id ?? fieldDraft.field_id;
+    const deviceId = run.manifest.device_ids[0] || onboardedDevices[0]?.device_id || deviceDraft.device_id;
+    if (!prescriptionId || !approvalRequestId) {
+      setOperationError("缺少 prescription_id 或 approval_request_id，请先运行 E 层");
+      return;
+    }
+    setOperationLoading(true);
+    setOperationError(null);
+    try {
+      const res = await runFlightTableOperation(run.run_id, {
+        prescription_id: prescriptionId,
+        approval_request_id: approvalRequestId,
+        field_id: fieldId || undefined,
+        device_id: deviceId || undefined,
+      });
+      setOperationResult(res);
+      applyRun(res.run);
+    } catch (err) {
+      setOperationError(errorToText(err));
+    } finally {
+      setOperationLoading(false);
+    }
+  }, [applyRun, decisionResult, deviceDraft.device_id, fieldDraft.field_id, onboardedDevices, run]);
+
   const handleVerify = React.useCallback(async () => {
     if (!run) return;
     setLoading(true);
@@ -595,6 +633,7 @@ export default function FlightTablePage(): React.ReactElement {
         run,
         telemetry_result: telemetryResult,
         decision_result: decisionResult,
+        operation_result: operationResult,
         verify_report: verifyReport,
         api_snapshots: latestSnapshots,
       });
@@ -603,7 +642,7 @@ export default function FlightTablePage(): React.ReactElement {
     } finally {
       setLoading(false);
     }
-  }, [decisionResult, run, snapshots, telemetryResult]);
+  }, [decisionResult, operationResult, run, snapshots, telemetryResult]);
 
   const handleClean = React.useCallback(async () => {
     if (!run) return;
@@ -616,6 +655,7 @@ export default function FlightTablePage(): React.ReactElement {
       setOnboardedDevices([]);
       setTelemetryResult(null);
       setDecisionResult(null);
+      setOperationResult(null);
       setSkillResult(null);
       setSpatialDraft(defaultSpatialDraft());
       applyRun(next);
@@ -658,6 +698,9 @@ export default function FlightTablePage(): React.ReactElement {
       decisionResult={decisionResult}
       decisionLoading={decisionLoading}
       decisionError={decisionError}
+      operationResult={operationResult}
+      operationLoading={operationLoading}
+      operationError={operationError}
       onRunIdDraftChange={setRunIdDraft}
       onLaneDraftChange={setLaneDraft}
       onSkillFailureTypeChange={setSkillFailureType}
@@ -678,6 +721,7 @@ export default function FlightTablePage(): React.ReactElement {
       onFailOneSkill={handleFailOneSkill}
       onRestoreSkills={handleRestoreSkills}
       onRunDecision={handleRunDecision}
+      onRunOperation={handleRunOperation}
       onVerify={handleVerify}
       onRetryFailedStep={handleRetryFailedStep}
       onClean={handleClean}
