@@ -178,6 +178,45 @@
   word-break: break-word;
 }
 
+.operatorEvidenceJobDetail {
+  display: grid;
+  gap: 5px;
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.operatorEvidenceJobDetail strong {
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.operatorEvidenceJobDetail a {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #132016;
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.operatorEvidenceJobDetail.success {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #047857;
+}
+
+.operatorEvidenceJobDetail.danger {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
 .operatorEvidenceNotice,
 .operatorEvidenceChecksumEmpty {
   border-radius: 12px;
