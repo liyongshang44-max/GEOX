@@ -7,6 +7,7 @@ import { registerFlightTableV1Routes } from "../../routes/dev/flight_table_v1.js
 import { registerFlightTableSkillRoutesV1 } from "../../routes/dev/flight_table_skills_v1.js";
 import { registerFlightTableRunControlRoutesV1 } from "../../routes/dev/flight_table_run_control_v1.js";
 import { registerFlightTableTelemetryRoutesV1 } from "../../routes/dev/flight_table_telemetry_v1.js";
+import { registerFlightTableDecisionRoutesV1 } from "../../routes/dev/flight_table_decision_v1.js";
 
 export function registerDevtoolsModule(app: FastifyInstance, pool: Pool): void {
   registerSimConfigRoutes(app);
@@ -15,4 +16,5 @@ export function registerDevtoolsModule(app: FastifyInstance, pool: Pool): void {
   registerFlightTableSkillRoutesV1(app, pool);
   registerFlightTableRunControlRoutesV1(app);
   registerFlightTableTelemetryRoutesV1(app, pool);
+  registerFlightTableDecisionRoutesV1(app, pool);
 }

@@ -9,6 +9,7 @@ import type {
   FlightTableSkillAssemblyResponseV1,
   FlightTableSkillFailureTypeV1,
 } from "../../../api/flightTable";
+import type { FlightTableDecisionRunResultV1 } from "../../../api/flightTableDecision";
 import type {
   FlightTableTelemetryResponseV1,
   FlightTableTelemetryScenarioKeyV1,
@@ -54,6 +55,9 @@ type Props = {
   skillResult: FlightTableSkillAssemblyResponseV1 | null;
   skillLoading: boolean;
   skillError: string | null;
+  decisionResult: FlightTableDecisionRunResultV1 | null;
+  decisionLoading: boolean;
+  decisionError: string | null;
   onRunIdDraftChange: (next: string) => void;
   onLaneDraftChange: (next: FlightTableLaneV1) => void;
   onSkillFailureTypeChange: (next: FlightTableSkillFailureTypeV1) => void;
@@ -73,6 +77,7 @@ type Props = {
   onBindSkills: () => void;
   onFailOneSkill: () => void;
   onRestoreSkills: () => void;
+  onRunDecision: () => void;
   onVerify: () => void;
   onRetryFailedStep: () => void;
   onClean: () => void;
@@ -183,7 +188,17 @@ export default function FlightTableShell(props: Props): React.ReactElement {
           />
         ) : null}
         {activeTab === "lane" ? <LaneComposer selectedLane={props.laneDraft} selectedSkillFailureType={props.skillFailureType} onLaneChange={props.onLaneDraftChange} onSkillFailureTypeChange={props.onSkillFailureTypeChange} /> : null}
-        {activeTab === "monitor" ? <FlightMatrix run={props.run} onRetryStep={props.onRetryStep} loading={props.loading} /> : null}
+        {activeTab === "monitor" ? (
+          <FlightMatrix
+            run={props.run}
+            decisionResult={props.decisionResult}
+            onRetryStep={props.onRetryStep}
+            onRunDecision={props.onRunDecision}
+            loading={props.loading}
+            decisionLoading={props.decisionLoading}
+            decisionError={props.decisionError}
+          />
+        ) : null}
         {activeTab === "replay" ? <><UiReplayLinks run={props.run} /><ManifestPanel manifest={props.run?.manifest ?? null} /><ApiSnapshotPanel snapshots={props.snapshots} /></> : null}
         {activeTab === "diagnostics" ? <DiagnosticsPanel run={props.run} error={props.error} /> : null}
       </main>
