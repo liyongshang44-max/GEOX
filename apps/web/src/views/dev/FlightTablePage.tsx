@@ -9,6 +9,7 @@ import {
   failOneFlightTableSkill,
   fetchFlightTableApiSnapshots,
   fetchFlightTableDeviceTemplates,
+  fetchFlightTableRun,
   fetchFlightTableRuns,
   fetchFlightTableVerifyReport,
   restoreFlightTableSkills,
@@ -208,6 +209,18 @@ export default function FlightTablePage(): React.ReactElement {
     }
     void refreshSnapshots(next);
   }, [refreshSnapshots]);
+
+  React.useEffect(() => {
+    if (!run || run.status !== "RUNNING") return undefined;
+    const timer = window.setInterval(() => {
+      void fetchFlightTableRun(run.run_id)
+        .then((next) => {
+          if (next.updated_at !== run.updated_at || next.status !== run.status) applyRun(next);
+        })
+        .catch(() => undefined);
+    }, 1500);
+    return () => window.clearInterval(timer);
+  }, [applyRun, run]);
 
   const handleCreateRun = React.useCallback(async () => {
     setLoading(true);
@@ -412,12 +425,24 @@ export default function FlightTablePage(): React.ReactElement {
     }
   }, [applyRun, run]);
 
+  const handleRetryStep = React.useCallback(async (stepKey: string) => {
+    if (!run) return;
+    setLoading(true);
+    try {
+      applyRun(await retryFlightTableStep(run.run_id, stepKey));
+    } catch (err) {
+      setError(errorToText(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [applyRun, run]);
+
   const handleRetryFailedStep = React.useCallback(async () => {
     if (!run) return;
     const failedStep = run.steps.find((step) => step.status === "FAIL");
     if (!failedStep) return;
     await handleRetryStep(failedStep.step_key);
-  }, [run]);
+  }, [handleRetryStep, run]);
 
   const handleExportAcceptancePackage = React.useCallback(async () => {
     if (!run) return;
@@ -450,18 +475,6 @@ export default function FlightTablePage(): React.ReactElement {
       setSkillResult(null);
       setSpatialDraft(defaultSpatialDraft());
       applyRun(next);
-    } catch (err) {
-      setError(errorToText(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [applyRun, run]);
-
-  const handleRetryStep = React.useCallback(async (stepKey: string) => {
-    if (!run) return;
-    setLoading(true);
-    try {
-      applyRun(await retryFlightTableStep(run.run_id, stepKey));
     } catch (err) {
       setError(errorToText(err));
     } finally {
