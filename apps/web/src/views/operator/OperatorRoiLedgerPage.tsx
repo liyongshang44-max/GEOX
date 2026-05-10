@@ -11,7 +11,25 @@ import { buildOperatorFieldMemoryVm, type OperatorFieldMemoryVm } from "../../vi
 import { buildOperatorLearningClosureVm } from "../../viewmodels/operatorLearningClosureVm";
 import { buildOperatorRoiLedgerVm, type OperatorRoiLedgerRowVm, type OperatorRoiLedgerVm } from "../../viewmodels/operatorRoiLedgerVm";
 
+function decodeLastPathSegment(href?: string | null): string {
+  if (!href) return "";
+  const segment = href.split("/").filter(Boolean).pop() ?? "";
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
+
+function roiOperatorQuery(row: OperatorRoiLedgerRowVm): string {
+  const params = new URLSearchParams();
+  const operationId = decodeLastPathSegment(row.operationHref) || (/待确认|暂无|未提供/.test(row.operationIdText) ? "" : row.operationIdText);
+  if (operationId) params.set("operation_id", operationId);
+  return params.toString();
+}
+
 function RoiRow({ row }: { row: OperatorRoiLedgerRowVm }): React.ReactElement {
+  const operatorQuery = roiOperatorQuery(row);
   return (
     <article className="operatorRoiRow">
       <header className="operatorRoiRowHead">
@@ -37,6 +55,8 @@ function RoiRow({ row }: { row: OperatorRoiLedgerRowVm }): React.ReactElement {
       <div className="operatorRoiNotice">{row.measuredAllowedText}</div>
       <div className="operatorRoiActions">
         {row.operationHref ? <Link to={row.operationHref}>查看作业</Link> : null}
+        {operatorQuery ? <Link to={`/operator/field-memory?${operatorQuery}`}>查看 Field Memory</Link> : null}
+        {operatorQuery ? <Link to={`/operator/evidence?${operatorQuery}`}>查看关联证据</Link> : null}
       </div>
     </article>
   );
@@ -139,6 +159,7 @@ export default function OperatorRoiLedgerPage(): React.ReactElement {
 
   const closureVm = buildOperatorLearningClosureVm({
     operationId,
+    fieldId,
     roiRows: vm?.rows ?? [],
     fieldMemoryRows: fieldMemoryVm?.rows ?? [],
     skillTrace,
