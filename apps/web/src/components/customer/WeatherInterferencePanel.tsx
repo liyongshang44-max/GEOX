@@ -21,7 +21,7 @@ function formatRainfall(value: number | null | undefined): string {
 }
 
 function statusText(context: OperationEnvironmentContext | null): string {
-  if (!context) return "天气源加载中";
+  if (!context) return "天气源不可用";
   if (context.status === "ok") return "天气源已接入";
   if (context.unavailableReason === "location_unavailable") return "当前位置不可用";
   if (context.unavailableReason === "provider_error") return "天气服务不可用";
