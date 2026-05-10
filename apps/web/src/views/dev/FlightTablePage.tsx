@@ -25,6 +25,13 @@ import {
   type FlightTableSkillAssemblyResponseV1,
   type FlightTableSkillFailureTypeV1,
 } from "../../api/flightTable";
+import {
+  fetchFlightTableTelemetryScenarios,
+  publishFlightTableTelemetry,
+  verifyFlightTableTelemetry,
+  type FlightTableTelemetryResponseV1,
+  type FlightTableTelemetryScenarioKeyV1,
+} from "../../api/flightTableTelemetry";
 import { ApiError } from "../../api/client";
 import { readTenantContext } from "../../auth/authStorage";
 import FlightTableShell from "../../components/dev/flight-table/FlightTableShell";
@@ -34,6 +41,13 @@ import type { DeviceOnboardingDraftV1 } from "../../components/dev/flight-table/
 import { defaultFlightTableRunId, flightTablePermissionLabel } from "../../viewmodels/flightTableVm";
 import "../../styles/flightTable.css";
 import "../../styles/flightTableSkills.css";
+import "../../styles/flightTableTelemetry.css";
+
+const DEFAULT_TELEMETRY_SCENARIOS: FlightTableTelemetryScenarioKeyV1[] = [
+  "before_irrigation_low_moisture",
+  "during_irrigation_flow",
+  "after_irrigation_success",
+];
 
 function errorToText(error: unknown): string {
   if (error instanceof ApiError) {
@@ -125,6 +139,11 @@ export default function FlightTablePage(): React.ReactElement {
   const [spatialError, setSpatialError] = React.useState<string | null>(null);
   const [deviceLoading, setDeviceLoading] = React.useState(false);
   const [deviceError, setDeviceError] = React.useState<string | null>(null);
+  const [telemetryScenarios, setTelemetryScenarios] = React.useState<FlightTableTelemetryScenarioKeyV1[]>([]);
+  const [selectedTelemetryScenarios, setSelectedTelemetryScenarios] = React.useState<FlightTableTelemetryScenarioKeyV1[]>(DEFAULT_TELEMETRY_SCENARIOS);
+  const [telemetryResult, setTelemetryResult] = React.useState<FlightTableTelemetryResponseV1 | null>(null);
+  const [telemetryLoading, setTelemetryLoading] = React.useState(false);
+  const [telemetryError, setTelemetryError] = React.useState<string | null>(null);
   const [skillLoading, setSkillLoading] = React.useState(false);
   const [skillError, setSkillError] = React.useState<string | null>(null);
   const [geometryResult, setGeometryResult] = React.useState<CreateFlightTableGeometryResponseV1 | null>(null);
@@ -151,10 +170,16 @@ export default function FlightTablePage(): React.ReactElement {
   React.useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    Promise.all([fetchFlightTableRuns(), fetchFlightTableDeviceTemplates().catch(() => [])])
-      .then(([runs, templates]) => {
+    Promise.all([
+      fetchFlightTableRuns(),
+      fetchFlightTableDeviceTemplates().catch(() => []),
+      fetchFlightTableTelemetryScenarios().catch(() => []),
+    ])
+      .then(([runs, templates, scenarios]) => {
         if (cancelled) return;
         setDeviceTemplates(templates);
+        setTelemetryScenarios(scenarios.length ? scenarios : DEFAULT_TELEMETRY_SCENARIOS);
+        setSelectedTelemetryScenarios((current) => current.length ? current : DEFAULT_TELEMETRY_SCENARIOS);
         if (templates[0]) setDeviceDraft((draft) => ({ ...draft, template_code: draft.template_code || templates[0].template_code }));
         const first = runs[0] ?? null;
         setRun(first);
@@ -359,6 +384,81 @@ export default function FlightTablePage(): React.ReactElement {
     }
   }, [applyRun, deviceDraft, fieldDraft.field_id, run]);
 
+  const handleTelemetryScenarioToggle = React.useCallback((scenario: FlightTableTelemetryScenarioKeyV1) => {
+    setSelectedTelemetryScenarios((current) => current.includes(scenario)
+      ? current.filter((item) => item !== scenario)
+      : [...current, scenario]);
+  }, []);
+
+  const handlePublishTelemetry = React.useCallback(async (deviceId?: string | null) => {
+    if (!run) {
+      setTelemetryError("请先创建 run");
+      return;
+    }
+    const fieldId = run.manifest.field_id ?? fieldDraft.field_id;
+    const resolvedDeviceId = deviceId || run.manifest.device_ids[0] || onboardedDevices[0]?.device_id;
+    if (!fieldId) {
+      setTelemetryError("请先创建田块对象");
+      return;
+    }
+    if (!resolvedDeviceId) {
+      setTelemetryError("请先接入设备");
+      return;
+    }
+    setTelemetryLoading(true);
+    setTelemetryError(null);
+    try {
+      const scenarios = selectedTelemetryScenarios.length ? selectedTelemetryScenarios : DEFAULT_TELEMETRY_SCENARIOS;
+      const res = await publishFlightTableTelemetry(run.run_id, {
+        scenarios,
+        mode: deviceDraft.telemetry_mode === "realistic" ? "mqtt" : "fast",
+        device_id: resolvedDeviceId,
+        field_id: fieldId,
+      });
+      setTelemetryResult(res);
+      applyRun(res.run);
+    } catch (err) {
+      setTelemetryError(errorToText(err));
+    } finally {
+      setTelemetryLoading(false);
+    }
+  }, [applyRun, deviceDraft.telemetry_mode, fieldDraft.field_id, onboardedDevices, run, selectedTelemetryScenarios]);
+
+  const handleVerifyTelemetry = React.useCallback(async (deviceId?: string | null) => {
+    if (!run) {
+      setTelemetryError("请先创建 run");
+      return;
+    }
+    const fieldId = run.manifest.field_id ?? fieldDraft.field_id;
+    const resolvedDeviceId = deviceId || run.manifest.device_ids[0] || onboardedDevices[0]?.device_id;
+    if (!fieldId || !resolvedDeviceId) {
+      setTelemetryError("缺少 field_id 或 device_id");
+      return;
+    }
+    setTelemetryLoading(true);
+    setTelemetryError(null);
+    try {
+      const verify = await verifyFlightTableTelemetry(run.run_id, { device_id: resolvedDeviceId, field_id: fieldId });
+      setTelemetryResult((current) => current ? { ...current, verify, freshness: verify.field_sensing_overview_v1.freshness ?? verify.field_sensing_summary_stage1_v1.freshness } : {
+        ok: true,
+        scenarios: selectedTelemetryScenarios,
+        points: [],
+        metric_count: verify.telemetry_index_v1.count,
+        last_telemetry_time: verify.telemetry_index_v1.latest_ts_ms ? new Date(verify.telemetry_index_v1.latest_ts_ms).toISOString() : null,
+        observation_status: verify.breakpoint ? "PARTIAL" : verify.device_observation_index_v1.visible ? "READY" : "MISSING",
+        sensing_status: verify.field_sensing_overview_v1.visible || verify.field_sensing_summary_stage1_v1.visible ? "READY" : verify.derived_sensing_state_index_v1.visible ? "PARTIAL" : "MISSING",
+        freshness: verify.field_sensing_overview_v1.freshness ?? verify.field_sensing_summary_stage1_v1.freshness,
+        verify,
+        run,
+      });
+      void refreshSnapshots(run);
+    } catch (err) {
+      setTelemetryError(errorToText(err));
+    } finally {
+      setTelemetryLoading(false);
+    }
+  }, [fieldDraft.field_id, onboardedDevices, refreshSnapshots, run, selectedTelemetryScenarios]);
+
   const handleBindSkills = React.useCallback(async () => {
     if (!run) {
       setSkillError("请先创建 run");
@@ -453,6 +553,7 @@ export default function FlightTablePage(): React.ReactElement {
       downloadJson(`${run.run_id}_acceptance_package.json`, {
         exported_at: new Date().toISOString(),
         run,
+        telemetry_result: telemetryResult,
         verify_report: verifyReport,
         api_snapshots: latestSnapshots,
       });
@@ -461,7 +562,7 @@ export default function FlightTablePage(): React.ReactElement {
     } finally {
       setLoading(false);
     }
-  }, [run, snapshots]);
+  }, [run, snapshots, telemetryResult]);
 
   const handleClean = React.useCallback(async () => {
     if (!run) return;
@@ -472,6 +573,7 @@ export default function FlightTablePage(): React.ReactElement {
       setReportVisible(false);
       setGeometryResult(null);
       setOnboardedDevices([]);
+      setTelemetryResult(null);
       setSkillResult(null);
       setSpatialDraft(defaultSpatialDraft());
       applyRun(next);
@@ -503,6 +605,11 @@ export default function FlightTablePage(): React.ReactElement {
       deviceError={deviceError}
       deviceTemplates={deviceTemplates}
       onboardedDevices={onboardedDevices}
+      telemetryScenarios={telemetryScenarios}
+      selectedTelemetryScenarios={selectedTelemetryScenarios}
+      telemetryResult={telemetryResult}
+      telemetryLoading={telemetryLoading}
+      telemetryError={telemetryError}
       skillResult={skillResult}
       skillLoading={skillLoading}
       skillError={skillError}
@@ -519,6 +626,9 @@ export default function FlightTablePage(): React.ReactElement {
       onSubmitGeometry={handleSubmitGeometry}
       onOnboardDevice={handleOnboardDevice}
       onRetryDevice={handleOnboardDevice}
+      onTelemetryScenarioToggle={handleTelemetryScenarioToggle}
+      onPublishTelemetry={handlePublishTelemetry}
+      onVerifyTelemetry={handleVerifyTelemetry}
       onBindSkills={handleBindSkills}
       onFailOneSkill={handleFailOneSkill}
       onRestoreSkills={handleRestoreSkills}
