@@ -10,6 +10,7 @@ import type {
   FlightTableSkillFailureTypeV1,
 } from "../../../api/flightTable";
 import type { FlightTableDecisionRunResultV1 } from "../../../api/flightTableDecision";
+import type { FlightTableOperationRunResultV1 } from "../../../api/flightTableOperation";
 import type {
   FlightTableTelemetryResponseV1,
   FlightTableTelemetryScenarioKeyV1,
@@ -58,6 +59,9 @@ type Props = {
   decisionResult: FlightTableDecisionRunResultV1 | null;
   decisionLoading: boolean;
   decisionError: string | null;
+  operationResult: FlightTableOperationRunResultV1 | null;
+  operationLoading: boolean;
+  operationError: string | null;
   onRunIdDraftChange: (next: string) => void;
   onLaneDraftChange: (next: FlightTableLaneV1) => void;
   onSkillFailureTypeChange: (next: FlightTableSkillFailureTypeV1) => void;
@@ -78,6 +82,7 @@ type Props = {
   onFailOneSkill: () => void;
   onRestoreSkills: () => void;
   onRunDecision: () => void;
+  onRunOperation: () => void;
   onVerify: () => void;
   onRetryFailedStep: () => void;
   onClean: () => void;
@@ -192,11 +197,15 @@ export default function FlightTableShell(props: Props): React.ReactElement {
           <FlightMatrix
             run={props.run}
             decisionResult={props.decisionResult}
+            operationResult={props.operationResult}
             onRetryStep={props.onRetryStep}
             onRunDecision={props.onRunDecision}
+            onRunOperation={props.onRunOperation}
             loading={props.loading}
             decisionLoading={props.decisionLoading}
+            operationLoading={props.operationLoading}
             decisionError={props.decisionError}
+            operationError={props.operationError}
           />
         ) : null}
         {activeTab === "replay" ? <><UiReplayLinks run={props.run} /><ManifestPanel manifest={props.run?.manifest ?? null} /><ApiSnapshotPanel snapshots={props.snapshots} /></> : null}
