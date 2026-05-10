@@ -14,10 +14,12 @@ export type OperatorLearningClosureVm = {
   learningExcludedReasonText: string;
   learningEffectiveTone: "success" | "warning" | "danger" | "neutral";
   rows: Array<{ label: string; value: string }>;
+  actions: Array<{ label: string; href: string }>;
 };
 
 export type OperatorLearningClosureInput = {
   operationId?: string | null;
+  fieldId?: string | null;
   roiRows?: OperatorRoiLedgerRowVm[];
   fieldMemoryRows?: OperatorFieldMemoryRowVm[];
   skillTrace?: OperatorSkillTraceResponse | null;
@@ -57,7 +59,7 @@ function skillTraceText(skillTrace: OperatorSkillTraceResponse | null | undefine
 
 function performanceText(performance: OperatorSkillPerformanceResponse | null | undefined): string {
   if (!performance || performance.notReady) return performance?.message || "skill trace 查询接口未接入。";
-  return performance.items.length ? `${performance.items.length} 条 Skill / Rule Performance` : "暂无 Skill / Rule Performance";
+  return performance.items.length ? `${performance.items.length} 条 Skill / Rule Performance，本次作业已进入 performance 评估链。` : "暂无 Skill / Rule Performance 更新记录";
 }
 
 function detectWeatherExclusion(roiRows: OperatorRoiLedgerRowVm[], memoryRows: OperatorFieldMemoryRowVm[], skillTrace: OperatorSkillTraceResponse | null | undefined): boolean {
@@ -73,10 +75,24 @@ function enteredLearning(memoryRows: OperatorFieldMemoryRowVm[], skillTrace: Ope
   return false;
 }
 
+function actionLinks(operationId: string, fieldId: string): Array<{ label: string; href: string }> {
+  if (!operationId) return [];
+  const query = new URLSearchParams({ operation_id: operationId });
+  if (fieldId) query.set("field_id", fieldId);
+  return [
+    { label: "查看作业", href: `/customer/operations/${encodeURIComponent(operationId)}` },
+    { label: "查看 Field Memory", href: `/operator/field-memory?${query.toString()}` },
+    { label: "查看 ROI", href: `/operator/roi-ledger?${query.toString()}` },
+    { label: "查看证据中心", href: `/operator/evidence?operation_id=${encodeURIComponent(operationId)}` },
+  ];
+}
+
 export function buildOperatorLearningClosureVm(input: OperatorLearningClosureInput): OperatorLearningClosureVm {
   const operationId = text(input.operationId, "");
+  const explicitFieldId = text(input.fieldId, "");
   const roiRows = input.roiRows ?? [];
   const memoryRows = input.fieldMemoryRows ?? [];
+  const fieldId = explicitFieldId || text(input.skillTrace?.items.find((item) => item.fieldId)?.fieldId, "");
   const weatherExcluded = detectWeatherExclusion(roiRows, memoryRows, input.skillTrace);
   const didLearn = enteredLearning(memoryRows, input.skillTrace);
   const learningExcludedReasonText = weatherExcluded
@@ -110,6 +126,7 @@ export function buildOperatorLearningClosureVm(input: OperatorLearningClosureInp
     learningExcludedReasonText: operationId ? learningExcludedReasonText : "未选择 operation_id，暂不判断学习排除原因。",
     learningEffectiveTone,
     rows: [],
+    actions: actionLinks(operationId, fieldId),
   };
   vm.rows = [
     { label: "作业 ID", value: vm.operationIdText },
