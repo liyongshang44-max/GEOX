@@ -493,6 +493,8 @@
 .operationTechDetailsTitle { margin-top: 8px; font-weight: 700; color: #4b5563; }
 .operationTechDetailsGrid { margin-top: 8px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; }
 .operationSkillTraceTechBlock { display: grid; gap: 8px; margin-top: 10px; min-width: 0; }
+.operationSkillTraceTechActions { display: flex; flex-wrap: wrap; gap: 8px; }
+.operationSkillTraceTechActions a { display: inline-flex; align-items: center; border: 1px solid #bfdbfe; border-radius: 999px; background: #eff6ff; color: #1d4ed8; padding: 5px 9px; font-size: 12px; font-weight: 900; text-decoration: none; }
 .operationSkillTraceTechCard { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; padding: 10px; border: 1px solid var(--customer-border); border-radius: 12px; background: #ffffff; color: #4b5563; min-width: 0; }
 .operationSkillTraceTechCard > div { min-width: 0; overflow-wrap: anywhere; line-height: 1.45; }
 .operationSkillTraceTechCard strong { color: #374151; font-weight: 800; }
