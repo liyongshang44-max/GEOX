@@ -9,10 +9,12 @@ import {
   normalizeFlightTableRunIdV1,
   readFlightTableRunV1,
   retryFlightTableStepV1,
+  updateFlightTableRunAfterFieldV1,
   verifyFlightTableRunV1,
 } from "../../services/flight_table/flight_table_orchestrator_v1.js";
 import { buildFlightVerifyReportV1 } from "../../services/flight_table/flight_table_verify_v1.js";
 import { listFlightTableApiSnapshotsV1 } from "../../services/flight_table/flight_table_snapshots_v1.js";
+import { createFlightTableFieldV1, normalizeFlightTableFieldInputV1 } from "../../services/flight_table/flight_table_field_v1.js";
 
 function flightTableEnabled(): boolean {
   return String(process.env.ENABLE_FLIGHT_TABLE_API ?? "").trim().toLowerCase() === "true";
@@ -46,12 +48,14 @@ function routeError(reply: FastifyReply, err: unknown) {
   const message = String((err as any)?.message ?? err ?? "UNKNOWN_ERROR");
   if (message === "FLIGHT_TABLE_SCOPE_MISMATCH") return reply.status(403).send({ ok: false, error: message });
   if (message === "FLIGHT_TABLE_INVALID_RUN_ID") return badRequest(reply, message);
+  if (message === "FLIGHT_TABLE_INVALID_FIELD_ID") return badRequest(reply, message);
+  if (message === "FLIGHT_TABLE_INVALID_SEASON_ID") return badRequest(reply, message);
   if (message === "FLIGHT_TABLE_RUN_EXISTS") return reply.status(409).send({ ok: false, error: message });
   if (message === "FLIGHT_TABLE_STEP_NOT_FOUND") return reply.status(404).send({ ok: false, error: message });
   return reply.status(500).send({ ok: false, error: "FLIGHT_TABLE_INTERNAL_ERROR", message });
 }
 
-export function registerFlightTableV1Routes(app: FastifyInstance, _pool: Pool): void {
+export function registerFlightTableV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/dev/flight-table/runs", async (req, reply) => {
     const auth = requireFlightTableAdmin(req, reply);
     if (!auth) return;
@@ -85,6 +89,40 @@ export function registerFlightTableV1Routes(app: FastifyInstance, _pool: Pool): 
     const run = await readFlightTableRunV1(runId);
     if (!run || !assertRunScope(run, auth)) return notFound(reply);
     return reply.send({ ok: true, run });
+  });
+
+  app.post("/api/v1/dev/flight-table/runs/:runId/field", async (req, reply) => {
+    const auth = requireFlightTableAdmin(req, reply);
+    if (!auth) return;
+    const runId = normalizeFlightTableRunIdV1((req.params as any)?.runId);
+    if (!runId) return badRequest(reply, "FLIGHT_TABLE_INVALID_RUN_ID");
+    try {
+      const run = await readFlightTableRunV1(runId);
+      if (!run || !assertRunScope(run, auth)) return notFound(reply);
+      const input = normalizeFlightTableFieldInputV1(req.body as any);
+      const fieldResult = await createFlightTableFieldV1(pool, run, input, auth);
+      const nextRun = await updateFlightTableRunAfterFieldV1(runId, {
+        field_id: input.field_id,
+        field_name: input.field_name,
+        season_id: input.season_id,
+        crop: input.crop,
+        crop_stage: input.crop_stage,
+        customer_visible: fieldResult.customer_visible,
+        report_visible: fieldResult.report_visible,
+        customer_scope: fieldResult.customer_scope,
+      });
+      return reply.send({
+        ok: true,
+        field_id: fieldResult.field_id,
+        field_name: fieldResult.field_name,
+        customer_visible: fieldResult.customer_visible,
+        report_visible: fieldResult.report_visible,
+        customer_scope: fieldResult.customer_scope,
+        run: nextRun,
+      });
+    } catch (err) {
+      return routeError(reply, err);
+    }
   });
 
   app.post("/api/v1/dev/flight-table/runs/:runId/verify", async (req, reply) => {
