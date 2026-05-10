@@ -38,6 +38,7 @@ function routeError(reply: FastifyReply, err: unknown) {
   if (message === "FLIGHT_TABLE_SCOPE_MISMATCH") return reply.status(403).send({ ok: false, error: message });
   if (message === "FLIGHT_TABLE_INVALID_RUN_ID") return badRequest(reply, message);
   if (message === "FLIGHT_TABLE_PRESCRIPTION_ID_MISSING" || message === "FLIGHT_TABLE_APPROVAL_REQUEST_ID_MISSING" || message === "FLIGHT_TABLE_FIELD_NOT_FOUND") return badRequest(reply, message);
+  if (message.startsWith("FLIGHT_TABLE_APPROVAL_NOT_APPROVED")) return reply.status(409).send({ ok: false, error: "FLIGHT_TABLE_APPROVAL_NOT_APPROVED", message });
   if (message.startsWith("FLIGHT_TABLE_PRESCRIPTION_READ_FAILED")) return reply.status(502).send({ ok: false, error: "FLIGHT_TABLE_PRESCRIPTION_READ_FAILED", message });
   if (message.startsWith("FLIGHT_TABLE_ACTION_TASK_FAILED")) return reply.status(502).send({ ok: false, error: "FLIGHT_TABLE_ACTION_TASK_FAILED", message });
   if (message.startsWith("FLIGHT_TABLE_ACTION_RECEIPT_FAILED")) return reply.status(502).send({ ok: false, error: "FLIGHT_TABLE_ACTION_RECEIPT_FAILED", message });
