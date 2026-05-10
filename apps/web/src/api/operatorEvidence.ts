@@ -1,9 +1,11 @@
+import { safeEvidenceDownloadUrl } from "../lib/evidenceDownloadSafety";
 import { apiRequestWithPolicy, withQuery } from "./client";
 
 export type OperatorEvidenceDataScope = "OFFICIAL_OPERATOR_API" | "FALLBACK_LIMITED" | "EMPTY" | "ERROR_EMPTY";
 export type OperatorEvidenceJobStatus = "PENDING" | "RUNNING" | "DONE" | "FAILED" | "UNKNOWN";
 export type OperatorEvidenceStorageMode = "OBJECT_STORE" | "LOCAL" | "INLINE" | "NOT_READY" | "UNKNOWN";
 export type OperatorEvidenceScopeStatus = "READY" | "NOT_READY" | "UNKNOWN";
+export type OperatorEvidenceExportScopeType = "TENANT" | "DEVICE" | "FIELD";
 
 export type OperatorEvidenceItem = {
   jobId: string;
@@ -18,6 +20,7 @@ export type OperatorEvidenceItem = {
   format?: string | null;
   storageMode: OperatorEvidenceStorageMode;
   downloadStatus?: string | null;
+  downloadUrl?: string | null;
   createdAt?: string | null;
   completedAt?: string | null;
   failureReason?: string | null;
@@ -31,6 +34,36 @@ export type OperatorEvidenceResponse = {
   items: OperatorEvidenceItem[];
   message?: string;
   exportReady: boolean;
+};
+
+export type CreateOperatorEvidenceExportJobInput = {
+  operation_id?: string | null;
+  scope_type: OperatorEvidenceExportScopeType;
+  scope_id: string;
+  field_id?: string | null;
+  from_ts_ms: number;
+  to_ts_ms: number;
+  export_format: string;
+  export_language: string;
+};
+
+export type OperatorEvidenceExportJobCreateResponse = {
+  ok: boolean;
+  httpStatus: number;
+  jobId: string;
+  operationId?: string | null;
+  jobStatus: OperatorEvidenceJobStatus;
+  item: OperatorEvidenceItem | null;
+  message: string;
+  errorCode?: string | null;
+};
+
+export type OperatorEvidenceJobDetailResponse = {
+  ok: boolean;
+  httpStatus: number;
+  item: OperatorEvidenceItem | null;
+  message: string;
+  errorCode?: string | null;
 };
 
 type AnyRecord = Record<string, any>;
@@ -59,18 +92,9 @@ function maskInternal(value: unknown, fallback = "未提供"): string {
   if (!raw) return fallback;
   if (/^[A-Za-z]:\\/.test(raw) || raw.startsWith("/") || raw.includes("\\") || raw.includes("file://")) return "本地路径已隐藏";
   if (/access[_-]?key|secret|token|password/i.test(raw)) return "敏感凭据已隐藏";
-  if (/s3:\/\//i.test(raw)) return raw.replace(/s3:\/\/([^/]+)\/(.+)/i, (_m, bucket, key) => `对象存储：${String(bucket).slice(0, 3)}*** / ${maskObjectKey(key)}`);
+  if (/s3:\/\//i.test(raw)) return "对象存储地址已隐藏";
   if (/https?:\/\//i.test(raw)) return "下载链接已隐藏";
   return raw.length > 96 ? `${raw.slice(0, 48)}...${raw.slice(-16)}` : raw;
-}
-
-function maskObjectKey(value: unknown): string {
-  const raw = text(value, "");
-  if (!raw) return "对象标识未提供";
-  const safe = raw.replace(/access[_-]?key|secret|token|password/gi, "credential");
-  const parts = safe.split("/").filter(Boolean);
-  const last = parts[parts.length - 1] || safe;
-  return last.length > 48 ? `${last.slice(0, 24)}...${last.slice(-12)}` : last;
 }
 
 function normalizeStatus(value: unknown): OperatorEvidenceJobStatus {
@@ -112,7 +136,7 @@ function manifestText(row: AnyRecord): string {
 }
 
 function artifactText(row: AnyRecord): string {
-  const candidates = [row.artifact_id, row.object_key, row.object_id, row.storage_key, row.bundle_key, row.path, row.download_url];
+  const candidates = [row.artifact_id, row.artifact_ref, row.object_key, row.object_id, row.storage_key, row.bundle_key, row.path, row.download_url];
   const hit = candidates.map((item) => maskInternal(item, "")).find(Boolean);
   return hit || "artifact 标识未提供";
 }
@@ -120,9 +144,10 @@ function artifactText(row: AnyRecord): string {
 function normalizeItem(row: AnyRecord, index: number, source: OperatorEvidenceItem["source"]): OperatorEvidenceItem {
   const operationId = text(row.operation_id ?? row.operationId ?? row.scope?.operation_id, "");
   const status = normalizeStatus(row.status ?? row.job_status ?? row.export_status);
-  const failureReason = text(row.failure_reason ?? row.error_message ?? row.error, "");
+  const failureReason = text(row.failed_reason ?? row.failure_reason ?? row.error_message ?? row.error, "");
+  const downloadUrl = safeEvidenceDownloadUrl(row.download_url ?? row.downloadUrl ?? row.download?.url ?? row.artifact?.download_url) ?? "";
   return {
-    jobId: text(row.job_id ?? row.export_job_id ?? row.id, `${source}-${index}`),
+    jobId: text(row.job_id ?? row.export_job_id ?? row.evidence_export_job_id ?? row.id, `${source}-${index}`),
     operationId,
     scopeType: text(row.scope_type ?? row.scope?.type, operationId ? "operation" : ""),
     scopeId: text(row.scope_id ?? row.scope?.id ?? operationId, ""),
@@ -131,9 +156,10 @@ function normalizeItem(row: AnyRecord, index: number, source: OperatorEvidenceIt
     manifestText: manifestText(row),
     sha256: text(row.sha256 ?? row.checksum_sha256 ?? row.checksum, ""),
     artifactText: artifactText(row),
-    format: text(row.format ?? row.bundle_format ?? row.content_type, "未提供"),
+    format: text(row.format ?? row.export_format ?? row.bundle_format ?? row.content_type, "未提供"),
     storageMode: normalizeStorageMode(row.storage_mode ?? row.storage?.mode ?? row.object_store_mode),
-    downloadStatus: text(row.download_status ?? row.presign_status ?? row.download?.status, status === "DONE" ? "可由后端授权下载" : "不可下载"),
+    downloadStatus: downloadUrl ? "可下载：后端授权入口" : text(row.download_status ?? row.presign_status ?? row.download?.status, status === "DONE" ? "后端未返回安全下载入口" : "不可下载"),
+    downloadUrl,
     createdAt: text(row.created_at ?? row.createdAt ?? row.generated_at, ""),
     completedAt: text(row.completed_at ?? row.completedAt ?? row.finished_at, ""),
     failureReason: status === "FAILED" ? (failureReason || "失败原因待补充") : failureReason,
@@ -147,6 +173,12 @@ function normalizeOperator(payload: unknown): OperatorEvidenceItem[] {
 
 function normalizeExportJobs(payload: unknown): OperatorEvidenceItem[] {
   return arrayFrom(payload, ["items", "jobs", "export_jobs", "data"]).map((row, index) => normalizeItem(row, index, "evidence_export_jobs"));
+}
+
+function normalizeSingleOperatorItem(payload: unknown, fallbackIndex = 0): OperatorEvidenceItem | null {
+  const rows = arrayFrom(payload, ["items", "jobs", "export_jobs", "data", "evidence"]);
+  const row = rows[0] ?? (payload && typeof payload === "object" && !Array.isArray(payload) ? payload as AnyRecord : null);
+  return row ? normalizeItem(row, fallbackIndex, "operator_evidence_api") : null;
 }
 
 function normalizeReportFallback(payload: unknown): OperatorEvidenceItem[] {
@@ -171,15 +203,164 @@ function normalizeReportFallback(payload: unknown): OperatorEvidenceItem[] {
   });
 }
 
-type OptionalApiResult = { ok: boolean; status: number; data: unknown | null };
+type OptionalApiResult = { ok: boolean; status: number; data: unknown | null; bodyText?: string };
 
 async function fetchOptional(path: string): Promise<OptionalApiResult> {
   try {
     const result = await apiRequestWithPolicy<unknown>(path, undefined, { allowedStatuses: [403, 404, 405, 422, 501], silent: true, timeoutMs: 10000 });
-    return { ok: Boolean(result.ok), status: Number(result.status ?? 0), data: result.data ?? null };
+    return { ok: Boolean(result.ok), status: Number(result.status ?? 0), data: result.data ?? null, bodyText: result.ok ? undefined : result.bodyText };
   } catch {
     return { ok: false, status: 0, data: null };
   }
+}
+
+function normalizeCreateScopeType(value: unknown): OperatorEvidenceExportScopeType {
+  const raw = text(value).toUpperCase();
+  if (raw === "TENANT" || raw === "DEVICE" || raw === "FIELD") return raw;
+  if (raw === "OPERATION") throw new Error("创建证据导出任务失败：底层 scope_type 只允许 TENANT、DEVICE 或 FIELD；operation 关联必须通过 operation_id 完成。");
+  throw new Error("创建证据导出任务失败：scope_type 必须是 TENANT、DEVICE 或 FIELD。");
+}
+
+function normalizeCreateTs(value: unknown, field: "from_ts_ms" | "to_ts_ms"): number {
+  const num = Number(value);
+  if (!Number.isFinite(num) || num <= 0) {
+    throw new Error(`创建证据导出任务失败：${field} 必须由 UI 明确生成，不能为空。`);
+  }
+  return Math.trunc(num);
+}
+
+function safeApiMessage(value: unknown, fallback: string): string {
+  const raw = text(value, "");
+  if (!raw) return fallback;
+  if (/token|secret|credential|private\s*key|password|stack\s*trace|debug\s*json|access[_-]?key/i.test(raw)) return fallback;
+  return raw.length > 180 ? `${raw.slice(0, 177)}...` : raw;
+}
+
+function parseErrorRecord(bodyText: string): AnyRecord | null {
+  try {
+    const parsed = JSON.parse(bodyText);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as AnyRecord : null;
+  } catch {
+    return null;
+  }
+}
+
+function buildCreatePayload(input: CreateOperatorEvidenceExportJobInput): AnyRecord {
+  const operationId = text(input.operation_id, "");
+  const scopeType = normalizeCreateScopeType(input.scope_type);
+  const scopeId = text(input.scope_id, "");
+  const fieldId = text(input.field_id, "");
+  const fromTsMs = normalizeCreateTs(input.from_ts_ms, "from_ts_ms");
+  const toTsMs = normalizeCreateTs(input.to_ts_ms, "to_ts_ms");
+  const exportFormat = text(input.export_format, "");
+  const exportLanguage = text(input.export_language, "");
+
+  if (!scopeId) throw new Error("创建证据导出任务失败：scope_id 不能为空。页面应按上下文明确生成 TENANT/FIELD/DEVICE scope。");
+  if (toTsMs <= fromTsMs) throw new Error("创建证据导出任务失败：to_ts_ms 必须大于 from_ts_ms。");
+  if (!exportFormat) throw new Error("创建证据导出任务失败：export_format 不能为空。");
+  if (!exportLanguage) throw new Error("创建证据导出任务失败：export_language 不能为空。");
+
+  return {
+    operation_id: operationId || undefined,
+    scope_type: scopeType,
+    scope_id: scopeId,
+    field_id: fieldId || undefined,
+    from_ts_ms: fromTsMs,
+    to_ts_ms: toTsMs,
+    export_format: exportFormat,
+    export_language: exportLanguage,
+  };
+}
+
+function normalizeCreateResponseItem(payload: unknown, requestPayload: AnyRecord): OperatorEvidenceItem | null {
+  const rows = arrayFrom(payload, ["items", "jobs", "export_jobs", "data"]);
+  const row = rows[0] ?? (payload && typeof payload === "object" && !Array.isArray(payload) ? payload as AnyRecord : null);
+  if (!row) return null;
+  return normalizeItem({
+    ...row,
+    operation_id: row.operation_id ?? requestPayload.operation_id,
+    scope_type: row.scope_type ?? requestPayload.scope_type,
+    scope_id: row.scope_id ?? requestPayload.scope_id,
+    format: row.format ?? requestPayload.export_format,
+  }, 0, "operator_evidence_api");
+}
+
+export async function createOperatorEvidenceExportJob(input: CreateOperatorEvidenceExportJobInput): Promise<OperatorEvidenceExportJobCreateResponse> {
+  const payload = buildCreatePayload(input);
+  const result = await apiRequestWithPolicy<unknown>(
+    withQuery("/api/v1/operator/evidence/export-jobs"),
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    { allowedStatuses: [400, 403, 404, 405, 409, 422, 501], silent: true, timeoutMs: 15000 },
+  );
+
+  if (!result.ok) {
+    const errorRecord = parseErrorRecord(result.bodyText);
+    const message = safeApiMessage(errorRecord?.message ?? errorRecord?.error ?? result.bodyText, "创建证据导出任务失败。");
+    return {
+      ok: false,
+      httpStatus: result.status,
+      jobId: "",
+      operationId: text(payload.operation_id, ""),
+      jobStatus: "UNKNOWN",
+      item: null,
+      message,
+      errorCode: text(errorRecord?.error_code ?? errorRecord?.code, "") || null,
+    };
+  }
+
+  const item = normalizeCreateResponseItem(result.data, payload);
+  const responseRecord = result.data && typeof result.data === "object" && !Array.isArray(result.data) ? result.data as AnyRecord : {};
+  return {
+    ok: true,
+    httpStatus: result.status,
+    jobId: item?.jobId ?? text(responseRecord.job_id ?? responseRecord.export_job_id ?? responseRecord.evidence_export_job_id, ""),
+    operationId: item?.operationId ?? text(payload.operation_id, ""),
+    jobStatus: item?.status ?? normalizeStatus(responseRecord.status ?? responseRecord.job_status ?? responseRecord.export_status),
+    item,
+    message: safeApiMessage(responseRecord.message, "证据导出任务已创建。"),
+    errorCode: null,
+  };
+}
+
+export async function fetchOperatorEvidenceJobDetail(jobId: string, operationId?: string): Promise<OperatorEvidenceJobDetailResponse> {
+  const id = text(jobId, "");
+  if (!id) {
+    return { ok: false, httpStatus: 0, item: null, message: "job_id 不能为空。", errorCode: "JOB_ID_REQUIRED" };
+  }
+
+  const detail = await fetchOptional(withQuery(`/api/v1/operator/evidence/export-jobs/${encodeURIComponent(id)}`));
+  if (detail.ok) {
+    const item = normalizeSingleOperatorItem(detail.data);
+    return {
+      ok: Boolean(item),
+      httpStatus: detail.status,
+      item,
+      message: item ? "job detail 已刷新。" : "job detail 响应为空。",
+      errorCode: item ? null : "EMPTY_JOB_DETAIL",
+    };
+  }
+
+  const op = text(operationId, "");
+  if (op) {
+    const byOperation = await fetchOptional(withQuery(`/api/v1/operator/evidence/by-operation/${encodeURIComponent(op)}`));
+    const items = normalizeOperator(byOperation.data);
+    const item = items.find((candidate) => candidate.jobId === id) ?? null;
+    if (item) {
+      return { ok: true, httpStatus: byOperation.status, item, message: "已通过 by-operation 刷新 job 状态。", errorCode: null };
+    }
+  }
+
+  const errorRecord = parseErrorRecord(detail.bodyText ?? "");
+  return {
+    ok: false,
+    httpStatus: detail.status,
+    item: null,
+    message: safeApiMessage(errorRecord?.message ?? errorRecord?.error ?? detail.bodyText, "刷新 job 状态失败。"),
+    errorCode: text(errorRecord?.error_code ?? errorRecord?.code, "") || null,
+  };
 }
 
 export async function fetchOperatorEvidence(operationId?: string): Promise<OperatorEvidenceResponse> {
