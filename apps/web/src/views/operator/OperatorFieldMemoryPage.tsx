@@ -1,11 +1,16 @@
 import React from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { fetchOperatorFieldMemory } from "../../api/operatorFieldMemory";
+import { fetchOperatorRoiLedger } from "../../api/operatorRoiLedger";
+import { fetchOperatorSkillPerformance, fetchOperatorSkillTraces, type OperatorSkillPerformanceResponse, type OperatorSkillTraceResponse } from "../../api/operatorSkillTrace";
+import LearningClosurePanel from "../../components/operator/LearningClosurePanel";
 import OperatorEmptyState from "../../components/operator/OperatorEmptyState";
 import SkillTracePanel from "../../components/operator/SkillTracePanel";
 import OperatorLayout from "../../layouts/OperatorLayout";
 import "../../styles/operatorFieldMemory.css";
 import { buildOperatorFieldMemoryVm, type OperatorFieldMemoryGroupVm, type OperatorFieldMemoryRowVm, type OperatorFieldMemoryVm } from "../../viewmodels/operatorFieldMemoryVm";
+import { buildOperatorLearningClosureVm } from "../../viewmodels/operatorLearningClosureVm";
+import { buildOperatorRoiLedgerVm, type OperatorRoiLedgerVm } from "../../viewmodels/operatorRoiLedgerVm";
 
 function buildTraceInput(row: OperatorFieldMemoryRowVm) {
   const refs = row.skillRefsText === "无引用" ? [] : row.skillRefsText.split("、").map((item) => item.trim()).filter(Boolean);
@@ -22,7 +27,27 @@ function buildTraceInput(row: OperatorFieldMemoryRowVm) {
   }));
 }
 
+function decodeLastPathSegment(href?: string | null): string {
+  if (!href) return "";
+  const segment = href.split("/").filter(Boolean).pop() ?? "";
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
+
+function fieldMemoryOperatorQuery(row: OperatorFieldMemoryRowVm): string {
+  const params = new URLSearchParams();
+  const operationId = decodeLastPathSegment(row.operationHref);
+  const fieldId = decodeLastPathSegment(row.fieldHref);
+  if (fieldId) params.set("field_id", fieldId);
+  if (operationId) params.set("operation_id", operationId);
+  return params.toString();
+}
+
 function FieldMemoryRow({ row }: { row: OperatorFieldMemoryRowVm }): React.ReactElement {
+  const operatorQuery = fieldMemoryOperatorQuery(row);
   return (
     <article className="operatorFieldMemoryRow">
       <header className="operatorFieldMemoryRowHead">
@@ -56,6 +81,8 @@ function FieldMemoryRow({ row }: { row: OperatorFieldMemoryRowVm }): React.React
       <div className="operatorFieldMemoryActions">
         {row.fieldHref ? <Link to={row.fieldHref}>查看地块</Link> : null}
         {row.operationHref ? <Link to={row.operationHref}>查看作业</Link> : null}
+        {operatorQuery ? <Link to={`/operator/roi-ledger?${operatorQuery}`}>查看关联 ROI</Link> : null}
+        {operatorQuery ? <Link to={`/operator/evidence?${operatorQuery}`}>查看关联证据</Link> : null}
       </div>
     </article>
   );
@@ -90,6 +117,9 @@ export default function OperatorFieldMemoryPage(): React.ReactElement {
   const [memoryTypeInput, setMemoryTypeInput] = React.useState(memoryType);
   const [loading, setLoading] = React.useState(true);
   const [vm, setVm] = React.useState<OperatorFieldMemoryVm | null>(null);
+  const [roiVm, setRoiVm] = React.useState<OperatorRoiLedgerVm | null>(null);
+  const [skillTrace, setSkillTrace] = React.useState<OperatorSkillTraceResponse | null>(null);
+  const [skillPerformance, setSkillPerformance] = React.useState<OperatorSkillPerformanceResponse | null>(null);
 
   React.useEffect(() => {
     setFieldInput(fieldId);
@@ -114,6 +144,32 @@ export default function OperatorFieldMemoryPage(): React.ReactElement {
     };
   }, [fieldId, operationId, memoryType]);
 
+  React.useEffect(() => {
+    let alive = true;
+    const op = operationId.trim();
+    setRoiVm(null);
+    setSkillTrace(null);
+    setSkillPerformance(null);
+    if (!op) {
+      return () => {
+        alive = false;
+      };
+    }
+    void Promise.all([
+      fetchOperatorRoiLedger({ fieldId, operationId: op }).then(buildOperatorRoiLedgerVm).catch(() => null),
+      fetchOperatorSkillTraces({ operationId: op }).catch(() => null),
+      fetchOperatorSkillPerformance({ fieldId, operationId: op }).catch(() => null),
+    ]).then(([nextRoiVm, nextSkillTrace, nextSkillPerformance]) => {
+      if (!alive) return;
+      setRoiVm(nextRoiVm);
+      setSkillTrace(nextSkillTrace);
+      setSkillPerformance(nextSkillPerformance);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [fieldId, operationId]);
+
   function applyFilters(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const next: Record<string, string> = {};
@@ -132,6 +188,15 @@ export default function OperatorFieldMemoryPage(): React.ReactElement {
     setMemoryTypeInput("");
     setSearchParams({});
   }
+
+  const closureVm = buildOperatorLearningClosureVm({
+    operationId,
+    fieldId,
+    fieldMemoryRows: vm?.rows ?? [],
+    roiRows: roiVm?.rows ?? [],
+    skillTrace,
+    performance: skillPerformance,
+  });
 
   return (
     <OperatorLayout title="田块记忆中心" lead="按 field / operation / memory_type 查看田块记忆详情，和客户层摘要保持分离。">
@@ -154,6 +219,8 @@ export default function OperatorFieldMemoryPage(): React.ReactElement {
             <button type="button" onClick={clearFilters}>清空</button>
           </div>
         </form>
+
+        <LearningClosurePanel vm={closureVm} />
 
         {loading ? <div className="operatorEmptyState">田块记忆加载中...</div> : null}
         {!loading && vm ? (

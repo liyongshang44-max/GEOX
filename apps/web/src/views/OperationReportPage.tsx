@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
 import { fetchOperationReport, type OperationReportV1 } from "../api/customerReports";
+import { fetchOperatorSkillTraces, type OperatorSkillTraceResponse, type OperatorSkillTraceRun } from "../api/operatorSkillTrace";
 import { fetchOperationEnvironmentContext, type OperationEnvironmentContext } from "../api/weather";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ErrorState from "../components/common/ErrorState";
@@ -317,6 +318,69 @@ function unavailableWeatherContext(operationId: string): OperationEnvironmentCon
   };
 }
 
+function classificationText(value: OperatorSkillTraceRun["classification"]): string {
+  if (value === "AGRONOMY") return "农艺技能";
+  if (value === "SENSING") return "感知技能";
+  if (value === "DEVICE") return "设备技能";
+  if (value === "ACCEPTANCE") return "验收技能";
+  return "分类待确认";
+}
+
+function statusText(value: OperatorSkillTraceRun["lastRunStatus"]): string {
+  if (value === "SUCCESS") return "运行成功";
+  if (value === "FAILED") return "运行失败";
+  if (value === "TIMEOUT") return "运行超时";
+  if (value === "SKIPPED") return "已跳过";
+  return "状态待确认";
+}
+
+function learningText(value: boolean | null): string {
+  if (value === true) return "已进入学习";
+  if (value === false) return "未进入学习";
+  return "学习状态待确认";
+}
+
+function operatorQuery(operationId: string, fieldId?: string | null): string {
+  const params = new URLSearchParams();
+  if (operationId.trim()) params.set("operation_id", operationId.trim());
+  if (fieldId && fieldId !== "--") params.set("field_id", fieldId);
+  return params.toString();
+}
+
+function OperationSkillTraceTechnicalBlock({ trace, loading, operationId, fieldId }: { trace: OperatorSkillTraceResponse | null; loading: boolean; operationId: string; fieldId?: string | null }): React.ReactElement {
+  if (loading) return <div id="operation-skill-trace" className="operationTechDetailsTitle">技能运行详情加载中...</div>;
+  if (!trace || trace.notReady || trace.items.length === 0) {
+    return <div id="operation-skill-trace" className="operationTechDetailsTitle">技能运行详情：{trace?.message || "skill trace 查询接口未接入。"}</div>;
+  }
+  const query = operatorQuery(operationId, fieldId);
+  return (
+    <div id="operation-skill-trace" className="operationSkillTraceTechBlock">
+      <div className="operationTechDetailsTitle">技能运行详情</div>
+      {query ? (
+        <div className="operationSkillTraceTechActions">
+          <Link to={`/operator/field-memory?${query}`}>查看 Field Memory</Link>
+          <Link to={`/operator/roi-ledger?${query}`}>查看 ROI</Link>
+          <Link to={`/operator/evidence?operation_id=${encodeURIComponent(operationId)}`}>查看证据中心</Link>
+        </div>
+      ) : null}
+      {trace.items.map((item) => (
+        <div key={`${item.skillId}-${item.traceRef ?? item.createdAt ?? item.runStage}`} className="operationSkillTraceTechCard">
+          <div><strong>技能名称：</strong>{item.skillName}</div>
+          <div><strong>技能分类：</strong>{classificationText(item.classification)}</div>
+          <div><strong>技能版本：</strong>{item.skillVersion}</div>
+          <div><strong>运行阶段：</strong>{item.runStage}</div>
+          <div><strong>运行状态：</strong>{statusText(item.lastRunStatus)}</div>
+          <div><strong>失败原因：</strong>{item.failureReason || "无失败原因"}</div>
+          <div><strong>输入摘要：</strong>{item.inputSummary || "暂无输入摘要"}</div>
+          <div><strong>输出摘要：</strong>{item.outputSummary || "暂无输出摘要"}</div>
+          <div><strong>证据引用：</strong>{item.evidenceRef || item.traceRef || "暂无证据引用"}</div>
+          <div><strong>是否进入学习：</strong>{learningText(item.enteredLearning)}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function OperationReportPage(): React.ReactElement {
   const { operationId = "" } = useParams();
   const [loading, setLoading] = React.useState(true);
@@ -327,6 +391,8 @@ export default function OperationReportPage(): React.ReactElement {
   const [roiDrawerOpen, setRoiDrawerOpen] = React.useState(false);
   const [weatherContext, setWeatherContext] = React.useState<OperationEnvironmentContext | null>(null);
   const [weatherLoading, setWeatherLoading] = React.useState(false);
+  const [skillTrace, setSkillTrace] = React.useState<OperatorSkillTraceResponse | null>(null);
+  const [skillTraceLoading, setSkillTraceLoading] = React.useState(false);
 
   React.useEffect(() => {
     let alive = true;
@@ -373,6 +439,43 @@ export default function OperationReportPage(): React.ReactElement {
       .finally(() => {
         if (!alive) return;
         setWeatherLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [operationId]);
+
+  React.useEffect(() => {
+    let alive = true;
+    const id = operationId.trim();
+    setSkillTrace(null);
+    if (!id) {
+      setSkillTraceLoading(false);
+      return () => {
+        alive = false;
+      };
+    }
+    setSkillTraceLoading(true);
+    void fetchOperatorSkillTraces({ operationId: id })
+      .then((result) => {
+        if (!alive) return;
+        setSkillTrace(result);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setSkillTrace({
+          source: "empty_error",
+          dataScope: "ERROR_EMPTY",
+          generated_at: new Date().toISOString(),
+          operationId: id,
+          items: [],
+          message: "skill trace 查询接口未接入。",
+          notReady: true,
+        });
+      })
+      .finally(() => {
+        if (!alive) return;
+        setSkillTraceLoading(false);
       });
     return () => {
       alive = false;
@@ -530,6 +633,7 @@ export default function OperationReportPage(): React.ReactElement {
                 <div key={row.label}><strong>{labelCustomerTechnicalField(row.label)}：</strong>{row.value}</div>
               ))}
             </div>
+            <OperationSkillTraceTechnicalBlock trace={skillTrace} loading={skillTraceLoading} operationId={operationId} fieldId={drawerFieldId} />
           </details>
         </section>
       </div>

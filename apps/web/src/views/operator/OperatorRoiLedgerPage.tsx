@@ -1,12 +1,35 @@
 import React from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { fetchOperatorFieldMemory } from "../../api/operatorFieldMemory";
 import { fetchOperatorRoiLedger } from "../../api/operatorRoiLedger";
+import { fetchOperatorSkillPerformance, fetchOperatorSkillTraces, type OperatorSkillPerformanceResponse, type OperatorSkillTraceResponse } from "../../api/operatorSkillTrace";
+import LearningClosurePanel from "../../components/operator/LearningClosurePanel";
 import OperatorEmptyState from "../../components/operator/OperatorEmptyState";
 import OperatorLayout from "../../layouts/OperatorLayout";
 import "../../styles/operatorRoiLedger.css";
+import { buildOperatorFieldMemoryVm, type OperatorFieldMemoryVm } from "../../viewmodels/operatorFieldMemoryVm";
+import { buildOperatorLearningClosureVm } from "../../viewmodels/operatorLearningClosureVm";
 import { buildOperatorRoiLedgerVm, type OperatorRoiLedgerRowVm, type OperatorRoiLedgerVm } from "../../viewmodels/operatorRoiLedgerVm";
 
+function decodeLastPathSegment(href?: string | null): string {
+  if (!href) return "";
+  const segment = href.split("/").filter(Boolean).pop() ?? "";
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
+
+function roiOperatorQuery(row: OperatorRoiLedgerRowVm): string {
+  const params = new URLSearchParams();
+  const operationId = decodeLastPathSegment(row.operationHref) || (/待确认|暂无|未提供/.test(row.operationIdText) ? "" : row.operationIdText);
+  if (operationId) params.set("operation_id", operationId);
+  return params.toString();
+}
+
 function RoiRow({ row }: { row: OperatorRoiLedgerRowVm }): React.ReactElement {
+  const operatorQuery = roiOperatorQuery(row);
   return (
     <article className="operatorRoiRow">
       <header className="operatorRoiRowHead">
@@ -32,6 +55,8 @@ function RoiRow({ row }: { row: OperatorRoiLedgerRowVm }): React.ReactElement {
       <div className="operatorRoiNotice">{row.measuredAllowedText}</div>
       <div className="operatorRoiActions">
         {row.operationHref ? <Link to={row.operationHref}>查看作业</Link> : null}
+        {operatorQuery ? <Link to={`/operator/field-memory?${operatorQuery}`}>查看 Field Memory</Link> : null}
+        {operatorQuery ? <Link to={`/operator/evidence?${operatorQuery}`}>查看关联证据</Link> : null}
       </div>
     </article>
   );
@@ -64,6 +89,9 @@ export default function OperatorRoiLedgerPage(): React.ReactElement {
   const [operationInput, setOperationInput] = React.useState(operationId);
   const [loading, setLoading] = React.useState(true);
   const [vm, setVm] = React.useState<OperatorRoiLedgerVm | null>(null);
+  const [fieldMemoryVm, setFieldMemoryVm] = React.useState<OperatorFieldMemoryVm | null>(null);
+  const [skillTrace, setSkillTrace] = React.useState<OperatorSkillTraceResponse | null>(null);
+  const [skillPerformance, setSkillPerformance] = React.useState<OperatorSkillPerformanceResponse | null>(null);
 
   React.useEffect(() => {
     setFieldInput(fieldId);
@@ -87,6 +115,32 @@ export default function OperatorRoiLedgerPage(): React.ReactElement {
     };
   }, [fieldId, operationId]);
 
+  React.useEffect(() => {
+    let alive = true;
+    const op = operationId.trim();
+    setFieldMemoryVm(null);
+    setSkillTrace(null);
+    setSkillPerformance(null);
+    if (!op) {
+      return () => {
+        alive = false;
+      };
+    }
+    void Promise.all([
+      fetchOperatorFieldMemory({ fieldId, operationId: op }).then(buildOperatorFieldMemoryVm).catch(() => null),
+      fetchOperatorSkillTraces({ operationId: op }).catch(() => null),
+      fetchOperatorSkillPerformance({ fieldId, operationId: op }).catch(() => null),
+    ]).then(([nextFieldMemoryVm, nextSkillTrace, nextSkillPerformance]) => {
+      if (!alive) return;
+      setFieldMemoryVm(nextFieldMemoryVm);
+      setSkillTrace(nextSkillTrace);
+      setSkillPerformance(nextSkillPerformance);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [fieldId, operationId]);
+
   function applyFilters(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const next: Record<string, string> = {};
@@ -102,6 +156,15 @@ export default function OperatorRoiLedgerPage(): React.ReactElement {
     setOperationInput("");
     setSearchParams({});
   }
+
+  const closureVm = buildOperatorLearningClosureVm({
+    operationId,
+    fieldId,
+    roiRows: vm?.rows ?? [],
+    fieldMemoryRows: fieldMemoryVm?.rows ?? [],
+    skillTrace,
+    performance: skillPerformance,
+  });
 
   return (
     <OperatorLayout title="ROI 明细账" lead="按 field / operation 追溯 ROI 明细，区分估算、实测、假设与证据不足。">
@@ -120,6 +183,8 @@ export default function OperatorRoiLedgerPage(): React.ReactElement {
             <button type="button" onClick={clearFilters}>清空</button>
           </div>
         </form>
+
+        <LearningClosurePanel vm={closureVm} />
 
         {loading ? <div className="operatorEmptyState">ROI 明细加载中...</div> : null}
         {!loading && vm ? (
