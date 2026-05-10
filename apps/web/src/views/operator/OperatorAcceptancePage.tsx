@@ -1,11 +1,12 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { fetchOperatorAcceptance, submitOperatorAcceptanceAction, type OperatorAcceptanceActionKind } from "../../api/operatorAcceptance";
+import { fetchSessionMe, type SessionMe } from "../../api/session";
 import OperatorEmptyState from "../../components/operator/OperatorEmptyState";
+import PermissionGate from "../../components/operator/PermissionGate";
 import OperatorLayout from "../../layouts/OperatorLayout";
 import "../../styles/operatorAcceptance.css";
-import { fetchSessionMe, type SessionMe } from "../../api/session";
-import { hasOperatorPermission } from "../../lib/permissions";
+import { hasOperatorPermission, permissionReason } from "../../lib/permissions";
 import { buildOperatorAcceptanceVm, type OperatorAcceptanceGroupVm, type OperatorAcceptanceRowVm, type OperatorAcceptanceVm } from "../../viewmodels/operatorAcceptanceVm";
 import { OPERATOR_PAGE_META } from "./operatorPageMeta";
 
@@ -16,22 +17,35 @@ function safeMessage(value: unknown, fallback = "操作失败，请稍后重试�
   return text;
 }
 
+function DisabledAcceptanceButtons({ pending }: { pending: boolean }): React.ReactElement {
+  return (
+    <>
+      <button type="button" disabled>{pending ? "处理中..." : "执行验收"}</button>
+      <button type="button" disabled>{pending ? "处理中..." : "发起复核"}</button>
+    </>
+  );
+}
+
 function AcceptanceRow({
   row,
   writeReady,
   actionState,
   onAction,
   sessionAllowed,
+  sessionLoading,
+  sessionDeniedReason,
 }: {
   row: OperatorAcceptanceRowVm;
   writeReady: boolean;
   actionState: { pending: boolean; lastError: string | null };
   onAction: (row: OperatorAcceptanceRowVm, action: OperatorAcceptanceActionKind) => void;
   sessionAllowed: boolean;
+  sessionLoading: boolean;
+  sessionDeniedReason: string;
 }): React.ReactElement {
-  const evaluateDisabled = !sessionAllowed || !writeReady || !row.evaluateButtonState.canAction || actionState.pending;
-  const reviewDisabled = !sessionAllowed || !writeReady || !row.reviewButtonState.canAction || actionState.pending;
-  const notice = (!sessionAllowed ? "会话权限不足：operator_acceptance" : "") || row.evaluateButtonState.disabledReason || row.reviewButtonState.disabledReason || row.disabledReason;
+  const evaluateDisabled = !writeReady || !row.evaluateButtonState.canAction || actionState.pending;
+  const reviewDisabled = !writeReady || !row.reviewButtonState.canAction || actionState.pending;
+  const notice = sessionDeniedReason || row.evaluateButtonState.disabledReason || row.reviewButtonState.disabledReason || row.disabledReason;
 
   return (
     <article className="operatorAcceptanceRow">
@@ -60,8 +74,20 @@ function AcceptanceRow({
 
       <div className="operatorAcceptanceActions">
         <Link to={row.operationHref}>查看作业</Link>
-        <button type="button" disabled={evaluateDisabled} onClick={() => onAction(row, "evaluate")}>{actionState.pending ? "处理中..." : "执行验收"}</button>
-        <button type="button" disabled={reviewDisabled} onClick={() => onAction(row, "request-review")}>{actionState.pending ? "处理中..." : "发起复核"}</button>
+        <PermissionGate
+          permissionKey="acceptance"
+          allowed={sessionAllowed}
+          loading={sessionLoading}
+          disabledReason={sessionDeniedReason}
+          fallback={() => <DisabledAcceptanceButtons pending={actionState.pending} />}
+        >
+          {() => (
+            <>
+              <button type="button" disabled={evaluateDisabled} onClick={() => onAction(row, "evaluate")}>{actionState.pending ? "处理中..." : "执行验收"}</button>
+              <button type="button" disabled={reviewDisabled} onClick={() => onAction(row, "request-review")}>{actionState.pending ? "处理中..." : "发起复核"}</button>
+            </>
+          )}
+        </PermissionGate>
       </div>
       {notice ? <div className="operatorAcceptanceDisabledReason">{notice}</div> : null}
     </article>
@@ -74,12 +100,16 @@ function AcceptanceGroup({
   getActionState,
   onAction,
   sessionAllowed,
+  sessionLoading,
+  sessionDeniedReason,
 }: {
   group: OperatorAcceptanceGroupVm;
   writeReady: boolean;
   getActionState: (operationId: string) => { pending: boolean; lastError: string | null };
   onAction: (row: OperatorAcceptanceRowVm, action: OperatorAcceptanceActionKind) => void;
   sessionAllowed: boolean;
+  sessionLoading: boolean;
+  sessionDeniedReason: string;
 }): React.ReactElement {
   return (
     <section className="operatorAcceptanceGroup">
@@ -100,6 +130,8 @@ function AcceptanceGroup({
               actionState={getActionState(row.operationId)}
               onAction={onAction}
               sessionAllowed={sessionAllowed}
+              sessionLoading={sessionLoading}
+              sessionDeniedReason={sessionDeniedReason}
             />
           ))}
         </div>
@@ -114,6 +146,7 @@ export default function OperatorAcceptancePage(): React.ReactElement {
   const [vm, setVm] = React.useState<OperatorAcceptanceVm | null>(null);
   const [actionStateByOperation, setActionStateByOperation] = React.useState<Record<string, { pending: boolean; lastError: string | null }>>({});
   const [session, setSession] = React.useState<SessionMe | null>(null);
+  const [sessionLoading, setSessionLoading] = React.useState(true);
 
   const loadAcceptance = React.useCallback(() => {
     setLoading(true);
@@ -128,10 +161,15 @@ export default function OperatorAcceptancePage(): React.ReactElement {
 
   React.useEffect(() => {
     let alive = true;
-    void fetchSessionMe().then((resp) => { if (alive) setSession(resp); }).catch(() => { if (alive) setSession(null); });
+    setSessionLoading(true);
+    void fetchSessionMe()
+      .then((resp) => { if (alive) setSession(resp); })
+      .catch(() => { if (alive) setSession(null); })
+      .finally(() => { if (alive) setSessionLoading(false); });
     return () => { alive = false; };
   }, []);
   const sessionAllowed = hasOperatorPermission(session, "acceptance");
+  const sessionDeniedReason = sessionAllowed ? "" : (sessionLoading ? "会话权限加载中..." : permissionReason(session, "acceptance"));
 
   React.useEffect(() => {
     let alive = true;
@@ -211,6 +249,8 @@ export default function OperatorAcceptancePage(): React.ReactElement {
                 getActionState={getActionState}
                 onAction={onAction}
                 sessionAllowed={sessionAllowed}
+                sessionLoading={sessionLoading}
+                sessionDeniedReason={sessionDeniedReason}
               />
             ))}
           </section>
