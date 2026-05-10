@@ -9,13 +9,17 @@ type Props = {
   onRunIdDraftChange: (next: string) => void;
   onLaneDraftChange: (next: string) => void;
   onCreateRun: () => void;
+  onStartRun: () => void;
   onVerify: () => void;
+  onRetryFailedStep: () => void;
   onClean: () => void;
+  onExportAcceptancePackage: () => void;
   loading: boolean;
 };
 
 export default function FlightRunHeader(props: Props): React.ReactElement {
   const { run, runIdDraft, laneDraft, loading } = props;
+  const failedStep = run?.steps.find((step) => step.status === "FAIL") ?? null;
   return (
     <header className="flight-run-header">
       <div>
@@ -40,9 +44,13 @@ export default function FlightRunHeader(props: Props): React.ReactElement {
         </label>
         <div className="flight-actions">
           <button type="button" onClick={props.onCreateRun} disabled={loading}>保存装配</button>
+          <button type="button" onClick={props.onStartRun} disabled={loading || !run}>启动飞行</button>
           <button type="button" onClick={props.onVerify} disabled={loading || !run}>只运行校验</button>
+          <button type="button" onClick={props.onRetryFailedStep} disabled={loading || !run || !failedStep}>重新运行失败步骤</button>
           <button type="button" onClick={props.onClean} disabled={loading || !run}>清理本次数据</button>
+          <button type="button" onClick={props.onExportAcceptancePackage} disabled={loading || !run}>导出验收包</button>
         </div>
+        {failedStep ? <p className="flight-muted">失败步骤：{failedStep.step_key} · {failedStep.message ?? "无错误说明"}</p> : null}
         {run ? (
           <div className="flight-current-run">
             <strong>{run.run_id}</strong>
