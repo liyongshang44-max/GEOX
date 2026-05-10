@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
 import { fetchFieldReport, type FieldReportDetailV1 } from "../api/customerReports";
+import { fetchWeatherForecast, fetchWeatherHistory, type WeatherResult } from "../api/weather";
 import ErrorState from "../components/common/ErrorState";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import CustomerEmptyState from "../components/customer/CustomerEmptyState";
@@ -9,6 +10,84 @@ import FieldMemoryPanel from "../components/customer/FieldMemoryPanel";
 import RoiLedgerDrawer from "../components/customer/RoiLedgerDrawer";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 import { buildFieldReportVm } from "../viewmodels/fieldReportVm";
+import "../styles/weatherInterference.css";
+
+type FieldWeatherState = {
+  loading: boolean;
+  history: WeatherResult | null;
+  forecast: WeatherResult | null;
+};
+
+function rainText(value: WeatherResult | null): string {
+  if (!value) return "暂无降雨量";
+  if (value.status === "unavailable") return "天气源不可用";
+  const rainfall = Number(value.rainfallMm);
+  return Number.isFinite(rainfall) ? `${rainfall.toFixed(2)} mm` : "暂无降雨量";
+}
+
+function hasRain(value: WeatherResult | null): boolean {
+  if (!value || value.status === "unavailable") return false;
+  return Number(value.rainfallMm ?? 0) > 0 || value.events.length > 0;
+}
+
+function fieldWeatherStatusText(weather: FieldWeatherState): string {
+  if (weather.loading) return "天气摘要加载中";
+  const results = [weather.history, weather.forecast].filter(Boolean) as WeatherResult[];
+  if (!results.length) return "天气源不可用";
+  if (results.some((item) => item.unavailableReason === "location_unavailable")) return "暂无地块位置，天气源不可用。";
+  if (results.every((item) => item.status === "unavailable")) return "天气源未接入或暂不可用。";
+  return "天气源已接入";
+}
+
+function fieldWeatherSuggestionText(weather: FieldWeatherState): string {
+  if (weather.loading) return "正在判断天气是否需要作为当前建议的解释背景。";
+  if (weather.history?.unavailableReason === "location_unavailable" || weather.forecast?.unavailableReason === "location_unavailable") return "暂无地块位置，天气源不可用。";
+  if (!weather.history && !weather.forecast) return "天气源未接入，当前建议不使用天气干扰信息。";
+  if (hasRain(weather.history) || hasRain(weather.forecast)) return "可能影响当前建议的解释与学习置信度；不直接替代处方或验收结论。";
+  if (weather.history?.status === "ok" || weather.forecast?.status === "ok") return "未发现明显降雨干扰；天气仅作为辅助解释，不直接改变当前建议。";
+  return "天气源未接入，当前建议不使用天气干扰信息。";
+}
+
+function fieldWeatherSourceText(weather: FieldWeatherState): string {
+  const sources = [weather.history?.source, weather.forecast?.source].filter(Boolean);
+  return sources.length ? sources.join(" / ") : "暂无数据来源";
+}
+
+function FieldWeatherSummaryCard({ weather }: { weather: FieldWeatherState }): React.ReactElement {
+  return (
+    <article className="customerCard weatherInterferencePanel fieldWeatherSummaryCard">
+      <div className="weatherInterferenceHead">
+        <div>
+          <h3>近期天气影响</h3>
+          <p>{fieldWeatherStatusText(weather)}</p>
+        </div>
+        <span className={`weatherInterferenceBadge ${weather.history?.status === "ok" || weather.forecast?.status === "ok" ? "ok" : "unavailable"}`}>{weather.loading ? "加载中" : "天气摘要"}</span>
+      </div>
+      <div className="weatherInterferenceGrid fieldWeatherSummaryGrid">
+        <div><strong>24h 降雨</strong><span>{weather.loading ? "加载中" : rainText(weather.history)}</span></div>
+        <div><strong>未来 24h 降雨预测</strong><span>{weather.loading ? "加载中" : rainText(weather.forecast)}</span></div>
+        <div><strong>是否影响当前建议</strong><span>{fieldWeatherSuggestionText(weather)}</span></div>
+        <div><strong>数据来源</strong><span>{fieldWeatherSourceText(weather)}</span></div>
+      </div>
+      <div className="weatherInterferenceBoundaryNote">天气用于辅助解释和学习排除，不直接替代处方、验收或执行决策。</div>
+    </article>
+  );
+}
+
+function unavailableWeatherResult(fieldId: string, reason: WeatherResult["unavailableReason"] = "unknown"): WeatherResult {
+  return {
+    status: "unavailable",
+    unavailableReason: reason,
+    source: `weather_unavailable:${reason ?? "unknown"}`,
+    fieldId,
+    from: null,
+    to: null,
+    rainfallMm: null,
+    confidence: null,
+    events: [],
+    explanation: reason === "location_unavailable" ? "暂无地块位置，天气源不可用。" : "天气源未接入或暂不可用。",
+  };
+}
 
 export default function FieldReportPage(): React.ReactElement {
   const { fieldId = "" } = useParams();
@@ -16,6 +95,7 @@ export default function FieldReportPage(): React.ReactElement {
   const [report, setReport] = React.useState<FieldReportDetailV1 | null>(null);
   const [error, setError] = React.useState("");
   const [roiDrawerOpen, setRoiDrawerOpen] = React.useState(false);
+  const [weather, setWeather] = React.useState<FieldWeatherState>({ loading: false, history: null, forecast: null });
 
   React.useEffect(() => {
     let alive = true;
@@ -33,6 +113,35 @@ export default function FieldReportPage(): React.ReactElement {
       .finally(() => {
         if (!alive) return;
         setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [fieldId]);
+
+  React.useEffect(() => {
+    let alive = true;
+    const id = fieldId.trim();
+    if (!id) {
+      setWeather({ loading: false, history: unavailableWeatherResult("", "bad_request"), forecast: unavailableWeatherResult("", "bad_request") });
+      return () => {
+        alive = false;
+      };
+    }
+    const to = new Date();
+    const from = new Date(to.getTime() - 24 * 60 * 60 * 1000);
+    setWeather((prev) => ({ ...prev, loading: true }));
+    void Promise.all([
+      fetchWeatherHistory({ fieldId: id, from, to }).catch((error: unknown) => unavailableWeatherResult(id, error instanceof Error && error.message.includes("field") ? "bad_request" : "unknown")),
+      fetchWeatherForecast({ fieldId: id }).catch(() => unavailableWeatherResult(id, "unknown")),
+    ])
+      .then(([history, forecast]) => {
+        if (!alive) return;
+        setWeather({ loading: false, history, forecast });
+      })
+      .catch(() => {
+        if (!alive) return;
+        setWeather({ loading: false, history: unavailableWeatherResult(id), forecast: unavailableWeatherResult(id) });
       });
     return () => {
       alive = false;
@@ -105,6 +214,8 @@ export default function FieldReportPage(): React.ReactElement {
             ) : <CustomerEmptyState vm={noPendingActionsState} />}
           </article>
         </section>
+
+        <FieldWeatherSummaryCard weather={weather} />
 
         <section className="fieldGrid fieldGrid2">
           <article className="customerCard">
