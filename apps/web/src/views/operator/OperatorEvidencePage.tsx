@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { fetchOperatorEvidence } from "../../api/operatorEvidence";
+import { createOperatorEvidenceExportJob, fetchOperatorEvidence } from "../../api/operatorEvidence";
 import { fetchSessionMe, type SessionMe } from "../../api/session";
 import OperatorEmptyState from "../../components/operator/OperatorEmptyState";
 import OperatorLayout from "../../layouts/OperatorLayout";
@@ -9,8 +9,27 @@ import "../../styles/operatorEvidence.css";
 import { buildOperatorEvidenceVm, type OperatorEvidenceRowVm, type OperatorEvidenceVm } from "../../viewmodels/operatorEvidenceVm";
 import { OPERATOR_PAGE_META } from "./operatorPageMeta";
 
-function EvidenceRow({ row, exportDisabledReason }: { row: OperatorEvidenceRowVm; exportDisabledReason: string | null }): React.ReactElement {
-  const exportDisabled = Boolean(exportDisabledReason);
+type CreateState = {
+  pending: boolean;
+  lastJobId: string;
+  message: string | null;
+  error: string | null;
+};
+
+function safeMessage(value: unknown, fallback = "操作失败，请稍后重试。") {
+  const text = String(value ?? "").trim();
+  if (!text || text === "--") return fallback;
+  if (/token|secret|credential|private\s*key|password|stack\s*trace|debug\s*json|access[_-]?key/i.test(text)) return fallback;
+  return text;
+}
+
+function buildDefaultExportWindow(): { from_ts_ms: number; to_ts_ms: number; label: string } {
+  const to = Date.now();
+  const from = to - 30 * 24 * 60 * 60 * 1000;
+  return { from_ts_ms: from, to_ts_ms: to, label: "最近 30 天" };
+}
+
+function EvidenceRow({ row }: { row: OperatorEvidenceRowVm }): React.ReactElement {
   return (
     <article className="operatorEvidenceRow">
       <header className="operatorEvidenceRowHead">
@@ -39,9 +58,7 @@ function EvidenceRow({ row, exportDisabledReason }: { row: OperatorEvidenceRowVm
 
       <div className="operatorEvidenceActions">
         {row.operationHref ? <Link to={row.operationHref}>查看作业</Link> : null}
-        <button type="button" disabled={exportDisabled}>创建证据导出任务</button>
       </div>
-      {exportDisabledReason ? <div className="operatorScopeWarning">{exportDisabledReason}</div> : null}
     </article>
   );
 }
@@ -53,15 +70,42 @@ function evidenceExportPermissionReason(sessionLoading: boolean, sessionUnavaila
   return null;
 }
 
+function createDisabledReason(args: {
+  permissionBlockReason: string | null;
+  operationId: string;
+  session: SessionMe | null;
+  fieldId: string;
+  pending: boolean;
+}): string | null {
+  if (args.permissionBlockReason) return args.permissionBlockReason;
+  if (!args.operationId) return "需要 operation_id 后才能创建作业证据包。";
+  if (!args.fieldId && !args.session?.tenant_id) return "会话缺少 tenant_id，无法生成 TENANT scope。";
+  if (args.pending) return "证据包创建中...";
+  return null;
+}
+
 export default function OperatorEvidencePage(): React.ReactElement {
   const [searchParams] = useSearchParams();
   const operationId = searchParams.get("operation_id") ?? "";
+  const fieldId = searchParams.get("field_id") ?? "";
   const meta = OPERATOR_PAGE_META.evidence;
   const [loading, setLoading] = React.useState(true);
   const [vm, setVm] = React.useState<OperatorEvidenceVm | null>(null);
   const [session, setSession] = React.useState<SessionMe | null>(null);
   const [sessionLoading, setSessionLoading] = React.useState(true);
   const [sessionUnavailable, setSessionUnavailable] = React.useState(false);
+  const [createState, setCreateState] = React.useState<CreateState>({ pending: false, lastJobId: "", message: null, error: null });
+
+  const loadEvidence = React.useCallback(() => {
+    setLoading(true);
+    return fetchOperatorEvidence(operationId)
+      .then((response) => {
+        setVm(buildOperatorEvidenceVm(response));
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [operationId]);
 
   React.useEffect(() => {
     let alive = true;
@@ -105,7 +149,64 @@ export default function OperatorEvidencePage(): React.ReactElement {
   }, [operationId]);
 
   const permissionBlockReason = evidenceExportPermissionReason(sessionLoading, sessionUnavailable, session);
-  const exportDisabledReason = permissionBlockReason || (!vm?.exportReady ? "证据导出写操作未 ready：后端权限、审计和错误码未完成前，当前页面只读。" : null);
+  const disabledReason = createDisabledReason({ permissionBlockReason, operationId, session, fieldId, pending: createState.pending });
+  const scopeType = fieldId ? "FIELD" : "TENANT";
+  const scopeId = fieldId || session?.tenant_id || "";
+  const defaultWindow = buildDefaultExportWindow();
+
+  const onRefresh = React.useCallback(() => {
+    void loadEvidence();
+  }, [loadEvidence]);
+
+  const onCreateEvidencePackage = React.useCallback(() => {
+    const reason = createDisabledReason({ permissionBlockReason, operationId, session, fieldId, pending: createState.pending });
+    if (reason) {
+      setCreateState((prev) => ({ ...prev, message: null, error: reason }));
+      return;
+    }
+
+    const windowMs = buildDefaultExportWindow();
+    const nextScopeType = fieldId ? "FIELD" : "TENANT";
+    const nextScopeId = fieldId || session?.tenant_id || "";
+    setCreateState({ pending: true, lastJobId: "", message: null, error: null });
+
+    void createOperatorEvidenceExportJob({
+      operation_id: operationId,
+      scope_type: nextScopeType,
+      scope_id: nextScopeId,
+      field_id: fieldId || undefined,
+      from_ts_ms: windowMs.from_ts_ms,
+      to_ts_ms: windowMs.to_ts_ms,
+      export_format: "ZIP",
+      export_language: "zh-CN",
+    })
+      .then((result) => {
+        if (!result.ok) {
+          setCreateState({
+            pending: false,
+            lastJobId: "",
+            message: null,
+            error: safeMessage(result.message, "创建证据包失败。"),
+          });
+          return;
+        }
+        setCreateState({
+          pending: false,
+          lastJobId: result.jobId || "job_id 待后端返回",
+          message: `证据包创建成功，job_id：${result.jobId || "job_id 待后端返回"}`,
+          error: null,
+        });
+        return loadEvidence();
+      })
+      .catch((error: unknown) => {
+        setCreateState({
+          pending: false,
+          lastJobId: "",
+          message: null,
+          error: safeMessage(error instanceof Error ? error.message : error, "创建证据包失败。"),
+        });
+      });
+  }, [createState.pending, fieldId, loadEvidence, operationId, permissionBlockReason, session]);
 
   return (
     <OperatorLayout title={meta.title} lead={meta.lead}>
@@ -118,16 +219,34 @@ export default function OperatorEvidencePage(): React.ReactElement {
             <div><span>更新时间</span><strong>{vm.generatedAtText}</strong></div>
           </section>
 
+          {operationId ? (
+            <section className="operatorEvidenceOperationPanel" aria-label="作业证据包导出">
+              <div>
+                <span>当前作业</span>
+                <strong>{operationId}</strong>
+                <small>scope：{scopeType} · {scopeId || "scope_id 待会话生成"} · 时间窗：{defaultWindow.label}</small>
+              </div>
+              <div className="operatorEvidenceOperationActions">
+                <button type="button" disabled={Boolean(disabledReason)} onClick={onCreateEvidencePackage}>{createState.pending ? "创建中..." : "创建证据包"}</button>
+                <button type="button" onClick={onRefresh} disabled={loading || createState.pending}>{loading ? "刷新中..." : "刷新状态"}</button>
+              </div>
+              {disabledReason ? <div className="operatorScopeWarning">{disabledReason}</div> : null}
+              {createState.lastJobId ? <div className="operatorEvidenceJobCreated">job_id：{createState.lastJobId}</div> : null}
+              {createState.message ? <div className="operatorEvidenceJobCreated">{createState.message}</div> : null}
+              {createState.error ? <div className="operatorScopeWarning">{createState.error}</div> : null}
+            </section>
+          ) : null}
+
           {vm.dataScopeWarning ? <div className="operatorScopeWarning">{vm.dataScopeWarning}</div> : null}
-          {permissionBlockReason ? <div className="operatorScopeWarning">{permissionBlockReason}</div> : null}
-          {!permissionBlockReason && !vm.exportReady ? <div className="operatorScopeWarning">证据导出写操作未 ready：后端权限、审计和错误码未完成前，当前页面只读。</div> : null}
+          {!operationId && permissionBlockReason ? <div className="operatorScopeWarning">{permissionBlockReason}</div> : null}
+          {!operationId && !permissionBlockReason && !vm.exportReady ? <div className="operatorScopeWarning">证据导出写操作未 ready：后端权限、审计和错误码未完成前，当前页面只读。</div> : null}
 
           {vm.totalCount === 0 ? <OperatorEmptyState title={vm.emptyTitle} description={vm.emptyDescription} reason="没有证据任务时不伪造 manifest、sha256 或下载入口。" /> : null}
 
           {vm.missingChecksumRows.length ? <div className="operatorEvidenceChecksumEmpty">{vm.missingChecksumRows.length} 个任务暂无 sha256 checksum，checksum 有则显示，无则保留正式空态。</div> : null}
 
           <section className="operatorEvidenceGrid" aria-label="证据导出任务">
-            {vm.rows.map((row) => <EvidenceRow key={row.jobId} row={row} exportDisabledReason={exportDisabledReason} />)}
+            {vm.rows.map((row) => <EvidenceRow key={row.jobId} row={row} />)}
           </section>
         </div>
       ) : null}
