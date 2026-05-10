@@ -1,9 +1,10 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { ackOperatorAlert, closeOperatorAlert, fetchOperatorDevicesAlerts } from "../../api/operatorDevicesAlerts";
-import OperatorEmptyState from "../../components/operator/OperatorEmptyState";
-import OperatorLayout from "../../layouts/OperatorLayout";
 import { fetchSessionMe, type SessionMe } from "../../api/session";
+import OperatorEmptyState from "../../components/operator/OperatorEmptyState";
+import PermissionGate from "../../components/operator/PermissionGate";
+import OperatorLayout from "../../layouts/OperatorLayout";
 import { hasOperatorPermission } from "../../lib/permissions";
 import "../../styles/operatorDevicesAlerts.css";
 import { buildOperatorDevicesAlertsVm, type OperatorAlertRowVm, type OperatorDeviceRowVm, type OperatorDevicesAlertsVm } from "../../viewmodels/operatorDevicesAlertsVm";
@@ -21,12 +22,21 @@ type AlertActionState = {
   tone?: "success" | "error";
 };
 
+type AlertPermissionState = {
+  sessionLoading: boolean;
+  canAck: boolean;
+  canClose: boolean;
+  ackReason: string;
+  closeReason: string;
+};
+
 type AlertSectionProps = {
   title: string;
   description: string;
   rows: OperatorAlertRowVm[];
   ackCloseReady: boolean;
   actionState: AlertActionState;
+  permissionState: AlertPermissionState;
   onAck: (alertId: string) => void;
   onClose: (alertId: string) => void;
 };
@@ -84,9 +94,12 @@ function DeviceSection({ title, description, rows, revokeVisible }: DeviceSectio
   );
 }
 
-function AlertCard({ row, ackCloseReady, actionState, onAck, onClose }: { row: OperatorAlertRowVm; ackCloseReady: boolean; actionState: AlertActionState; onAck: (alertId: string) => void; onClose: (alertId: string) => void }): React.ReactElement {
+function AlertCard({ row, ackCloseReady, actionState, permissionState, onAck, onClose }: { row: OperatorAlertRowVm; ackCloseReady: boolean; actionState: AlertActionState; permissionState: AlertPermissionState; onAck: (alertId: string) => void; onClose: (alertId: string) => void }): React.ReactElement {
   const ackBusy = actionState.busyKey === `${row.alertId}:ack`;
   const closeBusy = actionState.busyKey === `${row.alertId}:close`;
+  const ackDisabled = !ackCloseReady || !row.canAck || Boolean(actionState.busyKey);
+  const closeDisabled = !ackCloseReady || !row.canClose || Boolean(actionState.busyKey);
+  const actionNotice = row.disabledReason || (!permissionState.canAck ? permissionState.ackReason : "") || (!permissionState.canClose ? permissionState.closeReason : "");
   return (
     <article className="operatorAlertCard">
       <header className="operatorAlertHead">
@@ -112,18 +125,34 @@ function AlertCard({ row, ackCloseReady, actionState, onAck, onClose }: { row: O
         <div><span>数据来源</span><strong>{row.sourceText}</strong></div>
       </div>
 
-      {row.disabledReason ? <div className="operatorDevicesWarning">{row.disabledReason}</div> : null}
+      {actionNotice ? <div className="operatorDevicesWarning">{actionNotice}</div> : null}
       <div className="operatorDevicesNotice">ACK / close 操作只在后端权限与审计 ready 后开放；操作成功后刷新列表。</div>
       <div className="operatorDevicesActions">
         {row.operationHref ? <Link to={row.operationHref}>查看关联作业</Link> : null}
-        <button type="button" disabled={!ackCloseReady || !row.canAck || Boolean(actionState.busyKey)} onClick={() => onAck(row.alertId)}>{ackBusy ? "ACK 中..." : "ACK"}</button>
-        <button type="button" disabled={!ackCloseReady || !row.canClose || Boolean(actionState.busyKey)} onClick={() => onClose(row.alertId)}>{closeBusy ? "关闭中..." : "关闭"}</button>
+        <PermissionGate
+          permissionKey="ack"
+          allowed={permissionState.canAck}
+          loading={permissionState.sessionLoading}
+          disabledReason={permissionState.ackReason}
+          fallback={() => <button type="button" disabled>{ackBusy ? "ACK 中..." : "ACK"}</button>}
+        >
+          {() => <button type="button" disabled={ackDisabled} onClick={() => onAck(row.alertId)}>{ackBusy ? "ACK 中..." : "ACK"}</button>}
+        </PermissionGate>
+        <PermissionGate
+          permissionKey="close_alert"
+          allowed={permissionState.canClose}
+          loading={permissionState.sessionLoading}
+          disabledReason={permissionState.closeReason}
+          fallback={() => <button type="button" disabled>{closeBusy ? "关闭中..." : "关闭"}</button>}
+        >
+          {() => <button type="button" disabled={closeDisabled} onClick={() => onClose(row.alertId)}>{closeBusy ? "关闭中..." : "关闭"}</button>}
+        </PermissionGate>
       </div>
     </article>
   );
 }
 
-function AlertSection({ title, description, rows, ackCloseReady, actionState, onAck, onClose }: AlertSectionProps): React.ReactElement {
+function AlertSection({ title, description, rows, ackCloseReady, actionState, permissionState, onAck, onClose }: AlertSectionProps): React.ReactElement {
   return (
     <section className="operatorDevicesSection">
       <header className="operatorDevicesSectionHead">
@@ -135,11 +164,17 @@ function AlertSection({ title, description, rows, ackCloseReady, actionState, on
       </header>
       {rows.length ? (
         <div className="operatorDevicesList">
-          {rows.map((row) => <AlertCard key={`${title}-${row.alertId}`} row={row} ackCloseReady={ackCloseReady} actionState={actionState} onAck={onAck} onClose={onClose} />)}
+          {rows.map((row) => <AlertCard key={`${title}-${row.alertId}`} row={row} ackCloseReady={ackCloseReady} actionState={actionState} permissionState={permissionState} onAck={onAck} onClose={onClose} />)}
         </div>
       ) : <div className="operatorQueueEmpty">暂无该类告警。</div>}
     </section>
   );
+}
+
+function permissionReason(sessionLoading: boolean, session: SessionMe | null, permissionName: "operator_alert_ack_close" | "admin_device_revoke"): string {
+  if (sessionLoading) return "会话权限加载中...";
+  if (!session) return "会话不可用";
+  return `缺少会话权限：${permissionName}`;
 }
 
 export default function OperatorDevicesAlertsPage(): React.ReactElement {
@@ -147,6 +182,7 @@ export default function OperatorDevicesAlertsPage(): React.ReactElement {
   const [vm, setVm] = React.useState<OperatorDevicesAlertsVm | null>(null);
   const [actionState, setActionState] = React.useState<AlertActionState>({});
   const [session, setSession] = React.useState<SessionMe | null>(null);
+  const [sessionLoading, setSessionLoading] = React.useState(true);
 
   const reload = React.useCallback(() => {
     setLoading(true);
@@ -157,7 +193,11 @@ export default function OperatorDevicesAlertsPage(): React.ReactElement {
 
   React.useEffect(() => {
     let alive = true;
-    void fetchSessionMe().then((resp) => { if (alive) setSession(resp); }).catch(() => { if (alive) setSession(null); });
+    setSessionLoading(true);
+    void fetchSessionMe()
+      .then((resp) => { if (alive) setSession(resp); })
+      .catch(() => { if (alive) setSession(null); })
+      .finally(() => { if (alive) setSessionLoading(false); });
     return () => { alive = false; };
   }, []);
 
@@ -178,9 +218,26 @@ export default function OperatorDevicesAlertsPage(): React.ReactElement {
     };
   }, []);
 
+  const canAck = hasOperatorPermission(session, "ack");
+  const canCloseAlert = hasOperatorPermission(session, "close_alert");
   const revokeVisibleForSession = hasOperatorPermission(session, "revoke_device_credential");
+  const alertPermissionState: AlertPermissionState = {
+    sessionLoading,
+    canAck,
+    canClose: canCloseAlert,
+    ackReason: canAck ? "" : permissionReason(sessionLoading, session, "operator_alert_ack_close"),
+    closeReason: canCloseAlert ? "" : permissionReason(sessionLoading, session, "operator_alert_ack_close"),
+  };
 
   async function runAlertAction(alertId: string, action: "ack" | "close") {
+    if (action === "ack" && !canAck) {
+      setActionState({ message: permissionReason(sessionLoading, session, "operator_alert_ack_close"), tone: "error" });
+      return;
+    }
+    if (action === "close" && !canCloseAlert) {
+      setActionState({ message: permissionReason(sessionLoading, session, "operator_alert_ack_close"), tone: "error" });
+      return;
+    }
     setActionState({ busyKey: `${alertId}:${action}` });
     const result = action === "ack" ? await ackOperatorAlert(alertId) : await closeOperatorAlert(alertId);
     if (!result.ok) {
@@ -217,8 +274,8 @@ export default function OperatorDevicesAlertsPage(): React.ReactElement {
           </section>
 
           <section className="operatorDevicesGrid" aria-label="告警事件">
-            <AlertSection title="告警事件" description="当前可见的告警规则、事件和通知状态。" rows={vm.alerts} ackCloseReady={vm.ackCloseReady} actionState={actionState} onAck={(alertId) => void runAlertAction(alertId, "ack")} onClose={(alertId) => void runAlertAction(alertId, "close")} />
-            <AlertSection title="超时告警" description="超过处理窗口或已标记超时的告警。" rows={vm.overdueAlerts} ackCloseReady={vm.ackCloseReady} actionState={actionState} onAck={(alertId) => void runAlertAction(alertId, "ack")} onClose={(alertId) => void runAlertAction(alertId, "close")} />
+            <AlertSection title="告警事件" description="当前可见的告警规则、事件和通知状态。" rows={vm.alerts} ackCloseReady={vm.ackCloseReady} actionState={actionState} permissionState={alertPermissionState} onAck={(alertId) => void runAlertAction(alertId, "ack")} onClose={(alertId) => void runAlertAction(alertId, "close")} />
+            <AlertSection title="超时告警" description="超过处理窗口或已标记超时的告警。" rows={vm.overdueAlerts} ackCloseReady={vm.ackCloseReady} actionState={actionState} permissionState={alertPermissionState} onAck={(alertId) => void runAlertAction(alertId, "ack")} onClose={(alertId) => void runAlertAction(alertId, "close")} />
           </section>
         </div>
       ) : null}

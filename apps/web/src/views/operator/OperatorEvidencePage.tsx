@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { createOperatorEvidenceExportJob, fetchOperatorEvidence, fetchOperatorEvidenceJobDetail, type OperatorEvidenceItem } from "../../api/operatorEvidence";
 import { fetchSessionMe, type SessionMe } from "../../api/session";
 import OperatorEmptyState from "../../components/operator/OperatorEmptyState";
+import PermissionGate from "../../components/operator/PermissionGate";
 import OperatorLayout from "../../layouts/OperatorLayout";
 import { hasOperatorPermission } from "../../lib/permissions";
 import "../../styles/operatorEvidence.css";
@@ -354,7 +355,15 @@ export default function OperatorEvidencePage(): React.ReactElement {
                 <small>scope：{scopeType} · {scopeId || "scope_id 待会话生成"} · 时间窗：{defaultWindow.label}</small>
               </div>
               <div className="operatorEvidenceOperationActions">
-                <button type="button" disabled={Boolean(disabledReason)} onClick={onCreateEvidencePackage}>{createState.pending ? "创建中..." : "创建证据包"}</button>
+                <PermissionGate
+                  permissionKey="export_evidence"
+                  allowed={!permissionBlockReason}
+                  loading={sessionLoading}
+                  disabledReason={permissionBlockReason}
+                  fallback={() => <button type="button" disabled>{createState.pending ? "创建中..." : "创建证据包"}</button>}
+                >
+                  {() => <button type="button" disabled={Boolean(disabledReason)} onClick={onCreateEvidencePackage}>{createState.pending ? "创建中..." : "创建证据包"}</button>}
+                </PermissionGate>
                 <button type="button" onClick={onRefresh} disabled={loading || createState.pending}>{loading ? "刷新中..." : "刷新状态"}</button>
               </div>
               {disabledReason ? <div className="operatorScopeWarning">{disabledReason}</div> : null}
