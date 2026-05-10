@@ -1,7 +1,7 @@
 import React from "react";
-import type { FlightTableManifestV1 } from "../../../api/flightTable";
+import type { CreateFlightTableGeometryResponseV1, FlightTableManifestV1 } from "../../../api/flightTable";
 import FieldAssemblyCard, { type FieldAssemblyDraftV1 } from "./FieldAssemblyCard";
-import FieldSpatialCard from "./FieldSpatialCard";
+import FieldSpatialCard, { type FieldSpatialDraftV1 } from "./FieldSpatialCard";
 import DeviceOnboardingWizard from "./DeviceOnboardingWizard";
 import SkillAssemblyCard from "./SkillAssemblyCard";
 
@@ -12,9 +12,15 @@ type Props = {
   fieldError: string | null;
   customerVisible: boolean;
   reportVisible: boolean;
+  spatialDraft: FieldSpatialDraftV1;
+  spatialLoading: boolean;
+  spatialError: string | null;
+  geometryResult: CreateFlightTableGeometryResponseV1 | null;
   onFieldDraftChange: (patch: Partial<FieldAssemblyDraftV1>) => void;
   onCreateField: () => void;
   onVerifyField: () => void;
+  onSpatialDraftChange: (patch: Partial<FieldSpatialDraftV1>) => void;
+  onSubmitGeometry: () => void;
 };
 
 export default function FlightAssemblyPanel(props: Props): React.ReactElement {
@@ -35,7 +41,16 @@ export default function FlightAssemblyPanel(props: Props): React.ReactElement {
         onCreateField={props.onCreateField}
         onVerifyField={props.onVerifyField}
       />
-      <FieldSpatialCard geometryId={manifest?.geometry_id} />
+      <FieldSpatialCard
+        geometryId={manifest?.geometry_id}
+        fieldId={manifest?.field_id}
+        draft={props.spatialDraft}
+        geometryResult={props.geometryResult}
+        loading={props.spatialLoading}
+        error={props.spatialError}
+        onDraftChange={props.onSpatialDraftChange}
+        onSubmitGeometry={props.onSubmitGeometry}
+      />
       <SkillAssemblyCard skillBindingIds={manifest?.skill_binding_ids ?? []} skillRunIds={manifest?.skill_run_ids ?? []} />
       <DeviceOnboardingWizard deviceIds={manifest?.device_ids ?? []} credentials={manifest?.credential_ids ?? []} />
     </div>
