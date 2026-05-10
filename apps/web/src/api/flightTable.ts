@@ -99,6 +99,57 @@ export type FlightTableWeatherLocationV1 = {
   lng: number;
 };
 
+export type FlightTableDeviceTemplateV1 = {
+  template_code: string;
+  formal_template_code: string;
+  device_type: string;
+  capabilities: string[];
+  required_observation_skills: string[];
+  default_metrics: Array<{ metric: string; value: number | string | boolean; unit: string | null }>;
+  default_mode: "simulator" | "physical";
+};
+
+export type FlightTableDeviceStepResultV1 = {
+  step_key: string;
+  status: "PASS" | "FAIL";
+  source: "FORMAL_ROUTE_COMPAT" | "FORMAL_SERVICE" | "DEV_HELPER";
+  message: string;
+};
+
+export type FlightTableDeviceSummaryV1 = {
+  device_id: string;
+  device_type: string;
+  template_code: string;
+  mode: "simulator" | "physical";
+  credential_id: string;
+  credential_status: string;
+  masked_secret: "****";
+  online_status: "ONLINE" | "OFFLINE";
+  last_heartbeat: string | null;
+  last_telemetry: string | null;
+  field_binding: string | null;
+  capabilities: string[];
+  required_observation_skills: string[];
+  last_telemetry_metrics: Array<{ metric: string; value: number | string | boolean | null; unit: string | null }>;
+  projection_status: "READY" | "PARTIAL" | "FAIL";
+  sources: string[];
+  steps: FlightTableDeviceStepResultV1[];
+};
+
+export type FlightTableDevicesResponseV1 = {
+  ok: boolean;
+  field_id: string;
+  devices: FlightTableDeviceSummaryV1[];
+  templates: FlightTableDeviceTemplateV1[];
+  verify: {
+    raw_telemetry_visible: boolean;
+    observation_visible: boolean;
+    sensing_visible: boolean;
+    source_notes: string[];
+  };
+  run: FlightTableRunV1;
+};
+
 export type CreateFlightTableRunRequestV1 = {
   run_id: string;
   tenant_id: string;
@@ -148,6 +199,14 @@ export type CreateFlightTableGeometryResponseV1 = {
   run: FlightTableRunV1;
 };
 
+export type CreateFlightTableDevicesRequestV1 = {
+  field_id: string;
+  template_code: string;
+  device_id?: string;
+  mode?: "simulator" | "physical";
+  telemetry_mode?: "fast" | "realistic";
+};
+
 export async function createFlightTableRun(body: CreateFlightTableRunRequestV1): Promise<FlightTableRunV1> {
   const res = await apiRequest<{ ok: boolean; run: FlightTableRunV1 }>("/api/v1/dev/flight-table/runs", {
     method: "POST",
@@ -165,6 +224,18 @@ export async function createFlightTableField(runId: string, body: CreateFlightTa
 
 export async function createFlightTableGeometry(runId: string, body: CreateFlightTableGeometryRequestV1): Promise<CreateFlightTableGeometryResponseV1> {
   return apiRequest<CreateFlightTableGeometryResponseV1>(`/api/v1/dev/flight-table/runs/${encodeURIComponent(runId)}/field-geometry`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function fetchFlightTableDeviceTemplates(): Promise<FlightTableDeviceTemplateV1[]> {
+  const res = await apiRequest<{ ok: boolean; templates: FlightTableDeviceTemplateV1[] }>("/api/v1/dev/flight-table/device-templates");
+  return Array.isArray(res.templates) ? res.templates : [];
+}
+
+export async function createFlightTableDevices(runId: string, body: CreateFlightTableDevicesRequestV1): Promise<FlightTableDevicesResponseV1> {
+  return apiRequest<FlightTableDevicesResponseV1>(`/api/v1/dev/flight-table/runs/${encodeURIComponent(runId)}/devices`, {
     method: "POST",
     body: JSON.stringify(body),
   });
