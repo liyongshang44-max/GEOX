@@ -9,6 +9,7 @@ import {
   normalizeFlightTableRunIdV1,
   readFlightTableRunV1,
   retryFlightTableStepV1,
+  updateFlightTableRunAfterDevicesV1,
   updateFlightTableRunAfterFieldV1,
   updateFlightTableRunAfterGeometryV1,
   verifyFlightTableRunV1,
@@ -17,6 +18,7 @@ import { buildFlightVerifyReportV1 } from "../../services/flight_table/flight_ta
 import { listFlightTableApiSnapshotsV1 } from "../../services/flight_table/flight_table_snapshots_v1.js";
 import { createFlightTableFieldV1, normalizeFlightTableFieldInputV1 } from "../../services/flight_table/flight_table_field_v1.js";
 import { createFlightTableFieldGeometryV1 } from "../../services/flight_table/flight_table_geometry_v1.js";
+import { listFlightTableDeviceTemplatesForApiV1, onboardFlightTableDevicesV1 } from "../../services/flight_table/flight_table_devices_v1.js";
 
 function flightTableEnabled(): boolean {
   return String(process.env.ENABLE_FLIGHT_TABLE_API ?? "").trim().toLowerCase() === "true";
@@ -56,6 +58,7 @@ function routeError(reply: FastifyReply, err: unknown) {
   if (message === "FLIGHT_TABLE_INVALID_GEOMETRY") return badRequest(reply, message);
   if (message === "FLIGHT_TABLE_EMPTY_GEOMETRY") return badRequest(reply, message);
   if (message === "FLIGHT_TABLE_FIELD_NOT_FOUND") return reply.status(404).send({ ok: false, error: message });
+  if (message === "FLIGHT_TABLE_UNKNOWN_DEVICE_TEMPLATE") return badRequest(reply, message);
   if (message === "FLIGHT_TABLE_RUN_EXISTS") return reply.status(409).send({ ok: false, error: message });
   if (message === "FLIGHT_TABLE_STEP_NOT_FOUND") return reply.status(404).send({ ok: false, error: message });
   return reply.status(500).send({ ok: false, error: "FLIGHT_TABLE_INTERNAL_ERROR", message });
@@ -136,6 +139,12 @@ function registerCustomerFieldVisibilityFallback(app: FastifyInstance, pool: Poo
 
 export function registerFlightTableV1Routes(app: FastifyInstance, pool: Pool): void {
   registerCustomerFieldVisibilityFallback(app, pool);
+
+  app.get("/api/v1/dev/flight-table/device-templates", async (req, reply) => {
+    const auth = requireFlightTableAdmin(req, reply);
+    if (!auth) return;
+    return reply.send({ ok: true, templates: listFlightTableDeviceTemplatesForApiV1() });
+  });
 
   app.post("/api/v1/dev/flight-table/runs", async (req, reply) => {
     const auth = requireFlightTableAdmin(req, reply);
@@ -228,6 +237,22 @@ export function registerFlightTableV1Routes(app: FastifyInstance, pool: Pool): v
         weather_location_status: geometryResult.weather_location_status,
       });
       return reply.send({ ...geometryResult, run: nextRun });
+    } catch (err) {
+      return routeError(reply, err);
+    }
+  });
+
+  app.post("/api/v1/dev/flight-table/runs/:runId/devices", async (req, reply) => {
+    const auth = requireFlightTableAdmin(req, reply);
+    if (!auth) return;
+    const runId = normalizeFlightTableRunIdV1((req.params as any)?.runId);
+    if (!runId) return badRequest(reply, "FLIGHT_TABLE_INVALID_RUN_ID");
+    try {
+      const run = await readFlightTableRunV1(runId);
+      if (!run || !assertRunScope(run, auth)) return notFound(reply);
+      const deviceResult = await onboardFlightTableDevicesV1(pool, run, req.body as any, auth);
+      const nextRun = await updateFlightTableRunAfterDevicesV1(runId, deviceResult);
+      return reply.send({ ...deviceResult, run: nextRun });
     } catch (err) {
       return routeError(reply, err);
     }
