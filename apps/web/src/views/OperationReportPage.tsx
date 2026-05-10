@@ -1,12 +1,14 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
 import { fetchOperationReport, type OperationReportV1 } from "../api/customerReports";
+import { fetchOperationEnvironmentContext, type OperationEnvironmentContext } from "../api/weather";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ErrorState from "../components/common/ErrorState";
 import EvidencePackSummaryPanel from "../components/customer/EvidencePackSummaryPanel";
 import FieldMemoryPanel from "../components/customer/FieldMemoryPanel";
 import PrescriptionContractDrawer from "../components/customer/PrescriptionContractDrawer";
 import RoiLedgerDrawer from "../components/customer/RoiLedgerDrawer";
+import WeatherInterferencePanel from "../components/customer/WeatherInterferencePanel";
 import FieldGisMap from "../components/FieldGisMap";
 import { customerTimelineStatusLabel, labelCustomerTechnicalField } from "../lib/customerLabels";
 import { safeEvidenceDownloadUrl } from "../lib/evidenceDownloadSafety";
@@ -301,6 +303,20 @@ function OperationSpatialExecutionPanel({ spatial }: { spatial: OperationSpatial
   );
 }
 
+function unavailableWeatherContext(operationId: string): OperationEnvironmentContext {
+  return {
+    status: "unavailable",
+    unavailableReason: "not_ready",
+    operationId,
+    fieldId: null,
+    history: null,
+    forecast: null,
+    rainfallMayExplainSoilMoistureChange: null,
+    learningWeatherInterferenceExcluded: null,
+    explanation: "天气源未接入或当前位置不可用，当前不参与验收判断。",
+  };
+}
+
 export default function OperationReportPage(): React.ReactElement {
   const { operationId = "" } = useParams();
   const [loading, setLoading] = React.useState(true);
@@ -309,6 +325,8 @@ export default function OperationReportPage(): React.ReactElement {
   const [expandedKey, setExpandedKey] = React.useState<string | null>(null);
   const [prescriptionDrawerOpen, setPrescriptionDrawerOpen] = React.useState(false);
   const [roiDrawerOpen, setRoiDrawerOpen] = React.useState(false);
+  const [weatherContext, setWeatherContext] = React.useState<OperationEnvironmentContext | null>(null);
+  const [weatherLoading, setWeatherLoading] = React.useState(false);
 
   React.useEffect(() => {
     let alive = true;
@@ -326,6 +344,35 @@ export default function OperationReportPage(): React.ReactElement {
       .finally(() => {
         if (!alive) return;
         setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [operationId]);
+
+  React.useEffect(() => {
+    let alive = true;
+    const id = operationId.trim();
+    setWeatherContext(null);
+    if (!id) {
+      setWeatherLoading(false);
+      return () => {
+        alive = false;
+      };
+    }
+    setWeatherLoading(true);
+    void fetchOperationEnvironmentContext({ operationId: id })
+      .then((context) => {
+        if (!alive) return;
+        setWeatherContext(context);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setWeatherContext(unavailableWeatherContext(id));
+      })
+      .finally(() => {
+        if (!alive) return;
+        setWeatherLoading(false);
       });
     return () => {
       alive = false;
@@ -423,7 +470,12 @@ export default function OperationReportPage(): React.ReactElement {
                           {displayItems.map((item) => <div key={`${section.key}-${item.label}`}><strong>{item.label}：</strong>{safeMainViewText(item.value, "--")}</div>)}
                           {!displayItems.length && section.emptyState ? <div className="muted">{section.emptyState.title}：{section.emptyState.description}</div> : null}
                         </div>
-                        {isExecutionSection ? <OperationSpatialExecutionPanel spatial={spatialExecution} /> : null}
+                        {isExecutionSection ? (
+                          <>
+                            <OperationSpatialExecutionPanel spatial={spatialExecution} />
+                            <WeatherInterferencePanel context={weatherContext} loading={weatherLoading} />
+                          </>
+                        ) : null}
                       </>
                     ) : null}
                   </>
