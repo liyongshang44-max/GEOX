@@ -9,6 +9,10 @@ import type {
   FlightTableSkillAssemblyResponseV1,
   FlightTableSkillFailureTypeV1,
 } from "../../../api/flightTable";
+import type {
+  FlightTableTelemetryResponseV1,
+  FlightTableTelemetryScenarioKeyV1,
+} from "../../../api/flightTableTelemetry";
 import { summarizeFlightTableManifest } from "../../../viewmodels/flightTableVm";
 import FlightRunHeader from "./FlightRunHeader";
 import FlightAssemblyPanel from "./FlightAssemblyPanel";
@@ -42,6 +46,11 @@ type Props = {
   deviceError: string | null;
   deviceTemplates: FlightTableDeviceTemplateV1[];
   onboardedDevices: FlightTableDeviceSummaryV1[];
+  telemetryScenarios: FlightTableTelemetryScenarioKeyV1[];
+  selectedTelemetryScenarios: FlightTableTelemetryScenarioKeyV1[];
+  telemetryResult: FlightTableTelemetryResponseV1 | null;
+  telemetryLoading: boolean;
+  telemetryError: string | null;
   skillResult: FlightTableSkillAssemblyResponseV1 | null;
   skillLoading: boolean;
   skillError: string | null;
@@ -58,6 +67,9 @@ type Props = {
   onSubmitGeometry: () => void;
   onOnboardDevice: () => void;
   onRetryDevice: () => void;
+  onTelemetryScenarioToggle: (scenario: FlightTableTelemetryScenarioKeyV1) => void;
+  onPublishTelemetry: (deviceId?: string | null) => void;
+  onVerifyTelemetry: (deviceId?: string | null) => void;
   onBindSkills: () => void;
   onFailOneSkill: () => void;
   onRestoreSkills: () => void;
@@ -144,6 +156,11 @@ export default function FlightTableShell(props: Props): React.ReactElement {
             deviceError={props.deviceError}
             deviceTemplates={props.deviceTemplates}
             onboardedDevices={props.onboardedDevices}
+            telemetryScenarios={props.telemetryScenarios}
+            selectedTelemetryScenarios={props.selectedTelemetryScenarios}
+            telemetryResult={props.telemetryResult}
+            telemetryLoading={props.telemetryLoading}
+            telemetryError={props.telemetryError}
             skillResult={props.skillResult}
             skillFailureType={props.skillFailureType}
             skillLoading={props.skillLoading}
@@ -156,6 +173,9 @@ export default function FlightTableShell(props: Props): React.ReactElement {
             onDeviceDraftChange={props.onDeviceDraftChange}
             onOnboardDevice={props.onOnboardDevice}
             onRetryDevice={props.onRetryDevice}
+            onTelemetryScenarioToggle={props.onTelemetryScenarioToggle}
+            onPublishTelemetry={props.onPublishTelemetry}
+            onVerifyTelemetry={props.onVerifyTelemetry}
             onSkillFailureTypeChange={props.onSkillFailureTypeChange}
             onBindSkills={props.onBindSkills}
             onFailOneSkill={props.onFailOneSkill}
