@@ -5,38 +5,44 @@ import { fileURLToPath } from "node:url";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.resolve(scriptDir, "..");
-
 const failures = [];
+const cache = new Map();
 
 function filePath(file) {
   return path.join(appRoot, file);
 }
 
 function read(file) {
+  if (cache.has(file)) return cache.get(file);
   const fullPath = filePath(file);
   if (!fs.existsSync(fullPath)) {
     failures.push({ file, rule: "missing-file", detail: "Required P2.2 UI closure file is missing." });
+    cache.set(file, "");
     return "";
   }
-  return fs.readFileSync(fullPath, "utf8");
+  const text = fs.readFileSync(fullPath, "utf8");
+  cache.set(file, text);
+  return text;
+}
+
+function fail(file, rule, detail) {
+  failures.push({ file, rule, detail });
 }
 
 function expectPattern(file, pattern, rule, detail) {
   const text = read(file);
   if (!text) return;
-  if (!pattern.test(text)) failures.push({ file, rule, detail });
+  if (!pattern.test(text)) fail(file, rule, detail);
 }
 
 function expectNotPattern(file, pattern, rule, detail) {
   const text = read(file);
   if (!text) return;
-  if (pattern.test(text)) failures.push({ file, rule, detail });
+  if (pattern.test(text)) fail(file, rule, detail);
 }
 
 function expectPatterns(file, patterns, rule) {
-  for (const item of patterns) {
-    expectPattern(file, item.pattern, rule, item.detail);
-  }
+  for (const item of patterns) expectPattern(file, item.pattern, rule, item.detail);
 }
 
 function expectFiles(files) {
@@ -50,11 +56,21 @@ function runNestedCheck(label, scriptName) {
     stdio: "pipe",
   });
   if (result.status !== 0) {
-    failures.push({
-      file: `scripts/${scriptName}`,
-      rule: `${label}-failed`,
-      detail: `${label} failed. ${String(result.stderr || result.stdout || "").trim()}`,
-    });
+    fail(`scripts/${scriptName}`, `${label}-failed`, `${label} failed. ${String(result.stderr || result.stdout || "").trim()}`);
+  }
+}
+
+function expectPermissionGate({ file, key, label }) {
+  const text = read(file);
+  if (!text) return;
+  const actionPattern = new RegExp(`permissionKey=["']${key}["']|hasOperatorPermission\\(session, ["']${key}["']\\)`);
+  if (!actionPattern.test(text)) fail(file, "operator-write-permission-missing", `${file} must gate write actions by ${key}.`);
+
+  const literalLabelPattern = new RegExp(label);
+  const permissionReasonPattern = new RegExp(`permissionReason\\(session, ["']${key}["']\\)`);
+  const localPermissionReasonPattern = new RegExp(`permissionReason\\([^)]*["']${label}["'][^)]*\\)`);
+  if (!literalLabelPattern.test(text) && !permissionReasonPattern.test(text) && !localPermissionReasonPattern.test(text)) {
+    fail(file, "operator-permission-reason-missing", `${file} must expose standard permission text for ${label} either literally or through permissionReason(session, "${key}").`);
   }
 }
 
@@ -193,10 +209,7 @@ const permissionPages = [
   { file: "src/views/operator/OperatorDevicesAlertsPage.tsx", key: "close_alert", label: "operator_alert_ack_close" },
 ];
 
-for (const page of permissionPages) {
-  expectPattern(page.file, new RegExp(`permissionKey=["']${page.key}["']|hasOperatorPermission\\(session, ["']${page.key}["']\\)`), "operator-write-permission-missing", `${page.file} must gate write actions by ${page.key}.`);
-  expectPattern(page.file, new RegExp(page.label), "operator-permission-reason-missing", `${page.file} must expose standard permission text for ${page.label}.`);
-}
+for (const page of permissionPages) expectPermissionGate(page);
 
 expectPatterns("src/views/operator/OperatorDevicesAlertsPage.tsx", [
   { pattern: /revoke_device_credential/, detail: "Device credential revoke must be gated by revoke_device_credential." },
@@ -252,9 +265,7 @@ runNestedCheck("customer export same-source", "check-customer-export-same-source
 
 if (failures.length > 0) {
   console.error("❌ P2 full closure UI gate failed:");
-  for (const failure of failures) {
-    console.error(` - ${failure.file} [${failure.rule}] ${failure.detail}`);
-  }
+  for (const failure of failures) console.error(` - ${failure.file} [${failure.rule}] ${failure.detail}`);
   process.exit(1);
 }
 
