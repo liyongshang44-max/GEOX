@@ -47,6 +47,7 @@ export default function FieldReportPage(): React.ReactElement {
   const canExport = Boolean(fieldId.trim());
   const geometry = (report as { field?: { geometry?: unknown } }).field?.geometry;
   const hasGeometry = Boolean(geometry);
+  const hasMapLayers = hasGeometry || vm.mapLayers.hasAnyOperationLayer;
   const hasOperationForRisk = Boolean(vm.recentOperations[0]?.operationId);
   const riskOperationHref = hasOperationForRisk ? vm.recentOperations[0].href : undefined;
   const evidenceSummaryExists = vm.diagnosis.evidenceLines.some((line) => line && !line.includes("暂无"));
@@ -139,10 +140,31 @@ export default function FieldReportPage(): React.ReactElement {
             <h3 className="customerCardTitle">田块记忆</h3>
             <FieldMemoryPanel fieldId={vm.field.fieldId} embeddedMemory={embeddedMemory} compact />
           </article>
-          <article className="customerCard mapPlaceholderCard">
-            <h3 className="customerCardTitle">地块范围</h3>
-            {hasGeometry
-              ? <FieldGisMap polygonGeoJson={geometry} heatGeoJson={null} markers={[]} trajectorySegments={[]} acceptancePoints={[]} />
+          <article className="customerCard mapPlaceholderCard fieldMapLayerCard">
+            <div className="customerCardHeaderRow">
+              <h3 className="customerCardTitle">地块范围</h3>
+              <span className="muted">{vm.mapLayers.summaryText}</span>
+            </div>
+            {hasMapLayers
+              ? (
+                <FieldGisMap
+                  polygonGeoJson={geometry ?? null}
+                  plannedGeoJson={vm.mapLayers.plannedGeoJson}
+                  coverageGeoJson={vm.mapLayers.coverageGeoJson}
+                  heatGeoJson={null}
+                  markers={vm.mapLayers.deviceMarkers}
+                  trajectorySegments={vm.mapLayers.trajectorySegments}
+                  acceptancePoints={vm.mapLayers.acceptancePoints}
+                  labels={{
+                    fieldBoundary: "地块边界",
+                    plannedLayer: "计划作业区域",
+                    coverageLayer: "实际覆盖",
+                    operationTrack: "实际执行轨迹",
+                    devicePosition: "设备位置",
+                    layerAcceptance: "验收点",
+                  }}
+                />
+              )
               : <CustomerEmptyState vm={mapEmptyState} />}
           </article>
         </section>

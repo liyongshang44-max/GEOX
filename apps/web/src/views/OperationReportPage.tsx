@@ -7,6 +7,7 @@ import EvidencePackSummaryPanel from "../components/customer/EvidencePackSummary
 import FieldMemoryPanel from "../components/customer/FieldMemoryPanel";
 import PrescriptionContractDrawer from "../components/customer/PrescriptionContractDrawer";
 import RoiLedgerDrawer from "../components/customer/RoiLedgerDrawer";
+import FieldGisMap from "../components/FieldGisMap";
 import { customerTimelineStatusLabel, labelCustomerTechnicalField } from "../lib/customerLabels";
 import { safeEvidenceDownloadUrl } from "../lib/evidenceDownloadSafety";
 import { buildOperationReportVm } from "../viewmodels/operationReportVm";
@@ -38,6 +39,27 @@ type EvidencePackSafeMetadata = {
   manifest: string | null;
   sha256: string | null;
   downloadUrl: string | null;
+};
+
+type OperationSpatialTrajectorySegment = {
+  id: string;
+  status: "READY" | "DISPATCHED" | "SUCCEEDED" | "FAILED";
+  color: string;
+  coordinates: Array<[number, number]>;
+  label?: string;
+};
+
+type OperationSpatialExecutionVm = {
+  plannedGeoJson: unknown | null;
+  coverageGeoJson: unknown | null;
+  trajectorySegments: OperationSpatialTrajectorySegment[];
+  planStatusText: string;
+  coverageStatusText: string;
+  trajectoryStatusText: string;
+  deviationText: string;
+  deviationEvidenceText: string;
+  hasDeviationEvidence: boolean;
+  hasAnySpatialLayer: boolean;
 };
 
 function customerText(value: unknown, fallback = "暂无可展示信息"): string {
@@ -107,6 +129,178 @@ function shortOperationLabel(value: string): string {
   return text;
 }
 
+function isGeoJsonLike(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  const obj = value as Record<string, any>;
+  const type = String(obj.type ?? "");
+  if (type === "FeatureCollection") return Array.isArray(obj.features) && obj.features.length > 0;
+  if (type === "Feature") return isGeoJsonLike(obj.geometry);
+  if (["Polygon", "MultiPolygon", "LineString", "MultiLineString", "Point", "MultiPoint"].includes(type)) return Array.isArray(obj.coordinates);
+  return false;
+}
+
+function firstGeoJson(...values: unknown[]): unknown | null {
+  for (const value of values) {
+    if (isGeoJsonLike(value)) return value;
+  }
+  return null;
+}
+
+function collectCoordinatePairs(raw: unknown, out: Array<[number, number]>): void {
+  if (!Array.isArray(raw)) return;
+  if (raw.length >= 2 && Number.isFinite(Number(raw[0])) && Number.isFinite(Number(raw[1]))) {
+    out.push([Number(raw[0]), Number(raw[1])]);
+    return;
+  }
+  for (const item of raw) collectCoordinatePairs(item, out);
+}
+
+function lineStringsFromGeoJson(value: unknown): Array<Array<[number, number]>> {
+  if (!value || typeof value !== "object") return [];
+  const obj = value as Record<string, any>;
+  const type = String(obj.type ?? "");
+  if (type === "Feature") return lineStringsFromGeoJson(obj.geometry);
+  if (type === "FeatureCollection") return Array.isArray(obj.features) ? obj.features.flatMap((item) => lineStringsFromGeoJson(item)) : [];
+  if (type === "LineString") {
+    const pairs: Array<[number, number]> = [];
+    collectCoordinatePairs(obj.coordinates, pairs);
+    return pairs.length >= 2 ? [pairs] : [];
+  }
+  if (type === "MultiLineString") {
+    return Array.isArray(obj.coordinates)
+      ? obj.coordinates.flatMap((line: unknown) => {
+        const pairs: Array<[number, number]> = [];
+        collectCoordinatePairs(line, pairs);
+        return pairs.length >= 2 ? [pairs] : [];
+      })
+      : [];
+  }
+  return [];
+}
+
+function trajectorySegmentsFrom(value: unknown): OperationSpatialTrajectorySegment[] {
+  if (!value) return [];
+  if (isGeoJsonLike(value)) {
+    return lineStringsFromGeoJson(value).map((coordinates, index) => ({
+      id: `trajectory_${index + 1}`,
+      status: "SUCCEEDED" as const,
+      color: "#2563eb",
+      coordinates,
+      label: `实际轨迹 ${index + 1}`,
+    }));
+  }
+  if (Array.isArray(value)) {
+    const segments: OperationSpatialTrajectorySegment[] = [];
+    value.forEach((item, index) => {
+      if (isGeoJsonLike(item)) {
+        segments.push(...trajectorySegmentsFrom(item).map((segment, inner) => ({ ...segment, id: `trajectory_${index + 1}_${inner + 1}` })));
+        return;
+      }
+      if (item && typeof item === "object") {
+        const obj = item as Record<string, any>;
+        const coordinates: Array<[number, number]> = [];
+        collectCoordinatePairs(obj.coordinates ?? obj.points ?? obj.path, coordinates);
+        if (coordinates.length >= 2) {
+          segments.push({
+            id: String(obj.id ?? obj.segment_id ?? `trajectory_${index + 1}`),
+            status: String(obj.status ?? "SUCCEEDED").toUpperCase().includes("FAIL") ? "FAILED" : "SUCCEEDED",
+            color: "#2563eb",
+            coordinates,
+            label: customerText(obj.label ?? obj.name, `实际轨迹 ${index + 1}`),
+          });
+        }
+        return;
+      }
+      const coordinates: Array<[number, number]> = [];
+      collectCoordinatePairs(item, coordinates);
+      if (coordinates.length >= 2) {
+        segments.push({ id: `trajectory_${index + 1}`, status: "SUCCEEDED", color: "#2563eb", coordinates, label: `实际轨迹 ${index + 1}` });
+      }
+    });
+    return segments;
+  }
+  return [];
+}
+
+function buildOperationSpatialExecutionVm(report: OperationReportV1): OperationSpatialExecutionVm {
+  const reportAny = report as any;
+  const asExecuted = reportAny.as_executed ?? {};
+  const asApplied = reportAny.as_applied ?? {};
+  const prescription = reportAny.prescription ?? {};
+  const plannedGeoJson = firstGeoJson(
+    asApplied.planned_geojson,
+    asApplied.plan_geojson,
+    asApplied.planned_area_geojson,
+    prescription.planned_geojson,
+    prescription.plan_geojson,
+    prescription.spatial_geojson,
+    reportAny.planned_geojson,
+  );
+  const coverageGeoJson = firstGeoJson(
+    asApplied.coverage_geojson,
+    asApplied.actual_coverage_geojson,
+    asApplied.as_applied_geojson,
+    asApplied.applied_geojson,
+    reportAny.coverage_geojson,
+  );
+  const trajectorySegments = [
+    ...trajectorySegmentsFrom(asExecuted.trajectory_segments),
+    ...trajectorySegmentsFrom(asExecuted.trajectory_geojson),
+    ...trajectorySegmentsFrom(asExecuted.actual_trajectory_geojson),
+    ...trajectorySegmentsFrom(asExecuted.execution_trace_geojson),
+    ...trajectorySegmentsFrom(asExecuted.path_geojson),
+    ...trajectorySegmentsFrom(asApplied.trajectory_geojson),
+  ].filter((segment, index, all) => all.findIndex((candidate) => candidate.id === segment.id) === index);
+  const evidenceRef = customerText(asApplied.evidence_ref, "");
+  const deviationRaw = customerText(asApplied.planned_vs_actual_deviation, "");
+  const hasDeviationEvidence = Boolean(deviationRaw && evidenceRef);
+  return {
+    plannedGeoJson,
+    coverageGeoJson,
+    trajectorySegments,
+    planStatusText: plannedGeoJson ? "计划区域图层已接入。" : "暂无计划区域图层。",
+    coverageStatusText: coverageGeoJson ? customerText(asApplied.coverage_status, "实际覆盖图层已接入。") : "暂无实际覆盖图层。",
+    trajectoryStatusText: trajectorySegments.length ? `已接入 ${trajectorySegments.length} 条实际执行轨迹。` : "暂无执行轨迹图层。",
+    deviationText: hasDeviationEvidence ? deviationRaw : "计划-实际偏差待补充证据来源。",
+    deviationEvidenceText: evidenceRef || "暂无偏差证据来源。",
+    hasDeviationEvidence,
+    hasAnySpatialLayer: Boolean(plannedGeoJson || coverageGeoJson || trajectorySegments.length),
+  };
+}
+
+function OperationSpatialExecutionPanel({ spatial }: { spatial: OperationSpatialExecutionVm }): React.ReactElement {
+  return (
+    <section className="operationSpatialPanel" aria-label="空间执行记录">
+      <div className="operationSpatialPanelHead">
+        <h4>空间执行记录</h4>
+        <span>{spatial.hasAnySpatialLayer ? "空间图层已接入" : "空间图层待补充"}</span>
+      </div>
+      <div className="operationSpatialGrid">
+        <div><strong>计划区域状态</strong><span>{spatial.planStatusText}</span></div>
+        <div><strong>实际覆盖状态</strong><span>{spatial.coverageStatusText}</span></div>
+        <div><strong>执行轨迹状态</strong><span>{spatial.trajectoryStatusText}</span></div>
+        <div><strong>计划-实际偏差</strong><span>{spatial.deviationText}</span></div>
+        <div><strong>偏差证据来源</strong><span>{spatial.deviationEvidenceText}</span></div>
+      </div>
+      {spatial.hasAnySpatialLayer ? (
+        <div className="operationSpatialMap">
+          <FieldGisMap
+            polygonGeoJson={spatial.plannedGeoJson}
+            coverageGeoJson={spatial.coverageGeoJson}
+            heatGeoJson={null}
+            markers={[]}
+            trajectorySegments={spatial.trajectorySegments}
+            acceptancePoints={[]}
+            labels={{ fieldBoundary: "计划区域", coverageLayer: "实际覆盖", operationTrack: "实际执行轨迹" }}
+          />
+        </div>
+      ) : (
+        <div className="operationSpatialEmpty">暂无可渲染空间图层。</div>
+      )}
+    </section>
+  );
+}
+
 export default function OperationReportPage(): React.ReactElement {
   const { operationId = "" } = useParams();
   const [loading, setLoading] = React.useState(true);
@@ -142,6 +336,7 @@ export default function OperationReportPage(): React.ReactElement {
   if (error || !report) return <ErrorState title="作业报告加载失败" message={error || "暂无报告"} onRetry={() => window.location.reload()} />;
 
   const vm = buildOperationReportVm(report);
+  const spatialExecution = buildOperationSpatialExecutionVm(report);
   const canExport = Boolean(operationId.trim());
   const canBackToField = Boolean(vm.operation.fieldId && vm.operation.fieldId !== "--");
   const reportAny = report as any;
@@ -185,6 +380,7 @@ export default function OperationReportPage(): React.ReactElement {
             const isExpanded = expandedKey === section.key;
             const isEvidenceSection = section.key === "EVIDENCE";
             const isPrescriptionSection = section.key === "PRESCRIPTION";
+            const isExecutionSection = section.key === "EXECUTION";
             const isRoiSection = section.key === "ROI";
             const isMemorySection = section.key === "MEMORY";
             const displayItems = section.items.filter((item) => !shouldHideMainViewText(`${item.label} ${item.value}`));
@@ -222,10 +418,13 @@ export default function OperationReportPage(): React.ReactElement {
                     <div className="operationOneLiner">{safeMainViewText(section.summary)}</div>
                     <div className="operationOneLiner muted">{safeMainViewText(detailText)}</div>
                     {isExpanded ? (
-                      <div className="customerGrid2 customerSpacingTopXs">
-                        {displayItems.map((item) => <div key={`${section.key}-${item.label}`}><strong>{item.label}：</strong>{safeMainViewText(item.value, "--")}</div>)}
-                        {!displayItems.length && section.emptyState ? <div className="muted">{section.emptyState.title}：{section.emptyState.description}</div> : null}
-                      </div>
+                      <>
+                        <div className="customerGrid2 customerSpacingTopXs">
+                          {displayItems.map((item) => <div key={`${section.key}-${item.label}`}><strong>{item.label}：</strong>{safeMainViewText(item.value, "--")}</div>)}
+                          {!displayItems.length && section.emptyState ? <div className="muted">{section.emptyState.title}：{section.emptyState.description}</div> : null}
+                        </div>
+                        {isExecutionSection ? <OperationSpatialExecutionPanel spatial={spatialExecution} /> : null}
+                      </>
                     ) : null}
                   </>
                 )}

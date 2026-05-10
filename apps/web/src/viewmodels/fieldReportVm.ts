@@ -2,6 +2,25 @@ import type { FieldReportDetailV1 } from "../api/customerReports";
 import { customerFieldMemoryLabel, customerRoiLabel, labelAcceptanceStatus, labelFinalStatus, labelOperationType, labelRiskLevel, sanitizeCustomerText } from "../lib/customerLabels";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 
+export type FieldMapMarkerVm = { device_id: string; lat: number; lon: number; ts_ms?: number | null };
+export type FieldMapTrajectorySegmentVm = {
+  id: string;
+  status: "READY" | "DISPATCHED" | "SUCCEEDED" | "FAILED";
+  color: string;
+  coordinates: Array<[number, number]>;
+  label?: string;
+};
+export type FieldMapAcceptancePointVm = { id: string; status: string; lat: number; lon: number };
+export type FieldMapLayersVm = {
+  plannedGeoJson: unknown | null;
+  coverageGeoJson: unknown | null;
+  trajectorySegments: FieldMapTrajectorySegmentVm[];
+  acceptancePoints: FieldMapAcceptancePointVm[];
+  deviceMarkers: FieldMapMarkerVm[];
+  hasAnyOperationLayer: boolean;
+  summaryText: string;
+};
+
 export type FieldReportPageVm = {
   generatedAtText: string;
   field: { fieldId: string; fieldName: string; cropText: string; stageText: string; updatedAtText: string };
@@ -11,6 +30,7 @@ export type FieldReportPageVm = {
   recentOperations: Array<{ operationId: string; title: string; statusText: string; acceptanceText: string; evidenceText: string; updatedAtText: string; href: string }>;
   roiSummary: ({ title: string; lines: string[] } | { title: string; description: string }) & { displayText: string };
   fieldMemory: ({ title: string; lines: string[] } | { title: string; description: string }) & { displayText: string };
+  mapLayers: FieldMapLayersVm;
   exportHref: string;
   hero: {
     title: string;
@@ -58,10 +78,261 @@ function formatCount(value: number | null | undefined): string {
   return Number.isFinite(num) ? String(num) : "0";
 }
 
+function isObject(value: unknown): value is Record<string, any> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function asArray(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value;
+  if (value == null) return [];
+  return [value];
+}
+
+function isGeoJsonLike(value: unknown): boolean {
+  if (!isObject(value)) return false;
+  const type = String(value.type ?? "");
+  if (type === "FeatureCollection") return Array.isArray(value.features) && value.features.length > 0;
+  if (type === "Feature") return isGeoJsonLike(value.geometry);
+  if (["Polygon", "MultiPolygon", "LineString", "MultiLineString", "Point", "MultiPoint"].includes(type)) return Array.isArray(value.coordinates);
+  return false;
+}
+
+function toFeature(value: unknown): Record<string, any> | null {
+  if (!isGeoJsonLike(value)) return null;
+  const obj = value as Record<string, any>;
+  if (obj.type === "Feature") return obj;
+  return { type: "Feature", properties: {}, geometry: obj };
+}
+
+function collectFeatures(values: unknown[]): Record<string, any>[] {
+  const features: Record<string, any>[] = [];
+  for (const value of values) {
+    for (const item of asArray(value)) {
+      if (!isGeoJsonLike(item)) continue;
+      const obj = item as Record<string, any>;
+      if (obj.type === "FeatureCollection") {
+        for (const feature of asArray(obj.features)) {
+          const normalized = toFeature(feature);
+          if (normalized) features.push(normalized);
+        }
+      } else {
+        const normalized = toFeature(item);
+        if (normalized) features.push(normalized);
+      }
+    }
+  }
+  return features;
+}
+
+function combineGeoJson(values: unknown[]): unknown | null {
+  const features = collectFeatures(values);
+  if (!features.length) return null;
+  if (features.length === 1) return features[0];
+  return { type: "FeatureCollection", features };
+}
+
+function collectCoordinatePairs(raw: unknown, out: Array<[number, number]>): void {
+  if (!Array.isArray(raw)) return;
+  if (raw.length >= 2 && Number.isFinite(Number(raw[0])) && Number.isFinite(Number(raw[1]))) {
+    out.push([Number(raw[0]), Number(raw[1])]);
+    return;
+  }
+  for (const item of raw) collectCoordinatePairs(item, out);
+}
+
+function lineStringsFromGeoJson(value: unknown): Array<Array<[number, number]>> {
+  if (!isObject(value)) return [];
+  const type = String(value.type ?? "");
+  if (type === "Feature") return lineStringsFromGeoJson(value.geometry);
+  if (type === "FeatureCollection") return asArray(value.features).flatMap((feature) => lineStringsFromGeoJson(feature));
+  if (type === "LineString") {
+    const coordinates: Array<[number, number]> = [];
+    collectCoordinatePairs(value.coordinates, coordinates);
+    return coordinates.length >= 2 ? [coordinates] : [];
+  }
+  if (type === "MultiLineString") {
+    return asArray(value.coordinates).flatMap((line) => {
+      const coordinates: Array<[number, number]> = [];
+      collectCoordinatePairs(line, coordinates);
+      return coordinates.length >= 2 ? [coordinates] : [];
+    });
+  }
+  return [];
+}
+
+function trajectorySegmentsFrom(value: unknown, prefix: string): FieldMapTrajectorySegmentVm[] {
+  if (!value) return [];
+  if (isGeoJsonLike(value)) {
+    return lineStringsFromGeoJson(value).map((coordinates, index) => ({
+      id: `${prefix}_${index + 1}`,
+      status: "SUCCEEDED" as const,
+      color: "#2563eb",
+      coordinates,
+      label: `执行轨迹 ${index + 1}`,
+    }));
+  }
+  return asArray(value).flatMap((item, index) => {
+    if (isGeoJsonLike(item)) return trajectorySegmentsFrom(item, `${prefix}_${index + 1}`);
+    if (!isObject(item)) {
+      const coordinates: Array<[number, number]> = [];
+      collectCoordinatePairs(item, coordinates);
+      return coordinates.length >= 2 ? [{ id: `${prefix}_${index + 1}`, status: "SUCCEEDED" as const, color: "#2563eb", coordinates, label: `执行轨迹 ${index + 1}` }] : [];
+    }
+    const coordinates: Array<[number, number]> = [];
+    collectCoordinatePairs(item.coordinates ?? item.points ?? item.path, coordinates);
+    if (coordinates.length < 2) return [];
+    const statusRaw = String(item.status ?? item.final_status ?? "SUCCEEDED").toUpperCase();
+    return [{
+      id: String(item.id ?? item.segment_id ?? `${prefix}_${index + 1}`),
+      status: statusRaw.includes("FAIL") ? "FAILED" as const : "SUCCEEDED" as const,
+      color: "#2563eb",
+      coordinates,
+      label: sanitizeCustomerText(item.label ?? item.name ?? `执行轨迹 ${index + 1}`),
+    }];
+  });
+}
+
+function markerFrom(value: unknown, index: number): FieldMapMarkerVm | null {
+  if (!isObject(value)) return null;
+  const lat = Number(value.lat ?? value.latitude ?? value.position?.lat ?? value.location?.lat);
+  const lon = Number(value.lon ?? value.lng ?? value.longitude ?? value.position?.lon ?? value.position?.lng ?? value.location?.lon ?? value.location?.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  const ts = Number(value.ts_ms ?? value.timestamp_ms ?? value.last_seen_ts_ms ?? value.last_telemetry_ts_ms);
+  return {
+    device_id: sanitizeCustomerText(value.device_id ?? value.deviceId ?? value.id ?? `device_${index + 1}`),
+    lat,
+    lon,
+    ts_ms: Number.isFinite(ts) ? ts : null,
+  };
+}
+
+function acceptancePointFrom(value: unknown, index: number): FieldMapAcceptancePointVm | null {
+  if (!isObject(value)) return null;
+  const lat = Number(value.lat ?? value.latitude ?? value.point?.lat ?? value.location?.lat);
+  const lon = Number(value.lon ?? value.lng ?? value.longitude ?? value.point?.lon ?? value.point?.lng ?? value.location?.lon ?? value.location?.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  return {
+    id: sanitizeCustomerText(value.id ?? value.acceptance_id ?? value.point_id ?? `acceptance_${index + 1}`),
+    status: sanitizeCustomerText(value.status ?? value.verdict ?? value.result ?? "UNKNOWN"),
+    lat,
+    lon,
+  };
+}
+
+function uniqueBy<T>(items: T[], keyFn: (item: T) => string): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const item of items) {
+    const key = keyFn(item);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(item);
+  }
+  return out;
+}
+
+function buildFieldMapLayers(report: FieldReportDetailV1): FieldMapLayersVm {
+  const reportAny = report as any;
+  const mapLayers = reportAny.map_layers ?? reportAny.gis_layers ?? reportAny.spatial_layers ?? {};
+  const operations = [
+    ...asArray(mapLayers.operations),
+    ...asArray(mapLayers.operation_layers),
+    ...asArray(reportAny.operation_reports),
+    ...asArray(reportAny.recent_operation_reports),
+    ...asArray(reportAny.operations),
+    ...asArray(reportAny.recent_operations),
+  ].filter(isObject);
+
+  const plannedSources: unknown[] = [mapLayers.planned_geojson, mapLayers.planned_layer, mapLayers.planned_layers, mapLayers.operation_planned_layer];
+  const coverageSources: unknown[] = [mapLayers.coverage_geojson, mapLayers.coverage_layer, mapLayers.coverage_layers, mapLayers.as_applied_coverage_layer];
+  const trajectorySources: unknown[] = [mapLayers.trajectory_geojson, mapLayers.trajectory_segments, mapLayers.trajectories];
+  const markerSources: unknown[] = [mapLayers.device_markers, mapLayers.markers, reportAny.device_markers, reportAny.devices];
+  const acceptanceSources: unknown[] = [mapLayers.acceptance_points, mapLayers.acceptance_layer, reportAny.acceptance_points];
+
+  operations.forEach((op, index) => {
+    const asApplied = op.as_applied ?? op.asApplied ?? {};
+    const asExecuted = op.as_executed ?? op.asExecuted ?? {};
+    const prescription = op.prescription ?? {};
+    plannedSources.push(
+      op.planned_geojson,
+      op.plan_geojson,
+      op.planned_layer,
+      asApplied.planned_geojson,
+      asApplied.plan_geojson,
+      asApplied.planned_area_geojson,
+      prescription.planned_geojson,
+      prescription.plan_geojson,
+      prescription.spatial_geojson,
+    );
+    coverageSources.push(
+      op.coverage_geojson,
+      op.actual_coverage_geojson,
+      op.coverage_layer,
+      asApplied.coverage_geojson,
+      asApplied.actual_coverage_geojson,
+      asApplied.as_applied_geojson,
+      asApplied.applied_geojson,
+    );
+    trajectorySources.push(
+      op.trajectory_geojson,
+      op.trajectory_segments,
+      asExecuted.trajectory_geojson,
+      asExecuted.actual_trajectory_geojson,
+      asExecuted.execution_trace_geojson,
+      asExecuted.path_geojson,
+      asExecuted.trajectory_segments,
+      asApplied.trajectory_geojson,
+    );
+    markerSources.push(op.device_markers, op.markers, asExecuted.device_markers, asExecuted.markers, asExecuted.device_position);
+    acceptanceSources.push(op.acceptance_points, op.acceptance?.points, op.acceptance?.spatial_points, op.acceptance?.acceptance_points);
+    if (isGeoJsonLike(op.acceptance_geojson ?? op.acceptance?.geojson)) {
+      acceptanceSources.push(asArray(op.acceptance_geojson ?? op.acceptance?.geojson).map((feature: any, featureIndex: number) => ({
+        id: `${op.operation_id ?? op.operation_plan_id ?? index}_${featureIndex + 1}`,
+        status: feature?.properties?.status ?? feature?.properties?.verdict ?? op.acceptance?.status ?? "UNKNOWN",
+        lon: feature?.geometry?.coordinates?.[0],
+        lat: feature?.geometry?.coordinates?.[1],
+      })));
+    }
+  });
+
+  const plannedGeoJson = combineGeoJson(plannedSources);
+  const coverageGeoJson = combineGeoJson(coverageSources);
+  const trajectorySegments = uniqueBy(
+    trajectorySources.flatMap((source, index) => trajectorySegmentsFrom(source, `field_op_track_${index + 1}`)),
+    (item) => `${item.id}:${item.coordinates.length}`,
+  );
+  const deviceMarkers = uniqueBy(
+    markerSources.flatMap((source) => asArray(source)).map(markerFrom).filter((item): item is FieldMapMarkerVm => Boolean(item)),
+    (item) => `${item.device_id}:${item.lat}:${item.lon}`,
+  );
+  const acceptancePoints = uniqueBy(
+    acceptanceSources.flatMap((source) => asArray(source)).map(acceptancePointFrom).filter((item): item is FieldMapAcceptancePointVm => Boolean(item)),
+    (item) => `${item.id}:${item.lat}:${item.lon}`,
+  );
+  const hasAnyOperationLayer = Boolean(plannedGeoJson || coverageGeoJson || trajectorySegments.length || acceptancePoints.length || deviceMarkers.length);
+  const counts = [
+    plannedGeoJson ? "计划区域" : "",
+    coverageGeoJson ? "实际覆盖" : "",
+    trajectorySegments.length ? `${trajectorySegments.length} 条轨迹` : "",
+    acceptancePoints.length ? `${acceptancePoints.length} 个验收点` : "",
+    deviceMarkers.length ? `${deviceMarkers.length} 个设备点` : "",
+  ].filter(Boolean).join("、");
+  return {
+    plannedGeoJson,
+    coverageGeoJson,
+    trajectorySegments,
+    acceptancePoints,
+    deviceMarkers,
+    hasAnyOperationLayer,
+    summaryText: counts ? `已接入：${counts}` : "暂无作业空间图层。",
+  };
+}
+
 export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPageVm {
   const fieldId = report.field.field_id;
   const fieldName = String(report.field.field_name ?? "").trim();
   const title = fieldName || "地块名称待补充";
+  const mapLayers = buildFieldMapLayers(report);
 
 
   const overview = {
@@ -180,6 +451,7 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
         displayText: fieldMemoryLines.join("；"),
       }
       : { title: customerFieldMemoryLabel("FIELD_MEMORY_UNAVAILABLE"), description: fieldMemoryEmptyState.description, displayText: `${customerFieldMemoryLabel("FIELD_MEMORY_UNAVAILABLE")}：${fieldMemoryEmptyState.description}` },
+    mapLayers,
     exportHref: `/customer/fields/${encodeURIComponent(fieldId)}/export`,
     hero: {
       title,
