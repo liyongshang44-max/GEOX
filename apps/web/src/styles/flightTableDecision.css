@@ -6,6 +6,10 @@
   border-color: rgba(5, 150, 105, 0.28);
 }
 
+.flight-step-evidence {
+  border-color: rgba(124, 58, 237, 0.28);
+}
+
 .flight-e-layer-inline {
   display: grid;
   grid-template-columns: minmax(120px, 0.32fr) minmax(0, 0.68fr);
@@ -16,6 +20,10 @@
 
 .flight-f-layer-inline {
   grid-template-columns: minmax(120px, 0.36fr) minmax(0, 0.64fr);
+}
+
+.flight-g-layer-inline {
+  grid-template-columns: minmax(120px, 0.34fr) minmax(0, 0.66fr);
 }
 
 .flight-e-layer-inline dt {
@@ -39,6 +47,10 @@
 
 .flight-operation-drawer {
   border-color: rgba(5, 150, 105, 0.22);
+}
+
+.flight-evidence-drawer {
+  border-color: rgba(124, 58, 237, 0.22);
 }
 
 .flight-decision-drawer h4 {
