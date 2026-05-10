@@ -19,6 +19,7 @@ export type OperatorEvidenceItem = {
   format?: string | null;
   storageMode: OperatorEvidenceStorageMode;
   downloadStatus?: string | null;
+  downloadUrl?: string | null;
   createdAt?: string | null;
   completedAt?: string | null;
   failureReason?: string | null;
@@ -51,6 +52,14 @@ export type OperatorEvidenceExportJobCreateResponse = {
   jobId: string;
   operationId?: string | null;
   jobStatus: OperatorEvidenceJobStatus;
+  item: OperatorEvidenceItem | null;
+  message: string;
+  errorCode?: string | null;
+};
+
+export type OperatorEvidenceJobDetailResponse = {
+  ok: boolean;
+  httpStatus: number;
   item: OperatorEvidenceItem | null;
   message: string;
   errorCode?: string | null;
@@ -96,6 +105,14 @@ function maskObjectKey(value: unknown): string {
   return last.length > 48 ? `${last.slice(0, 24)}...${last.slice(-12)}` : last;
 }
 
+function safeDownloadUrl(value: unknown): string {
+  const raw = text(value, "");
+  if (!raw) return "";
+  if (!/^https?:\/\//i.test(raw)) return "";
+  if (/\s|[\r\n]/.test(raw)) return "";
+  return raw;
+}
+
 function normalizeStatus(value: unknown): OperatorEvidenceJobStatus {
   const raw = text(value, "UNKNOWN").toUpperCase();
   if (raw === "DONE" || raw === "SUCCESS" || raw === "COMPLETED") return "DONE";
@@ -135,7 +152,7 @@ function manifestText(row: AnyRecord): string {
 }
 
 function artifactText(row: AnyRecord): string {
-  const candidates = [row.artifact_id, row.object_key, row.object_id, row.storage_key, row.bundle_key, row.path, row.download_url];
+  const candidates = [row.artifact_id, row.artifact_ref, row.object_key, row.object_id, row.storage_key, row.bundle_key, row.path, row.download_url];
   const hit = candidates.map((item) => maskInternal(item, "")).find(Boolean);
   return hit || "artifact 标识未提供";
 }
@@ -143,7 +160,8 @@ function artifactText(row: AnyRecord): string {
 function normalizeItem(row: AnyRecord, index: number, source: OperatorEvidenceItem["source"]): OperatorEvidenceItem {
   const operationId = text(row.operation_id ?? row.operationId ?? row.scope?.operation_id, "");
   const status = normalizeStatus(row.status ?? row.job_status ?? row.export_status);
-  const failureReason = text(row.failure_reason ?? row.error_message ?? row.error, "");
+  const failureReason = text(row.failed_reason ?? row.failure_reason ?? row.error_message ?? row.error, "");
+  const downloadUrl = safeDownloadUrl(row.download_url ?? row.downloadUrl ?? row.download?.url ?? row.artifact?.download_url);
   return {
     jobId: text(row.job_id ?? row.export_job_id ?? row.evidence_export_job_id ?? row.id, `${source}-${index}`),
     operationId,
@@ -156,7 +174,8 @@ function normalizeItem(row: AnyRecord, index: number, source: OperatorEvidenceIt
     artifactText: artifactText(row),
     format: text(row.format ?? row.export_format ?? row.bundle_format ?? row.content_type, "未提供"),
     storageMode: normalizeStorageMode(row.storage_mode ?? row.storage?.mode ?? row.object_store_mode),
-    downloadStatus: text(row.download_status ?? row.presign_status ?? row.download?.status, status === "DONE" ? "可由后端授权下载" : "不可下载"),
+    downloadStatus: downloadUrl ? "可下载：后端授权链接" : text(row.download_status ?? row.presign_status ?? row.download?.status, status === "DONE" ? "可由后端授权下载" : "不可下载"),
+    downloadUrl,
     createdAt: text(row.created_at ?? row.createdAt ?? row.generated_at, ""),
     completedAt: text(row.completed_at ?? row.completedAt ?? row.finished_at, ""),
     failureReason: status === "FAILED" ? (failureReason || "失败原因待补充") : failureReason,
@@ -170,6 +189,12 @@ function normalizeOperator(payload: unknown): OperatorEvidenceItem[] {
 
 function normalizeExportJobs(payload: unknown): OperatorEvidenceItem[] {
   return arrayFrom(payload, ["items", "jobs", "export_jobs", "data"]).map((row, index) => normalizeItem(row, index, "evidence_export_jobs"));
+}
+
+function normalizeSingleOperatorItem(payload: unknown, fallbackIndex = 0): OperatorEvidenceItem | null {
+  const rows = arrayFrom(payload, ["items", "jobs", "export_jobs", "data", "evidence"]);
+  const row = rows[0] ?? (payload && typeof payload === "object" && !Array.isArray(payload) ? payload as AnyRecord : null);
+  return row ? normalizeItem(row, fallbackIndex, "operator_evidence_api") : null;
 }
 
 function normalizeReportFallback(payload: unknown): OperatorEvidenceItem[] {
@@ -194,12 +219,12 @@ function normalizeReportFallback(payload: unknown): OperatorEvidenceItem[] {
   });
 }
 
-type OptionalApiResult = { ok: boolean; status: number; data: unknown | null };
+type OptionalApiResult = { ok: boolean; status: number; data: unknown | null; bodyText?: string };
 
 async function fetchOptional(path: string): Promise<OptionalApiResult> {
   try {
     const result = await apiRequestWithPolicy<unknown>(path, undefined, { allowedStatuses: [403, 404, 405, 422, 501], silent: true, timeoutMs: 10000 });
-    return { ok: Boolean(result.ok), status: Number(result.status ?? 0), data: result.data ?? null };
+    return { ok: Boolean(result.ok), status: Number(result.status ?? 0), data: result.data ?? null, bodyText: result.ok ? undefined : result.bodyText };
   } catch {
     return { ok: false, status: 0, data: null };
   }
@@ -313,6 +338,44 @@ export async function createOperatorEvidenceExportJob(input: CreateOperatorEvide
     item,
     message: safeApiMessage(responseRecord.message, "证据导出任务已创建。"),
     errorCode: null,
+  };
+}
+
+export async function fetchOperatorEvidenceJobDetail(jobId: string, operationId?: string): Promise<OperatorEvidenceJobDetailResponse> {
+  const id = text(jobId, "");
+  if (!id) {
+    return { ok: false, httpStatus: 0, item: null, message: "job_id 不能为空。", errorCode: "JOB_ID_REQUIRED" };
+  }
+
+  const detail = await fetchOptional(withQuery(`/api/v1/operator/evidence/export-jobs/${encodeURIComponent(id)}`));
+  if (detail.ok) {
+    const item = normalizeSingleOperatorItem(detail.data);
+    return {
+      ok: Boolean(item),
+      httpStatus: detail.status,
+      item,
+      message: item ? "job detail 已刷新。" : "job detail 响应为空。",
+      errorCode: item ? null : "EMPTY_JOB_DETAIL",
+    };
+  }
+
+  const op = text(operationId, "");
+  if (op) {
+    const byOperation = await fetchOptional(withQuery(`/api/v1/operator/evidence/by-operation/${encodeURIComponent(op)}`));
+    const items = normalizeOperator(byOperation.data);
+    const item = items.find((candidate) => candidate.jobId === id) ?? null;
+    if (item) {
+      return { ok: true, httpStatus: byOperation.status, item, message: "已通过 by-operation 刷新 job 状态。", errorCode: null };
+    }
+  }
+
+  const errorRecord = parseErrorRecord(detail.bodyText ?? "");
+  return {
+    ok: false,
+    httpStatus: detail.status,
+    item: null,
+    message: safeApiMessage(errorRecord?.message ?? errorRecord?.error ?? detail.bodyText, "刷新 job 状态失败。"),
+    errorCode: text(errorRecord?.error_code ?? errorRecord?.code, "") || null,
   };
 }
 
