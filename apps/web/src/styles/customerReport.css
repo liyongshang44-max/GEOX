@@ -413,6 +413,79 @@
 .customerLinkButton { border: none; background: transparent; color: #047857; padding: 0; cursor: pointer; font-weight: 800; }
 .operationClosedLoopCard.isExpanded { border-color: var(--customer-border-strong); }
 
+.operationSpatialPanel {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--customer-border);
+  border-radius: 16px;
+  background: #f8fafc;
+  cursor: default;
+}
+.operationSpatialPanelHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.operationSpatialPanelHead h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--customer-title);
+}
+.operationSpatialPanelHead span {
+  border-radius: 999px;
+  border: 1px solid var(--customer-border);
+  background: #ffffff;
+  color: var(--customer-muted);
+  padding: 3px 9px;
+  font-size: 12px;
+  font-weight: 800;
+}
+.operationSpatialGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.operationSpatialGrid > div {
+  display: grid;
+  gap: 4px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--customer-border);
+  background: #ffffff;
+}
+.operationSpatialGrid strong {
+  color: var(--customer-muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+.operationSpatialGrid span {
+  color: var(--customer-text);
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.operationSpatialMap {
+  border-radius: 14px;
+  overflow: hidden;
+}
+.operationSpatialMap svg {
+  height: 260px !important;
+}
+.operationSpatialEmpty {
+  border: 1px dashed var(--customer-border-strong);
+  border-radius: 14px;
+  padding: 14px;
+  background: #ffffff;
+  color: var(--customer-muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .operationTechDetailsMuted { margin-top: 14px; padding: 12px 14px; background: #f3f4f6; border: 1px solid var(--customer-border); border-radius: 14px; font-size: 12px; color: var(--customer-muted); }
 .operationTechDetailsSummary { cursor: pointer; color: #4b5563; font-size: 12px; }
 .operationTechDetailsTitle { margin-top: 8px; font-weight: 700; color: #4b5563; }
@@ -440,7 +513,8 @@
   .customerEvidenceGrid,
   .customerGrid3,
   .customerFlow6,
-  .customerIndexGrid { grid-template-columns: 1fr; }
+  .customerIndexGrid,
+  .operationSpatialGrid { grid-template-columns: 1fr; }
   .customerIndexRow { grid-template-columns: 1fr; }
 }
 
