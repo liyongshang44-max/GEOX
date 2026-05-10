@@ -88,6 +88,14 @@ async function ensureRuntimeTables(pool: Pool | PoolClient): Promise<void> {
     updated_ts_ms BIGINT NOT NULL,
     PRIMARY KEY (tenant_id, device_id)
   )`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS device_binding_index_v1 (
+    tenant_id TEXT NOT NULL,
+    device_id TEXT NOT NULL,
+    field_id TEXT NOT NULL,
+    bound_ts_ms BIGINT NULL,
+    PRIMARY KEY (tenant_id, device_id, field_id)
+  )`);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_device_binding_index_v1_tenant_device ON device_binding_index_v1 (tenant_id, device_id)`);
   await pool.query(`CREATE TABLE IF NOT EXISTS device_credential_index_v1 (
     tenant_id TEXT NOT NULL,
     device_id TEXT NOT NULL,
