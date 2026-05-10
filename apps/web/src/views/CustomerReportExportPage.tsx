@@ -50,7 +50,7 @@ export default function CustomerReportExportPage(): React.ReactElement {
         setGeneratedAtText(vm.generatedAtText);
         setBackTo(`/customer/operations/${encodeURIComponent(operationId)}`);
         setSubtitle("作业闭环打印版");
-        setContent(<OperationExportBlocks vm={vm} />);
+        setContent(<OperationExportBlocks vm={vm} report={report} />);
         return;
       }
       const aggregate = await fetchCustomerDashboardAggregate();
