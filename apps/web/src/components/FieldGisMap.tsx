@@ -208,7 +208,7 @@ export default function FieldGisMap({
   });
   const isLayerVisible = (key: LayerKey) => visibleLayers[key] !== false;
 
-  const layerOptions: LayerOption[] = [
+  const allLayerOptions: LayerOption[] = [
     { key: "boundary", label: labels?.fieldBoundary || "地块边界", swatch: "#0284c7", hasData: polygonPaths.length > 0 },
     { key: "planned", label: labels?.plannedLayer || "计划区域", swatch: "#d97706", hasData: plannedPaths.length > 0 },
     { key: "coverage", label: labels?.coverageLayer || "实际覆盖", swatch: "#16a34a", hasData: coveragePaths.length > 0 },
@@ -216,7 +216,8 @@ export default function FieldGisMap({
     { key: "device", label: labels?.devicePosition || "设备位置", swatch: "#16a34a", hasData: validMarkers.length > 0 && markerPoints.length > 0 },
     { key: "acceptance", label: labels?.layerAcceptance || "验收点", swatch: "#7c3aed", hasData: validAcceptancePoints.length > 0 && acceptanceGeoPoints.length > 0 },
     { key: "heat", label: labels?.alertLocation || "告警/热区", swatch: "#dc2626", hasData: validHeatFeatures.length > 0 && heatPoints.length > 0 },
-  ].filter((item) => item.hasData);
+  ];
+  const layerOptions = allLayerOptions.filter((item) => item.hasData);
 
   const primarySegment = useMemo(() => {
     if (!validTrajectorySegments.length) return null;
