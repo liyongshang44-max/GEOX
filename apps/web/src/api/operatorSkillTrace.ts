@@ -6,13 +6,17 @@ export type OperatorSkillClassification = "AGRONOMY" | "SENSING" | "DEVICE" | "A
 
 export type OperatorSkillTraceRun = {
   skillId: string;
+  skillName: string;
   skillVersion: string;
   classification: OperatorSkillClassification;
   bindingScope: string;
+  runStage: string;
   lastRunStatus: OperatorSkillTraceStatus;
   failureReason: string | null;
   inputSummary: string | null;
   outputSummary: string | null;
+  evidenceRef: string | null;
+  enteredLearning: boolean | null;
   traceRef: string | null;
   operationId: string | null;
   fieldId: string | null;
@@ -123,6 +127,22 @@ function safeSummary(value: unknown): string | null {
   return null;
 }
 
+function safeRef(value: unknown): string | null {
+  const raw = text(value, "");
+  if (!raw) return null;
+  if (/secret|token|credential|password|access[_-]?key|private\s*key/i.test(raw)) return "引用已隐藏";
+  return raw.length > 120 ? `${raw.slice(0, 96)}...` : raw;
+}
+
+function normalizeLearningFlag(value: unknown): boolean | null {
+  if (typeof value === "boolean") return value;
+  const raw = text(value, "").toUpperCase();
+  if (!raw) return null;
+  if (["TRUE", "YES", "Y", "1", "ENTERED", "INCLUDED", "USED_FOR_LEARNING"].includes(raw)) return true;
+  if (["FALSE", "NO", "N", "0", "EXCLUDED", "NOT_INCLUDED", "SKIPPED"].includes(raw)) return false;
+  return null;
+}
+
 function bindingScope(row: AnyRecord): string {
   const scope = row.binding_scope ?? row.scope ?? row.binding?.scope;
   if (typeof scope === "string") return text(scope, "绑定范围待确认");
@@ -142,17 +162,32 @@ function bindingScope(row: AnyRecord): string {
   return parts.length ? parts.join(" · ") : "绑定范围待确认";
 }
 
+function normalizeRunStage(row: AnyRecord): string {
+  const raw = text(row.run_stage ?? row.stage ?? row.phase ?? row.lifecycle_stage ?? row.step, "");
+  if (raw) return raw;
+  const classification = normalizeClassification(row.classification ?? row.skill_classification ?? row.type);
+  if (classification === "AGRONOMY") return "农艺诊断 / 推荐";
+  if (classification === "DEVICE") return "执行 / 设备动作";
+  if (classification === "SENSING") return "感知 / 数据读取";
+  if (classification === "ACCEPTANCE") return "验收 / 结果判断";
+  return "运行阶段待确认";
+}
+
 function normalizeTraceRun(row: AnyRecord, index: number): OperatorSkillTraceRun {
   const skillId = text(row.skill_id ?? row.skillId ?? row.id, `skill-${index + 1}`);
   return {
     skillId,
+    skillName: text(row.skill_name ?? row.skillName ?? row.display_name ?? row.name, skillId),
     skillVersion: text(row.skill_version ?? row.version ?? row.skillVersion, "版本待确认"),
     classification: normalizeClassification(row.classification ?? row.skill_classification ?? row.type),
     bindingScope: bindingScope(row),
+    runStage: normalizeRunStage(row),
     lastRunStatus: normalizeStatus(row.last_run_status ?? row.status ?? row.run_status),
     failureReason: safeReason(row.failure_reason ?? row.error_reason ?? row.error_message ?? row.last_error ?? row.reason),
     inputSummary: safeSummary(row.input_summary ?? row.input ?? row.request_input),
     outputSummary: safeSummary(row.output_summary ?? row.output ?? row.response_output),
+    evidenceRef: safeRef(row.evidence_ref ?? row.evidenceRef ?? row.evidence_id ?? row.evidence_bundle_ref ?? row.evidenceBundleRef),
+    enteredLearning: normalizeLearningFlag(row.entered_learning ?? row.in_learning ?? row.learning_included ?? row.used_for_learning ?? row.learning_status),
     traceRef: text(row.trace_ref ?? row.skill_trace_ref ?? row.trace_id ?? row.run_id, "") || null,
     operationId: text(row.operation_id ?? row.operationId, "") || null,
     fieldId: text(row.field_id ?? row.fieldId, "") || null,
