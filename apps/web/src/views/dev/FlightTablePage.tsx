@@ -30,6 +30,7 @@ import type { FieldSpatialDraftV1 } from "../../components/dev/flight-table/Fiel
 import type { DeviceOnboardingDraftV1 } from "../../components/dev/flight-table/DeviceOnboardingWizard";
 import { defaultFlightTableRunId, flightTablePermissionLabel } from "../../viewmodels/flightTableVm";
 import "../../styles/flightTable.css";
+import "../../styles/flightTableSkills.css";
 
 function errorToText(error: unknown): string {
   if (error instanceof ApiError) {
