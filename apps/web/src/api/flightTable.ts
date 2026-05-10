@@ -249,6 +249,15 @@ export type CreateFlightTableDevicesRequestV1 = {
   telemetry_mode?: "fast" | "realistic";
 };
 
+export type StartFlightTableRunRequestV1 = {
+  lane: FlightTableLaneV1;
+  field_id?: string;
+  device_set?: string;
+  skill_policy?: string;
+  weather_policy?: string;
+  evidence_policy?: "complete" | "insufficient" | string;
+};
+
 export async function createFlightTableRun(body: CreateFlightTableRunRequestV1): Promise<FlightTableRunV1> {
   const res = await apiRequest<{ ok: boolean; run: FlightTableRunV1 }>("/api/v1/dev/flight-table/runs", {
     method: "POST",
@@ -302,6 +311,14 @@ export async function restoreFlightTableSkills(runId: string): Promise<FlightTab
     method: "POST",
     body: JSON.stringify({}),
   });
+}
+
+export async function startFlightTableRun(runId: string, body: StartFlightTableRunRequestV1): Promise<FlightTableRunV1> {
+  const res = await apiRequest<{ ok: boolean; run: FlightTableRunV1 }>(`/api/v1/dev/flight-table/runs/${encodeURIComponent(runId)}/start`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+  return res.run;
 }
 
 export async function fetchFlightTableRuns(): Promise<FlightTableRunV1[]> {

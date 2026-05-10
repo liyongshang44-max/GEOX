@@ -9,9 +9,12 @@ import {
   failOneFlightTableSkill,
   fetchFlightTableApiSnapshots,
   fetchFlightTableDeviceTemplates,
+  fetchFlightTableRun,
   fetchFlightTableRuns,
+  fetchFlightTableVerifyReport,
   restoreFlightTableSkills,
   retryFlightTableStep,
+  startFlightTableRun,
   verifyFlightTableRun,
   type CreateFlightTableGeometryResponseV1,
   type FlightTableApiSnapshotV1,
@@ -79,6 +82,32 @@ function defaultDeviceDraft(): DeviceOnboardingDraftV1 {
     mode: "simulator",
     telemetry_mode: "fast",
   };
+}
+
+function optimisticRunningRun(run: FlightTableRunV1, lane: FlightTableLaneV1): FlightTableRunV1 {
+  const now = new Date().toISOString();
+  return {
+    ...run,
+    lane,
+    status: "RUNNING",
+    started_at: run.started_at ?? now,
+    finished_at: undefined,
+    updated_at: now,
+    current_step: run.current_step ?? "A",
+    steps: run.steps.map((step, index) => index === 0
+      ? { ...step, status: "RUNNING", verify_result: "PENDING", started_at: step.started_at ?? now, updated_at: now }
+      : step.status === "FAIL" ? step : { ...step, status: step.status === "PASS" ? "PASS" : "PENDING", verify_result: step.verify_result === "PASS" ? "PASS" : "PENDING", updated_at: now }),
+  };
+}
+
+function downloadJson(filename: string, payload: unknown): void {
+  const blob = new Blob([`${JSON.stringify(payload, null, 2)}\n`], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export default function FlightTablePage(): React.ReactElement {
@@ -181,6 +210,18 @@ export default function FlightTablePage(): React.ReactElement {
     void refreshSnapshots(next);
   }, [refreshSnapshots]);
 
+  React.useEffect(() => {
+    if (!run || run.status !== "RUNNING") return undefined;
+    const timer = window.setInterval(() => {
+      void fetchFlightTableRun(run.run_id)
+        .then((next) => {
+          if (next.updated_at !== run.updated_at || next.status !== run.status) applyRun(next);
+        })
+        .catch(() => undefined);
+    }, 1500);
+    return () => window.clearInterval(timer);
+  }, [applyRun, run]);
+
   const handleCreateRun = React.useCallback(async () => {
     setLoading(true);
     try {
@@ -200,6 +241,29 @@ export default function FlightTablePage(): React.ReactElement {
       setLoading(false);
     }
   }, [applyRun, laneDraft, runIdDraft]);
+
+  const handleStartRun = React.useCallback(async () => {
+    if (!run) return;
+    setLoading(true);
+    setError(null);
+    setRun(optimisticRunningRun(run, laneDraft));
+    try {
+      const next = await startFlightTableRun(run.run_id, {
+        lane: laneDraft,
+        field_id: run.manifest.field_id ?? fieldDraft.field_id,
+        device_set: run.manifest.device_ids.length ? run.manifest.device_ids.join(",") : undefined,
+        skill_policy: laneDraft === "skill_failure" || laneDraft === "all" ? `failure:${skillFailureType}` : "require_all_bound",
+        weather_policy: laneDraft === "weather_interference" || laneDraft === "all" ? "simulate_weather_interference" : "observe_only",
+        evidence_policy: laneDraft === "evidence_insufficient" || laneDraft === "all" ? "insufficient" : "complete",
+      });
+      applyRun(next);
+    } catch (err) {
+      setError(errorToText(err));
+      setRun(run);
+    } finally {
+      setLoading(false);
+    }
+  }, [applyRun, fieldDraft.field_id, laneDraft, run, skillFailureType]);
 
   const handleCreateField = React.useCallback(async () => {
     if (!run) {
@@ -361,6 +425,44 @@ export default function FlightTablePage(): React.ReactElement {
     }
   }, [applyRun, run]);
 
+  const handleRetryStep = React.useCallback(async (stepKey: string) => {
+    if (!run) return;
+    setLoading(true);
+    try {
+      applyRun(await retryFlightTableStep(run.run_id, stepKey));
+    } catch (err) {
+      setError(errorToText(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [applyRun, run]);
+
+  const handleRetryFailedStep = React.useCallback(async () => {
+    if (!run) return;
+    const failedStep = run.steps.find((step) => step.status === "FAIL");
+    if (!failedStep) return;
+    await handleRetryStep(failedStep.step_key);
+  }, [handleRetryStep, run]);
+
+  const handleExportAcceptancePackage = React.useCallback(async () => {
+    if (!run) return;
+    setLoading(true);
+    try {
+      const verifyReport = await fetchFlightTableVerifyReport(run.run_id).catch(() => null);
+      const latestSnapshots = await fetchFlightTableApiSnapshots(run.run_id).catch(() => snapshots);
+      downloadJson(`${run.run_id}_acceptance_package.json`, {
+        exported_at: new Date().toISOString(),
+        run,
+        verify_report: verifyReport,
+        api_snapshots: latestSnapshots,
+      });
+    } catch (err) {
+      setError(errorToText(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [run, snapshots]);
+
   const handleClean = React.useCallback(async () => {
     if (!run) return;
     setLoading(true);
@@ -373,18 +475,6 @@ export default function FlightTablePage(): React.ReactElement {
       setSkillResult(null);
       setSpatialDraft(defaultSpatialDraft());
       applyRun(next);
-    } catch (err) {
-      setError(errorToText(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [applyRun, run]);
-
-  const handleRetryStep = React.useCallback(async (stepKey: string) => {
-    if (!run) return;
-    setLoading(true);
-    try {
-      applyRun(await retryFlightTableStep(run.run_id, stepKey));
     } catch (err) {
       setError(errorToText(err));
     } finally {
@@ -423,6 +513,7 @@ export default function FlightTablePage(): React.ReactElement {
       onSpatialDraftChange={(patch) => setSpatialDraft((draft) => ({ ...draft, ...patch }))}
       onDeviceDraftChange={(patch) => setDeviceDraft((draft) => ({ ...draft, ...patch }))}
       onCreateRun={handleCreateRun}
+      onStartRun={handleStartRun}
       onCreateField={handleCreateField}
       onVerifyField={handleVerifyField}
       onSubmitGeometry={handleSubmitGeometry}
@@ -432,7 +523,9 @@ export default function FlightTablePage(): React.ReactElement {
       onFailOneSkill={handleFailOneSkill}
       onRestoreSkills={handleRestoreSkills}
       onVerify={handleVerify}
+      onRetryFailedStep={handleRetryFailedStep}
       onClean={handleClean}
+      onExportAcceptancePackage={handleExportAcceptancePackage}
       onRetryStep={handleRetryStep}
       loading={loading}
       error={error}

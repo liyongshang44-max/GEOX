@@ -52,6 +52,7 @@ type Props = {
   onSpatialDraftChange: (patch: Partial<FieldSpatialDraftV1>) => void;
   onDeviceDraftChange: (patch: Partial<DeviceOnboardingDraftV1>) => void;
   onCreateRun: () => void;
+  onStartRun: () => void;
   onCreateField: () => void;
   onVerifyField: () => void;
   onSubmitGeometry: () => void;
@@ -61,7 +62,9 @@ type Props = {
   onFailOneSkill: () => void;
   onRestoreSkills: () => void;
   onVerify: () => void;
+  onRetryFailedStep: () => void;
   onClean: () => void;
+  onExportAcceptancePackage: () => void;
   onRetryStep: (stepKey: string) => void;
   loading: boolean;
   error: string | null;
@@ -103,8 +106,11 @@ export default function FlightTableShell(props: Props): React.ReactElement {
           onRunIdDraftChange={props.onRunIdDraftChange}
           onLaneDraftChange={(next) => props.onLaneDraftChange(next as FlightTableLaneV1)}
           onCreateRun={props.onCreateRun}
+          onStartRun={props.onStartRun}
           onVerify={props.onVerify}
+          onRetryFailedStep={props.onRetryFailedStep}
           onClean={props.onClean}
+          onExportAcceptancePackage={props.onExportAcceptancePackage}
           loading={props.loading}
         />
         {props.error ? <div className="flight-alert">{props.error}</div> : null}
