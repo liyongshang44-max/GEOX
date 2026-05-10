@@ -45,7 +45,7 @@ export function flightTablePermissionLabel(error?: string | null): string {
   if (!error) return "需要 security.admin 权限";
   if (error.includes("FLIGHT_TABLE_DISABLED")) return "飞行台 API 未启用";
   if (error.includes("AUTH_SCOPE_DENIED") || error.includes("AUTH_ROLE_SCOPE_DENIED")) return "当前会话缺少 security.admin 权限";
-  if (error.includes("AUTH_MISSING") || error.includes("AUTH_INVALID")) return "登录状态无效或缺少 Bearer token";
+  if (error.includes("AUTH_MISSING") || error.includes("AUTH_INVALID")) return "登录状态无效或缺少会话凭证";
   return "飞行台权限或服务状态异常";
 }
 
