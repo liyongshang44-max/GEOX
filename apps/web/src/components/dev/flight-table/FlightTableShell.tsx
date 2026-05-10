@@ -6,6 +6,8 @@ import type {
   FlightTableDeviceTemplateV1,
   FlightTableLaneV1,
   FlightTableRunV1,
+  FlightTableSkillAssemblyResponseV1,
+  FlightTableSkillFailureTypeV1,
 } from "../../../api/flightTable";
 import { summarizeFlightTableManifest } from "../../../viewmodels/flightTableVm";
 import FlightRunHeader from "./FlightRunHeader";
@@ -25,6 +27,7 @@ type Props = {
   snapshots: FlightTableApiSnapshotV1[];
   runIdDraft: string;
   laneDraft: FlightTableLaneV1;
+  skillFailureType: FlightTableSkillFailureTypeV1;
   fieldDraft: FieldAssemblyDraftV1;
   fieldLoading: boolean;
   fieldError: string | null;
@@ -39,8 +42,12 @@ type Props = {
   deviceError: string | null;
   deviceTemplates: FlightTableDeviceTemplateV1[];
   onboardedDevices: FlightTableDeviceSummaryV1[];
+  skillResult: FlightTableSkillAssemblyResponseV1 | null;
+  skillLoading: boolean;
+  skillError: string | null;
   onRunIdDraftChange: (next: string) => void;
   onLaneDraftChange: (next: FlightTableLaneV1) => void;
+  onSkillFailureTypeChange: (next: FlightTableSkillFailureTypeV1) => void;
   onFieldDraftChange: (patch: Partial<FieldAssemblyDraftV1>) => void;
   onSpatialDraftChange: (patch: Partial<FieldSpatialDraftV1>) => void;
   onDeviceDraftChange: (patch: Partial<DeviceOnboardingDraftV1>) => void;
@@ -50,6 +57,9 @@ type Props = {
   onSubmitGeometry: () => void;
   onOnboardDevice: () => void;
   onRetryDevice: () => void;
+  onBindSkills: () => void;
+  onFailOneSkill: () => void;
+  onRestoreSkills: () => void;
   onVerify: () => void;
   onClean: () => void;
   onRetryStep: (stepKey: string) => void;
@@ -128,6 +138,10 @@ export default function FlightTableShell(props: Props): React.ReactElement {
             deviceError={props.deviceError}
             deviceTemplates={props.deviceTemplates}
             onboardedDevices={props.onboardedDevices}
+            skillResult={props.skillResult}
+            skillFailureType={props.skillFailureType}
+            skillLoading={props.skillLoading}
+            skillError={props.skillError}
             onFieldDraftChange={props.onFieldDraftChange}
             onCreateField={props.onCreateField}
             onVerifyField={props.onVerifyField}
@@ -136,9 +150,13 @@ export default function FlightTableShell(props: Props): React.ReactElement {
             onDeviceDraftChange={props.onDeviceDraftChange}
             onOnboardDevice={props.onOnboardDevice}
             onRetryDevice={props.onRetryDevice}
+            onSkillFailureTypeChange={props.onSkillFailureTypeChange}
+            onBindSkills={props.onBindSkills}
+            onFailOneSkill={props.onFailOneSkill}
+            onRestoreSkills={props.onRestoreSkills}
           />
         ) : null}
-        {activeTab === "lane" ? <LaneComposer selectedLane={props.laneDraft} onLaneChange={props.onLaneDraftChange} /> : null}
+        {activeTab === "lane" ? <LaneComposer selectedLane={props.laneDraft} selectedSkillFailureType={props.skillFailureType} onLaneChange={props.onLaneDraftChange} onSkillFailureTypeChange={props.onSkillFailureTypeChange} /> : null}
         {activeTab === "monitor" ? <FlightMatrix run={props.run} onRetryStep={props.onRetryStep} loading={props.loading} /> : null}
         {activeTab === "replay" ? <><UiReplayLinks run={props.run} /><ManifestPanel manifest={props.run?.manifest ?? null} /><ApiSnapshotPanel snapshots={props.snapshots} /></> : null}
         {activeTab === "diagnostics" ? <DiagnosticsPanel run={props.run} error={props.error} /> : null}
