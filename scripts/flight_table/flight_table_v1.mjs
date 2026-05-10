@@ -1,5 +1,10 @@
 #!/usr/bin/env node
 
+import fs from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const baseUrl = String(process.env.FLIGHT_TABLE_API_BASE || process.env.GEOX_API_BASE || "http://127.0.0.1:3001").replace(/\/+$/, "");
 const sessionCredential = String(process.env.GEOX_AO_ACT_TOKEN || process.env.GEOX_TOKEN || "").trim();
 const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
@@ -11,15 +16,20 @@ const groupId = String(process.env.GEOX_GROUP_ID || "groupA");
 const fieldId = String(process.env.FLIGHT_TABLE_FIELD_ID || `ft_field_${stamp}`);
 const seasonId = String(process.env.FLIGHT_TABLE_SEASON_ID || `ft_season_${stamp}`);
 
-async function request(path, init = {}) {
+async function request(pathname, init = {}) {
   const headers = new Headers(init.headers || {});
   headers.set("Content-Type", "application/json");
   if (sessionCredential) headers.set("Authorization", `Bearer ${sessionCredential}`);
-  const res = await fetch(`${baseUrl}${path}`, { ...init, headers });
+  const res = await fetch(`${baseUrl}${pathname}`, { ...init, headers });
   const text = await res.text();
   let body = null;
   try { body = text ? JSON.parse(text) : {}; } catch { body = { raw: text }; }
   return { status: res.status, ok: res.ok, body };
+}
+
+async function readFixture(name) {
+  const raw = await fs.readFile(path.join(__dirname, "fixtures", name), "utf8");
+  return JSON.parse(raw);
 }
 
 const created = await request("/api/v1/dev/flight-table/runs", {
@@ -43,6 +53,20 @@ const fieldCreated = await request(`/api/v1/dev/flight-table/runs/${encodeURICom
 console.log(JSON.stringify({ step: "field", run_id: runId, field_id: fieldId, result: fieldCreated }, null, 2));
 
 if (!fieldCreated.ok) process.exit(1);
+
+const geometry = await readFixture("field_polygon.geojson");
+const geometryCreated = await request(`/api/v1/dev/flight-table/runs/${encodeURIComponent(runId)}/field-geometry`, {
+  method: "POST",
+  body: JSON.stringify({
+    field_id: fieldId,
+    geometry_format: "GEOJSON",
+    geometry,
+    weather_location: { lat: 31.234567, lng: 121.567890 },
+  }),
+});
+console.log(JSON.stringify({ step: "field-geometry", run_id: runId, field_id: fieldId, result: geometryCreated }, null, 2));
+
+if (!geometryCreated.ok) process.exit(1);
 
 const verified = await request(`/api/v1/dev/flight-table/runs/${encodeURIComponent(runId)}/verify`, {
   method: "POST",
