@@ -1,9 +1,10 @@
 import React from "react";
-import type { FlightTableApiSnapshotV1, FlightTableLaneV1, FlightTableRunV1 } from "../../../api/flightTable";
+import type { CreateFlightTableGeometryResponseV1, FlightTableApiSnapshotV1, FlightTableLaneV1, FlightTableRunV1 } from "../../../api/flightTable";
 import { summarizeFlightTableManifest } from "../../../viewmodels/flightTableVm";
 import FlightRunHeader from "./FlightRunHeader";
 import FlightAssemblyPanel from "./FlightAssemblyPanel";
 import type { FieldAssemblyDraftV1 } from "./FieldAssemblyCard";
+import type { FieldSpatialDraftV1 } from "./FieldSpatialCard";
 import LaneComposer from "./LaneComposer";
 import FlightMatrix from "./FlightMatrix";
 import ManifestPanel from "./ManifestPanel";
@@ -21,12 +22,18 @@ type Props = {
   fieldError: string | null;
   customerVisible: boolean;
   reportVisible: boolean;
+  spatialDraft: FieldSpatialDraftV1;
+  spatialLoading: boolean;
+  spatialError: string | null;
+  geometryResult: CreateFlightTableGeometryResponseV1 | null;
   onRunIdDraftChange: (next: string) => void;
   onLaneDraftChange: (next: FlightTableLaneV1) => void;
   onFieldDraftChange: (patch: Partial<FieldAssemblyDraftV1>) => void;
+  onSpatialDraftChange: (patch: Partial<FieldSpatialDraftV1>) => void;
   onCreateRun: () => void;
   onCreateField: () => void;
   onVerifyField: () => void;
+  onSubmitGeometry: () => void;
   onVerify: () => void;
   onClean: () => void;
   onRetryStep: (stepKey: string) => void;
@@ -96,9 +103,15 @@ export default function FlightTableShell(props: Props): React.ReactElement {
             fieldError={props.fieldError}
             customerVisible={props.customerVisible}
             reportVisible={props.reportVisible}
+            spatialDraft={props.spatialDraft}
+            spatialLoading={props.spatialLoading}
+            spatialError={props.spatialError}
+            geometryResult={props.geometryResult}
             onFieldDraftChange={props.onFieldDraftChange}
             onCreateField={props.onCreateField}
             onVerifyField={props.onVerifyField}
+            onSpatialDraftChange={props.onSpatialDraftChange}
+            onSubmitGeometry={props.onSubmitGeometry}
           />
         ) : null}
         {activeTab === "lane" ? <LaneComposer selectedLane={props.laneDraft} onLaneChange={props.onLaneDraftChange} /> : null}

@@ -39,6 +39,19 @@ export type FlightTableFieldManifestUpdateV1 = {
   customer_scope: "FALLBACK_OR_UNCONFIRMED" | "CONFIRMED";
 };
 
+export type FlightTableGeometryManifestUpdateV1 = {
+  field_id: string;
+  geometry_id: string;
+  geometry_status: string;
+  geometry_format: "GEOJSON";
+  centroid: { lat: number; lng: number } | null;
+  area_m2: number | null;
+  area_mu: number | null;
+  weather_location: { lat: number; lng: number } | null;
+  weather_provider_status: "UNAVAILABLE";
+  weather_location_status: "LOCATION_RECORDED" | "LOCATION_UNAVAILABLE";
+};
+
 type MutateRunFn = (run: FlightTableRunV1) => FlightTableRunV1 | Promise<FlightTableRunV1>;
 
 function runFilePath(run_id: string): string {
@@ -262,6 +275,63 @@ export async function updateFlightTableRunAfterFieldV1(
         season_id: field.season_id,
         crop: field.crop,
         crop_stage: field.crop_stage,
+        api_snapshot_refs: [...run.manifest.api_snapshot_refs, snapshotRefFromSnapshotV1(snapshot)],
+        ui_urls: Array.from(new Set([...run.manifest.ui_urls, fieldUrl])),
+      },
+    };
+    return { ...next, verify_summary: buildFlightVerifySummaryV1(next) };
+  });
+}
+
+export async function updateFlightTableRunAfterGeometryV1(
+  run_id: string,
+  geometry: FlightTableGeometryManifestUpdateV1,
+): Promise<FlightTableRunV1 | null> {
+  return mutateFlightTableRunV1(run_id, async (run) => {
+    const nowIso = new Date().toISOString();
+    const fieldUrl = `/customer/fields/${encodeURIComponent(geometry.field_id)}`;
+    const ok = geometry.geometry_status !== "MISSING" && geometry.geometry_status !== "INVALID" && Boolean(geometry.centroid);
+    const snapshot = await writeFlightTableApiSnapshotV1({
+      run_id: run.run_id,
+      method: "POST",
+      path: `/api/v1/dev/flight-table/runs/${encodeURIComponent(run.run_id)}/field-geometry`,
+      ok,
+      status_code: 200,
+      label: "create field geometry",
+      request: {
+        field_id: geometry.field_id,
+        geometry_format: geometry.geometry_format,
+        weather_location: geometry.weather_location,
+      },
+      response: {
+        field_id: geometry.field_id,
+        geometry_id: geometry.geometry_id,
+        geometry_status: geometry.geometry_status,
+        centroid: geometry.centroid,
+        area_m2: geometry.area_m2,
+        area_mu: geometry.area_mu,
+        weather_provider_status: geometry.weather_provider_status,
+        weather_location_status: geometry.weather_location_status,
+      },
+    });
+    const steps = run.steps.map((step) => step.step_key === "A1"
+      ? {
+        ...step,
+        status: ok ? "PASS" as const : "FAIL" as const,
+        verify_result: ok ? "PASS" as const : "FAIL" as const,
+        message: `geometry_id=${geometry.geometry_id}; geometry_status=${geometry.geometry_status}; weather_provider_status=${geometry.weather_provider_status}`,
+        finished_at: nowIso,
+        updated_at: nowIso,
+      }
+      : step);
+    const next = {
+      ...run,
+      current_step: "B",
+      steps,
+      manifest: {
+        ...run.manifest,
+        field_id: run.manifest.field_id ?? geometry.field_id,
+        geometry_id: geometry.geometry_id,
         api_snapshot_refs: [...run.manifest.api_snapshot_refs, snapshotRefFromSnapshotV1(snapshot)],
         ui_urls: Array.from(new Set([...run.manifest.ui_urls, fieldUrl])),
       },

@@ -2,11 +2,13 @@ import React from "react";
 import {
   cleanFlightTableRun,
   createFlightTableField,
+  createFlightTableGeometry,
   createFlightTableRun,
   fetchFlightTableApiSnapshots,
   fetchFlightTableRuns,
   retryFlightTableStep,
   verifyFlightTableRun,
+  type CreateFlightTableGeometryResponseV1,
   type FlightTableApiSnapshotV1,
   type FlightTableLaneV1,
   type FlightTableRunV1,
@@ -15,6 +17,7 @@ import { ApiError } from "../../api/client";
 import { readTenantContext } from "../../auth/authStorage";
 import FlightTableShell from "../../components/dev/flight-table/FlightTableShell";
 import type { FieldAssemblyDraftV1 } from "../../components/dev/flight-table/FieldAssemblyCard";
+import type { FieldSpatialDraftV1 } from "../../components/dev/flight-table/FieldSpatialCard";
 import { defaultFlightTableRunId, flightTablePermissionLabel } from "../../viewmodels/flightTableVm";
 import "../../styles/flightTable.css";
 
@@ -30,9 +33,13 @@ function defaultScope(): { tenant_id: string; project_id: string; group_id: stri
   return readTenantContext() ?? { tenant_id: "tenantA", project_id: "projectA", group_id: "groupA" };
 }
 
+function stampNow(): string {
+  return new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
+}
+
 function defaultFieldDraft(): FieldAssemblyDraftV1 {
   const scope = defaultScope();
-  const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
+  const stamp = stampNow();
   return {
     tenant_id: scope.tenant_id,
     project_id: scope.project_id,
@@ -45,14 +52,27 @@ function defaultFieldDraft(): FieldAssemblyDraftV1 {
   };
 }
 
+function defaultSpatialDraft(fieldId?: string | null): FieldSpatialDraftV1 {
+  return {
+    field_id: fieldId ?? "",
+    geometryText: "",
+    weatherLat: "31.234567",
+    weatherLng: "121.567890",
+  };
+}
+
 export default function FlightTablePage(): React.ReactElement {
   const [run, setRun] = React.useState<FlightTableRunV1 | null>(null);
   const [snapshots, setSnapshots] = React.useState<FlightTableApiSnapshotV1[]>([]);
   const [runIdDraft, setRunIdDraft] = React.useState(defaultFlightTableRunId);
   const [laneDraft, setLaneDraft] = React.useState<FlightTableLaneV1>("success");
   const [fieldDraft, setFieldDraft] = React.useState<FieldAssemblyDraftV1>(defaultFieldDraft);
+  const [spatialDraft, setSpatialDraft] = React.useState<FieldSpatialDraftV1>(() => defaultSpatialDraft());
   const [fieldLoading, setFieldLoading] = React.useState(false);
   const [fieldError, setFieldError] = React.useState<string | null>(null);
+  const [spatialLoading, setSpatialLoading] = React.useState(false);
+  const [spatialError, setSpatialError] = React.useState<string | null>(null);
+  const [geometryResult, setGeometryResult] = React.useState<CreateFlightTableGeometryResponseV1 | null>(null);
   const [customerVisible, setCustomerVisible] = React.useState(false);
   const [reportVisible, setReportVisible] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
@@ -92,6 +112,7 @@ export default function FlightTablePage(): React.ReactElement {
             crop: first.manifest.crop ?? draft.crop,
             crop_stage: first.manifest.crop_stage ?? draft.crop_stage,
           }));
+          setSpatialDraft((draft) => ({ ...draft, field_id: first.manifest.field_id ?? draft.field_id }));
           void refreshSnapshots(first);
         }
         setError(null);
@@ -124,6 +145,7 @@ export default function FlightTablePage(): React.ReactElement {
         crop: next.manifest.crop ?? draft.crop,
         crop_stage: next.manifest.crop_stage ?? draft.crop_stage,
       }));
+      setSpatialDraft((draft) => ({ ...draft, field_id: next.manifest.field_id ?? draft.field_id }));
     }
     void refreshSnapshots(next);
   }, [refreshSnapshots]);
@@ -165,6 +187,7 @@ export default function FlightTablePage(): React.ReactElement {
       });
       setCustomerVisible(res.customer_visible);
       setReportVisible(res.report_visible);
+      setSpatialDraft((draft) => ({ ...draft, field_id: res.field_id }));
       applyRun(res.run);
     } catch (err) {
       setFieldError(errorToText(err));
@@ -176,6 +199,40 @@ export default function FlightTablePage(): React.ReactElement {
   const handleVerifyField = React.useCallback(async () => {
     await handleCreateField();
   }, [handleCreateField]);
+
+  const handleSubmitGeometry = React.useCallback(async () => {
+    if (!run) {
+      setSpatialError("请先创建 run");
+      return;
+    }
+    const fieldId = spatialDraft.field_id || run.manifest.field_id;
+    if (!fieldId) {
+      setSpatialError("请先创建田块对象");
+      return;
+    }
+    setSpatialLoading(true);
+    setSpatialError(null);
+    try {
+      const parsed = JSON.parse(spatialDraft.geometryText);
+      const weatherLat = Number(spatialDraft.weatherLat);
+      const weatherLng = Number(spatialDraft.weatherLng);
+      const weather_location = Number.isFinite(weatherLat) && Number.isFinite(weatherLng)
+        ? { lat: weatherLat, lng: weatherLng }
+        : null;
+      const res = await createFlightTableGeometry(run.run_id, {
+        field_id: fieldId,
+        geometry_format: "GEOJSON",
+        geometry: parsed,
+        weather_location,
+      });
+      setGeometryResult(res);
+      applyRun(res.run);
+    } catch (err) {
+      setSpatialError(errorToText(err));
+    } finally {
+      setSpatialLoading(false);
+    }
+  }, [applyRun, run, spatialDraft]);
 
   const handleVerify = React.useCallback(async () => {
     if (!run) return;
@@ -196,6 +253,8 @@ export default function FlightTablePage(): React.ReactElement {
       const next = await cleanFlightTableRun(run.run_id);
       setCustomerVisible(false);
       setReportVisible(false);
+      setGeometryResult(null);
+      setSpatialDraft(defaultSpatialDraft());
       applyRun(next);
     } catch (err) {
       setError(errorToText(err));
@@ -227,12 +286,18 @@ export default function FlightTablePage(): React.ReactElement {
       fieldError={fieldError}
       customerVisible={customerVisible}
       reportVisible={reportVisible}
+      spatialDraft={spatialDraft}
+      spatialLoading={spatialLoading}
+      spatialError={spatialError}
+      geometryResult={geometryResult}
       onRunIdDraftChange={setRunIdDraft}
       onLaneDraftChange={setLaneDraft}
       onFieldDraftChange={(patch) => setFieldDraft((draft) => ({ ...draft, ...patch }))}
+      onSpatialDraftChange={(patch) => setSpatialDraft((draft) => ({ ...draft, ...patch }))}
       onCreateRun={handleCreateRun}
       onCreateField={handleCreateField}
       onVerifyField={handleVerifyField}
+      onSubmitGeometry={handleSubmitGeometry}
       onVerify={handleVerify}
       onClean={handleClean}
       onRetryStep={handleRetryStep}
