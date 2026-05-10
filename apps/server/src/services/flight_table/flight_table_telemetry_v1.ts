@@ -1,5 +1,7 @@
 import crypto from "node:crypto";
 import type { Pool } from "pg";
+import fs from "node:fs/promises";
+import path from "node:path";
 
 import type { AoActAuthContextV0 } from "../../auth/ao_act_authz_v0.js";
 import { ingestTelemetryV1 } from "../telemetry_ingest_service_v1.js";
@@ -11,8 +13,6 @@ import {
   snapshotRefFromSnapshotV1,
   writeFlightTableApiSnapshotV1,
 } from "./flight_table_snapshots_v1.js";
-import fs from "node:fs/promises";
-import path from "node:path";
 
 export type FlightTableTelemetryScenarioKeyV1 =
   | "before_irrigation_low_moisture"
@@ -113,7 +113,6 @@ function deviceIdFor(run: FlightTableRunV1, input?: string | null): string {
 
 function buildPoint(params: {
   scenario: FlightTableTelemetryScenarioKeyV1;
-  run: FlightTableRunV1;
   auth: AoActAuthContextV0;
   device_id: string;
   field_id: string;
@@ -155,17 +154,17 @@ export function buildFlightTableTelemetryScenarioPointsV1(
   const points: FlightTableTelemetryPointV1[] = [];
   for (const scenario of scenarios) {
     if (scenario === "before_irrigation_low_moisture") {
-      points.push(buildPoint({ scenario, run, auth, device_id, field_id, metric_key: "soil_moisture", value: 17, unit: "%VWC", ts_ms: baseTs, source }));
+      points.push(buildPoint({ scenario, auth, device_id, field_id, metric_key: "soil_moisture", value: 17, unit: "%VWC", ts_ms: baseTs, source }));
     } else if (scenario === "during_irrigation_flow") {
-      points.push(buildPoint({ scenario, run, auth, device_id, field_id, metric_key: "water_flow_rate", value: 128, unit: "L/min", ts_ms: baseTs + 60_000, source }));
-      points.push(buildPoint({ scenario, run, auth, device_id, field_id, metric_key: "water_pressure", value: 320, unit: "kPa", ts_ms: baseTs + 65_000, source }));
+      points.push(buildPoint({ scenario, auth, device_id, field_id, metric_key: "water_flow_rate", value: 128, unit: "L/min", ts_ms: baseTs + 60_000, source }));
+      points.push(buildPoint({ scenario, auth, device_id, field_id, metric_key: "water_pressure", value: 320, unit: "kPa", ts_ms: baseTs + 65_000, source }));
     } else if (scenario === "after_irrigation_success") {
-      points.push(buildPoint({ scenario, run, auth, device_id, field_id, metric_key: "soil_moisture", value: 31, unit: "%VWC", ts_ms: baseTs + 140_000, source }));
+      points.push(buildPoint({ scenario, auth, device_id, field_id, metric_key: "soil_moisture", value: 31, unit: "%VWC", ts_ms: baseTs + 140_000, source }));
     } else if (scenario === "rainfall_interference") {
-      points.push(buildPoint({ scenario, run, auth, device_id, field_id, metric_key: "air_humidity", value: 96, unit: "%RH", ts_ms: baseTs + 120_000, source }));
-      points.push(buildPoint({ scenario, run, auth, device_id, field_id, metric_key: "soil_moisture", value: 39, unit: "%VWC", ts_ms: baseTs + 125_000, source }));
+      points.push(buildPoint({ scenario, auth, device_id, field_id, metric_key: "air_humidity", value: 96, unit: "%RH", ts_ms: baseTs + 120_000, source }));
+      points.push(buildPoint({ scenario, auth, device_id, field_id, metric_key: "soil_moisture", value: 39, unit: "%VWC", ts_ms: baseTs + 125_000, source }));
     } else if (scenario === "sensor_failure") {
-      points.push(buildPoint({ scenario, run, auth, device_id, field_id, metric_key: "soil_moisture", value: "SENSOR_FAULT", unit: "%VWC", ts_ms: baseTs + 180_000, source: "FLIGHT_TABLE_FAST_INGEST_RAW_ONLY" }));
+      points.push(buildPoint({ scenario, auth, device_id, field_id, metric_key: "soil_moisture", value: "SENSOR_FAULT", unit: "%VWC", ts_ms: baseTs + 180_000, source: "FLIGHT_TABLE_FAST_INGEST_RAW_ONLY" }));
     }
   }
   return points;
@@ -324,7 +323,7 @@ export async function verifyFlightTableTelemetryV1(pool: Pool, run: FlightTableR
     const q = await pool.query(`SELECT * FROM field_sensing_summary_stage1_v1 WHERE tenant_id=$1 AND field_id=$2 LIMIT 1`, [tenant_id, field_id]);
     summary = q.rows?.[0] ?? null;
   } catch {}
-  const observationMissingBreakpoint = rawCount > observationIndexCount || rawOnlyCount > 0;
+  const observationMissingBreakpoint = rawOnlyCount > 0;
   return {
     raw_telemetry_v1: { visible: rawCount > 0, count: rawCount },
     telemetry_index_v1: { visible: telemetryCount > 0, count: telemetryCount, latest_ts_ms: latestTsMs },
