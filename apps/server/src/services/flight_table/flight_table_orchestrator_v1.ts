@@ -28,6 +28,17 @@ export type CreateFlightTableRunInputV1 = {
   lane?: FlightTableLaneV1;
 };
 
+export type FlightTableFieldManifestUpdateV1 = {
+  field_id: string;
+  field_name: string;
+  season_id: string;
+  crop: string;
+  crop_stage: string;
+  customer_visible: boolean;
+  report_visible: boolean;
+  customer_scope: "FALLBACK_OR_UNCONFIRMED" | "CONFIRMED";
+};
+
 type MutateRunFn = (run: FlightTableRunV1) => FlightTableRunV1 | Promise<FlightTableRunV1>;
 
 function runFilePath(run_id: string): string {
@@ -199,6 +210,63 @@ export async function verifyFlightTableRunV1(run_id: string): Promise<FlightTabl
         api_snapshot_refs: [...run.manifest.api_snapshot_refs, snapshotRefFromSnapshotV1(snapshot)],
       },
     };
+  });
+}
+
+export async function updateFlightTableRunAfterFieldV1(
+  run_id: string,
+  field: FlightTableFieldManifestUpdateV1,
+): Promise<FlightTableRunV1 | null> {
+  return mutateFlightTableRunV1(run_id, async (run) => {
+    const nowIso = new Date().toISOString();
+    const fieldUrl = `/customer/fields/${encodeURIComponent(field.field_id)}`;
+    const snapshot = await writeFlightTableApiSnapshotV1({
+      run_id: run.run_id,
+      method: "POST",
+      path: `/api/v1/dev/flight-table/runs/${encodeURIComponent(run.run_id)}/field`,
+      ok: field.customer_visible && field.report_visible,
+      status_code: 200,
+      label: "create field",
+      request: {
+        field_id: field.field_id,
+        field_name: field.field_name,
+        season_id: field.season_id,
+        crop: field.crop,
+        crop_stage: field.crop_stage,
+      },
+      response: {
+        field_id: field.field_id,
+        field_name: field.field_name,
+        customer_visible: field.customer_visible,
+        report_visible: field.report_visible,
+        customer_scope: field.customer_scope,
+      },
+    });
+    const steps = run.steps.map((step) => step.step_key === "A"
+      ? {
+        ...step,
+        status: field.customer_visible && field.report_visible ? "PASS" as const : "FAIL" as const,
+        verify_result: field.customer_visible && field.report_visible ? "PASS" as const : "FAIL" as const,
+        message: `field_id=${field.field_id}; customer_visible=${field.customer_visible}; report_visible=${field.report_visible}; customer_scope=${field.customer_scope}`,
+        finished_at: nowIso,
+        updated_at: nowIso,
+      }
+      : step);
+    const next = {
+      ...run,
+      current_step: "A1",
+      steps,
+      manifest: {
+        ...run.manifest,
+        field_id: field.field_id,
+        season_id: field.season_id,
+        crop: field.crop,
+        crop_stage: field.crop_stage,
+        api_snapshot_refs: [...run.manifest.api_snapshot_refs, snapshotRefFromSnapshotV1(snapshot)],
+        ui_urls: Array.from(new Set([...run.manifest.ui_urls, fieldUrl])),
+      },
+    };
+    return { ...next, verify_summary: buildFlightVerifySummaryV1(next) };
   });
 }
 
