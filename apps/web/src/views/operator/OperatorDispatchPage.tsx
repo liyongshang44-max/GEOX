@@ -1,10 +1,11 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { fetchOperatorDispatch, submitOperatorDispatchAction, type OperatorDispatchActionKind } from "../../api/operatorDispatch";
-import OperatorEmptyState from "../../components/operator/OperatorEmptyState";
-import OperatorLayout from "../../layouts/OperatorLayout";
 import { fetchSessionMe, type SessionMe } from "../../api/session";
-import { hasOperatorPermission } from "../../lib/permissions";
+import OperatorEmptyState from "../../components/operator/OperatorEmptyState";
+import PermissionGate from "../../components/operator/PermissionGate";
+import OperatorLayout from "../../layouts/OperatorLayout";
+import { hasOperatorPermission, permissionReason } from "../../lib/permissions";
 import { buildOperatorDispatchVm, type OperatorDispatchGroupVm, type OperatorDispatchRowVm, type OperatorDispatchVm } from "../../viewmodels/operatorDispatchVm";
 import { OPERATOR_PAGE_META } from "./operatorPageMeta";
 
@@ -15,22 +16,35 @@ function safeMessage(value: unknown, fallback = "操作失败，请稍后重试�
   return text;
 }
 
+function DisabledDispatchButtons({ pending }: { pending: boolean }): React.ReactElement {
+  return (
+    <>
+      <button type="button" disabled>{pending ? "处理中..." : "派发"}</button>
+      <button type="button" disabled>{pending ? "处理中..." : "重试"}</button>
+    </>
+  );
+}
+
 function DispatchRow({
   row,
   writeReady,
   actionState,
   onAction,
   sessionAllowed,
+  sessionLoading,
+  sessionDeniedReason,
 }: {
   row: OperatorDispatchRowVm;
   writeReady: boolean;
   actionState: { pending: boolean; lastError: string | null };
   onAction: (row: OperatorDispatchRowVm, action: OperatorDispatchActionKind) => void;
   sessionAllowed: boolean;
+  sessionLoading: boolean;
+  sessionDeniedReason: string;
 }): React.ReactElement {
-  const dispatchDisabled = !sessionAllowed || !writeReady || !row.dispatchButtonState.canAction || actionState.pending;
-  const retryDisabled = !sessionAllowed || !writeReady || !row.retryButtonState.canAction || actionState.pending;
-  const notice = (!sessionAllowed ? "会话权限不足：operator_dispatch" : "") || row.dispatchButtonState.disabledReason || row.retryButtonState.disabledReason || row.disabledReason;
+  const dispatchDisabled = !writeReady || !row.dispatchButtonState.canAction || actionState.pending;
+  const retryDisabled = !writeReady || !row.retryButtonState.canAction || actionState.pending;
+  const notice = sessionDeniedReason || row.dispatchButtonState.disabledReason || row.retryButtonState.disabledReason || row.disabledReason;
 
   return (
     <article className="operatorDispatchRow">
@@ -62,8 +76,20 @@ function DispatchRow({
       <div className="operatorDispatchActions">
         {row.taskHref ? <Link to={row.taskHref}>查看任务对象</Link> : null}
         {row.receiptHref ? <Link to={row.receiptHref}>查看回执对象</Link> : null}
-        <button type="button" disabled={dispatchDisabled} onClick={() => onAction(row, "dispatch")}>{actionState.pending ? "处理中..." : "派发"}</button>
-        <button type="button" disabled={retryDisabled} onClick={() => onAction(row, "retry")}>{actionState.pending ? "处理中..." : "重试"}</button>
+        <PermissionGate
+          permissionKey="dispatch"
+          allowed={sessionAllowed}
+          loading={sessionLoading}
+          disabledReason={sessionDeniedReason}
+          fallback={() => <DisabledDispatchButtons pending={actionState.pending} />}
+        >
+          {() => (
+            <>
+              <button type="button" disabled={dispatchDisabled} onClick={() => onAction(row, "dispatch")}>{actionState.pending ? "处理中..." : "派发"}</button>
+              <button type="button" disabled={retryDisabled} onClick={() => onAction(row, "retry")}>{actionState.pending ? "处理中..." : "重试"}</button>
+            </>
+          )}
+        </PermissionGate>
       </div>
       {notice ? <div className="operatorScopeWarning">{notice}</div> : null}
     </article>
@@ -76,12 +102,16 @@ function DispatchGroup({
   getActionState,
   onAction,
   sessionAllowed,
+  sessionLoading,
+  sessionDeniedReason,
 }: {
   group: OperatorDispatchGroupVm;
   writeReady: boolean;
   getActionState: (taskId: string) => { pending: boolean; lastError: string | null };
   onAction: (row: OperatorDispatchRowVm, action: OperatorDispatchActionKind) => void;
   sessionAllowed: boolean;
+  sessionLoading: boolean;
+  sessionDeniedReason: string;
 }): React.ReactElement {
   return (
     <section className="operatorDispatchGroup">
@@ -102,6 +132,8 @@ function DispatchGroup({
               actionState={getActionState(row.taskId)}
               onAction={onAction}
               sessionAllowed={sessionAllowed}
+              sessionLoading={sessionLoading}
+              sessionDeniedReason={sessionDeniedReason}
             />
           ))}
         </div>
@@ -116,6 +148,7 @@ export default function OperatorDispatchPage(): React.ReactElement {
   const [vm, setVm] = React.useState<OperatorDispatchVm | null>(null);
   const [actionStateByTask, setActionStateByTask] = React.useState<Record<string, { pending: boolean; lastError: string | null }>>({});
   const [session, setSession] = React.useState<SessionMe | null>(null);
+  const [sessionLoading, setSessionLoading] = React.useState(true);
 
   const loadDispatch = React.useCallback(() => {
     setLoading(true);
@@ -130,10 +163,15 @@ export default function OperatorDispatchPage(): React.ReactElement {
 
   React.useEffect(() => {
     let alive = true;
-    void fetchSessionMe().then((resp) => { if (alive) setSession(resp); }).catch(() => { if (alive) setSession(null); });
+    setSessionLoading(true);
+    void fetchSessionMe()
+      .then((resp) => { if (alive) setSession(resp); })
+      .catch(() => { if (alive) setSession(null); })
+      .finally(() => { if (alive) setSessionLoading(false); });
     return () => { alive = false; };
   }, []);
   const sessionAllowed = hasOperatorPermission(session, "dispatch");
+  const sessionDeniedReason = sessionAllowed ? "" : (sessionLoading ? "会话权限加载中..." : permissionReason(session, "dispatch"));
 
   React.useEffect(() => {
     let alive = true;
@@ -213,6 +251,8 @@ export default function OperatorDispatchPage(): React.ReactElement {
                 getActionState={getActionState}
                 onAction={onAction}
                 sessionAllowed={sessionAllowed}
+                sessionLoading={sessionLoading}
+                sessionDeniedReason={sessionDeniedReason}
               />
             ))}
           </section>
