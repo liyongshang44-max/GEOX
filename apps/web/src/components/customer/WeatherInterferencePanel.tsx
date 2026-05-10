@@ -63,11 +63,11 @@ function impactWindow(context: OperationEnvironmentContext | null): string {
   return `${formatDateTime(primary.from)} 至 ${formatDateTime(primary.to)}`;
 }
 
-function acceptanceParticipationText(context: OperationEnvironmentContext | null): string {
-  if (!context || context.status === "unavailable") return "未参与验收判断";
+function acceptanceBoundaryText(context: OperationEnvironmentContext | null): string {
+  if (!context || context.status === "unavailable") return "不参与验收判断；仅显示天气空态。";
   const rainfall = Number(totalRainfall(context) ?? 0);
-  if (rainfall > 0 || context.rainfallMayExplainSoilMoistureChange === true) return "参与验收复核：需考虑天气干扰";
-  return "参与验收参考：未发现明显降雨干扰";
+  if (rainfall > 0 || context.rainfallMayExplainSoilMoistureChange === true) return "仅辅助验收复核，不直接替代通过/失败结论。";
+  return "仅作为验收背景参考，不直接改变验收结论。";
 }
 
 function learningExclusionText(context: OperationEnvironmentContext | null): string {
@@ -82,9 +82,9 @@ function conclusionText(context: OperationEnvironmentContext | null): string {
   if (!context || context.status === "unavailable") return "天气源未接入或当前位置不可用，当前不参与验收判断。";
   const rainfall = Number(totalRainfall(context) ?? 0);
   if (rainfall > 0 || allEvents(context).length > 0) {
-    return "检测到降雨事件，本次土壤湿度变化可能受天气影响；相关学习结论需排除或降低置信度。";
+    return "检测到降雨事件，本次土壤湿度变化可能受天气影响；相关学习结论需排除或降低置信度。天气仅用于辅助解释和学习排除，不直接替代验收结论。";
   }
-  return "当前天气窗口未发现明显降雨事件，暂未识别天气干扰。";
+  return "当前天气窗口未发现明显降雨事件。天气仅作为辅助解释，不直接改变验收结论。";
 }
 
 function eventText(event: WeatherEvent, index: number): string {
@@ -111,7 +111,7 @@ export default function WeatherInterferencePanel({ context, loading = false, cla
         <div><strong>降雨量</strong><span>{formatRainfall(rainfall)}</span></div>
         <div><strong>降雨事件</strong><span>{events.length ? `${events.length} 个事件` : "暂无降雨事件"}</span></div>
         <div><strong>影响窗口</strong><span>{impactWindow(context)}</span></div>
-        <div><strong>是否参与验收</strong><span>{acceptanceParticipationText(context)}</span></div>
+        <div><strong>验收使用边界</strong><span>{acceptanceBoundaryText(context)}</span></div>
         <div><strong>是否排除学习</strong><span>{learningExclusionText(context)}</span></div>
         <div><strong>数据来源</strong><span>{weatherSource(context)}</span></div>
         <div><strong>更新时间</strong><span>{formatDateTime(updatedAt)}</span></div>
@@ -122,6 +122,8 @@ export default function WeatherInterferencePanel({ context, loading = false, cla
           {events.slice(0, 6).map((event, index) => <div key={`${event.startedAt ?? "event"}-${index}`}>{eventText(event, index)}</div>)}
         </div>
       ) : null}
+
+      <div className="weatherInterferenceBoundaryNote">天气用于辅助解释和学习排除，不直接替代验收结论，也不单独构成验收通过或失败原因。</div>
     </section>
   );
 }
