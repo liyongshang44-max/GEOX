@@ -38,7 +38,7 @@ export default function CustomerReportExportPage(): React.ReactElement {
         setGeneratedAtText(vm.generatedAtText);
         setBackTo(`/customer/fields/${encodeURIComponent(fieldId)}`);
         setSubtitle("地块病历打印版");
-        setContent(<FieldExportBlocks vm={vm} />);
+        setContent(<FieldExportBlocks vm={vm} report={report} />);
         return;
       }
       if (mode === "operation") {
