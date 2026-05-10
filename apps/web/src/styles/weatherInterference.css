@@ -1,0 +1,112 @@
+.weatherInterferencePanel {
+  display: grid;
+  gap: 14px;
+  border: 1px solid #dbeafe;
+  border-radius: 18px;
+  background: #f8fbff;
+  padding: 14px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.weatherInterferenceHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.weatherInterferenceHead h3 {
+  margin: 0 0 5px;
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.weatherInterferenceHead p {
+  margin: 0;
+  color: #334155;
+  font-size: 14px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.weatherInterferenceBadge {
+  border-radius: 999px;
+  padding: 4px 10px;
+  border: 1px solid #dbeafe;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.weatherInterferenceBadge.ok {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #047857;
+}
+
+.weatherInterferenceBadge.unavailable {
+  border-color: #e5e7eb;
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.weatherInterferenceGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.weatherInterferenceGrid > div {
+  display: grid;
+  gap: 4px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 9px 10px;
+  min-width: 0;
+}
+
+.weatherInterferenceGrid strong {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.weatherInterferenceGrid span {
+  color: #111827;
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.weatherInterferenceEvents {
+  display: grid;
+  gap: 6px;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+@media (max-width: 960px) {
+  .weatherInterferenceGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .weatherInterferenceGrid {
+    grid-template-columns: 1fr;
+  }
+}
