@@ -1,8 +1,13 @@
 import React from "react";
-import type { CreateFlightTableGeometryResponseV1, FlightTableManifestV1 } from "../../../api/flightTable";
+import type {
+  CreateFlightTableGeometryResponseV1,
+  FlightTableDeviceSummaryV1,
+  FlightTableDeviceTemplateV1,
+  FlightTableManifestV1,
+} from "../../../api/flightTable";
 import FieldAssemblyCard, { type FieldAssemblyDraftV1 } from "./FieldAssemblyCard";
 import FieldSpatialCard, { type FieldSpatialDraftV1 } from "./FieldSpatialCard";
-import DeviceOnboardingWizard from "./DeviceOnboardingWizard";
+import DeviceOnboardingWizard, { type DeviceOnboardingDraftV1 } from "./DeviceOnboardingWizard";
 import SkillAssemblyCard from "./SkillAssemblyCard";
 
 type Props = {
@@ -16,11 +21,19 @@ type Props = {
   spatialLoading: boolean;
   spatialError: string | null;
   geometryResult: CreateFlightTableGeometryResponseV1 | null;
+  deviceDraft: DeviceOnboardingDraftV1;
+  deviceLoading: boolean;
+  deviceError: string | null;
+  deviceTemplates: FlightTableDeviceTemplateV1[];
+  onboardedDevices: FlightTableDeviceSummaryV1[];
   onFieldDraftChange: (patch: Partial<FieldAssemblyDraftV1>) => void;
   onCreateField: () => void;
   onVerifyField: () => void;
   onSpatialDraftChange: (patch: Partial<FieldSpatialDraftV1>) => void;
   onSubmitGeometry: () => void;
+  onDeviceDraftChange: (patch: Partial<DeviceOnboardingDraftV1>) => void;
+  onOnboardDevice: () => void;
+  onRetryDevice: () => void;
 };
 
 export default function FlightAssemblyPanel(props: Props): React.ReactElement {
@@ -51,8 +64,20 @@ export default function FlightAssemblyPanel(props: Props): React.ReactElement {
         onDraftChange={props.onSpatialDraftChange}
         onSubmitGeometry={props.onSubmitGeometry}
       />
+      <DeviceOnboardingWizard
+        fieldId={manifest?.field_id}
+        deviceIds={manifest?.device_ids ?? []}
+        credentials={manifest?.credential_ids ?? []}
+        templates={props.deviceTemplates}
+        devices={props.onboardedDevices}
+        draft={props.deviceDraft}
+        loading={props.deviceLoading}
+        error={props.deviceError}
+        onDraftChange={props.onDeviceDraftChange}
+        onOnboardDevice={props.onOnboardDevice}
+        onRetry={props.onRetryDevice}
+      />
       <SkillAssemblyCard skillBindingIds={manifest?.skill_binding_ids ?? []} skillRunIds={manifest?.skill_run_ids ?? []} />
-      <DeviceOnboardingWizard deviceIds={manifest?.device_ids ?? []} credentials={manifest?.credential_ids ?? []} />
     </div>
   );
 }
