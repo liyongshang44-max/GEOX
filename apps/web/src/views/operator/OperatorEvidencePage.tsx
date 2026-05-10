@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { createOperatorEvidenceExportJob, fetchOperatorEvidence } from "../../api/operatorEvidence";
+import { createOperatorEvidenceExportJob, fetchOperatorEvidence, fetchOperatorEvidenceJobDetail, type OperatorEvidenceItem } from "../../api/operatorEvidence";
 import { fetchSessionMe, type SessionMe } from "../../api/session";
 import OperatorEmptyState from "../../components/operator/OperatorEmptyState";
 import OperatorLayout from "../../layouts/OperatorLayout";
@@ -16,6 +16,13 @@ type CreateState = {
   error: string | null;
 };
 
+type JobRefreshState = Record<string, {
+  pending: boolean;
+  message: string | null;
+  error: string | null;
+  lastRefreshedAt: string | null;
+}>;
+
 function safeMessage(value: unknown, fallback = "操作失败，请稍后重试。") {
   const text = String(value ?? "").trim();
   if (!text || text === "--") return fallback;
@@ -29,7 +36,48 @@ function buildDefaultExportWindow(): { from_ts_ms: number; to_ts_ms: number; lab
   return { from_ts_ms: from, to_ts_ms: to, label: "最近 30 天" };
 }
 
-function EvidenceRow({ row }: { row: OperatorEvidenceRowVm }): React.ReactElement {
+function buildRowFromItem(item: OperatorEvidenceItem): OperatorEvidenceRowVm | null {
+  const vm = buildOperatorEvidenceVm({
+    source: "operator_evidence_api",
+    dataScope: "OFFICIAL_OPERATOR_API",
+    generated_at: new Date().toISOString(),
+    items: [item],
+    exportReady: true,
+  });
+  return vm.rows[0] ?? null;
+}
+
+function replaceVmRow(vm: OperatorEvidenceVm, item: OperatorEvidenceItem): OperatorEvidenceVm {
+  const row = buildRowFromItem(item);
+  if (!row) return vm;
+  const exists = vm.rows.some((candidate) => candidate.jobId === row.jobId);
+  const rows = exists
+    ? vm.rows.map((candidate) => candidate.jobId === row.jobId ? row : candidate)
+    : [row, ...vm.rows];
+  return {
+    ...vm,
+    totalCount: rows.length,
+    rows,
+    failedRows: rows.filter((candidate) => candidate.statusText === "导出失败"),
+    missingChecksumRows: rows.filter((candidate) => candidate.checksumText === "暂无 sha256 checksum"),
+  };
+}
+
+function isPollingStatus(row: OperatorEvidenceRowVm): boolean {
+  return row.statusText === "等待导出" || row.statusText === "导出中";
+}
+
+function EvidenceRow({
+  row,
+  refreshState,
+  onRefreshJob,
+}: {
+  row: OperatorEvidenceRowVm;
+  refreshState?: JobRefreshState[string];
+  onRefreshJob: (row: OperatorEvidenceRowVm) => void;
+}): React.ReactElement {
+  const isDone = row.statusText === "已完成";
+  const isFailed = row.statusText === "导出失败";
   return (
     <article className="operatorEvidenceRow">
       <header className="operatorEvidenceRowHead">
@@ -54,11 +102,32 @@ function EvidenceRow({ row }: { row: OperatorEvidenceRowVm }): React.ReactElemen
         <div><span>数据来源</span><strong>{row.sourceText}</strong></div>
       </div>
 
+      {isDone ? (
+        <div className="operatorEvidenceJobDetail success">
+          <strong>导出已完成</strong>
+          <span>sha256：{row.checksumText}</span>
+          <span>completed_at：{row.completedAtText}</span>
+          <span>manifest：{row.manifestText}</span>
+          {row.downloadUrl ? <a href={row.downloadUrl} target="_blank" rel="noreferrer">打开下载链接</a> : <span>download_url：暂无</span>}
+        </div>
+      ) : null}
+
+      {isFailed ? (
+        <div className="operatorEvidenceJobDetail danger">
+          <strong>导出失败</strong>
+          <span>{row.failureReasonText}</span>
+        </div>
+      ) : null}
+
       <div className="operatorEvidenceNotice">证据中心不展示本地绝对路径、bucket secret、access key 或内部 runtime path。operation scope 未 ready 时显示未接入。</div>
 
       <div className="operatorEvidenceActions">
         {row.operationHref ? <Link to={row.operationHref}>查看作业</Link> : null}
+        <button type="button" disabled={Boolean(refreshState?.pending)} onClick={() => onRefreshJob(row)}>{refreshState?.pending ? "刷新中..." : "刷新 job 状态"}</button>
+        {row.downloadUrl && isDone ? <a href={row.downloadUrl} target="_blank" rel="noreferrer">下载证据包</a> : null}
       </div>
+      {refreshState?.message ? <div className="operatorEvidenceJobCreated">{refreshState.message}</div> : null}
+      {refreshState?.error ? <div className="operatorScopeWarning">{refreshState.error}</div> : null}
     </article>
   );
 }
@@ -95,6 +164,8 @@ export default function OperatorEvidencePage(): React.ReactElement {
   const [sessionLoading, setSessionLoading] = React.useState(true);
   const [sessionUnavailable, setSessionUnavailable] = React.useState(false);
   const [createState, setCreateState] = React.useState<CreateState>({ pending: false, lastJobId: "", message: null, error: null });
+  const [jobRefreshState, setJobRefreshState] = React.useState<JobRefreshState>({});
+  const pollingJobsKey = React.useMemo(() => (vm?.rows ?? []).filter(isPollingStatus).map((row) => row.jobId).sort().join("|"), [vm?.rows]);
 
   const loadEvidence = React.useCallback(() => {
     setLoading(true);
@@ -148,6 +219,59 @@ export default function OperatorEvidencePage(): React.ReactElement {
     };
   }, [operationId]);
 
+  const refreshJob = React.useCallback((row: OperatorEvidenceRowVm, silent = false) => {
+    const jobId = row.jobId;
+    if (!jobId) return;
+    if (!silent) {
+      setJobRefreshState((prev) => ({ ...prev, [jobId]: { pending: true, message: null, error: null, lastRefreshedAt: prev[jobId]?.lastRefreshedAt ?? null } }));
+    }
+    void fetchOperatorEvidenceJobDetail(jobId, operationId)
+      .then((result) => {
+        if (result.ok && result.item) {
+          setVm((current) => current ? replaceVmRow(current, result.item!) : current);
+          setJobRefreshState((prev) => ({
+            ...prev,
+            [jobId]: {
+              pending: false,
+              message: silent ? null : `job 状态已刷新：${result.item?.status ?? "UNKNOWN"}`,
+              error: null,
+              lastRefreshedAt: new Date().toISOString(),
+            },
+          }));
+          return;
+        }
+        setJobRefreshState((prev) => ({
+          ...prev,
+          [jobId]: {
+            pending: false,
+            message: null,
+            error: safeMessage(result.message, "刷新 job 状态失败。"),
+            lastRefreshedAt: prev[jobId]?.lastRefreshedAt ?? null,
+          },
+        }));
+      })
+      .catch((error: unknown) => {
+        setJobRefreshState((prev) => ({
+          ...prev,
+          [jobId]: {
+            pending: false,
+            message: null,
+            error: safeMessage(error instanceof Error ? error.message : error, "刷新 job 状态失败。"),
+            lastRefreshedAt: prev[jobId]?.lastRefreshedAt ?? null,
+          },
+        }));
+      });
+  }, [operationId]);
+
+  React.useEffect(() => {
+    const rows = (vm?.rows ?? []).filter(isPollingStatus);
+    if (!rows.length) return;
+    const timer = window.setInterval(() => {
+      for (const row of rows.slice(0, 5)) refreshJob(row, true);
+    }, 6000);
+    return () => window.clearInterval(timer);
+  }, [pollingJobsKey, refreshJob, vm?.rows]);
+
   const permissionBlockReason = evidenceExportPermissionReason(sessionLoading, sessionUnavailable, session);
   const disabledReason = createDisabledReason({ permissionBlockReason, operationId, session, fieldId, pending: createState.pending });
   const scopeType = fieldId ? "FIELD" : "TENANT";
@@ -189,6 +313,9 @@ export default function OperatorEvidencePage(): React.ReactElement {
             error: safeMessage(result.message, "创建证据包失败。"),
           });
           return;
+        }
+        if (result.item) {
+          setVm((current) => current ? replaceVmRow(current, result.item!) : current);
         }
         setCreateState({
           pending: false,
@@ -246,7 +373,7 @@ export default function OperatorEvidencePage(): React.ReactElement {
           {vm.missingChecksumRows.length ? <div className="operatorEvidenceChecksumEmpty">{vm.missingChecksumRows.length} 个任务暂无 sha256 checksum，checksum 有则显示，无则保留正式空态。</div> : null}
 
           <section className="operatorEvidenceGrid" aria-label="证据导出任务">
-            {vm.rows.map((row) => <EvidenceRow key={row.jobId} row={row} />)}
+            {vm.rows.map((row) => <EvidenceRow key={row.jobId} row={row} refreshState={jobRefreshState[row.jobId]} onRefreshJob={refreshJob} />)}
           </section>
         </div>
       ) : null}
