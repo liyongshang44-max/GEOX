@@ -1,6 +1,7 @@
 import React from "react";
 import type { FlightTableRunV1 } from "../../../api/flightTable";
 import type { FlightTableDecisionRunResultV1 } from "../../../api/flightTableDecision";
+import type { FlightTableEvidenceRunResultV1 } from "../../../api/flightTableEvidence";
 import type { FlightTableOperationRunResultV1 } from "../../../api/flightTableOperation";
 import { flightTableStepStatusLabel } from "../../../viewmodels/flightTableVm";
 
@@ -8,14 +9,18 @@ type Props = {
   run: FlightTableRunV1 | null;
   decisionResult: FlightTableDecisionRunResultV1 | null;
   operationResult: FlightTableOperationRunResultV1 | null;
+  evidenceResult: FlightTableEvidenceRunResultV1 | null;
   onRetryStep: (stepKey: string) => void;
   onRunDecision: () => void;
   onRunOperation: () => void;
+  onRunEvidence: () => void;
   loading: boolean;
   decisionLoading: boolean;
   operationLoading: boolean;
+  evidenceLoading: boolean;
   decisionError: string | null;
   operationError: string | null;
+  evidenceError: string | null;
 };
 
 function DecisionDrawer({ result, onClose }: { result: FlightTableDecisionRunResultV1; onClose: () => void }): React.ReactElement {
@@ -92,21 +97,59 @@ function OperationDrawer({ result, onClose }: { result: FlightTableOperationRunR
   );
 }
 
+function EvidenceDrawer({ result, onClose }: { result: FlightTableEvidenceRunResultV1; onClose: () => void }): React.ReactElement {
+  return (
+    <aside className="flight-decision-drawer flight-evidence-drawer">
+      <div className="flight-card-head">
+        <h3>G 层详情：Evidence · Acceptance · Export</h3>
+        <button type="button" onClick={onClose}>关闭</button>
+      </div>
+      <dl className="flight-field-state">
+        <dt>lane</dt><dd>{result.lane}</dd>
+        <dt>operation_id</dt><dd>{result.operation_id}</dd>
+        <dt>evidence_status</dt><dd>{result.evidence_status}</dd>
+        <dt>acceptance_status</dt><dd>{result.acceptance_status}</dd>
+        <dt>final_status</dt><dd>{result.final_status}</dd>
+        <dt>evidence_export_job_id</dt><dd>{result.evidence_export_job_id ?? "-"}</dd>
+        <dt>raw_export_status</dt><dd>{result.raw_export_status ?? "-"}</dd>
+        <dt>normalized_export_status</dt><dd>{result.evidence_export_job_status}</dd>
+        <dt>sha256</dt><dd>{result.sha256 ?? "未返回，不伪造"}</dd>
+        <dt>learning_excluded</dt><dd>{String(result.learning_excluded)}</dd>
+        <dt>by-operation match</dt><dd>{result.evidence_by_operation_match ? "YES" : "NO"}</dd>
+      </dl>
+      <section className="flight-decision-contract">
+        <h4>验收回放链接</h4>
+        {result.ui_urls.map((url) => <p key={url}><a href={url} target="_blank" rel="noreferrer">{url}</a></p>)}
+      </section>
+      <details open>
+        <summary>operation_report evidence_pack_summary</summary>
+        <pre className="flight-json">{JSON.stringify(result.operation_report_evidence_pack_summary ?? {}, null, 2)}</pre>
+      </details>
+      <p className="flight-muted">sha256 只有后端返回时才展示；无 sha256 时不在前端伪造。证据不足航线不得显示验收通过。</p>
+    </aside>
+  );
+}
+
 export default function FlightMatrix({
   run,
   decisionResult,
   operationResult,
+  evidenceResult,
   onRetryStep,
   onRunDecision,
   onRunOperation,
+  onRunEvidence,
   loading,
   decisionLoading,
   operationLoading,
+  evidenceLoading,
   decisionError,
   operationError,
+  evidenceError,
 }: Props): React.ReactElement {
   const [decisionDrawerOpen, setDecisionDrawerOpen] = React.useState(false);
   const [operationDrawerOpen, setOperationDrawerOpen] = React.useState(false);
+  const [evidenceDrawerOpen, setEvidenceDrawerOpen] = React.useState(false);
   return (
     <section className="flight-card">
       <div className="flight-card-head">
@@ -116,18 +159,22 @@ export default function FlightMatrix({
       <div className="flight-actions flight-card-actions">
         <button type="button" onClick={onRunDecision} disabled={loading || decisionLoading || !run}>运行 E 层：推荐 / 处方 / 审批</button>
         <button type="button" onClick={onRunOperation} disabled={loading || operationLoading || !run}>运行 F 层：Operation / AO-ACT / Receipt</button>
+        <button type="button" onClick={onRunEvidence} disabled={loading || evidenceLoading || !run}>运行 G 层：Evidence / Acceptance / Export</button>
         {decisionResult ? <button type="button" onClick={() => setDecisionDrawerOpen(true)}>查看 E 层详情</button> : null}
         {operationResult ? <button type="button" onClick={() => setOperationDrawerOpen(true)}>查看 F 层详情</button> : null}
+        {evidenceResult ? <button type="button" onClick={() => setEvidenceDrawerOpen(true)}>查看 G 层详情</button> : null}
         {decisionError ? <span className="flight-error-text">{decisionError}</span> : null}
         {operationError ? <span className="flight-error-text">{operationError}</span> : null}
+        {evidenceError ? <span className="flight-error-text">{evidenceError}</span> : null}
       </div>
       {run ? (
         <div className="flight-matrix">
           {run.steps.map((step) => {
             const isE = step.step_key === "E";
             const isF = step.step_key === "F";
+            const isG = step.step_key === "G";
             return (
-              <article key={step.step_key} className={`flight-step flight-step-${step.status.toLowerCase()} ${isE ? "flight-step-decision" : ""} ${isF ? "flight-step-operation" : ""}`}>
+              <article key={step.step_key} className={`flight-step flight-step-${step.status.toLowerCase()} ${isE ? "flight-step-decision" : ""} ${isF ? "flight-step-operation" : ""} ${isG ? "flight-step-evidence" : ""}`}>
                 <div>
                   <strong>{step.step_key}</strong>
                   <span>{step.label}</span>
@@ -148,11 +195,21 @@ export default function FlightMatrix({
                       <dt>as-executed</dt><dd>{operationResult.as_executed_status}</dd>
                     </dl>
                   ) : null}
+                  {isG && evidenceResult ? (
+                    <dl className="flight-e-layer-inline flight-g-layer-inline">
+                      <dt>evidence</dt><dd>{evidenceResult.evidence_status}</dd>
+                      <dt>acceptance</dt><dd>{evidenceResult.acceptance_status}</dd>
+                      <dt>final</dt><dd>{evidenceResult.final_status}</dd>
+                      <dt>export</dt><dd>{evidenceResult.evidence_export_job_status}</dd>
+                      <dt>sha256</dt><dd>{evidenceResult.sha256 ?? "-"}</dd>
+                    </dl>
+                  ) : null}
                 </div>
                 <div>
                   <em>{flightTableStepStatusLabel(step.status)}</em>
                   {isE && decisionResult ? <button type="button" onClick={() => setDecisionDrawerOpen(true)}>详情</button> : null}
                   {isF && operationResult ? <button type="button" onClick={() => setOperationDrawerOpen(true)}>详情</button> : null}
+                  {isG && evidenceResult ? <button type="button" onClick={() => setEvidenceDrawerOpen(true)}>详情</button> : null}
                   <button type="button" onClick={() => onRetryStep(step.step_key)} disabled={loading}>重试</button>
                 </div>
               </article>
@@ -164,6 +221,7 @@ export default function FlightMatrix({
       )}
       {decisionDrawerOpen && decisionResult ? <DecisionDrawer result={decisionResult} onClose={() => setDecisionDrawerOpen(false)} /> : null}
       {operationDrawerOpen && operationResult ? <OperationDrawer result={operationResult} onClose={() => setOperationDrawerOpen(false)} /> : null}
+      {evidenceDrawerOpen && evidenceResult ? <EvidenceDrawer result={evidenceResult} onClose={() => setEvidenceDrawerOpen(false)} /> : null}
     </section>
   );
 }
