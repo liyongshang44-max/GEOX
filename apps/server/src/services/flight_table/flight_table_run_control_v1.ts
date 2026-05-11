@@ -25,7 +25,9 @@ export type FlightTableStartInputV1 = {
   evidence_policy?: string;
 };
 
-const LANE_FAILURE_STEP: Record<Exclude<FlightTableLaneV1, "success" | "all">, { step_key: string; message: string }> = {
+type LaneFailure = { step_key: string; message: string };
+
+const LANE_FAILURE_STEP: Record<Exclude<FlightTableLaneV1, "success" | "all">, LaneFailure> = {
   evidence_insufficient: {
     step_key: "G",
     message: "evidence_policy produced evidence_insufficient; acceptance package is intentionally incomplete.",
@@ -61,7 +63,43 @@ function deriveLane(input: FlightTableStartInputV1, run: FlightTableRunV1): Flig
   return isFlightTableLaneV1(input.lane) ? input.lane : run.lane;
 }
 
-function stepMessage(step_key: string, lane: FlightTableLaneV1, failure: { step_key: string; message: string } | null): string {
+function count(value: unknown): number {
+  return Array.isArray(value) ? value.length : 0;
+}
+
+function successLaneManifestFailure(run: FlightTableRunV1): LaneFailure | null {
+  const m = run.manifest;
+  if (!m.field_id || !m.season_id || !m.crop || !m.crop_stage) {
+    return { step_key: "A", message: "success lane requires field_id, season_id, crop, and crop_stage in manifest; run-control must not mark an incomplete field assembly as PASS." };
+  }
+  if (!m.geometry_id) {
+    return { step_key: "A1", message: "success lane requires geometry_id in manifest; no geometry means no fabricated map or spatial PASS." };
+  }
+  if (count(m.device_ids) < 2 || count(m.credential_ids) < 1) {
+    return { step_key: "B", message: "success lane requires real device onboarding, credentials, heartbeat, and at least sensing plus execution devices in manifest." };
+  }
+  if (count(m.skill_binding_ids) < 4 || count(m.skill_run_ids) < 4) {
+    return { step_key: "C0", message: "success lane requires sensing, agronomy, device, and acceptance skill bindings plus skill traces in manifest." };
+  }
+  if (count(m.recommendation_ids) < 1 || count(m.prescription_ids) < 1 || count(m.approval_request_ids) < 1) {
+    return { step_key: "E", message: "success lane requires recommendation, prescription, and approval request objects in manifest." };
+  }
+  if (count(m.operation_plan_ids) < 1 || count(m.act_task_ids) < 1 || count(m.receipt_ids) < 1) {
+    return { step_key: "F", message: "success lane requires operation plan, AO-ACT task, and receipt in manifest; receipt is not acceptance." };
+  }
+  if (count(m.evidence_ids) < 1 || count(m.acceptance_ids) < 1 || count(m.evidence_export_job_ids) < 1) {
+    return { step_key: "G", message: "success lane requires evidence, acceptance, and evidence export relation in manifest." };
+  }
+  if (count(m.roi_ids) < 1 || count(m.field_memory_ids) < 1) {
+    return { step_key: "H", message: "success lane requires ROI and Field Memory learning closure objects in manifest." };
+  }
+  if (count(m.ui_urls) < 1 || count(m.api_snapshot_refs) < 1) {
+    return { step_key: "I", message: "success lane requires UI replay URLs and API snapshots in manifest." };
+  }
+  return null;
+}
+
+function stepMessage(step_key: string, lane: FlightTableLaneV1, failure: LaneFailure | null): string {
   if (failure?.step_key === step_key) return failure.message;
   if (failure && FLIGHT_TABLE_A0_STEPS_V1.findIndex((s) => s.step_key === step_key) > FLIGHT_TABLE_A0_STEPS_V1.findIndex((s) => s.step_key === failure.step_key)) {
     return `Skipped because lane ${lane} failed at ${failure.step_key}.`;
@@ -69,9 +107,9 @@ function stepMessage(step_key: string, lane: FlightTableLaneV1, failure: { step_
   return `FT-E lane ${lane} run-control marked this stage as complete.`;
 }
 
-function buildLaneSteps(run: FlightTableRunV1, lane: FlightTableLaneV1, ts: string): FlightTableStepV1[] {
+function buildLaneSteps(run: FlightTableRunV1, lane: FlightTableLaneV1, ts: string, forcedFailure: LaneFailure | null = null): FlightTableStepV1[] {
   const effectiveLane = lane === "all" ? "evidence_insufficient" : lane;
-  const failure = effectiveLane === "success" ? null : LANE_FAILURE_STEP[effectiveLane];
+  const failure = forcedFailure ?? (effectiveLane === "success" ? null : LANE_FAILURE_STEP[effectiveLane]);
   const failureIndex = failure ? FLIGHT_TABLE_A0_STEPS_V1.findIndex((step) => step.step_key === failure.step_key) : -1;
   return FLIGHT_TABLE_A0_STEPS_V1.map((def, index) => {
     const prev = existingStep(run, def.step_key);
@@ -142,7 +180,8 @@ export async function startFlightTableRunV1(run: FlightTableRunV1, input: Flight
   const skill_policy = normalizePolicy(input.skill_policy, lane === "skill_failure" || lane === "all" ? "inject_skill_failure" : "require_all_bound");
   const weather_policy = normalizePolicy(input.weather_policy, lane === "weather_interference" || lane === "all" ? "simulate_weather_interference" : "observe_only");
   const evidence_policy = normalizePolicy(input.evidence_policy, lane === "evidence_insufficient" || lane === "all" ? "insufficient" : "complete");
-  const steps = buildLaneSteps(run, lane, ts);
+  const manifestFailure = lane === "success" ? successLaneManifestFailure(run) : null;
+  const steps = buildLaneSteps(run, lane, ts, manifestFailure);
   const hasFail = steps.some((step) => step.status === "FAIL");
   const snapshot = await writeFlightTableApiSnapshotV1({
     run_id: run.run_id,
@@ -156,6 +195,7 @@ export async function startFlightTableRunV1(run: FlightTableRunV1, input: Flight
       previous_status: run.status,
       next_status: hasFail ? "FAIL" : "PASS",
       lane,
+      manifest_gate: manifestFailure,
       failed_steps: steps.filter((step) => step.status === "FAIL").map((step) => ({ step_key: step.step_key, message: step.message })),
     },
   });
