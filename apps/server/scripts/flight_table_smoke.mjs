@@ -27,7 +27,10 @@ function staticBoundaryChecks() {
   assert(route.includes("ENABLE_FLIGHT_TABLE_API"), "flight-table route must be guarded by ENABLE_FLIGHT_TABLE_API");
   assert(route.includes("FLIGHT_TABLE_DISABLED"), "flight-table route must return FLIGHT_TABLE_DISABLED when disabled");
   assert(route.includes("security.admin"), "flight-table route must require security.admin scope");
-  assert(route.includes("masked_secret"), "flight-table manifest must use masked credential output");
+
+  const manifest = read("apps/server/src/services/flight_table/flight_table_manifest_v1.ts");
+  assert(manifest.includes("masked_secret"), "flight-table manifest service must expose masked credential refs");
+  assert(manifest.includes('"****"'), "flight-table manifest service must mask credential refs as ****");
 
   const devtools = read("apps/server/src/modules/devtools/registerDevtoolsModule.ts");
   assert(devtools.includes("registerFlightTableV1Routes"), "flight-table base route must be registered through devtools module");
@@ -36,7 +39,7 @@ function staticBoundaryChecks() {
 
 async function disabledHttpCheck() {
   const resp = await getJson("/api/v1/dev/flight-table/runs");
-  assert(resp.status === 503, `default flight-table API must return 503 when disabled; got ${resp.status}`);
+  assert(resp.status === 503, `default flight-table API must return 503 when disabled; got ${resp.status}. If this is 404, the running server does not include the flight-table routes yet.`);
   assert(resp.json?.ok === false, "disabled response must be ok=false");
   assert(resp.json?.error === "FLIGHT_TABLE_DISABLED", "disabled response must return error=FLIGHT_TABLE_DISABLED");
 }
