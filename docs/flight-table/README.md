@@ -86,27 +86,40 @@ pnpm --filter @geox/server run smoke:flight-table
 Remove-Item Env:FLIGHT_TABLE_SKIP_HTTP
 ```
 
-`smoke:flight-table:success` and `smoke:flight-table:all` require a running server with Flight Table enabled and an admin auth value.
+`smoke:flight-table:success` and `smoke:flight-table:all` require a running server that was started after the latest pull, with Flight Table enabled in that server process, and with an admin auth value available to the smoke process.
+
+Setting `$env:ENABLE_FLIGHT_TABLE_API="true"` only in the PowerShell window that runs the smoke client does not enable an already-running server. Restart or rebuild the server/container with the same setting first.
+
+Example local PowerShell sequence:
+
+```powershell
+$env:ENABLE_FLIGHT_TABLE_API="true"
+pnpm --filter @geox/server run dev
+```
+
+Then, in another PowerShell window:
+
+```powershell
+$env:FLIGHT_TABLE_AUTH_TOKEN="<admin-auth-value>"
+pnpm --filter @geox/server run smoke:flight-table:success
+pnpm --filter @geox/server run smoke:flight-table:all
+Remove-Item Env:FLIGHT_TABLE_AUTH_TOKEN
+```
 
 Bash:
 
 ```bash
-ENABLE_FLIGHT_TABLE_API=true
-FLIGHT_TABLE_AUTH_TOKEN=<admin-auth-value>
-pnpm --filter @geox/server run smoke:flight-table:success
-pnpm --filter @geox/server run smoke:flight-table:all
+ENABLE_FLIGHT_TABLE_API=true pnpm --filter @geox/server run dev
 ```
 
-PowerShell:
+Then in another shell:
 
-```powershell
-$env:ENABLE_FLIGHT_TABLE_API="true"
-$env:FLIGHT_TABLE_AUTH_TOKEN="<admin-auth-value>"
-pnpm --filter @geox/server run smoke:flight-table:success
-pnpm --filter @geox/server run smoke:flight-table:all
-Remove-Item Env:ENABLE_FLIGHT_TABLE_API
-Remove-Item Env:FLIGHT_TABLE_AUTH_TOKEN
+```bash
+FLIGHT_TABLE_AUTH_TOKEN=<admin-auth-value> pnpm --filter @geox/server run smoke:flight-table:success
+FLIGHT_TABLE_AUTH_TOKEN=<admin-auth-value> pnpm --filter @geox/server run smoke:flight-table:all
 ```
+
+If the smoke returns 404 for `/api/v1/dev/flight-table/runs`, the target server does not have the flight-table routes registered. Rebuild or restart the server after pulling main, and confirm the smoke is hitting the correct port through `FLIGHT_TABLE_BASE_URL`.
 
 ## Data and persistence
 

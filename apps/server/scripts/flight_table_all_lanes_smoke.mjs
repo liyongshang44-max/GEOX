@@ -29,10 +29,12 @@ async function requestJson(method, pathname, body) {
   });
   let json = null;
   try { json = await res.json(); } catch { json = null; }
-  return { status: res.status, json };
+  return { status: res.status, json, pathname };
 }
 
 function assertEnabled(resp) {
+  assert(resp.status !== 0, `cannot reach ${baseUrl}; start the server before running enabled flight-table smoke`);
+  assert(resp.status !== 404, `${resp.pathname} returned 404. The running server at ${baseUrl} does not have flight-table routes registered. Rebuild/restart the server after pulling main, and start it with ENABLE_FLIGHT_TABLE_API=true.`);
   assert(resp.status !== 503 || resp.json?.error !== "FLIGHT_TABLE_DISABLED", "server must be started with ENABLE_FLIGHT_TABLE_API=true for all-lanes smoke");
   assert(resp.status !== 401, "flight-table smoke token is missing or invalid");
   assert(resp.status !== 403, "flight-table smoke token lacks security.admin scope");
@@ -63,10 +65,12 @@ async function smokeLane(lane) {
   assert(start.json?.run?.lane === lane, `${lane}: returned run must keep requested lane`);
 
   const verify = await requestJson("POST", `/api/v1/dev/flight-table/runs/${encodeURIComponent(runId)}/verify`, {});
+  assertEnabled(verify);
   assert(verify.status === 200, `${lane}: verify expected 200, got ${verify.status}`);
   assert(verify.json?.run?.steps?.length >= 1, `${lane}: verify must return run steps`);
 
   const clean = await requestJson("POST", `/api/v1/dev/flight-table/runs/${encodeURIComponent(runId)}/clean`, {});
+  assertEnabled(clean);
   assert(clean.status === 200, `${lane}: clean expected 200, got ${clean.status}`);
   assert(clean.json?.run?.status === "CLEANED", `${lane}: clean must set status=CLEANED`);
   return { lane, runId, status: clean.json?.run?.status };

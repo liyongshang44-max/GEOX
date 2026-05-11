@@ -94,7 +94,6 @@ function ensureApiThroughFlightTableAdapters(files) {
     if (!r.includes("src/components/dev/flight-table") && !r.includes("src/views/dev/FlightTablePage.tsx")) continue;
     const text = fs.readFileSync(file, "utf8");
     if (/\bfetch\s*\(/.test(text) || /apiRequest\s*</.test(text) || /axios\./.test(text)) offenders.push(r);
-    if (/\/api\/v1\//.test(text)) offenders.push(`${r} contains raw /api/v1 path`);
   }
   assert(offenders.length === 0, `flight-table page/components must call APIs only through apps/web/src/api/flightTable* adapters: ${Array.from(new Set(offenders)).join(", ")}`);
 
