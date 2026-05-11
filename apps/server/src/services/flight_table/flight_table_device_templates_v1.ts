@@ -66,7 +66,7 @@ export const FLIGHT_TABLE_DEVICE_TEMPLATES_V1: Record<string, FlightTableDeviceT
     capabilities: ["irrigation", "valve", "pump", "control"],
     required_observation_skills: ["sensor_quality_inference_v1"],
     default_metrics: [
-      { metric: "valve_state", value: "open", unit: null },
+      { metric: "valve_state", value: 1, unit: null },
       { metric: "pump_pressure_kpa", value: 220, unit: "kpa" },
     ],
     default_mode: "simulator",
