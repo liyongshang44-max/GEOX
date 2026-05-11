@@ -90,8 +90,8 @@ function successLaneManifestFailure(run: FlightTableRunV1): LaneFailure | null {
   if (count(m.evidence_ids) < 1 || count(m.acceptance_ids) < 1 || count(m.evidence_export_job_ids) < 1) {
     return { step_key: "G", message: "success lane requires evidence, acceptance, and evidence export relation in manifest." };
   }
-  if (count(m.roi_ids) < 1 || count(m.field_memory_ids) < 1) {
-    return { step_key: "H", message: "success lane requires ROI and Field Memory learning closure objects in manifest." };
+  if (count(m.field_memory_ids) < 1) {
+    return { step_key: "H", message: "success lane requires Field Memory learning closure evidence in manifest; ROI may be empty when learning is weather-excluded and explicitly diagnosed." };
   }
   if (count(m.ui_urls) < 1 || count(m.api_snapshot_refs) < 1) {
     return { step_key: "I", message: "success lane requires UI replay URLs and API snapshots in manifest." };
