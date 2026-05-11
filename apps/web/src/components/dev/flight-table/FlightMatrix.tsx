@@ -3,6 +3,7 @@ import type { FlightTableRunV1 } from "../../../api/flightTable";
 import type { FlightTableDecisionRunResultV1 } from "../../../api/flightTableDecision";
 import type { FlightTableEvidenceRunResultV1 } from "../../../api/flightTableEvidence";
 import type { FlightTableOperationRunResultV1 } from "../../../api/flightTableOperation";
+import type { FlightTableReportLearningRunResultV1 } from "../../../api/flightTableReportLearning";
 import { flightTableStepStatusLabel } from "../../../viewmodels/flightTableVm";
 
 type Props = {
@@ -10,17 +11,21 @@ type Props = {
   decisionResult: FlightTableDecisionRunResultV1 | null;
   operationResult: FlightTableOperationRunResultV1 | null;
   evidenceResult: FlightTableEvidenceRunResultV1 | null;
+  reportLearningResult: FlightTableReportLearningRunResultV1 | null;
   onRetryStep: (stepKey: string) => void;
   onRunDecision: () => void;
   onRunOperation: () => void;
   onRunEvidence: () => void;
+  onRunReportLearning: () => void;
   loading: boolean;
   decisionLoading: boolean;
   operationLoading: boolean;
   evidenceLoading: boolean;
+  reportLearningLoading: boolean;
   decisionError: string | null;
   operationError: string | null;
   evidenceError: string | null;
+  reportLearningError: string | null;
 };
 
 function DecisionDrawer({ result, onClose }: { result: FlightTableDecisionRunResultV1; onClose: () => void }): React.ReactElement {
@@ -130,26 +135,70 @@ function EvidenceDrawer({ result, onClose }: { result: FlightTableEvidenceRunRes
   );
 }
 
+function ReportLearningDrawer({ result, onClose }: { result: FlightTableReportLearningRunResultV1; onClose: () => void }): React.ReactElement {
+  return (
+    <aside className="flight-decision-drawer flight-report-learning-drawer">
+      <div className="flight-card-head">
+        <h3>H 层详情：Report · Weather · ROI · Field Memory · Learning</h3>
+        <button type="button" onClick={onClose}>关闭</button>
+      </div>
+      <dl className="flight-field-state">
+        <dt>operation report</dt><dd>{result.operation_report_ready ? "READY" : "NOT_READY"}</dd>
+        <dt>field report</dt><dd>{result.field_report_ready ? "READY" : "NOT_READY"}</dd>
+        <dt>customer reports</dt><dd>{result.customer_reports_ready ? "READY" : "NOT_READY"}</dd>
+        <dt>weather</dt><dd>{result.weather_status}</dd>
+        <dt>weather source</dt><dd>{result.weather_source ?? "-"}</dd>
+        <dt>ROI</dt><dd>{result.roi_status}</dd>
+        <dt>ROI ids</dt><dd>{result.roi_ids.length ? result.roi_ids.join(", ") : "-"}</dd>
+        <dt>Field Memory</dt><dd>{result.field_memory_status}</dd>
+        <dt>Field Memory ids</dt><dd>{result.field_memory_ids.length ? result.field_memory_ids.join(", ") : "-"}</dd>
+        <dt>Skill Trace</dt><dd>{result.skill_trace_status}</dd>
+        <dt>Skill Performance</dt><dd>{result.skill_performance_status}</dd>
+        <dt>Learning closure</dt><dd>{result.learning_closure}</dd>
+        <dt>Excluded reason</dt><dd>{result.learning_excluded_reason ?? "-"}</dd>
+      </dl>
+      <section className="flight-decision-contract">
+        <h4>验收回放页面链接</h4>
+        {result.ui_urls.map((url) => <p key={url}><a href={url} target="_blank" rel="noreferrer">{url}</a></p>)}
+      </section>
+      <details open>
+        <summary>诊断建议</summary>
+        {result.diagnostic_suggestions.length ? (
+          <ul className="flight-diagnostics-list">
+            {result.diagnostic_suggestions.map((item) => <li key={item}>{item}</li>)}
+          </ul>
+        ) : <p className="flight-muted">暂无诊断建议。</p>}
+      </details>
+      <p className="flight-muted">weather lane 不把雨水学习成灌溉效果；skill failure lane 不写入可信学习。ROI 估算会明确标注为 ESTIMATED，不冒充真实财务结果。</p>
+    </aside>
+  );
+}
+
 export default function FlightMatrix({
   run,
   decisionResult,
   operationResult,
   evidenceResult,
+  reportLearningResult,
   onRetryStep,
   onRunDecision,
   onRunOperation,
   onRunEvidence,
+  onRunReportLearning,
   loading,
   decisionLoading,
   operationLoading,
   evidenceLoading,
+  reportLearningLoading,
   decisionError,
   operationError,
   evidenceError,
+  reportLearningError,
 }: Props): React.ReactElement {
   const [decisionDrawerOpen, setDecisionDrawerOpen] = React.useState(false);
   const [operationDrawerOpen, setOperationDrawerOpen] = React.useState(false);
   const [evidenceDrawerOpen, setEvidenceDrawerOpen] = React.useState(false);
+  const [reportLearningDrawerOpen, setReportLearningDrawerOpen] = React.useState(false);
   return (
     <section className="flight-card">
       <div className="flight-card-head">
@@ -160,12 +209,15 @@ export default function FlightMatrix({
         <button type="button" onClick={onRunDecision} disabled={loading || decisionLoading || !run}>运行 E 层：推荐 / 处方 / 审批</button>
         <button type="button" onClick={onRunOperation} disabled={loading || operationLoading || !run}>运行 F 层：Operation / AO-ACT / Receipt</button>
         <button type="button" onClick={onRunEvidence} disabled={loading || evidenceLoading || !run}>运行 G 层：Evidence / Acceptance / Export</button>
+        <button type="button" onClick={onRunReportLearning} disabled={loading || reportLearningLoading || !run}>运行 H 层：Report / Learning Closure</button>
         {decisionResult ? <button type="button" onClick={() => setDecisionDrawerOpen(true)}>查看 E 层详情</button> : null}
         {operationResult ? <button type="button" onClick={() => setOperationDrawerOpen(true)}>查看 F 层详情</button> : null}
         {evidenceResult ? <button type="button" onClick={() => setEvidenceDrawerOpen(true)}>查看 G 层详情</button> : null}
+        {reportLearningResult ? <button type="button" onClick={() => setReportLearningDrawerOpen(true)}>查看 H 层详情</button> : null}
         {decisionError ? <span className="flight-error-text">{decisionError}</span> : null}
         {operationError ? <span className="flight-error-text">{operationError}</span> : null}
         {evidenceError ? <span className="flight-error-text">{evidenceError}</span> : null}
+        {reportLearningError ? <span className="flight-error-text">{reportLearningError}</span> : null}
       </div>
       {run ? (
         <div className="flight-matrix">
@@ -173,8 +225,9 @@ export default function FlightMatrix({
             const isE = step.step_key === "E";
             const isF = step.step_key === "F";
             const isG = step.step_key === "G";
+            const isH = step.step_key === "H";
             return (
-              <article key={step.step_key} className={`flight-step flight-step-${step.status.toLowerCase()} ${isE ? "flight-step-decision" : ""} ${isF ? "flight-step-operation" : ""} ${isG ? "flight-step-evidence" : ""}`}>
+              <article key={step.step_key} className={`flight-step flight-step-${step.status.toLowerCase()} ${isE ? "flight-step-decision" : ""} ${isF ? "flight-step-operation" : ""} ${isG ? "flight-step-evidence" : ""} ${isH ? "flight-step-report-learning" : ""}`}>
                 <div>
                   <strong>{step.step_key}</strong>
                   <span>{step.label}</span>
@@ -204,12 +257,23 @@ export default function FlightMatrix({
                       <dt>sha256</dt><dd>{evidenceResult.sha256 ?? "-"}</dd>
                     </dl>
                   ) : null}
+                  {isH && reportLearningResult ? (
+                    <dl className="flight-e-layer-inline flight-h-layer-inline">
+                      <dt>operation report</dt><dd>{reportLearningResult.operation_report_ready ? "READY" : "NOT_READY"}</dd>
+                      <dt>field report</dt><dd>{reportLearningResult.field_report_ready ? "READY" : "NOT_READY"}</dd>
+                      <dt>weather</dt><dd>{reportLearningResult.weather_status}</dd>
+                      <dt>ROI</dt><dd>{reportLearningResult.roi_status}</dd>
+                      <dt>Field Memory</dt><dd>{reportLearningResult.field_memory_status}</dd>
+                      <dt>learning</dt><dd>{reportLearningResult.learning_closure}</dd>
+                    </dl>
+                  ) : null}
                 </div>
                 <div>
                   <em>{flightTableStepStatusLabel(step.status)}</em>
                   {isE && decisionResult ? <button type="button" onClick={() => setDecisionDrawerOpen(true)}>详情</button> : null}
                   {isF && operationResult ? <button type="button" onClick={() => setOperationDrawerOpen(true)}>详情</button> : null}
                   {isG && evidenceResult ? <button type="button" onClick={() => setEvidenceDrawerOpen(true)}>详情</button> : null}
+                  {isH && reportLearningResult ? <button type="button" onClick={() => setReportLearningDrawerOpen(true)}>详情</button> : null}
                   <button type="button" onClick={() => onRetryStep(step.step_key)} disabled={loading}>重试</button>
                 </div>
               </article>
@@ -222,6 +286,7 @@ export default function FlightMatrix({
       {decisionDrawerOpen && decisionResult ? <DecisionDrawer result={decisionResult} onClose={() => setDecisionDrawerOpen(false)} /> : null}
       {operationDrawerOpen && operationResult ? <OperationDrawer result={operationResult} onClose={() => setOperationDrawerOpen(false)} /> : null}
       {evidenceDrawerOpen && evidenceResult ? <EvidenceDrawer result={evidenceResult} onClose={() => setEvidenceDrawerOpen(false)} /> : null}
+      {reportLearningDrawerOpen && reportLearningResult ? <ReportLearningDrawer result={reportLearningResult} onClose={() => setReportLearningDrawerOpen(false)} /> : null}
     </section>
   );
 }
