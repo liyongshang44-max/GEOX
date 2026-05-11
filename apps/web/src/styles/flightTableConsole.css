@@ -1,0 +1,94 @@
+.flight-console-sidebar button {
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 9px 10px;
+  text-align: left;
+}
+
+.flight-console-sidebar button.active,
+.flight-console-sidebar button:hover {
+  background: rgba(15, 23, 42, 0.08);
+  color: #0f172a;
+}
+
+.flight-console-scope {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin: 18px 0 0;
+}
+
+.flight-console-scope dt {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.flight-console-scope dd {
+  margin: 0;
+  color: #0f172a;
+  font-weight: 700;
+  word-break: break-word;
+}
+
+.flight-console-control-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(160px, 0.7fr);
+  gap: 10px;
+}
+
+.flight-console-primary-actions .flight-action-primary,
+.flight-actions .flight-action-primary {
+  background: #0f172a;
+  color: #fff;
+}
+
+.flight-console-secondary-actions button {
+  font-size: 13px;
+  opacity: 0.92;
+}
+
+.flight-summary-card small {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.flight-console-bottom-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.8fr) minmax(360px, 1.2fr) minmax(260px, 0.8fr);
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.flight-console-monitor-card .flight-card {
+  box-shadow: none;
+}
+
+.flight-diagnostics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.flight-diagnostics-panel details {
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  .flight-console-bottom-grid,
+  .flight-console-scope,
+  .flight-diagnostics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .flight-console-control-grid {
+    grid-template-columns: 1fr;
+  }
+}
