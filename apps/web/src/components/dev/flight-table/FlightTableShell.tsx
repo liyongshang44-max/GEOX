@@ -1,4 +1,5 @@
 import React from "react";
+import "../../../styles/flightTableConsole.css";
 import type {
   CreateFlightTableGeometryResponseV1,
   FlightTableApiSnapshotV1,
