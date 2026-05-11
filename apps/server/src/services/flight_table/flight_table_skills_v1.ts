@@ -161,6 +161,8 @@ async function ensureFieldMemoryRuntime(pool: Pool): Promise<void> {
     ADD COLUMN IF NOT EXISTS weather_interference_detected BOOLEAN NOT NULL DEFAULT false,
     ADD COLUMN IF NOT EXISTS learning_excluded_reason TEXT,
     ADD COLUMN IF NOT EXISTS occurred_at TIMESTAMPTZ NOT NULL DEFAULT now()`);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS field_memory_v1_tenant_memory_uidx
+    ON field_memory_v1 (tenant_id, memory_id)`);
 }
 
 async function verifyOperatorSkillViews(pool: Pool, run: FlightTableRunV1, operation_id: string): Promise<{ trace_visible: boolean; performance_visible: boolean }> {
