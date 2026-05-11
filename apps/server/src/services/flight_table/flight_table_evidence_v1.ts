@@ -56,6 +56,14 @@ type EvidenceScenario = {
   review_reason: string | null;
 };
 
+type FormalEvidenceArtifact = {
+  artifact_id: string;
+  kind: string;
+  level: "FORMAL" | "STRONG";
+  artifact_ref: string;
+  summary: Record<string, unknown>;
+};
+
 function nowIso(): string { return new Date().toISOString(); }
 function nowTs(): number { return Date.now(); }
 function safeText(v: unknown): string { return String(v ?? "").trim(); }
@@ -175,6 +183,57 @@ async function ensureEvidenceExportRelationTableV1(pool: Pool): Promise<void> {
   await pool.query(`CREATE INDEX IF NOT EXISTS op_evidence_rel_tenant_job_idx ON operation_evidence_export_relation_v1(tenant_id, evidence_export_job_id);`);
 }
 
+function formalArtifactsForScenario(params: {
+  evidence_id: string;
+  run_id: string;
+  operation_id: string;
+  operation_plan_id: string;
+  act_task_id: string;
+  receipt_id: string;
+  field_id: string;
+  lane: FlightTableEvidenceLaneV1;
+  scenario: EvidenceScenario;
+  sha256: string;
+}): FormalEvidenceArtifact[] {
+  const { evidence_id, run_id, operation_id, operation_plan_id, act_task_id, receipt_id, field_id, lane, scenario, sha256 } = params;
+  if (!scenario.evidence_complete || !scenario.trusted) return [];
+  const base = {
+    run_id,
+    operation_id,
+    operation_plan_id,
+    act_task_id,
+    receipt_id,
+    field_id,
+    lane,
+    evidence_id,
+    evidence_status: scenario.evidence_status,
+    sha256,
+  };
+  return [
+    {
+      artifact_id: `${evidence_id}_metric`,
+      kind: "metric",
+      level: "FORMAL",
+      artifact_ref: `flight-table/${run_id}/${operation_id}/metrics.json`,
+      summary: { ...base, metric_key: "soil_moisture_delta", before: 0.18, after: 0.31, delta: 0.13 },
+    },
+    {
+      artifact_id: `${evidence_id}_trajectory`,
+      kind: "trajectory",
+      level: "FORMAL",
+      artifact_ref: `flight-table/${run_id}/${operation_id}/execution_trajectory.json`,
+      summary: { ...base, coverage_percent: 92, as_applied_status: "PARTIAL" },
+    },
+    {
+      artifact_id: `${evidence_id}_receipt`,
+      kind: "water_delivery_receipt",
+      level: "FORMAL",
+      artifact_ref: `flight-table/${run_id}/${operation_id}/water_delivery_receipt.json`,
+      summary: { ...base, planned_amount: 25, actual_amount: 25, receipt_status: "SUCCESS_RECEIPT_ONLY_NOT_ACCEPTANCE" },
+    },
+  ];
+}
+
 async function writeEvidenceScenarioFactV1(params: {
   pool: Pool;
   run: FlightTableRunV1;
@@ -229,6 +288,35 @@ async function writeEvidenceScenarioFactV1(params: {
     "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb) ON CONFLICT (fact_id) DO NOTHING",
     [evidence_id, "api/v1/dev/flight-table/evidence", record],
   );
+  for (const artifact of formalArtifactsForScenario({ evidence_id, run_id: run.run_id, operation_id, operation_plan_id, act_task_id, receipt_id, field_id, lane, scenario, sha256 })) {
+    const artifactRecord = {
+      type: "evidence_artifact_v1",
+      payload: {
+        tenant_id: run.tenant_id,
+        project_id: run.project_id,
+        group_id: run.group_id,
+        run_id: run.run_id,
+        evidence_id,
+        artifact_id: artifact.artifact_id,
+        operation_id,
+        operation_plan_id,
+        act_task_id,
+        receipt_id,
+        field_id,
+        kind: artifact.kind,
+        level: artifact.level,
+        artifact_ref: artifact.artifact_ref,
+        sha256,
+        summary: artifact.summary,
+        source: "FLIGHT_TABLE_FORMAL_EVIDENCE",
+        created_at: nowIso(),
+      },
+    };
+    await pool.query(
+      "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb) ON CONFLICT (fact_id) DO UPDATE SET record_json=EXCLUDED.record_json, occurred_at=EXCLUDED.occurred_at, source=EXCLUDED.source",
+      [artifact.artifact_id, "api/v1/dev/flight-table/evidence", artifactRecord],
+    );
+  }
   return { evidence_id, sha256, summary };
 }
 
