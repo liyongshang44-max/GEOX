@@ -422,7 +422,7 @@ export async function runFlightTableReportLearningClosureV1(args: {
   });
 
   const passCondition = run.lane === "success"
-    ? operationReportReady && fieldReportReady && acceptance.pass && (roiStatus === "READY" || roiStatus === "ESTIMATED") && fieldMemoryStatus !== "ERROR" && closure !== "OPEN"
+    ? operationReportReady && fieldReportReady && acceptance.pass && fieldMemoryStatus === "READY" && (closure === "CLOSED" || closure === "EXCLUDED_WEATHER")
     : run.lane === "weather_interference"
       ? operationReportReady && fieldReportReady && closure === "EXCLUDED_WEATHER"
       : run.lane === "skill_failure"
