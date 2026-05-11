@@ -36,7 +36,7 @@ export function flightTableLaneLabel(lane: FlightTableLaneV1 | string | undefine
     case "evidence_insufficient": return "证据不足航线";
     case "weather_interference": return "天气干扰航线";
     case "skill_failure": return "技能失败航线";
-    case "all": return "全航线";
+    case "all": return "全异常抽样";
     default: return "未选择";
   }
 }
