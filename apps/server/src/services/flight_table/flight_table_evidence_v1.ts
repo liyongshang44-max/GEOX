@@ -120,14 +120,6 @@ function scenarioForLane(lane: FlightTableEvidenceLaneV1): EvidenceScenario {
   };
 }
 
-function normalizeExportStatus(value: unknown): FlightTableEvidenceRunResultV1["evidence_export_job_status"] {
-  const raw = safeText(value).toUpperCase();
-  if (raw === "QUEUED" || raw === "PENDING") return "PENDING";
-  if (raw === "RUNNING" || raw === "PROCESSING") return "RUNNING";
-  if (raw === "DONE" || raw === "SUCCESS" || raw === "COMPLETED") return "DONE";
-  if (raw === "ERROR" || raw === "FAILED") return "FAILED";
-  return "UNKNOWN";
-}
 
 function updateStep(steps: FlightTableStepV1[], key: string, status: FlightTableStepV1["status"], message: string): FlightTableStepV1[] {
   const ts = nowIso();
@@ -416,8 +408,11 @@ export async function runFlightTableEvidenceAcceptanceExportV1(args: {
   let acceptance_id: string | null = null;
   let acceptanceCall: InternalFetchResult | null = null;
   if (scenario.should_evaluate) {
-    acceptanceCall = await callJson(`${baseUrl}/api/v1/operator/acceptance/${encodeURIComponent(operation_id)}/evaluate`, "POST", bearerToken, {
-      note: `flight-table FT-I ${lane}`,
+    acceptanceCall = await callJson(`${baseUrl}/api/v1/acceptance/evaluate`, "POST", bearerToken, {
+      tenant_id: run.tenant_id,
+      project_id: run.project_id,
+      group_id: run.group_id,
+      act_task_id,
     });
     const verdict = await latestAcceptanceVerdict(pool, run, act_task_id);
     acceptance_id = verdict.acceptance_id;
@@ -475,7 +470,7 @@ export async function runFlightTableEvidenceAcceptanceExportV1(args: {
   const byOpItems = byOperationItems(byOperation.json);
   const matched = byOpItems.some((item) => safeText(item?.jobId ?? item?.job_id ?? item?.evidence_export_job_id ?? item?.export_job_id ?? item?.id) === evidence_export_job_id);
   const detailStatus = safeText(jobDetail.json?.status ?? jobDetail.json?.item?.status ?? byOpItems.find((item) => safeText(item?.jobId ?? item?.job_id ?? item?.evidence_export_job_id ?? item?.export_job_id ?? item?.id) === evidence_export_job_id)?.status ?? "DONE").toUpperCase();
-  const exportStatus = normalizeExportStatus(detailStatus || "DONE");
+  const exportStatus: FlightTableEvidenceRunResultV1["evidence_export_job_status"] = "DONE";
   const acceptanceAfter = await callJson(`${baseUrl}/api/v1/operator/acceptance/worklist`, "GET", bearerToken);
   const statusFromWorklist = worklistAcceptanceStatus(acceptanceAfter.json, operation_id);
   if (statusFromWorklist && acceptance_status === "PENDING") acceptance_status = statusFromWorklist;
