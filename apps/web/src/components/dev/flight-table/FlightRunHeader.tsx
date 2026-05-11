@@ -46,7 +46,7 @@ export default function FlightRunHeader(props: Props): React.ReactElement {
               <option value="evidence_insufficient">证据不足航线</option>
               <option value="weather_interference">天气干扰航线</option>
               <option value="skill_failure">技能失败航线</option>
-              <option value="all">全航线</option>
+              <option value="all">全异常抽样</option>
             </select>
           </label>
         </div>
