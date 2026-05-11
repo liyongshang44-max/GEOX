@@ -39,6 +39,12 @@ until the server is explicitly started with:
 ENABLE_FLIGHT_TABLE_API=true
 ```
 
+PowerShell equivalent:
+
+```powershell
+$env:ENABLE_FLIGHT_TABLE_API="true"
+```
+
 The API also requires `security.admin`. A future `dev.flight_table.run` scope may be added, but until that scope exists, `security.admin` is the accepted gate.
 
 ## Release gate commands
@@ -66,26 +72,47 @@ pnpm --filter @geox/web run build
 
 ## Smoke command behavior
 
-`smoke:flight-table` is the default-disabled gate. It verifies the feature flag, disabled error, admin boundary, and sensitive-output boundary. When HTTP is not available in a static CI environment, run it with:
+`smoke:flight-table` is the default-disabled gate. It verifies the feature flag, disabled error, admin boundary, and sensitive-output boundary. When HTTP is not available in a static CI environment, run it with Bash:
 
 ```bash
 FLIGHT_TABLE_SKIP_HTTP=true pnpm --filter @geox/server run smoke:flight-table
 ```
 
-`smoke:flight-table:success` and `smoke:flight-table:all` require a running server with Flight Table enabled and an admin token:
+PowerShell:
+
+```powershell
+$env:FLIGHT_TABLE_SKIP_HTTP="true"
+pnpm --filter @geox/server run smoke:flight-table
+Remove-Item Env:FLIGHT_TABLE_SKIP_HTTP
+```
+
+`smoke:flight-table:success` and `smoke:flight-table:all` require a running server with Flight Table enabled and an admin auth value.
+
+Bash:
 
 ```bash
 ENABLE_FLIGHT_TABLE_API=true
-FLIGHT_TABLE_AUTH_TOKEN=<admin-token>
+FLIGHT_TABLE_AUTH_TOKEN=<admin-auth-value>
 pnpm --filter @geox/server run smoke:flight-table:success
 pnpm --filter @geox/server run smoke:flight-table:all
+```
+
+PowerShell:
+
+```powershell
+$env:ENABLE_FLIGHT_TABLE_API="true"
+$env:FLIGHT_TABLE_AUTH_TOKEN="<admin-auth-value>"
+pnpm --filter @geox/server run smoke:flight-table:success
+pnpm --filter @geox/server run smoke:flight-table:all
+Remove-Item Env:ENABLE_FLIGHT_TABLE_API
+Remove-Item Env:FLIGHT_TABLE_AUTH_TOKEN
 ```
 
 ## Data and persistence
 
 Flight Table V1 stores run artifacts under the temporary run store used by the flight-table services. This is a development rig persistence model, not a production persistence layer.
 
-Every run must preserve a manifest and API snapshots. Credential payloads must be masked. `credential secret`, raw token values, private keys, and raw credential payloads must never be returned to the frontend.
+Every run must preserve a manifest and API snapshots. Credential payloads must be masked. Credential secrets, raw auth values, private keys, and raw credential payloads must never be returned to the frontend.
 
 ## Non-goals
 
