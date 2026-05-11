@@ -39,6 +39,10 @@ import {
   type FlightTableOperationRunResultV1,
 } from "../../api/flightTableOperation";
 import {
+  runFlightTableReportLearning,
+  type FlightTableReportLearningRunResultV1,
+} from "../../api/flightTableReportLearning";
+import {
   fetchFlightTableTelemetryScenarios,
   publishFlightTableTelemetry,
   verifyFlightTableTelemetry,
@@ -174,6 +178,9 @@ export default function FlightTablePage(): React.ReactElement {
   const [evidenceResult, setEvidenceResult] = React.useState<FlightTableEvidenceRunResultV1 | null>(null);
   const [evidenceLoading, setEvidenceLoading] = React.useState(false);
   const [evidenceError, setEvidenceError] = React.useState<string | null>(null);
+  const [reportLearningResult, setReportLearningResult] = React.useState<FlightTableReportLearningRunResultV1 | null>(null);
+  const [reportLearningLoading, setReportLearningLoading] = React.useState(false);
+  const [reportLearningError, setReportLearningError] = React.useState<string | null>(null);
   const [geometryResult, setGeometryResult] = React.useState<CreateFlightTableGeometryResponseV1 | null>(null);
   const [deviceTemplates, setDeviceTemplates] = React.useState<FlightTableDeviceTemplateV1[]>([]);
   const [onboardedDevices, setOnboardedDevices] = React.useState<FlightTableDeviceSummaryV1[]>([]);
@@ -637,6 +644,35 @@ export default function FlightTablePage(): React.ReactElement {
     }
   }, [applyRun, fieldDraft.field_id, laneDraft, operationResult, run]);
 
+  const handleRunReportLearning = React.useCallback(async () => {
+    if (!run) {
+      setReportLearningError("请先创建 run");
+      return;
+    }
+    const operationId = run.manifest.operation_plan_ids.at(-1) ?? evidenceResult?.operation_id ?? operationResult?.operation_id ?? operationResult?.operation_plan_id;
+    const fieldId = run.manifest.field_id ?? fieldDraft.field_id;
+    if (!operationId || !fieldId) {
+      setReportLearningError("缺少 operation_id 或 field_id，请先运行前置链路");
+      return;
+    }
+    setReportLearningLoading(true);
+    setReportLearningError(null);
+    try {
+      const res = await runFlightTableReportLearning(run.run_id, {
+        operation_id: operationId,
+        field_id: fieldId,
+        acceptance_id: run.manifest.acceptance_ids.at(-1),
+        evidence_id: run.manifest.evidence_ids.at(-1),
+      });
+      setReportLearningResult(res);
+      applyRun(res.run);
+    } catch (err) {
+      setReportLearningError(errorToText(err));
+    } finally {
+      setReportLearningLoading(false);
+    }
+  }, [applyRun, evidenceResult, fieldDraft.field_id, operationResult, run]);
+
   const handleVerify = React.useCallback(async () => {
     if (!run) return;
     setLoading(true);
@@ -681,6 +717,7 @@ export default function FlightTablePage(): React.ReactElement {
         decision_result: decisionResult,
         operation_result: operationResult,
         evidence_result: evidenceResult,
+        report_learning_result: reportLearningResult,
         verify_report: verifyReport,
         api_snapshots: latestSnapshots,
       });
@@ -689,7 +726,7 @@ export default function FlightTablePage(): React.ReactElement {
     } finally {
       setLoading(false);
     }
-  }, [decisionResult, evidenceResult, operationResult, run, snapshots, telemetryResult]);
+  }, [decisionResult, evidenceResult, operationResult, reportLearningResult, run, snapshots, telemetryResult]);
 
   const handleClean = React.useCallback(async () => {
     if (!run) return;
@@ -704,6 +741,7 @@ export default function FlightTablePage(): React.ReactElement {
       setDecisionResult(null);
       setOperationResult(null);
       setEvidenceResult(null);
+      setReportLearningResult(null);
       setSkillResult(null);
       setSpatialDraft(defaultSpatialDraft());
       applyRun(next);
@@ -752,6 +790,9 @@ export default function FlightTablePage(): React.ReactElement {
       evidenceResult={evidenceResult}
       evidenceLoading={evidenceLoading}
       evidenceError={evidenceError}
+      reportLearningResult={reportLearningResult}
+      reportLearningLoading={reportLearningLoading}
+      reportLearningError={reportLearningError}
       onRunIdDraftChange={setRunIdDraft}
       onLaneDraftChange={setLaneDraft}
       onSkillFailureTypeChange={setSkillFailureType}
@@ -774,6 +815,7 @@ export default function FlightTablePage(): React.ReactElement {
       onRunDecision={handleRunDecision}
       onRunOperation={handleRunOperation}
       onRunEvidence={handleRunEvidence}
+      onRunReportLearning={handleRunReportLearning}
       onVerify={handleVerify}
       onRetryFailedStep={handleRetryFailedStep}
       onClean={handleClean}

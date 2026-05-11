@@ -12,6 +12,7 @@ import type {
 import type { FlightTableDecisionRunResultV1 } from "../../../api/flightTableDecision";
 import type { FlightTableEvidenceRunResultV1 } from "../../../api/flightTableEvidence";
 import type { FlightTableOperationRunResultV1 } from "../../../api/flightTableOperation";
+import type { FlightTableReportLearningRunResultV1 } from "../../../api/flightTableReportLearning";
 import type {
   FlightTableTelemetryResponseV1,
   FlightTableTelemetryScenarioKeyV1,
@@ -66,6 +67,9 @@ type Props = {
   evidenceResult: FlightTableEvidenceRunResultV1 | null;
   evidenceLoading: boolean;
   evidenceError: string | null;
+  reportLearningResult: FlightTableReportLearningRunResultV1 | null;
+  reportLearningLoading: boolean;
+  reportLearningError: string | null;
   onRunIdDraftChange: (next: string) => void;
   onLaneDraftChange: (next: FlightTableLaneV1) => void;
   onSkillFailureTypeChange: (next: FlightTableSkillFailureTypeV1) => void;
@@ -88,6 +92,7 @@ type Props = {
   onRunDecision: () => void;
   onRunOperation: () => void;
   onRunEvidence: () => void;
+  onRunReportLearning: () => void;
   onVerify: () => void;
   onRetryFailedStep: () => void;
   onClean: () => void;
@@ -204,17 +209,21 @@ export default function FlightTableShell(props: Props): React.ReactElement {
             decisionResult={props.decisionResult}
             operationResult={props.operationResult}
             evidenceResult={props.evidenceResult}
+            reportLearningResult={props.reportLearningResult}
             onRetryStep={props.onRetryStep}
             onRunDecision={props.onRunDecision}
             onRunOperation={props.onRunOperation}
             onRunEvidence={props.onRunEvidence}
+            onRunReportLearning={props.onRunReportLearning}
             loading={props.loading}
             decisionLoading={props.decisionLoading}
             operationLoading={props.operationLoading}
             evidenceLoading={props.evidenceLoading}
+            reportLearningLoading={props.reportLearningLoading}
             decisionError={props.decisionError}
             operationError={props.operationError}
             evidenceError={props.evidenceError}
+            reportLearningError={props.reportLearningError}
           />
         ) : null}
         {activeTab === "replay" ? <><UiReplayLinks run={props.run} /><ManifestPanel manifest={props.run?.manifest ?? null} /><ApiSnapshotPanel snapshots={props.snapshots} /></> : null}
