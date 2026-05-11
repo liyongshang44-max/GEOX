@@ -32,8 +32,8 @@ import DiagnosticsPanel from "./DiagnosticsPanel";
 
 type Props = {
   run: FlightTableRunV1 | null;
-  manifest: FlightTableManifestV1 | null;
-  verifyReport: Record<string, unknown> | null;
+  manifest?: FlightTableManifestV1 | null;
+  verifyReport?: Record<string, unknown> | null;
   snapshots: FlightTableApiSnapshotV1[];
   runIdDraft: string;
   laneDraft: FlightTableLaneV1;
@@ -281,7 +281,7 @@ export default function FlightTableShell(props: Props): React.ReactElement {
         {activeTab === "lane" ? <LaneComposer selectedLane={props.laneDraft} selectedSkillFailureType={props.skillFailureType} onLaneChange={props.onLaneDraftChange} onSkillFailureTypeChange={props.onSkillFailureTypeChange} /> : null}
         {activeTab === "monitor" ? renderMatrix(props) : null}
         {activeTab === "replay" ? <><UiReplayLinks run={props.run} /><ManifestPanel manifest={manifest} /><ApiSnapshotPanel snapshots={props.snapshots} /></> : null}
-        {activeTab === "diagnostics" ? <DiagnosticsPanel run={props.run} manifest={manifest} verifyReport={props.verifyReport} snapshots={props.snapshots} error={props.error} /> : null}
+        {activeTab === "diagnostics" ? <DiagnosticsPanel run={props.run} manifest={manifest} verifyReport={props.verifyReport ?? null} snapshots={props.snapshots} error={props.error} /> : null}
       </main>
     </div>
   );
