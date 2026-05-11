@@ -1,3 +1,17 @@
+.flight-console-header {
+  grid-template-columns: minmax(0, 0.9fr) minmax(420px, 1.1fr);
+  align-items: start;
+}
+
+.flight-console-title-block {
+  min-width: 0;
+}
+
+.flight-console-title-block h1 {
+  line-height: 1.12;
+  max-width: 560px;
+}
+
 .flight-console-sidebar button {
   border: 0;
   border-radius: 12px;
@@ -17,9 +31,10 @@
 
 .flight-console-scope {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
   gap: 8px 12px;
   margin: 18px 0 0;
+  max-width: 360px;
 }
 
 .flight-console-scope dt {
@@ -31,7 +46,9 @@
   margin: 0;
   color: #0f172a;
   font-weight: 700;
-  word-break: break-word;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .flight-console-control-grid {
@@ -77,6 +94,21 @@
 
 .flight-diagnostics-panel details {
   min-width: 0;
+}
+
+@media (max-width: 1400px) {
+  .flight-console-header {
+    grid-template-columns: 1fr;
+  }
+
+  .flight-console-title-block h1 {
+    max-width: 720px;
+  }
+
+  .flight-console-scope {
+    grid-template-columns: repeat(4, minmax(96px, 1fr));
+    max-width: none;
+  }
 }
 
 @media (max-width: 1100px) {
