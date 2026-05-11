@@ -277,6 +277,65 @@ async function writeAsExecutedAndAppliedV1(params: {
   return { as_executed_id, as_applied_id, as_executed_status: "READY", as_applied_status: "PARTIAL", planned_vs_actual_summary };
 }
 
+function selectExecutionDeviceId(run: FlightTableRunV1, inputDeviceId: unknown): string {
+  const explicit = normalizeId(inputDeviceId);
+  if (explicit) return explicit;
+  const irrigation = run.manifest.device_ids.find((id) => /irrigation|controller|valve|pump|flow/i.test(id));
+  if (irrigation) return irrigation;
+  return run.manifest.device_ids.at(-1) ?? run.manifest.device_ids[0] ?? `ft_irrigation_controller_${run.run_id}`;
+}
+
+async function writeFlightTableTaskExecutionBindingV1(params: {
+  pool: Pool;
+  run: FlightTableRunV1;
+  act_task_id: string;
+  operation_plan_id: string;
+  field_id: string;
+  device_id: string;
+}): Promise<void> {
+  const { pool, run, act_task_id, operation_plan_id, field_id, device_id } = params;
+  const latest = await pool.query(
+    `SELECT fact_id, record_json::jsonb AS record_json
+       FROM facts
+      WHERE (record_json::jsonb->>'type')='ao_act_task_v0'
+        AND (record_json::jsonb#>>'{payload,act_task_id}')=$1
+        AND (record_json::jsonb#>>'{payload,tenant_id}')=$2
+        AND (record_json::jsonb#>>'{payload,project_id}')=$3
+        AND (record_json::jsonb#>>'{payload,group_id}')=$4
+      ORDER BY occurred_at DESC, fact_id DESC
+      LIMIT 1`,
+    [act_task_id, run.tenant_id, run.project_id, run.group_id],
+  );
+  const original = latest.rows?.[0]?.record_json;
+  if (!original?.payload) return;
+  const executor = { kind: "device", id: device_id, namespace: "flight_table" };
+  const enriched = {
+    ...original,
+    payload: {
+      ...original.payload,
+      operation_id: original.payload.operation_id ?? operation_plan_id,
+      operation_plan_id,
+      field_id,
+      device_id,
+      execution_mode: "DEVICE",
+      executor_kind: "device",
+      executor_id: executor,
+      meta: {
+        ...(original.payload.meta ?? {}),
+        device_id,
+        execution_mode: "DEVICE",
+        executor_kind: "device",
+        executor_id: executor,
+        execution_target_source: "flight_table_irrigation_controller",
+      },
+    },
+  };
+  await pool.query(
+    "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb) ON CONFLICT (fact_id) DO NOTHING",
+    [`ft_task_executor_${shortHash(`${act_task_id}|${device_id}`)}`, "api/v1/dev/flight-table/operation", enriched],
+  );
+}
+
 function extractWorklistItem(worklist: any, actTaskId: string): any | null {
   const items = Array.isArray(worklist?.items) ? worklist.items : Array.isArray(worklist?.data?.items) ? worklist.data.items : [];
   return items.find((item: any) => safeText(item?.act_task_id ?? item?.task_id) === actTaskId) ?? null;
@@ -301,7 +360,7 @@ export async function runFlightTableOperationAoActReceiptV1(args: {
   if (!prescriptionRead.ok) throw new Error(`FLIGHT_TABLE_PRESCRIPTION_READ_FAILED:${prescriptionRead.status}:${safeText(prescriptionRead.json?.error)}`);
   const prescription = prescriptionRead.json?.prescription ?? {};
   const field_id = normalizeId(input.field_id) ?? normalizeId(prescription.field_id) ?? run.manifest.field_id;
-  const device_id = normalizeId(input.device_id) ?? run.manifest.device_ids[0] ?? `ft_irrigation_controller_${run.run_id}`;
+  const device_id = selectExecutionDeviceId(run, input.device_id);
   if (!field_id) throw new Error("FLIGHT_TABLE_FIELD_NOT_FOUND");
   const approval_status = await latestApprovalStatus(pool, run, approval_request_id);
   if (approval_status !== "APPROVED") throw new Error(`FLIGHT_TABLE_APPROVAL_NOT_APPROVED:${approval_status ?? "UNKNOWN"}`);
@@ -351,8 +410,16 @@ export async function runFlightTableOperationAoActReceiptV1(args: {
   if (!taskResp.ok) throw new Error(`FLIGHT_TABLE_ACTION_TASK_FAILED:${taskResp.status}:${safeText(taskResp.json?.error)}`);
   const act_task_id = safeText(taskResp.json?.act_task_id ?? taskResp.json?.task_id);
   if (!act_task_id) throw new Error("FLIGHT_TABLE_ACT_TASK_ID_MISSING");
+  await writeFlightTableTaskExecutionBindingV1({
+    pool,
+    run,
+    act_task_id,
+    operation_plan_id: operation.operation_plan_id,
+    field_id,
+    device_id,
+  });
 
-  const dispatchResp = await callJson(`${baseUrl}/api/v1/operator/dispatch/${encodeURIComponent(act_task_id)}/dispatch`, "POST", bearerToken, { note: "flight-table FT-H dispatch" });
+  const dispatchResp = await callJson(`${baseUrl}/api/v1/operator/dispatch/${encodeURIComponent(act_task_id)}/dispatch`, "POST", bearerToken, { note: `flight-table FT-F dispatch to ${device_id}` });
   const dispatch_status = dispatchResp.ok ? safeText(dispatchResp.json?.status_after) || "DISPATCHED" : `DISPATCH_FAILED:${safeText(dispatchResp.json?.error_code ?? dispatchResp.json?.error ?? dispatchResp.status)}`;
   const worklist = await callJson(`${baseUrl}/api/v1/operator/dispatch/worklist?limit=300`, "GET", bearerToken);
   const worklistItem = extractWorklistItem(worklist.json, act_task_id);
@@ -363,7 +430,7 @@ export async function runFlightTableOperationAoActReceiptV1(args: {
     group_id: run.group_id,
     operation_plan_id: operation.operation_plan_id,
     act_task_id,
-    executor_id: { kind: "human", id: "ft_executor", namespace: "dev" },
+    executor_id: { kind: "device", id: device_id, namespace: "flight_table" },
     execution_time: { start_ts: nowTs() - 20 * 60_000, end_ts: nowTs() - 2 * 60_000 },
     execution_coverage: { kind: "field", ref: field_id },
     resource_usage: { fuel_l: 0, electric_kwh: 0.8, water_l: 25000, chemical_ml: 0 },
@@ -385,6 +452,10 @@ export async function runFlightTableOperationAoActReceiptV1(args: {
       approval_request_id,
       operation_plan_id: operation.operation_plan_id,
       executor_source: "flight_table",
+      device_id,
+      execution_mode: "DEVICE",
+      executor_kind: "device",
+      executor_id: { kind: "device", id: device_id, namespace: "flight_table" },
       receipt_success_is_not_acceptance_pass: true,
     },
   };
@@ -418,6 +489,9 @@ export async function runFlightTableOperationAoActReceiptV1(args: {
       operation_plan_source: operation.source,
       approval_status,
       act_task_id,
+      device_id,
+      executor_id: { kind: "device", id: device_id, namespace: "flight_table" },
+      execution_mode: "DEVICE",
       dispatch_status,
       worklist_visible: Boolean(worklistItem),
       receipt_id,
@@ -430,7 +504,7 @@ export async function runFlightTableOperationAoActReceiptV1(args: {
   });
 
   const stepPass = Boolean(operation.operation_plan_id && act_task_id && dispatchResp.ok && receipt_id && worklistItem);
-  const steps = updateStep(run.steps, "F", stepPass ? "PASS" : "FAIL", `operation=${operation.operation_plan_id}; task=${act_task_id}; dispatch=${dispatch_status}; receipt=${receipt_id}; as_applied=${asExec.as_applied_status}; receipt_is_acceptance=false`);
+  const steps = updateStep(run.steps, "F", stepPass ? "PASS" : "FAIL", `operation=${operation.operation_plan_id}; task=${act_task_id}; executor=device:${device_id}; dispatch=${dispatch_status}; receipt=${receipt_id}; as_applied=${asExec.as_applied_status}; receipt_is_acceptance=false`);
   const customerUrl = `/customer/operations/${encodeURIComponent(operation.operation_plan_id)}`;
   const dispatchUrl = `/operator/dispatch?operation_id=${encodeURIComponent(operation.operation_plan_id)}`;
   const nextRun = await writeRun({
