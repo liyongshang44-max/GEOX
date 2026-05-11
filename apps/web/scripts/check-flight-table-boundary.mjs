@@ -48,20 +48,27 @@ function ensureRouteOnlyInDevSurface() {
 }
 
 function ensureNoCredentialSecret(files) {
-  const allowed = new Set([
+  const allowedMaskedDisplay = new Set([
     "src/viewmodels/flightTableVm.ts",
     "src/api/flightTable.ts",
     "src/components/dev/flight-table/DeviceOnboardingWizard.tsx",
+    "src/components/dev/flight-table/ManifestPanel.tsx",
   ]);
+  const forbiddenSensitivePattern = new RegExp([
+    "credential[_-]?secret",
+    "raw[_-]?secret",
+    "access[_-]?token",
+    "private[_-]?key",
+  ].join("|"), "i");
   const offenders = [];
   for (const file of files) {
     const r = rel(file);
     if (!r.includes("src/components/dev/flight-table") && !r.includes("src/views/dev") && !r.includes("src/api/flightTable") && !r.includes("src/viewmodels/flightTableVm")) continue;
     const text = fs.readFileSync(file, "utf8");
-    if (/credential[_-]?secret|raw[_-]?secret|access[_-]?token|private[_-]?key/i.test(text)) offenders.push(r);
-    if (/masked_secret/.test(text) && !allowed.has(r)) offenders.push(`${r} uses masked_secret outside approved adapter/viewmodel/device display boundary`);
+    if (forbiddenSensitivePattern.test(text)) offenders.push(r);
+    if (/masked_secret/.test(text) && !allowedMaskedDisplay.has(r)) offenders.push(`${r} uses masked_secret outside approved adapter/viewmodel/manifest display boundary`);
   }
-  assert(offenders.length === 0, `flight-table UI must not expose credential secret/token/raw secret: ${offenders.join(", ")}`);
+  assert(offenders.length === 0, `flight-table UI must not expose forbidden credential fields: ${offenders.join(", ")}`);
 
   const vm = read("src/viewmodels/flightTableVm.ts");
   assert(vm.includes('masked_secret: "****"'), "flightTableVm must mask credentials as ****");
