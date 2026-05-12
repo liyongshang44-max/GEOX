@@ -9,6 +9,7 @@ import FieldGisMap from "../components/FieldGisMap";
 import FieldMemoryPanel from "../components/customer/FieldMemoryPanel";
 import RoiLedgerDrawer from "../components/customer/RoiLedgerDrawer";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
+import { customerCropLabel, customerMissingInputsText, customerSemanticLabel, customerSourceLabel, customerStageLabel } from "../lib/customerSemanticLabels";
 import { buildFieldReportVm } from "../viewmodels/fieldReportVm";
 import "../styles/weatherInterference.css";
 
@@ -18,7 +19,7 @@ function rainText(value: WeatherResult | null): string { if (!value) return "暂
 function hasRain(value: WeatherResult | null): boolean { if (!value || value.status === "unavailable") return false; return Number(value.rainfallMm ?? 0) > 0 || value.events.length > 0; }
 function fieldWeatherStatusText(weather: FieldWeatherState): string { if (weather.loading) return "天气摘要加载中"; const results = [weather.history, weather.forecast].filter(Boolean) as WeatherResult[]; if (!results.length) return "天气源不可用"; if (results.some((item) => item.unavailableReason === "location_unavailable")) return "暂无地块位置，天气源不可用。"; if (results.every((item) => item.status === "unavailable")) return "天气源未接入或暂不可用。"; return "天气源已接入"; }
 function fieldWeatherSuggestionText(weather: FieldWeatherState): string { if (weather.loading) return "正在判断天气是否需要作为当前建议的解释背景。"; if (weather.history?.unavailableReason === "location_unavailable" || weather.forecast?.unavailableReason === "location_unavailable") return "暂无地块位置，天气源不可用。"; if (!weather.history && !weather.forecast) return "天气源未接入，当前建议不使用天气干扰信息。"; if (hasRain(weather.history) || hasRain(weather.forecast)) return "可能影响当前建议的解释与学习置信度；不直接替代处方或验收结论。"; if (weather.history?.status === "ok" || weather.forecast?.status === "ok") return "未发现明显降雨干扰；天气仅作为辅助解释，不直接改变当前建议。"; return "天气源未接入，当前建议不使用天气干扰信息。"; }
-function fieldWeatherSourceText(weather: FieldWeatherState): string { const sources = [weather.history?.source, weather.forecast?.source].filter(Boolean); return sources.length ? sources.join(" / ") : "暂无数据来源"; }
+function fieldWeatherSourceText(weather: FieldWeatherState): string { const sources = [weather.history?.source, weather.forecast?.source].filter(Boolean).map((item) => customerSourceLabel(item)); return sources.length ? sources.join(" / ") : "暂无数据来源"; }
 function safeText(value: unknown, fallback = "暂无记录"): string { const s = String(value ?? "").trim(); return s || fallback; }
 function pct(value: unknown): string { const n = Number(value); return Number.isFinite(n) ? `${Math.round(n * 100)}%` : "暂无置信度"; }
 
@@ -101,15 +102,15 @@ export default function FieldReportPage(): React.ReactElement {
         </section>
 
         <section className="fieldGrid fieldGrid3">
-          <article className="customerCard"><h3 className="customerCardTitle">地块观测状态</h3><div>{safeText(observability.status, "UNOBSERVED")}</div><div className="customerSpacingTopXs">数据窗口：{safeText(observability.data_window?.duration_hours, "0")} 小时 · 置信度：{pct(observability.confidence)}</div><div className="customerSpacingTopXs">缺失输入：{Array.isArray(observability.missing_inputs) && observability.missing_inputs.length ? observability.missing_inputs.join("、") : "无"}</div></article>
-          <article className="customerCard"><h3 className="customerCardTitle">当前作物状态</h3><div>{safeText(cropContext.status, "UNKNOWN")}</div><div className="customerSpacingTopXs">作物：{safeText(cropContext.crop_code, "未知")} · 阶段：{safeText(cropContext.crop_stage, "未知")}</div><div className="customerSpacingTopXs">来源：{safeText(cropContext.source, "未确认")} · 允许作物处方：{cropContext.allowed_actions?.allow_crop_specific_prescription ? "是" : "否"}</div></article>
+          <article className="customerCard"><h3 className="customerCardTitle">地块观测状态</h3><div>{customerSemanticLabel(observability.status, "暂无观测")}</div><div className="customerSpacingTopXs">数据窗口：{safeText(observability.data_window?.duration_hours, "0")} 小时 · 置信度：{pct(observability.confidence)}</div><div className="customerSpacingTopXs">缺失输入：{customerMissingInputsText(observability.missing_inputs)}</div></article>
+          <article className="customerCard"><h3 className="customerCardTitle">当前作物状态</h3><div>{customerSemanticLabel(cropContext.status, "作物状态待确认")}</div><div className="customerSpacingTopXs">作物：{customerCropLabel(cropContext.crop_code, "作物待确认")} · 阶段：{customerStageLabel(cropContext.crop_stage, "阶段待确认")}</div><div className="customerSpacingTopXs">来源：{customerSourceLabel(cropContext.source, "未确认")} · 允许作物处方：{cropContext.allowed_actions?.allow_crop_specific_prescription ? "是" : "否"}</div></article>
           <article className="customerCard"><h3 className="customerCardTitle">当前建议</h3>{vm.nextAction ? <><div>{vm.nextAction.title}</div><div className="customerSpacingTopXs">{vm.nextAction.explainText}</div><div className="customerActionRow"><Link to={`/customer/fields/${encodeURIComponent(vm.field.fieldId)}`}>查看建议</Link></div></> : <CustomerEmptyState vm={noPendingActionsState} />}</article>
         </section>
 
         <section className="fieldGrid fieldGrid3">
           <article className="customerCard"><h3 className="customerCardTitle">当前风险</h3><div>{vm.diagnosis.headline}</div>{riskOperationHref ? <Link to={riskOperationHref}>查看相关作业</Link> : <span className="muted">暂无可关联作业</span>}</article>
           <article className="customerCard"><h3 className="customerCardTitle">诊断依据</h3>{evidenceSummaryExists ? <ul className="customerList">{vm.diagnosis.evidenceLines.map((item, idx) => <li key={`${item}-${idx}`} className="customerListItem">{item}</li>)}</ul> : <CustomerEmptyState vm={noEvidenceState} />}{evidenceSummaryExists ? <Link to="#">查看证据摘要</Link> : null}</article>
-          <article className="customerCard"><h3 className="customerCardTitle">种植规划候选</h3>{planCandidates.length ? <ul className="customerList">{planCandidates.slice(0, 3).map((item: any) => <li key={safeText(item.crop_code)} className="customerListItem"><div><strong>{safeText(item.crop_code)}</strong></div><div>适宜度 {pct(item.suitability_score)} · 预期毛利 {safeText(item.expected_margin_range?.min)}-{safeText(item.expected_margin_range?.max)} {safeText(item.expected_margin_range?.currency, "")}</div></li>)}</ul> : <span className="muted">当前作物已确认或缺少规划条件。</span>}</article>
+          <article className="customerCard"><h3 className="customerCardTitle">种植规划候选</h3>{planCandidates.length ? <ul className="customerList">{planCandidates.slice(0, 3).map((item: any) => <li key={safeText(item.crop_code)} className="customerListItem"><div><strong>{customerCropLabel(item.crop_code)}</strong></div><div>适宜度 {pct(item.suitability_score)} · 预期毛利 {safeText(item.expected_margin_range?.min)}-{safeText(item.expected_margin_range?.max)} {safeText(item.expected_margin_range?.currency, "")}</div></li>)}</ul> : <span className="muted">当前作物已确认或缺少规划条件。</span>}</article>
         </section>
 
         <FieldWeatherSummaryCard weather={weather} />
