@@ -46,7 +46,7 @@ export default function CustomerReportsCenterPage(): React.ReactElement {
                   <h3 className="customerCardTitle">{group.title}</h3>
                   <p className="customerMetricLabel">{group.description}</p>
                 </div>
-                {group.key === "EVIDENCE_VALUE" ? <span className="customerPill">待接入</span> : null}
+                {group.key === "EVIDENCE_VALUE" ? <span className="customerPill">数据不足</span> : null}
               </div>
 
               {group.items.length ? (
@@ -57,7 +57,7 @@ export default function CustomerReportsCenterPage(): React.ReactElement {
                         <strong>{item.title}</strong>
                         <p>{item.subtitle}</p>
                         <small>{item.coverageText}</small>
-                        <small>可信状态：{item.trustText}</small>
+                        <small>状态：{item.statusText}</small>
                         <small>更新时间：{item.updatedAtText}</small>
                       </div>
                       <span>{item.statusText}</span>
@@ -68,7 +68,7 @@ export default function CustomerReportsCenterPage(): React.ReactElement {
                         <strong>{item.title}</strong>
                         <p>{item.subtitle}</p>
                         <small>{item.coverageText}</small>
-                        <small>可信状态：{item.trustText}</small>
+                        <small>状态：{item.statusText}</small>
                         <small>更新时间：{item.updatedAtText}</small>
                       </div>
                       <span>{item.statusText}</span>
