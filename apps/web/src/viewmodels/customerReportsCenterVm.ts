@@ -79,73 +79,28 @@ function buildItem(item: CustomerReportCenterItem): CustomerReportsCenterItemVm 
 }
 
 function evidenceValuePendingItem(generatedAt: unknown): CustomerReportsCenterItemVm {
-  return {
-    title: "证据与价值报告",
-    subtitle: "证据包生成能力待接入。",
-    statusText: "待接入",
-    updatedAtText: toDateTimeText(generatedAt),
-    disabled: true,
-  };
+  return { title: "证据与价值报告", subtitle: "证据包生成能力待接入。", statusText: "待接入", updatedAtText: toDateTimeText(generatedAt), disabled: true };
 }
 
 function scopeCopy(response: CustomerReportsCenterResponse): { subtitle: string; badge: string; note?: string; isPreview: boolean } {
-  if (response.dataScope === "FALLBACK_RECENT_ONLY") {
-    return {
-      subtitle: "P1-A Preview：当前仅展示驾驶舱与近期可见对象对应报告入口，非全部报告列表。",
-      badge: "P1-A Preview",
-      note: response.data_scope_note || "当前仅展示驾驶舱与近期可见对象对应报告入口，非全部报告列表",
-      isPreview: true,
-    };
-  }
-  if (response.dataScope === "ERROR_EMPTY") {
-    return {
-      subtitle: "报告中心暂不可用，请稍后刷新。",
-      badge: "暂不可用",
-      note: response.data_scope_note || "报告中心暂不可用，请稍后刷新",
-      isPreview: true,
-    };
-  }
-  return {
-    subtitle: "查看授权范围内可交付报告入口。",
-    badge: "正式列表",
-    isPreview: false,
-  };
+  const mode = String(response.scope?.scope_mode ?? "").toUpperCase();
+  if (mode === "INTERNAL_PREVIEW") return { subtitle: "内部预览：当前按全域客户视图展示报告入口。", badge: "内部预览 / 全域预览", note: response.scope?.reason, isPreview: true };
+  if (mode === "DENIED") return { subtitle: "暂无授权地块，因此暂无可见报告入口。", badge: "暂无授权地块", note: response.scope?.reason || "当前账户未授权任何地块", isPreview: false };
+  if (mode === "CLIENT_ALLOWLIST") return { subtitle: "查看授权范围内可交付报告入口。", badge: `授权报告 ${response.report_count ?? response.reports.length} 个`, isPreview: false };
+  if (response.dataScope === "FALLBACK_RECENT_ONLY") return { subtitle: "P1-A Preview：当前仅展示驾驶舱与近期可见对象对应报告入口，非全部报告列表。", badge: "P1-A Preview", note: response.data_scope_note || "当前仅展示驾驶舱与近期可见对象对应报告入口，非全部报告列表", isPreview: true };
+  if (response.dataScope === "ERROR_EMPTY") return { subtitle: "报告中心暂不可用，请稍后刷新。", badge: "暂不可用", note: response.data_scope_note || "报告中心暂不可用，请稍后刷新", isPreview: true };
+  return { subtitle: "查看授权范围内可交付报告入口。", badge: "正式列表", isPreview: false };
 }
 
 export function buildCustomerReportsCenterVm(response: CustomerReportsCenterResponse): CustomerReportsCenterVm {
   const grouped = new Map<CustomerReportGroupKey, CustomerReportsCenterItemVm[]>();
   for (const key of Object.keys(GROUP_LABELS) as CustomerReportGroupKey[]) grouped.set(key, []);
-
   for (const report of response.reports ?? []) {
     const key = normalizeGroup(report.report_type);
     grouped.get(key)?.push(buildItem(report));
   }
-
-  if ((grouped.get("EVIDENCE_VALUE") ?? []).length === 0) {
-    grouped.set("EVIDENCE_VALUE", [evidenceValuePendingItem(response.generated_at)]);
-  }
-
-  const groups = (Object.keys(GROUP_LABELS) as CustomerReportGroupKey[]).map((key) => {
-    const base = GROUP_LABELS[key];
-    return {
-      key,
-      title: base.title,
-      description: base.description,
-      items: grouped.get(key) ?? [],
-    };
-  });
+  if ((grouped.get("EVIDENCE_VALUE") ?? []).length === 0) grouped.set("EVIDENCE_VALUE", [evidenceValuePendingItem(response.generated_at)]);
+  const groups = (Object.keys(GROUP_LABELS) as CustomerReportGroupKey[]).map((key) => ({ key, title: GROUP_LABELS[key].title, description: GROUP_LABELS[key].description, items: grouped.get(key) ?? [] }));
   const scope = scopeCopy(response);
-
-  return {
-    title: "报告中心",
-    subtitle: scope.subtitle,
-    generatedAtText: toDateTimeText(response.generated_at),
-    dataScope: response.dataScope,
-    isFallback: response.dataScope !== "OFFICIAL_CUSTOMER_API",
-    isPreview: scope.isPreview,
-    scopeBadgeText: scope.badge,
-    dataScopeNote: scope.note,
-    groups,
-    emptyState: getCustomerEmptyState("NO_RECENT_OPERATIONS"),
-  };
+  return { title: "报告中心", subtitle: scope.subtitle, generatedAtText: toDateTimeText(response.generated_at), dataScope: response.dataScope, isFallback: response.dataScope !== "OFFICIAL_CUSTOMER_API", isPreview: scope.isPreview, scopeBadgeText: scope.badge, dataScopeNote: scope.note, groups, emptyState: response.scope?.scope_mode === "DENIED" ? getCustomerEmptyState("NO_AUTHORIZED_FIELDS") : getCustomerEmptyState("NO_RECENT_OPERATIONS") };
 }

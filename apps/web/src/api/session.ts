@@ -1,14 +1,25 @@
 import { apiRequestWithPolicy, ApiError } from "./client";
 
+export type CustomerScopeModeV1 = "CLIENT_ALLOWLIST" | "INTERNAL_PREVIEW" | "DENIED";
+
+export type CustomerScopeV1 = {
+  scope_mode: CustomerScopeModeV1;
+  allowed_field_ids: string[];
+  can_preview_all_fields: boolean;
+  reason: string;
+};
+
 export type SessionMe = {
   user_id: string;
   display_name: string | null;
   tenant_id: string;
   project_id: string;
   group_id: string;
+  role?: string;
   roles: string[];
   scopes: string[];
   allowed_field_ids: string[];
+  customer_scope?: CustomerScopeV1;
   permissions?: {
     customer_read: boolean;
     operator_read: boolean;
