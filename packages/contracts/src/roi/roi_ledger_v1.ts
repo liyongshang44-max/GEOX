@@ -26,6 +26,62 @@ export const RoiBaselineTypeV1Values = [
 
 export type RoiBaselineTypeV1 = (typeof RoiBaselineTypeV1Values)[number];
 
+export const RecommendationValueTypeV1Values = [
+  "YIELD_LOSS_AVOIDED",
+  "YIELD_LIFT_EXPECTED",
+  "REVENUE_LOSS_AVOIDED",
+  "REVENUE_LIFT_EXPECTED",
+] as const;
+
+export type RecommendationValueTypeV1 = (typeof RecommendationValueTypeV1Values)[number];
+
+export const OperationRoiStatusV1Values = [
+  "HYPOTHESIS_ONLY",
+  "PROJECTED",
+  "EXECUTED_PENDING_RESPONSE",
+  "INTERIM_SUPPORTED",
+  "INTERIM_NOT_SUPPORTED",
+  "BASELINE_MISSING",
+  "EVIDENCE_INSUFFICIENT",
+  "EXCLUDED_WEATHER",
+  "REALIZED",
+] as const;
+
+export type OperationRoiStatusV1 = (typeof OperationRoiStatusV1Values)[number];
+
+export type RecommendationValueHypothesisV1 = {
+  value_type: RecommendationValueTypeV1;
+  expected_yield_effect: { min?: number; max?: number; unit: "%" | "kg/ha" | "t/ha" } | null;
+  expected_revenue_effect: { min?: number; max?: number; currency?: string } | null;
+  baseline_source: "HISTORICAL_AVERAGE" | "SEASON_PLAN" | "DEFAULT_ASSUMPTION" | "CUSTOMER_PROVIDED";
+  evidence_refs: string[];
+  confidence: "LOW" | "MEDIUM" | "HIGH";
+  assumptions: Record<string, unknown>;
+  uncertainty_notes: string | null;
+};
+
+export type PrescriptionValueProjectionV1 = {
+  planned_cost: number | null;
+  expected_benefit: number | null;
+  expected_net_value: number | null;
+  expected_roi_ratio: number | null;
+  cost_items: Array<{ type: string; amount: number | null; unit: string | null; money_value: number | null }>;
+  projection_basis: string;
+  confidence: "LOW" | "MEDIUM" | "HIGH";
+  assumptions: Record<string, unknown>;
+  uncertainty_notes: string | null;
+};
+
+export type OperationValueChainRoiV1 = {
+  status: OperationRoiStatusV1;
+  hypothesis: RecommendationValueHypothesisV1 | null;
+  projection: PrescriptionValueProjectionV1 | null;
+  interim_evidence: Record<string, unknown> | null;
+  ledger_items: unknown[];
+  exclusion_reason: string | null;
+  customer_safe_text: string;
+};
+
 export type RoiLedgerV1 = {
   roi_ledger_id: string;
   tenant_id: string;
