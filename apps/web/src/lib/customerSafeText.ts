@@ -74,8 +74,16 @@ function text(value: unknown): string {
   return String(value ?? "").trim();
 }
 
+function replaceToken(value: string, from: string, to: string): string {
+  return value.split(from).join(to);
+}
+
 function key(value: unknown): string {
-  return text(value).replaceAll("/", "_").replaceAll("-", "_").replaceAll(" ", "_").toUpperCase();
+  let result = text(value);
+  result = replaceToken(result, "/", "_");
+  result = replaceToken(result, "-", "_");
+  result = replaceToken(result, " ", "_");
+  return result.toUpperCase();
 }
 
 function isHex(value: string): boolean {
@@ -111,18 +119,19 @@ export function mapCustomerEnum(value: unknown, domain: CustomerEnumDomain = "ge
   const domainMap = DOMAIN_LABELS[String(domain ?? "generic").toLowerCase()];
   if (domainMap?.[enumKey]) return domainMap[enumKey];
   if (ENUM_LABELS[enumKey]) return ENUM_LABELS[enumKey];
-  return raw
-    .replaceAll("UNKNOWN", "未确认")
-    .replaceAll("USER_DECLARED", "人工声明")
-    .replaceAll("OBSERVED", "已接入观测")
-    .replaceAll("BASELINE_MISSING", "缺少收益基线")
-    .replaceAll("IRRIGATE", "灌溉")
-    .replaceAll("remote_sensing", "遥感观测")
-    .replaceAll("machinery", "农机作业记录")
-    .replaceAll("geometry", "地块边界")
-    .replaceAll("sha256", "文件校验信息")
-    .replaceAll("manifest", "证据清单")
-    .replaceAll("checksum", "校验信息");
+  let result = raw;
+  result = replaceToken(result, "UNKNOWN", "未确认");
+  result = replaceToken(result, "USER_DECLARED", "人工声明");
+  result = replaceToken(result, "OBSERVED", "已接入观测");
+  result = replaceToken(result, "BASELINE_MISSING", "缺少收益基线");
+  result = replaceToken(result, "IRRIGATE", "灌溉");
+  result = replaceToken(result, "remote_sensing", "遥感观测");
+  result = replaceToken(result, "machinery", "农机作业记录");
+  result = replaceToken(result, "geometry", "地块边界");
+  result = replaceToken(result, "sha256", "文件校验信息");
+  result = replaceToken(result, "manifest", "证据清单");
+  result = replaceToken(result, "checksum", "校验信息");
+  return result;
 }
 
 export function customerSafeName(value: unknown, fallback: string): string {
