@@ -1,4 +1,5 @@
 import { customerSafeName, isUnsafeCustomerText, mapCustomerEnum } from "./customerSafeText";
+import { customerStatusLabel, labelCustomerChainIntegrity, labelCustomerCropContextStatus, labelCustomerObservabilityStatus } from "./customerStatusLabels";
 
 const SOURCE_LABELS: Record<string, string> = {
   operation_report_v1: "作业报告摘要",
@@ -20,19 +21,12 @@ const SOURCE_LABELS: Record<string, string> = {
   SENSOR_INFERRED: "监测推断",
 };
 
-const CHAIN_INTEGRITY_LABELS: Record<string, string> = {
-  COMPLETE: "完整",
-  PARTIAL: "链路不完整",
-  LEGACY_OR_MANUAL: "历史/人工链路",
-  MISSING: "链路记录不足",
-};
-
 function normalize(raw: unknown): string {
   return String(raw ?? "").trim();
 }
 
 function normalizeKey(raw: unknown): string {
-  return normalize(raw).replace(/[\s-]+/g, "_").toUpperCase();
+  return normalize(raw).replace(/[\s/-]+/g, "_").toUpperCase();
 }
 
 function isBlankText(raw: string): boolean {
@@ -42,7 +36,8 @@ function isBlankText(raw: string): boolean {
 export function customerSemanticLabel(raw: unknown, fallback = "暂无记录"): string {
   const text = normalize(raw);
   if (isBlankText(text)) return fallback;
-  const mapped = mapCustomerEnum(text, "generic");
+  const statusText = customerStatusLabel(text, "generic", "");
+  const mapped = statusText || mapCustomerEnum(text, "generic");
   if (isUnsafeCustomerText(raw)) return mapped && mapped !== text ? mapped : fallback;
   return mapped || fallback;
 }
@@ -56,25 +51,31 @@ export function customerCropLabel(raw: unknown, fallback = "作物待确认"): s
 }
 
 export function customerStageLabel(raw: unknown, fallback = "阶段待确认"): string {
-  return customerSemanticLabel(raw, fallback);
+  const text = labelCustomerCropContextStatus(raw);
+  return text === "未确认" ? customerSemanticLabel(raw, fallback) : text;
 }
 
 export function customerSourceLabel(raw: unknown, fallback = "暂无数据来源"): string {
   const text = normalize(raw);
   if (isBlankText(text)) return fallback;
-  if (/weather_unavailable/i.test(text)) return "天气源暂不可用";
-  if (/^weather/i.test(text)) return "天气数据源";
+  if (text.toLowerCase().includes("weather_unavailable")) return "天气源暂不可用";
+  if (text.toLowerCase().startsWith("weather")) return "天气数据源";
   const key = normalizeKey(text);
   if (SOURCE_LABELS[text]) return SOURCE_LABELS[text];
   if (SOURCE_LABELS[key]) return SOURCE_LABELS[key];
-  if (/_v\d+$/i.test(text) || /^ao_act_/i.test(text)) return "系统记录摘要";
+  if (text.toLowerCase().endsWith("_v1") || text.toLowerCase().startsWith("ao_act_")) return "系统记录摘要";
   return customerSemanticLabel(text, fallback);
 }
 
 export function customerChainIntegrityLabel(raw: unknown, fallback = "链路状态待确认"): string {
   const key = normalizeKey(raw);
   if (!key) return fallback;
-  return CHAIN_INTEGRITY_LABELS[key] ?? customerSemanticLabel(raw, fallback);
+  return labelCustomerChainIntegrity(key);
+}
+
+export function customerObservabilityLabel(raw: unknown, fallback = "观测状态待确认"): string {
+  const text = labelCustomerObservabilityStatus(raw);
+  return text === "未确认" ? customerSemanticLabel(raw, fallback) : text;
 }
 
 export function isCustomerChainComplete(raw: unknown): boolean {
