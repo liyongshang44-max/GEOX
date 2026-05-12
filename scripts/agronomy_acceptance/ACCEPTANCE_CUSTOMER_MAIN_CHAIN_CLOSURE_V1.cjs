@@ -1,5 +1,8 @@
 const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:3001';
 const TOKEN = process.env.TOKEN || process.env.ADMIN_TOKEN || process.env.AO_ACT_TOKEN || process.env.AO_ACT_ADMIN_TOKEN || 'set-via-env-or-external-secret-file-admin';
+const TENANT_ID = process.env.TENANT_ID || 'tenantA';
+const PROJECT_ID = process.env.PROJECT_ID || 'projectA';
+const GROUP_ID = process.env.GROUP_ID || 'groupA';
 const FIELD_ID = process.env.FIELD_ID || 'ft_field_20260511134058';
 const OPERATION_ID = process.env.OPERATION_ID || 'ft_op_ft_ui_2_skills';
 const SEASON_ID = process.env.SEASON_ID || 'season_demo';
@@ -29,7 +32,16 @@ function cropSpecific(rec) { const a = actionOf(rec); return a.includes('IRRIG')
   const ops = await get('/api/v1/customer/operations');
   const fieldResp = await get(`/api/v1/reports/field/${encodeURIComponent(FIELD_ID)}`);
   const opResp = await get(`/api/v1/reports/operation/${encodeURIComponent(OPERATION_ID)}`);
-  const recResp = await post('/api/v1/recommendations/generate', { field_id: FIELD_ID, season_id: SEASON_ID, device_id: DEVICE_ID, crop_code: 'corn', image_recognition: { stress_score: 0.55, disease_score: 0.2, pest_risk_score: 0.2, confidence: 0.9 } });
+  const recResp = await post('/api/v1/recommendations/generate', {
+    tenant_id: TENANT_ID,
+    project_id: PROJECT_ID,
+    group_id: GROUP_ID,
+    field_id: FIELD_ID,
+    season_id: SEASON_ID,
+    device_id: DEVICE_ID,
+    crop_code: 'corn',
+    image_recognition: { stress_score: 0.55, disease_score: 0.2, pest_risk_score: 0.2, confidence: 0.9 },
+  });
 
   const fieldReport = fieldReportOf(fieldResp.json);
   const operationReport = operationReportOf(opResp.json);
@@ -61,7 +73,7 @@ function cropSpecific(rec) { const a = actionOf(rec); return a.includes('IRRIG')
     operation_report_has_roi_status: nonEmpty(operationReport.roi?.status),
     operation_report_status_chain_complete: statusChain.length >= 8 && statusChain.every((x) => nonEmpty(x.key) && nonEmpty(x.status)),
     old_opl_not_polluting_current_run: !String(operationReport.operation_id || operationReport.identifiers?.operation_id || '').startsWith('opl_'),
-    crop_context_guard_blocks_unconfirmed_crop_specific_prescription: cropContextUnconfirmed ? !recommendations.some(cropSpecific) : true,
+    crop_context_guard_blocks_unconfirmed_crop_specific_prescription: cropContextUnconfirmed ? recResp.ok && !recommendations.some(cropSpecific) : true,
   };
 
   const output = {
@@ -69,6 +81,8 @@ function cropSpecific(rec) { const a = actionOf(rec); return a.includes('IRRIG')
     suite: 'ACCEPTANCE_CUSTOMER_MAIN_CHAIN_CLOSURE_V1',
     field_id: FIELD_ID,
     operation_id: OPERATION_ID,
+    recommendation_request_status: recResp.status,
+    recommendation_error: recResp.ok ? null : recResp.json,
     checks,
     summary: {
       role: session.json?.role || session.json?.user?.role || session.json?.session?.role || null,
