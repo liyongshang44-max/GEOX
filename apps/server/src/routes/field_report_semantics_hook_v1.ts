@@ -1,5 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
+import { resolveCropContextV1 } from "../domain/crop/crop_context_v1.js";
+import { resolveFieldObservabilityProfileV1 } from "../domain/field/field_observability_profile_v1.js";
+import { buildCropPlanCandidatesV1 } from "../domain/crop/crop_planning_v1.js";
 
 function pathOnly(url: string | undefined): string {
   return String(url ?? "").split("?")[0];
@@ -130,14 +133,6 @@ function recentOperation(fieldReport: any) {
   };
 }
 
-function cropContext(rec: any) {
-  const payload = rec?.record_json?.payload ?? {};
-  const crop_code = text(payload.crop_code);
-  const crop_stage = text(payload.crop_stage);
-  if (!crop_code && !crop_stage) return { status: "UNKNOWN", crop_code: null, crop_stage: null, confidence: null, source: "not_available" };
-  return { status: "AVAILABLE", crop_code, crop_stage, confidence: payload.confidence ?? payload.skill_trace?.confidence?.level ?? null, source: "decision_recommendation_v1" };
-}
-
 function acceptedOperationAfterRecommendation(rec: any, recent: any): boolean {
   if (!rec || !recent) return false;
   const accepted = String(recent.summary ?? "").includes("已验收") || String(recent.final_status ?? "").toUpperCase() === "SUCCESS";
@@ -148,7 +143,7 @@ function acceptedOperationAfterRecommendation(rec: any, recent: any): boolean {
 }
 
 async function currentRecommendation(pool: Pool, rec: any, crop: any, recent: any) {
-  if (!rec || crop.status !== "AVAILABLE") return null;
+  if (!rec || !crop.allowed_actions?.allow_crop_specific_diagnosis) return null;
   const payload = rec.record_json?.payload ?? {};
   const recommendation_id = text(payload.recommendation_id);
   if (!recommendation_id) return null;
@@ -186,6 +181,16 @@ function diagnosisBasis(fieldReport: any, crop: any, rec: any) {
   };
 }
 
+function tenantFromReportOrAuth(req: any): { tenant_id: string; project_id: string; group_id: string } {
+  const auth = req.aoActAuth ?? req.auth ?? {};
+  const query = req.query ?? {};
+  return {
+    tenant_id: String(query.tenant_id ?? auth.tenant_id ?? ""),
+    project_id: String(query.project_id ?? auth.project_id ?? ""),
+    group_id: String(query.group_id ?? auth.group_id ?? ""),
+  };
+}
+
 export function registerFieldReportSemanticsHookV1(app: FastifyInstance, pool: Pool): void {
   app.addHook("onSend", async (req, reply, payload) => {
     if (reply.statusCode >= 400 || !isFieldReportPath(req.url)) return payload;
@@ -193,11 +198,20 @@ export function registerFieldReportSemanticsHookV1(app: FastifyInstance, pool: P
     const fieldReport = parsed?.field_report_v1;
     const fieldId = text(fieldReport?.field?.field_id);
     if (!fieldReport || !fieldId) return payload;
-    const [geometry, rec] = await Promise.all([loadGeometry(pool, fieldId), latestRecommendation(pool, fieldId)]);
-    const crop = cropContext(rec);
+    const tenant = tenantFromReportOrAuth(req as any);
+    const seasonId = text(fieldReport?.crop_context?.season_id ?? fieldReport?.recent_operation?.season_id ?? (req as any).query?.season_id);
+    const [geometry, rec, crop, observability] = await Promise.all([
+      loadGeometry(pool, fieldId),
+      latestRecommendation(pool, fieldId),
+      tenant.tenant_id && tenant.project_id && tenant.group_id ? resolveCropContextV1(pool, tenant, fieldId, seasonId) : Promise.resolve(null),
+      tenant.tenant_id && tenant.project_id && tenant.group_id ? resolveFieldObservabilityProfileV1(pool, tenant, fieldId) : Promise.resolve(null),
+    ]);
+    const cropContext = crop ?? { status: "UNKNOWN", crop_code: null, crop_stage: null, allowed_actions: { allow_crop_specific_diagnosis: false, allow_crop_specific_prescription: false, allow_crop_planning: true } };
+    const fieldObservabilityProfile = observability ?? null;
+    const cropPlanCandidates = fieldObservabilityProfile ? buildCropPlanCandidatesV1({ field_id: fieldId, season_id: seasonId, crop_context: cropContext as any, observability: fieldObservabilityProfile }) : [];
     const recent = recentOperation(fieldReport);
-    const current = await currentRecommendation(pool, rec, crop, recent);
-    const diagnosis = diagnosisBasis(fieldReport, crop, rec);
+    const current = await currentRecommendation(pool, rec, cropContext, recent);
+    const diagnosis = diagnosisBasis(fieldReport, cropContext, rec);
     const risk = {
       level: fieldReport.overview?.current_risk_level ?? "UNKNOWN",
       reasons: Array.isArray(fieldReport.explain?.top_reasons) ? fieldReport.explain.top_reasons : [],
@@ -206,7 +220,9 @@ export function registerFieldReportSemanticsHookV1(app: FastifyInstance, pool: P
     const enriched = {
       ...fieldReport,
       field: { ...fieldReport.field, ...geometry },
-      crop_context: crop,
+      field_observability_profile: fieldObservabilityProfile,
+      crop_context: cropContext,
+      crop_plan_candidates: cropPlanCandidates,
       risk,
       diagnosis_basis: diagnosis,
       current_recommendation: current,
