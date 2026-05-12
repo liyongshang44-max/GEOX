@@ -1,6 +1,5 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
 import { enforceRouteRoleAuth } from "../auth/route_role_authz.js";
 import { projectOperationStateV1 } from "../projections/operation_state_v1.js";
 import { filterByCustomerScope, isFieldAllowedByCustomerScope, resolveCustomerScope, type CustomerScopeV1 } from "../services/customer/customer_scope_v1.js";
@@ -74,9 +73,7 @@ function toIsoFromMs(ms: unknown): string | null {
   return Number.isFinite(n) && n > 0 ? new Date(n).toISOString() : null;
 }
 
-function operationIdOf(state: any): string {
-  return String(state.operation_id ?? state.operation_plan_id ?? "").trim();
-}
+function operationIdOf(state: any): string { return String(state.operation_id ?? state.operation_plan_id ?? "").trim(); }
 
 function stateUpdatedAt(state: any): string | null {
   const updatedTs = Number(state.updated_at ?? 0);
@@ -116,14 +113,9 @@ async function queryOpenAlertCountByField(pool: Pool, tenant: TenantTriple, fiel
 }
 
 function scopeFromRequest(req: any, reply: any): { auth: any; tenant: TenantTriple; scope: CustomerScopeV1 } | null {
-  if (!enforceRouteRoleAuth(req, reply, "summary")) return null;
-  const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+  const auth = enforceRouteRoleAuth(req, reply, "summary");
   if (!auth) return null;
-  return {
-    auth,
-    tenant: { tenant_id: String(auth.tenant_id), project_id: String(auth.project_id), group_id: String(auth.group_id) },
-    scope: resolveCustomerScope(auth),
-  };
+  return { auth, tenant: { tenant_id: String(auth.tenant_id), project_id: String(auth.project_id), group_id: String(auth.group_id) }, scope: resolveCustomerScope(auth) };
 }
 
 export function registerCustomerV1Routes(app: FastifyInstance, pool: Pool): void {
@@ -138,7 +130,6 @@ export function registerCustomerV1Routes(app: FastifyInstance, pool: Pool): void
 
     const reports: CustomerReportListItem[] = [{ report_type: "OVERVIEW", title: "经营总览报告", subtitle: "基于当前客户驾驶舱可见数据生成", href: "/customer/export", updated_at: generatedAt, status_text: "可导出", capability_status: "AVAILABLE" }];
     for (const fieldId of fieldIds.slice(0, 20)) reports.push({ report_type: "FIELD", title: `${fieldNameById.get(fieldId) ?? "地块"} · 地块报告`, subtitle: "基于当前可见地块数据生成", href: `/customer/fields/${encodeURIComponent(fieldId)}`, field_id: fieldId, field_name: fieldNameById.get(fieldId) ?? null, updated_at: generatedAt, status_text: "可查看", capability_status: "AVAILABLE" });
-
     const operationSeen = new Set<string>();
     for (const state of states) {
       const operationId = operationIdOf(state); if (!operationId || operationSeen.has(operationId)) continue;
