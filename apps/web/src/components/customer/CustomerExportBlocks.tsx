@@ -8,19 +8,18 @@ type Row = Array<string | number | undefined>;
 
 type OperationSameSourceExportSummary = {
   evidencePackStatus: string;
-  evidencePackSha256: string;
   asExecutedSummary: string;
   asAppliedCoverageStatus: string;
   weatherInterferenceSummary: string;
-  roiNature: string;
+  valueNature: string;
   fieldMemoryLearningSummary: string;
 };
 
 type FieldSameSourceExportSummary = {
-  geometryStatus: string;
+  boundaryStatus: string;
   recentOperationCoverageStatus: string;
   weatherSummary: string;
-  roiSummary: string;
+  valueSummary: string;
   fieldMemorySummary: string;
 };
 
@@ -45,18 +44,43 @@ function PrintTable({ headers, rows, emptyText }: { headers: string[]; rows: Row
   );
 }
 
+const EXPORT_RAW_LABELS: Record<string, string> = {
+  BASELINE_MISSING: "缺少收益基线，暂不形成可信收益结论",
+  EVIDENCE_INSUFFICIENT: "证据不足，暂不能形成可信结论",
+  HYPOTHESIS_ONLY: "仅形成价值假设，待后续证据验证",
+  PROJECTED: "已有投入产出预测，待执行结果验证",
+  EXECUTED_PENDING_RESPONSE: "已执行，等待响应证据",
+  INTERIM_SUPPORTED: "阶段性证据支持",
+  INTERIM_NOT_SUPPORTED: "阶段性证据暂不支持",
+  EXCLUDED_WEATHER: "受天气干扰，本次不进入效果学习",
+  REALIZED: "收获后已形成结果记录",
+  AVAILABLE: "已形成",
+  MISSING: "暂无记录",
+  PENDING: "等待生成",
+  NOT_APPLICABLE: "不适用",
+  PASS: "验收通过",
+  FAIL: "未达到预期效果",
+  SUCCESS: "已完成",
+  FAILED: "未达到预期效果",
+  LOW: "低可信度",
+  MEDIUM: "中等可信度",
+  HIGH: "高可信度",
+};
+
 function safeExportText(value: unknown, fallback = "暂无记录"): string {
   const text = String(value ?? "").trim();
   if (!text || text === "--" || text === "[object Object]") return fallback;
   if (/s3:\/\//i.test(text) || /minio:\/\//i.test(text) || /https?:\/\//i.test(text)) return fallback;
   if (/(^|\s)\/[\w./-]+/.test(text) || /[A-Z]:\\[\w\\.-]+/i.test(text)) return fallback;
   if (/\b(secret|token|credential)\b/i.test(text) || /stack\s*trace/i.test(text) || /debug\s*json/i.test(text) || /\{\s*"/.test(text)) return fallback;
-  return text;
-}
 
-function safeSha256(value: unknown, fallback = "后端未返回 sha256"): string {
-  const text = String(value ?? "").trim();
-  return /^[a-fA-F0-9]{64}$/.test(text) ? text.toLowerCase() : fallback;
+  const normalized = text.toUpperCase();
+  if (EXPORT_RAW_LABELS[normalized]) return EXPORT_RAW_LABELS[normalized];
+  return text
+    .replace(/\bgeometry\b/gi, "地块边界")
+    .replace(/\bField Memory\b/g, "田块记忆")
+    .replace(/\bROI\b/g, "价值记录")
+    .replace(/\bsha256\b/gi, "文件校验信息");
 }
 
 function isObject(value: unknown): value is Record<string, any> {
@@ -171,16 +195,15 @@ function buildOperationSameSourceExportSummary(vm: OperationReportPageVm, report
       ?? memory.recorded
       ?? memory.entered
       ?? sectionItemValue(vm, "MEMORY", "本次结果是否进入田块记忆", ""),
-    "暂无 Field Memory 学习摘要。",
+    "暂无田块记忆学习摘要。",
   );
 
   return {
     evidencePackStatus: evidenceStatus,
-    evidencePackSha256: safeSha256(pack.sha256 ?? pack.checksum_sha256 ?? pack.checksum),
     asExecutedSummary,
     asAppliedCoverageStatus: coverageStatus,
     weatherInterferenceSummary: weatherSummaryFromReport(reportAny),
-    roiNature: sectionItemValue(vm, "ROI", "实测/估算/假设", "暂无 ROI 性质。"),
+    valueNature: sectionItemValue(vm, "ROI", "实测/估算/假设", "暂无价值性质。"),
     fieldMemoryLearningSummary: memoryLearning,
   };
 }
@@ -188,10 +211,10 @@ function buildOperationSameSourceExportSummary(vm: OperationReportPageVm, report
 function buildFieldSameSourceExportSummary(vm: FieldReportPageVm, report?: FieldReportDetailV1 | null): FieldSameSourceExportSummary {
   const reportAny = fieldReportObject(report);
   const field = reportAny.field ?? {};
-  const geometry = field.geometry ?? reportAny.geometry ?? reportAny.field_geometry ?? reportAny.fieldGeometry;
-  const geometryStatus = isGeoJsonLike(geometry)
-    ? `地块 geometry 已接入（${featureCount(geometry)} 个空间对象）。`
-    : "暂无地块 geometry，导出版不绘制或伪造地块范围。";
+  const boundary = field.geometry ?? reportAny.geometry ?? reportAny.field_geometry ?? reportAny.fieldGeometry;
+  const boundaryStatus = isGeoJsonLike(boundary)
+    ? `地块边界已接入（${featureCount(boundary)} 个空间对象）。`
+    : "暂无地块边界，导出版不绘制或伪造地块范围。";
 
   const layerParts = [
     vm.mapLayers.plannedGeoJson ? "计划区域已接入" : "暂无计划区域",
@@ -205,11 +228,11 @@ function buildFieldSameSourceExportSummary(vm: FieldReportPageVm, report?: Field
     : "暂无近期作业覆盖图层，导出版不伪造覆盖、轨迹或验收点。";
 
   return {
-    geometryStatus,
+    boundaryStatus,
     recentOperationCoverageStatus,
     weatherSummary: weatherSummaryFromReport(reportAny),
-    roiSummary: safeExportText(vm.roiSummary.displayText, "暂无 ROI 摘要。"),
-    fieldMemorySummary: safeExportText(vm.fieldMemory.displayText, "暂无 Field Memory 摘要。"),
+    valueSummary: safeExportText(vm.roiSummary.displayText, "暂无价值摘要。"),
+    fieldMemorySummary: safeExportText(vm.fieldMemory.displayText, "暂无田块记忆摘要。"),
   };
 }
 
@@ -237,7 +260,7 @@ export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): 
         <h2 className="customerCardTitle">高风险地块 Top 5</h2>
         <PrintTable
           headers={["地块", "风险", "原因"]}
-          rows={topRisks.map((item) => [item.fieldName || "地块名称待补充", item.riskLabel, item.reasons.join("；") || "暂无风险原因"])}
+          rows={topRisks.map((item) => [item.fieldName || "未命名地块", item.riskLabel, item.reasons.join("；") || "暂无风险原因"])}
           emptyText={vm.emptyStates.NO_RISK_FIELDS?.title ?? "暂无高风险地块"}
         />
       </section>
@@ -282,17 +305,17 @@ export function FieldExportBlocks({ vm, report }: { vm: FieldReportPageVm; repor
         </div>
       </section>
       <section className="customerCard">
-        <h2 className="customerCardTitle">P2.2 地块同源增强摘要</h2>
+        <h2 className="customerCardTitle">地块报告同源摘要</h2>
         <PrintTable
           headers={["项目", "导出内容"]}
           rows={[
-            ["地块 geometry 状态", sameSource.geometryStatus],
+            ["地块边界状态", sameSource.boundaryStatus],
             ["近期作业覆盖状态", sameSource.recentOperationCoverageStatus],
             ["天气摘要", sameSource.weatherSummary],
-            ["ROI 摘要", sameSource.roiSummary],
-            ["Field Memory 摘要", sameSource.fieldMemorySummary],
+            ["价值摘要", sameSource.valueSummary],
+            ["田块记忆摘要", sameSource.fieldMemorySummary],
           ]}
-          emptyText="暂无地块同源增强摘要。"
+          emptyText="暂无地块同源摘要。"
         />
       </section>
       <section className="customerCard"><h2 className="customerCardTitle">风险/诊断</h2><p className="customerSpacingTopSm">{vm.explain.human}当前风险：{vm.risk.levelLabel}。</p></section>
@@ -332,19 +355,18 @@ export function OperationExportBlocks({ vm, report }: { vm: OperationReportPageV
         ))}
       </section>
       <section className="customerCard">
-        <h2 className="customerCardTitle">P2.2 同源增强摘要</h2>
+        <h2 className="customerCardTitle">作业报告同源摘要</h2>
         <PrintTable
           headers={["项目", "导出内容"]}
           rows={[
             ["证据包状态", sameSource.evidencePackStatus],
-            ["sha256", sameSource.evidencePackSha256],
             ["实际执行摘要", sameSource.asExecutedSummary],
             ["实际覆盖状态", sameSource.asAppliedCoverageStatus],
             ["天气干扰", sameSource.weatherInterferenceSummary],
-            ["ROI 性质", sameSource.roiNature],
-            ["Field Memory 学习摘要", sameSource.fieldMemoryLearningSummary],
+            ["价值性质", sameSource.valueNature],
+            ["田块记忆学习摘要", sameSource.fieldMemoryLearningSummary],
           ]}
-          emptyText="暂无 P2.2 同源增强摘要。"
+          emptyText="暂无作业同源摘要。"
         />
       </section>
       <section className="customerCard">
