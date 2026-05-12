@@ -47,12 +47,14 @@ function PrintTable({ headers, rows, emptyText }: { headers: string[]; rows: Row
 
 function safeExportText(value: unknown, fallback = "暂无记录"): string {
   const text = String(value ?? "").trim();
-  if (!text || text === "--" || text === "[object Object]" || isUnsafeCustomerText(text)) return fallback;
+  if (!text || text === "--" || text === "[object Object]") return fallback;
+  const mapped = mapCustomerEnum(text, "generic");
+  if (isUnsafeCustomerText(text)) return mapped && mapped !== text ? mapped : fallback;
   if (/s3:\/\//i.test(text) || /minio:\/\//i.test(text) || /https?:\/\//i.test(text)) return fallback;
   if (/(^|\s)\/[\w./-]+/.test(text) || /[A-Z]:\\[\w\\.-]+/i.test(text)) return fallback;
   if (/\b(secret|token|credential)\b/i.test(text) || /stack\s*trace/i.test(text) || /debug\s*json/i.test(text) || /\{\s*"/.test(text)) return fallback;
 
-  return mapCustomerEnum(text, "generic")
+  return mapped
     .replace(/\bField Memory\b/g, "田块记忆")
     .replace(/\bROI\b/g, "价值记录");
 }
