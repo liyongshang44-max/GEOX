@@ -5,6 +5,7 @@ import { fetchSessionMe, type SessionMe } from "../../api/session";
 import OperatorEmptyState from "../../components/operator/OperatorEmptyState";
 import PermissionGate from "../../components/operator/PermissionGate";
 import OperatorLayout from "../../layouts/OperatorLayout";
+import { labelOperatorTerm, replaceOperatorTerms } from "../../lib/operatorStatusLabels";
 import { hasOperatorPermission } from "../../lib/permissions";
 import "../../styles/operatorEvidence.css";
 import { buildOperatorEvidenceVm, type OperatorEvidenceRowVm, type OperatorEvidenceVm } from "../../viewmodels/operatorEvidenceVm";
@@ -28,7 +29,7 @@ function safeMessage(value: unknown, fallback = "操作失败，请稍后重试�
   const text = String(value ?? "").trim();
   if (!text || text === "--") return fallback;
   if (/token|secret|credential|private\s*key|password|stack\s*trace|debug\s*json|access[_-]?key/i.test(text)) return fallback;
-  return text;
+  return replaceOperatorTerms(text);
 }
 
 function buildDefaultExportWindow(): { from_ts_ms: number; to_ts_ms: number; label: string } {
@@ -60,7 +61,7 @@ function replaceVmRow(vm: OperatorEvidenceVm, item: OperatorEvidenceItem): Opera
     totalCount: rows.length,
     rows,
     failedRows: rows.filter((candidate) => candidate.statusText === "导出失败"),
-    missingChecksumRows: rows.filter((candidate) => candidate.checksumText === "暂无 sha256 checksum"),
+    missingChecksumRows: rows.filter((candidate) => candidate.checksumText === "暂无文件校验值"),
   };
 }
 
@@ -90,11 +91,11 @@ function EvidenceRow({
       </header>
 
       <div className="operatorEvidenceMeta">
-        <div><span>manifest</span><strong>{row.manifestText}</strong></div>
-        <div><span>sha256</span><strong>{row.checksumText}</strong></div>
-        <div><span>artifact / 对象标识</span><strong>{row.artifactText}</strong></div>
-        <div><span>format</span><strong>{row.formatText}</strong></div>
-        <div><span>scope</span><strong>{row.scopeText}</strong></div>
+        <div><span>{labelOperatorTerm("manifest")}</span><strong>{row.manifestText}</strong></div>
+        <div><span>{labelOperatorTerm("sha256 checksum")}</span><strong>{row.checksumText}</strong></div>
+        <div><span>证据对象标识</span><strong>{row.artifactText}</strong></div>
+        <div><span>导出格式</span><strong>{row.formatText}</strong></div>
+        <div><span>导出范围</span><strong>{row.scopeText}</strong></div>
         <div><span>存储模式</span><strong>{row.storageText}</strong></div>
         <div><span>下载状态</span><strong>{row.downloadText}</strong></div>
         <div><span>创建时间</span><strong>{row.createdAtText}</strong></div>
@@ -106,10 +107,10 @@ function EvidenceRow({
       {isDone ? (
         <div className="operatorEvidenceJobDetail success">
           <strong>导出已完成</strong>
-          <span>sha256：{row.checksumText}</span>
-          <span>completed_at：{row.completedAtText}</span>
-          <span>manifest：{row.manifestText}</span>
-          {row.downloadUrl ? <a href={row.downloadUrl} target="_blank" rel="noreferrer">打开下载链接</a> : <span>download_url：暂无</span>}
+          <span>{labelOperatorTerm("sha256 checksum")}：{row.checksumText}</span>
+          <span>完成时间：{row.completedAtText}</span>
+          <span>{labelOperatorTerm("manifest")}：{row.manifestText}</span>
+          {row.downloadUrl ? <a href={row.downloadUrl} target="_blank" rel="noreferrer">打开下载链接</a> : <span>下载链接：暂无</span>}
         </div>
       ) : null}
 
@@ -120,14 +121,14 @@ function EvidenceRow({
         </div>
       ) : null}
 
-      <div className="operatorEvidenceNotice">证据中心不展示本地绝对路径、bucket secret、access key 或内部 runtime path。operation scope 未 ready 时显示未接入。</div>
+      <div className="operatorEvidenceNotice">证据中心不展示本地绝对路径、bucket secret、access key 或内部 runtime path。作业范围未接入时显示未接入。</div>
 
       <div className="operatorEvidenceActions">
         {row.operationHref ? <Link to={row.operationHref}>查看作业</Link> : null}
-        <button type="button" disabled={Boolean(refreshState?.pending)} onClick={() => onRefreshJob(row)}>{refreshState?.pending ? "刷新中..." : "刷新 job 状态"}</button>
+        <button type="button" disabled={Boolean(refreshState?.pending)} onClick={() => onRefreshJob(row)}>{refreshState?.pending ? "刷新中..." : "刷新导出任务状态"}</button>
         {row.downloadUrl && isDone ? <a href={row.downloadUrl} target="_blank" rel="noreferrer">下载证据包</a> : null}
       </div>
-      {refreshState?.message ? <div className="operatorEvidenceJobCreated">{refreshState.message}</div> : null}
+      {refreshState?.message ? <div className="operatorEvidenceJobCreated">{safeMessage(refreshState.message)}</div> : null}
       {refreshState?.error ? <div className="operatorScopeWarning">{refreshState.error}</div> : null}
     </article>
   );
@@ -234,7 +235,7 @@ export default function OperatorEvidencePage(): React.ReactElement {
             ...prev,
             [jobId]: {
               pending: false,
-              message: silent ? null : `job 状态已刷新：${result.item?.status ?? "UNKNOWN"}`,
+              message: silent ? null : `导出任务状态已刷新：${result.item?.status ?? "状态待确认"}`,
               error: null,
               lastRefreshedAt: new Date().toISOString(),
             },
@@ -246,7 +247,7 @@ export default function OperatorEvidencePage(): React.ReactElement {
           [jobId]: {
             pending: false,
             message: null,
-            error: safeMessage(result.message, "刷新 job 状态失败。"),
+            error: safeMessage(result.message, "刷新导出任务状态失败。"),
             lastRefreshedAt: prev[jobId]?.lastRefreshedAt ?? null,
           },
         }));
@@ -257,7 +258,7 @@ export default function OperatorEvidencePage(): React.ReactElement {
           [jobId]: {
             pending: false,
             message: null,
-            error: safeMessage(error instanceof Error ? error.message : error, "刷新 job 状态失败。"),
+            error: safeMessage(error instanceof Error ? error.message : error, "刷新导出任务状态失败。"),
             lastRefreshedAt: prev[jobId]?.lastRefreshedAt ?? null,
           },
         }));
@@ -320,8 +321,8 @@ export default function OperatorEvidencePage(): React.ReactElement {
         }
         setCreateState({
           pending: false,
-          lastJobId: result.jobId || "job_id 待后端返回",
-          message: `证据包创建成功，job_id：${result.jobId || "job_id 待后端返回"}`,
+          lastJobId: result.jobId || "任务编号待后端返回",
+          message: `证据包创建成功，任务编号：${result.jobId || "待后端返回"}`,
           error: null,
         });
         return loadEvidence();
@@ -352,7 +353,7 @@ export default function OperatorEvidencePage(): React.ReactElement {
               <div>
                 <span>当前作业</span>
                 <strong>{operationId}</strong>
-                <small>scope：{scopeType} · {scopeId || "scope_id 待会话生成"} · 时间窗：{defaultWindow.label}</small>
+                <small>导出范围：{scopeType} · {scopeId || "导出对象待会话生成"} · 时间窗：{defaultWindow.label}</small>
               </div>
               <div className="operatorEvidenceOperationActions">
                 <PermissionGate
@@ -366,20 +367,20 @@ export default function OperatorEvidencePage(): React.ReactElement {
                 </PermissionGate>
                 <button type="button" onClick={onRefresh} disabled={loading || createState.pending}>{loading ? "刷新中..." : "刷新状态"}</button>
               </div>
-              {disabledReason ? <div className="operatorScopeWarning">{disabledReason}</div> : null}
-              {createState.lastJobId ? <div className="operatorEvidenceJobCreated">job_id：{createState.lastJobId}</div> : null}
+              {disabledReason ? <div className="operatorScopeWarning">{safeMessage(disabledReason)}</div> : null}
+              {createState.lastJobId ? <div className="operatorEvidenceJobCreated">任务编号：{createState.lastJobId}</div> : null}
               {createState.message ? <div className="operatorEvidenceJobCreated">{createState.message}</div> : null}
               {createState.error ? <div className="operatorScopeWarning">{createState.error}</div> : null}
             </section>
           ) : null}
 
-          {vm.dataScopeWarning ? <div className="operatorScopeWarning">{vm.dataScopeWarning}</div> : null}
+          {vm.dataScopeWarning ? <div className="operatorScopeWarning">{safeMessage(vm.dataScopeWarning)}</div> : null}
           {!operationId && permissionBlockReason ? <div className="operatorScopeWarning">{permissionBlockReason}</div> : null}
           {!operationId && !permissionBlockReason && !vm.exportReady ? <div className="operatorScopeWarning">证据导出写操作未 ready：后端权限、审计和错误码未完成前，当前页面只读。</div> : null}
 
-          {vm.totalCount === 0 ? <OperatorEmptyState title={vm.emptyTitle} description={vm.emptyDescription} reason="没有证据任务时不伪造 manifest、sha256 或下载入口。" /> : null}
+          {vm.totalCount === 0 ? <OperatorEmptyState title={vm.emptyTitle} description={vm.emptyDescription} reason="没有证据任务时不伪造证据清单、文件校验值或下载入口。" /> : null}
 
-          {vm.missingChecksumRows.length ? <div className="operatorEvidenceChecksumEmpty">{vm.missingChecksumRows.length} 个任务暂无 sha256 checksum，checksum 有则显示，无则保留正式空态。</div> : null}
+          {vm.missingChecksumRows.length ? <div className="operatorEvidenceChecksumEmpty">{vm.missingChecksumRows.length} 个任务暂无文件校验值；有则显示，无则保留正式空态。</div> : null}
 
           <section className="operatorEvidenceGrid" aria-label="证据导出任务">
             {vm.rows.map((row) => <EvidenceRow key={row.jobId} row={row} refreshState={jobRefreshState[row.jobId]} onRefreshJob={refreshJob} />)}
