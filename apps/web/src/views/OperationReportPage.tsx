@@ -1,384 +1,102 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
 import { fetchOperationReport, type OperationReportV1 } from "../api/customerReports";
-import { fetchOperatorSkillTraces, type OperatorSkillTraceResponse, type OperatorSkillTraceRun } from "../api/operatorSkillTrace";
-import { fetchOperationEnvironmentContext, type OperationEnvironmentContext } from "../api/weather";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ErrorState from "../components/common/ErrorState";
-import EvidencePackSummaryPanel from "../components/customer/EvidencePackSummaryPanel";
-import FieldMemoryPanel from "../components/customer/FieldMemoryPanel";
-import PrescriptionContractDrawer from "../components/customer/PrescriptionContractDrawer";
-import RoiLedgerDrawer from "../components/customer/RoiLedgerDrawer";
-import WeatherInterferencePanel from "../components/customer/WeatherInterferencePanel";
-import FieldGisMap from "../components/FieldGisMap";
 import { customerTimelineStatusLabel, labelCustomerTechnicalField } from "../lib/customerLabels";
-import { safeEvidenceDownloadUrl } from "../lib/evidenceDownloadSafety";
 import { buildOperationReportVm } from "../viewmodels/operationReportVm";
 
-const MAIN_VIEW_BLOCK_PATTERNS = [
-  /skill\s*run/i,
-  /skill_run/i,
-  /skill_trace/i,
-  /irrigation_soil_moisture_threshold/i,
-  /\b[A-Z][A-Z0-9_]{3,}\b/,
-];
-
-const CUSTOMER_EVIDENCE_BLOCK_PATTERNS = [
-  /s3:\/\//i,
-  /minio:\/\//i,
-  /https?:\/\//i,
-  /(^|\s)\/[\w./-]+/,
-  /[A-Z]:\\[\w\\.-]+/i,
-  /\bsecret\b/i,
-  /\btoken\b/i,
-  /\bcredential\b/i,
-  /stack\s*trace/i,
-  // customer-boundary-allow: customer evidence sanitizer blocks unsafe structured metadata from report payload
-  /debug\s*json/i,
-  /\{\s*"/,
-];
-
-type EvidencePackSafeMetadata = {
-  manifest: string | null;
-  sha256: string | null;
-  downloadUrl: string | null;
+type BackendChainItem = {
+  key: string;
+  label: string;
+  status: "DONE" | "AVAILABLE" | "PENDING" | "MISSING" | "NOT_APPLICABLE" | string;
+  reason?: string | null;
+  source?: string | null;
 };
 
-type OperationSpatialTrajectorySegment = {
-  id: string;
-  status: "READY" | "DISPATCHED" | "SUCCEEDED" | "FAILED";
-  color: string;
-  coordinates: Array<[number, number]>;
-  label?: string;
-};
-
-type OperationSpatialExecutionVm = {
-  plannedGeoJson: unknown | null;
-  coverageGeoJson: unknown | null;
-  trajectorySegments: OperationSpatialTrajectorySegment[];
-  planStatusText: string;
-  coverageStatusText: string;
-  trajectoryStatusText: string;
-  deviationText: string;
-  deviationEvidenceText: string;
-  hasDeviationEvidence: boolean;
-  hasAnySpatialLayer: boolean;
-};
+type DetailRow = { label: string; value: string };
 
 function customerText(value: unknown, fallback = "暂无可展示信息"): string {
   const text = String(value ?? "").trim();
-  if (!text || text === "--" || text === "0/0" || /1970\s*[\/-]/.test(text)) return fallback;
+  if (!text || text === "--" || text === "[object Object]" || /1970\s*[\/-]/.test(text)) return fallback;
   return text;
 }
 
-function shouldHideMainViewText(value: unknown): boolean {
-  const text = String(value ?? "").trim();
-  return text.length > 0 && MAIN_VIEW_BLOCK_PATTERNS.some((pattern) => pattern.test(text));
+function toCustomerStatus(status: unknown): "DONE" | "AVAILABLE" | "PENDING" | "MISSING" | "NOT_APPLICABLE" {
+  const raw = String(status ?? "").trim().toUpperCase();
+  if (raw === "DONE" || raw === "COMPLETE" || raw === "COMPLETED" || raw === "PASS") return "DONE";
+  if (raw === "AVAILABLE") return "AVAILABLE";
+  if (raw === "PENDING" || raw === "RUNNING") return "PENDING";
+  if (raw === "NOT_APPLICABLE") return "NOT_APPLICABLE";
+  return "MISSING";
 }
 
-function safeMainViewText(value: unknown, fallback = "暂无摘要"): string {
-  return shouldHideMainViewText(value) ? fallback : String(value ?? "").trim() || fallback;
-}
-
-function toSafeText(value: unknown): string | null {
-  const text = String(value ?? "").trim();
-  if (!text || text === "--" || text === "[object Object]") return null;
-  if (CUSTOMER_EVIDENCE_BLOCK_PATTERNS.some((pattern) => pattern.test(text))) return null;
-  return text;
-}
-
-function safeManifest(value: unknown): string | null {
-  const text = toSafeText(value);
-  if (!text) return null;
-  if (text.includes("/") || text.includes("\\")) return null;
-  return text.length <= 120 ? text : null;
-}
-
-function safeSha256(value: unknown): string | null {
-  const text = String(value ?? "").trim();
-  return /^[a-fA-F0-9]{64}$/.test(text) ? text.toLowerCase() : null;
-}
-
-function evidencePackSafeMetadata(report: OperationReportV1): EvidencePackSafeMetadata {
-  const pack = (report as unknown as { evidence_pack_summary?: Record<string, unknown> }).evidence_pack_summary ?? {};
-  return {
-    manifest: safeManifest(pack.manifest),
-    sha256: safeSha256(pack.sha256),
-    downloadUrl: safeEvidenceDownloadUrl(pack.download_url),
-  };
-}
-
-function EvidencePackMetadataBlock({ metadata }: { metadata: EvidencePackSafeMetadata }): React.ReactElement | null {
-  if (!metadata.manifest && !metadata.sha256 && !metadata.downloadUrl) return null;
-  return (
-    <div className="customerGrid2 customerSpacingTopXs">
-      {metadata.manifest ? <div><strong>证据清单：</strong>{metadata.manifest}</div> : null}
-      {metadata.sha256 ? <div><strong>校验值：</strong>{metadata.sha256}</div> : null}
-      {metadata.downloadUrl ? <div><strong>下载入口：</strong><a className="customerLinkButton" href={metadata.downloadUrl}>下载证据包</a></div> : null}
-    </div>
-  );
-}
-
-function shortOperationLabel(value: string): string {
-  const text = value.trim();
-  if (/处方/.test(text)) return "处方";
-  if (/as-executed|执行/i.test(text)) return "执行";
-  if (/field\s*memory|田块记忆|记忆/i.test(text)) return "记忆";
-  if (/recommendation|建议/i.test(text)) return "建议";
-  if (/approval|审批/i.test(text)) return "审批";
-  if (/evidence|证据/i.test(text)) return "证据";
-  if (/acceptance|验收/i.test(text)) return "验收";
-  if (/roi|价值记录/i.test(text)) return "价值";
-  return text;
-}
-
-function isGeoJsonLike(value: unknown): boolean {
-  if (!value || typeof value !== "object") return false;
-  const obj = value as Record<string, any>;
-  const type = String(obj.type ?? "");
-  if (type === "FeatureCollection") return Array.isArray(obj.features) && obj.features.length > 0;
-  if (type === "Feature") return isGeoJsonLike(obj.geometry);
-  if (["Polygon", "MultiPolygon", "LineString", "MultiLineString", "Point", "MultiPoint"].includes(type)) return Array.isArray(obj.coordinates);
-  return false;
-}
-
-function firstGeoJson(...values: unknown[]): unknown | null {
-  for (const value of values) {
-    if (isGeoJsonLike(value)) return value;
-  }
-  return null;
-}
-
-function collectCoordinatePairs(raw: unknown, out: Array<[number, number]>): void {
-  if (!Array.isArray(raw)) return;
-  if (raw.length >= 2 && Number.isFinite(Number(raw[0])) && Number.isFinite(Number(raw[1]))) {
-    out.push([Number(raw[0]), Number(raw[1])]);
-    return;
-  }
-  for (const item of raw) collectCoordinatePairs(item, out);
-}
-
-function lineStringsFromGeoJson(value: unknown): Array<Array<[number, number]>> {
-  if (!value || typeof value !== "object") return [];
-  const obj = value as Record<string, any>;
-  const type = String(obj.type ?? "");
-  if (type === "Feature") return lineStringsFromGeoJson(obj.geometry);
-  if (type === "FeatureCollection") return Array.isArray(obj.features) ? obj.features.flatMap((item) => lineStringsFromGeoJson(item)) : [];
-  if (type === "LineString") {
-    const pairs: Array<[number, number]> = [];
-    collectCoordinatePairs(obj.coordinates, pairs);
-    return pairs.length >= 2 ? [pairs] : [];
-  }
-  if (type === "MultiLineString") {
-    return Array.isArray(obj.coordinates)
-      ? obj.coordinates.flatMap((line: unknown) => {
-        const pairs: Array<[number, number]> = [];
-        collectCoordinatePairs(line, pairs);
-        return pairs.length >= 2 ? [pairs] : [];
-      })
-      : [];
-  }
-  return [];
-}
-
-function trajectorySegmentsFrom(value: unknown): OperationSpatialTrajectorySegment[] {
-  if (!value) return [];
-  if (isGeoJsonLike(value)) {
-    return lineStringsFromGeoJson(value).map((coordinates, index) => ({
-      id: `trajectory_${index + 1}`,
-      status: "SUCCEEDED" as const,
-      color: "#2563eb",
-      coordinates,
-      label: `实际轨迹 ${index + 1}`,
+function normalizeChain(report: OperationReportV1): BackendChainItem[] {
+  const raw = (report as any).status_chain;
+  if (Array.isArray(raw) && raw.length) {
+    return raw.map((item, index) => ({
+      key: String(item?.key ?? `chain_${index}`).trim() || `chain_${index}`,
+      label: String(item?.label ?? item?.key ?? `链路 ${index + 1}`).trim(),
+      status: toCustomerStatus(item?.status),
+      reason: item?.reason ?? null,
+      source: item?.source ?? null,
     }));
   }
-  if (Array.isArray(value)) {
-    const segments: OperationSpatialTrajectorySegment[] = [];
-    value.forEach((item, index) => {
-      if (isGeoJsonLike(item)) {
-        segments.push(...trajectorySegmentsFrom(item).map((segment, inner) => ({ ...segment, id: `trajectory_${index + 1}_${inner + 1}` })));
-        return;
-      }
-      if (item && typeof item === "object") {
-        const obj = item as Record<string, any>;
-        const coordinates: Array<[number, number]> = [];
-        collectCoordinatePairs(obj.coordinates ?? obj.points ?? obj.path, coordinates);
-        if (coordinates.length >= 2) {
-          segments.push({
-            id: String(obj.id ?? obj.segment_id ?? `trajectory_${index + 1}`),
-            status: String(obj.status ?? "SUCCEEDED").toUpperCase().includes("FAIL") ? "FAILED" : "SUCCEEDED",
-            color: "#2563eb",
-            coordinates,
-            label: customerText(obj.label ?? obj.name, `实际轨迹 ${index + 1}`),
-          });
-        }
-        return;
-      }
-      const coordinates: Array<[number, number]> = [];
-      collectCoordinatePairs(item, coordinates);
-      if (coordinates.length >= 2) {
-        segments.push({ id: `trajectory_${index + 1}`, status: "SUCCEEDED", color: "#2563eb", coordinates, label: `实际轨迹 ${index + 1}` });
-      }
-    });
-    return segments;
+  return [{ key: "legacy", label: "历史链路", status: "MISSING", reason: "该作业为历史/人工链路，缺少正式建议或处方记录。", source: "frontend_legacy_guard" }];
+}
+
+function renderScalar(value: unknown): string {
+  if (value == null) return "暂无记录";
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return customerText(value, "暂无记录");
+  if (Array.isArray(value)) return value.length ? value.map((item) => renderScalar(item)).join("；") : "暂无记录";
+  if (typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    const preferred = obj.customer_text ?? obj.summary_text ?? obj.summary ?? obj.status ?? obj.verdict ?? obj.id;
+    if (preferred != null) return renderScalar(preferred);
+    const pairs = Object.entries(obj).filter(([, v]) => v != null).slice(0, 4).map(([k, v]) => `${k}:${renderScalar(v)}`);
+    return pairs.length ? pairs.join("；") : "暂无记录";
   }
+  return "暂无记录";
+}
+
+function rowsFromObject(obj: unknown, preferredKeys: string[]): DetailRow[] {
+  if (!obj || typeof obj !== "object") return [];
+  const source = obj as Record<string, unknown>;
+  const used = new Set<string>();
+  const rows: DetailRow[] = [];
+  for (const key of preferredKeys) {
+    if (!(key in source)) continue;
+    used.add(key);
+    rows.push({ label: key, value: renderScalar(source[key]) });
+  }
+  for (const [key, value] of Object.entries(source)) {
+    if (used.has(key)) continue;
+    if (rows.length >= 8) break;
+    rows.push({ label: key, value: renderScalar(value) });
+  }
+  return rows;
+}
+
+function detailRowsFor(report: OperationReportV1, key: string): DetailRow[] {
+  const r = report as any;
+  const normalized = key.toLowerCase();
+  if (normalized === "diagnosis") return rowsFromObject(r.diagnosis, ["diagnosis_basis", "risk_level", "reason_codes", "before_metrics"]);
+  if (normalized === "recommendation") return rowsFromObject(r.recommendation, ["recommendation_id", "diagnosis_basis", "agronomy_explain", "reason_codes", "confidence", "status"]);
+  if (normalized === "prescription") return rowsFromObject(r.prescription, ["prescription_id", "recommendation_id", "operation_type", "target_area", "amount", "unit", "duration", "time_window", "acceptance_conditions", "device_requirements", "status"]);
+  if (normalized === "approval") return rowsFromObject(r.approval, ["approval_request_id", "status", "approver", "approved_at", "decision_note", "approval_scope"]);
+  if (normalized === "operation_plan") return rowsFromObject(r.operation_plan, ["operation_plan_id", "recommendation_id", "prescription_id", "approval_request_id", "field_id", "status"]);
+  if (normalized === "execution") return rowsFromObject(r.execution, ["act_task_id", "dispatch_status", "executor", "device_id", "execution_mode", "receipt_id", "receipt_status", "as_executed"]);
+  if (normalized === "receipt") return rowsFromObject(r.receipt, ["receipt_id", "status", "submitted_at", "metrics"]);
+  if (normalized === "evidence") return rowsFromObject(r.evidence, ["evidence_status", "evidence_ids", "export_job_id", "sha256", "trusted"]);
+  if (normalized === "acceptance") return rowsFromObject(r.acceptance, ["acceptance_id", "verdict", "evidence_sufficient", "accepted_at", "failure_reason"]);
+  if (normalized === "roi") return rowsFromObject(r.roi ?? r.roi_ledger, ["summary", "items", "water_saved", "labor_saved"]);
+  if (normalized === "field_memory") return rowsFromObject(r.field_memory, ["field_response_memory", "device_reliability_memory", "skill_performance_memory"]);
   return [];
 }
 
-function buildOperationSpatialExecutionVm(report: OperationReportV1): OperationSpatialExecutionVm {
-  const reportAny = report as any;
-  const asExecuted = reportAny.as_executed ?? {};
-  const asApplied = reportAny.as_applied ?? {};
-  const prescription = reportAny.prescription ?? {};
-  const plannedGeoJson = firstGeoJson(
-    asApplied.planned_geojson,
-    asApplied.plan_geojson,
-    asApplied.planned_area_geojson,
-    prescription.planned_geojson,
-    prescription.plan_geojson,
-    prescription.spatial_geojson,
-    reportAny.planned_geojson,
-  );
-  const coverageGeoJson = firstGeoJson(
-    asApplied.coverage_geojson,
-    asApplied.actual_coverage_geojson,
-    asApplied.as_applied_geojson,
-    asApplied.applied_geojson,
-    reportAny.coverage_geojson,
-  );
-  const trajectorySegments = [
-    ...trajectorySegmentsFrom(asExecuted.trajectory_segments),
-    ...trajectorySegmentsFrom(asExecuted.trajectory_geojson),
-    ...trajectorySegmentsFrom(asExecuted.actual_trajectory_geojson),
-    ...trajectorySegmentsFrom(asExecuted.execution_trace_geojson),
-    ...trajectorySegmentsFrom(asExecuted.path_geojson),
-    ...trajectorySegmentsFrom(asApplied.trajectory_geojson),
-  ].filter((segment, index, all) => all.findIndex((candidate) => candidate.id === segment.id) === index);
-  const evidenceRef = customerText(asApplied.evidence_ref, "");
-  const deviationRaw = customerText(asApplied.planned_vs_actual_deviation, "");
-  const hasDeviationEvidence = Boolean(deviationRaw && evidenceRef);
-  return {
-    plannedGeoJson,
-    coverageGeoJson,
-    trajectorySegments,
-    planStatusText: plannedGeoJson ? "计划区域图层已接入。" : "暂无计划区域图层。",
-    coverageStatusText: coverageGeoJson ? customerText(asApplied.coverage_status, "实际覆盖图层已接入。") : "暂无实际覆盖图层。",
-    trajectoryStatusText: trajectorySegments.length ? `已接入 ${trajectorySegments.length} 条实际执行轨迹。` : "暂无执行轨迹图层。",
-    deviationText: hasDeviationEvidence ? deviationRaw : "计划-实际偏差待补充证据来源。",
-    deviationEvidenceText: evidenceRef || "暂无偏差证据来源。",
-    hasDeviationEvidence,
-    hasAnySpatialLayer: Boolean(plannedGeoJson || coverageGeoJson || trajectorySegments.length),
-  };
-}
-
-function OperationSpatialExecutionPanel({ spatial }: { spatial: OperationSpatialExecutionVm }): React.ReactElement {
-  return (
-    <section className="operationSpatialPanel" aria-label="空间执行记录">
-      <div className="operationSpatialPanelHead">
-        <h4>空间执行记录</h4>
-        <span>{spatial.hasAnySpatialLayer ? "空间图层已接入" : "空间图层待补充"}</span>
-      </div>
-      <div className="operationSpatialGrid">
-        <div><strong>计划区域状态</strong><span>{spatial.planStatusText}</span></div>
-        <div><strong>实际覆盖状态</strong><span>{spatial.coverageStatusText}</span></div>
-        <div><strong>执行轨迹状态</strong><span>{spatial.trajectoryStatusText}</span></div>
-        <div><strong>计划-实际偏差</strong><span>{spatial.deviationText}</span></div>
-        <div><strong>偏差证据来源</strong><span>{spatial.deviationEvidenceText}</span></div>
-      </div>
-      {spatial.hasAnySpatialLayer ? (
-        <div className="operationSpatialMap">
-          <FieldGisMap
-            polygonGeoJson={spatial.plannedGeoJson}
-            coverageGeoJson={spatial.coverageGeoJson}
-            heatGeoJson={null}
-            markers={[]}
-            trajectorySegments={spatial.trajectorySegments}
-            acceptancePoints={[]}
-            labels={{ fieldBoundary: "计划区域", coverageLayer: "实际覆盖", operationTrack: "实际执行轨迹" }}
-          />
-        </div>
-      ) : (
-        <div className="operationSpatialEmpty">暂无可渲染空间图层。</div>
-      )}
-    </section>
-  );
-}
-
-function unavailableWeatherContext(operationId: string): OperationEnvironmentContext {
-  return {
-    status: "unavailable",
-    unavailableReason: "not_ready",
-    operationId,
-    fieldId: null,
-    history: null,
-    forecast: null,
-    rainfallMayExplainSoilMoistureChange: null,
-    learningWeatherInterferenceExcluded: null,
-    explanation: "天气源未接入或当前位置不可用，当前不参与验收判断。",
-  };
-}
-
-function classificationText(value: OperatorSkillTraceRun["classification"]): string {
-  if (value === "AGRONOMY") return "农艺技能";
-  if (value === "SENSING") return "感知技能";
-  if (value === "DEVICE") return "设备技能";
-  if (value === "ACCEPTANCE") return "验收技能";
-  return "分类待确认";
-}
-
-function statusText(value: OperatorSkillTraceRun["lastRunStatus"]): string {
-  if (value === "SUCCESS") return "运行成功";
-  if (value === "FAILED") return "运行失败";
-  if (value === "TIMEOUT") return "运行超时";
-  if (value === "SKIPPED") return "已跳过";
-  return "状态待确认";
-}
-
-function learningText(value: boolean | null): string {
-  if (value === true) return "已进入学习";
-  if (value === false) return "未进入学习";
-  return "学习状态待确认";
-}
-
-function operatorQuery(operationId: string, fieldId?: string | null): string {
-  const params = new URLSearchParams();
-  if (operationId.trim()) params.set("operation_id", operationId.trim());
-  if (fieldId && fieldId !== "--") params.set("field_id", fieldId);
-  return params.toString();
-}
-
-function OperationSkillTraceTechnicalBlock({ trace, loading, operationId, fieldId }: { trace: OperatorSkillTraceResponse | null; loading: boolean; operationId: string; fieldId?: string | null }): React.ReactElement {
-  if (loading) return <div id="operation-skill-trace" className="operationTechDetailsTitle">技能运行详情加载中...</div>;
-  if (!trace || trace.notReady || trace.items.length === 0) {
-    return <div id="operation-skill-trace" className="operationTechDetailsTitle">技能运行详情：{trace?.message || "skill trace 查询接口未接入。"}</div>;
-  }
-  const query = operatorQuery(operationId, fieldId);
-  return (
-    <div id="operation-skill-trace" className="operationSkillTraceTechBlock">
-      <div className="operationTechDetailsTitle">技能运行详情</div>
-      {query ? (
-        <div className="operationSkillTraceTechActions">
-          <Link to={`/operator/field-memory?${query}`}>查看 Field Memory</Link>
-          <Link to={`/operator/roi-ledger?${query}`}>查看 ROI</Link>
-          <Link to={`/operator/evidence?operation_id=${encodeURIComponent(operationId)}`}>查看证据中心</Link>
-        </div>
-      ) : null}
-      {trace.items.map((item) => (
-        <div key={`${item.skillId}-${item.traceRef ?? item.createdAt ?? item.runStage}`} className="operationSkillTraceTechCard">
-          <div><strong>技能名称：</strong>{item.skillName}</div>
-          <div><strong>技能分类：</strong>{classificationText(item.classification)}</div>
-          <div><strong>技能版本：</strong>{item.skillVersion}</div>
-          <div><strong>运行阶段：</strong>{item.runStage}</div>
-          <div><strong>运行状态：</strong>{statusText(item.lastRunStatus)}</div>
-          <div><strong>失败原因：</strong>{item.failureReason || "无失败原因"}</div>
-          <div><strong>输入摘要：</strong>{item.inputSummary || "暂无输入摘要"}</div>
-          <div><strong>输出摘要：</strong>{item.outputSummary || "暂无输出摘要"}</div>
-          <div><strong>证据引用：</strong>{item.evidenceRef || item.traceRef || "暂无证据引用"}</div>
-          <div><strong>是否进入学习：</strong>{learningText(item.enteredLearning)}</div>
-        </div>
-      ))}
-    </div>
-  );
+function missingLinksText(report: OperationReportV1): string {
+  const links = (report as any).missing_links;
+  return Array.isArray(links) && links.length ? links.map((x) => String(x)).join("、") : "无";
 }
 
 export default function OperationReportPage(): React.ReactElement {
@@ -387,119 +105,27 @@ export default function OperationReportPage(): React.ReactElement {
   const [error, setError] = React.useState<string>("");
   const [report, setReport] = React.useState<OperationReportV1 | null>(null);
   const [expandedKey, setExpandedKey] = React.useState<string | null>(null);
-  const [prescriptionDrawerOpen, setPrescriptionDrawerOpen] = React.useState(false);
-  const [roiDrawerOpen, setRoiDrawerOpen] = React.useState(false);
-  const [weatherContext, setWeatherContext] = React.useState<OperationEnvironmentContext | null>(null);
-  const [weatherLoading, setWeatherLoading] = React.useState(false);
-  const [skillTrace, setSkillTrace] = React.useState<OperatorSkillTraceResponse | null>(null);
-  const [skillTraceLoading, setSkillTraceLoading] = React.useState(false);
 
   React.useEffect(() => {
     let alive = true;
     setLoading(true);
     setError("");
     void fetchOperationReport(operationId)
-      .then((res) => {
-        if (!alive) return;
-        setReport(res);
-      })
-      .catch((e: unknown) => {
-        if (!alive) return;
-        setError(String(e instanceof Error ? e.message : "加载失败"));
-      })
-      .finally(() => {
-        if (!alive) return;
-        setLoading(false);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [operationId]);
-
-  React.useEffect(() => {
-    let alive = true;
-    const id = operationId.trim();
-    setWeatherContext(null);
-    if (!id) {
-      setWeatherLoading(false);
-      return () => {
-        alive = false;
-      };
-    }
-    setWeatherLoading(true);
-    void fetchOperationEnvironmentContext({ operationId: id })
-      .then((context) => {
-        if (!alive) return;
-        setWeatherContext(context);
-      })
-      .catch(() => {
-        if (!alive) return;
-        setWeatherContext(unavailableWeatherContext(id));
-      })
-      .finally(() => {
-        if (!alive) return;
-        setWeatherLoading(false);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [operationId]);
-
-  React.useEffect(() => {
-    let alive = true;
-    const id = operationId.trim();
-    setSkillTrace(null);
-    if (!id) {
-      setSkillTraceLoading(false);
-      return () => {
-        alive = false;
-      };
-    }
-    setSkillTraceLoading(true);
-    void fetchOperatorSkillTraces({ operationId: id })
-      .then((result) => {
-        if (!alive) return;
-        setSkillTrace(result);
-      })
-      .catch(() => {
-        if (!alive) return;
-        setSkillTrace({
-          source: "empty_error",
-          dataScope: "ERROR_EMPTY",
-          generated_at: new Date().toISOString(),
-          operationId: id,
-          items: [],
-          message: "skill trace 查询接口未接入。",
-          notReady: true,
-        });
-      })
-      .finally(() => {
-        if (!alive) return;
-        setSkillTraceLoading(false);
-      });
-    return () => {
-      alive = false;
-    };
+      .then((res) => { if (alive) setReport(res); })
+      .catch((e: unknown) => { if (alive) setError(String(e instanceof Error ? e.message : "加载失败")); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
   }, [operationId]);
 
   if (loading) return <SectionSkeleton kind="detail" />;
   if (error || !report) return <ErrorState title="作业报告加载失败" message={error || "暂无报告"} onRetry={() => window.location.reload()} />;
 
   const vm = buildOperationReportVm(report);
-  const spatialExecution = buildOperationSpatialExecutionVm(report);
-  const canExport = Boolean(operationId.trim());
-  const canBackToField = Boolean(vm.operation.fieldId && vm.operation.fieldId !== "--");
+  const chain = normalizeChain(report);
   const reportAny = report as any;
-  const prescriptionId = vm.drawerRefs.prescriptionId;
-  const recommendationId = vm.drawerRefs.recommendationId;
-  const drawerOperationId = vm.drawerRefs.operationId;
-  const drawerFieldId = vm.drawerRefs.fieldId;
-  const embeddedRoi = reportAny.roi_ledger ?? reportAny.roi ?? reportAny.value_summary;
-  const embeddedMemory = reportAny.field_memory ?? reportAny.field_memory_summary ?? reportAny.memory;
-  const evidenceMetadata = evidencePackSafeMetadata(report);
-  const displayEvidenceSummary = evidenceMetadata.downloadUrl && vm.evidenceSummary.detail === "当前展示客户可读证据包摘要，不提供文件下载入口。"
-    ? { ...vm.evidenceSummary, detail: "当前展示客户可读证据包摘要。" }
-    : vm.evidenceSummary;
+  const chainIntegrity = customerText(reportAny.chain_integrity, "LEGACY_OR_MANUAL");
+  const legacyWarning = customerText(reportAny.legacy_warning, chainIntegrity === "COMPLETE" ? "" : "该作业为历史/人工链路，缺少正式建议或处方记录。");
+  const canBackToField = Boolean(vm.operation.fieldId && vm.operation.fieldId !== "--");
 
   return (
     <div className="customerReportCanvas">
@@ -510,115 +136,72 @@ export default function OperationReportPage(): React.ReactElement {
               <div className="customerReportLogo">GEOX / 作业闭环</div>
               <h1 className="customerTitle">{vm.operation.title}</h1>
               <p className="customerSubtitle">地块：{customerText(vm.operation.fieldName, "暂无地块信息")}</p>
-              <p className="customerSubtitle">最终状态：{customerText(vm.operation.finalStatusLabel, "状态待更新")} · 更新时间：{customerText(vm.operation.updatedAtText, "暂无更新时间")}</p>
+              <p className="customerSubtitle">链路完整性：{chainIntegrity} · 缺失环节：{missingLinksText(report)}</p>
             </div>
             <div className="customerActions">
               <Link className="customerButton" to="/customer/dashboard">返回总览</Link>
-              {canBackToField ? <Link className="customerButton" to={`/customer/fields/${encodeURIComponent(vm.operation.fieldId)}`}>返回地块</Link> : <span className="muted">返回地块不可用：缺少地块标识</span>}
-              {canExport ? <Link className="customerButton" to={vm.exportHref}>导出报告</Link> : <span className="muted">导出不可用：缺少作业标识</span>}
-              {canExport ? <Link className="customerButton" to={`/operator/evidence?operation_id=${encodeURIComponent(operationId)}`}>查看证据导出</Link> : null}
+              {canBackToField ? <Link className="customerButton" to={`/customer/fields/${encodeURIComponent(vm.operation.fieldId)}`}>返回地块</Link> : null}
+              <Link className="customerButton" to={vm.exportHref}>导出报告</Link>
             </div>
           </div>
         </header>
 
+        {legacyWarning ? (
+          <section className="customerCard customerScopeWarning">
+            {legacyWarning}
+          </section>
+        ) : null}
+
         <section className="customerCard operationTimelineStrip">
-          {vm.timeline.map((item) => <span key={item.key} className="customerPill">{shortOperationLabel(item.label)}：{item.key === "EVIDENCE" ? displayEvidenceSummary.statusText : customerTimelineStatusLabel(item.status)}</span>)}
+          {chain.map((item) => (
+            <span key={item.key} className="customerPill">
+              {item.label}：{customerTimelineStatusLabel(toCustomerStatus(item.status))}
+            </span>
+          ))}
         </section>
 
         <section className="operationClosedLoopGrid">
-          {vm.sections.map((section, index) => {
-            const isExpanded = expandedKey === section.key;
-            const isEvidenceSection = section.key === "EVIDENCE";
-            const isPrescriptionSection = section.key === "PRESCRIPTION";
-            const isExecutionSection = section.key === "EXECUTION";
-            const isRoiSection = section.key === "ROI";
-            const isMemorySection = section.key === "MEMORY";
-            const displayItems = section.items.filter((item) => !shouldHideMainViewText(`${item.label} ${item.value}`));
-            const title = shortOperationLabel(section.title);
-            const statusText = isEvidenceSection ? displayEvidenceSummary.statusText : (section.statusText || customerTimelineStatusLabel(section.status));
-            const detailText = section.emptyState?.description || (displayItems[0] ? `${displayItems[0].label}：${displayItems[0].value}` : "暂无摘要");
+          {chain.map((item, index) => {
+            const rows = detailRowsFor(report, item.key);
+            const isExpanded = expandedKey === item.key;
             return (
               <article
-                key={section.key}
+                key={item.key}
                 className={`customerCard operationClosedLoopCard ${isExpanded ? "isExpanded" : ""}`}
                 role="button"
                 tabIndex={0}
-                onClick={() => setExpandedKey((prev) => prev === section.key ? null : section.key)}
+                onClick={() => setExpandedKey((prev) => prev === item.key ? null : item.key)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    setExpandedKey((prev) => prev === section.key ? null : section.key);
+                    setExpandedKey((prev) => prev === item.key ? null : item.key);
                   }
                 }}
               >
                 <div className="operationClosedLoopHead">
                   <span className="operationStepNo">{index + 1}</span>
-                  <h3 className="customerCardTitle">{title}</h3>
-                  <span className="operationStatusBadge">{statusText}</span>
+                  <h3 className="customerCardTitle">{item.label}</h3>
+                  <span className="operationStatusBadge">{customerTimelineStatusLabel(toCustomerStatus(item.status))}</span>
                 </div>
-                {isEvidenceSection ? (
-                  <>
-                    <EvidencePackSummaryPanel vm={displayEvidenceSummary} expanded={isExpanded} />
-                    {isExpanded ? <EvidencePackMetadataBlock metadata={evidenceMetadata} /> : null}
-                  </>
-                ) : isMemorySection && isExpanded ? (
-                  <FieldMemoryPanel fieldId={drawerFieldId} operationId={drawerOperationId} embeddedMemory={embeddedMemory} compact />
-                ) : (
-                  <>
-                    <div className="operationOneLiner">{safeMainViewText(section.summary)}</div>
-                    <div className="operationOneLiner muted">{safeMainViewText(detailText)}</div>
-                    {isExpanded ? (
-                      <>
-                        <div className="customerGrid2 customerSpacingTopXs">
-                          {displayItems.map((item) => <div key={`${section.key}-${item.label}`}><strong>{item.label}：</strong>{safeMainViewText(item.value, "--")}</div>)}
-                          {!displayItems.length && section.emptyState ? <div className="muted">{section.emptyState.title}：{section.emptyState.description}</div> : null}
-                        </div>
-                        {isExecutionSection ? (
-                          <>
-                            <OperationSpatialExecutionPanel spatial={spatialExecution} />
-                            <WeatherInterferencePanel context={weatherContext} loading={weatherLoading} />
-                          </>
-                        ) : null}
-                      </>
-                    ) : null}
-                  </>
-                )}
-                <div className="operationCardActions">
-                  <button
-                    type="button"
-                    className="customerLinkButton customerSpacingTopXs"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setExpandedKey((prev) => prev === section.key ? null : section.key);
-                    }}
-                  >
-                    {isExpanded ? "收起详情" : "查看详情"}
-                  </button>
-                  {isPrescriptionSection ? (
-                    <button
-                      type="button"
-                      className="customerLinkButton customerSpacingTopXs"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPrescriptionDrawerOpen(true);
-                      }}
-                    >
-                      查看处方详情
-                    </button>
-                  ) : null}
-                  {isRoiSection ? (
-                    <button
-                      type="button"
-                      className="customerLinkButton customerSpacingTopXs"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setRoiDrawerOpen(true);
-                      }}
-                    >
-                      查看价值记录明细
-                    </button>
-                  ) : null}
-                </div>
+                <div className="operationOneLiner">{customerText(item.reason, "暂无链路说明")}</div>
+                <div className="operationOneLiner muted">来源：{customerText(item.source, "operation_report_v1")}</div>
+                {isExpanded ? (
+                  <div className="customerGrid2 customerSpacingTopXs">
+                    {rows.length ? rows.map((row) => (
+                      <div key={`${item.key}-${row.label}`}><strong>{labelCustomerTechnicalField(row.label)}：</strong>{row.value}</div>
+                    )) : <div className="muted">暂无该环节的一等对象记录。</div>}
+                  </div>
+                ) : null}
+                <button
+                  type="button"
+                  className="customerLinkButton customerSpacingTopXs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setExpandedKey((prev) => prev === item.key ? null : item.key);
+                  }}
+                >
+                  {isExpanded ? "收起详情" : "查看详情"}
+                </button>
               </article>
             );
           })}
@@ -627,29 +210,19 @@ export default function OperationReportPage(): React.ReactElement {
         <section className="operationTechDetailsMuted">
           <details>
             <summary className="operationTechDetailsSummary">展开技术详情</summary>
-            <div className="operationTechDetailsTitle">技术详情（默认关闭）</div>
             <div className="operationTechDetailsGrid">
-              {(vm.technicalFoldout?.rows ?? []).map((row) => (
-                <div key={row.label}><strong>{labelCustomerTechnicalField(row.label)}：</strong>{row.value}</div>
-              ))}
+              <div><strong>operation_id：</strong>{customerText(reportAny.operation_id ?? report.identifiers?.operation_id)}</div>
+              <div><strong>recommendation_id：</strong>{customerText(reportAny.recommendation?.recommendation_id ?? report.identifiers?.recommendation_id)}</div>
+              <div><strong>prescription_id：</strong>{customerText(reportAny.prescription?.prescription_id ?? report.identifiers?.prescription_id)}</div>
+              <div><strong>approval_request_id：</strong>{customerText(reportAny.approval?.approval_request_id ?? report.identifiers?.approval_id)}</div>
+              <div><strong>act_task_id：</strong>{customerText(reportAny.execution?.act_task_id ?? report.identifiers?.act_task_id)}</div>
+              <div><strong>receipt_id：</strong>{customerText(reportAny.execution?.receipt_id ?? report.identifiers?.receipt_id)}</div>
+              <div><strong>chain_integrity：</strong>{chainIntegrity}</div>
+              <div><strong>missing_links：</strong>{missingLinksText(report)}</div>
             </div>
-            <OperationSkillTraceTechnicalBlock trace={skillTrace} loading={skillTraceLoading} operationId={operationId} fieldId={drawerFieldId} />
           </details>
         </section>
       </div>
-      <PrescriptionContractDrawer
-        open={prescriptionDrawerOpen}
-        prescriptionId={prescriptionId}
-        recommendationId={recommendationId}
-        onClose={() => setPrescriptionDrawerOpen(false)}
-      />
-      <RoiLedgerDrawer
-        open={roiDrawerOpen}
-        fieldId={drawerFieldId}
-        operationId={drawerOperationId}
-        embeddedRoi={embeddedRoi}
-        onClose={() => setRoiDrawerOpen(false)}
-      />
     </div>
   );
 }
