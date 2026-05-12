@@ -130,14 +130,17 @@ function normalizeItem(row: AnyRecord, index: number, source: OperatorRoiLedgerI
 }
 
 function normalizeRows(payload: unknown, source: OperatorRoiLedgerItem["source"], filters: { fieldId?: string; operationId?: string }): OperatorRoiLedgerItem[] {
-  const rows = arrayFrom(payload, ["items", "roi_items", "ledger", "roi_ledger", "data"]);
+  const rows = arrayFrom(payload, ["items", "roi_items", "ledger", "roi_ledger", "ledger_items", "data"]);
   return rows.map((row, index) => normalizeItem(row, index, source, filters));
 }
 
 function embeddedItemsFromOperationReport(report: any, filters: { fieldId?: string; operationId?: string }): OperatorRoiLedgerItem[] {
-  const roi = report?.roi_ledger;
-  if (!roi || typeof roi !== "object") return [];
-  return normalizeRows(roi, "operation_report_embedded", filters);
+  const roi = report?.roi;
+  const valueChainItems = normalizeRows(roi, "operation_report_embedded", filters);
+  if (valueChainItems.length > 0) return valueChainItems;
+  const legacyRoi = report?.roi_ledger;
+  if (!legacyRoi || typeof legacyRoi !== "object") return [];
+  return normalizeRows(legacyRoi, "operation_report_embedded", filters);
 }
 
 async function fetchOptional(path: string): Promise<unknown | null> {
@@ -161,13 +164,7 @@ export async function fetchOperatorRoiLedger(args: { fieldId?: unknown; operatio
     const official = await fetchOptional(withQuery("/api/v1/operator/roi-ledger", query));
     const officialItems = normalizeRows(official, "operator_roi_ledger_api", filters);
     if (officialItems.length > 0) {
-      return {
-        source: "operator_roi_ledger_api",
-        dataScope: "OFFICIAL_OPERATOR_API",
-        generated_at: new Date().toISOString(),
-        items: officialItems,
-        filters,
-      };
+      return { source: "operator_roi_ledger_api", dataScope: "OFFICIAL_OPERATOR_API", generated_at: new Date().toISOString(), items: officialItems, filters };
     }
   }
 
@@ -175,14 +172,7 @@ export async function fetchOperatorRoiLedger(args: { fieldId?: unknown; operatio
     const customer = await fetchOptional(withQuery("/api/v1/customer/roi-ledger", query));
     const customerItems = normalizeRows(customer, "customer_roi_ledger_api", filters);
     if (customerItems.length > 0) {
-      return {
-        source: "fallback_existing_sources",
-        dataScope: "FALLBACK_LIMITED",
-        generated_at: new Date().toISOString(),
-        items: customerItems,
-        filters,
-        message: "当前展示 customer roi-ledger 包装后的有限运营 ROI 明细，非完整 operator roi-ledger。",
-      };
+      return { source: "fallback_existing_sources", dataScope: "FALLBACK_LIMITED", generated_at: new Date().toISOString(), items: customerItems, filters, message: "当前展示 customer roi-ledger 包装后的有限运营 ROI 明细，非完整 operator roi-ledger。" };
     }
   }
 
@@ -191,14 +181,7 @@ export async function fetchOperatorRoiLedger(args: { fieldId?: unknown; operatio
       const report = await fetchOperationReport(operationId);
       const embedded = embeddedItemsFromOperationReport(report, filters);
       if (embedded.length > 0) {
-        return {
-          source: "fallback_existing_sources",
-          dataScope: "FALLBACK_LIMITED",
-          generated_at: new Date().toISOString(),
-          items: embedded,
-          filters,
-          message: "当前展示 operation report 内嵌 ROI 摘要，非完整 ROI 明细账。",
-        };
+        return { source: "fallback_existing_sources", dataScope: "FALLBACK_LIMITED", generated_at: new Date().toISOString(), items: embedded, filters, message: "当前展示 operation report 内嵌 ROI 摘要，非完整 ROI 明细账。" };
       }
     } catch {
       // keep formal empty state below
