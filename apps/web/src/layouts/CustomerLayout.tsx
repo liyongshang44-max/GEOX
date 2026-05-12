@@ -47,6 +47,19 @@ function isItemActive(pathname: string, key: string): boolean {
   return false;
 }
 
+function roleOf(session: SessionMe | null): string {
+  return String(session?.role ?? session?.roles?.[0] ?? "").trim().toLowerCase();
+}
+
+function accountScopeCopy(session: SessionMe | null): { scopeLine: string; statusLine: string } {
+  if (!session) return { scopeLine: "授权范围待确认", statusLine: "正在读取权限" };
+  const count = session.allowed_field_ids.length;
+  const scopeMode = String(session.customer_scope?.scope_mode ?? "").toUpperCase();
+  if (scopeMode === "INTERNAL_PREVIEW" || (roleOf(session) !== "client" && count === 0)) return { scopeLine: "内部预览", statusLine: "全域预览" };
+  if (roleOf(session) === "client" && count === 0) return { scopeLine: "暂无授权地块", statusLine: "请联系运营开通" };
+  return { scopeLine: `授权地块 ${count} 块`, statusLine: "授权范围已确认" };
+}
+
 export default function CustomerLayout({ children }: CustomerLayoutProps): React.ReactElement {
   const location = useLocation();
   const title = resolvePageTitle(location.pathname);
@@ -56,9 +69,8 @@ export default function CustomerLayout({ children }: CustomerLayoutProps): React
     fetchSessionMe().then((x) => { if (alive) setSession(x); }).catch(() => { if (alive) setSession(null); });
     return () => { alive = false; };
   }, []);
-  const scopeConfirmed = Boolean(session && session.allowed_field_ids.length > 0);
-  const authorizedFieldsCount = session?.allowed_field_ids.length ?? 0;
   const accountName = session?.display_name || session?.user_id || CUSTOMER_SHELL_LABELS.accountFallback;
+  const accountScope = accountScopeCopy(session);
 
   const isExportRoute = location.pathname === "/customer/export" || location.pathname.endsWith("/export");
   const mainContent = location.pathname === "/customer/fields" ? (
@@ -100,8 +112,8 @@ export default function CustomerLayout({ children }: CustomerLayoutProps): React
         <div className="customerShellMeta">
           <div>客户账户</div>
           <strong>{accountName}</strong>
-          <div>授权地块 {authorizedFieldsCount} 块</div>
-          <strong>{scopeConfirmed ? "授权范围已确认" : "授权范围待确认"}</strong>
+          <div>{accountScope.scopeLine}</div>
+          <strong>{accountScope.statusLine}</strong>
         </div>
         <div className="customerShellFooterNote">{CUSTOMER_SHELL_LABELS.sidebarFooter}</div>
       </aside>
@@ -120,8 +132,8 @@ export default function CustomerLayout({ children }: CustomerLayoutProps): React
             />
             <span className="customerShellAccountBadge" aria-hidden="true" />
             <span className="customerShellUserMuted">
-              {CUSTOMER_SHELL_LABELS.accountFallback}<br />
-              <small>{scopeConfirmed ? "授权范围已确认" : "授权范围待确认"}</small>
+              {accountName}<br />
+              <small>{accountScope.statusLine}</small>
             </span>
           </div>
         </header>
