@@ -46,6 +46,13 @@ export default function CustomerDashboardPage(): React.ReactElement {
   const pendingAcceptanceKpi = vm?.kpis.find((item) => item.key === "PENDING_ACCEPTANCE"); // no-raw-enum-customer-allow: dashboard KPI key lookup only, converted to customer label before render
   const recentOperationsKpi = vm?.kpis.find((item) => item.key === "RECENT_OPERATIONS");
   const summaryScopeText = vm?.summaryScopeText ?? "统计范围：当前可见授权经营范围；来源：客户看板统一摘要。";
+  const deviceFallback = {
+    empty: true,
+    scopeText: "统计范围：可见授权设备；当前地块设备请进入地块报告查看。",
+    globalText: "全域设备：暂无设备摘要。",
+    authorizedText: "可见授权设备：暂无设备摘要。",
+    fieldText: "当前地块设备请进入地块报告查看。",
+  };
   const acceptanceSummaryVm = {
     title: "执行与验收摘要",
     subtitle: summaryScopeText,
@@ -67,7 +74,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
         <div className="customerDashboardActionPanel"><CockpitActionList items={vm?.actionItems ?? []} emptyState={emptyStates.NO_PENDING_ACTIONS} /></div>
         <aside className="customerDashboardRightRail">
           <ExecutionAcceptanceSummary vm={acceptanceSummaryVm} />
-          <DeviceHealthCard summary={vm?.deviceHealth ?? { empty: true }} emptyState={emptyStates.NO_DEVICE_HEALTH} />
+          <DeviceHealthCard summary={vm?.deviceHealth ?? deviceFallback} emptyState={emptyStates.NO_DEVICE_HEALTH} />
         </aside>
       </section>
 
