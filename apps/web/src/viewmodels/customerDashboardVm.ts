@@ -1,6 +1,7 @@
 import type { CustomerDashboardAggregateV1 } from "../api/customerReports";
 import { CUSTOMER_LABELS, labelAcceptanceStatus, labelFinalStatus, labelRiskLevel, sanitizeCustomerText } from "../lib/customerLabels";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
+import { customerDisplayName, customerSemanticLabel } from "../lib/customerSemanticLabels";
 
 const numberFmt = new Intl.NumberFormat("zh-CN");
 
@@ -145,10 +146,10 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
     const riskTone = item.risk_level === "HIGH" ? "danger" : item.risk_level === "MEDIUM" ? "warning" : "neutral";
     return {
       fieldId,
-      fieldName: sanitizeCustomerText(item.field_name ?? "地块名称待补充", "地块名称待补充"),
+      fieldName: customerDisplayName(item.field_name, "未命名地块"),
       riskLabel: labelRiskLevel(item.risk_level),
       riskTone,
-      reasons: (item.risk_reasons ?? []).map((reason) => sanitizeCustomerText(reason)).filter(Boolean),
+      reasons: (item.risk_reasons ?? []).map((reason) => customerSemanticLabel(reason)).filter(Boolean),
       href: fieldId ? `/customer/fields/${encodeURIComponent(fieldId)}` : "/customer/dashboard",
     };
   });
@@ -157,11 +158,11 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
     const operationId = String(item.operation_id ?? item.operation_plan_id ?? "");
     return {
       operationId,
-      operationName: sanitizeCustomerText(item.customer_title ?? item.title ?? "作业"),
-      fieldName: sanitizeCustomerText(item.field_name ?? "地块名称待补充", "地块名称待补充"),
-      stateText: sanitizeCustomerText((item as any).operation_state ?? labelFinalStatus(item.final_status)),
+      operationName: customerDisplayName(item.customer_title ?? item.title, "未命名作业"),
+      fieldName: customerDisplayName(item.field_name, "未命名地块"),
+      stateText: customerSemanticLabel((item as any).operation_state ?? labelFinalStatus(item.final_status), "待确认"),
       acceptanceText: labelAcceptanceStatus(item.acceptance_status),
-      evidenceText: sanitizeCustomerText((item as any).evidence_status ?? "证据待补充"),
+      evidenceText: customerSemanticLabel((item as any).evidence_status ?? "证据待补充", "证据待补充"),
       updatedAtText: toDateTimeText((item as any).updated_at ?? item.executed_at),
       href: operationId ? `/customer/operations/${encodeURIComponent(operationId)}` : "/customer/dashboard",
     };
