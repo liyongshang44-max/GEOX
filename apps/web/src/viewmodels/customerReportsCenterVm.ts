@@ -37,10 +37,10 @@ export type CustomerReportsCenterVm = {
 };
 
 const GROUP_LABELS: Record<CustomerReportGroupKey, { title: string; description: string }> = {
-  OVERVIEW: { title: "总览报告", description: "经营驾驶舱和整体经营结论导出入口。" },
-  FIELD: { title: "地块报告", description: "按地块查看地块病历、风险和近期变化。" },
-  OPERATION: { title: "作业报告", description: "按作业查看建议、审批、执行、证据、验收与价值记录。" },
-  EVIDENCE_VALUE: { title: "证据与价值报告", description: "证据包与价值记录汇总入口。" },
+  OVERVIEW: { title: "总览报告", description: "经营驾驶舱、风险、作业和价值记录的交付入口。" },
+  FIELD: { title: "地块报告", description: "按地块查看地块范围、最近作业、风险诊断、价值与田块记忆。" },
+  OPERATION: { title: "作业报告", description: "按作业查看建议、处方审批、执行结果、证据验收、价值学习。" },
+  EVIDENCE_VALUE: { title: "证据与价值报告", description: "证据包、价值记录与可信状态汇总入口。" },
 };
 
 function toDateTimeText(raw: unknown): string {
@@ -53,6 +53,11 @@ function toDateTimeText(raw: unknown): string {
   return date.toLocaleString("zh-CN", { hour12: false });
 }
 
+function n(value: unknown): number {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
 function normalizeGroup(raw: unknown): CustomerReportGroupKey {
   const value = String(raw ?? "").trim().toUpperCase();
   if (value === "FIELD") return "FIELD";
@@ -61,18 +66,29 @@ function normalizeGroup(raw: unknown): CustomerReportGroupKey {
   return "OVERVIEW";
 }
 
-function capabilityText(raw: unknown): { text: string; disabled: boolean; trustText: string } {
+function capabilityText(raw: unknown, href: string): { text: string; disabled: boolean; trustText: string } {
   const value = String(raw ?? "").trim().toUpperCase();
-  if (value === "PENDING") return { text: "待接入", disabled: true, trustText: "能力待接入，暂不形成可交付报告" }; // no-raw-enum-customer-allow: backend capability code mapping only, converted before render
-  if (value === "UNAVAILABLE") return { text: "暂不可用", disabled: true, trustText: "数据暂不可用，暂不形成可交付报告" };
-  return { text: "可查看", disabled: false, trustText: "可交付，来源于当前客户报告数据" };
+  if (value === "PENDING") return { text: "数据不足", disabled: true, trustText: "数据不足，暂不形成可交付报告" }; // no-raw-enum-customer-allow: backend capability code mapping only, converted before render
+  if (value === "UNAVAILABLE") return { text: "数据不足", disabled: true, trustText: "数据暂不可用，暂不形成可交付报告" };
+  if (!href) return { text: "数据不足", disabled: true, trustText: "缺少报告入口，暂不可查看或导出" };
+  return { text: href.includes("export") ? "可导出" : "可查看", disabled: false, trustText: href.includes("export") ? "可导出" : "可查看" };
+}
+
+function overviewCoverageText(item: CustomerReportCenterItem): string {
+  const fieldCount = n(item.coverage_fields_count);
+  const operationCount = n(item.coverage_operations_count);
+  const valueCount = n(item.coverage_value_records_count);
+  if (fieldCount || operationCount || valueCount) {
+    return `覆盖：${fieldCount} 个地块、${operationCount} 条作业、${valueCount} 条价值记录`;
+  }
+  return "覆盖：经营总览、风险地块、近期作业与价值记录";
 }
 
 function coverageText(item: CustomerReportCenterItem, group: CustomerReportGroupKey): string {
-  if (group === "OVERVIEW") return "覆盖：经营总览、风险地块、近期作业与价值摘要";
-  if (group === "FIELD") return `覆盖：${customerDisplayName(item.field_name, "对应地块")} 的地块病历、风险与近期作业`;
-  if (group === "OPERATION") return `覆盖：${customerDisplayName(item.operation_title ?? item.title, "对应作业")} 的作业闭环、证据与验收`;
-  return "覆盖：证据包与价值记录汇总";
+  if (group === "OVERVIEW") return overviewCoverageText(item);
+  if (group === "FIELD") return "包含：地块范围、最近作业、风险诊断、价值与田块记忆";
+  if (group === "OPERATION") return "包含：为什么做、处方审批、执行结果、证据验收、价值学习";
+  return "包含：证据包、价值记录与可信状态";
 }
 
 function reportTitle(item: CustomerReportCenterItem, group: CustomerReportGroupKey): string {
@@ -82,25 +98,39 @@ function reportTitle(item: CustomerReportCenterItem, group: CustomerReportGroupK
   return customerDisplayName(item.title, "经营总览报告");
 }
 
+function subtitleText(item: CustomerReportCenterItem, group: CustomerReportGroupKey): string {
+  const fallback = group === "OVERVIEW"
+    ? "经营总览、风险地块、近期作业与价值记录"
+    : group === "FIELD"
+      ? "地块范围、最近作业、风险诊断、价值与田块记忆"
+      : group === "OPERATION"
+        ? "建议、处方审批、执行结果、证据验收、价值学习"
+        : "证据包、价值记录与可信状态";
+  const cleaned = sanitizeCustomerText(item.subtitle, fallback);
+  if (cleaned.includes("基于当前可见") || cleaned.includes("基于当前客户驾驶舱")) return fallback;
+  return cleaned;
+}
+
 function buildItem(item: CustomerReportCenterItem): CustomerReportsCenterItemVm {
   const group = normalizeGroup(item.report_type);
-  const capability = capabilityText(item.capability_status);
   const href = String(item.href ?? "").trim();
+  const capability = capabilityText(item.capability_status, href);
   const statusText = customerSemanticLabel(item.status_text, capability.text);
+  const normalizedStatus = ["可查看", "可导出", "数据不足"].includes(statusText) ? statusText : capability.text;
   return {
     title: reportTitle(item, group),
-    subtitle: sanitizeCustomerText(item.subtitle, group === "OVERVIEW" ? "基于当前客户驾驶舱可见数据生成" : "基于当前可见对象生成"),
+    subtitle: subtitleText(item, group),
     href: href || undefined,
-    statusText,
+    statusText: normalizedStatus,
     updatedAtText: toDateTimeText(item.updated_at),
     disabled: capability.disabled || !href,
     coverageText: coverageText(item, group),
-    trustText: capability.disabled ? capability.trustText : `${capability.trustText}；状态：${statusText}`,
+    trustText: normalizedStatus,
   };
 }
 
 function evidenceValuePendingItem(generatedAt: unknown): CustomerReportsCenterItemVm {
-  return { title: "证据与价值报告", subtitle: "证据包汇总能力待接入。", statusText: "待接入", updatedAtText: toDateTimeText(generatedAt), disabled: true, coverageText: "覆盖：证据包、价值记录与可信状态", trustText: "能力待接入，暂不形成可交付报告" };
+  return { title: "证据与价值报告", subtitle: "证据包、价值记录与可信状态", statusText: "数据不足", updatedAtText: toDateTimeText(generatedAt), disabled: true, coverageText: "包含：证据包、价值记录与可信状态", trustText: "数据不足" };
 }
 
 function scopeNote(raw: unknown): string | undefined {
