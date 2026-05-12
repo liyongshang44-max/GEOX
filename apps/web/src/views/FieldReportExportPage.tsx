@@ -40,8 +40,8 @@ export default function FieldReportExportPage(): React.ReactElement {
 
   return (
     <PrintReportScaffold
-      title={vm.field.fieldName || "地块报告"}
-      subtitle="地块病历打印版"
+      title="GEOX 地块报告"
+      subtitle={vm.field.fieldName || "地块名称待补充"}
       generatedAt={vm.generatedAtText}
       backTo={`/customer/fields/${encodeURIComponent(fieldId)}`}
     >
