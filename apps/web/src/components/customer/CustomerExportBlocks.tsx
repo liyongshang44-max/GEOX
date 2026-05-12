@@ -1,5 +1,6 @@
 import React from "react";
 import type { FieldReportDetailV1, OperationReportV1 } from "../../api/customerReports";
+import { customerSemanticLabel } from "../../lib/customerSemanticLabels";
 import type { CustomerDashboardPageVm } from "../../viewmodels/customerDashboardVm";
 import type { FieldReportPageVm } from "../../viewmodels/fieldReportVm";
 import type { OperationReportPageVm } from "../../viewmodels/operationReportVm";
@@ -44,29 +45,6 @@ function PrintTable({ headers, rows, emptyText }: { headers: string[]; rows: Row
   );
 }
 
-const EXPORT_RAW_LABELS: Record<string, string> = {
-  BASELINE_MISSING: "缺少收益基线，暂不形成可信收益结论",
-  EVIDENCE_INSUFFICIENT: "证据不足，暂不能形成可信结论",
-  HYPOTHESIS_ONLY: "仅形成价值假设，待后续证据验证",
-  PROJECTED: "已有投入产出预测，待执行结果验证",
-  EXECUTED_PENDING_RESPONSE: "已执行，等待响应证据",
-  INTERIM_SUPPORTED: "阶段性证据支持",
-  INTERIM_NOT_SUPPORTED: "阶段性证据暂不支持",
-  EXCLUDED_WEATHER: "受天气干扰，本次不进入效果学习",
-  REALIZED: "收获后已形成结果记录",
-  AVAILABLE: "已形成",
-  MISSING: "暂无记录",
-  PENDING: "等待生成",
-  NOT_APPLICABLE: "不适用",
-  PASS: "验收通过",
-  FAIL: "未达到预期效果",
-  SUCCESS: "已完成",
-  FAILED: "未达到预期效果",
-  LOW: "低可信度",
-  MEDIUM: "中等可信度",
-  HIGH: "高可信度",
-};
-
 function safeExportText(value: unknown, fallback = "暂无记录"): string {
   const text = String(value ?? "").trim();
   if (!text || text === "--" || text === "[object Object]") return fallback;
@@ -74,13 +52,9 @@ function safeExportText(value: unknown, fallback = "暂无记录"): string {
   if (/(^|\s)\/[\w./-]+/.test(text) || /[A-Z]:\\[\w\\.-]+/i.test(text)) return fallback;
   if (/\b(secret|token|credential)\b/i.test(text) || /stack\s*trace/i.test(text) || /debug\s*json/i.test(text) || /\{\s*"/.test(text)) return fallback;
 
-  const normalized = text.toUpperCase();
-  if (EXPORT_RAW_LABELS[normalized]) return EXPORT_RAW_LABELS[normalized];
-  return text
-    .replace(/\bgeometry\b/gi, "地块边界")
+  return customerSemanticLabel(text, text)
     .replace(/\bField Memory\b/g, "田块记忆")
-    .replace(/\bROI\b/g, "价值记录")
-    .replace(/\bsha256\b/gi, "文件校验信息");
+    .replace(/\bROI\b/g, "价值记录");
 }
 
 function isObject(value: unknown): value is Record<string, any> {
