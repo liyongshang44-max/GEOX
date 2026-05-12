@@ -1,4 +1,5 @@
 import type { OperatorApprovalItem, OperatorApprovalsResponse, OperatorApprovalRiskLevel, OperatorApprovalStatus } from "../api/operatorApprovals";
+import { mapOperatorStatusLabel, replaceOperatorTerms } from "../lib/operatorStatusLabels";
 
 export type OperatorActionButtonStateV1 = {
   canAction: boolean;
@@ -50,7 +51,7 @@ function text(value: unknown, fallback = ""): string {
   const raw = String(value ?? "").trim();
   if (!raw || raw === "--" || raw === "undefined" || raw === "null") return fallback;
   if (/token|secret|credential|private\s*key|password|stack\s*trace|debug\s*json/i.test(raw)) return fallback;
-  return raw;
+  return replaceOperatorTerms(raw);
 }
 
 function dateText(value: unknown): string {
@@ -66,7 +67,7 @@ function statusText(value: OperatorApprovalStatus): string {
   if (value === "APPROVED") return "已通过";
   if (value === "REJECTED") return "已拒绝";
   if (value === "RETURNED") return "已退回";
-  return "状态待确认";
+  return mapOperatorStatusLabel(value, "approval", "状态待确认");
 }
 
 function riskText(value: OperatorApprovalRiskLevel): string {
@@ -101,7 +102,7 @@ function buildActionButtonState(item: OperatorApprovalItem): OperatorActionButto
   if (item.selfApprovalRisk) {
     return {
       canAction: false,
-      disabledReason: "存在自审批风险，审批动作已阻断。",
+      disabledReason: mapOperatorStatusLabel("SELF_APPROVAL_BLOCKED", "approval"),
       pending: false,
       lastError: null,
     };
@@ -178,7 +179,7 @@ export function buildOperatorApprovalsVm(response: OperatorApprovalsResponse): O
     lead: "集中查看待审批事项、高风险处方、权限阻断、自审批风险与审批历史。",
     generatedAtText: dateText(response.generated_at),
     dataScopeText: dataScopeText(response),
-    dataScopeWarning: response.dataScope === "FALLBACK_LIMITED" ? response.message || "当前展示有限 fallback 审批数据，非完整运营审批中心。" : undefined,
+    dataScopeWarning: response.dataScope === "FALLBACK_LIMITED" ? text(response.message, "当前展示有限 fallback 审批数据，非完整运营审批中心。") : undefined,
     writeReady: response.writeReady,
     pending,
     highRiskPrescriptions,
