@@ -69,6 +69,10 @@ function normalizeStatus(value: unknown): string {
   return String(value ?? "").trim().replace(/[\s/-]+/g, "_").toUpperCase();
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export function labelOperatorStatus(value: unknown, fallback = "状态待确认"): string {
   const key = normalizeStatus(value);
   if (!key) return fallback;
@@ -103,10 +107,18 @@ export function labelOperatorTerm(value: unknown, fallback = ""): string {
 export function replaceOperatorTerms(value: unknown, fallback = ""): string {
   const raw = String(value ?? "").trim();
   if (!raw) return fallback;
+  const exactStatus = STATUS_LABELS[normalizeStatus(raw)];
+  if (exactStatus) return exactStatus;
+
   let next = raw;
   const orderedTerms = Object.keys(TERM_LABELS).sort((a, b) => b.length - a.length);
   for (const term of orderedTerms) {
-    next = next.replace(new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"), TERM_LABELS[term]);
+    next = next.replace(new RegExp(escapeRegExp(term), "g"), TERM_LABELS[term]);
+  }
+
+  const orderedStatuses = Object.keys(STATUS_LABELS).sort((a, b) => b.length - a.length);
+  for (const status of orderedStatuses) {
+    next = next.replace(new RegExp(`\\b${escapeRegExp(status)}\\b`, "g"), STATUS_LABELS[status]);
   }
   return next;
 }
