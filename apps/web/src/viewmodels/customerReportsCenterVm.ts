@@ -1,6 +1,7 @@
 import type { CustomerReportCenterItem, CustomerReportsCenterResponse, CustomerReportsDataScope } from "../api/customerReportsCenter";
 import { sanitizeCustomerText } from "../lib/customerLabels";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
+import { customerSemanticLabel } from "../lib/customerSemanticLabels";
 
 export type CustomerReportGroupKey = "OVERVIEW" | "FIELD" | "OPERATION" | "EVIDENCE_VALUE";
 
@@ -82,13 +83,18 @@ function evidenceValuePendingItem(generatedAt: unknown): CustomerReportsCenterIt
   return { title: "证据与价值报告", subtitle: "证据包生成能力待接入。", statusText: "待接入", updatedAtText: toDateTimeText(generatedAt), disabled: true };
 }
 
+function scopeNote(raw: unknown): string | undefined {
+  const text = String(raw ?? "").trim();
+  return text ? customerSemanticLabel(text, text) : undefined;
+}
+
 function scopeCopy(response: CustomerReportsCenterResponse): { subtitle: string; badge: string; note?: string; isPreview: boolean } {
   const mode = String(response.scope?.scope_mode ?? "").toUpperCase();
-  if (mode === "INTERNAL_PREVIEW") return { subtitle: "内部预览：当前按全域客户视图展示报告入口。", badge: "内部预览 / 全域预览", note: response.scope?.reason, isPreview: true };
-  if (mode === "DENIED") return { subtitle: "暂无授权地块，因此暂无可见报告入口。", badge: "暂无授权地块", note: response.scope?.reason || "当前账户未授权任何地块", isPreview: false };
+  if (mode === "INTERNAL_PREVIEW") return { subtitle: "当前展示可见经营范围内的报告入口。", badge: "经营范围预览", note: scopeNote(response.scope?.reason), isPreview: true };
+  if (mode === "DENIED") return { subtitle: "暂无授权地块，因此暂无可见报告入口。", badge: "暂无授权地块", note: scopeNote(response.scope?.reason) || "当前账户未授权任何地块", isPreview: false };
   if (mode === "CLIENT_ALLOWLIST") return { subtitle: "查看授权范围内可交付报告入口。", badge: `授权报告 ${response.report_count ?? response.reports.length} 个`, isPreview: false };
-  if (response.dataScope === "FALLBACK_RECENT_ONLY") return { subtitle: "P1-A Preview：当前仅展示驾驶舱与近期可见对象对应报告入口，非全部报告列表。", badge: "P1-A Preview", note: response.data_scope_note || "当前仅展示驾驶舱与近期可见对象对应报告入口，非全部报告列表", isPreview: true };
-  if (response.dataScope === "ERROR_EMPTY") return { subtitle: "报告中心暂不可用，请稍后刷新。", badge: "暂不可用", note: response.data_scope_note || "报告中心暂不可用，请稍后刷新", isPreview: true };
+  if (response.dataScope === "FALLBACK_RECENT_ONLY") return { subtitle: "当前展示驾驶舱与近期可见对象对应的报告入口。", badge: "近期报告", note: customerSemanticLabel(response.data_scope_note, "当前仅展示近期可见报告入口，完整列表待同步"), isPreview: true };
+  if (response.dataScope === "ERROR_EMPTY") return { subtitle: "报告中心暂不可用，请稍后刷新。", badge: "暂不可用", note: customerSemanticLabel(response.data_scope_note, "报告中心暂不可用，请稍后刷新"), isPreview: true };
   return { subtitle: "查看授权范围内可交付报告入口。", badge: "正式列表", isPreview: false };
 }
 
