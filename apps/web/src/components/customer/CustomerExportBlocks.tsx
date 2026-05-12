@@ -1,6 +1,6 @@
 import React from "react";
 import type { FieldReportDetailV1, OperationReportV1 } from "../../api/customerReports";
-import { customerSemanticLabel } from "../../lib/customerSemanticLabels";
+import { formatCustomerNumber, isUnsafeCustomerText, mapCustomerEnum } from "../../lib/customerSafeText";
 import type { CustomerDashboardPageVm } from "../../viewmodels/customerDashboardVm";
 import type { FieldReportPageVm } from "../../viewmodels/fieldReportVm";
 import type { OperationReportPageVm } from "../../viewmodels/operationReportVm";
@@ -47,12 +47,12 @@ function PrintTable({ headers, rows, emptyText }: { headers: string[]; rows: Row
 
 function safeExportText(value: unknown, fallback = "暂无记录"): string {
   const text = String(value ?? "").trim();
-  if (!text || text === "--" || text === "[object Object]") return fallback;
+  if (!text || text === "--" || text === "[object Object]" || isUnsafeCustomerText(text)) return fallback;
   if (/s3:\/\//i.test(text) || /minio:\/\//i.test(text) || /https?:\/\//i.test(text)) return fallback;
   if (/(^|\s)\/[\w./-]+/.test(text) || /[A-Z]:\\[\w\\.-]+/i.test(text)) return fallback;
   if (/\b(secret|token|credential)\b/i.test(text) || /stack\s*trace/i.test(text) || /debug\s*json/i.test(text) || /\{\s*"/.test(text)) return fallback;
 
-  return customerSemanticLabel(text, text)
+  return mapCustomerEnum(text, "generic")
     .replace(/\bField Memory\b/g, "田块记忆")
     .replace(/\bROI\b/g, "价值记录");
 }
@@ -112,8 +112,8 @@ function weatherSummaryFromReport(reportAny: Record<string, any>): string {
   const rainfall = Number(weather.rainfall_mm ?? weather.rainfallMm ?? weather.total_rainfall_mm ?? weather.totalRainfallMm ?? weather.rain_mm);
   const futureRainfall = Number(weather.forecast_rainfall_mm ?? weather.forecastRainfallMm ?? weather.next_24h_rainfall_mm ?? weather.future_24h_rainfall_mm);
   if (Number.isFinite(rainfall) || Number.isFinite(futureRainfall)) {
-    const rainText = Number.isFinite(rainfall) ? `${rainfall.toFixed(2)} mm` : "暂无记录";
-    const forecastText = Number.isFinite(futureRainfall) ? `${futureRainfall.toFixed(2)} mm` : "暂无记录";
+    const rainText = Number.isFinite(rainfall) ? formatCustomerNumber(rainfall, { maximumFractionDigits: 2, unit: " mm" }) : "暂无记录";
+    const forecastText = Number.isFinite(futureRainfall) ? formatCustomerNumber(futureRainfall, { maximumFractionDigits: 2, unit: " mm" }) : "暂无记录";
     return `24h 降雨：${rainText}；未来 24h 降雨预测：${forecastText}。天气仅用于辅助解释和学习排除。`;
   }
 
@@ -212,7 +212,7 @@ function buildFieldSameSourceExportSummary(vm: FieldReportPageVm, report?: Field
 
 export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): React.ReactElement {
   const dashboardKpis = vm.kpis.slice(0, 5);
-  const nextActionTitles = vm.actionItems.map((item) => item.title).join(" · ") || "暂无待处理事项";
+  const nextActionTitles = vm.actionItems.map((item) => safeExportText(item.title, "待处理事项")).join(" · ") || "暂无待处理事项";
   const recentOperations = vm.recentOperations.slice(0, 5);
   const topRisks = vm.topRiskFields.slice(0, 5);
   const roi = vm.roiSummary;
@@ -224,8 +224,8 @@ export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): 
         <div className="customerDashboardKpiRow customerSpacingTopSm">
           {dashboardKpis.map((item) => (
             <article key={item.key} className="customerMetricCard">
-              <div className="customerMetricLabel">{item.label}</div>
-              <div className="customerMetricValue">{item.value}{item.unit ?? ""}</div>
+              <div className="customerMetricLabel">{safeExportText(item.label, "指标")}</div>
+              <div className="customerMetricValue">{safeExportText(item.value, "0")}{item.unit ?? ""}</div>
             </article>
           ))}
         </div>
@@ -234,7 +234,7 @@ export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): 
         <h2 className="customerCardTitle">高风险地块 Top 5</h2>
         <PrintTable
           headers={["地块", "风险", "原因"]}
-          rows={topRisks.map((item) => [item.fieldName || "未命名地块", item.riskLabel, item.reasons.join("；") || "暂无风险原因"])}
+          rows={topRisks.map((item) => [safeExportText(item.fieldName, "地块名称待补充"), safeExportText(item.riskLabel, "风险待确认"), item.reasons.map((reason) => safeExportText(reason, "暂无风险原因")).join("；") || "暂无风险原因"])}
           emptyText={vm.emptyStates.NO_RISK_FIELDS?.title ?? "暂无高风险地块"}
         />
       </section>
@@ -242,7 +242,7 @@ export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): 
         <h2 className="customerCardTitle">近期作业 Top 5</h2>
         <PrintTable
           headers={["作业", "地块", "更新时间", "验收"]}
-          rows={recentOperations.map((item) => [item.operationName, item.fieldName, item.updatedAtText, item.acceptanceText])}
+          rows={recentOperations.map((item) => [safeExportText(item.operationName, "作业名称待补充"), safeExportText(item.fieldName, "地块名称待补充"), safeExportText(item.updatedAtText, "暂无更新时间"), safeExportText(item.acceptanceText, "等待验收")])}
           emptyText={vm.emptyStates.NO_RECENT_OPERATIONS?.title ?? "暂无近期作业"}
         />
       </section>
@@ -252,10 +252,10 @@ export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): 
           <p className="customerSpacingTopSm">{roi.emptyState?.title ?? vm.emptyStates.NO_ROI?.title ?? "暂无可量化价值记录"}</p>
         ) : (
           <div className="customerGrid2 customerSpacingTopSm">
-            <div><strong>价值记录数量：</strong>{roi.totalRoiItems}</div>
-            <div><strong>节水记录：</strong>{roi.waterSavedItems}</div>
-            <div><strong>价值摘要：</strong>{roi.customerValueText || "暂无收益摘要"}</div>
-            <div><strong>置信度：</strong>{roi.confidenceText || "暂无记录"}</div>
+            <div><strong>价值记录数量：</strong>{formatCustomerNumber(roi.totalRoiItems, { fallback: "0", maximumFractionDigits: 0 })}</div>
+            <div><strong>节水记录：</strong>{formatCustomerNumber(roi.waterSavedItems, { fallback: "0", maximumFractionDigits: 0 })}</div>
+            <div><strong>价值摘要：</strong>{safeExportText(roi.customerValueText, "暂无收益摘要")}</div>
+            <div><strong>置信度：</strong>{safeExportText(roi.confidenceText, "暂无记录")}</div>
           </div>
         )}
       </section>
@@ -272,10 +272,10 @@ export function FieldExportBlocks({ vm, report }: { vm: FieldReportPageVm; repor
       <section className="customerCard">
         <h2 className="customerCardTitle">摘要</h2>
         <div className="customerGrid2 customerSpacingTopSm">
-          <div><strong>地块名称：</strong>{vm.header.title}</div>
-          <div><strong>作业总数：</strong>{vm.overview.totalOperationsText}</div>
-          <div><strong>当前风险：</strong>{vm.risk.levelLabel}</div>
-          <div><strong>待验收：</strong>{vm.overview.pendingAcceptanceText}</div>
+          <div><strong>地块名称：</strong>{safeExportText(vm.header.title, "地块名称待补充")}</div>
+          <div><strong>作业总数：</strong>{safeExportText(vm.overview.totalOperationsText, "0")}</div>
+          <div><strong>当前风险：</strong>{safeExportText(vm.risk.levelLabel, "风险待确认")}</div>
+          <div><strong>待验收：</strong>{safeExportText(vm.overview.pendingAcceptanceText, "0")}</div>
         </div>
       </section>
       <section className="customerCard">
@@ -292,10 +292,10 @@ export function FieldExportBlocks({ vm, report }: { vm: FieldReportPageVm; repor
           emptyText="暂无地块同源摘要。"
         />
       </section>
-      <section className="customerCard"><h2 className="customerCardTitle">风险/诊断</h2><p className="customerSpacingTopSm">{vm.explain.human}当前风险：{vm.risk.levelLabel}。</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">下一步建议</h2><p className="customerSpacingTopSm">{vm.nextAction?.objectiveText ?? "暂无新的处理建议"}</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">价值与记忆</h2><div className="customerGrid2 customerSpacingTopSm"><div>{vm.roiSummary.displayText}</div><div>{vm.fieldMemory.displayText}</div></div></section>
-      <section className="customerCard"><h2 className="customerCardTitle">最终结论</h2><p className="customerSpacingTopSm">{vm.currentStatus.summary}</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">风险/诊断</h2><p className="customerSpacingTopSm">{safeExportText(vm.explain.human, "暂无状态解释")}当前风险：{safeExportText(vm.risk.levelLabel, "风险待确认")}。</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">下一步建议</h2><p className="customerSpacingTopSm">{safeExportText(vm.nextAction?.objectiveText, "暂无新的处理建议")}</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">价值与记忆</h2><div className="customerGrid2 customerSpacingTopSm"><div>{safeExportText(vm.roiSummary.displayText, "暂无价值摘要")}</div><div>{safeExportText(vm.fieldMemory.displayText, "暂无田块记忆摘要")}</div></div></section>
+      <section className="customerCard"><h2 className="customerCardTitle">最终结论</h2><p className="customerSpacingTopSm">{safeExportText(vm.currentStatus.summary, "暂无最终结论")}</p></section>
     </div>
   );
 }
@@ -311,8 +311,8 @@ export function OperationExportBlocks({ vm, report }: { vm: OperationReportPageV
       <section className="customerCard">
         <h2 className="customerCardTitle">作业报告头</h2>
         <div className="customerGrid2 customerSpacingTopSm">
-          <div><strong>作业：</strong>{vm.header.title}</div>
-          <div><strong>状态：</strong>{vm.operation.finalStatusLabel}</div>
+          <div><strong>作业：</strong>{safeExportText(vm.header.title, "作业名称待补充")}</div>
+          <div><strong>状态：</strong>{safeExportText(vm.operation.finalStatusLabel, "待确认")}</div>
         </div>
       </section>
       <section className="operationClosedLoopGrid">
@@ -320,8 +320,8 @@ export function OperationExportBlocks({ vm, report }: { vm: OperationReportPageV
           <article key={item.key} className="customerCard operationClosedLoopCard">
             <div className="operationClosedLoopHead">
               <span className="operationStepNo">{index + 1}</span>
-              <h2 className="customerCardTitle">{item.title}</h2>
-              <span className="operationStatusBadge">{item.statusText ?? item.status}</span>
+              <h2 className="customerCardTitle">{safeExportText(item.title, "作业环节")}</h2>
+              <span className="operationStatusBadge">{safeExportText(item.statusText ?? item.status, "待确认")}</span>
             </div>
             <p className="customerSpacingTopSm">{safeExportText(item.summary, "暂无摘要")}</p>
             {item.emptyState ? <p className="customerMetricLabel">{safeExportText(item.emptyState.title)}：{safeExportText(item.emptyState.description)}</p> : null}
