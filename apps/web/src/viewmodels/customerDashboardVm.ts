@@ -20,6 +20,11 @@ function num(raw: unknown): number {
   return Number.isFinite(value) ? value : 0;
 }
 
+function optionalNum(raw: unknown): number | null {
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
 function fieldBoundaryAvailable(raw: unknown): boolean {
   const item = raw as Record<string, unknown> | null | undefined;
   return Boolean(item?.geometry || item?.geometry_id);
@@ -88,15 +93,19 @@ export type CustomerDashboardVm = {
   actionItems: CustomerActionItemVm[];
   deviceHealth: {
     totalDevices?: number;
+    visibleDevices?: number;
     onlineDevices?: number;
     offlineDevices?: number;
     alertDevices?: number;
+    alertEvents?: number;
     offlineFields?: number;
     updatedAtText?: string;
     scopeText: string;
     globalText: string;
     authorizedText: string;
     fieldText: string;
+    offlineText: string;
+    alertText: string;
     empty: boolean;
   };
   roiSummary: {
@@ -145,16 +154,21 @@ export function normalizeDashboardAggregate(input: any): CustomerDashboardAggreg
 
 export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | { aggregate?: CustomerDashboardAggregateV1; customer_dashboard_aggregate_v1?: CustomerDashboardAggregateV1; data?: CustomerDashboardAggregateV1 }): CustomerDashboardVm {
   const aggregate = normalizeDashboardAggregate(input);
+  const deviceSummary = (aggregate.device_summary ?? {}) as any;
   const highRisk = num(aggregate.fields?.at_risk);
   const pendingAcceptance = num(aggregate.pending_actions_summary?.pending_acceptance);
   const pendingActions = num(aggregate.pending_actions_summary?.total_open_alerts);
+  const alertEvents = num((aggregate.pending_actions_summary as any)?.alert_events_count ?? (aggregate.pending_actions_summary as any)?.alert_events ?? pendingActions);
   const valueRecords = num(aggregate.roi_summary?.total_roi_items);
   const totalOperations = num(aggregate.period_summary?.total_operations || (aggregate.recent_operations ?? []).length);
-  const totalDevices = num(aggregate.device_summary?.total_devices);
-  const offlineDevices = num(aggregate.device_summary?.offline_devices);
+  const globalDevices = optionalNum(deviceSummary.global_devices_count ?? deviceSummary.globalDevicesCount ?? deviceSummary.total_devices);
+  const visibleDevices = num(deviceSummary.visible_devices_count ?? deviceSummary.visibleDevicesCount ?? deviceSummary.total_devices);
+  const totalDevices = visibleDevices;
+  const offlineDevices = num(deviceSummary.offline_devices_count ?? deviceSummary.offlineDevicesCount ?? deviceSummary.offline_devices);
   const onlineDevices = Math.max(0, totalDevices - offlineDevices);
-  const offlineFields = num(aggregate.device_summary?.offline_fields);
+  const offlineFields = num(deviceSummary.offline_fields);
   const generatedAtText = toDateTimeText((aggregate as any).generated_at ?? new Date().toISOString());
+  const globalDeviceText = globalDevices === null ? "全域设备：后端未返回；客户页不推断全域设备总量。" : `全域设备：共 ${numberFmt.format(globalDevices)} 台。`;
   const emptyStates = {
     NO_KPI_SUMMARY: getCustomerEmptyState("NO_KPI_SUMMARY"),
     NO_ROI: getCustomerEmptyState("NO_ROI"),
@@ -170,7 +184,7 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
     { key: "RISK_FIELDS", label: "风险地块", value: numberFmt.format(highRisk), unit: "块", tone: highRisk > 0 ? "danger" : "good", sourceNote: "customer_dashboard_aggregate_v1.fields.at_risk", customerHint: `${DASHBOARD_SUMMARY_SOURCE} 点击中部风险面板可查看地块详情。` },
     // no-raw-enum-customer-allow: KPI key constant for stable ordering and analytics mapping
     { key: "PENDING_ACCEPTANCE", label: "待验收作业", value: numberFmt.format(pendingAcceptance), unit: "条", tone: pendingAcceptance > 0 ? "warning" : "good", sourceNote: "customer_dashboard_aggregate_v1.pending_actions_summary.pending_acceptance", customerHint: `${DASHBOARD_SUMMARY_SOURCE} 与作业列表使用同一客户摘要来源。` },
-    { key: "OFFLINE_DEVICES", label: "离线设备", value: numberFmt.format(offlineDevices), unit: "台", tone: offlineDevices > 0 ? "warning" : "good", sourceNote: "customer_dashboard_aggregate_v1.device_summary.offline_devices", customerHint: `统计范围：可见授权设备；全域设备 ${numberFmt.format(totalDevices)} 台，离线 ${numberFmt.format(offlineDevices)} 台。当前地块设备请进入地块报告查看。` },
+    { key: "OFFLINE_DEVICES", label: "离线设备", value: numberFmt.format(offlineDevices), unit: "台", tone: offlineDevices > 0 ? "warning" : "good", sourceNote: "customer_dashboard_aggregate_v1.device_summary.offline_devices_count/offline_devices", customerHint: `统计范围：可见授权设备 visible_devices_count=${numberFmt.format(visibleDevices)}；offline_devices_count=${numberFmt.format(offlineDevices)}。当前地块设备请进入地块报告查看。` },
     { key: "VALUE_RECORDS", label: "价值记录", value: numberFmt.format(valueRecords), unit: "条", tone: valueRecords > 0 ? "good" : "neutral", sourceNote: "customer_dashboard_aggregate_v1.roi_summary.total_roi_items", customerHint: `${DASHBOARD_SUMMARY_SOURCE} 缺少基线时不形成可信收益结论。` },
     { key: "RECENT_OPERATIONS", label: "作业记录", value: numberFmt.format(totalOperations), unit: "条", tone: "neutral", sourceNote: "customer_dashboard_aggregate_v1.period_summary.total_operations", customerHint: `${DASHBOARD_SUMMARY_SOURCE} 下方仅展示最近 5 条作业。`, disabledReason: "顶部指标仅展示 5 项，近期作业在列表区展示。" },
   ];
@@ -231,7 +245,7 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
       },
       summary: `${DASHBOARD_SUMMARY_SOURCE} 确保作业闭环，提升验收及时率。`
     },
-    { id: "device", source: "DEVICE_OFFLINE", title: "排查离线设备并恢复数据", riskLabel: offlineDevices > 0 ? "需复核" : "稳定", riskTone: offlineDevices > 0 ? "warning" : "neutral", primaryAction: { label: "设备中心暂未开放", disabledReason: "设备中心暂未开放" }, summary: `统计范围：可见授权设备。全域设备 ${numberFmt.format(totalDevices)} 台，离线 ${numberFmt.format(offlineDevices)} 台；当前地块设备请进入地块报告查看。` },
+    { id: "device", source: "DEVICE_OFFLINE", title: "排查离线设备并恢复数据", riskLabel: offlineDevices > 0 ? "需复核" : "稳定", riskTone: offlineDevices > 0 ? "warning" : "neutral", primaryAction: { label: "设备中心暂未开放", disabledReason: "设备中心暂未开放" }, summary: `统计范围：可见授权设备。visible_devices_count=${numberFmt.format(visibleDevices)}，offline_devices_count=${numberFmt.format(offlineDevices)}；当前地块设备请进入地块报告查看。` },
     { id: "general", source: "GENERAL", title: "处理待办事项", riskLabel: pendingActions > 0 ? "待处理" : "已清空", riskTone: pendingActions > 0 ? "warning" : "neutral", primaryAction: { label: "当前页查看", disabledReason: "请在当前看板处理待办事项" }, summary: `${DASHBOARD_SUMMARY_SOURCE} 优先关闭待处理事项，保障关键风险先处置。` },
   ];
   const roiSummary = {
@@ -272,15 +286,19 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
     actionItems,
     deviceHealth: {
       totalDevices,
+      visibleDevices,
       onlineDevices,
       offlineDevices,
       alertDevices: undefined,
+      alertEvents,
       offlineFields,
-      updatedAtText: (aggregate.device_summary as any)?.updated_at ? toDateTimeText((aggregate.device_summary as any).updated_at) : generatedAtText,
-      scopeText: "统计范围：可见授权设备；当前地块设备请进入地块报告查看。",
-      globalText: `全域设备：共 ${numberFmt.format(totalDevices)} 台，离线 ${numberFmt.format(offlineDevices)} 台。`,
-      authorizedText: `可见授权设备：离线 ${numberFmt.format(offlineDevices)} 台；离线地块 ${numberFmt.format(offlineFields)} 块。`,
-      fieldText: "当前地块设备请进入地块报告查看。",
+      updatedAtText: deviceSummary.updated_at ? toDateTimeText(deviceSummary.updated_at) : generatedAtText,
+      scopeText: "设备 scope：global_devices_count=全域设备，visible_devices_count=可见授权设备，field_devices_count=当前地块设备，offline_devices_count=离线设备，alert_events_count=告警事件。当前页展示客户可见授权设备，不推断当前地块设备。",
+      globalText: globalDeviceText,
+      authorizedText: `可见授权设备：visible_devices_count=${numberFmt.format(visibleDevices)} 台；在线 ${numberFmt.format(onlineDevices)} 台。`,
+      fieldText: "当前地块设备：field_devices_count 需进入地块报告查看。",
+      offlineText: `离线设备：offline_devices_count=${numberFmt.format(offlineDevices)} 台；离线地块 ${numberFmt.format(offlineFields)} 块。`,
+      alertText: `告警事件：alert_events_count=${numberFmt.format(alertEvents)} 条。`,
       empty: !aggregate.device_summary,
     },
     roiSummary,
