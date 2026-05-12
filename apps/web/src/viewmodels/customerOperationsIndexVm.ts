@@ -63,7 +63,7 @@ function buildRow(item: CustomerOperationListItem): CustomerOperationsIndexRowVm
 function scopeReasonText(raw: unknown): string | undefined {
   const text = String(raw ?? "").trim();
   if (!text) return undefined;
-  return customerSemanticLabel(text, undefined as unknown as string);
+  return customerSemanticLabel(text, text);
 }
 
 function scopeCopy(response: CustomerOperationsListResponse): { subtitle: string; badge: string; note?: string; isPreview: boolean } {
