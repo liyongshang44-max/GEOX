@@ -6,8 +6,10 @@ import { registerReportsV1Routes } from "../../routes/reports_v1.js";
 import { registerReportsDashboardV1Routes } from "../../routes/reports_dashboard_v1.js";
 import { registerDashboardV1Routes } from "../../routes/dashboard_v1.js";
 import { registerCustomerV1Routes } from "../../routes/customer_v1.js";
+import { registerOperationReportChainHookV1 } from "../../routes/operation_report_chain_hook_v1.js";
 
 export function registerReportingModule(app: FastifyInstance, pool: Pool): void {
+  registerOperationReportChainHookV1(app, pool);
   registerOperationStateV1Routes(app, pool);
   registerReportsV1Routes(app, pool);
   registerReportsDashboardV1Routes(app, pool);
