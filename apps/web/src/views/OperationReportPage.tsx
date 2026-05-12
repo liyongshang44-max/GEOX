@@ -116,8 +116,8 @@ function evidenceChainText(vm: OperationReportPageVm): string {
   return "证据不足，需补齐后复核";
 }
 
-function formatRoiNumber(value: unknown): string {
-  if (value === null || value === undefined || value === "") return "暂不可计算";
+function formatRoiNumber(value: unknown, forceUnavailable = false): string {
+  if (forceUnavailable || value === null || value === undefined || value === "") return "暂不可计算";
   const n = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(n)) return "暂不可计算";
   if (n === 0) return "0";
@@ -145,11 +145,12 @@ function buildValueRows(reportAny: any): { summary: string; rows: MainRow[] } {
   const projection = roi.projection ?? reportAny.prescription?.value_projection ?? {};
   const hypothesis = roi.hypothesis ?? reportAny.recommendation?.value_hypothesis ?? {};
   const status = roiStatusText(reportAny);
+  const baselineMissing = status === "缺少收益基线";
   const plannedCost = formatRoiNumber(projection.planned_cost ?? projection.cost ?? hypothesis.planned_cost);
-  const expectedBenefit = formatRoiNumber(projection.expected_benefit ?? hypothesis.expected_benefit);
-  const expectedNet = formatRoiNumber(projection.expected_net_value ?? projection.expected_net ?? hypothesis.expected_net_value);
+  const expectedBenefit = formatRoiNumber(projection.expected_benefit ?? hypothesis.expected_benefit, baselineMissing);
+  const expectedNet = formatRoiNumber(projection.expected_net_value ?? projection.expected_net ?? hypothesis.expected_net_value, baselineMissing);
   const basis = roiBasisText(projection.projection_basis ?? hypothesis.baseline_source ?? roi.projection_basis);
-  const summary = status === "缺少收益基线"
+  const summary = baselineMissing
     ? "已有价值假设和计划成本记录；缺少历史产量/价格基线，暂不形成可信收益结论。"
     : "已有价值假设和作业学习记录，最终收益需结合后续证据复核。";
   return { summary, rows: [{ label: "价值状态", value: status }, { label: "计划成本", value: plannedCost }, { label: "预期收益", value: expectedBenefit }, { label: "预期净值", value: expectedNet }, { label: "依据", value: basis }] };
