@@ -25,6 +25,10 @@ function hasOp(items) { return arr(items).some((x) => String(x.operation_id || x
 function hasField(items) { return arr(items).some((x) => String(x.field_id || x.id || '').trim() === FIELD_ID); }
 function actionOf(rec) { return String(rec?.action_type || rec?.suggested_action?.action_type || rec?.recommendation_type || '').toUpperCase(); }
 function cropSpecific(rec) { const a = actionOf(rec); return a.includes('IRRIG') || a.includes('FERT') || a.includes('SPRAY') || a.includes('CROP.HEALTH') || Boolean(rec?.crop_code) || Boolean(rec?.crop_stage); }
+function recommendationTriggerBlocked(resp) {
+  const error = String(resp?.json?.error || resp?.json?.error_code || '').toUpperCase();
+  return resp?.status === 400 && (error === 'FORMAL_STAGE1_TRIGGER_NOT_ELIGIBLE' || error === 'NO_RECOMMENDATION_TRIGGERED');
+}
 
 (async () => {
   const session = await get('/api/v1/session/me');
@@ -49,6 +53,7 @@ function cropSpecific(rec) { const a = actionOf(rec); return a.includes('IRRIG')
   const currentRecommendation = fieldReport.current_recommendation ?? null;
   const recommendations = arr(recResp.json?.recommendations);
   const cropContextUnconfirmed = ['UNKNOWN', 'PRE_PLANT', 'FALLOW', 'PLANTED_UNCONFIRMED'].includes(String(cropContext.status || '').toUpperCase());
+  const noRecommendationGenerated = recommendationTriggerBlocked(recResp);
 
   const fieldsItems = fields.json?.items || fields.json?.fields || fields.json?.data?.items || [];
   const opsItems = ops.json?.items || ops.json?.operations || ops.json?.data?.items || [];
@@ -73,7 +78,7 @@ function cropSpecific(rec) { const a = actionOf(rec); return a.includes('IRRIG')
     operation_report_has_roi_status: nonEmpty(operationReport.roi?.status),
     operation_report_status_chain_complete: statusChain.length >= 8 && statusChain.every((x) => nonEmpty(x.key) && nonEmpty(x.status)),
     old_opl_not_polluting_current_run: !String(operationReport.operation_id || operationReport.identifiers?.operation_id || '').startsWith('opl_'),
-    crop_context_guard_blocks_unconfirmed_crop_specific_prescription: cropContextUnconfirmed ? recResp.ok && !recommendations.some(cropSpecific) : true,
+    crop_context_guard_blocks_unconfirmed_crop_specific_prescription: cropContextUnconfirmed ? (noRecommendationGenerated || (recResp.ok && !recommendations.some(cropSpecific))) : true,
   };
 
   const output = {
@@ -83,6 +88,7 @@ function cropSpecific(rec) { const a = actionOf(rec); return a.includes('IRRIG')
     operation_id: OPERATION_ID,
     recommendation_request_status: recResp.status,
     recommendation_error: recResp.ok ? null : recResp.json,
+    recommendation_blocked_before_generation: noRecommendationGenerated,
     checks,
     summary: {
       role: session.json?.role || session.json?.user?.role || session.json?.session?.role || null,
