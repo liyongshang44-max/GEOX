@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { enrichOperationReportChainV1 } from "../projections/operation_report_chain_v1.js";
+import { enrichOperationReportValueChainRoiV1 } from "../domain/roi/value_chain_roi_v1.js";
 
 function isOperationReportPath(url: string | undefined): boolean {
   const path = String(url ?? "").split("?")[0];
@@ -58,6 +59,7 @@ export function registerOperationReportChainHookV1(app: FastifyInstance, pool: P
     if (!report || typeof report !== "object") return payload;
     const enriched = await enrichOperationReportChainV1({ pool, report });
     const compatible = mergeReportCompatibility(report, enriched);
-    return JSON.stringify({ ...parsed, operation_report_v1: compatible });
+    const withValueChainRoi = enrichOperationReportValueChainRoiV1(compatible);
+    return JSON.stringify({ ...parsed, operation_report_v1: withValueChainRoi });
   });
 }
