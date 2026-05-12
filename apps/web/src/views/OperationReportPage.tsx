@@ -3,9 +3,9 @@ import { Link, useParams } from "react-router-dom";
 import { fetchOperationReport, type OperationReportV1 } from "../api/customerReports";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ErrorState from "../components/common/ErrorState";
-import { customerTimelineStatusLabel, labelCustomerTechnicalField } from "../lib/customerLabels";
+import { customerTimelineStatusLabel } from "../lib/customerLabels";
 import { customerChainIntegrityLabel, customerSemanticLabel, customerSourceLabel, isCustomerChainComplete } from "../lib/customerSemanticLabels";
-import { buildOperationReportVm } from "../viewmodels/operationReportVm";
+import { buildOperationReportVm, type CustomerReportSectionVm, type OperationReportPageVm } from "../viewmodels/operationReportVm";
 
 type BackendChainItem = {
   key: string;
@@ -14,8 +14,6 @@ type BackendChainItem = {
   reason?: string | null;
   source?: string | null;
 };
-
-type DetailRow = { label: string; value: string };
 
 const CHAIN_LABELS: Record<string, string> = {
   diagnosis: "诊断",
@@ -75,47 +73,24 @@ function renderScalar(value: unknown): string {
   if (Array.isArray(value)) return value.length ? value.map((item) => renderScalar(item)).join("；") : "暂无记录";
   if (typeof value === "object") {
     const obj = value as Record<string, unknown>;
-    const preferred = obj.customer_text ?? obj.customer_safe_text ?? obj.summary_text ?? obj.summary ?? obj.status ?? obj.verdict ?? obj.id;
+    const preferred = obj.customer_text ?? obj.customer_safe_text ?? obj.summary_text ?? obj.summary ?? obj.status ?? obj.verdict;
     if (preferred != null) return renderScalar(preferred);
-    const pairs = Object.entries(obj).filter(([, v]) => v != null).slice(0, 4).map(([k, v]) => `${labelCustomerTechnicalField(k)}:${renderScalar(v)}`);
-    return pairs.length ? pairs.join("；") : "暂无记录";
+    return "详见技术详情";
   }
   return "暂无记录";
 }
 
-function rowsFromObject(obj: unknown, preferredKeys: string[]): DetailRow[] {
-  if (!obj || typeof obj !== "object") return [];
-  const source = obj as Record<string, unknown>;
-  const used = new Set<string>();
-  const rows: DetailRow[] = [];
-  for (const key of preferredKeys) {
-    if (!(key in source)) continue;
-    used.add(key);
-    rows.push({ label: key, value: renderScalar(source[key]) });
-  }
-  for (const [key, value] of Object.entries(source)) {
-    if (used.has(key)) continue;
-    if (rows.length >= 8) break;
-    rows.push({ label: key, value: renderScalar(value) });
-  }
-  return rows;
-}
-
-function detailRowsFor(report: OperationReportV1, key: string): DetailRow[] {
-  const r = report as any;
+function sectionForChain(vm: OperationReportPageVm, key: string): CustomerReportSectionVm | undefined {
   const normalized = key.toLowerCase();
-  if (normalized === "diagnosis") return rowsFromObject(r.diagnosis, ["diagnosis_basis", "risk_level", "reason_codes", "before_metrics"]);
-  if (normalized === "recommendation") return rowsFromObject(r.recommendation, ["recommendation_id", "value_hypothesis", "diagnosis_basis", "agronomy_explain", "reason_codes", "confidence", "status"]);
-  if (normalized === "prescription") return rowsFromObject(r.prescription, ["prescription_id", "value_projection", "recommendation_id", "operation_type", "target_area", "amount", "unit", "duration", "time_window", "acceptance_conditions", "device_requirements", "status"]);
-  if (normalized === "approval") return rowsFromObject(r.approval, ["approval_request_id", "status", "approver", "approved_at", "decision_note", "approval_scope"]);
-  if (normalized === "operation_plan") return rowsFromObject(r.operation_plan, ["operation_plan_id", "recommendation_id", "prescription_id", "approval_request_id", "field_id", "status"]);
-  if (normalized === "execution") return rowsFromObject(r.execution, ["act_task_id", "dispatch_status", "executor", "device_id", "execution_mode", "receipt_id", "receipt_status", "as_executed"]);
-  if (normalized === "receipt") return rowsFromObject(r.receipt, ["receipt_id", "status", "submitted_at", "metrics"]);
-  if (normalized === "evidence") return rowsFromObject(r.evidence, ["evidence_status", "evidence_ids", "export_job_id", "sha256", "trusted"]);
-  if (normalized === "acceptance") return rowsFromObject(r.acceptance, ["acceptance_id", "verdict", "evidence_sufficient", "accepted_at", "failure_reason"]);
-  if (normalized === "roi") return rowsFromObject(r.roi ?? r.roi_ledger, ["status", "customer_safe_text", "hypothesis", "projection", "interim_evidence", "ledger_items", "exclusion_reason"]);
-  if (normalized === "field_memory") return rowsFromObject(r.field_memory, ["field_response_memory", "device_reliability_memory", "skill_performance_memory"]);
-  return [];
+  if (normalized === "recommendation") return vm.sections.find((item) => item.key === "RECOMMENDATION");
+  if (normalized === "prescription") return vm.sections.find((item) => item.key === "PRESCRIPTION");
+  if (normalized === "approval") return vm.sections.find((item) => item.key === "APPROVAL");
+  if (["operation_plan", "execution", "receipt"].includes(normalized)) return vm.sections.find((item) => item.key === "EXECUTION");
+  if (normalized === "evidence") return vm.sections.find((item) => item.key === "EVIDENCE");
+  if (normalized === "acceptance") return vm.sections.find((item) => item.key === "ACCEPTANCE");
+  if (normalized === "roi") return vm.sections.find((item) => item.key === "ROI");
+  if (normalized === "field_memory") return vm.sections.find((item) => item.key === "MEMORY");
+  return undefined;
 }
 
 function missingLinksText(report: OperationReportV1): string {
@@ -252,7 +227,7 @@ export default function OperationReportPage(): React.ReactElement {
 
         <section className="operationClosedLoopGrid">
           {chain.map((item, index) => {
-            const rows = detailRowsFor(report, item.key);
+            const section = sectionForChain(vm, item.key);
             const isExpanded = expandedKey === item.key;
             return (
               <article
@@ -273,13 +248,13 @@ export default function OperationReportPage(): React.ReactElement {
                   <h3 className="customerCardTitle">{item.label}</h3>
                   <span className="operationStatusBadge">{customerTimelineStatusLabel(toCustomerStatus(item.status))}</span>
                 </div>
-                <div className="operationOneLiner">{customerText(item.reason, "暂无链路说明")}</div>
+                <div className="operationOneLiner">{section?.summary || customerText(item.reason, "暂无链路说明")}</div>
                 <div className="operationOneLiner muted">来源：{customerSourceLabel(item.source, "作业报告摘要")}</div>
                 {isExpanded ? (
                   <div className="customerGrid2 customerSpacingTopXs">
-                    {rows.length ? rows.map((row) => (
-                      <div key={`${item.key}-${row.label}`}><strong>{labelCustomerTechnicalField(row.label)}：</strong>{row.value}</div>
-                    )) : <div className="muted">暂无该环节的一等对象记录。</div>}
+                    {section?.items.length ? section.items.map((row) => (
+                      <div key={`${item.key}-${row.label}`}><strong>{row.label}：</strong>{row.value}</div>
+                    )) : <div className="muted">该环节暂无客户可读明细，技术字段请查看底部技术详情。</div>}
                   </div>
                 ) : null}
                 <button
