@@ -23,6 +23,8 @@ export default function DeviceHealthCard({ summary, emptyState }: Props): React.
       <div className="customerMetricLabel">{summary.globalText}</div>
       <div className="customerMetricLabel">{summary.authorizedText}</div>
       <div className="customerMetricLabel">{summary.fieldText}</div>
+      <div className="customerMetricLabel">{summary.offlineText}</div>
+      <div className="customerMetricLabel">{summary.alertText}</div>
       <div className="muted">{summary.scopeText}</div>
       <div className="muted">最近更新时间：{summary.updatedAtText ?? "暂无更新时间"}</div>
     </article>
