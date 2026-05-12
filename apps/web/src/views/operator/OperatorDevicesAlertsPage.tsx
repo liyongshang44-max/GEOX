@@ -8,6 +8,7 @@ import OperatorLayout from "../../layouts/OperatorLayout";
 import { hasOperatorPermission } from "../../lib/permissions";
 import "../../styles/operatorDevicesAlerts.css";
 import { buildOperatorDevicesAlertsVm, type OperatorAlertRowVm, type OperatorDeviceRowVm, type OperatorDevicesAlertsVm } from "../../viewmodels/operatorDevicesAlertsVm";
+import { OPERATOR_PAGE_META } from "./operatorPageMeta";
 
 type DeviceSectionProps = {
   title: string;
@@ -178,6 +179,7 @@ function permissionReason(sessionLoading: boolean, session: SessionMe | null, pe
 }
 
 export default function OperatorDevicesAlertsPage(): React.ReactElement {
+  const meta = OPERATOR_PAGE_META.devicesAlerts;
   const [loading, setLoading] = React.useState(true);
   const [vm, setVm] = React.useState<OperatorDevicesAlertsVm | null>(null);
   const [actionState, setActionState] = React.useState<AlertActionState>({});
@@ -249,7 +251,7 @@ export default function OperatorDevicesAlertsPage(): React.ReactElement {
   }
 
   return (
-    <OperatorLayout title="设备与告警中心" lead="查看设备在线状态、心跳、telemetry、凭证状态、告警事件、通知、ACK 与关闭状态。">
+    <OperatorLayout title={meta.title} lead={meta.lead}>
       {loading ? <div className="operatorEmptyState">设备与告警中心加载中...</div> : null}
       {!loading && vm ? (
         <div className="operatorDevicesAlertsPage">
