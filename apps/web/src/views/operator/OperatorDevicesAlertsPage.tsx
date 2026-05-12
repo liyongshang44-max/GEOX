@@ -5,6 +5,7 @@ import { fetchSessionMe, type SessionMe } from "../../api/session";
 import OperatorEmptyState from "../../components/operator/OperatorEmptyState";
 import PermissionGate from "../../components/operator/PermissionGate";
 import OperatorLayout from "../../layouts/OperatorLayout";
+import { replaceOperatorTerms } from "../../lib/operatorStatusLabels";
 import { hasOperatorPermission } from "../../lib/permissions";
 import "../../styles/operatorDevicesAlerts.css";
 import { buildOperatorDevicesAlertsVm, type OperatorAlertRowVm, type OperatorDeviceRowVm, type OperatorDevicesAlertsVm } from "../../viewmodels/operatorDevicesAlertsVm";
@@ -56,21 +57,21 @@ function DeviceCard({ row, revokeVisible }: { row: OperatorDeviceRowVm; revokeVi
 
       <div className="operatorDeviceMeta">
         <div><span>最近心跳</span><strong>{row.lastHeartbeatText}</strong></div>
-        <div><span>最近 telemetry</span><strong>{row.lastTelemetryText}</strong></div>
+        <div><span>最近遥测</span><strong>{row.lastTelemetryText}</strong></div>
         <div><span>绑定地块</span><strong>{row.boundFieldText}</strong></div>
         <div><span>设备能力</span><strong>{row.capabilitiesText}</strong></div>
-        <div><span>credential status</span><strong>{row.credentialText}</strong></div>
-        <div><span>last issued time</span><strong>{row.credentialIssuedText}</strong></div>
-        <div><span>last used time</span><strong>{row.credentialLastUsedText}</strong></div>
-        <div><span>revoke status</span><strong>{row.revokeText}</strong></div>
+        <div><span>凭证状态</span><strong>{row.credentialText}</strong></div>
+        <div><span>最近签发时间</span><strong>{row.credentialIssuedText}</strong></div>
+        <div><span>最近使用时间</span><strong>{row.credentialLastUsedText}</strong></div>
+        <div><span>撤销状态</span><strong>{row.revokeText}</strong></div>
         <div><span>电量</span><strong>{row.batteryText}</strong></div>
         <div><span>数据延迟</span><strong>{row.delayText}</strong></div>
         <div><span>数据来源</span><strong>{row.sourceText}</strong></div>
       </div>
 
-      <div className="operatorDevicesNotice">设备凭证仅展示状态与时间，不展示 token / secret / credential payload。revoke 仅在管理员权限 ready 时显示。</div>
+      <div className="operatorDevicesNotice">设备凭证仅展示状态与时间，不展示 token / secret / credential payload。撤销仅在管理员权限 ready 时显示。</div>
       <div className="operatorDevicesActions">
-        {showRevokeButton ? <button type="button" disabled>revoke 管理员操作待接入</button> : <span className="operatorDevicesReadOnlyAction">revoke 默认只读或管理员可见</span>}
+        {showRevokeButton ? <button type="button" disabled>撤销管理员操作待接入</button> : <span className="operatorDevicesReadOnlyAction">撤销默认只读或管理员可见</span>}
       </div>
     </article>
   );
@@ -113,7 +114,7 @@ function AlertCard({ row, ackCloseReady, actionState, permissionState, onAck, on
 
       <div className="operatorAlertMeta">
         <div><span>通知状态</span><strong>{row.notificationText}</strong></div>
-        <div><span>ACK</span><strong>{row.ackText}</strong></div>
+        <div><span>确认状态</span><strong>{row.ackText}</strong></div>
         <div><span>关闭</span><strong>{row.closeText}</strong></div>
         <div><span>责任人</span><strong>{row.ownerText}</strong></div>
         <div><span>关联对象</span><strong>{row.objectText}</strong></div>
@@ -126,8 +127,8 @@ function AlertCard({ row, ackCloseReady, actionState, permissionState, onAck, on
         <div><span>数据来源</span><strong>{row.sourceText}</strong></div>
       </div>
 
-      {actionNotice ? <div className="operatorDevicesWarning">{actionNotice}</div> : null}
-      <div className="operatorDevicesNotice">ACK / close 操作只在后端权限与审计 ready 后开放；操作成功后刷新列表。</div>
+      {actionNotice ? <div className="operatorDevicesWarning">{replaceOperatorTerms(actionNotice)}</div> : null}
+      <div className="operatorDevicesNotice">确认 / 关闭操作只在后端权限与审计 ready 后开放；操作成功后刷新列表。</div>
       <div className="operatorDevicesActions">
         {row.operationHref ? <Link to={row.operationHref}>查看关联作业</Link> : null}
         <PermissionGate
@@ -135,9 +136,9 @@ function AlertCard({ row, ackCloseReady, actionState, permissionState, onAck, on
           allowed={permissionState.canAck}
           loading={permissionState.sessionLoading}
           disabledReason={permissionState.ackReason}
-          fallback={() => <button type="button" disabled>{ackBusy ? "ACK 中..." : "ACK"}</button>}
+          fallback={() => <button type="button" disabled>{ackBusy ? "确认中..." : "确认"}</button>}
         >
-          {() => <button type="button" disabled={ackDisabled} onClick={() => onAck(row.alertId)}>{ackBusy ? "ACK 中..." : "ACK"}</button>}
+          {() => <button type="button" disabled={ackDisabled} onClick={() => onAck(row.alertId)}>{ackBusy ? "确认中..." : "确认"}</button>}
         </PermissionGate>
         <PermissionGate
           permissionKey="close_alert"
@@ -243,11 +244,11 @@ export default function OperatorDevicesAlertsPage(): React.ReactElement {
     setActionState({ busyKey: `${alertId}:${action}` });
     const result = action === "ack" ? await ackOperatorAlert(alertId) : await closeOperatorAlert(alertId);
     if (!result.ok) {
-      setActionState({ message: result.message, tone: "error" });
+      setActionState({ message: replaceOperatorTerms(result.message), tone: "error" });
       return;
     }
     await reload();
-    setActionState({ message: result.auditText ? `${result.message} 审计来源：${result.auditText}` : result.message, tone: "success" });
+    setActionState({ message: result.auditText ? `${replaceOperatorTerms(result.message)} 审计来源：${replaceOperatorTerms(result.auditText)}` : replaceOperatorTerms(result.message), tone: "success" });
   }
 
   return (
@@ -262,16 +263,16 @@ export default function OperatorDevicesAlertsPage(): React.ReactElement {
             <div><span>更新时间</span><strong>{vm.generatedAtText}</strong></div>
           </section>
 
-          {vm.dataScopeWarning ? <div className="operatorScopeWarning">{vm.dataScopeWarning}</div> : null}
-          {!vm.ackCloseReady ? <div className="operatorScopeWarning">ACK / close 未开放或当前无可操作权限。</div> : null}
+          {vm.dataScopeWarning ? <div className="operatorScopeWarning">{replaceOperatorTerms(vm.dataScopeWarning)}</div> : null}
+          {!vm.ackCloseReady ? <div className="operatorScopeWarning">确认 / 关闭未开放或当前无可操作权限。</div> : null}
           {actionState.message ? <div className={actionState.tone === "error" ? "operatorDevicesActionError" : "operatorDevicesActionSuccess"}>{actionState.message}</div> : null}
 
-          {vm.totalDevices === 0 && vm.totalAlerts === 0 ? <OperatorEmptyState title={vm.emptyTitle} description={vm.emptyDescription} reason="没有设备或告警数据时不伪造状态、通知或 ACK/close 结果。" /> : null}
+          {vm.totalDevices === 0 && vm.totalAlerts === 0 ? <OperatorEmptyState title={vm.emptyTitle} description={vm.emptyDescription} reason="没有设备或告警数据时不伪造状态、通知或确认/关闭结果。" /> : null}
 
           <section className="operatorDevicesGrid" aria-label="设备状态">
             <DeviceSection title="在线设备" description="当前在线或活跃的设备。" rows={vm.onlineDevices} revokeVisible={vm.revokeVisible && revokeVisibleForSession} />
             <DeviceSection title="离线设备" description="离线设备需要追溯最近心跳和绑定地块。" rows={vm.offlineDevices} revokeVisible={vm.revokeVisible && revokeVisibleForSession} />
-            <DeviceSection title="数据延迟" description="telemetry 或心跳存在延迟的设备。" rows={vm.delayedDevices} revokeVisible={vm.revokeVisible && revokeVisibleForSession} />
+            <DeviceSection title="数据延迟" description="遥测或心跳存在延迟的设备。" rows={vm.delayedDevices} revokeVisible={vm.revokeVisible && revokeVisibleForSession} />
             <DeviceSection title="低电量" description="电量不足，需要运维关注。" rows={vm.lowBatteryDevices} revokeVisible={vm.revokeVisible && revokeVisibleForSession} />
           </section>
 
