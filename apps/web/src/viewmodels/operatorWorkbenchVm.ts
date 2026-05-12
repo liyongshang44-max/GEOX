@@ -1,4 +1,5 @@
 import type { OperatorWorkbenchItem, OperatorWorkbenchQueueKey, OperatorWorkbenchResponse } from "../api/operatorWorkbench";
+import { replaceOperatorTerms } from "../lib/operatorStatusLabels";
 
 export type OperatorWorkbenchQueueVm = {
   key: OperatorWorkbenchQueueKey;
@@ -39,7 +40,7 @@ const QUEUE_META: Record<OperatorWorkbenchQueueKey, { title: string; description
   EXECUTION_EXCEPTION: { title: "执行异常", description: "执行失败、无效执行或状态异常。", actionHref: "/operator/dispatch" },
   ACCEPTANCE_PENDING: { title: "待验收", description: "已执行完成但尚未形成验收结论。", actionHref: "/operator/acceptance" },
   EVIDENCE_INSUFFICIENT: { title: "证据不足", description: "缺少验收所需证据或证据摘要。", actionHref: "/operator/evidence" },
-  ACCEPTANCE_FAILED: { title: "验收失败", description: "验收未通过，需要复核或补救。", actionHref: "/operator/acceptance" },
+  ACCEPTANCE_FAILED: { title: "验收未通过", description: "验收未通过，需要复核或补救。", actionHref: "/operator/acceptance" },
   DEVICE_OFFLINE: { title: "设备离线", description: "设备状态异常或监测链路中断。", actionHref: "/operator/workbench" },
   ALERT_OVERDUE: { title: "告警超时", description: "告警长时间未处理或关闭。", actionHref: "/operator/workbench" },
 };
@@ -58,7 +59,7 @@ const QUEUE_ORDER: OperatorWorkbenchQueueKey[] = [
 function text(value: unknown, fallback = ""): string {
   const raw = String(value ?? "").trim();
   if (!raw || raw === "--" || raw === "undefined" || raw === "null") return fallback;
-  return raw;
+  return replaceOperatorTerms(raw);
 }
 
 function dateText(value: unknown): string {
@@ -130,10 +131,10 @@ export function buildOperatorWorkbenchVm(response: OperatorWorkbenchResponse): O
     lead: "汇总今天需要处理的审批、派发、异常、验收、证据、设备和告警事项。",
     generatedAtText: dateText(response.generated_at),
     dataScopeText: scopeText(response),
-    dataScopeWarning: response.dataScope === "FALLBACK_LIMITED" ? response.message || "当前展示有限 fallback 数据，非完整运营总队列。" : undefined,
+    dataScopeWarning: response.dataScope === "FALLBACK_LIMITED" ? text(response.message, "当前展示有限 fallback 数据，非完整运营总队列。") : undefined,
     totalCount: todos.length,
     queues,
     emptyTitle: "暂无可处理运营事项",
-    emptyDescription: "当前没有待审批、待派发、执行异常、待验收、证据不足、验收失败、设备离线或告警超时事项。",
+    emptyDescription: "当前没有待审批、待派发、执行异常、待验收、证据不足、验收未通过、设备离线或告警超时事项。",
   };
 }
