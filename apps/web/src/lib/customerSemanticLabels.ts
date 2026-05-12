@@ -40,10 +40,11 @@ function isBlankText(raw: string): boolean {
 }
 
 export function customerSemanticLabel(raw: unknown, fallback = "暂无记录"): string {
-  if (isUnsafeCustomerText(raw)) return fallback;
   const text = normalize(raw);
   if (isBlankText(text)) return fallback;
-  return mapCustomerEnum(text, "generic") || fallback;
+  const mapped = mapCustomerEnum(text, "generic");
+  if (isUnsafeCustomerText(raw)) return mapped && mapped !== text ? mapped : fallback;
+  return mapped || fallback;
 }
 
 export function customerDisplayName(raw: unknown, fallback: string): string {
