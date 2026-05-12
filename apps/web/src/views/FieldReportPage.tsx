@@ -19,6 +19,8 @@ function hasRain(value: WeatherResult | null): boolean { if (!value || value.sta
 function fieldWeatherStatusText(weather: FieldWeatherState): string { if (weather.loading) return "天气摘要加载中"; const results = [weather.history, weather.forecast].filter(Boolean) as WeatherResult[]; if (!results.length) return "天气源不可用"; if (results.some((item) => item.unavailableReason === "location_unavailable")) return "暂无地块位置，天气源不可用。"; if (results.every((item) => item.status === "unavailable")) return "天气源未接入或暂不可用。"; return "天气源已接入"; }
 function fieldWeatherSuggestionText(weather: FieldWeatherState): string { if (weather.loading) return "正在判断天气是否需要作为当前建议的解释背景。"; if (weather.history?.unavailableReason === "location_unavailable" || weather.forecast?.unavailableReason === "location_unavailable") return "暂无地块位置，天气源不可用。"; if (!weather.history && !weather.forecast) return "天气源未接入，当前建议不使用天气干扰信息。"; if (hasRain(weather.history) || hasRain(weather.forecast)) return "可能影响当前建议的解释与学习置信度；不直接替代处方或验收结论。"; if (weather.history?.status === "ok" || weather.forecast?.status === "ok") return "未发现明显降雨干扰；天气仅作为辅助解释，不直接改变当前建议。"; return "天气源未接入，当前建议不使用天气干扰信息。"; }
 function fieldWeatherSourceText(weather: FieldWeatherState): string { const sources = [weather.history?.source, weather.forecast?.source].filter(Boolean); return sources.length ? sources.join(" / ") : "暂无数据来源"; }
+function safeText(value: unknown, fallback = "暂无记录"): string { const s = String(value ?? "").trim(); return s || fallback; }
+function pct(value: unknown): string { const n = Number(value); return Number.isFinite(n) ? `${Math.round(n * 100)}%` : "暂无置信度"; }
 
 function FieldWeatherSummaryCard({ weather }: { weather: FieldWeatherState }): React.ReactElement {
   return (
@@ -73,6 +75,9 @@ export default function FieldReportPage(): React.ReactElement {
 
   const vm = buildFieldReportVm(report);
   const reportAny = report as any;
+  const cropContext = reportAny.crop_context ?? {};
+  const observability = reportAny.field_observability_profile ?? {};
+  const planCandidates = Array.isArray(reportAny.crop_plan_candidates) ? reportAny.crop_plan_candidates : [];
   const canExport = Boolean(fieldId.trim());
   const geometry = (report as { field?: { geometry?: unknown } }).field?.geometry;
   const hasGeometry = Boolean(geometry);
@@ -96,31 +101,28 @@ export default function FieldReportPage(): React.ReactElement {
         </section>
 
         <section className="fieldGrid fieldGrid3">
+          <article className="customerCard"><h3 className="customerCardTitle">地块观测状态</h3><div>{safeText(observability.status, "UNOBSERVED")}</div><div className="customerSpacingTopXs">数据窗口：{safeText(observability.data_window?.duration_hours, "0")} 小时 · 置信度：{pct(observability.confidence)}</div><div className="customerSpacingTopXs">缺失输入：{Array.isArray(observability.missing_inputs) && observability.missing_inputs.length ? observability.missing_inputs.join("、") : "无"}</div></article>
+          <article className="customerCard"><h3 className="customerCardTitle">当前作物状态</h3><div>{safeText(cropContext.status, "UNKNOWN")}</div><div className="customerSpacingTopXs">作物：{safeText(cropContext.crop_code, "未知")} · 阶段：{safeText(cropContext.crop_stage, "未知")}</div><div className="customerSpacingTopXs">来源：{safeText(cropContext.source, "未确认")} · 允许作物处方：{cropContext.allowed_actions?.allow_crop_specific_prescription ? "是" : "否"}</div></article>
+          <article className="customerCard"><h3 className="customerCardTitle">当前建议</h3>{vm.nextAction ? <><div>{vm.nextAction.title}</div><div className="customerSpacingTopXs">{vm.nextAction.explainText}</div><div className="customerActionRow"><Link to={`/customer/fields/${encodeURIComponent(vm.field.fieldId)}`}>查看建议</Link></div></> : <CustomerEmptyState vm={noPendingActionsState} />}</article>
+        </section>
+
+        <section className="fieldGrid fieldGrid3">
           <article className="customerCard"><h3 className="customerCardTitle">当前风险</h3><div>{vm.diagnosis.headline}</div>{riskOperationHref ? <Link to={riskOperationHref}>查看相关作业</Link> : <span className="muted">暂无可关联作业</span>}</article>
           <article className="customerCard"><h3 className="customerCardTitle">诊断依据</h3>{evidenceSummaryExists ? <ul className="customerList">{vm.diagnosis.evidenceLines.map((item, idx) => <li key={`${item}-${idx}`} className="customerListItem">{item}</li>)}</ul> : <CustomerEmptyState vm={noEvidenceState} />}{evidenceSummaryExists ? <Link to="#">查看证据摘要</Link> : null}</article>
-          <article className="customerCard">
-            <h3 className="customerCardTitle">当前建议</h3>
-            {vm.nextAction ? <><div>{vm.nextAction.title}</div><div className="customerSpacingTopXs">{vm.nextAction.explainText}</div><div className="customerActionRow"><Link to={`/customer/fields/${encodeURIComponent(vm.field.fieldId)}`}>查看建议</Link></div></> : <CustomerEmptyState vm={noPendingActionsState} />}
-          </article>
+          <article className="customerCard"><h3 className="customerCardTitle">种植规划候选</h3>{planCandidates.length ? <ul className="customerList">{planCandidates.slice(0, 3).map((item: any) => <li key={safeText(item.crop_code)} className="customerListItem"><div><strong>{safeText(item.crop_code)}</strong></div><div>适宜度 {pct(item.suitability_score)} · 预期毛利 {safeText(item.expected_margin_range?.min)}-{safeText(item.expected_margin_range?.max)} {safeText(item.expected_margin_range?.currency, "")}</div></li>)}</ul> : <span className="muted">当前作物已确认或缺少规划条件。</span>}</article>
         </section>
 
         <FieldWeatherSummaryCard weather={weather} />
 
         <section className="fieldGrid fieldGrid2">
-          <article className="customerCard">
-            <h3 className="customerCardTitle">最近作业</h3>
-            {vm.recentOperations.length ? <ul className="customerList">{vm.recentOperations.map((item) => <li key={item.operationId || item.title} className="customerListItem"><div><strong>{item.title}</strong></div><div>{item.acceptanceText} · {item.updatedAtText}</div><Link to={item.href}>查看作业</Link></li>)}</ul> : <CustomerEmptyState vm={noRecentOperationsState} />}
-          </article>
+          <article className="customerCard"><h3 className="customerCardTitle">最近作业</h3>{vm.recentOperations.length ? <ul className="customerList">{vm.recentOperations.map((item) => <li key={item.operationId || item.title} className="customerListItem"><div><strong>{item.title}</strong></div><div>{item.acceptanceText} · {item.updatedAtText}</div><Link to={item.href}>查看作业</Link></li>)}</ul> : <CustomerEmptyState vm={noRecentOperationsState} />}</article>
           <article className="customerCard"><h3 className="customerCardTitle">设备与监测摘要</h3><div>在线 {vm.deviceSummary.onlineText}/{vm.deviceSummary.totalText}，离线 {vm.deviceSummary.offlineText}</div><div className="customerSpacingTopXs">最近更新：{vm.deviceSummary.lastUpdateText}</div></article>
         </section>
 
         <section className="fieldGrid fieldGrid3">
           <article className="customerCard"><div className="customerCardHeaderRow"><h3 className="customerCardTitle">价值记录</h3><button type="button" className="customerLinkButton" onClick={() => setRoiDrawerOpen(true)}>查看明细</button></div>{hasRoiSummary ? <div>{vm.roiSummary.displayText}</div> : <CustomerEmptyState vm={roiEmptyState} />}</article>
           <article className="customerCard"><h3 className="customerCardTitle">田块记忆</h3><FieldMemoryPanel fieldId={vm.field.fieldId} embeddedMemory={embeddedMemory} compact /></article>
-          <article className="customerCard mapPlaceholderCard fieldMapLayerCard">
-            <div className="customerCardHeaderRow"><h3 className="customerCardTitle">地块范围</h3><span className="muted">{vm.mapLayers.summaryText}</span></div>
-            {hasMapLayers ? <FieldGisMap polygonGeoJson={geometry ?? null} plannedGeoJson={vm.mapLayers.plannedGeoJson} coverageGeoJson={vm.mapLayers.coverageGeoJson} heatGeoJson={null} markers={vm.mapLayers.deviceMarkers} trajectorySegments={vm.mapLayers.trajectorySegments} acceptancePoints={vm.mapLayers.acceptancePoints} labels={{ fieldBoundary: "地块边界", plannedLayer: "计划作业区域", coverageLayer: "实际覆盖", operationTrack: "实际执行轨迹", devicePosition: "设备位置", layerAcceptance: "验收点" }} /> : <CustomerEmptyState vm={mapEmptyState} />}
-          </article>
+          <article className="customerCard mapPlaceholderCard fieldMapLayerCard"><div className="customerCardHeaderRow"><h3 className="customerCardTitle">地块范围</h3><span className="muted">{vm.mapLayers.summaryText}</span></div>{hasMapLayers ? <FieldGisMap polygonGeoJson={geometry ?? null} plannedGeoJson={vm.mapLayers.plannedGeoJson} coverageGeoJson={vm.mapLayers.coverageGeoJson} heatGeoJson={null} markers={vm.mapLayers.deviceMarkers} trajectorySegments={vm.mapLayers.trajectorySegments} acceptancePoints={vm.mapLayers.acceptancePoints} labels={{ fieldBoundary: "地块边界", plannedLayer: "计划作业区域", coverageLayer: "实际覆盖", operationTrack: "实际执行轨迹", devicePosition: "设备位置", layerAcceptance: "验收点" }} /> : <CustomerEmptyState vm={mapEmptyState} />}</article>
         </section>
       </div>
       <RoiLedgerDrawer open={roiDrawerOpen} fieldId={vm.field.fieldId} embeddedRoi={reportAny.roi_ledger ?? reportAny.roi ?? reportAny.value_summary} onClose={() => setRoiDrawerOpen(false)} />
