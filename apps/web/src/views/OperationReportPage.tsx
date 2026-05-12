@@ -5,48 +5,45 @@ import SectionSkeleton from "../components/common/SectionSkeleton";
 import ErrorState from "../components/common/ErrorState";
 import { customerTimelineStatusLabel } from "../lib/customerLabels";
 import { customerSafeName, customerSafeTitle } from "../lib/customerSafeText";
-import { customerChainIntegrityLabel, customerSemanticLabel, customerSourceLabel, isCustomerChainComplete } from "../lib/customerSemanticLabels";
+import { customerChainIntegrityLabel, customerSemanticLabel, isCustomerChainComplete } from "../lib/customerSemanticLabels";
+import { labelCustomerAcceptanceVerdict, labelCustomerApprovalStatus, labelCustomerRoiStatus } from "../lib/customerStatusLabels";
 import { buildOperationReportVm, type CustomerReportSectionVm, type OperationReportPageVm } from "../viewmodels/operationReportVm";
 
-type BackendChainItem = {
-  key: string;
-  label: string;
-  status: "DONE" | "AVAILABLE" | "PENDING" | "MISSING" | "NOT_APPLICABLE" | string;
-  reason?: string | null;
-  source?: string | null;
-};
+type BackendChainItem = { key: string; label: string; status: "DONE" | "AVAILABLE" | "PENDING" | "MISSING" | "NOT_APPLICABLE" | string; reason?: string | null; source?: string | null };
+type MainRow = { label: string; value: string };
+type MainSection = { key: "why" | "prescription_approval" | "execution" | "evidence_acceptance" | "value_learning"; title: string; summary: string; rows: MainRow[] };
 
-const CHAIN_LABELS: Record<string, string> = {
-  diagnosis: "诊断",
-  recommendation: "建议",
-  prescription: "处方",
-  approval: "审批",
-  operation_plan: "作业计划",
-  execution: "执行",
-  receipt: "回执",
-  evidence: "证据",
-  acceptance: "验收",
-  roi: "价值记录",
-  field_memory: "田块记忆",
-};
+const CHAIN_LABELS: Record<string, string> = { diagnosis: "诊断", recommendation: "建议", prescription: "处方", approval: "审批", operation_plan: "作业计划", execution: "执行", receipt: "回执", evidence: "证据", acceptance: "验收", roi: "价值记录", field_memory: "田块记忆" };
+
+function normalizeKey(value: unknown): string { return String(value ?? "").trim().replace(/[\s/-]+/g, "_").toUpperCase(); }
+function isObject(value: unknown): value is Record<string, unknown> { return Boolean(value && typeof value === "object" && !Array.isArray(value)); }
+function text(value: unknown): string { return String(value ?? "").trim(); }
+function isBlank(value: unknown): boolean { const raw = text(value); return !raw || raw === "--" || raw === "[object Object]" || raw.toLowerCase() === "null" || raw.toLowerCase() === "undefined"; }
+function isTechnicalLike(value: unknown): boolean { const raw = text(value); return /^(rec|prc|apr|act|opl|ft_op|ft_field|receipt|recommendation|prescription|approval|operation|task)_[A-Za-z0-9_-]+$/i.test(raw) || /^[0-9a-f]{32}$/i.test(raw) || /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(raw); }
 
 function customerText(value: unknown, fallback = "暂无可展示信息"): string {
-  const text = String(value ?? "").trim();
-  if (!text || text === "--" || text === "[object Object]" || /1970\s*[\/-]/.test(text)) return fallback;
-  return customerSemanticLabel(text, fallback);
+  if (isBlank(value) || isTechnicalLike(value)) return fallback;
+  const raw = text(value);
+  if (/1970\s*[\/-]/.test(raw)) return fallback;
+  return customerSemanticLabel(raw, fallback);
+}
+
+function safeAuditValue(value: unknown, fallback = "暂无记录"): string {
+  if (isTechnicalLike(value)) return "技术字段已隐藏，需排障时查看技术详情。";
+  return customerText(value, fallback);
 }
 
 function toCustomerStatus(status: unknown): "DONE" | "AVAILABLE" | "PENDING" | "MISSING" | "NOT_APPLICABLE" {
-  const raw = String(status ?? "").trim().toUpperCase();
-  if (raw === "DONE" || raw === "COMPLETE" || raw === "COMPLETED" || raw === "PASS") return "DONE";
+  const raw = normalizeKey(status);
+  if (["DONE", "COMPLETE", "COMPLETED", "PASS", "SUCCESS", "SUCCEEDED", "VALID"].includes(raw)) return "DONE";
   if (raw === "AVAILABLE") return "AVAILABLE";
-  if (raw === "PENDING" || raw === "RUNNING") return "PENDING";
+  if (["PENDING", "RUNNING", "IN_PROGRESS", "PENDING_ACCEPTANCE"].includes(raw)) return "PENDING";
   if (raw === "NOT_APPLICABLE") return "NOT_APPLICABLE";
   return "MISSING";
 }
 
 function chainLabel(value: unknown, fallback: string): string {
-  const raw = String(value ?? "").trim();
+  const raw = text(value);
   const key = raw.toLowerCase();
   return CHAIN_LABELS[key] ?? customerSemanticLabel(raw, fallback);
 }
@@ -56,42 +53,34 @@ function normalizeChain(report: OperationReportV1): BackendChainItem[] {
   if (Array.isArray(raw) && raw.length) {
     return raw.map((item, index) => {
       const key = String(item?.key ?? `chain_${index}`).trim() || `chain_${index}`;
-      return {
-        key,
-        label: chainLabel(item?.label ?? key, `链路 ${index + 1}`),
-        status: toCustomerStatus(item?.status),
-        reason: item?.reason ?? null,
-        source: item?.source ?? null,
-      };
+      return { key, label: chainLabel(item?.label ?? key, `链路 ${index + 1}`), status: toCustomerStatus(item?.status), reason: item?.reason ?? null, source: item?.source ?? null };
     });
   }
   return [{ key: "legacy", label: "历史链路", status: "MISSING", reason: "该作业为历史/人工链路，缺少正式建议或处方记录。", source: "frontend_legacy_guard" }];
 }
 
-function renderScalar(value: unknown): string {
-  if (value == null) return "暂无记录";
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return customerText(value, "暂无记录");
-  if (Array.isArray(value)) return value.length ? value.map((item) => renderScalar(item)).join("；") : "暂无记录";
-  if (typeof value === "object") {
-    const obj = value as Record<string, unknown>;
-    const preferred = obj.customer_text ?? obj.customer_safe_text ?? obj.summary_text ?? obj.summary ?? obj.status ?? obj.verdict;
-    if (preferred != null) return renderScalar(preferred);
-    return "详见技术详情";
-  }
-  return "暂无记录";
-}
-
+function sectionByKey(vm: OperationReportPageVm, key: CustomerReportSectionVm["key"]): CustomerReportSectionVm | undefined { return vm.sections.find((item) => item.key === key); }
 function sectionForChain(vm: OperationReportPageVm, key: string): CustomerReportSectionVm | undefined {
   const normalized = key.toLowerCase();
-  if (normalized === "recommendation") return vm.sections.find((item) => item.key === "RECOMMENDATION");
-  if (normalized === "prescription") return vm.sections.find((item) => item.key === "PRESCRIPTION");
-  if (normalized === "approval") return vm.sections.find((item) => item.key === "APPROVAL");
-  if (["operation_plan", "execution", "receipt"].includes(normalized)) return vm.sections.find((item) => item.key === "EXECUTION");
-  if (normalized === "evidence") return vm.sections.find((item) => item.key === "EVIDENCE");
-  if (normalized === "acceptance") return vm.sections.find((item) => item.key === "ACCEPTANCE");
-  if (normalized === "roi") return vm.sections.find((item) => item.key === "ROI");
-  if (normalized === "field_memory") return vm.sections.find((item) => item.key === "MEMORY");
+  if (normalized === "recommendation") return sectionByKey(vm, "RECOMMENDATION");
+  if (normalized === "prescription") return sectionByKey(vm, "PRESCRIPTION");
+  if (normalized === "approval") return sectionByKey(vm, "APPROVAL");
+  if (["operation_plan", "execution", "receipt"].includes(normalized)) return sectionByKey(vm, "EXECUTION");
+  if (normalized === "evidence") return sectionByKey(vm, "EVIDENCE");
+  if (normalized === "acceptance") return sectionByKey(vm, "ACCEPTANCE");
+  if (normalized === "roi") return sectionByKey(vm, "ROI");
+  if (normalized === "field_memory") return sectionByKey(vm, "MEMORY");
   return undefined;
+}
+
+function sectionSummary(section: CustomerReportSectionVm | undefined, fallback: string): string {
+  if (!section || section.emptyState) return fallback;
+  return customerText(section.summary, fallback);
+}
+
+function sectionItem(section: CustomerReportSectionVm | undefined, labelIncludes: string, fallback = "暂无记录"): string {
+  const row = section?.items.find((item) => item.label.includes(labelIncludes));
+  return customerText(row?.value, fallback);
 }
 
 function missingLinksText(report: OperationReportV1): string {
@@ -99,65 +88,132 @@ function missingLinksText(report: OperationReportV1): string {
   return Array.isArray(links) && links.length ? links.map((x) => chainLabel(x, "待补充环节")).join("、") : "无";
 }
 
-function formatMoney(value: unknown): string {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return "暂无可信数值";
-  return `${Number(n.toFixed(2))}`;
+function approvalRecordLinked(reportAny: any): boolean {
+  return Boolean((isObject(reportAny.approval) && Object.keys(reportAny.approval).length > 0) || reportAny.approval_request_id || reportAny.identifiers?.approval_id || reportAny.identifiers?.approval_request_id);
 }
 
-function roiStatusLabel(value: unknown): string {
-  const status = String(value ?? "").trim().toUpperCase();
-  const map: Record<string, string> = {
-    HYPOTHESIS_ONLY: "仅形成价值假设，待后续证据验证",
-    PROJECTED: "已有投入产出预测，待执行结果验证",
-    EXECUTED_PENDING_RESPONSE: "已执行，等待响应证据",
-    INTERIM_SUPPORTED: "阶段性证据支持",
-    INTERIM_NOT_SUPPORTED: "阶段性证据暂不支持",
-    BASELINE_MISSING: "缺少收益基线，暂不形成可信收益结论",
-    EVIDENCE_INSUFFICIENT: "证据不足，暂不能形成可信结论",
-    EXCLUDED_WEATHER: "受天气干扰，本次不进入效果学习",
-    REALIZED: "收获后已形成结果记录",
-  };
-  return map[status] ?? "价值状态待确认";
+function approvalResultText(approval: any): string {
+  const status = normalizeKey(approval?.status ?? approval?.result ?? approval?.verdict);
+  if (!status) return "待确认";
+  if (["APPROVED", "PASS", "SUCCESS", "SUCCEEDED", "DONE"].includes(status)) return "已通过";
+  if (["REJECTED", "FAIL", "FAILED", "RETURNED"].includes(status)) return "已退回";
+  if (["PENDING", "REQUESTED", "WAITING"].includes(status)) return "待确认";
+  return labelCustomerApprovalStatus(status);
 }
 
-function OperationValueChainRoiPanel({ report }: { report: OperationReportV1 }): React.ReactElement {
-  const roi = (report as any).roi ?? {};
-  const hypothesis = roi.hypothesis ?? (report as any).recommendation?.value_hypothesis ?? null;
-  const projection = roi.projection ?? (report as any).prescription?.value_projection ?? null;
-  const interim = roi.interim_evidence ?? null;
-  const safeText = customerText(roi.customer_safe_text, "当前展示建议阶段价值假设与处方阶段投入产出预测，最终收益待后续证据验证。");
+function acceptanceResultText(value: unknown): string {
+  const key = normalizeKey(value);
+  if (!key) return "待确认";
+  if (["PASS", "SUCCESS", "SUCCEEDED", "APPROVED"].includes(key)) return "已通过";
+  if (["FAIL", "FAILED", "REJECTED"].includes(key)) return "未通过";
+  if (["PENDING", "PENDING_ACCEPTANCE", "WAITING"].includes(key)) return "待确认";
+  return labelCustomerAcceptanceVerdict(key);
+}
+
+function evidenceChainText(vm: OperationReportPageVm): string {
+  if (vm.evidenceSummary.state === "PACK_SUMMARY") return "证据链完整";
+  if (vm.evidenceSummary.state === "RECORDS_WITHOUT_SUMMARY") return "证据已记录，证据包摘要待生成";
+  return "证据不足，需补齐后复核";
+}
+
+function formatRoiNumber(value: unknown): string {
+  if (value === null || value === undefined || value === "") return "暂不可计算";
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return "暂不可计算";
+  if (n === 0) return "0";
+  return new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 2 }).format(n);
+}
+
+function roiBasisText(value: unknown): string {
+  const raw = text(value);
+  const key = normalizeKey(raw);
+  if (!raw || key === "COST_PROJECTION_ONLY_BASELINE_MISSING") return "当前仅有成本预测，缺少产量/价格基线";
+  return customerText(raw, "当前仅有成本预测，缺少产量/价格基线");
+}
+
+function roiStatusText(reportAny: any): string {
+  const roi = reportAny.roi ?? reportAny.roi_ledger ?? {};
+  const projection = roi.projection ?? reportAny.prescription?.value_projection ?? {};
+  const hypothesis = roi.hypothesis ?? reportAny.recommendation?.value_hypothesis ?? {};
+  const status = normalizeKey(roi.status ?? projection.status ?? hypothesis.status ?? projection.projection_basis ?? hypothesis.baseline_status);
+  if (!status || status.includes("BASELINE_MISSING") || normalizeKey(projection.projection_basis).includes("BASELINE_MISSING")) return "缺少收益基线";
+  return labelCustomerRoiStatus(status);
+}
+
+function buildValueRows(reportAny: any): { summary: string; rows: MainRow[] } {
+  const roi = reportAny.roi ?? reportAny.roi_ledger ?? {};
+  const projection = roi.projection ?? reportAny.prescription?.value_projection ?? {};
+  const hypothesis = roi.hypothesis ?? reportAny.recommendation?.value_hypothesis ?? {};
+  const status = roiStatusText(reportAny);
+  const plannedCost = formatRoiNumber(projection.planned_cost ?? projection.cost ?? hypothesis.planned_cost);
+  const expectedBenefit = formatRoiNumber(projection.expected_benefit ?? hypothesis.expected_benefit);
+  const expectedNet = formatRoiNumber(projection.expected_net_value ?? projection.expected_net ?? hypothesis.expected_net_value);
+  const basis = roiBasisText(projection.projection_basis ?? hypothesis.baseline_source ?? roi.projection_basis);
+  const summary = status === "缺少收益基线"
+    ? "已有价值假设和计划成本记录；缺少历史产量/价格基线，暂不形成可信收益结论。"
+    : "已有价值假设和作业学习记录，最终收益需结合后续证据复核。";
+  return { summary, rows: [{ label: "价值状态", value: status }, { label: "计划成本", value: plannedCost }, { label: "预期收益", value: expectedBenefit }, { label: "预期净值", value: expectedNet }, { label: "依据", value: basis }] };
+}
+
+function buildMainSections(vm: OperationReportPageVm, report: OperationReportV1): MainSection[] {
+  const reportAny = report as any;
+  const recommendation = sectionByKey(vm, "RECOMMENDATION");
+  const prescription = sectionByKey(vm, "PRESCRIPTION");
+  const approval = reportAny.approval ?? {};
+  const execution = sectionByKey(vm, "EXECUTION");
+  const acceptanceStatus = acceptanceResultText(report.acceptance?.status ?? reportAny.acceptance?.status ?? reportAny.acceptance?.verdict);
+  const operationTypeText = customerSemanticLabel(reportAny.operation_type ?? reportAny.prescription?.operation_type, "作业");
+  const value = buildValueRows(reportAny);
+  const approvalLinked = approvalRecordLinked(reportAny);
+  const receiptRecorded = Boolean(reportAny.execution?.receipt_id || report.evidence?.receipt_present || reportAny.identifiers?.receipt_id);
+  const dispatched = Boolean(reportAny.execution?.act_task_id || reportAny.identifiers?.act_task_id || normalizeKey(reportAny.execution?.dispatch_status) === "DISPATCHED");
+
+  return [
+    { key: "why", title: "为什么做", summary: sectionSummary(recommendation, `系统根据土壤水分、天气和地块观测记录形成${operationTypeText}建议。`), rows: [{ label: "建议原因", value: sectionItem(recommendation, "建议原因", `形成${operationTypeText}建议`) }, { label: "农艺解释", value: sectionItem(recommendation, "农艺解释", `系统根据土壤水分、天气和地块观测记录形成${operationTypeText}建议。`) }, { label: "风险等级", value: sectionItem(recommendation, "风险等级", "风险待确认") }] },
+    { key: "prescription_approval", title: "处方与审批", summary: `${sectionSummary(prescription, `已形成${operationTypeText}处方。`)}审批记录${approvalLinked ? "已关联" : "待关联"}，审批结果${approvalResultText(approval)}。`, rows: [{ label: "处方状态", value: sectionSummary(prescription, `已形成${operationTypeText}处方`) }, { label: "审批记录", value: approvalLinked ? "已关联" : "待关联" }, { label: "审批结果", value: approvalResultText(approval) }, { label: "审批人", value: customerText(approval.actor_name ?? approval.actor ?? approval.approver_name, "待确认") }, { label: "审批意见", value: customerText(approval.note ?? approval.comment ?? approval.reason, "暂无") }] },
+    { key: "execution", title: "执行结果", summary: `${dispatched ? "任务已派发到设备" : "任务派发状态待确认"}，${receiptRecorded ? "执行回执已记录" : "执行回执待记录"}。`, rows: [{ label: "派发状态", value: dispatched ? "任务已派发到设备" : "派发状态待确认" }, { label: "执行状态", value: sectionSummary(execution, vm.execution.statusText || "执行状态待确认") }, { label: "执行回执", value: receiptRecorded ? "已记录" : "待记录" }, { label: "完成时间", value: customerText(reportAny.execution?.finished_at ?? report.execution?.execution_finished_at ?? vm.operation.updatedAtText, "暂无完成时间") }] },
+    { key: "evidence_acceptance", title: "证据与验收", summary: `${evidenceChainText(vm)}，验收结论${acceptanceStatus}。`, rows: [{ label: "证据链", value: evidenceChainText(vm) }, { label: "证据摘要", value: customerText(vm.evidenceSummary.summary, "证据摘要待生成") }, { label: "验收结论", value: acceptanceStatus }, { label: "复核提示", value: customerText(vm.evidenceSummary.detail, "无") }] },
+    { key: "value_learning", title: "价值与学习", summary: value.summary, rows: [...value.rows, { label: "田块记忆", value: sectionSummary(sectionByKey(vm, "MEMORY"), "暂无可展示的田块记忆") }] },
+  ];
+}
+
+function MainSectionCard({ section }: { section: MainSection }): React.ReactElement {
   return (
-    <section className="customerCard operationValueChainRoi" aria-label="价值链记录">
-      <div className="operationClosedLoopHead">
-        <span className="operationStepNo">价值</span>
-        <h3 className="customerCardTitle">价值链记录</h3>
-        <span className="operationStatusBadge">{roiStatusLabel(roi.status)}</span>
+    <article className="customerCard operationMainSectionCard">
+      <h2 className="customerCardTitle">{section.title}</h2>
+      <p className="operationOneLiner">{section.summary}</p>
+      <div className="customerGrid2 customerSpacingTopXs">
+        {section.rows.map((row) => <div key={`${section.key}-${row.label}`}><strong>{row.label}：</strong>{row.value}</div>)}
       </div>
-      <div className="operationOneLiner">{safeText}</div>
-      <div className="customerGrid3 customerSpacingTopXs">
-        <div>
-          <strong>为什么值得做</strong>
-          <p>价值类型：{customerText(hypothesis?.value_type, "价值假设待生成")}</p>
-          <p>预计产量影响：{renderScalar(hypothesis?.expected_yield_effect)}</p>
-          <p>基线来源：{customerSourceLabel(hypothesis?.baseline_source, "暂无基线")}</p>
-          <p>可信度：{customerText(hypothesis?.confidence, "可信度待确认")}</p>
+    </article>
+  );
+}
+
+function AuditChain({ chain, vm }: { chain: BackendChainItem[]; vm: OperationReportPageVm }): React.ReactElement {
+  return (
+    <section className="customerCard operationAuditChain">
+      <details>
+        <summary className="operationTechDetailsSummary">审计链路（默认折叠）</summary>
+        <p className="customerMetricLabel customerSpacingTopSm">以下为诊断、建议、处方、审批、执行、证据、验收、价值和田块记忆的摘要链路。技术来源和原始编号默认不进入客户主视图。</p>
+        <div className="operationClosedLoopGrid customerSpacingTopSm">
+          {chain.map((item, index) => {
+            const section = sectionForChain(vm, item.key);
+            return (
+              <details key={item.key} className="customerCard operationClosedLoopCard">
+                <summary>
+                  <span className="operationStepNo">{index + 1}</span> {item.label}：{customerTimelineStatusLabel(toCustomerStatus(item.status))}
+                </summary>
+                <p className="operationOneLiner customerSpacingTopXs">{section?.summary ? customerText(section.summary, "暂无链路说明") : customerText(item.reason, "暂无链路说明")}</p>
+                {section?.items.length ? (
+                  <div className="customerGrid2 customerSpacingTopXs">
+                    {section.items.slice(0, 6).map((row) => <div key={`${item.key}-${row.label}`}><strong>{row.label}：</strong>{safeAuditValue(row.value)}</div>)}
+                  </div>
+                ) : <p className="muted customerSpacingTopXs">该环节暂无客户可读明细。</p>}
+              </details>
+            );
+          })}
         </div>
-        <div>
-          <strong>预计投入产出</strong>
-          <p>计划成本：{formatMoney(projection?.planned_cost)}</p>
-          <p>预期收益：{formatMoney(projection?.expected_benefit)}</p>
-          <p>预期净值：{formatMoney(projection?.expected_net_value)}</p>
-          <p>预测依据：{customerText(projection?.projection_basis, "预测依据待确认")}</p>
-        </div>
-        <div>
-          <strong>执行后证据是否支持</strong>
-          <p>证据状态：{customerText(interim?.evidence_status, "暂无阶段证据")}</p>
-          <p>验收结论：{customerText(interim?.acceptance_verdict, "待验收")}</p>
-          <p>账本条目：{customerText(interim?.ledger_count, "0")}</p>
-          <p>排除原因：{customerText(roi.exclusion_reason, "无")}</p>
-        </div>
-      </div>
+      </details>
     </section>
   );
 }
@@ -167,16 +223,12 @@ export default function OperationReportPage(): React.ReactElement {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string>("");
   const [report, setReport] = React.useState<OperationReportV1 | null>(null);
-  const [expandedKey, setExpandedKey] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     let alive = true;
     setLoading(true);
     setError("");
-    void fetchOperationReport(operationId)
-      .then((res) => { if (alive) setReport(res); })
-      .catch((e: unknown) => { if (alive) setError(String(e instanceof Error ? e.message : "加载失败")); })
-      .finally(() => { if (alive) setLoading(false); });
+    void fetchOperationReport(operationId).then((res) => { if (alive) setReport(res); }).catch((e: unknown) => { if (alive) setError(String(e instanceof Error ? e.message : "加载失败")); }).finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [operationId]);
 
@@ -192,6 +244,7 @@ export default function OperationReportPage(): React.ReactElement {
   const canBackToField = Boolean(vm.operation.fieldId && vm.operation.fieldId !== "--");
   const safeOperationTitle = customerSafeTitle(vm.operation.title, "作业名称待补充");
   const safeFieldName = customerSafeName(vm.operation.fieldName, "地块名称待补充");
+  const mainSections = buildMainSections(vm, report);
 
   return (
     <div className="customerReportCanvas">
@@ -199,7 +252,7 @@ export default function OperationReportPage(): React.ReactElement {
         <header className="customerHero operationHero">
           <div className="customerHeroTop">
             <div>
-              <div className="customerReportLogo">GEOX / 作业闭环</div>
+              <div className="customerReportLogo">GEOX / 作业报告</div>
               <h1 className="customerTitle">{safeOperationTitle}</h1>
               <p className="customerSubtitle">地块：{safeFieldName}</p>
               <p className="customerSubtitle">链路完整性：{chainIntegrity} · 缺失环节：{missingLinksText(report)}</p>
@@ -212,68 +265,13 @@ export default function OperationReportPage(): React.ReactElement {
           </div>
         </header>
 
-        {legacyWarning ? (
-          <section className="customerCard customerScopeWarning">
-            {legacyWarning}
-          </section>
-        ) : null}
+        {legacyWarning ? <section className="customerCard customerScopeWarning">{legacyWarning}</section> : null}
 
-        <OperationValueChainRoiPanel report={report} />
-
-        <section className="customerCard operationTimelineStrip">
-          {chain.map((item) => (
-            <span key={item.key} className="customerPill">
-              {item.label}：{customerTimelineStatusLabel(toCustomerStatus(item.status))}
-            </span>
-          ))}
+        <section className="operationMainSectionsGrid">
+          {mainSections.map((section) => <MainSectionCard key={section.key} section={section} />)}
         </section>
 
-        <section className="operationClosedLoopGrid">
-          {chain.map((item, index) => {
-            const section = sectionForChain(vm, item.key);
-            const isExpanded = expandedKey === item.key;
-            return (
-              <article
-                key={item.key}
-                className={`customerCard operationClosedLoopCard ${isExpanded ? "isExpanded" : ""}`}
-                role="button"
-                tabIndex={0}
-                onClick={() => setExpandedKey((prev) => prev === item.key ? null : item.key)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setExpandedKey((prev) => prev === item.key ? null : item.key);
-                  }
-                }}
-              >
-                <div className="operationClosedLoopHead">
-                  <span className="operationStepNo">{index + 1}</span>
-                  <h3 className="customerCardTitle">{item.label}</h3>
-                  <span className="operationStatusBadge">{customerTimelineStatusLabel(toCustomerStatus(item.status))}</span>
-                </div>
-                <div className="operationOneLiner">{section?.summary || customerText(item.reason, "暂无链路说明")}</div>
-                <div className="operationOneLiner muted">来源：{customerSourceLabel(item.source, "作业报告摘要")}</div>
-                {isExpanded ? (
-                  <div className="customerGrid2 customerSpacingTopXs">
-                    {section?.items.length ? section.items.map((row) => (
-                      <div key={`${item.key}-${row.label}`}><strong>{row.label}：</strong>{row.value}</div>
-                    )) : <div className="muted">该环节暂无客户可读明细，技术字段请查看底部技术详情。</div>}
-                  </div>
-                ) : null}
-                <button
-                  type="button"
-                  className="customerLinkButton customerSpacingTopXs"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setExpandedKey((prev) => prev === item.key ? null : item.key);
-                  }}
-                >
-                  {isExpanded ? "收起详情" : "查看详情"}
-                </button>
-              </article>
-            );
-          })}
-        </section>
+        <AuditChain chain={chain} vm={vm} />
 
         <section className="operationTechDetailsMuted">
           <details>
@@ -285,7 +283,7 @@ export default function OperationReportPage(): React.ReactElement {
               <div><strong>approval_request_id：</strong>{customerText(reportAny.approval?.approval_request_id ?? report.identifiers?.approval_id)}</div>
               <div><strong>act_task_id：</strong>{customerText(reportAny.execution?.act_task_id ?? report.identifiers?.act_task_id)}</div>
               <div><strong>receipt_id：</strong>{customerText(reportAny.execution?.receipt_id ?? report.identifiers?.receipt_id)}</div>
-              <div><strong>roi_status：</strong>{roiStatusLabel(reportAny.roi?.status)}</div>
+              <div><strong>roi_status：</strong>{roiStatusText(reportAny)}</div>
               <div><strong>chain_integrity：</strong>{chainIntegrity}</div>
               <div><strong>missing_links：</strong>{missingLinksText(report)}</div>
             </div>
