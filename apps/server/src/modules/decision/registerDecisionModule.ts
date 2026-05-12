@@ -6,6 +6,7 @@ import { registerSkillRulesV1Routes } from "../../routes/skills_rules_v1.js";
 import { registerSkillsV1Routes } from "../../routes/skills_v1.js";
 import { registerSkillRunsV1Routes } from "../../routes/skill_runs_v1.js";
 import { registerSkillRuntimeV1Routes } from "../../routes/skill_runtime_v1.js";
+import { registerValueChainRoiResponseHooksV1 } from "../../routes/value_chain_roi_hooks_v1.js";
 
 /**
  * Skills Architecture Layer (Horizontal Capability Layer)
@@ -26,6 +27,7 @@ export function registerSkillArchitectureLayer(app: FastifyInstance, pool: Pool)
 }
 
 export function registerDecisionModule(app: FastifyInstance, pool: Pool): void {
+  registerValueChainRoiResponseHooksV1(app);
   registerDecisionEngineV1Routes(app, pool);
   registerSkillArchitectureLayer(app, pool);
 }
