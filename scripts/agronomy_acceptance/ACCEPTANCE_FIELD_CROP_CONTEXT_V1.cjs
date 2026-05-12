@@ -3,6 +3,9 @@ const path = require('node:path');
 
 const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:3001';
 const TOKEN = process.env.ADMIN_TOKEN || process.env.AO_ACT_TOKEN || process.env.AO_ACT_ADMIN_TOKEN || 'set-via-env-or-external-secret-file-admin';
+const TENANT_ID = process.env.TENANT_ID || 'tenantA';
+const PROJECT_ID = process.env.PROJECT_ID || 'projectA';
+const GROUP_ID = process.env.GROUP_ID || 'groupA';
 const FIELD_ID = process.env.FIELD_ID || 'ft_field_20260511134058';
 const SEASON_ID = process.env.SEASON_ID || 'season_demo';
 const DEVICE_ID = process.env.DEVICE_ID || 'dev_onboard_accept_001';
@@ -34,6 +37,9 @@ function cropSpecific(rec) { const a = actionOf(rec); return a.includes('IRRIG')
   const allowPrescription = Boolean(cropContext.allowed_actions?.allow_crop_specific_prescription);
 
   const recommendationResp = await request('POST', '/api/v1/recommendations/generate', {
+    tenant_id: TENANT_ID,
+    project_id: PROJECT_ID,
+    group_id: GROUP_ID,
     field_id: FIELD_ID,
     season_id: SEASON_ID,
     device_id: DEVICE_ID,
@@ -87,6 +93,8 @@ function cropSpecific(rec) { const a = actionOf(rec); return a.includes('IRRIG')
     checks,
     semantic_checks: semanticChecks,
     static_checks: staticChecks,
+    recommendation_request_status: recommendationResp.status,
+    recommendation_error: recommendationResp.ok ? null : recommendationResp.json,
     summary: {
       crop_context: cropContext,
       observability_status: observability.status || null,
