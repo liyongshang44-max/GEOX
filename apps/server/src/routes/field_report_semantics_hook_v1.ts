@@ -138,12 +138,22 @@ function cropContext(rec: any) {
   return { status: "AVAILABLE", crop_code, crop_stage, confidence: payload.confidence ?? payload.skill_trace?.confidence?.level ?? null, source: "decision_recommendation_v1" };
 }
 
-async function currentRecommendation(pool: Pool, rec: any, crop: any) {
+function acceptedOperationAfterRecommendation(rec: any, recent: any): boolean {
+  if (!rec || !recent) return false;
+  const accepted = String(recent.summary ?? "").includes("已验收") || String(recent.final_status ?? "").toUpperCase() === "SUCCESS";
+  if (!accepted) return false;
+  const recMs = Date.parse(String(rec.occurred_at ?? ""));
+  const recentMs = Date.parse(String(recent.accepted_at ?? ""));
+  return Number.isFinite(recMs) && Number.isFinite(recentMs) && recentMs >= recMs;
+}
+
+async function currentRecommendation(pool: Pool, rec: any, crop: any, recent: any) {
   if (!rec || crop.status !== "AVAILABLE") return null;
   const payload = rec.record_json?.payload ?? {};
   const recommendation_id = text(payload.recommendation_id);
   if (!recommendation_id) return null;
   if (await recommendationClosed(pool, recommendation_id)) return null;
+  if (acceptedOperationAfterRecommendation(rec, recent)) return null;
   return {
     recommendation_id,
     action_type: text(payload.suggested_action?.action_type ?? payload.action_type),
@@ -185,14 +195,14 @@ export function registerFieldReportSemanticsHookV1(app: FastifyInstance, pool: P
     if (!fieldReport || !fieldId) return payload;
     const [geometry, rec] = await Promise.all([loadGeometry(pool, fieldId), latestRecommendation(pool, fieldId)]);
     const crop = cropContext(rec);
-    const current = await currentRecommendation(pool, rec, crop);
+    const recent = recentOperation(fieldReport);
+    const current = await currentRecommendation(pool, rec, crop, recent);
     const diagnosis = diagnosisBasis(fieldReport, crop, rec);
     const risk = {
       level: fieldReport.overview?.current_risk_level ?? "UNKNOWN",
       reasons: Array.isArray(fieldReport.explain?.top_reasons) ? fieldReport.explain.top_reasons : [],
       evidence_refs: diagnosis.evidence_refs,
     };
-    const recent = recentOperation(fieldReport);
     const enriched = {
       ...fieldReport,
       field: { ...fieldReport.field, ...geometry },
