@@ -56,6 +56,8 @@ export default function CustomerReportsCenterPage(): React.ReactElement {
                       <div>
                         <strong>{item.title}</strong>
                         <p>{item.subtitle}</p>
+                        <small>{item.coverageText}</small>
+                        <small>可信状态：{item.trustText}</small>
                         <small>更新时间：{item.updatedAtText}</small>
                       </div>
                       <span>{item.statusText}</span>
@@ -65,6 +67,8 @@ export default function CustomerReportsCenterPage(): React.ReactElement {
                       <div>
                         <strong>{item.title}</strong>
                         <p>{item.subtitle}</p>
+                        <small>{item.coverageText}</small>
+                        <small>可信状态：{item.trustText}</small>
                         <small>更新时间：{item.updatedAtText}</small>
                       </div>
                       <span>{item.statusText}</span>
