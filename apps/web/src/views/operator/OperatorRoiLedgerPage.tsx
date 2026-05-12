@@ -10,6 +10,7 @@ import "../../styles/operatorRoiLedger.css";
 import { buildOperatorFieldMemoryVm, type OperatorFieldMemoryVm } from "../../viewmodels/operatorFieldMemoryVm";
 import { buildOperatorLearningClosureVm } from "../../viewmodels/operatorLearningClosureVm";
 import { buildOperatorRoiLedgerVm, type OperatorRoiLedgerRowVm, type OperatorRoiLedgerVm } from "../../viewmodels/operatorRoiLedgerVm";
+import { OPERATOR_PAGE_META } from "./operatorPageMeta";
 
 function decodeLastPathSegment(href?: string | null): string {
   if (!href) return "";
@@ -82,6 +83,7 @@ function RoiSection({ title, description, rows }: { title: string; description: 
 }
 
 export default function OperatorRoiLedgerPage(): React.ReactElement {
+  const meta = OPERATOR_PAGE_META.roiLedger;
   const [searchParams, setSearchParams] = useSearchParams();
   const fieldId = searchParams.get("field_id") ?? "";
   const operationId = searchParams.get("operation_id") ?? "";
@@ -167,7 +169,7 @@ export default function OperatorRoiLedgerPage(): React.ReactElement {
   });
 
   return (
-    <OperatorLayout title="ROI 明细账" lead="按 field / operation 追溯 ROI 明细，区分估算、实测、假设与证据不足。">
+    <OperatorLayout title={meta.title} lead={meta.lead}>
       <div className="operatorRoiLedgerPage">
         <form className="operatorRoiFilters" onSubmit={applyFilters}>
           <label>
