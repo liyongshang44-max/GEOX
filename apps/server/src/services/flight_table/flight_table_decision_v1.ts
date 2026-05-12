@@ -12,6 +12,7 @@ import {
   snapshotRefFromSnapshotV1,
   writeFlightTableApiSnapshotV1,
 } from "./flight_table_snapshots_v1.js";
+import { buildPrescriptionValueProjectionV1, buildRecommendationValueHypothesisV1 } from "../../domain/roi/value_chain_roi_v1.js";
 
 export type FlightTableDecisionRunInputV1 = {
   field_id?: string;
@@ -30,6 +31,8 @@ export type FlightTableDecisionRunResultV1 = {
   approval_status: string;
   operation_plan_id: string | null;
   recommendation_explain: Record<string, unknown> | null;
+  recommendation_value_hypothesis: Record<string, unknown> | null;
+  prescription_value_projection: Record<string, unknown> | null;
   prescription_summary: Record<string, unknown>;
   approval_audit: Record<string, unknown>;
   approval_processed_by: string | null;
@@ -153,8 +156,10 @@ function findApproverToken(currentToken: string, auth: AoActAuthContextV0): { to
   return null;
 }
 
-function summarizePrescription(prescription: any): Record<string, unknown> {
+function summarizePrescription(prescription: any, recommendation: any): Record<string, unknown> {
   const amount = prescription?.operation_amount ?? {};
+  const valueHypothesis = buildRecommendationValueHypothesisV1(recommendation);
+  const valueProjection = buildPrescriptionValueProjectionV1(prescription, valueHypothesis);
   return {
     prescription_id: prescription?.prescription_id ?? null,
     operation_type: prescription?.operation_type ?? null,
@@ -167,6 +172,7 @@ function summarizePrescription(prescription: any): Record<string, unknown> {
     planned_rate: prescription?.planned_rate ?? amount?.rate ?? null,
     acceptance_conditions: prescription?.acceptance_conditions ?? null,
     approval_requirement: prescription?.approval_requirement ?? null,
+    value_projection: valueProjection,
   };
 }
 
@@ -231,6 +237,7 @@ export async function runFlightTableDecisionPrescriptionApprovalV1(args: {
   }
   const recommendation_id = safeText(recommendation?.recommendation_id);
   if (!recommendation_id) throw new Error("FLIGHT_TABLE_NO_RECOMMENDATION_TRIGGERED");
+  const recommendationValueHypothesis = buildRecommendationValueHypothesisV1(recommendation);
 
   const prescriptionMode = input.prescription_mode === "variable" ? "variable" : "standard";
   const prescriptionEndpoint = prescriptionMode === "variable"
@@ -295,6 +302,8 @@ export async function runFlightTableDecisionPrescriptionApprovalV1(args: {
   }
   operation_plan_id = safeText(submit.json?.operation_plan_id ?? submit.json?.approval?.operation_plan_id) || null;
 
+  const resolvedPrescription = prescriptionRead.json?.prescription ?? byRecommendation.json?.prescription ?? prescription;
+  const prescriptionValueProjection = buildPrescriptionValueProjectionV1(resolvedPrescription, recommendationValueHypothesis);
   const snapshot = await writeFlightTableApiSnapshotV1({
     run_id: run.run_id,
     method: "POST",
@@ -311,7 +320,9 @@ export async function runFlightTableDecisionPrescriptionApprovalV1(args: {
       approval_status,
       operation_plan_id,
       recommendation_explain: recommendation?.explain ?? null,
-      prescription_summary: summarizePrescription(prescriptionRead.json?.prescription ?? byRecommendation.json?.prescription ?? prescription),
+      recommendation_value_hypothesis: recommendationValueHypothesis,
+      prescription_value_projection: prescriptionValueProjection,
+      prescription_summary: summarizePrescription(resolvedPrescription, recommendation),
       approval_audit: approvalAudit,
     },
   });
@@ -342,7 +353,6 @@ export async function runFlightTableDecisionPrescriptionApprovalV1(args: {
     },
   });
 
-  const resolvedPrescription = prescriptionRead.json?.prescription ?? byRecommendation.json?.prescription ?? prescription;
   return {
     ok: true,
     recommendation_id,
@@ -351,7 +361,9 @@ export async function runFlightTableDecisionPrescriptionApprovalV1(args: {
     approval_status,
     operation_plan_id,
     recommendation_explain: recommendation?.explain ?? null,
-    prescription_summary: summarizePrescription(resolvedPrescription),
+    recommendation_value_hypothesis: recommendationValueHypothesis,
+    prescription_value_projection: prescriptionValueProjection,
+    prescription_summary: summarizePrescription(resolvedPrescription, recommendation),
     approval_audit: approvalAudit,
     approval_processed_by: approvalProcessedBy,
     contract_answers: contractAnswers({ field_id, prescription: resolvedPrescription, approval_request_id }),
