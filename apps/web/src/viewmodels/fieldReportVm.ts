@@ -1,6 +1,7 @@
 import type { FieldReportDetailV1 } from "../api/customerReports";
-import { customerFieldMemoryLabel, customerRoiLabel, labelAcceptanceStatus, labelFinalStatus, labelOperationType, labelRiskLevel, sanitizeCustomerText } from "../lib/customerLabels";
+import { customerFieldMemoryLabel, customerRoiLabel, labelAcceptanceStatus, labelFinalStatus, labelOperationType, labelRiskLevel } from "../lib/customerLabels";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
+import { formatCustomerDate, formatCustomerNumber, formatMoneyOrUnavailable } from "../lib/customerSafeText";
 import { customerCropLabel, customerDisplayName, customerSemanticLabel, customerSourceLabel, customerStageLabel } from "../lib/customerSemanticLabels";
 
 export type FieldMapMarkerVm = { device_id: string; lat: number; lon: number; ts_ms?: number | null };
@@ -33,23 +34,16 @@ export type FieldReportPageVm = {
   nextAction: { title: string; explainText: string; objectiveText: string; priorityText: string } | null;
 };
 
-function formatDateTime(value: string | null | undefined, fallback = "暂无更新时间"): string {
-  if (!value) return fallback;
-  const ms = Date.parse(value);
-  if (!Number.isFinite(ms) || ms <= 0) return fallback;
-  const d = new Date(ms);
-  if (d.getUTCFullYear() <= 1970) return fallback;
-  return d.toLocaleString("zh-CN", { hour12: false });
+function formatDateTime(value: string | null | undefined): string {
+  return formatCustomerDate(value);
 }
 
 function formatCurrency(value: number | null | undefined): string {
-  const num = Number(value ?? 0);
-  return new Intl.NumberFormat("zh-CN", { style: "currency", currency: "CNY", maximumFractionDigits: 2 }).format(Number.isFinite(num) ? num : 0);
+  return formatMoneyOrUnavailable(value);
 }
 
 function formatCount(value: number | null | undefined): string {
-  const num = Number(value ?? 0);
-  return Number.isFinite(num) ? String(num) : "0";
+  return formatCustomerNumber(value, { fallback: "0", maximumFractionDigits: 0 });
 }
 
 function txt(value: unknown, fallback = ""): string {
@@ -147,7 +141,7 @@ function buildRecentOperations(report: FieldReportDetailV1, fieldId: string) {
 export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPageVm {
   const reportAny = report as any;
   const fieldId = report.field.field_id;
-  const fieldName = customerDisplayName(report.field.field_name, "未命名地块");
+  const fieldName = customerDisplayName(report.field.field_name, "地块名称待补充");
   const cropContext = reportAny.crop_context ?? {};
   const riskObj = reportAny.risk ?? {};
   const diagnosisBasis = reportAny.diagnosis_basis ?? {};
