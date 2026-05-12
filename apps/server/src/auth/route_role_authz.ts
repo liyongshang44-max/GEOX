@@ -1,6 +1,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { requireAoActAuthV0, type AoActAuthContextV0 } from "./ao_act_authz_v0.js";
 import { isRoleAllowed, methodToAction, type AuthResource } from "../domain/auth/roles.js";
+import { resolveCustomerScope } from "../services/customer/customer_scope_v1.js";
 
 function deny(reply: FastifyReply, asNotFound: boolean, code = "AUTH_ROLE_DENIED"): null {
   if (asNotFound) {
@@ -19,9 +20,12 @@ function normalizeFieldIds(raw: unknown): string[] {
 }
 
 export function hasFieldAccess(auth: AoActAuthContextV0, fieldId: string): boolean {
-  const allowed = Array.isArray(auth.allowed_field_ids) ? auth.allowed_field_ids : [];
-  if (!allowed.length) return auth.role !== "client";
-  return allowed.includes(fieldId);
+  const fid = String(fieldId ?? "").trim();
+  if (!fid) return true;
+  const scope = resolveCustomerScope(auth);
+  if (scope.scope_mode === "DENIED") return false;
+  if (scope.can_preview_all_fields) return true;
+  return scope.allowed_field_ids.includes(fid);
 }
 
 export function enforceFieldScopeOrDeny(
@@ -61,7 +65,9 @@ function collectRequestedFieldIds(req: FastifyRequest): string[] {
     ...normalizeFieldIds(params.field_id),
     ...normalizeFieldIds(params.fieldId),
     ...normalizeFieldIds(query.field_id),
+    ...normalizeFieldIds(query.fieldId),
     ...normalizeFieldIds(query.field_ids),
+    ...normalizeFieldIds(query["field_ids[]"]),
     ...normalizeFieldIds(body.field_id),
     ...normalizeFieldIds(body.field_ids),
   ]));
