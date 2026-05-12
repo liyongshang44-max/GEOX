@@ -1,4 +1,5 @@
 import type { OperatorAcceptanceItem, OperatorAcceptanceResponse, OperatorAcceptanceStatus } from "../api/operatorAcceptance";
+import { mapOperatorStatusLabel, replaceOperatorTerms } from "../lib/operatorStatusLabels";
 
 export type OperatorActionButtonStateV1 = {
   canAction: boolean;
@@ -55,9 +56,9 @@ const GROUP_ORDER: OperatorAcceptanceStatus[] = ["PENDING", "EVIDENCE_INSUFFICIE
 const GROUP_META: Record<OperatorAcceptanceStatus, { title: string; description: string }> = {
   PENDING: { title: "待验收作业", description: "已执行或已收到回执，但尚未形成验收结论。" },
   EVIDENCE_INSUFFICIENT: { title: "证据不足", description: "证据不足不能包装成验收通过，需要补证或复核。" },
-  FAILED: { title: "验收失败", description: "验收未通过，必须展示失败原因。" },
+  FAILED: { title: "验收未通过", description: "验收未通过，必须展示失败原因。" },
   REVIEW_REQUIRED: { title: "需要复核", description: "存在异常、争议或人工复核要求。" },
-  PASSED: { title: "已通过", description: "后端验收结论为通过的作业。" },
+  PASSED: { title: "验收通过", description: "后端验收结论为通过的作业。" },
   UNKNOWN: { title: "状态待确认", description: "验收状态来源不足，暂不进入正式队列。" },
 };
 
@@ -65,7 +66,7 @@ function text(value: unknown, fallback = ""): string {
   const raw = String(value ?? "").trim();
   if (!raw || raw === "--" || raw === "undefined" || raw === "null") return fallback;
   if (/token|secret|credential|private\s*key|password|stack\s*trace|debug\s*json/i.test(raw)) return fallback;
-  return raw;
+  return replaceOperatorTerms(raw);
 }
 
 function dateText(value: unknown): string {
@@ -79,10 +80,10 @@ function dateText(value: unknown): string {
 function statusText(value: OperatorAcceptanceStatus): string {
   if (value === "PENDING") return "待验收";
   if (value === "EVIDENCE_INSUFFICIENT") return "证据不足";
-  if (value === "FAILED") return "验收失败";
+  if (value === "FAILED") return "验收未通过";
   if (value === "REVIEW_REQUIRED") return "需要复核";
-  if (value === "PASSED") return "已通过";
-  return "状态待确认";
+  if (value === "PASSED") return "验收通过";
+  return mapOperatorStatusLabel(value, "acceptance", "状态待确认");
 }
 
 function statusTone(value: OperatorAcceptanceStatus): OperatorAcceptanceRowVm["statusTone"] {
@@ -133,12 +134,12 @@ function buildRow(item: OperatorAcceptanceItem, writeReady: boolean): OperatorAc
     title: text(item.operationName, "验收作业"),
     objectText: objectText(item),
     acceptanceStatusText: statusText(item.acceptanceStatus),
-    operationStateText: text(item.operationStateStatus, "operation_state 状态未提供"),
+    operationStateText: text(item.operationStateStatus, "作业状态未提供"),
     statusTone: statusTone(item.acceptanceStatus),
     evidenceText: item.evidenceInsufficient ? "证据不足" : "证据状态来自后端验收/报告字段",
     failureReasonText: text(item.failureReason, item.acceptanceStatus === "FAILED" ? "失败原因待补充" : "无失败原因"),
     reviewReasonText: text(item.reviewReason, item.acceptanceStatus === "REVIEW_REQUIRED" ? "复核原因待补充" : "无复核原因"),
-    verdictText: text(item.acceptanceVerdict, "验收结论待生成"),
+    verdictText: mapOperatorStatusLabel(item.acceptanceVerdict, "acceptance", text(item.acceptanceVerdict, "验收结论待生成")),
     generatedAtText: dateText(item.generatedAt),
     updatedAtText: dateText(item.updatedAt),
     sourceText: sourceText(item.source),
@@ -171,11 +172,11 @@ export function buildOperatorAcceptanceVm(response: OperatorAcceptanceResponse):
     lead: "处理待验收、失败复核、证据不足与已通过验收作业。",
     generatedAtText: dateText(response.generated_at),
     dataScopeText: dataScopeText(response),
-    dataScopeWarning: response.dataScope === "FALLBACK_LIMITED" ? response.message || "当前展示有限 fallback 验收数据，非完整 operator acceptance。" : undefined,
+    dataScopeWarning: response.dataScope === "FALLBACK_LIMITED" ? replaceOperatorTerms(response.message || "当前展示有限 fallback 验收数据，非完整 operator acceptance。") : undefined,
     writeReady: response.writeReady,
     totalCount: rows.length,
     groups,
     emptyTitle: "暂无验收事项",
-    emptyDescription: "当前没有待验收、证据不足、验收失败、需要复核或已通过记录。",
+    emptyDescription: "当前没有待验收、证据不足、验收未通过、需要复核或验收通过记录。",
   };
 }
