@@ -4,6 +4,7 @@ import { fetchOperationReport, type OperationReportV1 } from "../api/customerRep
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ErrorState from "../components/common/ErrorState";
 import { customerTimelineStatusLabel, labelCustomerTechnicalField } from "../lib/customerLabels";
+import { customerChainIntegrityLabel, customerSemanticLabel, customerSourceLabel, isCustomerChainComplete } from "../lib/customerSemanticLabels";
 import { buildOperationReportVm } from "../viewmodels/operationReportVm";
 
 type BackendChainItem = {
@@ -16,10 +17,24 @@ type BackendChainItem = {
 
 type DetailRow = { label: string; value: string };
 
+const CHAIN_LABELS: Record<string, string> = {
+  diagnosis: "诊断",
+  recommendation: "建议",
+  prescription: "处方",
+  approval: "审批",
+  operation_plan: "作业计划",
+  execution: "执行",
+  receipt: "回执",
+  evidence: "证据",
+  acceptance: "验收",
+  roi: "价值记录",
+  field_memory: "田块记忆",
+};
+
 function customerText(value: unknown, fallback = "暂无可展示信息"): string {
   const text = String(value ?? "").trim();
   if (!text || text === "--" || text === "[object Object]" || /1970\s*[\/-]/.test(text)) return fallback;
-  return text;
+  return customerSemanticLabel(text, fallback);
 }
 
 function toCustomerStatus(status: unknown): "DONE" | "AVAILABLE" | "PENDING" | "MISSING" | "NOT_APPLICABLE" {
@@ -31,16 +46,25 @@ function toCustomerStatus(status: unknown): "DONE" | "AVAILABLE" | "PENDING" | "
   return "MISSING";
 }
 
+function chainLabel(value: unknown, fallback: string): string {
+  const raw = String(value ?? "").trim();
+  const key = raw.toLowerCase();
+  return CHAIN_LABELS[key] ?? customerSemanticLabel(raw, fallback);
+}
+
 function normalizeChain(report: OperationReportV1): BackendChainItem[] {
   const raw = (report as any).status_chain;
   if (Array.isArray(raw) && raw.length) {
-    return raw.map((item, index) => ({
-      key: String(item?.key ?? `chain_${index}`).trim() || `chain_${index}`,
-      label: String(item?.label ?? item?.key ?? `链路 ${index + 1}`).trim(),
-      status: toCustomerStatus(item?.status),
-      reason: item?.reason ?? null,
-      source: item?.source ?? null,
-    }));
+    return raw.map((item, index) => {
+      const key = String(item?.key ?? `chain_${index}`).trim() || `chain_${index}`;
+      return {
+        key,
+        label: chainLabel(item?.label ?? key, `链路 ${index + 1}`),
+        status: toCustomerStatus(item?.status),
+        reason: item?.reason ?? null,
+        source: item?.source ?? null,
+      };
+    });
   }
   return [{ key: "legacy", label: "历史链路", status: "MISSING", reason: "该作业为历史/人工链路，缺少正式建议或处方记录。", source: "frontend_legacy_guard" }];
 }
@@ -53,7 +77,7 @@ function renderScalar(value: unknown): string {
     const obj = value as Record<string, unknown>;
     const preferred = obj.customer_text ?? obj.customer_safe_text ?? obj.summary_text ?? obj.summary ?? obj.status ?? obj.verdict ?? obj.id;
     if (preferred != null) return renderScalar(preferred);
-    const pairs = Object.entries(obj).filter(([, v]) => v != null).slice(0, 4).map(([k, v]) => `${k}:${renderScalar(v)}`);
+    const pairs = Object.entries(obj).filter(([, v]) => v != null).slice(0, 4).map(([k, v]) => `${labelCustomerTechnicalField(k)}:${renderScalar(v)}`);
     return pairs.length ? pairs.join("；") : "暂无记录";
   }
   return "暂无记录";
@@ -96,7 +120,7 @@ function detailRowsFor(report: OperationReportV1, key: string): DetailRow[] {
 
 function missingLinksText(report: OperationReportV1): string {
   const links = (report as any).missing_links;
-  return Array.isArray(links) && links.length ? links.map((x) => String(x)).join("、") : "无";
+  return Array.isArray(links) && links.length ? links.map((x) => chainLabel(x, "待补充环节")).join("、") : "无";
 }
 
 function formatMoney(value: unknown): string {
@@ -108,15 +132,15 @@ function formatMoney(value: unknown): string {
 function roiStatusLabel(value: unknown): string {
   const status = String(value ?? "").trim().toUpperCase();
   const map: Record<string, string> = {
-    HYPOTHESIS_ONLY: "仅价值假设",
-    PROJECTED: "已有投入产出预测",
+    HYPOTHESIS_ONLY: "仅形成价值假设，待后续证据验证",
+    PROJECTED: "已有投入产出预测，待执行结果验证",
     EXECUTED_PENDING_RESPONSE: "已执行，等待响应证据",
     INTERIM_SUPPORTED: "阶段性证据支持",
-    INTERIM_NOT_SUPPORTED: "阶段性证据不支持",
-    BASELINE_MISSING: "缺少基线",
-    EVIDENCE_INSUFFICIENT: "证据不足",
-    EXCLUDED_WEATHER: "天气干扰已排除",
-    REALIZED: "收获后已实现",
+    INTERIM_NOT_SUPPORTED: "阶段性证据暂不支持",
+    BASELINE_MISSING: "缺少收益基线，暂不形成可信收益结论",
+    EVIDENCE_INSUFFICIENT: "证据不足，暂不能形成可信结论",
+    EXCLUDED_WEATHER: "受天气干扰，本次不进入效果学习",
+    REALIZED: "收获后已形成结果记录",
   };
   return map[status] ?? "价值状态待确认";
 }
@@ -128,10 +152,10 @@ function OperationValueChainRoiPanel({ report }: { report: OperationReportV1 }):
   const interim = roi.interim_evidence ?? null;
   const safeText = customerText(roi.customer_safe_text, "当前展示建议阶段价值假设与处方阶段投入产出预测，最终收益待后续证据验证。");
   return (
-    <section className="customerCard operationValueChainRoi" aria-label="价值链 ROI">
+    <section className="customerCard operationValueChainRoi" aria-label="价值链记录">
       <div className="operationClosedLoopHead">
-        <span className="operationStepNo">ROI</span>
-        <h3 className="customerCardTitle">价值链 ROI</h3>
+        <span className="operationStepNo">价值</span>
+        <h3 className="customerCardTitle">价值链记录</h3>
         <span className="operationStatusBadge">{roiStatusLabel(roi.status)}</span>
       </div>
       <div className="operationOneLiner">{safeText}</div>
@@ -140,8 +164,8 @@ function OperationValueChainRoiPanel({ report }: { report: OperationReportV1 }):
           <strong>为什么值得做</strong>
           <p>价值类型：{customerText(hypothesis?.value_type, "价值假设待生成")}</p>
           <p>预计产量影响：{renderScalar(hypothesis?.expected_yield_effect)}</p>
-          <p>基线来源：{customerText(hypothesis?.baseline_source, "暂无基线")}</p>
-          <p>可信度：{customerText(hypothesis?.confidence, "LOW")}</p>
+          <p>基线来源：{customerSourceLabel(hypothesis?.baseline_source, "暂无基线")}</p>
+          <p>可信度：{customerText(hypothesis?.confidence, "可信度待确认")}</p>
         </div>
         <div>
           <strong>预计投入产出</strong>
@@ -186,8 +210,9 @@ export default function OperationReportPage(): React.ReactElement {
   const vm = buildOperationReportVm(report);
   const chain = normalizeChain(report);
   const reportAny = report as any;
-  const chainIntegrity = customerText(reportAny.chain_integrity, "LEGACY_OR_MANUAL");
-  const legacyWarning = customerText(reportAny.legacy_warning, chainIntegrity === "COMPLETE" ? "" : "该作业为历史/人工链路，缺少正式建议或处方记录。");
+  const chainIntegrityRaw = reportAny.chain_integrity;
+  const chainIntegrity = customerChainIntegrityLabel(chainIntegrityRaw, "历史/人工链路");
+  const legacyWarning = customerText(reportAny.legacy_warning, isCustomerChainComplete(chainIntegrityRaw) ? "" : "该作业为历史/人工链路，缺少正式建议或处方记录。");
   const canBackToField = Boolean(vm.operation.fieldId && vm.operation.fieldId !== "--");
 
   return (
@@ -249,7 +274,7 @@ export default function OperationReportPage(): React.ReactElement {
                   <span className="operationStatusBadge">{customerTimelineStatusLabel(toCustomerStatus(item.status))}</span>
                 </div>
                 <div className="operationOneLiner">{customerText(item.reason, "暂无链路说明")}</div>
-                <div className="operationOneLiner muted">来源：{customerText(item.source, "operation_report_v1")}</div>
+                <div className="operationOneLiner muted">来源：{customerSourceLabel(item.source, "作业报告摘要")}</div>
                 {isExpanded ? (
                   <div className="customerGrid2 customerSpacingTopXs">
                     {rows.length ? rows.map((row) => (
@@ -282,7 +307,7 @@ export default function OperationReportPage(): React.ReactElement {
               <div><strong>approval_request_id：</strong>{customerText(reportAny.approval?.approval_request_id ?? report.identifiers?.approval_id)}</div>
               <div><strong>act_task_id：</strong>{customerText(reportAny.execution?.act_task_id ?? report.identifiers?.act_task_id)}</div>
               <div><strong>receipt_id：</strong>{customerText(reportAny.execution?.receipt_id ?? report.identifiers?.receipt_id)}</div>
-              <div><strong>roi_status：</strong>{customerText(reportAny.roi?.status)}</div>
+              <div><strong>roi_status：</strong>{roiStatusLabel(reportAny.roi?.status)}</div>
               <div><strong>chain_integrity：</strong>{chainIntegrity}</div>
               <div><strong>missing_links：</strong>{missingLinksText(report)}</div>
             </div>

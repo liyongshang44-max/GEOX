@@ -14,6 +14,7 @@ export default function CockpitKpiCard({ item }: Props): React.ReactElement {
   const label = text(item.label);
   const value = `${text(item.value)}${text(item.unit) === "--" ? "" : text(item.unit)}`;
   const hint = text(item.customerHint ?? "") === "--" ? "" : text(item.customerHint ?? "");
+  const cardTitle = hint || label;
 
   const content = (
     <>
@@ -24,7 +25,7 @@ export default function CockpitKpiCard({ item }: Props): React.ReactElement {
   );
 
   if (item.href && !item.disabledReason) {
-    return <Link className="customerMetricCard" to={item.href} title={item.sourceNote} data-source-note={item.sourceNote}>{content}</Link>;
+    return <Link className="customerMetricCard" to={item.href} title={cardTitle}>{content}</Link>;
   }
-  return <article className="customerMetricCard" title={item.sourceNote} data-source-note={item.sourceNote}>{content}</article>;
+  return <article className="customerMetricCard" title={cardTitle}>{content}</article>;
 }
