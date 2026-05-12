@@ -4,6 +4,7 @@ import { fetchOperationReport, type OperationReportV1 } from "../api/customerRep
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ErrorState from "../components/common/ErrorState";
 import { customerTimelineStatusLabel } from "../lib/customerLabels";
+import { customerSafeName, customerSafeTitle } from "../lib/customerSafeText";
 import { customerChainIntegrityLabel, customerSemanticLabel, customerSourceLabel, isCustomerChainComplete } from "../lib/customerSemanticLabels";
 import { buildOperationReportVm, type CustomerReportSectionVm, type OperationReportPageVm } from "../viewmodels/operationReportVm";
 
@@ -189,6 +190,8 @@ export default function OperationReportPage(): React.ReactElement {
   const chainIntegrity = customerChainIntegrityLabel(chainIntegrityRaw, "历史/人工链路");
   const legacyWarning = customerText(reportAny.legacy_warning, isCustomerChainComplete(chainIntegrityRaw) ? "" : "该作业为历史/人工链路，缺少正式建议或处方记录。");
   const canBackToField = Boolean(vm.operation.fieldId && vm.operation.fieldId !== "--");
+  const safeOperationTitle = customerSafeTitle(vm.operation.title, "作业名称待补充");
+  const safeFieldName = customerSafeName(vm.operation.fieldName, "地块名称待补充");
 
   return (
     <div className="customerReportCanvas">
@@ -197,8 +200,8 @@ export default function OperationReportPage(): React.ReactElement {
           <div className="customerHeroTop">
             <div>
               <div className="customerReportLogo">GEOX / 作业闭环</div>
-              <h1 className="customerTitle">{vm.operation.title}</h1>
-              <p className="customerSubtitle">地块：{customerText(vm.operation.fieldName, "暂无地块信息")}</p>
+              <h1 className="customerTitle">{safeOperationTitle}</h1>
+              <p className="customerSubtitle">地块：{safeFieldName}</p>
               <p className="customerSubtitle">链路完整性：{chainIntegrity} · 缺失环节：{missingLinksText(report)}</p>
             </div>
             <div className="customerActions">
