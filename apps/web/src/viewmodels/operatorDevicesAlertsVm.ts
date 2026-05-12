@@ -44,6 +44,16 @@ export type OperatorAlertRowVm = {
   operationHref?: string | null;
 };
 
+export type OperatorDeviceScopeVm = {
+  globalDevicesText: string;
+  visibleDevicesText: string;
+  fieldDevicesText: string;
+  offlineDevicesText: string;
+  alertEventsText: string;
+  sourceText: string;
+  explanationText: string;
+};
+
 export type OperatorDevicesAlertsVm = {
   title: string;
   lead: string;
@@ -54,6 +64,7 @@ export type OperatorDevicesAlertsVm = {
   revokeVisible: boolean;
   totalDevices: number;
   totalAlerts: number;
+  deviceScope: OperatorDeviceScopeVm;
   onlineDevices: OperatorDeviceRowVm[];
   offlineDevices: OperatorDeviceRowVm[];
   delayedDevices: OperatorDeviceRowVm[];
@@ -64,10 +75,16 @@ export type OperatorDevicesAlertsVm = {
   emptyDescription: string;
 };
 
+const numberFmt = new Intl.NumberFormat("zh-CN");
+
 function text(value: unknown, fallback = ""): string {
   const raw = String(value ?? "").trim();
   if (!raw || raw === "--" || raw === "undefined" || raw === "null") return fallback;
   return replaceOperatorTerms(raw);
+}
+
+function countText(value: number | null | undefined, fallback = "未返回"): string {
+  return typeof value === "number" && Number.isFinite(value) ? numberFmt.format(Math.max(0, value)) : fallback;
 }
 
 function dateText(value: unknown): string {
@@ -193,9 +210,28 @@ function dataScopeText(response: OperatorDevicesAlertsResponse): string {
   return "暂无设备或告警数据";
 }
 
+function buildScopeVm(response: OperatorDevicesAlertsResponse): OperatorDeviceScopeVm {
+  const scope = response.deviceScope;
+  const global = countText(scope.global_devices_count);
+  const visible = countText(scope.visible_devices_count);
+  const field = countText(scope.field_devices_count);
+  const offline = countText(scope.offline_devices_count);
+  const alerts = countText(scope.alert_events_count);
+  return {
+    globalDevicesText: `全域设备：${global === "未返回" ? "后端未返回" : `${global} 台`}`,
+    visibleDevicesText: `可见授权设备：${visible} 台`,
+    fieldDevicesText: `当前地块设备：${field === "未返回" ? "需进入地块报告查看" : `${field} 台`}`,
+    offlineDevicesText: `离线设备：${offline} 台`,
+    alertEventsText: `告警事件：${alerts} 条`,
+    sourceText: `设备口径来源：${text(scope.source_text, "设备范围来源待确认")}`,
+    explanationText: `设备中心按统一 scope 展示：global_devices_count=${global}，visible_devices_count=${visible}，field_devices_count=${field}，offline_devices_count=${offline}，alert_events_count=${alerts}。`,
+  };
+}
+
 export function buildOperatorDevicesAlertsVm(response: OperatorDevicesAlertsResponse): OperatorDevicesAlertsVm {
   const devices = (response.devices ?? []).map(buildDeviceRow);
   const alerts = (response.alerts ?? []).map(buildAlertRow);
+  const deviceScope = buildScopeVm(response);
   return {
     title: "设备与告警中心",
     lead: "查看设备在线状态、心跳、遥测、凭证状态、告警事件、通知、确认与关闭状态。",
@@ -204,8 +240,9 @@ export function buildOperatorDevicesAlertsVm(response: OperatorDevicesAlertsResp
     dataScopeWarning: response.dataScope === "FALLBACK_LIMITED" || response.dataScope === "OFFICIAL_OPERATOR_API" ? text(response.message) : undefined,
     ackCloseReady: response.ackCloseReady,
     revokeVisible: response.revokeVisible,
-    totalDevices: devices.length,
-    totalAlerts: alerts.length,
+    totalDevices: response.deviceScope.visible_devices_count,
+    totalAlerts: response.deviceScope.alert_events_count,
+    deviceScope,
     onlineDevices: devices.filter((item) => item.statusText === "在线"),
     offlineDevices: devices.filter((item) => item.statusText === "离线"),
     delayedDevices: devices.filter((item) => item.statusText === "数据延迟"),
