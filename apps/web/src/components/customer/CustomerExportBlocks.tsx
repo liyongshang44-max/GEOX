@@ -17,7 +17,7 @@ type OperationSameSourceExportSummary = {
 };
 
 type FieldSameSourceExportSummary = {
-  boundaryStatus: string;
+  rangeStatus: string;
   recentOperationCoverageStatus: string;
   weatherSummary: string;
   valueSummary: string;
@@ -56,7 +56,8 @@ function safeExportText(value: unknown, fallback = "暂无记录"): string {
 
   return mapped
     .replace(/\bField Memory\b/g, "田块记忆")
-    .replace(/\bROI\b/g, "价值记录");
+    .replace(/\bROI\b/g, "价值记录")
+    .replace(/\bgeometry\b/gi, "地块范围");
 }
 
 function isObject(value: unknown): value is Record<string, any> {
@@ -188,9 +189,9 @@ function buildFieldSameSourceExportSummary(vm: FieldReportPageVm, report?: Field
   const reportAny = fieldReportObject(report);
   const field = reportAny.field ?? {};
   const boundary = field.geometry ?? reportAny.geometry ?? reportAny.field_geometry ?? reportAny.fieldGeometry;
-  const boundaryStatus = isGeoJsonLike(boundary)
-    ? `地块边界已接入（${featureCount(boundary)} 个空间对象）。`
-    : "暂无地块边界，导出版不绘制或伪造地块范围。";
+  const rangeStatus = isGeoJsonLike(boundary)
+    ? `地块范围已接入（${featureCount(boundary)} 个空间对象）。`
+    : "暂无地块范围，导出版不绘制或伪造地块范围。";
 
   const layerParts = [
     vm.mapLayers.plannedGeoJson ? "计划区域已接入" : "暂无计划区域",
@@ -204,12 +205,33 @@ function buildFieldSameSourceExportSummary(vm: FieldReportPageVm, report?: Field
     : "暂无近期作业覆盖图层，导出版不伪造覆盖、轨迹或验收点。";
 
   return {
-    boundaryStatus,
+    rangeStatus,
     recentOperationCoverageStatus,
     weatherSummary: weatherSummaryFromReport(reportAny),
     valueSummary: safeExportText(vm.roiSummary.displayText, "暂无价值摘要。"),
     fieldMemorySummary: safeExportText(vm.fieldMemory.displayText, "暂无田块记忆摘要。"),
   };
+}
+
+function fieldObservabilityRows(report?: FieldReportDetailV1 | null): Row[] {
+  const reportAny = fieldReportObject(report);
+  const profile = reportAny.field_observability_profile ?? {};
+  const confidence = Number(profile.confidence);
+  return [
+    ["观测状态", safeExportText(profile.status, "观测状态待确认")],
+    ["缺失输入", Array.isArray(profile.missing_inputs) && profile.missing_inputs.length ? profile.missing_inputs.map((item: unknown) => safeExportText(item, "待补充输入")).join("、") : "无"],
+    ["数据窗口", profile.data_window?.duration_hours ? `${profile.data_window.duration_hours} 小时` : "暂无数据窗口"],
+    ["置信度", Number.isFinite(confidence) ? `${Math.round(confidence * 100)}%` : "暂无置信度"],
+  ];
+}
+
+function fieldRecentOperationRows(vm: FieldReportPageVm): Row[] {
+  return vm.recentOperations.slice(0, 5).map((item) => [
+    safeExportText(item.title, "作业名称待补充"),
+    safeExportText(item.statusText, "状态待确认"),
+    safeExportText(item.acceptanceText, "验收待确认"),
+    safeExportText(item.updatedAtText, "暂无更新时间"),
+  ]);
 }
 
 export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): React.ReactElement {
@@ -269,10 +291,11 @@ export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): 
 
 export function FieldExportBlocks({ vm, report }: { vm: FieldReportPageVm; report?: FieldReportDetailV1 | null }): React.ReactElement {
   const sameSource = buildFieldSameSourceExportSummary(vm, report);
+  const recentOperationRows = fieldRecentOperationRows(vm);
   return (
     <div className="customerCompactReport">
       <section className="customerCard">
-        <h2 className="customerCardTitle">摘要</h2>
+        <h2 className="customerCardTitle">1. 地块摘要</h2>
         <div className="customerGrid2 customerSpacingTopSm">
           <div><strong>地块名称：</strong>{safeExportText(vm.header.title, "地块名称待补充")}</div>
           <div><strong>作业总数：</strong>{safeExportText(vm.overview.totalOperationsText, "0")}</div>
@@ -281,23 +304,100 @@ export function FieldExportBlocks({ vm, report }: { vm: FieldReportPageVm; repor
         </div>
       </section>
       <section className="customerCard">
-        <h2 className="customerCardTitle">地块报告同源摘要</h2>
+        <h2 className="customerCardTitle">2. 地块范围与观测状态</h2>
         <PrintTable
-          headers={["项目", "导出内容"]}
+          headers={["项目", "内容"]}
           rows={[
-            ["地块边界状态", sameSource.boundaryStatus],
+            ["地块范围状态", sameSource.rangeStatus],
             ["近期作业覆盖状态", sameSource.recentOperationCoverageStatus],
+            ...fieldObservabilityRows(report),
             ["天气摘要", sameSource.weatherSummary],
+          ]}
+          emptyText="暂无地块范围与观测状态。"
+        />
+      </section>
+      <section className="customerCard">
+        <h2 className="customerCardTitle">3. 当前作物状态</h2>
+        <PrintTable
+          headers={["项目", "内容"]}
+          rows={[
+            ["作物状态", safeExportText(vm.cropContext.statusText, "未确认")],
+            ["作物", safeExportText(vm.cropContext.cropText, "作物待确认")],
+            ["阶段", safeExportText(vm.cropContext.stageText, "阶段待确认")],
+            ["来源", safeExportText(vm.cropContext.sourceText, "来源待确认")],
+            ["说明", safeExportText(vm.cropContext.explanationText, "暂无作物上下文说明")],
+          ]}
+          emptyText="暂无当前作物状态。"
+        />
+      </section>
+      <section className="customerCard">
+        <h2 className="customerCardTitle">4. 风险与诊断</h2>
+        <p className="customerSpacingTopSm">{safeExportText(vm.explain.human, "暂无状态解释")} 当前风险：{safeExportText(vm.risk.levelLabel, "风险待确认")}。</p>
+        <PrintTable headers={["诊断依据", "说明"]} rows={vm.diagnosis.evidenceLines.map((item, index) => [`依据 ${index + 1}`, safeExportText(item, "暂无诊断依据")])} emptyText="暂无诊断依据。" />
+      </section>
+      <section className="customerCard">
+        <h2 className="customerCardTitle">5. 当前建议</h2>
+        {vm.nextAction ? (
+          <PrintTable
+            headers={["项目", "内容"]}
+            rows={[
+              ["建议", safeExportText(vm.nextAction.title, "暂无建议")],
+              ["目标", safeExportText(vm.nextAction.objectiveText, "暂无目标")],
+              ["优先级", safeExportText(vm.nextAction.priorityText, "优先级待确认")],
+              ["说明", safeExportText(vm.nextAction.explainText, "暂无说明")],
+            ]}
+            emptyText="暂无当前建议。"
+          />
+        ) : <p className="customerSpacingTopSm">{safeExportText(vm.cropContext.explanationText, "暂无新的处理建议")}</p>}
+      </section>
+      <section className="customerCard">
+        <h2 className="customerCardTitle">6. 最近作业</h2>
+        <PrintTable
+          headers={["作业", "状态", "验收", "更新时间"]}
+          rows={recentOperationRows}
+          emptyText="暂无最近作业。"
+        />
+      </section>
+      <section className="customerCard">
+        <h2 className="customerCardTitle">7. 证据与验收</h2>
+        <PrintTable
+          headers={["项目", "内容"]}
+          rows={[
+            ["待验收作业", safeExportText(vm.overview.pendingAcceptanceText, "0")],
+            ["最近作业验收", safeExportText(vm.recentOperations[0]?.acceptanceText, "暂无验收记录")],
+            ["最近作业证据", safeExportText(vm.recentOperations[0]?.evidenceText, "暂无证据摘要")],
+          ]}
+          emptyText="暂无证据与验收摘要。"
+        />
+      </section>
+      <section className="customerCard">
+        <h2 className="customerCardTitle">8. 价值与田块记忆</h2>
+        <PrintTable
+          headers={["项目", "内容"]}
+          rows={[
             ["价值摘要", sameSource.valueSummary],
             ["田块记忆摘要", sameSource.fieldMemorySummary],
           ]}
-          emptyText="暂无地块同源摘要。"
+          emptyText="暂无价值与田块记忆摘要。"
         />
       </section>
-      <section className="customerCard"><h2 className="customerCardTitle">风险/诊断</h2><p className="customerSpacingTopSm">{safeExportText(vm.explain.human, "暂无状态解释")}当前风险：{safeExportText(vm.risk.levelLabel, "风险待确认")}。</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">下一步建议</h2><p className="customerSpacingTopSm">{safeExportText(vm.nextAction?.objectiveText, "暂无新的处理建议")}</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">价值与记忆</h2><div className="customerGrid2 customerSpacingTopSm"><div>{safeExportText(vm.roiSummary.displayText, "暂无价值摘要")}</div><div>{safeExportText(vm.fieldMemory.displayText, "暂无田块记忆摘要")}</div></div></section>
-      <section className="customerCard"><h2 className="customerCardTitle">最终结论</h2><p className="customerSpacingTopSm">{safeExportText(vm.currentStatus.summary, "暂无最终结论")}</p></section>
+      <section className="customerCard">
+        <h2 className="customerCardTitle">9. 最终结论</h2>
+        <p className="customerSpacingTopSm">{safeExportText(vm.currentStatus.summary, "暂无最终结论")}</p>
+      </section>
+      <section className="customerCard">
+        <h2 className="customerCardTitle">地块数据完整性摘要</h2>
+        <PrintTable
+          headers={["项目", "内容"]}
+          rows={[
+            ["地块范围状态", sameSource.rangeStatus],
+            ["近期作业覆盖状态", sameSource.recentOperationCoverageStatus],
+            ["价值摘要", sameSource.valueSummary],
+            ["田块记忆摘要", sameSource.fieldMemorySummary],
+          ]}
+          emptyText="暂无地块数据完整性摘要。"
+        />
+      </section>
     </div>
   );
 }
