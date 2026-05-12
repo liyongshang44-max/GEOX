@@ -11,6 +11,7 @@ import "../../styles/operatorFieldMemory.css";
 import { buildOperatorFieldMemoryVm, type OperatorFieldMemoryGroupVm, type OperatorFieldMemoryRowVm, type OperatorFieldMemoryVm } from "../../viewmodels/operatorFieldMemoryVm";
 import { buildOperatorLearningClosureVm } from "../../viewmodels/operatorLearningClosureVm";
 import { buildOperatorRoiLedgerVm, type OperatorRoiLedgerVm } from "../../viewmodels/operatorRoiLedgerVm";
+import { OPERATOR_PAGE_META } from "./operatorPageMeta";
 
 function buildTraceInput(row: OperatorFieldMemoryRowVm) {
   const refs = row.skillRefsText === "无引用" ? [] : row.skillRefsText.split("、").map((item) => item.trim()).filter(Boolean);
@@ -108,6 +109,7 @@ function FieldMemoryGroup({ group }: { group: OperatorFieldMemoryGroupVm }): Rea
 }
 
 export default function OperatorFieldMemoryPage(): React.ReactElement {
+  const meta = OPERATOR_PAGE_META.fieldMemory;
   const [searchParams, setSearchParams] = useSearchParams();
   const fieldId = searchParams.get("field_id") ?? "";
   const operationId = searchParams.get("operation_id") ?? "";
@@ -199,7 +201,7 @@ export default function OperatorFieldMemoryPage(): React.ReactElement {
   });
 
   return (
-    <OperatorLayout title="田块记忆中心" lead="按 field / operation / memory_type 查看田块记忆详情，和客户层摘要保持分离。">
+    <OperatorLayout title={meta.title} lead={meta.lead}>
       <div className="operatorFieldMemoryPage">
         <form className="operatorFieldMemoryFilters" onSubmit={applyFilters}>
           <label>
