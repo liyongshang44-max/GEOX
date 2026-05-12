@@ -1,6 +1,7 @@
 import type { FieldReportDetailV1 } from "../api/customerReports";
 import { customerFieldMemoryLabel, customerRoiLabel, labelAcceptanceStatus, labelFinalStatus, labelOperationType, labelRiskLevel, sanitizeCustomerText } from "../lib/customerLabels";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
+import { customerCropLabel, customerDisplayName, customerSemanticLabel, customerSourceLabel, customerStageLabel } from "../lib/customerSemanticLabels";
 
 export type FieldMapMarkerVm = { device_id: string; lat: number; lon: number; ts_ms?: number | null };
 export type FieldMapTrajectorySegmentVm = { id: string; status: "READY" | "DISPATCHED" | "SUCCEEDED" | "FAILED"; color: string; coordinates: Array<[number, number]>; label?: string };
@@ -72,6 +73,17 @@ function isGeoJsonLike(value: unknown): boolean {
   return ["Polygon", "MultiPolygon", "LineString", "MultiLineString", "Point", "MultiPoint"].includes(type) && Array.isArray(value.coordinates);
 }
 
+function customerEvidenceLine(value: unknown): string {
+  const text = customerSemanticLabel(value, "");
+  if (!text) return "";
+  return text.replace(/crop_stage\s*:\s*[^；,，\s]+/gi, "作物阶段已记录")
+    .replace(/crop_code\s*:\s*[^；,，\s]+/gi, "作物信息已记录")
+    .replace(/source\s*:\s*remote_sensing/gi, "来源：遥感观测")
+    .replace(/source\s*:\s*machinery/gi, "来源：农机作业记录")
+    .replace(/mock_[A-Za-z0-9_-]+/g, "模拟样本")
+    .replace(/geometry_id\s*[:=]\s*[^；,，\s]+/gi, "地块边界已接入");
+}
+
 function buildFieldMapLayers(report: FieldReportDetailV1): FieldMapLayersVm {
   const reportAny = report as any;
   const mapLayers = reportAny.map_layers ?? reportAny.gis_layers ?? reportAny.spatial_layers ?? {};
@@ -99,12 +111,12 @@ function buildCurrentRecommendation(report: FieldReportDetailV1, fieldId: string
   const current = (report as any).current_recommendation;
   if (!current || typeof current !== "object") return null;
   const title = operationLabel(current.action_type, "当前建议");
-  const explainText = sanitizeCustomerText(current.summary || current.explain_human || "暂无建议说明");
+  const explainText = customerSemanticLabel(current.summary || current.explain_human || "暂无建议说明");
   return {
     title,
     explainText,
-    objectiveText: sanitizeCustomerText(asArray(current.reason_codes).join("、") || "暂无目标"),
-    priorityText: sanitizeCustomerText(current.priority || "普通"),
+    objectiveText: customerSemanticLabel(asArray(current.reason_codes).join("、") || "暂无目标"),
+    priorityText: customerSemanticLabel(current.priority || "普通"),
     href: `/customer/fields/${encodeURIComponent(fieldId)}`,
   };
 }
@@ -122,7 +134,7 @@ function buildRecentOperations(report: FieldReportDetailV1, fieldId: string) {
     const summary = txt(item.summary, "");
     return {
       operationId,
-      title: sanitizeCustomerText(summary || item.customer_title || item.title || operationLabel(item.operation_type, "作业")),
+      title: customerDisplayName(summary || item.customer_title || item.title, operationLabel(item.operation_type, "作业")),
       statusText: labelFinalStatus(item.final_status),
       acceptanceText: labelAcceptanceStatus(item.acceptance_status ?? (summary.includes("已验收") ? "PASS" : null)),
       evidenceText: String(item.final_status ?? "").toUpperCase() === "EVIDENCE_MISSING" ? "证据缺失" : "证据已回传",
@@ -135,16 +147,16 @@ function buildRecentOperations(report: FieldReportDetailV1, fieldId: string) {
 export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPageVm {
   const reportAny = report as any;
   const fieldId = report.field.field_id;
-  const fieldName = txt(report.field.field_name, "地块名称待补充");
+  const fieldName = customerDisplayName(report.field.field_name, "未命名地块");
   const cropContext = reportAny.crop_context ?? {};
   const riskObj = reportAny.risk ?? {};
   const diagnosisBasis = reportAny.diagnosis_basis ?? {};
   const mapLayers = buildFieldMapLayers(report);
   const riskLevel = txt(riskObj.level ?? report.overview.current_risk_level, "UNKNOWN");
   const riskText = labelRiskLevel(riskLevel);
-  const reasons = (asArray(riskObj.reasons).length ? asArray(riskObj.reasons) : asArray(report.explain.top_reasons)).map((item) => sanitizeCustomerText(item)).filter(Boolean);
+  const reasons = (asArray(riskObj.reasons).length ? asArray(riskObj.reasons) : asArray(report.explain.top_reasons)).map((item) => customerEvidenceLine(item)).filter(Boolean);
   const basisStatus = txt(diagnosisBasis.status, "INSUFFICIENT");
-  const basisRefs = asArray(diagnosisBasis.evidence_refs).map((item) => sanitizeCustomerText(item)).filter(Boolean);
+  const basisRefs = asArray(diagnosisBasis.evidence_refs).map((item) => customerEvidenceLine(item)).filter(Boolean);
   const diagnosisLines = basisRefs.length ? basisRefs : (reasons.length ? reasons : [basisStatus === "NOT_APPLICABLE" ? "当前低风险，暂无新的诊断依据" : "暂无主要依据"]);
   const currentRecommendation = buildCurrentRecommendation(report, fieldId);
   const recentOperations = buildRecentOperations(report, fieldId);
@@ -167,7 +179,7 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
   const riskTone: "neutral" | "warning" | "danger" = riskText.includes("高") ? "danger" : riskText.includes("中") ? "warning" : "neutral";
   const explainHuman = basisStatus === "NOT_APPLICABLE" && riskLevel === "LOW"
     ? "该地块当前风险较低，暂无新的待处理建议。"
-    : sanitizeCustomerText(report.explain.human || "暂无状态解释");
+    : customerSemanticLabel(report.explain.human || "暂无状态解释");
 
   const roiItems = Number(report.value_summary.total_roi_items ?? 0);
   const roiEmptyState = getCustomerEmptyState("NO_ROI");
@@ -179,7 +191,7 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
   ];
   const fieldMemorySummary = reportAny.field_memory_summary;
   const fieldMemoryAvailable = Boolean(fieldMemorySummary && (Array.isArray(fieldMemorySummary.entries) || Array.isArray(fieldMemorySummary.items) || typeof fieldMemorySummary.summary_text === "string" || fieldMemorySummary.available === true));
-  const fieldMemoryLines = fieldMemoryAvailable ? [sanitizeCustomerText(fieldMemorySummary?.summary_text ?? "田块记忆已记录")].filter(Boolean) : [];
+  const fieldMemoryLines = fieldMemoryAvailable ? [customerSemanticLabel(fieldMemorySummary?.summary_text ?? "田块记忆已记录")].filter(Boolean) : [];
   const totalDevices = Number(report.device_summary.total_devices ?? 0);
   const onlineDevices = Number(report.device_summary.online_devices ?? 0);
   const offlineDevices = Number(report.device_summary.offline_devices ?? 0);
@@ -189,14 +201,17 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
     offlineText: totalDevices > 0 ? formatCount(offlineDevices) : "暂无设备状态摘要",
     lastUpdateText: formatDateTime(report.device_summary.last_telemetry_at),
   };
+  const cropText = cropContext.crop_code ? `作物：${customerCropLabel(cropContext.crop_code)}` : "暂无作物信息";
+  const stageText = cropContext.crop_stage ? `阶段：${customerStageLabel(cropContext.crop_stage)}` : "暂无阶段信息";
+  const cropDetail = [customerCropLabel(cropContext.crop_code, "作物待确认"), customerStageLabel(cropContext.crop_stage, "阶段待确认"), customerSourceLabel(cropContext.source, "来源待确认")].filter(Boolean).join(" / ");
 
   return {
     generatedAtText: formatDateTime(report.generated_at),
     field: {
       fieldId,
       fieldName,
-      cropText: cropContext.crop_code ? `作物：${cropContext.crop_code}` : "暂无作物信息",
-      stageText: cropContext.crop_stage ? `阶段：${cropContext.crop_stage}` : "暂无阶段信息",
+      cropText,
+      stageText,
       updatedAtText: formatDateTime(report.device_summary.last_telemetry_at),
     },
     risk: { levelLabel: riskText, tone: riskTone, reasons: diagnosisLines },
@@ -226,8 +241,8 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
       { title: "诊断依据", value: basisStatus === "AVAILABLE" ? "可用" : basisStatus === "NOT_APPLICABLE" ? "不适用" : "不足", detail: diagnosisLines.join("；") },
       { title: "当前建议", value: currentRecommendation ? currentRecommendation.title : "暂无待处理建议", detail: currentRecommendation?.explainText ?? "低风险或无未闭环建议时不显示作物特定建议" },
       { title: "最近作业", value: recentOperations[0]?.title ?? "暂无最近作业", detail: recentOperations[0]?.acceptanceText ?? "暂无验收记录" },
-      { title: "作物上下文", value: cropContext.status === "AVAILABLE" ? "可用" : "未知", detail: [cropContext.crop_code, cropContext.crop_stage].filter(Boolean).join(" / ") || "作物未知时不显示作物特定建议" },
-      { title: "空间范围", value: reportAny.field?.geometry ? "已接入" : "暂无范围", detail: reportAny.field?.geometry_id ?? "暂无 geometry_id" },
+      { title: "作物上下文", value: cropContext.status === "AVAILABLE" ? "可用" : "待确认", detail: cropDetail || "作物未知时不显示作物特定建议" },
+      { title: "空间范围", value: reportAny.field?.geometry ? "地块边界已接入" : "暂无范围", detail: reportAny.field?.geometry ? "地块边界可用于空间作业与导出报告" : "暂无地块边界" },
     ],
     currentStatus: { summary: explainHuman, reasons: diagnosisLines },
     recentOperationsTop5: recentOperations.map((item) => ({ id: item.operationId || "待生成", title: item.title, statusText: item.statusText, acceptanceText: item.acceptanceText, generatedAtText: item.updatedAtText, href: item.href })),
