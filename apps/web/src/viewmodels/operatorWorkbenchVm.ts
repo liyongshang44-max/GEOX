@@ -22,6 +22,15 @@ export type OperatorWorkbenchTodoVm = {
   sourceText: string;
 };
 
+export type OperatorWorkbenchSummaryVm = {
+  total: number;
+  operationTodos: number;
+  deviceTodos: number;
+  evidenceTodos: number;
+  alertTodos: number;
+  explanationText: string;
+};
+
 export type OperatorWorkbenchVm = {
   title: string;
   lead: string;
@@ -29,10 +38,19 @@ export type OperatorWorkbenchVm = {
   dataScopeText: string;
   dataScopeWarning?: string;
   totalCount: number;
+  summary: OperatorWorkbenchSummaryVm;
   queues: OperatorWorkbenchQueueVm[];
   emptyTitle: string;
   emptyDescription: string;
 };
+
+const OPERATION_QUEUE_KEYS = new Set<OperatorWorkbenchQueueKey>([
+  "APPROVAL_PENDING",
+  "DISPATCH_PENDING",
+  "EXECUTION_EXCEPTION",
+  "ACCEPTANCE_PENDING",
+  "ACCEPTANCE_FAILED",
+]);
 
 const QUEUE_META: Record<OperatorWorkbenchQueueKey, { title: string; description: string; actionHref: string }> = {
   APPROVAL_PENDING: { title: "待审批", description: "建议、处方或关键动作等待授权。", actionHref: "/operator/approvals" },
@@ -41,8 +59,8 @@ const QUEUE_META: Record<OperatorWorkbenchQueueKey, { title: string; description
   ACCEPTANCE_PENDING: { title: "待验收", description: "已执行完成但尚未形成验收结论。", actionHref: "/operator/acceptance" },
   EVIDENCE_INSUFFICIENT: { title: "证据不足", description: "缺少验收所需证据或证据摘要。", actionHref: "/operator/evidence" },
   ACCEPTANCE_FAILED: { title: "验收未通过", description: "验收未通过，需要复核或补救。", actionHref: "/operator/acceptance" },
-  DEVICE_OFFLINE: { title: "设备离线", description: "设备状态异常或监测链路中断。", actionHref: "/operator/workbench" },
-  ALERT_OVERDUE: { title: "告警超时", description: "告警长时间未处理或关闭。", actionHref: "/operator/workbench" },
+  DEVICE_OFFLINE: { title: "设备离线", description: "这些设备需要检查最近心跳、绑定地块和数据采集状态。", actionHref: "/operator/devices-alerts" },
+  ALERT_OVERDUE: { title: "告警超时", description: "告警长时间未处理或关闭。", actionHref: "/operator/devices-alerts" },
 };
 
 const QUEUE_ORDER: OperatorWorkbenchQueueKey[] = [
@@ -111,11 +129,32 @@ function scopeText(response: OperatorWorkbenchResponse): string {
   return "暂无运营待办";
 }
 
+function countByQueue(items: OperatorWorkbenchItem[], predicate: (queue: OperatorWorkbenchQueueKey) => boolean): number {
+  return items.filter((item) => predicate(item.queue)).length;
+}
+
+function buildSummary(items: OperatorWorkbenchItem[]): OperatorWorkbenchSummaryVm {
+  const operationTodos = countByQueue(items, (queue) => OPERATION_QUEUE_KEYS.has(queue));
+  const deviceTodos = countByQueue(items, (queue) => queue === "DEVICE_OFFLINE");
+  const evidenceTodos = countByQueue(items, (queue) => queue === "EVIDENCE_INSUFFICIENT");
+  const alertTodos = countByQueue(items, (queue) => queue === "ALERT_OVERDUE");
+  const total = items.length;
+  return {
+    total,
+    operationTodos,
+    deviceTodos,
+    evidenceTodos,
+    alertTodos,
+    explanationText: `待处理总数 ${total} = 作业待办 ${operationTodos} + 设备待办 ${deviceTodos} + 证据待办 ${evidenceTodos} + 告警待办 ${alertTodos}。`,
+  };
+}
+
 export function buildOperatorWorkbenchVm(response: OperatorWorkbenchResponse): OperatorWorkbenchVm {
-  const todos = (response.items ?? []).map(buildTodo);
+  const sourceItems = response.items ?? [];
+  const todos = sourceItems.map(buildTodo);
   const queues = QUEUE_ORDER.map((key) => {
     const meta = QUEUE_META[key];
-    const items = todos.filter((item, index) => response.items[index]?.queue === key);
+    const items = todos.filter((item, index) => sourceItems[index]?.queue === key);
     return {
       key,
       title: meta.title,
@@ -125,6 +164,7 @@ export function buildOperatorWorkbenchVm(response: OperatorWorkbenchResponse): O
       items,
     };
   });
+  const summary = buildSummary(sourceItems);
 
   return {
     title: "运营总队列",
@@ -132,7 +172,8 @@ export function buildOperatorWorkbenchVm(response: OperatorWorkbenchResponse): O
     generatedAtText: dateText(response.generated_at),
     dataScopeText: scopeText(response),
     dataScopeWarning: response.dataScope === "FALLBACK_LIMITED" ? text(response.message, "当前展示有限 fallback 数据，非完整运营总队列。") : undefined,
-    totalCount: todos.length,
+    totalCount: summary.total,
+    summary,
     queues,
     emptyTitle: "暂无可处理运营事项",
     emptyDescription: "当前没有待审批、待派发、执行异常、待验收、证据不足、验收未通过、设备离线或告警超时事项。",
