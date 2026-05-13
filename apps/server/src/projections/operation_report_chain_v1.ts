@@ -1,14 +1,13 @@
 import type { Pool } from "pg";
+import { validateOperationChainV1 } from "./operation_chain_validator_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; record_json: any };
 
-type ChainStatus = "DONE" | "AVAILABLE" | "PENDING" | "MISSING" | "NOT_APPLICABLE";
-
 export type OperationReportChainItemV1 = {
   key: string;
   label: string;
-  status: ChainStatus | string;
+  status: string;
   reason: string;
   source: string;
 };
@@ -19,21 +18,35 @@ function parseRecordJson(value: unknown): any {
   try { return JSON.parse(value); } catch { return null; }
 }
 
-function toText(value: unknown): string | null {
-  if (typeof value === "string") {
-    const text = value.trim();
-    return text || null;
-  }
+function text(value: unknown): string | null {
+  if (typeof value === "string") return value.trim() || null;
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   return null;
 }
 
-function toArray(value: unknown): unknown[] {
-  return Array.isArray(value) ? value : [];
+function num(value: unknown): number | null {
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : null;
 }
 
-function toObject(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+function firstNum(...values: unknown[]): number | null {
+  for (const value of values) {
+    const n = num(value);
+    if (n != null) return n;
+  }
+  return null;
+}
+
+function firstText(...values: unknown[]): string | null {
+  for (const value of values) {
+    const v = text(value);
+    if (v) return v;
+  }
+  return null;
+}
+
+function arr(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
 }
 
 function latestByType(facts: FactRow[], type: string): FactRow | null {
@@ -50,7 +63,7 @@ function payloadOf(fact: FactRow | null): any {
 }
 
 function idList(report: any): string[] {
-  const ids = [
+  return Array.from(new Set([
     report?.identifiers?.operation_id,
     report?.identifiers?.operation_plan_id,
     report?.identifiers?.recommendation_id,
@@ -58,13 +71,12 @@ function idList(report: any): string[] {
     report?.identifiers?.approval_id,
     report?.identifiers?.act_task_id,
     report?.identifiers?.receipt_id,
-  ].map((value) => String(value ?? "").trim()).filter(Boolean);
-  return Array.from(new Set(ids));
+  ].map((value) => String(value ?? "").trim()).filter(Boolean)));
 }
 
 async function queryChainFacts(pool: Pool, tenant: TenantTriple, report: any): Promise<FactRow[]> {
   const ids = idList(report);
-  if (ids.length === 0) return [];
+  if (!ids.length) return [];
   const q = await pool.query(
     `SELECT fact_id, occurred_at, record_json::jsonb AS record_json
        FROM facts
@@ -92,7 +104,7 @@ async function queryChainFacts(pool: Pool, tenant: TenantTriple, report: any): P
   }));
 }
 
-function normalizeApprovalStatus(raw: unknown, fallback: unknown): string | null {
+function approvalStatus(raw: unknown, fallback: unknown): string | null {
   const value = String(raw ?? fallback ?? "").trim().toUpperCase();
   if (!value) return null;
   if (["APPROVE", "APPROVED", "PASS"].includes(value)) return "APPROVED";
@@ -103,12 +115,8 @@ function normalizeApprovalStatus(raw: unknown, fallback: unknown): string | null
 function evidenceIds(facts: FactRow[]): string[] {
   return facts
     .filter((fact) => String(fact.record_json?.type ?? "") === "evidence_artifact_v1")
-    .map((fact) => toText(fact.record_json?.payload?.evidence_id ?? fact.record_json?.payload?.artifact_id ?? fact.fact_id))
+    .map((fact) => text(fact.record_json?.payload?.evidence_id ?? fact.record_json?.payload?.artifact_id ?? fact.fact_id))
     .filter((value): value is string => Boolean(value));
-}
-
-function buildStatusItem(key: string, label: string, present: boolean, reason: string, source: string, status: ChainStatus = "DONE"): OperationReportChainItemV1 {
-  return { key, label, status: present ? status : "MISSING", reason, source };
 }
 
 export async function enrichOperationReportChainV1(params: { pool: Pool; report: any }): Promise<any> {
@@ -136,66 +144,77 @@ export async function enrichOperationReportChainV1(params: { pool: Pool; report:
   const approvalReq = payloadOf(approvalRequestFact);
   const approvalDecision = payloadOf(approvalDecisionFact);
   const task = payloadOf(taskFact);
-  const receipt = payloadOf(receiptFact);
+  const receiptRaw = payloadOf(receiptFact);
   const acceptancePayload = payloadOf(acceptanceFact);
   const prescriptionPayload = payloadOf(prescriptionFact);
 
-  const recommendationId = toText(report?.identifiers?.recommendation_id ?? rec.recommendation_id);
-  const prescriptionId = toText(report?.identifiers?.prescription_id ?? prescriptionPayload.prescription_id ?? plan.prescription_id ?? approvalReq.prescription_id ?? plan.operation_plan_id);
-  const approvalRequestId = toText(report?.identifiers?.approval_id ?? approvalReq.request_id ?? plan.approval_request_id);
-  const actTaskId = toText(report?.identifiers?.act_task_id ?? task.act_task_id ?? plan.act_task_id);
-  const receiptId = toText(report?.identifiers?.receipt_id ?? receipt.receipt_id ?? receiptFact?.fact_id);
-  const acceptanceId = toText((report?.acceptance as any)?.acceptance_id ?? acceptancePayload.acceptance_id ?? acceptanceFact?.fact_id);
+  const recommendationId = text(report?.identifiers?.recommendation_id ?? rec.recommendation_id);
+  const prescriptionId = text(report?.identifiers?.prescription_id ?? prescriptionPayload.prescription_id ?? plan.prescription_id ?? approvalReq.prescription_id ?? plan.operation_plan_id);
+  const approvalRequestId = text(report?.identifiers?.approval_id ?? approvalReq.request_id ?? plan.approval_request_id);
+  const actTaskId = text(report?.identifiers?.act_task_id ?? task.act_task_id ?? plan.act_task_id);
+  const receiptId = text(report?.identifiers?.receipt_id ?? receiptRaw.receipt_id ?? receiptFact?.fact_id);
+  const acceptanceId = text(report?.acceptance?.acceptance_id ?? acceptancePayload.acceptance_id ?? acceptanceFact?.fact_id);
+  const operationType = text(prescriptionPayload.operation_type ?? prescriptionPayload.action_type ?? plan.operation_type ?? plan.action_type ?? rec.suggested_action?.action_type ?? report.operation_title);
 
-  const operationType = toText(prescriptionPayload.operation_type ?? prescriptionPayload.action_type ?? plan.operation_type ?? plan.action_type ?? rec.suggested_action?.action_type ?? report.operation_title);
+  const soilMoisture = firstNum(rec.skill_trace?.inputs?.soil_moisture, rec.diagnosis?.soil_moisture, rec.soil_moisture);
+  const threshold = firstNum(rec.skill_trace?.outputs?.threshold, rec.skill_trace?.outputs?.soil_moisture_threshold, rec.skill_trace?.params?.threshold, rec.diagnosis?.threshold, rec.diagnosis?.soil_moisture_threshold, rec.soil_moisture_threshold);
+  const deficitDetected = rec.skill_trace?.outputs?.deficit_detected ?? rec.diagnosis?.deficit_detected ?? rec.diagnosis?.water_deficit;
+
   const recommendation = recommendationId ? {
     recommendation_id: recommendationId,
     diagnosis_basis: rec.diagnosis_basis ?? rec.data_summary ?? rec.summary ?? report?.why?.objective_text ?? null,
     agronomy_explain: rec.agronomy_explain ?? rec.explain?.human ?? rec.explain_human ?? rec.summary ?? report?.why?.explain_human ?? null,
-    reason_codes: toArray(rec.reason_codes ?? report?.risk?.reasons).map((value) => String(value)).filter(Boolean),
-    evidence_refs: toArray(rec.evidence_refs ?? rec.evidence_ids),
+    reason_codes: arr(rec.reason_codes ?? report?.risk?.reasons).map(String).filter(Boolean),
+    evidence_refs: arr(rec.evidence_refs ?? rec.evidence_ids),
     confidence: rec.confidence ?? rec.confidence_level ?? null,
-    status: toText(rec.status ?? "AVAILABLE"),
+    status: text(rec.status ?? "AVAILABLE"),
+    soil_moisture: soilMoisture,
+    soil_moisture_threshold: threshold,
+    threshold,
+    deficit_detected: deficitDetected,
+    water_deficit: deficitDetected,
+    observation_window: firstText(rec.observation_window, rec.window, rec.skill_trace?.inputs?.observation_window),
+    rainfall_24h_mm: firstNum(rec.rainfall_24h_mm, rec.weather?.rainfall_24h_mm),
+    forecast_rainfall_24h_mm: firstNum(rec.forecast_rainfall_24h_mm, rec.weather?.forecast_rainfall_24h_mm),
+    source_summary: firstText(rec.source_summary, rec.data_summary, rec.summary),
+    missing_inputs: rec.missing_inputs ?? [],
+    skill_trace: rec.skill_trace ?? null,
   } : null;
 
   const prescription = prescriptionId ? {
     prescription_id: prescriptionId,
     recommendation_id: recommendationId,
     operation_type: operationType,
-    target_area: prescriptionPayload.target_area ?? prescriptionPayload.spatial_scope ?? plan.target_area ?? plan.spatial_scope ?? plan.target ?? null,
     amount: prescriptionPayload.amount ?? prescriptionPayload.planned_amount ?? plan.amount ?? plan.planned_amount ?? rec.suggested_action?.parameters?.amount ?? null,
     unit: prescriptionPayload.unit ?? plan.unit ?? rec.suggested_action?.parameters?.unit ?? null,
-    duration: prescriptionPayload.duration ?? plan.duration ?? rec.suggested_action?.parameters?.duration ?? null,
     time_window: prescriptionPayload.time_window ?? prescriptionPayload.timing_window ?? plan.time_window ?? plan.timing_window ?? null,
     acceptance_conditions: prescriptionPayload.acceptance_conditions ?? plan.acceptance_conditions ?? rec.acceptance_conditions ?? null,
     device_requirements: prescriptionPayload.device_requirements ?? plan.device_requirements ?? rec.suggested_action?.device_requirements ?? null,
-    status: toText(prescriptionPayload.status ?? plan.status ?? "AVAILABLE"),
+    status: text(prescriptionPayload.status ?? plan.status ?? "AVAILABLE"),
   } : null;
 
   const approval = approvalRequestId ? {
     approval_request_id: approvalRequestId,
-    status: normalizeApprovalStatus(approvalDecision.decision, report?.approval?.status) ?? "PENDING",
-    approver: toObject({
-      actor_id: toText(approvalDecision.actor_id ?? approvalDecision.decider ?? report?.approval?.actor_id),
-      name: toText(approvalDecision.actor_name ?? approvalDecision.actor_label ?? report?.approval?.actor_name),
-    }),
-    approved_at: toText(approvalDecision.approved_at ?? approvalDecision.decided_at ?? (normalizeApprovalStatus(approvalDecision.decision, report?.approval?.status) === "APPROVED" ? approvalDecisionFact?.occurred_at : report?.approval?.approved_at)),
-    decision_note: toText(approvalDecision.note ?? approvalDecision.reason ?? report?.approval?.note),
-    approval_scope: approvalReq.scope ?? approvalReq.approval_scope ?? null,
+    status: approvalStatus(approvalDecision.decision, report?.approval?.status) ?? "PENDING",
+    actor_id: text(approvalDecision.actor_id ?? approvalDecision.decider ?? report?.approval?.actor_id),
+    actor_name: text(approvalDecision.actor_name ?? approvalDecision.actor_label ?? report?.approval?.actor_name),
+    approved_at: text(approvalDecision.approved_at ?? approvalDecision.decided_at ?? report?.approval?.approved_at),
+    note: text(approvalDecision.note ?? approvalDecision.reason ?? report?.approval?.note),
   } : null;
 
   const asExecuted = report.as_executed ?? null;
-  const executionMode = String(asExecuted?.execution_mode ?? task.execution_mode ?? task.executor?.kind ?? "").toUpperCase();
-  const deviceId = toText(asExecuted?.device_id ?? task.device_id ?? task.executor?.device_id ?? receipt.device_id);
+  const deviceId = text(asExecuted?.device_id ?? task.device_id ?? task.executor?.device_id ?? receiptRaw.device_id);
   const execution = actTaskId ? {
     act_task_id: actTaskId,
-    dispatch_status: toText(task.status ?? report?.execution?.final_status ?? "PENDING"),
-    executor: { kind: deviceId || executionMode === "DEVICE" ? "device" : "human", id: deviceId ?? toText(asExecuted?.operator_id ?? task.executor_id) },
+    dispatch_status: text(task.status ?? report?.execution?.final_status ?? "PENDING"),
+    executor: { kind: deviceId ? "device" : "human", id: deviceId ?? text(asExecuted?.operator_id ?? task.executor_id) },
     device_id: deviceId,
-    execution_mode: deviceId || executionMode === "DEVICE" ? "DEVICE" : "HUMAN",
+    execution_mode: deviceId ? "DEVICE" : "HUMAN",
     receipt_id: receiptId,
-    receipt_status: toText(receipt.status ?? (receiptId ? "RECEIVED" : null)),
+    receipt_status: text(receiptRaw.status ?? (receiptId ? "RECEIVED" : null)),
     as_executed: asExecuted,
+    execution_started_at: text(receiptRaw.execution_started_at ?? asExecuted?.execution_started_at ?? asExecuted?.started_at),
+    execution_finished_at: text(receiptRaw.execution_finished_at ?? asExecuted?.execution_finished_at ?? asExecuted?.finished_at),
   } : null;
 
   const evidenceIdList = evidenceIds(facts);
@@ -203,91 +222,68 @@ export async function enrichOperationReportChainV1(params: { pool: Pool; report:
   const evidence = {
     evidence_status: evidenceComplete ? "COMPLETE" : "INCOMPLETE",
     evidence_ids: evidenceIdList,
-    export_job_id: toText((report as any).evidence_pack_summary?.export_job_id ?? (report as any).evidence_pack_summary?.job_id),
-    sha256: toText((report as any).evidence_pack_summary?.sha256),
     trusted: evidenceComplete && report?.acceptance?.missing_evidence !== true,
   };
 
-  const verdict = toText(acceptancePayload.verdict ?? report?.acceptance?.verdict ?? report?.acceptance?.status);
-  const acceptance = acceptanceId || verdict ? {
+  const acceptance = acceptanceId || acceptancePayload.verdict || report?.acceptance?.status ? {
     acceptance_id: acceptanceId,
-    verdict,
+    verdict: text(acceptancePayload.verdict ?? report?.acceptance?.verdict ?? report?.acceptance?.status),
     evidence_sufficient: report?.acceptance?.missing_evidence !== true,
-    accepted_at: toText(acceptancePayload.accepted_at ?? acceptancePayload.generated_at ?? report?.acceptance?.generated_at ?? acceptanceFact?.occurred_at),
-    failure_reason: toText(acceptancePayload.failure_reason ?? report?.execution?.invalid_reason),
+    accepted_at: text(acceptancePayload.accepted_at ?? acceptancePayload.generated_at ?? report?.acceptance?.generated_at ?? acceptanceFact?.occurred_at),
+    failure_reason: text(acceptancePayload.failure_reason ?? report?.execution?.invalid_reason),
   } : null;
 
   const diagnosis = {
-    field_id: toText(report?.identifiers?.field_id),
+    field_id: text(report?.identifiers?.field_id),
     diagnosis_basis: recommendation?.diagnosis_basis ?? report?.why?.objective_text ?? null,
     risk_level: report?.risk?.level ?? null,
     reason_codes: recommendation?.reason_codes ?? [],
-    before_metrics: plan.before_metrics ?? rec.before_metrics ?? null,
+    soil_moisture: soilMoisture,
+    soil_moisture_threshold: threshold,
+    threshold,
+    deficit_detected: deficitDetected,
+    water_deficit: deficitDetected,
+    observation_window: recommendation?.observation_window ?? null,
+    rainfall_24h_mm: recommendation?.rainfall_24h_mm ?? null,
+    forecast_rainfall_24h_mm: recommendation?.forecast_rainfall_24h_mm ?? null,
+    source_summary: recommendation?.source_summary ?? null,
+    confidence: rec.confidence ?? rec.confidence_level ?? null,
+    missing_inputs: rec.missing_inputs ?? [],
   };
 
-  const operationPlan = toText(report?.identifiers?.operation_plan_id ?? plan.operation_plan_id) ? {
-    operation_plan_id: toText(report?.identifiers?.operation_plan_id ?? plan.operation_plan_id),
+  const operationPlan = text(report?.identifiers?.operation_plan_id ?? plan.operation_plan_id) ? {
+    operation_plan_id: text(report?.identifiers?.operation_plan_id ?? plan.operation_plan_id),
     recommendation_id: recommendationId,
     prescription_id: prescriptionId,
     approval_request_id: approvalRequestId,
-    field_id: toText(report?.identifiers?.field_id ?? plan.field_id),
-    status: toText(plan.status ?? "AVAILABLE"),
+    field_id: text(report?.identifiers?.field_id ?? plan.field_id),
+    status: text(plan.status ?? "AVAILABLE"),
+    source: text(plan.source),
+    meta: plan.meta ?? null,
   } : null;
 
-  const missingLinks: string[] = [];
-  if (!recommendation) missingLinks.push("recommendation");
-  if (!prescription) missingLinks.push("prescription");
-  if (!approval) missingLinks.push("approval");
-  if (!operationPlan) missingLinks.push("operation_plan");
-  if (!execution?.act_task_id) missingLinks.push("execution");
-  if (!receiptId) missingLinks.push("receipt");
-  if (!evidenceComplete) missingLinks.push("evidence");
-  if (!acceptance) missingLinks.push("acceptance");
-
-  const chainFlags: string[] = [];
-  if (execution?.act_task_id && !prescription) chainFlags.push("manual_operation", "legacy_operation");
-  if (prescription && !recommendation) chainFlags.push("manual_override");
-  const chainIntegrity = missingLinks.length === 0 ? "COMPLETE" : "LEGACY_OR_MANUAL";
-  const legacyWarning = chainIntegrity === "LEGACY_OR_MANUAL" ? "该作业为历史/人工链路，缺少正式建议或处方记录。" : null;
-
-  const statusChain: OperationReportChainItemV1[] = [
-    buildStatusItem("diagnosis", "诊断", true, "诊断上下文已汇总", "operation_report_chain_v1"),
-    buildStatusItem("recommendation", "建议", Boolean(recommendation), recommendation ? "正式建议已关联" : "缺少正式建议记录", recommendation ? "decision_recommendation_v1" : "operation_report_chain_v1"),
-    buildStatusItem("prescription", "处方", Boolean(prescription), prescription ? "正式处方已关联" : "缺少正式处方记录", prescriptionFact ? String(prescriptionFact.record_json?.type) : (prescription ? "operation_plan_v1" : "operation_report_chain_v1")),
-    buildStatusItem("approval", "审批", Boolean(approval), approval ? "审批记录已关联" : "缺少审批记录", approval ? "approval_request_v1" : "operation_report_chain_v1"),
-    buildStatusItem("operation_plan", "作业计划", Boolean(operationPlan), operationPlan ? "作业计划已关联" : "缺少作业计划", operationPlan ? "operation_plan_v1" : "operation_report_chain_v1"),
-    buildStatusItem("execution", "执行", Boolean(execution?.act_task_id), execution?.act_task_id ? "执行任务已派发" : "缺少执行任务", execution?.act_task_id ? "ao_act_task_v0" : "operation_report_chain_v1"),
-    buildStatusItem("receipt", "回执", Boolean(receiptId), receiptId ? "执行回执已记录" : "缺少执行回执", receiptId ? String(receiptFact?.record_json?.type ?? "receipt") : "operation_report_chain_v1"),
-    buildStatusItem("evidence", "证据", evidenceComplete, evidenceComplete ? "证据链完整" : "证据不足", evidenceSummaryFact ? String(evidenceSummaryFact.record_json?.type) : "operation_report_chain_v1", evidenceComplete ? "DONE" : "MISSING"),
-    buildStatusItem("acceptance", "验收", Boolean(acceptance), acceptance ? "验收结论已形成" : "缺少验收结论", acceptance ? "acceptance_result_v1" : "operation_report_chain_v1"),
-    buildStatusItem("roi", "价值", Boolean(report?.roi_ledger?.summary?.total_items || toArray(report?.roi_ledger?.items).length), "价值记录状态", "roi_ledger_v1", "AVAILABLE"),
-    buildStatusItem("field_memory", "田块记忆", Boolean(toArray(report?.field_memory?.field_response_memory).length || toArray(report?.field_memory?.device_reliability_memory).length || toArray(report?.field_memory?.skill_performance_memory).length), "田块记忆状态", "field_memory_v1", "AVAILABLE"),
-  ];
+  const validation = validateOperationChainV1({ facts, report, rec, prescriptionPayload, approvalDecision, task, receipt: receiptRaw, acceptancePayload, recommendation, prescription, approval, operationPlan, execution, evidence, acceptance });
 
   return {
     ...report,
-    operation_id: toText(report?.identifiers?.operation_id ?? report?.identifiers?.operation_plan_id),
-    field: { field_id: toText(report?.identifiers?.field_id), field_name: toText(report?.field_name) },
-    crop_context: {
-      crop_code: toText(plan.crop_code ?? rec.crop_code),
-      crop_stage: toText(plan.crop_stage ?? rec.crop_stage),
-      season_id: toText(plan.season_id ?? rec.season_id),
-    },
+    operation_id: text(report?.identifiers?.operation_id ?? report?.identifiers?.operation_plan_id),
+    field: { field_id: text(report?.identifiers?.field_id), field_name: text(report?.field_name) },
     diagnosis,
     recommendation,
     prescription,
     approval,
     operation_plan: operationPlan,
     execution,
-    receipt: receiptId ? { receipt_id: receiptId, status: toText(receipt.status ?? "RECEIVED"), submitted_at: toText(receipt.submitted_at ?? receiptFact?.occurred_at), metrics: receipt.metrics ?? null } : null,
+    receipt: receiptId ? { receipt_id: receiptId, status: text(receiptRaw.status ?? "RECEIVED"), submitted_at: text(receiptRaw.submitted_at ?? receiptFact?.occurred_at), metrics: receiptRaw.metrics ?? null, execution_time: receiptRaw.execution_time ?? null, meta: receiptRaw.meta ?? null } : null,
     evidence,
     acceptance,
     roi: report?.roi_ledger ?? null,
     field_memory: report?.field_memory ?? null,
-    chain_integrity: chainIntegrity,
-    chain_flags: chainFlags,
-    missing_links: missingLinks,
-    legacy_warning: legacyWarning,
-    status_chain: statusChain,
+    chain_integrity: validation.chain_integrity,
+    chain_flags: validation.chain_flags,
+    missing_links: validation.missing_links,
+    legacy_warning: validation.legacy_warning,
+    status_chain: validation.status_chain,
+    chain_validation: validation.validation,
   };
 }

@@ -239,6 +239,10 @@ export function customerTimelineStatusLabel(raw: unknown): string {
   const key = normalizeKey(raw);
   if (key === "DONE" || key === "AVAILABLE" || key === "COMPLETE") return "已形成";
   if (key === "PENDING") return "等待生成";
+  if (key === "NEEDS_EVIDENCE") return "依据待补充";
+  if (key === "BLOCKED") return "被上游阻断";
+  if (key === "INVALID") return "记录无效";
+  if (key === "SIMULATED") return "模拟记录";
   if (key === "MISSING") return "暂无记录";
   if (key === "NOT_APPLICABLE") return "不适用";
   return mapStatusLabel(raw, "generic");
