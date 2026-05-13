@@ -8,12 +8,19 @@ export type OperatorActionButtonStateV1 = {
   lastError: string | null;
 };
 
+export type OperatorDispatchTechnicalRefsVm = {
+  taskIdText: string;
+  receiptIdText: string;
+  sourceText: string;
+};
+
 export type OperatorDispatchRowVm = {
   taskId: string;
   receiptIdText: string;
   title: string;
   objectText: string;
   statusText: string;
+  nextActionText: string;
   statusTone: "danger" | "warning" | "success" | "neutral";
   executionModeText: string;
   taskText: string;
@@ -21,6 +28,7 @@ export type OperatorDispatchRowVm = {
   ackText: string;
   receiptText: string;
   executorText: string;
+  deviceText: string;
   failureReasonText: string;
   sourceText: string;
   taskHref?: string | null;
@@ -30,6 +38,7 @@ export type OperatorDispatchRowVm = {
   dispatchButtonState: OperatorActionButtonStateV1;
   retryButtonState: OperatorActionButtonStateV1;
   disabledReason: string;
+  technicalRefs: OperatorDispatchTechnicalRefsVm;
 };
 
 export type OperatorDispatchGroupVm = {
@@ -53,28 +62,40 @@ export type OperatorDispatchVm = {
   emptyDescription: string;
 };
 
-type DispatchGroupKey = "TASK_CREATED" | "DISPATCH_PENDING" | "DISPATCHED" | "RETRY_DISPATCHED" | "ACKED" | "RECEIPT_PENDING" | "EXECUTION_FAILED" | "COMPLETED" | "HUMAN" | "DEVICE";
+type DispatchGroupKey = "TASK_CREATED" | "DISPATCH_PENDING" | "DISPATCHED" | "RETRY_DISPATCHED" | "ACKED" | "RECEIPT_PENDING" | "EXECUTION_FAILED" | "RECEIPT_RECEIVED" | "COMPLETED" | "HUMAN" | "DEVICE";
 
 const GROUP_META: Record<DispatchGroupKey, { title: string; description: string }> = {
-  TASK_CREATED: { title: "已生成执行任务", description: "执行任务已生成，需要关注后续派发。" },
+  TASK_CREATED: { title: "已生成任务", description: "任务已生成，尚未派发；下一步是确认执行方并派发。" },
   DISPATCH_PENDING: { title: "待派发任务", description: "任务已准备但尚未派发给人或设备。" },
   DISPATCHED: { title: "已派发任务", description: "任务已派发，等待接单确认或执行回执。" },
   RETRY_DISPATCHED: { title: "已重新派发", description: "失败任务已重新派发，等待后续接单确认或执行回执。" },
-  ACKED: { title: "已接单", description: "执行方已确认接收任务。" },
+  ACKED: { title: "已接单", description: "执行方已确认接收任务，等待执行回执。" },
   RECEIPT_PENDING: { title: "执行回执待收", description: "任务执行状态尚未形成回执；执行完成不等于验收通过。" },
-  EXECUTION_FAILED: { title: "执行失败", description: "任务执行失败或被判定为无效执行，必须展示失败原因。" },
-  COMPLETED: { title: "已完成任务", description: "任务已完成或已有执行回执，不能重试；验收通过仍以验收中心和作业报告为准。" },
+  EXECUTION_FAILED: { title: "执行失败", description: "任务执行失败或被判定为无效执行，失败状态允许重试。" },
+  RECEIPT_RECEIVED: { title: "已收到执行回执", description: "执行回执已记录，后续仍需验收中心判断结果。" },
+  COMPLETED: { title: "已完成任务", description: "任务已完成，不能重试；验收通过仍以验收中心和作业报告为准。" },
   HUMAN: { title: "人工执行任务", description: "由人工或服务队执行的任务。" },
   DEVICE: { title: "设备执行任务", description: "由设备、阀门、泵站或自动化执行器执行的任务。" },
 };
 
-const GROUP_ORDER: DispatchGroupKey[] = ["TASK_CREATED", "DISPATCH_PENDING", "DISPATCHED", "RETRY_DISPATCHED", "ACKED", "RECEIPT_PENDING", "EXECUTION_FAILED", "COMPLETED", "HUMAN", "DEVICE"];
+const GROUP_ORDER: DispatchGroupKey[] = ["TASK_CREATED", "DISPATCH_PENDING", "DISPATCHED", "RETRY_DISPATCHED", "ACKED", "RECEIPT_PENDING", "EXECUTION_FAILED", "RECEIPT_RECEIVED", "COMPLETED", "HUMAN", "DEVICE"];
+
+function isTechnicalId(value: unknown): boolean {
+  const raw = String(value ?? "").trim();
+  return /^(act|task|ao_act|receipt|rec|prc|apr|opl|ft_op|ft_field)_[A-Za-z0-9_-]+$/i.test(raw)
+    || /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(raw);
+}
 
 function text(value: unknown, fallback = ""): string {
   const raw = String(value ?? "").trim();
   if (!raw || raw === "--" || raw === "undefined" || raw === "null") return fallback;
   if (/token|secret|credential|private\s*key|password|stack\s*trace|debug\s*json/i.test(raw)) return fallback;
   return replaceOperatorTerms(raw);
+}
+
+function businessText(value: unknown, fallback = ""): string {
+  if (isTechnicalId(value)) return fallback;
+  return text(value, fallback);
 }
 
 function dateText(value: unknown): string {
@@ -85,12 +106,24 @@ function dateText(value: unknown): string {
   return new Date(ms).toLocaleString("zh-CN", { hour12: false });
 }
 
+function includesIrrigation(item: OperatorDispatchItem): boolean {
+  const haystack = [item.operationName, item.fieldName, item.executorText].map((x) => String(x ?? "")).join(" ");
+  return /IRRIGATE|IRRIGATION|灌溉/i.test(haystack);
+}
+
+function dispatchTitle(item: OperatorDispatchItem): string {
+  if (includesIrrigation(item)) return "灌溉任务";
+  const base = businessText(item.operationName, "派发任务");
+  if (base === "灌溉") return "灌溉任务";
+  return base;
+}
+
 function statusText(value: OperatorDispatchStatus): string {
-  if (value === "TASK_CREATED") return "已生成执行任务";
+  if (value === "TASK_CREATED") return "已生成，尚未派发";
   if (value === "DISPATCH_PENDING") return "待派发";
-  if (value === "DISPATCHED") return "已派发";
-  if (value === "RETRY_DISPATCHED") return "已重新派发";
-  if (value === "ACKED") return "已接单";
+  if (value === "DISPATCHED") return "已派发，等待接单确认";
+  if (value === "RETRY_DISPATCHED") return "已重新派发，等待接单确认";
+  if (value === "ACKED") return "已接单，等待执行回执";
   if (value === "RECEIPT_PENDING") return "执行回执待收";
   if (value === "EXECUTION_FAILED") return "执行失败";
   if (value === "RECEIPT_RECEIVED") return "已收到执行回执";
@@ -98,10 +131,21 @@ function statusText(value: OperatorDispatchStatus): string {
   return mapOperatorStatusLabel(value, "dispatch", "状态待确认");
 }
 
+function nextActionText(value: OperatorDispatchStatus): string {
+  if (value === "TASK_CREATED") return "确认执行方后派发任务";
+  if (value === "DISPATCH_PENDING") return "执行派发";
+  if (value === "DISPATCHED" || value === "RETRY_DISPATCHED") return "等待接单确认或执行回执";
+  if (value === "ACKED") return "等待执行回执";
+  if (value === "RECEIPT_PENDING") return "跟进执行方补充执行回执";
+  if (value === "EXECUTION_FAILED") return "复核失败原因，必要时重试派发";
+  if (value === "RECEIPT_RECEIVED" || value === "COMPLETED") return "进入验收中心复核执行结果";
+  return "确认任务状态后再处理";
+}
+
 function statusTone(value: OperatorDispatchStatus): OperatorDispatchRowVm["statusTone"] {
   if (value === "EXECUTION_FAILED") return "danger";
-  if (value === "DISPATCH_PENDING" || value === "RECEIPT_PENDING") return "warning";
-  if (value === "ACKED" || value === "RECEIPT_RECEIVED" || value === "DISPATCHED" || value === "RETRY_DISPATCHED") return "success";
+  if (value === "TASK_CREATED" || value === "DISPATCH_PENDING" || value === "RECEIPT_PENDING") return "warning";
+  if (value === "ACKED" || value === "RECEIPT_RECEIVED" || value === "DISPATCHED" || value === "RETRY_DISPATCHED" || value === "COMPLETED") return "success";
   return "neutral";
 }
 
@@ -118,22 +162,53 @@ function sourceText(value: OperatorDispatchItem["source"]): string {
 }
 
 function objectText(item: OperatorDispatchItem): string {
-  const parts = [text(item.fieldName), text(item.operationName)].filter(Boolean);
-  return parts.length ? parts.join(" · ") : "执行对象待确认";
+  const parts = [businessText(item.fieldName), businessText(item.operationName)].filter(Boolean);
+  return parts.length ? parts.join(" / ") : "任务对象待确认";
 }
 
 function buildDispatchButtonState(item: OperatorDispatchItem, writeReady: boolean): OperatorActionButtonStateV1 {
-  if (!writeReady) return { canAction: false, disabledReason: "派发写操作未 ready，当前只读。", pending: false, lastError: null };
-  if (!item.taskId) return { canAction: false, disabledReason: "执行任务未生成，不能派发。", pending: false, lastError: null };
-  if (!item.canDispatch) return { canAction: false, disabledReason: text(item.permissionReason, "当前任务状态不可派发。"), pending: false, lastError: null };
+  if (!writeReady) return { canAction: false, disabledReason: "当前不可派发：派发写操作未 ready，当前只读。", pending: false, lastError: null };
+  if (!item.taskId) return { canAction: false, disabledReason: "当前不可派发：执行任务未生成。", pending: false, lastError: null };
+  if (!item.canDispatch) return { canAction: false, disabledReason: text(item.permissionReason, "当前任务状态不允许派发。"), pending: false, lastError: null };
   return { canAction: true, disabledReason: null, pending: false, lastError: null };
 }
 
 function buildRetryButtonState(item: OperatorDispatchItem, writeReady: boolean): OperatorActionButtonStateV1 {
-  if (!writeReady) return { canAction: false, disabledReason: "派发写操作未 ready，当前只读。", pending: false, lastError: null };
-  if (!item.taskId) return { canAction: false, disabledReason: "执行任务未生成，不能重试。", pending: false, lastError: null };
-  if (!item.canRetry) return { canAction: false, disabledReason: text(item.permissionReason, "当前任务状态不允许重试。"), pending: false, lastError: null };
+  if (!writeReady) return { canAction: false, disabledReason: "当前任务状态不允许重试；只有失败状态可以重试。", pending: false, lastError: null };
+  if (!item.taskId) return { canAction: false, disabledReason: "当前任务状态不允许重试；执行任务未生成。", pending: false, lastError: null };
+  if (!item.canRetry) return { canAction: false, disabledReason: "当前任务状态不允许重试；只有失败状态可以重试。", pending: false, lastError: null };
   return { canAction: true, disabledReason: null, pending: false, lastError: null };
+}
+
+function taskText(item: OperatorDispatchItem): string {
+  if (item.status === "TASK_CREATED") return `已生成，尚未派发 · ${dateText(item.taskCreatedAt)}`;
+  return `已生成 · ${dateText(item.taskCreatedAt)}`;
+}
+
+function dispatchText(item: OperatorDispatchItem): string {
+  if (item.status === "TASK_CREATED" || item.status === "DISPATCH_PENDING") return "尚未派发";
+  return dateText(item.dispatchedAt);
+}
+
+function ackText(item: OperatorDispatchItem): string {
+  return item.ackedAt ? `已收到 · ${dateText(item.ackedAt)}` : "未收到";
+}
+
+function receiptText(item: OperatorDispatchItem): string {
+  return item.receiptId ? `已收到 · ${dateText(item.receiptReceivedAt)}` : "未收到";
+}
+
+function deviceText(item: OperatorDispatchItem): string {
+  if (item.executionMode !== "DEVICE") return "待确认";
+  return businessText(item.executorText, "待确认");
+}
+
+function buildTechnicalRefs(item: OperatorDispatchItem): OperatorDispatchTechnicalRefsVm {
+  return {
+    taskIdText: text(item.taskId, "执行任务 ID 待确认"),
+    receiptIdText: text(item.receiptId, "未收到执行回执 ID"),
+    sourceText: sourceText(item.source),
+  };
 }
 
 function buildRow(item: OperatorDispatchItem, writeReady: boolean): OperatorDispatchRowVm {
@@ -142,16 +217,18 @@ function buildRow(item: OperatorDispatchItem, writeReady: boolean): OperatorDisp
   return {
     taskId: text(item.taskId, "任务编号待确认"),
     receiptIdText: text(item.receiptId, "尚未收到执行回执"),
-    title: text(item.operationName, "派发任务"),
+    title: dispatchTitle(item),
     objectText: objectText(item),
     statusText: statusText(item.status),
+    nextActionText: nextActionText(item.status),
     statusTone: statusTone(item.status),
     executionModeText: modeText(item.executionMode),
-    taskText: `执行任务：${text(item.taskId, "待确认")} · ${dateText(item.taskCreatedAt)}`,
-    dispatchText: `派发：${dateText(item.dispatchedAt)}`,
-    ackText: `接单确认：${dateText(item.ackedAt)}`,
-    receiptText: `执行回执：${text(item.receiptId, "未收到")} · ${dateText(item.receiptReceivedAt)}`,
-    executorText: text(item.executorText, "执行方待确认"),
+    taskText: taskText(item),
+    dispatchText: dispatchText(item),
+    ackText: ackText(item),
+    receiptText: receiptText(item),
+    executorText: businessText(item.executorText, "待确认"),
+    deviceText: deviceText(item),
     failureReasonText: text(item.failureReason, item.status === "EXECUTION_FAILED" ? "失败原因待补充" : "无失败原因"),
     sourceText: sourceText(item.source),
     taskHref: item.taskHref ?? null,
@@ -161,6 +238,7 @@ function buildRow(item: OperatorDispatchItem, writeReady: boolean): OperatorDisp
     dispatchButtonState,
     retryButtonState,
     disabledReason: dispatchButtonState.disabledReason || retryButtonState.disabledReason || "",
+    technicalRefs: buildTechnicalRefs(item),
   };
 }
 
