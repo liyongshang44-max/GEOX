@@ -16,7 +16,9 @@
     "check:customer-export-same-source": "node ./scripts/check-customer-export-same-source.mjs",
     "check:customer-routes": "node ./scripts/check-customer-routes.mjs",
     "check:no-raw-enum-customer": "node ./scripts/check-no-raw-enum-customer.mjs",
-    "check:operator-boundary": "node ./scripts/check-operator-boundary.mjs"
+    "check:operator-boundary": "node ./scripts/check-operator-boundary.mjs",
+    "check:p2-full-closure-ui": "node ./scripts/check-p2-full-closure-ui.mjs",
+    "check:flight-table-boundary": "node ./scripts/check-flight-table-boundary.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

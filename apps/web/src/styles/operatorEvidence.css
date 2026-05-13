@@ -4,6 +4,81 @@
   min-width: 0;
 }
 
+.operatorEvidenceOperationPanel {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 14px;
+  border-radius: 20px;
+  border: 1px solid #dbeafe;
+  background: #eff6ff;
+  min-width: 0;
+}
+
+.operatorEvidenceOperationPanel > div:first-child {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.operatorEvidenceOperationPanel span {
+  color: #1e40af;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.operatorEvidenceOperationPanel strong {
+  color: #132016;
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+
+.operatorEvidenceOperationPanel small {
+  color: #455246;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.operatorEvidenceOperationActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.operatorEvidenceOperationActions button {
+  border-radius: 999px;
+  padding: 8px 12px;
+  border: 1px solid #132016;
+  background: #132016;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.operatorEvidenceOperationActions button:disabled {
+  cursor: not-allowed;
+  border-color: #d6ddcf;
+  background: #eef2e8;
+  color: #8a9689;
+}
+
+.operatorEvidenceJobCreated {
+  width: 100%;
+  border-radius: 12px;
+  padding: 8px 10px;
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #047857;
+  font-size: 13px;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
 .operatorEvidenceGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(320px, 1fr));
@@ -103,6 +178,45 @@
   word-break: break-word;
 }
 
+.operatorEvidenceJobDetail {
+  display: grid;
+  gap: 5px;
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.operatorEvidenceJobDetail strong {
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.operatorEvidenceJobDetail a {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #132016;
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.operatorEvidenceJobDetail.success {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #047857;
+}
+
+.operatorEvidenceJobDetail.danger {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
 .operatorEvidenceNotice,
 .operatorEvidenceChecksumEmpty {
   border-radius: 12px;
@@ -165,6 +279,10 @@
 }
 
 @media (max-width: 900px) {
+  .operatorEvidenceOperationPanel {
+    display: grid;
+  }
+
   .operatorEvidenceMeta {
     grid-template-columns: 1fr;
   }

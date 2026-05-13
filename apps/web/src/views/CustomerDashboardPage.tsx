@@ -45,12 +45,22 @@ export default function CustomerDashboardPage(): React.ReactElement {
   const kpis = vm?.kpis ?? [];
   const pendingAcceptanceKpi = vm?.kpis.find((item) => item.key === "PENDING_ACCEPTANCE"); // no-raw-enum-customer-allow: dashboard KPI key lookup only, converted to customer label before render
   const recentOperationsKpi = vm?.kpis.find((item) => item.key === "RECENT_OPERATIONS");
+  const summaryScopeText = vm?.summaryScopeText ?? "统计范围：当前可见授权经营范围；来源：客户看板统一摘要。";
+  const deviceFallback = {
+    empty: true,
+    scopeText: "设备 scope：global_devices_count=全域设备，visible_devices_count=可见授权设备，field_devices_count=当前地块设备，offline_devices_count=离线设备，alert_events_count=告警事件。",
+    globalText: "全域设备：暂无设备摘要。",
+    authorizedText: "可见授权设备：暂无设备摘要。",
+    fieldText: "当前地块设备：请进入地块报告查看。",
+    offlineText: "离线设备：暂无设备摘要。",
+    alertText: "告警事件：暂无设备摘要。",
+  };
   const acceptanceSummaryVm = {
     title: "执行与验收摘要",
-    subtitle: "P0 只展示 report / operation_state 已有节点",
+    subtitle: summaryScopeText,
     metrics: [
-      { key: "pending", label: "待验收", value: String(pendingAcceptanceKpi?.value ?? "0"), helperText: "未报告状态" },
-      { key: "recent", label: "近期作业", value: String(recentOperationsKpi?.value ?? "0"), helperText: "来自报告" },
+      { key: "pending", label: "待验收", value: String(pendingAcceptanceKpi?.value ?? "0"), helperText: "统计范围：当前可见授权经营范围；与作业列表使用同一客户摘要来源。" },
+      { key: "recent", label: "作业记录", value: String(recentOperationsKpi?.value ?? "0"), helperText: "统计范围：当前可见授权经营范围；下方仅展示最近 5 条作业。" },
     ],
     emptyState: emptyStates.NO_PENDING_ACTIONS,
   };
@@ -58,6 +68,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
 
   return (
     <div className="customerDashboardPage">
+      {vm ? <p className="customerMetricLabel customerSpacingBottomSm">{summaryScopeText}</p> : null}
       <CockpitKpiStrip items={kpis} emptyState={emptyStates.NO_KPI_SUMMARY} />
 
       <section className="customerDashboardMainGrid">
@@ -65,7 +76,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
         <div className="customerDashboardActionPanel"><CockpitActionList items={vm?.actionItems ?? []} emptyState={emptyStates.NO_PENDING_ACTIONS} /></div>
         <aside className="customerDashboardRightRail">
           <ExecutionAcceptanceSummary vm={acceptanceSummaryVm} />
-          <DeviceHealthCard summary={vm?.deviceHealth ?? { empty: true }} emptyState={emptyStates.NO_DEVICE_HEALTH} />
+          <DeviceHealthCard summary={vm?.deviceHealth ?? deviceFallback} emptyState={emptyStates.NO_DEVICE_HEALTH} />
         </aside>
       </section>
 

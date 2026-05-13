@@ -1,0 +1,20 @@
+{
+  "type": "Feature",
+  "properties": {
+    "fixture": "planned_irrigation_area",
+    "operation_type": "irrigation",
+    "planned_depth_mm": 24
+  },
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [121.5670, 31.2340],
+        [121.5680, 31.23415],
+        [121.56785, 31.23495],
+        [121.56685, 31.23482],
+        [121.5670, 31.2340]
+      ]
+    ]
+  }
+}

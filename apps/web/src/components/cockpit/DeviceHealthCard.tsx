@@ -11,7 +11,7 @@ export default function DeviceHealthCard({ summary, emptyState }: Props): React.
   if (summary.empty) {
     return (
       <article className="customerCard">
-        <h3 className="customerCardTitle">设备健康</h3>
+        <h3 className="customerCardTitle">设备状态</h3>
         <CustomerEmptyState vm={emptyState} />
       </article>
     );
@@ -19,11 +19,14 @@ export default function DeviceHealthCard({ summary, emptyState }: Props): React.
 
   return (
     <article className="customerCard">
-      <h3 className="customerCardTitle">设备健康</h3>
-      <div className="customerMetricLabel">在线设备：{summary.onlineDevices ?? "--"}</div>
-      <div className="customerMetricLabel">离线设备：{summary.offlineDevices ?? "--"}</div>
-      <div className="customerMetricLabel">告警设备：{summary.alertDevices ?? "--"}</div>
-      <div className="muted">最近更新时间：{summary.updatedAtText ?? "--"}</div>
+      <h3 className="customerCardTitle">设备状态</h3>
+      <div className="customerMetricLabel">{summary.globalText}</div>
+      <div className="customerMetricLabel">{summary.authorizedText}</div>
+      <div className="customerMetricLabel">{summary.fieldText}</div>
+      <div className="customerMetricLabel">{summary.offlineText}</div>
+      <div className="customerMetricLabel">{summary.alertText}</div>
+      <div className="muted">{summary.scopeText}</div>
+      <div className="muted">最近更新时间：{summary.updatedAtText ?? "暂无更新时间"}</div>
     </article>
   );
 }

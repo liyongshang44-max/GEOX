@@ -5,6 +5,15 @@ export type OperatorDeviceOnlineStatus = "ONLINE" | "OFFLINE" | "DELAYED" | "UNK
 export type OperatorCredentialStatus = "ACTIVE" | "REVOKED" | "UNKNOWN" | "HIDDEN";
 export type OperatorAlertStatus = "OPEN" | "ACKED" | "CLOSED" | "OVERDUE" | "UNKNOWN";
 
+export type OperatorDeviceScopeCounts = {
+  global_devices_count: number | null;
+  visible_devices_count: number;
+  field_devices_count: number | null;
+  offline_devices_count: number;
+  alert_events_count: number;
+  source_text: string;
+};
+
 export type OperatorDeviceItem = {
   deviceId: string;
   displayName?: string | null;
@@ -53,6 +62,7 @@ export type OperatorDevicesAlertsResponse = {
   generated_at?: string | null;
   devices: OperatorDeviceItem[];
   alerts: OperatorAlertItem[];
+  deviceScope: OperatorDeviceScopeCounts;
   message?: string;
   ackCloseReady: boolean;
   revokeVisible: boolean;
@@ -86,6 +96,76 @@ function arrayFrom(payload: unknown, keys: string[]): AnyRecord[] {
   if (obj.data) return arrayFrom(obj.data, keys);
   if (obj.items) return arrayFrom(obj.items, keys);
   return [];
+}
+
+function numberOrNull(value: unknown): number | null {
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function countValue(payload: unknown, keys: string[]): number | null {
+  if (!payload || typeof payload !== "object") return null;
+  const obj = payload as AnyRecord;
+  for (const key of keys) {
+    const value = numberOrNull(obj[key]);
+    if (value !== null) return Math.max(0, value);
+  }
+  if (obj.data) return countValue(obj.data, keys);
+  if (obj.aggregate) return countValue(obj.aggregate, keys);
+  if (obj.customer_dashboard_aggregate_v1) return countValue(obj.customer_dashboard_aggregate_v1, keys);
+  return null;
+}
+
+function dashboardDeviceSummary(payload: unknown): AnyRecord {
+  const obj = payload && typeof payload === "object" ? payload as AnyRecord : {};
+  const data = obj.data && typeof obj.data === "object" ? obj.data as AnyRecord : obj;
+  const aggregate = data.aggregate && typeof data.aggregate === "object" ? data.aggregate as AnyRecord : data;
+  const report = aggregate.customer_dashboard_aggregate_v1 && typeof aggregate.customer_dashboard_aggregate_v1 === "object" ? aggregate.customer_dashboard_aggregate_v1 as AnyRecord : aggregate;
+  return report.device_summary && typeof report.device_summary === "object" ? report.device_summary as AnyRecord : {};
+}
+
+function dashboardPendingSummary(payload: unknown): AnyRecord {
+  const obj = payload && typeof payload === "object" ? payload as AnyRecord : {};
+  const data = obj.data && typeof obj.data === "object" ? obj.data as AnyRecord : obj;
+  const aggregate = data.aggregate && typeof data.aggregate === "object" ? data.aggregate as AnyRecord : data;
+  const report = aggregate.customer_dashboard_aggregate_v1 && typeof aggregate.customer_dashboard_aggregate_v1 === "object" ? aggregate.customer_dashboard_aggregate_v1 as AnyRecord : aggregate;
+  return report.pending_actions_summary && typeof report.pending_actions_summary === "object" ? report.pending_actions_summary as AnyRecord : {};
+}
+
+function buildDeviceScopeFromLists(devices: OperatorDeviceItem[], alerts: OperatorAlertItem[], sourceText: string, explicit?: Partial<OperatorDeviceScopeCounts>): OperatorDeviceScopeCounts {
+  const visible = explicit?.visible_devices_count ?? devices.length;
+  const offline = explicit?.offline_devices_count ?? devices.filter((item) => item.onlineStatus === "OFFLINE").length;
+  const alertsCount = explicit?.alert_events_count ?? alerts.length;
+  return {
+    global_devices_count: explicit?.global_devices_count ?? null,
+    visible_devices_count: Math.max(0, visible),
+    field_devices_count: explicit?.field_devices_count ?? null,
+    offline_devices_count: Math.max(0, offline),
+    alert_events_count: Math.max(0, alertsCount),
+    source_text: sourceText,
+  };
+}
+
+function buildOfficialDeviceScope(payload: unknown, devices: OperatorDeviceItem[], alerts: OperatorAlertItem[]): OperatorDeviceScopeCounts {
+  return buildDeviceScopeFromLists(devices, alerts, "设备与告警中心明细接口", {
+    global_devices_count: countValue(payload, ["global_devices_count", "globalDevicesCount", "total_global_devices"]),
+    visible_devices_count: countValue(payload, ["visible_devices_count", "visibleDevicesCount", "total_devices", "device_count"]) ?? devices.length,
+    field_devices_count: countValue(payload, ["field_devices_count", "fieldDevicesCount"]),
+    offline_devices_count: countValue(payload, ["offline_devices_count", "offlineDevicesCount", "offline_devices"]) ?? devices.filter((item) => item.onlineStatus === "OFFLINE").length,
+    alert_events_count: countValue(payload, ["alert_events_count", "alertEventsCount", "alert_count", "total_alerts"]) ?? alerts.length,
+  });
+}
+
+function buildDashboardFallbackDeviceScope(payload: unknown, devices: OperatorDeviceItem[], alerts: OperatorAlertItem[]): OperatorDeviceScopeCounts {
+  const deviceSummary = dashboardDeviceSummary(payload);
+  const pendingSummary = dashboardPendingSummary(payload);
+  return buildDeviceScopeFromLists(devices, alerts, "客户看板聚合 fallback", {
+    global_devices_count: numberOrNull(deviceSummary.global_devices_count ?? deviceSummary.globalDevicesCount ?? deviceSummary.total_devices),
+    visible_devices_count: numberOrNull(deviceSummary.visible_devices_count ?? deviceSummary.visibleDevicesCount ?? deviceSummary.total_devices) ?? devices.length,
+    field_devices_count: numberOrNull(deviceSummary.field_devices_count ?? deviceSummary.fieldDevicesCount),
+    offline_devices_count: numberOrNull(deviceSummary.offline_devices_count ?? deviceSummary.offlineDevicesCount ?? deviceSummary.offline_devices) ?? devices.filter((item) => item.onlineStatus === "OFFLINE").length,
+    alert_events_count: numberOrNull(pendingSummary.alert_events_count ?? pendingSummary.total_open_alerts ?? deviceSummary.alert_events_count) ?? alerts.length,
+  });
 }
 
 function sanitizeText(value: unknown, fallback = "未提供"): string {
@@ -136,11 +216,6 @@ function normalizeAlertStatus(row: AnyRecord): OperatorAlertStatus {
   if (raw.includes("ACK")) return "ACKED";
   if (raw.includes("OPEN") || raw.includes("ACTIVE") || raw.includes("PENDING")) return "OPEN";
   return "UNKNOWN";
-}
-
-function numberOrNull(value: unknown): number | null {
-  const n = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(n) ? n : null;
 }
 
 function capabilities(row: AnyRecord): string[] {
@@ -306,6 +381,7 @@ export async function fetchOperatorDevicesAlerts(): Promise<OperatorDevicesAlert
       generated_at: new Date().toISOString(),
       devices: officialDevices,
       alerts: officialAlerts,
+      deviceScope: buildOfficialDeviceScope(official, officialDevices, officialAlerts),
       ackCloseReady,
       revokeVisible,
       message: ackCloseReady ? "ACK/close 操作由 operator alerts API 提供，状态变更应产生审计记录。" : "ACK/close 当前无可操作权限或后端未开放。",
@@ -315,17 +391,19 @@ export async function fetchOperatorDevicesAlerts(): Promise<OperatorDevicesAlert
   const aggregate = await fetchOptional(withQuery("/api/v1/reports/customer-dashboard/aggregate"));
   const fallbackDevices = normalizeReportDeviceFallback(aggregate).filter((item, index, all) => all.findIndex((x) => x.deviceId === item.deviceId) === index);
   const fallbackAlerts: OperatorAlertItem[] = [];
+  const fallbackScope = buildDashboardFallbackDeviceScope(aggregate, fallbackDevices, fallbackAlerts);
 
-  if (fallbackDevices.length > 0 || fallbackAlerts.length > 0) {
+  if (fallbackDevices.length > 0 || fallbackAlerts.length > 0 || fallbackScope.visible_devices_count > 0 || fallbackScope.offline_devices_count > 0 || fallbackScope.alert_events_count > 0) {
     return {
       source: "fallback_existing_sources",
       dataScope: "FALLBACK_LIMITED",
       generated_at: new Date().toISOString(),
       devices: fallbackDevices,
       alerts: fallbackAlerts,
+      deviceScope: fallbackScope,
       ackCloseReady: false,
       revokeVisible: false,
-      message: "operator devices-alerts 未接入，当前仅展示 reports aggregate 包装后的有限设备状态；ACK/close 只读。",
+      message: "operator devices-alerts 未接入，当前展示 customer dashboard aggregate 包装后的设备范围计数；明细列表可能少于统计总数，ACK/close 只读。",
     };
   }
 
@@ -335,6 +413,7 @@ export async function fetchOperatorDevicesAlerts(): Promise<OperatorDevicesAlert
     generated_at: new Date().toISOString(),
     devices: [],
     alerts: [],
+    deviceScope: buildDeviceScopeFromLists([], [], ENABLE_OPERATOR_DEVICES_ALERTS_API ? "设备与告警中心未返回可用数据" : "设备与告警中心 API 未启用"),
     ackCloseReady: false,
     revokeVisible: false,
     message: ENABLE_OPERATOR_DEVICES_ALERTS_API ? "operator devices-alerts 未接入，且暂无安全 fallback 设备或告警数据。" : "operator devices-alerts 未接入，当前不探测未 ready API；暂无安全 fallback 设备或告警数据。",

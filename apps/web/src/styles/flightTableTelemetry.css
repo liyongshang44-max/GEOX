@@ -1,0 +1,75 @@
+.flight-telemetry-panel {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  border-radius: 16px;
+  background: rgba(248, 250, 252, 0.72);
+}
+
+.flight-scenario-list {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.flight-scenario-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  border-radius: 14px;
+  padding: 10px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.flight-scenario-item input {
+  align-self: flex-start;
+}
+
+.flight-scenario-item span,
+.flight-scenario-item small {
+  word-break: break-word;
+}
+
+.flight-scenario-item span {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.flight-scenario-item small {
+  color: #64748b;
+}
+
+.flight-telemetry-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.flight-telemetry-summary details {
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  border-radius: 14px;
+  padding: 10px;
+  background: white;
+}
+
+.flight-telemetry-summary summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+@media (max-width: 1100px) {
+  .flight-scenario-list {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .flight-scenario-list {
+    grid-template-columns: 1fr;
+  }
+}

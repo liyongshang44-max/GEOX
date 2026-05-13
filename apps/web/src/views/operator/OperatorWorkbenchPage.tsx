@@ -40,13 +40,34 @@ export default function OperatorWorkbenchPage(): React.ReactElement {
             </div>
             <div>
               <span>待处理总数</span>
-              <strong>{vm.totalCount}</strong>
+              <strong>{vm.summary.total}</strong>
+            </div>
+            <div>
+              <span>作业待办</span>
+              <strong>{vm.summary.operationTodos}</strong>
+            </div>
+            <div>
+              <span>设备待办</span>
+              <strong>{vm.summary.deviceTodos}</strong>
+            </div>
+            <div>
+              <span>证据待办</span>
+              <strong>{vm.summary.evidenceTodos}</strong>
+            </div>
+            <div>
+              <span>告警待办</span>
+              <strong>{vm.summary.alertTodos}</strong>
             </div>
             <div>
               <span>更新时间</span>
               <strong>{vm.generatedAtText}</strong>
             </div>
           </section>
+
+          <div className="operatorScopeWarning">{vm.summary.explanationText}</div>
+          {vm.summary.deviceTodos > 0 && vm.summary.operationTodos === 0 ? (
+            <div className="operatorScopeWarning">当前待处理主要来自设备待办，不代表有 {vm.summary.deviceTodos} 条作业待办。</div>
+          ) : null}
 
           {vm.dataScopeWarning ? <div className="operatorScopeWarning">{vm.dataScopeWarning}</div> : null}
 

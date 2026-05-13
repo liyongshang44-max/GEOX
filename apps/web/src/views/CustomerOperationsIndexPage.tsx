@@ -39,7 +39,7 @@ export default function CustomerOperationsIndexPage(): React.ReactElement {
         <div className="customerCardHeaderRow">
           <div>
             <h3 className="customerCardTitle">作业进展</h3>
-            <p className="customerMetricLabel">点击作业进入作业闭环报告。</p>
+            <p className="customerMetricLabel">点击作业进入作业闭环报告。列表与作业报告使用同一客户状态口径。</p>
           </div>
           {vm ? <span className="customerPill">{vm.scopeBadgeText}</span> : null}
         </div>
@@ -64,26 +64,15 @@ export default function CustomerOperationsIndexPage(): React.ReactElement {
             {filteredRows.map((operation) => (
               <Link key={operation.operationId} className="customerIndexRow customerOperationRow" to={operation.href}>
                 <div>
-                  <strong>{operation.title}</strong>
-                  <small>{operation.fieldName}</small>
+                  <strong>{operation.primaryLine}</strong>
+                  <small>{operation.statusLine}</small>
+                  {operation.evidenceExplanation ? <small>{operation.evidenceExplanation}</small> : null}
                 </div>
                 <div>
-                  <span>{operation.statusText}</span>
+                  <span>完成时间：{operation.completedAtText}</span>
                   <small>{operation.operationTypeText}</small>
                 </div>
-                <div>
-                  <span>{operation.acceptanceText}</span>
-                  <small>验收状态</small>
-                </div>
-                <div>
-                  <span>{operation.evidenceText}</span>
-                  <small>证据状态</small>
-                </div>
-                <div>
-                  <span>{operation.updatedAtText}</span>
-                  <small>更新时间</small>
-                </div>
-                <em>查看作业报告</em>
+                <em>查看报告</em>
               </Link>
             ))}
           </div>

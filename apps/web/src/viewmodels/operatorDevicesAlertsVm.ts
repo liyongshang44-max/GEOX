@@ -1,4 +1,5 @@
 import type { OperatorAlertItem, OperatorAlertStatus, OperatorCredentialStatus, OperatorDeviceItem, OperatorDeviceOnlineStatus, OperatorDevicesAlertsResponse } from "../api/operatorDevicesAlerts";
+import { mapOperatorStatusLabel, replaceOperatorTerms } from "../lib/operatorStatusLabels";
 
 export type OperatorDeviceRowVm = {
   deviceId: string;
@@ -43,6 +44,16 @@ export type OperatorAlertRowVm = {
   operationHref?: string | null;
 };
 
+export type OperatorDeviceScopeVm = {
+  globalDevicesText: string;
+  visibleDevicesText: string;
+  fieldDevicesText: string;
+  offlineDevicesText: string;
+  alertEventsText: string;
+  sourceText: string;
+  explanationText: string;
+};
+
 export type OperatorDevicesAlertsVm = {
   title: string;
   lead: string;
@@ -53,6 +64,7 @@ export type OperatorDevicesAlertsVm = {
   revokeVisible: boolean;
   totalDevices: number;
   totalAlerts: number;
+  deviceScope: OperatorDeviceScopeVm;
   onlineDevices: OperatorDeviceRowVm[];
   offlineDevices: OperatorDeviceRowVm[];
   delayedDevices: OperatorDeviceRowVm[];
@@ -63,10 +75,16 @@ export type OperatorDevicesAlertsVm = {
   emptyDescription: string;
 };
 
+const numberFmt = new Intl.NumberFormat("zh-CN");
+
 function text(value: unknown, fallback = ""): string {
   const raw = String(value ?? "").trim();
   if (!raw || raw === "--" || raw === "undefined" || raw === "null") return fallback;
-  return raw;
+  return replaceOperatorTerms(raw);
+}
+
+function countText(value: number | null | undefined, fallback = "未返回"): string {
+  return typeof value === "number" && Number.isFinite(value) ? numberFmt.format(Math.max(0, value)) : fallback;
 }
 
 function dateText(value: unknown): string {
@@ -81,7 +99,7 @@ function onlineStatusText(value: OperatorDeviceOnlineStatus): string {
   if (value === "ONLINE") return "在线";
   if (value === "OFFLINE") return "离线";
   if (value === "DELAYED") return "数据延迟";
-  return "状态待确认";
+  return mapOperatorStatusLabel(value, "device", "状态待确认");
 }
 
 function onlineTone(value: OperatorDeviceOnlineStatus): OperatorDeviceRowVm["statusTone"] {
@@ -100,10 +118,10 @@ function credentialText(value: OperatorCredentialStatus): string {
 
 function alertStatusText(value: OperatorAlertStatus): string {
   if (value === "OPEN") return "待处理";
-  if (value === "ACKED") return "已 ACK";
+  if (value === "ACKED") return "已确认";
   if (value === "CLOSED") return "已关闭";
   if (value === "OVERDUE") return "已超时";
-  return "状态待确认";
+  return mapOperatorStatusLabel(value, "generic", "状态待确认");
 }
 
 function alertTone(value: OperatorAlertStatus): OperatorAlertRowVm["statusTone"] {
@@ -135,11 +153,11 @@ function buildDeviceRow(item: OperatorDeviceItem): OperatorDeviceRowVm {
     lastHeartbeatText: dateText(item.lastHeartbeatAt),
     lastTelemetryText: dateText(item.lastTelemetryAt),
     boundFieldText: text(item.fieldName, text(item.fieldId, "绑定地块待确认")),
-    capabilitiesText: item.capabilities.length ? item.capabilities.join("、") : "能力待确认",
+    capabilitiesText: item.capabilities.length ? item.capabilities.map((item) => text(item)).join("、") : "能力待确认",
     credentialText: credentialText(item.credentialStatus),
     credentialIssuedText: dateText(item.credentialLastIssuedAt),
     credentialLastUsedText: dateText(item.credentialLastUsedAt),
-    revokeText: text(item.revokeStatus, "revoke 默认只读或管理员可见"),
+    revokeText: text(item.revokeStatus, "撤销默认只读或管理员可见"),
     canRevoke: item.canRevoke,
     batteryText: batteryText(item.batteryPercent),
     delayText: text(item.dataDelayText, "数据延迟待确认"),
@@ -148,14 +166,14 @@ function buildDeviceRow(item: OperatorDeviceItem): OperatorDeviceRowVm {
 }
 
 function operationHref(operationId: unknown): string | null {
-  const id = text(operationId);
+  const id = String(operationId ?? "").trim();
   return id ? `/customer/operations/${encodeURIComponent(id)}` : null;
 }
 
 function disabledReason(item: OperatorAlertItem): string {
   if (item.canAck || item.canClose) return "";
-  if (item.source !== "operator_devices_alerts_api") return "fallback 数据只读，需 operator alerts API 才能操作。";
-  return text(item.permissionReason, "当前身份无 ACK / close 权限。") || "当前身份无 ACK / close 权限。";
+  if (item.source !== "operator_devices_alerts_api") return "fallback 数据只读，需运营告警接口才能操作。";
+  return text(item.permissionReason, "当前身份无确认或关闭权限。") || "当前身份无确认或关闭权限。";
 }
 
 function buildAlertRow(item: OperatorAlertItem): OperatorAlertRowVm {
@@ -167,7 +185,7 @@ function buildAlertRow(item: OperatorAlertItem): OperatorAlertRowVm {
     notificationText: text(item.notificationStatus, "通知状态待确认"),
     statusText: alertStatusText(item.status),
     statusTone: alertTone(item.status),
-    ackText: text(item.ackStatus, "未 ACK"),
+    ackText: text(item.ackStatus, "未确认"),
     closeText: text(item.closeStatus, "未关闭"),
     ownerText: text(item.ownerName, "责任人待确认"),
     objectText: objectParts.length ? objectParts.join(" · ") : "关联对象待确认",
@@ -192,19 +210,39 @@ function dataScopeText(response: OperatorDevicesAlertsResponse): string {
   return "暂无设备或告警数据";
 }
 
+function buildScopeVm(response: OperatorDevicesAlertsResponse): OperatorDeviceScopeVm {
+  const scope = response.deviceScope;
+  const global = countText(scope.global_devices_count);
+  const visible = countText(scope.visible_devices_count);
+  const field = countText(scope.field_devices_count);
+  const offline = countText(scope.offline_devices_count);
+  const alerts = countText(scope.alert_events_count);
+  return {
+    globalDevicesText: `全域设备：${global === "未返回" ? "后端未返回" : `${global} 台`}`,
+    visibleDevicesText: `可见授权设备：${visible} 台`,
+    fieldDevicesText: `当前地块设备：${field === "未返回" ? "需进入地块报告查看" : `${field} 台`}`,
+    offlineDevicesText: `离线设备：${offline} 台`,
+    alertEventsText: `告警事件：${alerts} 条`,
+    sourceText: `设备口径来源：${text(scope.source_text, "设备范围来源待确认")}`,
+    explanationText: `设备中心按统一 scope 展示：global_devices_count=${global}，visible_devices_count=${visible}，field_devices_count=${field}，offline_devices_count=${offline}，alert_events_count=${alerts}。`,
+  };
+}
+
 export function buildOperatorDevicesAlertsVm(response: OperatorDevicesAlertsResponse): OperatorDevicesAlertsVm {
   const devices = (response.devices ?? []).map(buildDeviceRow);
   const alerts = (response.alerts ?? []).map(buildAlertRow);
+  const deviceScope = buildScopeVm(response);
   return {
     title: "设备与告警中心",
-    lead: "查看设备在线状态、心跳、telemetry、凭证状态、告警事件、通知与 ACK/close 状态。",
+    lead: "查看设备在线状态、心跳、遥测、凭证状态、告警事件、通知、确认与关闭状态。",
     generatedAtText: dateText(response.generated_at),
     dataScopeText: dataScopeText(response),
-    dataScopeWarning: response.dataScope === "FALLBACK_LIMITED" || response.dataScope === "OFFICIAL_OPERATOR_API" ? response.message : undefined,
+    dataScopeWarning: response.dataScope === "FALLBACK_LIMITED" || response.dataScope === "OFFICIAL_OPERATOR_API" ? text(response.message) : undefined,
     ackCloseReady: response.ackCloseReady,
     revokeVisible: response.revokeVisible,
-    totalDevices: devices.length,
-    totalAlerts: alerts.length,
+    totalDevices: response.deviceScope.visible_devices_count,
+    totalAlerts: response.deviceScope.alert_events_count,
+    deviceScope,
     onlineDevices: devices.filter((item) => item.statusText === "在线"),
     offlineDevices: devices.filter((item) => item.statusText === "离线"),
     delayedDevices: devices.filter((item) => item.statusText === "数据延迟"),
@@ -212,6 +250,6 @@ export function buildOperatorDevicesAlertsVm(response: OperatorDevicesAlertsResp
     alerts,
     overdueAlerts: alerts.filter((item) => item.overdueText === "已超时"),
     emptyTitle: "暂无设备或告警数据",
-    emptyDescription: "当前没有设备状态、告警事件、通知、ACK 或 close 记录可展示。",
+    emptyDescription: "当前没有设备状态、告警事件、通知、确认或关闭记录可展示。",
   };
 }

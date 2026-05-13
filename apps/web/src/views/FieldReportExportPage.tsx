@@ -1,6 +1,6 @@
 import React from "react";
 import { useParams } from "react-router-dom";
-import { fetchFieldReport } from "../api/customerReports";
+import { fetchFieldReport, type FieldReportDetailV1 } from "../api/customerReports";
 import { buildFieldReportVm, type FieldReportPageVm } from "../viewmodels/fieldReportVm";
 import { FieldExportBlocks } from "../components/customer/CustomerExportBlocks";
 import PrintReportScaffold from "../components/customer/PrintReportScaffold";
@@ -8,6 +8,7 @@ import PrintReportScaffold from "../components/customer/PrintReportScaffold";
 export default function FieldReportExportPage(): React.ReactElement {
   const { fieldId = "" } = useParams();
   const [vm, setVm] = React.useState<FieldReportPageVm | null>(null);
+  const [report, setReport] = React.useState<FieldReportDetailV1 | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
 
@@ -16,12 +17,14 @@ export default function FieldReportExportPage(): React.ReactElement {
     setLoading(true);
     setError("");
     void fetchFieldReport(fieldId)
-      .then((report) => {
+      .then((nextReport) => {
         if (!alive) return;
-        setVm(buildFieldReportVm(report));
+        setReport(nextReport);
+        setVm(buildFieldReportVm(nextReport));
       })
       .catch((e: unknown) => {
         if (!alive) return;
+        setReport(null);
         setVm(null);
         setError(String(e instanceof Error ? e.message : "加载失败"));
       })
@@ -37,12 +40,12 @@ export default function FieldReportExportPage(): React.ReactElement {
 
   return (
     <PrintReportScaffold
-      title={vm.field.fieldName || "地块报告"}
-      subtitle="地块病历打印版"
+      title="GEOX 地块报告"
+      subtitle={vm.field.fieldName || "地块名称待补充"}
       generatedAt={vm.generatedAtText}
       backTo={`/customer/fields/${encodeURIComponent(fieldId)}`}
     >
-      <FieldExportBlocks vm={vm} />
+      <FieldExportBlocks vm={vm} report={report} />
     </PrintReportScaffold>
   );
 }

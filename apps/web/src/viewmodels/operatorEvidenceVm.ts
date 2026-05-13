@@ -1,4 +1,5 @@
 import type { OperatorEvidenceItem, OperatorEvidenceJobStatus, OperatorEvidenceResponse, OperatorEvidenceScopeStatus, OperatorEvidenceStorageMode } from "../api/operatorEvidence";
+import { mapOperatorStatusLabel, replaceOperatorTerms } from "../lib/operatorStatusLabels";
 
 export type OperatorEvidenceRowVm = {
   jobId: string;
@@ -13,6 +14,7 @@ export type OperatorEvidenceRowVm = {
   scopeText: string;
   storageText: string;
   downloadText: string;
+  downloadUrl?: string | null;
   createdAtText: string;
   completedAtText: string;
   failureReasonText: string;
@@ -38,7 +40,7 @@ export type OperatorEvidenceVm = {
 function text(value: unknown, fallback = ""): string {
   const raw = String(value ?? "").trim();
   if (!raw || raw === "--" || raw === "undefined" || raw === "null") return fallback;
-  return raw;
+  return replaceOperatorTerms(raw);
 }
 
 function dateText(value: unknown): string {
@@ -54,7 +56,7 @@ function statusText(value: OperatorEvidenceJobStatus): string {
   if (value === "RUNNING") return "导出中";
   if (value === "DONE") return "已完成";
   if (value === "FAILED") return "导出失败";
-  return "状态待确认";
+  return mapOperatorStatusLabel(value, "evidence", "状态待确认");
 }
 
 function statusTone(value: OperatorEvidenceJobStatus): OperatorEvidenceRowVm["statusTone"] {
@@ -85,25 +87,26 @@ function sourceText(value: OperatorEvidenceItem["source"]): string {
 }
 
 function operationHref(operationId: unknown): string | null {
-  const id = text(operationId);
+  const id = String(operationId ?? "").trim();
   return id ? `/customer/operations/${encodeURIComponent(id)}` : null;
 }
 
 function buildRow(item: OperatorEvidenceItem): OperatorEvidenceRowVm {
-  const scope = [text(item.scopeType, "scope 未接入"), text(item.scopeId, "对象未接入"), scopeStatusText(item.scopeStatus)].join(" · ");
+  const scope = [text(item.scopeType, "导出范围未接入"), text(item.scopeId, "对象未接入"), scopeStatusText(item.scopeStatus)].join(" · ");
   return {
     jobId: item.jobId,
     title: `证据导出任务 ${item.jobId}`,
-    objectText: text(item.operationId, "operation scope 未接入"),
+    objectText: text(item.operationId, "作业范围未接入"),
     statusText: statusText(item.status),
     statusTone: statusTone(item.status),
-    manifestText: text(item.manifestText, "manifest 暂无摘要"),
-    checksumText: text(item.sha256, "暂无 sha256 checksum"),
-    artifactText: text(item.artifactText, "artifact 标识未提供"),
-    formatText: text(item.format, "format 未提供"),
+    manifestText: text(item.manifestText, "证据清单暂无摘要"),
+    checksumText: text(item.sha256, "暂无文件校验值"),
+    artifactText: text(item.artifactText, "证据对象标识未提供"),
+    formatText: text(item.format, "导出格式未提供"),
     scopeText: scope,
     storageText: storageText(item.storageMode),
     downloadText: text(item.downloadStatus, "下载状态待确认"),
+    downloadUrl: String(item.downloadUrl ?? "").trim() || null,
     createdAtText: dateText(item.createdAt),
     completedAtText: dateText(item.completedAt),
     failureReasonText: text(item.failureReason, item.status === "FAILED" ? "失败原因待补充" : "无失败原因"),
@@ -123,16 +126,16 @@ export function buildOperatorEvidenceVm(response: OperatorEvidenceResponse): Ope
   const rows = (response.items ?? []).map(buildRow);
   return {
     title: "证据中心",
-    lead: "查看证据导出任务、manifest、sha256、artifact 标识、存储模式与失败原因。",
+    lead: "查看证据包状态、证据清单、文件校验值、证据对象标识、存储模式与失败原因。",
     generatedAtText: dateText(response.generated_at),
     dataScopeText: dataScopeText(response),
-    dataScopeWarning: response.dataScope === "FALLBACK_LIMITED" ? response.message || "当前展示有限 fallback 证据数据，非完整 operator evidence。" : undefined,
+    dataScopeWarning: response.dataScope === "FALLBACK_LIMITED" ? replaceOperatorTerms(response.message || "当前展示有限 fallback 证据数据，非完整 operator evidence。") : undefined,
     exportReady: response.exportReady,
     totalCount: rows.length,
     rows,
     failedRows: rows.filter((row) => row.statusText === "导出失败"),
-    missingChecksumRows: rows.filter((row) => row.checksumText === "暂无 sha256 checksum"),
+    missingChecksumRows: rows.filter((row) => row.checksumText === "暂无文件校验值"),
     emptyTitle: "暂无证据导出任务",
-    emptyDescription: "当前没有证据导出任务、manifest 或 sha256 checksum 可展示。",
+    emptyDescription: "当前没有证据导出任务、证据清单或文件校验值可展示。",
   };
 }

@@ -23,9 +23,12 @@ export async function appendSkillBinding(pool: Pool, input: SkillBindingInput) {
   const scope_type = String(input.scope_type ?? "TENANT").trim().toUpperCase();
   const trigger_stage = String(input.trigger_stage ?? "before_dispatch").trim();
   const rollout_mode = String(input.rollout_mode ?? "DIRECT").trim().toUpperCase();
+  const configPatch = asObject(input.config_patch) ?? undefined;
 
   return appendSkillBindingFact(pool, {
-    ...input,
+    tenant_id: String(input.tenant_id ?? ""),
+    project_id: String(input.project_id ?? ""),
+    group_id: String(input.group_id ?? ""),
     ...checked,
     binding_id: typeof input.binding_id === "string" ? input.binding_id : undefined,
     status: boolLike(input.enabled, true) ? "ACTIVE" : "DISABLED",
@@ -35,7 +38,11 @@ export async function appendSkillBinding(pool: Pool, input: SkillBindingInput) {
     crop_code: typeof input.crop_code === "string" ? input.crop_code : null,
     device_type: typeof input.device_type === "string" ? input.device_type.trim().toUpperCase() : null,
     priority: Number.isFinite(Number(input.priority)) ? Number(input.priority) : 0,
-    config_patch: asObject(input.config_patch) ?? undefined,
+    config_patch: configPatch,
+    changed_by_actor_id: typeof input.changed_by_actor_id === "string" ? input.changed_by_actor_id : undefined,
+    changed_by_token_id: typeof input.changed_by_token_id === "string" ? input.changed_by_token_id : undefined,
+    change_reason: typeof input.change_reason === "string" ? input.change_reason : undefined,
+    security_boundary_version: typeof input.security_boundary_version === "string" ? input.security_boundary_version : undefined,
   } as any);
 }
 

@@ -3,116 +3,220 @@ import { Link, useParams } from "react-router-dom";
 import { fetchOperationReport, type OperationReportV1 } from "../api/customerReports";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ErrorState from "../components/common/ErrorState";
-import EvidencePackSummaryPanel from "../components/customer/EvidencePackSummaryPanel";
-import FieldMemoryPanel from "../components/customer/FieldMemoryPanel";
-import PrescriptionContractDrawer from "../components/customer/PrescriptionContractDrawer";
-import RoiLedgerDrawer from "../components/customer/RoiLedgerDrawer";
-import { buildOperationReportVm } from "../viewmodels/operationReportVm";
-import { customerTimelineStatusLabel, labelCustomerTechnicalField } from "../lib/customerLabels";
+import { customerTimelineStatusLabel } from "../lib/customerLabels";
+import { customerSafeName, customerSafeTitle } from "../lib/customerSafeText";
+import { customerChainIntegrityLabel, customerSemanticLabel, isCustomerChainComplete } from "../lib/customerSemanticLabels";
+import { labelCustomerAcceptanceVerdict, labelCustomerApprovalStatus, labelCustomerRoiStatus } from "../lib/customerStatusLabels";
+import { buildOperationReportVm, type CustomerReportSectionVm, type OperationReportPageVm } from "../viewmodels/operationReportVm";
 
-const MAIN_VIEW_BLOCK_PATTERNS = [
-  /skill\s*run/i,
-  /skill_run/i,
-  /skill_trace/i,
-  /irrigation_soil_moisture_threshold/i,
-  /\b[A-Z][A-Z0-9_]{3,}\b/,
-];
+type BackendChainItem = { key: string; label: string; status: "DONE" | "AVAILABLE" | "PENDING" | "MISSING" | "NOT_APPLICABLE" | string; reason?: string | null; source?: string | null };
+type MainRow = { label: string; value: string };
+type MainSection = { key: "why" | "prescription_approval" | "execution" | "evidence_acceptance" | "value_learning"; title: string; summary: string; rows: MainRow[] };
 
-const CUSTOMER_EVIDENCE_BLOCK_PATTERNS = [
-  /s3:\/\//i,
-  /minio:\/\//i,
-  /https?:\/\//i,
-  /(^|\s)\/[\w./-]+/,
-  /[A-Z]:\\[\w\\.-]+/i,
-  /\bsecret\b/i,
-  /\btoken\b/i,
-  /\bcredential\b/i,
-  /stack\s*trace/i,
-  // customer-boundary-allow: customer evidence sanitizer blocks unsafe structured metadata from report payload
-  /debug\s*json/i,
-  /\{\s*"/,
-];
+const CHAIN_LABELS: Record<string, string> = { diagnosis: "诊断", recommendation: "建议", prescription: "处方", approval: "审批", operation_plan: "作业计划", execution: "执行", receipt: "回执", evidence: "证据", acceptance: "验收", roi: "价值记录", field_memory: "田块记忆" };
 
-type EvidencePackSafeMetadata = {
-  manifest: string | null;
-  sha256: string | null;
-  downloadUrl: string | null;
-};
+function normalizeKey(value: unknown): string { return String(value ?? "").trim().replace(/[\s/-]+/g, "_").toUpperCase(); }
+function isObject(value: unknown): value is Record<string, unknown> { return Boolean(value && typeof value === "object" && !Array.isArray(value)); }
+function text(value: unknown): string { return String(value ?? "").trim(); }
+function isBlank(value: unknown): boolean { const raw = text(value); return !raw || raw === "--" || raw === "[object Object]" || raw.toLowerCase() === "null" || raw.toLowerCase() === "undefined"; }
+function isTechnicalLike(value: unknown): boolean { const raw = text(value); return /^(rec|prc|apr|act|opl|ft_op|ft_field|receipt|recommendation|prescription|approval|operation|task)_[A-Za-z0-9_-]+$/i.test(raw) || /^[0-9a-f]{32}$/i.test(raw) || /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(raw); }
 
 function customerText(value: unknown, fallback = "暂无可展示信息"): string {
-  const text = String(value ?? "").trim();
-  if (!text || text === "--" || text === "0/0" || /1970\s*[\/-]/.test(text)) return fallback;
-  return text;
+  if (isBlank(value) || isTechnicalLike(value)) return fallback;
+  const raw = text(value);
+  if (/1970\s*[\/-]/.test(raw)) return fallback;
+  return customerSemanticLabel(raw, fallback);
 }
 
-function shouldHideMainViewText(value: unknown): boolean {
-  const text = String(value ?? "").trim();
-  return text.length > 0 && MAIN_VIEW_BLOCK_PATTERNS.some((pattern) => pattern.test(text));
+function safeAuditValue(value: unknown, fallback = "暂无记录"): string {
+  if (isTechnicalLike(value)) return "技术字段已隐藏，需排障时查看技术详情。";
+  return customerText(value, fallback);
 }
 
-function safeMainViewText(value: unknown, fallback = "暂无摘要"): string {
-  return shouldHideMainViewText(value) ? fallback : String(value ?? "").trim() || fallback;
+function toCustomerStatus(status: unknown): "DONE" | "AVAILABLE" | "PENDING" | "MISSING" | "NOT_APPLICABLE" {
+  const raw = normalizeKey(status);
+  if (["DONE", "COMPLETE", "COMPLETED", "PASS", "SUCCESS", "SUCCEEDED", "VALID"].includes(raw)) return "DONE";
+  if (raw === "AVAILABLE") return "AVAILABLE";
+  if (["PENDING", "RUNNING", "IN_PROGRESS", "PENDING_ACCEPTANCE"].includes(raw)) return "PENDING";
+  if (raw === "NOT_APPLICABLE") return "NOT_APPLICABLE";
+  return "MISSING";
 }
 
-function toSafeText(value: unknown): string | null {
-  const text = String(value ?? "").trim();
-  if (!text || text === "--" || text === "[object Object]") return null;
-  if (CUSTOMER_EVIDENCE_BLOCK_PATTERNS.some((pattern) => pattern.test(text))) return null;
-  return text;
+function chainLabel(value: unknown, fallback: string): string {
+  const raw = text(value);
+  const key = raw.toLowerCase();
+  return CHAIN_LABELS[key] ?? customerSemanticLabel(raw, fallback);
 }
 
-function safeManifest(value: unknown): string | null {
-  const text = toSafeText(value);
-  if (!text) return null;
-  if (text.includes("/") || text.includes("\\")) return null;
-  return text.length <= 120 ? text : null;
+function normalizeChain(report: OperationReportV1): BackendChainItem[] {
+  const raw = (report as any).status_chain;
+  if (Array.isArray(raw) && raw.length) {
+    return raw.map((item, index) => {
+      const key = String(item?.key ?? `chain_${index}`).trim() || `chain_${index}`;
+      return { key, label: chainLabel(item?.label ?? key, `链路 ${index + 1}`), status: toCustomerStatus(item?.status), reason: item?.reason ?? null, source: item?.source ?? null };
+    });
+  }
+  return [{ key: "legacy", label: "历史链路", status: "MISSING", reason: "该作业为历史/人工链路，缺少正式建议或处方记录。", source: "frontend_legacy_guard" }];
 }
 
-function safeSha256(value: unknown): string | null {
-  const text = String(value ?? "").trim();
-  return /^[a-fA-F0-9]{64}$/.test(text) ? text.toLowerCase() : null;
+function sectionByKey(vm: OperationReportPageVm, key: CustomerReportSectionVm["key"]): CustomerReportSectionVm | undefined { return vm.sections.find((item) => item.key === key); }
+function sectionForChain(vm: OperationReportPageVm, key: string): CustomerReportSectionVm | undefined {
+  const normalized = key.toLowerCase();
+  if (normalized === "recommendation") return sectionByKey(vm, "RECOMMENDATION");
+  if (normalized === "prescription") return sectionByKey(vm, "PRESCRIPTION");
+  if (normalized === "approval") return sectionByKey(vm, "APPROVAL");
+  if (["operation_plan", "execution", "receipt"].includes(normalized)) return sectionByKey(vm, "EXECUTION");
+  if (normalized === "evidence") return sectionByKey(vm, "EVIDENCE");
+  if (normalized === "acceptance") return sectionByKey(vm, "ACCEPTANCE");
+  if (normalized === "roi") return sectionByKey(vm, "ROI");
+  if (normalized === "field_memory") return sectionByKey(vm, "MEMORY");
+  return undefined;
 }
 
-function safeDownloadUrl(value: unknown): string | null {
-  const text = String(value ?? "").trim();
-  if (!text) return null;
-  if (!text.startsWith("/api/v1/") && !text.startsWith("/customer/")) return null;
-  if (text.includes("//") || text.includes("\\")) return null;
-  if (CUSTOMER_EVIDENCE_BLOCK_PATTERNS.some((pattern) => pattern.test(text.replace(/^\/api\/v1\//, "api/v1/").replace(/^\/customer\//, "customer/")))) return null;
-  return text;
+function sectionSummary(section: CustomerReportSectionVm | undefined, fallback: string): string {
+  if (!section || section.emptyState) return fallback;
+  return customerText(section.summary, fallback);
 }
 
-function evidencePackSafeMetadata(report: OperationReportV1): EvidencePackSafeMetadata {
-  const pack = (report as unknown as { evidence_pack_summary?: Record<string, unknown> }).evidence_pack_summary ?? {};
-  return {
-    manifest: safeManifest(pack.manifest),
-    sha256: safeSha256(pack.sha256),
-    downloadUrl: safeDownloadUrl(pack.download_url),
-  };
+function sectionItem(section: CustomerReportSectionVm | undefined, labelIncludes: string, fallback = "暂无记录"): string {
+  const row = section?.items.find((item) => item.label.includes(labelIncludes));
+  return customerText(row?.value, fallback);
 }
 
-function EvidencePackMetadataBlock({ metadata }: { metadata: EvidencePackSafeMetadata }): React.ReactElement | null {
-  if (!metadata.manifest && !metadata.sha256 && !metadata.downloadUrl) return null;
+function missingLinksText(report: OperationReportV1): string {
+  const links = (report as any).missing_links;
+  return Array.isArray(links) && links.length ? links.map((x) => chainLabel(x, "待补充环节")).join("、") : "无";
+}
+
+function approvalRecordLinked(reportAny: any): boolean {
+  return Boolean((isObject(reportAny.approval) && Object.keys(reportAny.approval).length > 0) || reportAny.approval_request_id || reportAny.identifiers?.approval_id || reportAny.identifiers?.approval_request_id);
+}
+
+function approvalResultText(approval: any): string {
+  const status = normalizeKey(approval?.status ?? approval?.result ?? approval?.verdict);
+  if (!status) return "待确认";
+  if (["APPROVED", "PASS", "SUCCESS", "SUCCEEDED", "DONE"].includes(status)) return "已通过";
+  if (["REJECTED", "FAIL", "FAILED", "RETURNED"].includes(status)) return "已退回";
+  if (["PENDING", "REQUESTED", "WAITING"].includes(status)) return "待确认";
+  return labelCustomerApprovalStatus(status);
+}
+
+function acceptanceResultText(value: unknown): string {
+  const key = normalizeKey(value);
+  if (!key) return "待确认";
+  if (["PASS", "SUCCESS", "SUCCEEDED", "APPROVED"].includes(key)) return "已通过";
+  if (["FAIL", "FAILED", "REJECTED"].includes(key)) return "未通过";
+  if (["PENDING", "PENDING_ACCEPTANCE", "WAITING"].includes(key)) return "待确认";
+  return labelCustomerAcceptanceVerdict(key);
+}
+
+function evidenceChainText(vm: OperationReportPageVm): string {
+  if (vm.evidenceSummary.state === "PACK_SUMMARY") return "证据链完整";
+  if (vm.evidenceSummary.state === "RECORDS_WITHOUT_SUMMARY") return "证据已记录，证据包摘要待生成";
+  return "证据不足，需补齐后复核";
+}
+
+function formatRoiNumber(value: unknown, forceUnavailable = false): string {
+  if (forceUnavailable || value === null || value === undefined || value === "") return "暂不可计算";
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return "暂不可计算";
+  if (n === 0) return "0";
+  return new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 2 }).format(n);
+}
+
+function roiBasisText(value: unknown): string {
+  const raw = text(value);
+  const key = normalizeKey(raw);
+  if (!raw || key === "COST_PROJECTION_ONLY_BASELINE_MISSING") return "当前仅有成本预测，缺少产量/价格基线";
+  return customerText(raw, "当前仅有成本预测，缺少产量/价格基线");
+}
+
+function roiStatusText(reportAny: any): string {
+  const roi = reportAny.roi ?? reportAny.roi_ledger ?? {};
+  const projection = roi.projection ?? reportAny.prescription?.value_projection ?? {};
+  const hypothesis = roi.hypothesis ?? reportAny.recommendation?.value_hypothesis ?? {};
+  const status = normalizeKey(roi.status ?? projection.status ?? hypothesis.status ?? projection.projection_basis ?? hypothesis.baseline_status);
+  if (!status || status.includes("BASELINE_MISSING") || normalizeKey(projection.projection_basis).includes("BASELINE_MISSING")) return "缺少收益基线";
+  return labelCustomerRoiStatus(status);
+}
+
+function buildValueRows(reportAny: any): { summary: string; rows: MainRow[] } {
+  const roi = reportAny.roi ?? reportAny.roi_ledger ?? {};
+  const projection = roi.projection ?? reportAny.prescription?.value_projection ?? {};
+  const hypothesis = roi.hypothesis ?? reportAny.recommendation?.value_hypothesis ?? {};
+  const status = roiStatusText(reportAny);
+  const baselineMissing = status === "缺少收益基线";
+  const plannedCost = formatRoiNumber(projection.planned_cost ?? projection.cost ?? hypothesis.planned_cost);
+  const expectedBenefit = formatRoiNumber(projection.expected_benefit ?? hypothesis.expected_benefit, baselineMissing);
+  const expectedNet = formatRoiNumber(projection.expected_net_value ?? projection.expected_net ?? hypothesis.expected_net_value, baselineMissing);
+  const basis = roiBasisText(projection.projection_basis ?? hypothesis.baseline_source ?? roi.projection_basis);
+  const summary = baselineMissing
+    ? "已有价值假设和计划成本记录；缺少历史产量/价格基线，暂不形成可信收益结论。"
+    : "已有价值假设和作业学习记录，最终收益需结合后续证据复核。";
+  return { summary, rows: [{ label: "价值状态", value: status }, { label: "计划成本", value: plannedCost }, { label: "预期收益", value: expectedBenefit }, { label: "预期净值", value: expectedNet }, { label: "依据", value: basis }] };
+}
+
+function buildMainSections(vm: OperationReportPageVm, report: OperationReportV1): MainSection[] {
+  const reportAny = report as any;
+  const recommendation = sectionByKey(vm, "RECOMMENDATION");
+  const prescription = sectionByKey(vm, "PRESCRIPTION");
+  const approval = reportAny.approval ?? {};
+  const execution = sectionByKey(vm, "EXECUTION");
+  const acceptanceStatus = acceptanceResultText(report.acceptance?.status ?? reportAny.acceptance?.status ?? reportAny.acceptance?.verdict);
+  const operationTypeText = customerSemanticLabel(reportAny.operation_type ?? reportAny.prescription?.operation_type, "作业");
+  const value = buildValueRows(reportAny);
+  const approvalLinked = approvalRecordLinked(reportAny);
+  const receiptRecorded = Boolean(reportAny.execution?.receipt_id || report.evidence?.receipt_present || reportAny.identifiers?.receipt_id);
+  const dispatched = Boolean(reportAny.execution?.act_task_id || reportAny.identifiers?.act_task_id || normalizeKey(reportAny.execution?.dispatch_status) === "DISPATCHED");
+
+  return [
+    { key: "why", title: "为什么做", summary: sectionSummary(recommendation, `系统根据土壤水分、天气和地块观测记录形成${operationTypeText}建议。`), rows: [{ label: "建议原因", value: sectionItem(recommendation, "建议原因", `形成${operationTypeText}建议`) }, { label: "农艺解释", value: sectionItem(recommendation, "农艺解释", `系统根据土壤水分、天气和地块观测记录形成${operationTypeText}建议。`) }, { label: "风险等级", value: sectionItem(recommendation, "风险等级", "风险待确认") }] },
+    { key: "prescription_approval", title: "处方与审批", summary: `${sectionSummary(prescription, `已形成${operationTypeText}处方。`)}审批记录${approvalLinked ? "已关联" : "待关联"}，审批结果${approvalResultText(approval)}。`, rows: [{ label: "处方状态", value: sectionSummary(prescription, `已形成${operationTypeText}处方`) }, { label: "审批记录", value: approvalLinked ? "已关联" : "待关联" }, { label: "审批结果", value: approvalResultText(approval) }, { label: "审批人", value: customerText(approval.actor_name ?? approval.actor ?? approval.approver_name, "待确认") }, { label: "审批意见", value: customerText(approval.note ?? approval.comment ?? approval.reason, "暂无") }] },
+    { key: "execution", title: "执行结果", summary: `${dispatched ? "任务已派发到设备" : "任务派发状态待确认"}，${receiptRecorded ? "执行回执已记录" : "执行回执待记录"}。`, rows: [{ label: "派发状态", value: dispatched ? "任务已派发到设备" : "派发状态待确认" }, { label: "执行状态", value: sectionSummary(execution, vm.execution.statusText || "执行状态待确认") }, { label: "执行回执", value: receiptRecorded ? "已记录" : "待记录" }, { label: "完成时间", value: customerText(reportAny.execution?.finished_at ?? report.execution?.execution_finished_at ?? vm.operation.updatedAtText, "暂无完成时间") }] },
+    { key: "evidence_acceptance", title: "证据与验收", summary: `${evidenceChainText(vm)}，验收结论${acceptanceStatus}。`, rows: [{ label: "证据链", value: evidenceChainText(vm) }, { label: "证据摘要", value: customerText(vm.evidenceSummary.summary, "证据摘要待生成") }, { label: "验收结论", value: acceptanceStatus }, { label: "复核提示", value: customerText(vm.evidenceSummary.detail, "无") }] },
+    { key: "value_learning", title: "价值与学习", summary: value.summary, rows: [...value.rows, { label: "田块记忆", value: sectionSummary(sectionByKey(vm, "MEMORY"), "暂无可展示的田块记忆") }] },
+  ];
+}
+
+function MainSectionCard({ section }: { section: MainSection }): React.ReactElement {
   return (
-    <div className="customerGrid2 customerSpacingTopXs">
-      {metadata.manifest ? <div><strong>证据清单：</strong>{metadata.manifest}</div> : null}
-      {metadata.sha256 ? <div><strong>校验值：</strong>{metadata.sha256}</div> : null}
-      {metadata.downloadUrl ? <div><strong>下载入口：</strong><a className="customerLinkButton" href={metadata.downloadUrl}>下载证据包</a></div> : null}
-    </div>
+    <article className="customerCard operationMainSectionCard">
+      <h2 className="customerCardTitle">{section.title}</h2>
+      <p className="operationOneLiner">{section.summary}</p>
+      <div className="customerGrid2 customerSpacingTopXs">
+        {section.rows.map((row) => <div key={`${section.key}-${row.label}`}><strong>{row.label}：</strong>{row.value}</div>)}
+      </div>
+    </article>
   );
 }
 
-function shortOperationLabel(value: string): string {
-  const text = value.trim();
-  if (/处方/.test(text)) return "处方";
-  if (/as-executed|执行/i.test(text)) return "执行";
-  if (/field\s*memory|田块记忆|记忆/i.test(text)) return "记忆";
-  if (/recommendation|建议/i.test(text)) return "建议";
-  if (/approval|审批/i.test(text)) return "审批";
-  if (/evidence|证据/i.test(text)) return "证据";
-  if (/acceptance|验收/i.test(text)) return "验收";
-  if (/roi|价值记录/i.test(text)) return "价值";
-  return text;
+function AuditChain({ chain, vm }: { chain: BackendChainItem[]; vm: OperationReportPageVm }): React.ReactElement {
+  return (
+    <section className="customerCard operationAuditChain">
+      <details>
+        <summary className="operationTechDetailsSummary">审计链路（默认折叠）</summary>
+        <p className="customerMetricLabel customerSpacingTopSm">以下为诊断、建议、处方、审批、执行、证据、验收、价值和田块记忆的摘要链路。技术来源和原始编号默认不进入客户主视图。</p>
+        <div className="operationClosedLoopGrid customerSpacingTopSm">
+          {chain.map((item, index) => {
+            const section = sectionForChain(vm, item.key);
+            return (
+              <details key={item.key} className="customerCard operationClosedLoopCard">
+                <summary>
+                  <span className="operationStepNo">{index + 1}</span> {item.label}：{customerTimelineStatusLabel(toCustomerStatus(item.status))}
+                </summary>
+                <p className="operationOneLiner customerSpacingTopXs">{section?.summary ? customerText(section.summary, "暂无链路说明") : customerText(item.reason, "暂无链路说明")}</p>
+                {section?.items.length ? (
+                  <div className="customerGrid2 customerSpacingTopXs">
+                    {section.items.slice(0, 6).map((row) => <div key={`${item.key}-${row.label}`}><strong>{row.label}：</strong>{safeAuditValue(row.value)}</div>)}
+                  </div>
+                ) : <p className="muted customerSpacingTopXs">该环节暂无客户可读明细。</p>}
+              </details>
+            );
+          })}
+        </div>
+      </details>
+    </section>
+  );
 }
 
 export default function OperationReportPage(): React.ReactElement {
@@ -120,49 +224,28 @@ export default function OperationReportPage(): React.ReactElement {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string>("");
   const [report, setReport] = React.useState<OperationReportV1 | null>(null);
-  const [expandedKey, setExpandedKey] = React.useState<string | null>(null);
-  const [prescriptionDrawerOpen, setPrescriptionDrawerOpen] = React.useState(false);
-  const [roiDrawerOpen, setRoiDrawerOpen] = React.useState(false);
 
   React.useEffect(() => {
     let alive = true;
     setLoading(true);
     setError("");
-    void fetchOperationReport(operationId)
-      .then((res) => {
-        if (!alive) return;
-        setReport(res);
-      })
-      .catch((e: unknown) => {
-        if (!alive) return;
-        setError(String(e instanceof Error ? e.message : "加载失败"));
-      })
-      .finally(() => {
-        if (!alive) return;
-        setLoading(false);
-      });
-    return () => {
-      alive = false;
-    };
+    void fetchOperationReport(operationId).then((res) => { if (alive) setReport(res); }).catch((e: unknown) => { if (alive) setError(String(e instanceof Error ? e.message : "加载失败")); }).finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
   }, [operationId]);
 
   if (loading) return <SectionSkeleton kind="detail" />;
   if (error || !report) return <ErrorState title="作业报告加载失败" message={error || "暂无报告"} onRetry={() => window.location.reload()} />;
 
   const vm = buildOperationReportVm(report);
-  const canExport = Boolean(operationId.trim());
-  const canBackToField = Boolean(vm.operation.fieldId && vm.operation.fieldId !== "--");
+  const chain = normalizeChain(report);
   const reportAny = report as any;
-  const prescriptionId = vm.drawerRefs.prescriptionId;
-  const recommendationId = vm.drawerRefs.recommendationId;
-  const drawerOperationId = vm.drawerRefs.operationId;
-  const drawerFieldId = vm.drawerRefs.fieldId;
-  const embeddedRoi = reportAny.roi_ledger ?? reportAny.roi ?? reportAny.value_summary;
-  const embeddedMemory = reportAny.field_memory ?? reportAny.field_memory_summary ?? reportAny.memory;
-  const evidenceMetadata = evidencePackSafeMetadata(report);
-  const displayEvidenceSummary = evidenceMetadata.downloadUrl && vm.evidenceSummary.detail === "当前展示客户可读证据包摘要，不提供文件下载入口。"
-    ? { ...vm.evidenceSummary, detail: "当前展示客户可读证据包摘要。" }
-    : vm.evidenceSummary;
+  const chainIntegrityRaw = reportAny.chain_integrity;
+  const chainIntegrity = customerChainIntegrityLabel(chainIntegrityRaw, "历史/人工链路");
+  const legacyWarning = customerText(reportAny.legacy_warning, isCustomerChainComplete(chainIntegrityRaw) ? "" : "该作业为历史/人工链路，缺少正式建议或处方记录。");
+  const canBackToField = Boolean(vm.operation.fieldId && vm.operation.fieldId !== "--");
+  const safeOperationTitle = customerSafeTitle(vm.operation.title, "作业名称待补充");
+  const safeFieldName = customerSafeName(vm.operation.fieldName, "地块名称待补充");
+  const mainSections = buildMainSections(vm, report);
 
   return (
     <div className="customerReportCanvas">
@@ -170,139 +253,44 @@ export default function OperationReportPage(): React.ReactElement {
         <header className="customerHero operationHero">
           <div className="customerHeroTop">
             <div>
-              <div className="customerReportLogo">GEOX / 作业闭环</div>
-              <h1 className="customerTitle">{vm.operation.title}</h1>
-              <p className="customerSubtitle">地块：{customerText(vm.operation.fieldName, "暂无地块信息")}</p>
-              <p className="customerSubtitle">最终状态：{customerText(vm.operation.finalStatusLabel, "状态待更新")} · 更新时间：{customerText(vm.operation.updatedAtText, "暂无更新时间")}</p>
+              <div className="customerReportLogo">GEOX / 作业报告</div>
+              <h1 className="customerTitle">{safeOperationTitle}</h1>
+              <p className="customerSubtitle">地块：{safeFieldName}</p>
+              <p className="customerSubtitle">链路完整性：{chainIntegrity} · 缺失环节：{missingLinksText(report)}</p>
             </div>
             <div className="customerActions">
               <Link className="customerButton" to="/customer/dashboard">返回总览</Link>
-              {canBackToField ? <Link className="customerButton" to={`/customer/fields/${encodeURIComponent(vm.operation.fieldId)}`}>返回地块</Link> : <span className="muted">返回地块不可用：缺少地块标识</span>}
-              {canExport ? <Link className="customerButton" to={vm.exportHref}>导出报告</Link> : <span className="muted">导出不可用：缺少作业标识</span>}
-              {canExport ? <Link className="customerButton" to={`/operator/evidence?operation_id=${encodeURIComponent(operationId)}`}>查看证据导出</Link> : null}
+              {canBackToField ? <Link className="customerButton" to={`/customer/fields/${encodeURIComponent(vm.operation.fieldId)}`}>返回地块</Link> : null}
+              <Link className="customerButton" to={vm.exportHref}>导出报告</Link>
             </div>
           </div>
         </header>
 
-        <section className="customerCard operationTimelineStrip">
-          {vm.timeline.map((item) => <span key={item.key} className="customerPill">{shortOperationLabel(item.label)}：{item.key === "EVIDENCE" ? displayEvidenceSummary.statusText : customerTimelineStatusLabel(item.status)}</span>)}
+        {legacyWarning ? <section className="customerCard customerScopeWarning">{legacyWarning}</section> : null}
+
+        <section className="operationMainSectionsGrid">
+          {mainSections.map((section) => <MainSectionCard key={section.key} section={section} />)}
         </section>
 
-        <section className="operationClosedLoopGrid">
-          {vm.sections.map((section, index) => {
-            const isExpanded = expandedKey === section.key;
-            const isEvidenceSection = section.key === "EVIDENCE";
-            const isPrescriptionSection = section.key === "PRESCRIPTION";
-            const isRoiSection = section.key === "ROI";
-            const isMemorySection = section.key === "MEMORY";
-            const displayItems = section.items.filter((item) => !shouldHideMainViewText(`${item.label} ${item.value}`));
-            const title = shortOperationLabel(section.title);
-            const statusText = isEvidenceSection ? displayEvidenceSummary.statusText : (section.statusText || customerTimelineStatusLabel(section.status));
-            const detailText = section.emptyState?.description || (displayItems[0] ? `${displayItems[0].label}：${displayItems[0].value}` : "暂无摘要");
-            return (
-              <article
-                key={section.key}
-                className={`customerCard operationClosedLoopCard ${isExpanded ? "isExpanded" : ""}`}
-                role="button"
-                tabIndex={0}
-                onClick={() => setExpandedKey((prev) => prev === section.key ? null : section.key)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setExpandedKey((prev) => prev === section.key ? null : section.key);
-                  }
-                }}
-              >
-                <div className="operationClosedLoopHead">
-                  <span className="operationStepNo">{index + 1}</span>
-                  <h3 className="customerCardTitle">{title}</h3>
-                  <span className="operationStatusBadge">{statusText}</span>
-                </div>
-                {isEvidenceSection ? (
-                  <>
-                    <EvidencePackSummaryPanel vm={displayEvidenceSummary} expanded={isExpanded} />
-                    {isExpanded ? <EvidencePackMetadataBlock metadata={evidenceMetadata} /> : null}
-                  </>
-                ) : isMemorySection && isExpanded ? (
-                  <FieldMemoryPanel fieldId={drawerFieldId} operationId={drawerOperationId} embeddedMemory={embeddedMemory} compact />
-                ) : (
-                  <>
-                    <div className="operationOneLiner">{safeMainViewText(section.summary)}</div>
-                    <div className="operationOneLiner muted">{safeMainViewText(detailText)}</div>
-                    {isExpanded ? (
-                      <div className="customerGrid2 customerSpacingTopXs">
-                        {displayItems.map((item) => <div key={`${section.key}-${item.label}`}><strong>{item.label}：</strong>{safeMainViewText(item.value, "--")}</div>)}
-                        {!displayItems.length && section.emptyState ? <div className="muted">{section.emptyState.title}：{section.emptyState.description}</div> : null}
-                      </div>
-                    ) : null}
-                  </>
-                )}
-                <div className="operationCardActions">
-                  <button
-                    type="button"
-                    className="customerLinkButton customerSpacingTopXs"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setExpandedKey((prev) => prev === section.key ? null : section.key);
-                    }}
-                  >
-                    {isExpanded ? "收起详情" : "查看详情"}
-                  </button>
-                  {isPrescriptionSection ? (
-                    <button
-                      type="button"
-                      className="customerLinkButton customerSpacingTopXs"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPrescriptionDrawerOpen(true);
-                      }}
-                    >
-                      查看处方详情
-                    </button>
-                  ) : null}
-                  {isRoiSection ? (
-                    <button
-                      type="button"
-                      className="customerLinkButton customerSpacingTopXs"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setRoiDrawerOpen(true);
-                      }}
-                    >
-                      查看价值记录明细
-                    </button>
-                  ) : null}
-                </div>
-              </article>
-            );
-          })}
-        </section>
+        <AuditChain chain={chain} vm={vm} />
 
         <section className="operationTechDetailsMuted">
           <details>
             <summary className="operationTechDetailsSummary">展开技术详情</summary>
-            <div className="operationTechDetailsTitle">技术详情（默认关闭）</div>
             <div className="operationTechDetailsGrid">
-              {(vm.technicalFoldout?.rows ?? []).map((row) => (
-                <div key={row.label}><strong>{labelCustomerTechnicalField(row.label)}：</strong>{row.value}</div>
-              ))}
+              <div><strong>operation_id：</strong>{customerText(reportAny.operation_id ?? report.identifiers?.operation_id)}</div>
+              <div><strong>recommendation_id：</strong>{customerText(reportAny.recommendation?.recommendation_id ?? report.identifiers?.recommendation_id)}</div>
+              <div><strong>prescription_id：</strong>{customerText(reportAny.prescription?.prescription_id ?? report.identifiers?.prescription_id)}</div>
+              <div><strong>approval_request_id：</strong>{customerText(reportAny.approval?.approval_request_id ?? report.identifiers?.approval_id)}</div>
+              <div><strong>act_task_id：</strong>{customerText(reportAny.execution?.act_task_id ?? report.identifiers?.act_task_id)}</div>
+              <div><strong>receipt_id：</strong>{customerText(reportAny.execution?.receipt_id ?? report.identifiers?.receipt_id)}</div>
+              <div><strong>roi_status：</strong>{roiStatusText(reportAny)}</div>
+              <div><strong>chain_integrity：</strong>{chainIntegrity}</div>
+              <div><strong>missing_links：</strong>{missingLinksText(report)}</div>
             </div>
           </details>
         </section>
       </div>
-      <PrescriptionContractDrawer
-        open={prescriptionDrawerOpen}
-        prescriptionId={prescriptionId}
-        recommendationId={recommendationId}
-        onClose={() => setPrescriptionDrawerOpen(false)}
-      />
-      <RoiLedgerDrawer
-        open={roiDrawerOpen}
-        fieldId={drawerFieldId}
-        operationId={drawerOperationId}
-        embeddedRoi={embeddedRoi}
-        onClose={() => setRoiDrawerOpen(false)}
-      />
     </div>
   );
 }

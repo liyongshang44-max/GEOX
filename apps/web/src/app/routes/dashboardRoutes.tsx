@@ -8,6 +8,7 @@ const ManualExecutionQualityAnalysisPage = React.lazy(() => import("../../featur
 const CustomerDashboardPage = React.lazy(() => import("../../features/customer/pages/CustomerDashboardPage"));
 const CustomerDashboardExportPage = React.lazy(() => import("../../features/customer/pages/CustomerDashboardExportPage"));
 const CustomerReportExportPage = React.lazy(() => import("../../features/customer/pages/CustomerReportExportPage"));
+const FlightTablePage = React.lazy(() => import("../../views/dev/FlightTablePage"));
 
 export function renderDashboardRoutes(expert: boolean): React.ReactElement[] {
   return [
@@ -17,6 +18,7 @@ export function renderDashboardRoutes(expert: boolean): React.ReactElement[] {
     <Route key="dashboard-manual-quality" path="/dashboard/manual-quality-analysis" element={<ManualExecutionQualityAnalysisPage />} />,
     <Route key="dashboard-customer-legacy" path="/dashboard/customer" element={<Navigate to="/customer/dashboard" replace />} />,
     <Route key="dashboard-customer" path="/customer/dashboard" element={<RouteErrorBoundary><CustomerDashboardPage /></RouteErrorBoundary>} />,
+    <Route key="flight-table" path="/dev/flight-table" element={<RouteErrorBoundary><FlightTablePage /></RouteErrorBoundary>} />,
     <Route key="dashboard-export-legacy" path="/dashboard/export" element={<Navigate to="/customer/export" replace />} />,
     <Route
       key="dashboard-export"

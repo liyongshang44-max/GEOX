@@ -35,6 +35,7 @@ export * from "./execution/as_applied_map_v1.js";
 
 export * from "./roi/roi_ledger_v1.js";
 export * from "./judge/judge_result_v2.js";
+export * from "./reports/operation_report_chain_v1.js";
 
 export * from "./product/metric_display_policy_v1.js";
 export * from "./schema/actuator_adapter_v1.js";

@@ -1,0 +1,81 @@
+.flight-step-decision {
+  border-color: rgba(37, 99, 235, 0.28);
+}
+
+.flight-step-operation {
+  border-color: rgba(5, 150, 105, 0.28);
+}
+
+.flight-step-evidence {
+  border-color: rgba(124, 58, 237, 0.28);
+}
+
+.flight-e-layer-inline {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.32fr) minmax(0, 0.68fr);
+  gap: 4px 10px;
+  margin: 10px 0 0;
+  font-size: 12px;
+}
+
+.flight-f-layer-inline {
+  grid-template-columns: minmax(120px, 0.36fr) minmax(0, 0.64fr);
+}
+
+.flight-g-layer-inline {
+  grid-template-columns: minmax(120px, 0.34fr) minmax(0, 0.66fr);
+}
+
+.flight-e-layer-inline dt {
+  color: #64748b;
+}
+
+.flight-e-layer-inline dd {
+  margin: 0;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.flight-decision-drawer {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+}
+
+.flight-operation-drawer {
+  border-color: rgba(5, 150, 105, 0.22);
+}
+
+.flight-evidence-drawer {
+  border-color: rgba(124, 58, 237, 0.22);
+}
+
+.flight-decision-drawer h4 {
+  margin: 16px 0 8px;
+}
+
+.flight-decision-drawer details {
+  margin-top: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  border-radius: 14px;
+  padding: 10px;
+  background: rgba(248, 250, 252, 0.78);
+}
+
+.flight-decision-drawer summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.flight-decision-contract {
+  margin-top: 12px;
+}
+
+@media (max-width: 720px) {
+  .flight-e-layer-inline {
+    grid-template-columns: 1fr;
+  }
+}
