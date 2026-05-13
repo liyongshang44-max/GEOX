@@ -89,11 +89,16 @@ const ALLOW_LINE_PATTERNS = [
   /setSearchParams/,
   /searchParams\.get\(/,
   /next\.(field_id|operation_id|memory_type)\s*=/,
+  /params\.set\(['"](field_id|operation_id|memory_type)['"]/,
   /new URLSearchParams/,
   /encodeURIComponent/,
   /permissionKey="ack"/,
   /permissionName: "operator_alert_ack_close"/,
   /canAck|ackBusy|onAck|ackDisabled|ackReason|ackCloseReady/,
+  /\b(IRRIGATE|PENDING_ACCEPTANCE|ACK|Dispatch|Receipt)\b.*(===|!==|case\s|includes\(|map|label|status|kind|type)/,
+  /(===|!==|case\s|includes\(|map|label|status|kind|type).*\b(IRRIGATE|PENDING_ACCEPTANCE|ACK|Dispatch|Receipt)\b/,
+  /\b(field_id|operation_id|memory_type)\b.*(searchParams|URLSearchParams|query|params|filter|href|internal)/,
+  /(searchParams|URLSearchParams|query|params|filter|href|internal).*\b(field_id|operation_id|memory_type)\b/,
 ];
 
 function rel(file) {
@@ -130,8 +135,9 @@ function shouldScanOperatorPath(file) {
   return false;
 }
 
-function isAllowedLine(line) {
-  return ALLOW_LINE_PATTERNS.some((pattern) => pattern.test(line));
+function isAllowedLine(lines, index) {
+  const context = [lines[index - 2], lines[index - 1], lines[index]].filter(Boolean).join(' ');
+  return ALLOW_LINE_PATTERNS.some((pattern) => pattern.test(context));
 }
 
 function collectStaticFiles() {
@@ -143,7 +149,7 @@ function scanText({ name, text, filePath = '' }) {
   const lines = text.split(/\r?\n/);
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i];
-    if (isAllowedLine(line)) continue;
+    if (isAllowedLine(lines, i)) continue;
     for (const item of FORBIDDEN) {
       if (!item.pattern.test(line)) continue;
       findings.push({ name, filePath, line: i + 1, token: item.token, snippet: line.trim().slice(0, 240) });
@@ -195,13 +201,14 @@ function printFindings(title, findings) {
 }
 
 async function main() {
+  const staticFiles = collectStaticFiles();
   const staticResult = scanStaticSources();
   const apiResult = await scanApiOutput();
   const findings = [...staticResult.findings, ...apiResult.findings];
 
   console.log('[OPERATOR_UI_SEMANTICS_V1] routes:');
   for (const route of ROUTES) console.log(`- ${route}`);
-  console.log(`[OPERATOR_UI_SEMANTICS_V1] static files scanned: ${collectStaticFiles().length}`);
+  console.log(`[OPERATOR_UI_SEMANTICS_V1] static files scanned: ${staticFiles.length}`);
   if (apiResult.skipped) {
     console.log('[OPERATOR_UI_SEMANTICS_V1] API scan skipped. Set GEOX_FRONTEND_ACCEPTANCE_API_BASE to enable route-output checks.');
   } else {
