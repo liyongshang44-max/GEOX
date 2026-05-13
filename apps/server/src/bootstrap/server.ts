@@ -16,6 +16,15 @@ export async function startServer(): Promise<void> {
 
   const { app, pool } = createApp({ config, paths });
 
+  process.on("uncaughtException", (err: any) => {
+    if (err?.code === "ERR_HTTP_HEADERS_SENT") {
+      app.log.error({ err }, "duplicate_reply_suppressed");
+      return;
+    }
+    app.log.error({ err }, "uncaught_exception");
+    process.exit(1);
+  });
+
   await runSqlMigrations(pool);
   startBackgroundWorkers(pool);
 
