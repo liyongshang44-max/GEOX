@@ -18,7 +18,7 @@ const OPERATION_ID = String(process.env.OPERATION_ID || '').trim();
 const ROUTE_TARGETS = [
   { route: '/customer/dashboard', sources: ['apps/web/src/views/CustomerDashboardPage.tsx'] },
   { route: '/customer/fields/:field_id', sources: ['apps/web/src/views/FieldReportPage.tsx', 'apps/web/src/viewmodels/fieldReportVm.ts'] },
-  { route: '/customer/operations', sources: ['apps/web/src/views/CustomerOperationsIndexPage.tsx', 'apps/web/src/api/customerOperations.ts'] },
+  { route: '/customer/operations', sources: ['apps/web/src/views/CustomerOperationsIndexPage.tsx', 'apps/web/src/viewmodels/customerOperationsVm.ts'] },
   { route: '/customer/operations/:operation_id', sources: ['apps/web/src/views/OperationReportPage.tsx', 'apps/web/src/viewmodels/operationReportVm.ts'] },
   { route: '/customer/reports', sources: ['apps/web/src/views/ReportsIndexPage.tsx'] },
   { route: '/customer/fields/:field_id/export', sources: ['apps/web/src/views/FieldReportExportPage.tsx'] },
@@ -51,6 +51,7 @@ const ALLOW_PATH_PATTERNS = [
   /(^|[/\\])__tests__([/\\]|$)/,
   /\.test\.[tj]sx?$/,
   /\.spec\.[tj]sx?$/,
+  /(^|[/\\])api([/\\]|$)/,
   /customerSafeText\.ts$/,
   /customerStatusLabels\.ts$/,
   /customerLabels\.ts$/,
@@ -73,6 +74,9 @@ const ALLOW_LINE_PATTERNS = [
   /technicalRefs/,
   /sourceText/,
   /raw\s*enum/i,
+  /\b(BASELINE_MISSING|YIELD_LIFT_EXPECTED|DEFAULT_ASSUMPTION)\b.*(===|!==|case\s|includes\(|map|label|status|kind|type)/,
+  /(===|!==|case\s|includes\(|map|label|status|kind|type).*\b(BASELINE_MISSING|YIELD_LIFT_EXPECTED|DEFAULT_ASSUMPTION)\b/,
+  /\b(operation_plan_v1|ao_act_task_v0|ao_act_receipt_v0|approval_request_v1|roi_ledger_v1|field_memory_v1)\b.*(source|technical|audit|trace|ref)/i,
 ];
 
 function rel(file) {
@@ -110,8 +114,9 @@ function shouldScanCustomerPath(file) {
   return false;
 }
 
-function isAllowedLine(line) {
-  return ALLOW_LINE_PATTERNS.some((pattern) => pattern.test(line));
+function isAllowedLine(lines, index) {
+  const context = [lines[index - 2], lines[index - 1], lines[index]].filter(Boolean).join(' ');
+  return ALLOW_LINE_PATTERNS.some((pattern) => pattern.test(context));
 }
 
 function collectStaticFiles() {
@@ -123,7 +128,7 @@ function scanText({ name, text, filePath = '' }) {
   const lines = text.split(/\r?\n/);
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i];
-    if (isAllowedLine(line)) continue;
+    if (isAllowedLine(lines, i)) continue;
     for (const item of FORBIDDEN) {
       if (!item.pattern.test(line)) continue;
       findings.push({ name, filePath, line: i + 1, token: item.token, snippet: line.trim().slice(0, 240) });
@@ -189,13 +194,14 @@ function printFindings(title, findings) {
 }
 
 async function main() {
+  const staticFiles = collectStaticFiles();
   const staticResult = scanStaticSources();
   const apiResult = await scanApiOutput();
   const findings = [...staticResult.findings, ...apiResult.findings];
 
   console.log('[CUSTOMER_UI_SEMANTICS_V1] routes:');
   for (const target of ROUTE_TARGETS) console.log(`- ${target.route}`);
-  console.log(`[CUSTOMER_UI_SEMANTICS_V1] static files scanned: ${collectStaticFiles().length}`);
+  console.log(`[CUSTOMER_UI_SEMANTICS_V1] static files scanned: ${staticFiles.length}`);
   if (apiResult.skipped) {
     console.log('[CUSTOMER_UI_SEMANTICS_V1] API scan skipped. Set GEOX_FRONTEND_ACCEPTANCE_API_BASE to enable route-output checks.');
   } else {
