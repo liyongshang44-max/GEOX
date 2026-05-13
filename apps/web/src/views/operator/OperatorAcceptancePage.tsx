@@ -6,7 +6,7 @@ import OperatorEmptyState from "../../components/operator/OperatorEmptyState";
 import PermissionGate from "../../components/operator/PermissionGate";
 import OperatorLayout from "../../layouts/OperatorLayout";
 import "../../styles/operatorAcceptance.css";
-import { labelOperatorTerm, replaceOperatorTerms } from "../../lib/operatorStatusLabels";
+import { replaceOperatorTerms } from "../../lib/operatorStatusLabels";
 import { hasOperatorPermission, permissionReason } from "../../lib/permissions";
 import { buildOperatorAcceptanceVm, type OperatorAcceptanceGroupVm, type OperatorAcceptanceRowVm, type OperatorAcceptanceVm } from "../../viewmodels/operatorAcceptanceVm";
 import { OPERATOR_PAGE_META } from "./operatorPageMeta";
@@ -59,18 +59,28 @@ function AcceptanceRow({
       </header>
 
       <div className="operatorAcceptanceMeta">
-        <div><span>验收状态</span><strong>{row.acceptanceStatusText}</strong></div>
-        <div><span>{labelOperatorTerm("operation_state")}</span><strong>{row.operationStateText}</strong></div>
-        <div><span>证据状态</span><strong>{row.evidenceText}</strong></div>
+        <div><span>状态</span><strong>{row.acceptanceStatusText}</strong></div>
         <div><span>验收结论</span><strong>{row.verdictText}</strong></div>
-        <div><span>失败原因</span><strong>{row.failureReasonText}</strong></div>
-        <div><span>复核原因</span><strong>{row.reviewReasonText}</strong></div>
+        <div><span>原因</span><strong>{row.reasonText}</strong></div>
+        <div><span>下一步</span><strong>{row.nextActionText}</strong></div>
+        <div><span>证据状态</span><strong>{row.evidenceText}</strong></div>
         <div><span>生成时间</span><strong>{row.generatedAtText}</strong></div>
         <div><span>更新时间</span><strong>{row.updatedAtText}</strong></div>
-        <div><span>数据来源</span><strong>{row.sourceText}</strong></div>
       </div>
 
-      <div className="operatorAcceptanceNotice">验收状态来自验收记录与作业状态；前端不自行推断最终状态。证据不足不能包装成验收通过。</div>
+      <details className="operationTechDetailsMuted">
+        <summary className="operationTechDetailsSummary">技术引用</summary>
+        <div className="operatorAcceptanceMeta customerSpacingTopSm">
+          <div><span>作业 ID</span><strong>{row.technicalRefs.operationIdText}</strong></div>
+          <div><span>验收记录 ID</span><strong>{row.technicalRefs.acceptanceIdText}</strong></div>
+          <div><span>作业状态</span><strong>{row.technicalRefs.operationStateText}</strong></div>
+          <div><span>数据来源</span><strong>{row.technicalRefs.sourceText}</strong></div>
+          <div><span>失败原因</span><strong>{row.failureReasonText}</strong></div>
+          <div><span>复核原因</span><strong>{row.reviewReasonText}</strong></div>
+        </div>
+      </details>
+
+      <div className="operatorAcceptanceNotice">验收状态来自验收记录与作业状态；前端不自行推断最终状态。证据不足不能包装成验收通过，验收失败需要复核或返工。</div>
       {actionState.lastError ? <div className="operatorAcceptanceDisabledReason">{actionState.lastError}</div> : null}
 
       <div className="operatorAcceptanceActions">
