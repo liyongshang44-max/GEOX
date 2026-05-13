@@ -152,8 +152,6 @@ export function validateOperationChainV1(input: ValidatorInput): OperationChainV
   );
   const deficitDetected = bool(rec?.skill_trace?.outputs?.deficit_detected ?? rec?.diagnosis?.deficit_detected ?? rec?.diagnosis?.water_deficit);
   const confidenceBasis = upper(rec?.skill_trace?.outputs?.confidence?.basis ?? rec?.confidence_basis);
-  const recommendationConfidence = finite(rec?.confidence ?? rec?.recommendation_confidence);
-  const action = actionTypeFrom(input);
 
   const irrigation = isIrrigation(input);
   const diagnosisHasCoreEvidence = irrigation
@@ -169,7 +167,7 @@ export function validateOperationChainV1(input: ValidatorInput): OperationChainV
   const recommendationExists = Boolean(recFact || input.recommendation);
   const recommendationStatus: OperationChainStatusV1 = !recommendationExists ? "MISSING" : diagnosisStatus === "DONE" ? "DONE" : "BLOCKED";
 
-  const prescriptionExists = Boolean(prescriptionFact || input.prescription);
+  const prescriptionExists = Boolean(prescriptionFact);
   const prescriptionStatus: OperationChainStatusV1 = !prescriptionExists ? "MISSING" : recommendationStatus === "DONE" ? "DONE" : "BLOCKED";
 
   const approvalDecision = upper(input.approvalDecision?.decision ?? input.approval?.status);
@@ -216,7 +214,7 @@ export function validateOperationChainV1(input: ValidatorInput): OperationChainV
         ? "SIMULATED"
         : "BLOCKED";
 
-  const roiAvailable = Boolean(input.report?.roi_ledger?.summary?.total_items || Array.isArray(input.report?.roi_ledger?.items) && input.report.roi_ledger.items.length || input.report?.roi);
+  const roiAvailable = Boolean(input.report?.roi_ledger?.summary?.total_items || (Array.isArray(input.report?.roi_ledger?.items) && input.report.roi_ledger.items.length) || input.report?.roi);
   const roiStatus: OperationChainStatusV1 = acceptanceStatus === "DONE" ? (roiAvailable ? "AVAILABLE" : "MISSING") : "BLOCKED";
 
   const memoryAvailable = Boolean(input.report?.field_memory || input.report?.field_memory?.field_response_memory?.length || input.report?.field_memory?.device_reliability_memory?.length || input.report?.field_memory?.skill_performance_memory?.length);
@@ -225,7 +223,7 @@ export function validateOperationChainV1(input: ValidatorInput): OperationChainV
   const status_chain: OperationChainItemV1[] = [
     node("diagnosis", "诊断", diagnosisStatus, diagnosisReason, recFact ? "decision_recommendation_v1" : "operation_report_chain_v1"),
     node("recommendation", "建议", recommendationStatus, recommendationStatus === "DONE" ? "正式建议已关联" : recommendationExists ? "上游诊断依据未通过校验，建议不能作为正式依据" : "缺少正式建议记录", recFact ? "decision_recommendation_v1" : "operation_report_chain_v1"),
-    node("prescription", "处方", prescriptionStatus, prescriptionStatus === "DONE" ? "正式处方已关联" : prescriptionExists ? "上游建议未通过校验，处方不能作为正式处方" : "缺少正式处方记录", prescriptionFact ? factType(prescriptionFact) : (prescriptionExists ? "operation_plan_v1" : "operation_report_chain_v1")),
+    node("prescription", "处方", prescriptionStatus, prescriptionStatus === "DONE" ? "正式处方已关联" : prescriptionExists ? "上游建议未通过校验，处方不能作为正式处方" : "缺少正式处方事实，不能仅凭作业计划中的处方编号认定处方成立", prescriptionFact ? factType(prescriptionFact) : "operation_report_chain_v1"),
     node("approval", "审批", approvalStatus, approvalApproved ? "审批结果已通过" : approvalExists ? "审批请求存在，但审批结果尚未通过" : "缺少审批记录", approvalDecisionFact ? "approval_decision_v1" : approvalExists ? "approval_request_v1" : "operation_report_chain_v1"),
     node("operation_plan", "作业计划", operationPlanStatus, operationPlanStatus === "DONE" ? "作业计划已获得审批授权" : operationPlanExists ? "审批未通过，作业计划不能作为正式执行计划" : "缺少作业计划", planFact ? "operation_plan_v1" : "operation_report_chain_v1"),
     node("execution", "执行", executionStatus, executionStatus === "DONE" ? "执行任务已由正式计划派发" : taskExists ? "上游作业计划未授权，执行任务不能作为正式执行" : "缺少执行任务", taskFact ? "ao_act_task_v0" : "operation_report_chain_v1"),
@@ -242,6 +240,7 @@ export function validateOperationChainV1(input: ValidatorInput): OperationChainV
   if (receiptNotAcceptance) chain_flags.push("receipt_success_is_not_acceptance_pass");
   if (!approvalApproved && approvalExists) chain_flags.push("approval_not_approved");
   if (diagnosisStatus === "NEEDS_EVIDENCE") chain_flags.push("diagnosis_needs_core_evidence");
+  if (!prescriptionExists && input.prescription) chain_flags.push("prescription_id_without_formal_prescription_fact");
   if (operationPlanExists && !operationPlanAuthorized) chain_flags.push("operation_plan_without_approved_decision");
   if (receiptStatus === "SIMULATED") chain_flags.push("simulated_receipt_not_acceptance_proof");
   if (acceptanceStatus === "SIMULATED") chain_flags.push("simulated_acceptance_not_customer_conclusion");
