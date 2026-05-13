@@ -1,5 +1,6 @@
 import React from "react";
 import type { FlightTableRunV1 } from "../../../api/flightTable";
+import { apiRequest, ApiError } from "../../../api/client";
 import { flightTableLaneLabel, flightTableStatusLabel } from "../../../viewmodels/flightTableVm";
 
 type Props = {
@@ -17,9 +18,42 @@ type Props = {
   loading: boolean;
 };
 
+function errorToText(error: unknown): string {
+  if (error instanceof ApiError) return error.bodyText || error.message;
+  return String((error as any)?.message ?? error ?? "一键生成完整链路失败");
+}
+
+function count(value: unknown): number {
+  return Array.isArray(value) ? value.length : 0;
+}
+
 export default function FlightRunHeader(props: Props): React.ReactElement {
   const { run, runIdDraft, laneDraft, loading } = props;
+  const [fullRunLoading, setFullRunLoading] = React.useState(false);
+  const [fullRunError, setFullRunError] = React.useState<string | null>(null);
   const failedStep = run?.steps.find((step) => step.status === "FAIL") ?? null;
+  const operationCount = count(run?.manifest.operation_plan_ids);
+  const taskCount = count(run?.manifest.act_task_ids);
+  const receiptCount = count(run?.manifest.receipt_ids);
+  const polluted = operationCount > 1 || taskCount > 1 || receiptCount > 1;
+
+  const handleFullRun = React.useCallback(async () => {
+    if (!run) return;
+    setFullRunLoading(true);
+    setFullRunError(null);
+    try {
+      await apiRequest(`/api/v1/dev/flight-table/runs/${encodeURIComponent(run.run_id)}/full-run`, {
+        method: "POST",
+        body: JSON.stringify({ lane: laneDraft }),
+      });
+      window.location.reload();
+    } catch (err) {
+      setFullRunError(errorToText(err));
+    } finally {
+      setFullRunLoading(false);
+    }
+  }, [laneDraft, run]);
+
   return (
     <header className="flight-run-header flight-console-header">
       <div className="flight-console-title-block">
@@ -51,15 +85,19 @@ export default function FlightRunHeader(props: Props): React.ReactElement {
           </label>
         </div>
         <div className="flight-actions flight-console-primary-actions">
-          <button type="button" onClick={props.onCreateRun} disabled={loading}>保存装配</button>
-          <button type="button" onClick={props.onExportAcceptancePackage} disabled={loading || !run}>导出验收包</button>
-          <button type="button" className="flight-action-primary" onClick={props.onStartRun} disabled={loading || !run}>启动飞行</button>
+          <button type="button" onClick={props.onCreateRun} disabled={loading || fullRunLoading}>保存装配</button>
+          <button type="button" onClick={props.onExportAcceptancePackage} disabled={loading || fullRunLoading || !run}>导出验收包</button>
+          <button type="button" className="flight-action-primary" onClick={handleFullRun} disabled={loading || fullRunLoading || !run}>一键生成完整链路</button>
         </div>
         <div className="flight-actions flight-console-secondary-actions">
-          <button type="button" onClick={props.onVerify} disabled={loading || !run}>只运行校验</button>
-          <button type="button" onClick={props.onRetryFailedStep} disabled={loading || !run || !failedStep}>重新运行失败步骤</button>
-          <button type="button" onClick={props.onClean} disabled={loading || !run}>清理本次数据</button>
+          <button type="button" onClick={props.onStartRun} disabled={loading || fullRunLoading || !run}>只运行校验</button>
+          <button type="button" onClick={props.onVerify} disabled={loading || fullRunLoading || !run}>刷新校验报告</button>
+          <button type="button" onClick={props.onRetryFailedStep} disabled={loading || fullRunLoading || !run || !failedStep}>重新运行失败步骤</button>
+          <button type="button" onClick={props.onClean} disabled={loading || fullRunLoading || !run}>清理运行态</button>
+          <button type="button" onClick={() => window.alert("演示数据清理涉及 facts / projection / device / operation 等正式表，当前不做自动硬删除；请先使用新的 run_id 生成干净样本。")}>清理演示数据</button>
         </div>
+        {fullRunError ? <p className="flight-error-text">一键生成失败：{fullRunError}</p> : null}
+        {polluted ? <p className="flight-error-text">当前 run 已重复执行：operation={operationCount}，task={taskCount}，receipt={receiptCount}。该 run 不适合作为干净验收样本。</p> : null}
         {failedStep ? <p className="flight-error-text">失败定位：{failedStep.step_key} · {failedStep.message ?? "无错误说明"}</p> : null}
         {run ? (
           <div className="flight-current-run">
