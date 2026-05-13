@@ -57,7 +57,7 @@ export default function OperatorLayout({ title, lead, children }: OperatorLayout
       <main className="operatorMain">
         <header className="operatorHeader">
           <div>
-            <div className="operatorEyebrow">P1-C / Operator Diagnostic Enhancement</div>
+            <div className="operatorEyebrow">运营工作台</div>
             <h1>{title}</h1>
             <p>{lead}</p>
           </div>
