@@ -29,7 +29,7 @@ function safeMessage(value: unknown, fallback = "操作失败，请稍后重试�
 
 function DisabledApprovalButtons({ pending }: { pending: boolean }): React.ReactElement {
   return (
-    <div className="operatorApprovalDecisionActions">
+    <div className="operatorApprovalDecisionActions" aria-disabled="true">
       <button type="button" disabled>{pending ? "处理中..." : "通过"}</button>
       <button type="button" disabled>{pending ? "处理中..." : "拒绝"}</button>
       <button type="button" disabled>{pending ? "处理中..." : "退回补充"}</button>
@@ -57,27 +57,27 @@ function ApprovalDecisionActions({
   sessionDeniedReason: string;
 }): React.ReactElement {
   const disabledReason = row.selfApprovalRisk
-    ? "存在自审批风险，审批动作已阻断。"
+    ? "当前不可操作：发起人与审批人相同"
     : (!writeReady
-      ? "审批写操作未 ready，当前只读。"
+      ? "当前不可操作：审批写操作未 ready，当前只读。"
       : (sessionDeniedReason
-        ? sessionDeniedReason
-        : (!row.actionButtonState.canAction ? row.actionButtonState.disabledReason || row.permissionReason : null)));
+        ? `当前不可操作：${sessionDeniedReason}`
+        : (!row.actionButtonState.canAction ? row.permissionReason : null)));
   const disabled = Boolean(disabledReason) || pending;
 
   return (
-    <div className="operatorApprovalDecisionPanel" aria-label="审批决策区">
+    <div className="operatorApprovalDecisionPanel" aria-label="审批决策区" aria-disabled={disabled}>
       {disabledReason ? <div className="operatorApprovalDecisionNotice">{disabledReason}</div> : null}
       {lastError ? <div className="operatorApprovalDecisionNotice">{lastError}</div> : null}
       <PermissionGate
         permissionKey="approve"
-        allowed={sessionAllowed}
+        allowed={sessionAllowed && !row.selfApprovalRisk && writeReady}
         loading={sessionLoading}
-        disabledReason={sessionDeniedReason}
+        disabledReason={disabledReason ?? sessionDeniedReason}
         fallback={() => <DisabledApprovalButtons pending={pending} />}
       >
         {() => (
-          <div className="operatorApprovalDecisionActions">
+          <div className="operatorApprovalDecisionActions" aria-disabled={disabled}>
             <button type="button" disabled={disabled} onClick={() => onAction("approve")}>{pending ? "处理中..." : "通过"}</button>
             <button type="button" disabled={disabled} onClick={() => onAction("reject")}>{pending ? "处理中..." : "拒绝"}</button>
             <button type="button" disabled={disabled} onClick={() => onAction("return")}>{pending ? "处理中..." : "退回补充"}</button>
@@ -119,10 +119,11 @@ function ApprovalCard({
       <div className="operatorApprovalMetaGrid">
         <div><span>对象</span><strong>{row.objectText}</strong></div>
         <div><span>状态</span><strong>{row.statusText}</strong></div>
+        <div><span>风险</span><strong>{row.riskText}</strong></div>
+        <div><span>下一步</span><strong>{row.nextActionText}</strong></div>
         <div><span>发起人</span><strong>{row.requestedByText}</strong></div>
         <div><span>审批人</span><strong>{row.approverText}</strong></div>
         <div><span>更新时间</span><strong>{row.updatedAtText}</strong></div>
-        <div><span>来源</span><strong>{row.sourceText}</strong></div>
       </div>
 
       <div className="operatorPrescriptionBox">
@@ -133,6 +134,16 @@ function ApprovalCard({
         </div>
         <button type="button" disabled={!row.prescriptionHref}>查看处方</button>
       </div>
+
+      <details className="operationTechDetailsMuted">
+        <summary className="operationTechDetailsSummary">技术引用</summary>
+        <div className="operatorApprovalMetaGrid customerSpacingTopSm">
+          <div><span>审批记录</span><strong>{row.technicalRefs.approvalRequestIdText}</strong></div>
+          <div><span>处方记录</span><strong>{row.technicalRefs.prescriptionIdText}</strong></div>
+          <div><span>建议记录</span><strong>{row.technicalRefs.recommendationIdText}</strong></div>
+          <div><span>来源</span><strong>{row.technicalRefs.sourceText}</strong></div>
+        </div>
+      </details>
 
       <ApprovalDecisionActions
         row={row}
