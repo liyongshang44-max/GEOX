@@ -162,13 +162,12 @@ export function registerCustomerV1Routes(app: FastifyInstance, pool: Pool): void
     const ctx = scopeFromRequest(req, reply); if (!ctx) return;
     const fieldId = String((req.params as any)?.fieldId ?? "").trim();
     if (!fieldId) return reply.code(404).send({ ok: false, error: "NOT_FOUND" });
-    const allowedFieldIds = Array.isArray(auth.allowed_field_ids) ? new Set(auth.allowed_field_ids.map((x) => String(x ?? "").trim()).filter(Boolean)) : new Set<string>();
-    if (allowedFieldIds.size > 0 && !allowedFieldIds.has(fieldId)) return reply.code(404).send({ ok: false, error: "NOT_FOUND" });
+    if (!isFieldAllowedByCustomerScope(ctx.scope, fieldId)) return reply.code(404).send({ ok: false, error: "NOT_FOUND" });
 
-    const fieldQ = await pool.query(`SELECT field_id FROM field_index_v1 WHERE tenant_id = $1 AND field_id = $2 LIMIT 1`, [tenant.tenant_id, fieldId]);
+    const fieldQ = await pool.query(`SELECT field_id, area_ha FROM field_index_v1 WHERE tenant_id = $1 AND field_id = $2 LIMIT 1`, [ctx.tenant.tenant_id, fieldId]);
     if (fieldQ.rowCount === 0) return reply.code(404).send({ ok: false, error: "NOT_FOUND" });
 
-    const geoQ = await pool.query(`SELECT polygon_geojson_json AS geojson, updated_ts_ms FROM field_polygon_v1 WHERE tenant_id = $1 AND field_id = $2 LIMIT 1`, [tenant.tenant_id, fieldId]);
+    const geoQ = await pool.query(`SELECT polygon_geojson_json AS geojson, updated_ts_ms FROM field_polygon_v1 WHERE tenant_id = $1 AND field_id = $2 LIMIT 1`, [ctx.tenant.tenant_id, fieldId]);
     const raw = safeJsonParse(geoQ.rows?.[0]?.geojson ?? null);
     const geometry = normalizeGeometry(raw);
     const areaHa = Number(fieldQ.rows?.[0]?.area_ha ?? NaN);
