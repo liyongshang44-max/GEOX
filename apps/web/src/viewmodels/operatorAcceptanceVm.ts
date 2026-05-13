@@ -1,10 +1,18 @@
 import type { OperatorAcceptanceItem, OperatorAcceptanceResponse, OperatorAcceptanceStatus } from "../api/operatorAcceptance";
+import { mapOperatorStatusLabel, replaceOperatorTerms } from "../lib/operatorStatusLabels";
 
 export type OperatorActionButtonStateV1 = {
   canAction: boolean;
   disabledReason: string | null;
   pending: boolean;
   lastError: string | null;
+};
+
+export type OperatorAcceptanceTechnicalRefsVm = {
+  operationIdText: string;
+  acceptanceIdText: string;
+  operationStateText: string;
+  sourceText: string;
 };
 
 export type OperatorAcceptanceRowVm = {
@@ -15,6 +23,8 @@ export type OperatorAcceptanceRowVm = {
   operationStateText: string;
   statusTone: "danger" | "warning" | "success" | "neutral";
   evidenceText: string;
+  reasonText: string;
+  nextActionText: string;
   failureReasonText: string;
   reviewReasonText: string;
   verdictText: string;
@@ -27,6 +37,7 @@ export type OperatorAcceptanceRowVm = {
   reviewButtonState: OperatorActionButtonStateV1;
   disabledReason: string;
   operationHref: string;
+  technicalRefs: OperatorAcceptanceTechnicalRefsVm;
 };
 
 export type OperatorAcceptanceGroupVm = {
@@ -53,19 +64,30 @@ export type OperatorAcceptanceVm = {
 const GROUP_ORDER: OperatorAcceptanceStatus[] = ["PENDING", "EVIDENCE_INSUFFICIENT", "FAILED", "REVIEW_REQUIRED", "PASSED"];
 
 const GROUP_META: Record<OperatorAcceptanceStatus, { title: string; description: string }> = {
-  PENDING: { title: "待验收作业", description: "已执行或已收到回执，但尚未形成验收结论。" },
-  EVIDENCE_INSUFFICIENT: { title: "证据不足", description: "证据不足不能包装成验收通过，需要补证或复核。" },
-  FAILED: { title: "验收失败", description: "验收未通过，必须展示失败原因。" },
+  PENDING: { title: "待验收", description: "已执行或已收到回执，但尚未形成验收结论。" },
+  EVIDENCE_INSUFFICIENT: { title: "证据不足", description: "证据不足，不能包装成验收通过，需要补证或复核。" },
+  FAILED: { title: "验收失败", description: "已经形成未通过结论，需要复核或返工。" },
   REVIEW_REQUIRED: { title: "需要复核", description: "存在异常、争议或人工复核要求。" },
-  PASSED: { title: "已通过", description: "后端验收结论为通过的作业。" },
+  PASSED: { title: "验收通过", description: "后端验收结论为通过的作业。" },
   UNKNOWN: { title: "状态待确认", description: "验收状态来源不足，暂不进入正式队列。" },
 };
+
+function isTechnicalId(value: unknown): boolean {
+  const raw = String(value ?? "").trim();
+  return /^(rec|prc|apr|act|opl|ft_op|ft_field|acceptance|acc)_[A-Za-z0-9_-]+$/i.test(raw)
+    || /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(raw);
+}
 
 function text(value: unknown, fallback = ""): string {
   const raw = String(value ?? "").trim();
   if (!raw || raw === "--" || raw === "undefined" || raw === "null") return fallback;
   if (/token|secret|credential|private\s*key|password|stack\s*trace|debug\s*json/i.test(raw)) return fallback;
-  return raw;
+  return replaceOperatorTerms(raw);
+}
+
+function businessText(value: unknown, fallback = ""): string {
+  if (isTechnicalId(value)) return fallback;
+  return text(value, fallback);
 }
 
 function dateText(value: unknown): string {
@@ -76,13 +98,61 @@ function dateText(value: unknown): string {
   return new Date(ms).toLocaleString("zh-CN", { hour12: false });
 }
 
+function includesIrrigation(item: OperatorAcceptanceItem): boolean {
+  const haystack = [item.operationName, item.fieldName, item.reviewReason, item.failureReason].map((x) => String(x ?? "")).join(" ");
+  return /IRRIGATE|IRRIGATION|灌溉/i.test(haystack);
+}
+
+function titleText(item: OperatorAcceptanceItem): string {
+  if (includesIrrigation(item)) return "灌溉作业";
+  const base = businessText(item.operationName, "验收作业");
+  if (base === "灌溉") return "灌溉作业";
+  return base;
+}
+
 function statusText(value: OperatorAcceptanceStatus): string {
   if (value === "PENDING") return "待验收";
   if (value === "EVIDENCE_INSUFFICIENT") return "证据不足";
   if (value === "FAILED") return "验收失败";
   if (value === "REVIEW_REQUIRED") return "需要复核";
-  if (value === "PASSED") return "已通过";
-  return "状态待确认";
+  if (value === "PASSED") return "验收通过";
+  return mapOperatorStatusLabel(value, "acceptance", "状态待确认");
+}
+
+function verdictText(item: OperatorAcceptanceItem): string {
+  if (item.acceptanceStatus === "EVIDENCE_INSUFFICIENT") return "暂不能通过";
+  if (item.acceptanceStatus === "FAILED") return "未通过";
+  if (item.acceptanceStatus === "PENDING") return "尚未形成验收结论";
+  if (item.acceptanceStatus === "REVIEW_REQUIRED") return "待复核";
+  if (item.acceptanceStatus === "PASSED") return "已通过";
+  return mapOperatorStatusLabel(item.acceptanceVerdict, "acceptance", text(item.acceptanceVerdict, "验收结论待生成"));
+}
+
+function reasonText(item: OperatorAcceptanceItem): string {
+  if (item.acceptanceStatus === "EVIDENCE_INSUFFICIENT" || item.evidenceInsufficient) return "缺少验收所需证据";
+  if (item.acceptanceStatus === "FAILED") return text(item.failureReason, "已形成未通过结论，失败原因待补充");
+  if (item.acceptanceStatus === "PENDING") return "已执行或已收到回执，但尚未形成验收结论";
+  if (item.acceptanceStatus === "REVIEW_REQUIRED") return text(item.reviewReason, "存在异常或争议，需要人工复核");
+  if (item.acceptanceStatus === "PASSED") return "验收结论已通过";
+  return "验收原因待确认";
+}
+
+function nextActionText(item: OperatorAcceptanceItem): string {
+  if (item.acceptanceStatus === "EVIDENCE_INSUFFICIENT" || item.evidenceInsufficient) return "补充证据或发起复核";
+  if (item.acceptanceStatus === "FAILED") return "复核失败原因，安排返工或补救";
+  if (item.acceptanceStatus === "PENDING") return "执行验收或发起复核";
+  if (item.acceptanceStatus === "REVIEW_REQUIRED") return "由具备权限的人员完成复核";
+  if (item.acceptanceStatus === "PASSED") return "归档验收结果并同步作业报告";
+  return "确认验收状态后再处理";
+}
+
+function evidenceText(item: OperatorAcceptanceItem): string {
+  if (item.acceptanceStatus === "EVIDENCE_INSUFFICIENT" || item.evidenceInsufficient) return "证据不足";
+  if (item.acceptanceStatus === "FAILED") return "证据已参与验收，但结论未通过";
+  if (item.acceptanceStatus === "PENDING") return "待验收复核";
+  if (item.acceptanceStatus === "PASSED") return "证据支持验收结论";
+  if (item.acceptanceStatus === "REVIEW_REQUIRED") return "证据或结论需要复核";
+  return "证据状态待确认";
 }
 
 function statusTone(value: OperatorAcceptanceStatus): OperatorAcceptanceRowVm["statusTone"] {
@@ -98,8 +168,8 @@ function sourceText(value: OperatorAcceptanceItem["source"]): string {
 }
 
 function objectText(item: OperatorAcceptanceItem): string {
-  const parts = [text(item.fieldName), text(item.operationName)].filter(Boolean);
-  return parts.length ? parts.join(" · ") : "验收对象待确认";
+  const parts = [businessText(item.fieldName), businessText(item.operationName)].filter(Boolean);
+  return parts.length ? parts.join(" / ") : "验收对象待确认";
 }
 
 function operationHref(operationId: string): string {
@@ -108,7 +178,8 @@ function operationHref(operationId: string): string {
 
 function buildEvaluateButtonState(item: OperatorAcceptanceItem, writeReady: boolean): OperatorActionButtonStateV1 {
   if (!writeReady) return { canAction: false, disabledReason: "验收写操作未 ready，当前只读。", pending: false, lastError: null };
-  if (item.evidenceInsufficient) return { canAction: false, disabledReason: "证据不足，不能直接包装成验收通过。", pending: false, lastError: null };
+  if (item.evidenceInsufficient || item.acceptanceStatus === "EVIDENCE_INSUFFICIENT") return { canAction: false, disabledReason: "证据不足，不能包装成验收通过，需要补证或复核。", pending: false, lastError: null };
+  if (item.acceptanceStatus === "FAILED") return { canAction: false, disabledReason: "已经形成未通过结论，需要复核或返工。", pending: false, lastError: null };
   if (!item.canEvaluate) return { canAction: false, disabledReason: text(item.permissionReason, "当前身份无验收操作权限。"), pending: false, lastError: null };
   return { canAction: true, disabledReason: null, pending: false, lastError: null };
 }
@@ -125,20 +196,31 @@ function disabledReason(item: OperatorAcceptanceItem, writeReady: boolean): stri
   return evaluateState.disabledReason || reviewState.disabledReason || "";
 }
 
+function buildTechnicalRefs(item: OperatorAcceptanceItem): OperatorAcceptanceTechnicalRefsVm {
+  return {
+    operationIdText: text(item.operationId, "作业 ID 待确认"),
+    acceptanceIdText: text(item.acceptanceId, "验收记录 ID 待确认"),
+    operationStateText: text(item.operationStateStatus, "作业状态未提供"),
+    sourceText: sourceText(item.source),
+  };
+}
+
 function buildRow(item: OperatorAcceptanceItem, writeReady: boolean): OperatorAcceptanceRowVm {
   const evaluateButtonState = buildEvaluateButtonState(item, writeReady);
   const reviewButtonState = buildReviewButtonState(item, writeReady);
   return {
     operationId: item.operationId,
-    title: text(item.operationName, "验收作业"),
+    title: titleText(item),
     objectText: objectText(item),
     acceptanceStatusText: statusText(item.acceptanceStatus),
-    operationStateText: text(item.operationStateStatus, "operation_state 状态未提供"),
+    operationStateText: text(item.operationStateStatus, "作业状态未提供"),
     statusTone: statusTone(item.acceptanceStatus),
-    evidenceText: item.evidenceInsufficient ? "证据不足" : "证据状态来自后端验收/报告字段",
+    evidenceText: evidenceText(item),
+    reasonText: reasonText(item),
+    nextActionText: nextActionText(item),
     failureReasonText: text(item.failureReason, item.acceptanceStatus === "FAILED" ? "失败原因待补充" : "无失败原因"),
     reviewReasonText: text(item.reviewReason, item.acceptanceStatus === "REVIEW_REQUIRED" ? "复核原因待补充" : "无复核原因"),
-    verdictText: text(item.acceptanceVerdict, "验收结论待生成"),
+    verdictText: verdictText(item),
     generatedAtText: dateText(item.generatedAt),
     updatedAtText: dateText(item.updatedAt),
     sourceText: sourceText(item.source),
@@ -148,6 +230,7 @@ function buildRow(item: OperatorAcceptanceItem, writeReady: boolean): OperatorAc
     reviewButtonState,
     disabledReason: disabledReason(item, writeReady),
     operationHref: operationHref(item.operationId),
+    technicalRefs: buildTechnicalRefs(item),
   };
 }
 
@@ -171,11 +254,11 @@ export function buildOperatorAcceptanceVm(response: OperatorAcceptanceResponse):
     lead: "处理待验收、失败复核、证据不足与已通过验收作业。",
     generatedAtText: dateText(response.generated_at),
     dataScopeText: dataScopeText(response),
-    dataScopeWarning: response.dataScope === "FALLBACK_LIMITED" ? response.message || "当前展示有限 fallback 验收数据，非完整 operator acceptance。" : undefined,
+    dataScopeWarning: response.dataScope === "FALLBACK_LIMITED" ? replaceOperatorTerms(response.message || "当前展示有限 fallback 验收数据，非完整 operator acceptance。") : undefined,
     writeReady: response.writeReady,
     totalCount: rows.length,
     groups,
     emptyTitle: "暂无验收事项",
-    emptyDescription: "当前没有待验收、证据不足、验收失败、需要复核或已通过记录。",
+    emptyDescription: "当前没有待验收、证据不足、验收失败、需要复核或验收通过记录。",
   };
 }
