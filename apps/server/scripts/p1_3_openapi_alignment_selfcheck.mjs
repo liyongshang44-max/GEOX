@@ -30,6 +30,7 @@ const excludedPathPatterns = [
   /^\/api\/v1\/evidence\/control-plane$/,
   /^\/api\/v1\/evidence-reports\//,
   /^\/api\/v1\/dev-lab\//,
+  /^\/api\/v1\/dev\/flight-table\//,
   /^\/api\/v1\/fields\/.+\/geometry$/,
   /^\/api\/v1\/fields\/.+\/sensing-read-models$/,
   /^\/api\/v1\/devices\/.+\/positions$/,
