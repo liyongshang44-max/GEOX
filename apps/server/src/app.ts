@@ -12,6 +12,7 @@ import { registerDomainModules } from "./modules/domain/registerDomainModules.js
 import { registerCompatibilityModules } from "./modules/compat/registerCompatibilityModules.js";
 import { registerAdminModule } from "./modules/admin/registerAdminModule.js";
 import { buildCorsOptionsV1 } from "./runtime/cors_v1.js";
+import { registerRouteReplyGuardV1 } from "./runtime/route_reply_guard_v1.js";
 
 type CreateAppOptions = {
   config: ServerConfig;
@@ -24,6 +25,7 @@ export function createApp(options: CreateAppOptions): { app: FastifyInstance; po
   const app = Fastify({ logger: true, bodyLimit: 50 * 1024 * 1024 });
   void app.register(cors, buildCorsOptionsV1());
 
+  registerRouteReplyGuardV1(app);
   registerCoreModule(app);
   registerStaticModule(app, {
     mediaDir: paths.mediaDir,
