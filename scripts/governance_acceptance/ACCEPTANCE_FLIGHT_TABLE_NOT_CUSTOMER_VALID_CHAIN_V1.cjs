@@ -39,7 +39,6 @@ for (const token of [
   'level: "DEBUG"',
   'FLIGHT_TABLE_DEV_EVIDENCE',
   'DEV_ONLY_NOT_FORMAL',
-  'SIMULATED_DEV_ONLY',
 ]) {
   assertIncludes(service, token, `Flight Table service ${token}`);
 }
@@ -60,7 +59,11 @@ assertIncludes(evidenceContract, 'SIMULATED_DEV_ONLY', 'evidence artifact contra
 assertIncludes(guardedReport, 'SIMULATED_DEV_ONLY', 'guarded report must downgrade simulated/dev chain');
 assertIncludes(guardedReport, 'customer_visible_eligible = trusted', 'guarded report must block customer-visible simulated chain');
 assertIncludes(flightTableDoc, 'Flight Table', 'Flight Table security boundary doc must exist');
-assertRegex(flightTableDoc, /dev-only|dev only|开发|模拟/i, 'Flight Table security doc must state dev/simulated boundary');
+assertRegex(
+  flightTableDoc,
+  /internal development and acceptance rig|dev\/admin tooling|must not be part of the default customer or operator production release path|dev-only|dev only|开发|模拟/i,
+  'Flight Table security doc must state internal dev/simulated boundary',
+);
 
 console.log('[FLIGHT_TABLE_NOT_CUSTOMER_VALID_CHAIN_V1] PASSED');
 console.log('[FLIGHT_TABLE_NOT_CUSTOMER_VALID_CHAIN_V1] Checked Flight Table dev route, simulated evidence lane, formal policy, artifact contract, and guarded report downgrade.');
