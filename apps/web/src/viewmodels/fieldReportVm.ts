@@ -1,8 +1,9 @@
 import type { FieldReportDetailV1 } from "../api/customerReports";
-import { customerFieldMemoryLabel, customerRoiLabel, labelAcceptanceStatus, labelFinalStatus, labelOperationType, labelRiskLevel } from "../lib/customerLabels";
+import { customerFieldMemoryLabel, customerRoiLabel, labelOperationType, labelRiskLevel } from "../lib/customerLabels";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 import { formatCustomerDate, formatCustomerNumber, formatMoneyOrUnavailable } from "../lib/customerSafeText";
 import { customerCropLabel, customerDisplayName, customerSemanticLabel, customerSourceLabel, customerStageLabel } from "../lib/customerSemanticLabels";
+import { customerGuardedAcceptanceText, customerGuardedEvidenceText, customerGuardedStatusText, customerTrustScopeText, customerValueSummaryText, isTrustedDashboardValueSummary } from "../lib/customerTrustGate";
 
 const CROP_UNKNOWN_EXPLANATION = "当前作物季尚未确认。系统可以展示历史作业和地块观测记录，但不会生成作物特定诊断或处方。";
 const CROP_UNKNOWN_DIAGNOSIS_LINES = ["已接入土壤水分、天气与设备观测数据。", "当前作物未确认，因此不形成作物特定诊断结论。"];
@@ -49,6 +50,7 @@ function txt(value: unknown, fallback = ""): string { const raw = String(value ?
 function asArray(value: unknown): unknown[] { return Array.isArray(value) ? value : []; }
 function isObject(value: unknown): value is Record<string, any> { return Boolean(value && typeof value === "object" && !Array.isArray(value)); }
 function upper(value: unknown): string { return String(value ?? "").trim().toUpperCase(); }
+function num(value: unknown): number { const n = Number(value ?? 0); return Number.isFinite(n) ? n : 0; }
 
 function isGeoJsonLike(value: unknown): boolean {
   if (!isObject(value)) return false;
@@ -99,13 +101,10 @@ function buildFieldMapLayers(report: FieldReportDetailV1): FieldMapLayersVm {
   const mapLayers = reportAny.map_layers ?? reportAny.gis_layers ?? reportAny.spatial_layers ?? {};
   const plannedGeoJson = isGeoJsonLike(mapLayers.planned_geojson) ? mapLayers.planned_geojson : null;
   const coverageGeoJson = isGeoJsonLike(mapLayers.coverage_geojson) ? mapLayers.coverage_geojson : null;
-  const trajectorySegments: FieldMapTrajectorySegmentVm[] = [];
-  const acceptancePoints: FieldMapAcceptancePointVm[] = [];
-  const deviceMarkers: FieldMapMarkerVm[] = [];
   const hasBoundary = isGeoJsonLike(reportAny.field?.geometry) || Boolean(reportAny.field?.geometry_id);
-  const hasAnyOperationLayer = Boolean(hasBoundary || plannedGeoJson || coverageGeoJson || trajectorySegments.length || acceptancePoints.length || deviceMarkers.length);
+  const hasAnyOperationLayer = Boolean(hasBoundary || plannedGeoJson || coverageGeoJson);
   const counts = [hasBoundary ? "地块边界" : "", plannedGeoJson ? "计划区域" : "", coverageGeoJson ? "实际覆盖" : ""].filter(Boolean).join("、");
-  return { plannedGeoJson, coverageGeoJson, trajectorySegments, acceptancePoints, deviceMarkers, hasAnyOperationLayer, summaryText: counts ? `已接入：${counts}` : "暂无作业空间图层。" };
+  return { plannedGeoJson, coverageGeoJson, trajectorySegments: [], acceptancePoints: [], deviceMarkers: [], hasAnyOperationLayer, summaryText: counts ? `已接入：${counts}` : "暂无作业空间图层。" };
 }
 
 function operationLabel(actionType: unknown, fallback = "建议执行下一步动作"): string {
@@ -149,10 +148,10 @@ function buildRecentOperations(report: FieldReportDetailV1, fieldId: string) {
     return {
       operationId,
       title: customerDisplayName(summary || item.customer_title || item.title, operationLabel(item.operation_type, "作业")),
-      statusText: labelFinalStatus(item.final_status),
-      acceptanceText: labelAcceptanceStatus(item.acceptance_status ?? (summary.includes("已验收") ? "PASS" : null)),
-      evidenceText: String(item.final_status ?? "").toUpperCase() === "EVIDENCE_MISSING" ? "证据缺失" : "证据已回传",
-      updatedAtText: formatDateTime(item.accepted_at ?? item.generated_at),
+      statusText: customerGuardedStatusText(item),
+      acceptanceText: customerGuardedAcceptanceText(item),
+      evidenceText: customerGuardedEvidenceText(item),
+      updatedAtText: formatDateTime(item.accepted_at ?? item.generated_at ?? item.updated_at),
       href: operationId && !operationId.startsWith("recent-") ? `/customer/operations/${encodeURIComponent(operationId)}` : `/customer/fields/${encodeURIComponent(fieldId)}`,
     };
   }).filter(Boolean) as FieldReportPageVm["recentOperations"];
@@ -160,6 +159,10 @@ function buildRecentOperations(report: FieldReportDetailV1, fieldId: string) {
 
 function hasHistoricalIrrigation(recentOperations: FieldReportPageVm["recentOperations"]): boolean {
   return recentOperations.some((item) => item.title.includes("灌溉"));
+}
+
+function fieldMemoryFormalAvailable(summary: any): boolean {
+  return Boolean(summary?.customer_visible_memory === true || summary?.learning_eligible === true || summary?.memory_lane === "FORMAL_FIELD_MEMORY" || summary?.trust_level === "FORMAL_ACCEPTED");
 }
 
 export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPageVm {
@@ -177,14 +180,10 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
   const reasons = (asArray(riskObj.reasons).length ? asArray(riskObj.reasons) : asArray(report.explain.top_reasons)).map((item) => customerEvidenceLine(item)).filter(Boolean);
   const basisStatus = txt(diagnosisBasis.status, "INSUFFICIENT");
   const basisRefs = asArray(diagnosisBasis.evidence_refs).map((item) => customerEvidenceLine(item)).filter(Boolean);
-  const diagnosisLines = cropConfirmed
-    ? (basisRefs.length ? basisRefs : (reasons.length ? reasons : [basisStatus === "NOT_APPLICABLE" ? "当前低风险，暂无新的诊断依据" : "暂无主要依据"]))
-    : CROP_UNKNOWN_DIAGNOSIS_LINES;
+  const diagnosisLines = cropConfirmed ? (basisRefs.length ? basisRefs : (reasons.length ? reasons : [basisStatus === "NOT_APPLICABLE" ? "当前低风险，暂无新的诊断依据" : "暂无主要依据"])) : CROP_UNKNOWN_DIAGNOSIS_LINES;
   const currentRecommendation = buildCurrentRecommendation(report, fieldId, cropConfirmed);
   const nextAction = currentRecommendation ? { title: currentRecommendation.title, explainText: currentRecommendation.explainText, objectiveText: currentRecommendation.objectiveText, priorityText: currentRecommendation.priorityText } : null;
-  const historicalOperationText = !cropConfirmed && hasHistoricalIrrigation(recentOperations)
-    ? "该地块存在历史灌溉作业记录。历史作业可用于经营回溯，但当前作物季尚未确认，因此不会作为作物特定处方依据。"
-    : "历史作业仅用于经营回溯；作物季确认前不形成作物特定处方。";
+  const historicalOperationText = !cropConfirmed && hasHistoricalIrrigation(recentOperations) ? "该地块存在历史灌溉作业记录。历史作业可用于经营回溯，但当前作物季尚未确认，因此不会作为作物特定处方依据。" : "历史作业仅用于经营回溯；作物季确认前不形成作物特定处方。";
 
   const overview = {
     riskText,
@@ -196,21 +195,21 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
     actualCostText: formatCurrency(report.overview.actual_total_cost),
   };
   const riskTone: "neutral" | "warning" | "danger" = riskText.includes("高") ? "danger" : riskText.includes("中") ? "warning" : "neutral";
-  const explainHuman = cropConfirmed
-    ? (basisStatus === "NOT_APPLICABLE" && riskLevel === "LOW" ? "该地块当前风险较低，暂无新的待处理建议。" : customerSemanticLabel(report.explain.human || "暂无状态解释"))
-    : CROP_UNKNOWN_EXPLANATION;
+  const explainHuman = cropConfirmed ? (basisStatus === "NOT_APPLICABLE" && riskLevel === "LOW" ? "该地块当前风险较低，暂无新的待处理建议。" : customerSemanticLabel(report.explain.human || "暂无状态解释")) : CROP_UNKNOWN_EXPLANATION;
 
-  const roiItems = Number(report.value_summary.total_roi_items ?? 0);
+  const valueSummary: any = report.value_summary ?? {};
+  const roiItems = num(valueSummary.total_roi_items);
+  const trustedRoi = isTrustedDashboardValueSummary(valueSummary);
   const roiEmptyState = getCustomerEmptyState("NO_ROI");
   const fieldMemoryEmptyState = getCustomerEmptyState("NO_FIELD_MEMORY");
   const roiLines = [
-    customerRoiLabel(report.value_summary.customer_value_text || `本地块已有 ${formatCount(report.value_summary.total_roi_items)} 条价值记录`),
-    `节水 ${formatCount(report.value_summary.water_saved_items)} 条、节人工 ${formatCount(report.value_summary.labor_saved_items)} 条、预警 ${formatCount(report.value_summary.early_warning_items)} 条`,
-    `可信度/假设：低置信 ${formatCount(report.value_summary.low_confidence_items)} 条，假设型 ${formatCount(report.value_summary.assumption_based_items)} 条`,
+    customerValueSummaryText(valueSummary, roiItems, (n) => formatCount(n)),
+    `节水 ${formatCount(valueSummary.water_saved_items)} 条、节人工 ${formatCount(valueSummary.labor_saved_items)} 条、预警 ${formatCount(valueSummary.early_warning_items)} 条`,
+    trustedRoi ? "已通过正式价值门禁。" : `未通过正式价值门禁：低置信 ${formatCount(valueSummary.low_confidence_items)} 条，假设型 ${formatCount(valueSummary.assumption_based_items)} 条`,
   ];
   const fieldMemorySummary = reportAny.field_memory_summary;
-  const fieldMemoryAvailable = Boolean(fieldMemorySummary && (Array.isArray(fieldMemorySummary.entries) || Array.isArray(fieldMemorySummary.items) || typeof fieldMemorySummary.summary_text === "string" || fieldMemorySummary.available === true));
-  const fieldMemoryLines = fieldMemoryAvailable ? [customerSemanticLabel(fieldMemorySummary?.summary_text ?? "田块记忆已记录")].filter(Boolean) : [];
+  const fieldMemoryAvailable = fieldMemoryFormalAvailable(fieldMemorySummary);
+  const fieldMemoryLines = fieldMemoryAvailable ? [customerSemanticLabel(fieldMemorySummary?.summary_text ?? "正式田块记忆已通过学习门禁")].filter(Boolean) : [];
   const totalDevices = Number(report.device_summary.total_devices ?? 0);
   const onlineDevices = Number(report.device_summary.online_devices ?? 0);
   const offlineDevices = Number(report.device_summary.offline_devices ?? 0);
@@ -223,24 +222,15 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
   return {
     generatedAtText: formatDateTime(report.generated_at),
     field: { fieldId, fieldName, cropText, stageText, updatedAtText: formatDateTime(report.device_summary.last_telemetry_at) },
-    cropContext: {
-      statusText: cropConfirmed ? "已确认种植" : "未确认",
-      cropText: cropConfirmed ? customerCropLabel(cropContext.crop_code, "作物待确认") : "作物待确认",
-      stageText: cropConfirmed ? customerStageLabel(cropContext.crop_stage, "阶段待确认") : "阶段待确认",
-      sourceText: customerSourceLabel(cropContext.source, "未确认"),
-      allowCropSpecificPrescription: cropConfirmed,
-      isCropConfirmed: cropConfirmed,
-      explanationText: cropConfirmed ? "当前作物季已确认，系统可结合观测数据形成作物相关诊断和建议。" : CROP_UNKNOWN_EXPLANATION,
-      historicalOperationText,
-    },
+    cropContext: { statusText: cropConfirmed ? "已确认种植" : "未确认", cropText: cropConfirmed ? customerCropLabel(cropContext.crop_code, "作物待确认") : "作物待确认", stageText: cropConfirmed ? customerStageLabel(cropContext.crop_stage, "阶段待确认") : "阶段待确认", sourceText: customerSourceLabel(cropContext.source, "未确认"), allowCropSpecificPrescription: cropConfirmed, isCropConfirmed: cropConfirmed, explanationText: cropConfirmed ? "当前作物季已确认，系统可结合观测数据形成作物相关诊断和建议。" : CROP_UNKNOWN_EXPLANATION, historicalOperationText },
     planningCandidates: { title: PLAN_CANDIDATE_TITLE, description: PLAN_CANDIDATE_DESCRIPTION },
     technicalEvidence: { summary: "技术证据 key 默认折叠，仅用于审计和排障。", lines: technicalLines },
     risk: { levelLabel: riskText, tone: riskTone, reasons: diagnosisLines },
     diagnosis: { headline: explainHuman, evidenceLines: diagnosisLines, dataQualityText: cropConfirmed ? (basisStatus === "AVAILABLE" ? "诊断依据可用" : basisStatus === "NOT_APPLICABLE" ? "低风险无需诊断" : "诊断依据不足") : "作物未确认，不形成作物特定诊断", latestObservationText: report.overview.latest_operation_at ? `最近一次作业观测时间：${formatDateTime(report.overview.latest_operation_at)}` : `最近遥测更新时间：${formatDateTime(report.device_summary.last_telemetry_at)}` },
     recommendations: currentRecommendation ? [{ title: currentRecommendation.title, summary: currentRecommendation.explainText, href: currentRecommendation.href }] : [],
     recentOperations,
-    roiSummary: roiItems > 0 ? { title: "价值记录摘要", lines: roiLines, displayText: roiLines.join("；") } : { title: customerRoiLabel("ROI_UNAVAILABLE"), description: roiEmptyState.description, displayText: `${customerRoiLabel("ROI_UNAVAILABLE")}：${roiEmptyState.description}` },
-    fieldMemory: fieldMemoryAvailable && fieldMemoryLines.length > 0 ? { title: "田块记忆摘要", lines: fieldMemoryLines, displayText: fieldMemoryLines.join("；") } : { title: customerFieldMemoryLabel("FIELD_MEMORY_UNAVAILABLE"), description: fieldMemoryEmptyState.description, displayText: `${customerFieldMemoryLabel("FIELD_MEMORY_UNAVAILABLE")}：${fieldMemoryEmptyState.description}` },
+    roiSummary: roiItems > 0 ? { title: trustedRoi ? "可信价值记录摘要" : "价值线索摘要", lines: roiLines, displayText: roiLines.join("；") } : { title: customerRoiLabel("ROI_UNAVAILABLE"), description: `${roiEmptyState.description} ${customerTrustScopeText()}`, displayText: `${customerRoiLabel("ROI_UNAVAILABLE")}：${roiEmptyState.description}` },
+    fieldMemory: fieldMemoryAvailable && fieldMemoryLines.length > 0 ? { title: "正式田块记忆摘要", lines: fieldMemoryLines, displayText: fieldMemoryLines.join("；") } : { title: customerFieldMemoryLabel("FIELD_MEMORY_UNAVAILABLE"), description: `${fieldMemoryEmptyState.description} 未通过正式学习门禁的技术记忆不作为客户学习闭环。`, displayText: `${customerFieldMemoryLabel("FIELD_MEMORY_UNAVAILABLE")}：${fieldMemoryEmptyState.description}` },
     mapLayers,
     exportHref: `/customer/fields/${encodeURIComponent(fieldId)}/export`,
     hero: { title: fieldName, subtitle: "聚焦当前诊断、最近作业与待处理建议" },
