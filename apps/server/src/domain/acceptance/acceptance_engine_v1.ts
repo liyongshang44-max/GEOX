@@ -14,7 +14,8 @@ export function buildAcceptanceResult(input: {
   return {
     acceptance_id: "acc_" + Date.now(),
     operation_plan_id: input.operation_plan_id,
-    verdict: "PARTIAL",
+    verdict: "PENDING",
+    summary: "Partial execution signals are not sufficient for formal acceptance; formal acceptance is required.",
     missing_evidence: Array.from(new Set(missing)),
     generated_at: new Date().toISOString()
   };

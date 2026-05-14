@@ -59,7 +59,7 @@ function isMeaningfulObject(value: unknown): boolean {
   const payload = payloadOf(value); if (!payload) return false;
   return Object.values(payload).some((item) => { if (item == null) return false; if (Array.isArray(item)) return item.length > 0; if (typeof item === "string") return item.trim().length > 0; if (typeof item === "number") return Number.isFinite(item); if (typeof item === "boolean") return true; if (typeof item === "object") return Object.keys(item as Record<string, unknown>).length > 0; return false; });
 }
-function arrayOf(value: unknown): unknown[] { return Array.isArray(value) ? value : []; }
+function arrayOf(value: unknown): any[] { return Array.isArray(value) ? value : []; }
 function countBundleEvidence(bundle: OperationEvidenceBundleSummaryInputV1 | null | undefined): EvidenceKindCounts { return { artifacts: arrayOf(bundle?.artifacts).length, logs: arrayOf(bundle?.logs).length, media: arrayOf(bundle?.media).length, metrics: arrayOf(bundle?.metrics).length }; }
 function rawEvidenceCount(counts: EvidenceKindCounts): number { return counts.artifacts + counts.logs + counts.media + counts.metrics; }
 function normalizeExportJobStatus(value: unknown): "QUEUED" | "RUNNING" | "DONE" | "ERROR" | null { const status = String(value ?? "").trim().toUpperCase(); if (status === "QUEUED") return "QUEUED"; if (status === "RUNNING") return "RUNNING"; if (status === "DONE" || status === "SUCCESS" || status === "READY") return "DONE"; if (status === "ERROR" || status === "FAILED" || status === "FAIL") return "ERROR"; return null; }
