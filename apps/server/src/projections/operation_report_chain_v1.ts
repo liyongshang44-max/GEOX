@@ -115,8 +115,17 @@ function approvalStatus(raw: unknown, fallback: unknown): string | null {
 function evidenceIds(facts: FactRow[]): string[] {
   return facts
     .filter((fact) => String(fact.record_json?.type ?? "") === "evidence_artifact_v1")
+    .filter((fact) => fact.record_json?.payload?.formal_eligible === true || String(fact.record_json?.payload?.evidence_level ?? "").toUpperCase() === "FORMAL")
     .map((fact) => text(fact.record_json?.payload?.evidence_id ?? fact.record_json?.payload?.artifact_id ?? fact.fact_id))
     .filter((value): value is string => Boolean(value));
+}
+
+function isFormalStage1SensingSummary(stage1_sensing_summary: any): boolean {
+  const sourceLane = String(stage1_sensing_summary?.source_lane ?? stage1_sensing_summary?.lane ?? "").trim().toUpperCase();
+  const trigger = stage1_sensing_summary?.formal_trigger ?? stage1_sensing_summary?.formal_triggered ?? stage1_sensing_summary?.triggered;
+  const passed = stage1_sensing_summary?.formal_evidence_passed ?? stage1_sensing_summary?.formal_sensing_passed ?? stage1_sensing_summary?.passed;
+  const simulated = stage1_sensing_summary?.is_simulated === true || sourceLane === "SIMULATED_DEV_ONLY" || sourceLane === "DEBUG_ONLY";
+  return !simulated && (trigger === true || passed === true || String(stage1_sensing_summary?.status ?? "").trim().toUpperCase() === "FORMAL_TRIGGERED" || String(stage1_sensing_summary?.status ?? "").trim().toUpperCase() === "PASSED");
 }
 
 export async function enrichOperationReportChainV1(params: { pool: Pool; report: any }): Promise<any> {
@@ -137,6 +146,7 @@ export async function enrichOperationReportChainV1(params: { pool: Pool; report:
   const receiptFact = latestByTypes(facts, ["ao_act_receipt_v0", "ao_act_receipt_v1"]);
   const acceptanceFact = latestByType(facts, "acceptance_result_v1");
   const evidenceSummaryFact = latestByTypes(facts, ["operation_evidence_summary_v1", "evidence_pack_summary_v1"]);
+  const stage1SensingSummaryFact = latestByTypes(facts, ["stage1_sensing_summary", "stage1_sensing_summary_v1", "ao_sense_stage1_summary_v1"]);
   const prescriptionFact = latestByTypes(facts, ["prescription_v1", "operation_prescription_v1", "decision_prescription_v1"]);
 
   const rec = payloadOf(recFact);
@@ -147,6 +157,7 @@ export async function enrichOperationReportChainV1(params: { pool: Pool; report:
   const receiptRaw = payloadOf(receiptFact);
   const acceptancePayload = payloadOf(acceptanceFact);
   const prescriptionPayload = payloadOf(prescriptionFact);
+  const stage1_sensing_summary = payloadOf(stage1SensingSummaryFact);
 
   const recommendationId = text(report?.identifiers?.recommendation_id ?? rec.recommendation_id);
   const prescriptionId = text(report?.identifiers?.prescription_id ?? prescriptionPayload.prescription_id ?? plan.prescription_id ?? approvalReq.prescription_id ?? plan.operation_plan_id);
@@ -218,11 +229,12 @@ export async function enrichOperationReportChainV1(params: { pool: Pool; report:
   } : null;
 
   const evidenceIdList = evidenceIds(facts);
-  const evidenceComplete = Boolean((report?.evidence?.receipt_present && report?.evidence?.acceptance_present) || evidenceIdList.length > 0 || evidenceSummaryFact);
+  const evidenceComplete = Boolean(evidenceIdList.length > 0 || evidenceSummaryFact || (stage1SensingSummaryFact && isFormalStage1SensingSummary(stage1_sensing_summary)));
   const evidence = {
     evidence_status: evidenceComplete ? "COMPLETE" : "INCOMPLETE",
     evidence_ids: evidenceIdList,
     trusted: evidenceComplete && report?.acceptance?.missing_evidence !== true,
+    stage1_sensing_summary,
   };
 
   const acceptance = acceptanceId || acceptancePayload.verdict || report?.acceptance?.status ? {
@@ -249,6 +261,7 @@ export async function enrichOperationReportChainV1(params: { pool: Pool; report:
     source_summary: recommendation?.source_summary ?? null,
     confidence: rec.confidence ?? rec.confidence_level ?? null,
     missing_inputs: rec.missing_inputs ?? [],
+    stage1_sensing_summary,
   };
 
   const operationPlan = text(report?.identifiers?.operation_plan_id ?? plan.operation_plan_id) ? {
