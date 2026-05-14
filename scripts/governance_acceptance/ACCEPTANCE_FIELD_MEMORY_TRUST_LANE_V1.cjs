@@ -11,8 +11,8 @@ function read(rel) {
 function assertIncludes(text, needle, label) {
   if (!text.includes(needle)) throw new Error(`${label}: missing ${needle}`);
 }
-function assertNotIncludes(text, needle, label) {
-  if (text.includes(needle)) throw new Error(`${label}: must not include ${needle}`);
+function assertRegex(text, regex, label) {
+  if (!regex.test(text)) throw new Error(`${label}: missing ${regex}`);
 }
 
 const service = read('apps/server/src/services/field_memory_service.ts');
@@ -62,7 +62,8 @@ assertIncludes(service, 'sourceTypeForMemory', 'source type separated by memory 
 assertIncludes(service, 'memory_type === "SKILL_PERFORMANCE_MEMORY") return "skill_run"', 'skill performance source type');
 assertIncludes(skillFacts, 'type: "skill_performance"', 'skill run still emits technical memory signal');
 assertIncludes(guard, 'hidden_by_guard', 'report guard hides non-formal field memory');
-assertNotIncludes(service, 'customer_visible_memory: true,\n      learning_eligible: true,\n      trust_reasons', 'service must not make visible learning without explicit formal branch check');
+assertRegex(service, /input\.customer_visible_memory === true[\s\S]*Boolean\(formalAcceptanceId\)/, 'explicit formal visibility must require formal acceptance id');
+assertRegex(service, /memory_type === "FIELD_RESPONSE_MEMORY" && formalAcceptanceId[\s\S]*memory_lane: "FORMAL_FIELD_MEMORY"/, 'only field response memory with formal acceptance id becomes formal field memory');
 
 console.log('[FIELD_MEMORY_TRUST_LANE_V1] PASSED');
 console.log('[FIELD_MEMORY_TRUST_LANE_V1] Checked Field Memory lane contract, migration, write classifier, read API exposure, and report guard hiding.');
