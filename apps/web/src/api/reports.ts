@@ -41,6 +41,16 @@ export function mapReportCode(raw: unknown): { raw: string; label: string; tone:
   return { raw: key, label: key, tone: "neutral" };
 }
 
+export function mapGuardedReportCode(raw: unknown, guard: { chainPassed?: boolean; customerVisibleEligible?: boolean; trustLevel?: unknown; needsReview?: boolean } = {}): { raw: string; label: string; tone: ReportCodeTone } {
+  const mapped = mapReportCode(raw);
+  const key = mapped.raw;
+  const successLike = ["SUCCESS", "SUCCEEDED", "DONE", "COMPLETED", "PASS", "VALID", "APPROVED"].includes(key);
+  const trustLevel = String(guard.trustLevel ?? "").trim().toUpperCase();
+  const formallyVisible = guard.chainPassed === true && guard.customerVisibleEligible !== false && guard.needsReview !== true && (!trustLevel || trustLevel === "FORMAL_CHAIN_PASSED" || trustLevel === "FORMAL_ACCEPTED");
+  if (successLike && !formallyVisible) return { raw: key, label: "需复核", tone: "warning" };
+  return mapped;
+}
+
 function unwrapOperationReport(payload: OperationReportSingleResponseV1 | OperationReportV1): OperationReportV1 {
   if ("operation_report_v1" in payload) return payload.operation_report_v1;
   return payload;
