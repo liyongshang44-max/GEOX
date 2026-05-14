@@ -93,7 +93,10 @@ function classifyMemoryLaneV1(memory_type: FieldMemoryTypeV1, input: RecordMemor
   }
 
   if (explicitLane && explicitTrust) {
-    const customerVisible = input.customer_visible_memory === true && explicitTrust === "FORMAL_ACCEPTED" && explicitLane === "FORMAL_FIELD_MEMORY";
+    const customerVisible = input.customer_visible_memory === true
+      && explicitTrust === "FORMAL_ACCEPTED"
+      && explicitLane === "FORMAL_FIELD_MEMORY"
+      && Boolean(formalAcceptanceId);
     return {
       memory_lane: explicitLane,
       trust_level: explicitTrust,
@@ -101,7 +104,7 @@ function classifyMemoryLaneV1(memory_type: FieldMemoryTypeV1, input: RecordMemor
       source_lane: sourceLane,
       customer_visible_memory: customerVisible,
       learning_eligible: input.learning_eligible === true && customerVisible,
-      trust_reasons: customerVisible ? Array.from(new Set(reasons)) : Array.from(new Set([...reasons, "NOT_FORMAL_FIELD_MEMORY"])),
+      trust_reasons: customerVisible ? Array.from(new Set(reasons)) : Array.from(new Set([...reasons, "FORMAL_ACCEPTANCE_ID_REQUIRED"])),
     };
   }
 
@@ -152,6 +155,13 @@ function classifyMemoryLaneV1(memory_type: FieldMemoryTypeV1, input: RecordMemor
   };
 }
 
+function sourceTypeForMemory(memory_type: FieldMemoryTypeV1): string {
+  if (memory_type === "FIELD_RESPONSE_MEMORY") return "acceptance";
+  if (memory_type === "SKILL_PERFORMANCE_MEMORY") return "skill_run";
+  if (memory_type === "DEVICE_RELIABILITY_MEMORY" || memory_type === "EXECUTION_QUALITY_MEMORY") return "execution_signal";
+  return "diagnostic_note";
+}
+
 export async function recordMemoryV1(db: DbConn, tenant_id: string, input: RecordMemoryInput): Promise<FieldMemoryV1> {
   const memory_type = normalizeMemoryType(input.type);
   const memory_id = crypto.randomUUID();
@@ -180,8 +190,8 @@ export async function recordMemoryV1(db: DbConn, tenant_id: string, input: Recor
   const summary_text = input.summary?.trim() || `Field memory recorded: ${memory_type}`;
   const occurred_at = new Date().toISOString();
   const trust = classifyMemoryLaneV1(memory_type, input);
-  const source_type = memory_type === "DEVICE_RELIABILITY_MEMORY" ? "skill_run" : "acceptance";
-  const source_id = input.acceptance_id ?? input.operation_id ?? memory_id;
+  const source_type = sourceTypeForMemory(memory_type);
+  const source_id = input.acceptance_id ?? input.operation_id ?? skill_trace_ref ?? memory_id;
 
   await db.query(
     `INSERT INTO field_memory_v1 (
