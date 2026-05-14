@@ -38,6 +38,7 @@
     "ci:web:views-boundary": "pnpm --filter @geox/web lint:views-boundary",
     "ci:web:operation-detail-hooks": "pnpm --filter @geox/web lint:operation-detail-hooks",
     "ci:governance:contract-alignment": "node scripts/governance_acceptance/ACCEPTANCE_CONTRACT_ALIGNMENT_V1.cjs",
+    "ci:governance:base-contract-negative": "node scripts/governance_acceptance/ACCEPTANCE_BASE_CONTRACT_NEGATIVE_RELEASE_GATE_V1.cjs",
     "qa:release-gate-check": "node scripts/qa/check_release_gates.cjs --report docs/qa/reports/release_gate_report.json",
     "ci:simulator:ingest-guard": "node scripts/check_simulator_ingest_guard.cjs",
     "ci:server:dashboard-status-source-of-truth": "node scripts/check_dashboard_status_source_of_truth.cjs",
