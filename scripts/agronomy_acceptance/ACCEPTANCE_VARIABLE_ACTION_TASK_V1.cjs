@@ -126,9 +126,36 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const paramNames = Object.keys(taskParams).sort();
   const schemaNames = schemaKeys.map((k) => k.name).sort();
   const primitiveOnly = Object.values(taskParams).every((v) => ['string', 'number', 'boolean'].includes(typeof v));
-
   const zoneRates = Array.isArray(taskPayload.meta?.variable_plan?.zone_rates) ? taskPayload.meta.variable_plan.zone_rates : [];
   const zoneIds = new Set(zoneRates.map((z) => String(z.zone_id ?? '')));
+
+  const planQuery = await pool.query(
+    `SELECT record_json::jsonb AS record_json
+       FROM facts
+      WHERE (record_json::jsonb->>'type')='operation_plan_v1'
+        AND (record_json::jsonb#>>'{payload,tenant_id}')=$1
+        AND (record_json::jsonb#>>'{payload,project_id}')=$2
+        AND (record_json::jsonb#>>'{payload,group_id}')=$3
+        AND (record_json::jsonb#>>'{payload,operation_plan_id}')=$4
+      ORDER BY occurred_at DESC, fact_id DESC
+      LIMIT 1`,
+    [tenant_id, project_id, group_id, operation_plan_id]
+  );
+  const planPayload = planQuery.rows?.[0]?.record_json?.payload ?? {};
+
+  const transitionQuery = await pool.query(
+    `SELECT record_json::jsonb AS record_json
+       FROM facts
+      WHERE (record_json::jsonb->>'type')='operation_plan_transition_v1'
+        AND (record_json::jsonb#>>'{payload,tenant_id}')=$1
+        AND (record_json::jsonb#>>'{payload,project_id}')=$2
+        AND (record_json::jsonb#>>'{payload,group_id}')=$3
+        AND (record_json::jsonb#>>'{payload,operation_plan_id}')=$4
+      ORDER BY occurred_at DESC, fact_id DESC
+      LIMIT 1`,
+    [tenant_id, project_id, group_id, operation_plan_id]
+  );
+  const transitionPayload = transitionQuery.rows?.[0]?.record_json?.payload ?? {};
 
   const openapiResp = await fetchJson(`${base}/api/v1/openapi.json`, { method: 'GET', token });
   const openapi_contains_variable_action_task = Boolean(openapiResp.ok && openapiResp.json?.paths?.['/api/v1/actions/task/from-variable-prescription']);
@@ -145,10 +172,15 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     task_meta_preserves_prescription_id: String(taskPayload.meta?.prescription_id ?? '') === prescription_id,
     task_meta_preserves_recommendation_id: String(taskPayload.meta?.recommendation_id ?? '') === recommendation_id,
     zone_ids_preserved: zoneIds.has(zoneLow.zone_id) && zoneIds.has(zoneNormal.zone_id),
+    task_ready_to_dispatch_not_acked: String(taskPayload.meta?.task_lifecycle_status ?? '') === 'READY_TO_DISPATCH' && String(taskPayload.meta?.ack_status ?? '') === 'ACK_REQUIRED',
+    task_default_parameter_sources_declared: String(taskPayload.meta?.parameter_source?.duration_sec ?? '') && String(taskPayload.meta?.parameter_source?.coverage_percent ?? '') && String(taskPayload.meta?.parameter_source?.amount ?? ''),
+    operation_plan_not_auto_acked: String(planPayload.status ?? '') !== 'ACKED' && String(planPayload.status ?? '') === 'READY_TO_DISPATCH',
+    operation_plan_transition_not_auto_acked: String(transitionPayload.to_status ?? '') !== 'ACKED' && String(transitionPayload.to_status ?? '') === 'READY_TO_DISPATCH',
+    dispatch_ack_not_synthesized: String(planPayload.ack_status ?? '') === 'ACK_REQUIRED' && String(planPayload.dispatch_status ?? '') === 'NOT_DISPATCHED',
     openapi_contains_variable_action_task,
   };
 
-  Object.entries(checks).forEach(([k, v]) => assert.equal(v, true, `check failed: ${k}`));
+  Object.entries(checks).forEach(([k, v]) => assert.equal(Boolean(v), true, `check failed: ${k}`));
   process.stdout.write(`${JSON.stringify({ ok: true, checks }, null, 2)}\n`);
   await pool.end();
 })().catch((err) => {
