@@ -162,12 +162,18 @@ export function evaluateFormalEvidencePolicyV1(input: {
   for (const log of Array.isArray(input.logs) ? input.logs : []) {
     const kind = typeof log === "string" ? log : (payloadOf(log).kind ?? payloadOf(log).type ?? log);
     const base = classifyEvidenceArtifactV1(log, { source: input.source, fallback_kind: String(kind ?? "log") });
+    const formalLog = hasFormalLogKind(kind);
+    const sourceLane = formalLog && base.source_lane === "UNKNOWN" ? "FORMAL_OPERATION" : base.source_lane;
+    const isSimulated = base.is_simulated || sourceLane === "SIMULATED_DEV_ONLY" || sourceLane === "DEBUG_ONLY";
+    const formalEligible = base.formal_eligible || (formalLog && !isSimulated);
     classifications.push({
       ...base,
-      formal_eligible: base.formal_eligible && hasFormalLogKind(kind),
-      blocking_reasons: base.formal_eligible && !hasFormalLogKind(kind)
-        ? Array.from(new Set([...base.blocking_reasons, "LOG_KIND_NOT_FORMAL"]))
-        : base.blocking_reasons,
+      source_lane: sourceLane,
+      is_simulated: isSimulated,
+      formal_eligible: formalEligible,
+      blocking_reasons: formalEligible
+        ? base.blocking_reasons.filter((reason) => reason !== "UNKNOWN_EVIDENCE_SOURCE_LANE")
+        : Array.from(new Set([...base.blocking_reasons, formalLog ? "" : "LOG_KIND_NOT_FORMAL"].filter(Boolean))),
     });
   }
 
