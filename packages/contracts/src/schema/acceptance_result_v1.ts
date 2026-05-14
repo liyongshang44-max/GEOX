@@ -17,6 +17,17 @@ export const AcceptanceMetricsV1Schema = z.object({
 });
 export type AcceptanceMetricsV1 = z.infer<typeof AcceptanceMetricsV1Schema>;
 
+export const AcceptanceFormalGateV1Schema = z.object({
+  formal_evidence_passed: z.boolean(),
+  formal_execution_passed: z.boolean(),
+  non_simulated_chain: z.boolean(),
+  chain_validation_passed: z.boolean().optional(),
+  trust_level: z.enum(["FORMAL_ACCEPTED", "NEEDS_REVIEW", "INSUFFICIENT_FORMAL_EVIDENCE", "SIMULATED_DEV_ONLY"]).optional(),
+  source_lane: z.string().min(1).optional(),
+  blocking_reasons: z.array(z.string().min(1)).optional()
+});
+export type AcceptanceFormalGateV1 = z.infer<typeof AcceptanceFormalGateV1Schema>;
+
 export const AcceptanceResultV1PayloadSchema = z.object({
   acceptance_id: z.string().min(1),
   act_task_id: z.string().min(1),
@@ -38,7 +49,15 @@ export const AcceptanceResultV1PayloadSchema = z.object({
   input_digest: z.string().min(1).optional(),
   output_digest: z.string().min(1).optional(),
   execution_judge_id: z.string().min(1).optional(),
-  execution_judge_verdict: z.string().min(1).optional()
+  execution_judge_verdict: z.string().min(1).optional(),
+
+  /** PR-1 base-contract metadata. PASS is formal only when this gate passes. */
+  formal_gate: AcceptanceFormalGateV1Schema.optional(),
+  formal_acceptance: z.boolean().optional(),
+  formal_evidence_passed: z.boolean().optional(),
+  non_simulated_chain: z.boolean().optional(),
+  source_lane: z.string().min(1).optional(),
+  trust_level: z.string().min(1).optional()
 });
 
 export type AcceptanceResultV1Payload = z.infer<typeof AcceptanceResultV1PayloadSchema>;
