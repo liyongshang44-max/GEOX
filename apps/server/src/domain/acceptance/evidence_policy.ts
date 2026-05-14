@@ -1,5 +1,11 @@
-export type EvidenceItem = { kind?: string };
-export type EvidenceLevel = "DEBUG" | "FORMAL" | "STRONG";
+import {
+  classifyEvidenceArtifactV1,
+  evaluateFormalEvidencePolicyV1,
+  type FormalEvidenceLevelV1,
+} from "../evidence/formal_evidence_policy_v1.js";
+
+export type EvidenceItem = { kind?: string; [key: string]: unknown } | string;
+export type EvidenceLevel = FormalEvidenceLevelV1;
 
 export type EvidenceBundle = {
   artifacts?: EvidenceItem[];
@@ -14,51 +20,33 @@ export type EvidenceEvaluation = {
   reason: "formal_evidence" | "only_sim_trace" | "no_evidence";
   evidence_level: EvidenceLevel;
   level_counts: Record<EvidenceLevel, number>;
+  formal_evidence_count: number;
+  simulated_evidence_count: number;
+  blocking_reasons: string[];
 };
 
-const FORMAL_LOG_ALLOWLIST = [
-  "mqtt",
-  "device",
-  "telemetry",
-  "controller",
-  "plc",
-  "modbus",
-  "can",
-  "gateway",
-  "sensor",
-  "runtime",
-] as const;
-
-const FORMAL_LOG_EXACT_KINDS = [
-  "dispatch_ack",
-  "valve_open_confirmation",
-  "water_delivery_receipt",
-] as const;
-
 function toKind(value: unknown): string {
-  return String((value as { kind?: string } | undefined)?.kind ?? value ?? "").trim().toLowerCase();
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const record = value as { kind?: unknown; type?: unknown };
+    return String(record.kind ?? record.type ?? "").trim().toLowerCase();
+  }
+  return String(value ?? "").trim().toLowerCase();
 }
 
 export function inferEvidenceLevel(value: unknown): EvidenceLevel {
-  const kind = toKind(value);
-  if (!kind || kind === "sim_trace") return "DEBUG";
-  if (kind.includes("photo") || kind.includes("image")) return "STRONG";
-  if (kind.includes("metric")) return "FORMAL";
-  return "FORMAL";
+  return classifyEvidenceArtifactV1(value as EvidenceItem, { fallback_kind: toKind(value) || "artifact" }).evidence_level;
 }
 
 export function isFormalLogKind(kindRaw: unknown): boolean {
-  const kind = toKind(kindRaw);
-  if (!kind || kind === "sim_trace") return false;
-  if (FORMAL_LOG_EXACT_KINDS.includes(kind as (typeof FORMAL_LOG_EXACT_KINDS)[number])) return true;
-  return FORMAL_LOG_ALLOWLIST.some((token) => kind.includes(token));
+  const result = evaluateFormalEvidencePolicyV1({ logs: [String(kindRaw ?? "")] });
+  return result.formal_evidence_passed;
 }
 
 /**
- * Evidence policy freeze (阶段4收口):
- * 1) sim_trace 仅算调试证据，不能用于正式验收。
- * 2) 正式证据满足其一：artifacts/media/metrics 非空，或日志为 allowlist 的非 sim_trace 类型。
- * 3) executed 回执但无正式证据 => INVALID_EXECUTION；有正式证据 => PENDING_ACCEPTANCE。
+ * Base-contract evidence policy:
+ * 1) sim_trace / flight-table / dev artifacts are debug or simulated only.
+ * 2) receipt/acceptance presence does not create formal evidence.
+ * 3) Formal evidence requires at least one formal_eligible artifact/log/media/metric.
  */
 export function evaluateEvidence(bundle: EvidenceBundle): EvidenceEvaluation {
   const artifacts = Array.isArray(bundle.artifacts) ? bundle.artifacts : [];
@@ -66,30 +54,51 @@ export function evaluateEvidence(bundle: EvidenceBundle): EvidenceEvaluation {
   const media = Array.isArray(bundle.media) ? bundle.media : [];
   const metrics = Array.isArray(bundle.metrics) ? bundle.metrics : [];
 
+  const formal = evaluateFormalEvidencePolicyV1({ artifacts, logs, media, metrics });
   const levelCounts: Record<EvidenceLevel, number> = { DEBUG: 0, FORMAL: 0, STRONG: 0 };
-  for (const item of artifacts) levelCounts[inferEvidenceLevel(item)] += 1;
-  for (const item of media) levelCounts[inferEvidenceLevel(item)] += 1;
-  for (const item of metrics) levelCounts[inferEvidenceLevel("metric")] += 1;
-  for (const item of logs) levelCounts[inferEvidenceLevel(item)] += 1;
+  for (const item of formal.classifications) levelCounts[item.evidence_level] += 1;
 
-  const hasFormalLog = logs.some((log) => isFormalLogKind(log?.kind ?? log));
-  const hasFormalEvidence = artifacts.length > 0 || media.length > 0 || metrics.length > 0 || hasFormalLog;
-  const evidenceLevel: EvidenceLevel = levelCounts.STRONG > 0 ? "STRONG" : (hasFormalEvidence ? "FORMAL" : "DEBUG");
-  if (hasFormalEvidence) {
-    return { has_formal_evidence: true, has_only_sim_trace: false, reason: "formal_evidence", evidence_level: evidenceLevel, level_counts: levelCounts };
-  }
-
-  const hasAnyLogs = logs.length > 0;
   const hasOnlySimTrace =
-    hasAnyLogs
+    logs.length > 0
     && logs.every((log) => toKind(log) === "sim_trace")
     && artifacts.length === 0
     && media.length === 0
     && metrics.length === 0;
 
-  if (hasOnlySimTrace) {
-    return { has_formal_evidence: false, has_only_sim_trace: true, reason: "only_sim_trace", evidence_level: "DEBUG", level_counts: levelCounts };
+  if (formal.formal_evidence_passed) {
+    return {
+      has_formal_evidence: true,
+      has_only_sim_trace: false,
+      reason: "formal_evidence",
+      evidence_level: formal.strong_artifact_count > 0 ? "STRONG" : "FORMAL",
+      level_counts: levelCounts,
+      formal_evidence_count: formal.formal_artifact_count,
+      simulated_evidence_count: formal.simulated_artifact_count,
+      blocking_reasons: formal.blocking_reasons,
+    };
   }
 
-  return { has_formal_evidence: false, has_only_sim_trace: false, reason: "no_evidence", evidence_level: "DEBUG", level_counts: levelCounts };
+  if (hasOnlySimTrace) {
+    return {
+      has_formal_evidence: false,
+      has_only_sim_trace: true,
+      reason: "only_sim_trace",
+      evidence_level: "DEBUG",
+      level_counts: levelCounts,
+      formal_evidence_count: 0,
+      simulated_evidence_count: formal.simulated_artifact_count,
+      blocking_reasons: formal.blocking_reasons,
+    };
+  }
+
+  return {
+    has_formal_evidence: false,
+    has_only_sim_trace: false,
+    reason: "no_evidence",
+    evidence_level: "DEBUG",
+    level_counts: levelCounts,
+    formal_evidence_count: 0,
+    simulated_evidence_count: formal.simulated_artifact_count,
+    blocking_reasons: formal.blocking_reasons,
+  };
 }

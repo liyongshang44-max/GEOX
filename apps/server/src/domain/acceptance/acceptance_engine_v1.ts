@@ -1,4 +1,3 @@
-import { evaluateAcceptance } from "./acceptance_rules_v1.js";
 import type { AcceptanceResultV1 } from "./types.js";
 
 export function buildAcceptanceResult(input: {
@@ -6,13 +5,17 @@ export function buildAcceptanceResult(input: {
   hasReceipt: boolean;
   evidenceCount: number;
 }): AcceptanceResultV1 {
-  const r = evaluateAcceptance(input);
+  const missing = [
+    ...(!input.hasReceipt ? ["receipt"] : []),
+    ...(input.evidenceCount <= 0 ? ["formal_evidence"] : []),
+    "formal_acceptance_required",
+  ];
 
   return {
     acceptance_id: "acc_" + Date.now(),
     operation_plan_id: input.operation_plan_id,
-    verdict: r.verdict,
-    missing_evidence: r.missing,
+    verdict: "PARTIAL",
+    missing_evidence: Array.from(new Set(missing)),
     generated_at: new Date().toISOString()
   };
 }
