@@ -9,6 +9,7 @@ const scripts = [
   'scripts/governance_acceptance/ACCEPTANCE_ROI_MEMORY_TRUST_LANE_V1.cjs',
   'scripts/governance_acceptance/ACCEPTANCE_FIELD_MEMORY_TRUST_LANE_V1.cjs',
   'scripts/governance_acceptance/ACCEPTANCE_OPERATOR_LEARNING_NOT_OBJECT_EXISTENCE_V1.cjs',
+  'scripts/governance_acceptance/ACCEPTANCE_OPERATOR_BACKEND_LEARNING_VALIDATION_V1.cjs',
   'scripts/governance_acceptance/ACCEPTANCE_FRONTEND_CUSTOMER_TRUST_GATE_V1.cjs',
   'scripts/governance_acceptance/ACCEPTANCE_VARIABLE_TASK_NOT_AUTO_ACKED_V1.cjs',
   'scripts/governance_acceptance/ACCEPTANCE_CONTRACT_ALIGNMENT_V1.cjs',
