@@ -16,6 +16,7 @@ import {
   listRoiLedgerByPrescription,
   listRoiLedgerByTask,
 } from "../domain/roi/roi_ledger_v1.js";
+import { attachRoiTrustListV1 } from "../domain/roi/roi_trust_v1.js";
 
 export function registerRoiLedgerV1Routes(app: FastifyInstance, pool: Pool): void {
   app.get("/api/v1/roi-ledger/health", async () => ({
@@ -24,7 +25,7 @@ export function registerRoiLedgerV1Routes(app: FastifyInstance, pool: Pool): voi
   }));
 
   app.post("/api/v1/roi-ledger/from-as-executed", async (req, reply) => {
-    const auth = requireAoActAnyScopeV0(req, reply, ["roi_ledger.write", "ao_act.task.write"]);
+    const auth = requireAoActAnyScopeV0(req, reply, ["roi_ledger.write"]);
     if (!auth) return;
 
     const body: any = req.body ?? {};
@@ -44,7 +45,17 @@ export function registerRoiLedgerV1Routes(app: FastifyInstance, pool: Pool): voi
       if (!Array.isArray(result.roi_ledgers) || result.roi_ledgers.length === 0) {
         return reply.status(422).send({ ok: false, error: "ROI_LEDGER_NOT_CREATED", reason: "UNKNOWN_EMPTY_RESULT" });
       }
-      return reply.send({ ok: true, idempotent: result.idempotent, roi_ledgers: result.roi_ledgers });
+      return reply.send({
+        ok: true,
+        idempotent: result.idempotent,
+        trust_layer: {
+          default_source_lane: "AS_EXECUTED_SIGNAL",
+          default_trust_level: "INTERIM_SUPPORTED",
+          customer_visible_value: false,
+          note: "from-as-executed creates ROI signal rows only; formal customer value requires formal acceptance and chain validation.",
+        },
+        roi_ledgers: attachRoiTrustListV1(result.roi_ledgers, { default_source_lane: "AS_EXECUTED_SIGNAL" }),
+      });
     } catch (error) {
       const code = String((error as Error)?.message ?? "");
       if (code === "AS_EXECUTED_NOT_FOUND") {
@@ -82,7 +93,7 @@ export function registerRoiLedgerV1Routes(app: FastifyInstance, pool: Pool): voi
     if (!as_executed_id) return reply.status(400).send({ ok: false, error: "MISSING_AS_EXECUTED_ID" });
 
     const rows = await listRoiLedgerByAsExecuted(pool, { ...tenant, as_executed_id });
-    return reply.send({ ok: true, roi_ledgers: rows });
+    return reply.send({ ok: true, roi_ledgers: attachRoiTrustListV1(rows, { default_source_lane: "AS_EXECUTED_SIGNAL" }) });
   });
 
   app.get("/api/v1/roi-ledger/by-task/:task_id", async (req, reply) => {
@@ -99,7 +110,7 @@ export function registerRoiLedgerV1Routes(app: FastifyInstance, pool: Pool): voi
     if (!task_id) return reply.status(400).send({ ok: false, error: "MISSING_TASK_ID" });
 
     const rows = await listRoiLedgerByTask(pool, { ...tenant, task_id });
-    return reply.send({ ok: true, roi_ledgers: rows });
+    return reply.send({ ok: true, roi_ledgers: attachRoiTrustListV1(rows, { default_source_lane: "AS_EXECUTED_SIGNAL" }) });
   });
 
   app.get("/api/v1/roi-ledger/by-prescription/:prescription_id", async (req, reply) => {
@@ -116,7 +127,7 @@ export function registerRoiLedgerV1Routes(app: FastifyInstance, pool: Pool): voi
     if (!prescription_id) return reply.status(400).send({ ok: false, error: "MISSING_PRESCRIPTION_ID" });
 
     const rows = await listRoiLedgerByPrescription(pool, { ...tenant, prescription_id });
-    return reply.send({ ok: true, roi_ledgers: rows });
+    return reply.send({ ok: true, roi_ledgers: attachRoiTrustListV1(rows, { default_source_lane: "AS_EXECUTED_SIGNAL" }) });
   });
 
   app.get("/api/v1/roi-ledger/by-field/:field_id", async (req, reply) => {
@@ -134,6 +145,6 @@ export function registerRoiLedgerV1Routes(app: FastifyInstance, pool: Pool): voi
     if (!requireFieldAllowedOr404V1(reply, auth, field_id)) return;
 
     const rows = await listRoiLedgerByField(pool, { ...tenant, field_id });
-    return reply.send({ ok: true, roi_ledgers: rows });
+    return reply.send({ ok: true, roi_ledgers: attachRoiTrustListV1(rows, { default_source_lane: "AS_EXECUTED_SIGNAL" }) });
   });
 }
