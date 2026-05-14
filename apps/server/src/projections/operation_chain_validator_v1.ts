@@ -126,6 +126,20 @@ function missingFrom(items: OperationChainItemV1[]): string[] {
     .map((item) => item.key);
 }
 
+const STAGE1_SENSING_SUMMARY_FACT_TYPES = [
+  "stage1_sensing_summary",
+  "stage1_sensing_summary_v1",
+  "ao_sense_stage1_summary_v1",
+];
+
+function isFormalStage1SensingSummary(stage1: any): boolean {
+  const sourceLane = upper(stage1?.source_lane ?? stage1?.lane);
+  const trigger = stage1?.formal_trigger ?? stage1?.formal_triggered ?? stage1?.triggered;
+  const passed = stage1?.formal_evidence_passed ?? stage1?.formal_sensing_passed ?? stage1?.passed;
+  const simulated = stage1?.is_simulated === true || sourceLane === "SIMULATED_DEV_ONLY" || sourceLane === "DEBUG_ONLY";
+  return !simulated && (trigger === true || passed === true || upper(stage1?.status) === "FORMAL_TRIGGERED" || upper(stage1?.status) === "PASSED");
+}
+
 export function validateOperationChainV1(input: ValidatorInput): OperationChainValidationResultV1 {
   const facts = input.facts ?? [];
   const recFact = latestByType(facts, "decision_recommendation_v1");
@@ -135,9 +149,11 @@ export function validateOperationChainV1(input: ValidatorInput): OperationChainV
   const taskFact = latestByType(facts, "ao_act_task_v0");
   const receiptFact = latestByTypes(facts, ["ao_act_receipt_v0", "ao_act_receipt_v1"]);
   const acceptanceFact = latestByType(facts, "acceptance_result_v1");
+  const stage1Fact = latestByTypes(facts, STAGE1_SENSING_SUMMARY_FACT_TYPES);
 
   const rec = input.rec ?? payload(recFact);
   const receipt = input.receipt ?? payload(receiptFact);
+  const stage1_sensing_summary = payload(stage1Fact);
   const isHelper = hasHelperOrSimulatedFact(facts);
   const receiptNotAcceptance = receiptBlocksAcceptance(receipt, facts);
 
@@ -152,16 +168,20 @@ export function validateOperationChainV1(input: ValidatorInput): OperationChainV
   );
   const deficitDetected = bool(rec?.skill_trace?.outputs?.deficit_detected ?? rec?.diagnosis?.deficit_detected ?? rec?.diagnosis?.water_deficit);
   const confidenceBasis = upper(rec?.skill_trace?.outputs?.confidence?.basis ?? rec?.confidence_basis);
+  const rawMetricContextPresent = soilMoisture != null || threshold != null || deficitDetected === true || confidenceBasis !== "";
+  const stage1FormalTrigger = Boolean(stage1Fact && isFormalStage1SensingSummary(stage1_sensing_summary));
 
   const irrigation = isIrrigation(input);
   const diagnosisHasCoreEvidence = irrigation
-    ? soilMoisture != null && threshold != null && deficitDetected === true && confidenceBasis !== "ASSUMED"
+    ? stage1FormalTrigger
     : Boolean(recFact || input.recommendation);
   const diagnosisStatus: OperationChainStatusV1 = diagnosisHasCoreEvidence ? "DONE" : (recFact || input.recommendation ? "NEEDS_EVIDENCE" : "MISSING");
   const diagnosisReason = diagnosisHasCoreEvidence
-    ? "核心感知证据已形成诊断依据"
+    ? "Stage-1 sensing summary 已提供正式触发依据"
     : irrigation
-      ? "缺少土壤水分、触发阈值或实测诊断依据，不能作为正式灌溉建议依据"
+      ? rawMetricContextPresent
+        ? "存在原始 soil moisture/threshold/deficit 线索，但缺少 Stage-1 sensing summary 正式触发来源，不能作为正式灌溉建议依据"
+        : "缺少 Stage-1 sensing summary 正式触发来源，不能作为正式灌溉建议依据"
       : "缺少正式诊断依据";
 
   const recommendationExists = Boolean(recFact || input.recommendation);
@@ -221,7 +241,7 @@ export function validateOperationChainV1(input: ValidatorInput): OperationChainV
   const memoryStatus: OperationChainStatusV1 = memoryAvailable ? (acceptanceStatus === "DONE" ? "AVAILABLE" : "SIMULATED") : "MISSING";
 
   const status_chain: OperationChainItemV1[] = [
-    node("diagnosis", "诊断", diagnosisStatus, diagnosisReason, recFact ? "decision_recommendation_v1" : "operation_report_chain_v1"),
+    node("diagnosis", "诊断", diagnosisStatus, diagnosisReason, stage1Fact ? factType(stage1Fact) : recFact ? "decision_recommendation_v1" : "operation_report_chain_v1"),
     node("recommendation", "建议", recommendationStatus, recommendationStatus === "DONE" ? "正式建议已关联" : recommendationExists ? "上游诊断依据未通过校验，建议不能作为正式依据" : "缺少正式建议记录", recFact ? "decision_recommendation_v1" : "operation_report_chain_v1"),
     node("prescription", "处方", prescriptionStatus, prescriptionStatus === "DONE" ? "正式处方已关联" : prescriptionExists ? "上游建议未通过校验，处方不能作为正式处方" : "缺少正式处方事实，不能仅凭作业计划中的处方编号认定处方成立", prescriptionFact ? factType(prescriptionFact) : "operation_report_chain_v1"),
     node("approval", "审批", approvalStatus, approvalApproved ? "审批结果已通过" : approvalExists ? "审批请求存在，但审批结果尚未通过" : "缺少审批记录", approvalDecisionFact ? "approval_decision_v1" : approvalExists ? "approval_request_v1" : "operation_report_chain_v1"),
@@ -239,6 +259,7 @@ export function validateOperationChainV1(input: ValidatorInput): OperationChainV
   if (isHelper) chain_flags.push("helper_or_simulated_facts_present");
   if (receiptNotAcceptance) chain_flags.push("receipt_success_is_not_acceptance_pass");
   if (!approvalApproved && approvalExists) chain_flags.push("approval_not_approved");
+  if (irrigation && !stage1FormalTrigger && recommendationExists) chain_flags.push("missing_stage1_sensing_summary_formal_trigger");
   if (diagnosisStatus === "NEEDS_EVIDENCE") chain_flags.push("diagnosis_needs_core_evidence");
   if (!prescriptionExists && input.prescription) chain_flags.push("prescription_id_without_formal_prescription_fact");
   if (operationPlanExists && !operationPlanAuthorized) chain_flags.push("operation_plan_without_approved_decision");
