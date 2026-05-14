@@ -17,6 +17,10 @@ const QuerySchema = z.object({
   prescription_id: z.string().optional(),
   acceptance_id: z.string().optional(),
   memory_type: z.string().optional(),
+  memory_lane: z.string().optional(),
+  trust_level: z.string().optional(),
+  customer_visible_memory: z.coerce.boolean().optional(),
+  learning_eligible: z.coerce.boolean().optional(),
   skill_id: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(200).optional(),
 });
@@ -39,9 +43,13 @@ export function registerFieldMemoryV1Routes(app: FastifyInstance, pool: Pool): v
     if (query.prescription_id) push("prescription_id", query.prescription_id);
     if (query.acceptance_id) push("acceptance_id", query.acceptance_id);
     if (query.memory_type) push("memory_type", query.memory_type);
+    if (query.memory_lane) push("memory_lane", query.memory_lane);
+    if (query.trust_level) push("trust_level", query.trust_level);
+    if (typeof query.customer_visible_memory === "boolean") push("customer_visible_memory", query.customer_visible_memory);
+    if (typeof query.learning_eligible === "boolean") push("learning_eligible", query.learning_eligible);
     if (query.skill_id) push("skill_id", query.skill_id);
     vals.push(limit);
-    const sql = `SELECT memory_id,tenant_id,project_id,group_id,field_id,operation_id,memory_type,metric_key,metric_value,before_value,after_value,delta_value,confidence,summary_text,evidence_refs,source_id,source_type,skill_id,skill_trace_ref,weather_interference_detected,learning_excluded_reason,occurred_at
+    const sql = `SELECT memory_id,tenant_id,project_id,group_id,field_id,operation_id,memory_type,metric_key,metric_value,before_value,after_value,delta_value,confidence,summary_text,evidence_refs,source_id,source_type,skill_id,skill_trace_ref,weather_interference_detected,learning_excluded_reason,memory_lane,trust_level,formal_acceptance_id,source_lane,customer_visible_memory,learning_eligible,trust_reasons,occurred_at
       FROM field_memory_v1 WHERE ${where.join(" AND ")} ORDER BY occurred_at DESC LIMIT $${vals.length}`;
     const q = await pool.query(sql, vals);
     return reply.send({ ok: true, items: q.rows ?? [] });
@@ -58,7 +66,9 @@ export function registerFieldMemoryV1Routes(app: FastifyInstance, pool: Pool): v
     const out = await handler(req, { send: (v:any)=>v, status: (_:any)=>({send:(v:any)=>v}) } as any);
     if (!out?.ok) return reply.send(out);
     const items = out.items ?? [];
-    return reply.send({ ok: true, total: items.length, recent: items, summary: { total: items.length } });
+    const formal_count = items.filter((item: any) => item.memory_lane === "FORMAL_FIELD_MEMORY" && item.customer_visible_memory === true).length;
+    const technical_count = items.length - formal_count;
+    return reply.send({ ok: true, total: items.length, formal_count, technical_count, recent: items, summary: { total: items.length, formal_count, technical_count } });
   });
 
   app.get("/api/v1/field-memory", (req, reply) => handler(req, reply));
