@@ -7,6 +7,13 @@ export type OperatorFieldMemoryItem = {
   fieldId?: string | null;
   operationId?: string | null;
   memoryType?: string | null;
+  memoryLane?: string | null;
+  trustLevel?: string | null;
+  formalAcceptanceId?: string | null;
+  sourceLane?: string | null;
+  customerVisibleMemory?: boolean | null;
+  learningEligible?: boolean | null;
+  trustReasons: string[];
   beforeText?: string | null;
   afterText?: string | null;
   deltaText?: string | null;
@@ -41,76 +48,46 @@ type AnyRecord = Record<string, any>;
 const ENABLE_OPERATOR_FIELD_MEMORY_API = String((import.meta as any)?.env?.VITE_ENABLE_OPERATOR_FIELD_MEMORY_API ?? "").toLowerCase() === "true";
 const ENABLE_GLOBAL_FIELD_MEMORY_FALLBACK = String((import.meta as any)?.env?.VITE_ENABLE_GLOBAL_FIELD_MEMORY_FALLBACK ?? "").toLowerCase() === "true";
 
-function text(value: unknown, fallback = ""): string {
-  const raw = String(value ?? "").trim();
-  if (!raw || raw === "--" || raw === "undefined" || raw === "null") return fallback;
-  return raw;
-}
-
-function arrayFrom(payload: unknown, keys: string[]): AnyRecord[] {
-  if (Array.isArray(payload)) return payload.filter((item): item is AnyRecord => Boolean(item && typeof item === "object"));
-  if (!payload || typeof payload !== "object") return [];
-  const obj = payload as AnyRecord;
-  for (const key of keys) {
-    const value = obj[key];
-    if (Array.isArray(value)) return value.filter((item): item is AnyRecord => Boolean(item && typeof item === "object"));
-  }
-  if (obj.data) return arrayFrom(obj.data, keys);
-  if (obj.items) return arrayFrom(obj.items, keys);
-  return [];
-}
-
-function safeText(value: unknown, fallback = "未提供"): string {
-  const raw = text(value, "");
-  if (!raw) return fallback;
-  if (/secret|token|access[_-]?key|password|credential/i.test(raw)) return "敏感信息已隐藏";
-  if (/^[A-Za-z]:\\/.test(raw) || raw.startsWith("/") || raw.includes("file://")) return "本地路径已隐藏";
-  if (raw.length > 180) return `${raw.slice(0, 120)}...${raw.slice(-24)}`;
-  return raw;
-}
-
-function summarizeValue(value: unknown, fallback = "未提供"): string {
-  if (value === null || value === undefined) return fallback;
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return safeText(value, fallback);
-  if (Array.isArray(value)) {
-    const parts = value.map((item) => summarizeValue(item, "")).filter(Boolean);
-    return parts.length ? parts.slice(0, 8).join("；") : fallback;
-  }
-  if (typeof value === "object") {
-    const entries = Object.entries(value as AnyRecord)
-      .filter(([key]) => !/secret|token|access|password|path/i.test(key))
-      .map(([key, val]) => `${key}: ${safeText(val, "")}`)
-      .filter(Boolean);
-    return entries.length ? entries.slice(0, 8).join("；") : fallback;
-  }
-  return fallback;
-}
-
-function refs(value: unknown): string[] {
-  if (!value) return [];
-  if (Array.isArray(value)) {
-    return value.map((item) => safeText(typeof item === "object" ? (item as AnyRecord).id ?? (item as AnyRecord).ref ?? (item as AnyRecord).skill_id ?? (item as AnyRecord).evidence_id : item, "")).filter(Boolean).slice(0, 12);
-  }
-  const single = safeText(value, "");
-  return single ? [single] : [];
-}
+function text(value: unknown, fallback = ""): string { const raw = String(value ?? "").trim(); if (!raw || raw === "--" || raw === "undefined" || raw === "null") return fallback; return raw; }
+function boolOrNull(value: unknown): boolean | null { if (typeof value === "boolean") return value; const raw = text(value, "").toLowerCase(); if (!raw) return null; if (["true", "1", "yes", "y"].includes(raw)) return true; if (["false", "0", "no", "n"].includes(raw)) return false; return null; }
+function arrayFrom(payload: unknown, keys: string[]): AnyRecord[] { if (Array.isArray(payload)) return payload.filter((item): item is AnyRecord => Boolean(item && typeof item === "object")); if (!payload || typeof payload !== "object") return []; const obj = payload as AnyRecord; for (const key of keys) { const value = obj[key]; if (Array.isArray(value)) return value.filter((item): item is AnyRecord => Boolean(item && typeof item === "object")); } if (obj.data) return arrayFrom(obj.data, keys); if (obj.items) return arrayFrom(obj.items, keys); return []; }
+function safeText(value: unknown, fallback = "未提供"): string { const raw = text(value, ""); if (!raw) return fallback; if (/secret|token|access[_-]?key|password|credential/i.test(raw)) return "敏感信息已隐藏"; if (/^[A-Za-z]:\\/.test(raw) || raw.startsWith("/") || raw.includes("file://")) return "本地路径已隐藏"; if (raw.length > 180) return `${raw.slice(0, 120)}...${raw.slice(-24)}`; return raw; }
+function summarizeValue(value: unknown, fallback = "未提供"): string { if (value === null || value === undefined) return fallback; if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return safeText(value, fallback); if (Array.isArray(value)) { const parts = value.map((item) => summarizeValue(item, "")).filter(Boolean); return parts.length ? parts.slice(0, 8).join("；") : fallback; } if (typeof value === "object") { const entries = Object.entries(value as AnyRecord).filter(([key]) => !/secret|token|access|password|path/i.test(key)).map(([key, val]) => `${key}: ${safeText(val, "")}`).filter(Boolean); return entries.length ? entries.slice(0, 8).join("；") : fallback; } return fallback; }
+function refs(value: unknown): string[] { if (!value) return []; if (Array.isArray(value)) return value.map((item) => safeText(typeof item === "object" ? (item as AnyRecord).id ?? (item as AnyRecord).ref ?? (item as AnyRecord).skill_id ?? (item as AnyRecord).evidence_id : item, "")).filter(Boolean).slice(0, 12); const single = safeText(value, ""); return single ? [single] : []; }
+function trustReasons(value: unknown): string[] { return refs(value).filter(Boolean); }
 
 function normalizeItem(row: AnyRecord, index: number, source: OperatorFieldMemoryItem["source"], filters: { fieldId?: string; operationId?: string; memoryType?: string }): OperatorFieldMemoryItem {
   const weatherInterferenceDetected = row.weather_interference_detected == null ? null : Boolean(row.weather_interference_detected);
   const learningExcludedReason = text(row.learning_excluded_reason, "") || null;
   const evidenceRefs = refs(row.evidence_refs ?? row.evidence_ref ?? row.evidence_ids);
-  const learned = row.learned == null ? null : Boolean(row.learned);
-  const learnedWhat = text(row.learned_what ?? row.learnedWhat, "") || null;
-  const operatorHint = weatherInterferenceDetected
-    ? "该次湿度变化可能受降雨影响，暂不计入灌溉学习。"
-    : evidenceRefs.length === 0
-      ? "无证据引用，不纳入学习。"
-      : null;
+  const memoryLane = text(row.memory_lane ?? row.memoryLane, "") || null;
+  const trustLevel = text(row.trust_level ?? row.trustLevel, "") || null;
+  const customerVisibleMemory = boolOrNull(row.customer_visible_memory ?? row.customerVisibleMemory);
+  const learningEligible = boolOrNull(row.learning_eligible ?? row.learningEligible);
+  const formalAcceptanceId = text(row.formal_acceptance_id ?? row.formalAcceptanceId, "") || null;
+  const sourceLane = text(row.source_lane ?? row.sourceLane, "") || null;
+  const rawLearned = row.learned == null ? null : Boolean(row.learned);
+  const learned = customerVisibleMemory === true && learningEligible === true && memoryLane === "FORMAL_FIELD_MEMORY" && trustLevel === "FORMAL_ACCEPTED" ? true : false;
+  const learnedWhat = learned ? (text(row.learned_what ?? row.learnedWhat, "") || "正式田块记忆已通过验收链路进入学习") : null;
+  const operatorHint = learned
+    ? null
+    : weatherInterferenceDetected
+      ? "该次湿度变化可能受降雨影响，暂不计入正式学习。"
+      : rawLearned === true || evidenceRefs.length > 0
+        ? "存在记忆/证据信号，但未通过正式学习门禁。"
+        : "未通过正式学习门禁。";
   return {
     memoryId: safeText(row.memory_id ?? row.field_memory_id ?? row.id, `memory-${index}`),
     fieldId: safeText(row.field_id ?? row.fieldId, filters.fieldId ?? ""),
     operationId: safeText(row.operation_id ?? row.operationId ?? row.operation_plan_id, filters.operationId ?? ""),
     memoryType: safeText(row.memory_type ?? row.type ?? row.category, filters.memoryType ?? "类型待确认"),
+    memoryLane,
+    trustLevel,
+    formalAcceptanceId,
+    sourceLane,
+    customerVisibleMemory,
+    learningEligible,
+    trustReasons: trustReasons(row.trust_reasons ?? row.trustReasons),
     beforeText: summarizeValue(row.before ?? row.before_state ?? row.previous ?? row.from, "before 未提供"),
     afterText: summarizeValue(row.after ?? row.after_state ?? row.current ?? row.to, "after 未提供"),
     deltaText: summarizeValue(row.delta ?? row.change ?? row.diff ?? row.delta_value, "delta 未提供"),
@@ -132,60 +109,20 @@ function normalizeItem(row: AnyRecord, index: number, source: OperatorFieldMemor
   };
 }
 
-function normalizeRows(payload: unknown, source: OperatorFieldMemoryItem["source"], filters: { fieldId?: string; operationId?: string; memoryType?: string }): OperatorFieldMemoryItem[] {
-  return arrayFrom(payload, ["items", "memories", "field_memory", "memory", "entries", "data"]).map((row, index) => normalizeItem(row, index, source, filters));
-}
-
-function filterItems(items: OperatorFieldMemoryItem[], filters: { fieldId?: string; operationId?: string; memoryType?: string }): OperatorFieldMemoryItem[] {
-  return items.filter((item) => {
-    if (filters.fieldId && text(item.fieldId) && text(item.fieldId) !== filters.fieldId) return false;
-    if (filters.operationId && text(item.operationId) && text(item.operationId) !== filters.operationId) return false;
-    if (filters.memoryType && text(item.memoryType).toLowerCase() !== filters.memoryType.toLowerCase()) return false;
-    return true;
-  });
-}
-
-async function fetchOptional(path: string): Promise<{ status: number; data: unknown | null; denied: boolean }> {
-  try {
-    const result = await apiRequestWithPolicy<unknown>(path, undefined, { allowedStatuses: [401, 403, 404, 405, 422], silent: true, timeoutMs: 10000 });
-    return { status: result.status, data: result.ok ? result.data : null, denied: result.status === 401 || result.status === 403 };
-  } catch {
-    return { status: 0, data: null, denied: false };
-  }
-}
+function normalizeRows(payload: unknown, source: OperatorFieldMemoryItem["source"], filters: { fieldId?: string; operationId?: string; memoryType?: string }): OperatorFieldMemoryItem[] { return arrayFrom(payload, ["items", "memories", "field_memory", "memory", "entries", "data"]).map((row, index) => normalizeItem(row, index, source, filters)); }
+function filterItems(items: OperatorFieldMemoryItem[], filters: { fieldId?: string; operationId?: string; memoryType?: string }): OperatorFieldMemoryItem[] { return items.filter((item) => { if (filters.fieldId && text(item.fieldId) && text(item.fieldId) !== filters.fieldId) return false; if (filters.operationId && text(item.operationId) && text(item.operationId) !== filters.operationId) return false; if (filters.memoryType && text(item.memoryType).toLowerCase() !== filters.memoryType.toLowerCase()) return false; return true; }); }
+async function fetchOptional(path: string): Promise<{ status: number; data: unknown | null; denied: boolean }> { try { const result = await apiRequestWithPolicy<unknown>(path, undefined, { allowedStatuses: [401, 403, 404, 405, 422], silent: true, timeoutMs: 10000 }); return { status: result.status, data: result.ok ? result.data : null, denied: result.status === 401 || result.status === 403 }; } catch { return { status: 0, data: null, denied: false }; } }
 
 export async function fetchOperatorFieldMemory(args: { fieldId?: unknown; operationId?: unknown; memoryType?: unknown } = {}): Promise<OperatorFieldMemoryResponse> {
-  const fieldId = text(args.fieldId, "");
-  const operationId = text(args.operationId, "");
-  const memoryType = text(args.memoryType, "");
+  const fieldId = text(args.fieldId, ""); const operationId = text(args.operationId, ""); const memoryType = text(args.memoryType, "");
   const filters = { ...(fieldId ? { fieldId } : {}), ...(operationId ? { operationId } : {}), ...(memoryType ? { memoryType } : {}) };
-  const query: Record<string, string> = {};
-  if (fieldId) query.field_id = fieldId;
-  if (operationId) query.operation_id = operationId;
-  if (memoryType) query.memory_type = memoryType;
+  const query: Record<string, string> = {}; if (fieldId) query.field_id = fieldId; if (operationId) query.operation_id = operationId; if (memoryType) query.memory_type = memoryType;
 
   if (ENABLE_OPERATOR_FIELD_MEMORY_API) {
     const official = await fetchOptional(withQuery("/api/v1/operator/field-memory", query));
-    if (official.denied) {
-      return {
-        source: "permission_denied",
-        dataScope: "PERMISSION_DENIED",
-        generated_at: new Date().toISOString(),
-        items: [],
-        filters,
-        message: "当前身份无权查看运营田块记忆明细。",
-      };
-    }
+    if (official.denied) return { source: "permission_denied", dataScope: "PERMISSION_DENIED", generated_at: new Date().toISOString(), items: [], filters, message: "当前身份无权查看运营田块记忆明细。" };
     const officialItems = filterItems(normalizeRows(official.data, "operator_field_memory_api", filters), filters);
-    if (officialItems.length > 0) {
-      return {
-        source: "operator_field_memory_api",
-        dataScope: "OFFICIAL_OPERATOR_API",
-        generated_at: new Date().toISOString(),
-        items: officialItems,
-        filters,
-      };
-    }
+    if (officialItems.length > 0) return { source: "operator_field_memory_api", dataScope: "OFFICIAL_OPERATOR_API", generated_at: new Date().toISOString(), items: officialItems, filters };
   }
 
   const fallbackCalls: Promise<{ status: number; data: unknown | null; denied: boolean }>[] = [];
@@ -195,40 +132,10 @@ export async function fetchOperatorFieldMemory(args: { fieldId?: unknown; operat
 
   if (fallbackCalls.length > 0) {
     const fallbackResults = await Promise.all(fallbackCalls);
-    if (fallbackResults.some((item) => item.denied)) {
-      return {
-        source: "permission_denied",
-        dataScope: "PERMISSION_DENIED",
-        generated_at: new Date().toISOString(),
-        items: [],
-        filters,
-        message: "当前身份无权查看运营田块记忆明细。",
-      };
-    }
-
-    const fallbackItems = filterItems(fallbackResults.flatMap((result) => normalizeRows(result.data, operationId ? "operation_field_memory_api" : "field_memory_api", filters)), filters)
-      .filter((item, index, all) => all.findIndex((x) => x.memoryId === item.memoryId) === index);
-
-    if (fallbackItems.length > 0) {
-      return {
-        source: "fallback_existing_sources",
-        dataScope: "FALLBACK_LIMITED",
-        generated_at: new Date().toISOString(),
-        items: fallbackItems,
-        filters,
-        message: "当前展示 field-memory 现有接口包装后的有限运营记忆明细，非完整 operator field-memory。",
-      };
-    }
+    if (fallbackResults.some((item) => item.denied)) return { source: "permission_denied", dataScope: "PERMISSION_DENIED", generated_at: new Date().toISOString(), items: [], filters, message: "当前身份无权查看运营田块记忆明细。" };
+    const fallbackItems = filterItems(fallbackResults.flatMap((result) => normalizeRows(result.data, operationId ? "operation_field_memory_api" : "field_memory_api", filters)), filters).filter((item, index, all) => all.findIndex((x) => x.memoryId === item.memoryId) === index);
+    if (fallbackItems.length > 0) return { source: "fallback_existing_sources", dataScope: "FALLBACK_LIMITED", generated_at: new Date().toISOString(), items: fallbackItems, filters, message: "当前展示 field-memory 现有接口包装后的有限运营记忆明细，非完整 operator field-memory。" };
   }
 
-  return {
-    source: "fallback_existing_sources",
-    dataScope: "EMPTY",
-    generated_at: new Date().toISOString(),
-    items: [],
-    filters,
-    message: ENABLE_OPERATOR_FIELD_MEMORY_API || ENABLE_GLOBAL_FIELD_MEMORY_FALLBACK || fieldId || operationId
-      ? "暂无田块记忆明细。"
-      : "田块记忆明细接口未接入，当前不探测未 ready API；可输入 field_id 或 operation_id 查看已有详情 fallback。",
-  };
+  return { source: "fallback_existing_sources", dataScope: "EMPTY", generated_at: new Date().toISOString(), items: [], filters, message: ENABLE_OPERATOR_FIELD_MEMORY_API || ENABLE_GLOBAL_FIELD_MEMORY_FALLBACK || fieldId || operationId ? "暂无田块记忆明细。" : "田块记忆明细接口未接入，当前不探测未 ready API；可输入 field_id 或 operation_id 查看已有详情 fallback。" };
 }

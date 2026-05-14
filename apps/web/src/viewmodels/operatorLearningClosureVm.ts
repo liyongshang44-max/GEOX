@@ -40,39 +40,53 @@ function includesWeatherInterference(value: unknown): boolean {
   return /降雨|天气|雨水|rainfall|rain|weather/i.test(String(value ?? ""));
 }
 
-function evidenceStatus(roiRows: OperatorRoiLedgerRowVm[], memoryRows: OperatorFieldMemoryRowVm[]): string {
-  const roiEvidence = roiRows.some((row) => isKnown(row.evidenceRefText));
-  const memoryEvidence = memoryRows.some((row) => isKnown(row.evidenceRefsText));
-  if (roiEvidence || memoryEvidence) return "证据已关联";
-  return "证据待补充";
+function formalEvidenceStatus(roiRows: OperatorRoiLedgerRowVm[], memoryRows: OperatorFieldMemoryRowVm[]): string {
+  const trustedRoi = roiRows.some((row) => row.customerVisibleValue === true);
+  const formalMemory = memoryRows.some((row) => row.learningGateText === "已通过正式学习门禁");
+  if (trustedRoi || formalMemory) return "正式链路证据已通过";
+  const hasRawEvidence = roiRows.some((row) => isKnown(row.evidenceRefText)) || memoryRows.some((row) => isKnown(row.evidenceRefsText));
+  return hasRawEvidence ? "存在证据信号，待正式门禁确认" : "证据待补充";
 }
 
-function acceptanceResult(memoryRows: OperatorFieldMemoryRowVm[]): string {
-  if (memoryRows.some((row) => isKnown(row.acceptanceIdText))) return "验收记录已关联";
+function acceptanceResult(memoryRows: OperatorFieldMemoryRowVm[], roiRows: OperatorRoiLedgerRowVm[]): string {
+  if (memoryRows.some((row) => row.learningGateText === "已通过正式学习门禁")) return "正式验收学习已关联";
+  if (roiRows.some((row) => row.customerVisibleValue === true)) return "正式价值验收已关联";
+  if (memoryRows.some((row) => isKnown(row.acceptanceIdText))) return "验收记录已关联，但未通过学习门禁";
   return "验收结果待补充";
 }
 
 function skillTraceText(skillTrace: OperatorSkillTraceResponse | null | undefined): string {
   if (!skillTrace || skillTrace.notReady) return skillTrace?.message || "技能运行记录查询接口未接入。";
-  return skillTrace.items.length ? `${skillTrace.items.length} 条技能运行记录` : "暂无技能运行记录";
+  const rawEntered = (skillTrace.items ?? []).filter((item) => item.enteredLearning === true).length;
+  return skillTrace.items.length
+    ? `${skillTrace.items.length} 条技能运行记录${rawEntered ? `；${rawEntered} 条仅作为学习信号` : ""}`
+    : "暂无技能运行记录";
 }
 
 function performanceText(performance: OperatorSkillPerformanceResponse | null | undefined): string {
   if (!performance || performance.notReady) return performance?.message || "技能 / 规则表现查询接口未接入。";
-  return performance.items.length ? `${performance.items.length} 条技能 / 规则表现记录，本次作业已进入表现评估链。` : "暂无技能 / 规则表现更新记录";
+  return performance.items.length ? `${performance.items.length} 条技能 / 规则表现记录，需经过学习门禁后才算生效。` : "暂无技能 / 规则表现更新记录";
 }
 
 function detectWeatherExclusion(roiRows: OperatorRoiLedgerRowVm[], memoryRows: OperatorFieldMemoryRowVm[], skillTrace: OperatorSkillTraceResponse | null | undefined): boolean {
-  const memoryHit = memoryRows.some((row) => [row.learnedText, row.confidenceText, row.deltaText, row.beforeText, row.afterText].some(includesWeatherInterference));
-  const roiHit = roiRows.some((row) => [row.assumptionText, row.measuredAllowedText, row.confidenceText, row.calculationMethodText].some(includesWeatherInterference));
+  const memoryHit = memoryRows.some((row) => [row.learnedText, row.learningGateText, row.confidenceText, row.deltaText, row.beforeText, row.afterText].some(includesWeatherInterference));
+  const roiHit = roiRows.some((row) => [row.assumptionText, row.measuredAllowedText, row.confidenceText, row.calculationMethodText, row.valueGateText].some(includesWeatherInterference));
   const traceHit = (skillTrace?.items ?? []).some((item) => [item.inputSummary, item.outputSummary, item.failureReason].some(includesWeatherInterference));
   return memoryHit || roiHit || traceHit;
 }
 
-function enteredLearning(memoryRows: OperatorFieldMemoryRowVm[], skillTrace: OperatorSkillTraceResponse | null | undefined): boolean {
-  if (memoryRows.some((row) => /已学习|学到了|已进入学习/.test(row.learnedText))) return true;
-  if ((skillTrace?.items ?? []).some((item) => item.enteredLearning === true)) return true;
-  return false;
+function hasFormalLearning(memoryRows: OperatorFieldMemoryRowVm[]): boolean {
+  return memoryRows.some((row) => row.learningGateText === "已通过正式学习门禁");
+}
+
+function hasTrustedValue(roiRows: OperatorRoiLedgerRowVm[]): boolean {
+  return roiRows.some((row) => row.customerVisibleValue === true);
+}
+
+function rawLearningSignals(memoryRows: OperatorFieldMemoryRowVm[], skillTrace: OperatorSkillTraceResponse | null | undefined): number {
+  const memorySignals = memoryRows.filter((row) => /已学习|学到了|已进入学习|证据信号/.test(row.learnedText)).length;
+  const traceSignals = (skillTrace?.items ?? []).filter((item) => item.enteredLearning === true).length;
+  return memorySignals + traceSignals;
 }
 
 function actionLinks(operationId: string, fieldId: string): Array<{ label: string; href: string }> {
@@ -95,36 +109,50 @@ export function buildOperatorLearningClosureVm(input: OperatorLearningClosureInp
   const memoryRows = input.fieldMemoryRows ?? [];
   const fieldId = explicitFieldId || text(input.skillTrace?.items.find((item) => item.fieldId)?.fieldId, "");
   const weatherExcluded = detectWeatherExclusion(roiRows, memoryRows, input.skillTrace);
-  const didLearn = enteredLearning(memoryRows, input.skillTrace);
-  const learningExcludedReasonText = weatherExcluded
-    ? "因降雨干扰，本次结果未进入灌溉效果学习。"
-    : didLearn
-      ? "未发现学习排除原因。"
-      : "暂无进入学习的明确证据。";
+  const formalLearning = hasFormalLearning(memoryRows);
+  const trustedValue = hasTrustedValue(roiRows);
+  const signalCount = rawLearningSignals(memoryRows, input.skillTrace);
+
+  const learningExcludedReasonText = !operationId
+    ? "未选择作业，暂不判断学习排除原因。"
+    : weatherExcluded
+      ? "因天气或降雨干扰，本次结果未进入正式学习。"
+      : formalLearning
+        ? "已通过正式学习门禁。"
+        : signalCount > 0
+          ? `存在 ${signalCount} 条学习信号，但未通过正式学习门禁。`
+          : "暂无通过正式学习门禁的证据。";
+
   const learningEffectiveText = !operationId
     ? "需选择作业后判断"
     : weatherExcluded
       ? "未生效"
-      : didLearn
+      : formalLearning
         ? "已生效"
-        : "待确认";
+        : signalCount > 0 || trustedValue
+          ? "待正式门禁确认"
+          : "待确认";
+
   const learningEffectiveTone: OperatorLearningClosureVm["learningEffectiveTone"] = !operationId
     ? "neutral"
     : weatherExcluded
       ? "warning"
-      : didLearn
+      : formalLearning
         ? "success"
-        : "neutral";
+        : signalCount > 0 || trustedValue
+          ? "warning"
+          : "neutral";
+
   const vm: OperatorLearningClosureVm = {
     operationIdText: operationId || "未选择作业",
-    evidenceStatusText: operationId ? evidenceStatus(roiRows, memoryRows) : "需选择作业后追溯证据",
-    acceptanceResultText: operationId ? acceptanceResult(memoryRows) : "需选择作业后追溯验收",
-    roiEntryText: operationId ? `${roiRows.length} 条价值记录` : "需选择作业后追溯价值记录",
-    fieldMemoryEntryText: operationId ? `${memoryRows.length} 条田块记忆` : "需选择作业后追溯田块记忆",
+    evidenceStatusText: operationId ? formalEvidenceStatus(roiRows, memoryRows) : "需选择作业后追溯证据",
+    acceptanceResultText: operationId ? acceptanceResult(memoryRows, roiRows) : "需选择作业后追溯验收",
+    roiEntryText: operationId ? `${roiRows.length} 条价值记录；${roiRows.filter((row) => row.customerVisibleValue).length} 条通过正式价值门禁` : "需选择作业后追溯价值记录",
+    fieldMemoryEntryText: operationId ? `${memoryRows.length} 条田块记忆；${memoryRows.filter((row) => row.learningGateText === "已通过正式学习门禁").length} 条正式学习` : "需选择作业后追溯田块记忆",
     skillTraceText: operationId ? skillTraceText(input.skillTrace) : "需选择作业后追溯技能运行记录",
     performanceText: operationId ? performanceText(input.performance) : "需选择作业后追溯技能 / 规则表现",
     learningEffectiveText,
-    learningExcludedReasonText: operationId ? learningExcludedReasonText : "未选择作业，暂不判断学习排除原因。",
+    learningExcludedReasonText,
     learningEffectiveTone,
     rows: [],
     actions: actionLinks(operationId, fieldId),
