@@ -26,6 +26,26 @@ export const RoiBaselineTypeV1Values = [
 
 export type RoiBaselineTypeV1 = (typeof RoiBaselineTypeV1Values)[number];
 
+export const RoiTrustLevelV1Values = [
+  "FORMAL_ACCEPTED",
+  "INTERIM_SUPPORTED",
+  "HYPOTHESIS_ONLY",
+  "SIMULATED_DEV_ONLY",
+  "INSUFFICIENT_FORMAL_EVIDENCE",
+] as const;
+
+export type RoiTrustLevelV1 = (typeof RoiTrustLevelV1Values)[number];
+
+export const RoiSourceLaneV1Values = [
+  "FORMAL_ACCEPTANCE",
+  "AS_EXECUTED_SIGNAL",
+  "FLIGHT_TABLE_DEV",
+  "SKILL_TECHNICAL",
+  "MANUAL_IMPORT",
+] as const;
+
+export type RoiSourceLaneV1 = (typeof RoiSourceLaneV1Values)[number];
+
 export const RecommendationValueTypeV1Values = [
   "YIELD_LOSS_AVOIDED",
   "YIELD_LIFT_EXPECTED",
@@ -82,6 +102,16 @@ export type OperationValueChainRoiV1 = {
   customer_safe_text: string;
 };
 
+export type RoiLedgerTrustV1 = {
+  trust_level: RoiTrustLevelV1;
+  source_lane: RoiSourceLaneV1;
+  formal_acceptance_id: string | null;
+  formal_evidence_passed: boolean;
+  chain_validation_passed: boolean;
+  customer_visible_value: boolean;
+  trust_reasons: string[];
+};
+
 export type RoiLedgerV1 = {
   roi_ledger_id: string;
   tenant_id: string;
@@ -128,6 +158,15 @@ export type RoiLedgerV1 = {
     trace_id?: string;
     run_id?: string;
   }>;
+
+  /** PR-3 base-contract trust layer. MEASURED is a calculation basis, not formal acceptance. */
+  trust_level?: RoiTrustLevelV1;
+  source_lane?: RoiSourceLaneV1;
+  formal_acceptance_id?: string | null;
+  formal_evidence_passed?: boolean;
+  chain_validation_passed?: boolean;
+  customer_visible_value?: boolean;
+  trust_reasons?: string[];
 
   created_at: string;
   updated_at: string;
