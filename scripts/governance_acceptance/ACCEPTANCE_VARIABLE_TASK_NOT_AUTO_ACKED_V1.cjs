@@ -11,8 +11,13 @@ function read(rel) {
 function assertIncludes(text, needle, label) {
   if (!text.includes(needle)) throw new Error(`${label}: missing ${needle}`);
 }
-function assertRegex(text, regex, label) {
-  if (!regex.test(text)) throw new Error(`${label}: missing ${regex}`);
+function assertOrdered(text, needles, label) {
+  let cursor = -1;
+  for (const needle of needles) {
+    const next = text.indexOf(needle, cursor + 1);
+    if (next < 0) throw new Error(`${label}: missing ordered token ${needle}`);
+    cursor = next;
+  }
 }
 
 const taskBuilder = read('apps/server/src/domain/prescription/variable_action_task_v1.ts');
@@ -43,12 +48,43 @@ for (const token of [
   'READY_TO_DISPATCH',
   'ACK_REQUIRED',
   'NOT_DISPATCHED',
+  "'{payload,status}'",
+  "'{payload,to_status}'",
+  "'{payload,dispatch_status}'",
+  "'{payload,ack_status}'",
 ]) {
   assertIncludes(migration, token, `db no-auto-ack guard ${token}`);
 }
 
-assertRegex(migration, /record_type\s*=\s*'operation_plan_v1'[\s\S]*status\}'\).*'ACKED'[\s\S]*'READY_TO_DISPATCH'/, 'operation plan ACKED must be rewritten to READY_TO_DISPATCH');
-assertRegex(migration, /record_type\s*=\s*'operation_plan_transition_v1'[\s\S]*to_status\}'\).*'ACKED'[\s\S]*'READY_TO_DISPATCH'/, 'operation plan transition ACKED must be rewritten to READY_TO_DISPATCH');
+assertOrdered(
+  migration,
+  [
+    "record_type = 'operation_plan_v1'",
+    "'{payload,status}'",
+    "'ACKED'",
+    "'{payload,status}'",
+    "'\"READY_TO_DISPATCH\"'::jsonb",
+    "'{payload,dispatch_status}'",
+    "'\"NOT_DISPATCHED\"'::jsonb",
+    "'{payload,ack_status}'",
+    "'\"ACK_REQUIRED\"'::jsonb",
+  ],
+  'operation plan ACKED must be rewritten to READY_TO_DISPATCH and require executor ack'
+);
+
+assertOrdered(
+  migration,
+  [
+    "record_type = 'operation_plan_transition_v1'",
+    "VARIABLE_ACTION_TASK_CREATED",
+    "'{payload,to_status}'",
+    "'ACKED'",
+    "'{payload,to_status}'",
+    "'\"READY_TO_DISPATCH\"'::jsonb",
+    "'{payload,ack_source_required}'",
+  ],
+  'operation plan transition ACKED must be rewritten to READY_TO_DISPATCH'
+);
 
 for (const check of [
   'task_ready_to_dispatch_not_acked',
