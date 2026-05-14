@@ -115,35 +115,50 @@ async function acceptanceReceiptDoesNotPass({ pool, base, token, tenant }) {
 }
 
 async function roiFromAsExecutedNotCustomerVisible({ pool, base, token, tenant }) {
-  assert.equal(await tableExists(pool, 'as_executed_v1'), true, 'as_executed_v1 table missing');
+  assert.equal(await tableExists(pool, 'roi_ledger_v1'), true, 'roi_ledger_v1 table missing');
   const as_executed_id = nowId('as_exec_dyn_neg');
   const task_id = nowId('task_dyn_neg_roi');
   const field_id = nowId('field_dyn_neg_roi');
-  await insertKnownColumns(pool, 'as_executed_v1', {
-    as_executed_id,
+  const roi_ledger_id = nowId('roi_dyn_neg');
+  await insertKnownColumns(pool, 'roi_ledger_v1', {
+    roi_ledger_id,
     tenant_id: tenant.tenant_id,
     project_id: tenant.project_id,
     group_id: tenant.group_id,
+    operation_id: nowId('op_dyn_neg_roi'),
     task_id,
     prescription_id: nowId('presc_dyn_neg_roi'),
+    as_executed_id,
     field_id,
-    planned: JSON.stringify({ amount: 30, unit: 'L', operation_plan_id: nowId('op_dyn_neg_roi') }),
-    executed: JSON.stringify({ amount: 25, unit: 'L', status: 'CONFIRMED', resource_usage: { water_l: 25, electric_kwh: 0, chemical_ml: 0 } }),
+    roi_type: 'WATER_SAVED',
+    baseline_type: 'SEASON_PLAN',
+    baseline_value: 30,
+    planned_value: 30,
+    actual_value: 25,
+    delta_value: 5,
+    unit: 'L',
+    value_kind: 'MEASURED',
+    baseline: JSON.stringify({ source: 'dynamic_negative_planned_amount', amount: 30, unit: 'L' }),
+    actual: JSON.stringify({ source: 'dynamic_negative_as_executed_amount', amount: 25, unit: 'L' }),
+    delta: JSON.stringify({ amount: 5, unit: 'L' }),
+    confidence: JSON.stringify({ level: 'HIGH', basis: 'measured', reasons: ['dynamic_negative_as_executed_signal_only'] }),
     evidence_refs: JSON.stringify(['receipt_only_dynamic_negative']),
+    calculation_method: 'dynamic_negative_roi_signal_v1',
+    assumptions: JSON.stringify({ source_lane: 'AS_EXECUTED_SIGNAL' }),
     created_at: new Date(),
     updated_at: new Date(),
   });
-  const resp = await fetchJson(`${base}/api/v1/roi-ledger/from-as-executed`, {
-    method: 'POST',
+
+  const resp = await fetchJson(`${base}/api/v1/roi-ledger/by-as-executed/${encodeURIComponent(as_executed_id)}?tenant_id=${encodeURIComponent(tenant.tenant_id)}&project_id=${encodeURIComponent(tenant.project_id)}&group_id=${encodeURIComponent(tenant.group_id)}`, {
+    method: 'GET',
     token,
-    body: { ...tenant, as_executed_id },
   });
-  const json = requireOk(resp, 'roi from as-executed');
+  const json = requireOk(resp, 'roi by as-executed');
   const rows = Array.isArray(json.roi_ledgers) ? json.roi_ledgers : [];
   assert.ok(rows.length > 0, 'roi ledgers missing for as_executed negative case');
   for (const row of rows) {
-    assert.notEqual(String(row.trust_level ?? '').toUpperCase(), 'FORMAL_ACCEPTED', 'as_executed ROI must not default FORMAL_ACCEPTED');
-    assert.notEqual(Boolean(row.customer_visible_value), true, 'as_executed ROI must not default customer_visible_value=true');
+    assert.notEqual(String(row.trust_level ?? '').toUpperCase(), 'FORMAL_ACCEPTED', 'as_executed ROI signal must not be FORMAL_ACCEPTED');
+    assert.notEqual(Boolean(row.customer_visible_value), true, 'as_executed ROI signal must not be customer_visible_value=true');
   }
   return { as_executed_id, roi_count: rows.length, trust_levels: rows.map((r) => r.trust_level) };
 }
