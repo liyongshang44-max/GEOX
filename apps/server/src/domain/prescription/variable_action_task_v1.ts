@@ -83,6 +83,9 @@ export function buildVariableActionTaskPayloadV1(input: {
 
   const now = Number.isFinite(input.now_ts_ms) ? input.now_ts_ms : Date.now();
   const field_id = asText(prescription.field_id);
+  const durationSec = 1200;
+  const durationMin = 20;
+  const coveragePercent = 95;
 
   const sanitizedZoneRates = zoneRatesRaw.map((zoneRate) => ({
     zone_id: asText(zoneRate?.zone_id),
@@ -123,16 +126,18 @@ export function buildVariableActionTaskPayloadV1(input: {
       ],
     },
     parameters: {
-      duration_sec: 1200,
-      duration_min: 20,
+      duration_sec: durationSec,
+      duration_min: durationMin,
       amount,
-      coverage_percent: 95,
+      coverage_percent: coveragePercent,
     },
     constraints: {
-  approval_required: true,
-  variable_rate_required: true,
-  zone_count: sanitizedZoneRates.length,
-},
+      approval_required: true,
+      variable_rate_required: true,
+      zone_count: sanitizedZoneRates.length,
+      dispatch_ack_required: true,
+      task_creation_is_not_ack: true,
+    },
     meta: {
       prescription_id: asText(prescription.prescription_id),
       recommendation_id: asText(prescription.recommendation_id),
@@ -143,7 +148,26 @@ export function buildVariableActionTaskPayloadV1(input: {
         mode: "VARIABLE_BY_ZONE",
         zone_rates: sanitizedZoneRates,
       },
-
+      task_lifecycle_status: "READY_TO_DISPATCH",
+      operation_plan_candidate_status: "READY_TO_DISPATCH",
+      dispatch_status: "NOT_DISPATCHED",
+      ack_status: "ACK_REQUIRED",
+      ack_source_required: "executor acknowledgement",
+      status_contract: "TASK_CREATED_READY_TO_DISPATCH_NOT_ACKED",
+      default_parameter_sources: {
+        time_window: "helper default",
+        duration_sec: "helper default",
+        duration_min: "helper default",
+        coverage_percent: "helper default",
+        amount: "formal prescription zone_rates sum",
+      },
+      parameter_source: {
+        time_window: "helper default",
+        duration_sec: "helper default",
+        duration_min: "helper default",
+        amount: "formal prescription",
+        coverage_percent: "helper default",
+      },
       zone_count: sanitizedZoneRates.length,
     },
   };
