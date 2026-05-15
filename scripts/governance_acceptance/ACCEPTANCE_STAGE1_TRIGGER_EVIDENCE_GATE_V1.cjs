@@ -29,8 +29,12 @@ includesAll(boundary, [
   'getStage1EvidenceSufficiencyStatus(summaryPayload) !== "PASS"',
   'EVIDENCE_SUFFICIENCY_NOT_PASS',
   'TIME_COVERAGE_MISSING',
-  'INSUFFICIENT_SAMPLE_COUNT',
-  'TIME_COVERAGE_NOT_PASS',
+  'formal_sample_count',
+  'formal_coverage_ratio',
+  'formal_source_eligible',
+  'INSUFFICIENT_FORMAL_SAMPLE_COUNT',
+  'INSUFFICIENT_FORMAL_COVERAGE_RATIO',
+  'FORMAL_SOURCE_NOT_ELIGIBLE',
   'MAX_GAP_EXCEEDED',
   'FRESHNESS_NOT_FRESH',
   'DEVICE_HEALTH_BAD',
@@ -41,12 +45,15 @@ assert(boundary.includes('irrigationEffectiveness === "low" || leakRisk === "hig
 assert(boundary.includes('if (reasons.length > 0)'), 'formal signal must be gated by evidence reason codes');
 assert(boundary.includes('return { status: "NEEDS_EVIDENCE", error: FORMAL_STAGE1_TRIGGER_NEEDS_EVIDENCE'), 'failed evidence gate must return FORMAL_STAGE1_TRIGGER_NEEDS_EVIDENCE');
 assert(boundary.includes('return { status: "ELIGIBLE", reason_codes: [] }'), 'only fully satisfied evidence gate may become ELIGIBLE');
-assert(boundary.includes('coverageRatio == null || coverageRatio < 0.5'), 'coverage不足必须阻断 formal trigger');
-assert(boundary.includes('sampleCount == null || sampleCount < 3'), '单点/样本不足必须阻断 formal trigger');
+assert(boundary.includes('formalCoverageRatio == null || formalCoverageRatio < 0.5'), 'formal coverage不足必须阻断 formal trigger');
+assert(boundary.includes('formalSampleCount == null || formalSampleCount < 3'), 'formal 单点/样本不足必须阻断 formal trigger');
+assert(boundary.includes('!formalSourceEligible'), 'non-formal sample source 必须阻断 formal trigger');
 assert(boundary.includes('maxGapMs == null || maxGapMs > allowedMaxGapMs'), 'gap超限必须阻断 formal trigger');
 assert(boundary.includes('freshness !== "fresh"'), 'stale 数据只能 NEEDS_EVIDENCE');
 assert(boundary.includes('deviceHealthStatus === "BAD"'), 'device_health BAD 必须阻断 formal trigger');
 assert(boundary.includes('conflictStatus === "CONFLICTING" || conflictStatus === "UNRESOLVED"'), '多源冲突必须阻断 formal trigger');
+assert(!boundary.includes('sampleCount == null || sampleCount < 3'), 'formal trigger must not use total sample_count');
+assert(!boundary.includes('coverageRatio == null || coverageRatio < 0.5'), 'formal trigger must not use total coverage_ratio');
 
 includesAll(gateRoute, [
   'registerAppleIIStage1EvidenceGateV1',
