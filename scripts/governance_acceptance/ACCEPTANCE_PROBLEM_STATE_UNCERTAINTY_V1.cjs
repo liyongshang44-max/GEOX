@@ -17,6 +17,7 @@ function includesAll(text, xs, label) {
 }
 
 const builder = read('apps/server/src/domain/sensing/problem_state_uncertainty_v1.ts');
+const pipeline = read('apps/server/src/services/appleii_problem_state_pipeline_v1.ts');
 const gateRoute = read('apps/server/src/routes/appleii_stage1_evidence_gate_v1.ts');
 const kernel = read('apps/server/src/domain/control_kernel/control_kernel_input_contract_v1.ts');
 
@@ -67,15 +68,27 @@ assert(!builder.includes('createTask'), 'ProblemState builder must not create ta
 assert(!builder.includes('act_task'), 'ProblemState builder must not create AO-ACT task');
 assert(!builder.includes('dispatch'), 'ProblemState builder must not dispatch work');
 
-includesAll(gateRoute, [
+includesAll(pipeline, [
+  'runAppleIIProblemStatePipelineV1',
+  'AppleII sensing/judge pipeline boundary',
+  'formal producer path for ProblemState / UncertaintyEnvelope facts',
+  'refreshFieldReadModelsWithObservabilityV1',
   'appendProblemStateAndUncertaintyFactsV1',
+  'stage1_summary',
+  'problem_state_output',
+], 'Apple II problem state sensing/judge pipeline');
+
+includesAll(gateRoute, [
+  'runAppleIIProblemStatePipelineV1',
   'problem_state_v1: problemStateOutput.problem_state_v1',
   'uncertainty_envelope_v1: problemStateOutput.uncertainty_envelope_v1',
   'problem_state_ref',
   'uncertainty_envelope_ref',
   'fact_ids',
-  'error: "NEEDS_EVIDENCE"',
-], 'Apple II gate integration');
+  'FORMAL_STAGE1_TRIGGER_NEEDS_EVIDENCE',
+], 'decision route compatibility preflight integration');
+assert(!gateRoute.includes('appendProblemStateAndUncertaintyFactsV1'), 'decision route must not append ProblemState facts directly; use Apple II pipeline');
+assert(!gateRoute.includes('refreshFieldReadModelsWithObservabilityV1'), 'decision route must not refresh Stage-1 directly; use Apple II pipeline');
 
 includesAll(kernel, [
   'PermissionSetV1',

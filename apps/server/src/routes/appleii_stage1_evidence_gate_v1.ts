@@ -5,8 +5,7 @@ import {
   FORMAL_STAGE1_TRIGGER_NEEDS_EVIDENCE,
   evaluateFormalStage1TriggerGateV1,
 } from "../domain/decision/stage1_action_boundary_v1.js";
-import { appendProblemStateAndUncertaintyFactsV1 } from "../domain/sensing/problem_state_uncertainty_v1.js";
-import { refreshFieldReadModelsWithObservabilityV1 } from "../services/field_read_model_refresh_v1.js";
+import { runAppleIIProblemStatePipelineV1 } from "../services/appleii_problem_state_pipeline_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 
@@ -41,24 +40,16 @@ export function registerAppleIIStage1EvidenceGateV1(app: FastifyInstance, pool: 
     };
     if (!tenantMatches(auth, tenant, reply)) return reply;
 
-    const refreshed = await refreshFieldReadModelsWithObservabilityV1(pool, {
+    const pipelineOutput = await runAppleIIProblemStatePipelineV1(pool, {
       tenant_id: tenant.tenant_id,
       project_id: tenant.project_id,
       group_id: tenant.group_id,
       field_id: fieldId,
       device_id: deviceId,
     });
-    const stage1Summary = refreshed.sensing_summary_stage1.payload;
-    if (!stage1Summary || typeof stage1Summary !== "object") return;
-
-    const problemStateOutput = await appendProblemStateAndUncertaintyFactsV1(pool, {
-      tenant_id: tenant.tenant_id,
-      project_id: tenant.project_id,
-      group_id: tenant.group_id,
-      field_id: fieldId,
-      device_id: deviceId,
-      stage1Summary: stage1Summary as Record<string, any>,
-    });
+    if (!pipelineOutput) return;
+    const stage1Summary = pipelineOutput.stage1_summary;
+    const problemStateOutput = pipelineOutput.problem_state_output;
 
     const gate = evaluateFormalStage1TriggerGateV1(stage1Summary);
     if (gate.status === "NEEDS_EVIDENCE") {

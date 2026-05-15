@@ -110,19 +110,22 @@ function collectStage1EvidenceGateReasonCodes(summaryPayload: unknown): string[]
     addReason(reasons, "TIME_COVERAGE_MISSING");
   }
 
-  const sampleCount = asNumber(coverage.sample_count);
-  const coverageRatio = asNumber(coverage.coverage_ratio);
+  const formalSampleCount = asNumber(coverage.formal_sample_count);
+  const formalCoverageRatio = asNumber(coverage.formal_coverage_ratio);
+  const formalSourceEligible = coverage.formal_source_eligible === true;
   const maxGapMs = asNumber(coverage.max_gap_ms);
   const expectedIntervalMs = asNumber(coverage.expected_sample_interval_ms);
   const allowedMaxGapMs = Math.max((expectedIntervalMs ?? 30 * 60 * 1000) * 2, 60 * 60 * 1000);
-  if (sampleCount == null || sampleCount < 3) addReason(reasons, "INSUFFICIENT_SAMPLE_COUNT");
-  if (coverageRatio == null || coverageRatio < 0.5) addReason(reasons, "TIME_COVERAGE_NOT_PASS");
+  if (formalSampleCount == null || formalSampleCount < 3) addReason(reasons, "INSUFFICIENT_FORMAL_SAMPLE_COUNT");
+  if (formalCoverageRatio == null || formalCoverageRatio < 0.5) addReason(reasons, "INSUFFICIENT_FORMAL_COVERAGE_RATIO");
+  if (!formalSourceEligible) addReason(reasons, "FORMAL_SOURCE_NOT_ELIGIBLE");
   if (maxGapMs == null || maxGapMs > allowedMaxGapMs) addReason(reasons, "MAX_GAP_EXCEEDED");
 
   const freshness = String(coverage.freshness ?? summary.freshness ?? "").trim().toLowerCase();
   if (freshness !== "fresh") addReason(reasons, "FRESHNESS_NOT_FRESH");
 
   const deviceHealthStatus = String(device.device_health_status ?? "").trim().toUpperCase();
+  if (deviceHealthStatus === "UNKNOWN") addReason(reasons, "DEVICE_HEALTH_UNKNOWN");
   if (deviceHealthStatus === "BAD") addReason(reasons, "DEVICE_HEALTH_BAD");
   if (deviceHealthStatus === "OFFLINE") addReason(reasons, "DEVICE_HEALTH_OFFLINE");
 

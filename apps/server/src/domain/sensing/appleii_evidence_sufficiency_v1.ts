@@ -5,6 +5,7 @@ export type AppleIIDeviceHealthStatusV1 = "GOOD" | "DEGRADED" | "BAD" | "OFFLINE
 export type AppleIISensorDriftStatusV1 = "NONE" | "SUSPECT" | "DRIFTING" | "UNKNOWN";
 export type AppleIIConflictStatusV1 = "NONE" | "UNRESOLVED" | "UNKNOWN";
 export type AppleIIEvidenceSufficiencyStatusV1 = "PASS" | "NEEDS_EVIDENCE";
+export type AppleIISampleSourceV1 = "device" | "gateway" | "system" | "human" | "import" | "sim" | "unknown";
 
 export type AppleIITimeCoverageV1 = {
   observation_window: {
@@ -13,6 +14,11 @@ export type AppleIITimeCoverageV1 = {
   };
   coverage_ratio: number;
   sample_count: number;
+  formal_sample_count: number;
+  non_formal_sample_count: number;
+  formal_coverage_ratio: number;
+  sample_source_lanes: Record<string, { sample_count: number; formal_eligible: boolean }>;
+  formal_source_eligible: boolean;
   gap_count: number;
   max_gap_ms: number;
   expected_sample_interval_ms: number;
@@ -21,11 +27,18 @@ export type AppleIITimeCoverageV1 = {
 
 export type AppleIIDeviceHealthSnapshotV1 = {
   device_health_status: AppleIIDeviceHealthStatusV1;
+  device_status_present: boolean;
+  heartbeat_present: boolean;
+  telemetry_present: boolean;
+  telemetry_only: boolean;
+  status_unknown_but_sample_fresh: boolean;
   last_telemetry_ts_ms: number | null;
   last_heartbeat_ts_ms: number | null;
+  last_sample_ts_ms: number | null;
   offline: boolean;
   battery_percent: number | null;
   rssi_dbm: number | null;
+  reason_codes: string[];
 };
 
 export type AppleIIConflictDetectionV1 = {
@@ -53,7 +66,20 @@ type RawSampleRow = {
   metric: string;
   value: number;
   qc_quality: string;
+  source: AppleIISampleSourceV1;
   payload_json: any;
+};
+
+type FormalSourcePolicyV1 = Partial<Record<AppleIISampleSourceV1, boolean>>;
+
+const DEFAULT_FORMAL_SAMPLE_SOURCE_POLICY_V1: Record<AppleIISampleSourceV1, boolean> = {
+  device: true,
+  gateway: true,
+  system: false,
+  human: false,
+  import: false,
+  sim: false,
+  unknown: false,
 };
 
 function toNumber(v: unknown): number | null {
@@ -76,6 +102,32 @@ function parseJsonObject(v: unknown): Record<string, any> {
     }
   }
   return {};
+}
+
+function normalizeSampleSource(v: unknown): AppleIISampleSourceV1 {
+  const s = String(v ?? "").trim().toLowerCase();
+  if (s === "device" || s === "gateway" || s === "system" || s === "human" || s === "import" || s === "sim") return s;
+  return "unknown";
+}
+
+function buildFormalSourcePolicy(policy?: FormalSourcePolicyV1 | null): Record<AppleIISampleSourceV1, boolean> {
+  return { ...DEFAULT_FORMAL_SAMPLE_SOURCE_POLICY_V1, ...(policy ?? {}) };
+}
+
+function isFormalSampleSource(source: AppleIISampleSourceV1, policy: Record<AppleIISampleSourceV1, boolean>): boolean {
+  return policy[source] === true;
+}
+
+function buildSampleSourceLanes(samples: RawSampleRow[], policy: Record<AppleIISampleSourceV1, boolean>): Record<string, { sample_count: number; formal_eligible: boolean }> {
+  const lanes: Record<string, { sample_count: number; formal_eligible: boolean }> = {};
+  for (const sample of samples) {
+    const source = normalizeSampleSource(sample.source);
+    const current = lanes[source] ?? { sample_count: 0, formal_eligible: isFormalSampleSource(source, policy) };
+    current.sample_count += 1;
+    current.formal_eligible = isFormalSampleSource(source, policy);
+    lanes[source] = current;
+  }
+  return lanes;
 }
 
 function computeGapStats(samples: RawSampleRow[], startTs: number, endTs: number, expectedIntervalMs: number): {
@@ -132,25 +184,48 @@ function latestSampleTs(samples: RawSampleRow[]): number | null {
 }
 
 function deriveDeviceHealth(row: any, nowMs: number, maxAgeMs: number, samples: RawSampleRow[]): AppleIIDeviceHealthSnapshotV1 {
+  const deviceStatusPresent = row != null;
   const sampleLatest = latestSampleTs(samples);
-  const lastTelemetry = toNumber(row?.last_telemetry_ts_ms) ?? sampleLatest;
-  const lastHeartbeat = toNumber(row?.last_heartbeat_ts_ms);
-  const latest = Math.max(lastTelemetry ?? 0, lastHeartbeat ?? 0);
-  const offline = !latest || nowMs - latest > maxAgeMs;
-  const battery = toNumber(row?.battery_percent);
-  const rssi = toNumber(row?.rssi_dbm);
+  const sampleFresh = sampleLatest != null && nowMs - sampleLatest <= maxAgeMs;
+  const lastTelemetry = deviceStatusPresent ? toNumber(row?.last_telemetry_ts_ms) : null;
+  const lastHeartbeat = deviceStatusPresent ? toNumber(row?.last_heartbeat_ts_ms) : null;
+  const telemetryPresent = lastTelemetry != null;
+  const heartbeatPresent = lastHeartbeat != null;
+  const telemetryOnly = telemetryPresent && !heartbeatPresent;
+  const latestStatusTs = Math.max(lastTelemetry ?? 0, lastHeartbeat ?? 0);
+  const offline = deviceStatusPresent ? (!latestStatusTs || nowMs - latestStatusTs > maxAgeMs) : false;
+  const battery = deviceStatusPresent ? toNumber(row?.battery_percent) : null;
+  const rssi = deviceStatusPresent ? toNumber(row?.rssi_dbm) : null;
+  const reasonCodes: string[] = [];
   let status: AppleIIDeviceHealthStatusV1 = "UNKNOWN";
-  if (offline) status = "OFFLINE";
-  else if ((battery != null && battery <= 10) || (rssi != null && rssi <= -95)) status = "BAD";
-  else if ((battery != null && battery <= 20) || (rssi != null && rssi <= -85)) status = "DEGRADED";
-  else status = "GOOD";
+
+  if (!deviceStatusPresent) {
+    reasonCodes.push("DEVICE_STATUS_MISSING");
+    if (sampleFresh) reasonCodes.push("STATUS_UNKNOWN_BUT_SAMPLE_FRESH");
+    status = "UNKNOWN";
+  } else {
+    if (!heartbeatPresent) reasonCodes.push("DEVICE_HEARTBEAT_MISSING");
+    if (telemetryOnly) reasonCodes.push("TELEMETRY_ONLY_DEVICE_HEALTH");
+    if (offline) status = "OFFLINE";
+    else if ((battery != null && battery <= 10) || (rssi != null && rssi <= -95)) status = "BAD";
+    else if (!heartbeatPresent || (battery != null && battery <= 20) || (rssi != null && rssi <= -85)) status = "DEGRADED";
+    else status = "GOOD";
+  }
+
   return {
     device_health_status: status,
+    device_status_present: deviceStatusPresent,
+    heartbeat_present: heartbeatPresent,
+    telemetry_present: telemetryPresent,
+    telemetry_only: telemetryOnly,
+    status_unknown_but_sample_fresh: !deviceStatusPresent && sampleFresh,
     last_telemetry_ts_ms: lastTelemetry,
     last_heartbeat_ts_ms: lastHeartbeat,
+    last_sample_ts_ms: sampleLatest,
     offline,
     battery_percent: battery,
     rssi_dbm: rssi,
+    reason_codes: reasonCodes,
   };
 }
 
@@ -211,6 +286,7 @@ export async function buildAppleIIEvidenceSufficiencyV1(db: DbConn, params: {
   min_coverage_ratio?: number;
   max_gap_ms?: number;
   freshness_max_age_ms?: number;
+  formal_source_policy?: FormalSourcePolicyV1 | null;
 }): Promise<AppleIIEvidenceSufficiencyV1> {
   const nowMs = Number.isFinite(params.now_ms) ? Number(params.now_ms) : Date.now();
   const observationWindowMs = Number(params.observation_window_ms ?? 6 * 60 * 60 * 1000);
@@ -219,6 +295,7 @@ export async function buildAppleIIEvidenceSufficiencyV1(db: DbConn, params: {
   const minCoverageRatio = Number(params.min_coverage_ratio ?? 0.5);
   const maxAllowedGapMs = Number(params.max_gap_ms ?? Math.max(expectedSampleIntervalMs * 2, 60 * 60 * 1000));
   const freshnessMaxAgeMs = Number(params.freshness_max_age_ms ?? Math.max(expectedSampleIntervalMs * 2, 60 * 60 * 1000));
+  const formalSourcePolicy = buildFormalSourcePolicy(params.formal_source_policy);
   const startTs = nowMs - observationWindowMs;
   const endTs = nowMs;
 
@@ -243,7 +320,7 @@ export async function buildAppleIIEvidenceSufficiencyV1(db: DbConn, params: {
   }
 
   const sampleRows = await db.query(
-    `SELECT sample_id, sensor_id, ts_ms, metric, value, qc_quality, payload_json
+    `SELECT sample_id, sensor_id, ts_ms, metric, value, qc_quality, source, payload_json
      FROM raw_samples
      WHERE ${where.join(" AND ")}
      ORDER BY ts_ms ASC
@@ -252,10 +329,13 @@ export async function buildAppleIIEvidenceSufficiencyV1(db: DbConn, params: {
   );
   const samples = (sampleRows.rows ?? []).map((row: any) => ({
     ...row,
+    source: normalizeSampleSource(row.source),
     payload_json: parseJsonObject(row.payload_json),
     ts_ms: Number(row.ts_ms),
     value: Number(row.value),
   })) as RawSampleRow[];
+  const formalSamples = samples.filter((sample) => isFormalSampleSource(sample.source, formalSourcePolicy));
+  const nonFormalSampleCount = samples.length - formalSamples.length;
 
   let deviceStatusRow: any = null;
   if (params.device_id) {
@@ -274,31 +354,42 @@ export async function buildAppleIIEvidenceSufficiencyV1(db: DbConn, params: {
   }
 
   const gapStats = computeGapStats(samples, startTs, endTs, expectedSampleIntervalMs);
+  const formalGapStats = computeGapStats(formalSamples, startTs, endTs, expectedSampleIntervalMs);
   const coverageRatio = clamp01(gapStats.covered_ms / Math.max(1, endTs - startTs));
-  const freshness = deriveFreshness(samples, nowMs, freshnessMaxAgeMs);
+  const formalCoverageRatio = clamp01(formalGapStats.covered_ms / Math.max(1, endTs - startTs));
+  const freshness = deriveFreshness(formalSamples, nowMs, freshnessMaxAgeMs);
   const timeCoverage: AppleIITimeCoverageV1 = {
     observation_window: { start_ts_ms: startTs, end_ts_ms: endTs },
     coverage_ratio: Number(coverageRatio.toFixed(6)),
     sample_count: samples.length,
-    gap_count: gapStats.gap_count,
-    max_gap_ms: gapStats.max_gap_ms,
+    formal_sample_count: formalSamples.length,
+    non_formal_sample_count: nonFormalSampleCount,
+    formal_coverage_ratio: Number(formalCoverageRatio.toFixed(6)),
+    sample_source_lanes: buildSampleSourceLanes(samples, formalSourcePolicy),
+    formal_source_eligible: formalSamples.length > 0 && nonFormalSampleCount === 0,
+    gap_count: formalGapStats.gap_count,
+    max_gap_ms: formalGapStats.max_gap_ms,
     expected_sample_interval_ms: expectedSampleIntervalMs,
     freshness,
   };
-  const deviceHealth = deriveDeviceHealth(deviceStatusRow, nowMs, freshnessMaxAgeMs, samples);
-  const conflicts = detectConflict(samples);
-  const reasonCodes: string[] = [];
-  if (timeCoverage.sample_count < minSampleCount) reasonCodes.push("INSUFFICIENT_SAMPLE_COUNT");
-  if (timeCoverage.coverage_ratio < minCoverageRatio) reasonCodes.push("INSUFFICIENT_COVERAGE_RATIO");
+  const deviceHealth = deriveDeviceHealth(deviceStatusRow, nowMs, freshnessMaxAgeMs, formalSamples);
+  const conflicts = detectConflict(formalSamples);
+  const reasonCodes: string[] = [...deviceHealth.reason_codes];
+  if (nonFormalSampleCount > 0) reasonCodes.push("NON_FORMAL_SAMPLE_SOURCE");
+  if (samples.some((sample) => sample.source === "sim")) reasonCodes.push("SIMULATED_SAMPLE_NOT_FORMAL");
+  if (timeCoverage.formal_sample_count < minSampleCount) reasonCodes.push("INSUFFICIENT_FORMAL_SAMPLE_COUNT");
+  if (timeCoverage.formal_coverage_ratio < minCoverageRatio) reasonCodes.push("INSUFFICIENT_FORMAL_COVERAGE_RATIO");
   if (timeCoverage.max_gap_ms > maxAllowedGapMs) reasonCodes.push("MAX_GAP_EXCEEDED");
   if (timeCoverage.freshness !== "fresh") reasonCodes.push("STALE_OR_UNKNOWN_FRESHNESS");
+  if (!timeCoverage.formal_source_eligible) reasonCodes.push("FORMAL_SOURCE_NOT_ELIGIBLE");
+  if (deviceHealth.device_health_status === "UNKNOWN") reasonCodes.push("DEVICE_HEALTH_UNKNOWN");
   if (deviceHealth.device_health_status === "OFFLINE" || deviceHealth.device_health_status === "BAD") reasonCodes.push("DEVICE_HEALTH_NOT_GOOD");
   if (conflicts.conflict_status === "UNRESOLVED") reasonCodes.push("UNRESOLVED_SENSOR_CONFLICT");
   if (conflicts.sensor_drift_status === "DRIFTING") reasonCodes.push("SENSOR_DRIFTING");
 
   return {
     evidence_sufficiency: reasonCodes.length ? "NEEDS_EVIDENCE" : "PASS",
-    reason_codes: reasonCodes,
+    reason_codes: Array.from(new Set(reasonCodes)),
     time_coverage_v1: timeCoverage,
     device_health_snapshot_v1: deviceHealth,
     conflict_detection_v1: conflicts,
