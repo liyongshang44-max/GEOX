@@ -58,7 +58,7 @@ function enforceTenantMatch(auth: any, tenant: RawSampleFactEnvelopeTenantV1, re
 
 export function registerSensingFactEnvelopeV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/sensing/raw-samples", async (req, reply) => {
-    const auth = requireAoActAnyScopeV0(req, reply, ["telemetry.write" as any, "telemetry.read"] as any);
+    const auth = requireAoActAnyScopeV0(req, reply, ["telemetry.write", "telemetry.read"]);
     if (!auth) return;
     const body: any = req.body ?? {};
     const tenant = tenantFromAuth(auth, body);
