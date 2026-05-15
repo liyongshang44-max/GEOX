@@ -93,9 +93,20 @@ function assertRequiredAoSenseBoundaries() {
   assert(fs.existsSync(v1Sense), 'AO-SENSE v1 route must exist');
   assert(fs.existsSync(receiptSchema), 'AO-SENSE receipt contract must exist');
   assert(fs.existsSync(taskSchema), 'AO-SENSE task contract must exist');
-  assert(read(route).includes(AO_SENSE_RECEIPT), 'control_ao_sense route must write/read ao_sense_receipt_v1');
-  assert(read(route).includes(AO_SENSE_TASK), 'control_ao_sense route must write/read ao_sense_task_v1');
-  assert(read(v1Sense).includes('/api/v1/sense'), 'v1 sense route must keep AO-SENSE under /api/v1/sense namespace');
+
+  const routeText = read(route);
+  const v1SenseText = read(v1Sense);
+  assert(routeText.includes(AO_SENSE_RECEIPT), 'control_ao_sense route must write/read ao_sense_receipt_v1');
+  assert(routeText.includes(AO_SENSE_TASK), 'control_ao_sense route must write/read ao_sense_task_v1');
+  assert(v1SenseText.includes('registerAoSenseV1Routes'), 'v1 sense route must delegate to AO-SENSE v1 route owner');
+  assert(
+    routeText.includes('/api/v1/sense/task') &&
+      routeText.includes('/api/v1/sense/receipt') &&
+      routeText.includes('/api/v1/sense/tasks') &&
+      routeText.includes('/api/v1/sense/receipts') &&
+      routeText.includes('/api/v1/sense/next-task'),
+    'AO-SENSE v1 route owner must keep business endpoints under /api/v1/sense namespace'
+  );
 }
 
 assertRequiredAoSenseBoundaries();
