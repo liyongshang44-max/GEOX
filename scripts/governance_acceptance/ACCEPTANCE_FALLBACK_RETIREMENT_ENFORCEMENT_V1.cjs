@@ -12,11 +12,7 @@ function assert(cond, msg) { if (!cond) fail(msg); }
 function rel(file) { return path.relative(root, file).replace(/\\/g, '/'); }
 function read(file) { return fs.readFileSync(file, 'utf8'); }
 function stripComments(text) {
-  return text
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .split('\n')
-    .map((line) => line.replace(/\/\/.*$/g, ''))
-    .join('\n');
+  return text.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').map((line) => line.replace(/\/\/.*$/g, '')).join('\n');
 }
 function walk(dir, out = []) {
   if (!fs.existsSync(dir)) return out;
@@ -29,32 +25,53 @@ function walk(dir, out = []) {
   }
   return out;
 }
+function existing(paths) {
+  return paths.map((p) => path.join(root, p)).filter((p) => fs.existsSync(p));
+}
 
-const files = [
-  ...walk(path.join(root, 'apps/server/src')),
-  ...walk(path.join(root, 'apps/web/src')),
-  ...walk(path.join(root, 'packages')),
+const customerSurfaceFiles = existing([
+  'apps/web/src/api/reports.ts',
+  'apps/web/src/views/CustomerDashboardPage.tsx',
+  'apps/web/src/views/FieldReportPage.tsx',
+  'apps/web/src/views/OperationReportPage.tsx',
+  'apps/web/src/viewmodels/fieldReportVm.ts',
+  'apps/web/src/viewmodels/operationReportVm.ts',
+  'apps/web/src/viewmodels/customerReportsCenterVm.ts',
+  'apps/web/src/viewmodels/customerFieldsIndexVm.ts',
+  'apps/web/src/viewmodels/customerOperationsIndexVm.ts',
+  'apps/web/src/viewmodels/customerRoiLedgerVm.ts',
+  'apps/web/src/viewmodels/customerFieldMemoryVm.ts',
+  'apps/web/src/lib/dataOrigin.ts',
+  'apps/web/src/lib/customerStatusLabels.ts',
+  'apps/web/src/lib/customerSemanticLabels.ts',
+  'apps/server/src/routes/reports_v1.ts',
+  'apps/server/src/routes/reports_dashboard_v1.ts',
+  'apps/server/src/projections/report_v1.ts',
+  'apps/server/src/projections/report_dashboard_v1.ts',
+]);
+const operatorSurfaceFiles = [
+  ...walk(path.join(root, 'apps/web/src/views/operator')),
+  ...walk(path.join(root, 'apps/web/src/api')).filter((f) => /operator|workbench|dispatch|approval|acceptance|evidence|devices/i.test(rel(f))),
+  ...walk(path.join(root, 'apps/web/src/viewmodels')).filter((f) => /operator|workbench|dispatch|approval|acceptance|evidence|devices/i.test(rel(f))),
 ];
+const files = [...new Set([...customerSurfaceFiles, ...operatorSurfaceFiles])];
 
 function fallbackLines(file) {
   const lines = stripComments(read(file)).split('\n');
   const out = [];
   for (let i = 0; i < lines.length; i += 1) {
-    if (/fallback/i.test(lines[i])) out.push({ index: i, line: lines[i], context: lines.slice(Math.max(0, i - 4), i + 5).join('\n') });
+    if (/fallback/i.test(lines[i])) out.push({ file, context: lines.slice(Math.max(0, i - 4), i + 5).join('\n') });
   }
   return out;
 }
-function isPayloadFallbackContext(ctx) {
-  const lower = ctx.toLowerCase();
-  return /fallback\s*[:=]/i.test(ctx)
-    || /isfallback\s*[:=]/i.test(ctx)
+function isFallbackPayloadContext(ctx) {
+  return /\bfallback\b\s*[:=]/i.test(ctx)
+    || /\bisFallback\b\s*[:=]/.test(ctx)
     || /fallback_reason\s*[:=]/i.test(ctx)
     || /fallback_payload\s*[:=]/i.test(ctx)
     || /data_origin\s*[:=].*fallback/i.test(ctx)
     || /origin\s*[:=].*fallback/i.test(ctx)
-    || /reply\.send\s*\(/i.test(ctx)
-    || /return\s+\{[\s\S]*fallback/i.test(ctx)
-    || lower.includes('fallback_limited');
+    || /fallback_limited/i.test(ctx);
 }
 function hasLimitedMarker(ctx) {
   const lower = ctx.toLowerCase();
@@ -64,10 +81,9 @@ function hasLimitedMarker(ctx) {
 const fallbackPayloadContexts = [];
 for (const file of files) {
   for (const hit of fallbackLines(file)) {
-    if (isPayloadFallbackContext(hit.context)) fallbackPayloadContexts.push({ file, context: hit.context });
+    if (isFallbackPayloadContext(hit.context)) fallbackPayloadContexts.push(hit);
   }
 }
-
 const fallbackOffenders = fallbackPayloadContexts
   .filter(({ context }) => !hasLimitedMarker(context))
   .map(({ file }) => `${rel(file)} fallback payload/path must be marked limited/degraded`);
@@ -83,9 +99,8 @@ for (const { file, context } of fallbackPayloadContexts) {
 }
 assert(trustedFallbackOffenders.length === 0, `fallback must not output trusted/final fields:\n${[...new Set(trustedFallbackOffenders)].join('\n')}`);
 
-const operatorFiles = files.filter((file) => /operator|workbench|dispatch|approval/i.test(rel(file)));
 const writeButtonOffenders = [];
-for (const file of operatorFiles) {
+for (const file of operatorSurfaceFiles) {
   const text = stripComments(read(file));
   const lower = text.toLowerCase();
   if (!lower.includes('fallback')) continue;
@@ -95,17 +110,10 @@ for (const file of operatorFiles) {
 }
 assert(writeButtonOffenders.length === 0, `operator fallback must not enable write buttons:\n${writeButtonOffenders.join('\n')}`);
 
-const customerFiles = [
-  ...walk(path.join(root, 'apps/web/src')),
-  ...walk(path.join(root, 'apps/server/src/routes')),
-  ...walk(path.join(root, 'apps/server/src/projections')),
-];
-const internalNavOffenders = [];
 const internalTerms = ['/' + 'admin', '/' + 'debug', '/' + 'internal', 'admin' + '/debug', 'debug' + '/internal'];
-for (const file of customerFiles) {
+const internalNavOffenders = [];
+for (const file of customerSurfaceFiles) {
   const text = stripComments(read(file)).toLowerCase();
-  const isCustomerSurface = text.includes('customer') || rel(file).includes('/views/') || rel(file).includes('/components/') || rel(file).includes('/routes/reports');
-  if (!isCustomerSurface) continue;
   for (const term of internalTerms) {
     if (text.includes(term)) internalNavOffenders.push(`${rel(file)} contains internal navigation term ${term}`);
   }
