@@ -30,6 +30,7 @@ includesAll(builder, [
   'AppleIIEvidenceSufficiencyV1',
   'AppleIIDeviceHealthSnapshotV1',
   'AppleIIConflictDetectionV1',
+  'AppleIITriggerMetricEvidenceV1',
   'observation_window',
   'start_ts_ms',
   'end_ts_ms',
@@ -39,6 +40,9 @@ includesAll(builder, [
   'non_formal_sample_count',
   'formal_coverage_ratio',
   'sample_source_lanes',
+  'formal_metric_lanes',
+  'trigger_metric_evidence',
+  'supporting_metrics',
   'formal_source_eligible',
   'gap_count',
   'max_gap_ms',
@@ -68,6 +72,10 @@ includesAll(builder, [
   'import: false',
   'sim: false',
   'unknown: false',
+  'IRRIGATION_EFFECTIVENESS_FORMAL_METRICS_V1',
+  'LEAK_RISK_FORMAL_METRICS_V1',
+  'buildFormalMetricLanes',
+  'buildTriggerMetricEvidence',
   'source, payload_json',
   'formalSamples = samples.filter',
   'buildSampleSourceLanes',
@@ -96,6 +104,8 @@ includesAll(builder, [
 
 assert(builder.includes('SELECT sample_id, sensor_id, ts_ms, metric, value, qc_quality, source, payload_json'), 'Apple II evidence query must read raw_samples.source');
 assert(builder.includes('source: normalizeSampleSource(row.source)'), 'Apple II evidence must normalize sample source');
+assert(builder.includes('trigger_metric_evidence: buildTriggerMetricEvidence(formalSamples)'), 'Apple II evidence must derive trigger metric evidence from formal samples');
+assert(builder.includes('formal_metric_lanes: buildFormalMetricLanes(formalSamples)'), 'Apple II evidence must expose formal metric lanes');
 assert(builder.includes('const deviceStatusPresent = row != null'), 'device health must distinguish missing device_status_index_v1');
 assert(builder.includes('const sampleFresh = sampleLatest != null && nowMs - sampleLatest <= maxAgeMs'), 'device health may record sample freshness but not use it as GOOD');
 assert(builder.includes('if (!deviceStatusPresent)'), 'missing device status must be explicitly handled');
@@ -134,6 +144,9 @@ includesAll(boundary, [
   'formal_sample_count',
   'formal_coverage_ratio',
   'formal_source_eligible',
+  'trigger_metric_evidence',
+  'MISSING_IRRIGATION_EFFECTIVENESS_METRIC_EVIDENCE',
+  'MISSING_LEAK_RISK_METRIC_EVIDENCE',
   'INSUFFICIENT_FORMAL_SAMPLE_COUNT',
   'INSUFFICIENT_FORMAL_COVERAGE_RATIO',
   'FORMAL_SOURCE_NOT_ELIGIBLE',
