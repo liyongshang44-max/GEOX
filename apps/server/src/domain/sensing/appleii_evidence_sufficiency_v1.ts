@@ -126,8 +126,14 @@ function deriveFreshness(samples: RawSampleRow[], nowMs: number, maxAgeMs: numbe
   return nowMs - latest <= maxAgeMs ? "fresh" : "stale";
 }
 
-function deriveDeviceHealth(row: any, nowMs: number, maxAgeMs: number): AppleIIDeviceHealthSnapshotV1 {
-  const lastTelemetry = toNumber(row?.last_telemetry_ts_ms);
+function latestSampleTs(samples: RawSampleRow[]): number | null {
+  const latest = Math.max(...samples.map((x) => Number(x.ts_ms)).filter(Number.isFinite));
+  return Number.isFinite(latest) && latest > 0 ? latest : null;
+}
+
+function deriveDeviceHealth(row: any, nowMs: number, maxAgeMs: number, samples: RawSampleRow[]): AppleIIDeviceHealthSnapshotV1 {
+  const sampleLatest = latestSampleTs(samples);
+  const lastTelemetry = toNumber(row?.last_telemetry_ts_ms) ?? sampleLatest;
   const lastHeartbeat = toNumber(row?.last_heartbeat_ts_ms);
   const latest = Math.max(lastTelemetry ?? 0, lastHeartbeat ?? 0);
   const offline = !latest || nowMs - latest > maxAgeMs;
@@ -279,7 +285,7 @@ export async function buildAppleIIEvidenceSufficiencyV1(db: DbConn, params: {
     expected_sample_interval_ms: expectedSampleIntervalMs,
     freshness,
   };
-  const deviceHealth = deriveDeviceHealth(deviceStatusRow, nowMs, freshnessMaxAgeMs);
+  const deviceHealth = deriveDeviceHealth(deviceStatusRow, nowMs, freshnessMaxAgeMs, samples);
   const conflicts = detectConflict(samples);
   const reasonCodes: string[] = [];
   if (timeCoverage.sample_count < minSampleCount) reasonCodes.push("INSUFFICIENT_SAMPLE_COUNT");
