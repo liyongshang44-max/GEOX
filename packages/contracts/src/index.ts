@@ -5,6 +5,7 @@ export * from "./schema/overlay_candidates_v1.js";
 export * from "./schema/candidate_overlay_v1.js";
 export * from "./schema/quality_v1.js";
 export * from "./schema/marker_v1.js";
+export * from "./schema/fact_envelope_v1.js";
 
 export * from "./schema/overlay_explain_v1.js";
 export * from "./schema/control_verdict_v0.js"; // 导出 ControlVerdict v0：供 kernel/validator 使用
