@@ -5,8 +5,8 @@
 
 import assert from "node:assert";
 
-import { evaluateControlV0 } from "../kernel";
-import type { ControlRuleSetV0 } from "../ruleset/types";
+import { evaluateControlV0 } from "../kernel.js";
+import type { ControlRuleSetV0 } from "../ruleset/types.js";
 
 import "./no_ruleset_loader";// 负向验收：禁止 runtime ruleset loader
 

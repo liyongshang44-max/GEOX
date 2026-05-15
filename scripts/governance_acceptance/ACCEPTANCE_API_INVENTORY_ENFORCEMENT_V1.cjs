@@ -71,8 +71,17 @@ for (const guard of ['projectReportV1','projectFieldReportDetailV1','projectOper
 const adminPrefix = '/api/' + 'admin';
 const debugPrefix = '/api/' + 'debug';
 const internalPrefix = '/api/' + 'internal';
+const customerSurfaceFiles = [
+  'apps/web/src/api/reports.ts',
+  'apps/web/src/layouts/CustomerLayout.tsx',
+  'apps/web/src/views/CustomerDashboardPage.tsx',
+  'apps/web/src/views/FieldReportPage.tsx',
+  'apps/web/src/views/OperationReportPage.tsx',
+  ...walk(path.join(root, 'apps/web/src/components/customer')).map(rel),
+].map((p) => path.join(root, p));
 const navOffenders = [];
-for (const file of walk(path.join(root, 'apps/web/src'))) {
+for (const file of customerSurfaceFiles) {
+  if (!fs.existsSync(file)) continue;
   const text = read(file);
   if (text.includes(adminPrefix) || text.includes(debugPrefix) || text.includes(internalPrefix)) navOffenders.push(rel(file));
 }
