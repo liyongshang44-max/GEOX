@@ -37,25 +37,74 @@ function routePaths() {
   }
   return routes;
 }
-function prefixes(text) {
-  return [...new Set([...text.matchAll(/path_prefix:\s*"([^"]+)"/g)].map((m) => m[1]))];
+function routeInventoryEntries(text) {
+  const entryMatches = [...text.matchAll(/\{[\s\S]*?id:\s*"([^"]+)"[\s\S]*?route_path:\s*"([^"]+)"[\s\S]*?route_group:\s*"([^"]+)"[\s\S]*?path_match:\s*"([^"]+)"[\s\S]*?\}/g)];
+  return entryMatches.map((m) => ({ id: m[1], route_path: m[2], route_group: m[3], path_match: m[4] }));
 }
-function covered(routePath, ps) {
-  return ps.some((p) => routePath === p || routePath.startsWith(`${p}/`) || routePath.startsWith(`${p}:`) || routePath.startsWith(p.replace(/\/[^/]+$/, '')));
+function routeToRegex(routePath) {
+  const escaped = routePath
+    .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+    .replace(/:[A-Za-z0-9_]+/g, '[^/]+')
+    .replace(/\\\*/g, '.*');
+  return new RegExp(`^${escaped}$`);
+}
+function covered(routePath, entries) {
+  return entries.some((entry) => {
+    if (entry.path_match === 'exact') return routeToRegex(entry.route_path).test(routePath);
+    if (entry.path_match === 'group') {
+      const base = entry.route_path.replace(/\/\*$/, '');
+      return routePath === base || routePath.startsWith(`${base}/`) || routeToRegex(entry.route_path).test(routePath);
+    }
+    return false;
+  });
 }
 
 assert(fs.existsSync(inventoryPath), 'API_ROUTE_INVENTORY source file must exist');
 const inventory = read(inventoryPath);
 assert(inventory.includes('export const API_ROUTE_INVENTORY'), 'API_ROUTE_INVENTORY must be exported');
-for (const required of ['/api/v1/reports','/api/v1/actions','/api/v1/approvals','/api/v1/recommendations','/api/v1/sensing','/api/v1/sense','/api/v1/devices','/api/v1/alerts','/api/v1/skills','/api/v1/field-programs','/api/admin','/api/debug']) {
-  assert(inventory.includes(`path_prefix: "${required}"`), `API_ROUTE_INVENTORY missing ${required}`);
+assert(!inventory.includes('path_prefix'), 'API_ROUTE_INVENTORY must not rely on prefix-only path_prefix entries');
+for (const marker of ['route_path:', 'route_group:', 'path_match:', 'ApiRouteInventoryPathMatchV1', 'path_match: "exact"', 'path_match: "group"']) {
+  assert(inventory.includes(marker), `route/group-level inventory missing marker ${marker}`);
+}
+
+for (const required of [
+  '/api/v1/reports/customer-dashboard/aggregate',
+  '/api/v1/reports/field/:field_id',
+  '/api/v1/reports/operation/:operation_id',
+  '/api/v1/sensing/raw-samples',
+  '/api/v1/sensing/series',
+  '/api/v1/sense/task',
+  '/api/v1/sense/receipt',
+  '/api/v1/sense/tasks',
+  '/api/v1/sense/receipts',
+  '/api/v1/sense/next-task',
+  '/api/v1/actions/*',
+  '/api/v1/approvals/*',
+  '/api/v1/recommendations/*',
+  '/api/admin/*',
+  '/api/debug/*',
+]) {
+  assert(inventory.includes(`route_path: "${required}"`), `API_ROUTE_INVENTORY missing route/group ${required}`);
+}
+for (const requiredGroup of [
+  'customer-reports.dashboard',
+  'customer-reports.field',
+  'customer-reports.operation',
+  'sensing.raw-samples',
+  'sensing.series',
+  'ao-sense.task',
+  'ao-sense.receipt',
+]) {
+  assert(inventory.includes(`route_group: "${requiredGroup}"`), `API_ROUTE_INVENTORY missing route_group ${requiredGroup}`);
 }
 for (const marker of ['audience: "customer"','boundary: "official"','guarded_projection: true','customer_navigation_allowed: false','write_requires_backend_validation: true','audit_required: true']) {
   assert(inventory.includes(marker), `inventory missing marker ${marker}`);
 }
-const ps = prefixes(inventory);
-const uncovered = routePaths().filter((r) => !covered(r.path, ps));
-assert(uncovered.length === 0, `new /api route must be registered in API_ROUTE_INVENTORY:\n${uncovered.map((r) => `${r.file} ${r.method} ${r.path}`).join('\n')}`);
+
+const entries = routeInventoryEntries(inventory);
+assert(entries.length >= 15, 'API_ROUTE_INVENTORY must contain route/group-level entries, not only coarse prefixes');
+const uncovered = routePaths().filter((r) => !covered(r.path, entries));
+assert(uncovered.length === 0, `new /api route must be registered in API_ROUTE_INVENTORY route/group entries:\n${uncovered.map((r) => `${r.file} ${r.method} ${r.path}`).join('\n')}`);
 
 assert(fs.existsSync(reportsRoute), 'reports_v1 route must exist');
 assert(fs.existsSync(dashboardRoute), 'reports_dashboard_v1 route must exist');
