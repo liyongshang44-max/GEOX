@@ -34,6 +34,11 @@ includesAll(builder, [
   'end_ts_ms',
   'coverage_ratio',
   'sample_count',
+  'formal_sample_count',
+  'non_formal_sample_count',
+  'formal_coverage_ratio',
+  'sample_source_lanes',
+  'formal_source_eligible',
   'gap_count',
   'max_gap_ms',
   'expected_sample_interval_ms',
@@ -47,10 +52,24 @@ includesAll(builder, [
 ], 'builder core object contract');
 
 includesAll(builder, [
+  'DEFAULT_FORMAL_SAMPLE_SOURCE_POLICY_V1',
+  'device: true',
+  'gateway: true',
+  'system: false',
+  'human: false',
+  'import: false',
+  'sim: false',
+  'unknown: false',
+  'source, payload_json',
+  'formalSamples = samples.filter',
+  'buildSampleSourceLanes',
   'if (sorted.length === 1)',
   'coveredMs = 0',
-  'INSUFFICIENT_SAMPLE_COUNT',
-  'INSUFFICIENT_COVERAGE_RATIO',
+  'NON_FORMAL_SAMPLE_SOURCE',
+  'SIMULATED_SAMPLE_NOT_FORMAL',
+  'INSUFFICIENT_FORMAL_SAMPLE_COUNT',
+  'INSUFFICIENT_FORMAL_COVERAGE_RATIO',
+  'FORMAL_SOURCE_NOT_ELIGIBLE',
   'MAX_GAP_EXCEEDED',
   'STALE_OR_UNKNOWN_FRESHNESS',
   'DEVICE_HEALTH_NOT_GOOD',
@@ -61,9 +80,14 @@ includesAll(builder, [
   'conflict_status: conflictingMetricCount > 0 ? "UNRESOLVED" : "NONE"',
 ], 'builder negative conditions');
 
-assert(builder.includes('timeCoverage.sample_count < minSampleCount'), 'single point or insufficient sample count must fail sufficiency');
-assert(builder.includes('timeCoverage.coverage_ratio < minCoverageRatio'), 'coverage ratio must gate sufficiency');
-assert(builder.includes('timeCoverage.max_gap_ms > maxAllowedGapMs'), 'max gap must gate sufficiency');
+assert(builder.includes('SELECT sample_id, sensor_id, ts_ms, metric, value, qc_quality, source, payload_json'), 'Apple II evidence query must read raw_samples.source');
+assert(builder.includes('source: normalizeSampleSource(row.source)'), 'Apple II evidence must normalize sample source');
+assert(builder.includes('timeCoverage.formal_sample_count < minSampleCount'), 'formal sample count must gate sufficiency');
+assert(builder.includes('timeCoverage.formal_coverage_ratio < minCoverageRatio'), 'formal coverage ratio must gate sufficiency');
+assert(builder.includes('!timeCoverage.formal_source_eligible'), 'formal source eligibility must gate sufficiency');
+assert(builder.includes('samples.some((sample) => sample.source === "sim")'), 'sim samples must be explicitly rejected as formal evidence');
+assert(!builder.includes('timeCoverage.sample_count < minSampleCount'), 'total sample_count must not gate formal sufficiency');
+assert(!builder.includes('timeCoverage.coverage_ratio < minCoverageRatio'), 'total coverage_ratio must not gate formal sufficiency');
 assert(builder.includes('return {\n    evidence_sufficiency: reasonCodes.length ? "NEEDS_EVIDENCE" : "PASS"'), 'evidence sufficiency must collapse failures to NEEDS_EVIDENCE');
 
 includesAll(summary, [
@@ -85,9 +109,17 @@ includesAll(boundary, [
   'getStage1EvidenceSufficiencyStatus',
   'evaluateFormalStage1TriggerGateV1',
   'EVIDENCE_SUFFICIENCY_NOT_PASS',
+  'formal_sample_count',
+  'formal_coverage_ratio',
+  'formal_source_eligible',
+  'INSUFFICIENT_FORMAL_SAMPLE_COUNT',
+  'INSUFFICIENT_FORMAL_COVERAGE_RATIO',
+  'FORMAL_SOURCE_NOT_ELIGIBLE',
   'if (getStage1EvidenceSufficiencyStatus(summaryPayload) !== "PASS")',
   'return { status: "NEEDS_EVIDENCE"',
 ], 'formal trigger evidence gate');
+assert(!boundary.includes('sampleCount == null || sampleCount < 3'), 'formal trigger must not use total sample_count');
+assert(!boundary.includes('coverageRatio == null || coverageRatio < 0.5'), 'formal trigger must not use total coverage_ratio');
 
 includesAll(gateRoute, [
   'registerAppleIIStage1EvidenceGateV1',
