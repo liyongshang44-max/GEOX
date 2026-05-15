@@ -37,6 +37,7 @@ includesAll(boundary, [
   'FORMAL_SOURCE_NOT_ELIGIBLE',
   'MAX_GAP_EXCEEDED',
   'FRESHNESS_NOT_FRESH',
+  'DEVICE_HEALTH_UNKNOWN',
   'DEVICE_HEALTH_BAD',
   'CONFLICT_STATUS_CONFLICTING',
 ], 'formal stage1 trigger boundary');
@@ -50,6 +51,7 @@ assert(boundary.includes('formalSampleCount == null || formalSampleCount < 3'), 
 assert(boundary.includes('!formalSourceEligible'), 'non-formal sample source 必须阻断 formal trigger');
 assert(boundary.includes('maxGapMs == null || maxGapMs > allowedMaxGapMs'), 'gap超限必须阻断 formal trigger');
 assert(boundary.includes('freshness !== "fresh"'), 'stale 数据只能 NEEDS_EVIDENCE');
+assert(boundary.includes('deviceHealthStatus === "UNKNOWN"'), 'device_health UNKNOWN 必须阻断 formal trigger');
 assert(boundary.includes('deviceHealthStatus === "BAD"'), 'device_health BAD 必须阻断 formal trigger');
 assert(boundary.includes('conflictStatus === "CONFLICTING" || conflictStatus === "UNRESOLVED"'), '多源冲突必须阻断 formal trigger');
 assert(!boundary.includes('sampleCount == null || sampleCount < 3'), 'formal trigger must not use total sample_count');
