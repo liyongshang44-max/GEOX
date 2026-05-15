@@ -20,6 +20,7 @@ const builder = read('apps/server/src/domain/sensing/appleii_evidence_sufficienc
 const summary = read('apps/server/src/projections/field_sensing_summary_stage1_v1.ts');
 const boundary = read('apps/server/src/domain/decision/stage1_action_boundary_v1.ts');
 const gateRoute = read('apps/server/src/routes/appleii_stage1_evidence_gate_v1.ts');
+const pipeline = read('apps/server/src/services/appleii_problem_state_pipeline_v1.ts');
 const decisionModule = read('apps/server/src/modules/decision/registerDecisionModule.ts');
 const refresh = read('apps/server/src/services/field_read_model_refresh_v1.ts');
 const migration = read('apps/server/db/migrations/2026_05_15_appleii_time_coverage_v1.sql');
@@ -146,7 +147,7 @@ includesAll(gateRoute, [
   'registerAppleIIStage1EvidenceGateV1',
   'preHandler',
   '/api/v1/recommendations/generate',
-  'refreshFieldReadModelsWithObservabilityV1',
+  'runAppleIIProblemStatePipelineV1',
   'evaluateFormalStage1TriggerGateV1',
   'gate.status === "NEEDS_EVIDENCE"',
   'FORMAL_STAGE1_TRIGGER_NEEDS_EVIDENCE',
@@ -156,6 +157,16 @@ includesAll(gateRoute, [
   'device_health_snapshot_v1',
   'conflict_detection_v1',
 ], 'recommendation generate evidence gate route');
+assert(!gateRoute.includes('refreshFieldReadModelsWithObservabilityV1'), 'decision route must not refresh Stage-1 directly; use Apple II pipeline');
+assert(!gateRoute.includes('appendProblemStateAndUncertaintyFactsV1'), 'decision route must not append ProblemState facts directly; use Apple II pipeline');
+
+includesAll(pipeline, [
+  'runAppleIIProblemStatePipelineV1',
+  'refreshFieldReadModelsWithObservabilityV1',
+  'appendProblemStateAndUncertaintyFactsV1',
+  'stage1_summary',
+  'problem_state_output',
+], 'Apple II problem state pipeline');
 
 includesAll(decisionModule, [
   'registerAppleIIStage1EvidenceGateV1',
