@@ -43,6 +43,8 @@
     "ci:governance:problem-state-uncertainty": "node scripts/governance_acceptance/ACCEPTANCE_PROBLEM_STATE_UNCERTAINTY_V1.cjs",
     "ci:governance:stage1-trigger-evidence-gate": "node scripts/governance_acceptance/ACCEPTANCE_STAGE1_TRIGGER_EVIDENCE_GATE_V1.cjs",
     "ci:governance:aosense-aoact-partition": "node scripts/governance_acceptance/ACCEPTANCE_AOSENSE_AOACT_PARTITION_V1.cjs",
+    "ci:governance:control-kernel-non-action-boundary": "node scripts/governance_acceptance/ACCEPTANCE_CONTROL_KERNEL_NON_ACTION_BOUNDARY_V1.cjs",
+    "ci:governance:ruleset-loading-boundary": "node scripts/governance_acceptance/ACCEPTANCE_RULESET_LOADING_BOUNDARY_V1.cjs",
     "ci:governance:base-contract-negative": "node scripts/governance_acceptance/ACCEPTANCE_BASE_CONTRACT_NEGATIVE_RELEASE_GATE_V1.cjs",
     "qa:release-gate-check": "node scripts/qa/check_release_gates.cjs --report docs/qa/reports/release_gate_report.json",
     "ci:simulator:ingest-guard": "node scripts/check_simulator_ingest_guard.cjs",
