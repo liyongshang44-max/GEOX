@@ -99,6 +99,7 @@ function collectStage1EvidenceGateReasonCodes(summaryPayload: unknown): string[]
   const coverage = asRecord(summary.time_coverage_v1);
   const device = asRecord(summary.device_health_snapshot_v1);
   const conflict = asRecord(summary.conflict_detection_v1);
+  const triggerMetricEvidence = asRecord(coverage.trigger_metric_evidence);
   const reasons: string[] = Array.isArray(evidence.reason_codes)
     ? evidence.reason_codes.map((x: unknown) => String(x)).filter(Boolean)
     : [];
@@ -120,6 +121,14 @@ function collectStage1EvidenceGateReasonCodes(summaryPayload: unknown): string[]
   if (formalCoverageRatio == null || formalCoverageRatio < 0.5) addReason(reasons, "INSUFFICIENT_FORMAL_COVERAGE_RATIO");
   if (!formalSourceEligible) addReason(reasons, "FORMAL_SOURCE_NOT_ELIGIBLE");
   if (maxGapMs == null || maxGapMs > allowedMaxGapMs) addReason(reasons, "MAX_GAP_EXCEEDED");
+
+  const signals = deriveFormalTriggerSignalsFromStage1Summary(summaryPayload);
+  if (String(signals.irrigation_effectiveness ?? "").trim().toLowerCase() === "low" && triggerMetricEvidence.irrigation_effectiveness !== true) {
+    addReason(reasons, "MISSING_IRRIGATION_EFFECTIVENESS_METRIC_EVIDENCE");
+  }
+  if (String(signals.leak_risk ?? "").trim().toLowerCase() === "high" && triggerMetricEvidence.leak_risk !== true) {
+    addReason(reasons, "MISSING_LEAK_RISK_METRIC_EVIDENCE");
+  }
 
   const freshness = String(coverage.freshness ?? summary.freshness ?? "").trim().toLowerCase();
   if (freshness !== "fresh") addReason(reasons, "FRESHNESS_NOT_FRESH");
