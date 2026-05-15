@@ -471,12 +471,27 @@ export function computeGapsForSeriesV1(samples: RawSampleEnvelopeV1[], params: {
   return gaps.sort((a, b) => a.startTs - b.startTs || String(a.sensorId ?? "").localeCompare(String(b.sensorId ?? "")) || String(a.metric ?? "").localeCompare(String(b.metric ?? "")));
 }
 
+function containsForbiddenOverlayConclusionV1(...values: unknown[]): boolean {
+  const text = values
+    .map((value) => {
+      if (value == null) return "";
+      if (typeof value === "string") return value;
+      try {
+        return JSON.stringify(value);
+      } catch {
+        return "";
+      }
+    })
+    .join(" ")
+    .toLowerCase();
+  return FORBIDDEN_OVERLAY_TERMS_V1.some((term) => text.includes(term));
+}
+
 function normalizeOverlayKindV1(kind: unknown, payload: Record<string, any>): SeriesOverlayKindV1 | null {
   const candidates = [kind, payload.kind, payload.type, payload.overlay_kind]
     .map((x) => String(x ?? "").trim().toLowerCase())
     .filter(Boolean);
-  const joined = candidates.join(" ");
-  if (FORBIDDEN_OVERLAY_TERMS_V1.some((term) => joined.includes(term))) return null;
+  if (containsForbiddenOverlayConclusionV1(candidates)) return null;
   for (const candidate of candidates) {
     if (OFFICIAL_SERIES_OVERLAY_KIND_SET_V1.has(candidate)) return candidate as SeriesOverlayKindV1;
     if (candidate.includes("candidate")) return "candidate";
@@ -523,6 +538,7 @@ export async function readSeriesOverlaysV1(pool: Pool, filter: RawSampleReadFilt
   const overlays: SeriesOverlayV1[] = [];
   for (const row of result.rows ?? []) {
     const payload = parsePayloadJson(row.payload_json);
+    if (containsForbiddenOverlayConclusionV1(row.kind, payload)) continue;
     const kind = normalizeOverlayKindV1(row.kind, payload);
     if (!kind) continue;
     const occurredMs = new Date(row.occurred_at).getTime();
