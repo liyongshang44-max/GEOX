@@ -1,0 +1,306 @@
+import type { Pool, PoolClient } from "pg";
+
+export type AppleIIFreshnessV1 = "fresh" | "stale" | "unknown";
+export type AppleIIDeviceHealthStatusV1 = "GOOD" | "DEGRADED" | "BAD" | "OFFLINE" | "UNKNOWN";
+export type AppleIISensorDriftStatusV1 = "NONE" | "SUSPECT" | "DRIFTING" | "UNKNOWN";
+export type AppleIIConflictStatusV1 = "NONE" | "UNRESOLVED" | "UNKNOWN";
+export type AppleIIEvidenceSufficiencyStatusV1 = "PASS" | "NEEDS_EVIDENCE";
+
+export type AppleIITimeCoverageV1 = {
+  observation_window: {
+    start_ts_ms: number;
+    end_ts_ms: number;
+  };
+  coverage_ratio: number;
+  sample_count: number;
+  gap_count: number;
+  max_gap_ms: number;
+  expected_sample_interval_ms: number;
+  freshness: AppleIIFreshnessV1;
+};
+
+export type AppleIIDeviceHealthSnapshotV1 = {
+  device_health_status: AppleIIDeviceHealthStatusV1;
+  last_telemetry_ts_ms: number | null;
+  last_heartbeat_ts_ms: number | null;
+  offline: boolean;
+  battery_percent: number | null;
+  rssi_dbm: number | null;
+};
+
+export type AppleIIConflictDetectionV1 = {
+  sensor_drift_status: AppleIISensorDriftStatusV1;
+  conflict_status: AppleIIConflictStatusV1;
+  device_count: number;
+  conflicting_metric_count: number;
+  conflict_reasons: string[];
+};
+
+export type AppleIIEvidenceSufficiencyV1 = {
+  evidence_sufficiency: AppleIIEvidenceSufficiencyStatusV1;
+  reason_codes: string[];
+  time_coverage_v1: AppleIITimeCoverageV1;
+  device_health_snapshot_v1: AppleIIDeviceHealthSnapshotV1;
+  conflict_detection_v1: AppleIIConflictDetectionV1;
+};
+
+type DbConn = Pool | PoolClient;
+
+type RawSampleRow = {
+  sample_id: string;
+  sensor_id: string;
+  ts_ms: number;
+  metric: string;
+  value: number;
+  qc_quality: string;
+  payload_json: any;
+};
+
+function toNumber(v: unknown): number | null {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function clamp01(v: number): number {
+  return Math.max(0, Math.min(1, v));
+}
+
+function parseJsonObject(v: unknown): Record<string, any> {
+  if (v && typeof v === "object" && !Array.isArray(v)) return v as Record<string, any>;
+  if (typeof v === "string") {
+    try {
+      const parsed = JSON.parse(v);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
+function computeGapStats(samples: RawSampleRow[], startTs: number, endTs: number, expectedIntervalMs: number): {
+  gap_count: number;
+  max_gap_ms: number;
+  covered_ms: number;
+} {
+  if (!samples.length) return { gap_count: 1, max_gap_ms: Math.max(0, endTs - startTs), covered_ms: 0 };
+  const sorted = samples.slice().sort((a, b) => Number(a.ts_ms) - Number(b.ts_ms));
+  let gapCount = 0;
+  let maxGapMs = 0;
+  let coveredMs = 0;
+  const firstTs = Number(sorted[0].ts_ms);
+  const lastTs = Number(sorted[sorted.length - 1].ts_ms);
+
+  if (firstTs > startTs) {
+    const gap = firstTs - startTs;
+    gapCount += 1;
+    maxGapMs = Math.max(maxGapMs, gap);
+  }
+  if (lastTs < endTs) {
+    const gap = endTs - lastTs;
+    gapCount += 1;
+    maxGapMs = Math.max(maxGapMs, gap);
+  }
+
+  for (let i = 1; i < sorted.length; i += 1) {
+    const prev = Number(sorted[i - 1].ts_ms);
+    const cur = Number(sorted[i].ts_ms);
+    const delta = cur - prev;
+    if (delta > expectedIntervalMs) {
+      gapCount += 1;
+      maxGapMs = Math.max(maxGapMs, delta);
+    }
+    coveredMs += Math.min(Math.max(delta, 0), expectedIntervalMs);
+  }
+
+  if (sorted.length === 1) {
+    coveredMs = 0;
+  }
+  return { gap_count: gapCount, max_gap_ms: maxGapMs, covered_ms: coveredMs };
+}
+
+function deriveFreshness(samples: RawSampleRow[], nowMs: number, maxAgeMs: number): AppleIIFreshnessV1 {
+  if (!samples.length) return "unknown";
+  const latest = Math.max(...samples.map((x) => Number(x.ts_ms)).filter(Number.isFinite));
+  if (!Number.isFinite(latest)) return "unknown";
+  return nowMs - latest <= maxAgeMs ? "fresh" : "stale";
+}
+
+function latestSampleTs(samples: RawSampleRow[]): number | null {
+  const latest = Math.max(...samples.map((x) => Number(x.ts_ms)).filter(Number.isFinite));
+  return Number.isFinite(latest) && latest > 0 ? latest : null;
+}
+
+function deriveDeviceHealth(row: any, nowMs: number, maxAgeMs: number, samples: RawSampleRow[]): AppleIIDeviceHealthSnapshotV1 {
+  const sampleLatest = latestSampleTs(samples);
+  const lastTelemetry = toNumber(row?.last_telemetry_ts_ms) ?? sampleLatest;
+  const lastHeartbeat = toNumber(row?.last_heartbeat_ts_ms);
+  const latest = Math.max(lastTelemetry ?? 0, lastHeartbeat ?? 0);
+  const offline = !latest || nowMs - latest > maxAgeMs;
+  const battery = toNumber(row?.battery_percent);
+  const rssi = toNumber(row?.rssi_dbm);
+  let status: AppleIIDeviceHealthStatusV1 = "UNKNOWN";
+  if (offline) status = "OFFLINE";
+  else if ((battery != null && battery <= 10) || (rssi != null && rssi <= -95)) status = "BAD";
+  else if ((battery != null && battery <= 20) || (rssi != null && rssi <= -85)) status = "DEGRADED";
+  else status = "GOOD";
+  return {
+    device_health_status: status,
+    last_telemetry_ts_ms: lastTelemetry,
+    last_heartbeat_ts_ms: lastHeartbeat,
+    offline,
+    battery_percent: battery,
+    rssi_dbm: rssi,
+  };
+}
+
+function detectConflict(samples: RawSampleRow[]): AppleIIConflictDetectionV1 {
+  if (!samples.length) {
+    return {
+      sensor_drift_status: "UNKNOWN",
+      conflict_status: "UNKNOWN",
+      device_count: 0,
+      conflicting_metric_count: 0,
+      conflict_reasons: ["NO_SAMPLES"],
+    };
+  }
+  const sensors = new Set(samples.map((x) => String(x.sensor_id ?? "").trim()).filter(Boolean));
+  const byMetric = new Map<string, number[]>();
+  for (const row of samples) {
+    const metric = String(row.metric ?? "").trim();
+    const value = Number(row.value);
+    if (!metric || !Number.isFinite(value)) continue;
+    const arr = byMetric.get(metric) ?? [];
+    arr.push(value);
+    byMetric.set(metric, arr);
+  }
+  const conflictReasons: string[] = [];
+  let conflictingMetricCount = 0;
+  for (const [metric, values] of byMetric.entries()) {
+    if (values.length < 2) continue;
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const spread = max - min;
+    const threshold = metric.toLowerCase().includes("moisture") ? 20 : Math.max(10, Math.abs((min + max) / 2) * 0.5);
+    if (spread > threshold) {
+      conflictingMetricCount += 1;
+      conflictReasons.push(`UNRESOLVED_CONFLICT:${metric}`);
+    }
+  }
+  const suspectDrift = samples.some((x) => String(x.qc_quality ?? "").toLowerCase() === "suspect");
+  const badDrift = samples.some((x) => String(x.qc_quality ?? "").toLowerCase() === "bad");
+  return {
+    sensor_drift_status: badDrift ? "DRIFTING" : suspectDrift ? "SUSPECT" : "NONE",
+    conflict_status: conflictingMetricCount > 0 ? "UNRESOLVED" : "NONE",
+    device_count: sensors.size,
+    conflicting_metric_count: conflictingMetricCount,
+    conflict_reasons: conflictReasons,
+  };
+}
+
+export async function buildAppleIIEvidenceSufficiencyV1(db: DbConn, params: {
+  tenant_id: string;
+  project_id?: string | null;
+  group_id?: string | null;
+  field_id: string;
+  device_id?: string | null;
+  now_ms?: number;
+  observation_window_ms?: number;
+  expected_sample_interval_ms?: number;
+  min_sample_count?: number;
+  min_coverage_ratio?: number;
+  max_gap_ms?: number;
+  freshness_max_age_ms?: number;
+}): Promise<AppleIIEvidenceSufficiencyV1> {
+  const nowMs = Number.isFinite(params.now_ms) ? Number(params.now_ms) : Date.now();
+  const observationWindowMs = Number(params.observation_window_ms ?? 6 * 60 * 60 * 1000);
+  const expectedSampleIntervalMs = Number(params.expected_sample_interval_ms ?? 30 * 60 * 1000);
+  const minSampleCount = Number(params.min_sample_count ?? 3);
+  const minCoverageRatio = Number(params.min_coverage_ratio ?? 0.5);
+  const maxAllowedGapMs = Number(params.max_gap_ms ?? Math.max(expectedSampleIntervalMs * 2, 60 * 60 * 1000));
+  const freshnessMaxAgeMs = Number(params.freshness_max_age_ms ?? Math.max(expectedSampleIntervalMs * 2, 60 * 60 * 1000));
+  const startTs = nowMs - observationWindowMs;
+  const endTs = nowMs;
+
+  const args: any[] = [params.tenant_id, startTs, endTs];
+  const where: string[] = [
+    `(payload_json ->> 'tenant_id') = $1`,
+    `ts_ms >= $2`,
+    `ts_ms <= $3`,
+  ];
+  let p = 4;
+  if (params.group_id) {
+    where.push(`(payload_json ->> 'group_id') = $${p++}`);
+    args.push(params.group_id);
+  }
+  if (params.field_id) {
+    where.push(`(payload_json ->> 'field_id') = $${p++}`);
+    args.push(params.field_id);
+  }
+  if (params.device_id) {
+    where.push(`sensor_id = $${p++}`);
+    args.push(params.device_id);
+  }
+
+  const sampleRows = await db.query(
+    `SELECT sample_id, sensor_id, ts_ms, metric, value, qc_quality, payload_json
+     FROM raw_samples
+     WHERE ${where.join(" AND ")}
+     ORDER BY ts_ms ASC
+     LIMIT 20000`,
+    args,
+  );
+  const samples = (sampleRows.rows ?? []).map((row: any) => ({
+    ...row,
+    payload_json: parseJsonObject(row.payload_json),
+    ts_ms: Number(row.ts_ms),
+    value: Number(row.value),
+  })) as RawSampleRow[];
+
+  let deviceStatusRow: any = null;
+  if (params.device_id) {
+    try {
+      const got = await db.query(
+        `SELECT last_telemetry_ts_ms, last_heartbeat_ts_ms, battery_percent, rssi_dbm
+         FROM device_status_index_v1
+         WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3 AND device_id = $4
+         LIMIT 1`,
+        [params.tenant_id, params.project_id ?? "projectA", params.group_id ?? "groupA", params.device_id],
+      );
+      deviceStatusRow = got.rows?.[0] ?? null;
+    } catch {
+      deviceStatusRow = null;
+    }
+  }
+
+  const gapStats = computeGapStats(samples, startTs, endTs, expectedSampleIntervalMs);
+  const coverageRatio = clamp01(gapStats.covered_ms / Math.max(1, endTs - startTs));
+  const freshness = deriveFreshness(samples, nowMs, freshnessMaxAgeMs);
+  const timeCoverage: AppleIITimeCoverageV1 = {
+    observation_window: { start_ts_ms: startTs, end_ts_ms: endTs },
+    coverage_ratio: Number(coverageRatio.toFixed(6)),
+    sample_count: samples.length,
+    gap_count: gapStats.gap_count,
+    max_gap_ms: gapStats.max_gap_ms,
+    expected_sample_interval_ms: expectedSampleIntervalMs,
+    freshness,
+  };
+  const deviceHealth = deriveDeviceHealth(deviceStatusRow, nowMs, freshnessMaxAgeMs, samples);
+  const conflicts = detectConflict(samples);
+  const reasonCodes: string[] = [];
+  if (timeCoverage.sample_count < minSampleCount) reasonCodes.push("INSUFFICIENT_SAMPLE_COUNT");
+  if (timeCoverage.coverage_ratio < minCoverageRatio) reasonCodes.push("INSUFFICIENT_COVERAGE_RATIO");
+  if (timeCoverage.max_gap_ms > maxAllowedGapMs) reasonCodes.push("MAX_GAP_EXCEEDED");
+  if (timeCoverage.freshness !== "fresh") reasonCodes.push("STALE_OR_UNKNOWN_FRESHNESS");
+  if (deviceHealth.device_health_status === "OFFLINE" || deviceHealth.device_health_status === "BAD") reasonCodes.push("DEVICE_HEALTH_NOT_GOOD");
+  if (conflicts.conflict_status === "UNRESOLVED") reasonCodes.push("UNRESOLVED_SENSOR_CONFLICT");
+  if (conflicts.sensor_drift_status === "DRIFTING") reasonCodes.push("SENSOR_DRIFTING");
+
+  return {
+    evidence_sufficiency: reasonCodes.length ? "NEEDS_EVIDENCE" : "PASS",
+    reason_codes: reasonCodes,
+    time_coverage_v1: timeCoverage,
+    device_health_snapshot_v1: deviceHealth,
+    conflict_detection_v1: conflicts,
+  };
+}

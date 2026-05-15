@@ -12,6 +12,12 @@ export const FORBIDDEN_STAGE1_TRIGGER_FIELDS = [
   "sensor_quality"
 ] as const;
 
+export type Stage1FormalTriggerGateStatusV1 = "ELIGIBLE" | "NOT_ELIGIBLE" | "NEEDS_EVIDENCE";
+export type Stage1FormalTriggerGateV1 = {
+  status: Stage1FormalTriggerGateStatusV1;
+  reason_codes: string[];
+};
+
 export type Stage1FormalActionField = (typeof FORMAL_STAGE1_ACTION_FIELDS)[number];
 export type Stage1SupportOnlyField = (typeof SUPPORT_ONLY_STAGE1_FIELDS)[number];
 export type Stage1ForbiddenTriggerField = (typeof FORBIDDEN_STAGE1_TRIGGER_FIELDS)[number];
@@ -21,10 +27,12 @@ export type Stage1FormalTriggerSignalsV1 = Record<Stage1FormalActionField, unkno
 
 const RECOMMENDATION_FORMAL_INPUT_LAYER = "stage1_sensing_summary_v1" as const;
 
+function asRecord(v: unknown): Record<string, any> {
+  return v && typeof v === "object" ? v as Record<string, any> : {};
+}
+
 export function normalizeStage1RecommendationInput(summaryPayload: unknown): Stage1ActionBoundaryNormalizedInputV1 {
-  const summary = summaryPayload && typeof summaryPayload === "object"
-    ? summaryPayload as Record<string, unknown>
-    : {};
+  const summary = asRecord(summaryPayload);
   const output: Stage1ActionBoundaryNormalizedInputV1 = {};
   for (const key of [...FORMAL_STAGE1_ACTION_FIELDS, ...SUPPORT_ONLY_STAGE1_FIELDS]) {
     if (Object.prototype.hasOwnProperty.call(summary, key)) {
@@ -60,8 +68,33 @@ export function deriveFormalTriggerSignalsFromStage1Summary(summaryPayload: unkn
   };
 }
 
-export function isFormalStage1TriggerEligible(signals: Stage1FormalTriggerSignalsV1): boolean {
+function rawFormalSignalMatches(signals: Stage1FormalTriggerSignalsV1): boolean {
   const irrigationEffectiveness = String(signals.irrigation_effectiveness ?? "").trim().toLowerCase();
   const leakRisk = String(signals.leak_risk ?? "").trim().toLowerCase();
   return irrigationEffectiveness === "low" || leakRisk === "high";
+}
+
+export function getStage1EvidenceSufficiencyStatus(summaryPayload: unknown): "PASS" | "NEEDS_EVIDENCE" {
+  const summary = asRecord(summaryPayload);
+  const direct = String(summary.evidence_sufficiency ?? "").trim().toUpperCase();
+  const nested = String(asRecord(summary.evidence_sufficiency_v1).evidence_sufficiency ?? "").trim().toUpperCase();
+  return direct === "PASS" || nested === "PASS" ? "PASS" : "NEEDS_EVIDENCE";
+}
+
+export function evaluateFormalStage1TriggerGateV1(summaryPayload: unknown): Stage1FormalTriggerGateV1 {
+  const signals = deriveFormalTriggerSignalsFromStage1Summary(summaryPayload);
+  if (!rawFormalSignalMatches(signals)) {
+    return { status: "NOT_ELIGIBLE", reason_codes: ["NO_FORMAL_STAGE1_SIGNAL"] };
+  }
+  const summary = asRecord(summaryPayload);
+  const evidence = asRecord(summary.evidence_sufficiency_v1);
+  const reasons = Array.isArray(evidence.reason_codes) ? evidence.reason_codes.map((x: unknown) => String(x)).filter(Boolean) : [];
+  if (getStage1EvidenceSufficiencyStatus(summaryPayload) !== "PASS") {
+    return { status: "NEEDS_EVIDENCE", reason_codes: reasons.length ? reasons : ["EVIDENCE_SUFFICIENCY_NOT_PASS"] };
+  }
+  return { status: "ELIGIBLE", reason_codes: [] };
+}
+
+export function isFormalStage1TriggerEligible(signals: Stage1FormalTriggerSignalsV1): boolean {
+  return rawFormalSignalMatches(signals);
 }
