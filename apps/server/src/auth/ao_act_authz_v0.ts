@@ -11,6 +11,7 @@ export type AoActScopeV0 =
   | "ao_act.receipt.write"
   | "ao_act.index.read"
   | "telemetry.read"
+  | "telemetry.write"
   | "devices.write"
   | "devices.read"
   | "devices.credentials.write"
@@ -124,6 +125,7 @@ function defaultScopesFromEnv(): AoActScopeV0[] {
     "fields.read",
     "fields.write",
     "telemetry.read",
+    "telemetry.write",
   ];
 }
 
