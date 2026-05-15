@@ -12,9 +12,12 @@ export const FORBIDDEN_STAGE1_TRIGGER_FIELDS = [
   "sensor_quality"
 ] as const;
 
+export const FORMAL_STAGE1_TRIGGER_NEEDS_EVIDENCE = "FORMAL_STAGE1_TRIGGER_NEEDS_EVIDENCE" as const;
+
 export type Stage1FormalTriggerGateStatusV1 = "ELIGIBLE" | "NOT_ELIGIBLE" | "NEEDS_EVIDENCE";
 export type Stage1FormalTriggerGateV1 = {
   status: Stage1FormalTriggerGateStatusV1;
+  error?: typeof FORMAL_STAGE1_TRIGGER_NEEDS_EVIDENCE;
   reason_codes: string[];
 };
 
@@ -29,6 +32,15 @@ const RECOMMENDATION_FORMAL_INPUT_LAYER = "stage1_sensing_summary_v1" as const;
 
 function asRecord(v: unknown): Record<string, any> {
   return v && typeof v === "object" ? v as Record<string, any> : {};
+}
+
+function asNumber(v: unknown): number | null {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function addReason(out: string[], reason: string): void {
+  if (!out.includes(reason)) out.push(reason);
 }
 
 export function normalizeStage1RecommendationInput(summaryPayload: unknown): Stage1ActionBoundaryNormalizedInputV1 {
@@ -81,16 +93,53 @@ export function getStage1EvidenceSufficiencyStatus(summaryPayload: unknown): "PA
   return direct === "PASS" || nested === "PASS" ? "PASS" : "NEEDS_EVIDENCE";
 }
 
+function collectStage1EvidenceGateReasonCodes(summaryPayload: unknown): string[] {
+  const summary = asRecord(summaryPayload);
+  const evidence = asRecord(summary.evidence_sufficiency_v1);
+  const coverage = asRecord(summary.time_coverage_v1);
+  const device = asRecord(summary.device_health_snapshot_v1);
+  const conflict = asRecord(summary.conflict_detection_v1);
+  const reasons: string[] = Array.isArray(evidence.reason_codes)
+    ? evidence.reason_codes.map((x: unknown) => String(x)).filter(Boolean)
+    : [];
+
+  if (getStage1EvidenceSufficiencyStatus(summaryPayload) !== "PASS") addReason(reasons, "EVIDENCE_SUFFICIENCY_NOT_PASS");
+
+  const observationWindow = asRecord(coverage.observation_window);
+  if (!coverage || Object.keys(coverage).length === 0 || !observationWindow.start_ts_ms || !observationWindow.end_ts_ms) {
+    addReason(reasons, "TIME_COVERAGE_MISSING");
+  }
+
+  const sampleCount = asNumber(coverage.sample_count);
+  const coverageRatio = asNumber(coverage.coverage_ratio);
+  const maxGapMs = asNumber(coverage.max_gap_ms);
+  const expectedIntervalMs = asNumber(coverage.expected_sample_interval_ms);
+  const allowedMaxGapMs = Math.max((expectedIntervalMs ?? 30 * 60 * 1000) * 2, 60 * 60 * 1000);
+  if (sampleCount == null || sampleCount < 3) addReason(reasons, "INSUFFICIENT_SAMPLE_COUNT");
+  if (coverageRatio == null || coverageRatio < 0.5) addReason(reasons, "TIME_COVERAGE_NOT_PASS");
+  if (maxGapMs == null || maxGapMs > allowedMaxGapMs) addReason(reasons, "MAX_GAP_EXCEEDED");
+
+  const freshness = String(coverage.freshness ?? summary.freshness ?? "").trim().toLowerCase();
+  if (freshness !== "fresh") addReason(reasons, "FRESHNESS_NOT_FRESH");
+
+  const deviceHealthStatus = String(device.device_health_status ?? "").trim().toUpperCase();
+  if (deviceHealthStatus === "BAD") addReason(reasons, "DEVICE_HEALTH_BAD");
+  if (deviceHealthStatus === "OFFLINE") addReason(reasons, "DEVICE_HEALTH_OFFLINE");
+
+  const conflictStatus = String(conflict.conflict_status ?? "").trim().toUpperCase();
+  if (conflictStatus === "CONFLICTING" || conflictStatus === "UNRESOLVED") addReason(reasons, "CONFLICT_STATUS_CONFLICTING");
+
+  return reasons;
+}
+
 export function evaluateFormalStage1TriggerGateV1(summaryPayload: unknown): Stage1FormalTriggerGateV1 {
   const signals = deriveFormalTriggerSignalsFromStage1Summary(summaryPayload);
   if (!rawFormalSignalMatches(signals)) {
     return { status: "NOT_ELIGIBLE", reason_codes: ["NO_FORMAL_STAGE1_SIGNAL"] };
   }
-  const summary = asRecord(summaryPayload);
-  const evidence = asRecord(summary.evidence_sufficiency_v1);
-  const reasons = Array.isArray(evidence.reason_codes) ? evidence.reason_codes.map((x: unknown) => String(x)).filter(Boolean) : [];
-  if (getStage1EvidenceSufficiencyStatus(summaryPayload) !== "PASS") {
-    return { status: "NEEDS_EVIDENCE", reason_codes: reasons.length ? reasons : ["EVIDENCE_SUFFICIENCY_NOT_PASS"] };
+  const reasons = collectStage1EvidenceGateReasonCodes(summaryPayload);
+  if (reasons.length > 0) {
+    return { status: "NEEDS_EVIDENCE", error: FORMAL_STAGE1_TRIGGER_NEEDS_EVIDENCE, reason_codes: reasons };
   }
   return { status: "ELIGIBLE", reason_codes: [] };
 }
