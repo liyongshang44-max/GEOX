@@ -6,6 +6,7 @@ import { registerTelemetryV1Routes } from "../../routes/telemetry_v1.js";
 import { registerDeviceHeartbeatV1Routes } from "../../routes/device_heartbeat_v1.js";
 import { registerDeviceStatusV1Routes } from "../../routes/device_status_v1.js";
 import { registerWeatherV1Routes } from "../../routes/weather_v1.js";
+import { registerSensingFactEnvelopeV1Routes } from "../../routes/sensing_fact_envelope_v1.js";
 
 export function registerSensingModule(app: FastifyInstance, pool: Pool): void {
   registerRawRoutes(app, pool);
@@ -13,4 +14,5 @@ export function registerSensingModule(app: FastifyInstance, pool: Pool): void {
   registerDeviceHeartbeatV1Routes(app, pool);
   registerDeviceStatusV1Routes(app, pool);
   registerWeatherV1Routes(app, pool);
+  registerSensingFactEnvelopeV1Routes(app, pool);
 }
