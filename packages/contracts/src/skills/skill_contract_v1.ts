@@ -6,6 +6,70 @@ export type SkillCategoryV1 =
   | "roi"
   | "other";
 
+export type SkillCanonicalCategoryV1 =
+  | "SENSING"
+  | "AGRONOMY"
+  | "DEVICE"
+  | "ACCEPTANCE"
+  | "CONTROL"
+  | "OPS"
+  | "OBSERVABILITY";
+
+export const SkillCategoryValuesV1: readonly SkillCategoryV1[] = [
+  "sensing",
+  "agronomy",
+  "device",
+  "acceptance",
+  "roi",
+  "other",
+] as const;
+
+export const SkillCanonicalCategoryValuesV1: readonly SkillCanonicalCategoryV1[] = [
+  "SENSING",
+  "AGRONOMY",
+  "DEVICE",
+  "ACCEPTANCE",
+  "CONTROL",
+  "OPS",
+  "OBSERVABILITY",
+] as const;
+
+const SKILL_CATEGORY_CANONICAL_MAP_V1: Record<string, SkillCanonicalCategoryV1> = {
+  sensing: "SENSING",
+  SENSING: "SENSING",
+  agronomy: "AGRONOMY",
+  AGRONOMY: "AGRONOMY",
+  crop: "AGRONOMY",
+  CROP: "AGRONOMY",
+  device: "DEVICE",
+  DEVICE: "DEVICE",
+  acceptance: "ACCEPTANCE",
+  ACCEPTANCE: "ACCEPTANCE",
+  control: "CONTROL",
+  CONTROL: "CONTROL",
+  ops: "OPS",
+  OPS: "OPS",
+  operation: "OPS",
+  OPERATION: "OPS",
+  roi: "OPS",
+  ROI: "OPS",
+  observability: "OBSERVABILITY",
+  OBSERVABILITY: "OBSERVABILITY",
+  other: "OBSERVABILITY",
+  OTHER: "OBSERVABILITY",
+};
+
+export function normalizeSkillCategoryToCanonicalV1(value: unknown): SkillCanonicalCategoryV1 {
+  const raw = typeof value === "string" ? value.trim() : "";
+  if (!raw) return "OBSERVABILITY";
+  return SKILL_CATEGORY_CANONICAL_MAP_V1[raw] ?? SKILL_CATEGORY_CANONICAL_MAP_V1[raw.toUpperCase()] ?? "OBSERVABILITY";
+}
+
+export function isLegacySkillCategoryV1(value: unknown): boolean {
+  const raw = typeof value === "string" ? value.trim().toLowerCase() : "";
+  return raw === "roi" || raw === "other";
+}
+
 export type SkillRiskLevelV1 = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
 export type SkillRolloutModeV1 = "all" | "allowlist" | "canary" | "shadow";
@@ -27,6 +91,8 @@ export type SkillContractV1 = {
   skill_id: string;
   skill_version: string;
   skill_category: SkillCategoryV1;
+  canonical_skill_category?: SkillCanonicalCategoryV1;
+  legacy_skill_category?: boolean;
   // Optional schema references for lightweight adapters.
   input_schema_ref?: string;
   output_schema_ref?: string;
