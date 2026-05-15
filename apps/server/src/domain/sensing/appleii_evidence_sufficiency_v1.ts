@@ -7,6 +7,12 @@ export type AppleIIConflictStatusV1 = "NONE" | "UNRESOLVED" | "UNKNOWN";
 export type AppleIIEvidenceSufficiencyStatusV1 = "PASS" | "NEEDS_EVIDENCE";
 export type AppleIISampleSourceV1 = "device" | "gateway" | "system" | "human" | "import" | "sim" | "unknown";
 
+export type AppleIITriggerMetricEvidenceV1 = {
+  irrigation_effectiveness: boolean;
+  leak_risk: boolean;
+  supporting_metrics: string[];
+};
+
 export type AppleIITimeCoverageV1 = {
   observation_window: {
     start_ts_ms: number;
@@ -18,6 +24,8 @@ export type AppleIITimeCoverageV1 = {
   non_formal_sample_count: number;
   formal_coverage_ratio: number;
   sample_source_lanes: Record<string, { sample_count: number; formal_eligible: boolean }>;
+  formal_metric_lanes: Record<string, { sample_count: number }>;
+  trigger_metric_evidence: AppleIITriggerMetricEvidenceV1;
   formal_source_eligible: boolean;
   gap_count: number;
   max_gap_ms: number;
@@ -82,6 +90,25 @@ const DEFAULT_FORMAL_SAMPLE_SOURCE_POLICY_V1: Record<AppleIISampleSourceV1, bool
   unknown: false,
 };
 
+const IRRIGATION_EFFECTIVENESS_FORMAL_METRICS_V1 = new Set<string>([
+  "soil_moisture",
+  "soil_moisture_pct",
+  "moisture_pct",
+  "flow_rate",
+  "irrigation_flow_rate",
+  "water_flow",
+  "pump_flow",
+]);
+const LEAK_RISK_FORMAL_METRICS_V1 = new Set<string>([
+  "soil_moisture",
+  "soil_moisture_pct",
+  "moisture_pct",
+  "flow_rate",
+  "irrigation_flow_rate",
+  "water_flow",
+  "pressure",
+]);
+
 function toNumber(v: unknown): number | null {
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
@@ -110,6 +137,10 @@ function normalizeSampleSource(v: unknown): AppleIISampleSourceV1 {
   return "unknown";
 }
 
+function normalizeMetric(v: unknown): string {
+  return String(v ?? "").trim().toLowerCase();
+}
+
 function buildFormalSourcePolicy(policy?: FormalSourcePolicyV1 | null): Record<AppleIISampleSourceV1, boolean> {
   return { ...DEFAULT_FORMAL_SAMPLE_SOURCE_POLICY_V1, ...(policy ?? {}) };
 }
@@ -128,6 +159,27 @@ function buildSampleSourceLanes(samples: RawSampleRow[], policy: Record<AppleIIS
     lanes[source] = current;
   }
   return lanes;
+}
+
+function buildFormalMetricLanes(samples: RawSampleRow[]): Record<string, { sample_count: number }> {
+  const lanes: Record<string, { sample_count: number }> = {};
+  for (const sample of samples) {
+    const metric = normalizeMetric(sample.metric);
+    if (!metric) continue;
+    const current = lanes[metric] ?? { sample_count: 0 };
+    current.sample_count += 1;
+    lanes[metric] = current;
+  }
+  return lanes;
+}
+
+function buildTriggerMetricEvidence(samples: RawSampleRow[]): AppleIITriggerMetricEvidenceV1 {
+  const metrics = Array.from(new Set(samples.map((sample) => normalizeMetric(sample.metric)).filter(Boolean)));
+  return {
+    irrigation_effectiveness: metrics.some((metric) => IRRIGATION_EFFECTIVENESS_FORMAL_METRICS_V1.has(metric)),
+    leak_risk: metrics.some((metric) => LEAK_RISK_FORMAL_METRICS_V1.has(metric)),
+    supporting_metrics: metrics,
+  };
 }
 
 function computeGapStats(samples: RawSampleRow[], startTs: number, endTs: number, expectedIntervalMs: number): {
@@ -366,6 +418,8 @@ export async function buildAppleIIEvidenceSufficiencyV1(db: DbConn, params: {
     non_formal_sample_count: nonFormalSampleCount,
     formal_coverage_ratio: Number(formalCoverageRatio.toFixed(6)),
     sample_source_lanes: buildSampleSourceLanes(samples, formalSourcePolicy),
+    formal_metric_lanes: buildFormalMetricLanes(formalSamples),
+    trigger_metric_evidence: buildTriggerMetricEvidence(formalSamples),
     formal_source_eligible: formalSamples.length > 0 && nonFormalSampleCount === 0,
     gap_count: formalGapStats.gap_count,
     max_gap_ms: formalGapStats.max_gap_ms,
