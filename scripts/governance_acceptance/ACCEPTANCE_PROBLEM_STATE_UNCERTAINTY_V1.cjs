@@ -70,13 +70,13 @@ assert(!builder.includes('dispatch'), 'ProblemState builder must not dispatch wo
 
 includesAll(pipeline, [
   'runAppleIIProblemStatePipelineV1',
-  'AppleII sensing/judge pipeline boundary',
-  'formal producer path for ProblemState / UncertaintyEnvelope facts',
   'refreshFieldReadModelsWithObservabilityV1',
   'appendProblemStateAndUncertaintyFactsV1',
   'stage1_summary',
   'problem_state_output',
 ], 'Apple II problem state sensing/judge pipeline');
+assert(pipeline.includes('formal producer path for ProblemState / UncertaintyEnvelope facts'), 'Apple II pipeline must document formal producer path');
+assert(pipeline.includes('Decision routes may call this pipeline as a compatibility bridge'), 'decision route must be compatibility bridge, not owner');
 
 includesAll(gateRoute, [
   'runAppleIIProblemStatePipelineV1',
