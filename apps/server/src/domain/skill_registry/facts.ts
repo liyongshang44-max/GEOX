@@ -9,11 +9,12 @@ import {
   SkillDefinitionRequiredEvidenceSchema,
   SkillDefinitionRiskLevelSchema,
   SkillDefinitionScopeSchema,
+  normalizeSkillCategoryToCanonicalV1,
 } from "@geox/contracts";
 import { recordMemoryV1 } from "../../services/field_memory_service.js";
 import { assertSkillOutputBoundaryV1 } from "../../auth/skill_security_v1.js";
 
-const SKILL_CATEGORY_VALUES = ["AGRONOMY", "OPS", "CONTROL", "OBSERVABILITY", "DEVICE", "ACCEPTANCE"] as const;
+const SKILL_CATEGORY_VALUES = ["SENSING", "AGRONOMY", "OPS", "CONTROL", "OBSERVABILITY", "DEVICE", "ACCEPTANCE"] as const;
 const SKILL_STATUS_VALUES = ["DRAFT", "ACTIVE", "DISABLED", "DEPRECATED"] as const;
 const SCOPE_TYPE_VALUES = ["GLOBAL", "TENANT", "FIELD", "DEVICE", "PROGRAM"] as const;
 const ROLLOUT_MODE_VALUES = ["DIRECT", "CANARY", "DRY_RUN"] as const;
@@ -112,11 +113,7 @@ const SkillRunPayloadSchema = TenantTripleSchema.extend({
   error_code: z.string().min(1).nullable().optional(),
   duration_ms: z.number().int().nonnegative().optional(),
 }).superRefine((value, ctx) => {
-  const relationIds = [value.task_id, value.recommendation_id, value.prescription_id]
-    .map((x) => typeof x === "string" ? x.trim() : "")
-    .filter(Boolean);
   const operationId = typeof value.operation_id === "string" ? value.operation_id.trim() : "";
-  const hasTask = Boolean(typeof value.task_id === "string" && value.task_id.trim());
   const hasRecommendationOrPrescription = Boolean(
     (typeof value.recommendation_id === "string" && value.recommendation_id.trim())
     || (typeof value.prescription_id === "string" && value.prescription_id.trim())
@@ -160,16 +157,6 @@ export type SkillBindingFactPayload = z.infer<typeof SkillBindingPayloadSchema>;
 export type SkillBindingFactInput = Omit<z.input<typeof SkillBindingPayloadSchema>, "binding_id"> & { binding_id?: string };
 export type SkillRunFactPayload = z.infer<typeof SkillRunPayloadSchema>;
 export type SkillTraceFactPayload = z.infer<typeof SkillTracePayloadSchema>;
-
-const SKILL_CATEGORY_COMPAT: Record<string, SkillDefinitionFactPayload["category"]> = {
-  AGRONOMY: "AGRONOMY",
-  OPS: "OPS",
-  OPERATION: "OPS",
-  CONTROL: "CONTROL",
-  OBSERVABILITY: "OBSERVABILITY",
-  DEVICE: "DEVICE",
-  ACCEPTANCE: "ACCEPTANCE",
-};
 
 const SKILL_STATUS_COMPAT: Record<string, SkillDefinitionFactPayload["status"]> = {
   DRAFT: "DRAFT",
@@ -239,7 +226,7 @@ function compatEnum<T extends string>(value: unknown, compat: Record<string, T>)
 }
 
 function normalizeCategory(value: unknown): SkillDefinitionFactPayload["category"] {
-  return compatEnum(value, SKILL_CATEGORY_COMPAT) ?? "AGRONOMY";
+  return normalizeSkillCategoryToCanonicalV1(value) as SkillDefinitionFactPayload["category"];
 }
 
 function normalizeSkillStatus(value: unknown): SkillDefinitionFactPayload["status"] {
@@ -389,7 +376,7 @@ export async function appendSkillTraceFact(
 ): Promise<{ fact_id: string; occurred_at: string; payload: SkillTraceFactPayload }> {
   const payload = SkillTracePayloadSchema.parse(input);
   assertSkillOutputBoundaryV1({
-    category: String((payload as any).category ?? "OBSERVABILITY"),
+    category: String((payload as any).category ?? (payload as any).skill_category ?? "OBSERVABILITY"),
     trigger_stage: String((payload as any).trigger_stage ?? "after_recommendation"),
     outputs: payload.outputs,
   });
