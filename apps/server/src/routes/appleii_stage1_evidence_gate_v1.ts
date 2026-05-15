@@ -1,7 +1,10 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { Pool } from "pg";
 import { requireAoActAnyScopeV0 } from "../auth/ao_act_authz_v0.js";
-import { evaluateFormalStage1TriggerGateV1 } from "../domain/decision/stage1_action_boundary_v1.js";
+import {
+  FORMAL_STAGE1_TRIGGER_NEEDS_EVIDENCE,
+  evaluateFormalStage1TriggerGateV1,
+} from "../domain/decision/stage1_action_boundary_v1.js";
 import { appendProblemStateAndUncertaintyFactsV1 } from "../domain/sensing/problem_state_uncertainty_v1.js";
 import { refreshFieldReadModelsWithObservabilityV1 } from "../services/field_read_model_refresh_v1.js";
 
@@ -61,7 +64,7 @@ export function registerAppleIIStage1EvidenceGateV1(app: FastifyInstance, pool: 
     if (gate.status === "NEEDS_EVIDENCE") {
       return reply.status(400).send({
         ok: false,
-        error: "NEEDS_EVIDENCE",
+        error: gate.error ?? FORMAL_STAGE1_TRIGGER_NEEDS_EVIDENCE,
         reason_codes: gate.reason_codes,
         problem_state_v1: problemStateOutput.problem_state_v1,
         uncertainty_envelope_v1: problemStateOutput.uncertainty_envelope_v1,
