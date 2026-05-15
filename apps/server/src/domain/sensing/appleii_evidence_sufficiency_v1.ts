@@ -27,11 +27,18 @@ export type AppleIITimeCoverageV1 = {
 
 export type AppleIIDeviceHealthSnapshotV1 = {
   device_health_status: AppleIIDeviceHealthStatusV1;
+  device_status_present: boolean;
+  heartbeat_present: boolean;
+  telemetry_present: boolean;
+  telemetry_only: boolean;
+  status_unknown_but_sample_fresh: boolean;
   last_telemetry_ts_ms: number | null;
   last_heartbeat_ts_ms: number | null;
+  last_sample_ts_ms: number | null;
   offline: boolean;
   battery_percent: number | null;
   rssi_dbm: number | null;
+  reason_codes: string[];
 };
 
 export type AppleIIConflictDetectionV1 = {
@@ -177,25 +184,48 @@ function latestSampleTs(samples: RawSampleRow[]): number | null {
 }
 
 function deriveDeviceHealth(row: any, nowMs: number, maxAgeMs: number, samples: RawSampleRow[]): AppleIIDeviceHealthSnapshotV1 {
+  const deviceStatusPresent = row != null;
   const sampleLatest = latestSampleTs(samples);
-  const lastTelemetry = toNumber(row?.last_telemetry_ts_ms) ?? sampleLatest;
-  const lastHeartbeat = toNumber(row?.last_heartbeat_ts_ms);
-  const latest = Math.max(lastTelemetry ?? 0, lastHeartbeat ?? 0);
-  const offline = !latest || nowMs - latest > maxAgeMs;
-  const battery = toNumber(row?.battery_percent);
-  const rssi = toNumber(row?.rssi_dbm);
+  const sampleFresh = sampleLatest != null && nowMs - sampleLatest <= maxAgeMs;
+  const lastTelemetry = deviceStatusPresent ? toNumber(row?.last_telemetry_ts_ms) : null;
+  const lastHeartbeat = deviceStatusPresent ? toNumber(row?.last_heartbeat_ts_ms) : null;
+  const telemetryPresent = lastTelemetry != null;
+  const heartbeatPresent = lastHeartbeat != null;
+  const telemetryOnly = telemetryPresent && !heartbeatPresent;
+  const latestStatusTs = Math.max(lastTelemetry ?? 0, lastHeartbeat ?? 0);
+  const offline = deviceStatusPresent ? (!latestStatusTs || nowMs - latestStatusTs > maxAgeMs) : false;
+  const battery = deviceStatusPresent ? toNumber(row?.battery_percent) : null;
+  const rssi = deviceStatusPresent ? toNumber(row?.rssi_dbm) : null;
+  const reasonCodes: string[] = [];
   let status: AppleIIDeviceHealthStatusV1 = "UNKNOWN";
-  if (offline) status = "OFFLINE";
-  else if ((battery != null && battery <= 10) || (rssi != null && rssi <= -95)) status = "BAD";
-  else if ((battery != null && battery <= 20) || (rssi != null && rssi <= -85)) status = "DEGRADED";
-  else status = "GOOD";
+
+  if (!deviceStatusPresent) {
+    reasonCodes.push("DEVICE_STATUS_MISSING");
+    if (sampleFresh) reasonCodes.push("STATUS_UNKNOWN_BUT_SAMPLE_FRESH");
+    status = "UNKNOWN";
+  } else {
+    if (!heartbeatPresent) reasonCodes.push("DEVICE_HEARTBEAT_MISSING");
+    if (telemetryOnly) reasonCodes.push("TELEMETRY_ONLY_DEVICE_HEALTH");
+    if (offline) status = "OFFLINE";
+    else if ((battery != null && battery <= 10) || (rssi != null && rssi <= -95)) status = "BAD";
+    else if (!heartbeatPresent || (battery != null && battery <= 20) || (rssi != null && rssi <= -85)) status = "DEGRADED";
+    else status = "GOOD";
+  }
+
   return {
     device_health_status: status,
+    device_status_present: deviceStatusPresent,
+    heartbeat_present: heartbeatPresent,
+    telemetry_present: telemetryPresent,
+    telemetry_only: telemetryOnly,
+    status_unknown_but_sample_fresh: !deviceStatusPresent && sampleFresh,
     last_telemetry_ts_ms: lastTelemetry,
     last_heartbeat_ts_ms: lastHeartbeat,
+    last_sample_ts_ms: sampleLatest,
     offline,
     battery_percent: battery,
     rssi_dbm: rssi,
+    reason_codes: reasonCodes,
   };
 }
 
@@ -344,7 +374,7 @@ export async function buildAppleIIEvidenceSufficiencyV1(db: DbConn, params: {
   };
   const deviceHealth = deriveDeviceHealth(deviceStatusRow, nowMs, freshnessMaxAgeMs, formalSamples);
   const conflicts = detectConflict(formalSamples);
-  const reasonCodes: string[] = [];
+  const reasonCodes: string[] = [...deviceHealth.reason_codes];
   if (nonFormalSampleCount > 0) reasonCodes.push("NON_FORMAL_SAMPLE_SOURCE");
   if (samples.some((sample) => sample.source === "sim")) reasonCodes.push("SIMULATED_SAMPLE_NOT_FORMAL");
   if (timeCoverage.formal_sample_count < minSampleCount) reasonCodes.push("INSUFFICIENT_FORMAL_SAMPLE_COUNT");
@@ -352,13 +382,14 @@ export async function buildAppleIIEvidenceSufficiencyV1(db: DbConn, params: {
   if (timeCoverage.max_gap_ms > maxAllowedGapMs) reasonCodes.push("MAX_GAP_EXCEEDED");
   if (timeCoverage.freshness !== "fresh") reasonCodes.push("STALE_OR_UNKNOWN_FRESHNESS");
   if (!timeCoverage.formal_source_eligible) reasonCodes.push("FORMAL_SOURCE_NOT_ELIGIBLE");
+  if (deviceHealth.device_health_status === "UNKNOWN") reasonCodes.push("DEVICE_HEALTH_UNKNOWN");
   if (deviceHealth.device_health_status === "OFFLINE" || deviceHealth.device_health_status === "BAD") reasonCodes.push("DEVICE_HEALTH_NOT_GOOD");
   if (conflicts.conflict_status === "UNRESOLVED") reasonCodes.push("UNRESOLVED_SENSOR_CONFLICT");
   if (conflicts.sensor_drift_status === "DRIFTING") reasonCodes.push("SENSOR_DRIFTING");
 
   return {
     evidence_sufficiency: reasonCodes.length ? "NEEDS_EVIDENCE" : "PASS",
-    reason_codes: reasonCodes,
+    reason_codes: Array.from(new Set(reasonCodes)),
     time_coverage_v1: timeCoverage,
     device_health_snapshot_v1: deviceHealth,
     conflict_detection_v1: conflicts,
