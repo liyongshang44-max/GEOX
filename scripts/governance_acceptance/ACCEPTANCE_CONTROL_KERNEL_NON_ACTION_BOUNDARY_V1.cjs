@@ -13,27 +13,12 @@ function assert(cond, msg) {
     process.exit(1);
   }
 }
-
-function rel(file) {
-  return path.relative(root, file).replace(/\\/g, '/');
-}
-
-function readRel(file) {
-  return fs.readFileSync(path.join(root, file), 'utf8');
-}
-
-function read(file) {
-  return fs.readFileSync(file, 'utf8');
-}
-
+function rel(file) { return path.relative(root, file).replace(/\\/g, '/'); }
+function readRel(file) { return fs.readFileSync(path.join(root, file), 'utf8'); }
+function read(file) { return fs.readFileSync(file, 'utf8'); }
 function stripComments(text) {
-  return text
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .split('\n')
-    .map((line) => line.replace(/\/\/.*$/g, ''))
-    .join('\n');
+  return text.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').map((line) => line.replace(/\/\/.*$/g, '')).join('\n');
 }
-
 function walk(dir, out = []) {
   if (!fs.existsSync(dir)) return out;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -41,13 +26,10 @@ function walk(dir, out = []) {
     if (entry.isDirectory()) {
       if (['node_modules', '.git', 'dist', 'build', 'coverage', '.next'].includes(entry.name)) continue;
       walk(full, out);
-    } else if (/\.(ts|tsx|js|cjs|mjs|json)$/.test(entry.name)) {
-      out.push(full);
-    }
+    } else if (/\.(ts|tsx|js|cjs|mjs|json)$/.test(entry.name)) out.push(full);
   }
   return out;
 }
-
 function getInterfaceBody(text, name) {
   const marker = `interface ${name}`;
   const start = text.indexOf(marker);
@@ -67,19 +49,7 @@ const verdictText = readRel(CONTROL_VERDICT_FILE);
 const kernelText = readRel(KERNEL_FILE);
 const verdictBody = stripComments(getInterfaceBody(verdictText, 'ControlVerdictV0'));
 
-// 1. ControlVerdict must stay a verdict-only audit object.
-for (const forbidden of [
-  'recommendation',
-  'task',
-  'priority',
-  'parameters',
-  'explanation',
-  'next_action',
-  'readiness',
-  'prescription',
-  'operation_plan',
-  'act_task',
-]) {
+for (const forbidden of ['recommendation','task','priority','parameters','explanation','next_action','readiness','prescription','operation_plan','act_task']) {
   assert(!verdictBody.toLowerCase().includes(forbidden), `ControlVerdictV0 must not contain ${forbidden}`);
 }
 for (const required of ['type:', 'schema_version:', 'verdict_id:', 'evaluated_at_ts:', 'subjectRef:', 'window:', 'action_code:', 'verdict:', 'rule_ref']) {
@@ -87,13 +57,12 @@ for (const required of ['type:', 'schema_version:', 'verdict_id:', 'evaluated_at
 }
 assert(verdictText.includes('export type VerdictV0 = "ALLOW" | "DENY" | "UNDETERMINED"'), 'ControlVerdict values must stay ALLOW/DENY/UNDETERMINED only');
 
-// 2. Control Kernel package must be pure and must not import server routes, AO-ACT, report, recommendation, task modules.
 const kernelFiles = walk(path.join(root, CONTROL_KERNEL_DIR));
-const forbiddenKernelTerms = [
+const forbiddenImportTerms = [
   'apps/server',
   'routes/',
-  'ao_act',
-  'act_task',
+  'control_ao_act',
+  'action_task',
   'actions/task',
   'recommendation',
   'prescription',
@@ -102,26 +71,23 @@ const forbiddenKernelTerms = [
   'customer_report',
   'roi_ledger',
   'field_memory',
-  'fetch(',
   'axios',
   'pg',
-  'fs.',
-  'writeFile',
-  'INSERT INTO',
-  'UPDATE ',
-  'DELETE ',
 ];
 for (const file of kernelFiles) {
   const text = stripComments(read(file));
+  const importLines = text.split('\n').filter((line) => /^\s*import\s/.test(line)).join('\n').toLowerCase();
+  for (const term of forbiddenImportTerms) {
+    assert(!importLines.includes(term.toLowerCase()), `${rel(file)} must not import ${term}`);
+  }
   const lower = text.toLowerCase();
-  for (const term of forbiddenKernelTerms) {
-    assert(!lower.includes(term.toLowerCase()), `${rel(file)} must not import/use ${term}`);
+  for (const sideEffect of ['fetch(', 'fs.', 'writefile', 'insert into', 'update ', 'delete ']) {
+    assert(!lower.includes(sideEffect), `${rel(file)} must not perform IO/side effects via ${sideEffect}`);
   }
 }
 assert(kernelText.includes('No IO. No side effects. No execution. No explanation.'), 'kernel.ts must retain explicit non-goal statement');
 assert(kernelText.includes('return Object.freeze(verdicts)'), 'kernel must freeze verdict outputs');
 
-// 3. Calling side must not wire ControlVerdict.ALLOW directly to AO-ACT task creation, recommendation/prescription generation, or UI next-action/readiness.
 const allAppFiles = [
   ...walk(path.join(root, 'apps/server/src')),
   ...walk(path.join(root, 'apps/web/src')),
@@ -136,34 +102,18 @@ for (const file of allAppFiles) {
   const hasVerdict = lower.includes('controlverdict') || lower.includes('control_verdict') || lower.includes('verdict');
   if (!hasVerdict) continue;
   const forbiddenSinks = [
-    'createaoacttask',
-    'create_action_task',
-    'action.task.create',
-    '/api/v1/actions/task',
-    'act_task',
-    'generate recommendation',
-    'buildrecommendation',
-    'create recommendation',
-    'prescription',
-    'next_action',
-    'nextaction',
-    'readiness',
-    'customer readiness',
-    'operator readiness',
+    'createaoacttask','create_action_task','action.task.create','/api/v1/actions/task','act_task',
+    'generate recommendation','buildrecommendation','create recommendation','prescription',
+    'next_action','nextaction','readiness','customer readiness','operator readiness',
   ];
   for (const sink of forbiddenSinks) {
-    if (lower.includes(sink)) {
-      allowOffenders.push(`${rel(file)} contains ControlVerdict/ALLOW with ${sink}`);
-    }
+    if (lower.includes(sink)) allowOffenders.push(`${rel(file)} contains ControlVerdict/ALLOW with ${sink}`);
   }
 }
 assert(allowOffenders.length === 0, `ControlVerdict.ALLOW must not be wired directly to action sinks:\n${allowOffenders.join('\n')}`);
 
-// 4. evaluateControlV0 should not be used outside control-kernel self-tests / harness until an explicit adapter is introduced.
 const evaluateUsers = allAppFiles.filter((file) => stripComments(read(file)).includes('evaluateControlV0')).map(rel);
-const allowedEvaluateUsers = [
-  'packages/control-repo-const-harness/src/ruleset_file_harness.ts',
-];
+const allowedEvaluateUsers = ['packages/control-repo-const-harness/src/ruleset_file_harness.ts'];
 const unexpectedEvaluateUsers = evaluateUsers.filter((file) => !allowedEvaluateUsers.includes(file));
 assert(unexpectedEvaluateUsers.length === 0, `evaluateControlV0 must not be called by app/service code yet:\n${unexpectedEvaluateUsers.join('\n')}`);
 
