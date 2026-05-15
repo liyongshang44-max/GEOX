@@ -281,6 +281,42 @@ function deriveDeviceHealth(row: any, nowMs: number, maxAgeMs: number, samples: 
   };
 }
 
+async function readDeviceHealthStatusRowV1(db: DbConn, params: {
+  tenant_id: string;
+  project_id?: string | null;
+  group_id?: string | null;
+  field_id?: string | null;
+  device_id?: string | null;
+}): Promise<any | null> {
+  const deviceId = String(params.device_id ?? "").trim();
+  if (!deviceId) return null;
+  const selectCols = `SELECT last_telemetry_ts_ms, last_heartbeat_ts_ms, battery_percent, rssi_dbm FROM device_status_index_v1`;
+  const attempts: Array<{ sql: string; args: unknown[] }> = [
+    {
+      sql: `${selectCols} WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3 AND device_id = $4 LIMIT 1`,
+      args: [params.tenant_id, params.project_id ?? "projectA", params.group_id ?? "groupA", deviceId],
+    },
+    {
+      sql: `${selectCols} WHERE tenant_id = $1 AND field_id = $2 AND device_id = $3 LIMIT 1`,
+      args: [params.tenant_id, params.field_id ?? "", deviceId],
+    },
+    {
+      sql: `${selectCols} WHERE tenant_id = $1 AND device_id = $2 LIMIT 1`,
+      args: [params.tenant_id, deviceId],
+    },
+  ];
+  for (const attempt of attempts) {
+    try {
+      const got = await db.query(attempt.sql, attempt.args);
+      if (got.rows?.[0]) return got.rows[0];
+    } catch {
+      // device_status_index_v1 is compatibility-managed and older installs may not have
+      // project_id/group_id/field_id. Fall through to the next stable key shape.
+    }
+  }
+  return null;
+}
+
 function detectConflict(samples: RawSampleRow[]): AppleIIConflictDetectionV1 {
   if (!samples.length) {
     return {
@@ -389,21 +425,7 @@ export async function buildAppleIIEvidenceSufficiencyV1(db: DbConn, params: {
   const formalSamples = samples.filter((sample) => isFormalSampleSource(sample.source, formalSourcePolicy));
   const nonFormalSampleCount = samples.length - formalSamples.length;
 
-  let deviceStatusRow: any = null;
-  if (params.device_id) {
-    try {
-      const got = await db.query(
-        `SELECT last_telemetry_ts_ms, last_heartbeat_ts_ms, battery_percent, rssi_dbm
-         FROM device_status_index_v1
-         WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3 AND device_id = $4
-         LIMIT 1`,
-        [params.tenant_id, params.project_id ?? "projectA", params.group_id ?? "groupA", params.device_id],
-      );
-      deviceStatusRow = got.rows?.[0] ?? null;
-    } catch {
-      deviceStatusRow = null;
-    }
-  }
+  const deviceStatusRow = await readDeviceHealthStatusRowV1(db, params);
 
   const gapStats = computeGapStats(samples, startTs, endTs, expectedSampleIntervalMs);
   const formalGapStats = computeGapStats(formalSamples, startTs, endTs, expectedSampleIntervalMs);
