@@ -5,6 +5,7 @@ const { assert, env, fetchJson } = require('../agronomy_acceptance/_common.cjs')
 
 const id = (p) => `${p}_${Date.now()}_${randomUUID().replace(/-/g, '').slice(0, 8)}`;
 const js = (x) => JSON.stringify(x);
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function tableExists(pool, table) {
   const q = await pool.query('SELECT to_regclass($1) AS reg', [`public.${table}`]);
@@ -12,11 +13,20 @@ async function tableExists(pool, table) {
 }
 
 async function health(base) {
-  const r = await fetchJson(`${base}/api/v1/health`, { method: 'GET' });
-  if (!r.ok) {
-    const legacy = await fetchJson(`${base}/api/health`, { method: 'GET' });
-    assert.equal(legacy.ok, true, `health failed ${r.status}/${legacy.status}`);
+  let lastErr = null;
+  for (let i = 0; i < 20; i += 1) {
+    try {
+      const r = await fetchJson(`${base}/api/v1/health`, { method: 'GET' });
+      if (r.ok) return;
+      const legacy = await fetchJson(`${base}/api/health`, { method: 'GET' });
+      if (legacy.ok) return;
+      lastErr = new Error(`health failed ${r.status}/${legacy.status}`);
+    } catch (err) {
+      lastErr = err;
+    }
+    await sleep(1000);
   }
+  throw lastErr ?? new Error('server health failed');
 }
 
 async function insertRaw(pool, tenant, field, dev, source, metric, now) {
@@ -91,7 +101,7 @@ async function scenario(ctx, { source, metric = 'soil_moisture', withStatus = tr
   const row = await summary(ctx.pool, ctx.tenant, field);
   if (shouldPass) {
     assert.notEqual(resp.json?.error, 'FORMAL_STAGE1_TRIGGER_NEEDS_EVIDENCE', `${source} unexpectedly blocked body=${resp.text}`);
-    assert.equal(row?.evidence_sufficiency, 'PASS', `${source} summary must PASS`);
+    assert.equal(row?.evidence_sufficiency, 'PASS', `${source} summary must PASS; summary=${JSON.stringify(row)}`);
     assert.equal(row?.time_coverage_v1?.formal_source_eligible, true, `${source} formal_source_eligible`);
     assert.equal(row?.time_coverage_v1?.trigger_metric_evidence?.irrigation_effectiveness, true, `${source} trigger metric evidence`);
     return { source, metric, passed: true, response_status: resp.status };
