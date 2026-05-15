@@ -7,7 +7,8 @@ const inventoryPath = path.join(root, 'apps/server/src/routes/api_route_inventor
 const reportsRoute = path.join(root, 'apps/server/src/routes/reports_v1.ts');
 const dashboardRoute = path.join(root, 'apps/server/src/routes/reports_dashboard_v1.ts');
 const sensingRoute = path.join(root, 'apps/server/src/routes/sensing_fact_envelope_v1.ts');
-const senseRoute = path.join(root, 'apps/server/src/routes/v1/sense.ts');
+const senseDelegatorRoute = path.join(root, 'apps/server/src/routes/v1/sense.ts');
+const senseImplementationRoute = path.join(root, 'apps/server/src/routes/control_ao_sense.ts');
 
 function fail(msg) {
   console.error(`[ACCEPTANCE_API_INVENTORY_ENFORCEMENT_V1] FAIL: ${msg}`);
@@ -56,21 +57,23 @@ for (const marker of ['audience: "customer"','boundary: "official"','guarded_pro
   assert(inventory.includes(marker), `inventory missing marker ${marker}`);
 }
 
-for (const file of [reportsRoute, dashboardRoute, sensingRoute, senseRoute]) {
+for (const file of [reportsRoute, dashboardRoute, sensingRoute, senseDelegatorRoute, senseImplementationRoute]) {
   assert(fs.existsSync(file), `protected route file missing: ${file}`);
 }
 const reportsText = read(reportsRoute);
 const dashboardText = read(dashboardRoute);
 const sensingText = read(sensingRoute);
-const senseText = read(senseRoute);
+const senseDelegatorText = read(senseDelegatorRoute);
+const senseImplementationText = read(senseImplementationRoute);
 
 assert(dashboardText.includes('/api/v1/reports/customer-dashboard/aggregate'), 'customer dashboard aggregate route missing');
 assert(reportsText.includes('/api/v1/reports/field/'), 'customer field report route missing');
 assert(reportsText.includes('/api/v1/reports/operation/'), 'customer operation report route missing');
 assert(sensingText.includes('/api/v1/sensing/raw-samples'), 'sensing raw-samples route missing');
 assert(sensingText.includes('/api/v1/sensing/series'), 'sensing series route missing');
+assert(senseDelegatorText.includes('registerAoSenseV1Routes'), 'AO-SENSE v1 delegator must register implementation routes');
 for (const route of ['/api/v1/sense/task', '/api/v1/sense/receipt', '/api/v1/sense/tasks', '/api/v1/sense/receipts', '/api/v1/sense/next-task']) {
-  assert(senseText.includes(route), `AO-SENSE v1 route missing ${route}`);
+  assert(senseImplementationText.includes(route), `AO-SENSE v1 implementation route missing ${route}`);
 }
 for (const guard of ['projectReportV1','projectFieldReportDetailV1','projectOperationStateV1','requireAoActScopeV0','enforceFieldScopeOrDeny','enforceOperationFieldScope']) {
   assert(reportsText.includes(guard) || dashboardText.includes(guard), `customer official API must pass guarded projection/scope: ${guard}`);
