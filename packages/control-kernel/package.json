@@ -14,6 +14,6 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "node --loader ts-node/esm src/__tests__/run.ts"
+    "test": "pnpm run build && node dist/__tests__/run.js"
   }
 }
