@@ -56,12 +56,20 @@ includesAll(service, [
   'ON CONFLICT (sample_id) DO NOTHING',
   'OFFICIAL_SERIES_OVERLAY_KIND_ALLOWLIST_V1 = ["marker", "candidate", "annotation"]',
   'FORBIDDEN_OVERLAY_TERMS_V1 = ["recommendation", "prescription", "acceptance", "conclusion"]',
+  'containsForbiddenOverlayConclusionV1',
+  'if (containsForbiddenOverlayConclusionV1(row.kind, payload)) continue',
 ], 'service');
 
 assert(!service.includes('interpolated: true'), 'service must not emit interpolated samples');
 assert(!service.includes('synthetic: true'), 'service must not emit synthetic samples');
 assert(!service.includes('fake_sample: true'), 'service must not emit fake samples');
+assert(!service.includes('last known'), 'service must not describe or implement last-known-value filling');
+assert(!service.includes('lastKnown'), 'service must not implement last-known-value filling');
+assert(!service.includes('interpolation'), 'service must not implement interpolation');
 assert(service.includes('return [{ startTs, endTs, reason: "no_data"'), 'no-data windows must produce a gap instead of a stable state');
+assert(service.includes('const gaps = computeGapsForSeriesV1(samples'), 'SeriesResponse must always compute gaps');
+assert(service.includes('const overlays = await readSeriesOverlaysV1(pool, filter)'), 'SeriesResponse must always compute overlays');
+assert(service.includes('samples,\n    gaps,\n    overlays'), 'SeriesResponse must always return samples/gaps/overlays');
 
 includesAll(routes, [
   'app.post("/api/v1/sensing/raw-samples"',
@@ -70,8 +78,10 @@ includesAll(routes, [
   'requireAoActScopeV0(req, reply, "telemetry.write")',
   'requireAoActScopeV0(req, reply, "telemetry.read")',
   'SCOPE_FILTER_REQUIRED',
+  'return reply.send({ ok: true, ...item, item })',
 ], 'routes');
 assert(!routes.includes('requireAoActAnyScopeV0(req, reply, ["telemetry.write", "telemetry.read"]'), 'read scope must not allow raw sample writes');
+assert(!routes.includes('reply.send({ ok: true, item })') || routes.includes('POST /api/v1/sensing/raw-samples') === false, 'series route must not hide samples/gaps/overlays only under item');
 
 includesAll(register, [
   'registerSensingFactEnvelopeV1Routes',
@@ -89,6 +99,9 @@ includesAll(contracts, [
   'interpolated: z.literal(false)',
   'synthetic: z.literal(false)',
   'EC metric unit must be dS/m',
+  'samples: z.array(RawSampleFactEnvelopeV1Schema)',
+  'gaps: z.array(SeriesGapV1Schema)',
+  'overlays: z.array(SeriesOverlayV1Schema)',
 ], 'contracts');
 includesAll(contractsIndex, ['export * from "./schema/fact_envelope_v1.js"'], 'contracts index');
 
