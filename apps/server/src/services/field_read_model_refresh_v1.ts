@@ -10,16 +10,7 @@ import type { Pool, PoolClient } from "pg";
 
 type DbConn = Pool | PoolClient;
 
-// freshness semantics (external contract):
-// - fresh: data is within the validity window.
-// - stale: data is expired but still readable as reference.
-// - unknown: freshness cannot be determined.
 type Freshness = Stage1Freshness;
-// refresh status semantics (external contract):
-// - ok: refresh succeeded and returned a currently valid result.
-// - fallback_stale: refresh failed; last snapshot returned as stale fallback.
-// - no_data: refresh succeeded but lacked enough official data for stage-1 summary.
-// - error: refresh failed and no fallback snapshot is available.
 type RefreshStatus = Stage1RefreshStatus;
 
 type SnapshotEntry<T> = {
@@ -186,6 +177,7 @@ export async function refreshFieldReadModelsWithObservabilityV1(db: DbConn, para
   project_id: string;
   group_id: string;
   field_id: string;
+  device_id?: string | null;
 }): Promise<{
   sensing_overview: RefreshOutput<Awaited<ReturnType<typeof refreshFieldSensingOverviewV1>>>;
   sensing_summary_stage1: RefreshOutput<Awaited<ReturnType<typeof refreshFieldSensingSummaryStage1V1>>>;
@@ -197,6 +189,10 @@ export async function refreshFieldReadModelsWithObservabilityV1(db: DbConn, para
     group_id: params.group_id,
     field_id: params.field_id,
   };
+  const summaryBase = {
+    ...base,
+    device_id: params.device_id ?? null,
+  };
 
   const [sensing_overview, sensing_summary_stage1, fertility_state] = await Promise.all([
     refreshWithFallback({
@@ -206,8 +202,6 @@ export async function refreshFieldReadModelsWithObservabilityV1(db: DbConn, para
       hasData: (payload) => {
         const p = payload as Record<string, any>;
         if (Array.isArray(p.soil_indicators_json) && p.soil_indicators_json.length > 0) return true;
-        // hasData only uses stage-1 official summary signals.
-        // compatibility-only fields (for example irrigation_need_level) are intentionally excluded.
         return Boolean(
           hasAnyOfficialStage1SummarySignal(p)
           || p.computed_at_ts_ms
@@ -216,8 +210,8 @@ export async function refreshFieldReadModelsWithObservabilityV1(db: DbConn, para
       },
     }),
     refreshWithFallback({
-      key: `sensing_summary_stage1:${params.tenant_id}:${params.project_id}:${params.group_id}:${params.field_id}`,
-      refresher: () => refreshFieldSensingSummaryStage1V1(db, base),
+      key: `sensing_summary_stage1:${params.tenant_id}:${params.project_id}:${params.group_id}:${params.field_id}:${params.device_id ?? "any_device"}`,
+      refresher: () => refreshFieldSensingSummaryStage1V1(db, summaryBase),
       resolveFreshness: (payload) => (payload as Record<string, any>).freshness,
       hasData: (payload) => {
         const p = payload as Record<string, any>;
