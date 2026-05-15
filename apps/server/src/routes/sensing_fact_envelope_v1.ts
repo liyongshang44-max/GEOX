@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { Pool } from "pg";
-import { requireAoActAnyScopeV0, requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
+import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
 import {
   appendRawSampleV1,
   buildSeriesResponseV1,
@@ -58,7 +58,7 @@ function enforceTenantMatch(auth: any, tenant: RawSampleFactEnvelopeTenantV1, re
 
 export function registerSensingFactEnvelopeV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/sensing/raw-samples", async (req, reply) => {
-    const auth = requireAoActAnyScopeV0(req, reply, ["telemetry.write", "telemetry.read"]);
+    const auth = requireAoActScopeV0(req, reply, "telemetry.write");
     if (!auth) return;
     const body: any = req.body ?? {};
     const tenant = tenantFromAuth(auth, body);
