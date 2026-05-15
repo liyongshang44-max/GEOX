@@ -5,6 +5,15 @@ const path = require('node:path');
 const root = process.cwd();
 const AO_SENSE_RECEIPT = 'ao_sense_receipt_v1';
 const AO_SENSE_TASK = 'ao_sense_task_v1';
+const AO_SENSE_OWNED_FILES = new Set([
+  'apps/server/src/routes/control_ao_sense.ts',
+  'apps/server/src/routes/v1/sense.ts',
+  'apps/server/src/routes/legacy/sense.ts',
+  'apps/judge/src/ao_sense.ts',
+  'packages/contracts/ao_sense_v1.schema.json',
+  'packages/contracts/ao_sense_task_v1.schema.json',
+  'packages/contracts/ao_sense_receipt_v1.schema.json',
+]);
 
 function assert(cond, msg) {
   if (!cond) {
@@ -39,10 +48,15 @@ function filesUnder(...dirs) {
   return dirs.flatMap((d) => walk(path.join(root, d)));
 }
 
+function isAoSenseOwned(file) {
+  return AO_SENSE_OWNED_FILES.has(rel(file));
+}
+
 function assertNoAoSenseReceiptInScope(label, dirs, forbiddenTerms) {
   const files = filesUnder(...dirs);
   const offenders = [];
   for (const file of files) {
+    if (isAoSenseOwned(file)) continue;
     const text = read(file);
     if (!text.includes(AO_SENSE_RECEIPT)) continue;
     const lower = text.toLowerCase();
@@ -59,6 +73,7 @@ function assertNoAoSenseTaskInAoActTaskScope(label, dirs) {
   const files = filesUnder(...dirs);
   const offenders = [];
   for (const file of files) {
+    if (isAoSenseOwned(file)) continue;
     const text = read(file);
     if (!text.includes(AO_SENSE_TASK)) continue;
     const lower = text.toLowerCase();
@@ -126,17 +141,7 @@ assertNoAoSenseTaskInAoActTaskScope(
   ['apps/server/src/routes/v1', 'apps/server/src/routes/legacy', 'apps/server/src/projections', 'apps/web/src']
 );
 
-// Positive namespace check: AO-SENSE may appear in AO-SENSE-owned files and docs, but not in AO-ACT execution/acceptance/ROI/memory/state scopes.
-const allowedAoSenseFiles = [
-  'apps/server/src/routes/control_ao_sense.ts',
-  'apps/server/src/routes/v1/sense.ts',
-  'apps/server/src/routes/legacy/sense.ts',
-  'apps/judge/src/ao_sense.ts',
-  'packages/contracts/ao_sense_v1.schema.json',
-  'packages/contracts/ao_sense_task_v1.schema.json',
-  'packages/contracts/ao_sense_receipt_v1.schema.json',
-];
-for (const file of allowedAoSenseFiles) {
+for (const file of AO_SENSE_OWNED_FILES) {
   assert(fs.existsSync(path.join(root, file)), `expected AO-SENSE boundary file missing: ${file}`);
 }
 
