@@ -1,5 +1,3 @@
--- Fact Envelope v1: raw_samples becomes an append-only raw fact table.
-
 ALTER TABLE raw_samples
   ADD COLUMN IF NOT EXISTS updated_at timestamptz NULL;
 
@@ -8,52 +6,32 @@ ALTER TABLE markers
 
 DO $$
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'raw_samples_source_v1_check'
-  ) THEN
-    ALTER TABLE raw_samples
-      ADD CONSTRAINT raw_samples_source_v1_check
-      CHECK (source IN ('device','gateway','system','human','import','sim'));
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'raw_samples_source_v1_check') THEN
+    ALTER TABLE raw_samples ADD CONSTRAINT raw_samples_source_v1_check CHECK (source IN ('device','gateway','system','human','import','sim')) NOT VALID;
   END IF;
 
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'raw_samples_qc_quality_v1_check'
-  ) THEN
-    ALTER TABLE raw_samples
-      ADD CONSTRAINT raw_samples_qc_quality_v1_check
-      CHECK (qc_quality IN ('unknown','ok','suspect','bad'));
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'raw_samples_qc_quality_v1_check') THEN
+    ALTER TABLE raw_samples ADD CONSTRAINT raw_samples_qc_quality_v1_check CHECK (qc_quality IN ('unknown','ok','suspect','bad')) NOT VALID;
   END IF;
 
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'raw_samples_no_interpolated_or_synthetic_v1_check'
-  ) THEN
-    ALTER TABLE raw_samples
-      ADD CONSTRAINT raw_samples_no_interpolated_or_synthetic_v1_check
-      CHECK (
-        COALESCE(payload_json ->> 'sample_kind', 'raw') = 'raw'
-        AND COALESCE(payload_json ->> 'interpolated', 'false') = 'false'
-        AND COALESCE(payload_json ->> 'synthetic', 'false') = 'false'
-        AND COALESCE(payload_json ->> 'fake_sample', 'false') = 'false'
-      );
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'raw_samples_no_interpolated_or_synthetic_v1_check') THEN
+    ALTER TABLE raw_samples ADD CONSTRAINT raw_samples_no_interpolated_or_synthetic_v1_check CHECK (
+      COALESCE(payload_json ->> 'sample_kind', 'raw') = 'raw'
+      AND COALESCE(payload_json ->> 'interpolated', 'false') = 'false'
+      AND COALESCE(payload_json ->> 'synthetic', 'false') = 'false'
+      AND COALESCE(payload_json ->> 'fake_sample', 'false') = 'false'
+    ) NOT VALID;
   END IF;
 
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'raw_samples_ec_unit_ds_m_v1_check'
-  ) THEN
-    ALTER TABLE raw_samples
-      ADD CONSTRAINT raw_samples_ec_unit_ds_m_v1_check
-      CHECK (
-        lower(metric) NOT IN ('ec','soil_ec','soil_ec_ds_m','ec_ds_m','salinity_ec_ds_m','soil_salinity_ec')
-        OR payload_json ->> 'unit' = 'dS/m'
-      );
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'raw_samples_ec_unit_ds_m_v1_check') THEN
+    ALTER TABLE raw_samples ADD CONSTRAINT raw_samples_ec_unit_ds_m_v1_check CHECK (
+      lower(metric) NOT IN ('ec','soil_ec','soil_ec_ds_m','ec_ds_m','salinity_ec_ds_m','soil_salinity_ec')
+      OR payload_json ->> 'unit' = 'dS/m'
+    ) NOT VALID;
   END IF;
 
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'markers_source_v1_check'
-  ) THEN
-    ALTER TABLE markers
-      ADD CONSTRAINT markers_source_v1_check
-      CHECK (source IN ('device','gateway','system','human'));
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'markers_source_v1_check') THEN
+    ALTER TABLE markers ADD CONSTRAINT markers_source_v1_check CHECK (source IN ('device','gateway','system','human')) NOT VALID;
   END IF;
 END $$;
 
