@@ -128,7 +128,7 @@ export function registerSensingFactEnvelopeV1Routes(app: FastifyInstance, pool: 
         limit: toPositiveInt(q.limit) ?? 10000,
         max_gap_ms: toPositiveInt(q.max_gap_ms ?? q.maxGapMs) ?? undefined,
       });
-      return reply.send({ ok: true, item });
+      return reply.send({ ok: true, ...item, item });
     } catch (err) {
       if (handleFactEnvelopeError(reply, err)) return;
       req.log.error({ err }, "series response v1 failed");
