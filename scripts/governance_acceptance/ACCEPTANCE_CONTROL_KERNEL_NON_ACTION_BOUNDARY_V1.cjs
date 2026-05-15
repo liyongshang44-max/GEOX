@@ -26,6 +26,14 @@ function read(file) {
   return fs.readFileSync(file, 'utf8');
 }
 
+function stripComments(text) {
+  return text
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split('\n')
+    .map((line) => line.replace(/\/\/.*$/g, ''))
+    .join('\n');
+}
+
 function walk(dir, out = []) {
   if (!fs.existsSync(dir)) return out;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -57,7 +65,7 @@ function getInterfaceBody(text, name) {
 
 const verdictText = readRel(CONTROL_VERDICT_FILE);
 const kernelText = readRel(KERNEL_FILE);
-const verdictBody = getInterfaceBody(verdictText, 'ControlVerdictV0');
+const verdictBody = stripComments(getInterfaceBody(verdictText, 'ControlVerdictV0'));
 
 // 1. ControlVerdict must stay a verdict-only audit object.
 for (const forbidden of [
@@ -104,7 +112,7 @@ const forbiddenKernelTerms = [
   'DELETE ',
 ];
 for (const file of kernelFiles) {
-  const text = read(file);
+  const text = stripComments(read(file));
   const lower = text.toLowerCase();
   for (const term of forbiddenKernelTerms) {
     assert(!lower.includes(term.toLowerCase()), `${rel(file)} must not import/use ${term}`);
@@ -122,7 +130,7 @@ const allAppFiles = [
 
 const allowOffenders = [];
 for (const file of allAppFiles) {
-  const text = read(file);
+  const text = stripComments(read(file));
   if (!text.includes('ALLOW')) continue;
   const lower = text.toLowerCase();
   const hasVerdict = lower.includes('controlverdict') || lower.includes('control_verdict') || lower.includes('verdict');
@@ -152,7 +160,7 @@ for (const file of allAppFiles) {
 assert(allowOffenders.length === 0, `ControlVerdict.ALLOW must not be wired directly to action sinks:\n${allowOffenders.join('\n')}`);
 
 // 4. evaluateControlV0 should not be used outside control-kernel self-tests / harness until an explicit adapter is introduced.
-const evaluateUsers = allAppFiles.filter((file) => read(file).includes('evaluateControlV0')).map(rel);
+const evaluateUsers = allAppFiles.filter((file) => stripComments(read(file)).includes('evaluateControlV0')).map(rel);
 const allowedEvaluateUsers = [
   'packages/control-repo-const-harness/src/ruleset_file_harness.ts',
 ];
