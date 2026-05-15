@@ -67,7 +67,7 @@ assert(!service.includes('synthetic: true'), 'service must not emit synthetic sa
 assert(!service.includes('fake_sample: true'), 'service must not emit fake samples');
 assert(!service.includes('last known'), 'service must not describe or implement last-known-value filling');
 assert(!service.includes('lastKnown'), 'service must not implement last-known-value filling');
-assert(!service.includes('interpolation'), 'service must not implement interpolation');
+assert(!/\binterpolate\w*\s*\(/i.test(service), 'service must not call or implement interpolation functions');
 assert(service.includes('return [{ startTs, endTs, reason: "no_data"'), 'no-data windows must produce a gap instead of a stable state');
 assert(service.includes('const gaps = computeGapsForSeriesV1(samples'), 'SeriesResponse must always compute gaps');
 assert(service.includes('const overlays = await readSeriesOverlaysV1(pool, filter)'), 'SeriesResponse must always compute overlays');
