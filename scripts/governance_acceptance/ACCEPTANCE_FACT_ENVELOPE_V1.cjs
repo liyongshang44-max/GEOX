@@ -24,6 +24,8 @@ const auth = read('apps/server/src/auth/ao_act_authz_v0.ts');
 const roles = read('apps/server/src/domain/auth/roles.ts');
 const contracts = read('packages/contracts/src/schema/fact_envelope_v1.ts');
 const contractsIndex = read('packages/contracts/src/index.ts');
+const seriesRouteStart = routes.indexOf('app.get("/api/v1/sensing/series"');
+const seriesRouteBody = seriesRouteStart >= 0 ? routes.slice(seriesRouteStart) : '';
 
 includesAll(migration, [
   'prevent_raw_samples_mutation_v1',
@@ -81,7 +83,8 @@ includesAll(routes, [
   'return reply.send({ ok: true, ...item, item })',
 ], 'routes');
 assert(!routes.includes('requireAoActAnyScopeV0(req, reply, ["telemetry.write", "telemetry.read"]'), 'read scope must not allow raw sample writes');
-assert(!routes.includes('reply.send({ ok: true, item })') || routes.includes('POST /api/v1/sensing/raw-samples') === false, 'series route must not hide samples/gaps/overlays only under item');
+assert(seriesRouteBody.includes('return reply.send({ ok: true, ...item, item })'), 'series route must expose samples/gaps/overlays at the top level');
+assert(!seriesRouteBody.includes('return reply.send({ ok: true, item })'), 'series route must not hide samples/gaps/overlays only under item');
 
 includesAll(register, [
   'registerSensingFactEnvelopeV1Routes',
