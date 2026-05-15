@@ -86,7 +86,7 @@ export function registerSensingFactEnvelopeV1Routes(app: FastifyInstance, pool: 
       const items = await readRawSamplesV1(pool, {
         ...tenant,
         sensor_id: toTrimmedString(q.sensor_id ?? q.sensorId),
-        group_id: toTrimmedString(q.group_id ?? q.groupId),
+        group_id: toTrimmedString(q.group_id ?? q.groupId) ?? tenant.group_id,
         field_id: toTrimmedString(q.field_id ?? q.fieldId),
         metrics: parseMetricList(q.metrics ?? q.metric),
         start_ts_ms,
@@ -112,15 +112,15 @@ export function registerSensingFactEnvelopeV1Routes(app: FastifyInstance, pool: 
     if (start_ts_ms == null || end_ts_ms == null || end_ts_ms < start_ts_ms) return badRequest(reply, "INVALID_TIME_RANGE");
 
     const sensor_id = toTrimmedString(q.sensor_id ?? q.sensorId);
-    const group_id = toTrimmedString(q.group_id ?? q.groupId);
+    const query_group_id = toTrimmedString(q.group_id ?? q.groupId);
     const field_id = toTrimmedString(q.field_id ?? q.fieldId);
-    if (!sensor_id && !group_id && !field_id) return badRequest(reply, "SCOPE_FILTER_REQUIRED");
+    if (!sensor_id && !query_group_id && !field_id) return badRequest(reply, "SCOPE_FILTER_REQUIRED");
 
     try {
       const item = await buildSeriesResponseV1(pool, {
         ...tenant,
         sensor_id,
-        group_id,
+        group_id: query_group_id ?? tenant.group_id,
         field_id,
         metrics: parseMetricList(q.metrics ?? q.metric),
         start_ts_ms,
