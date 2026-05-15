@@ -5,6 +5,14 @@ import {
   type Stage1OfficialSummarySoilMetric,
   type Stage1Freshness,
 } from "../domain/sensing/stage1_sensing_contract_v1.js";
+import {
+  buildAppleIIEvidenceSufficiencyV1,
+  type AppleIIConflictDetectionV1,
+  type AppleIIDeviceHealthSnapshotV1,
+  type AppleIIEvidenceSufficiencyV1,
+  type AppleIIEvidenceSufficiencyStatusV1,
+  type AppleIITimeCoverageV1,
+} from "../domain/sensing/appleii_evidence_sufficiency_v1.js";
 import { refreshFieldSensingOverviewV1 } from "./field_sensing_overview_v1.js";
 
 type DbConn = Pool | PoolClient;
@@ -38,6 +46,11 @@ export type FieldSensingSummaryStage1V1 = {
   irrigation_effectiveness: "low" | "medium" | "high" | "unknown" | null;
   leak_risk: "low" | "medium" | "high" | "unknown" | null;
   official_soil_metrics_json: Stage1SoilMetricSummaryItemV1[];
+  time_coverage_v1: AppleIITimeCoverageV1;
+  evidence_sufficiency_v1: AppleIIEvidenceSufficiencyV1;
+  device_health_snapshot_v1: AppleIIDeviceHealthSnapshotV1;
+  conflict_detection_v1: AppleIIConflictDetectionV1;
+  evidence_sufficiency: AppleIIEvidenceSufficiencyStatusV1;
   computed_at_ts_ms: number | null;
   updated_ts_ms: number;
 };
@@ -96,8 +109,6 @@ const STAGE1_CUSTOMER_SUMMARY_FIELD_NORMALIZERS = {
 
 const STAGE1_SUMMARY_SOIL_METRICS_ORDERED_SUBSET = STAGE1_OFFICIAL_SUMMARY_SOIL_METRIC_CONTRACT.ordered_metrics;
 
-// Explicit source->summary mapping for customer-facing soil summary metrics.
-// This mapping is summary-subset specific and intentionally decoupled from pipeline input whitelist semantics.
 const STAGE1_SUMMARY_SOIL_METRIC_SOURCE_TO_SUBSET_METRIC = {
   soil_moisture_pct: "soil_moisture_pct",
   soil_moisture: "soil_moisture_pct",
@@ -160,8 +171,6 @@ function deriveStage1SummaryConfidence(overviewConfidence: unknown, soilMetrics:
 }
 
 function pickStage1CustomerSummaryFields(source: Stage1SummarySourceOverviewLike): Stage1CustomerSummarySubsetV1 {
-  // Customer-facing stage-1 summary is whitelist-driven:
-  // any compatibility/internal key outside STAGE1_CUSTOMER_SUMMARY_FIELDS is excluded by default.
   return {
     canopy_temp_status: STAGE1_CUSTOMER_SUMMARY_FIELD_NORMALIZERS.canopy_temp_status(source.canopy_temp_status) as FieldSensingSummaryStage1V1["canopy_temp_status"],
     evapotranspiration_risk: STAGE1_CUSTOMER_SUMMARY_FIELD_NORMALIZERS.evapotranspiration_risk(source.evapotranspiration_risk) as FieldSensingSummaryStage1V1["evapotranspiration_risk"],
@@ -188,11 +197,21 @@ export async function ensureFieldSensingSummaryStage1ProjectionV1(db: DbConn): P
           irrigation_effectiveness text NULL,
           leak_risk text NULL,
           official_soil_metrics_json jsonb NOT NULL DEFAULT '[]'::jsonb,
+          time_coverage_v1 jsonb NOT NULL DEFAULT '{}'::jsonb,
+          evidence_sufficiency_v1 jsonb NOT NULL DEFAULT '{}'::jsonb,
+          device_health_snapshot_v1 jsonb NOT NULL DEFAULT '{}'::jsonb,
+          conflict_detection_v1 jsonb NOT NULL DEFAULT '{}'::jsonb,
+          evidence_sufficiency text NOT NULL DEFAULT 'NEEDS_EVIDENCE',
           computed_at_ts_ms bigint NULL,
           updated_ts_ms bigint NOT NULL,
           PRIMARY KEY (tenant_id, field_id)
         )`
       );
+      await db.query(`ALTER TABLE field_sensing_summary_stage1_v1 ADD COLUMN IF NOT EXISTS time_coverage_v1 jsonb NOT NULL DEFAULT '{}'::jsonb`);
+      await db.query(`ALTER TABLE field_sensing_summary_stage1_v1 ADD COLUMN IF NOT EXISTS evidence_sufficiency_v1 jsonb NOT NULL DEFAULT '{}'::jsonb`);
+      await db.query(`ALTER TABLE field_sensing_summary_stage1_v1 ADD COLUMN IF NOT EXISTS device_health_snapshot_v1 jsonb NOT NULL DEFAULT '{}'::jsonb`);
+      await db.query(`ALTER TABLE field_sensing_summary_stage1_v1 ADD COLUMN IF NOT EXISTS conflict_detection_v1 jsonb NOT NULL DEFAULT '{}'::jsonb`);
+      await db.query(`ALTER TABLE field_sensing_summary_stage1_v1 ADD COLUMN IF NOT EXISTS evidence_sufficiency text NOT NULL DEFAULT 'NEEDS_EVIDENCE'`);
       await db.query(`CREATE INDEX IF NOT EXISTS idx_field_sensing_summary_stage1_scope ON field_sensing_summary_stage1_v1 (tenant_id, project_id, group_id, field_id)`);
     })().catch((err) => {
       ensurePromise = null;
@@ -207,18 +226,23 @@ export async function refreshFieldSensingSummaryStage1V1(db: DbConn, params: {
   project_id?: string | null;
   group_id?: string | null;
   field_id: string;
+  device_id?: string | null;
   now_ms?: number;
 }): Promise<FieldSensingSummaryStage1V1> {
   await ensureFieldSensingSummaryStage1ProjectionV1(db);
 
-  // Overview is an internal aggregation source.
-  // Stage-1 summary contract remains authoritative and must be built by explicit summary-subset contract rules.
-  // STAGE1_OFFICIAL_SUMMARY_SOIL_METRIC_CONTRACT is customer-facing display contract only; it is not pipeline input contract.
-  // Overview changes must NOT silently expand stage-1 summary fields.
   const overview = await refreshFieldSensingOverviewV1(db, params);
   const nowMs = Number.isFinite(params.now_ms) ? Number(params.now_ms) : Date.now();
   const officialSoilMetrics = pickOfficialSoilMetrics(overview.soil_indicators_json);
   const summaryFields = pickStage1CustomerSummaryFields(overview);
+  const evidenceSufficiency = await buildAppleIIEvidenceSufficiencyV1(db, {
+    tenant_id: params.tenant_id,
+    project_id: params.project_id,
+    group_id: params.group_id,
+    field_id: params.field_id,
+    device_id: params.device_id ?? null,
+    now_ms: nowMs,
+  });
 
   const payload: FieldSensingSummaryStage1V1 = {
     tenant_id: overview.tenant_id,
@@ -229,14 +253,19 @@ export async function refreshFieldSensingSummaryStage1V1(db: DbConn, params: {
     confidence: deriveStage1SummaryConfidence(overview.confidence, officialSoilMetrics),
     ...summaryFields,
     official_soil_metrics_json: officialSoilMetrics,
+    time_coverage_v1: evidenceSufficiency.time_coverage_v1,
+    evidence_sufficiency_v1: evidenceSufficiency,
+    device_health_snapshot_v1: evidenceSufficiency.device_health_snapshot_v1,
+    conflict_detection_v1: evidenceSufficiency.conflict_detection_v1,
+    evidence_sufficiency: evidenceSufficiency.evidence_sufficiency,
     computed_at_ts_ms: toFiniteNumber(overview.computed_at_ts_ms),
     updated_ts_ms: nowMs,
   };
 
   await db.query(
     `INSERT INTO field_sensing_summary_stage1_v1
-      (tenant_id, project_id, group_id, field_id, freshness, confidence, canopy_temp_status, evapotranspiration_risk, sensor_quality_level, irrigation_effectiveness, leak_risk, official_soil_metrics_json, computed_at_ts_ms, updated_ts_ms)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,$14)
+      (tenant_id, project_id, group_id, field_id, freshness, confidence, canopy_temp_status, evapotranspiration_risk, sensor_quality_level, irrigation_effectiveness, leak_risk, official_soil_metrics_json, time_coverage_v1, evidence_sufficiency_v1, device_health_snapshot_v1, conflict_detection_v1, evidence_sufficiency, computed_at_ts_ms, updated_ts_ms)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13::jsonb,$14::jsonb,$15::jsonb,$16::jsonb,$17,$18,$19)
      ON CONFLICT (tenant_id, field_id)
      DO UPDATE SET
       project_id = EXCLUDED.project_id,
@@ -249,6 +278,11 @@ export async function refreshFieldSensingSummaryStage1V1(db: DbConn, params: {
       irrigation_effectiveness = EXCLUDED.irrigation_effectiveness,
       leak_risk = EXCLUDED.leak_risk,
       official_soil_metrics_json = EXCLUDED.official_soil_metrics_json,
+      time_coverage_v1 = EXCLUDED.time_coverage_v1,
+      evidence_sufficiency_v1 = EXCLUDED.evidence_sufficiency_v1,
+      device_health_snapshot_v1 = EXCLUDED.device_health_snapshot_v1,
+      conflict_detection_v1 = EXCLUDED.conflict_detection_v1,
+      evidence_sufficiency = EXCLUDED.evidence_sufficiency,
       computed_at_ts_ms = EXCLUDED.computed_at_ts_ms,
       updated_ts_ms = EXCLUDED.updated_ts_ms`,
     [
@@ -264,6 +298,11 @@ export async function refreshFieldSensingSummaryStage1V1(db: DbConn, params: {
       payload.irrigation_effectiveness,
       payload.leak_risk,
       JSON.stringify(payload.official_soil_metrics_json),
+      JSON.stringify(payload.time_coverage_v1),
+      JSON.stringify(payload.evidence_sufficiency_v1),
+      JSON.stringify(payload.device_health_snapshot_v1),
+      JSON.stringify(payload.conflict_detection_v1),
+      payload.evidence_sufficiency,
       payload.computed_at_ts_ms,
       payload.updated_ts_ms,
     ]
