@@ -125,6 +125,7 @@ function collectStage1EvidenceGateReasonCodes(summaryPayload: unknown): string[]
   if (freshness !== "fresh") addReason(reasons, "FRESHNESS_NOT_FRESH");
 
   const deviceHealthStatus = String(device.device_health_status ?? "").trim().toUpperCase();
+  if (deviceHealthStatus === "UNKNOWN") addReason(reasons, "DEVICE_HEALTH_UNKNOWN");
   if (deviceHealthStatus === "BAD") addReason(reasons, "DEVICE_HEALTH_BAD");
   if (deviceHealthStatus === "OFFLINE") addReason(reasons, "DEVICE_HEALTH_OFFLINE");
 
