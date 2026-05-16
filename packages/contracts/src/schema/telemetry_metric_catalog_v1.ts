@@ -9,7 +9,10 @@ export type TelemetryMetricNameV1 =
   | "canopy_temperature"
   | "soil_salinity_index"
   | "water_flow_rate"
-  | "water_pressure";
+  | "water_pressure"
+  | "inlet_flow_lpm"
+  | "outlet_flow_lpm"
+  | "pressure_drop_kpa";
 
 export type TelemetryMetricSpecV1 = {
   /** Canonical metric unit used across ingest, storage and downstream fusion. */
@@ -101,6 +104,27 @@ export const TELEMETRY_METRIC_CATALOG_V1: Record<TelemetryMetricNameV1, Telemetr
     max: 1600,
     description: "Water pressure in kilopascal",
   },
+  inlet_flow_lpm: {
+    unit: "L/min",
+    aliases: ["l/min", "lpm", "LPM", "inflow_lpm", "flow_in_lpm"],
+    min: 0,
+    max: 10000,
+    description: "Inlet water flow in liters per minute",
+  },
+  outlet_flow_lpm: {
+    unit: "L/min",
+    aliases: ["l/min", "lpm", "LPM", "outflow_lpm", "flow_out_lpm"],
+    min: 0,
+    max: 10000,
+    description: "Outlet water flow in liters per minute",
+  },
+  pressure_drop_kpa: {
+    unit: "kPa",
+    aliases: ["kpa", "KPA", "delta_pressure_kpa", "pressure_loss_kpa"],
+    min: 0,
+    max: 1600,
+    description: "Pressure drop in irrigation line (kPa)",
+  },
 };
 
 // Backward compatibility map: ingest accepts legacy metric keys, storage should persist canonical keys.
@@ -120,6 +144,17 @@ export const TELEMETRY_METRIC_COMPAT_ALIASES_V1: Readonly<Record<string, Telemet
   pressure: "water_pressure",
   pressure_kpa: "water_pressure",
   water_pressure_kpa: "water_pressure",
+  inlet_flow_lpm: "inlet_flow_lpm",
+  inflow_lpm: "inlet_flow_lpm",
+  flow_in_lpm: "inlet_flow_lpm",
+  inlet_lpm: "inlet_flow_lpm",
+  outlet_flow_lpm: "outlet_flow_lpm",
+  outflow_lpm: "outlet_flow_lpm",
+  flow_out_lpm: "outlet_flow_lpm",
+  outlet_lpm: "outlet_flow_lpm",
+  pressure_drop_kpa: "pressure_drop_kpa",
+  delta_pressure_kpa: "pressure_drop_kpa",
+  pressure_loss_kpa: "pressure_drop_kpa",
 });
 
 export function toCanonicalTelemetryMetricNameV1(metric: string): string {
