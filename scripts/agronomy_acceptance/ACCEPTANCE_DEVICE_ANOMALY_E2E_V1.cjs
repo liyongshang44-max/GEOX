@@ -264,8 +264,19 @@ async function main() {
     await removeDeviceStatus(pool, pre);
     const preRec = await generateRecommendation({ ...ctx, f: pre });
     const preReasons = Array.isArray(preRec.json?.reason_codes) ? preRec.json.reason_codes : [];
+    const preError = String(preRec.json?.error ?? '');
+    const preBlockingReasons = Array.isArray(preRec.json?.blocking_reasons)
+      ? preRec.json.blocking_reasons.map(String)
+      : [];
     const preRecommendationBlocked = preRec.status === 400;
-    const deviceHealthReasonPresent = preReasons.includes('DEVICE_STATUS_MISSING') || preReasons.includes('DEVICE_HEALTH_UNKNOWN') || String(preRec.json?.error ?? '').includes('FORMAL_STAGE1_TRIGGER');
+    const deviceHealthReasonPresent =
+      preReasons.includes('DEVICE_STATUS_MISSING') ||
+      preReasons.includes('DEVICE_HEALTH_UNKNOWN') ||
+      preBlockingReasons.some((x) =>
+        x.includes('DEVICE_STATUS_MISSING') || x.includes('DEVICE_HEALTH_UNKNOWN')
+      ) ||
+      preError.includes('DEVICE_STATUS_MISSING') ||
+      preError.includes('DEVICE_HEALTH_UNKNOWN');
     const prePrescriptionCount = await countFacts(pool, pre, 'prescription_v1', `AND (record_json::jsonb#>>'{payload,field_id}')=$5`, [pre.field_id]);
     const preTaskCount = await countFacts(pool, pre, 'ao_act_task_v0', `AND (record_json::jsonb#>>'{payload,field_id}')=$5`, [pre.field_id]);
 
