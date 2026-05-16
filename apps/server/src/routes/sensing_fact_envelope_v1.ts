@@ -74,6 +74,96 @@ function qualityFlagsFromRawSampleV1(item: RawSampleEnvelopeV1): string[] {
   return ["OK"];
 }
 
+function asPayloadRecord(input: any): Record<string, any> {
+  return input && typeof input === "object" && !Array.isArray(input) ? input : {};
+}
+
+function normalizeRawMetricToCapabilityV1(metric: unknown): string | null {
+  const normalized = String(metric ?? "").trim().toLowerCase().replace(/\s+/g, "_");
+  if (!normalized) return null;
+  if (["soil_moisture", "soil_moisture_pct", "moisture_pct"].includes(normalized)) return "telemetry.soil_moisture";
+  if (["pressure", "pressure_kpa", "water_pressure", "water_pressure_kpa"].includes(normalized)) return "telemetry.water_pressure";
+  if (["flow_rate", "water_flow", "water_flow_rate"].includes(normalized)) return "telemetry.water_flow_rate";
+  if (["soil_ec", "soil_ec_ds_m", "ec_ds_m"].includes(normalized)) return "telemetry.soil_ec";
+  if (["air_temperature", "air_temp", "air_temp_c"].includes(normalized)) return "telemetry.air_temperature";
+  if (["air_humidity", "humidity", "humidity_pct"].includes(normalized)) return "telemetry.air_humidity";
+  return `telemetry.${normalized}`;
+}
+
+function normalizeCapabilityListV1(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw.map((x) => String(x ?? "").trim()).filter(Boolean);
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed.map((x) => String(x ?? "").trim()).filter(Boolean) : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+async function requireFormalSampleGuardsV1(pool: Pool, body: any, tenant: RawSampleFactEnvelopeTenantV1): Promise<void> {
+  const payload = asPayloadRecord(body?.payload);
+  const source = body?.source ?? payload.source;
+  if (!isFormalRawSampleSourceV1(source)) return;
+
+  const deviceId = String(body?.sensor_id ?? body?.sensorId ?? payload.sensor_id ?? payload.device_id ?? "").trim();
+  const fieldId = String(body?.field_id ?? body?.fieldId ?? payload.field_id ?? "").trim();
+  const credentialId = String(body?.credential_id ?? payload.credential_id ?? "").trim();
+  const metric = String(body?.metric ?? payload.metric ?? "").trim();
+
+  if (!deviceId) return;
+
+  if (credentialId) {
+    const credential = await pool.query(
+      `SELECT 1
+         FROM device_credential_index_v1
+        WHERE tenant_id = $1
+          AND device_id = $2
+          AND credential_id = $3
+          AND status = 'ACTIVE'
+          AND revoked_ts_ms IS NULL
+        LIMIT 1`,
+      [tenant.tenant_id, deviceId, credentialId],
+    ).catch(() => ({ rows: [] as any[] }));
+    if (!credential.rows?.length) {
+      throw new RawSampleFactEnvelopeErrorV1("FORMAL_DEVICE_CREDENTIAL_INVALID", 400);
+    }
+  }
+
+  if (fieldId) {
+    const binding = await pool.query(
+      `SELECT 1
+         FROM device_binding_index_v1
+        WHERE tenant_id = $1
+          AND device_id = $2
+          AND field_id = $3
+        LIMIT 1`,
+      [tenant.tenant_id, deviceId, fieldId],
+    ).catch(() => ({ rows: [] as any[] }));
+    if (!binding.rows?.length) {
+      throw new RawSampleFactEnvelopeErrorV1("FORMAL_DEVICE_FIELD_BINDING_MISMATCH", 400);
+    }
+  }
+
+  const requiredCapability = normalizeRawMetricToCapabilityV1(metric);
+  if (requiredCapability) {
+    const capabilities = await pool.query(
+      `SELECT capabilities
+         FROM device_capability
+        WHERE tenant_id = $1
+          AND device_id = $2
+        LIMIT 1`,
+      [tenant.tenant_id, deviceId],
+    ).catch(() => ({ rows: [] as any[] }));
+    const capabilityList = normalizeCapabilityListV1(capabilities.rows?.[0]?.capabilities);
+    if (capabilityList.length > 0 && !capabilityList.includes(requiredCapability)) {
+      throw new RawSampleFactEnvelopeErrorV1("FORMAL_DEVICE_UNSUPPORTED_METRIC", 400);
+    }
+  }
+}
+
 async function maybeRunOfficialObservationPipelineV1(pool: Pool, item: RawSampleEnvelopeV1) {
   if (!isFormalRawSampleSourceV1(item.source)) return null;
   if (!item.field_id || !item.sensor_id || !item.metric) return null;
@@ -112,6 +202,7 @@ export function registerSensingFactEnvelopeV1Routes(app: FastifyInstance, pool: 
     const tenant = tenantFromAuth(auth, body);
     if (!enforceTenantMatch(auth, tenant, reply)) return;
     try {
+      await requireFormalSampleGuardsV1(pool, body, tenant);
       const item = await appendRawSampleV1(pool, body, tenant);
       const observation_pipeline = await maybeRunOfficialObservationPipelineV1(pool, item);
       return reply.send({ ok: true, item, observation_pipeline });
