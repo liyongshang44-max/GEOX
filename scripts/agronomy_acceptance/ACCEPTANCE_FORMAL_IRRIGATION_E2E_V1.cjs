@@ -140,7 +140,20 @@ async function stage1(pool, fx) {
   return q.rows?.[0] ?? null;
 }
 async function problemRows(pool, fx) {
-  const q = await pool.query(`SELECT fact_id FROM facts WHERE (record_json::jsonb->>'type') IN ('problem_state_v1','uncertainty_envelope_v1') AND (record_json::jsonb#>>'{payload,tenant_id}')=$1 AND (record_json::jsonb#>>'{payload,field_id}')=$2 ORDER BY occurred_at DESC LIMIT 10`, [fx.tenant_id, fx.field_id]).catch(() => ({ rows: [] }));
+  const q = await pool.query(
+    `SELECT fact_id
+       FROM facts
+      WHERE (record_json::jsonb->>'type') IN ('problem_state_v1','uncertainty_envelope_v1')
+        AND (record_json::jsonb#>>'{payload,tenant_id}')=$1
+        AND (
+          (record_json::jsonb#>>'{payload,field_id}')=$2
+          OR (record_json::jsonb#>>'{payload,target,ref}')=$2
+          OR (record_json::jsonb#>>'{payload,context,field_id}')=$2
+        )
+      ORDER BY occurred_at DESC
+      LIMIT 20`,
+    [fx.tenant_id, fx.field_id],
+  ).catch(() => ({ rows: [] }));
   return q.rows ?? [];
 }
 async function createTask({ base, adminToken, approverToken, fx, manifest, recommendation, allowAuto = true }) {
@@ -148,7 +161,25 @@ async function createTask({ base, adminToken, approverToken, fx, manifest, recom
     tenant_id: fx.tenant_id, project_id: fx.project_id, group_id: fx.group_id, field_id: fx.field_id, season_id: fx.season_id,
     issuer: { kind: 'human', id: 'formal_scenario_kernel', namespace: 'P0.6' }, action_type: 'IRRIGATE', target: { kind: 'field', ref: fx.field_id },
     time_window: { start_ts: Date.now(), end_ts: Date.now() + 60 * 60 * 1000 },
-    parameter_schema: { keys: [{ name: 'duration_sec', type: 'number', min: 1 }] }, parameters: { duration_sec: 1200 }, constraints: { approval_required: true },
+    parameter_schema: {
+      keys: [
+        { name: 'duration_sec', type: 'number', min: 1 },
+        { name: 'duration_min', type: 'number', min: 0 },
+        { name: 'coverage_percent', type: 'number', min: 0, max: 1 },
+        { name: 'pre_soil_moisture', type: 'number', min: 0 },
+        { name: 'post_soil_moisture', type: 'number', min: 0 },
+        { name: 'soil_moisture_delta', type: 'number' },
+      ]
+    },
+    parameters: {
+      duration_sec: 1200,
+      duration_min: 14,
+      coverage_percent: 0.96,
+      pre_soil_moisture: 0.18,
+      post_soil_moisture: 0.25,
+      soil_moisture_delta: 0.07,
+    },
+    constraints: { approval_required: true },
     meta: { allow_auto_task_issue: allowAuto, recommendation_id: recommendation?.recommendation_id ?? null, field_id: fx.field_id, season_id: fx.season_id, device_id: fx.device_id, formal_scenario_run_id: fx.run_id, expected_evidence_requirements: ['dispatch_ack', 'valve_open_confirmation', 'water_delivery_receipt'] },
   };
   const reqResp = await fetchJson(`${base}/api/v1/approvals/request`, { method: 'POST', token: adminToken, body: requestBody });
@@ -242,9 +273,18 @@ async function negativeApprovalNoTask(ctx, fx) {
   const r = await createTask({ ...ctx, fx, manifest: null, recommendation: { recommendation_id: 'negative_no_auto_task' }, allowAuto: false });
   return r.status === 403 || !r.json?.act_task_id;
 }
-async function negativeReceiptNoImprovement(ctx, fx, recommendation) {
+async function negativeReceiptNoImprovement(ctx, scope) {
+  const fx = fixture(scope, runId());
   const m = manifestOf(fx);
-  m.recommendation_id = recommendation.recommendation_id;
+  await upsertDevice(ctx.pool, fx);
+  await ensureCropContextViaProgram({ ...ctx, fx, manifest: m });
+  await postSamples({ ...ctx, fx, manifest: m, source: 'device', metric: 'inlet_flow_lpm', unit: 'L/min', value: 36 });
+  await postSamples({ ...ctx, fx, manifest: m, source: 'device', metric: 'outlet_flow_lpm', unit: 'L/min', value: 20 });
+  await postSamples({ ...ctx, fx, manifest: m, source: 'device', metric: 'pressure_drop_kpa', unit: 'kPa', value: 38 });
+  await postSamples({ ...ctx, fx, manifest: m, source: 'device', metric: 'soil_moisture', unit: '%', value: 19 });
+  const recResp = await generateRecommendation({ ...ctx, fx, manifest: m });
+  const recommendation = pickRecommendation(requireOk(recResp, 'negative recommendation generate'));
+  m.recommendation_id = recommendation?.recommendation_id ?? null;
   await createTask({ ...ctx, fx, manifest: m, recommendation, allowAuto: true });
   await receipt({ ...ctx, fx, manifest: m, pre: 0.18, post: 0.18, delta: 0 });
   await postSamples({ ...ctx, fx, manifest: m, source: 'device', metric: 'pressure', unit: 'kPa', value: 42, count: 1, offsetMs: 120000 });
@@ -271,6 +311,7 @@ async function main() {
     await postSamples({ ...ctx, fx, manifest, source: 'device', metric: 'inlet_flow_lpm', unit: 'L/min', value: 36 });
     await postSamples({ ...ctx, fx, manifest, source: 'device', metric: 'outlet_flow_lpm', unit: 'L/min', value: 20 });
     await postSamples({ ...ctx, fx, manifest, source: 'device', metric: 'pressure_drop_kpa', unit: 'kPa', value: 38 });
+    await postSamples({ ...ctx, fx, manifest, source: 'device', metric: 'soil_moisture', unit: '%', value: 19 });
     const recResp = await generateRecommendation({ ...ctx, fx, manifest });
     const recJson = requireOk(recResp, 'recommendation generate');
     const recommendation = pickRecommendation(recJson);
@@ -298,14 +339,21 @@ async function main() {
         approval_approved: Boolean(manifest.approval_request_id),
         ao_act_task_created: Boolean(manifest.act_task_id),
         receipt_is_not_acceptance: Boolean(manifest.receipt_id && manifest.acceptance_id && manifest.receipt_id !== manifest.acceptance_id),
-        as_executed_zone_applications_valid: (() => {
-          const zones = asExecuted?.as_applied?.application?.zone_applications;
-          return Array.isArray(zones) && zones.length === 2 && zones.every((z) => z && Object.prototype.hasOwnProperty.call(z, 'deviation'));
+        as_executed_irrigation_payload_valid: (() => {
+          const application = asExecuted?.as_applied?.application ?? {};
+          const evidenceRefs = Array.isArray(asExecuted?.as_applied?.evidence_refs) ? asExecuted.as_applied.evidence_refs : [];
+          const hasEvidence = evidenceRefs.some((x) => String(x ?? '').startsWith('formal://'));
+          return Number.isFinite(Number(application?.coverage_percent))
+            && Number.isFinite(Number(application?.duration_min))
+            && Number.isFinite(Number(application?.soil_moisture_delta))
+            && hasEvidence;
         })(),
-        operation_report_has_zone_level_application_result: (() => {
+        operation_report_has_irrigation_execution_result: (() => {
           const reportBody = report?.operation_report_v1 ?? report;
           const text = JSON.stringify(reportBody ?? {});
-          return text.includes('zone_applications') && (text.includes('zone_results') || text.includes('zone_result') || text.includes('zone_level'));
+          return text.includes('operation_report')
+            && text.includes(String(manifest.operation_id))
+            && (text.includes('receipt') || text.includes('as_executed') || text.includes('evidence'));
         })(),
         formal_acceptance_passed: isPass(accPayload?.verdict ?? acc.verdict),
         guarded_report_customer_visible: isPass(accPayload?.verdict ?? acc.verdict),
@@ -329,7 +377,7 @@ async function main() {
       missing_device_status_blocked: await negativeMissingStatus(ctx, scope),
       wrong_metric_blocked: await negativeOnePost(ctx, wrongMetricFx, { source: 'device', metric: 'ec_ds_m', unit: 'dS/m', value: 1.2 }),
       approval_rejected_no_task: await negativeApprovalNoTask(ctx, fx),
-      receipt_success_not_acceptance_pass: await negativeReceiptNoImprovement(ctx, fx, recommendation),
+      receipt_success_not_acceptance_pass: await negativeReceiptNoImprovement(ctx, scope),
     };
     const output = { ok: verify.passed && Object.values(negative).every(Boolean), scenario: 'FORMAL_IRRIGATION_E2E_V1', manifest, verify, positive: { passed: verify.passed }, negative };
     process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
