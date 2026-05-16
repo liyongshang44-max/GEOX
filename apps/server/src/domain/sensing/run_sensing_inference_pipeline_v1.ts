@@ -83,6 +83,22 @@ function pickLatestFinite(observations: Observation[], keys: string[]): number |
   return null;
 }
 
+function pickLatestFiniteMetricValue(observations: Observation[], aliases: string[]): number | null {
+  const aliasSet = new Set(aliases.map((x) => String(x).trim()).filter(Boolean));
+  for (let i = observations.length - 1; i >= 0; i -= 1) {
+    const observation = observations[i];
+    for (const alias of aliases) {
+      const direct = toFiniteNumber(observation[alias]);
+      if (direct != null) return direct;
+    }
+    const metric = String(observation.metric ?? "").trim();
+    if (!metric || !aliasSet.has(metric)) continue;
+    const rowValue = toFiniteNumber(observation.value_num ?? observation.value ?? observation.metric_value);
+    if (rowValue != null) return rowValue;
+  }
+  return null;
+}
+
 function filterObservationsByDevices(observations: Observation[], deviceIds: string[]): Observation[] {
   if (!deviceIds.length) return observations;
   const allow = new Set(deviceIds);
@@ -457,9 +473,9 @@ export async function runSensingInferencePipelineV1(input: RunSensingInferencePi
 
   try {
     const aggregate = {
-      inlet_flow_lpm: pickLatestFinite(scopedObservations, ["inlet_flow_lpm", "inflow_lpm", "flow_in_lpm"]),
-      outlet_flow_lpm: pickLatestFinite(scopedObservations, ["outlet_flow_lpm", "outflow_lpm", "flow_out_lpm"]),
-      pressure_drop_kpa: pickLatestFinite(scopedObservations, ["pressure_drop_kpa", "delta_pressure_kpa", "pressure_loss_kpa"]),
+      inlet_flow_lpm: pickLatestFiniteMetricValue(scopedObservations, ["inlet_flow_lpm", "inflow_lpm", "flow_in_lpm"]),
+      outlet_flow_lpm: pickLatestFiniteMetricValue(scopedObservations, ["outlet_flow_lpm", "outflow_lpm", "flow_out_lpm"]),
+      pressure_drop_kpa: pickLatestFiniteMetricValue(scopedObservations, ["pressure_drop_kpa", "delta_pressure_kpa", "pressure_loss_kpa"]),
       observation_count: scopedObservations.length,
       source_ids: input.source_device_ids,
     };
