@@ -72,23 +72,48 @@ async function ensureDevice(pool, scope, field_id, device_id) {
   await pool.query(`ALTER TABLE device_status_index_v1 ADD COLUMN IF NOT EXISTS field_id TEXT NULL`).catch(() => undefined);
   const ts = Date.now();
   await pool.query(`INSERT INTO device_index_v1(tenant_id,device_id,display_name,device_mode,created_ts_ms) VALUES($1,$2,$3,'physical',$4) ON CONFLICT(tenant_id,device_id) DO UPDATE SET display_name=EXCLUDED.display_name,device_mode='physical'`, [scope.tenant_id, device_id, `Formal variable ${device_id}`, ts]);
-  await pool.query(`INSERT INTO device_capability VALUES($1,$2,$3::jsonb,$4) ON CONFLICT(tenant_id,device_id) DO UPDATE SET capabilities=EXCLUDED.capabilities,updated_ts_ms=EXCLUDED.updated_ts_ms`, [scope.tenant_id, device_id, JSON.stringify(['telemetry.water_pressure', 'device.irrigation.valve.open']), ts]);
+  await pool.query(`INSERT INTO device_capability VALUES($1,$2,$3::jsonb,$4) ON CONFLICT(tenant_id,device_id) DO UPDATE SET capabilities=EXCLUDED.capabilities,updated_ts_ms=EXCLUDED.updated_ts_ms`, [scope.tenant_id, device_id, JSON.stringify([
+    'telemetry.soil_moisture',
+    'telemetry.inlet_flow_lpm',
+    'telemetry.outlet_flow_lpm',
+    'telemetry.pressure_drop_kpa',
+    'telemetry.water_pressure',
+    'device.irrigation.valve.open',
+  ]), ts]);
   await pool.query(`INSERT INTO device_binding_index_v1 VALUES($1,$2,$3,$4) ON CONFLICT(tenant_id,device_id,field_id) DO UPDATE SET bound_ts_ms=EXCLUDED.bound_ts_ms`, [scope.tenant_id, device_id, field_id, ts]);
   await pool.query(`INSERT INTO device_status_index_v1(tenant_id,project_id,group_id,field_id,device_id,status,last_telemetry_ts_ms,last_heartbeat_ts_ms,battery_percent,rssi_dbm,fw_ver,updated_ts_ms) VALUES($1,$2,$3,$4,$5,'ONLINE',$6,$6,82,-55,'formal-variable-e2e',$6) ON CONFLICT(tenant_id,device_id) DO UPDATE SET project_id=EXCLUDED.project_id,group_id=EXCLUDED.group_id,field_id=EXCLUDED.field_id,status='ONLINE',last_telemetry_ts_ms=EXCLUDED.last_telemetry_ts_ms,last_heartbeat_ts_ms=EXCLUDED.last_heartbeat_ts_ms,updated_ts_ms=EXCLUDED.updated_ts_ms`, [scope.tenant_id, scope.project_id, scope.group_id, field_id, device_id, ts - 30000]);
 }
-async function postZoneSamples(base, token, scope, field_id, device_id, zone_id, phase) {
-  const start = Date.now() - 5 * 30 * 60 * 1000;
+async function postZoneSamples(base, token, scope, field_id, device_id, zone_id, phase, formal_scenario_run_id, sampleWindow) {
+  const start = Number(sampleWindow?.startTs ?? Date.now() - 60_000 - 18 * 20 * 60 * 1000);
+  const intervalMs = Number(sampleWindow?.intervalMs ?? 20 * 60 * 1000);
+  const pointCount = Number(sampleWindow?.pointCount ?? 19);
   const refs = [];
-  for (let i = 0; i < 6; i += 1) {
-    const body = {
-      tenant_id: scope.tenant_id, project_id: scope.project_id, group_id: scope.group_id,
-      sample_id: sampleId(`${phase}_${zone_id}_${i}`), sensor_id: device_id, field_id,
-      ts_ms: start + i * 30 * 60 * 1000, metric: 'pressure', value: phase === 'pre' ? 42 + i * 0.01 : 28 + i * 0.01,
-      unit: 'kPa', qc_quality: 'ok', source: 'device',
-      payload: { ...scope, field_id, device_id, zone_id, phase, formal_scenario: 'FORMAL_VARIABLE_OPERATION_E2E_V1' },
-    };
-    requireOk(await fetchJson(`${base}/api/v1/sensing/raw-samples`, { method: 'POST', token, body }), `zone sample ${zone_id}/${phase}/${i}`);
-    refs.push(body.sample_id);
+  for (let i = 0; i < pointCount; i += 1) {
+    const ts_ms = start + i * intervalMs;
+    const metrics = phase === 'pre'
+      ? [
+        { metric: 'soil_moisture', value: 0.185 + i * 0.0003, unit: 'm3/m3' },
+        { metric: 'inlet_flow_lpm', value: 36.1 + i * 0.01, unit: 'L/min' },
+        { metric: 'outlet_flow_lpm', value: 20.1 + i * 0.01, unit: 'L/min' },
+        { metric: 'pressure_drop_kpa', value: 38.1 + i * 0.01, unit: 'kPa' },
+      ]
+      : [
+        { metric: 'soil_moisture', value: 0.265 + i * 0.0004, unit: 'm3/m3' },
+        { metric: 'inlet_flow_lpm', value: 32.8 + i * 0.01, unit: 'L/min' },
+        { metric: 'outlet_flow_lpm', value: 24.8 + i * 0.01, unit: 'L/min' },
+        { metric: 'pressure_drop_kpa', value: 14.8 + i * 0.01, unit: 'kPa' },
+      ];
+    for (const m of metrics) {
+      const body = {
+        tenant_id: scope.tenant_id, project_id: scope.project_id, group_id: scope.group_id,
+        sample_id: sampleId(`${phase}_${zone_id}_${m.metric}_${i}`), sensor_id: device_id, field_id,
+        ts_ms, metric: m.metric, value: m.value, unit: m.unit, qc_quality: 'ok', source: i % 2 === 0 ? 'device' : 'gateway',
+        interpolated: false, synthetic: false,
+        payload: { ...scope, field_id, device_id, zone_id, phase, formal_scenario_run_id, formal_scenario: 'FORMAL_VARIABLE_OPERATION_E2E_V1' },
+      };
+      requireOk(await fetchJson(`${base}/api/v1/sensing/raw-samples`, { method: 'POST', token, body }), `zone sample ${zone_id}/${phase}/${m.metric}/${i}`);
+      refs.push(body.sample_id);
+    }
   }
   return refs[0];
 }
@@ -186,8 +211,14 @@ async function fetchOperationReport(base, token, scope, operation_plan_id) {
     const zones = [{ zone_id: 'zone_a', zone_name: 'North required zone' }, { zone_id: 'zone_b', zone_name: 'South required zone' }];
     await ensureDevice(pool, scope, field_id, device_id);
     await createZones(base, adminToken, scope, field_id, zones);
-    const preA = await postZoneSamples(base, adminToken, scope, field_id, device_id, 'zone_a', 'pre');
-    const preB = await postZoneSamples(base, adminToken, scope, field_id, device_id, 'zone_b', 'pre');
+    const endTs = Date.now() - 60_000;
+    const intervalMs = 20 * 60 * 1000;
+    const pointCount = 19;
+    const startTs = endTs - (pointCount - 1) * intervalMs;
+    const sampleWindow = { startTs, intervalMs, pointCount, endTs };
+
+    const preA = await postZoneSamples(base, adminToken, scope, field_id, device_id, 'zone_a', 'pre', run, sampleWindow);
+    const preB = await postZoneSamples(base, adminToken, scope, field_id, device_id, 'zone_b', 'pre', run, sampleWindow);
     const summary = await stage1Summary(pool, scope, field_id);
     const recJson = requireOk(await fetchJson(`${base}/api/v1/recommendations/generate`, { method: 'POST', token: adminToken, body: { ...scope, field_id, season_id, device_id, crop_code: 'corn' } }), 'recommendation');
     const recommendation = recJson.recommendations?.[0] ?? {};
@@ -204,8 +235,8 @@ async function fetchOperationReport(base, token, scope, operation_plan_id) {
     const act_task_id = String(task.act_task_id ?? '').trim();
     const tp = await taskPayload(pool, scope, operation_plan_id);
     const task_not_auto_acked = String(tp?.meta?.ack_status ?? '') === 'ACK_REQUIRED' && String(tp?.meta?.task_lifecycle_status ?? '') === 'READY_TO_DISPATCH';
-    const postA = await postZoneSamples(base, adminToken, scope, field_id, device_id, 'zone_a', 'post');
-    const postB = await postZoneSamples(base, adminToken, scope, field_id, device_id, 'zone_b', 'post');
+    const postA = await postZoneSamples(base, adminToken, scope, field_id, device_id, 'zone_a', 'post', run, sampleWindow);
+    const postB = await postZoneSamples(base, adminToken, scope, field_id, device_id, 'zone_b', 'post', run, sampleWindow);
     const positiveApps = [
       { zone_id: 'zone_a', planned_amount: 25, applied_amount: 24, planned_rate: 25, actual_rate: 24, unit: 'mm', coverage_percent: 0.95, status: 'APPLIED', pre_sensing_ref: preA, post_sensing_ref: postA },
       { zone_id: 'zone_b', planned_amount: 15, applied_amount: 15, planned_rate: 15, actual_rate: 15, unit: 'mm', coverage_percent: 0.96, status: 'APPLIED', pre_sensing_ref: preB, post_sensing_ref: postB },
@@ -250,7 +281,16 @@ async function fetchOperationReport(base, token, scope, operation_plan_id) {
       report_includes_zone_level_result: Array.isArray(reportZoneApps) && reportZoneApps.length === 2,
     };
     const ok = Object.values(checks).every(Boolean) && Object.values(negative).every(Boolean);
-    const output = { ok, scenario: 'FORMAL_VARIABLE_OPERATION_E2E_V1', zone_matrix, checks, negative };
+    const evidenceSnapshot = {
+      evidence_sufficiency: summary?.evidence_sufficiency ?? null,
+      formal_coverage_ratio: Number(summary?.formal_coverage_ratio ?? summary?.coverage_ratio ?? 0),
+      trigger_metric_evidence: summary?.trigger_metric_evidence ?? null,
+      max_gap_ms: summary?.max_gap_ms ?? null,
+      expected_sample_interval_ms: summary?.expected_sample_interval_ms ?? null,
+      supporting_metrics: summary?.supporting_metrics ?? null,
+      sample_window: sampleWindow,
+    };
+    const output = { ok, scenario: 'FORMAL_VARIABLE_OPERATION_E2E_V1', zone_matrix, checks, negative, evidence_snapshot: evidenceSnapshot };
     process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
     if (!ok) process.exitCode = 1;
   } finally { await pool.end(); }
