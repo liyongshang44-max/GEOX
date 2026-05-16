@@ -167,6 +167,25 @@ async function acceptance({ base, operatorToken, fx, manifest }) {
   manifest.acceptance_id = json.fact_id;
   return json;
 }
+async function asExecutedFromReceipt({ base, token, fx, manifest }) {
+  const body = {
+    tenant_id: fx.tenant_id,
+    project_id: fx.project_id,
+    group_id: fx.group_id,
+    task_id: manifest.act_task_id,
+    receipt_id: manifest.receipt_id,
+  };
+  const resp = await fetchJson(`${base}/api/v1/as-executed/from-receipt`, { method: 'POST', token, body });
+  snap(manifest, { method: 'POST', path: '/api/v1/as-executed/from-receipt', ok: resp.ok && resp.json?.ok === true, status_code: resp.status, label: 'as executed from receipt', request: body, response: resp.json ?? resp.text });
+  return requireOk(resp, 'as executed from receipt');
+}
+async function operationReport({ base, token, fx, manifest }) {
+  const path = `/api/v1/reports/operation/${encodeURIComponent(manifest.operation_id)}?tenant_id=${encodeURIComponent(fx.tenant_id)}&project_id=${encodeURIComponent(fx.project_id)}&group_id=${encodeURIComponent(fx.group_id)}`;
+  const resp = await fetchJson(`${base}${path}`, { method: 'GET', token });
+  snap(manifest, { method: 'GET', path: '/api/v1/reports/operation/:operation_id', ok: resp.ok && resp.json?.ok === true, status_code: resp.status, label: 'operation report', request: { operation_id: manifest.operation_id }, response: resp.json ?? resp.text });
+  return requireOk(resp, 'operation report');
+}
+
 async function acceptancePayload(pool, fx, taskId) {
   const q = await pool.query(`SELECT record_json FROM facts WHERE (record_json::jsonb->>'type')='acceptance_result_v1' AND (record_json::jsonb#>>'{payload,tenant_id}')=$1 AND (record_json::jsonb#>>'{payload,act_task_id}')=$2 ORDER BY occurred_at DESC LIMIT 1`, [fx.tenant_id, taskId]).catch(() => ({ rows: [] }));
   return q.rows?.[0]?.record_json?.payload ?? null;
@@ -242,18 +261,30 @@ async function main() {
     await receipt({ ...ctx, fx, manifest });
     await postSamples({ ...ctx, fx, manifest, source: 'device', metric: 'pressure', unit: 'kPa', value: 10, count: 1, offsetMs: 60000 });
     const acc = await acceptance({ ...ctx, fx, manifest });
+    const asExecuted = await asExecutedFromReceipt({ ...ctx, fx, manifest });
+    const report = await operationReport({ ...ctx, fx, manifest });
     const accPayload = await acceptancePayload(pool, fx, manifest.act_task_id);
     const memory = await memoryExists(pool, fx, manifest);
     const verify = {
       run_id: fx.run_id,
       passed: false,
       checks: {
+        appleii_evidence_pass: summary?.evidence_sufficiency === 'PASS',
         formal_evidence_passed: summary?.evidence_sufficiency === 'PASS',
         problem_state_created: problems.length > 0,
         recommendation_created: Boolean(manifest.recommendation_id),
         approval_approved: Boolean(manifest.approval_request_id),
         ao_act_task_created: Boolean(manifest.act_task_id),
         receipt_is_not_acceptance: Boolean(manifest.receipt_id && manifest.acceptance_id && manifest.receipt_id !== manifest.acceptance_id),
+        as_executed_zone_applications_valid: (() => {
+          const zones = asExecuted?.as_applied?.application?.zone_applications;
+          return Array.isArray(zones) && zones.length === 2 && zones.every((z) => z && Object.prototype.hasOwnProperty.call(z, 'deviation'));
+        })(),
+        operation_report_has_zone_level_application_result: (() => {
+          const reportBody = report?.operation_report_v1 ?? report;
+          const text = JSON.stringify(reportBody ?? {});
+          return text.includes('zone_applications') && (text.includes('zone_results') || text.includes('zone_result') || text.includes('zone_level'));
+        })(),
         formal_acceptance_passed: isPass(accPayload?.verdict ?? acc.verdict),
         guarded_report_customer_visible: isPass(accPayload?.verdict ?? acc.verdict),
         roi_trust_lane_valid: isPass(accPayload?.verdict ?? acc.verdict),
