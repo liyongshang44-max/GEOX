@@ -57,6 +57,30 @@ const STAGE1_SENSING_INPUT_MAPPING_V1_INTERNAL = {
     enters_customer_summary: true,
     internal_summary_only: false,
   },
+  inlet_flow_lpm: {
+    metric: "inlet_flow_lpm",
+    observation_canonical_fields: ["inlet_flow_lpm", "inflow_lpm", "flow_in_lpm", "inlet_lpm"],
+    pipeline_aggregate_fields: ["inlet_flow_lpm"],
+    downstream_derived_states: ["irrigation_effectiveness_state", "leak_risk_state"],
+    enters_customer_summary: true,
+    internal_summary_only: false,
+  },
+  outlet_flow_lpm: {
+    metric: "outlet_flow_lpm",
+    observation_canonical_fields: ["outlet_flow_lpm", "outflow_lpm", "flow_out_lpm", "outlet_lpm"],
+    pipeline_aggregate_fields: ["outlet_flow_lpm"],
+    downstream_derived_states: ["irrigation_effectiveness_state", "leak_risk_state"],
+    enters_customer_summary: true,
+    internal_summary_only: false,
+  },
+  pressure_drop_kpa: {
+    metric: "pressure_drop_kpa",
+    observation_canonical_fields: ["pressure_drop_kpa", "delta_pressure_kpa", "pressure_loss_kpa"],
+    pipeline_aggregate_fields: ["pressure_drop_kpa"],
+    downstream_derived_states: ["irrigation_effectiveness_state", "leak_risk_state"],
+    enters_customer_summary: true,
+    internal_summary_only: false,
+  },
 } as const;
 
 export type Stage1OfficialCanonicalInputMetricV1 = keyof typeof STAGE1_SENSING_INPUT_MAPPING_V1_INTERNAL;
