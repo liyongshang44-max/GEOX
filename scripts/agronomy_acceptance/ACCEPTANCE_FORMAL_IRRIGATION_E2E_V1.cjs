@@ -112,6 +112,25 @@ async function generateRecommendation({ base, token, fx, manifest = null }) {
   if (manifest) snap(manifest, { method: 'POST', path: '/api/v1/recommendations/generate', ok: resp.ok && resp.json?.ok === true, status_code: resp.status, label: 'recommendation generate', request: body, response: resp.json ?? resp.text });
   return resp;
 }
+async function ensureCropContextViaProgram({ base, token, fx, manifest = null }) {
+  const body = {
+    tenant_id: fx.tenant_id,
+    project_id: fx.project_id,
+    group_id: fx.group_id,
+    program_id: `prg_${fx.run_id}`,
+    field_id: fx.field_id,
+    season_id: fx.season_id,
+    crop_code: 'corn',
+    status: 'ACTIVE',
+    goal_profile: { yield_priority: 'high', quality_priority: 'medium', residue_priority: 'low', water_saving_priority: 'medium', cost_priority: 'medium' },
+    constraints: { forbid_pesticide_classes: [], forbid_fertilizer_types: [], max_irrigation_mm_per_day: null, manual_approval_required_for: [], allow_night_irrigation: true, max_irrigation_rounds_per_day: 3 },
+    budget: { max_cost_total: null, currency: 'USD' },
+    execution_policy: { mode: 'approval_required', auto_execute_allowed_task_types: [] },
+  };
+  const resp = await fetchJson(`${base}/api/v1/programs`, { method: 'POST', token, body });
+  if (manifest) snap(manifest, { method: 'POST', path: '/api/v1/programs', ok: resp.ok && resp.json?.ok === true, status_code: resp.status, label: 'field program create', request: body, response: resp.json ?? resp.text });
+  return requireOk(resp, 'field program create');
+}
 function pickRecommendation(json) {
   const list = Array.isArray(json?.recommendations) ? json.recommendations : [];
   return list.find((x) => String(x?.recommendation_type ?? '') === 'irrigation_recommendation_v1' || String(x?.action_type ?? '').toUpperCase() === 'IRRIGATE') ?? list[0] ?? null;
@@ -248,6 +267,7 @@ async function main() {
   try {
     await health(base);
     await upsertDevice(pool, fx);
+    await ensureCropContextViaProgram({ ...ctx, fx, manifest });
     await postSamples({ ...ctx, fx, manifest, source: 'device', metric: 'inlet_flow_lpm', unit: 'L/min', value: 36 });
     await postSamples({ ...ctx, fx, manifest, source: 'device', metric: 'outlet_flow_lpm', unit: 'L/min', value: 20 });
     await postSamples({ ...ctx, fx, manifest, source: 'device', metric: 'pressure_drop_kpa', unit: 'kPa', value: 38 });
