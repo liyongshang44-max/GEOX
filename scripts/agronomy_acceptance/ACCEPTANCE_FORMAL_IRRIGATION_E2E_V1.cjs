@@ -340,12 +340,16 @@ async function main() {
         ao_act_task_created: Boolean(manifest.act_task_id),
         receipt_is_not_acceptance: Boolean(manifest.receipt_id && manifest.acceptance_id && manifest.receipt_id !== manifest.acceptance_id),
         as_executed_irrigation_payload_valid: (() => {
-          const application = asExecuted?.as_applied?.application ?? {};
-          const evidenceRefs = Array.isArray(asExecuted?.as_applied?.evidence_refs) ? asExecuted.as_applied.evidence_refs : [];
-          const hasEvidence = evidenceRefs.some((x) => String(x ?? '').startsWith('formal://'));
-          return Number.isFinite(Number(application?.coverage_percent))
-            && Number.isFinite(Number(application?.duration_min))
-            && Number.isFinite(Number(application?.soil_moisture_delta))
+          const asApplied = asExecuted?.as_applied ?? {};
+          const executed = asExecuted?.as_executed?.executed ?? {};
+          const observed = executed?.observed_parameters ?? {};
+          const evidenceRefs = Array.isArray(asApplied?.evidence_refs) ? asApplied.evidence_refs : [];
+          const hasEvidence = evidenceRefs.some((x) => String(x?.ref ?? x ?? '').startsWith('formal://'));
+          return Number.isFinite(Number(asApplied?.coverage?.coverage_percent))
+            && Number.isFinite(Number(observed?.duration_min))
+            && Number.isFinite(Number(observed?.pre_soil_moisture))
+            && Number.isFinite(Number(observed?.post_soil_moisture))
+            && Number.isFinite(Number(observed?.soil_moisture_delta))
             && hasEvidence;
         })(),
         operation_report_has_irrigation_execution_result: (() => {

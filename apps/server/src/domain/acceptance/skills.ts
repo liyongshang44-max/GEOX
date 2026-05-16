@@ -32,6 +32,10 @@ export const irrigationAcceptanceV1: AcceptanceSkill = {
     const durationMin = Number(observed.duration_min ?? input.receipt?.payload?.duration_min ?? NaN);
     const effectiveness = String(input.water_flow_state?.irrigation_effectiveness ?? "").toLowerCase();
     const leakRisk = String(input.water_flow_state?.leak_risk ?? "").toLowerCase();
+    const preSoilMoisture = Number(observed.pre_soil_moisture ?? NaN);
+    const postSoilMoisture = Number(observed.post_soil_moisture ?? NaN);
+    const soilMoistureDelta = Number(observed.soil_moisture_delta ?? NaN);
+    const hasMoistureObserved = Number.isFinite(preSoilMoisture) && Number.isFinite(postSoilMoisture) && Number.isFinite(soilMoistureDelta);
 
     if (!Number.isFinite(durationMin) || durationMin <= 0) {
       return { verdict: "PENDING", explanation_codes: ["MISSING_RECEIPT_DURATION"] };
@@ -43,6 +47,10 @@ export const irrigationAcceptanceV1: AcceptanceSkill = {
 
     if (leakRisk === "high") {
       return { verdict: "FAIL", explanation_codes: ["LEAK_RISK_HIGH"] };
+    }
+
+    if (hasMoistureObserved && (soilMoistureDelta <= 0 || postSoilMoisture <= preSoilMoisture)) {
+      return { verdict: "FAIL", explanation_codes: ["IRRIGATION_NO_MOISTURE_IMPROVEMENT", "SOIL_MOISTURE_NOT_IMPROVED"] };
     }
 
     return {

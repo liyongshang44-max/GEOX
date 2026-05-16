@@ -1545,6 +1545,45 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
           }
         }
       });
+      const problemTypeHint = String(recommendationPayload.recommendation_type ?? "").toLowerCase().includes("irrigation")
+        ? "IRRIGATION_DEFICIT"
+        : "WATER_DEFICIT";
+      const evidenceSufficiency = String((stage1Summary as any)?.evidence_sufficiency ?? "").trim().toUpperCase();
+      const problemConfidence = Number(recommendationPayload.confidence ?? recommendationPayload.rule_confidence ?? 0.5);
+      const supportingEvidenceRefs = [
+        `stage1_sensing_summary_v1:${snapshot_id}`,
+        `field_sensing_overview_v1:${snapshot_id}`,
+        String(recommendation_input_fact_id ?? "").trim() ? `decision_recommendation_input_facts_v1:${recommendation_input_fact_id}` : null,
+      ].filter((x): x is string => Boolean(x));
+      await insertFact(pool, "api/v1/recommendations/generate", {
+        type: "problem_state_v1",
+        payload: {
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
+          field_id: recommendationPayload.field_id,
+          season_id: recommendationPayload.season_id,
+          crop_code: cropCode || null,
+          target: { kind: "field", ref: recommendationPayload.field_id },
+          context: {
+            field_id: recommendationPayload.field_id,
+            stage1_ref: `stage1_sensing_summary_v1:${snapshot_id}`,
+            sensing_ref: `field_sensing_overview_v1:${snapshot_id}`,
+          },
+          problem_type: problemTypeHint,
+          severity: Number.isFinite(problemConfidence) ? Number(problemConfidence.toFixed(4)) : 0.5,
+          confidence: Number.isFinite(problemConfidence) ? Number(problemConfidence.toFixed(4)) : 0.5,
+          evidence_sufficiency: evidenceSufficiency || null,
+          source: "recommendation_generate",
+          recommendation_id: recommendationPayload.recommendation_id,
+          formal_scenario_run_id: String(body?.meta?.formal_scenario_run_id ?? body?.formal_scenario_run_id ?? "").trim() || null,
+          stage1_ref: `stage1_sensing_summary_v1:${snapshot_id}`,
+          sensing_ref: `field_sensing_overview_v1:${snapshot_id}`,
+          supporting_evidence_refs: supportingEvidenceRefs,
+          created_ts: Date.now(),
+        }
+      });
+
       await appendSkillRunFact(pool, {
         tenant_id: tenant.tenant_id,
         project_id: tenant.project_id,
