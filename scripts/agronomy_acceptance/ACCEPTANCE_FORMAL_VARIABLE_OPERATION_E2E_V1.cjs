@@ -131,20 +131,43 @@ function receiptBody(scope, operation_plan_id, act_task_id, field_id, device_id,
 async function submitReceiptEval(base, token, operatorToken, scope, body) {
   const receipt = requireOk(await fetchJson(`${base}/api/v1/actions/receipt`, { method: 'POST', token, body }), 'receipt');
   const receipt_id = String(receipt.receipt_id ?? receipt.fact_id ?? '').trim();
-  const asx = await fetchJson(`${base}/api/v1/as-executed/from-receipt`, { method: 'POST', token, body: { ...scope, task_id: body.act_task_id, receipt_id } });
+  const asxResp = await fetchJson(`${base}/api/v1/as-executed/from-receipt`, { method: 'POST', token, body: { ...scope, task_id: body.act_task_id, receipt_id } });
+  const asx = requireOk(asxResp, 'as-executed');
   const acc = await fetchJson(`${base}/api/v1/acceptance/evaluate`, { method: 'POST', token: operatorToken, body: { ...scope, act_task_id: body.act_task_id, receipt_id } });
   return { receipt, receipt_id, asx, acc };
+}
+async function stage1Summary(pool, scope, field_id) {
+  const q = await pool.query(
+    `SELECT *
+       FROM field_sensing_summary_stage1_v1
+      WHERE tenant_id=$1
+        AND project_id=$2
+        AND group_id=$3
+        AND field_id=$4
+      ORDER BY updated_ts_ms DESC
+      LIMIT 1`,
+    [scope.tenant_id, scope.project_id, scope.group_id, field_id],
+  ).catch(() => ({ rows: [] }));
+  return q.rows?.[0] ?? null;
 }
 async function fetchLatestAcceptance(pool, scope, act_task_id) {
   const q = await pool.query(`SELECT record_json::jsonb AS r FROM facts WHERE (record_json::jsonb->>'type')='acceptance_result_v1' AND (record_json::jsonb#>>'{payload,tenant_id}')=$1 AND (record_json::jsonb#>>'{payload,project_id}')=$2 AND (record_json::jsonb#>>'{payload,group_id}')=$3 AND (record_json::jsonb#>>'{payload,act_task_id}')=$4 ORDER BY occurred_at DESC LIMIT 1`, [scope.tenant_id, scope.project_id, scope.group_id, act_task_id]).catch(() => ({ rows: [] }));
   return q.rows?.[0]?.r?.payload ?? {};
 }
 async function createRoi(base, token, scope, asx) {
-  const as_executed_id = String(asx.json?.as_executed?.as_executed_id ?? asx.as_executed?.as_executed_id ?? '').trim();
+  const as_executed_id = String(asx.as_executed?.as_executed_id ?? '').trim();
   if (!as_executed_id) return [];
   await fetchJson(`${base}/api/v1/roi-ledger/from-as-executed`, { method: 'POST', token, body: { ...scope, as_executed_id } });
   const got = await fetchJson(`${base}/api/v1/roi-ledger/by-as-executed/${encodeURIComponent(as_executed_id)}?tenant_id=${scope.tenant_id}&project_id=${scope.project_id}&group_id=${scope.group_id}`, { method: 'GET', token });
   return got.json?.roi_ledgers ?? got.roi_ledgers ?? [];
+}
+async function fetchOperationReport(base, token, scope, operation_plan_id) {
+  const resp = await fetchJson(
+    `${base}/api/v1/reports/operation/${encodeURIComponent(operation_plan_id)}?tenant_id=${encodeURIComponent(scope.tenant_id)}&project_id=${encodeURIComponent(scope.project_id)}&group_id=${encodeURIComponent(scope.group_id)}`,
+    { method: 'GET', token },
+  );
+  if (!resp.ok) return null;
+  return resp.json?.operation_report_v1 ?? null;
 }
 (async () => {
   const base = env('BASE_URL', process.env.GEOX_BASE_URL || 'http://127.0.0.1:3001');
@@ -165,6 +188,7 @@ async function createRoi(base, token, scope, asx) {
     await createZones(base, adminToken, scope, field_id, zones);
     const preA = await postZoneSamples(base, adminToken, scope, field_id, device_id, 'zone_a', 'pre');
     const preB = await postZoneSamples(base, adminToken, scope, field_id, device_id, 'zone_b', 'pre');
+    const summary = await stage1Summary(pool, scope, field_id);
     const recJson = requireOk(await fetchJson(`${base}/api/v1/recommendations/generate`, { method: 'POST', token: adminToken, body: { ...scope, field_id, season_id, device_id, crop_code: 'corn' } }), 'recommendation');
     const recommendation = recJson.recommendations?.[0] ?? {};
     assert.ok(recommendation.recommendation_id, 'recommendation missing');
@@ -191,6 +215,15 @@ async function createRoi(base, token, scope, asx) {
     const zone_matrix = buildZoneMatrix(zoneRates, positiveApps);
     const roiRows = await createRoi(base, adminToken, scope, pos.asx);
     const roiTypes = new Set(roiRows.map((x) => String(x.roi_type ?? '')));
+    const asAppliedZoneApps = pos.asx?.as_applied?.application?.zone_applications ?? [];
+    const asAppliedZoneDeviationComputed = Array.isArray(asAppliedZoneApps)
+      && asAppliedZoneApps.length === 2
+      && asAppliedZoneApps.every((z) => typeof z.deviation_percent === 'number' || typeof z.deviation_amount === 'number');
+    const report = await fetchOperationReport(base, adminToken, scope, operation_plan_id);
+    const reportZoneApps = report?.as_applied?.application?.zone_applications
+      ?? report?.operation?.as_applied?.application?.zone_applications
+      ?? report?.zone_applications
+      ?? [];
 
     const negative = {
       zone_skip_not_full_pass: rollup(buildZoneMatrix(zoneRates, [positiveApps[0]])) !== 'PASS',
@@ -203,16 +236,18 @@ async function createRoi(base, token, scope, asx) {
     };
     const checks = {
       management_zones_exist: true,
-      appleii_evidence_pass: true,
+      appleii_evidence_pass: summary?.evidence_sufficiency === 'PASS',
       variable_recommendation_created: Boolean(recommendation.recommendation_id),
       variable_prescription_with_zone_rates: Boolean(prescription_id && Array.isArray(prc.prescription?.operation_amount?.zone_rates)),
       approval_approved: Boolean(approval_request_id),
       task_created_not_auto_acked: Boolean(act_task_id && task_not_auto_acked),
       receipt_contains_zone_applications: positiveApps.length === 2,
+      as_applied_zone_deviations_computed: asAppliedZoneDeviationComputed,
       zone_level_acceptance_computed: zone_matrix.every((z) => z.zone_acceptance_result === 'PASS'),
       operation_rollup_computed: rollup(zone_matrix) === 'PASS',
       acceptance_pass_from_zone_rollup: isPass(accPayload.verdict) && rollup(zone_matrix) === 'PASS',
       roi_contains_variable_metrics: roiTypes.has('VARIABLE_WATER_SAVED') && roiTypes.has('ZONE_COMPLETION_RATE') && roiTypes.has('VARIABLE_EXECUTION_RELIABILITY'),
+      report_includes_zone_level_result: Array.isArray(reportZoneApps) && reportZoneApps.length === 2,
     };
     const ok = Object.values(checks).every(Boolean) && Object.values(negative).every(Boolean);
     const output = { ok, scenario: 'FORMAL_VARIABLE_OPERATION_E2E_V1', zone_matrix, checks, negative };
