@@ -99,6 +99,7 @@ services:
       GEOX_TOKENS_FILE: /app/config/auth/security_acceptance_tokens.json
       GEOX_SYSTEM_PROFILE: commercial_v1
       GEOX_INTERNAL_BASE_URL: http://server:3000
+      GEOX_INTERNAL_TASK_ISSUER_TOKEN: ${GEOX_INTERNAL_TASK_ISSUER_TOKEN:-operator_token}
       ALERT_WEBHOOK_URL: ""
       ALERT_WECHAT_WEBHOOK_URL: ""
       ALERT_DINGTALK_WEBHOOK_URL: ""
