@@ -39,10 +39,9 @@ function parseMetricList(v: unknown): string[] {
   return v.split(",").map((x) => x.trim()).filter(Boolean);
 }
 
-function handleFactEnvelopeError(reply: FastifyReply, err: unknown): boolean {
-  if (!(err instanceof RawSampleFactEnvelopeErrorV1)) return false;
-  reply.status(err.statusCode).send({ ok: false, error: err.code });
-  return true;
+function handleFactEnvelopeError(reply: FastifyReply, err: unknown): FastifyReply | null {
+  if (!(err instanceof RawSampleFactEnvelopeErrorV1)) return null;
+  return reply.status(err.statusCode).send({ ok: false, error: err.code });
 }
 
 function tenantFromAuth(auth: any, override: any = {}): RawSampleFactEnvelopeTenantV1 {
@@ -207,7 +206,9 @@ export function registerSensingFactEnvelopeV1Routes(app: FastifyInstance, pool: 
       const observation_pipeline = await maybeRunOfficialObservationPipelineV1(pool, item);
       return reply.send({ ok: true, item, observation_pipeline });
     } catch (err) {
-      if (handleFactEnvelopeError(reply, err)) return;
+      const handled = handleFactEnvelopeError(reply, err);
+      if (handled) return handled;
+      if (reply.sent) return reply;
       req.log.error({ err }, "raw_sample_v1 append failed");
       return reply.status(500).send({ ok: false, error: "RAW_SAMPLE_APPEND_FAILED" });
     }
@@ -235,7 +236,9 @@ export function registerSensingFactEnvelopeV1Routes(app: FastifyInstance, pool: 
       });
       return reply.send({ ok: true, count: items.length, items });
     } catch (err) {
-      if (handleFactEnvelopeError(reply, err)) return;
+      const handled = handleFactEnvelopeError(reply, err);
+      if (handled) return handled;
+      if (reply.sent) return reply;
       req.log.error({ err }, "raw_sample_v1 read failed");
       return reply.status(500).send({ ok: false, error: "RAW_SAMPLE_READ_FAILED" });
     }
@@ -270,7 +273,9 @@ export function registerSensingFactEnvelopeV1Routes(app: FastifyInstance, pool: 
       });
       return reply.send({ ok: true, ...item, item });
     } catch (err) {
-      if (handleFactEnvelopeError(reply, err)) return;
+      const handled = handleFactEnvelopeError(reply, err);
+      if (handled) return handled;
+      if (reply.sent) return reply;
       req.log.error({ err }, "series response v1 failed");
       return reply.status(500).send({ ok: false, error: "SERIES_RESPONSE_FAILED" });
     }
