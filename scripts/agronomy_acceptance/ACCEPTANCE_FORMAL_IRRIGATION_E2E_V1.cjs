@@ -148,7 +148,25 @@ async function createTask({ base, adminToken, approverToken, fx, manifest, recom
     tenant_id: fx.tenant_id, project_id: fx.project_id, group_id: fx.group_id, field_id: fx.field_id, season_id: fx.season_id,
     issuer: { kind: 'human', id: 'formal_scenario_kernel', namespace: 'P0.6' }, action_type: 'IRRIGATE', target: { kind: 'field', ref: fx.field_id },
     time_window: { start_ts: Date.now(), end_ts: Date.now() + 60 * 60 * 1000 },
-    parameter_schema: { keys: [{ name: 'duration_sec', type: 'number', min: 1 }] }, parameters: { duration_sec: 1200 }, constraints: { approval_required: true },
+    parameter_schema: {
+      keys: [
+        { name: 'duration_sec', type: 'number', min: 1 },
+        { name: 'duration_min', type: 'number', min: 0 },
+        { name: 'coverage_percent', type: 'number', min: 0, max: 1 },
+        { name: 'pre_soil_moisture', type: 'number', min: 0 },
+        { name: 'post_soil_moisture', type: 'number', min: 0 },
+        { name: 'soil_moisture_delta', type: 'number' },
+      ]
+    },
+    parameters: {
+      duration_sec: 1200,
+      duration_min: 14,
+      coverage_percent: 0.96,
+      pre_soil_moisture: 0.18,
+      post_soil_moisture: 0.25,
+      soil_moisture_delta: 0.07,
+    },
+    constraints: { approval_required: true },
     meta: { allow_auto_task_issue: allowAuto, recommendation_id: recommendation?.recommendation_id ?? null, field_id: fx.field_id, season_id: fx.season_id, device_id: fx.device_id, formal_scenario_run_id: fx.run_id, expected_evidence_requirements: ['dispatch_ack', 'valve_open_confirmation', 'water_delivery_receipt'] },
   };
   const reqResp = await fetchJson(`${base}/api/v1/approvals/request`, { method: 'POST', token: adminToken, body: requestBody });
