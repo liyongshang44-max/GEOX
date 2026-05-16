@@ -151,9 +151,19 @@ async function ensureCropContextViaProgram(base, token, scope, field_id, season_
 }
 async function approvePrescription(base, token, approverToken, scope, prescription_id) {
   const sub = requireOk(await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(prescription_id)}/submit-approval`, { method: 'POST', token, body: scope }), 'submit approval');
-  const approval_request_id = String(sub.approval_request_id ?? '').trim();
-  let appr = await fetchJson(`${base}/api/v1/approvals/${encodeURIComponent(approval_request_id)}/decide`, { method: 'POST', token: approverToken, body: { ...scope, decision: 'APPROVE' } });
-  if (!appr.ok) appr = await fetchJson(`${base}/api/v1/approvals/approve`, { method: 'POST', token: approverToken, body: { ...scope, request_id: approval_request_id, decision: 'APPROVE' } });
+  const approval_request_id = String(sub.approval_request_id ?? sub.request_id ?? sub.approval_id ?? '').trim();
+  if (!approval_request_id) {
+    assert.fail(`approval_request_id missing: ${JSON.stringify({
+      ok: sub?.ok ?? null,
+      keys: Object.keys(sub ?? {}),
+      prescription_id,
+      approval_request_id: sub?.approval_request_id ?? null,
+      request_id: sub?.request_id ?? null,
+      approval_id: sub?.approval_id ?? null,
+      body: sub,
+    })}`);
+  }
+  const appr = await fetchJson(`${base}/api/v1/approvals/approve`, { method: 'POST', token: approverToken, body: { ...scope, request_id: approval_request_id, decision: 'APPROVE' } });
   requireOk(appr, 'approve');
   return approval_request_id;
 }
