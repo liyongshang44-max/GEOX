@@ -1628,12 +1628,21 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     const group_id = tenant.group_id;
     const season_id = body.season_id;
 
-    const finalRecommendations = await applyFieldMemoryAdjustmentsToRecommendations(pool, {
+    const adjustedRecommendations = await applyFieldMemoryAdjustmentsToRecommendations(pool, {
       tenant_id,
       project_id,
       group_id,
       season_id,
       recommendations: resolvedRecommendations,
+    });
+    const finalRecommendations = finalizeRecommendationResponseV1({
+      resolvedRecommendations,
+      adjustedRecommendations,
+      tenant_id,
+      project_id,
+      group_id,
+      field_id: body.field_id,
+      warn: (message, meta) => app.log.warn(meta ?? {}, message),
     });
 
     return reply.send({
@@ -2017,5 +2026,30 @@ async function applyFieldMemoryAdjustmentsToRecommendations(
     adjusted.push(recommendation);
   }
 
+  return adjusted;
+}
+
+export function finalizeRecommendationResponseV1(input: {
+  resolvedRecommendations: RecommendationV1[];
+  adjustedRecommendations: RecommendationV1[];
+  warn?: (message: string, meta?: Record<string, unknown>) => void;
+  tenant_id: string;
+  project_id: string;
+  group_id: string;
+  field_id?: string;
+}): RecommendationV1[] {
+  const resolved = Array.isArray(input.resolvedRecommendations) ? input.resolvedRecommendations : [];
+  const adjusted = Array.isArray(input.adjustedRecommendations) ? input.adjustedRecommendations : [];
+  if (resolved.length > 0 && adjusted.length === 0) {
+    input.warn?.("field_memory_adjustment_empty_fallback_to_resolved", {
+      tenant_id: input.tenant_id,
+      project_id: input.project_id,
+      group_id: input.group_id,
+      field_id: input.field_id ?? null,
+      resolved_len: resolved.length,
+      adjusted_len: adjusted.length,
+    });
+    return resolved;
+  }
   return adjusted;
 }
