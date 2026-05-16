@@ -184,21 +184,25 @@ async function loadFacts(pool: Pool, tenant: TenantTriple): Promise<FactRow[]> {
   }));
 }
 
-async function loadLatestAsAppliedMapByOperation(pool: Pool, tenant: TenantTriple): Promise<Map<string, any>> {
-  const q = await pool.query(
-    `SELECT DISTINCT ON (operation_plan_id) operation_plan_id, as_applied_id, zone_id, application
-       FROM as_applied_map_v1
-      WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3
-      ORDER BY operation_plan_id, updated_ts_ms DESC`,
-    [tenant.tenant_id, tenant.project_id, tenant.group_id],
-  ).catch(() => ({ rows: [] as any[] }));
-  const out = new Map<string, any>();
-  for (const row of q.rows ?? []) {
-    const key = String(row.operation_plan_id ?? "").trim();
-    if (!key) continue;
-    out.set(key, { as_applied_id: String(row.as_applied_id ?? "").trim() || null, zone_id: String(row.zone_id ?? "").trim() || null, application: parseRecordJson(row.application) ?? row.application ?? null });
+async function loadAsAppliedMapRows(pool: Pool, tenant: TenantTriple): Promise<any[]> {
+  try {
+    const q = await pool.query(
+      `SELECT as_applied_id, as_executed_id, task_id, receipt_id, prescription_id, zone_id, application, updated_ts_ms, created_at
+         FROM as_applied_map_v1
+        WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3
+        ORDER BY updated_ts_ms DESC NULLS LAST, created_at DESC NULLS LAST, as_applied_id DESC`,
+      [tenant.tenant_id, tenant.project_id, tenant.group_id],
+    );
+    return q.rows ?? [];
+  } catch (error) {
+    console.error("[operation_state_v1] loadAsAppliedMapRows failed", {
+      tenant_id: tenant.tenant_id,
+      project_id: tenant.project_id,
+      group_id: tenant.group_id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
   }
-  return out;
 }
 
 function transitionToTimelineType(statusRaw: string): TimelineType | null {
@@ -716,6 +720,21 @@ function latestNonEmpty<T>(rows: FactRow[], pick: (row: FactRow) => T | null | u
 export async function projectOperationStateV1(pool: Pool, tenant: TenantTriple): Promise<OperationStateV1[]> {
   const facts = await loadFacts(pool, tenant);
   const states = projectOperationStateFromFacts(facts);
-  const asAppliedByOp = await loadLatestAsAppliedMapByOperation(pool, tenant);
-  return states.map((s) => ({ ...s, as_applied: asAppliedByOp.get(s.operation_plan_id) ?? null }));
+  const asAppliedRows = await loadAsAppliedMapRows(pool, tenant);
+  const normalizeAsApplied = (row: any) => ({ as_applied_id: String(row.as_applied_id ?? "").trim() || null, zone_id: String(row.zone_id ?? "").trim() || null, application: parseRecordJson(row.application) ?? row.application ?? null });
+  const findBy = (matcher: (row: any) => boolean) => {
+    const found = asAppliedRows.find(matcher);
+    return found ? normalizeAsApplied(found) : null;
+  };
+  return states.map((s) => {
+    const byTaskId = s.task_id ? findBy((row) => String(row.task_id ?? "").trim() === s.task_id) : null;
+    if (byTaskId) return { ...s, as_applied: byTaskId };
+    const byActTaskId = s.act_task_id ? findBy((row) => String(row.task_id ?? "").trim() === s.act_task_id) : null;
+    if (byActTaskId) return { ...s, as_applied: byActTaskId };
+    const byReceiptId = s.receipt_id ? findBy((row) => String(row.receipt_id ?? "").trim() === s.receipt_id) : null;
+    if (byReceiptId) return { ...s, as_applied: byReceiptId };
+    const byPrescriptionId = (s as any).prescription_id ? findBy((row) => String(row.prescription_id ?? "").trim() === String((s as any).prescription_id ?? "").trim()) : null;
+    if (byPrescriptionId) return { ...s, as_applied: byPrescriptionId };
+    return { ...s, as_applied: null };
+  });
 }
