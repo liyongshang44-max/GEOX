@@ -916,6 +916,7 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
 
       return reply.send({ ok: true, fact_id, act_task_id, precheck: hardRulePrecheck });
     } catch (e: any) {
+      if (reply.sent) return;
       return reply.status(400).send({ ok: false, error: e?.message ?? "BAD_REQUEST" });
     }
 }
