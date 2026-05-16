@@ -132,6 +132,23 @@ async function createZones(base, token, scope, field_id, zones) {
   const ids = new Set((read.items ?? []).map((x) => x.zone_id));
   zones.forEach((z) => assert.ok(ids.has(z.zone_id), `zone missing: ${z.zone_id}`));
 }
+async function ensureCropContextViaProgram(base, token, scope, field_id, season_id, run) {
+  const body = {
+    tenant_id: scope.tenant_id,
+    project_id: scope.project_id,
+    group_id: scope.group_id,
+    program_id: `prg_${run}`,
+    field_id,
+    season_id,
+    crop_code: 'corn',
+    status: 'ACTIVE',
+    goal_profile: { yield_priority: 'high', quality_priority: 'medium', residue_priority: 'low', water_saving_priority: 'medium', cost_priority: 'medium' },
+    constraints: { forbid_pesticide_classes: [], forbid_fertilizer_types: [], max_irrigation_mm_per_day: null, manual_approval_required_for: [], allow_night_irrigation: true, max_irrigation_rounds_per_day: 3 },
+    budget: { max_cost_total: null, currency: 'USD' },
+    execution_policy: { mode: 'approval_required', auto_execute_allowed_task_types: [] },
+  };
+  return requireOk(await fetchJson(`${base}/api/v1/programs`, { method: 'POST', token, body }), 'field program create');
+}
 async function approvePrescription(base, token, approverToken, scope, prescription_id) {
   const sub = requireOk(await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(prescription_id)}/submit-approval`, { method: 'POST', token, body: scope }), 'submit approval');
   const approval_request_id = String(sub.approval_request_id ?? '').trim();
@@ -218,6 +235,7 @@ async function fetchOperationReport(base, token, scope, operation_plan_id) {
     const zones = [{ zone_id: 'zone_a', zone_name: 'North required zone' }, { zone_id: 'zone_b', zone_name: 'South required zone' }];
     await ensureDevice(pool, scope, field_id, device_id);
     await createZones(base, adminToken, scope, field_id, zones);
+    await ensureCropContextViaProgram(base, adminToken, scope, field_id, season_id, run);
     const endTs = Date.now() - 60_000;
     const intervalMs = 20 * 60 * 1000;
     const pointCount = 19;
