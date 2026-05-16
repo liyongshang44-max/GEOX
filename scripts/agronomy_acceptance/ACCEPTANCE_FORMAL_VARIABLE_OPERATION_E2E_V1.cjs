@@ -49,6 +49,13 @@ function rollup(zoneMatrix, policy = 'ALL_REQUIRED_PASS', opts = {}) {
   }
   return zoneMatrix.every((z) => z.zone_acceptance_result === 'PASS') ? 'PASS' : 'PARTIAL';
 }
+function pickRecommendation(json) {
+  return json?.recommendations?.[0]
+    ?? json?.recommendation
+    ?? json?.item
+    ?? json?.items?.[0]
+    ?? null;
+}
 async function health(base) {
   let last = null;
   for (let i = 0; i < 20; i += 1) {
@@ -221,8 +228,24 @@ async function fetchOperationReport(base, token, scope, operation_plan_id) {
     const preB = await postZoneSamples(base, adminToken, scope, field_id, device_id, 'zone_b', 'pre', run, sampleWindow);
     const summary = await stage1Summary(pool, scope, field_id);
     const recJson = requireOk(await fetchJson(`${base}/api/v1/recommendations/generate`, { method: 'POST', token: adminToken, body: { ...scope, field_id, season_id, device_id, crop_code: 'corn' } }), 'recommendation');
-    const recommendation = recJson.recommendations?.[0] ?? {};
-    assert.ok(recommendation.recommendation_id, 'recommendation missing');
+    const recommendation = pickRecommendation(recJson) ?? {};
+    if (!recommendation.recommendation_id) {
+      const compactBody = {
+        ok: recJson?.ok ?? null,
+        keys: Object.keys(recJson ?? {}),
+        fact_ids: recJson?.fact_ids ?? null,
+        recommendations_len: Array.isArray(recJson?.recommendations) ? recJson.recommendations.length : null,
+        field_id,
+        run_id: run,
+        evidence_snapshot: {
+          evidence_sufficiency: summary?.evidence_sufficiency ?? null,
+          formal_coverage_ratio: Number(summary?.formal_coverage_ratio ?? summary?.coverage_ratio ?? 0),
+          trigger_metric_evidence: summary?.trigger_metric_evidence ?? null,
+          max_gap_ms: summary?.max_gap_ms ?? null,
+        },
+      };
+      assert.fail(`recommendation missing: ${JSON.stringify(compactBody)}`);
+    }
     const zoneRates = [
       { zone_id: 'zone_a', operation_type: 'IRRIGATION', planned_amount: 25, unit: 'mm', required: true },
       { zone_id: 'zone_b', operation_type: 'IRRIGATION', planned_amount: 15, unit: 'mm', required: true },
