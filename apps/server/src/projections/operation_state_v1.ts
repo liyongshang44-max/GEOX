@@ -125,6 +125,11 @@ export type OperationStateV1 = {
       error_code: string | null;
     };
   };
+  as_applied?: {
+    as_applied_id?: string | null;
+    zone_id?: string | null;
+    application?: any;
+  } | null;
 };
 
 export type OperationProjectionFactRow = FactRow;
@@ -177,6 +182,23 @@ async function loadFacts(pool: Pool, tenant: TenantTriple): Promise<FactRow[]> {
     occurred_at: String(row.occurred_at),
     record_json: parseRecordJson(row.record_json) ?? row.record_json
   }));
+}
+
+async function loadLatestAsAppliedMapByOperation(pool: Pool, tenant: TenantTriple): Promise<Map<string, any>> {
+  const q = await pool.query(
+    `SELECT DISTINCT ON (operation_plan_id) operation_plan_id, as_applied_id, zone_id, application
+       FROM as_applied_map_v1
+      WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3
+      ORDER BY operation_plan_id, updated_ts_ms DESC`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id],
+  ).catch(() => ({ rows: [] as any[] }));
+  const out = new Map<string, any>();
+  for (const row of q.rows ?? []) {
+    const key = String(row.operation_plan_id ?? "").trim();
+    if (!key) continue;
+    out.set(key, { as_applied_id: String(row.as_applied_id ?? "").trim() || null, zone_id: String(row.zone_id ?? "").trim() || null, application: parseRecordJson(row.application) ?? row.application ?? null });
+  }
+  return out;
 }
 
 function transitionToTimelineType(statusRaw: string): TimelineType | null {
@@ -693,5 +715,7 @@ function latestNonEmpty<T>(rows: FactRow[], pick: (row: FactRow) => T | null | u
 
 export async function projectOperationStateV1(pool: Pool, tenant: TenantTriple): Promise<OperationStateV1[]> {
   const facts = await loadFacts(pool, tenant);
-  return projectOperationStateFromFacts(facts);
+  const states = projectOperationStateFromFacts(facts);
+  const asAppliedByOp = await loadLatestAsAppliedMapByOperation(pool, tenant);
+  return states.map((s) => ({ ...s, as_applied: asAppliedByOp.get(s.operation_plan_id) ?? null }));
 }

@@ -120,6 +120,7 @@
       "scopes": [
         "action.read",
         "action.receipt.submit",
+        "ao_act.receipt.write",
         "field.zone.read"
       ]
     },

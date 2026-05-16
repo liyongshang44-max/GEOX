@@ -190,7 +190,9 @@ export type OperationReportV1 = {
     applied_amount_summary: string | null;
     planned_vs_actual_deviation: string | null;
     evidence_ref: string | null;
+    application?: Record<string, unknown> | null;
   };
+  zone_applications?: unknown[];
   planned: {
     planned_area: Record<string, unknown> | null;
     planned_path: Record<string, unknown> | null;
@@ -630,7 +632,11 @@ export function projectOperationReportV1(input: {
     applied_amount_summary: toText(asAppliedRaw?.applied_amount_summary ?? asAppliedRaw?.amount_summary),
     planned_vs_actual_deviation: toText(asAppliedRaw?.planned_vs_actual_deviation ?? asAppliedRaw?.deviation_summary),
     evidence_ref: toText(asAppliedRaw?.evidence_ref ?? asAppliedRaw?.evidence_id ?? asAppliedRaw?.trace_id),
+    application: toObject(asAppliedRaw?.application ?? null),
   };
+  const zoneApplications = Array.isArray((asApplied as any)?.application?.zone_applications)
+    ? (asApplied as any).application.zone_applications
+    : [];
 
   const computedRisk = evaluateRisk({
     final_status: finalStatus,
@@ -763,6 +769,7 @@ export function projectOperationReportV1(input: {
       low_confidence_items: roiSummaries.filter((x) => String((x.confidence as any)?.level ?? "").toUpperCase() === "LOW"),
     },
     as_applied: asApplied,
+    zone_applications: zoneApplications,
     planned,
     workflow: {
       owner_actor_id: toText(input.operation_workflow?.owner_actor_id),

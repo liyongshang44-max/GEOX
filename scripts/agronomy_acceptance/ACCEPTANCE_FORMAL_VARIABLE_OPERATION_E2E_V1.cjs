@@ -216,9 +216,12 @@ async function fetchLatestAcceptance(pool, scope, act_task_id) {
 async function createRoi(base, token, scope, asx) {
   const as_executed_id = String(asx.as_executed?.as_executed_id ?? '').trim();
   if (!as_executed_id) return [];
-  await fetchJson(`${base}/api/v1/roi-ledger/from-as-executed`, { method: 'POST', token, body: { ...scope, as_executed_id } });
+  const fromResp = await fetchJson(`${base}/api/v1/roi-ledger/from-as-executed`, { method: 'POST', token, body: { ...scope, as_executed_id } });
+  if (!fromResp.ok || fromResp.json?.ok === false) {
+    assert.fail(`roi from-as-executed failed: ${JSON.stringify({ as_executed_id, status: fromResp.status, body: fromResp.json ?? fromResp.text ?? null })}`);
+  }
   const got = await fetchJson(`${base}/api/v1/roi-ledger/by-as-executed/${encodeURIComponent(as_executed_id)}?tenant_id=${scope.tenant_id}&project_id=${scope.project_id}&group_id=${scope.group_id}`, { method: 'GET', token });
-  return got.json?.roi_ledgers ?? got.roi_ledgers ?? [];
+  return { as_executed_id, fromResp: fromResp.json ?? fromResp.text ?? null, rows: (got.json?.roi_ledgers ?? got.roi_ledgers ?? []) };
 }
 async function fetchOperationReport(base, token, scope, operation_plan_id) {
   const resp = await fetchJson(
@@ -295,7 +298,8 @@ async function fetchOperationReport(base, token, scope, operation_plan_id) {
     const pos = await submitReceiptEval(base, executorToken, operatorToken, scope, receiptBody(scope, operation_plan_id, act_task_id, field_id, device_id, positiveApps));
     const accPayload = await fetchLatestAcceptance(pool, scope, act_task_id);
     const zone_matrix = buildZoneMatrix(zoneRates, positiveApps);
-    const roiRows = await createRoi(base, adminToken, scope, pos.asx);
+    const roiResult = await createRoi(base, adminToken, scope, pos.asx);
+    const roiRows = roiResult.rows ?? [];
     const roiTypes = new Set(roiRows.map((x) => String(x.roi_type ?? '')));
     const asAppliedZoneApps = pos.asx?.as_applied?.application?.zone_applications ?? [];
     const asAppliedZoneDeviationComputed = Array.isArray(asAppliedZoneApps)
@@ -342,6 +346,9 @@ async function fetchOperationReport(base, token, scope, operation_plan_id) {
       sample_window: sampleWindow,
     };
     const output = { ok, scenario: 'FORMAL_VARIABLE_OPERATION_E2E_V1', zone_matrix, checks, negative, evidence_snapshot: evidenceSnapshot };
+    if (!checks.acceptance_pass_from_zone_rollup) output.acceptance_debug = { verdict: accPayload?.verdict ?? null, result: accPayload?.result ?? null, status: accPayload?.status ?? null, reason_codes: accPayload?.reason_codes ?? null, zone_results: accPayload?.zone_results ?? accPayload?.zone_matrix ?? null, operation_rollup_policy: accPayload?.operation_rollup_policy ?? null };
+    if (!checks.roi_contains_variable_metrics) output.roi_debug = { as_executed_id: roiResult.as_executed_id, returned_roi_types: roiRows.map((x) => x.roi_type), from_as_executed_response: roiResult.fromResp };
+    if (!checks.report_includes_zone_level_result) output.report_debug = { operation_report_v1_keys: Object.keys(report ?? {}), as_applied_keys: Object.keys(report?.as_applied ?? {}), operation_as_applied_keys: Object.keys(report?.operation?.as_applied ?? {}), zone_applications_length: Array.isArray(reportZoneApps) ? reportZoneApps.length : null };
     process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
     if (!ok) process.exitCode = 1;
   } finally { await pool.end(); }

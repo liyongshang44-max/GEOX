@@ -84,7 +84,8 @@ export const variableIrrigationAcceptanceV1: AcceptanceSkill = {
       const zone_id = String(z?.zone_id ?? "").trim();
       const planned_amount = Number(z?.planned_amount);
       const applied_amount = Number(z?.applied_amount);
-      const coverage_percent = Number(z?.coverage_percent);
+      const coverageRaw = Number(z?.coverage_percent);
+      const coverage_percent = Number.isFinite(coverageRaw) && coverageRaw <= 1 ? coverageRaw * 100 : coverageRaw;
       const status = String(z?.status ?? "").trim().toUpperCase();
       const valid = zone_id
         && Number.isFinite(planned_amount) && planned_amount > 0

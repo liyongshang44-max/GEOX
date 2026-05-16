@@ -417,6 +417,20 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
       const acceptanceFactId = randomUUID();
       const nowIso = new Date().toISOString();
       const expectedDurationMin = Number(taskPayload?.parameters?.duration_min);
+      const variableExecution = receiptFact.record_json?.payload?.meta?.variable_execution;
+      const variableMode = String(variableExecution?.mode ?? "").trim().toUpperCase();
+      const zoneResults = Array.isArray(variableExecution?.zone_applications) ? variableExecution.zone_applications.map((z: any) => {
+        const planned = Number(z?.planned_amount);
+        const applied = Number(z?.applied_amount);
+        const coverageRaw = Number(z?.coverage_percent);
+        const coveragePercent = Number.isFinite(coverageRaw) && coverageRaw <= 1 ? coverageRaw * 100 : coverageRaw;
+        const deviationPercent = Number.isFinite(Number(z?.deviation_percent))
+          ? Number(z.deviation_percent)
+          : (Number.isFinite(planned) && planned > 0 && Number.isFinite(applied) ? ((applied - planned) / planned) * 100 : null);
+        const zoneVerdict = String(z?.status ?? "").toUpperCase() === "SKIPPED" || coveragePercent < 95 || (deviationPercent != null && Math.abs(deviationPercent) > 15) ? "FAIL" : "PASS";
+        return { ...z, coverage_percent: coveragePercent, deviation_percent: deviationPercent, zone_acceptance_result: zoneVerdict };
+      }) : [];
+      const failedRequiredZones = zoneResults.filter((z: any) => z?.required !== false && String(z?.zone_acceptance_result ?? "").toUpperCase() !== "PASS").map((z: any) => String(z?.zone_id ?? "")).filter(Boolean);
       const acceptanceRecord = {
         type: "acceptance_result_v1",
         payload: GeoxContracts.AcceptanceResultV1PayloadSchema.parse({
@@ -440,7 +454,15 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
           evaluated_at: nowIso,
           evidence_refs: [taskFact.fact_id, receiptFact.fact_id, ...judgeResultIds],
           execution_judge_id: effectiveExecutionJudgeId || undefined,
-          execution_judge_verdict: executionJudge?.verdict || undefined
+          execution_judge_verdict: executionJudge?.verdict || undefined,
+          variable_operation: variableMode === "VARIABLE_BY_ZONE" || undefined,
+          operation_rollup_policy: variableMode === "VARIABLE_BY_ZONE" ? "ALL_REQUIRED_PASS" : undefined,
+          zone_results: zoneResults.length ? zoneResults : undefined,
+          zone_matrix: zoneResults.length ? zoneResults : undefined,
+          failed_required_zones: failedRequiredZones.length ? failedRequiredZones : undefined,
+          as_executed_id: String((taskPayload as any)?.meta?.as_executed_id ?? "").trim() || undefined,
+          as_applied_id: String((taskPayload as any)?.meta?.as_applied_id ?? "").trim() || undefined,
+          receipt_id: String(receiptFact.record_json?.payload?.receipt_id ?? receiptFact.fact_id ?? "").trim() || undefined,
         })
       };
 
