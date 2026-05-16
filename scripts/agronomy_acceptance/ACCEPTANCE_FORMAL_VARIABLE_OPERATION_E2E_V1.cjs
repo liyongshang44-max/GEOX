@@ -83,11 +83,13 @@ async function ensureDevice(pool, scope, field_id, device_id) {
   await pool.query(`INSERT INTO device_binding_index_v1 VALUES($1,$2,$3,$4) ON CONFLICT(tenant_id,device_id,field_id) DO UPDATE SET bound_ts_ms=EXCLUDED.bound_ts_ms`, [scope.tenant_id, device_id, field_id, ts]);
   await pool.query(`INSERT INTO device_status_index_v1(tenant_id,project_id,group_id,field_id,device_id,status,last_telemetry_ts_ms,last_heartbeat_ts_ms,battery_percent,rssi_dbm,fw_ver,updated_ts_ms) VALUES($1,$2,$3,$4,$5,'ONLINE',$6,$6,82,-55,'formal-variable-e2e',$6) ON CONFLICT(tenant_id,device_id) DO UPDATE SET project_id=EXCLUDED.project_id,group_id=EXCLUDED.group_id,field_id=EXCLUDED.field_id,status='ONLINE',last_telemetry_ts_ms=EXCLUDED.last_telemetry_ts_ms,last_heartbeat_ts_ms=EXCLUDED.last_heartbeat_ts_ms,updated_ts_ms=EXCLUDED.updated_ts_ms`, [scope.tenant_id, scope.project_id, scope.group_id, field_id, device_id, ts - 30000]);
 }
-async function postZoneSamples(base, token, scope, field_id, device_id, zone_id, phase, formal_scenario_run_id) {
-  const start = Date.now() - 14 * 20 * 60 * 1000;
+async function postZoneSamples(base, token, scope, field_id, device_id, zone_id, phase, formal_scenario_run_id, sampleWindow) {
+  const start = Number(sampleWindow?.startTs ?? Date.now() - 60_000 - 18 * 20 * 60 * 1000);
+  const intervalMs = Number(sampleWindow?.intervalMs ?? 20 * 60 * 1000);
+  const pointCount = Number(sampleWindow?.pointCount ?? 19);
   const refs = [];
-  for (let i = 0; i < 14; i += 1) {
-    const ts_ms = start + i * 20 * 60 * 1000;
+  for (let i = 0; i < pointCount; i += 1) {
+    const ts_ms = start + i * intervalMs;
     const metrics = phase === 'pre'
       ? [
         { metric: 'soil_moisture', value: 0.215 + i * 0.0004, unit: 'm3/m3' },
@@ -209,8 +211,14 @@ async function fetchOperationReport(base, token, scope, operation_plan_id) {
     const zones = [{ zone_id: 'zone_a', zone_name: 'North required zone' }, { zone_id: 'zone_b', zone_name: 'South required zone' }];
     await ensureDevice(pool, scope, field_id, device_id);
     await createZones(base, adminToken, scope, field_id, zones);
-    const preA = await postZoneSamples(base, adminToken, scope, field_id, device_id, 'zone_a', 'pre', run);
-    const preB = await postZoneSamples(base, adminToken, scope, field_id, device_id, 'zone_b', 'pre', run);
+    const endTs = Date.now() - 60_000;
+    const intervalMs = 20 * 60 * 1000;
+    const pointCount = 19;
+    const startTs = endTs - (pointCount - 1) * intervalMs;
+    const sampleWindow = { startTs, intervalMs, pointCount, endTs };
+
+    const preA = await postZoneSamples(base, adminToken, scope, field_id, device_id, 'zone_a', 'pre', run, sampleWindow);
+    const preB = await postZoneSamples(base, adminToken, scope, field_id, device_id, 'zone_b', 'pre', run, sampleWindow);
     const summary = await stage1Summary(pool, scope, field_id);
     const recJson = requireOk(await fetchJson(`${base}/api/v1/recommendations/generate`, { method: 'POST', token: adminToken, body: { ...scope, field_id, season_id, device_id, crop_code: 'corn' } }), 'recommendation');
     const recommendation = recJson.recommendations?.[0] ?? {};
@@ -227,8 +235,8 @@ async function fetchOperationReport(base, token, scope, operation_plan_id) {
     const act_task_id = String(task.act_task_id ?? '').trim();
     const tp = await taskPayload(pool, scope, operation_plan_id);
     const task_not_auto_acked = String(tp?.meta?.ack_status ?? '') === 'ACK_REQUIRED' && String(tp?.meta?.task_lifecycle_status ?? '') === 'READY_TO_DISPATCH';
-    const postA = await postZoneSamples(base, adminToken, scope, field_id, device_id, 'zone_a', 'post', run);
-    const postB = await postZoneSamples(base, adminToken, scope, field_id, device_id, 'zone_b', 'post', run);
+    const postA = await postZoneSamples(base, adminToken, scope, field_id, device_id, 'zone_a', 'post', run, sampleWindow);
+    const postB = await postZoneSamples(base, adminToken, scope, field_id, device_id, 'zone_b', 'post', run, sampleWindow);
     const positiveApps = [
       { zone_id: 'zone_a', planned_amount: 25, applied_amount: 24, planned_rate: 25, actual_rate: 24, unit: 'mm', coverage_percent: 0.95, status: 'APPLIED', pre_sensing_ref: preA, post_sensing_ref: postA },
       { zone_id: 'zone_b', planned_amount: 15, applied_amount: 15, planned_rate: 15, actual_rate: 15, unit: 'mm', coverage_percent: 0.96, status: 'APPLIED', pre_sensing_ref: preB, post_sensing_ref: postB },
@@ -278,7 +286,9 @@ async function fetchOperationReport(base, token, scope, operation_plan_id) {
       formal_coverage_ratio: Number(summary?.formal_coverage_ratio ?? summary?.coverage_ratio ?? 0),
       trigger_metric_evidence: summary?.trigger_metric_evidence ?? null,
       max_gap_ms: summary?.max_gap_ms ?? null,
+      expected_sample_interval_ms: summary?.expected_sample_interval_ms ?? null,
       supporting_metrics: summary?.supporting_metrics ?? null,
+      sample_window: sampleWindow,
     };
     const output = { ok, scenario: 'FORMAL_VARIABLE_OPERATION_E2E_V1', zone_matrix, checks, negative, evidence_snapshot: evidenceSnapshot };
     process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
