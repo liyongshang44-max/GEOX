@@ -80,7 +80,7 @@ async function upsertDevice(pool, fx) {
     `INSERT INTO device_capability (tenant_id, device_id, capabilities, updated_ts_ms)
      VALUES ($1,$2,$3::jsonb,$4)
      ON CONFLICT (tenant_id, device_id) DO UPDATE SET capabilities=EXCLUDED.capabilities, updated_ts_ms=EXCLUDED.updated_ts_ms`,
-    [fx.tenant_id, fx.device_id, JSON.stringify(['telemetry.soil_moisture', 'telemetry.water_pressure', 'device.irrigation.valve.open']), ts],
+    [fx.tenant_id, fx.device_id, JSON.stringify(['telemetry.soil_moisture', 'telemetry.water_pressure', 'telemetry.inlet_flow_lpm', 'telemetry.outlet_flow_lpm', 'telemetry.pressure_drop_kpa', 'device.irrigation.valve.open']), ts],
   );
   await pool.query(`INSERT INTO device_binding_index_v1 (tenant_id, device_id, field_id, bound_ts_ms) VALUES ($1,$2,$3,$4) ON CONFLICT (tenant_id, device_id, field_id) DO UPDATE SET bound_ts_ms=EXCLUDED.bound_ts_ms`, [fx.tenant_id, fx.device_id, fx.field_id, ts]);
   await pool.query(`INSERT INTO device_credential_index_v1 (tenant_id, device_id, credential_id, credential_hash, status, issued_ts_ms, revoked_ts_ms, created_ts_ms, updated_ts_ms) VALUES ($1,$2,$3,$4,'ACTIVE',$5,NULL,$5,$5) ON CONFLICT (tenant_id, device_id, credential_id) DO UPDATE SET credential_hash=EXCLUDED.credential_hash, status='ACTIVE', revoked_ts_ms=NULL, updated_ts_ms=EXCLUDED.updated_ts_ms`, [fx.tenant_id, fx.device_id, fx.credential_id, sha(`${fx.run_id}:${fx.device_id}:credential`), ts]);
@@ -111,6 +111,25 @@ async function generateRecommendation({ base, token, fx, manifest = null }) {
   const resp = await fetchJson(`${base}/api/v1/recommendations/generate`, { method: 'POST', token, body });
   if (manifest) snap(manifest, { method: 'POST', path: '/api/v1/recommendations/generate', ok: resp.ok && resp.json?.ok === true, status_code: resp.status, label: 'recommendation generate', request: body, response: resp.json ?? resp.text });
   return resp;
+}
+async function ensureCropContextViaProgram({ base, token, fx, manifest = null }) {
+  const body = {
+    tenant_id: fx.tenant_id,
+    project_id: fx.project_id,
+    group_id: fx.group_id,
+    program_id: `prg_${fx.run_id}`,
+    field_id: fx.field_id,
+    season_id: fx.season_id,
+    crop_code: 'corn',
+    status: 'ACTIVE',
+    goal_profile: { yield_priority: 'high', quality_priority: 'medium', residue_priority: 'low', water_saving_priority: 'medium', cost_priority: 'medium' },
+    constraints: { forbid_pesticide_classes: [], forbid_fertilizer_types: [], max_irrigation_mm_per_day: null, manual_approval_required_for: [], allow_night_irrigation: true, max_irrigation_rounds_per_day: 3 },
+    budget: { max_cost_total: null, currency: 'USD' },
+    execution_policy: { mode: 'approval_required', auto_execute_allowed_task_types: [] },
+  };
+  const resp = await fetchJson(`${base}/api/v1/programs`, { method: 'POST', token, body });
+  if (manifest) snap(manifest, { method: 'POST', path: '/api/v1/programs', ok: resp.ok && resp.json?.ok === true, status_code: resp.status, label: 'field program create', request: body, response: resp.json ?? resp.text });
+  return requireOk(resp, 'field program create');
 }
 function pickRecommendation(json) {
   const list = Array.isArray(json?.recommendations) ? json.recommendations : [];
@@ -248,7 +267,10 @@ async function main() {
   try {
     await health(base);
     await upsertDevice(pool, fx);
-    await postSamples({ ...ctx, fx, manifest, source: 'device', metric: 'pressure', unit: 'kPa', value: 42 });
+    await ensureCropContextViaProgram({ ...ctx, fx, manifest });
+    await postSamples({ ...ctx, fx, manifest, source: 'device', metric: 'inlet_flow_lpm', unit: 'L/min', value: 36 });
+    await postSamples({ ...ctx, fx, manifest, source: 'device', metric: 'outlet_flow_lpm', unit: 'L/min', value: 20 });
+    await postSamples({ ...ctx, fx, manifest, source: 'device', metric: 'pressure_drop_kpa', unit: 'kPa', value: 38 });
     const recResp = await generateRecommendation({ ...ctx, fx, manifest });
     const recJson = requireOk(recResp, 'recommendation generate');
     const recommendation = pickRecommendation(recJson);

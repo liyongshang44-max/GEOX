@@ -16,8 +16,31 @@ type DbConn = Pool | PoolClient;
 type RawSampleRow = { sample_id: string; sensor_id: string; ts_ms: number; metric: string; value: number; qc_quality: string; source: AppleIISampleSourceV1; payload_json: any };
 type FormalSourcePolicyV1 = Partial<Record<AppleIISampleSourceV1, boolean>>;
 const DEFAULT_FORMAL_SAMPLE_SOURCE_POLICY_V1: Record<AppleIISampleSourceV1, boolean> = { device: true, gateway: true, system: false, human: false, import: false, sim: false, unknown: false };
-const IRRIGATION_EFFECTIVENESS_FORMAL_METRICS_V1 = new Set(["soil_moisture", "soil_moisture_pct", "moisture_pct", "flow_rate", "irrigation_flow_rate", "water_flow", "pump_flow"]);
-const LEAK_RISK_FORMAL_METRICS_V1 = new Set(["soil_moisture", "soil_moisture_pct", "moisture_pct", "flow_rate", "irrigation_flow_rate", "water_flow", "pressure"]);
+const IRRIGATION_EFFECTIVENESS_FORMAL_METRICS_V1 = new Set([
+  "soil_moisture",
+  "soil_moisture_pct",
+  "moisture_pct",
+  "flow_rate",
+  "irrigation_flow_rate",
+  "water_flow",
+  "pump_flow",
+  "water_flow_rate",
+  "inlet_flow_lpm",
+  "outlet_flow_lpm",
+]);
+const LEAK_RISK_FORMAL_METRICS_V1 = new Set([
+  "soil_moisture",
+  "soil_moisture_pct",
+  "moisture_pct",
+  "flow_rate",
+  "irrigation_flow_rate",
+  "water_flow",
+  "pressure",
+  "water_pressure",
+  "pressure_drop_kpa",
+  "inlet_flow_lpm",
+  "outlet_flow_lpm",
+]);
 const toNumber = (v: unknown): number | null => { const n = Number(v); return Number.isFinite(n) ? n : null; };
 const clamp01 = (v: number): number => Math.max(0, Math.min(1, v));
 const normalizeMetric = (v: unknown): string => String(v ?? "").trim().toLowerCase();
@@ -29,7 +52,19 @@ function isFormalSampleSource(source: AppleIISampleSourceV1, policy: Record<Appl
 function inferSingleFormalSampleDeviceId(samples: RawSampleRow[]): string | null { const ids = Array.from(new Set(samples.map((sample) => normalizeDeviceId(sample.sensor_id)).filter(Boolean))) as string[]; return ids.length === 1 ? ids[0] : null; }
 function buildSampleSourceLanes(samples: RawSampleRow[], policy: Record<AppleIISampleSourceV1, boolean>): Record<string, { sample_count: number; formal_eligible: boolean }> { const lanes: Record<string, { sample_count: number; formal_eligible: boolean }> = {}; for (const sample of samples) { const source = normalizeSampleSource(sample.source); const current = lanes[source] ?? { sample_count: 0, formal_eligible: isFormalSampleSource(source, policy) }; current.sample_count += 1; current.formal_eligible = isFormalSampleSource(source, policy); lanes[source] = current; } return lanes; }
 function buildFormalMetricLanes(samples: RawSampleRow[]): Record<string, { sample_count: number }> { const lanes: Record<string, { sample_count: number }> = {}; for (const sample of samples) { const metric = normalizeMetric(sample.metric); if (!metric) continue; const current = lanes[metric] ?? { sample_count: 0 }; current.sample_count += 1; lanes[metric] = current; } return lanes; }
-function buildTriggerMetricEvidence(samples: RawSampleRow[]): AppleIITriggerMetricEvidenceV1 { const metrics = Array.from(new Set(samples.map((sample) => normalizeMetric(sample.metric)).filter(Boolean))); return { irrigation_effectiveness: metrics.some((metric) => IRRIGATION_EFFECTIVENESS_FORMAL_METRICS_V1.has(metric)), leak_risk: metrics.some((metric) => LEAK_RISK_FORMAL_METRICS_V1.has(metric)), supporting_metrics: metrics }; }
+function buildTriggerMetricEvidence(samples: RawSampleRow[]): AppleIITriggerMetricEvidenceV1 {
+  const metrics = Array.from(new Set(samples.map((sample) => normalizeMetric(sample.metric)).filter(Boolean)));
+  const has = (metric: string): boolean => metrics.includes(metric);
+  const hasAny = (pool: Set<string>): boolean => metrics.some((metric) => pool.has(metric));
+  const hasFlowTrio = has("inlet_flow_lpm") && has("outlet_flow_lpm") && has("pressure_drop_kpa");
+  const hasFlowPair = has("inlet_flow_lpm") && has("outlet_flow_lpm");
+
+  return {
+    irrigation_effectiveness: hasAny(IRRIGATION_EFFECTIVENESS_FORMAL_METRICS_V1) || hasFlowPair || hasFlowTrio,
+    leak_risk: hasAny(LEAK_RISK_FORMAL_METRICS_V1) || has("pressure_drop_kpa") || hasFlowTrio,
+    supporting_metrics: metrics,
+  };
+}
 function computeGapStats(samples: RawSampleRow[], startTs: number, endTs: number, expectedIntervalMs: number) { if (!samples.length) return { gap_count: 1, max_gap_ms: Math.max(0, endTs - startTs), covered_ms: 0 }; const sorted = samples.slice().sort((a, b) => Number(a.ts_ms) - Number(b.ts_ms)); let gapCount = 0, maxGapMs = 0, coveredMs = 0; const firstTs = Number(sorted[0].ts_ms), lastTs = Number(sorted[sorted.length - 1].ts_ms); if (firstTs > startTs) { const gap = firstTs - startTs; gapCount += 1; maxGapMs = Math.max(maxGapMs, gap); } if (lastTs < endTs) { const gap = endTs - lastTs; gapCount += 1; maxGapMs = Math.max(maxGapMs, gap); } for (let i = 1; i < sorted.length; i += 1) { const prev = Number(sorted[i - 1].ts_ms), cur = Number(sorted[i].ts_ms), delta = cur - prev; if (delta > expectedIntervalMs) { gapCount += 1; maxGapMs = Math.max(maxGapMs, delta); } coveredMs += Math.min(Math.max(delta, 0), expectedIntervalMs); } if (sorted.length === 1) { coveredMs = 0; } return { gap_count: gapCount, max_gap_ms: maxGapMs, covered_ms: coveredMs }; }
 function latestSampleTs(samples: RawSampleRow[]): number | null { const latest = Math.max(...samples.map((x) => Number(x.ts_ms)).filter(Number.isFinite)); return Number.isFinite(latest) && latest > 0 ? latest : null; }
 function deriveFreshness(samples: RawSampleRow[], nowMs: number, maxAgeMs: number): AppleIIFreshnessV1 { const latest = latestSampleTs(samples); if (latest == null) return "unknown"; return nowMs - latest <= maxAgeMs ? "fresh" : "stale"; }
