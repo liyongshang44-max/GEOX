@@ -72,24 +72,42 @@ async function removeDeviceStatus(pool, f) {
 }
 
 async function postSamples({ base, token, f, source = 'device', count = 12 }) {
+  const metricDefs = [
+    { metric: 'soil_moisture', unit: '%', base: 19 },
+    { metric: 'inlet_flow_lpm', unit: 'L/min', base: 36 },
+    { metric: 'outlet_flow_lpm', unit: 'L/min', base: 20 },
+    { metric: 'pressure_drop_kpa', unit: 'kPa', base: 38 },
+  ];
   const start = Date.now() - (count - 1) * 30 * 60 * 1000 - 60_000;
-  for (let i = 0; i < count; i += 1) {
-    const body = {
-      tenant_id: f.tenant_id,
-      project_id: f.project_id,
-      group_id: f.group_id,
-      sample_id: sid(`rs_${f.run_id}_${i}`),
-      sensor_id: f.device_id,
-      field_id: f.field_id,
-      ts_ms: Math.trunc(start + i * 30 * 60 * 1000),
-      metric: 'pressure',
-      value: 42 + i * 0.01,
-      unit: 'kPa',
-      qc_quality: 'ok',
-      source,
-      payload: { tenant_id: f.tenant_id, project_id: f.project_id, group_id: f.group_id, field_id: f.field_id, device_id: f.device_id, credential_id: f.credential_id, formal_scenario_run_id: f.run_id },
-    };
-    requireOk(await fetchJson(`${base}/api/v1/sensing/raw-samples`, { method: 'POST', token, body }), `raw sample ${i}`);
+  for (const def of metricDefs) {
+    for (let i = 0; i < count; i += 1) {
+      const body = {
+        tenant_id: f.tenant_id,
+        project_id: f.project_id,
+        group_id: f.group_id,
+        sample_id: sid(`rs_${f.run_id}_${def.metric}_${i}`),
+        sensor_id: f.device_id,
+        field_id: f.field_id,
+        ts_ms: Math.trunc(start + i * 30 * 60 * 1000),
+        metric: def.metric,
+        value: Number(def.base) + i * 0.01,
+        unit: def.unit,
+        qc_quality: 'ok',
+        source,
+        payload: {
+          tenant_id: f.tenant_id,
+          project_id: f.project_id,
+          group_id: f.group_id,
+          field_id: f.field_id,
+          device_id: f.device_id,
+          credential_id: f.credential_id,
+          formal_scenario_run_id: f.run_id,
+          interpolated: false,
+          synthetic: false,
+        },
+      };
+      requireOk(await fetchJson(`${base}/api/v1/sensing/raw-samples`, { method: 'POST', token, body }), `raw sample ${def.metric} ${i}`);
+    }
   }
 }
 
