@@ -66,6 +66,21 @@ test("stage1 input mapping defines stable canonical -> observation/pipeline targ
       pipeline: ["pressure_drop_kpa"],
       derived: ["irrigation_effectiveness_state", "leak_risk_state"],
     },
+    inlet_flow_lpm: {
+      observation: ["inlet_flow_lpm", "inflow_lpm", "flow_in_lpm", "inlet_lpm"],
+      pipeline: ["inlet_flow_lpm"],
+      derived: ["irrigation_effectiveness_state", "leak_risk_state"],
+    },
+    outlet_flow_lpm: {
+      observation: ["outlet_flow_lpm", "outflow_lpm", "flow_out_lpm", "outlet_lpm"],
+      pipeline: ["outlet_flow_lpm"],
+      derived: ["irrigation_effectiveness_state", "leak_risk_state"],
+    },
+    pressure_drop_kpa: {
+      observation: ["pressure_drop_kpa", "delta_pressure_kpa", "pressure_loss_kpa"],
+      pipeline: ["pressure_drop_kpa"],
+      derived: ["irrigation_effectiveness_state", "leak_risk_state"],
+    },
   };
 
   for (const metric of STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS_V1) {

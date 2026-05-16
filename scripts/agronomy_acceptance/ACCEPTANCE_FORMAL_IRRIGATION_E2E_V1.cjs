@@ -80,7 +80,7 @@ async function upsertDevice(pool, fx) {
     `INSERT INTO device_capability (tenant_id, device_id, capabilities, updated_ts_ms)
      VALUES ($1,$2,$3::jsonb,$4)
      ON CONFLICT (tenant_id, device_id) DO UPDATE SET capabilities=EXCLUDED.capabilities, updated_ts_ms=EXCLUDED.updated_ts_ms`,
-    [fx.tenant_id, fx.device_id, JSON.stringify(['telemetry.soil_moisture', 'telemetry.water_pressure', 'device.irrigation.valve.open']), ts],
+    [fx.tenant_id, fx.device_id, JSON.stringify(['telemetry.soil_moisture', 'telemetry.water_pressure', 'telemetry.inlet_flow_lpm', 'telemetry.outlet_flow_lpm', 'telemetry.pressure_drop_kpa', 'device.irrigation.valve.open']), ts],
   );
   await pool.query(`INSERT INTO device_binding_index_v1 (tenant_id, device_id, field_id, bound_ts_ms) VALUES ($1,$2,$3,$4) ON CONFLICT (tenant_id, device_id, field_id) DO UPDATE SET bound_ts_ms=EXCLUDED.bound_ts_ms`, [fx.tenant_id, fx.device_id, fx.field_id, ts]);
   await pool.query(`INSERT INTO device_credential_index_v1 (tenant_id, device_id, credential_id, credential_hash, status, issued_ts_ms, revoked_ts_ms, created_ts_ms, updated_ts_ms) VALUES ($1,$2,$3,$4,'ACTIVE',$5,NULL,$5,$5) ON CONFLICT (tenant_id, device_id, credential_id) DO UPDATE SET credential_hash=EXCLUDED.credential_hash, status='ACTIVE', revoked_ts_ms=NULL, updated_ts_ms=EXCLUDED.updated_ts_ms`, [fx.tenant_id, fx.device_id, fx.credential_id, sha(`${fx.run_id}:${fx.device_id}:credential`), ts]);
@@ -248,7 +248,9 @@ async function main() {
   try {
     await health(base);
     await upsertDevice(pool, fx);
-    await postSamples({ ...ctx, fx, manifest, source: 'device', metric: 'pressure', unit: 'kPa', value: 42 });
+    await postSamples({ ...ctx, fx, manifest, source: 'device', metric: 'inlet_flow_lpm', unit: 'L/min', value: 36 });
+    await postSamples({ ...ctx, fx, manifest, source: 'device', metric: 'outlet_flow_lpm', unit: 'L/min', value: 20 });
+    await postSamples({ ...ctx, fx, manifest, source: 'device', metric: 'pressure_drop_kpa', unit: 'kPa', value: 38 });
     const recResp = await generateRecommendation({ ...ctx, fx, manifest });
     const recJson = requireOk(recResp, 'recommendation generate');
     const recommendation = pickRecommendation(recJson);
