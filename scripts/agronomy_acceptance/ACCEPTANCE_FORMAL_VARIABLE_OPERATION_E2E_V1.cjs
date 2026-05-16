@@ -72,7 +72,14 @@ async function ensureDevice(pool, scope, field_id, device_id) {
   await pool.query(`ALTER TABLE device_status_index_v1 ADD COLUMN IF NOT EXISTS field_id TEXT NULL`).catch(() => undefined);
   const ts = Date.now();
   await pool.query(`INSERT INTO device_index_v1(tenant_id,device_id,display_name,device_mode,created_ts_ms) VALUES($1,$2,$3,'physical',$4) ON CONFLICT(tenant_id,device_id) DO UPDATE SET display_name=EXCLUDED.display_name,device_mode='physical'`, [scope.tenant_id, device_id, `Formal variable ${device_id}`, ts]);
-  await pool.query(`INSERT INTO device_capability VALUES($1,$2,$3::jsonb,$4) ON CONFLICT(tenant_id,device_id) DO UPDATE SET capabilities=EXCLUDED.capabilities,updated_ts_ms=EXCLUDED.updated_ts_ms`, [scope.tenant_id, device_id, JSON.stringify(['telemetry.water_pressure', 'device.irrigation.valve.open']), ts]);
+  await pool.query(`INSERT INTO device_capability VALUES($1,$2,$3::jsonb,$4) ON CONFLICT(tenant_id,device_id) DO UPDATE SET capabilities=EXCLUDED.capabilities,updated_ts_ms=EXCLUDED.updated_ts_ms`, [scope.tenant_id, device_id, JSON.stringify([
+    'telemetry.soil_moisture',
+    'telemetry.inlet_flow_lpm',
+    'telemetry.outlet_flow_lpm',
+    'telemetry.pressure_drop_kpa',
+    'telemetry.water_pressure',
+    'device.irrigation.valve.open',
+  ]), ts]);
   await pool.query(`INSERT INTO device_binding_index_v1 VALUES($1,$2,$3,$4) ON CONFLICT(tenant_id,device_id,field_id) DO UPDATE SET bound_ts_ms=EXCLUDED.bound_ts_ms`, [scope.tenant_id, device_id, field_id, ts]);
   await pool.query(`INSERT INTO device_status_index_v1(tenant_id,project_id,group_id,field_id,device_id,status,last_telemetry_ts_ms,last_heartbeat_ts_ms,battery_percent,rssi_dbm,fw_ver,updated_ts_ms) VALUES($1,$2,$3,$4,$5,'ONLINE',$6,$6,82,-55,'formal-variable-e2e',$6) ON CONFLICT(tenant_id,device_id) DO UPDATE SET project_id=EXCLUDED.project_id,group_id=EXCLUDED.group_id,field_id=EXCLUDED.field_id,status='ONLINE',last_telemetry_ts_ms=EXCLUDED.last_telemetry_ts_ms,last_heartbeat_ts_ms=EXCLUDED.last_heartbeat_ts_ms,updated_ts_ms=EXCLUDED.updated_ts_ms`, [scope.tenant_id, scope.project_id, scope.group_id, field_id, device_id, ts - 30000]);
 }
