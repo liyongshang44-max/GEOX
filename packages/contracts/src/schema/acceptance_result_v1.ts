@@ -58,6 +58,15 @@ export const AcceptanceResultV1PayloadSchema = z.object({
   non_simulated_chain: z.boolean().optional(),
   source_lane: z.string().min(1).optional(),
   trust_level: z.string().min(1).optional()
+}).extend({
+  variable_operation: z.boolean().optional(),
+  operation_rollup_policy: z.string().min(1).optional(),
+  zone_results: z.array(z.any()).optional(),
+  zone_matrix: z.array(z.any()).optional(),
+  failed_required_zones: z.array(z.string().min(1)).optional(),
+  as_executed_id: z.string().min(1).optional(),
+  as_applied_id: z.string().min(1).optional(),
+  receipt_id: z.string().min(1).optional(),
 });
 
 export type AcceptanceResultV1Payload = z.infer<typeof AcceptanceResultV1PayloadSchema>;

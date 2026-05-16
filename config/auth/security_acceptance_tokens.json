@@ -43,7 +43,9 @@
         "ao_act.receipt.write",
         "ao_act.index.read",
         "evidence_export.read",
-        "evidence_export.write"
+        "evidence_export.write",
+        "telemetry.write",
+        "telemetry.read"
       ]
     },
     {
@@ -120,6 +122,7 @@
       "scopes": [
         "action.read",
         "action.receipt.submit",
+        "ao_act.receipt.write",
         "field.zone.read"
       ]
     },
