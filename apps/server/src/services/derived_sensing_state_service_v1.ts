@@ -313,7 +313,16 @@ export async function appendDerivedSensingStateV1(db: DbConn, input: DerivedSens
     `INSERT INTO derived_sensing_state_index_v1
       (tenant_id, project_id, group_id, field_id, state_type, payload_json, confidence, explanation_codes_json, source_observation_ids_json, source_device_ids_json, computed_at, computed_at_ts_ms, fact_id)
      VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8::jsonb, $9::jsonb, $10::jsonb, $11::timestamptz, $12, $13)
-     ON CONFLICT (tenant_id, field_id, state_type, computed_at_ts_ms) DO NOTHING`,
+     ON CONFLICT (tenant_id, field_id, state_type, computed_at_ts_ms) DO UPDATE SET
+       project_id = EXCLUDED.project_id,
+       group_id = EXCLUDED.group_id,
+       payload_json = EXCLUDED.payload_json,
+       confidence = EXCLUDED.confidence,
+       explanation_codes_json = EXCLUDED.explanation_codes_json,
+       source_observation_ids_json = EXCLUDED.source_observation_ids_json,
+       source_device_ids_json = EXCLUDED.source_device_ids_json,
+       fact_id = EXCLUDED.fact_id,
+       computed_at = EXCLUDED.computed_at`,
     [
       input.tenant_id,
       input.project_id,
