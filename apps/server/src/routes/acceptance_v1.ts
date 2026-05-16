@@ -431,6 +431,9 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
         return { ...z, coverage_percent: coveragePercent, deviation_percent: deviationPercent, zone_acceptance_result: zoneVerdict };
       }) : [];
       const failedRequiredZones = zoneResults.filter((z: any) => z?.required !== false && String(z?.zone_acceptance_result ?? "").toUpperCase() !== "PASS").map((z: any) => String(z?.zone_id ?? "")).filter(Boolean);
+      const rollupVerdict = variableMode === "VARIABLE_BY_ZONE" && zoneResults.length > 0
+        ? (failedRequiredZones.length === 0 ? "PASS" : "FAIL")
+        : toVerdict(evaluated.result);
       const acceptanceRecord = {
         type: "acceptance_result_v1",
         payload: GeoxContracts.AcceptanceResultV1PayloadSchema.parse({
@@ -443,14 +446,14 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
           operation_plan_id: typeof taskPayload.operation_plan_id === "string" ? taskPayload.operation_plan_id : undefined,
           trace_id,
           program_id: typeof taskPayload.program_id === "string" ? taskPayload.program_id : undefined,
-          verdict: toVerdict(evaluated.result),
+          verdict: rollupVerdict,
           metrics: buildAcceptanceMetrics({ evaluated, expectedDurationMin: Number.isFinite(expectedDurationMin) ? expectedDurationMin : null }),
           rule_id: evaluated.rule_id,
           explanation_codes: evaluated.explanation_codes,
           acceptance_skill_id: evaluated.acceptance_skill_id,
           acceptance_skill_version: evaluated.acceptance_skill_version,
           input_digest: digestJson({ action_type: taskPayload.action_type, parameters: taskPayload.parameters, receipt: receiptFact.record_json?.payload ?? {}, derived_states, acceptance_policy_ref }),
-          output_digest: digestJson({ result: evaluated.result, verdict: toVerdict(evaluated.result), explanation_codes: evaluated.explanation_codes, metrics: evaluated.metrics }),
+          output_digest: digestJson({ result: evaluated.result, verdict: rollupVerdict, explanation_codes: evaluated.explanation_codes, metrics: evaluated.metrics }),
           evaluated_at: nowIso,
           evidence_refs: [taskFact.fact_id, receiptFact.fact_id, ...judgeResultIds],
           execution_judge_id: effectiveExecutionJudgeId || undefined,
