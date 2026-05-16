@@ -596,7 +596,15 @@ export function computeRoiLedgerEntriesFromAsExecuted(asExecuted: AsExecutedRow,
   const laborSaved = computeLaborSavedEntry(asExecuted);
   if (laborSaved) entries.push(laborSaved);
 
-  const allowedMvp0 = new Set(["WATER_SAVED", "LABOR_SAVED", "EARLY_WARNING_LEAD_TIME", "FIRST_PASS_ACCEPTANCE_RATE"]);
+  const allowedMvp0 = new Set([
+    "WATER_SAVED",
+    "LABOR_SAVED",
+    "EARLY_WARNING_LEAD_TIME",
+    "FIRST_PASS_ACCEPTANCE_RATE",
+    "VARIABLE_WATER_SAVED",
+    "ZONE_COMPLETION_RATE",
+    "VARIABLE_EXECUTION_RELIABILITY",
+  ]);
   // 商业可信度门禁：MVP-0 只保留允许类型，且必须具备 baseline/confidence/evidence，并满足 value_kind 约束。
   return entries.map((entry) => enrichCommercialFields(entry, { ...context, asExecuted })).filter((entry) => {
     if (!allowedMvp0.has(entry.roi_type)) return false;
