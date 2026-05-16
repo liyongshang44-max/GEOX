@@ -72,25 +72,72 @@ async function removeDeviceStatus(pool, f) {
 }
 
 async function postSamples({ base, token, f, source = 'device', count = 12 }) {
+  const metricDefs = [
+    { metric: 'soil_moisture', unit: '%', base: 19 },
+    { metric: 'inlet_flow_lpm', unit: 'L/min', base: 36 },
+    { metric: 'outlet_flow_lpm', unit: 'L/min', base: 20 },
+    { metric: 'pressure_drop_kpa', unit: 'kPa', base: 38 },
+  ];
   const start = Date.now() - (count - 1) * 30 * 60 * 1000 - 60_000;
-  for (let i = 0; i < count; i += 1) {
-    const body = {
-      tenant_id: f.tenant_id,
-      project_id: f.project_id,
-      group_id: f.group_id,
-      sample_id: sid(`rs_${f.run_id}_${i}`),
-      sensor_id: f.device_id,
-      field_id: f.field_id,
-      ts_ms: Math.trunc(start + i * 30 * 60 * 1000),
-      metric: 'pressure',
-      value: 42 + i * 0.01,
-      unit: 'kPa',
-      qc_quality: 'ok',
-      source,
-      payload: { tenant_id: f.tenant_id, project_id: f.project_id, group_id: f.group_id, field_id: f.field_id, device_id: f.device_id, credential_id: f.credential_id, formal_scenario_run_id: f.run_id },
-    };
-    requireOk(await fetchJson(`${base}/api/v1/sensing/raw-samples`, { method: 'POST', token, body }), `raw sample ${i}`);
+  for (const def of metricDefs) {
+    for (let i = 0; i < count; i += 1) {
+      const body = {
+        tenant_id: f.tenant_id,
+        project_id: f.project_id,
+        group_id: f.group_id,
+        sample_id: sid(`rs_${f.run_id}_${def.metric}_${i}`),
+        sensor_id: f.device_id,
+        field_id: f.field_id,
+        ts_ms: Math.trunc(start + i * 30 * 60 * 1000),
+        metric: def.metric,
+        value: Number(def.base) + i * 0.01,
+        unit: def.unit,
+        qc_quality: 'ok',
+        source,
+        payload: {
+          tenant_id: f.tenant_id,
+          project_id: f.project_id,
+          group_id: f.group_id,
+          field_id: f.field_id,
+          device_id: f.device_id,
+          credential_id: f.credential_id,
+          formal_scenario_run_id: f.run_id,
+          interpolated: false,
+          synthetic: false,
+        },
+      };
+      requireOk(await fetchJson(`${base}/api/v1/sensing/raw-samples`, { method: 'POST', token, body }), `raw sample ${def.metric} ${i}`);
+    }
   }
+}
+
+async function ensureCropContextViaProgram({ base, token, f }) {
+  const body = {
+    tenant_id: f.tenant_id,
+    project_id: f.project_id,
+    group_id: f.group_id,
+    program_id: `prg_${f.run_id}`,
+    field_id: f.field_id,
+    season_id: f.season_id,
+    crop_code: 'corn',
+    status: 'ACTIVE',
+    goal_profile: { yield_priority: 'high', quality_priority: 'medium', residue_priority: 'low', water_saving_priority: 'medium', cost_priority: 'medium' },
+    constraints: { forbid_pesticide_classes: [], forbid_fertilizer_types: [], max_irrigation_mm_per_day: null, manual_approval_required_for: [], allow_night_irrigation: true, max_irrigation_rounds_per_day: 3 },
+    budget: { max_cost_total: null, currency: 'USD' },
+    execution_policy: { mode: 'approval_required', auto_execute_allowed_task_types: [] },
+  };
+  return requireOk(await fetchJson(`${base}/api/v1/programs`, { method: 'POST', token, body }), 'field program create');
+}
+
+async function generateRecommendationWithRetry({ base, token, f, attempts = 8, waitMs = 1200 }) {
+  let last = null;
+  for (let i = 0; i < attempts; i += 1) {
+    const resp = await generateRecommendation({ base, token, f });
+    if (resp.ok) return resp;
+    last = resp;
+    await sleep(waitMs);
+  }
+  return last;
 }
 
 async function generateRecommendation({ base, token, f }) {
@@ -260,6 +307,7 @@ async function main() {
 
     const pre = fx(scope, rid());
     await upsertDevice(pool, pre, 'ONLINE');
+    await ensureCropContextViaProgram({ ...ctx, f: pre });
     await postSamples({ ...ctx, f: pre });
     await removeDeviceStatus(pool, pre);
     const preRec = await generateRecommendation({ ...ctx, f: pre });
@@ -282,8 +330,9 @@ async function main() {
 
     const off = fx(scope, rid());
     await upsertDevice(pool, off, 'ONLINE');
+    await ensureCropContextViaProgram({ ...ctx, f: off });
     await postSamples({ ...ctx, f: off });
-    const recJson = requireOk(await generateRecommendation({ ...ctx, f: off }), 'offline lane recommendation');
+    const recJson = requireOk(await generateRecommendationWithRetry({ ...ctx, f: off }), 'offline lane recommendation');
     const recommendation = pickRecommendation(recJson);
     assert.ok(recommendation?.recommendation_id, 'offline lane recommendation missing');
     const approvalReq = await requestApproval({ ...ctx, f: off, recommendation, skipAutoTaskIssue: true });
