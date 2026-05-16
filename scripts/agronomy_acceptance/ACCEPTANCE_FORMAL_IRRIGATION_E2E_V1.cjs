@@ -271,6 +271,7 @@ async function main() {
     await postSamples({ ...ctx, fx, manifest, source: 'device', metric: 'inlet_flow_lpm', unit: 'L/min', value: 36 });
     await postSamples({ ...ctx, fx, manifest, source: 'device', metric: 'outlet_flow_lpm', unit: 'L/min', value: 20 });
     await postSamples({ ...ctx, fx, manifest, source: 'device', metric: 'pressure_drop_kpa', unit: 'kPa', value: 38 });
+    await postSamples({ ...ctx, fx, manifest, source: 'device', metric: 'soil_moisture', unit: '%', value: 19 });
     const recResp = await generateRecommendation({ ...ctx, fx, manifest });
     const recJson = requireOk(recResp, 'recommendation generate');
     const recommendation = pickRecommendation(recJson);

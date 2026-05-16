@@ -323,7 +323,11 @@ async function handleApprovalApprove(req: any, reply: any, pool: Pool) {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "authorization": String((req.headers as any)["authorization"] ?? "")
+        "authorization": (() => {
+          const internalToken = String(process.env.GEOX_INTERNAL_TASK_ISSUER_TOKEN ?? "").trim();
+          if (!internalToken) throw new Error("INTERNAL_TASK_ISSUER_TOKEN_MISSING");
+          return internalToken.toLowerCase().startsWith("bearer ") ? internalToken : `Bearer ${internalToken}`;
+        })()
       },
       body: JSON.stringify(aoActBody)
     });
@@ -363,6 +367,10 @@ async function handleApprovalApprove(req: any, reply: any, pool: Pool) {
 
     return reply.send({ ok: true, request_id, decision_id, act_task_id, ao_act_fact_id: ao_fact_id, decision_fact_id });
   } catch (e: any) {
+    if (reply.sent) return;
+    if (String(e?.message ?? "") === "INTERNAL_TASK_ISSUER_TOKEN_MISSING") {
+      return reply.status(500).send({ ok: false, error: "INTERNAL_TASK_ISSUER_TOKEN_MISSING" });
+    }
     return reply.status(400).send({ ok: false, error: e?.message ?? "BAD_REQUEST" });
   }
 }
