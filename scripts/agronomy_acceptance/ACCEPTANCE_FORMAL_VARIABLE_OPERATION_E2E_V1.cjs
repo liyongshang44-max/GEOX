@@ -228,7 +228,14 @@ async function fetchOperationReport(base, token, scope, operation_plan_id) {
     `${base}/api/v1/reports/operation/${encodeURIComponent(operation_plan_id)}?tenant_id=${encodeURIComponent(scope.tenant_id)}&project_id=${encodeURIComponent(scope.project_id)}&group_id=${encodeURIComponent(scope.group_id)}`,
     { method: 'GET', token },
   );
-  if (!resp.ok) return null;
+  if (!resp.ok) {
+    assert.fail(`operation report failed: ${JSON.stringify({
+      status: resp.status,
+      body: resp.json ?? resp.text ?? null,
+      operation_plan_id,
+      request_url: `${base}/api/v1/reports/operation/${encodeURIComponent(operation_plan_id)}?tenant_id=${encodeURIComponent(scope.tenant_id)}&project_id=${encodeURIComponent(scope.project_id)}&group_id=${encodeURIComponent(scope.group_id)}`,
+    })}`);
+  }
   return resp.json?.operation_report_v1 ?? null;
 }
 (async () => {

@@ -187,10 +187,10 @@ async function loadFacts(pool: Pool, tenant: TenantTriple): Promise<FactRow[]> {
 async function loadAsAppliedMapRows(pool: Pool, tenant: TenantTriple): Promise<any[]> {
   try {
     const q = await pool.query(
-      `SELECT as_applied_id, as_executed_id, task_id, receipt_id, prescription_id, zone_id, application, updated_ts_ms, created_at
+      `SELECT as_applied_id, as_executed_id, task_id, receipt_id, prescription_id, zone_id, application, updated_at, created_at
          FROM as_applied_map_v1
         WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3
-        ORDER BY updated_ts_ms DESC NULLS LAST, created_at DESC NULLS LAST, as_applied_id DESC`,
+        ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST, as_applied_id DESC`,
       [tenant.tenant_id, tenant.project_id, tenant.group_id],
     );
     return q.rows ?? [];
