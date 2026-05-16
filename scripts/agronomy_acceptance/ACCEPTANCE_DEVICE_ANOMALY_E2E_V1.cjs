@@ -93,6 +93,35 @@ async function postSamples({ base, token, f, source = 'device', count = 12 }) {
   }
 }
 
+async function ensureCropContextViaProgram({ base, token, f }) {
+  const body = {
+    tenant_id: f.tenant_id,
+    project_id: f.project_id,
+    group_id: f.group_id,
+    program_id: `prg_${f.run_id}`,
+    field_id: f.field_id,
+    season_id: f.season_id,
+    crop_code: 'corn',
+    status: 'ACTIVE',
+    goal_profile: { yield_priority: 'high', quality_priority: 'medium', residue_priority: 'low', water_saving_priority: 'medium', cost_priority: 'medium' },
+    constraints: { forbid_pesticide_classes: [], forbid_fertilizer_types: [], max_irrigation_mm_per_day: null, manual_approval_required_for: [], allow_night_irrigation: true, max_irrigation_rounds_per_day: 3 },
+    budget: { max_cost_total: null, currency: 'USD' },
+    execution_policy: { mode: 'approval_required', auto_execute_allowed_task_types: [] },
+  };
+  return requireOk(await fetchJson(`${base}/api/v1/programs`, { method: 'POST', token, body }), 'field program create');
+}
+
+async function generateRecommendationWithRetry({ base, token, f, attempts = 8, waitMs = 1200 }) {
+  let last = null;
+  for (let i = 0; i < attempts; i += 1) {
+    const resp = await generateRecommendation({ base, token, f });
+    if (resp.ok) return resp;
+    last = resp;
+    await sleep(waitMs);
+  }
+  return last;
+}
+
 async function generateRecommendation({ base, token, f }) {
   return fetchJson(`${base}/api/v1/recommendations/generate`, {
     method: 'POST',
@@ -260,6 +289,7 @@ async function main() {
 
     const pre = fx(scope, rid());
     await upsertDevice(pool, pre, 'ONLINE');
+    await ensureCropContextViaProgram({ ...ctx, f: pre });
     await postSamples({ ...ctx, f: pre });
     await removeDeviceStatus(pool, pre);
     const preRec = await generateRecommendation({ ...ctx, f: pre });
@@ -282,8 +312,9 @@ async function main() {
 
     const off = fx(scope, rid());
     await upsertDevice(pool, off, 'ONLINE');
+    await ensureCropContextViaProgram({ ...ctx, f: off });
     await postSamples({ ...ctx, f: off });
-    const recJson = requireOk(await generateRecommendation({ ...ctx, f: off }), 'offline lane recommendation');
+    const recJson = requireOk(await generateRecommendationWithRetry({ ...ctx, f: off }), 'offline lane recommendation');
     const recommendation = pickRecommendation(recJson);
     assert.ok(recommendation?.recommendation_id, 'offline lane recommendation missing');
     const approvalReq = await requestApproval({ ...ctx, f: off, recommendation, skipAutoTaskIssue: true });
