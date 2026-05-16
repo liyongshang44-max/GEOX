@@ -553,6 +553,71 @@ async function ensureVariableOperationPlanV1(
   return { operation_plan_id: input.operation_plan_id, operation_plan_fact_id: operationPlanFactId, created: true };
 }
 
+async function ensureOperationPlanForApprovedActionTaskV1(
+  pool: Pool,
+  input: {
+    tenant: TenantTripleV0;
+    operation_plan_id: string;
+    approval_request_id: string;
+    recommendation_id: string | null;
+    field_id: string | null;
+    season_id: string | null;
+    action_type: string;
+    act_task_id: string;
+    device_id: string | null;
+    actor_id: string;
+    token_id: string;
+    source: string;
+  }
+): Promise<{ operation_plan_id: string; operation_plan_fact_id: string; created: boolean }> {
+  const existing = await pool.query(
+    `SELECT fact_id
+       FROM facts
+      WHERE (record_json::jsonb->>'type') = 'operation_plan_v1'
+        AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $1
+        AND (record_json::jsonb#>>'{payload,tenant_id}') = $2
+        AND (record_json::jsonb#>>'{payload,project_id}') = $3
+        AND (record_json::jsonb#>>'{payload,group_id}') = $4
+      ORDER BY occurred_at DESC, fact_id DESC
+      LIMIT 1`,
+    [input.operation_plan_id, input.tenant.tenant_id, input.tenant.project_id, input.tenant.group_id],
+  );
+  if ((existing.rowCount ?? 0) > 0) {
+    return { operation_plan_id: input.operation_plan_id, operation_plan_fact_id: String(existing.rows[0].fact_id), created: false };
+  }
+
+  const nowTs = Date.now();
+  const factId = randomUUID();
+  await pool.query(
+    "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+    [factId, FACT_SOURCE_AO_ACT_V0, {
+      type: "operation_plan_v1",
+      payload: {
+        tenant_id: input.tenant.tenant_id,
+        project_id: input.tenant.project_id,
+        group_id: input.tenant.group_id,
+        operation_plan_id: input.operation_plan_id,
+        operation_id: input.operation_plan_id,
+        approval_request_id: input.approval_request_id,
+        recommendation_id: input.recommendation_id,
+        field_id: input.field_id,
+        season_id: input.season_id,
+        action_type: input.action_type,
+        status: "ACKED",
+        act_task_id: input.act_task_id,
+        device_id: input.device_id,
+        source: input.source,
+        actor_id: input.actor_id,
+        token_id: input.token_id,
+        created_at_ts: nowTs,
+        updated_at_ts: nowTs,
+      }
+    }],
+  );
+
+  return { operation_plan_id: input.operation_plan_id, operation_plan_fact_id: factId, created: true };
+}
+
 
 async function findDuplicateAoActReceiptByIdempotencyKey(
   pool: Pool, // Postgres pool used to query the append-only facts ledger.
@@ -855,6 +920,20 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
 
       const act_task_id = `act_${randomUUID().replace(/-/g, "")}`; // Deterministic format is not required; uniqueness is.
       const created_at_ts = Date.now(); // Audit timestamp (fact occurred_at is authoritative)
+      await ensureOperationPlanForApprovedActionTaskV1(pool, {
+        tenant,
+        operation_plan_id: body.operation_plan_id,
+        approval_request_id: body.approval_request_id,
+        recommendation_id: String(body.meta?.recommendation_id ?? "").trim() || null,
+        field_id: String(body.field_id ?? body.meta?.field_id ?? body.target?.ref ?? "").trim() || null,
+        season_id: String(body.season_id ?? body.meta?.season_id ?? "").trim() || null,
+        action_type: String(body.action_type ?? "").trim() || "IRRIGATE",
+        act_task_id,
+        device_id: String(body.meta?.device_id ?? "").trim() || null,
+        actor_id: String(auth.actor_id ?? "").trim(),
+        token_id: String(auth.token_id ?? "").trim(),
+        source: "approval_auto_task_issue"
+      });
 
       const record_json = {
         type: "ao_act_task_v0",
