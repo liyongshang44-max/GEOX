@@ -232,7 +232,7 @@ async function receiptFailureLane(ctx, baseF, recommendation) {
     logs_refs: [{ kind: 'sim_trace', ref: `sim://${task.act_task_id}` }],
     status: 'not_executed',
     constraint_check: { violated: true, violations: ['DEVICE_OFFLINE_DURING_EXECUTION'] },
-    observed_parameters: { duration_sec: 0 },
+    observed_parameters: { duration_sec: 1200 },
     meta: { idempotency_key: sid('receipt_failed'), command_id: task.act_task_id, operation_plan_id: `op_${f.run_id}`, evidence_source: 'sim', device_id: f.device_id, formal_scenario_run_id: f.run_id },
   };
   requireOk(await fetchJson(`${ctx.base}/api/v1/actions/receipt`, { method: 'POST', token: ctx.executorToken, body: receiptBody }), 'failure receipt');
