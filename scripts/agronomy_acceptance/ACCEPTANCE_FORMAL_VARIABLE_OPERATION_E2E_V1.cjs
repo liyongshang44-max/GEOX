@@ -92,7 +92,7 @@ async function postZoneSamples(base, token, scope, field_id, device_id, zone_id,
     const ts_ms = start + i * intervalMs;
     const metrics = phase === 'pre'
       ? [
-        { metric: 'soil_moisture', value: 0.215 + i * 0.0004, unit: 'm3/m3' },
+        { metric: 'soil_moisture', value: 0.185 + i * 0.0003, unit: 'm3/m3' },
         { metric: 'inlet_flow_lpm', value: 36.1 + i * 0.01, unit: 'L/min' },
         { metric: 'outlet_flow_lpm', value: 20.1 + i * 0.01, unit: 'L/min' },
         { metric: 'pressure_drop_kpa', value: 38.1 + i * 0.01, unit: 'kPa' },
