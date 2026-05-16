@@ -1,5 +1,9 @@
 # GEOX Skill Safety Boundary V1
 
+> 本文件受 `docs/governance/GEOX_SKILL_CONSTITUTION_V1.md` 约束。
+> 如有冲突，以 Skill Constitution 为准。
+> 本文件保留为 Skill 安全边界细则，不作为完整 Skill 宪法。
+
 - Skill 分类：SENSING / AGRONOMY / DEVICE / ACCEPTANCE / OPS / CONTROL / OBSERVABILITY。
 - AGRONOMY 仅 recommendation/prescription 语义，不能输出 device command / approval decision / task id。
 - DEVICE 仅 capability/adapter/evidence，不能输出 approval/acceptance/ROI 覆盖结果。

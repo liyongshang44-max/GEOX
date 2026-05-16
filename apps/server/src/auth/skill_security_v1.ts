@@ -1,4 +1,7 @@
-export type SkillCategoryV1 = "SENSING" | "AGRONOMY" | "DEVICE" | "ACCEPTANCE" | "OPS" | "CONTROL" | "OBSERVABILITY";
+import { normalizeSkillCategoryToCanonicalV1 } from "@geox/contracts";
+import type { SkillCanonicalCategoryV1 } from "@geox/contracts";
+
+export type SkillCategoryV1 = SkillCanonicalCategoryV1;
 export type SkillTriggerStageV1 = "before_recommendation" | "after_recommendation" | "before_dispatch" | "before_acceptance" | "after_acceptance";
 
 const FORBIDDEN_OUTPUT_KEYS = new Set([
@@ -7,7 +10,7 @@ const FORBIDDEN_OUTPUT_KEYS = new Set([
 ]);
 
 export function assertSkillCategoryBoundaryV1(input: { category: string; trigger_stage: string; requested_action?: string | null; }): void {
-  const category = String(input.category ?? "").trim().toUpperCase();
+  const category = normalizeSkillCategoryToCanonicalV1(input.category);
   const stage = String(input.trigger_stage ?? "").trim();
   const action = String(input.requested_action ?? "").trim().toLowerCase();
   if (category === "AGRONOMY" && stage === "before_dispatch") throw new Error("SKILL_CATEGORY_BOUNDARY_VIOLATION");
@@ -15,6 +18,8 @@ export function assertSkillCategoryBoundaryV1(input: { category: string; trigger
   if (category === "DEVICE" && ["approval_decision", "acceptance_result", "roi_ledger"].includes(action)) throw new Error("SKILL_CATEGORY_BOUNDARY_VIOLATION");
   if (category === "ACCEPTANCE" && ["task_mutation", "receipt_mutation", "prescription_mutation", "field_memory_mutation", "roi_mutation"].includes(action)) throw new Error("SKILL_CATEGORY_BOUNDARY_VIOLATION");
   if (["SENSING", "OBSERVABILITY"].includes(category) && ["device_command", "approval_decision", "recommendation_approval"].includes(action)) throw new Error("SKILL_CATEGORY_BOUNDARY_VIOLATION");
+  if (category === "OPS" && ["formal_acceptance", "formal_roi", "formal_field_memory", "customer_final_status"].includes(action)) throw new Error("SKILL_CATEGORY_BOUNDARY_VIOLATION");
+  if (category === "CONTROL" && ["task", "recommendation", "device_command", "dispatch_command"].includes(action)) throw new Error("SKILL_CATEGORY_BOUNDARY_VIOLATION");
 }
 
 export function assertSkillOutputBoundaryV1(input: { category: string; trigger_stage: string; outputs: any; }): void {
@@ -31,4 +36,6 @@ export function assertSkillBindingWriteAllowedV1(input: { auth: { role: string; 
   if (!["before_recommendation", "after_recommendation", "before_dispatch", "before_acceptance", "after_acceptance"].includes(stage)) throw new Error("SKILL_BINDING_TRIGGER_STAGE_DENIED");
   const rollout = String(input.rollout_mode ?? "").trim().toUpperCase();
   if (!["DIRECT", "CANARY", "DRY_RUN"].includes(rollout)) throw new Error("SKILL_ROLLOUT_MODE_DENIED");
+  const category = normalizeSkillCategoryToCanonicalV1(input.category);
+  if (category === "DEVICE" && !input.auth.scopes?.includes("skill_binding.write")) throw new Error("SKILL_BINDING_SCOPE_DENIED");
 }
