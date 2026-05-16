@@ -6,8 +6,13 @@ import {
   buildSeriesResponseV1,
   readRawSamplesV1,
   RawSampleFactEnvelopeErrorV1,
+  type RawSampleEnvelopeV1,
   type RawSampleFactEnvelopeTenantV1,
 } from "../domain/sensing/raw_sample_fact_envelope_v1.js";
+import {
+  ensureDeviceObservationProjectionV1,
+  writeObservationRunPipelineAndRefreshFieldV1,
+} from "../services/device_observation_service_v1.js";
 
 function badRequest(reply: FastifyReply, error: string) {
   return reply.status(400).send({ ok: false, error });
@@ -56,6 +61,49 @@ function enforceTenantMatch(auth: any, tenant: RawSampleFactEnvelopeTenantV1, re
   return true;
 }
 
+function isFormalRawSampleSourceV1(source: unknown): boolean {
+  const s = String(source ?? "").trim().toLowerCase();
+  return s === "device" || s === "gateway";
+}
+
+function qualityFlagsFromRawSampleV1(item: RawSampleEnvelopeV1): string[] {
+  const q = String(item.qc_quality ?? "").trim().toUpperCase();
+  if (q === "OK") return ["OK"];
+  if (q === "SUSPECT") return ["SUSPECT"];
+  if (q === "BAD") return ["OUTLIER"];
+  return ["OK"];
+}
+
+async function maybeRunOfficialObservationPipelineV1(pool: Pool, item: RawSampleEnvelopeV1) {
+  if (!isFormalRawSampleSourceV1(item.source)) return null;
+  if (!item.field_id || !item.sensor_id || !item.metric) return null;
+  const client = await pool.connect();
+  try {
+    await ensureDeviceObservationProjectionV1(client);
+    const result = await writeObservationRunPipelineAndRefreshFieldV1(client, {
+      tenant_id: String(item.payload_json?.tenant_id ?? ""),
+      project_id: item.project_id,
+      group_id: item.group_id,
+      device_id: item.sensor_id,
+      field_id: item.field_id,
+      metric: item.metric,
+      value: item.value,
+      unit: item.unit,
+      quality_flags: qualityFlagsFromRawSampleV1(item),
+      confidence: item.qc_quality === "ok" ? 0.9 : 0.45,
+      observed_at_ts_ms: item.ts_ms,
+      source_fact_id: item.fact_id,
+    });
+    return {
+      observation_fact_id: result.observation.fact_id,
+      pipeline_runs: result.pipeline?.runs ?? [],
+      read_model_refreshed: Boolean(result.read_model_refresh),
+    };
+  } finally {
+    client.release();
+  }
+}
+
 export function registerSensingFactEnvelopeV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/sensing/raw-samples", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "telemetry.write");
@@ -65,7 +113,8 @@ export function registerSensingFactEnvelopeV1Routes(app: FastifyInstance, pool: 
     if (!enforceTenantMatch(auth, tenant, reply)) return;
     try {
       const item = await appendRawSampleV1(pool, body, tenant);
-      return reply.send({ ok: true, item });
+      const observation_pipeline = await maybeRunOfficialObservationPipelineV1(pool, item);
+      return reply.send({ ok: true, item, observation_pipeline });
     } catch (err) {
       if (handleFactEnvelopeError(reply, err)) return;
       req.log.error({ err }, "raw_sample_v1 append failed");
