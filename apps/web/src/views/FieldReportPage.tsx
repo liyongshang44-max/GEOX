@@ -8,6 +8,7 @@ import CustomerEmptyState from "../components/customer/CustomerEmptyState";
 import FieldGisMap from "../components/FieldGisMap";
 import FieldMemoryPanel from "../components/customer/FieldMemoryPanel";
 import RoiLedgerDrawer from "../components/customer/RoiLedgerDrawer";
+import { FormalChainSummaryCard, ScenarioAcceptanceSummary } from "../components/customer";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 import { customerCropLabel, customerMissingInputsText, customerSemanticLabel, customerSourceLabel } from "../lib/customerSemanticLabels";
 import { buildFieldReportVm } from "../viewmodels/fieldReportVm";
@@ -106,6 +107,8 @@ export default function FieldReportPage(): React.ReactElement {
         </section>
 
         <section className="fieldGrid fieldGrid3">
+          {reportAny.recent_operations?.[0] ? <FormalChainSummaryCard data={reportAny.recent_operations[0]} /> : null}
+          {reportAny.recent_operations?.[0] ? <ScenarioAcceptanceSummary data={reportAny.recent_operations[0]} /> : null}
           <article className="customerCard"><h3 className="customerCardTitle">地块观测状态</h3><div>{customerSemanticLabel(observability.status, "暂无观测")}</div><div className="customerSpacingTopXs">数据窗口：{safeText(observability.data_window?.duration_hours, "0")} 小时 · 置信度：{pct(observability.confidence)}</div><div className="customerSpacingTopXs">缺失输入：{customerMissingInputsText(observability.missing_inputs)}</div></article>
           <article className="customerCard"><h3 className="customerCardTitle">当前作物状态</h3><div>{vm.cropContext.statusText}</div><div className="customerSpacingTopXs">作物：{vm.cropContext.cropText} · 阶段：{vm.cropContext.stageText}</div><div className="customerSpacingTopXs">来源：{vm.cropContext.sourceText} · 允许作物处方：{vm.cropContext.allowCropSpecificPrescription ? "是" : "否"}</div><p className="muted customerSpacingTopXs">{vm.cropContext.explanationText}</p></article>
           <article className="customerCard"><h3 className="customerCardTitle">当前建议</h3>{vm.nextAction ? <><div>{vm.nextAction.title}</div><div className="customerSpacingTopXs">{vm.nextAction.explainText}</div><div className="customerActionRow"><Link to={`/customer/fields/${encodeURIComponent(vm.field.fieldId)}`}>查看建议</Link></div></> : <><CustomerEmptyState vm={noPendingActionsState} /><p className="muted customerSpacingTopXs">{vm.cropContext.explanationText}</p></>}</article>

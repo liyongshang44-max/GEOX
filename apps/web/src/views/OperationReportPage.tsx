@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { fetchOperationReport, type OperationReportV1 } from "../api/customerReports";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ErrorState from "../components/common/ErrorState";
+import { FailSafeCustomerNotice, FormalChainSummaryCard, FormalScenarioBadge, ScenarioAcceptanceSummary, ScenarioValueMemorySummary, ZoneRollupSummary } from "../components/customer";
 import { customerTimelineStatusLabel } from "../lib/customerLabels";
 import { customerSafeName, customerSafeTitle } from "../lib/customerSafeText";
 import { customerChainIntegrityLabel, customerSemanticLabel, isCustomerChainComplete } from "../lib/customerSemanticLabels";
@@ -523,6 +524,14 @@ export default function OperationReportPage(): React.ReactElement {
         </header>
 
         {legacyWarning ? <section className="customerCard customerScopeWarning">{legacyWarning}</section> : null}
+        <section className="operationMainSectionsGrid">
+          <article className="customerCard"><h3 className="customerCardTitle">正式场景</h3><FormalScenarioBadge data={report} /></article>
+          <FormalChainSummaryCard data={report} />
+          <ScenarioAcceptanceSummary data={report} />
+          <ScenarioValueMemorySummary data={report} />
+          <ZoneRollupSummary data={report} />
+          <FailSafeCustomerNotice data={report} />
+        </section>
 
         <section className="operationMainSectionsGrid">
           {mainSections.map((section) => <MainSectionCard key={section.key} section={section} />)}
