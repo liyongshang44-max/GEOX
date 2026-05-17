@@ -43,6 +43,12 @@ assert.match(noProjection, /ACCEPTANCE_FORMAL_.*\.\(cjs\|ts\)/, 'no-projection-w
 assert.match(irrigationTs, /\/api\/v1\/actions\/index\?/, 'formal irrigation script must fetch task via actions index before receipt');
 assert.match(irrigationTs, /buildObservedParametersFromSchema/, 'formal irrigation script must build observed_parameters from task schema');
 assert.match(irrigationTs, /assertFormalReceiptContract/, 'formal irrigation script must self-check receipt contract before submit');
+assert.doesNotMatch(irrigationTs, /receipt_success_not_acceptance_pass\s*=\s*true/, 'formal irrigation script must not hardcode receipt_success_not_acceptance_pass=true');
+assert.match(irrigationTs, /approval_rejected_no_task/, 'formal irrigation script must include approval_rejected_no_task negative gate');
+assert.match(irrigationTs, /(decision:\s*['"]REJECT['"]|decision:\s*['"]DECLINE['"]|approved:\s*false)/, 'approval_rejected_no_task flow must include explicit reject/decline semantics');
+assert.match(irrigationTs, /requireOk\s*\(\s*taskIndexResp\s*,/, 'formal irrigation receipt flow must requireOk(taskIndexResp, ...) before receipt');
+assert.match(irrigationTs, /taskRecord/, 'formal irrigation receipt flow must include explicit taskRecord checks before receipt');
+assert.match(irrigationTs, /(FORMAL_RECEIPT_CONTRACT_INVALID|TASK_RECORD_MISSING_BEFORE_RECEIPT|TASK_PARAMETER_SCHEMA_KEYS_MISSING|OBSERVED_PARAMETER_NOT_ALLOWED|NEGATIVE_TASK_RECORD_MISSING_BEFORE_RECEIPT|NEGATIVE_TASK_PARAMETER_SCHEMA_KEYS_MISSING|NEGATIVE_OBSERVED_PARAMETER_NOT_ALLOWED)/, 'formal irrigation receipt flow must include strong pre-receipt validation markers');
 assert.doesNotMatch(irrigationTs, /observed_parameters:\s*\{\s*duration_min\s*:/, 'formal irrigation script must not put duration/effect metrics into observed_parameters');
 assert.match(irrigationTs, /meta:\s*\{[^}]*execution_summary:[\s\S]*effect_observation:/, 'formal irrigation script must keep execution/effect summary in meta');
 assert.match(irrigationTs, /(PRESCRIPTION_ID_MISSING|FORMAL_PRESCRIPTION_REQUIRED|manifest\.prescription_id)/, 'formal irrigation script must assert/output non-empty prescription_id semantics');
@@ -63,6 +69,10 @@ const output = {
     irrigation_prescription_assertion_or_output: true,
     irrigation_receipt_observed_parameters_schema_aligned: true,
     irrigation_receipt_execution_effect_in_meta: true,
+    irrigation_negative_receipt_not_hardcoded_true: true,
+    irrigation_negative_approval_uses_reject_semantics: true,
+    irrigation_receipt_preindex_require_ok: true,
+    irrigation_receipt_taskrecord_strong_validation: true,
     no_projection_gate_scans_device_anomaly: true,
     release_gate_has_no_projection: true,
     flight_table_formal_scenarios_endpoint: true,
