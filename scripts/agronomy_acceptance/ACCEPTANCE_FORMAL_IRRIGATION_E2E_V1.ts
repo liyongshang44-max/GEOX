@@ -192,7 +192,53 @@ async function main() {
   { const fx = makeFx(scope); await upsertDevice(pool, fx); await pool.query(`DELETE FROM device_status_index_v1 WHERE tenant_id=$1 AND device_id=$2`, [fx.tenant_id, fx.device_id]); await postRaw(base, adminToken, fx, {}, true); const rec = await fetchJson(`${base}/api/v1/recommendations/generate`, { method: 'POST', token: adminToken, body: { tenant_id: fx.tenant_id, project_id: fx.project_id, group_id: fx.group_id, field_id: fx.field_id, season_id: fx.season_id, device_id: fx.device_id, crop_code: 'corn' } }); negative.missing_device_status_blocked = rec.status === 400; }
   { const fx = makeFx(scope); await upsertDevice(pool, fx); const r = await postRaw(base, adminToken, fx, { metric: 'ec_ds_m', unit: 'dS/m', value: 1.2 }, false); negative.wrong_metric_blocked = r.status === 400; }
   { const fx = makeFx(scope); await upsertDevice(pool, fx); const req = await fetchJson(`${base}/api/v1/approvals/request`, { method: 'POST', token: adminToken, body: { tenant_id: fx.tenant_id, project_id: fx.project_id, group_id: fx.group_id, field_id: fx.field_id, season_id: fx.season_id, issuer: { kind: 'human', id: 'negative', namespace: 'P0.6' }, action_type: 'IRRIGATE', target: { kind: 'field', ref: fx.field_id }, time_window: { start_ts: Date.now(), end_ts: Date.now() + 3600000 }, parameter_schema: { keys: [] }, parameters: {}, constraints: { approval_required: true }, meta: { allow_auto_task_issue: false } } }); const q = requireOk(req, 'approval request negative'); const ap = await fetchJson(`${base}/api/v1/approvals/approve`, { method: 'POST', token: approverToken, body: { tenant_id: fx.tenant_id, project_id: fx.project_id, group_id: fx.group_id, request_id: q.request_id } }); negative.approval_rejected_no_task = ap.status === 403 || !ap.json?.act_task_id; }
-  { negative.receipt_success_not_acceptance_pass = true; }
+  {
+    const command_id = String(result.manifest.act_task_id ?? '').trim();
+    const operation_plan_id = String(result.manifest.operation_id ?? '').trim();
+    if (!command_id || !operation_plan_id) throw new Error('NEGATIVE_RECEIPT_CHAIN_TASK_MISSING');
+    const taskIndexResp = await fetchJson(`${base}/api/v1/actions/index?tenant_id=${encodeURIComponent(result.fixture.tenant_id)}&project_id=${encodeURIComponent(result.fixture.project_id)}&group_id=${encodeURIComponent(result.fixture.group_id)}&act_task_id=${encodeURIComponent(command_id)}`, { method: 'GET', token: operatorToken });
+    const taskRows = Array.isArray(taskIndexResp.json?.items) ? taskIndexResp.json.items : [];
+    const taskRecord = taskRows.find((r: any) => String(r?.act_task_id ?? '').trim() === command_id)?.task_record_json ?? null;
+    const allowedObservedKeys = extractAllowedParameterKeys(taskRecord);
+    const taskParameters = taskRecord?.payload?.parameters && typeof taskRecord.payload.parameters === 'object' ? taskRecord.payload.parameters : {};
+    const observed_parameters = buildObservedParametersFromSchema(allowedObservedKeys, taskParameters as Record<string, unknown>);
+    const idempotency_key = `formal_negative_receipt_${command_id}_${Date.now()}`;
+    const badReceiptBody = {
+      tenant_id: result.fixture.tenant_id,
+      project_id: result.fixture.project_id,
+      group_id: result.fixture.group_id,
+      operation_plan_id,
+      act_task_id: command_id,
+      command_id,
+      executor_id: { kind: 'device', id: result.fixture.device_id, namespace: 'formal_scenario_negative' },
+      execution_time: { start_ts: Date.now() - 480000, end_ts: Date.now() - 120000 },
+      execution_coverage: { kind: 'field', ref: result.fixture.field_id },
+      resource_usage: { fuel_l: 0, electric_kwh: 0.9, water_l: 120, chemical_ml: 0 },
+      evidence_refs: [{ kind: 'formal_device_log', ref: `formal://negative/${result.fixture.device_id}/${command_id}` }],
+      logs_refs: [{ kind: 'dispatch_ack', ref: `negative_ack_${command_id}` }],
+      status: 'executed',
+      constraint_check: { violated: false, violations: [] },
+      observed_parameters,
+      meta: {
+        command_id,
+        idempotency_key,
+        formal_scenario_run_id: result.fixture.run_id,
+        effect_observation: { pre_soil_moisture: 0.25, post_soil_moisture: 0.23, soil_moisture_delta: -0.02 }
+      }
+    };
+    const badReceiptResp = await fetchJson(`${base}/api/v1/actions/receipt`, { method: 'POST', token: executorToken, body: badReceiptBody });
+    const badReceiptOk = badReceiptResp.ok && badReceiptResp.json?.ok === true;
+    result.recordApiSnapshot({ method: 'POST', path: '/api/v1/actions/receipt', ok: badReceiptOk, status_code: badReceiptResp.status, label: 'negative receipt', request: badReceiptBody, response: badReceiptResp.json ?? badReceiptResp.text });
+    if (!badReceiptOk) {
+      negative.receipt_success_not_acceptance_pass = false;
+    } else {
+      const badAccBody = { tenant_id: result.fixture.tenant_id, project_id: result.fixture.project_id, group_id: result.fixture.group_id, act_task_id: command_id };
+      const badAccResp = await fetchJson(`${base}/api/v1/acceptance/evaluate`, { method: 'POST', token: operatorToken, body: badAccBody });
+      result.recordApiSnapshot({ method: 'POST', path: '/api/v1/acceptance/evaluate', ok: badAccResp.ok && badAccResp.json?.ok === true, status_code: badAccResp.status, label: 'negative acceptance evaluate', request: badAccBody, response: badAccResp.json ?? badAccResp.text });
+      const badAcc = requireOk(badAccResp, 'negative acceptance evaluate');
+      negative.receipt_success_not_acceptance_pass = !isPass(badAcc?.verdict);
+    }
+  }
 
   await pool.end();
   const positive = { passed: result.verify.passed };
