@@ -4,6 +4,7 @@ import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 import { formatCustomerDate, formatCustomerNumber, formatMoneyOrUnavailable } from "../lib/customerSafeText";
 import { customerCropLabel, customerDisplayName, customerSemanticLabel, customerSourceLabel, customerStageLabel } from "../lib/customerSemanticLabels";
 import { customerGuardedAcceptanceText, customerGuardedEvidenceText, customerGuardedStatusText, customerTrustScopeText, customerValueSummaryText, isTrustedDashboardValueSummary } from "../lib/customerTrustGate";
+import { buildFormalScenarioVm } from "../lib/formalScenarioViewModel";
 
 const CROP_UNKNOWN_EXPLANATION = "当前作物季尚未确认。系统可以展示历史作业和地块观测记录，但不会生成作物特定诊断或处方。";
 const CROP_UNKNOWN_DIAGNOSIS_LINES = ["已接入土壤水分、天气与设备观测数据。", "当前作物未确认，因此不形成作物特定诊断结论。"];
@@ -24,7 +25,7 @@ export type FieldReportPageVm = {
   risk: { levelLabel: string; tone: "neutral" | "warning" | "danger"; reasons: string[] };
   diagnosis: { headline: string; evidenceLines: string[]; dataQualityText: string; latestObservationText: string };
   recommendations: Array<{ title: string; summary: string; href?: string }>;
-  recentOperations: Array<{ operationId: string; title: string; statusText: string; acceptanceText: string; evidenceText: string; updatedAtText: string; href: string }>;
+  recentOperations: Array<{ operationId: string; title: string; statusText: string; acceptanceText: string; evidenceText: string; formalScenarioText: string; updatedAtText: string; href: string }>;
   roiSummary: ({ title: string; lines: string[] } | { title: string; description: string }) & { displayText: string };
   fieldMemory: ({ title: string; lines: string[] } | { title: string; description: string }) & { displayText: string };
   mapLayers: FieldMapLayersVm;
@@ -145,12 +146,14 @@ function buildRecentOperations(report: FieldReportDetailV1, fieldId: string) {
     if (seen.has(operationId)) return null;
     seen.add(operationId);
     const summary = txt(item.summary, "");
+    const formalVm = buildFormalScenarioVm(item);
     return {
       operationId,
       title: customerDisplayName(summary || item.customer_title || item.title, operationLabel(item.operation_type, "作业")),
       statusText: customerGuardedStatusText(item),
       acceptanceText: customerGuardedAcceptanceText(item),
       evidenceText: customerGuardedEvidenceText(item),
+      formalScenarioText: [formalVm.scenarioLabel, formalVm.chainText, formalVm.zoneSummaryText].filter(Boolean).join("｜"),
       updatedAtText: formatDateTime(item.accepted_at ?? item.generated_at ?? item.updated_at),
       href: operationId && !operationId.startsWith("recent-") ? `/customer/operations/${encodeURIComponent(operationId)}` : `/customer/fields/${encodeURIComponent(fieldId)}`,
     };

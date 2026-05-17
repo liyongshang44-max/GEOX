@@ -14,6 +14,7 @@ import {
   sanitizeCustomerText,
 } from "../lib/customerLabels";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
+import { buildFormalScenarioVm } from "../lib/formalScenarioViewModel";
 
 const REVIEW_NEEDED_TEXT = "需复核";
 
@@ -310,6 +311,7 @@ function mapSlaQuality(value: unknown, rawMs: unknown): string {
 }
 
 export function buildOperationReportVm(report: OperationReportV1): OperationReportPageVm {
+  const formalScenarioVm = buildFormalScenarioVm(report);
   const chain_validation = backendChainValidation(report);
   const chainPassed = backendChainPassed(report);
   const needsReview = backendNeedsReview(report);
@@ -474,7 +476,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
       { label: "raw_enum", value: kv((report as any).raw_enum ?? (report as any).status_enum ?? report.execution.final_status) },
     ] },
     header: { title: operationTitle, subtitle: finalStatusText, internalId },
-    why: { summary: kv(reportWhy?.explain_human, `当前作业用于处理本次地块作业需求，目标是降低${riskLabel}相关问题并完成闭环处置。`), riskLabel, reasonText: kv(reportWhy?.objective_text, reasonText) },
+    why: { summary: `${kv(reportWhy?.explain_human, `当前作业用于处理本次地块作业需求，目标是降低${riskLabel}相关问题并完成闭环处置。`)}｜${formalScenarioVm.scenarioLabel}｜${formalScenarioVm.chainText}｜${formalScenarioVm.evidenceText}`, riskLabel, reasonText: kv(reportWhy?.objective_text, reasonText) },
     approval: { statusText: reportApproval ? mapApprovalStatusForCustomer(reportApproval?.status) : "待确认", actorText: kv(reportApproval?.actor_name, "--"), timeText: kv(reportApproval?.approved_at || reportApproval?.generated_at, "--"), noteText: kv(reportApproval?.note, "--"), available: Boolean(reportApproval) },
     execution: { ownerText: kv(report.workflow.owner_name || report.workflow.owner_actor_id), startedAtText: chainPassed ? kv(report.execution.execution_started_at) : REVIEW_NEEDED_TEXT, finishedAtText: chainPassed ? kv(report.execution.execution_finished_at) : REVIEW_NEEDED_TEXT, invalidExecutionText: labelBooleanYesNo(report.execution.invalid_execution), statusText: chainPassed ? mapOperationStatusToCustomerLabel(report.execution.final_status) : REVIEW_NEEDED_TEXT },
     evidence: {
@@ -492,7 +494,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
     evidenceSummary,
     acceptance: { statusText: acceptanceStatusText, verdictText: chainPassed ? kv(report.acceptance.verdict, "--") : REVIEW_NEEDED_TEXT, missingEvidenceText: report.acceptance.missing_evidence || needsReview ? REVIEW_NEEDED_TEXT : "无", generatedAtText: chainPassed ? formatCustomerDateTime(report.acceptance.generated_at) : REVIEW_NEEDED_TEXT },
     value: { valueText, methodText, evidenceText: chainPassed ? evidenceNote : REVIEW_NEEDED_TEXT, confidenceText, fallbackText: chainPassed ? "本次作业的量化价值仍在积累中，当前可确认价值为：作业完成并完成验收。" : "后端正式链路校验未通过，当前不展示可信收益。", useFallback: useFallback || !chainPassed },
-    conclusion: { finalStatusText, resultText: finalStatusText },
+    conclusion: { finalStatusText, resultText: [formalScenarioVm.acceptanceText, formalScenarioVm.failSafeText, formalScenarioVm.manualTakeoverText, formalScenarioVm.zoneSummaryText].filter(Boolean).join("｜") || finalStatusText },
     fieldMemory: { title: "田块记忆", items: hasMemoryData ? memoryItems.map((item) => item.value) : [chainPassed ? getCustomerEmptyState("NO_FIELD_MEMORY").title : "后端链路校验未通过，暂不进入客户学习闭环"] },
     roiLedger: { title: "", items: [], confidenceText },
     drawerRefs: {

@@ -3,6 +3,7 @@ import { CUSTOMER_LABELS, labelRiskLevel, sanitizeCustomerText } from "../lib/cu
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 import { customerDisplayName, customerSemanticLabel } from "../lib/customerSemanticLabels";
 import { customerGuardedAcceptanceText, customerGuardedEvidenceText, customerGuardedStatusText, customerTrustScopeText, customerValueSummaryText, isTrustedDashboardValueSummary } from "../lib/customerTrustGate";
+import { buildFormalScenarioVm } from "../lib/formalScenarioViewModel";
 
 const numberFmt = new Intl.NumberFormat("zh-CN");
 const DASHBOARD_SUMMARY_SOURCE = "统计范围：当前可见授权经营范围；来源：客户看板统一摘要。";
@@ -68,7 +69,7 @@ export type CustomerDashboardVm = {
   kpis: CustomerKpiVm[];
   topRiskFields: CustomerRiskFieldVm[];
   pendingItems: Array<{ id: string; sentence: string; href: string }>;
-  recentOperations: Array<{ operationId: string; operationName: string; fieldName: string; stateText: string; acceptanceText: string; evidenceText: string; updatedAtText: string; href: string }>;
+  recentOperations: Array<{ operationId: string; operationName: string; fieldName: string; stateText: string; acceptanceText: string; evidenceText: string; scenarioSummaryText: string; updatedAtText: string; href: string }>;
   actionItems: CustomerActionItemVm[];
   deviceHealth: {
     totalDevices?: number;
@@ -165,6 +166,7 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
   });
   const recentOperations: CustomerDashboardVm["recentOperations"] = (aggregate.recent_operations ?? []).slice(0, 5).map((item) => {
     const operationId = String(item.operation_id ?? item.operation_plan_id ?? "");
+    const formalVm = buildFormalScenarioVm(item);
     return {
       operationId,
       operationName: customerDisplayName(item.customer_title ?? item.title, "未命名作业"),
@@ -172,6 +174,7 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
       stateText: customerGuardedStatusText(item),
       acceptanceText: customerGuardedAcceptanceText(item),
       evidenceText: customerGuardedEvidenceText(item),
+      scenarioSummaryText: [formalVm.scenarioLabel, formalVm.chainText, formalVm.evidenceText].filter(Boolean).join("｜"),
       updatedAtText: toDateTimeText((item as any).updated_at ?? item.executed_at),
       href: operationId ? `/customer/operations/${encodeURIComponent(operationId)}` : "/customer/dashboard",
     };
