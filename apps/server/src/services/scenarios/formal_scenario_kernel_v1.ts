@@ -129,6 +129,23 @@ export async function runFormalScenarioKernelV1(input: RunFormalScenarioKernelIn
   return { run, fixture, manifest, verify };
 }
 
+
+
+export type FormalScenarioKernelMigrationPlanV1 = {
+  scenario_type: FormalScenarioTypeV1;
+  target_kernel: "runFormalScenarioKernelV1";
+  status: "done" | "in_progress" | "planned";
+  debt_class: "P0.6-post";
+  notes: string;
+};
+
+export function listFormalScenarioKernelMigrationPlanV1(): FormalScenarioKernelMigrationPlanV1[] {
+  return [
+    { scenario_type: "FORMAL_IRRIGATION", target_kernel: "runFormalScenarioKernelV1", status: "done", debt_class: "P0.6-post", notes: "Already migrated." },
+    { scenario_type: "DEVICE_ANOMALY", target_kernel: "runFormalScenarioKernelV1", status: "planned", debt_class: "P0.6-post", notes: "Migrate run/fixture/manifest/snapshot/verify from standalone mini-kernel." },
+    { scenario_type: "FORMAL_VARIABLE_OPERATION", target_kernel: "runFormalScenarioKernelV1", status: "planned", debt_class: "P0.6-post", notes: "Migrate run/fixture/manifest/snapshot/verify from standalone mini-kernel." },
+  ];
+}
 export function cleanFormalScenarioRunV1(run_id: string): { ok: true; run_id: string; cleaned: true } {
   const normalized = normalizeSafeId(run_id);
   if (!normalized || !normalized.startsWith("fsr_")) throw new FormalScenarioKernelErrorV1("FORMAL_SCENARIO_INVALID_RUN_ID");

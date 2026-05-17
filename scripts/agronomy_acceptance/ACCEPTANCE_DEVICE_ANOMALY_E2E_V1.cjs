@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// P0.6-post debt: migrate this scenario to runFormalScenarioKernelV1 (run/fixture/manifest/snapshot/verify).
 const { randomUUID, createHash } = require('node:crypto');
 const { Pool } = require('pg');
 const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
