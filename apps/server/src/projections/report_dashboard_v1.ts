@@ -629,6 +629,10 @@ export function projectCustomerDashboardAggregateFromStatesV1(params: {
     recent_operations: sortedStates.slice(0, 5).map((state) => {
       const fieldId = String(state.field_id ?? "").trim();
       const riskReasons = deriveStateRiskReasons(state);
+      const formalScenario = (state as any).formal_scenario ?? null;
+      const failSafe = (state as any).fail_safe ?? null;
+      const manualTakeover = (state as any).manual_takeover ?? null;
+      const zoneMatrix = Array.isArray((state as any).zone_matrix) ? (state as any).zone_matrix : [];
       return {
         operation_id: String(state.operation_id ?? "").trim(),
         operation_plan_id: String(state.operation_plan_id ?? state.operation_id ?? "").trim(),
@@ -643,6 +647,16 @@ export function projectCustomerDashboardAggregateFromStatesV1(params: {
         risk_reasons: riskReasons,
         estimated_total_cost: 0,
         execution_duration_ms: null,
+        scenario_type: typeof formalScenario?.scenario_type === "string" ? formalScenario.scenario_type : undefined,
+        formal_chain_status: typeof formalScenario?.formal_chain_status === "string" ? formalScenario.formal_chain_status : undefined,
+        evidence_status: typeof formalScenario?.evidence_status === "string" ? formalScenario.evidence_status : undefined,
+        fail_safe_status: typeof failSafe?.status === "string" ? failSafe.status : undefined,
+        manual_takeover_status: typeof manualTakeover?.status === "string" ? manualTakeover.status : undefined,
+        zone_rollup_status: zoneMatrix.length
+          ? (zoneMatrix.every((zone: any) => String(zone?.zone_acceptance_result ?? "").toUpperCase() === "PASS") ? "PASS" : "NEEDS_REVIEW")
+          : undefined,
+        customer_visible_eligible: typeof formalScenario?.customer_visible_eligible === "boolean" ? formalScenario.customer_visible_eligible : undefined,
+        needs_review: typeof formalScenario?.needs_review === "boolean" ? formalScenario.needs_review : undefined,
       };
     }),
     risk_summary: {
