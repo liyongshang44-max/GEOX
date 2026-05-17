@@ -365,7 +365,15 @@ async function handleApprovalApprove(req: any, reply: any, pool: Pool) {
       [decision_fact_id, "api/v1/approvals/approve", decision_record]
     );
 
-    return reply.send({ ok: true, request_id, decision_id, act_task_id, ao_act_fact_id: ao_fact_id, decision_fact_id });
+    return reply.send({
+      ok: true,
+      request_id,
+      decision_id,
+      operation_plan_id: operationPlanId,
+      act_task_id,
+      ao_act_fact_id: ao_fact_id,
+      decision_fact_id
+    });
   } catch (e: any) {
     if (reply.sent) return;
     if (String(e?.message ?? "") === "INTERNAL_TASK_ISSUER_TOKEN_MISSING") {
