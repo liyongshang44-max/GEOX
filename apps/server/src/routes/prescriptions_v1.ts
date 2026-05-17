@@ -48,6 +48,11 @@ function deriveApprovalActionType(operationType: string): string {
   return "EXECUTE";
 }
 
+function asOptionalNonEmptyText(value: unknown): string | null {
+  const text = String(value ?? "").trim();
+  return text.length > 0 ? text : null;
+}
+
 export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/prescriptions/from-recommendation", async (req, reply) => {
     const auth = requireAoActAnyScopeV0(req, reply, ["prescription.write", "ao_act.task.write"]);
@@ -230,6 +235,29 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
         } : {}),
       };
 
+      const recommendationId = String(prescription.recommendation_id ?? "").trim();
+      const recommendationFact = recommendationId
+        ? await loadRecommendationFact(client as any, tenant, recommendationId)
+        : null;
+      const recPayload = recommendationFact?.payload ?? {};
+      const prescriptionOperationParams = toObjOrNull(prescription.operation_amount?.parameters ?? null) ?? {};
+      const allowAutoTaskIssueRequested = body?.allow_auto_task_issue === true
+        || prescription?.allow_auto_task_issue === true
+        || prescriptionOperationParams.allow_auto_task_issue === true;
+      const proposalMeta: Record<string, unknown> = {
+        prescription_id: prescription.prescription_id,
+        recommendation_id: prescription.recommendation_id,
+        operation_type: prescription.operation_type,
+        field_id: prescription.field_id,
+        season_id: prescription.season_id,
+        approval_requirement: prescription.approval_requirement,
+        acceptance_conditions: prescription.acceptance_conditions,
+        ...(allowAutoTaskIssueRequested ? { allow_auto_task_issue: true } : {}),
+        ...(asOptionalNonEmptyText(prescription?.device_requirements?.device_id) ? { device_id: asOptionalNonEmptyText(prescription.device_requirements.device_id) } : {}),
+        ...(asOptionalNonEmptyText(recPayload?.device_id) ? { device_id: asOptionalNonEmptyText(recPayload.device_id) } : {}),
+        ...(asOptionalNonEmptyText((recPayload?.meta as any)?.formal_scenario_run_id) ? { formal_scenario_run_id: asOptionalNonEmptyText((recPayload.meta as any).formal_scenario_run_id) } : {}),
+      };
+
       const delegated = await createApprovalRequestV1(client, auth, {
         tenant_id: tenant.tenant_id,
         project_id: tenant.project_id,
@@ -260,13 +288,7 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
         parameters: primitiveParameters,
         constraints: { approval_required: Boolean(prescription.approval_requirement?.required) },
         meta: {
-          prescription_id: prescription.prescription_id,
-          recommendation_id: prescription.recommendation_id,
-          operation_type: prescription.operation_type,
-          field_id: prescription.field_id,
-          season_id: prescription.season_id,
-          approval_requirement: prescription.approval_requirement,
-          acceptance_conditions: prescription.acceptance_conditions,
+          ...proposalMeta,
           ...(isVariableByZone ? {
             skip_auto_task_issue: true,
             variable_prescription: true,
