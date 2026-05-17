@@ -1,5 +1,5 @@
 import React from "react";
-import type { FieldReportDetailV1, OperationReportV1 } from "../../api/customerReports";
+import type { FieldReportDetailV1, OperationReportV1 } from "../../api/reports";
 import { formatCustomerNumber, isUnsafeCustomerText, mapCustomerEnum } from "../../lib/customerSafeText";
 import { buildFormalScenarioVm } from "../../lib/formalScenarioViewModel";
 import { customerGuardedAcceptanceText, customerGuardedEvidenceText, customerGuardedStatusText } from "../../lib/customerTrustGate";
