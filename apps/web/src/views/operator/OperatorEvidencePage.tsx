@@ -8,6 +8,8 @@ import { replaceOperatorTerms } from "../../lib/operatorStatusLabels";
 import "../../styles/operatorEvidence.css";
 import { buildOperatorEvidenceVm, type OperatorEvidenceVm } from "../../viewmodels/operatorEvidenceVm";
 import { OPERATOR_PAGE_META } from "./operatorPageMeta";
+import { buildEvidenceVm } from "../../lib/evidenceViewModel";
+import { EvidenceGapPanel, EvidenceRefList, EvidenceTrustLegend } from "../../components/evidence";
 
 function safeMessage(value: unknown, fallback = "暂无状态说明。") {
   const text = String(value ?? "").trim();
@@ -80,6 +82,7 @@ export default function OperatorEvidencePage(): React.ReactElement {
           {vm?.dataScopeWarning ? <div className="operatorScopeWarning">{safeMessage(vm.dataScopeWarning)}</div> : null}
           {operationReport ? (
             <section className="operatorQueueGrid" aria-label="formal-scenario-review">
+              <article className="operatorQueueCard"><header className="operatorQueueHead"><h2>Unified Evidence Viewer</h2></header><EvidenceTrustLegend vm={buildEvidenceVm(operationReport)} /><EvidenceRefList vm={buildEvidenceVm(operationReport)} /><EvidenceGapPanel vm={buildEvidenceVm(operationReport)} /></article>
               <OperatorFormalChainTimeline report={operationReport} />
               <OperatorEvidenceGapPanel report={operationReport} />
               <OperatorAcceptanceReasonPanel report={operationReport} />

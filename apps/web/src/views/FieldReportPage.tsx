@@ -12,6 +12,8 @@ import { FormalChainSummaryCard, ScenarioAcceptanceSummary } from "../components
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 import { customerCropLabel, customerMissingInputsText, customerSemanticLabel, customerSourceLabel } from "../lib/customerSemanticLabels";
 import { buildFieldReportVm } from "../viewmodels/fieldReportVm";
+import { buildEvidenceVm } from "../lib/evidenceViewModel";
+import { EvidenceGapPanel, EvidenceRefList, EvidenceTrustLegend, FormalEvidenceBadge, MissingEvidenceBadge, SimulatedOrDebugEvidenceBadge, TechnicalSignalBadge } from "../components/evidence";
 import "../styles/weatherInterference.css";
 
 type FieldWeatherState = { loading: boolean; history: WeatherResult | null; forecast: WeatherResult | null };
@@ -92,6 +94,7 @@ export default function FieldReportPage(): React.ReactElement {
   const noRecentOperationsState = getCustomerEmptyState("NO_RECENT_OPERATIONS");
   const noPendingActionsState = getCustomerEmptyState("NO_PENDING_ACTIONS");
   const noEvidenceState = getCustomerEmptyState("NO_EVIDENCE");
+  const evidenceVm = buildEvidenceVm(reportAny.recent_operations?.[0] ?? {});
 
   return (
     <div className="customerReportCanvas">
@@ -117,6 +120,7 @@ export default function FieldReportPage(): React.ReactElement {
         <section className="fieldGrid fieldGrid3">
           <article className="customerCard"><h3 className="customerCardTitle">当前风险</h3><div>{vm.diagnosis.headline}</div>{riskOperationHref ? <Link to={riskOperationHref}>查看相关作业</Link> : <span className="muted">暂无可关联作业</span>}<p className="muted customerSpacingTopXs">{vm.cropContext.historicalOperationText}</p></article>
           <article className="customerCard"><h3 className="customerCardTitle">诊断依据</h3>{evidenceSummaryExists ? <ul className="customerList">{vm.diagnosis.evidenceLines.map((item, idx) => <li key={`${item}-${idx}`} className="customerListItem">{item}</li>)}</ul> : <CustomerEmptyState vm={noEvidenceState} />}</article>
+          <article className="customerCard"><h3 className="customerCardTitle">统一证据视图</h3><EvidenceTrustLegend vm={evidenceVm} />{evidenceVm.trustLevel === "FORMAL" ? <FormalEvidenceBadge /> : evidenceVm.trustLevel === "SIMULATED" ? <SimulatedOrDebugEvidenceBadge /> : evidenceVm.trustLevel === "TECHNICAL_ONLY" ? <TechnicalSignalBadge /> : <MissingEvidenceBadge />}<EvidenceRefList vm={evidenceVm} /><EvidenceGapPanel vm={evidenceVm} /></article>
           <article className="customerCard"><h3 className="customerCardTitle">{vm.planningCandidates.title}</h3><p className="customerMetricLabel">{vm.planningCandidates.description}</p>{planCandidates.length ? <ul className="customerList customerSpacingTopXs">{planCandidates.slice(0, 3).map((item: any) => <li key={safeText(item.crop_code)} className="customerListItem"><div><strong>{customerCropLabel(item.crop_code)}</strong></div><div>适宜度 {pct(item.suitability_score)} · 预期毛利 {safeText(item.expected_margin_range?.min)}-{safeText(item.expected_margin_range?.max)} {safeText(item.expected_margin_range?.currency, "")}</div></li>)}</ul> : <span className="muted">当前缺少可展示的种植规划候选。</span>}</article>
         </section>
 

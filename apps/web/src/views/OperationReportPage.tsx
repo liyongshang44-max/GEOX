@@ -9,6 +9,8 @@ import { customerSafeName, customerSafeTitle } from "../lib/customerSafeText";
 import { customerChainIntegrityLabel, customerSemanticLabel, isCustomerChainComplete } from "../lib/customerSemanticLabels";
 import { labelCustomerAcceptanceVerdict, labelCustomerApprovalStatus, labelCustomerRoiStatus } from "../lib/customerStatusLabels";
 import { buildOperationReportVm, type CustomerReportSectionVm, type OperationReportPageVm } from "../viewmodels/operationReportVm";
+import { buildEvidenceVm } from "../lib/evidenceViewModel";
+import { EvidenceGapPanel, EvidenceRefList, EvidenceTrustLegend, FormalEvidenceBadge, MissingEvidenceBadge, SimulatedOrDebugEvidenceBadge, TechnicalSignalBadge } from "../components/evidence";
 
 type BackendChainItem = { key: string; label: string; status: "DONE" | "AVAILABLE" | "PENDING" | "MISSING" | "NOT_APPLICABLE" | string; reason?: string | null; source?: string | null };
 type MainRow = { label: string; value: string };
@@ -503,6 +505,7 @@ export default function OperationReportPage(): React.ReactElement {
   const safeOperationTitle = customerSafeTitle(vm.operation.title, "作业名称待补充");
   const safeFieldName = customerSafeName(vm.operation.fieldName, "地块名称待补充");
   const mainSections = buildMainSections(vm, report);
+  const evidenceVm = buildEvidenceVm(report);
 
   return (
     <div className="customerReportCanvas">
@@ -525,6 +528,13 @@ export default function OperationReportPage(): React.ReactElement {
 
         {legacyWarning ? <section className="customerCard customerScopeWarning">{legacyWarning}</section> : null}
         <section className="operationMainSectionsGrid">
+          <article className="customerCard">
+            <h3 className="customerCardTitle">统一证据视图</h3>
+            <EvidenceTrustLegend vm={evidenceVm} />
+            {evidenceVm.trustLevel === "FORMAL" ? <FormalEvidenceBadge /> : evidenceVm.trustLevel === "SIMULATED" ? <SimulatedOrDebugEvidenceBadge /> : evidenceVm.trustLevel === "TECHNICAL_ONLY" ? <TechnicalSignalBadge /> : <MissingEvidenceBadge />}
+            <EvidenceRefList vm={evidenceVm} />
+            <EvidenceGapPanel vm={evidenceVm} />
+          </article>
           <article className="customerCard"><h3 className="customerCardTitle">正式场景</h3><FormalScenarioBadge data={report} /></article>
           <FormalChainSummaryCard data={report} />
           <ScenarioAcceptanceSummary data={report} />
