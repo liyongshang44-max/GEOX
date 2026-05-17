@@ -78,7 +78,7 @@ test("approval reject contract writes REJECTED and issues no task", async () => 
   assert.equal(latestDec?.payload?.auto_task_issued, false);
   assert.equal(latestDec?.payload?.act_task_id, null);
 
-  const aoTaskFacts = pool.facts.filter((f) => f?.type === "ao_act_task_v1" && String(f?.payload?.approval_request_id ?? "") === "req_1");
+  const aoTaskFacts = pool.facts.filter((f) => ["ao_act_task_v0", "ao_act_task_v1"].includes(String(f?.type ?? "")) && String(f?.payload?.approval_request_id ?? "") === "req_1");
   assert.equal(aoTaskFacts.length, 0);
 
   await app.close();

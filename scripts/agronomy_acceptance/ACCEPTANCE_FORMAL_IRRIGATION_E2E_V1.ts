@@ -261,9 +261,10 @@ async function main() {
     const indexRows = rowsOfActionIndex(indexResp.json);
     ctx.recordApiSnapshot({ method: 'GET', path: '/api/v1/actions/index', ok: indexResp.ok && indexResp.json?.ok === true, status_code: indexResp.status, label: 'actions/index after reject', request: { tenant_id: fx.tenant_id, project_id: fx.project_id, group_id: fx.group_id, approval_request_id: q.request_id }, response: indexResp.json ?? indexResp.text });
     const rejectOk = ap.ok && ap.json?.ok === true;
+    const rejectDecisionIsRejected = String(ap.json?.decision ?? '').trim().toUpperCase() === 'REJECTED';
     const noTaskInResponse = !String(ap.json?.act_task_id ?? '').trim();
     const noDerivedTask = indexRows.every((item: any) => String(item?.approval_request_id ?? item?.task_record_json?.payload?.approval_request_id ?? '').trim() !== String(q.request_id));
-    negative.approval_rejected_no_task = rejectOk && noTaskInResponse && noDerivedTask;
+    negative.approval_rejected_no_task = rejectOk && rejectDecisionIsRejected && noTaskInResponse && noDerivedTask;
 
     const taskIndexResp = await fetchJson(`${base}/api/v1/actions/index?tenant_id=${encodeURIComponent(ctx.fixture.tenant_id)}&project_id=${encodeURIComponent(ctx.fixture.project_id)}&group_id=${encodeURIComponent(ctx.fixture.group_id)}&act_task_id=${encodeURIComponent(command_id)}`, { method: 'GET', token: operatorToken });
     ctx.recordApiSnapshot({ method: 'GET', path: '/api/v1/actions/index', ok: taskIndexResp.ok && taskIndexResp.json?.ok === true, status_code: taskIndexResp.status, label: 'negative task index before receipt', request: { tenant_id: ctx.fixture.tenant_id, project_id: ctx.fixture.project_id, group_id: ctx.fixture.group_id, act_task_id: command_id }, response: taskIndexResp.json ?? taskIndexResp.text });
