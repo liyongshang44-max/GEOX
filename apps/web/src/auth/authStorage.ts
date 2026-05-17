@@ -1,6 +1,7 @@
 import type { SessionMeta, SessionState, TenantContext } from "./sessionModel";
 
 const TOKEN_KEY = "geox_ao_act_token";
+const LEGACY_DELIVERY_TOKEN_KEY = "geox_delivery_token_v1";
 const TENANT_KEY = "geox_tenant_context";
 const SESSION_META_KEY = "geox_session_meta";
 
@@ -139,4 +140,10 @@ export function clearSession(): void {
   clearSessionToken();
   clearTenantContext();
   clearSessionMeta();
+}
+
+export function hasDeliveryTokenWithoutApiSessionToken(): boolean {
+  const apiToken = readStorageValue(TOKEN_KEY);
+  if (apiToken) return false;
+  return Boolean(readStorageValue(LEGACY_DELIVERY_TOKEN_KEY));
 }

@@ -1,6 +1,7 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { LoginError, type LoginErrorCode, loginWithToken } from "../api/auth";
+import { hasDeliveryTokenWithoutApiSessionToken } from "../auth/authStorage";
 import { useSession } from "../auth/useSession";
 
 const LOGIN_ERROR_COPY: Record<LoginErrorCode, string> = {
@@ -19,6 +20,7 @@ export default function LoginPage(): React.ReactElement {
   const [token, setTokenInput] = React.useState("");
   const [errorCode, setErrorCode] = React.useState<LoginErrorCode | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
+  const hasTokenTypeMismatch = React.useMemo(() => hasDeliveryTokenWithoutApiSessionToken(), []);
   const invalidReason = React.useMemo(() => {
     const params = new URLSearchParams(location.search);
     const reason = params.get("reason") || "";
@@ -64,6 +66,11 @@ export default function LoginPage(): React.ReactElement {
         <div className="card" role="status" style={{ borderColor: "#f6d78b", background: "#fff9eb", marginBottom: 12 }}>
           <div>{notice}</div>
           <button type="button" className="btn ghost" style={{ marginTop: 8 }} onClick={clearNotice}>我知道了</button>
+        </div>
+      ) : null}
+      {hasTokenTypeMismatch ? (
+        <div className="card" role="status" style={{ borderColor: "#f6d78b", background: "#fff9eb", marginBottom: 12 }}>
+          检测到 delivery token，但 API 会话 token 未设置。请使用 AO-ACT token 登录，例如本地 security_acceptance_tokens.json 中的 admin_token。
         </div>
       ) : null}
       <form onSubmit={onSubmit}>
