@@ -41,6 +41,10 @@ assert.match(verify, /prescription_created:\s*Boolean\(manifest\.prescription_id
 assert.match(noProjection, /ACCEPTANCE_FORMAL_.*\.\(cjs\|ts\)/, 'no-projection-write gate must scan formal ts acceptance files');
 
 assert.match(irrigationTs, /\/api\/v1\/actions\/index\?/, 'formal irrigation script must fetch task via actions index before receipt');
+assert.match(irrigationTs, /function\s+rowsOfActionIndex\s*\(/, 'formal irrigation script must contain action index rows/items adapter');
+assert.match(irrigationTs, /payload\?\.rows[\s\S]*payload\?\.items/, 'formal irrigation adapter must support both rows and items payload shapes');
+assert.doesNotMatch(irrigationTs, /Array\.isArray\(taskIndex\?\.items\) \? taskIndex\.items : \[\]/, 'formal irrigation script must not use items-only task index lookup');
+assert.doesNotMatch(irrigationTs, /Array\.isArray\(indexResp\.json\?\.items\) \? indexResp\.json\.items : \[\]/, 'formal irrigation script must not use items-only reject index lookup');
 assert.match(irrigationTs, /buildObservedParametersFromSchema/, 'formal irrigation script must build observed_parameters from task schema');
 assert.match(irrigationTs, /assertFormalReceiptContract/, 'formal irrigation script must self-check receipt contract before submit');
 assert.doesNotMatch(irrigationTs, /receipt_success_not_acceptance_pass\s*=\s*true/, 'formal irrigation script must not hardcode receipt_success_not_acceptance_pass=true');
@@ -70,6 +74,8 @@ const output = {
     irrigation_no_local_runtime_helpers: true,
     irrigation_prescription_assertion_or_output: true,
     irrigation_receipt_observed_parameters_schema_aligned: true,
+    irrigation_actions_index_rows_items_adapter: true,
+    irrigation_no_items_only_index_lookup: true,
     irrigation_receipt_execution_effect_in_meta: true,
     irrigation_negative_receipt_not_hardcoded_true: true,
     irrigation_negative_approval_uses_reject_semantics: true,
