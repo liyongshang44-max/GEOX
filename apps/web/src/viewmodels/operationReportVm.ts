@@ -6,7 +6,6 @@ import {
   labelBooleanYesNo,
   labelConfidenceHint,
   labelEmptyFallback,
-  labelFinalStatus,
   labelMemoryCode,
   labelOperationType,
   labelRiskLevel,
@@ -286,14 +285,6 @@ function formatMemoryLine(item: any): string {
   return `${labelMemoryCode(item?.memory_code ?? item?.code ?? item?.memory_type)}：${labelEmptyFallback(item?.summary_text, "地块响应记录")}（灌前${before ?? "待生成"} → 灌后${after ?? "待生成"}，${statusText}）`;
 }
 
-function mapAcceptanceCopy(value: unknown): string {
-  const status = String(value ?? "").trim().toUpperCase();
-  if (status === "PASS") return "验收通过";
-  if (status === "FAIL") return "未达到预期效果";
-  if (status === "PENDING") return "验收结果尚未生成";
-  return "验收结果尚未生成";
-}
-
 function mapApprovalStatusForCustomer(value: unknown): string {
   const raw = String(value ?? "").trim();
   const normalized = raw.toUpperCase();
@@ -316,8 +307,8 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
   const chainPassed = backendChainPassed(report);
   const needsReview = backendNeedsReview(report);
   const trustLevel = String((report as any).trust_level ?? (report as any).guarded_projection?.trust_level ?? "").trim();
-  const finalStatusText = chainPassed ? labelFinalStatus(report.execution.final_status) : REVIEW_NEEDED_TEXT;
-  const acceptanceStatusText = chainPassed ? mapAcceptanceCopy(report.acceptance.status) : REVIEW_NEEDED_TEXT;
+  const finalStatusText = formalScenarioVm.chainText;
+  const acceptanceStatusText = formalScenarioVm.acceptanceText;
   const riskLabel = labelRiskLevel(report.risk.level);
   const reasonText = joinReasonTexts(report.risk.reasons);
   const reportWhy = (report as any).why ?? null;
@@ -427,7 +418,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
     { key: "RECOMMENDATION", status: hasRecommendationData ? "AVAILABLE" : "MISSING", title: "建议", summary: hasRecommendationData ? recommendationReason : "暂无正式建议记录", items: hasRecommendationData ? [{ label: "建议原因", value: recommendationReason }, { label: "农艺解释", value: explainText }, { label: "风险等级", value: riskLabel }, { label: "数据依据摘要", value: recommendationSummary }] : [], emptyState: hasRecommendationData ? undefined : { title: "暂无正式建议记录", description: "当前缺少建议、解释或风险依据。" } },
     { key: "PRESCRIPTION", status: hasPrescriptionData ? "AVAILABLE" : "MISSING", title: "处方", summary: hasPrescriptionData ? "已形成正式处方" : "未形成正式处方", items: prescriptionItems, emptyState: hasPrescriptionData ? undefined : { title: "未形成正式处方", description: "当前没有正式处方记录。" } },
     { key: "APPROVAL", status: reportApproval ? "AVAILABLE" : "MISSING", title: "审批", summary: reportApproval ? mapApprovalStatusForCustomer(reportApproval?.status) : "审批记录暂不可用", items: reportApproval ? [{ label: "审批状态", value: mapApprovalStatusForCustomer(reportApproval?.status) }, { label: "审批人", value: kv(reportApproval?.actor_name, "--") }, { label: "审批时间", value: kv(reportApproval?.approved_at || reportApproval?.generated_at, "--") }, { label: "审批意见", value: kv(reportApproval?.note, "--") }] : [], emptyState: reportApproval ? undefined : { title: "审批记录暂不可用", description: "当前尚未生成可展示的审批记录。" } },
-    { key: "EXECUTION", status: hasAsExecuted ? "AVAILABLE" : "MISSING", title: "执行", summary: hasAsExecuted ? mapOperationStatusToCustomerLabel(report.execution.final_status) : "暂无实际执行记录", items: hasAsExecuted ? [{ label: "执行对象", value: executionTarget }, { label: "人/设备", value: executorText }, { label: "开始时间", value: kv(asExecutedData?.started_at ?? report.execution.execution_started_at, "--") }, { label: "结束时间", value: kv(asExecutedData?.finished_at ?? report.execution.execution_finished_at, "--") }, { label: "执行参数", value: executionParamsText }, { label: "执行摘要", value: asExecutedSummary }, { label: "覆盖状态", value: kv(asAppliedData?.coverage_status, !isVariableOperation ? "NOT_APPLICABLE" : "MISSING") }, { label: "覆盖记录", value: asAppliedSummary }, { label: "计划-实际偏差", value: deviationText }, { label: "偏差证据来源", value: kv(asAppliedData?.evidence_ref, "--") }] : [], emptyState: hasAsExecuted ? undefined : { title: "暂无实际执行记录", description: needsReview ? "后端链路校验未通过，执行记录暂不作为客户正式结论。" : "当前尚无实际执行记录。" } },
+    { key: "EXECUTION", status: hasAsExecuted ? "AVAILABLE" : "MISSING", title: "执行", summary: hasAsExecuted ? formalScenarioVm.chainText : "暂无实际执行记录", items: hasAsExecuted ? [{ label: "执行对象", value: executionTarget }, { label: "人/设备", value: executorText }, { label: "开始时间", value: kv(asExecutedData?.started_at ?? report.execution.execution_started_at, "--") }, { label: "结束时间", value: kv(asExecutedData?.finished_at ?? report.execution.execution_finished_at, "--") }, { label: "执行参数", value: executionParamsText }, { label: "执行摘要", value: asExecutedSummary }, { label: "覆盖状态", value: kv(asAppliedData?.coverage_status, !isVariableOperation ? "NOT_APPLICABLE" : "MISSING") }, { label: "覆盖记录", value: asAppliedSummary }, { label: "计划-实际偏差", value: deviationText }, { label: "偏差证据来源", value: kv(asAppliedData?.evidence_ref, "--") }] : [], emptyState: hasAsExecuted ? undefined : { title: "暂无实际执行记录", description: needsReview ? "后端链路校验未通过，执行记录暂不作为客户正式结论。" : "当前尚无实际执行记录。" } },
     { key: "EVIDENCE", status: evidenceSummary.state === "PACK_SUMMARY" ? "AVAILABLE" : (evidenceSummary.state === "RECORDS_WITHOUT_SUMMARY" ? "PENDING" : "MISSING"), title: "证据", summary: evidenceSummary.summary, items: evidenceSummary.items, emptyState: evidenceSummary.state === "PACK_SUMMARY" ? undefined : { title: evidenceSummary.summary, description: evidenceSummary.detail } },
     { key: "ACCEPTANCE", status: chainPassed && report.acceptance.generated_at ? "AVAILABLE" : "PENDING", title: "验收", summary: acceptanceStatusText, items: chainPassed && report.acceptance.generated_at ? [{ label: "验收结论", value: acceptanceStatusText }, { label: "验收依据", value: kv(report.acceptance.verdict, "--") }, { label: "未通过原因", value: report.acceptance.status === "FAIL" ? kv(report.execution.invalid_reason, "--") : "--" }, { label: "证据不足原因", value: Array.isArray(report.acceptance.missing_items) && report.acceptance.missing_items.length ? report.acceptance.missing_items.map((item) => labelEmptyFallback(item)).join("、") : "--" }, { label: "复核提示", value: report.acceptance.missing_evidence ? "证据不足，建议补齐后复核" : "--" }] : [], emptyState: chainPassed && report.acceptance.generated_at ? undefined : { title: REVIEW_NEEDED_TEXT, description: "验收结论需以后端正式链路校验为准。" } },
     { key: "ROI", status: valueNumber == null ? "MISSING" : "AVAILABLE", title: "价值记录", summary: valueNumber == null ? "暂无可量化价值记录" : `${roiNatureText} · ${valueText}`, items: valueNumber == null ? [] : [{ label: "价值类型", value: roiValueType }, { label: "实测/估算/假设", value: roiNatureText }, { label: "数值摘要", value: valueText }, { label: "可信度", value: confidenceText }, { label: "证据说明", value: evidenceNote }], emptyState: valueNumber == null ? { title: "暂无可量化价值记录", description: chainPassed ? "当前未形成可审计价值记录。" : "后端链路校验未通过，价值记录暂不作为客户可信收益。" } : undefined },
@@ -478,7 +469,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
     header: { title: operationTitle, subtitle: finalStatusText, internalId },
     why: { summary: `${kv(reportWhy?.explain_human, `当前作业用于处理本次地块作业需求，目标是降低${riskLabel}相关问题并完成闭环处置。`)}｜${formalScenarioVm.scenarioLabel}｜${formalScenarioVm.chainText}｜${formalScenarioVm.evidenceText}`, riskLabel, reasonText: kv(reportWhy?.objective_text, reasonText) },
     approval: { statusText: reportApproval ? mapApprovalStatusForCustomer(reportApproval?.status) : "待确认", actorText: kv(reportApproval?.actor_name, "--"), timeText: kv(reportApproval?.approved_at || reportApproval?.generated_at, "--"), noteText: kv(reportApproval?.note, "--"), available: Boolean(reportApproval) },
-    execution: { ownerText: kv(report.workflow.owner_name || report.workflow.owner_actor_id), startedAtText: chainPassed ? kv(report.execution.execution_started_at) : REVIEW_NEEDED_TEXT, finishedAtText: chainPassed ? kv(report.execution.execution_finished_at) : REVIEW_NEEDED_TEXT, invalidExecutionText: labelBooleanYesNo(report.execution.invalid_execution), statusText: chainPassed ? mapOperationStatusToCustomerLabel(report.execution.final_status) : REVIEW_NEEDED_TEXT },
+    execution: { ownerText: kv(report.workflow.owner_name || report.workflow.owner_actor_id), startedAtText: chainPassed ? kv(report.execution.execution_started_at) : REVIEW_NEEDED_TEXT, finishedAtText: chainPassed ? kv(report.execution.execution_finished_at) : REVIEW_NEEDED_TEXT, invalidExecutionText: labelBooleanYesNo(report.execution.invalid_execution), statusText: formalScenarioVm.chainText },
     evidence: {
       executionReceipt: chainPassed ? mapEvidenceStatusLabel(report.evidence.artifacts_count) : REVIEW_NEEDED_TEXT,
       executionRecord: chainPassed ? mapEvidenceStatusLabel(report.evidence.logs_count) : REVIEW_NEEDED_TEXT,
