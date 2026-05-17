@@ -199,6 +199,39 @@ async function main() {
   { const fx = makeFx(scope); await upsertDevice(pool, fx); await pool.query(`DELETE FROM device_status_index_v1 WHERE tenant_id=$1 AND device_id=$2`, [fx.tenant_id, fx.device_id]); await postRaw(base, adminToken, fx, {}, true); const rec = await fetchJson(`${base}/api/v1/recommendations/generate`, { method: 'POST', token: adminToken, body: { tenant_id: fx.tenant_id, project_id: fx.project_id, group_id: fx.group_id, field_id: fx.field_id, season_id: fx.season_id, device_id: fx.device_id, crop_code: 'corn' } }); negative.missing_device_status_blocked = rec.status === 400; }
   { const fx = makeFx(scope); await upsertDevice(pool, fx); const r = await postRaw(base, adminToken, fx, { metric: 'ec_ds_m', unit: 'dS/m', value: 1.2 }, false); negative.wrong_metric_blocked = r.status === 400; }
   await runFormalScenarioKernelV1({ scenario_type: 'FORMAL_IRRIGATION', lane: 'negative', ...scope, async driver(ctx: FormalScenarioKernelContextV1) {
+    ctx.updateManifest({ field_id: ctx.fixture.field_id, device_id: ctx.fixture.device_id, credential_id: ctx.fixture.credential_id, zone_ids: ctx.fixture.zone_ids });
+    await upsertDevice(pool, ctx.fixture);
+    const programBody = { tenant_id: ctx.fixture.tenant_id, project_id: ctx.fixture.project_id, group_id: ctx.fixture.group_id, program_id: `prg_neg_${ctx.fixture.run_id}`, field_id: ctx.fixture.field_id, season_id: ctx.fixture.season_id, crop_code: 'corn', status: 'ACTIVE', goal_profile: { yield_priority: 'high', quality_priority: 'medium', residue_priority: 'low', water_saving_priority: 'medium', cost_priority: 'medium' }, constraints: { forbid_pesticide_classes: [], forbid_fertilizer_types: [], max_irrigation_mm_per_day: null, manual_approval_required_for: [], allow_night_irrigation: true, max_irrigation_rounds_per_day: 3 }, budget: { max_cost_total: null, currency: 'USD' }, execution_policy: { mode: 'approval_required', auto_execute_allowed_task_types: [] } };
+    const programResp = await fetchJson(`${base}/api/v1/programs`, { method: 'POST', token: adminToken, body: programBody });
+    ctx.recordApiSnapshot({ method: 'POST', path: '/api/v1/programs', ok: programResp.ok && programResp.json?.ok === true, status_code: programResp.status, label: 'negative field program create', request: programBody, response: programResp.json ?? programResp.text });
+    requireOk(programResp, 'negative field program create');
+    await postEvidenceWindow(base, adminToken, ctx.fixture, ctx);
+    const recBody = { tenant_id: ctx.fixture.tenant_id, project_id: ctx.fixture.project_id, group_id: ctx.fixture.group_id, field_id: ctx.fixture.field_id, season_id: ctx.fixture.season_id, device_id: ctx.fixture.device_id, crop_code: 'corn' };
+    const recResp = await fetchJson(`${base}/api/v1/recommendations/generate`, { method: 'POST', token: adminToken, body: recBody });
+    ctx.recordApiSnapshot({ method: 'POST', path: '/api/v1/recommendations/generate', ok: recResp.ok && recResp.json?.ok === true, status_code: recResp.status, label: 'negative recommendation generate', request: recBody, response: recResp.json ?? recResp.text });
+    const rec = requireOk(recResp, 'negative recommendation generate');
+    const recommendation_id = String((Array.isArray(rec?.recommendations) ? rec.recommendations[0] : rec?.recommendation)?.recommendation_id ?? '').trim();
+    if (!recommendation_id) throw new Error('NEGATIVE_RECOMMENDATION_ID_MISSING');
+    const pBody = { tenant_id: ctx.fixture.tenant_id, project_id: ctx.fixture.project_id, group_id: ctx.fixture.group_id, recommendation_id, field_id: ctx.fixture.field_id, season_id: ctx.fixture.season_id };
+    const pResp = await fetchJson(`${base}/api/v1/prescriptions/from-recommendation`, { method: 'POST', token: adminToken, body: pBody });
+    ctx.recordApiSnapshot({ method: 'POST', path: '/api/v1/prescriptions/from-recommendation', ok: pResp.ok && pResp.json?.ok === true, status_code: pResp.status, label: 'negative prescription create', request: pBody, response: pResp.json ?? pResp.text });
+    const pJson = requireOk(pResp, 'negative prescription create');
+    const prescription_id = String(pJson?.prescription?.prescription_id ?? pJson?.prescription_id ?? '').trim();
+    if (!prescription_id) throw new Error('NEGATIVE_PRESCRIPTION_ID_MISSING');
+    const submitBody = { tenant_id: ctx.fixture.tenant_id, project_id: ctx.fixture.project_id, group_id: ctx.fixture.group_id, allow_auto_task_issue: true };
+    const submitResp = await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(prescription_id)}/submit-approval`, { method: 'POST', token: adminToken, body: submitBody });
+    ctx.recordApiSnapshot({ method: 'POST', path: '/api/v1/prescriptions/:prescription_id/submit-approval', ok: submitResp.ok && submitResp.json?.ok === true, status_code: submitResp.status, label: 'negative submit approval', request: submitBody, response: submitResp.json ?? submitResp.text });
+    const submit = requireOk(submitResp, 'negative submit approval');
+    const negativeApprovalRequestId = String(submit?.approval_request_id ?? submit?.request_id ?? submit?.approval_id ?? '').trim();
+    if (!negativeApprovalRequestId) throw new Error('NEGATIVE_APPROVAL_REQUEST_ID_MISSING');
+    const approveBody = { tenant_id: ctx.fixture.tenant_id, project_id: ctx.fixture.project_id, group_id: ctx.fixture.group_id, request_id: negativeApprovalRequestId, decision: 'APPROVE' };
+    const approveResp = await fetchJson(`${base}/api/v1/approvals/approve`, { method: 'POST', token: approverToken, body: approveBody });
+    ctx.recordApiSnapshot({ method: 'POST', path: '/api/v1/approvals/approve', ok: approveResp.ok && approveResp.json?.ok === true, status_code: approveResp.status, label: 'negative approval approve for task creation', request: approveBody, response: approveResp.json ?? approveResp.text });
+    const approve = requireOk(approveResp, 'negative approval approve for task creation');
+    const command_id = String(approve.act_task_id ?? '').trim();
+    const operation_plan_id = String(approve.operation_plan_id ?? approve.operation_id ?? '').trim();
+    if (!command_id || !operation_plan_id) throw new Error('NEGATIVE_RECEIPT_CHAIN_TASK_MISSING');
+
     const fx = makeFx(scope);
     await upsertDevice(pool, fx);
     const reqBody = { tenant_id: fx.tenant_id, project_id: fx.project_id, group_id: fx.group_id, field_id: fx.field_id, season_id: fx.season_id, issuer: { kind: 'human', id: 'negative', namespace: 'P0.6' }, action_type: 'IRRIGATE', target: { kind: 'field', ref: fx.field_id }, time_window: { start_ts: Date.now(), end_ts: Date.now() + 3600000 }, parameter_schema: { keys: [] }, parameters: {}, constraints: { approval_required: true }, meta: { allow_auto_task_issue: true } };
@@ -216,11 +249,8 @@ async function main() {
     const noDerivedTask = indexItems.every((item: any) => String(item?.approval_request_id ?? item?.task_record_json?.payload?.approval_request_id ?? '').trim() !== String(q.request_id));
     negative.approval_rejected_no_task = rejectOk && noTaskInResponse && noDerivedTask;
 
-    const command_id = String(result.manifest.act_task_id ?? '').trim();
-    const operation_plan_id = String(result.manifest.operation_id ?? '').trim();
-    if (!command_id || !operation_plan_id) throw new Error('NEGATIVE_RECEIPT_CHAIN_TASK_MISSING');
-    const taskIndexResp = await fetchJson(`${base}/api/v1/actions/index?tenant_id=${encodeURIComponent(result.fixture.tenant_id)}&project_id=${encodeURIComponent(result.fixture.project_id)}&group_id=${encodeURIComponent(result.fixture.group_id)}&act_task_id=${encodeURIComponent(command_id)}`, { method: 'GET', token: operatorToken });
-    ctx.recordApiSnapshot({ method: 'GET', path: '/api/v1/actions/index', ok: taskIndexResp.ok && taskIndexResp.json?.ok === true, status_code: taskIndexResp.status, label: 'negative task index before receipt', request: { tenant_id: result.fixture.tenant_id, project_id: result.fixture.project_id, group_id: result.fixture.group_id, act_task_id: command_id }, response: taskIndexResp.json ?? taskIndexResp.text });
+    const taskIndexResp = await fetchJson(`${base}/api/v1/actions/index?tenant_id=${encodeURIComponent(ctx.fixture.tenant_id)}&project_id=${encodeURIComponent(ctx.fixture.project_id)}&group_id=${encodeURIComponent(ctx.fixture.group_id)}&act_task_id=${encodeURIComponent(command_id)}`, { method: 'GET', token: operatorToken });
+    ctx.recordApiSnapshot({ method: 'GET', path: '/api/v1/actions/index', ok: taskIndexResp.ok && taskIndexResp.json?.ok === true, status_code: taskIndexResp.status, label: 'negative task index before receipt', request: { tenant_id: ctx.fixture.tenant_id, project_id: ctx.fixture.project_id, group_id: ctx.fixture.group_id, act_task_id: command_id }, response: taskIndexResp.json ?? taskIndexResp.text });
     const taskIndex = requireOk(taskIndexResp, 'negative task index before receipt');
     const taskRows = Array.isArray(taskIndex?.items) ? taskIndex.items : [];
     const taskRecord = taskRows.find((r: any) => String(r?.act_task_id ?? '').trim() === command_id)?.task_record_json ?? null;
@@ -234,17 +264,17 @@ async function main() {
     }
     const idempotency_key = `formal_negative_receipt_${command_id}_${Date.now()}`;
     const badReceiptBody = {
-      tenant_id: result.fixture.tenant_id,
-      project_id: result.fixture.project_id,
-      group_id: result.fixture.group_id,
+      tenant_id: ctx.fixture.tenant_id,
+      project_id: ctx.fixture.project_id,
+      group_id: ctx.fixture.group_id,
       operation_plan_id,
       act_task_id: command_id,
       command_id,
-      executor_id: { kind: 'device', id: result.fixture.device_id, namespace: 'formal_scenario_negative' },
+      executor_id: { kind: 'device', id: ctx.fixture.device_id, namespace: 'formal_scenario_negative' },
       execution_time: { start_ts: Date.now() - 480000, end_ts: Date.now() - 120000 },
-      execution_coverage: { kind: 'field', ref: result.fixture.field_id },
+      execution_coverage: { kind: 'field', ref: ctx.fixture.field_id },
       resource_usage: { fuel_l: 0, electric_kwh: 0.9, water_l: 120, chemical_ml: 0 },
-      evidence_refs: [{ kind: 'formal_device_log', ref: `formal://negative/${result.fixture.device_id}/${command_id}` }],
+      evidence_refs: [{ kind: 'formal_device_log', ref: `formal://negative/${ctx.fixture.device_id}/${command_id}` }],
       logs_refs: [{ kind: 'dispatch_ack', ref: `negative_ack_${command_id}` }],
       status: 'executed',
       constraint_check: { violated: false, violations: [] },
@@ -252,7 +282,7 @@ async function main() {
       meta: {
         command_id,
         idempotency_key,
-        formal_scenario_run_id: result.fixture.run_id,
+        formal_scenario_run_id: ctx.fixture.run_id,
         effect_observation: { pre_soil_moisture: 0.25, post_soil_moisture: 0.23, soil_moisture_delta: -0.02 }
       }
     };
@@ -262,7 +292,7 @@ async function main() {
     if (!badReceiptOk) {
       negative.receipt_success_not_acceptance_pass = false;
     } else {
-      const badAccBody = { tenant_id: result.fixture.tenant_id, project_id: result.fixture.project_id, group_id: result.fixture.group_id, act_task_id: command_id };
+      const badAccBody = { tenant_id: ctx.fixture.tenant_id, project_id: ctx.fixture.project_id, group_id: ctx.fixture.group_id, act_task_id: command_id };
       const badAccResp = await fetchJson(`${base}/api/v1/acceptance/evaluate`, { method: 'POST', token: operatorToken, body: badAccBody });
       ctx.recordApiSnapshot({ method: 'POST', path: '/api/v1/acceptance/evaluate', ok: badAccResp.ok && badAccResp.json?.ok === true, status_code: badAccResp.status, label: 'negative acceptance evaluate', request: badAccBody, response: badAccResp.json ?? badAccResp.text });
       const badAcc = requireOk(badAccResp, 'negative acceptance evaluate');
