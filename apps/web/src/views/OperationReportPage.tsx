@@ -516,7 +516,7 @@ export default function OperationReportPage(): React.ReactElement {
               <div className="customerReportLogo">GEOX / 作业报告</div>
               <h1 className="customerTitle">{safeOperationTitle}</h1>
               <p className="customerSubtitle">地块：{safeFieldName}</p>
-              <p className="customerSubtitle">链路完整性：{chainIntegrity} · 缺失环节：{missingLinksText(report)}</p>
+              <p className="customerSubtitle">链路完整性：{chainIntegrity}</p>
             </div>
             <div className="customerActions">
               <Link className="customerButton" to="/customer/dashboard">返回总览</Link>
@@ -533,7 +533,7 @@ export default function OperationReportPage(): React.ReactElement {
             <EvidenceTrustLegend vm={evidenceVm} />
             <EvidenceTrustBadge vm={evidenceVm} />
             <EvidenceRefList vm={evidenceVm} mode="customer" />
-            <EvidenceGapPanel vm={evidenceVm} />
+            <EvidenceGapPanel vm={evidenceVm} mode="customer" />
           </article>
           <article className="customerCard"><h3 className="customerCardTitle">正式场景</h3><FormalScenarioBadge data={report} /></article>
           <FormalChainSummaryCard data={report} />
@@ -553,12 +553,12 @@ export default function OperationReportPage(): React.ReactElement {
           <details>
             <summary className="operationTechDetailsSummary">展开技术详情</summary>
             <div className="operationTechDetailsGrid">
-              <div><strong>operation_id：</strong>{customerText(reportAny.operation_id ?? report.identifiers?.operation_id)}</div>
-              <div><strong>recommendation_id：</strong>{customerText(reportAny.recommendation?.recommendation_id ?? report.identifiers?.recommendation_id)}</div>
-              <div><strong>prescription_id：</strong>{customerText(reportAny.prescription?.prescription_id ?? report.identifiers?.prescription_id)}</div>
-              <div><strong>approval_request_id：</strong>{customerText(reportAny.approval?.approval_request_id ?? report.identifiers?.approval_id)}</div>
-              <div><strong>act_task_id：</strong>{customerText(reportAny.execution?.act_task_id ?? report.identifiers?.act_task_id)}</div>
-              <div><strong>receipt_id：</strong>{customerText(reportAny.execution?.receipt_id ?? report.identifiers?.receipt_id)}</div>
+              <div><strong>operation_id：</strong>{text(reportAny.operation_id ?? report.identifiers?.operation_id) || "--"}</div>
+              <div><strong>recommendation_id：</strong>{text(reportAny.recommendation?.recommendation_id ?? report.identifiers?.recommendation_id) || "--"}</div>
+              <div><strong>prescription_id：</strong>{text(reportAny.prescription?.prescription_id ?? report.identifiers?.prescription_id) || "--"}</div>
+              <div><strong>approval_request_id：</strong>{text(reportAny.approval?.approval_request_id ?? report.identifiers?.approval_id) || "--"}</div>
+              <div><strong>act_task_id：</strong>{text(reportAny.execution?.act_task_id ?? report.identifiers?.act_task_id) || "--"}</div>
+              <div><strong>receipt_id：</strong>{text(reportAny.execution?.receipt_id ?? report.identifiers?.receipt_id) || "--"}</div>
               <div><strong>roi_status：</strong>{roiStatusText(reportAny)}</div>
               <div><strong>chain_integrity：</strong>{chainIntegrity}</div>
               <div><strong>missing_links：</strong>{missingLinksText(report)}</div>

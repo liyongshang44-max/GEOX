@@ -10,6 +10,7 @@ const FILES = {
   operation: 'apps/web/src/views/OperationReportPage.tsx',
   cards: 'apps/web/src/components/customer/FormalScenarioCards.tsx',
   vm: 'apps/web/src/lib/formalScenarioViewModel.ts',
+  labels: 'apps/web/src/lib/customerScenarioLabels.ts',
 };
 
 function read(rel) {
@@ -31,6 +32,7 @@ function main() {
   const operation = read(FILES.operation);
   const cards = read(FILES.cards);
   const vm = read(FILES.vm);
+  const labels = read(FILES.labels);
 
   // Wiring checks
   assertContains(dashboard, /FormalScenarioBadge\s+data=\{aggregate\.recent_operations\[0\]\}/, 'dashboard must render FormalScenarioBadge for latest operation', failures);
@@ -54,6 +56,13 @@ function main() {
   assertContains(vm, /executionGuardText\s*=\s*scenarioKey\s*===\s*"DEVICE_ANOMALY"/, 'formal scenario VM must provide execution guard text for DEVICE_ANOMALY', failures);
   assertContains(cards, /vm\.scenarioKey\s*!==\s*"DEVICE_ANOMALY"/, 'FailSafeCustomerNotice should keep DEVICE_ANOMALY visible', failures);
 
+
+  assertContains(labels, /export function customerReasonText\s*\(/, 'customerScenarioLabels must export customerReasonText', failures);
+  assertContains(labels, /export function customerEvidenceGapText\s*\(/, 'customerScenarioLabels must export customerEvidenceGapText', failures);
+  assertContains(labels, /export function customerTrustLevelText\s*\(/, 'customerScenarioLabels must export customerTrustLevelText', failures);
+
+  assertContains(cards, /vm\.customerReasonSummary|vm\.customerBlockingReasons/, 'FormalScenarioCards must use customer reason summary/reasons from VM', failures);
+  if (/blocking_reasons|missing_items/.test(cards)) fail('FormalScenarioCards must not directly render raw blocking_reasons/missing_items', failures);
   // Guardrails: no raw enum shown to customer in formal cards.
   const forbiddenRawEnum = [
     /\bFORMAL_IRRIGATION\b/,

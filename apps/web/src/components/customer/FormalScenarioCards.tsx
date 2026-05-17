@@ -12,12 +12,12 @@ export function FormalScenarioBadge({ data }: { data: any }): React.ReactElement
 
 export function FormalChainSummaryCard({ data }: { data: any }): React.ReactElement {
   const vm = buildFormalScenarioVm(data);
-  return <article className="customerCard"><h3 className="customerCardTitle">正式链路摘要</h3><div>{vm.chainText}</div><div className="customerSpacingTopXs">正式证据：{vm.evidenceText}</div></article>;
+  return <article className="customerCard"><h3 className="customerCardTitle">正式链路摘要</h3><div>正式链路：{vm.chainText}</div><div className="customerSpacingTopXs">正式证据：{vm.evidenceText}</div><div className="customerSpacingTopXs">原因摘要：{vm.customerReasonSummary}</div></article>;
 }
 
 export function ScenarioAcceptanceSummary({ data }: { data: any }): React.ReactElement {
   const vm = buildFormalScenarioVm(data);
-  return <article className="customerCard"><h3 className="customerCardTitle">验收与闭环</h3><div>{vm.acceptanceText}</div><div className="customerSpacingTopXs">建议/处方/审批/执行/验收闭环：{vm.chainText}</div><div className="customerSpacingTopXs">{vm.zoneSummaryText ?? "暂无分区验收摘要"}</div></article>;
+  return <article className="customerCard"><h3 className="customerCardTitle">验收与闭环</h3><div>验收状态：{vm.acceptanceText}</div><div className="customerSpacingTopXs">验收说明：{vm.customerReasonSummary}</div><div className="customerSpacingTopXs">建议/处方/审批/执行/验收闭环：{vm.chainText}</div><div className="customerSpacingTopXs">{vm.zoneSummaryText ?? "暂无分区验收摘要"}</div></article>;
 }
 
 export function ScenarioValueMemorySummary({ data }: { data: any }): React.ReactElement {
