@@ -12,8 +12,8 @@ This document defines the P0.6 close-out artifact strategy for Formal Scenario K
 - `verify`
 - `api_snapshots` (inside manifest)
 
-At **P0.6**, full persistence infrastructure is **not required**.
-At **P0.7 planning gate**, persistence strategy must be selected and implementation started.
+At **P0.6-post M1 (2026-05-17)**, persistence strategy is selected as **JSON artifacts** and dev/internal persistence endpoints are introduced.
+At **P0.7 planning gate**, this M1 path can either continue or migrate to facts/tables with compatibility readers.
 
 ---
 
@@ -29,9 +29,9 @@ At **P0.7 planning gate**, persistence strategy must be selected and implementat
   - `manifest.api_snapshots`
 - CI logs are the temporary artifact carrier for P0.6 diagnosis.
 
-### P0.7 target
+### P0.6-post M1 selected strategy (implemented)
 
-In addition to stdout, persist artifacts per `run_id` under repo/runtime workspace:
+Persist artifacts per `run_id` under repo/runtime workspace:
 
 - `.geox/formal_scenario_runs/<run_id>/manifest.json`
 - `.geox/formal_scenario_runs/<run_id>/verify.json`
@@ -161,3 +161,11 @@ This strategy explicitly states:
 - P0.6 does **not** require complete persistence infrastructure.
 - P0.7 must choose and commit to JSON artifact vs facts/table official strategy.
 - Artifacts must not enter customer-report formal chain.
+
+
+## M1 guardrails (implemented)
+
+- Storage mode is fixed to `JSON_ARTIFACT_M1` for this phase.
+- Write/read paths are dev-only endpoints under `/api/v1/dev/flight-table/...` and require `security.admin` scope.
+- Artifacts are explicitly marked `customer_chain_eligible: false`.
+- Customer/export APIs must not read these artifacts to form customer-visible conclusions.

@@ -107,3 +107,28 @@ export function mergeFormalScenarioVerifyEvidenceV1(
 ): FormalScenarioVerifyEvidenceV1 {
   return Object.assign({}, ...items.filter(Boolean));
 }
+
+
+export function sanitizeFormalScenarioVerifyV1(input: any): FormalScenarioVerifyV1 {
+  const run_id = String(input?.run_id ?? "fsr_unknown").trim() || "fsr_unknown";
+  const checks: FormalScenarioVerifyChecksV1 = {
+    formal_evidence_passed: input?.checks?.formal_evidence_passed === true,
+    problem_state_created: input?.checks?.problem_state_created === true,
+    recommendation_created: input?.checks?.recommendation_created === true,
+    prescription_created: input?.checks?.prescription_created === true,
+    approval_approved: input?.checks?.approval_approved === true,
+    ao_act_task_created: input?.checks?.ao_act_task_created === true,
+    receipt_is_not_acceptance: input?.checks?.receipt_is_not_acceptance === true,
+    formal_acceptance_passed: input?.checks?.formal_acceptance_passed === true,
+    guarded_report_customer_visible: input?.checks?.guarded_report_customer_visible === true,
+    roi_trust_lane_valid: input?.checks?.roi_trust_lane_valid === true,
+    field_memory_lane_valid: input?.checks?.field_memory_lane_valid === true,
+  };
+  const blocking_reasons = Array.isArray(input?.blocking_reasons) ? input.blocking_reasons.map((x: unknown) => String(x ?? "").trim()).filter(Boolean) : [];
+  return {
+    run_id,
+    passed: input?.passed === true,
+    checks,
+    blocking_reasons,
+  };
+}
