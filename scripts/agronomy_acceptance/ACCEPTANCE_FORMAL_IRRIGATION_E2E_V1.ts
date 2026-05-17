@@ -117,7 +117,7 @@ async function main() {
     const prescription_id = String(pJson?.prescription?.prescription_id ?? pJson?.prescription_id ?? '').trim();
     if (!prescription_id) throw new Error('PRESCRIPTION_ID_MISSING');
     ctx.updateManifest({ prescription_id });
-    const submitBody = { tenant_id: ctx.fixture.tenant_id, project_id: ctx.fixture.project_id, group_id: ctx.fixture.group_id };
+    const submitBody = { tenant_id: ctx.fixture.tenant_id, project_id: ctx.fixture.project_id, group_id: ctx.fixture.group_id, allow_auto_task_issue: true };
     const submitResp = await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(prescription_id)}/submit-approval`, { method: 'POST', token: adminToken, body: submitBody });
     ctx.recordApiSnapshot({ method: 'POST', path: '/api/v1/prescriptions/:prescription_id/submit-approval', ok: submitResp.ok && submitResp.json?.ok === true, status_code: submitResp.status, label: 'submit approval', request: submitBody, response: submitResp.json ?? submitResp.text });
     const submit = requireOk(submitResp, 'submit approval');
