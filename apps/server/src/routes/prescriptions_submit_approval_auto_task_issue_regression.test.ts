@@ -129,6 +129,8 @@ test("prescription submit approval preserves allow_auto_task_issue meta and appr
   const originalFetch = global.fetch;
   global.fetch = (async (input: any, init?: any) => {
     if (String(input).includes("/api/v1/actions/task")) {
+      const body = JSON.parse(String(init?.body ?? "{}"));
+      assert.equal(String(body.operation_plan_id ?? "").trim().length > 0, true);
       return new Response(JSON.stringify({ ok: true, act_task_id: "act_1", fact_id: "fact_act_1" }), {
         status: 200,
         headers: { "content-type": "application/json" },
@@ -166,7 +168,17 @@ test("prescription submit approval preserves allow_auto_task_issue meta and appr
     assert.equal(approveRes.statusCode, 200);
     const approveJson: any = approveRes.json();
     assert.equal(approveJson.ok, true);
+    assert.equal(String(approveJson.operation_plan_id ?? "").trim().length > 0, true);
+    assert.equal(String(approveJson.operation_plan_id ?? ""), `opl_${requestId}`);
     assert.equal(String(approveJson.act_task_id ?? ""), "act_1");
+    const receiptBody = {
+      tenant_id: "tenantA",
+      project_id: "projectA",
+      group_id: "groupA",
+      operation_plan_id: approveJson.operation_plan_id,
+      act_task_id: approveJson.act_task_id,
+    };
+    assert.equal(String(receiptBody.operation_plan_id ?? "").trim().length > 0, true);
   } finally {
     global.fetch = originalFetch;
     await app.close();
