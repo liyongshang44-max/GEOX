@@ -191,7 +191,24 @@ async function main() {
   { const fx = makeFx(scope); await upsertDevice(pool, fx); const r = await postRaw(base, adminToken, fx, { metric: 'soil_ec', unit: 'dS/m', value: 1.2 }, false); negative.unsupported_metric_blocked = r.status === 400; }
   { const fx = makeFx(scope); await upsertDevice(pool, fx); await pool.query(`DELETE FROM device_status_index_v1 WHERE tenant_id=$1 AND device_id=$2`, [fx.tenant_id, fx.device_id]); await postRaw(base, adminToken, fx, {}, true); const rec = await fetchJson(`${base}/api/v1/recommendations/generate`, { method: 'POST', token: adminToken, body: { tenant_id: fx.tenant_id, project_id: fx.project_id, group_id: fx.group_id, field_id: fx.field_id, season_id: fx.season_id, device_id: fx.device_id, crop_code: 'corn' } }); negative.missing_device_status_blocked = rec.status === 400; }
   { const fx = makeFx(scope); await upsertDevice(pool, fx); const r = await postRaw(base, adminToken, fx, { metric: 'ec_ds_m', unit: 'dS/m', value: 1.2 }, false); negative.wrong_metric_blocked = r.status === 400; }
-  { const fx = makeFx(scope); await upsertDevice(pool, fx); const req = await fetchJson(`${base}/api/v1/approvals/request`, { method: 'POST', token: adminToken, body: { tenant_id: fx.tenant_id, project_id: fx.project_id, group_id: fx.group_id, field_id: fx.field_id, season_id: fx.season_id, issuer: { kind: 'human', id: 'negative', namespace: 'P0.6' }, action_type: 'IRRIGATE', target: { kind: 'field', ref: fx.field_id }, time_window: { start_ts: Date.now(), end_ts: Date.now() + 3600000 }, parameter_schema: { keys: [] }, parameters: {}, constraints: { approval_required: true }, meta: { allow_auto_task_issue: false } } }); const q = requireOk(req, 'approval request negative'); const ap = await fetchJson(`${base}/api/v1/approvals/approve`, { method: 'POST', token: approverToken, body: { tenant_id: fx.tenant_id, project_id: fx.project_id, group_id: fx.group_id, request_id: q.request_id } }); negative.approval_rejected_no_task = ap.status === 403 || !ap.json?.act_task_id; }
+  {
+    const fx = makeFx(scope);
+    await upsertDevice(pool, fx);
+    const reqBody = { tenant_id: fx.tenant_id, project_id: fx.project_id, group_id: fx.group_id, field_id: fx.field_id, season_id: fx.season_id, issuer: { kind: 'human', id: 'negative', namespace: 'P0.6' }, action_type: 'IRRIGATE', target: { kind: 'field', ref: fx.field_id }, time_window: { start_ts: Date.now(), end_ts: Date.now() + 3600000 }, parameter_schema: { keys: [] }, parameters: {}, constraints: { approval_required: true }, meta: { allow_auto_task_issue: true } };
+    const req = await fetchJson(`${base}/api/v1/approvals/request`, { method: 'POST', token: adminToken, body: reqBody });
+    result.recordApiSnapshot({ method: 'POST', path: '/api/v1/approvals/request', ok: req.ok && req.json?.ok === true, status_code: req.status, label: 'approval request', request: reqBody, response: req.json ?? req.text });
+    const q = requireOk(req, 'approval request negative');
+    const rejectBody = { tenant_id: fx.tenant_id, project_id: fx.project_id, group_id: fx.group_id, request_id: q.request_id, approved: false, decision: 'REJECT', reason: 'formal_irrigation_negative_reject_no_task' };
+    const ap = await fetchJson(`${base}/api/v1/approvals/approve`, { method: 'POST', token: approverToken, body: rejectBody });
+    result.recordApiSnapshot({ method: 'POST', path: '/api/v1/approvals/approve', ok: ap.ok && ap.json?.ok === true, status_code: ap.status, label: 'approval reject', request: rejectBody, response: ap.json ?? ap.text });
+    const indexResp = await fetchJson(`${base}/api/v1/actions/index?tenant_id=${encodeURIComponent(fx.tenant_id)}&project_id=${encodeURIComponent(fx.project_id)}&group_id=${encodeURIComponent(fx.group_id)}&approval_request_id=${encodeURIComponent(String(q.request_id ?? ''))}`, { method: 'GET', token: operatorToken });
+    const indexItems = Array.isArray(indexResp.json?.items) ? indexResp.json.items : [];
+    result.recordApiSnapshot({ method: 'GET', path: '/api/v1/actions/index', ok: indexResp.ok && indexResp.json?.ok === true, status_code: indexResp.status, label: 'actions/index after reject', request: { tenant_id: fx.tenant_id, project_id: fx.project_id, group_id: fx.group_id, approval_request_id: q.request_id }, response: indexResp.json ?? indexResp.text });
+    const rejectOk = ap.ok && ap.json?.ok === true;
+    const noTaskInResponse = !String(ap.json?.act_task_id ?? '').trim();
+    const noDerivedTask = indexItems.every((item: any) => String(item?.approval_request_id ?? item?.task_record_json?.payload?.approval_request_id ?? '').trim() !== String(q.request_id));
+    negative.approval_rejected_no_task = rejectOk && noTaskInResponse && noDerivedTask;
+  }
   {
     const command_id = String(result.manifest.act_task_id ?? '').trim();
     const operation_plan_id = String(result.manifest.operation_id ?? '').trim();
