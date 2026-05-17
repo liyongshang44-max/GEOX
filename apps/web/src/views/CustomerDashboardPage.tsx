@@ -10,6 +10,7 @@ import {
   ValueResultPanel,
 } from "../components/cockpit";
 import RoiLedgerDrawer from "../components/customer/RoiLedgerDrawer";
+import { FormalScenarioBadge } from "../components/customer";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 import { buildCustomerDashboardVm, type CustomerDashboardPageVm } from "../viewmodels/customerDashboardVm";
 
@@ -81,6 +82,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
       </section>
 
       <section className="customerDashboardBottomGrid">
+        {aggregate?.recent_operations?.[0] ? <FormalScenarioBadge data={aggregate.recent_operations[0]} /> : null}
         {vm?.roiSummary ? (
           <div className="customerDashboardRoiEntry">
             <ValueResultPanel roi={vm.roiSummary} emptyState={emptyStates.NO_ROI} />

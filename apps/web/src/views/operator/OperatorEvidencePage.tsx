@@ -1,11 +1,15 @@
 import React from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { fetchOperatorEvidence } from "../../api/operatorEvidence";
+import { fetchOperationReport, type OperationReportV1 } from "../../api/reports";
+import { OperatorAcceptanceReasonPanel, OperatorEvidenceGapPanel, OperatorFailSafePanel, OperatorFormalChainTimeline, OperatorManualTakeoverPanel, OperatorZoneMatrixPanel } from "../../components/operator/OperatorScenarioReviewPanels";
 import OperatorLayout from "../../layouts/OperatorLayout";
 import { replaceOperatorTerms } from "../../lib/operatorStatusLabels";
 import "../../styles/operatorEvidence.css";
 import { buildOperatorEvidenceVm, type OperatorEvidenceVm } from "../../viewmodels/operatorEvidenceVm";
 import { OPERATOR_PAGE_META } from "./operatorPageMeta";
+import { buildEvidenceVm } from "../../lib/evidenceViewModel";
+import { EvidenceGapPanel, EvidenceRefList, EvidenceTrustLegend } from "../../components/evidence";
 
 function safeMessage(value: unknown, fallback = "暂无状态说明。") {
   const text = String(value ?? "").trim();
@@ -20,6 +24,7 @@ export default function OperatorEvidencePage(): React.ReactElement {
   const meta = OPERATOR_PAGE_META.evidence;
   const [loading, setLoading] = React.useState(true);
   const [vm, setVm] = React.useState<OperatorEvidenceVm | null>(null);
+  const [operationReport, setOperationReport] = React.useState<OperationReportV1 | null>(null);
 
   React.useEffect(() => {
     let alive = true;
@@ -37,6 +42,11 @@ export default function OperatorEvidencePage(): React.ReactElement {
         if (!alive) return;
         setLoading(false);
       });
+    if (operationId) {
+      void fetchOperationReport(operationId).then((res) => { if (alive) setOperationReport(res); }).catch(() => { if (alive) setOperationReport(null); });
+    } else {
+      setOperationReport(null);
+    }
     return () => {
       alive = false;
     };
@@ -70,6 +80,17 @@ export default function OperatorEvidencePage(): React.ReactElement {
 
           <div className="operatorEvidenceNotice">当前页面为只读未开放状态，不创建导出任务，不提供下载入口，不展示文件校验或证据包内部结构。</div>
           {vm?.dataScopeWarning ? <div className="operatorScopeWarning">{safeMessage(vm.dataScopeWarning)}</div> : null}
+          {operationReport ? (
+            <section className="operatorQueueGrid" aria-label="formal-scenario-review">
+              <article className="operatorQueueCard"><header className="operatorQueueHead"><h2>Unified Evidence Viewer</h2></header><EvidenceTrustLegend vm={buildEvidenceVm(operationReport)} /><EvidenceRefList vm={buildEvidenceVm(operationReport)} /><EvidenceGapPanel vm={buildEvidenceVm(operationReport)} /></article>
+              <OperatorFormalChainTimeline report={operationReport} />
+              <OperatorEvidenceGapPanel report={operationReport} />
+              <OperatorAcceptanceReasonPanel report={operationReport} />
+              <OperatorFailSafePanel report={operationReport} />
+              <OperatorManualTakeoverPanel report={operationReport} />
+              <OperatorZoneMatrixPanel report={operationReport} />
+            </section>
+          ) : null}
         </div>
       ) : null}
     </OperatorLayout>

@@ -30,6 +30,14 @@ export type CustomerDashboardAggregateV1 = {
     risk_reasons: string[];
     estimated_total_cost: number;
     execution_duration_ms: number | null;
+    scenario_type?: string;
+    formal_chain_status?: string;
+    evidence_status?: string;
+    fail_safe_status?: string;
+    manual_takeover_status?: string;
+    zone_rollup_status?: string;
+    customer_visible_eligible?: boolean;
+    needs_review?: boolean;
   }>;
   risk_summary: {
     level: OperationReportRiskLevel;
@@ -382,6 +390,16 @@ export function projectCustomerDashboardAggregateV1(params: {
       risk_reasons: [...report.risk.reasons],
       estimated_total_cost: Number(report.cost.estimated_total ?? 0),
       execution_duration_ms: report.sla.execution_duration_ms ?? null,
+      scenario_type: report.formal_scenario?.scenario_type ?? undefined,
+      formal_chain_status: report.formal_scenario?.formal_chain_status ?? undefined,
+      evidence_status: report.formal_scenario?.evidence_status ?? undefined,
+      fail_safe_status: report.fail_safe?.status ?? undefined,
+      manual_takeover_status: report.manual_takeover?.status ?? undefined,
+      zone_rollup_status: report.zone_matrix?.length
+        ? (report.zone_matrix.every((zone) => zone.zone_acceptance_result === "PASS") ? "PASS" : "NEEDS_REVIEW")
+        : undefined,
+      customer_visible_eligible: report.formal_scenario?.customer_visible_eligible ?? undefined,
+      needs_review: report.formal_scenario?.needs_review ?? undefined,
     };
   });
 

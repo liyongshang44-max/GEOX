@@ -202,6 +202,37 @@ export type OperationReportV1 = {
     collapsed_by_default: boolean;
     stage1_debug_matrix: Array<{ zone_id: string | null; stage1_debug: { formal_coverage_ratio: unknown; trigger_metric_evidence: unknown; stage1_source: unknown } }>;
   };
+  formal_scenario?: {
+    scenario_type: "FORMAL_IRRIGATION" | "DEVICE_ANOMALY" | "FORMAL_VARIABLE_OPERATION" | "UNKNOWN";
+    formal_chain_status: "PASSED" | "NEEDS_REVIEW" | "INSUFFICIENT_EVIDENCE" | "SIMULATED" | "LIMITED";
+    evidence_status: "FORMAL_PASSED" | "MISSING" | "SIMULATED" | "TECHNICAL_ONLY";
+    customer_visible_eligible: boolean;
+    needs_review: boolean;
+    blocking_reasons: string[];
+  };
+  fail_safe?: {
+    status: "NONE" | "OPEN" | "ACKED" | "COMPLETED" | "RESOLVED";
+    trigger: string | null;
+    severity: string | null;
+    event_id: string | null;
+  };
+  manual_takeover?: {
+    status: "NONE" | "REQUESTED" | "ACKED" | "COMPLETED";
+    takeover_id: string | null;
+    reason: string | null;
+  };
+  zone_matrix?: Array<{
+    zone_id: string;
+    planned_rate: number | null;
+    actual_rate: number | null;
+    coverage_percent: number | null;
+    deviation_percent: number | null;
+    pre_sensing_ref: string | null;
+    post_sensing_ref: string | null;
+    evidence_sufficiency: "PASS" | "FAIL" | "NEEDS_EVIDENCE";
+    zone_acceptance_result: "PASS" | "FAIL" | "PARTIAL" | "NEEDS_REVIEW";
+    operation_rollup_policy: "ALL_REQUIRED_PASS" | "PARTIAL_ALLOWED" | "CRITICAL_ZONE_REQUIRED";
+  }>;
   planned: {
     planned_area: Record<string, unknown> | null;
     planned_path: Record<string, unknown> | null;
@@ -663,6 +694,60 @@ export function projectOperationReportV1(input: {
   const zoneRollupPass = zoneMatrixCustomerView.length > 0
     ? zoneMatrixCustomerView.every((z: any) => String(z?.zone_acceptance_result ?? "").toUpperCase() === "PASS")
     : false;
+  const operationScenarioType = String((operationStateAny?.scenario_type ?? operationStateAny?.meta?.scenario_type ?? operationStateAny?.operation_scenario_type ?? "")).trim().toUpperCase();
+  const scenarioType: NonNullable<OperationReportV1["formal_scenario"]>["scenario_type"] =
+    operationScenarioType === "FORMAL_IRRIGATION" || operationScenarioType === "DEVICE_ANOMALY" || operationScenarioType === "FORMAL_VARIABLE_OPERATION"
+      ? operationScenarioType as any
+      : (variableByZoneMode ? "FORMAL_VARIABLE_OPERATION" : "UNKNOWN");
+  const chainStatusRaw = String((operationStateAny?.chain_status ?? operationStateAny?.guarded_projection?.chain_status ?? operationStateAny?.formal_chain_status ?? "")).trim().toUpperCase();
+  const formalChainStatus: NonNullable<OperationReportV1["formal_scenario"]>["formal_chain_status"] =
+    chainStatusRaw === "PASSED" || chainStatusRaw === "NEEDS_REVIEW" || chainStatusRaw === "INSUFFICIENT_EVIDENCE" || chainStatusRaw === "SIMULATED" || chainStatusRaw === "LIMITED"
+      ? chainStatusRaw as any
+      : "LIMITED";
+  const evidenceStatusRaw = String((operationStateAny?.evidence_status ?? operationStateAny?.evidence?.evidence_status ?? "")).trim().toUpperCase();
+  const evidenceStatus: NonNullable<OperationReportV1["formal_scenario"]>["evidence_status"] =
+    evidenceStatusRaw === "FORMAL_PASSED" || evidenceStatusRaw === "MISSING" || evidenceStatusRaw === "SIMULATED" || evidenceStatusRaw === "TECHNICAL_ONLY"
+      ? evidenceStatusRaw as any
+      : (formalChainStatus === "PASSED" ? "FORMAL_PASSED" : "MISSING");
+  const blockingReasons = Array.isArray(operationStateAny?.guarded_projection?.blocking_reasons)
+    ? operationStateAny.guarded_projection.blocking_reasons.map((x: unknown) => String(x ?? "").trim()).filter(Boolean)
+    : [];
+  const customerVisibleEligible = Boolean(
+    operationStateAny?.customer_visible_eligible
+    ?? operationStateAny?.guarded_projection?.customer_visible_eligible
+    ?? (formalChainStatus === "PASSED"),
+  );
+  const needsReview = Boolean(operationStateAny?.needs_review ?? !customerVisibleEligible);
+  const failSafeRaw = operationStateAny?.fail_safe ?? operationStateAny?.fail_safe_event ?? {};
+  const failSafeStatusRaw = String(failSafeRaw?.status ?? "").trim().toUpperCase();
+  const failSafeStatus: NonNullable<OperationReportV1["fail_safe"]>["status"] =
+    failSafeStatusRaw === "OPEN" || failSafeStatusRaw === "ACKED" || failSafeStatusRaw === "COMPLETED" || failSafeStatusRaw === "RESOLVED"
+      ? failSafeStatusRaw as any
+      : "NONE";
+  const manualTakeoverRaw = operationStateAny?.manual_takeover ?? {};
+  const manualTakeoverStatusRaw = String(manualTakeoverRaw?.status ?? "").trim().toUpperCase();
+  const manualTakeoverStatus: NonNullable<OperationReportV1["manual_takeover"]>["status"] =
+    manualTakeoverStatusRaw === "REQUESTED" || manualTakeoverStatusRaw === "ACKED" || manualTakeoverStatusRaw === "COMPLETED"
+      ? manualTakeoverStatusRaw as any
+      : "NONE";
+  const zoneMatrix: NonNullable<OperationReportV1["zone_matrix"]> = zoneApplications.map((z: any) => ({
+    zone_id: String(z?.zone_id ?? "").trim(),
+    planned_rate: toNullableNumber(z?.planned_rate),
+    actual_rate: toNullableNumber(z?.actual_rate),
+    coverage_percent: toNullableNumber(z?.coverage_percent ?? z?.formal_coverage_ratio),
+    deviation_percent: toNullableNumber(z?.deviation_percent),
+    pre_sensing_ref: toText(z?.pre_sensing_ref),
+    post_sensing_ref: toText(z?.post_sensing_ref),
+    evidence_sufficiency: (["PASS", "FAIL", "NEEDS_EVIDENCE"].includes(String(z?.evidence_sufficiency ?? "").toUpperCase())
+      ? String(z?.evidence_sufficiency).toUpperCase()
+      : "NEEDS_EVIDENCE") as any,
+    zone_acceptance_result: (["PASS", "FAIL", "PARTIAL", "NEEDS_REVIEW"].includes(String(z?.zone_acceptance_result ?? "").toUpperCase())
+      ? String(z?.zone_acceptance_result).toUpperCase()
+      : "NEEDS_REVIEW") as any,
+    operation_rollup_policy: (["ALL_REQUIRED_PASS", "PARTIAL_ALLOWED", "CRITICAL_ZONE_REQUIRED"].includes(String(z?.operation_rollup_policy ?? "").toUpperCase())
+      ? String(z?.operation_rollup_policy).toUpperCase()
+      : "ALL_REQUIRED_PASS") as any,
+  })).filter((z) => z.zone_id);
 
   const computedRisk = evaluateRisk({
     final_status: finalStatus,
@@ -805,6 +890,26 @@ export function projectOperationReportV1(input: {
       collapsed_by_default: true,
       stage1_debug_matrix: zoneMatrixOperatorDebug,
     },
+    formal_scenario: {
+      scenario_type: scenarioType,
+      formal_chain_status: formalChainStatus,
+      evidence_status: evidenceStatus,
+      customer_visible_eligible: customerVisibleEligible,
+      needs_review: customerVisibleEligible ? needsReview : true,
+      blocking_reasons: blockingReasons,
+    },
+    fail_safe: {
+      status: failSafeStatus,
+      trigger: toText(failSafeRaw?.trigger ?? failSafeRaw?.trigger_type),
+      severity: toText(failSafeRaw?.severity),
+      event_id: toText(failSafeRaw?.event_id ?? failSafeRaw?.fail_safe_event_id),
+    },
+    manual_takeover: {
+      status: manualTakeoverStatus,
+      takeover_id: toText(manualTakeoverRaw?.takeover_id),
+      reason: toText(manualTakeoverRaw?.reason ?? manualTakeoverRaw?.reason_code),
+    },
+    zone_matrix: zoneMatrix,
     planned,
     workflow: {
       owner_actor_id: toText(input.operation_workflow?.owner_actor_id),

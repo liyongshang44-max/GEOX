@@ -1,6 +1,9 @@
 import React from "react";
 import type { FieldReportDetailV1, OperationReportV1 } from "../../api/customerReports";
 import { formatCustomerNumber, isUnsafeCustomerText, mapCustomerEnum } from "../../lib/customerSafeText";
+import { buildFormalScenarioVm } from "../../lib/formalScenarioViewModel";
+import { customerGuardedAcceptanceText, customerGuardedEvidenceText, customerGuardedStatusText } from "../../lib/customerTrustGate";
+import { buildEvidenceVm } from "../../lib/evidenceViewModel";
 import type { CustomerDashboardPageVm } from "../../viewmodels/customerDashboardVm";
 import type { FieldReportPageVm } from "../../viewmodels/fieldReportVm";
 import type { OperationReportPageVm } from "../../viewmodels/operationReportVm";
@@ -405,6 +408,8 @@ export function FieldExportBlocks({ vm, report }: { vm: FieldReportPageVm; repor
 export function OperationExportBlocks({ vm, report }: { vm: OperationReportPageVm; report?: OperationReportV1 | null }): React.ReactElement {
   const sections = vm.sections;
   const sameSource = buildOperationSameSourceExportSummary(vm, report);
+  const formalVm = buildFormalScenarioVm(report ?? {});
+  const evidenceVm = buildEvidenceVm(report ?? {});
   const evidenceItems = vm.evidenceSummary.items
     .map((item) => [safeExportText(item.label), safeExportText(item.value)] as [string, string])
     .filter(([label, value]) => label !== "暂无记录" && value !== "暂无记录");
@@ -415,6 +420,10 @@ export function OperationExportBlocks({ vm, report }: { vm: OperationReportPageV
         <div className="customerGrid2 customerSpacingTopSm">
           <div><strong>作业：</strong>{safeExportText(vm.header.title, "作业名称待补充")}</div>
           <div><strong>状态：</strong>{safeExportText(vm.operation.finalStatusLabel, "待确认")}</div>
+          <div><strong>正式场景：</strong>{safeExportText(formalVm.scenarioLabel, "待确认")}</div>
+          <div><strong>正式链路：</strong>{safeExportText(customerGuardedStatusText(report ?? {}), "需复核")}</div>
+          <div><strong>证据门禁：</strong>{safeExportText(customerGuardedEvidenceText(report ?? {}), "需复核")}</div>
+          <div><strong>验收门禁：</strong>{safeExportText(customerGuardedAcceptanceText(report ?? {}), "需复核")}</div>
         </div>
       </section>
       <section className="operationClosedLoopGrid">
@@ -447,8 +456,10 @@ export function OperationExportBlocks({ vm, report }: { vm: OperationReportPageV
       </section>
       <section className="customerCard">
         <h2 className="customerCardTitle">证据包摘要</h2>
+        <p className="customerMetricLabel customerSpacingTopXs">统一证据信任级别：{evidenceVm.trustLevel}</p>
         <p className="customerSpacingTopSm">{safeExportText(vm.evidenceSummary.summary, "暂无有效证据。")}</p>
         <p className="customerMetricLabel customerSpacingTopXs">{safeExportText(vm.evidenceSummary.detail, "暂无补充说明")}</p>
+        {evidenceVm.gaps.length ? <p className="customerMetricLabel customerSpacingTopXs">证据缺口：{safeExportText(evidenceVm.gaps.join("、"), "暂无")}</p> : null}
         {evidenceItems.length ? (
           <div className="customerGrid2 customerSpacingTopXs">
             {evidenceItems.map(([label, value]) => <div key={label}><strong>{label}：</strong>{value}</div>)}
