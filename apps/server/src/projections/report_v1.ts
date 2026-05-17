@@ -203,13 +203,25 @@ export type OperationReportV1 = {
     stage1_debug_matrix: Array<{ zone_id: string | null; stage1_debug: { formal_coverage_ratio: unknown; trigger_metric_evidence: unknown; stage1_source: unknown } }>;
   };
   formal_scenario?: {
-    scenario_type: "FORMAL_IRRIGATION" | "DEVICE_ANOMALY" | "FORMAL_VARIABLE_OPERATION" | "UNKNOWN";
+    scenario_type: "FORMAL_IRRIGATION" | "DEVICE_ANOMALY" | "FORMAL_VARIABLE_OPERATION" | "FORMAL_SAMPLING" | "UNKNOWN";
     formal_chain_status: "PASSED" | "NEEDS_REVIEW" | "INSUFFICIENT_EVIDENCE" | "SIMULATED" | "LIMITED";
     evidence_status: "FORMAL_PASSED" | "MISSING" | "SIMULATED" | "TECHNICAL_ONLY";
     customer_visible_eligible: boolean;
     needs_review: boolean;
     blocking_reasons: string[];
   };
+  sampling?: {
+    plan_id: string | null;
+    sample_id: string | null;
+    sample_type: "SOIL" | "TISSUE" | "WATER" | null;
+    zone_id: string | null;
+    collected_at_ts: number | null;
+    lab_result_status: "PASS" | "NEEDS_REVIEW" | "INVALID" | "MISSING";
+    acceptance_status: "PASS" | "NEEDS_REVIEW" | "FAIL" | "MISSING";
+    customer_visible_eligible: boolean;
+    blocking_reasons: string[];
+  };
+
   fail_safe?: {
     status: "NONE" | "OPEN" | "ACKED" | "COMPLETED" | "RESOLVED";
     trigger: string | null;
@@ -694,11 +706,22 @@ export function projectOperationReportV1(input: {
   const zoneRollupPass = zoneMatrixCustomerView.length > 0
     ? zoneMatrixCustomerView.every((z: any) => String(z?.zone_acceptance_result ?? "").toUpperCase() === "PASS")
     : false;
+  const samplingRaw = operationStateAny?.sampling ?? operationStateAny?.sampling_report ?? operationStateAny?.operation_sampling ?? {};
+  const samplingSampleTypeRaw = String(samplingRaw?.sample_type ?? "").trim().toUpperCase();
+  const samplingSampleType = (["SOIL", "TISSUE", "WATER"].includes(samplingSampleTypeRaw) ? samplingSampleTypeRaw : null) as NonNullable<OperationReportV1["sampling"]>["sample_type"];
+  const samplingLabStatusRaw = String(samplingRaw?.lab_result_status ?? "").trim().toUpperCase();
+  const samplingLabStatus = (["PASS", "NEEDS_REVIEW", "INVALID", "MISSING"].includes(samplingLabStatusRaw) ? samplingLabStatusRaw : "MISSING") as NonNullable<OperationReportV1["sampling"]>["lab_result_status"];
+  const samplingAcceptanceStatusRaw = String(samplingRaw?.acceptance_status ?? "").trim().toUpperCase();
+  const samplingAcceptanceStatus = (["PASS", "NEEDS_REVIEW", "FAIL", "MISSING"].includes(samplingAcceptanceStatusRaw) ? samplingAcceptanceStatusRaw : "MISSING") as NonNullable<OperationReportV1["sampling"]>["acceptance_status"];
+  const samplingBlockingReasons = Array.isArray(samplingRaw?.blocking_reasons)
+    ? samplingRaw.blocking_reasons.map((x: unknown) => String(x ?? "").trim()).filter(Boolean)
+    : [];
+
   const operationScenarioType = String((operationStateAny?.scenario_type ?? operationStateAny?.meta?.scenario_type ?? operationStateAny?.operation_scenario_type ?? "")).trim().toUpperCase();
   const scenarioType: NonNullable<OperationReportV1["formal_scenario"]>["scenario_type"] =
     operationScenarioType === "FORMAL_IRRIGATION" || operationScenarioType === "DEVICE_ANOMALY" || operationScenarioType === "FORMAL_VARIABLE_OPERATION"
       ? operationScenarioType as any
-      : (variableByZoneMode ? "FORMAL_VARIABLE_OPERATION" : "UNKNOWN");
+      : (variableByZoneMode ? "FORMAL_VARIABLE_OPERATION" : (samplingRaw?.sample_id || samplingRaw?.plan_id ? "FORMAL_SAMPLING" : "UNKNOWN"));
   const chainStatusRaw = String((operationStateAny?.chain_status ?? operationStateAny?.guarded_projection?.chain_status ?? operationStateAny?.formal_chain_status ?? "")).trim().toUpperCase();
   const formalChainStatus: NonNullable<OperationReportV1["formal_scenario"]>["formal_chain_status"] =
     chainStatusRaw === "PASSED" || chainStatusRaw === "NEEDS_REVIEW" || chainStatusRaw === "INSUFFICIENT_EVIDENCE" || chainStatusRaw === "SIMULATED" || chainStatusRaw === "LIMITED"
@@ -897,6 +920,17 @@ export function projectOperationReportV1(input: {
       customer_visible_eligible: customerVisibleEligible,
       needs_review: customerVisibleEligible ? needsReview : true,
       blocking_reasons: blockingReasons,
+    },
+    sampling: {
+      plan_id: toText(samplingRaw?.plan_id),
+      sample_id: toText(samplingRaw?.sample_id),
+      sample_type: samplingSampleType,
+      zone_id: toText(samplingRaw?.zone_id),
+      collected_at_ts: toNullableNumber(samplingRaw?.collected_at_ts),
+      lab_result_status: samplingLabStatus,
+      acceptance_status: samplingAcceptanceStatus,
+      customer_visible_eligible: Boolean(samplingRaw?.customer_visible_eligible),
+      blocking_reasons: samplingBlockingReasons,
     },
     fail_safe: {
       status: failSafeStatus,

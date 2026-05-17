@@ -36,11 +36,25 @@ function asList(value: unknown): string[] {
 
 function collectBlockingReasons(reportOrOperation: any): string[] {
   const scenarioReasons = asList(reportOrOperation?.formal_scenario?.blocking_reasons);
+  const samplingReasons = asList(reportOrOperation?.sampling?.blocking_reasons);
   const missingItems = asList(reportOrOperation?.acceptance?.missing_items);
   const chainReasons = asList(reportOrOperation?.chain_validation?.blocking_reasons);
-  return [...scenarioReasons, ...missingItems, ...chainReasons]
+  return [...scenarioReasons, ...samplingReasons, ...missingItems, ...chainReasons]
     .map((x) => (x.startsWith("missing:") ? customerEvidenceGapText(x) : customerReasonText(x)))
     .filter(Boolean);
+}
+
+
+function samplingSummaryText(value: any): string | undefined {
+  const sampling = value?.sampling ?? {};
+  const lab = String(sampling?.lab_result_status ?? "").toUpperCase();
+  const acc = String(sampling?.acceptance_status ?? "").toUpperCase();
+  const simulated = asList(sampling?.blocking_reasons).some((x) => String(x).toLowerCase().includes("simulated"));
+  if (lab === "INVALID" || lab === "NEEDS_REVIEW") return "采样已完成，但实验室结果未通过质量校验 → 需复核";
+  if (simulated) return "采样记录来自模拟链路 → 不作为客户结论";
+  if (lab === "PASS" && (acc === "MISSING" || acc === "FAIL")) return "实验室结果已导入，但缺少采样回执 → 证据不足";
+  if (lab === "PASS" && acc === "PASS") return "采样与实验室结果均通过 → 可作为农艺判断依据";
+  return undefined;
 }
 
 function zoneSummaryText(value: any): string | undefined {
@@ -73,7 +87,7 @@ export function buildFormalScenarioVm(reportOrOperation: any): FormalScenarioVm 
     acceptanceText,
     failSafeText,
     manualTakeoverText,
-    zoneSummaryText: zoneSummaryText(reportOrOperation),
+    zoneSummaryText: samplingSummaryText(reportOrOperation) ?? zoneSummaryText(reportOrOperation),
     roiTrustText: scenario?.customer_visible_eligible === true ? "价值结论可对客展示" : "价值结论暂不展示：缺少正式验收结果。",
     memoryTrustText: scenario?.customer_visible_eligible === true ? "学习结论可对客展示" : "学习结论暂不展示：缺少正式田块响应验证。",
     deviceStatusText,
