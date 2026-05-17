@@ -59,7 +59,7 @@ async function postRaw(base: string, token: string, fx: any, overrides: any = {}
 }
 
 async function main() {
-  const base = env('BASE_URL', 'http://127.0.0.1:3000');
+  const base = env('BASE_URL', 'http://127.0.0.1:3001');
   await health(base);
   const adminToken = env('TOKEN_ADMIN');
   const approverToken = env('TOKEN_APPROVER', adminToken);
