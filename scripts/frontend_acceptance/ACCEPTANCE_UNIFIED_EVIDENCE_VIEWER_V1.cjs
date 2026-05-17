@@ -56,10 +56,18 @@ function main() {
   includesAll(operatorView, ['Unified Evidence Viewer', 'EvidenceTrustLegend', 'EvidenceRefList', 'EvidenceRefList vm={evidenceVm} mode="operator"', 'EvidenceGapPanel', 'EvidenceTrustBadge'], FILES.operatorView);
   includesAll(fieldView, ['统一证据视图', 'EvidenceTrustLegend', 'EvidenceRefList', 'EvidenceRefList vm={evidenceVm} mode="customer"', 'EvidenceGapPanel', 'EvidenceTrustBadge'], FILES.fieldView);
 
-  const customerBranch = components.match(/if \(mode === "operator"\) \{([\s\S]*?)\}\s*return <ul className="customerList">([\s\S]*?)<\/ul>;/);
-  if (!customerBranch) throw new Error(`${FILES.evidenceComponents} missing explicit customer/operator branch in EvidenceRefList`);
-  if (/\br\.ref\b/.test(customerBranch[2])) throw new Error(`${FILES.evidenceComponents} customer branch must not render r.ref`);
-  if (!/\br\.ref\b/.test(customerBranch[1])) throw new Error(`${FILES.evidenceComponents} operator branch must render r.ref`);
+  const operatorToken = 'if (mode === "operator") {';
+  const operatorStart = components.indexOf(operatorToken);
+  if (operatorStart < 0) throw new Error(`${FILES.evidenceComponents} missing explicit customer/operator branch in EvidenceRefList`);
+  const customerIndex = components.indexOf('const formalCount = vm.refs.filter', operatorStart);
+  if (customerIndex < 0) throw new Error(`${FILES.evidenceComponents} missing customer summary branch in EvidenceRefList`);
+  const operatorBody = components.slice(operatorStart, customerIndex);
+  const customerBody = components.slice(customerIndex, components.indexOf('export function EvidenceGapPanel'));
+  if (/\br\.ref\b/.test(customerBody)) throw new Error(`${FILES.evidenceComponents} customer branch must not render r.ref`);
+  if (!/\br\.ref\b/.test(operatorBody)) throw new Error(`${FILES.evidenceComponents} operator branch must render r.ref`);
+  if (/vm\.refs\.map\(/.test(customerBody)) throw new Error(`${FILES.evidenceComponents} customer branch must not map(vm.refs) to render MISSING refs directly`);
+  if (/(证据缺失｜|缺失项)/.test(customerBody)) throw new Error(`${FILES.evidenceComponents} customer branch must not include “证据缺失｜缺失项”`);
+  includesAll(customerBody, ['正式证据：{formalCount} 条', '技术信号：{technicalCount} 条', '模拟/调试记录：{simulatedCount} 条，不作为正式结论', '证据缺口：见下方摘要'], `${FILES.evidenceComponents} customer branch`);
 
 
   const customerForbidden = /(INSUFFICIENT|SIMULATED_DEV_ONLY|TECHNICAL_ONLY|Stage-1|sensing summary|soil_moisture|threshold|deficit|missing:)/;

@@ -37,7 +37,19 @@ export function EvidenceRefList({
   if (mode === "operator") {
     return <ul className="customerList">{vm.refs.map((r, i) => <li key={`${r.ref}-${i}`} className="customerListItem">{r.label}｜{badgeTone(r.type)}｜{r.ref}</li>)}</ul>;
   }
-  return <ul className="customerList">{vm.refs.map((r, i) => <li key={`${r.label}-${r.type}-${i}`} className="customerListItem">{badgeTone(r.type)}｜{r.label || "证据摘要待补充"}</li>)}</ul>;
+  const formalCount = vm.refs.filter((r) => r.type === "FORMAL").length;
+  const technicalCount = vm.refs.filter((r) => r.type === "TECHNICAL").length;
+  const simulatedCount = vm.refs.filter((r) => r.type === "SIMULATED").length;
+  const missingCount = vm.refs.filter((r) => r.type === "MISSING").length;
+  return (
+    <ul className="customerList">
+      {formalCount ? <li className="customerListItem">正式证据：{formalCount} 条</li> : null}
+      {technicalCount ? <li className="customerListItem">技术信号：{technicalCount} 条</li> : null}
+      {simulatedCount ? <li className="customerListItem">模拟/调试记录：{simulatedCount} 条，不作为正式结论</li> : null}
+      {missingCount ? <li className="customerListItem">证据缺口：见下方摘要</li> : null}
+      {!formalCount && !technicalCount && !simulatedCount && !missingCount ? <li className="customerListItem">暂无证据引用</li> : null}
+    </ul>
+  );
 }
 
 export function EvidenceGapPanel({ vm, mode = "customer" }: { vm: EvidenceVm; mode?: EvidenceViewMode }): React.ReactElement {
