@@ -49,6 +49,8 @@ assert.match(irrigationTs, /(decision:\s*['"]REJECT['"]|decision:\s*['"]DECLINE[
 assert.match(irrigationTs, /requireOk\s*\(\s*taskIndexResp\s*,/, 'formal irrigation receipt flow must requireOk(taskIndexResp, ...) before receipt');
 assert.match(irrigationTs, /taskRecord/, 'formal irrigation receipt flow must include explicit taskRecord checks before receipt');
 assert.match(irrigationTs, /(FORMAL_RECEIPT_CONTRACT_INVALID|TASK_RECORD_MISSING_BEFORE_RECEIPT|TASK_PARAMETER_SCHEMA_KEYS_MISSING|OBSERVED_PARAMETER_NOT_ALLOWED|NEGATIVE_TASK_RECORD_MISSING_BEFORE_RECEIPT|NEGATIVE_TASK_PARAMETER_SCHEMA_KEYS_MISSING|NEGATIVE_OBSERVED_PARAMETER_NOT_ALLOWED)/, 'formal irrigation receipt flow must include strong pre-receipt validation markers');
+assert.doesNotMatch(irrigationTs, /result\.recordApiSnapshot\s*\(/, 'formal irrigation script must not call result.recordApiSnapshot');
+assert.doesNotMatch(irrigationTs, /negative[\s\S]{0,4000}result\.manifest\.act_task_id/, 'negative receipt lane must not reuse positive result.manifest.act_task_id');
 assert.doesNotMatch(irrigationTs, /observed_parameters:\s*\{\s*duration_min\s*:/, 'formal irrigation script must not put duration/effect metrics into observed_parameters');
 assert.match(irrigationTs, /meta:\s*\{[^}]*execution_summary:[\s\S]*effect_observation:/, 'formal irrigation script must keep execution/effect summary in meta');
 assert.match(irrigationTs, /(PRESCRIPTION_ID_MISSING|FORMAL_PRESCRIPTION_REQUIRED|manifest\.prescription_id)/, 'formal irrigation script must assert/output non-empty prescription_id semantics');
@@ -73,6 +75,8 @@ const output = {
     irrigation_negative_approval_uses_reject_semantics: true,
     irrigation_receipt_preindex_require_ok: true,
     irrigation_receipt_taskrecord_strong_validation: true,
+    irrigation_no_result_record_api_snapshot: true,
+    irrigation_negative_receipt_not_reuse_positive_task: true,
     no_projection_gate_scans_device_anomaly: true,
     release_gate_has_no_projection: true,
     flight_table_formal_scenarios_endpoint: true,
