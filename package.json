@@ -57,6 +57,7 @@
     "ci:scenario:device-anomaly": "node scripts/agronomy_acceptance/ACCEPTANCE_DEVICE_ANOMALY_E2E_V1.cjs",
     "ci:scenario:formal-variable-operation": "node scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_VARIABLE_OPERATION_E2E_V1.cjs",
     "ci:scenario:formal-e2e": "pnpm run ci:scenario:formal-irrigation && pnpm run ci:scenario:device-anomaly && pnpm run ci:scenario:formal-variable-operation",
+    "ci:scenario:productization": "node scripts/agronomy_acceptance/ACCEPTANCE_SCENARIO_PRODUCTIZATION_RELEASE_GATE.cjs",
     "qa:release-gate-check": "node scripts/qa/check_release_gates.cjs --report docs/qa/reports/release_gate_report.json",
     "ci:simulator:ingest-guard": "node scripts/check_simulator_ingest_guard.cjs",
     "ci:server:dashboard-status-source-of-truth": "node scripts/check_dashboard_status_source_of_truth.cjs",
