@@ -1,6 +1,8 @@
 import React from "react";
 import type { EvidenceVm } from "../../lib/evidenceViewModel";
 
+export type EvidenceViewMode = "customer" | "operator";
+
 function badgeTone(type: EvidenceVm["refs"][number]["type"]): string {
   if (type === "FORMAL") return "正式证据";
   if (type === "TECHNICAL") return "技术信号";
@@ -24,9 +26,18 @@ export function EvidenceTrustBadge({ vm }: { vm: EvidenceVm }): React.ReactEleme
   return <MissingEvidenceBadge />;
 }
 
-export function EvidenceRefList({ vm }: { vm: EvidenceVm }): React.ReactElement {
+export function EvidenceRefList({
+  vm,
+  mode = "customer",
+}: {
+  vm: EvidenceVm;
+  mode?: EvidenceViewMode;
+}): React.ReactElement {
   if (!vm.refs.length) return <div className="muted">暂无证据引用</div>;
-  return <ul className="customerList">{vm.refs.map((r, i) => <li key={`${r.ref}-${i}`} className="customerListItem">{r.label}｜{badgeTone(r.type)}｜{r.ref}</li>)}</ul>;
+  if (mode === "operator") {
+    return <ul className="customerList">{vm.refs.map((r, i) => <li key={`${r.ref}-${i}`} className="customerListItem">{r.label}｜{badgeTone(r.type)}｜{r.ref}</li>)}</ul>;
+  }
+  return <ul className="customerList">{vm.refs.map((r, i) => <li key={`${r.label}-${r.type}-${i}`} className="customerListItem">{badgeTone(r.type)}｜{r.label || "证据摘要待补充"}</li>)}</ul>;
 }
 
 export function EvidenceGapPanel({ vm }: { vm: EvidenceVm }): React.ReactElement {

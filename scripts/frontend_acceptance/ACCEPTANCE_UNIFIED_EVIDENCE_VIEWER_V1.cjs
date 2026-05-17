@@ -38,6 +38,9 @@ function main() {
   includesAll(evidenceVm, ['export type EvidenceVm', 'refs:', 'gaps:', 'trustLevel:'], FILES.evidenceVm);
   includesAll(components, [
     'export function EvidenceRefList',
+    'type EvidenceViewMode = "customer" | "operator"',
+    'mode = "customer"',
+    'mode?: EvidenceViewMode',
     'export function EvidenceGapPanel',
     'export function FormalEvidenceBadge',
     'export function TechnicalSignalBadge',
@@ -46,9 +49,14 @@ function main() {
     'export function EvidenceTrustLegend',
   ], FILES.evidenceComponents);
 
-  includesAll(operationView, ['统一证据视图', 'EvidenceTrustLegend', 'EvidenceRefList', 'EvidenceGapPanel', 'EvidenceTrustBadge'], FILES.operationView);
-  includesAll(operatorView, ['Unified Evidence Viewer', 'EvidenceTrustLegend', 'EvidenceRefList', 'EvidenceGapPanel', 'EvidenceTrustBadge'], FILES.operatorView);
-  includesAll(fieldView, ['统一证据视图', 'EvidenceTrustLegend', 'EvidenceRefList', 'EvidenceGapPanel', 'EvidenceTrustBadge'], FILES.fieldView);
+  includesAll(operationView, ['统一证据视图', 'EvidenceTrustLegend', 'EvidenceRefList', 'EvidenceRefList vm={evidenceVm} mode="customer"', 'EvidenceGapPanel', 'EvidenceTrustBadge'], FILES.operationView);
+  includesAll(operatorView, ['Unified Evidence Viewer', 'EvidenceTrustLegend', 'EvidenceRefList', 'EvidenceRefList vm={evidenceVm} mode="operator"', 'EvidenceGapPanel', 'EvidenceTrustBadge'], FILES.operatorView);
+  includesAll(fieldView, ['统一证据视图', 'EvidenceTrustLegend', 'EvidenceRefList', 'EvidenceRefList vm={evidenceVm} mode="customer"', 'EvidenceGapPanel', 'EvidenceTrustBadge'], FILES.fieldView);
+
+  const customerBranch = components.match(/if \(mode === "operator"\) \{([\s\S]*?)\}\s*return <ul className="customerList">([\s\S]*?)<\/ul>;/);
+  if (!customerBranch) throw new Error(`${FILES.evidenceComponents} missing explicit customer/operator branch in EvidenceRefList`);
+  if (/\br\.ref\b/.test(customerBranch[2])) throw new Error(`${FILES.evidenceComponents} customer branch must not render r.ref`);
+  if (!/\br\.ref\b/.test(customerBranch[1])) throw new Error(`${FILES.evidenceComponents} operator branch must render r.ref`);
 
   assertNoForbidden(operationView, [{ name: 'page-level trust branching', pattern: /trustLevel\s*===\s*"(FORMAL|SIMULATED|TECHNICAL_ONLY)"/ }], FILES.operationView);
   assertNoForbidden(fieldView, [{ name: 'page-level trust branching', pattern: /trustLevel\s*===\s*"(FORMAL|SIMULATED|TECHNICAL_ONLY)"/ }], FILES.fieldView);
