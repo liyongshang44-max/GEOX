@@ -39,6 +39,12 @@ assert.doesNotMatch(irrigationTs, /manifest\s*=\s*\{/, 'formal irrigation positi
 assert.doesNotMatch(irrigationTs, /api_snapshots\s*:\s*\[\]/, 'formal irrigation positive path must not create local snapshot array');
 assert.match(verify, /prescription_created:\s*Boolean\(manifest\.prescription_id\)/, 'verify must hard-require manifest.prescription_id for prescription_created');
 assert.match(noProjection, /ACCEPTANCE_FORMAL_.*\.\(cjs\|ts\)/, 'no-projection-write gate must scan formal ts acceptance files');
+
+assert.match(irrigationTs, /\/api\/v1\/actions\/index\?/, 'formal irrigation script must fetch task via actions index before receipt');
+assert.match(irrigationTs, /buildObservedParametersFromSchema/, 'formal irrigation script must build observed_parameters from task schema');
+assert.match(irrigationTs, /assertFormalReceiptContract/, 'formal irrigation script must self-check receipt contract before submit');
+assert.doesNotMatch(irrigationTs, /observed_parameters:\s*\{\s*duration_min\s*:/, 'formal irrigation script must not put duration/effect metrics into observed_parameters');
+assert.match(irrigationTs, /meta:\s*\{[^}]*execution_summary:[\s\S]*effect_observation:/, 'formal irrigation script must keep execution/effect summary in meta');
 assert.match(irrigationTs, /(PRESCRIPTION_ID_MISSING|FORMAL_PRESCRIPTION_REQUIRED|manifest\.prescription_id)/, 'formal irrigation script must assert/output non-empty prescription_id semantics');
 assert.match(noProjection, /DEVICE_ANOMALY_E2E_V1/, 'no-projection-write gate must scan device anomaly script');
 assert.match(releaseGate, /ci:governance:formal-scenario-no-projection-write/, 'release gate must include formal-scenario-no-projection-write');
@@ -55,6 +61,8 @@ const output = {
     irrigation_uses_kernel: true,
     irrigation_no_local_runtime_helpers: true,
     irrigation_prescription_assertion_or_output: true,
+    irrigation_receipt_observed_parameters_schema_aligned: true,
+    irrigation_receipt_execution_effect_in_meta: true,
     no_projection_gate_scans_device_anomaly: true,
     release_gate_has_no_projection: true,
     flight_table_formal_scenarios_endpoint: true,

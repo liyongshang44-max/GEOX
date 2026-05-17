@@ -75,6 +75,32 @@ async function postEvidenceWindow(base: string, token: string, fx: any, ctx: For
     }
   }
 }
+
+
+function extractAllowedParameterKeys(taskRecord: any): string[] {
+  const keys = Array.isArray(taskRecord?.payload?.parameter_schema?.keys) ? taskRecord.payload.parameter_schema.keys : [];
+  return keys.map((k: any) => String(k?.name ?? '').trim()).filter(Boolean);
+}
+
+function buildObservedParametersFromSchema(allowedKeys: string[], fallbackParameters: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of allowedKeys) {
+    if (Object.prototype.hasOwnProperty.call(fallbackParameters, key)) out[key] = fallbackParameters[key];
+  }
+  return out;
+}
+
+function assertFormalReceiptContract(input: { operation_plan_id: string; act_task_id: string; command_id: string; idempotency_key: string; observed_parameters: Record<string, unknown>; allowed_keys: string[]; }) {
+  if (!String(input.operation_plan_id ?? '').trim()) throw new Error('FORMAL_RECEIPT_CONTRACT_INVALID');
+  if (!String(input.act_task_id ?? '').trim()) throw new Error('FORMAL_RECEIPT_CONTRACT_INVALID');
+  if (String(input.command_id ?? '').trim() !== String(input.act_task_id ?? '').trim()) throw new Error('FORMAL_RECEIPT_CONTRACT_INVALID');
+  if (!String(input.idempotency_key ?? '').trim()) throw new Error('FORMAL_RECEIPT_CONTRACT_INVALID');
+  const allowed = new Set(input.allowed_keys);
+  for (const key of Object.keys(input.observed_parameters ?? {})) {
+    if (!allowed.has(key)) throw new Error('FORMAL_RECEIPT_CONTRACT_INVALID');
+  }
+}
+
 async function main() {
   const base = env('BASE_URL', 'http://127.0.0.1:3001');
   await health(base);
@@ -131,7 +157,15 @@ async function main() {
     ctx.updateManifest({ approval_request_id, act_task_id: approve.act_task_id ?? null, operation_id: operation_plan_id });
     const command_id = String(ctx.manifest.act_task_id ?? '').trim();
     if (!command_id) throw new Error('COMMAND_ID_MISSING_BEFORE_RECEIPT');
-    const receiptBody = { tenant_id: ctx.fixture.tenant_id, project_id: ctx.fixture.project_id, group_id: ctx.fixture.group_id, operation_plan_id, act_task_id: ctx.manifest.act_task_id, command_id, executor_id: { kind: 'device', id: ctx.fixture.device_id, namespace: 'formal_scenario' }, execution_time: { start_ts: Date.now() - 900000, end_ts: Date.now() - 60000 }, execution_coverage: { kind: 'field', ref: ctx.fixture.field_id }, resource_usage: { fuel_l: 0, electric_kwh: 1.1, water_l: 360, chemical_ml: 0 }, evidence_refs: [{ kind: 'formal_device_log', ref: `formal://${ctx.fixture.device_id}/${command_id}` }], logs_refs: [{ kind: 'dispatch_ack', ref: `ack_${command_id}` }], status: 'executed', constraint_check: { violated: false, violations: [] }, observed_parameters: { duration_min: 14, coverage_percent: 0.96, pre_soil_moisture: 0.18, post_soil_moisture: 0.25, soil_moisture_delta: 0.07 }, meta: { command_id, idempotency_key: `formal_receipt_${command_id}_${Date.now()}`, formal_scenario_run_id: ctx.fixture.run_id } };
+    const taskIndexResp = await fetchJson(`${base}/api/v1/actions/index?tenant_id=${encodeURIComponent(ctx.fixture.tenant_id)}&project_id=${encodeURIComponent(ctx.fixture.project_id)}&group_id=${encodeURIComponent(ctx.fixture.group_id)}&act_task_id=${encodeURIComponent(command_id)}`, { method: 'GET', token: operatorToken });
+    const taskRows = Array.isArray(taskIndexResp.json?.items) ? taskIndexResp.json.items : [];
+    const taskRecord = taskRows.find((r: any) => String(r?.act_task_id ?? '').trim() === command_id)?.task_record_json ?? null;
+    const allowedObservedKeys = extractAllowedParameterKeys(taskRecord);
+    const taskParameters = taskRecord?.payload?.parameters && typeof taskRecord.payload.parameters === 'object' ? taskRecord.payload.parameters : {};
+    const observed_parameters = buildObservedParametersFromSchema(allowedObservedKeys, taskParameters as Record<string, unknown>);
+    const idempotency_key = `formal_receipt_${command_id}_${Date.now()}`;
+    assertFormalReceiptContract({ operation_plan_id, act_task_id: command_id, command_id, idempotency_key, observed_parameters, allowed_keys: allowedObservedKeys });
+    const receiptBody = { tenant_id: ctx.fixture.tenant_id, project_id: ctx.fixture.project_id, group_id: ctx.fixture.group_id, operation_plan_id, act_task_id: ctx.manifest.act_task_id, command_id, executor_id: { kind: 'device', id: ctx.fixture.device_id, namespace: 'formal_scenario' }, execution_time: { start_ts: Date.now() - 900000, end_ts: Date.now() - 60000 }, execution_coverage: { kind: 'field', ref: ctx.fixture.field_id }, resource_usage: { fuel_l: 0, electric_kwh: 1.1, water_l: 360, chemical_ml: 0 }, evidence_refs: [{ kind: 'formal_device_log', ref: `formal://${ctx.fixture.device_id}/${command_id}` }], logs_refs: [{ kind: 'dispatch_ack', ref: `ack_${command_id}` }], status: 'executed', constraint_check: { violated: false, violations: [] }, observed_parameters, meta: { command_id, idempotency_key, formal_scenario_run_id: ctx.fixture.run_id, execution_summary: { duration_min: 14, coverage_percent: 0.96 }, effect_observation: { pre_soil_moisture: 0.18, post_soil_moisture: 0.25, soil_moisture_delta: 0.07 } } };
     const receiptResp = await fetchJson(`${base}/api/v1/actions/receipt`, { method: 'POST', token: executorToken, body: receiptBody });
     ctx.recordApiSnapshot({ method: 'POST', path: '/api/v1/actions/receipt', ok: receiptResp.ok && receiptResp.json?.ok === true, status_code: receiptResp.status, label: 'formal receipt', request: receiptBody, response: receiptResp.json ?? receiptResp.text });
     const receipt = requireOk(receiptResp, 'formal receipt');
