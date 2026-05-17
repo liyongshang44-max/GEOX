@@ -38,6 +38,13 @@ function parseLimit(v: any, def: number, max: number): number {
   return Math.min(n, max);
 }
 
+
+function isRejectDecision(body: any): boolean {
+  const decision = String(body?.decision ?? body?.status ?? '').trim().toUpperCase();
+  if (["REJECT", "REJECTED", "DECLINE", "DECLINED"].includes(decision)) return true;
+  return body?.approved === false;
+}
+
 function normalizeAoActIssuer(auth: any, proposalIssuer: any): any {
   // AO-ACT contract requires issuer as an object {kind:'human', id, namespace}.
   // We bind issuer.id to the authenticated actor_id for auditability; proposalIssuer is kept only as proposal text.
@@ -238,6 +245,60 @@ async function handleApprovalApprove(req: any, reply: any, pool: Pool) {
     const proposal = payload.proposal ?? null;
     if (!proposal) return reply.status(500).send({ ok: false, error: "REQUEST_RECORD_INVALID" });
 
+    const decision_id = `apd_${randomUUID().replace(/-/g, "")}`;
+    const isReject = isRejectDecision(body);
+    if (isReject) {
+      const rejected_at_ts = Date.now();
+      const rejectedRequestRecord = {
+        type: "approval_request_v1",
+        payload: {
+          ...payload,
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
+          program_id: String(body.program_id ?? body.meta?.program_id ?? payload.program_id ?? "").trim() || null,
+          field_id: body.field_id ?? body.meta?.field_id ?? body.target?.ref ?? null,
+          season_id: body.season_id ?? body.meta?.season_id ?? null,
+          request_id,
+          status: "REJECTED",
+          rejected_at_ts,
+          rejected_by_actor_id: auth.actor_id,
+          rejected_by_token_id: auth.token_id,
+          reject_reason: body.reason ?? null
+        }
+      };
+      await pool.query(
+        "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+        [randomUUID(), "api/v1/approvals/approve", rejectedRequestRecord]
+      );
+      const decision_fact_id = randomUUID();
+      const decision_record = {
+        type: "approval_decision_v1",
+        payload: {
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
+          decision_id,
+          request_id,
+          approval_request_id: request_id,
+          approval_id: request_id,
+          decision: "REJECTED",
+          act_task_id: null,
+          ao_act_fact_id: null,
+          actor_id: auth.actor_id,
+          token_id: auth.token_id,
+          created_at_ts: rejected_at_ts,
+          auto_task_issued: false,
+          reason: body.reason ?? null,
+        }
+      };
+      await pool.query(
+        "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+        [decision_fact_id, "api/v1/approvals/approve", decision_record]
+      );
+      return reply.send({ ok: true, request_id, decision_id, decision: "REJECTED", act_task_id: null, ao_act_fact_id: null, decision_fact_id });
+    }
+
     const approvedRequestRecord = {
       type: "approval_request_v1",
       payload: {
@@ -260,7 +321,6 @@ async function handleApprovalApprove(req: any, reply: any, pool: Pool) {
       [randomUUID(), "api/v1/approvals/approve", approvedRequestRecord]
     );
 
-    const decision_id = `apd_${randomUUID().replace(/-/g, "")}`;
     const allowAutoTaskIssue = Boolean(proposal?.meta?.allow_auto_task_issue === true);
     const skipAutoTaskIssue = Boolean(proposal?.meta?.skip_auto_task_issue === true);
     if (!skipAutoTaskIssue && !allowAutoTaskIssue) {

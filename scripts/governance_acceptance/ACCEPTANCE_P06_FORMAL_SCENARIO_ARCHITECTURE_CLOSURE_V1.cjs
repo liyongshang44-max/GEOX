@@ -15,6 +15,7 @@ const files = {
   noProjectionGate: 'scripts/governance_acceptance/ACCEPTANCE_FORMAL_SCENARIO_NO_PROJECTION_WRITE_V1.cjs',
   releaseGate: 'scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_SCENARIO_E2E_RELEASE_GATE.cjs',
   flightTableRoute: 'apps/server/src/routes/dev/flight_table_v1.ts',
+  approvalRoute: 'apps/server/src/routes/control_approval_request_v1.ts',
   artifactDoc: 'docs/flight-table/FORMAL_SCENARIO_ARTIFACT_STRATEGY_V1.md',
 };
 
@@ -25,6 +26,7 @@ const irrigationCjs = read(files.irrigationCjs);
 const noProjection = read(files.noProjectionGate);
 const releaseGate = read(files.releaseGate);
 const flightTable = read(files.flightTableRoute);
+const approvalRoute = read(files.approvalRoute);
 
 assert.match(kernel, /runFormalScenarioKernelV1\s*\(/, 'kernel must expose runFormalScenarioKernelV1');
 assert.match(verify, /prescription_created/, 'formal scenario verify must include prescription_created');
@@ -41,6 +43,10 @@ assert.match(verify, /prescription_created:\s*Boolean\(manifest\.prescription_id
 assert.match(noProjection, /ACCEPTANCE_FORMAL_.*\.\(cjs\|ts\)/, 'no-projection-write gate must scan formal ts acceptance files');
 
 assert.match(irrigationTs, /\/api\/v1\/actions\/index\?/, 'formal irrigation script must fetch task via actions index before receipt');
+assert.match(irrigationTs, /function\s+rowsOfActionIndex\s*\(/, 'formal irrigation script must contain action index rows/items adapter');
+assert.match(irrigationTs, /payload\?\.rows[\s\S]*payload\?\.items/, 'formal irrigation adapter must support both rows and items payload shapes');
+assert.doesNotMatch(irrigationTs, /Array\.isArray\(taskIndex\?\.items\) \? taskIndex\.items : \[\]/, 'formal irrigation script must not use items-only task index lookup');
+assert.doesNotMatch(irrigationTs, /Array\.isArray\(indexResp\.json\?\.items\) \? indexResp\.json\.items : \[\]/, 'formal irrigation script must not use items-only reject index lookup');
 assert.match(irrigationTs, /buildObservedParametersFromSchema/, 'formal irrigation script must build observed_parameters from task schema');
 assert.match(irrigationTs, /assertFormalReceiptContract/, 'formal irrigation script must self-check receipt contract before submit');
 assert.doesNotMatch(irrigationTs, /receipt_success_not_acceptance_pass\s*=\s*true/, 'formal irrigation script must not hardcode receipt_success_not_acceptance_pass=true');
@@ -58,6 +64,11 @@ assert.match(noProjection, /DEVICE_ANOMALY_E2E_V1/, 'no-projection-write gate mu
 assert.match(releaseGate, /ci:governance:formal-scenario-no-projection-write/, 'release gate must include formal-scenario-no-projection-write');
 assert.match(flightTable, /\/api\/v1\/dev\/flight-table\/formal-scenarios/, 'flight table route must expose formal-scenarios endpoint');
 assert.match(flightTable, /listFormalScenarioLaneDefinitionsV1/, 'flight table route must use listFormalScenarioLaneDefinitionsV1');
+assert.match(approvalRoute, /decision:\s*"REJECTED"/, 'approval route must persist REJECTED decision semantics');
+assert.match(approvalRoute, /status:\s*"REJECTED"/, 'approval route must persist REJECTED request status semantics');
+assert.match(approvalRoute, /if \(isReject\)[\s\S]{0,2000}return reply\.send\(\{ ok: true,[\s\S]*decision: "REJECTED"/, 'approval route reject branch must return REJECTED contract response');
+assert.doesNotMatch(approvalRoute, /if \(isReject\)[\s\S]{0,2000}AUTO_TASK_ISSUE_NOT_ALLOWED/, 'approval route reject branch must not be gated by AUTO_TASK_ISSUE_NOT_ALLOWED');
+assert.doesNotMatch(irrigationTs, /approval_rejected_no_task[\s\S]{0,1600}(403|FORBIDDEN|ROLE_APPROVER_REQUIRED|AUTO_TASK_ISSUE_NOT_ALLOWED)/, 'formal irrigation reject-no-task lane must not rely on auth/guard errors');
 assert.ok(exists(files.artifactDoc), 'artifact strategy document must exist');
 
 const output = {
@@ -70,6 +81,8 @@ const output = {
     irrigation_no_local_runtime_helpers: true,
     irrigation_prescription_assertion_or_output: true,
     irrigation_receipt_observed_parameters_schema_aligned: true,
+    irrigation_actions_index_rows_items_adapter: true,
+    irrigation_no_items_only_index_lookup: true,
     irrigation_receipt_execution_effect_in_meta: true,
     irrigation_negative_receipt_not_hardcoded_true: true,
     irrigation_negative_approval_uses_reject_semantics: true,
@@ -82,6 +95,9 @@ const output = {
     flight_table_formal_scenarios_endpoint: true,
     flight_table_uses_shared_lane_definitions: true,
     artifact_strategy_doc_exists: true,
+    approval_route_rejected_contract_semantics: true,
+    approval_reject_no_autotask_guard_dependency: true,
+    irrigation_reject_no_task_not_error_substitute: true,
   },
 };
 
