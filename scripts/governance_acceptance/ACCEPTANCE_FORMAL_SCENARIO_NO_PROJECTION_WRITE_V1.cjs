@@ -8,7 +8,7 @@ const SCAN_TARGETS = [
   {
     label: 'formal_scenario_scripts',
     dir: path.join(ROOT, 'scripts', 'agronomy_acceptance'),
-    filePattern: /^ACCEPTANCE_FORMAL_.*\.cjs$/,
+    filePattern: /^ACCEPTANCE_FORMAL_.*\.(cjs|ts)$/,
   },
   {
     label: 'device_anomaly_scenario_script',
