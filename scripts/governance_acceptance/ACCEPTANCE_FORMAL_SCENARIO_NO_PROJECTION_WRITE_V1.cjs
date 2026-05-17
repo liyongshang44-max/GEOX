@@ -11,6 +11,11 @@ const SCAN_TARGETS = [
     filePattern: /^ACCEPTANCE_FORMAL_.*\.cjs$/,
   },
   {
+    label: 'device_anomaly_scenario_script',
+    dir: path.join(ROOT, 'scripts', 'agronomy_acceptance'),
+    filePattern: /^ACCEPTANCE_DEVICE_ANOMALY_E2E_V1\.cjs$/,
+  },
+  {
     label: 'formal_scenario_kernel',
     dir: path.join(ROOT, 'apps', 'server', 'src', 'services', 'scenarios'),
     filePattern: /\.ts$/,
