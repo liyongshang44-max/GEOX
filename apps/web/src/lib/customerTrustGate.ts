@@ -9,22 +9,27 @@ function upper(value: unknown): string {
 }
 
 export function isCustomerFormalChainPassed(value: any): boolean {
-  const trustLevel = upper(value?.trust_level ?? value?.trustLevel ?? value?.guarded_projection?.trust_level);
-  const chainStatus = upper(value?.chain_status ?? value?.chainStatus ?? value?.guarded_projection?.chain_status);
+  const formal = value?.formal_scenario ?? {};
+  const trustLevel = upper(value?.trust_level ?? value?.trustLevel ?? value?.guarded_projection?.trust_level ?? formal.trust_level);
+  const chainStatus = upper(value?.chain_status ?? value?.chainStatus ?? value?.formal_chain_status ?? formal.formal_chain_status ?? value?.guarded_projection?.chain_status);
+  const evidenceStatus = upper(value?.evidence_status ?? formal.evidence_status);
   const chainPassed = value?.chain_validation?.passed === true || value?.guarded_projection?.passed === true || chainStatus === "PASSED";
-  const visibleEligible = value?.customer_visible_eligible !== false && value?.customerVisibleEligible !== false;
-  const needsReview = value?.needs_review === true || value?.needsReview === true;
+  const visibleEligible = value?.customer_visible_eligible !== false && value?.customerVisibleEligible !== false && formal.customer_visible_eligible !== false;
+  const needsReview = value?.needs_review === true || value?.needsReview === true || formal.needs_review === true;
   const simulated = value?.is_simulated === true || value?.isSimulated === true || chainStatus === "SIMULATED" || trustLevel === "SIMULATED_DEV_ONLY";
   const formalTrust = !trustLevel || trustLevel === "FORMAL_CHAIN_PASSED" || trustLevel === "FORMAL_ACCEPTED";
-  return chainPassed && visibleEligible && !needsReview && !simulated && formalTrust;
+  const missingEvidence = evidenceStatus === "MISSING" || evidenceStatus === "TECHNICAL_ONLY";
+  return chainPassed && visibleEligible && !needsReview && !simulated && formalTrust && !missingEvidence;
 }
 
 export function customerGuardedStatus(value: any): CustomerGuardedStatus {
   if (isCustomerFormalChainPassed(value)) return "PASSED";
-  const trustLevel = upper(value?.trust_level ?? value?.trustLevel ?? value?.guarded_projection?.trust_level);
-  const chainStatus = upper(value?.chain_status ?? value?.chainStatus ?? value?.guarded_projection?.chain_status);
+  const formal = value?.formal_scenario ?? {};
+  const trustLevel = upper(value?.trust_level ?? value?.trustLevel ?? value?.guarded_projection?.trust_level ?? formal.trust_level);
+  const chainStatus = upper(value?.chain_status ?? value?.chainStatus ?? value?.formal_chain_status ?? formal.formal_chain_status ?? value?.guarded_projection?.chain_status);
+  const evidenceStatus = upper(value?.evidence_status ?? formal.evidence_status);
   if (value?.is_simulated === true || value?.isSimulated === true || chainStatus === "SIMULATED" || trustLevel === "SIMULATED_DEV_ONLY") return "SIMULATED";
-  if (chainStatus === "INSUFFICIENT_EVIDENCE" || trustLevel === "INSUFFICIENT_FORMAL_EVIDENCE") return "INSUFFICIENT_EVIDENCE";
+  if (chainStatus === "INSUFFICIENT_EVIDENCE" || trustLevel === "INSUFFICIENT_FORMAL_EVIDENCE" || evidenceStatus === "MISSING" || evidenceStatus === "TECHNICAL_ONLY") return "INSUFFICIENT_EVIDENCE";
   if (chainStatus === "LIMITED" || trustLevel === "LIMITED_FALLBACK") return "LIMITED";
   return "NEEDS_REVIEW";
 }

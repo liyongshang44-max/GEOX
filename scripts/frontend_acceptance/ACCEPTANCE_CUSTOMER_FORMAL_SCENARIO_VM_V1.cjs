@@ -42,6 +42,21 @@ for (const symbol of requiredReuse) {
   }
 }
 
+
+const trustGateText = read(targets.trustGate) || '';
+const trustGateRequired = [
+  'formal_scenario',
+  'formal_chain_status',
+  'evidence_status',
+  'customer_visible_eligible',
+  'needs_review',
+];
+for (const token of trustGateRequired) {
+  if (!new RegExp(`\\b${token}\\b`).test(trustGateText)) {
+    failures.push(`${rel(targets.trustGate)} must read ${token}`);
+  }
+}
+
 const dashboardText = read(targets.dashboardVm) || '';
 if (!/buildFormalScenarioVm\s*\(/.test(dashboardText)
     && !/customerGuardedStatusText|customerGuardedAcceptanceText|customerGuardedEvidenceText/.test(dashboardText)) {
