@@ -67,3 +67,14 @@ This backlog entry explicitly confirms:
 - It is non-blocking for P0.6.
 - Governance follow-up path is defined.
 - Irrelevant skill failures must not block irrigation scenario verdicts.
+
+---
+
+## P0.6-post-03 implementation note (2026-05-17)
+
+- Observation pipeline now outputs per-skill relevance labeling (`relevant` vs `irrelevant`) and severity (`error` vs `warning`) for scenario-aware triage.
+- For formal irrigation/device anomaly/formal variable operation context, `fertility_inference_v1` is treated as **irrelevant** for blocking judgment.
+- Pipeline result now provides:
+  - `relevant_failures` (blocking/error channel candidates)
+  - `irrelevant_warnings` (diagnostic/noise channel)
+- This enforces: fertility inference failure must not influence irrigation acceptance verdict path.

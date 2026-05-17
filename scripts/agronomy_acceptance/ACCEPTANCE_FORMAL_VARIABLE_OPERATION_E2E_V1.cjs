@@ -1,3 +1,4 @@
+// P0.6-post debt: migrate this scenario to runFormalScenarioKernelV1; current script still contains a standalone mini-kernel.
 const { randomUUID } = require('node:crypto');
 const { Pool } = require('pg');
 const { assert, env, fetchJson, requireOk } = require('./_common.cjs');

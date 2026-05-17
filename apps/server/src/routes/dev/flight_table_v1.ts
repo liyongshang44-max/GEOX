@@ -1,3 +1,4 @@
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Pool } from "pg";
 
@@ -20,6 +21,12 @@ import { createFlightTableFieldV1, normalizeFlightTableFieldInputV1 } from "../.
 import { createFlightTableFieldGeometryV1 } from "../../services/flight_table/flight_table_geometry_v1.js";
 import { listFlightTableDeviceTemplatesForApiV1, onboardFlightTableDevicesV1 } from "../../services/flight_table/flight_table_devices_v1.js";
 import { listFormalScenarioLaneDefinitionsV1 } from "../../services/scenarios/formal_scenario_lanes_v1.js";
+import {
+  buildFormalScenarioSnapshotsArtifactV1,
+  createFormalScenarioArtifactPathsV1,
+  sanitizeFormalScenarioManifestV1,
+} from "../../services/scenarios/formal_scenario_manifest_v1.js";
+import { sanitizeFormalScenarioVerifyV1 } from "../../services/scenarios/formal_scenario_verify_v1.js";
 
 function flightTableEnabled(): boolean {
   return String(process.env.ENABLE_FLIGHT_TABLE_API ?? "").trim().toLowerCase() === "true";
@@ -89,6 +96,17 @@ function silentAdminAuth(req: FastifyRequest): AoActAuthContextV0 | null {
   };
 }
 
+
+
+async function readJsonOrNull(path: string): Promise<any | null> {
+  try {
+    const raw = await readFile(path, "utf-8");
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 function registerCustomerFieldVisibilityFallback(app: FastifyInstance, pool: Pool): void {
   app.addHook("onRequest", async (req, reply) => {
     if (!flightTableEnabled()) return;
@@ -152,6 +170,39 @@ export function registerFlightTableV1Routes(app: FastifyInstance, pool: Pool): v
       flight_table_visible: item.flight_table_visible,
     }));
     return reply.send({ ok: true, source: "formal_scenario_lanes_v1", scenarios });
+  });
+
+
+  app.post("/api/v1/dev/flight-table/formal-scenarios/:runId/artifacts", async (req, reply) => {
+    const auth = requireFlightTableAdmin(req, reply);
+    if (!auth) return;
+    const runId = String((req.params as any)?.runId ?? "").trim();
+    if (!runId) return badRequest(reply, "FORMAL_SCENARIO_INVALID_RUN_ID");
+    const body: any = req.body ?? {};
+    const rootDir = String(process.env.FORMAL_SCENARIO_ARTIFACT_ROOT ?? ".geox/formal_scenario_runs").trim() || ".geox/formal_scenario_runs";
+    const paths = createFormalScenarioArtifactPathsV1(runId, rootDir);
+    const manifest = sanitizeFormalScenarioManifestV1({ ...(body.manifest ?? {}), run_id: runId });
+    const verify = sanitizeFormalScenarioVerifyV1({ ...(body.verify ?? {}), run_id: runId });
+    const snapshots = buildFormalScenarioSnapshotsArtifactV1(manifest);
+    await mkdir(paths.run_dir, { recursive: true });
+    await writeFile(paths.manifest_path, JSON.stringify(manifest, null, 2));
+    await writeFile(paths.verify_path, JSON.stringify(verify, null, 2));
+    await writeFile(paths.snapshots_path, JSON.stringify(snapshots, null, 2));
+    return reply.send({ ok: true, run_id: runId, artifact_paths: paths, storage: "JSON_ARTIFACT_M1", customer_chain_eligible: false });
+  });
+
+  app.get("/api/v1/dev/flight-table/formal-scenarios/:runId/artifacts", async (req, reply) => {
+    const auth = requireFlightTableAdmin(req, reply);
+    if (!auth) return;
+    const runId = String((req.params as any)?.runId ?? "").trim();
+    if (!runId) return badRequest(reply, "FORMAL_SCENARIO_INVALID_RUN_ID");
+    const rootDir = String(process.env.FORMAL_SCENARIO_ARTIFACT_ROOT ?? ".geox/formal_scenario_runs").trim() || ".geox/formal_scenario_runs";
+    const paths = createFormalScenarioArtifactPathsV1(runId, rootDir);
+    const manifest = await readJsonOrNull(paths.manifest_path);
+    const verify = await readJsonOrNull(paths.verify_path);
+    const snapshots = await readJsonOrNull(paths.snapshots_path);
+    if (!manifest && !verify && !snapshots) return reply.status(404).send({ ok: false, error: "FORMAL_SCENARIO_ARTIFACT_NOT_FOUND" });
+    return reply.send({ ok: true, run_id: runId, storage: "JSON_ARTIFACT_M1", customer_chain_eligible: false, artifacts: { manifest, verify, snapshots } });
   });
 
   app.get("/api/v1/dev/flight-table/device-templates", async (req, reply) => {

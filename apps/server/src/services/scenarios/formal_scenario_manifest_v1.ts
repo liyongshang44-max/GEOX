@@ -125,3 +125,28 @@ export function mergeFormalScenarioManifestV1(
     api_snapshots: [...(current.api_snapshots ?? []), ...(patch.api_snapshots ?? [])],
   });
 }
+
+
+export type FormalScenarioArtifactPathsV1 = {
+  root_dir: string;
+  run_dir: string;
+  manifest_path: string;
+  verify_path: string;
+  snapshots_path: string;
+};
+
+export function createFormalScenarioArtifactPathsV1(run_id: string, root_dir = ".geox/formal_scenario_runs"): FormalScenarioArtifactPathsV1 {
+  const safeRunId = cleanString(run_id) ?? "fsr_unknown";
+  const run_dir = `${String(root_dir).replace(/\/$/, "")}/${safeRunId}`;
+  return {
+    root_dir: String(root_dir),
+    run_dir,
+    manifest_path: `${run_dir}/manifest.json`,
+    verify_path: `${run_dir}/verify.json`,
+    snapshots_path: `${run_dir}/snapshots.json`,
+  };
+}
+
+export function buildFormalScenarioSnapshotsArtifactV1(manifest: FormalScenarioManifestV1): FormalScenarioApiSnapshotV1[] {
+  return (manifest.api_snapshots ?? []).map((item) => ({ ...item }));
+}
