@@ -52,7 +52,7 @@ async function upsertDevice(pool: Pool, fx: any) {
 }
 
 async function postRaw(base: string, token: string, fx: any, overrides: any = {}, expectOk = true, ctx: FormalScenarioKernelContextV1 | null = null) {
-  const body = { tenant_id: fx.tenant_id, project_id: fx.project_id, group_id: fx.group_id, sample_id: `rs_${fx.run_id}_${Date.now()}`, sensor_id: overrides.device_id ?? fx.device_id, field_id: overrides.field_id ?? fx.field_id, ts_ms: Date.now() - 120_000, metric: overrides.metric ?? 'pressure', value: overrides.value ?? 42, unit: overrides.unit ?? 'kPa', qc_quality: 'ok', source: overrides.source ?? 'device', payload: { tenant_id: fx.tenant_id, project_id: fx.project_id, group_id: fx.group_id, field_id: overrides.field_id ?? fx.field_id, device_id: overrides.device_id ?? fx.device_id, credential_id: overrides.credential_id ?? fx.credential_id, sample_kind: 'raw', interpolated: false, synthetic: false, formal_scenario_run_id: fx.run_id } };
+  const body = { tenant_id: fx.tenant_id, project_id: fx.project_id, group_id: fx.group_id, sample_id: `rs_${fx.run_id}_${Date.now()}`, sensor_id: overrides.device_id ?? fx.device_id, field_id: overrides.field_id ?? fx.field_id, ts_ms: overrides.ts_ms ?? (Date.now() - 120_000), metric: overrides.metric ?? 'pressure', value: overrides.value ?? 42, unit: overrides.unit ?? 'kPa', qc_quality: 'ok', source: overrides.source ?? 'device', payload: { tenant_id: fx.tenant_id, project_id: fx.project_id, group_id: fx.group_id, field_id: overrides.field_id ?? fx.field_id, device_id: overrides.device_id ?? fx.device_id, credential_id: overrides.credential_id ?? fx.credential_id, sample_kind: 'raw', interpolated: false, synthetic: false, formal_scenario_run_id: fx.run_id } };
   const resp = await fetchJson(`${base}/api/v1/sensing/raw-samples`, { method: 'POST', token, body });
   if (ctx) ctx.recordApiSnapshot({ method: 'POST', path: '/api/v1/sensing/raw-samples', ok: resp.ok && resp.json?.ok === true, status_code: resp.status, label: `${body.source}/${body.metric}`, request: body, response: resp.json ?? resp.text });
   if (expectOk) requireOk(resp, 'raw sample');
@@ -78,10 +78,10 @@ async function postEvidenceWindow(base: string, token: string, fx: any, ctx: For
 async function main() {
   const base = env('BASE_URL', 'http://127.0.0.1:3001');
   await health(base);
-  const adminToken = env('TOKEN_ADMIN');
-  const approverToken = env('TOKEN_APPROVER', adminToken);
-  const operatorToken = env('TOKEN_OPERATOR', adminToken);
-  const executorToken = env('TOKEN_EXECUTOR', adminToken);
+  const adminToken = env('TOKEN_ADMIN', env('ADMIN_TOKEN'));
+  const approverToken = env('TOKEN_APPROVER', env('APPROVER_TOKEN', adminToken));
+  const operatorToken = env('TOKEN_OPERATOR', env('OPERATOR_TOKEN', adminToken));
+  const executorToken = env('TOKEN_EXECUTOR', env('EXECUTOR_TOKEN', adminToken));
   const scope = { tenant_id: env('TENANT_ID', 't_demo'), project_id: env('PROJECT_ID', 'p_demo'), group_id: env('GROUP_ID', 'g_demo') };
   const pool = new Pool({ connectionString: env('DATABASE_URL') });
 
