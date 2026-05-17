@@ -78,7 +78,7 @@ function normalizeTagFilters(raw: unknown): string[] {
 
 function requireTenantMatchOr404(auth: TenantTriple, tenant: TenantTriple, reply: any): boolean {
   if (auth.tenant_id !== tenant.tenant_id || auth.project_id !== tenant.project_id || auth.group_id !== tenant.group_id) {
-    reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    if (!reply.sent) reply.status(404).send({ ok: false, error: "NOT_FOUND" });
     return false;
   }
   return true;

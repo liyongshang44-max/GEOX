@@ -82,8 +82,19 @@ async function main() {
   const approverToken = env('TOKEN_APPROVER', env('APPROVER_TOKEN', adminToken));
   const operatorToken = env('TOKEN_OPERATOR', env('OPERATOR_TOKEN', adminToken));
   const executorToken = env('TOKEN_EXECUTOR', env('EXECUTOR_TOKEN', adminToken));
-  const scope = { tenant_id: env('TENANT_ID', 't_demo'), project_id: env('PROJECT_ID', 'p_demo'), group_id: env('GROUP_ID', 'g_demo') };
+  const scope = {
+    tenant_id: env('TENANT_ID', env('GEOX_TENANT_ID', 'tenantA')),
+    project_id: env('PROJECT_ID', env('GEOX_PROJECT_ID', 'projectA')),
+    group_id: env('GROUP_ID', env('GEOX_GROUP_ID', 'groupA'))
+  };
   const pool = new Pool({ connectionString: env('DATABASE_URL') });
+
+  const tokenDiagnostics = {
+    admin_token_source_empty: !String(process.env.TOKEN_ADMIN ?? process.env.ADMIN_TOKEN ?? '').trim(),
+    approver_token_source_empty: !String(process.env.TOKEN_APPROVER ?? process.env.APPROVER_TOKEN ?? process.env.TOKEN_ADMIN ?? process.env.ADMIN_TOKEN ?? '').trim(),
+    operator_token_source_empty: !String(process.env.TOKEN_OPERATOR ?? process.env.OPERATOR_TOKEN ?? process.env.TOKEN_ADMIN ?? process.env.ADMIN_TOKEN ?? '').trim(),
+    executor_token_source_empty: !String(process.env.TOKEN_EXECUTOR ?? process.env.EXECUTOR_TOKEN ?? process.env.TOKEN_ADMIN ?? process.env.ADMIN_TOKEN ?? '').trim()
+  };
 
   const result = await runFormalScenarioKernelV1({ scenario_type: 'FORMAL_IRRIGATION', lane: 'positive', ...scope, async driver(ctx: FormalScenarioKernelContextV1) {
     ctx.updateManifest({ field_id: ctx.fixture.field_id, device_id: ctx.fixture.device_id, credential_id: ctx.fixture.credential_id, zone_ids: ctx.fixture.zone_ids });
@@ -148,7 +159,7 @@ async function main() {
   await pool.end();
   const positive = { passed: result.verify.passed };
   const ok = positive.passed && Object.values(negative).every(Boolean);
-  console.log(JSON.stringify({ ok, scenario: 'FORMAL_IRRIGATION_E2E_V1', run: result.run, fixture: result.fixture, manifest: result.manifest, verify: result.verify, positive, negative }, null, 2));
+  console.log(JSON.stringify({ ok, scenario: 'FORMAL_IRRIGATION_E2E_V1', run: result.run, scope, token_diagnostics: tokenDiagnostics, fixture: result.fixture, manifest: result.manifest, verify: result.verify, positive, negative }, null, 2));
   if (!ok) process.exitCode = 1;
 }
 
