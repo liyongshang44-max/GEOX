@@ -532,7 +532,7 @@ export default function OperationReportPage(): React.ReactElement {
             <h3 className="customerCardTitle">统一证据视图</h3>
             <EvidenceTrustLegend vm={evidenceVm} />
             <EvidenceTrustBadge vm={evidenceVm} />
-            <EvidenceRefList vm={evidenceVm} />
+            <EvidenceRefList vm={evidenceVm} mode="customer" />
             <EvidenceGapPanel vm={evidenceVm} />
           </article>
           <article className="customerCard"><h3 className="customerCardTitle">正式场景</h3><FormalScenarioBadge data={report} /></article>
