@@ -12,8 +12,17 @@ const checks = [
   { dir: "../frontend_acceptance", file: "ACCEPTANCE_SCENARIO_EXPORT_SAME_SOURCE_V1.cjs" },
 ];
 
+const optionalChecks = [
+  { dir: "../agronomy_acceptance", file: "ACCEPTANCE_P07_FINAL_AUDIT_DOC_V1.cjs" },
+];
+
 const root = resolve(__dirname);
 let failed = false;
+
+for (const check of optionalChecks) {
+  const fullPath = resolve(root, check.dir, check.file);
+  if (existsSync(fullPath)) checks.push(check);
+}
 
 for (const { dir, file } of checks) {
   const fullPath = resolve(root, dir, file);
