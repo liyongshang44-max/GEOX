@@ -16,7 +16,7 @@ export function SimulatedOrDebugEvidenceBadge(): React.ReactElement { return <sp
 export function MissingEvidenceBadge(): React.ReactElement { return <span className="customerPill">证据缺失</span>; }
 
 export function EvidenceTrustLegend({ vm }: { vm: EvidenceVm }): React.ReactElement {
-  return <div className="customerMetricLabel">证据信任级别：{vm.trustLevel}</div>;
+  return <div className="customerMetricLabel">证据信任级别：{vm.trustText}</div>;
 }
 
 export function EvidenceTrustBadge({ vm }: { vm: EvidenceVm }): React.ReactElement {
@@ -40,6 +40,7 @@ export function EvidenceRefList({
   return <ul className="customerList">{vm.refs.map((r, i) => <li key={`${r.label}-${r.type}-${i}`} className="customerListItem">{badgeTone(r.type)}｜{r.label || "证据摘要待补充"}</li>)}</ul>;
 }
 
-export function EvidenceGapPanel({ vm }: { vm: EvidenceVm }): React.ReactElement {
-  return <div>{vm.gaps.length ? vm.gaps.join("、") : "无证据缺口"}</div>;
+export function EvidenceGapPanel({ vm, mode = "customer" }: { vm: EvidenceVm; mode?: EvidenceViewMode }): React.ReactElement {
+  const items = mode === "operator" ? (vm.operatorGaps ?? vm.gaps) : vm.gaps;
+  return <div>{items.length ? items.join("、") : "无证据缺口"}</div>;
 }
