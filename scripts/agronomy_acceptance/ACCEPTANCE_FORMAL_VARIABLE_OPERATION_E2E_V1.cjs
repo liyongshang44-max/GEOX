@@ -343,13 +343,21 @@ async function fetchOperationReport(base, token, scope, operation_plan_id) {
       report_includes_zone_level_result: Array.isArray(reportZoneApps) && reportZoneApps.length === 2,
     };
     const ok = Object.values(checks).every(Boolean) && Object.values(negative).every(Boolean);
+    const zoneLevelEvidenceSummary = {
+      zone_count: zone_matrix.length,
+      zones_with_pre_and_post_refs: positiveApps.filter((z) => z.pre_sensing_ref && z.post_sensing_ref).length,
+      zone_ids_with_complete_refs: positiveApps.filter((z) => z.pre_sensing_ref && z.post_sensing_ref).map((z) => z.zone_id),
+      source: 'zone_applications.pre/post_sensing_ref',
+    };
     const evidenceSnapshot = {
       evidence_sufficiency: summary?.evidence_sufficiency ?? null,
-      formal_coverage_ratio: Number(summary?.formal_coverage_ratio ?? summary?.coverage_ratio ?? 0),
-      trigger_metric_evidence: summary?.trigger_metric_evidence ?? null,
-      max_gap_ms: summary?.max_gap_ms ?? null,
-      expected_sample_interval_ms: summary?.expected_sample_interval_ms ?? null,
-      supporting_metrics: summary?.supporting_metrics ?? null,
+      stage1_formal_coverage_ratio: Number(summary?.formal_coverage_ratio ?? summary?.coverage_ratio ?? 0),
+      stage1_trigger_metric_evidence: summary?.trigger_metric_evidence ?? null,
+      stage1_max_gap_ms: summary?.max_gap_ms ?? null,
+      stage1_expected_sample_interval_ms: summary?.expected_sample_interval_ms ?? null,
+      stage1_supporting_metrics: summary?.supporting_metrics ?? null,
+      zone_level_evidence_summary: zoneLevelEvidenceSummary,
+      note: 'stage1_* fields are Stage-1 summary/debug fields and may not represent zone-level evidence directly',
       sample_window: sampleWindow,
     };
     const output = { ok, scenario: 'FORMAL_VARIABLE_OPERATION_E2E_V1', zone_matrix, checks, negative, evidence_snapshot: evidenceSnapshot };
