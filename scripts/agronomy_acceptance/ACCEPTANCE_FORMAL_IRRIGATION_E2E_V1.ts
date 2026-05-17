@@ -158,11 +158,18 @@ async function main() {
     const command_id = String(ctx.manifest.act_task_id ?? '').trim();
     if (!command_id) throw new Error('COMMAND_ID_MISSING_BEFORE_RECEIPT');
     const taskIndexResp = await fetchJson(`${base}/api/v1/actions/index?tenant_id=${encodeURIComponent(ctx.fixture.tenant_id)}&project_id=${encodeURIComponent(ctx.fixture.project_id)}&group_id=${encodeURIComponent(ctx.fixture.group_id)}&act_task_id=${encodeURIComponent(command_id)}`, { method: 'GET', token: operatorToken });
-    const taskRows = Array.isArray(taskIndexResp.json?.items) ? taskIndexResp.json.items : [];
+    ctx.recordApiSnapshot({ method: 'GET', path: '/api/v1/actions/index', ok: taskIndexResp.ok && taskIndexResp.json?.ok === true, status_code: taskIndexResp.status, label: 'task index before receipt', request: { tenant_id: ctx.fixture.tenant_id, project_id: ctx.fixture.project_id, group_id: ctx.fixture.group_id, act_task_id: command_id }, response: taskIndexResp.json ?? taskIndexResp.text });
+    const taskIndex = requireOk(taskIndexResp, 'task index before receipt');
+    const taskRows = Array.isArray(taskIndex?.items) ? taskIndex.items : [];
     const taskRecord = taskRows.find((r: any) => String(r?.act_task_id ?? '').trim() === command_id)?.task_record_json ?? null;
+    if (!taskRecord) throw new Error('TASK_RECORD_MISSING_BEFORE_RECEIPT');
     const allowedObservedKeys = extractAllowedParameterKeys(taskRecord);
+    if (!Array.isArray(taskRecord?.payload?.parameter_schema?.keys)) throw new Error('TASK_PARAMETER_SCHEMA_KEYS_MISSING');
     const taskParameters = taskRecord?.payload?.parameters && typeof taskRecord.payload.parameters === 'object' ? taskRecord.payload.parameters : {};
     const observed_parameters = buildObservedParametersFromSchema(allowedObservedKeys, taskParameters as Record<string, unknown>);
+    for (const key of Object.keys(observed_parameters ?? {})) {
+      if (!allowedObservedKeys.includes(key)) throw new Error(`OBSERVED_PARAMETER_NOT_ALLOWED:${key}`);
+    }
     const idempotency_key = `formal_receipt_${command_id}_${Date.now()}`;
     assertFormalReceiptContract({ operation_plan_id, act_task_id: command_id, command_id, idempotency_key, observed_parameters, allowed_keys: allowedObservedKeys });
     const receiptBody = { tenant_id: ctx.fixture.tenant_id, project_id: ctx.fixture.project_id, group_id: ctx.fixture.group_id, operation_plan_id, act_task_id: ctx.manifest.act_task_id, command_id, executor_id: { kind: 'device', id: ctx.fixture.device_id, namespace: 'formal_scenario' }, execution_time: { start_ts: Date.now() - 900000, end_ts: Date.now() - 60000 }, execution_coverage: { kind: 'field', ref: ctx.fixture.field_id }, resource_usage: { fuel_l: 0, electric_kwh: 1.1, water_l: 360, chemical_ml: 0 }, evidence_refs: [{ kind: 'formal_device_log', ref: `formal://${ctx.fixture.device_id}/${command_id}` }], logs_refs: [{ kind: 'dispatch_ack', ref: `ack_${command_id}` }], status: 'executed', constraint_check: { violated: false, violations: [] }, observed_parameters, meta: { command_id, idempotency_key, formal_scenario_run_id: ctx.fixture.run_id, execution_summary: { duration_min: 14, coverage_percent: 0.96 }, effect_observation: { pre_soil_moisture: 0.18, post_soil_moisture: 0.25, soil_moisture_delta: 0.07 } } };
@@ -214,11 +221,18 @@ async function main() {
     const operation_plan_id = String(result.manifest.operation_id ?? '').trim();
     if (!command_id || !operation_plan_id) throw new Error('NEGATIVE_RECEIPT_CHAIN_TASK_MISSING');
     const taskIndexResp = await fetchJson(`${base}/api/v1/actions/index?tenant_id=${encodeURIComponent(result.fixture.tenant_id)}&project_id=${encodeURIComponent(result.fixture.project_id)}&group_id=${encodeURIComponent(result.fixture.group_id)}&act_task_id=${encodeURIComponent(command_id)}`, { method: 'GET', token: operatorToken });
-    const taskRows = Array.isArray(taskIndexResp.json?.items) ? taskIndexResp.json.items : [];
+    result.recordApiSnapshot({ method: 'GET', path: '/api/v1/actions/index', ok: taskIndexResp.ok && taskIndexResp.json?.ok === true, status_code: taskIndexResp.status, label: 'negative task index before receipt', request: { tenant_id: result.fixture.tenant_id, project_id: result.fixture.project_id, group_id: result.fixture.group_id, act_task_id: command_id }, response: taskIndexResp.json ?? taskIndexResp.text });
+    const taskIndex = requireOk(taskIndexResp, 'negative task index before receipt');
+    const taskRows = Array.isArray(taskIndex?.items) ? taskIndex.items : [];
     const taskRecord = taskRows.find((r: any) => String(r?.act_task_id ?? '').trim() === command_id)?.task_record_json ?? null;
+    if (!taskRecord) throw new Error('NEGATIVE_TASK_RECORD_MISSING_BEFORE_RECEIPT');
     const allowedObservedKeys = extractAllowedParameterKeys(taskRecord);
+    if (!Array.isArray(taskRecord?.payload?.parameter_schema?.keys)) throw new Error('NEGATIVE_TASK_PARAMETER_SCHEMA_KEYS_MISSING');
     const taskParameters = taskRecord?.payload?.parameters && typeof taskRecord.payload.parameters === 'object' ? taskRecord.payload.parameters : {};
     const observed_parameters = buildObservedParametersFromSchema(allowedObservedKeys, taskParameters as Record<string, unknown>);
+    for (const key of Object.keys(observed_parameters ?? {})) {
+      if (!allowedObservedKeys.includes(key)) throw new Error(`NEGATIVE_OBSERVED_PARAMETER_NOT_ALLOWED:${key}`);
+    }
     const idempotency_key = `formal_negative_receipt_${command_id}_${Date.now()}`;
     const badReceiptBody = {
       tenant_id: result.fixture.tenant_id,
