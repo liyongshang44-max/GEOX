@@ -193,6 +193,15 @@ export type OperationReportV1 = {
     application?: Record<string, unknown> | null;
   };
   zone_applications?: unknown[];
+  zone_evidence_customer_v1?: {
+    zone_matrix: Array<{ zone_id: string | null; zone_acceptance_result: string | null; operation_rollup_policy: string | null }>;
+    operation_rollup_policy: string | null;
+  };
+  zone_evidence_operator_debug_v1?: {
+    label: "技术诊断";
+    collapsed_by_default: boolean;
+    stage1_debug_matrix: Array<{ zone_id: string | null; stage1_debug: { formal_coverage_ratio: unknown; trigger_metric_evidence: unknown; stage1_source: unknown } }>;
+  };
   planned: {
     planned_area: Record<string, unknown> | null;
     planned_path: Record<string, unknown> | null;
@@ -637,6 +646,23 @@ export function projectOperationReportV1(input: {
   const zoneApplications = Array.isArray((asApplied as any)?.application?.zone_applications)
     ? (asApplied as any).application.zone_applications
     : [];
+  const zoneMatrixCustomerView = zoneApplications.map((z: any) => ({
+    zone_id: String(z?.zone_id ?? "").trim() || null,
+    zone_acceptance_result: String(z?.zone_acceptance_result ?? "").trim() || null,
+    operation_rollup_policy: String(z?.operation_rollup_policy ?? "").trim() || null,
+  }));
+  const zoneMatrixOperatorDebug = zoneApplications.map((z: any) => ({
+    zone_id: String(z?.zone_id ?? "").trim() || null,
+    stage1_debug: {
+      formal_coverage_ratio: z?.formal_coverage_ratio ?? null,
+      trigger_metric_evidence: z?.trigger_metric_evidence ?? null,
+      stage1_source: z?.stage1_source ?? null,
+    },
+  }));
+  const variableByZoneMode = String((asApplied as any)?.application?.mode ?? "").trim().toUpperCase() === "VARIABLE_BY_ZONE";
+  const zoneRollupPass = zoneMatrixCustomerView.length > 0
+    ? zoneMatrixCustomerView.every((z: any) => String(z?.zone_acceptance_result ?? "").toUpperCase() === "PASS")
+    : false;
 
   const computedRisk = evaluateRisk({
     final_status: finalStatus,
@@ -734,7 +760,7 @@ export function projectOperationReportV1(input: {
       execution_duration_quality: computedSlaMetrics.execution_duration_quality,
       acceptance_latency_quality: computedSlaMetrics.acceptance_latency_quality,
       execution_success: Boolean(input.sla.execution_success),
-      acceptance_pass: Boolean(input.sla.acceptance_pass),
+      acceptance_pass: variableByZoneMode ? zoneRollupPass : Boolean(input.sla.acceptance_pass),
       response_time_ms: input.sla.response_time_ms ?? null,
       dispatch_latency_ms: computedSlaMetrics.dispatch_latency_ms,
       execution_duration_ms: computedSlaMetrics.execution_duration_ms,
@@ -769,7 +795,16 @@ export function projectOperationReportV1(input: {
       low_confidence_items: roiSummaries.filter((x) => String((x.confidence as any)?.level ?? "").toUpperCase() === "LOW"),
     },
     as_applied: asApplied,
-    zone_applications: zoneApplications,
+    zone_applications: zoneMatrixCustomerView,
+    zone_evidence_customer_v1: {
+      zone_matrix: zoneMatrixCustomerView,
+      operation_rollup_policy: zoneMatrixCustomerView[0]?.operation_rollup_policy ?? null,
+    },
+    zone_evidence_operator_debug_v1: {
+      label: "技术诊断",
+      collapsed_by_default: true,
+      stage1_debug_matrix: zoneMatrixOperatorDebug,
+    },
     planned,
     workflow: {
       owner_actor_id: toText(input.operation_workflow?.owner_actor_id),
