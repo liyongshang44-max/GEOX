@@ -59,6 +59,23 @@ export function customerEvidenceGapText(raw: unknown): string {
   return mapped;
 }
 
+export function customerEvidenceGapCategory(raw: unknown): string {
+  const normalized = normReason(raw);
+  if (!normalized) return "需要补充正式链路后展示";
+  if (normalized === "missing:roi" || normalized === "missing:field_memory") return "价值和田块记忆暂不对客展示";
+  if (normalized === "missing:diagnosis" || normalized.includes("sensing summary") || normalized.includes("soil_moisture") || normalized.includes("threshold") || normalized.includes("deficit")) {
+    return "正式诊断依据不足";
+  }
+  if (["missing:recommendation", "missing:prescription", "missing:approval", "missing:operation_plan"].includes(normalized)) {
+    return "建议、处方与审批链路尚未闭合";
+  }
+  if (["missing:execution", "missing:receipt", "missing:evidence"].includes(normalized)) {
+    return "正式执行回执与验收结果尚未成立";
+  }
+  if (normalized === "missing:acceptance") return "正式验收未成立";
+  return "需要补充正式链路后展示";
+}
+
 export function customerTrustLevelText(raw: unknown): string {
   const key = String(raw ?? "").trim().toUpperCase();
   if (key === "FORMAL") return "正式证据";
