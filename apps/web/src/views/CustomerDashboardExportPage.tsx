@@ -1,5 +1,5 @@
 import React from "react";
-import { fetchCustomerDashboardAggregate } from "../api/customerReports";
+import { fetchCustomerDashboardAggregate } from "../api/reports";
 import { buildCustomerDashboardVm, type CustomerDashboardPageVm } from "../viewmodels/customerDashboardVm";
 import { DashboardExportBlocks } from "../components/customer/CustomerExportBlocks";
 import PrintReportScaffold from "../components/customer/PrintReportScaffold";
