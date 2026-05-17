@@ -7,6 +7,7 @@ const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const FILES = {
   evidenceComponents: 'apps/web/src/components/evidence/index.tsx',
   evidenceVm: 'apps/web/src/lib/evidenceViewModel.ts',
+  customerLabels: 'apps/web/src/lib/customerScenarioLabels.ts',
   operationView: 'apps/web/src/views/OperationReportPage.tsx',
   operatorView: 'apps/web/src/views/operator/OperatorEvidencePage.tsx',
   fieldView: 'apps/web/src/views/FieldReportPage.tsx',
@@ -34,6 +35,7 @@ function main() {
   const operationView = read(FILES.operationView);
   const operatorView = read(FILES.operatorView);
   const fieldView = read(FILES.fieldView);
+  const customerLabels = read(FILES.customerLabels);
 
   includesAll(evidenceVm, ['export type EvidenceVm', 'refs:', 'gaps:', 'operatorGaps?:', 'trustLevel:', 'trustText:'], FILES.evidenceVm);
   includesAll(components, [
@@ -65,6 +67,8 @@ function main() {
   if (customerForbidden.test(operationEvidenceView)) throw new Error(`${FILES.operationView} customer evidence section leaked technical terms`);
   if (/证据信任级别：\{vm\.trustLevel\}/.test(components)) throw new Error(`${FILES.evidenceComponents} EvidenceTrustLegend must not render vm.trustLevel directly`);
   if (/vm\.gaps\.join\("、"\)/.test(components)) throw new Error(`${FILES.evidenceComponents} EvidenceGapPanel must not directly join raw gaps in customer mode`);
+  includesAll(evidenceVm, ['customerEvidenceGapCategory', 'uniqueCategories', '还有 ${hiddenCount} 项需运营复核'], FILES.evidenceVm);
+  includesAll(customerLabels, ['正式诊断依据不足', '建议、处方与审批链路尚未闭合', '正式执行回执与验收结果尚未成立', '正式验收未成立', '价值和田块记忆暂不对客展示'], FILES.customerLabels);
   assertNoForbidden(operationView, [{ name: 'page-level trust branching', pattern: /trustLevel\s*===\s*"(FORMAL|SIMULATED|TECHNICAL_ONLY)"/ }], FILES.operationView);
   assertNoForbidden(fieldView, [{ name: 'page-level trust branching', pattern: /trustLevel\s*===\s*"(FORMAL|SIMULATED|TECHNICAL_ONLY)"/ }], FILES.fieldView);
 

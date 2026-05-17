@@ -42,5 +42,7 @@ export function EvidenceRefList({
 
 export function EvidenceGapPanel({ vm, mode = "customer" }: { vm: EvidenceVm; mode?: EvidenceViewMode }): React.ReactElement {
   const items = mode === "operator" ? (vm.operatorGaps ?? vm.gaps) : vm.gaps;
-  return <div>{items.length ? items.join("、") : "无证据缺口"}</div>;
+  if (!items.length) return <div>无证据缺口</div>;
+  if (mode === "operator") return <div>{items.join("、")}</div>;
+  return <ul className="customerList">{items.map((item, i) => <li key={`${item}-${i}`} className="customerListItem">{item}</li>)}</ul>;
 }
