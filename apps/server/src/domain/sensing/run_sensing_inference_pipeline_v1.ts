@@ -30,6 +30,7 @@ export type RunSensingInferencePipelineV1Input = {
   source_observation_ids?: string[];
   observations: Observation[];
   now: number;
+  scenario_type?: "FORMAL_IRRIGATION" | "DEVICE_ANOMALY" | "FORMAL_VARIABLE_OPERATION" | "UNKNOWN";
 };
 
 export type SensingSkillRunSummaryV1 = {
@@ -38,10 +39,14 @@ export type SensingSkillRunSummaryV1 = {
   success: boolean;
   fact_id: string | null;
   error: string | null;
+  relevance: "relevant" | "irrelevant";
+  severity: "error" | "warning";
 };
 
 export type RunSensingInferencePipelineV1Result = {
   runs: SensingSkillRunSummaryV1[];
+  relevant_failures: SensingSkillRunSummaryV1[];
+  irrelevant_warnings: SensingSkillRunSummaryV1[];
 };
 
 function toFiniteNumber(input: unknown): number | null {
@@ -106,6 +111,25 @@ function filterObservationsByDevices(observations: Observation[], deviceIds: str
     const deviceId = getObservationDeviceId(x);
     return deviceId ? allow.has(deviceId) : true;
   });
+}
+
+function normalizeScenarioType(input: unknown): "FORMAL_IRRIGATION" | "DEVICE_ANOMALY" | "FORMAL_VARIABLE_OPERATION" | "UNKNOWN" {
+  const value = String(input ?? "").trim().toUpperCase();
+  if (value === "FORMAL_IRRIGATION") return "FORMAL_IRRIGATION";
+  if (value === "DEVICE_ANOMALY") return "DEVICE_ANOMALY";
+  if (value === "FORMAL_VARIABLE_OPERATION") return "FORMAL_VARIABLE_OPERATION";
+  return "UNKNOWN";
+}
+
+export function classifySensingSkillRelevanceV1(
+  scenario_type: RunSensingInferencePipelineV1Input["scenario_type"],
+  skill_id: SensingSkillRunSummaryV1["skill_id"],
+): "relevant" | "irrelevant" {
+  const scenario = normalizeScenarioType(scenario_type);
+  if (scenario === "FORMAL_IRRIGATION" || scenario === "FORMAL_VARIABLE_OPERATION" || scenario === "DEVICE_ANOMALY") {
+    if (skill_id === "fertility_inference_v1") return "irrelevant";
+  }
+  return "relevant";
 }
 
 export async function runSensingInferencePipelineV1(input: RunSensingInferencePipelineV1Input): Promise<RunSensingInferencePipelineV1Result> {
@@ -241,6 +265,8 @@ export async function runSensingInferencePipelineV1(input: RunSensingInferencePi
       success: true,
       fact_id: run.fact_id,
       error: null,
+      relevance: classifySensingSkillRelevanceV1(input.scenario_type, "fertility_inference_v1"),
+      severity: "warning",
     });
   } catch (error) {
     const error_code = normalizeErrorCode(error);
@@ -259,6 +285,8 @@ export async function runSensingInferencePipelineV1(input: RunSensingInferencePi
       success: false,
       fact_id,
       error: normalizeErrorMessage(error),
+      relevance: classifySensingSkillRelevanceV1(input.scenario_type, "fertility_inference_v1"),
+      severity: classifySensingSkillRelevanceV1(input.scenario_type, "fertility_inference_v1") === "irrelevant" ? "warning" : "error",
     });
   }
 
@@ -349,6 +377,8 @@ export async function runSensingInferencePipelineV1(input: RunSensingInferencePi
       success: true,
       fact_id: run.fact_id,
       error: null,
+      relevance: classifySensingSkillRelevanceV1(input.scenario_type, "canopy_temperature_inference_v1"),
+      severity: "warning",
     });
   } catch (error) {
     const error_code = normalizeErrorCode(error);
@@ -367,6 +397,8 @@ export async function runSensingInferencePipelineV1(input: RunSensingInferencePi
       success: false,
       fact_id,
       error: normalizeErrorMessage(error),
+      relevance: classifySensingSkillRelevanceV1(input.scenario_type, "canopy_temperature_inference_v1"),
+      severity: classifySensingSkillRelevanceV1(input.scenario_type, "canopy_temperature_inference_v1") === "irrelevant" ? "warning" : "error",
     });
   }
 
@@ -450,6 +482,8 @@ export async function runSensingInferencePipelineV1(input: RunSensingInferencePi
       success: true,
       fact_id: run.fact_id,
       error: null,
+      relevance: classifySensingSkillRelevanceV1(input.scenario_type, "sensor_quality_inference_v1"),
+      severity: "warning",
     });
   } catch (error) {
     const error_code = normalizeErrorCode(error);
@@ -468,6 +502,8 @@ export async function runSensingInferencePipelineV1(input: RunSensingInferencePi
       success: false,
       fact_id,
       error: normalizeErrorMessage(error),
+      relevance: classifySensingSkillRelevanceV1(input.scenario_type, "sensor_quality_inference_v1"),
+      severity: classifySensingSkillRelevanceV1(input.scenario_type, "sensor_quality_inference_v1") === "irrelevant" ? "warning" : "error",
     });
   }
 
@@ -553,6 +589,8 @@ export async function runSensingInferencePipelineV1(input: RunSensingInferencePi
       success: true,
       fact_id: run.fact_id,
       error: null,
+      relevance: classifySensingSkillRelevanceV1(input.scenario_type, "water_flow_inference_v1"),
+      severity: "warning",
     });
   } catch (error) {
     const error_code = normalizeErrorCode(error);
@@ -571,8 +609,12 @@ export async function runSensingInferencePipelineV1(input: RunSensingInferencePi
       success: false,
       fact_id,
       error: normalizeErrorMessage(error),
+      relevance: classifySensingSkillRelevanceV1(input.scenario_type, "water_flow_inference_v1"),
+      severity: classifySensingSkillRelevanceV1(input.scenario_type, "water_flow_inference_v1") === "irrelevant" ? "warning" : "error",
     });
   }
 
-  return { runs };
+  const relevant_failures = runs.filter((run) => run.success !== true && run.relevance === "relevant");
+  const irrelevant_warnings = runs.filter((run) => run.success !== true && run.relevance === "irrelevant");
+  return { runs, relevant_failures, irrelevant_warnings };
 }

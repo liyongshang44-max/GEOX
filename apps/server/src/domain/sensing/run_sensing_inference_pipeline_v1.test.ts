@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { runSensingInferencePipelineV1 } from "./run_sensing_inference_pipeline_v1.js";
+import { classifySensingSkillRelevanceV1, runSensingInferencePipelineV1 } from "./run_sensing_inference_pipeline_v1.js";
 
 type QueryCall = { sql: string; params: unknown[] | undefined };
 
@@ -67,4 +67,9 @@ test("runSensingInferencePipelineV1 keeps expanded water-flow observation compat
 
   assert.equal(result.irrigation.irrigation_effectiveness, "low");
   assert.equal(result.leak.leak_risk, "high");
+});
+
+test("classifySensingSkillRelevanceV1 marks fertility as irrelevant for formal irrigation", () => {
+  assert.equal(classifySensingSkillRelevanceV1("FORMAL_IRRIGATION", "fertility_inference_v1"), "irrelevant");
+  assert.equal(classifySensingSkillRelevanceV1("FORMAL_IRRIGATION", "water_flow_inference_v1"), "relevant");
 });
