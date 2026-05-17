@@ -57,6 +57,7 @@ GET  /api/v1/dev/flight-table/runs/:runId/api-snapshots
 POST /api/v1/dev/flight-table/runs/:runId/field
 POST /api/v1/dev/flight-table/runs/:runId/field-geometry
 GET  /api/v1/dev/flight-table/device-templates
+GET  /api/v1/dev/flight-table/formal-scenarios
 POST /api/v1/dev/flight-table/runs/:runId/devices
 POST /api/v1/dev/flight-table/runs/:runId/skills/bind
 POST /api/v1/dev/flight-table/runs/:runId/skills/fail-one
@@ -202,3 +203,31 @@ pnpm --filter @geox/server run smoke:flight-table
 pnpm --filter @geox/server run smoke:flight-table:success
 pnpm --filter @geox/server run smoke:flight-table:all
 ```
+
+
+## Formal scenario definitions endpoint
+
+```text
+GET /api/v1/dev/flight-table/formal-scenarios
+```
+
+Response shape:
+
+```json
+{
+  "ok": true,
+  "source": "formal_scenario_lanes_v1",
+  "scenarios": [
+    {
+      "scenario_type": "FORMAL_IRRIGATION",
+      "lane": "positive",
+      "label": "Formal irrigation positive closed loop",
+      "release_gate": true,
+      "flight_table_visible": true
+    }
+  ]
+}
+```
+
+This endpoint must read from `listFormalScenarioLaneDefinitionsV1()` and must not maintain a separate Flight Table taxonomy.
+Flight Table and CLI governance/release gates share the same `scenario_type`, `lane`, `release_gate`, and `flight_table_visible` definitions.

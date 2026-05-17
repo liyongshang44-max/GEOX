@@ -27,6 +27,13 @@ function staticBoundaryChecks() {
   assert(route.includes("ENABLE_FLIGHT_TABLE_API"), "flight-table route must be guarded by ENABLE_FLIGHT_TABLE_API");
   assert(route.includes("FLIGHT_TABLE_DISABLED"), "flight-table route must return FLIGHT_TABLE_DISABLED when disabled");
   assert(route.includes("security.admin"), "flight-table route must require security.admin scope");
+  assert(route.includes("/api/v1/dev/flight-table/formal-scenarios"), "flight-table route must expose formal-scenarios endpoint");
+  assert(route.includes("listFormalScenarioLaneDefinitionsV1"), "formal-scenarios endpoint must read scenario definitions from formal_scenario_lanes_v1");
+
+  const scenarioLanes = read("apps/server/src/services/scenarios/formal_scenario_lanes_v1.ts");
+  assert(scenarioLanes.includes('"FORMAL_IRRIGATION"'), "formal_scenario_lanes_v1 must include FORMAL_IRRIGATION");
+  assert(scenarioLanes.includes('"DEVICE_ANOMALY"'), "formal_scenario_lanes_v1 must include DEVICE_ANOMALY");
+  assert(scenarioLanes.includes('"FORMAL_VARIABLE_OPERATION"'), "formal_scenario_lanes_v1 must include FORMAL_VARIABLE_OPERATION");
 
   const manifest = read("apps/server/src/services/flight_table/flight_table_manifest_v1.ts");
   assert(manifest.includes("masked_secret"), "flight-table manifest service must expose masked credential refs");

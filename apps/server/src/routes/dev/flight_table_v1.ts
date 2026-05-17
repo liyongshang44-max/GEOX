@@ -19,6 +19,7 @@ import { listFlightTableApiSnapshotsV1 } from "../../services/flight_table/fligh
 import { createFlightTableFieldV1, normalizeFlightTableFieldInputV1 } from "../../services/flight_table/flight_table_field_v1.js";
 import { createFlightTableFieldGeometryV1 } from "../../services/flight_table/flight_table_geometry_v1.js";
 import { listFlightTableDeviceTemplatesForApiV1, onboardFlightTableDevicesV1 } from "../../services/flight_table/flight_table_devices_v1.js";
+import { listFormalScenarioLaneDefinitionsV1 } from "../../services/scenarios/formal_scenario_lanes_v1.js";
 
 function flightTableEnabled(): boolean {
   return String(process.env.ENABLE_FLIGHT_TABLE_API ?? "").trim().toLowerCase() === "true";
@@ -139,6 +140,19 @@ function registerCustomerFieldVisibilityFallback(app: FastifyInstance, pool: Poo
 
 export function registerFlightTableV1Routes(app: FastifyInstance, pool: Pool): void {
   registerCustomerFieldVisibilityFallback(app, pool);
+
+  app.get("/api/v1/dev/flight-table/formal-scenarios", async (req, reply) => {
+    const auth = requireFlightTableAdmin(req, reply);
+    if (!auth) return;
+    const scenarios = listFormalScenarioLaneDefinitionsV1().map((item) => ({
+      scenario_type: item.scenario_type,
+      lane: item.lane,
+      label: item.label,
+      release_gate: item.release_gate,
+      flight_table_visible: item.flight_table_visible,
+    }));
+    return reply.send({ ok: true, source: "formal_scenario_lanes_v1", scenarios });
+  });
 
   app.get("/api/v1/dev/flight-table/device-templates", async (req, reply) => {
     const auth = requireFlightTableAdmin(req, reply);

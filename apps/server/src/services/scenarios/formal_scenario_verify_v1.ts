@@ -7,6 +7,7 @@ export type FormalScenarioVerifyChecksV1 = {
   formal_evidence_passed: boolean;
   problem_state_created: boolean;
   recommendation_created: boolean;
+  prescription_created: boolean;
   approval_approved: boolean;
   ao_act_task_created: boolean;
   receipt_is_not_acceptance: boolean;
@@ -36,6 +37,7 @@ const CHECK_KEYS: readonly (keyof FormalScenarioVerifyChecksV1)[] = [
   "formal_evidence_passed",
   "problem_state_created",
   "recommendation_created",
+  "prescription_created",
   "approval_approved",
   "ao_act_task_created",
   "receipt_is_not_acceptance",
@@ -68,6 +70,7 @@ function deriveChecksFromManifest(
     formal_evidence_passed: bool(evidence.formal_evidence_passed),
     problem_state_created: bool(evidence.problem_state_created) || Boolean(evidence.problem_state_id || evidence.uncertainty_envelope_id),
     recommendation_created: bool(evidence.recommendation_created) || Boolean(manifest.recommendation_id),
+    prescription_created: Boolean(manifest.prescription_id),
     approval_approved: bool(evidence.approval_approved) || Boolean(manifest.approval_request_id),
     ao_act_task_created: bool(evidence.ao_act_task_created) || Boolean(manifest.act_task_id),
     receipt_is_not_acceptance: bool(evidence.receipt_is_not_acceptance) || Boolean(manifest.receipt_id && manifest.acceptance_id && manifest.receipt_id !== manifest.acceptance_id),
