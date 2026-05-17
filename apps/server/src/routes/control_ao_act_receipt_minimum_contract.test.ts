@@ -188,6 +188,25 @@ test("receipt minimum contract: missing observed_parameters is rejected", async 
   await app.close();
 });
 
+
+
+test("receipt minimum contract: observed_parameters unknown key duration_min is rejected", async () => {
+  const pool = new ReceiptContractPool();
+  const app = await setupApp(pool);
+  const payload = validPayload();
+  (payload.observed_parameters as any).duration_min = 20;
+
+  const res = await app.inject({
+    method: "POST",
+    url: "/api/v1/actions/receipt",
+    headers: { authorization: "Bearer receipt-contract-token" },
+    payload,
+  });
+
+  assert.equal(res.statusCode, 400);
+  assert.match(String(res.json().error ?? ""), /unknown key|INVALID|OBSERVED/i);
+  await app.close();
+});
 test("receipt minimum contract: task missing -> UNKNOWN_TASK", async () => {
   const pool = new ReceiptContractPool({ taskExists: false });
   const app = await setupApp(pool);
