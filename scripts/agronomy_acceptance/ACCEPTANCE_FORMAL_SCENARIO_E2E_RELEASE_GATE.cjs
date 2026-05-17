@@ -10,6 +10,12 @@ const COMMANDS = [
     gate: 'governance',
   },
   {
+    name: 'formal_scenario_no_projection_write',
+    command: 'pnpm',
+    args: ['run', 'ci:governance:formal-scenario-no-projection-write'],
+    gate: 'governance',
+  },
+  {
     name: 'formal_scenario_e2e',
     command: 'pnpm',
     args: ['run', 'ci:scenario:formal-e2e'],
