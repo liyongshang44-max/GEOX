@@ -67,7 +67,8 @@
     "acceptance:release-audit:evidence-bundle:v1": "node scripts/agronomy_acceptance/ACCEPTANCE_RELEASE_AUDIT_EVIDENCE_BUNDLE_V1.cjs",
     "acceptance:operation-report-chain:v1": "node scripts/agronomy_acceptance/ACCEPTANCE_OPERATION_REPORT_CHAIN_V1.cjs",
     "acceptance:commercial:mvp0:syntax": "node -c scripts/agronomy_acceptance/ACCEPTANCE_COMMERCIAL_MVP0_IRRIGATION_V1.cjs && node -c scripts/agronomy_acceptance/ACCEPTANCE_COMMERCIAL_MVP0_RELEASE_GATE.cjs",
-    "acceptance:commercial:mvp0:release-gate": "node scripts/agronomy_acceptance/ACCEPTANCE_COMMERCIAL_MVP0_RELEASE_GATE.cjs"
+    "acceptance:commercial:mvp0:release-gate": "node scripts/agronomy_acceptance/ACCEPTANCE_COMMERCIAL_MVP0_RELEASE_GATE.cjs",
+    "ci:governance:p06-formal-scenario-architecture-closure": "node scripts/governance_acceptance/ACCEPTANCE_P06_FORMAL_SCENARIO_ARCHITECTURE_CLOSURE_V1.cjs"
   },
   "volta": {
     "node": "20.11.1"

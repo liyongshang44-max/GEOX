@@ -16,6 +16,12 @@ const COMMANDS = [
     gate: 'governance',
   },
   {
+    name: 'p06_formal_scenario_architecture_closure',
+    command: 'pnpm',
+    args: ['run', 'ci:governance:p06-formal-scenario-architecture-closure'],
+    gate: 'governance',
+  },
+  {
     name: 'formal_scenario_e2e',
     command: 'pnpm',
     args: ['run', 'ci:scenario:formal-e2e'],
