@@ -4,19 +4,19 @@ const { existsSync } = require("node:fs");
 const { resolve } = require("node:path");
 
 const checks = [
-  "ACCEPTANCE_SCENARIO_REPORT_PROJECTION_V1.cjs",
-  "ACCEPTANCE_CUSTOMER_FORMAL_SCENARIO_VM_V1.cjs",
-  "ACCEPTANCE_CUSTOMER_FORMAL_SCENARIO_REPORT_V1.cjs",
-  "ACCEPTANCE_OPERATOR_SCENARIO_REVIEW_V1.cjs",
-  "ACCEPTANCE_UNIFIED_EVIDENCE_VIEWER_V1.cjs",
-  "ACCEPTANCE_SCENARIO_EXPORT_SAME_SOURCE_V1.cjs",
+  { dir: "../agronomy_acceptance", file: "ACCEPTANCE_SCENARIO_REPORT_PROJECTION_V1.cjs" },
+  { dir: "../frontend_acceptance", file: "ACCEPTANCE_CUSTOMER_FORMAL_SCENARIO_VM_V1.cjs" },
+  { dir: "../frontend_acceptance", file: "ACCEPTANCE_CUSTOMER_FORMAL_SCENARIO_REPORT_V1.cjs" },
+  { dir: "../frontend_acceptance", file: "ACCEPTANCE_OPERATOR_SCENARIO_REVIEW_V1.cjs" },
+  { dir: "../frontend_acceptance", file: "ACCEPTANCE_UNIFIED_EVIDENCE_VIEWER_V1.cjs" },
+  { dir: "../frontend_acceptance", file: "ACCEPTANCE_SCENARIO_EXPORT_SAME_SOURCE_V1.cjs" },
 ];
 
 const root = resolve(__dirname);
 let failed = false;
 
-for (const file of checks) {
-  const fullPath = resolve(root, "../frontend_acceptance", file);
+for (const { dir, file } of checks) {
+  const fullPath = resolve(root, dir, file);
   if (!existsSync(fullPath)) {
     console.error(`[scenario-productization] missing: ${fullPath}`);
     failed = true;
