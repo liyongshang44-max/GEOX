@@ -90,6 +90,18 @@ function buildObservedParametersFromSchema(allowedKeys: string[], fallbackParame
   return out;
 }
 
+function rowsOfActionIndex(payload: any): any[] {
+  if (Array.isArray(payload?.rows)) return payload.rows;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
+}
+
+function findTaskRecordFromActionIndex(payload: any, actTaskId: string): any | null {
+  const rows = rowsOfActionIndex(payload);
+  return rows.find((r: any) => String(r?.act_task_id ?? '').trim() === actTaskId)?.task_record_json ?? null;
+}
+
 function assertFormalReceiptContract(input: { operation_plan_id: string; act_task_id: string; command_id: string; idempotency_key: string; observed_parameters: Record<string, unknown>; allowed_keys: string[]; }) {
   if (!String(input.operation_plan_id ?? '').trim()) throw new Error('FORMAL_RECEIPT_CONTRACT_INVALID');
   if (!String(input.act_task_id ?? '').trim()) throw new Error('FORMAL_RECEIPT_CONTRACT_INVALID');
@@ -160,9 +172,13 @@ async function main() {
     const taskIndexResp = await fetchJson(`${base}/api/v1/actions/index?tenant_id=${encodeURIComponent(ctx.fixture.tenant_id)}&project_id=${encodeURIComponent(ctx.fixture.project_id)}&group_id=${encodeURIComponent(ctx.fixture.group_id)}&act_task_id=${encodeURIComponent(command_id)}`, { method: 'GET', token: operatorToken });
     ctx.recordApiSnapshot({ method: 'GET', path: '/api/v1/actions/index', ok: taskIndexResp.ok && taskIndexResp.json?.ok === true, status_code: taskIndexResp.status, label: 'task index before receipt', request: { tenant_id: ctx.fixture.tenant_id, project_id: ctx.fixture.project_id, group_id: ctx.fixture.group_id, act_task_id: command_id }, response: taskIndexResp.json ?? taskIndexResp.text });
     const taskIndex = requireOk(taskIndexResp, 'task index before receipt');
-    const taskRows = Array.isArray(taskIndex?.items) ? taskIndex.items : [];
-    const taskRecord = taskRows.find((r: any) => String(r?.act_task_id ?? '').trim() === command_id)?.task_record_json ?? null;
-    if (!taskRecord) throw new Error('TASK_RECORD_MISSING_BEFORE_RECEIPT');
+    const taskRecord = findTaskRecordFromActionIndex(taskIndex, command_id);
+    if (!taskRecord) {
+      const availableRows = rowsOfActionIndex(taskIndex);
+      const availableActTaskIds = availableRows.map((r: any) => String(r?.act_task_id ?? '').trim()).filter(Boolean);
+      const responseKeys = taskIndex && typeof taskIndex === 'object' ? Object.keys(taskIndex) : [];
+      throw new Error(`TASK_RECORD_MISSING_BEFORE_RECEIPT act_task_id=${command_id} available_row_count=${availableRows.length} available_row_act_task_ids=${JSON.stringify(availableActTaskIds)} response_keys=${JSON.stringify(responseKeys)}`);
+    }
     const allowedObservedKeys = extractAllowedParameterKeys(taskRecord);
     if (!Array.isArray(taskRecord?.payload?.parameter_schema?.keys)) throw new Error('TASK_PARAMETER_SCHEMA_KEYS_MISSING');
     const taskParameters = taskRecord?.payload?.parameters && typeof taskRecord.payload.parameters === 'object' ? taskRecord.payload.parameters : {};
@@ -242,18 +258,17 @@ async function main() {
     const ap = await fetchJson(`${base}/api/v1/approvals/approve`, { method: 'POST', token: approverToken, body: rejectBody });
     ctx.recordApiSnapshot({ method: 'POST', path: '/api/v1/approvals/approve', ok: ap.ok && ap.json?.ok === true, status_code: ap.status, label: 'approval reject', request: rejectBody, response: ap.json ?? ap.text });
     const indexResp = await fetchJson(`${base}/api/v1/actions/index?tenant_id=${encodeURIComponent(fx.tenant_id)}&project_id=${encodeURIComponent(fx.project_id)}&group_id=${encodeURIComponent(fx.group_id)}&approval_request_id=${encodeURIComponent(String(q.request_id ?? ''))}`, { method: 'GET', token: operatorToken });
-    const indexItems = Array.isArray(indexResp.json?.items) ? indexResp.json.items : [];
+    const indexRows = rowsOfActionIndex(indexResp.json);
     ctx.recordApiSnapshot({ method: 'GET', path: '/api/v1/actions/index', ok: indexResp.ok && indexResp.json?.ok === true, status_code: indexResp.status, label: 'actions/index after reject', request: { tenant_id: fx.tenant_id, project_id: fx.project_id, group_id: fx.group_id, approval_request_id: q.request_id }, response: indexResp.json ?? indexResp.text });
     const rejectOk = ap.ok && ap.json?.ok === true;
     const noTaskInResponse = !String(ap.json?.act_task_id ?? '').trim();
-    const noDerivedTask = indexItems.every((item: any) => String(item?.approval_request_id ?? item?.task_record_json?.payload?.approval_request_id ?? '').trim() !== String(q.request_id));
+    const noDerivedTask = indexRows.every((item: any) => String(item?.approval_request_id ?? item?.task_record_json?.payload?.approval_request_id ?? '').trim() !== String(q.request_id));
     negative.approval_rejected_no_task = rejectOk && noTaskInResponse && noDerivedTask;
 
     const taskIndexResp = await fetchJson(`${base}/api/v1/actions/index?tenant_id=${encodeURIComponent(ctx.fixture.tenant_id)}&project_id=${encodeURIComponent(ctx.fixture.project_id)}&group_id=${encodeURIComponent(ctx.fixture.group_id)}&act_task_id=${encodeURIComponent(command_id)}`, { method: 'GET', token: operatorToken });
     ctx.recordApiSnapshot({ method: 'GET', path: '/api/v1/actions/index', ok: taskIndexResp.ok && taskIndexResp.json?.ok === true, status_code: taskIndexResp.status, label: 'negative task index before receipt', request: { tenant_id: ctx.fixture.tenant_id, project_id: ctx.fixture.project_id, group_id: ctx.fixture.group_id, act_task_id: command_id }, response: taskIndexResp.json ?? taskIndexResp.text });
     const taskIndex = requireOk(taskIndexResp, 'negative task index before receipt');
-    const taskRows = Array.isArray(taskIndex?.items) ? taskIndex.items : [];
-    const taskRecord = taskRows.find((r: any) => String(r?.act_task_id ?? '').trim() === command_id)?.task_record_json ?? null;
+    const taskRecord = findTaskRecordFromActionIndex(taskIndex, command_id);
     if (!taskRecord) throw new Error('NEGATIVE_TASK_RECORD_MISSING_BEFORE_RECEIPT');
     const allowedObservedKeys = extractAllowedParameterKeys(taskRecord);
     if (!Array.isArray(taskRecord?.payload?.parameter_schema?.keys)) throw new Error('NEGATIVE_TASK_PARAMETER_SCHEMA_KEYS_MISSING');
