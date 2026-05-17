@@ -29,12 +29,19 @@ export const irrigationAcceptanceV1: AcceptanceSkill = {
   action_type: "IRRIGATE",
   run(input) {
     const observed = (input.receipt?.payload?.observed_parameters ?? {}) as Record<string, any>;
-    const durationMin = Number(observed.duration_min ?? input.receipt?.payload?.duration_min ?? NaN);
+    const executionSummary = (input.receipt?.payload?.meta?.execution_summary ?? {}) as Record<string, any>;
+    const effectObservation = (input.receipt?.payload?.meta?.effect_observation ?? {}) as Record<string, any>;
+    const durationMin = Number(
+      executionSummary.duration_min
+      ?? observed.duration_min
+      ?? input.receipt?.payload?.duration_min
+      ?? NaN
+    );
     const effectiveness = String(input.water_flow_state?.irrigation_effectiveness ?? "").toLowerCase();
     const leakRisk = String(input.water_flow_state?.leak_risk ?? "").toLowerCase();
-    const preSoilMoisture = Number(observed.pre_soil_moisture ?? NaN);
-    const postSoilMoisture = Number(observed.post_soil_moisture ?? NaN);
-    const soilMoistureDelta = Number(observed.soil_moisture_delta ?? NaN);
+    const preSoilMoisture = Number(effectObservation.pre_soil_moisture ?? observed.pre_soil_moisture ?? NaN);
+    const postSoilMoisture = Number(effectObservation.post_soil_moisture ?? observed.post_soil_moisture ?? NaN);
+    const soilMoistureDelta = Number(effectObservation.soil_moisture_delta ?? observed.soil_moisture_delta ?? NaN);
     const hasMoistureObserved = Number.isFinite(preSoilMoisture) && Number.isFinite(postSoilMoisture) && Number.isFinite(soilMoistureDelta);
 
     if (!Number.isFinite(durationMin) || durationMin <= 0) {
