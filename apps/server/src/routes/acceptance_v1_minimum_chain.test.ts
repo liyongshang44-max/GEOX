@@ -41,8 +41,13 @@ class AcceptancePool {
             type: "ao_act_receipt_v0",
             payload: {
               act_task_id: "task_1",
-              observed_parameters: { duration_min: 20 },
+              observed_parameters: { duration_sec: 1200 },
               execution_time: { start_ts: 1_700_000_000_000, end_ts: 1_700_000_060_000 },
+              logs_refs: [{ kind: "dispatch_ack", ref: "log_1" }],
+              meta: {
+                execution_summary: { duration_min: 20, coverage_percent: 98 },
+                effect_observation: { pre_soil_moisture: 0.19, post_soil_moisture: 0.24, soil_moisture_delta: 0.05 },
+              },
             },
           },
         }],
@@ -72,7 +77,7 @@ async function setupApp(pool: AcceptancePool) {
   process.env.GEOX_TENANT_ID = "tenantA";
   process.env.GEOX_PROJECT_ID = "projectA";
   process.env.GEOX_GROUP_ID = "groupA";
-  process.env.GEOX_SCOPES = "ao_act.index.read";
+  process.env.GEOX_SCOPES = "ao_act.index.read,acceptance.evaluate";
 
   const app = Fastify();
   registerAcceptanceV1Routes(app, pool as any);
@@ -93,6 +98,10 @@ test("acceptance evaluate writes acceptance_result_v1", async () => {
 
   assert.equal(res.statusCode, 200);
   assert.equal(res.json().ok, true);
+  assert.equal(res.json().verdict, "PASS");
+  assert.equal(res.json().acceptance?.verdict, "PASS");
+  assert.equal(res.json().acceptance?.metrics?.formal_execution_passed, 1);
+  assert.equal(res.json().acceptance?.metrics?.non_simulated_chain, 1);
   assert.ok(pool.insertedTypes.includes("acceptance_result_v1"));
   await app.close();
 });

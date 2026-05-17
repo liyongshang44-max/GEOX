@@ -554,7 +554,17 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
         ok: true,
         verdict: acceptanceRecord.payload.verdict,
         fact_id: acceptanceFactId,
-        judge_result_ids_used: judgeResultIds
+        judge_result_ids_used: judgeResultIds,
+        acceptance: {
+          verdict: acceptanceRecord.payload.verdict,
+          explanation_codes: evaluated.explanation_codes,
+          metrics: {
+            formal_evidence_count: Number(evaluated.metrics?.formal_evidence_count ?? 0),
+            simulated_evidence_count: Number(evaluated.metrics?.simulated_evidence_count ?? 0),
+            formal_execution_passed: Number(evaluated.metrics?.formal_execution_passed ?? 0),
+            non_simulated_chain: Number(evaluated.metrics?.non_simulated_chain ?? 0),
+          },
+        }
       });
     } catch (error: any) {
       return reply.status(400).send({ ok: false, error: String(error?.message ?? error ?? "INVALID_REQUEST") });

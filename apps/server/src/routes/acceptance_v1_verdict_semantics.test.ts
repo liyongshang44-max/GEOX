@@ -40,7 +40,13 @@ class AcceptanceVerdictSemanticsPool {
     }
 
     if (text.includes("ao_act_receipt_v0") && text.includes("LIMIT 1")) {
-      const observedParameters = this.scenario === "PARTIAL" ? {} : { duration_min: 20 };
+      const observedParameters = { duration_sec: 1200 };
+      const meta = this.scenario === "PARTIAL"
+        ? {}
+        : {
+          execution_summary: { duration_min: 20, coverage_percent: 99 },
+          effect_observation: { pre_soil_moisture: 0.2, post_soil_moisture: 0.25, soil_moisture_delta: 0.05 },
+        };
       return {
         rows: [{
           fact_id: "fact_receipt_case",
@@ -49,6 +55,9 @@ class AcceptanceVerdictSemanticsPool {
             payload: {
               act_task_id: "task_case",
               observed_parameters: observedParameters,
+              execution_time: { start_ts: 1_700_000_000_000, end_ts: 1_700_000_060_000 },
+              logs_refs: [{ kind: "dispatch_ack", ref: "log_case_1" }],
+              meta,
             },
           },
         }],
@@ -87,7 +96,7 @@ async function setupApp(pool: AcceptanceVerdictSemanticsPool) {
   process.env.GEOX_TENANT_ID = "tenantA";
   process.env.GEOX_PROJECT_ID = "projectA";
   process.env.GEOX_GROUP_ID = "groupA";
-  process.env.GEOX_SCOPES = "ao_act.index.read";
+  process.env.GEOX_SCOPES = "ao_act.index.read,acceptance.evaluate";
 
   const app = Fastify();
   registerAcceptanceV1Routes(app, pool as any);
@@ -120,6 +129,9 @@ test("acceptance verdict semantics: route outputs PASS/FAIL/PARTIAL and writes s
   assert.equal(passRun.res.json().verdict, "PASS");
   assert.equal(failRun.res.json().verdict, "FAIL");
   assert.equal(partialRun.res.json().verdict, "PARTIAL");
+  assert.equal(passRun.res.json().acceptance?.metrics?.formal_execution_passed, 1);
+  assert.equal(passRun.res.json().acceptance?.metrics?.non_simulated_chain, 1);
+  assert.ok(Array.isArray(passRun.res.json().acceptance?.explanation_codes));
 
   const insertedVerdicts = [
     passRun.pool.insertedRecords.find((x) => x?.type === "acceptance_result_v1")?.payload?.verdict,
