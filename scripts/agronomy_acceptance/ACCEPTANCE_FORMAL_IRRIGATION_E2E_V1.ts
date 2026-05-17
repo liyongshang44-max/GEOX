@@ -92,7 +92,7 @@ async function main() {
       const pResp = await fetchJson(`${base}/api/v1/prescriptions/from-recommendation`, { method: 'POST', token: adminToken, body: pBody });
       ctx.recordApiSnapshot({ method: 'POST', path: '/api/v1/prescriptions/from-recommendation', ok: pResp.ok && pResp.json?.ok === true, status_code: pResp.status, label: 'prescription create', request: pBody, response: pResp.json ?? pResp.text });
       const pJson = requireOk(pResp, 'prescription create');
-      const prescription_id = String(pJson?.prescription_id ?? '').trim();
+      const prescription_id = String(pJson?.prescription?.prescription_id ?? pJson?.prescription_id ?? '').trim();
       if (!prescription_id) throw new Error('PRESCRIPTION_ID_MISSING');
       ctx.updateManifest({ prescription_id });
 

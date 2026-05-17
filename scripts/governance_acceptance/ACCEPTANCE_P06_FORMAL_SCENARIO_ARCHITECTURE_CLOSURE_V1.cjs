@@ -33,7 +33,8 @@ assert.doesNotMatch(irrigationTs, /function\s+runId\s*\(/, 'formal irrigation sc
 assert.doesNotMatch(irrigationTs, /function\s+fixture\s*\(/, 'formal irrigation script must not define function fixture');
 assert.doesNotMatch(irrigationTs, /function\s+manifestOf\s*\(/, 'formal irrigation script must not define function manifestOf');
 assert.doesNotMatch(irrigationTs, /function\s+snap\s*\(/, 'formal irrigation script must not define function snap');
-assert.match(irrigationTs, /(prescription_id|PRESCRIPTION_ID_MISSING|FORMAL_PRESCRIPTION_REQUIRED)/, 'formal irrigation script must assert or output non-empty prescription_id');
+assert.match(irrigationTs, /prescription\?\.prescription_id/, 'formal irrigation script must read prescription?.prescription_id from create response');
+assert.match(irrigationTs, /(PRESCRIPTION_ID_MISSING|FORMAL_PRESCRIPTION_REQUIRED|manifest\.prescription_id)/, 'formal irrigation script must assert/output non-empty prescription_id semantics');
 assert.match(noProjection, /DEVICE_ANOMALY_E2E_V1/, 'no-projection-write gate must scan device anomaly script');
 assert.match(releaseGate, /ci:governance:formal-scenario-no-projection-write/, 'release gate must include formal-scenario-no-projection-write');
 assert.match(flightTable, /\/api\/v1\/dev\/flight-table\/formal-scenarios/, 'flight table route must expose formal-scenarios endpoint');
