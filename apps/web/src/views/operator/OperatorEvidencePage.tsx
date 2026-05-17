@@ -9,7 +9,7 @@ import "../../styles/operatorEvidence.css";
 import { buildOperatorEvidenceVm, type OperatorEvidenceVm } from "../../viewmodels/operatorEvidenceVm";
 import { OPERATOR_PAGE_META } from "./operatorPageMeta";
 import { buildEvidenceVm } from "../../lib/evidenceViewModel";
-import { EvidenceGapPanel, EvidenceRefList, EvidenceTrustLegend } from "../../components/evidence";
+import { EvidenceGapPanel, EvidenceRefList, EvidenceTrustBadge, EvidenceTrustLegend } from "../../components/evidence";
 
 function safeMessage(value: unknown, fallback = "暂无状态说明。") {
   const text = String(value ?? "").trim();
@@ -84,7 +84,7 @@ export default function OperatorEvidencePage(): React.ReactElement {
             <section className="operatorQueueGrid" aria-label="formal-scenario-review">
               <article className="operatorQueueCard"><header className="operatorQueueHead"><h2>ROI Trust Lane</h2></header><p>Trust level: {String((operationReport as any)?.formal_scenario?.formal_chain_status ?? "LIMITED")}</p><p>Low confidence items: {String((operationReport as any)?.roi_ledger?.summary?.low_confidence_items ?? 0)}</p><p>Insufficient evidence items: {String((operationReport as any)?.roi_ledger?.summary?.insufficient_items ?? 0)}</p></article>
               <article className="operatorQueueCard"><header className="operatorQueueHead"><h2>Field Memory Lane</h2></header><p>Field response memory: {String((operationReport as any)?.field_memory?.field_response_memory?.length ?? 0)}</p><p>Device reliability memory: {String((operationReport as any)?.field_memory?.device_reliability_memory?.length ?? 0)}</p><p>Skill performance memory: {String((operationReport as any)?.field_memory?.skill_performance_memory?.length ?? 0)}</p></article>
-              <article className="operatorQueueCard"><header className="operatorQueueHead"><h2>Unified Evidence Viewer</h2></header><EvidenceTrustLegend vm={buildEvidenceVm(operationReport)} /><EvidenceRefList vm={buildEvidenceVm(operationReport)} /><EvidenceGapPanel vm={buildEvidenceVm(operationReport)} /></article>
+              <article className="operatorQueueCard"><header className="operatorQueueHead"><h2>Unified Evidence Viewer</h2></header>{(() => { const evidenceVm = buildEvidenceVm(operationReport); return <><EvidenceTrustLegend vm={evidenceVm} /><EvidenceTrustBadge vm={evidenceVm} /><EvidenceRefList vm={evidenceVm} /><EvidenceGapPanel vm={evidenceVm} /></>; })()}</article>
               <OperatorFormalChainTimeline report={operationReport} />
               <OperatorEvidenceGapPanel report={operationReport} />
               <OperatorAcceptanceReasonPanel report={operationReport} />
