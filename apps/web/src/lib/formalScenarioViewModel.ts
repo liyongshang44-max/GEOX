@@ -1,6 +1,6 @@
 import { mapGuardedReportCode } from "../api/reports";
 import { customerGuardedAcceptanceText, customerGuardedEvidenceText, customerGuardedStatusText } from "./customerTrustGate";
-import { failSafeStatusLabel, manualTakeoverStatusLabel, scenarioTypeLabel } from "./customerScenarioLabels";
+import { customerEvidenceGapText, customerReasonText, failSafeStatusLabel, manualTakeoverStatusLabel, scenarioTypeLabel } from "./customerScenarioLabels";
 
 function customerText(value: unknown, fallback = "暂无记录"): string {
   const raw = String(value ?? "").trim();
@@ -21,10 +21,26 @@ export type FormalScenarioVm = {
   deviceStatusText?: string;
   executionGuardText?: string;
   tone: "success" | "warning" | "danger" | "neutral";
+  customerReasonSummary: string;
+  customerBlockingReasons: string[];
 };
 
 function scenarioKeyOf(reportOrOperation: any): string {
   return String(reportOrOperation?.formal_scenario?.scenario_type ?? reportOrOperation?.scenario_type ?? "").trim().toUpperCase();
+}
+
+
+function asList(value: unknown): string[] {
+  return Array.isArray(value) ? value.map((x) => String(x ?? "").trim()).filter(Boolean) : [];
+}
+
+function collectBlockingReasons(reportOrOperation: any): string[] {
+  const scenarioReasons = asList(reportOrOperation?.formal_scenario?.blocking_reasons);
+  const missingItems = asList(reportOrOperation?.acceptance?.missing_items);
+  const chainReasons = asList(reportOrOperation?.chain_validation?.blocking_reasons);
+  return [...scenarioReasons, ...missingItems, ...chainReasons]
+    .map((x) => (x.startsWith("missing:") ? customerEvidenceGapText(x) : customerReasonText(x)))
+    .filter(Boolean);
 }
 
 function zoneSummaryText(value: any): string | undefined {
@@ -47,6 +63,8 @@ export function buildFormalScenarioVm(reportOrOperation: any): FormalScenarioVm 
   const manualTakeoverText = reportOrOperation?.manual_takeover?.status ? manualTakeoverStatusLabel(reportOrOperation.manual_takeover.status) : undefined;
   const deviceStatusText = scenarioKey === "DEVICE_ANOMALY" ? `设备状态：${customerText(reportOrOperation?.device_status ?? reportOrOperation?.device?.status ?? "未知", "未知")}` : undefined;
   const executionGuardText = scenarioKey === "DEVICE_ANOMALY" ? "设备异常场景下，不对客户展示“执行成功”结论，需先完成人工复核。" : undefined;
+  const customerBlockingReasons = collectBlockingReasons(reportOrOperation);
+  const customerReasonSummary = customerBlockingReasons[0] ?? "正式链路信息已记录，当前无额外阻塞说明。";
   return {
     scenarioKey,
     scenarioLabel,
@@ -56,10 +74,12 @@ export function buildFormalScenarioVm(reportOrOperation: any): FormalScenarioVm 
     failSafeText,
     manualTakeoverText,
     zoneSummaryText: zoneSummaryText(reportOrOperation),
-    roiTrustText: scenario?.customer_visible_eligible === true ? "价值结论可对客展示" : "价值结论需复核后展示",
-    memoryTrustText: scenario?.customer_visible_eligible === true ? "学习结论可对客展示" : "学习结论需复核后展示",
+    roiTrustText: scenario?.customer_visible_eligible === true ? "价值结论可对客展示" : "价值结论暂不展示：缺少正式验收结果。",
+    memoryTrustText: scenario?.customer_visible_eligible === true ? "学习结论可对客展示" : "学习结论暂不展示：缺少正式田块响应验证。",
     deviceStatusText,
     executionGuardText,
     tone,
+    customerReasonSummary,
+    customerBlockingReasons,
   };
 }

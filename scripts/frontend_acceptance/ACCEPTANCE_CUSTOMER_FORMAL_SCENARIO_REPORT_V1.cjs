@@ -60,6 +60,9 @@ function main() {
   assertContains(labels, /export function customerReasonText\s*\(/, 'customerScenarioLabels must export customerReasonText', failures);
   assertContains(labels, /export function customerEvidenceGapText\s*\(/, 'customerScenarioLabels must export customerEvidenceGapText', failures);
   assertContains(labels, /export function customerTrustLevelText\s*\(/, 'customerScenarioLabels must export customerTrustLevelText', failures);
+
+  assertContains(cards, /vm\.customerReasonSummary|vm\.customerBlockingReasons/, 'FormalScenarioCards must use customer reason summary/reasons from VM', failures);
+  if (/blocking_reasons|missing_items/.test(cards)) fail('FormalScenarioCards must not directly render raw blocking_reasons/missing_items', failures);
   // Guardrails: no raw enum shown to customer in formal cards.
   const forbiddenRawEnum = [
     /\bFORMAL_IRRIGATION\b/,

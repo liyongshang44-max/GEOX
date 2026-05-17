@@ -30,6 +30,16 @@ if (!/export\s+function\s+buildFormalScenarioVm\s*\(/.test(formalText)) {
   failures.push(`missing buildFormalScenarioVm export in ${rel(targets.formalVm)}`);
 }
 
+const requiredVmFields = [
+  "customerReasonSummary",
+  "customerBlockingReasons",
+];
+for (const token of requiredVmFields) {
+  if (!new RegExp(`\\b${token}\\b`).test(formalText)) {
+    failures.push(`${rel(targets.formalVm)} must define ${token}`);
+  }
+}
+
 const requiredReuse = [
   'customerGuardedStatusText',
   'customerGuardedAcceptanceText',
