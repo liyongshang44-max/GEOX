@@ -3,6 +3,7 @@ export function scenarioTypeLabel(value: unknown): string {
   if (key === "FORMAL_IRRIGATION") return "正式灌溉";
   if (key === "DEVICE_ANOMALY") return "设备异常";
   if (key === "FORMAL_VARIABLE_OPERATION") return "变量作业";
+  if (key === "FORMAL_SAMPLING") return "正式采样";
   return "正式场景待确认";
 }
 
@@ -41,6 +42,10 @@ const CUSTOMER_REASON_MAP: Record<string, string> = {
   "simulated_dev_only": "模拟记录，不作为客户结论",
   "insufficient": "证据不足",
   "limited": "有限记录，需复核",
+  "sampling_lab_invalid": "采样已完成，但实验室结果未通过质量校验 → 需复核",
+  "sampling_simulated": "采样记录来自模拟链路 → 不作为客户结论",
+  "sampling_missing_receipt": "实验室结果已导入，但缺少采样回执 → 证据不足",
+  "sampling_passed": "采样与实验室结果均通过 → 可作为农艺判断依据",
 };
 
 function normReason(raw: unknown): string {

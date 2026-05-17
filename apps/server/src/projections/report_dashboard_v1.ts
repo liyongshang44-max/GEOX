@@ -38,6 +38,8 @@ export type CustomerDashboardAggregateV1 = {
     zone_rollup_status?: string;
     customer_visible_eligible?: boolean;
     needs_review?: boolean;
+    sampling_lab_result_status?: string;
+    sampling_acceptance_status?: string;
   }>;
   risk_summary: {
     level: OperationReportRiskLevel;
@@ -400,6 +402,8 @@ export function projectCustomerDashboardAggregateV1(params: {
         : undefined,
       customer_visible_eligible: report.formal_scenario?.customer_visible_eligible ?? undefined,
       needs_review: report.formal_scenario?.needs_review ?? undefined,
+      sampling_lab_result_status: report.sampling?.lab_result_status ?? undefined,
+      sampling_acceptance_status: report.sampling?.acceptance_status ?? undefined,
     };
   });
 
