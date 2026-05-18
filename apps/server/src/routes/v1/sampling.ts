@@ -74,6 +74,8 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
     if (body.zone_id != null && !isNonEmptyString(body.zone_id)) return badRequest(reply, "MISSING_OR_INVALID:zone_id");
     if (!isNonEmptyString(body.reason) || !PLAN_REASONS.has(body.reason)) return badRequest(reply, "MISSING_OR_INVALID:reason");
     if (!isNonEmptyString(body.sample_type) || !SAMPLE_TYPES.has(body.sample_type)) return badRequest(reply, "MISSING_OR_INVALID:sample_type");
+    if (body.operation_id != null && !isNonEmptyString(body.operation_id)) return badRequest(reply, "MISSING_OR_INVALID:operation_id");
+    if (body.operation_plan_id != null && !isNonEmptyString(body.operation_plan_id)) return badRequest(reply, "MISSING_OR_INVALID:operation_plan_id");
     if (body.required_depth_cm != null && (typeof body.required_depth_cm !== "number" || !Number.isFinite(body.required_depth_cm))) return badRequest(reply, "MISSING_OR_INVALID:required_depth_cm");
     if (typeof body.required_points !== "number" || !Number.isInteger(body.required_points) || body.required_points <= 0) return badRequest(reply, "MISSING_OR_INVALID:required_points");
     if (!isValidEvidenceRefArray(body.evidence_refs, false)) return badRequest(reply, "MISSING_OR_INVALID:evidence_refs");
