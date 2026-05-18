@@ -40,17 +40,25 @@ async function main() {
     const run = rid('formal_sampling');
     const sample_id = rid('sample');
 
+    const now = Date.now();
     const aoTask = requireOk(await fetchJson(`${base}/api/v1/sense/task`, {
       method: 'POST',
       token,
       body: {
-        tenant_id: scope.tenant_id,
-        project_id: scope.project_id,
-        group_id: scope.group_id,
-        field_id: `field_${run}`,
-        requested_by: 'acceptance_script',
-        request_ts: Date.now(),
-        notes: `run=${run}`,
+        subjectRef: {
+          projectId: scope.project_id,
+          groupId: scope.group_id,
+        },
+        window: {
+          startTs: now - 60_000,
+          endTs: now + 60_000,
+        },
+        sense_kind: 'sampling',
+        sense_focus: 'soil_sample_collection',
+        priority: 'normal',
+        supporting_problem_state_id: `problem_${run}`,
+        supporting_determinism_hash: `det_${run}`,
+        supporting_effective_config_hash: `cfg_${run}`,
       },
     }), 'create ao sense task');
     checks.ao_sense_task_created = true;
