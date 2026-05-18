@@ -14,6 +14,10 @@ async function postJson(path, body) {
 }
 
 async function main() {
+  const mode = 'live';
+  const health = await fetch(`${baseUrl}/api/v1/health`, { method: 'GET' }).catch(() => null);
+  if (!health || !health.ok) throw new Error(`live API unavailable at ${baseUrl}`);
+
   const checks = {
     plan_created: false,
     receipt_requires_existing_plan: false,
@@ -21,6 +25,7 @@ async function main() {
     lab_result_requires_existing_sample: false,
     lab_result_requires_evidence_refs: false,
     invalid_quality_status_blocked: false,
+    sample_lookup_works: false,
   };
 
   const now = Date.now();
@@ -115,7 +120,11 @@ async function main() {
   assert.ok(labInvalidQuality.status >= 400 && labInvalidQuality.status < 500, 'invalid quality status blocked');
   checks.invalid_quality_status_blocked = true;
 
-  console.log(JSON.stringify({ ok: true, suite: 'ACCEPTANCE_SAMPLING_API_V1', checks }, null, 2));
+  const sampleLookup = await fetch(`${baseUrl}/api/v1/sampling/sample/${ids.sample_id}`, { method: 'GET' });
+  assert.equal(sampleLookup.status, 200, 'sample lookup should succeed for created sample');
+  checks.sample_lookup_works = true;
+
+  console.log(JSON.stringify({ ok: true, suite: 'ACCEPTANCE_SAMPLING_API_V1', mode, checks }, null, 2));
 }
 
 main().catch((err) => {

@@ -1,4 +1,5 @@
 const { randomUUID } = require('node:crypto');
+const assertNode = require('node:assert/strict');
 const { Pool } = require('pg');
 const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
 
@@ -13,6 +14,8 @@ async function health(base) {
 }
 
 async function main() {
+  const mode = 'live';
+  assertNode.equal(process.env.SAMPLING_MODE !== 'offline', true, 'offline fallback is forbidden in formal sampling E2E');
   const base = env('BASE_URL', process.env.GEOX_BASE_URL || 'http://127.0.0.1:3001');
   const token = env('ADMIN_TOKEN', env('AO_ACT_TOKEN', 'admin_token'));
   const scope = { tenant_id: env('TENANT_ID', 'tenantA'), project_id: env('PROJECT_ID', 'projectA'), group_id: env('GROUP_ID', 'groupA') };
@@ -26,6 +29,7 @@ async function main() {
     sample_receipt_created: false,
     lab_result_imported: false,
     sampling_acceptance_evaluated: false,
+    acceptance_api_live_called: false,
     invalid_lab_result_not_pass: false,
     customer_report_downgraded_when_evidence_missing: false,
   };
@@ -87,6 +91,7 @@ async function main() {
     checks.lab_result_imported = true;
 
     const acceptance = requireOk(await fetchJson(`${base}/api/v1/sampling/acceptance/evaluate`, { method: 'POST', token, body: { plan_id: plan.plan_id, sample_id, import_id: lab.import_id } }), 'evaluate sampling acceptance');
+    checks.acceptance_api_live_called = true;
     checks.sampling_acceptance_evaluated = ['PASS', 'FAIL', 'INSUFFICIENT_EVIDENCE'].includes(acceptance.verdict);
 
     const sample = requireOk(await fetchJson(`${base}/api/v1/sampling/sample/${sample_id}`, { method: 'GET', token }), 'fetch sample by sample_id');
@@ -125,7 +130,7 @@ async function main() {
     const debugAcceptance = requireOk(await fetchJson(`${base}/api/v1/sampling/acceptance/evaluate`, { method: 'POST', token, body: { plan_id: plan.plan_id, sample_id: debugSampleId, import_id: debugLab.import_id } }), 'evaluate debug/simulated sampling acceptance');
     checks.customer_report_downgraded_when_evidence_missing = (debugAcceptance.customer_visible_eligible === false) || (debugAcceptance.report_tier && String(debugAcceptance.report_tier).toUpperCase() !== 'FORMAL');
 
-    const output = { ok: true, scenario: 'FORMAL_SAMPLING', mode: 'live', checks, refs: { plan_id: plan.plan_id, receipt_id: receipt.receipt_id, import_id: lab.import_id } };
+    const output = { ok: true, scenario: 'FORMAL_SAMPLING', mode, checks, refs: { plan_id: plan.plan_id, receipt_id: receipt.receipt_id, import_id: lab.import_id } };
     console.log(JSON.stringify(output, null, 2));
   } finally {
     await pool.end().catch(() => undefined);
