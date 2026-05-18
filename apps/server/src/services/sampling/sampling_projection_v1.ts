@@ -32,13 +32,51 @@ function toNum(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+function emptySamplingReportView(): SamplingReportViewV1 {
+  return {
+    plan_id: null,
+    sample_id: null,
+    sample_type: null,
+    zone_id: null,
+    collected_at_ts: null,
+    lab_result_status: "MISSING",
+    acceptance_status: "MISSING",
+    customer_visible_eligible: false,
+    blocking_reasons: [],
+  };
+}
+
 export async function buildSamplingReportViewV1(pool: Pool, params: SamplingScope): Promise<SamplingReportViewV1> {
   const scope = [params.tenant_id, params.project_id, params.group_id];
   const plan = toText(params.plan_id);
-  const field = toText(params.field_id);
+  const operationId = toText(params.operation_id);
 
-  const planRow = plan
-    ? await pool.query(
+  if (!plan && !operationId) return emptySamplingReportView();
+
+  let resolvedPlanId: string | null = plan;
+
+  if (!resolvedPlanId && operationId) {
+    const relationRow = await pool.query(
+      `SELECT record_json
+         FROM facts
+        WHERE (record_json::jsonb->>'type')='sampling_operation_relation_v1'
+          AND (record_json::jsonb->>'tenant_id')=$1
+          AND (record_json::jsonb->>'project_id')=$2
+          AND (record_json::jsonb->>'group_id')=$3
+          AND (
+            (record_json::jsonb->>'operation_id')=$4
+            OR (record_json::jsonb->>'operation_plan_id')=$4
+          )
+        ORDER BY occurred_at DESC
+        LIMIT 1`,
+      [...scope, operationId],
+    );
+    resolvedPlanId = toText(relationRow.rows?.[0]?.record_json?.plan_id);
+  }
+
+  if (!resolvedPlanId) return emptySamplingReportView();
+
+  const planRow = await pool.query(
       `SELECT record_json
          FROM facts
         WHERE (record_json::jsonb->>'type')='sampling_plan_v1'
@@ -48,23 +86,11 @@ export async function buildSamplingReportViewV1(pool: Pool, params: SamplingScop
           AND (record_json::jsonb->>'plan_id')=$4
         ORDER BY occurred_at DESC
         LIMIT 1`,
-      [...scope, plan],
-    )
-    : await pool.query(
-      `SELECT record_json
-         FROM facts
-        WHERE (record_json::jsonb->>'type')='sampling_plan_v1'
-          AND (record_json::jsonb->>'tenant_id')=$1
-          AND (record_json::jsonb->>'project_id')=$2
-          AND (record_json::jsonb->>'group_id')=$3
-          AND ($4::text IS NULL OR (record_json::jsonb->>'field_id')=$4)
-        ORDER BY occurred_at DESC
-        LIMIT 1`,
-      [...scope, field],
+      [...scope, resolvedPlanId],
     );
 
   const planJson: any = planRow.rows?.[0]?.record_json ?? null;
-  const resolvedPlanId = toText(planJson?.plan_id) ?? plan;
+  resolvedPlanId = toText(planJson?.plan_id) ?? resolvedPlanId;
 
   const receiptRow = resolvedPlanId
     ? await pool.query(
