@@ -88,6 +88,8 @@ export class SamplingServiceV1 {
     evidence_refs: EvidenceRef[];
     chain_of_custody_status: string;
     ao_sense_receipt_fact_id?: string;
+    sample_type_override?: boolean;
+    override_reason?: string;
   }): Promise<{ receipt_id: string; fact_id: string }> {
     const receipt_id = randomUUID();
     const fact_id = `sr_${receipt_id}`;
@@ -111,11 +113,31 @@ export class SamplingServiceV1 {
       evidence_refs: input.evidence_refs,
       chain_of_custody_status: input.chain_of_custody_status,
       ao_sense_receipt_fact_id: input.ao_sense_receipt_fact_id ?? null,
+      sample_type_override: input.sample_type_override === true,
+      override_reason: input.override_reason ?? null,
     };
 
     const ok = await this.insertFact({ fact_id, occurred_at: new Date().toISOString(), source: "api_v1_sampling", record_json });
     if (!ok) throw new Error("FACT_INSERT_CONFLICT_OR_FAILED");
     return { receipt_id, fact_id };
+  }
+
+  async findPlanById(plan_id: string): Promise<Record<string, unknown> | null> {
+    const result = await this.pool.query(FIND_FACT_SQL, ["sampling_plan_v1", "plan_id", plan_id]);
+    return result.rows?.[0]?.record_json ?? null;
+  }
+
+  async findReceiptBySampleId(sample_id: string): Promise<Record<string, unknown> | null> {
+    const result = await this.pool.query(
+      `SELECT record_json
+       FROM facts
+       WHERE (record_json::jsonb->>'type') = 'sample_receipt_v1'
+         AND (record_json::jsonb->>'sample_id') = $1
+       ORDER BY occurred_at DESC
+       LIMIT 1`,
+      [sample_id],
+    );
+    return result.rows?.[0]?.record_json ?? null;
   }
 
   async createLabResult(input: {

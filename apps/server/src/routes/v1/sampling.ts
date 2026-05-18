@@ -18,6 +18,23 @@ function badRequest(reply: any, error: string) {
   return reply.status(400).send({ ok: false, error });
 }
 
+const PLAN_REASONS = new Set(["BASELINE", "DIAGNOSTIC", "FOLLOWUP", "COMPLIANCE"]);
+const SAMPLE_TYPES = new Set(["SOIL", "TISSUE", "WATER"]);
+const CHAIN_STATUSES = new Set(["RECORDED", "MISSING", "BROKEN"]);
+const QUALITY_STATUSES = new Set(["PASS", "NEEDS_REVIEW", "INVALID"]);
+const EVIDENCE_KINDS = new Set(["raw_sample_v1", "marker_v1", "import_run_v1", "fact_id"]);
+
+function isValidEvidenceRefArray(v: unknown, mustNonEmpty: boolean): boolean {
+  if (!Array.isArray(v)) return false;
+  if (mustNonEmpty && v.length < 1) return false;
+  for (const entry of v) {
+    if (!isObjectRecord(entry)) return false;
+    if (!isNonEmptyString((entry as any).kind) || !isNonEmptyString((entry as any).ref_id)) return false;
+    if (!EVIDENCE_KINDS.has((entry as any).kind)) return false;
+  }
+  return true;
+}
+
 export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void {
   const service = new SamplingServiceV1(pool);
 
@@ -28,11 +45,11 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
     if (!isNonEmptyString(body.group_id)) return badRequest(reply, "MISSING_OR_INVALID:group_id");
     if (!isNonEmptyString(body.field_id)) return badRequest(reply, "MISSING_OR_INVALID:field_id");
     if (body.zone_id != null && !isNonEmptyString(body.zone_id)) return badRequest(reply, "MISSING_OR_INVALID:zone_id");
-    if (!isNonEmptyString(body.reason)) return badRequest(reply, "MISSING_OR_INVALID:reason");
-    if (!isNonEmptyString(body.sample_type)) return badRequest(reply, "MISSING_OR_INVALID:sample_type");
+    if (!isNonEmptyString(body.reason) || !PLAN_REASONS.has(body.reason)) return badRequest(reply, "MISSING_OR_INVALID:reason");
+    if (!isNonEmptyString(body.sample_type) || !SAMPLE_TYPES.has(body.sample_type)) return badRequest(reply, "MISSING_OR_INVALID:sample_type");
     if (body.required_depth_cm != null && (typeof body.required_depth_cm !== "number" || !Number.isFinite(body.required_depth_cm))) return badRequest(reply, "MISSING_OR_INVALID:required_depth_cm");
     if (typeof body.required_points !== "number" || !Number.isInteger(body.required_points) || body.required_points <= 0) return badRequest(reply, "MISSING_OR_INVALID:required_points");
-    if (!Array.isArray(body.evidence_refs)) return badRequest(reply, "MISSING_OR_INVALID:evidence_refs");
+    if (!isValidEvidenceRefArray(body.evidence_refs, false)) return badRequest(reply, "MISSING_OR_INVALID:evidence_refs");
 
     const created = await service.createPlan(body);
     return reply.send({ ok: true, ...created });
@@ -48,9 +65,19 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
     if (!isNonEmptyString(body.field_id)) return badRequest(reply, "MISSING_OR_INVALID:field_id");
     if (!isIntMs(body.collected_at_ts)) return badRequest(reply, "MISSING_OR_INVALID:collected_at_ts");
     if (!isNonEmptyString(body.collector_actor_id)) return badRequest(reply, "MISSING_OR_INVALID:collector_actor_id");
-    if (!isNonEmptyString(body.sample_type)) return badRequest(reply, "MISSING_OR_INVALID:sample_type");
-    if (!Array.isArray(body.evidence_refs) || body.evidence_refs.length < 1) return badRequest(reply, "MISSING_OR_INVALID:evidence_refs");
-    if (!isNonEmptyString(body.chain_of_custody_status)) return badRequest(reply, "MISSING_OR_INVALID:chain_of_custody_status");
+    if (!isNonEmptyString(body.sample_type) || !SAMPLE_TYPES.has(body.sample_type)) return badRequest(reply, "MISSING_OR_INVALID:sample_type");
+    if (!isValidEvidenceRefArray(body.evidence_refs, true)) return badRequest(reply, "MISSING_OR_INVALID:evidence_refs");
+    if (!isNonEmptyString(body.chain_of_custody_status) || !CHAIN_STATUSES.has(body.chain_of_custody_status)) return badRequest(reply, "MISSING_OR_INVALID:chain_of_custody_status");
+
+    const plan = await service.findPlanById(body.plan_id);
+    if (!plan) return reply.status(404).send({ ok: false, error: "NOT_FOUND:plan_id" });
+    if (plan.tenant_id !== body.tenant_id || plan.project_id !== body.project_id || plan.group_id !== body.group_id || plan.field_id !== body.field_id) {
+      return badRequest(reply, "MISMATCH:plan_scope");
+    }
+    const allowOverride = body.sample_type_override === true;
+    if (plan.sample_type !== body.sample_type && !(allowOverride && isNonEmptyString(body.override_reason))) {
+      return badRequest(reply, "MISMATCH:sample_type");
+    }
 
     const created = await service.createReceipt(body);
     return reply.send({ ok: true, ...created });
@@ -62,8 +89,11 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
     if (!isIntMs(body.imported_at_ts)) return badRequest(reply, "MISSING_OR_INVALID:imported_at_ts");
     if (!isObjectRecord(body.metrics)) return badRequest(reply, "MISSING_OR_INVALID:metrics");
     if (!isObjectRecord(body.units)) return badRequest(reply, "MISSING_OR_INVALID:units");
-    if (!Array.isArray(body.evidence_refs)) return badRequest(reply, "MISSING_OR_INVALID:evidence_refs");
-    if (!isNonEmptyString(body.quality_status)) return badRequest(reply, "MISSING_OR_INVALID:quality_status");
+    if (!isValidEvidenceRefArray(body.evidence_refs, true)) return badRequest(reply, "MISSING_OR_INVALID:evidence_refs");
+    if (!isNonEmptyString(body.quality_status) || !QUALITY_STATUSES.has(body.quality_status)) return badRequest(reply, "MISSING_OR_INVALID:quality_status");
+
+    const receipt = await service.findReceiptBySampleId(body.sample_id);
+    if (!receipt) return reply.status(404).send({ ok: false, error: "NOT_FOUND:sample_receipt" });
 
     const created = await service.createLabResult(body);
     return reply.send({ ok: true, ...created });
