@@ -27,6 +27,7 @@ async function main() {
     lab_result_requires_evidence_refs: false,
     invalid_quality_status_blocked: false,
     sample_lookup_works: false,
+    acceptance_requires_existing_plan: false,
   };
 
   const now = Date.now();
@@ -124,6 +125,13 @@ async function main() {
   const sampleLookup = await fetch(`${baseUrl}/api/v1/sampling/sample/${ids.sample_id}`, { method: 'GET', headers: { authorization: `Bearer ${token}` } });
   assert.equal(sampleLookup.status, 200, 'sample lookup should succeed for created sample');
   checks.sample_lookup_works = true;
+
+  const acceptanceMissingPlan = await postJson('/api/v1/sampling/acceptance/evaluate', {
+    plan_id: 'missing-plan-id',
+    sample_id: ids.sample_id,
+  });
+  assert.equal(acceptanceMissingPlan.status, 404, 'acceptance evaluate must return 404 when plan does not exist');
+  checks.acceptance_requires_existing_plan = true;
 
   console.log(JSON.stringify({ ok: true, suite: 'ACCEPTANCE_SAMPLING_API_V1', mode, checks }, null, 2));
 }

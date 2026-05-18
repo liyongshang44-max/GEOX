@@ -149,7 +149,7 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
     if (!isNonEmptyString(body.sample_id)) return badRequest(reply, "MISSING_OR_INVALID:sample_id");
     if (body.import_id != null && !isNonEmptyString(body.import_id)) return badRequest(reply, "MISSING_OR_INVALID:import_id");
     const plan = await service.findPlanById(body.plan_id);
-    if (!plan) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    if (!plan) return reply.status(404).send({ ok: false, error: "NOT_FOUND:plan_id" });
     if (!tenantMatchesAuth(plan, auth)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
 
     const receipt = await service.findReceiptBySampleId(body.sample_id);
@@ -158,9 +158,9 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
         plan_id: body.plan_id,
         sample_id: body.sample_id,
         import_id: body.import_id,
-        tenant_id: "",
-        project_id: "",
-        group_id: "",
+        tenant_id: String(plan.tenant_id),
+        project_id: String(plan.project_id),
+        group_id: String(plan.group_id),
         verdict: "INSUFFICIENT_EVIDENCE",
         reasons: ["MISSING_SAMPLE_RECEIPT"],
         evidence_refs: [],
@@ -169,6 +169,8 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
     }
     if (receipt.plan_id !== body.plan_id) return badRequest(reply, "MISMATCH:plan_id");
     if (receipt.sample_id !== body.sample_id) return badRequest(reply, "MISMATCH:sample_id");
+    if (!tenantMatchesAuth(receipt, auth)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    if (!tenantMatchesAuth(receipt, plan)) return badRequest(reply, "MISMATCH:receipt_scope");
     if (!Array.isArray(receipt.evidence_refs) || receipt.evidence_refs.length < 1) {
       const created = await service.createAcceptance({
         plan_id: body.plan_id,
