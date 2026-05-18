@@ -118,7 +118,7 @@ export function buildVariableActionTaskPayloadV1(input: {
     // available as meta.operation_type so fertilization can reuse the existing
     // variable operation chain without creating a duplicate execution path.
     action_type: "IRRIGATE" as const,
-    target: { kind: "field", ref: field_id },
+    target: { kind: "field" as const, ref: field_id },
     time_window: {
       start_ts: now,
       end_ts: now + (30 * 60 * 1000),
