@@ -6,6 +6,7 @@ type SamplingScope = {
   group_id: string;
   field_id?: string | null;
   operation_id?: string | null;
+  operation_ids?: string[] | null;
   plan_id?: string | null;
 };
 
@@ -32,6 +33,14 @@ function toNum(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+function uniqueTextList(values: unknown[]): string[] {
+  return Array.from(new Set(
+    values
+      .map((v) => toText(v))
+      .filter((v): v is string => Boolean(v))
+  ));
+}
+
 function emptySamplingReportView(): SamplingReportViewV1 {
   return {
     plan_id: null,
@@ -49,13 +58,16 @@ function emptySamplingReportView(): SamplingReportViewV1 {
 export async function buildSamplingReportViewV1(pool: Pool, params: SamplingScope): Promise<SamplingReportViewV1> {
   const scope = [params.tenant_id, params.project_id, params.group_id];
   const plan = toText(params.plan_id);
-  const operationId = toText(params.operation_id);
+  const operationIds = uniqueTextList([
+    params.operation_id,
+    ...(Array.isArray(params.operation_ids) ? params.operation_ids : []),
+  ]);
 
-  if (!plan && !operationId) return emptySamplingReportView();
+  if (!plan && operationIds.length < 1) return emptySamplingReportView();
 
   let resolvedPlanId: string | null = plan;
 
-  if (!resolvedPlanId && operationId) {
+  if (!resolvedPlanId && operationIds.length > 0) {
     const relationRow = await pool.query(
       `SELECT record_json
          FROM facts
@@ -64,12 +76,12 @@ export async function buildSamplingReportViewV1(pool: Pool, params: SamplingScop
           AND (record_json::jsonb->>'project_id')=$2
           AND (record_json::jsonb->>'group_id')=$3
           AND (
-            (record_json::jsonb->>'operation_id')=$4
-            OR (record_json::jsonb->>'operation_plan_id')=$4
+            (record_json::jsonb->>'operation_id') = ANY($4::text[])
+            OR (record_json::jsonb->>'operation_plan_id') = ANY($4::text[])
           )
         ORDER BY occurred_at DESC
         LIMIT 1`,
-      [...scope, operationId],
+      [...scope, operationIds],
     );
     resolvedPlanId = toText(relationRow.rows?.[0]?.record_json?.plan_id);
   }
