@@ -8,6 +8,7 @@ import type {
   FertilizationRecommendationZoneRateV1,
   FertilizationSensingStateRefV1,
   FertilizationSkillSignalRefV1,
+  FertilizationSourceSkillRefV1,
   NitrogenNeedAssessmentFactV1,
   NitrogenNeedAssessmentStatusV1,
   NitrogenNeedMetricsV1,
@@ -100,6 +101,20 @@ function normalizeSkillSignalRefs(input: unknown): FertilizationSkillSignalRefV1
       skill_run_id: nonEmptyText(entry?.skill_run_id),
       skill_trace_id: nonEmptyText(entry?.skill_trace_id),
       signal_type,
+    };
+  });
+}
+
+function normalizeSourceSkillRefs(input: unknown): FertilizationSourceSkillRefV1[] {
+  if (input === undefined || input === null) return [];
+  if (!Array.isArray(input)) throw new FertilizationServiceErrorV1("MISSING_OR_INVALID:source_skill_refs", 400);
+  return input.map((entry: any) => {
+    const skill_id = nonEmptyText(entry?.skill_id);
+    if (!skill_id) throw new FertilizationServiceErrorV1("MISSING_OR_INVALID:source_skill_refs", 400);
+    return {
+      skill_id,
+      skill_run_id: nonEmptyText(entry?.skill_run_id),
+      output_ref: nonEmptyText(entry?.output_ref),
     };
   });
 }
@@ -371,9 +386,7 @@ export class FertilizationServiceV1 {
       throw new FertilizationServiceErrorV1("CUSTOMER_VISIBLE_RECOMMENDATION_REQUIRES_FORMAL_LOW_N_RISK", 400);
     }
     const customer_visible_eligible = requestedCustomerVisible && formalLowN;
-    const source_skill_refs = Array.isArray(input.source_skill_refs)
-      ? input.source_skill_refs.map((entry: any) => ({ skill_id: nonEmptyText(entry?.skill_id), skill_run_id: nonEmptyText(entry?.skill_run_id), output_ref: nonEmptyText(entry?.output_ref) })).filter((entry: any) => entry.skill_id)
-      : [];
+    const source_skill_refs = normalizeSourceSkillRefs(input.source_skill_refs);
 
     const recommendation_id = randomUUID();
     const recommendation: FertilizationRecommendationFactV1 = {
