@@ -62,9 +62,9 @@ export function registerFertilizationV1Routes(app: FastifyInstance, pool: Pool):
     if (!auth) return reply;
     const body: any = req.body ?? {};
     const tenant = tenantFromBodyOrAuthV1(body, auth);
-    if (!requireTenantMatchOr404(reply, tenant, auth)) return;
+    if (!requireTenantMatchOr404(reply, tenant, auth)) return reply;
     if (!isNonEmptyString(body.field_id)) return badRequest(reply, "MISSING_OR_INVALID:field_id");
-    if (!requireFieldAllowedOr404V1(reply, auth, body.field_id)) return;
+    if (!requireFieldAllowedOr404V1(reply, auth, body.field_id)) return reply;
 
     try {
       const result = await service.createNitrogenAssessment({ ...body, ...tenant, field_id: String(body.field_id) });
@@ -79,9 +79,9 @@ export function registerFertilizationV1Routes(app: FastifyInstance, pool: Pool):
     if (!auth) return reply;
     const body: any = req.body ?? {};
     const tenant = tenantFromBodyOrAuthV1(body, auth);
-    if (!requireTenantMatchOr404(reply, tenant, auth)) return;
+    if (!requireTenantMatchOr404(reply, tenant, auth)) return reply;
     if (!isNonEmptyString(body.field_id)) return badRequest(reply, "MISSING_OR_INVALID:field_id");
-    if (!requireFieldAllowedOr404V1(reply, auth, body.field_id)) return;
+    if (!requireFieldAllowedOr404V1(reply, auth, body.field_id)) return reply;
 
     try {
       const result = await service.createRecommendation({ ...body, ...tenant, field_id: String(body.field_id) });
@@ -96,9 +96,9 @@ export function registerFertilizationV1Routes(app: FastifyInstance, pool: Pool):
     if (!auth) return reply;
     const body: any = req.body ?? {};
     const tenant = tenantFromBodyOrAuthV1(body, auth);
-    if (!requireTenantMatchOr404(reply, tenant, auth)) return;
+    if (!requireTenantMatchOr404(reply, tenant, auth)) return reply;
     if (!isNonEmptyString(body.field_id)) return badRequest(reply, "MISSING_OR_INVALID:field_id");
-    if (!requireFieldAllowedOr404V1(reply, auth, body.field_id)) return;
+    if (!requireFieldAllowedOr404V1(reply, auth, body.field_id)) return reply;
 
     try {
       const result = await service.createPrescription({ ...body, ...tenant, field_id: String(body.field_id) });
@@ -116,12 +116,12 @@ export function registerFertilizationV1Routes(app: FastifyInstance, pool: Pool):
     const fertilization_prescription_id = String(params.fertilization_prescription_id ?? "").trim();
     if (!fertilization_prescription_id) return badRequest(reply, "MISSING_OR_INVALID:fertilization_prescription_id");
     const tenant = tenantFromBodyOrAuthV1(body, auth);
-    if (!requireTenantMatchOr404(reply, tenant, auth)) return;
+    if (!requireTenantMatchOr404(reply, tenant, auth)) return reply;
 
     try {
       const result = await bridge.createVariablePrescription({ ...tenant, fertilization_prescription_id, created_by: auth.actor_id });
       const fieldId = String(result.fertilization_prescription?.field_id ?? "");
-      if (!requireFieldAllowedOr404V1(reply, auth, fieldId)) return;
+      if (!requireFieldAllowedOr404V1(reply, auth, fieldId)) return reply;
       return reply.send({
         ok: true,
         idempotent: result.idempotent,
@@ -139,12 +139,12 @@ export function registerFertilizationV1Routes(app: FastifyInstance, pool: Pool):
     if (!auth) return reply;
     const body: any = req.body ?? {};
     const tenant = tenantFromBodyOrAuthV1(body, auth);
-    if (!requireTenantMatchOr404(reply, tenant, auth)) return;
+    if (!requireTenantMatchOr404(reply, tenant, auth)) return reply;
 
     try {
       const result = await service.evaluateAcceptance({ ...body, ...tenant });
       const fieldId = String(result.acceptance?.field_id ?? "");
-      if (!requireFieldAllowedOr404V1(reply, auth, fieldId)) return;
+      if (!requireFieldAllowedOr404V1(reply, auth, fieldId)) return reply;
       return reply.send({ ok: true, fact_id: result.fact_id, acceptance: result.acceptance });
     } catch (error) {
       return handleServiceError(reply, error);
@@ -159,11 +159,11 @@ export function registerFertilizationV1Routes(app: FastifyInstance, pool: Pool):
     const assessment_id = String(params.assessment_id ?? "").trim();
     if (!assessment_id) return badRequest(reply, "MISSING_OR_INVALID:assessment_id");
     const tenant = tenantFromQueryOrAuthV1(query, auth);
-    if (!requireTenantMatchOr404(reply, tenant, auth)) return;
+    if (!requireTenantMatchOr404(reply, tenant, auth)) return reply;
 
     const found = await service.getAssessment(tenant, assessment_id);
     if (!found) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    if (!requireFieldAllowedOr404V1(reply, auth, found.record_json.field_id)) return;
+    if (!requireFieldAllowedOr404V1(reply, auth, found.record_json.field_id)) return reply;
     return reply.send({ ok: true, fact: found });
   });
 
@@ -175,11 +175,11 @@ export function registerFertilizationV1Routes(app: FastifyInstance, pool: Pool):
     const fertilization_prescription_id = String(params.fertilization_prescription_id ?? "").trim();
     if (!fertilization_prescription_id) return badRequest(reply, "MISSING_OR_INVALID:fertilization_prescription_id");
     const tenant = tenantFromQueryOrAuthV1(query, auth);
-    if (!requireTenantMatchOr404(reply, tenant, auth)) return;
+    if (!requireTenantMatchOr404(reply, tenant, auth)) return reply;
 
     const found = await service.getPrescription(tenant, fertilization_prescription_id);
     if (!found) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    if (!requireFieldAllowedOr404V1(reply, auth, found.record_json.field_id)) return;
+    if (!requireFieldAllowedOr404V1(reply, auth, found.record_json.field_id)) return reply;
     return reply.send({ ok: true, fact: found });
   });
 }
