@@ -4,6 +4,7 @@ export function scenarioTypeLabel(value: unknown): string {
   if (key === "DEVICE_ANOMALY") return "设备异常";
   if (key === "FORMAL_VARIABLE_OPERATION") return "变量作业";
   if (key === "FORMAL_SAMPLING") return "正式采样";
+  if (key === "FORMAL_FERTILIZATION") return "正式施氮";
   return "正式场景待确认";
 }
 
@@ -46,6 +47,18 @@ const CUSTOMER_REASON_MAP: Record<string, string> = {
   "sampling_simulated": "采样记录来自模拟链路 → 不作为客户结论",
   "sampling_missing_receipt": "实验室结果已导入，但缺少采样回执 → 证据不足",
   "sampling_passed": "采样与实验室结果均通过 → 可作为农艺判断依据",
+  "fertilization_lab_low_n_formal": "实验室结果显示存在缺氮风险，已生成施氮建议。",
+  "fertilization_sensing_review_only": "感知系统提示可能存在养分风险，建议先采样复核。",
+  "fertilization_salinity_risk": "土壤电导率异常，可能存在盐分或水分干扰，暂不生成施氮建议。",
+  "fertilization_warning_only": "当前仅为感知预警，不作为正式施肥结论。",
+  "fertilization_prescription_approved": "施氮处方已批准，等待执行。",
+  "fertilization_zone_deviation_large": "施氮作业部分分区偏差过大，需复核。",
+  "missing:fertilization_assessment": "缺少施氮诊断记录",
+  "missing:fertilization_recommendation": "缺少施氮建议记录",
+  "missing:fertilization_prescription": "缺少施氮处方记录",
+  "missing:fertilization_acceptance": "缺少施氮验收记录",
+  "fertilization_not_customer_visible": "施氮结论暂不对客展示",
+  "fertilization_acceptance_not_pass": "施氮验收未通过或需复核",
 };
 
 function normReason(raw: unknown): string {
@@ -67,6 +80,7 @@ export function customerEvidenceGapText(raw: unknown): string {
 export function customerEvidenceGapCategory(raw: unknown): string {
   const normalized = normReason(raw);
   if (!normalized) return "需要补充正式链路后展示";
+  if (normalized.startsWith("fertilization") || normalized.includes("施氮")) return "施氮诊断、处方与验收链路需复核";
   if (normalized === "missing:roi" || normalized === "missing:field_memory") return "价值和田块记忆暂不对客展示";
   if (normalized === "missing:diagnosis" || normalized.includes("sensing summary") || normalized.includes("soil_moisture") || normalized.includes("threshold") || normalized.includes("deficit")) {
     return "正式诊断依据不足";
@@ -88,4 +102,19 @@ export function customerTrustLevelText(raw: unknown): string {
   if (key === "TECHNICAL_ONLY") return "验收未成立：回执成功不能作为验收结论";
   if (key === "LIMITED") return "有限记录，需复核";
   return "证据不足：缺少正式传感器触发摘要";
+}
+
+export function fertilizationCustomerSummaryText(input: any): string {
+  const trigger = String(input?.trigger_source ?? "").toUpperCase();
+  const evidence = String(input?.evidence_tier ?? "").toUpperCase();
+  const acceptance = String(input?.acceptance_status ?? "").toUpperCase();
+  const blocking = Array.isArray(input?.blocking_reasons) ? input.blocking_reasons.map((x: unknown) => normReason(x)) : [];
+  if (blocking.includes("fertilization_salinity_risk")) return "土壤电导率异常，可能存在盐分或水分干扰，暂不生成施氮建议。";
+  if (blocking.includes("fertilization_zone_deviation_large")) return "施氮作业部分分区偏差过大，需复核。";
+  if (trigger === "SAMPLING_LAB" && evidence === "FORMAL") return "实验室结果显示存在缺氮风险，已生成施氮建议。";
+  if (trigger === "SENSING_RISK") return "感知系统提示可能存在养分风险，建议先采样复核。";
+  if (evidence === "WARNING") return "当前仅为感知预警，不作为正式施肥结论。";
+  if (acceptance === "MISSING") return "施氮处方已批准，等待执行。";
+  if (acceptance === "FAIL" || acceptance === "NEEDS_REVIEW") return "施氮作业部分分区偏差过大，需复核。";
+  return "施氮链路已记录，等待正式复核。";
 }
