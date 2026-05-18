@@ -66,7 +66,15 @@ async function main() {
     const aoReceipt = requireOk(await fetchJson(`${base}/api/v1/sense/receipt`, {
       method: 'POST',
       token,
-      body: { task_id: aoTask.task_id, receipt_ts: Date.now(), operator_id: 'acceptance_operator' },
+      body: {
+        task_id: aoTask.task_id,
+        executed_at_ts: Date.now(),
+        result: 'success',
+        evidence_refs: [
+          { kind: 'raw_sample_v1', ref_id: rid('raw_sample') },
+          { kind: 'marker_v1', ref_id: rid('marker') },
+        ],
+      },
     }), 'create ao sense receipt');
     checks.ao_sense_receipt_created = true;
 
