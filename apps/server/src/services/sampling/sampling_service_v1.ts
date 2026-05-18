@@ -141,6 +141,18 @@ export class SamplingServiceV1 {
     return result.rows?.[0]?.record_json ?? null;
   }
 
+  async hasFactByIdAndType(fact_id: string, type: string): Promise<boolean> {
+    const result = await this.pool.query(
+      `SELECT 1
+       FROM facts
+       WHERE fact_id = $1
+         AND (record_json::jsonb->>'type') = $2
+       LIMIT 1`,
+      [fact_id, type],
+    );
+    return (result.rowCount ?? 0) > 0;
+  }
+
   async createLabResult(input: {
     sample_id: string;
     imported_at_ts: number;
