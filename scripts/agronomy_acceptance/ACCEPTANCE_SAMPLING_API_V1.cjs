@@ -1,75 +1,124 @@
-const fs = require('node:fs');
-const path = require('node:path');
 const assert = require('node:assert/strict');
 
-const root = path.resolve(__dirname, '..', '..');
-const routeFile = path.join(root, 'apps/server/src/routes/v1/sampling.ts');
-const serviceFile = path.join(root, 'apps/server/src/services/sampling/sampling_service_v1.ts');
+const baseUrl = process.env.SAMPLING_API_BASE_URL || process.env.API_BASE_URL || 'http://127.0.0.1:3000';
 
-const routeText = fs.readFileSync(routeFile, 'utf8');
-const serviceText = fs.readFileSync(serviceFile, 'utf8');
-
-const requiredRoutes = [
-  '/api/v1/sampling/plan',
-  '/api/v1/sampling/receipt',
-  '/api/v1/sampling/lab-result',
-  '/api/v1/sampling/plan/:plan_id',
-  '/api/v1/sampling/sample/:sample_id',
-];
-
-for (const route of requiredRoutes) {
-  assert.equal(routeText.includes(route), true, `missing route: ${route}`);
+async function postJson(path, body) {
+  const res = await fetch(`${baseUrl}${path}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  let json = null;
+  try { json = await res.json(); } catch {}
+  return { status: res.status, json };
 }
 
-for (const factType of ['sampling_plan_v1', 'sample_receipt_v1', 'lab_result_import_v1']) {
-  assert.equal(serviceText.includes(factType), true, `missing fact writer for ${factType}`);
+async function main() {
+  const checks = {
+    plan_created: false,
+    receipt_requires_existing_plan: false,
+    receipt_requires_evidence_refs: false,
+    lab_result_requires_existing_sample: false,
+    lab_result_requires_evidence_refs: false,
+    invalid_quality_status_blocked: false,
+  };
+
+  const now = Date.now();
+  const ids = {
+    tenant_id: `t-${now}`,
+    project_id: `p-${now}`,
+    group_id: `g-${now}`,
+    field_id: `f-${now}`,
+    sample_id: `s-${now}`,
+  };
+
+  const planRes = await postJson('/api/v1/sampling/plan', {
+    ...ids,
+    reason: 'BASELINE',
+    sample_type: 'SOIL',
+    required_points: 3,
+    evidence_refs: [],
+  });
+  assert.equal(planRes.status, 200, 'plan create should succeed');
+  assert.equal(planRes.json?.ok, true, 'plan create ok=true');
+  assert.ok(planRes.json?.plan_id, 'plan_id required');
+  checks.plan_created = true;
+
+  const badPlanReceipt = await postJson('/api/v1/sampling/receipt', {
+    plan_id: 'missing-plan-id',
+    sample_id: `${ids.sample_id}-x`,
+    ...ids,
+    collected_at_ts: now,
+    collector_actor_id: 'collector-1',
+    sample_type: 'SOIL',
+    evidence_refs: [{ kind: 'raw_sample_v1', ref_id: 'raw-1' }],
+    chain_of_custody_status: 'RECORDED',
+  });
+  assert.ok(badPlanReceipt.status >= 400 && badPlanReceipt.status < 500, 'receipt requires existing plan');
+  checks.receipt_requires_existing_plan = true;
+
+  const receiptNoEvidence = await postJson('/api/v1/sampling/receipt', {
+    plan_id: planRes.json.plan_id,
+    sample_id: `${ids.sample_id}-no-evi`,
+    ...ids,
+    collected_at_ts: now,
+    collector_actor_id: 'collector-1',
+    sample_type: 'SOIL',
+    evidence_refs: [],
+    chain_of_custody_status: 'RECORDED',
+  });
+  assert.ok(receiptNoEvidence.status >= 400 && receiptNoEvidence.status < 500, 'receipt requires evidence_refs');
+  checks.receipt_requires_evidence_refs = true;
+
+  const goodReceipt = await postJson('/api/v1/sampling/receipt', {
+    plan_id: planRes.json.plan_id,
+    sample_id: ids.sample_id,
+    ...ids,
+    collected_at_ts: now,
+    collector_actor_id: 'collector-1',
+    sample_type: 'SOIL',
+    evidence_refs: [{ kind: 'raw_sample_v1', ref_id: 'raw-1' }],
+    chain_of_custody_status: 'RECORDED',
+  });
+  assert.equal(goodReceipt.status, 200, 'good receipt should succeed');
+
+  const labMissingSample = await postJson('/api/v1/sampling/lab-result', {
+    sample_id: 'missing-sample',
+    imported_at_ts: now,
+    metrics: { ph: 6.5 },
+    units: { ph: 'pH' },
+    evidence_refs: [{ kind: 'import_run_v1', ref_id: 'import-1' }],
+    quality_status: 'PASS',
+  });
+  assert.ok(labMissingSample.status >= 400 && labMissingSample.status < 500, 'lab result requires existing sample');
+  checks.lab_result_requires_existing_sample = true;
+
+  const labNoEvidence = await postJson('/api/v1/sampling/lab-result', {
+    sample_id: ids.sample_id,
+    imported_at_ts: now,
+    metrics: { ph: 6.7 },
+    units: { ph: 'pH' },
+    evidence_refs: [],
+    quality_status: 'PASS',
+  });
+  assert.ok(labNoEvidence.status >= 400 && labNoEvidence.status < 500, 'lab result requires evidence_refs');
+  checks.lab_result_requires_evidence_refs = true;
+
+  const labInvalidQuality = await postJson('/api/v1/sampling/lab-result', {
+    sample_id: ids.sample_id,
+    imported_at_ts: now,
+    metrics: { ph: 6.9 },
+    units: { ph: 'pH' },
+    evidence_refs: [{ kind: 'import_run_v1', ref_id: 'import-2' }],
+    quality_status: 'BAD',
+  });
+  assert.ok(labInvalidQuality.status >= 400 && labInvalidQuality.status < 500, 'invalid quality status blocked');
+  checks.invalid_quality_status_blocked = true;
+
+  console.log(JSON.stringify({ ok: true, suite: 'ACCEPTANCE_SAMPLING_API_V1', checks }, null, 2));
 }
 
-function extractMethodBody(text, methodName) {
-  const start = text.indexOf(`async ${methodName}(`);
-  assert.notEqual(start, -1, `missing method: ${methodName}`);
-
-  const openBrace = text.indexOf('{', start);
-  assert.notEqual(openBrace, -1, `missing method body open brace: ${methodName}`);
-
-  let depth = 0;
-  for (let i = openBrace; i < text.length; i += 1) {
-    const ch = text[i];
-    if (ch === '{') depth += 1;
-    if (ch === '}') depth -= 1;
-    if (depth === 0) {
-      return text.slice(openBrace, i + 1);
-    }
-  }
-
-  throw new Error(`unterminated method body: ${methodName}`);
-}
-
-function expectIncludesAll(text, required, prefix) {
-  for (const field of required) {
-    assert.equal(text.includes(field), true, `${prefix} missing field: ${field}`);
-  }
-}
-
-const createPlanBody = extractMethodBody(serviceText, 'createPlan');
-expectIncludesAll(
-  createPlanBody,
-  ['tenant_id', 'project_id', 'group_id', 'field_id', 'reason', 'sample_type', 'required_points', 'evidence_refs'],
-  'createPlan',
-);
-
-const createReceiptBody = extractMethodBody(serviceText, 'createReceipt');
-expectIncludesAll(
-  createReceiptBody,
-  ['sample_id', 'chain_of_custody_status', 'collector_actor_id', 'sample_type', 'evidence_refs'],
-  'createReceipt',
-);
-
-const createLabResultBody = extractMethodBody(serviceText, 'createLabResult');
-expectIncludesAll(
-  createLabResultBody,
-  ['import_id', 'units', 'evidence_refs', 'quality_status'],
-  'createLabResult',
-);
-
-console.log('PASS acceptance sampling api v1', { routeFile, serviceFile, routes: requiredRoutes.length });
+main().catch((err) => {
+  console.error(JSON.stringify({ ok: false, suite: 'ACCEPTANCE_SAMPLING_API_V1', error: String(err && err.message ? err.message : err) }, null, 2));
+  process.exit(1);
+});
