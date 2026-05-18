@@ -13,6 +13,7 @@ export const FORMAL_SCENARIO_TYPES_V1: readonly FormalScenarioTypeV1[] = [
   "FORMAL_IRRIGATION",
   "DEVICE_ANOMALY",
   "FORMAL_VARIABLE_OPERATION",
+  "FORMAL_FERTILIZATION",
 ] as const;
 
 export const FORMAL_SCENARIO_LANES_V1: readonly FormalScenarioLaneV1[] = [
@@ -29,6 +30,9 @@ const DEFINITIONS: readonly FormalScenarioLaneDefinitionV1[] = [
   { scenario_type: "FORMAL_VARIABLE_OPERATION", lane: "positive", label: "Formal variable operation positive lane", release_gate: true, flight_table_visible: true, kernel_ready: false },
   { scenario_type: "FORMAL_VARIABLE_OPERATION", lane: "partial", label: "Formal variable operation partial rollup lane", release_gate: true, flight_table_visible: true, kernel_ready: false },
   { scenario_type: "FORMAL_VARIABLE_OPERATION", lane: "negative", label: "Formal variable operation negative zone lanes", release_gate: true, flight_table_visible: true, kernel_ready: false },
+  { scenario_type: "FORMAL_FERTILIZATION", lane: "positive", label: "Formal fertilization positive lane", release_gate: true, flight_table_visible: true, kernel_ready: false },
+  { scenario_type: "FORMAL_FERTILIZATION", lane: "negative", label: "Formal fertilization negative agronomy lanes", release_gate: true, flight_table_visible: true, kernel_ready: false },
+  { scenario_type: "FORMAL_FERTILIZATION", lane: "partial", label: "Formal fertilization zone deviation lane", release_gate: true, flight_table_visible: true, kernel_ready: false },
 ] as const;
 
 export function isFormalScenarioTypeV1(input: unknown): input is FormalScenarioTypeV1 {
