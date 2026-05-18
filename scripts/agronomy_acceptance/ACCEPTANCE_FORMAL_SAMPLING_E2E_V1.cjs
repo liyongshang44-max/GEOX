@@ -18,6 +18,7 @@ async function main() {
   assertNode.equal(process.env.SAMPLING_MODE !== 'offline', true, 'offline fallback is forbidden in formal sampling E2E');
   const base = env('BASE_URL', process.env.GEOX_BASE_URL || 'http://127.0.0.1:3001');
   const token = env('ADMIN_TOKEN', env('AO_ACT_TOKEN', 'admin_token'));
+  const reportOperationId = process.env.SAMPLING_REPORT_OPERATION_ID || null;
   const scope = { tenant_id: env('TENANT_ID', 'tenantA'), project_id: env('PROJECT_ID', 'projectA'), group_id: env('GROUP_ID', 'groupA') };
   const pool = new Pool({ connectionString: env('DATABASE_URL', 'postgres://postgres:postgres@127.0.0.1:5432/geox') });
 
@@ -63,7 +64,7 @@ async function main() {
     }), 'create ao sense receipt');
     checks.ao_sense_receipt_created = true;
 
-    const plan = requireOk(await fetchJson(`${base}/api/v1/sampling/plan`, { method: 'POST', token, body: { tenant_id: scope.tenant_id, project_id: scope.project_id, group_id: scope.group_id, field_id: `field_${run}`, reason: 'MANUAL_REQUEST', sample_type: 'SOIL', required_depth_cm: 20, required_points: 3, evidence_refs: [{ kind: 'fact_id', ref_id: aoTask.fact_id }] } }), 'create sampling plan');
+    const plan = requireOk(await fetchJson(`${base}/api/v1/sampling/plan`, { method: 'POST', token, body: { tenant_id: scope.tenant_id, project_id: scope.project_id, group_id: scope.group_id, field_id: `field_${run}`, reason: 'MANUAL_REQUEST', sample_type: 'SOIL', required_depth_cm: 20, required_points: 3, evidence_refs: [{ kind: 'fact_id', ref_id: aoTask.fact_id }], operation_id: reportOperationId } }), 'create sampling plan');
     checks.sampling_plan_created = true;
 
     const aoSenseReceiptFactId = aoReceipt.fact_id;
