@@ -31,7 +31,7 @@ export function buildVariableActionTaskPayloadV1(input: {
   operation_plan_id: string;
   approval_request_id: string;
   field_id: string;
-  season_id?: string | null;
+  season_id?: string;
   device_id: string;
   issuer: { kind: "human"; id: string; namespace: string };
   action_type: "IRRIGATE";
@@ -89,6 +89,7 @@ export function buildVariableActionTaskPayloadV1(input: {
   const durationSec = 1200;
   const durationMin = 20;
   const coveragePercent = 95;
+  const season_id = asText(prescription.season_id);
 
   const sanitizedZoneRates = zoneRatesRaw.map((zoneRate) => ({
     zone_id: asText(zoneRate?.zone_id),
@@ -100,24 +101,23 @@ export function buildVariableActionTaskPayloadV1(input: {
     source_refs: Array.isArray(zoneRate?.source_refs) ? zoneRate.source_refs.map((x: unknown) => String(x)).filter(Boolean) : [],
   }));
 
-  return {
+  const payload = {
     tenant_id: asText(input.tenant_id),
     project_id: asText(input.project_id),
     group_id: asText(input.group_id),
     operation_plan_id: asText(input.operation_plan_id),
     approval_request_id: asText(input.approval_request_id),
     field_id,
-    season_id: prescription.season_id == null ? null : asText(prescription.season_id),
     device_id: asText(input.device_id),
     issuer: {
-      kind: "human",
+      kind: "human" as const,
       id: asText(input.actor_id),
       namespace: "variable_action_task_v1",
     },
     // AO-ACT v0 keeps a narrow action_type allowlist. The formal operation remains
     // available as meta.operation_type so fertilization can reuse the existing
     // variable operation chain without creating a duplicate execution path.
-    action_type: "IRRIGATE",
+    action_type: "IRRIGATE" as const,
     target: { kind: "field", ref: field_id },
     time_window: {
       start_ts: now,
@@ -125,10 +125,10 @@ export function buildVariableActionTaskPayloadV1(input: {
     },
     parameter_schema: {
       keys: [
-        { name: "duration_sec", type: "number", min: 1, max: 7200 },
-        { name: "duration_min", type: "number", min: 1, max: 720 },
-        { name: "amount", type: "number", min: 1, max: 100000 },
-        { name: "coverage_percent", type: "number", min: 0, max: 100 },
+        { name: "duration_sec", type: "number" as const, min: 1, max: 7200 },
+        { name: "duration_min", type: "number" as const, min: 1, max: 720 },
+        { name: "amount", type: "number" as const, min: 1, max: 100000 },
+        { name: "coverage_percent", type: "number" as const, min: 0, max: 100 },
       ],
     },
     parameters: {
@@ -181,4 +181,6 @@ export function buildVariableActionTaskPayloadV1(input: {
       zone_count: sanitizedZoneRates.length,
     },
   };
+
+  return season_id ? { ...payload, season_id } : payload;
 }

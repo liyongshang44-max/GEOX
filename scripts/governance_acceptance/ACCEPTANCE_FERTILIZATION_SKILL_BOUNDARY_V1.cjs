@@ -3,6 +3,7 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 
 const root = process.cwd();
+const selfRel = normalizeRelPath(path.relative(root, __filename));
 
 function full(rel) {
   return path.join(root, rel);
@@ -145,7 +146,7 @@ assertIncludes(fertilityCore, 'inferFertilityFromDeviceObservationV1', 'fertilit
 // 3. SkillRun SUCCESS must not be translated into LOW_N_RISK by service or scripts.
 const serviceAndScriptFiles = [
   ...collectFiles('apps/server/src/services', ['.ts']),
-  ...collectFiles('scripts', ['.cjs', '.mjs', '.js', '.ts']),
+  ...collectFiles('scripts', ['.cjs', '.mjs', '.js', '.ts']).filter((rel) => rel !== selfRel),
 ];
 const skillRunToLowNRiskPatterns = [
   /SkillRun\s+SUCCESS\s*(?:=>|->|=|===|:)\s*["']?LOW_N_RISK/i,
