@@ -62,7 +62,7 @@ async function main() {
     }), 'create ao sense receipt');
     checks.ao_sense_receipt_created = true;
 
-    const plan = requireOk(await fetchJson(`${base}/api/v1/sampling/plan`, { method: 'POST', token, body: { tenant_id: scope.tenant_id, project_id: scope.project_id, group_id: scope.group_id, field_id: `field_${run}`, reason: 'COMPLIANCE', sample_type: 'SOIL', required_depth_cm: 20, required_points: 3, evidence_refs: [{ kind: 'fact_id', ref_id: aoTask.fact_id }] } }), 'create sampling plan');
+    const plan = requireOk(await fetchJson(`${base}/api/v1/sampling/plan`, { method: 'POST', token, body: { tenant_id: scope.tenant_id, project_id: scope.project_id, group_id: scope.group_id, field_id: `field_${run}`, reason: 'MANUAL_REQUEST', sample_type: 'SOIL', required_depth_cm: 20, required_points: 3, evidence_refs: [{ kind: 'fact_id', ref_id: aoTask.fact_id }] } }), 'create sampling plan');
     checks.sampling_plan_created = true;
 
     const aoSenseReceiptFactId = aoReceipt.fact_id;
