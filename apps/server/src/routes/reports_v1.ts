@@ -15,6 +15,7 @@ import { computeOperationCostV1 } from "../domain/cost_model.js";
 import { toCustomerFacingActionLabel } from "../domain/controlplane/irrigation_action_mapping_v1.js";
 import { listAlertOperationRelationV1ByOperation, listOperationWorkflowV1 } from "./alert_workflow_v1.js";
 import { buildSamplingReportViewV1 } from "../services/sampling/sampling_projection_v1.js";
+import { buildFertilizationReportProjectionV1 } from "../services/fertilization/fertilization_projection_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; record_json: any };
@@ -55,16 +56,29 @@ async function queryFactsForOperation(pool: Pool, tenant: TenantTriple, operatio
   const q = await pool.query(
     `SELECT fact_id, occurred_at, record_json::jsonb AS record_json
        FROM facts
-      WHERE (record_json::jsonb#>>'{payload,tenant_id}') = $1
-        AND (record_json::jsonb#>>'{payload,project_id}') = $2
-        AND (record_json::jsonb#>>'{payload,group_id}') = $3
+      WHERE (
+          (record_json::jsonb#>>'{payload,tenant_id}') = $1
+          OR (record_json::jsonb->>'tenant_id') = $1
+        )
+        AND (
+          (record_json::jsonb#>>'{payload,project_id}') = $2
+          OR (record_json::jsonb->>'project_id') = $2
+        )
+        AND (
+          (record_json::jsonb#>>'{payload,group_id}') = $3
+          OR (record_json::jsonb->>'group_id') = $3
+        )
         AND (
           (record_json::jsonb#>>'{payload,operation_plan_id}') = $4
           OR (record_json::jsonb#>>'{payload,operation_id}') = $4
+          OR (record_json::jsonb->>'operation_plan_id') = $4
+          OR (record_json::jsonb->>'operation_id') = $4
+          OR (record_json::jsonb->>'act_task_id') = $4
+          OR (record_json::jsonb->>'receipt_id') = $4
         )
       ORDER BY occurred_at ASC, fact_id ASC`,
     [tenant.tenant_id, tenant.project_id, tenant.group_id, operationPlanId]
-  );
+  ).catch(() => ({ rows: [] as any[] }));
   return (q.rows ?? []).map((row: any) => ({
     fact_id: String(row.fact_id ?? ""),
     occurred_at: String(row.occurred_at ?? ""),
@@ -89,7 +103,7 @@ async function queryFactsByTypeAndPayloadKey(
         AND (record_json::jsonb#>>'{payload,${keyPath}}') = $5
       ORDER BY occurred_at ASC, fact_id ASC`,
     [type, tenant.tenant_id, tenant.project_id, tenant.group_id, keyValue],
-  );
+  ).catch(() => ({ rows: [] as any[] }));
   return (q.rows ?? []).map((row: any) => ({
     fact_id: String(row.fact_id ?? ""),
     occurred_at: String(row.occurred_at ?? ""),
@@ -123,18 +137,8 @@ function deriveOperationTitle(actionType: unknown): string | null {
 function ensureReportV1ExtendedFields(report: OperationReportV1): OperationReportV1 {
   return {
     ...report,
-    approval: report.approval ?? {
-      status: null,
-      actor_id: null,
-      actor_name: null,
-      generated_at: null,
-      approved_at: null,
-      note: null,
-    },
-    why: report.why ?? {
-      explain_human: null,
-      objective_text: null,
-    },
+    approval: report.approval ?? { status: null, actor_id: null, actor_name: null, generated_at: null, approved_at: null, note: null },
+    why: report.why ?? { explain_human: null, objective_text: null },
     operation_title: report.operation_title ?? null,
     customer_title: report.customer_title ?? report.operation_title ?? null,
     as_executed: (report as any).as_executed ?? {
@@ -157,17 +161,10 @@ function ensureReportV1ExtendedFields(report: OperationReportV1): OperationRepor
       planned_vs_actual_deviation: null,
       evidence_ref: null,
     },
-    field_memory: (report as any).field_memory ?? {
-      field_response_memory: [],
-      device_reliability_memory: [],
-      skill_performance_memory: [],
-    },
+    field_memory: (report as any).field_memory ?? { field_response_memory: [], device_reliability_memory: [], skill_performance_memory: [] },
     roi_ledger: (report as any).roi_ledger ?? {
-      water_saved: [],
-      labor_saved: [],
-      early_warning_lead_time: [],
-      first_pass_acceptance_rate: [],
-      low_confidence_items: [],
+      summary: { total_items: 0, measured_items: 0, estimated_items: 0, assumption_based_items: 0, insufficient_items: 0, low_confidence_items: 0, has_customer_visible_value: false },
+      items: [], water_saved: [], labor_saved: [], early_warning_lead_time: [], first_pass_acceptance_rate: [], low_confidence_items: [],
     },
   };
 }
@@ -189,8 +186,7 @@ function buildFieldResponseSummaryText(row: any): string {
 function normalizeFieldMemoryRow(row: any): any {
   const before = toFiniteNumberOrNull(row?.before_value);
   const after = toFiniteNumberOrNull(row?.after_value);
-  const delta = toFiniteNumberOrNull(row?.delta_value)
-    ?? (before != null && after != null ? Number((after - before).toFixed(2)) : null);
+  const delta = toFiniteNumberOrNull(row?.delta_value) ?? (before != null && after != null ? Number((after - before).toFixed(2)) : null);
   return {
     ...row,
     before_value: before,
@@ -214,10 +210,7 @@ function toIsoFromEpochMs(v: unknown): string | null {
   return new Date(n).toISOString();
 }
 
-type FieldReportDetailResponseV1 = {
-  ok: true;
-  field_report_v1: FieldReportDetailV1;
-};
+type FieldReportDetailResponseV1 = { ok: true; field_report_v1: FieldReportDetailV1 };
 const FIELD_REPORT_OPERATION_LIMIT = 20;
 
 async function queryRoiLedgerForReport(pool: Pool, tenant: TenantTriple, s: OperationStateV1): Promise<any[]> {
@@ -227,36 +220,43 @@ async function queryRoiLedgerForReport(pool: Pool, tenant: TenantTriple, s: Oper
         AND (operation_id=$4 OR task_id=$5 OR prescription_id=$6)
       ORDER BY created_at DESC`,
     [tenant.tenant_id, tenant.project_id, tenant.group_id, s.operation_id, s.task_id ?? s.act_task_id ?? null, (s as any).prescription_id ?? null]
-  );
+  ).catch(() => ({ rows: [] as any[] }));
   return q.rows ?? [];
 }
 
+function mergeFertilizationIntoReport(report: OperationReportV1, fertilization: any | null): OperationReportV1 {
+  if (!fertilization) return report;
+  const scenario = (report as any).formal_scenario ?? {};
+  const blockingReasons = Array.from(new Set([
+    ...(Array.isArray(scenario.blocking_reasons) ? scenario.blocking_reasons : []),
+    ...(Array.isArray(fertilization.blocking_reasons) ? fertilization.blocking_reasons : []),
+  ].map((x) => String(x ?? "").trim()).filter(Boolean)));
+  return {
+    ...report,
+    fertilization,
+    formal_scenario: {
+      scenario_type: "FORMAL_FERTILIZATION",
+      formal_chain_status: fertilization.customer_visible_eligible ? "PASSED" : (fertilization.acceptance_status === "MISSING" ? "LIMITED" : "NEEDS_REVIEW"),
+      evidence_status: fertilization.evidence_tier === "FORMAL" ? "FORMAL_PASSED" : (fertilization.evidence_tier === "WARNING" ? "TECHNICAL_ONLY" : "MISSING"),
+      customer_visible_eligible: Boolean(fertilization.customer_visible_eligible),
+      needs_review: !fertilization.customer_visible_eligible,
+      blocking_reasons: blockingReasons,
+    },
+  } as any;
+}
 
 export async function projectReportV1(params: {
   pool: Pool;
   tenant: TenantTriple;
   operationState: OperationStateV1;
-  operationWorkflow?: {
-    owner_actor_id: string | null;
-    owner_name: string | null;
-    last_note: string | null;
-    updated_at: number;
-    updated_by: string;
-    linked_alert_ids?: string[];
-  } | null;
+  operationWorkflow?: { owner_actor_id: string | null; owner_name: string | null; last_note: string | null; updated_at: number; updated_by: string; linked_alert_ids?: string[] } | null;
 }): Promise<OperationReportV1> {
   const { pool, tenant, operationState, operationWorkflow } = params;
   const operationPlanId = operationState.operation_plan_id || operationState.operation_id;
   const facts = await queryFactsForOperation(pool, tenant, operationPlanId);
-  const recommendationFacts = operationState.recommendation_id
-    ? await queryFactsByTypeAndPayloadKey(pool, tenant, "decision_recommendation_v1", "recommendation_id", operationState.recommendation_id)
-    : [];
-  const approvalRequestFacts = operationState.approval_request_id
-    ? await queryFactsByTypeAndPayloadKey(pool, tenant, "approval_request_v1", "request_id", operationState.approval_request_id)
-    : [];
-  const approvalDecisionFacts = operationState.approval_request_id
-    ? await queryFactsByTypeAndPayloadKey(pool, tenant, "approval_decision_v1", "request_id", operationState.approval_request_id)
-    : [];
+  const recommendationFacts = operationState.recommendation_id ? await queryFactsByTypeAndPayloadKey(pool, tenant, "decision_recommendation_v1", "recommendation_id", operationState.recommendation_id) : [];
+  const approvalRequestFacts = operationState.approval_request_id ? await queryFactsByTypeAndPayloadKey(pool, tenant, "approval_request_v1", "request_id", operationState.approval_request_id) : [];
+  const approvalDecisionFacts = operationState.approval_request_id ? await queryFactsByTypeAndPayloadKey(pool, tenant, "approval_decision_v1", "request_id", operationState.approval_request_id) : [];
   const allFacts = [...facts, ...recommendationFacts, ...approvalRequestFacts, ...approvalDecisionFacts];
 
   const acceptanceFact = latestByType(allFacts, "acceptance_result_v1");
@@ -266,25 +266,14 @@ export async function projectReportV1(params: {
   const approvalDecisionFact = latestByType(allFacts, "approval_decision_v1");
   const evidenceSummaryFact = latestEvidenceSummaryFact(allFacts);
   const artifactFacts = allFacts.filter((x) => String(x.record_json?.type ?? "") === "evidence_artifact_v1");
-  const normalizedReceipt = receiptFact
-    ? normalizeReceiptEvidence(receiptFact, String(receiptFact.record_json?.type ?? ""))
-    : null;
-
+  const normalizedReceipt = receiptFact ? normalizeReceiptEvidence(receiptFact, String(receiptFact.record_json?.type ?? "")) : null;
   const receiptPayload = receiptFact?.record_json?.payload ?? {};
   const logs = Array.isArray(receiptPayload?.logs_refs) ? receiptPayload.logs_refs : [];
   const metrics = Array.isArray(receiptPayload?.metrics) ? receiptPayload.metrics : [];
   const photos = Array.isArray(receiptPayload?.photo_refs) ? receiptPayload.photo_refs : [];
   const media = photos.map((ref: unknown) => ({ kind: "photo", ref }));
-  const artifacts = artifactFacts.map((fact) => ({
-    kind: toText(fact.record_json?.payload?.kind) ?? "artifact",
-    ref: toText(fact.record_json?.payload?.artifact_id ?? fact.fact_id),
-  }));
-  const evidenceBundle = {
-    artifacts,
-    logs,
-    media,
-    metrics,
-  };
+  const artifacts = artifactFacts.map((fact) => ({ kind: toText(fact.record_json?.payload?.kind) ?? "artifact", ref: toText(fact.record_json?.payload?.artifact_id ?? fact.fact_id) }));
+  const evidenceBundle = { artifacts, logs, media, metrics };
   const relationQ = await pool.query(
     `SELECT evidence_export_job_id, status, manifest, sha256, download_url, failed_reason
        FROM operation_evidence_export_relation_v1
@@ -294,30 +283,18 @@ export async function projectReportV1(params: {
     [tenant.tenant_id, operationPlanId]
   ).catch(() => ({ rows: [] as any[] }));
   const relation = relationQ.rows?.[0] ?? null;
-
-  const estimatedCost = computeOperationCostV1(operationState.action_type, {
-    water_l: normalizedReceipt?.water_l,
-    chemical_ml: normalizedReceipt?.chemical_ml,
-  });
+  const estimatedCost = computeOperationCostV1(operationState.action_type, { water_l: normalizedReceipt?.water_l, chemical_ml: normalizedReceipt?.chemical_ml });
   const executionSuccess = ["SUCCESS", "SUCCEEDED"].includes(String(operationState.final_status ?? "").toUpperCase());
   const acceptancePass = String(acceptanceFact?.record_json?.payload?.verdict ?? "").toUpperCase().includes("PASS");
   const responseTimeMs = buildResponseTimeMs(operationState, normalizedReceipt?.execution_started_at ?? null);
   const recommendationPayload = recommendationFact?.record_json?.payload ?? {};
   const explainHuman = toText(recommendationPayload?.summary ?? recommendationPayload?.action_summary ?? recommendationPayload?.reason);
-  const objectiveText = toText(
-    recommendationPayload?.objective_text
-    ?? recommendationPayload?.expected_effect?.[0]?.description
-    ?? recommendationPayload?.expected_effect?.[0]?.metric
-  );
+  const objectiveText = toText(recommendationPayload?.objective_text ?? recommendationPayload?.expected_effect?.[0]?.description ?? recommendationPayload?.expected_effect?.[0]?.metric);
   const approvalStatus = normalizeApprovalStatus(approvalDecisionFact?.record_json?.payload?.decision, Boolean(approvalRequestFact));
   const operationTitle = deriveOperationTitle(operationState.action_type ?? recommendationPayload?.suggested_action?.action_type);
   const operationStateAny: any = operationState as any;
   const fallbackSamplingPlanId = toText(operationStateAny?.sampling_plan_id ?? operationStateAny?.sampling?.plan_id);
-  const samplingOperationIds = Array.from(new Set([
-    toText(operationState.operation_id),
-    toText(operationState.operation_plan_id),
-    toText(operationPlanId),
-  ].filter(Boolean) as string[]));
+  const samplingOperationIds = Array.from(new Set([toText(operationState.operation_id), toText(operationState.operation_plan_id), toText(operationPlanId)].filter(Boolean) as string[]));
   const samplingView = await buildSamplingReportViewV1(pool, {
     tenant_id: tenant.tenant_id,
     project_id: tenant.project_id,
@@ -327,16 +304,22 @@ export async function projectReportV1(params: {
     operation_ids: samplingOperationIds,
     plan_id: fallbackSamplingPlanId,
   });
+  const fertilizationView = await buildFertilizationReportProjectionV1(pool, {
+    tenant,
+    operation_plan_id: operationPlanId,
+    operation_id: operationState.operation_id,
+    act_task_id: operationState.act_task_id ?? operationState.task_id ?? null,
+    receipt_id: operationState.receipt_id ?? null,
+    prescription_id: (operationState as any).prescription_id ?? null,
+    recommendation_id: operationState.recommendation_id ?? null,
+  });
   const acceptanceForReport = acceptanceFact ? {
     verdict: acceptanceFact.record_json?.payload?.verdict,
     missing_evidence: acceptanceFact.record_json?.payload?.missing_evidence,
     generated_at: acceptanceFact.record_json?.payload?.generated_at ?? acceptanceFact.occurred_at,
     status: operationState.acceptance?.status,
   } : null;
-  const receiptForReport = normalizedReceipt ? {
-    execution_started_at: normalizedReceipt.execution_started_at,
-    execution_finished_at: normalizedReceipt.execution_finished_at,
-  } : null;
+  const receiptForReport = normalizedReceipt ? { execution_started_at: normalizedReceipt.execution_started_at, execution_finished_at: normalizedReceipt.execution_finished_at } : null;
 
   const operationReport = projectOperationReportV1({
     tenant,
@@ -351,19 +334,8 @@ export async function projectReportV1(params: {
       estimated_electric_cost: estimatedCost.estimated_electric_cost,
       estimated_chemical_cost: estimatedCost.estimated_chemical_cost,
     },
-    sla: {
-      execution_success: executionSuccess,
-      acceptance_pass: acceptancePass,
-      response_time_ms: responseTimeMs,
-    },
-    operation_workflow: operationWorkflow ? {
-      owner_actor_id: operationWorkflow.owner_actor_id,
-      owner_name: operationWorkflow.owner_name,
-      last_note: operationWorkflow.last_note,
-      updated_at: operationWorkflow.updated_at,
-      updated_by: operationWorkflow.updated_by,
-      linked_alert_ids: operationWorkflow.linked_alert_ids ?? [],
-    } : null,
+    sla: { execution_success: executionSuccess, acceptance_pass: acceptancePass, response_time_ms: responseTimeMs },
+    operation_workflow: operationWorkflow ? { ...operationWorkflow, linked_alert_ids: operationWorkflow.linked_alert_ids ?? [] } : null,
     approval: {
       status: approvalStatus,
       actor_id: toText(approvalDecisionFact?.record_json?.payload?.actor_id ?? approvalDecisionFact?.record_json?.payload?.decider),
@@ -374,16 +346,13 @@ export async function projectReportV1(params: {
     },
     roi_ledger: await queryRoiLedgerForReport(pool, tenant, operationState),
     sampling_view: samplingView,
-    why: {
-      explain_human: explainHuman,
-      objective_text: objectiveText,
-    },
+    why: { explain_human: explainHuman, objective_text: objectiveText },
     operation_title: operationTitle,
     customer_title: operationTitle,
   });
-
+  const reportWithFertilization = mergeFertilizationIntoReport(operationReport, fertilizationView);
   return {
-    ...operationReport,
+    ...reportWithFertilization,
     evidence_pack_summary: buildOperationEvidencePackSummaryV1({
       receipt: receiptFact ?? receiptForReport,
       evidence_bundle: evidenceBundle,
@@ -402,86 +371,51 @@ export async function projectReportV1(params: {
       } : null,
       now: new Date(operationReport.generated_at),
     }),
-  } as OperationReportV1;
+  } as any;
 }
 
 export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void {
   app.get("/api/v1/reports/operation/:operation_id", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
-
     const tenant = tenantFromReq(req as any, auth);
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-
     const operationId = toText((req.params as any)?.operation_id);
     if (!operationId) return reply.status(400).send({ ok: false, error: "MISSING_OPERATION_ID" });
-
     const states = await projectOperationStateV1(pool, tenant);
     const state = states.find((x) => x.operation_id === operationId || x.operation_plan_id === operationId) ?? null;
     if (!state) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    const scopedFieldId = await enforceOperationFieldScope(
-      auth,
-      operationId,
-      reply,
-      async (opId) => {
-        const matched = states.find((x) => x.operation_id === opId || x.operation_plan_id === opId) ?? null;
-        return matched ? String(matched.field_id ?? "").trim() || null : null;
-      },
-      { asNotFound: true }
-    );
+    const scopedFieldId = await enforceOperationFieldScope(auth, operationId, reply, async (opId) => {
+      const matched = states.find((x) => x.operation_id === opId || x.operation_plan_id === opId) ?? null;
+      return matched ? String(matched.field_id ?? "").trim() || null : null;
+    }, { asNotFound: true });
     if (!scopedFieldId) return;
-
-    const workflowMap = await listOperationWorkflowV1(pool, {
-      tenant_id: tenant.tenant_id,
-      operation_ids: [state.operation_id, state.operation_plan_id].filter(Boolean),
-    });
-    const relationMapByOperation = await listAlertOperationRelationV1ByOperation(pool, {
-      tenant_id: tenant.tenant_id,
-      operation_ids: [state.operation_id, state.operation_plan_id].filter(Boolean),
-    });
+    const workflowMap = await listOperationWorkflowV1(pool, { tenant_id: tenant.tenant_id, operation_ids: [state.operation_id, state.operation_plan_id].filter(Boolean) });
+    const relationMapByOperation = await listAlertOperationRelationV1ByOperation(pool, { tenant_id: tenant.tenant_id, operation_ids: [state.operation_id, state.operation_plan_id].filter(Boolean) });
     const workflow = workflowMap.get(state.operation_id) ?? workflowMap.get(state.operation_plan_id) ?? null;
     const linkedAlerts = relationMapByOperation.get(state.operation_id) ?? relationMapByOperation.get(state.operation_plan_id) ?? [];
     const operation_report_v1 = await projectReportV1({
       pool,
       tenant,
       operationState: state,
-      operationWorkflow: workflow ? {
-        ...workflow,
+      operationWorkflow: workflow ? { ...workflow, linked_alert_ids: linkedAlerts.map((row) => row.alert_id).filter(Boolean) } : (linkedAlerts.length > 0 ? {
+        owner_actor_id: null,
+        owner_name: null,
+        last_note: null,
+        updated_at: 0,
+        updated_by: "",
         linked_alert_ids: linkedAlerts.map((row) => row.alert_id).filter(Boolean),
-      } : (linkedAlerts.length > 0
-        ? {
-          owner_actor_id: null,
-          owner_name: null,
-          last_note: null,
-          updated_at: 0,
-          updated_by: "",
-          linked_alert_ids: linkedAlerts.map((row) => row.alert_id).filter(Boolean),
-        }
-        : null),
+      } : null),
     });
-    const candidateIds = Array.from(new Set([
-      state.operation_id,
-      state.operation_plan_id,
-      state.recommendation_id,
-      state.act_task_id,
-      (state.acceptance as any)?.acceptance_id,
-    ].map((x) => String(x ?? "").trim()).filter(Boolean)));
+    const candidateIds = Array.from(new Set([state.operation_id, state.operation_plan_id, state.recommendation_id, state.act_task_id, (state.acceptance as any)?.acceptance_id].map((x) => String(x ?? "").trim()).filter(Boolean)));
     const fm = await pool.query(
       `SELECT memory_id,memory_type,metric_key,before_value,after_value,delta_value,target_range,confidence,summary_text,evidence_refs,skill_id,skill_trace_ref,occurred_at
        FROM field_memory_v1
-       WHERE tenant_id = $1
-         AND project_id = $2
-         AND group_id = $3
-         AND (
-          operation_id = ANY($4::text[])
-          OR task_id = ANY($4::text[])
-          OR recommendation_id = ANY($4::text[])
-          OR prescription_id = ANY($4::text[])
-          OR acceptance_id = ANY($4::text[])
-         )
+       WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3
+         AND (operation_id = ANY($4::text[]) OR task_id = ANY($4::text[]) OR recommendation_id = ANY($4::text[]) OR prescription_id = ANY($4::text[]) OR acceptance_id = ANY($4::text[]))
        ORDER BY occurred_at DESC LIMIT 50`,
       [tenant.tenant_id, tenant.project_id, tenant.group_id, candidateIds],
-    );
+    ).catch(() => ({ rows: [] as any[] }));
     const enrichedReport = ensureReportV1ExtendedFields(operation_report_v1);
     const normalizedMemoryRows = (fm.rows ?? []).map((x: any) => normalizeFieldMemoryRow(x));
     enrichedReport.field_memory = {
@@ -489,15 +423,13 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       device_reliability_memory: normalizedMemoryRows.filter((x:any)=>x.memory_type==="DEVICE_RELIABILITY_MEMORY"),
       skill_performance_memory: normalizedMemoryRows.filter((x:any)=>x.memory_type==="SKILL_PERFORMANCE_MEMORY"),
     };
-    const roiRows = Array.isArray(enrichedReport.roi_ledger?.water_saved)
-      ? [
-        ...(enrichedReport.roi_ledger.water_saved ?? []),
-        ...(enrichedReport.roi_ledger.labor_saved ?? []),
-        ...(enrichedReport.roi_ledger.early_warning_lead_time ?? []),
-        ...(enrichedReport.roi_ledger.first_pass_acceptance_rate ?? []),
-        ...(enrichedReport.roi_ledger.low_confidence_items ?? []),
-      ]
-      : [];
+    const roiRows = Array.isArray(enrichedReport.roi_ledger?.water_saved) ? [
+      ...(enrichedReport.roi_ledger.water_saved ?? []),
+      ...(enrichedReport.roi_ledger.labor_saved ?? []),
+      ...(enrichedReport.roi_ledger.early_warning_lead_time ?? []),
+      ...(enrichedReport.roi_ledger.first_pass_acceptance_rate ?? []),
+      ...(enrichedReport.roi_ledger.low_confidence_items ?? []),
+    ] : [];
     const skillTraceFromMemory = (fm.rows ?? []).map((x: any) => toText(x.skill_trace_ref)).find(Boolean) ?? null;
     const skillRunFromFacts = toText((state as any).skill_run_id);
     const asExecutedFromFacts = toText((state as any).as_executed_id);
@@ -509,23 +441,17 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       skill_run_id: enrichedReport.identifiers.skill_run_id ?? skillRunFromFacts,
       as_executed_id: enrichedReport.identifiers.as_executed_id ?? asExecutedFromFacts,
     } as any;
-    const payload: OperationReportSingleResponseV1 = {
-      ok: true,
-      operation_report_v1: enrichedReport,
-    };
+    const payload: OperationReportSingleResponseV1 = { ok: true, operation_report_v1: enrichedReport };
     return reply.send(payload);
   });
 
   app.get("/api/v1/reports/field/:field_id", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
-
     const tenant = tenantFromReq(req as any, auth);
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-
     const fieldId = toText((req.params as any)?.field_id);
     if (!fieldId) return reply.status(400).send({ ok: false, error: "MISSING_FIELD_ID" });
-
     const states = await projectOperationStateV1(pool, tenant);
     if (!enforceFieldScopeOrDeny(auth, fieldId, reply, { asNotFound: true })) return;
     const fieldStates = states
@@ -533,38 +459,16 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       .filter((x) => hasFieldAccess(auth, String(x.field_id ?? "")))
       .sort((a, b) => Number(b.last_event_ts ?? 0) - Number(a.last_event_ts ?? 0))
       .slice(0, FIELD_REPORT_OPERATION_LIMIT);
-
-    const items = await Promise.all(
-      fieldStates
-        .slice(0, FIELD_REPORT_OPERATION_LIMIT)
-        .map(async (state) => {
-          const projected = await projectReportV1({
-            pool,
-            tenant,
-            operationState: state,
-          });
-          return ensureReportV1ExtendedFields(projected);
-        }),
-    );
-    const fieldNameQ = await pool.query(
-      `SELECT name
-         FROM field_index_v1
-        WHERE tenant_id = $1
-          AND field_id = $2
-        LIMIT 1`,
-      [tenant.tenant_id, fieldId],
-    );
+    const items = await Promise.all(fieldStates.map(async (state) => ensureReportV1ExtendedFields(await projectReportV1({ pool, tenant, operationState: state }))));
+    const fieldNameQ = await pool.query(`SELECT name FROM field_index_v1 WHERE tenant_id = $1 AND field_id = $2 LIMIT 1`, [tenant.tenant_id, fieldId]).catch(() => ({ rows: [] as any[] }));
     const fieldName = toText(fieldNameQ.rows?.[0]?.name);
-
     const boundDevicesQ = await pool.query(
       `SELECT b.device_id, s.last_telemetry_ts_ms
          FROM device_binding_index_v1 b
-         LEFT JOIN device_status_index_v1 s
-           ON s.tenant_id = b.tenant_id AND s.device_id = b.device_id
-        WHERE b.tenant_id = $1
-          AND b.field_id = $2`,
+         LEFT JOIN device_status_index_v1 s ON s.tenant_id = b.tenant_id AND s.device_id = b.device_id
+        WHERE b.tenant_id = $1 AND b.field_id = $2`,
       [tenant.tenant_id, fieldId],
-    );
+    ).catch(() => ({ rows: [] as any[] }));
     const boundDeviceIds = (boundDevicesQ.rows ?? []).map((row: any) => String(row.device_id ?? "")).filter(Boolean);
     const onlineThresholdMs = Date.now() - 15 * 60 * 1000;
     let onlineDevices = 0;
@@ -576,33 +480,21 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
         if (lastTelemetryTsMs >= onlineThresholdMs) onlineDevices += 1;
       }
     }
-
     const alertQ = await pool.query(
       `SELECT COUNT(*)::bigint AS active_alerts
          FROM alert_event_index_v1
-        WHERE tenant_id = $1
-          AND status IN ('OPEN', 'ACKED')
-          AND (
-            (object_type = 'FIELD' AND object_id = $2)
-            OR (object_type = 'DEVICE' AND object_id = ANY($3::text[]))
-          )`,
+        WHERE tenant_id = $1 AND status IN ('OPEN', 'ACKED')
+          AND ((object_type = 'FIELD' AND object_id = $2) OR (object_type = 'DEVICE' AND object_id = ANY($3::text[])))`,
       [tenant.tenant_id, fieldId, boundDeviceIds.length > 0 ? boundDeviceIds : ["__none__"]],
-    );
+    ).catch(() => ({ rows: [] as any[] }));
     const openAlertsCount = Number(alertQ.rows?.[0]?.active_alerts ?? 0);
-
     const fieldReport = projectFieldReportDetailV1({
       field_id: fieldId,
       field_name: fieldName,
       reports: items,
       open_alerts_count: openAlertsCount,
-      device_summary: {
-        total_devices: boundDeviceIds.length,
-        online_devices: onlineDevices,
-        offline_devices: Math.max(0, boundDeviceIds.length - onlineDevices),
-        last_telemetry_at: toIsoFromEpochMs(lastTelemetryMs),
-      },
+      device_summary: { total_devices: boundDeviceIds.length, online_devices: onlineDevices, offline_devices: Math.max(0, boundDeviceIds.length - onlineDevices), last_telemetry_at: toIsoFromEpochMs(lastTelemetryMs) },
     });
-
     const payload: FieldReportDetailResponseV1 = { ok: true, field_report_v1: fieldReport };
     return reply.send(payload);
   });
