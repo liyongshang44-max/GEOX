@@ -40,7 +40,7 @@ async function main() {
 
   const planRes = await postJson('/api/v1/sampling/plan', {
     ...ids,
-    reason: 'BASELINE',
+    reason: 'MANUAL_REQUEST',
     sample_type: 'SOIL',
     required_points: 3,
     evidence_refs: [],
