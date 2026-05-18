@@ -4,6 +4,13 @@ const { assert, env, fetchJson, requireOk, waitForHealth } = require('./_common.
 const baseUrl = env('SAMPLING_API_BASE_URL', env('API_BASE_URL', 'http://127.0.0.1:3000'));
 const token = env('ADMIN_TOKEN', env('AO_ACT_TOKEN', 'admin_token'));
 
+function extractOperationReport(json) {
+  return json?.operation_report_v1
+    ?? json?.report_json
+    ?? json?.report?.report_json
+    ?? json;
+}
+
 async function main() {
   await waitForHealth(baseUrl);
 
@@ -67,7 +74,7 @@ async function main() {
 
   const reportPath = `${baseUrl}/api/v1/reports/operation/${encodeURIComponent(operationId)}?tenant_id=${encodeURIComponent(scope.tenant_id)}&project_id=${encodeURIComponent(scope.project_id)}&group_id=${encodeURIComponent(scope.group_id)}`;
   const operationReport = requireOk(await fetchJson(reportPath, { method: 'GET', token }), 'query operation report');
-  const reportJson = operationReport.report_json || operationReport.report?.report_json || operationReport;
+  const reportJson = extractOperationReport(operationReport);
   assert.equal(
     reportJson?.formal_scenario?.scenario_type,
     'FORMAL_SAMPLING',
@@ -150,11 +157,7 @@ async function main() {
     token,
   }), 'query operation report after unbound sampling plan');
 
-  const afterJson =
-    operationReportAfterUnbound.operation_report_v1
-    ?? operationReportAfterUnbound.report_json
-    ?? operationReportAfterUnbound.report?.report_json
-    ?? operationReportAfterUnbound;
+  const afterJson = extractOperationReport(operationReportAfterUnbound);
 
   assert.equal(
     afterJson?.sampling?.plan_id,
