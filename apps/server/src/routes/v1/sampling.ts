@@ -68,6 +68,7 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
     if (!isNonEmptyString(body.sample_type) || !SAMPLE_TYPES.has(body.sample_type)) return badRequest(reply, "MISSING_OR_INVALID:sample_type");
     if (!isValidEvidenceRefArray(body.evidence_refs, true)) return badRequest(reply, "MISSING_OR_INVALID:evidence_refs");
     if (!isNonEmptyString(body.chain_of_custody_status) || !CHAIN_STATUSES.has(body.chain_of_custody_status)) return badRequest(reply, "MISSING_OR_INVALID:chain_of_custody_status");
+    if (body.ao_sense_receipt_fact_id != null && !isNonEmptyString(body.ao_sense_receipt_fact_id)) return badRequest(reply, "MISSING_OR_INVALID:ao_sense_receipt_fact_id");
 
     const plan = await service.findPlanById(body.plan_id);
     if (!plan) return reply.status(404).send({ ok: false, error: "NOT_FOUND:plan_id" });
@@ -77,6 +78,13 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
     const allowOverride = body.sample_type_override === true;
     if (plan.sample_type !== body.sample_type && !(allowOverride && isNonEmptyString(body.override_reason))) {
       return badRequest(reply, "MISMATCH:sample_type");
+    }
+    if (isNonEmptyString(body.ao_sense_receipt_fact_id)) {
+      const hasMatchedFactRef = Array.isArray(body.evidence_refs)
+        && body.evidence_refs.some((e: any) => e?.kind === "fact_id" && e?.ref_id === body.ao_sense_receipt_fact_id);
+      if (!hasMatchedFactRef) return badRequest(reply, "MISMATCH:ao_sense_receipt_fact_id");
+      const aoSenseReceiptExists = await service.hasFactByIdAndType(body.ao_sense_receipt_fact_id, "ao_sense_receipt_v1");
+      if (!aoSenseReceiptExists) return badRequest(reply, "NOT_FOUND:ao_sense_receipt_fact_id");
     }
 
     const created = await service.createReceipt(body);

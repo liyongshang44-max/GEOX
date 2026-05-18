@@ -21,6 +21,7 @@ async function main() {
   const checks = {
     ao_sense_task_created: false,
     ao_sense_receipt_created: false,
+    sample_receipt_refs_ao_sense_receipt: false,
     sampling_plan_created: false,
     sample_receipt_created: false,
     lab_result_imported: false,
@@ -57,13 +58,32 @@ async function main() {
     }), 'create ao sense receipt');
     checks.ao_sense_receipt_created = true;
 
-    const plan = requireOk(await fetchJson(`${base}/api/v1/sampling/plan`, { method: 'POST', token, body: { subject_ref: { project_id: scope.project_id, field_id: `field_${run}` }, sampling_kind: 'FORMAL_SAMPLING', requested_by: 'acceptance_script', requested_at_ts: Date.now(), notes: `run=${run}` } }), 'create sampling plan');
+    const plan = requireOk(await fetchJson(`${base}/api/v1/sampling/plan`, { method: 'POST', token, body: { tenant_id: scope.tenant_id, project_id: scope.project_id, group_id: scope.group_id, field_id: `field_${run}`, reason: 'COMPLIANCE', sample_type: 'SOIL', required_depth_cm: 20, required_points: 3, evidence_refs: [{ kind: 'fact_id', ref_id: aoTask.fact_id }] } }), 'create sampling plan');
     checks.sampling_plan_created = true;
 
-    const receipt = requireOk(await fetchJson(`${base}/api/v1/sampling/receipt`, { method: 'POST', token, body: { plan_id: plan.plan_id, sample_ref: { sample_id }, collected_at_ts: Date.now(), collector_id: 'collector_formal_sampling', evidence_refs: [{ kind: 'ao_sense_task', ref_id: aoTask.task_id }, { kind: 'ao_sense_receipt', ref_id: aoReceipt.receipt_id }, { kind: 'photo', ref_id: rid('photo') }] } }), 'create sample receipt with evidence refs');
+    const aoSenseReceiptFactId = aoReceipt.fact_id;
+    const receipt = requireOk(await fetchJson(`${base}/api/v1/sampling/receipt`, {
+      method: 'POST',
+      token,
+      body: {
+        plan_id: plan.plan_id,
+        sample_id,
+        tenant_id: scope.tenant_id,
+        project_id: scope.project_id,
+        group_id: scope.group_id,
+        field_id: `field_${run}`,
+        collected_at_ts: Date.now(),
+        collector_actor_id: 'collector_formal_sampling',
+        sample_type: 'SOIL',
+        chain_of_custody_status: 'RECORDED',
+        evidence_refs: [{ kind: 'fact_id', ref_id: aoSenseReceiptFactId }],
+        ao_sense_receipt_fact_id: aoSenseReceiptFactId,
+      },
+    }), 'create sample receipt with evidence refs');
     checks.sample_receipt_created = true;
+    checks.sample_receipt_refs_ao_sense_receipt = true;
 
-    const lab = requireOk(await fetchJson(`${base}/api/v1/sampling/lab-result`, { method: 'POST', token, body: { sample_id, report_ref: rid('lab_report'), imported_at_ts: Date.now(), metrics: { ph: 6.5, ec: 1.2, quality_status: 'PASS' } } }), 'import lab result');
+    const lab = requireOk(await fetchJson(`${base}/api/v1/sampling/lab-result`, { method: 'POST', token, body: { sample_id, imported_at_ts: Date.now(), metrics: { ph: 6.5, ec: 1.2 }, units: { ph: 'pH', ec: 'mS/cm' }, evidence_refs: [{ kind: 'import_run_v1', ref_id: rid('import_run') }], quality_status: 'PASS' } }), 'import lab result');
     checks.lab_result_imported = true;
 
     const acceptance = requireOk(await fetchJson(`${base}/api/v1/sampling/acceptance/evaluate`, { method: 'POST', token, body: { plan_id: plan.plan_id, sample_id, import_id: lab.import_id } }), 'evaluate sampling acceptance');
@@ -94,18 +114,18 @@ async function main() {
     assert.equal((negMismatch.status >= 400 && negMismatch.status < 500) || mismatchAccepted, true, `expected 4xx or INSUFFICIENT_EVIDENCE for sample_id mismatch; got status=${negMismatch.status} body=${negMismatch.text}`);
 
     const invalidSampleId = rid('sample_invalid_quality');
-    requireOk(await fetchJson(`${base}/api/v1/sampling/receipt`, { method: 'POST', token, body: { plan_id: plan.plan_id, sample_ref: { sample_id: invalidSampleId }, collected_at_ts: Date.now(), collector_id: 'collector_formal_sampling', evidence_refs: [{ kind: 'ao_sense_task', ref_id: aoTask.task_id }, { kind: 'ao_sense_receipt', ref_id: aoReceipt.receipt_id }, { kind: 'photo', ref_id: rid('photo') }] } }), 'create receipt for invalid quality sample');
-    const invalidLab = requireOk(await fetchJson(`${base}/api/v1/sampling/lab-result`, { method: 'POST', token, body: { sample_id: invalidSampleId, report_ref: rid('lab_report_invalid_quality'), imported_at_ts: Date.now(), metrics: { ph: 9.9, ec: 4.4, quality_status: 'INVALID' } } }), 'import invalid quality lab result');
+    requireOk(await fetchJson(`${base}/api/v1/sampling/receipt`, { method: 'POST', token, body: { plan_id: plan.plan_id, sample_id: invalidSampleId, tenant_id: scope.tenant_id, project_id: scope.project_id, group_id: scope.group_id, field_id: `field_${run}`, collected_at_ts: Date.now(), collector_actor_id: 'collector_formal_sampling', sample_type: 'SOIL', chain_of_custody_status: 'RECORDED', evidence_refs: [{ kind: 'fact_id', ref_id: aoSenseReceiptFactId }] } }), 'create receipt for invalid quality sample');
+    const invalidLab = requireOk(await fetchJson(`${base}/api/v1/sampling/lab-result`, { method: 'POST', token, body: { sample_id: invalidSampleId, imported_at_ts: Date.now(), metrics: { ph: 9.9, ec: 4.4 }, units: { ph: 'pH', ec: 'mS/cm' }, evidence_refs: [{ kind: 'import_run_v1', ref_id: rid('import_run') }], quality_status: 'INVALID' } }), 'import invalid quality lab result');
     const invalidAcceptance = requireOk(await fetchJson(`${base}/api/v1/sampling/acceptance/evaluate`, { method: 'POST', token, body: { plan_id: plan.plan_id, sample_id: invalidSampleId, import_id: invalidLab.import_id } }), 'evaluate invalid quality sampling acceptance');
     checks.invalid_lab_result_not_pass = invalidAcceptance.verdict !== 'PASS';
 
     const debugSampleId = rid('debug_sample');
-    requireOk(await fetchJson(`${base}/api/v1/sampling/receipt`, { method: 'POST', token, body: { plan_id: plan.plan_id, sample_ref: { sample_id: debugSampleId }, collected_at_ts: Date.now(), collector_id: 'collector_formal_sampling', evidence_refs: [{ kind: 'simulated', ref_id: rid('sim') }, { kind: 'debug', ref_id: rid('dbg') }] } }), 'create receipt for simulated/debug sample');
-    const debugLab = requireOk(await fetchJson(`${base}/api/v1/sampling/lab-result`, { method: 'POST', token, body: { sample_id: debugSampleId, report_ref: rid('lab_report_debug'), imported_at_ts: Date.now(), metrics: { ph: 6.2, ec: 1.0, quality_status: 'PASS' } } }), 'import debug lab result');
+    requireOk(await fetchJson(`${base}/api/v1/sampling/receipt`, { method: 'POST', token, body: { plan_id: plan.plan_id, sample_id: debugSampleId, tenant_id: scope.tenant_id, project_id: scope.project_id, group_id: scope.group_id, field_id: `field_${run}`, collected_at_ts: Date.now(), collector_actor_id: 'collector_formal_sampling', sample_type: 'SOIL', chain_of_custody_status: 'RECORDED', evidence_refs: [{ kind: 'raw_sample_v1', ref_id: rid('raw_sample') }, { kind: 'marker_v1', ref_id: rid('marker') }] } }), 'create receipt for simulated/debug sample');
+    const debugLab = requireOk(await fetchJson(`${base}/api/v1/sampling/lab-result`, { method: 'POST', token, body: { sample_id: debugSampleId, imported_at_ts: Date.now(), metrics: { ph: 6.2, ec: 1.0 }, units: { ph: 'pH', ec: 'mS/cm' }, evidence_refs: [{ kind: 'import_run_v1', ref_id: rid('import_run') }], quality_status: 'PASS' } }), 'import debug lab result');
     const debugAcceptance = requireOk(await fetchJson(`${base}/api/v1/sampling/acceptance/evaluate`, { method: 'POST', token, body: { plan_id: plan.plan_id, sample_id: debugSampleId, import_id: debugLab.import_id } }), 'evaluate debug/simulated sampling acceptance');
     checks.customer_report_downgraded_when_evidence_missing = (debugAcceptance.customer_visible_eligible === false) || (debugAcceptance.report_tier && String(debugAcceptance.report_tier).toUpperCase() !== 'FORMAL');
 
-    const output = { ok: true, scenario: 'FORMAL_SAMPLING', mode: 'live', checks, refs: { plan_id: plan.plan_id, receipt_id: receipt.receipt_id, lab_result_id: lab.lab_result_id } };
+    const output = { ok: true, scenario: 'FORMAL_SAMPLING', mode: 'live', checks, refs: { plan_id: plan.plan_id, receipt_id: receipt.receipt_id, import_id: lab.import_id } };
     console.log(JSON.stringify(output, null, 2));
   } finally {
     await pool.end().catch(() => undefined);
