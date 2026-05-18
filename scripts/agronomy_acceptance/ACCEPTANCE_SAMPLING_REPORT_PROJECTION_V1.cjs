@@ -4,15 +4,37 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
 const baseUrl = env('SAMPLING_API_BASE_URL', env('API_BASE_URL', 'http://127.0.0.1:3000'));
 const token = env('ADMIN_TOKEN', env('AO_ACT_TOKEN', 'admin_token'));
 const operationId = env('SAMPLING_REPORT_OPERATION_ID', '');
+const scope = {
+  tenant_id: env('TENANT_ID', 'tenantA'),
+  project_id: env('PROJECT_ID', 'projectA'),
+  group_id: env('GROUP_ID', 'groupA'),
+};
+
+function operationReportUrl() {
+  return `${baseUrl}/api/v1/reports/operation/${encodeURIComponent(operationId)}?tenant_id=${encodeURIComponent(scope.tenant_id)}&project_id=${encodeURIComponent(scope.project_id)}&group_id=${encodeURIComponent(scope.group_id)}`;
+}
 
 async function main() {
   if (!operationId) {
     throw new Error('SAMPLING_REPORT_OPERATION_ID not found; run formal scenario seed or provide an existing operation id');
   }
 
-  const scope = { tenant_id: 'tenantA', project_id: 'projectA', group_id: 'groupA' };
-  const opReport = await fetchJson(`${baseUrl}/api/v1/reports/operation/${encodeURIComponent(operationId)}?tenant_id=${encodeURIComponent(scope.tenant_id)}&project_id=${encodeURIComponent(scope.project_id)}&group_id=${encodeURIComponent(scope.group_id)}`, { token });
+  let opReport;
+  try {
+    opReport = await fetchJson(operationReportUrl(), { token });
+  } catch (err) {
+    throw new Error(`operation report API unreachable at ${baseUrl}; original_error=${String(err?.message ?? err)}`);
+  }
   if (!opReport.ok) {
+    if (opReport.status === 404) {
+      throw new Error('SAMPLING_REPORT_OPERATION_ID not found; run formal scenario seed or provide an existing operation id');
+    }
+    if (opReport.status === 401 || opReport.status === 403) {
+      throw new Error(`SAMPLING_REPORT_OPERATION_ID access denied for tenant/project/group scope (${scope.tenant_id}/${scope.project_id}/${scope.group_id}); check ADMIN_TOKEN and scope env`);
+    }
+    if (opReport.status >= 500) {
+      throw new Error(`operation report API failed (${opReport.status}); check server health and logs`);
+    }
     throw new Error('SAMPLING_REPORT_OPERATION_ID not found; run formal scenario seed or provide an existing operation id');
   }
 
@@ -51,7 +73,13 @@ async function main() {
     body: { plan_id: plan.plan_id, sample_id, import_id: lab.import_id },
   }), 'acceptance evaluate');
 
-  const reportPayload = requireOk(await fetchJson(`${baseUrl}/api/v1/reports/operation/${encodeURIComponent(operationId)}?tenant_id=${encodeURIComponent(scope.tenant_id)}&project_id=${encodeURIComponent(scope.project_id)}&group_id=${encodeURIComponent(scope.group_id)}`, { token }), 'query operation report');
+  let reportPayloadRaw;
+  try {
+    reportPayloadRaw = await fetchJson(operationReportUrl(), { token });
+  } catch (err) {
+    throw new Error(`operation report API unreachable at ${baseUrl}; original_error=${String(err?.message ?? err)}`);
+  }
+  const reportPayload = requireOk(reportPayloadRaw, 'query operation report');
   const report = reportPayload.operation_report_v1 || reportPayload.report || {};
   assert.equal(report.formal_scenario?.scenario_type, 'FORMAL_SAMPLING', 'scenario_type should be FORMAL_SAMPLING');
   assert.equal(report.sampling?.plan_id, plan.plan_id, 'sampling.plan_id should match created plan');
@@ -65,6 +93,7 @@ async function main() {
     checks: {
       created_plan_receipt_lab_acceptance: true,
       operation_report_projection_checked: true,
+      operation_relation_binding_effective: report.sampling?.plan_id === plan.plan_id && report.sampling?.sample_id === sample_id,
     },
   }, null, 2));
 }
