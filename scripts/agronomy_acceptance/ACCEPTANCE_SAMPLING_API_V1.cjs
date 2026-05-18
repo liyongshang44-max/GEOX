@@ -1,11 +1,12 @@
 const assert = require('node:assert/strict');
 
 const baseUrl = process.env.SAMPLING_API_BASE_URL || process.env.API_BASE_URL || 'http://127.0.0.1:3000';
+const token = process.env.ADMIN_TOKEN || process.env.AO_ACT_TOKEN || 'admin_token';
 
 async function postJson(path, body) {
   const res = await fetch(`${baseUrl}${path}`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
     body: JSON.stringify(body),
   });
   let json = null;
@@ -120,7 +121,7 @@ async function main() {
   assert.ok(labInvalidQuality.status >= 400 && labInvalidQuality.status < 500, 'invalid quality status blocked');
   checks.invalid_quality_status_blocked = true;
 
-  const sampleLookup = await fetch(`${baseUrl}/api/v1/sampling/sample/${ids.sample_id}`, { method: 'GET' });
+  const sampleLookup = await fetch(`${baseUrl}/api/v1/sampling/sample/${ids.sample_id}`, { method: 'GET', headers: { authorization: `Bearer ${token}` } });
   assert.equal(sampleLookup.status, 200, 'sample lookup should succeed for created sample');
   checks.sample_lookup_works = true;
 

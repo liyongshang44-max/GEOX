@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { SamplingServiceV1 } from "../../services/sampling/sampling_service_v1.js";
+import { requireAoActAnyScopeV0 } from "../../auth/ao_act_authz_v0.js";
 
 function isNonEmptyString(v: unknown): v is string {
   return typeof v === "string" && v.trim().length > 0;
@@ -16,6 +17,30 @@ function isObjectRecord(v: unknown): v is Record<string, unknown> {
 
 function badRequest(reply: any, error: string) {
   return reply.status(400).send({ ok: false, error });
+}
+
+function requireSamplingWriteAuth(req: any, reply: any) {
+  return requireAoActAnyScopeV0(req, reply, [
+    "fields.write",
+    "telemetry.write",
+    "acceptance.evaluate",
+    "security.admin",
+  ]);
+}
+
+function requireSamplingReadAuth(req: any, reply: any) {
+  return requireAoActAnyScopeV0(req, reply, [
+    "fields.read",
+    "telemetry.read",
+    "ao_act.index.read",
+    "security.admin",
+  ]);
+}
+
+function tenantMatchesAuth(body: any, auth: any): boolean {
+  return String(body?.tenant_id ?? "") === auth.tenant_id
+    && String(body?.project_id ?? "") === auth.project_id
+    && String(body?.group_id ?? "") === auth.group_id;
 }
 
 const PLAN_REASONS = new Set(["BASELINE", "DIAGNOSTIC", "FOLLOWUP", "COMPLIANCE"]);
@@ -39,6 +64,8 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
   const service = new SamplingServiceV1(pool);
 
   app.post("/api/v1/sampling/plan", async (req, reply) => {
+    const auth = requireSamplingWriteAuth(req, reply);
+    if (!auth) return;
     const body: any = req.body ?? {};
     if (!isNonEmptyString(body.tenant_id)) return badRequest(reply, "MISSING_OR_INVALID:tenant_id");
     if (!isNonEmptyString(body.project_id)) return badRequest(reply, "MISSING_OR_INVALID:project_id");
@@ -50,12 +77,15 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
     if (body.required_depth_cm != null && (typeof body.required_depth_cm !== "number" || !Number.isFinite(body.required_depth_cm))) return badRequest(reply, "MISSING_OR_INVALID:required_depth_cm");
     if (typeof body.required_points !== "number" || !Number.isInteger(body.required_points) || body.required_points <= 0) return badRequest(reply, "MISSING_OR_INVALID:required_points");
     if (!isValidEvidenceRefArray(body.evidence_refs, false)) return badRequest(reply, "MISSING_OR_INVALID:evidence_refs");
+    if (!tenantMatchesAuth(body, auth)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
 
     const created = await service.createPlan(body);
     return reply.send({ ok: true, ...created });
   });
 
   app.post("/api/v1/sampling/receipt", async (req, reply) => {
+    const auth = requireSamplingWriteAuth(req, reply);
+    if (!auth) return;
     const body: any = req.body ?? {};
     if (!isNonEmptyString(body.plan_id)) return badRequest(reply, "MISSING_OR_INVALID:plan_id");
     if (!isNonEmptyString(body.sample_id)) return badRequest(reply, "MISSING_OR_INVALID:sample_id");
@@ -69,6 +99,7 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
     if (!isValidEvidenceRefArray(body.evidence_refs, true)) return badRequest(reply, "MISSING_OR_INVALID:evidence_refs");
     if (!isNonEmptyString(body.chain_of_custody_status) || !CHAIN_STATUSES.has(body.chain_of_custody_status)) return badRequest(reply, "MISSING_OR_INVALID:chain_of_custody_status");
     if (body.ao_sense_receipt_fact_id != null && !isNonEmptyString(body.ao_sense_receipt_fact_id)) return badRequest(reply, "MISSING_OR_INVALID:ao_sense_receipt_fact_id");
+    if (!tenantMatchesAuth(body, auth)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
 
     const plan = await service.findPlanById(body.plan_id);
     if (!plan) return reply.status(404).send({ ok: false, error: "NOT_FOUND:plan_id" });
@@ -92,6 +123,8 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
   });
 
   app.post("/api/v1/sampling/lab-result", async (req, reply) => {
+    const auth = requireSamplingWriteAuth(req, reply);
+    if (!auth) return;
     const body: any = req.body ?? {};
     if (!isNonEmptyString(body.sample_id)) return badRequest(reply, "MISSING_OR_INVALID:sample_id");
     if (!isIntMs(body.imported_at_ts)) return badRequest(reply, "MISSING_OR_INVALID:imported_at_ts");
@@ -102,16 +135,22 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
 
     const receipt = await service.findReceiptBySampleId(body.sample_id);
     if (!receipt) return reply.status(404).send({ ok: false, error: "NOT_FOUND:sample_receipt" });
+    if (!tenantMatchesAuth(receipt, auth)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
 
     const created = await service.createLabResult(body);
     return reply.send({ ok: true, ...created });
   });
 
   app.post("/api/v1/sampling/acceptance/evaluate", async (req, reply) => {
+    const auth = requireSamplingWriteAuth(req, reply);
+    if (!auth) return;
     const body: any = req.body ?? {};
     if (!isNonEmptyString(body.plan_id)) return badRequest(reply, "MISSING_OR_INVALID:plan_id");
     if (!isNonEmptyString(body.sample_id)) return badRequest(reply, "MISSING_OR_INVALID:sample_id");
     if (body.import_id != null && !isNonEmptyString(body.import_id)) return badRequest(reply, "MISSING_OR_INVALID:import_id");
+    const plan = await service.findPlanById(body.plan_id);
+    if (!plan) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    if (!tenantMatchesAuth(plan, auth)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
 
     const receipt = await service.findReceiptBySampleId(body.sample_id);
     if (!receipt) {
@@ -203,20 +242,24 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
   });
 
   app.get("/api/v1/sampling/plan/:plan_id", async (req, reply) => {
+    const auth = requireSamplingReadAuth(req, reply);
+    if (!auth) return;
     const plan_id = (req.params as any)?.plan_id;
     if (!isNonEmptyString(plan_id)) return badRequest(reply, "MISSING_OR_INVALID:plan_id");
 
     const found = await service.getPlan(plan_id);
-    if (!found) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    if (!found || !tenantMatchesAuth(found, auth)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
     return reply.send({ ok: true, fact: found });
   });
 
   app.get("/api/v1/sampling/sample/:sample_id", async (req, reply) => {
+    const auth = requireSamplingReadAuth(req, reply);
+    if (!auth) return;
     const sample_id = (req.params as any)?.sample_id;
     if (!isNonEmptyString(sample_id)) return badRequest(reply, "MISSING_OR_INVALID:sample_id");
 
     const found = await service.getSample(sample_id);
-    if (!found) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    if (!found || !tenantMatchesAuth(found, auth)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
     return reply.send({ ok: true, fact: found });
   });
 }
