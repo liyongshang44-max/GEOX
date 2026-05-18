@@ -269,7 +269,10 @@ async function run() {
     receipt_contains_zone_fertilizer_applications: false,
     fertilization_acceptance_evaluated: false,
     zone_failure_not_hidden_by_average: false,
-    operation_report_contains_fertilization: false,
+    operation_report_formal_fertilization: false,
+    operation_report_fertilization_ids_match: false,
+    operation_report_fertilization_acceptance_pass: false,
+    operation_report_fertilization_zone_rates_present: false,
   };
   const negative = {
     lab_result_quality_status_invalid_assessment_not_low_n_risk: false,
@@ -397,8 +400,19 @@ async function run() {
       fertAcc = await evalFertilizationAcceptance(base, operatorToken, scope, fertilization_prescription_id, receiptFlow.receipt_id, act_task_id, operation_plan_id, goodApps);
       checks.fertilization_acceptance_evaluated = fertAcc.ok === true && fertAcc.json?.ok !== false && Boolean(fertAcc.json?.acceptance);
       reportResp = await fetchOperationReport(base, adminToken, scope, operation_plan_id);
-      const reportText = JSON.stringify(reportResp.json ?? reportResp.text ?? '').toUpperCase();
-      checks.operation_report_contains_fertilization = reportResp.ok === true && reportText.includes('FERTILIZATION');
+      const report = reportResp.json?.operation_report_v1;
+      assert.equal(report?.formal_scenario?.scenario_type, 'FORMAL_FERTILIZATION');
+      assert.equal(report?.fertilization?.assessment_id, formal.assessment.assessment_id);
+      assert.equal(report?.fertilization?.fertilization_recommendation_id, recommendation_id);
+      assert.equal(report?.fertilization?.fertilization_prescription_id, fertilization_prescription_id);
+      assert.equal(report?.fertilization?.acceptance_status, 'PASS');
+      assert.equal(report?.fertilization?.customer_visible_eligible, true);
+      assert.equal(Array.isArray(report?.fertilization?.zone_rates), true);
+      assert.equal(report.fertilization.zone_rates.length >= 2, true);
+      checks.operation_report_formal_fertilization = true;
+      checks.operation_report_fertilization_ids_match = true;
+      checks.operation_report_fertilization_acceptance_pass = true;
+      checks.operation_report_fertilization_zone_rates_present = true;
 
       const missingAcc = await evalFertilizationAcceptance(base, operatorToken, scope, fertilization_prescription_id, receiptFlow.receipt_id, act_task_id, operation_plan_id, []);
       negative.receipt_success_missing_zone_applications_acceptance_not_pass = missingAcc.ok && String(missingAcc.json?.acceptance?.acceptance_status ?? '').toUpperCase() !== 'PASS';
