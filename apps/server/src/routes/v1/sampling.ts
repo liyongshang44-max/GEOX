@@ -252,7 +252,10 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
     if (!isNonEmptyString(plan_id)) return badRequest(reply, "MISSING_OR_INVALID:plan_id");
 
     const found = await service.getPlan(plan_id);
-    if (!found || !tenantMatchesAuth(found, auth)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    const scopeRecord = (found as any)?.record_json ?? found;
+    if (!found || !tenantMatchesAuth(scopeRecord, auth)) {
+      return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    }
     return reply.send({ ok: true, fact: found });
   });
 
@@ -263,7 +266,10 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
     if (!isNonEmptyString(sample_id)) return badRequest(reply, "MISSING_OR_INVALID:sample_id");
 
     const found = await service.getSample(sample_id);
-    if (!found || !tenantMatchesAuth(found, auth)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    const scopeRecord = (found as any)?.record_json ?? found;
+    if (!found || !tenantMatchesAuth(scopeRecord, auth)) {
+      return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    }
     return reply.send({ ok: true, fact: found });
   });
 }
