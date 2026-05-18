@@ -43,7 +43,7 @@ function tenantMatchesAuth(body: any, auth: any): boolean {
     && String(body?.group_id ?? "") === auth.group_id;
 }
 
-const PLAN_REASONS = new Set(["BASELINE", "DIAGNOSTIC", "FOLLOWUP", "COMPLIANCE"]);
+const PLAN_REASONS = new Set(["LOW_CONFIDENCE", "NUTRIENT_CHECK", "SOIL_MOISTURE_VALIDATION", "MODEL_GAP", "MANUAL_REQUEST"]);
 const SAMPLE_TYPES = new Set(["SOIL", "TISSUE", "WATER"]);
 const CHAIN_STATUSES = new Set(["RECORDED", "MISSING", "BROKEN"]);
 const QUALITY_STATUSES = new Set(["PASS", "NEEDS_REVIEW", "INVALID"]);

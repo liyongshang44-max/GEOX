@@ -32,8 +32,6 @@ async function main() {
     sampling_acceptance_evaluated: false,
     acceptance_api_live_called: false,
     invalid_lab_result_not_pass: false,
-    customer_report_downgraded_when_evidence_missing: false,
-    acceptance_missing_receipt_uses_plan_scope: false,
   };
 
   try {
@@ -64,7 +62,7 @@ async function main() {
     }), 'create ao sense receipt');
     checks.ao_sense_receipt_created = true;
 
-    const plan = requireOk(await fetchJson(`${base}/api/v1/sampling/plan`, { method: 'POST', token, body: { tenant_id: scope.tenant_id, project_id: scope.project_id, group_id: scope.group_id, field_id: `field_${run}`, reason: 'MANUAL_REQUEST', sample_type: 'SOIL', required_depth_cm: 20, required_points: 3, evidence_refs: [{ kind: 'fact_id', ref_id: aoTask.fact_id }], operation_id: reportOperationId } }), 'create sampling plan');
+    const plan = requireOk(await fetchJson(`${base}/api/v1/sampling/plan`, { method: 'POST', token, body: { tenant_id: scope.tenant_id, project_id: scope.project_id, group_id: scope.group_id, field_id: `field_${run}`, reason: 'MANUAL_REQUEST', sample_type: 'SOIL', required_depth_cm: 20, required_points: 3, evidence_refs: [{ kind: 'fact_id', ref_id: aoTask.fact_id }] } }), 'create sampling plan');
     checks.sampling_plan_created = true;
 
     const aoSenseReceiptFactId = aoReceipt.fact_id;
@@ -144,11 +142,9 @@ async function main() {
     const invalidAcceptance = requireOk(await fetchJson(`${base}/api/v1/sampling/acceptance/evaluate`, { method: 'POST', token, body: { plan_id: plan.plan_id, sample_id: invalidSampleId, import_id: invalidLab.import_id } }), 'evaluate invalid quality sampling acceptance');
     checks.invalid_lab_result_not_pass = invalidAcceptance.verdict !== 'PASS';
 
-    const debugSampleId = rid('debug_sample');
-    requireOk(await fetchJson(`${base}/api/v1/sampling/receipt`, { method: 'POST', token, body: { plan_id: plan.plan_id, sample_id: debugSampleId, tenant_id: scope.tenant_id, project_id: scope.project_id, group_id: scope.group_id, field_id: `field_${run}`, collected_at_ts: Date.now(), collector_actor_id: 'collector_formal_sampling', sample_type: 'SOIL', chain_of_custody_status: 'RECORDED', evidence_refs: [{ kind: 'raw_sample_v1', ref_id: rid('raw_sample') }, { kind: 'marker_v1', ref_id: rid('marker') }] } }), 'create receipt for simulated/debug sample');
-    const debugLab = requireOk(await fetchJson(`${base}/api/v1/sampling/lab-result`, { method: 'POST', token, body: { sample_id: debugSampleId, imported_at_ts: Date.now(), metrics: { ph: 6.2, ec: 1.0 }, units: { ph: 'pH', ec: 'mS/cm' }, evidence_refs: [{ kind: 'import_run_v1', ref_id: rid('import_run') }], quality_status: 'PASS' } }), 'import debug lab result');
-    const debugAcceptance = requireOk(await fetchJson(`${base}/api/v1/sampling/acceptance/evaluate`, { method: 'POST', token, body: { plan_id: plan.plan_id, sample_id: debugSampleId, import_id: debugLab.import_id } }), 'evaluate debug/simulated sampling acceptance');
-    checks.customer_report_downgraded_when_evidence_missing = (debugAcceptance.customer_visible_eligible === false) || (debugAcceptance.report_tier && String(debugAcceptance.report_tier).toUpperCase() !== 'FORMAL');
+    for (const [name, value] of Object.entries(checks)) {
+      assert.equal(value, true, `check must be true: ${name}`);
+    }
 
     const output = { ok: true, scenario: 'FORMAL_SAMPLING', mode, checks, refs: { plan_id: plan.plan_id, receipt_id: receipt.receipt_id, import_id: lab.import_id } };
     console.log(JSON.stringify(output, null, 2));

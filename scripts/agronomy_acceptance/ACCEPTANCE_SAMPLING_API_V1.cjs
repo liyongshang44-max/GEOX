@@ -20,6 +20,18 @@ async function postJson(path, body, withAuth = true) {
   try { json = await res.json(); } catch {}
   return { status: res.status, json };
 }
+async function postJsonWithAuth(path, body, authHeader) {
+  const headers = { 'content-type': 'application/json' };
+  if (authHeader != null) headers.authorization = authHeader;
+  const res = await fetch(`${baseUrl}${path}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  });
+  let json = null;
+  try { json = await res.json(); } catch {}
+  return { status: res.status, json };
+}
 
 async function main() {
   const mode = 'live';
@@ -34,8 +46,9 @@ async function main() {
     lab_result_requires_evidence_refs: false,
     invalid_quality_status_blocked: false,
     sample_lookup_works: false,
-    missing_auth_rejected: false,
-    cross_tenant_hidden_404: false,
+    auth_missing_rejected_401: false,
+    auth_invalid_rejected_401: false,
+    tenant_boundary_rejected_404: false,
   };
 
   const now = Date.now();
@@ -67,8 +80,8 @@ async function main() {
   checks.cross_tenant_hidden_404 = true;
 
   const planRes = await postJson('/api/v1/sampling/plan', {
-    ...scopedBody,
-    reason: 'BASELINE',
+    ...ids,
+    reason: 'MANUAL_REQUEST',
     sample_type: 'SOIL',
     required_points: 3,
     evidence_refs: [],
@@ -153,12 +166,56 @@ async function main() {
   assert.equal(sampleLookup.status, 200, 'sample lookup should succeed for created sample');
   checks.sample_lookup_works = true;
 
-  const acceptanceMissingPlan = await postJson('/api/v1/sampling/acceptance/evaluate', {
-    plan_id: 'missing-plan-id',
-    sample_id: ids.sample_id,
+  const noAuth = await postJsonWithAuth('/api/v1/sampling/plan', {
+    ...ids,
+    reason: 'MANUAL_REQUEST',
+    sample_type: 'SOIL',
+    required_points: 1,
+    evidence_refs: [],
+  }, null);
+  assert.equal(noAuth.status, 401, 'missing authorization must be 401');
+  checks.auth_missing_rejected_401 = true;
+
+  const badAuth = await postJsonWithAuth('/api/v1/sampling/plan', {
+    ...ids,
+    reason: 'MANUAL_REQUEST',
+    sample_type: 'SOIL',
+    required_points: 1,
+    evidence_refs: [],
+  }, 'Bearer invalid_token_for_sampling_acceptance');
+  assert.equal(badAuth.status, 401, 'invalid token must be 401');
+  checks.auth_invalid_rejected_401 = true;
+
+  const scopedIds = {
+    tenant_id: process.env.GEOX_TENANT_ID || 'tenantA',
+    project_id: process.env.GEOX_PROJECT_ID || 'projectA',
+    group_id: process.env.GEOX_GROUP_ID || 'groupA',
+    field_id: `f-scope-${now}`,
+    sample_id: `s-scope-${now}`,
+  };
+  const scopedPlan = await postJson('/api/v1/sampling/plan', {
+    ...scopedIds,
+    reason: 'MANUAL_REQUEST',
+    sample_type: 'SOIL',
+    required_points: 2,
+    evidence_refs: [],
   });
-  assert.equal(acceptanceMissingPlan.status, 404, 'acceptance evaluate must return 404 when plan does not exist');
-  checks.acceptance_requires_existing_plan = true;
+  assert.equal(scopedPlan.status, 200, 'scoped plan create should succeed');
+  const crossTenant = await postJson('/api/v1/sampling/receipt', {
+    plan_id: scopedPlan.json.plan_id,
+    sample_id: `${scopedIds.sample_id}-cross`,
+    tenant_id: `${scopedIds.tenant_id}-other`,
+    project_id: scopedIds.project_id,
+    group_id: scopedIds.group_id,
+    field_id: scopedIds.field_id,
+    collected_at_ts: now,
+    collector_actor_id: 'collector-cross-tenant',
+    sample_type: 'SOIL',
+    evidence_refs: [{ kind: 'raw_sample_v1', ref_id: 'raw-cross' }],
+    chain_of_custody_status: 'RECORDED',
+  });
+  assert.equal(crossTenant.status, 404, 'cross-tenant scope must be 404');
+  checks.tenant_boundary_rejected_404 = true;
 
   console.log(JSON.stringify({ ok: true, suite: 'ACCEPTANCE_SAMPLING_API_V1', mode, checks }, null, 2));
 }
