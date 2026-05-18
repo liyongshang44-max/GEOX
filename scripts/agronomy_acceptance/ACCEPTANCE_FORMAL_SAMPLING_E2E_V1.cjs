@@ -32,6 +32,7 @@ async function main() {
     sampling_acceptance_evaluated: false,
     acceptance_api_live_called: false,
     invalid_lab_result_not_pass: false,
+    acceptance_missing_receipt_uses_plan_scope: false,
   };
 
   try {
@@ -40,17 +41,25 @@ async function main() {
     const run = rid('formal_sampling');
     const sample_id = rid('sample');
 
+    const now = Date.now();
     const aoTask = requireOk(await fetchJson(`${base}/api/v1/sense/task`, {
       method: 'POST',
       token,
       body: {
-        tenant_id: scope.tenant_id,
-        project_id: scope.project_id,
-        group_id: scope.group_id,
-        field_id: `field_${run}`,
-        requested_by: 'acceptance_script',
-        request_ts: Date.now(),
-        notes: `run=${run}`,
+        subjectRef: {
+          projectId: scope.project_id,
+          groupId: scope.group_id,
+        },
+        window: {
+          startTs: now - 60_000,
+          endTs: now + 60_000,
+        },
+        sense_kind: 'sampling',
+        sense_focus: 'soil_sample_collection',
+        priority: 'normal',
+        supporting_problem_state_id: `problem_${run}`,
+        supporting_determinism_hash: `det_${run}`,
+        supporting_effective_config_hash: `cfg_${run}`,
       },
     }), 'create ao sense task');
     checks.ao_sense_task_created = true;
@@ -58,7 +67,15 @@ async function main() {
     const aoReceipt = requireOk(await fetchJson(`${base}/api/v1/sense/receipt`, {
       method: 'POST',
       token,
-      body: { task_id: aoTask.task_id, receipt_ts: Date.now(), operator_id: 'acceptance_operator' },
+      body: {
+        task_id: aoTask.task_id,
+        executed_at_ts: Date.now(),
+        result: 'success',
+        evidence_refs: [
+          { kind: 'raw_sample_v1', ref_id: rid('raw_sample') },
+          { kind: 'marker_v1', ref_id: rid('marker') },
+        ],
+      },
     }), 'create ao sense receipt');
     checks.ao_sense_receipt_created = true;
 
@@ -95,7 +112,11 @@ async function main() {
     checks.sampling_acceptance_evaluated = ['PASS', 'FAIL', 'INSUFFICIENT_EVIDENCE'].includes(acceptance.verdict);
 
     const sample = requireOk(await fetchJson(`${base}/api/v1/sampling/sample/${sample_id}`, { method: 'GET', token }), 'fetch sample by sample_id');
-    assert.equal(Boolean(sample.sample_id || sample.sample?.sample_id), true, 'sample lookup missing sample id');
+    assert.equal(
+      sample.fact?.record_json?.sample_id,
+      sample_id,
+      'sample lookup missing sample id',
+    );
 
     const negNoReceiptLab = await fetchJson(`${base}/api/v1/sampling/lab-result`, {
       method: 'POST',

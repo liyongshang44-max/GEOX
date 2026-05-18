@@ -5,7 +5,12 @@ const baseUrl = env('SAMPLING_API_BASE_URL', env('API_BASE_URL', 'http://127.0.0
 const token = env('ADMIN_TOKEN', env('AO_ACT_TOKEN', 'admin_token'));
 
 async function main() {
-  const existingOperationId = process.env.SAMPLING_EXISTING_OPERATION_ID || '';
+  const operationId = env('SAMPLING_REPORT_OPERATION_ID');
+  const scope = {
+    tenant_id: env('TENANT_ID', 'tenantA'),
+    project_id: env('PROJECT_ID', 'projectA'),
+    group_id: env('GROUP_ID', 'groupA'),
+  };
   const now = Date.now();
   const field_id = `f-${now}`;
   const sample_id = `s-${now}`;
@@ -13,16 +18,30 @@ async function main() {
   const plan = requireOk(await fetchJson(`${baseUrl}/api/v1/sampling/plan`, {
     method: 'POST',
     token,
-    body: { tenant_id, project_id, group_id, field_id, reason: 'MANUAL_REQUEST', sample_type: 'SOIL', required_points: 3, evidence_refs: [] },
+    body: {
+      ...scope,
+      field_id,
+      reason: 'MANUAL_REQUEST',
+      sample_type: 'SOIL',
+      required_points: 3,
+      evidence_refs: [],
+      operation_id: operationId,
+    },
   }), 'create plan');
 
   requireOk(await fetchJson(`${baseUrl}/api/v1/sampling/receipt`, {
     method: 'POST',
     token,
     body: {
-      plan_id: plan.plan_id, sample_id, ...scope, field_id,
-      collected_at_ts: now, collector_actor_id: 'collector-1', sample_type: 'SOIL',
-      evidence_refs: [{ kind: 'raw_sample_v1', ref_id: `raw-${now}` }], chain_of_custody_status: 'RECORDED',
+      plan_id: plan.plan_id,
+      sample_id,
+      ...scope,
+      field_id,
+      collected_at_ts: now,
+      collector_actor_id: 'collector-1',
+      sample_type: 'SOIL',
+      evidence_refs: [{ kind: 'raw_sample_v1', ref_id: `raw-${now}` }],
+      chain_of_custody_status: 'RECORDED',
     },
   }), 'create receipt');
 
@@ -44,16 +63,19 @@ async function main() {
   const sampleFact = requireOk(await fetchJson(`${baseUrl}/api/v1/sampling/sample/${sample_id}`, { token }), 'query sample');
   assert.equal(sampleFact.fact?.record_json?.sample_id, sample_id, 'sample_id should exist');
 
+  const reportPath = `${baseUrl}/api/v1/reports/operation/${encodeURIComponent(operationId)}?tenant_id=${encodeURIComponent(scope.tenant_id)}&project_id=${encodeURIComponent(scope.project_id)}&group_id=${encodeURIComponent(scope.group_id)}`;
+  const operationReport = requireOk(await fetchJson(reportPath, { method: 'GET', token }), 'query operation report');
+  const reportJson = operationReport.report_json || operationReport.report?.report_json || operationReport;
+  assert.equal(reportJson?.operation_type, 'FORMAL_SAMPLING', 'operation report must be FORMAL_SAMPLING');
+
   console.log(JSON.stringify({
     ok: true,
     suite: 'ACCEPTANCE_SAMPLING_REPORT_PROJECTION_V1',
     checks: {
       created_plan_receipt_lab_acceptance: true,
       sample_id_present: true,
-      note: 'Sampling projection/status is now sourced from facts in report_v1 path.',
-      operation_report_gate_dependency: existingOperationId
-        ? `uses pre-existing operation id: ${existingOperationId}`
-        : 'requires a pre-existing operation id for operation report projection gate; this script does not seed operation',
+      operation_report_projection_called: true,
+      operation_type_formal_sampling: true,
     },
   }, null, 2));
 }
