@@ -118,7 +118,16 @@ assertOnlyAuthorizedFactsWriter(
 );
 
 // 2. Fertility/nitrogen inference skills must not directly write or declare formal fertilization recommendations.
-const skillCandidateFiles = sourceFiles.filter((rel) => {
+// Scope this check to actual skill implementation/registry files. Business routes such as
+// decision_engine_v1.ts may reference a skill and write unrelated domain facts; they are not
+// Skill output implementations and must not be classified as skill boundary offenders here.
+const skillImplementationFiles = [
+  ...collectFiles('packages/device-skills/src', ['.ts']),
+  ...collectFiles('packages/skill-registry/src', ['.ts']),
+  'apps/server/src/domain/acceptance/skills.ts',
+].map(normalizeRelPath).filter((rel, index, arr) => fs.existsSync(full(rel)) && arr.indexOf(rel) === index);
+
+const skillCandidateFiles = skillImplementationFiles.filter((rel) => {
   const text = fs.readFileSync(full(rel), 'utf8');
   return text.includes('fertility_inference_v1') || text.includes('nitrogen_need_inference_v1');
 });
@@ -156,12 +165,6 @@ assertIncludes(constitution, 'SkillRun SUCCESS != Recommendation成立', 'skill 
 assertIncludes(constitution, 'SkillRun SUCCESS != Prescription成立', 'skill constitution');
 assertIncludes(constitution, 'SkillRun SUCCESS != Acceptance PASS', 'skill constitution');
 assertIncludes(fertilizationContract, 'SkillRun SUCCESS ≠ nitrogen_need_assessment LOW_N_RISK', 'fertilization contract hard rule');
-
-const skillImplementationFiles = [
-  ...collectFiles('packages/device-skills/src', ['.ts']),
-  ...collectFiles('packages/skill-registry/src', ['.ts']),
-  'apps/server/src/domain/acceptance/skills.ts',
-].map(normalizeRelPath).filter((rel, index, arr) => fs.existsSync(full(rel)) && arr.indexOf(rel) === index);
 
 const forbiddenSkillOutputPatterns = [
   /approval[_\s-]*decision/i,
