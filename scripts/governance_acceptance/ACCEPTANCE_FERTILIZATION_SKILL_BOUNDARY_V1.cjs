@@ -8,6 +8,10 @@ function full(rel) {
   return path.join(root, rel);
 }
 
+function normalizeRelPath(rel) {
+  return String(rel ?? '').replace(/\\/g, '/');
+}
+
 function read(rel) {
   const fp = full(rel);
   assert.equal(fs.existsSync(fp), true, `missing required file: ${rel}`);
@@ -21,7 +25,7 @@ function collectFiles(dir, suffixes = ['.ts', '.cjs', '.mjs', '.js']) {
   for (const entry of fs.readdirSync(start, { withFileTypes: true })) {
     const fp = path.join(start, entry.name);
     if (entry.isDirectory()) out.push(...collectFiles(path.relative(root, fp), suffixes));
-    else if (entry.isFile() && suffixes.some((suffix) => fp.endsWith(suffix))) out.push(path.relative(root, fp));
+    else if (entry.isFile() && suffixes.some((suffix) => fp.endsWith(suffix))) out.push(normalizeRelPath(path.relative(root, fp)));
   }
   return out;
 }
@@ -45,12 +49,12 @@ function hasFactTypeWriteLiteral(text, factType) {
 }
 
 function isPathUnder(rel, dir) {
-  return rel.replace(/\\/g, '/').startsWith(dir.replace(/\\/g, '/'));
+  return normalizeRelPath(rel).startsWith(normalizeRelPath(dir));
 }
 
 function assertOnlyAuthorizedFactsWriter(files, factType, allowedPathPredicates, label) {
   const offenders = [];
-  for (const rel of files) {
+  for (const rel of files.map(normalizeRelPath)) {
     const text = read(rel);
     if (!hasActualFactsInsert(text)) continue;
     if (!hasFactTypeWriteLiteral(text, factType)) continue;
@@ -157,7 +161,7 @@ const skillImplementationFiles = [
   ...collectFiles('packages/device-skills/src', ['.ts']),
   ...collectFiles('packages/skill-registry/src', ['.ts']),
   'apps/server/src/domain/acceptance/skills.ts',
-].filter((rel, index, arr) => fs.existsSync(full(rel)) && arr.indexOf(rel) === index);
+].map(normalizeRelPath).filter((rel, index, arr) => fs.existsSync(full(rel)) && arr.indexOf(rel) === index);
 
 const forbiddenSkillOutputPatterns = [
   /approval[_\s-]*decision/i,

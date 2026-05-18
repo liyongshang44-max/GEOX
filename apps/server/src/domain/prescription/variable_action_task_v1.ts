@@ -8,6 +8,12 @@ function asPositiveNumber(value: unknown): number | null {
   return parsed;
 }
 
+function normalizeVariableOperationTypeV1(value: unknown): "IRRIGATION" | "FERTILIZATION" {
+  const operationType = asText(value).toUpperCase();
+  if (operationType === "IRRIGATION" || operationType === "FERTILIZATION") return operationType;
+  throw new Error("VARIABLE_PRESCRIPTION_UNSUPPORTED_OPERATION_TYPE");
+}
+
 export function buildVariableActionTaskPayloadV1(input: {
   tenant_id: string;
   project_id: string;
@@ -49,10 +55,7 @@ export function buildVariableActionTaskPayloadV1(input: {
   meta: Record<string, any>;
 } {
   const prescription = input.prescription ?? {};
-  const operationType = asText(prescription.operation_type).toUpperCase();
-  if (operationType !== "IRRIGATION") {
-    throw new Error("VARIABLE_PRESCRIPTION_ONLY_SUPPORTS_IRRIGATION");
-  }
+  const operationType = normalizeVariableOperationTypeV1(prescription.operation_type);
 
   const operationAmount = (prescription.operation_amount && typeof prescription.operation_amount === "object")
     ? prescription.operation_amount
@@ -89,7 +92,7 @@ export function buildVariableActionTaskPayloadV1(input: {
 
   const sanitizedZoneRates = zoneRatesRaw.map((zoneRate) => ({
     zone_id: asText(zoneRate?.zone_id),
-    operation_type: asText(zoneRate?.operation_type).toUpperCase(),
+    operation_type: asText(zoneRate?.operation_type).toUpperCase() || operationType,
     planned_amount: Number(zoneRate?.planned_amount ?? 0),
     unit: asText(zoneRate?.unit),
     priority: asText(zoneRate?.priority).toUpperCase() || undefined,
@@ -111,6 +114,9 @@ export function buildVariableActionTaskPayloadV1(input: {
       id: asText(input.actor_id),
       namespace: "variable_action_task_v1",
     },
+    // AO-ACT v0 keeps a narrow action_type allowlist. The formal operation remains
+    // available as meta.operation_type so fertilization can reuse the existing
+    // variable operation chain without creating a duplicate execution path.
     action_type: "IRRIGATE",
     target: { kind: "field", ref: field_id },
     time_window: {
@@ -137,15 +143,19 @@ export function buildVariableActionTaskPayloadV1(input: {
       zone_count: sanitizedZoneRates.length,
       dispatch_ack_required: true,
       task_creation_is_not_ack: true,
+      operation_type: operationType,
     },
     meta: {
       prescription_id: asText(prescription.prescription_id),
       recommendation_id: asText(prescription.recommendation_id),
       operation_type: operationType,
+      task_type: operationType,
+      nutrient: asText(operationAmount.nutrient ?? prescription.nutrient) || null,
       device_id: asText(input.device_id),
       device_requirements: prescription.device_requirements ?? {},
       variable_plan: {
         mode: "VARIABLE_BY_ZONE",
+        operation_type: operationType,
         zone_rates: sanitizedZoneRates,
       },
       task_lifecycle_status: "READY_TO_DISPATCH",
