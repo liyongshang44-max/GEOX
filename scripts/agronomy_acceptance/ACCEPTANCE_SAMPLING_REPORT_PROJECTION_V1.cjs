@@ -15,7 +15,7 @@ async function main() {
   const plan = requireOk(await fetchJson(`${baseUrl}/api/v1/sampling/plan`, {
     method: 'POST',
     token,
-    body: { tenant_id, project_id, group_id, field_id, reason: 'BASELINE', sample_type: 'SOIL', required_points: 3, evidence_refs: [] },
+    body: { tenant_id, project_id, group_id, field_id, reason: 'MANUAL_REQUEST', sample_type: 'SOIL', required_points: 3, evidence_refs: [] },
   }), 'create plan');
 
   requireOk(await fetchJson(`${baseUrl}/api/v1/sampling/receipt`, {

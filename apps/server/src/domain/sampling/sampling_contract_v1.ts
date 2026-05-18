@@ -5,6 +5,13 @@ export type SamplingReasonV1 =
   | "MODEL_GAP"
   | "MANUAL_REQUEST";
 export type SamplingSampleTypeV1 = "SOIL" | "TISSUE" | "WATER";
+export const SAMPLING_REASONS_V1 = [
+  "LOW_CONFIDENCE",
+  "NUTRIENT_CHECK",
+  "SOIL_MOISTURE_VALIDATION",
+  "MODEL_GAP",
+  "MANUAL_REQUEST",
+] as const;
 export type SamplingEvidenceRefV1 = { kind: string; ref_id: string };
 export type SamplingFactEnvelopeV1<TType extends string, TPayload> = { type: TType; payload: TPayload };
 export type SamplingPlanV1 = { plan_id: string; tenant_id: string; project_id: string; group_id: string; field_id: string; zone_id?: string | null; reason: SamplingReasonV1; sample_type: SamplingSampleTypeV1; required_depth_cm?: number | null; required_points: number; created_at_ts: number; evidence_refs: Array<SamplingEvidenceRefV1> };
