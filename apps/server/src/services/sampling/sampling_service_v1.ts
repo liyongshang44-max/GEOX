@@ -214,6 +214,9 @@ export class SamplingServiceV1 {
     reasons: string[];
     evidence_refs: EvidenceRef[];
   }): Promise<{ acceptance_id: string; fact_id: string }> {
+    if (!input.tenant_id || !input.project_id || !input.group_id) {
+      throw new Error("INVALID_ACCEPTANCE_SCOPE");
+    }
     const acceptance_id = randomUUID();
     const fact_id = `sa_${acceptance_id}`;
 
