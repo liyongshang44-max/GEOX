@@ -1,17 +1,9 @@
 const { randomUUID } = require('node:crypto');
 const assertNode = require('node:assert/strict');
 const { Pool } = require('pg');
-const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
+const { assert, env, fetchJson, requireOk, waitForHealth } = require('./_common.cjs');
 
 function rid(prefix) { return `${prefix}_${randomUUID().replace(/-/g, '')}`; }
-
-async function health(base) {
-  const a = await fetchJson(`${base}/api/v1/health`, { method: 'GET' });
-  if (a.ok) return true;
-  const b = await fetchJson(`${base}/api/health`, { method: 'GET' });
-  if (b.ok) return true;
-  throw new Error(`health failed: ${a.status}/${b.status}`);
-}
 
 async function main() {
   const mode = 'live';
@@ -36,7 +28,7 @@ async function main() {
   };
 
   try {
-    await health(base);
+    await waitForHealth(base);
 
     const run = rid('formal_sampling');
     const sample_id = rid('sample');

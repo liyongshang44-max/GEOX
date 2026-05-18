@@ -1,10 +1,12 @@
 #!/usr/bin/env node
-const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
+const { assert, env, fetchJson, requireOk, waitForHealth } = require('./_common.cjs');
 
 const baseUrl = env('SAMPLING_API_BASE_URL', env('API_BASE_URL', 'http://127.0.0.1:3000'));
 const token = env('ADMIN_TOKEN', env('AO_ACT_TOKEN', 'admin_token'));
 
 async function main() {
+  await waitForHealth(baseUrl);
+
   const operationId = env('SAMPLING_REPORT_OPERATION_ID');
   const scope = {
     tenant_id: env('TENANT_ID', 'tenantA'),

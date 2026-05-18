@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const { waitForHealth } = require('./_common.cjs');
 
 const baseUrl = process.env.SAMPLING_API_BASE_URL || process.env.API_BASE_URL || 'http://127.0.0.1:3000';
 const token = process.env.ADMIN_TOKEN || process.env.AO_ACT_TOKEN || 'admin_token';
@@ -35,16 +36,7 @@ async function postJsonWithAuth(path, body, authHeader) {
 
 async function main() {
   const mode = 'live';
-  const healthPaths = ['/api/v1/health', '/api/health', '/health'];
-  let healthOk = false;
-  for (const healthPath of healthPaths) {
-    const health = await fetch(`${baseUrl}${healthPath}`, { method: 'GET' }).catch(() => null);
-    if (health && health.ok) {
-      healthOk = true;
-      break;
-    }
-  }
-  if (!healthOk) throw new Error(`live API unavailable at ${baseUrl}`);
+  await waitForHealth(baseUrl);
 
   const checks = {
     plan_created: false,
