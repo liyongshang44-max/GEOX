@@ -14,6 +14,7 @@ import { normalizeReceiptEvidence } from "../services/receipt_evidence.js";
 import { computeOperationCostV1 } from "../domain/cost_model.js";
 import { toCustomerFacingActionLabel } from "../domain/controlplane/irrigation_action_mapping_v1.js";
 import { listAlertOperationRelationV1ByOperation, listOperationWorkflowV1 } from "./alert_workflow_v1.js";
+import { buildSamplingReportViewV1 } from "../services/sampling/sampling_projection_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; record_json: any };
@@ -310,6 +311,16 @@ export async function projectReportV1(params: {
   );
   const approvalStatus = normalizeApprovalStatus(approvalDecisionFact?.record_json?.payload?.decision, Boolean(approvalRequestFact));
   const operationTitle = deriveOperationTitle(operationState.action_type ?? recommendationPayload?.suggested_action?.action_type);
+  const operationStateAny: any = operationState as any;
+  const fallbackSamplingPlanId = toText(operationStateAny?.sampling_plan_id ?? operationStateAny?.sampling?.plan_id);
+  const samplingView = await buildSamplingReportViewV1(pool, {
+    tenant_id: tenant.tenant_id,
+    project_id: tenant.project_id,
+    group_id: tenant.group_id,
+    field_id: operationState.field_id ?? null,
+    operation_id: operationState.operation_id ?? null,
+    plan_id: fallbackSamplingPlanId,
+  });
   const acceptanceForReport = acceptanceFact ? {
     verdict: acceptanceFact.record_json?.payload?.verdict,
     missing_evidence: acceptanceFact.record_json?.payload?.missing_evidence,
@@ -356,6 +367,7 @@ export async function projectReportV1(params: {
       note: toText(approvalDecisionFact?.record_json?.payload?.note ?? approvalDecisionFact?.record_json?.payload?.reason),
     },
     roi_ledger: await queryRoiLedgerForReport(pool, tenant, operationState),
+    sampling_view: samplingView,
     why: {
       explain_human: explainHuman,
       objective_text: objectiveText,

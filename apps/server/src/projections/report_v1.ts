@@ -516,6 +516,7 @@ export function projectOperationReportV1(input: {
   customer_title?: unknown;
   now?: Date;
   roi_ledger?: any[];
+  sampling_view?: Partial<NonNullable<OperationReportV1["sampling"]>> | null;
 }): OperationReportV1 {
   const now = input.now ?? new Date();
   const acceptanceMissingItems = Array.isArray(input.acceptance?.missing_evidence)
@@ -706,7 +707,7 @@ export function projectOperationReportV1(input: {
   const zoneRollupPass = zoneMatrixCustomerView.length > 0
     ? zoneMatrixCustomerView.every((z: any) => String(z?.zone_acceptance_result ?? "").toUpperCase() === "PASS")
     : false;
-  const samplingRaw = operationStateAny?.sampling ?? operationStateAny?.sampling_report ?? operationStateAny?.operation_sampling ?? {};
+  const samplingRaw = input.sampling_view ?? {};
   const samplingSampleTypeRaw = String(samplingRaw?.sample_type ?? "").trim().toUpperCase();
   const samplingSampleType = (["SOIL", "TISSUE", "WATER"].includes(samplingSampleTypeRaw) ? samplingSampleTypeRaw : null) as NonNullable<OperationReportV1["sampling"]>["sample_type"];
   const samplingLabStatusRaw = String(samplingRaw?.lab_result_status ?? "").trim().toUpperCase();
