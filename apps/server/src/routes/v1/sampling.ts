@@ -65,7 +65,7 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
 
   app.post("/api/v1/sampling/plan", async (req, reply) => {
     const auth = requireSamplingWriteAuth(req, reply);
-    if (!auth) return;
+    if (!auth) return reply;
     const body: any = req.body ?? {};
     if (!isNonEmptyString(body.tenant_id)) return badRequest(reply, "MISSING_OR_INVALID:tenant_id");
     if (!isNonEmptyString(body.project_id)) return badRequest(reply, "MISSING_OR_INVALID:project_id");
@@ -87,7 +87,7 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
 
   app.post("/api/v1/sampling/receipt", async (req, reply) => {
     const auth = requireSamplingWriteAuth(req, reply);
-    if (!auth) return;
+    if (!auth) return reply;
     const body: any = req.body ?? {};
     if (!isNonEmptyString(body.plan_id)) return badRequest(reply, "MISSING_OR_INVALID:plan_id");
     if (!isNonEmptyString(body.sample_id)) return badRequest(reply, "MISSING_OR_INVALID:sample_id");
@@ -126,7 +126,7 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
 
   app.post("/api/v1/sampling/lab-result", async (req, reply) => {
     const auth = requireSamplingWriteAuth(req, reply);
-    if (!auth) return;
+    if (!auth) return reply;
     const body: any = req.body ?? {};
     if (!isNonEmptyString(body.sample_id)) return badRequest(reply, "MISSING_OR_INVALID:sample_id");
     if (!isIntMs(body.imported_at_ts)) return badRequest(reply, "MISSING_OR_INVALID:imported_at_ts");
@@ -145,7 +145,7 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
 
   app.post("/api/v1/sampling/acceptance/evaluate", async (req, reply) => {
     const auth = requireSamplingWriteAuth(req, reply);
-    if (!auth) return;
+    if (!auth) return reply;
     const body: any = req.body ?? {};
     if (!isNonEmptyString(body.plan_id)) return badRequest(reply, "MISSING_OR_INVALID:plan_id");
     if (!isNonEmptyString(body.sample_id)) return badRequest(reply, "MISSING_OR_INVALID:sample_id");
@@ -247,7 +247,7 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
 
   app.get("/api/v1/sampling/plan/:plan_id", async (req, reply) => {
     const auth = requireSamplingReadAuth(req, reply);
-    if (!auth) return;
+    if (!auth) return reply;
     const plan_id = (req.params as any)?.plan_id;
     if (!isNonEmptyString(plan_id)) return badRequest(reply, "MISSING_OR_INVALID:plan_id");
 
@@ -261,7 +261,7 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
 
   app.get("/api/v1/sampling/sample/:sample_id", async (req, reply) => {
     const auth = requireSamplingReadAuth(req, reply);
-    if (!auth) return;
+    if (!auth) return reply;
     const sample_id = (req.params as any)?.sample_id;
     if (!isNonEmptyString(sample_id)) return badRequest(reply, "MISSING_OR_INVALID:sample_id");
 
