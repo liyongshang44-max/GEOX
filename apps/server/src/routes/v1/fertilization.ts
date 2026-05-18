@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 import type { Pool } from "pg";
 import { requireAoActAnyScopeV0 } from "../../auth/ao_act_authz_v0.js";
 import { requireFieldAllowedOr404V1, tenantFromBodyOrAuthV1, tenantFromQueryOrAuthV1 } from "../../auth/tenant_scope_v1.js";
+import { FertilizationBridgeErrorV1, FertilizationVariableBridgeV1 } from "../../services/fertilization/fertilization_bridge_v1.js";
 import { FertilizationServiceErrorV1, FertilizationServiceV1 } from "../../services/fertilization/fertilization_service_v1.js";
 
 type TenantTripleV1 = { tenant_id: string; project_id: string; group_id: string };
@@ -46,7 +47,7 @@ function requireFertilizationReadAuth(req: any, reply: FastifyReply) {
 }
 
 function handleServiceError(reply: FastifyReply, error: unknown) {
-  if (error instanceof FertilizationServiceErrorV1) {
+  if (error instanceof FertilizationServiceErrorV1 || error instanceof FertilizationBridgeErrorV1) {
     return reply.status(error.statusCode).send({ ok: false, error: error.message });
   }
   throw error;
@@ -54,6 +55,7 @@ function handleServiceError(reply: FastifyReply, error: unknown) {
 
 export function registerFertilizationV1Routes(app: FastifyInstance, pool: Pool): void {
   const service = new FertilizationServiceV1(pool);
+  const bridge = new FertilizationVariableBridgeV1(pool);
 
   app.post("/api/v1/fertilization/nitrogen-assessment", async (req, reply) => {
     const auth = requireFertilizationWriteAuth(req, reply);
@@ -101,6 +103,32 @@ export function registerFertilizationV1Routes(app: FastifyInstance, pool: Pool):
     try {
       const result = await service.createPrescription({ ...body, ...tenant, field_id: String(body.field_id) });
       return reply.send({ ok: true, fact_id: result.fact_id, prescription: result.prescription });
+    } catch (error) {
+      return handleServiceError(reply, error);
+    }
+  });
+
+  app.post("/api/v1/fertilization/prescription/:fertilization_prescription_id/to-variable-prescription", async (req, reply) => {
+    const auth = requireFertilizationWriteAuth(req, reply);
+    if (!auth) return reply;
+    const params: any = (req as any).params ?? {};
+    const body: any = req.body ?? {};
+    const fertilization_prescription_id = String(params.fertilization_prescription_id ?? "").trim();
+    if (!fertilization_prescription_id) return badRequest(reply, "MISSING_OR_INVALID:fertilization_prescription_id");
+    const tenant = tenantFromBodyOrAuthV1(body, auth);
+    if (!requireTenantMatchOr404(reply, tenant, auth)) return;
+
+    try {
+      const result = await bridge.createVariablePrescription({ ...tenant, fertilization_prescription_id, created_by: auth.actor_id });
+      const fieldId = String(result.fertilization_prescription?.field_id ?? "");
+      if (!requireFieldAllowedOr404V1(reply, auth, fieldId)) return;
+      return reply.send({
+        ok: true,
+        idempotent: result.idempotent,
+        variable_plan: result.variable_plan,
+        variable_prescription: result.variable_prescription,
+        fertilization_prescription: result.fertilization_prescription,
+      });
     } catch (error) {
       return handleServiceError(reply, error);
     }
