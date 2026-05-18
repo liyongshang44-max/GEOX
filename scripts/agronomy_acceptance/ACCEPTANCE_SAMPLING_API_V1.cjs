@@ -58,29 +58,19 @@ async function main() {
   };
   const scopedBody = { ...tenantScope, ...ids };
 
-  const missingAuth = await postJson('/api/v1/sampling/plan', {
-    ...scopedBody,
-    reason: 'BASELINE',
-    sample_type: 'SOIL',
-    required_points: 3,
-    evidence_refs: [],
-  }, false);
-  assert.equal(missingAuth.status, 401, 'missing authorization should be rejected with 401');
-  checks.missing_auth_rejected = true;
-
-  const crossTenant = await postJson('/api/v1/sampling/plan', {
+  const crossTenantPlan = await postJson('/api/v1/sampling/plan', {
     ...scopedBody,
     tenant_id: `${tenantScope.tenant_id}_other`,
-    reason: 'BASELINE',
+    reason: 'MANUAL_REQUEST',
     sample_type: 'SOIL',
     required_points: 3,
     evidence_refs: [],
   });
-  assert.equal(crossTenant.status, 404, 'cross-tenant scope should return 404');
-  checks.cross_tenant_hidden_404 = true;
+  assert.equal(crossTenantPlan.status, 404, 'cross-tenant scope should return 404');
+  checks.tenant_boundary_rejected_404 = true;
 
   const planRes = await postJson('/api/v1/sampling/plan', {
-    ...ids,
+    ...scopedBody,
     reason: 'MANUAL_REQUEST',
     sample_type: 'SOIL',
     required_points: 3,
@@ -167,7 +157,7 @@ async function main() {
   checks.sample_lookup_works = true;
 
   const noAuth = await postJsonWithAuth('/api/v1/sampling/plan', {
-    ...ids,
+    ...scopedBody,
     reason: 'MANUAL_REQUEST',
     sample_type: 'SOIL',
     required_points: 1,
@@ -177,7 +167,7 @@ async function main() {
   checks.auth_missing_rejected_401 = true;
 
   const badAuth = await postJsonWithAuth('/api/v1/sampling/plan', {
-    ...ids,
+    ...scopedBody,
     reason: 'MANUAL_REQUEST',
     sample_type: 'SOIL',
     required_points: 1,
@@ -201,7 +191,7 @@ async function main() {
     evidence_refs: [],
   });
   assert.equal(scopedPlan.status, 200, 'scoped plan create should succeed');
-  const crossTenant = await postJson('/api/v1/sampling/receipt', {
+  const crossTenantReceipt = await postJson('/api/v1/sampling/receipt', {
     plan_id: scopedPlan.json.plan_id,
     sample_id: `${scopedIds.sample_id}-cross`,
     tenant_id: `${scopedIds.tenant_id}-other`,
@@ -214,8 +204,12 @@ async function main() {
     evidence_refs: [{ kind: 'raw_sample_v1', ref_id: 'raw-cross' }],
     chain_of_custody_status: 'RECORDED',
   });
-  assert.equal(crossTenant.status, 404, 'cross-tenant scope must be 404');
+  assert.equal(crossTenantReceipt.status, 404, 'cross-tenant scope must be 404');
   checks.tenant_boundary_rejected_404 = true;
+
+  for (const [name, value] of Object.entries(checks)) {
+    assert.equal(value, true, `check must be true: ${name}`);
+  }
 
   console.log(JSON.stringify({ ok: true, suite: 'ACCEPTANCE_SAMPLING_API_V1', mode, checks }, null, 2));
 }
