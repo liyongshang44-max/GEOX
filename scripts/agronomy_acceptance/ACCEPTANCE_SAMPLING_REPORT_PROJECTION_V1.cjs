@@ -68,7 +68,35 @@ async function main() {
   const reportPath = `${baseUrl}/api/v1/reports/operation/${encodeURIComponent(operationId)}?tenant_id=${encodeURIComponent(scope.tenant_id)}&project_id=${encodeURIComponent(scope.project_id)}&group_id=${encodeURIComponent(scope.group_id)}`;
   const operationReport = requireOk(await fetchJson(reportPath, { method: 'GET', token }), 'query operation report');
   const reportJson = operationReport.report_json || operationReport.report?.report_json || operationReport;
-  assert.equal(reportJson?.operation_type, 'FORMAL_SAMPLING', 'operation report must be FORMAL_SAMPLING');
+  assert.equal(
+    reportJson?.formal_scenario?.scenario_type,
+    'FORMAL_SAMPLING',
+    'operation report formal_scenario.scenario_type must be FORMAL_SAMPLING',
+  );
+
+  assert.equal(
+    reportJson?.sampling?.plan_id,
+    plan.plan_id,
+    'operation report sampling.plan_id must match created plan',
+  );
+
+  assert.equal(
+    reportJson?.sampling?.sample_id,
+    sample_id,
+    'operation report sampling.sample_id must match created sample',
+  );
+
+  assert.equal(
+    reportJson?.sampling?.lab_result_status,
+    'PASS',
+    'operation report sampling.lab_result_status must be PASS',
+  );
+
+  assert.equal(
+    reportJson?.sampling?.acceptance_status,
+    'PASS',
+    'operation report sampling.acceptance_status must be PASS',
+  );
 
   console.log(JSON.stringify({
     ok: true,
@@ -77,7 +105,11 @@ async function main() {
       created_plan_receipt_lab_acceptance: true,
       sample_id_present: true,
       operation_report_projection_called: true,
-      operation_type_formal_sampling: true,
+      formal_scenario_sampling: true,
+      operation_report_sampling_plan_id_matches: true,
+      operation_report_sampling_sample_id_matches: true,
+      operation_report_sampling_lab_status_pass: true,
+      operation_report_sampling_acceptance_status_pass: true,
     },
   }, null, 2));
 }
