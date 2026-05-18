@@ -313,12 +313,18 @@ export async function projectReportV1(params: {
   const operationTitle = deriveOperationTitle(operationState.action_type ?? recommendationPayload?.suggested_action?.action_type);
   const operationStateAny: any = operationState as any;
   const fallbackSamplingPlanId = toText(operationStateAny?.sampling_plan_id ?? operationStateAny?.sampling?.plan_id);
+  const samplingOperationIds = Array.from(new Set([
+    toText(operationState.operation_id),
+    toText(operationState.operation_plan_id),
+    toText(operationPlanId),
+  ].filter(Boolean) as string[]));
   const samplingView = await buildSamplingReportViewV1(pool, {
     tenant_id: tenant.tenant_id,
     project_id: tenant.project_id,
     group_id: tenant.group_id,
     field_id: operationState.field_id ?? null,
-    operation_id: operationState.operation_id ?? null,
+    operation_id: samplingOperationIds[0] ?? null,
+    operation_ids: samplingOperationIds,
     plan_id: fallbackSamplingPlanId,
   });
   const acceptanceForReport = acceptanceFact ? {
