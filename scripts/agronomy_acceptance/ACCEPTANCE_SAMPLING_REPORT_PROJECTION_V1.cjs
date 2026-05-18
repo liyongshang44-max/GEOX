@@ -5,6 +5,7 @@ const baseUrl = env('SAMPLING_API_BASE_URL', env('API_BASE_URL', 'http://127.0.0
 const token = env('ADMIN_TOKEN', env('AO_ACT_TOKEN', 'admin_token'));
 
 async function main() {
+  const existingOperationId = process.env.SAMPLING_EXISTING_OPERATION_ID || '';
   const now = Date.now();
   const tenant_id = `t-${now}`;
   const project_id = `p-${now}`;
@@ -53,6 +54,9 @@ async function main() {
       created_plan_receipt_lab_acceptance: true,
       sample_id_present: true,
       note: 'Sampling projection/status is now sourced from facts in report_v1 path.',
+      operation_report_gate_dependency: existingOperationId
+        ? `uses pre-existing operation id: ${existingOperationId}`
+        : 'requires a pre-existing operation id for operation report projection gate; this script does not seed operation',
     },
   }, null, 2));
 }
