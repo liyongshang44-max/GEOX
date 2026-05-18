@@ -1,4 +1,4 @@
-export type FormalScenarioTypeV1 = "FORMAL_IRRIGATION" | "DEVICE_ANOMALY" | "FORMAL_VARIABLE_OPERATION";
+export type FormalScenarioTypeV1 = "FORMAL_IRRIGATION" | "DEVICE_ANOMALY" | "FORMAL_VARIABLE_OPERATION" | "FORMAL_FERTILIZATION";
 export type FormalScenarioLaneV1 = "positive" | "negative" | "anomaly" | "partial";
 export type FormalScenarioRunStatusV1 = "RUNNING" | "PASSED" | "FAILED";
 
