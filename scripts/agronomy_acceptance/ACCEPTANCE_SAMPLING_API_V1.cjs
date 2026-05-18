@@ -2,11 +2,18 @@ const assert = require('node:assert/strict');
 
 const baseUrl = process.env.SAMPLING_API_BASE_URL || process.env.API_BASE_URL || 'http://127.0.0.1:3000';
 const token = process.env.ADMIN_TOKEN || process.env.AO_ACT_TOKEN || 'admin_token';
+const tenantScope = {
+  tenant_id: process.env.TENANT_ID || 'tenantA',
+  project_id: process.env.PROJECT_ID || 'projectA',
+  group_id: process.env.GROUP_ID || 'groupA',
+};
 
-async function postJson(path, body) {
+async function postJson(path, body, withAuth = true) {
+  const headers = { 'content-type': 'application/json' };
+  if (withAuth) headers.authorization = `Bearer ${token}`;
   const res = await fetch(`${baseUrl}${path}`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    headers,
     body: JSON.stringify(body),
   });
   let json = null;
@@ -27,21 +34,41 @@ async function main() {
     lab_result_requires_evidence_refs: false,
     invalid_quality_status_blocked: false,
     sample_lookup_works: false,
-    acceptance_requires_existing_plan: false,
+    missing_auth_rejected: false,
+    cross_tenant_hidden_404: false,
   };
 
   const now = Date.now();
   const ids = {
-    tenant_id: `t-${now}`,
-    project_id: `p-${now}`,
-    group_id: `g-${now}`,
     field_id: `f-${now}`,
     sample_id: `s-${now}`,
   };
+  const scopedBody = { ...tenantScope, ...ids };
+
+  const missingAuth = await postJson('/api/v1/sampling/plan', {
+    ...scopedBody,
+    reason: 'BASELINE',
+    sample_type: 'SOIL',
+    required_points: 3,
+    evidence_refs: [],
+  }, false);
+  assert.equal(missingAuth.status, 401, 'missing authorization should be rejected with 401');
+  checks.missing_auth_rejected = true;
+
+  const crossTenant = await postJson('/api/v1/sampling/plan', {
+    ...scopedBody,
+    tenant_id: `${tenantScope.tenant_id}_other`,
+    reason: 'BASELINE',
+    sample_type: 'SOIL',
+    required_points: 3,
+    evidence_refs: [],
+  });
+  assert.equal(crossTenant.status, 404, 'cross-tenant scope should return 404');
+  checks.cross_tenant_hidden_404 = true;
 
   const planRes = await postJson('/api/v1/sampling/plan', {
-    ...ids,
-    reason: 'MANUAL_REQUEST',
+    ...scopedBody,
+    reason: 'BASELINE',
     sample_type: 'SOIL',
     required_points: 3,
     evidence_refs: [],
@@ -54,7 +81,7 @@ async function main() {
   const badPlanReceipt = await postJson('/api/v1/sampling/receipt', {
     plan_id: 'missing-plan-id',
     sample_id: `${ids.sample_id}-x`,
-    ...ids,
+    ...scopedBody,
     collected_at_ts: now,
     collector_actor_id: 'collector-1',
     sample_type: 'SOIL',
@@ -67,7 +94,7 @@ async function main() {
   const receiptNoEvidence = await postJson('/api/v1/sampling/receipt', {
     plan_id: planRes.json.plan_id,
     sample_id: `${ids.sample_id}-no-evi`,
-    ...ids,
+    ...scopedBody,
     collected_at_ts: now,
     collector_actor_id: 'collector-1',
     sample_type: 'SOIL',
@@ -80,7 +107,7 @@ async function main() {
   const goodReceipt = await postJson('/api/v1/sampling/receipt', {
     plan_id: planRes.json.plan_id,
     sample_id: ids.sample_id,
-    ...ids,
+    ...scopedBody,
     collected_at_ts: now,
     collector_actor_id: 'collector-1',
     sample_type: 'SOIL',

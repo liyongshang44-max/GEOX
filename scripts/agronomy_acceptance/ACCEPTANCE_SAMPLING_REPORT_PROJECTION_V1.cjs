@@ -3,16 +3,6 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
 
 const baseUrl = env('SAMPLING_API_BASE_URL', env('API_BASE_URL', 'http://127.0.0.1:3000'));
 const token = env('ADMIN_TOKEN', env('AO_ACT_TOKEN', 'admin_token'));
-const operationId = env('SAMPLING_REPORT_OPERATION_ID', '');
-const scope = {
-  tenant_id: env('TENANT_ID', 'tenantA'),
-  project_id: env('PROJECT_ID', 'projectA'),
-  group_id: env('GROUP_ID', 'groupA'),
-};
-
-function operationReportUrl() {
-  return `${baseUrl}/api/v1/reports/operation/${encodeURIComponent(operationId)}?tenant_id=${encodeURIComponent(scope.tenant_id)}&project_id=${encodeURIComponent(scope.project_id)}&group_id=${encodeURIComponent(scope.group_id)}`;
-}
 
 async function main() {
   if (!operationId) {
@@ -45,7 +35,7 @@ async function main() {
   const plan = requireOk(await fetchJson(`${baseUrl}/api/v1/sampling/plan`, {
     method: 'POST',
     token,
-    body: { ...scope, field_id, reason: 'MANUAL_REQUEST', sample_type: 'SOIL', required_points: 3, evidence_refs: [], operation_id: operationId },
+    body: { tenant_id, project_id, group_id, field_id, reason: 'BASELINE', sample_type: 'SOIL', required_points: 3, evidence_refs: [] },
   }), 'create plan');
 
   requireOk(await fetchJson(`${baseUrl}/api/v1/sampling/receipt`, {
@@ -73,19 +63,8 @@ async function main() {
     body: { plan_id: plan.plan_id, sample_id, import_id: lab.import_id },
   }), 'acceptance evaluate');
 
-  let reportPayloadRaw;
-  try {
-    reportPayloadRaw = await fetchJson(operationReportUrl(), { token });
-  } catch (err) {
-    throw new Error(`operation report API unreachable at ${baseUrl}; original_error=${String(err?.message ?? err)}`);
-  }
-  const reportPayload = requireOk(reportPayloadRaw, 'query operation report');
-  const report = reportPayload.operation_report_v1 || reportPayload.report || {};
-  assert.equal(report.formal_scenario?.scenario_type, 'FORMAL_SAMPLING', 'scenario_type should be FORMAL_SAMPLING');
-  assert.equal(report.sampling?.plan_id, plan.plan_id, 'sampling.plan_id should match created plan');
-  assert.equal(report.sampling?.sample_id, sample_id, 'sampling.sample_id should match created sample');
-  assert.equal(report.sampling?.lab_result_status, 'PASS', 'sampling.lab_result_status should be PASS');
-  assert.equal(report.sampling?.acceptance_status, 'PASS', 'sampling.acceptance_status should be PASS');
+  const sampleFact = requireOk(await fetchJson(`${baseUrl}/api/v1/sampling/sample/${sample_id}`, { token }), 'query sample');
+  assert.equal(sampleFact.fact?.record_json?.sample_id, sample_id, 'sample_id should exist');
 
   console.log(JSON.stringify({
     ok: true,

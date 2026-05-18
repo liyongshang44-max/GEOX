@@ -43,7 +43,7 @@ function tenantMatchesAuth(body: any, auth: any): boolean {
     && String(body?.group_id ?? "") === auth.group_id;
 }
 
-const PLAN_REASONS = new Set(["LOW_CONFIDENCE", "NUTRIENT_CHECK", "SOIL_MOISTURE_VALIDATION", "MODEL_GAP", "MANUAL_REQUEST"]);
+const PLAN_REASONS = new Set(["BASELINE", "DIAGNOSTIC", "FOLLOWUP", "COMPLIANCE"]);
 const SAMPLE_TYPES = new Set(["SOIL", "TISSUE", "WATER"]);
 const CHAIN_STATUSES = new Set(["RECORDED", "MISSING", "BROKEN"]);
 const QUALITY_STATUSES = new Set(["PASS", "NEEDS_REVIEW", "INVALID"]);
@@ -151,7 +151,7 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
     if (!isNonEmptyString(body.sample_id)) return badRequest(reply, "MISSING_OR_INVALID:sample_id");
     if (body.import_id != null && !isNonEmptyString(body.import_id)) return badRequest(reply, "MISSING_OR_INVALID:import_id");
     const plan = await service.findPlanById(body.plan_id);
-    if (!plan) return reply.status(404).send({ ok: false, error: "NOT_FOUND:plan_id" });
+    if (!plan) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
     if (!tenantMatchesAuth(plan, auth)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
 
     const receipt = await service.findReceiptBySampleId(body.sample_id);
