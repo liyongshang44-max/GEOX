@@ -153,6 +153,13 @@ async function main() {
   assert.equal(sampleLookup.status, 200, 'sample lookup should succeed for created sample');
   checks.sample_lookup_works = true;
 
+  const acceptanceMissingPlan = await postJson('/api/v1/sampling/acceptance/evaluate', {
+    plan_id: 'missing-plan-id',
+    sample_id: ids.sample_id,
+  });
+  assert.equal(acceptanceMissingPlan.status, 404, 'acceptance evaluate must return 404 when plan does not exist');
+  checks.acceptance_requires_existing_plan = true;
+
   console.log(JSON.stringify({ ok: true, suite: 'ACCEPTANCE_SAMPLING_API_V1', mode, checks }, null, 2));
 }
 

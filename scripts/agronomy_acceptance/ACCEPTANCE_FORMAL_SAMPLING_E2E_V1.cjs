@@ -18,6 +18,7 @@ async function main() {
   assertNode.equal(process.env.SAMPLING_MODE !== 'offline', true, 'offline fallback is forbidden in formal sampling E2E');
   const base = env('BASE_URL', process.env.GEOX_BASE_URL || 'http://127.0.0.1:3001');
   const token = env('ADMIN_TOKEN', env('AO_ACT_TOKEN', 'admin_token'));
+  const reportOperationId = process.env.SAMPLING_REPORT_OPERATION_ID || null;
   const scope = { tenant_id: env('TENANT_ID', 'tenantA'), project_id: env('PROJECT_ID', 'projectA'), group_id: env('GROUP_ID', 'groupA') };
   const pool = new Pool({ connectionString: env('DATABASE_URL', 'postgres://postgres:postgres@127.0.0.1:5432/geox') });
 
@@ -32,6 +33,7 @@ async function main() {
     acceptance_api_live_called: false,
     invalid_lab_result_not_pass: false,
     customer_report_downgraded_when_evidence_missing: false,
+    acceptance_missing_receipt_uses_plan_scope: false,
   };
 
   try {
@@ -62,7 +64,7 @@ async function main() {
     }), 'create ao sense receipt');
     checks.ao_sense_receipt_created = true;
 
-    const plan = requireOk(await fetchJson(`${base}/api/v1/sampling/plan`, { method: 'POST', token, body: { tenant_id: scope.tenant_id, project_id: scope.project_id, group_id: scope.group_id, field_id: `field_${run}`, reason: 'COMPLIANCE', sample_type: 'SOIL', required_depth_cm: 20, required_points: 3, evidence_refs: [{ kind: 'fact_id', ref_id: aoTask.fact_id }] } }), 'create sampling plan');
+    const plan = requireOk(await fetchJson(`${base}/api/v1/sampling/plan`, { method: 'POST', token, body: { tenant_id: scope.tenant_id, project_id: scope.project_id, group_id: scope.group_id, field_id: `field_${run}`, reason: 'MANUAL_REQUEST', sample_type: 'SOIL', required_depth_cm: 20, required_points: 3, evidence_refs: [{ kind: 'fact_id', ref_id: aoTask.fact_id }], operation_id: reportOperationId } }), 'create sampling plan');
     checks.sampling_plan_created = true;
 
     const aoSenseReceiptFactId = aoReceipt.fact_id;
@@ -117,6 +119,24 @@ async function main() {
     const negMismatch = await fetchJson(`${base}/api/v1/sampling/acceptance/evaluate`, { method: 'POST', token, body: { plan_id: plan.plan_id, sample_id: rid('mismatch'), import_id: lab.import_id } });
     const mismatchAccepted = negMismatch.ok && negMismatch.json?.ok === true && negMismatch.json?.verdict === 'INSUFFICIENT_EVIDENCE';
     assert.equal((negMismatch.status >= 400 && negMismatch.status < 500) || mismatchAccepted, true, `expected 4xx or INSUFFICIENT_EVIDENCE for sample_id mismatch; got status=${negMismatch.status} body=${negMismatch.text}`);
+
+    const missingReceiptSampleId = rid('missing_receipt_acceptance');
+    const missingReceiptAcceptance = requireOk(await fetchJson(`${base}/api/v1/sampling/acceptance/evaluate`, {
+      method: 'POST',
+      token,
+      body: { plan_id: plan.plan_id, sample_id: missingReceiptSampleId, import_id: rid('missing_receipt_import') },
+    }), 'evaluate acceptance with existing plan but missing receipt');
+    assert.equal(missingReceiptAcceptance.verdict, 'INSUFFICIENT_EVIDENCE', 'missing receipt must return INSUFFICIENT_EVIDENCE');
+    const acceptanceFact = await pool.query('SELECT record_json FROM facts WHERE fact_id=$1', [missingReceiptAcceptance.fact_id]);
+    assert.equal(acceptanceFact.rowCount, 1, 'acceptance fact must exist');
+    const acceptanceRecord = acceptanceFact.rows[0].record_json || {};
+    assert.equal(acceptanceRecord.tenant_id, scope.tenant_id, 'tenant_id must match plan/auth scope');
+    assert.equal(acceptanceRecord.project_id, scope.project_id, 'project_id must match plan/auth scope');
+    assert.equal(acceptanceRecord.group_id, scope.group_id, 'group_id must match plan/auth scope');
+    assert.notEqual(acceptanceRecord.tenant_id, '', 'tenant_id must not be empty');
+    assert.notEqual(acceptanceRecord.project_id, '', 'project_id must not be empty');
+    assert.notEqual(acceptanceRecord.group_id, '', 'group_id must not be empty');
+    checks.acceptance_missing_receipt_uses_plan_scope = true;
 
     const invalidSampleId = rid('sample_invalid_quality');
     requireOk(await fetchJson(`${base}/api/v1/sampling/receipt`, { method: 'POST', token, body: { plan_id: plan.plan_id, sample_id: invalidSampleId, tenant_id: scope.tenant_id, project_id: scope.project_id, group_id: scope.group_id, field_id: `field_${run}`, collected_at_ts: Date.now(), collector_actor_id: 'collector_formal_sampling', sample_type: 'SOIL', chain_of_custody_status: 'RECORDED', evidence_refs: [{ kind: 'fact_id', ref_id: aoSenseReceiptFactId }] } }), 'create receipt for invalid quality sample');

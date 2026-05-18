@@ -45,8 +45,10 @@ export class SamplingServiceV1 {
     sample_type: string;
     required_depth_cm?: number | null;
     required_points: number;
+    operation_id?: string | null;
+    operation_plan_id?: string | null;
     evidence_refs: EvidenceRef[];
-  }): Promise<{ plan_id: string; fact_id: string }> {
+  }): Promise<{ plan_id: string; fact_id: string; relation_fact_id?: string }> {
     const plan_id = randomUUID();
     const fact_id = `sp_${plan_id}`;
 
@@ -69,7 +71,36 @@ export class SamplingServiceV1 {
 
     const ok = await this.insertFact({ fact_id, occurred_at: new Date().toISOString(), source: "api_v1_sampling", record_json });
     if (!ok) throw new Error("FACT_INSERT_CONFLICT_OR_FAILED");
-    return { plan_id, fact_id };
+
+    const operation_id = typeof input.operation_id === "string" && input.operation_id.trim() ? input.operation_id.trim() : null;
+    const operation_plan_id = typeof input.operation_plan_id === "string" && input.operation_plan_id.trim() ? input.operation_plan_id.trim() : null;
+    if (!operation_id && !operation_plan_id) return { plan_id, fact_id };
+
+    const relation_id = randomUUID();
+    const relation_fact_id = `sor_${relation_id}`;
+    const relationRecordJson: Record<string, unknown> = {
+      type: "sampling_operation_relation_v1",
+      schema_version: "1",
+      relation_id,
+      tenant_id: input.tenant_id,
+      project_id: input.project_id,
+      group_id: input.group_id,
+      field_id: input.field_id,
+      plan_id,
+      operation_id,
+      operation_plan_id,
+      created_at_ts: Date.now(),
+    };
+
+    const relationOk = await this.insertFact({
+      fact_id: relation_fact_id,
+      occurred_at: new Date().toISOString(),
+      source: "api_v1_sampling",
+      record_json: relationRecordJson,
+    });
+    if (!relationOk) throw new Error("FACT_INSERT_CONFLICT_OR_FAILED");
+
+    return { plan_id, fact_id, relation_fact_id };
   }
 
   async createReceipt(input: {
@@ -214,6 +245,9 @@ export class SamplingServiceV1 {
     reasons: string[];
     evidence_refs: EvidenceRef[];
   }): Promise<{ acceptance_id: string; fact_id: string }> {
+    if (!input.tenant_id || !input.project_id || !input.group_id) {
+      throw new Error("INVALID_ACCEPTANCE_SCOPE");
+    }
     const acceptance_id = randomUUID();
     const fact_id = `sa_${acceptance_id}`;
 

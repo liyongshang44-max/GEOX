@@ -5,10 +5,30 @@ const baseUrl = env('SAMPLING_API_BASE_URL', env('API_BASE_URL', 'http://127.0.0
 const token = env('ADMIN_TOKEN', env('AO_ACT_TOKEN', 'admin_token'));
 
 async function main() {
+  if (!operationId) {
+    throw new Error('SAMPLING_REPORT_OPERATION_ID not found; run formal scenario seed or provide an existing operation id');
+  }
+
+  let opReport;
+  try {
+    opReport = await fetchJson(operationReportUrl(), { token });
+  } catch (err) {
+    throw new Error(`operation report API unreachable at ${baseUrl}; original_error=${String(err?.message ?? err)}`);
+  }
+  if (!opReport.ok) {
+    if (opReport.status === 404) {
+      throw new Error('SAMPLING_REPORT_OPERATION_ID not found; run formal scenario seed or provide an existing operation id');
+    }
+    if (opReport.status === 401 || opReport.status === 403) {
+      throw new Error(`SAMPLING_REPORT_OPERATION_ID access denied for tenant/project/group scope (${scope.tenant_id}/${scope.project_id}/${scope.group_id}); check ADMIN_TOKEN and scope env`);
+    }
+    if (opReport.status >= 500) {
+      throw new Error(`operation report API failed (${opReport.status}); check server health and logs`);
+    }
+    throw new Error('SAMPLING_REPORT_OPERATION_ID not found; run formal scenario seed or provide an existing operation id');
+  }
+
   const now = Date.now();
-  const tenant_id = `t-${now}`;
-  const project_id = `p-${now}`;
-  const group_id = `g-${now}`;
   const field_id = `f-${now}`;
   const sample_id = `s-${now}`;
 
@@ -22,7 +42,7 @@ async function main() {
     method: 'POST',
     token,
     body: {
-      plan_id: plan.plan_id, sample_id, tenant_id, project_id, group_id, field_id,
+      plan_id: plan.plan_id, sample_id, ...scope, field_id,
       collected_at_ts: now, collector_actor_id: 'collector-1', sample_type: 'SOIL',
       evidence_refs: [{ kind: 'raw_sample_v1', ref_id: `raw-${now}` }], chain_of_custody_status: 'RECORDED',
     },
@@ -51,8 +71,8 @@ async function main() {
     suite: 'ACCEPTANCE_SAMPLING_REPORT_PROJECTION_V1',
     checks: {
       created_plan_receipt_lab_acceptance: true,
-      sample_id_present: true,
-      note: 'Sampling projection/status is now sourced from facts in report_v1 path.',
+      operation_report_projection_checked: true,
+      operation_relation_binding_effective: report.sampling?.plan_id === plan.plan_id && report.sampling?.sample_id === sample_id,
     },
   }, null, 2));
 }
