@@ -121,6 +121,7 @@ async function main() {
     reasons: ['CROSS_TENANT_NEGATIVE'],
   });
   assert.equal(crossTenant.status, 404, `cross tenant must be 404; got=${crossTenant.status}`);
+  await waitForHealth(base);
   checks.cross_tenant_404 = true;
 
   const { lab } = await createSamplingFormalChain(base, token, scope, field_id, sample_id);
