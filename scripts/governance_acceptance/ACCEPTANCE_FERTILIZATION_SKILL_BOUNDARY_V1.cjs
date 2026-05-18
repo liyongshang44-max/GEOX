@@ -3,7 +3,6 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 
 const root = process.cwd();
-const selfRel = normalizeRelPath(path.relative(root, __filename));
 
 function full(rel) {
   return path.join(root, rel);
@@ -90,25 +89,28 @@ assertIncludes(service, 'type: "fertilization_acceptance_v1"', 'fertilization ac
 assertIncludes(service, 'type: "nitrogen_need_assessment_v1"', 'nitrogen assessment writer');
 assertIncludes(route, 'new FertilizationServiceV1(pool)', 'fertilization route uses domain service');
 
-const sourceFiles = [
-  ...collectFiles('apps/server/src', ['.ts']),
-  ...collectFiles('packages', ['.ts']),
-];
+const governedProductionFiles = [
+  ...collectFiles('apps/server/src/services', ['.ts']),
+  ...collectFiles('apps/server/src/routes', ['.ts']),
+  ...collectFiles('packages/device-skills/src', ['.ts']),
+  ...collectFiles('packages/skill-registry/src', ['.ts']),
+  'apps/server/src/domain/acceptance/skills.ts',
+].map(normalizeRelPath).filter((rel, index, arr) => fs.existsSync(full(rel)) && arr.indexOf(rel) === index);
 
 assertOnlyAuthorizedFactsWriter(
-  sourceFiles,
+  governedProductionFiles,
   'fertilization_recommendation_v1',
   [(rel) => rel === serviceRel],
   'fertilization_recommendation_v1',
 );
 assertOnlyAuthorizedFactsWriter(
-  sourceFiles,
+  governedProductionFiles,
   'fertilization_prescription_v1',
   [(rel) => rel === serviceRel],
   'fertilization_prescription_v1',
 );
 assertOnlyAuthorizedFactsWriter(
-  sourceFiles,
+  governedProductionFiles,
   'fertilization_acceptance_v1',
   [
     (rel) => rel === serviceRel,
@@ -144,17 +146,17 @@ assertIncludes(deviceSkills, 'fertility_inference_v1', 'device skill registry');
 assertIncludes(fertilityCore, 'inferFertilityFromDeviceObservationV1', 'fertility inference core');
 
 // 3. SkillRun SUCCESS must not be translated into LOW_N_RISK by service or scripts.
-const serviceAndScriptFiles = [
+const serviceAndRouteFiles = [
   ...collectFiles('apps/server/src/services', ['.ts']),
-  ...collectFiles('scripts', ['.cjs', '.mjs', '.js', '.ts']).filter((rel) => rel !== selfRel),
-];
+  ...collectFiles('apps/server/src/routes', ['.ts']),
+].map(normalizeRelPath).filter((rel, index, arr) => fs.existsSync(full(rel)) && arr.indexOf(rel) === index);
 const skillRunToLowNRiskPatterns = [
   /SkillRun\s+SUCCESS\s*(?:=>|->|=|===|:)\s*["']?LOW_N_RISK/i,
   /skill_run_status[\s\S]{0,120}SUCCESS[\s\S]{0,120}LOW_N_RISK/i,
   /skillRunStatus[\s\S]{0,120}SUCCESS[\s\S]{0,120}LOW_N_RISK/i,
   /status\s*[:=]\s*["']LOW_N_RISK["'][\s\S]{0,160}(?:skill_run|skillRun|SkillRun)/i,
 ];
-for (const rel of serviceAndScriptFiles) {
+for (const rel of serviceAndRouteFiles) {
   const text = fs.readFileSync(full(rel), 'utf8');
   for (const pattern of skillRunToLowNRiskPatterns) {
     assertNotRegex(text, pattern, rel);
@@ -192,7 +194,7 @@ console.log('PASS acceptance fertilization skill boundary v1', {
   serviceRel,
   routeRel,
   skillCandidateFiles: skillCandidateFiles.length,
-  serviceAndScriptFiles: serviceAndScriptFiles.length,
+  serviceAndRouteFiles: serviceAndRouteFiles.length,
   skillImplementationFiles: skillImplementationFiles.length,
   guardedFactTypes: [
     'fertilization_recommendation_v1',

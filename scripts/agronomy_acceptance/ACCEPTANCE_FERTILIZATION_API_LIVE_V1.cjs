@@ -6,13 +6,22 @@ const id = (prefix) => `${prefix}_${randomUUID().replace(/-/g, '').slice(0, 10)}
 function tokenEnv(name, fallback) { return env(name, env('AO_ACT_TOKEN', fallback)); }
 
 async function post(base, path, token, body) {
-  return fetchJson(`${base}${path}`, { method: 'POST', token, body });
+  try {
+    return await fetchJson(`${base}${path}`, { method: 'POST', token, body });
+  } catch (err) {
+    throw new Error(`POST ${path} fetch failed: ${String(err?.message ?? err)}`);
+  }
 }
 
 async function postRawAuth(base, path, authHeader, body) {
   const headers = { 'content-type': 'application/json' };
   if (authHeader != null) headers.authorization = authHeader;
-  const res = await fetch(`${base}${path}`, { method: 'POST', headers, body: JSON.stringify(body) });
+  let res;
+  try {
+    res = await fetch(`${base}${path}`, { method: 'POST', headers, body: JSON.stringify(body) });
+  } catch (err) {
+    throw new Error(`POST ${path} fetch failed: ${String(err?.message ?? err)}`);
+  }
   const text = await res.text();
   let json = null;
   try { json = text ? JSON.parse(text) : null; } catch {}
@@ -60,7 +69,7 @@ async function createSamplingFormalChain(base, token, scope, field_id, sample_id
 }
 
 async function main() {
-  const base = env('FERTILIZATION_API_BASE_URL', env('API_BASE_URL', env('BASE_URL', 'http://127.0.0.1:3000')));
+  const base = env('FERTILIZATION_API_BASE_URL', env('API_BASE_URL', env('BASE_URL', 'http://127.0.0.1:3001')));
   const token = tokenEnv('ADMIN_TOKEN', 'admin_token');
   const scope = { tenant_id: env('TENANT_ID', 'tenantA'), project_id: env('PROJECT_ID', 'projectA'), group_id: env('GROUP_ID', 'groupA') };
   await waitForHealth(base);
@@ -144,42 +153,52 @@ async function main() {
   assert.equal(sensingLowN.status, 400, `SENSING_RISK status LOW_N_RISK must be 400; got=${sensingLowN.status}`);
   checks.sensing_risk_low_n_risk_blocked_400 = true;
 
-  const assessId = lowN.json?.assessment_id;
-  assert.ok(assessId, 'assessment_id is required for recommendation negative tests');
+  const lowNAssessmentId = lowN.json?.assessment?.assessment_id;
+  assert.ok(lowNAssessmentId, 'assessment.assessment_id is required for recommendation tests');
+
+  const sensing = requireOk(await post(base, '/api/v1/fertilization/nitrogen-assessment', token, {
+    ...scope,
+    field_id,
+    trigger_source: 'SENSING_RISK',
+    sensing_state_refs: [{ state_type: 'fertility_state', ref_id: id('state') }],
+    skill_signal_refs: [{ skill_id: 'fertility_inference_v1', skill_run_id: id('run'), signal_type: 'LOW_FERTILITY_SIGNAL' }],
+    reasons: ['SENSING_REVIEW_ONLY'],
+  }), 'sensing assessment');
+  const sensingAssessmentId = sensing.assessment.assessment_id;
 
   const recBadVisible = await post(base, '/api/v1/fertilization/recommendation', token, {
     ...scope,
     field_id,
-    assessment_id: assessId,
+    assessment_id: sensingAssessmentId,
     recommendation_type: 'NITROGEN',
     suggested_total_n_kg_ha: 20,
-    zone_rates: [{ zone_id: 'z1', planned_n_kg_ha: 20, max_n_kg_ha: 25 }],
+    zone_rates: [{ zone_id: 'z1', n_kg_ha: 20, confidence: 'LOW', reason: 'SENSING_REVIEW_ONLY' }],
     risk_flags: [],
-    customer_visible_eligible: 'true',
-    evidence_refs: [{ kind: 'nitrogen_need_assessment_v1', ref_id: assessId }],
+    customer_visible_eligible: true,
+    evidence_refs: [{ kind: 'nitrogen_need_assessment_v1', ref_id: sensingAssessmentId }],
   });
-  assert.equal(recBadVisible.status, 400, `customer_visible_eligible=true (non-boolean) must be 400; got=${recBadVisible.status}`);
+  assert.equal(recBadVisible.status, 400, `SENSING_RISK assessment + customer_visible_eligible=true must be 400; got=${recBadVisible.status}`);
   checks.sensing_risk_customer_visible_true_blocked_400 = true;
 
   const recOk = requireOk(await post(base, '/api/v1/fertilization/recommendation', token, {
     ...scope,
     field_id,
-    assessment_id: assessId,
+    assessment_id: lowNAssessmentId,
     recommendation_type: 'NITROGEN',
     suggested_total_n_kg_ha: 20,
-    zone_rates: [{ zone_id: 'z1', planned_n_kg_ha: 20, max_n_kg_ha: 25 }],
+    zone_rates: [{ zone_id: 'z1', n_kg_ha: 20, confidence: 'HIGH', reason: 'LOW_N_LAB_CONFIRMED' }],
     risk_flags: [],
     customer_visible_eligible: true,
-    evidence_refs: [{ kind: 'nitrogen_need_assessment_v1', ref_id: assessId }],
+    evidence_refs: [{ kind: 'nitrogen_need_assessment_v1', ref_id: lowNAssessmentId }],
   }), 'recommendation create');
 
   const rxNegative = await post(base, '/api/v1/fertilization/prescription', token, {
     ...scope,
     field_id,
-    fertilization_recommendation_id: recOk.recommendation_id,
+    fertilization_recommendation_id: recOk.recommendation.fertilization_recommendation_id,
     material_type: 'UREA',
     zone_rates: [{ zone_id: 'z1', planned_n_kg_ha: -1, max_n_kg_ha: 25 }],
-    evidence_refs: [{ kind: 'fertilization_recommendation_v1', ref_id: recOk.recommendation_id }],
+    evidence_refs: [{ kind: 'fertilization_recommendation_v1', ref_id: recOk.recommendation.fertilization_recommendation_id }],
   });
   assert.equal(rxNegative.status, 400, `negative planned_n_kg_ha must be 400; got=${rxNegative.status}`);
   checks.negative_planned_n_blocked_400 = true;
@@ -187,10 +206,10 @@ async function main() {
   const rxAboveMax = await post(base, '/api/v1/fertilization/prescription', token, {
     ...scope,
     field_id,
-    fertilization_recommendation_id: recOk.recommendation_id,
+    fertilization_recommendation_id: recOk.recommendation.fertilization_recommendation_id,
     material_type: 'UREA',
     zone_rates: [{ zone_id: 'z1', planned_n_kg_ha: 30, max_n_kg_ha: 25 }],
-    evidence_refs: [{ kind: 'fertilization_recommendation_v1', ref_id: recOk.recommendation_id }],
+    evidence_refs: [{ kind: 'fertilization_recommendation_v1', ref_id: recOk.recommendation.fertilization_recommendation_id }],
   });
   assert.equal(rxAboveMax.status, 400, `planned_n_kg_ha > max_n_kg_ha must be 400; got=${rxAboveMax.status}`);
   checks.above_max_planned_n_blocked_400 = true;

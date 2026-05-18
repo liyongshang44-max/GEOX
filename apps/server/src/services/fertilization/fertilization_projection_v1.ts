@@ -115,6 +115,29 @@ async function queryFacts(pool: Pool, tenant: TenantTripleV1, candidates: string
   return (result.rows ?? []).map((row: any) => ({ fact_id: String(row.fact_id ?? ""), occurred_at: String(row.occurred_at ?? ""), record_json: parseJson(row.record_json) }));
 }
 
+async function queryFactByTypeAndKey(
+  pool: Pool,
+  tenant: TenantTripleV1,
+  type: string,
+  key: string,
+  value: string,
+): Promise<FactRowV1 | null> {
+  const result = await pool.query(
+    `SELECT fact_id, occurred_at, record_json::jsonb AS record_json
+       FROM facts
+      WHERE COALESCE(record_json::jsonb->>'tenant_id', record_json::jsonb#>>'{payload,tenant_id}') = $1
+        AND COALESCE(record_json::jsonb->>'project_id', record_json::jsonb#>>'{payload,project_id}') = $2
+        AND COALESCE(record_json::jsonb->>'group_id', record_json::jsonb#>>'{payload,group_id}') = $3
+        AND (record_json::jsonb->>'type') = $4
+        AND (record_json::jsonb->>$5) = $6
+      ORDER BY occurred_at DESC, fact_id DESC
+      LIMIT 1`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, type, key, value],
+  ).catch(() => ({ rows: [] as any[] }));
+  const row = result.rows?.[0] ?? null;
+  return row ? { fact_id: String(row.fact_id ?? ""), occurred_at: String(row.occurred_at ?? ""), record_json: parseJson(row.record_json) } : null;
+}
+
 function latest(facts: FactRowV1[], type: string): any | null {
   const hit = [...facts].reverse().find((row) => String(row.record_json?.type ?? "") === type);
   return hit?.record_json ?? null;
@@ -197,13 +220,45 @@ export async function buildFertilizationReportProjectionV1(pool: Pool, params: {
     params.prescription_id,
     params.recommendation_id,
   ].map((x) => cleanText(x)).filter((x): x is string => Boolean(x));
-  const facts = await queryFacts(pool, params.tenant, candidates);
+  let facts = await queryFacts(pool, params.tenant, candidates);
+
   const acceptance = latest(facts, "fertilization_acceptance_v1");
-  const prescriptionByLatest = latest(facts, "fertilization_prescription_v1");
-  const prescription = prescriptionByLatest ?? (acceptance?.fertilization_prescription_id
-    ? [...facts].reverse().find((row) => row.record_json?.type === "fertilization_prescription_v1" && row.record_json?.fertilization_prescription_id === acceptance.fertilization_prescription_id)?.record_json ?? null
-    : null);
-  const recommendation = findRecommendation(facts, prescription, acceptance);
+
+  const linkedPrescriptionId = cleanText(acceptance?.fertilization_prescription_id);
+  if (linkedPrescriptionId && !facts.some((row) =>
+    row.record_json?.type === "fertilization_prescription_v1"
+    && row.record_json?.fertilization_prescription_id === linkedPrescriptionId
+  )) {
+    const row = await queryFactByTypeAndKey(pool, params.tenant, "fertilization_prescription_v1", "fertilization_prescription_id", linkedPrescriptionId);
+    if (row) facts.push(row);
+  }
+
+  let prescription = latest(facts, "fertilization_prescription_v1");
+  if (linkedPrescriptionId) {
+    prescription = [...facts].reverse().find((row) => row.record_json?.type === "fertilization_prescription_v1" && row.record_json?.fertilization_prescription_id === linkedPrescriptionId)?.record_json ?? prescription;
+  }
+
+  const linkedRecommendationId = cleanText(prescription?.fertilization_recommendation_id);
+  if (linkedRecommendationId && !facts.some((row) =>
+    row.record_json?.type === "fertilization_recommendation_v1"
+    && row.record_json?.fertilization_recommendation_id === linkedRecommendationId
+  )) {
+    const row = await queryFactByTypeAndKey(pool, params.tenant, "fertilization_recommendation_v1", "fertilization_recommendation_id", linkedRecommendationId);
+    if (row) facts.push(row);
+  }
+
+  let recommendation = findRecommendation(facts, prescription, acceptance);
+
+  const linkedAssessmentId = cleanText(recommendation?.assessment_id ?? prescription?.assessment_id);
+  if (linkedAssessmentId && !facts.some((row) =>
+    row.record_json?.type === "nitrogen_need_assessment_v1"
+    && row.record_json?.assessment_id === linkedAssessmentId
+  )) {
+    const row = await queryFactByTypeAndKey(pool, params.tenant, "nitrogen_need_assessment_v1", "assessment_id", linkedAssessmentId);
+    if (row) facts.push(row);
+  }
+
+  recommendation = findRecommendation(facts, prescription, acceptance);
   const assessment = findAssessment(facts, recommendation, prescription);
   if (!assessment && !recommendation && !prescription && !acceptance) return null;
   const zone_rates = normalizeZoneRates(prescription, acceptance);
