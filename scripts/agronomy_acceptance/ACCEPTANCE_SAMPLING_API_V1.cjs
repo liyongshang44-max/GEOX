@@ -25,4 +25,51 @@ for (const factType of ['sampling_plan_v1', 'sample_receipt_v1', 'lab_result_imp
   assert.equal(serviceText.includes(factType), true, `missing fact writer for ${factType}`);
 }
 
+function extractMethodBody(text, methodName) {
+  const start = text.indexOf(`async ${methodName}(`);
+  assert.notEqual(start, -1, `missing method: ${methodName}`);
+
+  const openBrace = text.indexOf('{', start);
+  assert.notEqual(openBrace, -1, `missing method body open brace: ${methodName}`);
+
+  let depth = 0;
+  for (let i = openBrace; i < text.length; i += 1) {
+    const ch = text[i];
+    if (ch === '{') depth += 1;
+    if (ch === '}') depth -= 1;
+    if (depth === 0) {
+      return text.slice(openBrace, i + 1);
+    }
+  }
+
+  throw new Error(`unterminated method body: ${methodName}`);
+}
+
+function expectIncludesAll(text, required, prefix) {
+  for (const field of required) {
+    assert.equal(text.includes(field), true, `${prefix} missing field: ${field}`);
+  }
+}
+
+const createPlanBody = extractMethodBody(serviceText, 'createPlan');
+expectIncludesAll(
+  createPlanBody,
+  ['tenant_id', 'project_id', 'group_id', 'field_id', 'reason', 'sample_type', 'required_points', 'evidence_refs'],
+  'createPlan',
+);
+
+const createReceiptBody = extractMethodBody(serviceText, 'createReceipt');
+expectIncludesAll(
+  createReceiptBody,
+  ['sample_id', 'chain_of_custody_status', 'collector_actor_id', 'sample_type', 'evidence_refs'],
+  'createReceipt',
+);
+
+const createLabResultBody = extractMethodBody(serviceText, 'createLabResult');
+expectIncludesAll(
+  createLabResultBody,
+  ['import_id', 'units', 'evidence_refs', 'quality_status'],
+  'createLabResult',
+);
+
 console.log('PASS acceptance sampling api v1', { routeFile, serviceFile, routes: requiredRoutes.length });
