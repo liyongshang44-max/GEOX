@@ -32,6 +32,7 @@ async function main() {
     sampling_acceptance_evaluated: false,
     acceptance_api_live_called: false,
     invalid_lab_result_not_pass: false,
+    acceptance_missing_receipt_uses_plan_scope: false,
   };
 
   try {
@@ -111,7 +112,11 @@ async function main() {
     checks.sampling_acceptance_evaluated = ['PASS', 'FAIL', 'INSUFFICIENT_EVIDENCE'].includes(acceptance.verdict);
 
     const sample = requireOk(await fetchJson(`${base}/api/v1/sampling/sample/${sample_id}`, { method: 'GET', token }), 'fetch sample by sample_id');
-    assert.equal(Boolean(sample.sample_id || sample.sample?.sample_id), true, 'sample lookup missing sample id');
+    assert.equal(
+      sample.fact?.record_json?.sample_id,
+      sample_id,
+      'sample lookup missing sample id',
+    );
 
     const negNoReceiptLab = await fetchJson(`${base}/api/v1/sampling/lab-result`, {
       method: 'POST',
