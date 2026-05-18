@@ -99,6 +99,101 @@ export function registerSamplingV1Routes(app: FastifyInstance, pool: Pool): void
     return reply.send({ ok: true, ...created });
   });
 
+  app.post("/api/v1/sampling/acceptance/evaluate", async (req, reply) => {
+    const body: any = req.body ?? {};
+    if (!isNonEmptyString(body.plan_id)) return badRequest(reply, "MISSING_OR_INVALID:plan_id");
+    if (!isNonEmptyString(body.sample_id)) return badRequest(reply, "MISSING_OR_INVALID:sample_id");
+    if (body.import_id != null && !isNonEmptyString(body.import_id)) return badRequest(reply, "MISSING_OR_INVALID:import_id");
+
+    const receipt = await service.findReceiptBySampleId(body.sample_id);
+    if (!receipt) {
+      const created = await service.createAcceptance({
+        plan_id: body.plan_id,
+        sample_id: body.sample_id,
+        import_id: body.import_id,
+        tenant_id: "",
+        project_id: "",
+        group_id: "",
+        verdict: "INSUFFICIENT_EVIDENCE",
+        reasons: ["MISSING_SAMPLE_RECEIPT"],
+        evidence_refs: [],
+      });
+      return reply.send({ ok: true, ...created, verdict: "INSUFFICIENT_EVIDENCE", reasons: ["MISSING_SAMPLE_RECEIPT"] });
+    }
+    if (receipt.plan_id !== body.plan_id) return badRequest(reply, "MISMATCH:plan_id");
+    if (receipt.sample_id !== body.sample_id) return badRequest(reply, "MISMATCH:sample_id");
+    if (!Array.isArray(receipt.evidence_refs) || receipt.evidence_refs.length < 1) {
+      const created = await service.createAcceptance({
+        plan_id: body.plan_id,
+        sample_id: body.sample_id,
+        import_id: body.import_id,
+        tenant_id: String(receipt.tenant_id ?? ""),
+        project_id: String(receipt.project_id ?? ""),
+        group_id: String(receipt.group_id ?? ""),
+        verdict: "INSUFFICIENT_EVIDENCE",
+        reasons: ["MISSING_RECEIPT_EVIDENCE_REFS"],
+        evidence_refs: [],
+      });
+      return reply.send({ ok: true, ...created, verdict: "INSUFFICIENT_EVIDENCE", reasons: ["MISSING_RECEIPT_EVIDENCE_REFS"] });
+    }
+
+    const labResult = await service.findLabResultBySampleId(body.sample_id, body.import_id);
+    if (!labResult) {
+      const created = await service.createAcceptance({
+        plan_id: body.plan_id,
+        sample_id: body.sample_id,
+        import_id: body.import_id,
+        tenant_id: String(receipt.tenant_id ?? ""),
+        project_id: String(receipt.project_id ?? ""),
+        group_id: String(receipt.group_id ?? ""),
+        verdict: "INSUFFICIENT_EVIDENCE",
+        reasons: ["MISSING_LAB_RESULT_IMPORT"],
+        evidence_refs: receipt.evidence_refs as any[],
+      });
+      return reply.send({ ok: true, ...created, verdict: "INSUFFICIENT_EVIDENCE", reasons: ["MISSING_LAB_RESULT_IMPORT"] });
+    }
+
+    if (labResult.sample_id !== body.sample_id) return badRequest(reply, "MISMATCH:sample_id");
+    const quality = String(labResult.quality_status ?? "").toUpperCase();
+    const coc = String(receipt.chain_of_custody_status ?? "").toUpperCase();
+    let verdict: "PASS" | "FAIL" | "INSUFFICIENT_EVIDENCE" = "INSUFFICIENT_EVIDENCE";
+    const reasons: string[] = [];
+
+    if (quality === "INVALID") {
+      verdict = "FAIL";
+      reasons.push("LAB_QUALITY_INVALID");
+    } else if (quality === "NEEDS_REVIEW") {
+      verdict = "INSUFFICIENT_EVIDENCE";
+      reasons.push("LAB_QUALITY_NEEDS_REVIEW");
+    } else if (coc === "BROKEN") {
+      verdict = "FAIL";
+      reasons.push("CHAIN_OF_CUSTODY_BROKEN");
+    } else if (coc === "MISSING") {
+      verdict = "INSUFFICIENT_EVIDENCE";
+      reasons.push("CHAIN_OF_CUSTODY_MISSING");
+    } else if (quality === "PASS" && coc === "RECORDED") {
+      verdict = "PASS";
+      reasons.push("QUALITY_PASS_AND_COC_RECORDED");
+    } else {
+      verdict = "INSUFFICIENT_EVIDENCE";
+      reasons.push("UNCLASSIFIED_EVIDENCE_STATE");
+    }
+
+    const evidence_refs = [...(Array.isArray(receipt.evidence_refs) ? receipt.evidence_refs : []), ...(Array.isArray(labResult.evidence_refs) ? labResult.evidence_refs : [])];
+    const created = await service.createAcceptance({
+      plan_id: body.plan_id,
+      sample_id: body.sample_id,
+      import_id: body.import_id ?? String(labResult.import_id ?? ""),
+      tenant_id: String(receipt.tenant_id ?? ""),
+      project_id: String(receipt.project_id ?? ""),
+      group_id: String(receipt.group_id ?? ""),
+      verdict,
+      reasons,
+      evidence_refs: evidence_refs as any[],
+    });
+    return reply.send({ ok: true, ...created, verdict, reasons });
+  });
+
   app.get("/api/v1/sampling/plan/:plan_id", async (req, reply) => {
     const plan_id = (req.params as any)?.plan_id;
     if (!isNonEmptyString(plan_id)) return badRequest(reply, "MISSING_OR_INVALID:plan_id");

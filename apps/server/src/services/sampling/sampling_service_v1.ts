@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 
 type EvidenceRef = { kind: string; ref_id: string };
+type SamplingVerdict = "PASS" | "FAIL" | "INSUFFICIENT_EVIDENCE";
 
 type InsertFactInput = {
   fact_id: string;
@@ -169,6 +170,60 @@ export class SamplingServiceV1 {
     const ok = await this.insertFact({ fact_id, occurred_at: new Date().toISOString(), source: "api_v1_sampling", record_json });
     if (!ok) throw new Error("FACT_INSERT_CONFLICT_OR_FAILED");
     return { import_id, fact_id };
+  }
+
+  async findLabResultBySampleId(sample_id: string, import_id?: string): Promise<Record<string, unknown> | null> {
+    if (import_id) {
+      const result = await this.pool.query(
+        `SELECT record_json
+         FROM facts
+         WHERE (record_json::jsonb->>'type') = 'lab_result_import_v1'
+           AND (record_json::jsonb->>'sample_id') = $1
+           AND (record_json::jsonb->>'import_id') = $2
+         ORDER BY occurred_at DESC
+         LIMIT 1`,
+        [sample_id, import_id],
+      );
+      return result.rows?.[0]?.record_json ?? null;
+    }
+
+    const result = await this.pool.query(FIND_FACT_SQL, ["lab_result_import_v1", "sample_id", sample_id]);
+    return result.rows?.[0]?.record_json ?? null;
+  }
+
+  async createAcceptance(input: {
+    plan_id: string;
+    sample_id: string;
+    import_id?: string;
+    tenant_id: string;
+    project_id: string;
+    group_id: string;
+    verdict: SamplingVerdict;
+    reasons: string[];
+    evidence_refs: EvidenceRef[];
+  }): Promise<{ acceptance_id: string; fact_id: string }> {
+    const acceptance_id = randomUUID();
+    const fact_id = `sa_${acceptance_id}`;
+
+    const record_json: Record<string, unknown> = {
+      type: "sampling_acceptance_v1",
+      schema_version: "1",
+      acceptance_id,
+      plan_id: input.plan_id,
+      sample_id: input.sample_id,
+      import_id: input.import_id ?? null,
+      tenant_id: input.tenant_id,
+      project_id: input.project_id,
+      group_id: input.group_id,
+      verdict: input.verdict,
+      reasons: input.reasons,
+      evaluated_at_ts: Date.now(),
+      evidence_refs: input.evidence_refs,
+    };
+
+    const ok = await this.insertFact({ fact_id, occurred_at: new Date().toISOString(), source: "api_v1_sampling", record_json });
+    if (!ok) throw new Error("FACT_INSERT_CONFLICT_OR_FAILED");
+    return { acceptance_id, fact_id };
   }
 
   async getPlan(plan_id: string): Promise<Record<string, unknown> | null> {
