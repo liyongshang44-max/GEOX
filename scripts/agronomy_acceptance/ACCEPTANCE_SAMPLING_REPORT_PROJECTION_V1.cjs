@@ -7,9 +7,6 @@ const token = env('ADMIN_TOKEN', env('AO_ACT_TOKEN', 'admin_token'));
 async function main() {
   const existingOperationId = process.env.SAMPLING_EXISTING_OPERATION_ID || '';
   const now = Date.now();
-  const tenant_id = `t-${now}`;
-  const project_id = `p-${now}`;
-  const group_id = `g-${now}`;
   const field_id = `f-${now}`;
   const sample_id = `s-${now}`;
 
@@ -23,7 +20,7 @@ async function main() {
     method: 'POST',
     token,
     body: {
-      plan_id: plan.plan_id, sample_id, tenant_id, project_id, group_id, field_id,
+      plan_id: plan.plan_id, sample_id, ...scope, field_id,
       collected_at_ts: now, collector_actor_id: 'collector-1', sample_type: 'SOIL',
       evidence_refs: [{ kind: 'raw_sample_v1', ref_id: `raw-${now}` }], chain_of_custody_status: 'RECORDED',
     },
