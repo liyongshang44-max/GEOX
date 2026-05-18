@@ -35,8 +35,16 @@ async function postJsonWithAuth(path, body, authHeader) {
 
 async function main() {
   const mode = 'live';
-  const health = await fetch(`${baseUrl}/api/v1/health`, { method: 'GET' }).catch(() => null);
-  if (!health || !health.ok) throw new Error(`live API unavailable at ${baseUrl}`);
+  const healthPaths = ['/api/v1/health', '/api/health', '/health'];
+  let healthOk = false;
+  for (const healthPath of healthPaths) {
+    const health = await fetch(`${baseUrl}${healthPath}`, { method: 'GET' }).catch(() => null);
+    if (health && health.ok) {
+      healthOk = true;
+      break;
+    }
+  }
+  if (!healthOk) throw new Error(`live API unavailable at ${baseUrl}`);
 
   const checks = {
     plan_created: false,
