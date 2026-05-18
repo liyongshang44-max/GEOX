@@ -194,7 +194,11 @@ Fertilization Domain owns formal business facts. GEOX Main Chain owns Recommenda
 
 `AcceptanceSkill skill_id=fertilization_acceptance_v1` is only an acceptance-signal producer and is not the formal `fertilization_acceptance_v1` fact writer.
 
+AcceptanceSkill skill_id=fertilization_acceptance_v1 is only an acceptance_signal producer and is not the formal fertilization_acceptance_v1 fact writer.
+
 Fertilization AGRONOMY Skill output may be `diagnosis_signal` or `recommendation_candidate`, but it must pass through Fertilization Domain and Main Chain before customer-visible recommendation, prescription, approval, AO-ACT task, receipt, acceptance, ROI, or Field Memory.
+
+Fertilization AGRONOMY Skill output may be diagnosis_signal or recommendation_candidate before domain promotion; it is not a customer-visible recommendation, prescription, approval, AO-ACT task, receipt, acceptance, ROI, or Field Memory.
 
 ## 5. Hard rules
 
