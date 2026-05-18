@@ -143,7 +143,6 @@ export function buildVariableActionTaskPayloadV1(input: {
       zone_count: sanitizedZoneRates.length,
       dispatch_ack_required: true,
       task_creation_is_not_ack: true,
-      operation_type: operationType,
     },
     meta: {
       prescription_id: asText(prescription.prescription_id),
