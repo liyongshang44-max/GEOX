@@ -1,4 +1,5 @@
 import { evaluateRisk } from "../domain/risk_engine.js";
+import type { FertilizationReportProjectionV1 } from "../services/fertilization/fertilization_projection_v1.js";
 import type { PestDiseaseInspectionReportProjectionV1 } from "../services/inspection/pest_disease_inspection_projection_v1.js";
 import type { OperationStateV1 } from "./operation_state_v1.js";
 
@@ -12,6 +13,7 @@ export type OperationReportFormalScenarioTypeV1 =
   | "FORMAL_PEST_DISEASE_INSPECTION"
   | "UNKNOWN";
 export type OperationReportPestDiseaseInspectionV1 = PestDiseaseInspectionReportProjectionV1;
+export type OperationReportFertilizationV1 = FertilizationReportProjectionV1;
 
 export type FieldMemorySummary = {
   memory_id: string;
@@ -231,6 +233,7 @@ export type OperationReportV1 = {
     customer_visible_eligible: boolean;
     blocking_reasons: string[];
   };
+  fertilization?: OperationReportFertilizationV1;
   pest_disease_inspection?: OperationReportPestDiseaseInspectionV1;
 
   fail_safe?: {
@@ -498,6 +501,44 @@ function normalizeOperationReportFormalScenarioTypeV1(
   return null;
 }
 
+function mergeFertilizationIntoReport(
+  report: OperationReportV1,
+  fertilization: OperationReportFertilizationV1 | null,
+): OperationReportV1 {
+  if (!fertilization) return report;
+
+  const scenario = report.formal_scenario ?? {
+    scenario_type: "UNKNOWN" as OperationReportFormalScenarioTypeV1,
+    formal_chain_status: "LIMITED" as const,
+    evidence_status: "MISSING" as const,
+    customer_visible_eligible: false,
+    needs_review: true,
+    blocking_reasons: [],
+  };
+
+  const blockingReasons = Array.from(new Set([
+    ...(Array.isArray(scenario.blocking_reasons) ? scenario.blocking_reasons : []),
+    ...(Array.isArray(fertilization.blocking_reasons) ? fertilization.blocking_reasons : []),
+  ].map((x) => String(x ?? "").trim()).filter(Boolean)));
+
+  return {
+    ...report,
+    fertilization,
+    formal_scenario: {
+      scenario_type: "FORMAL_FERTILIZATION",
+      formal_chain_status: fertilization.customer_visible_eligible
+        ? "PASSED"
+        : (fertilization.acceptance_status === "MISSING" ? "LIMITED" : "NEEDS_REVIEW"),
+      evidence_status: fertilization.evidence_tier === "FORMAL"
+        ? "FORMAL_PASSED"
+        : (fertilization.evidence_tier === "WARNING" ? "TECHNICAL_ONLY" : "MISSING"),
+      customer_visible_eligible: Boolean(fertilization.customer_visible_eligible),
+      needs_review: !fertilization.customer_visible_eligible,
+      blocking_reasons: blockingReasons,
+    },
+  };
+}
+
 export function projectOperationReportV1(input: {
   tenant: TenantTriple;
   operation_plan_id: string;
@@ -542,6 +583,7 @@ export function projectOperationReportV1(input: {
   now?: Date;
   roi_ledger?: any[];
   sampling_view?: Partial<NonNullable<OperationReportV1["sampling"]>> | null;
+  fertilization_view?: OperationReportFertilizationV1 | null;
 }): OperationReportV1 {
   const now = input.now ?? new Date();
   const acceptanceMissingItems = Array.isArray(input.acceptance?.missing_evidence)
@@ -814,7 +856,7 @@ export function projectOperationReportV1(input: {
     pending_acceptance_over_30m: pendingAcceptanceOver30m,
   });
 
-  return {
+  const report: OperationReportV1 = {
     type: "operation_report_v1",
     version: "v1",
     generated_at: now.toISOString(),
@@ -993,4 +1035,5 @@ export function projectOperationReportV1(input: {
         : [],
     },
   };
+  return mergeFertilizationIntoReport(report, input.fertilization_view ?? null);
 }
