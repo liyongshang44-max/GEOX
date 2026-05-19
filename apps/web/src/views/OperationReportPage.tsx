@@ -7,7 +7,7 @@ import { FailSafeCustomerNotice, FormalChainSummaryCard, FormalScenarioBadge, Sc
 import { customerTimelineStatusLabel } from "../lib/customerLabels";
 import { customerSafeName, customerSafeTitle } from "../lib/customerSafeText";
 import { customerChainIntegrityLabel, customerSemanticLabel, isCustomerChainComplete } from "../lib/customerSemanticLabels";
-import { customerReasonText, pestDiseaseAssessmentStatusLabel, pestDiseaseConfidenceLabel, pestDiseaseEvidenceTierLabel, pestDiseaseInspectionTargetLabel, pestDiseaseReviewStatusLabel, pestDiseaseSeverityLabel } from "../lib/customerScenarioLabels";
+import { customerReasonText, pestDiseaseAcceptanceStatusLabel, pestDiseaseAssessmentStatusLabel, pestDiseaseConfidenceLabel, pestDiseaseEvidenceTierLabel, pestDiseaseInspectionTargetLabel, pestDiseaseReviewStatusLabel, pestDiseaseSeverityLabel } from "../lib/customerScenarioLabels";
 import { labelCustomerAcceptanceVerdict, labelCustomerApprovalStatus, labelCustomerRoiStatus } from "../lib/customerStatusLabels";
 import { buildOperationReportVm, type CustomerReportSectionVm, type OperationReportPageVm } from "../viewmodels/operationReportVm";
 import { buildEvidenceVm } from "../lib/evidenceViewModel";
@@ -536,11 +536,16 @@ function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDise
     {
       key: "inspection_acceptance",
       title: "巡检证据验收",
-      summary: customerText(acceptance.summary ?? pdi.acceptance_summary, `巡检证据验收${acceptanceResultText(acceptance.status ?? pdi.acceptance_status)}。`),
+      summary: (String(acceptance.status ?? pdi.acceptance_status ?? "").trim().toUpperCase() === "PASS")
+        ? "巡检证据已通过验收，可作为后续处理建议依据，但不代表已完成防治。"
+        : customerVisibleEligible
+          ? customerText(acceptance.summary ?? pdi.acceptance_summary, "巡检证据验收状态待确认。")
+          : "需要补齐正式链路后展示",
       rows: [
-        { label: "验收结论", value: acceptanceResultText(acceptance.status ?? pdi.acceptance_status) },
-        { label: "验收人", value: customerText(acceptance.actor_name ?? acceptance.actor, "待确认") },
-        { label: "验收意见", value: customerText(acceptance.note ?? acceptance.comment, "暂无") },
+        { label: "巡检证据验收", value: pestDiseaseAcceptanceStatusLabel(acceptance.status ?? pdi.acceptance_status) },
+        { label: "验收说明", value: "巡检证据已通过验收，可作为后续处理建议依据，但不代表已完成防治。" },
+        { label: "客户可见", value: customerVisibleEligible ? "可展示" : "需补齐正式链路后展示" },
+        { label: "证据缺口", value: evidenceGap },
       ],
     },
     {

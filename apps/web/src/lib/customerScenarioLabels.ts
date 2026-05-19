@@ -192,3 +192,13 @@ export function pestDiseaseReviewStatusLabel(value: unknown): string {
   if (key === "NOT_REQUIRED") return "不需要";
   return "待复核";
 }
+
+export function pestDiseaseAcceptanceStatusLabel(value: unknown): string {
+  const key = String(value ?? "").trim().toUpperCase();
+  if (key === "PASS" || key === "APPROVED" || key === "SUCCESS") return "已通过";
+  if (key === "FAIL" || key === "REJECTED" || key === "FAILED") return "未通过";
+  if (key === "NEEDS_REVIEW" || key === "PENDING" || key === "WAITING") return "需复核";
+  if (key === "INSUFFICIENT_EVIDENCE" || key === "EVIDENCE_MISSING") return "证据不足";
+  if (!key || key === "MISSING") return "缺失";
+  return "缺失";
+}
