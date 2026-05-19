@@ -32,7 +32,18 @@ export function buildEvidenceVm(input: any): EvidenceVm {
   if (inspection) {
     refs.push({ ref: "pest_disease_inspection", type: inspection.acceptance_status === "PASS" ? "FORMAL" : "TECHNICAL", label: "病虫害巡检证据" });
   }
-  const operatorGaps = [...asList(input?.acceptance?.missing_items), ...asList(scenario?.blocking_reasons), ...asList(inspection?.blocking_reasons)];
+  const inspectionTechnicalOnly = Boolean(
+    inspection
+    && String(inspection.acceptance_status ?? "").toUpperCase() !== "PASS"
+    && (String(inspection.evidence_tier ?? "").toUpperCase() === "TECHNICAL"
+      || String(inspection.evidence_tier ?? "").toUpperCase() === "WARNING"),
+  );
+  const operatorGaps = [
+    ...asList(input?.acceptance?.missing_items),
+    ...asList(scenario?.blocking_reasons),
+    ...asList(inspection?.blocking_reasons),
+    ...(inspectionTechnicalOnly ? ["pest_disease_skill_signal_only"] : []),
+  ];
   const uniqueCategories: string[] = [];
   for (const gap of operatorGaps) {
     const category = customerEvidenceGapCategory(gap);
