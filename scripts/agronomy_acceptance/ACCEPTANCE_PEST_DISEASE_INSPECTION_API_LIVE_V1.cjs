@@ -11,6 +11,7 @@ const invalidToken = env('INVALID_TOKEN', 'definitely_invalid_token');
 const readOnlyToken = env('READ_ONLY_TOKEN', env('CLIENT_TOKEN', 'set-via-env-or-external-secret-file-client'));
 const writeOnlyToken = env('WRITE_ONLY_TOKEN', '');
 const nonAcceptanceToken = env('NON_ACCEPTANCE_TOKEN', readOnlyToken);
+const otherTenantToken = env('OTHER_TENANT_TOKEN', '');
 const scope = {
   tenant_id: env('TENANT_ID', 'tenantA'),
   project_id: env('PROJECT_ID', 'projectA'),
@@ -169,13 +170,22 @@ async function tenantBoundary() {
 
   const runId = id('tenant_get');
   await createRequest(runId);
-  const old = process.env.GEOX_TOKENS_JSON;
-  process.env.GEOX_TOKENS_JSON = JSON.stringify({ version: 'ao_act_tokens_v0', tokens: [{ token: 'other_tenant_token_live', token_id: 'tok_other_live', actor_id: 'other_live', tenant_id: `${scope.tenant_id}_other`, project_id: scope.project_id, group_id: scope.group_id, role: 'admin', revoked: false, scopes: ['fields.read', 'security.admin'] }] });
-  // Server reads its own environment, not this script's mutated env. If no structured token source is configured with an other-tenant token, this request should be 401/403/404 and still proves no cross-tenant read succeeded.
-  expectTenantDenied(await get(`/api/v1/inspection/pest-disease/${q(`inspection_${runId}`)}`, 'other_tenant_token_live'), 'GET other tenant denied');
-  if (old === undefined) delete process.env.GEOX_TOKENS_JSON; else process.env.GEOX_TOKENS_JSON = old;
+  let authenticated_cross_tenant_get_supported = false;
+  if (otherTenantToken) {
+    expectTenantDenied(
+      await get(`/api/v1/inspection/pest-disease/${q(`inspection_${runId}`)}`, otherTenantToken),
+      'GET other tenant denied',
+    );
+    authenticated_cross_tenant_get_supported = true;
+  } else {
+    const resp = await get(
+      `/api/v1/inspection/pest-disease/${q(`inspection_${runId}`)}`,
+      'other_tenant_token_live',
+    );
+    expectStatus(resp, [401], 'unknown other tenant token denied');
+  }
   await waitForHealth(base);
-  return true;
+  return { ok: true, authenticated_cross_tenant_get_supported };
 }
 
 async function requiredFields() {
@@ -275,7 +285,8 @@ async function businessBoundary() {
     api_live: {
       positive_chain_created: true,
       auth_boundary: auth.ok === true,
-      tenant_boundary: tenant === true,
+      tenant_boundary: tenant.ok === true,
+      authenticated_cross_tenant_get_supported: tenant.authenticated_cross_tenant_get_supported,
       required_fields: fields === true,
       enum_validation: enums === true,
       business_boundary: business === true,
