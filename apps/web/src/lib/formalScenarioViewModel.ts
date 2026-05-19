@@ -48,9 +48,17 @@ function collectBlockingReasons(reportOrOperation: any): string[] {
   const scenarioReasons = asList(reportOrOperation?.formal_scenario?.blocking_reasons);
   const samplingReasons = asList(reportOrOperation?.sampling?.blocking_reasons);
   const fertilizationReasons = asList(reportOrOperation?.fertilization?.blocking_reasons);
+  const pestDiseaseReasons = asList(reportOrOperation?.pest_disease_inspection?.blocking_reasons);
   const missingItems = asList(reportOrOperation?.acceptance?.missing_items);
   const chainReasons = asList(reportOrOperation?.chain_validation?.blocking_reasons);
-  return [...scenarioReasons, ...samplingReasons, ...fertilizationReasons, ...missingItems, ...chainReasons]
+  return [
+    ...scenarioReasons,
+    ...samplingReasons,
+    ...fertilizationReasons,
+    ...pestDiseaseReasons,
+    ...missingItems,
+    ...chainReasons,
+  ]
     .map((x) => (x.startsWith("missing:") ? customerEvidenceGapText(x) : customerReasonText(x)))
     .filter(Boolean);
 }
