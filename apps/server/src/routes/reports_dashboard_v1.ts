@@ -220,7 +220,7 @@ async function queryPendingActionsSummary(pool: Pool, tenant: TenantTriple, fiel
   const startTodayMs = startToday.getTime();
   const q = await pool.query(
     `WITH scoped_alerts AS (
-       SELECT e.alert_id
+       SELECT e.event_id AS alert_id
          FROM alert_event_index_v1 e
         WHERE e.tenant_id = $1
           AND e.status IN ('OPEN','ACKED')
@@ -243,7 +243,7 @@ async function queryPendingActionsSummary(pool: Pool, tenant: TenantTriple, fiel
         ON w.tenant_id = $1
        AND w.alert_id = s.alert_id`,
     [tenant.tenant_id, fieldIds, nowMs, startTodayMs],
-  ).catch(() => ({ rows: [{}] as any[] }));
+  );
   const row: any = q.rows?.[0] ?? {};
   return {
     total_open_alerts: Number(row.total_open_alerts ?? 0),
