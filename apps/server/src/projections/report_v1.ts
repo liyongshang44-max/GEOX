@@ -231,6 +231,7 @@ export type OperationReportV1 = {
     customer_visible_eligible: boolean;
     blocking_reasons: string[];
   };
+  pest_disease_inspection?: OperationReportPestDiseaseInspectionV1;
 
   fail_safe?: {
     status: "NONE" | "OPEN" | "ACKED" | "COMPLETED" | "RESOLVED";
