@@ -5,6 +5,7 @@ export function scenarioTypeLabel(value: unknown): string {
   if (key === "FORMAL_VARIABLE_OPERATION") return "变量作业";
   if (key === "FORMAL_SAMPLING") return "正式采样";
   if (key === "FORMAL_FERTILIZATION") return "正式施氮";
+  if (key === "FORMAL_PEST_DISEASE_INSPECTION") return "病虫害巡检";
   return "正式场景待确认";
 }
 
@@ -24,7 +25,6 @@ export function manualTakeoverStatusLabel(value: unknown): string {
   if (key === "COMPLETED") return "人工接管已完成";
   return "人工接管未触发";
 }
-
 
 const CUSTOMER_REASON_MAP: Record<string, string> = {
   "missing:diagnosis": "缺少正式诊断依据",
@@ -59,6 +59,14 @@ const CUSTOMER_REASON_MAP: Record<string, string> = {
   "missing:fertilization_acceptance": "缺少施氮验收记录",
   "fertilization_not_customer_visible": "施氮结论暂不对客展示",
   "fertilization_acceptance_not_pass": "施氮验收未通过或需复核",
+  "pest_disease_suspected_review_required": "发现疑似病虫害风险，已进入人工复核。",
+  "pest_disease_inspection_confirmed_no_spray": "巡检结果已确认，但尚未进入补喷处方。",
+  "pest_disease_missing_geo": "巡检缺少定位证据，需复核。",
+  "pest_disease_missing_media": "巡检缺少图片证据，需复核。",
+  "pest_disease_skill_signal_only": "当前仅为识别信号，不作为正式巡检结论。",
+  "pest_disease_review_pending": "人工复核尚未完成。",
+  "pest_disease_review_rejected": "人工复核未通过，暂不展示为正式结论。",
+  "pest_disease_acceptance_pass_not_treatment": "巡检证据已通过验收，可作为后续处理建议依据，但不代表已完成防治。",
 };
 
 function normReason(raw: unknown): string {
@@ -80,17 +88,12 @@ export function customerEvidenceGapText(raw: unknown): string {
 export function customerEvidenceGapCategory(raw: unknown): string {
   const normalized = normReason(raw);
   if (!normalized) return "需要补充正式链路后展示";
+  if (normalized.startsWith("pest_disease") || normalized.includes("病虫害") || normalized.includes("巡检")) return "病虫害巡检证据需复核";
   if (normalized.startsWith("fertilization") || normalized.includes("施氮")) return "施氮诊断、处方与验收链路需复核";
   if (normalized === "missing:roi" || normalized === "missing:field_memory") return "价值和田块记忆暂不对客展示";
-  if (normalized === "missing:diagnosis" || normalized.includes("sensing summary") || normalized.includes("soil_moisture") || normalized.includes("threshold") || normalized.includes("deficit")) {
-    return "正式诊断依据不足";
-  }
-  if (["missing:recommendation", "missing:prescription", "missing:approval", "missing:operation_plan"].includes(normalized)) {
-    return "建议、处方与审批链路尚未闭合";
-  }
-  if (["missing:execution", "missing:receipt", "missing:evidence"].includes(normalized)) {
-    return "正式执行回执与验收结果尚未成立";
-  }
+  if (normalized === "missing:diagnosis" || normalized.includes("sensing summary") || normalized.includes("soil_moisture") || normalized.includes("threshold") || normalized.includes("deficit")) return "正式诊断依据不足";
+  if (["missing:recommendation", "missing:prescription", "missing:approval", "missing:operation_plan"].includes(normalized)) return "建议、处方与审批链路尚未闭合";
+  if (["missing:execution", "missing:receipt", "missing:evidence"].includes(normalized)) return "正式执行回执与验收结果尚未成立";
   if (normalized === "missing:acceptance") return "正式验收未成立";
   return "需要补充正式链路后展示";
 }
@@ -117,4 +120,19 @@ export function fertilizationCustomerSummaryText(input: any): string {
   if (acceptance === "MISSING") return "施氮处方已批准，等待执行。";
   if (acceptance === "FAIL" || acceptance === "NEEDS_REVIEW") return "施氮作业部分分区偏差过大，需复核。";
   return "施氮链路已记录，等待正式复核。";
+}
+
+export function pestDiseaseInspectionCustomerSummaryText(input: any): string {
+  const status = String(input?.assessment_status ?? "").toUpperCase();
+  const acceptance = String(input?.acceptance_status ?? "").toUpperCase();
+  const review = String(input?.review_status ?? "").toUpperCase();
+  const blocking = Array.isArray(input?.blocking_reasons) ? input.blocking_reasons.map((x: unknown) => normReason(x)) : [];
+  if (blocking.includes("pest_disease_missing_geo") || blocking.includes("pest_disease_missing_media")) return "巡检任务已完成，但缺少定位或图片证据，需复核。";
+  if (blocking.includes("pest_disease_skill_signal_only")) return "图像/人工巡检记录仅作为技术信号，不作为自动喷药依据。";
+  if (review === "PENDING") return "发现疑似病虫害风险，已进入人工复核。";
+  if (review === "REJECTED") return "人工复核未通过，暂不展示为正式结论。";
+  if (acceptance === "PASS") return "巡检证据已通过验收，可作为后续处理建议的依据。";
+  if (status === "CONFIRMED") return "巡检结果已确认，但尚未进入补喷处方。";
+  if (status === "SUSPECTED") return "发现疑似病虫害风险，已进入人工复核。";
+  return "巡检证据不足，暂不生成处理建议。";
 }
