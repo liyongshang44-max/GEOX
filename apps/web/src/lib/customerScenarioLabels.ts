@@ -182,3 +182,13 @@ export function pestDiseaseConfidenceLabel(value: unknown): string {
   if (key === "LOW") return "低";
   return "待确认";
 }
+
+export function pestDiseaseReviewStatusLabel(value: unknown): string {
+  const key = String(value ?? "").trim().toUpperCase();
+  if (key === "APPROVED" || key === "PASS") return "已通过";
+  if (key === "PENDING" || key === "NEEDS_REVIEW" || key === "WAITING") return "待复核";
+  if (key === "REJECTED" || key === "FAIL") return "未通过";
+  if (key === "ESCALATED") return "已升级";
+  if (key === "NOT_REQUIRED") return "不需要";
+  return "待复核";
+}

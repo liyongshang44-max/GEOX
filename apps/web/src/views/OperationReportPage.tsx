@@ -7,7 +7,7 @@ import { FailSafeCustomerNotice, FormalChainSummaryCard, FormalScenarioBadge, Sc
 import { customerTimelineStatusLabel } from "../lib/customerLabels";
 import { customerSafeName, customerSafeTitle } from "../lib/customerSafeText";
 import { customerChainIntegrityLabel, customerSemanticLabel, isCustomerChainComplete } from "../lib/customerSemanticLabels";
-import { customerReasonText, pestDiseaseAssessmentStatusLabel, pestDiseaseConfidenceLabel, pestDiseaseEvidenceTierLabel, pestDiseaseInspectionTargetLabel, pestDiseaseSeverityLabel } from "../lib/customerScenarioLabels";
+import { customerReasonText, pestDiseaseAssessmentStatusLabel, pestDiseaseConfidenceLabel, pestDiseaseEvidenceTierLabel, pestDiseaseInspectionTargetLabel, pestDiseaseReviewStatusLabel, pestDiseaseSeverityLabel } from "../lib/customerScenarioLabels";
 import { labelCustomerAcceptanceVerdict, labelCustomerApprovalStatus, labelCustomerRoiStatus } from "../lib/customerStatusLabels";
 import { buildOperationReportVm, type CustomerReportSectionVm, type OperationReportPageVm } from "../viewmodels/operationReportVm";
 import { buildEvidenceVm } from "../lib/evidenceViewModel";
@@ -475,6 +475,8 @@ function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDise
     ? pdi.blocking_reasons.map((x: unknown) => customerReasonText(x)).join("、")
     : "无";
   const customerVisibleEligible = pdi.customer_visible_eligible !== false;
+  const reviewRequired = Boolean(pdi.review_required);
+  const reviewStatusRaw = String(pdi.review_status ?? "").trim().toUpperCase();
 
   return [
     {
@@ -522,12 +524,13 @@ function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDise
     {
       key: "human_review",
       title: "人工复核",
-      summary: customerText(review.summary ?? pdi.review_summary, "人工复核状态待更新。"),
+      summary: reviewStatusRaw === "REJECTED"
+        ? "人工复核未通过，暂不展示为正式结论。"
+        : customerText(review.summary ?? pdi.review_summary, "人工复核状态待更新。"),
       rows: [
-        { label: "复核状态", value: customerText(review.status ?? pdi.review_status, "待复核") },
-        { label: "复核人", value: customerText(review.reviewer_name ?? review.reviewer, "待分配") },
-        { label: "复核意见", value: customerText(review.comment ?? review.note, "暂无") },
-        { label: "阻塞原因", value: blockingReasons || "无" },
+        { label: "是否需要人工复核", value: reviewRequired ? "需要" : "不需要" },
+        { label: "复核状态", value: reviewRequired ? pestDiseaseReviewStatusLabel(review.status ?? pdi.review_status) : "不需要" },
+        { label: "复核结果", value: reviewedByHuman ? "已完成" : "尚未完成" },
       ],
     },
     {
