@@ -21,6 +21,7 @@ type TenantTriple = {
 
 const DASHBOARD_REPORT_CONCURRENCY_LIMIT = 12;
 const DEVICE_OFFLINE_THRESHOLD_MS = 15 * 60 * 1000;
+const DASHBOARD_AGGREGATE_REPORT_LIMIT = 10;
 
 type CustomerReportListItem = {
   report_id?: string | null;
@@ -398,29 +399,57 @@ export function registerReportsDashboardV1Routes(app: FastifyInstance, pool: Poo
       queryDeviceSummary(pool, tenant, aggregateFieldIds),
     ]);
 
-    const reports = (await mapWithConcurrencyLimit(
-      scopedStates,
-      DASHBOARD_REPORT_CONCURRENCY_LIMIT,
-      async (state) => projectReportV1({ pool, tenant, operationState: state }),
-    )).filter((report): report is NonNullable<typeof report> => Boolean(report));
+    const aggregate = projectCustomerDashboardAggregateFromStatesV1({
+      states: scopedStates,
+      field_ids: aggregateFieldIds,
+      field_name_by_id: fieldNameById,
+      open_alerts_by_field: openAlertsByField,
+      pending_actions_summary: pendingActionsSummary,
+      device_summary: deviceSummary,
+    });
 
-    const aggregate = reports.length > 0
-      ? projectCustomerDashboardAggregateV1({
-        reports,
-        field_name_by_id: fieldNameById,
-        open_alerts_by_field: openAlertsByField,
-        pending_acceptance_by_field: undefined,
-        pending_actions_summary: pendingActionsSummary,
-        device_summary: deviceSummary,
-      })
-      : projectCustomerDashboardAggregateFromStatesV1({
-        states: scopedStates,
-        field_ids: aggregateFieldIds,
-        field_name_by_id: fieldNameById,
-        open_alerts_by_field: openAlertsByField,
-        pending_actions_summary: pendingActionsSummary,
-        device_summary: deviceSummary,
-      });
+    const candidateOperationIds = Array.from(new Set([
+      ...aggregate.recent_operations.map((item) => String(item.operation_id ?? "").trim()).filter(Boolean),
+      ...aggregate.top_risk_fields.map((field) => {
+        const matched = scopedStates.find((state) => String(state.field_id ?? "").trim() === field.field_id);
+        return String(matched?.operation_id ?? "").trim();
+      }).filter(Boolean),
+    ])).slice(0, DASHBOARD_AGGREGATE_REPORT_LIMIT);
+
+    if (candidateOperationIds.length > 0) {
+      const stateByOperationId = new Map<string, (typeof scopedStates)[number]>();
+      for (const state of scopedStates) {
+        const opId = String(state.operation_id ?? "").trim();
+        const planId = String(state.operation_plan_id ?? "").trim();
+        if (opId && !stateByOperationId.has(opId)) stateByOperationId.set(opId, state);
+        if (planId && !stateByOperationId.has(planId)) stateByOperationId.set(planId, state);
+      }
+
+      const reports = (await mapWithConcurrencyLimit(
+        candidateOperationIds,
+        DASHBOARD_REPORT_CONCURRENCY_LIMIT,
+        async (operationId) => {
+          const state = stateByOperationId.get(operationId);
+          if (!state) return null;
+          return projectReportV1({ pool, tenant, operationState: state });
+        },
+      )).filter((report): report is NonNullable<typeof report> => Boolean(report));
+
+      if (reports.length > 0) {
+        const reportAgg = projectCustomerDashboardAggregateV1({
+          reports,
+          field_name_by_id: fieldNameById,
+          open_alerts_by_field: openAlertsByField,
+          pending_acceptance_by_field: undefined,
+          pending_actions_summary: pendingActionsSummary,
+          device_summary: deviceSummary,
+        });
+        const reportRecentByOperation = new Map(
+          reportAgg.recent_operations.map((item) => [item.operation_id, item] as const),
+        );
+        aggregate.recent_operations = aggregate.recent_operations.map((item) => reportRecentByOperation.get(item.operation_id) ?? item);
+      }
+    }
 
     return reply.send({
       ok: true,
