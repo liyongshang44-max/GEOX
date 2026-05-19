@@ -102,8 +102,27 @@ function evidenceCopy(item: CustomerOperationListItem): { text: string; explanat
 }
 
 function buildTitle(operationTypeText: string, item: CustomerOperationListItem): string {
-  const raw = item.customer_title || item.title;
+  return operationDisplayTitle(operationTypeText, item);
+}
+
+function operationDisplayTitle(operationTypeText: string, item: CustomerOperationListItem): string {
+  const raw = String(item.customer_title || item.title || "").trim();
+  const normalized = raw.toUpperCase();
+
+  if (normalized === "PEST_DISEASE_INSPECTION" || normalized.includes("PEST_DISEASE_INSPECTION")) {
+    return "病虫害巡检";
+  }
+
   return customerDisplayName(raw, `${operationTypeText}作业`);
+}
+
+function isPestDiseaseInspectionOperation(item: CustomerOperationListItem): boolean {
+  const anyItem = item as any;
+  const scenario = normalizeStatus(anyItem.formal_scenario?.scenario_type ?? anyItem.scenario_type);
+  const operationType = normalizeStatus(anyItem.operation_type ?? anyItem.prescription?.operation_type ?? anyItem.customer_title ?? anyItem.title);
+  return scenario === "FORMAL_PEST_DISEASE_INSPECTION"
+    || Boolean(anyItem.pest_disease_inspection)
+    || operationType.includes("PEST_DISEASE_INSPECTION");
 }
 
 function buildFieldName(item: CustomerOperationListItem): string {
@@ -113,7 +132,7 @@ function buildFieldName(item: CustomerOperationListItem): string {
 function buildRow(item: CustomerOperationListItem): CustomerOperationsIndexRowVm {
   const operationId = String(item.operation_id ?? item.operation_plan_id ?? "").trim();
   const statusFilter = mapStatusFilter(item);
-  const operationTypeText = labelOperationType(item.operation_type);
+  const operationTypeText = isPestDiseaseInspectionOperation(item) ? "病虫害巡检" : labelOperationType(item.operation_type);
   const title = buildTitle(operationTypeText, item);
   const fieldName = buildFieldName(item);
   const finalText = finalStatusText(item);

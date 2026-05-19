@@ -19,7 +19,10 @@ export function FormalChainSummaryCard({ data }: { data: any }): React.ReactElem
 
 export function ScenarioAcceptanceSummary({ data }: { data: any }): React.ReactElement {
   const vm = buildFormalScenarioVm(data);
-  return <article className="customerCard"><h3 className="customerCardTitle">验收与闭环</h3><div>验收状态：{vm.acceptanceText}</div><div className="customerSpacingTopXs">验收说明：{vm.customerReasonSummary}</div><div className="customerSpacingTopXs">建议/处方/审批/执行/验收闭环：{vm.chainText}</div><div className="customerSpacingTopXs">{vm.zoneSummaryText ?? "暂无分区验收摘要"}</div></article>;
+  const chainLabel = vm.scenarioKey === "FORMAL_PEST_DISEASE_INSPECTION"
+    ? "巡检证据链"
+    : "建议/处方/审批/执行/验收闭环";
+  return <article className="customerCard"><h3 className="customerCardTitle">验收与闭环</h3><div>验收状态：{vm.acceptanceText}</div><div className="customerSpacingTopXs">验收说明：{vm.customerReasonSummary}</div><div className="customerSpacingTopXs">{chainLabel}：{vm.chainText}</div><div className="customerSpacingTopXs">{vm.zoneSummaryText ?? "暂无分区验收摘要"}</div></article>;
 }
 
 export function ScenarioValueMemorySummary({ data }: { data: any }): React.ReactElement {

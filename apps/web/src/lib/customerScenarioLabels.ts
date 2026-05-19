@@ -136,3 +136,69 @@ export function pestDiseaseInspectionCustomerSummaryText(input: any): string {
   if (status === "SUSPECTED") return "发现疑似病虫害风险，已进入人工复核。";
   return "巡检证据不足，暂不生成处理建议。";
 }
+
+export function pestDiseaseInspectionTargetLabel(value: unknown): string {
+  const key = String(value ?? "").trim().toUpperCase();
+  if (key === "PEST") return "虫害";
+  if (key === "DISEASE") return "病害";
+  if (key === "WEED") return "杂草";
+  if (key === "UNKNOWN_STRESS") return "未知胁迫";
+  return "待确认";
+}
+
+export function pestDiseaseAssessmentStatusLabel(value: unknown): string {
+  const key = String(value ?? "").trim().toUpperCase();
+  if (key === "CONFIRMED") return "已确认";
+  if (key === "SUSPECTED") return "疑似风险";
+  if (key === "RULED_OUT") return "已排除";
+  if (key === "NEEDS_REVIEW") return "需复核";
+  if (key === "INSUFFICIENT_EVIDENCE") return "证据不足";
+  return "待确认";
+}
+
+export function pestDiseaseSeverityLabel(value: unknown): string {
+  const key = String(value ?? "").trim().toUpperCase();
+  if (key === "HIGH") return "高";
+  if (key === "MEDIUM") return "中";
+  if (key === "LOW") return "低";
+  if (key === "NONE" || key === "NO_ISSUE") return "无";
+  if (key === "NEEDS_REVIEW") return "需复核";
+  return "需复核";
+}
+
+export function pestDiseaseEvidenceTierLabel(value: unknown): string {
+  const key = String(value ?? "").trim().toUpperCase();
+  if (key === "FORMAL") return "正式证据";
+  if (key === "TECHNICAL") return "技术信号";
+  if (key === "WARNING") return "预警";
+  if (key === "MANUAL_REVIEW") return "人工复核";
+  return "待确认";
+}
+
+export function pestDiseaseConfidenceLabel(value: unknown): string {
+  const key = String(value ?? "").trim().toUpperCase();
+  if (key === "HIGH") return "高";
+  if (key === "MEDIUM") return "中";
+  if (key === "LOW") return "低";
+  return "待确认";
+}
+
+export function pestDiseaseReviewStatusLabel(value: unknown): string {
+  const key = String(value ?? "").trim().toUpperCase();
+  if (key === "APPROVED" || key === "PASS") return "已通过";
+  if (key === "PENDING" || key === "NEEDS_REVIEW" || key === "WAITING") return "待复核";
+  if (key === "REJECTED" || key === "FAIL") return "未通过";
+  if (key === "ESCALATED") return "已升级";
+  if (key === "NOT_REQUIRED") return "不需要";
+  return "待复核";
+}
+
+export function pestDiseaseAcceptanceStatusLabel(value: unknown): string {
+  const key = String(value ?? "").trim().toUpperCase();
+  if (key === "PASS" || key === "APPROVED" || key === "SUCCESS") return "已通过";
+  if (key === "FAIL" || key === "REJECTED" || key === "FAILED") return "未通过";
+  if (key === "NEEDS_REVIEW" || key === "PENDING" || key === "WAITING") return "需复核";
+  if (key === "INSUFFICIENT_EVIDENCE" || key === "EVIDENCE_MISSING") return "证据不足";
+  if (!key || key === "MISSING") return "缺失";
+  return "缺失";
+}

@@ -92,6 +92,7 @@ const OPERATION_TYPE_LABELS: Record<string, string> = {
   FERTILIZE: "施肥",
   SPRAY: "喷药",
   INSPECT: "巡检",
+  PEST_DISEASE_INSPECTION: "病虫害巡检",
   PEST_CONTROL: "病虫害处理",
   HARVEST: "采收",
 };

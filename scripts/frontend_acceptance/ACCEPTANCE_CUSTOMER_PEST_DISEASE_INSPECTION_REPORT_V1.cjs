@@ -7,7 +7,9 @@ const root = path.resolve(__dirname, '..', '..');
 const files = {
   labels: path.join(root, 'apps/web/src/lib/customerScenarioLabels.ts'),
   vm: path.join(root, 'apps/web/src/lib/formalScenarioViewModel.ts'),
-  cards: path.join(root, 'apps/web/src/components/customer/FormalScenarioCards.tsx'),
+  operationReportPage: path.join(root, 'apps/web/src/views/OperationReportPage.tsx'),
+  operationsIndexVm: path.join(root, 'apps/web/src/viewmodels/customerOperationsIndexVm.ts'),
+  formalCards: path.join(root, 'apps/web/src/components/customer/FormalScenarioCards.tsx'),
   evidenceVm: path.join(root, 'apps/web/src/lib/evidenceViewModel.ts'),
   evidence: path.join(root, 'apps/web/src/components/evidence/index.tsx'),
 };
@@ -22,12 +24,37 @@ function assertAll(text, required, label) {
   assert.deepEqual(missing, [], `${label} missing required entries: ${missing.join(', ')}`);
 }
 
+function assertNone(text, blocked, label) {
+  const found = blocked.filter((x) => text.includes(x));
+  assert.deepEqual(found, [], `${label} contains blocked entries: ${found.join(', ')}`);
+}
+
+function extractFunctionBody(text, signatureStart) {
+  const start = text.indexOf(signatureStart);
+  assert.notEqual(start, -1, `unable to locate function signature: ${signatureStart}`);
+  const braceStart = text.indexOf('{', start);
+  assert.notEqual(braceStart, -1, `unable to locate function opening brace: ${signatureStart}`);
+  let depth = 0;
+  for (let i = braceStart; i < text.length; i += 1) {
+    const ch = text[i];
+    if (ch === '{') depth += 1;
+    if (ch === '}') {
+      depth -= 1;
+      if (depth === 0) return text.slice(braceStart + 1, i);
+    }
+  }
+  assert.fail(`unable to extract function body: ${signatureStart}`);
+}
+
 (function main() {
   const labels = read(files.labels);
   const vm = read(files.vm);
-  const cards = read(files.cards);
+  const operationReportPage = read(files.operationReportPage);
+  const operationsIndexVm = read(files.operationsIndexVm);
+  const formalCards = read(files.formalCards);
   const evidenceVm = read(files.evidenceVm);
   const evidence = read(files.evidence);
+  const pdiSectionBody = extractFunctionBody(operationReportPage, 'function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDiseaseSection[]');
 
   assertAll(labels, [
     'FORMAL_PEST_DISEASE_INSPECTION',
@@ -55,7 +82,33 @@ function assertAll(text, required, label) {
     'pestDiseaseSummaryText',
   ], 'formalScenarioViewModel pest disease summary integration');
 
-  assertAll(cards, [
+  assertAll(operationReportPage, [
+    'function isPestDiseaseInspectionReport(report: OperationReportV1): boolean',
+    'scenario === "FORMAL_PEST_DISEASE_INSPECTION"',
+    'Boolean(anyReport.pest_disease_inspection)',
+    'function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDiseaseSection[]',
+    '为什么巡检',
+    '巡检证据',
+    '识别与诊断结论',
+    '人工复核',
+    '巡检证据验收',
+    '后续处理边界',
+    '尚未生成补喷处方',
+    '尚未形成防治执行任务',
+    '尚未形成防治效果验收',
+    '不代表已完成防治',
+    '病虫害巡检报告',
+  ], 'OperationReportPage pest disease scenario detection and layout');
+
+  assertAll(operationsIndexVm, [
+    'function isPestDiseaseInspectionOperation(item: CustomerOperationListItem): boolean',
+    'scenario === "FORMAL_PEST_DISEASE_INSPECTION"',
+    'Boolean(anyItem.pest_disease_inspection)',
+    'PEST_DISEASE_INSPECTION',
+    '病虫害巡检',
+  ], 'customerOperationsIndexVm pest disease scenario detection');
+
+  assertAll(formalCards, [
     'pestDiseaseSummaryText',
     '巡检摘要',
     '巡检证据汇总',
@@ -65,6 +118,13 @@ function assertAll(text, required, label) {
     '严重度',
     '置信度',
   ], 'FormalScenarioCards pest disease cards');
+
+  assertNone(pdiSectionBody, [
+    '土壤水分',
+    '过去 24h 降雨',
+    '未来 24h 降雨预测',
+    '处方与审批',
+  ], 'OperationReportPage PDI dedicated section');
 
   assertAll(evidenceVm, [
     'inspectionSummary',
