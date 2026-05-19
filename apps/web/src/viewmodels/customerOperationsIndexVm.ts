@@ -102,7 +102,17 @@ function evidenceCopy(item: CustomerOperationListItem): { text: string; explanat
 }
 
 function buildTitle(operationTypeText: string, item: CustomerOperationListItem): string {
-  const raw = item.customer_title || item.title;
+  return operationDisplayTitle(operationTypeText, item);
+}
+
+function operationDisplayTitle(operationTypeText: string, item: CustomerOperationListItem): string {
+  const raw = String(item.customer_title || item.title || "").trim();
+  const normalized = raw.toUpperCase();
+
+  if (normalized === "PEST_DISEASE_INSPECTION" || normalized.includes("PEST_DISEASE_INSPECTION")) {
+    return "病虫害巡检";
+  }
+
   return customerDisplayName(raw, `${operationTypeText}作业`);
 }
 
