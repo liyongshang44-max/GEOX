@@ -7,6 +7,8 @@ const root = path.resolve(__dirname, '..', '..');
 const files = {
   labels: path.join(root, 'apps/web/src/lib/customerScenarioLabels.ts'),
   vm: path.join(root, 'apps/web/src/lib/formalScenarioViewModel.ts'),
+  reportPage: path.join(root, 'apps/web/src/views/OperationReportPage.tsx'),
+  indexVm: path.join(root, 'apps/web/src/viewmodels/customerOperationsIndexVm.ts'),
   cards: path.join(root, 'apps/web/src/components/customer/FormalScenarioCards.tsx'),
   evidenceVm: path.join(root, 'apps/web/src/lib/evidenceViewModel.ts'),
   evidence: path.join(root, 'apps/web/src/components/evidence/index.tsx'),
@@ -25,6 +27,8 @@ function assertAll(text, required, label) {
 (function main() {
   const labels = read(files.labels);
   const vm = read(files.vm);
+  const reportPage = read(files.reportPage);
+  const indexVm = read(files.indexVm);
   const cards = read(files.cards);
   const evidenceVm = read(files.evidenceVm);
   const evidence = read(files.evidence);
@@ -54,6 +58,18 @@ function assertAll(text, required, label) {
     'pest_disease_inspection',
     'pestDiseaseSummaryText',
   ], 'formalScenarioViewModel pest disease summary integration');
+
+  assertAll(reportPage, [
+    'function isPestDiseaseInspectionReport(report: OperationReportV1): boolean',
+    'scenario === "FORMAL_PEST_DISEASE_INSPECTION"',
+    'Boolean(anyReport.pest_disease_inspection)',
+  ], 'OperationReportPage pest disease scenario detection');
+
+  assertAll(indexVm, [
+    'function isPestDiseaseInspectionOperation(item: CustomerOperationListItem): boolean',
+    'scenario === "FORMAL_PEST_DISEASE_INSPECTION"',
+    'Boolean(anyItem.pest_disease_inspection)',
+  ], 'customerOperationsIndexVm pest disease scenario detection');
 
   assertAll(cards, [
     'pestDiseaseSummaryText',

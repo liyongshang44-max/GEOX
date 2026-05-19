@@ -17,6 +17,27 @@ type MainRow = { label: string; value: string };
 type MainSection = { key: "why" | "prescription_approval" | "execution" | "evidence_acceptance" | "value_learning"; title: string; summary: string; rows: MainRow[] };
 type SensingEvidenceVm = { summary: string; rows: MainRow[]; hasQuantifiedEvidence: boolean };
 
+function isPestDiseaseInspectionReport(report: OperationReportV1): boolean {
+  const anyReport = report as any;
+  const scenario = String(
+    anyReport.formal_scenario?.scenario_type ??
+    anyReport.scenario_type ??
+    "",
+  ).toUpperCase();
+
+  const operationType = String(
+    anyReport.operation_type ??
+    anyReport.prescription?.operation_type ??
+    anyReport.customer_title ??
+    anyReport.operation_title ??
+    "",
+  ).toUpperCase();
+
+  return scenario === "FORMAL_PEST_DISEASE_INSPECTION"
+    || Boolean(anyReport.pest_disease_inspection)
+    || operationType.includes("PEST_DISEASE_INSPECTION");
+}
+
 const CHAIN_LABELS: Record<string, string> = {
   diagnosis: "诊断",
   recommendation: "建议",
@@ -506,6 +527,7 @@ export default function OperationReportPage(): React.ReactElement {
   const safeFieldName = customerSafeName(vm.operation.fieldName, "地块名称待补充");
   const mainSections = buildMainSections(vm, report);
   const evidenceVm = buildEvidenceVm(report);
+  const isPestDiseaseInspection = isPestDiseaseInspectionReport(report);
 
   return (
     <div className="customerReportCanvas">
@@ -516,6 +538,7 @@ export default function OperationReportPage(): React.ReactElement {
               <div className="customerReportLogo">GEOX / 作业报告</div>
               <h1 className="customerTitle">{safeOperationTitle}</h1>
               <p className="customerSubtitle">地块：{safeFieldName}</p>
+              {isPestDiseaseInspection ? <p className="customerSubtitle">场景：病虫害巡检</p> : null}
               <p className="customerSubtitle">链路完整性：{chainIntegrity}</p>
             </div>
             <div className="customerActions">
