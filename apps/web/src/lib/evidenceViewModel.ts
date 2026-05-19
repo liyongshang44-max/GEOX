@@ -6,6 +6,15 @@ export type EvidenceVm = {
   operatorGaps?: string[];
   trustLevel: "FORMAL" | "TECHNICAL_ONLY" | "SIMULATED" | "INSUFFICIENT";
   trustText: string;
+  inspectionSummary?: {
+    media_count: number;
+    geo_evidence_present: boolean;
+    reviewed_by_human: boolean;
+    severity: string | null;
+    confidence: string | null;
+    review_required: boolean;
+    blocking_reasons: string[];
+  };
 };
 
 function asList(value: unknown): string[] {
@@ -19,7 +28,11 @@ export function buildEvidenceVm(input: any): EvidenceVm {
   const refs: EvidenceVm["refs"] = asList(input?.acceptance?.missing_items).map((gap) => ({ ref: gap, type: "MISSING" as const, label: "缺失项" }));
   const formalRefs = asList(input?.roi_ledger?.items?.flatMap?.((x: any) => x?.evidence_refs ?? []) ?? []);
   refs.push(...formalRefs.map((ref) => ({ ref, type: chain === "SIMULATED" ? "SIMULATED" as const : "FORMAL" as const, label: "证据引用" })));
-  const operatorGaps = [...asList(input?.acceptance?.missing_items), ...asList(scenario?.blocking_reasons)];
+  const inspection = input?.pest_disease_inspection ?? null;
+  if (inspection) {
+    refs.push({ ref: "pest_disease_inspection", type: inspection.acceptance_status === "PASS" ? "FORMAL" : "TECHNICAL", label: "病虫害巡检证据" });
+  }
+  const operatorGaps = [...asList(input?.acceptance?.missing_items), ...asList(scenario?.blocking_reasons), ...asList(inspection?.blocking_reasons)];
   const uniqueCategories: string[] = [];
   for (const gap of operatorGaps) {
     const category = customerEvidenceGapCategory(gap);
@@ -35,5 +48,14 @@ export function buildEvidenceVm(input: any): EvidenceVm {
       : chain === "SIMULATED" || evidence === "SIMULATED" ? "SIMULATED"
         : evidence === "TECHNICAL_ONLY" ? "TECHNICAL_ONLY"
           : "INSUFFICIENT";
-  return { refs, gaps, operatorGaps, trustLevel, trustText: customerTrustLevelText(trustLevel) };
+  const inspectionSummary = inspection ? {
+    media_count: Number(inspection.media_count ?? 0),
+    geo_evidence_present: Boolean(inspection.geo_evidence_present),
+    reviewed_by_human: Boolean(inspection.reviewed_by_human),
+    severity: inspection.severity ?? null,
+    confidence: inspection.confidence ?? null,
+    review_required: Boolean(inspection.review_required),
+    blocking_reasons: asList(inspection.blocking_reasons),
+  } : undefined;
+  return { refs, gaps, operatorGaps, trustLevel, trustText: customerTrustLevelText(trustLevel), inspectionSummary };
 }
