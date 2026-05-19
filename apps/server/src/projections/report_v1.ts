@@ -1,4 +1,5 @@
 import { evaluateRisk } from "../domain/risk_engine.js";
+import type { PestDiseaseInspectionReportProjectionV1 } from "../services/inspection/pest_disease_inspection_projection_v1.js";
 import type { OperationStateV1 } from "./operation_state_v1.js";
 
 export type OperationReportRiskLevel = "LOW" | "MEDIUM" | "HIGH";
@@ -10,6 +11,7 @@ export type OperationReportFormalScenarioTypeV1 =
   | "FORMAL_FERTILIZATION"
   | "FORMAL_PEST_DISEASE_INSPECTION"
   | "UNKNOWN";
+export type OperationReportPestDiseaseInspectionV1 = PestDiseaseInspectionReportProjectionV1;
 
 export type FieldMemorySummary = {
   memory_id: string;
