@@ -248,12 +248,49 @@ function mergeFertilizationIntoReport(report: OperationReportV1, fertilization: 
 
 function mergePestDiseaseInspectionIntoReport(
   report: OperationReportV1,
-  inspection: OperationReportV1["pest_disease_inspection"] | null,
+  pestDiseaseInspection: NonNullable<OperationReportV1["pest_disease_inspection"]> | null,
 ): OperationReportV1 {
-  if (!inspection) return report;
+  if (!pestDiseaseInspection) return report;
+
+  const scenario = report.formal_scenario ?? {
+    scenario_type: "UNKNOWN",
+    formal_chain_status: "LIMITED",
+    evidence_status: "MISSING",
+    customer_visible_eligible: false,
+    needs_review: true,
+    blocking_reasons: [],
+  };
+  const blockingReasons = Array.from(new Set([
+    ...(Array.isArray(scenario.blocking_reasons) ? scenario.blocking_reasons : []),
+    ...(Array.isArray(pestDiseaseInspection.blocking_reasons) ? pestDiseaseInspection.blocking_reasons : []),
+  ].map((x) => String(x ?? "").trim()).filter(Boolean)));
+
   return {
     ...report,
-    pest_disease_inspection: inspection,
+    pest_disease_inspection: pestDiseaseInspection,
+    formal_scenario: {
+      scenario_type: "FORMAL_PEST_DISEASE_INSPECTION",
+      formal_chain_status: pestDiseaseInspection.customer_visible_eligible
+        ? "PASSED"
+        : (
+          pestDiseaseInspection.acceptance_status === "MISSING"
+            ? "LIMITED"
+            : pestDiseaseInspection.acceptance_status === "INSUFFICIENT_EVIDENCE"
+              ? "INSUFFICIENT_EVIDENCE"
+              : "NEEDS_REVIEW"
+        ),
+      evidence_status: pestDiseaseInspection.acceptance_status === "PASS"
+        ? "FORMAL_PASSED"
+        : (
+          pestDiseaseInspection.evidence_tier === "WARNING"
+            || pestDiseaseInspection.evidence_tier === "TECHNICAL"
+              ? "TECHNICAL_ONLY"
+              : "MISSING"
+        ),
+      customer_visible_eligible: Boolean(pestDiseaseInspection.customer_visible_eligible),
+      needs_review: !pestDiseaseInspection.customer_visible_eligible || Boolean(pestDiseaseInspection.review_required),
+      blocking_reasons: blockingReasons,
+    },
   };
 }
 
