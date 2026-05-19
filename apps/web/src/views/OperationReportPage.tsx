@@ -7,7 +7,7 @@ import { FailSafeCustomerNotice, FormalChainSummaryCard, FormalScenarioBadge, Sc
 import { customerTimelineStatusLabel } from "../lib/customerLabels";
 import { customerSafeName, customerSafeTitle } from "../lib/customerSafeText";
 import { customerChainIntegrityLabel, customerSemanticLabel, isCustomerChainComplete } from "../lib/customerSemanticLabels";
-import { pestDiseaseAssessmentStatusLabel, pestDiseaseEvidenceTierLabel, pestDiseaseInspectionTargetLabel, pestDiseaseSeverityLabel } from "../lib/customerScenarioLabels";
+import { customerReasonText, pestDiseaseAssessmentStatusLabel, pestDiseaseEvidenceTierLabel, pestDiseaseInspectionTargetLabel, pestDiseaseSeverityLabel } from "../lib/customerScenarioLabels";
 import { labelCustomerAcceptanceVerdict, labelCustomerApprovalStatus, labelCustomerRoiStatus } from "../lib/customerStatusLabels";
 import { buildOperationReportVm, type CustomerReportSectionVm, type OperationReportPageVm } from "../viewmodels/operationReportVm";
 import { buildEvidenceVm } from "../lib/evidenceViewModel";
@@ -465,6 +465,15 @@ function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDise
   const blockingReasons = Array.isArray(pdi.blocking_reasons) ? pdi.blocking_reasons.map((x: unknown) => customerText(x, "")).filter(Boolean).join("、") : "无";
   const blocking = Array.isArray(pdi.blocking_reasons) ? pdi.blocking_reasons.map((x: unknown) => String(x ?? "").trim().toLowerCase()) : [];
   const skillSignalOnly = blocking.includes("pest_disease_skill_signal_only");
+  const mediaCountRaw = pdi.media_count;
+  const mediaCount = typeof mediaCountRaw === "number" ? mediaCountRaw : Number(mediaCountRaw);
+  const mediaMissing = !Number.isFinite(mediaCount) || mediaCount <= 0;
+  const geoPresent = Boolean(pdi.geo_evidence_present);
+  const geoMissing = !geoPresent;
+  const reviewedByHuman = Boolean(pdi.reviewed_by_human);
+  const evidenceGap = Array.isArray(pdi.blocking_reasons) && pdi.blocking_reasons.length
+    ? pdi.blocking_reasons.map((x: unknown) => customerReasonText(x)).join("、")
+    : "无";
 
   return [
     {
@@ -482,12 +491,15 @@ function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDise
     {
       key: "inspection_evidence",
       title: "巡检证据",
-      summary: customerText(pdi.evidence_summary ?? evidence.summary, "已记录巡检证据，待进一步复核。"),
+      summary: mediaMissing || geoMissing
+        ? "巡检任务已完成，但缺少定位或图片证据，需复核。"
+        : customerText(pdi.evidence_summary ?? evidence.summary, "已记录巡检证据，待进一步复核。"),
       rows: [
-        { label: "图片/媒体", value: valueOrPending(evidence.media_count ?? pdi.media_count, "待补充") },
-        { label: "定位证据", value: customerText(evidence.geo_evidence_present ?? pdi.geo_evidence_present, "待确认") },
-        { label: "采集时间", value: customerText(evidence.collected_at ?? pdi.collected_at, "待补充") },
-        { label: "缺失项", value: listOrPending(evidence.missing_items ?? pdi.missing_items) },
+        { label: "图片/媒体", value: mediaMissing ? "0 条" : `${mediaCount} 条` },
+        { label: "定位证据", value: geoPresent ? "已提供" : "缺少定位" },
+        { label: "人工复核", value: reviewedByHuman ? "已完成" : "尚未完成" },
+        { label: "证据等级", value: pestDiseaseEvidenceTierLabel(pdi.evidence_tier ?? evidence.evidence_tier) },
+        { label: "证据缺口", value: evidenceGap },
       ],
     },
     {
