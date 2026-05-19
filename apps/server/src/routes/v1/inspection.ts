@@ -30,7 +30,7 @@ function sendServiceError(reply: FastifyReply, err: unknown) {
 export function registerInspectionV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/inspection/pest-disease/request", async (req, reply) => {
     const auth = requireAnyScope(req, reply, INSPECTION_WRITE_SCOPES);
-    if (!auth) return;
+    if (!auth) return reply;
     try {
       const result = await createPestDiseaseInspectionRequestV1(pool, req.body, auth);
       return reply.send({ ok: true, ...result });
@@ -41,7 +41,7 @@ export function registerInspectionV1Routes(app: FastifyInstance, pool: Pool): vo
 
   app.post("/api/v1/inspection/pest-disease/observation", async (req, reply) => {
     const auth = requireAnyScope(req, reply, INSPECTION_WRITE_SCOPES);
-    if (!auth) return;
+    if (!auth) return reply;
     try {
       const result = await createPestDiseaseObservationV1(pool, req.body, auth);
       return reply.send({ ok: true, ...result });
@@ -52,7 +52,7 @@ export function registerInspectionV1Routes(app: FastifyInstance, pool: Pool): vo
 
   app.post("/api/v1/inspection/pest-disease/signal", async (req, reply) => {
     const auth = requireAnyScope(req, reply, INSPECTION_WRITE_SCOPES);
-    if (!auth) return;
+    if (!auth) return reply;
     try {
       const result = await createPestDiseaseSignalV1(pool, req.body, auth);
       return reply.send({ ok: true, ...result });
@@ -63,7 +63,7 @@ export function registerInspectionV1Routes(app: FastifyInstance, pool: Pool): vo
 
   app.post("/api/v1/inspection/pest-disease/assessment", async (req, reply) => {
     const auth = requireAnyScope(req, reply, INSPECTION_WRITE_SCOPES);
-    if (!auth) return;
+    if (!auth) return reply;
     try {
       const result = await createPestDiseaseInspectionAssessmentV1(pool, req.body, auth);
       return reply.send({ ok: true, ...result });
@@ -74,7 +74,7 @@ export function registerInspectionV1Routes(app: FastifyInstance, pool: Pool): vo
 
   app.post("/api/v1/inspection/pest-disease/review", async (req, reply) => {
     const auth = requireAnyScope(req, reply, INSPECTION_WRITE_SCOPES);
-    if (!auth) return;
+    if (!auth) return reply;
     try {
       const result = await createPestDiseaseInspectionReviewV1(pool, req.body, auth);
       return reply.send({ ok: true, ...result });
@@ -85,7 +85,7 @@ export function registerInspectionV1Routes(app: FastifyInstance, pool: Pool): vo
 
   app.post("/api/v1/inspection/pest-disease/acceptance/evaluate", async (req, reply) => {
     const auth = requireAnyScope(req, reply, INSPECTION_ACCEPTANCE_SCOPES);
-    if (!auth) return;
+    if (!auth) return reply;
     try {
       const result = await evaluatePestDiseaseInspectionAcceptanceV1(pool, req.body, auth);
       return reply.send({ ok: true, ...result });
@@ -96,7 +96,7 @@ export function registerInspectionV1Routes(app: FastifyInstance, pool: Pool): vo
 
   app.get("/api/v1/inspection/pest-disease/:inspection_id", async (req, reply) => {
     const auth = requireAnyScope(req, reply, INSPECTION_READ_SCOPES);
-    if (!auth) return;
+    if (!auth) return reply;
     try {
       const inspectionId = String((req.params as any)?.inspection_id ?? "").trim();
       const result = await getPestDiseaseInspectionV1(pool, inspectionId, auth);
