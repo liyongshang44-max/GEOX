@@ -83,6 +83,13 @@ function zoneSummaryText(value: any): string | undefined {
     const fail = fertilizationZones.filter((z: any) => String(z?.result ?? "").toUpperCase() === "FAIL").length;
     return `施氮分区验收：${pass}/${fertilizationZones.length} 通过${fail > 0 ? "，存在偏差分区" : ""}`;
   }
+  const pestDiseaseInspection = value?.pest_disease_inspection ?? null;
+  if (pestDiseaseInspection) {
+    const mediaCount = Number(pestDiseaseInspection.media_count ?? 0);
+    const geoText = pestDiseaseInspection.geo_evidence_present ? "有定位" : "缺定位";
+    const reviewText = pestDiseaseInspection.reviewed_by_human ? "已人工复核" : "待人工复核";
+    return `巡检证据：图片/媒体 ${mediaCount} 条，${geoText}，${reviewText}`;
+  }
   const zones = Array.isArray(value?.zone_matrix) ? value.zone_matrix : [];
   if (!zones.length) return undefined;
   const pass = zones.filter((z: any) => String(z?.zone_acceptance_result ?? "").toUpperCase() === "PASS").length;
