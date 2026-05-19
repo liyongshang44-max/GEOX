@@ -1,6 +1,14 @@
 import { mapGuardedReportCode } from "../api/reports";
 import { customerGuardedAcceptanceText, customerGuardedEvidenceText, customerGuardedStatusText } from "./customerTrustGate";
-import { customerEvidenceGapText, customerReasonText, failSafeStatusLabel, fertilizationCustomerSummaryText, manualTakeoverStatusLabel, scenarioTypeLabel } from "./customerScenarioLabels";
+import {
+  customerEvidenceGapText,
+  customerReasonText,
+  failSafeStatusLabel,
+  fertilizationCustomerSummaryText,
+  manualTakeoverStatusLabel,
+  pestDiseaseInspectionCustomerSummaryText,
+  scenarioTypeLabel,
+} from "./customerScenarioLabels";
 
 function customerText(value: unknown, fallback = "暂无记录"): string {
   const raw = String(value ?? "").trim();
@@ -81,7 +89,11 @@ export function buildFormalScenarioVm(reportOrOperation: any): FormalScenarioVm 
   const acceptanceText = customerGuardedAcceptanceText(reportOrOperation);
   const finalMapped = mapGuardedReportCode(reportOrOperation?.execution?.final_status ?? reportOrOperation?.final_status, reportOrOperation);
   const fertilization = reportOrOperation?.fertilization ?? null;
+  const pestDiseaseInspection = reportOrOperation?.pest_disease_inspection ?? null;
   const fertilizationSummaryText = scenarioKey === "FORMAL_FERTILIZATION" || fertilization ? fertilizationCustomerSummaryText(fertilization) : undefined;
+  const pestDiseaseInspectionSummaryText = scenarioKey === "FORMAL_PEST_DISEASE_INSPECTION" || pestDiseaseInspection
+    ? pestDiseaseInspectionCustomerSummaryText(pestDiseaseInspection)
+    : undefined;
   const tone: FormalScenarioVm["tone"] = fertilization?.acceptance_status === "FAIL"
     ? "danger"
     : fertilization?.acceptance_status === "NEEDS_REVIEW"
@@ -92,7 +104,7 @@ export function buildFormalScenarioVm(reportOrOperation: any): FormalScenarioVm 
   const deviceStatusText = scenarioKey === "DEVICE_ANOMALY" ? `设备状态：${customerText(reportOrOperation?.device_status ?? reportOrOperation?.device?.status ?? "未知", "未知")}` : undefined;
   const executionGuardText = scenarioKey === "DEVICE_ANOMALY" ? "设备异常场景下，不对客户展示“执行成功”结论，需先完成人工复核。" : undefined;
   const customerBlockingReasons = collectBlockingReasons(reportOrOperation);
-  const customerReasonSummary = fertilizationSummaryText ?? customerBlockingReasons[0] ?? "正式链路信息已记录，当前无额外阻塞说明。";
+  const customerReasonSummary = pestDiseaseInspectionSummaryText ?? fertilizationSummaryText ?? customerBlockingReasons[0] ?? "正式链路信息已记录，当前无额外阻塞说明。";
   return {
     scenarioKey,
     scenarioLabel,
