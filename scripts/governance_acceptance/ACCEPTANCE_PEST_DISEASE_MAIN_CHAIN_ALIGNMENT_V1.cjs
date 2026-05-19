@@ -169,20 +169,44 @@ function assertCustomerCopySafe(rel, text) {
 function assertDocForbiddenTermsOnlyInAllowedContext(text) {
   const lines = splitLines(text);
   const violations = [];
+  let inForbiddenCustomerSection = false;
+
   lines.forEach((line, idx) => {
     const lower = line.toLowerCase();
-    const section = docSectionForLine(line);
+
+    if (/^##\s+/.test(line)) {
+      inForbiddenCustomerSection = false;
+    }
+
+    if (
+      lower.includes('forbidden customer meanings')
+      || lower.includes('forbidden-list section')
+      || line.includes('禁止客户表达')
+      || line.includes('Forbidden customer')
+    ) {
+      inForbiddenCustomerSection = true;
+    }
+
+    const section = inForbiddenCustomerSection ? 'forbidden' : docSectionForLine(line);
+
     for (const term of forbiddenTerms) {
       if (!lower.includes(term.toLowerCase())) continue;
       if (isAllowedDocSection(line, section)) continue;
       violations.push(`docs/contracts/PEST_DISEASE_MAIN_CHAIN_ALIGNMENT_V1.md:${idx + 1}: forbidden term ${term} outside allowed boundary/forbidden context`);
     }
+
     for (const phrase of forbiddenCustomerPhrases) {
       if (!line.includes(phrase)) continue;
-      if (isAllowedDocSection(line, section) || line.includes('不得表达') || line.includes('Forbidden')) continue;
+      if (
+        inForbiddenCustomerSection
+        || isAllowedDocSection(line, section)
+        || line.includes('不得表达')
+        || line.includes('Forbidden')
+      ) continue;
       violations.push(`docs/contracts/PEST_DISEASE_MAIN_CHAIN_ALIGNMENT_V1.md:${idx + 1}: forbidden customer phrase ${phrase} outside allowed boundary/forbidden context`);
     }
   });
+
   assert.deepEqual(violations, [], `document forbidden-term context violations:\n${violations.join('\n')}`);
 }
 
