@@ -128,10 +128,10 @@ export function pestDiseaseInspectionCustomerSummaryText(input: any): string {
   const review = String(input?.review_status ?? "").toUpperCase();
   const blocking = Array.isArray(input?.blocking_reasons) ? input.blocking_reasons.map((x: unknown) => normReason(x)) : [];
   if (blocking.includes("pest_disease_missing_geo") || blocking.includes("pest_disease_missing_media")) return "巡检任务已完成，但缺少定位或图片证据，需复核。";
-  if (blocking.includes("pest_disease_skill_signal_only")) return "图像/人工巡检记录仅作为技术信号，不作为自动喷药依据。";
+  if (blocking.includes("pest_disease_skill_signal_only")) return "当前仅为识别信号，不作为正式巡检结论。";
   if (review === "PENDING") return "发现疑似病虫害风险，已进入人工复核。";
   if (review === "REJECTED") return "人工复核未通过，暂不展示为正式结论。";
-  if (acceptance === "PASS") return "巡检证据已通过验收，可作为后续处理建议的依据。";
+  if (acceptance === "PASS") return "巡检证据已通过验收，可作为后续处理建议依据，但不代表已完成防治。";
   if (status === "CONFIRMED") return "巡检结果已确认，但尚未进入补喷处方。";
   if (status === "SUSPECTED") return "发现疑似病虫害风险，已进入人工复核。";
   return "巡检证据不足，暂不生成处理建议。";

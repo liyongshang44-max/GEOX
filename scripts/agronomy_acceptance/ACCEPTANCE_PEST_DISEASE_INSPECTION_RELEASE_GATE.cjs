@@ -5,66 +5,19 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..', '..');
 
 const steps = [
-  {
-    name: 'ACCEPTANCE_PEST_DISEASE_INSPECTION_CONTRACT_V1',
-    command: 'node',
-    args: ['scripts/agronomy_acceptance/ACCEPTANCE_PEST_DISEASE_INSPECTION_CONTRACT_V1.cjs'],
-  },
-  {
-    name: 'ACCEPTANCE_PEST_DISEASE_INSPECTION_NO_PROJECTION_WRITE_V1',
-    command: 'node',
-    args: ['scripts/governance_acceptance/ACCEPTANCE_PEST_DISEASE_INSPECTION_NO_PROJECTION_WRITE_V1.cjs'],
-  },
-  {
-    name: 'ACCEPTANCE_PEST_DISEASE_SKILL_BOUNDARY_V1',
-    command: 'node',
-    args: ['scripts/governance_acceptance/ACCEPTANCE_PEST_DISEASE_SKILL_BOUNDARY_V1.cjs'],
-  },
-  {
-    name: 'ACCEPTANCE_PEST_DISEASE_INSPECTION_API_V1',
-    command: 'node',
-    args: ['scripts/agronomy_acceptance/ACCEPTANCE_PEST_DISEASE_INSPECTION_API_V1.cjs'],
-  },
-  {
-    name: 'ACCEPTANCE_PEST_DISEASE_INSPECTION_API_LIVE_V1',
-    command: 'node',
-    args: ['scripts/agronomy_acceptance/ACCEPTANCE_PEST_DISEASE_INSPECTION_API_LIVE_V1.cjs'],
-  },
-  {
-    name: 'ACCEPTANCE_PEST_DISEASE_AO_SENSE_BRIDGE_V1',
-    command: 'node',
-    args: ['scripts/agronomy_acceptance/ACCEPTANCE_PEST_DISEASE_AO_SENSE_BRIDGE_V1.cjs'],
-  },
-  {
-    name: 'ACCEPTANCE_FORMAL_PEST_DISEASE_INSPECTION_E2E_V1',
-    command: 'node',
-    args: ['scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_PEST_DISEASE_INSPECTION_E2E_V1.cjs'],
-  },
-  {
-    name: 'ACCEPTANCE_PEST_DISEASE_INSPECTION_REPORT_PROJECTION_V1',
-    command: 'node',
-    args: ['scripts/agronomy_acceptance/ACCEPTANCE_PEST_DISEASE_INSPECTION_REPORT_PROJECTION_V1.cjs'],
-  },
-  {
-    name: 'ACCEPTANCE_PEST_DISEASE_INSPECTION_GET_CONSISTENCY_V1',
-    command: 'node',
-    args: ['scripts/agronomy_acceptance/ACCEPTANCE_PEST_DISEASE_INSPECTION_GET_CONSISTENCY_V1.cjs'],
-  },
-  {
-    name: 'ACCEPTANCE_CUSTOMER_PEST_DISEASE_INSPECTION_REPORT_V1',
-    command: 'node',
-    args: ['scripts/frontend_acceptance/ACCEPTANCE_CUSTOMER_PEST_DISEASE_INSPECTION_REPORT_V1.cjs'],
-  },
-  {
-    name: 'server typecheck',
-    command: 'pnpm',
-    args: ['--filter', '@geox/server', 'typecheck'],
-  },
-  {
-    name: 'web typecheck',
-    command: 'pnpm',
-    args: ['--filter', '@geox/web', 'typecheck'],
-  },
+  { name: 'ACCEPTANCE_PEST_DISEASE_INSPECTION_CONTRACT_V1', command: 'node', args: ['scripts/agronomy_acceptance/ACCEPTANCE_PEST_DISEASE_INSPECTION_CONTRACT_V1.cjs'] },
+  { name: 'ACCEPTANCE_PEST_DISEASE_INSPECTION_NO_PROJECTION_WRITE_V1', command: 'node', args: ['scripts/governance_acceptance/ACCEPTANCE_PEST_DISEASE_INSPECTION_NO_PROJECTION_WRITE_V1.cjs'] },
+  { name: 'ACCEPTANCE_PEST_DISEASE_SKILL_BOUNDARY_V1', command: 'node', args: ['scripts/governance_acceptance/ACCEPTANCE_PEST_DISEASE_SKILL_BOUNDARY_V1.cjs'] },
+  { name: 'ACCEPTANCE_PEST_DISEASE_INSPECTION_API_V1', command: 'node', args: ['scripts/agronomy_acceptance/ACCEPTANCE_PEST_DISEASE_INSPECTION_API_V1.cjs'] },
+  { name: 'ACCEPTANCE_PEST_DISEASE_INSPECTION_API_LIVE_V1', command: 'node', args: ['scripts/agronomy_acceptance/ACCEPTANCE_PEST_DISEASE_INSPECTION_API_LIVE_V1.cjs'] },
+  { name: 'ACCEPTANCE_PEST_DISEASE_AO_SENSE_BRIDGE_V1', command: 'node', args: ['scripts/agronomy_acceptance/ACCEPTANCE_PEST_DISEASE_AO_SENSE_BRIDGE_V1.cjs'] },
+  { name: 'ACCEPTANCE_FORMAL_PEST_DISEASE_INSPECTION_E2E_V1', command: 'node', args: ['scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_PEST_DISEASE_INSPECTION_E2E_V1.cjs'] },
+  { name: 'ACCEPTANCE_PEST_DISEASE_INSPECTION_GET_CONSISTENCY_V1', command: 'node', args: ['scripts/agronomy_acceptance/ACCEPTANCE_PEST_DISEASE_INSPECTION_GET_CONSISTENCY_V1.cjs'] },
+  { name: 'ACCEPTANCE_PEST_DISEASE_INSPECTION_REPORT_PROJECTION_V1', command: 'node', args: ['scripts/agronomy_acceptance/ACCEPTANCE_PEST_DISEASE_INSPECTION_REPORT_PROJECTION_V1.cjs'] },
+  { name: 'ACCEPTANCE_CUSTOMER_PEST_DISEASE_INSPECTION_REPORT_V1', command: 'node', args: ['scripts/frontend_acceptance/ACCEPTANCE_CUSTOMER_PEST_DISEASE_INSPECTION_REPORT_V1.cjs'] },
+  { name: 'ACCEPTANCE_PEST_DISEASE_MAIN_CHAIN_ALIGNMENT_V1', command: 'node', args: ['scripts/governance_acceptance/ACCEPTANCE_PEST_DISEASE_MAIN_CHAIN_ALIGNMENT_V1.cjs'] },
+  { name: 'server typecheck', command: 'pnpm', args: ['--filter', '@geox/server', 'typecheck'] },
+  { name: 'web typecheck', command: 'pnpm', args: ['--filter', '@geox/web', 'typecheck'] },
 ];
 
 function runStep(step) {
@@ -100,7 +53,5 @@ function runStep(step) {
     ADMIN_TOKEN: process.env.ADMIN_TOKEN ? '<set>' : '<missing>',
   });
   for (const step of steps) runStep(step);
-  console.log('\n[pest-disease-release-gate] PASS P2-C pest disease inspection release gate', {
-    steps: steps.map((step) => step.name),
-  });
+  console.log('\n[pest-disease-release-gate] PASS P2-C pest disease inspection release gate', { steps: steps.map((step) => step.name) });
 })();
