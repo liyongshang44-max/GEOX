@@ -29,6 +29,7 @@ export type FormalScenarioVm = {
   deviceStatusText?: string;
   executionGuardText?: string;
   fertilizationSummaryText?: string;
+  pestDiseaseSummaryText?: string;
   tone: "success" | "warning" | "danger" | "neutral";
   customerReasonSummary: string;
   customerBlockingReasons: string[];
@@ -119,6 +120,7 @@ export function buildFormalScenarioVm(reportOrOperation: any): FormalScenarioVm 
     deviceStatusText,
     executionGuardText,
     fertilizationSummaryText,
+    pestDiseaseSummaryText: pestDiseaseInspectionSummaryText,
     tone,
     customerReasonSummary,
     customerBlockingReasons,
