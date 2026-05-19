@@ -651,6 +651,44 @@ function AuditChain({ chain, vm, report }: { chain: BackendChainItem[]; vm: Oper
   );
 }
 
+function PestDiseaseAuditChain({ report }: { report: OperationReportV1 }): React.ReactElement {
+  const pdi = ((report as any).pest_disease_inspection ?? {}) as any;
+  const obs = isObject(pdi.observation_evidence?.latest_observation) ? pdi.observation_evidence.latest_observation : {};
+  const mediaRefs = Array.isArray(obs.media_refs) ? obs.media_refs : [];
+  const mediaText = mediaRefs.length
+    ? mediaRefs.slice(0, 5).map((m: any) => `${text(m?.kind) || "media"}:${text(m?.ref_id) || "--"}`).join("；")
+    : "暂无图片/媒体引用";
+  const geoText = isObject(obs.geo_point) ? `${text(obs.geo_point?.lat)}, ${text(obs.geo_point?.lng)}` : "暂无定位";
+  return (
+    <section className="customerCard operationAuditChain">
+      <details>
+        <summary className="operationTechDetailsSummary">巡检审计链路（默认折叠）</summary>
+        <p className="customerMetricLabel customerSpacingTopSm">以下为病虫害巡检证据链摘要：观测依据、人工复核与验收边界。</p>
+        <div className="operationClosedLoopGrid customerSpacingTopSm">
+          <details className="customerCard operationClosedLoopCard">
+            <summary><span className="operationStepNo">1</span> 观测依据：{customerTimelineStatusLabel("DONE")}</summary>
+            <div className="customerGrid2 customerSpacingTopXs">
+              <div><strong>图片/媒体证据：</strong>{customerText(mediaText, "暂无图片/媒体引用")}</div>
+              <div><strong>采集时间：</strong>{customerText(obs.captured_at_text ?? obs.captured_at_ts, "暂无时间")}</div>
+              <div><strong>定位证据：</strong>{customerText(geoText, "暂无定位")}</div>
+              <div><strong>设备来源：</strong>{customerText(firstValue(obs, ["device_profile.device_model", "device_profile.device_type", "device_profile.device_id"]), "暂无设备来源")}</div>
+            </div>
+          </details>
+          <details className="customerCard operationClosedLoopCard">
+            <summary><span className="operationStepNo">2</span> 复核与验收：{customerTimelineStatusLabel("AVAILABLE")}</summary>
+            <div className="customerGrid2 customerSpacingTopXs">
+              <div><strong>人工复核：</strong>{Boolean(pdi.reviewed_by_human) ? "已完成" : "尚未完成"}</div>
+              <div><strong>复核状态：</strong>{pestDiseaseReviewStatusLabel(pdi.review_status)}</div>
+              <div><strong>验收状态：</strong>{pestDiseaseAcceptanceStatusLabel(pdi.acceptance_status)}</div>
+              <div><strong>结论边界：</strong>巡检结论不等于已完成防治执行。</div>
+            </div>
+          </details>
+        </div>
+      </details>
+    </section>
+  );
+}
+
 export default function OperationReportPage(): React.ReactElement {
   const { operationId = "" } = useParams();
   const [loading, setLoading] = React.useState(true);
@@ -728,7 +766,9 @@ export default function OperationReportPage(): React.ReactElement {
           {mainSections.map((section) => <MainSectionCard key={section.key} section={section} />)}
         </section>
 
-        <AuditChain chain={chain} vm={vm} report={report} />
+        {isPestDiseaseInspection
+          ? <PestDiseaseAuditChain report={report} />
+          : <AuditChain chain={chain} vm={vm} report={report} />}
 
         <section className="operationTechDetailsMuted">
           <details>
