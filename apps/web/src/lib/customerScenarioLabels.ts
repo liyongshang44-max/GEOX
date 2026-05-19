@@ -136,3 +136,39 @@ export function pestDiseaseInspectionCustomerSummaryText(input: any): string {
   if (status === "SUSPECTED") return "发现疑似病虫害风险，已进入人工复核。";
   return "巡检证据不足，暂不生成处理建议。";
 }
+
+export function pestDiseaseInspectionTargetLabel(value: unknown): string {
+  const key = String(value ?? "").trim().toUpperCase();
+  if (key === "PEST") return "虫害";
+  if (key === "DISEASE") return "病害";
+  if (key === "WEED") return "杂草";
+  if (key === "UNKNOWN_STRESS") return "未知胁迫";
+  return "待确认";
+}
+
+export function pestDiseaseAssessmentStatusLabel(value: unknown): string {
+  const key = String(value ?? "").trim().toUpperCase();
+  if (key === "CONFIRMED") return "已确认";
+  if (key === "SUSPECTED") return "疑似风险";
+  if (key === "RULED_OUT") return "已排除";
+  if (key === "NEEDS_REVIEW") return "需复核";
+  if (key === "INSUFFICIENT_EVIDENCE") return "证据不足";
+  return "待确认";
+}
+
+export function pestDiseaseSeverityLabel(value: unknown): string {
+  const key = String(value ?? "").trim().toUpperCase();
+  if (key === "HIGH") return "高";
+  if (key === "MEDIUM") return "中";
+  if (key === "LOW") return "低";
+  return "待补充";
+}
+
+export function pestDiseaseEvidenceTierLabel(value: unknown): string {
+  const key = String(value ?? "").trim().toUpperCase();
+  if (key === "FORMAL") return "正式证据";
+  if (key === "TECHNICAL") return "技术信号";
+  if (key === "WARNING") return "预警";
+  if (key === "MANUAL_REVIEW") return "人工复核";
+  return "待确认";
+}

@@ -7,6 +7,7 @@ import { FailSafeCustomerNotice, FormalChainSummaryCard, FormalScenarioBadge, Sc
 import { customerTimelineStatusLabel } from "../lib/customerLabels";
 import { customerSafeName, customerSafeTitle } from "../lib/customerSafeText";
 import { customerChainIntegrityLabel, customerSemanticLabel, isCustomerChainComplete } from "../lib/customerSemanticLabels";
+import { pestDiseaseAssessmentStatusLabel, pestDiseaseEvidenceTierLabel, pestDiseaseInspectionTargetLabel, pestDiseaseSeverityLabel } from "../lib/customerScenarioLabels";
 import { labelCustomerAcceptanceVerdict, labelCustomerApprovalStatus, labelCustomerRoiStatus } from "../lib/customerStatusLabels";
 import { buildOperationReportVm, type CustomerReportSectionVm, type OperationReportPageVm } from "../viewmodels/operationReportVm";
 import { buildEvidenceVm } from "../lib/evidenceViewModel";
@@ -462,6 +463,8 @@ function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDise
   const acceptance = root.acceptance ?? pdi.acceptance ?? {};
   const nextStep = pdi.next_step ?? {};
   const blockingReasons = Array.isArray(pdi.blocking_reasons) ? pdi.blocking_reasons.map((x: unknown) => customerText(x, "")).filter(Boolean).join("、") : "无";
+  const blocking = Array.isArray(pdi.blocking_reasons) ? pdi.blocking_reasons.map((x: unknown) => String(x ?? "").trim().toLowerCase()) : [];
+  const skillSignalOnly = blocking.includes("pest_disease_skill_signal_only");
 
   return [
     {
@@ -469,9 +472,11 @@ function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDise
       title: "为什么巡检",
       summary: customerText(pdi.reason_summary ?? pdi.summary_reason, "因识别到疑似病虫害风险，触发巡检任务。"),
       rows: [
-        { label: "触发来源", value: customerText(pdi.trigger_source ?? pdi.trigger, "识别信号触发") },
-        { label: "风险提示", value: customerText(pdi.risk_hint ?? pdi.risk_summary, "疑似病虫害风险待复核") },
-        { label: "巡检范围", value: customerText(pdi.inspection_scope ?? pdi.scope, "地块巡检范围待补充") },
+        { label: "巡检目标", value: pestDiseaseInspectionTargetLabel(pdi.inspection_target ?? pdi.target_type) },
+        { label: "疑似问题", value: customerText(pdi.suspected_issue_code, "待确认") },
+        { label: "触发说明", value: "发现疑似病虫害风险，进入巡检证据链" },
+        { label: "证据等级", value: pestDiseaseEvidenceTierLabel(pdi.evidence_tier ?? evidence.evidence_tier) },
+        { label: "是否仅识别信号", value: skillSignalOnly ? "当前仅为识别信号，不作为正式巡检结论。" : "否" },
       ],
     },
     {
@@ -491,7 +496,8 @@ function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDise
       summary: customerText(assessment.summary ?? pdi.assessment_summary, "巡检识别已完成，结论待复核。"),
       rows: [
         { label: "识别状态", value: customerText(assessment.status ?? pdi.assessment_status, "待确认") },
-        { label: "严重度", value: customerText(assessment.severity ?? pdi.severity, "待补充") },
+        { label: "识别状态标签", value: pestDiseaseAssessmentStatusLabel(assessment.status ?? pdi.assessment_status) },
+        { label: "严重度", value: pestDiseaseSeverityLabel(assessment.severity ?? pdi.severity) },
         { label: "置信度", value: customerText(assessment.confidence ?? pdi.confidence, "待补充") },
         { label: "诊断说明", value: customerText(assessment.diagnosis ?? pdi.diagnosis, "诊断说明待补充") },
       ],
