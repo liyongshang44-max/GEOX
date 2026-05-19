@@ -651,6 +651,7 @@ export default function OperationReportPage(): React.ReactElement {
     : buildMainSections(vm, report);
   const evidenceVm = buildEvidenceVm(report);
   const isPestDiseaseInspection = isPestDiseaseInspectionReport(report);
+  const heroTitle = isPestDiseaseInspection ? "病虫害巡检报告" : safeOperationTitle;
 
   return (
     <div className="customerReportCanvas">
@@ -658,8 +659,8 @@ export default function OperationReportPage(): React.ReactElement {
         <header className="customerHero operationHero">
           <div className="customerHeroTop">
             <div>
-              <div className="customerReportLogo">GEOX / 作业报告</div>
-              <h1 className="customerTitle">{safeOperationTitle}</h1>
+              <div className="customerReportLogo">{isPestDiseaseInspection ? "GEOX / 巡检报告" : "GEOX / 作业报告"}</div>
+              <h1 className="customerTitle">{heroTitle}</h1>
               <p className="customerSubtitle">地块：{safeFieldName}</p>
               {isPestDiseaseInspection ? <p className="customerSubtitle">场景：病虫害巡检</p> : null}
               <p className="customerSubtitle">链路完整性：{chainIntegrity}</p>
