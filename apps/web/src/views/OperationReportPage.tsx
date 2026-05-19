@@ -524,7 +524,7 @@ function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDise
       rows: [
         { label: "图片/媒体证据", value: latestMediaRefText },
         { label: "采集时间", value: latestCapturedAt },
-        { label: "定位证据", value: latestGeo },
+        { label: "定位点", value: latestGeo },
         { label: "设备来源", value: latestDevice },
         { label: "现场备注", value: latestNote },
         { label: "观察部位", value: latestPlantPart },
@@ -670,7 +670,7 @@ function PestDiseaseAuditChain({ report }: { report: OperationReportV1 }): React
             <div className="customerGrid2 customerSpacingTopXs">
               <div><strong>图片/媒体证据：</strong>{customerText(mediaText, "暂无图片/媒体引用")}</div>
               <div><strong>采集时间：</strong>{customerText(obs.captured_at_text ?? obs.captured_at_ts, "暂无时间")}</div>
-              <div><strong>定位证据：</strong>{customerText(geoText, "暂无定位")}</div>
+              <div><strong>定位点：</strong>{customerText(geoText, "暂无定位")}</div>
               <div><strong>设备来源：</strong>{customerText(firstValue(obs, ["device_profile.device_model", "device_profile.device_type", "device_profile.device_id"]), "暂无设备来源")}</div>
             </div>
           </details>

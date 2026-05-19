@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 
 const root = path.resolve(__dirname, '..', '..');
 const files = {
+  projection: path.join(root, 'apps/server/src/services/inspection/pest_disease_inspection_projection_v1.ts'),
   labels: path.join(root, 'apps/web/src/lib/customerScenarioLabels.ts'),
   vm: path.join(root, 'apps/web/src/lib/formalScenarioViewModel.ts'),
   operationReportPage: path.join(root, 'apps/web/src/views/OperationReportPage.tsx'),
@@ -48,6 +49,7 @@ function extractFunctionBody(text, signatureStart) {
 
 (function main() {
   const labels = read(files.labels);
+  const projection = read(files.projection);
   const vm = read(files.vm);
   const operationReportPage = read(files.operationReportPage);
   const operationsIndexVm = read(files.operationsIndexVm);
@@ -55,6 +57,20 @@ function extractFunctionBody(text, signatureStart) {
   const evidenceVm = read(files.evidenceVm);
   const evidence = read(files.evidence);
   const pdiSectionBody = extractFunctionBody(operationReportPage, 'function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDiseaseSection[]');
+  const pdiAuditBody = extractFunctionBody(operationReportPage, 'function PestDiseaseAuditChain({ report }: { report: OperationReportV1 }): React.ReactElement');
+
+  assertAll(projection, [
+    'observation_evidence',
+    'latest_observation',
+    'media_refs',
+    'captured_at_ts',
+    'geo_point',
+    'device_profile',
+    'scout_note',
+    'severity_percent',
+    'incidence_percent',
+    'affected_area_percent',
+  ], 'pest disease inspection projection observation evidence fields');
 
   assertAll(labels, [
     'FORMAL_PEST_DISEASE_INSPECTION',
@@ -98,6 +114,13 @@ function extractFunctionBody(text, signatureStart) {
     '尚未形成防治效果验收',
     '不代表已完成防治',
     '病虫害巡检报告',
+    'PestDiseaseAuditChain',
+    '巡检观察',
+    '图片/媒体证据',
+    '采集时间',
+    '定位点',
+    '设备来源',
+    '现场备注',
   ], 'OperationReportPage pest disease scenario detection and layout');
 
   assertAll(operationsIndexVm, [
@@ -119,12 +142,16 @@ function extractFunctionBody(text, signatureStart) {
     '置信度',
   ], 'FormalScenarioCards pest disease cards');
 
-  assertNone(pdiSectionBody, [
+  const blockedPdiTerms = [
     '土壤水分',
+    '触发阈值',
     '过去 24h 降雨',
     '未来 24h 降雨预测',
     '处方与审批',
-  ], 'OperationReportPage PDI dedicated section');
+    'PEST_DISEASE_INSPECTION',
+  ];
+  assertNone(pdiSectionBody, blockedPdiTerms, 'OperationReportPage PDI dedicated section');
+  assertNone(pdiAuditBody, blockedPdiTerms, 'OperationReportPage PestDiseaseAuditChain');
 
   assertAll(evidenceVm, [
     'inspectionSummary',
