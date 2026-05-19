@@ -108,6 +108,12 @@ function assertSkillRunSuccessNotConfirmed(files) {
   for (const file of files) {
     const rel = toPosix(path.relative(root, file));
     const text = stripComments(fs.readFileSync(file, 'utf8'));
+
+    // Inspection Domain service is the only allowed formal assessment writer.
+    // It may contain both pest_disease_signal_v1 references and formal assessment rules,
+    // but it must still be checked by assertFormalAssessmentWriter(...).
+    if (rel === allowedFormalAssessmentWriter) continue;
+
     if (!/SkillRun|skill_run|skillRun|skill_run_id|skill_trace_id|pest_disease_signal_v1/i.test(text)) continue;
     const successToConfirmedPatterns = [
       /SUCCESS[\s\S]{0,240}assessment_status[\s\S]{0,80}CONFIRMED/i,

@@ -225,9 +225,19 @@ async function queryRoiLedgerForReport(pool: Pool, tenant: TenantTriple, s: Oper
   return q.rows ?? [];
 }
 
-function mergeFertilizationIntoReport(report: OperationReportV1, fertilization: any | null): OperationReportV1 {
+function mergeFertilizationIntoReport(
+  report: OperationReportV1,
+  fertilization: NonNullable<OperationReportV1["fertilization"]> | null,
+): OperationReportV1 {
   if (!fertilization) return report;
-  const scenario = (report as any).formal_scenario ?? {};
+  const scenario = report.formal_scenario ?? {
+    scenario_type: "UNKNOWN",
+    formal_chain_status: "LIMITED",
+    evidence_status: "MISSING",
+    customer_visible_eligible: false,
+    needs_review: true,
+    blocking_reasons: [],
+  };
   const blockingReasons = Array.from(new Set([
     ...(Array.isArray(scenario.blocking_reasons) ? scenario.blocking_reasons : []),
     ...(Array.isArray(fertilization.blocking_reasons) ? fertilization.blocking_reasons : []),
@@ -243,7 +253,7 @@ function mergeFertilizationIntoReport(report: OperationReportV1, fertilization: 
       needs_review: !fertilization.customer_visible_eligible,
       blocking_reasons: blockingReasons,
     },
-  } as any;
+  };
 }
 
 function mergePestDiseaseInspectionIntoReport(
