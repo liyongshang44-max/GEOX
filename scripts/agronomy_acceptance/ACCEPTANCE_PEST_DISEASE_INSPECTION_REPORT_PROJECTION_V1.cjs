@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 const { randomUUID } = require('node:crypto');
+const fs = require('node:fs');
+const path = require('node:path');
 const { Pool } = require('pg');
 const { assert, env, fetchJson, requireOk, waitForHealth } = require('./_common.cjs');
 
@@ -43,6 +45,23 @@ async function insertOperationPlanFact(pool, scope, operation_plan_id, field_id,
 }
 
 async function run() {
+  const root = path.resolve(__dirname, '..', '..');
+  const reportV1 = fs.readFileSync(path.join(root, 'apps/server/src/projections/report_v1.ts'), 'utf8');
+  const reportsRoute = fs.readFileSync(path.join(root, 'apps/server/src/routes/reports_v1.ts'), 'utf8');
+  assert.equal(reportV1.includes('OperationReportFormalScenarioTypeV1'), true);
+  assert.equal(reportV1.includes('"FORMAL_FERTILIZATION"'), true);
+  assert.equal(reportV1.includes('"FORMAL_PEST_DISEASE_INSPECTION"'), true);
+  assert.equal(reportV1.includes('pest_disease_inspection?: OperationReportPestDiseaseInspectionV1'), true);
+  assert.equal(reportsRoute.includes('buildPestDiseaseInspectionReportProjectionV1'), true);
+  assert.equal(reportsRoute.includes('mergePestDiseaseInspectionIntoReport'), true);
+  assert.equal(reportsRoute.includes('scenario_type: "FORMAL_PEST_DISEASE_INSPECTION"'), true);
+  const pestMergeStart = reportsRoute.indexOf('function mergePestDiseaseInspectionIntoReport');
+  const projectReportStart = reportsRoute.indexOf('export async function projectReportV1');
+  const pestBlock = pestMergeStart >= 0 && projectReportStart > pestMergeStart
+    ? reportsRoute.slice(pestMergeStart, projectReportStart)
+    : '';
+  assert.equal(pestBlock.includes('as any'), false, 'pest/disease report merge must not use as any');
+
   const base = env('BASE_URL', process.env.GEOX_BASE_URL || 'http://127.0.0.1:3001');
   const adminToken = tokenEnv('ADMIN_TOKEN', 'admin_token');
   const operatorToken = tokenEnv('OPERATOR_TOKEN', 'operator_token');

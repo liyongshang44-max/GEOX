@@ -16,6 +16,7 @@ import { toCustomerFacingActionLabel } from "../domain/controlplane/irrigation_a
 import { listAlertOperationRelationV1ByOperation, listOperationWorkflowV1 } from "./alert_workflow_v1.js";
 import { buildSamplingReportViewV1 } from "../services/sampling/sampling_projection_v1.js";
 import { buildFertilizationReportProjectionV1 } from "../services/fertilization/fertilization_projection_v1.js";
+import { buildPestDiseaseInspectionReportProjectionV1 } from "../services/inspection/pest_disease_inspection_projection_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; record_json: any };
@@ -245,6 +246,55 @@ function mergeFertilizationIntoReport(report: OperationReportV1, fertilization: 
   } as any;
 }
 
+function mergePestDiseaseInspectionIntoReport(
+  report: OperationReportV1,
+  pestDiseaseInspection: NonNullable<OperationReportV1["pest_disease_inspection"]> | null,
+): OperationReportV1 {
+  if (!pestDiseaseInspection) return report;
+
+  const scenario = report.formal_scenario ?? {
+    scenario_type: "UNKNOWN",
+    formal_chain_status: "LIMITED",
+    evidence_status: "MISSING",
+    customer_visible_eligible: false,
+    needs_review: true,
+    blocking_reasons: [],
+  };
+  const blockingReasons = Array.from(new Set([
+    ...(Array.isArray(scenario.blocking_reasons) ? scenario.blocking_reasons : []),
+    ...(Array.isArray(pestDiseaseInspection.blocking_reasons) ? pestDiseaseInspection.blocking_reasons : []),
+  ].map((x) => String(x ?? "").trim()).filter(Boolean)));
+
+  return {
+    ...report,
+    pest_disease_inspection: pestDiseaseInspection,
+    formal_scenario: {
+      scenario_type: "FORMAL_PEST_DISEASE_INSPECTION",
+      formal_chain_status: pestDiseaseInspection.customer_visible_eligible
+        ? "PASSED"
+        : (
+          pestDiseaseInspection.acceptance_status === "MISSING"
+            ? "LIMITED"
+            : pestDiseaseInspection.acceptance_status === "INSUFFICIENT_EVIDENCE"
+              ? "INSUFFICIENT_EVIDENCE"
+              : "NEEDS_REVIEW"
+        ),
+      evidence_status: pestDiseaseInspection.acceptance_status === "PASS"
+        ? "FORMAL_PASSED"
+        : (
+          pestDiseaseInspection.evidence_tier === "WARNING"
+            || pestDiseaseInspection.evidence_tier === "TECHNICAL"
+              ? "TECHNICAL_ONLY"
+              : "MISSING"
+        ),
+      customer_visible_eligible: Boolean(pestDiseaseInspection.customer_visible_eligible),
+      needs_review: !pestDiseaseInspection.customer_visible_eligible
+        || (Boolean(pestDiseaseInspection.review_required) && !pestDiseaseInspection.reviewed_by_human),
+      blocking_reasons: blockingReasons,
+    },
+  };
+}
+
 export async function projectReportV1(params: {
   pool: Pool;
   tenant: TenantTriple;
@@ -313,6 +363,16 @@ export async function projectReportV1(params: {
     prescription_id: (operationState as any).prescription_id ?? null,
     recommendation_id: operationState.recommendation_id ?? null,
   });
+  const pestDiseaseInspectionView = await buildPestDiseaseInspectionReportProjectionV1(pool, {
+    tenant,
+    operation_plan_id: operationPlanId,
+    operation_id: operationState.operation_id,
+    inspection_id: toText(
+      (operationState as any)?.pest_disease_inspection_id
+        ?? (operationState as any)?.inspection_id
+        ?? (operationState as any)?.pest_disease_inspection?.inspection_id,
+    ),
+  });
   const acceptanceForReport = acceptanceFact ? {
     verdict: acceptanceFact.record_json?.payload?.verdict,
     missing_evidence: acceptanceFact.record_json?.payload?.missing_evidence,
@@ -351,8 +411,12 @@ export async function projectReportV1(params: {
     customer_title: operationTitle,
   });
   const reportWithFertilization = mergeFertilizationIntoReport(operationReport, fertilizationView);
+  const reportWithPestDiseaseInspection = mergePestDiseaseInspectionIntoReport(
+    reportWithFertilization,
+    pestDiseaseInspectionView,
+  );
   return {
-    ...reportWithFertilization,
+    ...reportWithPestDiseaseInspection,
     evidence_pack_summary: buildOperationEvidencePackSummaryV1({
       receipt: receiptFact ?? receiptForReport,
       evidence_bundle: evidenceBundle,
@@ -371,7 +435,7 @@ export async function projectReportV1(params: {
       } : null,
       now: new Date(operationReport.generated_at),
     }),
-  } as any;
+  };
 }
 
 export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void {

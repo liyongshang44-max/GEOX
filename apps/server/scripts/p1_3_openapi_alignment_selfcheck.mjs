@@ -62,6 +62,12 @@ const excludedPathPatterns = [
   /^\/api\/v1\/operations\/[^/]+\/field-memory$/,
   /^\/api\/v1\/skill\/runs\/[^/]+$/,
   /^\/api\/v1\/skill\/cancel\/[^/]+$/,
+  /^\/api\/v1\/fertilization(?:\/|$)/,
+  /^\/api\/v1\/inspection\/pest-disease(?:\/|$)/,
+  /^\/api\/v1\/sampling(?:\/|$)/,
+  /^\/api\/v1\/sensing(?:\/|$)/,
+  /^\/api\/v1\/operator\/learning-validation$/,
+  /^\/api\/v1\/operator\/operations\/.+\/learning-validation$/,
 ];
 const forbiddenOpenApiPaths = [
   '/api/v1/operations/console',
