@@ -156,20 +156,20 @@ function parseRecordJson(value: unknown): any {
   try { return JSON.parse(value); } catch { return null; }
 }
 
-function isReadonlySet<T extends string>(
-  value: ReadonlySet<T> | readonly T[],
-): value is ReadonlySet<T> {
-  return typeof (value as ReadonlySet<T>).has === "function";
+function isSet<T extends string>(
+  value: Set<T> | readonly T[],
+): value is Set<T> {
+  return value instanceof Set;
 }
 
-function enumValue<T extends string>(value: unknown, allowed: ReadonlySet<T> | readonly T[], field: string): T {
+function enumValue<T extends string>(value: unknown, allowed: Set<T> | readonly T[], field: string): T {
   const v = mustText(value, field) as T;
-  const ok = isReadonlySet(allowed) ? allowed.has(v) : allowed.includes(v);
+  const ok = isSet(allowed) ? allowed.has(v) : allowed.includes(v);
   if (!ok) throw new PestDiseaseInspectionServiceError(400, `INVALID_ENUM:${field}`);
   return v;
 }
 
-function optionalEnumValue<T extends string>(value: unknown, allowed: ReadonlySet<T>, field: string, fallback: T): T {
+function optionalEnumValue<T extends string>(value: unknown, allowed: Set<T>, field: string, fallback: T): T {
   if (value == null || value === "") return fallback;
   return enumValue(value, allowed, field);
 }

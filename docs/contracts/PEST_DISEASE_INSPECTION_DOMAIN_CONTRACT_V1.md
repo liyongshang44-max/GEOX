@@ -335,6 +335,13 @@ Inspection Domain owns `pest_disease_inspection_assessment_v1` and `pest_disease
 
 AO-SENSE may request and receipt inspection tasks, but pest/disease media, GPS, scout note, device profile, counts, incidence, severity, and evidence quality belong in `pest_disease_observation_v1` and are referenced from AO-SENSE receipt by `fact_id`.
 
+### Acceptance-required boundary literals
+
+- Pest/Disease AGRONOMY or SENSING Skill output may produce pest_disease_signal_v1 only
+- Inspection Domain owns pest_disease_inspection_assessment_v1 and pest_disease_inspection_acceptance_v1
+- AO-SENSE may request and receipt inspection tasks
+- referenced from AO-SENSE receipt by fact_id
+
 ## 5. Hard rules
 
 - pest_disease_inspection_acceptance PASS = 巡检证据链完整，可支撑 assessment

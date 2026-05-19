@@ -80,14 +80,8 @@ function assertAll(text, required, label) {
   assertAll(contract, factTypes, 'inspection contract fact types');
 
   assertAll(service, [
-    'MISSING_OR_INVALID:tenant_id',
-    'MISSING_OR_INVALID:project_id',
-    'MISSING_OR_INVALID:group_id',
-    'MISSING_OR_INVALID:field_id',
     'trigger_source',
     'requested_target',
-    'MISSING_OR_INVALID:inspection_id',
-    'MISSING_OR_INVALID:captured_at_ts',
     'target_type',
     'MISSING_MEDIA',
     'MISSING_GEO',
@@ -100,6 +94,20 @@ function assertAll(text, required, label) {
     'missing:approved_review',
     'inspection_acceptance_pass_means_evidence_chain_complete_not_spray',
   ], 'inspection service business rules');
+
+  assert.equal(
+    service.includes('`MISSING_OR_INVALID:${field}`'),
+    true,
+    'service must generate MISSING_OR_INVALID field-specific errors',
+  );
+  assertAll(service, [
+    'mustText(body?.tenant_id, "tenant_id")',
+    'mustText(body?.project_id, "project_id")',
+    'mustText(body?.group_id, "group_id")',
+    'mustText(body?.field_id, "field_id")',
+    'mustText(body?.inspection_id, "inspection_id")',
+    'intMs(body?.captured_at_ts, "captured_at_ts")',
+  ], 'inspection service required field validation calls');
 
   assert.equal(service.includes('INSERT INTO facts'), true, 'service must write append-only facts');
   assert.equal(service.includes('SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json'), true, 'service must read facts');
