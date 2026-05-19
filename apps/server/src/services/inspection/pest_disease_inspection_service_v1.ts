@@ -15,14 +15,17 @@ import {
   type PestDiseaseInspectionConfidenceV1,
   type PestDiseaseInspectionEvidenceRefV1,
   type PestDiseaseInspectionEvidenceTierV1,
+  type PestDiseaseInspectionPriorityV1,
   type PestDiseaseInspectionRequestFactV1,
   type PestDiseaseInspectionReviewFactV1,
+  type PestDiseaseInspectionReviewStatusV1,
   type PestDiseaseInspectionSeverityV1,
   type PestDiseaseInspectionTargetTypeV1,
   type PestDiseaseMediaKindV1,
   type PestDiseaseObservationFactV1,
   type PestDiseasePlantPartV1,
   type PestDiseaseSignalFactV1,
+  type PestDiseaseSignalTypeV1,
 } from "../../domain/inspection/pest_disease_inspection_contract_v1.js";
 
 export class PestDiseaseInspectionServiceError extends Error {
@@ -95,8 +98,9 @@ const EVIDENCE_QUALITIES = new Set<PestDiseaseEvidenceQualityV1>([
   "LOW_QUALITY_IMAGE",
 ]);
 
-const SIGNAL_TYPES = new Set(["PEST_SIGNAL", "DISEASE_SIGNAL", "WEED_SIGNAL", "CROP_STRESS_SIGNAL"]);
+const SIGNAL_TYPES = new Set<PestDiseaseSignalTypeV1>(["PEST_SIGNAL", "DISEASE_SIGNAL", "WEED_SIGNAL", "CROP_STRESS_SIGNAL"]);
 const CONFIDENCE_VALUES = new Set<PestDiseaseInspectionConfidenceV1>(["HIGH", "MEDIUM", "LOW"]);
+const PRIORITY_VALUES = new Set<PestDiseaseInspectionPriorityV1>(["LOW", "NORMAL", "HIGH", "URGENT"]);
 const ASSESSMENT_STATUSES = new Set<PestDiseaseInspectionAssessmentStatusV1>([
   "CONFIRMED",
   "SUSPECTED",
@@ -106,7 +110,7 @@ const ASSESSMENT_STATUSES = new Set<PestDiseaseInspectionAssessmentStatusV1>([
 ]);
 const SEVERITY_VALUES = new Set<PestDiseaseInspectionSeverityV1>(["NONE", "LOW", "MEDIUM", "HIGH", "NEEDS_REVIEW"]);
 const EVIDENCE_TIERS = new Set<PestDiseaseInspectionEvidenceTierV1>(["FORMAL", "TECHNICAL", "WARNING", "MANUAL_REVIEW"]);
-const REVIEW_STATUSES = new Set(["NOT_REQUIRED", "PENDING", "APPROVED", "REJECTED", "ESCALATED"]);
+const REVIEW_STATUSES = new Set<PestDiseaseInspectionReviewStatusV1>(["NOT_REQUIRED", "PENDING", "APPROVED", "REJECTED", "ESCALATED"]);
 
 function text(value: unknown): string | null {
   if (typeof value === "string") {
@@ -363,7 +367,7 @@ export async function createPestDiseaseInspectionRequestV1(pool: Pool, body: any
     crop_code: text(body?.crop_code),
     crop_stage: text(body?.crop_stage),
     requested_at_ts,
-    priority: optionalEnumValue(body?.priority, new Set(["LOW", "NORMAL", "HIGH", "URGENT"]), "priority", "NORMAL"),
+    priority: optionalEnumValue(body?.priority, PRIORITY_VALUES, "priority", "NORMAL"),
     evidence_refs: normalizeEvidenceRefs(body?.evidence_refs),
     reasons: listText(body?.reasons),
   };
@@ -432,7 +436,7 @@ export async function createPestDiseaseSignalV1(pool: Pool, body: any, auth: AoA
     skill_id: skill_id ?? "unknown_skill",
     skill_run_id,
     skill_trace_id: text(body?.skill_trace_id),
-    signal_type: enumValue(body?.signal_type, SIGNAL_TYPES as Set<any>, "signal_type") as any,
+    signal_type: enumValue(body?.signal_type, SIGNAL_TYPES, "signal_type"),
     candidate_issue_code: text(body?.candidate_issue_code),
     confidence: optionalEnumValue(body?.confidence, CONFIDENCE_VALUES, "confidence", "LOW"),
     reason_codes: listText(body?.reason_codes),
@@ -529,7 +533,7 @@ export async function createPestDiseaseInspectionReviewV1(pool: Pool, body: any,
     project_id: tenant.project_id,
     group_id: tenant.group_id,
     field_id: tenant.field_id,
-    review_status: enumValue(body?.review_status, REVIEW_STATUSES as Set<any>, "review_status") as any,
+    review_status: enumValue(body?.review_status, REVIEW_STATUSES, "review_status"),
     reviewer_actor_id: text(body?.reviewer_actor_id ?? auth.actor_id),
     reviewed_at_ts: body?.reviewed_at_ts == null ? null : intMs(body?.reviewed_at_ts, "reviewed_at_ts"),
     review_note: text(body?.review_note),
