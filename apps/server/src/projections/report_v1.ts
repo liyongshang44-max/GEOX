@@ -484,6 +484,20 @@ export function computeReportV1SlaMetrics(params: {
   };
 }
 
+function normalizeOperationReportFormalScenarioTypeV1(
+  value: unknown,
+): OperationReportFormalScenarioTypeV1 | null {
+  const key = String(value ?? "").trim().toUpperCase();
+  if (key === "FORMAL_IRRIGATION") return "FORMAL_IRRIGATION";
+  if (key === "DEVICE_ANOMALY") return "DEVICE_ANOMALY";
+  if (key === "FORMAL_VARIABLE_OPERATION") return "FORMAL_VARIABLE_OPERATION";
+  if (key === "FORMAL_SAMPLING") return "FORMAL_SAMPLING";
+  if (key === "FORMAL_FERTILIZATION") return "FORMAL_FERTILIZATION";
+  if (key === "FORMAL_PEST_DISEASE_INSPECTION") return "FORMAL_PEST_DISEASE_INSPECTION";
+  if (key === "UNKNOWN") return "UNKNOWN";
+  return null;
+}
+
 export function projectOperationReportV1(input: {
   tenant: TenantTriple;
   operation_plan_id: string;
@@ -729,14 +743,11 @@ export function projectOperationReportV1(input: {
     ? samplingRaw.blocking_reasons.map((x: unknown) => String(x ?? "").trim()).filter(Boolean)
     : [];
 
-  const operationScenarioType = String((operationStateAny?.scenario_type ?? operationStateAny?.meta?.scenario_type ?? operationStateAny?.operation_scenario_type ?? "")).trim().toUpperCase();
+  const operationScenarioType = normalizeOperationReportFormalScenarioTypeV1(
+    operationStateAny?.scenario_type ?? operationStateAny?.meta?.scenario_type ?? operationStateAny?.operation_scenario_type,
+  );
   const scenarioType: NonNullable<OperationReportV1["formal_scenario"]>["scenario_type"] =
-    operationScenarioType === "FORMAL_IRRIGATION"
-    || operationScenarioType === "DEVICE_ANOMALY"
-    || operationScenarioType === "FORMAL_VARIABLE_OPERATION"
-    || operationScenarioType === "FORMAL_SAMPLING"
-    || operationScenarioType === "FORMAL_FERTILIZATION"
-    || operationScenarioType === "FORMAL_PEST_DISEASE_INSPECTION"
+    operationScenarioType != null
       ? operationScenarioType
       : (variableByZoneMode ? "FORMAL_VARIABLE_OPERATION" : (samplingRaw?.sample_id || samplingRaw?.plan_id ? "FORMAL_SAMPLING" : "UNKNOWN"));
   const chainStatusRaw = String((operationStateAny?.chain_status ?? operationStateAny?.guarded_projection?.chain_status ?? operationStateAny?.formal_chain_status ?? "")).trim().toUpperCase();
