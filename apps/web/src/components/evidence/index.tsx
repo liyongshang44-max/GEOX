@@ -52,9 +52,22 @@ export function EvidenceRefList({
   );
 }
 
+export function InspectionEvidenceSummary({ vm }: { vm: EvidenceVm }): React.ReactElement | null {
+  const summary = vm.inspectionSummary;
+  if (!summary) return null;
+  return (
+    <ul className="customerList">
+      <li className="customerListItem">图片/媒体证据：{summary.media_count > 0 ? `${summary.media_count} 条` : "缺图片"}</li>
+      <li className="customerListItem">定位证据：{summary.geo_evidence_present ? "有定位" : "缺定位"}</li>
+      <li className="customerListItem">人工复核：{summary.reviewed_by_human ? "已复核" : "未完成复核"}</li>
+      <li className="customerListItem">严重度：{summary.severity ?? "待确认"}｜置信度：{summary.confidence ?? "待确认"}</li>
+      {summary.review_required ? <li className="customerListItem">需要人工复核</li> : null}
+      {summary.blocking_reasons.includes("pest_disease_skill_signal_only") ? <li className="customerListItem">当前仅为识别信号，不作为正式巡检结论</li> : null}
+    </ul>
+  );
+}
+
 export function EvidenceGapPanel({ vm, mode = "customer" }: { vm: EvidenceVm; mode?: EvidenceViewMode }): React.ReactElement {
   const items = mode === "operator" ? (vm.operatorGaps ?? vm.gaps) : vm.gaps;
-  if (!items.length) return <div>无证据缺口</div>;
-  if (mode === "operator") return <div>{items.join("、")}</div>;
-  return <ul className="customerList">{items.map((item, i) => <li key={`${item}-${i}`} className="customerListItem">{item}</li>)}</ul>;
+  return <><InspectionEvidenceSummary vm={vm} />{!items.length ? <div>无证据缺口</div> : mode === "operator" ? <div>{items.join("、")}</div> : <ul className="customerList">{items.map((item, i) => <li key={`${item}-${i}`} className="customerListItem">{item}</li>)}</ul>}</>;
 }

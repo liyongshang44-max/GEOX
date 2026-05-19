@@ -7,12 +7,14 @@ function toneClass(tone: "success" | "warning" | "danger" | "neutral"): string {
 
 export function FormalScenarioBadge({ data }: { data: any }): React.ReactElement {
   const vm = buildFormalScenarioVm(data);
-  return <span className={`riskBadge ${toneClass(vm.tone)}`}>{vm.scenarioLabel} · {vm.fertilizationSummaryText ?? vm.chainText}</span>;
+  const pestDiseaseSummary = (vm as any).pestDiseaseSummaryText as string | undefined;
+  return <span className={`riskBadge ${toneClass(vm.tone)}`}>{vm.scenarioLabel} · {pestDiseaseSummary ?? vm.fertilizationSummaryText ?? vm.chainText}</span>;
 }
 
 export function FormalChainSummaryCard({ data }: { data: any }): React.ReactElement {
   const vm = buildFormalScenarioVm(data);
-  return <article className="customerCard"><h3 className="customerCardTitle">正式链路摘要</h3><div>正式链路：{vm.chainText}</div><div className="customerSpacingTopXs">正式证据：{vm.evidenceText}</div><div className="customerSpacingTopXs">原因摘要：{vm.customerReasonSummary}</div>{vm.fertilizationSummaryText ? <div className="customerSpacingTopXs">施氮摘要：{vm.fertilizationSummaryText}</div> : null}</article>;
+  const pestDiseaseSummary = (vm as any).pestDiseaseSummaryText as string | undefined;
+  return <article className="customerCard"><h3 className="customerCardTitle">正式链路摘要</h3><div>正式链路：{vm.chainText}</div><div className="customerSpacingTopXs">正式证据：{vm.evidenceText}</div><div className="customerSpacingTopXs">原因摘要：{vm.customerReasonSummary}</div>{vm.fertilizationSummaryText ? <div className="customerSpacingTopXs">施氮摘要：{vm.fertilizationSummaryText}</div> : null}{pestDiseaseSummary ? <div className="customerSpacingTopXs">巡检摘要：{pestDiseaseSummary}</div> : null}</article>;
 }
 
 export function ScenarioAcceptanceSummary({ data }: { data: any }): React.ReactElement {
@@ -26,6 +28,10 @@ export function ScenarioValueMemorySummary({ data }: { data: any }): React.React
 }
 
 export function ZoneRollupSummary({ data }: { data: any }): React.ReactElement {
+  const pdi = data?.pest_disease_inspection ?? null;
+  if (pdi) {
+    return <article className="customerCard"><h3 className="customerCardTitle">巡检证据汇总</h3><div>图片/媒体：{Number(pdi.media_count ?? 0)} 条</div><div className="customerSpacingTopXs">定位证据：{pdi.geo_evidence_present ? "已提供" : "缺少定位"}</div><div className="customerSpacingTopXs">人工复核：{pdi.reviewed_by_human ? "已完成" : "尚未完成"}</div><div className="customerSpacingTopXs">严重度：{String(pdi.severity ?? "待确认")}，置信度：{String(pdi.confidence ?? "待确认")}</div></article>;
+  }
   const fertilizationZones = Array.isArray(data?.fertilization?.zone_rates) ? data.fertilization.zone_rates : [];
   if (fertilizationZones.length) {
     const pass = fertilizationZones.filter((z: any) => String(z?.result ?? "").toUpperCase() === "PASS").length;
