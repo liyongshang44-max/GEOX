@@ -242,7 +242,8 @@ export async function buildPestDiseaseInspectionReportProjectionV1(pool: Pool, p
   const acceptance = acceptanceRow?.record_json ?? null;
   const scopedObservations = observationSetForAssessment(observations, assessment);
   const evidence = evidenceStats(scopedObservations);
-  const observationEvidenceItems = scopedObservations.map(mapObservationEvidenceItem);
+  const latestScopedObservation = scopedObservations.length ? scopedObservations[scopedObservations.length - 1] : null;
+  const observationEvidenceItems = scopedObservations.slice(-5).map(mapObservationEvidenceItem);
   const reviewStatus = normalizeEnum(review?.review_status, ["NOT_REQUIRED", "PENDING", "APPROVED", "REJECTED", "ESCALATED"] as const)
     ?? (assessment?.review_required ? "PENDING" : "NOT_REQUIRED");
   const acceptanceStatus = normalizeEnum(acceptance?.verdict, ["PASS", "FAIL", "NEEDS_REVIEW", "INSUFFICIENT_EVIDENCE"] as const) ?? "MISSING";
@@ -289,7 +290,7 @@ export async function buildPestDiseaseInspectionReportProjectionV1(pool: Pool, p
     observation_evidence: {
       total_observations: observations.length,
       observations_used_by_assessment: scopedObservations.length,
-      latest_observation: observationEvidenceItems.length ? observationEvidenceItems[observationEvidenceItems.length - 1] : null,
+      latest_observation: latestScopedObservation ? mapObservationEvidenceItem(latestScopedObservation) : null,
       items: observationEvidenceItems,
     },
     acceptance_status: acceptanceStatus,
