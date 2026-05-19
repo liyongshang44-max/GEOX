@@ -2,6 +2,14 @@ import { evaluateRisk } from "../domain/risk_engine.js";
 import type { OperationStateV1 } from "./operation_state_v1.js";
 
 export type OperationReportRiskLevel = "LOW" | "MEDIUM" | "HIGH";
+export type OperationReportFormalScenarioTypeV1 =
+  | "FORMAL_IRRIGATION"
+  | "DEVICE_ANOMALY"
+  | "FORMAL_VARIABLE_OPERATION"
+  | "FORMAL_SAMPLING"
+  | "FORMAL_FERTILIZATION"
+  | "FORMAL_PEST_DISEASE_INSPECTION"
+  | "UNKNOWN";
 
 export type FieldMemorySummary = {
   memory_id: string;
@@ -203,7 +211,7 @@ export type OperationReportV1 = {
     stage1_debug_matrix: Array<{ zone_id: string | null; stage1_debug: { formal_coverage_ratio: unknown; trigger_metric_evidence: unknown; stage1_source: unknown } }>;
   };
   formal_scenario?: {
-    scenario_type: "FORMAL_IRRIGATION" | "DEVICE_ANOMALY" | "FORMAL_VARIABLE_OPERATION" | "FORMAL_SAMPLING" | "UNKNOWN";
+    scenario_type: OperationReportFormalScenarioTypeV1;
     formal_chain_status: "PASSED" | "NEEDS_REVIEW" | "INSUFFICIENT_EVIDENCE" | "SIMULATED" | "LIMITED";
     evidence_status: "FORMAL_PASSED" | "MISSING" | "SIMULATED" | "TECHNICAL_ONLY";
     customer_visible_eligible: boolean;
@@ -720,8 +728,13 @@ export function projectOperationReportV1(input: {
 
   const operationScenarioType = String((operationStateAny?.scenario_type ?? operationStateAny?.meta?.scenario_type ?? operationStateAny?.operation_scenario_type ?? "")).trim().toUpperCase();
   const scenarioType: NonNullable<OperationReportV1["formal_scenario"]>["scenario_type"] =
-    operationScenarioType === "FORMAL_IRRIGATION" || operationScenarioType === "DEVICE_ANOMALY" || operationScenarioType === "FORMAL_VARIABLE_OPERATION"
-      ? operationScenarioType as any
+    operationScenarioType === "FORMAL_IRRIGATION"
+    || operationScenarioType === "DEVICE_ANOMALY"
+    || operationScenarioType === "FORMAL_VARIABLE_OPERATION"
+    || operationScenarioType === "FORMAL_SAMPLING"
+    || operationScenarioType === "FORMAL_FERTILIZATION"
+    || operationScenarioType === "FORMAL_PEST_DISEASE_INSPECTION"
+      ? operationScenarioType
       : (variableByZoneMode ? "FORMAL_VARIABLE_OPERATION" : (samplingRaw?.sample_id || samplingRaw?.plan_id ? "FORMAL_SAMPLING" : "UNKNOWN"));
   const chainStatusRaw = String((operationStateAny?.chain_status ?? operationStateAny?.guarded_projection?.chain_status ?? operationStateAny?.formal_chain_status ?? "")).trim().toUpperCase();
   const formalChainStatus: NonNullable<OperationReportV1["formal_scenario"]>["formal_chain_status"] =
