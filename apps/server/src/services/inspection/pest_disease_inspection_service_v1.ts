@@ -336,8 +336,10 @@ function buildChainValidation(params: { latestAssessment: any | null; reviews: F
     return { customer_visible_eligible: false, needs_review: false, blocking_reasons: ["missing:assessment"] };
   }
   const observationRefs = Array.isArray(assessment.observation_refs) ? assessment.observation_refs : [];
+  const skillSignalRefs = Array.isArray(assessment.skill_signal_refs) ? assessment.skill_signal_refs : [];
   const evidence = observationEvidenceState(params.observations, observationRefs);
   const latestReview = latestReviewStatus(params.reviews, String(assessment.assessment_id ?? ""));
+  const skillOnly = observationRefs.length < 1 && skillSignalRefs.length > 0;
   const blocking: string[] = [];
   if (!evidence.hasTime) blocking.push("missing:captured_at_ts");
   if (!evidence.hasGeo) blocking.push("missing:geo_evidence");
@@ -345,12 +347,22 @@ function buildChainValidation(params: { latestAssessment: any | null; reviews: F
   if (assessment.review_required && latestReview !== "APPROVED") blocking.push("missing:approved_review");
   if (latestReview === "REJECTED") blocking.push("review:rejected");
   if (latestReview === "ESCALATED") blocking.push("review:escalated");
-  const needs_review = Boolean(assessment.review_required) || latestReview === "REJECTED" || latestReview === "ESCALATED";
+  if (String(assessment.assessment_status ?? "") === "INSUFFICIENT_EVIDENCE") blocking.push("assessment:insufficient_evidence");
+  if (skillOnly) blocking.push("assessment:skill_signal_only");
+  const needs_review = Boolean(assessment.review_required) || latestReview === "REJECTED" || latestReview === "ESCALATED" || String(assessment.assessment_status ?? "") === "NEEDS_REVIEW" || skillOnly;
+  const customer_visible_eligible = evidence.hasTime
+    && evidence.hasGeo
+    && evidence.hasMedia
+    && (!assessment.review_required || latestReview === "APPROVED")
+    && latestReview !== "REJECTED"
+    && latestReview !== "ESCALATED"
+    && String(assessment.assessment_status ?? "") !== "INSUFFICIENT_EVIDENCE"
+    && !skillOnly;
   return {
-    customer_visible_eligible: Boolean(assessment.customer_visible_eligible) && blocking.length === 0,
+    customer_visible_eligible,
     needs_review,
     latest_review_status: latestReview,
-    blocking_reasons: blocking,
+    blocking_reasons: Array.from(new Set(blocking)),
   };
 }
 
