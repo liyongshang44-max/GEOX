@@ -15,6 +15,18 @@ import { EvidenceGapPanel, EvidenceRefList, EvidenceTrustBadge, EvidenceTrustLeg
 type BackendChainItem = { key: string; label: string; status: "DONE" | "AVAILABLE" | "PENDING" | "MISSING" | "NOT_APPLICABLE" | string; reason?: string | null; source?: string | null };
 type MainRow = { label: string; value: string };
 type MainSection = { key: "why" | "prescription_approval" | "execution" | "evidence_acceptance" | "value_learning"; title: string; summary: string; rows: MainRow[] };
+type PestDiseaseSection = {
+  key:
+    | "inspection_reason"
+    | "inspection_evidence"
+    | "assessment_result"
+    | "human_review"
+    | "inspection_acceptance"
+    | "next_boundary";
+  title: string;
+  summary: string;
+  rows: MainRow[];
+};
 type SensingEvidenceVm = { summary: string; rows: MainRow[]; hasQuantifiedEvidence: boolean };
 
 function isPestDiseaseInspectionReport(report: OperationReportV1): boolean {
@@ -441,7 +453,84 @@ function buildMainSections(vm: OperationReportPageVm, report: OperationReportV1)
   ];
 }
 
-function MainSectionCard({ section }: { section: MainSection }): React.ReactElement {
+function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDiseaseSection[] {
+  const root = report as any;
+  const pdi = root.pest_disease_inspection ?? {};
+  const assessment = pdi.assessment ?? {};
+  const evidence = pdi.evidence ?? {};
+  const review = pdi.human_review ?? {};
+  const acceptance = root.acceptance ?? pdi.acceptance ?? {};
+  const nextStep = pdi.next_step ?? {};
+  const blockingReasons = Array.isArray(pdi.blocking_reasons) ? pdi.blocking_reasons.map((x: unknown) => customerText(x, "")).filter(Boolean).join("、") : "无";
+
+  return [
+    {
+      key: "inspection_reason",
+      title: "为什么巡检",
+      summary: customerText(pdi.reason_summary ?? pdi.summary_reason, "因识别到疑似病虫害风险，触发巡检任务。"),
+      rows: [
+        { label: "触发来源", value: customerText(pdi.trigger_source ?? pdi.trigger, "识别信号触发") },
+        { label: "风险提示", value: customerText(pdi.risk_hint ?? pdi.risk_summary, "疑似病虫害风险待复核") },
+        { label: "巡检范围", value: customerText(pdi.inspection_scope ?? pdi.scope, "地块巡检范围待补充") },
+      ],
+    },
+    {
+      key: "inspection_evidence",
+      title: "巡检证据",
+      summary: customerText(pdi.evidence_summary ?? evidence.summary, "已记录巡检证据，待进一步复核。"),
+      rows: [
+        { label: "图片/媒体", value: valueOrPending(evidence.media_count ?? pdi.media_count, "待补充") },
+        { label: "定位证据", value: customerText(evidence.geo_evidence_present ?? pdi.geo_evidence_present, "待确认") },
+        { label: "采集时间", value: customerText(evidence.collected_at ?? pdi.collected_at, "待补充") },
+        { label: "缺失项", value: listOrPending(evidence.missing_items ?? pdi.missing_items) },
+      ],
+    },
+    {
+      key: "assessment_result",
+      title: "识别与诊断结论",
+      summary: customerText(assessment.summary ?? pdi.assessment_summary, "巡检识别已完成，结论待复核。"),
+      rows: [
+        { label: "识别状态", value: customerText(assessment.status ?? pdi.assessment_status, "待确认") },
+        { label: "严重度", value: customerText(assessment.severity ?? pdi.severity, "待补充") },
+        { label: "置信度", value: customerText(assessment.confidence ?? pdi.confidence, "待补充") },
+        { label: "诊断说明", value: customerText(assessment.diagnosis ?? pdi.diagnosis, "诊断说明待补充") },
+      ],
+    },
+    {
+      key: "human_review",
+      title: "人工复核",
+      summary: customerText(review.summary ?? pdi.review_summary, "人工复核状态待更新。"),
+      rows: [
+        { label: "复核状态", value: customerText(review.status ?? pdi.review_status, "待复核") },
+        { label: "复核人", value: customerText(review.reviewer_name ?? review.reviewer, "待分配") },
+        { label: "复核意见", value: customerText(review.comment ?? review.note, "暂无") },
+        { label: "阻塞原因", value: blockingReasons || "无" },
+      ],
+    },
+    {
+      key: "inspection_acceptance",
+      title: "巡检证据验收",
+      summary: customerText(acceptance.summary ?? pdi.acceptance_summary, `巡检证据验收${acceptanceResultText(acceptance.status ?? pdi.acceptance_status)}。`),
+      rows: [
+        { label: "验收结论", value: acceptanceResultText(acceptance.status ?? pdi.acceptance_status) },
+        { label: "验收人", value: customerText(acceptance.actor_name ?? acceptance.actor, "待确认") },
+        { label: "验收意见", value: customerText(acceptance.note ?? acceptance.comment, "暂无") },
+      ],
+    },
+    {
+      key: "next_boundary",
+      title: "后续处理边界",
+      summary: customerText(nextStep.summary ?? pdi.next_boundary_summary, "当前页面仅展示巡检结果，不代表已进入防治处方。"),
+      rows: [
+        { label: "是否进入处方", value: customerText(nextStep.enter_prescription ?? pdi.enter_prescription, "未进入") },
+        { label: "下一步动作", value: customerText(nextStep.action ?? pdi.next_action, "待人工确认后决定") },
+        { label: "边界说明", value: customerText(nextStep.boundary_note ?? pdi.boundary_note, "巡检结论仅作为后续决策依据，不等同于已执行防治作业。") },
+      ],
+    },
+  ];
+}
+
+function MainSectionCard({ section }: { section: MainSection | PestDiseaseSection }): React.ReactElement {
   return (
     <article className="customerCard operationMainSectionCard">
       <h2 className="customerCardTitle">{section.title}</h2>
@@ -525,7 +614,9 @@ export default function OperationReportPage(): React.ReactElement {
   const canBackToField = Boolean(vm.operation.fieldId && vm.operation.fieldId !== "--");
   const safeOperationTitle = customerSafeTitle(vm.operation.title, "作业名称待补充");
   const safeFieldName = customerSafeName(vm.operation.fieldName, "地块名称待补充");
-  const mainSections = buildMainSections(vm, report);
+  const mainSections = isPestDiseaseInspectionReport(report)
+    ? buildPestDiseaseInspectionSections(report)
+    : buildMainSections(vm, report);
   const evidenceVm = buildEvidenceVm(report);
   const isPestDiseaseInspection = isPestDiseaseInspectionReport(report);
 
