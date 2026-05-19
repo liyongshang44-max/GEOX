@@ -477,6 +477,20 @@ function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDise
   const customerVisibleEligible = pdi.customer_visible_eligible !== false;
   const reviewRequired = Boolean(pdi.review_required);
   const reviewStatusRaw = String(pdi.review_status ?? "").trim().toUpperCase();
+  const observationEvidence = isObject(pdi.observation_evidence) ? pdi.observation_evidence : {};
+  const evidenceItems = Array.isArray((observationEvidence as any).items) ? (observationEvidence as any).items : [];
+  const latestObservation = isObject((observationEvidence as any).latest_observation) ? (observationEvidence as any).latest_observation : {};
+  const latestMediaRefs = Array.isArray((latestObservation as any).media_refs) ? (latestObservation as any).media_refs : [];
+  const latestMediaRefText = latestMediaRefs.length
+    ? latestMediaRefs.slice(0, 3).map((m: any) => customerText(`${text(m?.kind) || "media"}:${text(m?.ref_id) || "--"}`, "")).filter(Boolean).join("；")
+    : "暂无图片/媒体引用";
+  const latestGeo = isObject((latestObservation as any).geo_point) ? `${text((latestObservation as any).geo_point?.lat)}, ${text((latestObservation as any).geo_point?.lng)}` : "暂无定位";
+  const latestCapturedAt = customerText((latestObservation as any).captured_at_text ?? (latestObservation as any).captured_at_ts, "暂无时间");
+  const latestDevice = customerText(
+    firstValue(latestObservation, ["device_profile.device_model", "device_profile.device_type", "device_profile.device_id"]),
+    "暂无设备来源",
+  );
+  const latestNote = customerText((latestObservation as any).scout_note, "暂无巡检备注");
 
   return [
     {
@@ -499,6 +513,12 @@ function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDise
         : customerText(pdi.evidence_summary ?? evidence.summary, "已记录巡检证据，待进一步复核。"),
       rows: [
         { label: "图片/媒体", value: mediaMissing ? "0 条" : `${mediaCount} 条` },
+        { label: "图片证据引用", value: latestMediaRefText },
+        { label: "最近采集时间", value: latestCapturedAt },
+        { label: "最近定位点", value: latestGeo },
+        { label: "最近设备/来源", value: latestDevice },
+        { label: "巡检备注", value: latestNote },
+        { label: "巡检观察次数", value: `${Number((observationEvidence as any).total_observations ?? evidenceItems.length) || 0} 次` },
         { label: "定位证据", value: geoPresent ? "已提供" : "缺少定位" },
         { label: "人工复核", value: reviewedByHuman ? "已完成" : "尚未完成" },
         { label: "证据等级", value: pestDiseaseEvidenceTierLabel(pdi.evidence_tier ?? evidence.evidence_tier) },
