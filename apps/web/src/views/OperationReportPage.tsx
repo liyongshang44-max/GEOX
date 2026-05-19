@@ -551,11 +551,12 @@ function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDise
     {
       key: "next_boundary",
       title: "后续处理边界",
-      summary: customerText(nextStep.summary ?? pdi.next_boundary_summary, "当前页面仅展示巡检结果，不代表已进入防治处方。"),
+      summary: "当前仅完成巡检证据链；是否补喷、用药、派发执行任务，需要进入后续处方与审批链路。",
       rows: [
-        { label: "是否进入处方", value: customerText(nextStep.enter_prescription ?? pdi.enter_prescription, "未进入") },
-        { label: "下一步动作", value: customerText(nextStep.action ?? pdi.next_action, "待人工确认后决定") },
-        { label: "边界说明", value: customerText(nextStep.boundary_note ?? pdi.boundary_note, "巡检结论仅作为后续决策依据，不等同于已执行防治作业。") },
+        { label: "补喷处方", value: "尚未生成补喷处方" },
+        { label: "防治执行任务", value: "尚未形成防治执行任务" },
+        { label: "防治效果验收", value: "尚未形成防治效果验收" },
+        { label: "结论边界", value: "不代表已完成防治" },
       ],
     },
   ];
