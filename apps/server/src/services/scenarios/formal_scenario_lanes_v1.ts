@@ -14,6 +14,7 @@ export const FORMAL_SCENARIO_TYPES_V1: readonly FormalScenarioTypeV1[] = [
   "DEVICE_ANOMALY",
   "FORMAL_VARIABLE_OPERATION",
   "FORMAL_FERTILIZATION",
+  "FORMAL_PEST_DISEASE_INSPECTION",
 ] as const;
 
 export const FORMAL_SCENARIO_LANES_V1: readonly FormalScenarioLaneV1[] = [
@@ -33,6 +34,9 @@ const DEFINITIONS: readonly FormalScenarioLaneDefinitionV1[] = [
   { scenario_type: "FORMAL_FERTILIZATION", lane: "positive", label: "Formal fertilization positive lane", release_gate: true, flight_table_visible: true, kernel_ready: false },
   { scenario_type: "FORMAL_FERTILIZATION", lane: "negative", label: "Formal fertilization negative agronomy lanes", release_gate: true, flight_table_visible: true, kernel_ready: false },
   { scenario_type: "FORMAL_FERTILIZATION", lane: "partial", label: "Formal fertilization zone deviation lane", release_gate: true, flight_table_visible: true, kernel_ready: false },
+  { scenario_type: "FORMAL_PEST_DISEASE_INSPECTION", lane: "positive", label: "Formal pest disease inspection positive lane", release_gate: true, flight_table_visible: true, kernel_ready: false },
+  { scenario_type: "FORMAL_PEST_DISEASE_INSPECTION", lane: "negative", label: "Formal pest disease inspection negative evidence lanes", release_gate: true, flight_table_visible: true, kernel_ready: false },
+  { scenario_type: "FORMAL_PEST_DISEASE_INSPECTION", lane: "partial", label: "Formal pest disease inspection review/partial evidence lane", release_gate: true, flight_table_visible: true, kernel_ready: false },
 ] as const;
 
 export function isFormalScenarioTypeV1(input: unknown): input is FormalScenarioTypeV1 {
@@ -54,7 +58,6 @@ export function getFormalScenarioLaneDefinitionV1(
   const hit = DEFINITIONS.find((item) => item.scenario_type === scenario_type && item.lane === lane);
   return hit ? { ...hit } : null;
 }
-
 
 export function listArchitectureClosureGateLanesV1(): FormalScenarioLaneDefinitionV1[] {
   return listFormalScenarioLaneDefinitionsV1().filter((item) => item.release_gate);
