@@ -491,6 +491,18 @@ function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDise
     "暂无设备来源",
   );
   const latestNote = customerText((latestObservation as any).scout_note, "暂无巡检备注");
+  const latestPlantPart = customerText((latestObservation as any).plant_part, "待补充");
+  const latestIssueCode = customerText((latestObservation as any).suspected_issue_code ?? pdi.suspected_issue_code, "待确认");
+  const latestIncidence = valueOrPending((latestObservation as any).incidence_percent, "%");
+  const latestSeverityPercent = valueOrPending((latestObservation as any).severity_percent, "%");
+  const latestAffectedArea = valueOrPending((latestObservation as any).affected_area_percent, "%");
+  const latestEvidenceQuality = customerText((latestObservation as any).evidence_quality, "待补充");
+  const hasLatestObservation = Boolean(Object.keys(latestObservation).length);
+  const inspectionEvidenceSummary = hasLatestObservation
+    ? (mediaMissing || geoMissing
+      ? "巡检任务已完成，但缺少定位或图片证据，需复核。"
+      : customerText(pdi.evidence_summary ?? evidence.summary, "已记录巡检证据，待进一步复核。"))
+    : "暂无可展示的巡检观察明细；当前仅有汇总计数。";
 
   return [
     {
@@ -508,18 +520,20 @@ function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDise
     {
       key: "inspection_evidence",
       title: "巡检证据",
-      summary: mediaMissing || geoMissing
-        ? "巡检任务已完成，但缺少定位或图片证据，需复核。"
-        : customerText(pdi.evidence_summary ?? evidence.summary, "已记录巡检证据，待进一步复核。"),
+      summary: inspectionEvidenceSummary,
       rows: [
-        { label: "图片/媒体", value: mediaMissing ? "0 条" : `${mediaCount} 条` },
-        { label: "图片证据引用", value: latestMediaRefText },
-        { label: "最近采集时间", value: latestCapturedAt },
-        { label: "最近定位点", value: latestGeo },
-        { label: "最近设备/来源", value: latestDevice },
-        { label: "巡检备注", value: latestNote },
+        { label: "图片/媒体证据", value: latestMediaRefText },
+        { label: "采集时间", value: latestCapturedAt },
+        { label: "定位证据", value: latestGeo },
+        { label: "设备来源", value: latestDevice },
+        { label: "现场备注", value: latestNote },
+        { label: "观察部位", value: latestPlantPart },
+        { label: "疑似问题", value: latestIssueCode },
+        { label: "发生率", value: latestIncidence },
+        { label: "严重度比例", value: latestSeverityPercent },
+        { label: "影响面积", value: latestAffectedArea },
+        { label: "证据质量", value: latestEvidenceQuality },
         { label: "巡检观察次数", value: `${Number((observationEvidence as any).total_observations ?? evidenceItems.length) || 0} 次` },
-        { label: "定位证据", value: geoPresent ? "已提供" : "缺少定位" },
         { label: "人工复核", value: reviewedByHuman ? "已完成" : "尚未完成" },
         { label: "证据等级", value: pestDiseaseEvidenceTierLabel(pdi.evidence_tier ?? evidence.evidence_tier) },
         { label: "证据缺口", value: evidenceGap },
