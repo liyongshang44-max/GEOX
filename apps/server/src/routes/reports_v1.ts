@@ -410,9 +410,12 @@ export async function projectReportV1(params: {
     customer_title: operationTitle,
   });
   const reportWithFertilization = mergeFertilizationIntoReport(operationReport, fertilizationView);
-  const reportWithInspection = mergePestDiseaseInspectionIntoReport(reportWithFertilization, pestDiseaseInspectionView);
+  const reportWithPestDiseaseInspection = mergePestDiseaseInspectionIntoReport(
+    reportWithFertilization,
+    pestDiseaseInspectionView,
+  );
   return {
-    ...reportWithInspection,
+    ...reportWithPestDiseaseInspection,
     evidence_pack_summary: buildOperationEvidencePackSummaryV1({
       receipt: receiptFact ?? receiptForReport,
       evidence_bundle: evidenceBundle,
@@ -431,7 +434,7 @@ export async function projectReportV1(params: {
       } : null,
       now: new Date(operationReport.generated_at),
     }),
-  } as any;
+  };
 }
 
 export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void {

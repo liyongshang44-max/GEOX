@@ -273,6 +273,7 @@ export type OperationReportV1 = {
     updated_by: string | null;
     linked_alert_ids?: string[];
   };
+  evidence_pack_summary?: unknown;
 
 };
 
