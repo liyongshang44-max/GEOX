@@ -26,6 +26,11 @@ const steps = [
     args: ['scripts/agronomy_acceptance/ACCEPTANCE_PEST_DISEASE_INSPECTION_API_V1.cjs'],
   },
   {
+    name: 'ACCEPTANCE_PEST_DISEASE_INSPECTION_API_LIVE_V1',
+    command: 'node',
+    args: ['scripts/agronomy_acceptance/ACCEPTANCE_PEST_DISEASE_INSPECTION_API_LIVE_V1.cjs'],
+  },
+  {
     name: 'ACCEPTANCE_PEST_DISEASE_AO_SENSE_BRIDGE_V1',
     command: 'node',
     args: ['scripts/agronomy_acceptance/ACCEPTANCE_PEST_DISEASE_AO_SENSE_BRIDGE_V1.cjs'],
@@ -39,6 +44,11 @@ const steps = [
     name: 'ACCEPTANCE_PEST_DISEASE_INSPECTION_REPORT_PROJECTION_V1',
     command: 'node',
     args: ['scripts/agronomy_acceptance/ACCEPTANCE_PEST_DISEASE_INSPECTION_REPORT_PROJECTION_V1.cjs'],
+  },
+  {
+    name: 'ACCEPTANCE_PEST_DISEASE_INSPECTION_GET_CONSISTENCY_V1',
+    command: 'node',
+    args: ['scripts/agronomy_acceptance/ACCEPTANCE_PEST_DISEASE_INSPECTION_GET_CONSISTENCY_V1.cjs'],
   },
   {
     name: 'ACCEPTANCE_CUSTOMER_PEST_DISEASE_INSPECTION_REPORT_V1',
