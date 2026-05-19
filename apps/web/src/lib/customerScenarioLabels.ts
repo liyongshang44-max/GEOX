@@ -161,7 +161,9 @@ export function pestDiseaseSeverityLabel(value: unknown): string {
   if (key === "HIGH") return "高";
   if (key === "MEDIUM") return "中";
   if (key === "LOW") return "低";
-  return "待补充";
+  if (key === "NONE" || key === "NO_ISSUE") return "无";
+  if (key === "NEEDS_REVIEW") return "需复核";
+  return "需复核";
 }
 
 export function pestDiseaseEvidenceTierLabel(value: unknown): string {
@@ -170,5 +172,13 @@ export function pestDiseaseEvidenceTierLabel(value: unknown): string {
   if (key === "TECHNICAL") return "技术信号";
   if (key === "WARNING") return "预警";
   if (key === "MANUAL_REVIEW") return "人工复核";
+  return "待确认";
+}
+
+export function pestDiseaseConfidenceLabel(value: unknown): string {
+  const key = String(value ?? "").trim().toUpperCase();
+  if (key === "HIGH") return "高";
+  if (key === "MEDIUM") return "中";
+  if (key === "LOW") return "低";
   return "待确认";
 }

@@ -7,7 +7,7 @@ import { FailSafeCustomerNotice, FormalChainSummaryCard, FormalScenarioBadge, Sc
 import { customerTimelineStatusLabel } from "../lib/customerLabels";
 import { customerSafeName, customerSafeTitle } from "../lib/customerSafeText";
 import { customerChainIntegrityLabel, customerSemanticLabel, isCustomerChainComplete } from "../lib/customerSemanticLabels";
-import { customerReasonText, pestDiseaseAssessmentStatusLabel, pestDiseaseEvidenceTierLabel, pestDiseaseInspectionTargetLabel, pestDiseaseSeverityLabel } from "../lib/customerScenarioLabels";
+import { customerReasonText, pestDiseaseAssessmentStatusLabel, pestDiseaseConfidenceLabel, pestDiseaseEvidenceTierLabel, pestDiseaseInspectionTargetLabel, pestDiseaseSeverityLabel } from "../lib/customerScenarioLabels";
 import { labelCustomerAcceptanceVerdict, labelCustomerApprovalStatus, labelCustomerRoiStatus } from "../lib/customerStatusLabels";
 import { buildOperationReportVm, type CustomerReportSectionVm, type OperationReportPageVm } from "../viewmodels/operationReportVm";
 import { buildEvidenceVm } from "../lib/evidenceViewModel";
@@ -474,6 +474,7 @@ function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDise
   const evidenceGap = Array.isArray(pdi.blocking_reasons) && pdi.blocking_reasons.length
     ? pdi.blocking_reasons.map((x: unknown) => customerReasonText(x)).join("、")
     : "无";
+  const customerVisibleEligible = pdi.customer_visible_eligible !== false;
 
   return [
     {
@@ -505,13 +506,17 @@ function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDise
     {
       key: "assessment_result",
       title: "识别与诊断结论",
-      summary: customerText(assessment.summary ?? pdi.assessment_summary, "巡检识别已完成，结论待复核。"),
+      summary: customerVisibleEligible
+        ? customerText(assessment.summary ?? pdi.assessment_summary, "巡检识别已完成，结论待复核。")
+        : "需要补齐正式链路后展示",
       rows: [
-        { label: "识别状态", value: customerText(assessment.status ?? pdi.assessment_status, "待确认") },
-        { label: "识别状态标签", value: pestDiseaseAssessmentStatusLabel(assessment.status ?? pdi.assessment_status) },
+        { label: "巡检结论", value: pestDiseaseAssessmentStatusLabel(assessment.status ?? pdi.assessment_status) },
+        { label: "巡检对象", value: pestDiseaseInspectionTargetLabel(pdi.target_type ?? assessment.target_type ?? pdi.inspection_target) },
+        { label: "疑似问题", value: customerText(pdi.suspected_issue_code ?? assessment.suspected_issue_code, "待确认") },
         { label: "严重度", value: pestDiseaseSeverityLabel(assessment.severity ?? pdi.severity) },
-        { label: "置信度", value: customerText(assessment.confidence ?? pdi.confidence, "待补充") },
-        { label: "诊断说明", value: customerText(assessment.diagnosis ?? pdi.diagnosis, "诊断说明待补充") },
+        { label: "置信度", value: pestDiseaseConfidenceLabel(assessment.confidence ?? pdi.confidence) },
+        { label: "客户可见", value: customerVisibleEligible ? "可展示" : "需补齐正式链路后展示" },
+        { label: "阻塞原因", value: evidenceGap },
       ],
     },
     {
