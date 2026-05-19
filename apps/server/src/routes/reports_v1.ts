@@ -16,6 +16,7 @@ import { toCustomerFacingActionLabel } from "../domain/controlplane/irrigation_a
 import { listAlertOperationRelationV1ByOperation, listOperationWorkflowV1 } from "./alert_workflow_v1.js";
 import { buildSamplingReportViewV1 } from "../services/sampling/sampling_projection_v1.js";
 import { buildFertilizationReportProjectionV1 } from "../services/fertilization/fertilization_projection_v1.js";
+import { buildPestDiseaseInspectionReportProjectionV1 } from "../services/inspection/pest_disease_inspection_projection_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; record_json: any };
@@ -245,6 +246,17 @@ function mergeFertilizationIntoReport(report: OperationReportV1, fertilization: 
   } as any;
 }
 
+function mergePestDiseaseInspectionIntoReport(
+  report: OperationReportV1,
+  inspection: OperationReportV1["pest_disease_inspection"] | null,
+): OperationReportV1 {
+  if (!inspection) return report;
+  return {
+    ...report,
+    pest_disease_inspection: inspection,
+  };
+}
+
 export async function projectReportV1(params: {
   pool: Pool;
   tenant: TenantTriple;
@@ -313,6 +325,11 @@ export async function projectReportV1(params: {
     prescription_id: (operationState as any).prescription_id ?? null,
     recommendation_id: operationState.recommendation_id ?? null,
   });
+  const pestDiseaseInspectionView = await buildPestDiseaseInspectionReportProjectionV1(pool, {
+    tenant,
+    operation_plan_id: operationPlanId,
+    operation_id: operationState.operation_id,
+  });
   const acceptanceForReport = acceptanceFact ? {
     verdict: acceptanceFact.record_json?.payload?.verdict,
     missing_evidence: acceptanceFact.record_json?.payload?.missing_evidence,
@@ -351,8 +368,9 @@ export async function projectReportV1(params: {
     customer_title: operationTitle,
   });
   const reportWithFertilization = mergeFertilizationIntoReport(operationReport, fertilizationView);
+  const reportWithInspection = mergePestDiseaseInspectionIntoReport(reportWithFertilization, pestDiseaseInspectionView);
   return {
-    ...reportWithFertilization,
+    ...reportWithInspection,
     evidence_pack_summary: buildOperationEvidencePackSummaryV1({
       receipt: receiptFact ?? receiptForReport,
       evidence_bundle: evidenceBundle,
