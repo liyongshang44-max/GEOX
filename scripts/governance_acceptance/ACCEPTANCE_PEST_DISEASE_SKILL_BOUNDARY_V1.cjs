@@ -56,14 +56,6 @@ function stripComments(source) {
     .replace(/\/\/.*$/gm, ' ');
 }
 
-function isSkillRelated(text) {
-  return /pest_disease_signal_v1|PestDiseaseSignal|skill_run_id|skill_trace_id|skill_id|SkillRun|skill output|skill_output|signal_type|PEST_SIGNAL|DISEASE_SIGNAL|WEED_SIGNAL|CROP_STRESS_SIGNAL/i.test(text);
-}
-
-function isPestDiseaseRelated(text) {
-  return /pest_disease|PestDisease|PEST_SIGNAL|DISEASE_SIGNAL|WEED_SIGNAL|CROP_STRESS_SIGNAL/i.test(text);
-}
-
 function assertNoForbiddenSkillOutputTerms(files) {
   const forbiddenOutputTerms = [
     'spray_prescription',
@@ -78,7 +70,12 @@ function assertNoForbiddenSkillOutputTerms(files) {
     const rel = toPosix(path.relative(root, file));
     const raw = fs.readFileSync(file, 'utf8');
     const text = stripComments(raw);
-    if (!isPestDiseaseRelated(text) && !isSkillRelated(text)) continue;
+    // Restrict this rule to actual pest/disease Skill signal producers.
+    // Broad keyword matching causes false positives in unrelated routes/services.
+    const isSignalProducer =
+      /type\s*:\s*["']pest_disease_signal_v1["']/i.test(text)
+      || /INSERT\s+INTO\s+facts[\s\S]{0,1600}pest_disease_signal_v1/i.test(text);
+    if (!isSignalProducer) continue;
     for (const term of forbiddenOutputTerms) {
       if (text.includes(term)) {
         violations.push(`${rel}: skill-related pest/disease production code must not contain forbidden output term ${term}`);
@@ -108,6 +105,12 @@ function assertSkillRunSuccessNotConfirmed(files) {
   for (const file of files) {
     const rel = toPosix(path.relative(root, file));
     const text = stripComments(fs.readFileSync(file, 'utf8'));
+
+    // Inspection Domain service is the only allowed formal assessment writer.
+    // It may contain both pest_disease_signal_v1 references and formal assessment rules,
+    // but it must still be checked by assertFormalAssessmentWriter(...).
+    if (rel === allowedFormalAssessmentWriter) continue;
+
     if (!/SkillRun|skill_run|skillRun|skill_run_id|skill_trace_id|pest_disease_signal_v1/i.test(text)) continue;
     const successToConfirmedPatterns = [
       /SUCCESS[\s\S]{0,240}assessment_status[\s\S]{0,80}CONFIRMED/i,
