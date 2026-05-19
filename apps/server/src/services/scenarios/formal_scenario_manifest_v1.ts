@@ -1,4 +1,4 @@
-export type FormalScenarioTypeV1 = "FORMAL_IRRIGATION" | "DEVICE_ANOMALY" | "FORMAL_VARIABLE_OPERATION" | "FORMAL_FERTILIZATION";
+export type FormalScenarioTypeV1 = "FORMAL_IRRIGATION" | "DEVICE_ANOMALY" | "FORMAL_VARIABLE_OPERATION" | "FORMAL_FERTILIZATION" | "FORMAL_PEST_DISEASE_INSPECTION";
 export type FormalScenarioLaneV1 = "positive" | "negative" | "anomaly" | "partial";
 export type FormalScenarioRunStatusV1 = "RUNNING" | "PASSED" | "FAILED";
 
@@ -125,7 +125,6 @@ export function mergeFormalScenarioManifestV1(
     api_snapshots: [...(current.api_snapshots ?? []), ...(patch.api_snapshots ?? [])],
   });
 }
-
 
 export type FormalScenarioArtifactPathsV1 = {
   root_dir: string;
