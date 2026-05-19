@@ -107,7 +107,7 @@ export function buildFormalScenarioVm(reportOrOperation: any): FormalScenarioVm 
   const fertilization = reportOrOperation?.fertilization ?? null;
   const pestDiseaseInspection = reportOrOperation?.pest_disease_inspection ?? null;
   const fertilizationSummaryText = scenarioKey === "FORMAL_FERTILIZATION" || fertilization ? fertilizationCustomerSummaryText(fertilization) : undefined;
-  const pestDiseaseInspectionSummaryText = scenarioKey === "FORMAL_PEST_DISEASE_INSPECTION" || pestDiseaseInspection
+  const pestDiseaseSummaryText = scenarioKey === "FORMAL_PEST_DISEASE_INSPECTION" || pestDiseaseInspection
     ? pestDiseaseInspectionCustomerSummaryText(pestDiseaseInspection)
     : undefined;
   const tone: FormalScenarioVm["tone"] = fertilization?.acceptance_status === "FAIL"
@@ -120,7 +120,7 @@ export function buildFormalScenarioVm(reportOrOperation: any): FormalScenarioVm 
   const deviceStatusText = scenarioKey === "DEVICE_ANOMALY" ? `设备状态：${customerText(reportOrOperation?.device_status ?? reportOrOperation?.device?.status ?? "未知", "未知")}` : undefined;
   const executionGuardText = scenarioKey === "DEVICE_ANOMALY" ? "设备异常场景下，不对客户展示“执行成功”结论，需先完成人工复核。" : undefined;
   const customerBlockingReasons = collectBlockingReasons(reportOrOperation);
-  const customerReasonSummary = pestDiseaseInspectionSummaryText ?? fertilizationSummaryText ?? customerBlockingReasons[0] ?? "正式链路信息已记录，当前无额外阻塞说明。";
+  const customerReasonSummary = pestDiseaseSummaryText ?? fertilizationSummaryText ?? customerBlockingReasons[0] ?? "正式链路信息已记录，当前无额外阻塞说明。";
   return {
     scenarioKey,
     scenarioLabel,
@@ -135,7 +135,7 @@ export function buildFormalScenarioVm(reportOrOperation: any): FormalScenarioVm 
     deviceStatusText,
     executionGuardText,
     fertilizationSummaryText,
-    pestDiseaseSummaryText: pestDiseaseInspectionSummaryText,
+    pestDiseaseSummaryText,
     tone,
     customerReasonSummary,
     customerBlockingReasons,
