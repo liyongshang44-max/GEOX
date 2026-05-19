@@ -366,6 +366,11 @@ export async function projectReportV1(params: {
     tenant,
     operation_plan_id: operationPlanId,
     operation_id: operationState.operation_id,
+    inspection_id: toText(
+      (operationState as any)?.pest_disease_inspection_id
+        ?? (operationState as any)?.inspection_id
+        ?? (operationState as any)?.pest_disease_inspection?.inspection_id,
+    ),
   });
   const acceptanceForReport = acceptanceFact ? {
     verdict: acceptanceFact.record_json?.payload?.verdict,
