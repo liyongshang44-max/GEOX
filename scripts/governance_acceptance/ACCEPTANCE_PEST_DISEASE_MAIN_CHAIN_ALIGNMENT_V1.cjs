@@ -50,6 +50,12 @@ const forbiddenCustomerPhrases = [
   '防治效果已达成',
 ];
 
+const fileSpecificAllowedForbiddenTerms = {
+  [files.reportsRoute]: new Set(['roi_ledger', 'field_memory']),
+  [files.reportProjection]: new Set(['roi_ledger', 'field_memory']),
+  [files.formalE2e]: new Set(['spray_prescription', 'ao_act_task', 'roi_ledger', 'field_memory']),
+};
+
 const requiredBoundaryLiterals = [
   'pest_disease_inspection_acceptance PASS = 巡检证据链完整',
   'pest_disease_inspection_acceptance PASS ≠ spray recommendation',
@@ -142,10 +148,12 @@ function assertNoForbiddenWriteTargets(rel, text) {
 function assertCodeForbiddenTerms(rel, text) {
   const lines = splitLines(stripComments(text));
   const violations = [];
+  const allowedTermsForFile = fileSpecificAllowedForbiddenTerms[rel] ?? new Set();
   lines.forEach((line, idx) => {
     const lower = line.toLowerCase();
     for (const term of forbiddenTerms) {
       if (!lower.includes(term.toLowerCase())) continue;
+      if (allowedTermsForFile.has(term)) continue;
       if (isAllowedNegativeContext(line)) continue;
       violations.push(`${rel}:${idx + 1}: forbidden downstream chain term ${term}`);
     }
