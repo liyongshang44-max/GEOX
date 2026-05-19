@@ -288,7 +288,8 @@ function mergePestDiseaseInspectionIntoReport(
               : "MISSING"
         ),
       customer_visible_eligible: Boolean(pestDiseaseInspection.customer_visible_eligible),
-      needs_review: !pestDiseaseInspection.customer_visible_eligible || Boolean(pestDiseaseInspection.review_required),
+      needs_review: !pestDiseaseInspection.customer_visible_eligible
+        || (Boolean(pestDiseaseInspection.review_required) && !pestDiseaseInspection.reviewed_by_human),
       blocking_reasons: blockingReasons,
     },
   };
