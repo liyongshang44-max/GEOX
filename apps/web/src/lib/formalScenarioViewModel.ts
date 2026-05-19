@@ -110,11 +110,22 @@ export function buildFormalScenarioVm(reportOrOperation: any): FormalScenarioVm 
   const pestDiseaseSummaryText = scenarioKey === "FORMAL_PEST_DISEASE_INSPECTION" || pestDiseaseInspection
     ? pestDiseaseInspectionCustomerSummaryText(pestDiseaseInspection)
     : undefined;
-  const tone: FormalScenarioVm["tone"] = fertilization?.acceptance_status === "FAIL"
-    ? "danger"
-    : fertilization?.acceptance_status === "NEEDS_REVIEW"
-      ? "warning"
-      : finalMapped.tone === "danger" ? "danger" : finalMapped.tone === "success" ? "success" : "warning";
+  const tone: FormalScenarioVm["tone"] =
+    pestDiseaseInspection?.acceptance_status === "PASS"
+      ? "success"
+      : pestDiseaseInspection?.review_status === "REJECTED" || pestDiseaseInspection?.acceptance_status === "FAIL"
+        ? "danger"
+        : pestDiseaseInspection?.review_required || pestDiseaseInspection?.customer_visible_eligible === false
+          ? "warning"
+          : fertilization?.acceptance_status === "FAIL"
+            ? "danger"
+            : fertilization?.acceptance_status === "NEEDS_REVIEW"
+              ? "warning"
+              : finalMapped.tone === "danger"
+                ? "danger"
+                : finalMapped.tone === "success"
+                  ? "success"
+                  : "warning";
   const failSafeText = reportOrOperation?.fail_safe?.status ? failSafeStatusLabel(reportOrOperation.fail_safe.status) : undefined;
   const manualTakeoverText = reportOrOperation?.manual_takeover?.status ? manualTakeoverStatusLabel(reportOrOperation.manual_takeover.status) : undefined;
   const deviceStatusText = scenarioKey === "DEVICE_ANOMALY" ? `设备状态：${customerText(reportOrOperation?.device_status ?? reportOrOperation?.device?.status ?? "未知", "未知")}` : undefined;
