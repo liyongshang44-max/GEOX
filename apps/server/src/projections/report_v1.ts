@@ -743,13 +743,20 @@ export function projectOperationReportV1(input: {
     ? samplingRaw.blocking_reasons.map((x: unknown) => String(x ?? "").trim()).filter(Boolean)
     : [];
 
-  const operationScenarioType = normalizeOperationReportFormalScenarioTypeV1(
-    operationStateAny?.scenario_type ?? operationStateAny?.meta?.scenario_type ?? operationStateAny?.operation_scenario_type,
-  );
-  const scenarioType: NonNullable<OperationReportV1["formal_scenario"]>["scenario_type"] =
-    operationScenarioType != null
-      ? operationScenarioType
-      : (variableByZoneMode ? "FORMAL_VARIABLE_OPERATION" : (samplingRaw?.sample_id || samplingRaw?.plan_id ? "FORMAL_SAMPLING" : "UNKNOWN"));
+  const operationScenarioType = String(
+    operationStateAny?.scenario_type
+      ?? operationStateAny?.meta?.scenario_type
+      ?? operationStateAny?.operation_scenario_type
+      ?? "",
+  ).trim().toUpperCase();
+  const explicitScenarioType = normalizeOperationReportFormalScenarioTypeV1(operationScenarioType);
+  const scenarioType: OperationReportFormalScenarioTypeV1 =
+    explicitScenarioType
+      ?? (variableByZoneMode
+        ? "FORMAL_VARIABLE_OPERATION"
+        : (samplingRaw?.sample_id || samplingRaw?.plan_id
+          ? "FORMAL_SAMPLING"
+          : "UNKNOWN"));
   const chainStatusRaw = String((operationStateAny?.chain_status ?? operationStateAny?.guarded_projection?.chain_status ?? operationStateAny?.formal_chain_status ?? "")).trim().toUpperCase();
   const formalChainStatus: NonNullable<OperationReportV1["formal_scenario"]>["formal_chain_status"] =
     chainStatusRaw === "PASSED" || chainStatusRaw === "NEEDS_REVIEW" || chainStatusRaw === "INSUFFICIENT_EVIDENCE" || chainStatusRaw === "SIMULATED" || chainStatusRaw === "LIMITED"
