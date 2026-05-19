@@ -21,6 +21,7 @@ type TenantTriple = {
 
 const DASHBOARD_REPORT_CONCURRENCY_LIMIT = 12;
 const DEVICE_OFFLINE_THRESHOLD_MS = 15 * 60 * 1000;
+const DASHBOARD_AGGREGATE_REPORT_LIMIT = 10;
 
 type CustomerReportListItem = {
   report_id?: string | null;
