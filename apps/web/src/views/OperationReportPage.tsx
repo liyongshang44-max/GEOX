@@ -551,7 +551,7 @@ function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDise
     {
       key: "next_boundary",
       title: "后续处理边界",
-      summary: "当前仅完成巡检证据链；是否补喷、用药、派发执行任务，需要进入后续处方与审批链路。",
+      summary: "当前仅完成巡检证据链；是否补喷、用药、派发执行任务，需进入后续正式决策链路。",
       rows: [
         { label: "补喷处方", value: "尚未生成补喷处方" },
         { label: "防治执行任务", value: "尚未形成防治执行任务" },
