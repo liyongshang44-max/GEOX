@@ -330,7 +330,7 @@ function observationEvidenceState(observations: FactRow[], observationRefs: stri
   return { hasTime, hasGeo, hasMedia, matched: scoped };
 }
 
-function buildChainValidation(params: { latestAssessment: any | null; reviews: FactRow[]; observations: FactRow[] }) {
+function buildChainValidation(params: { latestAssessment: any | null; reviews: FactRow[]; observations: FactRow[]; acceptances: FactRow[] }) {
   const assessment = params.latestAssessment;
   if (!assessment) {
     return { customer_visible_eligible: false, needs_review: false, blocking_reasons: ["missing:assessment"] };
@@ -339,6 +339,12 @@ function buildChainValidation(params: { latestAssessment: any | null; reviews: F
   const skillSignalRefs = Array.isArray(assessment.skill_signal_refs) ? assessment.skill_signal_refs : [];
   const evidence = observationEvidenceState(params.observations, observationRefs);
   const latestReview = latestReviewStatus(params.reviews, String(assessment.assessment_id ?? ""));
+  const latestAcceptance = [...params.acceptances]
+    .reverse()
+    .find((row) => String(row.record_json?.assessment_id ?? "") === String(assessment.assessment_id ?? ""))
+    ?? [...params.acceptances].reverse()[0]
+    ?? null;
+  const latestAcceptanceVerdict = String(latestAcceptance?.record_json?.verdict ?? "").trim().toUpperCase();
   const skillOnly = observationRefs.length < 1 && skillSignalRefs.length > 0;
   const blocking: string[] = [];
   if (!evidence.hasTime) blocking.push("missing:captured_at_ts");
@@ -349,10 +355,16 @@ function buildChainValidation(params: { latestAssessment: any | null; reviews: F
   if (latestReview === "ESCALATED") blocking.push("review:escalated");
   if (String(assessment.assessment_status ?? "") === "INSUFFICIENT_EVIDENCE") blocking.push("assessment:insufficient_evidence");
   if (skillOnly) blocking.push("assessment:skill_signal_only");
+  if (!latestAcceptance) blocking.push("missing:inspection_acceptance");
+  if (latestAcceptanceVerdict && latestAcceptanceVerdict !== "PASS") blocking.push(`acceptance:${latestAcceptanceVerdict.toLowerCase()}`);
   const needs_review = Boolean(assessment.review_required) || latestReview === "REJECTED" || latestReview === "ESCALATED" || String(assessment.assessment_status ?? "") === "NEEDS_REVIEW" || skillOnly;
+  const acceptancePass = latestAcceptanceVerdict === "PASS";
+  const acceptancePresent = Boolean(latestAcceptance);
   const customer_visible_eligible = evidence.hasTime
     && evidence.hasGeo
     && evidence.hasMedia
+    && acceptancePresent
+    && acceptancePass
     && (!assessment.review_required || latestReview === "APPROVED")
     && latestReview !== "REJECTED"
     && latestReview !== "ESCALATED"
@@ -362,6 +374,7 @@ function buildChainValidation(params: { latestAssessment: any | null; reviews: F
     customer_visible_eligible,
     needs_review,
     latest_review_status: latestReview,
+    latest_acceptance_status: latestAcceptanceVerdict || null,
     blocking_reasons: Array.from(new Set(blocking)),
   };
 }
@@ -633,6 +646,6 @@ export async function getPestDiseaseInspectionV1(pool: Pool, inspection_id: stri
     assessments: split.assessments,
     reviews: split.reviews,
     acceptances: split.acceptances,
-    chain_validation: buildChainValidation({ latestAssessment, reviews: split.reviews, observations: split.observations }),
+    chain_validation: buildChainValidation({ latestAssessment, reviews: split.reviews, observations: split.observations, acceptances: split.acceptances }),
   };
 }

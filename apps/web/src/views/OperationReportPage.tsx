@@ -477,6 +477,32 @@ function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDise
   const customerVisibleEligible = pdi.customer_visible_eligible !== false;
   const reviewRequired = Boolean(pdi.review_required);
   const reviewStatusRaw = String(pdi.review_status ?? "").trim().toUpperCase();
+  const observationEvidence = isObject(pdi.observation_evidence) ? pdi.observation_evidence : {};
+  const evidenceItems = Array.isArray((observationEvidence as any).items) ? (observationEvidence as any).items : [];
+  const latestObservation = isObject((observationEvidence as any).latest_observation) ? (observationEvidence as any).latest_observation : {};
+  const latestMediaRefs = Array.isArray((latestObservation as any).media_refs) ? (latestObservation as any).media_refs : [];
+  const latestMediaRefText = latestMediaRefs.length
+    ? latestMediaRefs.slice(0, 3).map((m: any) => customerText(`${text(m?.kind) || "media"}:${text(m?.ref_id) || "--"}`, "")).filter(Boolean).join("；")
+    : "暂无图片/媒体引用";
+  const latestGeo = isObject((latestObservation as any).geo_point) ? `${text((latestObservation as any).geo_point?.lat)}, ${text((latestObservation as any).geo_point?.lng)}` : "暂无定位";
+  const latestCapturedAt = customerText((latestObservation as any).captured_at_text ?? (latestObservation as any).captured_at_ts, "暂无时间");
+  const latestDevice = customerText(
+    firstValue(latestObservation, ["device_profile.device_model", "device_profile.device_type", "device_profile.device_id"]),
+    "暂无设备来源",
+  );
+  const latestNote = customerText((latestObservation as any).scout_note, "暂无巡检备注");
+  const latestPlantPart = customerText((latestObservation as any).plant_part, "待补充");
+  const latestIssueCode = customerText((latestObservation as any).suspected_issue_code ?? pdi.suspected_issue_code, "待确认");
+  const latestIncidence = valueOrPending((latestObservation as any).incidence_percent, "%");
+  const latestSeverityPercent = valueOrPending((latestObservation as any).severity_percent, "%");
+  const latestAffectedArea = valueOrPending((latestObservation as any).affected_area_percent, "%");
+  const latestEvidenceQuality = customerText((latestObservation as any).evidence_quality, "待补充");
+  const hasLatestObservation = Boolean(Object.keys(latestObservation).length);
+  const inspectionEvidenceSummary = hasLatestObservation
+    ? (mediaMissing || geoMissing
+      ? "巡检任务已完成，但缺少定位或图片证据，需复核。"
+      : customerText(pdi.evidence_summary ?? evidence.summary, "已记录巡检证据，待进一步复核。"))
+    : "暂无可展示的巡检观察明细；当前仅有汇总计数。";
 
   return [
     {
@@ -494,12 +520,20 @@ function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDise
     {
       key: "inspection_evidence",
       title: "巡检证据",
-      summary: mediaMissing || geoMissing
-        ? "巡检任务已完成，但缺少定位或图片证据，需复核。"
-        : customerText(pdi.evidence_summary ?? evidence.summary, "已记录巡检证据，待进一步复核。"),
+      summary: inspectionEvidenceSummary,
       rows: [
-        { label: "图片/媒体", value: mediaMissing ? "0 条" : `${mediaCount} 条` },
-        { label: "定位证据", value: geoPresent ? "已提供" : "缺少定位" },
+        { label: "图片/媒体证据", value: latestMediaRefText },
+        { label: "采集时间", value: latestCapturedAt },
+        { label: "定位点", value: latestGeo },
+        { label: "设备来源", value: latestDevice },
+        { label: "现场备注", value: latestNote },
+        { label: "观察部位", value: latestPlantPart },
+        { label: "疑似问题", value: latestIssueCode },
+        { label: "发生率", value: latestIncidence },
+        { label: "严重度比例", value: latestSeverityPercent },
+        { label: "影响面积", value: latestAffectedArea },
+        { label: "证据质量", value: latestEvidenceQuality },
+        { label: "巡检观察次数", value: `${Number((observationEvidence as any).total_observations ?? evidenceItems.length) || 0} 次` },
         { label: "人工复核", value: reviewedByHuman ? "已完成" : "尚未完成" },
         { label: "证据等级", value: pestDiseaseEvidenceTierLabel(pdi.evidence_tier ?? evidence.evidence_tier) },
         { label: "证据缺口", value: evidenceGap },
@@ -617,6 +651,44 @@ function AuditChain({ chain, vm, report }: { chain: BackendChainItem[]; vm: Oper
   );
 }
 
+function PestDiseaseAuditChain({ report }: { report: OperationReportV1 }): React.ReactElement {
+  const pdi = ((report as any).pest_disease_inspection ?? {}) as any;
+  const obs = isObject(pdi.observation_evidence?.latest_observation) ? pdi.observation_evidence.latest_observation : {};
+  const mediaRefs = Array.isArray(obs.media_refs) ? obs.media_refs : [];
+  const mediaText = mediaRefs.length
+    ? mediaRefs.slice(0, 5).map((m: any) => `${text(m?.kind) || "media"}:${text(m?.ref_id) || "--"}`).join("；")
+    : "暂无图片/媒体引用";
+  const geoText = isObject(obs.geo_point) ? `${text(obs.geo_point?.lat)}, ${text(obs.geo_point?.lng)}` : "暂无定位";
+  return (
+    <section className="customerCard operationAuditChain">
+      <details>
+        <summary className="operationTechDetailsSummary">巡检审计链路（默认折叠）</summary>
+        <p className="customerMetricLabel customerSpacingTopSm">以下为病虫害巡检证据链摘要：观测依据、人工复核与验收边界。</p>
+        <div className="operationClosedLoopGrid customerSpacingTopSm">
+          <details className="customerCard operationClosedLoopCard">
+            <summary><span className="operationStepNo">1</span> 观测依据：{customerTimelineStatusLabel("DONE")}</summary>
+            <div className="customerGrid2 customerSpacingTopXs">
+              <div><strong>图片/媒体证据：</strong>{customerText(mediaText, "暂无图片/媒体引用")}</div>
+              <div><strong>采集时间：</strong>{customerText(obs.captured_at_text ?? obs.captured_at_ts, "暂无时间")}</div>
+              <div><strong>定位点：</strong>{customerText(geoText, "暂无定位")}</div>
+              <div><strong>设备来源：</strong>{customerText(firstValue(obs, ["device_profile.device_model", "device_profile.device_type", "device_profile.device_id"]), "暂无设备来源")}</div>
+            </div>
+          </details>
+          <details className="customerCard operationClosedLoopCard">
+            <summary><span className="operationStepNo">2</span> 复核与验收：{customerTimelineStatusLabel("AVAILABLE")}</summary>
+            <div className="customerGrid2 customerSpacingTopXs">
+              <div><strong>人工复核：</strong>{Boolean(pdi.reviewed_by_human) ? "已完成" : "尚未完成"}</div>
+              <div><strong>复核状态：</strong>{pestDiseaseReviewStatusLabel(pdi.review_status)}</div>
+              <div><strong>验收状态：</strong>{pestDiseaseAcceptanceStatusLabel(pdi.acceptance_status)}</div>
+              <div><strong>结论边界：</strong>巡检结论不等于已完成防治执行。</div>
+            </div>
+          </details>
+        </div>
+      </details>
+    </section>
+  );
+}
+
 export default function OperationReportPage(): React.ReactElement {
   const { operationId = "" } = useParams();
   const [loading, setLoading] = React.useState(true);
@@ -694,7 +766,9 @@ export default function OperationReportPage(): React.ReactElement {
           {mainSections.map((section) => <MainSectionCard key={section.key} section={section} />)}
         </section>
 
-        <AuditChain chain={chain} vm={vm} report={report} />
+        {isPestDiseaseInspection
+          ? <PestDiseaseAuditChain report={report} />
+          : <AuditChain chain={chain} vm={vm} report={report} />}
 
         <section className="operationTechDetailsMuted">
           <details>

@@ -1,5 +1,28 @@
 import type { Pool } from "pg";
 
+export type PestDiseaseObservationEvidenceItemV1 = {
+  observation_id: string | null;
+  fact_id: string | null;
+  captured_at_ts: number | null;
+  captured_at_text?: string | null;
+  media_refs: Array<{ kind: string; ref_id: string; checksum?: string | null }>;
+  media_count: number;
+  geo_point: { lat: number; lng: number } | null;
+  geo_evidence_present: boolean;
+  device_profile: { device_id?: string | null; device_model?: string | null; device_type?: string | null } | null;
+  scout_note: string | null;
+  crop_stage: string | null;
+  plant_part: string | null;
+  target_type: string | null;
+  suspected_issue_code: string | null;
+  pest_count: number | null;
+  trap_count: number | null;
+  incidence_percent: number | null;
+  severity_percent: number | null;
+  affected_area_percent: number | null;
+  evidence_quality: string | null;
+};
+
 export type PestDiseaseInspectionReportProjectionV1 = {
   inspection_id: string | null;
   assessment_id: string | null;
@@ -19,6 +42,12 @@ export type PestDiseaseInspectionReportProjectionV1 = {
 
   review_required: boolean;
   review_status: "NOT_REQUIRED" | "PENDING" | "APPROVED" | "REJECTED" | "ESCALATED" | null;
+  observation_evidence: {
+    total_observations: number;
+    observations_used_by_assessment: number;
+    latest_observation: PestDiseaseObservationEvidenceItemV1 | null;
+    items: PestDiseaseObservationEvidenceItemV1[];
+  };
 
   acceptance_status: "PASS" | "FAIL" | "NEEDS_REVIEW" | "INSUFFICIENT_EVIDENCE" | "MISSING";
   customer_visible_eligible: boolean;
@@ -46,6 +75,10 @@ function toText(v: unknown): string | null {
 function normalizeEnum<T extends string>(v: unknown, allowed: readonly T[]): T | null {
   const s = String(v ?? "").trim().toUpperCase();
   return allowed.includes(s as T) ? s as T : null;
+}
+function toNumber(v: unknown): number | null {
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
 }
 
 function asList(v: unknown): string[] {
@@ -124,6 +157,46 @@ function evidenceStats(observations: FactRow[]) {
   const time_present = observations.some((row) => Number.isFinite(Number(row.record_json?.captured_at_ts)) && Number(row.record_json?.captured_at_ts) > 0);
   return { media_count, geo_evidence_present, time_present };
 }
+function mapObservationEvidenceItem(row: FactRow): PestDiseaseObservationEvidenceItemV1 {
+  const record = row.record_json ?? {};
+  const media_refs = (Array.isArray(record?.media_refs) ? record.media_refs : [])
+    .map((m: any) => ({
+      kind: toText(m?.kind) ?? "unknown",
+      ref_id: toText(m?.ref_id ?? m?.ref ?? m?.id),
+      checksum: toText(m?.checksum ?? m?.sha256),
+    }))
+    .filter((m: any) => Boolean(m.ref_id));
+  const lat = toNumber(record?.geo_point?.lat);
+  const lng = toNumber(record?.geo_point?.lng);
+  const captured_at_ts = toNumber(record?.captured_at_ts);
+  const device_profile = {
+    device_id: toText(record?.device_profile?.device_id ?? record?.device_id),
+    device_model: toText(record?.device_profile?.device_model ?? record?.device_model),
+    device_type: toText(record?.device_profile?.device_type ?? record?.device_type),
+  };
+  return {
+    observation_id: toText(record?.observation_id),
+    fact_id: row.fact_id || null,
+    captured_at_ts,
+    captured_at_text: captured_at_ts != null && captured_at_ts > 0 ? new Date(captured_at_ts).toISOString() : null,
+    media_refs,
+    media_count: media_refs.length,
+    geo_point: lat != null && lng != null ? { lat, lng } : null,
+    geo_evidence_present: lat != null && lng != null,
+    device_profile: device_profile.device_id || device_profile.device_model || device_profile.device_type ? device_profile : null,
+    scout_note: toText(record?.scout_note ?? record?.note),
+    crop_stage: toText(record?.crop_stage),
+    plant_part: toText(record?.plant_part),
+    target_type: toText(record?.target_type),
+    suspected_issue_code: toText(record?.suspected_issue_code),
+    pest_count: toNumber(record?.pest_count),
+    trap_count: toNumber(record?.trap_count),
+    incidence_percent: toNumber(record?.incidence_percent),
+    severity_percent: toNumber(record?.severity_percent),
+    affected_area_percent: toNumber(record?.affected_area_percent),
+    evidence_quality: toText(record?.evidence_quality),
+  };
+}
 
 function buildBlockingReasons(params: {
   assessment: any | null;
@@ -169,6 +242,8 @@ export async function buildPestDiseaseInspectionReportProjectionV1(pool: Pool, p
   const acceptance = acceptanceRow?.record_json ?? null;
   const scopedObservations = observationSetForAssessment(observations, assessment);
   const evidence = evidenceStats(scopedObservations);
+  const latestScopedObservation = scopedObservations.length ? scopedObservations[scopedObservations.length - 1] : null;
+  const observationEvidenceItems = scopedObservations.slice(-5).map(mapObservationEvidenceItem);
   const reviewStatus = normalizeEnum(review?.review_status, ["NOT_REQUIRED", "PENDING", "APPROVED", "REJECTED", "ESCALATED"] as const)
     ?? (assessment?.review_required ? "PENDING" : "NOT_REQUIRED");
   const acceptanceStatus = normalizeEnum(acceptance?.verdict, ["PASS", "FAIL", "NEEDS_REVIEW", "INSUFFICIENT_EVIDENCE"] as const) ?? "MISSING";
@@ -212,6 +287,12 @@ export async function buildPestDiseaseInspectionReportProjectionV1(pool: Pool, p
     reviewed_by_human,
     review_required,
     review_status: reviewStatus,
+    observation_evidence: {
+      total_observations: observations.length,
+      observations_used_by_assessment: scopedObservations.length,
+      latest_observation: latestScopedObservation ? mapObservationEvidenceItem(latestScopedObservation) : null,
+      items: observationEvidenceItems,
+    },
     acceptance_status: acceptanceStatus,
     customer_visible_eligible,
     blocking_reasons,
