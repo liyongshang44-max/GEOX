@@ -121,6 +121,7 @@ function extractFunctionBody(text, signatureStart) {
     '定位点',
     '设备来源',
     '现场备注',
+    '巡检结论不等于已完成防治执行',
   ], 'OperationReportPage pest disease scenario detection and layout');
 
   assertAll(operationsIndexVm, [
@@ -152,6 +153,16 @@ function extractFunctionBody(text, signatureStart) {
   ];
   assertNone(pdiSectionBody, blockedPdiTerms, 'OperationReportPage PDI dedicated section');
   assertNone(pdiAuditBody, blockedPdiTerms, 'OperationReportPage PestDiseaseAuditChain');
+
+  const blockedPositiveTreatmentTerms = [
+    '已喷药',
+    '已防治',
+    '防治完成',
+    '喷药完成',
+    '病虫害已解决',
+    '作物风险已解除',
+  ];
+  assertNone(pdiSectionBody, blockedPositiveTreatmentTerms, 'OperationReportPage PDI section treatment-complete forbidden claims');
 
   assertAll(evidenceVm, [
     'inspectionSummary',
