@@ -1,7 +1,7 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Pool } from "pg";
 
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
+import { requireAoActAuthV0, requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
 import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0.js";
 import { ingestTelemetryV1 } from "../services/telemetry_ingest_service_v1.js";
 
@@ -28,28 +28,38 @@ type DeviceSimulatorStateRow = {
   updated_ts_ms: number;
 };
 
-const runners = new Map<string, SimulatorRunner>(); // Process-level singleton: one runner per tenant+device.
+const runners = new Map<string, SimulatorRunner>();
 let ensureDeviceSimulatorIndexPromise: Promise<void> | null = null;
 
-function isNonEmptyString(v: any): v is string {
-  return typeof v === "string" && v.trim().length > 0;
+function isNonEmptyString(v: any): v is string { return typeof v === "string" && v.trim().length > 0; }
+function normalizeDeviceId(v: any): string { return isNonEmptyString(v) ? String(v).trim() : ""; }
+function parseIntervalMs(raw: any): number { const n = Number(raw); if (!Number.isFinite(n)) return 5000; const clamped = Math.floor(n); return Math.max(1000, Math.min(clamped, 60000)); }
+function parseLimit(raw: any): number { const n = Number(raw); if (!Number.isFinite(n)) return 200; return Math.max(1, Math.min(Math.floor(n), 500)); }
+
+function isDevtoolsEnabledV1(): boolean {
+  const raw = String(process.env.GEOX_DEVTOOLS_ENABLED ?? "").trim().toLowerCase();
+  return raw === "1" || raw === "true" || raw === "yes" || raw === "on";
 }
 
-function normalizeDeviceId(v: any): string {
-  return isNonEmptyString(v) ? String(v).trim() : "";
+function devtoolsDisabled(reply: FastifyReply): boolean {
+  if (isDevtoolsEnabledV1()) return false;
+  reply.status(404).send({ ok: false, error: "DEVTOOLS_DISABLED", feature_flag: "GEOX_DEVTOOLS_ENABLED" });
+  return true;
 }
 
-function parseIntervalMs(raw: any): number {
-  const n = Number(raw);
-  if (!Number.isFinite(n)) return 5000;
-  const clamped = Math.floor(n);
-  return Math.max(1000, Math.min(clamped, 60000));
+function hasSimulatorRunScope(auth: AoActAuthContextV0): boolean {
+  const scopes = Array.isArray(auth.scopes) ? auth.scopes.map((x) => String(x)) : [];
+  return auth.role === "admin" || scopes.includes("security.admin") || scopes.includes("dev.simulator.run");
 }
 
-function parseLimit(raw: any): number {
-  const n = Number(raw);
-  if (!Number.isFinite(n)) return 200;
-  return Math.max(1, Math.min(Math.floor(n), 500));
+function requireSimulatorRunAuthV1(req: FastifyRequest, reply: FastifyReply): AoActAuthContextV0 | null {
+  const auth = requireAoActAuthV0(req, reply);
+  if (!auth) return null;
+  if (!hasSimulatorRunScope(auth)) {
+    reply.status(403).send({ ok: false, error: "AUTH_SCOPE_DENIED", required_scope: "dev.simulator.run", alternate_scope: "security.admin" });
+    return null;
+  }
+  return auth;
 }
 
 async function ensureDeviceSimulatorIndexRuntime(pool: Pool): Promise<void> {
@@ -70,10 +80,7 @@ async function ensureDeviceSimulatorIndexRuntime(pool: Pool): Promise<void> {
         )
       `);
       await pool.query(`CREATE INDEX IF NOT EXISTS device_simulator_index_status_idx ON device_simulator_index_v1 (tenant_id, status, updated_ts_ms DESC)`);
-    })().catch((err) => {
-      ensureDeviceSimulatorIndexPromise = null;
-      throw err;
-    });
+    })().catch((err) => { ensureDeviceSimulatorIndexPromise = null; throw err; });
   }
   await ensureDeviceSimulatorIndexPromise;
 }
@@ -91,17 +98,7 @@ async function upsertDeviceSimulatorState(pool: Pool, state: DeviceSimulatorStat
       last_tick_ts_ms = EXCLUDED.last_tick_ts_ms,
       last_error = EXCLUDED.last_error,
       updated_ts_ms = EXCLUDED.updated_ts_ms`,
-    [
-      state.tenant_id,
-      state.device_id,
-      state.status,
-      state.started_ts_ms,
-      state.stopped_ts_ms,
-      state.interval_ms,
-      state.last_tick_ts_ms,
-      state.last_error,
-      state.updated_ts_ms,
-    ]
+    [state.tenant_id, state.device_id, state.status, state.started_ts_ms, state.stopped_ts_ms, state.interval_ms, state.last_tick_ts_ms, state.last_error, state.updated_ts_ms]
   );
 }
 
@@ -115,43 +112,14 @@ async function readDeviceSimulatorState(pool: Pool, tenant_id: string, device_id
   );
   if (!q.rows[0]) return null;
   const row: any = q.rows[0];
-  return {
-    tenant_id: String(row.tenant_id),
-    device_id: String(row.device_id),
-    status: String(row.status) as DeviceSimulatorStateRow["status"],
-    started_ts_ms: row.started_ts_ms == null ? null : Number(row.started_ts_ms),
-    stopped_ts_ms: row.stopped_ts_ms == null ? null : Number(row.stopped_ts_ms),
-    interval_ms: Number(row.interval_ms ?? 5000),
-    last_tick_ts_ms: row.last_tick_ts_ms == null ? null : Number(row.last_tick_ts_ms),
-    last_error: row.last_error == null ? null : String(row.last_error),
-    updated_ts_ms: Number(row.updated_ts_ms ?? 0),
-  };
+  return { tenant_id: String(row.tenant_id), device_id: String(row.device_id), status: String(row.status) as DeviceSimulatorStateRow["status"], started_ts_ms: row.started_ts_ms == null ? null : Number(row.started_ts_ms), stopped_ts_ms: row.stopped_ts_ms == null ? null : Number(row.stopped_ts_ms), interval_ms: Number(row.interval_ms ?? 5000), last_tick_ts_ms: row.last_tick_ts_ms == null ? null : Number(row.last_tick_ts_ms), last_error: row.last_error == null ? null : String(row.last_error), updated_ts_ms: Number(row.updated_ts_ms ?? 0) };
 }
 
-async function listDeviceSimulatorStatesFromIndexV1(
-  pool: Pool,
-  tenant_id: string,
-  limit: number,
-): Promise<any[]> {
-  // SSOT for aggregate read API:
-  // always read from persisted device_simulator_index_v1, never from in-memory runners.
+async function listDeviceSimulatorStatesFromIndexV1(pool: Pool, tenant_id: string, limit: number): Promise<any[]> {
   const q = await pool.query(
-    `SELECT
-        s.tenant_id,
-        s.device_id,
-        s.status,
-        s.started_ts_ms,
-        s.stopped_ts_ms,
-        s.interval_ms,
-        s.last_tick_ts_ms,
-        s.last_error,
-        s.updated_ts_ms,
-        d.display_name,
-        d.device_mode
+    `SELECT s.tenant_id, s.device_id, s.status, s.started_ts_ms, s.stopped_ts_ms, s.interval_ms, s.last_tick_ts_ms, s.last_error, s.updated_ts_ms, d.display_name, d.device_mode
       FROM device_simulator_index_v1 s
-      LEFT JOIN device_index_v1 d
-        ON d.tenant_id = s.tenant_id
-       AND d.device_id = s.device_id
+      LEFT JOIN device_index_v1 d ON d.tenant_id = s.tenant_id AND d.device_id = s.device_id
      WHERE s.tenant_id = $1
      ORDER BY s.updated_ts_ms DESC, s.device_id ASC
      LIMIT $2`,
@@ -161,21 +129,17 @@ async function listDeviceSimulatorStatesFromIndexV1(
 }
 
 async function ensureDeviceExists(pool: Pool, tenant_id: string, device_id: string): Promise<boolean> {
-  const found = await pool.query(
-    `SELECT 1 FROM device_index_v1 WHERE tenant_id = $1 AND device_id = $2 LIMIT 1`,
-    [tenant_id, device_id]
-  );
+  const found = await pool.query(`SELECT 1 FROM device_index_v1 WHERE tenant_id = $1 AND device_id = $2 LIMIT 1`, [tenant_id, device_id]);
   return (found.rows ?? []).length > 0;
 }
 
 async function writeTelemetryTick(pool: Pool, runner: SimulatorRunner): Promise<void> {
   const ts_ms = Date.now();
-  const cycle = (2 * Math.PI * runner.seq) / 144; // ~12 minutes at 5s interval.
+  const cycle = (2 * Math.PI * runner.seq) / 144;
   const tempBase = 24;
   const air_temperature = Number((tempBase + 1.4 * Math.sin(cycle) + 0.4 * Math.sin(cycle / 3)).toFixed(2));
   const air_humidity = Number((58 - 0.45 * (air_temperature - tempBase) + 1.2 * Math.sin(cycle / 2 + Math.PI / 6)).toFixed(2));
   const soil_moisture = Number((41 + 3.5 * Math.sin(cycle / 6 + Math.PI / 5) + 0.08 * runner.seq).toFixed(2));
-
   const telemetryPoints = [
     { metric: "sim_runner_alive", value: 1, unit: "unitless" },
     { metric: "air_temperature", value: air_temperature, unit: "celsius" },
@@ -184,425 +148,113 @@ async function writeTelemetryTick(pool: Pool, runner: SimulatorRunner): Promise<
   ] as const;
 
   for (const point of telemetryPoints) {
-    await ingestTelemetryV1(
-      pool,
-      {
-        tenant_id: runner.tenant_id,
-        device_id: runner.device_id,
-        metric: point.metric,
-        value: point.value,
-        unit: point.unit,
-        ts_ms,
-      },
-      {
-        source: "device_simulator_v1",
-        quality_flags: ["OK"],
-        confidence: 1,
-      }
-    );
+    await ingestTelemetryV1(pool, { tenant_id: runner.tenant_id, device_id: runner.device_id, metric: point.metric, value: point.value, unit: point.unit, ts_ms }, {
+      source: "device_simulator_v1",
+      quality_flags: ["OK", "SIMULATED_DEV_ONLY"],
+      confidence: 1,
+      source_lane: "SIMULATED_DEV_ONLY",
+      is_simulated: true,
+      formal_eligible: false,
+      evidence_level: "DEBUG",
+      dev_source: "DEVICE_SIMULATOR_V1",
+    });
   }
 
   runner.last_tick_ts_ms = ts_ms;
   runner.seq += 1;
-  await upsertDeviceSimulatorState(pool, {
-    tenant_id: runner.tenant_id,
-    device_id: runner.device_id,
-    status: "running",
-    started_ts_ms: runner.started_ts_ms,
-    stopped_ts_ms: null,
-    interval_ms: runner.interval_ms,
-    last_tick_ts_ms: runner.last_tick_ts_ms,
-    last_error: null,
-    updated_ts_ms: ts_ms,
-  });
+  await upsertDeviceSimulatorState(pool, { tenant_id: runner.tenant_id, device_id: runner.device_id, status: "running", started_ts_ms: runner.started_ts_ms, stopped_ts_ms: null, interval_ms: runner.interval_ms, last_tick_ts_ms: runner.last_tick_ts_ms, last_error: null, updated_ts_ms: ts_ms });
 }
 
-async function withValidatedDevice(
-  req: any,
-  reply: any,
-  pool: Pool,
-  opts: { source: "path" | "body" | "query" }
-): Promise<{ auth: AoActAuthContextV0; device_id: string; key: string } | null> {
-  const auth = requireAoActScopeV0(req, reply, "telemetry.read");
+async function withValidatedDevice(req: any, reply: any, pool: Pool, opts: { source: "path" | "body" | "query"; mode: "read" | "run" }): Promise<{ auth: AoActAuthContextV0; device_id: string; key: string } | null> {
+  if (devtoolsDisabled(reply)) return null;
+  const auth = opts.mode === "run" ? requireSimulatorRunAuthV1(req, reply) : requireAoActScopeV0(req, reply, "telemetry.read");
   if (!auth) return null;
-
-  const source = opts.source;
-  const rawDeviceId =
-    source === "path"
-      ? req.params?.id
-      : source === "body"
-      ? req.body?.device_id
-      : req.query?.device_id;
+  const rawDeviceId = opts.source === "path" ? req.params?.id : opts.source === "body" ? req.body?.device_id : req.query?.device_id;
   const device_id = normalizeDeviceId(rawDeviceId);
   if (!device_id) return reply.status(400).send({ ok: false, error: "MISSING:device_id" });
-
   const exists = await ensureDeviceExists(pool, auth.tenant_id, device_id);
   if (!exists) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-
-  const key = `${auth.tenant_id}::${device_id}`;
-  return { auth, device_id, key };
+  return { auth, device_id, key: `${auth.tenant_id}::${device_id}` };
 }
 
 export function registerDeviceSimulatorV1Routes(app: FastifyInstance, pool: Pool): void {
-  // Conflict guard for legacy/incorrect aggregate path:
-  // register static route ahead of /api/v1/devices/:device_id/status so "simulator" is never parsed as :device_id.
   app.get("/api/v1/devices/simulator/status", async (_req, reply) => {
-    return reply.status(410).send({
-      ok: false,
-      error: "DEPRECATED_PATH",
-      message: "Use /api/v1/devices/simulator/statuses instead",
-      replacement: "/api/v1/devices/simulator/statuses",
-    });
+    if (devtoolsDisabled(reply)) return;
+    return reply.status(410).send({ ok: false, error: "DEPRECATED_PATH", message: "Use /api/v1/devices/simulator/statuses instead", replacement: "/api/v1/devices/simulator/statuses" });
   });
 
   app.get("/api/v1/devices/simulator/statuses", async (req, reply) => {
+    if (devtoolsDisabled(reply)) return;
     await ensureDeviceSimulatorIndexRuntime(pool);
     const auth = requireAoActScopeV0(req, reply, "telemetry.read");
     if (!auth) return;
-
     const query: any = req.query ?? {};
     const limit = parseLimit(query.limit);
-    // Compatibility-only query params: accepted but auth context is always authoritative.
-    // This avoids unbounded scans and prevents caller-controlled cross-scope reads.
-    const query_tenant_id = isNonEmptyString(query.tenant_id) ? String(query.tenant_id).trim() : null;
-    const query_project_id = isNonEmptyString(query.project_id) ? String(query.project_id).trim() : null;
-    const query_group_id = isNonEmptyString(query.group_id) ? String(query.group_id).trim() : null;
-    const tenant_id = auth.tenant_id;
-    const project_id = auth.project_id;
-    const group_id = auth.group_id;
-
-    const rows = await listDeviceSimulatorStatesFromIndexV1(pool, tenant_id, limit);
-    const items = rows.map((row: any) => ({
-      tenant_id: String(row.tenant_id ?? tenant_id),
-      project_id,
-      group_id,
-      device_id: String(row.device_id ?? ""),
-      display_name: row.display_name == null ? null : String(row.display_name),
-      device_mode: row.device_mode == null ? null : String(row.device_mode),
-      key: `${tenant_id}::${String(row.device_id ?? "")}`,
-      running: String(row.status ?? "").toLowerCase() === "running",
-      status: String(row.status ?? "stopped").toLowerCase(),
-      started_ts_ms: row.started_ts_ms == null ? null : Number(row.started_ts_ms),
-      stopped_ts_ms: row.stopped_ts_ms == null ? null : Number(row.stopped_ts_ms),
-      interval_ms: Number(row.interval_ms ?? 5000),
-      last_tick_ts_ms: row.last_tick_ts_ms == null ? null : Number(row.last_tick_ts_ms),
-      last_error: row.last_error == null ? null : String(row.last_error),
-      updated_ts_ms: row.updated_ts_ms == null ? null : Number(row.updated_ts_ms),
-    }));
-
-    return reply.send({
-      ok: true,
-      tenant_id,
-      project_id,
-      group_id,
-      scope_source: "auth_context",
-      scope_query_ignored:
-        query_tenant_id !== null || query_project_id !== null || query_group_id !== null,
-      items,
-    });
+    const rows = await listDeviceSimulatorStatesFromIndexV1(pool, auth.tenant_id, limit);
+    const items = rows.map((row: any) => ({ tenant_id: String(row.tenant_id ?? auth.tenant_id), project_id: auth.project_id, group_id: auth.group_id, device_id: String(row.device_id ?? ""), display_name: row.display_name == null ? null : String(row.display_name), device_mode: row.device_mode == null ? null : String(row.device_mode), key: `${auth.tenant_id}::${String(row.device_id ?? "")}`, running: String(row.status ?? "").toLowerCase() === "running", status: String(row.status ?? "stopped").toLowerCase(), started_ts_ms: row.started_ts_ms == null ? null : Number(row.started_ts_ms), stopped_ts_ms: row.stopped_ts_ms == null ? null : Number(row.stopped_ts_ms), interval_ms: Number(row.interval_ms ?? 5000), last_tick_ts_ms: row.last_tick_ts_ms == null ? null : Number(row.last_tick_ts_ms), last_error: row.last_error == null ? null : String(row.last_error), updated_ts_ms: row.updated_ts_ms == null ? null : Number(row.updated_ts_ms) }));
+    return reply.send({ ok: true, tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id, scope_source: "auth_context", scope_query_ignored: Boolean(query.tenant_id || query.project_id || query.group_id), items });
   });
 
-  app.post("/api/v1/devices/:id/simulator/start", async (req, reply) => {
+  async function startRunner(req: any, reply: any, source: "path" | "body", deprecated = false) {
     await ensureDeviceSimulatorIndexRuntime(pool);
-    const validated = await withValidatedDevice(req, reply, pool, { source: "path" });
+    const validated = await withValidatedDevice(req, reply, pool, { source, mode: "run" });
     if (!validated) return;
-
     const { auth, device_id, key } = validated;
     const existing = runners.get(key);
-    if (existing) {
-      return reply.send({
-        ok: true,
-        tenant_id: auth.tenant_id,
-        device_id,
-        key,
-        running: true,
-        already_running: true,
-        started_ts_ms: existing.started_ts_ms,
-        interval_ms: existing.interval_ms,
-        last_tick_ts_ms: existing.last_tick_ts_ms,
-      });
-    }
-
+    if (existing) return reply.send({ ok: true, tenant_id: auth.tenant_id, device_id, key, running: true, already_running: true, deprecated, replacement: deprecated ? `/api/v1/devices/${encodeURIComponent(device_id)}/simulator/start` : undefined, started_ts_ms: existing.started_ts_ms, interval_ms: existing.interval_ms, last_tick_ts_ms: existing.last_tick_ts_ms, source_lane: "SIMULATED_DEV_ONLY", is_simulated: true, formal_eligible: false });
     const interval_ms = parseIntervalMs((req.body ?? ({} as any)).interval_ms);
-    const runner: SimulatorRunner = {
-      key,
-      tenant_id: auth.tenant_id,
-      device_id,
-      started_ts_ms: Date.now(),
-      interval_ms,
-      handle: setInterval(() => {
-        void writeTelemetryTick(pool, runner).catch((err) => {
-          const message = err instanceof Error ? err.message : String(err);
-          void upsertDeviceSimulatorState(pool, {
-            tenant_id: auth.tenant_id,
-            device_id,
-            status: "error",
-            started_ts_ms: runner.started_ts_ms,
-            stopped_ts_ms: Date.now(),
-            interval_ms: runner.interval_ms,
-            last_tick_ts_ms: runner.last_tick_ts_ms,
-            last_error: message,
-            updated_ts_ms: Date.now(),
-          }).catch(() => void 0);
-          req.log.error({ err, tenant_id: auth.tenant_id, device_id }, "device_simulator_tick_failed");
-        });
-      }, interval_ms),
-      seq: 0,
-      last_tick_ts_ms: null,
-    };
-
+    const runner: SimulatorRunner = { key, tenant_id: auth.tenant_id, device_id, started_ts_ms: Date.now(), interval_ms, handle: setInterval(() => { void writeTelemetryTick(pool, runner).catch((err) => { const message = err instanceof Error ? err.message : String(err); void upsertDeviceSimulatorState(pool, { tenant_id: auth.tenant_id, device_id, status: "error", started_ts_ms: runner.started_ts_ms, stopped_ts_ms: Date.now(), interval_ms: runner.interval_ms, last_tick_ts_ms: runner.last_tick_ts_ms, last_error: message, updated_ts_ms: Date.now() }).catch(() => void 0); req.log.error({ err, tenant_id: auth.tenant_id, device_id }, deprecated ? "device_simulator_tick_failed_legacy" : "device_simulator_tick_failed"); }); }, interval_ms), seq: 0, last_tick_ts_ms: null };
     await writeTelemetryTick(pool, runner);
     runners.set(key, runner);
+    return reply.send({ ok: true, tenant_id: auth.tenant_id, device_id, key, running: true, already_running: false, deprecated, replacement: deprecated ? `/api/v1/devices/${encodeURIComponent(device_id)}/simulator/start` : undefined, started_ts_ms: runner.started_ts_ms, interval_ms: runner.interval_ms, last_tick_ts_ms: runner.last_tick_ts_ms, source_lane: "SIMULATED_DEV_ONLY", is_simulated: true, formal_eligible: false });
+  }
 
-    return reply.send({
-      ok: true,
-      tenant_id: auth.tenant_id,
-      device_id,
-      key,
-      running: true,
-      already_running: false,
-      started_ts_ms: runner.started_ts_ms,
-      interval_ms: runner.interval_ms,
-      last_tick_ts_ms: runner.last_tick_ts_ms,
-    });
-  });
-
-  app.post("/api/v1/devices/:id/simulator/stop", async (req, reply) => {
+  async function stopRunner(req: any, reply: any, source: "path" | "body", deprecated = false) {
     await ensureDeviceSimulatorIndexRuntime(pool);
-    const validated = await withValidatedDevice(req, reply, pool, { source: "path" });
+    const validated = await withValidatedDevice(req, reply, pool, { source, mode: "run" });
     if (!validated) return;
-
     const { auth, device_id, key } = validated;
     const existing = runners.get(key);
-    if (!existing) {
-      return reply.send({ ok: true, tenant_id: auth.tenant_id, device_id, key, running: false, already_stopped: true });
-    }
-
+    if (!existing) return reply.send({ ok: true, tenant_id: auth.tenant_id, device_id, key, running: false, already_stopped: true, deprecated, replacement: deprecated ? `/api/v1/devices/${encodeURIComponent(device_id)}/simulator/stop` : undefined });
     clearInterval(existing.handle);
     runners.delete(key);
-    await upsertDeviceSimulatorState(pool, {
-      tenant_id: auth.tenant_id,
-      device_id,
-      status: "stopped",
-      started_ts_ms: existing.started_ts_ms,
-      stopped_ts_ms: Date.now(),
-      interval_ms: existing.interval_ms,
-      last_tick_ts_ms: existing.last_tick_ts_ms,
-      last_error: null,
-      updated_ts_ms: Date.now(),
-    });
-    return reply.send({ ok: true, tenant_id: auth.tenant_id, device_id, key, running: false, already_stopped: false });
-  });
+    await upsertDeviceSimulatorState(pool, { tenant_id: auth.tenant_id, device_id, status: "stopped", started_ts_ms: existing.started_ts_ms, stopped_ts_ms: Date.now(), interval_ms: existing.interval_ms, last_tick_ts_ms: existing.last_tick_ts_ms, last_error: null, updated_ts_ms: Date.now() });
+    return reply.send({ ok: true, tenant_id: auth.tenant_id, device_id, key, running: false, already_stopped: false, deprecated, replacement: deprecated ? `/api/v1/devices/${encodeURIComponent(device_id)}/simulator/stop` : undefined });
+  }
+
+  app.post("/api/v1/devices/:id/simulator/start", async (req, reply) => startRunner(req, reply, "path"));
+  app.post("/api/v1/devices/:id/simulator/stop", async (req, reply) => stopRunner(req, reply, "path"));
 
   app.get("/api/v1/devices/:id/simulator/status", async (req, reply) => {
     await ensureDeviceSimulatorIndexRuntime(pool);
-    const validated = await withValidatedDevice(req, reply, pool, { source: "path" });
+    const validated = await withValidatedDevice(req, reply, pool, { source: "path", mode: "read" });
     if (!validated) return;
-
     const { auth, device_id, key } = validated;
     const existing = runners.get(key);
     if (!existing) {
       const persisted = await readDeviceSimulatorState(pool, auth.tenant_id, device_id);
       if (!persisted) return reply.send({ ok: true, tenant_id: auth.tenant_id, device_id, key, running: false });
-      return reply.send({
-        ok: true,
-        tenant_id: auth.tenant_id,
-        device_id,
-        key,
-        running: persisted.status === "running",
-        started_ts_ms: persisted.started_ts_ms,
-        stopped_ts_ms: persisted.stopped_ts_ms,
-        interval_ms: persisted.interval_ms,
-        last_tick_ts_ms: persisted.last_tick_ts_ms,
-        status: persisted.status,
-        last_error: persisted.last_error,
-        persisted: true,
-      });
+      return reply.send({ ok: true, tenant_id: auth.tenant_id, device_id, key, running: persisted.status === "running", started_ts_ms: persisted.started_ts_ms, stopped_ts_ms: persisted.stopped_ts_ms, interval_ms: persisted.interval_ms, last_tick_ts_ms: persisted.last_tick_ts_ms, status: persisted.status, last_error: persisted.last_error, persisted: true });
     }
-
-    return reply.send({
-      ok: true,
-      tenant_id: auth.tenant_id,
-      device_id,
-      key,
-      running: true,
-      started_ts_ms: existing.started_ts_ms,
-      interval_ms: existing.interval_ms,
-      last_tick_ts_ms: existing.last_tick_ts_ms,
-      seq: existing.seq,
-    });
+    return reply.send({ ok: true, tenant_id: auth.tenant_id, device_id, key, running: true, started_ts_ms: existing.started_ts_ms, interval_ms: existing.interval_ms, last_tick_ts_ms: existing.last_tick_ts_ms, seq: existing.seq });
   });
 
-  // Backward-compatibility routes. Keep for short-term migration; deprecated in favor of /api/v1/devices/:id/simulator/*.
-  app.post("/api/v1/simulator-runner/start", async (req, reply) => {
-    await ensureDeviceSimulatorIndexRuntime(pool);
-    const validated = await withValidatedDevice(req, reply, pool, { source: "body" });
-    if (!validated) return;
-
-    const { auth, device_id, key } = validated;
-    const existing = runners.get(key);
-    if (existing) {
-      return reply.send({
-        ok: true,
-        tenant_id: auth.tenant_id,
-        device_id,
-        key,
-        running: true,
-        already_running: true,
-        deprecated: true,
-        replacement: `/api/v1/devices/${encodeURIComponent(device_id)}/simulator/start`,
-        started_ts_ms: existing.started_ts_ms,
-        interval_ms: existing.interval_ms,
-        last_tick_ts_ms: existing.last_tick_ts_ms,
-      });
-    }
-
-    const interval_ms = parseIntervalMs((req.body ?? ({} as any)).interval_ms);
-    const runner: SimulatorRunner = {
-      key,
-      tenant_id: auth.tenant_id,
-      device_id,
-      started_ts_ms: Date.now(),
-      interval_ms,
-      handle: setInterval(() => {
-        void writeTelemetryTick(pool, runner).catch((err) => {
-          const message = err instanceof Error ? err.message : String(err);
-          void upsertDeviceSimulatorState(pool, {
-            tenant_id: auth.tenant_id,
-            device_id,
-            status: "error",
-            started_ts_ms: runner.started_ts_ms,
-            stopped_ts_ms: Date.now(),
-            interval_ms: runner.interval_ms,
-            last_tick_ts_ms: runner.last_tick_ts_ms,
-            last_error: message,
-            updated_ts_ms: Date.now(),
-          }).catch(() => void 0);
-          req.log.error({ err, tenant_id: auth.tenant_id, device_id }, "device_simulator_tick_failed_legacy");
-        });
-      }, interval_ms),
-      seq: 0,
-      last_tick_ts_ms: null,
-    };
-
-    await writeTelemetryTick(pool, runner);
-    runners.set(key, runner);
-
-    return reply.send({
-      ok: true,
-      tenant_id: auth.tenant_id,
-      device_id,
-      key,
-      running: true,
-      already_running: false,
-      deprecated: true,
-      replacement: `/api/v1/devices/${encodeURIComponent(device_id)}/simulator/start`,
-      started_ts_ms: runner.started_ts_ms,
-      interval_ms: runner.interval_ms,
-      last_tick_ts_ms: runner.last_tick_ts_ms,
-    });
-  });
-
-  app.post("/api/v1/simulator-runner/stop", async (req, reply) => {
-    await ensureDeviceSimulatorIndexRuntime(pool);
-    const validated = await withValidatedDevice(req, reply, pool, { source: "body" });
-    if (!validated) return;
-
-    const { auth, device_id, key } = validated;
-    const existing = runners.get(key);
-    if (!existing) {
-      return reply.send({
-        ok: true,
-        tenant_id: auth.tenant_id,
-        device_id,
-        key,
-        running: false,
-        already_stopped: true,
-        deprecated: true,
-        replacement: `/api/v1/devices/${encodeURIComponent(device_id)}/simulator/stop`,
-      });
-    }
-
-    clearInterval(existing.handle);
-    runners.delete(key);
-    await upsertDeviceSimulatorState(pool, {
-      tenant_id: auth.tenant_id,
-      device_id,
-      status: "stopped",
-      started_ts_ms: existing.started_ts_ms,
-      stopped_ts_ms: Date.now(),
-      interval_ms: existing.interval_ms,
-      last_tick_ts_ms: existing.last_tick_ts_ms,
-      last_error: null,
-      updated_ts_ms: Date.now(),
-    });
-    return reply.send({
-      ok: true,
-      tenant_id: auth.tenant_id,
-      device_id,
-      key,
-      running: false,
-      already_stopped: false,
-      deprecated: true,
-      replacement: `/api/v1/devices/${encodeURIComponent(device_id)}/simulator/stop`,
-    });
-  });
+  app.post("/api/v1/simulator-runner/start", async (req, reply) => startRunner(req, reply, "body", true));
+  app.post("/api/v1/simulator-runner/stop", async (req, reply) => stopRunner(req, reply, "body", true));
 
   app.get("/api/v1/simulator-runner/status", async (req, reply) => {
     await ensureDeviceSimulatorIndexRuntime(pool);
-    const validated = await withValidatedDevice(req, reply, pool, { source: "query" });
+    const validated = await withValidatedDevice(req, reply, pool, { source: "query", mode: "read" });
     if (!validated) return;
-
     const { auth, device_id, key } = validated;
     const existing = runners.get(key);
     if (!existing) {
       const persisted = await readDeviceSimulatorState(pool, auth.tenant_id, device_id);
-      if (persisted) {
-        return reply.send({
-          ok: true,
-          tenant_id: auth.tenant_id,
-          device_id,
-          key,
-          running: persisted.status === "running",
-          deprecated: true,
-          replacement: `/api/v1/devices/${encodeURIComponent(device_id)}/simulator/status`,
-          started_ts_ms: persisted.started_ts_ms,
-          stopped_ts_ms: persisted.stopped_ts_ms,
-          interval_ms: persisted.interval_ms,
-          last_tick_ts_ms: persisted.last_tick_ts_ms,
-          status: persisted.status,
-          last_error: persisted.last_error,
-          persisted: true,
-        });
-      }
-      return reply.send({
-        ok: true,
-        tenant_id: auth.tenant_id,
-        device_id,
-        key,
-        running: false,
-        deprecated: true,
-        replacement: `/api/v1/devices/${encodeURIComponent(device_id)}/simulator/status`,
-      });
+      if (persisted) return reply.send({ ok: true, tenant_id: auth.tenant_id, device_id, key, running: persisted.status === "running", deprecated: true, replacement: `/api/v1/devices/${encodeURIComponent(device_id)}/simulator/status`, started_ts_ms: persisted.started_ts_ms, stopped_ts_ms: persisted.stopped_ts_ms, interval_ms: persisted.interval_ms, last_tick_ts_ms: persisted.last_tick_ts_ms, status: persisted.status, last_error: persisted.last_error, persisted: true });
+      return reply.send({ ok: true, tenant_id: auth.tenant_id, device_id, key, running: false, deprecated: true, replacement: `/api/v1/devices/${encodeURIComponent(device_id)}/simulator/status` });
     }
-
-    return reply.send({
-      ok: true,
-      tenant_id: auth.tenant_id,
-      device_id,
-      key,
-      running: true,
-      deprecated: true,
-      replacement: `/api/v1/devices/${encodeURIComponent(device_id)}/simulator/status`,
-      started_ts_ms: existing.started_ts_ms,
-      interval_ms: existing.interval_ms,
-      last_tick_ts_ms: existing.last_tick_ts_ms,
-      seq: existing.seq,
-    });
+    return reply.send({ ok: true, tenant_id: auth.tenant_id, device_id, key, running: true, deprecated: true, replacement: `/api/v1/devices/${encodeURIComponent(device_id)}/simulator/status`, started_ts_ms: existing.started_ts_ms, interval_ms: existing.interval_ms, last_tick_ts_ms: existing.last_tick_ts_ms, seq: existing.seq });
   });
 
-  app.addHook("onClose", async () => {
-    for (const runner of runners.values()) clearInterval(runner.handle);
-    runners.clear();
-  });
+  app.addHook("onClose", async () => { for (const runner of runners.values()) clearInterval(runner.handle); runners.clear(); });
 }
