@@ -52,6 +52,7 @@
     "ci:governance:appleii-formal-evidence-dynamic-e2e": "node scripts/governance_acceptance/ACCEPTANCE_APPLEII_FORMAL_EVIDENCE_DYNAMIC_E2E_V1.cjs",
     "ci:governance:base-contract-negative": "node scripts/governance_acceptance/ACCEPTANCE_BASE_CONTRACT_NEGATIVE_RELEASE_GATE_V1.cjs",
     "ci:governance:formal-scenario-no-projection-write": "node scripts/governance_acceptance/ACCEPTANCE_FORMAL_SCENARIO_NO_PROJECTION_WRITE_V1.cjs",
+    "ci:base-contract:p0": "node scripts/governance_acceptance/ACCEPTANCE_BASE_CONTRACT_P0_RELEASE_GATE_V1.cjs",
     "ci:governance:full-base-contract": "pnpm run ci:governance:fact-envelope && pnpm run ci:governance:appleii-time-coverage && pnpm run ci:governance:problem-state-uncertainty && pnpm run ci:governance:stage1-trigger-evidence-gate && pnpm run ci:governance:aosense-aoact-partition && pnpm run ci:governance:control-kernel-non-action-boundary && pnpm run ci:governance:ruleset-loading-boundary && pnpm run ci:governance:skill-constitution && pnpm run ci:governance:skill-category-boundary && pnpm run ci:governance:api-inventory-enforcement && pnpm run ci:governance:fallback-retirement-enforcement && pnpm run ci:governance:appleii-formal-evidence-dynamic-e2e && pnpm run ci:governance:base-contract-negative",
     "ci:scenario:formal-irrigation": "node scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_IRRIGATION_E2E_V1.cjs",
     "ci:scenario:device-anomaly": "node scripts/agronomy_acceptance/ACCEPTANCE_DEVICE_ANOMALY_E2E_V1.cjs",
