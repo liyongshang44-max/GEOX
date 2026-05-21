@@ -8,7 +8,7 @@ import type { AcceptanceResultV1Payload } from "@geox/contracts";
 
 import { requireAoActAnyScopeV0 } from "../auth/ao_act_authz_v0.js";
 import { evaluateAcceptanceV1 } from "../domain/acceptance/engine_v1.js";
-import { evidencePolicyFromReceiptV1, type FormalEvidenceSourceLaneV1 } from "../domain/evidence/formal_evidence_policy_v1.js";
+import { evidencePolicyFromReceiptV1, type FormalEvidenceSourceLaneV1, type FormalEvidencePolicyResultV1 } from "../domain/evidence/formal_evidence_policy_v1.js";
 import { appendSkillRunFact, appendSkillTraceFact, digestJson } from "../domain/skill_registry/facts.js";
 import { listJudgeResultsV2, loadJudgeResultV2 } from "../domain/judge/judge_result_v2.js";
 import { recordMemoryV1 } from "../services/field_memory_service.js";
@@ -112,7 +112,7 @@ async function loadLatestExecutionJudgeForTask(pool: Pool, tenant: TenantTriple,
   return rows[0]?.judge_id ?? null;
 }
 
-function toVerdict(result: "PASSED" | "FAILED" | "INCONCLUSIVE"): "PASS" | "FAIL" | "PARTIAL" {
+export function toVerdict(result: "PASSED" | "FAILED" | "INCONCLUSIVE"): "PASS" | "FAIL" | "PARTIAL" {
   if (result === "PASSED") return "PASS";
   if (result === "FAILED") return "FAIL";
   return "PARTIAL";
@@ -128,14 +128,6 @@ function deriveTelemetryFromReceipt(receipt: any): Record<string, number> {
   return {};
 }
 
-function hasExecutionWindow(receipt: any): boolean {
-  const payload = receipt?.payload ?? {};
-  const executionTime = payload.execution_time ?? payload.meta?.execution_time ?? {};
-  const start = Number(executionTime.start_ts ?? payload.execution_started_at ?? NaN);
-  const end = Number(executionTime.end_ts ?? payload.execution_finished_at ?? NaN);
-  return Number.isFinite(start) && Number.isFinite(end) && end > start;
-}
-
 function toSourceLane(lanes: FormalEvidenceSourceLaneV1[]): AcceptanceSourceLaneV1 {
   if (lanes.includes("SIMULATED_DEV_ONLY")) return "SIMULATED_DEV_ONLY";
   if (lanes.includes("DEBUG_ONLY")) return "DEBUG_ONLY";
@@ -143,10 +135,84 @@ function toSourceLane(lanes: FormalEvidenceSourceLaneV1[]): AcceptanceSourceLane
   return "UNKNOWN";
 }
 
-function buildFormalAcceptanceGateV1(receipt: any): FormalAcceptanceGateV1 {
+function isPassLike(value: unknown): boolean {
+  const status = String(value ?? "").trim().toUpperCase();
+  return ["PASS", "PASSED", "SUCCESS", "SUCCEEDED", "VALID"].includes(status);
+}
+
+function hasExecutionJudgePass(executionJudge: any): boolean {
+  if (!executionJudge || typeof executionJudge !== "object") return false;
+  return isPassLike(executionJudge.verdict)
+    || isPassLike(executionJudge.result)
+    || isPassLike(executionJudge.status)
+    || isPassLike(executionJudge.payload?.verdict)
+    || isPassLike(executionJudge.record_json?.payload?.verdict);
+}
+
+function collectReceiptEvidenceItems(receipt: any): any[] {
+  const payload = receipt?.payload ?? {};
+  const lists = [
+    payload.artifacts,
+    payload.artifact_refs,
+    payload.logs_refs,
+    payload.logs,
+    payload.media_refs,
+    payload.media,
+    payload.photo_refs,
+    payload.metrics,
+    payload.metric_refs,
+  ];
+  return lists.flatMap((v) => Array.isArray(v) ? v : []);
+}
+
+function hasReceiptCompletenessSkillPass(receipt: any): boolean {
+  const payload = receipt?.payload ?? {};
+  const candidates = [
+    payload.receipt_completeness,
+    payload.receipt_completeness_skill,
+    payload.meta?.receipt_completeness,
+    payload.meta?.receipt_completeness_skill,
+    ...(Array.isArray(payload.skill_results) ? payload.skill_results : []),
+  ];
+  return candidates.some((candidate) => {
+    const raw = JSON.stringify(candidate ?? "").toLowerCase();
+    return raw.includes("receipt_completeness") && (isPassLike(candidate?.verdict) || isPassLike(candidate?.result) || isPassLike(candidate?.status));
+  });
+}
+
+function hasFormalExecutionEvidenceV1(receipt: any, policy: FormalEvidencePolicyResultV1): boolean {
+  if (!policy.formal_evidence_passed) return false;
+  const evidenceItems = collectReceiptEvidenceItems(receipt);
+  const formalExecutionMarkers = [
+    "water_delivery_receipt",
+    "delivery_receipt",
+    "water_delivery",
+    "in_field_trajectory",
+    "formal_trajectory",
+    "coverage_evidence",
+    "coverage_receipt",
+    "coverage_percent",
+    "post_effect",
+    "effect_observation",
+    "soil_moisture_delta",
+    "as_applied",
+    "flow_meter",
+    "meter_reading",
+  ];
+  return evidenceItems.some((item) => {
+    const raw = JSON.stringify(item ?? "").toLowerCase();
+    if (!raw || raw.includes("sim_trace") || raw.includes("debug") || raw.includes("flight_table") || raw.includes("flight-table")) return false;
+    return formalExecutionMarkers.some((marker) => raw.includes(marker));
+  });
+}
+
+function buildFormalAcceptanceGateV1(receipt: any, executionJudge: any): FormalAcceptanceGateV1 {
   const policy = evidencePolicyFromReceiptV1(receipt ?? {});
   const source_lane = toSourceLane(policy.source_lanes);
-  const formal_execution_passed = hasExecutionWindow(receipt ?? {});
+  const executionJudgePassed = hasExecutionJudgePass(executionJudge);
+  const receiptCompletenessSkillPassed = hasReceiptCompletenessSkillPass(receipt ?? {});
+  const formalExecutionEvidencePassed = hasFormalExecutionEvidenceV1(receipt ?? {}, policy);
+  const formal_execution_passed = executionJudgePassed || receiptCompletenessSkillPassed || formalExecutionEvidencePassed;
   const is_simulated = policy.simulated_artifact_count > 0 || source_lane === "SIMULATED_DEV_ONLY" || source_lane === "DEBUG_ONLY";
   const non_simulated_chain = !is_simulated;
   const formal_evidence_passed = policy.formal_evidence_passed;
@@ -154,7 +220,7 @@ function buildFormalAcceptanceGateV1(receipt: any): FormalAcceptanceGateV1 {
   const blocking_reasons = Array.from(new Set([
     ...policy.blocking_reasons,
     ...(!formal_evidence_passed ? ["FORMAL_EVIDENCE_REQUIRED"] : []),
-    ...(!formal_execution_passed ? ["FORMAL_EXECUTION_WINDOW_REQUIRED"] : []),
+    ...(!formal_execution_passed ? ["FORMAL_EXECUTION_EVIDENCE_REQUIRED"] : []),
     ...(is_simulated ? ["SIMULATED_OR_DEBUG_EVIDENCE_NOT_FORMAL"] : []),
     ...(source_lane !== "FORMAL_OPERATION" ? ["FORMAL_OPERATION_SOURCE_LANE_REQUIRED"] : []),
   ]));
@@ -232,6 +298,8 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
         executionJudge = await loadJudgeResultV2(pool, { ...tenant, judge_id: executionJudgeIdFromInput });
         if (!executionJudge) return reply.status(404).send({ ok: false, error: "EXECUTION_JUDGE_NOT_FOUND" });
         if (executionJudge.judge_kind !== "EXECUTION") return reply.status(400).send({ ok: false, error: "INVALID_EXECUTION_JUDGE_KIND" });
+      } else if (executionJudgeId) {
+        executionJudge = await loadJudgeResultV2(pool, { ...tenant, judge_id: executionJudgeId });
       }
       const effectiveExecutionJudgeId = executionJudgeIdFromInput || executionJudgeId || "";
       const judgeResultIds = Array.from(new Set([...(body.judge_result_ids ?? []), ...(effectiveExecutionJudgeId ? [effectiveExecutionJudgeId] : [])]));
@@ -246,7 +314,7 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
         sensor_quality_state: null,
         acceptance_policy_ref: null,
       });
-      const formalGate = buildFormalAcceptanceGateV1(receiptFact.record_json ?? {});
+      const formalGate = buildFormalAcceptanceGateV1(receiptFact.record_json ?? {}, executionJudge);
       const initialVerdict = toVerdict(evaluated.result);
       const gatedVerdict = applyFormalAcceptanceGateV1(initialVerdict, formalGate);
       const trace_id = String(taskPayload?.trace_id ?? taskPayload?.meta?.trace_id ?? "").trim() || `trace_${randomUUID().replace(/-/g, "")}`;
@@ -365,7 +433,7 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
 
       if (acceptanceRecord.payload.verdict === "FAIL" || acceptanceRecord.payload.verdict === "PARTIAL" || acceptanceRecord.payload.verdict === "NEEDS_REVIEW" || acceptanceRecord.payload.verdict === "INSUFFICIENT_EVIDENCE") {
         const trigger = acceptanceRecord.payload.verdict === "FAIL" ? "ACCEPTANCE_FAILED" : "ACCEPTANCE_NEEDS_REVIEW";
-        const fs = await createFailSafeEventV1(pool, { ...tenant, act_task_id: body.act_task_id, field_id: field_id ?? null, trigger_type: trigger, severity: acceptanceRecord.payload.verdict === "FAIL" ? "HIGH" : "MEDIUM", reason_code: trigger, blocked_action: "acceptance.evaluate", source: "api/v1/acceptance/evaluate" });
+        const fs = await createFailSafeEventV1(pool, { ...tenant, act_task_id: body.act_task_id, field_id: field_id ?? null, trigger_type: trigger as any, severity: acceptanceRecord.payload.verdict === "FAIL" ? "HIGH" : "MEDIUM", reason_code: trigger, blocked_action: "acceptance.evaluate", source: "api/v1/acceptance/evaluate" });
         await createManualTakeoverV1(pool, { ...tenant, fail_safe_event_id: fs.fail_safe_event_id, act_task_id: body.act_task_id, field_id: field_id ?? null, reason_code: trigger });
       }
 
