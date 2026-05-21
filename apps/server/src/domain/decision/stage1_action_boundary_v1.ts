@@ -43,6 +43,44 @@ function addReason(out: string[], reason: string): void {
   if (!out.includes(reason)) out.push(reason);
 }
 
+function upper(value: unknown): string {
+  return String(value ?? "").trim().toUpperCase();
+}
+
+function containsDevMarker(value: unknown): boolean {
+  const raw = JSON.stringify(value ?? "").toLowerCase();
+  return raw.includes("simulated_dev_only")
+    || raw.includes("device_simulator_v1")
+    || raw.includes("flight_table")
+    || raw.includes("flight-table")
+    || raw.includes("irrigation_simulator")
+    || raw.includes("sim_trace")
+    || raw.includes("debug_only");
+}
+
+export function isSimulatedStage1SummaryV1(summaryPayload: unknown): boolean {
+  const summary = asRecord(summaryPayload);
+  const coverage = asRecord(summary.time_coverage_v1);
+  const evidence = asRecord(summary.evidence_sufficiency_v1);
+  const device = asRecord(summary.device_health_snapshot_v1);
+  const sourceLane = upper(summary.source_lane ?? summary.lane ?? summary.trust_lane ?? coverage.source_lane ?? evidence.source_lane);
+  const evidenceLevel = upper(summary.evidence_level ?? coverage.evidence_level ?? evidence.evidence_level);
+  const devSource = upper(summary.dev_source ?? coverage.dev_source ?? evidence.dev_source ?? device.dev_source);
+  return summary.is_simulated === true
+    || coverage.is_simulated === true
+    || evidence.is_simulated === true
+    || device.is_simulated === true
+    || summary.formal_eligible === false
+    || coverage.formal_eligible === false
+    || evidence.formal_eligible === false
+    || sourceLane === "SIMULATED_DEV_ONLY"
+    || sourceLane === "DEBUG_ONLY"
+    || evidenceLevel === "DEBUG"
+    || devSource.includes("SIMULATOR")
+    || devSource.includes("FLIGHT_TABLE")
+    || containsDevMarker(summaryPayload);
+}
+
 export function normalizeStage1RecommendationInput(summaryPayload: unknown): Stage1ActionBoundaryNormalizedInputV1 {
   const summary = asRecord(summaryPayload);
   const output: Stage1ActionBoundaryNormalizedInputV1 = {};
@@ -104,6 +142,7 @@ function collectStage1EvidenceGateReasonCodes(summaryPayload: unknown): string[]
     ? evidence.reason_codes.map((x: unknown) => String(x)).filter(Boolean)
     : [];
 
+  if (isSimulatedStage1SummaryV1(summaryPayload)) addReason(reasons, "SIMULATED_STAGE1_SUMMARY_NOT_FORMAL_TRIGGER");
   if (getStage1EvidenceSufficiencyStatus(summaryPayload) !== "PASS") addReason(reasons, "EVIDENCE_SUFFICIENCY_NOT_PASS");
 
   const observationWindow = asRecord(coverage.observation_window);
