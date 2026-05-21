@@ -119,8 +119,11 @@ jobs:
           export BASE_URL=http://127.0.0.1:3001
           export API_BASE_URL=http://127.0.0.1:3001
           export DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/geox
-          export AO_ACT_TOKEN="$GEOX_AO_ACT_TOKEN"
-          export ADMIN_TOKEN="$GEOX_AO_ACT_TOKEN"
+          export AO_ACT_TOKEN="${GEOX_AO_ACT_TOKEN:-$GEOX_TOKEN}"
+          export ADMIN_TOKEN="${GEOX_TOKEN:-$GEOX_AO_ACT_TOKEN}"
+          export TENANT_ID="${TENANT_ID:-tenantA}"
+          export PROJECT_ID="${PROJECT_ID:-projectA}"
+          export GROUP_ID="${GROUP_ID:-groupA}"
           pnpm run ci:base-contract:p0
       - name: Run acceptance suite
         run: |
