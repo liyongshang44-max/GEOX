@@ -99,23 +99,19 @@ function parseRecordJson(v: any): any {
   }
   return null;
 }
-
 function toMs(v: unknown): number {
   if (typeof v === "number" && Number.isFinite(v)) return v;
   const ms = Date.parse(String(v ?? ""));
   return Number.isFinite(ms) ? ms : 0;
 }
-
 function toText(v: unknown): string | null {
   const text = String(v ?? "").trim();
   return text ? text : null;
 }
-
 function toNumOrUndef(v: unknown): number | undefined {
   const n = Number(v ?? NaN);
   return Number.isFinite(n) ? n : undefined;
 }
-
 function latestByKey(rows: FactRow[], keyFn: (row: FactRow) => string): Map<string, FactRow> {
   const out = new Map<string, FactRow>();
   for (const row of rows) {
@@ -126,7 +122,6 @@ function latestByKey(rows: FactRow[], keyFn: (row: FactRow) => string): Map<stri
   }
   return out;
 }
-
 function latestNonEmpty<T>(rows: FactRow[], pick: (row: FactRow) => T | null | undefined): T | null {
   for (let i = rows.length - 1; i >= 0; i -= 1) {
     const value = pick(rows[i]);
@@ -139,7 +134,6 @@ function latestNonEmpty<T>(rows: FactRow[], pick: (row: FactRow) => T | null | u
   }
   return null;
 }
-
 function toMetricsSnapshot(v: any): { soil_moisture?: number; temperature?: number; humidity?: number } {
   const raw = (v && typeof v === "object") ? v : {};
   const out: { soil_moisture?: number; temperature?: number; humidity?: number } = {};
@@ -151,7 +145,6 @@ function toMetricsSnapshot(v: any): { soil_moisture?: number; temperature?: numb
   if (hum !== undefined) out.humidity = hum;
   return out;
 }
-
 function normalizeAcceptanceVerdict(verdictRaw: unknown): OperationAcceptanceStatusV1 | null {
   const verdict = String(verdictRaw ?? "").trim().toUpperCase();
   if (!verdict) return null;
@@ -162,13 +155,18 @@ function normalizeAcceptanceVerdict(verdictRaw: unknown): OperationAcceptanceSta
   if (verdict === "INSUFFICIENT_EVIDENCE") return "INSUFFICIENT_EVIDENCE";
   return null;
 }
-
+function isFormalAcceptancePayload(payload: any): boolean {
+  if (!payload || typeof payload !== "object") return false;
+  if (payload.formal_acceptance === true) return true;
+  if (payload.formal_evidence_passed === true && payload.is_simulated !== true) return true;
+  if (payload.source_lane === "FORMAL_OPERATION" && payload.customer_visible_eligible === true) return true;
+  return false;
+}
 function hasExecutedReceiptStatus(statusRaw: unknown): boolean {
   const status = String(statusRaw ?? "").trim().toUpperCase();
   if (!status) return false;
   return ["DONE", "SUCCEEDED", "SUCCESS", "EXECUTED", "ACKED"].includes(status);
 }
-
 function transitionToTimelineType(statusRaw: string): TimelineType | null {
   const status = statusRaw.toUpperCase();
   if (["CREATED", "PROPOSED"].includes(status)) return "RECOMMENDATION_CREATED";
@@ -179,7 +177,6 @@ function transitionToTimelineType(statusRaw: string): TimelineType | null {
   if (["FAILED", "ERROR"].includes(status)) return "FAILED";
   return null;
 }
-
 function timelineLabel(type: TimelineType): string {
   if (type === "ASSIGNMENT_CREATED") return "assignment created";
   if (type === "ASSIGNMENT_ACCEPTED") return "assignment accepted";
@@ -197,31 +194,20 @@ function timelineLabel(type: TimelineType): string {
   if (type === "MANUAL_FALLBACK") return "转人工处理";
   return "execution failed";
 }
-
 function statusFromTransitionForTechnicalProjection(statusRaw: string): OperationStateV1["final_status"] | null {
   const s = statusRaw.toUpperCase();
   if (["EXECUTING", "RUNNING", "IN_PROGRESS", "DISPATCHED", "READY", "APPROVED"].includes(s)) return "RUNNING";
-  if (["FAILED", "ERROR", "REJECTED"].includes(s)) return "PENDING_ACCEPTANCE";
-  if (["SUCCEEDED", "SUCCESS", "DONE"].includes(s)) return "PENDING_ACCEPTANCE";
+  if (["FAILED", "ERROR", "REJECTED", "SUCCEEDED", "SUCCESS", "DONE"].includes(s)) return "PENDING_ACCEPTANCE";
   if (s) return "PENDING";
   return null;
 }
-
 function emptySkillTraceNode() {
   return { skill_id: null as string | null, version: null as string | null, run_id: null as string | null, result_status: null as string | null, error_code: null as string | null };
 }
-
 function mapSkillRun(row: FactRow | null | undefined) {
   const payload = row?.record_json?.payload ?? {};
-  return {
-    skill_id: toText(payload.skill_id),
-    version: toText(payload.version),
-    run_id: toText(payload.run_id),
-    result_status: toText(payload.result_status),
-    error_code: toText(payload.error_code),
-  };
+  return { skill_id: toText(payload.skill_id), version: toText(payload.version), run_id: toText(payload.run_id), result_status: toText(payload.result_status), error_code: toText(payload.error_code) };
 }
-
 async function loadFacts(pool: Pool, tenant: TenantTriple): Promise<FactRow[]> {
   const sql = `SELECT fact_id, occurred_at, (record_json::jsonb) AS record_json FROM facts
     WHERE (record_json::jsonb->>'type') IN (
@@ -237,7 +223,6 @@ async function loadFacts(pool: Pool, tenant: TenantTriple): Promise<FactRow[]> {
   const res = await pool.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id]);
   return (res.rows ?? []).map((row: any) => ({ fact_id: String(row.fact_id), occurred_at: String(row.occurred_at), record_json: parseRecordJson(row.record_json) ?? row.record_json }));
 }
-
 async function loadAsAppliedMapRows(pool: Pool, tenant: TenantTriple): Promise<any[]> {
   try {
     const q = await pool.query(
@@ -252,7 +237,6 @@ async function loadAsAppliedMapRows(pool: Pool, tenant: TenantTriple): Promise<a
     return [];
   }
 }
-
 export function projectOperationStateFromFacts(facts: OperationProjectionFactRow[]): OperationStateV1[] {
   const planFactsByOperationId = new Map<string, FactRow[]>();
   for (const row of facts.filter((r) => r.record_json?.type === "operation_plan_v1")) {
@@ -262,21 +246,16 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     rows.push(row);
     planFactsByOperationId.set(operationPlanId, rows);
   }
-
   const recById = latestByKey(facts.filter((r) => r.record_json?.type === "decision_recommendation_v1"), (r) => String(r.record_json?.payload?.recommendation_id ?? "").trim());
   const requestById = latestByKey(facts.filter((r) => r.record_json?.type === "approval_request_v1"), (r) => String(r.record_json?.payload?.request_id ?? "").trim());
   const decisionByReq = latestByKey(facts.filter((r) => r.record_json?.type === "approval_decision_v1"), (r) => String(r.record_json?.payload?.request_id ?? "").trim());
   const taskById = latestByKey(facts.filter((r) => r.record_json?.type === "ao_act_task_v0"), (r) => String(r.record_json?.payload?.act_task_id ?? "").trim());
-  const receiptByTask = latestByKey(
-    facts.filter((r) => ["ao_act_receipt_v0", "ao_act_receipt_v1"].includes(String(r.record_json?.type ?? ""))),
-    (r) => String(r.record_json?.payload?.act_task_id ?? r.record_json?.payload?.task_id ?? "").trim()
-  );
+  const receiptByTask = latestByKey(facts.filter((r) => ["ao_act_receipt_v0", "ao_act_receipt_v1"].includes(String(r.record_json?.type ?? ""))), (r) => String(r.record_json?.payload?.act_task_id ?? r.record_json?.payload?.task_id ?? "").trim());
   const acceptanceFacts = facts.filter((r) => String(r.record_json?.type ?? "") === "acceptance_result_v1");
   const acceptanceByPlan = latestByKey(acceptanceFacts, (r) => String(r.record_json?.payload?.operation_plan_id ?? "").trim());
   const acceptanceByTask = latestByKey(acceptanceFacts, (r) => String(r.record_json?.payload?.act_task_id ?? "").trim());
   const manualFallbackByTask = latestByKey(facts.filter((r) => r.record_json?.type === "ao_act_manual_fallback_v1"), (r) => String(r.record_json?.payload?.act_task_id ?? "").trim());
   const skillRuns = facts.filter((r) => String(r.record_json?.type ?? "") === "skill_run_v1");
-
   const transitionByPlan = new Map<string, FactRow[]>();
   for (const row of facts.filter((r) => r.record_json?.type === "operation_plan_transition_v1")) {
     const operationPlanId = toText(row.record_json?.payload?.operation_plan_id);
@@ -285,19 +264,16 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     arr.push(row);
     transitionByPlan.set(operationPlanId, arr);
   }
-
   const states: OperationStateV1[] = [];
   for (const row of facts.filter((r) => r.record_json?.type === "operation_plan_v1").reverse()) {
     const payload = row.record_json?.payload ?? {};
     const operation_plan_id = toText(payload.operation_plan_id);
     if (!operation_plan_id) continue;
     if (states.some((s) => s.operation_id === operation_plan_id)) continue;
-
     const allPlanFacts = planFactsByOperationId.get(operation_plan_id) ?? [row];
     const recommendation_id = latestNonEmpty(allPlanFacts, (planFact) => toText(planFact.record_json?.payload?.recommendation_id)) ?? null;
     const approval_request_id = latestNonEmpty(allPlanFacts, (planFact) => toText(planFact.record_json?.payload?.approval_request_id)) ?? null;
     const task_id = latestNonEmpty(allPlanFacts, (planFact) => toText(planFact.record_json?.payload?.act_task_id)) ?? null;
-
     const rec = recommendation_id ? recById.get(recommendation_id) : undefined;
     const req = approval_request_id ? requestById.get(approval_request_id) : undefined;
     const decision = approval_request_id ? decisionByReq.get(approval_request_id) : undefined;
@@ -305,62 +281,28 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     const receipt = task_id ? receiptByTask.get(task_id) : undefined;
     const manualFallbackFact = task_id ? manualFallbackByTask.get(task_id) : undefined;
     const acceptanceFact = acceptanceByPlan.get(operation_plan_id) ?? (task_id ? acceptanceByTask.get(task_id) : undefined);
-
-    const sourceFacts = Array.from(new Set([
-      row.fact_id,
-      rec?.fact_id,
-      req?.fact_id,
-      decision?.fact_id,
-      task?.fact_id,
-      receipt?.fact_id,
-      acceptanceFact?.fact_id,
-      manualFallbackFact?.fact_id,
-    ].filter((x): x is string => Boolean(x))));
-
-    const artifactPayloads = facts
-      .filter((f) => String(f.record_json?.type ?? "") === "evidence_artifact_v1")
-      .map((f) => ({ fact_id: f.fact_id, payload: f.record_json?.payload ?? {} }))
-      .filter((artifact) => {
-        const byPlan = String(artifact.payload?.operation_plan_id ?? "").trim() === operation_plan_id;
-        const byTask = task_id ? String(artifact.payload?.act_task_id ?? "").trim() === task_id : false;
-        return byPlan || byTask;
-      });
+    const sourceFacts = Array.from(new Set([row.fact_id, rec?.fact_id, req?.fact_id, decision?.fact_id, task?.fact_id, receipt?.fact_id, acceptanceFact?.fact_id, manualFallbackFact?.fact_id].filter((x): x is string => Boolean(x))));
+    const artifactPayloads = facts.filter((f) => String(f.record_json?.type ?? "") === "evidence_artifact_v1").map((f) => ({ fact_id: f.fact_id, payload: f.record_json?.payload ?? {} })).filter((artifact) => {
+      const byPlan = String(artifact.payload?.operation_plan_id ?? "").trim() === operation_plan_id;
+      const byTask = task_id ? String(artifact.payload?.act_task_id ?? "").trim() === task_id : false;
+      return byPlan || byTask;
+    });
     for (const artifact of artifactPayloads) sourceFacts.push(artifact.fact_id);
-
     const artifactEvidence = artifactPayloads.map((artifact) => ({ kind: String(artifact.payload?.kind ?? "artifact") }));
     const receiptPayload = receipt?.record_json?.payload ?? {};
-    const mediaEvidence = artifactPayloads
-      .filter((artifact) => {
-        const kind = String(artifact.payload?.kind ?? "").toLowerCase();
-        return kind.includes("image") || kind.includes("video") || kind.includes("media") || kind.includes("photo") || kind.includes("trajectory");
-      })
-      .map((artifact) => ({ kind: String(artifact.payload?.kind ?? "media") }));
-    const evidenceEvaluation = evaluateEvidence({
-      artifacts: artifactEvidence,
-      logs: Array.isArray(receiptPayload?.logs_refs) ? receiptPayload.logs_refs : [],
-      media: mediaEvidence,
-      metrics: Array.isArray(receiptPayload?.metrics) ? receiptPayload.metrics : [],
-    });
-
-    const fallbackAcceptance = buildAcceptanceResult({
-      operation_plan_id,
-      hasReceipt: Boolean(receipt),
-      evidenceCount: artifactEvidence.length,
-      hasFormalEvidence: evidenceEvaluation.has_formal_evidence,
-    });
+    const mediaEvidence = artifactPayloads.filter((artifact) => {
+      const kind = String(artifact.payload?.kind ?? "").toLowerCase();
+      return kind.includes("image") || kind.includes("video") || kind.includes("media") || kind.includes("photo") || kind.includes("trajectory");
+    }).map((artifact) => ({ kind: String(artifact.payload?.kind ?? "media") }));
+    const evidenceEvaluation = evaluateEvidence({ artifacts: artifactEvidence, logs: Array.isArray(receiptPayload?.logs_refs) ? receiptPayload.logs_refs : [], media: mediaEvidence, metrics: Array.isArray(receiptPayload?.metrics) ? receiptPayload.metrics : [] });
+    const fallbackAcceptance = buildAcceptanceResult({ operation_plan_id, hasReceipt: Boolean(receipt), evidenceCount: artifactEvidence.length, hasFormalEvidence: evidenceEvaluation.has_formal_evidence });
     const acceptanceFactPayload = acceptanceFact?.record_json?.payload ?? {};
     const acceptanceStatusFromFact = normalizeAcceptanceVerdict(acceptanceFactPayload?.verdict);
-    const hasFormalAcceptance = Boolean(acceptanceFact && acceptanceStatusFromFact);
-    const acceptance = hasFormalAcceptance
-      ? {
-        status: acceptanceStatusFromFact as OperationAcceptanceStatusV1,
-        missing: Array.isArray(acceptanceFactPayload?.missing_evidence) ? acceptanceFactPayload.missing_evidence.map((x: unknown) => String(x)).filter(Boolean) : []
-      }
-      : {
-        status: fallbackAcceptance.verdict,
-        missing: fallbackAcceptance.missing_evidence ?? []
-      };
-
+    const hasFormalAcceptance = Boolean(acceptanceFact && acceptanceStatusFromFact) && isFormalAcceptancePayload(acceptanceFactPayload);
+    const acceptance = hasFormalAcceptance ? {
+      status: acceptanceStatusFromFact as OperationAcceptanceStatusV1,
+      missing: Array.isArray(acceptanceFactPayload?.missing_evidence) ? acceptanceFactPayload.missing_evidence.map((x: unknown) => String(x)).filter(Boolean) : []
+    } : { status: fallbackAcceptance.verdict, missing: fallbackAcceptance.missing_evidence ?? [] };
     const transitions = transitionByPlan.get(operation_plan_id) ?? [];
     const timeline: OperationTimelineItemV1[] = [];
     for (const t of transitions) {
@@ -378,37 +320,19 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     if (manualFallbackFact) timeline.push({ ts: toMs(manualFallbackFact.occurred_at), type: "MANUAL_FALLBACK", label: timelineLabel("MANUAL_FALLBACK") });
     if (acceptanceFact) timeline.push({ ts: toMs(acceptanceFact.occurred_at), type: "ACCEPTANCE_GENERATED", label: timelineLabel("ACCEPTANCE_GENERATED") });
     const fullTimeline = [...new Map(timeline.map((item) => [`${item.type}_${item.ts}`, item])).values()].sort((a, b) => a.ts - b.ts);
-
     const receiptStatus = String(receipt?.record_json?.payload?.status ?? "PENDING");
     const latestTransition = transitions.length ? String(transitions[transitions.length - 1].record_json?.payload?.status ?? "") : "";
     const executedReceipt = hasExecutedReceiptStatus(receiptStatus);
     const stateSource: OperationStateSourceV1 = hasFormalAcceptance ? "FORMAL_ACCEPTANCE" : "FALLBACK_LIMITED";
-    const formalStatus: OperationFormalStatusV1 = acceptance.status === "PASS"
-      ? "FORMAL_PASS"
-      : acceptance.status === "FAIL"
-        ? "FORMAL_FAIL"
-        : "NOT_FORMAL";
+    const formalStatus: OperationFormalStatusV1 = hasFormalAcceptance && acceptance.status === "PASS" ? "FORMAL_PASS" : hasFormalAcceptance && acceptance.status === "FAIL" ? "FORMAL_FAIL" : "NOT_FORMAL";
     const fallbackLimited = !hasFormalAcceptance;
-
     const blockingReasons = new Set<string>(fallbackLimited ? ["formal_acceptance_required"] : []);
     if (!receipt) blockingReasons.add("receipt_missing");
     if (receipt && !evidenceEvaluation.has_formal_evidence) blockingReasons.add(evidenceEvaluation.reason === "only_sim_trace" ? "formal_evidence_invalid" : "formal_evidence_missing");
     for (const reason of evidenceEvaluation.blocking_reasons ?? []) blockingReasons.add(String(reason));
     for (const reason of acceptance.missing ?? []) blockingReasons.add(String(reason));
     if (manualFallbackFact) blockingReasons.add("manual_fallback_present");
-
-    const finalStatusNormalized: OperationStateV1["final_status"] = formalStatus === "FORMAL_PASS"
-      ? "SUCCESS"
-      : formalStatus === "FORMAL_FAIL"
-        ? "FAILED"
-        : receipt && executedReceipt
-          ? "PENDING_ACCEPTANCE"
-          : statusFromTransitionForTechnicalProjection(latestTransition) ?? (task_id ? "RUNNING" : "PENDING");
-
-    const invalidReason: OperationStateV1["invalid_reason"] = finalStatusNormalized === "INVALID_EXECUTION"
-      ? (evidenceEvaluation.reason === "only_sim_trace" ? "evidence_invalid" : "evidence_missing")
-      : null;
-
+    const finalStatusNormalized: OperationStateV1["final_status"] = formalStatus === "FORMAL_PASS" ? "SUCCESS" : formalStatus === "FORMAL_FAIL" ? "FAILED" : receipt && executedReceipt ? "PENDING_ACCEPTANCE" : statusFromTransitionForTechnicalProjection(latestTransition) ?? (task_id ? "RUNNING" : "PENDING");
     const latestPlanPayload = allPlanFacts[allPlanFacts.length - 1]?.record_json?.payload ?? payload;
     const inferredFieldId = latestNonEmpty(allPlanFacts, (planFact) => toText(planFact.record_json?.payload?.field_id ?? planFact.record_json?.payload?.target?.ref)) ?? toText(rec?.record_json?.payload?.field_id);
     const inferredSeasonId = toText(latestPlanPayload.season_id ?? rec?.record_json?.payload?.season_id);
@@ -416,12 +340,8 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     const inferredCropStage = toText(rec?.record_json?.payload?.crop_stage) ?? latestNonEmpty(allPlanFacts, (planFact) => toText(planFact.record_json?.payload?.crop_stage));
     const inferredRuleId = toText(rec?.record_json?.payload?.rule_id) ?? latestNonEmpty(allPlanFacts, (planFact) => toText(planFact.record_json?.payload?.rule_id)) ?? toText(rec?.record_json?.payload?.rule_hit?.[0]?.rule_id);
     const inferredSkillId = toText(rec?.record_json?.payload?.skill_id) ?? latestNonEmpty(allPlanFacts, (planFact) => toText(planFact.record_json?.payload?.skill_id)) ?? inferredRuleId;
-    const ruleHit = (Array.isArray(rec?.record_json?.payload?.rule_hit) ? rec?.record_json?.payload?.rule_hit : Array.isArray(latestPlanPayload?.rule_hit) ? latestPlanPayload.rule_hit : [])
-      .map((hit: any) => ({ rule_id: String(hit?.rule_id ?? "").trim(), matched: Boolean(hit?.matched), threshold: Number.isFinite(Number(hit?.threshold)) ? Number(hit.threshold) : null, actual: Number.isFinite(Number(hit?.actual)) ? Number(hit.actual) : null }))
-      .filter((hit: any) => Boolean(hit.rule_id));
-    const reasonCodes = (Array.isArray(rec?.record_json?.payload?.reason_codes) ? rec?.record_json?.payload?.reason_codes : Array.isArray(latestPlanPayload?.reason_codes) ? latestPlanPayload.reason_codes : [])
-      .map((x: unknown) => String(x ?? "").trim())
-      .filter(Boolean);
+    const ruleHit = (Array.isArray(rec?.record_json?.payload?.rule_hit) ? rec?.record_json?.payload?.rule_hit : Array.isArray(latestPlanPayload?.rule_hit) ? latestPlanPayload.rule_hit : []).map((hit: any) => ({ rule_id: String(hit?.rule_id ?? "").trim(), matched: Boolean(hit?.matched), threshold: Number.isFinite(Number(hit?.threshold)) ? Number(hit.threshold) : null, actual: Number.isFinite(Number(hit?.actual)) ? Number(hit.actual) : null })).filter((hit: any) => Boolean(hit.rule_id));
+    const reasonCodes = (Array.isArray(rec?.record_json?.payload?.reason_codes) ? rec?.record_json?.payload?.reason_codes : Array.isArray(latestPlanPayload?.reason_codes) ? latestPlanPayload.reason_codes : []).map((x: unknown) => String(x ?? "").trim()).filter(Boolean);
     const skillRunsForOperation = skillRuns.filter((runFact) => {
       const p = runFact.record_json?.payload ?? {};
       return toText(p.operation_id) === operation_plan_id || toText(p.operation_plan_id) === operation_plan_id;
@@ -430,7 +350,6 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       const matched = skillRunsForOperation.filter(predicate).sort((a, b) => toMs(a.occurred_at) - toMs(b.occurred_at));
       return matched[matched.length - 1] ?? null;
     };
-
     states.push({
       operation_id: operation_plan_id,
       operation_plan_id,
@@ -461,13 +380,13 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       receipt_status: receiptStatus,
       acceptance,
       final_status: finalStatusNormalized,
-      invalid_reason: invalidReason,
+      invalid_reason: null,
       last_event_ts: fullTimeline.length ? fullTimeline[fullTimeline.length - 1].ts : toMs(row.occurred_at),
       timeline: fullTimeline,
       state_source: stateSource,
       formal_status: formalStatus,
       source_facts: Array.from(new Set(sourceFacts)),
-      projection_rule: "operation_state_trust_gate_v1: formal acceptance facts are the only source of formal SUCCESS/FAILED; receipts remain technical signals until formal acceptance.",
+      projection_rule: "operation_state_trust_gate_v1: explicit formal acceptance facts are the only source of formal SUCCESS/FAILED; receipts remain technical signals until formal acceptance.",
       freshness: { updated_at: new Date(fullTimeline.length ? fullTimeline[fullTimeline.length - 1].ts : toMs(row.occurred_at)).toISOString(), stale: false },
       blocking_reasons: Array.from(blockingReasons).filter(Boolean),
       fallback_limited: fallbackLimited,
@@ -493,10 +412,8 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       }
     });
   }
-
   return states.sort((a, b) => b.last_event_ts - a.last_event_ts);
 }
-
 export async function projectOperationStateV1(pool: Pool, tenant: TenantTriple): Promise<OperationStateV1[]> {
   const facts = await loadFacts(pool, tenant);
   const states = projectOperationStateFromFacts(facts);
