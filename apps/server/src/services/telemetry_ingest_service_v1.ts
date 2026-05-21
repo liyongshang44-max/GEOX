@@ -20,6 +20,11 @@ export type TelemetryIngressContextV1 = {
   field_id?: string | null;
   quality_flags?: string[];
   confidence?: number | null;
+  source_lane?: "FORMAL_OPERATION" | "SIMULATED_DEV_ONLY" | "DEBUG_ONLY" | "MANUAL_IMPORT" | "UNKNOWN";
+  is_simulated?: boolean;
+  formal_eligible?: boolean;
+  evidence_level?: "DEBUG" | "FORMAL" | "STRONG";
+  dev_source?: string | null;
 };
 
 export type TelemetryIngressResultV1 = {
@@ -59,6 +64,10 @@ async function resolveConn(db: Pool | PoolClient): Promise<{ conn: PoolClient; r
 /**
  * Unified official telemetry ingest entry:
  * raw telemetry record -> observation write -> sensing pipeline -> derived/read model refresh.
+ *
+ * Dev/simulator boundary:
+ * simulator telemetry may be recorded for debugging, but must carry simulated trust metadata and
+ * must be excluded by the observation pipeline from formal Stage-1 sensing triggers.
  */
 export async function ingestTelemetryV1(
   db: Pool | PoolClient,
@@ -71,6 +80,10 @@ export async function ingestTelemetryV1(
   const telemetry_id = sha256Hex(`${payload.tenant_id}|${payload.device_id}|${metric}|${ts_ms}`);
   const raw_fact_id = `raw_${telemetry_id}`;
   const value_num = toNumericValue(payload.value);
+  const source_lane = context.source_lane ?? (context.is_simulated ? "SIMULATED_DEV_ONLY" : "UNKNOWN");
+  const is_simulated = context.is_simulated === true || source_lane === "SIMULATED_DEV_ONLY" || source_lane === "DEBUG_ONLY";
+  const formal_eligible = is_simulated ? false : context.formal_eligible === true;
+  const evidence_level = context.evidence_level ?? (is_simulated ? "DEBUG" : "FORMAL");
 
   const { conn, release } = await resolveConn(db);
   try {
@@ -96,6 +109,11 @@ export async function ingestTelemetryV1(
             unit: payload.unit,
             ts_ms,
             source: context.source,
+            source_lane,
+            is_simulated,
+            formal_eligible,
+            evidence_level,
+            dev_source: context.dev_source ?? null,
           },
         }),
       ]
@@ -138,6 +156,11 @@ export async function ingestTelemetryV1(
       confidence: context.confidence ?? null,
       observed_at_ts_ms: ts_ms,
       source_fact_id: raw_fact_id,
+      source_lane,
+      is_simulated,
+      formal_eligible,
+      evidence_level,
+      dev_source: context.dev_source ?? null,
     });
 
     await conn.query("COMMIT");

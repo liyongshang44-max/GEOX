@@ -12,7 +12,17 @@ import { registerFlightTableOperationRoutesV1 } from "../../routes/dev/flight_ta
 import { registerFlightTableEvidenceRoutesV1 } from "../../routes/dev/flight_table_evidence_v1.js";
 import { registerFlightTableReportLearningRoutesV1 } from "../../routes/dev/flight_table_report_learning_v1.js";
 
+export function isDevtoolsEnabledV1(): boolean {
+  const raw = String(process.env.GEOX_DEVTOOLS_ENABLED ?? "").trim().toLowerCase();
+  return raw === "1" || raw === "true" || raw === "yes" || raw === "on";
+}
+
 export function registerDevtoolsModule(app: FastifyInstance, pool: Pool): void {
+  if (!isDevtoolsEnabledV1()) {
+    app.log.warn({ feature_flag: "GEOX_DEVTOOLS_ENABLED", enabled: false }, "devtools_module_disabled");
+    return;
+  }
+
   registerSimConfigRoutes(app);
   registerDeviceSimulatorV1Routes(app, pool);
   registerFlightTableV1Routes(app, pool);
