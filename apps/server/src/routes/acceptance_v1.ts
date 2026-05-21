@@ -6,8 +6,9 @@ import { z } from "zod";
 import GeoxContracts from "@geox/contracts";
 import type { AcceptanceResultV1Payload } from "@geox/contracts";
 
-import { requireAoActAnyScopeV0, requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
+import { requireAoActAnyScopeV0 } from "../auth/ao_act_authz_v0.js";
 import { evaluateAcceptanceV1 } from "../domain/acceptance/engine_v1.js";
+import { evidencePolicyFromReceiptV1, type FormalEvidenceSourceLaneV1 } from "../domain/evidence/formal_evidence_policy_v1.js";
 import { appendSkillRunFact, appendSkillTraceFact, digestJson } from "../domain/skill_registry/facts.js";
 import { listJudgeResultsV2, loadJudgeResultV2 } from "../domain/judge/judge_result_v2.js";
 import { recordMemoryV1 } from "../services/field_memory_service.js";
@@ -16,10 +17,20 @@ import { auditContextFromRequestV1, recordSecurityAuditEventV1 } from "../servic
 
 const FACT_SOURCE_ACCEPTANCE_V1 = "api/v1/acceptance";
 
-type TenantTriple = {
-  tenant_id: string;
-  project_id: string;
-  group_id: string;
+type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
+type AcceptanceWriteVerdictV1 = "PASS" | "FAIL" | "PARTIAL" | "NEEDS_REVIEW" | "INSUFFICIENT_EVIDENCE";
+type AcceptanceSourceLaneV1 = "FORMAL_OPERATION" | "SIMULATED_DEV_ONLY" | "DEBUG_ONLY" | "UNKNOWN";
+
+type FormalAcceptanceGateV1 = {
+  formal_evidence_passed: boolean;
+  formal_execution_passed: boolean;
+  non_simulated_chain: boolean;
+  formal_acceptance: boolean;
+  source_lane: AcceptanceSourceLaneV1;
+  is_simulated: boolean;
+  blocking_reasons: string[];
+  customer_visible_eligible: boolean;
+  trust_level: "FORMAL_ACCEPTED" | "NEEDS_REVIEW" | "INSUFFICIENT_FORMAL_EVIDENCE" | "SIMULATED_DEV_ONLY";
 };
 
 const EvaluateRequestSchema = z.object({
@@ -39,17 +50,14 @@ const AcceptanceReadQuerySchema = z.object({
   limit: z.union([z.string(), z.number()]).optional()
 });
 
-function requireTenantMatchOr404(
-  auth: { tenant_id: string; project_id: string; group_id: string },
-  target: TenantTriple,
-  reply: any
-): boolean {
+function requireTenantMatchOr404(auth: TenantTriple & { role?: string }, target: TenantTriple, reply: any): boolean {
   if (auth.tenant_id !== target.tenant_id || auth.project_id !== target.project_id || auth.group_id !== target.group_id) {
     reply.status(404).send({ ok: false, error: "NOT_FOUND" });
     return false;
   }
   return true;
 }
+
 function requireAcceptanceEvaluateRoleV1(reply: any, auth: any): boolean {
   const role = String(auth?.role ?? "").trim();
   if (role === "admin" || role === "operator") return true;
@@ -79,19 +87,15 @@ async function loadTaskFact(pool: Pool, actTaskId: string, tenant: TenantTriple)
   `;
   const r = await pool.query(sql, [actTaskId, tenant.tenant_id, tenant.project_id, tenant.group_id]);
   if (!r.rows?.length) return null;
-  return {
-    fact_id: String(r.rows[0].fact_id),
-    occurred_at: r.rows[0].occurred_at ? String(r.rows[0].occurred_at) : null,
-    record_json: normalizeRecordJson(r.rows[0].record_json)
-  };
+  return { fact_id: String(r.rows[0].fact_id), occurred_at: r.rows[0].occurred_at ? String(r.rows[0].occurred_at) : null, record_json: normalizeRecordJson(r.rows[0].record_json) };
 }
 
 async function loadReceiptFact(pool: Pool, actTaskId: string, tenant: TenantTriple): Promise<{ fact_id: string; record_json: any } | null> {
   const sql = `
     SELECT fact_id, (record_json::jsonb) AS record_json
     FROM facts
-    WHERE (record_json::jsonb)->>'type' = 'ao_act_receipt_v0'
-      AND (record_json::jsonb)#>>'{payload,act_task_id}' = $1
+    WHERE (record_json::jsonb)->>'type' IN ('ao_act_receipt_v0','ao_act_receipt_v1')
+      AND COALESCE((record_json::jsonb)#>>'{payload,act_task_id}', (record_json::jsonb)#>>'{payload,task_id}') = $1
       AND (record_json::jsonb)#>>'{payload,tenant_id}' = $2
       AND (record_json::jsonb)#>>'{payload,project_id}' = $3
       AND (record_json::jsonb)#>>'{payload,group_id}' = $4
@@ -100,170 +104,78 @@ async function loadReceiptFact(pool: Pool, actTaskId: string, tenant: TenantTrip
   `;
   const r = await pool.query(sql, [actTaskId, tenant.tenant_id, tenant.project_id, tenant.group_id]);
   if (!r.rows?.length) return null;
-  return {
-    fact_id: String(r.rows[0].fact_id),
-    record_json: normalizeRecordJson(r.rows[0].record_json)
-  };
+  return { fact_id: String(r.rows[0].fact_id), record_json: normalizeRecordJson(r.rows[0].record_json) };
+}
+
+async function loadLatestExecutionJudgeForTask(pool: Pool, tenant: TenantTriple, task_id: string): Promise<string | null> {
+  const rows = await listJudgeResultsV2(pool, { ...tenant, judge_kind: "EXECUTION", task_id, limit: 1 });
+  return rows[0]?.judge_id ?? null;
+}
+
+function toVerdict(result: "PASSED" | "FAILED" | "INCONCLUSIVE"): "PASS" | "FAIL" | "PARTIAL" {
+  if (result === "PASSED") return "PASS";
+  if (result === "FAILED") return "FAIL";
+  return "PARTIAL";
 }
 
 function deriveTelemetryFromReceipt(receipt: any): Record<string, number> {
   const observed = (receipt?.payload?.observed_parameters ?? {}) as Record<string, unknown>;
   const directDuration = Number((observed as any).duration_min);
-  if (Number.isFinite(directDuration) && directDuration > 0) {
-    return { duration_min: directDuration };
-  }
-
+  if (Number.isFinite(directDuration) && directDuration > 0) return { duration_min: directDuration };
   const startTs = Number(receipt?.payload?.execution_time?.start_ts);
   const endTs = Number(receipt?.payload?.execution_time?.end_ts);
-  if (Number.isFinite(startTs) && Number.isFinite(endTs) && endTs > startTs) {
-    return { duration_min: (endTs - startTs) / 60000 };
-  }
-
+  if (Number.isFinite(startTs) && Number.isFinite(endTs) && endTs > startTs) return { duration_min: (endTs - startTs) / 60000 };
   return {};
 }
 
-function normalizeGeoPoint(raw: any): { lat: number; lon: number } | null {
-  if (!raw || typeof raw !== "object") return null;
-  const lat = Number(raw?.lat ?? raw?.latitude ?? raw?.location?.lat ?? raw?.location?.latitude);
-  const lon = Number(raw?.lon ?? raw?.lng ?? raw?.longitude ?? raw?.location?.lon ?? raw?.location?.lng ?? raw?.location?.longitude);
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
-  return { lat, lon };
+function hasExecutionWindow(receipt: any): boolean {
+  const payload = receipt?.payload ?? {};
+  const executionTime = payload.execution_time ?? payload.meta?.execution_time ?? {};
+  const start = Number(executionTime.start_ts ?? payload.execution_started_at ?? NaN);
+  const end = Number(executionTime.end_ts ?? payload.execution_finished_at ?? NaN);
+  return Number.isFinite(start) && Number.isFinite(end) && end > start;
 }
 
-async function loadFieldPolygon(pool: Pool, tenantId: string, fieldId: string | null): Promise<any | null> {
-  if (!fieldId) return null;
-  const q = await pool.query(`SELECT polygon_geojson_json AS geojson FROM field_polygon_v1 WHERE tenant_id = $1 AND field_id = $2`, [tenantId, fieldId]);
-  if (!q.rows?.length) return null;
-  return normalizeRecordJson(q.rows[0].geojson);
+function toSourceLane(lanes: FormalEvidenceSourceLaneV1[]): AcceptanceSourceLaneV1 {
+  if (lanes.includes("SIMULATED_DEV_ONLY")) return "SIMULATED_DEV_ONLY";
+  if (lanes.includes("DEBUG_ONLY")) return "DEBUG_ONLY";
+  if (lanes.includes("FORMAL_OPERATION")) return "FORMAL_OPERATION";
+  return "UNKNOWN";
 }
 
-async function loadTrackPoints(pool: Pool, tenant: TenantTriple, deviceId: string | null, startTs: number | null, endTs: number | null): Promise<Array<{ lat: number; lon: number; ts_ms: number }>> {
-  if (!deviceId || !startTs || !endTs || endTs < startTs) return [];
-  const q = await pool.query(
-    `SELECT COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) AS ts_ms,
-            (record_json::jsonb #> '{payload,geo}') AS geo_json
-       FROM facts
-      WHERE (record_json::jsonb #>> '{entity,tenant_id}') = $1
-        AND (record_json::jsonb #>> '{entity,device_id}') = $2
-        AND (record_json::jsonb ->> 'type') IN ('raw_telemetry_v1','device_heartbeat_v1')
-        AND (record_json::jsonb #> '{payload,geo}') IS NOT NULL
-        AND COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) BETWEEN $3 AND $4
-      ORDER BY ts_ms ASC`,
-    [tenant.tenant_id, deviceId, startTs, endTs]
-  );
-  const strictPoints = (q.rows ?? []).map((row: any) => {
-    const geo = normalizeGeoPoint(normalizeRecordJson(row.geo_json) ?? row.geo_json);
-    const ts_ms = Number(row.ts_ms ?? 0);
-    if (!geo || !Number.isFinite(ts_ms) || ts_ms <= 0) return null;
-    return { lat: geo.lat, lon: geo.lon, ts_ms };
-  }).filter(Boolean) as Array<{ lat: number; lon: number; ts_ms: number }>;
-  if (strictPoints.length > 0) return strictPoints;
-
-  const fallbackQ = await pool.query(
-    `SELECT COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) AS ts_ms,
-            (record_json::jsonb #> '{payload,geo}') AS geo_json
-       FROM facts
-      WHERE (record_json::jsonb #>> '{entity,tenant_id}') = $1
-        AND (record_json::jsonb #>> '{entity,device_id}') = $2
-        AND (record_json::jsonb ->> 'type') IN ('raw_telemetry_v1','device_heartbeat_v1')
-        AND (record_json::jsonb #> '{payload,geo}') IS NOT NULL
-      ORDER BY ts_ms DESC
-      LIMIT 500`,
-    [tenant.tenant_id, deviceId]
-  );
-  return (fallbackQ.rows ?? []).map((row: any) => {
-    const geo = normalizeGeoPoint(normalizeRecordJson(row.geo_json) ?? row.geo_json);
-    const ts_ms = Number(row.ts_ms ?? 0);
-    if (!geo || !Number.isFinite(ts_ms) || ts_ms <= 0) return null;
-    return { lat: geo.lat, lon: geo.lon, ts_ms };
-  }).filter(Boolean).reverse() as Array<{ lat: number; lon: number; ts_ms: number }>;
-}
-
-async function inferFieldIdFromDeviceBinding(pool: Pool, tenantId: string, deviceId: string | null): Promise<string | null> {
-  if (!deviceId) return null;
-  const q = await pool.query(
-    `SELECT field_id
-       FROM device_binding_index_v1
-      WHERE tenant_id = $1 AND device_id = $2
-      ORDER BY bound_ts_ms DESC
-      LIMIT 1`,
-    [tenantId, deviceId]
-  );
-  return q.rows?.length ? String(q.rows[0].field_id ?? "").trim() || null : null;
-}
-
-async function loadProgramAcceptancePolicyRef(
-  pool: Pool,
-  tenant: TenantTriple,
-  programId: string | null
-): Promise<string | null> {
-  if (!programId) return null;
-  const q = await pool.query(
-    `SELECT (record_json::jsonb #>> '{payload,acceptance_policy_ref}') AS acceptance_policy_ref
-       FROM facts
-      WHERE (record_json::jsonb ->> 'type') = 'field_program_v1'
-        AND (record_json::jsonb #>> '{payload,tenant_id}') = $1
-        AND (record_json::jsonb #>> '{payload,project_id}') = $2
-        AND (record_json::jsonb #>> '{payload,group_id}') = $3
-        AND (record_json::jsonb #>> '{payload,program_id}') = $4
-      ORDER BY occurred_at DESC, fact_id DESC
-      LIMIT 1`,
-    [tenant.tenant_id, tenant.project_id, tenant.group_id, programId]
-  );
-  if (!q.rows?.length) return null;
-  const value = String(q.rows[0].acceptance_policy_ref ?? "").trim();
-  return value || null;
-}
-
-async function loadLatestExecutionJudgeForTask(pool: Pool, tenant: TenantTriple, task_id: string): Promise<string | null> {
-  const rows = await listJudgeResultsV2(pool, {
-    ...tenant,
-    judge_kind: "EXECUTION",
-    task_id,
-    limit: 1,
-  });
-  return rows[0]?.judge_id ?? null;
-}
-
-
-
-type AcceptanceDerivedStates = {
-  water_flow_state: Record<string, any> | null;
-  fertility_state: Record<string, any> | null;
-  sensor_quality_state: Record<string, any> | null;
-};
-
-async function loadAcceptanceDerivedStates(pool: Pool, tenant: TenantTriple, fieldId: string | null): Promise<AcceptanceDerivedStates> {
-  if (!fieldId) {
-    return { water_flow_state: null, fertility_state: null, sensor_quality_state: null };
-  }
-  const q = await pool.query(
-    `SELECT DISTINCT ON (state_type) state_type, payload_json
-       FROM derived_sensing_state_index_v1
-      WHERE tenant_id = $1
-        AND field_id = $2
-        AND ($3::text IS NULL OR project_id = $3)
-        AND ($4::text IS NULL OR group_id = $4)
-        AND state_type = ANY($5::text[])
-      ORDER BY state_type, computed_at_ts_ms DESC`,
-    [tenant.tenant_id, fieldId, tenant.project_id, tenant.group_id, ["water_flow_state", "fertility_state", "sensor_quality_state"]]
-  ).catch(() => ({ rows: [] as any[] }));
-
-  const byType = new Map<string, Record<string, any>>();
-  for (const row of q.rows ?? []) {
-    byType.set(String(row.state_type), normalizeRecordJson(row.payload_json) ?? row.payload_json ?? null);
-  }
+function buildFormalAcceptanceGateV1(receipt: any): FormalAcceptanceGateV1 {
+  const policy = evidencePolicyFromReceiptV1(receipt ?? {});
+  const source_lane = toSourceLane(policy.source_lanes);
+  const formal_execution_passed = hasExecutionWindow(receipt ?? {});
+  const is_simulated = policy.simulated_artifact_count > 0 || source_lane === "SIMULATED_DEV_ONLY" || source_lane === "DEBUG_ONLY";
+  const non_simulated_chain = !is_simulated;
+  const formal_evidence_passed = policy.formal_evidence_passed;
+  const formal_acceptance = formal_evidence_passed && formal_execution_passed && non_simulated_chain && source_lane === "FORMAL_OPERATION";
+  const blocking_reasons = Array.from(new Set([
+    ...policy.blocking_reasons,
+    ...(!formal_evidence_passed ? ["FORMAL_EVIDENCE_REQUIRED"] : []),
+    ...(!formal_execution_passed ? ["FORMAL_EXECUTION_WINDOW_REQUIRED"] : []),
+    ...(is_simulated ? ["SIMULATED_OR_DEBUG_EVIDENCE_NOT_FORMAL"] : []),
+    ...(source_lane !== "FORMAL_OPERATION" ? ["FORMAL_OPERATION_SOURCE_LANE_REQUIRED"] : []),
+  ]));
   return {
-    water_flow_state: byType.get("water_flow_state") ?? null,
-    fertility_state: byType.get("fertility_state") ?? null,
-    sensor_quality_state: byType.get("sensor_quality_state") ?? null,
+    formal_evidence_passed,
+    formal_execution_passed,
+    non_simulated_chain,
+    formal_acceptance,
+    source_lane,
+    is_simulated,
+    blocking_reasons: formal_acceptance ? [] : blocking_reasons,
+    customer_visible_eligible: formal_acceptance,
+    trust_level: formal_acceptance ? "FORMAL_ACCEPTED" : is_simulated ? "SIMULATED_DEV_ONLY" : formal_evidence_passed ? "NEEDS_REVIEW" : "INSUFFICIENT_FORMAL_EVIDENCE",
   };
 }
-export function toVerdict(result: "PASSED" | "FAILED" | "INCONCLUSIVE"): "PASS" | "FAIL" | "PARTIAL" {
-  if (result === "PASSED") return "PASS";
-  if (result === "FAILED") return "FAIL";
-  return "PARTIAL";
+
+function applyFormalAcceptanceGateV1(verdict: "PASS" | "FAIL" | "PARTIAL", gate: FormalAcceptanceGateV1): AcceptanceWriteVerdictV1 {
+  if (verdict !== "PASS") return verdict;
+  if (gate.formal_acceptance) return "PASS";
+  if (!gate.formal_evidence_passed) return "INSUFFICIENT_EVIDENCE";
+  return "NEEDS_REVIEW";
 }
 
 function finiteOptionalMetric(value: unknown): number | undefined {
@@ -277,27 +189,20 @@ function buildAcceptanceMetrics(params: { evaluated: { score?: number; metrics: 
   const coverageRatio = Number(params.evaluated.score ?? m.coverage_ratio ?? 0);
   const expected = Number(params.expectedDurationMin);
   const actual = Number(m.actual_duration);
-  const telemetryDelta = Number.isFinite(expected) && expected > 0 && Number.isFinite(actual)
-    ? Math.abs(actual - expected) / expected
-    : 0;
+  const telemetryDelta = Number.isFinite(expected) && expected > 0 && Number.isFinite(actual) ? Math.abs(actual - expected) / expected : 0;
   const out: AcceptanceResultV1Payload["metrics"] = {
     coverage_ratio: Number.isFinite(coverageRatio) ? coverageRatio : 0,
     in_field_ratio: Number.isFinite(inFieldRatio) ? inFieldRatio : 0,
     telemetry_delta: Number.isFinite(telemetryDelta) ? telemetryDelta : 0
   };
-
   const zoneApplicationCount = finiteOptionalMetric(m.zone_application_count);
   if (zoneApplicationCount !== undefined) out.zone_application_count = zoneApplicationCount;
-
   const zoneCompletionRate = finiteOptionalMetric(m.zone_completion_rate);
   if (zoneCompletionRate !== undefined) out.zone_completion_rate = zoneCompletionRate;
-
   const avgZoneCoveragePercent = finiteOptionalMetric(m.avg_zone_coverage_percent);
   if (avgZoneCoveragePercent !== undefined) out.avg_zone_coverage_percent = avgZoneCoveragePercent;
-
   const maxZoneDeviationPercent = finiteOptionalMetric(m.max_zone_deviation_percent);
   if (maxZoneDeviationPercent !== undefined) out.max_zone_deviation_percent = maxZoneDeviationPercent;
-
   return out;
 }
 
@@ -307,87 +212,54 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
       const auth = requireAoActAnyScopeV0(req, reply, ["acceptance.evaluate", "ao_act.task.write"]);
       if (!auth) return;
       if (!requireAcceptanceEvaluateRoleV1(reply, auth)) return;
-
       const body = EvaluateRequestSchema.parse((req as any).body ?? {});
-      const tenant: TenantTriple = {
-        tenant_id: body.tenant_id,
-        project_id: body.project_id,
-        group_id: body.group_id
-      };
+      const tenant: TenantTriple = { tenant_id: body.tenant_id, project_id: body.project_id, group_id: body.group_id };
       if (!requireTenantMatchOr404(auth, tenant, reply)) return;
 
       const taskFact = await loadTaskFact(pool, body.act_task_id, tenant);
       if (!taskFact) return reply.status(404).send({ ok: false, error: "TASK_NOT_FOUND" });
-
       const receiptFact = await loadReceiptFact(pool, body.act_task_id, tenant);
       if (!receiptFact) return reply.status(404).send({ ok: false, error: "RECEIPT_NOT_FOUND" });
 
       const taskPayload = taskFact.record_json?.payload ?? {};
-      const telemetry = deriveTelemetryFromReceipt(receiptFact.record_json);
-      const taskFactOccurredAtMs = Number(Date.parse(String(taskFact?.occurred_at ?? ""))) || null;
-      const device_id = typeof taskPayload?.meta?.device_id === "string"
-        ? taskPayload.meta.device_id
-        : (typeof taskPayload?.device_id === "string" ? taskPayload.device_id : null);
-      const fieldIdFromPayload = typeof taskPayload.field_id === "string" ? taskPayload.field_id : null;
-      const field_id = fieldIdFromPayload || await inferFieldIdFromDeviceBinding(pool, tenant.tenant_id, device_id);
-      const start_ts_raw = Number(taskPayload?.time_window?.start_ts ?? 0);
-      const end_ts_raw = Number(taskPayload?.time_window?.end_ts ?? 0);
-      const start_ts = Number.isFinite(start_ts_raw) && start_ts_raw > 0 ? start_ts_raw : (taskFactOccurredAtMs ?? Date.now() - 2 * 60 * 60 * 1000);
-      const end_ts = Number.isFinite(end_ts_raw) && end_ts_raw > 0 ? end_ts_raw : (start_ts + 2 * 60 * 60 * 1000);
-      const program_id = typeof taskPayload?.program_id === "string" ? taskPayload.program_id : null;
-      const [field_polygon, track_points, acceptance_policy_ref, derived_states] = await Promise.all([
-        loadFieldPolygon(pool, tenant.tenant_id, field_id),
-        loadTrackPoints(pool, tenant, device_id, start_ts, end_ts),
-        loadProgramAcceptancePolicyRef(pool, tenant, program_id),
-        loadAcceptanceDerivedStates(pool, tenant, field_id)
-      ]);
+      const receiptPayload = receiptFact.record_json?.payload ?? {};
+      const device_id = typeof taskPayload?.meta?.device_id === "string" ? taskPayload.meta.device_id : (typeof taskPayload?.device_id === "string" ? taskPayload.device_id : null);
+      const field_id = typeof taskPayload.field_id === "string" ? taskPayload.field_id : (typeof receiptPayload.field_id === "string" ? receiptPayload.field_id : null);
       const executionJudgeId = await loadLatestExecutionJudgeForTask(pool, tenant, body.act_task_id);
       const executionJudgeIdFromInput = typeof body.execution_judge_id === "string" ? body.execution_judge_id.trim() : "";
       let executionJudge = null as Awaited<ReturnType<typeof loadJudgeResultV2>> | null;
       if (executionJudgeIdFromInput) {
         executionJudge = await loadJudgeResultV2(pool, { ...tenant, judge_id: executionJudgeIdFromInput });
         if (!executionJudge) return reply.status(404).send({ ok: false, error: "EXECUTION_JUDGE_NOT_FOUND" });
-        if (executionJudge.judge_kind !== "EXECUTION") {
-          return reply.status(400).send({ ok: false, error: "INVALID_EXECUTION_JUDGE_KIND" });
-        }
+        if (executionJudge.judge_kind !== "EXECUTION") return reply.status(400).send({ ok: false, error: "INVALID_EXECUTION_JUDGE_KIND" });
       }
-
       const effectiveExecutionJudgeId = executionJudgeIdFromInput || executionJudgeId || "";
-      const judgeResultIds = Array.from(new Set([
-        ...(body.judge_result_ids ?? []),
-        ...(effectiveExecutionJudgeId ? [effectiveExecutionJudgeId] : [])
-      ]));
+      const judgeResultIds = Array.from(new Set([...(body.judge_result_ids ?? []), ...(effectiveExecutionJudgeId ? [effectiveExecutionJudgeId] : [])]));
 
       const evaluated = evaluateAcceptanceV1({
         action_type: String(taskPayload.action_type ?? ""),
         parameters: (taskPayload.parameters ?? {}) as Record<string, any>,
-        telemetry: { ...telemetry, field_polygon, track_points },
+        telemetry: deriveTelemetryFromReceipt(receiptFact.record_json),
         receipt: receiptFact.record_json ?? {},
-        water_flow_state: derived_states.water_flow_state,
-        fertility_state: derived_states.fertility_state,
-        sensor_quality_state: derived_states.sensor_quality_state,
-        acceptance_policy_ref
+        water_flow_state: null,
+        fertility_state: null,
+        sensor_quality_state: null,
+        acceptance_policy_ref: null,
       });
-      const trace_id =
-        String(taskPayload?.trace_id ?? taskPayload?.meta?.trace_id ?? "").trim()
-        || `trace_${randomUUID().replace(/-/g, "")}`;
+      const formalGate = buildFormalAcceptanceGateV1(receiptFact.record_json ?? {});
+      const initialVerdict = toVerdict(evaluated.result);
+      const gatedVerdict = applyFormalAcceptanceGateV1(initialVerdict, formalGate);
+      const trace_id = String(taskPayload?.trace_id ?? taskPayload?.meta?.trace_id ?? "").trim() || `trace_${randomUUID().replace(/-/g, "")}`;
+
       await appendSkillTraceFact(pool, {
         tenant_id: tenant.tenant_id,
         project_id: tenant.project_id,
         group_id: tenant.group_id,
         trace_id,
         skill_run_id: null,
-        inputs: {
-          action_type: String(taskPayload.action_type ?? ""),
-          parameters: taskPayload.parameters ?? {},
-          acceptance_policy_ref,
-        },
-        outputs: {
-          result: evaluated.result,
-          metrics: evaluated.metrics,
-          explanation_codes: evaluated.explanation_codes ?? [],
-        },
-        confidence: { level: "MEDIUM", basis: "estimated", reasons: ["acceptance_engine_v1"] },
+        inputs: { action_type: String(taskPayload.action_type ?? ""), parameters: taskPayload.parameters ?? {} },
+        outputs: { result: evaluated.result, metrics: evaluated.metrics, explanation_codes: evaluated.explanation_codes ?? [], formal_gate: formalGate },
+        confidence: { level: "MEDIUM", basis: "estimated", reasons: ["acceptance_engine_v1", "formal_acceptance_gate_v1"] },
         evidence_refs: [taskFact.fact_id, receiptFact.fact_id, ...judgeResultIds],
       });
       await appendSkillRunFact(pool, {
@@ -398,7 +270,7 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
         version: evaluated.acceptance_skill_version ?? "v1",
         category: "ACCEPTANCE",
         status: "ACTIVE",
-        result_status: evaluated.result === "PASSED" ? "SUCCESS" : (evaluated.result === "FAILED" ? "FAILED" : "SKIPPED"),
+        result_status: gatedVerdict === "PASS" ? "SUCCESS" : (gatedVerdict === "FAIL" ? "FAILED" : "SKIPPED"),
         trigger_stage: "after_acceptance",
         scope_type: "FIELD",
         rollout_mode: "DIRECT",
@@ -408,8 +280,8 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
         operation_plan_id: typeof taskPayload.operation_plan_id === "string" ? taskPayload.operation_plan_id : null,
         field_id,
         device_id,
-        input_digest: digestJson({ action_type: taskPayload.action_type, parameters: taskPayload.parameters, receipt: receiptFact.record_json?.payload ?? {}, derived_states, acceptance_policy_ref }),
-        output_digest: digestJson(evaluated),
+        input_digest: digestJson({ action_type: taskPayload.action_type, parameters: taskPayload.parameters, receipt: receiptPayload }),
+        output_digest: digestJson({ evaluated, gatedVerdict, formalGate }),
         error_code: null,
         duration_ms: 0,
       });
@@ -417,23 +289,6 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
       const acceptanceFactId = randomUUID();
       const nowIso = new Date().toISOString();
       const expectedDurationMin = Number(taskPayload?.parameters?.duration_min);
-      const variableExecution = receiptFact.record_json?.payload?.meta?.variable_execution;
-      const variableMode = String(variableExecution?.mode ?? "").trim().toUpperCase();
-      const zoneResults = Array.isArray(variableExecution?.zone_applications) ? variableExecution.zone_applications.map((z: any) => {
-        const planned = Number(z?.planned_amount);
-        const applied = Number(z?.applied_amount);
-        const coverageRaw = Number(z?.coverage_percent);
-        const coveragePercent = Number.isFinite(coverageRaw) && coverageRaw <= 1 ? coverageRaw * 100 : coverageRaw;
-        const deviationPercent = Number.isFinite(Number(z?.deviation_percent))
-          ? Number(z.deviation_percent)
-          : (Number.isFinite(planned) && planned > 0 && Number.isFinite(applied) ? ((applied - planned) / planned) * 100 : null);
-        const zoneVerdict = String(z?.status ?? "").toUpperCase() === "SKIPPED" || coveragePercent < 95 || (deviationPercent != null && Math.abs(deviationPercent) > 15) ? "FAIL" : "PASS";
-        return { ...z, coverage_percent: coveragePercent, deviation_percent: deviationPercent, zone_acceptance_result: zoneVerdict };
-      }) : [];
-      const failedRequiredZones = zoneResults.filter((z: any) => z?.required !== false && String(z?.zone_acceptance_result ?? "").toUpperCase() !== "PASS").map((z: any) => String(z?.zone_id ?? "")).filter(Boolean);
-      const rollupVerdict = variableMode === "VARIABLE_BY_ZONE" && zoneResults.length > 0
-        ? (failedRequiredZones.length === 0 ? "PASS" : "FAIL")
-        : toVerdict(evaluated.result);
       const acceptanceRecord = {
         type: "acceptance_result_v1",
         payload: GeoxContracts.AcceptanceResultV1PayloadSchema.parse({
@@ -446,92 +301,74 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
           operation_plan_id: typeof taskPayload.operation_plan_id === "string" ? taskPayload.operation_plan_id : undefined,
           trace_id,
           program_id: typeof taskPayload.program_id === "string" ? taskPayload.program_id : undefined,
-          verdict: rollupVerdict,
+          verdict: gatedVerdict,
           metrics: buildAcceptanceMetrics({ evaluated, expectedDurationMin: Number.isFinite(expectedDurationMin) ? expectedDurationMin : null }),
           rule_id: evaluated.rule_id,
-          explanation_codes: evaluated.explanation_codes,
+          explanation_codes: Array.from(new Set([...(evaluated.explanation_codes ?? []), ...formalGate.blocking_reasons])),
           acceptance_skill_id: evaluated.acceptance_skill_id,
           acceptance_skill_version: evaluated.acceptance_skill_version,
-          input_digest: digestJson({ action_type: taskPayload.action_type, parameters: taskPayload.parameters, receipt: receiptFact.record_json?.payload ?? {}, derived_states, acceptance_policy_ref }),
-          output_digest: digestJson({ result: evaluated.result, verdict: rollupVerdict, explanation_codes: evaluated.explanation_codes, metrics: evaluated.metrics }),
+          input_digest: digestJson({ action_type: taskPayload.action_type, parameters: taskPayload.parameters, receipt: receiptPayload }),
+          output_digest: digestJson({ result: evaluated.result, initialVerdict, gatedVerdict, explanation_codes: evaluated.explanation_codes, metrics: evaluated.metrics, formalGate }),
           evaluated_at: nowIso,
           evidence_refs: [taskFact.fact_id, receiptFact.fact_id, ...judgeResultIds],
           execution_judge_id: effectiveExecutionJudgeId || undefined,
           execution_judge_verdict: executionJudge?.verdict || undefined,
-          variable_operation: variableMode === "VARIABLE_BY_ZONE" || undefined,
-          operation_rollup_policy: variableMode === "VARIABLE_BY_ZONE" ? "ALL_REQUIRED_PASS" : undefined,
-          zone_results: zoneResults.length ? zoneResults : undefined,
-          zone_matrix: zoneResults.length ? zoneResults : undefined,
-          failed_required_zones: failedRequiredZones.length ? failedRequiredZones : undefined,
-          as_executed_id: String((taskPayload as any)?.meta?.as_executed_id ?? "").trim() || undefined,
-          as_applied_id: String((taskPayload as any)?.meta?.as_applied_id ?? "").trim() || undefined,
-          receipt_id: String(receiptFact.record_json?.payload?.receipt_id ?? receiptFact.fact_id ?? "").trim() || undefined,
+          receipt_id: String(receiptPayload?.receipt_id ?? receiptFact.fact_id ?? "").trim() || undefined,
+          formal_gate: formalGate,
+          formal_acceptance: formalGate.formal_acceptance,
+          formal_evidence_passed: formalGate.formal_evidence_passed,
+          formal_execution_passed: formalGate.formal_execution_passed,
+          non_simulated_chain: formalGate.non_simulated_chain,
+          source_lane: formalGate.source_lane,
+          is_simulated: formalGate.is_simulated,
+          blocking_reasons: formalGate.blocking_reasons,
+          customer_visible_eligible: formalGate.customer_visible_eligible,
+          trust_level: formalGate.trust_level,
         })
       };
 
-      await pool.query(
-        "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
-        [acceptanceFactId, FACT_SOURCE_ACCEPTANCE_V1, acceptanceRecord]
-      );
+      await pool.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", [acceptanceFactId, FACT_SOURCE_ACCEPTANCE_V1, acceptanceRecord]);
 
-      if (acceptanceRecord.payload.verdict === "PASS" && field_id) {
-        const observedParams = (receiptFact.record_json?.payload?.observed_parameters ?? {}) as Record<string, unknown>;
+      if (acceptanceRecord.payload.verdict === "PASS" && acceptanceRecord.payload.formal_acceptance === true && field_id) {
+        const observedParams = (receiptPayload?.observed_parameters ?? {}) as Record<string, unknown>;
         const soilMoistureDeltaRaw = Number(observedParams?.soil_moisture_delta);
         const pre_soil_moisture = Number(observedParams?.pre_soil_moisture ?? observedParams?.before_soil_moisture ?? 0.18);
         const post_soil_moisture = Number(observedParams?.post_soil_moisture ?? observedParams?.after_soil_moisture ?? (Number.isFinite(pre_soil_moisture) && Number.isFinite(soilMoistureDeltaRaw) ? pre_soil_moisture + soilMoistureDeltaRaw : 0.24));
-        const soil_moisture_delta = Number.isFinite(soilMoistureDeltaRaw) ? soilMoistureDeltaRaw : undefined;
-        const recommendation_id = String((taskPayload as any)?.meta?.recommendation_id ?? "").trim() || undefined;
-        const prescription_id = String((taskPayload as any)?.meta?.prescription_id ?? "").trim() || undefined;
-        const recommendationSkillTraceRef = String((taskPayload as any)?.meta?.skill_trace_ref ?? (receiptFact.record_json?.payload as any)?.meta?.skill_trace_ref ?? "").trim() || undefined;
         const opId = typeof taskPayload.operation_plan_id === "string" ? taskPayload.operation_plan_id : (typeof taskPayload.operation_id === "string" ? taskPayload.operation_id : body.act_task_id);
         const evidenceRefs = [taskFact.fact_id, receiptFact.fact_id, ...judgeResultIds, acceptanceFactId];
-        try {
-          await recordMemoryV1(pool, tenant.tenant_id, {
-            type: "FIELD_RESPONSE_MEMORY", operation_id: opId, task_id: body.act_task_id, field_id,
-            project_id: tenant.project_id, group_id: tenant.group_id,
-            recommendation_id, prescription_id, acceptance_id: acceptanceFactId,
-            skill_refs: [{ skill_id: "irrigation_deficit_skill_v1", skill_version: "v1", trace_id: recommendationSkillTraceRef }],
-            skill_trace_ref: recommendationSkillTraceRef,
-            metrics: {
-              before_soil_moisture: Number.isFinite(pre_soil_moisture) ? pre_soil_moisture : 0.18,
-              after_soil_moisture: Number.isFinite(post_soil_moisture) ? post_soil_moisture : 0.24,
-              soil_moisture_delta,
-              target_range: { min: 0.22, max: 0.28 },
-              success: true,
-              acceptance_passed: true,
-            },
-            evidence_refs: evidenceRefs, summary: `Acceptance passed for task ${body.act_task_id}`,
-          });
-          await recordMemoryV1(pool, tenant.tenant_id, {
-            type: "DEVICE_RELIABILITY_MEMORY", field_id, operation_id: opId, task_id: body.act_task_id,
-            project_id: tenant.project_id, group_id: tenant.group_id,
-            recommendation_id, prescription_id, acceptance_id: acceptanceFactId,
-            skill_id: "mock_valve_control_skill_v1",
-            skill_refs: [{ skill_id: "irrigation_deficit_skill_v1", skill_version: "v1", trace_id: recommendationSkillTraceRef }],
-            skill_trace_ref: recommendationSkillTraceRef,
-            metrics: { success: true, confidence: 0.9 },
-            evidence_refs: evidenceRefs,
-            summary: `Valve response confirmed for task ${body.act_task_id}`,
-          });
-          await recordMemoryV1(pool, tenant.tenant_id, {
-            type: "SKILL_PERFORMANCE_MEMORY", field_id, operation_id: opId, task_id: body.act_task_id,
-            project_id: tenant.project_id, group_id: tenant.group_id,
-            recommendation_id, prescription_id, acceptance_id: acceptanceFactId,
-            skill_refs: [{ skill_id: "irrigation_deficit_skill_v1", skill_version: "v1", trace_id: recommendationSkillTraceRef }],
-            skill_trace_ref: recommendationSkillTraceRef,
-            evidence_refs: evidenceRefs,
-            summary: "缺水诊断能力触发后形成灌溉处方，审批通过，执行后验收通过",
-          });
-        } catch (error) {
-          app.log.error({ error }, "recordMemoryV1 failed after acceptance");
-          throw error;
-        }
+        await recordMemoryV1(pool, tenant.tenant_id, {
+          type: "FIELD_RESPONSE_MEMORY",
+          operation_id: opId,
+          task_id: body.act_task_id,
+          field_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
+          acceptance_id: acceptanceFactId,
+          formal_acceptance_id: acceptanceFactId,
+          memory_lane: "FORMAL_FIELD_MEMORY",
+          trust_level: "FORMAL_ACCEPTED",
+          source_lane: "FORMAL_OPERATION",
+          customer_visible_memory: true,
+          learning_eligible: true,
+          metrics: {
+            before_soil_moisture: Number.isFinite(pre_soil_moisture) ? pre_soil_moisture : 0.18,
+            after_soil_moisture: Number.isFinite(post_soil_moisture) ? post_soil_moisture : 0.24,
+            soil_moisture_delta: Number.isFinite(soilMoistureDeltaRaw) ? soilMoistureDeltaRaw : undefined,
+            target_range: { min: 0.22, max: 0.28 },
+            success: true,
+            acceptance_passed: true,
+          },
+          evidence_refs: evidenceRefs,
+          summary: `Formal acceptance passed for task ${body.act_task_id}`,
+        });
       }
-      if (acceptanceRecord.payload.verdict === "FAIL" || acceptanceRecord.payload.verdict === "PARTIAL") {
-        const trigger = acceptanceRecord.payload.verdict === "FAIL" ? "ACCEPTANCE_FAILED" : "ACCEPTANCE_INCONCLUSIVE";
+
+      if (acceptanceRecord.payload.verdict === "FAIL" || acceptanceRecord.payload.verdict === "PARTIAL" || acceptanceRecord.payload.verdict === "NEEDS_REVIEW" || acceptanceRecord.payload.verdict === "INSUFFICIENT_EVIDENCE") {
+        const trigger = acceptanceRecord.payload.verdict === "FAIL" ? "ACCEPTANCE_FAILED" : "ACCEPTANCE_NEEDS_REVIEW";
         const fs = await createFailSafeEventV1(pool, { ...tenant, act_task_id: body.act_task_id, field_id: field_id ?? null, trigger_type: trigger, severity: acceptanceRecord.payload.verdict === "FAIL" ? "HIGH" : "MEDIUM", reason_code: trigger, blocked_action: "acceptance.evaluate", source: "api/v1/acceptance/evaluate" });
         await createManualTakeoverV1(pool, { ...tenant, fail_safe_event_id: fs.fail_safe_event_id, act_task_id: body.act_task_id, field_id: field_id ?? null, reason_code: trigger });
       }
+
       await recordSecurityAuditEventV1(pool, {
         tenant_id: tenant.tenant_id,
         project_id: tenant.project_id,
@@ -543,11 +380,7 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
         field_id: field_id ?? undefined,
         result: "ALLOW",
         source: "api/v1/acceptance/evaluate",
-        metadata: {
-          act_task_id: body.act_task_id,
-          verdict: acceptanceRecord.payload.verdict,
-          acceptance_skill_id: acceptanceRecord.payload.acceptance_skill_id
-        }
+        metadata: { act_task_id: body.act_task_id, verdict: acceptanceRecord.payload.verdict, formal_acceptance: acceptanceRecord.payload.formal_acceptance, acceptance_skill_id: acceptanceRecord.payload.acceptance_skill_id }
       });
 
       return reply.send({
@@ -557,12 +390,18 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
         judge_result_ids_used: judgeResultIds,
         acceptance: {
           verdict: acceptanceRecord.payload.verdict,
-          explanation_codes: evaluated.explanation_codes,
+          explanation_codes: acceptanceRecord.payload.explanation_codes,
+          formal_acceptance: acceptanceRecord.payload.formal_acceptance,
+          formal_evidence_passed: acceptanceRecord.payload.formal_evidence_passed,
+          source_lane: acceptanceRecord.payload.source_lane,
+          is_simulated: acceptanceRecord.payload.is_simulated,
+          blocking_reasons: acceptanceRecord.payload.blocking_reasons,
+          customer_visible_eligible: acceptanceRecord.payload.customer_visible_eligible,
           metrics: {
             formal_evidence_count: Number(evaluated.metrics?.formal_evidence_count ?? 0),
             simulated_evidence_count: Number(evaluated.metrics?.simulated_evidence_count ?? 0),
-            formal_execution_passed: Number(evaluated.metrics?.formal_execution_passed ?? 0),
-            non_simulated_chain: Number(evaluated.metrics?.non_simulated_chain ?? 0),
+            formal_execution_passed: formalGate.formal_execution_passed ? 1 : 0,
+            non_simulated_chain: formalGate.non_simulated_chain ? 1 : 0,
           },
         }
       });
@@ -575,18 +414,11 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
     try {
       const auth = requireAoActAnyScopeV0(req, reply, ["acceptance.read", "ao_act.index.read"]);
       if (!auth) return;
-
       const q = AcceptanceReadQuerySchema.parse((req as any).query ?? {});
-      const tenant: TenantTriple = {
-        tenant_id: q.tenant_id,
-        project_id: q.project_id,
-        group_id: q.group_id
-      };
+      const tenant: TenantTriple = { tenant_id: q.tenant_id, project_id: q.project_id, group_id: q.group_id };
       if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-
       const limitRaw = Number(q.limit ?? 20);
       const limit = Number.isFinite(limitRaw) ? Math.min(100, Math.max(1, Math.trunc(limitRaw))) : 20;
-
       const out = await pool.query(
         `SELECT fact_id, occurred_at, (record_json::jsonb) AS record_json
            FROM facts
@@ -599,15 +431,7 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
           LIMIT ${limit}`,
         [tenant.tenant_id, tenant.project_id, tenant.group_id, q.act_task_id]
       );
-
-      return reply.send({
-        ok: true,
-        items: (out.rows ?? []).map((row: any) => ({
-          fact_id: String(row.fact_id),
-          occurred_at: row.occurred_at,
-          record_json: normalizeRecordJson(row.record_json)
-        }))
-      });
+      return reply.send({ ok: true, items: (out.rows ?? []).map((row: any) => ({ fact_id: String(row.fact_id), occurred_at: row.occurred_at, record_json: normalizeRecordJson(row.record_json) })) });
     } catch (error: any) {
       return reply.status(400).send({ ok: false, error: String(error?.message ?? error ?? "INVALID_REQUEST") });
     }
