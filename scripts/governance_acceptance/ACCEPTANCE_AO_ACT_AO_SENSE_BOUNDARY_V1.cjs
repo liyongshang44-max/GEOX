@@ -34,7 +34,6 @@ const senseControl = read(files.senseControl);
 const inspection = read(files.inspection);
 const variableAcceptance = read(files.variableAcceptance);
 
-// Variable prescription -> task candidate, not ACKED/executing/success.
 assertIncludes(aoActPrimary, 'interceptVariablePrescriptionTaskV1', 'AO-ACT primary route variable prescription intercept');
 assertIncludes(aoActPrimary, 'writeVariableTaskCandidateV1', 'AO-ACT variable candidate writer');
 assertIncludes(aoActPrimary, 'task_status: "TASK_CREATED"', 'variable route response task status');
@@ -53,11 +52,9 @@ assertNotIncludes(variableRouteBlock, 'status: "EXECUTING"', 'variable candidate
 assertNotIncludes(variableRouteBlock, 'status: "SUCCESS"', 'variable candidate writer must not succeed');
 assertNotIncludes(variableRouteBlock, 'status: "SUCCEEDED"', 'variable candidate writer must not succeed');
 
-// Legacy/control route still has historical ACKED path, but PR-9 must intercept v1 primary before it.
 assertIncludes(aoActControl, 'status: "ACKED"', 'control route historical ACKED path retained as audited legacy risk');
 assertIncludes(aoActPrimary, 'from-variable-prescription', 'v1 route owns variable prescription endpoint');
 
-// Parameter source contract must use enum-like source lanes.
 for (const value of ['FORMAL_PRESCRIPTION', 'EXPLICIT_OPERATOR_INPUT', 'DEMO_DEFAULT']) {
   assertIncludes(variableTask, `"${value}"`, 'variable action parameter source enum');
 }
@@ -67,31 +64,37 @@ assertIncludes(variableTask, 'coverage_percent: demoDefaultSource', 'coverage so
 assertIncludes(variableTask, 'amount: formalPrescriptionSource', 'amount source must be formal prescription');
 assertNotIncludes(variableTask, '"helper default"', 'helper default string must be replaced by DEMO_DEFAULT');
 
-// AO-SENSE receipt must remain observation-only and must not imply AO-ACT execution or acceptance pass.
 assertIncludes(sensePrimary, 'registerAoSenseV1Routes', 'sense primary route registration');
 assertIncludes(senseControl, 'receipt_success_is_observation_only: true', 'AO-SENSE receipt observation-only boundary');
 assertIncludes(senseControl, 'does_not_imply_ao_act_execution_success: true', 'AO-SENSE not AO-ACT success');
 assertIncludes(senseControl, 'does_not_imply_acceptance_pass: true', 'AO-SENSE not acceptance pass');
 assertIncludes(senseControl, 'allowed_evidence_ref: "observation_fact_only"', 'AO-SENSE evidence boundary');
-assertIncludes(senseControl, 'AO_SENSE_RECEIPT_REQUIRES_OBSERVATION_FACT_KIND', 'AO-SENSE evidence kind guard');
-assertIncludes(senseControl, 'AO_SENSE_RECEIPT_REQUIRES_OBSERVATION_FACT', 'AO-SENSE observation fact ref guard');
+assertIncludes(senseControl, 'evidence_validation: "db_fact_type_device_observation_v1"', 'AO-SENSE evidence DB type validation label');
+assertIncludes(senseControl, 'validateObservationEvidenceRefShape', 'AO-SENSE receipt structural ref validation helper');
+assertIncludes(senseControl, 'validateObservationOnlyEvidenceRefs', 'AO-SENSE receipt DB ref validation helper');
+assertIncludes(senseControl, 'SELECT fact_id, record_json::jsonb AS record_json', 'AO-SENSE receipt must query facts table');
+assertIncludes(senseControl, 'WHERE fact_id = ANY($1::text[])', 'AO-SENSE receipt must validate referenced facts by id');
+assertIncludes(senseControl, 'allowedObservationFactTypes', 'AO-SENSE receipt must use explicit fact type allowlist');
+assertIncludes(senseControl, 'new Set(["device_observation_v1"])', 'AO-SENSE receipt must allow device_observation_v1 only');
+assertIncludes(senseControl, 'AO_SENSE_OBSERVATION_FACT_NOT_FOUND', 'AO-SENSE missing observation fact guard');
+assertIncludes(senseControl, 'AO_SENSE_RECEIPT_REQUIRES_OBSERVATION_FACT_TYPE', 'AO-SENSE wrong fact type guard');
 assertIncludes(senseControl, 'ao_act_execution_success: false', 'AO-SENSE explicit non AO-ACT success');
 assertIncludes(senseControl, 'acceptance_pass: false', 'AO-SENSE explicit non acceptance pass');
 const senseReceiptBlock = bodyOf(senseControl, 'async function handleCreateSenseReceipt', 'async function handleListSenseTasks');
+assertNotIncludes(senseReceiptBlock, 'startsWith("obs_")', 'AO-SENSE receipt must not use obs_ prefix validation');
+assertNotIncludes(senseReceiptBlock, 'startsWith("observation_")', 'AO-SENSE receipt must not use observation_ prefix validation');
 assertNotIncludes(senseReceiptBlock, 'ao_act_receipt_v0', 'AO-SENSE receipt must not write AO-ACT receipt');
 assertNotIncludes(senseReceiptBlock, 'operation_plan_v1', 'AO-SENSE receipt must not write operation plan');
 assertNotIncludes(senseReceiptBlock, 'operation_plan_transition_v1', 'AO-SENSE receipt must not write operation transition');
 assertNotIncludes(senseReceiptBlock, 'SUCCESS', 'AO-SENSE receipt must not write execution success');
 assertNotIncludes(senseReceiptBlock, 'SUCCEEDED', 'AO-SENSE receipt must not write execution succeeded');
 
-// PDI inspection acceptance must not spawn AO-ACT spray tasks.
 const pdiAcceptanceBlock = bodyOf(inspection, 'app.post("/api/v1/inspection/pest-disease/acceptance/evaluate"', 'app.get("/api/v1/inspection/pest-disease/:inspection_id"');
 assertNotIncludes(pdiAcceptanceBlock, '/api/v1/actions/task', 'PDI acceptance must not call AO-ACT task API');
 assertNotIncludes(pdiAcceptanceBlock, 'ao_act_task_v0', 'PDI acceptance must not write AO-ACT task');
 assertNotIncludes(pdiAcceptanceBlock, 'SPRAY', 'PDI acceptance must not synthesize spray');
 assertNotIncludes(pdiAcceptanceBlock, 'spray', 'PDI acceptance must not synthesize spray');
 
-// Dynamic acceptance script must prove not-ACKED and source semantics.
 assertIncludes(variableAcceptance, 'operation_plan_not_auto_acked', 'variable acceptance not auto acked check');
 assertIncludes(variableAcceptance, 'operation_plan_transition_not_auto_acked', 'variable acceptance transition not auto acked check');
 assertIncludes(variableAcceptance, 'dispatch_ack_not_synthesized', 'variable acceptance dispatch ack check');
