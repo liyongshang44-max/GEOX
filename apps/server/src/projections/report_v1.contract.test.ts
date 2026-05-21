@@ -4,7 +4,12 @@ import assert from "node:assert/strict";
 import { projectOperationReportV1 } from "./report_v1.js";
 import type { OperationStateV1 } from "./operation_state_v1.js";
 
-function buildState(finalStatus: OperationStateV1["final_status"]): OperationStateV1 {
+function buildState(
+  finalStatus: OperationStateV1["final_status"],
+  opts: { formal?: boolean } = {},
+): OperationStateV1 {
+  const formal = opts.formal === true;
+
   return {
     operation_id: "op-1",
     operation_plan_id: "plan-1",
@@ -33,11 +38,23 @@ function buildState(finalStatus: OperationStateV1["final_status"]): OperationSta
     actual_effect: null,
     dispatch_status: "PENDING",
     receipt_status: "PENDING",
-    acceptance: { status: "PENDING", missing: [] },
+    acceptance: { status: formal && finalStatus === "SUCCESS" ? "PASS" : formal && finalStatus === "FAILED" ? "FAIL" : "PENDING", missing: [] },
     final_status: finalStatus,
     invalid_reason: null,
     last_event_ts: Date.now(),
     timeline: [],
+    state_source: formal ? "FORMAL_ACCEPTANCE" : "FALLBACK_LIMITED",
+    formal_status: formal && finalStatus === "SUCCESS"
+      ? "FORMAL_PASS"
+      : formal && finalStatus === "FAILED"
+        ? "FORMAL_FAIL"
+        : "NOT_FORMAL",
+    source_facts: [],
+    projection_rule: "test_fixture",
+    freshness: { updated_at: new Date().toISOString(), stale: false },
+    blocking_reasons: formal ? [] : ["formal_acceptance_required"],
+    fallback_limited: !formal,
+    customer_visible_eligible: formal && finalStatus === "SUCCESS",
     manual_fallback: null,
     skill_trace: {
       crop_skill: { skill_id: null, version: null, run_id: null, result_status: null, error_code: null },
@@ -72,7 +89,7 @@ test("report v1 contract: workflow exposes linked_alert_ids", () => {
   const output = projectOperationReportV1({
     tenant: { tenant_id: "t1", project_id: "p1", group_id: "g1" },
     operation_plan_id: "plan-1",
-    operation_state: buildState("SUCCESS"),
+    operation_state: buildState("SUCCESS", { formal: true }),
     evidence_bundle: {},
     acceptance: null,
     receipt: null,
