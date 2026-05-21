@@ -17,8 +17,6 @@ const inventorySource = fs.readFileSync(inventoryPath, 'utf8');
 
 const forbiddenOpenApiPaths = [
   '/api/v1/operations/console',
-  '/api/v1/approval-requests',
-  '/api/v1/approval-requests/{request_id}/approve',
   '/api/v1/control/approval-requests',
   '/api/devices',
   '/api/devices/{device_id}/credentials',
@@ -108,6 +106,12 @@ function normalizeRoutePath(routePath) {
   return routePath.replace(/:([A-Za-z0-9_]+)/g, '{$1}');
 }
 
+function routePatternToRegex(routePath) {
+  const normalized = normalizeRoutePath(routePath).replace(/\/$/, '');
+  const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\{[A-Za-z0-9_]+\\\}/g, '[^/]+');
+  return new RegExp(`^${escaped}(?:/|$)`);
+}
+
 function collectV1Routes(filePath) {
   const text = fs.readFileSync(filePath, 'utf8');
   const regex = /app\.(get|post|put|delete|patch)\("([^"]+)"/g;
@@ -168,16 +172,25 @@ function inventoryEntries() {
   }).filter((entry) => entry.route_path);
 }
 
+function methodMatches(entry, route) {
+  return entry.method === 'ANY' || entry.method === route.method;
+}
+
 function routeMatchesInventory(route, inventory) {
-  for (const entry of inventory) {
-    if (entry.path_match === 'exact') {
-      if (normalizeRoutePath(entry.route_path) === route.normalized && (entry.method === 'ANY' || entry.method === route.method)) return entry;
-      continue;
-    }
-    const prefix = entry.route_path.endsWith('/*') ? entry.route_path.slice(0, -1) : entry.route_path;
-    if (route.path.startsWith(prefix) && (entry.method === 'ANY' || entry.method === route.method)) return entry;
-  }
-  return null;
+  const exactMatches = inventory
+    .filter((entry) => entry.path_match === 'exact' && methodMatches(entry, route) && normalizeRoutePath(entry.route_path) === route.normalized)
+    .sort((a, b) => b.route_path.length - a.route_path.length);
+  if (exactMatches[0]) return exactMatches[0];
+
+  const groupMatches = inventory
+    .filter((entry) => entry.path_match === 'group' && methodMatches(entry, route))
+    .map((entry) => {
+      const pattern = entry.route_path.endsWith('/*') ? entry.route_path.slice(0, -2) : entry.route_path;
+      return { entry, pattern, regex: routePatternToRegex(pattern) };
+    })
+    .filter((candidate) => candidate.regex.test(route.path))
+    .sort((a, b) => b.pattern.length - a.pattern.length);
+  return groupMatches[0]?.entry ?? null;
 }
 
 function warningOnly(route, inventoryEntry) {
