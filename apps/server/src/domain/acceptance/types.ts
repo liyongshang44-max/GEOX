@@ -1,4 +1,4 @@
-export type AcceptanceVerdict = "PASS" | "FAIL" | "PENDING";
+export type AcceptanceVerdict = "PASS" | "FAIL" | "PENDING" | "NEEDS_FORMAL_ACCEPTANCE" | "INSUFFICIENT_EVIDENCE";
 
 export interface AcceptanceResultV1 {
   acceptance_id: string;
