@@ -12,7 +12,13 @@ export type OperationReportFormalScenarioTypeV1 =
   | "FORMAL_FERTILIZATION"
   | "FORMAL_PEST_DISEASE_INSPECTION"
   | "UNKNOWN";
-export type OperationReportPestDiseaseInspectionV1 = PestDiseaseInspectionReportProjectionV1;
+export type OperationReportPestDiseaseInspectionV1 = PestDiseaseInspectionReportProjectionV1 & {
+  inspection_id: PestDiseaseInspectionReportProjectionV1["inspection_id"];
+  acceptance_status: PestDiseaseInspectionReportProjectionV1["acceptance_status"];
+  customer_visible_eligible: PestDiseaseInspectionReportProjectionV1["customer_visible_eligible"];
+  observation_evidence: PestDiseaseInspectionReportProjectionV1["observation_evidence"];
+  blocking_reasons: PestDiseaseInspectionReportProjectionV1["blocking_reasons"];
+};
 export type OperationReportFertilizationV1 = FertilizationReportProjectionV1;
 
 export type FieldMemorySummary = {
