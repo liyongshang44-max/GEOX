@@ -25,6 +25,11 @@ export type DeviceObservationServiceV1Input = {
   confidence: number | null;
   observed_at_ts_ms: number;
   source_fact_id: string;
+  source_lane?: "FORMAL_OPERATION" | "SIMULATED_DEV_ONLY" | "DEBUG_ONLY" | "MANUAL_IMPORT" | "UNKNOWN";
+  is_simulated?: boolean;
+  formal_eligible?: boolean;
+  evidence_level?: "DEBUG" | "FORMAL" | "STRONG";
+  dev_source?: string | null;
 };
 
 type DeviceObservationDbConn = PoolClient;
@@ -84,6 +89,19 @@ function normalizeQualityFlags(input: string[]): DeviceObservationQualityFlagV1[
   return [...out.values()];
 }
 
+function isSimulatedObservation(input: DeviceObservationServiceV1Input): boolean {
+  const lane = String(input.source_lane ?? "").trim().toUpperCase();
+  const level = String(input.evidence_level ?? "").trim().toUpperCase();
+  const dev = String(input.dev_source ?? "").trim().toUpperCase();
+  return input.is_simulated === true
+    || input.formal_eligible === false
+    || lane === "SIMULATED_DEV_ONLY"
+    || lane === "DEBUG_ONLY"
+    || level === "DEBUG"
+    || dev.includes("SIMULATOR")
+    || dev.includes("FLIGHT_TABLE");
+}
+
 /**
  * Contract boundary:
  * raw_telemetry_v1 is ingress evidence only and MUST NOT be consumed by business read models.
@@ -101,6 +119,10 @@ export async function writeDeviceObservationFactV1(clientConn: PoolClient, input
   const project_id = normalizeNonEmpty(input.project_id, "_na_project");
   const group_id = normalizeNonEmpty(input.group_id, "_na_group");
   const field_id = normalizeNonEmpty(input.field_id, "_na_field");
+  const source_lane = input.source_lane ?? (input.is_simulated ? "SIMULATED_DEV_ONLY" : "UNKNOWN");
+  const is_simulated = isSimulatedObservation(input);
+  const formal_eligible = is_simulated ? false : input.formal_eligible === true;
+  const evidence_level = input.evidence_level ?? (is_simulated ? "DEBUG" : "FORMAL");
 
   const contractPayload = {
     type: "device_observation_v1" as const,
@@ -117,7 +139,7 @@ export async function writeDeviceObservationFactV1(clientConn: PoolClient, input
     metric_unit: unit,
     confidence,
     quality_flags,
-    explanation_codes: ["normalized_from_raw_telemetry_v1"],
+    explanation_codes: ["normalized_from_raw_telemetry_v1", ...(is_simulated ? ["simulated_dev_only_not_formal_stage1"] : [])],
   };
   const parsed = DeviceObservationV1Schema.safeParse(contractPayload);
   if (!parsed.success) {
@@ -143,6 +165,11 @@ export async function writeDeviceObservationFactV1(clientConn: PoolClient, input
       confidence,
       observed_at_ts_ms: input.observed_at_ts_ms,
       source_fact_id: input.source_fact_id,
+      source_lane,
+      is_simulated,
+      formal_eligible,
+      evidence_level,
+      dev_source: input.dev_source ?? null,
       contract: parsed.data,
     },
   };
@@ -151,7 +178,7 @@ export async function writeDeviceObservationFactV1(clientConn: PoolClient, input
     `INSERT INTO facts (fact_id, occurred_at, source, record_json)
      VALUES ($1, $2::timestamptz, $3, $4)
      ON CONFLICT (fact_id) DO NOTHING`,
-    [fact_id, occurred_at_iso, "gateway", JSON.stringify(record)]
+    [fact_id, occurred_at_iso, is_simulated ? "simulator" : "gateway", JSON.stringify(record)]
   );
 
   await clientConn.query(
@@ -226,13 +253,14 @@ async function loadRecentFieldObservationsForPipelineV1(db: DeviceObservationDbC
   field_id: string;
 }): Promise<Array<Record<string, unknown>>> {
   const rows = await db.query(
-    `SELECT device_id, metric, value_num, fact_id
-       FROM device_observation_index_v1
-      WHERE tenant_id = $1
-        AND project_id = $2
-        AND group_id = $3
-        AND field_id = $4
-      ORDER BY observed_at_ts_ms DESC
+    `SELECT o.device_id, o.metric, o.value_num, o.fact_id, f.record_json
+       FROM device_observation_index_v1 o
+       LEFT JOIN facts f ON f.fact_id = o.fact_id
+      WHERE o.tenant_id = $1
+        AND o.project_id = $2
+        AND o.group_id = $3
+        AND o.field_id = $4
+      ORDER BY o.observed_at_ts_ms DESC
       LIMIT 256`,
     [params.tenant_id, params.project_id, params.group_id, params.field_id]
   );
@@ -242,6 +270,11 @@ async function loadRecentFieldObservationsForPipelineV1(db: DeviceObservationDbC
       const metric = String(row.metric ?? "").trim();
       const device_id = String(row.device_id ?? "").trim();
       const observation_id = String(row.fact_id ?? "").trim();
+      const payload = row.record_json?.payload ?? {};
+      const sourceLane = String(payload?.source_lane ?? "").trim().toUpperCase();
+      const evidenceLevel = String(payload?.evidence_level ?? "").trim().toUpperCase();
+      const simulated = payload?.is_simulated === true || payload?.formal_eligible === false || sourceLane === "SIMULATED_DEV_ONLY" || sourceLane === "DEBUG_ONLY" || evidenceLevel === "DEBUG";
+      if (simulated) return null;
       const valueNum = toFiniteNumber(row.value_num);
       if (!metric || !device_id || !observation_id || valueNum == null) return null;
       return {
@@ -266,7 +299,7 @@ export async function writeObservationRunPipelineAndRefreshFieldV1(
   const group_id = normalizeNonEmpty(input.group_id, "_na_group");
   const field_id = normalizeNonEmpty(input.field_id, "_na_field");
 
-  if (field_id === "_na_field") {
+  if (field_id === "_na_field" || isSimulatedObservation(input)) {
     return { observation, pipeline: null, read_model_refresh: null };
   }
 
