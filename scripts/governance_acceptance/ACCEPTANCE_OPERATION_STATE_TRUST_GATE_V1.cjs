@@ -80,7 +80,8 @@ assertNotIncludes(route, 'customer_visible_eligible:', 'operation_state route mu
 assertNotIncludes(route, 'fallback_limited:', 'operation_state route must not derive fallback_limited');
 
 const fixture = String.raw`
-const mod = await import('./apps/server/src/projections/operation_state_v1.ts');
+(async () => {
+const mod = await import('./src/projections/operation_state_v1.ts');
 const { projectOperationStateFromFacts } = mod;
 const ts = '2026-01-01T00:00:00.000Z';
 function fact(fact_id, occurred_at, type, payload) {
@@ -132,6 +133,7 @@ assertRuntime(formalState.final_status === 'SUCCESS', 'explicit formal PASS may 
 assertRuntime(formalState.formal_status === 'FORMAL_PASS', 'explicit formal PASS must become FORMAL_PASS');
 assertRuntime(formalState.fallback_limited === false, 'explicit formal PASS must not be fallback limited');
 assertRuntime(formalState.customer_visible_eligible === true, 'explicit formal PASS may be customer visible');
+})();
 `;
 
 const runtime = spawnSync('pnpm', ['--filter', '@geox/server', 'exec', 'tsx', '-e', fixture], {
