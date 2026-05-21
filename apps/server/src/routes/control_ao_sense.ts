@@ -11,6 +11,7 @@ import { randomUUID } from "crypto";
  * - AO-SENSE receipt success is observation completion only.
  * - AO-SENSE receipt success MUST NOT be interpreted as AO-ACT execution success.
  * - AO-SENSE receipts may reference observation facts only.
+ * - Observation-only means DB fact type validation, not string-prefix validation.
  */
 
 type SenseLegacyContext = { deprecated: boolean; legacyPath?: string };
@@ -106,17 +107,40 @@ async function handleCreateSenseTask(pool: Pool, req: any, reply: any) {
   return reply.send({ ok: true, task_id, fact_id });
 }
 
-function validateObservationOnlyEvidenceRefs(evidenceRefs: any[]): string | null {
-  if (!Array.isArray(evidenceRefs) || evidenceRefs.length < 1) return "EVIDENCE_REFS_EMPTY";
+function validateObservationEvidenceRefShape(evidenceRefs: any[]): { error: string | null; refIds: string[] } {
+  if (!Array.isArray(evidenceRefs) || evidenceRefs.length < 1) return { error: "EVIDENCE_REFS_EMPTY", refIds: [] };
+  const refIds: string[] = [];
   for (let i = 0; i < evidenceRefs.length; i++) {
     const er = evidenceRefs[i];
     const erExtra = checkNoExtraKeys(er, ["kind", "ref_id"]);
-    if (erExtra) return `evidence_refs[${i}].${erExtra}`;
+    if (erExtra) return { error: `evidence_refs[${i}].${erExtra}`, refIds: [] };
     const kind = String(er?.kind ?? "").trim();
     const refId = String(er?.ref_id ?? "").trim();
-    if (kind !== "fact_id") return `evidence_refs[${i}].AO_SENSE_RECEIPT_REQUIRES_OBSERVATION_FACT_KIND`;
-    if (!refId) return `evidence_refs[${i}].MISSING_OR_INVALID:ref_id`;
-    if (!refId.startsWith("obs_") && !refId.startsWith("observation_")) return `evidence_refs[${i}].AO_SENSE_RECEIPT_REQUIRES_OBSERVATION_FACT`;
+    if (kind !== "fact_id") return { error: `evidence_refs[${i}].AO_SENSE_RECEIPT_REQUIRES_OBSERVATION_FACT_KIND`, refIds: [] };
+    if (!refId) return { error: `evidence_refs[${i}].MISSING_OR_INVALID:ref_id`, refIds: [] };
+    refIds.push(refId);
+  }
+  return { error: null, refIds };
+}
+
+async function validateObservationOnlyEvidenceRefs(pool: Pool, evidenceRefs: any[]): Promise<string | null> {
+  const shaped = validateObservationEvidenceRefShape(evidenceRefs);
+  if (shaped.error) return shaped.error;
+  const uniqueRefIds = Array.from(new Set(shaped.refIds));
+  const found = await pool.query(
+    `SELECT fact_id, record_json::jsonb AS record_json
+       FROM facts
+      WHERE fact_id = ANY($1::text[])`,
+    [uniqueRefIds],
+  );
+  const byId = new Map<string, any>((found.rows ?? []).map((row: any) => [String(row.fact_id), safeJsonParse(row.record_json)]));
+  const allowedObservationFactTypes = new Set(["device_observation_v1"]);
+  for (let i = 0; i < evidenceRefs.length; i++) {
+    const refId = String(evidenceRefs[i]?.ref_id ?? "").trim();
+    const record = byId.get(refId);
+    if (!record) return `evidence_refs[${i}].AO_SENSE_OBSERVATION_FACT_NOT_FOUND`;
+    const factType = String(record?.type ?? "").trim();
+    if (!allowedObservationFactTypes.has(factType)) return `evidence_refs[${i}].AO_SENSE_RECEIPT_REQUIRES_OBSERVATION_FACT_TYPE:${factType || "UNKNOWN"}`;
   }
   return null;
 }
@@ -131,7 +155,7 @@ async function handleCreateSenseReceipt(pool: Pool, req: any, reply: any) {
   const allowedResults = new Set(["success", "fail", "partial"]);
   if (!isNonEmptyString(body.result) || !allowedResults.has(body.result)) return badRequest(reply, "MISSING_OR_INVALID:result");
 
-  const evidenceError = validateObservationOnlyEvidenceRefs(body.evidence_refs);
+  const evidenceError = await validateObservationOnlyEvidenceRefs(pool, body.evidence_refs);
   if (evidenceError) return badRequest(reply, evidenceError);
 
   const receipt_id = randomUUID();
@@ -151,6 +175,7 @@ async function handleCreateSenseReceipt(pool: Pool, req: any, reply: any) {
       does_not_imply_ao_act_execution_success: true,
       does_not_imply_acceptance_pass: true,
       allowed_evidence_ref: "observation_fact_only",
+      evidence_validation: "db_fact_type_device_observation_v1",
     },
     ao_act_execution_success: false,
     acceptance_pass: false,
