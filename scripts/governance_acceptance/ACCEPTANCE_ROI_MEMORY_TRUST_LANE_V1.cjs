@@ -114,8 +114,9 @@ assertIncludes(customerRoute, '能力可用，结论需复核', 'customer route 
 assertIncludes(customerRoute, '不代表正式经营结论', 'customer route limited subtitle wording');
 
 const fixture = String.raw`
-const { projectRoiTrustV1 } = await import('./apps/server/src/domain/roi/roi_trust_v1.ts');
-const { recordMemoryV1 } = await import('./apps/server/src/services/field_memory_service.ts');
+(async () => {
+const { projectRoiTrustV1 } = await import('./src/domain/roi/roi_trust_v1.ts');
+const { recordMemoryV1 } = await import('./src/services/field_memory_service.ts');
 function assertRuntime(condition, message) { if (!condition) throw new Error(message); }
 const asExecutedTrust = projectRoiTrustV1({ roi_ledger_id: 'roi_1', source_lane: 'AS_EXECUTED_SIGNAL', trust_level: 'FORMAL_ACCEPTED', formal_acceptance_id: 'acc_1', formal_evidence_passed: true, chain_validation_passed: true, customer_visible_value: true, value_kind: 'MEASURED', confidence: { level: 'HIGH' } });
 assertRuntime(asExecutedTrust.trust_level !== 'FORMAL_ACCEPTED', 'as_executed ROI must not stay FORMAL_ACCEPTED');
@@ -141,6 +142,7 @@ const formalMemory = await recordMemoryV1(fakeDb, 'tenantA', { type: 'FIELD_RESP
 assertRuntime(formalMemory.memory_lane === 'FORMAL_FIELD_MEMORY', 'explicit formal acceptance should create formal memory');
 assertRuntime(formalMemory.customer_visible_memory === true, 'explicit formal memory should be customer visible');
 assertRuntime(formalMemory.learning_eligible === true, 'explicit formal memory should be learning eligible');
+})();
 `;
 const runtime = spawnSync('pnpm', ['--filter', '@geox/server', 'exec', 'tsx', '-e', fixture], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 if (runtime.status !== 0) {

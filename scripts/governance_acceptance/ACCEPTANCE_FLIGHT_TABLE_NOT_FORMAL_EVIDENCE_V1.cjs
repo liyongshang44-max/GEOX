@@ -53,7 +53,8 @@ assertIncludes(policy, 'FLIGHT_TABLE_MARKERS', 'formal evidence policy flight ta
 assertIncludes(policy, 'isFlightTableEvidence', 'formal evidence policy flight table predicate');
 assertIncludes(policy, 'FLIGHT_TABLE_DEV_EVIDENCE_NOT_FORMAL', 'formal evidence policy blocking reason');
 assertIncludes(policy, 'FLIGHT_TABLE_FORMAL_ELIGIBLE_FORBIDDEN', 'formal evidence policy forbidden formal eligible reason');
-assertIncludes(policy, 'flightTableEvidence ? false', 'formal evidence policy formal eligible hard false');
+assertIncludes(policy, 'const formalEligible = flightTableEvidence', 'formal evidence policy formal eligible hard false');
+assertIncludes(policy, '? false', 'formal evidence policy formal eligible hard false ternary');
 assertIncludes(policy, 'flightTableEvidence ? "SIMULATED_DEV_ONLY"', 'formal evidence policy source lane hard downgrade');
 assertIncludes(policy, 'flightTableEvidence ? "DEBUG"', 'formal evidence policy evidence level hard downgrade');
 assertIncludes(policy, 'formal_evidence_passed: formal.length > 0', 'formal evidence policy pass calculation');
