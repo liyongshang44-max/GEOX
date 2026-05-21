@@ -75,6 +75,7 @@ const criticalSchemas = [
   'SenseReceiptRequest',
   'SenseReceiptResponse',
   'OperationReportV1',
+  'OperationReportSingleResponse',
 ];
 
 const criticalPathRefs = [
@@ -87,7 +88,7 @@ const criticalPathRefs = [
   ['POST /api/v1/devices', 'DeviceUpsertRequest', 'DeviceUpsertResponse'],
   ['POST /api/v1/sense/task', 'SenseTaskRequest', 'SenseTaskResponse'],
   ['POST /api/v1/sense/receipt', 'SenseReceiptRequest', 'SenseReceiptResponse'],
-  ['GET /api/v1/reports/operation/{operation_id}', null, 'OperationReportV1'],
+  ['GET /api/v1/reports/operation/{operation_id}', null, 'OperationReportSingleResponse'],
 ];
 
 function walkTsFiles(target) {
