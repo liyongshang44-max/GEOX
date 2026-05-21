@@ -8,6 +8,11 @@ function asPositiveNumber(value: unknown): number | null {
   return parsed;
 }
 
+export type VariableActionParameterSourceV1 =
+  | "FORMAL_PRESCRIPTION"
+  | "EXPLICIT_OPERATOR_INPUT"
+  | "DEMO_DEFAULT";
+
 function normalizeVariableOperationTypeV1(value: unknown): "IRRIGATION" | "FERTILIZATION" {
   const operationType = asText(value).toUpperCase();
   if (operationType === "IRRIGATION" || operationType === "FERTILIZATION") return operationType;
@@ -90,6 +95,8 @@ export function buildVariableActionTaskPayloadV1(input: {
   const durationMin = 20;
   const coveragePercent = 95;
   const season_id = asText(prescription.season_id);
+  const demoDefaultSource: VariableActionParameterSourceV1 = "DEMO_DEFAULT";
+  const formalPrescriptionSource: VariableActionParameterSourceV1 = "FORMAL_PRESCRIPTION";
 
   const sanitizedZoneRates = zoneRatesRaw.map((zoneRate) => ({
     zone_id: asText(zoneRate?.zone_id),
@@ -164,19 +171,19 @@ export function buildVariableActionTaskPayloadV1(input: {
       ack_source_required: "executor acknowledgement",
       status_contract: "TASK_CREATED_READY_TO_DISPATCH_NOT_ACKED",
       default_parameter_sources: {
-        time_window: "helper default",
-        duration_sec: "helper default",
-        duration_min: "helper default",
-        coverage_percent: "helper default",
-        amount: "formal prescription zone_rates sum",
+        time_window: demoDefaultSource,
+        duration_sec: demoDefaultSource,
+        duration_min: demoDefaultSource,
+        coverage_percent: demoDefaultSource,
+        amount: formalPrescriptionSource,
       },
       parameter_source: {
-        time_window: "helper default",
-        duration_sec: "helper default",
-        duration_min: "helper default",
-        amount: "formal prescription",
-        coverage_percent: "helper default",
-      },
+        time_window: demoDefaultSource,
+        duration_sec: demoDefaultSource,
+        duration_min: demoDefaultSource,
+        amount: formalPrescriptionSource,
+        coverage_percent: demoDefaultSource,
+      } satisfies Record<string, VariableActionParameterSourceV1>,
       zone_count: sanitizedZoneRates.length,
     },
   };
