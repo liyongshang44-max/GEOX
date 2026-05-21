@@ -5,118 +5,33 @@ import { projectOperationStateV1 } from "../projections/operation_state_v1.js";
 import { filterByCustomerScope, isFieldAllowedByCustomerScope, resolveCustomerScope, type CustomerScopeV1 } from "../services/customer/customer_scope_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
+type ProjectionSource = "GUARDED_REPORT" | "STATE_FALLBACK_LIMITED";
+type TrustFields = { projection_source: ProjectionSource; fallback_limited: boolean; customer_visible_eligible: boolean; blocking_reasons: string[] };
 type CustomerReportListItem = { report_id?: string | null; report_type: "OVERVIEW" | "FIELD" | "OPERATION" | "EVIDENCE_VALUE"; title: string; subtitle?: string | null; href?: string | null; field_id?: string | null; field_name?: string | null; operation_id?: string | null; operation_title?: string | null; updated_at?: string | null; status_text?: string | null; capability_status?: "AVAILABLE" | "PENDING" | "UNAVAILABLE"; };
-type CustomerOperationListItem = { operation_id: string; operation_plan_id: string | null; field_id: string | null; field_name: string | null; title: string | null; customer_title: string | null; operation_type: string | null; final_status: string | null; acceptance_status: string | null; evidence_status: string | null; evidence_summary_status: string | null; updated_at: string | null; executed_at: string | null; };
-type CustomerFieldListItem = { field_id: string; field_name: string | null; risk_level: "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN"; risk_reasons: string[]; updated_at: string | null; crop_name: string | null; stage_name: string | null; recent_operation_id: string | null; recent_operation_title: string | null; open_alerts_count: number; pending_acceptance_count: number; };
+type CustomerOperationListItem = TrustFields & { operation_id: string; operation_plan_id: string | null; field_id: string | null; field_name: string | null; title: string | null; customer_title: string | null; operation_type: string | null; final_status: string | null; acceptance_status: string | null; evidence_status: string | null; evidence_summary_status: string | null; updated_at: string | null; executed_at: string | null; };
+type CustomerFieldListItem = TrustFields & { field_id: string; field_name: string | null; risk_level: "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN"; risk_reasons: string[]; updated_at: string | null; crop_name: string | null; stage_name: string | null; recent_operation_id: string | null; recent_operation_title: string | null; open_alerts_count: number; pending_acceptance_count: number; };
 type FieldGeometryStatus = "AVAILABLE" | "MISSING" | "INVALID";
 type CustomerFieldGeometryResponse = { field_id: string; geometry_status: FieldGeometryStatus; geometry_format: "GEOJSON"; geometry: Record<string, unknown> | null; area_mu?: number | null; centroid?: { lat: number; lng: number } | null; updated_at: string | null; };
 
-function safeJsonParse(raw: unknown): unknown | null {
-  if (raw == null) return null;
-  if (typeof raw === "string") { try { return JSON.parse(raw); } catch { return null; } }
-  return raw;
-}
+const STATE_FALLBACK_TRUST: TrustFields = { projection_source: "STATE_FALLBACK_LIMITED", fallback_limited: true, customer_visible_eligible: false, blocking_reasons: ["state_fallback_limited_not_customer_official"] };
 
-function readCoordinates(node: unknown, out: Array<{ lat: number; lng: number }>): void {
-  if (!Array.isArray(node) || node.length === 0) return;
-  if (node.length >= 2 && typeof node[0] === "number" && typeof node[1] === "number") {
-    const lng = Number(node[0]); const lat = Number(node[1]);
-    if (Number.isFinite(lat) && Number.isFinite(lng)) out.push({ lat, lng });
-    return;
-  }
-  for (const child of node) readCoordinates(child, out);
-}
-
-function normalizeGeometry(raw: unknown): Record<string, unknown> | null {
-  if (!raw || typeof raw !== "object") return null;
-  const obj = raw as Record<string, unknown>;
-  if (typeof obj.type !== "string") return null;
-  if (obj.type === "Feature") {
-    const featureGeometry = normalizeGeometry(obj.geometry);
-    if (!featureGeometry) return null;
-    return { type: "Feature", properties: typeof obj.properties === "object" && obj.properties != null ? obj.properties : {}, geometry: featureGeometry };
-  }
-  if (obj.type === "FeatureCollection") {
-    const features = Array.isArray(obj.features) ? obj.features : [];
-    return { type: "FeatureCollection", features: features.map((x) => normalizeGeometry(x)).filter(Boolean) };
-  }
-  if (!("coordinates" in obj)) return null;
-  return { type: obj.type, coordinates: obj.coordinates as unknown };
-}
-
-function geometryCentroid(geometry: Record<string, unknown> | null): { lat: number; lng: number } | null {
-  if (!geometry) return null;
-  const coords: Array<{ lat: number; lng: number }> = [];
-  const geoType = String(geometry.type ?? "").toUpperCase();
-  if (geoType === "FEATURE") return geometryCentroid((geometry.geometry as Record<string, unknown>) ?? null);
-  if (geoType === "FEATURECOLLECTION") {
-    for (const feature of (Array.isArray(geometry.features) ? geometry.features : [])) {
-      const c = geometryCentroid(feature as Record<string, unknown>);
-      if (c) coords.push(c);
-    }
-  } else {
-    readCoordinates((geometry as any).coordinates, coords);
-  }
-  if (!coords.length) return null;
-  const sums = coords.reduce((acc, point) => ({ lat: acc.lat + point.lat, lng: acc.lng + point.lng }), { lat: 0, lng: 0 });
-  return { lat: Number((sums.lat / coords.length).toFixed(6)), lng: Number((sums.lng / coords.length).toFixed(6)) };
-}
-
-function toRiskLevel(value: unknown): "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN" {
-  const v = String(value ?? "").trim().toUpperCase();
-  if (v === "HIGH" || v === "MEDIUM" || v === "LOW") return v;
-  return "UNKNOWN";
-}
-
-function toIsoFromMs(ms: unknown): string | null {
-  const n = Number(ms ?? 0);
-  return Number.isFinite(n) && n > 0 ? new Date(n).toISOString() : null;
-}
-
+function safeJsonParse(raw: unknown): unknown | null { if (raw == null) return null; if (typeof raw === "string") { try { return JSON.parse(raw); } catch { return null; } } return raw; }
+function readCoordinates(node: unknown, out: Array<{ lat: number; lng: number }>): void { if (!Array.isArray(node) || node.length === 0) return; if (node.length >= 2 && typeof node[0] === "number" && typeof node[1] === "number") { const lng = Number(node[0]); const lat = Number(node[1]); if (Number.isFinite(lat) && Number.isFinite(lng)) out.push({ lat, lng }); return; } for (const child of node) readCoordinates(child, out); }
+function normalizeGeometry(raw: unknown): Record<string, unknown> | null { if (!raw || typeof raw !== "object") return null; const obj = raw as Record<string, unknown>; if (typeof obj.type !== "string") return null; if (obj.type === "Feature") { const featureGeometry = normalizeGeometry(obj.geometry); if (!featureGeometry) return null; return { type: "Feature", properties: typeof obj.properties === "object" && obj.properties != null ? obj.properties : {}, geometry: featureGeometry }; } if (obj.type === "FeatureCollection") { const features = Array.isArray(obj.features) ? obj.features : []; return { type: "FeatureCollection", features: features.map((x) => normalizeGeometry(x)).filter(Boolean) }; } if (!("coordinates" in obj)) return null; return { type: obj.type, coordinates: obj.coordinates as unknown }; }
+function geometryCentroid(geometry: Record<string, unknown> | null): { lat: number; lng: number } | null { if (!geometry) return null; const coords: Array<{ lat: number; lng: number }> = []; const geoType = String(geometry.type ?? "").toUpperCase(); if (geoType === "FEATURE") return geometryCentroid((geometry.geometry as Record<string, unknown>) ?? null); if (geoType === "FEATURECOLLECTION") { for (const feature of (Array.isArray(geometry.features) ? geometry.features : [])) { const c = geometryCentroid(feature as Record<string, unknown>); if (c) coords.push(c); } } else readCoordinates((geometry as any).coordinates, coords); if (!coords.length) return null; const sums = coords.reduce((acc, point) => ({ lat: acc.lat + point.lat, lng: acc.lng + point.lng }), { lat: 0, lng: 0 }); return { lat: Number((sums.lat / coords.length).toFixed(6)), lng: Number((sums.lng / coords.length).toFixed(6)) }; }
+function toRiskLevel(value: unknown): "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN" { const v = String(value ?? "").trim().toUpperCase(); if (v === "HIGH" || v === "MEDIUM" || v === "LOW") return v; return "UNKNOWN"; }
+function toIsoFromMs(ms: unknown): string | null { const n = Number(ms ?? 0); return Number.isFinite(n) && n > 0 ? new Date(n).toISOString() : null; }
 function operationIdOf(state: any): string { return String(state.operation_id ?? state.operation_plan_id ?? "").trim(); }
+function stateUpdatedAt(state: any): string | null { const updatedTs = Number(state.updated_at ?? 0); const timelineTs = Math.max(...(Array.isArray(state.timeline) ? state.timeline : []).map((item: any) => Number(item.ts ?? 0)).filter((n: number) => Number.isFinite(n) && n > 0), 0); return toIsoFromMs(updatedTs || timelineTs); }
+function limitedFinalStatusFromState(): string { return "LIMITED_STATE"; }
+function limitedAcceptanceStatusFromState(): string { return "NEEDS_REVIEW"; }
+function limitedEvidenceStatusFromState(): string { return "LIMITED_STATE"; }
+function formalPendingAcceptanceFromState(_state: any): number { return 0; }
 
-function stateUpdatedAt(state: any): string | null {
-  const updatedTs = Number(state.updated_at ?? 0);
-  const timelineTs = Math.max(...(Array.isArray(state.timeline) ? state.timeline : []).map((item: any) => Number(item.ts ?? 0)).filter((n: number) => Number.isFinite(n) && n > 0), 0);
-  return toIsoFromMs(updatedTs || timelineTs);
-}
-
-async function queryFieldRows(pool: Pool, tenant: TenantTriple, scope: CustomerScopeV1): Promise<Array<{ field_id: string; name: string | null; area_ha: number | null }>> {
-  if (scope.scope_mode === "DENIED") return [];
-  const params: any[] = [tenant.tenant_id];
-  const fieldSql = scope.can_preview_all_fields ? "" : " AND field_id = ANY($2::text[])";
-  if (!scope.can_preview_all_fields) params.push(scope.allowed_field_ids);
-  const q = await pool.query(`SELECT field_id, name, area_ha FROM field_index_v1 WHERE tenant_id = $1${fieldSql} ORDER BY field_id ASC`, params).catch(() => ({ rows: [] as any[] }));
-  return (q.rows ?? []).map((row: any) => ({ field_id: String(row.field_id ?? "").trim(), name: String(row.name ?? "").trim() || null, area_ha: Number.isFinite(Number(row.area_ha)) ? Number(row.area_ha) : null })).filter((row) => row.field_id);
-}
-
-async function queryFieldNameMap(pool: Pool, tenant: TenantTriple, fieldIds: string[]): Promise<Map<string, string | null>> {
-  if (fieldIds.length === 0) return new Map();
-  const q = await pool.query(`SELECT field_id, name FROM field_index_v1 WHERE tenant_id = $1 AND field_id = ANY($2::text[])`, [tenant.tenant_id, fieldIds]).catch(() => ({ rows: [] as any[] }));
-  const map = new Map<string, string | null>();
-  for (const row of q.rows ?? []) {
-    const fieldId = String((row as any).field_id ?? "").trim();
-    if (fieldId) map.set(fieldId, String((row as any).name ?? "").trim() || null);
-  }
-  return map;
-}
-
-async function queryOpenAlertCountByField(pool: Pool, tenant: TenantTriple, fieldIds: string[]): Promise<Map<string, number>> {
-  if (fieldIds.length === 0) return new Map();
-  const q = await pool.query(`SELECT field_id, SUM(cnt)::bigint AS count FROM (SELECT e.object_id AS field_id, COUNT(*)::bigint AS cnt FROM alert_event_index_v1 e WHERE e.tenant_id = $1 AND e.status IN ('OPEN','ACKED') AND e.object_type = 'FIELD' AND e.object_id = ANY($2::text[]) GROUP BY e.object_id UNION ALL SELECT b.field_id AS field_id, COUNT(*)::bigint AS cnt FROM alert_event_index_v1 e JOIN device_binding_index_v1 b ON b.tenant_id = e.tenant_id AND b.device_id = e.object_id WHERE e.tenant_id = $1 AND e.status IN ('OPEN','ACKED') AND e.object_type = 'DEVICE' AND b.field_id = ANY($2::text[]) GROUP BY b.field_id) t GROUP BY field_id`, [tenant.tenant_id, fieldIds]).catch(() => ({ rows: [] as any[] }));
-  const map = new Map<string, number>();
-  for (const row of q.rows ?? []) {
-    const fieldId = String((row as any).field_id ?? "").trim();
-    if (fieldId) map.set(fieldId, Number((row as any).count ?? 0));
-  }
-  return map;
-}
-
-function scopeFromRequest(req: any, reply: any): { auth: any; tenant: TenantTriple; scope: CustomerScopeV1 } | null {
-  const auth = enforceRouteRoleAuth(req, reply, "summary");
-  if (!auth) return null;
-  return { auth, tenant: { tenant_id: String(auth.tenant_id), project_id: String(auth.project_id), group_id: String(auth.group_id) }, scope: resolveCustomerScope(auth) };
-}
+async function queryFieldRows(pool: Pool, tenant: TenantTriple, scope: CustomerScopeV1): Promise<Array<{ field_id: string; name: string | null; area_ha: number | null }>> { if (scope.scope_mode === "DENIED") return []; const params: any[] = [tenant.tenant_id]; const fieldSql = scope.can_preview_all_fields ? "" : " AND field_id = ANY($2::text[])"; if (!scope.can_preview_all_fields) params.push(scope.allowed_field_ids); const q = await pool.query(`SELECT field_id, name, area_ha FROM field_index_v1 WHERE tenant_id = $1${fieldSql} ORDER BY field_id ASC`, params).catch(() => ({ rows: [] as any[] })); return (q.rows ?? []).map((row: any) => ({ field_id: String(row.field_id ?? "").trim(), name: String(row.name ?? "").trim() || null, area_ha: Number.isFinite(Number(row.area_ha)) ? Number(row.area_ha) : null })).filter((row) => row.field_id); }
+async function queryFieldNameMap(pool: Pool, tenant: TenantTriple, fieldIds: string[]): Promise<Map<string, string | null>> { if (fieldIds.length === 0) return new Map(); const q = await pool.query(`SELECT field_id, name FROM field_index_v1 WHERE tenant_id = $1 AND field_id = ANY($2::text[])`, [tenant.tenant_id, fieldIds]).catch(() => ({ rows: [] as any[] })); const map = new Map<string, string | null>(); for (const row of q.rows ?? []) { const fieldId = String((row as any).field_id ?? "").trim(); if (fieldId) map.set(fieldId, String((row as any).name ?? "").trim() || null); } return map; }
+async function queryOpenAlertCountByField(pool: Pool, tenant: TenantTriple, fieldIds: string[]): Promise<Map<string, number>> { if (fieldIds.length === 0) return new Map(); const q = await pool.query(`SELECT field_id, SUM(cnt)::bigint AS count FROM (SELECT e.object_id AS field_id, COUNT(*)::bigint AS cnt FROM alert_event_index_v1 e WHERE e.tenant_id = $1 AND e.status IN ('OPEN','ACKED') AND e.object_type = 'FIELD' AND e.object_id = ANY($2::text[]) GROUP BY e.object_id UNION ALL SELECT b.field_id AS field_id, COUNT(*)::bigint AS cnt FROM alert_event_index_v1 e JOIN device_binding_index_v1 b ON b.tenant_id = e.tenant_id AND b.device_id = e.object_id WHERE e.tenant_id = $1 AND e.status IN ('OPEN','ACKED') AND e.object_type = 'DEVICE' AND b.field_id = ANY($2::text[]) GROUP BY b.field_id) t GROUP BY field_id`, [tenant.tenant_id, fieldIds]).catch(() => ({ rows: [] as any[] })); const map = new Map<string, number>(); for (const row of q.rows ?? []) { const fieldId = String((row as any).field_id ?? "").trim(); if (fieldId) map.set(fieldId, Number((row as any).count ?? 0)); } return map; }
+function scopeFromRequest(req: any, reply: any): { auth: any; tenant: TenantTriple; scope: CustomerScopeV1 } | null { const auth = enforceRouteRoleAuth(req, reply, "summary"); if (!auth) return null; return { auth, tenant: { tenant_id: String(auth.tenant_id), project_id: String(auth.project_id), group_id: String(auth.group_id) }, scope: resolveCustomerScope(auth) }; }
 
 export function registerCustomerV1Routes(app: FastifyInstance, pool: Pool): void {
   app.get("/api/v1/customer/reports", async (req, reply) => {
@@ -127,20 +42,12 @@ export function registerCustomerV1Routes(app: FastifyInstance, pool: Pool): void
     const fieldIds = fieldRows.length ? fieldRows.map((x) => x.field_id) : Array.from(new Set(states.map((state: any) => String(state.field_id ?? "").trim()).filter(Boolean)));
     const fieldNameById = new Map(fieldRows.map((row) => [row.field_id, row.name] as const));
     for (const [fieldId, name] of await queryFieldNameMap(pool, ctx.tenant, fieldIds)) if (!fieldNameById.has(fieldId)) fieldNameById.set(fieldId, name);
-
     const reports: CustomerReportListItem[] = [{ report_type: "OVERVIEW", title: "经营总览报告", subtitle: "基于当前客户驾驶舱可见数据生成", href: "/customer/export", updated_at: generatedAt, status_text: "可导出", capability_status: "AVAILABLE" }];
     for (const fieldId of fieldIds.slice(0, 20)) reports.push({ report_type: "FIELD", title: `${fieldNameById.get(fieldId) ?? "地块"} · 地块报告`, subtitle: "基于当前可见地块数据生成", href: `/customer/fields/${encodeURIComponent(fieldId)}`, field_id: fieldId, field_name: fieldNameById.get(fieldId) ?? null, updated_at: generatedAt, status_text: "可查看", capability_status: "AVAILABLE" });
     const operationSeen = new Set<string>();
-    for (const state of states) {
-      const operationId = operationIdOf(state); if (!operationId || operationSeen.has(operationId)) continue;
-      operationSeen.add(operationId);
-      const fieldId = String((state as any).field_id ?? "").trim() || null;
-      const operationTitle = String((state as any).action_type ?? "").trim() || "作业";
-      reports.push({ report_type: "OPERATION", title: `${operationTitle} · 作业报告`, subtitle: "基于当前近期作业生成", href: `/customer/operations/${encodeURIComponent(operationId)}`, operation_id: operationId, operation_title: operationTitle, field_id: fieldId, field_name: fieldId ? (fieldNameById.get(fieldId) ?? null) : null, updated_at: stateUpdatedAt(state) ?? generatedAt, status_text: "可查看", capability_status: "AVAILABLE" });
-      if (operationSeen.size >= 30) break;
-    }
+    for (const state of states) { const operationId = operationIdOf(state); if (!operationId || operationSeen.has(operationId)) continue; operationSeen.add(operationId); const fieldId = String((state as any).field_id ?? "").trim() || null; const operationTitle = String((state as any).action_type ?? "").trim() || "作业"; reports.push({ report_type: "OPERATION", title: `${operationTitle} · 作业报告`, subtitle: "基于当前近期作业生成（状态需以受保护作业报告为准）", href: `/customer/operations/${encodeURIComponent(operationId)}`, operation_id: operationId, operation_title: operationTitle, field_id: fieldId, field_name: fieldId ? (fieldNameById.get(fieldId) ?? null) : null, updated_at: stateUpdatedAt(state) ?? generatedAt, status_text: "需复核", capability_status: "PENDING" }); if (operationSeen.size >= 30) break; }
     reports.push({ report_type: "EVIDENCE_VALUE", title: "证据与价值报告", subtitle: "证据包生成能力待接入", href: null, updated_at: generatedAt, status_text: "待接入", capability_status: "PENDING" });
-    return reply.send({ ok: true, source: "customer_reports_api", dataScope: "OFFICIAL_CUSTOMER_API", generated_at: generatedAt, scope: ctx.scope, report_count: reports.length, reports });
+    return reply.send({ ok: true, source: "customer_reports_api", dataScope: "OFFICIAL_CUSTOMER_API", projection_source: "STATE_FALLBACK_LIMITED", fallback_limited: true, customer_visible_eligible: false, blocking_reasons: STATE_FALLBACK_TRUST.blocking_reasons, generated_at: generatedAt, scope: ctx.scope, report_count: reports.length, reports });
   });
 
   app.get("/api/v1/customer/operations", async (req, reply) => {
@@ -153,9 +60,9 @@ export function registerCustomerV1Routes(app: FastifyInstance, pool: Pool): void
       const fieldId = String(state.field_id ?? "").trim() || null;
       const operationType = String(state.action_type ?? "").trim() || null;
       const executedTs = Number(state.execution_finished_at ?? state.execution_started_at ?? 0);
-      return { operation_id: operationId, operation_plan_id: String(state.operation_plan_id ?? "").trim() || null, field_id: fieldId, field_name: fieldId ? (fieldNameById.get(fieldId) ?? null) : null, title: operationType ? `${operationType}作业` : null, customer_title: operationType ? `${operationType}作业` : null, operation_type: operationType, final_status: String(state.final_status ?? "").trim() || null, acceptance_status: String(state.acceptance?.status ?? "").trim() || null, evidence_status: String(state.evidence?.status ?? "").trim() || null, evidence_summary_status: String(state.evidence_summary?.status ?? "").trim() || null, updated_at: stateUpdatedAt(state), executed_at: toIsoFromMs(executedTs) };
+      return { ...STATE_FALLBACK_TRUST, operation_id: operationId, operation_plan_id: String(state.operation_plan_id ?? "").trim() || null, field_id: fieldId, field_name: fieldId ? (fieldNameById.get(fieldId) ?? null) : null, title: operationType ? `${operationType}作业` : null, customer_title: operationType ? `${operationType}作业` : null, operation_type: operationType, final_status: limitedFinalStatusFromState(), acceptance_status: limitedAcceptanceStatusFromState(), evidence_status: limitedEvidenceStatusFromState(), evidence_summary_status: limitedEvidenceStatusFromState(), updated_at: stateUpdatedAt(state), executed_at: toIsoFromMs(executedTs) };
     }).filter((item): item is CustomerOperationListItem => item != null).sort((a, b) => Date.parse(b.updated_at ?? "") - Date.parse(a.updated_at ?? ""));
-    return reply.send({ ok: true, source: "customer_operations_api", dataScope: "OFFICIAL_CUSTOMER_API", generated_at: new Date().toISOString(), scope: ctx.scope, operation_count: operations.length, operations });
+    return reply.send({ ok: true, source: "customer_operations_api", dataScope: "OFFICIAL_CUSTOMER_API", projection_source: "STATE_FALLBACK_LIMITED", fallback_limited: true, customer_visible_eligible: false, blocking_reasons: STATE_FALLBACK_TRUST.blocking_reasons, generated_at: new Date().toISOString(), scope: ctx.scope, operation_count: operations.length, operations });
   });
 
   app.get("/api/v1/customer/fields/:fieldId/geometry", async (req, reply) => {
@@ -163,14 +70,10 @@ export function registerCustomerV1Routes(app: FastifyInstance, pool: Pool): void
     const fieldId = String((req.params as any)?.fieldId ?? "").trim();
     if (!fieldId) return reply.code(404).send({ ok: false, error: "NOT_FOUND" });
     if (!isFieldAllowedByCustomerScope(ctx.scope, fieldId)) return reply.code(404).send({ ok: false, error: "NOT_FOUND" });
-
     const fieldQ = await pool.query(`SELECT field_id, area_ha FROM field_index_v1 WHERE tenant_id = $1 AND field_id = $2 LIMIT 1`, [ctx.tenant.tenant_id, fieldId]);
     if (fieldQ.rowCount === 0) return reply.code(404).send({ ok: false, error: "NOT_FOUND" });
-
     const geoQ = await pool.query(`SELECT polygon_geojson_json AS geojson, updated_ts_ms FROM field_polygon_v1 WHERE tenant_id = $1 AND field_id = $2 LIMIT 1`, [ctx.tenant.tenant_id, fieldId]);
-    const raw = safeJsonParse(geoQ.rows?.[0]?.geojson ?? null);
-    const geometry = normalizeGeometry(raw);
-    const areaHa = Number(fieldQ.rows?.[0]?.area_ha ?? NaN);
+    const raw = safeJsonParse(geoQ.rows?.[0]?.geojson ?? null); const geometry = normalizeGeometry(raw); const areaHa = Number(fieldQ.rows?.[0]?.area_ha ?? NaN);
     const payload: CustomerFieldGeometryResponse = { field_id: fieldId, geometry_status: geometry ? "AVAILABLE" : (raw == null ? "MISSING" : "INVALID"), geometry_format: "GEOJSON", geometry, area_mu: Number.isFinite(areaHa) ? Number((areaHa * 15).toFixed(4)) : null, centroid: geometryCentroid(geometry), updated_at: toIsoFromMs(geoQ.rows?.[0]?.updated_ts_ms ?? 0) };
     return reply.send({ ok: true, source: "customer_fields_geometry_api", dataScope: "OFFICIAL_CUSTOMER_API", scope: ctx.scope, ...payload });
   });
@@ -189,16 +92,13 @@ export function registerCustomerV1Routes(app: FastifyInstance, pool: Pool): void
       const fieldId = String((state as any).field_id ?? "").trim(); if (!fieldId) continue;
       const latestTs = Math.max(Number((state as any).updated_at ?? 0), Number((state as any).last_event_ts ?? 0), ...(Array.isArray((state as any).timeline) ? (state as any).timeline.map((item: any) => Number(item.ts ?? 0)) : []));
       const existing = byField.get(fieldId);
-      const pending = String((state as any).acceptance?.status ?? "").toUpperCase() === "PENDING" ? 1 : 0;
+      const pending = formalPendingAcceptanceFromState(state);
       const riskLevel = String((state as any).risk?.level ?? (state as any).risk_level ?? "UNKNOWN");
       const riskReasons = Array.isArray((state as any).risk?.reasons) ? (state as any).risk.reasons.map((x: unknown) => String(x ?? "").trim()).filter(Boolean) : [];
       if (!existing) byField.set(fieldId, { latestTs, latestOperationId: operationIdOf(state) || null, pendingAcceptanceCount: pending, riskLevel, riskReasons });
       else { existing.pendingAcceptanceCount += pending; if (latestTs > existing.latestTs) { existing.latestTs = latestTs; existing.latestOperationId = operationIdOf(state) || null; existing.riskLevel = riskLevel; existing.riskReasons = riskReasons; } }
     }
-    const fields: CustomerFieldListItem[] = fieldIds.map((fieldId) => {
-      const agg = byField.get(fieldId);
-      return { field_id: fieldId, field_name: fieldNameById.get(fieldId) ?? null, risk_level: toRiskLevel(agg?.riskLevel), risk_reasons: agg?.riskReasons ?? [], updated_at: toIsoFromMs(agg?.latestTs ?? 0), crop_name: null, stage_name: null, recent_operation_id: agg?.latestOperationId ?? null, recent_operation_title: null, open_alerts_count: Number(openAlertsByField.get(fieldId) ?? 0), pending_acceptance_count: Number(agg?.pendingAcceptanceCount ?? 0) };
-    });
-    return reply.send({ ok: true, source: "customer_fields_api", dataScope: "OFFICIAL_CUSTOMER_API", generated_at: new Date().toISOString(), scope: ctx.scope, field_count: fields.length, fields });
+    const fields: CustomerFieldListItem[] = fieldIds.map((fieldId) => { const agg = byField.get(fieldId); return { ...STATE_FALLBACK_TRUST, field_id: fieldId, field_name: fieldNameById.get(fieldId) ?? null, risk_level: toRiskLevel(agg?.riskLevel), risk_reasons: agg?.riskReasons ?? [], updated_at: toIsoFromMs(agg?.latestTs ?? 0), crop_name: null, stage_name: null, recent_operation_id: agg?.latestOperationId ?? null, recent_operation_title: null, open_alerts_count: Number(openAlertsByField.get(fieldId) ?? 0), pending_acceptance_count: Number(agg?.pendingAcceptanceCount ?? 0) }; });
+    return reply.send({ ok: true, source: "customer_fields_api", dataScope: "OFFICIAL_CUSTOMER_API", projection_source: "STATE_FALLBACK_LIMITED", fallback_limited: true, customer_visible_eligible: false, blocking_reasons: STATE_FALLBACK_TRUST.blocking_reasons, generated_at: new Date().toISOString(), scope: ctx.scope, field_count: fields.length, fields });
   });
 }
