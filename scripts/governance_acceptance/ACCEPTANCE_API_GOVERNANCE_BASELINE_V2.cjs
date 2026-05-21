@@ -23,6 +23,7 @@ const openapiSelfcheck = read(files.openapiSelfcheck);
 const errorEnvelope = read(files.errorEnvelope);
 
 const requiredInventoryFields = ['owner', 'audience', 'boundary', 'source_model', 'auth_scope', 'error_model', 'contract_ref', 'gate_maturity'];
+const allowedFieldConstants = ['standardError', 'contractBase', 'customerContract', 'evidenceContract', 'stateContract', 'aoBoundaryContract', 'roiMemoryContract', 'devtoolsContract'];
 for (const field of requiredInventoryFields) {
   assertIncludes(inventory, `${field}:`, `api route inventory field ${field}`);
   assertIncludes(inventoryDoc, `\`${field}\``, `api route inventory doc field ${field}`);
@@ -41,37 +42,23 @@ assertIncludes(inventory, 'docs/contracts/v2/AO_ACT_AND_AO_SENSE_BOUNDARY_CONTRA
 assertIncludes(inventory, 'docs/contracts/v2/ROI_AND_FIELD_MEMORY_TRUST_LANE_CONTRACT_V2.md', 'inventory ROI/memory contract ref');
 
 const officialRoutes = [
-  '/api/v1/customer/reports',
-  '/api/v1/customer/fields',
-  '/api/v1/customer/operations',
-  '/api/v1/reports/operation/:operation_id',
-  '/api/v1/reports/field/:field_id',
-  '/api/v1/reports/customer-dashboard/*',
-  '/api/v1/operator/*',
-  '/api/v1/actions/*',
-  '/api/v1/approvals/*',
-  '/api/v1/acceptance/*',
-  '/api/v1/sense/*',
-  '/api/v1/sensing/*',
-  '/api/v1/inspection/pest-disease/*',
-  '/api/v1/roi-ledger/*',
-  '/api/v1/field-memory/*',
+  '/api/v1/customer/reports', '/api/v1/customer/fields', '/api/v1/customer/operations',
+  '/api/v1/reports/operation/:operation_id', '/api/v1/reports/field/:field_id', '/api/v1/reports/customer-dashboard/*',
+  '/api/v1/operator/*', '/api/v1/actions/*', '/api/v1/approvals/*', '/api/v1/acceptance/*',
+  '/api/v1/sense/*', '/api/v1/sensing/*', '/api/v1/inspection/pest-disease/*', '/api/v1/roi-ledger/*', '/api/v1/field-memory/*',
 ];
-for (const route of officialRoutes) {
-  assertIncludes(inventory, `route_path: "${route}"`, `inventory official route ${route}`);
-}
+for (const route of officialRoutes) assertIncludes(inventory, `route_path: "${route}"`, `inventory official route ${route}`);
 
 const inventoryEntries = inventory.split('entry({').slice(1).map((chunk) => chunk.split('}),')[0]);
 function fieldPresent(chunk, field) {
-  return new RegExp(`${field}:\\s*("[^"]+"|standardError)`).test(chunk);
+  const constants = allowedFieldConstants.join('|');
+  return new RegExp(`${field}:\\s*("[^"]+"|${constants})`).test(chunk);
 }
 for (const chunk of inventoryEntries) {
   const route = /route_path:\s*"([^"]+)"/.exec(chunk)?.[1] ?? 'unknown-route';
   const boundary = /boundary:\s*"([^"]+)"/.exec(chunk)?.[1] ?? '';
   const audience = /audience:\s*"([^"]+)"/.exec(chunk)?.[1] ?? '';
-  for (const field of requiredInventoryFields) {
-    assert(fieldPresent(chunk, field), `inventory entry ${route} missing ${field}`);
-  }
+  for (const field of requiredInventoryFields) assert(fieldPresent(chunk, field), `inventory entry ${route} missing ${field}`);
   if (boundary === 'official' && audience !== 'system') {
     assert(!/auth_scope:\s*""/.test(chunk), `official route ${route} missing auth_scope`);
     assert(!/contract_ref:\s*""/.test(chunk), `official route ${route} missing contract_ref`);
