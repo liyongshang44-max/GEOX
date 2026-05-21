@@ -30,7 +30,8 @@ export type OperationTimelineItemV1 = {
 
 export type OperationStateSourceV1 = "TECHNICAL_PROJECTION" | "FORMAL_ACCEPTANCE" | "FALLBACK_LIMITED";
 export type OperationFormalStatusV1 = "FORMAL_PASS" | "FORMAL_FAIL" | "NOT_FORMAL";
-export type OperationAcceptanceStatusV1 = "PASS" | "FAIL" | "PENDING" | "NEEDS_FORMAL_ACCEPTANCE" | "INSUFFICIENT_EVIDENCE";
+export type OperationAcceptanceStatusV1 = "PASS" | "FAIL" | "PENDING" | "NOT_AVAILABLE";
+type OperationAcceptanceRawStatusV1 = OperationAcceptanceStatusV1 | "NEEDS_FORMAL_ACCEPTANCE" | "INSUFFICIENT_EVIDENCE";
 
 export type OperationStateV1 = {
   operation_id: string;
@@ -60,7 +61,7 @@ export type OperationStateV1 = {
   actual_effect: { type: string; value: number } | null;
   dispatch_status: string;
   receipt_status: string;
-  acceptance: { status: OperationAcceptanceStatusV1; missing: string[] };
+  acceptance: { status: OperationAcceptanceStatusV1; missing: string[]; raw_status?: OperationAcceptanceRawStatusV1 };
   final_status: "SUCCESS" | "FAILED" | "RUNNING" | "PENDING" | "PENDING_ACCEPTANCE" | "INVALID_EXECUTION";
   invalid_reason: "evidence_missing" | "evidence_invalid" | null;
   last_event_ts: number;
@@ -145,7 +146,7 @@ function toMetricsSnapshot(v: any): { soil_moisture?: number; temperature?: numb
   if (hum !== undefined) out.humidity = hum;
   return out;
 }
-function normalizeAcceptanceVerdict(verdictRaw: unknown): OperationAcceptanceStatusV1 | null {
+function normalizeAcceptanceVerdict(verdictRaw: unknown): OperationAcceptanceRawStatusV1 | null {
   const verdict = String(verdictRaw ?? "").trim().toUpperCase();
   if (!verdict) return null;
   if (verdict === "PASS") return "PASS";
@@ -154,6 +155,15 @@ function normalizeAcceptanceVerdict(verdictRaw: unknown): OperationAcceptanceSta
   if (verdict === "NEEDS_FORMAL_ACCEPTANCE") return "NEEDS_FORMAL_ACCEPTANCE";
   if (verdict === "INSUFFICIENT_EVIDENCE") return "INSUFFICIENT_EVIDENCE";
   return null;
+}
+function toProjectionAcceptanceStatus(status: unknown): OperationAcceptanceStatusV1 {
+  const s = String(status ?? "").trim().toUpperCase();
+  if (s === "PASS") return "PASS";
+  if (s === "FAIL") return "FAIL";
+  if (s === "PENDING") return "PENDING";
+  if (s === "NEEDS_FORMAL_ACCEPTANCE") return "PENDING";
+  if (s === "INSUFFICIENT_EVIDENCE") return "PENDING";
+  return "NOT_AVAILABLE";
 }
 function isFormalAcceptancePayload(payload: any): boolean {
   if (!payload || typeof payload !== "object") return false;
@@ -299,10 +309,12 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     const acceptanceFactPayload = acceptanceFact?.record_json?.payload ?? {};
     const acceptanceStatusFromFact = normalizeAcceptanceVerdict(acceptanceFactPayload?.verdict);
     const hasFormalAcceptance = Boolean(acceptanceFact && acceptanceStatusFromFact) && isFormalAcceptancePayload(acceptanceFactPayload);
+    const rawAcceptanceStatus = hasFormalAcceptance ? acceptanceStatusFromFact : fallbackAcceptance.verdict;
     const acceptance = hasFormalAcceptance ? {
-      status: acceptanceStatusFromFact as OperationAcceptanceStatusV1,
+      status: toProjectionAcceptanceStatus(acceptanceStatusFromFact),
+      raw_status: acceptanceStatusFromFact as OperationAcceptanceRawStatusV1,
       missing: Array.isArray(acceptanceFactPayload?.missing_evidence) ? acceptanceFactPayload.missing_evidence.map((x: unknown) => String(x)).filter(Boolean) : []
-    } : { status: fallbackAcceptance.verdict, missing: fallbackAcceptance.missing_evidence ?? [] };
+    } : { status: toProjectionAcceptanceStatus(fallbackAcceptance.verdict), raw_status: fallbackAcceptance.verdict, missing: fallbackAcceptance.missing_evidence ?? [] };
     const transitions = transitionByPlan.get(operation_plan_id) ?? [];
     const timeline: OperationTimelineItemV1[] = [];
     for (const t of transitions) {
@@ -324,7 +336,7 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     const latestTransition = transitions.length ? String(transitions[transitions.length - 1].record_json?.payload?.status ?? "") : "";
     const executedReceipt = hasExecutedReceiptStatus(receiptStatus);
     const stateSource: OperationStateSourceV1 = hasFormalAcceptance ? "FORMAL_ACCEPTANCE" : "FALLBACK_LIMITED";
-    const formalStatus: OperationFormalStatusV1 = hasFormalAcceptance && acceptance.status === "PASS" ? "FORMAL_PASS" : hasFormalAcceptance && acceptance.status === "FAIL" ? "FORMAL_FAIL" : "NOT_FORMAL";
+    const formalStatus: OperationFormalStatusV1 = hasFormalAcceptance && rawAcceptanceStatus === "PASS" ? "FORMAL_PASS" : hasFormalAcceptance && rawAcceptanceStatus === "FAIL" ? "FORMAL_FAIL" : "NOT_FORMAL";
     const fallbackLimited = !hasFormalAcceptance;
     const blockingReasons = new Set<string>(fallbackLimited ? ["formal_acceptance_required"] : []);
     if (!receipt) blockingReasons.add("receipt_missing");
