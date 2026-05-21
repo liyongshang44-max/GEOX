@@ -37,6 +37,12 @@ Runtime delivery must use build artifacts.
 - `tsx` is not the delivery/runtime contract
 - compose/runtime paths must not rely on source-mounted live TypeScript execution as the delivery model
 
+### Contract governance baselines
+
+- `docs/contracts/v2/`
+
+`docs/contracts/v2/*` are proposed governance baseline documents for Base Contract v2. They are not repository-level SSOT by themselves and do not claim implementation completion, CI enforcement, runtime blocking, business correctness, or commercial readiness unless separately proven.
+
 ## Documentation layering
 
 ### Repository-level SSOT
@@ -81,6 +87,7 @@ These are domain-specific references, not repository-level SSOT documents:
 - `docs/delivery/`
 - `docs/qa/`
 - `docs/commercial/`
+- `docs/contracts/v2/`
 
 ## SSOT layering rule
 
