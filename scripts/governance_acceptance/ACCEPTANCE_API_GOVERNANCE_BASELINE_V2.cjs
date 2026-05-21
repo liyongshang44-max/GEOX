@@ -15,7 +15,6 @@ function read(file) { return fs.readFileSync(file, 'utf8'); }
 function fail(message) { console.error(`[api-governance-baseline-v2] FAIL: ${message}`); process.exit(1); }
 function assert(condition, message) { if (!condition) fail(message); }
 function assertIncludes(source, needle, label) { assert(source.includes(needle), `${label} must include ${needle}`); }
-function assertNotIncludes(source, needle, label) { assert(!source.includes(needle), `${label} must not include ${needle}`); }
 
 const inventory = read(files.inventory);
 const inventoryDoc = read(files.inventoryDoc);
@@ -23,16 +22,7 @@ const openapi = read(files.openapi);
 const openapiSelfcheck = read(files.openapiSelfcheck);
 const errorEnvelope = read(files.errorEnvelope);
 
-const requiredInventoryFields = [
-  'owner',
-  'audience',
-  'boundary',
-  'source_model',
-  'auth_scope',
-  'error_model',
-  'contract_ref',
-  'gate_maturity',
-];
+const requiredInventoryFields = ['owner', 'audience', 'boundary', 'source_model', 'auth_scope', 'error_model', 'contract_ref', 'gate_maturity'];
 for (const field of requiredInventoryFields) {
   assertIncludes(inventory, `${field}:`, `api route inventory field ${field}`);
   assertIncludes(inventoryDoc, `\`${field}\``, `api route inventory doc field ${field}`);
@@ -72,12 +62,15 @@ for (const route of officialRoutes) {
 }
 
 const inventoryEntries = inventory.split('entry({').slice(1).map((chunk) => chunk.split('}),')[0]);
+function fieldPresent(chunk, field) {
+  return new RegExp(`${field}:\\s*("[^"]+"|standardError)`).test(chunk);
+}
 for (const chunk of inventoryEntries) {
   const route = /route_path:\s*"([^"]+)"/.exec(chunk)?.[1] ?? 'unknown-route';
   const boundary = /boundary:\s*"([^"]+)"/.exec(chunk)?.[1] ?? '';
   const audience = /audience:\s*"([^"]+)"/.exec(chunk)?.[1] ?? '';
   for (const field of requiredInventoryFields) {
-    assert(new RegExp(`${field}:\\s*"[^"]+"`).test(chunk), `inventory entry ${route} missing ${field}`);
+    assert(fieldPresent(chunk, field), `inventory entry ${route} missing ${field}`);
   }
   if (boundary === 'official' && audience !== 'system') {
     assert(!/auth_scope:\s*""/.test(chunk), `official route ${route} missing auth_scope`);
@@ -104,13 +97,7 @@ assertIncludes(openapiSelfcheck, 'inventory_baseline', 'OpenAPI selfcheck invent
 assertIncludes(openapiSelfcheck, 'missing_inventory', 'OpenAPI selfcheck missing inventory fail');
 assertIncludes(openapiSelfcheck, 'missing_openapi_path', 'OpenAPI selfcheck missing openapi path classification');
 assertIncludes(openapiSelfcheck, 'officialRoutesNoLongerExcluded', 'OpenAPI selfcheck official route exclusion guard');
-for (const blockedPattern of [
-  '/api/v1/acceptance/',
-  '/api/v1/reports/customer-dashboard/',
-  '/api/v1/inspection/pest-disease',
-  '/api/v1/roi-ledger',
-  '/api/v1/field-memory',
-]) {
+for (const blockedPattern of ['/api/v1/acceptance/', '/api/v1/reports/customer-dashboard/', '/api/v1/inspection/pest-disease', '/api/v1/roi-ledger', '/api/v1/field-memory']) {
   assertIncludes(openapiSelfcheck, blockedPattern, `OpenAPI selfcheck official no-long-exclusion marker ${blockedPattern}`);
 }
 
