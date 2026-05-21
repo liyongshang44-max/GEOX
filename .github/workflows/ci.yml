@@ -110,6 +110,18 @@ jobs:
           docker run --rm --network host --entrypoint /bin/sh minio/mc:latest -c 'set -eu; mc alias set local http://127.0.0.1:9000 minioadmin minioadmin; mc ls local; mc stat local/evidence-exports-v1'
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps
 
+
+      - name: Run Base Contract P0 aggregate gate
+        run: |
+          set -a
+          source .env.ci
+          set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export API_BASE_URL=http://127.0.0.1:3001
+          export DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/geox
+          export AO_ACT_TOKEN="$GEOX_AO_ACT_TOKEN"
+          export ADMIN_TOKEN="$GEOX_AO_ACT_TOKEN"
+          pnpm run ci:base-contract:p0
       - name: Run acceptance suite
         run: |
           set -a
@@ -122,6 +134,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p acceptance-output
+          cp docs/audit/BASE_CONTRACT_GATE_MATURITY_REPORT.md acceptance-output/BASE_CONTRACT_GATE_MATURITY_REPORT.md || true
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs server > acceptance-output/SERVER_RUNTIME.log || true
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs minio-init > acceptance-output/MINIO_INIT.log || true
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs postgres > acceptance-output/POSTGRES_RUNTIME.log || true
@@ -147,6 +160,7 @@ jobs:
           path: |
             acceptance-output/report.json
             acceptance-output/report.html
+            acceptance-output/BASE_CONTRACT_GATE_MATURITY_REPORT.md
             acceptance-output/*.log
           if-no-files-found: warn
 
