@@ -40,13 +40,15 @@ class AcceptancePool {
           record_json: {
             type: "ao_act_receipt_v0",
             payload: {
+              tenant_id: "tenantA",
+              project_id: "projectA",
+              group_id: "groupA",
               act_task_id: "task_1",
               observed_parameters: { duration_sec: 1200 },
               execution_time: { start_ts: 1_700_000_000_000, end_ts: 1_700_000_060_000 },
               logs_refs: [{ kind: "dispatch_ack", ref: "log_1" }],
               meta: {
                 execution_summary: { duration_min: 20, coverage_percent: 98 },
-                effect_observation: { pre_soil_moisture: 0.19, post_soil_moisture: 0.24, soil_moisture_delta: 0.05 },
               },
             },
           },
@@ -55,11 +57,14 @@ class AcceptancePool {
       };
     }
 
+    if (text.includes("judge_result_v2")) return { rows: [], rowCount: 0 };
     if (text.includes("FROM field_polygon_v1")) return { rows: [], rowCount: 0 };
     if (text.includes("device_binding_index_v1")) return { rows: [], rowCount: 0 };
     if (text.includes("raw_telemetry_v1") || text.includes("device_heartbeat_v1")) return { rows: [], rowCount: 0 };
     if (text.includes("field_program_v1")) return { rows: [], rowCount: 0 };
     if (text.includes("derived_sensing_state_index_v1")) return { rows: [], rowCount: 0 };
+    if (text.includes("fail_safe_event_v1") && text.includes("SELECT")) return { rows: [], rowCount: 0 };
+    if (text.includes("manual_takeover_v1") && text.includes("SELECT")) return { rows: [], rowCount: 0 };
 
     if (text.startsWith("INSERT INTO facts")) {
       const record = params?.[2] ?? null;
@@ -67,6 +72,10 @@ class AcceptancePool {
       if (type) this.insertedTypes.push(type);
       return { rows: [], rowCount: 1 };
     }
+
+    if (text.includes("INSERT INTO fail_safe_event_v1")) return { rows: [], rowCount: 1 };
+    if (text.includes("INSERT INTO manual_takeover_v1")) return { rows: [], rowCount: 1 };
+    if (text.includes("INSERT INTO security_audit_log_v1") || text.includes("security_audit")) return { rows: [], rowCount: 1 };
 
     return { rows: [], rowCount: 0 };
   }
@@ -85,7 +94,7 @@ async function setupApp(pool: AcceptancePool) {
   return app;
 }
 
-test("acceptance evaluate writes acceptance_result_v1", async () => {
+test("acceptance evaluate writes non-formal result when only dispatch_ack and execution_time exist", async () => {
   const pool = new AcceptancePool();
   const app = await setupApp(pool);
 
@@ -97,11 +106,15 @@ test("acceptance evaluate writes acceptance_result_v1", async () => {
   });
 
   assert.equal(res.statusCode, 200);
-  assert.equal(res.json().ok, true);
-  assert.equal(res.json().verdict, "PASS");
-  assert.equal(res.json().acceptance?.verdict, "PASS");
-  assert.equal(res.json().acceptance?.metrics?.formal_execution_passed, 1);
-  assert.equal(res.json().acceptance?.metrics?.non_simulated_chain, 1);
+  const body = res.json();
+  assert.equal(body.ok, true);
+  assert.notEqual(body.verdict, "PASS");
+  assert.ok(["INSUFFICIENT_EVIDENCE", "NEEDS_REVIEW", "PARTIAL"].includes(body.verdict));
+  assert.notEqual(body.acceptance?.verdict, "PASS");
+  assert.equal(body.acceptance?.formal_acceptance, false);
+  assert.equal(body.acceptance?.customer_visible_eligible, false);
+  assert.equal(body.acceptance?.metrics?.formal_execution_passed, 0);
+  assert.equal(body.acceptance?.metrics?.non_simulated_chain, 1);
   assert.ok(pool.insertedTypes.includes("acceptance_result_v1"));
   await app.close();
 });

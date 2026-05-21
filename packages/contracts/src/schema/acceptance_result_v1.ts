@@ -1,7 +1,10 @@
 import { z } from "zod";
 
-export const AcceptanceVerdictV1Schema = z.enum(["PASS", "FAIL", "PARTIAL"]);
+export const AcceptanceVerdictV1Schema = z.enum(["PASS", "FAIL", "PARTIAL", "NEEDS_REVIEW", "INSUFFICIENT_EVIDENCE"]);
 export type AcceptanceVerdictV1 = z.infer<typeof AcceptanceVerdictV1Schema>;
+
+export const AcceptanceSourceLaneV1Schema = z.enum(["FORMAL_OPERATION", "SIMULATED_DEV_ONLY", "DEBUG_ONLY", "UNKNOWN"]);
+export type AcceptanceSourceLaneV1 = z.infer<typeof AcceptanceSourceLaneV1Schema>;
 
 export const AcceptanceMetricsV1Schema = z.object({
   coverage_ratio: z.number().finite(),
@@ -23,8 +26,10 @@ export const AcceptanceFormalGateV1Schema = z.object({
   non_simulated_chain: z.boolean(),
   chain_validation_passed: z.boolean().optional(),
   trust_level: z.enum(["FORMAL_ACCEPTED", "NEEDS_REVIEW", "INSUFFICIENT_FORMAL_EVIDENCE", "SIMULATED_DEV_ONLY"]).optional(),
-  source_lane: z.string().min(1).optional(),
-  blocking_reasons: z.array(z.string().min(1)).optional()
+  source_lane: AcceptanceSourceLaneV1Schema.optional(),
+  is_simulated: z.boolean().optional(),
+  blocking_reasons: z.array(z.string().min(1)).optional(),
+  customer_visible_eligible: z.boolean().optional()
 });
 export type AcceptanceFormalGateV1 = z.infer<typeof AcceptanceFormalGateV1Schema>;
 
@@ -51,12 +56,16 @@ export const AcceptanceResultV1PayloadSchema = z.object({
   execution_judge_id: z.string().min(1).optional(),
   execution_judge_verdict: z.string().min(1).optional(),
 
-  /** PR-1 base-contract metadata. PASS is formal only when this gate passes. */
+  /** Base Contract v2 formal acceptance gate metadata. */
   formal_gate: AcceptanceFormalGateV1Schema.optional(),
   formal_acceptance: z.boolean().optional(),
   formal_evidence_passed: z.boolean().optional(),
   non_simulated_chain: z.boolean().optional(),
-  source_lane: z.string().min(1).optional(),
+  formal_execution_passed: z.boolean().optional(),
+  source_lane: AcceptanceSourceLaneV1Schema.optional(),
+  is_simulated: z.boolean().optional(),
+  blocking_reasons: z.array(z.string().min(1)).optional(),
+  customer_visible_eligible: z.boolean().optional(),
   trust_level: z.string().min(1).optional()
 }).extend({
   variable_operation: z.boolean().optional(),
