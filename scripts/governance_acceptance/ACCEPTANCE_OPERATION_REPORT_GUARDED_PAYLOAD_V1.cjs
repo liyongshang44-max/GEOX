@@ -80,6 +80,20 @@ assertIncludes(chain, 'prescriptionStatus === "DONE"', 'prescription availabilit
 assertIncludes(chain, 'status: prescriptionStatus === "DONE" ? (base.prescription.status ?? "AVAILABLE") : "NOT_AVAILABLE"', 'missing prescription downgrade');
 assertNotIncludes(chain, 'plan.operation_plan_id)', 'operation_plan_id fallback must not create prescription id');
 
+// Validator must block weak/legacy acceptance_result_v1 PASS without formal metadata.
+assertIncludes(validator, 'isFormalAcceptancePayload', 'chain validator formal acceptance guard');
+assertIncludes(validator, 'acceptance_result_without_formal_acceptance_gate', 'chain validator formal acceptance flag');
+assertIncludes(validator, 'formal_acceptance', 'chain validator formal acceptance metadata');
+assertIncludes(validator, 'formal_evidence_passed', 'chain validator formal acceptance metadata');
+assertIncludes(validator, 'formal_execution_passed', 'chain validator formal acceptance metadata');
+assertIncludes(validator, 'non_simulated_chain', 'chain validator formal acceptance metadata');
+assertIncludes(validator, 'customer_visible_eligible', 'chain validator customer visibility metadata');
+assertIncludes(validator, 'is_simulated', 'chain validator simulated acceptance metadata');
+assertIncludes(validator, 'sourceLane === "SIMULATED_DEV_ONLY" || sourceLane === "DEBUG_ONLY"', 'chain validator simulated acceptance guard');
+assertIncludes(validator, 'payload.customer_visible_eligible === false', 'chain validator customer visibility guard');
+assertIncludes(validator, 'acceptanceFormal', 'chain validator acceptance status requires formal gate');
+assertIncludes(validator, 'evidenceStatus === "DONE" && acceptanceFormal', 'chain validator acceptance DONE predicate');
+
 // Validator must still identify missing formal prescription and simulated/helper chains.
 assertIncludes(validator, 'prescription_id_without_formal_prescription_fact', 'chain validator prescription guard');
 assertIncludes(validator, 'helper_or_simulated_facts_present', 'chain validator simulated guard');
