@@ -62,7 +62,13 @@ function hasDevMarker(input: RecordMemoryInput): boolean {
     || raw.includes("flight_table")
     || raw.includes("simulated_dev_only")
     || raw.includes("irrigation_simulator")
-    || raw.includes("sim_trace");
+    || raw.includes("sim_trace")
+    || raw.includes("flight_table_dev");
+}
+
+function isFormalAcceptanceSource(sourceLane: string | null): boolean {
+  const lane = String(sourceLane ?? "").trim().toUpperCase();
+  return lane === "FORMAL_ACCEPTANCE" || lane === "FORMAL_OPERATION";
 }
 
 function classifyMemoryLaneV1(memory_type: FieldMemoryTypeV1, input: RecordMemoryInput): {
@@ -76,7 +82,8 @@ function classifyMemoryLaneV1(memory_type: FieldMemoryTypeV1, input: RecordMemor
 } {
   const explicitLane = input.memory_lane;
   const explicitTrust = input.trust_level;
-  const formalAcceptanceId = String(input.formal_acceptance_id ?? input.acceptance_id ?? "").trim() || null;
+  const formalAcceptanceId = String(input.formal_acceptance_id ?? "").trim() || null;
+  const legacyAcceptanceId = String(input.acceptance_id ?? "").trim() || null;
   const sourceLane = String(input.source_lane ?? "").trim() || null;
   const reasons: string[] = Array.isArray(input.trust_reasons) ? [...input.trust_reasons] : [];
 
@@ -85,38 +92,39 @@ function classifyMemoryLaneV1(memory_type: FieldMemoryTypeV1, input: RecordMemor
       memory_lane: "SIMULATED_DEV_MEMORY",
       trust_level: "SIMULATED_DEV_ONLY",
       formal_acceptance_id: formalAcceptanceId,
-      source_lane: sourceLane ?? "SIMULATED_DEV_ONLY",
+      source_lane: sourceLane ?? "FLIGHT_TABLE_DEV",
       customer_visible_memory: false,
       learning_eligible: false,
       trust_reasons: Array.from(new Set([...reasons, "SIMULATED_OR_DEV_MEMORY"])),
     };
   }
 
-  if (explicitLane && explicitTrust) {
-    const customerVisible = input.customer_visible_memory === true
-      && explicitTrust === "FORMAL_ACCEPTED"
-      && explicitLane === "FORMAL_FIELD_MEMORY"
-      && Boolean(formalAcceptanceId);
-    return {
-      memory_lane: explicitLane,
-      trust_level: explicitTrust,
-      formal_acceptance_id: formalAcceptanceId,
-      source_lane: sourceLane,
-      customer_visible_memory: customerVisible,
-      learning_eligible: input.learning_eligible === true && customerVisible,
-      trust_reasons: customerVisible ? Array.from(new Set(reasons)) : Array.from(new Set([...reasons, "FORMAL_ACCEPTANCE_ID_REQUIRED"])),
-    };
-  }
+  const explicitFormalMemoryRequested = explicitLane === "FORMAL_FIELD_MEMORY" || explicitTrust === "FORMAL_ACCEPTED" || input.customer_visible_memory === true || input.learning_eligible === true;
+  const formalLaneAllowed = explicitLane === "FORMAL_FIELD_MEMORY"
+    && explicitTrust === "FORMAL_ACCEPTED"
+    && Boolean(formalAcceptanceId)
+    && isFormalAcceptanceSource(sourceLane);
 
-  if (memory_type === "FIELD_RESPONSE_MEMORY" && formalAcceptanceId) {
+  if (explicitFormalMemoryRequested) {
+    if (formalLaneAllowed) {
+      return {
+        memory_lane: "FORMAL_FIELD_MEMORY",
+        trust_level: "FORMAL_ACCEPTED",
+        formal_acceptance_id: formalAcceptanceId,
+        source_lane: sourceLane,
+        customer_visible_memory: input.customer_visible_memory === true,
+        learning_eligible: input.learning_eligible === true && input.customer_visible_memory === true,
+        trust_reasons: Array.from(new Set(reasons)),
+      };
+    }
     return {
-      memory_lane: "FORMAL_FIELD_MEMORY",
-      trust_level: "FORMAL_ACCEPTED",
+      memory_lane: memory_type === "SKILL_PERFORMANCE_MEMORY" ? "TECHNICAL_SKILL_MEMORY" : memory_type === "DEVICE_RELIABILITY_MEMORY" || memory_type === "EXECUTION_QUALITY_MEMORY" ? "TECHNICAL_EXECUTION_MEMORY" : "DIAGNOSTIC_NOTE",
+      trust_level: "INSUFFICIENT_FORMAL_EVIDENCE",
       formal_acceptance_id: formalAcceptanceId,
-      source_lane: sourceLane ?? "FORMAL_ACCEPTANCE",
-      customer_visible_memory: true,
-      learning_eligible: true,
-      trust_reasons: Array.from(new Set(reasons)),
+      source_lane: sourceLane ?? "MANUAL_IMPORT",
+      customer_visible_memory: false,
+      learning_eligible: false,
+      trust_reasons: Array.from(new Set([...reasons, "FORMAL_MEMORY_REQUIRES_EXPLICIT_FORMAL_ACCEPTANCE_GATE", ...(legacyAcceptanceId && !formalAcceptanceId ? ["LEGACY_ACCEPTANCE_ID_NOT_FORMAL_ACCEPTANCE_ID"] : [])])),
     };
   }
 
@@ -124,7 +132,7 @@ function classifyMemoryLaneV1(memory_type: FieldMemoryTypeV1, input: RecordMemor
     return {
       memory_lane: "TECHNICAL_SKILL_MEMORY",
       trust_level: "TECHNICAL_SIGNAL",
-      formal_acceptance_id: formalAcceptanceId,
+      formal_acceptance_id: null,
       source_lane: sourceLane ?? "SKILL_TECHNICAL",
       customer_visible_memory: false,
       learning_eligible: false,
@@ -136,8 +144,8 @@ function classifyMemoryLaneV1(memory_type: FieldMemoryTypeV1, input: RecordMemor
     return {
       memory_lane: "TECHNICAL_EXECUTION_MEMORY",
       trust_level: "TECHNICAL_SIGNAL",
-      formal_acceptance_id: formalAcceptanceId,
-      source_lane: sourceLane ?? "EXECUTION_TECHNICAL",
+      formal_acceptance_id: null,
+      source_lane: sourceLane ?? "AS_EXECUTED_SIGNAL",
       customer_visible_memory: false,
       learning_eligible: false,
       trust_reasons: Array.from(new Set([...reasons, "EXECUTION_SIGNAL_IS_NOT_FORMAL_FIELD_LEARNING"])),
@@ -172,26 +180,15 @@ export async function recordMemoryV1(db: DbConn, tenant_id: string, input: Recor
   const confidence = num((metrics as any).confidence) ?? 0.8;
   const skill_refs = Array.isArray(input.skill_refs) ? input.skill_refs : [];
   const firstSkillRef = skill_refs.find((x: any) => String(x?.skill_id ?? "").trim());
-  const skill_id =
-    String(input.skill_id ?? "").trim()
-    || String(firstSkillRef?.skill_id ?? "").trim()
-    || undefined;
-  const skill_trace_ref =
-    String(input.skill_trace_ref ?? "").trim()
-    || String(firstSkillRef?.trace_id ?? firstSkillRef?.skill_run_id ?? "").trim()
-    || undefined;
-  const metric_key =
-    memory_type === "FIELD_RESPONSE_MEMORY" ? "soil_moisture_response" :
-    memory_type === "DEVICE_RELIABILITY_MEMORY" ? "valve_response_status" :
-    "irrigation_skill_outcome";
-  const metric_value = memory_type === "DEVICE_RELIABILITY_MEMORY"
-    ? ((metrics as any).success === false ? 0 : 1)
-    : undefined;
+  const skill_id = String(input.skill_id ?? "").trim() || String(firstSkillRef?.skill_id ?? "").trim() || undefined;
+  const skill_trace_ref = String(input.skill_trace_ref ?? "").trim() || String(firstSkillRef?.trace_id ?? firstSkillRef?.skill_run_id ?? "").trim() || undefined;
+  const metric_key = memory_type === "FIELD_RESPONSE_MEMORY" ? "soil_moisture_response" : memory_type === "DEVICE_RELIABILITY_MEMORY" ? "valve_response_status" : "irrigation_skill_outcome";
+  const metric_value = memory_type === "DEVICE_RELIABILITY_MEMORY" ? ((metrics as any).success === false ? 0 : 1) : undefined;
   const summary_text = input.summary?.trim() || `Field memory recorded: ${memory_type}`;
   const occurred_at = new Date().toISOString();
   const trust = classifyMemoryLaneV1(memory_type, input);
   const source_type = sourceTypeForMemory(memory_type);
-  const source_id = input.acceptance_id ?? input.operation_id ?? skill_trace_ref ?? memory_id;
+  const source_id = trust.formal_acceptance_id ?? input.operation_id ?? skill_trace_ref ?? memory_id;
 
   await db.query(
     `INSERT INTO field_memory_v1 (
