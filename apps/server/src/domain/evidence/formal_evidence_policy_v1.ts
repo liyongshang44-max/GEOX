@@ -44,6 +44,35 @@ const FORMAL_LOG_ALLOWLIST = [
   "water_delivery_receipt",
 ] as const;
 
+const FLIGHT_TABLE_MARKERS = [
+  "flight-table",
+  "flight_table",
+  "flight table",
+  "flight_table_dev_evidence",
+  "flight-table-dev-evidence",
+  "flight_table_dev",
+  "ft_evidence_",
+  "ft_export_",
+  "ft_rel_",
+] as const;
+
+const DEV_SIM_MARKERS = [
+  ...FLIGHT_TABLE_MARKERS,
+  "irrigation_simulator",
+  "simulated_dev_only",
+  "sim_trace",
+] as const;
+
+export const SUPPORTED_EVIDENCE_ARTIFACT_KINDS_V1 = [
+  "image",
+  "note",
+  "metric",
+  "trajectory",
+  "water_delivery_receipt",
+  "media",
+  "log",
+] as const;
+
 function asRecord(value: EvidenceLike): Record<string, any> {
   if (value && typeof value === "object" && !Array.isArray(value)) return value as Record<string, any>;
   return {};
@@ -69,12 +98,24 @@ function payloadOf(value: EvidenceLike): Record<string, any> {
   return Object.keys(nestedPayload).length ? nestedPayload : Object.keys(payload).length ? payload : record;
 }
 
-function containsAnyMarker(value: unknown, markers: string[]): boolean {
+function containsAnyMarker(value: unknown, markers: readonly string[]): boolean {
   const raw = JSON.stringify(value ?? "").toLowerCase();
   return markers.some((marker) => raw.includes(marker));
 }
 
-function normalizeEvidenceLevel(value: unknown, kindRaw: unknown): FormalEvidenceLevelV1 {
+function isFlightTableEvidence(payload: Record<string, any>, source?: unknown): boolean {
+  const sourceText = upper(payload.source ?? source);
+  const devSource = upper(payload.dev_source);
+  const artifactRef = lower(payload.artifact_ref ?? payload.ref ?? payload.url);
+  return sourceText.startsWith("FLIGHT_TABLE_")
+    || devSource.startsWith("FLIGHT_TABLE")
+    || artifactRef.includes("flight-table")
+    || artifactRef.includes("flight_table")
+    || containsAnyMarker({ payload, source }, FLIGHT_TABLE_MARKERS);
+}
+
+function normalizeEvidenceLevel(value: unknown, kindRaw: unknown, payload?: Record<string, any>, source?: unknown): FormalEvidenceLevelV1 {
+  if (payload && isFlightTableEvidence(payload, source)) return "DEBUG";
   const explicit = upper(value);
   if (explicit === "STRONG") return "STRONG";
   if (explicit === "FORMAL") return "FORMAL";
@@ -95,49 +136,54 @@ function normalizeSourceLane(value: unknown): FormalEvidenceSourceLaneV1 | null 
 }
 
 function inferSourceLane(payload: Record<string, any>, source?: unknown): FormalEvidenceSourceLaneV1 {
+  if (isFlightTableEvidence(payload, source)) return "SIMULATED_DEV_ONLY";
   const explicit = normalizeSourceLane(payload.source_lane ?? payload.lane ?? payload.trust_lane);
   if (explicit) return explicit;
-  if (containsAnyMarker({ payload, source }, ["flight-table", "flight_table", "flight table", "irrigation_simulator", "simulated_dev_only"])) {
-    return "SIMULATED_DEV_ONLY";
-  }
-  if (containsAnyMarker({ payload, source }, ["debug", "sim_trace", "dev_source"])) return "DEBUG_ONLY";
+  if (containsAnyMarker({ payload, source }, DEV_SIM_MARKERS)) return "SIMULATED_DEV_ONLY";
+  if (containsAnyMarker({ payload, source }, ["debug", "dev_source"])) return "DEBUG_ONLY";
   if (text(payload.artifact_id) || text(payload.evidence_id) || text(payload.receipt_id) || text(payload.act_task_id)) return "FORMAL_OPERATION";
   return "UNKNOWN";
 }
 
 function hasFormalLogKind(kindRaw: unknown): boolean {
   const kind = lower(kindRaw);
-  if (!kind || kind === "sim_trace" || kind.includes("debug")) return false;
+  if (!kind || kind === "sim_trace" || kind.includes("debug") || containsAnyMarker(kind, FLIGHT_TABLE_MARKERS)) return false;
   return FORMAL_LOG_ALLOWLIST.some((token) => kind.includes(token));
 }
 
 export function classifyEvidenceArtifactV1(value: EvidenceLike, options?: { source?: unknown; fallback_kind?: string }): FormalEvidenceClassificationV1 {
   const payload = payloadOf(value);
   const kind = text(payload.kind ?? payload.evidence_kind ?? options?.fallback_kind ?? value);
+  const flightTableEvidence = isFlightTableEvidence(payload, options?.source ?? payload.source);
   const sourceLane = inferSourceLane(payload, options?.source ?? payload.source);
-  const evidenceLevel = normalizeEvidenceLevel(payload.evidence_level ?? payload.level, kind);
+  const evidenceLevel = normalizeEvidenceLevel(payload.evidence_level ?? payload.level, kind, payload, options?.source ?? payload.source);
   const explicitEligible = typeof payload.formal_eligible === "boolean" ? payload.formal_eligible : null;
   const explicitSimulated = typeof payload.is_simulated === "boolean" ? payload.is_simulated : null;
-  const isSimulated = Boolean(explicitSimulated)
+  const isSimulated = flightTableEvidence
+    || Boolean(explicitSimulated)
     || sourceLane === "SIMULATED_DEV_ONLY"
     || sourceLane === "DEBUG_ONLY"
-    || containsAnyMarker({ payload, source: options?.source }, ["flight-table", "flight_table", "irrigation_simulator", "sim_trace"]);
+    || containsAnyMarker({ payload, source: options?.source }, DEV_SIM_MARKERS);
 
   const blockingReasons: string[] = [];
+  if (flightTableEvidence) blockingReasons.push("FLIGHT_TABLE_DEV_EVIDENCE_NOT_FORMAL");
   if (isSimulated) blockingReasons.push("SIMULATED_OR_DEV_EVIDENCE");
   if (sourceLane === "UNKNOWN") blockingReasons.push("UNKNOWN_EVIDENCE_SOURCE_LANE");
   if (evidenceLevel === "DEBUG") blockingReasons.push("DEBUG_EVIDENCE_NOT_FORMAL");
   if (explicitEligible === false) blockingReasons.push("FORMAL_ELIGIBLE_FALSE");
+  if (explicitEligible === true && flightTableEvidence) blockingReasons.push("FLIGHT_TABLE_FORMAL_ELIGIBLE_FORBIDDEN");
 
-  const formalEligible = explicitEligible === false
+  const formalEligible = flightTableEvidence
     ? false
-    : !isSimulated && evidenceLevel !== "DEBUG" && sourceLane !== "UNKNOWN";
+    : explicitEligible === false
+      ? false
+      : !isSimulated && evidenceLevel !== "DEBUG" && sourceLane !== "UNKNOWN";
 
   return {
-    source_lane: sourceLane,
+    source_lane: flightTableEvidence ? "SIMULATED_DEV_ONLY" : sourceLane,
     is_simulated: isSimulated,
     formal_eligible: formalEligible,
-    evidence_level: evidenceLevel,
+    evidence_level: flightTableEvidence ? "DEBUG" : evidenceLevel,
     blocking_reasons: Array.from(new Set(blockingReasons)),
   };
 }
@@ -162,7 +208,7 @@ export function evaluateFormalEvidencePolicyV1(input: {
   for (const log of Array.isArray(input.logs) ? input.logs : []) {
     const kind = typeof log === "string" ? log : (payloadOf(log).kind ?? payloadOf(log).type ?? log);
     const base = classifyEvidenceArtifactV1(log, { source: input.source, fallback_kind: String(kind ?? "log") });
-    const formalLog = hasFormalLogKind(kind);
+    const formalLog = hasFormalLogKind(kind) && !base.is_simulated && base.source_lane !== "SIMULATED_DEV_ONLY" && base.source_lane !== "DEBUG_ONLY";
     const sourceLane = formalLog && base.source_lane === "UNKNOWN" ? "FORMAL_OPERATION" : base.source_lane;
     const isSimulated = base.is_simulated || sourceLane === "SIMULATED_DEV_ONLY" || sourceLane === "DEBUG_ONLY";
     const formalEligible = base.formal_eligible || (formalLog && !isSimulated);
