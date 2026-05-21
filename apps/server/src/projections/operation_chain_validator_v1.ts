@@ -140,6 +140,24 @@ function isFormalStage1SensingSummary(stage1: any): boolean {
   return !simulated && (trigger === true || passed === true || upper(stage1?.status) === "FORMAL_TRIGGERED" || upper(stage1?.status) === "PASSED");
 }
 
+function isFormalAcceptancePayload(payload: any): boolean {
+  if (!payload || typeof payload !== "object") return false;
+
+  const sourceLane = upper(payload.source_lane);
+  const trustLevel = upper(payload.trust_level);
+
+  if (payload.is_simulated === true) return false;
+  if (sourceLane === "SIMULATED_DEV_ONLY" || sourceLane === "DEBUG_ONLY") return false;
+  if (payload.customer_visible_eligible === false) return false;
+
+  if (payload.formal_acceptance === true) return true;
+
+  return payload.formal_evidence_passed === true
+    && payload.formal_execution_passed !== false
+    && payload.non_simulated_chain !== false
+    && (sourceLane === "FORMAL_OPERATION" || trustLevel === "FORMAL_ACCEPTED");
+}
+
 export function validateOperationChainV1(input: ValidatorInput): OperationChainValidationResultV1 {
   const facts = input.facts ?? [];
   const recFact = latestByType(facts, "decision_recommendation_v1");
@@ -225,10 +243,12 @@ export function validateOperationChainV1(input: ValidatorInput): OperationChainV
         : "BLOCKED";
 
   const acceptanceExists = Boolean(acceptanceFact || input.acceptance);
+  const acceptancePayloadForFormalGate = input.acceptancePayload ?? input.acceptance ?? input.report?.acceptance;
+  const acceptanceFormal = isFormalAcceptancePayload(acceptancePayloadForFormalGate);
   const acceptanceVerdict = upper(input.acceptance?.verdict ?? input.acceptancePayload?.verdict ?? input.report?.acceptance?.verdict ?? input.report?.acceptance?.status);
   const acceptanceStatus: OperationChainStatusV1 = !acceptanceExists
     ? "MISSING"
-    : evidenceStatus === "DONE" && ["PASS", "FAIL", "FAILED", "REJECTED"].includes(acceptanceVerdict)
+    : evidenceStatus === "DONE" && acceptanceFormal && ["PASS", "FAIL", "FAILED", "REJECTED"].includes(acceptanceVerdict)
       ? "DONE"
       : receiptNotAcceptance || isHelper
         ? "SIMULATED"
@@ -249,7 +269,7 @@ export function validateOperationChainV1(input: ValidatorInput): OperationChainV
     node("execution", "执行", executionStatus, executionStatus === "DONE" ? "执行任务已由正式计划派发" : taskExists ? "上游作业计划未授权，执行任务不能作为正式执行" : "缺少执行任务", taskFact ? "ao_act_task_v0" : "operation_report_chain_v1"),
     node("receipt", "回执", receiptStatus, receiptStatus === "DONE" ? "执行回执已记录且具备执行窗口" : receiptStatus === "SIMULATED" ? "该回执来自飞行台/模拟链路，不能作为验收通过依据" : receiptExists ? "回执缺少执行窗口或上游执行未成立" : "缺少执行回执", receiptFact ? factType(receiptFact) : "operation_report_chain_v1"),
     node("evidence", "证据", evidenceStatus, evidenceStatus === "DONE" ? "证据链完整" : evidenceStatus === "SIMULATED" ? "证据来自模拟链路，不能包装成正式验收证据" : "证据不足或上游回执未成立", "operation_report_chain_v1"),
-    node("acceptance", "验收", acceptanceStatus, acceptanceStatus === "DONE" ? "验收结论已形成" : acceptanceStatus === "SIMULATED" ? "飞行台回执成功不等于验收通过，验收结论需降级" : acceptanceExists ? "上游证据未成立，验收不能作为正式结论" : "缺少验收结论", acceptanceFact ? "acceptance_result_v1" : "operation_report_chain_v1"),
+    node("acceptance", "验收", acceptanceStatus, acceptanceStatus === "DONE" ? "正式验收结论已形成" : acceptanceStatus === "SIMULATED" ? "飞行台回执成功不等于验收通过，验收结论需降级" : acceptanceExists && !acceptanceFormal ? "验收记录缺少 formal_acceptance gate metadata，不能作为正式客户结论" : acceptanceExists ? "上游证据未成立，验收不能作为正式结论" : "缺少验收结论", acceptanceFact ? "acceptance_result_v1" : "operation_report_chain_v1"),
     node("roi", "价值", roiStatus, roiStatus === "AVAILABLE" ? "价值记录可作为学习输入" : roiStatus === "BLOCKED" ? "验收未正式成立，价值结论不能成立" : "缺少价值记录", "roi_ledger_v1"),
     node("field_memory", "田块记忆", memoryStatus, memoryStatus === "AVAILABLE" ? "田块记忆可作为学习输入" : memoryStatus === "SIMULATED" ? "田块记忆来自未正式验收链路，仅作排查线索" : "缺少田块记忆", "field_memory_v1"),
   ];
@@ -265,6 +285,7 @@ export function validateOperationChainV1(input: ValidatorInput): OperationChainV
   if (operationPlanExists && !operationPlanAuthorized) chain_flags.push("operation_plan_without_approved_decision");
   if (receiptStatus === "SIMULATED") chain_flags.push("simulated_receipt_not_acceptance_proof");
   if (acceptanceStatus === "SIMULATED") chain_flags.push("simulated_acceptance_not_customer_conclusion");
+  if (acceptanceExists && !acceptanceFormal) chain_flags.push("acceptance_result_without_formal_acceptance_gate");
 
   const blocking_reasons = status_chain.filter((item) => ["BLOCKED", "INVALID", "SIMULATED", "NEEDS_EVIDENCE"].includes(item.status)).map((item) => `${item.label}: ${item.reason}`);
   const mandatoryPassed = status_chain.slice(0, 9).every((item) => item.status === "DONE");
