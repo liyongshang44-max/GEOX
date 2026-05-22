@@ -19,12 +19,51 @@ type CreateAppOptions = {
   paths: RuntimePaths;
 };
 
+function registerRuntimeErrorBoundaryV1(app: FastifyInstance): void {
+  app.setErrorHandler((error: any, req, reply) => {
+    const msg = String(error?.message ?? "").trim();
+    if (msg.includes("OPERATION_PLAN_TERMINAL")) {
+      if (reply.sent) {
+        req.log.error({ err: error }, "terminal operation conflict after reply was already sent");
+        return;
+      }
+      return reply.code(409).send({
+        ok: false,
+        error: "OPERATION_PLAN_TERMINAL",
+        already_terminal: true,
+        message: "operation plan is already terminal"
+      });
+    }
+
+    if (msg.includes("STATE_TRANSITION_DENIED")) {
+      if (reply.sent) {
+        req.log.error({ err: error }, "state transition conflict after reply was already sent");
+        return;
+      }
+      return reply.code(409).send({
+        ok: false,
+        error: "STATE_TRANSITION_DENIED",
+        message: "state transition denied"
+      });
+    }
+
+    if (reply.sent) {
+      req.log.error({ err: error }, "unhandled error after reply was already sent");
+      return;
+    }
+
+    req.log.error({ err: error }, "unhandled runtime error");
+    return reply.code(500).send({ ok: false, error: "INTERNAL_SERVER_ERROR" });
+  });
+}
+
 export function createApp(options: CreateAppOptions): { app: FastifyInstance; pool: Pool } {
   const { config, paths } = options;
   const pool = createDatabasePool(config.databaseUrl);
   const app = Fastify({ logger: true, bodyLimit: 50 * 1024 * 1024 });
   void app.register(cors, buildCorsOptionsV1());
 
+  registerRuntimeErrorBoundaryV1(app);
   registerRouteReplyGuardV1(app);
   registerCoreModule(app);
   registerStaticModule(app, {
