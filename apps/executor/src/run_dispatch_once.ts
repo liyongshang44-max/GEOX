@@ -143,8 +143,7 @@ function parseTerminalDedupeMs() {
     if (!Number.isFinite(parsed))
         return DEFAULT_TERMINAL_DEDUPE_MS;
     return Math.max(10000, parsed);
-}
-function sweepExpiredTerminalDedupe(nowMs) {
+}\nfunction sweepExpiredTerminalDedupe(nowMs) {
     for (const [taskId, untilMs] of recentTerminalByTask.entries()) {
         if (untilMs > nowMs)
             continue;
@@ -257,7 +256,7 @@ function hasReceiptIdempotencyKey(items, taskId, attemptNo, receiptCode) {
     const expected = `${taskId}:${attemptNo}:${receiptCode}`;
     return items.some((item) => String(item?.receipt?.payload?.meta?.idempotency_key ?? "").trim() === expected);
 }
-async function appendReceiptV1(args, task, attemptNo, receipt_status, adapter_type, receipt_code, receipt_message, raw_receipt_ref) {
+async function appendReceiptV1(args, task, attemptNo, receipt_status, adapter_type, receipt_code, receipt_message, raw_receipt_ref = null) {
     const receiptCode = String(receipt_code ?? receipt_status).trim() || receipt_status;
     const idempotencyKey = `${task.act_task_id}:${attemptNo}:${receiptCode}`;
     const existing = await getReceipts(args, task);
