@@ -5,8 +5,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.runDispatchOnce = runDispatchOnce;
 const node_crypto_1 = __importDefault(require("node:crypto"));
-const adapters_1 = require("./adapters/index.ts");
-const claim_1 = require("./lib/claim.ts");
+const adapters_1 = require("./adapters/index.js");
+const claim_1 = require("./lib/claim.js");
 function parseBool(v, fallback) {
     if (v === undefined)
         return fallback;
