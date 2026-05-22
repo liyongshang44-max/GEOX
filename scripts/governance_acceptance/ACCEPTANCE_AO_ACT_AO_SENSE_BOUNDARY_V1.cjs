@@ -69,13 +69,13 @@ assertIncludes(senseControl, 'receipt_success_is_observation_only: true', 'AO-SE
 assertIncludes(senseControl, 'does_not_imply_ao_act_execution_success: true', 'AO-SENSE not AO-ACT success');
 assertIncludes(senseControl, 'does_not_imply_acceptance_pass: true', 'AO-SENSE not acceptance pass');
 assertIncludes(senseControl, 'allowed_evidence_ref: "observation_fact_only"', 'AO-SENSE evidence boundary');
-assertIncludes(senseControl, 'evidence_validation: "db_fact_type_device_observation_v1"', 'AO-SENSE evidence DB type validation label');
+assertIncludes(senseControl, 'evidence_validation: "db_fact_type_observation_allowlist"', 'AO-SENSE evidence DB type validation label');
 assertIncludes(senseControl, 'validateObservationEvidenceRefShape', 'AO-SENSE receipt structural ref validation helper');
 assertIncludes(senseControl, 'validateObservationOnlyEvidenceRefs', 'AO-SENSE receipt DB ref validation helper');
 assertIncludes(senseControl, 'SELECT fact_id, record_json::jsonb AS record_json', 'AO-SENSE receipt must query facts table');
 assertIncludes(senseControl, 'WHERE fact_id = ANY($1::text[])', 'AO-SENSE receipt must validate referenced facts by id');
 assertIncludes(senseControl, 'allowedObservationFactTypes', 'AO-SENSE receipt must use explicit fact type allowlist');
-assertIncludes(senseControl, 'new Set(["device_observation_v1"])', 'AO-SENSE receipt must allow device_observation_v1 only');
+assertIncludes(senseControl, 'new Set(["device_observation_v1", "pest_disease_observation_v1"])', 'AO-SENSE receipt allowlist must include device and pest_disease observation facts');
 assertIncludes(senseControl, 'AO_SENSE_OBSERVATION_FACT_NOT_FOUND', 'AO-SENSE missing observation fact guard');
 assertIncludes(senseControl, 'AO_SENSE_RECEIPT_REQUIRES_OBSERVATION_FACT_TYPE', 'AO-SENSE wrong fact type guard');
 assertIncludes(senseControl, 'ao_act_execution_success: false', 'AO-SENSE explicit non AO-ACT success');
