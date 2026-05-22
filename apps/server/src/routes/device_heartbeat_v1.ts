@@ -128,10 +128,14 @@ export function registerDeviceHeartbeatV1Routes(app: FastifyInstance, pool: Pool
         insertVals
       ); // Execute.
 
-      reply.code(200).send({ ok: true, device_id, ts_ms: now_ms }); // Reply ok.
+      return reply.code(200).send({ ok: true, device_id, ts_ms: now_ms }); // Reply ok.
     } catch (e: any) { // Error path.
       const msg = typeof e?.message === "string" ? e.message : "heartbeat failed"; // Normalize message.
-      reply.code(500).send({ ok: false, error: "HEARTBEAT_ERROR", message: msg }); // Reply error.
+      if (reply.sent) {
+        req.log?.error?.({ err: e }, "heartbeat failed after reply was already sent");
+        return;
+      }
+      return reply.code(500).send({ ok: false, error: "HEARTBEAT_ERROR", message: msg }); // Reply error.
     }
   }); // End route.
 } // End register.
