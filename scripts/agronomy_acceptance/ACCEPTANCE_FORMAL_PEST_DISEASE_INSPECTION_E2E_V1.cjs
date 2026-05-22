@@ -97,12 +97,12 @@ async function evaluateAcceptance(base, token, payload) {
 
 async function createReceiptWithoutObservation(base, token, runId) {
   const task = await createSenseTask(base, token, runId, 'NORMAL');
-  return requireOk(await post(base, '/api/v1/sense/receipt', token, {
+  return post(base, '/api/v1/sense/receipt', token, {
     task_id: task.task_id,
     executed_at_ts: Date.now(),
     result: 'success',
     evidence_refs: [{ kind: 'fact_id', ref_id: `missing_observation_${runId}` }],
-  }), 'AO-SENSE receipt without observation');
+  });
 }
 
 async function queryFactsByInspection(pool, inspection_id) {
@@ -319,7 +319,9 @@ async function run() {
 
     const noObsInspectionId = `inspection_noobs_${runId}`;
     await createInspectionRequest(base, adminToken, scope, field_id, noObsInspectionId, 'AO_SENSE', 'PEST');
-    await createReceiptWithoutObservation(base, adminToken, `noobs_${runId}`);
+    const noObsReceipt = await createReceiptWithoutObservation(base, adminToken, `noobs_${runId}`);
+    assert.equal(noObsReceipt.status, 400, `AO-SENSE no-observation receipt should be rejected: ${JSON.stringify(compact(noObsReceipt))}`);
+    assert.equal(noObsReceipt.json?.error, 'evidence_refs[0].AO_SENSE_OBSERVATION_FACT_NOT_FOUND');
     const noObsConfirm = await createAssessmentRaw(base, adminToken, scope, {
       assessment_id: `assessment_noobs_${runId}`,
       inspection_id: noObsInspectionId,

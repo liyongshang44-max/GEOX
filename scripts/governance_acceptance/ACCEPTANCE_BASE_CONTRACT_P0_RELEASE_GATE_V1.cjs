@@ -57,6 +57,12 @@ function writeReport(results, overallStatus) {
 
 (function main() {
   console.log('[base-contract-p0-release-gate] running Base Contract P0 aggregate negative gate');
+  const runtimeRequired = ["BASE_URL", "API_BASE_URL", "DATABASE_URL", "ADMIN_TOKEN", "AO_ACT_TOKEN"];
+  const missingRuntime = runtimeRequired.filter((key) => !String(process.env[key] ?? "").trim());
+  if (missingRuntime.length > 0) {
+    console.error(`[base-contract-p0-release-gate] missing runtime env: ${missingRuntime.join(", ")}`);
+    process.exit(1);
+  }
   console.log('[base-contract-p0-release-gate] environment', {
     BASE_URL: process.env.BASE_URL ?? null,
     API_BASE_URL: process.env.API_BASE_URL ?? null,

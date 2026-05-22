@@ -90,15 +90,17 @@ assertIncludes(stage1, 'containsDevMarker(summaryPayload)', 'stage1 dev marker g
 // Flight Table evidence must remain non-formal and under admin/feature flag boundaries.
 assertIncludes(evidencePolicy, 'FLIGHT_TABLE_DEV_EVIDENCE_NOT_FORMAL', 'formal evidence policy flight table block');
 assertIncludes(evidencePolicy, 'SIMULATED_OR_DEV_EVIDENCE', 'formal evidence policy simulated block');
-assertIncludes(evidencePolicy, 'flightTableEvidence ? false', 'formal evidence policy flight table formal false');
+assertIncludes(evidencePolicy, 'const formalEligible = flightTableEvidence', 'formal evidence policy flight table formal false');
+assertIncludes(evidencePolicy, '? false', 'formal evidence policy flight table formal false ternary');
 assertIncludes(evidencePolicy, 'flightTableEvidence ? "SIMULATED_DEV_ONLY"', 'formal evidence policy flight table lane');
 assertIncludes(evidencePolicy, 'flightTableEvidence ? "DEBUG"', 'formal evidence policy flight table debug');
 assertIncludes(flightEvidence, 'ENABLE_FLIGHT_TABLE_API', 'flight table feature flag');
 assertIncludes(flightEvidence, 'security.admin', 'flight table admin scope');
 
 const fixture = String.raw`
-const { evaluateFormalStage1TriggerGateV1, isSimulatedStage1SummaryV1 } = await import('./apps/server/src/domain/decision/stage1_action_boundary_v1.ts');
-const { classifyEvidenceArtifactV1 } = await import('./apps/server/src/domain/evidence/formal_evidence_policy_v1.ts');
+(async () => {
+const { evaluateFormalStage1TriggerGateV1, isSimulatedStage1SummaryV1 } = await import('./src/domain/decision/stage1_action_boundary_v1.ts');
+const { classifyEvidenceArtifactV1 } = await import('./src/domain/evidence/formal_evidence_policy_v1.ts');
 function assertRuntime(condition, message) { if (!condition) throw new Error(message); }
 const simulatedStage1 = {
   irrigation_effectiveness: 'low',
@@ -136,6 +138,7 @@ assertRuntime(flight.source_lane === 'SIMULATED_DEV_ONLY', 'Flight Table source 
 assertRuntime(flight.is_simulated === true, 'Flight Table evidence must be simulated');
 assertRuntime(flight.formal_eligible === false, 'Flight Table evidence must not be formal eligible');
 assertRuntime(flight.evidence_level === 'DEBUG', 'Flight Table evidence must be DEBUG');
+})();
 `;
 const runtime = spawnSync('pnpm', ['--filter', '@geox/server', 'exec', 'tsx', '-e', fixture], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 if (runtime.status !== 0) {

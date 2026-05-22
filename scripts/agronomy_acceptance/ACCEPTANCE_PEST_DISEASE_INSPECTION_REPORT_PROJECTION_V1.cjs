@@ -29,6 +29,9 @@ async function insertOperationPlanFact(pool, scope, operation_plan_id, field_id,
 
 function assertStaticContracts(root) {
   const reportV1 = fs.readFileSync(path.join(root, 'apps/server/src/projections/report_v1.ts'), 'utf8');
+  const operationStateProjection = fs.readFileSync(path.join(root, 'apps/server/src/projections/operation_state_v1.ts'), 'utf8');
+  assert.equal(operationStateProjection.includes('projectOperationStateV1'), true);
+  assert.equal(operationStateProjection.includes('operation_plan_v1'), true);
   const reportsRoute = fs.readFileSync(path.join(root, 'apps/server/src/routes/reports_v1.ts'), 'utf8');
   const projection = fs.readFileSync(path.join(root, 'apps/server/src/services/inspection/pest_disease_inspection_projection_v1.ts'), 'utf8');
   const exportBlocks = fs.readFileSync(path.join(root, 'apps/web/src/components/customer/CustomerExportBlocks.tsx'), 'utf8');

@@ -6,7 +6,7 @@ const id = (p) => `${p}_${randomUUID().replace(/-/g, '').slice(0, 18)}`;
 const q = (v) => encodeURIComponent(String(v ?? ''));
 
 const base = env('BASE_URL', process.env.API_BASE_URL || 'http://127.0.0.1:3001');
-const adminToken = env('ADMIN_TOKEN', 'admin_token');
+const adminToken = env('ADMIN_TOKEN', env('AO_ACT_TOKEN', env('TOKEN', 'admin_token')));
 const invalidToken = env('INVALID_TOKEN', 'definitely_invalid_token');
 const readOnlyToken = env('READ_ONLY_TOKEN', env('CLIENT_TOKEN', 'set-via-env-or-external-secret-file-client'));
 const writeOnlyToken = env('WRITE_ONLY_TOKEN', '');

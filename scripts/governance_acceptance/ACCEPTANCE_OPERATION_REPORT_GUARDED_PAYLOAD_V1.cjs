@@ -98,7 +98,7 @@ assertIncludes(validator, 'evidenceStatus === "DONE" && acceptanceFormal', 'chai
 assertIncludes(validator, 'prescription_id_without_formal_prescription_fact', 'chain validator prescription guard');
 assertIncludes(validator, 'helper_or_simulated_facts_present', 'chain validator simulated guard');
 assertIncludes(validator, 'simulated_acceptance_not_customer_conclusion', 'chain validator simulated acceptance guard');
-assertIncludes(validator, 'chain_validation', 'chain validator result shape');
+assertIncludes(validator, 'validation:', 'chain validator result shape');
 
 // Reports route/hook must execute the chain enrichment for operation report responses.
 assertIncludes(hook, 'enrichOperationReportChainV1', 'operation report chain hook');

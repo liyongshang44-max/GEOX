@@ -85,7 +85,8 @@ assertIncludes(reportsDashboardRoute, 'projectCustomerDashboardAggregateFromStat
 assertIncludes(reportsDashboardRoute, 'projectFieldPortfolioSummaryV1', 'reports dashboard route guarded report projection');
 
 const fixture = String.raw`
-const mod = await import('./apps/server/src/projections/report_dashboard_v1.ts');
+(async () => {
+const mod = await import('./src/projections/report_dashboard_v1.ts');
 const { projectCustomerDashboardAggregateFromStatesV1, projectCustomerDashboardAggregateV1 } = mod;
 function assertRuntime(condition, message) {
   if (!condition) throw new Error(message);
@@ -134,6 +135,7 @@ assertRuntime(reportAgg.recent_operations[0].acceptance_status !== 'PASS', 'weak
 assertRuntime(reportAgg.roi_summary.has_customer_visible_value === false, 'assumption ROI must not have customer visible value');
 assertRuntime(reportAgg.roi_summary.hypothesis_items === 1, 'assumption ROI must be counted as hypothesis');
 assertRuntime(reportAgg.roi_summary.trusted_value_items === 0, 'assumption ROI must not be trusted value');
+})();
 `;
 
 const runtime = spawnSync('pnpm', ['--filter', '@geox/server', 'exec', 'tsx', '-e', fixture], {

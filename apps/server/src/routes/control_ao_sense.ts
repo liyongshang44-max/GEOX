@@ -134,7 +134,7 @@ async function validateObservationOnlyEvidenceRefs(pool: Pool, evidenceRefs: any
     [uniqueRefIds],
   );
   const byId = new Map<string, any>((found.rows ?? []).map((row: any) => [String(row.fact_id), safeJsonParse(row.record_json)]));
-  const allowedObservationFactTypes = new Set(["device_observation_v1"]);
+  const allowedObservationFactTypes = new Set(["device_observation_v1", "pest_disease_observation_v1"]);
   for (let i = 0; i < evidenceRefs.length; i++) {
     const refId = String(evidenceRefs[i]?.ref_id ?? "").trim();
     const record = byId.get(refId);
@@ -175,7 +175,7 @@ async function handleCreateSenseReceipt(pool: Pool, req: any, reply: any) {
       does_not_imply_ao_act_execution_success: true,
       does_not_imply_acceptance_pass: true,
       allowed_evidence_ref: "observation_fact_only",
-      evidence_validation: "db_fact_type_device_observation_v1",
+      evidence_validation: "db_fact_type_observation_allowlist_v1",
     },
     ao_act_execution_success: false,
     acceptance_pass: false,
