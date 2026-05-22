@@ -16,6 +16,20 @@ function run(command, args, opts = {}) {
   return result;
 }
 
+function hasDistSafeImportOrRequire(source, modulePath) {
+  return source.includes(`from "${modulePath}"`) ||
+    source.includes(`from '${modulePath}'`) ||
+    source.includes(`require("${modulePath}")`) ||
+    source.includes(`require('${modulePath}')`);
+}
+
+function hasTsImportOrRequire(source, modulePathWithoutExtension) {
+  return source.includes(`from "${modulePathWithoutExtension}.ts"`) ||
+    source.includes(`from '${modulePathWithoutExtension}.ts'`) ||
+    source.includes(`require("${modulePathWithoutExtension}.ts")`) ||
+    source.includes(`require('${modulePathWithoutExtension}.ts')`);
+}
+
 function checkStaticPackaging() {
   const executorPkg = JSON.parse(read('apps/executor/package.json'));
   const build = String(executorPkg?.scripts?.build ?? '');
@@ -33,14 +47,14 @@ function checkStaticPackaging() {
   assert(executorSection.includes('pnpm --filter @geox/executor build'), 'commercial_v1 executor build arg must build @geox/executor');
 
   const runtimeLoop = read('apps/executor/src/runtime_loop.ts');
-  assert(runtimeLoop.includes('require("./run_dispatch_once.js")'), 'runtime_loop.ts must require dist-safe run_dispatch_once.js');
-  assert(!runtimeLoop.includes('require("./run_dispatch_once.ts")'), 'runtime_loop.ts must not require run_dispatch_once.ts');
+  assert(hasDistSafeImportOrRequire(runtimeLoop, './run_dispatch_once.js'), 'runtime_loop.ts must use dist-safe run_dispatch_once.js import/require');
+  assert(!hasTsImportOrRequire(runtimeLoop, './run_dispatch_once'), 'runtime_loop.ts must not import/require run_dispatch_once.ts');
 
   const dispatchOnce = read('apps/executor/src/run_dispatch_once.ts');
-  assert(dispatchOnce.includes('require("./adapters/index.js")'), 'run_dispatch_once.ts must require dist-safe adapters/index.js');
-  assert(dispatchOnce.includes('require("./lib/claim.js")'), 'run_dispatch_once.ts must require dist-safe lib/claim.js');
-  assert(!dispatchOnce.includes('require("./adapters/index.ts")'), 'run_dispatch_once.ts must not require adapters/index.ts');
-  assert(!dispatchOnce.includes('require("./lib/claim.ts")'), 'run_dispatch_once.ts must not require lib/claim.ts');
+  assert(hasDistSafeImportOrRequire(dispatchOnce, './adapters/index.js'), 'run_dispatch_once.ts must use dist-safe adapters/index.js import/require');
+  assert(hasDistSafeImportOrRequire(dispatchOnce, './lib/claim.js'), 'run_dispatch_once.ts must use dist-safe lib/claim.js import/require');
+  assert(!hasTsImportOrRequire(dispatchOnce, './adapters/index'), 'run_dispatch_once.ts must not import/require adapters/index.ts');
+  assert(!hasTsImportOrRequire(dispatchOnce, './lib/claim'), 'run_dispatch_once.ts must not import/require lib/claim.ts');
 }
 
 function checkBuildArtifacts() {
