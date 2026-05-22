@@ -2,7 +2,7 @@
   "name": "@geox/executor",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "runtime": "node dist/runtime_loop.js",
