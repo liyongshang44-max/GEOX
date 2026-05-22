@@ -12,8 +12,8 @@ function fail(message) {
 function assert(condition, message) { if (!condition) fail(message); }
 function read(rel) { return fs.readFileSync(path.join(root, rel), 'utf8'); }
 function run(command, args, opts = {}) {
-  const result = spawnSync(command, args, { cwd: root, encoding: 'utf8', shell: process.platform === 'win32', ...opts });
-  return result;
+  const bin = process.platform === 'win32' && command === 'pnpm' ? 'pnpm.cmd' : command;
+  return spawnSync(bin, args, { cwd: root, encoding: 'utf8', shell: false, ...opts });
 }
 
 function hasDistSafeImportOrRequire(source, modulePath) {
