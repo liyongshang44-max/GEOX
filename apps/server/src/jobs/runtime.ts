@@ -1,4 +1,6 @@
+import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
+import { pathToFileURL } from "node:url";
 import { Pool } from "pg";
 import { fetchPendingJobs, markJobFailed, runQueuedEvidenceExportJob } from "../routes/delivery_evidence_export_v1.js";
 import { fetchPendingEvidenceReportJobs, markEvidenceReportJobFailed, runQueuedEvidenceReportJob } from "../routes/evidence_report_v1.js";
@@ -73,7 +75,13 @@ export async function runJobsRuntime(): Promise<void> {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+function isMainModule(): boolean {
+  const argv1 = process.argv[1];
+  if (!argv1) return false;
+  return import.meta.url === pathToFileURL(path.resolve(argv1)).href;
+}
+
+if (isMainModule()) {
   runJobsRuntime().catch((error) => {
     console.error(`FATAL: jobs runtime crashed: ${error instanceof Error ? error.stack ?? error.message : String(error)}`);
     process.exit(1);
