@@ -6,9 +6,13 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "target": "ES2022",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"],
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "noEmit": false,
+    "strict": false
   },
-  "include": ["src"]
+  "include": ["src/**/*.ts"]
 }
