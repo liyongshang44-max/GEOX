@@ -175,7 +175,7 @@ async function handleCreateSenseReceipt(pool: Pool, req: any, reply: any) {
       does_not_imply_ao_act_execution_success: true,
       does_not_imply_acceptance_pass: true,
       allowed_evidence_ref: "observation_fact_only",
-      evidence_validation: "db_fact_type_observation_allowlist",
+      evidence_validation: "db_fact_type_observation_allowlist_v1",
     },
     ao_act_execution_success: false,
     acceptance_pass: false,
