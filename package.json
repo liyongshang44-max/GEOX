@@ -65,7 +65,7 @@
     "ci:route-dependency-guard": "node scripts/check_route_dependency_guard.cjs",
     "selfcheck:smoke:pending-acceptance": "node --test scripts/acceptance/__tests__/pending_acceptance_smoke_selfcheck.test.cjs",
     "selfcheck:p1-skill-loop-minimal": "node apps/server/scripts/p1_skill_loop_minimal_selfcheck.mjs",
-    "test:acceptance": "pnpm run ci:base-contract:p0 && node scripts/acceptance/run_acceptance.cjs",
+    "test:acceptance": "node scripts/acceptance/run_acceptance.cjs",
     "acceptance:release-audit:evidence-bundle:v1": "node scripts/agronomy_acceptance/ACCEPTANCE_RELEASE_AUDIT_EVIDENCE_BUNDLE_V1.cjs",
     "acceptance:operation-report-chain:v1": "node scripts/agronomy_acceptance/ACCEPTANCE_OPERATION_REPORT_CHAIN_V1.cjs",
     "acceptance:commercial:mvp0:syntax": "node -c scripts/agronomy_acceptance/ACCEPTANCE_COMMERCIAL_MVP0_IRRIGATION_V1.cjs && node -c scripts/agronomy_acceptance/ACCEPTANCE_COMMERCIAL_MVP0_RELEASE_GATE.cjs",
@@ -73,7 +73,8 @@
     "ci:governance:p06-formal-scenario-architecture-closure": "node scripts/governance_acceptance/ACCEPTANCE_P06_FORMAL_SCENARIO_ARCHITECTURE_CLOSURE_V1.cjs",
     "ci:scenario:sampling": "node scripts/agronomy_acceptance/ACCEPTANCE_SAMPLING_RELEASE_GATE.cjs",
     "ci:scenario:fertilization": "node scripts/agronomy_acceptance/ACCEPTANCE_FERTILIZATION_RELEASE_GATE.cjs",
-    "ci:scenario:pest-disease-inspection": "node scripts/agronomy_acceptance/ACCEPTANCE_PEST_DISEASE_INSPECTION_RELEASE_GATE.cjs"
+    "ci:scenario:pest-disease-inspection": "node scripts/agronomy_acceptance/ACCEPTANCE_PEST_DISEASE_INSPECTION_RELEASE_GATE.cjs",
+    "test:acceptance:with-p0": "pnpm run ci:base-contract:p0 && pnpm run test:acceptance"
   },
   "volta": {
     "node": "20.11.1"
