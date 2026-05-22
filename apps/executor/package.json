@@ -2,14 +2,21 @@
   "name": "@geox/executor",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
-    "once": "tsx src/run_once.ts",
-    "dispatch-once": "tsx src/run_dispatch_once.ts",
-    "build": "node -e \"process.exit(0)\"",
-    "dispatch-mqtt-once": "tsx src/run_mqtt_downlink_once.ts",
-    "device-sim-once": "tsx src/run_mqtt_device_sim_once.ts",
-    "receipt-uplink-once": "tsx src/run_mqtt_receipt_uplink_once.ts"
+    "build": "tsc -p tsconfig.json",
+    "runtime": "node dist/runtime_loop.js",
+    "once": "node dist/run_once.js",
+    "dispatch-once": "node dist/run_dispatch_once.js",
+    "dispatch-mqtt-once": "node dist/run_mqtt_downlink_once.js",
+    "device-sim-once": "node dist/run_mqtt_device_sim_once.js",
+    "receipt-uplink-once": "node dist/run_mqtt_receipt_uplink_once.js",
+    "dev:runtime": "pnpm run build && node dist/runtime_loop.js",
+    "dev:once": "pnpm run build && node dist/run_once.js",
+    "dev:dispatch-once": "pnpm run build && node dist/run_dispatch_once.js",
+    "dev:dispatch-mqtt-once": "pnpm run build && node dist/run_mqtt_downlink_once.js",
+    "dev:device-sim-once": "pnpm run build && node dist/run_mqtt_device_sim_once.js",
+    "dev:receipt-uplink-once": "pnpm run build && node dist/run_mqtt_receipt_uplink_once.js"
   },
   "dependencies": {
     "@geox/contracts": "workspace:*",
