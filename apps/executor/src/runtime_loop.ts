@@ -1,11 +1,22 @@
-const { runDispatchOnce } = require("./run_dispatch_once.ts");
+import { fileURLToPath } from "node:url";
+
+import { runDispatchOnce } from "./run_dispatch_once.js";
 
 const DEFAULT_POLL_INTERVAL_MS = 3000;
 const MIN_POLL_INTERVAL_MS = 2000;
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 30000;
 const MIN_HEARTBEAT_INTERVAL_MS = 5000;
 
-function parsePollIntervalMs(argv) {
+type ExecutorRuntimeContext = {
+  baseUrl: string;
+  token: string;
+  tenant_id: string;
+  project_id: string;
+  group_id: string;
+  executor_id: string;
+};
+
+function parsePollIntervalMs(argv: string[]): number {
   const idx = argv.indexOf("--poll_interval_ms");
   const fromArg = idx >= 0 ? argv[idx + 1] : undefined;
   const raw = fromArg ?? process.env.POLL_INTERVAL_MS ?? `${DEFAULT_POLL_INTERVAL_MS}`;
@@ -14,7 +25,7 @@ function parsePollIntervalMs(argv) {
   return Math.max(MIN_POLL_INTERVAL_MS, parsed);
 }
 
-function parseHeartbeatIntervalMs(argv) {
+function parseHeartbeatIntervalMs(argv: string[]): number {
   const idx = argv.indexOf("--heartbeat_interval_ms");
   const fromArg = idx >= 0 ? argv[idx + 1] : undefined;
   const raw = fromArg ?? process.env.HEARTBEAT_INTERVAL_MS ?? `${DEFAULT_HEARTBEAT_INTERVAL_MS}`;
@@ -23,8 +34,8 @@ function parseHeartbeatIntervalMs(argv) {
   return Math.max(MIN_HEARTBEAT_INTERVAL_MS, parsed);
 }
 
-function stripPollArg(argv) {
-  const next = [];
+function stripPollArg(argv: string[]): string[] {
+  const next: string[] = [];
   for (let i = 0; i < argv.length; i += 1) {
     const item = argv[i];
     if (item === "--poll_interval_ms" || item === "--heartbeat_interval_ms") {
@@ -36,12 +47,12 @@ function stripPollArg(argv) {
   return next;
 }
 
-function sleep(ms) {
+function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function parseExecutorContext(cliArgs) {
-  const get = (k) => {
+function parseExecutorContext(cliArgs: string[]): ExecutorRuntimeContext {
+  const get = (k: string): string | undefined => {
     const idx = cliArgs.indexOf(`--${k}`);
     if (idx === -1) return undefined;
     const v = cliArgs[idx + 1];
@@ -57,7 +68,7 @@ function parseExecutorContext(cliArgs) {
   return { baseUrl, token, tenant_id, project_id, group_id, executor_id };
 }
 
-async function heartbeatOnce(ctx) {
+async function heartbeatOnce(ctx: ExecutorRuntimeContext): Promise<void> {
   if (!ctx.token) return;
   const url = `${ctx.baseUrl}/api/v1/devices/${encodeURIComponent(ctx.executor_id)}/heartbeat`;
   try {
@@ -84,12 +95,12 @@ async function heartbeatOnce(ctx) {
     }
 
     console.log(`HEARTBEAT_TRACE executor_id=${ctx.executor_id} tenant_id=${ctx.tenant_id}`);
-  } catch (error) {
+  } catch (error: any) {
     console.log(`WARN: executor heartbeat error message=${error?.message ?? String(error)}`);
   }
 }
 
-async function runRuntimeLoop(cliArgs) {
+export async function runRuntimeLoop(cliArgs?: string[]): Promise<void> {
   const argv = cliArgs ?? process.argv.slice(2);
   const pollIntervalMs = parsePollIntervalMs(argv);
   const heartbeatIntervalMs = parseHeartbeatIntervalMs(argv);
@@ -108,7 +119,7 @@ async function runRuntimeLoop(cliArgs) {
 
     try {
       await runDispatchOnce(forwardArgs);
-    } catch (error) {
+    } catch (error: any) {
       console.error(`ERROR: runtime loop iteration failed: ${error?.stack ?? error?.message ?? String(error)}`);
     }
 
@@ -116,11 +127,11 @@ async function runRuntimeLoop(cliArgs) {
   }
 }
 
-if (require.main === module) {
-  runRuntimeLoop().catch((error) => {
+const isMain = process.argv[1] === fileURLToPath(import.meta.url);
+
+if (isMain) {
+  runRuntimeLoop().catch((error: any) => {
     console.error(`FATAL: runtime loop crashed unexpectedly: ${error?.stack ?? error?.message ?? String(error)}`);
     process.exit(1);
   });
 }
-
-module.exports = { runRuntimeLoop };
