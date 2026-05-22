@@ -1,6 +1,4 @@
-import { fileURLToPath } from "node:url";
-
-import { runDispatchOnce } from "./run_dispatch_once.js";
+const { runDispatchOnce } = require("./run_dispatch_once.js");
 
 const DEFAULT_POLL_INTERVAL_MS = 3000;
 const MIN_POLL_INTERVAL_MS = 2000;
@@ -100,7 +98,7 @@ async function heartbeatOnce(ctx: ExecutorRuntimeContext): Promise<void> {
   }
 }
 
-export async function runRuntimeLoop(cliArgs?: string[]): Promise<void> {
+async function runRuntimeLoop(cliArgs?: string[]): Promise<void> {
   const argv = cliArgs ?? process.argv.slice(2);
   const pollIntervalMs = parsePollIntervalMs(argv);
   const heartbeatIntervalMs = parseHeartbeatIntervalMs(argv);
@@ -127,11 +125,11 @@ export async function runRuntimeLoop(cliArgs?: string[]): Promise<void> {
   }
 }
 
-const isMain = process.argv[1] === fileURLToPath(import.meta.url);
-
-if (isMain) {
+if (require.main === module) {
   runRuntimeLoop().catch((error: any) => {
     console.error(`FATAL: runtime loop crashed unexpectedly: ${error?.stack ?? error?.message ?? String(error)}`);
     process.exit(1);
   });
 }
+
+module.exports = { runRuntimeLoop };
