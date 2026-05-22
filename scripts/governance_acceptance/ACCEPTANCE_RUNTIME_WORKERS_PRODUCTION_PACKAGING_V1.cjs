@@ -70,17 +70,20 @@ function dockerAvailable() {
 }
 
 function inspectContainer(name) {
-  const result = run('docker', ['inspect', name, '--format', '{{.State.Status}} {{.State.Restarting}}']);
+  const result = run('docker', ['inspect', name, '--format', '{{.State.Status}} {{.State.Restarting}} {{.State.ExitCode}}']);
   if (result.status !== 0) return null;
   const text = result.stdout.trim();
-  const [status, restarting] = text.split(/\s+/);
-  return { status, restarting: restarting === 'true' };
+  const [status, restarting, exitCode] = text.split(/\s+/);
+  return { status, restarting: restarting === 'true', exit_code: Number(exitCode ?? 0) };
+}
+
+function containerLogs(name, tail = '80') {
+  const result = run('docker', ['logs', name, '--tail', tail]);
+  return `${result.stdout ?? ''}\n${result.stderr ?? ''}`.trim();
 }
 
 function logsContain(name, patterns) {
-  const result = run('docker', ['logs', name, '--tail', '160']);
-  if (result.status !== 0) return false;
-  const text = `${result.stdout}\n${result.stderr}`;
+  const text = containerLogs(name, '160');
   return patterns.some((pattern) => text.includes(pattern));
 }
 
@@ -96,8 +99,12 @@ function checkLiveContainersIfPresent() {
   for (const name of [...required, executorName]) {
     const state = inspectContainer(name);
     assert(state, `container ${name} must be inspectable`);
-    assert(!state.restarting, `container ${name} must not be Restarting`);
-    assert(['running', 'healthy'].includes(state.status), `container ${name} must be running, got ${state.status}`);
+    if (state.restarting) {
+      fail(`container ${name} must not be Restarting. status=${state.status} exit_code=${state.exit_code}. recent logs:\n${containerLogs(name, '80')}`);
+    }
+    if (!['running', 'healthy'].includes(state.status)) {
+      fail(`container ${name} must be running, got ${state.status}. exit_code=${state.exit_code}. recent logs:\n${containerLogs(name, '80')}`);
+    }
   }
   assert(logsContain(executorName, ['INFO: executor runtime loop started', 'HEARTBEAT_TRACE']), 'executor logs must show runtime loop started or HEARTBEAT_TRACE');
   assert(logsContain('geox-v1-jobs', ['INFO: jobs runtime started', 'JOBS_TRACE']), 'jobs logs must show jobs runtime started or JOBS_TRACE');
