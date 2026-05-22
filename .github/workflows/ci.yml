@@ -110,6 +110,13 @@ jobs:
           docker run --rm --network host --entrypoint /bin/sh minio/mc:latest -c 'set -eu; mc alias set local http://127.0.0.1:9000 minioadmin minioadmin; mc ls local; mc stat local/evidence-exports-v1'
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps
 
+      - name: Run runtime workers packaging gate
+        run: |
+          set -euo pipefail
+          set -a
+          source .env.ci
+          set +a
+          pnpm run ci:runtime:workers
 
       - name: Run Base Contract P0 aggregate gate
         run: |
