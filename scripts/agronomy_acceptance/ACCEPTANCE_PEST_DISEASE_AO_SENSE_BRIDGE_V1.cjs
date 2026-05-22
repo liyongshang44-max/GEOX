@@ -46,9 +46,15 @@ function stripCommentsAndStrings(source) {
     'sense_focus',
     'evidence_refs',
     'fact_id',
-    'raw_sample_v1',
-    'marker_v1',
-    'import_run_v1',
+    'validateObservationOnlyEvidenceRefs',
+    'validateObservationEvidenceRefShape',
+    'fact_id',
+    'SELECT fact_id, record_json::jsonb AS record_json',
+    'WHERE fact_id = ANY($1::text[])',
+    'allowedObservationFactTypes',
+    'device_observation_v1',
+    'AO_SENSE_OBSERVATION_FACT_NOT_FOUND',
+    'AO_SENSE_RECEIPT_REQUIRES_OBSERVATION_FACT_TYPE',
   ], 'AO-SENSE route bridge prerequisites');
 
   assertNone(sense, [
