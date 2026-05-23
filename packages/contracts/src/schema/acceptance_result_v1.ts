@@ -22,6 +22,9 @@ export type AcceptanceMetricsV1 = z.infer<typeof AcceptanceMetricsV1Schema>;
 
 export const AcceptanceFormalGateV1Schema = z.object({
   formal_evidence_passed: z.boolean(),
+  receipt_structure_passed: z.boolean().optional(),
+  execution_evidence_passed: z.boolean().optional(),
+  execution_effect_passed: z.boolean().optional(),
   formal_execution_passed: z.boolean(),
   non_simulated_chain: z.boolean(),
   chain_validation_passed: z.boolean().optional(),
@@ -60,6 +63,9 @@ export const AcceptanceResultV1PayloadSchema = z.object({
   formal_gate: AcceptanceFormalGateV1Schema.optional(),
   formal_acceptance: z.boolean().optional(),
   formal_evidence_passed: z.boolean().optional(),
+  receipt_structure_passed: z.boolean().optional(),
+  execution_evidence_passed: z.boolean().optional(),
+  execution_effect_passed: z.boolean().optional(),
   non_simulated_chain: z.boolean().optional(),
   formal_execution_passed: z.boolean().optional(),
   source_lane: AcceptanceSourceLaneV1Schema.optional(),
