@@ -121,12 +121,14 @@ assertIncludes(customerRoute, 'LIMITED', 'customer route limited data trust mark
 assertIncludes(customerRoute, '能力可用，结论需复核', 'customer route capability wording');
 assertIncludes(customerRoute, '不代表正式经营结论', 'customer route limited subtitle wording');
 
+const serverSrc = path.join(root, 'apps/server/src').replace(/\\/g, '/');
+
 const fixture = String.raw`
 (async () => {
-const { projectRoiTrustV1 } = await import('./src/domain/roi/roi_trust_v1.ts');
-const { recordMemoryV1 } = await import('./src/services/field_memory_service.ts');
-const { projectCustomerDashboardAggregateV1, projectFieldReportDetailV1 } = await import('./src/projections/report_dashboard_v1.ts');
-const { applyGuardedDashboardAggregateV1, applyGuardedFieldReportV1, isFormalCustomerValueItem } = await import('./src/projections/guarded_report_v1.ts');
+const { projectRoiTrustV1 } = await import('${serverSrc}/domain/roi/roi_trust_v1.ts');
+const { recordMemoryV1 } = await import('${serverSrc}/services/field_memory_service.ts');
+const { projectCustomerDashboardAggregateV1, projectFieldReportDetailV1 } = await import('${serverSrc}/projections/report_dashboard_v1.ts');
+const { applyGuardedDashboardAggregateV1, applyGuardedFieldReportV1, isFormalCustomerValueItem } = await import('${serverSrc}/projections/guarded_report_v1.ts');
 function assertRuntime(condition, message) { if (!condition) throw new Error(message); }
 const asExecutedTrust = projectRoiTrustV1({ roi_ledger_id: 'roi_1', source_lane: 'AS_EXECUTED_SIGNAL', trust_level: 'FORMAL_ACCEPTED', formal_acceptance_id: 'acc_1', formal_evidence_passed: true, chain_validation_passed: true, customer_visible_value: true, value_kind: 'MEASURED', confidence: { level: 'HIGH' } });
 assertRuntime(asExecutedTrust.trust_level !== 'FORMAL_ACCEPTED', 'as_executed ROI must not stay FORMAL_ACCEPTED');
@@ -181,6 +183,23 @@ assertRuntime(formalMemory.customer_visible_memory === true, 'explicit formal me
 assertRuntime(formalMemory.learning_eligible === true, 'explicit formal memory should be learning eligible');
 })();
 `;
-const runtime = spawnSync('pnpm', ['--filter', '@geox/server', 'exec', 'tsx', '-e', fixture], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+const tmpDir = path.join(root, '.tmp', 'governance_acceptance');
+fs.mkdirSync(tmpDir, { recursive: true });
+
+const fixturePath = path.join(tmpDir, `roi_memory_trust_lane_fixture_${process.pid}.mts`);
+fs.writeFileSync(fixturePath, fixture, 'utf8');
+
+const pnpmBin = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
+
+const runtime = spawnSync(pnpmBin, ['--filter', '@geox/server', 'exec', 'tsx', fixturePath], {
+  cwd: root,
+  encoding: 'utf8',
+  stdio: ['ignore', 'pipe', 'pipe'],
+  shell: false,
+});
+
+try {
+  fs.rmSync(fixturePath, { force: true });
+} catch {}
 if (runtime.status !== 0) { process.stderr.write(runtime.stdout || ''); process.stderr.write(runtime.stderr || ''); fail('runtime fixture failed'); }
 console.log('[roi-memory-trust-lane] PASS');
