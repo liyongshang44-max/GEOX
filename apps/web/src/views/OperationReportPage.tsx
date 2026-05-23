@@ -8,7 +8,7 @@ import { customerTimelineStatusLabel } from "../lib/customerLabels";
 import { customerSafeName, customerSafeTitle } from "../lib/customerSafeText";
 import { customerChainIntegrityLabel, customerSemanticLabel, isCustomerChainComplete } from "../lib/customerSemanticLabels";
 import { customerReasonText, pestDiseaseAcceptanceStatusLabel, pestDiseaseAssessmentStatusLabel, pestDiseaseConfidenceLabel, pestDiseaseEvidenceTierLabel, pestDiseaseInspectionTargetLabel, pestDiseaseReviewStatusLabel, pestDiseaseSeverityLabel } from "../lib/customerScenarioLabels";
-import { labelCustomerAcceptanceVerdict, labelCustomerApprovalStatus, labelCustomerRoiStatus } from "../lib/customerStatusLabels";
+import { labelCustomerApprovalStatus, labelCustomerRoiStatus } from "../lib/customerStatusLabels";
 import { buildOperationReportVm, type CustomerReportSectionVm, type OperationReportPageVm } from "../viewmodels/operationReportVm";
 import { buildEvidenceVm } from "../lib/evidenceViewModel";
 import { EvidenceGapPanel, EvidenceRefList, EvidenceTrustBadge, EvidenceTrustLegend } from "../components/evidence";
@@ -311,7 +311,7 @@ function approvalRecordLinked(reportAny: any): boolean {
 function approvalResultText(approval: any): string {
   const status = normalizeKey(approval?.status ?? approval?.result ?? approval?.verdict);
   if (!status) return "待确认";
-  if (["APPROVED", "PASS", "SUCCESS", "SUCCEEDED", "DONE"].includes(status)) return "已通过";
+  if (["APPROVED", "PASS", "SUCCESS", "SUCCEEDED", "DONE"].includes(status)) return "审批记录已接入，需复核";
   if (["REJECTED", "FAIL", "FAILED", "RETURNED"].includes(status)) return "已退回";
   if (["PENDING", "REQUESTED", "WAITING"].includes(status)) return "待确认";
   return labelCustomerApprovalStatus(status);
@@ -320,10 +320,10 @@ function approvalResultText(approval: any): string {
 function acceptanceResultText(value: unknown): string {
   const key = normalizeKey(value);
   if (!key) return "待确认";
-  if (["PASS", "SUCCESS", "SUCCEEDED", "APPROVED"].includes(key)) return "已通过";
+  if (["PASS", "SUCCESS", "SUCCEEDED", "APPROVED"].includes(key)) return "需复核";
   if (["FAIL", "FAILED", "REJECTED"].includes(key)) return "未通过";
   if (["PENDING", "PENDING_ACCEPTANCE", "WAITING"].includes(key)) return "待确认";
-  return labelCustomerAcceptanceVerdict(key);
+  return "需复核";
 }
 
 function evidenceChainText(vm: OperationReportPageVm): string {
@@ -389,7 +389,7 @@ function buildMainSections(vm: OperationReportPageVm, report: OperationReportV1)
   const prescription = sectionByKey(vm, "PRESCRIPTION");
   const approval = reportAny.approval ?? {};
   const execution = sectionByKey(vm, "EXECUTION");
-  const acceptanceStatus = acceptanceResultText(report.acceptance?.status ?? reportAny.acceptance?.status ?? reportAny.acceptance?.verdict);
+  const acceptanceStatus = vm.acceptance.statusText;
   const operationTypeText = operationActionLabel(reportAny.operation_type ?? reportAny.prescription?.operation_type ?? reportAny.prescription?.action, "作业");
   const value = buildValueRows(reportAny);
   const sensing = buildSensingEvidence(report);
@@ -500,7 +500,7 @@ function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDise
   const hasLatestObservation = Boolean(Object.keys(latestObservation).length);
   const inspectionEvidenceSummary = hasLatestObservation
     ? (mediaMissing || geoMissing
-      ? "巡检任务已完成，但缺少定位或图片证据，需复核。"
+      ? "巡检任务已有记录，但缺少定位或图片证据，需复核。"
       : customerText(pdi.evidence_summary ?? evidence.summary, "已记录巡检证据，待进一步复核。"))
     : "暂无可展示的巡检观察明细；当前仅有汇总计数。";
 
@@ -543,7 +543,7 @@ function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDise
       key: "assessment_result",
       title: "识别与诊断结论",
       summary: customerVisibleEligible
-        ? customerText(assessment.summary ?? pdi.assessment_summary, "巡检识别已完成，结论待复核。")
+        ? customerText(assessment.summary ?? pdi.assessment_summary, "巡检识别已记录，结论待复核。")
         : "需要补齐正式链路后展示",
       rows: [
         { label: "巡检结论", value: pestDiseaseAssessmentStatusLabel(assessment.status ?? pdi.assessment_status) },
@@ -564,20 +564,20 @@ function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDise
       rows: [
         { label: "是否需要人工复核", value: reviewRequired ? "需要" : "不需要" },
         { label: "复核状态", value: reviewRequired ? pestDiseaseReviewStatusLabel(review.status ?? pdi.review_status) : "不需要" },
-        { label: "复核结果", value: reviewedByHuman ? "已完成" : "尚未完成" },
+        { label: "复核结果", value: reviewedByHuman ? "已记录" : "尚未完成" },
       ],
     },
     {
       key: "inspection_acceptance",
       title: "巡检证据验收",
       summary: (String(acceptance.status ?? pdi.acceptance_status ?? "").trim().toUpperCase() === "PASS")
-        ? "巡检证据已通过验收，可作为后续处理建议依据，但不代表已完成防治。"
+        ? "巡检证据已有记录，可作为后续处理建议依据；仍以正式链路校验为准，且不代表防治闭环。"
         : customerVisibleEligible
           ? customerText(acceptance.summary ?? pdi.acceptance_summary, "巡检证据验收状态待确认。")
           : "需要补齐正式链路后展示",
       rows: [
         { label: "巡检证据验收", value: pestDiseaseAcceptanceStatusLabel(acceptance.status ?? pdi.acceptance_status) },
-        { label: "验收说明", value: "巡检证据已通过验收，可作为后续处理建议依据，但不代表已完成防治。" },
+        { label: "验收说明", value: "巡检证据已有记录，可作为后续处理建议依据；仍以正式链路校验为准，且不代表防治闭环。" },
         { label: "客户可见", value: customerVisibleEligible ? "可展示" : "需补齐正式链路后展示" },
         { label: "证据缺口", value: evidenceGap },
       ],
@@ -590,7 +590,7 @@ function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDise
         { label: "补喷处方", value: "尚未生成补喷处方" },
         { label: "防治执行任务", value: "尚未形成防治执行任务" },
         { label: "防治效果验收", value: "尚未形成防治效果验收" },
-        { label: "结论边界", value: "不代表已完成防治" },
+        { label: "结论边界", value: "不代表防治闭环" },
       ],
     },
   ];
@@ -677,10 +677,10 @@ function PestDiseaseAuditChain({ report }: { report: OperationReportV1 }): React
           <details className="customerCard operationClosedLoopCard">
             <summary><span className="operationStepNo">2</span> 复核与验收：{customerTimelineStatusLabel("AVAILABLE")}</summary>
             <div className="customerGrid2 customerSpacingTopXs">
-              <div><strong>人工复核：</strong>{Boolean(pdi.reviewed_by_human) ? "已完成" : "尚未完成"}</div>
+              <div><strong>人工复核：</strong>{Boolean(pdi.reviewed_by_human) ? "已记录" : "尚未完成"}</div>
               <div><strong>复核状态：</strong>{pestDiseaseReviewStatusLabel(pdi.review_status)}</div>
               <div><strong>验收状态：</strong>{pestDiseaseAcceptanceStatusLabel(pdi.acceptance_status)}</div>
-              <div><strong>结论边界：</strong>巡检结论不等于已完成防治执行。</div>
+              <div><strong>结论边界：</strong>巡检结论不等于防治执行闭环。</div>
             </div>
           </details>
         </div>

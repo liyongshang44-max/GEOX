@@ -43,12 +43,16 @@ const forbiddenTerms = [
 const forbiddenCustomerPhrases = [
   '已喷药',
   '已防治',
+  '已完成防治',
   '防治完成',
   '喷药完成',
   '病虫害已解决',
   '作物风险已解除',
   '防治效果已达成',
 ];
+
+const legacyPositiveAcceptanceCopy = '巡检证据已通过验收，可作为后续处理建议依据，但不代表已完成防治。';
+const trustNeutralAcceptanceCopy = '巡检证据已有记录，可作为后续处理建议依据；仍以正式链路校验为准，且不代表防治闭环。';
 
 const fileSpecificAllowedForbiddenTerms = {
   [files.reportsRoute]: new Set(['roi_ledger', 'field_memory']),
@@ -63,7 +67,7 @@ const requiredBoundaryLiterals = [
   'pest_disease_inspection_acceptance PASS ≠ AO-ACT spray task',
   'SkillRun SUCCESS ≠ pest_disease_inspection_assessment CONFIRMED',
   'pest_disease_signal_v1 is a technical signal, not a formal assessment',
-  '巡检证据已通过验收，可作为后续处理建议依据，但不代表已完成防治。',
+  trustNeutralAcceptanceCopy,
   '巡检结果已确认，但尚未进入补喷处方。',
   '当前仅为识别信号，不作为正式巡检结论。',
 ];
@@ -170,6 +174,9 @@ function assertCustomerCopySafe(rel, text) {
       if (line.includes('不代表') || line.includes('不是') || line.includes('不得') || line.includes('禁止') || line.includes('not') || line.includes('Forbidden')) continue;
       violations.push(`${rel}:${idx + 1}: customer copy must not imply treatment completion phrase ${phrase}`);
     }
+    if (line.includes(legacyPositiveAcceptanceCopy)) {
+      violations.push(`${rel}:${idx + 1}: customer copy must not require legacy PASS-positive inspection acceptance copy`);
+    }
   });
   assert.deepEqual(violations, [], `customer copy treatment-completion violations:\n${violations.join('\n')}`);
 }
@@ -212,6 +219,10 @@ function assertDocForbiddenTermsOnlyInAllowedContext(text) {
         || line.includes('Forbidden')
       ) continue;
       violations.push(`docs/contracts/PEST_DISEASE_MAIN_CHAIN_ALIGNMENT_V1.md:${idx + 1}: forbidden customer phrase ${phrase} outside allowed boundary/forbidden context`);
+    }
+
+    if (line.includes(legacyPositiveAcceptanceCopy)) {
+      violations.push(`docs/contracts/PEST_DISEASE_MAIN_CHAIN_ALIGNMENT_V1.md:${idx + 1}: legacy PASS-positive inspection acceptance copy must be replaced by trust-neutral copy`);
     }
   });
 
@@ -274,8 +285,8 @@ function assertReportMergeBoundary(text) {
     'Inspection acceptance PASS does not create dispatch command.',
     'Inspection acceptance PASS does not create ROI.',
     'Inspection acceptance PASS does not create Field Memory.',
-    'Customer report must say inspection evidence passed, not treatment completed.',
-    '巡检证据已通过验收，可作为后续处理建议依据，但不代表已完成防治。',
+    'Customer report must say inspection evidence is recorded and remains subject to formal chain validation, not treatment completed.',
+    trustNeutralAcceptanceCopy,
     '巡检结果已确认，但尚未进入补喷处方。',
     '当前仅为识别信号，不作为正式巡检结论。',
   ], 'PEST_DISEASE_MAIN_CHAIN_ALIGNMENT_V1.md');
@@ -295,7 +306,8 @@ function assertReportMergeBoundary(text) {
     assertCustomerCopySafe(rel, content[rel]);
   }
 
-  assert.equal(content[files.customerLabels].includes('巡检证据已通过验收，可作为后续处理建议依据，但不代表已完成防治。'), true, 'customer labels must include safe acceptance PASS copy');
+  assert.equal(content[files.customerLabels].includes(trustNeutralAcceptanceCopy), true, 'customer labels must include trust-neutral inspection acceptance copy');
+  assert.equal(content[files.customerLabels].includes(legacyPositiveAcceptanceCopy), false, 'customer labels must not include legacy PASS-positive inspection acceptance copy');
   assert.equal(content[files.customerLabels].includes('巡检结果已确认，但尚未进入补喷处方。'), true, 'customer labels must include no spot-spray prescription copy');
   assert.equal(content[files.customerLabels].includes('当前仅为识别信号，不作为正式巡检结论。'), true, 'customer labels must include skill-signal-only copy');
   assert.equal(/treatment[_\s-]?completed|spray[_\s-]?completed|pest[_\s-]?control[_\s-]?completed/i.test(content[files.formalScenarioVm]), false, 'formalScenarioViewModel must not output treatment completed semantics');

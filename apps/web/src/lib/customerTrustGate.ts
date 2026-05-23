@@ -1,5 +1,19 @@
 export type CustomerGuardedStatus = "PASSED" | "NEEDS_REVIEW" | "INSUFFICIENT_EVIDENCE" | "SIMULATED" | "LIMITED";
 
+export type CustomerTrustContext = {
+  chain_passed?: boolean;
+  customer_visible_eligible?: boolean;
+  needs_review?: boolean;
+  is_simulated?: boolean;
+  trust_level?: string | null;
+  chain_status?: string | null;
+  evidence_status?: string | null;
+  formal_acceptance?: boolean;
+  fallback_limited?: boolean;
+  projection_source?: string | null;
+  data_trust_status?: string | null;
+};
+
 function text(value: unknown): string {
   return String(value ?? "").trim();
 }
@@ -8,29 +22,54 @@ function upper(value: unknown): string {
   return text(value).toUpperCase();
 }
 
-export function isCustomerFormalChainPassed(value: any): boolean {
+export function customerTrustContextFromReportLike(value: any): CustomerTrustContext {
   const formal = value?.formal_scenario ?? {};
-  const trustLevel = upper(value?.trust_level ?? value?.trustLevel ?? value?.guarded_projection?.trust_level ?? formal.trust_level);
-  const chainStatus = upper(value?.chain_status ?? value?.chainStatus ?? value?.formal_chain_status ?? formal.formal_chain_status ?? value?.guarded_projection?.chain_status);
-  const evidenceStatus = upper(value?.evidence_status ?? formal.evidence_status);
-  const chainPassed = value?.chain_validation?.passed === true || value?.guarded_projection?.passed === true || chainStatus === "PASSED";
-  const visibleEligible = value?.customer_visible_eligible !== false && value?.customerVisibleEligible !== false && formal.customer_visible_eligible !== false;
-  const needsReview = value?.needs_review === true || value?.needsReview === true || formal.needs_review === true;
-  const simulated = value?.is_simulated === true || value?.isSimulated === true || chainStatus === "SIMULATED" || trustLevel === "SIMULATED_DEV_ONLY";
+  const guarded = value?.guarded_projection ?? {};
+  const projectionSource = upper(value?.projection_source ?? value?.projectionSource ?? guarded?.projection_source ?? guarded?.source);
+  const dataTrustStatus = upper(value?.data_trust_status ?? value?.dataTrustStatus ?? guarded?.data_trust_status);
+  const chainStatus = text(value?.chain_status ?? value?.chainStatus ?? value?.formal_chain_status ?? formal.formal_chain_status ?? guarded?.chain_status) || null;
+  const guardedListItem = projectionSource === "GUARDED_REPORT" || dataTrustStatus === "FORMAL";
+  return {
+    chain_passed: value?.chain_validation?.passed === true || guarded?.passed === true || upper(chainStatus) === "PASSED" || guardedListItem,
+    customer_visible_eligible: value?.customer_visible_eligible !== false && value?.customerVisibleEligible !== false && formal.customer_visible_eligible !== false && guarded?.customer_visible_eligible !== false,
+    needs_review: value?.needs_review === true || value?.needsReview === true || formal.needs_review === true,
+    is_simulated: value?.is_simulated === true || value?.isSimulated === true,
+    trust_level: text(value?.trust_level ?? value?.trustLevel ?? guarded?.trust_level ?? formal.trust_level) || null,
+    chain_status: chainStatus,
+    evidence_status: text(value?.evidence_status ?? formal.evidence_status ?? value?.evidence?.evidence_status ?? value?.evidence?.status) || null,
+    formal_acceptance: value?.formal_acceptance === true || value?.acceptance?.formal_acceptance === true || formal.formal_acceptance === true || guardedListItem,
+    fallback_limited: value?.fallback_limited === true || guarded?.fallback_limited === true || projectionSource === "STATE_FALLBACK_LIMITED" || dataTrustStatus === "LIMITED",
+    projection_source: projectionSource || null,
+    data_trust_status: dataTrustStatus || null,
+  };
+}
+
+export function isCustomerFormalChainPassed(value: any): boolean {
+  const ctx = customerTrustContextFromReportLike(value);
+  const trustLevel = upper(ctx.trust_level);
+  const chainStatus = upper(ctx.chain_status);
+  const evidenceStatus = upper(ctx.evidence_status);
+  const projectionSource = upper(ctx.projection_source);
+  const dataTrustStatus = upper(ctx.data_trust_status);
+  const chainPassed = ctx.chain_passed === true || chainStatus === "PASSED" || projectionSource === "GUARDED_REPORT" || dataTrustStatus === "FORMAL";
+  const visibleEligible = ctx.customer_visible_eligible !== false;
+  const needsReview = ctx.needs_review === true;
+  const simulated = ctx.is_simulated === true || chainStatus === "SIMULATED" || trustLevel === "SIMULATED_DEV_ONLY";
   const formalTrust = !trustLevel || trustLevel === "FORMAL_CHAIN_PASSED" || trustLevel === "FORMAL_ACCEPTED";
   const missingEvidence = evidenceStatus === "MISSING" || evidenceStatus === "TECHNICAL_ONLY";
-  return chainPassed && visibleEligible && !needsReview && !simulated && formalTrust && !missingEvidence;
+  const fallbackLimited = ctx.fallback_limited === true || trustLevel === "LIMITED_FALLBACK" || projectionSource === "STATE_FALLBACK_LIMITED" || dataTrustStatus === "LIMITED";
+  return chainPassed && visibleEligible && !needsReview && !simulated && formalTrust && !missingEvidence && !fallbackLimited;
 }
 
 export function customerGuardedStatus(value: any): CustomerGuardedStatus {
   if (isCustomerFormalChainPassed(value)) return "PASSED";
-  const formal = value?.formal_scenario ?? {};
-  const trustLevel = upper(value?.trust_level ?? value?.trustLevel ?? value?.guarded_projection?.trust_level ?? formal.trust_level);
-  const chainStatus = upper(value?.chain_status ?? value?.chainStatus ?? value?.formal_chain_status ?? formal.formal_chain_status ?? value?.guarded_projection?.chain_status);
-  const evidenceStatus = upper(value?.evidence_status ?? formal.evidence_status);
-  if (value?.is_simulated === true || value?.isSimulated === true || chainStatus === "SIMULATED" || trustLevel === "SIMULATED_DEV_ONLY") return "SIMULATED";
+  const ctx = customerTrustContextFromReportLike(value);
+  const trustLevel = upper(ctx.trust_level);
+  const chainStatus = upper(ctx.chain_status);
+  const evidenceStatus = upper(ctx.evidence_status);
+  if (ctx.is_simulated === true || chainStatus === "SIMULATED" || trustLevel === "SIMULATED_DEV_ONLY") return "SIMULATED";
   if (chainStatus === "INSUFFICIENT_EVIDENCE" || trustLevel === "INSUFFICIENT_FORMAL_EVIDENCE" || evidenceStatus === "MISSING" || evidenceStatus === "TECHNICAL_ONLY") return "INSUFFICIENT_EVIDENCE";
-  if (chainStatus === "LIMITED" || trustLevel === "LIMITED_FALLBACK") return "LIMITED";
+  if (chainStatus === "LIMITED" || trustLevel === "LIMITED_FALLBACK" || ctx.fallback_limited === true) return "LIMITED";
   return "NEEDS_REVIEW";
 }
 
@@ -59,6 +98,20 @@ export function customerGuardedEvidenceText(value: any): string {
   if (status === "INSUFFICIENT_EVIDENCE") return "正式证据不足";
   if (status === "LIMITED") return "有限记录，待正式校验";
   return "证据待正式校验";
+}
+
+export function mapGuardedOperationStatusToCustomerLabel(value: unknown, trustContext: CustomerTrustContext | any): string {
+  const ctx = trustContext && typeof trustContext === "object"
+    ? { ...customerTrustContextFromReportLike(trustContext), ...(trustContext as CustomerTrustContext) }
+    : null;
+  if (!ctx) return "需复核";
+  const guardedStatus = customerGuardedStatus(ctx);
+  if (guardedStatus !== "PASSED") return customerGuardedStatusText(ctx);
+  const raw = upper(value);
+  if (["SUCCESS", "DONE", "COMPLETED", "APPROVED", "PASS", "PASSED", "VALID"].includes(raw)) return "正式完成";
+  if (["FAILED", "REJECTED", "ERROR", "INVALID", "INVALID_EXECUTION"].includes(raw)) return "异常，需复核";
+  if (["PENDING", "WAITING", "QUEUED", "RUNNING", "IN_PROGRESS", "PENDING_ACCEPTANCE"].includes(raw)) return "进行中";
+  return "正式完成";
 }
 
 export function isTrustedCustomerValue(value: any): boolean {

@@ -29,19 +29,66 @@ async function waitForHealth(baseUrl) {
   throw new Error(`live API unavailable at ${baseUrl}; last_health=${last}`);
 }
 
+function originOf(url) {
+  try { return new URL(url).origin; }
+  catch { return ''; }
+}
+
+function retryDelayMs(attemptIndex) {
+  const baseDelay = Number(process.env.ACCEPTANCE_FETCH_RETRY_DELAY_MS || 250);
+  return Math.min(2000, baseDelay * Math.max(1, attemptIndex + 1));
+}
+
+async function healthSnapshot(url) {
+  const origin = originOf(url);
+  if (!origin) return 'origin_unavailable';
+  for (const healthPath of ['/api/v1/health', '/api/health', '/health']) {
+    try {
+      const res = await fetch(`${origin}${healthPath}`, { method: 'GET' });
+      return `${healthPath} -> ${res.status}`;
+    } catch (err) {
+      return `${healthPath} -> ${String(err?.message ?? err)}`;
+    }
+  }
+  return 'health_unavailable';
+}
+
 async function fetchJson(url, { method = 'GET', token = '', body = undefined } = {}) {
-  const res = await fetch(url, {
-    method,
-    headers: {
-      ...(body === undefined ? {} : { 'content-type': 'application/json' }),
-      ...(token ? { authorization: `Bearer ${token}` } : {}),
-    },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  const text = await res.text();
-  let json = null;
-  try { json = text ? JSON.parse(text) : null; } catch {}
-  return { status: res.status, ok: res.ok, json, text };
+  const attempts = Math.max(1, Number(process.env.ACCEPTANCE_FETCH_RETRY_ATTEMPTS || 5));
+  let lastError = null;
+  let lastStatus = null;
+  let lastText = '';
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: {
+          ...(body === undefined ? {} : { 'content-type': 'application/json' }),
+          ...(token ? { authorization: `Bearer ${token}` } : {}),
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+      const text = await res.text();
+      lastStatus = res.status;
+      lastText = text;
+      if ((res.status === 502 || res.status === 503 || res.status === 504) && attempt + 1 < attempts) {
+        await sleep(retryDelayMs(attempt));
+        continue;
+      }
+      let json = null;
+      try { json = text ? JSON.parse(text) : null; } catch {}
+      return { status: res.status, ok: res.ok, json, text };
+    } catch (err) {
+      lastError = err;
+      if (attempt + 1 >= attempts) break;
+      await sleep(retryDelayMs(attempt));
+    }
+  }
+
+  const health = await healthSnapshot(url);
+  const reason = lastError ? String(lastError?.stack || lastError?.message || lastError) : `last_status=${lastStatus} body=${lastText}`;
+  throw new Error(`fetchJson failed after ${attempts} attempt(s): ${method} ${url}; health=${health}; reason=${reason}`);
 }
 
 function requireOk(resp, msg) {

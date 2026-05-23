@@ -13,6 +13,7 @@ const gates = [
   { name: 'ACCEPTANCE_OPERATION_REPORT_GUARDED_PAYLOAD_V1', maturity: 'ci_enforced', command: 'node', args: ['scripts/governance_acceptance/ACCEPTANCE_OPERATION_REPORT_GUARDED_PAYLOAD_V1.cjs'], contract: 'Operation Report Chain Guard' },
   { name: 'ACCEPTANCE_CUSTOMER_DASHBOARD_PROJECTION_TRUST_V1', maturity: 'ci_enforced', command: 'node', args: ['scripts/governance_acceptance/ACCEPTANCE_CUSTOMER_DASHBOARD_PROJECTION_TRUST_V1.cjs'], contract: 'Dashboard / FieldReport Projection Trust' },
   { name: 'ACCEPTANCE_ROI_MEMORY_TRUST_LANE_V1', maturity: 'ci_enforced', command: 'node', args: ['scripts/governance_acceptance/ACCEPTANCE_ROI_MEMORY_TRUST_LANE_V1.cjs'], contract: 'ROI / Field Memory Trust Lane' },
+  { name: 'ACCEPTANCE_FRONTEND_CUSTOMER_TRUST_GATE_V1', maturity: 'ci_enforced', command: 'node', args: ['scripts/governance_acceptance/ACCEPTANCE_FRONTEND_CUSTOMER_TRUST_GATE_V1.cjs'], contract: 'Frontend Customer Trust Gate' },
   { name: 'ACCEPTANCE_DEVTOOLS_SIMULATOR_NOT_FORMAL_V1', maturity: 'ci_enforced', command: 'node', args: ['scripts/governance_acceptance/ACCEPTANCE_DEVTOOLS_SIMULATOR_NOT_FORMAL_V1.cjs'], contract: 'Devtools / Simulator Boundary' },
   { name: 'ACCEPTANCE_AO_ACT_AO_SENSE_BOUNDARY_V1', maturity: 'ci_enforced', command: 'node', args: ['scripts/governance_acceptance/ACCEPTANCE_AO_ACT_AO_SENSE_BOUNDARY_V1.cjs'], contract: 'AO-ACT / AO-SENSE Boundary' },
   { name: 'PDI_RELEASE_GATE', maturity: 'ci_enforced', command: 'node', args: ['scripts/agronomy_acceptance/ACCEPTANCE_PEST_DISEASE_INSPECTION_RELEASE_GATE.cjs'], contract: 'PDI Customer Evidence Basis / Scenario Release Gate' },
@@ -34,12 +35,7 @@ function runGate(gate) {
   const startedMs = Date.now();
   console.log(`\n[base-contract-p0-release-gate] START ${gate.name}`);
   console.log(`[base-contract-p0-release-gate] $ ${gate.command} ${gate.args.join(' ')}`);
-  const result = spawnSync(gate.command, gate.args, {
-    cwd: root,
-    env: process.env,
-    stdio: 'inherit',
-    shell: process.platform === 'win32',
-  });
+  const result = spawnSync(gate.command, gate.args, { cwd: root, env: process.env, stdio: 'inherit', shell: process.platform === 'win32' });
   const elapsedMs = Date.now() - startedMs;
   if (result.error) return { ...gate, status: 'ERROR', exit_code: null, elapsed_ms: elapsedMs, started_at: startedAt.toISOString(), error: String(result.error?.message ?? result.error) };
   if (result.status !== 0) return { ...gate, status: 'FAIL', exit_code: result.status ?? 1, elapsed_ms: elapsedMs, started_at: startedAt.toISOString(), error: null };

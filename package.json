@@ -52,6 +52,7 @@
     "ci:governance:appleii-formal-evidence-dynamic-e2e": "node scripts/governance_acceptance/ACCEPTANCE_APPLEII_FORMAL_EVIDENCE_DYNAMIC_E2E_V1.cjs",
     "ci:governance:base-contract-negative": "node scripts/governance_acceptance/ACCEPTANCE_BASE_CONTRACT_NEGATIVE_RELEASE_GATE_V1.cjs",
     "ci:governance:formal-scenario-no-projection-write": "node scripts/governance_acceptance/ACCEPTANCE_FORMAL_SCENARIO_NO_PROJECTION_WRITE_V1.cjs",
+    "ci:frontend:customer-trust-gate": "node scripts/governance_acceptance/ACCEPTANCE_FRONTEND_CUSTOMER_TRUST_GATE_V1.cjs",
     "ci:base-contract:p0": "node scripts/governance_acceptance/ACCEPTANCE_BASE_CONTRACT_P0_RELEASE_GATE_V1.cjs",
     "ci:runtime:workers": "node scripts/governance_acceptance/ACCEPTANCE_RUNTIME_WORKERS_PRODUCTION_PACKAGING_V1.cjs",
     "ci:commercial:runtime": "pnpm run ci:runtime:workers",
