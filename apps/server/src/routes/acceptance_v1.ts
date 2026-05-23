@@ -23,6 +23,9 @@ type AcceptanceSourceLaneV1 = "FORMAL_OPERATION" | "SIMULATED_DEV_ONLY" | "DEBUG
 
 type FormalAcceptanceGateV1 = {
   formal_evidence_passed: boolean;
+  receipt_structure_passed: boolean;
+  execution_evidence_passed: boolean;
+  execution_effect_passed: boolean;
   formal_execution_passed: boolean;
   non_simulated_chain: boolean;
   formal_acceptance: boolean;
@@ -180,10 +183,18 @@ function hasReceiptCompletenessSkillPass(receipt: any): boolean {
   });
 }
 
-function hasFormalExecutionEvidenceV1(receipt: any, policy: FormalEvidencePolicyResultV1): boolean {
+function receiptContainsFormalMarker(receipt: any, policy: FormalEvidencePolicyResultV1, markers: string[]): boolean {
   if (!policy.formal_evidence_passed) return false;
   const evidenceItems = collectReceiptEvidenceItems(receipt);
-  const formalExecutionMarkers = [
+  return evidenceItems.some((item) => {
+    const raw = JSON.stringify(item ?? "").toLowerCase();
+    if (!raw || raw.includes("sim_trace") || raw.includes("debug") || raw.includes("flight_table") || raw.includes("flight-table")) return false;
+    return markers.some((marker) => raw.includes(marker));
+  });
+}
+
+function hasFormalExecutionEvidenceV1(receipt: any, policy: FormalEvidencePolicyResultV1): boolean {
+  return receiptContainsFormalMarker(receipt, policy, [
     "water_delivery_receipt",
     "delivery_receipt",
     "water_delivery",
@@ -192,27 +203,43 @@ function hasFormalExecutionEvidenceV1(receipt: any, policy: FormalEvidencePolicy
     "coverage_evidence",
     "coverage_receipt",
     "coverage_percent",
-    "post_effect",
-    "effect_observation",
-    "soil_moisture_delta",
     "as_applied",
     "flow_meter",
     "meter_reading",
-  ];
-  return evidenceItems.some((item) => {
-    const raw = JSON.stringify(item ?? "").toLowerCase();
-    if (!raw || raw.includes("sim_trace") || raw.includes("debug") || raw.includes("flight_table") || raw.includes("flight-table")) return false;
-    return formalExecutionMarkers.some((marker) => raw.includes(marker));
-  });
+  ]);
 }
 
-function buildFormalAcceptanceGateV1(receipt: any, executionJudge: any): FormalAcceptanceGateV1 {
+function hasFormalExecutionEffectEvidenceV1(receipt: any, policy: FormalEvidencePolicyResultV1): boolean {
+  return receiptContainsFormalMarker(receipt, policy, [
+    "post_effect",
+    "effect_observation",
+    "soil_moisture_delta",
+    "coverage_evidence",
+    "coverage_receipt",
+    "coverage_percent",
+    "as_applied",
+    "flow_meter",
+    "meter_reading",
+  ]);
+}
+
+function actionRequiresExecutionEffectV1(actionType: unknown): boolean {
+  const action = String(actionType ?? "").trim().toUpperCase();
+  if (!action) return true;
+  if (action.includes("INSPECT") || action.includes("SCOUT") || action.includes("SENSE") || action.includes("MONITOR") || action.includes("OBSERVE") || action.includes("SAMPLE")) return false;
+  return true;
+}
+
+export function buildFormalAcceptanceGateV1(receipt: any, executionJudge: any, actionType?: unknown): FormalAcceptanceGateV1 {
   const policy = evidencePolicyFromReceiptV1(receipt ?? {});
   const source_lane = toSourceLane(policy.source_lanes);
+  const receipt_structure_passed = hasReceiptCompletenessSkillPass(receipt ?? {});
   const executionJudgePassed = hasExecutionJudgePass(executionJudge);
-  const receiptCompletenessSkillPassed = hasReceiptCompletenessSkillPass(receipt ?? {});
   const formalExecutionEvidencePassed = hasFormalExecutionEvidenceV1(receipt ?? {}, policy);
-  const formal_execution_passed = executionJudgePassed || receiptCompletenessSkillPassed || formalExecutionEvidencePassed;
+  const execution_evidence_passed = executionJudgePassed || formalExecutionEvidencePassed;
+  const execution_effect_passed = hasFormalExecutionEffectEvidenceV1(receipt ?? {}, policy);
+  const effectRequired = actionRequiresExecutionEffectV1(actionType ?? receipt?.payload?.action_type ?? receipt?.payload?.operation_type);
+  const formal_execution_passed = execution_evidence_passed === true && (execution_effect_passed === true || effectRequired === false);
   const is_simulated = policy.simulated_artifact_count > 0 || source_lane === "SIMULATED_DEV_ONLY" || source_lane === "DEBUG_ONLY";
   const non_simulated_chain = !is_simulated;
   const formal_evidence_passed = policy.formal_evidence_passed;
@@ -220,12 +247,18 @@ function buildFormalAcceptanceGateV1(receipt: any, executionJudge: any): FormalA
   const blocking_reasons = Array.from(new Set([
     ...policy.blocking_reasons,
     ...(!formal_evidence_passed ? ["FORMAL_EVIDENCE_REQUIRED"] : []),
-    ...(!formal_execution_passed ? ["FORMAL_EXECUTION_EVIDENCE_REQUIRED"] : []),
+    ...(receipt_structure_passed && !execution_evidence_passed ? ["RECEIPT_STRUCTURE_ONLY_NOT_FORMAL_EXECUTION"] : []),
+    ...(!execution_evidence_passed ? ["FORMAL_EXECUTION_EVIDENCE_REQUIRED"] : []),
+    ...(effectRequired && execution_evidence_passed && !execution_effect_passed ? ["FORMAL_EXECUTION_EFFECT_EVIDENCE_REQUIRED"] : []),
+    ...(!formal_execution_passed ? ["FORMAL_EXECUTION_REQUIRED"] : []),
     ...(is_simulated ? ["SIMULATED_OR_DEBUG_EVIDENCE_NOT_FORMAL"] : []),
     ...(source_lane !== "FORMAL_OPERATION" ? ["FORMAL_OPERATION_SOURCE_LANE_REQUIRED"] : []),
   ]));
   return {
     formal_evidence_passed,
+    receipt_structure_passed,
+    execution_evidence_passed,
+    execution_effect_passed,
     formal_execution_passed,
     non_simulated_chain,
     formal_acceptance,
@@ -237,7 +270,7 @@ function buildFormalAcceptanceGateV1(receipt: any, executionJudge: any): FormalA
   };
 }
 
-function applyFormalAcceptanceGateV1(verdict: "PASS" | "FAIL" | "PARTIAL", gate: FormalAcceptanceGateV1): AcceptanceWriteVerdictV1 {
+export function applyFormalAcceptanceGateV1(verdict: "PASS" | "FAIL" | "PARTIAL", gate: FormalAcceptanceGateV1): AcceptanceWriteVerdictV1 {
   if (verdict !== "PASS") return verdict;
   if (gate.formal_acceptance) return "PASS";
   if (!gate.formal_evidence_passed) return "INSUFFICIENT_EVIDENCE";
@@ -314,7 +347,7 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
         sensor_quality_state: null,
         acceptance_policy_ref: null,
       });
-      const formalGate = buildFormalAcceptanceGateV1(receiptFact.record_json ?? {}, executionJudge);
+      const formalGate = buildFormalAcceptanceGateV1(receiptFact.record_json ?? {}, executionJudge, taskPayload.action_type);
       const initialVerdict = toVerdict(evaluated.result);
       const gatedVerdict = applyFormalAcceptanceGateV1(initialVerdict, formalGate);
       const trace_id = String(taskPayload?.trace_id ?? taskPayload?.meta?.trace_id ?? "").trim() || `trace_${randomUUID().replace(/-/g, "")}`;
@@ -385,6 +418,9 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
           formal_gate: formalGate,
           formal_acceptance: formalGate.formal_acceptance,
           formal_evidence_passed: formalGate.formal_evidence_passed,
+          receipt_structure_passed: formalGate.receipt_structure_passed,
+          execution_evidence_passed: formalGate.execution_evidence_passed,
+          execution_effect_passed: formalGate.execution_effect_passed,
           formal_execution_passed: formalGate.formal_execution_passed,
           non_simulated_chain: formalGate.non_simulated_chain,
           source_lane: formalGate.source_lane,
@@ -461,6 +497,10 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
           explanation_codes: acceptanceRecord.payload.explanation_codes,
           formal_acceptance: acceptanceRecord.payload.formal_acceptance,
           formal_evidence_passed: acceptanceRecord.payload.formal_evidence_passed,
+          receipt_structure_passed: acceptanceRecord.payload.receipt_structure_passed,
+          execution_evidence_passed: acceptanceRecord.payload.execution_evidence_passed,
+          execution_effect_passed: acceptanceRecord.payload.execution_effect_passed,
+          formal_execution_passed: acceptanceRecord.payload.formal_execution_passed,
           source_lane: acceptanceRecord.payload.source_lane,
           is_simulated: acceptanceRecord.payload.is_simulated,
           blocking_reasons: acceptanceRecord.payload.blocking_reasons,
@@ -468,6 +508,9 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
           metrics: {
             formal_evidence_count: Number(evaluated.metrics?.formal_evidence_count ?? 0),
             simulated_evidence_count: Number(evaluated.metrics?.simulated_evidence_count ?? 0),
+            receipt_structure_passed: formalGate.receipt_structure_passed ? 1 : 0,
+            execution_evidence_passed: formalGate.execution_evidence_passed ? 1 : 0,
+            execution_effect_passed: formalGate.execution_effect_passed ? 1 : 0,
             formal_execution_passed: formalGate.formal_execution_passed ? 1 : 0,
             non_simulated_chain: formalGate.non_simulated_chain ? 1 : 0,
           },
