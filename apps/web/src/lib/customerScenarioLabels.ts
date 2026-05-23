@@ -13,7 +13,7 @@ export function failSafeStatusLabel(value: unknown): string {
   const key = String(value ?? "").trim().toUpperCase();
   if (key === "OPEN") return "Fail-safe 已触发";
   if (key === "ACKED") return "Fail-safe 已确认";
-  if (key === "COMPLETED") return "Fail-safe 处置完成";
+  if (key === "COMPLETED") return "Fail-safe 处置记录需复核";
   if (key === "RESOLVED") return "Fail-safe 已解除";
   return "Fail-safe 未触发";
 }
@@ -22,7 +22,7 @@ export function manualTakeoverStatusLabel(value: unknown): string {
   const key = String(value ?? "").trim().toUpperCase();
   if (key === "REQUESTED") return "人工接管已请求";
   if (key === "ACKED") return "人工接管已确认";
-  if (key === "COMPLETED") return "人工接管已完成";
+  if (key === "COMPLETED") return "人工接管记录需复核";
   return "人工接管未触发";
 }
 
@@ -43,10 +43,10 @@ const CUSTOMER_REASON_MAP: Record<string, string> = {
   "simulated_dev_only": "模拟记录，不作为客户结论",
   "insufficient": "证据不足",
   "limited": "有限记录，需复核",
-  "sampling_lab_invalid": "采样已完成，但实验室结果未通过质量校验 → 需复核",
+  "sampling_lab_invalid": "采样记录存在，但实验室结果未通过质量校验 → 需复核",
   "sampling_simulated": "采样记录来自模拟链路 → 不作为客户结论",
   "sampling_missing_receipt": "实验室结果已导入，但缺少采样回执 → 证据不足",
-  "sampling_passed": "采样与实验室结果均通过 → 可作为农艺判断依据",
+  "sampling_passed": "采样与实验室结果已有通过记录 → 仍以正式链路校验为准",
   "fertilization_lab_low_n_formal": "实验室结果显示存在缺氮风险，已生成施氮建议。",
   "fertilization_sensing_review_only": "感知系统提示可能存在养分风险，建议先采样复核。",
   "fertilization_salinity_risk": "土壤电导率异常，可能存在盐分或水分干扰，暂不生成施氮建议。",
@@ -66,7 +66,7 @@ const CUSTOMER_REASON_MAP: Record<string, string> = {
   "pest_disease_skill_signal_only": "当前仅为识别信号，不作为正式巡检结论。",
   "pest_disease_review_pending": "人工复核尚未完成。",
   "pest_disease_review_rejected": "人工复核未通过，暂不展示为正式结论。",
-  "pest_disease_acceptance_pass_not_treatment": "巡检证据已通过验收，可作为后续处理建议依据，但不代表已完成防治。",
+  "pest_disease_acceptance_pass_not_treatment": "巡检证据已有通过记录，可作为后续处理建议依据；仍以正式链路校验为准，且不代表已完成防治。",
 };
 
 function normReason(raw: unknown): string {
@@ -127,11 +127,11 @@ export function pestDiseaseInspectionCustomerSummaryText(input: any): string {
   const acceptance = String(input?.acceptance_status ?? "").toUpperCase();
   const review = String(input?.review_status ?? "").toUpperCase();
   const blocking = Array.isArray(input?.blocking_reasons) ? input.blocking_reasons.map((x: unknown) => normReason(x)) : [];
-  if (blocking.includes("pest_disease_missing_geo") || blocking.includes("pest_disease_missing_media")) return "巡检任务已完成，但缺少定位或图片证据，需复核。";
+  if (blocking.includes("pest_disease_missing_geo") || blocking.includes("pest_disease_missing_media")) return "巡检任务已有记录，但缺少定位或图片证据，需复核。";
   if (blocking.includes("pest_disease_skill_signal_only")) return "当前仅为识别信号，不作为正式巡检结论。";
   if (review === "PENDING") return "发现疑似病虫害风险，已进入人工复核。";
   if (review === "REJECTED") return "人工复核未通过，暂不展示为正式结论。";
-  if (acceptance === "PASS") return "巡检证据已通过验收，可作为后续处理建议依据，但不代表已完成防治。";
+  if (acceptance === "PASS") return "巡检证据已有通过记录，可作为后续处理建议依据；仍以正式链路校验为准，且不代表已完成防治。";
   if (status === "CONFIRMED") return "巡检结果已确认，但尚未进入补喷处方。";
   if (status === "SUSPECTED") return "发现疑似病虫害风险，已进入人工复核。";
   return "巡检证据不足，暂不生成处理建议。";
@@ -185,7 +185,7 @@ export function pestDiseaseConfidenceLabel(value: unknown): string {
 
 export function pestDiseaseReviewStatusLabel(value: unknown): string {
   const key = String(value ?? "").trim().toUpperCase();
-  if (key === "APPROVED" || key === "PASS") return "已通过";
+  if (key === "APPROVED" || key === "PASS") return "复核记录需以正式链路为准";
   if (key === "PENDING" || key === "NEEDS_REVIEW" || key === "WAITING") return "待复核";
   if (key === "REJECTED" || key === "FAIL") return "未通过";
   if (key === "ESCALATED") return "已升级";
@@ -195,7 +195,7 @@ export function pestDiseaseReviewStatusLabel(value: unknown): string {
 
 export function pestDiseaseAcceptanceStatusLabel(value: unknown): string {
   const key = String(value ?? "").trim().toUpperCase();
-  if (key === "PASS" || key === "APPROVED" || key === "SUCCESS") return "已通过";
+  if (key === "PASS" || key === "APPROVED" || key === "SUCCESS") return "验收记录需以正式链路为准";
   if (key === "FAIL" || key === "REJECTED" || key === "FAILED") return "未通过";
   if (key === "NEEDS_REVIEW" || key === "PENDING" || key === "WAITING") return "需复核";
   if (key === "INSUFFICIENT_EVIDENCE" || key === "EVIDENCE_MISSING") return "证据不足";
