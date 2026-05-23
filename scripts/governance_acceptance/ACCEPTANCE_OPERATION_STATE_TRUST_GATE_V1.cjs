@@ -39,6 +39,9 @@ const route = read(files.route);
 
 assertIncludes(projection, 'state_source', 'OperationStateV1 trust fields');
 assertIncludes(projection, 'formal_status', 'OperationStateV1 trust fields');
+assertIncludes(projection, 'formal_acceptance_status', 'OperationStateV1 compatibility fields');
+assertIncludes(projection, 'technical_acceptance_hint', 'OperationStateV1 compatibility fields');
+assertIncludes(projection, 'TECHNICAL_HINT_NOT_FORMAL_ACCEPTANCE', 'OperationStateV1 technical hint reason');
 assertIncludes(projection, 'source_facts', 'OperationStateV1 trust fields');
 assertIncludes(projection, 'projection_rule', 'OperationStateV1 trust fields');
 assertIncludes(projection, 'freshness', 'OperationStateV1 trust fields');
@@ -74,6 +77,11 @@ assertIncludes(projection, 'const fallbackLimited = !hasFormalAcceptance', 'fall
 assertIncludes(projection, 'fallback_limited: fallbackLimited', 'fallback limited output');
 assertIncludes(projection, 'customer_visible_eligible: formalStatus === "FORMAL_PASS" && !fallbackLimited', 'customer visibility formal pass rule');
 assertIncludes(projection, 'formal_acceptance_required', 'formal acceptance blocking reason');
+assertIncludes(projection, 'toNonFormalAcceptanceRawStatus', 'non-formal raw acceptance status mapper');
+assertIncludes(projection, 'status: receipt ? "PENDING"', 'non-formal acceptance status downgrade');
+assertIncludes(projection, 'raw_status: nonFormalRawAcceptanceStatus', 'non-formal acceptance raw status downgrade');
+assertNotIncludes(projection, 'status: toProjectionAcceptanceStatus(fallbackAcceptance.verdict)', 'operation_state fallback acceptance status');
+assertNotIncludes(projection, 'raw_status: fallbackAcceptance.verdict', 'operation_state fallback acceptance raw status');
 
 assertIncludes(route, 'projectOperationStateV1(pool, tenant)', 'operation state route projection usage');
 assertNotIncludes(route, 'customer_visible_eligible:', 'operation_state route must not derive customer_visible_eligible');
@@ -102,12 +110,20 @@ const baseFacts = [
     tenant_id: 'tenantA', project_id: 'projectA', group_id: 'groupA', act_task_id: 'task_trust_1', status: 'SUCCESS', logs_refs: ['sim_trace']
   }),
   fact('evidence_1', '2026-01-01T00:03:00.000Z', 'evidence_artifact_v1', {
-    tenant_id: 'tenantA', project_id: 'projectA', group_id: 'groupA', operation_plan_id: 'op_trust_1', act_task_id: 'task_trust_1', kind: 'sim_trace'
+    tenant_id: 'tenantA', project_id: 'projectA', group_id: 'groupA', operation_plan_id: 'op_trust_1', act_task_id: 'task_trust_1', kind: 'image'
   })
 ];
 const state = projectOperationStateFromFacts(baseFacts)[0];
 assertRuntime(state.final_status !== 'SUCCESS', 'receipt SUCCESS must not become formal SUCCESS');
+assertRuntime(state.final_status !== 'FAILED', 'receipt SUCCESS must not become formal FAILED');
+assertRuntime(state.final_status === 'PENDING_ACCEPTANCE', 'receipt executed without formal acceptance must remain PENDING_ACCEPTANCE');
 assertRuntime(state.acceptance.status !== 'PASS', 'fallback acceptance must not PASS');
+assertRuntime(state.acceptance.status !== 'FAIL', 'fallback acceptance must not FAIL');
+assertRuntime(state.acceptance.raw_status !== 'PASS', 'fallback acceptance raw_status must not PASS');
+assertRuntime(state.acceptance.raw_status !== 'FAIL', 'fallback acceptance raw_status must not FAIL');
+assertRuntime(['NEEDS_FORMAL_ACCEPTANCE', 'INSUFFICIENT_EVIDENCE'].includes(state.acceptance.raw_status), 'fallback raw_status must be weak/non-formal');
+assertRuntime(state.technical_acceptance_hint && state.technical_acceptance_hint.reason === 'TECHNICAL_HINT_NOT_FORMAL_ACCEPTANCE', 'fallback technical hint must be present');
+assertRuntime(state.formal_acceptance_status === 'NOT_FORMAL', 'fallback formal_acceptance_status must be NOT_FORMAL');
 assertRuntime(state.fallback_limited === true, 'fallback_limited must be true without formal acceptance');
 assertRuntime(state.customer_visible_eligible === false, 'fallback state must not be customer visible');
 assertRuntime(Array.isArray(state.blocking_reasons) && state.blocking_reasons.includes('formal_acceptance_required'), 'blocking_reasons must include formal_acceptance_required');
@@ -119,7 +135,10 @@ const weakAcceptanceFacts = baseFacts.concat([
 ]);
 const weakState = projectOperationStateFromFacts(weakAcceptanceFacts)[0];
 assertRuntime(weakState.final_status !== 'SUCCESS', 'weak acceptance_result_v1 PASS without formal metadata must not become SUCCESS');
+assertRuntime(weakState.acceptance.status !== 'PASS', 'weak acceptance_result_v1 PASS must not surface as acceptance.status PASS');
+assertRuntime(weakState.acceptance.raw_status !== 'PASS', 'weak acceptance_result_v1 PASS must not surface as acceptance.raw_status PASS');
 assertRuntime(weakState.formal_status === 'NOT_FORMAL', 'weak acceptance_result_v1 PASS must not be FORMAL_PASS');
+assertRuntime(weakState.formal_acceptance_status === 'NOT_FORMAL', 'weak acceptance_result_v1 PASS must not be formal_acceptance_status FORMAL_PASS');
 assertRuntime(weakState.fallback_limited === true, 'weak acceptance_result_v1 PASS must remain fallback_limited');
 assertRuntime(weakState.customer_visible_eligible === false, 'weak acceptance_result_v1 PASS must not be customer visible');
 
@@ -130,7 +149,11 @@ const formalAcceptanceFacts = baseFacts.concat([
 ]);
 const formalState = projectOperationStateFromFacts(formalAcceptanceFacts)[0];
 assertRuntime(formalState.final_status === 'SUCCESS', 'explicit formal PASS may become SUCCESS');
+assertRuntime(formalState.acceptance.status === 'PASS', 'explicit formal PASS may surface as acceptance.status PASS');
+assertRuntime(formalState.acceptance.raw_status === 'PASS', 'explicit formal PASS may surface as acceptance.raw_status PASS');
 assertRuntime(formalState.formal_status === 'FORMAL_PASS', 'explicit formal PASS must become FORMAL_PASS');
+assertRuntime(formalState.formal_acceptance_status === 'FORMAL_PASS', 'explicit formal PASS must become formal_acceptance_status FORMAL_PASS');
+assertRuntime(formalState.technical_acceptance_hint === undefined, 'explicit formal PASS must not include technical acceptance hint');
 assertRuntime(formalState.fallback_limited === false, 'explicit formal PASS must not be fallback limited');
 assertRuntime(formalState.customer_visible_eligible === true, 'explicit formal PASS may be customer visible');
 })();
