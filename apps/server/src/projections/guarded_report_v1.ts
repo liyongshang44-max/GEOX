@@ -10,12 +10,50 @@ function blockingReasons(report: any): string[] { const reasons = [...(Array.isA
 function trustLevelFor(report: any): GuardTrustLevelV1 { if (chainPassed(report)) return "FORMAL_CHAIN_PASSED"; if (isSimulated(report)) return "SIMULATED_DEV_ONLY"; const reasons = blockingReasons(report).join("|").toUpperCase(); if (reasons.includes("EVIDENCE") || reasons.includes("FORMAL")) return "INSUFFICIENT_FORMAL_EVIDENCE"; if (!report?.chain_validation) return "LIMITED_FALLBACK"; return "NEEDS_REVIEW"; }
 function guardStatusFor(trust: GuardTrustLevelV1): GuardStatusV1 { if (trust === "FORMAL_CHAIN_PASSED") return "PASSED"; if (trust === "SIMULATED_DEV_ONLY") return "SIMULATED"; if (trust === "INSUFFICIENT_FORMAL_EVIDENCE") return "INSUFFICIENT_EVIDENCE"; if (trust === "LIMITED_FALLBACK") return "LIMITED"; return "NEEDS_REVIEW"; }
 
+export function isFormalCustomerValueItem(item: any): boolean {
+  return item?.customer_visible_value === true
+    && item?.trust_level === "FORMAL_ACCEPTED"
+    && item?.source_lane === "FORMAL_ACCEPTANCE"
+    && Boolean(item?.formal_acceptance_id)
+    && item?.formal_evidence_passed === true
+    && item?.chain_validation_passed === true;
+}
+
+function collectRoiItems(roi: any): any[] {
+  const items: any[] = [];
+  if (Array.isArray(roi?.items)) items.push(...roi.items);
+  for (const key of ["water_saved", "labor_saved", "early_warning_lead_time", "first_pass_acceptance_rate", "low_confidence_items"]) {
+    if (Array.isArray(roi?.[key])) items.push(...roi[key]);
+  }
+  return items;
+}
+
+function summaryHasFormalCustomerValue(summary: any): boolean {
+  return summary?.has_customer_visible_value === true && Number(summary?.trusted_value_items ?? 0) > 0;
+}
+
 function guardRoiLedger(roi: any, trusted: boolean, trust: GuardTrustLevelV1): any {
   const next = clone(roi ?? {});
-  const guardItem = (item: any) => ({ ...item, customer_visible_value: trusted && item?.customer_visible_value === true, trust_level: item?.trust_level ?? trust, customer_text: trusted ? item?.customer_text : "该价值记录未通过正式链路校验，仅作为内部线索。" });
+  const guardItem = (item: any) => {
+    const formalValue = trusted && isFormalCustomerValueItem(item);
+    return {
+      ...item,
+      customer_visible_value: formalValue,
+      trust_level: item?.trust_level ?? trust,
+      customer_text: formalValue ? item?.customer_text : "该价值记录未通过正式链路校验，仅作为内部线索。",
+    };
+  };
   next.items = Array.isArray(next.items) ? next.items.map(guardItem) : [];
   for (const key of ["water_saved", "labor_saved", "early_warning_lead_time", "first_pass_acceptance_rate", "low_confidence_items"]) if (Array.isArray(next[key])) next[key] = next[key].map(guardItem);
-  next.summary = { ...(next.summary ?? {}), has_customer_visible_value: trusted && next.summary?.has_customer_visible_value === true, trust_level: trust, customer_visible_value: trusted && next.summary?.has_customer_visible_value === true };
+  const formalItems = collectRoiItems(next).filter(isFormalCustomerValueItem);
+  const hasFormalCustomerValue = trusted && formalItems.length > 0;
+  next.summary = {
+    ...(next.summary ?? {}),
+    trusted_value_items: hasFormalCustomerValue ? formalItems.length : 0,
+    has_customer_visible_value: hasFormalCustomerValue,
+    trust_level: hasFormalCustomerValue ? "FORMAL_ACCEPTED" : trust,
+    customer_visible_value: hasFormalCustomerValue,
+  };
   return next;
 }
 
@@ -76,12 +114,22 @@ function guardOperationListItem(op: any): any {
   };
 }
 
+function hasFormalOperationInAggregate(payload: any): boolean {
+  return Array.isArray(payload?.recent_operations) && payload.recent_operations.some((op: any) => op?.projection_source === "GUARDED_REPORT" || op?.customer_visible_eligible === true || op?.trust_level === "FORMAL_CHAIN_PASSED");
+}
+
 export function applyGuardedDashboardAggregateV1(aggregate: any): any {
   if (!aggregate || typeof aggregate !== "object") return aggregate;
   const next = clone(aggregate);
   next.recent_operations = Array.isArray(next.recent_operations) ? next.recent_operations.map(guardOperationListItem) : [];
-  next.roi_summary = { ...(next.roi_summary ?? {}), has_customer_visible_value: false, customer_value_text: "价值记录需通过正式链路校验后才可作为客户可信收益。", trust_level: "LIMITED_FALLBACK" };
-  next.guarded_projection = { enabled: true, source: "dashboard_aggregate_guard", note: "Dashboard summary only exposes guarded customer conclusions; weak state fallback is limited." };
+  const hasFormalValue = summaryHasFormalCustomerValue(next.roi_summary) && hasFormalOperationInAggregate(next);
+  next.roi_summary = {
+    ...(next.roi_summary ?? {}),
+    has_customer_visible_value: hasFormalValue,
+    customer_value_text: hasFormalValue ? next.roi_summary?.customer_value_text : "价值记录需通过正式链路校验后才可作为客户可信收益。",
+    trust_level: hasFormalValue ? "FORMAL_ACCEPTED" : "LIMITED_FALLBACK",
+  };
+  next.guarded_projection = { enabled: true, source: "dashboard_aggregate_guard", note: "Dashboard summary only exposes formal customer value when ROI and guarded operation chain are both formal." };
   return next;
 }
 
@@ -89,7 +137,13 @@ export function applyGuardedFieldReportV1(fieldReport: any): any {
   if (!fieldReport || typeof fieldReport !== "object") return fieldReport;
   const next = clone(fieldReport);
   next.recent_operations = Array.isArray(next.recent_operations) ? next.recent_operations.map(guardOperationListItem) : [];
-  next.value_summary = { ...(next.value_summary ?? {}), has_customer_visible_value: false, customer_value_text: "该地块价值记录需通过正式链路校验后才可作为可信收益。", trust_level: "LIMITED_FALLBACK" };
+  const hasFormalValue = summaryHasFormalCustomerValue(next.value_summary) && hasFormalOperationInAggregate(next);
+  next.value_summary = {
+    ...(next.value_summary ?? {}),
+    has_customer_visible_value: hasFormalValue,
+    customer_value_text: hasFormalValue ? next.value_summary?.customer_value_text : "该地块价值记录需通过正式链路校验后才可作为可信收益。",
+    trust_level: hasFormalValue ? "FORMAL_ACCEPTED" : "LIMITED_FALLBACK",
+  };
   next.guarded_projection = { enabled: true, source: "field_report_guard" };
   return next;
 }
