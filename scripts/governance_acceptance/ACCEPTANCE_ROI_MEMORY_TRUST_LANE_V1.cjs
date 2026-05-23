@@ -2,6 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
+const { pathToFileURL } = require('node:url');
 
 const root = process.cwd();
 const files = {
@@ -121,7 +122,7 @@ assertIncludes(customerRoute, 'LIMITED', 'customer route limited data trust mark
 assertIncludes(customerRoute, '能力可用，结论需复核', 'customer route capability wording');
 assertIncludes(customerRoute, '不代表正式经营结论', 'customer route limited subtitle wording');
 
-const serverSrc = path.join(root, 'apps/server/src').replace(/\\/g, '/');
+const serverSrc = pathToFileURL(path.join(root, 'apps/server/src')).href;
 
 const fixture = String.raw`
 (async () => {
