@@ -97,7 +97,7 @@ function extractFunctionBody(text, signatureStart) {
     '发生率',
     '严重度比例',
     '影响面积',
-    '巡检证据已通过验收，可作为后续处理建议依据，但不代表已完成防治。',
+    '巡检证据已有记录，可作为后续处理建议依据；仍以正式链路校验为准，且不代表防治闭环。',
     '当前仅完成巡检证据链；是否补喷、用药、派发执行任务，需进入后续正式决策链路。',
   ], 'OperationReportPage PDI observation evidence display');
 
@@ -145,6 +145,8 @@ function extractFunctionBody(text, signatureStart) {
     '喷药完成',
     '病虫害已解决',
     '作物风险已解除',
+    '已完成防治',
+    '巡检证据已通过验收，可作为后续处理建议依据，但不代表已完成防治。',
   ];
   assertNone(pdiSectionBody, blockedPositiveTreatmentTerms, 'OperationReportPage PDI section treatment-complete forbidden claims');
   assertNone(pdiAuditBody, blockedPositiveTreatmentTerms, 'OperationReportPage PDI audit treatment-complete forbidden claims');
