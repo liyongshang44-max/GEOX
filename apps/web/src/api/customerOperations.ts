@@ -16,6 +16,15 @@ export type CustomerOperationListItem = {
   acceptance_status?: string | null;
   evidence_status?: string | null;
   evidence_summary_status?: string | null;
+  projection_source?: "GUARDED_REPORT" | "STATE_FALLBACK_LIMITED" | string | null;
+  fallback_limited?: boolean | null;
+  customer_visible_eligible?: boolean | null;
+  blocking_reasons?: string[] | null;
+  data_trust_status?: "FORMAL" | "LIMITED" | string | null;
+  chain_status?: string | null;
+  trust_level?: string | null;
+  needs_review?: boolean | null;
+  is_simulated?: boolean | null;
   generated_at?: string | null;
   updated_at?: string | null;
   executed_at?: string | null;
@@ -52,10 +61,35 @@ function toFallbackOperations(aggregate: CustomerDashboardAggregateV1): Customer
   const seen = new Set<string>();
   const rows: CustomerOperationListItem[] = [];
   for (const item of aggregate.recent_operations ?? []) {
-    const operationId = String((item as any).operation_id ?? (item as any).operation_plan_id ?? "").trim();
+    const anyItem = item as any;
+    const operationId = String(anyItem.operation_id ?? anyItem.operation_plan_id ?? "").trim();
     if (!operationId || seen.has(operationId)) continue;
     seen.add(operationId);
-    rows.push({ operation_id: String((item as any).operation_id ?? "") || null, operation_plan_id: String((item as any).operation_plan_id ?? operationId) || null, field_id: String((item as any).field_id ?? "") || null, field_name: (item as any).field_name ?? null, title: (item as any).title ?? null, customer_title: (item as any).customer_title ?? null, operation_type: (item as any).operation_type ?? null, final_status: (item as any).final_status ?? null, acceptance_status: (item as any).acceptance_status ?? null, evidence_status: (item as any).evidence_status ?? null, evidence_summary_status: (item as any).evidence_summary_status ?? null, generated_at: (item as any).generated_at ?? null, updated_at: (item as any).updated_at ?? (item as any).executed_at ?? (item as any).generated_at ?? null, executed_at: (item as any).executed_at ?? null });
+    rows.push({
+      operation_id: String(anyItem.operation_id ?? "") || null,
+      operation_plan_id: String(anyItem.operation_plan_id ?? operationId) || null,
+      field_id: String(anyItem.field_id ?? "") || null,
+      field_name: anyItem.field_name ?? null,
+      title: anyItem.title ?? null,
+      customer_title: anyItem.customer_title ?? null,
+      operation_type: anyItem.operation_type ?? null,
+      final_status: anyItem.final_status ?? null,
+      acceptance_status: anyItem.acceptance_status ?? null,
+      evidence_status: anyItem.evidence_status ?? null,
+      evidence_summary_status: anyItem.evidence_summary_status ?? null,
+      projection_source: anyItem.projection_source ?? null,
+      fallback_limited: anyItem.fallback_limited ?? null,
+      customer_visible_eligible: anyItem.customer_visible_eligible ?? null,
+      blocking_reasons: Array.isArray(anyItem.blocking_reasons) ? anyItem.blocking_reasons : null,
+      data_trust_status: anyItem.data_trust_status ?? null,
+      chain_status: anyItem.chain_status ?? anyItem.formal_chain_status ?? null,
+      trust_level: anyItem.trust_level ?? null,
+      needs_review: anyItem.needs_review ?? null,
+      is_simulated: anyItem.is_simulated ?? null,
+      generated_at: anyItem.generated_at ?? null,
+      updated_at: anyItem.updated_at ?? anyItem.executed_at ?? anyItem.generated_at ?? null,
+      executed_at: anyItem.executed_at ?? null,
+    });
   }
   return rows;
 }
