@@ -10,22 +10,11 @@ const files = {
   customerRoute: path.join(root, 'apps/server/src/routes/customer_v1.ts'),
 };
 
-function read(file) {
-  return fs.readFileSync(file, 'utf8');
-}
-function fail(message) {
-  console.error(`[customer-dashboard-projection-trust] FAIL: ${message}`);
-  process.exit(1);
-}
-function assert(condition, message) {
-  if (!condition) fail(message);
-}
-function assertIncludes(source, needle, label) {
-  assert(source.includes(needle), `${label} must include ${needle}`);
-}
-function assertNotIncludes(source, needle, label) {
-  assert(!source.includes(needle), `${label} must not include ${needle}`);
-}
+function read(file) { return fs.readFileSync(file, 'utf8'); }
+function fail(message) { console.error(`[customer-dashboard-projection-trust] FAIL: ${message}`); process.exit(1); }
+function assert(condition, message) { if (!condition) fail(message); }
+function assertIncludes(source, needle, label) { assert(source.includes(needle), `${label} must include ${needle}`); }
+function assertNotIncludes(source, needle, label) { assert(!source.includes(needle), `${label} must not include ${needle}`); }
 
 const projection = read(files.projection);
 const reportsDashboardRoute = read(files.reportsDashboardRoute);
@@ -50,9 +39,7 @@ assertIncludes(projection, 'pending_acceptance: 0', 'state fallback pending acce
 assertIncludes(projection, 'roi_summary: limitedRoiSummary(sortedStates.length)', 'state fallback ROI must be limited');
 
 // Dashboard and Field Report ROI summaries must split trust categories and avoid customer-visible assumption value.
-for (const field of ['trusted_value_items', 'hypothesis_items', 'estimated_items', 'insufficient_evidence_items', 'simulated_or_technical_items']) {
-  assertIncludes(projection, field, 'ROI summary trust buckets');
-}
+for (const field of ['trusted_value_items', 'hypothesis_items', 'estimated_items', 'insufficient_evidence_items', 'simulated_or_technical_items']) assertIncludes(projection, field, 'ROI summary trust buckets');
 assertIncludes(projection, 'isTrustedRoiItem', 'ROI trust classifier');
 assertIncludes(projection, 'isSimulatedOrTechnicalRoiItem', 'ROI technical/simulated classifier');
 assertIncludes(projection, 'has_customer_visible_value: hasValue', 'ROI customer visible value must be trusted-only');
@@ -65,6 +52,8 @@ assertIncludes(projection, 'safeReportFinalStatus', 'guarded report status proje
 assertIncludes(projection, 'safeReportAcceptanceStatus', 'guarded report acceptance projection');
 assertIncludes(projection, 'trust.customer_visible_eligible && upper(report.execution.final_status) === "PENDING_ACCEPTANCE"', 'guarded pending acceptance source');
 assertIncludes(projection, 'report_without_guarded_chain_validation', 'weak report blocking reason');
+assertIncludes(projection, 'customerOperationListTrustFromGuardedReportV1', 'customer operations guarded report trust helper');
+assertIncludes(projection, 'isCustomerVisibleGuardedOperationReportV1', 'customer operations guarded report visibility helper');
 
 // Customer route must not expose raw operation_state final/acceptance status as official customer state.
 assertIncludes(customerRoute, 'STATE_FALLBACK_TRUST', 'customer state fallback trust metadata');
@@ -74,11 +63,28 @@ assertIncludes(customerRoute, 'customer_visible_eligible: false', 'customer rout
 assertIncludes(customerRoute, 'limitedFinalStatusFromState', 'customer route limited final status helper');
 assertIncludes(customerRoute, 'limitedAcceptanceStatusFromState', 'customer route limited acceptance status helper');
 assertIncludes(customerRoute, 'formalPendingAcceptanceFromState', 'customer route formal pending helper');
-assertIncludes(customerRoute, 'final_status: limitedFinalStatusFromState()', 'customer operations final status must be limited');
-assertIncludes(customerRoute, 'acceptance_status: limitedAcceptanceStatusFromState()', 'customer operations acceptance status must be needs review');
+assertIncludes(customerRoute, 'final_status: limitedFinalStatusFromState()', 'customer operations fallback final status must be limited');
+assertIncludes(customerRoute, 'acceptance_status: limitedAcceptanceStatusFromState()', 'customer operations fallback acceptance status must be needs review');
 assertIncludes(customerRoute, 'pending_acceptance_count: Number(agg?.pendingAcceptanceCount ?? 0)', 'customer fields pending count must use limited helper aggregation');
 assertNotIncludes(customerRoute, 'final_status: String(state.final_status', 'customer operations must not expose raw state final_status');
 assertNotIncludes(customerRoute, 'acceptance_status: String(state.acceptance?.status', 'customer operations must not expose raw state acceptance status');
+
+// Customer operations must prefer guarded report and keep state as limited fallback.
+assertIncludes(customerRoute, 'buildGuardedOperationReportV1', 'customer operations guarded report builder');
+assertIncludes(customerRoute, 'projectReportV1', 'customer operations operation report projection');
+assertIncludes(customerRoute, 'customerOperationFromGuardedReport', 'customer operations guarded report mapper');
+assertIncludes(customerRoute, 'customerOperationFromStateFallback', 'customer operations state fallback mapper');
+assertIncludes(customerRoute, 'buildGuardedCustomerOperationItem', 'customer operations guarded/fallback item builder');
+assertIncludes(customerRoute, 'customerOperationFromGuardedReport(guarded, params.state, params.fieldNameById) ?? customerOperationFromStateFallback', 'customer operations guarded-first fallback order');
+assertIncludes(customerRoute, 'isCustomerVisibleGuardedOperationReportV1(report)', 'customer operations guarded visibility predicate');
+assertIncludes(customerRoute, 'projection_source: hasFormalOperation ? "GUARDED_REPORT" : "STATE_FALLBACK_LIMITED"', 'customer operations response trust source');
+assertIncludes(customerRoute, 'fallback_limited: !hasFormalOperation', 'customer operations response fallback limited');
+assertIncludes(customerRoute, 'data_trust_status: hasFormalOperation ? "FORMAL" : "LIMITED"', 'customer operations response data trust status');
+
+// Customer scope boundary must remain in place.
+assertIncludes(customerRoute, 'filterByCustomerScope(await projectOperationStateV1(pool, ctx.tenant), ctx.scope', 'customer operations scope filtering');
+assertIncludes(customerRoute, 'resolveCustomerScope(auth)', 'customer scope resolver');
+assertIncludes(customerRoute, 'isFieldAllowedByCustomerScope', 'customer field geometry scope guard');
 
 // reports_dashboard route may still use FromStates fallback, but the projection must now return limited/safe payload.
 assertIncludes(reportsDashboardRoute, 'projectCustomerDashboardAggregateFromStatesV1', 'reports dashboard route state fallback projection');
@@ -87,24 +93,10 @@ assertIncludes(reportsDashboardRoute, 'projectFieldPortfolioSummaryV1', 'reports
 const fixture = String.raw`
 (async () => {
 const mod = await import('./src/projections/report_dashboard_v1.ts');
-const { projectCustomerDashboardAggregateFromStatesV1, projectCustomerDashboardAggregateV1 } = mod;
-function assertRuntime(condition, message) {
-  if (!condition) throw new Error(message);
-}
-const weakState = {
-  operation_id: 'op_weak_success',
-  operation_plan_id: 'op_weak_success',
-  field_id: 'field_1',
-  final_status: 'SUCCESS',
-  acceptance: { status: 'PASS' },
-  reason_codes: [],
-  last_event_ts: 1700000000000,
-};
-const stateAgg = projectCustomerDashboardAggregateFromStatesV1({
-  states: [weakState],
-  field_ids: ['field_1'],
-  field_name_by_id: new Map([['field_1', 'Field 1']]),
-});
+const { projectCustomerDashboardAggregateFromStatesV1, projectCustomerDashboardAggregateV1, customerOperationListTrustFromGuardedReportV1, isCustomerVisibleGuardedOperationReportV1 } = mod;
+function assertRuntime(condition, message) { if (!condition) throw new Error(message); }
+const weakState = { operation_id: 'op_weak_success', operation_plan_id: 'op_weak_success', field_id: 'field_1', final_status: 'SUCCESS', acceptance: { status: 'PASS' }, reason_codes: [], last_event_ts: 1700000000000 };
+const stateAgg = projectCustomerDashboardAggregateFromStatesV1({ states: [weakState], field_ids: ['field_1'], field_name_by_id: new Map([['field_1', 'Field 1']]) });
 assertRuntime(stateAgg.projection_source === 'STATE_FALLBACK_LIMITED', 'FromStates fallback must have STATE_FALLBACK_LIMITED source');
 assertRuntime(stateAgg.fallback_limited === true, 'FromStates fallback must be fallback_limited');
 assertRuntime(stateAgg.customer_visible_eligible === false, 'FromStates fallback must not be customer visible');
@@ -115,19 +107,7 @@ assertRuntime(stateAgg.recent_operations[0].acceptance_status !== 'PASS', 'weak 
 assertRuntime(stateAgg.roi_summary.has_customer_visible_value === false, 'FromStates ROI must not have customer visible value');
 assertRuntime(stateAgg.pending_actions_summary.pending_acceptance === 0, 'FromStates pending_acceptance must not be raw-derived');
 
-const weakReport = {
-  identifiers: { operation_id: 'op_report_1', operation_plan_id: 'op_report_1', field_id: 'field_1' },
-  generated_at: new Date(1700000000000).toISOString(),
-  operation_title: '灌溉作业',
-  customer_title: '灌溉作业',
-  execution: { final_status: 'SUCCESS', execution_finished_at: new Date(1700000000000).toISOString() },
-  acceptance: { status: 'PASS' },
-  risk: { level: 'LOW', reasons: [] },
-  cost: { estimated_total: 0, actual_total: 0 },
-  sla: { execution_duration_ms: null },
-  roi_ledger: { items: [{ value_kind: 'ASSUMPTION_BASED', roi_type: 'WATER_SAVED', estimated_money_value: 100, customer_text: 'assumption value', confidence: { level: 'LOW' } }] },
-  why: {},
-};
+const weakReport = { identifiers: { operation_id: 'op_report_1', operation_plan_id: 'op_report_1', field_id: 'field_1' }, generated_at: new Date(1700000000000).toISOString(), operation_title: '灌溉作业', customer_title: '灌溉作业', execution: { final_status: 'SUCCESS', execution_finished_at: new Date(1700000000000).toISOString() }, acceptance: { status: 'PASS' }, risk: { level: 'LOW', reasons: [] }, cost: { estimated_total: 0, actual_total: 0 }, sla: { execution_duration_ms: null }, roi_ledger: { items: [{ value_kind: 'ASSUMPTION_BASED', roi_type: 'WATER_SAVED', estimated_money_value: 100, customer_text: 'assumption value', confidence: { level: 'LOW' } }] }, why: {} };
 const reportAgg = projectCustomerDashboardAggregateV1({ reports: [weakReport] });
 assertRuntime(reportAgg.projection_source === 'STATE_FALLBACK_LIMITED', 'weak report without chain validation must be fallback limited');
 assertRuntime(reportAgg.recent_operations[0].final_status !== 'SUCCESS', 'weak report SUCCESS must not be exposed as SUCCESS');
@@ -135,18 +115,23 @@ assertRuntime(reportAgg.recent_operations[0].acceptance_status !== 'PASS', 'weak
 assertRuntime(reportAgg.roi_summary.has_customer_visible_value === false, 'assumption ROI must not have customer visible value');
 assertRuntime(reportAgg.roi_summary.hypothesis_items === 1, 'assumption ROI must be counted as hypothesis');
 assertRuntime(reportAgg.roi_summary.trusted_value_items === 0, 'assumption ROI must not be trusted value');
+
+const formalReport = { ...weakReport, chain_validation: { passed: true, helper_or_simulated: false }, status_chain: [{ key: 'acceptance', status: 'DONE' }], fallback_limited: false, customer_visible_eligible: true, blocking_reasons: [], execution: { ...weakReport.execution, final_status: 'SUCCESS' }, acceptance: { status: 'PASS', formal_acceptance: true }, roi_ledger: { items: [] } };
+const formalTrust = customerOperationListTrustFromGuardedReportV1(formalReport);
+assertRuntime(formalTrust.projection_source === 'GUARDED_REPORT', 'guarded formal report must be GUARDED_REPORT');
+assertRuntime(formalTrust.fallback_limited === false, 'guarded formal report must not be fallback limited');
+assertRuntime(formalTrust.customer_visible_eligible === true, 'guarded formal report must be customer visible');
+assertRuntime(isCustomerVisibleGuardedOperationReportV1(formalReport) === true, 'guarded formal report visibility helper must be true');
+const formalAgg = projectCustomerDashboardAggregateV1({ reports: [formalReport] });
+assertRuntime(formalAgg.recent_operations[0].projection_source === 'GUARDED_REPORT', 'formal recent operation must be GUARDED_REPORT');
+assertRuntime(formalAgg.recent_operations[0].customer_visible_eligible === true, 'formal recent operation must be customer visible');
+assertRuntime(formalAgg.recent_operations[0].final_status !== 'LIMITED_STATE', 'formal recent operation must not be LIMITED_STATE');
+assertRuntime(formalAgg.recent_operations[0].final_status === 'SUCCESS', 'formal recent operation must expose report execution final_status');
+assertRuntime(formalAgg.recent_operations[0].acceptance_status === 'PASS', 'formal recent operation must expose report acceptance status');
 })();
 `;
 
-const runtime = spawnSync('pnpm', ['--filter', '@geox/server', 'exec', 'tsx', '-e', fixture], {
-  cwd: root,
-  encoding: 'utf8',
-  stdio: ['ignore', 'pipe', 'pipe'],
-});
-if (runtime.status !== 0) {
-  process.stderr.write(runtime.stdout || '');
-  process.stderr.write(runtime.stderr || '');
-  fail('runtime fixture failed');
-}
+const runtime = spawnSync('pnpm', ['--filter', '@geox/server', 'exec', 'tsx', '-e', fixture], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+if (runtime.status !== 0) { process.stderr.write(runtime.stdout || ''); process.stderr.write(runtime.stderr || ''); fail('runtime fixture failed'); }
 
 console.log('[customer-dashboard-projection-trust] PASS');
