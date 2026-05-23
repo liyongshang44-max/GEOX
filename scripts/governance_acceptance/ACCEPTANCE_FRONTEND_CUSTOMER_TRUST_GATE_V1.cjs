@@ -38,23 +38,26 @@ function normalizeScannerText(value) {
 function lineWindow(lines, index, radius) {
   return normalizeScannerText(lines.slice(Math.max(0, index - radius), Math.min(lines.length, index + radius + 1)).join(' '));
 }
-function hasDirectRawStatusMapping(source, status, label) {
+function findDirectRawStatusMappings(source, status, label) {
+  const findings = [];
   const lines = String(source ?? '').split(/\r?\n/);
   for (let index = 0; index < lines.length; index += 1) {
+    const lineNo = index + 1;
     const current = normalizeScannerText(lines[index]);
     const nearby = lineWindow(lines, index, 2);
     const quotedStatus = `"${status}"`;
     const quotedLabel = `"${label}"`;
-    if (current.includes(`${status}: ${quotedLabel}`)) return true;
-    if (current.includes(`${quotedStatus}: ${quotedLabel}`)) return true;
-    if (current.includes(`case ${quotedStatus}:`) && nearby.includes(`return ${quotedLabel}`)) return true;
-    if (nearby.includes(`key === ${quotedStatus}`) && nearby.includes(`return ${quotedLabel}`)) return true;
-    if (nearby.includes(`status === ${quotedStatus}`) && nearby.includes(`return ${quotedLabel}`)) return true;
-    if (nearby.includes(`raw === ${quotedStatus}`) && nearby.includes(`return ${quotedLabel}`)) return true;
-    if (nearby.includes(`includes(${quotedStatus})`) && nearby.includes(`return ${quotedLabel}`)) return true;
-    if (nearby.includes(quotedStatus) && nearby.includes('.includes(') && nearby.includes(`return ${quotedLabel}`)) return true;
+    const push = (pattern) => findings.push({ line: lineNo, pattern });
+    if (current.includes(`${status}: ${quotedLabel}`)) push(`${status}: ${quotedLabel}`);
+    if (current.includes(`${quotedStatus}: ${quotedLabel}`)) push(`${quotedStatus}: ${quotedLabel}`);
+    if (current.includes(`case ${quotedStatus}:`) && nearby.includes(`return ${quotedLabel}`)) push(`case ${quotedStatus} -> return ${quotedLabel}`);
+    if (nearby.includes(`key === ${quotedStatus}`) && nearby.includes(`return ${quotedLabel}`)) push(`key === ${quotedStatus} -> return ${quotedLabel}`);
+    if (nearby.includes(`status === ${quotedStatus}`) && nearby.includes(`return ${quotedLabel}`)) push(`status === ${quotedStatus} -> return ${quotedLabel}`);
+    if (nearby.includes(`raw === ${quotedStatus}`) && nearby.includes(`return ${quotedLabel}`)) push(`raw === ${quotedStatus} -> return ${quotedLabel}`);
+    if (nearby.includes(`includes(${quotedStatus})`) && nearby.includes(`return ${quotedLabel}`)) push(`includes(${quotedStatus}) -> return ${quotedLabel}`);
+    if (nearby.includes(quotedStatus) && nearby.includes('.includes(') && nearby.includes(`return ${quotedLabel}`)) push(`array includes ${quotedStatus} -> return ${quotedLabel}`);
   }
-  return false;
+  return findings;
 }
 
 const customerTrustGate = read(files.customerTrustGate);
@@ -103,16 +106,21 @@ const dangerousRules = [
   { status: 'PASS', label: '已通过' },
   { status: 'VALID', label: '已完成' },
 ];
+const offenders = [];
 for (const file of customerFiles) {
   const rel = path.relative(root, file).replace(/\\/g, '/');
   const source = read(file);
   const hasTrustGate = /customerTrustGate|customerGuarded|mapGuardedOperationStatusToCustomerLabel|isCustomerFormalChainPassed|isTrustedCustomerValue/.test(source);
   const allowTechnical = /技术状态\/审计字段|customer-boundary-allow|ACCEPTANCE_FRONTEND_CUSTOMER_TRUST_GATE/.test(source);
+  if (hasTrustGate || allowTechnical) continue;
   for (const rule of dangerousRules) {
-    if (hasDirectRawStatusMapping(source, rule.status, rule.label) && !hasTrustGate && !allowTechnical) {
-      fail(`${rel} directly maps raw ${rule.status} to ${rule.label} without customer trust context`);
+    for (const finding of findDirectRawStatusMappings(source, rule.status, rule.label)) {
+      offenders.push(`${rel}:${finding.line} directly maps raw ${rule.status} to ${rule.label} (${finding.pattern})`);
     }
   }
+}
+if (offenders.length > 0) {
+  fail(`frontend customer trust gate found ${offenders.length} offender(s):\n${offenders.map((x) => `- ${x}`).join('\n')}`);
 }
 
 assertIncludes(packageJson, 'ci:frontend:customer-trust-gate', 'package script');
