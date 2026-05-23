@@ -1024,6 +1024,10 @@ export function isAckConvergedDispatchQueueState(state: string): boolean {
   return ["ACKED", "SUCCEEDED", "FAILED"].includes(String(state ?? "").trim().toUpperCase());
 }
 
+function isTerminalOperationPlanStatus(status: string): boolean {
+  return ["SUCCEEDED", "FAILED", "INVALID_EXECUTION", "PENDING_ACCEPTANCE"].includes(String(status ?? "").trim().toUpperCase());
+}
+
 export function shouldTreatAckAsIdempotent(input: {
   requestedState: string;
   queueState?: string | null;
@@ -2970,7 +2974,46 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const rows = await claimDispatchQueueRows(pool, tenant, limit, lease_seconds, executor_id, lease_token, actTaskId, adapterHint);
     const claimedIds = rows.map((r: any) => String(r.queue_id)).filter(Boolean);
     const items = await listDispatchQueueByIds(pool, tenant, claimedIds);
-    return reply.send({ ok: true, claim_id: lease_token, lease_token, items });
+
+    const deliverableItems: any[] = [];
+    for (const item of items) {
+      const taskPayload = item?.task?.payload ?? {};
+      const operation_plan_id = String(taskPayload?.operation_plan_id ?? "").trim();
+      if (!operation_plan_id) {
+        deliverableItems.push(item);
+        continue;
+      }
+      const operationPlan = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
+      const operation_plan_status = String(operationPlan?.record_json?.payload?.status ?? "").trim().toUpperCase();
+      if (!isTerminalOperationPlanStatus(operation_plan_status)) {
+        deliverableItems.push(item);
+        continue;
+      }
+
+      await updateDispatchQueueStateByActTask(pool, tenant, String(item.act_task_id ?? "").trim(), {
+        state: "FAILED"
+      });
+      await insertFact(pool, "api/v1/ao-act/dispatches/claim", {
+        type: "ao_act_dispatch_queue_stale_v1",
+        payload: {
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
+          queue_id: String(item.queue_id ?? "").trim(),
+          act_task_id: String(item.act_task_id ?? "").trim(),
+          command_id: String(item.command_id ?? "").trim(),
+          operation_plan_id,
+          operation_plan_status,
+          queue_state_before: String(item.state ?? "").trim().toUpperCase() || null,
+          queue_state_after: "FAILED",
+          reason: "OPERATION_PLAN_TERMINAL",
+          stale_ts_ms: Date.now(),
+          executor_id
+        }
+      });
+    }
+
+    return reply.send({ ok: true, claim_id: lease_token, lease_token, items: deliverableItems });
   });
 
 
@@ -3040,19 +3083,41 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         if (state === "ACKED" && isAckConvergedOperationPlanStatus(currentPlanStatus)) {
           idempotent = true;
         } else if (currentPlanStatus !== targetPlanStatus) {
-          const transitioned = await transitionOperationPlanStateV1(
-            pool,
-            tenant,
-            operationPlan,
-            {
-              next_status: state as OperationPlanStatusV1,
-              trigger: "dispatch_state_update",
-              act_task_id
-            },
-            "api/v1/ao-act/dispatches/state"
-          );
-          operation_plan_transition_fact_id = transitioned.transition_fact_id;
-          operation_plan_update_fact_id = transitioned.operation_plan_fact_id;
+          try {
+            const transitioned = await transitionOperationPlanStateV1(
+              pool,
+              tenant,
+              operationPlan,
+              {
+                next_status: state as OperationPlanStatusV1,
+                trigger: "dispatch_state_update",
+                act_task_id
+              },
+              "api/v1/ao-act/dispatches/state"
+            );
+            operation_plan_transition_fact_id = transitioned.transition_fact_id;
+            operation_plan_update_fact_id = transitioned.operation_plan_fact_id;
+          } catch (e: any) {
+            const msg = String(e?.message ?? "").trim();
+            if (msg.includes("OPERATION_PLAN_TERMINAL")) {
+              const terminal_converged = state === "ACKED" || state === "FAILED";
+              const terminalBody = {
+                ok: false,
+                error: "OPERATION_PLAN_TERMINAL",
+                act_task_id,
+                command_id,
+                operation_plan_id: operation_plan_id || null,
+                operation_plan_status: currentPlanStatus || null,
+                queue_state: queueState || null,
+                terminal_converged
+              };
+              if (terminal_converged) {
+                return reply.status(200).send({ ...terminalBody, ok: true, idempotent: true });
+              }
+              return reply.status(409).send(terminalBody);
+            }
+            throw e;
+          }
         }
       }
     }
