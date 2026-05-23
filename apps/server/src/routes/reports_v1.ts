@@ -9,6 +9,7 @@ import {
   type OperationReportV1,
 } from "../projections/report_v1.js";
 import { buildOperationEvidencePackSummaryV1 } from "../projections/operation_evidence_summary_v1.js";
+import { buildGuardedOperationReportV1 } from "../projections/guarded_operation_report_projector_v1.js";
 import { projectFieldReportDetailV1, type FieldReportDetailV1 } from "../projections/report_dashboard_v1.js";
 import { normalizeReceiptEvidence } from "../services/receipt_evidence.js";
 import { computeOperationCostV1 } from "../domain/cost_model.js";
@@ -515,7 +516,8 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       skill_run_id: enrichedReport.identifiers.skill_run_id ?? skillRunFromFacts,
       as_executed_id: enrichedReport.identifiers.as_executed_id ?? asExecutedFromFacts,
     } as any;
-    const payload: OperationReportSingleResponseV1 = { ok: true, operation_report_v1: enrichedReport };
+    const guardedOperationReport = await buildGuardedOperationReportV1({ pool, report: enrichedReport });
+    const payload: OperationReportSingleResponseV1 = { ok: true, operation_report_v1: guardedOperationReport as OperationReportV1 };
     return reply.send(payload);
   });
 
