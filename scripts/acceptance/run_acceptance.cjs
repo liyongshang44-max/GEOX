@@ -13,35 +13,38 @@ const reportHtmlPath = path.join(outputDir, 'report.html');
 const STEP_DEFINITIONS = [
   {
     id: 'SERVER_SELFCHECK',
-    command: 'pnpm --filter @geox/server run test:p1:selfcheck',
+    pnpmArgs: ['--filter', '@geox/server', 'run', 'test:p1:selfcheck'],
     logFile: 'SERVER_SELFCHECK.log',
     notes: 'Runs p1 minimal selfcheck to validate baseline skill loop invariants.'
   },
   {
     id: 'P1_SMOKE',
-    command: 'pnpm --filter @geox/server run test:p1:smoke',
+    pnpmArgs: ['--filter', '@geox/server', 'run', 'test:p1:smoke'],
     logFile: 'P1_SMOKE.log',
     notes: 'Runs p1 minimal smoke scenario against current server behavior.'
   },
   {
     id: 'P1_ACCEPTANCE_SMOKE',
-    command: 'pnpm --filter @geox/server run test:p1:acceptance-smoke',
+    pnpmArgs: ['--filter', '@geox/server', 'run', 'test:p1:acceptance-smoke'],
     logFile: 'P1_ACCEPTANCE_SMOKE.log',
     notes: 'Runs acceptance-oriented p1 smoke and checks acceptance verdict transitions.'
   },
   {
     id: 'EVIDENCE_EXPORT_S3_SMOKE',
-    command: 'pnpm --filter @geox/server run test:evidence-export:s3-smoke',
+    pnpmArgs: ['--filter', '@geox/server', 'run', 'test:evidence-export:s3-smoke'],
     logFile: 'EVIDENCE_EXPORT_S3_SMOKE.log',
     notes: 'Runs evidence export S3 smoke flow to confirm export path availability.'
   },
   {
     id: 'OPENAPI_SELFCHECK',
-    command: 'pnpm --filter @geox/server run test:p1:openapi-selfcheck',
+    pnpmArgs: ['--filter', '@geox/server', 'run', 'test:p1:openapi-selfcheck'],
     logFile: 'OPENAPI_SELFCHECK.log',
     notes: 'Runs OpenAPI selfcheck for p1-3 alignment sanity.'
   }
-];
+].map((step) => ({
+  ...step,
+  command: `pnpm ${step.pnpmArgs.join(' ')}`
+}));
 
 const args = new Set(process.argv.slice(2));
 if (args.has('--list')) {
@@ -133,20 +136,29 @@ function ensureOutputDir(dir) {
 function runStep(step, envOverrides = {}) {
   const stepStarted = Date.now();
   const logPath = path.join(outputDir, step.logFile);
+  const pnpmSpawn = resolvePnpmSpawn(step.pnpmArgs);
 
   return new Promise((resolve) => {
     let outputBuffer = '';
     const logStream = fs.createWriteStream(logPath, { flags: 'w' });
     logStream.write(`# ${step.id}\n`);
     logStream.write(`# command: ${step.command}\n`);
+    logStream.write(`# spawn: ${pnpmSpawn.display}\n`);
     logStream.write(`# started_at: ${new Date(stepStarted).toISOString()}\n\n`);
 
     console.log(`\n[acceptance] START ${step.id}`);
     console.log(`[acceptance] CMD   ${step.command}`);
 
-    const child = spawn('bash', ['-lc', step.command], {
+    const child = spawn(pnpmSpawn.cmd, pnpmSpawn.args, {
       cwd: repoRoot,
-      env: { ...process.env, ...envOverrides },
+      env: {
+        ...process.env,
+        CI: process.env.CI || 'true',
+        COREPACK_ENABLE_DOWNLOAD_PROMPT: process.env.COREPACK_ENABLE_DOWNLOAD_PROMPT || '0',
+        npm_config_confirmModulesPurge: process.env.npm_config_confirmModulesPurge || 'false',
+        ...envOverrides
+      },
+      shell: pnpmSpawn.shell,
       stdio: ['ignore', 'pipe', 'pipe']
     });
 
@@ -218,6 +230,26 @@ function runStep(step, envOverrides = {}) {
       });
     });
   });
+}
+
+function resolvePnpmSpawn(pnpmArgs) {
+  const npmExecPath = String(process.env.npm_execpath || '').trim();
+  if (npmExecPath && /\.(cjs|mjs|js)$/i.test(npmExecPath) && fs.existsSync(npmExecPath)) {
+    return {
+      cmd: process.execPath,
+      args: [npmExecPath, ...pnpmArgs],
+      shell: false,
+      display: `${process.execPath} ${npmExecPath} ${pnpmArgs.join(' ')}`
+    };
+  }
+
+  const cmd = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
+  return {
+    cmd,
+    args: pnpmArgs,
+    shell: false,
+    display: `${cmd} ${pnpmArgs.join(' ')}`
+  };
 }
 
 function extractOperationPlanIdFromP1Output(output) {
