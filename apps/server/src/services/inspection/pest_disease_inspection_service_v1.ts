@@ -247,7 +247,13 @@ async function insertFact(pool: Pool, fact_id: string, record_json: any): Promis
   const occurred_at = new Date(created).toISOString();
   const res = await pool.query(INSERT_FACT_SQL, [fact_id, occurred_at, "inspection", JSON.stringify(record_json)]);
   if (!res.rows || res.rows.length < 1) {
-    throw new PestDiseaseInspectionServiceError(500, "FACT_INSERT_CONFLICT_OR_FAILED");
+    const existing = await pool.query(
+      `SELECT fact_id FROM facts WHERE fact_id = $1 LIMIT 1`,
+      [fact_id],
+    );
+    if (!existing.rows || existing.rows.length < 1) {
+      throw new PestDiseaseInspectionServiceError(500, "FACT_INSERT_CONFLICT_OR_FAILED");
+    }
   }
   return { fact_id };
 }
