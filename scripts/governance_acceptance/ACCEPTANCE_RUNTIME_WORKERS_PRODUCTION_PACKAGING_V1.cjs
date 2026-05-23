@@ -82,6 +82,14 @@ function containerLogs(name, tail = '80') {
   return `${result.stdout ?? ''}\n${result.stderr ?? ''}`.trim();
 }
 
+
+function assertLogsNotContain(name, patterns, tail = '240') {
+  const text = containerLogs(name, tail);
+  const hit = patterns.find((pattern) => text.includes(pattern));
+  assert(!hit, `${name} logs must not contain ${hit}. recent logs:
+${text}`);
+}
+
 function logsContain(name, patterns) {
   const text = containerLogs(name, '160');
   return patterns.some((pattern) => text.includes(pattern));
@@ -108,6 +116,7 @@ function checkLiveContainersIfPresent() {
   }
   assert(logsContain(executorName, ['INFO: executor runtime loop started', 'HEARTBEAT_TRACE']), 'executor logs must show runtime loop started or HEARTBEAT_TRACE');
   assert(logsContain('geox-v1-jobs', ['INFO: jobs runtime started', 'JOBS_TRACE']), 'jobs logs must show jobs runtime started or JOBS_TRACE');
+  assertLogsNotContain('geox-v1-server', ['ERR_HTTP_HEADERS_SENT', 'Reply was already sent']);
 }
 
 checkStaticPackaging();
