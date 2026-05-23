@@ -3,7 +3,13 @@ import { labelOperationType } from "../lib/customerLabels";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 import { formatCustomerDate } from "../lib/customerSafeText";
 import { customerDisplayName, customerSemanticLabel } from "../lib/customerSemanticLabels";
-import { labelCustomerAcceptanceVerdict, labelCustomerEvidenceStatus, labelCustomerOperationFinalStatus } from "../lib/customerStatusLabels";
+import {
+  customerGuardedAcceptanceText,
+  customerGuardedEvidenceText,
+  customerGuardedStatus,
+  customerGuardedStatusText,
+  isCustomerFormalChainPassed,
+} from "../lib/customerTrustGate";
 
 export type CustomerOperationStatusFilter = "ALL" | "IN_PROGRESS" | "WAIT_ACCEPTANCE" | "ACCEPTANCE_PASS" | "ACCEPTANCE_FAIL" | "EVIDENCE_INSUFFICIENT";
 
@@ -46,8 +52,8 @@ function normalizeStatus(raw: unknown): string {
   return String(raw ?? "").trim().replace(/[\s/-]+/g, "_").toUpperCase();
 }
 
-function isAcceptancePass(raw: unknown): boolean {
-  return ["PASS", "SUCCESS", "SUCCEEDED", "APPROVED"].includes(normalizeStatus(raw));
+function isFormalAcceptancePass(item: CustomerOperationListItem): boolean {
+  return isCustomerFormalChainPassed(item) && ["PASS", "SUCCESS", "SUCCEEDED", "APPROVED"].includes(normalizeStatus(item.acceptance_status));
 }
 
 function isAcceptanceFail(raw: unknown): boolean {
@@ -66,39 +72,30 @@ function isEvidenceInsufficient(item: CustomerOperationListItem): boolean {
   return ["EVIDENCE_MISSING", "INSUFFICIENT_EVIDENCE", "NO_EVIDENCE", "MISSING"].includes(evidenceStatus) || finalStatus === "EVIDENCE_MISSING";
 }
 
-function isEvidenceComplete(raw: unknown): boolean {
-  return ["COMPLETE", "COMPLETED", "AVAILABLE", "DONE", "PACK_SUMMARY", "RECORDS_WITHOUT_SUMMARY"].includes(normalizeStatus(raw));
-}
-
 function mapStatusFilter(item: CustomerOperationListItem): Exclude<CustomerOperationStatusFilter, "ALL"> {
-  if (isEvidenceInsufficient(item) && !isAcceptancePass(item.acceptance_status)) return "EVIDENCE_INSUFFICIENT";
+  const guarded = customerGuardedStatus(item);
+  if (guarded === "INSUFFICIENT_EVIDENCE" || (isEvidenceInsufficient(item) && !isFormalAcceptancePass(item))) return "EVIDENCE_INSUFFICIENT";
   if (isAcceptanceFail(item.acceptance_status)) return "ACCEPTANCE_FAIL";
-  if (isAcceptancePass(item.acceptance_status)) return "ACCEPTANCE_PASS";
+  if (isFormalAcceptancePass(item)) return "ACCEPTANCE_PASS";
   if (isWaitingAcceptance(item)) return "WAIT_ACCEPTANCE";
   return "IN_PROGRESS";
 }
 
 function finalStatusText(item: CustomerOperationListItem): string {
-  const finalStatus = normalizeStatus(item.final_status);
-  if (isAcceptancePass(item.acceptance_status) || ["SUCCESS", "SUCCEEDED", "COMPLETED", "DONE", "VALID", "COMPLETE"].includes(finalStatus)) return "已完成";
-  if (isWaitingAcceptance(item)) return "已完成";
-  return labelCustomerOperationFinalStatus(item.final_status);
+  if (isWaitingAcceptance(item) && !isCustomerFormalChainPassed(item)) return "待验收";
+  return customerGuardedStatusText(item);
 }
 
 function acceptanceText(item: CustomerOperationListItem): string {
-  if (isWaitingAcceptance(item)) return "待验收";
-  return labelCustomerAcceptanceVerdict(item.acceptance_status);
+  if (isWaitingAcceptance(item) && !isCustomerFormalChainPassed(item)) return "待验收";
+  return customerGuardedAcceptanceText(item);
 }
 
 function evidenceCopy(item: CustomerOperationListItem): { text: string; explanation?: string } {
-  const rawEvidence = item.evidence_status ?? item.evidence_summary_status;
-  if (isEvidenceInsufficient(item) && !isAcceptancePass(item.acceptance_status)) return { text: "等待补充证据" };
-  if (isEvidenceComplete(rawEvidence)) return { text: "证据完整" };
-  if (isAcceptancePass(item.acceptance_status)) {
-    return { text: "证据已支持验收", explanation: "列表未收到完整证据包状态时，以作业报告验收结论为准；详情页可查看证据摘要。" };
-  }
-  if (isWaitingAcceptance(item)) return { text: "等待验收确认" };
-  return { text: labelCustomerEvidenceStatus(rawEvidence) };
+  if (isEvidenceInsufficient(item) && !isFormalAcceptancePass(item)) return { text: "等待补充证据" };
+  const text = customerGuardedEvidenceText(item);
+  if (!isCustomerFormalChainPassed(item)) return { text, explanation: "列表主文案以客户信任门禁为准；回执成功或 raw PASS 不能单独形成正式结论。" };
+  return { text };
 }
 
 function buildTitle(operationTypeText: string, item: CustomerOperationListItem): string {
