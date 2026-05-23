@@ -136,7 +136,7 @@ function ensureOutputDir(dir) {
 function runStep(step, envOverrides = {}) {
   const stepStarted = Date.now();
   const logPath = path.join(outputDir, step.logFile);
-  const pnpmSpawn = resolvePnpmSpawn(step.pnpmArgs);
+  const isWindows = process.platform === 'win32';
 
   return new Promise((resolve) => {
     let outputBuffer = '';
@@ -149,16 +149,15 @@ function runStep(step, envOverrides = {}) {
     console.log(`\n[acceptance] START ${step.id}`);
     console.log(`[acceptance] CMD   ${step.command}`);
 
-    const child = spawn(pnpmSpawn.cmd, pnpmSpawn.args, {
+    const child = spawn(step.command, {
       cwd: repoRoot,
       env: {
         ...process.env,
         CI: process.env.CI || 'true',
-        COREPACK_ENABLE_DOWNLOAD_PROMPT: process.env.COREPACK_ENABLE_DOWNLOAD_PROMPT || '0',
         npm_config_confirmModulesPurge: process.env.npm_config_confirmModulesPurge || 'false',
         ...envOverrides
       },
-      shell: pnpmSpawn.shell,
+      shell: isWindows,
       stdio: ['ignore', 'pipe', 'pipe']
     });
 
