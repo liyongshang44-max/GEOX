@@ -79,30 +79,32 @@ It does not mean:
 - ROI has been produced;
 - Field Memory has learned a treatment effect.
 
-Customer report must say inspection evidence passed, not treatment completed.
+Customer report must say inspection evidence is recorded and remains subject to formal chain validation, not treatment completed.
 
 ## 6. Customer copy baseline
 
-Customer-facing copy must stay inside the inspection evidence chain.
+Customer-facing copy must stay inside the inspection evidence chain and must not turn raw inspection PASS into a customer treatment or completion conclusion.
 
 Required customer-safe Chinese copy:
 
-- 巡检证据已通过验收，可作为后续处理建议依据，但不代表已完成防治。
+- 巡检证据已有记录，可作为后续处理建议依据；仍以正式链路校验为准，且不代表防治闭环。
 - 巡检结果已确认，但尚未进入补喷处方。
 - 当前仅为识别信号，不作为正式巡检结论。
 
 Allowed meanings:
 
-- 巡检证据通过；
+- 巡检证据已有记录；
 - 发现疑似风险；
 - 需要人工复核；
 - 巡检结果已确认但未进入补喷处方；
-- 可作为后续处理建议依据。
+- 可作为后续处理建议依据；
+- 仍以正式链路校验为准。
 
 Forbidden customer meanings outside this forbidden-list section:
 
 - 已喷药；
 - 已防治；
+- 已完成防治；
 - 防治完成；
 - 喷药完成；
 - 病虫害已解决；
