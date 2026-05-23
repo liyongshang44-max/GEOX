@@ -100,6 +100,7 @@ const customerFiles = walk(webSrc).filter((file) => {
 const dangerousRules = [
   { status: 'SUCCESS', label: '已完成' },
   { status: 'PASS', label: '验收通过' },
+  { status: 'PASS', label: '已通过' },
   { status: 'VALID', label: '已完成' },
 ];
 for (const file of customerFiles) {
