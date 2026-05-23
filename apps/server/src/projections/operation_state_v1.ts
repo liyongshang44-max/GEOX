@@ -33,6 +33,12 @@ export type OperationFormalStatusV1 = "FORMAL_PASS" | "FORMAL_FAIL" | "NOT_FORMA
 export type OperationAcceptanceStatusV1 = "PASS" | "FAIL" | "PENDING" | "NOT_AVAILABLE";
 type OperationAcceptanceRawStatusV1 = OperationAcceptanceStatusV1 | "NEEDS_FORMAL_ACCEPTANCE" | "INSUFFICIENT_EVIDENCE";
 
+type TechnicalAcceptanceHintV1 = {
+  verdict: string;
+  missing_evidence: string[];
+  reason: "TECHNICAL_HINT_NOT_FORMAL_ACCEPTANCE";
+};
+
 export type OperationStateV1 = {
   operation_id: string;
   operation_plan_id: string;
@@ -62,6 +68,8 @@ export type OperationStateV1 = {
   dispatch_status: string;
   receipt_status: string;
   acceptance: { status: OperationAcceptanceStatusV1; missing: string[]; raw_status?: OperationAcceptanceRawStatusV1 };
+  technical_acceptance_hint?: TechnicalAcceptanceHintV1;
+  formal_acceptance_status?: OperationFormalStatusV1;
   final_status: "SUCCESS" | "FAILED" | "RUNNING" | "PENDING" | "PENDING_ACCEPTANCE" | "INVALID_EXECUTION";
   invalid_reason: "evidence_missing" | "evidence_invalid" | null;
   last_event_ts: number;
@@ -164,6 +172,12 @@ function toProjectionAcceptanceStatus(status: unknown): OperationAcceptanceStatu
   if (s === "NEEDS_FORMAL_ACCEPTANCE") return "PENDING";
   if (s === "INSUFFICIENT_EVIDENCE") return "PENDING";
   return "NOT_AVAILABLE";
+}
+function toNonFormalAcceptanceRawStatus(status: unknown, hasFormalEvidence: boolean): "NEEDS_FORMAL_ACCEPTANCE" | "INSUFFICIENT_EVIDENCE" {
+  const s = String(status ?? "").trim().toUpperCase();
+  if (s === "NEEDS_FORMAL_ACCEPTANCE") return "NEEDS_FORMAL_ACCEPTANCE";
+  if (s === "INSUFFICIENT_EVIDENCE") return "INSUFFICIENT_EVIDENCE";
+  return hasFormalEvidence ? "NEEDS_FORMAL_ACCEPTANCE" : "INSUFFICIENT_EVIDENCE";
 }
 function isFormalAcceptancePayload(payload: any): boolean {
   if (!payload || typeof payload !== "object") return false;
@@ -309,12 +323,19 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     const acceptanceFactPayload = acceptanceFact?.record_json?.payload ?? {};
     const acceptanceStatusFromFact = normalizeAcceptanceVerdict(acceptanceFactPayload?.verdict);
     const hasFormalAcceptance = Boolean(acceptanceFact && acceptanceStatusFromFact) && isFormalAcceptancePayload(acceptanceFactPayload);
-    const rawAcceptanceStatus = hasFormalAcceptance ? acceptanceStatusFromFact : fallbackAcceptance.verdict;
+    const nonFormalRawAcceptanceStatus = toNonFormalAcceptanceRawStatus(fallbackAcceptance.verdict, evidenceEvaluation.has_formal_evidence);
+    const rawAcceptanceStatus = hasFormalAcceptance ? acceptanceStatusFromFact : nonFormalRawAcceptanceStatus;
+    const fallbackMissingEvidence = Array.isArray(fallbackAcceptance.missing_evidence) ? fallbackAcceptance.missing_evidence.map((x: unknown) => String(x)).filter(Boolean) : [];
+    const technicalAcceptanceHint: TechnicalAcceptanceHintV1 | undefined = hasFormalAcceptance ? undefined : {
+      verdict: String(fallbackAcceptance.verdict ?? nonFormalRawAcceptanceStatus),
+      missing_evidence: fallbackMissingEvidence,
+      reason: "TECHNICAL_HINT_NOT_FORMAL_ACCEPTANCE"
+    };
     const acceptance = hasFormalAcceptance ? {
       status: toProjectionAcceptanceStatus(acceptanceStatusFromFact),
       raw_status: acceptanceStatusFromFact as OperationAcceptanceRawStatusV1,
       missing: Array.isArray(acceptanceFactPayload?.missing_evidence) ? acceptanceFactPayload.missing_evidence.map((x: unknown) => String(x)).filter(Boolean) : []
-    } : { status: toProjectionAcceptanceStatus(fallbackAcceptance.verdict), raw_status: fallbackAcceptance.verdict, missing: fallbackAcceptance.missing_evidence ?? [] };
+    } : { status: receipt ? "PENDING" as OperationAcceptanceStatusV1 : "NOT_AVAILABLE" as OperationAcceptanceStatusV1, raw_status: nonFormalRawAcceptanceStatus, missing: fallbackMissingEvidence };
     const transitions = transitionByPlan.get(operation_plan_id) ?? [];
     const timeline: OperationTimelineItemV1[] = [];
     for (const t of transitions) {
@@ -391,6 +412,8 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       dispatch_status: task_id ? "DISPATCHED" : String(payload.status ?? "CREATED"),
       receipt_status: receiptStatus,
       acceptance,
+      technical_acceptance_hint: technicalAcceptanceHint,
+      formal_acceptance_status: formalStatus,
       final_status: finalStatusNormalized,
       invalid_reason: null,
       last_event_ts: fullTimeline.length ? fullTimeline[fullTimeline.length - 1].ts : toMs(row.occurred_at),
