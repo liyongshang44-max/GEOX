@@ -3040,19 +3040,41 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         if (state === "ACKED" && isAckConvergedOperationPlanStatus(currentPlanStatus)) {
           idempotent = true;
         } else if (currentPlanStatus !== targetPlanStatus) {
-          const transitioned = await transitionOperationPlanStateV1(
-            pool,
-            tenant,
-            operationPlan,
-            {
-              next_status: state as OperationPlanStatusV1,
-              trigger: "dispatch_state_update",
-              act_task_id
-            },
-            "api/v1/ao-act/dispatches/state"
-          );
-          operation_plan_transition_fact_id = transitioned.transition_fact_id;
-          operation_plan_update_fact_id = transitioned.operation_plan_fact_id;
+          try {
+            const transitioned = await transitionOperationPlanStateV1(
+              pool,
+              tenant,
+              operationPlan,
+              {
+                next_status: state as OperationPlanStatusV1,
+                trigger: "dispatch_state_update",
+                act_task_id
+              },
+              "api/v1/ao-act/dispatches/state"
+            );
+            operation_plan_transition_fact_id = transitioned.transition_fact_id;
+            operation_plan_update_fact_id = transitioned.operation_plan_fact_id;
+          } catch (e: any) {
+            const msg = String(e?.message ?? "").trim();
+            if (msg.includes("OPERATION_PLAN_TERMINAL")) {
+              const terminal_converged = state === "ACKED" || state === "FAILED";
+              const terminalBody = {
+                ok: false,
+                error: "OPERATION_PLAN_TERMINAL",
+                act_task_id,
+                command_id,
+                operation_plan_id: operation_plan_id || null,
+                operation_plan_status: currentPlanStatus || null,
+                queue_state: queueState || null,
+                terminal_converged
+              };
+              if (terminal_converged) {
+                return reply.status(200).send({ ...terminalBody, ok: true, idempotent: true });
+              }
+              return reply.status(409).send(terminalBody);
+            }
+            throw e;
+          }
         }
       }
     }
