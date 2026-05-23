@@ -7,6 +7,8 @@ type CustomerNumberOptions = {
   unit?: string;
 };
 
+const REVIEW_REQUIRED = "需复核";
+
 const ENUM_LABELS: Record<string, string> = {
   UNKNOWN: "未确认",
   NA: "暂无记录",
@@ -18,11 +20,13 @@ const ENUM_LABELS: Record<string, string> = {
   AVAILABLE: "已接入",
   UNAVAILABLE: "暂不可用",
   COMPLETE: "完整",
-  COMPLETED: "已完成",
-  DONE: "已完成",
-  SUCCESS: "已完成",
-  SUCCEEDED: "已完成",
-  PASS: "已通过",
+  COMPLETED: REVIEW_REQUIRED,
+  DONE: REVIEW_REQUIRED,
+  SUCCESS: REVIEW_REQUIRED,
+  SUCCEEDED: REVIEW_REQUIRED,
+  VALID: REVIEW_REQUIRED,
+  PASS: REVIEW_REQUIRED,
+  PASSED: REVIEW_REQUIRED,
   FAIL: "未通过",
   FAILED: "未通过",
   PENDING: "等待生成",
@@ -61,7 +65,8 @@ const ENUM_LABELS: Record<string, string> = {
 };
 
 const DOMAIN_LABELS: Record<string, Record<string, string>> = {
-  acceptance: { PASS: "已通过", SUCCESS: "已通过", SUCCEEDED: "已通过", FAIL: "未通过", FAILED: "未通过", PENDING: "等待验收", PENDING_ACCEPTANCE: "等待验收", UNKNOWN: "未确认" },
+  status: { SUCCESS: REVIEW_REQUIRED, SUCCEEDED: REVIEW_REQUIRED, COMPLETED: REVIEW_REQUIRED, DONE: REVIEW_REQUIRED, VALID: REVIEW_REQUIRED, PASS: REVIEW_REQUIRED, PASSED: REVIEW_REQUIRED, FAIL: "未通过", FAILED: "未通过", PENDING: "等待生成", PENDING_ACCEPTANCE: "等待验收", UNKNOWN: "未确认" },
+  acceptance: { PASS: REVIEW_REQUIRED, PASSED: REVIEW_REQUIRED, SUCCESS: REVIEW_REQUIRED, SUCCEEDED: REVIEW_REQUIRED, VALID: REVIEW_REQUIRED, FAIL: "未通过", FAILED: "未通过", PENDING: "等待验收", PENDING_ACCEPTANCE: "等待验收", UNKNOWN: "未确认" },
   operation: { IRRIGATE: "灌溉", FERTILIZE: "施肥", SPRAY: "喷药", INSPECT: "巡检", PEST_CONTROL: "病虫害处理", HARVEST: "采收" },
   risk: { HIGH: "高风险", MEDIUM: "中风险", LOW: "低风险", UNKNOWN: "未确认" },
   source: { USER_DECLARED: "人工声明", SYSTEM_INFERRED: "系统推断", SENSOR_INFERRED: "监测推断", REMOTE_SENSING: "遥感观测", MACHINERY: "农机作业记录" },
