@@ -54,7 +54,8 @@ assertIncludes(operationReportVm, 'customerGuardedStatusText', 'operation report
 assertIncludes(operationReportVm, 'customerGuardedAcceptanceText', 'operation report VM acceptance trust gate');
 assertIncludes(operationReportVm, 'customerGuardedEvidenceText', 'operation report VM evidence trust gate');
 assertIncludes(operationReportVm, 'isTrustedCustomerValue', 'operation report VM ROI trust gate');
-assertIncludes(operationReportVm, 'mapGuardedOperationStatusToCustomerLabel(report.execution.final_status, trustContext)', 'operation report VM guarded status mapping');
+assertIncludes(operationReportVm, 'mapOperationStatusToCustomerLabel(report.execution.final_status, trustContext)', 'operation report VM guarded status mapping through compatibility wrapper');
+assertIncludes(operationReportVm, 'return mapGuardedOperationStatusToCustomerLabel(value, trustContext ?? null)', 'operation report VM compatibility wrapper must call guarded mapper');
 assertIncludes(operationReportVm, '技术状态/审计字段：raw_enum', 'raw status must be technical foldout only');
 assertIncludes(operationReportVm, 'ASSUMPTION_BASED、估算、模拟或未通过正式链路的 ROI 不进入客户可信收益', 'weak ROI customer text');
 assertNotIncludes(operationReportVm, 'if (["SUCCESS", "DONE", "COMPLETED", "APPROVED", "PASS", "VALID"].includes(status)) return "已完成"', 'raw success mapping forbidden');
