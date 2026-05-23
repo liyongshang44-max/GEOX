@@ -2960,11 +2960,11 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
   // Industrial runtime queue claim: atomically leases READY items to a single executor.
   app.post("/api/v1/ao-act/dispatches/claim", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
-    if (!auth) return;
+    if (!auth) return reply;
     const body: any = req.body ?? {};
     const tenant: TenantTriple = parseTenantFromBody(body);
-    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return reply;
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;
     const limit = Math.max(1, Math.min(50, Number.parseInt(String(body.limit ?? 1), 10) || 1));
     const lease_seconds = Math.max(5, Math.min(300, Number.parseInt(String(body.lease_seconds ?? 30), 10) || 30));
     const executor_id = String(body.executor_id ?? auth.actor_id ?? "executor").trim() || "executor";
@@ -3013,6 +3013,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       });
     }
 
+    if (reply.sent) return reply;
     return reply.send({ ok: true, claim_id: lease_token, lease_token, items: deliverableItems });
   });
 
