@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const fs = require('node:fs');
 const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 
 const root = process.cwd();
 const files = {
@@ -9,6 +10,8 @@ const files = {
   report: path.join(root, 'apps/server/src/projections/report_v1.ts'),
   reportsRoute: path.join(root, 'apps/server/src/routes/reports_v1.ts'),
   hook: path.join(root, 'apps/server/src/routes/operation_report_chain_hook_v1.ts'),
+  projector: path.join(root, 'apps/server/src/projections/guarded_operation_report_projector_v1.ts'),
+  routeCoverage: path.join(root, 'scripts/governance_acceptance/ACCEPTANCE_REPORT_GUARD_ROUTE_COVERAGE_V1.cjs'),
 };
 
 function read(file) {
@@ -33,6 +36,7 @@ const validator = read(files.validator);
 const report = read(files.report);
 const reportsRoute = read(files.reportsRoute);
 const hook = read(files.hook);
+const projector = read(files.projector);
 
 // Guard must exist and be applied to the main operation report payload.
 assertIncludes(chain, 'applyOperationReportChainGuardV1', 'operation_report_chain_v1');
@@ -100,12 +104,24 @@ assertIncludes(validator, 'helper_or_simulated_facts_present', 'chain validator 
 assertIncludes(validator, 'simulated_acceptance_not_customer_conclusion', 'chain validator simulated acceptance guard');
 assertIncludes(validator, 'validation:', 'chain validator result shape');
 
-// Reports route/hook must execute the chain enrichment for operation report responses.
-assertIncludes(hook, 'enrichOperationReportChainV1', 'operation report chain hook');
+// Projector must own the canonical active guard order and route must call it before sending.
+assertIncludes(projector, 'export async function buildGuardedOperationReportV1', 'guarded operation report projector');
+assertIncludes(projector, 'enrichOperationReportChainV1({ pool: params.pool, report })', 'guarded projector chain enrich order');
+assertIncludes(projector, 'enrichOperationReportValueChainRoiV1(compatible)', 'guarded projector ROI enrich order');
+assertIncludes(projector, 'applyGuardedOperationReportV1(withValueChainRoi)', 'guarded projector final guard order');
+assertIncludes(projector, 'ensureGuardedOperationReportContractV1', 'guarded projector contract field check');
+assertIncludes(reportsRoute, 'buildGuardedOperationReportV1', 'operation report route main outlet');
+assertIncludes(reportsRoute, 'const guardedOperationReport = await buildGuardedOperationReportV1({ pool, report: enrichedReport })', 'operation report route main outlet');
+assertIncludes(reportsRoute, 'operation_report_v1: guardedOperationReport', 'operation report route guarded payload');
+assertNotIncludes(reportsRoute, 'operation_report_v1: enrichedReport }', 'operation report route unguarded payload');
+
+// Hook must remain defense-in-depth and reuse projector, not duplicate active guard chain.
+assertIncludes(hook, 'buildGuardedOperationReportV1', 'operation report chain hook projector reuse');
 assertIncludes(hook, 'guardOperationReportResponse', 'operation report chain hook');
 assertIncludes(hook, 'isOperationReportPath', 'operation report chain hook');
 assertIncludes(hook, 'operation_report_v1: guarded', 'operation report chain hook returns guarded report');
-assertIncludes(reportsRoute, '/api/v1/reports/operation/:operation_id', 'operation report route');
+assertNotIncludes(hook, 'enrichOperationReportValueChainRoiV1', 'operation report hook must not duplicate ROI enrichment');
+assertNotIncludes(hook, 'applyGuardedOperationReportV1', 'operation report hook must not duplicate guard application');
 
 // Base report type still has primary payload fields that the guard mutates.
 assertIncludes(report, 'acceptance:', 'report_v1 primary acceptance payload');
@@ -113,5 +129,16 @@ assertIncludes(report, 'execution:', 'report_v1 primary execution payload');
 assertIncludes(report, 'evidence:', 'report_v1 primary evidence payload');
 assertIncludes(report, 'roi_ledger:', 'report_v1 primary ROI payload');
 assertIncludes(report, 'field_memory:', 'report_v1 primary Field Memory payload');
+
+const coverage = spawnSync('node', ['scripts/governance_acceptance/ACCEPTANCE_REPORT_GUARD_ROUTE_COVERAGE_V1.cjs'], {
+  cwd: root,
+  encoding: 'utf8',
+  stdio: ['ignore', 'pipe', 'pipe'],
+});
+if (coverage.status !== 0) {
+  process.stderr.write(coverage.stdout || '');
+  process.stderr.write(coverage.stderr || '');
+  fail('report guard route coverage gate failed');
+}
 
 console.log('[operation-report-guarded-payload] PASS');

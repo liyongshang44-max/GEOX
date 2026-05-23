@@ -1,14 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
-import { enrichOperationReportChainV1 } from "../projections/operation_report_chain_v1.js";
-import { enrichOperationReportValueChainRoiV1 } from "../domain/roi/value_chain_roi_v1.js";
+import { buildGuardedOperationReportV1 } from "../projections/guarded_operation_report_projector_v1.js";
 import {
   applyGuardedCustomerFieldsResponseV1,
   applyGuardedCustomerOperationsResponseV1,
   applyGuardedCustomerReportsResponseV1,
   applyGuardedDashboardAggregateV1,
   applyGuardedFieldReportV1,
-  applyGuardedOperationReportV1,
 } from "../projections/guarded_report_v1.js";
 
 function pathOf(url: string | undefined): string { return String(url ?? "").split("?")[0]; }
@@ -36,35 +34,10 @@ function parsePayload(payload: unknown): any | null {
   return null;
 }
 
-function mergeReportCompatibility(baseReport: any, enrichedReport: any): any {
-  const chainApproval = enrichedReport?.approval;
-  const chainExecution = enrichedReport?.execution;
-  const chainEvidence = enrichedReport?.evidence;
-  const chainAcceptance = enrichedReport?.acceptance;
-  return {
-    ...enrichedReport,
-    approval: chainApproval ? {
-      ...(baseReport.approval ?? {}),
-      ...chainApproval,
-      actor_id: baseReport.approval?.actor_id ?? chainApproval.approver?.actor_id ?? null,
-      actor_name: baseReport.approval?.actor_name ?? chainApproval.approver?.name ?? null,
-      generated_at: baseReport.approval?.generated_at ?? null,
-      approved_at: baseReport.approval?.approved_at ?? chainApproval.approved_at ?? null,
-      note: baseReport.approval?.note ?? chainApproval.decision_note ?? null,
-    } : (baseReport.approval ?? null),
-    execution: chainExecution ? { ...(baseReport.execution ?? {}), ...chainExecution } : (baseReport.execution ?? null),
-    evidence: { ...(baseReport.evidence ?? {}), ...(chainEvidence ?? {}) },
-    acceptance: chainAcceptance ? { ...(baseReport.acceptance ?? {}), ...chainAcceptance } : (baseReport.acceptance ?? null),
-  };
-}
-
 async function guardOperationReportResponse(pool: Pool, parsed: any): Promise<any> {
   const report = parsed?.operation_report_v1;
   if (!report || typeof report !== "object") return parsed;
-  const enriched = await enrichOperationReportChainV1({ pool, report });
-  const compatible = mergeReportCompatibility(report, enriched);
-  const withValueChainRoi = enrichOperationReportValueChainRoiV1(compatible);
-  const guarded = applyGuardedOperationReportV1(withValueChainRoi);
+  const guarded = await buildGuardedOperationReportV1({ pool, report });
   return { ...parsed, operation_report_v1: guarded };
 }
 
