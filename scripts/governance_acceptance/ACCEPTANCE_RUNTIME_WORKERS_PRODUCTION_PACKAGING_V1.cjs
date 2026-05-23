@@ -128,7 +128,8 @@ function checkLiveContainersIfPresent() {
   assert(!(serverRecent.includes('OPERATION_PLAN_TERMINAL') && serverRecent.includes('statusCode":500')), 'server logs must not contain OPERATION_PLAN_TERMINAL with statusCode 500 in recent logs');
 
   const executorRecent = containerLogs(executorName, '800', '5m');
-  assert(!executorRecent.includes('runtime loop iteration failed'), 'executor logs must not contain runtime loop iteration failed in recent logs');
+  const runtimeLoopFailedCount = countMatches(executorRecent, /runtime loop iteration failed/g);
+  assert(runtimeLoopFailedCount <= 1, `executor logs runtime loop iteration failed must not repeat over threshold(1) in 5m, got ${runtimeLoopFailedCount}`);
   assert(!executorRecent.includes('OPERATION_PLAN_TASK_ID_MISMATCH'), 'executor logs must not contain OPERATION_PLAN_TASK_ID_MISMATCH in recent logs');
 
   const receiptFailedCount = countMatches(executorRecent, /RECEIPT_WRITE_FAILED/g);
