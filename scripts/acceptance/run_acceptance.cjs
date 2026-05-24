@@ -133,6 +133,15 @@ function ensureOutputDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
+function resolveStepCommand(command, isWindows) {
+  const parts = String(command || '').trim().split(/\s+/).filter(Boolean);
+  const rawCmd = parts[0] || '';
+  const cmdArgs = parts.slice(1);
+  const executable = isWindows && rawCmd === 'pnpm' ? 'pnpm.cmd' : rawCmd;
+  if (!executable) throw new Error('INVALID_STEP_COMMAND');
+  return { executable, cmdArgs };
+}
+
 function runStep(step, envOverrides = {}) {
   const stepStarted = Date.now();
   const logPath = path.join(outputDir, step.logFile);
@@ -149,15 +158,8 @@ function runStep(step, envOverrides = {}) {
     console.log(`\n[acceptance] START ${step.id}`);
     console.log(`[acceptance] CMD   ${step.command}`);
 
-    const parts = String(step.command || '').trim().split(/\s+/).filter(Boolean);
-    const rawCmd = parts[0] || '';
-    const cmdArgs = parts.slice(1);
-    const spawnCmd = isWindows && rawCmd === 'pnpm' ? 'pnpm.cmd' : rawCmd;
-    if (!spawnCmd) {
-      throw new Error(`INVALID_STEP_COMMAND:${step.id}`);
-    }
-
-    const child = spawn(spawnCmd, cmdArgs, {
+    const { executable, cmdArgs } = resolveStepCommand(step.command, isWindows);
+    const child = spawn(executable, cmdArgs, {
       cwd: repoRoot,
       env: {
         ...process.env,
