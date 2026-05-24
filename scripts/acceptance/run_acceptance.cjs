@@ -150,15 +150,16 @@ function runStep(step, envOverrides = {}) {
   return new Promise((resolve) => {
     let outputBuffer = '';
     const logStream = fs.createWriteStream(logPath, { flags: 'w' });
+    const { executable, cmdArgs } = resolveStepCommand(step.command, isWindows);
+    const spawnDisplay = [executable, ...cmdArgs].join(' ');
     logStream.write(`# ${step.id}\n`);
     logStream.write(`# command: ${step.command}\n`);
-    logStream.write(`# spawn: ${pnpmSpawn.display}\n`);
+    logStream.write(`# spawn: ${spawnDisplay}\n`);
     logStream.write(`# started_at: ${new Date(stepStarted).toISOString()}\n\n`);
 
     console.log(`\n[acceptance] START ${step.id}`);
     console.log(`[acceptance] CMD   ${step.command}`);
 
-    const { executable, cmdArgs } = resolveStepCommand(step.command, isWindows);
     const child = spawn(executable, cmdArgs, {
       cwd: repoRoot,
       env: {
