@@ -6,6 +6,9 @@ const FORMAL_RAW_SAMPLE_METRICS = [
   'outlet_flow_lpm',
   'pressure_drop_kpa',
 ];
+const FORMAL_SAMPLE_POINT_COUNT = 12;
+const FORMAL_SAMPLE_INTERVAL_MS = 30 * 60 * 1000;
+const SAMPLE_WINDOW_START_BUFFER_MS = ((5 * 60) + 50) * 60 * 1000;
 
 function bool(v) {
   return v === true || v === '1' || String(v ?? '').toLowerCase() === 'true';
@@ -46,9 +49,10 @@ function buildRawSampleRows({
   }
 
   const staleOffset = sample_mode === 'stale' ? 48 * 60 * 60 * 1000 : 0;
+  const sampleStartTs = now_ms - staleOffset - SAMPLE_WINDOW_START_BUFFER_MS;
   const rows = [];
-  for (let i = 0; i < 12; i += 1) {
-    const ts = now_ms - staleOffset - (5 * 60 * 60 * 1000) + (i * 30 * 60 * 1000);
+  for (let i = 0; i < FORMAL_SAMPLE_POINT_COUNT; i += 1) {
+    const ts = sampleStartTs + (i * FORMAL_SAMPLE_INTERVAL_MS);
     const base = {
       sample_id: `rs_${randomUUID()}`,
       sensor_id: device_id,
