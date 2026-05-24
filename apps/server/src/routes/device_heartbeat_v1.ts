@@ -31,12 +31,24 @@ function normalizeDeviceId(raw: unknown): string { // Normalize device_id (path 
   return v; // Return normalized id.
 }
 
+function firstNonEmpty(...values: unknown[]): string | null {
+  for (const value of values) {
+    const text = typeof value === "string" ? value.trim() : String(value ?? "").trim();
+    if (text) return text;
+  }
+  return null;
+}
+
 function pickTenantId(req: any): string { // Best-effort tenant id derivation.
-  const t1 = req?.auth?.tenant_id; // Read req.auth.tenant_id if present.
-  if (typeof t1 === "string" && t1.length) return t1; // Use if available.
-  const t2 = req?.user?.tenant_id; // Read req.user.tenant_id if present.
-  if (typeof t2 === "string" && t2.length) return t2; // Use if available.
-  return "tenantA"; // Conservative fallback.
+  return firstNonEmpty(req?.auth?.tenant_id, req?.user?.tenant_id, req?.body?.tenant_id) ?? "tenantA";
+}
+
+function pickProjectId(req: any): string { // Best-effort project id derivation.
+  return firstNonEmpty(req?.auth?.project_id, req?.user?.project_id, req?.body?.project_id) ?? "projectA";
+}
+
+function pickGroupId(req: any): string { // Best-effort group id derivation.
+  return firstNonEmpty(req?.auth?.group_id, req?.user?.group_id, req?.body?.group_id) ?? "groupA";
 }
 
 async function loadDeviceStatusIndexColumns(pool: Pool): Promise<Set<string>> { // Load columns for device_status_index_v1.
@@ -55,6 +67,21 @@ function has(cols: Set<string>, name: string): boolean { // Column existence hel
   return cols.has(name); // True if column exists.
 }
 
+function pushColumn(input: {
+  cols: Set<string>;
+  insertCols: string[];
+  insertVals: any[];
+  updates: string[];
+  name: string;
+  value: any;
+  update?: string;
+}): void {
+  if (!has(input.cols, input.name)) return;
+  input.insertCols.push(input.name);
+  input.insertVals.push(input.value);
+  input.updates.push(input.update ?? `"${input.name}" = EXCLUDED."${input.name}"`);
+}
+
 async function ensureDeviceExists(pool: Pool, tenant_id: string, device_id: string): Promise<void> { // Verify device exists.
   const candidates = ["devices_v1", "devices"]; // Candidate device tables.
   for (const table of candidates) { // Iterate candidates.
@@ -71,6 +98,8 @@ export function registerDeviceHeartbeatV1Routes(app: FastifyInstance, pool: Pool
   app.post("/api/v1/devices/:device_id/heartbeat", async (req: any, reply: any) => { // Heartbeat endpoint.
     try { // Begin handler.
       const tenant_id = pickTenantId(req); // Resolve tenant id.
+      const project_id = pickProjectId(req); // Resolve project id for fail-safe scoped status lookup.
+      const group_id = pickGroupId(req); // Resolve group id for fail-safe scoped status lookup.
       const device_id = normalizeDeviceId(req?.params?.device_id); // Normalize device id.
       const now_ms = nowMs(); // Timestamp.
 
@@ -87,35 +116,21 @@ export function registerDeviceHeartbeatV1Routes(app: FastifyInstance, pool: Pool
       insertCols.push("device_id"); // device id column.
       insertVals.push(device_id); // device id value.
 
-      if (has(cols, "last_heartbeat_ts_ms")) { // If last_heartbeat exists.
-        insertCols.push("last_heartbeat_ts_ms"); // Add column.
-        insertVals.push(now_ms); // Set to now.
-        updates.push(`last_heartbeat_ts_ms = EXCLUDED.last_heartbeat_ts_ms`); // Update on conflict.
-      }
-
-      if (has(cols, "last_seen_ts_ms")) { // Optional column: last_seen.
-        insertCols.push("last_seen_ts_ms"); // Add column.
-        insertVals.push(now_ms); // Set to now.
-        updates.push(`last_seen_ts_ms = EXCLUDED.last_seen_ts_ms`); // Update on conflict.
-      }
-
-      if (has(cols, "updated_ts_ms")) { // Optional column: updated timestamp.
-        insertCols.push("updated_ts_ms"); // Add column.
-        insertVals.push(now_ms); // Set to now.
-        updates.push(`updated_ts_ms = EXCLUDED.updated_ts_ms`); // Update on conflict.
-      }
-
-      if (has(cols, "status")) { // Optional column: status string.
-        insertCols.push("status"); // Add column.
-        insertVals.push("ONLINE"); // Set to ONLINE.
-        updates.push(`status = EXCLUDED.status`); // Update on conflict.
-      }
-
-      if (has(cols, "note")) { // Optional column: note.
-        insertCols.push("note"); // Add column.
-        insertVals.push(null); // Insert null note.
-        updates.push(`note = COALESCE(device_status_index_v1.note, EXCLUDED.note)`); // Keep existing if any.
-      }
+      pushColumn({ cols, insertCols, insertVals, updates, name: "project_id", value: project_id });
+      pushColumn({ cols, insertCols, insertVals, updates, name: "group_id", value: group_id });
+      pushColumn({ cols, insertCols, insertVals, updates, name: "last_heartbeat_ts_ms", value: now_ms });
+      pushColumn({ cols, insertCols, insertVals, updates, name: "last_seen_ts_ms", value: now_ms });
+      pushColumn({ cols, insertCols, insertVals, updates, name: "updated_ts_ms", value: now_ms });
+      pushColumn({ cols, insertCols, insertVals, updates, name: "status", value: "ONLINE" });
+      pushColumn({
+        cols,
+        insertCols,
+        insertVals,
+        updates,
+        name: "note",
+        value: null,
+        update: `note = COALESCE(device_status_index_v1.note, EXCLUDED.note)`,
+      });
 
       const colSql = insertCols.map((c) => `"${c}"`).join(", "); // Quote column names.
       const phSql = insertVals.map((_, i) => `$${i + 1}`).join(", "); // Placeholders.
@@ -129,7 +144,7 @@ export function registerDeviceHeartbeatV1Routes(app: FastifyInstance, pool: Pool
       ); // Execute.
 
       reply.code(200); // Set HTTP status.
-      return { ok: true, device_id, ts_ms: now_ms }; // Return payload (Fastify sends once).
+      return { ok: true, device_id, tenant_id, project_id, group_id, ts_ms: now_ms }; // Return payload (Fastify sends once).
     } catch (e: any) { // Error path.
       const msg = typeof e?.message === "string" ? e.message : "heartbeat failed"; // Normalize message.
       if (reply.sent) {
