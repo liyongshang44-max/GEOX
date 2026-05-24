@@ -1,13 +1,63 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const BASE_URL = process.env.GEOX_BASE_URL ?? "http://127.0.0.1:3001";
 const DEVICE_ID = String(process.env.GEOX_DEVICE_ID ?? "dev_smoke_01").trim() || "dev_smoke_01";
-const ACCESS = String(process.env.GEOX_TOKEN ?? process.env.GEOX_AO_ACT_TOKEN ?? "").trim();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const REPO_ROOT = path.resolve(__dirname, "../../..");
+const TOKEN_CANDIDATE_FILES = [
+  path.join(REPO_ROOT, "config/auth/ao_act_tokens_v0.json"),
+  path.join(REPO_ROOT, "config/auth/example_tokens.json"),
+];
+const REQUIRED_SCOPES_FOR_P1_SMOKE = Object.freeze([
+  "ao_act.task.write",
+  "ao_act.index.read",
+  "ao_act.receipt.write",
+  "evidence_export.read",
+  "evidence_export.write",
+]);
 const tenant = {
   tenant_id: String(process.env.GEOX_TENANT_ID ?? "tenantA").trim() || "tenantA",
   project_id: String(process.env.GEOX_PROJECT_ID ?? "projectA").trim() || "projectA",
   group_id: String(process.env.GEOX_GROUP_ID ?? "groupA").trim() || "groupA",
 };
+
+function parseTokenFile(tokenFilePath) {
+  if (!fs.existsSync(tokenFilePath)) return null;
+  const parsed = JSON.parse(fs.readFileSync(tokenFilePath, "utf8"));
+  const tokens = Array.isArray(parsed?.tokens) ? parsed.tokens : [];
+  for (const row of tokens) {
+    const token = typeof row?.token === "string" ? row.token.trim() : "";
+    const scopes = Array.isArray(row?.scopes) ? row.scopes.map((s) => String(s)) : [];
+    const role = String(row?.role ?? "").trim().toLowerCase();
+    const tenantId = String(row?.tenant_id ?? "").trim();
+    const projectId = String(row?.project_id ?? "").trim();
+    const groupId = String(row?.group_id ?? "").trim();
+    const revoked = Boolean(row?.revoked);
+    if (!token || revoked) continue;
+    if (token.includes("set-via-env-or-external-secret-file")) continue;
+    if (tenantId !== tenant.tenant_id || projectId !== tenant.project_id || groupId !== tenant.group_id) continue;
+    if (!["admin", "operator"].includes(role)) continue;
+    if (!REQUIRED_SCOPES_FOR_P1_SMOKE.every((scope) => scopes.includes(scope))) continue;
+    return token;
+  }
+  return null;
+}
+
+function resolveAccessToken() {
+  const fromEnv = String(process.env.GEOX_TOKEN ?? process.env.GEOX_AO_ACT_TOKEN ?? "").trim();
+  if (fromEnv) return fromEnv;
+  for (const tokenFilePath of TOKEN_CANDIDATE_FILES) {
+    const candidate = parseTokenFile(tokenFilePath);
+    if (candidate) return candidate;
+  }
+  throw new Error(`MISSING_ENV:GEOX_TOKEN (fallback checked: ${TOKEN_CANDIDATE_FILES.join(", ")})`);
+}
+
+const ACCESS = resolveAccessToken();
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -17,7 +67,7 @@ function jsonHeaders() {
   return {
     "content-type": "application/json",
     accept: "application/json",
-    ...(ACCESS ? { authorization: `Bearer ${ACCESS}` } : {}),
+    authorization: `Bearer ${ACCESS}`,
   };
 }
 
