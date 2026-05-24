@@ -39,7 +39,7 @@ function buildRawSampleRows({
       ts_ms: ts,
       metric: 'soil_moisture',
       value: pre_soil_moisture,
-      qc_quality: 'good',
+      qc_quality: 'ok',
       source: 'device',
       payload_json: { tenant_id, project_id, group_id, field_id, device_id, fixture: 'stage1_formal_irrigation', sample_mode },
     }];
@@ -53,7 +53,7 @@ function buildRawSampleRows({
       sample_id: `rs_${randomUUID()}`,
       sensor_id: device_id,
       ts_ms: ts,
-      qc_quality: 'good',
+      qc_quality: 'ok',
       source: 'device',
       payload_json: { tenant_id, project_id, group_id, field_id, device_id, fixture: 'stage1_formal_irrigation', sample_mode },
     };
