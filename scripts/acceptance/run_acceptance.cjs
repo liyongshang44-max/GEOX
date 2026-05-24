@@ -133,6 +133,7 @@ function ensureOutputDir(dir) {
 function runStep(step, envOverrides = {}) {
   const stepStarted = Date.now();
   const logPath = path.join(outputDir, step.logFile);
+  const isWindows = process.platform === 'win32';
 
   return new Promise((resolve) => {
     let outputBuffer = '';
@@ -144,9 +145,23 @@ function runStep(step, envOverrides = {}) {
     console.log(`\n[acceptance] START ${step.id}`);
     console.log(`[acceptance] CMD   ${step.command}`);
 
-    const child = spawn('bash', ['-lc', step.command], {
+    const parts = String(step.command || '').trim().split(/\s+/).filter(Boolean);
+    const rawCmd = parts[0] || '';
+    const cmdArgs = parts.slice(1);
+    const spawnCmd = isWindows && rawCmd === 'pnpm' ? 'pnpm.cmd' : rawCmd;
+    if (!spawnCmd) {
+      throw new Error(`INVALID_STEP_COMMAND:${step.id}`);
+    }
+
+    const child = spawn(spawnCmd, cmdArgs, {
       cwd: repoRoot,
-      env: { ...process.env, ...envOverrides },
+      env: {
+        ...process.env,
+        CI: process.env.CI || 'true',
+        npm_config_confirmModulesPurge: process.env.npm_config_confirmModulesPurge || 'false',
+        ...envOverrides
+      },
+      shell: false,
       stdio: ['ignore', 'pipe', 'pipe']
     });
 
