@@ -149,7 +149,12 @@ function runStep(step, envOverrides = {}) {
     console.log(`\n[acceptance] START ${step.id}`);
     console.log(`[acceptance] CMD   ${step.command}`);
 
-    const child = spawn(step.command, {
+    const parts = String(step.command || '').trim().split(/\s+/).filter(Boolean);
+    const cmd = parts[0] || '';
+    const cmdArgs = parts.slice(1);
+    const pnpmSpawn = isWindows && cmd === 'pnpm' ? 'pnpm.cmd' : cmd;
+
+    const child = spawn(pnpmSpawn, cmdArgs, {
       cwd: repoRoot,
       env: {
         ...process.env,
@@ -157,7 +162,7 @@ function runStep(step, envOverrides = {}) {
         npm_config_confirmModulesPurge: process.env.npm_config_confirmModulesPurge || 'false',
         ...envOverrides
       },
-      shell: isWindows,
+      shell: false,
       stdio: ['ignore', 'pipe', 'pipe']
     });
 
