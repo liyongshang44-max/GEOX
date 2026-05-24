@@ -118,6 +118,10 @@ jobs:
           set +a
           pnpm run ci:runtime:workers
 
+      - name: Run Stage-1 fixture raw sample contract gate
+        run: |
+          pnpm run ci:stage1-fixture:raw-sample-contract
+
       - name: Run Base Contract P0 aggregate gate
         run: |
           set -euo pipefail
