@@ -130,9 +130,19 @@ function ensureOutputDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
+function resolveStepCommand(command, isWindows) {
+  const parts = String(command || '').trim().split(/\s+/).filter(Boolean);
+  const rawCmd = parts[0] || '';
+  const cmdArgs = parts.slice(1);
+  const executable = isWindows && rawCmd === 'pnpm' ? 'pnpm.cmd' : rawCmd;
+  if (!executable) throw new Error('INVALID_STEP_COMMAND');
+  return { executable, cmdArgs };
+}
+
 function runStep(step, envOverrides = {}) {
   const stepStarted = Date.now();
   const logPath = path.join(outputDir, step.logFile);
+  const isWindows = process.platform === 'win32';
 
   return new Promise((resolve) => {
     let outputBuffer = '';
@@ -144,9 +154,16 @@ function runStep(step, envOverrides = {}) {
     console.log(`\n[acceptance] START ${step.id}`);
     console.log(`[acceptance] CMD   ${step.command}`);
 
-    const child = spawn('bash', ['-lc', step.command], {
+    const { executable, cmdArgs } = resolveStepCommand(step.command, isWindows);
+    const child = spawn(executable, cmdArgs, {
       cwd: repoRoot,
-      env: { ...process.env, ...envOverrides },
+      env: {
+        ...process.env,
+        CI: process.env.CI || 'true',
+        npm_config_confirmModulesPurge: process.env.npm_config_confirmModulesPurge || 'false',
+        ...envOverrides
+      },
+      shell: false,
       stdio: ['ignore', 'pipe', 'pipe']
     });
 
