@@ -111,6 +111,33 @@ Rules:
 - Operator write APIs must keep backend-owned status transitions, permission checks, and audit facts.
 - Operator write APIs must not let frontend directly write `final_status`, `acceptance.status`, dispatch state, or approval state without backend validation and audit.
 
+## Device runtime transitional API
+
+`POST /api/v1/devices/:device_id/heartbeat` is currently an acceptance-compatible device-status projection route.
+
+Inventory row:
+
+| field | value |
+| --- | --- |
+| route | `POST /api/v1/devices/:device_id/heartbeat` |
+| owner | `device-runtime` |
+| audience | `device/executor/internal` |
+| boundary | `device-status-projection` |
+| source_model | `device credential + device registry target; body scope transitional` |
+| auth_scope | `device credential / future device.heartbeat.write` |
+| current_maturity | `transitional` |
+| contract_ref | `docs/contracts/v2/DEVICE_HEARTBEAT_AUTH_CONTRACT_V2.md` |
+| customer_visible | `false` |
+| formal_chain_effect | `updates device_status_index only; does not directly create acceptance/report/ROI/memory` |
+| gate_maturity | `inventory_baseline` |
+
+Rules:
+
+- Current body-scope fallback is transitional and exists for local/CI smoke compatibility.
+- Production heartbeat scope must be derived from authenticated device credential and registered device binding.
+- The route must not directly create acceptance, customer report conclusions, ROI, or Field Memory.
+- Future enforcement belongs to `scripts/governance_acceptance/ACCEPTANCE_DEVICE_HEARTBEAT_SCOPE_AUTH_V1.cjs`.
+
 ## Legacy API
 
 Legacy APIs are compatibility surfaces registered through legacy modules. New frontend code must not depend on these endpoints.
