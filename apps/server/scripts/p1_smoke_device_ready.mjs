@@ -28,49 +28,101 @@ function normalizeScope(value) {
   return String(value ?? "").trim();
 }
 
-function parseTokenFile(tokenFilePath) {
-  if (!fs.existsSync(tokenFilePath)) return [];
-  const parsed = JSON.parse(fs.readFileSync(tokenFilePath, "utf8"));
-  const tokens = Array.isArray(parsed?.tokens) ? parsed.tokens : [];
-  return tokens
-    .map((row) => {
+function loadTokenCandidates() {
+  const rows = [];
+  for (const tokenFilePath of TOKEN_CANDIDATE_FILES) {
+    if (!fs.existsSync(tokenFilePath)) continue;
+    const parsed = JSON.parse(fs.readFileSync(tokenFilePath, "utf8"));
+    const tokens = Array.isArray(parsed?.tokens) ? parsed.tokens : [];
+    for (const row of tokens) {
       const token = typeof row?.token === "string" ? row.token.trim() : "";
-      const scopes = Array.isArray(row?.scopes) ? row.scopes.map((s) => String(s)) : [];
-      const role = String(row?.role ?? "").trim().toLowerCase();
-      const rowTenant = String(row?.tenant_id ?? "").trim();
-      const rowProject = String(row?.project_id ?? "").trim();
-      const rowGroup = String(row?.group_id ?? "").trim();
-      const revoked = Boolean(row?.revoked);
-      return { token, scopes, role, tenant_id: rowTenant, project_id: rowProject, group_id: rowGroup, revoked };
-    })
-    .filter((row) => {
-      if (!row.token || row.revoked) return false;
-      if (row.token.includes("set-via-env-or-external-secret-file")) return false;
-      if (row.tenant_id !== tenant.tenant_id || row.project_id !== tenant.project_id || row.group_id !== tenant.group_id) return false;
-      return true;
-    });
-}
-
-function tokenSatisfies(candidate, requiredAnyScopes) {
-  if (!candidate?.token) return false;
-  if (!Array.isArray(requiredAnyScopes) || requiredAnyScopes.length === 0) return true;
-  return requiredAnyScopes.some((scope) => candidate.scopes.includes(scope));
-}
-
-function resolveAccessToken(requiredAnyScopes = []) {
-  const fromEnv = normalizeScope(process.env.GEOX_TOKEN ?? process.env.GEOX_AO_ACT_TOKEN ?? "");
-  if (fromEnv) {
-    return fromEnv;
+      if (!token || token.includes("set-via-env-or-external-secret-file")) continue;
+      rows.push({
+        token,
+        source_file: tokenFilePath,
+        scopes: Array.isArray(row?.scopes) ? row.scopes.map((s) => String(s)) : [],
+        role: String(row?.role ?? "").trim().toLowerCase(),
+        tenant_id: String(row?.tenant_id ?? "").trim(),
+        project_id: String(row?.project_id ?? "").trim(),
+        group_id: String(row?.group_id ?? "").trim(),
+        revoked: Boolean(row?.revoked),
+      });
+    }
   }
-  const candidates = TOKEN_CANDIDATE_FILES.flatMap((tokenFilePath) => parseTokenFile(tokenFilePath));
+  return rows;
+}
+
+function findKnownTokenRow(token, candidates = loadTokenCandidates()) {
+  const normalized = normalizeScope(token);
+  if (!normalized) return null;
+  return candidates.find((row) => row.token === normalized) ?? null;
+}
+
+function tokenHasAnyScope(row, requiredAnyScopes = []) {
+  if (!row?.token) return false;
+  if (!Array.isArray(requiredAnyScopes) || requiredAnyScopes.length === 0) return true;
+  return requiredAnyScopes.some((scope) => row.scopes.includes(scope));
+}
+
+function tokenMatchesTenant(row) {
+  return row?.tenant_id === tenant.tenant_id && row?.project_id === tenant.project_id && row?.group_id === tenant.group_id;
+}
+
+function formatRequired(requiredAnyScopes = []) {
+  return requiredAnyScopes.join("|") || "any";
+}
+
+function formatActualScopes(row) {
+  const scopes = Array.isArray(row?.scopes) ? row.scopes : [];
+  return scopes.length ? scopes.join("|") : "none";
+}
+
+function verifyEnvTokenScope(label, token, requiredAnyScopes = [], candidates = loadTokenCandidates()) {
+  const row = findKnownTokenRow(token, candidates);
+  const required = formatRequired(requiredAnyScopes);
+  if (!row) {
+    if (process.env.GEOX_ACCEPTANCE_ALLOW_UNVERIFIED_ENV_TOKEN === "1") {
+      console.warn(`[p1-smoke-device-ready] WARN unverified env token accepted by GEOX_ACCEPTANCE_ALLOW_UNVERIFIED_ENV_TOKEN=1 label=${label}`);
+      return;
+    }
+    throw new Error(`UNVERIFIED_ENV_TOKEN:${label} token was provided by env but was not found in known acceptance token files`);
+  }
+  if (row.revoked || !tokenMatchesTenant(row) || !tokenHasAnyScope(row, requiredAnyScopes)) {
+    throw new Error(`MISSING_TOKEN_SCOPE:${label} requiredAny=${required} actual=${formatActualScopes(row)}`);
+  }
+}
+
+function resolveAccessToken(requiredAnyScopes = [], opts = {}) {
+  const label = String(opts.label ?? "accessToken");
+  const envNames = Array.isArray(opts.envNames) && opts.envNames.length > 0
+    ? opts.envNames
+    : ["GEOX_TOKEN", "GEOX_AO_ACT_TOKEN"];
+  const candidates = loadTokenCandidates();
+
+  for (const envName of envNames) {
+    const value = normalizeScope(process.env[envName] ?? "");
+    if (!value) continue;
+    verifyEnvTokenScope(label, value, requiredAnyScopes, candidates);
+    return value;
+  }
+
   const preferredRoles = ["admin", "operator", "executor", "auditor", "client"];
   for (const role of preferredRoles) {
-    const candidate = candidates.find((row) => row.role === role && tokenSatisfies(row, requiredAnyScopes));
+    const candidate = candidates.find((row) =>
+      row.role === role &&
+      !row.revoked &&
+      tokenMatchesTenant(row) &&
+      tokenHasAnyScope(row, requiredAnyScopes)
+    );
     if (candidate) return candidate.token;
   }
-  const anyCandidate = candidates.find((row) => tokenSatisfies(row, requiredAnyScopes));
+  const anyCandidate = candidates.find((row) =>
+    !row.revoked &&
+    tokenMatchesTenant(row) &&
+    tokenHasAnyScope(row, requiredAnyScopes)
+  );
   if (anyCandidate) return anyCandidate.token;
-  throw new Error(`MISSING_TOKEN_WITH_SCOPE:${requiredAnyScopes.join("|") || "any"} (fallback checked: ${TOKEN_CANDIDATE_FILES.join(", ")})`);
+  throw new Error(`MISSING_TOKEN_WITH_SCOPE:${formatRequired(requiredAnyScopes)} (fallback checked: ${TOKEN_CANDIDATE_FILES.join(", ")})`);
 }
 
 function parseJsonOrThrow(raw, context) {
@@ -205,8 +257,14 @@ async function main() {
     return;
   }
 
-  const statusToken = resolveAccessToken(["action.read", "ao_act.index.read", "security.admin"]);
-  const adminToken = resolveAccessToken(["security.admin", "action.task.dispatch"]);
+  const statusToken = resolveAccessToken(
+    ["action.read", "ao_act.index.read", "security.admin"],
+    { label: "statusToken", envNames: ["GEOX_STATUS_TOKEN", "GEOX_TOKEN", "GEOX_AO_ACT_TOKEN"] }
+  );
+  const adminToken = resolveAccessToken(
+    ["security.admin", "action.task.dispatch"],
+    { label: "adminToken", envNames: ["GEOX_ADMIN_TOKEN", "GEOX_TOKEN", "GEOX_AO_ACT_TOKEN"] }
+  );
   const heartbeatRes = await fetchJson(`/api/v1/devices/${encodeURIComponent(DEVICE_ID)}/heartbeat`, {
     method: "POST",
     token: statusToken,

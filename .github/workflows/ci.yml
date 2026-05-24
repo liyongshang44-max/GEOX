@@ -148,6 +148,17 @@ jobs:
           export GROUP_ID="${GROUP_ID:-groupA}"
 
           pnpm run ci:base-contract:p0
+
+      - name: Run P1 smoke preflight idempotency gate
+        run: |
+          set -euo pipefail
+          set -a
+          source .env.ci
+          set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export API_BASE_URL=http://127.0.0.1:3001
+          pnpm run ci:p1-smoke:preflight-idempotent
+
       - name: Run acceptance suite
         run: |
           set -a
