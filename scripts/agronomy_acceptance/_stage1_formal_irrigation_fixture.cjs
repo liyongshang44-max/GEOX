@@ -18,6 +18,15 @@ function nowMsFrom(opts) {
   return Number.isFinite(Number(opts?.now_ms)) ? Number(opts.now_ms) : Date.now();
 }
 
+function inferSeasonIdFromFieldId(field_id) {
+  const field = String(field_id ?? '').trim();
+  let match = field.match(/^demo_field_mvp0_(\d+)$/);
+  if (match) return `season_mvp0_${match[1]}`;
+  match = field.match(/^field_gap_closure_(\d+)$/);
+  if (match) return `season_gap_closure_${match[1]}`;
+  return null;
+}
+
 async function seedFormalCropContextV1(pool, {
   tenant_id,
   project_id,
@@ -243,11 +252,16 @@ async function seedFormalIrrigationStage1Evidence(pool, opts) {
   const field_id = opts.field_id;
   const device_id = opts.device_id;
   const now_ms = nowMsFrom(opts);
+  const season_id = opts.season_id ?? inferSeasonIdFromFieldId(field_id);
   const pre_soil_moisture = Number(opts.pre_soil_moisture ?? 0.16);
   const sample_mode = opts.sample_mode
     ?? (bool(opts.simulate_stale) ? 'stale' : bool(opts.simulate_insufficient_evidence) ? 'insufficient' : 'formal');
 
   await ensureStage1FixtureColumns(pool);
+
+  const crop_context_seed = season_id
+    ? await seedFormalCropContextV1(pool, { tenant_id, project_id, group_id, field_id, season_id, crop_code: opts.crop_code ?? 'corn', crop_stage: opts.crop_stage ?? 'V8', now_ms })
+    : null;
 
   const rawRows = buildRawSampleRows({ tenant_id, project_id, group_id, field_id, device_id, now_ms, sample_mode, pre_soil_moisture });
   const rawSampleIds = rawRows.map((x) => x.sample_id);
@@ -261,6 +275,8 @@ async function seedFormalIrrigationStage1Evidence(pool, opts) {
   return {
     field_id,
     device_id,
+    season_id,
+    crop_context_seed,
     observation_id,
     raw_sample_ids: rawSampleIds,
     sample_mode,
