@@ -1,5 +1,6 @@
 const { spawnSync } = require('node:child_process');
 const { Pool } = require('pg');
+
 function hasValidRoiConfidence(confidence) {
   if (typeof confidence === 'number') return confidence > 0;
   if (!confidence || typeof confidence !== 'object') return false;
@@ -11,10 +12,7 @@ function hasValidRoiConfidence(confidence) {
 function extractJsonBlock(text) {
   const marker = '::ACCEPTANCE_JSON::';
   const idx = text.lastIndexOf(marker);
-  if (idx >= 0) {
-    const marked = text.slice(idx + marker.length).trim();
-    return JSON.parse(marked);
-  }
+  if (idx >= 0) return JSON.parse(text.slice(idx + marker.length).trim());
 
   let end = -1;
   for (let i = text.length - 1; i >= 0; i -= 1) {
@@ -37,114 +35,81 @@ function extractJsonBlock(text) {
     if (ch === '}') depth += 1;
     else if (ch === '{') {
       depth -= 1;
-      if (depth === 0) {
-        return JSON.parse(text.slice(i, end + 1));
-      }
+      if (depth === 0) return JSON.parse(text.slice(i, end + 1));
     }
   }
   throw new Error('no balanced JSON object found');
 }
 
-function runScript(script, envOverride = {}) {
+function tailText(text, max = 4000) {
+  const raw = String(text ?? '');
+  return raw.length > max ? raw.slice(raw.length - max) : raw;
+}
+
+function runScript(name, script, envOverride = {}) {
   const res = spawnSync(process.execPath, [script], { encoding: 'utf8', env: { ...process.env, ...envOverride } });
   const merged = `${res.stdout || ''}\n${res.stderr || ''}`.trim();
   try {
-    return extractJsonBlock(merged);
+    const parsed = extractJsonBlock(merged);
+    return { ...parsed, __debug: { name, script, exit_code: res.status, ok: parsed?.ok === true, error: parsed?.failed_reason || parsed?.error || null, raw_tail: parsed?.ok === true ? '' : tailText(merged) } };
   } catch (err) {
-    return { ok: false, script, error: String(err?.message || err), raw: merged };
+    return { ok: false, script, error: String(err?.message || err), raw: merged, __debug: { name, script, exit_code: res.status, ok: false, error: String(err?.message || err), raw_tail: tailText(merged) } };
   }
 }
 
 const pass = (v) => (v ? 'PASS' : 'FAIL');
 const isFilled = (x) => String(x || '').trim().length > 0;
-const isPass = (v) => String(v || '').toUpperCase() === 'PASS';
 
 function scriptInfraUnavailable(result) {
-  const raw = String(result?.raw || result?.error || '').toUpperCase();
+  const raw = String(result?.raw || result?.error || result?.__debug?.raw_tail || '').toUpperCase();
   return raw.includes('ECONNREFUSED') || raw.includes('FETCH FAILED') || raw.includes('EHOSTUNREACH');
 }
 
 async function existsFieldMemoryId(pool, memoryId, scope) {
   const q = await pool.query(
-    `SELECT 1 FROM field_memory_v1
-      WHERE memory_id=$1
-        AND tenant_id=$2
-        AND project_id=$3
-        AND group_id=$4
-      LIMIT 1`,
+    `SELECT 1 FROM field_memory_v1 WHERE memory_id=$1 AND tenant_id=$2 AND project_id=$3 AND group_id=$4 LIMIT 1`,
     [memoryId, scope.tenant_id, scope.project_id, scope.group_id]
   );
   return (q.rows?.length ?? 0) > 0;
 }
-async function queryFieldMemoryByScope(pool, {
-  tenant_id,
-  project_id,
-  group_id,
-  field_id,
-  operation_id,
-  task_id,
-  recommendation_id,
-  prescription_id,
-  acceptance_id,
-}) {
+
+async function queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, field_id, operation_id, task_id }) {
   const params = [tenant_id, project_id, group_id];
   let sql = `SELECT * FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3`;
   if (field_id) { params.push(field_id); sql += ` AND field_id=$${params.length}`; }
   if (operation_id) { params.push(operation_id); sql += ` AND operation_id=$${params.length}`; }
   if (task_id) { params.push(task_id); sql += ` AND task_id=$${params.length}`; }
-  if (recommendation_id) { params.push(recommendation_id); sql += ` AND recommendation_id=$${params.length}`; }
-  if (prescription_id) { params.push(prescription_id); sql += ` AND prescription_id=$${params.length}`; }
-  if (acceptance_id) { params.push(acceptance_id); sql += ` AND acceptance_id=$${params.length}`; }
   sql += ` ORDER BY occurred_at DESC LIMIT 500`;
   return pool.query(sql, params);
 }
+
 async function existsRoiLedgerId(pool, roiLedgerId, scope, roiHasProjectGroup) {
   const q = roiHasProjectGroup
-    ? await pool.query(
-      `SELECT 1 FROM roi_ledger_v1
-        WHERE roi_ledger_id=$1
-          AND tenant_id=$2
-          AND project_id=$3
-          AND group_id=$4
-        LIMIT 1`,
-      [roiLedgerId, scope.tenant_id, scope.project_id, scope.group_id]
-    )
-    : await pool.query(
-      `SELECT 1 FROM roi_ledger_v1
-        WHERE roi_ledger_id=$1
-          AND tenant_id=$2
-        LIMIT 1`,
-      [roiLedgerId, scope.tenant_id]
-    );
+    ? await pool.query(`SELECT 1 FROM roi_ledger_v1 WHERE roi_ledger_id=$1 AND tenant_id=$2 AND project_id=$3 AND group_id=$4 LIMIT 1`, [roiLedgerId, scope.tenant_id, scope.project_id, scope.group_id])
+    : await pool.query(`SELECT 1 FROM roi_ledger_v1 WHERE roi_ledger_id=$1 AND tenant_id=$2 LIMIT 1`, [roiLedgerId, scope.tenant_id]);
   return (q.rows?.length ?? 0) > 0;
 }
+
 async function existsSkillRunId(pool, skillRunId) {
   const q = await pool.query(
     `SELECT 1 FROM facts
       WHERE (record_json::jsonb->>'type') IN ('skill_run_v1','skill_execution_v1')
-        AND (
-          (record_json::jsonb#>>'{payload,run_id}')=$1
-          OR (record_json::jsonb#>>'{payload,skill_run_id}')=$1
-          OR fact_id=$1
-        )
+        AND ((record_json::jsonb#>>'{payload,run_id}')=$1 OR (record_json::jsonb#>>'{payload,skill_run_id}')=$1 OR fact_id=$1)
       LIMIT 1`,
     [skillRunId]
   );
   return (q.rows?.length ?? 0) > 0;
 }
-async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
-  const q = await pool.query(
-    `SELECT 1 FROM facts
-      WHERE (record_json::jsonb->>'type')='ao_act_task_v0'
-        AND (record_json::jsonb#>>'{payload,act_task_id}')=$1
-        AND (
-          (record_json::jsonb#>>'{payload,meta,skill_binding_evidence,skill_binding_id}')=$2
-          OR (record_json::jsonb#>>'{payload,meta,skill_binding_evidence,skill_binding_fact_id}')=$2
-        )
-      LIMIT 1`,
-    [taskId, skillBindingId]
-  );
-  return (q.rows?.length ?? 0) > 0;
+
+function buildDebugFailures(items) {
+  return Object.fromEntries(Object.entries(items)
+    .filter(([, result]) => result?.ok !== true)
+    .map(([name, result]) => [name, {
+      ok: result?.ok === true,
+      error: result?.__debug?.error || result?.failed_reason || result?.error || null,
+      exit_code: result?.__debug?.exit_code ?? null,
+      raw_tail: result?.__debug?.raw_tail || tailText(result?.raw || ''),
+    }]));
 }
 
 (async () => {
@@ -156,14 +121,15 @@ async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
     dbAvailable = false;
     console.warn('[release-gate] DB unavailable, skip DB-backed checks:', err?.code || err?.message || err);
   }
-  const skillGap = runScript('scripts/agronomy_acceptance/ACCEPTANCE_SKILL_CONTRACT_GAP_CLOSURE_V1.cjs');
-  const fieldMemory = runScript('scripts/agronomy_acceptance/ACCEPTANCE_FIELD_MEMORY_V1.cjs');
-  const roiCommercial = runScript('scripts/agronomy_acceptance/ACCEPTANCE_ROI_LEDGER_COMMERCIAL_V1.cjs');
-  const irrigation = runScript('scripts/agronomy_acceptance/ACCEPTANCE_COMMERCIAL_MVP0_IRRIGATION_V1.cjs');
+
+  const skillGap = runScript('skill_contract_gap_closure', 'scripts/agronomy_acceptance/ACCEPTANCE_SKILL_CONTRACT_GAP_CLOSURE_V1.cjs');
+  const fieldMemory = runScript('field_memory', 'scripts/agronomy_acceptance/ACCEPTANCE_FIELD_MEMORY_V1.cjs');
+  const roiCommercial = runScript('roi_commercial', 'scripts/agronomy_acceptance/ACCEPTANCE_ROI_LEDGER_COMMERCIAL_V1.cjs');
+  const irrigation = runScript('irrigation_mvp0', 'scripts/agronomy_acceptance/ACCEPTANCE_COMMERCIAL_MVP0_IRRIGATION_V1.cjs');
   const dFailureRuns = [
-    runScript('scripts/agronomy_acceptance/ACCEPTANCE_COMMERCIAL_MVP0_IRRIGATION_V1.cjs', { SIMULATE_STALE_OBSERVATION: '1' }),
-    runScript('scripts/agronomy_acceptance/ACCEPTANCE_COMMERCIAL_MVP0_IRRIGATION_V1.cjs', { SIMULATE_INSUFFICIENT_EVIDENCE: '1' }),
-    runScript('scripts/agronomy_acceptance/ACCEPTANCE_COMMERCIAL_MVP0_IRRIGATION_V1.cjs', { SIMULATE_APPROVAL_REJECTED: '1' }),
+    runScript('d_failure_stale_observation', 'scripts/agronomy_acceptance/ACCEPTANCE_COMMERCIAL_MVP0_IRRIGATION_V1.cjs', { SIMULATE_STALE_OBSERVATION: '1' }),
+    runScript('d_failure_insufficient_evidence', 'scripts/agronomy_acceptance/ACCEPTANCE_COMMERCIAL_MVP0_IRRIGATION_V1.cjs', { SIMULATE_INSUFFICIENT_EVIDENCE: '1' }),
+    runScript('d_failure_approval_rejected', 'scripts/agronomy_acceptance/ACCEPTANCE_COMMERCIAL_MVP0_IRRIGATION_V1.cjs', { SIMULATE_APPROVAL_REJECTED: '1' }),
   ];
 
   const chain = irrigation.chain_summary || {};
@@ -171,54 +137,16 @@ async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
   const infraUnavailable = !dbAvailable || [skillGap, fieldMemory, roiCommercial, irrigation, ...dFailureRuns].some(scriptInfraUnavailable);
   const roiChecks = roiCommercial.checks || {};
   const irrigationChecks = irrigation.checks || {};
-
-  const coreIdsOk = [
-    'field_id','observation_id','recommendation_id','skill_trace_id','prescription_id','approval_id','task_id','skill_binding_id','skill_run_id','receipt_id','as_executed_id','post_observation_id','acceptance_id','report_ref',
-  ].every((k) => isFilled(chain[k]));
-
+  const coreIdsOk = ['field_id','observation_id','recommendation_id','skill_trace_id','prescription_id','approval_id','task_id','skill_binding_id','skill_run_id','receipt_id','as_executed_id','post_observation_id','acceptance_id','report_ref'].every((k) => isFilled(chain[k]));
   const fieldMemoryIds = Array.isArray(chain.field_memory_ids) ? chain.field_memory_ids.filter(isFilled) : [];
   const roiLedgerIds = Array.isArray(chain.roi_ledger_ids) ? chain.roi_ledger_ids.filter(isFilled) : [];
-  const scope = {
-    tenant_id: process.env.TENANT_ID || 'tenantA',
-    project_id: process.env.PROJECT_ID || 'projectA',
-    group_id: process.env.GROUP_ID || 'groupA',
-  };
-  const roiScopeColsQ = dbAvailable
-    ? await pool.query(
-      `SELECT column_name FROM information_schema.columns
-        WHERE table_name='roi_ledger_v1' AND column_name IN ('project_id','group_id')`
-    )
-    : { rows: [] };
+  const scope = { tenant_id: process.env.TENANT_ID || 'tenantA', project_id: process.env.PROJECT_ID || 'projectA', group_id: process.env.GROUP_ID || 'groupA' };
+  const roiScopeColsQ = dbAvailable ? await pool.query(`SELECT column_name FROM information_schema.columns WHERE table_name='roi_ledger_v1' AND column_name IN ('project_id','group_id')`) : { rows: [] };
   const roiHasProjectGroup = dbAvailable ? (roiScopeColsQ.rows?.length ?? 0) === 2 : false;
 
-  const roiCompatibleOk = [
-    'ledger_has_baseline_actual_delta',
-    'ledger_has_evidence_refs',
-    'ledger_has_confidence',
-    'ledger_has_commercial_credibility_fields',
-    'report_summary_has_baseline_type',
-    'report_summary_has_confidence',
-    'report_summary_has_evidence_refs',
-    'no_forbidden_types',
-    'default_assumption_not_measured',
-  ].every((k) => roiChecks[k] === true || roiChecks[k] === 'PASS');
-
-  const customerReportOk = [
-    'report_contains_field_memory',
-    'report_contains_roi',
-    'report_summary_has_confidence',
-    'report_summary_has_customer_text',
-    'no_raw_enum_in_customer_report',
-  ].every((k) => irrigationChecks[k] === true || irrigationChecks[k] === 'PASS');
-
-  const fp = irrigation.failure_audit_summary;
-  const syntheticFp = dFailureRuns.map((r, i) => ({
-    name: `d_failure_run_${i + 1}`,
-    pass: r?.blocked === true && Array.isArray(r?.failure_reasons) && r.failure_reasons.length > 0,
-  }));
-  const failurePathsPassCount = Array.isArray(fp)
-    ? fp.filter((x) => x && (x.blocked === true || isPass(x.status))).length
-    : 0;
+  const roiCompatibleOk = ['ledger_has_baseline_actual_delta','ledger_has_evidence_refs','ledger_has_confidence','ledger_has_commercial_credibility_fields','report_summary_has_baseline_type','report_summary_has_confidence','report_summary_has_evidence_refs','no_forbidden_types','default_assumption_not_measured'].every((k) => roiChecks[k] === true || roiChecks[k] === 'PASS');
+  const customerReportOk = ['report_contains_field_memory','report_contains_roi','report_summary_has_confidence','report_summary_has_customer_text','no_raw_enum_in_customer_report'].every((k) => irrigationChecks[k] === true || irrigationChecks[k] === 'PASS');
+  const syntheticFp = dFailureRuns.map((r, i) => ({ name: `d_failure_run_${i + 1}`, pass: r?.blocked === true && Array.isArray(r?.failure_reasons) && r.failure_reasons.length > 0 }));
   const failurePathsOk = syntheticFp.filter((x) => x.pass).length >= 3;
 
   const skillBindingExists = isFilled(chain.skill_binding_id);
@@ -229,39 +157,12 @@ async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
     }).then((r) => r.json().catch(() => ({})))
     : {};
   const reportPayload = reportResp?.operation_report_v1 ?? {};
-  const reportPayloadOk = isFilled(chain.report_ref)
-    && (
-      String(reportPayload?.identifiers?.operation_id ?? '').trim() === String(chain.report_ref).trim()
-      || String(reportPayload?.identifiers?.operation_plan_id ?? '').trim() === String(chain.report_ref).trim()
-    );
-  const fieldMemoryExists = dbAvailable
-    ? (fieldMemoryIds.length > 0
-      && (await Promise.all(fieldMemoryIds.map((x) => existsFieldMemoryId(pool, x, scope)))).every(Boolean))
-    : true;
-  const scopeMemoryQ = dbAvailable ? await queryFieldMemoryByScope(pool, {
-    tenant_id: scope.tenant_id,
-    project_id: scope.project_id,
-    group_id: scope.group_id,
-    field_id: chain.field_id || undefined,
-  }) : { rows: [] };
-  const operationMemoryQ = dbAvailable ? await queryFieldMemoryByScope(pool, {
-    tenant_id: scope.tenant_id,
-    project_id: scope.project_id,
-    group_id: scope.group_id,
-    operation_id: chain.report_ref || undefined,
-    task_id: chain.task_id || undefined,
-  }) : { rows: [] };
-  const roiLedgerExists = dbAvailable
-    ? (roiLedgerIds.length > 0
-      && (await Promise.all(roiLedgerIds.map((x) => existsRoiLedgerId(pool, x, scope, roiHasProjectGroup)))).every(Boolean))
-    : true;
-  const dRoiStrong = Array.isArray(irrigation?.roi_ledgers)
-    && irrigation.roi_ledgers.every((x) =>
-      x.baseline != null
-      && hasValidRoiConfidence(x.confidence)
-      && Array.isArray(x.evidence_refs)
-      && x.evidence_refs.length > 0
-    );
+  const reportPayloadOk = isFilled(chain.report_ref) && (String(reportPayload?.identifiers?.operation_id ?? '').trim() === String(chain.report_ref).trim() || String(reportPayload?.identifiers?.operation_plan_id ?? '').trim() === String(chain.report_ref).trim());
+  const fieldMemoryExists = dbAvailable ? (fieldMemoryIds.length > 0 && (await Promise.all(fieldMemoryIds.map((x) => existsFieldMemoryId(pool, x, scope)))).every(Boolean)) : true;
+  const scopeMemoryQ = dbAvailable ? await queryFieldMemoryByScope(pool, { ...scope, field_id: chain.field_id || undefined }) : { rows: [] };
+  const operationMemoryQ = dbAvailable ? await queryFieldMemoryByScope(pool, { ...scope, operation_id: chain.report_ref || undefined, task_id: chain.task_id || undefined }) : { rows: [] };
+  const roiLedgerExists = dbAvailable ? (roiLedgerIds.length > 0 && (await Promise.all(roiLedgerIds.map((x) => existsRoiLedgerId(pool, x, scope, roiHasProjectGroup)))).every(Boolean)) : true;
+  const dRoiStrong = Array.isArray(irrigation?.roi_ledgers) && irrigation.roi_ledgers.every((x) => x.baseline != null && hasValidRoiConfidence(x.confidence) && Array.isArray(x.evidence_refs) && x.evidence_refs.length > 0);
 
   const checks = {
     skill_contract_gap_closure: pass(skillGap?.ok === true),
@@ -272,6 +173,15 @@ async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
     failure_paths: pass(failurePathsOk),
   };
 
+  const debugFailures = buildDebugFailures({
+    skill_contract_gap_closure: skillGap,
+    field_memory: fieldMemory,
+    roi_commercial: roiCommercial,
+    irrigation_mvp0: irrigation,
+    d_failure_stale_observation: dFailureRuns[0],
+    d_failure_insufficient_evidence: dFailureRuns[1],
+    d_failure_approval_rejected: dFailureRuns[2],
+  });
   const rawStatus = Object.values(checks).every((x) => x === 'PASS') ? 'PASS' : 'FAIL';
   const output = {
     release_gate: 'COMMERCIAL_MVP0',
@@ -280,29 +190,10 @@ async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
     db_status: dbAvailable ? 'CONNECTED' : 'SKIPPED',
     gate_mode: strictGate ? 'STRICT' : 'BEST_EFFORT',
     infra_unavailable: infraUnavailable,
-    failure_paths_summary: {
-      pass_count: syntheticFp.filter((x) => x.pass).length,
-      min_required_pass: 3,
-      items: syntheticFp,
-    },
+    debug_failures: debugFailures,
+    failure_paths_summary: { pass_count: syntheticFp.filter((x) => x.pass).length, min_required_pass: 3, items: syntheticFp },
     chain_summary: {
-      field_id: chain.field_id || '',
-      observation_id: chain.observation_id || '',
-      recommendation_id: chain.recommendation_id || '',
-      skill_trace_id: chain.skill_trace_id || '',
-      prescription_id: chain.prescription_id || '',
-      approval_id: chain.approval_id || '',
-      task_id: chain.task_id || '',
-      skill_binding_id: chain.skill_binding_id || '',
-      skill_run_id: chain.skill_run_id || '',
-      receipt_id: chain.receipt_id || '',
-      as_executed_id: chain.as_executed_id || '',
-      post_observation_id: chain.post_observation_id || '',
-      acceptance_id: chain.acceptance_id || '',
-      report_ref: chain.report_ref || '',
-      report_id: chain.report_id || '',
-      field_memory_ids: fieldMemoryIds,
-      roi_ledger_ids: roiLedgerIds,
+      field_id: chain.field_id || '', observation_id: chain.observation_id || '', recommendation_id: chain.recommendation_id || '', skill_trace_id: chain.skill_trace_id || '', prescription_id: chain.prescription_id || '', approval_id: chain.approval_id || '', task_id: chain.task_id || '', skill_binding_id: chain.skill_binding_id || '', skill_run_id: chain.skill_run_id || '', receipt_id: chain.receipt_id || '', as_executed_id: chain.as_executed_id || '', post_observation_id: chain.post_observation_id || '', acceptance_id: chain.acceptance_id || '', report_ref: chain.report_ref || '', report_id: chain.report_id || '', field_memory_ids: fieldMemoryIds, roi_ledger_ids: roiLedgerIds,
     },
   };
 
