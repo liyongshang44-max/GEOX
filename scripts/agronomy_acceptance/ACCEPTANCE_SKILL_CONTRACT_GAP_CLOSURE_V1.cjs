@@ -1,6 +1,6 @@
 const { Pool } = require('pg');
 const { env, fetchJson } = require('./_common.cjs');
-const { seedFormalIrrigationStage1Evidence } = require('./_stage1_formal_irrigation_fixture.cjs');
+const { seedFormalCropContextV1, seedFormalIrrigationStage1Evidence } = require('./_stage1_formal_irrigation_fixture.cjs');
 
 const TASK_NAME = 'COMMERCIAL_MVP0_B_SKILL_CONTRACT_GAP_CLOSURE_FIX';
 const toPassFail = (v) => v ? 'PASS' : 'FAIL';
@@ -90,6 +90,9 @@ async function main() {
     mock_valve_control_skill_query_or_register: 'FAIL',
     skill_contract_fields_complete: 'FAIL',
     skill_binding_created_or_found: 'FAIL',
+    crop_context_confirmed: 'FAIL',
+    crop_context_guard_not_blocking: 'FAIL',
+    recommendation_count_positive: 'FAIL',
     recommendation_has_skill_trace: 'FAIL',
     prescription_keeps_skill_trace: 'FAIL',
     task_binds_device_skill: 'FAIL',
@@ -107,6 +110,7 @@ async function main() {
 
   try {
     const suffix = Date.now();
+    const now_ms = Date.now();
     const field_id = `field_gap_closure_${suffix}`;
     const season_id = `season_gap_closure_${suffix}`;
     const device_id = `device_gap_closure_${suffix}`;
@@ -126,7 +130,8 @@ async function main() {
     if (mockBinding) ids.skill_binding_id = String(mockBinding.binding_id ?? mockBinding.fact_id ?? '');
     checks.skill_binding_created_or_found = toPassFail(Boolean(mockBinding));
 
-    const fixture = await seedFormalIrrigationStage1Evidence(pool, { tenant_id, project_id, group_id, field_id, device_id, pre_soil_moisture: 0.16, sample_mode: 'formal' });
+    await seedFormalCropContextV1(pool, { tenant_id, project_id, group_id, field_id, season_id, crop_code: 'corn', crop_stage: 'V8', now_ms });
+    const fixture = await seedFormalIrrigationStage1Evidence(pool, { tenant_id, project_id, group_id, field_id, season_id, device_id, now_ms, pre_soil_moisture: 0.16, sample_mode: 'formal', crop_code: 'corn', crop_stage: 'V8' });
 
     const gen = await fetchJson(`${base}/api/v1/recommendations/generate`, {
       method: 'POST',
@@ -134,6 +139,12 @@ async function main() {
       body: { tenant_id, project_id, group_id, field_id, season_id, device_id, crop_code: 'corn', stage1_sensing_summary: fixture.stage1_sensing_summary, image_recognition: { stress_score: 0.7, disease_score: 0.1, pest_risk_score: 0.1, confidence: 0.9 } },
     });
     const genJson = requireOk(gen, 'generate recommendation');
+    checks.crop_context_confirmed = toPassFail(genJson.crop_context?.status === 'PLANTED_CONFIRMED' && genJson.crop_context?.crop_code === 'corn' && genJson.crop_context?.crop_stage === 'V8');
+    checks.crop_context_guard_not_blocking = toPassFail((genJson.crop_context_guard?.blocked_crop_specific_recommendations ?? 0) === 0);
+    const recommendation_count = Array.isArray(genJson?.recommendations) ? genJson.recommendations.length : 0;
+    checks.recommendation_count_positive = toPassFail(recommendation_count > 0);
+    if (checks.crop_context_confirmed !== 'PASS') throw new Error(JSON.stringify({ reason: 'CROP_CONTEXT_NOT_CONFIRMED', crop_context: genJson.crop_context }));
+    if (checks.crop_context_guard_not_blocking !== 'PASS') throw new Error(JSON.stringify({ reason: 'CROP_CONTEXT_GUARD_BLOCKED', crop_context_guard: genJson.crop_context_guard }));
     const recommendation = pickIrrigationRecommendation(genJson);
     if (!recommendation?.skill_trace) throw new Error(JSON.stringify({ reason: 'MISSING_SKILL_TRACE', recommendation_generate_response: genJson }));
     ids.recommendation_id = String(recommendation.recommendation_id ?? '');
@@ -217,7 +228,7 @@ async function main() {
     checks.roi_refs_skill_trace_or_source_skill = toPassFail(roiRefOk);
 
     const allPass = Object.values(checks).every((x) => x === 'PASS') && Object.values(failure_paths).every((x) => x === 'PASS');
-    process.stdout.write(`${JSON.stringify({ ok: allPass, task: TASK_NAME, checks, failure_paths, ids }, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify({ ok: allPass, task: TASK_NAME, checks, failure_paths, recommendation_count, crop_context: genJson.crop_context, crop_context_guard: genJson.crop_context_guard, ids }, null, 2)}\n`);
     if (!allPass) process.exitCode = 1;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
