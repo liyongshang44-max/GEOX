@@ -6,16 +6,16 @@ services:
     image: postgres:16
     container_name: geox-v1-postgres
     environment:
-      POSTGRES_USER: landos
-      POSTGRES_PASSWORD: landos_pwd
-      POSTGRES_DB: landos
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
     ports:
       - "5433:5432"
     volumes:
       - geox_v1_pgdata:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U landos -d landos -h 127.0.0.1 -p 5432"]
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\" -h 127.0.0.1 -p 5432"]
       interval: 3s
       timeout: 2s
       retries: 20
@@ -32,8 +32,8 @@ services:
     container_name: geox-v1-minio
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
     ports:
       - "9000:9000"
       - "9002:9001"
@@ -52,8 +52,8 @@ services:
       minio:
         condition: service_healthy
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
       GEOX_EVIDENCE_S3_BUCKET: ${GEOX_EVIDENCE_S3_BUCKET:-evidence-exports-v1}
     restart: "no"
     entrypoint: ["/bin/sh", "-ceu"]
@@ -92,7 +92,7 @@ services:
     command: ["node", "apps/server/dist/server.js"]
     environment:
       DB_DRIVER: postgres
-      DATABASE_URL: postgres://landos:landos_pwd@postgres:5432/landos
+      DATABASE_URL: postgres://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
       DB_STRICT: "1"
       NODE_ENV: development
       GEOX_RUNTIME_ENV: test
@@ -114,8 +114,8 @@ services:
       GEOX_EVIDENCE_S3_PUBLIC_ENDPOINT: ${GEOX_EVIDENCE_S3_PUBLIC_ENDPOINT:-http://127.0.0.1:9000}
       GEOX_EVIDENCE_S3_BUCKET: ${GEOX_EVIDENCE_S3_BUCKET:-evidence-exports-v1}
       GEOX_EVIDENCE_S3_REGION: us-east-1
-      GEOX_EVIDENCE_S3_ACCESS_KEY_ID: minioadmin
-      GEOX_EVIDENCE_S3_SECRET_ACCESS_KEY: minioadmin
+      GEOX_EVIDENCE_S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}
+      GEOX_EVIDENCE_S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
       GEOX_EVIDENCE_S3_FORCE_PATH_STYLE: "true"
       GEOX_EVIDENCE_S3_PRESIGN_TTL_SEC: "900"
       GEOX_AO_ACT_TOKEN: ${GEOX_AO_ACT_TOKEN:?GEOX_AO_ACT_TOKEN is required}
@@ -156,7 +156,7 @@ services:
     command: ["node", "apps/telemetry-ingest/dist/main.js"]
     environment:
       DB_DRIVER: postgres
-      DATABASE_URL: postgres://landos:landos_pwd@postgres:5432/landos
+      DATABASE_URL: postgres://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
       DB_STRICT: "1"
       NODE_ENV: development
       GEOX_SYSTEM_PROFILE: commercial_v1
@@ -186,7 +186,7 @@ services:
     command: ["node", "apps/server/dist/jobs/runtime.js"]
     environment:
       DB_DRIVER: postgres
-      DATABASE_URL: postgres://landos:landos_pwd@postgres:5432/landos
+      DATABASE_URL: postgres://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
       DB_STRICT: "1"
       NODE_ENV: development
       GEOX_SYSTEM_PROFILE: commercial_v1
@@ -216,13 +216,13 @@ services:
     command: ["node", "apps/executor/dist/runtime_loop.js"]
     environment:
       DB_DRIVER: postgres
-      DATABASE_URL: postgres://landos:landos_pwd@postgres:5432/landos
+      DATABASE_URL: postgres://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
       DB_STRICT: "1"
       NODE_ENV: development
       GEOX_SYSTEM_PROFILE: commercial_v1
       GEOX_INTERNAL_BASE_URL: http://server:3000
       GEOX_BASE_URL: http://server:3000
-      GEOX_AO_ACT_TOKEN: ${GEOX_EXECUTOR_TOKEN:-executor_token}
+      GEOX_AO_ACT_TOKEN: ${GEOX_EXECUTOR_TOKEN:?GEOX_EXECUTOR_TOKEN is required}
       GEOX_TENANT_ID: tenantA
       GEOX_PROJECT_ID: projectA
       GEOX_GROUP_ID: groupA
