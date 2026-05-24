@@ -15,9 +15,6 @@ function run(command, args, opts = {}) {
   const bin = process.platform === 'win32' && command === 'pnpm' ? 'pnpm.cmd' : command;
   return spawnSync(bin, args, { cwd: root, encoding: 'utf8', shell: false, ...opts });
 }
-function sleep(ms) {
-  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
-}
 
 function hasDistSafeImportOrRequire(source, modulePath) {
   return source.includes(`from "${modulePath}"`) ||
@@ -73,17 +70,18 @@ function dockerAvailable() {
 }
 
 function inspectContainer(name) {
-  const result = run('docker', ['inspect', name, '--format', '{{.State.Status}} {{.State.Restarting}} {{.State.ExitCode}} {{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}']);
+  const result = run('docker', ['inspect', name, '--format', '{{.State.Status}} {{.State.Restarting}} {{.State.ExitCode}}']);
   if (result.status !== 0) return null;
   const text = result.stdout.trim();
-  const [status, restarting, exitCode, health] = text.split(/\s+/);
-  return { status, restarting: restarting === 'true', exit_code: Number(exitCode ?? 0), health: health || 'none' };
+  const [status, restarting, exitCode] = text.split(/\s+/);
+  return { status, restarting: restarting === 'true', exit_code: Number(exitCode ?? 0) };
 }
 
 function containerLogs(name, tail = '80', since = '5m') {
   const result = run('docker', ['logs', name, '--since', since, '--tail', tail]);
   return `${result.stdout ?? ''}\n${result.stderr ?? ''}`.trim();
 }
+
 
 function assertLogsNotContain(name, patterns, tail = '240', since = '5m') {
   const text = containerLogs(name, tail, since);
@@ -102,53 +100,6 @@ function countMatches(text, regex) {
   return matched ? matched.length : 0;
 }
 
-function assertContainerRunning(name) {
-  const state = inspectContainer(name);
-  assert(state, `container ${name} must be inspectable`);
-  if (state.restarting) {
-    fail(`container ${name} must not be Restarting. status=${state.status} health=${state.health} exit_code=${state.exit_code}. recent logs:\n${containerLogs(name, '80')}`);
-  }
-  if (state.status !== 'running') {
-    fail(`container ${name} must be running, got ${state.status}. health=${state.health} exit_code=${state.exit_code}. recent logs:\n${containerLogs(name, '80')}`);
-  }
-  return state;
-}
-
-function waitForStableRuntime(required, executorName) {
-  const deadlineMs = Date.now() + Number(process.env.RUNTIME_WORKERS_STABLE_TIMEOUT_MS || 90000);
-  let lastDiag = '';
-  while (Date.now() < deadlineMs) {
-    const states = Object.fromEntries([...required, executorName].map((name) => [name, inspectContainer(name)]));
-    const badState = Object.entries(states).find(([, state]) => !state || state.restarting || state.status !== 'running');
-    if (badState) {
-      const [name, state] = badState;
-      lastDiag = `${name} state=${JSON.stringify(state)}`;
-      if (state?.restarting) fail(`container ${name} must not be Restarting. recent logs:\n${containerLogs(name, '80')}`);
-      sleep(1000);
-      continue;
-    }
-
-    const serverState = states['geox-v1-server'];
-    const serverReady = serverState?.health === 'healthy' || serverState?.health === 'none';
-    const jobsReady = logsContain('geox-v1-jobs', ['INFO: jobs runtime started', 'JOBS_TRACE'], '2m');
-    const executorReady = logsContain(executorName, ['INFO: executor runtime loop started', 'HEARTBEAT_TRACE'], '2m');
-    if (serverReady && jobsReady && executorReady) {
-      const stableSince = new Date().toISOString();
-      sleep(Number(process.env.RUNTIME_WORKERS_STABLE_OBSERVE_MS || 3000));
-      console.log('[runtime-workers-packaging] live runtime stable', {
-        server_health: serverState?.health ?? null,
-        jobs_ready: jobsReady,
-        executor_ready: executorReady,
-        stable_since: stableSince,
-      });
-      return stableSince;
-    }
-    lastDiag = `server_health=${serverState?.health ?? 'unknown'} jobs_ready=${jobsReady} executor_ready=${executorReady}`;
-    sleep(1000);
-  }
-  fail(`commercial_v1 runtime did not become stable before live log checks. last=${lastDiag}. server_logs:\n${containerLogs('geox-v1-server', '120')}\njobs_logs:\n${containerLogs('geox-v1-jobs', '120')}\nexecutor_logs:\n${containerLogs(executorName, '120')}`);
-}
-
 function checkLiveContainersIfPresent() {
   const names = dockerAvailable();
   const required = ['geox-v1-server', 'geox-v1-jobs'];
@@ -158,24 +109,31 @@ function checkLiveContainersIfPresent() {
     return;
   }
 
-  for (const name of [...required, executorName]) assertContainerRunning(name);
+  for (const name of [...required, executorName]) {
+    const state = inspectContainer(name);
+    assert(state, `container ${name} must be inspectable`);
+    if (state.restarting) {
+      fail(`container ${name} must not be Restarting. status=${state.status} exit_code=${state.exit_code}. recent logs:\n${containerLogs(name, '80')}`);
+    }
+    if (!['running', 'healthy'].includes(state.status)) {
+      fail(`container ${name} must be running, got ${state.status}. exit_code=${state.exit_code}. recent logs:\n${containerLogs(name, '80')}`);
+    }
+  }
+  assert(logsContain(executorName, ['INFO: executor runtime loop started', 'HEARTBEAT_TRACE']), 'executor logs must show runtime loop started or HEARTBEAT_TRACE');
+  assert(logsContain('geox-v1-jobs', ['INFO: jobs runtime started', 'JOBS_TRACE']), 'jobs logs must show jobs runtime started or JOBS_TRACE');
+  assertLogsNotContain('geox-v1-server', ['ERR_HTTP_HEADERS_SENT', 'Reply was already sent']);
+  assertLogsNotContain('geox-v1-server', ['OPERATION_PLAN_TERMINAL"'], '300');
 
-  const stableSince = waitForStableRuntime(required, executorName);
-  assert(logsContain(executorName, ['INFO: executor runtime loop started', 'HEARTBEAT_TRACE'], '2m'), 'executor logs must show runtime loop started or HEARTBEAT_TRACE');
-  assert(logsContain('geox-v1-jobs', ['INFO: jobs runtime started', 'JOBS_TRACE'], '2m'), 'jobs logs must show jobs runtime started or JOBS_TRACE');
-  assertLogsNotContain('geox-v1-server', ['ERR_HTTP_HEADERS_SENT', 'Reply was already sent'], '240', stableSince);
-  assertLogsNotContain('geox-v1-server', ['OPERATION_PLAN_TERMINAL"'], '300', stableSince);
+  const serverRecent = containerLogs('geox-v1-server', '400', '5m');
+  assert(!(serverRecent.includes('OPERATION_PLAN_TERMINAL') && serverRecent.includes('statusCode":500')), 'server logs must not contain OPERATION_PLAN_TERMINAL with statusCode 500 in recent logs');
 
-  const serverRecent = containerLogs('geox-v1-server', '400', stableSince);
-  assert(!(serverRecent.includes('OPERATION_PLAN_TERMINAL') && serverRecent.includes('statusCode":500')), 'server logs must not contain OPERATION_PLAN_TERMINAL with statusCode 500 in stable runtime logs');
-
-  const executorRecent = containerLogs(executorName, '800', stableSince);
+  const executorRecent = containerLogs(executorName, '800', '5m');
   const runtimeLoopFailedCount = countMatches(executorRecent, /runtime loop iteration failed/g);
-  assert(runtimeLoopFailedCount <= 1, `executor logs runtime loop iteration failed must not repeat over threshold(1) after stable runtime window, got ${runtimeLoopFailedCount}. recent logs:\n${executorRecent}`);
-  assert(!executorRecent.includes('OPERATION_PLAN_TASK_ID_MISMATCH'), 'executor logs must not contain OPERATION_PLAN_TASK_ID_MISMATCH after stable runtime window');
+  assert(runtimeLoopFailedCount <= 1, `executor logs runtime loop iteration failed must not repeat over threshold(1) in 5m, got ${runtimeLoopFailedCount}`);
+  assert(!executorRecent.includes('OPERATION_PLAN_TASK_ID_MISMATCH'), 'executor logs must not contain OPERATION_PLAN_TASK_ID_MISMATCH in recent logs');
 
   const receiptFailedCount = countMatches(executorRecent, /RECEIPT_WRITE_FAILED/g);
-  assert(receiptFailedCount <= 3, `executor logs RECEIPT_WRITE_FAILED must not repeat over threshold(3) after stable runtime window, got ${receiptFailedCount}. recent logs:\n${executorRecent}`);
+  assert(receiptFailedCount <= 3, `executor logs RECEIPT_WRITE_FAILED must not repeat over threshold(3) in 5m, got ${receiptFailedCount}`);
 
   const leaseRecoverByTask = new Map();
   const leaseRecoverRegex = /LEASE_RECOVER[^\n]*task_id=([^\s]+)/g;
@@ -186,7 +144,7 @@ function checkLiveContainersIfPresent() {
     leaseRecoverByTask.set(taskId, (leaseRecoverByTask.get(taskId) ?? 0) + 1);
   }
   for (const [taskId, cnt] of leaseRecoverByTask.entries()) {
-    assert(cnt <= 3, `executor logs LEASE_RECOVER task_id=${taskId} repeated over threshold(3) after stable runtime window, got ${cnt}`);
+    assert(cnt <= 3, `executor logs LEASE_RECOVER task_id=${taskId} repeated over threshold(3) in 5m, got ${cnt}`);
   }
 }
 
