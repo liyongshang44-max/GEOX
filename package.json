@@ -56,6 +56,7 @@
     "ci:base-contract:p0": "node scripts/governance_acceptance/ACCEPTANCE_BASE_CONTRACT_P0_RELEASE_GATE_V1.cjs",
     "ci:runtime:workers": "node scripts/governance_acceptance/ACCEPTANCE_RUNTIME_WORKERS_PRODUCTION_PACKAGING_V1.cjs",
     "ci:p1-smoke:preflight-idempotent": "node scripts/governance_acceptance/ACCEPTANCE_P1_SMOKE_PREFLIGHT_IDEMPOTENT_V1.cjs",
+    "ci:stage1-fixture:raw-sample-contract": "node scripts/governance_acceptance/ACCEPTANCE_STAGE1_FIXTURE_RAW_SAMPLE_CONTRACT_V1.cjs",
     "ci:commercial:runtime": "pnpm run ci:runtime:workers",
     "ci:governance:full-base-contract": "pnpm run ci:governance:fact-envelope && pnpm run ci:governance:appleii-time-coverage && pnpm run ci:governance:problem-state-uncertainty && pnpm run ci:governance:stage1-trigger-evidence-gate && pnpm run ci:governance:aosense-aoact-partition && pnpm run ci:governance:control-kernel-non-action-boundary && pnpm run ci:governance:ruleset-loading-boundary && pnpm run ci:governance:skill-constitution && pnpm run ci:governance:skill-category-boundary && pnpm run ci:governance:api-inventory-enforcement && pnpm run ci:governance:fallback-retirement-enforcement && pnpm run ci:governance:appleii-formal-evidence-dynamic-e2e && pnpm run ci:governance:base-contract-negative",
     "ci:scenario:formal-irrigation": "node scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_IRRIGATION_E2E_V1.cjs",
