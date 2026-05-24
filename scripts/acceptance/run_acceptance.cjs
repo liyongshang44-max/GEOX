@@ -150,11 +150,14 @@ function runStep(step, envOverrides = {}) {
     console.log(`[acceptance] CMD   ${step.command}`);
 
     const parts = String(step.command || '').trim().split(/\s+/).filter(Boolean);
-    const cmd = parts[0] || '';
+    const rawCmd = parts[0] || '';
     const cmdArgs = parts.slice(1);
-    const pnpmSpawn = isWindows && cmd === 'pnpm' ? 'pnpm.cmd' : cmd;
+    const spawnCmd = isWindows && rawCmd === 'pnpm' ? 'pnpm.cmd' : rawCmd;
+    if (!spawnCmd) {
+      throw new Error(`INVALID_STEP_COMMAND:${step.id}`);
+    }
 
-    const child = spawn(pnpmSpawn, cmdArgs, {
+    const child = spawn(spawnCmd, cmdArgs, {
       cwd: repoRoot,
       env: {
         ...process.env,
