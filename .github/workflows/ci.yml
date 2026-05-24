@@ -63,15 +63,12 @@ jobs:
 
       - name: Prepare commercial compose env
         run: |
-          TOKEN="${{ secrets.GEOX_ACCEPTANCE_TOKEN }}"
-          if [ -z "$TOKEN" ]; then TOKEN="${{ secrets.GEOX_AO_ACT_TOKEN }}"; fi
-          if [ -z "$TOKEN" ]; then
-            echo "missing GitHub Actions secret for acceptance token: configure GEOX_ACCEPTANCE_TOKEN (recommended) or GEOX_AO_ACT_TOKEN"
-            exit 1
-          fi
+          ACCEPTANCE_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.role==='admin' && x.scopes.includes('security.admin') && !x.revoked); if(!t) { console.error('missing active admin security.admin token'); process.exit(1); } console.log(t.token)")"
+          EXECUTOR_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.token==='tenant_a_admin_token' && x.scopes.includes('ao_act.task.write') && x.scopes.includes('ao_act.receipt.write') && !x.revoked); if(!t) { console.error('missing active executor-compatible acceptance token'); process.exit(1); } console.log(t.token)")"
           cat > .env.ci <<EOF
-          GEOX_AO_ACT_TOKEN=$TOKEN
-          GEOX_TOKEN=$TOKEN
+          GEOX_AO_ACT_TOKEN=$ACCEPTANCE_TOKEN
+          GEOX_TOKEN=$ACCEPTANCE_TOKEN
+          GEOX_EXECUTOR_TOKEN=$EXECUTOR_TOKEN
           GEOX_EVIDENCE_S3_BUCKET=evidence-exports-v1
           GEOX_EVIDENCE_S3_PUBLIC_ENDPOINT=http://127.0.0.1:9000
           MINIO_ROOT_USER=minioadmin
