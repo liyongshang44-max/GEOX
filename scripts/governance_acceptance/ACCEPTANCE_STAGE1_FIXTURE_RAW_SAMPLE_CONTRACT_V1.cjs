@@ -59,10 +59,23 @@ assert(fixture.includes('((5 * 60) + 50) * 60 * 1000'), 'fixture must use 5h50m 
 assert(fixture.includes('FORMAL_SAMPLE_INTERVAL_MS'), 'fixture must define explicit formal sample interval');
 assert(fixture.includes('FORMAL_SAMPLE_POINT_COUNT = 12'), 'fixture must keep 12 formal sample time points');
 
-async function assertDynamicFormalWindow() {
-  const { seedFormalIrrigationStage1Evidence } = require(fixturePath);
+assert(fixture.includes('seedFormalCropContextV1'), 'fixture must export seedFormalCropContextV1');
+assert(fixture.includes("type: 'crop_context_v1'"), 'crop context fixture must use type crop_context_v1');
+assert(fixture.includes("status: 'PLANTED_CONFIRMED'"), 'crop context fixture must use PLANTED_CONFIRMED');
+assert(fixture.includes("crop_code = 'corn'"), 'crop context fixture default crop_code must be corn');
+assert(fixture.includes("crop_stage = 'V8'"), 'crop context fixture default crop_stage must be V8');
+assert(fixture.includes("fixture: 'commercial_mvp0_crop_context'"), 'crop context fixture must identify commercial_mvp0_crop_context');
+assert(!compact.includes("record = { type: 'crop_context_v1', tenant_id"), 'crop context fields must not be written at record root');
+assert(compact.includes('payload: { tenant_id, project_id, group_id, field_id, season_id'), 'crop context tenant/project/group/field/season must be under payload');
+
+async function assertDynamicFormalWindowAndCropContext() {
+  const { seedFormalCropContextV1, seedFormalIrrigationStage1Evidence } = require(fixturePath);
+  assert(typeof seedFormalCropContextV1 === 'function', 'seedFormalCropContextV1 must be exported as a function');
+  assert(typeof seedFormalIrrigationStage1Evidence === 'function', 'seedFormalIrrigationStage1Evidence must be exported as a function');
+
   const nowMs = 1_800_000_000_000;
   const rawSamples = [];
+  const cropContextFacts = [];
   const pool = {
     async query(sql, params = []) {
       if (String(sql).includes('INSERT INTO raw_samples')) {
@@ -77,6 +90,12 @@ async function assertDynamicFormalWindow() {
           payload_json: JSON.parse(params[7]),
         });
       }
+      if (String(sql).includes('INSERT INTO facts')) {
+        const record = JSON.parse(params[2]);
+        if (record?.type === 'crop_context_v1') {
+          cropContextFacts.push({ fact_id: params[0], occurred_at_ts_ms: params[1], source: 'acceptance_fixture', record });
+        }
+      }
       return { rows: [], rowCount: 0 };
     },
   };
@@ -85,7 +104,7 @@ async function assertDynamicFormalWindow() {
     tenant_id: 'tenantA',
     project_id: 'projectA',
     group_id: 'groupA',
-    field_id: 'field_stage1_fixture_contract',
+    field_id: 'field_gap_closure_1800000000000',
     device_id: 'device_stage1_fixture_contract',
     now_ms: nowMs,
     sample_mode: 'formal',
@@ -117,8 +136,21 @@ async function assertDynamicFormalWindow() {
   const expectedLast = nowMs - (20 * 60 * 1000);
   assert(minTs === expectedFirst, 'formal fixture first sample must use 5h50m start buffer', { min_ts: minTs, expected_first: expectedFirst });
   assert(maxTs === expectedLast, 'formal fixture last sample must land at now_ms - 20m', { max_ts: maxTs, expected_last: expectedLast });
+
+  assert(cropContextFacts.length >= 1, 'formal irrigation fixture must seed crop_context_v1 before recommendation generate');
+  const cropPayload = cropContextFacts[0].record.payload;
+  assert(cropContextFacts[0].record.type === 'crop_context_v1', 'crop context fact type must be crop_context_v1');
+  assert(cropPayload.tenant_id === 'tenantA', 'crop context tenant_id must be under payload');
+  assert(cropPayload.project_id === 'projectA', 'crop context project_id must be under payload');
+  assert(cropPayload.group_id === 'groupA', 'crop context group_id must be under payload');
+  assert(cropPayload.field_id === 'field_gap_closure_1800000000000', 'crop context field_id must be under payload');
+  assert(cropPayload.season_id === 'season_gap_closure_1800000000000', 'crop context season_id must be under payload and match field fixture');
+  assert(cropPayload.status === 'PLANTED_CONFIRMED', 'crop context status must be PLANTED_CONFIRMED');
+  assert(cropPayload.crop_code === 'corn', 'crop context crop_code must be corn');
+  assert(cropPayload.crop_stage === 'V8', 'crop context crop_stage must be V8');
+  assert(cropPayload.source === 'USER_DECLARED', 'crop context source must be USER_DECLARED');
 }
 
-assertDynamicFormalWindow()
+assertDynamicFormalWindowAndCropContext()
   .then(() => console.log('[stage1-fixture-raw-sample-contract] PASS'))
   .catch((error) => fail(error instanceof Error ? error.message : String(error)));
