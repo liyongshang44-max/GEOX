@@ -18,6 +18,47 @@ function nowMsFrom(opts) {
   return Number.isFinite(Number(opts?.now_ms)) ? Number(opts.now_ms) : Date.now();
 }
 
+async function seedFormalCropContextV1(pool, {
+  tenant_id,
+  project_id,
+  group_id,
+  field_id,
+  season_id,
+  crop_code = 'corn',
+  crop_stage = 'V8',
+  now_ms = Date.now(),
+}) {
+  const fact_id = `cropctx_${randomUUID()}`;
+  const record = {
+    type: 'crop_context_v1',
+    schema_version: '1',
+    payload: {
+      tenant_id,
+      project_id,
+      group_id,
+      field_id,
+      season_id,
+      status: 'PLANTED_CONFIRMED',
+      crop_code,
+      crop_stage,
+      variety_code: 'demo_corn',
+      planting_date: new Date(now_ms - 45 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+      confidence: 0.9,
+      source: 'USER_DECLARED',
+      fixture: 'commercial_mvp0_crop_context',
+    },
+  };
+
+  await pool.query(
+    `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+     VALUES ($1, to_timestamp($2 / 1000.0), 'acceptance_fixture', $3::jsonb)
+     ON CONFLICT (fact_id) DO NOTHING`,
+    [fact_id, now_ms, JSON.stringify(record)]
+  );
+
+  return { fact_id, crop_context: record.payload };
+}
+
 async function ensureStage1FixtureColumns(pool) {
   await pool.query(`ALTER TABLE derived_sensing_state_index_v1 ADD COLUMN IF NOT EXISTS project_id text`);
   await pool.query(`ALTER TABLE derived_sensing_state_index_v1 ADD COLUMN IF NOT EXISTS group_id text`);
@@ -234,4 +275,4 @@ async function seedFormalIrrigationStage1Evidence(pool, opts) {
   };
 }
 
-module.exports = { seedFormalIrrigationStage1Evidence };
+module.exports = { seedFormalIrrigationStage1Evidence, seedFormalCropContextV1 };
