@@ -45,21 +45,28 @@ function findText(pattern, options = {}) {
   return hits;
 }
 
-const contractPath = 'docs/contracts/AO_ACT_VERSION_BOUNDARY_V1.md';
+const restContractPath = 'docs/controlplane/GEOX-CP-ControlPlane-REST-v1.md';
+const aoActContractPath = 'docs/controlplane/GEOX-CP-AO-ACT-Contracts-v0.md';
 const routePath = 'apps/server/src/routes/control_ao_act.ts';
 const v1RoutePath = 'apps/server/src/routes/v1/ao_act.ts';
+const approvalRoutePath = 'apps/server/src/routes/control_approval_request_v1.ts';
 const scopePath = 'apps/server/src/auth/resource_scope_v1.ts';
 
-assert(fs.existsSync(path.join(root, contractPath)), `missing contract: ${contractPath}`);
-assert(fs.existsSync(path.join(root, routePath)), `missing route file: ${routePath}`);
-assert(fs.existsSync(path.join(root, v1RoutePath)), `missing v1 route file: ${v1RoutePath}`);
-assert(fs.existsSync(path.join(root, scopePath)), `missing scope file: ${scopePath}`);
+for (const p of [restContractPath, aoActContractPath, routePath, v1RoutePath, approvalRoutePath, scopePath]) {
+  assert(fs.existsSync(path.join(root, p)), `missing required file: ${p}`);
+}
 
-const contract = read(contractPath);
-assert(contract.includes('/api/v1/actions/*'), 'contract must explicitly define /api/v1/actions/* as AO-ACT product ingress');
-assert(contract.includes('ao_act_task_v0'), 'contract must explicitly freeze current task fact type ao_act_task_v0');
-assert(contract.includes('ao_act_receipt_v0'), 'contract must explicitly freeze current receipt fact type ao_act_receipt_v0');
-assert(contract.includes('API v1 does not imply fact type v1'), 'contract must state API version and fact type version are separate');
+const restContract = read(restContractPath);
+assert(restContract.includes('主入口为 `/api/v1/*`'), 'REST v1 contract must define /api/v1/* as the external primary entry');
+assert(restContract.includes('v1 入口允许复用 v0 AO-ACT 运行时'), 'REST v1 contract must explicitly allow v1 wrappers to reuse AO-ACT v0 runtime');
+assert(restContract.includes('创建 `ao_act_task_v0`'), 'REST v1 contract must state approval-created action tasks are ao_act_task_v0');
+assert(restContract.includes('生成 `ao_act_task_v0`'), 'REST v1 AO-ACT task wrapper must state it generates ao_act_task_v0');
+assert(restContract.includes('生成 `ao_act_receipt_v0`'), 'REST v1 AO-ACT receipt wrapper must state it generates ao_act_receipt_v0');
+
+const aoActContract = read(aoActContractPath);
+assert(aoActContract.includes('type (required, const) = "ao_act_task_v0"'), 'AO-ACT v0 contract must freeze task fact type');
+assert(aoActContract.includes('type (required, const) = "ao_act_receipt_v0"'), 'AO-ACT v0 contract must freeze receipt fact type');
+assert(aoActContract.includes('Ledger 中以 record_json 存储'), 'AO-ACT v0 contract must define facts record_json ledger shape');
 
 const route = read(routePath);
 assert(route.includes('app.post("/api/v1/actions/task"'), 'AO-ACT task must keep /api/v1/actions/task as primary route');
@@ -69,6 +76,11 @@ assert(route.includes('type: "ao_act_receipt_v0"'), 'current receipt writer must
 
 const v1Route = read(v1RoutePath);
 assert(v1Route.includes('registerAoActV1Routes'), 'v1 AO-ACT route module must delegate primary /api/v1/actions routes');
+assert(v1Route.includes('type: "ao_act_task_v0"'), 'variable prescription task candidate route must still write ao_act_task_v0 until migration');
+
+const approvalRoute = read(approvalRoutePath);
+assert(approvalRoute.includes('/api/v1/actions/task'), 'approval approve flow must issue tasks through /api/v1/actions/task');
+assert(approvalRoute.includes('AO_ACT_TASK_ISSUE_FAILED'), 'approval approve flow must surface AO-ACT task issue failures');
 
 const scope = read(scopePath);
 assert(scope.includes("record_json::jsonb->>'type' = 'ao_act_task_v0'"), 'getActionTaskScopeV1 must read current ao_act_task_v0 facts');
@@ -98,37 +110,10 @@ const receiptV1Writers = findText(/type:\s*["']ao_act_receipt_v1["']|type\s*=\s*
 });
 assert(receiptV1Writers.length === 0, `do not introduce ao_act_receipt_v1 writers before migration: ${receiptV1Writers.join(', ')}`);
 
-const knownReceiptV1CompatibilityReads = findText('ao_act_receipt_v1', {
-  roots: ['apps/server/src', 'apps/executor/src'],
-});
-const allowedReceiptV1CompatibilityReads = new Set([
-  'apps/server/src/routes/billing_v1.ts',
-  'apps/server/src/projections/program_timeline_v1.ts',
-  'apps/server/src/routes/dashboard_v1.ts',
-  'apps/server/src/routes/reports_v1.ts',
-  'apps/server/src/routes/acceptance_v1.ts',
-  'apps/server/src/routes/operation_state_v1.ts',
-  'apps/server/src/routes/evidence_export_jobs_v1.ts',
-  'apps/server/src/projections/operation_report_chain_v1.ts',
-  'apps/server/src/projections/manual_execution_quality_v1.ts',
-  'apps/executor/src/run_dispatch_once.ts',
-  'apps/executor/src/adapters/irrigation_simulator.ts',
-  'apps/server/src/routes/evidence_report_v1.ts',
-  'apps/server/src/domain/controlplane/task_service.ts',
-  'apps/server/src/routes/evidence_bundle_v1.ts',
-  'apps/server/src/routes/sla_v1.ts',
-  'apps/server/src/domain/execution/as_executed_v1.ts',
-  'apps/server/src/projections/operation_state_v1.ts',
-  'apps/server/src/routes/delivery_evidence_export_v1.ts',
-  'apps/executor/src/run_mqtt_receipt_uplink_once.ts',
-]);
-const unexpectedReceiptV1Reads = knownReceiptV1CompatibilityReads.filter((p) => !allowedReceiptV1CompatibilityReads.has(p));
-assert(unexpectedReceiptV1Reads.length === 0, `new ao_act_receipt_v1 compatibility reads must be reviewed and allowlisted: ${unexpectedReceiptV1Reads.join(', ')}`);
-
 console.log('[ao-act-version-boundary] PASS', {
+  rest_contract: restContractPath,
+  ao_act_contract: aoActContractPath,
   product_ingress: '/api/v1/actions/*',
   current_task_fact_type: 'ao_act_task_v0',
   current_receipt_fact_type: 'ao_act_receipt_v0',
-  compatibility_receipt_v1_reads: knownReceiptV1CompatibilityReads.length,
-  contract: contractPath,
 });
