@@ -20,6 +20,37 @@ function hasValidRoiConfidence(confidence) {
     && Array.isArray(confidence.reasons);
 }
 
+function pickRepresentativeFieldMemoryIds(rows) {
+  const items = Array.isArray(rows) ? rows : [];
+  const picked = [];
+  const pushId = (row) => {
+    const id = String(row?.memory_id ?? '').trim();
+    if (id && !picked.includes(id)) picked.push(id);
+  };
+  const pushFirstByType = (type) => {
+    pushId(items.find((x) => String(x?.memory_type ?? '') === type));
+  };
+
+  pushFirstByType('FIELD_RESPONSE_MEMORY');
+  pushFirstByType('DEVICE_RELIABILITY_MEMORY');
+  pushFirstByType('SKILL_PERFORMANCE_MEMORY');
+
+  for (const row of items) {
+    pushId(row);
+    if (picked.length >= 3) break;
+  }
+
+  return picked.slice(0, 3);
+}
+
+function memoryTypesForIds(rows, ids) {
+  const idSet = new Set((Array.isArray(ids) ? ids : []).map((x) => String(x ?? '').trim()).filter(Boolean));
+  return new Set((Array.isArray(rows) ? rows : [])
+    .filter((row) => idSet.has(String(row?.memory_id ?? '').trim()))
+    .map((row) => String(row?.memory_type ?? '').trim())
+    .filter(Boolean));
+}
+
 function buildIrrigationReceiptBody({ tenant_id, project_id, group_id, operation_plan_id, act_task_id, field_id, suffix, recommendation_id, prescription_id, skill_trace_ref }) {
   return {
     tenant_id,
@@ -290,7 +321,11 @@ function stage1FailureReasonFromGenerate(gen, fallback) {
   if (!hasConfidence || !hasBaseline || !hasEvidenceRefs) failureReasons.push('LOW_CONFIDENCE_ROI');
 
   const memoryQ = await queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, field_id });
-  const field_memory_ids = (memoryQ.rows ?? []).slice(0, 3).map((r) => String(r.memory_id ?? '').trim()).filter(Boolean);
+  const field_memory_ids = pickRepresentativeFieldMemoryIds(memoryQ.rows ?? []);
+  const fieldMemoryTypes = memoryTypesForIds(memoryQ.rows ?? [], field_memory_ids);
+  const fieldMemoryIdsCoverCoreTypes = fieldMemoryTypes.has('FIELD_RESPONSE_MEMORY')
+    && fieldMemoryTypes.has('DEVICE_RELIABILITY_MEMORY')
+    && fieldMemoryTypes.has('SKILL_PERFORMANCE_MEMORY');
   const memoryByOperation = await queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, operation_id: operation_plan_id || undefined, task_id: task_id || undefined, recommendation_id, prescription_id, acceptance_id });
   const memoryIdsExist = await assertFieldMemoryIdsExist(pool, field_memory_ids);
 
@@ -328,6 +363,7 @@ function stage1FailureReasonFromGenerate(gen, fallback) {
     crop_context_guard_not_blocking: (genJson.crop_context_guard?.blocked_crop_specific_recommendations ?? 0) === 0,
     recommendation_count_positive: recommendation_count > 0,
     field_memory_at_least_three: blocked ? true : field_memory_ids.length >= 3,
+    field_memory_ids_cover_core_types: blocked ? true : fieldMemoryIdsCoverCoreTypes,
     field_memory_query_by_operation: blocked ? true : (memoryByOperation.rows?.length ?? 0) >= 1,
     field_memory_ids_exist: blocked ? true : memoryIdsExist,
     roi_has_baseline_and_confidence_or_blocked: blocked ? true : roi_ledger_ids.length > 0,
@@ -340,7 +376,7 @@ function stage1FailureReasonFromGenerate(gen, fallback) {
     no_raw_enum_in_customer_report: blocked ? true : noRawEnumInCustomerReport,
   };
   Object.entries(checks).forEach(([k, v]) => assert.equal(v, true, `check failed: ${k}`));
-  process.stdout.write(`${JSON.stringify({ ok: true, blocked, failure_reasons: failureReasons, failure_audit_summary, recommendation_count, crop_context: genJson.crop_context, crop_context_guard: genJson.crop_context_guard, chain_summary, roi_ledgers, checks }, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({ ok: true, blocked, failure_reasons: failureReasons, failure_audit_summary, recommendation_count, crop_context: genJson.crop_context, crop_context_guard: genJson.crop_context_guard, chain_summary, field_memory_types: Array.from(fieldMemoryTypes), roi_ledgers, checks }, null, 2)}\n`);
   await pool.end();
 })().catch((err) => {
   console.error(err);
