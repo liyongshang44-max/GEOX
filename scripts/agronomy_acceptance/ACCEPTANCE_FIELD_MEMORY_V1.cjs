@@ -149,18 +149,36 @@ function pickFirstObject(...candidates) {
 }
 
 function pickAcceptanceField(acceptanceJson, key) {
-  const formalGate = pickFirstObject(acceptanceJson?.formal_gate, acceptanceJson?.formal_acceptance_gate, acceptanceJson?.formal_evidence_gate);
-  const metrics = pickFirstObject(acceptanceJson?.metrics, formalGate?.metrics);
+  const acceptance = pickFirstObject(acceptanceJson?.acceptance);
+  const formalGate = pickFirstObject(
+    acceptanceJson?.formal_gate,
+    acceptanceJson?.formal_acceptance_gate,
+    acceptanceJson?.formal_evidence_gate
+  );
+  const metrics = pickFirstObject(
+    acceptanceJson?.metrics,
+    acceptance?.metrics,
+    formalGate?.metrics
+  );
+
   if (Object.prototype.hasOwnProperty.call(acceptanceJson ?? {}, key)) return acceptanceJson[key];
+  if (Object.prototype.hasOwnProperty.call(acceptance, key)) return acceptance[key];
   if (Object.prototype.hasOwnProperty.call(formalGate, key)) return formalGate[key];
   if (Object.prototype.hasOwnProperty.call(metrics, key)) return metrics[key];
   return undefined;
 }
 
 function buildAcceptanceGateDiagnostics(acceptanceJson) {
-  const metrics = pickFirstObject(acceptanceJson?.metrics, acceptanceJson?.formal_gate?.metrics, acceptanceJson?.formal_acceptance_gate?.metrics);
+  const acceptance = pickFirstObject(acceptanceJson?.acceptance);
+  const metrics = pickFirstObject(
+    acceptanceJson?.metrics,
+    acceptance?.metrics,
+    acceptanceJson?.formal_gate?.metrics,
+    acceptanceJson?.formal_acceptance_gate?.metrics
+  );
+
   return {
-    verdict: acceptanceJson?.verdict ?? null,
+    verdict: acceptanceJson?.verdict ?? acceptance?.verdict ?? null,
     formal_acceptance: pickAcceptanceField(acceptanceJson, 'formal_acceptance'),
     formal_evidence_passed: pickAcceptanceField(acceptanceJson, 'formal_evidence_passed'),
     receipt_structure_passed: pickAcceptanceField(acceptanceJson, 'receipt_structure_passed'),
@@ -173,6 +191,36 @@ function buildAcceptanceGateDiagnostics(acceptanceJson) {
     metrics,
   };
 }
+
+function assertAcceptanceDiagnosticsResponseShape() {
+  const mock = {
+    ok: true,
+    verdict: 'PASS',
+    acceptance: {
+      formal_acceptance: true,
+      formal_evidence_passed: true,
+      execution_evidence_passed: true,
+      execution_effect_passed: true,
+      formal_execution_passed: true,
+      source_lane: 'FORMAL_OPERATION',
+      is_simulated: false,
+      blocking_reasons: [],
+      metrics: { formal_evidence_count: 3 },
+    },
+  };
+  const diagnostics = buildAcceptanceGateDiagnostics(mock);
+  assert.equal(diagnostics.formal_acceptance, true, 'acceptance diagnostics must read acceptance.formal_acceptance');
+  assert.equal(diagnostics.formal_evidence_passed, true, 'acceptance diagnostics must read acceptance.formal_evidence_passed');
+  assert.equal(diagnostics.execution_evidence_passed, true, 'acceptance diagnostics must read acceptance.execution_evidence_passed');
+  assert.equal(diagnostics.execution_effect_passed, true, 'acceptance diagnostics must read acceptance.execution_effect_passed');
+  assert.equal(diagnostics.formal_execution_passed, true, 'acceptance diagnostics must read acceptance.formal_execution_passed');
+  assert.equal(diagnostics.source_lane, 'FORMAL_OPERATION', 'acceptance diagnostics must read acceptance.source_lane');
+  assert.equal(diagnostics.is_simulated, false, 'acceptance diagnostics must read acceptance.is_simulated');
+  assert.deepEqual(diagnostics.blocking_reasons, [], 'acceptance diagnostics must read acceptance.blocking_reasons');
+  assert.equal(diagnostics.metrics?.formal_evidence_count, 3, 'acceptance diagnostics must read acceptance.metrics');
+}
+
+assertAcceptanceDiagnosticsResponseShape();
 
 function buildStage1GateDiagnostics(recGenJson) {
   const problemState = pickFirstObject(recGenJson?.problem_state_v1, recGenJson?.problem_state);
