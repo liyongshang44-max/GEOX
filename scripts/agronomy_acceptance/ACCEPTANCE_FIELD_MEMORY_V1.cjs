@@ -15,6 +15,17 @@ function pickIrrigationRecommendation(genJson) {
     || String(x?.skill_trace?.skill_id ?? '') === 'irrigation_deficit_skill_v1'
   ) ?? null;
 }
+function formalEvidenceRef(kind, ref) {
+  return {
+    kind,
+    ref,
+    source_lane: 'FORMAL_OPERATION',
+    evidence_level: 'FORMAL',
+    formal_eligible: true,
+    is_simulated: false,
+  };
+}
+
 function buildIrrigationReceiptBody({
   tenant_id,
   project_id,
@@ -30,7 +41,10 @@ function buildIrrigationReceiptBody({
   amount = 20,
   coverage_percent = 90,
   duration_min = 20,
+  pre_soil_moisture = 0.16,
+  post_soil_moisture = 0.24,
 }) {
+  const soil_moisture_delta = Number((post_soil_moisture - pre_soil_moisture).toFixed(4));
   return {
     tenant_id,
     project_id,
@@ -41,12 +55,53 @@ function buildIrrigationReceiptBody({
     execution_time: { start_ts: Date.now() - 20_000, end_ts: Date.now() - 5_000 },
     execution_coverage: { kind: 'field', ref: field_id },
     resource_usage: { fuel_l: 0, electric_kwh: 0, water_l, chemical_ml: 0 },
-    observed_parameters: { amount, coverage_percent, duration_min },
-    evidence_refs: [{ kind: 'sensor', ref: `sensor_${suffix}` }],
+    observed_parameters: {
+      amount,
+      coverage_percent,
+      duration_min,
+      pre_soil_moisture,
+      post_soil_moisture,
+      soil_moisture_delta,
+    },
+    evidence_refs: [formalEvidenceRef('sensor', `sensor_${suffix}`)],
     logs_refs: [
-      { kind: 'dispatch_ack', ref: `ack_${suffix}` },
-      { kind: 'valve_open_confirmation', ref: `valve_${suffix}` },
-      { kind: 'water_delivery_receipt', ref: `water_${suffix}` },
+      formalEvidenceRef('dispatch_ack', `ack_${suffix}`),
+      formalEvidenceRef('valve_open_confirmation', `valve_${suffix}`),
+      formalEvidenceRef('water_delivery_receipt', `water_${suffix}`),
+      formalEvidenceRef('coverage_evidence', `coverage_${suffix}`),
+      formalEvidenceRef('effect_observation', `effect_${suffix}`),
+      formalEvidenceRef('soil_moisture_delta', `delta_${suffix}`),
+    ],
+    metrics: [
+      {
+        kind: 'soil_moisture_delta',
+        metric: 'soil_moisture_delta',
+        value: soil_moisture_delta,
+        before_value: pre_soil_moisture,
+        after_value: post_soil_moisture,
+        source_lane: 'FORMAL_OPERATION',
+        evidence_level: 'FORMAL',
+        formal_eligible: true,
+        is_simulated: false,
+      },
+      {
+        kind: 'coverage_percent',
+        metric: 'coverage_percent',
+        value: coverage_percent,
+        source_lane: 'FORMAL_OPERATION',
+        evidence_level: 'FORMAL',
+        formal_eligible: true,
+        is_simulated: false,
+      },
+      {
+        kind: 'meter_reading',
+        metric: 'water_l',
+        value: water_l,
+        source_lane: 'FORMAL_OPERATION',
+        evidence_level: 'FORMAL',
+        formal_eligible: true,
+        is_simulated: false,
+      },
     ],
     status: 'executed',
     constraint_check: { violated: false, violations: [] },
@@ -57,6 +112,10 @@ function buildIrrigationReceiptBody({
       prescription_id,
       skill_id: 'irrigation_deficit_skill_v1',
       skill_trace_ref,
+      source_lane: 'FORMAL_OPERATION',
+      evidence_level: 'FORMAL',
+      formal_eligible: true,
+      is_simulated: false,
     },
   };
 }
@@ -124,6 +183,32 @@ async function assertProjectionTablesReady(pool) {
 
 function pickFirstObject(...candidates) {
   return candidates.find((x) => x && typeof x === 'object' && !Array.isArray(x)) ?? {};
+}
+
+function pickAcceptanceField(acceptanceJson, key) {
+  const formalGate = pickFirstObject(acceptanceJson?.formal_gate, acceptanceJson?.formal_acceptance_gate, acceptanceJson?.formal_evidence_gate);
+  const metrics = pickFirstObject(acceptanceJson?.metrics, formalGate?.metrics);
+  if (Object.prototype.hasOwnProperty.call(acceptanceJson ?? {}, key)) return acceptanceJson[key];
+  if (Object.prototype.hasOwnProperty.call(formalGate, key)) return formalGate[key];
+  if (Object.prototype.hasOwnProperty.call(metrics, key)) return metrics[key];
+  return undefined;
+}
+
+function buildAcceptanceGateDiagnostics(acceptanceJson) {
+  const metrics = pickFirstObject(acceptanceJson?.metrics, acceptanceJson?.formal_gate?.metrics, acceptanceJson?.formal_acceptance_gate?.metrics);
+  return {
+    verdict: acceptanceJson?.verdict ?? null,
+    formal_acceptance: pickAcceptanceField(acceptanceJson, 'formal_acceptance'),
+    formal_evidence_passed: pickAcceptanceField(acceptanceJson, 'formal_evidence_passed'),
+    receipt_structure_passed: pickAcceptanceField(acceptanceJson, 'receipt_structure_passed'),
+    execution_evidence_passed: pickAcceptanceField(acceptanceJson, 'execution_evidence_passed'),
+    execution_effect_passed: pickAcceptanceField(acceptanceJson, 'execution_effect_passed'),
+    formal_execution_passed: pickAcceptanceField(acceptanceJson, 'formal_execution_passed'),
+    source_lane: pickAcceptanceField(acceptanceJson, 'source_lane'),
+    is_simulated: pickAcceptanceField(acceptanceJson, 'is_simulated'),
+    blocking_reasons: pickAcceptanceField(acceptanceJson, 'blocking_reasons') ?? [],
+    metrics,
+  };
 }
 
 function buildStage1GateDiagnostics(recGenJson) {
@@ -526,6 +611,8 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
       prescription_id,
       skill_trace_ref,
       coverage_percent: 95,
+      pre_soil_moisture,
+      post_soil_moisture,
     })
   });
   const receiptJson = requireOk(receiptResp, 'submit action receipt');
@@ -567,10 +654,21 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
     }
   });
   const acceptanceJson = requireOk(acceptanceResp, 'acceptance evaluate');
+  process.stdout.write(`${JSON.stringify({ acceptance_evaluate_response: acceptanceJson }, null, 2)}\n`);
+  const acceptanceGateDiagnostics = buildAcceptanceGateDiagnostics(acceptanceJson);
+  process.stdout.write(`${JSON.stringify({ acceptance_formal_gate_diagnostics: acceptanceGateDiagnostics }, null, 2)}\n`);
   const acceptance_verdict = String(acceptanceJson?.verdict ?? '').trim().toUpperCase();
   const acceptance_fact_id = String(acceptanceJson?.fact_id ?? '').trim();
   assert.ok(acceptance_fact_id, 'acceptance_fact_id missing');
   assert.equal(acceptance_verdict, 'PASS', `acceptance verdict must be PASS, got ${acceptance_verdict}`);
+  assert.equal(acceptanceGateDiagnostics.formal_acceptance, true, 'formal_acceptance must be true');
+  assert.equal(acceptanceGateDiagnostics.formal_evidence_passed, true, 'formal_evidence_passed must be true');
+  assert.equal(acceptanceGateDiagnostics.execution_evidence_passed, true, 'execution_evidence_passed must be true');
+  assert.equal(acceptanceGateDiagnostics.execution_effect_passed, true, 'execution_effect_passed must be true');
+  assert.equal(acceptanceGateDiagnostics.formal_execution_passed, true, 'formal_execution_passed must be true');
+  assert.equal(acceptanceGateDiagnostics.source_lane, 'FORMAL_OPERATION', 'source_lane must be FORMAL_OPERATION');
+  assert.equal(acceptanceGateDiagnostics.is_simulated, false, 'is_simulated must be false');
+  assert.deepEqual(acceptanceGateDiagnostics.blocking_reasons ?? [], [], 'blocking_reasons must be empty');
 
   const memoryList = await fetchJson(`${base}/api/v1/field-memory?field_id=${encodeURIComponent(field_id)}&limit=50`, { method: 'GET', token: adminToken });
   const memoryListJson = requireOk(memoryList, 'field memory list');
