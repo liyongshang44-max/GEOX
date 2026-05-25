@@ -83,6 +83,56 @@ async function queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, 
   return pool.query(sql, params);
 }
 
+async function queryFieldMemoryLinkedToChain(pool, {
+  tenant_id,
+  project_id,
+  group_id,
+  field_id,
+  operation_id,
+  task_id,
+  recommendation_id,
+  prescription_id,
+  acceptance_id,
+  receipt_id,
+}) {
+  const params = [tenant_id, project_id, group_id];
+  let sql = `SELECT * FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3`;
+  if (field_id) {
+    params.push(field_id);
+    sql += ` AND field_id=$${params.length}`;
+  }
+
+  const ids = [
+    operation_id,
+    task_id,
+    recommendation_id,
+    prescription_id,
+    acceptance_id,
+    receipt_id,
+  ].map((x) => String(x || '').trim()).filter(Boolean);
+
+  if (ids.length === 0) {
+    sql += ` AND FALSE ORDER BY occurred_at DESC LIMIT 500`;
+    return pool.query(sql, params);
+  }
+
+  const orParts = [];
+  for (const id of ids) {
+    params.push(id);
+    const p = `$${params.length}`;
+    orParts.push(`operation_id=${p}`);
+    orParts.push(`task_id=${p}`);
+    orParts.push(`recommendation_id=${p}`);
+    orParts.push(`prescription_id=${p}`);
+    orParts.push(`acceptance_id=${p}`);
+    orParts.push(`source_id=${p}`);
+    orParts.push(`evidence_refs::text LIKE '%' || ${p} || '%'`);
+  }
+
+  sql += ` AND (${orParts.join(' OR ')}) ORDER BY occurred_at DESC LIMIT 500`;
+  return pool.query(sql, params);
+}
+
 async function existsRoiLedgerId(pool, roiLedgerId, scope, roiHasProjectGroup) {
   const q = roiHasProjectGroup
     ? await pool.query(`SELECT 1 FROM roi_ledger_v1 WHERE roi_ledger_id=$1 AND tenant_id=$2 AND project_id=$3 AND group_id=$4 LIMIT 1`, [roiLedgerId, scope.tenant_id, scope.project_id, scope.group_id])
@@ -161,12 +211,47 @@ function buildDebugFailures(items) {
   const fieldMemoryExists = dbAvailable ? (fieldMemoryIds.length > 0 && (await Promise.all(fieldMemoryIds.map((x) => existsFieldMemoryId(pool, x, scope)))).every(Boolean)) : true;
   const scopeMemoryQ = dbAvailable ? await queryFieldMemoryByScope(pool, { ...scope, field_id: chain.field_id || undefined }) : { rows: [] };
   const operationMemoryQ = dbAvailable ? await queryFieldMemoryByScope(pool, { ...scope, operation_id: chain.report_ref || undefined, task_id: chain.task_id || undefined }) : { rows: [] };
+  const linkedMemoryQ = dbAvailable ? await queryFieldMemoryLinkedToChain(pool, {
+    ...scope,
+    field_id: chain.field_id || undefined,
+    operation_id: chain.report_ref || undefined,
+    task_id: chain.task_id || undefined,
+    recommendation_id: chain.recommendation_id || undefined,
+    prescription_id: chain.prescription_id || undefined,
+    acceptance_id: chain.acceptance_id || undefined,
+    receipt_id: chain.receipt_id || undefined,
+  }) : { rows: [] };
+  const linkedMemoryIds = new Set((linkedMemoryQ.rows ?? []).map((row) => String(row?.memory_id ?? '')).filter(Boolean));
+  const linkedMemoryCoversFieldMemoryIds = fieldMemoryIds.length > 0 && fieldMemoryIds.every((id) => linkedMemoryIds.has(String(id)));
+  const fieldMemoryScriptOk = fieldMemory?.ok === true;
+  const fieldMemoryIdsOk = fieldMemoryIds.length >= 3 && fieldMemoryExists;
+  const scopeMemoryOk = (scopeMemoryQ.rows?.length ?? 0) >= 3;
+  const linkedMemoryOk = (linkedMemoryQ.rows?.length ?? 0) >= 3 || linkedMemoryCoversFieldMemoryIds;
+  const fieldMemoryGateDebug = {
+    field_memory_script_ok: fieldMemoryScriptOk,
+    field_memory_ids_count: fieldMemoryIds.length,
+    field_memory_exists: fieldMemoryExists,
+    scope_memory_count: scopeMemoryQ.rows?.length ?? 0,
+    old_operation_memory_count: operationMemoryQ.rows?.length ?? 0,
+    linked_memory_count: linkedMemoryQ.rows?.length ?? 0,
+    linked_memory_covers_field_memory_ids: linkedMemoryCoversFieldMemoryIds,
+    linked_memory_ids: Array.from(linkedMemoryIds),
+    chain_ids: {
+      field_id: chain.field_id || '',
+      report_ref: chain.report_ref || '',
+      task_id: chain.task_id || '',
+      recommendation_id: chain.recommendation_id || '',
+      prescription_id: chain.prescription_id || '',
+      acceptance_id: chain.acceptance_id || '',
+      receipt_id: chain.receipt_id || '',
+    },
+  };
   const roiLedgerExists = dbAvailable ? (roiLedgerIds.length > 0 && (await Promise.all(roiLedgerIds.map((x) => existsRoiLedgerId(pool, x, scope, roiHasProjectGroup)))).every(Boolean)) : true;
   const dRoiStrong = Array.isArray(irrigation?.roi_ledgers) && irrigation.roi_ledgers.every((x) => x.baseline != null && hasValidRoiConfidence(x.confidence) && Array.isArray(x.evidence_refs) && x.evidence_refs.length > 0);
 
   const checks = {
     skill_contract_gap_closure: pass(skillGap?.ok === true),
-    field_memory_v1: pass(fieldMemory?.ok === true && fieldMemoryIds.length >= 3 && (dbAvailable ? ((scopeMemoryQ.rows?.length ?? 0) >= 3 && (operationMemoryQ.rows?.length ?? 0) >= 1 && fieldMemoryExists) : true)),
+    field_memory_v1: pass(fieldMemoryScriptOk && fieldMemoryIdsOk && (dbAvailable ? (scopeMemoryOk && linkedMemoryOk) : true)),
     roi_ledger_commercial_v1: pass(roiCommercial?.ok === true && roiCompatibleOk && roiLedgerIds.length > 0),
     irrigation_mvp0_closed_loop: pass(irrigation?.ok === true && coreIdsOk && skillBindingExists && skillRunExists && reportPayloadOk && fieldMemoryExists && roiLedgerExists && dRoiStrong),
     customer_report: pass(irrigation?.ok === true && isFilled(chain.report_ref) && reportPayloadOk && customerReportOk),
@@ -191,6 +276,7 @@ function buildDebugFailures(items) {
     gate_mode: strictGate ? 'STRICT' : 'BEST_EFFORT',
     infra_unavailable: infraUnavailable,
     debug_failures: debugFailures,
+    field_memory_gate_debug: fieldMemoryGateDebug,
     failure_paths_summary: { pass_count: syntheticFp.filter((x) => x.pass).length, min_required_pass: 3, items: syntheticFp },
     chain_summary: {
       field_id: chain.field_id || '', observation_id: chain.observation_id || '', recommendation_id: chain.recommendation_id || '', skill_trace_id: chain.skill_trace_id || '', prescription_id: chain.prescription_id || '', approval_id: chain.approval_id || '', task_id: chain.task_id || '', skill_binding_id: chain.skill_binding_id || '', skill_run_id: chain.skill_run_id || '', receipt_id: chain.receipt_id || '', as_executed_id: chain.as_executed_id || '', post_observation_id: chain.post_observation_id || '', acceptance_id: chain.acceptance_id || '', report_ref: chain.report_ref || '', report_id: chain.report_id || '', field_memory_ids: fieldMemoryIds, roi_ledger_ids: roiLedgerIds,
