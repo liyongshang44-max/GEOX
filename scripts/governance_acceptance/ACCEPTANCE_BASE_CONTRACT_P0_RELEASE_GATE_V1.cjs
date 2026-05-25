@@ -16,6 +16,7 @@ const gates = [
   { name: 'ACCEPTANCE_FRONTEND_CUSTOMER_TRUST_GATE_V1', maturity: 'ci_enforced', command: 'node', args: ['scripts/governance_acceptance/ACCEPTANCE_FRONTEND_CUSTOMER_TRUST_GATE_V1.cjs'], contract: 'Frontend Customer Trust Gate' },
   { name: 'ACCEPTANCE_DEVTOOLS_SIMULATOR_NOT_FORMAL_V1', maturity: 'ci_enforced', command: 'node', args: ['scripts/governance_acceptance/ACCEPTANCE_DEVTOOLS_SIMULATOR_NOT_FORMAL_V1.cjs'], contract: 'Devtools / Simulator Boundary' },
   { name: 'ACCEPTANCE_AO_ACT_AO_SENSE_BOUNDARY_V1', maturity: 'ci_enforced', command: 'node', args: ['scripts/governance_acceptance/ACCEPTANCE_AO_ACT_AO_SENSE_BOUNDARY_V1.cjs'], contract: 'AO-ACT / AO-SENSE Boundary' },
+  { name: 'ACCEPTANCE_AO_ACT_VERSION_BOUNDARY_V1', maturity: 'ci_enforced', command: 'node', args: ['scripts/governance_acceptance/ACCEPTANCE_AO_ACT_VERSION_BOUNDARY_V1.cjs'], contract: 'AO-ACT API / Fact Version Boundary' },
   { name: 'PDI_RELEASE_GATE', maturity: 'ci_enforced', command: 'node', args: ['scripts/agronomy_acceptance/ACCEPTANCE_PEST_DISEASE_INSPECTION_RELEASE_GATE.cjs'], contract: 'PDI Customer Evidence Basis / Scenario Release Gate' },
   { name: 'SERVER_TYPECHECK', maturity: 'ci_enforced', command: 'pnpm', args: ['--filter', '@geox/server', 'typecheck'], contract: 'Server Compile Contract' },
   { name: 'WEB_TYPECHECK', maturity: 'ci_enforced', command: 'pnpm', args: ['--filter', '@geox/web', 'typecheck'], contract: 'Web Compile Contract' },
