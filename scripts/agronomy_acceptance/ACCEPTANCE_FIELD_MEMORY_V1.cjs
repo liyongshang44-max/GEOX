@@ -1,6 +1,10 @@
 const { randomUUID } = require('node:crypto');
 const { Pool } = require('pg');
 const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
+const {
+  seedFormalCropContextV1,
+  seedFormalIrrigationStage1Evidence,
+} = require('./_stage1_formal_irrigation_fixture.cjs');
 
 let pool;
 function pickIrrigationRecommendation(genJson) {
@@ -96,7 +100,16 @@ async function assertFieldMemoryIdsExist(pool, ids) {
 }
 
 async function assertProjectionTablesReady(pool) {
-  const required = ['derived_sensing_state_index_v1', 'device_observation_index_v1', 'field_memory_v1'];
+  const required = [
+    'raw_samples',
+    'derived_sensing_state_index_v1',
+    'device_observation_index_v1',
+    'device_status_index_v1',
+    'device_binding_index_v1',
+    'device_capability',
+    'field_memory_v1',
+    'facts',
+  ];
   const missing = [];
   for (const table of required) {
     const q = await pool.query(`SELECT to_regclass($1) AS reg`, [`public.${table}`]);
@@ -107,6 +120,53 @@ async function assertProjectionTablesReady(pool) {
     err.code = 'BOOTSTRAP_FAILURE_MISSING_PROJECTION_TABLES';
     throw err;
   }
+}
+
+function pickFirstObject(...candidates) {
+  return candidates.find((x) => x && typeof x === 'object' && !Array.isArray(x)) ?? {};
+}
+
+function buildStage1GateDiagnostics(recGenJson) {
+  const problemState = pickFirstObject(recGenJson?.problem_state_v1, recGenJson?.problem_state);
+  const evidence = pickFirstObject(
+    recGenJson?.evidence_sufficiency_v1,
+    recGenJson?.evidence_sufficiency,
+    problemState?.evidence_sufficiency_v1,
+    problemState?.evidence_sufficiency
+  );
+  const device = pickFirstObject(
+    recGenJson?.device_health_snapshot_v1,
+    recGenJson?.device_health_snapshot,
+    problemState?.device_health_snapshot_v1,
+    problemState?.device_health_snapshot
+  );
+  return {
+    error: recGenJson?.error ?? null,
+    reason_codes: Array.isArray(recGenJson?.reason_codes) ? recGenJson.reason_codes : [],
+    evidence_sufficiency: evidence,
+    formal_sample_count: Number(evidence?.formal_sample_count ?? evidence?.sample_count ?? 0),
+    formal_coverage_ratio: Number(evidence?.formal_coverage_ratio ?? evidence?.coverage_ratio ?? 0),
+    device_status_present: Boolean(device?.device_status_present ?? device?.status_present ?? device?.status),
+    device_health_status: String(device?.device_health_status ?? device?.health_status ?? device?.status ?? 'UNKNOWN'),
+  };
+}
+
+function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, season_id, fixture, cropContextSeed }) {
+  return {
+    reason: 'NO_RECOMMENDATION_TRIGGERED',
+    field_id,
+    device_id,
+    season_id,
+    fixture: {
+      raw_sample_count: Array.isArray(fixture?.raw_sample_ids) ? fixture.raw_sample_ids.length : 0,
+      sample_mode: fixture?.sample_mode ?? 'unknown',
+      crop_context_fact_id: cropContextSeed?.fact_id ?? fixture?.crop_context_seed?.fact_id ?? '',
+      observation_id: fixture?.observation_id ?? '',
+    },
+    stage1_gate: buildStage1GateDiagnostics(recGen?.json ?? {}),
+    recommendation_generate_response: recGen?.json ?? {},
+    status: recGen?.status,
+  };
 }
 
 (async () => {
@@ -133,51 +193,50 @@ async function assertProjectionTablesReady(pool) {
     : `device_memory_${suffix}`;
   const pre_soil_moisture = 0.16;
   const post_soil_moisture = 0.24;
-  const ts0 = Date.now() - 60_000;
+  const now_ms = Date.now();
+  const ts0 = now_ms - 60_000;
   await assertProjectionTablesReady(pool);
 
   const health = await fetchJson(`${base}/api/v1/field-memory/health`, { method: 'GET' });
   const healthz_ok = health.ok && health.json?.ok === true && health.json?.table_ready === true;
 
-  // Seed formal Stage1 trigger states and low moisture signal.
-  // recommendations.generate does not trust body.stage1_sensing_summary as formal trigger.
-  // It refreshes field read models from derived_sensing_state_index_v1 and device_observation_index_v1.
-  await pool.query(`ALTER TABLE derived_sensing_state_index_v1 ADD COLUMN IF NOT EXISTS project_id text`);
-  await pool.query(`ALTER TABLE derived_sensing_state_index_v1 ADD COLUMN IF NOT EXISTS group_id text`);
-  await pool.query(`ALTER TABLE derived_sensing_state_index_v1 ADD COLUMN IF NOT EXISTS source_observation_ids_json jsonb NOT NULL DEFAULT '[]'::jsonb`);
+  const cropContextSeed = await seedFormalCropContextV1(pool, {
+    tenant_id,
+    project_id,
+    group_id,
+    field_id,
+    season_id,
+    crop_code: 'corn',
+    crop_stage: 'V8',
+    now_ms,
+  });
 
-  await pool.query(
-    `INSERT INTO derived_sensing_state_index_v1
-      (tenant_id, project_id, group_id, field_id, state_type, payload_json, confidence, explanation_codes_json, source_device_ids_json, computed_at, computed_at_ts_ms, fact_id, source_observation_ids_json)
-     VALUES
-      ($1,$2,$3,$4,'irrigation_effectiveness_state','{"level":"LOW"}'::jsonb,0.95,'[]'::jsonb,'[]'::jsonb,NOW(),$5,$6,'["obs_field_memory_irrigation"]'::jsonb),
-      ($1,$2,$3,$4,'leak_risk_state','{"level":"LOW"}'::jsonb,0.95,'[]'::jsonb,'[]'::jsonb,NOW(),$5,$7,'["obs_field_memory_leak"]'::jsonb)
-     ON CONFLICT DO NOTHING`,
-    [tenant_id, project_id, group_id, field_id, ts0, randomUUID(), randomUUID()]
-  );
-
-  await pool.query(
-    `INSERT INTO device_observation_index_v1
-      (tenant_id, project_id, group_id, field_id, device_id, metric, observed_at, observed_at_ts_ms, value_num, confidence, fact_id)
-     VALUES
-      ($1,$2,$3,$4,$5,'soil_moisture',to_timestamp($6 / 1000.0),$6,$7,0.92,$8)
-     ON CONFLICT DO NOTHING`,
-    [
-      tenant_id,
-      project_id,
-      group_id,
-      field_id,
-      device_id,
-      ts0,
-      pre_soil_moisture,
-      `obs_soil_field_memory_${randomUUID()}`,
-    ]
-  );
+  const fixture = await seedFormalIrrigationStage1Evidence(pool, {
+    tenant_id,
+    project_id,
+    group_id,
+    field_id,
+    season_id,
+    device_id,
+    now_ms,
+    pre_soil_moisture,
+    sample_mode: 'formal',
+    crop_code: 'corn',
+    crop_stage: 'V8',
+  });
 
   process.stdout.write(`${JSON.stringify({
-    stage1_seeded: true,
+    stage1_fixture_seeded: true,
     field_id,
-    trigger: { irrigation_effectiveness: 'low', leak_risk: 'low' },
+    device_id,
+    season_id,
+    fixture: {
+      raw_sample_count: fixture.raw_sample_ids?.length ?? 0,
+      sample_mode: fixture.sample_mode,
+      crop_context_fact_id: cropContextSeed.fact_id,
+      observation_id: fixture.observation_id,
+    },
+    trigger: fixture.stage1_sensing_summary,
     soil_moisture: pre_soil_moisture
   })}\n`);
 
@@ -189,24 +248,22 @@ async function assertProjectionTablesReady(pool) {
       season_id,
       device_id,
       crop_code: 'corn',
+      stage1_sensing_summary: fixture.stage1_sensing_summary,
       image_recognition: { stress_score: 0.55, disease_score: 0.2, pest_risk_score: 0.2, confidence: 0.9 }
     }
   });
   process.stdout.write(`${JSON.stringify({ recommendation_generate_response: recGen.json ?? {}, status: recGen.status }, null, 2)}\n`);
   if (!recGen.ok || !Array.isArray(recGen.json?.recommendations) || recGen.json.recommendations.length === 0) {
-    process.stdout.write(`${JSON.stringify({
-      reason: 'NO_RECOMMENDATION_TRIGGERED',
-      stage1_seed_debug: {
-        derived_states_inserted: true,
-        soil_moisture: 0.16,
-        field_id,
-        device_id,
-      },
-      recommendation_generate_response: recGen.json ?? {},
-    }, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify(buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, season_id, fixture, cropContextSeed }), null, 2)}\n`);
     throw new Error('NO_RECOMMENDATION_TRIGGERED');
   }
   const recJson = requireOk(recGen, 'generate recommendation');
+  assert.equal(recJson.crop_context?.status, 'PLANTED_CONFIRMED');
+  assert.equal(recJson.crop_context?.crop_code, 'corn');
+  assert.equal(recJson.crop_context?.crop_stage, 'V8');
+  assert.equal(recJson.crop_context_guard?.blocked_crop_specific_recommendations ?? 0, 0);
+  const recommendationCount = Array.isArray(recJson.recommendations) ? recJson.recommendations.length : 0;
+  assert.ok(recommendationCount > 0, 'recommendation_count must be positive');
   const recommendation = pickIrrigationRecommendation(recJson);
   assert.ok(recommendation, 'NO_IRRIGATION_RECOMMENDATION_RETURNED');
   const recId = String(recommendation.recommendation_id ?? '');
