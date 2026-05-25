@@ -1,7 +1,7 @@
 const { randomUUID } = require('node:crypto');
 const { Pool } = require('pg');
 const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
-const { seedFormalIrrigationStage1Evidence } = require('./_stage1_formal_irrigation_fixture.cjs');
+const { seedFormalCropContextV1, seedFormalIrrigationStage1Evidence } = require('./_stage1_formal_irrigation_fixture.cjs');
 
 function pickIrrigationRecommendation(genJson) {
   const recommendations = Array.isArray(genJson?.recommendations) ? genJson.recommendations : [];
@@ -101,6 +101,7 @@ function stage1FailureReasonFromGenerate(gen, fallback) {
   const pool = new Pool({ connectionString: databaseUrl });
 
   const suffix = Date.now();
+  const now_ms = Date.now();
   const field_id = env('FIELD_ID', `demo_field_mvp0_${suffix}`);
   const season_id = `season_mvp0_${suffix}`;
   const device_id = `device_mvp0_${suffix}`;
@@ -110,14 +111,29 @@ function stage1FailureReasonFromGenerate(gen, fallback) {
   const simulateInsufficientEvidence = env('SIMULATE_INSUFFICIENT_EVIDENCE', '0') === '1';
   const simulateApprovalRejected = env('SIMULATE_APPROVAL_REJECTED', '0') === '1';
 
+  const cropContextSeed = await seedFormalCropContextV1(pool, {
+    tenant_id,
+    project_id,
+    group_id,
+    field_id,
+    season_id,
+    crop_code: 'corn',
+    crop_stage: 'V8',
+    now_ms,
+  });
+
   const fixture = await seedFormalIrrigationStage1Evidence(pool, {
     tenant_id,
     project_id,
     group_id,
     field_id,
+    season_id,
     device_id,
+    now_ms,
     pre_soil_moisture,
     sample_mode: simulateStale ? 'stale' : simulateInsufficientEvidence ? 'insufficient' : 'formal',
+    crop_code: 'corn',
+    crop_stage: 'V8',
   });
   const observation_id = fixture.observation_id;
 
@@ -146,6 +162,7 @@ function stage1FailureReasonFromGenerate(gen, fallback) {
       blocked: true,
       failure_reasons,
       failure_audit_summary,
+      crop_context_seed: cropContextSeed.crop_context,
       stage1_gate: { error: gen.json?.error, reason_codes: gen.json?.reason_codes ?? [] },
       chain_summary: { field_id, observation_id, recommendation_id: '', skill_trace_id: '', prescription_id: '', approval_id: '', task_id: '', skill_binding_id: '', skill_run_id: '', receipt_id: '', as_executed_id: '', post_observation_id: '', acceptance_id: '', report_ref: '', report_id: '', field_memory_ids: [], roi_ledger_ids: [] },
       roi_ledgers: [],
@@ -156,6 +173,12 @@ function stage1FailureReasonFromGenerate(gen, fallback) {
   }
 
   const genJson = requireOk(gen, 'generate irrigation recommendation');
+  assert.notEqual(genJson.crop_context?.status, 'UNKNOWN', 'crop_context should not be UNKNOWN');
+  assert.equal(genJson.crop_context?.status, 'PLANTED_CONFIRMED');
+  assert.equal(genJson.crop_context?.crop_code, 'corn');
+  assert.equal(genJson.crop_context?.crop_stage, 'V8');
+  assert.equal(genJson.crop_context_guard?.blocked_crop_specific_recommendations ?? 0, 0);
+  const recommendation_count = Array.isArray(genJson?.recommendations) ? genJson.recommendations.length : 0;
   const recommendation = pickIrrigationRecommendation(genJson);
   assert.ok(recommendation, 'NO_IRRIGATION_RECOMMENDATION_RETURNED');
   const recommendation_id = String(recommendation?.recommendation_id ?? '').trim();
@@ -190,7 +213,7 @@ function stage1FailureReasonFromGenerate(gen, fallback) {
     const rejectJson = decideApproval.json ?? {};
     const operation_plan_id = String(rejectJson.operation_plan_id ?? '').trim();
     const failure_audit_summary = failureReasons.map((reason) => ({ reason, blocked: true, degraded: false }));
-    process.stdout.write(`${JSON.stringify({ ok: true, blocked: true, failure_reasons: failureReasons, failure_audit_summary, chain_summary: { field_id, observation_id, recommendation_id, skill_trace_id, prescription_id, approval_id, task_id: '', skill_binding_id: '', skill_run_id: '', receipt_id: '', as_executed_id: '', post_observation_id: '', acceptance_id: '', report_ref: operation_plan_id, report_id: '', field_memory_ids: [], roi_ledger_ids: [] }, roi_ledgers: [], checks: { failure_path_not_fake_success: true, failure_in_report_or_audit_summary: true } }, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify({ ok: true, blocked: true, failure_reasons: failureReasons, failure_audit_summary, recommendation_count, crop_context: genJson.crop_context, crop_context_guard: genJson.crop_context_guard, chain_summary: { field_id, observation_id, recommendation_id, skill_trace_id, prescription_id, approval_id, task_id: '', skill_binding_id: '', skill_run_id: '', receipt_id: '', as_executed_id: '', post_observation_id: '', acceptance_id: '', report_ref: operation_plan_id, report_id: '', field_memory_ids: [], roi_ledger_ids: [] }, roi_ledgers: [], checks: { failure_path_not_fake_success: true, failure_in_report_or_audit_summary: true } }, null, 2)}\n`);
     await pool.end();
     return;
   }
@@ -301,6 +324,9 @@ function stage1FailureReasonFromGenerate(gen, fallback) {
     no_skill_run: blocked ? true : Boolean(skill_run_id),
     no_as_executed: blocked ? true : Boolean(as_executed_id),
     no_acceptance: blocked ? true : Boolean(acceptance_id),
+    crop_context_confirmed: genJson.crop_context?.status === 'PLANTED_CONFIRMED',
+    crop_context_guard_not_blocking: (genJson.crop_context_guard?.blocked_crop_specific_recommendations ?? 0) === 0,
+    recommendation_count_positive: recommendation_count > 0,
     field_memory_at_least_three: blocked ? true : field_memory_ids.length >= 3,
     field_memory_query_by_operation: blocked ? true : (memoryByOperation.rows?.length ?? 0) >= 1,
     field_memory_ids_exist: blocked ? true : memoryIdsExist,
@@ -314,7 +340,7 @@ function stage1FailureReasonFromGenerate(gen, fallback) {
     no_raw_enum_in_customer_report: blocked ? true : noRawEnumInCustomerReport,
   };
   Object.entries(checks).forEach(([k, v]) => assert.equal(v, true, `check failed: ${k}`));
-  process.stdout.write(`${JSON.stringify({ ok: true, blocked, failure_reasons: failureReasons, failure_audit_summary, chain_summary, roi_ledgers, checks }, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({ ok: true, blocked, failure_reasons: failureReasons, failure_audit_summary, recommendation_count, crop_context: genJson.crop_context, crop_context_guard: genJson.crop_context_guard, chain_summary, roi_ledgers, checks }, null, 2)}\n`);
   await pool.end();
 })().catch((err) => {
   console.error(err);
