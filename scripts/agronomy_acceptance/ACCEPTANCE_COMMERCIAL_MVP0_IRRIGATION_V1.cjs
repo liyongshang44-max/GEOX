@@ -97,7 +97,7 @@ async function queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, 
   const ids = [operation_id, task_id, recommendation_id, prescription_id, acceptance_id].map((x) => String(x ?? '').trim()).filter(Boolean);
   if (ids.length > 0) {
     params.push(ids);
-    sql += ` AND (operation_id = ANY($${params.length}::text[]) OR task_id = ANY($${params.length}::text[]) OR recommendation_id = ANY($${params.length}::text[]) OR prescription_id = ANY($${params.length}::text[]) OR acceptance_id = ANY($${params.length}::text[]) OR source_id = ANY($${params.length}::text[]) OR EXISTS (SELECT 1 FROM unnest($${params.length}::text[]) AS chain_id WHERE evidence_refs::text LIKE '%' || chain_id || '%'))`;
+    sql += ` AND (operation_id = ANY($${params.length}::text[]) OR task_id = ANY($${params.length}::text[]) OR recommendation_id = ANY($${params.length}::text[]) OR prescription_id = ANY($${params.length}::text[]) OR acceptance_id = ANY($${params.length}::text[]) OR source_id = ANY($${params.length}::text[]) OR EXISTS (SELECT 1 FROM unnest($${params.length}::text[]) AS chain_ids(chain_id) WHERE evidence_refs::text LIKE '%' || chain_id || '%'))`;
   }
   sql += ` ORDER BY occurred_at DESC LIMIT 500`;
   return pool.query(sql, params);
