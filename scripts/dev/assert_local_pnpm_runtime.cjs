@@ -39,15 +39,19 @@ function normalize(value) {
   return String(value || '').replace(/\\/g, '/');
 }
 
-function containsWslOrLinuxPnpm(value) {
+function containsWslOrPnpm11Marker(value) {
   const s = normalize(value).toLowerCase();
-  return s.includes('/home/')
-    || s.includes('/.cache/node/corepack/v1/pnpm/11.')
+  return s.includes('/.cache/node/corepack/v1/pnpm/11.')
     || s.includes('/corepack/v1/pnpm/11.')
     || s.includes('/wsl')
     || s.includes('wsl$')
     || s.includes('\\wsl')
-    || s.includes('ubuntu') && s.includes('pnpm');
+    || (s.includes('ubuntu') && s.includes('pnpm'));
+}
+
+function containsWindowsToLinuxPnpmMismatch(value) {
+  const s = normalize(value).toLowerCase();
+  return containsWslOrPnpm11Marker(s) || s.includes('/home/');
 }
 
 function hasWindowsPathShape(value) {
@@ -91,7 +95,7 @@ function collectCandidates() {
   }
 
   const pathMatches = splitPathEntries(env.PATH)
-    .filter((entry) => containsWslOrLinuxPnpm(entry) || normalize(entry).toLowerCase().includes('corepack'));
+    .filter((entry) => containsWslOrPnpm11Marker(entry) || (isWindows && containsWindowsToLinuxPnpmMismatch(entry)) || normalize(entry).toLowerCase().includes('corepack'));
   if (pathMatches.length > 0) {
     candidates.push({ kind: 'path_entries', source: 'PATH filtered entries', status: 0, stdout: pathMatches.join('\n'), stderr: '' });
   }
@@ -151,10 +155,10 @@ function main() {
     .map((x) => [x.source, x.stdout, x.stderr].filter(Boolean).join('\n'))
     .join('\n');
 
-  if (containsWslOrLinuxPnpm(allText)) {
+  if (containsWslOrPnpm11Marker(allText) || (isWindows && containsWindowsToLinuxPnpmMismatch(allText))) {
     reasons.push({
       code: 'WSL_OR_COREPACK_PNPM_11_DETECTED',
-      detail: 'Detected /home, WSL, or Corepack pnpm 11.x marker in pnpm runtime discovery output.',
+      detail: 'Detected WSL/Linux or Corepack pnpm 11.x marker in pnpm runtime discovery output.',
     });
   }
 
@@ -168,7 +172,7 @@ function main() {
   if (isWindows) {
     const where = candidates.find((x) => x.kind === 'where_pnpm');
     const whereLines = String(where?.stdout || '').split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
-    const nonWindowsPnpm = whereLines.filter((line) => !hasWindowsPathShape(line) || containsWslOrLinuxPnpm(line));
+    const nonWindowsPnpm = whereLines.filter((line) => !hasWindowsPathShape(line) || containsWindowsToLinuxPnpmMismatch(line));
     if (nonWindowsPnpm.length > 0) {
       reasons.push({
         code: 'WINDOWS_POWERSHELL_RESOLVES_NON_WINDOWS_PNPM',
