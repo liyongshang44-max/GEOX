@@ -98,6 +98,8 @@ async function main() {
     task_binds_device_skill: 'FAIL',
     mock_valve_skill_run_created: 'FAIL',
     field_memory_refs_skill_id: 'FAIL',
+    technical_field_memory_refs_skill_trace: 'FAIL',
+    technical_field_memory_not_customer_visible: 'FAIL',
     roi_refs_skill_trace_or_source_skill: 'FAIL',
     approval_required_before_device_skill: 'FAIL',
     memory_query_by_operation: 'FAIL',
@@ -214,9 +216,31 @@ async function main() {
     const memoryByOperationQ = await queryFieldMemoryByOperationOrTask(pool, { tenant_id, project_id, group_id, operation_plan_id, act_task_id: ids.task_id });
     const memRows = memoryQ.rows ?? [];
     ids.field_memory_ids = memRows.map((x) => String(x.memory_id)).filter(Boolean);
-    const memDevice = memRows.find((x) => String(x.memory_type) === 'DEVICE_RELIABILITY_MEMORY' && String(x.skill_id) === 'mock_valve_control_skill_v1');
-    const memSkill = memRows.find((x) => String(x.memory_type) === 'SKILL_PERFORMANCE_MEMORY' && String(x.skill_id) === 'irrigation_deficit_skill_v1' && String(x.skill_trace_ref ?? '').trim());
-    checks.field_memory_refs_skill_id = toPassFail(Boolean(memDevice && memSkill));
+    const technicalSkillMemories = memRows.filter((x) =>
+      String(x.memory_type) === 'SKILL_PERFORMANCE_MEMORY'
+      && String(x.source_lane) === 'SKILL_TECHNICAL'
+      && String(x.trust_level) === 'TECHNICAL_SIGNAL'
+      && String(x.customer_visible_memory) === 'false'
+      && String(x.learning_eligible) === 'false'
+      && String(x.skill_id ?? '').trim()
+      && String(x.skill_trace_ref ?? '').trim()
+    );
+
+    const memDeviceSkill = technicalSkillMemories.find((x) =>
+      String(x.skill_id) === 'mock_valve_control_skill_v1'
+    );
+
+    const memIrrigationSkill = technicalSkillMemories.find((x) => {
+      const skillId = String(x.skill_id ?? '');
+      return skillId === 'irrigation_deficit_skill_v1'
+        || skillId === 'irrigation_soil_moisture_threshold'
+        || skillId === 'irrigation_acceptance_v1'
+        || skillId.startsWith('irrigation_');
+    });
+
+    checks.field_memory_refs_skill_id = toPassFail(Boolean(memDeviceSkill && memIrrigationSkill));
+    checks.technical_field_memory_refs_skill_trace = toPassFail(technicalSkillMemories.length >= 2 && technicalSkillMemories.every((x) => String(x.skill_id ?? '').trim() && String(x.skill_trace_ref ?? '').trim()));
+    checks.technical_field_memory_not_customer_visible = toPassFail(technicalSkillMemories.length >= 2 && technicalSkillMemories.every((x) => String(x.customer_visible_memory) === 'false' && String(x.learning_eligible) === 'false'));
     checks.memory_query_by_operation = toPassFail((memoryByOperationQ.rows ?? []).length > 0);
 
     const asExec = await fetchJson(`${base}/api/v1/as-executed/from-receipt`, { method: 'POST', token, body: { tenant_id, project_id, group_id, task_id: ids.task_id, receipt_id: receipt_fact_id } });
