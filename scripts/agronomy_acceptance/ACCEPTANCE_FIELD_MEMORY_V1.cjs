@@ -707,6 +707,41 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
   const byScopeIds = byScopeItems.slice(0, 3).map((x) => String(x.memory_id ?? '')).filter(Boolean);
   const byIdsExist = await assertFieldMemoryIdsExist(pool, byScopeIds);
   const byType = new Set(byScopeItems.map((item) => String(item?.memory_type ?? '')));
+  const linkedMemoryItems = byScopeItems.filter((item) => {
+    const operationId = String(item?.operation_id ?? '');
+    const taskId = String(item?.task_id ?? '');
+    const recommendationId = String(item?.recommendation_id ?? '');
+    const prescriptionId = String(item?.prescription_id ?? '');
+    const acceptanceId = String(item?.acceptance_id ?? '');
+    const sourceId = String(item?.source_id ?? '');
+    const evidenceText = JSON.stringify(item?.evidence_refs ?? []);
+
+    return operationId === operation_plan_id
+      || taskId === actTaskId
+      || recommendationId === recId
+      || prescriptionId === prescription_id
+      || acceptanceId === acceptance_fact_id
+      || sourceId === operation_plan_id
+      || sourceId === actTaskId
+      || sourceId === recId
+      || sourceId === acceptance_fact_id
+      || evidenceText.includes(operation_plan_id)
+      || evidenceText.includes(actTaskId)
+      || evidenceText.includes(receipt_fact_id)
+      || evidenceText.includes(acceptance_fact_id);
+  });
+  const memoryLinkKeys = byScopeItems.map((x) => ({
+    memory_id: x?.memory_id,
+    memory_type: x?.memory_type,
+    operation_id: x?.operation_id,
+    task_id: x?.task_id,
+    recommendation_id: x?.recommendation_id,
+    prescription_id: x?.prescription_id,
+    acceptance_id: x?.acceptance_id,
+    source_id: x?.source_id,
+    skill_id: x?.skill_id,
+    skill_trace_ref: x?.skill_trace_ref,
+  }));
 
   const fieldResponseItems = byScopeItems.filter((x) => x?.memory_type === 'FIELD_RESPONSE_MEMORY');
   const deviceItems = byScopeItems.filter((x) => x?.memory_type === 'DEVICE_RELIABILITY_MEMORY');
@@ -724,15 +759,21 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
     field_memory_debug: {
       field_id,
       act_task_id: actTaskId,
+      approval_decide_act_task_id: decideJson?.act_task_id ?? null,
+      manual_task_act_task_id: actTaskId,
       recommendation_id: recId,
       operation_plan_id,
       execution_judge_id,
       acceptance_verdict,
       acceptance_fact_id,
+      by_operation_count: byOperationItems.length,
+      linked_memory_count: linkedMemoryItems.length,
+      memory_link_keys: memoryLinkKeys,
       memory_types: Array.from(byType),
       memory_count: byScopeItems.length
     }
   }, null, 2)}\n`);
+  const currentChainMemoryLinked = linkedMemoryItems.length >= 3;
   const checks = {
     db_contract_aligned: dbContractAligned,
     field_response_memory_written:
@@ -740,7 +781,8 @@ function buildRecommendationFailureDiagnostic({ recGen, field_id, device_id, sea
     device_reliability_memory_written: byType.has('DEVICE_RELIABILITY_MEMORY'),
     skill_performance_memory_written: byType.has('SKILL_PERFORMANCE_MEMORY'),
     memory_query_by_field: byScopeItems.length >= 3 && byScopeItems.every((item) => String(item?.field_id ?? '') === field_id),
-    memory_query_by_operation: byOperationItems.length >= 3,
+    memory_query_by_operation: currentChainMemoryLinked,
+    memory_linked_to_current_chain: currentChainMemoryLinked,
     memory_query_by_id_all_exist: byIdsExist,
     memory_has_confidence: byScopeItems.every((item) => Number(item?.confidence) > 0),
     memory_has_summary_text: byScopeItems.every((item) => String(item?.summary_text ?? "").trim().length > 0),
