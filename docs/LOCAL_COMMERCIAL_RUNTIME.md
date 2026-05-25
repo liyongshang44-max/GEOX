@@ -18,6 +18,45 @@ It is not a production secret-management model. The example credentials are inte
 
 The repository `.gitignore` already excludes `.env`.
 
+## PowerShell runtime determinism
+
+PowerShell local acceptance must use Windows Node plus Windows pnpm.
+
+Do not run local PowerShell acceptance through a WSL/Linux pnpm executable. In particular, this path pattern means the local acceptance result is invalid:
+
+```text
+/home/<user>/.cache/node/corepack/v1/pnpm/11.x/dist/pnpm.mjs
+```
+
+That runtime can trigger non-interactive pnpm module purge prompts such as:
+
+```text
+ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY
+Command failed with exit code 1: pnpm install
+```
+
+Before running acceptance locally, verify runtime resolution:
+
+```powershell
+pnpm run doctor:local-runtime
+pnpm run doctor:local-runtime:print
+
+where.exe pnpm
+Get-Command pnpm -All | Format-List Source,Version,CommandType
+pnpm --version
+node -p "process.execPath"
+```
+
+Expected outcome:
+
+- `doctor:local-runtime` prints `LOCAL_PNPM_RUNTIME_OK`.
+- `node -p "process.execPath"` points to a Windows Node executable when running from Windows PowerShell.
+- `where.exe pnpm` and `Get-Command pnpm -All` do not resolve to `/home/...`, `\\wsl$`, or Corepack pnpm 11.x under a WSL cache.
+
+If `doctor:local-runtime` fails with `LOCAL_PNPM_RUNTIME_MISMATCH`, fix the PowerShell `PATH` so Windows pnpm wins, reopen the shell, and run the doctor again. Do not trust local acceptance results produced by a mismatched WSL/Corepack pnpm runtime.
+
+`pnpm run test:acceptance` runs this guard before the business acceptance steps, so a local runtime mismatch fails fast instead of surfacing midway through the acceptance suite.
+
 ## PowerShell quick start
 
 From the repository root:
@@ -32,6 +71,7 @@ docker compose -f docker-compose.commercial_v1.yml up -d --build postgres minio 
 curl.exe http://127.0.0.1:3001/api/health
 curl.exe http://127.0.0.1:3001/api/admin/healthz
 
+pnpm run doctor:local-runtime
 pnpm --filter @geox/server run test:p1:smoke
 pnpm run test:acceptance
 pnpm run ci:runtime:workers
