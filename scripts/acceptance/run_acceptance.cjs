@@ -166,6 +166,7 @@ function runStep(step, envOverrides = {}) {
         ...process.env,
         CI: process.env.CI || 'true',
         npm_config_confirmModulesPurge: process.env.npm_config_confirmModulesPurge || 'false',
+        npm_config_confirm_modules_purge: process.env.npm_config_confirm_modules_purge || 'false',
         ...envOverrides
       },
       shell: false,
