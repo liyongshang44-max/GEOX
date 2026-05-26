@@ -69,3 +69,19 @@ A scenario release gate does not make the scenario sale-ready. Commercial readin
 ## Non-goals
 
 This document does not modify scenario services, frontend scenario cards, reports, APIs, or acceptance scripts.
+
+## Controlled Pilot sellable scope (PR-4 aligned)
+
+1. `FORMAL_IRRIGATION`
+   - status: `pilot_eligible`
+   - condition: PR-1 / PR-2 formal evidence + report/dashboard closure passed.
+2. `FORMAL_PEST_DISEASE_INSPECTION`
+   - status: `pilot_eligible`
+   - condition: customer report can show inspection evidence chain; not equivalent to spray/treatment closure.
+3. `DEVICE_ANOMALY`
+   - status: `pilot_eligible`
+   - condition: fail-safe / manual takeover / evidence insufficiency / report-dashboard gating passed.
+4. `FORMAL_FERTILIZATION`
+   - status: `conditional` / `pending_ci_proof`
+   - reason: merged but not counted as Controlled Pilot mandatory scenario until `ci:scenario:fertilization` is green.
+

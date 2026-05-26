@@ -4,22 +4,23 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '../..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 const cards = read('apps/web/src/components/customer/FormalScenarioCards.tsx');
-const labels = read('apps/web/src/lib/customerScenarioLabels.ts');
+const page = read('apps/web/src/views/OperationReportPage.tsx');
 const has = (src, s) => src.includes(s);
-const u = (...codes) => String.fromCharCode(...codes);
+
 const checks = {
-  label_device_anomaly: has(labels, 'DEVICE_ANOMALY'),
-  label_device_anomaly_cn: has(labels, u(35774,22791,24322,24120)),
-  shows_type: has(cards, 'anomalyTypeText'),
-  shows_scope: has(cards, 'impactText'),
-  shows_missing_evidence: has(cards, 'missingEvidenceText'),
-  shows_fail_safe: has(cards, 'Fail-safe'),
-  shows_manual_takeover: has(cards, u(20154,24037,25509,31649)),
-  shows_next_action: has(cards, u(23458,25143,19979,19968,27493)),
-  blocks_success_wording: has(cards, u(25191,34892,25104,21151)) && has(cards, u(19981,23637,31034)),
-  hides_roi: has(cards, 'ROI') && has(cards, u(19981,23637,31034)),
-  hides_field_memory: has(cards, 'Field Memory') && has(cards, u(19981,29983,25104)),
+  operation_report_page_renders_fail_safe_notice: has(page, '<FailSafeCustomerNotice data={report} />'),
+  card_renders_anomaly_type: has(cards, '异常类型'),
+  card_renders_impact_scope: has(cards, '影响范围'),
+  card_renders_system_block_reason: has(cards, '系统阻断'),
+  card_renders_missing_evidence: has(cards, '缺少证据'),
+  card_renders_manual_takeover: has(cards, '人工接管'),
+  card_renders_fail_safe: has(cards, 'Fail-safe'),
+  card_renders_customer_next_action: has(cards, '客户下一步'),
+  card_blocks_success_claim: has(cards, '不展示') && has(cards, '执行成功'),
+  card_blocks_roi_claim: has(cards, '不展示 ROI'),
+  card_blocks_field_memory_claim: has(cards, '不生成对客 Field Memory'),
 };
+
 const ok = Object.values(checks).every(Boolean);
 console.log(JSON.stringify({ ok, checks }, null, 2));
 if (!ok) process.exit(1);
