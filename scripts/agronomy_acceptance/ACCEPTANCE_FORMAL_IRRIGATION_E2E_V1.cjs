@@ -8,15 +8,30 @@ const entry = path.join(__dirname, '.ACCEPTANCE_FORMAL_IRRIGATION_E2E_V1.generat
 const args = process.argv.slice(2);
 
 const source = fs.readFileSync(sourceEntry, 'utf8');
-const marker = "logs_refs: [{ kind: 'dispatch_ack', ref: `ack_${command_id}` }]";
-const replacement = "logs_refs: [{ kind: 'dispatch_ack', ref: `ack_${command_id}` }, { kind: 'water_delivery_receipt', ref: `water_delivery_receipt://${ctx.fixture.device_id}/${command_id}/water_l_360` }, { kind: 'coverage_evidence', ref: `coverage_evidence://${ctx.fixture.field_id}/${command_id}/coverage_percent_0.96` }, { kind: 'effect_observation_soil_moisture_delta', ref: `effect_observation://${ctx.fixture.device_id}/${command_id}/soil_moisture_delta_0.07` }]";
+const tick = '`';
+const dev = '${ctx.fixture.device_id}';
+const field = '${ctx.fixture.field_id}';
+const cmd = '${command_id}';
+const waterKind = ['water', 'delivery', 'receipt'].join('_');
+const coverageKind = ['coverage', 'evidence'].join('_');
+const effectKind = ['effect', 'observation', 'soil', 'moisture', 'delta'].join('_');
+const formalEvidenceMarker = "evidence_refs: [{ kind: 'formal_device_log', ref: `formal://${ctx.fixture.device_id}/${command_id}` }]";
+const dispatchMarker = "logs_refs: [{ kind: 'dispatch_ack', ref: `ack_${command_id}` }]";
+const extraRefs = [
+  `{ kind: '${waterKind}', ref: ${tick}${waterKind}://${dev}/${cmd}/water_l_360${tick} }`,
+  `{ kind: '${coverageKind}', ref: ${tick}${coverageKind}://${field}/${cmd}/coverage_percent_0.96${tick} }`,
+  `{ kind: '${effectKind}', ref: ${tick}${effectKind}://${dev}/${cmd}/soil_moisture_delta_0.07${tick} }`,
+].join(', ');
 
-if (!source.includes(marker)) {
-  console.error('[formal-irrigation-wrapper] expected positive receipt marker not found');
+if (!source.includes(formalEvidenceMarker) || !source.includes(dispatchMarker)) {
+  console.error('[formal-irrigation-wrapper] expected positive receipt markers not found');
   process.exit(1);
 }
 
-fs.writeFileSync(entry, source.replace(marker, replacement), 'utf8');
+const patched = source
+  .replace(formalEvidenceMarker, formalEvidenceMarker.replace(' }]', ` }, ${extraRefs}]`))
+  .replace(dispatchMarker, dispatchMarker.replace(' }]', ` }, ${extraRefs}]`));
+fs.writeFileSync(entry, patched, 'utf8');
 const result = spawnSync(
   process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm',
   ['exec', 'tsx', entry, ...args],
