@@ -110,6 +110,13 @@ jobs:
           docker run --rm --network host --entrypoint /bin/sh minio/mc:latest -c 'set -eu; mc alias set local http://127.0.0.1:9000 minioadmin minioadmin; mc ls local; mc stat local/evidence-exports-v1'
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps
 
+      - name: Run Controlled Pilot strict release gate
+        run: |
+          set -a
+          source .env.ci
+          set +a
+          pnpm run ci:controlled-pilot
+
       - name: Run runtime workers packaging gate
         run: |
           set -euo pipefail
@@ -214,13 +221,6 @@ jobs:
           set +a
           pnpm acceptance:commercial:mvp0:syntax
           pnpm acceptance:commercial:mvp0:release-gate
-
-      - name: Run Controlled Pilot strict release gate
-        run: |
-          set -a
-          source .env.ci
-          set +a
-          pnpm run ci:controlled-pilot
 
       - name: Stop acceptance runtime dependencies
         if: always()
