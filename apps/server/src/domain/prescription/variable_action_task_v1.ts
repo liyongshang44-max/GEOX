@@ -13,10 +13,17 @@ export type VariableActionParameterSourceV1 =
   | "EXPLICIT_OPERATOR_INPUT"
   | "DEMO_DEFAULT";
 
-function normalizeVariableOperationTypeV1(value: unknown): "IRRIGATION" | "FERTILIZATION" {
+type VariableOperationTypeV1 = "IRRIGATION" | "FERTILIZATION";
+type VariableExecutionSemanticsV1 = "IRRIGATION_APPLICATION" | "FERTILIZER_APPLICATION";
+
+function normalizeVariableOperationTypeV1(value: unknown): VariableOperationTypeV1 {
   const operationType = asText(value).toUpperCase();
   if (operationType === "IRRIGATION" || operationType === "FERTILIZATION") return operationType;
   throw new Error("VARIABLE_PRESCRIPTION_UNSUPPORTED_OPERATION_TYPE");
+}
+
+function executionSemanticsForOperationTypeV1(operationType: VariableOperationTypeV1): VariableExecutionSemanticsV1 {
+  return operationType === "FERTILIZATION" ? "FERTILIZER_APPLICATION" : "IRRIGATION_APPLICATION";
 }
 
 export function buildVariableActionTaskPayloadV1(input: {
@@ -61,6 +68,7 @@ export function buildVariableActionTaskPayloadV1(input: {
 } {
   const prescription = input.prescription ?? {};
   const operationType = normalizeVariableOperationTypeV1(prescription.operation_type);
+  const executionSemantics = executionSemanticsForOperationTypeV1(operationType);
 
   const operationAmount = (prescription.operation_amount && typeof prescription.operation_amount === "object")
     ? prescription.operation_amount
@@ -122,8 +130,8 @@ export function buildVariableActionTaskPayloadV1(input: {
       namespace: "variable_action_task_v1",
     },
     // AO-ACT v0 keeps a narrow action_type allowlist. The formal operation remains
-    // available as meta.operation_type so fertilization can reuse the existing
-    // variable operation chain without creating a duplicate execution path.
+    // available as meta.operation_type/task_type/execution_semantics so fertilization
+    // reuses the existing variable task transport without being interpreted as irrigation.
     action_type: "IRRIGATE" as const,
     target: { kind: "field" as const, ref: field_id },
     time_window: {
@@ -156,12 +164,18 @@ export function buildVariableActionTaskPayloadV1(input: {
       recommendation_id: asText(prescription.recommendation_id),
       operation_type: operationType,
       task_type: operationType,
+      execution_semantics: executionSemantics,
       nutrient: asText(operationAmount.nutrient ?? prescription.nutrient) || null,
       device_id: asText(input.device_id),
       device_requirements: prescription.device_requirements ?? {},
+      expected_evidence_requirements: operationType === "FERTILIZATION"
+        ? ["dispatch_ack", "fertilizer_dispense_confirmation", "fertilization_zone_application_receipt"]
+        : ["dispatch_ack", "valve_open_confirmation", "water_delivery_receipt"],
       variable_plan: {
         mode: "VARIABLE_BY_ZONE",
         operation_type: operationType,
+        task_type: operationType,
+        execution_semantics: executionSemantics,
         zone_rates: sanitizedZoneRates,
       },
       task_lifecycle_status: "READY_TO_DISPATCH",
