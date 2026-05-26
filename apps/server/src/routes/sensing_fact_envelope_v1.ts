@@ -182,6 +182,11 @@ async function maybeRunOfficialObservationPipelineV1(pool: Pool, item: RawSample
       confidence: item.qc_quality === "ok" ? 0.9 : 0.45,
       observed_at_ts_ms: item.ts_ms,
       source_fact_id: item.fact_id,
+      source_lane: "FORMAL_OPERATION",
+      is_simulated: false,
+      formal_eligible: true,
+      evidence_level: "FORMAL",
+      dev_source: null,
     });
     return {
       observation_fact_id: result.observation.fact_id,
