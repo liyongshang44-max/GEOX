@@ -269,8 +269,12 @@ export function validateOperationChainV1(input: ValidatorInput): OperationChainV
           ? "DONE"
           : "INVALID";
 
+  const projectedZoneRates = Array.isArray(input.report?.fertilization?.zone_rates) ? input.report.fertilization.zone_rates : [];
+  const projectedFertilizationZoneEvidence = projectedZoneRates.length > 0
+    && projectedZoneRates.every((zone: any) => ["PASS", "FAIL", "NEEDS_REVIEW"].includes(upper(zone?.result)));
   const fertilizationZoneEvidence = fertilization && Boolean(
-    Array.isArray(payload(acceptanceFact)?.zone_results) && payload(acceptanceFact).zone_results.length > 0,
+    (Array.isArray(payload(acceptanceFact)?.zone_results) && payload(acceptanceFact).zone_results.length > 0)
+      || projectedFertilizationZoneEvidence,
   );
   const evidenceTrusted = Boolean(
     (input.evidence?.trusted && input.evidence?.evidence_status === "COMPLETE")
@@ -287,7 +291,7 @@ export function validateOperationChainV1(input: ValidatorInput): OperationChainV
   const acceptanceExists = Boolean(acceptanceFact || input.acceptance || formalFertilizationAcceptance);
   const acceptancePayloadForFormalGate = input.acceptancePayload ?? payload(acceptanceFact) ?? input.acceptance ?? input.report?.acceptance;
   const acceptanceFormal = isFormalAcceptancePayload(acceptancePayloadForFormalGate) || formalFertilizationAcceptance;
-  const acceptanceVerdict = upper(input.acceptance?.verdict ?? input.acceptancePayload?.verdict ?? payload(acceptanceFact)?.verdict ?? payload(acceptanceFact)?.acceptance_status ?? input.report?.acceptance?.verdict ?? input.report?.acceptance?.status);
+  const acceptanceVerdict = upper(input.acceptance?.verdict ?? input.acceptancePayload?.verdict ?? payload(acceptanceFact)?.verdict ?? payload(acceptanceFact)?.acceptance_status ?? input.report?.fertilization?.acceptance_status ?? input.report?.acceptance?.verdict ?? input.report?.acceptance?.status);
   const acceptanceStatus: OperationChainStatusV1 = !acceptanceExists
     ? "MISSING"
     : evidenceStatus === "DONE" && acceptanceFormal && ["PASS", "FAIL", "FAILED", "REJECTED"].includes(acceptanceVerdict)
@@ -310,7 +314,7 @@ export function validateOperationChainV1(input: ValidatorInput): OperationChainV
     node("operation_plan", "作业计划", operationPlanStatus, operationPlanStatus === "DONE" ? "作业计划已获得审批授权" : operationPlanExists ? "审批未通过，作业计划不能作为正式执行计划" : "缺少作业计划", planFact ? "operation_plan_v1" : "operation_report_chain_v1"),
     node("execution", "执行", executionStatus, executionStatus === "DONE" ? "执行任务已由正式计划派发" : taskExists ? "上游作业计划未授权，执行任务不能作为正式执行" : "缺少执行任务", taskFact ? "ao_act_task_v0" : "operation_report_chain_v1"),
     node("receipt", "回执", receiptStatus, receiptStatus === "DONE" ? "执行回执已记录且具备执行窗口" : receiptStatus === "SIMULATED" ? "该回执来自飞行台/模拟链路，不能作为验收通过依据" : receiptExists ? "回执缺少执行窗口或上游执行未成立" : "缺少执行回执", receiptFact ? factType(receiptFact) : "operation_report_chain_v1"),
-    node("evidence", "证据", evidenceStatus, evidenceStatus === "DONE" ? (fertilization ? "施肥分区执行证据链完整" : "证据链完整") : evidenceStatus === "SIMULATED" ? "证据来自模拟链路，不能包装成正式验收证据" : "证据不足或上游回执未成立", fertilization && acceptanceFact ? factType(acceptanceFact) : "operation_report_chain_v1"),
+    node("evidence", "证据", evidenceStatus, evidenceStatus === "DONE" ? (fertilization ? "施肥分区执行证据链完整" : "证据链完整") : evidenceStatus === "SIMULATED" ? "证据来自模拟链路，不能包装成正式验收证据" : "证据不足或上游回执未成立", fertilization && acceptanceFact ? factType(acceptanceFact) : fertilization && projectedFertilizationZoneEvidence ? "fertilization_report_projection_v1" : "operation_report_chain_v1"),
     node("acceptance", "验收", acceptanceStatus, acceptanceStatus === "DONE" ? "正式验收结论已形成" : acceptanceStatus === "SIMULATED" ? "飞行台回执成功不等于验收通过，验收结论需降级" : acceptanceExists && !acceptanceFormal ? "验收记录缺少 formal_acceptance gate metadata，不能作为正式客户结论" : acceptanceExists ? "上游证据未成立，验收不能作为正式结论" : "缺少验收结论", acceptanceFact ? factType(acceptanceFact) : "operation_report_chain_v1"),
     node("roi", "价值", roiStatus, roiStatus === "AVAILABLE" ? "价值记录可作为学习输入" : roiStatus === "BLOCKED" ? "验收未正式成立，价值结论不能成立" : "缺少价值记录", "roi_ledger_v1"),
     node("field_memory", "田块记忆", memoryStatus, memoryStatus === "AVAILABLE" ? "田块记忆可作为学习输入" : memoryStatus === "SIMULATED" ? "田块记忆来自未正式验收链路，仅作排查线索" : "缺少田块记忆", "field_memory_v1"),
