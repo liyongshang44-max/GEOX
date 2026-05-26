@@ -110,6 +110,7 @@ function hasExecutionWindow(receipt: any): boolean {
 }
 
 function actionTypeFrom(input: ValidatorInput): string {
+  const reportLooksFertilization = Boolean(input.report?.fertilization?.fertilization_prescription_id);
   return upper(
     input.prescription?.operation_type
       ?? input.prescriptionPayload?.operation_type
@@ -118,7 +119,7 @@ function actionTypeFrom(input: ValidatorInput): string {
       ?? input.task?.operation_type
       ?? input.operationPlan?.meta?.operation_type
       ?? input.operationPlan?.operation_type
-      ?? input.report?.fertilization?.fertilization_prescription_id ? "FERTILIZATION" : undefined
+      ?? (reportLooksFertilization ? "FERTILIZATION" : undefined)
       ?? input.rec?.suggested_action?.action_type
       ?? input.report?.operation_type,
   );
