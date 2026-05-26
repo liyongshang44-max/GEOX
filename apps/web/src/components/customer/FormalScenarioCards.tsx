@@ -9,6 +9,28 @@ function closureToneClass(status: "PASS" | "NEEDS_REVIEW" | "BLOCKED"): string {
   return status === "PASS" ? "riskBadgeneutral" : status === "NEEDS_REVIEW" ? "riskBadgewarning" : "riskBadgedanger";
 }
 
+function listText(value: unknown): string {
+  return Array.isArray(value) ? value.map((x) => String(x ?? "").trim()).filter(Boolean).join("、") : String(value ?? "").trim();
+}
+
+function anomalyTypeText(data: any): string {
+  const raw = listText(data?.device_anomaly?.anomaly_types) || listText(data?.fail_safe?.trigger) || listText(data?.execution?.invalid_reason);
+  return raw || "设备异常";
+}
+
+function impactText(data: any): string {
+  const scope = data?.device_anomaly?.impact_scope ?? {};
+  const fieldId = scope.field_id ?? data?.identifiers?.field_id ?? "待确认";
+  const deviceId = scope.device_id ?? data?.as_executed?.device_id ?? "待确认";
+  const taskId = scope.act_task_id ?? data?.identifiers?.act_task_id ?? "待确认";
+  return `影响范围：地块 ${fieldId}，设备 ${deviceId}，任务 ${taskId}`;
+}
+
+function missingEvidenceText(data: any): string {
+  const missing = listText(data?.device_anomaly?.missing_evidence) || listText(data?.acceptance?.missing_items) || listText(data?.formal_scenario?.blocking_reasons);
+  return missing ? `缺少证据：${missing}` : "缺少证据：设备回执、派发确认或验收材料待补充";
+}
+
 export function FormalScenarioBadge({ data }: { data: any }): React.ReactElement {
   const vm = buildFormalScenarioVm(data);
   const pestDiseaseSummary = (vm as any).pestDiseaseSummaryText as string | undefined;
@@ -31,7 +53,8 @@ export function ScenarioAcceptanceSummary({ data }: { data: any }): React.ReactE
 
 export function ScenarioValueMemorySummary({ data }: { data: any }): React.ReactElement {
   const vm = buildFormalScenarioVm(data);
-  return <article className="customerCard"><h3 className="customerCardTitle">价值与学习门禁</h3><div>{vm.roiTrustText}</div><div className="customerSpacingTopXs">{vm.memoryTrustText}</div></article>;
+  const isAnomaly = vm.scenarioKey === "DEVICE_ANOMALY";
+  return <article className="customerCard"><h3 className="customerCardTitle">价值与学习门禁</h3><div>{isAnomaly ? "设备异常未完成正式验收前，不展示 ROI 价值结论。" : vm.roiTrustText}</div><div className="customerSpacingTopXs">{isAnomaly ? "设备异常未完成正式验收前，不生成对客 Field Memory。" : vm.memoryTrustText}</div></article>;
 }
 
 export function ZoneRollupSummary({ data }: { data: any }): React.ReactElement {
@@ -58,5 +81,5 @@ export function ZoneRollupSummary({ data }: { data: any }): React.ReactElement {
 export function FailSafeCustomerNotice({ data }: { data: any }): React.ReactElement | null {
   const vm = buildFormalScenarioVm(data);
   if (vm.scenarioKey !== "DEVICE_ANOMALY" && !vm.failSafeText && !vm.manualTakeoverText) return null;
-  return <article className="customerCard"><h3 className="customerCardTitle">设备异常与接管</h3><div>{vm.deviceStatusText ?? "设备状态：未知"}</div><div className="customerSpacingTopXs">{vm.failSafeText ?? "Fail-safe 未触发"}</div><div className="customerSpacingTopXs">{vm.manualTakeoverText ?? "人工接管未触发"}</div>{vm.executionGuardText ? <div className="customerSpacingTopXs">{vm.executionGuardText}</div> : null}</article>;
+  return <article className="customerCard"><h3 className="customerCardTitle">设备异常与接管</h3><div>{vm.deviceStatusText ?? "设备状态：未知"}</div><div className="customerSpacingTopXs">异常类型：{anomalyTypeText(data)}</div><div className="customerSpacingTopXs">{impactText(data)}</div><div className="customerSpacingTopXs">系统阻断：{data?.device_anomaly?.system_block_reason ?? data?.execution?.invalid_reason ?? "设备异常或证据不足，需复核。"}</div><div className="customerSpacingTopXs">{missingEvidenceText(data)}</div><div className="customerSpacingTopXs">是否需要人工接管：{data?.device_anomaly?.manual_takeover_required || vm.manualTakeoverText ? "需要" : "待确认"}</div><div className="customerSpacingTopXs">{vm.failSafeText ?? "Fail-safe 未触发"}</div><div className="customerSpacingTopXs">{vm.manualTakeoverText ?? "人工接管未触发"}</div><div className="customerSpacingTopXs">客户下一步：{data?.device_anomaly?.customer_next_action ?? "完成人工接管、现场复核并补充证据。"}</div>{vm.executionGuardText ? <div className="customerSpacingTopXs">{vm.executionGuardText}</div> : null}</article>;
 }
