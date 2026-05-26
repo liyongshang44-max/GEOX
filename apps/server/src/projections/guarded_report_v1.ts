@@ -1,6 +1,8 @@
 type GuardTrustLevelV1 = "FORMAL_CHAIN_PASSED" | "NEEDS_REVIEW" | "INSUFFICIENT_FORMAL_EVIDENCE" | "SIMULATED_DEV_ONLY" | "LIMITED_FALLBACK";
 
 type GuardStatusV1 = "PASSED" | "NEEDS_REVIEW" | "INSUFFICIENT_EVIDENCE" | "SIMULATED" | "LIMITED";
+type CustomerFormalChainStatusV1 = "PASSED" | "NEEDS_REVIEW" | "BLOCKED";
+type CustomerFormalEvidenceStatusV1 = "FORMAL_EVIDENCE_PASSED" | "INSUFFICIENT_EVIDENCE" | "SIMULATED" | "BLOCKED";
 
 function upper(value: unknown): string { return String(value ?? "").trim().toUpperCase(); }
 function clone<T>(value: T): T { if (value == null || typeof value !== "object") return value; return JSON.parse(JSON.stringify(value)); }
@@ -64,6 +66,79 @@ function guardFieldMemory(memory: any, trusted: boolean, trust: GuardTrustLevelV
 }
 
 function statusOf(report: any, key: string): string { const item = Array.isArray(report?.status_chain) ? report.status_chain.find((x: any) => String(x?.key ?? "") === key) : null; return upper(item?.status); }
+function unique(values: unknown[]): string[] { return Array.from(new Set(values.map((x) => String(x ?? "").trim()).filter(Boolean))); }
+
+function formalScenarioTypeFor(report: any): string {
+  const existing = upper(report?.formal_scenario?.scenario_type);
+  if (["FORMAL_IRRIGATION", "DEVICE_ANOMALY", "FORMAL_VARIABLE_OPERATION", "FORMAL_SAMPLING", "FORMAL_FERTILIZATION", "FORMAL_PEST_DISEASE_INSPECTION"].includes(existing)) return existing;
+  if (report?.pest_disease_inspection) return "FORMAL_PEST_DISEASE_INSPECTION";
+  if (report?.fertilization) return "FORMAL_FERTILIZATION";
+  if (report?.sampling?.sample_id || report?.sampling?.plan_id) return "FORMAL_SAMPLING";
+  if (Array.isArray(report?.zone_matrix) && report.zone_matrix.length > 0) return "FORMAL_VARIABLE_OPERATION";
+  const failSafe = upper(report?.fail_safe?.status);
+  const manualTakeover = upper(report?.manual_takeover?.status);
+  if ((failSafe && failSafe !== "NONE") || (manualTakeover && manualTakeover !== "NONE")) return "DEVICE_ANOMALY";
+  const actionText = [
+    report?.operation_title,
+    report?.customer_title,
+    report?.action_type,
+    report?.as_executed?.actual_params?.action_type,
+    report?.suggested_action?.action_type,
+  ].map((x) => String(x ?? "").trim()).join("|").toUpperCase();
+  if (actionText.includes("IRRIG") || actionText.includes("灌溉")) return "FORMAL_IRRIGATION";
+  if (report?.identifiers?.recommendation_id || report?.identifiers?.prescription_id || report?.identifiers?.act_task_id) return "FORMAL_IRRIGATION";
+  return "UNKNOWN";
+}
+
+function formalChainStatusFor(trust: GuardTrustLevelV1, guardStatus: GuardStatusV1): CustomerFormalChainStatusV1 {
+  if (trust === "FORMAL_CHAIN_PASSED" || guardStatus === "PASSED") return "PASSED";
+  if (trust === "NEEDS_REVIEW" || guardStatus === "NEEDS_REVIEW") return "NEEDS_REVIEW";
+  return "BLOCKED";
+}
+
+function formalEvidenceStatusFor(trust: GuardTrustLevelV1, guardStatus: GuardStatusV1): CustomerFormalEvidenceStatusV1 {
+  if (trust === "FORMAL_CHAIN_PASSED" || guardStatus === "PASSED") return "FORMAL_EVIDENCE_PASSED";
+  if (trust === "SIMULATED_DEV_ONLY" || guardStatus === "SIMULATED") return "SIMULATED";
+  if (trust === "INSUFFICIENT_FORMAL_EVIDENCE" || guardStatus === "INSUFFICIENT_EVIDENCE" || trust === "NEEDS_REVIEW") return "INSUFFICIENT_EVIDENCE";
+  return "BLOCKED";
+}
+
+function collectFormalScenarioSourceRefs(report: any): string[] {
+  const ids = report?.identifiers ?? {};
+  const refs = [
+    ids.recommendation_id ? `recommendation:${ids.recommendation_id}` : null,
+    ids.prescription_id ? `prescription:${ids.prescription_id}` : null,
+    ids.approval_id ? `approval:${ids.approval_id}` : null,
+    ids.operation_plan_id ? `operation_plan:${ids.operation_plan_id}` : null,
+    ids.act_task_id ? `ao_act_task:${ids.act_task_id}` : null,
+    ids.receipt_id ? `receipt:${ids.receipt_id}` : null,
+    report?.acceptance?.acceptance_id ? `acceptance:${report.acceptance.acceptance_id}` : null,
+    report?.acceptance?.formal_acceptance === true ? "acceptance:formal" : null,
+    report?.evidence?.formal_evidence_passed === true ? "evidence:formal_passed" : null,
+    report?.roi_ledger?.summary?.has_customer_visible_value === true ? "roi:customer_visible" : null,
+    report?.field_memory && report.field_memory.hidden_by_guard !== true ? "field_memory:visible" : null,
+    ...(Array.isArray(report?.status_chain) ? report.status_chain.map((x: any) => String(x?.key ?? "").trim() ? `status_chain:${String(x.key).trim()}:${String(x?.status ?? "").trim()}` : null) : []),
+    ...(Array.isArray(report?.formal_scenario?.source_refs) ? report.formal_scenario.source_refs : []),
+  ];
+  return unique(refs);
+}
+
+function reconcileFormalScenarioProjectionV1(report: any, trust: GuardTrustLevelV1, guardStatus: GuardStatusV1, trusted: boolean, reasons: string[]): any {
+  const existing = report?.formal_scenario && typeof report.formal_scenario === "object" ? report.formal_scenario : {};
+  const formal_chain_status = formalChainStatusFor(trust, guardStatus);
+  const evidence_status = formalEvidenceStatusFor(trust, guardStatus);
+  const blocking_reasons = unique([...(Array.isArray(existing.blocking_reasons) ? existing.blocking_reasons : []), ...reasons]);
+  return {
+    ...existing,
+    scenario_type: formalScenarioTypeFor(report),
+    formal_chain_status,
+    evidence_status,
+    customer_visible_eligible: trusted,
+    needs_review: trusted ? Boolean(existing.needs_review ?? false) : true,
+    blocking_reasons,
+    source_refs: collectFormalScenarioSourceRefs(report),
+  };
+}
 
 export function applyGuardedOperationReportV1(report: any): any {
   if (!report || typeof report !== "object") return report;
@@ -93,6 +168,7 @@ export function applyGuardedOperationReportV1(report: any): any {
   next.roi = guardRoiLedger(next.roi, trusted, trust);
   next.field_memory = guardFieldMemory(next.field_memory, trusted, trust);
   if (next.evidence_pack_summary && !trusted) next.evidence_pack_summary = { ...next.evidence_pack_summary, status: trust === "SIMULATED_DEV_ONLY" ? "PENDING" : "FAILED", evidence_count: 0, insufficient_reason: next.evidence_pack_summary.insufficient_reason ?? "该证据包未通过正式链路校验，不能作为客户正式结论。" };
+  next.formal_scenario = reconcileFormalScenarioProjectionV1(next, trust, guardStatus, trusted, reasons);
   return next;
 }
 
