@@ -51,8 +51,9 @@ const routePath = 'apps/server/src/routes/control_ao_act.ts';
 const v1RoutePath = 'apps/server/src/routes/v1/ao_act.ts';
 const approvalRoutePath = 'apps/server/src/routes/control_approval_request_v1.ts';
 const scopePath = 'apps/server/src/auth/resource_scope_v1.ts';
+const taskServicePath = 'apps/server/src/domain/controlplane/task_service.ts';
 
-for (const p of [restContractPath, aoActContractPath, routePath, v1RoutePath, approvalRoutePath, scopePath]) {
+for (const p of [restContractPath, aoActContractPath, routePath, v1RoutePath, approvalRoutePath, scopePath, taskServicePath]) {
   assert(fs.existsSync(path.join(root, p)), `missing required file: ${p}`);
 }
 
@@ -86,6 +87,11 @@ const scope = read(scopePath);
 assert(scope.includes("record_json::jsonb->>'type' = 'ao_act_task_v0'"), 'getActionTaskScopeV1 must read current ao_act_task_v0 facts');
 assert(!scope.includes('FROM ao_act_task_v1'), 'getActionTaskScopeV1 must not read non-current ao_act_task_v1 table');
 
+const taskService = read(taskServicePath);
+assert(taskService.includes('app.post("/api/v1/ao-act/receipts/uplink"'), 'receipt uplink bridge route must stay explicit if it writes ao_act_receipt_v1');
+assert(taskService.includes('fetchJson(`${hostBaseUrl(req)}/api/v1/ao-act/receipts`'), 'receipt uplink bridge must delegate to stable receipt runtime before writing bridge audit fact');
+assert(taskService.includes('type: "ao_act_receipt_v1"'), 'receipt uplink bridge must make the existing v1 audit/write explicit');
+
 const forbiddenTaskV1RuntimeReads = findText(/FROM\s+ao_act_task_v1|record_json::jsonb[^\n]+ao_act_task_v1|record_json[^\n]+ao_act_task_v1/i, {
   roots: ['apps/server/src', 'apps/executor/src'],
   exclude: [
@@ -104,15 +110,18 @@ const taskV1Writers = findText(/type:\s*["']ao_act_task_v1["']|type\s*=\s*["']ao
 });
 assert(taskV1Writers.length === 0, `do not introduce ao_act_task_v1 writers/checks before migration: ${taskV1Writers.join(', ')}`);
 
-// Current AO-ACT product runtime writes receipt facts as ao_act_receipt_v0. Some older
-// as-executed / ROI acceptance fixtures intentionally seed ao_act_receipt_v1 to validate
-// downstream compatibility readers. Those fixtures are not AO-ACT runtime writers and
-// must not make this contract gate fail. Keep the hard ban focused on runtime writers.
+// Current primary AO-ACT product receipt path is still ao_act_receipt_v0. The existing
+// MQTT receipt uplink bridge in task_service.ts delegates into that stable runtime and
+// also writes one ao_act_receipt_v1 audit/compat fact for downstream readers. That is an
+// existing bridge, not a general AO-ACT fact-v1 migration. Keep the guard strict by
+// allowing only this known bridge file and rejecting any additional runtime v1 writers.
+const allowedReceiptV1RuntimeWriterFiles = new Set([taskServicePath]);
 const receiptV1RuntimeWriters = findText(/["']?type["']?\s*:\s*["']ao_act_receipt_v1["']/i, {
   roots: ['apps/server/src', 'apps/executor/src'],
   exclude: [],
 });
-assert(receiptV1RuntimeWriters.length === 0, `runtime code must not write ao_act_receipt_v1 before migration: ${receiptV1RuntimeWriters.join(', ')}`);
+const unexpectedReceiptV1RuntimeWriters = receiptV1RuntimeWriters.filter((p) => !allowedReceiptV1RuntimeWriterFiles.has(p));
+assert(unexpectedReceiptV1RuntimeWriters.length === 0, `unexpected runtime ao_act_receipt_v1 writer before migration: ${unexpectedReceiptV1RuntimeWriters.join(', ')}`);
 
 const allowedReceiptV1FixtureFiles = new Set([
   'scripts/agronomy_acceptance/ACCEPTANCE_AS_EXECUTED_AS_APPLIED_V1.cjs',
@@ -132,5 +141,6 @@ console.log('[ao-act-version-boundary] PASS', {
   product_ingress: '/api/v1/actions/*',
   current_task_fact_type: 'ao_act_task_v0',
   current_receipt_fact_type: 'ao_act_receipt_v0',
+  allowed_receipt_v1_runtime_bridge_files: receiptV1RuntimeWriters,
   legacy_receipt_v1_fixture_files: receiptV1FixtureWriters,
 });
