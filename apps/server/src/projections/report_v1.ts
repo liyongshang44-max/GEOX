@@ -2,6 +2,7 @@ import { evaluateRisk } from "../domain/risk_engine.js";
 import type { FertilizationReportProjectionV1 } from "../services/fertilization/fertilization_projection_v1.js";
 import type { PestDiseaseInspectionReportProjectionV1 } from "../services/inspection/pest_disease_inspection_projection_v1.js";
 import type { OperationStateV1 } from "./operation_state_v1.js";
+import { applyDeviceAnomalyReportGuardV1 } from "./device_anomaly_report_v1.js";
 
 export type OperationReportRiskLevel = "LOW" | "MEDIUM" | "HIGH";
 export type OperationReportFormalScenarioTypeV1 =
@@ -241,6 +242,7 @@ export type OperationReportV1 = {
   };
   fertilization?: OperationReportFertilizationV1;
   pest_disease_inspection?: OperationReportPestDiseaseInspectionV1;
+  device_anomaly?: import("./device_anomaly_report_v1.js").DeviceAnomalyReportV1;
 
   fail_safe?: {
     status: "NONE" | "OPEN" | "ACKED" | "COMPLETED" | "RESOLVED";
@@ -1042,5 +1044,7 @@ export function projectOperationReportV1(input: {
         : [],
     },
   };
-  return mergeFertilizationIntoReport(report, input.fertilization_view ?? null);
+  const mergedReport = mergeFertilizationIntoReport(report, input.fertilization_view ?? null);
+  const shouldGuardDeviceAnomaly = scenarioType === "DEVICE_ANOMALY" || mergedReport.fail_safe?.status !== "NONE" || mergedReport.manual_takeover?.status !== "NONE";
+  return shouldGuardDeviceAnomaly ? applyDeviceAnomalyReportGuardV1(mergedReport) : mergedReport;
 }
