@@ -72,7 +72,9 @@ function bool(value: unknown): boolean | null {
 }
 
 function payload(fact: FactRow | null | undefined): any {
-  return fact?.record_json?.payload ?? {};
+  const record = fact?.record_json ?? {};
+  if (record?.payload && typeof record.payload === "object") return record.payload;
+  return record;
 }
 
 function factType(fact: FactRow | null | undefined): string {
@@ -108,12 +110,28 @@ function hasExecutionWindow(receipt: any): boolean {
 }
 
 function actionTypeFrom(input: ValidatorInput): string {
-  return upper(input.prescription?.operation_type ?? input.prescriptionPayload?.operation_type ?? input.prescriptionPayload?.action_type ?? input.rec?.suggested_action?.action_type ?? input.report?.operation_type);
+  return upper(
+    input.prescription?.operation_type
+      ?? input.prescriptionPayload?.operation_type
+      ?? input.prescriptionPayload?.action_type
+      ?? input.task?.meta?.operation_type
+      ?? input.task?.operation_type
+      ?? input.operationPlan?.meta?.operation_type
+      ?? input.operationPlan?.operation_type
+      ?? input.report?.fertilization?.fertilization_prescription_id ? "FERTILIZATION" : undefined
+      ?? input.rec?.suggested_action?.action_type
+      ?? input.report?.operation_type,
+  );
 }
 
 function isIrrigation(input: ValidatorInput): boolean {
   const action = actionTypeFrom(input);
   return action.includes("IRRIG") || action.includes("WATER");
+}
+
+function isFertilization(input: ValidatorInput): boolean {
+  const action = actionTypeFrom(input);
+  return action.includes("FERTIL") || Boolean(input.report?.fertilization?.fertilization_prescription_id);
 }
 
 function node(key: string, label: string, status: OperationChainStatusV1, reason: string, source: string): OperationChainItemV1 {
@@ -145,12 +163,14 @@ function isFormalAcceptancePayload(payload: any): boolean {
 
   const sourceLane = upper(payload.source_lane);
   const trustLevel = upper(payload.trust_level);
+  const status = upper(payload.acceptance_status ?? payload.verdict);
 
   if (payload.is_simulated === true) return false;
   if (sourceLane === "SIMULATED_DEV_ONLY" || sourceLane === "DEBUG_ONLY") return false;
   if (payload.customer_visible_eligible === false) return false;
 
   if (payload.formal_acceptance === true) return true;
+  if (payload.type === "fertilization_acceptance_v1" && ["PASS", "FAIL"].includes(status)) return true;
 
   return payload.formal_evidence_passed === true
     && payload.formal_execution_passed !== false
@@ -160,13 +180,14 @@ function isFormalAcceptancePayload(payload: any): boolean {
 
 export function validateOperationChainV1(input: ValidatorInput): OperationChainValidationResultV1 {
   const facts = input.facts ?? [];
-  const recFact = latestByType(facts, "decision_recommendation_v1");
-  const prescriptionFact = latestByTypes(facts, ["prescription_v1", "operation_prescription_v1", "decision_prescription_v1"]);
+  const fertilizationAssessmentFact = latestByType(facts, "nitrogen_need_assessment_v1");
+  const recFact = latestByTypes(facts, ["decision_recommendation_v1", "fertilization_recommendation_v1"]);
+  const prescriptionFact = latestByTypes(facts, ["prescription_v1", "operation_prescription_v1", "decision_prescription_v1", "fertilization_prescription_v1"]);
   const approvalDecisionFact = latestByType(facts, "approval_decision_v1");
   const planFact = latestByType(facts, "operation_plan_v1");
   const taskFact = latestByType(facts, "ao_act_task_v0");
   const receiptFact = latestByTypes(facts, ["ao_act_receipt_v0", "ao_act_receipt_v1"]);
-  const acceptanceFact = latestByType(facts, "acceptance_result_v1");
+  const acceptanceFact = latestByTypes(facts, ["acceptance_result_v1", "fertilization_acceptance_v1"]);
   const stage1Fact = latestByTypes(facts, STAGE1_SENSING_SUMMARY_FACT_TYPES);
 
   const rec = input.rec ?? payload(recFact);
@@ -190,32 +211,46 @@ export function validateOperationChainV1(input: ValidatorInput): OperationChainV
   const stage1FormalTrigger = Boolean(stage1Fact && isFormalStage1SensingSummary(stage1_sensing_summary));
 
   const irrigation = isIrrigation(input);
+  const fertilization = isFertilization(input);
+  const fertilizationFormalAssessment = Boolean(
+    fertilizationAssessmentFact
+      || input.report?.fertilization?.assessment_id
+      || rec?.assessment_id
+      || input.prescriptionPayload?.assessment_id,
+  );
+  const fertilizationAcceptanceStatus = upper(payload(acceptanceFact)?.acceptance_status ?? input.report?.fertilization?.acceptance_status);
+  const formalFertilizationAcceptance = fertilization && ["PASS", "FAIL"].includes(fertilizationAcceptanceStatus);
+
   const diagnosisHasCoreEvidence = irrigation
     ? stage1FormalTrigger
-    : Boolean(recFact || input.recommendation);
+    : fertilization
+      ? fertilizationFormalAssessment
+      : Boolean(recFact || input.recommendation);
   const diagnosisStatus: OperationChainStatusV1 = diagnosisHasCoreEvidence ? "DONE" : (recFact || input.recommendation ? "NEEDS_EVIDENCE" : "MISSING");
   const diagnosisReason = diagnosisHasCoreEvidence
-    ? "Stage-1 sensing summary 已提供正式触发依据"
+    ? (fertilization ? "正式施肥诊断事实已关联" : "Stage-1 sensing summary 已提供正式触发依据")
     : irrigation
       ? rawMetricContextPresent
         ? "存在原始 soil moisture/threshold/deficit 线索，但缺少 Stage-1 sensing summary 正式触发来源，不能作为正式灌溉建议依据"
         : "缺少 Stage-1 sensing summary 正式触发来源，不能作为正式灌溉建议依据"
-      : "缺少正式诊断依据";
+      : fertilization
+        ? "缺少 nitrogen_need_assessment_v1 正式施肥诊断事实"
+        : "缺少正式诊断依据";
 
-  const recommendationExists = Boolean(recFact || input.recommendation);
+  const recommendationExists = Boolean(recFact || input.recommendation || input.report?.fertilization?.fertilization_recommendation_id);
   const recommendationStatus: OperationChainStatusV1 = !recommendationExists ? "MISSING" : diagnosisStatus === "DONE" ? "DONE" : "BLOCKED";
 
-  const prescriptionExists = Boolean(prescriptionFact);
+  const prescriptionExists = Boolean(prescriptionFact || input.prescription || input.report?.fertilization?.fertilization_prescription_id);
   const prescriptionStatus: OperationChainStatusV1 = !prescriptionExists ? "MISSING" : recommendationStatus === "DONE" ? "DONE" : "BLOCKED";
 
   const approvalDecision = upper(input.approvalDecision?.decision ?? input.approval?.status);
-  const approvalApproved = Boolean(approvalDecisionFact && ["APPROVE", "APPROVED", "PASS"].includes(approvalDecision));
+  const approvalApproved = Boolean((approvalDecisionFact || input.approval) && ["APPROVE", "APPROVED", "PASS"].includes(approvalDecision));
   const approvalExists = Boolean(input.approval || approvalDecisionFact || latestByType(facts, "approval_request_v1"));
   const approvalStatus: OperationChainStatusV1 = approvalApproved ? "DONE" : approvalExists ? "PENDING" : "MISSING";
 
   const planStatusText = upper(input.operationPlan?.status ?? payload(planFact)?.status);
   const operationPlanExists = Boolean(planFact || input.operationPlan);
-  const operationPlanAuthorized = operationPlanExists && approvalApproved && ["APPROVED_FOR_EXECUTION", "READY", "READY_FOR_EXECUTION"].includes(planStatusText);
+  const operationPlanAuthorized = operationPlanExists && approvalApproved && ["APPROVED_FOR_EXECUTION", "READY", "READY_FOR_EXECUTION", "READY_TO_DISPATCH", "ACKED", "SUCCEEDED"].includes(planStatusText);
   const operationPlanStatus: OperationChainStatusV1 = !operationPlanExists ? "MISSING" : operationPlanAuthorized ? "DONE" : "BLOCKED";
 
   const taskExists = Boolean(taskFact || input.execution?.act_task_id);
@@ -233,7 +268,13 @@ export function validateOperationChainV1(input: ValidatorInput): OperationChainV
           ? "DONE"
           : "INVALID";
 
-  const evidenceTrusted = Boolean(input.evidence?.trusted && input.evidence?.evidence_status === "COMPLETE");
+  const fertilizationZoneEvidence = fertilization && Boolean(
+    Array.isArray(payload(acceptanceFact)?.zone_results) && payload(acceptanceFact).zone_results.length > 0,
+  );
+  const evidenceTrusted = Boolean(
+    (input.evidence?.trusted && input.evidence?.evidence_status === "COMPLETE")
+      || (formalFertilizationAcceptance && fertilizationZoneEvidence),
+  );
   const evidenceStatus: OperationChainStatusV1 = !evidenceTrusted
     ? "MISSING"
     : receiptStatus === "DONE"
@@ -242,10 +283,10 @@ export function validateOperationChainV1(input: ValidatorInput): OperationChainV
         ? "SIMULATED"
         : "BLOCKED";
 
-  const acceptanceExists = Boolean(acceptanceFact || input.acceptance);
-  const acceptancePayloadForFormalGate = input.acceptancePayload ?? input.acceptance ?? input.report?.acceptance;
-  const acceptanceFormal = isFormalAcceptancePayload(acceptancePayloadForFormalGate);
-  const acceptanceVerdict = upper(input.acceptance?.verdict ?? input.acceptancePayload?.verdict ?? input.report?.acceptance?.verdict ?? input.report?.acceptance?.status);
+  const acceptanceExists = Boolean(acceptanceFact || input.acceptance || formalFertilizationAcceptance);
+  const acceptancePayloadForFormalGate = input.acceptancePayload ?? payload(acceptanceFact) ?? input.acceptance ?? input.report?.acceptance;
+  const acceptanceFormal = isFormalAcceptancePayload(acceptancePayloadForFormalGate) || formalFertilizationAcceptance;
+  const acceptanceVerdict = upper(input.acceptance?.verdict ?? input.acceptancePayload?.verdict ?? payload(acceptanceFact)?.verdict ?? payload(acceptanceFact)?.acceptance_status ?? input.report?.acceptance?.verdict ?? input.report?.acceptance?.status);
   const acceptanceStatus: OperationChainStatusV1 = !acceptanceExists
     ? "MISSING"
     : evidenceStatus === "DONE" && acceptanceFormal && ["PASS", "FAIL", "FAILED", "REJECTED"].includes(acceptanceVerdict)
@@ -261,25 +302,27 @@ export function validateOperationChainV1(input: ValidatorInput): OperationChainV
   const memoryStatus: OperationChainStatusV1 = memoryAvailable ? (acceptanceStatus === "DONE" ? "AVAILABLE" : "SIMULATED") : "MISSING";
 
   const status_chain: OperationChainItemV1[] = [
-    node("diagnosis", "诊断", diagnosisStatus, diagnosisReason, stage1Fact ? factType(stage1Fact) : recFact ? "decision_recommendation_v1" : "operation_report_chain_v1"),
-    node("recommendation", "建议", recommendationStatus, recommendationStatus === "DONE" ? "正式建议已关联" : recommendationExists ? "上游诊断依据未通过校验，建议不能作为正式依据" : "缺少正式建议记录", recFact ? "decision_recommendation_v1" : "operation_report_chain_v1"),
+    node("diagnosis", "诊断", diagnosisStatus, diagnosisReason, fertilization ? (fertilizationAssessmentFact ? factType(fertilizationAssessmentFact) : "fertilization_report_projection_v1") : stage1Fact ? factType(stage1Fact) : recFact ? factType(recFact) : "operation_report_chain_v1"),
+    node("recommendation", "建议", recommendationStatus, recommendationStatus === "DONE" ? "正式建议已关联" : recommendationExists ? "上游诊断依据未通过校验，建议不能作为正式依据" : "缺少正式建议记录", recFact ? factType(recFact) : "operation_report_chain_v1"),
     node("prescription", "处方", prescriptionStatus, prescriptionStatus === "DONE" ? "正式处方已关联" : prescriptionExists ? "上游建议未通过校验，处方不能作为正式处方" : "缺少正式处方事实，不能仅凭作业计划中的处方编号认定处方成立", prescriptionFact ? factType(prescriptionFact) : "operation_report_chain_v1"),
     node("approval", "审批", approvalStatus, approvalApproved ? "审批结果已通过" : approvalExists ? "审批请求存在，但审批结果尚未通过" : "缺少审批记录", approvalDecisionFact ? "approval_decision_v1" : approvalExists ? "approval_request_v1" : "operation_report_chain_v1"),
     node("operation_plan", "作业计划", operationPlanStatus, operationPlanStatus === "DONE" ? "作业计划已获得审批授权" : operationPlanExists ? "审批未通过，作业计划不能作为正式执行计划" : "缺少作业计划", planFact ? "operation_plan_v1" : "operation_report_chain_v1"),
     node("execution", "执行", executionStatus, executionStatus === "DONE" ? "执行任务已由正式计划派发" : taskExists ? "上游作业计划未授权，执行任务不能作为正式执行" : "缺少执行任务", taskFact ? "ao_act_task_v0" : "operation_report_chain_v1"),
     node("receipt", "回执", receiptStatus, receiptStatus === "DONE" ? "执行回执已记录且具备执行窗口" : receiptStatus === "SIMULATED" ? "该回执来自飞行台/模拟链路，不能作为验收通过依据" : receiptExists ? "回执缺少执行窗口或上游执行未成立" : "缺少执行回执", receiptFact ? factType(receiptFact) : "operation_report_chain_v1"),
-    node("evidence", "证据", evidenceStatus, evidenceStatus === "DONE" ? "证据链完整" : evidenceStatus === "SIMULATED" ? "证据来自模拟链路，不能包装成正式验收证据" : "证据不足或上游回执未成立", "operation_report_chain_v1"),
-    node("acceptance", "验收", acceptanceStatus, acceptanceStatus === "DONE" ? "正式验收结论已形成" : acceptanceStatus === "SIMULATED" ? "飞行台回执成功不等于验收通过，验收结论需降级" : acceptanceExists && !acceptanceFormal ? "验收记录缺少 formal_acceptance gate metadata，不能作为正式客户结论" : acceptanceExists ? "上游证据未成立，验收不能作为正式结论" : "缺少验收结论", acceptanceFact ? "acceptance_result_v1" : "operation_report_chain_v1"),
+    node("evidence", "证据", evidenceStatus, evidenceStatus === "DONE" ? (fertilization ? "施肥分区执行证据链完整" : "证据链完整") : evidenceStatus === "SIMULATED" ? "证据来自模拟链路，不能包装成正式验收证据" : "证据不足或上游回执未成立", fertilization && acceptanceFact ? factType(acceptanceFact) : "operation_report_chain_v1"),
+    node("acceptance", "验收", acceptanceStatus, acceptanceStatus === "DONE" ? "正式验收结论已形成" : acceptanceStatus === "SIMULATED" ? "飞行台回执成功不等于验收通过，验收结论需降级" : acceptanceExists && !acceptanceFormal ? "验收记录缺少 formal_acceptance gate metadata，不能作为正式客户结论" : acceptanceExists ? "上游证据未成立，验收不能作为正式结论" : "缺少验收结论", acceptanceFact ? factType(acceptanceFact) : "operation_report_chain_v1"),
     node("roi", "价值", roiStatus, roiStatus === "AVAILABLE" ? "价值记录可作为学习输入" : roiStatus === "BLOCKED" ? "验收未正式成立，价值结论不能成立" : "缺少价值记录", "roi_ledger_v1"),
     node("field_memory", "田块记忆", memoryStatus, memoryStatus === "AVAILABLE" ? "田块记忆可作为学习输入" : memoryStatus === "SIMULATED" ? "田块记忆来自未正式验收链路，仅作排查线索" : "缺少田块记忆", "field_memory_v1"),
   ];
 
   const missing_links = missingFrom(status_chain);
   const chain_flags: string[] = [];
+  if (fertilization) chain_flags.push("formal_fertilization_chain");
   if (isHelper) chain_flags.push("helper_or_simulated_facts_present");
   if (receiptNotAcceptance) chain_flags.push("receipt_success_is_not_acceptance_pass");
   if (!approvalApproved && approvalExists) chain_flags.push("approval_not_approved");
   if (irrigation && !stage1FormalTrigger && recommendationExists) chain_flags.push("missing_stage1_sensing_summary_formal_trigger");
+  if (fertilization && !fertilizationFormalAssessment) chain_flags.push("missing_fertilization_assessment_fact");
   if (diagnosisStatus === "NEEDS_EVIDENCE") chain_flags.push("diagnosis_needs_core_evidence");
   if (!prescriptionExists && input.prescription) chain_flags.push("prescription_id_without_formal_prescription_fact");
   if (operationPlanExists && !operationPlanAuthorized) chain_flags.push("operation_plan_without_approved_decision");
