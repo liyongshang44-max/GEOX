@@ -15,12 +15,20 @@ function customerText(value: unknown, fallback = "暂无记录"): string {
   return raw || fallback;
 }
 
+export type FormalScenarioClosureStepV1 = {
+  key: string;
+  label: string;
+  status: "PASS" | "NEEDS_REVIEW" | "BLOCKED";
+  text: string;
+};
+
 export type FormalScenarioVm = {
   scenarioKey: string;
   scenarioLabel: string;
   chainText: string;
   evidenceText: string;
   acceptanceText: string;
+  closureSteps: FormalScenarioClosureStepV1[];
   failSafeText?: string;
   manualTakeoverText?: string;
   zoneSummaryText?: string;
@@ -38,7 +46,6 @@ export type FormalScenarioVm = {
 function scenarioKeyOf(reportOrOperation: any): string {
   return String(reportOrOperation?.formal_scenario?.scenario_type ?? reportOrOperation?.scenario_type ?? "").trim().toUpperCase();
 }
-
 
 function asList(value: unknown): string[] {
   return Array.isArray(value) ? value.map((x) => String(x ?? "").trim()).filter(Boolean) : [];
@@ -63,6 +70,55 @@ function collectBlockingReasons(reportOrOperation: any): string[] {
     .filter(Boolean);
 }
 
+function sourceRefsOf(reportOrOperation: any): string[] {
+  return asList(reportOrOperation?.formal_scenario?.source_refs);
+}
+
+function sourceRefsInclude(refs: string[], ...needles: string[]): boolean {
+  const haystack = refs.join("|").toLowerCase();
+  return needles.some((needle) => haystack.includes(needle.toLowerCase()));
+}
+
+function formalChainStatusOf(reportOrOperation: any): "PASSED" | "NEEDS_REVIEW" | "BLOCKED" {
+  const raw = String(reportOrOperation?.formal_scenario?.formal_chain_status ?? reportOrOperation?.chain_status ?? "").trim().toUpperCase();
+  if (raw === "PASSED") return "PASSED";
+  if (raw === "NEEDS_REVIEW") return "NEEDS_REVIEW";
+  return "BLOCKED";
+}
+
+function closureStatus(params: { refs: string[]; report: any; passed: boolean; needles: string[]; fallbackPass?: boolean }): FormalScenarioClosureStepV1["status"] {
+  if (params.passed && (params.fallbackPass || sourceRefsInclude(params.refs, ...params.needles))) return "PASS";
+  if (params.report?.formal_scenario?.needs_review === true || formalChainStatusOf(params.report) === "NEEDS_REVIEW") return "NEEDS_REVIEW";
+  return "BLOCKED";
+}
+
+function closureText(status: FormalScenarioClosureStepV1["status"]): string {
+  if (status === "PASS") return "已闭合";
+  if (status === "NEEDS_REVIEW") return "需复核";
+  return "未闭合";
+}
+
+function buildClosureSteps(reportOrOperation: any): FormalScenarioClosureStepV1[] {
+  const refs = sourceRefsOf(reportOrOperation);
+  const chainPassed = formalChainStatusOf(reportOrOperation) === "PASSED" || reportOrOperation?.formal_scenario?.customer_visible_eligible === true;
+  const stepDefs: Array<{ key: string; label: string; needles: string[]; fallbackPass?: boolean }> = [
+    { key: "stage1_evidence", label: "Stage-1 evidence", needles: ["stage1", "evidence:formal_passed"], fallbackPass: reportOrOperation?.formal_scenario?.evidence_status === "FORMAL_EVIDENCE_PASSED" },
+    { key: "diagnosis", label: "Diagnosis / problem state", needles: ["problem_state", "diagnosis"] },
+    { key: "recommendation", label: "Recommendation", needles: ["recommendation:"] },
+    { key: "prescription", label: "Prescription", needles: ["prescription:"] },
+    { key: "approval", label: "Approval", needles: ["approval:"] },
+    { key: "ao_act_task", label: "AO-ACT task", needles: ["ao_act_task:", "task:"] },
+    { key: "receipt", label: "Receipt", needles: ["receipt:"] },
+    { key: "formal_acceptance", label: "Formal acceptance", needles: ["acceptance:"] },
+    { key: "roi_trust_lane", label: "ROI trust lane", needles: ["roi:"] },
+    { key: "field_memory_lane", label: "Field Memory lane", needles: ["field_memory:"] },
+  ];
+
+  return stepDefs.map((step) => {
+    const status = closureStatus({ refs, report: reportOrOperation, passed: chainPassed, needles: step.needles, fallbackPass: step.fallbackPass });
+    return { key: step.key, label: step.label, status, text: closureText(status) };
+  });
+}
 
 function samplingSummaryText(value: any): string | undefined {
   const sampling = value?.sampling ?? {};
@@ -138,6 +194,7 @@ export function buildFormalScenarioVm(reportOrOperation: any): FormalScenarioVm 
     chainText,
     evidenceText,
     acceptanceText,
+    closureSteps: buildClosureSteps(reportOrOperation),
     failSafeText,
     manualTakeoverText,
     zoneSummaryText: samplingSummaryText(reportOrOperation) ?? zoneSummaryText(reportOrOperation),
