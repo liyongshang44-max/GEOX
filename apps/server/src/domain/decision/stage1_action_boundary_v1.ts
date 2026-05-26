@@ -21,6 +21,20 @@ export type Stage1FormalTriggerGateV1 = {
   reason_codes: string[];
 };
 
+export type Stage1ActionBoundaryDebugV1 = {
+  stage1_summary_id: string | null;
+  evidence_sufficiency: unknown;
+  time_coverage: unknown;
+  formal_sample_count: number | null;
+  formal_coverage_ratio: number | null;
+  max_gap_ms: number | null;
+  freshness: string | null;
+  device_health_status: string | null;
+  conflict_status: string | null;
+  trigger_metric_evidence: unknown;
+  reason_codes: string[];
+};
+
 export type Stage1FormalActionField = (typeof FORMAL_STAGE1_ACTION_FIELDS)[number];
 export type Stage1SupportOnlyField = (typeof SUPPORT_ONLY_STAGE1_FIELDS)[number];
 export type Stage1ForbiddenTriggerField = (typeof FORBIDDEN_STAGE1_TRIGGER_FIELDS)[number];
@@ -29,6 +43,7 @@ export type Stage1ActionBoundaryNormalizedInputV1 = Partial<Record<Stage1FormalA
 export type Stage1FormalTriggerSignalsV1 = Record<Stage1FormalActionField, unknown>;
 
 const RECOMMENDATION_FORMAL_INPUT_LAYER = "stage1_sensing_summary_v1" as const;
+const STAGE1_SUMMARY_ATTACHMENT = Symbol.for("geox.stage1_summary_payload_v1");
 
 function asRecord(v: unknown): Record<string, any> {
   return v && typeof v === "object" ? v as Record<string, any> : {};
@@ -56,6 +71,19 @@ function containsDevMarker(value: unknown): boolean {
     || raw.includes("irrigation_simulator")
     || raw.includes("sim_trace")
     || raw.includes("debug_only");
+}
+
+function attachStage1SummaryToSignals(signals: Stage1FormalTriggerSignalsV1, summaryPayload: unknown): Stage1FormalTriggerSignalsV1 {
+  Object.defineProperty(signals, STAGE1_SUMMARY_ATTACHMENT, {
+    value: summaryPayload,
+    enumerable: false,
+    configurable: false,
+  });
+  return signals;
+}
+
+function getAttachedStage1Summary(signals: Stage1FormalTriggerSignalsV1): unknown | null {
+  return (signals as any)?.[STAGE1_SUMMARY_ATTACHMENT] ?? null;
 }
 
 export function isSimulatedStage1SummaryV1(summaryPayload: unknown): boolean {
@@ -112,10 +140,10 @@ export function assertNoForbiddenTriggerFields(input: unknown): void {
 export function deriveFormalTriggerSignalsFromStage1Summary(summaryPayload: unknown): Stage1FormalTriggerSignalsV1 {
   const normalized = normalizeStage1RecommendationInput(summaryPayload);
   assertNoForbiddenTriggerFields(summaryPayload);
-  return {
+  return attachStage1SummaryToSignals({
     irrigation_effectiveness: normalized.irrigation_effectiveness,
     leak_risk: normalized.leak_risk,
-  };
+  }, summaryPayload);
 }
 
 function rawFormalSignalMatches(signals: Stage1FormalTriggerSignalsV1): boolean {
@@ -195,6 +223,32 @@ export function evaluateFormalStage1TriggerGateV1(summaryPayload: unknown): Stag
   return { status: "ELIGIBLE", reason_codes: [] };
 }
 
+export function buildStage1ActionBoundaryDebugV1(summaryPayload: unknown): Stage1ActionBoundaryDebugV1 {
+  const summary = asRecord(summaryPayload);
+  const coverage = asRecord(summary.time_coverage_v1);
+  const device = asRecord(summary.device_health_snapshot_v1);
+  const conflict = asRecord(summary.conflict_detection_v1);
+  const gate = evaluateFormalStage1TriggerGateV1(summaryPayload);
+  const stage1SummaryId = String(summary.stage1_summary_id ?? summary.summary_id ?? summary.fact_id ?? "").trim();
+  return {
+    stage1_summary_id: stage1SummaryId || null,
+    evidence_sufficiency: summary.evidence_sufficiency ?? asRecord(summary.evidence_sufficiency_v1).evidence_sufficiency ?? null,
+    time_coverage: coverage,
+    formal_sample_count: asNumber(coverage.formal_sample_count),
+    formal_coverage_ratio: asNumber(coverage.formal_coverage_ratio),
+    max_gap_ms: asNumber(coverage.max_gap_ms),
+    freshness: String(coverage.freshness ?? summary.freshness ?? "").trim() || null,
+    device_health_status: String(device.device_health_status ?? "").trim() || null,
+    conflict_status: String(conflict.conflict_status ?? "").trim() || null,
+    trigger_metric_evidence: coverage.trigger_metric_evidence ?? null,
+    reason_codes: gate.reason_codes,
+  };
+}
+
 export function isFormalStage1TriggerEligible(signals: Stage1FormalTriggerSignalsV1): boolean {
+  const attachedSummary = getAttachedStage1Summary(signals);
+  if (attachedSummary != null) {
+    return evaluateFormalStage1TriggerGateV1(attachedSummary).status === "ELIGIBLE";
+  }
   return rawFormalSignalMatches(signals);
 }
