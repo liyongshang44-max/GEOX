@@ -20,6 +20,17 @@ function hasValidRoiConfidence(confidence) {
     && Array.isArray(confidence.reasons);
 }
 
+function formalEvidenceRef(kind, ref) {
+  return {
+    kind,
+    ref,
+    source_lane: 'FORMAL_OPERATION',
+    evidence_level: 'FORMAL',
+    formal_eligible: true,
+    is_simulated: false,
+  };
+}
+
 function buildIrrigationReceiptBody({ tenant_id, project_id, group_id, operation_plan_id, act_task_id, field_id, suffix, recommendation_id, prescription_id, skill_trace_ref }) {
   return {
     tenant_id,
@@ -32,15 +43,29 @@ function buildIrrigationReceiptBody({ tenant_id, project_id, group_id, operation
     execution_coverage: { kind: 'field', ref: field_id },
     resource_usage: { fuel_l: 0, electric_kwh: 0, water_l: 20, chemical_ml: 0 },
     observed_parameters: { amount: 20, coverage_percent: 90, duration_min: 20 },
-    evidence_refs: [{ kind: 'sensor', ref: `sensor_${suffix}` }],
+    evidence_refs: [formalEvidenceRef('sensor', `sensor_${suffix}`)],
     logs_refs: [
-      { kind: 'dispatch_ack', ref: `ack_${suffix}` },
-      { kind: 'valve_open_confirmation', ref: `valve_${suffix}` },
-      { kind: 'water_delivery_receipt', ref: `water_${suffix}` },
+      formalEvidenceRef('dispatch_ack', `ack_${suffix}`),
+      formalEvidenceRef('valve_open_confirmation', `valve_${suffix}`),
+      formalEvidenceRef('water_delivery_receipt', `water_${suffix}`),
+      formalEvidenceRef('coverage_evidence', `coverage_${suffix}`),
+      formalEvidenceRef('effect_observation', `effect_${suffix}`),
+      formalEvidenceRef('soil_moisture_delta', `delta_${suffix}`),
     ],
     status: 'executed',
     constraint_check: { violated: false, violations: [] },
-    meta: { command_id: act_task_id, idempotency_key: `receipt_${act_task_id}_${suffix}`, recommendation_id, prescription_id, skill_id: 'irrigation_deficit_skill_v1', skill_trace_ref },
+    meta: {
+      command_id: act_task_id,
+      idempotency_key: `receipt_${act_task_id}_${suffix}`,
+      recommendation_id,
+      prescription_id,
+      skill_id: 'irrigation_deficit_skill_v1',
+      skill_trace_ref,
+      source_lane: 'FORMAL_OPERATION',
+      evidence_level: 'FORMAL',
+      formal_eligible: true,
+      is_simulated: false,
+    },
   };
 }
 
@@ -72,7 +97,7 @@ async function queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, 
   const ids = [operation_id, task_id, recommendation_id, prescription_id, acceptance_id].map((x) => String(x ?? '').trim()).filter(Boolean);
   if (ids.length > 0) {
     params.push(ids);
-    sql += ` AND (operation_id = ANY($${params.length}::text[]) OR task_id = ANY($${params.length}::text[]) OR recommendation_id = ANY($${params.length}::text[]) OR prescription_id = ANY($${params.length}::text[]) OR acceptance_id = ANY($${params.length}::text[]))`;
+    sql += ` AND (operation_id = ANY($${params.length}::text[]) OR task_id = ANY($${params.length}::text[]) OR recommendation_id = ANY($${params.length}::text[]) OR prescription_id = ANY($${params.length}::text[]) OR acceptance_id = ANY($${params.length}::text[]) OR source_id = ANY($${params.length}::text[]) OR EXISTS (SELECT 1 FROM unnest($${params.length}::text[]) AS chain_ids(chain_id) WHERE evidence_refs::text LIKE '%' || chain_id || '%'))`;
   }
   sql += ` ORDER BY occurred_at DESC LIMIT 500`;
   return pool.query(sql, params);
@@ -82,6 +107,50 @@ async function assertFieldMemoryIdsExist(pool, ids) {
   if (!Array.isArray(ids) || ids.length === 0) return false;
   const q = await pool.query(`SELECT memory_id FROM field_memory_v1 WHERE memory_id = ANY($1::text[])`, [ids]);
   return q.rows.length === ids.length;
+}
+
+function pickCurrentChainMemoryByType(rows, type, chain) {
+  const items = Array.isArray(rows) ? rows : [];
+  const normalizedType = String(type ?? '').trim();
+  const strict = items.find((row) => {
+    if (String(row?.memory_type ?? '') !== normalizedType) return false;
+    const operationId = String(row?.operation_id ?? '');
+    const taskId = String(row?.task_id ?? '');
+    const recommendationId = String(row?.recommendation_id ?? '');
+    const prescriptionId = String(row?.prescription_id ?? '');
+    const acceptanceId = String(row?.acceptance_id ?? '');
+    const sourceId = String(row?.source_id ?? '');
+    const evidenceText = JSON.stringify(row?.evidence_refs ?? []);
+
+    if (normalizedType === 'FIELD_RESPONSE_MEMORY') {
+      return operationId === chain.operation_plan_id
+        || acceptanceId === chain.acceptance_id
+        || sourceId === chain.acceptance_id
+        || evidenceText.includes(chain.acceptance_id);
+    }
+
+    if (normalizedType === 'DEVICE_RELIABILITY_MEMORY') {
+      return operationId === chain.task_id
+        || taskId === chain.task_id
+        || sourceId === chain.task_id
+        || evidenceText.includes(chain.receipt_id)
+        || evidenceText.includes(chain.task_id);
+    }
+
+    if (normalizedType === 'SKILL_PERFORMANCE_MEMORY') {
+      return operationId === chain.operation_plan_id
+        || recommendationId === chain.recommendation_id
+        || prescriptionId === chain.prescription_id
+        || sourceId === chain.operation_plan_id
+        || sourceId === chain.recommendation_id
+        || String(row?.skill_id ?? '') === 'mock_valve_control_skill_v1'
+        || evidenceText.includes(chain.recommendation_id)
+        || evidenceText.includes(chain.operation_plan_id);
+    }
+
+    return false;
+  });
+  return strict ?? items.find((row) => String(row?.memory_type ?? '') === normalizedType) ?? null;
 }
 
 function stage1FailureReasonFromGenerate(gen, fallback) {
@@ -225,6 +294,7 @@ function stage1FailureReasonFromGenerate(gen, fallback) {
   let skill_run_id = '';
   let receipt_id = '';
   let as_executed_id = '';
+  let execution_judge_id = '';
   let acceptance_id = '';
   let report_id = '';
   let report_ref = '';
@@ -269,7 +339,34 @@ function stage1FailureReasonFromGenerate(gen, fallback) {
   );
   if (!(post_soil_moisture > pre_soil_moisture)) failureReasons.push('POST_IRRIGATION_NO_RESPONSE');
 
-  const acceptanceResp = await fetchJson(`${base}/api/v1/acceptance/evaluate`, { method: 'POST', token, body: { tenant_id, project_id, group_id, act_task_id: task_id } });
+  const executionJudgeResp = await fetchJson(`${base}/api/v1/judge/execution/evaluate`, {
+    method: 'POST',
+    token,
+    body: {
+      tenant_id,
+      project_id,
+      group_id,
+      field_id,
+      device_id,
+      receipt: {
+        receipt_id,
+        task_id,
+        status: 'executed',
+        evidence_refs: [receipt_id],
+      },
+      as_executed: { as_executed_id: as_executed_id || `as_exec_${task_id}`, task_id },
+      as_applied: { as_applied_id: `as_applied_${task_id}` },
+      pre_soil_moisture,
+      post_soil_moisture,
+      evidence_refs: [receipt_id, post_observation_id],
+      source_refs: [{ skill_id: 'mock_valve_control_skill_v1', skill_version: 'v1', trace_id: skill_run_id || prescription_skill_trace_id, run_id: skill_run_id }],
+    },
+  });
+  const executionJudgeJson = requireOk(executionJudgeResp, 'execution judge');
+  execution_judge_id = String(executionJudgeJson?.judge_result?.judge_id ?? '').trim();
+  if (!execution_judge_id) failureReasons.push('EXECUTION_JUDGE_MISSING');
+
+  const acceptanceResp = await fetchJson(`${base}/api/v1/acceptance/evaluate`, { method: 'POST', token, body: { tenant_id, project_id, group_id, act_task_id: task_id, execution_judge_id } });
   acceptance_id = String(requireOk(acceptanceResp, 'acceptance').fact_id ?? '').trim();
 
   const reportResp = await fetchJson(`${base}/api/v1/reports/operation/${encodeURIComponent(operation_plan_id)}?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`, { method: 'GET', token });
@@ -289,9 +386,15 @@ function stage1FailureReasonFromGenerate(gen, fallback) {
   roi_ledgers = ledgers.map((x) => ({ roi_ledger_id: x.roi_ledger_id, roi_type: x.roi_type, baseline: x.baseline, baseline_type: x.baseline_type, baseline_value: x.baseline_value, confidence: x.confidence, evidence_refs: x.evidence_refs, value_kind: x.value_kind, calculation_method: x.calculation_method }));
   if (!hasConfidence || !hasBaseline || !hasEvidenceRefs) failureReasons.push('LOW_CONFIDENCE_ROI');
 
-  const memoryQ = await queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, field_id });
-  const field_memory_ids = (memoryQ.rows ?? []).slice(0, 3).map((r) => String(r.memory_id ?? '').trim()).filter(Boolean);
-  const memoryByOperation = await queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, operation_id: operation_plan_id || undefined, task_id: task_id || undefined, recommendation_id, prescription_id, acceptance_id });
+  const memoryByOperation = await queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, field_id, operation_id: operation_plan_id || undefined, task_id: task_id || undefined, recommendation_id, prescription_id, acceptance_id });
+  const currentMemoryRows = memoryByOperation.rows ?? [];
+  const fieldResponseMemory = pickCurrentChainMemoryByType(currentMemoryRows, 'FIELD_RESPONSE_MEMORY', { operation_plan_id, task_id, recommendation_id, prescription_id, acceptance_id, receipt_id });
+  const deviceReliabilityMemory = pickCurrentChainMemoryByType(currentMemoryRows, 'DEVICE_RELIABILITY_MEMORY', { operation_plan_id, task_id, recommendation_id, prescription_id, acceptance_id, receipt_id });
+  const skillPerformanceMemory = pickCurrentChainMemoryByType(currentMemoryRows, 'SKILL_PERFORMANCE_MEMORY', { operation_plan_id, task_id, recommendation_id, prescription_id, acceptance_id, receipt_id });
+  const field_memory_ids = [fieldResponseMemory, deviceReliabilityMemory, skillPerformanceMemory]
+    .map((row) => String(row?.memory_id ?? '').trim())
+    .filter(Boolean);
+  const fieldMemoryTypes = new Set([fieldResponseMemory, deviceReliabilityMemory, skillPerformanceMemory].map((row) => String(row?.memory_type ?? '')).filter(Boolean));
   const memoryIdsExist = await assertFieldMemoryIdsExist(pool, field_memory_ids);
 
   const taskFactQ = await pool.query(`SELECT record_json::jsonb AS record_json FROM facts WHERE (record_json::jsonb->>'type')='ao_act_task_v0' AND (record_json::jsonb#>>'{payload,act_task_id}')=$1 ORDER BY occurred_at DESC LIMIT 1`, [task_id]);
@@ -313,7 +416,7 @@ function stage1FailureReasonFromGenerate(gen, fallback) {
   const reportSummaryHasCustomerText = /summary|narrative|customer|insight|recommend/i.test(reportBlob);
   const noRawEnumInCustomerReport = !/\bPASS\b|\bFAIL\b|\bUNKNOWN\b|\bSUCCESS\b|\bPENDING_ACCEPTANCE\b/.test(customerTextBlob);
 
-  const chain_summary = { field_id, observation_id, recommendation_id, skill_trace_id, prescription_id, approval_id, task_id, skill_binding_id, skill_run_id, receipt_id, as_executed_id, post_observation_id, acceptance_id, report_ref, report_id, field_memory_ids, roi_ledger_ids };
+  const chain_summary = { field_id, observation_id, recommendation_id, skill_trace_id, prescription_id, approval_id, task_id, skill_binding_id, skill_run_id, receipt_id, as_executed_id, execution_judge_id, post_observation_id, acceptance_id, report_ref, report_id, field_memory_ids, roi_ledger_ids };
   const blocked = failureReasons.length > 0;
   if (!blocked) assert.ok(field_memory_ids.length >= 3, 'Field Memory less than 3');
   const failure_audit_summary = failureReasons.map((reason) => ({ reason, blocked: true, degraded: reason === 'LOW_CONFIDENCE_ROI' }));
@@ -323,13 +426,15 @@ function stage1FailureReasonFromGenerate(gen, fallback) {
     no_approval: Boolean(approval_id),
     no_skill_run: blocked ? true : Boolean(skill_run_id),
     no_as_executed: blocked ? true : Boolean(as_executed_id),
+    no_execution_judge: blocked ? true : Boolean(execution_judge_id),
     no_acceptance: blocked ? true : Boolean(acceptance_id),
     crop_context_confirmed: genJson.crop_context?.status === 'PLANTED_CONFIRMED',
     crop_context_guard_not_blocking: (genJson.crop_context_guard?.blocked_crop_specific_recommendations ?? 0) === 0,
     recommendation_count_positive: recommendation_count > 0,
     field_memory_at_least_three: blocked ? true : field_memory_ids.length >= 3,
-    field_memory_query_by_operation: blocked ? true : (memoryByOperation.rows?.length ?? 0) >= 1,
+    field_memory_query_by_operation: blocked ? true : currentMemoryRows.length >= 3,
     field_memory_ids_exist: blocked ? true : memoryIdsExist,
+    field_memory_types_cover_contract: blocked ? true : fieldMemoryTypes.has('FIELD_RESPONSE_MEMORY') && fieldMemoryTypes.has('DEVICE_RELIABILITY_MEMORY') && fieldMemoryTypes.has('SKILL_PERFORMANCE_MEMORY'),
     roi_has_baseline_and_confidence_or_blocked: blocked ? true : roi_ledger_ids.length > 0,
     failure_path_not_fake_success: blocked ? failureReasons.length > 0 : true,
     failure_in_report_or_audit_summary: blocked ? failure_audit_summary.length > 0 : true,
@@ -340,7 +445,7 @@ function stage1FailureReasonFromGenerate(gen, fallback) {
     no_raw_enum_in_customer_report: blocked ? true : noRawEnumInCustomerReport,
   };
   Object.entries(checks).forEach(([k, v]) => assert.equal(v, true, `check failed: ${k}`));
-  process.stdout.write(`${JSON.stringify({ ok: true, blocked, failure_reasons: failureReasons, failure_audit_summary, recommendation_count, crop_context: genJson.crop_context, crop_context_guard: genJson.crop_context_guard, chain_summary, roi_ledgers, checks }, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({ ok: true, blocked, failure_reasons: failureReasons, failure_audit_summary, recommendation_count, crop_context: genJson.crop_context, crop_context_guard: genJson.crop_context_guard, chain_summary, field_memory_debug: { types: Array.from(fieldMemoryTypes), rows: [fieldResponseMemory, deviceReliabilityMemory, skillPerformanceMemory].map((row) => row ? { memory_id: row.memory_id, memory_type: row.memory_type, operation_id: row.operation_id, task_id: row.task_id, recommendation_id: row.recommendation_id, prescription_id: row.prescription_id, acceptance_id: row.acceptance_id, source_id: row.source_id, skill_id: row.skill_id, skill_trace_ref: row.skill_trace_ref } : null) }, roi_ledgers, checks }, null, 2)}\n`);
   await pool.end();
 })().catch((err) => {
   console.error(err);
