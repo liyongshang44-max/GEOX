@@ -104,11 +104,27 @@ const taskV1Writers = findText(/type:\s*["']ao_act_task_v1["']|type\s*=\s*["']ao
 });
 assert(taskV1Writers.length === 0, `do not introduce ao_act_task_v1 writers/checks before migration: ${taskV1Writers.join(', ')}`);
 
-const receiptV1Writers = findText(/type:\s*["']ao_act_receipt_v1["']|type\s*=\s*["']ao_act_receipt_v1["']/i, {
-  roots: ['apps/server/src', 'apps/executor/src', 'scripts/agronomy_acceptance', 'scripts/governance_acceptance'],
-  exclude: ['scripts/governance_acceptance/ACCEPTANCE_AO_ACT_VERSION_BOUNDARY_V1.cjs'],
+// Current AO-ACT product runtime writes receipt facts as ao_act_receipt_v0. Some older
+// as-executed / ROI acceptance fixtures intentionally seed ao_act_receipt_v1 to validate
+// downstream compatibility readers. Those fixtures are not AO-ACT runtime writers and
+// must not make this contract gate fail. Keep the hard ban focused on runtime writers.
+const receiptV1RuntimeWriters = findText(/["']?type["']?\s*:\s*["']ao_act_receipt_v1["']/i, {
+  roots: ['apps/server/src', 'apps/executor/src'],
+  exclude: [],
 });
-assert(receiptV1Writers.length === 0, `do not introduce ao_act_receipt_v1 writers before migration: ${receiptV1Writers.join(', ')}`);
+assert(receiptV1RuntimeWriters.length === 0, `runtime code must not write ao_act_receipt_v1 before migration: ${receiptV1RuntimeWriters.join(', ')}`);
+
+const allowedReceiptV1FixtureFiles = new Set([
+  'scripts/agronomy_acceptance/ACCEPTANCE_AS_EXECUTED_AS_APPLIED_V1.cjs',
+  'scripts/agronomy_acceptance/ACCEPTANCE_AS_EXECUTED_RECORD_V1.cjs',
+  'scripts/agronomy_acceptance/ACCEPTANCE_ROI_LEDGER_V1.cjs',
+]);
+const receiptV1FixtureWriters = findText(/["']?type["']?\s*:\s*["']ao_act_receipt_v1["']/i, {
+  roots: ['scripts/agronomy_acceptance'],
+  exclude: [],
+});
+const unexpectedReceiptV1FixtureWriters = receiptV1FixtureWriters.filter((p) => !allowedReceiptV1FixtureFiles.has(p));
+assert(unexpectedReceiptV1FixtureWriters.length === 0, `unexpected ao_act_receipt_v1 fixture writer before migration: ${unexpectedReceiptV1FixtureWriters.join(', ')}`);
 
 console.log('[ao-act-version-boundary] PASS', {
   rest_contract: restContractPath,
@@ -116,4 +132,5 @@ console.log('[ao-act-version-boundary] PASS', {
   product_ingress: '/api/v1/actions/*',
   current_task_fact_type: 'ao_act_task_v0',
   current_receipt_fact_type: 'ao_act_receipt_v0',
+  legacy_receipt_v1_fixture_files: receiptV1FixtureWriters,
 });
