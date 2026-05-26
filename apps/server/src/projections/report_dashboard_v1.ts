@@ -167,6 +167,7 @@ function safeReportAcceptanceStatus(report: OperationReportV1): string | null { 
 function safeStateFinalStatus(): string { return "LIMITED_STATE"; }
 function safeStateAcceptanceStatus(state: OperationStateV1): string | null { return state ? "NEEDS_REVIEW" : null; }
 function dashboardNeedsReview(trust: DashboardProjectionTrustV1, report: OperationReportV1): boolean { return !trust.customer_visible_eligible || Boolean((report as any).formal_scenario?.needs_review); }
+function isTrustedRoiItem(item: any): boolean { return isFormalCustomerValueItem(item); }
 
 function isSimulatedOrTechnicalRoiItem(item: any): boolean {
   const valueKind = upper(item?.value_kind);
@@ -194,7 +195,7 @@ function allRoiItems(report: OperationReportV1): any[] {
 
 function buildFieldValueSummary(reports: OperationReportV1[]): RoiSummaryTrustV1 {
   const items = reports.flatMap((r) => allRoiItems(r).map((item: any) => ({ ...item, __report_trust: reportTrust(r) })));
-  const trustedItems = items.filter((x: any) => x.__report_trust.customer_visible_eligible && isFormalCustomerValueItem(x));
+  const trustedItems = items.filter((x: any) => x.__report_trust.customer_visible_eligible && isTrustedRoiItem(x));
   const estimated = items.filter((x: any) => upper(x.value_kind) === "ESTIMATED").length;
   const assumptionBased = items.filter((x: any) => upper(x.value_kind) === "ASSUMPTION_BASED" || upper(x.baseline_type) === "DEFAULT_ASSUMPTION" || upper(x.trust_level) === "HYPOTHESIS_ONLY").length;
   const insufficient = items.filter((x: any) => upper(x.value_kind) === "INSUFFICIENT_EVIDENCE" || upper(x.trust_level) === "INSUFFICIENT_FORMAL_EVIDENCE").length;
