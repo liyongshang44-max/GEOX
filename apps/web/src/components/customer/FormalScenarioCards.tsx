@@ -5,6 +5,10 @@ function toneClass(tone: "success" | "warning" | "danger" | "neutral"): string {
   return tone === "danger" ? "riskBadgedanger" : tone === "warning" ? "riskBadgewarning" : tone === "success" ? "riskBadgeneutral" : "riskBadgeneutral";
 }
 
+function closureToneClass(status: "PASS" | "NEEDS_REVIEW" | "BLOCKED"): string {
+  return status === "PASS" ? "riskBadgeneutral" : status === "NEEDS_REVIEW" ? "riskBadgewarning" : "riskBadgedanger";
+}
+
 export function FormalScenarioBadge({ data }: { data: any }): React.ReactElement {
   const vm = buildFormalScenarioVm(data);
   const pestDiseaseSummary = (vm as any).pestDiseaseSummaryText as string | undefined;
@@ -22,7 +26,7 @@ export function ScenarioAcceptanceSummary({ data }: { data: any }): React.ReactE
   const chainLabel = vm.scenarioKey === "FORMAL_PEST_DISEASE_INSPECTION"
     ? "巡检证据链"
     : "建议/处方/审批/执行/验收闭环";
-  return <article className="customerCard"><h3 className="customerCardTitle">验收与闭环</h3><div>验收状态：{vm.acceptanceText}</div><div className="customerSpacingTopXs">验收说明：{vm.customerReasonSummary}</div><div className="customerSpacingTopXs">{chainLabel}：{vm.chainText}</div><div className="customerSpacingTopXs">{vm.zoneSummaryText ?? "暂无分区验收摘要"}</div></article>;
+  return <article className="customerCard"><h3 className="customerCardTitle">验收与闭环</h3><div>验收状态：{vm.acceptanceText}</div><div className="customerSpacingTopXs">验收说明：{vm.customerReasonSummary}</div><div className="customerSpacingTopXs">{chainLabel}：{vm.chainText}</div><div className="customerSpacingTopXs">正式闭环明细：</div><div className="customerSpacingTopXs customerGridTwo">{vm.closureSteps.map((step) => <div key={step.key} className="customerMiniCard"><div>{step.label}</div><span className={`riskBadge ${closureToneClass(step.status)}`}>{step.text}</span></div>)}</div><div className="customerSpacingTopXs">{vm.zoneSummaryText ?? "暂无分区验收摘要"}</div></article>;
 }
 
 export function ScenarioValueMemorySummary({ data }: { data: any }): React.ReactElement {
