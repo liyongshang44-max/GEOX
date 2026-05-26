@@ -1,5 +1,5 @@
 import React from "react";
-import { buildFormalScenarioVm } from "../../lib/formalScenarioViewModel";
+import { buildFormalScenarioVm, type FormalScenarioVm } from "../../lib/formalScenarioViewModel";
 
 function toneClass(tone: "success" | "warning" | "danger" | "neutral"): string {
   return tone === "danger" ? "riskBadgedanger" : tone === "warning" ? "riskBadgewarning" : tone === "success" ? "riskBadgeneutral" : "riskBadgeneutral";
@@ -26,8 +26,8 @@ function impactText(data: any): string {
   return `影响范围：地块 ${fieldId}，设备 ${deviceId}，任务 ${taskId}`;
 }
 
-function missingEvidenceText(data: any): string {
-  const missing = listText(data?.device_anomaly?.missing_evidence) || listText(data?.acceptance?.missing_items) || listText(data?.formal_scenario?.blocking_reasons);
+function missingEvidenceText(vm: FormalScenarioVm): string {
+  const missing = vm.customerBlockingReasons.join("、");
   return missing ? `缺少证据：${missing}` : "缺少证据：设备回执、派发确认或验收材料待补充";
 }
 
@@ -45,10 +45,8 @@ export function FormalChainSummaryCard({ data }: { data: any }): React.ReactElem
 
 export function ScenarioAcceptanceSummary({ data }: { data: any }): React.ReactElement {
   const vm = buildFormalScenarioVm(data);
-  const chainLabel = vm.scenarioKey === "FORMAL_PEST_DISEASE_INSPECTION"
-    ? "巡检证据链"
-    : "建议/处方/审批/执行/验收闭环";
-  return <article className="customerCard"><h3 className="customerCardTitle">验收与闭环</h3><div>验收状态：{vm.acceptanceText}</div><div className="customerSpacingTopXs">验收说明：{vm.customerReasonSummary}</div><div className="customerSpacingTopXs">{chainLabel}：{vm.chainText}</div><div className="customerSpacingTopXs">正式闭环明细：</div><div className="customerSpacingTopXs customerGridTwo">{vm.closureSteps.map((step) => <div key={step.key} className="customerMiniCard"><div>{step.label}</div><span className={`riskBadge ${closureToneClass(step.status)}`}>{step.text}</span></div>)}</div><div className="customerSpacingTopXs">{vm.zoneSummaryText ?? "暂无分区验收摘要"}</div></article>;
+  const pdiText = vm.scenarioKey === "FORMAL_PEST_DISEASE_INSPECTION" ? <div className="customerSpacingTopXs">巡检证据链：{vm.chainText}</div> : null;
+  return <article className="customerCard"><h3 className="customerCardTitle">验收与闭环</h3><div>验收状态：{vm.acceptanceText}</div><div className="customerSpacingTopXs">验收说明：{vm.customerReasonSummary}</div><div className="customerSpacingTopXs">建议/处方/审批/执行/验收闭环：{vm.chainText}</div>{pdiText}<div className="customerSpacingTopXs">正式闭环明细：</div><div className="customerSpacingTopXs customerGridTwo">{vm.closureSteps.map((step) => <div key={step.key} className="customerMiniCard"><div>{step.label}</div><span className={`riskBadge ${closureToneClass(step.status)}`}>{step.text}</span></div>)}</div><div className="customerSpacingTopXs">{vm.zoneSummaryText ?? "暂无分区验收摘要"}</div></article>;
 }
 
 export function ScenarioValueMemorySummary({ data }: { data: any }): React.ReactElement {
@@ -81,5 +79,5 @@ export function ZoneRollupSummary({ data }: { data: any }): React.ReactElement {
 export function FailSafeCustomerNotice({ data }: { data: any }): React.ReactElement | null {
   const vm = buildFormalScenarioVm(data);
   if (vm.scenarioKey !== "DEVICE_ANOMALY" && !vm.failSafeText && !vm.manualTakeoverText) return null;
-  return <article className="customerCard"><h3 className="customerCardTitle">设备异常与接管</h3><div>{vm.deviceStatusText ?? "设备状态：未知"}</div><div className="customerSpacingTopXs">异常类型：{anomalyTypeText(data)}</div><div className="customerSpacingTopXs">{impactText(data)}</div><div className="customerSpacingTopXs">系统阻断：{data?.device_anomaly?.system_block_reason ?? data?.execution?.invalid_reason ?? "设备异常或证据不足，需复核。"}</div><div className="customerSpacingTopXs">{missingEvidenceText(data)}</div><div className="customerSpacingTopXs">是否需要人工接管：{data?.device_anomaly?.manual_takeover_required || data?.device_anomaly?.manual_takeover_status || vm.manualTakeoverText ? "需要" : "待确认"}</div><div className="customerSpacingTopXs">{data?.device_anomaly?.fail_safe_status ? `Fail-safe 状态：${data.device_anomaly.fail_safe_status}` : (vm.failSafeText ?? "Fail-safe 未触发")}</div><div className="customerSpacingTopXs">{data?.device_anomaly?.manual_takeover_status ? `人工接管状态：${data.device_anomaly.manual_takeover_status}` : (vm.manualTakeoverText ?? "人工接管未触发")}</div><div className="customerSpacingTopXs">客户下一步：{data?.device_anomaly?.customer_next_action ?? "完成人工接管、现场复核并补充证据。"}</div>{vm.executionGuardText ? <div className="customerSpacingTopXs">{vm.executionGuardText}</div> : null}<div className="customerSpacingTopXs">当前异常场景不展示“执行成功”，需复核后才能更新状态。</div></article>;
+  return <article className="customerCard"><h3 className="customerCardTitle">设备异常与接管</h3><div>{vm.deviceStatusText ?? "设备状态：未知"}</div><div className="customerSpacingTopXs">异常类型：{anomalyTypeText(data)}</div><div className="customerSpacingTopXs">{impactText(data)}</div><div className="customerSpacingTopXs">系统阻断：{vm.customerReasonSummary || "设备异常或证据不足，需复核。"}</div><div className="customerSpacingTopXs">{missingEvidenceText(vm)}</div><div className="customerSpacingTopXs">是否需要人工接管：{data?.device_anomaly?.manual_takeover_required || data?.device_anomaly?.manual_takeover_status || vm.manualTakeoverText ? "需要" : "待确认"}</div><div className="customerSpacingTopXs">{data?.device_anomaly?.fail_safe_status ? `Fail-safe 状态：${data.device_anomaly.fail_safe_status}` : (vm.failSafeText ?? "Fail-safe 未触发")}</div><div className="customerSpacingTopXs">{data?.device_anomaly?.manual_takeover_status ? `人工接管状态：${data.device_anomaly.manual_takeover_status}` : (vm.manualTakeoverText ?? "人工接管未触发")}</div><div className="customerSpacingTopXs">客户下一步：{data?.device_anomaly?.customer_next_action ?? "完成人工接管、现场复核并补充证据。"}</div>{vm.executionGuardText ? <div className="customerSpacingTopXs">{vm.executionGuardText}</div> : null}<div className="customerSpacingTopXs">当前异常场景不展示“执行成功”，需复核后才能更新状态。</div></article>;
 }
