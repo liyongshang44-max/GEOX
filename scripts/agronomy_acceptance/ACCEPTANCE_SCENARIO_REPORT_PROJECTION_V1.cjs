@@ -12,7 +12,8 @@ const dashboardProjection = read('apps/server/src/projections/report_dashboard_v
 const checks = {
   formal_irrigation_formal_scenario_projected:
     /formal_scenario:\s*\{[\s\S]*scenario_type:[\s\S]*formal_chain_status:[\s\S]*evidence_status:/m.test(reportProjection) &&
-    /scenarioType[\s\S]*FORMAL_IRRIGATION/m.test(reportProjection),
+    /FORMAL_IRRIGATION/.test(reportProjection) &&
+    /const\s+scenarioType:\s+OperationReportFormalScenarioTypeV1/m.test(reportProjection),
 
   device_anomaly_fail_safe_manual_takeover_or_none:
     reportProjection.includes('const failSafeStatus') &&
@@ -29,7 +30,7 @@ const checks = {
 
   dashboard_recent_operations_has_formal_summary:
     /recent_operations:[\s\S]*scenario_type\?:\s*string;[\s\S]*formal_chain_status\?:\s*string;[\s\S]*evidence_status\?:\s*string;[\s\S]*fail_safe_status\?:\s*string;[\s\S]*manual_takeover_status\?:\s*string;[\s\S]*zone_rollup_status\?:\s*string;[\s\S]*customer_visible_eligible\?:\s*boolean;[\s\S]*needs_review\?:\s*boolean;/m.test(dashboardProjection) &&
-    /scenario_type:\s*report\.formal_scenario\?\.scenario_type/m.test(dashboardProjection),
+    /scenario_type:\s*\(\(\(report as any\)\.device_anomaly \|\| report\.formal_scenario\?\.scenario_type === "DEVICE_ANOMALY"\)/m.test(dashboardProjection),
 
   success_like_not_customer_visible_must_need_review:
     /needs_review:\s*customerVisibleEligible\s*\?\s*needsReview\s*:\s*true/m.test(reportProjection),
