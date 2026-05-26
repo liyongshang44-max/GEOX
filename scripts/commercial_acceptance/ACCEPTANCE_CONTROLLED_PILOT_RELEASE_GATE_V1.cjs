@@ -39,7 +39,7 @@ function loadDotEnvFile(filePath) {
     const idx = line.indexOf('=');
     if (idx <= 0) continue;
     const key = line.slice(0, idx).trim();
-    const value = line.slice(idx + 1).trim().replace(/^['"]|['"]$/g, '');
+    const value = line.slice(idx + 1).trim().replace(/^[ '"]|[ '"]$/g, '');
     out[key] = value;
   }
   return out;
@@ -81,24 +81,25 @@ function buildGateEnv() {
   return env;
 }
 
-function tail(value, max = 3200) {
+function tail(value, max = 4200) {
   const raw = String(value || '').trim();
   return raw.length <= max ? raw : raw.slice(raw.length - max);
 }
 
 function runGate(gate, env) {
   const started_at = new Date().toISOString();
+  console.log(`[controlled-pilot-release-gate] START ${gate.id}: ${gate.command}`);
   const result = spawnSync(gate.command, {
     cwd: ROOT,
     shell: true,
     encoding: 'utf8',
     env,
+    maxBuffer: 64 * 1024 * 1024,
   });
   const stdout = result.stdout || '';
   const stderr = result.stderr || '';
-  process.stdout.write(stdout);
-  process.stderr.write(stderr);
-  return {
+  const output_tail = result.status === 0 ? '' : tail(`${stdout}\n${stderr}`);
+  const record = {
     id: gate.id,
     command: gate.command,
     ok: result.status === 0,
@@ -106,8 +107,15 @@ function runGate(gate, env) {
     signal: result.signal || null,
     started_at,
     finished_at: new Date().toISOString(),
-    output_tail: result.status === 0 ? '' : tail(`${stdout}\n${stderr}`)
+    output_tail,
   };
+  if (record.ok) {
+    console.log(`[controlled-pilot-release-gate] PASS ${gate.id}`);
+  } else {
+    console.error(`[controlled-pilot-release-gate] FAIL ${gate.id} exit=${record.exit_code}`);
+    console.error(`[controlled-pilot-release-gate] ${gate.id} output_tail=${JSON.stringify(output_tail)}`);
+  }
+  return record;
 }
 
 function toList(items) {
