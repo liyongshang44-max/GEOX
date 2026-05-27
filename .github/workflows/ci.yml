@@ -31,6 +31,9 @@ jobs:
       - name: Route dependency guard
         run: pnpm run ci:route-dependency-guard
 
+      - name: Route response ownership guard
+        run: pnpm run ci:route-response-ownership
+
       - name: Typecheck
         run: pnpm -r typecheck
 

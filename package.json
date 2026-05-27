@@ -83,7 +83,8 @@
     "ci:scenario:fertilization": "node scripts/agronomy_acceptance/ACCEPTANCE_FERTILIZATION_RELEASE_GATE.cjs",
     "ci:scenario:pest-disease-inspection": "node scripts/agronomy_acceptance/ACCEPTANCE_PEST_DISEASE_INSPECTION_RELEASE_GATE.cjs",
     "test:acceptance:with-p0": "pnpm run ci:base-contract:p0 && pnpm run test:acceptance",
-    "ci:governance:no-variable-task-prehandler": "node scripts/governance_acceptance/ACCEPTANCE_NO_VARIABLE_TASK_PREHANDLER_V1.cjs"
+    "ci:governance:no-variable-task-prehandler": "node scripts/governance_acceptance/ACCEPTANCE_NO_VARIABLE_TASK_PREHANDLER_V1.cjs",
+    "ci:route-response-ownership": "node scripts/governance_acceptance/ACCEPTANCE_ROUTE_RESPONSE_OWNERSHIP_V1.cjs"
   },
   "volta": {
     "node": "20.11.1"
