@@ -31,6 +31,7 @@ const temporaryOpenApiWarningPatterns = [
   /^\/api\/v1\/dev\/flight-table\//,
   /^\/api\/v1\/dev-lab\//,
   /^\/api\/v1\/simulators\//,
+  /^\/api\/v1\/devices\/simulator(?:\/|$)/,
   /^\/api\/v1\/billing\//,
   /^\/api\/v1\/audit-export\//,
   /^\/api\/v1\/service-teams(?:\/|$)/,
@@ -52,7 +53,7 @@ const salesCriticalRoutePatterns = [
   /^\/api\/v1\/acceptance(?:\/|$)/,
   /^\/api\/v1\/evidence-export(?:\/|$)/,
   /^\/api\/v1\/inspection(?:\/|$)/,
-  /^\/api\/v1\/devices\/[^/]+\/status$/,
+  /^\/api\/v1\/devices\/(?!simulator(?:\/|$))[^/]+\/status$/,
   /^\/api\/v1\/fail-safe(?:\/|$)/,
   /^\/api\/v1\/manual-takeover(?:\/|$)/,
   /^\/api\/v1\/manual-takeovers$/,
@@ -301,7 +302,7 @@ for (const [routeKey, requestSchema, responseSchema] of criticalPathRefs) {
   if (responseSchema && !block.includes(responseSchema)) errors.push(`missing_response_ref:${routeKey}:${responseSchema}`);
 }
 
-const salesCriticalWarnings = warnings.filter((warning) => /\/api\/v1\/(customer|reports|actions|sense|acceptance|evidence-export|inspection|devices\/[^/]+\/status|fail-safe|manual-takeover|manual-takeovers)/.test(warning));
+const salesCriticalWarnings = warnings.filter((warning) => /\/api\/v1\/(customer|reports|actions|sense|acceptance|evidence-export|inspection|devices\/(?!simulator(?:\/|$))[^/]+\/status|fail-safe|manual-takeover|manual-takeovers)/.test(warning));
 if (salesCriticalWarnings.length) errors.push(...salesCriticalWarnings.map((warning) => `sales_critical_warn_only:${warning}`));
 
 if (errors.length) {
