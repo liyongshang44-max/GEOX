@@ -1523,6 +1523,7 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
         task_meta: delegated.json?.task_meta ?? delegated.json?.task?.meta ?? null,
       });
     } catch (e: any) {
+      if (reply.sent) return;
       const code = String(e?.message ?? "BAD_REQUEST");
       if (
         code === "VARIABLE_PRESCRIPTION_ONLY_SUPPORTS_IRRIGATION" ||
