@@ -117,8 +117,6 @@ jobs:
           set +a
           pnpm run ci:controlled-pilot
 
-
-
       - name: Run Stage-1 fixture raw sample contract gate
         run: |
           pnpm run ci:stage1-fixture:raw-sample-contract
@@ -140,16 +138,6 @@ jobs:
           set +a
           pnpm run test:acceptance
 
-      - name: Runtime hygiene check (no double-send errors)
-        if: always()
-        run: |
-          set -euo pipefail
-          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs --tail=3000 server > /tmp/server-runtime-hygiene.log || true
-          if rg -n "FST_ERR_REP_ALREADY_SENT|Reply was already sent|ERR_HTTP_HEADERS_SENT" /tmp/server-runtime-hygiene.log; then
-            echo "[hygiene] detected double-send/runtime header errors"
-            exit 1
-          fi
-
       - name: Collect runtime evidence logs
         if: always()
         run: |
@@ -157,11 +145,12 @@ jobs:
           mkdir -p acceptance-output
           cp docs/audit/BASE_CONTRACT_GATE_MATURITY_REPORT.md acceptance-output/BASE_CONTRACT_GATE_MATURITY_REPORT.md || true
           cp docs/audit/CONTROLLED_PILOT_READINESS_REPORT.md acceptance-output/CONTROLLED_PILOT_READINESS_REPORT.md || true
-          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs server > acceptance-output/SERVER_RUNTIME.log || true
-          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs minio-init > acceptance-output/MINIO_INIT.log || true
-          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs postgres > acceptance-output/POSTGRES_RUNTIME.log || true
-          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs jobs > acceptance-output/JOBS_RUNTIME.log || true
-          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs executor > acceptance-output/EXECUTOR_RUNTIME.log || true
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs --no-color --tail=5000 server > acceptance-output/SERVER_RUNTIME.log
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs --no-color --tail=2000 minio-init > acceptance-output/MINIO_INIT.log || true
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs --no-color --tail=2000 postgres > acceptance-output/POSTGRES_RUNTIME.log || true
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs --no-color --tail=2000 jobs > acceptance-output/JOBS_RUNTIME.log || true
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs --no-color --tail=2000 executor > acceptance-output/EXECUTOR_RUNTIME.log || true
+          test -s acceptance-output/SERVER_RUNTIME.log
           set +e
           docker run --rm --network host --entrypoint /bin/sh minio/mc:latest -c 'set -eu; mc alias set local http://127.0.0.1:9000 minioadmin minioadmin; mc ls local; mc stat local/evidence-exports-v1' > acceptance-output/MINIO_BUCKET_VERIFY.log 2>&1
           MINIO_BUCKET_VERIFY_RC=$?
@@ -172,6 +161,26 @@ jobs:
           if [ "$MINIO_BUCKET_VERIFY_RC" -ne 0 ]; then
             echo "[acceptance] bucket verify command failed with rc=$MINIO_BUCKET_VERIFY_RC (see acceptance-output/MINIO_BUCKET_VERIFY.log)"
             exit "$MINIO_BUCKET_VERIFY_RC"
+          fi
+
+      - name: Run COMMERCIAL MVP0 release gate
+        run: |
+          set -a
+          source .env.ci
+          set +a
+          pnpm acceptance:commercial:mvp0:syntax
+          pnpm acceptance:commercial:mvp0:release-gate
+
+      - name: Final runtime hygiene check and artifact log collection
+        if: always()
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs --no-color --tail=5000 server > acceptance-output/SERVER_RUNTIME.log
+          test -s acceptance-output/SERVER_RUNTIME.log
+          if grep -E "FST_ERR_REP_ALREADY_SENT|Reply was already sent|ERR_HTTP_HEADERS_SENT" acceptance-output/SERVER_RUNTIME.log; then
+            echo "[hygiene] detected double-send/runtime header errors"
+            exit 1
           fi
 
       - name: Upload acceptance artifacts
@@ -186,14 +195,6 @@ jobs:
             acceptance-output/CONTROLLED_PILOT_READINESS_REPORT.md
             acceptance-output/*.log
           if-no-files-found: warn
-
-      - name: Run COMMERCIAL MVP0 release gate
-        run: |
-          set -a
-          source .env.ci
-          set +a
-          pnpm acceptance:commercial:mvp0:syntax
-          pnpm acceptance:commercial:mvp0:release-gate
 
       - name: Stop acceptance runtime dependencies
         if: always()
