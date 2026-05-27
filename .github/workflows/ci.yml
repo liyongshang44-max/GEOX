@@ -118,6 +118,17 @@ jobs:
           pnpm run ci:controlled-pilot
 
 
+
+      - name: Runtime hygiene check (no double-send errors)
+        if: always()
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs --tail=2000 server > /tmp/server-runtime-hygiene.log || true
+          if rg -n "FST_ERR_REP_ALREADY_SENT|Reply was already sent|ERR_HTTP_HEADERS_SENT" /tmp/server-runtime-hygiene.log; then
+            echo "[hygiene] detected double-send/runtime header errors"
+            exit 1
+          fi
+
       - name: Run Stage-1 fixture raw sample contract gate
         run: |
           pnpm run ci:stage1-fixture:raw-sample-contract

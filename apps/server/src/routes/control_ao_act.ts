@@ -263,17 +263,22 @@ async function postJsonInternal(
   const localPortRaw = Number((req.socket as any)?.localPort ?? 3000);
   const localPort = Number.isFinite(localPortRaw) && localPortRaw > 0 ? localPortRaw : 3000;
   const url = `${proto}://127.0.0.1:${localPort}${path}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      accept: "application/json",
-      authorization: authz,
-      "content-type": "application/json"
-    },
-    body: JSON.stringify(body)
-  });
-  const json = await res.json().catch(() => null);
-  return { ok: res.ok, status: res.status, json };
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        authorization: authz,
+        "content-type": "application/json",
+        "x-geox-internal-subrequest": "1"
+      },
+      body: JSON.stringify(body)
+    });
+    const json = await res.json().catch(() => null);
+    return { ok: res.ok, status: res.status, json };
+  } catch {
+    return { ok: false, status: 503, json: { ok: false, error: "INTERNAL_SUBREQUEST_FAILED" } };
+  }
 }
 
 function validateKeyedPrimitives(

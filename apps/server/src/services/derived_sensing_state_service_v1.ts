@@ -266,6 +266,9 @@ export async function ensureDerivedSensingStateProjectionV1(db: DbConn): Promise
   );
   await db.query(`CREATE INDEX IF NOT EXISTS idx_derived_sensing_state_index_v1_scope_time ON derived_sensing_state_index_v1 (tenant_id, project_id, group_id, field_id, computed_at_ts_ms DESC)`);
   await db.query(`CREATE INDEX IF NOT EXISTS idx_derived_sensing_state_index_v1_type_time ON derived_sensing_state_index_v1 (tenant_id, field_id, state_type, computed_at_ts_ms DESC)`);
+  await db.query(`DELETE FROM derived_sensing_state_index_v1 a
+    USING derived_sensing_state_index_v1 b
+    WHERE a.ctid < b.ctid AND a.fact_id = b.fact_id`);
   await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS ux_derived_sensing_state_index_v1_fact_id ON derived_sensing_state_index_v1 (fact_id)`);
   await db.query(`ALTER TABLE derived_sensing_state_index_v1 ADD COLUMN IF NOT EXISTS source_observation_ids_json jsonb NOT NULL DEFAULT '[]'::jsonb`);
   await db.query(`UPDATE derived_sensing_state_index_v1 SET source_observation_ids_json = '[]'::jsonb WHERE source_observation_ids_json IS NULL`);
