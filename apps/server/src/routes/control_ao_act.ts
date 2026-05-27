@@ -1325,11 +1325,11 @@ return reply.send({ ok: true, rows: out.rows, note: "tenant_filtered_inline" });
 // 新流必须走本路由：action 执行主口径是 `/api/v1/actions/*`，并且禁止新代码依赖 legacy/deprecated route。
 export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/actions/task", async (req, reply) => handleAoActTaskV1(app, pool, req, reply, false));
-  app.post("/api/v1/actions/task/from-variable-prescription", async (req, reply) => {
-    try {
+  app.post("/api/v1/actions/task/from-variable-prescription", (req, reply) => {
+    void (async () => {
       const auth = requireAoActAnyScopeV0(req, reply, ["action.task.create", "ao_act.task.write"]);
-      if (!auth) return reply;
-      if (!requireActionTaskCreateRoleV1(reply, auth)) return reply;
+      if (!auth) return;
+      if (!requireActionTaskCreateRoleV1(reply, auth)) return;
 
       const body = z.object({
         tenant_id: z.string().min(1),
@@ -1342,7 +1342,7 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
       }).parse(req.body ?? {});
 
       const tenant = assertTenantFieldsPresentV0(body, "body");
-      if (!requireTenantMatchOr404V0(auth, tenant, reply)) return reply;
+      if (!requireTenantMatchOr404V0(auth, tenant, reply)) return;
 
       const prescription = await getPrescriptionById(pool, body.prescription_id, tenant);
       if (!prescription) return sendErrorReply(reply, 404, { ok: false, error: "PRESCRIPTION_NOT_FOUND" });
@@ -1412,7 +1412,7 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
         token_id: auth.token_id,
       });
 
-      return {
+      reply.send({
         ok: true,
         act_task_id: actTaskId,
         task_fact_id: created.fact_id,
@@ -1420,11 +1420,13 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
         operation_plan_fact_id: operationPlanAnchor.operation_plan_fact_id,
         operation_plan_anchor_created: operationPlanAnchor.created,
         task_meta: taskPayload.meta ?? created.task_meta ?? null,
-      };
-    } catch (e: any) {
+      });
+    })().catch((e: any) => {
+      if (reply.sent) return;
       const code = String(e?.message ?? "BAD_REQUEST");
-      return sendErrorReply(reply, 400, { ok: false, error: code });
-    }
+      sendErrorReply(reply, 400, { ok: false, error: code });
+    });
+    return reply;
   });
   app.post("/api/v1/actions/receipt", async (req, reply) => handleAoActReceiptV1(app, pool, req, reply, false));
   app.get("/api/v1/actions/index", async (req, reply) => handleAoActIndexV1(app, pool, req, reply, false));
