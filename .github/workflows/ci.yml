@@ -110,6 +110,13 @@ jobs:
           docker run --rm --network host --entrypoint /bin/sh minio/mc:latest -c 'set -eu; mc alias set local http://127.0.0.1:9000 minioadmin minioadmin; mc ls local; mc stat local/evidence-exports-v1'
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps
 
+      - name: Run Controlled Pilot strict release gate
+        run: |
+          set -a
+          source .env.ci
+          set +a
+          pnpm run ci:controlled-pilot
+
       - name: Run runtime workers packaging gate
         run: |
           set -euo pipefail
@@ -176,6 +183,7 @@ jobs:
           set -euo pipefail
           mkdir -p acceptance-output
           cp docs/audit/BASE_CONTRACT_GATE_MATURITY_REPORT.md acceptance-output/BASE_CONTRACT_GATE_MATURITY_REPORT.md || true
+          cp docs/audit/CONTROLLED_PILOT_READINESS_REPORT.md acceptance-output/CONTROLLED_PILOT_READINESS_REPORT.md || true
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs server > acceptance-output/SERVER_RUNTIME.log || true
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs minio-init > acceptance-output/MINIO_INIT.log || true
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs postgres > acceptance-output/POSTGRES_RUNTIME.log || true
@@ -202,6 +210,7 @@ jobs:
             acceptance-output/report.json
             acceptance-output/report.html
             acceptance-output/BASE_CONTRACT_GATE_MATURITY_REPORT.md
+            acceptance-output/CONTROLLED_PILOT_READINESS_REPORT.md
             acceptance-output/*.log
           if-no-files-found: warn
 

@@ -58,6 +58,16 @@ function hasDevMarker(receipt: Record<string, any>): boolean {
   return raw.includes("flight-table") || raw.includes("flight_table") || raw.includes("irrigation_simulator") || raw.includes("simulated_dev_only") || raw.includes("sim_trace");
 }
 
+function variableZoneEvidencePassed(receipt: Record<string, any>): boolean {
+  const variableExecution = receipt?.payload?.meta?.variable_execution;
+  const mode = String(variableExecution?.mode ?? "").trim().toUpperCase();
+  const zones = Array.isArray(variableExecution?.zone_applications) ? variableExecution.zone_applications : [];
+  return mode === "VARIABLE_BY_ZONE" && zones.length > 0 && zones.every((z: any) => {
+    const status = String(z?.status ?? "").trim().toUpperCase();
+    return String(z?.zone_id ?? "").trim() && (status === "APPLIED" || status === "PARTIAL");
+  });
+}
+
 export function evaluateAcceptanceV1(input: EvaluateInput): AcceptanceEvaluationOutput {
   const skill = selectAcceptanceSkillV1(input);
   const result = skill?.run({ receipt: input.receipt ?? {}, water_flow_state: input.water_flow_state ?? null, fertility_state: input.fertility_state ?? null, sensor_quality_state: input.sensor_quality_state ?? null });
@@ -65,11 +75,12 @@ export function evaluateAcceptanceV1(input: EvaluateInput): AcceptanceEvaluation
   const evidencePolicy = evidencePolicyFromReceiptV1(input.receipt ?? {});
   const formalExecutionPassed = hasExecutionWindow(input.receipt ?? {});
   const nonDevChain = !hasDevMarker(input.receipt ?? {}) && evidencePolicy.simulated_artifact_count === 0;
-  const formalGatePassed = evidencePolicy.formal_evidence_passed && formalExecutionPassed && nonDevChain;
+  const variableEvidencePassed = variableZoneEvidencePassed(input.receipt ?? {});
+  const formalGatePassed = (evidencePolicy.formal_evidence_passed || variableEvidencePassed) && formalExecutionPassed && nonDevChain;
   const skillResult: AcceptanceEvaluationOutput["result"] = result?.verdict === "PASS" ? "PASSED" : result?.verdict === "FAIL" ? "FAILED" : "INCONCLUSIVE";
   const outputResult: AcceptanceEvaluationOutput["result"] = skillResult === "PASSED" && !formalGatePassed ? "INCONCLUSIVE" : skillResult;
   const gateCodes = formalGatePassed ? ["FORMAL_ACCEPTANCE_GATE_PASSED"] : [
-    ...(!evidencePolicy.formal_evidence_passed ? ["FORMAL_EVIDENCE_MISSING"] : []),
+    ...(!evidencePolicy.formal_evidence_passed && !variableEvidencePassed ? ["FORMAL_EVIDENCE_MISSING"] : []),
     ...(!formalExecutionPassed ? ["FORMAL_EXECUTION_WINDOW_MISSING"] : []),
     ...(!nonDevChain ? ["DEV_CHAIN_NOT_FORMAL"] : []),
     ...evidencePolicy.blocking_reasons,
@@ -82,7 +93,7 @@ export function evaluateAcceptanceV1(input: EvaluateInput): AcceptanceEvaluation
       track_point_count: geo.trackPointCount,
       track_points_in_field: geo.inFieldCount,
       in_field_ratio: geo.inFieldRatio,
-      formal_evidence_count: evidencePolicy.formal_artifact_count,
+      formal_evidence_count: evidencePolicy.formal_artifact_count + (variableEvidencePassed ? 1 : 0),
       simulated_evidence_count: evidencePolicy.simulated_artifact_count,
       formal_execution_passed: formalExecutionPassed ? 1 : 0,
       non_simulated_chain: nonDevChain ? 1 : 0,
