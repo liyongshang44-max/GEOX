@@ -46,7 +46,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
   app.get("/api/v1/skills", async (req, reply) => {
     try {
       const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
-      if (!auth) return;
+      if (!auth) return reply;
       const query = (req.query ?? {}) as Record<string, unknown>;
       const tenant = tenantFromQuery(query, auth);
       if (!tenantMatches(auth, tenant)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
@@ -60,7 +60,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
   app.get("/api/v1/skills/:skill_id", async (req, reply) => {
     try {
       const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
-      if (!auth) return;
+      if (!auth) return reply;
       const tenant = tenantFromQuery((req.query ?? {}) as Record<string, unknown>, auth);
       if (!tenantMatches(auth, tenant)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
 
@@ -80,7 +80,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
     setSkillsLegacyDeprecationHeaders(reply, SKILLS_LEGACY_RUNS_READ_SUCCESSOR_ENDPOINT);
     try {
       const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
-      if (!auth) return;
+      if (!auth) return reply;
       const query = (req.query ?? {}) as Record<string, unknown>;
       const tenant = tenantFromQuery(query, auth);
       if (!tenantMatches(auth, tenant)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
@@ -96,7 +96,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/skills/bindings", async (req, reply) => {
     try {
       const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
-      if (!auth) return;
+      if (!auth) return reply;
       const body = (req.body ?? {}) as Record<string, unknown>;
       const tenant = tenantFromBody(body, auth);
       if (!tenantMatches(auth, tenant)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
@@ -116,7 +116,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
   app.get("/api/v1/skills/bindings", async (req, reply) => {
     try {
       const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
-      if (!auth) return;
+      if (!auth) return reply;
       const query = (req.query ?? {}) as Record<string, unknown>;
       const tenant = tenantFromQuery(query, auth);
       if (!tenantMatches(auth, tenant)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
@@ -132,7 +132,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/skills/bindings/override", async (req, reply) => {
     try {
       const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
-      if (!auth) return;
+      if (!auth) return reply;
       const body = (req.body ?? {}) as Record<string, unknown>;
       const tenant = tenantFromBody(body, auth);
       if (!tenantMatches(auth, tenant)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
@@ -153,7 +153,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
     setSkillsLegacyDeprecationHeaders(reply, SKILLS_LEGACY_MUTATION_WRITE_SUCCESSOR_ENDPOINT);
     try {
       const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
-      if (!auth) return;
+      if (!auth) return reply;
       const tenant = tenantFromQuery((req.query ?? {}) as Record<string, unknown>, auth);
       if (!tenantMatches(auth, tenant)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
       const skill_id = String((req.params as { skill_id?: string }).skill_id ?? "").trim();
@@ -173,7 +173,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
     setSkillsLegacyDeprecationHeaders(reply, SKILLS_LEGACY_MUTATION_WRITE_SUCCESSOR_ENDPOINT);
     try {
       const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
-      if (!auth) return;
+      if (!auth) return reply;
       const tenant = tenantFromQuery((req.query ?? {}) as Record<string, unknown>, auth);
       if (!tenantMatches(auth, tenant)) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
       const skill_id = String((req.params as { skill_id?: string }).skill_id ?? "").trim();
