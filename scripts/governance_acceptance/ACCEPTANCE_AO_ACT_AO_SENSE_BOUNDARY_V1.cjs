@@ -34,7 +34,7 @@ const senseControl = read(files.senseControl);
 const inspection = read(files.inspection);
 const variableAcceptance = read(files.variableAcceptance);
 
-assertIncludes(aoActPrimary, 'registerAoActV1Routes(app, pool)', 'AO-ACT v1 primary route must delegate to control AO-ACT v1 routes');
+assertIncludes(aoActPrimary, 'registerAoActV1Routes(app, pool)', 'AO-ACT primary route must delegate to control AO-ACT v1 routes');
 assertNotIncludes(aoActPrimary, 'app.addHook("preHandler"', 'AO-ACT primary route must not intercept variable prescription via preHandler');
 assertNotIncludes(aoActPrimary, 'interceptVariablePrescriptionTaskV1', 'AO-ACT primary route must not own variable prescription response');
 assertNotIncludes(aoActPrimary, 'writeVariableTaskCandidateV1', 'AO-ACT primary route must not write variable task facts directly');
@@ -47,12 +47,12 @@ const fromVariableRouteBlock = bodyOf(
 );
 assertIncludes(fromVariableRouteBlock, 'createAoActTaskCoreV1', 'from-variable-prescription must use shared AO-ACT task core');
 assertIncludes(fromVariableRouteBlock, 'buildVariableActionTaskPayloadV1', 'from-variable-prescription must build variable task payload');
-assertIncludes(fromVariableRouteBlock, 'ensureVariableOperationPlanV1', 'from-variable-prescription must anchor operation plan');
+assertIncludes(fromVariableRouteBlock, 'ensureVariableOperationPlanV1', 'from-variable-prescription must anchor variable operation plan');
 assertIncludes(fromVariableRouteBlock, 'source: "api/v1/actions/task/from-variable-prescription"', 'from-variable-prescription source must be explicit');
 assertNotIncludes(fromVariableRouteBlock, 'postJsonInternal(req', 'from-variable-prescription must not use internal subrequest helper');
 assertNotIncludes(fromVariableRouteBlock, 'postJsonInternal(', 'from-variable-prescription must not use internal HTTP subrequest');
-assertNotIncludes(fromVariableRouteBlock, 'reply.send(', 'from-variable-prescription must not explicitly send success response');
-assertNotIncludes(fromVariableRouteBlock, 'sendErrorReply(', 'from-variable-prescription must not explicitly send error response');
+assertNotIncludes(fromVariableRouteBlock, 'reply.send(', 'from-variable-prescription must not explicitly send response');
+assertNotIncludes(fromVariableRouteBlock, 'sendErrorReply(', 'from-variable-prescription must not use explicit sendErrorReply');
 assertNotIncludes(fromVariableRouteBlock, 'status: "ACKED"', 'from-variable route must not write ACKED');
 assertNotIncludes(fromVariableRouteBlock, 'to_status: "ACKED"', 'from-variable route must not transition to ACKED');
 
