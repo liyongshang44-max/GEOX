@@ -1426,7 +1426,6 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
       const code = String(e?.message ?? "BAD_REQUEST");
       sendErrorReply(reply, 400, { ok: false, error: code });
     });
-    return reply;
   });
   app.post("/api/v1/actions/receipt", async (req, reply) => handleAoActReceiptV1(app, pool, req, reply, false));
   app.get("/api/v1/actions/index", async (req, reply) => handleAoActIndexV1(app, pool, req, reply, false));
