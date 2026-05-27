@@ -34,26 +34,27 @@ const senseControl = read(files.senseControl);
 const inspection = read(files.inspection);
 const variableAcceptance = read(files.variableAcceptance);
 
-assertIncludes(aoActPrimary, 'interceptVariablePrescriptionTaskV1', 'AO-ACT primary route variable prescription intercept');
-assertIncludes(aoActPrimary, 'writeVariableTaskCandidateV1', 'AO-ACT variable candidate writer');
-assertIncludes(aoActPrimary, 'task_status: "TASK_CREATED"', 'variable route response task status');
-assertIncludes(aoActPrimary, 'operation_plan_status: "READY_TO_DISPATCH"', 'variable route response operation status');
-assertIncludes(aoActPrimary, 'dispatch_status: "NOT_DISPATCHED"', 'variable route dispatch status');
-assertIncludes(aoActPrimary, 'ack_status: "ACK_REQUIRED"', 'variable route ack status');
-assertIncludes(aoActPrimary, 'task_creation_is_not_ack: true', 'operation plan task creation boundary');
-assertIncludes(aoActPrimary, 'ack_requires_dispatch_claim_or_executor_ack: true', 'operation plan ack source boundary');
-assertIncludes(aoActPrimary, 'VARIABLE_ACTION_TASK_CANDIDATE_CREATED_NOT_ACKED', 'transition reason not acked');
-assertIncludes(aoActPrimary, 'app.addHook("preHandler"', 'AO-ACT route interception hook');
+assertIncludes(aoActPrimary, 'registerAoActV1Routes(app, pool)', 'AO-ACT v1 primary route must delegate to control AO-ACT v1 routes');
+assertNotIncludes(aoActPrimary, 'app.addHook("preHandler"', 'AO-ACT primary route must not intercept variable prescription via preHandler');
+assertNotIncludes(aoActPrimary, 'interceptVariablePrescriptionTaskV1', 'AO-ACT primary route must not own variable prescription response');
+assertNotIncludes(aoActPrimary, 'writeVariableTaskCandidateV1', 'AO-ACT primary route must not write variable task facts directly');
+assertNotIncludes(aoActPrimary, 'reply.send(', 'AO-ACT primary route must not send responses directly');
 
-const variableRouteBlock = bodyOf(aoActPrimary, 'async function writeVariableTaskCandidateV1', '// AO-ACT v1 primary routes.');
-assertNotIncludes(variableRouteBlock, 'status: "ACKED"', 'variable candidate writer must not write ACKED');
-assertNotIncludes(variableRouteBlock, 'to_status: "ACKED"', 'variable candidate transition must not ACK');
-assertNotIncludes(variableRouteBlock, 'status: "EXECUTING"', 'variable candidate writer must not execute');
-assertNotIncludes(variableRouteBlock, 'status: "SUCCESS"', 'variable candidate writer must not succeed');
-assertNotIncludes(variableRouteBlock, 'status: "SUCCEEDED"', 'variable candidate writer must not succeed');
-
-assertIncludes(aoActControl, 'status: "ACKED"', 'control route historical ACKED path retained as audited legacy risk');
-assertIncludes(aoActPrimary, 'from-variable-prescription', 'v1 route owns variable prescription endpoint');
+const fromVariableRouteBlock = bodyOf(
+  aoActControl,
+  'app.post("/api/v1/actions/task/from-variable-prescription"',
+  'app.post("/api/v1/actions/receipt"'
+);
+assertIncludes(fromVariableRouteBlock, 'createAoActTaskCoreV1', 'from-variable-prescription must use shared AO-ACT task core');
+assertIncludes(fromVariableRouteBlock, 'buildVariableActionTaskPayloadV1', 'from-variable-prescription must build variable task payload');
+assertIncludes(fromVariableRouteBlock, 'ensureVariableOperationPlanV1', 'from-variable-prescription must anchor operation plan');
+assertIncludes(fromVariableRouteBlock, 'source: "api/v1/actions/task/from-variable-prescription"', 'from-variable-prescription source must be explicit');
+assertNotIncludes(fromVariableRouteBlock, 'postJsonInternal(req', 'from-variable-prescription must not use internal subrequest helper');
+assertNotIncludes(fromVariableRouteBlock, 'postJsonInternal(', 'from-variable-prescription must not use internal HTTP subrequest');
+assertNotIncludes(fromVariableRouteBlock, 'reply.send(', 'from-variable-prescription must not explicitly send success response');
+assertNotIncludes(fromVariableRouteBlock, 'sendErrorReply(', 'from-variable-prescription must not explicitly send error response');
+assertNotIncludes(fromVariableRouteBlock, 'status: "ACKED"', 'from-variable route must not write ACKED');
+assertNotIncludes(fromVariableRouteBlock, 'to_status: "ACKED"', 'from-variable route must not transition to ACKED');
 
 for (const value of ['FORMAL_PRESCRIPTION', 'EXPLICIT_OPERATOR_INPUT', 'DEMO_DEFAULT']) {
   assertIncludes(variableTask, `"${value}"`, 'variable action parameter source enum');
