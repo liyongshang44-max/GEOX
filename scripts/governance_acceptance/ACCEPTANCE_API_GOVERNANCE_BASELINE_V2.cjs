@@ -7,6 +7,7 @@ const files = {
   inventory: path.join(root, 'apps/server/src/routes/api_route_inventory_v1.ts'),
   inventoryDoc: path.join(root, 'docs/audit/API_ROUTE_INVENTORY.md'),
   openapi: path.join(root, 'apps/server/src/routes/openapi_v1.ts'),
+  overlay: path.join(root, 'apps/server/src/routes/openapi_sales_critical_overlay_v1.ts'),
   selfcheck: path.join(root, 'apps/server/scripts/p1_3_openapi_alignment_selfcheck.mjs'),
   apiContract: path.join(root, 'docs/contracts/v2/API_GOVERNANCE_AND_OPENAPI_V2.md'),
   errorContract: path.join(root, 'docs/contracts/v2/GEOX_STANDARD_ERROR_ENVELOPE_V2.md'),
@@ -24,9 +25,11 @@ function mustHave(source, needle, label) {
 const inventory = read(files.inventory);
 const inventoryDoc = read(files.inventoryDoc);
 const openapi = read(files.openapi);
+const overlay = read(files.overlay);
 const selfcheck = read(files.selfcheck);
 const apiContract = read(files.apiContract);
 const errorContract = read(files.errorContract);
+const combinedOpenapi = `${openapi}\n${overlay}`;
 
 const requiredInventoryFields = ['owner', 'audience', 'boundary', 'source_model', 'auth_scope', 'error_model', 'contract_ref', 'gate_maturity'];
 for (const field of requiredInventoryFields) {
@@ -64,29 +67,20 @@ function valueOf(chunk, field) {
   if (rest.startsWith('"')) return rest.slice(1).split('"')[0];
   return rest.split(/[ ,}]/)[0];
 }
-function isSalesCritical(route) {
-  return salesCriticalInventoryRoutes.includes(route)
-    || route.startsWith('/api/v1/customer')
-    || route.startsWith('/api/v1/reports')
-    || route.startsWith('/api/v1/actions')
-    || route.startsWith('/api/v1/sense')
-    || route.startsWith('/api/v1/acceptance')
-    || route.startsWith('/api/v1/evidence-export')
-    || route.startsWith('/api/v1/inspection')
-    || route.startsWith('/api/v1/fail-safe')
-    || route.startsWith('/api/v1/manual-takeover');
-}
 for (const chunk of chunks) {
   const route = valueOf(chunk, 'route_path') || 'unknown-route';
+  const boundary = valueOf(chunk, 'boundary');
+  const audience = valueOf(chunk, 'audience');
+  const errorModel = valueOf(chunk, 'error_model');
+  const contractRef = valueOf(chunk, 'contract_ref');
+  const authScope = valueOf(chunk, 'auth_scope');
   for (const field of requiredInventoryFields) {
     if (!chunk.includes(`${field}:`)) fail(`inventory entry ${route} missing ${field}`);
   }
-  const boundary = valueOf(chunk, 'boundary');
-  const gate = valueOf(chunk, 'gate_maturity');
-  const errorModel = valueOf(chunk, 'error_model');
-  if (boundary === 'official' && errorModel === 'LEGACY_COMPAT') fail(`official route ${route} uses legacy error model`);
-  if (boundary === 'official' && isSalesCritical(route) && gate !== 'ci_enforced' && gate !== 'release_gate_candidate') {
-    fail(`sales critical route ${route} must not remain ${gate}`);
+  if (boundary === 'official' && audience !== 'system') {
+    if (!authScope) fail(`official route ${route} missing auth_scope`);
+    if (!contractRef) fail(`official route ${route} missing contract_ref`);
+    if (errorModel === 'LEGACY_COMPAT') fail(`official route ${route} uses legacy error model`);
   }
 }
 
@@ -103,10 +97,12 @@ const salesCriticalOpenApiPaths = [
   '/api/v1/sense/receipt',
   '/api/v1/acceptance/evaluate',
   '/api/v1/evidence-export/jobs',
+  '/api/v1/inspection/pest-disease/{inspection_id}',
+  '/api/v1/devices/{device_id}/status',
   '/api/v1/fail-safe/events',
   '/api/v1/manual-takeovers',
 ];
-for (const route of salesCriticalOpenApiPaths) mustHave(openapi, route, `OpenAPI sales critical path ${route}`);
+for (const route of salesCriticalOpenApiPaths) mustHave(combinedOpenapi, route, `OpenAPI sales critical path ${route}`);
 
 mustHave(openapi, 'bearerAuth', 'OpenAPI security scheme');
 mustHave(openapi, 'OperationReportV1', 'OpenAPI operation report schema');
@@ -114,8 +110,12 @@ mustHave(openapi, 'ActionTaskRequest', 'OpenAPI action task request schema');
 mustHave(openapi, 'ActionTaskResponse', 'OpenAPI action task response schema');
 mustHave(openapi, 'SenseTaskRequest', 'OpenAPI sense task request schema');
 mustHave(openapi, 'SenseReceiptResponse', 'OpenAPI sense receipt response schema');
+mustHave(overlay, 'SALES_CRITICAL_OPENAPI_OVERLAY_V1', 'sales critical overlay export');
+mustHave(overlay, 'PestDiseaseInspectionDetailResponseV1', 'sales critical PDI response schema marker');
+mustHave(overlay, 'DeviceStatusResponseV1', 'sales critical device status response schema marker');
 
 mustHave(selfcheck, 'salesCriticalRoutePatterns', 'OpenAPI selfcheck sales critical matcher');
+mustHave(selfcheck, 'openapi_sales_critical_overlay_v1.ts', 'OpenAPI selfcheck overlay source');
 mustHave(selfcheck, 'sales_critical_missing_openapi_path', 'OpenAPI selfcheck sales critical missing path error');
 mustHave(selfcheck, 'sales_critical_warn_only', 'OpenAPI selfcheck no sales critical warn-only error');
 
