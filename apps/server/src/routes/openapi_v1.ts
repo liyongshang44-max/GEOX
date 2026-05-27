@@ -1,6 +1,7 @@
 // GEOX/apps/server/src/routes/openapi_v1.ts
 
 import type { FastifyInstance } from "fastify"; // Fastify instance type.
+import { SALES_CRITICAL_OPENAPI_PATHS_V1, SALES_CRITICAL_OPENAPI_SCHEMAS_V1 } from "./openapi_sales_critical_overlay_v1.js";
 
 function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
   const spec = {
@@ -4679,6 +4680,9 @@ function applyP13OpenApiAlignment(spec: any) {
     "/api/v1/skills/bindings": { get: { tags: ["operations"], summary: "Read effective skill bindings", responses: { "200": jsonResponse(ref("SkillBindingsResponse"), "Skill bindings") } }, post: { tags: ["operations"], summary: "Create skill binding", requestBody: { required: true, content: { "application/json": { schema: ref("SkillBindingCreateRequest") } } }, responses: { "201": jsonResponse(ref("SkillBindingWriteResponse"), "Skill binding created") } } },
     "/api/v1/skills/bindings/override": { post: { tags: ["operations"], summary: "Append override-only skill binding", requestBody: { required: true, content: { "application/json": { schema: ref("SkillBindingOverrideRequest") } } }, responses: { "201": jsonResponse(ref("SkillBindingWriteResponse"), "Skill binding override appended") } } },
   });
+
+  Object.assign(spec.paths as Record<string, unknown>, SALES_CRITICAL_OPENAPI_PATHS_V1);
+  Object.assign(spec.components.schemas as Record<string, unknown>, SALES_CRITICAL_OPENAPI_SCHEMAS_V1);
 
   return spec;
 }

@@ -69,6 +69,8 @@ audience
 
 Sales-critical route groups may use `release_gate_candidate` while runtime and schema parity are still being finalized, but they must not be downgraded to `inventory_baseline`, `legacy_exempt`, `debug_exempt`, or temporary WARN-only status. Missing OpenAPI path/method coverage for these groups is a release-gate failure.
 
+Runtime requirement: sales-critical overlay paths/schemas must be merged into `/api/v1/openapi.json` output, not only checked by static selfcheck scripts.
+
 ## OpenAPI baseline
 
 OpenAPI must become a real contract, not decorative documentation. For PR-0 this is a proposed target only.

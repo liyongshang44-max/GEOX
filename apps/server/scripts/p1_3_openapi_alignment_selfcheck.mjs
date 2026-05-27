@@ -113,6 +113,15 @@ const criticalSchemas = [
   'OperationReportSingleResponse',
 ];
 
+
+const runtimeOverlayMergeChecks = [
+  'SALES_CRITICAL_OPENAPI_PATHS_V1',
+  'SALES_CRITICAL_OPENAPI_SCHEMAS_V1',
+  'Object.assign(spec.paths',
+  'Object.assign(spec.components.schemas',
+  'openapi_sales_critical_overlay_v1',
+];
+
 const criticalPathRefs = [
   ['POST /api/v1/actions/task', 'ActionTaskRequest', 'ActionTaskResponse'],
   ['POST /api/v1/actions/receipt', 'ActionReceiptRequest', 'ActionReceiptResponse'],
@@ -250,6 +259,11 @@ const warnings = [];
 
 for (const removedPattern of officialRoutesNoLongerExcluded) {
   if (contractSource.includes(`excluded:${removedPattern}`)) errors.push(`official_route_still_excluded:${removedPattern}`);
+}
+
+
+for (const marker of runtimeOverlayMergeChecks) {
+  if (!openapiSource.includes(marker)) errors.push(`runtime_overlay_merge_missing:${marker}`);
 }
 
 for (const [routePath, count] of [...pathCounts.entries()].sort()) {

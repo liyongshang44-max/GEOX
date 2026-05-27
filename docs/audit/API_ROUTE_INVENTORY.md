@@ -93,7 +93,7 @@ The following route groups are sales-critical for Controlled Pilot readiness and
 
 Current device-status API implementation is represented by `GET /api/v1/devices/:device_id/status`; it is governed by the `/device-status/*` sales-critical category even though its URL is under `/devices/*`.
 
-For these groups, the inventory must declare owner, audience, boundary, auth_scope, error_model, contract_ref, and gate_maturity. OpenAPI must declare the path and method, and write routes must declare request and response schemas.
+For these groups, the inventory must declare owner, audience, boundary, auth_scope, error_model, contract_ref, and gate_maturity (`release_gate_candidate` or stricter). OpenAPI must declare the path and method, and write routes must declare request and response schemas. Runtime `/api/v1/openapi.json` must include sales-critical overlay paths/schemas.
 
 ---
 
