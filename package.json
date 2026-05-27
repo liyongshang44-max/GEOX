@@ -59,7 +59,7 @@
     "ci:stage1-fixture:raw-sample-contract": "node scripts/governance_acceptance/ACCEPTANCE_STAGE1_FIXTURE_RAW_SAMPLE_CONTRACT_V1.cjs",
     "ci:commercial:runtime": "pnpm run ci:runtime:workers",
     "ci:controlled-pilot": "node scripts/commercial_acceptance/ACCEPTANCE_CONTROLLED_PILOT_RELEASE_GATE_V1.cjs",
-    "ci:governance:full-base-contract": "pnpm run ci:governance:fact-envelope && pnpm run ci:governance:appleii-time-coverage && pnpm run ci:governance:problem-state-uncertainty && pnpm run ci:governance:stage1-trigger-evidence-gate && pnpm run ci:governance:aosense-aoact-partition && pnpm run ci:governance:control-kernel-non-action-boundary && pnpm run ci:governance:ruleset-loading-boundary && pnpm run ci:governance:skill-constitution && pnpm run ci:governance:skill-category-boundary && pnpm run ci:governance:api-inventory-enforcement && pnpm run ci:governance:fallback-retirement-enforcement && pnpm run ci:governance:appleii-formal-evidence-dynamic-e2e && pnpm run ci:governance:base-contract-negative",
+    "ci:governance:full-base-contract": "pnpm run ci:governance:fact-envelope && pnpm run ci:governance:appleii-time-coverage && pnpm run ci:governance:problem-state-uncertainty && pnpm run ci:governance:stage1-trigger-evidence-gate && pnpm run ci:governance:aosense-aoact-partition && pnpm run ci:governance:control-kernel-non-action-boundary && pnpm run ci:governance:ruleset-loading-boundary && pnpm run ci:governance:skill-constitution && pnpm run ci:governance:skill-category-boundary && pnpm run ci:governance:api-inventory-enforcement && pnpm run ci:governance:fallback-retirement-enforcement && pnpm run ci:governance:appleii-formal-evidence-dynamic-e2e && pnpm run ci:governance:base-contract-negative && pnpm run ci:governance:runtime-openapi-sales-critical",
     "ci:scenario:formal-irrigation": "node scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_IRRIGATION_E2E_V1.cjs",
     "ci:scenario:device-anomaly": "node scripts/agronomy_acceptance/ACCEPTANCE_DEVICE_ANOMALY_E2E_V1.cjs",
     "ci:scenario:formal-variable-operation": "node scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_VARIABLE_OPERATION_E2E_V1.cjs",
@@ -84,7 +84,8 @@
     "ci:scenario:pest-disease-inspection": "node scripts/agronomy_acceptance/ACCEPTANCE_PEST_DISEASE_INSPECTION_RELEASE_GATE.cjs",
     "test:acceptance:with-p0": "pnpm run ci:base-contract:p0 && pnpm run test:acceptance",
     "ci:governance:no-variable-task-prehandler": "node scripts/governance_acceptance/ACCEPTANCE_NO_VARIABLE_TASK_PREHANDLER_V1.cjs",
-    "ci:route-response-ownership": "node scripts/governance_acceptance/ACCEPTANCE_ROUTE_RESPONSE_OWNERSHIP_V1.cjs"
+    "ci:route-response-ownership": "node scripts/governance_acceptance/ACCEPTANCE_ROUTE_RESPONSE_OWNERSHIP_V1.cjs",
+    "ci:governance:runtime-openapi-sales-critical": "node scripts/governance_acceptance/ACCEPTANCE_RUNTIME_OPENAPI_SALES_CRITICAL_V1.cjs"
   },
   "volta": {
     "node": "20.11.1"
