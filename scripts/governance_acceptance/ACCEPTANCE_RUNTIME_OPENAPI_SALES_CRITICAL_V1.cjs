@@ -39,13 +39,9 @@ const WRITE_METHODS = new Set(['post', 'put', 'patch']);
 const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options', 'trace'];
 const GOVERNANCE_FIELDS = ['owner', 'audience', 'boundary', 'auth_scope', 'error_model', 'contract_ref', 'gate_maturity'];
 
-function fail(message) {
-  console.error(`[runtime-openapi-sales-critical-v1] FAIL: ${message}`);
-  process.exit(1);
-}
-
-function must(condition, message) {
-  if (!condition) fail(message);
+const errors = [];
+function check(condition, message) {
+  if (!condition) errors.push(message);
 }
 
 function resolveRefSchemaName(ref) {
@@ -56,75 +52,101 @@ function resolveRefSchemaName(ref) {
 }
 
 function mustSchemaRefExists(schema, context, schemas) {
-  must(schema && typeof schema === 'object', `${context} missing schema`);
+  check(schema && typeof schema === 'object', `${context} missing schema`);
+  if (!schema || typeof schema !== 'object') return;
   if (schema.$ref) {
     const schemaName = resolveRefSchemaName(schema.$ref);
-    must(schemaName, `${context} has non-components schema ref ${String(schema.$ref)}`);
-    must(schemas[schemaName], `${context} references missing schema ${schemaName}`);
+    check(schemaName, `${context} has non-components schema ref ${String(schema.$ref)}`);
+    if (schemaName) check(schemas[schemaName], `${context} references missing schema ${schemaName}`);
   }
 }
 
 (async () => {
   const url = `${BASE_URL}${OPENAPI_PATH}`;
   const response = await fetch(url, { method: 'GET' }).catch((error) => {
-    fail(`request failed for ${url}: ${error?.message || String(error)}`);
+    console.error(`[runtime-openapi-sales-critical-v1] FAIL`);
+    console.error(`- request failed for ${url}: ${error?.message || String(error)}`);
+    process.exit(1);
   });
 
-  must(response && response.ok, `GET ${url} returned ${response?.status ?? 'unknown'} ${response?.statusText ?? ''}`);
+  check(response && response.ok, `GET ${url} returned ${response?.status ?? 'unknown'} ${response?.statusText ?? ''}`);
+  if (!response || !response.ok) {
+    console.error(`[runtime-openapi-sales-critical-v1] FAIL`);
+    for (const error of errors) console.error(`- ${error}`);
+    process.exit(1);
+  }
 
   let spec;
   try {
     spec = await response.json();
   } catch (error) {
-    fail(`invalid JSON from ${url}: ${error?.message || String(error)}`);
+    console.error(`[runtime-openapi-sales-critical-v1] FAIL`);
+    console.error(`- invalid JSON from ${url}: ${error?.message || String(error)}`);
+    process.exit(1);
   }
 
-  must(spec?.openapi === '3.0.3', `spec.openapi expected 3.0.3 got ${String(spec?.openapi)}`);
-  must(spec?.paths && typeof spec.paths === 'object', 'spec.paths missing or invalid');
-  must(spec?.components?.schemas && typeof spec.components.schemas === 'object', 'spec.components.schemas missing or invalid');
+  check(spec?.openapi === '3.0.3', `spec.openapi expected 3.0.3 got ${String(spec?.openapi)}`);
+  check(spec?.paths && typeof spec.paths === 'object', 'spec.paths missing or invalid');
+  check(spec?.components?.schemas && typeof spec.components.schemas === 'object', 'spec.components.schemas missing or invalid');
+  if (!spec?.paths || !spec?.components?.schemas) {
+    console.error(`[runtime-openapi-sales-critical-v1] FAIL`);
+    for (const error of errors) console.error(`- ${error}`);
+    process.exit(1);
+  }
 
   for (const pathKey of SALES_CRITICAL_PATHS) {
-    must(spec.paths[pathKey], `missing sales-critical path ${pathKey}`);
+    check(spec.paths[pathKey], `missing sales-critical path ${pathKey}`);
   }
   for (const schemaName of REQUIRED_GLOBAL_SCHEMAS) {
-    must(spec.components.schemas[schemaName], `missing sales-critical schema ${schemaName}`);
+    check(spec.components.schemas[schemaName], `missing sales-critical schema ${schemaName}`);
   }
 
+  const operationIds = new Set();
   for (const pathKey of SALES_CRITICAL_PATHS) {
     const pathItem = spec.paths[pathKey] || {};
     const operations = HTTP_METHODS.filter((method) => {
       const op = pathItem[method];
       return op && typeof op === 'object';
     });
-    must(operations.length > 0, `${pathKey} has no OpenAPI operation`);
+    check(operations.length > 0, `${pathKey} has no OpenAPI operation`);
     for (const method of operations) {
       const operation = pathItem[method];
+      const opLabel = `${method.toUpperCase()} ${pathKey}`;
 
-      must(operation.operationId, `${method.toUpperCase()} ${pathKey} missing operationId`);
-      must(Array.isArray(operation.security) && operation.security.length > 0, `${method.toUpperCase()} ${pathKey} missing security`);
+      check(operation.operationId, `${opLabel} missing operationId`);
+      if (operation.operationId) {
+        check(!operationIds.has(operation.operationId), `${opLabel} duplicate operationId ${operation.operationId}`);
+        operationIds.add(operation.operationId);
+      }
+      check(Array.isArray(operation.security) && operation.security.length > 0, `${opLabel} missing security`);
       if (WRITE_METHODS.has(method)) {
         const requestSchema = operation.requestBody?.content?.['application/json']?.schema;
-        must(requestSchema, `${method.toUpperCase()} ${pathKey} missing JSON requestBody schema`);
+        check(requestSchema, `${opLabel} missing JSON requestBody schema`);
         mustSchemaRefExists(
           requestSchema,
-          `${method.toUpperCase()} ${pathKey} requestBody`,
+          `${opLabel} requestBody`,
           spec.components.schemas,
         );
       }
       const responseSchema = operation.responses?.['200']?.content?.['application/json']?.schema;
-      must(responseSchema, `${method.toUpperCase()} ${pathKey} missing 200 JSON response schema`);
+      check(responseSchema, `${opLabel} missing 200 JSON response schema`);
       mustSchemaRefExists(
         responseSchema,
-        `${method.toUpperCase()} ${pathKey} response 200`,
+        `${opLabel} response 200`,
         spec.components.schemas,
       );
 
       const governance = operation['x-geox-governance'];
-      must(governance && typeof governance === 'object', `${method.toUpperCase()} ${pathKey} missing x-geox-governance`);
+      check(governance && typeof governance === 'object', `${opLabel} missing x-geox-governance`);
       for (const field of GOVERNANCE_FIELDS) {
-        must(governance[field], `${method.toUpperCase()} ${pathKey} governance missing ${field}`);
+        check(governance?.[field], `${opLabel} governance missing ${field}`);
       }
     }
+  }
+  if (errors.length > 0) {
+    console.error(`[runtime-openapi-sales-critical-v1] FAIL`);
+    for (const error of errors) console.error(`- ${error}`);
+    process.exit(1);
   }
 
   console.log(`[runtime-openapi-sales-critical-v1] PASS ${url}`);

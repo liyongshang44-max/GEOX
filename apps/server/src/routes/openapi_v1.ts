@@ -2,6 +2,7 @@
 
 import type { FastifyInstance } from "fastify"; // Fastify instance type.
 import { SALES_CRITICAL_OPENAPI_PATHS_V1, SALES_CRITICAL_OPENAPI_SCHEMAS_V1 } from "./openapi_sales_critical_overlay_v1.js";
+import { applySalesCriticalOpenApiGovernanceDefaultsV1 } from "./openapi_sales_critical_governance_defaults_v1.js";
 
 function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
   const spec = {
@@ -4683,6 +4684,7 @@ function applyP13OpenApiAlignment(spec: any) {
 
   Object.assign(spec.paths as Record<string, unknown>, SALES_CRITICAL_OPENAPI_PATHS_V1);
   Object.assign(spec.components.schemas as Record<string, unknown>, SALES_CRITICAL_OPENAPI_SCHEMAS_V1);
+  applySalesCriticalOpenApiGovernanceDefaultsV1(spec);
 
   return spec;
 }
