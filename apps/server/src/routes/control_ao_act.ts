@@ -734,6 +734,10 @@ function logLegacyAoActWarning(app: FastifyInstance, req: any, path: string): vo
 function legacyAoActRouteV1(kind: "task" | "receipt" | "index"): string {
   return `/api/control/ao_act/${kind}`;
 }
+function sendErrorReply(reply: any, status: number, payload: Record<string, unknown>) {
+  reply.status(status).send(payload);
+  return reply;
+}
 
 const LEGACY_AO_ACT_SUNSET_RFC1123 = "Thu, 31 Dec 2026 23:59:59 GMT";
 const LEGACY_COMPATIBILITY_NOTICE = "compatibility only / do not use in new flows";
@@ -1324,8 +1328,8 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/actions/task/from-variable-prescription", async (req, reply) => {
     try {
       const auth = requireAoActAnyScopeV0(req, reply, ["action.task.create", "ao_act.task.write"]);
-      if (!auth) return;
-      if (!requireActionTaskCreateRoleV1(reply, auth)) return;
+      if (!auth) return reply;
+      if (!requireActionTaskCreateRoleV1(reply, auth)) return reply;
 
       const body = z.object({
         tenant_id: z.string().min(1),
@@ -1338,17 +1342,17 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
       }).parse(req.body ?? {});
 
       const tenant = assertTenantFieldsPresentV0(body, "body");
-      if (!requireTenantMatchOr404V0(auth, tenant, reply)) return;
+      if (!requireTenantMatchOr404V0(auth, tenant, reply)) return reply;
 
       const prescription = await getPrescriptionById(pool, body.prescription_id, tenant);
-      if (!prescription) return reply.status(404).send({ ok: false, error: "PRESCRIPTION_NOT_FOUND" });
+      if (!prescription) return sendErrorReply(reply, 404, { ok: false, error: "PRESCRIPTION_NOT_FOUND" });
       if (String((prescription as any)?.operation_amount?.mode ?? "").trim().toUpperCase() !== "VARIABLE_BY_ZONE") {
-        return reply.status(400).send({ ok: false, error: "VARIABLE_PRESCRIPTION_MODE_REQUIRED" });
+        return sendErrorReply(reply, 400, { ok: false, error: "VARIABLE_PRESCRIPTION_MODE_REQUIRED" });
       }
 
       const approvalStatus = await loadLatestApprovalRequestStatusV0(pool, body.approval_request_id, tenant);
       if (approvalStatus !== "APPROVED") {
-        return reply.status(403).send({ ok: false, error: "APPROVAL_REQUEST_NOT_APPROVED" });
+        return sendErrorReply(reply, 403, { ok: false, error: "APPROVAL_REQUEST_NOT_APPROVED" });
       }
 
       const taskPayload = buildVariableActionTaskPayloadV1({
@@ -1372,7 +1376,7 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
         source: "api/v1/actions/task/from-variable-prescription"
       });
       if (!created.ok) {
-        return reply.status(created.status).send({
+        return sendErrorReply(reply, created.status, {
           ok: false,
           error: created.error,
           ...(created.detail ? { detail: created.detail } : {})
@@ -1408,7 +1412,7 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
         token_id: auth.token_id,
       });
 
-      return reply.send({
+      return {
         ok: true,
         act_task_id: actTaskId,
         task_fact_id: created.fact_id,
@@ -1416,20 +1420,10 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
         operation_plan_fact_id: operationPlanAnchor.operation_plan_fact_id,
         operation_plan_anchor_created: operationPlanAnchor.created,
         task_meta: taskPayload.meta ?? created.task_meta ?? null,
-      });
+      };
     } catch (e: any) {
-      if (reply.sent) return;
       const code = String(e?.message ?? "BAD_REQUEST");
-      if (
-        code === "VARIABLE_PRESCRIPTION_ONLY_SUPPORTS_IRRIGATION" ||
-        code === "VARIABLE_PRESCRIPTION_MODE_REQUIRED" ||
-        code === "VARIABLE_PRESCRIPTION_ZONE_RATES_REQUIRED" ||
-        code === "VARIABLE_RATE_DEVICE_REQUIREMENT_REQUIRED" ||
-        code === "VARIABLE_PRESCRIPTION_AMOUNT_INVALID"
-      ) {
-        return reply.status(400).send({ ok: false, error: code });
-      }
-      return reply.status(400).send({ ok: false, error: code });
+      return sendErrorReply(reply, 400, { ok: false, error: code });
     }
   });
   app.post("/api/v1/actions/receipt", async (req, reply) => handleAoActReceiptV1(app, pool, req, reply, false));
