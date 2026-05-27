@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 'use strict';
 
+// This gate requires a running GEOX server.
+// It is intended to run inside the acceptance runtime after /api/health is ready.
 const BASE_URL = process.env.BASE_URL || process.env.API_BASE_URL || 'http://127.0.0.1:3001';
 const OPENAPI_PATH = '/api/v1/openapi.json';
 
@@ -23,18 +25,14 @@ const SALES_CRITICAL_PATHS = [
   '/api/v1/manual-takeovers',
 ];
 
-const SALES_CRITICAL_SCHEMAS = [
+const REQUIRED_GLOBAL_SCHEMAS = [
   'OperationReportV1',
   'ActionTaskRequest',
   'ActionTaskResponse',
   'SenseTaskRequest',
   'SenseReceiptResponse',
-  'AcceptanceEvaluateRequest',
-  'EvidenceExportJobCreateRequest',
-  'PestDiseaseInspectionDetailV1',
   'DeviceStatusResponseV1',
-  'FailSafeEventCreateRequest',
-  'ManualTakeoverCreateRequest',
+  'PestDiseaseInspectionDetailResponseV1',
 ];
 
 const WRITE_METHODS = new Set(['post', 'put', 'patch']);
@@ -48,6 +46,22 @@ function fail(message) {
 
 function must(condition, message) {
   if (!condition) fail(message);
+}
+
+function resolveRefSchemaName(ref) {
+  if (typeof ref !== 'string') return '';
+  const prefix = '#/components/schemas/';
+  if (!ref.startsWith(prefix)) return '';
+  return ref.slice(prefix.length);
+}
+
+function mustSchemaRefExists(schema, context, schemas) {
+  must(schema && typeof schema === 'object', `${context} missing schema`);
+  if (schema.$ref) {
+    const schemaName = resolveRefSchemaName(schema.$ref);
+    must(schemaName, `${context} has non-components schema ref ${String(schema.$ref)}`);
+    must(schemas[schemaName], `${context} references missing schema ${schemaName}`);
+  }
 }
 
 (async () => {
@@ -72,22 +86,38 @@ function must(condition, message) {
   for (const pathKey of SALES_CRITICAL_PATHS) {
     must(spec.paths[pathKey], `missing sales-critical path ${pathKey}`);
   }
-  for (const schemaName of SALES_CRITICAL_SCHEMAS) {
+  for (const schemaName of REQUIRED_GLOBAL_SCHEMAS) {
     must(spec.components.schemas[schemaName], `missing sales-critical schema ${schemaName}`);
   }
 
   for (const pathKey of SALES_CRITICAL_PATHS) {
     const pathItem = spec.paths[pathKey] || {};
-    for (const method of HTTP_METHODS) {
+    const operations = HTTP_METHODS.filter((method) => {
+      const op = pathItem[method];
+      return op && typeof op === 'object';
+    });
+    must(operations.length > 0, `${pathKey} has no OpenAPI operation`);
+    for (const method of operations) {
       const operation = pathItem[method];
-      if (!operation || typeof operation !== 'object') continue;
 
       must(operation.operationId, `${method.toUpperCase()} ${pathKey} missing operationId`);
       must(Array.isArray(operation.security) && operation.security.length > 0, `${method.toUpperCase()} ${pathKey} missing security`);
       if (WRITE_METHODS.has(method)) {
-        must(operation.requestBody, `${method.toUpperCase()} ${pathKey} missing requestBody`);
+        const requestSchema = operation.requestBody?.content?.['application/json']?.schema;
+        must(requestSchema, `${method.toUpperCase()} ${pathKey} missing JSON requestBody schema`);
+        mustSchemaRefExists(
+          requestSchema,
+          `${method.toUpperCase()} ${pathKey} requestBody`,
+          spec.components.schemas,
+        );
       }
-      must(operation.responses && operation.responses['200'], `${method.toUpperCase()} ${pathKey} missing 200 response`);
+      const responseSchema = operation.responses?.['200']?.content?.['application/json']?.schema;
+      must(responseSchema, `${method.toUpperCase()} ${pathKey} missing 200 JSON response schema`);
+      mustSchemaRefExists(
+        responseSchema,
+        `${method.toUpperCase()} ${pathKey} response 200`,
+        spec.components.schemas,
+      );
 
       const governance = operation['x-geox-governance'];
       must(governance && typeof governance === 'object', `${method.toUpperCase()} ${pathKey} missing x-geox-governance`);

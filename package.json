@@ -85,7 +85,8 @@
     "test:acceptance:with-p0": "pnpm run ci:base-contract:p0 && pnpm run test:acceptance",
     "ci:governance:no-variable-task-prehandler": "node scripts/governance_acceptance/ACCEPTANCE_NO_VARIABLE_TASK_PREHANDLER_V1.cjs",
     "ci:route-response-ownership": "node scripts/governance_acceptance/ACCEPTANCE_ROUTE_RESPONSE_OWNERSHIP_V1.cjs",
-    "ci:governance:runtime-openapi-sales-critical": "node scripts/governance_acceptance/ACCEPTANCE_RUNTIME_OPENAPI_SALES_CRITICAL_V1.cjs"
+    "ci:governance:runtime-openapi-sales-critical": "node scripts/governance_acceptance/ACCEPTANCE_RUNTIME_OPENAPI_SALES_CRITICAL_V1.cjs",
+    "acceptance:runtime-openapi-sales-critical": "pnpm run ci:governance:runtime-openapi-sales-critical"
   },
   "volta": {
     "node": "20.11.1"
