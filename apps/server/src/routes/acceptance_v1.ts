@@ -284,10 +284,7 @@ export function buildFormalAcceptanceGateV1(receipt: any, executionJudge: any, a
     execution_evidence_passed === true
     && (execution_effect_passed === true || effectRequired === false);
 
-  const is_simulated =
-    policy.simulated_artifact_count > 0
-    || source_lane === "SIMULATED_DEV_ONLY"
-    || source_lane === "DEBUG_ONLY";
+  const is_simulated = policy.simulated_artifact_count > 0 || source_lane === "SIMULATED_DEV_ONLY" || source_lane === "DEBUG_ONLY";
 
   const non_simulated_chain = !is_simulated;
 
