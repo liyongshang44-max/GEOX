@@ -35,6 +35,7 @@ The inventory is an engineering governance baseline. It does not claim every lis
 6. Admin/debug/internal APIs are not customer-facing and must not leak secrets, local file paths, stack traces, internal object-store paths, or debug JSON into customer responses.
 7. Any customer export route must use the same data source as the corresponding customer page.
 8. New or materially changed official `/api/v1/*` routes must update both `api_route_inventory_v1.ts` and OpenAPI, or be classified as `inventory_baseline` with an explicit gate warning.
+9. Sales-critical Controlled Pilot route groups must not remain WARN-only. They require an OpenAPI path/method and a governed inventory entry with owner, audience, boundary, auth_scope, error_model, contract_ref, and gate_maturity.
 
 ---
 
@@ -70,6 +71,29 @@ Allowed `gate_maturity` values:
 | `inventory_baseline` | Inventory exists; gaps must be surfaced as warnings or future tasks. |
 | `legacy_exempt` | Legacy compatibility surface. Must not be a new frontend dependency. |
 | `debug_exempt` | Debug/devtools/internal route. Must be feature/admin-gated and non-customer. |
+
+---
+
+## Sales-critical Controlled Pilot API scope
+
+The following route groups are sales-critical for Controlled Pilot readiness and are not allowed to be silently downgraded to WARN-only coverage:
+
+```text
+/customer/*
+/reports/*
+/actions/*
+/sense/*
+/acceptance/*
+/evidence-export/*
+/inspection/*
+/device-status/*
+/fail-safe/*
+/manual-takeover/*
+```
+
+Current device-status API implementation is represented by `GET /api/v1/devices/:device_id/status`; it is governed by the `/device-status/*` sales-critical category even though its URL is under `/devices/*`.
+
+For these groups, the inventory must declare owner, audience, boundary, auth_scope, error_model, contract_ref, and gate_maturity. OpenAPI must declare the path and method, and write routes must declare request and response schemas.
 
 ---
 

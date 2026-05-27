@@ -11,9 +11,12 @@ const root = fs.existsSync(path.join(process.cwd(), 'apps/server/src/routes/open
 
 const routeRoots = ['apps/server/src/routes'];
 const openapiPath = path.join(root, 'apps/server/src/routes/openapi_v1.ts');
+const overlayPath = path.join(root, 'apps/server/src/routes/openapi_sales_critical_overlay_v1.ts');
 const inventoryPath = path.join(root, 'apps/server/src/routes/api_route_inventory_v1.ts');
 const openapiSource = fs.readFileSync(openapiPath, 'utf8');
+const overlaySource = fs.existsSync(overlayPath) ? fs.readFileSync(overlayPath, 'utf8') : '';
 const inventorySource = fs.readFileSync(inventoryPath, 'utf8');
+const contractSource = `${openapiSource}\n${overlaySource}`;
 
 const forbiddenOpenApiPaths = [
   '/api/v1/operations/console',
@@ -28,6 +31,7 @@ const temporaryOpenApiWarningPatterns = [
   /^\/api\/v1\/dev\/flight-table\//,
   /^\/api\/v1\/dev-lab\//,
   /^\/api\/v1\/simulators\//,
+  /^\/api\/v1\/devices\/simulator(?:\/|$)/,
   /^\/api\/v1\/billing\//,
   /^\/api\/v1\/audit-export\//,
   /^\/api\/v1\/service-teams(?:\/|$)/,
@@ -39,6 +43,39 @@ const temporaryOpenApiWarningPatterns = [
   /^\/api\/v1\/sla\/summary$/,
   /^\/api\/v1\/operator\/learning-validation$/,
   /^\/api\/v1\/operator\/operations\/.+\/learning-validation$/,
+];
+
+const salesCriticalRoutePatterns = [
+  /^\/api\/v1\/customer(?:\/|$)/,
+  /^\/api\/v1\/reports(?:\/|$)/,
+  /^\/api\/v1\/actions(?:\/|$)/,
+  /^\/api\/v1\/sense(?:\/|$)/,
+  /^\/api\/v1\/acceptance(?:\/|$)/,
+  /^\/api\/v1\/evidence-export(?:\/|$)/,
+  /^\/api\/v1\/inspection(?:\/|$)/,
+  /^\/api\/v1\/devices\/(?!simulator(?:\/|$))[^/]+\/status$/,
+  /^\/api\/v1\/fail-safe(?:\/|$)/,
+  /^\/api\/v1\/manual-takeover(?:\/|$)/,
+  /^\/api\/v1\/manual-takeovers$/,
+];
+
+const salesCriticalOpenApiPaths = [
+  '/api/v1/customer/reports',
+  '/api/v1/customer/fields',
+  '/api/v1/customer/operations',
+  '/api/v1/reports/operation/{operation_id}',
+  '/api/v1/reports/field/{field_id}',
+  '/api/v1/actions/task',
+  '/api/v1/actions/receipt',
+  '/api/v1/actions/execute',
+  '/api/v1/sense/task',
+  '/api/v1/sense/receipt',
+  '/api/v1/acceptance/evaluate',
+  '/api/v1/evidence-export/jobs',
+  '/api/v1/inspection/pest-disease/{inspection_id}',
+  '/api/v1/devices/{device_id}/status',
+  '/api/v1/fail-safe/events',
+  '/api/v1/manual-takeovers',
 ];
 
 const officialRoutesNoLongerExcluded = [
@@ -97,7 +134,7 @@ function walkTsFiles(target) {
   for (const entry of fs.readdirSync(abs, { withFileTypes: true })) {
     const fp = path.join(abs, entry.name);
     if (entry.isDirectory()) out.push(...walkTsFiles(path.relative(root, fp)));
-    else if (entry.isFile() && fp.endsWith('.ts') && !fp.endsWith('openapi_v1.ts')) out.push(fp);
+    else if (entry.isFile() && fp.endsWith('.ts') && !fp.endsWith('openapi_v1.ts') && !fp.endsWith('openapi_sales_critical_overlay_v1.ts')) out.push(fp);
   }
   return out;
 }
@@ -193,7 +230,12 @@ function routeMatchesInventory(route, inventory) {
   return groupMatches[0]?.entry ?? null;
 }
 
+function isSalesCriticalRoute(routePath) {
+  return salesCriticalRoutePatterns.some((re) => re.test(normalizeRoutePath(routePath)) || re.test(routePath));
+}
+
 function warningOnly(route, inventoryEntry) {
+  if (isSalesCriticalRoute(route.path)) return false;
   if (temporaryOpenApiWarningPatterns.some((re) => re.test(route.path))) return true;
   if (!inventoryEntry) return false;
   return inventoryEntry.gate_maturity === 'inventory_baseline' || inventoryEntry.gate_maturity === 'debug_exempt' || inventoryEntry.gate_maturity === 'legacy_exempt';
@@ -202,12 +244,12 @@ function warningOnly(route, inventoryEntry) {
 const routeFiles = routeRoots.flatMap(walkTsFiles);
 const routes = routeFiles.flatMap(collectV1Routes);
 const inventory = inventoryEntries();
-const { pathBlocks, pathCounts } = extractPathBlocks(openapiSource);
+const { pathBlocks, pathCounts } = extractPathBlocks(contractSource);
 const errors = [];
 const warnings = [];
 
 for (const removedPattern of officialRoutesNoLongerExcluded) {
-  if (openapiSource.includes(`excluded:${removedPattern}`)) errors.push(`official_route_still_excluded:${removedPattern}`);
+  if (contractSource.includes(`excluded:${removedPattern}`)) errors.push(`official_route_still_excluded:${removedPattern}`);
 }
 
 for (const [routePath, count] of [...pathCounts.entries()].sort()) {
@@ -215,7 +257,11 @@ for (const [routePath, count] of [...pathCounts.entries()].sort()) {
 }
 
 for (const badPath of forbiddenOpenApiPaths) {
-  if (openapiSource.includes(`"${badPath}":`)) errors.push(`forbidden_path:${badPath}`);
+  if (contractSource.includes(`"${badPath}":`)) errors.push(`forbidden_path:${badPath}`);
+}
+
+for (const requiredPath of salesCriticalOpenApiPaths) {
+  if (!pathBlocks.has(requiredPath)) errors.push(`sales_critical_missing_openapi_path:${requiredPath}`);
 }
 
 for (const route of routes.sort((a, b) => `${a.method} ${a.path}`.localeCompare(`${b.method} ${b.path}`))) {
@@ -240,7 +286,7 @@ for (const route of routes.sort((a, b) => `${a.method} ${a.path}`.localeCompare(
 }
 
 for (const schemaName of criticalSchemas) {
-  const definitionCount = countSchemaDefinitions(openapiSource, schemaName);
+  const definitionCount = countSchemaDefinitions(contractSource, schemaName);
   if (definitionCount !== 1) errors.push(`duplicate_or_missing_schema_definition:${schemaName}:${definitionCount}`);
 }
 
@@ -255,6 +301,9 @@ for (const [routeKey, requestSchema, responseSchema] of criticalPathRefs) {
   if (requestSchema && !block.includes(requestSchema)) errors.push(`missing_request_ref:${routeKey}:${requestSchema}`);
   if (responseSchema && !block.includes(responseSchema)) errors.push(`missing_response_ref:${routeKey}:${responseSchema}`);
 }
+
+const salesCriticalWarnings = warnings.filter((warning) => /\/api\/v1\/(customer|reports|actions|sense|acceptance|evidence-export|inspection|devices\/(?!simulator(?:\/|$))[^/]+\/status|fail-safe|manual-takeover|manual-takeovers)/.test(warning));
+if (salesCriticalWarnings.length) errors.push(...salesCriticalWarnings.map((warning) => `sales_critical_warn_only:${warning}`));
 
 if (errors.length) {
   console.error('[p1-3-openapi-selfcheck] FAIL');
@@ -279,5 +328,7 @@ console.log('[p1-3-openapi-selfcheck] OK', JSON.stringify({
   checked_files: routeFiles.length,
   checked_critical_schemas: criticalSchemas.length,
   checked_critical_paths: criticalPathRefs.length,
+  checked_sales_critical_paths: salesCriticalOpenApiPaths.length,
+  sales_critical_warnings: salesCriticalWarnings.length,
   warnings: warnings.length,
 }));

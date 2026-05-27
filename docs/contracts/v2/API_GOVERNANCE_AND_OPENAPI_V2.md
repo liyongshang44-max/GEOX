@@ -35,6 +35,40 @@ Every new or materially changed route must be representable in an inventory row 
 | error_model | yes | proposed until unified envelope is adopted | script_exists |
 | contract_reference | yes | proposed until linked from inventory | script_exists |
 
+## Sales-critical API hard gate
+
+For Controlled Pilot sales readiness, the following official API surfaces are sales-critical and must not remain WARN-only:
+
+```text
+/customer/*
+/reports/*
+/actions/*
+/sense/*
+/acceptance/*
+/evidence-export/*
+/inspection/*
+/device-status/*
+/fail-safe/*
+/manual-takeover/*
+```
+
+The current implementation may expose device status as `GET /api/v1/devices/{device_id}/status`; that route is governed by the same device-status rule.
+
+Each sales-critical route group must have:
+
+```text
+OpenAPI path
+request schema for write routes
+response schema
+auth/scope metadata
+error model
+contract_ref
+owner
+audience
+```
+
+Sales-critical route groups may use `release_gate_candidate` while runtime and schema parity are still being finalized, but they must not be downgraded to `inventory_baseline`, `legacy_exempt`, `debug_exempt`, or temporary WARN-only status. Missing OpenAPI path/method coverage for these groups is a release-gate failure.
+
 ## OpenAPI baseline
 
 OpenAPI must become a real contract, not decorative documentation. For PR-0 this is a proposed target only.
