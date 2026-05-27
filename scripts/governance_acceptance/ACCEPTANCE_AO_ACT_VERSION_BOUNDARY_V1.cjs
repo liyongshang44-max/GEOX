@@ -26,6 +26,13 @@ function rel(abs) {
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
+function bodyOf(source, startNeedle, endNeedle) {
+  const start = source.indexOf(startNeedle);
+  assert(start >= 0, `missing section start: ${startNeedle}`);
+  const end = endNeedle ? source.indexOf(endNeedle, start + startNeedle.length) : source.length;
+  assert(end > start, `missing section end: ${endNeedle}`);
+  return source.slice(start, end);
+}
 
 function findText(pattern, options = {}) {
   const roots = options.roots ?? ['apps/server/src', 'apps/executor/src', 'scripts/agronomy_acceptance', 'scripts/governance_acceptance'];
@@ -77,7 +84,18 @@ assert(route.includes('type: "ao_act_receipt_v0"'), 'current receipt writer must
 
 const v1Route = read(v1RoutePath);
 assert(v1Route.includes('registerAoActV1Routes'), 'v1 AO-ACT route module must delegate primary /api/v1/actions routes');
-assert(v1Route.includes('type: "ao_act_task_v0"'), 'variable prescription task candidate route must still write ao_act_task_v0 until migration');
+assert(!v1Route.includes('type: "ao_act_task_v0"'), 'v1 AO-ACT route module must not write ao_act_task_v0 directly; control_ao_act owns current v0 fact writes');
+assert(!v1Route.includes('reply.send('), 'v1 AO-ACT route module must not send responses directly');
+assert(!v1Route.includes('app.addHook("preHandler"'), 'v1 AO-ACT route module must not intercept variable prescription via preHandler');
+assert(!v1Route.includes('writeVariableTaskCandidateV1'), 'v1 AO-ACT route module must not write variable task candidates directly');
+
+const fromVariableRouteBlock = bodyOf(
+  route,
+  'app.post("/api/v1/actions/task/from-variable-prescription"',
+  'app.post("/api/v1/actions/receipt"'
+);
+assert(fromVariableRouteBlock.includes('createAoActTaskCoreV1'), 'from-variable-prescription must use shared AO-ACT task core that writes current ao_act_task_v0');
+assert(!fromVariableRouteBlock.includes('postJsonInternal('), 'from-variable-prescription must not use internal HTTP subrequest');
 
 const approvalRoute = read(approvalRoutePath);
 assert(approvalRoute.includes('/api/v1/actions/task'), 'approval approve flow must issue tasks through /api/v1/actions/task');
