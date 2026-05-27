@@ -1,147 +1,82 @@
 // GEOX sales-critical OpenAPI governance overlay v1.
 //
-// This file is consumed by the OpenAPI alignment selfcheck for sales-critical
-// paths that must be governed before the large generated OpenAPI document is
-// fully normalized. It is not a runtime router.
+// Runtime overlay: merged into /api/v1/openapi.json by openapi_v1.ts.
 
-export const SALES_CRITICAL_OPENAPI_OVERLAY_V1 = {
+const standardErrorResponseRef = { $ref: "#/components/responses/StandardErrorResponseV2" } as const;
+
+const governance = (owner: string, audience: string, auth_scope: string, contract_ref: string) => ({
+  owner,
+  audience,
+  boundary: "official",
+  auth_scope,
+  error_model: "GEOX_STANDARD_ERROR_ENVELOPE_V2",
+  contract_ref,
+  gate_maturity: "release_gate_candidate",
+});
+
+const writeJsonBody = (schemaName: string) => ({
+  required: true,
+  content: {
+    "application/json": {
+      schema: { $ref: `#/components/schemas/${schemaName}` },
+    },
+  },
+});
+
+const jsonResponse = (schemaName: string, description: string) => ({
+  description,
+  content: {
+    "application/json": {
+      schema: { $ref: `#/components/schemas/${schemaName}` },
+    },
+  },
+});
+
+export const SALES_CRITICAL_OPENAPI_PATHS_V1 = {
   "/api/v1/acceptance/results": {
     get: {
-      owner: "acceptance-service",
-      audience: "operator",
-      boundary: "official",
-      auth_scope: "acceptance.read or acceptance.*",
-      error_model: "GEOX_STANDARD_ERROR_ENVELOPE_V2",
-      contract_ref: "docs/contracts/v2/EVIDENCE_AND_ACCEPTANCE_CONTRACT_V2.md",
-      gate_maturity: "release_gate_candidate",
-      request_schema: null,
-      response_schema: "AcceptanceResultsListResponseV1",
+      tags: ["acceptance"], summary: "List acceptance results", operationId: "listAcceptanceResultsV1", security: [{ bearerAuth: [] }],
+      responses: { "200": jsonResponse("AcceptanceResultsListResponseV1", "Acceptance results list"), "400": standardErrorResponseRef, "401": standardErrorResponseRef, "403": standardErrorResponseRef, "500": standardErrorResponseRef },
+      "x-geox-governance": governance("acceptance-service", "operator", "acceptance.read or acceptance.*", "docs/contracts/v2/EVIDENCE_AND_ACCEPTANCE_CONTRACT_V2.md"),
     },
   },
-
   "/api/v1/reports/customer-dashboard/field-portfolio-summary": {
     get: {
-      owner: "reporting-service",
-      audience: "customer",
-      boundary: "official",
-      auth_scope: "summary",
-      error_model: "GEOX_STANDARD_ERROR_ENVELOPE_V2",
-      contract_ref: "docs/contracts/v2/REPORTING_AND_CUSTOMER_API_CONTRACT_V2.md",
-      gate_maturity: "release_gate_candidate",
-      request_schema: null,
-      response_schema: "CustomerDashboardFieldPortfolioSummaryResponseV1",
+      tags: ["dashboard", "customer"], summary: "Read customer field portfolio summary", operationId: "getCustomerFieldPortfolioSummaryV1", security: [{ bearerAuth: [] }],
+      responses: { "200": jsonResponse("CustomerDashboardFieldPortfolioSummaryResponseV1", "Customer field portfolio summary"), "400": standardErrorResponseRef, "401": standardErrorResponseRef, "403": standardErrorResponseRef, "500": standardErrorResponseRef },
+      "x-geox-governance": governance("reporting-service", "customer", "summary", "docs/contracts/v2/REPORTING_AND_CUSTOMER_API_CONTRACT_V2.md"),
     },
   },
+  "/api/v1/inspection/pest-disease/request": { post: { tags: ["operations"], summary: "Create pest-disease inspection request", operationId: "createPestDiseaseInspectionRequestV1", security: [{ bearerAuth: [] }], requestBody: writeJsonBody("PestDiseaseInspectionRequestV1"), responses: { "200": jsonResponse("PestDiseaseInspectionWriteResponseV1", "Inspection request accepted"), "400": standardErrorResponseRef, "401": standardErrorResponseRef, "403": standardErrorResponseRef, "500": standardErrorResponseRef }, "x-geox-governance": governance("decision-service", "operator", "inspection.write or inspection.*", "docs/contracts/v2/EVIDENCE_AND_ACCEPTANCE_CONTRACT_V2.md") } },
+  "/api/v1/inspection/pest-disease/observation": { post: { tags: ["operations"], summary: "Submit pest-disease observation", operationId: "submitPestDiseaseObservationV1", security: [{ bearerAuth: [] }], requestBody: writeJsonBody("PestDiseaseObservationRequestV1"), responses: { "200": jsonResponse("PestDiseaseInspectionWriteResponseV1", "Observation accepted"), "400": standardErrorResponseRef, "401": standardErrorResponseRef, "403": standardErrorResponseRef, "500": standardErrorResponseRef }, "x-geox-governance": governance("decision-service", "operator", "inspection.write or inspection.*", "docs/contracts/v2/EVIDENCE_AND_ACCEPTANCE_CONTRACT_V2.md") } },
+  "/api/v1/inspection/pest-disease/signal": { post: { tags: ["operations"], summary: "Submit pest-disease signal", operationId: "submitPestDiseaseSignalV1", security: [{ bearerAuth: [] }], requestBody: writeJsonBody("PestDiseaseSignalRequestV1"), responses: { "200": jsonResponse("PestDiseaseInspectionWriteResponseV1", "Signal accepted"), "400": standardErrorResponseRef, "401": standardErrorResponseRef, "403": standardErrorResponseRef, "500": standardErrorResponseRef }, "x-geox-governance": governance("decision-service", "operator", "inspection.write or inspection.*", "docs/contracts/v2/EVIDENCE_AND_ACCEPTANCE_CONTRACT_V2.md") } },
+  "/api/v1/inspection/pest-disease/assessment": { post: { tags: ["operations"], summary: "Submit pest-disease assessment", operationId: "submitPestDiseaseAssessmentV1", security: [{ bearerAuth: [] }], requestBody: writeJsonBody("PestDiseaseAssessmentRequestV1"), responses: { "200": jsonResponse("PestDiseaseInspectionWriteResponseV1", "Assessment accepted"), "400": standardErrorResponseRef, "401": standardErrorResponseRef, "403": standardErrorResponseRef, "500": standardErrorResponseRef }, "x-geox-governance": governance("decision-service", "operator", "inspection.write or inspection.*", "docs/contracts/v2/EVIDENCE_AND_ACCEPTANCE_CONTRACT_V2.md") } },
+  "/api/v1/inspection/pest-disease/review": { post: { tags: ["operations"], summary: "Submit pest-disease review", operationId: "submitPestDiseaseReviewV1", security: [{ bearerAuth: [] }], requestBody: writeJsonBody("PestDiseaseReviewRequestV1"), responses: { "200": jsonResponse("PestDiseaseInspectionWriteResponseV1", "Review accepted"), "400": standardErrorResponseRef, "401": standardErrorResponseRef, "403": standardErrorResponseRef, "500": standardErrorResponseRef }, "x-geox-governance": governance("decision-service", "operator", "inspection.review or inspection.*", "docs/contracts/v2/EVIDENCE_AND_ACCEPTANCE_CONTRACT_V2.md") } },
+  "/api/v1/inspection/pest-disease/acceptance/evaluate": { post: { tags: ["acceptance"], summary: "Evaluate pest-disease acceptance", operationId: "evaluatePestDiseaseAcceptanceV1", security: [{ bearerAuth: [] }], requestBody: writeJsonBody("PestDiseaseAcceptanceEvaluateRequestV1"), responses: { "200": jsonResponse("PestDiseaseAcceptanceEvaluateResponseV1", "Acceptance evaluation result"), "400": standardErrorResponseRef, "401": standardErrorResponseRef, "403": standardErrorResponseRef, "500": standardErrorResponseRef }, "x-geox-governance": governance("acceptance-service", "operator", "acceptance.write or inspection.*", "docs/contracts/v2/EVIDENCE_AND_ACCEPTANCE_CONTRACT_V2.md") } },
+  "/api/v1/inspection/pest-disease/{inspection_id}": { get: { tags: ["operations"], summary: "Read pest-disease inspection detail", operationId: "getPestDiseaseInspectionDetailV1", security: [{ bearerAuth: [] }], parameters: [{ name: "inspection_id", in: "path", required: true, schema: { type: "string" } }], responses: { "200": jsonResponse("PestDiseaseInspectionDetailResponseV1", "Inspection detail"), "400": standardErrorResponseRef, "401": standardErrorResponseRef, "403": standardErrorResponseRef, "500": standardErrorResponseRef }, "x-geox-governance": governance("decision-service", "operator", "inspection.read or inspection.*", "docs/contracts/v2/EVIDENCE_AND_ACCEPTANCE_CONTRACT_V2.md") } },
 
-  "/api/v1/inspection/pest-disease/request": {
-    post: {
-      owner: "decision-service",
-      audience: "operator",
-      boundary: "official",
-      auth_scope: "inspection.write or inspection.*",
-      error_model: "GEOX_STANDARD_ERROR_ENVELOPE_V2",
-      contract_ref: "docs/contracts/v2/EVIDENCE_AND_ACCEPTANCE_CONTRACT_V2.md",
-      gate_maturity: "release_gate_candidate",
-      request_schema: "PestDiseaseInspectionRequestV1",
-      response_schema: "PestDiseaseInspectionWriteResponseV1",
-    },
-  },
+  "/api/v1/devices/{device_id}/positions": { get: { tags: ["devices"], summary: "List device positions", operationId: "listDevicePositionsV1", security: [{ bearerAuth: [] }], parameters: [{ name: "device_id", in: "path", required: true, schema: { type: "string" } }], responses: { "200": jsonResponse("DevicePositionsResponseV1", "Device positions"), "400": standardErrorResponseRef, "401": standardErrorResponseRef, "403": standardErrorResponseRef, "500": standardErrorResponseRef }, "x-geox-governance": governance("executor-service", "operator", "devices.read or devices.*", "docs/contracts/v2/API_GOVERNANCE_AND_OPENAPI_V2.md") } },
+  "/api/v1/devices/{device_id}/bind-field": { post: { tags: ["devices"], summary: "Bind device to field", operationId: "bindDeviceFieldV1", security: [{ bearerAuth: [] }], parameters: [{ name: "device_id", in: "path", required: true, schema: { type: "string" } }], requestBody: writeJsonBody("DeviceBindFieldRequestV1"), responses: { "200": jsonResponse("DeviceBindFieldResponseV1", "Device field binding updated"), "400": standardErrorResponseRef, "401": standardErrorResponseRef, "403": standardErrorResponseRef, "500": standardErrorResponseRef }, "x-geox-governance": governance("executor-service", "operator", "devices.write or devices.*", "docs/contracts/v2/API_GOVERNANCE_AND_OPENAPI_V2.md") } },
+  "/api/v1/devices/{device_id}/conflicts": { get: { tags: ["devices"], summary: "Read device scheduling conflicts", operationId: "getDeviceConflictsV1", security: [{ bearerAuth: [] }], parameters: [{ name: "device_id", in: "path", required: true, schema: { type: "string" } }], responses: { "200": jsonResponse("DeviceConflictsResponseV1", "Device conflicts"), "400": standardErrorResponseRef, "401": standardErrorResponseRef, "403": standardErrorResponseRef, "500": standardErrorResponseRef }, "x-geox-governance": governance("executor-service", "operator", "devices.read or devices.*", "docs/contracts/v2/API_GOVERNANCE_AND_OPENAPI_V2.md") } },
+  "/api/v1/devices/{device_id}/status": { get: { tags: ["devices"], summary: "Get device runtime status", operationId: "getDeviceStatusV1", security: [{ bearerAuth: [] }], parameters: [{ name: "device_id", in: "path", required: true, schema: { type: "string" } }], responses: { "200": jsonResponse("DeviceStatusResponseV1", "Device status"), "400": standardErrorResponseRef, "401": standardErrorResponseRef, "403": standardErrorResponseRef, "500": standardErrorResponseRef }, "x-geox-governance": governance("executor-service", "operator", "devices.read or devices.*", "docs/contracts/v2/API_GOVERNANCE_AND_OPENAPI_V2.md") } },
+} as const;
 
-  "/api/v1/inspection/pest-disease/observation": {
-    post: {
-      owner: "decision-service",
-      audience: "operator",
-      boundary: "official",
-      auth_scope: "inspection.write or inspection.*",
-      error_model: "GEOX_STANDARD_ERROR_ENVELOPE_V2",
-      contract_ref: "docs/contracts/v2/EVIDENCE_AND_ACCEPTANCE_CONTRACT_V2.md",
-      gate_maturity: "release_gate_candidate",
-      request_schema: "PestDiseaseObservationRequestV1",
-      response_schema: "PestDiseaseInspectionWriteResponseV1",
-    },
-  },
-
-  "/api/v1/inspection/pest-disease/signal": {
-    post: {
-      owner: "decision-service",
-      audience: "operator",
-      boundary: "official",
-      auth_scope: "inspection.write or inspection.*",
-      error_model: "GEOX_STANDARD_ERROR_ENVELOPE_V2",
-      contract_ref: "docs/contracts/v2/EVIDENCE_AND_ACCEPTANCE_CONTRACT_V2.md",
-      gate_maturity: "release_gate_candidate",
-      request_schema: "PestDiseaseSignalRequestV1",
-      response_schema: "PestDiseaseInspectionWriteResponseV1",
-    },
-  },
-
-  "/api/v1/inspection/pest-disease/assessment": {
-    post: {
-      owner: "decision-service",
-      audience: "operator",
-      boundary: "official",
-      auth_scope: "inspection.write or inspection.*",
-      error_model: "GEOX_STANDARD_ERROR_ENVELOPE_V2",
-      contract_ref: "docs/contracts/v2/EVIDENCE_AND_ACCEPTANCE_CONTRACT_V2.md",
-      gate_maturity: "release_gate_candidate",
-      request_schema: "PestDiseaseAssessmentRequestV1",
-      response_schema: "PestDiseaseInspectionWriteResponseV1",
-    },
-  },
-
-  "/api/v1/inspection/pest-disease/review": {
-    post: {
-      owner: "decision-service",
-      audience: "operator",
-      boundary: "official",
-      auth_scope: "inspection.review or inspection.*",
-      error_model: "GEOX_STANDARD_ERROR_ENVELOPE_V2",
-      contract_ref: "docs/contracts/v2/EVIDENCE_AND_ACCEPTANCE_CONTRACT_V2.md",
-      gate_maturity: "release_gate_candidate",
-      request_schema: "PestDiseaseReviewRequestV1",
-      response_schema: "PestDiseaseInspectionWriteResponseV1",
-    },
-  },
-
-  "/api/v1/inspection/pest-disease/acceptance/evaluate": {
-    post: {
-      owner: "acceptance-service",
-      audience: "operator",
-      boundary: "official",
-      auth_scope: "acceptance.write or inspection.*",
-      error_model: "GEOX_STANDARD_ERROR_ENVELOPE_V2",
-      contract_ref: "docs/contracts/v2/EVIDENCE_AND_ACCEPTANCE_CONTRACT_V2.md",
-      gate_maturity: "release_gate_candidate",
-      request_schema: "PestDiseaseAcceptanceEvaluateRequestV1",
-      response_schema: "PestDiseaseAcceptanceEvaluateResponseV1",
-    },
-  },
-
-  "/api/v1/inspection/pest-disease/{inspection_id}": {
-    get: {
-      owner: "decision-service",
-      audience: "operator",
-      boundary: "official",
-      auth_scope: "inspection.read or inspection.*",
-      error_model: "GEOX_STANDARD_ERROR_ENVELOPE_V2",
-      contract_ref: "docs/contracts/v2/EVIDENCE_AND_ACCEPTANCE_CONTRACT_V2.md",
-      gate_maturity: "release_gate_candidate",
-      request_schema: null,
-      response_schema: "PestDiseaseInspectionDetailResponseV1",
-    },
-  },
-
-  "/api/v1/devices/{device_id}/status": {
-    get: {
-      owner: "executor-service",
-      audience: "operator",
-      boundary: "official",
-      auth_scope: "devices.read or devices.*",
-      error_model: "GEOX_STANDARD_ERROR_ENVELOPE_V2",
-      contract_ref: "docs/contracts/v2/API_GOVERNANCE_AND_OPENAPI_V2.md",
-      gate_maturity: "release_gate_candidate",
-      request_schema: null,
-      response_schema: "DeviceStatusResponseV1",
-    },
-  },
+export const SALES_CRITICAL_OPENAPI_SCHEMAS_V1 = {
+  AcceptanceResultsListResponseV1: { type: "object", required: ["ok", "items"], properties: { ok: { type: "boolean" }, items: { type: "array", items: { type: "object", required: ["result_id", "status"], properties: { result_id: { type: "string" }, status: { type: "string" }, inspected_at: { type: "string", format: "date-time", nullable: true } }, additionalProperties: true } } }, additionalProperties: true },
+  CustomerDashboardFieldPortfolioSummaryResponseV1: { type: "object", required: ["ok", "portfolio"], properties: { ok: { type: "boolean" }, portfolio: { type: "object", required: ["field_count"], properties: { field_count: { type: "integer", minimum: 0 }, active_operation_count: { type: "integer", minimum: 0 }, risk_level: { type: "string", nullable: true } }, additionalProperties: true } }, additionalProperties: true },
+  PestDiseaseInspectionRequestV1: { type: "object", required: ["inspection_id", "field_id"], properties: { inspection_id: { type: "string" }, field_id: { type: "string" }, notes: { type: "string", nullable: true } }, additionalProperties: true },
+  PestDiseaseObservationRequestV1: { type: "object", required: ["inspection_id", "observation"], properties: { inspection_id: { type: "string" }, observation: { type: "string" }, evidence_refs: { type: "array", items: { type: "string" } } }, additionalProperties: true },
+  PestDiseaseSignalRequestV1: { type: "object", required: ["inspection_id", "signal_type"], properties: { inspection_id: { type: "string" }, signal_type: { type: "string" }, score: { type: "number", nullable: true } }, additionalProperties: true },
+  PestDiseaseAssessmentRequestV1: { type: "object", required: ["inspection_id", "assessment"], properties: { inspection_id: { type: "string" }, assessment: { type: "string" }, confidence: { type: "number", nullable: true } }, additionalProperties: true },
+  PestDiseaseReviewRequestV1: { type: "object", required: ["inspection_id", "decision"], properties: { inspection_id: { type: "string" }, decision: { type: "string" }, reviewer_note: { type: "string", nullable: true } }, additionalProperties: true },
+  PestDiseaseAcceptanceEvaluateRequestV1: { type: "object", required: ["inspection_id", "acceptance_rule_id"], properties: { inspection_id: { type: "string" }, acceptance_rule_id: { type: "string" }, expected_outcome: { type: "string", nullable: true } }, additionalProperties: true },
+  PestDiseaseInspectionWriteResponseV1: { type: "object", required: ["ok", "inspection_id", "status"], properties: { ok: { type: "boolean" }, inspection_id: { type: "string" }, status: { type: "string" } }, additionalProperties: true },
+  PestDiseaseAcceptanceEvaluateResponseV1: { type: "object", required: ["ok", "inspection_id", "acceptance_result"], properties: { ok: { type: "boolean" }, inspection_id: { type: "string" }, acceptance_result: { type: "string" }, reason: { type: "string", nullable: true } }, additionalProperties: true },
+  PestDiseaseInspectionDetailResponseV1: { type: "object", required: ["ok", "inspection"], properties: { ok: { type: "boolean" }, inspection: { type: "object", required: ["inspection_id", "status"], properties: { inspection_id: { type: "string" }, status: { type: "string" }, field_id: { type: "string", nullable: true } }, additionalProperties: true } }, additionalProperties: true },
+  DevicePositionsResponseV1: { type: "object", required: ["ok", "positions"], properties: { ok: { type: "boolean" }, positions: { type: "array", items: { type: "object", properties: { ts: { type: "string", nullable: true }, lat: { type: "number", nullable: true }, lon: { type: "number", nullable: true } }, additionalProperties: true } } }, additionalProperties: true },
+  DeviceBindFieldRequestV1: { type: "object", required: ["field_id"], properties: { field_id: { type: "string" } }, additionalProperties: true },
+  DeviceBindFieldResponseV1: { type: "object", required: ["ok", "device_id", "field_id"], properties: { ok: { type: "boolean" }, device_id: { type: "string" }, field_id: { type: "string" } }, additionalProperties: true },
+  DeviceConflictsResponseV1: { type: "object", required: ["ok", "conflicts"], properties: { ok: { type: "boolean" }, conflicts: { type: "array", items: { type: "object", properties: { conflict_id: { type: "string" }, reason: { type: "string", nullable: true } }, additionalProperties: true } } }, additionalProperties: true },
+  DeviceStatusResponseV1: { type: "object", required: ["ok", "device_id", "status"], properties: { ok: { type: "boolean" }, device_id: { type: "string" }, status: { type: "string" }, last_seen_at: { type: "string", nullable: true }, source: { type: "string", nullable: true } }, additionalProperties: true },
+  StandardErrorEnvelopeV2: { type: "object", required: ["ok", "error"], properties: { ok: { type: "boolean", enum: [false] }, error: { type: "object", required: ["code", "message", "category", "retryable"], properties: { code: { type: "string" }, message: { type: "string" }, category: { type: "string" }, retryable: { type: "boolean" } }, additionalProperties: true } }, additionalProperties: true },
 } as const;
