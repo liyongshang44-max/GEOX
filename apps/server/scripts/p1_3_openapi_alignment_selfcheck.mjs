@@ -41,6 +41,39 @@ const temporaryOpenApiWarningPatterns = [
   /^\/api\/v1\/operator\/operations\/.+\/learning-validation$/,
 ];
 
+const salesCriticalRoutePatterns = [
+  /^\/api\/v1\/customer(?:\/|$)/,
+  /^\/api\/v1\/reports(?:\/|$)/,
+  /^\/api\/v1\/actions(?:\/|$)/,
+  /^\/api\/v1\/sense(?:\/|$)/,
+  /^\/api\/v1\/acceptance(?:\/|$)/,
+  /^\/api\/v1\/evidence-export(?:\/|$)/,
+  /^\/api\/v1\/inspection(?:\/|$)/,
+  /^\/api\/v1\/devices\/[^/]+\/status$/,
+  /^\/api\/v1\/fail-safe(?:\/|$)/,
+  /^\/api\/v1\/manual-takeover(?:\/|$)/,
+  /^\/api\/v1\/manual-takeovers$/,
+];
+
+const salesCriticalOpenApiPaths = [
+  '/api/v1/customer/reports',
+  '/api/v1/customer/fields',
+  '/api/v1/customer/operations',
+  '/api/v1/reports/operation/{operation_id}',
+  '/api/v1/reports/field/{field_id}',
+  '/api/v1/actions/task',
+  '/api/v1/actions/receipt',
+  '/api/v1/actions/execute',
+  '/api/v1/sense/task',
+  '/api/v1/sense/receipt',
+  '/api/v1/acceptance/evaluate',
+  '/api/v1/evidence-export/jobs',
+  '/api/v1/inspection/pest-disease/{inspection_id}',
+  '/api/v1/devices/{device_id}/status',
+  '/api/v1/fail-safe/events',
+  '/api/v1/manual-takeovers',
+];
+
 const officialRoutesNoLongerExcluded = [
   '/api/v1/acceptance/',
   '/api/v1/reports/customer-dashboard/',
@@ -193,7 +226,12 @@ function routeMatchesInventory(route, inventory) {
   return groupMatches[0]?.entry ?? null;
 }
 
+function isSalesCriticalRoute(routePath) {
+  return salesCriticalRoutePatterns.some((re) => re.test(normalizeRoutePath(routePath)) || re.test(routePath));
+}
+
 function warningOnly(route, inventoryEntry) {
+  if (isSalesCriticalRoute(route.path)) return false;
   if (temporaryOpenApiWarningPatterns.some((re) => re.test(route.path))) return true;
   if (!inventoryEntry) return false;
   return inventoryEntry.gate_maturity === 'inventory_baseline' || inventoryEntry.gate_maturity === 'debug_exempt' || inventoryEntry.gate_maturity === 'legacy_exempt';
@@ -216,6 +254,10 @@ for (const [routePath, count] of [...pathCounts.entries()].sort()) {
 
 for (const badPath of forbiddenOpenApiPaths) {
   if (openapiSource.includes(`"${badPath}":`)) errors.push(`forbidden_path:${badPath}`);
+}
+
+for (const requiredPath of salesCriticalOpenApiPaths) {
+  if (!pathBlocks.has(requiredPath)) errors.push(`sales_critical_missing_openapi_path:${requiredPath}`);
 }
 
 for (const route of routes.sort((a, b) => `${a.method} ${a.path}`.localeCompare(`${b.method} ${b.path}`))) {
@@ -256,6 +298,9 @@ for (const [routeKey, requestSchema, responseSchema] of criticalPathRefs) {
   if (responseSchema && !block.includes(responseSchema)) errors.push(`missing_response_ref:${routeKey}:${responseSchema}`);
 }
 
+const salesCriticalWarnings = warnings.filter((warning) => /\/api\/v1\/(customer|reports|actions|sense|acceptance|evidence-export|inspection|devices\/[^/]+\/status|fail-safe|manual-takeover|manual-takeovers)/.test(warning));
+if (salesCriticalWarnings.length) errors.push(...salesCriticalWarnings.map((warning) => `sales_critical_warn_only:${warning}`));
+
 if (errors.length) {
   console.error('[p1-3-openapi-selfcheck] FAIL');
   for (const error of errors) console.error(`- ${error}`);
@@ -279,5 +324,7 @@ console.log('[p1-3-openapi-selfcheck] OK', JSON.stringify({
   checked_files: routeFiles.length,
   checked_critical_schemas: criticalSchemas.length,
   checked_critical_paths: criticalPathRefs.length,
+  checked_sales_critical_paths: salesCriticalOpenApiPaths.length,
+  sales_critical_warnings: salesCriticalWarnings.length,
   warnings: warnings.length,
 }));
