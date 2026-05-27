@@ -11,9 +11,12 @@ const root = fs.existsSync(path.join(process.cwd(), 'apps/server/src/routes/open
 
 const routeRoots = ['apps/server/src/routes'];
 const openapiPath = path.join(root, 'apps/server/src/routes/openapi_v1.ts');
+const overlayPath = path.join(root, 'apps/server/src/routes/openapi_sales_critical_overlay_v1.ts');
 const inventoryPath = path.join(root, 'apps/server/src/routes/api_route_inventory_v1.ts');
 const openapiSource = fs.readFileSync(openapiPath, 'utf8');
+const overlaySource = fs.existsSync(overlayPath) ? fs.readFileSync(overlayPath, 'utf8') : '';
 const inventorySource = fs.readFileSync(inventoryPath, 'utf8');
+const contractSource = `${openapiSource}\n${overlaySource}`;
 
 const forbiddenOpenApiPaths = [
   '/api/v1/operations/console',
@@ -130,7 +133,7 @@ function walkTsFiles(target) {
   for (const entry of fs.readdirSync(abs, { withFileTypes: true })) {
     const fp = path.join(abs, entry.name);
     if (entry.isDirectory()) out.push(...walkTsFiles(path.relative(root, fp)));
-    else if (entry.isFile() && fp.endsWith('.ts') && !fp.endsWith('openapi_v1.ts')) out.push(fp);
+    else if (entry.isFile() && fp.endsWith('.ts') && !fp.endsWith('openapi_v1.ts') && !fp.endsWith('openapi_sales_critical_overlay_v1.ts')) out.push(fp);
   }
   return out;
 }
@@ -240,12 +243,12 @@ function warningOnly(route, inventoryEntry) {
 const routeFiles = routeRoots.flatMap(walkTsFiles);
 const routes = routeFiles.flatMap(collectV1Routes);
 const inventory = inventoryEntries();
-const { pathBlocks, pathCounts } = extractPathBlocks(openapiSource);
+const { pathBlocks, pathCounts } = extractPathBlocks(contractSource);
 const errors = [];
 const warnings = [];
 
 for (const removedPattern of officialRoutesNoLongerExcluded) {
-  if (openapiSource.includes(`excluded:${removedPattern}`)) errors.push(`official_route_still_excluded:${removedPattern}`);
+  if (contractSource.includes(`excluded:${removedPattern}`)) errors.push(`official_route_still_excluded:${removedPattern}`);
 }
 
 for (const [routePath, count] of [...pathCounts.entries()].sort()) {
@@ -253,7 +256,7 @@ for (const [routePath, count] of [...pathCounts.entries()].sort()) {
 }
 
 for (const badPath of forbiddenOpenApiPaths) {
-  if (openapiSource.includes(`"${badPath}":`)) errors.push(`forbidden_path:${badPath}`);
+  if (contractSource.includes(`"${badPath}":`)) errors.push(`forbidden_path:${badPath}`);
 }
 
 for (const requiredPath of salesCriticalOpenApiPaths) {
@@ -282,7 +285,7 @@ for (const route of routes.sort((a, b) => `${a.method} ${a.path}`.localeCompare(
 }
 
 for (const schemaName of criticalSchemas) {
-  const definitionCount = countSchemaDefinitions(openapiSource, schemaName);
+  const definitionCount = countSchemaDefinitions(contractSource, schemaName);
   if (definitionCount !== 1) errors.push(`duplicate_or_missing_schema_definition:${schemaName}:${definitionCount}`);
 }
 
