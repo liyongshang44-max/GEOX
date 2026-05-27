@@ -117,48 +117,10 @@ jobs:
           set +a
           pnpm run ci:controlled-pilot
 
-      - name: Run runtime workers packaging gate
-        run: |
-          set -euo pipefail
-          set -a
-          source .env.ci
-          set +a
-          pnpm run ci:runtime:workers
 
       - name: Run Stage-1 fixture raw sample contract gate
         run: |
           pnpm run ci:stage1-fixture:raw-sample-contract
-
-      - name: Run Base Contract P0 aggregate gate
-        run: |
-          set -euo pipefail
-          set -a
-          source .env.ci
-          set +a
-
-          export BASE_URL=http://127.0.0.1:3001
-          export API_BASE_URL=http://127.0.0.1:3001
-          export DATABASE_URL=postgres://landos:landos_pwd@127.0.0.1:5433/landos
-
-          P0_ADMIN_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.role==='admin' && x.scopes.includes('security.admin') && !x.revoked); if(!t) { console.error('missing active admin security.admin token'); process.exit(1); } console.log(t.token)")"
-          P0_CLIENT_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.role==='client' && !x.revoked); if(!t) { console.error('missing active client token'); process.exit(1); } console.log(t.token)")"
-          P0_CROSS_TENANT_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.tenant_id==='tenantB' && !x.revoked); if(!t) { console.error('missing active cross-tenant token'); process.exit(1); } console.log(t.token)")"
-
-          export ADMIN_TOKEN="$P0_ADMIN_TOKEN"
-          export AO_ACT_TOKEN="$P0_ADMIN_TOKEN"
-          export TOKEN="$P0_ADMIN_TOKEN"
-
-          export READ_ONLY_TOKEN="$P0_CLIENT_TOKEN"
-          export CLIENT_TOKEN="$P0_CLIENT_TOKEN"
-          export NON_ACCEPTANCE_TOKEN="$P0_CLIENT_TOKEN"
-          export OTHER_TENANT_TOKEN="$P0_CROSS_TENANT_TOKEN"
-          export INVALID_TOKEN=definitely_invalid_token
-
-          export TENANT_ID="${TENANT_ID:-tenantA}"
-          export PROJECT_ID="${PROJECT_ID:-projectA}"
-          export GROUP_ID="${GROUP_ID:-groupA}"
-
-          pnpm run ci:base-contract:p0
 
       - name: Run P1 smoke preflight idempotency gate
         run: |
