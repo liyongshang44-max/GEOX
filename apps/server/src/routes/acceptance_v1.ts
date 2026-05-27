@@ -257,9 +257,7 @@ export function buildFormalAcceptanceGateV1(receipt: any, executionJudge: any, a
       ? "FORMAL_OPERATION"
       : policySourceLane;
 
-  const receipt_structure_passed = hasReceiptCompletenessSkillPass(receipt ?? {});
-  const baseReceiptStructurePassed = receipt_structure_passed;
-  const receipt_structure_passed_with_variable = baseReceiptStructurePassed || variableZoneEvidencePassed;
+  const receipt_structure_passed = hasReceiptCompletenessSkillPass(receipt ?? {}) || variableZoneEvidencePassed;
 
   const executionJudgePassed = hasExecutionJudgePass(executionJudge);
 
@@ -267,15 +265,14 @@ export function buildFormalAcceptanceGateV1(receipt: any, executionJudge: any, a
   const formalExecutionEvidencePassed = baseFormalExecutionEvidencePassed || variableZoneEvidencePassed;
   const execution_evidence_passed = executionJudgePassed || formalExecutionEvidencePassed;
 
-  const execution_effect_passed = hasFormalExecutionEffectEvidenceV1(receipt ?? {}, policy);
+  const execution_effect_passed = hasFormalExecutionEffectEvidenceV1(receipt ?? {}, policy) || variableZoneEvidencePassed;
   const baseExecutionEffectPassed = execution_effect_passed;
-  const execution_effect_passed_with_variable = baseExecutionEffectPassed || variableZoneEvidencePassed;
 
   const effectRequired = actionRequiresExecutionEffectV1(
     actionType ?? receipt?.payload?.action_type ?? receipt?.payload?.operation_type
   );
 
-  const formal_execution_passed = execution_evidence_passed === true && (execution_effect_passed_with_variable === true || effectRequired === false);
+  const formal_execution_passed = execution_evidence_passed === true && (execution_effect_passed === true || effectRequired === false);
 
   const is_simulated = policy.simulated_artifact_count > 0 || source_lane === "SIMULATED_DEV_ONLY" || source_lane === "DEBUG_ONLY";
 
@@ -293,9 +290,9 @@ export function buildFormalAcceptanceGateV1(receipt: any, executionJudge: any, a
   const blocking_reasons = Array.from(new Set([
     ...policy.blocking_reasons,
     ...(!formal_evidence_passed ? ["FORMAL_EVIDENCE_REQUIRED"] : []),
-    ...(receipt_structure_passed_with_variable && !execution_evidence_passed ? ["RECEIPT_STRUCTURE_ONLY_NOT_FORMAL_EXECUTION"] : []),
+    ...(receipt_structure_passed && !execution_evidence_passed ? ["RECEIPT_STRUCTURE_ONLY_NOT_FORMAL_EXECUTION"] : []),
     ...(!execution_evidence_passed ? ["FORMAL_EXECUTION_EVIDENCE_REQUIRED"] : []),
-    ...(effectRequired && execution_evidence_passed && !execution_effect_passed_with_variable ? ["FORMAL_EXECUTION_EFFECT_EVIDENCE_REQUIRED"] : []),
+    ...(effectRequired && execution_evidence_passed && !execution_effect_passed ? ["FORMAL_EXECUTION_EFFECT_EVIDENCE_REQUIRED"] : []),
     ...(!formal_execution_passed ? ["FORMAL_EXECUTION_REQUIRED"] : []),
     ...(is_simulated ? ["SIMULATED_OR_DEBUG_EVIDENCE_NOT_FORMAL"] : []),
     ...(source_lane !== "FORMAL_OPERATION" ? ["FORMAL_OPERATION_SOURCE_LANE_REQUIRED"] : []),
@@ -303,9 +300,9 @@ export function buildFormalAcceptanceGateV1(receipt: any, executionJudge: any, a
 
   return {
     formal_evidence_passed,
-    receipt_structure_passed: receipt_structure_passed_with_variable,
+    receipt_structure_passed,
     execution_evidence_passed,
-    execution_effect_passed: execution_effect_passed_with_variable,
+    execution_effect_passed,
     formal_execution_passed,
     non_simulated_chain,
     formal_acceptance,
