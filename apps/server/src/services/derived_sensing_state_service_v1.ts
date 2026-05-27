@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { Pool, PoolClient } from "pg";
 
 type DbConn = Pool | PoolClient;
+const DERIVED_SENSING_STATE_PROJECTION_INIT_LOCK_KEY_V1 = 912774321;
 
 export const DERIVED_SENSING_STATE_TYPES_V1 = [
   "fertility_state",
@@ -246,8 +247,10 @@ function normalizeStatePayload(stateType: DerivedSensingStateTypeV1, payload: Re
 }
 
 export async function ensureDerivedSensingStateProjectionV1(db: DbConn): Promise<void> {
-  await db.query(
-    `CREATE TABLE IF NOT EXISTS derived_sensing_state_index_v1 (
+  await db.query("SELECT pg_advisory_lock($1)", [DERIVED_SENSING_STATE_PROJECTION_INIT_LOCK_KEY_V1]);
+  try {
+    await db.query(
+      `CREATE TABLE IF NOT EXISTS derived_sensing_state_index_v1 (
       tenant_id text NOT NULL,
       project_id text NULL,
       group_id text NULL,
@@ -263,15 +266,20 @@ export async function ensureDerivedSensingStateProjectionV1(db: DbConn): Promise
       fact_id text NOT NULL,
       PRIMARY KEY (tenant_id, field_id, state_type, computed_at_ts_ms)
     )`
-  );
-  await db.query(`CREATE INDEX IF NOT EXISTS idx_derived_sensing_state_index_v1_scope_time ON derived_sensing_state_index_v1 (tenant_id, project_id, group_id, field_id, computed_at_ts_ms DESC)`);
-  await db.query(`CREATE INDEX IF NOT EXISTS idx_derived_sensing_state_index_v1_type_time ON derived_sensing_state_index_v1 (tenant_id, field_id, state_type, computed_at_ts_ms DESC)`);
-  await db.query(`DELETE FROM derived_sensing_state_index_v1 a
+    );
+    await db.query(`ALTER TABLE derived_sensing_state_index_v1 ADD COLUMN IF NOT EXISTS source_observation_ids_json jsonb NOT NULL DEFAULT '[]'::jsonb`);
+    await db.query(`ALTER TABLE derived_sensing_state_index_v1 ADD COLUMN IF NOT EXISTS source_device_ids_json jsonb NOT NULL DEFAULT '[]'::jsonb`);
+    await db.query(`UPDATE derived_sensing_state_index_v1 SET source_observation_ids_json = '[]'::jsonb WHERE source_observation_ids_json IS NULL`);
+    await db.query(`UPDATE derived_sensing_state_index_v1 SET source_device_ids_json = '[]'::jsonb WHERE source_device_ids_json IS NULL`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_derived_sensing_state_index_v1_scope_time ON derived_sensing_state_index_v1 (tenant_id, project_id, group_id, field_id, computed_at_ts_ms DESC)`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_derived_sensing_state_index_v1_type_time ON derived_sensing_state_index_v1 (tenant_id, field_id, state_type, computed_at_ts_ms DESC)`);
+    await db.query(`DELETE FROM derived_sensing_state_index_v1 a
     USING derived_sensing_state_index_v1 b
     WHERE a.ctid < b.ctid AND a.fact_id = b.fact_id`);
-  await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS ux_derived_sensing_state_index_v1_fact_id ON derived_sensing_state_index_v1 (fact_id)`);
-  await db.query(`ALTER TABLE derived_sensing_state_index_v1 ADD COLUMN IF NOT EXISTS source_observation_ids_json jsonb NOT NULL DEFAULT '[]'::jsonb`);
-  await db.query(`UPDATE derived_sensing_state_index_v1 SET source_observation_ids_json = '[]'::jsonb WHERE source_observation_ids_json IS NULL`);
+    await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS ux_derived_sensing_state_index_v1_fact_id ON derived_sensing_state_index_v1 (fact_id)`);
+  } finally {
+    await db.query("SELECT pg_advisory_unlock($1)", [DERIVED_SENSING_STATE_PROJECTION_INIT_LOCK_KEY_V1]).catch(() => undefined);
+  }
 }
 
 export async function appendDerivedSensingStateV1(db: DbConn, input: DerivedSensingStateV1Input): Promise<{ fact_id: string; occurred_at_iso: string }> {

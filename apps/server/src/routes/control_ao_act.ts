@@ -757,252 +757,135 @@ function markLegacyCompatibilityResponse(reply: any, successorEndpoint: string):
   reply.send = (payload: any) => originalSend(withLegacyCompatibilityPayload(payload, successorEndpoint));
 }
 
+type AoActTaskCoreResultV1 =
+  | { ok: true; fact_id: string; act_task_id: string; precheck: any; task_meta: any | null }
+  | { ok: false; status: number; error: string; detail?: any };
+
+async function createAoActTaskCoreV1(input: {
+  pool: Pool;
+  req: any;
+  auth: any;
+  tenant: TenantTripleV0;
+  body: any;
+  source: "api/v1/actions/task" | "api/v1/actions/task/from-variable-prescription";
+}): Promise<AoActTaskCoreResultV1> {
+  try {
+    const { pool, req, auth, tenant, body, source } = input;
+    const hit = scanForForbiddenKeys(body);
+    if (hit) return { ok: false, status: 400, error: `FORBIDDEN_KEY:${hit}` };
+
+    const parsedBody = z
+      .object({
+        tenant_id: z.string().min(1),
+        project_id: z.string().min(1),
+        group_id: z.string().min(1),
+        operation_plan_id: z.string().min(1),
+        approval_request_id: z.string().min(1),
+        program_id: z.string().min(1).optional(),
+        field_id: z.string().min(1).optional(),
+        season_id: z.string().min(1).optional(),
+        issuer: z.object({ kind: z.literal("human"), id: z.string().min(1), namespace: z.string().min(1) }),
+        action_type: z.string().min(1),
+        target: z.object({ kind: z.enum(["field", "area", "path"]), ref: z.string().min(1) }),
+        time_window: z.object({ start_ts: z.number(), end_ts: z.number() }),
+        parameter_schema: z.object({
+          keys: z
+            .array(
+              z.object({
+                name: z.string().min(1),
+                type: z.enum(["number", "boolean", "enum"]),
+                min: z.number().optional(),
+                max: z.number().optional(),
+                enum: z.array(z.string().min(1)).optional()
+              })
+            )
+            .min(1)
+        }),
+        parameters: z.record(z.union([z.number(), z.boolean(), z.string()])),
+        constraints: z.record(z.union([z.number(), z.boolean(), z.string()])),
+        device_refs: z.array(z.object({ kind: z.literal("device_ref_fact"), ref: z.string().min(8), note: z.string().max(280).nullable().optional() })).optional(),
+        meta: z.record(z.any()).optional()
+      })
+      .parse(body);
+
+    const taskTenant = assertTenantFieldsPresentV0(parsedBody, "body");
+    if (auth.tenant_id !== taskTenant.tenant_id || auth.project_id !== taskTenant.project_id || auth.group_id !== taskTenant.group_id) {
+      return { ok: false, status: 404, error: "NOT_FOUND" };
+    }
+    if (!AO_ACT_ACTION_TYPE_ALLOWLIST_V0.includes(parsedBody.action_type as any)) return { ok: false, status: 400, error: "ACTION_TYPE_NOT_ALLOWED" };
+    if (parsedBody.time_window.start_ts > parsedBody.time_window.end_ts) return { ok: false, status: 400, error: "TIME_WINDOW_INVALID" };
+
+    const approvalStatus = await loadLatestApprovalRequestStatusV0(pool, parsedBody.approval_request_id, taskTenant);
+    if (approvalStatus !== "APPROVED") return { ok: false, status: 403, error: "APPROVAL_REQUEST_NOT_APPROVED" };
+
+    const deviceId = String((parsedBody.meta as any)?.device_id ?? "").trim();
+    if (deviceId) {
+      const existingFs = await findOpenFailSafeForDeviceV1(pool, { ...taskTenant, device_id: deviceId });
+      if (existingFs) return { ok: false, status: 409, error: "FAIL_SAFE_OPEN", detail: { fail_safe_event_id: existingFs.fail_safe_event_id } };
+      const safety = await evaluateDeviceDispatchSafetyV1(pool, { ...taskTenant, device_id: deviceId });
+      if (!safety.safe) {
+        const fs = await createFailSafeEventV1(pool, { ...taskTenant, device_id: deviceId, trigger_type: safety.reason_code, severity: "HIGH", reason_code: safety.reason_code, blocked_action: "action.task.create", source });
+        const takeover = await createManualTakeoverV1(pool, { ...taskTenant, fail_safe_event_id: fs.fail_safe_event_id, device_id: deviceId, requested_by_actor_id: auth.actor_id, requested_by_token_id: auth.token_id, reason_code: String(safety.reason_code ?? "DEVICE_STATUS_UNKNOWN") });
+        await recordSecurityAuditEventV1(pool, { ...taskTenant, ...auditContextFromRequestV1(req, auth), action: "manual_override.requested", target_type: "manual_takeover", target_id: takeover.takeover_id, result: "ALLOW", source, metadata: { fail_safe_event_id: fs.fail_safe_event_id, device_id: deviceId, reason_code: safety.reason_code, blocked_action: "action.task.create" } });
+        await recordSecurityAuditEventV1(pool, { ...taskTenant, actor_id: auth.actor_id, token_id: auth.token_id, role: auth.role, action: "fail_safe.triggered", target_type: "device", target_id: deviceId, result: "ALLOW", reason: String(safety.reason_code ?? "DEVICE_STATUS_UNKNOWN"), source });
+        return { ok: false, status: 409, error: "FAIL_SAFE_TRIGGERED", detail: { fail_safe_event_id: fs.fail_safe_event_id, manual_takeover_required: true, reason_code: safety.reason_code } };
+      }
+    }
+
+    const schemaKeys = parsedBody.parameter_schema.keys.map((k: any) => ({ name: k.name, type: k.type, min: k.min, max: k.max, enum: k.type === "enum" ? (k.enum ?? []) : undefined })) as ParamDef[];
+    assertNoObjectsOrArrays(parsedBody.parameters, "parameters");
+    assertNoObjectsOrArrays(parsedBody.constraints, "constraints");
+    validateKeyedPrimitives(schemaKeys, parsedBody.parameters, "parameters");
+    validateEnumStringValuesAgainstSchema(schemaKeys, parsedBody.constraints, "constraints");
+
+    const resolvedFieldId = String(parsedBody.field_id ?? parsedBody.meta?.field_id ?? "").trim();
+    let hardRuleConstraints: Record<string, unknown> = parsedBody.constraints;
+    let hardRuleSource: "request_constraints" | "field_fertility_state_v1" = "request_constraints";
+    if (resolvedFieldId) {
+      const fertilityState = await refreshFieldFertilityStateV1(pool, { tenant_id: taskTenant.tenant_id, project_id: taskTenant.project_id, group_id: taskTenant.group_id, field_id: resolvedFieldId });
+      hardRuleConstraints = { ...parsedBody.constraints, ...deriveFertilityPrecheckConstraintsV1({ fertilityState, baseConstraints: parsedBody.constraints }) };
+      hardRuleSource = "field_fertility_state_v1";
+    }
+    const enableAoActPrecheck = isFeatureEnabledV0("GEOX_ENABLE_AO_ACT_PRECHECK_V1", true);
+    const hardRulePrecheck = enableAoActPrecheck ? evaluateAoActHardRulePrecheckV1({ scope: { tenant_id: taskTenant.tenant_id, project_id: taskTenant.project_id }, constraints: hardRuleConstraints, source: hardRuleSource }) : { action_hints: [] as string[], reason_codes: [] as string[], reason_details: [] as Array<{ code: string; action_hint: "irrigate_first" | "inspect"; source: "request_constraints" | "field_fertility_state_v1" }>, source: hardRuleSource };
+
+    const act_task_id = `act_${randomUUID().replace(/-/g, "")}`;
+    await ensureOperationPlanForApprovedActionTaskV1(pool, {
+      tenant: taskTenant, operation_plan_id: parsedBody.operation_plan_id, approval_request_id: parsedBody.approval_request_id, recommendation_id: String(parsedBody.meta?.recommendation_id ?? "").trim() || null, field_id: String(parsedBody.field_id ?? parsedBody.meta?.field_id ?? parsedBody.target?.ref ?? "").trim() || null, season_id: String(parsedBody.season_id ?? parsedBody.meta?.season_id ?? "").trim() || null, action_type: String(parsedBody.action_type ?? "").trim() || "IRRIGATE", act_task_id, device_id: String(parsedBody.meta?.device_id ?? "").trim() || null, actor_id: String(auth.actor_id ?? "").trim(), token_id: String(auth.token_id ?? "").trim(), source: "approval_auto_task_issue"
+    });
+
+    const created_at_ts = Date.now();
+    const record_json = { type: "ao_act_task_v0", payload: { tenant_id: taskTenant.tenant_id, project_id: taskTenant.project_id, group_id: taskTenant.group_id, operation_plan_id: parsedBody.operation_plan_id, approval_request_id: parsedBody.approval_request_id, program_id: parsedBody.program_id ?? parsedBody.meta?.program_id ?? null, field_id: parsedBody.field_id ?? parsedBody.meta?.field_id ?? null, season_id: parsedBody.season_id ?? parsedBody.meta?.season_id ?? null, act_task_id, issuer: parsedBody.issuer, action_type: parsedBody.action_type, task_type: String(parsedBody.meta?.task_type ?? parsedBody.action_type).trim() || parsedBody.action_type, target: parsedBody.target, time_window: parsedBody.time_window, parameter_schema: parsedBody.parameter_schema, parameters: parsedBody.parameters, constraints: hardRuleConstraints, precheck: hardRulePrecheck, created_at_ts, meta: parsedBody.meta } };
+    const fact_id = randomUUID();
+    await pool.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", [fact_id, FACT_SOURCE_AO_ACT_V0, record_json]);
+    await writeAoActAuthzAuditFactV0(pool, { event: "task_write", actor_id: auth.actor_id, token_id: auth.token_id, target_fact_id: fact_id, act_task_id });
+    await recordSecurityAuditEventV1(pool, { tenant_id: taskTenant.tenant_id, project_id: taskTenant.project_id, group_id: taskTenant.group_id, ...auditContextFromRequestV1(req, auth), action: "action.task_created", target_type: "act_task", target_id: act_task_id, field_id: String(parsedBody.field_id ?? parsedBody.meta?.field_id ?? "").trim() || undefined, result: "ALLOW", source, metadata: { operation_plan_id: parsedBody.operation_plan_id, approval_request_id: parsedBody.approval_request_id, device_id: String(parsedBody.meta?.device_id ?? "").trim() || undefined, action_type: parsedBody.action_type } });
+    return { ok: true, fact_id, act_task_id, precheck: hardRulePrecheck, task_meta: parsedBody.meta ?? null };
+  } catch (e: any) {
+    return { ok: false, status: 400, error: e?.message ?? "BAD_REQUEST" };
+  }
+}
+
 async function handleAoActTaskV1(app: FastifyInstance, pool: Pool, req: any, reply: any, deprecated = false) {
   if (deprecated) {
     markLegacyCompatibilityResponse(reply, "/api/v1/actions/task");
     logLegacyAoActWarning(app, req, "/api/control/ao_act/task");
   }
-    try {
-      const auth = requireAoActAnyScopeV0(req, reply, ["action.task.create", "ao_act.task.write"]);
-      if (!auth) return;
-      if (!requireActionTaskCreateRoleV1(reply, auth)) {
-        const raw = (req as any).body ?? {};
-        const tenant_id = String(raw.tenant_id ?? auth.tenant_id ?? "").trim();
-        const project_id = String(raw.project_id ?? auth.project_id ?? "").trim();
-        const group_id = String(raw.group_id ?? auth.group_id ?? "").trim();
-        if (tenant_id && project_id && group_id) {
-          await recordSecurityAuditEventV1(pool, {
-            tenant_id, project_id, group_id,
-            ...auditContextFromRequestV1(req, auth),
-            action: "security.denied",
-            target_type: "act_task",
-            result: "DENY",
-            error_code: "ACTION_TASK_CREATE_ROLE_DENIED",
-            source: "api/v1/actions/task"
-          }).catch(() => undefined);
-        }
-        return;
-      }
-
-      const hit = scanForForbiddenKeys(req.body);
-      if (hit) return reply.status(400).send({ ok: false, error: `FORBIDDEN_KEY:${hit}` });
-
-      const body = z
-        .object({
-          tenant_id: z.string().min(1),
-          project_id: z.string().min(1),
-          group_id: z.string().min(1),
-          operation_plan_id: z.string().min(1),
-          approval_request_id: z.string().min(1),
-          program_id: z.string().min(1).optional(),
-          field_id: z.string().min(1).optional(),
-          season_id: z.string().min(1).optional(),
-          issuer: z.object({ kind: z.literal("human"), id: z.string().min(1), namespace: z.string().min(1) }),
-          action_type: z.string().min(1),
-          target: z.object({ kind: z.enum(["field", "area", "path"]), ref: z.string().min(1) }),
-          time_window: z.object({ start_ts: z.number(), end_ts: z.number() }),
-          parameter_schema: z.object({
-            keys: z
-              .array(
-                z.object({
-                  name: z.string().min(1),
-                  type: z.enum(["number", "boolean", "enum"]),
-                  min: z.number().optional(),
-                  max: z.number().optional(),
-                  enum: z.array(z.string().min(1)).optional()
-                })
-              )
-              .min(1)
-          }),
-          parameters: z.record(z.union([z.number(), z.boolean(), z.string()])),
-          constraints: z.record(z.union([z.number(), z.boolean(), z.string()])),
-          device_refs: z
-            .array(
-              z.object({
-                kind: z.literal("device_ref_fact"),
-                ref: z.string().min(8),
-                note: z.string().max(280).nullable().optional()
-              })
-            )
-            .optional(),
-          meta: z.record(z.any()).optional()
-        })
-        .parse(req.body);
-
-const tenant = assertTenantFieldsPresentV0(body, "body"); // Extract tenant triple from parsed body.
-if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard isolation (404 on mismatch).
-
-
-      if (!AO_ACT_ACTION_TYPE_ALLOWLIST_V0.includes(body.action_type as any)) {
-        return reply.status(400).send({ ok: false, error: "ACTION_TYPE_NOT_ALLOWED" });
-      }
-
-      if (body.time_window.start_ts > body.time_window.end_ts) {
-        return reply.status(400).send({ ok: false, error: "TIME_WINDOW_INVALID" });
-      }
-
-      const approvalStatus = await loadLatestApprovalRequestStatusV0(pool, body.approval_request_id, tenant);
-      if (approvalStatus !== "APPROVED") {
-        return reply.status(403).send({ ok: false, error: "APPROVAL_REQUEST_NOT_APPROVED" });
-      }
-      const deviceId = String((body.meta as any)?.device_id ?? "").trim();
-      if (deviceId) {
-        const existingFs = await findOpenFailSafeForDeviceV1(pool, { ...tenant, device_id: deviceId });
-        if (existingFs) return reply.status(409).send({ ok: false, error: "FAIL_SAFE_OPEN", fail_safe_event_id: existingFs.fail_safe_event_id });
-        const safety = await evaluateDeviceDispatchSafetyV1(pool, { ...tenant, device_id: deviceId });
-        if (!safety.safe) {
-          const fs = await createFailSafeEventV1(pool, { ...tenant, device_id: deviceId, trigger_type: safety.reason_code, severity: "HIGH", reason_code: safety.reason_code, blocked_action: "action.task.create", source: "api/v1/actions/task" });
-          const takeover = await createManualTakeoverV1(pool, { ...tenant, fail_safe_event_id: fs.fail_safe_event_id, device_id: deviceId, requested_by_actor_id: auth.actor_id, requested_by_token_id: auth.token_id, reason_code: String(safety.reason_code ?? "DEVICE_STATUS_UNKNOWN") });
-          await recordSecurityAuditEventV1(pool, {
-            ...tenant,
-            ...auditContextFromRequestV1(req, auth),
-            action: "manual_override.requested",
-            target_type: "manual_takeover",
-            target_id: takeover.takeover_id,
-            result: "ALLOW",
-            source: "api/v1/actions/task",
-            metadata: {
-              fail_safe_event_id: fs.fail_safe_event_id,
-              device_id: deviceId,
-              reason_code: safety.reason_code,
-              blocked_action: "action.task.create"
-            }
-          });
-          await recordSecurityAuditEventV1(pool, { ...tenant, actor_id: auth.actor_id, token_id: auth.token_id, role: auth.role, action: "fail_safe.triggered", target_type: "device", target_id: deviceId, result: "ALLOW", reason: String(safety.reason_code ?? "DEVICE_STATUS_UNKNOWN"), source: "api/v1/actions/task" });
-          return reply.status(409).send({ ok: false, error: "FAIL_SAFE_TRIGGERED", fail_safe_event_id: fs.fail_safe_event_id, manual_takeover_required: true, reason_code: safety.reason_code });
-        }
-      }
-
-      const schemaKeys = body.parameter_schema.keys.map((k) => ({
-        name: k.name,
-        type: k.type,
-        min: k.min,
-        max: k.max,
-        enum: k.type === "enum" ? (k.enum ?? []) : undefined
-      })) as ParamDef[];
-
-      // v0 冻结：parameters / constraints 只能是原子值（禁止 object / array）
-      assertNoObjectsOrArrays(body.parameters, "parameters");
-      assertNoObjectsOrArrays(body.constraints, "constraints");
-
-      // v0: parameters keys must 1:1 match schema.keys (and enum strings must be in-list)
-      validateKeyedPrimitives(schemaKeys, body.parameters, "parameters");
-
-      // v0 冻结 0.2：constraints 中如果出现 string 值，则必须被 parameter_schema 作为 enum 定义，否则 reject。
-      validateEnumStringValuesAgainstSchema(schemaKeys, body.constraints, "constraints");
-      const resolvedFieldId = String(body.field_id ?? body.meta?.field_id ?? "").trim();
-      let hardRuleConstraints: Record<string, unknown> = body.constraints;
-      let hardRuleSource: "request_constraints" | "field_fertility_state_v1" = "request_constraints";
-      if (resolvedFieldId) {
-        const fertilityState = await refreshFieldFertilityStateV1(pool, {
-          tenant_id: tenant.tenant_id,
-          project_id: tenant.project_id,
-          group_id: tenant.group_id,
-          field_id: resolvedFieldId,
-        });
-        hardRuleConstraints = {
-          ...body.constraints,
-          ...deriveFertilityPrecheckConstraintsV1({
-            fertilityState,
-            baseConstraints: body.constraints,
-          })
-        };
-        hardRuleSource = "field_fertility_state_v1";
-      }
-      const enableAoActPrecheck = isFeatureEnabledV0("GEOX_ENABLE_AO_ACT_PRECHECK_V1", true);
-      const hardRulePrecheck = enableAoActPrecheck
-        ? evaluateAoActHardRulePrecheckV1({
-            scope: { tenant_id: tenant.tenant_id, project_id: tenant.project_id },
-            constraints: hardRuleConstraints,
-            source: hardRuleSource,
-          })
-        : {
-            action_hints: [] as string[],
-            reason_codes: [] as string[],
-            reason_details: [] as Array<{ code: string; action_hint: "irrigate_first" | "inspect"; source: "request_constraints" | "field_fertility_state_v1" }>,
-            source: hardRuleSource,
-          };
-
-      const act_task_id = `act_${randomUUID().replace(/-/g, "")}`; // Deterministic format is not required; uniqueness is.
-      const created_at_ts = Date.now(); // Audit timestamp (fact occurred_at is authoritative)
-      await ensureOperationPlanForApprovedActionTaskV1(pool, {
-        tenant,
-        operation_plan_id: body.operation_plan_id,
-        approval_request_id: body.approval_request_id,
-        recommendation_id: String(body.meta?.recommendation_id ?? "").trim() || null,
-        field_id: String(body.field_id ?? body.meta?.field_id ?? body.target?.ref ?? "").trim() || null,
-        season_id: String(body.season_id ?? body.meta?.season_id ?? "").trim() || null,
-        action_type: String(body.action_type ?? "").trim() || "IRRIGATE",
-        act_task_id,
-        device_id: String(body.meta?.device_id ?? "").trim() || null,
-        actor_id: String(auth.actor_id ?? "").trim(),
-        token_id: String(auth.token_id ?? "").trim(),
-        source: "approval_auto_task_issue"
-      });
-
-      const record_json = {
-        type: "ao_act_task_v0",
-        payload: {
-          tenant_id: tenant.tenant_id,
-          project_id: tenant.project_id,
-          group_id: tenant.group_id,
-          operation_plan_id: body.operation_plan_id,
-          approval_request_id: body.approval_request_id,
-          program_id: body.program_id ?? body.meta?.program_id ?? null,
-          field_id: body.field_id ?? body.meta?.field_id ?? null,
-          season_id: body.season_id ?? body.meta?.season_id ?? null,
-          act_task_id,
-          issuer: body.issuer,
-          action_type: body.action_type,
-          task_type: String(body.meta?.task_type ?? body.action_type).trim() || body.action_type,
-          target: body.target,
-          time_window: body.time_window,
-          parameter_schema: body.parameter_schema,
-          parameters: body.parameters,
-          constraints: hardRuleConstraints,
-          precheck: hardRulePrecheck,
-          created_at_ts,
-          meta: body.meta
-        }
-      };
-
-      const fact_id = randomUUID();
-      await pool.query(
-        "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
-        [fact_id, FACT_SOURCE_AO_ACT_V0, record_json]
-      );
-
-      await writeAoActAuthzAuditFactV0(pool, {
-        event: "task_write",
-        actor_id: auth.actor_id,
-        token_id: auth.token_id,
-        target_fact_id: fact_id,
-        act_task_id
-      });
-      await recordSecurityAuditEventV1(pool, {
-        tenant_id: tenant.tenant_id,
-        project_id: tenant.project_id,
-        group_id: tenant.group_id,
-        ...auditContextFromRequestV1(req, auth),
-        action: "action.task_created",
-        target_type: "act_task",
-        target_id: act_task_id,
-        field_id: String(body.field_id ?? body.meta?.field_id ?? "").trim() || undefined,
-        result: "ALLOW",
-        source: "api/v1/actions/task",
-        metadata: {
-          operation_plan_id: body.operation_plan_id,
-          approval_request_id: body.approval_request_id,
-          device_id: String(body.meta?.device_id ?? "").trim() || undefined,
-          action_type: body.action_type
-        }
-      });
-
-      return reply.send({ ok: true, fact_id, act_task_id, precheck: hardRulePrecheck });
-    } catch (e: any) {
-      if (reply.sent) return;
-      return reply.status(400).send({ ok: false, error: e?.message ?? "BAD_REQUEST" });
+  const auth = requireAoActAnyScopeV0(req, reply, ["action.task.create", "ao_act.task.write"]);
+  if (!auth) return;
+  if (!requireActionTaskCreateRoleV1(reply, auth)) {
+    const raw = (req as any).body ?? {};
+    const tenant_id = String(raw.tenant_id ?? auth.tenant_id ?? "").trim();
+    const project_id = String(raw.project_id ?? auth.project_id ?? "").trim();
+    const group_id = String(raw.group_id ?? auth.group_id ?? "").trim();
+    if (tenant_id && project_id && group_id) {
+      await recordSecurityAuditEventV1(pool, { tenant_id, project_id, group_id, ...auditContextFromRequestV1(req, auth), action: "security.denied", target_type: "act_task", result: "DENY", error_code: "ACTION_TASK_CREATE_ROLE_DENIED", source: "api/v1/actions/task" }).catch(() => undefined);
     }
+    return;
+  }
+  const result = await createAoActTaskCoreV1({ pool, req, auth, tenant: { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id }, body: (req as any).body ?? {}, source: "api/v1/actions/task" });
+  if (!result.ok) return reply.status(result.status).send({ ok: false, error: result.error, ...(result.detail ? { detail: result.detail } : {}) });
+  return reply.send({ ok: true, fact_id: result.fact_id, act_task_id: result.act_task_id, precheck: result.precheck });
 }
 
 async function handleAoActReceiptV1(app: FastifyInstance, pool: Pool, req: any, reply: any, deprecated = false) {
@@ -1477,13 +1360,22 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
         now_ts_ms: Date.now(),
       });
 
-      const authorization = String((req.headers as any).authorization ?? "");
-      const delegated = await postJsonInternal(req, authorization, "/api/v1/actions/task", taskPayload);
-      if (!delegated.ok || delegated.json?.ok !== true) {
-        return reply.status(delegated.status || 400).send(delegated.json ?? { ok: false, error: "VARIABLE_ACTION_TASK_CREATE_FAILED" });
+      const created = await createAoActTaskCoreV1({
+        pool,
+        req,
+        auth,
+        tenant,
+        body: taskPayload,
+        source: "api/v1/actions/task/from-variable-prescription"
+      });
+      if (!created.ok) {
+        return reply.status(created.status).send({
+          ok: false,
+          error: created.error,
+          ...(created.detail ? { detail: created.detail } : {})
+        });
       }
-      const actTaskId = String(delegated.json?.act_task_id ?? "").trim();
-      if (!actTaskId) return reply.status(500).send({ ok: false, error: "VARIABLE_ACTION_TASK_ID_MISSING" });
+      const actTaskId = created.act_task_id;
       await recordSecurityAuditEventV1(pool, {
         tenant_id: tenant.tenant_id,
         project_id: tenant.project_id,
@@ -1516,11 +1408,11 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
       return reply.send({
         ok: true,
         act_task_id: actTaskId,
-        task_fact_id: delegated.json?.fact_id ?? delegated.json?.task_fact_id ?? null,
+        task_fact_id: created.fact_id,
         operation_plan_id: body.operation_plan_id,
         operation_plan_fact_id: operationPlanAnchor.operation_plan_fact_id,
         operation_plan_anchor_created: operationPlanAnchor.created,
-        task_meta: delegated.json?.task_meta ?? delegated.json?.task?.meta ?? null,
+        task_meta: taskPayload.meta ?? created.task_meta ?? null,
       });
     } catch (e: any) {
       if (reply.sent) return;
