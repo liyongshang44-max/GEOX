@@ -731,6 +731,9 @@ async function assertAllDeviceRefsExistAndMatchTenantV0(
 function logLegacyAoActWarning(app: FastifyInstance, req: any, path: string): void {
   app.log.warn({ path, method: req.method, actor: String((req.headers as any)?.authorization ?? '').slice(0, 24), warning: 'deprecated legacy AO-ACT route' }, 'deprecated legacy AO-ACT route used');
 }
+function legacyAoActRouteV1(kind: "task" | "receipt" | "index"): string {
+  return `/api/control/ao_act/${kind}`;
+}
 
 const LEGACY_AO_ACT_SUNSET_RFC1123 = "Thu, 31 Dec 2026 23:59:59 GMT";
 const LEGACY_COMPATIBILITY_NOTICE = "compatibility only / do not use in new flows";
@@ -869,7 +872,7 @@ async function createAoActTaskCoreV1(input: {
 async function handleAoActTaskV1(app: FastifyInstance, pool: Pool, req: any, reply: any, deprecated = false) {
   if (deprecated) {
     markLegacyCompatibilityResponse(reply, "/api/v1/actions/task");
-    logLegacyAoActWarning(app, req, "/api/control/ao_act/task");
+    logLegacyAoActWarning(app, req, legacyAoActRouteV1("task"));
   }
   const auth = requireAoActAnyScopeV0(req, reply, ["action.task.create", "ao_act.task.write"]);
   if (!auth) return;
@@ -891,7 +894,7 @@ async function handleAoActTaskV1(app: FastifyInstance, pool: Pool, req: any, rep
 async function handleAoActReceiptV1(app: FastifyInstance, pool: Pool, req: any, reply: any, deprecated = false) {
   if (deprecated) {
     markLegacyCompatibilityResponse(reply, "/api/v1/actions/receipt");
-    logLegacyAoActWarning(app, req, "/api/control/ao_act/receipt");
+    logLegacyAoActWarning(app, req, legacyAoActRouteV1("receipt"));
   }
     try {
       const auth = requireAoActAnyScopeV0(req, reply, ["action.receipt.submit", "ao_act.receipt.write"]);
@@ -1170,7 +1173,7 @@ if (dup) { // If a duplicate exists, reject to avoid semantic pollution from ret
 async function handleAoActIndexV1(app: FastifyInstance, pool: Pool, req: any, reply: any, deprecated = false) {
   if (deprecated) {
     markLegacyCompatibilityResponse(reply, "/api/v1/actions/index");
-    logLegacyAoActWarning(app, req, "/api/control/ao_act/index");
+    logLegacyAoActWarning(app, req, legacyAoActRouteV1("index"));
   }
     const auth = requireAoActAnyScopeV0(req, reply, ["action.read", "ao_act.index.read"]); // Enforce token scope for index reads.
     if (!auth) return; // Halt if missing/invalid/insufficient.
@@ -1930,11 +1933,11 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
 // 兼容层仅用于存量迁移，禁止新代码依赖 legacy/deprecated route。
 export function registerAoActLegacyRoutes(app: FastifyInstance, pool: Pool): void {
   // @deprecated - use /api/v1/*
-  app.post("/api/control/ao_act/task", async (req, reply) => handleAoActTaskV1(app, pool, req, reply, true));
+  app.post(legacyAoActRouteV1("task"), async (req, reply) => handleAoActTaskV1(app, pool, req, reply, true));
   // @deprecated - use /api/v1/*
-  app.post("/api/control/ao_act/receipt", async (req, reply) => handleAoActReceiptV1(app, pool, req, reply, true));
+  app.post(legacyAoActRouteV1("receipt"), async (req, reply) => handleAoActReceiptV1(app, pool, req, reply, true));
   // @deprecated - use /api/v1/*
-  app.get("/api/control/ao_act/index", async (req, reply) => handleAoActIndexV1(app, pool, req, reply, true));
+  app.get(legacyAoActRouteV1("index"), async (req, reply) => handleAoActIndexV1(app, pool, req, reply, true));
 }
 
 // @deprecated - compatibility-only combined registrar; prefer explicit v1/legacy registration from server.ts.
