@@ -24,6 +24,77 @@ function sleep(ms) {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
+function loadDotEnvFile(filePath) {
+  if (!fs.existsSync(filePath)) return {};
+  const out = {};
+  for (const rawLine of fs.readFileSync(filePath, 'utf8').split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
+    const idx = line.indexOf('=');
+    if (idx <= 0) continue;
+    const key = line.slice(0, idx).trim();
+    const value = line.slice(idx + 1).trim().replace(/^[ '\"]|[ '\"]$/g, '');
+    out[key] = value;
+  }
+  return out;
+}
+
+function expectedPostgresEnv() {
+  return {
+    ...loadDotEnvFile(path.join(root, '.env')),
+    ...loadDotEnvFile(path.join(root, '.env.ci')),
+    ...process.env,
+  };
+}
+
+function redact(value) {
+  if (!value) return '<empty>';
+  return '<redacted>';
+}
+
+function parseDatabaseUrl(databaseUrl) {
+  try {
+    const parsed = new URL(databaseUrl);
+    return {
+      protocol: parsed.protocol,
+      username: decodeURIComponent(parsed.username || ''),
+      password: decodeURIComponent(parsed.password || ''),
+      hostname: parsed.hostname,
+      port: parsed.port,
+      database: decodeURIComponent(parsed.pathname.replace(/^\//, '')),
+    };
+  } catch (error) {
+    fail(`RUNTIME_WORKERS_DATABASE_URL_INVALID message=${String(error?.message ?? error)}`);
+  }
+}
+
+function checkDatabaseUrlConsistency(databaseUrl) {
+  const expected = expectedPostgresEnv();
+  const parsed = parseDatabaseUrl(databaseUrl);
+  assert(parsed.protocol === 'postgres:' || parsed.protocol === 'postgresql:', `RUNTIME_WORKERS_DATABASE_URL_INVALID_PROTOCOL protocol=${parsed.protocol}`);
+
+  const expectedUser = String(expected.POSTGRES_USER || expected.PGUSER || '').trim();
+  const expectedPassword = String(expected.POSTGRES_PASSWORD || expected.PGPASSWORD || '').trim();
+  const expectedDb = String(expected.POSTGRES_DB || expected.PGDATABASE || '').trim();
+
+  if (expectedUser && parsed.username !== expectedUser) {
+    fail(`RUNTIME_WORKERS_DATABASE_URL_USER_MISMATCH expected=${expectedUser} actual=${parsed.username}`);
+  }
+  if (expectedPassword && parsed.password !== expectedPassword) {
+    fail(`RUNTIME_WORKERS_DATABASE_URL_PASSWORD_MISMATCH expected=${redact(expectedPassword)} actual=${redact(parsed.password)}`);
+  }
+  if (expectedDb && parsed.database !== expectedDb) {
+    fail(`RUNTIME_WORKERS_DATABASE_URL_DB_MISMATCH expected=${expectedDb} actual=${parsed.database}`);
+  }
+
+  const allowContainerDbHost = String(process.env.RUNTIME_WORKERS_ALLOW_CONTAINER_DB_HOST || '').trim() === '1';
+  if (!allowContainerDbHost && parsed.hostname === 'postgres') {
+    fail('RUNTIME_WORKERS_DATABASE_URL_HOST_UNREACHABLE host=postgres reason=ci_runtime_workers_runs_on_host_use_127.0.0.1:5433_or_set_RUNTIME_WORKERS_ALLOW_CONTAINER_DB_HOST=1');
+  }
+
+  console.log(`[runtime-workers-packaging] database url consistency ok user=${parsed.username || '<empty>'} db=${parsed.database || '<empty>'} host=${parsed.hostname}:${parsed.port || '<default>'}`);
+}
+
 function hasDistSafeImportOrRequire(source, modulePath) {
   return source.includes(`from "${modulePath}"`) ||
     source.includes(`from '${modulePath}'`) ||
@@ -89,6 +160,7 @@ function checkStaticPackaging() {
   assert(!self.includes(forbiddenLogPassFunction), 'runtime worker liveness gate must not define Docker-log keyword liveness helper');
   assert(!self.includes(forbiddenLogPassAssert), 'runtime worker liveness gate must not assert pass through Docker-log keyword matching');
   assert(self.includes('worker_runtime_heartbeat_v1'), 'runtime worker liveness gate must query worker_runtime_heartbeat_v1');
+  assert(self.includes('RUNTIME_WORKERS_DATABASE_URL_PASSWORD_MISMATCH'), 'runtime worker liveness gate must guard DATABASE_URL password consistency');
 }
 
 function checkBuildArtifacts() {
@@ -201,6 +273,7 @@ async function queryHeartbeat(pool, worker) {
 async function checkDbHeartbeats(diagnosticContainers) {
   const databaseUrl = String(process.env.DATABASE_URL || '').trim();
   if (!databaseUrl) fail('RUNTIME_WORKERS_DATABASE_URL_REQUIRED');
+  checkDatabaseUrlConsistency(databaseUrl);
   const maxAgeMs = Math.max(1, Number.parseInt(String(process.env.RUNTIME_WORKER_HEARTBEAT_MAX_AGE_MS || '120000'), 10) || 120000);
   const pool = new Pool({ connectionString: databaseUrl });
   try {
