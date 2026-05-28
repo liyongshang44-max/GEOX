@@ -192,14 +192,8 @@ async function runRuntimeLoop(cliArgs?: string[]): Promise<void> {
 
     try {
       await safeRecordExecutorHeartbeat(workerHeartbeatPool, workerHeartbeatCtx, "RUNNING", "IDLE");
-      const result = await runDispatchOnce(forwardArgs);
-      const lastTickStatus = String(result?.last_tick_status ?? "OK").toUpperCase();
-      await safeRecordExecutorHeartbeat(
-        workerHeartbeatPool,
-        workerHeartbeatCtx,
-        "OK",
-        lastTickStatus === "NO_TASK" ? "NO_TASK" : (lastTickStatus === "CLAIMED_TASK" ? "CLAIMED_TASK" : "OK"),
-      );
+      await runDispatchOnce(forwardArgs);
+      await safeRecordExecutorHeartbeat(workerHeartbeatPool, workerHeartbeatCtx, "OK", "OK");
     } catch (error: any) {
       await safeRecordExecutorHeartbeat(workerHeartbeatPool, workerHeartbeatCtx, "ERROR", "ERROR", error);
       console.error(`ERROR: runtime loop iteration failed: ${error?.stack ?? error?.message ?? String(error)}`);
