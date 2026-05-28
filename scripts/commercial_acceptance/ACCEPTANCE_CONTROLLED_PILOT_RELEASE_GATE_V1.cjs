@@ -7,6 +7,7 @@ const REPORT_PATH = path.resolve(ROOT, 'docs/audit/CONTROLLED_PILOT_READINESS_RE
 
 const REQUIRED_GATES = [
   { id: 'runtime_workers', command: 'pnpm run ci:runtime:workers' },
+  { id: 'pilot_runtime_security_baseline', command: 'pnpm run ci:runtime:pilot-security-baseline' },
   { id: 'base_contract_p0', command: 'pnpm run ci:base-contract:p0' },
   { id: 'scenario_pest_disease_inspection', command: 'pnpm run ci:scenario:pest-disease-inspection' },
   { id: 'scenario_formal_e2e', command: 'pnpm run ci:scenario:formal-e2e' },
@@ -22,12 +23,14 @@ const experimental_scenarios = ['FORMAL_FERTILIZATION'];
 const known_limits = [
   'FORMAL_FERTILIZATION = conditional_pending_ci_proof',
   'required_for_controlled_pilot = false',
-  'ci:controlled-pilot expects the acceptance runtime to be running; it does not start Docker services or downgrade missing runtime to PASS.'
+  'ci:controlled-pilot expects the acceptance runtime to be running; it does not start Docker services or downgrade missing runtime to PASS.',
+  'pilot_runtime_security_baseline is a pilot minimum runtime-safety gate, not a complete commercial IAM program.'
 ];
 const not_for_sale_claims = [
   'FORMAL_FERTILIZATION is NOT part of mandatory controlled pilot sales gate.',
   'No BEST_EFFORT sales claim is allowed when any required gate fails.',
-  'Device anomaly does not create ROI or customer-visible Field Memory before formal acceptance.'
+  'Device anomaly does not create ROI or customer-visible Field Memory before formal acceptance.',
+  'Acceptance fixture tokens are not a production IAM template.'
 ];
 
 function loadDotEnvFile(filePath) {
@@ -39,7 +42,7 @@ function loadDotEnvFile(filePath) {
     const idx = line.indexOf('=');
     if (idx <= 0) continue;
     const key = line.slice(0, idx).trim();
-    const value = line.slice(idx + 1).trim().replace(/^[ '"]|[ '"]$/g, '');
+    const value = line.slice(idx + 1).trim().replace(/^[ '\"]|[ '\"]$/g, '');
     out[key] = value;
   }
   return out;
@@ -55,7 +58,7 @@ function loadAcceptanceTokens() {
   const client = active((token) => token.role === 'client');
   const tenantB = active((token) => token.tenant_id === 'tenantB');
   return {
-    ...(admin ? { ADMIN_TOKEN: admin, AO_ACT_TOKEN: admin, TOKEN: admin, GEOX_TOKEN: admin, GEOX_AO_ACT_TOKEN: admin } : {}),
+    ...(admin ? { ADMIN_TOKEN: admin, AO_ACT_TOKEN: admin, TOKEN: admin, GEOX_AO_ACT_TOKEN: admin } : {}),
     ...(client ? { READ_ONLY_TOKEN: client, CLIENT_TOKEN: client, NON_ACCEPTANCE_TOKEN: client } : {}),
     ...(tenantB ? { OTHER_TENANT_TOKEN: tenantB } : {}),
     INVALID_TOKEN: 'definitely_invalid_token'
@@ -74,7 +77,7 @@ function buildGateEnv() {
   };
   env.BASE_URL = env.BASE_URL || 'http://127.0.0.1:3001';
   env.API_BASE_URL = env.API_BASE_URL || env.BASE_URL;
-  env.DATABASE_URL = env.DATABASE_URL || 'postgres://landos:landos_pwd@127.0.0.1:5433/landos';
+  env.DATABASE_URL = env.DATABASE_URL || `postgres://${env.POSTGRES_USER || 'landos'}:${env.POSTGRES_PASSWORD || ''}@127.0.0.1:5433/${env.POSTGRES_DB || 'landos'}`;
   env.TENANT_ID = env.TENANT_ID || 'tenantA';
   env.PROJECT_ID = env.PROJECT_ID || 'projectA';
   env.GROUP_ID = env.GROUP_ID || 'groupA';
@@ -167,6 +170,7 @@ console.log('[controlled-pilot-release-gate] strict mode environment', {
   BASE_URL: gateEnv.BASE_URL,
   API_BASE_URL: gateEnv.API_BASE_URL,
   DATABASE_URL: gateEnv.DATABASE_URL ? '<set>' : '<missing>',
+  GEOX_RUNTIME_ENV: gateEnv.GEOX_RUNTIME_ENV || '<missing>',
   ADMIN_TOKEN: gateEnv.ADMIN_TOKEN ? '<set>' : '<missing>',
   AO_ACT_TOKEN: gateEnv.AO_ACT_TOKEN ? '<set>' : '<missing>',
   CLIENT_TOKEN: gateEnv.CLIENT_TOKEN ? '<set>' : '<missing>',
