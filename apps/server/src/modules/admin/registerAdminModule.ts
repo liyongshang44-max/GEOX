@@ -98,16 +98,23 @@ export function registerAdminModule(app: FastifyInstance, pool: Pool): void {
       }
     }
 
+    const runtimeSecurity = getRuntimeSecurityStatusV1();
+    const schemaOk = missing_tables.length === 0
+      && missing_views.length === 0
+      && Object.keys(missing_table_columns).length === 0
+      && Object.keys(invalid_column_types).length === 0;
+    const runtimeSecurityRequired = runtimeSecurity.runtime_env === "pilot" || runtimeSecurity.runtime_env === "production";
+    const ok = schemaOk && (!runtimeSecurityRequired || runtimeSecurity.ok);
+
     return reply.send({
-      ok: missing_tables.length === 0
-        && missing_views.length === 0
-        && Object.keys(missing_table_columns).length === 0
-        && Object.keys(invalid_column_types).length === 0,
+      ok,
+      schema_ok: schemaOk,
+      runtime_security_required: runtimeSecurityRequired,
       missing_tables,
       missing_views,
       missing_table_columns,
       invalid_column_types,
-      runtime_security: getRuntimeSecurityStatusV1(),
+      runtime_security: runtimeSecurity,
     });
   });
 

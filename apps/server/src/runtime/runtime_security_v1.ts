@@ -14,6 +14,23 @@ const WEAK = new Set([
   "landos",
 ]);
 
+function isPlaceholderSecretV1(value: string): boolean {
+  const lower = String(value ?? "").trim().toLowerCase();
+  if (!lower) return true;
+  if (/^<[^>]+>$/.test(lower)) return true;
+  return [
+    "strong-random",
+    "placeholder",
+    "replace",
+    "set-via",
+    "secret-manager",
+    "todo",
+    "fixme",
+    "sample",
+    "demo",
+  ].some((x) => lower.includes(x));
+}
+
 function envValue(...keys: string[]): string {
   for (const key of keys) {
     const value = String(process.env[key] ?? "").trim();
@@ -27,6 +44,7 @@ function isWeak(v: string): boolean {
   if (!value) return true;
   const lower = value.toLowerCase();
   if (WEAK.has(lower)) return true;
+  if (isPlaceholderSecretV1(value)) return true;
   if (lower.includes("changeme") || lower.includes("example") || lower.includes("default")) return true;
   return value.length < 12;
 }
