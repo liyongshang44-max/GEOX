@@ -102,6 +102,7 @@ services:
     environment:
       DB_DRIVER: postgres
       DATABASE_URL: postgres://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       DB_STRICT: "1"
       NODE_ENV: production
       GEOX_RUNTIME_ENV: ${GEOX_RUNTIME_ENV:-pilot}
