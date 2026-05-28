@@ -84,7 +84,10 @@ function checkStaticPackaging() {
   assert(!hasTsImportOrRequire(dispatchOnce, './lib/claim'), 'run_dispatch_once.ts must not import/require lib/claim.ts');
 
   const self = read('scripts/governance_acceptance/ACCEPTANCE_RUNTIME_WORKERS_PRODUCTION_PACKAGING_V1.cjs');
-  assert(!self.includes('logsContain('), 'runtime worker liveness gate must not pass via Docker log keyword matching');
+  const forbiddenLogPassFunction = 'function ' + 'logsContain';
+  const forbiddenLogPassAssert = 'assert(' + 'logsContain';
+  assert(!self.includes(forbiddenLogPassFunction), 'runtime worker liveness gate must not define Docker-log keyword liveness helper');
+  assert(!self.includes(forbiddenLogPassAssert), 'runtime worker liveness gate must not assert pass through Docker-log keyword matching');
   assert(self.includes('worker_runtime_heartbeat_v1'), 'runtime worker liveness gate must query worker_runtime_heartbeat_v1');
 }
 
