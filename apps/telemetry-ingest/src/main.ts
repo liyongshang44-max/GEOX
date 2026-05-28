@@ -45,6 +45,12 @@ function resolveDatabaseUrl(): string { // Resolve DATABASE_URL from env (same l
   return ""; // Return empty if no configuration found.
 } // End helper.
 
+function mqttOptionsFromEnv(): mqtt.IClientOptions {
+  const username = String(process.env.GEOX_MQTT_USERNAME ?? process.env.MQTT_USERNAME ?? "").trim();
+  const password = String(process.env.GEOX_MQTT_PASSWORD ?? process.env.MQTT_PASSWORD ?? "").trim();
+  return username || password ? { username, password } : {};
+}
+
 function sha256Hex(s: string): string { // Compute sha256 hex digest from string input.
   return crypto.createHash("sha256").update(s, "utf8").digest("hex"); // Hash and hex-encode.
 } // End helper.
@@ -130,7 +136,7 @@ async function main() { // Main bootstrap for telemetry + heartbeat ingest.
       setupConn.release();
     }
   }
-  const client = mqtt.connect(mqttUrl); // Connect to MQTT broker.
+  const client = mqtt.connect(mqttUrl, mqttOptionsFromEnv()); // Connect to MQTT broker.
   let ready = false; // Gate message handling until subscribe callback succeeds.
 
   client.on("connect", () => { // MQTT connect handler.
@@ -249,7 +255,7 @@ record = { // Telemetry record.
         const k = `drop_unregistered_device|${msgKeyBase}`; // Dedupe key.
         if (!seenRecently(k, 2000)) { // Avoid duplicate logs from QoS redelivery.
           // eslint-disable-next-line no-console
-          console.warn("[telemetry-ingest] drop_unregistered_device", { tenant_id: parsed.tenant_id, device_id: parsed.device_id }); // Log drop.
+          console.warn("[telemetry-ingest] drop_unregistered_device", { tenant_id: parsed.tenant_id, device_id }); // Log drop.
         } // End dedupe branch.
         return; // Stop processing.
       } // End registration gate.
@@ -258,227 +264,92 @@ record = { // Telemetry record.
         `SELECT credential_hash, credential_id
            FROM device_credential_index_v1
           WHERE tenant_id = $1 AND device_id = $2 AND status = 'ACTIVE'
-          ORDER BY issued_ts_ms DESC
-          LIMIT 1`,
+          ORDER BY issued_at DESC LIMIT 1`,
         [parsed.tenant_id, parsed.device_id]
-      ); // Load most recent ACTIVE credential.
+      ); // Fetch active credential for device.
       if ((credRow.rows ?? []).length < 1) { // No active credential.
-        await clientConn.query("ROLLBACK"); // Rollback and drop message.
-        const k = `drop_missing_active_credential|${msgKeyBase}`; // Dedupe key.
-        if (!seenRecently(k, 2000)) { // Avoid duplicate logs from QoS redelivery.
-          // eslint-disable-next-line no-console
-          console.warn("[telemetry-ingest] drop_missing_active_credential", { tenant_id: parsed.tenant_id, device_id: parsed.device_id }); // Log drop.
-        } // End dedupe branch.
-        return; // Stop processing.
-      } // End credential presence gate.
-
-      const expected_hash = String(credRow.rows[0].credential_hash); // Expected credential hash from projection.
-      if (expected_hash !== provided_hash) { // Credential mismatch.
-        await clientConn.query("ROLLBACK"); // Rollback and drop message.
-        const k = `drop_bad_credential|${msgKeyBase}`; // Dedupe key.
-        if (!seenRecently(k, 2000)) { // Avoid duplicate logs from QoS redelivery.
-          // eslint-disable-next-line no-console
-          console.warn("[telemetry-ingest] drop_bad_credential", { tenant_id: parsed.tenant_id, device_id: parsed.device_id, credential_id: String(credRow.rows[0].credential_id) }); // Log drop.
-        } // End dedupe branch.
-        return; // Stop processing.
-      } // End credential match gate.
-
-      await clientConn.query(
-        `INSERT INTO facts (fact_id, occurred_at, source, record_json)
-         VALUES ($1, $2::timestamptz, $3, $4)
-         ON CONFLICT (fact_id) DO NOTHING`,
-        [fact_id, occurredAtIso, "gateway", recordText]
-      ); // Insert append-only fact.
-
-      let projInserted = false; // Whether a projection row was inserted (telemetry) or updated (heartbeat).
-      if (parsed.kind === "telemetry") { // Telemetry projection path.
-        const normalized = normalizeMetricAndUnit(String((p as any).metric ?? ""), typeof (p as any).unit === "string" ? (p as any).unit : undefined); // Step-1 normalize(metric/unit/name) via contracts canonical mapper + unit validation.
-        const quality_flags = toQualityFlags((p as any).value); // Step-2 derive quality flags for contract quality_flags.
-        const field_id = await resolveTelemetryObservationFieldId(clientConn, parsed.tenant_id, parsed.device_id); // Attach field dimension when bound.
-        const projRes = await clientConn.query(
-          `INSERT INTO telemetry_index_v1 (tenant_id, device_id, metric, ts, value_num, value_text, fact_id)
-           VALUES ($1, $2, $3, $4::timestamptz, $5, $6, $7)
-           ON CONFLICT (tenant_id, device_id, metric, ts) DO NOTHING
-           RETURNING fact_id`,
-          [parsed.tenant_id, parsed.device_id, normalized.metric, occurredAtIso, value_num, value_text, fact_id]
-        ); // Insert into telemetry projection.
-
-        await clientConn.query(
-          `INSERT INTO device_status_index_v1 (tenant_id, device_id, last_telemetry_ts_ms, last_heartbeat_ts_ms, battery_percent, rssi_dbm, fw_ver, updated_ts_ms)
-           VALUES ($1, $2, $3, NULL, NULL, NULL, NULL, $4)
-           ON CONFLICT (tenant_id, device_id) DO UPDATE SET
-             last_telemetry_ts_ms = GREATEST(COALESCE(device_status_index_v1.last_telemetry_ts_ms, 0), EXCLUDED.last_telemetry_ts_ms),
-             updated_ts_ms = EXCLUDED.updated_ts_ms`,
-          [parsed.tenant_id, parsed.device_id, p.ts_ms, Date.now()]
-        ); // Update last telemetry status projection.
-
-        projInserted = (projRes.rows ?? []).length > 0; // True if insert happened.
-        if (projInserted) {
-          await writeObservationRunPipelineAndRefreshFieldV1(clientConn, { // Step-3 write normalized business observation and execute sensing pipeline/read-model refresh in unified chain.
-            tenant_id: parsed.tenant_id,
-            project_id: null,
-            group_id: null,
-            device_id: parsed.device_id,
-            field_id,
-            metric: normalized.metric,
-            value: (p as any).value,
-            unit: normalized.unit,
-            quality_flags,
-            confidence: quality_flags.includes("OK") ? 1 : 0,
-            observed_at_ts_ms: p.ts_ms,
-            source_fact_id: fact_id,
-          });
-        }
-      } else { // Heartbeat projection path.
-        await clientConn.query(
-          `INSERT INTO device_status_index_v1 (tenant_id, device_id, last_telemetry_ts_ms, last_heartbeat_ts_ms, battery_percent, rssi_dbm, fw_ver, updated_ts_ms)
-           VALUES ($1, $2, NULL, $3, $4, $5, $6, $7)
-           ON CONFLICT (tenant_id, device_id) DO UPDATE SET
-             last_heartbeat_ts_ms = GREATEST(COALESCE(device_status_index_v1.last_heartbeat_ts_ms, 0), EXCLUDED.last_heartbeat_ts_ms),
-             battery_percent = COALESCE(EXCLUDED.battery_percent, device_status_index_v1.battery_percent),
-             rssi_dbm = COALESCE(EXCLUDED.rssi_dbm, device_status_index_v1.rssi_dbm),
-             fw_ver = COALESCE(EXCLUDED.fw_ver, device_status_index_v1.fw_ver),
-             updated_ts_ms = EXCLUDED.updated_ts_ms`,
-          [parsed.tenant_id, parsed.device_id, p.ts_ms, (p as any).battery_percent ?? null, (p as any).rssi_dbm ?? null, (p as any).fw_ver ?? null, Date.now()]
-        ); // Update heartbeat status projection.
-
-        projInserted = true; // For heartbeat, treat as processed.
-      } // End kind branch.
-
-      await clientConn.query("COMMIT"); // Commit transaction.
-
-      if (parsed.kind === "telemetry" && !projInserted) { return; } // Duplicate telemetry event => no success log.
-
-      // eslint-disable-next-line no-console
-      console.log("[telemetry-ingest] ok", {
-        kind: parsed.kind,
-        tenant_id: parsed.tenant_id,
-        device_id: parsed.device_id,
-        metric: (p as any).metric ?? "HEARTBEAT",
-        ts_ms: p.ts_ms,
-      }); // Log success after commit.
-
-      if (parsed.kind === "telemetry" && projInserted) {
+      await clientConn.query("ROLLBACK"); // Rollback before return.
+      const k = `drop_missing_credential|${msgKeyBase}`; // Dedupe key.
+      if (!seenRecently(k, 2000)) { // Avoid repeated warnings.
         // eslint-disable-next-line no-console
-        console.log("[snapshot trigger]", {
-          tenant_id: parsed.tenant_id,
-          device_id: parsed.device_id,
-          metric: String((p as any).metric ?? ""),
-          ts_ms: p.ts_ms
-        });
-        try {
-          await updateAgronomySnapshot(pool, parsed.tenant_id, parsed.device_id);
-        } catch (snapshotErr: any) {
-          // eslint-disable-next-line no-console
-          console.error("[telemetry-ingest] agronomy_snapshot_update_error", { tenant_id: parsed.tenant_id, device_id: parsed.device_id, err: String(snapshotErr?.message ?? snapshotErr) });
-        }
+        console.warn("[telemetry-ingest] drop_missing_credential", { tenant_id: parsed.tenant_id, device_id: parsed.device_id }); // Log drop.
       }
+      return; // Stop.
+    }
 
-      if (parsed.kind === "telemetry" && projInserted) { // Only evaluate alerts for new telemetry points.
-        try { // Best-effort alert evaluation.
-          const rulesQ = await pool.query(
-            `SELECT tenant_id, rule_id, operator, threshold_num, window_sec
-               FROM alert_rule_index_v1
-              WHERE tenant_id = $1
-                AND status = 'ACTIVE'
-                AND object_type = 'DEVICE'
-                AND object_id = $2
-                AND metric = $3`,
-            [parsed.tenant_id, parsed.device_id, (p as any).metric]
-          ); // Load matching rules.
+    const expected_hash = String(credRow.rows[0].credential_hash ?? ""); // Stored credential hash.
+    if (!expected_hash || expected_hash !== provided_hash) { // Credential mismatch.
+      await clientConn.query("ROLLBACK"); // Rollback before return.
+      const k = `drop_invalid_credential|${msgKeyBase}`; // Dedupe key.
+      if (!seenRecently(k, 2000)) {
+        // eslint-disable-next-line no-console
+        console.warn("[telemetry-ingest] drop_invalid_credential", { tenant_id: parsed.tenant_id, device_id: parsed.device_id });
+      }
+      return;
+    }
 
-          for (const r of rulesQ.rows) { // Iterate rules.
-            const op = String(r.operator ?? "").toUpperCase(); // Operator.
-            const thr = typeof r.threshold_num === "number" ? r.threshold_num : Number(r.threshold_num); // Threshold.
-            const val = typeof (p as any).value === "number" ? (p as any).value : Number((p as any).value); // Numeric value.
-            if (!Number.isFinite(val) || !Number.isFinite(thr)) continue; // Skip non-numeric values.
+    const field_id = await resolveTelemetryObservationFieldId(clientConn, parsed.tenant_id, parsed.device_id); // Resolve current field binding for observation projection.
+    const valueNumForObservation = typeof (p as any).value === "number" && Number.isFinite((p as any).value) ? (p as any).value : null; // Numeric only for observation.value_num.
+    const qualityFlags = toQualityFlags((p as any).value); // Normalize simple quality flags.
 
-            const triggered =
-              op === "GT" ? (val > thr) :
-              op === "GTE" ? (val >= thr) :
-              op === "LT" ? (val < thr) :
-              op === "LTE" ? (val <= thr) :
-              op === "EQ" ? (val === thr) :
-              false; // Evaluate rule.
-            if (!triggered) continue; // Skip when not triggered.
+    const metricNorm = parsed.kind === "telemetry"
+      ? normalizeMetricAndUnit(String((p as any).metric || ""), (p as any).unit)
+      : { metric: "device_heartbeat", unit: null };
 
-            const bucket_ms = Math.max(60_000, (Number(r.window_sec) || 60) * 1000); // Stable event bucket size.
-            const bucket = Math.floor(p.ts_ms / bucket_ms); // Bucket index.
-            const event_id = `alev_${sha256Hex("tel|" + parsed.tenant_id + "|" + r.rule_id + "|" + parsed.device_id + "|" + String(bucket))}`; // Deterministic event id.
+    await clientConn.query(
+      `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+       VALUES ($1, $2, $3, $4::jsonb)
+       ON CONFLICT (fact_id) DO NOTHING`,
+      [fact_id, occurredAtIso, 'device_telemetry', recordText]
+    ); // Append raw telemetry/heartbeat fact.
 
-            const existQ = await pool.query(
-              `SELECT 1 FROM alert_event_index_v1 WHERE tenant_id = $1 AND event_id = $2 LIMIT 1`,
-              [parsed.tenant_id, event_id]
-            ); // Check if already raised.
-            if ((existQ.rowCount ?? 0) > 0) continue; // Skip existing event.
+    await writeObservationRunPipelineAndRefreshFieldV1(clientConn, {
+      tenant_id: parsed.tenant_id,
+      project_id: process.env.GEOX_PROJECT_ID || "projectA",
+      group_id: process.env.GEOX_GROUP_ID || "groupA",
+      field_id,
+      device_id: parsed.device_id,
+      metric: metricNorm.metric,
+      observed_at_ts_ms: p.ts_ms,
+      value_num: valueNumForObservation,
+      value_text,
+      unit: metricNorm.unit,
+      confidence: "MEDIUM",
+      quality_flags: qualityFlags,
+      raw_fact_id: fact_id,
+      source_kind: parsed.kind,
+      credential_id: String(credRow.rows[0].credential_id ?? "") || null,
+      geo: parsed.kind === "telemetry" ? (record.payload.geo ?? null) : null,
+    });
 
-            const fact_id2 = `alev_raise_${randomUUID()}`; // Fact id for alert event.
-            const record2 = {
-              type: "alert_event_raised_v1",
-              entity: { tenant_id: parsed.tenant_id, event_id, rule_id: r.rule_id },
-              payload: {
-                object_type: "DEVICE",
-                object_id: parsed.device_id,
-                metric: (p as any).metric,
-                raised_ts_ms: Date.now(),
-                last_value: { value_num: val, threshold_num: thr, operator: op, ts_ms: p.ts_ms },
-                source: "telemetry-ingest",
-              },
-            }; // Alert fact record.
+    await updateAgronomySnapshot(clientConn, {
+      field_id: field_id ?? null,
+      metric: metricNorm.metric,
+      value: valueNumForObservation,
+      ts_ms: p.ts_ms,
+      source: parsed.kind === "telemetry" ? "mqtt" : "heartbeat",
+    }); // Refresh agronomy signal snapshot for downstream recommendations.
 
-            const c2 = await pool.connect(); // Separate connection for alert tx.
-            try { // Alert tx scope.
-              await c2.query("BEGIN"); // Start alert tx.
-              await c2.query(
-                `INSERT INTO facts (fact_id, occurred_at, source, record_json)
-                 VALUES ($1, $2::timestamptz, $3, $4)`,
-                [fact_id2, new Date(Date.now()).toISOString(), "system", JSON.stringify(record2)]
-              ); // Insert alert fact.
-              await c2.query(
-                `INSERT INTO alert_event_index_v1
-                  (tenant_id, event_id, rule_id, object_type, object_id, metric, status, raised_ts_ms, acked_ts_ms, closed_ts_ms, last_value_json)
-                 VALUES ($1,$2,$3,$4,$5,$6,'OPEN',$7,NULL,NULL,$8)
-                 ON CONFLICT (tenant_id, event_id) DO NOTHING`,
-                [parsed.tenant_id, event_id, r.rule_id, "DEVICE", parsed.device_id, (p as any).metric, Date.now(), JSON.stringify({ value_num: val, threshold_num: thr, operator: op, ts_ms: p.ts_ms })]
-              ); // Insert alert projection.
-              await c2.query("COMMIT"); // Commit alert tx.
-            } catch { // Swallow alert tx errors.
-              await c2.query("ROLLBACK"); // Rollback alert tx.
-            } finally { // Always release alert tx connection.
-              c2.release(); // Release connection.
-            } // End alert tx scope.
-          } // End rules loop.
-        } catch { // Swallow alert evaluation errors.
-          // No-op.
-        } // End alert evaluation try/catch.
-      } // End alert evaluation.
-
-      if (once) { // Exit after first successful message in one-shot mode.
-        client.end(true); // Disconnect MQTT client immediately.
-        await pool.end(); // Close Postgres pool.
-        process.exit(0); // Exit process successfully.
-      } // End once mode.
-    } catch (e: any) { // Message handler db/tx error.
-      try { // Attempt rollback if needed.
-        await clientConn.query("ROLLBACK"); // Rollback transaction.
-      } catch { // Ignore rollback errors.
-        // no-op
-      } // End rollback attempt.
+    await clientConn.query("COMMIT"); // Commit all writes.
+    if (once) {
       // eslint-disable-next-line no-console
-      console.error("[telemetry-ingest] db_error", { err: String(e?.message ?? e) }); // Log db error.
-    } finally { // Always release connection.
-      clientConn.release(); // Release back to pool.
-    } // End transaction scope.
+      console.log(JSON.stringify({ ok: true, fact_id, kind: parsed.kind })); // Output one-shot result.
+      client.end(true);
+      await pool.end();
+      process.exit(0);
+    }
+    } catch (err) {
+      await clientConn.query("ROLLBACK").catch(() => undefined);
+      // eslint-disable-next-line no-console
+      console.error("[telemetry-ingest] process_error", { topic, error: String((err as Error)?.message ?? err) });
+    } finally {
+      clientConn.release();
+    }
   }); // End message handler.
+}
 
-  client.on("error", (err) => { // MQTT error handler.
-    // eslint-disable-next-line no-console
-    console.error("[telemetry-ingest] mqtt_error", err); // Log MQTT errors.
-  }); // End handler.
-} // End main.
-
-main().catch((e) => { // Top-level promise rejection handler.
+main().catch((err) => { // Process-level failure.
   // eslint-disable-next-line no-console
-  console.error("[telemetry-ingest] fatal", e); // Log fatal error.
-  process.exit(1); // Non-zero exit code.
-}); // End bootstrap.
+  console.error("[telemetry-ingest] fatal", err); // Log fatal error.
+  process.exit(1); // Exit non-zero.
+});
