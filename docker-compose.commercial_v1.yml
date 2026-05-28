@@ -23,9 +23,18 @@ services:
   mqtt:
     image: eclipse-mosquitto:2
     container_name: geox-v1-mqtt
+    environment:
+      MQTT_USERNAME: ${MQTT_USERNAME:?MQTT_USERNAME is required}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:?MQTT_PASSWORD is required}
+    entrypoint: ["/bin/sh", "-ceu"]
+    command:
+      - |
+        mkdir -p /tmp/mosquitto-config /tmp/mosquitto-data /tmp/mosquitto-log
+        printf 'listener 1883 0.0.0.0\nallow_anonymous false\npassword_file /tmp/mosquitto-config/passwords\npersistence false\n' > /tmp/mosquitto-config/mosquitto.conf
+        mosquitto_passwd -b -c /tmp/mosquitto-config/passwords "$$MQTT_USERNAME" "$$MQTT_PASSWORD"
+        exec mosquitto -c /tmp/mosquitto-config/mosquitto.conf
     ports:
       - "1883:1883"
-      - "9001:9001"
 
   minio:
     image: minio/minio:latest
@@ -94,12 +103,28 @@ services:
       DB_DRIVER: postgres
       DATABASE_URL: postgres://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
       DB_STRICT: "1"
-      NODE_ENV: development
-      GEOX_RUNTIME_ENV: test
+      NODE_ENV: production
+      GEOX_RUNTIME_ENV: ${GEOX_RUNTIME_ENV:-pilot}
       GEOX_TOKENS_FILE: /app/config/auth/security_acceptance_tokens.json
-      GEOX_SYSTEM_PROFILE: commercial_v1
+      GEOX_SYSTEM_PROFILE: controlled_pilot
       GEOX_INTERNAL_BASE_URL: http://server:3000
       GEOX_INTERNAL_TASK_ISSUER_TOKEN: ${GEOX_INTERNAL_TASK_ISSUER_TOKEN:-operator_token}
+      CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required}
+      GEOX_ALLOWED_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required}
+      APP_SECRET: ${APP_SECRET:?APP_SECRET is required}
+      GEOX_APP_SECRET: ${APP_SECRET:?APP_SECRET is required}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?PUBLIC_BASE_URL is required}
+      GEOX_PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?PUBLIC_BASE_URL is required}
+      MQTT_AUTH_REQUIRED: "1"
+      GEOX_MQTT_AUTH_REQUIRED: "1"
+      MQTT_USERNAME: ${MQTT_USERNAME:?MQTT_USERNAME is required}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:?MQTT_PASSWORD is required}
+      GEOX_MQTT_USERNAME: ${MQTT_USERNAME:?MQTT_USERNAME is required}
+      GEOX_MQTT_PASSWORD: ${MQTT_PASSWORD:?MQTT_PASSWORD is required}
+      GEOX_EXECUTION_DEFAULT_DISABLED: ${GEOX_EXECUTION_DEFAULT_DISABLED:-1}
+      GEOX_EXECUTION_ENABLE_EXPLICITLY: ${GEOX_EXECUTION_ENABLE_EXPLICITLY:-0}
+      GEOX_EXECUTION_ENABLE_REASON: ${GEOX_EXECUTION_ENABLE_REASON:-controlled-pilot-runtime-explicit}
+      GEOX_DEVTOOLS_ENABLED: ${GEOX_DEVTOOLS_ENABLED:-0}
       ALERT_WEBHOOK_URL: ""
       ALERT_WECHAT_WEBHOOK_URL: ""
       ALERT_DINGTALK_WEBHOOK_URL: ""
@@ -118,8 +143,6 @@ services:
       GEOX_EVIDENCE_S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
       GEOX_EVIDENCE_S3_FORCE_PATH_STYLE: "true"
       GEOX_EVIDENCE_S3_PRESIGN_TTL_SEC: "900"
-      GEOX_AO_ACT_TOKEN: ${GEOX_AO_ACT_TOKEN:?GEOX_AO_ACT_TOKEN is required}
-      GEOX_TOKEN: ${GEOX_AO_ACT_TOKEN:?GEOX_AO_ACT_TOKEN is required}
     ports:
       - "3001:3000"
     depends_on:
@@ -158,14 +181,17 @@ services:
       DB_DRIVER: postgres
       DATABASE_URL: postgres://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
       DB_STRICT: "1"
-      NODE_ENV: development
-      GEOX_SYSTEM_PROFILE: commercial_v1
+      NODE_ENV: production
+      GEOX_RUNTIME_ENV: ${GEOX_RUNTIME_ENV:-pilot}
+      GEOX_SYSTEM_PROFILE: controlled_pilot
       GEOX_BASE_URL: http://server:3000
       GEOX_AO_ACT_TOKEN: ${GEOX_AO_ACT_TOKEN:?GEOX_AO_ACT_TOKEN is required}
       GEOX_TENANT_ID: tenantA
       GEOX_PROJECT_ID: projectA
       GEOX_GROUP_ID: groupA
       GEOX_MQTT_URL: mqtt://mqtt:1883
+      GEOX_MQTT_USERNAME: ${MQTT_USERNAME:?MQTT_USERNAME is required}
+      GEOX_MQTT_PASSWORD: ${MQTT_PASSWORD:?MQTT_PASSWORD is required}
     depends_on:
       postgres:
         condition: service_healthy
@@ -188,8 +214,9 @@ services:
       DB_DRIVER: postgres
       DATABASE_URL: postgres://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
       DB_STRICT: "1"
-      NODE_ENV: development
-      GEOX_SYSTEM_PROFILE: commercial_v1
+      NODE_ENV: production
+      GEOX_RUNTIME_ENV: ${GEOX_RUNTIME_ENV:-pilot}
+      GEOX_SYSTEM_PROFILE: controlled_pilot
       GEOX_BASE_URL: http://server:3000
       GEOX_AO_ACT_TOKEN: ${GEOX_AO_ACT_TOKEN:?GEOX_AO_ACT_TOKEN is required}
       GEOX_TENANT_ID: tenantA
@@ -218,8 +245,9 @@ services:
       DB_DRIVER: postgres
       DATABASE_URL: postgres://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}
       DB_STRICT: "1"
-      NODE_ENV: development
-      GEOX_SYSTEM_PROFILE: commercial_v1
+      NODE_ENV: production
+      GEOX_RUNTIME_ENV: ${GEOX_RUNTIME_ENV:-pilot}
+      GEOX_SYSTEM_PROFILE: controlled_pilot
       GEOX_INTERNAL_BASE_URL: http://server:3000
       GEOX_BASE_URL: http://server:3000
       GEOX_AO_ACT_TOKEN: ${GEOX_EXECUTOR_TOKEN:?GEOX_EXECUTOR_TOKEN is required}
@@ -227,6 +255,8 @@ services:
       GEOX_PROJECT_ID: projectA
       GEOX_GROUP_ID: groupA
       GEOX_MQTT_URL: mqtt://mqtt:1883
+      GEOX_MQTT_USERNAME: ${MQTT_USERNAME:?MQTT_USERNAME is required}
+      GEOX_MQTT_PASSWORD: ${MQTT_PASSWORD:?MQTT_PASSWORD is required}
       POLL_INTERVAL_MS: ${POLL_INTERVAL_MS:-3000}
       ALERT_WEBHOOK_URL: ""
       ALERT_WECHAT_WEBHOOK_URL: ""
