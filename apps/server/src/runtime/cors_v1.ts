@@ -22,7 +22,7 @@ export function isOriginAllowedV1(origin: string | undefined, allowed: string[])
 }
 
 export function buildCorsOptionsV1(): FastifyCorsOptions {
-  const allowed = parseAllowedOriginsV1(process.env.GEOX_ALLOWED_ORIGINS);
+  const allowed = parseAllowedOriginsV1(process.env.CORS_ORIGINS ?? process.env.GEOX_ALLOWED_ORIGINS);
   const credentials = String(process.env.GEOX_CORS_ALLOW_CREDENTIALS ?? "1") === "1";
 
   return {
