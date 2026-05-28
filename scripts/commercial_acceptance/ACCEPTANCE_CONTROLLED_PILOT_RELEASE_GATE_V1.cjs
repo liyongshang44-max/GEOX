@@ -14,6 +14,7 @@ const REQUIRED_GATES = [
   { id: 'scenario_productization', command: 'pnpm run ci:scenario:productization' },
   { id: 'device_anomaly_controlled_pilot', command: 'node scripts/agronomy_acceptance/ACCEPTANCE_DEVICE_ANOMALY_CONTROLLED_PILOT_V1.cjs' },
   { id: 'customer_device_anomaly_report', command: 'node scripts/frontend_acceptance/ACCEPTANCE_CUSTOMER_DEVICE_ANOMALY_REPORT_V1.cjs' },
+  { id: 'runtime_openapi_sales_critical', command: 'node scripts/governance_acceptance/ACCEPTANCE_RUNTIME_OPENAPI_SALES_CRITICAL_V1.cjs' },
   { id: 'server_typecheck', command: 'pnpm --filter @geox/server typecheck' },
   { id: 'web_typecheck', command: 'pnpm --filter @geox/web typecheck' }
 ];
