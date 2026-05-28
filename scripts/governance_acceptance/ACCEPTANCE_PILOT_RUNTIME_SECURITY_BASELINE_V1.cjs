@@ -47,7 +47,47 @@ function extractMqttBlock(compose) {
   return compose.slice(start, next);
 }
 
-(function main() {
+async function checkRuntimeHealthz() {
+  const baseUrl = String(process.env.BASE_URL || process.env.API_BASE_URL || '').trim();
+  if (!baseUrl) return { checked: false, reason: 'BASE_URL_NOT_SET' };
+  let response;
+  try {
+    response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/admin/healthz`);
+  } catch (err) {
+    return { checked: false, reason: `HEALTHZ_FETCH_FAILED:${String(err?.message ?? err)}` };
+  }
+  const text = await response.text();
+  check(response.status === 200, `runtime healthz expected HTTP 200 got ${response.status}`);
+  let body;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    check(false, `runtime healthz response is not JSON: ${text.slice(0, 240)}`);
+    return { checked: true, ok: false };
+  }
+  const runtimeSecurity = body?.runtime_security;
+  check(runtimeSecurity && typeof runtimeSecurity === 'object', 'runtime healthz missing runtime_security object');
+  check(runtimeSecurity?.ok === true, `runtime healthz runtime_security.ok must be true, got ${JSON.stringify(runtimeSecurity)}`);
+  check(runtimeSecurity?.runtime_env === 'pilot' || runtimeSecurity?.runtime_env === 'production', `runtime healthz runtime_env must be pilot/production, got ${runtimeSecurity?.runtime_env}`);
+  const c = runtimeSecurity?.checks || {};
+  for (const key of [
+    'runtime_env_pilot_or_production',
+    'cors_origins_configured',
+    'app_secret_configured',
+    'public_base_url_configured',
+    'postgres_password_strong',
+    'minio_password_strong',
+    'mqtt_auth_enabled',
+    'single_token_fallback_disabled',
+    'execution_enable_reason_present',
+    'devtools_disabled',
+  ]) {
+    check(c[key] === true, `runtime healthz check ${key} must be true, got ${c[key]}`);
+  }
+  return { checked: true, ok: runtimeSecurity?.ok === true, runtime_env: runtimeSecurity?.runtime_env };
+}
+
+async function main() {
   const runtime = read(RUNTIME_SECURITY);
   const cors = read(CORS);
   const admin = read(ADMIN_MODULE);
@@ -108,6 +148,8 @@ function extractMqttBlock(compose) {
   mustNotInclude(ci, 'POSTGRES_PASSWORD=landos_pwd', 'CI must not use weak Postgres password');
   mustNotInclude(ci, 'MINIO_ROOT_PASSWORD=minioadmin', 'CI must not use weak MinIO password');
 
+  const runtimeHealthz = await checkRuntimeHealthz();
+
   if (errors.length) {
     console.error('[pilot-runtime-security-baseline-v1] FAIL');
     for (const error of errors) console.error(`- ${error}`);
@@ -121,6 +163,12 @@ function extractMqttBlock(compose) {
       compose_pilot_security: true,
       ci_pilot_security: true,
       env_examples: true,
+      runtime_healthz: runtimeHealthz,
     }
   }, null, 2));
-})();
+}
+
+main().catch((err) => {
+  console.error('[pilot-runtime-security-baseline-v1] FAIL', err?.stack || err);
+  process.exit(1);
+});
