@@ -12,9 +12,9 @@ import {
   PestDiseaseInspectionServiceError,
 } from "../../services/inspection/pest_disease_inspection_service_v1.js";
 
-const INSPECTION_WRITE_SCOPES: AoActScopeV0[] = ["fields.write", "security.admin"];
+const INSPECTION_WRITE_SCOPES: AoActScopeV0[] = ["inspection.write", "security.admin"];
 const INSPECTION_ACCEPTANCE_SCOPES: AoActScopeV0[] = ["acceptance.evaluate", "security.admin"];
-const INSPECTION_READ_SCOPES: AoActScopeV0[] = ["fields.read", "ao_act.index.read", "security.admin"];
+const INSPECTION_READ_SCOPES: AoActScopeV0[] = ["inspection.read", "security.admin"];
 
 function requireAnyScope(req: FastifyRequest, reply: FastifyReply, scopes: AoActScopeV0[]): AoActAuthContextV0 | null {
   return requireAoActAnyScopeV0(req, reply, scopes);

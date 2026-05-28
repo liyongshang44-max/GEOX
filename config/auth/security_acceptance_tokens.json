@@ -44,6 +44,8 @@
         "ao_act.index.read",
         "evidence_export.read",
         "evidence_export.write",
+        "inspection.read",
+        "inspection.write",
         "telemetry.write",
         "telemetry.read"
       ]
@@ -68,7 +70,9 @@
         "prescription.submit_approval",
         "approval.request",
         "field_memory.read",
-        "roi_ledger.read"
+        "roi_ledger.read",
+        "inspection.read",
+        "inspection.write"
       ]
     },
     {
@@ -86,7 +90,8 @@
         "approval.read",
         "prescription.read",
         "recommendation.read",
-        "field.zone.read"
+        "field.zone.read",
+        "inspection.read"
       ]
     },
     {
@@ -106,7 +111,9 @@
         "action.read",
         "acceptance.evaluate",
         "field.zone.read",
-        "security.audit.read"
+        "security.audit.read",
+        "inspection.read",
+        "inspection.write"
       ]
     },
     {
@@ -164,8 +171,33 @@
         "action.read",
         "field_memory.read",
         "roi_ledger.read",
-        "field.zone.read"
+        "field.zone.read",
+        "inspection.read"
       ]
+    },
+    {
+      "token": "set-via-env-or-external-secret-file-pdi-readonly",
+      "token_id": "tok_pdi_readonly",
+      "actor_id": "tok_pdi_readonly_actor",
+      "tenant_id": "tenantA",
+      "project_id": "projectA",
+      "group_id": "groupA",
+      "role": "auditor",
+      "revoked": false,
+      "allowed_field_ids": [],
+      "scopes": ["inspection.read"]
+    },
+    {
+      "token": "set-via-env-or-external-secret-file-pdi-writeonly",
+      "token_id": "tok_pdi_writeonly",
+      "actor_id": "tok_pdi_writeonly_actor",
+      "tenant_id": "tenantA",
+      "project_id": "projectA",
+      "group_id": "groupA",
+      "role": "operator",
+      "revoked": false,
+      "allowed_field_ids": [],
+      "scopes": ["inspection.write"]
     },
     {
       "token": "revoked_token",
@@ -232,7 +264,9 @@
         "ao_act.receipt.write",
         "ao_act.index.read",
         "evidence_export.read",
-        "evidence_export.write"
+        "evidence_export.write",
+        "inspection.read",
+        "inspection.write"
       ]
     },
     {
@@ -255,7 +289,8 @@
         "roi_ledger.read",
         "security.audit.read",
         "skill.read",
-        "ao_act.index.read"
+        "ao_act.index.read",
+        "inspection.read"
       ]
     },
     {
@@ -347,7 +382,8 @@
         "action.read",
         "field_memory.read",
         "roi_ledger.read",
-        "field.zone.read"
+        "field.zone.read",
+        "inspection.read"
       ]
     }
   ]
