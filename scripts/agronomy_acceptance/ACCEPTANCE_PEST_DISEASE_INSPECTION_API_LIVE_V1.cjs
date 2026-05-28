@@ -8,8 +8,8 @@ const q = (v) => encodeURIComponent(String(v ?? ''));
 const base = env('BASE_URL', process.env.API_BASE_URL || 'http://127.0.0.1:3001');
 const adminToken = env('ADMIN_TOKEN', env('AO_ACT_TOKEN', env('TOKEN', 'admin_token')));
 const invalidToken = env('INVALID_TOKEN', 'definitely_invalid_token');
-const readOnlyToken = env('READ_ONLY_TOKEN', env('CLIENT_TOKEN', 'set-via-env-or-external-secret-file-client'));
-const writeOnlyToken = env('WRITE_ONLY_TOKEN', '');
+const readOnlyToken = env('PDI_READ_ONLY_TOKEN', env('READ_ONLY_TOKEN', 'set-via-env-or-external-secret-file-pdi-readonly'));
+const writeOnlyToken = env('PDI_WRITE_ONLY_TOKEN', env('WRITE_ONLY_TOKEN', 'set-via-env-or-external-secret-file-pdi-writeonly'));
 const nonAcceptanceToken = env('NON_ACCEPTANCE_TOKEN', readOnlyToken);
 const otherTenantToken = env('OTHER_TENANT_TOKEN', '');
 const scope = {
@@ -147,19 +147,20 @@ async function authBoundary() {
   expectDenied(await post(writePath, invalidToken, body), 'invalid token denied');
   expectDenied(await post(writePath, readOnlyToken, body), 'read-only token denied for write endpoint');
 
+  const writeRunId = id('auth_write_only');
+  const writeOnlyCreate = await createRequest(writeRunId, {}, writeOnlyToken);
+  assert.equal(writeOnlyCreate.record?.type, 'pest_disease_inspection_request_v1', 'write-only token must create inspection request');
+  expectDenied(await get(`/api/v1/inspection/pest-disease/${q(`inspection_${writeRunId}`)}`, writeOnlyToken), 'write-only token denied for read endpoint');
+
   const runId = id('auth_accept');
   await createRequest(runId);
   await createObservation(runId);
   await createAssessment(runId, { skill_signal_refs: [], confidence: 'HIGH', review_required: false, customer_visible_eligible: true });
+  const readOnlyDetail = await getInspection(runId, readOnlyToken);
+  assert.equal(readOnlyDetail.inspection_id, `inspection_${runId}`, 'read-only token must read inspection detail');
   expectDenied(await post('/api/v1/inspection/pest-disease/acceptance/evaluate', nonAcceptanceToken, { assessment_id: `assessment_${runId}` }), 'non-acceptance token denied for acceptance evaluate');
 
-  let readWriteScopeDistinctionSupported = false;
-  if (writeOnlyToken) {
-    const readResp = await get(`/api/v1/inspection/pest-disease/${q(`inspection_${runId}`)}`, writeOnlyToken);
-    expectDenied(readResp, 'write-only token denied for read endpoint');
-    readWriteScopeDistinctionSupported = true;
-  }
-  return { ok: true, read_write_scope_distinction_supported: readWriteScopeDistinctionSupported };
+  return { ok: true, read_write_scope_distinction_supported: true };
 }
 
 async function tenantBoundary() {
