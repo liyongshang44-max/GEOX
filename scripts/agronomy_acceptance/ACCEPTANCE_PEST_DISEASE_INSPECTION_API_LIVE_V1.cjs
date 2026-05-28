@@ -8,8 +8,8 @@ const q = (v) => encodeURIComponent(String(v ?? ''));
 const base = env('BASE_URL', process.env.API_BASE_URL || 'http://127.0.0.1:3001');
 const adminToken = env('ADMIN_TOKEN', env('AO_ACT_TOKEN', env('TOKEN', 'admin_token')));
 const invalidToken = env('INVALID_TOKEN', 'definitely_invalid_token');
-const readOnlyToken = env('PDI_READ_ONLY_TOKEN', env('READ_ONLY_TOKEN', 'set-via-env-or-external-secret-file-pdi-readonly'));
-const writeOnlyToken = env('PDI_WRITE_ONLY_TOKEN', env('WRITE_ONLY_TOKEN', 'set-via-env-or-external-secret-file-pdi-writeonly'));
+const readOnlyToken = env('PDI_READ_ONLY_TOKEN', 'set-via-env-or-external-secret-file-pdi-readonly');
+const writeOnlyToken = env('PDI_WRITE_ONLY_TOKEN', 'set-via-env-or-external-secret-file-pdi-writeonly');
 const nonAcceptanceToken = env('NON_ACCEPTANCE_TOKEN', readOnlyToken);
 const otherTenantToken = env('OTHER_TENANT_TOKEN', '');
 const scope = {
