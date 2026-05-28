@@ -321,13 +321,47 @@ This acceptance is inspection evidence acceptance. It is not a claim that a pest
 }
 ```
 
-## 3. AO-SENSE bridge rule
+## 3. API read / write scope boundary
+
+PDI API authorization uses dedicated Inspection Domain scopes. Generic field or AO-ACT read scopes are not sufficient substitutes for PDI read access.
+
+```text
+inspection.read
+inspection.write
+acceptance.evaluate
+security.admin
+```
+
+Rules:
+
+- `inspection.read` grants read-only access to `GET /api/v1/inspection/pest-disease/:inspection_id`.
+- `inspection.read` must not create or mutate PDI request, observation, signal, assessment, review, or acceptance facts.
+- `inspection.write` grants write access to PDI request, observation, signal, assessment, and review endpoints.
+- `inspection.write` must not grant read access to `GET /api/v1/inspection/pest-disease/:inspection_id`.
+- `acceptance.evaluate` grants inspection acceptance evaluation only at `POST /api/v1/inspection/pest-disease/acceptance/evaluate`.
+- `inspection.read` and `inspection.write` must not grant acceptance evaluation.
+- `security.admin` may satisfy read/write/evaluate checks as the administrative break-glass scope.
+- `fields.read`, `fields.write`, and `ao_act.index.read` are not PDI read/write authorization scopes.
+
+The live API gate must prove this boundary and report:
+
+```json
+{ "read_write_scope_distinction_supported": true }
+```
+
+The proof must include:
+
+- a read-only token can read PDI detail but is denied on PDI write endpoints;
+- a write-only token can create a PDI inspection request but is denied on PDI detail read;
+- a non-acceptance token is denied on inspection acceptance evaluation.
+
+## 4. AO-SENSE bridge rule
 
 `/api/v1/sense/task` may be used as the generic task shell with `sense_kind = "pest_disease_inspection"` or equivalent future mapping. The inspection-specific fact writer must emit `pest_disease_inspection_request_v1` and `pest_disease_observation_v1`.
 
 `/api/v1/sense/receipt` must not be expanded with pest/disease-specific fields. It may reference `pest_disease_observation_v1` via `evidence_refs: [{ kind: "fact_id", ref_id: "..." }]`.
 
-## 4. Skill boundary note
+## 5. Skill boundary note
 
 Pest/Disease AGRONOMY or SENSING Skill output may produce `pest_disease_signal_v1` only; it is not a formal assessment, review, acceptance, recommendation, prescription, approval, AO-ACT task, ROI, or Field Memory.
 
@@ -342,7 +376,7 @@ AO-SENSE may request and receipt inspection tasks, but pest/disease media, GPS, 
 - AO-SENSE may request and receipt inspection tasks
 - referenced from AO-SENSE receipt by fact_id
 
-## 5. Hard rules
+## 6. Hard rules
 
 - pest_disease_inspection_acceptance PASS = 巡检证据链完整，可支撑 assessment
 - pest_disease_inspection_acceptance PASS ≠ 病虫害一定存在
@@ -354,6 +388,6 @@ AO-SENSE may request and receipt inspection tasks, but pest/disease media, GPS, 
 - pest_disease_signal_v1 is a technical signal, not a formal assessment
 - pest_disease_inspection_assessment_v1 ≠ spray recommendation / spot spray prescription / AO-ACT spray task
 
-## 6. Non-goals for P2-C contract
+## 7. Non-goals for P2-C contract
 
 This contract does not define a spray recommendation, spot spray prescription, pesticide/material plan, AO-ACT spray task, ROI ledger entry, or Field Memory write. Those belong to later stages after the inspection evidence chain is accepted and promoted through the main chain.
