@@ -69,16 +69,30 @@ jobs:
           ACCEPTANCE_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.role==='admin' && x.scopes.includes('security.admin') && !x.revoked); if(!t) { console.error('missing active admin security.admin token'); process.exit(1); } console.log(t.token)")"
           EXECUTOR_TOKEN="$(node -e "const f=require('./config/auth/security_acceptance_tokens.json'); const t=f.tokens.find(x => x.token==='tenant_a_admin_token' && x.scopes.includes('ao_act.task.write') && x.scopes.includes('ao_act.receipt.write') && !x.revoked); if(!t) { console.error('missing active executor-compatible acceptance token'); process.exit(1); } console.log(t.token)")"
           cat > .env.ci <<EOF
+          GEOX_RUNTIME_ENV=pilot
           POSTGRES_USER=landos
-          POSTGRES_PASSWORD=landos_pwd
+          POSTGRES_PASSWORD=ci-pilot-postgres-strong-2026
           POSTGRES_DB=landos
           GEOX_AO_ACT_TOKEN=$ACCEPTANCE_TOKEN
-          GEOX_TOKEN=$ACCEPTANCE_TOKEN
           GEOX_EXECUTOR_TOKEN=$EXECUTOR_TOKEN
           GEOX_EVIDENCE_S3_BUCKET=evidence-exports-v1
           GEOX_EVIDENCE_S3_PUBLIC_ENDPOINT=http://127.0.0.1:9000
-          MINIO_ROOT_USER=minioadmin
-          MINIO_ROOT_PASSWORD=minioadmin
+          MINIO_ROOT_USER=geoxminio
+          MINIO_ROOT_PASSWORD=ci-pilot-minio-strong-2026
+          MQTT_AUTH_REQUIRED=1
+          GEOX_MQTT_AUTH_REQUIRED=1
+          MQTT_USERNAME=geoxmqtt
+          MQTT_PASSWORD=ci-pilot-mqtt-strong-2026
+          CORS_ORIGINS=https://pilot-ci.geox.invalid
+          GEOX_ALLOWED_ORIGINS=https://pilot-ci.geox.invalid
+          APP_SECRET=ci-pilot-app-secret-strong-2026
+          GEOX_APP_SECRET=ci-pilot-app-secret-strong-2026
+          PUBLIC_BASE_URL=https://pilot-ci.geox.invalid
+          GEOX_PUBLIC_BASE_URL=https://pilot-ci.geox.invalid
+          GEOX_EXECUTION_DEFAULT_DISABLED=1
+          GEOX_EXECUTION_ENABLE_EXPLICITLY=0
+          GEOX_EXECUTION_ENABLE_REASON=ci-controlled-pilot-runtime-security-baseline
+          GEOX_DEVTOOLS_ENABLED=0
           EOF
 
       - name: Validate commercial compose rendering
@@ -110,7 +124,7 @@ jobs:
             docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs --tail=120 mqtt || true
             exit 1
           fi
-          docker run --rm --network host --entrypoint /bin/sh minio/mc:latest -c 'set -eu; mc alias set local http://127.0.0.1:9000 minioadmin minioadmin; mc ls local; mc stat local/evidence-exports-v1'
+          docker run --rm --network host --entrypoint /bin/sh minio/mc:latest -c 'set -eu; mc alias set local http://127.0.0.1:9000 geoxminio ci-pilot-minio-strong-2026; mc ls local; mc stat local/evidence-exports-v1'
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps
 
       - name: Run Controlled Pilot strict release gate
@@ -155,10 +169,10 @@ jobs:
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs --no-color --tail=2000 executor > acceptance-output/EXECUTOR_RUNTIME.log || true
           test -s acceptance-output/SERVER_RUNTIME.log
           set +e
-          docker run --rm --network host --entrypoint /bin/sh minio/mc:latest -c 'set -eu; mc alias set local http://127.0.0.1:9000 minioadmin minioadmin; mc ls local; mc stat local/evidence-exports-v1' > acceptance-output/MINIO_BUCKET_VERIFY.log 2>&1
+          docker run --rm --network host --entrypoint /bin/sh minio/mc:latest -c 'set -eu; mc alias set local http://127.0.0.1:9000 geoxminio ci-pilot-minio-strong-2026; mc ls local; mc stat local/evidence-exports-v1' > acceptance-output/MINIO_BUCKET_VERIFY.log 2>&1
           MINIO_BUCKET_VERIFY_RC=$?
           set -e
-          grep -E "\\[evidence-export\\]\\[s3\\] upload target bucket=evidence-exports-v1 endpoint=.* job_id=" acceptance-output/SERVER_RUNTIME.log || true
+          grep -E "\[evidence-export\]\[s3\] upload target bucket=evidence-exports-v1 endpoint=.* job_id=" acceptance-output/SERVER_RUNTIME.log || true
           grep -E "verifying bucket exists: evidence-exports-v1|listing buckets" acceptance-output/MINIO_INIT.log || true
           grep -E "evidence-exports-v1" acceptance-output/MINIO_BUCKET_VERIFY.log || true
           if [ "$MINIO_BUCKET_VERIFY_RC" -ne 0 ]; then
