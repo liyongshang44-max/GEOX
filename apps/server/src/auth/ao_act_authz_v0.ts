@@ -20,6 +20,8 @@ export type AoActScopeV0 =
   | "devices.status.read"
   | "fields.read"
   | "fields.write"
+  | "inspection.read"
+  | "inspection.write"
   | "alerts.read"
   | "alerts.write"
   | "evidence_export.read"
@@ -124,6 +126,8 @@ function defaultScopesFromEnv(): AoActScopeV0[] {
     "evidence_export.write",
     "fields.read",
     "fields.write",
+    "inspection.read",
+    "inspection.write",
     "telemetry.read",
     "telemetry.write",
   ];
