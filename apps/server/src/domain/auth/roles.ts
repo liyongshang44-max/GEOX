@@ -1,19 +1,19 @@
 import type { AoActScopeV0 } from "../../auth/ao_act_authz_v0.js";
 
-export type AuthRole = "admin" | "operator" | "viewer" | "client" | "agronomist" | "approver" | "executor" | "auditor" | "support";
+export type AuthRole = "admin" | "operator" | "viewer" | "client" | "executor" | "agronomist" | "approver" | "auditor" | "support";
 export type AuthResource = "reports" | "operations" | "dashboard" | "fields" | "portfolio" | "summary" | "tags";
 export type AuthAction = "read" | "execute" | "write";
 
 export const ROLE_SCOPE_MATRIX_V1: Record<AuthRole, (AoActScopeV0 | "*")[]> = {
   admin: ["*"],
-  agronomist: ["recommendation.write","recommendation.read","prescription.write","prescription.read","prescription.submit_approval","field.zone.read","field_memory.read","roi_ledger.read","skill.read","skill.trace.write","telemetry.read"],
-  approver: ["approval.read","approval.decide","prescription.read","recommendation.read","field.zone.read"],
+  agronomist: ["recommendation.write","recommendation.read","prescription.write","prescription.read","prescription.submit_approval","field.zone.read","field_memory.read","roi_ledger.read","skill.read","skill.trace.write","telemetry.read","inspection.read","inspection.write"],
+  approver: ["approval.read","approval.decide","prescription.read","recommendation.read","field.zone.read","inspection.read"],
   executor: ["action.read","action.receipt.submit","ao_act.receipt.write","field.zone.read","skill.run.write","telemetry.write"],
-  operator: ["action.read","action.task.create","action.task.dispatch","action.receipt.submit","judge.execution.write","acceptance.evaluate","field.zone.read","skill.read","skill.run.write","telemetry.read","telemetry.write"],
-  auditor: ["recommendation.read","prescription.read","approval.read","action.read","judge.read","acceptance.read","field_memory.read","roi_ledger.read","security.audit.read","skill.read","telemetry.read"],
+  operator: ["action.read","action.task.create","action.task.dispatch","action.receipt.submit","judge.execution.write","acceptance.evaluate","field.zone.read","skill.read","skill.run.write","telemetry.read","telemetry.write","inspection.read","inspection.write"],
+  auditor: ["recommendation.read","prescription.read","approval.read","action.read","judge.read","acceptance.read","field_memory.read","roi_ledger.read","security.audit.read","skill.read","telemetry.read","inspection.read"],
   viewer: ["recommendation.read","prescription.read","action.read","field_memory.read","roi_ledger.read","field.zone.read","telemetry.read"],
   client: ["recommendation.read","prescription.read","action.read","field_memory.read","roi_ledger.read","field.zone.read","skill.read"],
-  support: ["recommendation.read","prescription.read","approval.read","action.read","judge.read","acceptance.read","field_memory.read","roi_ledger.read","field.zone.read","skill.read","skill.binding.write","telemetry.read"],
+  support: ["recommendation.read","prescription.read","approval.read","action.read","judge.read","acceptance.read","field_memory.read","roi_ledger.read","field.zone.read","skill.read","skill.binding.write","telemetry.read","inspection.read"],
 };
 
 export function isScopeAllowedForRoleV1(role: AuthRole, scope: AoActScopeV0): boolean {
