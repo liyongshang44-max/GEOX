@@ -1,4 +1,14 @@
+const crypto = require("node:crypto");
+const os = require("node:os");
 const { runDispatchOnce } = require("./run_dispatch_once.js");
+const {
+  createHeartbeatPool,
+  recordWorkerRuntimeError,
+  recordWorkerRuntimeHeartbeat,
+  recordWorkerRuntimeStarted,
+  resolveWorkerId,
+  truncateWorkerError,
+} = require("./lib/worker_runtime_heartbeat.js");
 
 const DEFAULT_POLL_INTERVAL_MS = 3000;
 const MIN_POLL_INTERVAL_MS = 2000;
@@ -12,6 +22,13 @@ type ExecutorRuntimeContext = {
   project_id: string;
   group_id: string;
   executor_id: string;
+};
+
+type ExecutorWorkerHeartbeatContext = {
+  worker_id: string;
+  runtime_instance_id: string;
+  poll_interval_ms: number;
+  heartbeat_interval_ms: number;
 };
 
 function parsePollIntervalMs(argv: string[]): number {
@@ -66,6 +83,56 @@ function parseExecutorContext(cliArgs: string[]): ExecutorRuntimeContext {
   return { baseUrl, token, tenant_id, project_id, group_id, executor_id };
 }
 
+function buildExecutorHeartbeatMetadata(ctx: ExecutorWorkerHeartbeatContext) {
+  return {
+    poll_interval_ms: ctx.poll_interval_ms,
+    interval_ms: ctx.heartbeat_interval_ms,
+    runtime_env: process.env.GEOX_RUNTIME_ENV ?? null,
+    system_profile: process.env.GEOX_SYSTEM_PROFILE ?? null,
+    container_hint: process.env.HOSTNAME ?? os.hostname(),
+    build_mode: "node-dist",
+  };
+}
+
+async function safeRecordExecutorHeartbeat(pool: any, ctx: ExecutorWorkerHeartbeatContext, status: "STARTED" | "RUNNING" | "OK" | "ERROR", lastTickStatus: "IDLE" | "NO_TASK" | "CLAIMED_TASK" | "OK" | "ERROR", error?: unknown): Promise<void> {
+  try {
+    if (status === "STARTED") {
+      await recordWorkerRuntimeStarted(pool, {
+        worker_type: "executor",
+        worker_id: ctx.worker_id,
+        runtime_instance_id: ctx.runtime_instance_id,
+        status,
+        last_tick_status: lastTickStatus,
+        last_error: error ? truncateWorkerError(error) : null,
+        metadata_json: buildExecutorHeartbeatMetadata(ctx),
+      });
+      return;
+    }
+    if (status === "ERROR") {
+      await recordWorkerRuntimeError(pool, {
+        worker_type: "executor",
+        worker_id: ctx.worker_id,
+        runtime_instance_id: ctx.runtime_instance_id,
+        last_tick_status: "ERROR",
+        metadata_json: buildExecutorHeartbeatMetadata(ctx),
+        error,
+      });
+      return;
+    }
+    await recordWorkerRuntimeHeartbeat(pool, {
+      worker_type: "executor",
+      worker_id: ctx.worker_id,
+      runtime_instance_id: ctx.runtime_instance_id,
+      status,
+      last_tick_status: lastTickStatus,
+      last_error: null,
+      metadata_json: buildExecutorHeartbeatMetadata(ctx),
+    });
+  } catch (heartbeatError: any) {
+    console.error(`WORKER_HEARTBEAT_WRITE_FAILED worker_type=executor worker_id=${ctx.worker_id} error=${String(heartbeatError?.message ?? heartbeatError)}`);
+  }
+}
+
 async function heartbeatOnce(ctx: ExecutorRuntimeContext): Promise<void> {
   if (!ctx.token) return;
   const url = `${ctx.baseUrl}/api/v1/devices/${encodeURIComponent(ctx.executor_id)}/heartbeat`;
@@ -104,8 +171,16 @@ async function runRuntimeLoop(cliArgs?: string[]): Promise<void> {
   const heartbeatIntervalMs = parseHeartbeatIntervalMs(argv);
   const forwardArgs = stripPollArg(argv);
   const heartbeatCtx = parseExecutorContext(argv);
+  const workerHeartbeatPool = createHeartbeatPool();
+  const workerHeartbeatCtx: ExecutorWorkerHeartbeatContext = {
+    worker_id: resolveWorkerId("geox-v1-executor"),
+    runtime_instance_id: crypto.randomUUID(),
+    poll_interval_ms: pollIntervalMs,
+    heartbeat_interval_ms: heartbeatIntervalMs,
+  };
 
   console.log(`INFO: executor runtime loop started poll_interval_ms=${pollIntervalMs} heartbeat_interval_ms=${heartbeatIntervalMs}`);
+  await safeRecordExecutorHeartbeat(workerHeartbeatPool, workerHeartbeatCtx, "STARTED", "IDLE");
 
   let lastHeartbeatAtMs = 0;
   while (true) {
@@ -116,8 +191,17 @@ async function runRuntimeLoop(cliArgs?: string[]): Promise<void> {
     }
 
     try {
-      await runDispatchOnce(forwardArgs);
+      await safeRecordExecutorHeartbeat(workerHeartbeatPool, workerHeartbeatCtx, "RUNNING", "IDLE");
+      const result = await runDispatchOnce(forwardArgs);
+      const lastTickStatus = String(result?.last_tick_status ?? "OK").toUpperCase();
+      await safeRecordExecutorHeartbeat(
+        workerHeartbeatPool,
+        workerHeartbeatCtx,
+        "OK",
+        lastTickStatus === "NO_TASK" ? "NO_TASK" : (lastTickStatus === "CLAIMED_TASK" ? "CLAIMED_TASK" : "OK"),
+      );
     } catch (error: any) {
+      await safeRecordExecutorHeartbeat(workerHeartbeatPool, workerHeartbeatCtx, "ERROR", "ERROR", error);
       console.error(`ERROR: runtime loop iteration failed: ${error?.stack ?? error?.message ?? String(error)}`);
     }
 
