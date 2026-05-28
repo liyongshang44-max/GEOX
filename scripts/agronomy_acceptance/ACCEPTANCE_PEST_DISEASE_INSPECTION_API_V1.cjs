@@ -49,13 +49,15 @@ function assertAll(text, required, label) {
 
   assertAll(route, [
     'requireAoActAnyScopeV0',
-    'fields.write',
+    'inspection.write',
+    'inspection.read',
     'security.admin',
     'acceptance.evaluate',
-    'fields.read',
-    'ao_act.index.read',
     'registerInspectionV1Routes',
   ], 'inspection route auth and registration');
+  for (const legacyScope of ['fields.write', 'fields.read', 'ao_act.index.read']) {
+    assert.equal(route.includes(legacyScope), false, `PDI route must not use legacy field/AO-ACT scope as inspection auth: ${legacyScope}`);
+  }
 
   const serviceFunctions = [
     'createPestDiseaseInspectionRequestV1',
@@ -128,5 +130,6 @@ function assertAll(text, required, label) {
     endpoints: endpointStrings.length,
     serviceFunctions: serviceFunctions.length,
     factTypes: factTypes.length,
+    readWriteScopes: ['inspection.read', 'inspection.write'],
   });
 })();
