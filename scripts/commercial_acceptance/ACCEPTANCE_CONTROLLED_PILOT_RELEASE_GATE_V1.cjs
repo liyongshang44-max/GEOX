@@ -24,7 +24,8 @@ const known_limits = [
   'FORMAL_FERTILIZATION = conditional_pending_ci_proof',
   'required_for_controlled_pilot = false',
   'ci:controlled-pilot expects the acceptance runtime to be running; it does not start Docker services or downgrade missing runtime to PASS.',
-  'pilot_runtime_security_baseline is a pilot minimum runtime-safety gate, not a complete commercial IAM program.'
+  'pilot_runtime_security_baseline is a pilot minimum runtime-safety gate, not a complete commercial IAM program.',
+  'runtime worker liveness source of truth is worker_runtime_heartbeat_v1; Docker logs are diagnostic only.'
 ];
 const not_for_sale_claims = [
   'FORMAL_FERTILIZATION is NOT part of mandatory controlled pilot sales gate.',
@@ -129,6 +130,19 @@ function jsonBlock(value) {
   return ['```json', JSON.stringify(value, null, 2), '```'].join('\n');
 }
 
+function buildRuntimeWorkerLiveness(results) {
+  const runtimeGate = results.find((gate) => gate.id === 'runtime_workers');
+  const fresh = runtimeGate?.ok === true;
+  return {
+    source: 'worker_runtime_heartbeat_v1',
+    logs_role: 'diagnostic_only',
+    jobs_heartbeat_fresh: fresh,
+    executor_heartbeat_fresh: fresh,
+    gate_id: 'runtime_workers',
+    gate_status: fresh ? 'PASS' : 'FAIL'
+  };
+}
+
 function writeReport(summary, passed_gates, failed_gates) {
   const report = [
     '# Controlled Pilot Readiness Report',
@@ -143,6 +157,9 @@ function writeReport(summary, passed_gates, failed_gates) {
     '',
     '## Failed gate output tails',
     failed_gates.length === 0 ? '- none' : failed_gates.map((gate) => `### ${gate.id}\n\n${jsonBlock({ command: gate.command, exit_code: gate.exit_code, output_tail: gate.output_tail })}`).join('\n\n'),
+    '',
+    '## Runtime worker liveness',
+    jsonBlock(summary.runtime_worker_liveness),
     '',
     '## Pilot eligible scenarios',
     toList(pilot_eligible_scenarios),
@@ -179,6 +196,7 @@ console.log('[controlled-pilot-release-gate] strict mode environment', {
 const results = REQUIRED_GATES.map((gate) => ({ ...gate, ...runGate(gate, gateEnv) }));
 const passed_gates = results.filter((gate) => gate.ok);
 const failed_gates = results.filter((gate) => !gate.ok);
+const runtime_worker_liveness = buildRuntimeWorkerLiveness(results);
 
 const summary = {
   status: failed_gates.length === 0 ? 'PASS' : 'FAIL',
@@ -187,6 +205,7 @@ const summary = {
   failed_gate_count: failed_gates.length,
   passed_gate_ids: passed_gates.map((gate) => gate.id),
   failed_gate_ids: failed_gates.map((gate) => gate.id),
+  runtime_worker_liveness,
   pilot_eligible_scenarios,
   experimental_scenarios
 };
