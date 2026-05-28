@@ -114,6 +114,7 @@ async function main() {
   mustInclude(admin, 'runtime_security: getRuntimeSecurityStatusV1()', 'healthz must expose runtime security status');
 
   mustInclude(serverBlock, 'GEOX_RUNTIME_ENV: ${GEOX_RUNTIME_ENV:-pilot}', 'server compose must default to pilot runtime env');
+  mustInclude(serverBlock, 'POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}', 'server compose must expose Postgres password to runtime security check');
   mustInclude(serverBlock, 'CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required}', 'server compose must require CORS origins');
   mustInclude(serverBlock, 'APP_SECRET: ${APP_SECRET:?APP_SECRET is required}', 'server compose must require APP secret');
   mustInclude(serverBlock, 'PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?PUBLIC_BASE_URL is required}', 'server compose must require public base URL');
