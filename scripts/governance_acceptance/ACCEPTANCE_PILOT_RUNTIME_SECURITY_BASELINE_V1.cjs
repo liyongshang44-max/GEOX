@@ -67,7 +67,10 @@ async function checkRuntimeHealthz() {
   }
   const runtimeSecurity = body?.runtime_security;
   check(runtimeSecurity && typeof runtimeSecurity === 'object', 'runtime healthz missing runtime_security object');
+  check(body?.schema_ok === true, `runtime healthz schema_ok must be true, got ${JSON.stringify(body?.schema_ok)}`);
+  check(body?.runtime_security_required === true, `runtime healthz runtime_security_required must be true, got ${JSON.stringify(body?.runtime_security_required)}`);
   check(runtimeSecurity?.ok === true, `runtime healthz runtime_security.ok must be true, got ${JSON.stringify(runtimeSecurity)}`);
+  check(body?.ok === true, `runtime healthz top-level ok must be true, got ${JSON.stringify(body?.ok)}`);
   check(runtimeSecurity?.runtime_env === 'pilot' || runtimeSecurity?.runtime_env === 'production', `runtime healthz runtime_env must be pilot/production, got ${runtimeSecurity?.runtime_env}`);
   const c = runtimeSecurity?.checks || {};
   for (const key of [
@@ -111,7 +114,14 @@ async function main() {
   mustInclude(runtime, 'APP_SECRET', 'runtime security must accept APP_SECRET');
 
   mustInclude(cors, 'process.env.CORS_ORIGINS ?? process.env.GEOX_ALLOWED_ORIGINS', 'CORS runtime must use CORS_ORIGINS alias');
-  mustInclude(admin, 'runtime_security: getRuntimeSecurityStatusV1()', 'healthz must expose runtime security status');
+  mustInclude(runtime, 'strong-random', 'runtime security must reject strong-random placeholders');
+  mustInclude(runtime, 'placeholder', 'runtime security must reject placeholder secrets');
+  mustInclude(runtime, 'secret-manager', 'runtime security must reject secret-manager placeholders');
+  mustInclude(runtime, '^<[^>]+>$', 'runtime security must reject angle-bracket placeholders');
+
+  mustInclude(admin, 'schema_ok', 'healthz must expose schema_ok');
+  mustInclude(admin, 'runtime_security_required', 'healthz must expose runtime_security_required');
+  mustInclude(admin, 'runtimeSecurity.ok', 'healthz top-level ok must include runtime security');
 
   mustInclude(serverBlock, 'GEOX_RUNTIME_ENV: ${GEOX_RUNTIME_ENV:-pilot}', 'server compose must default to pilot runtime env');
   mustInclude(serverBlock, 'POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}', 'server compose must expose Postgres password to runtime security check');
