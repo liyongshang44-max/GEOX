@@ -218,8 +218,6 @@ services:
       NODE_ENV: production
       GEOX_RUNTIME_ENV: ${GEOX_RUNTIME_ENV:-pilot}
       GEOX_SYSTEM_PROFILE: controlled_pilot
-      GEOX_WORKER_ID: geox-v1-jobs
-      GEOX_WORKER_TYPE: jobs
       GEOX_BASE_URL: http://server:3000
       GEOX_AO_ACT_TOKEN: ${GEOX_AO_ACT_TOKEN:?GEOX_AO_ACT_TOKEN is required}
       GEOX_TENANT_ID: tenantA
@@ -251,8 +249,6 @@ services:
       NODE_ENV: production
       GEOX_RUNTIME_ENV: ${GEOX_RUNTIME_ENV:-pilot}
       GEOX_SYSTEM_PROFILE: controlled_pilot
-      GEOX_WORKER_ID: geox-v1-executor
-      GEOX_WORKER_TYPE: executor
       GEOX_INTERNAL_BASE_URL: http://server:3000
       GEOX_BASE_URL: http://server:3000
       GEOX_AO_ACT_TOKEN: ${GEOX_EXECUTOR_TOKEN:?GEOX_EXECUTOR_TOKEN is required}

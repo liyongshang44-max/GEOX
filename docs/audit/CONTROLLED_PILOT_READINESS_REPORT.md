@@ -15,17 +15,6 @@ Status: FAIL
 - scenario_formal_e2e: pnpm run ci:scenario:formal-e2e (exit=1)
 - scenario_productization: pnpm run ci:scenario:productization (exit=1)
 
-## Runtime worker liveness
-```json
-{
-  "source": "worker_runtime_heartbeat_v1",
-  "logs_role": "diagnostic_only",
-  "jobs_heartbeat_fresh": true,
-  "executor_heartbeat_fresh": true,
-  "gate_id": "runtime_workers"
-}
-```
-
 ## Pilot eligible scenarios
 - FORMAL_IRRIGATION
 - FORMAL_PEST_DISEASE_INSPECTION
@@ -37,7 +26,6 @@ Status: FAIL
 ## Known limits
 - FORMAL_FERTILIZATION = conditional_pending_ci_proof
 - required_for_controlled_pilot = false
-- runtime worker liveness source of truth is worker_runtime_heartbeat_v1; Docker logs are diagnostic only.
 
 ## Not for sale claims
 - FORMAL_FERTILIZATION is NOT part of mandatory controlled pilot sales gate.
@@ -62,13 +50,6 @@ Status: FAIL
     "scenario_formal_e2e",
     "scenario_productization"
   ],
-  "runtime_worker_liveness": {
-    "source": "worker_runtime_heartbeat_v1",
-    "logs_role": "diagnostic_only",
-    "jobs_heartbeat_fresh": true,
-    "executor_heartbeat_fresh": true,
-    "gate_id": "runtime_workers"
-  },
   "pilot_eligible_scenarios": [
     "FORMAL_IRRIGATION",
     "FORMAL_PEST_DISEASE_INSPECTION",
