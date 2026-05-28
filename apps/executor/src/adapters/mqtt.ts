@@ -9,6 +9,11 @@ function normalizeOutboundActionType(raw: any): string {
   return normalized === "irrigate" ? "irrigation.start" : normalized;
 }
 
+function mqttOptionsFromEnv(): mqtt.IClientOptions {
+  const username = String(process.env.GEOX_MQTT_USERNAME ?? process.env.MQTT_USERNAME ?? "").trim();
+  const password = String(process.env.GEOX_MQTT_PASSWORD ?? process.env.MQTT_PASSWORD ?? "").trim();
+  return username || password ? { username, password, connectTimeout: 5000, reconnectPeriod: 0 } : { connectTimeout: 5000, reconnectPeriod: 0 };
+}
 
 function resolveTopic(task: AoActTask): string {
   const meta = (task?.meta ?? {}) as Record<string, unknown>;
@@ -62,7 +67,7 @@ function resolvePayload(task: AoActTask): Record<string, unknown> | null {
 
 function connectMqtt(url: string): Promise<mqtt.MqttClient> {
   return new Promise((resolve, reject) => {
-    const client = mqtt.connect(url, { connectTimeout: 5000, reconnectPeriod: 0 });
+    const client = mqtt.connect(url, mqttOptionsFromEnv());
 
     const onError = (err: Error) => {
       client.removeListener("connect", onConnect);
