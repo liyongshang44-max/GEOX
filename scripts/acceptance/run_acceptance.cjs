@@ -40,6 +40,12 @@ const STEP_DEFINITIONS = [
     pnpmArgs: ['--filter', '@geox/server', 'run', 'test:p1:openapi-selfcheck'],
     logFile: 'OPENAPI_SELFCHECK.log',
     notes: 'Runs OpenAPI selfcheck for p1-3 alignment sanity.'
+  },
+  {
+    id: 'RUNTIME_OPENAPI_SALES_CRITICAL',
+    pnpmArgs: ['run', 'ci:governance:runtime-openapi-sales-critical'],
+    logFile: 'RUNTIME_OPENAPI_SALES_CRITICAL.log',
+    notes: 'Fetches runtime /api/v1/openapi.json and validates sales-critical OpenAPI JSON paths, schemas, operations, security, responses, and x-geox-governance.'
   }
 ].map((step) => ({
   ...step,

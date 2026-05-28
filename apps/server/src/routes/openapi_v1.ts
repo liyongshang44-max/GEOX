@@ -2,6 +2,7 @@
 
 import type { FastifyInstance } from "fastify"; // Fastify instance type.
 import { SALES_CRITICAL_OPENAPI_PATHS_V1, SALES_CRITICAL_OPENAPI_SCHEMAS_V1 } from "./openapi_sales_critical_overlay_v1.js";
+import { applySalesCriticalOpenApiGovernanceDefaultsV1 } from "./openapi_sales_critical_governance_defaults_v1.js";
 
 function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
   const spec = {
@@ -105,6 +106,51 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             export_format: { type: "string", enum: ["JSON", "CSV", "PDF"] },
             export_language: { type: "string", enum: ["zh-CN", "en-US"] }
           }
+        },
+        CustomerReportsListResponseV1: {
+          type: "object",
+          required: ["ok", "reports"],
+          properties: {
+            ok: { type: "boolean" },
+            reports: { type: "array", items: { type: "object", additionalProperties: true } }
+          },
+          additionalProperties: true
+        },
+        CustomerFieldsListResponseV1: {
+          type: "object",
+          required: ["ok", "fields"],
+          properties: {
+            ok: { type: "boolean" },
+            fields: { type: "array", items: { type: "object", additionalProperties: true } }
+          },
+          additionalProperties: true
+        },
+        CustomerOperationsListResponseV1: {
+          type: "object",
+          required: ["ok", "operations"],
+          properties: {
+            ok: { type: "boolean" },
+            operations: { type: "array", items: { type: "object", additionalProperties: true } }
+          },
+          additionalProperties: true
+        },
+        EvidenceExportJobsListResponseV1: {
+          type: "object",
+          required: ["ok", "jobs"],
+          properties: {
+            ok: { type: "boolean" },
+            jobs: { type: "array", items: { type: "object", additionalProperties: true } }
+          },
+          additionalProperties: true
+        },
+        EvidenceExportJobCreateResponseV1: {
+          type: "object",
+          required: ["ok", "job"],
+          properties: {
+            ok: { type: "boolean" },
+            job: { type: "object", additionalProperties: true }
+          },
+          additionalProperties: true
         },
 
         EvidencePackSummaryV1: {
@@ -2782,14 +2828,14 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             }
           },
           responses: {
-            "200": { description: "Evidence export job created successfully" }
+            "200": jsonResponse({ '$ref': "#/components/schemas/EvidenceExportJobCreateResponseV1" }, "Evidence export job created successfully")
           }
         },
         get: {
           tags: ["exports"],
           summary: "Read evidence export job list",
           responses: {
-            "200": { description: "Evidence export job list returned successfully" }
+            "200": jsonResponse({ '$ref': "#/components/schemas/EvidenceExportJobsListResponseV1" }, "Evidence export job list returned successfully")
           }
         }
       },
@@ -4609,7 +4655,7 @@ function applyP13OpenApiAlignment(spec: any) {
         tags: ["customer"],
         summary: "List customer-scoped fields (official facade)",
         security: [{ bearerAuth: [] }],
-        responses: { "200": { description: "Customer fields list" } }
+        responses: { "200": jsonResponse(ref("CustomerFieldsListResponseV1"), "Customer fields list") }
       }
     },
 
@@ -4649,7 +4695,7 @@ function applyP13OpenApiAlignment(spec: any) {
         tags: ["customer"],
         summary: "List customer-scoped operations (official facade)",
         security: [{ bearerAuth: [] }],
-        responses: { "200": { description: "Customer operations list" } }
+        responses: { "200": jsonResponse(ref("CustomerOperationsListResponseV1"), "Customer operations list") }
       }
     },
     "/api/v1/customer/reports": {
@@ -4657,7 +4703,7 @@ function applyP13OpenApiAlignment(spec: any) {
         tags: ["customer"],
         summary: "List customer report entries (official facade)",
         security: [{ bearerAuth: [] }],
-        responses: { "200": { description: "Customer reports list" } }
+        responses: { "200": jsonResponse(ref("CustomerReportsListResponseV1"), "Customer reports list") }
       }
     },
     "/api/v1/devices": { post: { tags: ["devices"], summary: "Register or upsert device", requestBody: { required: true, content: { "application/json": { schema: ref("DeviceUpsertRequest") } } }, responses: { "200": jsonResponse(ref("DeviceUpsertResponse"), "Device upsert result") } }, get: { tags: ["devices"], summary: "List devices", responses: { "200": jsonResponse(ref("DevicesListResponse"), "Devices list") } } },
@@ -4683,6 +4729,7 @@ function applyP13OpenApiAlignment(spec: any) {
 
   Object.assign(spec.paths as Record<string, unknown>, SALES_CRITICAL_OPENAPI_PATHS_V1);
   Object.assign(spec.components.schemas as Record<string, unknown>, SALES_CRITICAL_OPENAPI_SCHEMAS_V1);
+  applySalesCriticalOpenApiGovernanceDefaultsV1(spec);
 
   return spec;
 }
