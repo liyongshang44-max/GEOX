@@ -11,10 +11,10 @@ import { registerFlightTableDecisionRoutesV1 } from "../../routes/dev/flight_tab
 import { registerFlightTableOperationRoutesV1 } from "../../routes/dev/flight_table_operation_v1.js";
 import { registerFlightTableEvidenceRoutesV1 } from "../../routes/dev/flight_table_evidence_v1.js";
 import { registerFlightTableReportLearningRoutesV1 } from "../../routes/dev/flight_table_report_learning_v1.js";
+import { isRuntimeDevtoolsEnabledV1 } from "../../runtime/runtime_security_v1.js";
 
 export function isDevtoolsEnabledV1(): boolean {
-  const raw = String(process.env.GEOX_DEVTOOLS_ENABLED ?? "").trim().toLowerCase();
-  return raw === "1" || raw === "true" || raw === "yes" || raw === "on";
+  return isRuntimeDevtoolsEnabledV1();
 }
 
 export function registerDevtoolsModule(app: FastifyInstance, pool: Pool): void {
