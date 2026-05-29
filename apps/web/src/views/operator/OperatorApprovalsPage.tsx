@@ -8,7 +8,10 @@ import { hasOperatorPermission, permissionReason } from "../../lib/permissions";
 import { buildOperatorApprovalsVm, type OperatorApprovalRowVm, type OperatorApprovalsVm } from "../../viewmodels/operatorApprovalsVm";
 import { OPERATOR_PAGE_META } from "./operatorPageMeta";
 
+type ApprovalSectionKey = "pending" | "highRiskPrescriptions" | "noPermission" | "selfApprovalRisk" | "history";
+
 type ApprovalSectionProps = {
+  sectionKey: ApprovalSectionKey;
   title: string;
   description: string;
   rows: OperatorApprovalRowVm[];
@@ -159,7 +162,7 @@ function ApprovalCard({
   );
 }
 
-function ApprovalSection({ title, description, rows, writeReady, getActionState, onAction, sessionAllowed, sessionLoading, sessionDeniedReason }: ApprovalSectionProps): React.ReactElement {
+function ApprovalSection({ sectionKey, title, description, rows, writeReady, getActionState, onAction, sessionAllowed, sessionLoading, sessionDeniedReason }: ApprovalSectionProps): React.ReactElement {
   return (
     <section className="operatorApprovalSection">
       <header className="operatorApprovalSectionHead">
@@ -173,7 +176,7 @@ function ApprovalSection({ title, description, rows, writeReady, getActionState,
         <div className="operatorApprovalList">
           {rows.map((row) => (
             <ApprovalCard
-              key={`${title}-${row.approvalRequestId}`}
+              key={`${sectionKey}-${row.approvalRequestId}`}
               row={row}
               writeReady={writeReady}
               actionState={getActionState(row.approvalRequestId)}
@@ -290,11 +293,11 @@ export default function OperatorApprovalsPage(): React.ReactElement {
           {vm.totalCount === 0 ? <OperatorEmptyState title={vm.emptyTitle} description={vm.emptyDescription} reason="没有审批数据时不伪造审批事项。" /> : null}
 
           <div className="operatorApprovalGrid">
-            <ApprovalSection title="待审批列表" description="当前需要运营人员处理的审批请求。" rows={vm.pending} writeReady={vm.writeReady} getActionState={getActionState} onAction={onAction} sessionAllowed={sessionAllowed} sessionLoading={sessionLoading} sessionDeniedReason={sessionDeniedReason} />
-            <ApprovalSection title="高风险处方" description="高风险且关联正式处方的审批事项。" rows={vm.highRiskPrescriptions} writeReady={vm.writeReady} getActionState={getActionState} onAction={onAction} sessionAllowed={sessionAllowed} sessionLoading={sessionLoading} sessionDeniedReason={sessionDeniedReason} />
-            <ApprovalSection title="无权限审批" description="当前身份不可执行审批动作的事项。" rows={vm.noPermission} writeReady={vm.writeReady} getActionState={getActionState} onAction={onAction} sessionAllowed={sessionAllowed} sessionLoading={sessionLoading} sessionDeniedReason={sessionDeniedReason} />
-            <ApprovalSection title="自审批风险" description="发起人与审批人存在重合风险的事项。" rows={vm.selfApprovalRisk} writeReady={vm.writeReady} getActionState={getActionState} onAction={onAction} sessionAllowed={sessionAllowed} sessionLoading={sessionLoading} sessionDeniedReason={sessionDeniedReason} />
-            <ApprovalSection title="审批历史" description="已通过、已拒绝或已退回的审批记录。" rows={vm.history} writeReady={vm.writeReady} getActionState={getActionState} onAction={onAction} sessionAllowed={sessionAllowed} sessionLoading={sessionLoading} sessionDeniedReason={sessionDeniedReason} />
+            <ApprovalSection sectionKey="pending" title="待审批列表" description="当前需要运营人员处理的审批请求。" rows={vm.pending} writeReady={vm.writeReady} getActionState={getActionState} onAction={onAction} sessionAllowed={sessionAllowed} sessionLoading={sessionLoading} sessionDeniedReason={sessionDeniedReason} />
+            <ApprovalSection sectionKey="highRiskPrescriptions" title="高风险处方" description="高风险且关联正式处方的审批事项。" rows={vm.highRiskPrescriptions} writeReady={vm.writeReady} getActionState={getActionState} onAction={onAction} sessionAllowed={sessionAllowed} sessionLoading={sessionLoading} sessionDeniedReason={sessionDeniedReason} />
+            <ApprovalSection sectionKey="noPermission" title="无权限审批" description="当前身份不可执行审批动作的事项。" rows={vm.noPermission} writeReady={vm.writeReady} getActionState={getActionState} onAction={onAction} sessionAllowed={sessionAllowed} sessionLoading={sessionLoading} sessionDeniedReason={sessionDeniedReason} />
+            <ApprovalSection sectionKey="selfApprovalRisk" title="自审批风险" description="发起人与审批人存在重合风险的事项。" rows={vm.selfApprovalRisk} writeReady={vm.writeReady} getActionState={getActionState} onAction={onAction} sessionAllowed={sessionAllowed} sessionLoading={sessionLoading} sessionDeniedReason={sessionDeniedReason} />
+            <ApprovalSection sectionKey="history" title="审批历史" description="已通过、已拒绝或已退回的审批记录。" rows={vm.history} writeReady={vm.writeReady} getActionState={getActionState} onAction={onAction} sessionAllowed={sessionAllowed} sessionLoading={sessionLoading} sessionDeniedReason={sessionDeniedReason} />
           </div>
         </div>
       ) : null}
