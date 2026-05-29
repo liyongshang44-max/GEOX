@@ -1,11 +1,9 @@
 {
   "name": "geox",
   "private": true,
-  "workspaces": [
-    "packages/*",
-    "apps/*"
-  ],
+  "workspaces": ["packages/*", "apps/*"],
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^20.10.0",
     "@types/pg": "^8.10.0",
@@ -56,6 +54,7 @@
     "ci:frontend:flight-table-devtools-boundary": "node scripts/frontend_acceptance/ACCEPTANCE_FLIGHT_TABLE_DEVTOOLS_BOUNDARY_V1.cjs",
     "ci:frontend:operator-approvals-dedupe": "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_APPROVALS_VM_DEDUPE_V1.cjs",
     "ci:frontend:operator-page-runtime-states": "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_PAGE_RUNTIME_STATES_V1.cjs",
+    "ci:frontend:runtime-page-audit": "node scripts/frontend_acceptance/ACCEPTANCE_FRONTEND_RUNTIME_PAGE_AUDIT_V1.cjs",
     "ci:base-contract:p0": "node scripts/governance_acceptance/ACCEPTANCE_BASE_CONTRACT_P0_RELEASE_GATE_V1.cjs",
     "ci:runtime:workers": "node scripts/governance_acceptance/ACCEPTANCE_RUNTIME_WORKERS_PRODUCTION_PACKAGING_V1.cjs",
     "ci:runtime:workers:negative": "node scripts/governance_acceptance/ACCEPTANCE_RUNTIME_WORKERS_HEARTBEAT_NEGATIVE_V1.cjs",
@@ -93,7 +92,5 @@
     "ci:governance:runtime-openapi-sales-critical": "node scripts/governance_acceptance/ACCEPTANCE_RUNTIME_OPENAPI_SALES_CRITICAL_V1.cjs",
     "acceptance:runtime-openapi-sales-critical": "pnpm run ci:governance:runtime-openapi-sales-critical"
   },
-  "volta": {
-    "node": "20.11.1"
-  }
+  "volta": { "node": "20.11.1" }
 }
