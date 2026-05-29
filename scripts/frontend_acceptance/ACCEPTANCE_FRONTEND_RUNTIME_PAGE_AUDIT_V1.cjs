@@ -8,7 +8,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const REPORT_PATH = path.join(ROOT, 'docs/audit/FRONTEND_RUNTIME_PAGE_AUDIT_REPORT.md');
 const SCREENSHOT_DIR = path.join(ROOT, 'docs/audit/frontend-runtime-page-audit');
 const WEB_BASE_URL = String(process.env.FRONTEND_AUDIT_WEB_BASE_URL || 'http://127.0.0.1:5173').replace(/\/+$/, '');
-const API_BASE_URL = String(process.env.API_BASE_URL || process.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001').replace(/\/+$/, '');
+const API_BASE_URL = String(process.env.API_BASE_URL || process.env.GEOX_WEB_PROXY_TARGET || 'http://127.0.0.1:3001').replace(/\/+$/, '');
 const DEVTOOLS_DISABLED = !['1', 'true', 'yes', 'on'].includes(String(process.env.GEOX_DEVTOOLS_ENABLED || '').toLowerCase());
 const ACCEPTANCE_TOKEN = String(process.env.GEOX_AO_ACT_TOKEN || process.env.GEOX_ACCEPTANCE_TOKEN || 'tenant_a_admin_token');
 
@@ -66,8 +66,9 @@ function startWebServerIfNeeded() {
     cwd: ROOT,
     env: {
       ...process.env,
-      VITE_API_BASE_URL: API_BASE_URL,
-      VITE_API_BASE: API_BASE_URL,
+      GEOX_WEB_PROXY_TARGET: API_BASE_URL,
+      VITE_API_BASE_URL: '',
+      VITE_API_BASE: '',
       BROWSER: 'none',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -204,7 +205,7 @@ function writeReport(results) {
   lines.push('');
   lines.push(`Generated at: ${new Date().toISOString()}`);
   lines.push(`Web base URL: ${WEB_BASE_URL}`);
-  lines.push(`API base URL: ${API_BASE_URL}`);
+  lines.push(`API proxy target: ${API_BASE_URL}`);
   lines.push(`Devtools disabled: ${DEVTOOLS_DISABLED ? 'yes' : 'no'}`);
   lines.push('');
   lines.push('| route | status | screenshot | diagnosis |');
