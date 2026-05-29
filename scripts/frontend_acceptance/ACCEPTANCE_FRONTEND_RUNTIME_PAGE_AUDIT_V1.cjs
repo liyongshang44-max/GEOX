@@ -12,10 +12,10 @@ const API_BASE_URL = String(process.env.API_BASE_URL || process.env.GEOX_WEB_PRO
 const DEVTOOLS_DISABLED = !['1', 'true', 'yes', 'on'].includes(String(process.env.GEOX_DEVTOOLS_ENABLED || '').toLowerCase());
 const ACCEPTANCE_TOKEN = String(process.env.GEOX_AO_ACT_TOKEN || process.env.GEOX_ACCEPTANCE_TOKEN || 'tenant_a_admin_token');
 const INSTALL_TIMEOUT_MS = Number(process.env.FRONTEND_AUDIT_BROWSER_INSTALL_TIMEOUT_MS || 240_000);
-const ROUTE_TIMEOUT_MS = Number(process.env.FRONTEND_AUDIT_ROUTE_TIMEOUT_MS || 75_000);
-const AUDIT_TIMEOUT_MS = Number(process.env.FRONTEND_AUDIT_TOTAL_TIMEOUT_MS || 900_000);
+const ROUTE_TIMEOUT_MS = Number(process.env.FRONTEND_AUDIT_ROUTE_TIMEOUT_MS || 45_000);
+const AUDIT_TIMEOUT_MS = Number(process.env.FRONTEND_AUDIT_TOTAL_TIMEOUT_MS || 600_000);
 
-const ROUTES = [
+const DEFAULT_ROUTES = [
   '/customer/dashboard',
   '/customer/export',
   '/operator/workbench',
@@ -28,6 +28,20 @@ const ROUTES = [
   '/operator/field-memory',
   '/dev/flight-table',
 ];
+
+function parseAuditRoutes() {
+  const raw = String(process.env.FRONTEND_AUDIT_ROUTES || '').trim();
+  if (!raw) return DEFAULT_ROUTES;
+  const routes = raw
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => (item.startsWith('/') ? item : `/${item}`));
+  if (routes.length === 0) throw new Error('FRONTEND_AUDIT_ROUTES was set but no routes were parsed');
+  return [...new Set(routes)];
+}
+
+const ROUTES = parseAuditRoutes();
 
 const OPERATOR_ROUTES = new Set(ROUTES.filter((route) => route.startsWith('/operator/')));
 const EXPLICIT_OPERATOR_STATE = /正在加载运营数据|暂无待处理事项|运营数据加载失败|当前账号权限不足|数据范围|更新时间|总数|待处理|正式运营|证据中心|田块记忆|ROI|派发|验收|告警|审批/;
@@ -244,6 +258,8 @@ function writeReport(results) {
   lines.push(`Web base URL: ${WEB_BASE_URL}`);
   lines.push(`API proxy target: ${API_BASE_URL}`);
   lines.push(`Devtools disabled: ${DEVTOOLS_DISABLED ? 'yes' : 'no'}`);
+  lines.push(`Routes audited: ${ROUTES.length}`);
+  if (process.env.FRONTEND_AUDIT_ROUTES) lines.push(`Route source: FRONTEND_AUDIT_ROUTES`);
   lines.push('');
   lines.push('| route | status | screenshot | diagnosis |');
   lines.push('| --- | --- | --- | --- |');
@@ -280,6 +296,10 @@ async function runAudit() {
     throw new Error(`@playwright/test is required for browser runtime audit: ${error.message || error}`);
   }
 
+  console.log('[frontend-runtime-audit] route_count', ROUTES.length);
+  console.log('[frontend-runtime-audit] routes', ROUTES.join(', '));
+  console.log('[frontend-runtime-audit] route_timeout_ms', ROUTE_TIMEOUT_MS);
+  console.log('[frontend-runtime-audit] total_timeout_ms', AUDIT_TIMEOUT_MS);
   ensurePlaywrightChromiumInstalled();
 
   let webProcess = null;
