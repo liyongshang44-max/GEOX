@@ -4,7 +4,7 @@ export function scenarioTypeLabel(value: unknown): string {
   if (key === "DEVICE_ANOMALY") return "设备异常";
   if (key === "FORMAL_VARIABLE_OPERATION") return "变量作业";
   if (key === "FORMAL_SAMPLING") return "正式采样";
-  if (key === "FORMAL_FERTILIZATION") return "正式施氮";
+  if (key === "FORMAL_FERTILIZATION") return "施氮（实验性 / non-selling）";
   if (key === "FORMAL_PEST_DISEASE_INSPECTION") return "病虫害巡检";
   return "正式场景待确认";
 }

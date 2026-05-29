@@ -25,7 +25,7 @@ export type FieldReportPageVm = {
   risk: { levelLabel: string; tone: "neutral" | "warning" | "danger"; reasons: string[] };
   diagnosis: { headline: string; evidenceLines: string[]; dataQualityText: string; latestObservationText: string };
   recommendations: Array<{ title: string; summary: string; href?: string }>;
-  recentOperations: Array<{ operationId: string; title: string; statusText: string; acceptanceText: string; evidenceText: string; formalScenarioText: string; updatedAtText: string; href: string }>;
+  recentOperations: Array<{ operationId: string; title: string; statusText: string; acceptanceText: string; evidenceText: string; formalScenarioText: string; scenarioTypeText: string; formalChainStatusText: string; evidenceStatusText: string; needsReviewText: string; updatedAtText: string; href: string }>;
   roiSummary: ({ title: string; lines: string[] } | { title: string; description: string }) & { displayText: string };
   fieldMemory: ({ title: string; lines: string[] } | { title: string; description: string }) & { displayText: string };
   mapLayers: FieldMapLayersVm;
@@ -154,6 +154,10 @@ function buildRecentOperations(report: FieldReportDetailV1, fieldId: string) {
       acceptanceText: customerGuardedAcceptanceText(item),
       evidenceText: customerGuardedEvidenceText(item),
       formalScenarioText: [formalVm.scenarioLabel, formalVm.chainText, formalVm.zoneSummaryText].filter(Boolean).join("｜"),
+      scenarioTypeText: formalVm.rawScenarioType || "UNKNOWN",
+      formalChainStatusText: formalVm.formalChainStatus,
+      evidenceStatusText: formalVm.rawEvidenceStatus,
+      needsReviewText: formalVm.needsReview ? "true" : "false",
       updatedAtText: formatDateTime(item.accepted_at ?? item.generated_at ?? item.updated_at),
       href: operationId && !operationId.startsWith("recent-") ? `/customer/operations/${encodeURIComponent(operationId)}` : `/customer/fields/${encodeURIComponent(fieldId)}`,
     };

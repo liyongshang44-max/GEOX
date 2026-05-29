@@ -1,0 +1,102 @@
+#!/usr/bin/env node
+const fs = require('node:fs');
+const path = require('node:path');
+
+const root = path.resolve(__dirname, '..', '..');
+const rels = {
+  formalCards: 'apps/web/src/components/customer/FormalScenarioCards.tsx',
+  exportBlocks: 'apps/web/src/components/customer/CustomerExportBlocks.tsx',
+  dashboardVm: 'apps/web/src/viewmodels/customerDashboardVm.ts',
+  fieldVm: 'apps/web/src/viewmodels/fieldReportVm.ts',
+  operationVm: 'apps/web/src/viewmodels/operationReportVm.ts',
+  trustGate: 'apps/web/src/lib/customerTrustGate.ts',
+  formalVm: 'apps/web/src/lib/formalScenarioViewModel.ts',
+  scenarioLabels: 'apps/web/src/lib/customerScenarioLabels.ts',
+  recentOps: 'apps/web/src/components/cockpit/RecentOperationsSection.tsx',
+  fieldPage: 'apps/web/src/views/FieldReportPage.tsx',
+  operationPage: 'apps/web/src/views/OperationReportPage.tsx',
+  dashboardPage: 'apps/web/src/views/CustomerDashboardPage.tsx',
+  productGate: 'scripts/agronomy_acceptance/ACCEPTANCE_SCENARIO_PRODUCTIZATION_RELEASE_GATE.cjs',
+};
+
+const failures = [];
+function read(rel) {
+  const abs = path.join(root, rel);
+  if (!fs.existsSync(abs)) {
+    failures.push(`missing file: ${rel}`);
+    return '';
+  }
+  return fs.readFileSync(abs, 'utf8');
+}
+function assert(re, text, msg) {
+  if (!re.test(text)) failures.push(msg);
+}
+function assertNot(re, text, msg) {
+  if (re.test(text)) failures.push(msg);
+}
+
+const formalCards = read(rels.formalCards);
+const exportBlocks = read(rels.exportBlocks);
+const dashboardVm = read(rels.dashboardVm);
+const fieldVm = read(rels.fieldVm);
+const operationVm = read(rels.operationVm);
+const trustGate = read(rels.trustGate);
+const formalVm = read(rels.formalVm);
+const scenarioLabels = read(rels.scenarioLabels);
+const recentOps = read(rels.recentOps);
+const fieldPage = read(rels.fieldPage);
+const operationPage = read(rels.operationPage);
+const dashboardPage = read(rels.dashboardPage);
+const productGate = read(rels.productGate);
+
+// Required components exist and expose the controlled-pilot summaries.
+for (const symbol of ['FormalScenarioBadge', 'FormalChainSummaryCard', 'ScenarioAcceptanceSummary', 'ScenarioValueMemorySummary', 'FailSafeCustomerNotice']) {
+  assert(new RegExp(`export\\s+function\\s+${symbol}\\s*\\(`), formalCards, `${symbol} must exist in FormalScenarioCards`);
+}
+assert(/closure chain|闭环明细|closureSteps/, formalCards, 'ScenarioAcceptanceSummary must show closure chain details');
+if (!(/ROI trust lane/.test(formalVm) && /Field Memory trust lane/.test(formalVm))) failures.push('ScenarioValueMemorySummary must separate ROI and Field Memory trust lanes');
+if (!(/trusted/.test(formalVm) && /estimate/.test(formalVm) && /hypothesis/.test(formalVm) && /insufficient evidence/.test(formalVm))) failures.push('ROI must distinguish trusted / estimate / hypothesis / insufficient evidence');
+if (!(/formal memory/.test(formalVm) && /technical memory/.test(formalVm) && /simulated memory/.test(formalVm))) failures.push('Field Memory must distinguish formal / technical / simulated memory');
+
+// PASS/SUCCESS must be guarded by backend chain_validation + explicit customer_visible_eligible.
+assert(/const visibleEligible = ctx\.customer_visible_eligible === true/, trustGate, 'customer_visible_eligible must be explicitly true for formal pass');
+assert(/chainPassed && visibleEligible && !needsReview/, trustGate, 'formal pass requires backend chain and visible eligibility');
+assert(/mapGuardedOperationStatusToCustomerLabel/, operationVm, 'operation VM must route raw status through guarded mapper');
+assertNot(/if\s*\(\s*\[[^\]]*(SUCCESS|PASS)[^\]]*\]\.includes\([^)]*\)\s*\)\s*return\s*["'`](正式完成|验收通过|已完成|已通过)/, dashboardVm + fieldVm + operationVm + formalCards, 'No raw SUCCESS/PASS mapping to formal completion without guarded backend status');
+
+// Dashboard / field recent operations must expose the guarded payload fields.
+for (const token of ['scenarioTypeText', 'formalChainStatusText', 'evidenceStatusText', 'needsReviewText']) {
+  assert(new RegExp(token), dashboardVm, `dashboard VM recent operations must include ${token}`);
+  assert(new RegExp(token), recentOps, `dashboard recent operations UI must render ${token}`);
+  assert(new RegExp(token), fieldVm, `field VM recent operations must include ${token}`);
+  assert(new RegExp(token), fieldPage, `field recent operations UI must render ${token}`);
+}
+if (!(/scenario_type/.test(recentOps) && /formal_chain_status/.test(recentOps) && /evidence_status/.test(recentOps) && /needs_review/.test(recentOps))) failures.push('dashboard recent operations must render backend guarded payload labels');
+
+// Three pilot scenarios must be recognizable; fertilization must remain experimental / non-selling.
+for (const scenario of ['FORMAL_IRRIGATION', 'FORMAL_PEST_DISEASE_INSPECTION', 'DEVICE_ANOMALY']) {
+  assert(new RegExp(scenario), scenarioLabels + formalVm + operationPage + dashboardPage, `${scenario} must be recognizable on customer pages`);
+}
+assert(/FORMAL_FERTILIZATION/, scenarioLabels + formalVm, 'FORMAL_FERTILIZATION must be handled if shown');
+assert(/实验性\s*\/\s*non-selling|experimental\s*\/\s*non-selling/i, scenarioLabels + formalVm, 'FORMAL_FERTILIZATION must be marked experimental / non-selling');
+assertNot(/FORMAL_FERTILIZATION[\s\S]{0,120}pilot eligible/i, scenarioLabels + formalVm + formalCards, 'FORMAL_FERTILIZATION must not be wrapped as pilot eligible');
+
+// Export must use the same VM/helper source as pages and carry guarded payload fields.
+assert(/vm\.conclusion\.finalStatusText/, exportBlocks, 'operation export must reuse page VM final status');
+assert(/vm\.evidenceSummary\.statusText/, exportBlocks, 'operation export must reuse page VM evidence status');
+assert(/vm\.acceptance\.statusText/, exportBlocks, 'operation export must reuse page VM acceptance status');
+for (const token of ['scenarioTypeText', 'formalChainStatusText', 'evidenceStatusText', 'needsReviewText']) {
+  assert(new RegExp(token), exportBlocks, `export must include same-source ${token}`);
+}
+
+// Fallback / limited data must remain review-only.
+if (!(/fallback_limited/.test(trustGate) && /LIMITED_FALLBACK/.test(trustGate) && /return \"LIMITED\"/.test(trustGate))) failures.push('fallback / limited data must be explicitly handled');
+if (!(/有限记录/.test(trustGate) && /需复核/.test(trustGate))) failures.push('limited/fallback text must not render formal completion');
+assert(/ACCEPTANCE_CONTROLLED_PILOT_FRONTEND_AUDIT_V1\.cjs/, productGate, 'scenario productization gate must include controlled pilot frontend audit');
+
+if (failures.length) {
+  console.error('ACCEPTANCE_CONTROLLED_PILOT_FRONTEND_AUDIT_V1 failed');
+  for (const failure of failures) console.error(` - ${failure}`);
+  process.exit(1);
+}
+console.log('ACCEPTANCE_CONTROLLED_PILOT_FRONTEND_AUDIT_V1 passed');
