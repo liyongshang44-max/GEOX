@@ -6,10 +6,12 @@ import { registerApprovalsV1PrimaryRoutes } from "./v1/approvals.js";
 import { registerDevicesV1PrimaryCompatibilityRoutes } from "./v1/devices.js";
 import { registerFertilizationV1Routes } from "./v1/fertilization.js";
 import { registerInspectionV1Routes } from "./v1/inspection.js";
+import { registerRuntimeFeaturesV1Routes } from "./v1/runtime_features_v1.js";
 import { registerSenseV1PrimaryRoutes } from "./v1/sense.js";
 import { registerSamplingV1Routes } from "./v1/sampling.js";
 
 export function registerCoreV1Routes(app: FastifyInstance, pool: Pool): void {
+  registerRuntimeFeaturesV1Routes(app);
   registerAoActV1PrimaryRoutes(app, pool);
   registerApprovalsV1PrimaryRoutes(app, pool);
   registerDevicesV1PrimaryCompatibilityRoutes(app, pool);
