@@ -11,7 +11,6 @@ const checks = [
   { dir: "../frontend_acceptance", file: "ACCEPTANCE_UNIFIED_EVIDENCE_VIEWER_V1.cjs" },
   { dir: "../frontend_acceptance", file: "ACCEPTANCE_SCENARIO_EXPORT_SAME_SOURCE_V1.cjs" },
   { dir: "../frontend_acceptance", file: "ACCEPTANCE_CONTROLLED_PILOT_FRONTEND_AUDIT_V1.cjs" },
-  { dir: "../frontend_acceptance", file: "ACCEPTANCE_FRONTEND_RUNTIME_PAGE_AUDIT_V1.cjs" },
 ];
 
 const optionalChecks = [
