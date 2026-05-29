@@ -4,16 +4,17 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const REPORT_PATH = path.resolve(ROOT, 'docs/audit/CONTROLLED_PILOT_READINESS_REPORT.md');
-const DEFAULT_GATE_TIMEOUT_MS = Number(process.env.CONTROLLED_PILOT_GATE_TIMEOUT_MS || 30 * 60 * 1000);
+const DEFAULT_GATE_TIMEOUT_MS = Number(process.env.CONTROLLED_PILOT_GATE_TIMEOUT_MS || 8 * 60 * 1000);
+const LONG_GATE_TIMEOUT_MS = Number(process.env.CONTROLLED_PILOT_LONG_GATE_TIMEOUT_MS || 24 * 60 * 1000);
 
 const REQUIRED_GATES = [
   { id: 'runtime_workers', command: 'pnpm run ci:runtime:workers' },
   { id: 'pilot_runtime_security_baseline', command: 'pnpm run ci:runtime:pilot-security-baseline' },
   { id: 'base_contract_p0', command: 'pnpm run ci:base-contract:p0' },
-  { id: 'scenario_pest_disease_inspection', command: 'pnpm run ci:scenario:pest-disease-inspection' },
-  { id: 'scenario_formal_e2e', command: 'pnpm run ci:scenario:formal-e2e' },
-  { id: 'scenario_productization', command: 'pnpm run ci:scenario:productization' },
-  { id: 'device_anomaly_controlled_pilot', command: 'node scripts/agronomy_acceptance/ACCEPTANCE_DEVICE_ANOMALY_CONTROLLED_PILOT_V1.cjs' },
+  { id: 'scenario_pest_disease_inspection', command: 'pnpm run ci:scenario:pest-disease-inspection', timeout_ms: LONG_GATE_TIMEOUT_MS },
+  { id: 'scenario_formal_e2e', command: 'pnpm run ci:scenario:formal-e2e', timeout_ms: LONG_GATE_TIMEOUT_MS },
+  { id: 'scenario_productization', command: 'pnpm run ci:scenario:productization', timeout_ms: LONG_GATE_TIMEOUT_MS },
+  { id: 'device_anomaly_controlled_pilot', command: 'node scripts/agronomy_acceptance/ACCEPTANCE_DEVICE_ANOMALY_CONTROLLED_PILOT_V1.cjs', timeout_ms: LONG_GATE_TIMEOUT_MS },
   { id: 'customer_device_anomaly_report', command: 'node scripts/frontend_acceptance/ACCEPTANCE_CUSTOMER_DEVICE_ANOMALY_REPORT_V1.cjs' },
   { id: 'runtime_openapi_sales_critical', command: 'node scripts/governance_acceptance/ACCEPTANCE_RUNTIME_OPENAPI_SALES_CRITICAL_V1.cjs' },
   { id: 'server_typecheck', command: 'pnpm --filter @geox/server typecheck' },
@@ -28,7 +29,8 @@ const known_limits = [
   'ci:controlled-pilot expects the acceptance runtime to be running; it does not start Docker services or downgrade missing runtime to PASS.',
   'pilot_runtime_security_baseline is a pilot minimum runtime-safety gate, not a complete commercial IAM program.',
   'runtime worker liveness source of truth is worker_runtime_heartbeat_v1; Docker logs are diagnostic only.',
-  'Each controlled-pilot sub-gate has a hard timeout so a silent child process hang is reported as FAIL instead of blocking CI indefinitely.'
+  'Each controlled-pilot sub-gate has a hard timeout so a silent child process hang is reported as FAIL instead of blocking CI indefinitely.',
+  'Default sub-gate timeout is short for diagnostics; known long scenario/productization gates use a separate long timeout.'
 ];
 const not_for_sale_claims = [
   'FORMAL_FERTILIZATION is NOT part of mandatory controlled pilot sales gate.',
@@ -208,7 +210,8 @@ console.log('[controlled-pilot-release-gate] strict mode environment', {
   ADMIN_TOKEN: gateEnv.ADMIN_TOKEN ? '<set>' : '<missing>',
   AO_ACT_TOKEN: gateEnv.AO_ACT_TOKEN ? '<set>' : '<missing>',
   CLIENT_TOKEN: gateEnv.CLIENT_TOKEN ? '<set>' : '<missing>',
-  DEFAULT_GATE_TIMEOUT_MS
+  DEFAULT_GATE_TIMEOUT_MS,
+  LONG_GATE_TIMEOUT_MS
 });
 
 const results = REQUIRED_GATES.map((gate) => ({ ...gate, ...runGate(gate, gateEnv) }));
