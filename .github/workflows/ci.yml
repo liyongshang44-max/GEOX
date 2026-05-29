@@ -99,11 +99,15 @@ jobs:
         run: docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml config > /tmp/commercial-compose.rendered.yml
 
       - name: Start acceptance runtime dependencies
+        timeout-minutes: 8
         run: |
-          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d minio minio-init
+          set -euo pipefail
+          trap 'rc=$?; echo "[diag] runtime dependency startup failed rc=$rc"; docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps || true; echo "[diag] --- minio-init logs ---"; docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs --tail=200 minio-init || true; echo "[diag] --- server logs ---"; docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs --tail=200 server || true; echo "[diag] --- postgres logs ---"; docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs --tail=200 postgres || true; echo "[diag] --- mqtt logs ---"; docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs --tail=120 mqtt || true; exit $rc' ERR
+          timeout 180 docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d minio minio-init
           docker logs geox-v1-minio-init || true
           docker ps -a
-          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d postgres mqtt server jobs executor
+          timeout 300 docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d postgres mqtt server jobs executor
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps
 
       - name: Wait for acceptance services ready
         run: |
