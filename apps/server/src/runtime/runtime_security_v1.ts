@@ -53,6 +53,10 @@ function boolEnv(key: string): boolean {
   return ["1", "true", "yes", "on"].includes(String(process.env[key] ?? "").trim().toLowerCase());
 }
 
+export function isRuntimeDevtoolsEnabledV1(): boolean {
+  return boolEnv("GEOX_DEVTOOLS_ENABLED") || boolEnv("DEVTOOLS_ENABLED") || boolEnv("GEOX_ENABLE_DEVTOOLS");
+}
+
 export function getRuntimeEnvV1(): GeoxRuntimeEnvV1 {
   const explicit = String(process.env.GEOX_RUNTIME_ENV ?? "").trim().toLowerCase();
   if (["development", "test", "pilot", "staging", "production"].includes(explicit)) return explicit as GeoxRuntimeEnvV1;
@@ -121,7 +125,7 @@ export function getRuntimeSecurityStatusV1() {
   checks.public_base_url_configured = Boolean(publicBase) && !publicBase.includes("localhost") && !publicBase.includes("127.0.0.1");
   if (productionLike && !checks.public_base_url_configured) errors.push("RUNTIME_PUBLIC_BASE_URL_REQUIRED");
 
-  const devtoolsEnabled = boolEnv("GEOX_DEVTOOLS_ENABLED") || boolEnv("DEVTOOLS_ENABLED") || boolEnv("GEOX_ENABLE_DEVTOOLS");
+  const devtoolsEnabled = isRuntimeDevtoolsEnabledV1();
   checks.devtools_disabled = !devtoolsEnabled;
   if (productionLike && devtoolsEnabled) errors.push("RUNTIME_DEVTOOLS_FORBIDDEN");
 
