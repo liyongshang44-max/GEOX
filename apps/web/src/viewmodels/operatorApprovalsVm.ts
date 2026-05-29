@@ -39,6 +39,17 @@ export type OperatorApprovalRowVm = {
   technicalRefs: OperatorApprovalTechnicalRefsVm;
 };
 
+export type OperatorApprovalDedupeSectionDiagnosticsVm = {
+  duplicateCount: number;
+  duplicateIds: string[];
+};
+
+export type OperatorApprovalDedupeDiagnosticsVm = {
+  duplicateCount: number;
+  duplicateIds: string[];
+  bySection: Record<string, OperatorApprovalDedupeSectionDiagnosticsVm>;
+};
+
 export type OperatorApprovalsVm = {
   title: string;
   lead: string;
@@ -51,6 +62,7 @@ export type OperatorApprovalsVm = {
   noPermission: OperatorApprovalRowVm[];
   selfApprovalRisk: OperatorApprovalRowVm[];
   history: OperatorApprovalRowVm[];
+  dedupeDiagnostics: OperatorApprovalDedupeDiagnosticsVm;
   totalCount: number;
   emptyTitle: string;
   emptyDescription: string;
@@ -210,6 +222,38 @@ function buildRow(item: OperatorApprovalItem): OperatorApprovalRowVm {
   };
 }
 
+export function dedupeApprovalRowsById(
+  rows: OperatorApprovalRowVm[],
+  sectionKey: string,
+): {
+  rows: OperatorApprovalRowVm[];
+  duplicateCount: number;
+  duplicateIds: string[];
+} {
+  const seen = new Set<string>();
+  const duplicateIds = new Set<string>();
+  const deduped: OperatorApprovalRowVm[] = [];
+  let duplicateCount = 0;
+
+  for (const row of rows) {
+    const approvalRequestId = String(row.approvalRequestId ?? "").trim();
+    const dedupeKey = approvalRequestId || `__missing_approval_request_id__:${sectionKey}`;
+    if (seen.has(dedupeKey)) {
+      duplicateCount += 1;
+      duplicateIds.add(approvalRequestId || "__missing_approval_request_id__");
+      continue;
+    }
+    seen.add(dedupeKey);
+    deduped.push(row);
+  }
+
+  return {
+    rows: deduped,
+    duplicateCount,
+    duplicateIds: [...duplicateIds],
+  };
+}
+
 function dataScopeText(response: OperatorApprovalsResponse): string {
   if (response.dataScope === "OFFICIAL_OPERATOR_API") return "正式运营审批中心";
   if (response.dataScope === "FALLBACK_LIMITED") return "有限 fallback 审批列表";
@@ -217,16 +261,54 @@ function dataScopeText(response: OperatorApprovalsResponse): string {
   return "暂无审批事项";
 }
 
+function buildDedupeDiagnostics(sections: Record<string, ReturnType<typeof dedupeApprovalRowsById>>): OperatorApprovalDedupeDiagnosticsVm {
+  const bySection: Record<string, OperatorApprovalDedupeSectionDiagnosticsVm> = {};
+  const duplicateIds = new Set<string>();
+  let duplicateCount = 0;
+
+  for (const [sectionKey, result] of Object.entries(sections)) {
+    duplicateCount += result.duplicateCount;
+    for (const duplicateId of result.duplicateIds) duplicateIds.add(duplicateId);
+    bySection[sectionKey] = {
+      duplicateCount: result.duplicateCount,
+      duplicateIds: result.duplicateIds,
+    };
+  }
+
+  return {
+    duplicateCount,
+    duplicateIds: [...duplicateIds],
+    bySection,
+  };
+}
+
 export function buildOperatorApprovalsVm(response: OperatorApprovalsResponse): OperatorApprovalsVm {
-  const rows = (response.items ?? []).map(buildRow);
-  const pending = rows.filter((row, index) => response.items[index]?.status === "PENDING");
-  const highRiskPrescriptions = pending.filter((row, index) => {
-    const original = response.items.filter((item) => item.status === "PENDING")[index];
-    return original?.riskLevel === "HIGH" && Boolean(original?.prescriptionId);
+  const rowItems = (response.items ?? []).map((item) => ({ item, row: buildRow(item) }));
+
+  const pendingBase = rowItems
+    .filter(({ item }) => item.status === "PENDING")
+    .map(({ row }) => row);
+  const highRiskPrescriptionsBase = rowItems
+    .filter(({ item }) => item.status === "PENDING" && item.riskLevel === "HIGH" && Boolean(item.prescriptionId))
+    .map(({ row }) => row);
+  const noPermissionBase = pendingBase.filter((row) => !row.actionButtonState.canAction && !row.selfApprovalRisk);
+  const selfApprovalRiskBase = pendingBase.filter((row) => row.selfApprovalRisk);
+  const historyBase = rowItems
+    .filter(({ item }) => item.status !== "PENDING")
+    .map(({ row }) => row);
+
+  const pending = dedupeApprovalRowsById(pendingBase, "pending");
+  const highRiskPrescriptions = dedupeApprovalRowsById(highRiskPrescriptionsBase, "highRiskPrescriptions");
+  const noPermission = dedupeApprovalRowsById(noPermissionBase, "noPermission");
+  const selfApprovalRisk = dedupeApprovalRowsById(selfApprovalRiskBase, "selfApprovalRisk");
+  const history = dedupeApprovalRowsById(historyBase, "history");
+  const dedupeDiagnostics = buildDedupeDiagnostics({
+    pending,
+    highRiskPrescriptions,
+    noPermission,
+    selfApprovalRisk,
+    history,
   });
-  const noPermission = pending.filter((row) => !row.actionButtonState.canAction && !row.selfApprovalRisk);
-  const selfApprovalRisk = pending.filter((row) => row.selfApprovalRisk);
-  const history = rows.filter((row, index) => response.items[index]?.status !== "PENDING");
 
   return {
     title: "审批中心",
@@ -235,12 +317,13 @@ export function buildOperatorApprovalsVm(response: OperatorApprovalsResponse): O
     dataScopeText: dataScopeText(response),
     dataScopeWarning: response.dataScope === "FALLBACK_LIMITED" ? text(response.message, "当前展示有限 fallback 审批数据，非完整运营审批中心。") : undefined,
     writeReady: response.writeReady,
-    pending,
-    highRiskPrescriptions,
-    noPermission,
-    selfApprovalRisk,
-    history,
-    totalCount: rows.length,
+    pending: pending.rows,
+    highRiskPrescriptions: highRiskPrescriptions.rows,
+    noPermission: noPermission.rows,
+    selfApprovalRisk: selfApprovalRisk.rows,
+    history: history.rows,
+    dedupeDiagnostics,
+    totalCount: pending.rows.length + history.rows.length,
     emptyTitle: "暂无审批事项",
     emptyDescription: "当前没有待审批、高风险处方、自审批风险或审批历史记录。",
   };
