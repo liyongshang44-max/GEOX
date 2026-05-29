@@ -148,35 +148,15 @@ function prescriptionHref(item: OperatorApprovalItem): string | null {
 
 function buildActionButtonState(item: OperatorApprovalItem): OperatorActionButtonStateV1 {
   if (item.selfApprovalRisk) {
-    return {
-      canAction: false,
-      disabledReason: "发起人与审批人相同",
-      pending: false,
-      lastError: null,
-    };
+    return { canAction: false, disabledReason: "发起人与审批人相同", pending: false, lastError: null };
   }
   if (item.status !== "PENDING") {
-    return {
-      canAction: false,
-      disabledReason: "审批请求当前状态不可再次处理。",
-      pending: false,
-      lastError: null,
-    };
+    return { canAction: false, disabledReason: "审批请求当前状态不可再次处理。", pending: false, lastError: null };
   }
   if (!item.permissionAllowed) {
-    return {
-      canAction: false,
-      disabledReason: text(item.permissionReason, "当前身份无审批权限。"),
-      pending: false,
-      lastError: null,
-    };
+    return { canAction: false, disabledReason: text(item.permissionReason, "当前身份无审批权限。"), pending: false, lastError: null };
   }
-  return {
-    canAction: true,
-    disabledReason: null,
-    pending: false,
-    lastError: null,
-  };
+  return { canAction: true, disabledReason: null, pending: false, lastError: null };
 }
 
 function nextActionText(item: OperatorApprovalItem, actionButtonState: OperatorActionButtonStateV1): string {
@@ -225,11 +205,7 @@ function buildRow(item: OperatorApprovalItem): OperatorApprovalRowVm {
 export function dedupeApprovalRowsById(
   rows: OperatorApprovalRowVm[],
   sectionKey: string,
-): {
-  rows: OperatorApprovalRowVm[];
-  duplicateCount: number;
-  duplicateIds: string[];
-} {
+): { rows: OperatorApprovalRowVm[]; duplicateCount: number; duplicateIds: string[] } {
   const seen = new Set<string>();
   const duplicateIds = new Set<string>();
   const deduped: OperatorApprovalRowVm[] = [];
@@ -247,11 +223,7 @@ export function dedupeApprovalRowsById(
     deduped.push(row);
   }
 
-  return {
-    rows: deduped,
-    duplicateCount,
-    duplicateIds: [...duplicateIds],
-  };
+  return { rows: deduped, duplicateCount, duplicateIds: [...duplicateIds] };
 }
 
 function dataScopeText(response: OperatorApprovalsResponse): string {
@@ -269,46 +241,26 @@ function buildDedupeDiagnostics(sections: Record<string, ReturnType<typeof dedup
   for (const [sectionKey, result] of Object.entries(sections)) {
     duplicateCount += result.duplicateCount;
     for (const duplicateId of result.duplicateIds) duplicateIds.add(duplicateId);
-    bySection[sectionKey] = {
-      duplicateCount: result.duplicateCount,
-      duplicateIds: result.duplicateIds,
-    };
+    bySection[sectionKey] = { duplicateCount: result.duplicateCount, duplicateIds: result.duplicateIds };
   }
 
-  return {
-    duplicateCount,
-    duplicateIds: [...duplicateIds],
-    bySection,
-  };
+  return { duplicateCount, duplicateIds: [...duplicateIds], bySection };
 }
 
 export function buildOperatorApprovalsVm(response: OperatorApprovalsResponse): OperatorApprovalsVm {
   const rowItems = (response.items ?? []).map((item) => ({ item, row: buildRow(item) }));
-
-  const pendingBase = rowItems
-    .filter(({ item }) => item.status === "PENDING")
-    .map(({ row }) => row);
-  const highRiskPrescriptionsBase = rowItems
-    .filter(({ item }) => item.status === "PENDING" && item.riskLevel === "HIGH" && Boolean(item.prescriptionId))
-    .map(({ row }) => row);
+  const pendingBase = rowItems.filter(({ item }) => item.status === "PENDING").map(({ row }) => row);
+  const highRiskPrescriptionsBase = rowItems.filter(({ item }) => item.status === "PENDING" && item.riskLevel === "HIGH" && Boolean(item.prescriptionId)).map(({ row }) => row);
   const noPermissionBase = pendingBase.filter((row) => !row.actionButtonState.canAction && !row.selfApprovalRisk);
   const selfApprovalRiskBase = pendingBase.filter((row) => row.selfApprovalRisk);
-  const historyBase = rowItems
-    .filter(({ item }) => item.status !== "PENDING")
-    .map(({ row }) => row);
+  const historyBase = rowItems.filter(({ item }) => item.status !== "PENDING").map(({ row }) => row);
 
   const pending = dedupeApprovalRowsById(pendingBase, "pending");
   const highRiskPrescriptions = dedupeApprovalRowsById(highRiskPrescriptionsBase, "highRiskPrescriptions");
   const noPermission = dedupeApprovalRowsById(noPermissionBase, "noPermission");
   const selfApprovalRisk = dedupeApprovalRowsById(selfApprovalRiskBase, "selfApprovalRisk");
   const history = dedupeApprovalRowsById(historyBase, "history");
-  const dedupeDiagnostics = buildDedupeDiagnostics({
-    pending,
-    highRiskPrescriptions,
-    noPermission,
-    selfApprovalRisk,
-    history,
-  });
+  const dedupeDiagnostics = buildDedupeDiagnostics({ pending, highRiskPrescriptions, noPermission, selfApprovalRisk, history });
 
   return {
     title: "审批中心",
