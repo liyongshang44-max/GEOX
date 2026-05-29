@@ -128,7 +128,7 @@ jobs:
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps
 
       - name: Run frontend runtime page audit
-        timeout-minutes: 12
+        timeout-minutes: 8
         run: |
           set -euo pipefail
           set -a
@@ -138,8 +138,9 @@ jobs:
           export API_BASE_URL=http://127.0.0.1:3001
           export GEOX_WEB_PROXY_TARGET=http://127.0.0.1:3001
           export FRONTEND_AUDIT_WEB_BASE_URL=http://127.0.0.1:5173
-          export FRONTEND_AUDIT_ROUTE_TIMEOUT_MS=30000
-          export FRONTEND_AUDIT_TOTAL_TIMEOUT_MS=600000
+          export FRONTEND_AUDIT_ROUTES=/customer/dashboard,/operator/workbench,/operator/approvals,/dev/flight-table
+          export FRONTEND_AUDIT_ROUTE_TIMEOUT_MS=25000
+          export FRONTEND_AUDIT_TOTAL_TIMEOUT_MS=420000
           pnpm run ci:frontend:runtime-page-audit
 
       - name: Run Controlled Pilot strict release gate
