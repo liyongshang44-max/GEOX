@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-const { spawn } = require('node:child_process');
+const { spawn, spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
@@ -58,6 +58,19 @@ async function waitForHttp(url, timeoutMs) {
     await sleep(500);
   }
   return false;
+}
+
+function ensurePlaywrightChromiumInstalled() {
+  if (process.env.FRONTEND_AUDIT_SKIP_BROWSER_INSTALL === '1') return;
+  console.log('[frontend-runtime-audit] ensuring Playwright Chromium is installed');
+  const ret = spawnSync('pnpm', ['exec', 'playwright', 'install', 'chromium'], {
+    cwd: ROOT,
+    env: process.env,
+    stdio: 'inherit',
+  });
+  if (ret.status !== 0) {
+    throw new Error(`playwright chromium install failed with exit=${ret.status}`);
+  }
 }
 
 function startWebServerIfNeeded() {
@@ -242,6 +255,8 @@ async function main() {
   } catch (error) {
     throw new Error(`@playwright/test is required for browser runtime audit: ${error.message || error}`);
   }
+
+  ensurePlaywrightChromiumInstalled();
 
   let webProcess = null;
   const alreadyReady = await waitForHttp(WEB_BASE_URL, 1500);
