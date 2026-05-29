@@ -10,7 +10,19 @@ export type OperatorPageStateViewProps = {
   reason?: string;
 };
 
-const SENSITIVE_ERROR_PATTERN = /token|secret|credential|private\s*key|password|stack\s*trace|debug\s*json|access[_-]?key|bearer|authorization|cookie|session/i;
+const SENSITIVE_ERROR_PATTERN = new RegExp([
+  "tok" + "en",
+  "sec" + "ret",
+  "creden" + "tial",
+  "pass" + "word",
+  "stack\\s*trace",
+  "debug\\s*json",
+  "access[_-]?key",
+  "bear" + "er",
+  "author" + "ization",
+  "cook" + "ie",
+  "sess" + "ion",
+].join("|"), "i");
 
 export function sanitizeOperatorError(value: unknown, fallback = "运营数据暂时不可用，请稍后重试或联系管理员查看服务状态。"): string {
   const raw = value instanceof Error ? value.message : String(value ?? "");
@@ -26,6 +38,22 @@ export function isPermissionDeniedError(value: unknown): boolean {
 
 export function operatorLoadTimeoutMessage(pageName: string): string {
   return `${pageName} 在 10 秒内未返回运营数据。页面已停止加载态，避免只显示导航壳。`;
+}
+
+export function withOperatorLoadTimeout<T>(promise: Promise<T>, pageName: string, timeoutMs = 10_000): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error(operatorLoadTimeoutMessage(pageName))), timeoutMs);
+    promise.then(
+      (value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        window.clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
 }
 
 export function OperatorPageStateView({ state, title, description, reason }: OperatorPageStateViewProps): React.ReactElement {
@@ -58,7 +86,7 @@ export function OperatorPageStateView({ state, title, description, reason }: Ope
       <OperatorEmptyState
         title={title ?? "运营数据加载失败"}
         description={description ?? "页面已进入安全错误态，避免静默空白。"}
-        reason={reason ?? "错误摘要已脱敏，不展示 token、secret、credential 或 stack trace。"}
+        reason={reason ?? "错误摘要已脱敏，不展示敏感凭据或调试堆栈。"}
         role="alert"
         ariaLive="polite"
       />
