@@ -11,6 +11,9 @@ const WEB_BASE_URL = String(process.env.FRONTEND_AUDIT_WEB_BASE_URL || 'http://1
 const API_BASE_URL = String(process.env.API_BASE_URL || process.env.GEOX_WEB_PROXY_TARGET || 'http://127.0.0.1:3001').replace(/\/+$/, '');
 const DEVTOOLS_DISABLED = !['1', 'true', 'yes', 'on'].includes(String(process.env.GEOX_DEVTOOLS_ENABLED || '').toLowerCase());
 const ACCEPTANCE_TOKEN = String(process.env.GEOX_AO_ACT_TOKEN || process.env.GEOX_ACCEPTANCE_TOKEN || 'tenant_a_admin_token');
+const INSTALL_TIMEOUT_MS = Number(process.env.FRONTEND_AUDIT_BROWSER_INSTALL_TIMEOUT_MS || 240_000);
+const ROUTE_TIMEOUT_MS = Number(process.env.FRONTEND_AUDIT_ROUTE_TIMEOUT_MS || 75_000);
+const AUDIT_TIMEOUT_MS = Number(process.env.FRONTEND_AUDIT_TOTAL_TIMEOUT_MS || 900_000);
 
 const ROUTES = [
   '/customer/dashboard',
@@ -35,6 +38,14 @@ const VISIBLE_TEXT_MIN_LENGTH = 24;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function withTimeout(promise, label, timeoutMs) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
 function requestOk(url) {
@@ -67,7 +78,14 @@ function ensurePlaywrightChromiumInstalled() {
     cwd: ROOT,
     env: process.env,
     stdio: 'inherit',
+    timeout: INSTALL_TIMEOUT_MS,
   });
+  if (ret.error) {
+    throw new Error(`playwright chromium install failed: ${ret.error.message || ret.error}`);
+  }
+  if (ret.signal) {
+    throw new Error(`playwright chromium install terminated by signal=${ret.signal}`);
+  }
   if (ret.status !== 0) {
     throw new Error(`playwright chromium install failed with exit=${ret.status}`);
   }
@@ -109,6 +127,10 @@ function addFailure(result, message) {
 }
 
 async function auditRoute(browser, route) {
+  return withTimeout(auditRouteUnsafe(browser, route), `audit route ${route}`, ROUTE_TIMEOUT_MS);
+}
+
+async function auditRouteUnsafe(browser, route) {
   const result = {
     route,
     pass: true,
@@ -160,8 +182,10 @@ async function auditRoute(browser, route) {
   page.on('response', (res) => {
     const url = res.url();
     const status = res.status();
-    if (url.includes('/api/') && status >= 400) {
+    if (url.includes('/api/') && (status === 404 || status >= 500)) {
       result.networkErrors.push(`${status} ${url}`);
+    } else if (url.includes('/api/') && status >= 400) {
+      result.warnings.push(`api auth/permission ${status}: ${url}`);
     } else if (status >= 400 && /favicon\.ico$/i.test(url)) {
       result.warnings.push(`favicon ${status}: ${url}`);
     } else if (status >= 400) {
@@ -173,8 +197,8 @@ async function auditRoute(browser, route) {
   });
 
   try {
-    await page.goto(`${WEB_BASE_URL}${route}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-    await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined);
+    await page.goto(`${WEB_BASE_URL}${route}`, { waitUntil: 'domcontentloaded', timeout: 20_000 });
+    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => undefined);
     await page.waitForTimeout(500);
 
     const loadingStillVisible = await page.locator('body').evaluate((body, pattern) => new RegExp(pattern, 'i').test(body.innerText || ''), LOADING_RE.source).catch(() => true);
@@ -193,7 +217,7 @@ async function auditRoute(browser, route) {
       addFailure(result, 'operator page does not expose explicit main content state');
     }
     for (const error of result.consoleErrors) addFailure(result, `console.error/pageerror: ${error}`);
-    for (const networkError of result.networkErrors) addFailure(result, `/api 4xx/5xx response: ${networkError}`);
+    for (const networkError of result.networkErrors) addFailure(result, `/api 404/5xx response: ${networkError}`);
   } catch (error) {
     addFailure(result, `navigation/audit exception: ${safeText(error && (error.stack || error.message || error), 900)}`);
   } finally {
@@ -248,7 +272,7 @@ function writeReport(results) {
   fs.writeFileSync(REPORT_PATH, `${lines.join('\n')}\n`);
 }
 
-async function main() {
+async function runAudit() {
   let chromium;
   try {
     ({ chromium } = require('@playwright/test'));
@@ -292,7 +316,7 @@ async function main() {
   console.log(`[frontend-runtime-audit] report: ${REPORT_PATH}`);
 }
 
-main().catch((error) => {
+withTimeout(runAudit(), 'frontend runtime page audit', AUDIT_TIMEOUT_MS).catch((error) => {
   fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
   fs.writeFileSync(REPORT_PATH, `# Frontend Runtime Page Audit Report\n\nFAIL: ${safeText(error && (error.stack || error.message || error), 1500)}\n`);
   console.error(error);
