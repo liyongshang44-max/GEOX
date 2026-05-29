@@ -122,6 +122,16 @@ Heartbeat writes must be independent of MQTT and independent of device communica
 
 `ci:runtime:workers` must connect to the DB through `DATABASE_URL` and query `worker_runtime_heartbeat_v1` directly.
 
+The standalone runtime-workers gate bootstraps DB environment in this order:
+
+1. Use an explicit `DATABASE_URL` from `process.env`.
+2. If `DATABASE_URL` is missing, load `.env.ci` when present.
+3. If `.env.ci` is not present, load `.env` when present.
+4. If `DATABASE_URL` is still missing but `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` are available, derive `postgres://USER:PASSWORD@127.0.0.1:5433/DB`.
+5. If no URL can be loaded or derived, fail with `RUNTIME_WORKERS_DATABASE_URL_REQUIRED`.
+
+When both `DATABASE_URL` and `POSTGRES_PASSWORD` are available, the URL password must match `POSTGRES_PASSWORD`; otherwise the gate fails with `RUNTIME_WORKERS_DATABASE_URL_PASSWORD_MISMATCH`.
+
 For each required worker:
 
 ```text

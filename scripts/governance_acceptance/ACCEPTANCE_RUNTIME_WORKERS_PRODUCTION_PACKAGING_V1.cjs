@@ -39,6 +39,46 @@ function loadDotEnvFile(filePath) {
   return out;
 }
 
+function applyEnvDefaults(defaults) {
+  for (const [key, value] of Object.entries(defaults)) {
+    if (process.env[key] === undefined) process.env[key] = value;
+  }
+}
+
+function envFileExists(relPath) {
+  return fs.existsSync(path.join(root, relPath));
+}
+
+function resolveRuntimeWorkersEnv() {
+  if (String(process.env.DATABASE_URL || '').trim()) {
+    return { source: 'process.env', databaseUrl: String(process.env.DATABASE_URL).trim() };
+  }
+
+  let loadedSource = null;
+  if (envFileExists('.env.ci')) {
+    applyEnvDefaults(loadDotEnvFile(path.join(root, '.env.ci')));
+    loadedSource = '.env.ci';
+  } else if (envFileExists('.env')) {
+    applyEnvDefaults(loadDotEnvFile(path.join(root, '.env')));
+    loadedSource = '.env';
+  }
+
+  if (String(process.env.DATABASE_URL || '').trim()) {
+    return { source: loadedSource || 'process.env', databaseUrl: String(process.env.DATABASE_URL).trim() };
+  }
+
+  const user = String(process.env.POSTGRES_USER || process.env.PGUSER || '').trim();
+  const password = String(process.env.POSTGRES_PASSWORD || process.env.PGPASSWORD || '').trim();
+  const database = String(process.env.POSTGRES_DB || process.env.PGDATABASE || '').trim();
+  if (user && password && database) {
+    const databaseUrl = `postgres://${encodeURIComponent(user)}:${encodeURIComponent(password)}@127.0.0.1:5433/${encodeURIComponent(database)}`;
+    process.env.DATABASE_URL = databaseUrl;
+    return { source: `${loadedSource || 'process.env'}:derived-postgres`, databaseUrl };
+  }
+
+  return { source: loadedSource || 'process.env', databaseUrl: '' };
+}
+
 function expectedPostgresEnv() {
   return {
     ...loadDotEnvFile(path.join(root, '.env')),
@@ -271,8 +311,9 @@ async function queryHeartbeat(pool, worker) {
 }
 
 async function checkDbHeartbeats(diagnosticContainers) {
-  const databaseUrl = String(process.env.DATABASE_URL || '').trim();
+  const { databaseUrl, source } = resolveRuntimeWorkersEnv();
   if (!databaseUrl) fail('RUNTIME_WORKERS_DATABASE_URL_REQUIRED');
+  console.log(`[runtime-workers-packaging] database url source=${source}`);
   checkDatabaseUrlConsistency(databaseUrl);
   const maxAgeMs = Math.max(1, Number.parseInt(String(process.env.RUNTIME_WORKER_HEARTBEAT_MAX_AGE_MS || '120000'), 10) || 120000);
   const pool = new Pool({ connectionString: databaseUrl });
