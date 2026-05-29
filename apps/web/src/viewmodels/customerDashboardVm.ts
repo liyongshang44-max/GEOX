@@ -69,7 +69,7 @@ export type CustomerDashboardVm = {
   kpis: CustomerKpiVm[];
   topRiskFields: CustomerRiskFieldVm[];
   pendingItems: Array<{ id: string; sentence: string; href: string }>;
-  recentOperations: Array<{ operationId: string; operationName: string; fieldName: string; stateText: string; acceptanceText: string; evidenceText: string; scenarioSummaryText: string; updatedAtText: string; href: string }>;
+  recentOperations: Array<{ operationId: string; operationName: string; fieldName: string; stateText: string; acceptanceText: string; evidenceText: string; scenarioSummaryText: string; scenarioTypeText: string; formalChainStatusText: string; evidenceStatusText: string; needsReviewText: string; updatedAtText: string; href: string }>;
   actionItems: CustomerActionItemVm[];
   deviceHealth: {
     totalDevices?: number;
@@ -175,6 +175,10 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
       acceptanceText: customerGuardedAcceptanceText(item),
       evidenceText: customerGuardedEvidenceText(item),
       scenarioSummaryText: [formalVm.scenarioLabel, formalVm.chainText, formalVm.evidenceText].filter(Boolean).join("｜"),
+      scenarioTypeText: formalVm.rawScenarioType || "UNKNOWN",
+      formalChainStatusText: formalVm.formalChainStatus,
+      evidenceStatusText: formalVm.rawEvidenceStatus,
+      needsReviewText: formalVm.needsReview ? "true" : "false",
       updatedAtText: toDateTimeText((item as any).updated_at ?? item.executed_at),
       href: operationId ? `/customer/operations/${encodeURIComponent(operationId)}` : "/customer/dashboard",
     };

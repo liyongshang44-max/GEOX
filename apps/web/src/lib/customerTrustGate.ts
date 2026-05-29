@@ -52,7 +52,7 @@ export function isCustomerFormalChainPassed(value: any): boolean {
   const projectionSource = upper(ctx.projection_source);
   const dataTrustStatus = upper(ctx.data_trust_status);
   const chainPassed = ctx.chain_passed === true || chainStatus === "PASSED" || projectionSource === "GUARDED_REPORT" || dataTrustStatus === "FORMAL";
-  const visibleEligible = ctx.customer_visible_eligible !== false;
+  const visibleEligible = ctx.customer_visible_eligible === true;
   const needsReview = ctx.needs_review === true;
   const simulated = ctx.is_simulated === true || chainStatus === "SIMULATED" || trustLevel === "SIMULATED_DEV_ONLY";
   const formalTrust = !trustLevel || trustLevel === "FORMAL_CHAIN_PASSED" || trustLevel === "FORMAL_ACCEPTED";
@@ -121,7 +121,7 @@ export function isTrustedCustomerValue(value: any): boolean {
 
 export function isTrustedDashboardValueSummary(summary: any): boolean {
   const trustLevel = upper(summary?.trust_level ?? summary?.trustLevel);
-  return summary?.has_customer_visible_value === true && (!trustLevel || trustLevel === "FORMAL_ACCEPTED" || trustLevel === "FORMAL_CHAIN_PASSED");
+  return summary?.has_customer_visible_value === true && (trustLevel === "FORMAL_ACCEPTED" || trustLevel === "FORMAL_CHAIN_PASSED");
 }
 
 export function customerValueSummaryText(summary: any, total: number, formatter: (n: number) => string): string {

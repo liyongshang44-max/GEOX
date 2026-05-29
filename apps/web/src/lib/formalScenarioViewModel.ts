@@ -1,5 +1,5 @@
 import { mapGuardedReportCode } from "../api/reports";
-import { customerGuardedAcceptanceText, customerGuardedEvidenceText, customerGuardedStatusText } from "./customerTrustGate";
+import { customerGuardedAcceptanceText, customerGuardedEvidenceText, customerGuardedStatusText, isCustomerFormalChainPassed } from "./customerTrustGate";
 import {
   customerEvidenceGapText,
   customerReasonText,
@@ -41,6 +41,10 @@ export type FormalScenarioVm = {
   tone: "success" | "warning" | "danger" | "neutral";
   customerReasonSummary: string;
   customerBlockingReasons: string[];
+  rawScenarioType: string;
+  formalChainStatus: string;
+  rawEvidenceStatus: string;
+  needsReview: boolean;
 };
 
 function scenarioKeyOf(reportOrOperation: any): string {
@@ -100,7 +104,7 @@ function closureText(status: FormalScenarioClosureStepV1["status"]): string {
 
 function buildClosureSteps(reportOrOperation: any): FormalScenarioClosureStepV1[] {
   const refs = sourceRefsOf(reportOrOperation);
-  const chainPassed = formalChainStatusOf(reportOrOperation) === "PASSED" || reportOrOperation?.formal_scenario?.customer_visible_eligible === true;
+  const chainPassed = isCustomerFormalChainPassed(reportOrOperation);
   const stepDefs: Array<{ key: string; label: string; needles: string[]; fallbackPass?: boolean }> = [
     { key: "stage1_evidence", label: "Stage-1 evidence", needles: ["stage1", "evidence:formal_passed"], fallbackPass: reportOrOperation?.formal_scenario?.evidence_status === "FORMAL_EVIDENCE_PASSED" },
     { key: "diagnosis", label: "Diagnosis / problem state", needles: ["problem_state", "diagnosis"] },
@@ -118,6 +122,26 @@ function buildClosureSteps(reportOrOperation: any): FormalScenarioClosureStepV1[
     const status = closureStatus({ refs, report: reportOrOperation, passed: chainPassed, needles: step.needles, fallbackPass: step.fallbackPass });
     return { key: step.key, label: step.label, status, text: closureText(status) };
   });
+}
+
+function roiTrustLaneText(reportOrOperation: any): string {
+  const scenario = reportOrOperation?.formal_scenario ?? {};
+  const roi = reportOrOperation?.roi_ledger ?? reportOrOperation?.roi ?? {};
+  const trust = String(roi?.trust_level ?? roi?.summary?.trust_level ?? scenario?.roi_trust_lane ?? scenario?.trust_level ?? "").trim().toUpperCase();
+  const valueType = String(roi?.value_type ?? roi?.value_kind ?? roi?.projection?.value_type ?? roi?.projection?.projection_basis ?? roi?.hypothesis?.value_type ?? "").trim().toUpperCase();
+  if (isCustomerFormalChainPassed(reportOrOperation) && (trust === "FORMAL_ACCEPTED" || trust === "FORMAL_CHAIN_PASSED")) return "ROI trust lane：trusted / 正式可信价值，可对客展示。";
+  if (trust.includes("ESTIMATE") || valueType.includes("ESTIMATE") || valueType.includes("PROJECTION")) return "ROI trust lane：estimate / 估算线索，需正式验收后才可作为可信收益。";
+  if (trust.includes("HYPOTHESIS") || valueType.includes("HYPOTHESIS") || valueType.includes("ASSUMPTION")) return "ROI trust lane：hypothesis / 假设线索，不作为销售收益结论。";
+  return "ROI trust lane：insufficient evidence / 证据不足，暂不展示收益结论。";
+}
+
+function memoryTrustLaneText(reportOrOperation: any): string {
+  const memory = reportOrOperation?.field_memory ?? reportOrOperation?.field_memory_summary ?? {};
+  const lane = String(memory?.memory_lane ?? memory?.trust_lane ?? memory?.trust_level ?? reportOrOperation?.formal_scenario?.field_memory_lane ?? "").trim().toUpperCase();
+  if (isCustomerFormalChainPassed(reportOrOperation) && (memory?.customer_visible_memory === true || memory?.learning_eligible === true || lane === "FORMAL_FIELD_MEMORY" || lane === "FORMAL_ACCEPTED")) return "Field Memory trust lane：formal memory / 正式记忆，可进入客户学习闭环。";
+  if (lane.includes("SIMULATED") || reportOrOperation?.is_simulated === true) return "Field Memory trust lane：simulated memory / 模拟记忆，不进入客户学习闭环。";
+  if (lane.includes("TECHNICAL") || lane.includes("DIAGNOSTIC") || memory?.technical_memory === true) return "Field Memory trust lane：technical memory / 技术记忆，仅供内部排障。";
+  return "Field Memory trust lane：technical memory / 未通过正式学习门禁，仅作技术线索。";
 }
 
 function samplingSummaryText(value: any): string | undefined {
@@ -155,6 +179,7 @@ function zoneSummaryText(value: any): string | undefined {
 export function buildFormalScenarioVm(reportOrOperation: any): FormalScenarioVm {
   const scenario = reportOrOperation?.formal_scenario ?? {};
   const scenarioKey = scenarioKeyOf(reportOrOperation);
+  const rawScenarioType = scenarioKey;
   const scenarioLabel = scenarioTypeLabel(scenario.scenario_type ?? reportOrOperation?.scenario_type);
   const chainText = customerGuardedStatusText(reportOrOperation);
   const evidenceText = customerGuardedEvidenceText(reportOrOperation);
@@ -166,8 +191,9 @@ export function buildFormalScenarioVm(reportOrOperation: any): FormalScenarioVm 
   const pestDiseaseSummaryText = scenarioKey === "FORMAL_PEST_DISEASE_INSPECTION" || pestDiseaseInspection
     ? pestDiseaseInspectionCustomerSummaryText(pestDiseaseInspection)
     : undefined;
+  const guardedPassed = isCustomerFormalChainPassed(reportOrOperation);
   const tone: FormalScenarioVm["tone"] =
-    pestDiseaseInspection?.acceptance_status === "PASS"
+    guardedPassed
       ? "success"
       : pestDiseaseInspection?.review_status === "REJECTED" || pestDiseaseInspection?.acceptance_status === "FAIL"
         ? "danger"
@@ -180,14 +206,19 @@ export function buildFormalScenarioVm(reportOrOperation: any): FormalScenarioVm 
               : finalMapped.tone === "danger"
                 ? "danger"
                 : finalMapped.tone === "success"
-                  ? "success"
+                  ? "warning"
                   : "warning";
   const failSafeText = reportOrOperation?.fail_safe?.status ? failSafeStatusLabel(reportOrOperation.fail_safe.status) : undefined;
   const manualTakeoverText = reportOrOperation?.manual_takeover?.status ? manualTakeoverStatusLabel(reportOrOperation.manual_takeover.status) : undefined;
   const deviceStatusText = scenarioKey === "DEVICE_ANOMALY" ? `设备状态：${customerText(reportOrOperation?.device_status ?? reportOrOperation?.device?.status ?? "未知", "未知")}` : undefined;
   const executionGuardText = scenarioKey === "DEVICE_ANOMALY" ? "设备异常场景下，不对客户展示“执行成功”结论，需先完成人工复核。" : undefined;
   const customerBlockingReasons = collectBlockingReasons(reportOrOperation);
-  const customerReasonSummary = pestDiseaseSummaryText ?? fertilizationSummaryText ?? customerBlockingReasons[0] ?? "正式链路信息已记录，当前无额外阻塞说明。";
+  const customerReasonSummary = scenarioKey === "FORMAL_FERTILIZATION"
+    ? "实验性 / non-selling：施氮仅作为受控试点线索，不包装成客户可售试点资格。"
+    : pestDiseaseSummaryText ?? fertilizationSummaryText ?? customerBlockingReasons[0] ?? "正式链路信息已记录，当前无额外阻塞说明。";
+  const formalChainStatus = String(scenario?.formal_chain_status ?? reportOrOperation?.formal_chain_status ?? reportOrOperation?.chain_status ?? "NEEDS_REVIEW").trim().toUpperCase() || "NEEDS_REVIEW";
+  const rawEvidenceStatus = String(scenario?.evidence_status ?? reportOrOperation?.evidence_status ?? reportOrOperation?.evidence?.status ?? "NEEDS_REVIEW").trim().toUpperCase() || "NEEDS_REVIEW";
+  const needsReview = !guardedPassed || scenario?.needs_review === true || reportOrOperation?.needs_review === true;
   return {
     scenarioKey,
     scenarioLabel,
@@ -198,8 +229,8 @@ export function buildFormalScenarioVm(reportOrOperation: any): FormalScenarioVm 
     failSafeText,
     manualTakeoverText,
     zoneSummaryText: samplingSummaryText(reportOrOperation) ?? zoneSummaryText(reportOrOperation),
-    roiTrustText: scenario?.customer_visible_eligible === true ? "价值结论可对客展示" : "价值结论暂不展示：缺少正式验收结果。",
-    memoryTrustText: scenario?.customer_visible_eligible === true ? "学习结论可对客展示" : "学习结论暂不展示：缺少正式田块响应验证。",
+    roiTrustText: roiTrustLaneText(reportOrOperation),
+    memoryTrustText: memoryTrustLaneText(reportOrOperation),
     deviceStatusText,
     executionGuardText,
     fertilizationSummaryText,
@@ -207,5 +238,9 @@ export function buildFormalScenarioVm(reportOrOperation: any): FormalScenarioVm 
     tone,
     customerReasonSummary,
     customerBlockingReasons,
+    rawScenarioType,
+    formalChainStatus,
+    rawEvidenceStatus,
+    needsReview,
   };
 }

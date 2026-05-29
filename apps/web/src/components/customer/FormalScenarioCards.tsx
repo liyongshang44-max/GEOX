@@ -34,19 +34,19 @@ function missingEvidenceText(vm: FormalScenarioVm): string {
 export function FormalScenarioBadge({ data }: { data: any }): React.ReactElement {
   const vm = buildFormalScenarioVm(data);
   const pestDiseaseSummary = (vm as any).pestDiseaseSummaryText as string | undefined;
-  return <span className={`riskBadge ${toneClass(vm.tone)}`}>{vm.scenarioLabel} · {pestDiseaseSummary ?? vm.fertilizationSummaryText ?? vm.chainText}</span>;
+  return <span className={`riskBadge ${toneClass(vm.tone)}`}>{vm.scenarioLabel} · {pestDiseaseSummary ?? vm.fertilizationSummaryText ?? vm.chainText} · needs_review={vm.needsReview ? "true" : "false"}</span>;
 }
 
 export function FormalChainSummaryCard({ data }: { data: any }): React.ReactElement {
   const vm = buildFormalScenarioVm(data);
   const pestDiseaseSummary = (vm as any).pestDiseaseSummaryText as string | undefined;
-  return <article className="customerCard"><h3 className="customerCardTitle">正式链路摘要</h3><div>正式链路：{vm.chainText}</div><div className="customerSpacingTopXs">正式证据：{vm.evidenceText}</div><div className="customerSpacingTopXs">原因摘要：{vm.customerReasonSummary}</div>{vm.fertilizationSummaryText ? <div className="customerSpacingTopXs">施氮摘要：{vm.fertilizationSummaryText}</div> : null}{pestDiseaseSummary ? <div className="customerSpacingTopXs">巡检摘要：{pestDiseaseSummary}</div> : null}</article>;
+  return <article className="customerCard"><h3 className="customerCardTitle">正式链路摘要</h3><div>正式链路：{vm.chainText}</div><div className="customerSpacingTopXs">正式证据：{vm.evidenceText}</div><div className="customerSpacingTopXs">原因摘要：{vm.customerReasonSummary}</div><div className="customerSpacingTopXs">guarded payload：scenario_type={vm.rawScenarioType || "UNKNOWN"} · formal_chain_status={vm.formalChainStatus} · evidence_status={vm.rawEvidenceStatus} · needs_review={vm.needsReview ? "true" : "false"}</div>{vm.fertilizationSummaryText ? <div className="customerSpacingTopXs">施氮摘要：{vm.fertilizationSummaryText}</div> : null}{pestDiseaseSummary ? <div className="customerSpacingTopXs">巡检摘要：{pestDiseaseSummary}</div> : null}</article>;
 }
 
 export function ScenarioAcceptanceSummary({ data }: { data: any }): React.ReactElement {
   const vm = buildFormalScenarioVm(data);
   const pdiText = vm.scenarioKey === "FORMAL_PEST_DISEASE_INSPECTION" ? <div className="customerSpacingTopXs">巡检证据链：{vm.chainText}</div> : null;
-  return <article className="customerCard"><h3 className="customerCardTitle">验收与闭环</h3><div>验收状态：{vm.acceptanceText}</div><div className="customerSpacingTopXs">验收说明：{vm.customerReasonSummary}</div><div className="customerSpacingTopXs">建议/处方/审批/执行/验收闭环：{vm.chainText}</div>{pdiText}<div className="customerSpacingTopXs">正式闭环明细：</div><div className="customerSpacingTopXs customerGridTwo">{vm.closureSteps.map((step) => <div key={step.key} className="customerMiniCard"><div>{step.label}</div><span className={`riskBadge ${closureToneClass(step.status)}`}>{step.text}</span></div>)}</div><div className="customerSpacingTopXs">{vm.zoneSummaryText ?? "暂无分区验收摘要"}</div></article>;
+  return <article className="customerCard"><h3 className="customerCardTitle">验收与闭环</h3><div>验收状态：{vm.acceptanceText}</div><div className="customerSpacingTopXs">验收说明：{vm.customerReasonSummary}</div><div className="customerSpacingTopXs">建议/处方/审批/执行/验收闭环：{vm.chainText}（closure chain）</div>{pdiText}<div className="customerSpacingTopXs">正式闭环明细：</div><div className="customerSpacingTopXs customerGridTwo">{vm.closureSteps.map((step) => <div key={step.key} className="customerMiniCard"><div>{step.label}</div><span className={`riskBadge ${closureToneClass(step.status)}`}>{step.text}</span></div>)}</div><div className="customerSpacingTopXs">{vm.zoneSummaryText ?? "暂无分区验收摘要"}</div></article>;
 }
 
 export function ScenarioValueMemorySummary({ data }: { data: any }): React.ReactElement {
