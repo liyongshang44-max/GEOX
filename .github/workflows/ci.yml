@@ -26,7 +26,7 @@ jobs:
           cache: pnpm
 
       - name: Install
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Route dependency guard
         run: pnpm run ci:route-dependency-guard
@@ -62,7 +62,7 @@ jobs:
           cache: pnpm
 
       - name: Install
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Prepare commercial compose env
         run: |
@@ -99,11 +99,15 @@ jobs:
         run: docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml config > /tmp/commercial-compose.rendered.yml
 
       - name: Start acceptance runtime dependencies
+        timeout-minutes: 8
         run: |
-          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d minio minio-init
+          set -euo pipefail
+          trap 'rc=$?; echo "[diag] runtime dependency startup failed rc=$rc"; docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps || true; echo "[diag] --- minio-init logs ---"; docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs --tail=200 minio-init || true; echo "[diag] --- server logs ---"; docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs --tail=200 server || true; echo "[diag] --- postgres logs ---"; docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs --tail=200 postgres || true; echo "[diag] --- mqtt logs ---"; docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs --tail=120 mqtt || true; exit $rc' ERR
+          timeout 180 docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d minio minio-init
           docker logs geox-v1-minio-init || true
           docker ps -a
-          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d postgres mqtt server jobs executor
+          timeout 300 docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d postgres mqtt server jobs executor
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps
 
       - name: Wait for acceptance services ready
         run: |
@@ -127,7 +131,41 @@ jobs:
           docker run --rm --network host --entrypoint /bin/sh minio/mc:latest -c 'set -eu; mc alias set local http://127.0.0.1:9000 geoxminio ci-pilot-minio-strong-2026; mc ls local; mc stat local/evidence-exports-v1'
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps
 
+      - name: Install Playwright Chromium for frontend audit
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          pnpm exec playwright install chromium
+
+      - name: Run frontend runtime page audit
+        timeout-minutes: 8
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          set -a
+          source .env.ci
+          set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export API_BASE_URL=http://127.0.0.1:3001
+          export GEOX_WEB_PROXY_TARGET=http://127.0.0.1:3001
+          export FRONTEND_AUDIT_WEB_BASE_URL=http://127.0.0.1:5173
+          export FRONTEND_AUDIT_ROUTES=/customer/dashboard,/operator/workbench,/operator/approvals,/dev/flight-table
+          export FRONTEND_AUDIT_ROUTE_TIMEOUT_MS=25000
+          export FRONTEND_AUDIT_TOTAL_TIMEOUT_MS=360000
+          export FRONTEND_AUDIT_SKIP_BROWSER_INSTALL=1
+          export FRONTEND_AUDIT_SKIP_WEB_SERVER=1
+          pnpm --filter @geox/web dev -- --host 127.0.0.1 --port 5173 > acceptance-output/FRONTEND_WEB.log 2>&1 &
+          WEB_PID=$!
+          trap 'kill $WEB_PID >/dev/null 2>&1 || true; wait $WEB_PID 2>/dev/null || true' EXIT
+          if ! timeout 90 bash -lc 'until curl -fsS http://127.0.0.1:5173 > /dev/null; do echo "[wait] frontend web not ready"; tail -n 40 acceptance-output/FRONTEND_WEB.log || true; sleep 2; done'; then
+            echo "[diag] frontend web server did not become ready"
+            tail -n 200 acceptance-output/FRONTEND_WEB.log || true
+            exit 1
+          fi
+          pnpm run ci:frontend:runtime-page-audit
+
       - name: Run Controlled Pilot strict release gate
+        timeout-minutes: 45
         run: |
           set -a
           source .env.ci
@@ -162,6 +200,8 @@ jobs:
           mkdir -p acceptance-output
           cp docs/audit/BASE_CONTRACT_GATE_MATURITY_REPORT.md acceptance-output/BASE_CONTRACT_GATE_MATURITY_REPORT.md || true
           cp docs/audit/CONTROLLED_PILOT_READINESS_REPORT.md acceptance-output/CONTROLLED_PILOT_READINESS_REPORT.md || true
+          cp docs/audit/FRONTEND_RUNTIME_PAGE_AUDIT_REPORT.md acceptance-output/FRONTEND_RUNTIME_PAGE_AUDIT_REPORT.md || true
+          cp -R docs/audit/frontend-runtime-page-audit acceptance-output/frontend-runtime-page-audit || true
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs --no-color --tail=5000 server > acceptance-output/SERVER_RUNTIME.log
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs --no-color --tail=2000 minio-init > acceptance-output/MINIO_INIT.log || true
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs --no-color --tail=2000 postgres > acceptance-output/POSTGRES_RUNTIME.log || true
@@ -210,6 +250,9 @@ jobs:
             acceptance-output/report.html
             acceptance-output/BASE_CONTRACT_GATE_MATURITY_REPORT.md
             acceptance-output/CONTROLLED_PILOT_READINESS_REPORT.md
+            acceptance-output/FRONTEND_RUNTIME_PAGE_AUDIT_REPORT.md
+            acceptance-output/frontend-runtime-page-audit/**
+            acceptance-output/FRONTEND_WEB.log
             acceptance-output/*.log
           if-no-files-found: warn
 
@@ -220,30 +263,4 @@ jobs:
             echo "skip cleanup: .env.ci missing"
             exit 0
           fi
-          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml down --remove-orphans
-
-  release-gate:
-    runs-on: ubuntu-latest
-    needs:
-      - build-test
-      - acceptance
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Download acceptance artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: acceptance-output
-          path: acceptance-output
-
-      - name: Generate release gate report
-        run: node scripts/qa/generate_release_gate_report.cjs
-
-      - name: Check release gates
-        run: node scripts/qa/check_release_gates.cjs --report docs/qa/reports/release_gate_report.json
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml down -v

@@ -4,15 +4,17 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const REPORT_PATH = path.resolve(ROOT, 'docs/audit/CONTROLLED_PILOT_READINESS_REPORT.md');
+const DEFAULT_GATE_TIMEOUT_MS = Number(process.env.CONTROLLED_PILOT_GATE_TIMEOUT_MS || 8 * 60 * 1000);
+const LONG_GATE_TIMEOUT_MS = Number(process.env.CONTROLLED_PILOT_LONG_GATE_TIMEOUT_MS || 24 * 60 * 1000);
 
 const REQUIRED_GATES = [
   { id: 'runtime_workers', command: 'pnpm run ci:runtime:workers' },
   { id: 'pilot_runtime_security_baseline', command: 'pnpm run ci:runtime:pilot-security-baseline' },
   { id: 'base_contract_p0', command: 'pnpm run ci:base-contract:p0' },
-  { id: 'scenario_pest_disease_inspection', command: 'pnpm run ci:scenario:pest-disease-inspection' },
-  { id: 'scenario_formal_e2e', command: 'pnpm run ci:scenario:formal-e2e' },
-  { id: 'scenario_productization', command: 'pnpm run ci:scenario:productization' },
-  { id: 'device_anomaly_controlled_pilot', command: 'node scripts/agronomy_acceptance/ACCEPTANCE_DEVICE_ANOMALY_CONTROLLED_PILOT_V1.cjs' },
+  { id: 'scenario_pest_disease_inspection', command: 'pnpm run ci:scenario:pest-disease-inspection', timeout_ms: LONG_GATE_TIMEOUT_MS },
+  { id: 'scenario_formal_e2e', command: 'pnpm run ci:scenario:formal-e2e', timeout_ms: LONG_GATE_TIMEOUT_MS },
+  { id: 'scenario_productization', command: 'pnpm run ci:scenario:productization', timeout_ms: LONG_GATE_TIMEOUT_MS },
+  { id: 'device_anomaly_controlled_pilot', command: 'node scripts/agronomy_acceptance/ACCEPTANCE_DEVICE_ANOMALY_CONTROLLED_PILOT_V1.cjs', timeout_ms: LONG_GATE_TIMEOUT_MS },
   { id: 'customer_device_anomaly_report', command: 'node scripts/frontend_acceptance/ACCEPTANCE_CUSTOMER_DEVICE_ANOMALY_REPORT_V1.cjs' },
   { id: 'runtime_openapi_sales_critical', command: 'node scripts/governance_acceptance/ACCEPTANCE_RUNTIME_OPENAPI_SALES_CRITICAL_V1.cjs' },
   { id: 'server_typecheck', command: 'pnpm --filter @geox/server typecheck' },
@@ -26,7 +28,9 @@ const known_limits = [
   'required_for_controlled_pilot = false',
   'ci:controlled-pilot expects the acceptance runtime to be running; it does not start Docker services or downgrade missing runtime to PASS.',
   'pilot_runtime_security_baseline is a pilot minimum runtime-safety gate, not a complete commercial IAM program.',
-  'runtime worker liveness source of truth is worker_runtime_heartbeat_v1; Docker logs are diagnostic only.'
+  'runtime worker liveness source of truth is worker_runtime_heartbeat_v1; Docker logs are diagnostic only.',
+  'Each controlled-pilot sub-gate has a hard timeout so a silent child process hang is reported as FAIL instead of blocking CI indefinitely.',
+  'Default sub-gate timeout is short for diagnostics; known long scenario/productization gates use a separate long timeout.'
 ];
 const not_for_sale_claims = [
   'FORMAL_FERTILIZATION is NOT part of mandatory controlled pilot sales gate.',
@@ -91,25 +95,38 @@ function tail(value, max = 4200) {
   return raw.length <= max ? raw : raw.slice(raw.length - max);
 }
 
+function gateTimeoutMs(gate) {
+  const envKey = `CONTROLLED_PILOT_GATE_TIMEOUT_MS_${gate.id.toUpperCase().replace(/[^A-Z0-9]+/g, '_')}`;
+  return Number(process.env[envKey] || gate.timeout_ms || DEFAULT_GATE_TIMEOUT_MS);
+}
+
 function runGate(gate, env) {
   const started_at = new Date().toISOString();
-  console.log(`[controlled-pilot-release-gate] START ${gate.id}: ${gate.command}`);
+  const timeout_ms = gateTimeoutMs(gate);
+  console.log(`[controlled-pilot-release-gate] START ${gate.id}: ${gate.command} timeout_ms=${timeout_ms}`);
   const result = spawnSync(gate.command, {
     cwd: ROOT,
     shell: true,
     encoding: 'utf8',
     env,
     maxBuffer: 64 * 1024 * 1024,
+    timeout: timeout_ms,
+    killSignal: 'SIGTERM'
   });
   const stdout = result.stdout || '';
   const stderr = result.stderr || '';
-  const output_tail = result.status === 0 ? '' : tail(`${stdout}\n${stderr}`);
+  const error_text = result.error ? `${result.error.code || 'ERROR'}: ${result.error.message || result.error}` : '';
+  const timed_out = result.error?.code === 'ETIMEDOUT';
+  const ok = result.status === 0 && !result.error;
+  const output_tail = ok ? '' : tail([error_text, stdout, stderr].filter(Boolean).join('\n'));
   const record = {
     id: gate.id,
     command: gate.command,
-    ok: result.status === 0,
+    ok,
     exit_code: result.status,
     signal: result.signal || null,
+    timeout_ms,
+    timed_out,
     started_at,
     finished_at: new Date().toISOString(),
     output_tail,
@@ -117,7 +134,8 @@ function runGate(gate, env) {
   if (record.ok) {
     console.log(`[controlled-pilot-release-gate] PASS ${gate.id}`);
   } else {
-    console.error(`[controlled-pilot-release-gate] FAIL ${gate.id} exit=${record.exit_code}`);
+    const timeout_suffix = timed_out ? ' timeout=true' : '';
+    console.error(`[controlled-pilot-release-gate] FAIL ${gate.id} exit=${record.exit_code} signal=${record.signal}${timeout_suffix}`);
     console.error(`[controlled-pilot-release-gate] ${gate.id} output_tail=${JSON.stringify(output_tail)}`);
   }
   return record;
@@ -154,10 +172,10 @@ function writeReport(summary, passed_gates, failed_gates) {
     toList(passed_gates.map((gate) => `${gate.id}: ${gate.command}`)),
     '',
     '## Failed gates',
-    toList(failed_gates.map((gate) => `${gate.id}: ${gate.command} (exit=${gate.exit_code})`)),
+    toList(failed_gates.map((gate) => `${gate.id}: ${gate.command} (exit=${gate.exit_code}, signal=${gate.signal || 'none'}, timeout=${gate.timed_out ? 'true' : 'false'})`)),
     '',
     '## Failed gate output tails',
-    failed_gates.length === 0 ? '- none' : failed_gates.map((gate) => `### ${gate.id}\n\n${jsonBlock({ command: gate.command, exit_code: gate.exit_code, output_tail: gate.output_tail })}`).join('\n\n'),
+    failed_gates.length === 0 ? '- none' : failed_gates.map((gate) => `### ${gate.id}\n\n${jsonBlock({ command: gate.command, exit_code: gate.exit_code, signal: gate.signal, timeout_ms: gate.timeout_ms, timed_out: gate.timed_out, output_tail: gate.output_tail })}`).join('\n\n'),
     '',
     '## Runtime worker liveness',
     jsonBlock(summary.runtime_worker_liveness),
@@ -192,6 +210,8 @@ console.log('[controlled-pilot-release-gate] strict mode environment', {
   ADMIN_TOKEN: gateEnv.ADMIN_TOKEN ? '<set>' : '<missing>',
   AO_ACT_TOKEN: gateEnv.AO_ACT_TOKEN ? '<set>' : '<missing>',
   CLIENT_TOKEN: gateEnv.CLIENT_TOKEN ? '<set>' : '<missing>',
+  DEFAULT_GATE_TIMEOUT_MS,
+  LONG_GATE_TIMEOUT_MS
 });
 
 const results = REQUIRED_GATES.map((gate) => ({ ...gate, ...runGate(gate, gateEnv) }));
@@ -214,8 +234,8 @@ const summary = {
 writeReport(summary, passed_gates, failed_gates);
 process.stdout.write(`${JSON.stringify({
   ...summary,
-  passed_gates: passed_gates.map((gate) => ({ id: gate.id, command: gate.command })),
-  failed_gates: failed_gates.map((gate) => ({ id: gate.id, command: gate.command, exit_code: gate.exit_code, output_tail: gate.output_tail })),
+  passed_gates: passed_gates.map((gate) => ({ id: gate.id, command: gate.command, timeout_ms: gate.timeout_ms })),
+  failed_gates: failed_gates.map((gate) => ({ id: gate.id, command: gate.command, exit_code: gate.exit_code, signal: gate.signal, timeout_ms: gate.timeout_ms, timed_out: gate.timed_out, output_tail: gate.output_tail })),
   known_limits,
   not_for_sale_claims
 }, null, 2)}\n`);
