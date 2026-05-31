@@ -138,7 +138,7 @@ jobs:
           pnpm exec playwright install chromium
 
       - name: Run frontend runtime page audit
-        timeout-minutes: 8
+        timeout-minutes: 12
         run: |
           set -euo pipefail
           mkdir -p acceptance-output
@@ -149,9 +149,9 @@ jobs:
           export API_BASE_URL=http://127.0.0.1:3001
           export GEOX_WEB_PROXY_TARGET=http://127.0.0.1:3001
           export FRONTEND_AUDIT_WEB_BASE_URL=http://127.0.0.1:5173
-          export FRONTEND_AUDIT_ROUTES=/customer/dashboard,/operator/workbench,/operator/approvals,/dev/flight-table
-          export FRONTEND_AUDIT_ROUTE_TIMEOUT_MS=25000
-          export FRONTEND_AUDIT_TOTAL_TIMEOUT_MS=360000
+          export FRONTEND_AUDIT_ROUTES=/customer/dashboard,/customer/export,/operator/workbench,/operator/approvals,/operator/dispatch,/operator/acceptance,/operator/evidence,/operator/devices-alerts,/operator/roi-ledger,/operator/field-memory,/dev/flight-table
+          export FRONTEND_AUDIT_ROUTE_TIMEOUT_MS=35000
+          export FRONTEND_AUDIT_TOTAL_TIMEOUT_MS=600000
           export FRONTEND_AUDIT_SKIP_BROWSER_INSTALL=1
           export FRONTEND_AUDIT_SKIP_WEB_SERVER=1
           pnpm --filter @geox/web dev -- --host 127.0.0.1 --port 5173 > acceptance-output/FRONTEND_WEB.log 2>&1 &
