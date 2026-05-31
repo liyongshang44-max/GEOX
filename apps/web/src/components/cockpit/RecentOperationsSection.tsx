@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import type { CustomerDashboardVm } from "../../viewmodels/customerDashboardVm";
+import { customerProductText, customerReviewStateText } from "../../lib/customerProductLanguage";
 import { CustomerEmptyState, type CustomerEmptyStateVm } from "../customer";
 
 type Props = {
@@ -17,13 +18,11 @@ export default function RecentOperationsSection({ items, emptyState }: Props): R
           {items.map((item) => (
             <article key={item.operationId || item.href} className="customerListItem">
               <div><strong>{item.operationName} / {item.fieldName}</strong></div>
-              <div className="customerMetricLabel">状态：{item.stateText}</div>
-              <div className="customerMetricLabel">验收状态：{item.acceptanceText}</div>
-              <div className="customerMetricLabel">证据状态：{item.evidenceText}</div>
-              <div className="customerMetricLabel">scenario_type：{item.scenarioTypeText}</div>
-              <div className="customerMetricLabel">formal_chain_status：{item.formalChainStatusText}</div>
-              <div className="customerMetricLabel">evidence_status：{item.evidenceStatusText}</div>
-              <div className="customerMetricLabel">needs_review：{item.needsReviewText}</div>
+              <div className="customerMetricLabel">状态：{customerProductText(item.stateText)}</div>
+              <div className="customerMetricLabel">验收状态：{customerProductText(item.acceptanceText)}</div>
+              <div className="customerMetricLabel">证据状态：{customerProductText(item.evidenceText)}</div>
+              <div className="customerMetricLabel">正式链路：{customerProductText(item.scenarioSummaryText, "正式链路状态待确认")}</div>
+              <div className="customerMetricLabel">复核状态：{customerReviewStateText(item.needsReviewText)}</div>
               <div className="muted">更新时间：{item.updatedAtText}</div>
               {item.href ? <Link className="customerButton customerSpacingTopXs" to={item.href}>查看作业</Link> : null}
             </article>
