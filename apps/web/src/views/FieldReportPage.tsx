@@ -10,6 +10,7 @@ import FieldMemoryPanel from "../components/customer/FieldMemoryPanel";
 import RoiLedgerDrawer from "../components/customer/RoiLedgerDrawer";
 import { FormalChainSummaryCard, ScenarioAcceptanceSummary } from "../components/customer";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
+import { customerProductText, customerReviewStateText } from "../lib/customerProductLanguage";
 import { customerCropLabel, customerMissingInputsText, customerSemanticLabel, customerSourceLabel } from "../lib/customerSemanticLabels";
 import { buildFieldReportVm } from "../viewmodels/fieldReportVm";
 import { buildEvidenceVm } from "../lib/evidenceViewModel";
@@ -133,12 +134,12 @@ export default function FieldReportPage(): React.ReactElement {
         <FieldWeatherSummaryCard weather={weather} />
 
         <section className="fieldGrid fieldGrid2">
-          <article className="customerCard"><h3 className="customerCardTitle">最近作业</h3>{vm.recentOperations.length ? <ul className="customerList">{vm.recentOperations.map((item) => <li key={item.operationId || item.title} className="customerListItem"><div><strong>{item.title}</strong></div><div>{item.acceptanceText} · {item.updatedAtText}</div><div className="customerMetricLabel">{item.formalScenarioText}</div><div className="customerMetricLabel">scenario_type：{item.scenarioTypeText} · formal_chain_status：{item.formalChainStatusText} · evidence_status：{item.evidenceStatusText} · needs_review：{item.needsReviewText}</div><Link to={item.href}>查看作业</Link></li>)}</ul> : <CustomerEmptyState vm={noRecentOperationsState} />}</article>
-          <article className="customerCard"><h3 className="customerCardTitle">设备与监测摘要</h3><div>当前地块设备：共 {vm.deviceSummary.totalText}；在线 {vm.deviceSummary.onlineText}，离线 {vm.deviceSummary.offlineText}</div><div className="customerSpacingTopXs">scope：field_devices_count / offline_devices_count；全域设备与可见授权设备请查看客户首页设备状态。</div><div className="customerSpacingTopXs">最近更新：{vm.deviceSummary.lastUpdateText}</div></article>
+          <article className="customerCard"><h3 className="customerCardTitle">最近作业</h3>{vm.recentOperations.length ? <ul className="customerList">{vm.recentOperations.map((item) => <li key={item.operationId || item.title} className="customerListItem"><div><strong>{item.title}</strong></div><div>{customerProductText(item.acceptanceText)} · {item.updatedAtText}</div><div className="customerMetricLabel">正式链路：{customerProductText(item.formalScenarioText, "正式链路状态待确认")}</div><div className="customerMetricLabel">复核状态：{customerReviewStateText(item.needsReviewText)}</div><Link to={item.href}>查看作业</Link></li>)}</ul> : <CustomerEmptyState vm={noRecentOperationsState} />}</article>
+          <article className="customerCard"><h3 className="customerCardTitle">设备与监测摘要</h3><div>当前地块设备：共 {vm.deviceSummary.totalText}；在线 {vm.deviceSummary.onlineText}，离线 {vm.deviceSummary.offlineText}</div><div className="customerSpacingTopXs">统计范围：当前地块设备与离线设备。全域设备与授权可见设备请查看客户首页设备状态。</div><div className="customerSpacingTopXs">最近更新：{vm.deviceSummary.lastUpdateText}</div></article>
         </section>
 
         <section className="fieldGrid fieldGrid2">
-          <article className="customerCard"><div className="customerCardHeaderRow"><h3 className="customerCardTitle">价值记录</h3><button type="button" className="customerLinkButton" onClick={() => setRoiDrawerOpen(true)}>查看明细</button></div>{hasRoiSummary ? <div>{vm.roiSummary.displayText}</div> : <CustomerEmptyState vm={roiEmptyState} />}</article>
+          <article className="customerCard"><div className="customerCardHeaderRow"><h3 className="customerCardTitle">价值记录</h3><button type="button" className="customerLinkButton" onClick={() => setRoiDrawerOpen(true)}>查看明细</button></div>{hasRoiSummary ? <div>{customerProductText(vm.roiSummary.displayText)}</div> : <CustomerEmptyState vm={roiEmptyState} />}</article>
           <article className="customerCard"><h3 className="customerCardTitle">田块记忆</h3><FieldMemoryPanel fieldId={vm.field.fieldId} embeddedMemory={embeddedMemory} compact /></article>
         </section>
       </div>
