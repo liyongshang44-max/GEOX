@@ -52,6 +52,7 @@
     "ci:governance:formal-scenario-no-projection-write": "node scripts/governance_acceptance/ACCEPTANCE_FORMAL_SCENARIO_NO_PROJECTION_WRITE_V1.cjs",
     "ci:frontend:customer-trust-gate": "node scripts/governance_acceptance/ACCEPTANCE_FRONTEND_CUSTOMER_TRUST_GATE_V1.cjs",
     "ci:frontend:customer-product-language": "node scripts/frontend_acceptance/ACCEPTANCE_CUSTOMER_PRODUCT_LANGUAGE_V1.cjs",
+    "ci:frontend:operator-device-offline-workflow": "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_DEVICE_OFFLINE_WORKFLOW_V1.cjs",
     "ci:frontend:flight-table-devtools-boundary": "node scripts/frontend_acceptance/ACCEPTANCE_FLIGHT_TABLE_DEVTOOLS_BOUNDARY_V1.cjs",
     "ci:frontend:operator-approvals-dedupe": "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_APPROVALS_VM_DEDUPE_V1.cjs",
     "ci:frontend:operator-page-runtime-states": "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_PAGE_RUNTIME_STATES_V1.cjs",
