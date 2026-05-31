@@ -8,6 +8,7 @@ const checks = [
   { dir: "../frontend_acceptance", file: "ACCEPTANCE_CUSTOMER_FORMAL_SCENARIO_VM_V1.cjs" },
   { dir: "../frontend_acceptance", file: "ACCEPTANCE_CUSTOMER_FORMAL_SCENARIO_REPORT_V1.cjs" },
   { dir: "../frontend_acceptance", file: "ACCEPTANCE_CUSTOMER_PRODUCT_LANGUAGE_V1.cjs" },
+  { dir: "../frontend_acceptance", file: "ACCEPTANCE_OPERATOR_DEVICE_OFFLINE_WORKFLOW_V1.cjs" },
   { dir: "../frontend_acceptance", file: "ACCEPTANCE_OPERATOR_SCENARIO_REVIEW_V1.cjs" },
   { dir: "../frontend_acceptance", file: "ACCEPTANCE_UNIFIED_EVIDENCE_VIEWER_V1.cjs" },
   { dir: "../frontend_acceptance", file: "ACCEPTANCE_SCENARIO_EXPORT_SAME_SOURCE_V1.cjs" },
