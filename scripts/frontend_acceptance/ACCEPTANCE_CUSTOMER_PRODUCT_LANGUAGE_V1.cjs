@@ -72,6 +72,21 @@ for (const rel of requiredProductLanguageUsages) {
   }
 }
 
+const dashboardVmPath = path.join(ROOT, 'apps/web/src/viewmodels/customerDashboardVm.ts');
+const dashboardVm = fs.existsSync(dashboardVmPath) ? fs.readFileSync(dashboardVmPath, 'utf8') : '';
+if (/设备中心暂未开放/.test(dashboardVm)) {
+  console.error('[customer-product-language] forbidden dead customer action: 设备中心暂未开放');
+  failed = true;
+}
+if (!/查看受影响地块/.test(dashboardVm) || !/离线设备需由运营人员复核最近心跳、遥测和绑定地块/.test(dashboardVm)) {
+  console.error('[customer-product-language] customer offline device action must be actionable and explain operator follow-up');
+  failed = true;
+}
+if (!/未完成复核前不展示执行成功或价值结论/.test(dashboardVm)) {
+  console.error('[customer-product-language] customer offline device action must preserve no-fake-success/no-value boundary');
+  failed = true;
+}
+
 if (failed) {
   console.error('[customer-product-language] FAIL');
   process.exit(1);
