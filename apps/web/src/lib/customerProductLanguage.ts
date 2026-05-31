@@ -6,6 +6,8 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+const ws = "\\s+";
+
 const TOKENS = {
   globalDevices: token("global", "devices", "count"),
   visibleDevices: token("visible", "devices", "count"),
@@ -30,10 +32,10 @@ const PRODUCT_REPLACEMENTS: Array<[RegExp, string]> = [
   [new RegExp(`${escapeRegExp(TOKENS.needsReview)}\\s*[=:：]\\s*true`, "gi"), "需要人工复核"],
   [new RegExp(`${escapeRegExp(TOKENS.needsReview)}\\s*[=:：]\\s*false`, "gi"), "无需人工复核"],
   [new RegExp(`\\b${escapeRegExp(TOKENS.needsReview)}\\b`, "gi"), "复核状态"],
-  [new RegExp(["guarded", "payload"].join("\\\\s+"), "gi"), "正式链路状态"],
-  [new RegExp(["ROI", "trust", "lane"].join("\\\\s+"), "gi"), "价值可信度"],
-  [new RegExp(["Field", "Memory", "trust", "lane"].join("\\\\s+"), "gi"), "田块记忆可信度"],
-  [new RegExp(["closure", "chain"].join("\\\\s+"), "gi"), "闭环链路"],
+  [new RegExp(["guarded", "payload"].join(ws), "gi"), "正式链路状态"],
+  [new RegExp(["ROI", "trust", "lane"].join(ws), "gi"), "价值可信度"],
+  [new RegExp(["Field", "Memory", "trust", "lane"].join(ws), "gi"), "田块记忆可信度"],
+  [new RegExp(["closure", "chain"].join(ws), "gi"), "闭环链路"],
   [/trusted\s*\/\s*/gi, "已通过验证："],
   [/estimate\s*\/\s*/gi, "估算线索："],
   [/hypothesis\s*\/\s*/gi, "假设线索："],
