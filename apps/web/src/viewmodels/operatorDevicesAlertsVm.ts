@@ -1,4 +1,4 @@
-import type { OperatorAlertItem, OperatorAlertStatus, OperatorCredentialStatus, OperatorDeviceItem, OperatorDeviceOnlineStatus, OperatorDevicesAlertsResponse } from "../api/operatorDevicesAlerts";
+import type { OperatorAlertItem, OperatorAlertStatus, OperatorCredentialStatus, OperatorDeviceItem, OperatorDeviceOnlineStatus, OperatorDevicesAlertsQuery, OperatorDevicesAlertsResponse } from "../api/operatorDevicesAlerts";
 import { mapOperatorStatusLabel, replaceOperatorTerms } from "../lib/operatorStatusLabels";
 
 export type OperatorDeviceRowVm = {
@@ -54,6 +54,21 @@ export type OperatorDeviceScopeVm = {
   explanationText: string;
 };
 
+export type OperatorDeviceOfflineFocusVm = {
+  active: boolean;
+  title: string;
+  description: string;
+  deviceIdText: string;
+  fieldText: string;
+  lastHeartbeatText: string;
+  lastTelemetryText: string;
+  delayText: string;
+  statusText: string;
+  auditText: string;
+  nextSteps: string[];
+  matchedDevice?: OperatorDeviceRowVm | null;
+};
+
 export type OperatorDevicesAlertsVm = {
   title: string;
   lead: string;
@@ -65,6 +80,7 @@ export type OperatorDevicesAlertsVm = {
   totalDevices: number;
   totalAlerts: number;
   deviceScope: OperatorDeviceScopeVm;
+  focus: OperatorDeviceOfflineFocusVm;
   onlineDevices: OperatorDeviceRowVm[];
   offlineDevices: OperatorDeviceRowVm[];
   delayedDevices: OperatorDeviceRowVm[];
@@ -228,10 +244,39 @@ function buildScopeVm(response: OperatorDevicesAlertsResponse): OperatorDeviceSc
   };
 }
 
-export function buildOperatorDevicesAlertsVm(response: OperatorDevicesAlertsResponse): OperatorDevicesAlertsVm {
+function buildFocusVm(query: OperatorDevicesAlertsQuery | undefined, offlineDevices: OperatorDeviceRowVm[]): OperatorDeviceOfflineFocusVm {
+  const active = text(query?.focus) === "device_offline" || Boolean(text(query?.deviceId) || text(query?.fieldId));
+  const deviceId = text(query?.deviceId, "待确认");
+  const fieldId = text(query?.fieldId, "待确认");
+  const matchedDevice = offlineDevices.find((item) => (query?.deviceId ? item.deviceId === query.deviceId : true) && (query?.fieldId ? item.boundFieldText.includes(String(query.fieldId)) : true)) ?? null;
+  return {
+    active,
+    title: "设备离线处理",
+    description: active ? "从运营总队列进入的设备离线事项。先确认最近心跳与遥测，再安排现场复核或设备维护；此流程不生成正式作业成功结论。" : "未从设备离线队列进入，当前按设备与告警中心总览展示。",
+    deviceIdText: matchedDevice?.deviceId ?? deviceId,
+    fieldText: matchedDevice?.boundFieldText ?? fieldId,
+    lastHeartbeatText: matchedDevice?.lastHeartbeatText ?? "待设备中心返回",
+    lastTelemetryText: matchedDevice?.lastTelemetryText ?? "待设备中心返回",
+    delayText: matchedDevice?.delayText ?? "数据延迟待确认",
+    statusText: matchedDevice?.statusText ?? (active ? "离线状态待确认" : "未聚焦设备"),
+    auditText: active ? "审计策略：只记录离线排查入口、设备/地块范围、后续人工处理建议；不伪造 ACK、验收、ROI 或 Field Memory。" : "未触发离线处理审计入口。",
+    nextSteps: [
+      "核对最近心跳与最近遥测时间，确认是否为通信中断、供电问题或设备维护状态。",
+      "核对绑定地块，确认离线影响的观测范围与是否影响当前验收证据。",
+      "需要现场处理时，转人工巡检或维护任务；未完成复核前不得对客户展示执行成功。",
+    ],
+    matchedDevice,
+  };
+}
+
+export function buildOperatorDevicesAlertsVm(response: OperatorDevicesAlertsResponse, query?: OperatorDevicesAlertsQuery): OperatorDevicesAlertsVm {
   const devices = (response.devices ?? []).map(buildDeviceRow);
   const alerts = (response.alerts ?? []).map(buildAlertRow);
   const deviceScope = buildScopeVm(response);
+  const onlineDevices = devices.filter((item) => item.statusText === "在线");
+  const offlineDevices = devices.filter((item) => item.statusText === "离线");
+  const delayedDevices = devices.filter((item) => item.statusText === "数据延迟");
+  const lowBatteryDevices = devices.filter((item) => item.batteryText.startsWith("低电量"));
   return {
     title: "设备与告警中心",
     lead: "查看设备在线状态、心跳、遥测、凭证状态、告警事件、通知、确认与关闭状态。",
@@ -243,10 +288,11 @@ export function buildOperatorDevicesAlertsVm(response: OperatorDevicesAlertsResp
     totalDevices: response.deviceScope.visible_devices_count,
     totalAlerts: response.deviceScope.alert_events_count,
     deviceScope,
-    onlineDevices: devices.filter((item) => item.statusText === "在线"),
-    offlineDevices: devices.filter((item) => item.statusText === "离线"),
-    delayedDevices: devices.filter((item) => item.statusText === "数据延迟"),
-    lowBatteryDevices: devices.filter((item) => item.batteryText.startsWith("低电量")),
+    focus: buildFocusVm(query, offlineDevices),
+    onlineDevices,
+    offlineDevices,
+    delayedDevices,
+    lowBatteryDevices,
     alerts,
     overdueAlerts: alerts.filter((item) => item.overdueText === "已超时"),
     emptyTitle: "暂无设备或告警数据",
