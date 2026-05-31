@@ -139,6 +139,8 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
   const offlineFields = num(deviceSummary.offline_fields);
   const generatedAtText = toDateTimeText((aggregate as any).generated_at ?? new Date().toISOString());
   const globalDeviceText = globalDevices === null ? "全域设备：后端未返回；客户页不推断全域设备总量。" : `全域设备：共 ${numberFmt.format(globalDevices)} 台。`;
+  const firstRiskFieldId = String((aggregate.top_risk_fields ?? [])[0]?.field_id ?? "");
+  const firstRiskFieldHref = firstRiskFieldId ? `/customer/fields/${encodeURIComponent(firstRiskFieldId)}` : "/customer/dashboard";
   const emptyStates = {
     NO_KPI_SUMMARY: getCustomerEmptyState("NO_KPI_SUMMARY"),
     NO_ROI: getCustomerEmptyState("NO_ROI"),
@@ -184,10 +186,10 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
     };
   });
   const actionItems: CustomerActionItemVm[] = [
-    { id: "risk", source: "RECOMMENDATION", title: "集中处理高风险地块", riskLabel: "高风险", riskTone: "danger", fieldId: String((aggregate.top_risk_fields ?? [])[0]?.field_id ?? ""), primaryAction: { label: "查看地块", href: (aggregate.top_risk_fields ?? [])[0]?.field_id ? `/customer/fields/${encodeURIComponent(String((aggregate.top_risk_fields ?? [])[0]?.field_id))}` : undefined, disabledReason: (aggregate.top_risk_fields ?? [])[0]?.field_id ? undefined : "暂无可跳转地块" }, summary: `${DASHBOARD_SUMMARY_SOURCE} 按风险等级推进复核，避免问题扩大。` },
-    { id: "accept", source: "PENDING_ACCEPTANCE", title: "完成待验收作业并回写结果", riskLabel: pendingAcceptance > 0 ? "待验收" : "已完成", riskTone: pendingAcceptance > 0 ? "warning" : "neutral", operationId: String((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id ?? ""), primaryAction: { label: "查看作业", href: ((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id) ? `/customer/operations/${encodeURIComponent(String((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id))}` : undefined, disabledReason: ((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id) ? undefined : "暂无可跳转作业" }, summary: `${DASHBOARD_SUMMARY_SOURCE} 确保作业闭环，提升验收及时率。` },
-    { id: "device", source: "DEVICE_OFFLINE", title: "排查离线设备并恢复数据", riskLabel: offlineDevices > 0 ? "需复核" : "稳定", riskTone: offlineDevices > 0 ? "warning" : "neutral", primaryAction: { label: "设备中心暂未开放", disabledReason: "设备中心暂未开放" }, summary: `统计范围：可见授权设备。visible_devices_count=${numberFmt.format(visibleDevices)}，offline_devices_count=${numberFmt.format(offlineDevices)}；当前地块设备请进入地块报告查看。` },
-    { id: "general", source: "GENERAL", title: "处理待办事项", riskLabel: pendingActions > 0 ? "待处理" : "已清空", riskTone: pendingActions > 0 ? "warning" : "neutral", primaryAction: { label: "当前页查看", disabledReason: "请在当前看板处理待办事项" }, summary: `${DASHBOARD_SUMMARY_SOURCE} 优先关闭待处理事项，保障关键风险先处置。` },
+    { id: "risk", source: "RECOMMENDATION", title: "集中处理高风险地块", riskLabel: "高风险", riskTone: "danger", fieldId: firstRiskFieldId, primaryAction: { label: "查看地块", href: firstRiskFieldHref }, summary: `${DASHBOARD_SUMMARY_SOURCE} 按风险等级推进复核，避免问题扩大。` },
+    { id: "accept", source: "PENDING_ACCEPTANCE", title: "完成待验收作业并回写结果", riskLabel: pendingAcceptance > 0 ? "待验收" : "已完成", riskTone: pendingAcceptance > 0 ? "warning" : "neutral", operationId: String((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id ?? ""), primaryAction: { label: "查看作业", href: ((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id) ? `/customer/operations/${encodeURIComponent(String((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id))}` : "/customer/dashboard" }, summary: `${DASHBOARD_SUMMARY_SOURCE} 确保作业闭环，提升验收及时率。` },
+    { id: "device", source: "DEVICE_OFFLINE", title: "排查离线设备并恢复数据", riskLabel: offlineDevices > 0 ? "需复核" : "稳定", riskTone: offlineDevices > 0 ? "warning" : "neutral", primaryAction: { label: offlineDevices > 0 ? "查看受影响地块" : "查看设备状态", href: firstRiskFieldHref }, summary: `离线设备需由运营人员复核最近心跳、遥测和绑定地块。客户侧先查看受影响地块与作业证据；未完成复核前不展示执行成功或价值结论。` },
+    { id: "general", source: "GENERAL", title: "处理待办事项", riskLabel: pendingActions > 0 ? "待处理" : "已清空", riskTone: pendingActions > 0 ? "warning" : "neutral", primaryAction: { label: "当前页查看", href: "/customer/dashboard" }, summary: `${DASHBOARD_SUMMARY_SOURCE} 优先关闭待处理事项，保障关键风险先处置。` },
   ];
   const roiSummary = {
     totalRoiItems: valueRecords,
