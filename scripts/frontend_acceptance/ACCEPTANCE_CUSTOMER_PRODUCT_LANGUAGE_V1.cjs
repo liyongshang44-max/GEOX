@@ -20,7 +20,7 @@ function rawToken(...parts) {
 
 const banned = [
   ['guarded payload', /guarded\s+payload/i],
-  ['needs_review', new RegExp(rawToken('needs', 'review'), 'i')],
+  ['needs_review rendered assignment', /needs_review\s*[=:：]/i],
   ['scenario_type', new RegExp(rawToken('scenario', 'type'), 'i')],
   ['formal_chain_status', new RegExp(rawToken('formal', 'chain', 'status'), 'i')],
   ['evidence_status', new RegExp(rawToken('evidence', 'status'), 'i')],

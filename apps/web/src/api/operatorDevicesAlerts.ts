@@ -4,6 +4,13 @@ export type OperatorDevicesAlertsDataScope = "OFFICIAL_OPERATOR_API" | "FALLBACK
 export type OperatorDeviceOnlineStatus = "ONLINE" | "OFFLINE" | "DELAYED" | "UNKNOWN";
 export type OperatorCredentialStatus = "ACTIVE" | "REVOKED" | "UNKNOWN" | "HIDDEN";
 export type OperatorAlertStatus = "OPEN" | "ACKED" | "CLOSED" | "OVERDUE" | "UNKNOWN";
+export type OperatorDevicesAlertsQuery = {
+  focus?: "device_offline" | "alert_overdue" | "all" | string;
+  deviceId?: string;
+  fieldId?: string;
+  alertId?: string;
+  onlineStatus?: OperatorDeviceOnlineStatus | string;
+};
 
 export type OperatorDeviceScopeCounts = {
   global_devices_count: number | null;
@@ -313,6 +320,17 @@ function normalizeReportDeviceFallback(payload: unknown): OperatorDeviceItem[] {
   });
 }
 
+function matchesQueryDevice(item: OperatorDeviceItem, query?: OperatorDevicesAlertsQuery): boolean {
+  if (!query) return true;
+  const deviceId = text(query.deviceId);
+  const fieldId = text(query.fieldId);
+  const onlineStatus = text(query.onlineStatus).toUpperCase();
+  if (deviceId && item.deviceId !== deviceId) return false;
+  if (fieldId && item.fieldId !== fieldId) return false;
+  if (onlineStatus && item.onlineStatus !== onlineStatus) return false;
+  return true;
+}
+
 async function fetchOptional(path: string): Promise<unknown | null> {
   try {
     const result = await apiRequestWithPolicy<unknown>(path, undefined, { allowedStatuses: [403, 404, 405, 422], silent: true, timeoutMs: 10000 });
@@ -322,10 +340,16 @@ async function fetchOptional(path: string): Promise<unknown | null> {
   }
 }
 
-async function fetchOfficialDevicesAlertsOptional(): Promise<unknown | null> {
+async function fetchOfficialDevicesAlertsOptional(query?: OperatorDevicesAlertsQuery): Promise<unknown | null> {
   if (operatorDevicesAlertsApiUnavailable) return null;
   try {
-    const result = await apiRequestWithPolicy<unknown>(withQuery("/api/v1/operator/devices-alerts"), undefined, { allowedStatuses: [403, 404, 405, 422], silent: true, timeoutMs: 10000 });
+    const result = await apiRequestWithPolicy<unknown>(withQuery("/api/v1/operator/devices-alerts", {
+      focus: query?.focus,
+      device_id: query?.deviceId,
+      field_id: query?.fieldId,
+      alert_id: query?.alertId,
+      online_status: query?.onlineStatus,
+    }), undefined, { allowedStatuses: [403, 404, 405, 422], silent: true, timeoutMs: 10000 });
     if (result.ok) return result.data;
     operatorDevicesAlertsApiUnavailable = true;
     return null;
@@ -368,8 +392,8 @@ export async function closeOperatorAlert(alertId: string): Promise<OperatorAlert
   return postOperatorAlertAction(alertId, "close");
 }
 
-export async function fetchOperatorDevicesAlerts(): Promise<OperatorDevicesAlertsResponse> {
-  const official = await fetchOfficialDevicesAlertsOptional();
+export async function fetchOperatorDevicesAlerts(query?: OperatorDevicesAlertsQuery): Promise<OperatorDevicesAlertsResponse> {
+  const official = await fetchOfficialDevicesAlertsOptional(query);
   const officialDevices = normalizeOfficialDevices(official);
   const officialAlerts = normalizeOfficialAlerts(official);
   if (officialDevices.length > 0 || officialAlerts.length > 0) {
@@ -389,7 +413,9 @@ export async function fetchOperatorDevicesAlerts(): Promise<OperatorDevicesAlert
   }
 
   const aggregate = await fetchOptional(withQuery("/api/v1/reports/customer-dashboard/aggregate"));
-  const fallbackDevices = normalizeReportDeviceFallback(aggregate).filter((item, index, all) => all.findIndex((x) => x.deviceId === item.deviceId) === index);
+  const fallbackDevices = normalizeReportDeviceFallback(aggregate)
+    .filter((item, index, all) => all.findIndex((x) => x.deviceId === item.deviceId) === index)
+    .filter((item) => matchesQueryDevice(item, query));
   const fallbackAlerts: OperatorAlertItem[] = [];
   const fallbackScope = buildDashboardFallbackDeviceScope(aggregate, fallbackDevices, fallbackAlerts);
 
