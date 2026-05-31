@@ -49,9 +49,9 @@ export default function CustomerDashboardPage(): React.ReactElement {
   const summaryScopeText = vm?.summaryScopeText ?? "统计范围：当前可见授权经营范围；来源：客户看板统一摘要。";
   const deviceFallback = {
     empty: true,
-    scopeText: "设备 scope：global_devices_count=全域设备，visible_devices_count=可见授权设备，field_devices_count=当前地块设备，offline_devices_count=离线设备，alert_events_count=告警事件。",
+    scopeText: "设备统计范围：当前账号授权可见设备；当前地块设备请进入地块报告查看。",
     globalText: "全域设备：暂无设备摘要。",
-    authorizedText: "可见授权设备：暂无设备摘要。",
+    authorizedText: "授权可见设备：暂无设备摘要。",
     fieldText: "当前地块设备：请进入地块报告查看。",
     offlineText: "离线设备：暂无设备摘要。",
     alertText: "告警事件：暂无设备摘要。",
