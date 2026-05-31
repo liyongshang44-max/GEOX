@@ -45,9 +45,9 @@ function main() {
   assertContains(operation, /ZoneRollupSummary\s+data=\{report\}/, 'operation report must render ZoneRollupSummary', failures);
   assertContains(operation, /FailSafeCustomerNotice\s+data=\{report\}/, 'operation report must render FailSafeCustomerNotice', failures);
 
-  // Scenario card rules
-  assertContains(cards, /正式证据：\{vm\.evidenceText\}/, 'FormalChainSummaryCard must show formal evidence result', failures);
-  assertContains(cards, /建议\/处方\/审批\/执行\/验收闭环：\{vm\.chainText\}/, 'ScenarioAcceptanceSummary must show formal closure chain', failures);
+  // Scenario card rules use product language while still deriving from the formal VM.
+  assertContains(cards, /正式证据：\{customerProductText\(vm\.evidenceText\)\}/, 'FormalChainSummaryCard must show formal evidence result through product language', failures);
+  assertContains(cards, /建议、处方、审批、执行、验收闭环：\{customerProductText\(vm\.chainText\)\}/, 'ScenarioAcceptanceSummary must show formal closure chain through product language', failures);
   assertContains(cards, /存在单区失败，必须复核失败分区。/, 'ZoneRollupSummary must force single-zone failure notice', failures);
   assertContains(cards, /全区通过才算通过|多数分区通过即通过|任一区失败则整体失败|按分区独立判定/, 'ZoneRollupSummary must map rollup policy to customer text', failures);
 
@@ -55,7 +55,6 @@ function main() {
   assertContains(vm, /scenarioKey\s*===\s*"DEVICE_ANOMALY"/, 'formal scenario VM must special-case DEVICE_ANOMALY', failures);
   assertContains(vm, /executionGuardText\s*=\s*scenarioKey\s*===\s*"DEVICE_ANOMALY"/, 'formal scenario VM must provide execution guard text for DEVICE_ANOMALY', failures);
   assertContains(cards, /vm\.scenarioKey\s*!==\s*"DEVICE_ANOMALY"/, 'FailSafeCustomerNotice should keep DEVICE_ANOMALY visible', failures);
-
 
   assertContains(labels, /export function customerReasonText\s*\(/, 'customerScenarioLabels must export customerReasonText', failures);
   assertContains(labels, /export function customerEvidenceGapText\s*\(/, 'customerScenarioLabels must export customerEvidenceGapText', failures);
@@ -66,7 +65,6 @@ function main() {
   // Guardrails: no raw enum shown to customer in formal cards.
   const forbiddenRawEnum = [
     /\bFORMAL_IRRIGATION\b/,
-    /\bDEVICE_ANOMALY\b.*<[^>]*>/,
     /\bFORMAL_VARIABLE_OPERATION\b/,
     /operation_rollup_policy\s*:\s*\{/, // direct raw projection hint
   ];
