@@ -51,15 +51,15 @@ assertContains(devicesApi, /matchesQueryDevice/, 'fallback device list is filter
 
 assertContains(devicesVm, /OperatorDeviceOfflineFocusVm/, 'device offline focus VM exists');
 assertContains(devicesVm, /buildFocusVm/, 'focus VM builder exists');
+assertContains(devicesVm, /设备离线处理/, 'focus panel title is produced by VM');
 assertContains(devicesVm, /不伪造 ACK、验收、ROI 或 Field Memory/, 'focus audit boundary forbids fake outcomes');
-assertContains(devicesVm, /未完成现场复核前，不生成正式作业成功、客户 ROI 或 Field Memory/, 'focus next-step boundary forbids sales claims');
+assertContains(devicesVm, /未完成复核前不得对客户展示执行成功/, 'focus next-step boundary forbids sales claims');
 
 assertContains(devicesPage, /useSearchParams/, 'devices-alerts page reads URL query');
 assertContains(devicesPage, /queryFromParams/, 'query parser exists');
 assertContains(devicesPage, /fetchOperatorDevicesAlerts\(query\)/, 'page fetches devices-alerts with query');
 assertContains(devicesPage, /buildOperatorDevicesAlertsVm\(response, query\)/, 'page builds VM with query');
 assertContains(devicesPage, /DeviceOfflineFocusPanel/, 'device offline focus panel is rendered');
-assertContains(devicesPage, /设备离线处理/, 'focus panel title is present');
 assertContains(devicesPage, /未完成现场复核前，不生成正式作业成功、客户 ROI 或 Field Memory/, 'page displays boundary against fake success');
 
 if (process.exitCode) {
