@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import type { CustomerKpiVm } from "../../viewmodels/customerDashboardVm";
+import { customerProductText } from "../../lib/customerProductLanguage";
 
 type Props = { item: CustomerKpiVm };
 
@@ -11,9 +12,9 @@ function text(value: unknown): string {
 }
 
 export default function CockpitKpiCard({ item }: Props): React.ReactElement {
-  const label = text(item.label);
+  const label = customerProductText(text(item.label));
   const value = `${text(item.value)}${text(item.unit) === "--" ? "" : text(item.unit)}`;
-  const hint = text(item.customerHint ?? "") === "--" ? "" : text(item.customerHint ?? "");
+  const hint = text(item.customerHint ?? "") === "--" ? "" : customerProductText(text(item.customerHint ?? ""));
   const cardTitle = hint || label;
 
   const content = (
