@@ -11,6 +11,8 @@ const FILES = {
   operationExportAlias: 'apps/web/src/views/OperationReportExportPage.tsx',
   customerReportExport: 'apps/web/src/views/CustomerReportExportPage.tsx',
   exportBlocks: 'apps/web/src/components/customer/CustomerExportBlocks.tsx',
+  dashboardVm: 'apps/web/src/viewmodels/customerDashboardVm.ts',
+  safeText: 'apps/web/src/lib/customerSafeText.ts',
   formalVm: 'apps/web/src/lib/formalScenarioViewModel.ts',
   trustGate: 'apps/web/src/lib/customerTrustGate.ts',
   evidenceVm: 'apps/web/src/lib/evidenceViewModel.ts',
@@ -40,6 +42,8 @@ function main() {
   const operationExportAlias = read(FILES.operationExportAlias);
   const customerReportExport = read(FILES.customerReportExport);
   const exportBlocks = read(FILES.exportBlocks);
+  const dashboardVm = read(FILES.dashboardVm);
+  const safeText = read(FILES.safeText);
 
   // 0) Official reports API must expose exactly required fetchers used by export.
   assertContains(reportsApi, /export\s+async\s+function\s+fetchCustomerDashboardAggregate\s*\(/, 'reports.ts must export fetchCustomerDashboardAggregate', failures);
@@ -92,8 +96,35 @@ function main() {
 
   // 4) Ban dangerous direct mapping/leaks in export blocks.
   assertNotContains(exportBlocks, /\bSUCCESS\b\s*[:=]|\bPASS\b\s*[:=]/, 'CustomerExportBlocks must not hardcode SUCCESS/PASS mapping', failures);
+  const rawLeakPatterns = [
+    ['PENDING_ACCEPTANCE', /\bPENDING_ACCEPTANCE(?:\b|_)/],
+    ['PENDING_ACCEPTANCE_REQUIRES_FORMAL_REVIEW', /PENDING_ACCEPTANCE_REQUIRES_FORMAL_REVIEW/],
+    ['soil_moisture_below_threshold', /soil_moisture_below_threshold/],
+    ['no_rain_forecast', /no_rain_forecast/],
+    ['BLOCKED', /\bBLOCKED\b/],
+  ];
+  for (const [label, pattern] of rawLeakPatterns) {
+    assertNotContains(exportBlocks, pattern, `CustomerExportBlocks must not expose raw customer code literal: ${label}`, failures);
+  }
+  for (const helper of ['customerReasonText', 'customerOperationStateText', 'customerNeedsReviewText', 'customerEvidenceStateText']) {
+    assertContains(exportBlocks, new RegExp(`\\b${helper}\\b`), `CustomerExportBlocks must route through ${helper}`, failures);
+  }
 
-  // 5) operation export alias should keep delegation only.
+  // 5) Dashboard VM must not feed raw formal scenario fields to export rows.
+  assertNotContains(dashboardVm, /scenarioTypeText:\s*formalVm\.rawScenarioType/, 'Dashboard VM must not pass raw scenario type to export', failures);
+  assertNotContains(dashboardVm, /formalChainStatusText:\s*formalVm\.formalChainStatus/, 'Dashboard VM must not pass raw formal chain status to export', failures);
+  assertNotContains(dashboardVm, /evidenceStatusText:\s*formalVm\.rawEvidenceStatus/, 'Dashboard VM must not pass raw evidence status to export', failures);
+  assertNotContains(dashboardVm, /needsReviewText:\s*formalVm\.needsReview\s*\?\s*["']true["']\s*:\s*["']false["']/, 'Dashboard VM must not pass raw boolean review state to export', failures);
+  for (const helper of ['customerFormalChainText', 'customerEvidenceStateText', 'customerNeedsReviewText']) {
+    assertContains(dashboardVm, new RegExp(`\\b${helper}\\b`), `Dashboard VM must route through ${helper}`, failures);
+  }
+
+  // 6) Official raw adapters must carry the required customer-facing wording.
+  for (const phrase of ['等待正式验收', '需正式验收后确认', '土壤水分偏低', '近期无降雨预报', '暂不形成正式结论', '需要人工复核', '暂不需要人工复核', '链路待校验', '链路已通过', '有限记录', '证据待补充', '证据已通过']) {
+    if (!safeText.includes(phrase)) failures.push(`customerSafeText missing phrase: ${phrase}`);
+  }
+
+  // 7) operation export alias should keep delegation only.
   assertContains(operationExportAlias, /export\s*\{\s*default\s*\}\s*from\s*["']\.\/CustomerReportExportPage["']/, 'OperationReportExportPage must re-export CustomerReportExportPage', failures);
 
   if (failures.length) {
