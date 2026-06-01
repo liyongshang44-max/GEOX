@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ackOperatorAlert, closeOperatorAlert, fetchOperatorDevicesAlerts, type OperatorDevicesAlertsQuery } from "../../api/operatorDevicesAlerts";
+import { ackDeviceOffline, ackOperatorAlert, closeOperatorAlert, createOfflineInspectionTaskCandidate, fetchOperatorDevicesAlerts, markDeviceOfflineFollowup, type OperatorDevicesAlertsQuery, type OperatorOfflineDeviceActionResult } from "../../api/operatorDevicesAlerts";
 import { fetchSessionMe, type SessionMe } from "../../api/session";
 import DeviceOfflineHandlingPanel, { type DeviceOfflineActionState } from "../../components/operator/DeviceOfflineHandlingPanel";
 import OperatorEmptyState from "../../components/operator/OperatorEmptyState";
@@ -54,6 +54,12 @@ function permissionReason(sessionLoading: boolean, session: SessionMe | null, pe
   return `缺少会话权限：${permissionName}`;
 }
 
+function offlineActionSuccessMessage(result: OperatorOfflineDeviceActionResult): string {
+  const audit = result.auditText ? ` 审计来源：${replaceOperatorTerms(result.auditText)}` : "";
+  const status = result.status ? ` 状态：${replaceOperatorTerms(result.status)}` : "";
+  return `${replaceOperatorTerms(result.message)}${audit}${status}`;
+}
+
 export default function OperatorDevicesAlertsPage(): React.ReactElement {
   const meta = OPERATOR_PAGE_META.devicesAlerts;
   const [searchParams] = useSearchParams();
@@ -92,25 +98,38 @@ export default function OperatorDevicesAlertsPage(): React.ReactElement {
     }
   }
 
-  function confirmOfflineHandling() {
-    const matchedDevice = vm?.focus.matchedDevice;
-    if (!matchedDevice) { setOfflineActionState({ status: "error", message: "操作未完成：缺少权限 / 后端接口未开放 / 设备不存在 / 设备明细不可用" }); return; }
-    const deviceId = matchedDevice.deviceId || "device";
-    const auditId = `offline-${deviceId}`;
+  function focusedDeviceId(): string {
+    return vm?.focus.matchedDevice?.deviceId || "";
+  }
+
+  async function runOfflineDeviceAction(action: "ack" | "followup" | "inspection-task-candidate") {
+    const deviceId = focusedDeviceId();
+    if (!deviceId) { setOfflineActionState({ status: "error", message: "操作未完成：缺少权限 / 后端接口未开放 / 设备不存在 / 设备明细不可用" }); return; }
     setOfflineActionState({ status: "submitting" });
-    window.setTimeout(() => setOfflineActionState({ status: "success", auditId, message: `已记录设备离线确认，审计编号：${auditId}` }), 150);
+    try {
+      const result = action === "ack"
+        ? await ackDeviceOffline(deviceId)
+        : action === "followup"
+          ? await markDeviceOfflineFollowup(deviceId)
+          : await createOfflineInspectionTaskCandidate(deviceId);
+      if (!result.ok) { setOfflineActionState({ status: "error", message: sanitizeOperatorError(result.message) }); return; }
+      await reload();
+      setOfflineActionState({ status: "success", auditId: result.auditText ?? undefined, message: offlineActionSuccessMessage(result) });
+    } catch (error) {
+      setOfflineActionState({ status: "error", message: sanitizeOperatorError(error) });
+    }
+  }
+
+  function confirmOfflineHandling() {
+    void runOfflineDeviceAction("ack");
   }
 
   function markManualReview() {
-    const focusMode = vm?.focus.mode;
-    if (!vm || focusMode === "MISSING_LOCATION") { setOfflineActionState({ status: "error", message: "操作未完成：设备明细不可用" }); return; }
-    const auditId = "manual-review";
-    setOfflineActionState({ status: "submitting" });
-    window.setTimeout(() => setOfflineActionState({ status: "success", auditId, message: `已记录设备离线确认，审计编号：${auditId}` }), 150);
+    void runOfflineDeviceAction("followup");
   }
 
   function createTaskCandidate() {
-    setOfflineActionState({ status: "disabled", message: "动作未开放。当前只能记录需人工核查，不能直接创建任务" });
+    void runOfflineDeviceAction("inspection-task-candidate");
   }
 
   return (
