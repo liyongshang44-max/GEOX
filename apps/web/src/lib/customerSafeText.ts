@@ -13,6 +13,8 @@ const ENUM_LABELS: Record<string, string> = {
   UNKNOWN: "未确认",
   NA: "暂无记录",
   N_A: "暂无记录",
+  TRUE: "需要人工复核",
+  FALSE: "暂不需要人工复核",
   OBSERVED: "已接入观测",
   USER_DECLARED: "人工声明",
   SYSTEM_INFERRED: "系统推断",
@@ -29,8 +31,12 @@ const ENUM_LABELS: Record<string, string> = {
   PASSED: REVIEW_REQUIRED,
   FAIL: "未通过",
   FAILED: "未通过",
+  BLOCKED: "暂不形成正式结论",
   PENDING: "等待生成",
-  PENDING_ACCEPTANCE: "等待验收",
+  PENDING_ACCEPTANCE: "等待正式验收",
+  PENDING_ACCEPTANCE_REQUIRES_FORMAL_REVIEW: "需正式验收后确认",
+  SOIL_MOISTURE_BELOW_THRESHOLD: "土壤水分偏低",
+  NO_RAIN_FORECAST: "近期无降雨预报",
   IN_PROGRESS: "执行中",
   RUNNING: "执行中",
   BASELINE_MISSING: "缺少收益基线",
@@ -65,12 +71,13 @@ const ENUM_LABELS: Record<string, string> = {
 };
 
 const DOMAIN_LABELS: Record<string, Record<string, string>> = {
-  status: { SUCCESS: REVIEW_REQUIRED, SUCCEEDED: REVIEW_REQUIRED, COMPLETED: REVIEW_REQUIRED, DONE: REVIEW_REQUIRED, VALID: REVIEW_REQUIRED, PASS: REVIEW_REQUIRED, PASSED: REVIEW_REQUIRED, FAIL: "未通过", FAILED: "未通过", PENDING: "等待生成", PENDING_ACCEPTANCE: "等待验收", UNKNOWN: "未确认" },
-  acceptance: { PASS: REVIEW_REQUIRED, PASSED: REVIEW_REQUIRED, SUCCESS: REVIEW_REQUIRED, SUCCEEDED: REVIEW_REQUIRED, VALID: REVIEW_REQUIRED, FAIL: "未通过", FAILED: "未通过", PENDING: "等待验收", PENDING_ACCEPTANCE: "等待验收", UNKNOWN: "未确认" },
-  operation: { IRRIGATE: "灌溉", FERTILIZE: "施肥", SPRAY: "喷药", INSPECT: "巡检", PEST_CONTROL: "病虫害处理", HARVEST: "采收" },
+  status: { SUCCESS: REVIEW_REQUIRED, SUCCEEDED: REVIEW_REQUIRED, COMPLETED: REVIEW_REQUIRED, DONE: REVIEW_REQUIRED, VALID: REVIEW_REQUIRED, PASS: REVIEW_REQUIRED, PASSED: REVIEW_REQUIRED, FAIL: "未通过", FAILED: "未通过", BLOCKED: "暂不形成正式结论", PENDING: "等待生成", PENDING_ACCEPTANCE: "等待正式验收", PENDING_ACCEPTANCE_REQUIRES_FORMAL_REVIEW: "需正式验收后确认", UNKNOWN: "未确认" },
+  acceptance: { PASS: REVIEW_REQUIRED, PASSED: REVIEW_REQUIRED, SUCCESS: REVIEW_REQUIRED, SUCCEEDED: REVIEW_REQUIRED, VALID: REVIEW_REQUIRED, FAIL: "未通过", FAILED: "未通过", BLOCKED: "暂不形成正式结论", PENDING: "等待验收", PENDING_ACCEPTANCE: "等待正式验收", PENDING_ACCEPTANCE_REQUIRES_FORMAL_REVIEW: "需正式验收后确认", UNKNOWN: "未确认" },
+  operation: { IRRIGATE: "灌溉", FERTILIZE: "施肥", SPRAY: "喷药", INSPECT: "巡检", PEST_CONTROL: "病虫害处理", HARVEST: "采收", PENDING_ACCEPTANCE: "等待正式验收", BLOCKED: "暂不形成正式结论" },
   risk: { HIGH: "高风险", MEDIUM: "中风险", LOW: "低风险", UNKNOWN: "未确认" },
   source: { USER_DECLARED: "人工声明", SYSTEM_INFERRED: "系统推断", SENSOR_INFERRED: "监测推断", REMOTE_SENSING: "遥感观测", MACHINERY: "农机作业记录" },
-  value: { BASELINE_MISSING: "缺少收益基线", DEFAULT_ASSUMPTION: "默认假设，待证据验证", YIELD_LIFT_EXPECTED: "预期提升产量，待结果验证" },
+  value: { BASELINE_MISSING: "缺少收益基线", DEFAULT_ASSUMPTION: "默认假设，待证据验证", YIELD_LIFT_EXPECTED: "预期提升产量，待结果验证", BLOCKED: "暂不形成正式结论" },
+  reason: { PENDING_ACCEPTANCE_REQUIRES_FORMAL_REVIEW: "需正式验收后确认", SOIL_MOISTURE_BELOW_THRESHOLD: "土壤水分偏低", NO_RAIN_FORECAST: "近期无降雨预报", BLOCKED: "暂不形成正式结论" },
 };
 
 const TECH_PREFIXES = ["rec_", "prc_", "apr_", "act_", "opl_", "ft_op_", "ft_field_"];
@@ -89,6 +96,10 @@ function key(value: unknown): string {
   result = replaceToken(result, "-", "_");
   result = replaceToken(result, " ", "_");
   return result.toUpperCase();
+}
+
+function lowerKey(value: unknown): string {
+  return text(value).replace(/[\s/-]+/g, "_").toLowerCase();
 }
 
 function isHex(value: string): boolean {
@@ -125,6 +136,11 @@ export function mapCustomerEnum(value: unknown, domain: CustomerEnumDomain = "ge
   if (domainMap?.[enumKey]) return domainMap[enumKey];
   if (ENUM_LABELS[enumKey]) return ENUM_LABELS[enumKey];
   let result = raw;
+  result = replaceToken(result, "PENDING_ACCEPTANCE_REQUIRES_FORMAL_REVIEW", "需正式验收后确认");
+  result = replaceToken(result, "PENDING_ACCEPTANCE", "等待正式验收");
+  result = replaceToken(result, "soil_moisture_below_threshold", "土壤水分偏低");
+  result = replaceToken(result, "no_rain_forecast", "近期无降雨预报");
+  result = replaceToken(result, "BLOCKED", "暂不形成正式结论");
   result = replaceToken(result, "UNKNOWN", "未确认");
   result = replaceToken(result, "USER_DECLARED", "人工声明");
   result = replaceToken(result, "OBSERVED", "已接入观测");
@@ -137,6 +153,51 @@ export function mapCustomerEnum(value: unknown, domain: CustomerEnumDomain = "ge
   result = replaceToken(result, "manifest", "证据清单");
   result = replaceToken(result, "checksum", "校验信息");
   return result;
+}
+
+export function customerReasonText(raw: unknown): string {
+  const normalized = lowerKey(raw);
+  if (!normalized) return "待补充";
+  if (normalized === "pending_acceptance") return "等待正式验收";
+  if (normalized === "pending_acceptance_requires_formal_review") return "需正式验收后确认";
+  if (normalized === "soil_moisture_below_threshold") return "土壤水分偏低";
+  if (normalized === "no_rain_forecast") return "近期无降雨预报";
+  if (normalized === "blocked") return "暂不形成正式结论";
+  if (normalized === "true") return "需要人工复核";
+  if (normalized === "false") return "暂不需要人工复核";
+  return mapCustomerEnum(raw, "reason") || "需要补充正式链路后展示";
+}
+
+export function customerFormalChainText(raw: unknown): string {
+  const normalized = lowerKey(raw);
+  if (!normalized) return "链路待校验";
+  if (["complete", "passed", "pass", "formal_chain_passed", "formal_accepted"].includes(normalized)) return "链路已通过";
+  if (["blocked", "failed", "fail", "invalid", "insufficient_context"].includes(normalized)) return "暂不形成正式结论";
+  return "链路待校验";
+}
+
+export function customerEvidenceStateText(raw: unknown): string {
+  const normalized = lowerKey(raw);
+  if (!normalized) return "证据待补充";
+  if (["formal_evidence_passed", "passed", "pass", "complete", "complete_evidence"].includes(normalized)) return "证据已通过";
+  if (["limited", "limited_record", "limited_records"].includes(normalized)) return "有限记录";
+  return "证据待补充";
+}
+
+export function customerNeedsReviewText(raw: unknown): string {
+  const normalized = lowerKey(raw);
+  if (["true", "yes", "1", "needs_review", "required", "review_required"].includes(normalized)) return "需要人工复核";
+  if (["false", "no", "0", "not_required", "none"].includes(normalized)) return "暂不需要人工复核";
+  return "需要人工复核";
+}
+
+export function customerOperationStateText(raw: unknown): string {
+  const normalized = lowerKey(raw);
+  if (!normalized) return "作业状态待确认";
+  if (normalized === "pending_acceptance") return "等待正式验收";
+  if (normalized === "pending_acceptance_requires_formal_review") return "需正式验收后确认";
+  if (normalized === "blocked") return "暂不形成正式结论";
+  return mapCustomerEnum(raw, "operation") || mapCustomerEnum(raw, "status") || "作业状态待确认";
 }
 
 export function customerSafeName(value: unknown, fallback: string): string {
