@@ -54,10 +54,22 @@ const QUEUE_HREF: Record<OperatorWorkbenchQueueKey, string> = {
   ALERT_OVERDUE: "/operator/devices-alerts?focus=alert_overdue",
 };
 
+const PLACEHOLDER_ID_VALUES = new Set(["...", "…", "--", "undefined", "null", "待确认", "未定位到设备", "地块待确认"]);
+
+export function isPlaceholderId(value: unknown): boolean {
+  const raw = String(value ?? "").trim();
+  if (!raw) return true;
+  return PLACEHOLDER_ID_VALUES.has(raw) || PLACEHOLDER_ID_VALUES.has(raw.toLowerCase());
+}
+
 function text(value: unknown, fallback = ""): string {
   const raw = String(value ?? "").trim();
-  if (!raw || raw === "--" || raw === "undefined" || raw === "null") return fallback;
+  if (!raw || raw === "--" || raw === "undefined" || raw === "null" || raw === "..." || raw === "…" || raw === "待确认") return fallback;
   return raw;
+}
+
+function idText(value: unknown): string {
+  return isPlaceholderId(value) ? "" : String(value ?? "").trim();
 }
 
 function arrayFrom(payload: unknown, keys: string[]): AnyRecord[] {
@@ -101,7 +113,7 @@ function normalizeQueue(value: unknown): OperatorWorkbenchQueueKey | null {
 function appendQuery(path: string, params: Record<string, unknown>): string {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
-    const raw = text(value);
+    const raw = key.endsWith("_id") ? idText(value) : text(value);
     if (raw) query.set(key, raw);
   }
   const qs = query.toString();
@@ -110,10 +122,11 @@ function appendQuery(path: string, params: Record<string, unknown>): string {
 }
 
 function deviceOfflineHref(params: { deviceId?: unknown; fieldId?: unknown; source?: unknown }): string {
-  const deviceId = text(params.deviceId);
-  const fieldId = text(params.fieldId);
+  const deviceId = idText(params.deviceId);
+  const fieldId = idText(params.fieldId);
+  const source = text(params.source).toLowerCase();
   if (deviceId) return appendQuery(QUEUE_HREF.DEVICE_OFFLINE, { device_id: deviceId, field_id: fieldId, online_status: "OFFLINE" });
-  if (text(params.source) === "aggregate") return appendQuery(QUEUE_HREF.DEVICE_OFFLINE, { source: "aggregate", field_id: fieldId });
+  if (source === "aggregate") return appendQuery(QUEUE_HREF.DEVICE_OFFLINE, { source: "aggregate", field_id: fieldId });
   return appendQuery(QUEUE_HREF.DEVICE_OFFLINE, { field_id: fieldId });
 }
 
@@ -128,12 +141,12 @@ function defaultActionHref(queue: OperatorWorkbenchQueueKey, row: AnyRecord): st
 }
 
 function operationHref(operationId: unknown): string | null {
-  const id = text(operationId);
+  const id = idText(operationId);
   return id ? `/customer/operations/${encodeURIComponent(id)}` : null;
 }
 
 function fieldHref(fieldId: unknown): string | null {
-  const id = text(fieldId);
+  const id = idText(fieldId);
   return id ? `/customer/fields/${encodeURIComponent(id)}` : null;
 }
 
@@ -149,11 +162,11 @@ function normalizeOfficial(payload: unknown): OperatorWorkbenchItem[] {
   const rows = arrayFrom(payload, ["items", "todos", "workbench", "queue"]);
   return rows.map((row, index) => {
     const queue = normalizeQueue(row.queue ?? row.queue_key ?? row.type ?? row.status) ?? "APPROVAL_PENDING";
-    const deviceId = text(row.device_id ?? row.deviceId, "");
-    const fieldId = text(row.field_id ?? row.fieldId, "");
-    const alertId = text(row.alert_id ?? row.alertId, "");
+    const deviceId = idText(row.device_id ?? row.deviceId);
+    const fieldId = idText(row.field_id ?? row.fieldId);
+    const alertId = idText(row.alert_id ?? row.alertId);
     return {
-      id: text(row.id ?? row.todo_id ?? row.operation_id ?? row.approval_request_id ?? row.device_id ?? row.alert_id, `official-${index}`),
+      id: idText(row.id ?? row.todo_id ?? row.operation_id ?? row.approval_request_id ?? row.device_id ?? row.alert_id) || `official-${index}`,
       queue,
       title: text(row.title ?? row.summary, "运营待办"),
       description: text(row.description ?? row.detail ?? row.reason, "待运营人员处理。"),
@@ -167,8 +180,8 @@ function normalizeOfficial(payload: unknown): OperatorWorkbenchItem[] {
       deviceId,
       fieldId,
       alertId,
-      sourceId: text(row.source_id ?? row.id, ""),
-      queueId: text(row.queue_id ?? row.todo_id ?? row.id, ""),
+      sourceId: idText(row.source_id ?? row.id),
+      queueId: idText(row.queue_id ?? row.todo_id ?? row.id),
       handlingStatus: normalizeHandlingStatus(row.handling_status, "OPEN"),
     };
   });
@@ -177,7 +190,7 @@ function normalizeOfficial(payload: unknown): OperatorWorkbenchItem[] {
 function buildApprovalFallback(payload: unknown): OperatorWorkbenchItem[] {
   const rows = arrayFrom(payload, ["items", "requests", "approval_requests", "data"]);
   return rows.slice(0, 12).map((row, index) => ({
-    id: text(row.approval_request_id ?? row.request_id ?? row.id, `approval-${index}`),
+    id: idText(row.approval_request_id ?? row.request_id ?? row.id) || `approval-${index}`,
     queue: "APPROVAL_PENDING" as const,
     title: text(row.title ?? row.summary, "待审批事项"),
     description: text(row.reason ?? row.description ?? row.status, "建议或处方等待审批。"),
@@ -188,7 +201,7 @@ function buildApprovalFallback(payload: unknown): OperatorWorkbenchItem[] {
     actionHref: "/operator/approvals",
     relatedHref: operationHref(row.operation_id),
     source: "approvals_api" as const,
-    sourceId: text(row.approval_request_id ?? row.request_id ?? row.id, ""),
+    sourceId: idText(row.approval_request_id ?? row.request_id ?? row.id),
     handlingStatus: "READ_ONLY" as const,
   }));
 }
@@ -200,7 +213,7 @@ function buildReportFallback(payload: unknown): OperatorWorkbenchItem[] {
 
   for (const row of recentOperations.slice(0, 20)) {
     const status = text(row.final_status ?? row.status ?? row.acceptance_status).toUpperCase();
-    const operationId = text(row.operation_id ?? row.operation_plan_id ?? row.id);
+    const operationId = idText(row.operation_id ?? row.operation_plan_id ?? row.id);
     const base = {
       id: operationId || `operation-${items.length}`,
       fieldName: fieldDisplayName(row),
@@ -225,8 +238,9 @@ function buildReportFallback(payload: unknown): OperatorWorkbenchItem[] {
   for (const row of topRiskFields.slice(0, 6)) {
     const riskReasons = Array.isArray(row.risk_reasons) ? row.risk_reasons.join("、") : text(row.risk_reason ?? row.reason, "风险原因待确认");
     if (/offline|离线/i.test(riskReasons)) {
-      const fieldId = text(row.field_id ?? row.id);
-      const deviceId = text(row.device_id ?? row.deviceId);
+      const fieldId = idText(row.field_id ?? row.id);
+      const deviceId = idText(row.device_id ?? row.deviceId);
+      const aggregateSource = deviceId ? "" : "aggregate";
       items.push({
         id: `offline-${deviceId || fieldId || items.length}`,
         queue: "DEVICE_OFFLINE",
@@ -236,12 +250,12 @@ function buildReportFallback(payload: unknown): OperatorWorkbenchItem[] {
         operationName: deviceId || "聚合统计设备待定位",
         priority: "MEDIUM",
         updatedAt: text(row.updated_at ?? row.generated_at, ""),
-        actionHref: deviceOfflineHref({ deviceId, fieldId, source: deviceId ? "" : "aggregate" }),
+        actionHref: deviceOfflineHref({ deviceId, fieldId, source: aggregateSource }),
         relatedHref: fieldHref(fieldId),
         source: "reports_aggregate",
         deviceId: deviceId || null,
         fieldId: fieldId || null,
-        sourceId: text(row.source_id ?? row.id ?? fieldId, ""),
+        sourceId: idText(row.source_id ?? row.id ?? fieldId),
         queueId: `DEVICE_OFFLINE:${deviceId || fieldId || items.length}`,
         handlingStatus: "READ_ONLY",
       });
@@ -256,8 +270,8 @@ function buildAlertsFallback(payload: unknown): OperatorWorkbenchItem[] {
   return rows.slice(0, 12).map((row, index) => {
     const isOverdue = Boolean(row.overdue) || /overdue|timeout|超时/i.test(`${row.status ?? ""} ${row.reason ?? ""} ${row.title ?? ""}`);
     const queue = isOverdue ? "ALERT_OVERDUE" as const : "EXECUTION_EXCEPTION" as const;
-    const alertId = text(row.alert_id ?? row.id, `alert-${index}`);
-    const fieldId = text(row.field_id ?? row.fieldId, "");
+    const alertId = idText(row.alert_id ?? row.id) || `alert-${index}`;
+    const fieldId = idText(row.field_id ?? row.fieldId);
     return {
       id: alertId,
       queue,
