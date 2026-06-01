@@ -17,6 +17,7 @@ const PAGE_NAME = "设备与告警中心";
 
 type AlertActionState = { busyKey?: string; message?: string; tone?: "success" | "error" };
 type AlertPermissionState = { sessionLoading: boolean; canAck: boolean; canClose: boolean; ackReason: string; closeReason: string };
+type OfflineActionApi = (deviceId: string) => Promise<OperatorOfflineDeviceActionResult>;
 
 function queryFromParams(params: URLSearchParams): OperatorDevicesAlertsQuery {
   return { focus: params.get("focus") ?? undefined, deviceId: params.get("device_id") ?? undefined, fieldId: params.get("field_id") ?? undefined, alertId: params.get("alert_id") ?? undefined, onlineStatus: params.get("online_status") ?? undefined, source: params.get("source") ?? undefined };
@@ -102,16 +103,12 @@ export default function OperatorDevicesAlertsPage(): React.ReactElement {
     return vm?.focus.matchedDevice?.deviceId || "";
   }
 
-  async function runOfflineDeviceAction(action: "ack" | "followup" | "inspection-task-candidate") {
+  async function submitOfflineDeviceAction(actionApi: OfflineActionApi) {
     const deviceId = focusedDeviceId();
     if (!deviceId) { setOfflineActionState({ status: "error", message: "操作未完成：缺少权限 / 后端接口未开放 / 设备不存在 / 设备明细不可用" }); return; }
     setOfflineActionState({ status: "submitting" });
     try {
-      const result = action === "ack"
-        ? await ackDeviceOffline(deviceId)
-        : action === "followup"
-          ? await markDeviceOfflineFollowup(deviceId)
-          : await createOfflineInspectionTaskCandidate(deviceId);
+      const result = await actionApi(deviceId);
       if (!result.ok) { setOfflineActionState({ status: "error", message: sanitizeOperatorError(result.message) }); return; }
       await reload();
       setOfflineActionState({ status: "success", auditId: result.auditText ?? undefined, message: offlineActionSuccessMessage(result) });
@@ -121,15 +118,15 @@ export default function OperatorDevicesAlertsPage(): React.ReactElement {
   }
 
   function confirmOfflineHandling() {
-    void runOfflineDeviceAction("ack");
+    void submitOfflineDeviceAction(ackDeviceOffline);
   }
 
   function markManualReview() {
-    void runOfflineDeviceAction("followup");
+    void submitOfflineDeviceAction(markDeviceOfflineFollowup);
   }
 
   function createTaskCandidate() {
-    void runOfflineDeviceAction("inspection-task-candidate");
+    void submitOfflineDeviceAction(createOfflineInspectionTaskCandidate);
   }
 
   return (
