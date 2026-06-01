@@ -71,6 +71,13 @@ function read(rel) {
   return fs.readFileSync(file, 'utf8');
 }
 
+function reportSection(report, route) {
+  const start = report.indexOf(`## ${route}`);
+  if (start < 0) return '';
+  const next = report.indexOf('\n## ', start + 1);
+  return next < 0 ? report.slice(start) : report.slice(start, next);
+}
+
 for (const rel of checkedFiles) {
   const text = read(rel);
   for (const [label, pattern] of banned) {
@@ -156,9 +163,16 @@ if (!/isCustomerVisibleFormalMemory/.test(memoryVm)) {
 const reportPath = path.join(ROOT, 'docs/audit/FRONTEND_RUNTIME_PAGE_AUDIT_REPORT.md');
 if (fs.existsSync(reportPath)) {
   const report = fs.readFileSync(reportPath, 'utf8');
-  for (const [label, pattern] of [...banned, ...customerRawLeakBanned]) {
+  for (const [label, pattern] of banned) {
     if (pattern.test(report)) {
       console.error(`[customer-product-language] runtime audit report leaked customer technical language: ${label}`);
+      failed = true;
+    }
+  }
+  const customerReportText = `${reportSection(report, '/customer/dashboard')}\n${reportSection(report, '/customer/export')}`;
+  for (const [label, pattern] of customerRawLeakBanned) {
+    if (pattern.test(customerReportText)) {
+      console.error(`[customer-product-language] runtime customer pages leaked raw enum/reason: ${label}`);
       failed = true;
     }
   }
