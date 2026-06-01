@@ -3,11 +3,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const files = [
+const mainVisualFiles = [
   'apps/web/src/views/operator/OperatorDevicesAlertsPage.tsx',
   'apps/web/src/viewmodels/operatorDevicesAlertsVm.ts',
-  'apps/web/src/api/operatorDevicesAlerts.ts',
-  'apps/web/src/api/operatorWorkbench.ts',
   'apps/web/src/components/operator/OperatorEmptyState.tsx',
   'apps/web/src/components/operator/OperatorPageState.tsx',
 ];
@@ -26,7 +24,6 @@ const forbiddenMainVisual = [
   ['alerts_api fallback', /alerts_api\s+fallback/i],
 ];
 
-const allowedTechnicalMarkers = ['技术详情', '<details', 'operationTechDetailsMuted', 'operatorTechDetails'];
 let failed = false;
 
 function read(rel) {
@@ -47,12 +44,9 @@ function stringLiterals(text) {
   return out;
 }
 
-for (const rel of files) {
+for (const rel of mainVisualFiles) {
   const text = read(rel);
-  const literals = stringLiterals(text);
-  const hasTechnicalDetail = allowedTechnicalMarkers.some((marker) => text.includes(marker));
-  for (const literal of literals) {
-    if (hasTechnicalDetail && /技术详情|operatorTechDetails|operationTechDetailsMuted|<details/.test(literal)) continue;
+  for (const literal of stringLiterals(text)) {
     for (const [label, pattern] of forbiddenMainVisual) {
       if (pattern.test(literal)) {
         console.error(`[operator-product-language] main visual leaked ${label} in ${rel}: ${literal.slice(0, 160)}`);
