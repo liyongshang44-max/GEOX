@@ -135,7 +135,7 @@ async function handleOfflineAction(req: any, reply: any, pool: Pool, action: Off
   try {
     await writeAuditFact(pool, auth, result, device);
   } catch {
-    return reply.code(500).send({
+    return reply.code(503).send({
       ok: false,
       device_id: deviceId,
       action,
