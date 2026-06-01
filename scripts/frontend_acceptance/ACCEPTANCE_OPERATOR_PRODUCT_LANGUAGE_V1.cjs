@@ -25,14 +25,6 @@ const forbiddenMainVisual = [
   ['alerts_api fallback', /alerts_api\s+fallback/i],
 ];
 
-const rawHandlingStatus = [
-  ['FOLLOWUP_REQUIRED', /\bFOLLOWUP_REQUIRED\b/],
-  ['TASK_CANDIDATE_CREATED', /\bTASK_CANDIDATE_CREATED\b/],
-  ['READ_ONLY', /\bREAD_ONLY\b/],
-  ['ACKED', /\bACKED\b/],
-  ['OPEN', /\bOPEN\b/],
-];
-
 let failed = false;
 
 function read(rel) {
@@ -59,12 +51,6 @@ for (const rel of mainVisualFiles) {
     for (const [label, pattern] of forbiddenMainVisual) {
       if (pattern.test(literal)) {
         console.error(`[operator-product-language] main visual leaked ${label} in ${rel}: ${literal.slice(0, 160)}`);
-        failed = true;
-      }
-    }
-    for (const [label, pattern] of rawHandlingStatus) {
-      if (pattern.test(literal)) {
-        console.error(`[operator-product-language] device offline raw handling status leaked in visible literal ${label} in ${rel}: ${literal.slice(0, 160)}`);
         failed = true;
       }
     }
@@ -100,6 +86,18 @@ if (!/labelOperatorOfflineHandlingStatus\("OPEN"\)/.test(vm) || !/labelOperatorO
 }
 if (/return\s+["'](?:OPEN|READ_ONLY|FOLLOWUP_REQUIRED|TASK_CANDIDATE_CREATED|ACKED)["']/.test(vm)) {
   console.error('[operator-product-language] VM must not return raw device offline handling status');
+  failed = true;
+}
+if (/handlingStatusText:\s*["'](?:OPEN|READ_ONLY|FOLLOWUP_REQUIRED|TASK_CANDIDATE_CREATED|ACKED)["']/.test(vm + panel + page)) {
+  console.error('[operator-product-language] raw handling status must not be assigned to visible handlingStatusText');
+  failed = true;
+}
+if (/状态：\$\{replaceOperatorTerms\(result\.status\)\}/.test(page)) {
+  console.error('[operator-product-language] offline action success must not render result.status through generic replaceOperatorTerms');
+  failed = true;
+}
+if (/<strong>\s*(?:FOLLOWUP_REQUIRED|TASK_CANDIDATE_CREATED|READ_ONLY|ACKED|OPEN)\s*<\/strong>/.test(panel + page)) {
+  console.error('[operator-product-language] raw handling status must not be hardcoded in visible markup');
   failed = true;
 }
 
