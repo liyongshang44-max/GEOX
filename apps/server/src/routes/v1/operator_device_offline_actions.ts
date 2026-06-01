@@ -67,6 +67,7 @@ async function findDevice(pool: Pool, deviceId: string): Promise<DeviceRow | nul
 }
 
 async function writeAuditFact(pool: Pool, auth: AoActAuthContextV0, result: OfflineActionResponse, device: DeviceRow | null): Promise<void> {
+  const snapshot = device ?? {};
   const record = {
     type: "operator_device_offline_action_audit_v1",
     payload: {
@@ -83,11 +84,11 @@ async function writeAuditFact(pool: Pool, auth: AoActAuthContextV0, result: Offl
       source_lane: "OPERATOR_DEVICE_OFFLINE_ACTION",
       audit_policy: AUDIT_POLICY,
       device_snapshot: {
-        device_id: safeText(device?.device_id),
-        field_id: safeText(device?.field_id),
-        online_status: safeText(device?.online_status ?? device?.status),
-        last_heartbeat_ts_ms: device?.last_heartbeat_ts_ms ?? null,
-        last_telemetry_ts_ms: device?.last_telemetry_ts_ms ?? null,
+        device_id: safeText(snapshot["device_id"]),
+        field_id: safeText(snapshot["field_id"]),
+        online_status: safeText(snapshot["online_status"] ?? snapshot["status"]),
+        last_heartbeat_ts_ms: snapshot["last_heartbeat_ts_ms"] ?? null,
+        last_telemetry_ts_ms: snapshot["last_telemetry_ts_ms"] ?? null,
       },
       note: result.message,
       created_at: result.created_at,
@@ -107,7 +108,7 @@ function featureBoundaryError(deviceId: string, action: OfflineAction, message: 
   };
 }
 
-async function handleOfflineAction(req: any, reply: any, pool: Pool, action: OfflineAction, status: OfflineStatus): Promise<void> {
+async function handleOfflineAction(req: any, reply: any, pool: Pool, action: OfflineAction, status: OfflineStatus): Promise<any> {
   const auth = requireAoActAnyScopeV0(req, reply, ["operator.device_offline.write", "devices.write"]);
   const deviceId = safeText(req.params?.device_id);
   if (!auth) return;
