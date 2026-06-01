@@ -1,4 +1,4 @@
-import { customerSafeName, isUnsafeCustomerText, mapCustomerEnum } from "./customerSafeText";
+import { customerFormalChainText, customerNeedsReviewText, customerOperationStateText, customerReasonText, customerSafeName, isUnsafeCustomerText, mapCustomerEnum } from "./customerSafeText";
 import { customerStatusLabel, labelCustomerChainIntegrity, labelCustomerCropContextStatus, labelCustomerObservabilityStatus } from "./customerStatusLabels";
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -36,6 +36,10 @@ function isBlankText(raw: string): boolean {
 export function customerSemanticLabel(raw: unknown, fallback = "暂无记录"): string {
   const text = normalize(raw);
   if (isBlankText(text)) return fallback;
+  const key = normalizeKey(text);
+  if (key === "TRUE" || key === "FALSE") return customerNeedsReviewText(text);
+  if (key === "PENDING_ACCEPTANCE_REQUIRES_FORMAL_REVIEW" || key === "SOIL_MOISTURE_BELOW_THRESHOLD" || key === "NO_RAIN_FORECAST") return customerReasonText(text);
+  if (key === "PENDING_ACCEPTANCE" || key === "BLOCKED") return customerOperationStateText(text);
   const statusText = customerStatusLabel(text, "generic", "");
   const mapped = statusText || mapCustomerEnum(text, "generic");
   if (isUnsafeCustomerText(raw)) return mapped && mapped !== text ? mapped : fallback;
@@ -70,7 +74,7 @@ export function customerSourceLabel(raw: unknown, fallback = "暂无数据来源
 export function customerChainIntegrityLabel(raw: unknown, fallback = "链路状态待确认"): string {
   const key = normalizeKey(raw);
   if (!key) return fallback;
-  return labelCustomerChainIntegrity(key);
+  return customerFormalChainText(key);
 }
 
 export function customerObservabilityLabel(raw: unknown, fallback = "观测状态待确认"): string {
