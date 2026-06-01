@@ -52,6 +52,13 @@ const banned = [
   ['Fail-safe', /Fail-safe/i],
 ];
 
+const customerRawLeakBanned = [
+  ['PENDING_ACCEPTANCE', /\bPENDING_ACCEPTANCE(?:\b|_)/],
+  ['soil_moisture_below_threshold', /soil_moisture_below_threshold/],
+  ['no_rain_forecast', /no_rain_forecast/],
+  ['BLOCKED', /\bBLOCKED\b/],
+];
+
 let failed = false;
 
 function read(rel) {
@@ -64,6 +71,13 @@ function read(rel) {
   return fs.readFileSync(file, 'utf8');
 }
 
+function reportSection(report, route) {
+  const start = report.indexOf(`## ${route}`);
+  if (start < 0) return '';
+  const next = report.indexOf('\n## ', start + 1);
+  return next < 0 ? report.slice(start) : report.slice(start, next);
+}
+
 for (const rel of checkedFiles) {
   const text = read(rel);
   for (const [label, pattern] of banned) {
@@ -71,6 +85,20 @@ for (const rel of checkedFiles) {
       console.error(`[customer-product-language] customer-facing technical language leaked: ${label} in ${rel}`);
       failed = true;
     }
+  }
+}
+
+const exportBlocks = read('apps/web/src/components/customer/CustomerExportBlocks.tsx');
+for (const [label, pattern] of customerRawLeakBanned) {
+  if (pattern.test(exportBlocks)) {
+    console.error(`[customer-product-language] customer export raw enum/reason leaked in source: ${label}`);
+    failed = true;
+  }
+}
+for (const helper of ['customerReasonText', 'customerOperationStateText', 'customerNeedsReviewText', 'customerEvidenceStateText']) {
+  if (!new RegExp(`\\b${helper}\\b`).test(exportBlocks)) {
+    console.error(`[customer-product-language] customer export must use ${helper}`);
+    failed = true;
   }
 }
 
@@ -95,6 +123,31 @@ if (!/未完成复核前不展示执行成功或价值结论/.test(dashboardVm))
   console.error('[customer-product-language] customer offline device action must preserve no-fake-success/no-value boundary');
   failed = true;
 }
+for (const [label, pattern] of [
+  ['raw scenario type passthrough', /scenarioTypeText:\s*formalVm\.rawScenarioType/],
+  ['raw formal chain status passthrough', /formalChainStatusText:\s*formalVm\.formalChainStatus/],
+  ['raw evidence status passthrough', /evidenceStatusText:\s*formalVm\.rawEvidenceStatus/],
+  ['raw boolean review passthrough', /needsReviewText:\s*formalVm\.needsReview\s*\?\s*["']true["']\s*:\s*["']false["']/],
+]) {
+  if (pattern.test(dashboardVm)) {
+    console.error(`[customer-product-language] dashboard VM leaks customer raw status: ${label}`);
+    failed = true;
+  }
+}
+for (const helper of ['customerFormalChainText', 'customerEvidenceStateText', 'customerNeedsReviewText']) {
+  if (!new RegExp(`\\b${helper}\\b`).test(dashboardVm)) {
+    console.error(`[customer-product-language] dashboard VM must use ${helper}`);
+    failed = true;
+  }
+}
+
+const safeText = read('apps/web/src/lib/customerSafeText.ts');
+for (const required of ['等待正式验收', '需正式验收后确认', '土壤水分偏低', '近期无降雨预报', '暂不形成正式结论', '需要人工复核', '暂不需要人工复核', '链路待校验', '链路已通过', '有限记录', '证据待补充', '证据已通过']) {
+  if (!safeText.includes(required)) {
+    console.error(`[customer-product-language] customerSafeText missing required customer wording: ${required}`);
+    failed = true;
+  }
+}
 
 const memoryPanel = read('apps/web/src/components/customer/FieldMemoryPanel.tsx');
 const memoryVm = read('apps/web/src/viewmodels/customerFieldMemoryVm.ts');
@@ -113,6 +166,13 @@ if (fs.existsSync(reportPath)) {
   for (const [label, pattern] of banned) {
     if (pattern.test(report)) {
       console.error(`[customer-product-language] runtime audit report leaked customer technical language: ${label}`);
+      failed = true;
+    }
+  }
+  const customerReportText = `${reportSection(report, '/customer/dashboard')}\n${reportSection(report, '/customer/export')}`;
+  for (const [label, pattern] of customerRawLeakBanned) {
+    if (pattern.test(customerReportText)) {
+      console.error(`[customer-product-language] runtime customer pages leaked raw enum/reason: ${label}`);
       failed = true;
     }
   }

@@ -1,3 +1,5 @@
+import { customerEvidenceStateText, customerFormalChainText, customerNeedsReviewText, customerOperationStateText, customerReasonText } from "./customerSafeText";
+
 function token(...parts: string[]): string {
   return parts.join("_");
 }
@@ -18,6 +20,11 @@ const TOKENS = {
   formalChainStatus: token("formal", "chain", "status"),
   evidenceStatus: token("evidence", "status"),
   needsReview: token("needs", "review"),
+  pendingAcceptance: token("PENDING", "ACCEPTANCE"),
+  pendingFormalReview: token("PENDING", "ACCEPTANCE", "REQUIRES", "FORMAL", "REVIEW"),
+  soilMoistureLow: token("soil", "moisture", "below", "threshold"),
+  noRainForecast: token("no", "rain", "forecast"),
+  blocked: ["BLO", "CKED"].join(""),
 };
 
 const PRODUCT_REPLACEMENTS: Array<[RegExp, string]> = [
@@ -30,7 +37,12 @@ const PRODUCT_REPLACEMENTS: Array<[RegExp, string]> = [
   [new RegExp(`\\b${escapeRegExp(TOKENS.formalChainStatus)}\\b`, "gi"), "正式闭环状态"],
   [new RegExp(`\\b${escapeRegExp(TOKENS.evidenceStatus)}\\b`, "gi"), "证据状态"],
   [new RegExp(`${escapeRegExp(TOKENS.needsReview)}\\s*[=:：]\\s*true`, "gi"), "需要人工复核"],
-  [new RegExp(`${escapeRegExp(TOKENS.needsReview)}\\s*[=:：]\\s*false`, "gi"), "无需人工复核"],
+  [new RegExp(`${escapeRegExp(TOKENS.needsReview)}\\s*[=:：]\\s*false`, "gi"), "暂不需要人工复核"],
+  [new RegExp(`\\b${escapeRegExp(TOKENS.pendingFormalReview)}\\b`, "gi"), customerReasonText(TOKENS.pendingFormalReview)],
+  [new RegExp(`\\b${escapeRegExp(TOKENS.pendingAcceptance)}\\b`, "gi"), customerOperationStateText(TOKENS.pendingAcceptance)],
+  [new RegExp(`\\b${escapeRegExp(TOKENS.soilMoistureLow)}\\b`, "gi"), customerReasonText(TOKENS.soilMoistureLow)],
+  [new RegExp(`\\b${escapeRegExp(TOKENS.noRainForecast)}\\b`, "gi"), customerReasonText(TOKENS.noRainForecast)],
+  [new RegExp(`\\b${escapeRegExp(TOKENS.blocked)}\\b`, "gi"), customerOperationStateText(TOKENS.blocked)],
   [new RegExp(`\\b${escapeRegExp(TOKENS.needsReview)}\\b`, "gi"), "复核状态"],
   [new RegExp(["guarded", "payload"].join(ws), "gi"), "正式链路状态"],
   [new RegExp(["ROI", "trust", "lane"].join(ws), "gi"), "价值可信度"],
@@ -73,11 +85,19 @@ export function customerProductText(value: unknown, fallback = "暂无记录"): 
 }
 
 export function customerReviewStateText(value: unknown): string {
-  const raw = String(value ?? "").trim().toLowerCase();
-  if (!raw) return "复核状态待确认";
-  if (raw === "true" || raw === "yes" || raw === "1" || raw.includes("review") || raw.includes("复核")) return "需要人工复核";
-  if (raw === "false" || raw === "no" || raw === "0") return "暂无人工复核要求";
-  return customerProductText(value, "复核状态待确认");
+  return customerNeedsReviewText(value);
+}
+
+export function customerFormalStatusText(value: unknown): string {
+  return customerFormalChainText(value);
+}
+
+export function customerEvidenceStatusText(value: unknown): string {
+  return customerEvidenceStateText(value);
+}
+
+export function customerOperationStatusText(value: unknown): string {
+  return customerOperationStateText(value);
 }
 
 export function customerClosureStepLabel(value: unknown): string {

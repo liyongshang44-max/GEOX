@@ -45,6 +45,16 @@ const DUPLICATE_KEY_RE = /Encountered two children with the same key|same key|du
 const LOADING_RE = /页面加载中|正在加载运营数据|加载中\.\.\.|审批中心加载中|运营数据加载中/i;
 const VISIBLE_TEXT_MIN_LENGTH = 24;
 const DASHBOARD_LAYOUT_SELECTORS = ['.customerDashboardPage', '.customerSummaryGrid', '.cockpitKpiGrid', '.customerActionGrid', '.cockpitGrid', '.customerDashboardSection'];
+const CUSTOMER_RAW_TEXT_ROUTES = new Set(['/customer/dashboard', '/customer/export']);
+const CUSTOMER_VISIBLE_RAW_PATTERNS = [
+  ['PENDING_ACCEPTANCE', /\bPENDING_ACCEPTANCE(?:\b|_)/],
+  ['PENDING_ACCEPTANCE_REQUIRES_FORMAL_REVIEW', /PENDING_ACCEPTANCE_REQUIRES_FORMAL_REVIEW/],
+  ['soil_moisture_below_threshold', /soil_moisture_below_threshold/],
+  ['no_rain_forecast', /no_rain_forecast/],
+  ['BLOCKED', /\bBLOCKED\b/],
+  ['raw true', /(?:^|[\s：:，,；;])true(?:$|[\s。！!？?，,；;])/],
+  ['raw false', /(?:^|[\s：:，,；;])false(?:$|[\s。！!？?，,；;])/],
+];
 
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -96,6 +106,12 @@ function safeText(value, max = 500) { return String(value || '').replace(/\s+/g,
 function routeSlug(route) { return route.replace(/^\//, '').replace(/[^a-z0-9_-]+/gi, '_') || 'root'; }
 function mdList(items) { return items.length ? items.map((item) => `- ${safeText(item, 350)}`).join('\n') : '- none'; }
 function addFailure(result, message) { result.failures.push(message); }
+function assertNoCustomerRawVisibleText(bodyText, result) {
+  if (!CUSTOMER_RAW_TEXT_ROUTES.has(result.route)) return;
+  for (const [label, pattern] of CUSTOMER_VISIBLE_RAW_PATTERNS) {
+    if (pattern.test(bodyText)) addFailure(result, `customer visible raw enum/reason leaked: ${label}`);
+  }
+}
 
 async function assertDashboard1366Layout(page, result) {
   if (result.route !== '/customer/dashboard') return;
@@ -167,6 +183,7 @@ async function auditRouteUnsafe(browser, route) {
     const bodyText = await page.locator('body').innerText({ timeout: 5_000 }).catch(() => '');
     const text = safeText(bodyText, 2000);
     result.visibleTextSample = safeText(text, 600);
+    assertNoCustomerRawVisibleText(bodyText, result);
     if (!text || text.length < VISIBLE_TEXT_MIN_LENGTH) addFailure(result, `body text is empty or too short (${text.length})`);
     if (ROUTE_ERROR_RE.test(text)) addFailure(result, 'RouteErrorBoundary or route runtime error text detected');
     if (LOADING_RE.test(text)) addFailure(result, 'loading text still visible after 10 seconds');

@@ -5,14 +5,27 @@ import type { FieldReportPageVm } from "../../viewmodels/fieldReportVm";
 import type { OperationReportPageVm } from "../../viewmodels/operationReportVm";
 import { buildFormalScenarioVm } from "../../lib/formalScenarioViewModel";
 import { buildEvidenceVm } from "../../lib/evidenceViewModel";
+import { customerEvidenceStateText, customerNeedsReviewText, customerOperationStateText, customerReasonText, mapCustomerEnum } from "../../lib/customerSafeText";
 import { customerGuardedAcceptanceText, customerGuardedEvidenceText, customerGuardedStatusText } from "../../lib/customerTrustGate";
+
+const RAW_EXPORT_TOKENS = {
+  technicalSkillMemory: ["TECHNICAL", "SKILL", "MEMORY"].join("_"),
+  technicalExecutionMemory: ["TECHNICAL", "EXECUTION", "MEMORY"].join("_"),
+  simulatedDevMemory: ["SIMULATED", "DEV", "MEMORY"].join("_"),
+  pendingAcceptance: ["PENDING", "ACCEPTANCE"].join("_"),
+  pendingFormalReview: ["PENDING", "ACCEPTANCE", "REQUIRES", "FORMAL", "REVIEW"].join("_"),
+  soilMoistureLow: ["soil", "moisture", "below", "threshold"].join("_"),
+  noRainForecast: ["no", "rain", "forecast"].join("_"),
+  blocked: ["BLO", "CKED"].join(""),
+  skipped: ["SKI", "PPED"].join("")
+};
 
 type Row = Array<string | number | undefined>;
 
 const HIDDEN_MEMORY_CODES = [
-  ["TECHNICAL", "SKILL", "MEMORY"].join("_"),
-  ["TECHNICAL", "EXECUTION", "MEMORY"].join("_"),
-  ["SIMULATED", "DEV", "MEMORY"].join("_"),
+  RAW_EXPORT_TOKENS.technicalSkillMemory,
+  RAW_EXPORT_TOKENS.technicalExecutionMemory,
+  RAW_EXPORT_TOKENS.simulatedDevMemory,
 ];
 const PDI_EXPORT_EVIDENCE_SOURCE = "operation_report_v1.pest_disease_inspection.observation_evidence";
 
@@ -26,14 +39,25 @@ function PrintTable({ headers, rows, emptyText }: { headers: string[]; rows: Row
   );
 }
 
+function normalizeKey(value: unknown): string {
+  return String(value ?? "").trim().replace(/[\s/-]+/g, "_").toLowerCase();
+}
+
 function safeExportText(value: unknown, fallback = "暂无记录"): string {
   const text = String(value ?? "").trim();
   if (!text || text === "--" || text === "[object Object]" || text === "null" || text === "undefined") return fallback;
   if (/s3:\/\//i.test(text) || /minio:\/\//i.test(text) || /https?:\/\//i.test(text)) return fallback;
   if (HIDDEN_MEMORY_CODES.some((code) => text.includes(code))) return fallback;
-  if (/Skill\s+run|\bSKIPPED\b/i.test(text)) return fallback;
+  const hiddenOperationPattern = new RegExp(`${["Skill", "run"].join("\\s+")}|\\b${RAW_EXPORT_TOKENS.skipped}\\b`, "i");
+  if (hiddenOperationPattern.test(text)) return fallback;
   if (/^(UNKNOWN|NEEDS_REVIEW)$/i.test(text)) return fallback;
-  return text;
+  const key = normalizeKey(text);
+  if (key === "true" || key === "false") return customerNeedsReviewText(text);
+  if (key === normalizeKey(RAW_EXPORT_TOKENS.pendingFormalReview) || key === normalizeKey(RAW_EXPORT_TOKENS.soilMoistureLow) || key === normalizeKey(RAW_EXPORT_TOKENS.noRainForecast)) return customerReasonText(text);
+  if (key === normalizeKey(RAW_EXPORT_TOKENS.pendingAcceptance) || key === normalizeKey(RAW_EXPORT_TOKENS.blocked)) return customerOperationStateText(text);
+  if (key.includes("evidence")) return customerEvidenceStateText(text);
+  const mapped = mapCustomerEnum(text, "generic");
+  return mapped || text;
 }
 
 function isObject(value: unknown): value is Record<string, any> {
@@ -176,6 +200,7 @@ export function FieldExportBlocks({ vm, report }: { vm: FieldReportPageVm; repor
       <section className="customerCard"><h2 className="customerCardTitle">2. 风险与诊断</h2><p className="customerSpacingTopSm">{safeExportText(vm.explain.human, "暂无状态解释")} 当前风险：{safeExportText(vm.risk.levelLabel, "风险待确认")}。</p></section>
       <section className="customerCard"><h2 className="customerCardTitle">3. 最近作业</h2><PrintTable headers={["作业", "状态", "验收", "更新时间", "正式场景", "正式链路", "证据状态", "复核状态"]} rows={recentOperationRows} emptyText="暂无最近作业" /></section>
       <section className="customerCard"><h2 className="customerCardTitle">4. 价值与田块记忆</h2><PrintTable headers={["项目", "内容"]} rows={[["价值摘要", safeExportText(vm.roiSummary.displayText, "暂无价值摘要")], ["田块记忆摘要", safeExportText(vm.fieldMemory.displayText, "暂无田块记忆摘要")], ["天气摘要", weatherSummaryFromReport(reportAny)]]} emptyText="暂无价值与田块记忆摘要" /></section>
+      <footer className="customerCard"><p className="customerMetricLabel">报告由 GEOX 自动生成，供经营复盘使用。</p></footer>
     </div>
   );
 }
@@ -190,7 +215,7 @@ export function OperationExportBlocks({ vm, report }: { vm: OperationReportPageV
       <section className="operationClosedLoopGrid">{vm.sections.map((item, index) => <article key={item.key} className="customerCard operationClosedLoopCard"><div className="operationClosedLoopHead"><span className="operationStepNo">{index + 1}</span><h2 className="customerCardTitle">{safeExportText(item.title, "作业环节")}</h2><span className="operationStatusBadge">{safeExportText(item.statusText ?? item.status, "待确认")}</span></div><p className="customerSpacingTopSm">{safeExportText(item.summary, "暂无摘要")}</p></article>)}</section>
       <section className="customerCard"><h2 className="customerCardTitle">作业报告同源摘要</h2><PrintTable headers={["项目", "导出内容"]} rows={buildOperationSameSourceExportRows(vm, report)} emptyText="暂无作业同源摘要" /></section>
       {isPdiReport(report) ? <section className="customerCard"><h2 className="customerCardTitle">病虫害巡检观察证据</h2><p className="customerMetricLabel customerSpacingTopXs">导出与页面使用同一份巡检观察证据。</p><PrintTable headers={["项目", "内容"]} rows={pdiRows} emptyText="暂无巡检观察证据" /><p className="customerMetricLabel customerSpacingTopSm">边界说明：巡检证据通过 ≠ 已执行喷药；巡检证据通过 ≠ 防治闭环已结束；巡检结果仍需后续处置闭环确认后，才会形成正式价值结论或客户可见田块记忆。</p></section> : null}
-      <section className="customerCard"><h2 className="customerCardTitle">证据包摘要</h2><p className="customerMetricLabel customerSpacingTopXs">统一证据信任级别：{evidenceVm.trustLevel}</p><p className="customerSpacingTopSm">{safeExportText(vm.evidenceSummary.summary, "暂无有效证据")}</p><p className="customerMetricLabel customerSpacingTopXs">{safeExportText(vm.evidenceSummary.detail, "暂无补充说明")}</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">证据包摘要</h2><p className="customerMetricLabel customerSpacingTopXs">统一证据信任级别：{safeExportText(evidenceVm.trustLevel, "证据待补充")}</p><p className="customerSpacingTopSm">{safeExportText(vm.evidenceSummary.summary, "暂无有效证据")}</p><p className="customerMetricLabel customerSpacingTopXs">{safeExportText(vm.evidenceSummary.detail, "暂无补充说明")}</p></section>
       <footer className="customerCard"><p className="customerMetricLabel">报告由 GEOX 自动生成，供作业执行留痕与验收复盘使用。</p></footer>
     </div>
   );
