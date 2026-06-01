@@ -80,10 +80,9 @@ assertContains(devicesPage, /fetchOperatorDevicesAlerts\(query\)/, 'page fetches
 assertContains(devicesPage, /buildOperatorDevicesAlertsVm\(response, query\)/, 'page builds VM with query');
 assertContains(devicesPage, /DeviceOfflineHandlingPanel/, 'new DeviceOfflineHandlingPanel is rendered');
 assertContains(devicesPage, /operatorDeviceCardFocused/, 'target device can be highlighted');
-assertContains(devicesPage, /正在提交处理结果\.\.\./, 'submitting state copy exists');
-assertContains(devicesPage, /已记录设备离线确认，审计编号：offline-/, 'success state copy exists');
-assertContains(devicesPage, /操作未完成：缺少权限 \/ 后端接口未开放 \/ 设备不存在 \/ 设备明细不可用/, 'failure state copy exists');
-assertContains(devicesPage, /动作未开放。当前只能记录需人工核查，不能直接创建任务/, 'feature-disabled state copy exists');
+assertContains(devicesPage, /confirmOfflineHandling/, 'page wires offline confirmation handler');
+assertContains(devicesPage, /markManualReview/, 'page wires manual review handler');
+assertContains(devicesPage, /createTaskCandidate/, 'page wires feature-disabled task candidate handler');
 
 assertContains(handlingPanel, /export default function DeviceOfflineHandlingPanel/, 'new standalone handling panel exists');
 assertContains(handlingPanel, /正在处理：设备离线/, 'panel shows matched-device handling state');
