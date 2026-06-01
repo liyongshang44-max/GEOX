@@ -10,6 +10,7 @@ export type OperatorDevicesAlertsQuery = {
   fieldId?: string;
   alertId?: string;
   onlineStatus?: OperatorDeviceOnlineStatus | string;
+  source?: "aggregate" | string;
 };
 
 export type OperatorDeviceScopeCounts = {
@@ -166,7 +167,7 @@ function buildOfficialDeviceScope(payload: unknown, devices: OperatorDeviceItem[
 function buildDashboardFallbackDeviceScope(payload: unknown, devices: OperatorDeviceItem[], alerts: OperatorAlertItem[]): OperatorDeviceScopeCounts {
   const deviceSummary = dashboardDeviceSummary(payload);
   const pendingSummary = dashboardPendingSummary(payload);
-  return buildDeviceScopeFromLists(devices, alerts, "客户看板聚合 fallback", {
+  return buildDeviceScopeFromLists(devices, alerts, "客户看板聚合数据", {
     global_devices_count: numberOrNull(deviceSummary.global_devices_count ?? deviceSummary.globalDevicesCount ?? deviceSummary.total_devices),
     visible_devices_count: numberOrNull(deviceSummary.visible_devices_count ?? deviceSummary.visibleDevicesCount ?? deviceSummary.total_devices) ?? devices.length,
     field_devices_count: numberOrNull(deviceSummary.field_devices_count ?? deviceSummary.fieldDevicesCount),
@@ -179,7 +180,7 @@ function sanitizeText(value: unknown, fallback = "未提供"): string {
   const raw = text(value, "");
   if (!raw) return fallback;
   if (/secret|token|access[_-]?key|password|credential_payload/i.test(raw)) return "敏感凭据已隐藏";
-  if (/^[A-Za-z]:\\/.test(raw) || raw.startsWith("/") || raw.includes("file://")) return "本地路径已隐藏";
+  if (/^[A-Za-z]:\/.test(raw) || raw.startsWith("/") || raw.includes("file://")) return "本地路径已隐藏";
   return raw.length > 96 ? `${raw.slice(0, 48)}...${raw.slice(-16)}` : raw;
 }
 
@@ -310,12 +311,14 @@ function normalizeReportDeviceFallback(payload: unknown): OperatorDeviceItem[] {
   return riskFields.slice(0, 8).flatMap((row, index) => {
     const reason = `${row.risk_reason ?? ""} ${Array.isArray(row.risk_reasons) ? row.risk_reasons.join(" ") : ""}`;
     if (!/offline|离线|device/i.test(reason)) return [];
+    const deviceId = text(row.device_id ?? row.deviceId);
+    if (!deviceId) return [];
     return [normalizeDevice({
-      device_id: row.device_id ?? `field-device-${row.field_id ?? index}`,
+      device_id: deviceId,
       status: /offline|离线/i.test(reason) ? "OFFLINE" : "UNKNOWN",
       field_name: row.field_name,
       field_id: row.field_id,
-      data_delay_text: "来自风险地块 fallback，设备明细未完整接入",
+      data_delay_text: "来自风险地块聚合数据，设备明细未完整接入",
     }, index, "reports_aggregate")];
   });
 }
@@ -349,6 +352,7 @@ async function fetchOfficialDevicesAlertsOptional(query?: OperatorDevicesAlertsQ
       field_id: query?.fieldId,
       alert_id: query?.alertId,
       online_status: query?.onlineStatus,
+      source: query?.source,
     }), undefined, { allowedStatuses: [403, 404, 405, 422], silent: true, timeoutMs: 10000 });
     if (result.ok) return result.data;
     operatorDevicesAlertsApiUnavailable = true;
@@ -373,9 +377,7 @@ async function postOperatorAlertAction(alertId: string, action: "ack" | "close")
   if (!safeAlertId) return { ok: false, message: "alertId 缺失，无法操作。" };
   try {
     const result = await apiRequestWithPolicy<unknown>(`/api/v1/operator/alerts/${safeAlertId}/${action}`, { method: "POST", body: JSON.stringify({}) }, { allowedStatuses: [400, 401, 403, 404, 409, 422], silent: true, timeoutMs: 10000 });
-    if (!result.ok) {
-      return { ok: false, message: parseActionFailure(result.status, result.bodyText) };
-    }
+    if (!result.ok) return { ok: false, message: parseActionFailure(result.status, result.bodyText) };
     const payload = result.data as AnyRecord;
     const auditText = sanitizeText(payload?.audit_id ?? payload?.audit_ref ?? payload?.audit?.id ?? payload?.status_source, "审计来源待确认");
     return { ok: true, message: action === "ack" ? "ACK 成功，列表已刷新。" : "关闭成功，列表已刷新。", auditText };
@@ -408,14 +410,12 @@ export async function fetchOperatorDevicesAlerts(query?: OperatorDevicesAlertsQu
       deviceScope: buildOfficialDeviceScope(official, officialDevices, officialAlerts),
       ackCloseReady,
       revokeVisible,
-      message: ackCloseReady ? "ACK/close 操作由 operator alerts API 提供，状态变更应产生审计记录。" : "ACK/close 当前无可操作权限或后端未开放。",
+      message: ackCloseReady ? "确认/关闭操作由运营告警接口提供，状态变更应产生审计记录。" : "确认/关闭当前无可操作权限或后端未开放。",
     };
   }
 
   const aggregate = await fetchOptional(withQuery("/api/v1/reports/customer-dashboard/aggregate"));
-  const fallbackDevices = normalizeReportDeviceFallback(aggregate)
-    .filter((item, index, all) => all.findIndex((x) => x.deviceId === item.deviceId) === index)
-    .filter((item) => matchesQueryDevice(item, query));
+  const fallbackDevices = normalizeReportDeviceFallback(aggregate).filter((item, index, all) => all.findIndex((x) => x.deviceId === item.deviceId) === index).filter((item) => matchesQueryDevice(item, query));
   const fallbackAlerts: OperatorAlertItem[] = [];
   const fallbackScope = buildDashboardFallbackDeviceScope(aggregate, fallbackDevices, fallbackAlerts);
 
@@ -429,7 +429,7 @@ export async function fetchOperatorDevicesAlerts(query?: OperatorDevicesAlertsQu
       deviceScope: fallbackScope,
       ackCloseReady: false,
       revokeVisible: false,
-      message: "operator devices-alerts 未接入，当前展示 customer dashboard aggregate 包装后的设备范围计数；明细列表可能少于统计总数，ACK/close 只读。",
+      message: "当前设备明细未完整接入，页面以统一统计口径展示；确认/关闭只读。",
     };
   }
 
@@ -442,6 +442,6 @@ export async function fetchOperatorDevicesAlerts(query?: OperatorDevicesAlertsQu
     deviceScope: buildDeviceScopeFromLists([], [], ENABLE_OPERATOR_DEVICES_ALERTS_API ? "设备与告警中心未返回可用数据" : "设备与告警中心 API 未启用"),
     ackCloseReady: false,
     revokeVisible: false,
-    message: ENABLE_OPERATOR_DEVICES_ALERTS_API ? "operator devices-alerts 未接入，且暂无安全 fallback 设备或告警数据。" : "operator devices-alerts 未接入，当前不探测未 ready API；暂无安全 fallback 设备或告警数据。",
+    message: "暂无安全 fallback 设备或告警数据。",
   };
 }
