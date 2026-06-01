@@ -7,7 +7,7 @@ import OperatorEmptyState from "../../components/operator/OperatorEmptyState";
 import { isPermissionDeniedError, OperatorPageStateView, sanitizeOperatorError, withOperatorLoadTimeout, type OperatorPageRuntimeState } from "../../components/operator/OperatorPageState";
 import PermissionGate from "../../components/operator/PermissionGate";
 import OperatorLayout from "../../layouts/OperatorLayout";
-import { replaceOperatorTerms } from "../../lib/operatorStatusLabels";
+import { labelOperatorOfflineHandlingStatus, replaceOperatorTerms } from "../../lib/operatorStatusLabels";
 import { hasOperatorPermission } from "../../lib/permissions";
 import "../../styles/operatorDevicesAlerts.css";
 import { buildOperatorDevicesAlertsVm, type OperatorAlertRowVm, type OperatorDeviceRowVm, type OperatorDevicesAlertsVm } from "../../viewmodels/operatorDevicesAlertsVm";
@@ -57,7 +57,7 @@ function permissionReason(sessionLoading: boolean, session: SessionMe | null, pe
 
 function offlineActionSuccessMessage(result: OperatorOfflineDeviceActionResult): string {
   const audit = result.auditText ? ` 审计来源：${replaceOperatorTerms(result.auditText)}` : "";
-  const status = result.status ? ` 状态：${replaceOperatorTerms(result.status)}` : "";
+  const status = result.status ? ` 状态：${labelOperatorOfflineHandlingStatus(result.status)}` : "";
   return `${replaceOperatorTerms(result.message)}${audit}${status}`;
 }
 
