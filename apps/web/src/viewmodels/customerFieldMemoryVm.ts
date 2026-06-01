@@ -89,6 +89,16 @@ function technicalRefs(item: CustomerFieldMemoryItem): Array<{ label: string; va
   ].filter((row) => row.value && row.value !== "--");
 }
 
+function isCustomerVisibleFormalMemory(item: CustomerFieldMemoryItem): boolean {
+  const raw = item as CustomerFieldMemoryItem & Record<string, unknown>;
+  if (raw.customer_visible === true || raw.customer_visible_eligible === true || raw.formal_memory === true) return true;
+  const lane = String(raw.memory_lane ?? raw.lane ?? raw.visibility ?? raw.status ?? "").toUpperCase();
+  if (/CUSTOMER_VISIBLE|FORMAL|ACCEPTED|PASSED/.test(lane)) return true;
+  const text = `${raw.memory_type ?? ""} ${raw.memory_code ?? ""} ${raw.source_ref ?? ""}`.toUpperCase();
+  if (/SIMULATED|TECHNICAL|DEV|INTERNAL|DRAFT/.test(text)) return false;
+  return false;
+}
+
 function buildEntry(item: CustomerFieldMemoryItem): CustomerFieldMemoryEntryVm {
   const learned = learnedText(item);
   return {
@@ -102,11 +112,11 @@ function buildEntry(item: CustomerFieldMemoryItem): CustomerFieldMemoryEntryVm {
 }
 
 function scopeSubtitle(response: CustomerFieldMemoryResponse): string {
-  if (response.dataScope === "OFFICIAL_CUSTOMER_API") return "客户授权范围内的田块记忆摘要。";
-  if (response.dataScope === "COMPAT_MEMORY_API") return "当前展示兼容记忆接口返回的客户可读摘要。";
-  if (response.dataScope === "FALLBACK_EMBEDDED_REPORT") return "当前展示报告内嵌田块记忆摘要。";
+  if (response.dataScope === "OFFICIAL_CUSTOMER_API") return "客户授权范围内的正式田块记忆摘要。";
+  if (response.dataScope === "COMPAT_MEMORY_API") return "当前只展示兼容接口返回的正式客户可见记忆。";
+  if (response.dataScope === "FALLBACK_EMBEDDED_REPORT") return "当前只展示报告内嵌的正式客户可见记忆。";
   if (response.dataScope === "ERROR_EMPTY") return "田块记忆暂不可用，请稍后刷新。";
-  return "暂无田块记忆。";
+  return "暂无正式田块记忆。";
 }
 
 function statusText(response: CustomerFieldMemoryResponse): string {
@@ -118,7 +128,10 @@ function statusText(response: CustomerFieldMemoryResponse): string {
 }
 
 export function buildCustomerFieldMemoryVm(response: CustomerFieldMemoryResponse): CustomerFieldMemoryVm {
-  const entries = (response.items ?? []).map(buildEntry).filter((entry) => entry.learnedText.trim().length > 0);
+  const entries = (response.items ?? [])
+    .filter(isCustomerVisibleFormalMemory)
+    .map(buildEntry)
+    .filter((entry) => entry.learnedText.trim().length > 0);
   return {
     dataScope: response.dataScope,
     title: "田块记忆",
@@ -126,7 +139,7 @@ export function buildCustomerFieldMemoryVm(response: CustomerFieldMemoryResponse
     statusText: statusText(response),
     generatedAtText: toDateTimeText(response.generated_at),
     entries,
-    emptyTitle: "暂无田块记忆",
-    emptyDescription: "当前系统还没有形成可复用的地块响应、设备可靠性或技能表现记忆。",
+    emptyTitle: "暂无正式田块记忆",
+    emptyDescription: "系统只会在正式验收通过后形成客户可见的田块学习结论；技术调试、模拟或内部记忆不会进入客户页。",
   };
 }
