@@ -11,6 +11,7 @@ export type OperatorWorkbenchQueueKey =
   | "ALERT_OVERDUE";
 
 export type OperatorWorkbenchDataScope = "OFFICIAL_OPERATOR_API" | "FALLBACK_LIMITED" | "EMPTY" | "ERROR_EMPTY";
+export type OperatorWorkbenchHandlingStatus = "OPEN" | "ACKED" | "FOLLOWUP_REQUIRED" | "TASK_CANDIDATE_CREATED" | "CLOSED" | "READ_ONLY";
 
 export type OperatorWorkbenchItem = {
   id: string;
@@ -24,6 +25,12 @@ export type OperatorWorkbenchItem = {
   actionHref: string;
   relatedHref?: string | null;
   source: "operator_api" | "approvals_api" | "reports_aggregate" | "alerts_api";
+  deviceId?: string | null;
+  fieldId?: string | null;
+  alertId?: string | null;
+  sourceId?: string | null;
+  queueId?: string | null;
+  handlingStatus?: OperatorWorkbenchHandlingStatus;
 };
 
 export type OperatorWorkbenchResponse = {
@@ -72,6 +79,12 @@ function normalizePriority(value: unknown): OperatorWorkbenchItem["priority"] {
   return "UNKNOWN";
 }
 
+function normalizeHandlingStatus(value: unknown, fallback: OperatorWorkbenchHandlingStatus): OperatorWorkbenchHandlingStatus {
+  const raw = text(value, fallback).toUpperCase();
+  if (raw === "OPEN" || raw === "ACKED" || raw === "FOLLOWUP_REQUIRED" || raw === "TASK_CANDIDATE_CREATED" || raw === "CLOSED" || raw === "READ_ONLY") return raw;
+  return fallback;
+}
+
 function normalizeQueue(value: unknown): OperatorWorkbenchQueueKey | null {
   const raw = text(value).toUpperCase();
   if (raw === "APPROVAL_PENDING" || raw.includes("APPROVAL")) return "APPROVAL_PENDING";
@@ -91,36 +104,54 @@ function appendQuery(path: string, params: Record<string, unknown>): string {
     const raw = text(value);
     if (raw) query.set(key, raw);
   }
-  const sep = path.includes("?") ? "&" : "?";
   const qs = query.toString();
-  return qs ? `${path}${sep}${qs}` : path;
+  if (!qs) return path;
+  return `${path}${path.includes("?") ? "&" : "?"}${qs}`;
 }
 
-function deviceOfflineHref(params: { deviceId?: unknown; fieldId?: unknown }): string {
-  return appendQuery(QUEUE_HREF.DEVICE_OFFLINE, {
-    device_id: params.deviceId,
-    field_id: params.fieldId,
-    online_status: "OFFLINE",
-  });
+function deviceOfflineHref(params: { deviceId?: unknown; fieldId?: unknown; source?: unknown }): string {
+  const deviceId = text(params.deviceId);
+  const fieldId = text(params.fieldId);
+  if (deviceId) return appendQuery(QUEUE_HREF.DEVICE_OFFLINE, { device_id: deviceId, field_id: fieldId, online_status: "OFFLINE" });
+  if (text(params.source) === "aggregate") return appendQuery(QUEUE_HREF.DEVICE_OFFLINE, { source: "aggregate", field_id: fieldId });
+  return appendQuery(QUEUE_HREF.DEVICE_OFFLINE, { field_id: fieldId });
 }
 
 function alertOverdueHref(params: { alertId?: unknown; fieldId?: unknown }): string {
-  return appendQuery(QUEUE_HREF.ALERT_OVERDUE, {
-    alert_id: params.alertId,
-    field_id: params.fieldId,
-  });
+  return appendQuery(QUEUE_HREF.ALERT_OVERDUE, { alert_id: params.alertId, field_id: params.fieldId });
 }
 
 function defaultActionHref(queue: OperatorWorkbenchQueueKey, row: AnyRecord): string {
-  if (queue === "DEVICE_OFFLINE") return deviceOfflineHref({ deviceId: row.device_id ?? row.deviceId, fieldId: row.field_id ?? row.fieldId });
+  if (queue === "DEVICE_OFFLINE") return deviceOfflineHref({ deviceId: row.device_id ?? row.deviceId, fieldId: row.field_id ?? row.fieldId, source: row.source });
   if (queue === "ALERT_OVERDUE") return alertOverdueHref({ alertId: row.alert_id ?? row.alertId ?? row.id, fieldId: row.field_id ?? row.fieldId });
   return QUEUE_HREF[queue];
+}
+
+function operationHref(operationId: unknown): string | null {
+  const id = text(operationId);
+  return id ? `/customer/operations/${encodeURIComponent(id)}` : null;
+}
+
+function fieldHref(fieldId: unknown): string | null {
+  const id = text(fieldId);
+  return id ? `/customer/fields/${encodeURIComponent(id)}` : null;
+}
+
+function fieldDisplayName(row: AnyRecord): string {
+  return text(row.field_name ?? row.fieldName ?? row.name, "地块待确认");
+}
+
+function operationDisplayName(row: AnyRecord): string {
+  return text(row.operation_title ?? row.customer_title ?? row.title ?? row.operation_name, "作业待确认");
 }
 
 function normalizeOfficial(payload: unknown): OperatorWorkbenchItem[] {
   const rows = arrayFrom(payload, ["items", "todos", "workbench", "queue"]);
   return rows.map((row, index) => {
     const queue = normalizeQueue(row.queue ?? row.queue_key ?? row.type ?? row.status) ?? "APPROVAL_PENDING";
+    const deviceId = text(row.device_id ?? row.deviceId, "");
+    const fieldId = text(row.field_id ?? row.fieldId, "");
+    const alertId = text(row.alert_id ?? row.alertId, "");
     return {
       id: text(row.id ?? row.todo_id ?? row.operation_id ?? row.approval_request_id ?? row.device_id ?? row.alert_id, `official-${index}`),
       queue,
@@ -133,21 +164,14 @@ function normalizeOfficial(payload: unknown): OperatorWorkbenchItem[] {
       actionHref: text(row.action_href, defaultActionHref(queue, row)),
       relatedHref: text(row.related_href, ""),
       source: "operator_api" as const,
+      deviceId,
+      fieldId,
+      alertId,
+      sourceId: text(row.source_id ?? row.id, ""),
+      queueId: text(row.queue_id ?? row.todo_id ?? row.id, ""),
+      handlingStatus: normalizeHandlingStatus(row.handling_status, "OPEN"),
     };
   });
-}
-
-function operationHref(operationId: unknown): string | null {
-  const id = text(operationId);
-  return id ? `/customer/operations/${encodeURIComponent(id)}` : null;
-}
-
-function fieldDisplayName(row: AnyRecord): string {
-  return text(row.field_name ?? row.fieldName ?? row.name, "地块待确认");
-}
-
-function operationDisplayName(row: AnyRecord): string {
-  return text(row.operation_title ?? row.customer_title ?? row.title ?? row.operation_name, "作业待确认");
 }
 
 function buildApprovalFallback(payload: unknown): OperatorWorkbenchItem[] {
@@ -164,6 +188,8 @@ function buildApprovalFallback(payload: unknown): OperatorWorkbenchItem[] {
     actionHref: "/operator/approvals",
     relatedHref: operationHref(row.operation_id),
     source: "approvals_api" as const,
+    sourceId: text(row.approval_request_id ?? row.request_id ?? row.id, ""),
+    handlingStatus: "READ_ONLY" as const,
   }));
 }
 
@@ -182,24 +208,16 @@ function buildReportFallback(payload: unknown): OperatorWorkbenchItem[] {
       updatedAt: text(row.updated_at ?? row.generated_at ?? row.finished_at, ""),
       relatedHref: operationHref(operationId),
       source: "reports_aggregate" as const,
+      sourceId: operationId,
+      handlingStatus: "READ_ONLY" as const,
     };
 
-    if (status.includes("PENDING_ACCEPTANCE")) {
-      items.push({ ...base, queue: "ACCEPTANCE_PENDING", title: "待验收作业", description: `${base.operationName} 等待验收结论。`, priority: "MEDIUM", actionHref: "/operator/acceptance" });
-      continue;
-    }
-    if (status.includes("INVALID_EXECUTION") || status.includes("FAILED")) {
-      items.push({ ...base, queue: "EXECUTION_EXCEPTION", title: "执行异常作业", description: `${base.operationName} 需要复核执行状态。`, priority: "HIGH", actionHref: "/operator/dispatch" });
-      continue;
-    }
-    if (status.includes("ACCEPTANCE_FAILED") || status === "FAIL") {
-      items.push({ ...base, queue: "ACCEPTANCE_FAILED", title: "验收失败作业", description: `${base.operationName} 未通过验收，需要处理。`, priority: "HIGH", actionHref: "/operator/acceptance" });
-      continue;
-    }
-
-    const evidenceText = `${row.evidence_status ?? ""} ${row.evidence_summary ?? ""} ${row.risk_reason ?? ""}`.toUpperCase();
-    if (evidenceText.includes("MISSING") || evidenceText.includes("INSUFFICIENT") || evidenceText.includes("证据不足")) {
-      items.push({ ...base, queue: "EVIDENCE_INSUFFICIENT", title: "证据不足作业", description: `${base.operationName} 需要补齐证据。`, priority: "HIGH", actionHref: "/operator/evidence" });
+    if (status.includes("PENDING_ACCEPTANCE")) items.push({ ...base, queue: "ACCEPTANCE_PENDING", title: "待验收作业", description: `${base.operationName} 等待验收结论。`, priority: "MEDIUM", actionHref: "/operator/acceptance" });
+    else if (status.includes("INVALID_EXECUTION") || status.includes("FAILED")) items.push({ ...base, queue: "EXECUTION_EXCEPTION", title: "执行异常作业", description: `${base.operationName} 需要复核执行状态。`, priority: "HIGH", actionHref: "/operator/dispatch" });
+    else if (status.includes("ACCEPTANCE_FAILED") || status === "FAIL") items.push({ ...base, queue: "ACCEPTANCE_FAILED", title: "验收失败作业", description: `${base.operationName} 未通过验收，需要处理。`, priority: "HIGH", actionHref: "/operator/acceptance" });
+    else {
+      const evidenceText = `${row.evidence_status ?? ""} ${row.evidence_summary ?? ""} ${row.risk_reason ?? ""}`.toUpperCase();
+      if (evidenceText.includes("MISSING") || evidenceText.includes("INSUFFICIENT") || evidenceText.includes("证据不足")) items.push({ ...base, queue: "EVIDENCE_INSUFFICIENT", title: "证据不足作业", description: `${base.operationName} 需要补齐证据。`, priority: "HIGH", actionHref: "/operator/evidence" });
     }
   }
 
@@ -208,19 +226,24 @@ function buildReportFallback(payload: unknown): OperatorWorkbenchItem[] {
     const riskReasons = Array.isArray(row.risk_reasons) ? row.risk_reasons.join("、") : text(row.risk_reason ?? row.reason, "风险原因待确认");
     if (/offline|离线/i.test(riskReasons)) {
       const fieldId = text(row.field_id ?? row.id);
-      const deviceId = text(row.device_id ?? row.deviceId ?? `field-device-${fieldId || items.length}`);
+      const deviceId = text(row.device_id ?? row.deviceId);
       items.push({
         id: `offline-${deviceId || fieldId || items.length}`,
         queue: "DEVICE_OFFLINE",
         title: "设备离线风险",
-        description: `${fieldDisplayName(row)} 存在设备离线风险，需要进入设备与告警中心复核最近心跳、绑定地块和数据采集状态。`,
+        description: deviceId ? `${fieldDisplayName(row)} 存在设备离线风险，需要进入设备与告警中心复核。` : `${fieldDisplayName(row)} 的设备离线待办来自聚合统计，当前没有设备明细。`,
         fieldName: fieldDisplayName(row),
-        operationName: deviceId,
+        operationName: deviceId || "聚合统计设备待定位",
         priority: "MEDIUM",
         updatedAt: text(row.updated_at ?? row.generated_at, ""),
-        actionHref: deviceOfflineHref({ deviceId, fieldId }),
-        relatedHref: fieldId ? `/customer/fields/${encodeURIComponent(fieldId)}` : null,
+        actionHref: deviceOfflineHref({ deviceId, fieldId, source: deviceId ? "" : "aggregate" }),
+        relatedHref: fieldHref(fieldId),
         source: "reports_aggregate",
+        deviceId: deviceId || null,
+        fieldId: fieldId || null,
+        sourceId: text(row.source_id ?? row.id ?? fieldId, ""),
+        queueId: `DEVICE_OFFLINE:${deviceId || fieldId || items.length}`,
+        handlingStatus: "READ_ONLY",
       });
     }
   }
@@ -234,6 +257,7 @@ function buildAlertsFallback(payload: unknown): OperatorWorkbenchItem[] {
     const isOverdue = Boolean(row.overdue) || /overdue|timeout|超时/i.test(`${row.status ?? ""} ${row.reason ?? ""} ${row.title ?? ""}`);
     const queue = isOverdue ? "ALERT_OVERDUE" as const : "EXECUTION_EXCEPTION" as const;
     const alertId = text(row.alert_id ?? row.id, `alert-${index}`);
+    const fieldId = text(row.field_id ?? row.fieldId, "");
     return {
       id: alertId,
       queue,
@@ -243,9 +267,13 @@ function buildAlertsFallback(payload: unknown): OperatorWorkbenchItem[] {
       operationName: text(row.operation_title ?? alertId, ""),
       priority: normalizePriority(row.severity ?? row.priority),
       updatedAt: text(row.updated_at ?? row.created_at ?? row.generated_at, ""),
-      actionHref: isOverdue ? alertOverdueHref({ alertId, fieldId: row.field_id ?? row.fieldId }) : "/operator/dispatch",
+      actionHref: isOverdue ? alertOverdueHref({ alertId, fieldId }) : "/operator/dispatch",
       relatedHref: null,
       source: "alerts_api" as const,
+      fieldId,
+      alertId,
+      sourceId: alertId,
+      handlingStatus: "READ_ONLY" as const,
     };
   });
 }
@@ -265,21 +293,11 @@ export async function fetchOperatorWorkbench(): Promise<OperatorWorkbenchRespons
   const official = await fetchOptional(withQuery("/api/v1/operator/workbench"));
   const officialItems = normalizeOfficial(official.data);
   if (official.ok || (official.data && typeof official.data === "object" && ((official.data as AnyRecord).dataScope === "OFFICIAL_OPERATOR_API" || text((official.data as AnyRecord).source).includes("operator_workbench")))) {
-    return {
-      source: "operator_workbench_api",
-      dataScope: "OFFICIAL_OPERATOR_API",
-      generated_at: new Date().toISOString(),
-      items: officialItems,
-    };
+    return { source: "operator_workbench_api", dataScope: "OFFICIAL_OPERATOR_API", generated_at: new Date().toISOString(), items: officialItems };
   }
 
   if (![404, 405, 501].includes(official.status)) {
-    return {
-      source: "operator_workbench_api",
-      dataScope: "OFFICIAL_OPERATOR_API",
-      generated_at: new Date().toISOString(),
-      items: officialItems,
-    };
+    return { source: "operator_workbench_api", dataScope: "OFFICIAL_OPERATOR_API", generated_at: new Date().toISOString(), items: officialItems };
   }
 
   const [approvals, aggregate, alerts] = await Promise.all([
@@ -288,27 +306,8 @@ export async function fetchOperatorWorkbench(): Promise<OperatorWorkbenchRespons
     fetchOptional(withQuery("/api/v1/alerts")),
   ]);
 
-  const fallbackItems = [
-    ...buildApprovalFallback(approvals.data),
-    ...buildReportFallback(aggregate.data),
-    ...buildAlertsFallback(alerts.data),
-  ];
+  const fallbackItems = [...buildApprovalFallback(approvals.data), ...buildReportFallback(aggregate.data), ...buildAlertsFallback(alerts.data)];
+  if (fallbackItems.length > 0) return { source: "fallback_existing_sources", dataScope: "FALLBACK_LIMITED", generated_at: new Date().toISOString(), items: fallbackItems, message: "当前展示 approvals / reports / alerts 可见数据包装后的有限运营队列，非完整运营总队列。" };
 
-  if (fallbackItems.length > 0) {
-    return {
-      source: "fallback_existing_sources",
-      dataScope: "FALLBACK_LIMITED",
-      generated_at: new Date().toISOString(),
-      items: fallbackItems,
-      message: "当前展示 approvals / reports / alerts 可见数据包装后的有限运营队列，非完整运营总队列。",
-    };
-  }
-
-  return {
-    source: "fallback_existing_sources",
-    dataScope: "EMPTY",
-    generated_at: new Date().toISOString(),
-    items: [],
-    message: "暂无可处理运营事项。",
-  };
+  return { source: "fallback_existing_sources", dataScope: "EMPTY", generated_at: new Date().toISOString(), items: [], message: "暂无可处理运营事项。" };
 }

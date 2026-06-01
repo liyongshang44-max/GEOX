@@ -3,6 +3,7 @@ import { mapOperatorStatusLabel, replaceOperatorTerms } from "../lib/operatorSta
 
 export type OperatorDeviceRowVm = {
   deviceId: string;
+  fieldId?: string | null;
   title: string;
   statusText: string;
   statusTone: "success" | "warning" | "danger" | "neutral";
@@ -18,6 +19,7 @@ export type OperatorDeviceRowVm = {
   batteryText: string;
   delayText: string;
   sourceText: string;
+  highlighted: boolean;
 };
 
 export type OperatorAlertRowVm = {
@@ -57,8 +59,11 @@ export type OperatorDeviceScopeVm = {
   visibleOfflineText: string;
 };
 
+export type OperatorDeviceOfflineFocusMode = "IDLE" | "DEVICE_MATCHED" | "AGGREGATE_ONLY" | "MISSING_LOCATION" | "DEVICE_NOT_FOUND";
+
 export type OperatorDeviceOfflineFocusVm = {
   active: boolean;
+  mode: OperatorDeviceOfflineFocusMode;
   title: string;
   description: string;
   deviceIdText: string;
@@ -67,9 +72,12 @@ export type OperatorDeviceOfflineFocusVm = {
   lastTelemetryText: string;
   delayText: string;
   statusText: string;
+  handlingStatusText: string;
   auditText: string;
   nextSteps: string[];
   matchedDevice?: OperatorDeviceRowVm | null;
+  relatedFieldHref?: string | null;
+  returnHref: string;
 };
 
 export type OperatorDevicesAlertsVm = {
@@ -162,10 +170,30 @@ function batteryText(value: number | null | undefined): string {
   return value <= 20 ? `低电量 ${value}%` : `${value}%`;
 }
 
-function buildDeviceRow(item: OperatorDeviceItem): OperatorDeviceRowVm {
+function operationHref(operationId: unknown): string | null {
+  const id = String(operationId ?? "").trim();
+  return id ? `/customer/operations/${encodeURIComponent(id)}` : null;
+}
+
+function disabledReason(item: OperatorAlertItem): string {
+  if (item.canAck || item.canClose) return "";
+  if (item.source !== "operator_devices_alerts_api") return "当前记录只读，需等待设备与告警明细接口开放操作。";
+  return text(item.permissionReason, "当前身份无确认或关闭权限。") || "当前身份无确认或关闭权限。";
+}
+
+function isTargetDevice(item: OperatorDeviceItem, query?: OperatorDevicesAlertsQuery): boolean {
+  const deviceId = text(query?.deviceId);
+  const fieldId = text(query?.fieldId);
+  if (deviceId && item.deviceId !== deviceId) return false;
+  if (fieldId && text(item.fieldId) !== fieldId) return false;
+  return Boolean(deviceId);
+}
+
+function buildDeviceRow(item: OperatorDeviceItem, query?: OperatorDevicesAlertsQuery): OperatorDeviceRowVm {
   const title = text(item.displayName, item.deviceId);
   return {
     deviceId: item.deviceId,
+    fieldId: item.fieldId ?? null,
     title,
     statusText: onlineStatusText(item.onlineStatus),
     statusTone: onlineTone(item.onlineStatus),
@@ -181,18 +209,8 @@ function buildDeviceRow(item: OperatorDeviceItem): OperatorDeviceRowVm {
     batteryText: batteryText(item.batteryPercent),
     delayText: text(item.dataDelayText, "数据延迟待确认"),
     sourceText: sourceText(item.source),
+    highlighted: isTargetDevice(item, query),
   };
-}
-
-function operationHref(operationId: unknown): string | null {
-  const id = String(operationId ?? "").trim();
-  return id ? `/customer/operations/${encodeURIComponent(id)}` : null;
-}
-
-function disabledReason(item: OperatorAlertItem): string {
-  if (item.canAck || item.canClose) return "";
-  if (item.source !== "operator_devices_alerts_api") return "当前记录只读，需等待设备与告警明细接口开放操作。";
-  return text(item.permissionReason, "当前身份无确认或关闭权限。") || "当前身份无确认或关闭权限。";
 }
 
 function buildAlertRow(item: OperatorAlertItem): OperatorAlertRowVm {
@@ -250,33 +268,54 @@ function buildScopeVm(response: OperatorDevicesAlertsResponse): OperatorDeviceSc
   };
 }
 
+function handlingStatusText(mode: OperatorDeviceOfflineFocusMode): string {
+  if (mode === "DEVICE_MATCHED") return "OPEN";
+  if (mode === "AGGREGATE_ONLY") return "READ_ONLY";
+  if (mode === "MISSING_LOCATION") return "READ_ONLY";
+  if (mode === "DEVICE_NOT_FOUND") return "FOLLOWUP_REQUIRED";
+  return "READ_ONLY";
+}
+
 function buildFocusVm(query: OperatorDevicesAlertsQuery | undefined, offlineDevices: OperatorDeviceRowVm[]): OperatorDeviceOfflineFocusVm {
-  const active = text(query?.focus) === "device_offline" || Boolean(text(query?.deviceId) || text(query?.fieldId));
-  const deviceId = text(query?.deviceId, "待确认");
-  const fieldId = text(query?.fieldId, "待确认");
-  const matchedDevice = offlineDevices.find((item) => (query?.deviceId ? item.deviceId === query.deviceId : true) && (query?.fieldId ? item.boundFieldText.includes(String(query.fieldId)) : true)) ?? null;
+  const focus = text(query?.focus);
+  const deviceId = text(query?.deviceId);
+  const fieldId = text(query?.fieldId);
+  const source = text(query?.source);
+  const active = focus === "device_offline" || Boolean(deviceId || fieldId || source === "aggregate");
+  const matchedDevice = deviceId ? offlineDevices.find((item) => item.deviceId === deviceId && (!fieldId || item.fieldId === fieldId || item.boundFieldText.includes(fieldId))) ?? null : null;
+  const mode: OperatorDeviceOfflineFocusMode = !active ? "IDLE" : (matchedDevice ? "DEVICE_MATCHED" : (source === "aggregate" && !deviceId ? "AGGREGATE_ONLY" : (!deviceId ? "MISSING_LOCATION" : "DEVICE_NOT_FOUND")));
+  const relatedFieldHref = fieldId ? `/customer/fields/${encodeURIComponent(fieldId)}` : null;
+  const title = mode === "DEVICE_MATCHED" ? "正在处理：设备离线" : (mode === "MISSING_LOCATION" ? "缺少设备定位信息" : "设备离线处理");
+  const aggregateDescription = "该待办来自聚合统计，当前没有设备明细。";
+  const missingDescription = "缺少设备定位信息，无法定位目标设备。请返回运营总队列查看原始待办来源。";
+  const deviceDescription = "已定位目标离线设备。先确认最近心跳与遥测，再安排现场复核或设备维护。";
+  const notFoundDescription = "操作未完成：缺少权限 / 后端接口未开放 / 设备不存在 / 设备明细不可用";
   return {
     active,
-    title: "设备离线处理",
-    description: active ? "从运营总队列进入的设备离线事项。先确认最近心跳与遥测，再安排现场复核或设备维护；此流程不生成正式作业成功结论。" : "未从设备离线队列进入，当前按设备与告警中心总览展示。",
-    deviceIdText: matchedDevice?.deviceId ?? deviceId,
-    fieldText: matchedDevice?.boundFieldText ?? fieldId,
+    mode,
+    title,
+    description: mode === "DEVICE_MATCHED" ? deviceDescription : (mode === "AGGREGATE_ONLY" ? aggregateDescription : (mode === "MISSING_LOCATION" ? missingDescription : notFoundDescription)),
+    deviceIdText: matchedDevice?.deviceId ?? (deviceId || "未定位到设备"),
+    fieldText: matchedDevice?.boundFieldText ?? (fieldId || "地块待确认"),
     lastHeartbeatText: matchedDevice?.lastHeartbeatText ?? "待设备中心返回",
     lastTelemetryText: matchedDevice?.lastTelemetryText ?? "待设备中心返回",
     delayText: matchedDevice?.delayText ?? "数据延迟待确认",
-    statusText: matchedDevice?.statusText ?? (active ? "离线状态待确认" : "未聚焦设备"),
-    auditText: active ? "审计策略：只记录离线排查入口、设备/地块范围、后续人工处理建议；不伪造 ACK、验收、ROI 或 Field Memory。" : "未触发离线处理审计入口。",
+    statusText: matchedDevice?.statusText ?? (mode === "AGGREGATE_ONLY" ? "聚合统计" : (mode === "MISSING_LOCATION" ? "缺少定位" : "设备明细不可用")),
+    handlingStatusText: handlingStatusText(mode),
+    auditText: mode === "DEVICE_MATCHED" ? "审计状态：已定位设备，允许记录离线确认。" : "审计状态：只记录排查入口、设备/地块范围、后续人工核查建议。",
     nextSteps: [
       "核对最近心跳与最近遥测时间，确认是否为通信中断、供电问题或设备维护状态。",
       "核对绑定地块，确认离线影响的观测范围与是否影响当前验收证据。",
-      "需要现场处理时，转人工巡检或维护任务；未完成复核前不得对客户展示执行成功。",
+      "需要现场处理时，先记录需人工核查；未完成复核前不得对客户展示执行成功。",
     ],
     matchedDevice,
+    relatedFieldHref,
+    returnHref: "/operator/workbench",
   };
 }
 
 export function buildOperatorDevicesAlertsVm(response: OperatorDevicesAlertsResponse, query?: OperatorDevicesAlertsQuery): OperatorDevicesAlertsVm {
-  const devices = (response.devices ?? []).map(buildDeviceRow);
+  const devices = (response.devices ?? []).map((item) => buildDeviceRow(item, query));
   const alerts = (response.alerts ?? []).map(buildAlertRow);
   const deviceScope = buildScopeVm(response);
   const onlineDevices = devices.filter((item) => item.statusText === "在线");
