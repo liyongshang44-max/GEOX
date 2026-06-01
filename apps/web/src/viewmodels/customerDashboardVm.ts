@@ -2,6 +2,7 @@ import type { CustomerDashboardAggregateV1 } from "../api/customerReports";
 import { CUSTOMER_LABELS, labelRiskLevel, sanitizeCustomerText } from "../lib/customerLabels";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 import { customerDisplayName, customerSemanticLabel } from "../lib/customerSemanticLabels";
+import { customerEvidenceStateText, customerFormalChainText, customerNeedsReviewText } from "../lib/customerSafeText";
 import { customerGuardedAcceptanceText, customerGuardedEvidenceText, customerGuardedStatusText, customerTrustScopeText, customerValueSummaryText, isTrustedDashboardValueSummary } from "../lib/customerTrustGate";
 import { buildFormalScenarioVm } from "../lib/formalScenarioViewModel";
 
@@ -177,10 +178,10 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
       acceptanceText: customerGuardedAcceptanceText(item),
       evidenceText: customerGuardedEvidenceText(item),
       scenarioSummaryText: [formalVm.scenarioLabel, formalVm.chainText, formalVm.evidenceText].filter(Boolean).join("｜"),
-      scenarioTypeText: formalVm.rawScenarioType || "UNKNOWN",
-      formalChainStatusText: formalVm.formalChainStatus,
-      evidenceStatusText: formalVm.rawEvidenceStatus,
-      needsReviewText: formalVm.needsReview ? "true" : "false",
+      scenarioTypeText: formalVm.scenarioLabel,
+      formalChainStatusText: customerFormalChainText(formalVm.formalChainStatus),
+      evidenceStatusText: customerEvidenceStateText(formalVm.rawEvidenceStatus),
+      needsReviewText: customerNeedsReviewText(formalVm.needsReview),
       updatedAtText: toDateTimeText((item as any).updated_at ?? item.executed_at),
       href: operationId ? `/customer/operations/${encodeURIComponent(operationId)}` : "/customer/dashboard",
     };
