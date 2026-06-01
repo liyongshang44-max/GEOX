@@ -40,6 +40,13 @@ const CUSTOMER_REASON_MAP: Record<string, string> = {
   "missing:field_memory": "田块记忆暂不展示",
   "stage-1 sensing summary": "缺少正式传感器触发摘要",
   "soil_moisture/threshold/deficit": "缺少土壤水分诊断依据",
+  "pending_acceptance": "等待正式验收",
+  "pending_acceptance_requires_formal_review": "需正式验收后确认",
+  "soil_moisture_below_threshold": "土壤水分偏低",
+  "no_rain_forecast": "近期无降雨预报",
+  "blocked": "暂不形成正式结论",
+  "true": "需要人工复核",
+  "false": "暂不需要人工复核",
   "simulated_dev_only": "模拟记录，不作为客户结论",
   "insufficient": "证据不足",
   "limited": "有限记录，需复核",
@@ -70,7 +77,7 @@ const CUSTOMER_REASON_MAP: Record<string, string> = {
 };
 
 function normReason(raw: unknown): string {
-  return String(raw ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+  return String(raw ?? "").trim().replace(/[\s/-]+/g, "_").toLowerCase();
 }
 
 export function customerReasonText(raw: unknown): string {
@@ -91,7 +98,7 @@ export function customerEvidenceGapCategory(raw: unknown): string {
   if (normalized.startsWith("pest_disease") || normalized.includes("病虫害") || normalized.includes("巡检")) return "病虫害巡检证据需复核";
   if (normalized.startsWith("fertilization") || normalized.includes("施氮")) return "施氮诊断、处方与验收链路需复核";
   if (normalized === "missing:roi" || normalized === "missing:field_memory") return "价值和田块记忆暂不对客展示";
-  if (normalized === "missing:diagnosis" || normalized.includes("sensing summary") || normalized.includes("soil_moisture") || normalized.includes("threshold") || normalized.includes("deficit")) return "正式诊断依据不足";
+  if (normalized === "missing:diagnosis" || normalized.includes("sensing_summary") || normalized.includes("soil_moisture") || normalized.includes("threshold") || normalized.includes("deficit")) return "正式诊断依据不足";
   if (["missing:recommendation", "missing:prescription", "missing:approval", "missing:operation_plan"].includes(normalized)) return "建议、处方与审批链路尚未闭合";
   if (["missing:execution", "missing:receipt", "missing:evidence"].includes(normalized)) return "正式执行回执与验收结果尚未成立";
   if (normalized === "missing:acceptance") return "正式验收未成立";
