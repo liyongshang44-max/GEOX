@@ -165,6 +165,7 @@ function normalizeOfficial(payload: unknown): OperatorWorkbenchItem[] {
     const deviceId = idText(row.device_id ?? row.deviceId);
     const fieldId = idText(row.field_id ?? row.fieldId);
     const alertId = idText(row.alert_id ?? row.alertId);
+    const safeActionHref = queue === "DEVICE_OFFLINE" ? defaultActionHref(queue, row) : text(row.action_href, defaultActionHref(queue, row));
     return {
       id: idText(row.id ?? row.todo_id ?? row.operation_id ?? row.approval_request_id ?? row.device_id ?? row.alert_id) || `official-${index}`,
       queue,
@@ -174,7 +175,7 @@ function normalizeOfficial(payload: unknown): OperatorWorkbenchItem[] {
       operationName: text(row.operation_name ?? row.operation_title ?? row.device_id ?? row.alert_id, ""),
       priority: normalizePriority(row.priority ?? row.risk_level),
       updatedAt: text(row.updated_at ?? row.created_at ?? row.generated_at, ""),
-      actionHref: text(row.action_href, defaultActionHref(queue, row)),
+      actionHref: safeActionHref,
       relatedHref: text(row.related_href, ""),
       source: "operator_api" as const,
       deviceId,
