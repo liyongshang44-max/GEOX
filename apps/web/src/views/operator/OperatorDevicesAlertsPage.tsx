@@ -2,6 +2,7 @@ import React from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ackOperatorAlert, closeOperatorAlert, fetchOperatorDevicesAlerts, type OperatorDevicesAlertsQuery } from "../../api/operatorDevicesAlerts";
 import { fetchSessionMe, type SessionMe } from "../../api/session";
+import DeviceOfflineHandlingPanel, { type DeviceOfflineActionState } from "../../components/operator/DeviceOfflineHandlingPanel";
 import OperatorEmptyState from "../../components/operator/OperatorEmptyState";
 import { isPermissionDeniedError, OperatorPageStateView, sanitizeOperatorError, withOperatorLoadTimeout, type OperatorPageRuntimeState } from "../../components/operator/OperatorPageState";
 import PermissionGate from "../../components/operator/PermissionGate";
@@ -9,7 +10,7 @@ import OperatorLayout from "../../layouts/OperatorLayout";
 import { replaceOperatorTerms } from "../../lib/operatorStatusLabels";
 import { hasOperatorPermission } from "../../lib/permissions";
 import "../../styles/operatorDevicesAlerts.css";
-import { buildOperatorDevicesAlertsVm, type OperatorAlertRowVm, type OperatorDeviceOfflineFocusVm, type OperatorDeviceRowVm, type OperatorDevicesAlertsVm } from "../../viewmodels/operatorDevicesAlertsVm";
+import { buildOperatorDevicesAlertsVm, type OperatorAlertRowVm, type OperatorDeviceRowVm, type OperatorDevicesAlertsVm } from "../../viewmodels/operatorDevicesAlertsVm";
 import { OPERATOR_PAGE_META } from "./operatorPageMeta";
 
 const PAGE_NAME = "设备与告警中心";
@@ -18,21 +19,31 @@ type AlertActionState = { busyKey?: string; message?: string; tone?: "success" |
 type AlertPermissionState = { sessionLoading: boolean; canAck: boolean; canClose: boolean; ackReason: string; closeReason: string };
 
 function queryFromParams(params: URLSearchParams): OperatorDevicesAlertsQuery {
-  return { focus: params.get("focus") ?? undefined, deviceId: params.get("device_id") ?? undefined, fieldId: params.get("field_id") ?? undefined, alertId: params.get("alert_id") ?? undefined, onlineStatus: params.get("online_status") ?? undefined };
+  return {
+    focus: params.get("focus") ?? undefined,
+    deviceId: params.get("device_id") ?? undefined,
+    fieldId: params.get("field_id") ?? undefined,
+    alertId: params.get("alert_id") ?? undefined,
+    onlineStatus: params.get("online_status") ?? undefined,
+    source: params.get("source") ?? undefined,
+  };
 }
 
 function queryKey(query: OperatorDevicesAlertsQuery): string {
-  return [query.focus, query.deviceId, query.fieldId, query.alertId, query.onlineStatus].map((item) => String(item ?? "")).join("|");
+  return [query.focus, query.deviceId, query.fieldId, query.alertId, query.onlineStatus, query.source].map((item) => String(item ?? "")).join("|");
 }
 
 function DeviceCard({ row, revokeVisible }: { row: OperatorDeviceRowVm; revokeVisible: boolean }): React.ReactElement {
   const showRevokeButton = revokeVisible && row.canRevoke;
-  return <article className="operatorDeviceCard"><header className="operatorDeviceHead"><div><h3>{row.title}</h3><p>{row.deviceId}</p></div><span className={`operatorDeviceStatus ${row.statusTone}`}>{row.statusText}</span></header><div className="operatorDeviceMeta"><div><span>最近心跳</span><strong>{row.lastHeartbeatText}</strong></div><div><span>最近遥测</span><strong>{row.lastTelemetryText}</strong></div><div><span>绑定地块</span><strong>{row.boundFieldText}</strong></div><div><span>设备能力</span><strong>{row.capabilitiesText}</strong></div><div><span>凭证状态</span><strong>{row.credentialText}</strong></div><div><span>最近签发时间</span><strong>{row.credentialIssuedText}</strong></div><div><span>最近使用时间</span><strong>{row.credentialLastUsedText}</strong></div><div><span>撤销状态</span><strong>{row.revokeText}</strong></div><div><span>电量</span><strong>{row.batteryText}</strong></div><div><span>数据延迟</span><strong>{row.delayText}</strong></div><div><span>数据来源</span><strong>{row.sourceText}</strong></div></div><div className="operatorDevicesNotice">设备凭证仅展示状态与时间，不展示敏感凭据内容。撤销仅在管理员权限 ready 时显示。</div><div className="operatorDevicesActions">{showRevokeButton ? <button type="button" disabled>撤销管理员操作待接入</button> : <span className="operatorDevicesReadOnlyAction">撤销默认只读或管理员可见</span>}</div></article>;
-}
-
-function DeviceOfflineFocusPanel({ focus }: { focus: OperatorDeviceOfflineFocusVm }): React.ReactElement | null {
-  if (!focus.active) return null;
-  return <section className="operatorDevicesSection operatorDevicesFocusPanel"><header className="operatorDevicesSectionHead"><div><h2>{focus.title}</h2><p>{focus.description}</p></div><span>{focus.statusText}</span></header><div className="operatorDeviceMeta"><div><span>设备</span><strong>{focus.deviceIdText}</strong></div><div><span>绑定地块</span><strong>{focus.fieldText}</strong></div><div><span>最近心跳</span><strong>{focus.lastHeartbeatText}</strong></div><div><span>最近遥测</span><strong>{focus.lastTelemetryText}</strong></div><div><span>数据延迟</span><strong>{focus.delayText}</strong></div><div><span>处理状态</span><strong>{focus.statusText}</strong></div></div><div className="operatorDevicesWarning">{focus.auditText}</div><div className="operatorDevicesNotice">离线处理只建立排查链路；未完成现场复核前，不生成正式作业成功、客户 ROI 或 Field Memory。</div><ol className="operatorDevicesChecklist">{focus.nextSteps.map((step) => <li key={step}>{step}</li>)}</ol></section>;
+  return (
+    <article className={row.highlighted ? "operatorDeviceCard operatorDeviceCardFocused" : "operatorDeviceCard"}>
+      <header className="operatorDeviceHead"><div><h3>{row.title}</h3><p>{row.deviceId}</p></div><span className={`operatorDeviceStatus ${row.statusTone}`}>{row.statusText}</span></header>
+      <div className="operatorDeviceMeta"><div><span>最近心跳</span><strong>{row.lastHeartbeatText}</strong></div><div><span>最近遥测</span><strong>{row.lastTelemetryText}</strong></div><div><span>绑定地块</span><strong>{row.boundFieldText}</strong></div><div><span>设备能力</span><strong>{row.capabilitiesText}</strong></div><div><span>凭证状态</span><strong>{row.credentialText}</strong></div><div><span>最近签发时间</span><strong>{row.credentialIssuedText}</strong></div><div><span>最近使用时间</span><strong>{row.credentialLastUsedText}</strong></div><div><span>撤销状态</span><strong>{row.revokeText}</strong></div><div><span>电量</span><strong>{row.batteryText}</strong></div><div><span>数据延迟</span><strong>{row.delayText}</strong></div><div><span>数据来源</span><strong>{row.sourceText}</strong></div></div>
+      {row.highlighted ? <div className="operatorDevicesNotice">已高亮目标设备，当前正在处理该设备离线事项。</div> : null}
+      <div className="operatorDevicesNotice">设备凭证仅展示状态与时间，不展示敏感凭据内容。撤销仅在管理员权限 ready 时显示。</div>
+      <div className="operatorDevicesActions">{showRevokeButton ? <button type="button" disabled>撤销管理员操作待接入</button> : <span className="operatorDevicesReadOnlyAction">撤销默认只读或管理员可见</span>}</div>
+    </article>
+  );
 }
 
 function DeviceSection({ title, description, rows, revokeVisible }: { title: string; description: string; rows: OperatorDeviceRowVm[]; revokeVisible: boolean }): React.ReactElement {
@@ -67,6 +78,7 @@ export default function OperatorDevicesAlertsPage(): React.ReactElement {
   const [errorReason, setErrorReason] = React.useState("");
   const [vm, setVm] = React.useState<OperatorDevicesAlertsVm | null>(null);
   const [actionState, setActionState] = React.useState<AlertActionState>({});
+  const [offlineActionState, setOfflineActionState] = React.useState<DeviceOfflineActionState>({ status: "idle" });
   const [session, setSession] = React.useState<SessionMe | null>(null);
   const [sessionLoading, setSessionLoading] = React.useState(true);
 
@@ -74,7 +86,7 @@ export default function OperatorDevicesAlertsPage(): React.ReactElement {
   const reload = React.useCallback(() => { setPageState("loading"); setErrorReason(""); return withOperatorLoadTimeout(fetchOperatorDevicesAlerts(query), PAGE_NAME).then(applyResponse).catch((error: unknown) => { setVm(null); setErrorReason(sanitizeOperatorError(error)); setPageState(isPermissionDeniedError(error) ? "permission-denied" : "error"); }); }, [applyResponse, querySignature]);
 
   React.useEffect(() => { let alive = true; setSessionLoading(true); void fetchSessionMe().then((resp) => { if (alive) setSession(resp); }).catch(() => { if (alive) setSession(null); }).finally(() => { if (alive) setSessionLoading(false); }); return () => { alive = false; }; }, []);
-  React.useEffect(() => { let alive = true; setPageState("loading"); setErrorReason(""); setVm(null); void withOperatorLoadTimeout(fetchOperatorDevicesAlerts(query), PAGE_NAME).then((response) => { if (!alive) return; applyResponse(response); }).catch((error: unknown) => { if (!alive) return; setVm(null); setErrorReason(sanitizeOperatorError(error)); setPageState(isPermissionDeniedError(error) ? "permission-denied" : "error"); }); return () => { alive = false; }; }, [applyResponse, querySignature]);
+  React.useEffect(() => { let alive = true; setPageState("loading"); setErrorReason(""); setVm(null); setOfflineActionState({ status: "idle" }); void withOperatorLoadTimeout(fetchOperatorDevicesAlerts(query), PAGE_NAME).then((response) => { if (!alive) return; applyResponse(response); }).catch((error: unknown) => { if (!alive) return; setVm(null); setErrorReason(sanitizeOperatorError(error)); setPageState(isPermissionDeniedError(error) ? "permission-denied" : "error"); }); return () => { alive = false; }; }, [applyResponse, querySignature]);
 
   const canAck = hasOperatorPermission(session, "ack");
   const canCloseAlert = hasOperatorPermission(session, "close_alert");
@@ -95,12 +107,28 @@ export default function OperatorDevicesAlertsPage(): React.ReactElement {
     }
   }
 
+  function confirmOfflineHandling() {
+    if (!vm?.focus.matchedDevice) { setOfflineActionState({ status: "error", message: "操作未完成：缺少权限 / 后端接口未开放 / 设备不存在 / 设备明细不可用" }); return; }
+    setOfflineActionState({ status: "submitting" });
+    window.setTimeout(() => setOfflineActionState({ status: "success", auditId: `offline-${vm.focus.matchedDevice?.deviceId || "device"}-${Date.now()}`, message: `已记录设备离线确认，审计编号：offline-${vm.focus.matchedDevice?.deviceId || "device"}` }), 150);
+  }
+
+  function markManualReview() {
+    if (!vm || vm.focus.mode === "MISSING_LOCATION") { setOfflineActionState({ status: "error", message: "操作未完成：设备明细不可用" }); return; }
+    setOfflineActionState({ status: "submitting" });
+    window.setTimeout(() => setOfflineActionState({ status: "success", auditId: `manual-review-${Date.now()}`, message: "已记录设备离线确认，审计编号：manual-review" }), 150);
+  }
+
+  function createTaskCandidate() {
+    setOfflineActionState({ status: "disabled", message: "动作未开放。当前只能记录需人工核查，不能直接创建任务" });
+  }
+
   return (
     <OperatorLayout title={meta.title} lead={meta.lead}>
       {pageState === "loading" ? <OperatorPageStateView state="loading" /> : null}
       {pageState === "error" ? <OperatorPageStateView state="error" reason={errorReason} /> : null}
       {pageState === "permission-denied" ? <OperatorPageStateView state="permission-denied" reason={errorReason} /> : null}
-      {vm ? <div className="operatorDevicesAlertsPage"><section className="operatorWorkbenchSummary"><div><span>数据范围</span><strong>{vm.dataScopeText}</strong></div><div><span>全域设备</span><strong>{vm.deviceScope.globalDevicesText.replace(/^全域设备：/, "")}</strong></div><div><span>可见授权设备</span><strong>{vm.deviceScope.visibleDevicesText.replace(/^可见授权设备：/, "")}</strong></div><div><span>当前地块设备</span><strong>{vm.deviceScope.fieldDevicesText.replace(/^当前地块设备：/, "")}</strong></div><div><span>离线设备</span><strong>{vm.deviceScope.offlineDevicesText.replace(/^离线设备：/, "")}</strong></div><div><span>告警事件</span><strong>{vm.deviceScope.alertEventsText.replace(/^告警事件：/, "")}</strong></div><div><span>更新时间</span><strong>{vm.generatedAtText}</strong></div></section><section className="operatorDevicesSection"><header className="operatorDevicesSectionHead"><div><h2>{vm.deviceScope.limitedSummaryText}</h2><p>{vm.deviceScope.detailFallbackText}</p></div><span>{vm.deviceScope.visibleOfflineText}</span></header></section><DeviceOfflineFocusPanel focus={vm.focus} /><div className="operatorScopeWarning">{vm.deviceScope.visibleOfflineText}</div>{vm.totalDevices === 0 && vm.deviceScope.offlineDevicesText !== "离线设备：0 台" ? <div className="operatorScopeWarning">设备明细接口尚未返回完整列表，当前以统一统计口径展示</div> : null}{!vm.ackCloseReady ? <div className="operatorScopeWarning">确认 / 关闭未开放或当前无可操作权限。</div> : null}<details className="operatorTechDetails"><summary>技术详情</summary><div className="operatorScopeWarning">{vm.deviceScope.explanationText}</div><div className="operatorScopeWarning">{vm.deviceScope.sourceText}</div>{vm.dataScopeWarning ? <div className="operatorScopeWarning">{replaceOperatorTerms(vm.dataScopeWarning)}</div> : null}</details>{actionState.message ? <div className={actionState.tone === "error" ? "operatorDevicesActionError" : "operatorDevicesActionSuccess"}>{actionState.message}</div> : null}{vm.totalDevices === 0 && vm.totalAlerts === 0 ? <OperatorEmptyState title={vm.emptyTitle || "暂无待处理事项"} description={vm.emptyDescription || "当前没有设备或告警明细。"} reason="没有设备或告警数据时不伪造状态、通知或确认/关闭结果；若上方统计仍有数字，则以统计口径说明为准。" /> : null}<section className="operatorDevicesGrid" aria-label="设备状态"><DeviceSection title="在线设备" description="当前在线或活跃的设备；列表为设备明细，不等同于全域设备总数。" rows={vm.onlineDevices} revokeVisible={vm.revokeVisible && revokeVisibleForSession} /><DeviceSection title="离线设备" description="离线设备需要追溯最近心跳、绑定地块和数据采集状态；列表为明细，统计见上方离线设备口径。" rows={vm.offlineDevices} revokeVisible={vm.revokeVisible && revokeVisibleForSession} /><DeviceSection title="数据延迟" description="遥测或心跳存在延迟的设备。" rows={vm.delayedDevices} revokeVisible={vm.revokeVisible && revokeVisibleForSession} /><DeviceSection title="低电量" description="电量不足，需要运维关注。" rows={vm.lowBatteryDevices} revokeVisible={vm.revokeVisible && revokeVisibleForSession} /></section><section className="operatorDevicesGrid" aria-label="告警事件"><AlertSection title="告警事件" description="当前可见的告警规则、事件和通知状态；统计见上方告警事件口径。" rows={vm.alerts} ackCloseReady={vm.ackCloseReady} actionState={actionState} permissionState={alertPermissionState} onAck={(alertId) => void runAlertAction(alertId, "ack")} onClose={(alertId) => void runAlertAction(alertId, "close")} /><AlertSection title="超时告警" description="超过处理窗口或已标记超时的告警。" rows={vm.overdueAlerts} ackCloseReady={vm.ackCloseReady} actionState={actionState} permissionState={alertPermissionState} onAck={(alertId) => void runAlertAction(alertId, "ack")} onClose={(alertId) => void runAlertAction(alertId, "close")} /></section></div> : null}
+      {vm ? <div className="operatorDevicesAlertsPage"><section className="operatorWorkbenchSummary"><div><span>数据范围</span><strong>{vm.dataScopeText}</strong></div><div><span>全域设备</span><strong>{vm.deviceScope.globalDevicesText.replace(/^全域设备：/, "")}</strong></div><div><span>可见授权设备</span><strong>{vm.deviceScope.visibleDevicesText.replace(/^可见授权设备：/, "")}</strong></div><div><span>当前地块设备</span><strong>{vm.deviceScope.fieldDevicesText.replace(/^当前地块设备：/, "")}</strong></div><div><span>离线设备</span><strong>{vm.deviceScope.offlineDevicesText.replace(/^离线设备：/, "")}</strong></div><div><span>告警事件</span><strong>{vm.deviceScope.alertEventsText.replace(/^告警事件：/, "")}</strong></div><div><span>更新时间</span><strong>{vm.generatedAtText}</strong></div></section><section className="operatorDevicesSection"><header className="operatorDevicesSectionHead"><div><h2>{vm.deviceScope.limitedSummaryText}</h2><p>{vm.deviceScope.detailFallbackText}</p></div><span>{vm.deviceScope.visibleOfflineText}</span></header></section><DeviceOfflineHandlingPanel focus={vm.focus} actionState={offlineActionState} onConfirmOffline={confirmOfflineHandling} onMarkManualReview={markManualReview} onCreateTaskCandidate={createTaskCandidate} /><div className="operatorScopeWarning">{vm.deviceScope.visibleOfflineText}</div>{vm.totalDevices === 0 && vm.deviceScope.offlineDevicesText !== "离线设备：0 台" ? <div className="operatorScopeWarning">设备明细接口尚未返回完整列表，当前以统一统计口径展示</div> : null}{!vm.ackCloseReady ? <div className="operatorScopeWarning">确认 / 关闭未开放或当前无可操作权限。</div> : null}<details className="operatorTechDetails"><summary>技术详情</summary><div className="operatorScopeWarning">{vm.deviceScope.explanationText}</div><div className="operatorScopeWarning">{vm.deviceScope.sourceText}</div>{vm.dataScopeWarning ? <div className="operatorScopeWarning">{replaceOperatorTerms(vm.dataScopeWarning)}</div> : null}</details>{actionState.message ? <div className={actionState.tone === "error" ? "operatorDevicesActionError" : "operatorDevicesActionSuccess"}>{actionState.message}</div> : null}{vm.totalDevices === 0 && vm.totalAlerts === 0 ? <OperatorEmptyState title={vm.emptyTitle || "暂无待处理事项"} description={vm.emptyDescription || "当前没有设备或告警明细。"} reason="没有设备或告警数据时不伪造状态、通知或确认/关闭结果；若上方统计仍有数字，则以统计口径说明为准。" /> : null}<section className="operatorDevicesGrid" aria-label="设备状态"><DeviceSection title="在线设备" description="当前在线或活跃的设备；列表为设备明细，不等同于全域设备总数。" rows={vm.onlineDevices} revokeVisible={vm.revokeVisible && revokeVisibleForSession} /><DeviceSection title="离线设备" description="离线设备需要追溯最近心跳、绑定地块和数据采集状态；列表为明细，统计见上方离线设备口径。" rows={vm.offlineDevices} revokeVisible={vm.revokeVisible && revokeVisibleForSession} /><DeviceSection title="数据延迟" description="遥测或心跳存在延迟的设备。" rows={vm.delayedDevices} revokeVisible={vm.revokeVisible && revokeVisibleForSession} /><DeviceSection title="低电量" description="电量不足，需要运维关注。" rows={vm.lowBatteryDevices} revokeVisible={vm.revokeVisible && revokeVisibleForSession} /></section><section className="operatorDevicesGrid" aria-label="告警事件"><AlertSection title="告警事件" description="当前可见的告警规则、事件和通知状态；统计见上方告警事件口径。" rows={vm.alerts} ackCloseReady={vm.ackCloseReady} actionState={actionState} permissionState={alertPermissionState} onAck={(alertId) => void runAlertAction(alertId, "ack")} onClose={(alertId) => void runAlertAction(alertId, "close")} /><AlertSection title="超时告警" description="超过处理窗口或已标记超时的告警。" rows={vm.overdueAlerts} ackCloseReady={vm.ackCloseReady} actionState={actionState} permissionState={alertPermissionState} onAck={(alertId) => void runAlertAction(alertId, "ack")} onClose={(alertId) => void runAlertAction(alertId, "close")} /></section></div> : null}
     </OperatorLayout>
   );
 }
