@@ -52,6 +52,9 @@ export type OperatorDeviceScopeVm = {
   alertEventsText: string;
   sourceText: string;
   explanationText: string;
+  limitedSummaryText: string;
+  detailFallbackText: string;
+  visibleOfflineText: string;
 };
 
 export type OperatorDeviceOfflineFocusVm = {
@@ -148,10 +151,10 @@ function alertTone(value: OperatorAlertStatus): OperatorAlertRowVm["statusTone"]
 }
 
 function sourceText(value: OperatorDeviceItem["source"] | OperatorAlertItem["source"]): string {
-  if (value === "operator_devices_alerts_api") return "运营设备告警接口";
-  if (value === "devices_api") return "设备接口 fallback";
-  if (value === "alerts_api") return "告警接口 fallback";
-  return "报告聚合 fallback";
+  if (value === "operator_devices_alerts_api") return "设备与告警明细接口";
+  if (value === "devices_api") return "设备明细补充接口";
+  if (value === "alerts_api") return "告警明细补充接口";
+  return "报告聚合补充数据";
 }
 
 function batteryText(value: number | null | undefined): string {
@@ -188,7 +191,7 @@ function operationHref(operationId: unknown): string | null {
 
 function disabledReason(item: OperatorAlertItem): string {
   if (item.canAck || item.canClose) return "";
-  if (item.source !== "operator_devices_alerts_api") return "fallback 数据只读，需运营告警接口才能操作。";
+  if (item.source !== "operator_devices_alerts_api") return "当前记录只读，需等待设备与告警明细接口开放操作。";
   return text(item.permissionReason, "当前身份无确认或关闭权限。") || "当前身份无确认或关闭权限。";
 }
 
@@ -221,7 +224,7 @@ function buildAlertRow(item: OperatorAlertItem): OperatorAlertRowVm {
 
 function dataScopeText(response: OperatorDevicesAlertsResponse): string {
   if (response.dataScope === "OFFICIAL_OPERATOR_API") return "正式设备与告警中心";
-  if (response.dataScope === "FALLBACK_LIMITED") return "有限 fallback 设备告警数据";
+  if (response.dataScope === "FALLBACK_LIMITED") return "当前显示有限设备状态摘要";
   if (response.dataScope === "ERROR_EMPTY") return "设备与告警中心暂不可用";
   return "暂无设备或告警数据";
 }
@@ -240,7 +243,10 @@ function buildScopeVm(response: OperatorDevicesAlertsResponse): OperatorDeviceSc
     offlineDevicesText: `离线设备：${offline} 台`,
     alertEventsText: `告警事件：${alerts} 条`,
     sourceText: `设备口径来源：${text(scope.source_text, "设备范围来源待确认")}`,
-    explanationText: `设备中心按统一 scope 展示：global_devices_count=${global}，visible_devices_count=${visible}，field_devices_count=${field}，offline_devices_count=${offline}，alert_events_count=${alerts}。`,
+    explanationText: `设备中心按统一统计口径展示：全域 ${global}，可见 ${visible}，当前地块 ${field}，离线 ${offline}，告警 ${alerts}。`,
+    limitedSummaryText: "当前显示有限设备状态摘要",
+    detailFallbackText: "设备明细接口尚未返回完整列表，当前以统一统计口径展示",
+    visibleOfflineText: `当前可见设备 ${visible} 台，其中 ${offline} 台离线`,
   };
 }
 
