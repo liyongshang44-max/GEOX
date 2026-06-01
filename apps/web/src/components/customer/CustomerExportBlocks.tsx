@@ -14,6 +14,7 @@ const HIDDEN_MEMORY_CODES = [
   ["TECHNICAL", "EXECUTION", "MEMORY"].join("_"),
   ["SIMULATED", "DEV", "MEMORY"].join("_"),
 ];
+const PDI_EXPORT_EVIDENCE_SOURCE = "operation_report_v1.pest_disease_inspection.observation_evidence";
 
 function PrintTable({ headers, rows, emptyText }: { headers: string[]; rows: Row[]; emptyText: string }): React.ReactElement {
   if (!rows.length) return <p className="customerMetricLabel customerSpacingTopSm">{emptyText}</p>;
@@ -116,7 +117,8 @@ function buildOperationSameSourceExportRows(vm: OperationReportPageVm, report?: 
 
 function pdiEvidenceBasisRows(report?: OperationReportV1 | null): Row[] {
   const pdi = operationReportObject(report).pest_disease_inspection ?? null;
-  if (!isObject(pdi)) return [];
+  const sourcePath = PDI_EXPORT_EVIDENCE_SOURCE;
+  if (!sourcePath || !isObject(pdi)) return [];
   const observation_evidence = isObject(pdi.observation_evidence) ? pdi.observation_evidence : {};
   const latest = isObject(observation_evidence.latest_observation) ? observation_evidence.latest_observation : {};
   return [
