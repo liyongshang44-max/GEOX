@@ -1,0 +1,69 @@
+import React from "react";
+import { Link } from "react-router-dom";
+import type { OperatorDeviceOfflineFocusVm } from "../../viewmodels/operatorDevicesAlertsVm";
+
+export type DeviceOfflineActionState = {
+  status: "idle" | "submitting" | "success" | "error" | "disabled";
+  message?: string;
+  auditId?: string;
+};
+
+type Props = {
+  focus: OperatorDeviceOfflineFocusVm;
+  actionState: DeviceOfflineActionState;
+  onConfirmOffline: () => void;
+  onMarkManualReview: () => void;
+  onCreateTaskCandidate: () => void;
+};
+
+function ActionResult({ state }: { state: DeviceOfflineActionState }): React.ReactElement | null {
+  if (state.status === "idle") return null;
+  if (state.status === "submitting") return <div className="operatorDevicesNotice">正在提交处理结果...</div>;
+  if (state.status === "success") return <div className="operatorDevicesActionSuccess">{state.message || `已记录设备离线确认，审计编号：${state.auditId || "offline-audit-local"}`}</div>;
+  if (state.status === "disabled") return <div className="operatorDevicesWarning">动作未开放。当前只能记录需人工核查，不能直接创建任务</div>;
+  return <div className="operatorDevicesActionError">{state.message || "操作未完成：缺少权限 / 后端接口未开放 / 设备不存在 / 设备明细不可用"}</div>;
+}
+
+export default function DeviceOfflineHandlingPanel({ focus, actionState, onConfirmOffline, onMarkManualReview, onCreateTaskCandidate }: Props): React.ReactElement | null {
+  if (!focus.active) return null;
+  const isSubmitting = actionState.status === "submitting";
+  return (
+    <section className="operatorDevicesSection operatorDevicesFocusPanel" aria-label="设备离线处理面板">
+      <header className="operatorDevicesSectionHead">
+        <div>
+          <h2>{focus.title}</h2>
+          <p>{focus.description}</p>
+        </div>
+        <span>{focus.statusText}</span>
+      </header>
+
+      {focus.mode === "DEVICE_MATCHED" ? <div className="operatorDevicesNotice">正在处理：设备离线</div> : null}
+      {focus.mode === "AGGREGATE_ONLY" ? <div className="operatorDevicesWarning">该待办来自聚合统计，当前没有设备明细。</div> : null}
+      {focus.mode === "MISSING_LOCATION" ? <div className="operatorDevicesActionError">缺少设备定位信息</div> : null}
+      {focus.mode === "DEVICE_NOT_FOUND" ? <div className="operatorDevicesActionError">操作未完成：缺少权限 / 后端接口未开放 / 设备不存在 / 设备明细不可用</div> : null}
+
+      <div className="operatorDeviceMeta">
+        <div><span>设备</span><strong>{focus.deviceIdText}</strong></div>
+        <div><span>绑定地块</span><strong>{focus.fieldText}</strong></div>
+        <div><span>最近心跳</span><strong>{focus.lastHeartbeatText}</strong></div>
+        <div><span>最近遥测</span><strong>{focus.lastTelemetryText}</strong></div>
+        <div><span>数据延迟</span><strong>{focus.delayText}</strong></div>
+        <div><span>处理状态</span><strong>{focus.handlingStatusText}</strong></div>
+      </div>
+
+      <div className="operatorDevicesWarning">{focus.auditText}</div>
+      <div className="operatorDevicesNotice">离线处理只建立排查链路；未完成现场复核前，不生成正式作业成功、客户 ROI 或 Field Memory。</div>
+      <ol className="operatorDevicesChecklist">{focus.nextSteps.map((step) => <li key={step}>{step}</li>)}</ol>
+
+      <div className="operatorDevicesActions">
+        {focus.relatedFieldHref ? <Link to={focus.relatedFieldHref}>查看地块报告</Link> : null}
+        {focus.returnHref ? <Link to={focus.returnHref}>返回运营总队列</Link> : null}
+        <button type="button" disabled={isSubmitting || focus.mode !== "DEVICE_MATCHED"} onClick={onConfirmOffline}>记录设备离线确认</button>
+        <button type="button" disabled={isSubmitting || focus.mode === "MISSING_LOCATION"} onClick={onMarkManualReview}>标记需人工核查</button>
+        <button type="button" disabled={isSubmitting} onClick={onCreateTaskCandidate}>创建维护任务候选</button>
+      </div>
+
+      <ActionResult state={actionState} />
+    </section>
+  );
+}
