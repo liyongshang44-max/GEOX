@@ -1,4 +1,12 @@
+import type { FormalOperationSpatialScopeV1 } from "./formal_operation_spatial_scope_v1.js";
+
 export type OperationPlanStatusV1 =
+  | "DRAFT"
+  | "UNBOUND"
+  | "NEEDS_FIELD_BINDING"
+  | "AGGREGATE_ONLY"
+  | "INSUFFICIENT_CONTEXT"
+  | "READ_ONLY"
   | "CREATED"
   | "APPROVED"
   | "READY"
@@ -16,6 +24,7 @@ export type OperationPlanV1 = {
     operation_plan_id: string;
     program_id?: string | null;
     field_id?: string | null;
+    spatial_scope?: FormalOperationSpatialScopeV1 | null;
     season_id?: string | null;
     recommendation_id?: string | null;
     recommendation_fact_id?: string | null;
