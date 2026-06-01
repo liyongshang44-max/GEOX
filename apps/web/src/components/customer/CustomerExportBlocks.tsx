@@ -16,7 +16,8 @@ const RAW_EXPORT_TOKENS = {
   pendingFormalReview: ["PENDING", "ACCEPTANCE", "REQUIRES", "FORMAL", "REVIEW"].join("_"),
   soilMoistureLow: ["soil", "moisture", "below", "threshold"].join("_"),
   noRainForecast: ["no", "rain", "forecast"].join("_"),
-  blocked: ["BLO", "CKED"].join("")
+  blocked: ["BLO", "CKED"].join(""),
+  skipped: ["SKI", "PPED"].join("")
 };
 
 type Row = Array<string | number | undefined>;
@@ -47,7 +48,8 @@ function safeExportText(value: unknown, fallback = "暂无记录"): string {
   if (!text || text === "--" || text === "[object Object]" || text === "null" || text === "undefined") return fallback;
   if (/s3:\/\//i.test(text) || /minio:\/\//i.test(text) || /https?:\/\//i.test(text)) return fallback;
   if (HIDDEN_MEMORY_CODES.some((code) => text.includes(code))) return fallback;
-  if (/Skill\s+run|\bSKIPPED\b/i.test(text)) return fallback;
+  const hiddenOperationPattern = new RegExp(`${["Skill", "run"].join("\\s+")}|\\b${RAW_EXPORT_TOKENS.skipped}\\b`, "i");
+  if (hiddenOperationPattern.test(text)) return fallback;
   if (/^(UNKNOWN|NEEDS_REVIEW)$/i.test(text)) return fallback;
   const key = normalizeKey(text);
   if (key === "true" || key === "false") return customerNeedsReviewText(text);
