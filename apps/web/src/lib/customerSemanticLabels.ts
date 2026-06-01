@@ -1,5 +1,5 @@
 import { customerFormalChainText, customerNeedsReviewText, customerOperationStateText, customerReasonText, customerSafeName, isUnsafeCustomerText, mapCustomerEnum } from "./customerSafeText";
-import { customerStatusLabel, labelCustomerChainIntegrity, labelCustomerCropContextStatus, labelCustomerObservabilityStatus } from "./customerStatusLabels";
+import { customerStatusLabel, labelCustomerCropContextStatus, labelCustomerObservabilityStatus } from "./customerStatusLabels";
 
 const SOURCE_LABELS: Record<string, string> = {
   operation_report_v1: "作业报告摘要",
