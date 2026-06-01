@@ -19,14 +19,7 @@ type AlertActionState = { busyKey?: string; message?: string; tone?: "success" |
 type AlertPermissionState = { sessionLoading: boolean; canAck: boolean; canClose: boolean; ackReason: string; closeReason: string };
 
 function queryFromParams(params: URLSearchParams): OperatorDevicesAlertsQuery {
-  return {
-    focus: params.get("focus") ?? undefined,
-    deviceId: params.get("device_id") ?? undefined,
-    fieldId: params.get("field_id") ?? undefined,
-    alertId: params.get("alert_id") ?? undefined,
-    onlineStatus: params.get("online_status") ?? undefined,
-    source: params.get("source") ?? undefined,
-  };
+  return { focus: params.get("focus") ?? undefined, deviceId: params.get("device_id") ?? undefined, fieldId: params.get("field_id") ?? undefined, alertId: params.get("alert_id") ?? undefined, onlineStatus: params.get("online_status") ?? undefined, source: params.get("source") ?? undefined };
 }
 
 function queryKey(query: OperatorDevicesAlertsQuery): string {
@@ -35,15 +28,7 @@ function queryKey(query: OperatorDevicesAlertsQuery): string {
 
 function DeviceCard({ row, revokeVisible }: { row: OperatorDeviceRowVm; revokeVisible: boolean }): React.ReactElement {
   const showRevokeButton = revokeVisible && row.canRevoke;
-  return (
-    <article className={row.highlighted ? "operatorDeviceCard operatorDeviceCardFocused" : "operatorDeviceCard"}>
-      <header className="operatorDeviceHead"><div><h3>{row.title}</h3><p>{row.deviceId}</p></div><span className={`operatorDeviceStatus ${row.statusTone}`}>{row.statusText}</span></header>
-      <div className="operatorDeviceMeta"><div><span>最近心跳</span><strong>{row.lastHeartbeatText}</strong></div><div><span>最近遥测</span><strong>{row.lastTelemetryText}</strong></div><div><span>绑定地块</span><strong>{row.boundFieldText}</strong></div><div><span>设备能力</span><strong>{row.capabilitiesText}</strong></div><div><span>凭证状态</span><strong>{row.credentialText}</strong></div><div><span>最近签发时间</span><strong>{row.credentialIssuedText}</strong></div><div><span>最近使用时间</span><strong>{row.credentialLastUsedText}</strong></div><div><span>撤销状态</span><strong>{row.revokeText}</strong></div><div><span>电量</span><strong>{row.batteryText}</strong></div><div><span>数据延迟</span><strong>{row.delayText}</strong></div><div><span>数据来源</span><strong>{row.sourceText}</strong></div></div>
-      {row.highlighted ? <div className="operatorDevicesNotice">已高亮目标设备，当前正在处理该设备离线事项。</div> : null}
-      <div className="operatorDevicesNotice">设备凭证仅展示状态与时间，不展示敏感凭据内容。撤销仅在管理员权限 ready 时显示。</div>
-      <div className="operatorDevicesActions">{showRevokeButton ? <button type="button" disabled>撤销管理员操作待接入</button> : <span className="operatorDevicesReadOnlyAction">撤销默认只读或管理员可见</span>}</div>
-    </article>
-  );
+  return <article className={row.highlighted ? "operatorDeviceCard operatorDeviceCardFocused" : "operatorDeviceCard"}><header className="operatorDeviceHead"><div><h3>{row.title}</h3><p>{row.deviceId}</p></div><span className={`operatorDeviceStatus ${row.statusTone}`}>{row.statusText}</span></header><div className="operatorDeviceMeta"><div><span>最近心跳</span><strong>{row.lastHeartbeatText}</strong></div><div><span>最近遥测</span><strong>{row.lastTelemetryText}</strong></div><div><span>绑定地块</span><strong>{row.boundFieldText}</strong></div><div><span>设备能力</span><strong>{row.capabilitiesText}</strong></div><div><span>凭证状态</span><strong>{row.credentialText}</strong></div><div><span>最近签发时间</span><strong>{row.credentialIssuedText}</strong></div><div><span>最近使用时间</span><strong>{row.credentialLastUsedText}</strong></div><div><span>撤销状态</span><strong>{row.revokeText}</strong></div><div><span>电量</span><strong>{row.batteryText}</strong></div><div><span>数据延迟</span><strong>{row.delayText}</strong></div><div><span>数据来源</span><strong>{row.sourceText}</strong></div></div>{row.highlighted ? <div className="operatorDevicesNotice">已高亮目标设备，当前正在处理该设备离线事项。</div> : null}<div className="operatorDevicesNotice">设备凭证仅展示状态与时间，不展示敏感凭据内容。撤销仅在管理员权限 ready 时显示。</div><div className="operatorDevicesActions">{showRevokeButton ? <button type="button" disabled>撤销管理员操作待接入</button> : <span className="operatorDevicesReadOnlyAction">撤销默认只读或管理员可见</span>}</div></article>;
 }
 
 function DeviceSection({ title, description, rows, revokeVisible }: { title: string; description: string; rows: OperatorDeviceRowVm[]; revokeVisible: boolean }): React.ReactElement {
@@ -108,15 +93,20 @@ export default function OperatorDevicesAlertsPage(): React.ReactElement {
   }
 
   function confirmOfflineHandling() {
-    if (!vm?.focus.matchedDevice) { setOfflineActionState({ status: "error", message: "操作未完成：缺少权限 / 后端接口未开放 / 设备不存在 / 设备明细不可用" }); return; }
+    const matchedDevice = vm?.focus.matchedDevice;
+    if (!matchedDevice) { setOfflineActionState({ status: "error", message: "操作未完成：缺少权限 / 后端接口未开放 / 设备不存在 / 设备明细不可用" }); return; }
+    const deviceId = matchedDevice.deviceId || "device";
+    const auditId = `offline-${deviceId}`;
     setOfflineActionState({ status: "submitting" });
-    window.setTimeout(() => setOfflineActionState({ status: "success", auditId: `offline-${vm.focus.matchedDevice?.deviceId || "device"}-${Date.now()}`, message: `已记录设备离线确认，审计编号：offline-${vm.focus.matchedDevice?.deviceId || "device"}` }), 150);
+    window.setTimeout(() => setOfflineActionState({ status: "success", auditId, message: `已记录设备离线确认，审计编号：${auditId}` }), 150);
   }
 
   function markManualReview() {
-    if (!vm || vm.focus.mode === "MISSING_LOCATION") { setOfflineActionState({ status: "error", message: "操作未完成：设备明细不可用" }); return; }
+    const focusMode = vm?.focus.mode;
+    if (!vm || focusMode === "MISSING_LOCATION") { setOfflineActionState({ status: "error", message: "操作未完成：设备明细不可用" }); return; }
+    const auditId = "manual-review";
     setOfflineActionState({ status: "submitting" });
-    window.setTimeout(() => setOfflineActionState({ status: "success", auditId: `manual-review-${Date.now()}`, message: "已记录设备离线确认，审计编号：manual-review" }), 150);
+    window.setTimeout(() => setOfflineActionState({ status: "success", auditId, message: `已记录设备离线确认，审计编号：${auditId}` }), 150);
   }
 
   function createTaskCandidate() {
