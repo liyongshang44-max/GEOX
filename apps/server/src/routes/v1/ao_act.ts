@@ -5,25 +5,58 @@ import { registerAoActV1Routes } from "../control_ao_act.js";
 
 const FORMAL_OPERATION_FIELD_BINDING_ERROR_V1 = "NEEDS_FIELD_BINDING";
 const FORMAL_OPERATION_FIELD_BINDING_MESSAGE_V1 = "正式农业作业必须绑定地块或明确空间范围";
-const FORMAL_AGRICULTURAL_ACTION_TYPES_V1 = new Set(["PLOW", "HARROW", "SEED", "IRRIGATE", "FERTILIZE", "HARVEST", "INSPECT", "SAMPLE", "CHECK_FIELD_STATUS"]);
+const FORMAL_AGRICULTURAL_ACTION_TYPES_V1 = new Set(["PLOW", "HARROW", "SEED", "SPRAY", "IRRIGATE", "FERTILIZE", "HARVEST", "INSPECT", "SAMPLE", "CHECK_FIELD_STATUS", "PEST_CONTROL"]);
+
+function normalizeId(value: unknown): string {
+  const raw = String(value ?? "").trim();
+  if (!raw || raw === "..." || raw === "undefined" || raw === "null") return "";
+  if (raw.length > 128) return "";
+  return /^[A-Za-z0-9_\-:.]+$/.test(raw) ? raw : "";
+}
 
 function validFieldId(value: unknown): boolean {
-  const raw = String(value ?? "").trim();
-  if (!raw || raw === "..." || raw === "undefined" || raw === "null") return false;
-  if (raw.length > 128) return false;
-  return /^[A-Za-z0-9_\-:.]+$/.test(raw);
+  return Boolean(normalizeId(value));
+}
+
+function spatialScopeOf(body: any): any {
+  return body?.spatial_scope ?? body?.meta?.spatial_scope ?? body?.meta?.variable_plan?.spatial_scope ?? null;
+}
+
+function fieldIdFromSpatialScope(scope: any): string {
+  if (!scope || typeof scope !== "object") return "";
+  const kind = String(scope.kind ?? "").trim().toLowerCase();
+  if (!kind || kind === "aggregate_only") return "";
+  if (!["field", "management_zone", "prescription_zone", "device_affected_fields"].includes(kind)) return "";
+  const direct = normalizeId(scope.field_id);
+  if (direct) return direct;
+  if (Array.isArray(scope.field_ids)) {
+    for (const fieldId of scope.field_ids) {
+      const next = normalizeId(fieldId);
+      if (next) return next;
+    }
+  }
+  return "";
 }
 
 function spatialScopeHasExplicitFieldBinding(scope: any): boolean {
-  if (!scope || typeof scope !== "object") return false;
-  const kind = String(scope.kind ?? "").trim().toLowerCase();
-  if (!kind || kind === "aggregate_only") return false;
-  if (!["field", "management_zone", "prescription_zone", "device_affected_fields"].includes(kind)) return false;
-  return Boolean(validFieldId(scope.field_id) || (Array.isArray(scope.field_ids) && scope.field_ids.some(validFieldId)));
+  return Boolean(fieldIdFromSpatialScope(scope));
+}
+
+function normalizeExplicitFieldBinding(body: any): void {
+  if (!body || typeof body !== "object") return;
+  const scope = spatialScopeOf(body);
+  const scopeFieldId = fieldIdFromSpatialScope(scope);
+  if (scope && typeof scope === "object") {
+    body.meta = body.meta && typeof body.meta === "object" ? body.meta : {};
+    body.meta.spatial_scope = scope;
+  }
+  if (!validFieldId(body.field_id) && !validFieldId(body?.meta?.field_id) && scopeFieldId) {
+    body.field_id = scopeFieldId;
+  }
 }
 
 function hasExplicitFieldBinding(body: any): boolean {
-  const scope = body?.spatial_scope ?? body?.meta?.spatial_scope ?? body?.meta?.variable_plan?.spatial_scope ?? null;
+  const scope = spatialScopeOf(body);
   return Boolean(validFieldId(body?.field_id) || validFieldId(body?.meta?.field_id) || spatialScopeHasExplicitFieldBinding(scope));
 }
 
@@ -42,7 +75,9 @@ export function registerAoActV1PrimaryRoutes(app: FastifyInstance, pool: Pool): 
     if (String((req as any).method ?? "").toUpperCase() !== "POST") return;
     if (path !== "/api/v1/actions/task" && path !== "/api/v1/actions/task/from-variable-prescription") return;
     const body = ((req as any).body ?? {}) as any;
-    if (!isFormalAgriculturalTask(body) || hasExplicitFieldBinding(body)) return;
+    if (!isFormalAgriculturalTask(body)) return;
+    normalizeExplicitFieldBinding(body);
+    if (hasExplicitFieldBinding(body)) return;
     reply.status(422).send({ ok: false, error: FORMAL_OPERATION_FIELD_BINDING_ERROR_V1, message: FORMAL_OPERATION_FIELD_BINDING_MESSAGE_V1 });
   });
   registerAoActV1Routes(app, pool);
