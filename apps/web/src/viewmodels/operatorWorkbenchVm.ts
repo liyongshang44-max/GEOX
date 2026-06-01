@@ -1,4 +1,4 @@
-import type { OperatorWorkbenchItem, OperatorWorkbenchQueueKey, OperatorWorkbenchResponse } from "../api/operatorWorkbench";
+import type { OperatorWorkbenchHandlingStatus, OperatorWorkbenchItem, OperatorWorkbenchQueueKey, OperatorWorkbenchResponse } from "../api/operatorWorkbench";
 import { replaceOperatorTerms } from "../lib/operatorStatusLabels";
 
 export type OperatorWorkbenchQueueVm = {
@@ -20,6 +20,13 @@ export type OperatorWorkbenchTodoVm = {
   actionHref: string;
   relatedHref?: string | null;
   sourceText: string;
+  deviceId?: string | null;
+  fieldId?: string | null;
+  alertId?: string | null;
+  sourceId?: string | null;
+  queueId?: string | null;
+  handlingStatus?: OperatorWorkbenchHandlingStatus;
+  handlingStatusText: string;
 };
 
 export type OperatorWorkbenchSummaryVm = {
@@ -103,8 +110,18 @@ function sourceText(value: OperatorWorkbenchItem["source"]): string {
   return "fallback";
 }
 
+function handlingStatusText(value: OperatorWorkbenchItem["handlingStatus"]): string {
+  if (value === "OPEN") return "待处理";
+  if (value === "ACKED") return "已确认";
+  if (value === "FOLLOWUP_REQUIRED") return "需继续跟进";
+  if (value === "TASK_CANDIDATE_CREATED") return "已记录任务候选";
+  if (value === "CLOSED") return "已关闭";
+  if (value === "READ_ONLY") return "只读待核查";
+  return "状态待确认";
+}
+
 function metaText(item: OperatorWorkbenchItem): string {
-  const parts = [text(item.fieldName), text(item.operationName)].filter(Boolean);
+  const parts = [text(item.fieldName), text(item.operationName), text(item.deviceId), text(item.alertId)].filter(Boolean);
   return parts.length ? parts.join(" · ") : "对象范围待确认";
 }
 
@@ -119,6 +136,13 @@ function buildTodo(item: OperatorWorkbenchItem): OperatorWorkbenchTodoVm {
     actionHref: item.actionHref || QUEUE_META[item.queue].actionHref,
     relatedHref: item.relatedHref ?? null,
     sourceText: sourceText(item.source),
+    deviceId: item.deviceId ?? null,
+    fieldId: item.fieldId ?? null,
+    alertId: item.alertId ?? null,
+    sourceId: item.sourceId ?? null,
+    queueId: item.queueId ?? null,
+    handlingStatus: item.handlingStatus,
+    handlingStatusText: handlingStatusText(item.handlingStatus),
   };
 }
 
@@ -154,7 +178,7 @@ export function buildOperatorWorkbenchVm(response: OperatorWorkbenchResponse): O
   const todos = sourceItems.map(buildTodo);
   const queues = QUEUE_ORDER.map((key) => {
     const meta = QUEUE_META[key];
-    const items = todos.filter((item, index) => sourceItems[index]?.queue === key);
+    const items = todos.filter((_, index) => sourceItems[index]?.queue === key);
     return {
       key,
       title: meta.title,
