@@ -8,6 +8,7 @@ type OfflineStatus = "ACKED" | "FOLLOWUP_REQUIRED" | "TASK_CANDIDATE_CREATED";
 type DeviceRow = Record<string, unknown>;
 
 const AUDIT_POLICY = "NO_FORMAL_ACCEPTANCE_NO_FIELD_MEMORY_NO_ROI_NO_AO_ACT" as const;
+const OFFLINE_POLICY_SCOPE = "operator.device_offline.write";
 
 function safeText(value: unknown): string {
   const raw = String(value ?? "").trim();
@@ -47,6 +48,7 @@ async function writeAuditFact(pool: Pool, auth: AoActAuthContextV0, payload: Rec
       tenant_id: auth.tenant_id,
       project_id: auth.project_id,
       group_id: auth.group_id,
+      policy_scope: OFFLINE_POLICY_SCOPE,
       audit_policy: AUDIT_POLICY,
       source_lane: "OPERATOR_DEVICE_OFFLINE_ACTION",
     },
@@ -59,7 +61,7 @@ function featureBoundaryError(deviceId: string, action: OfflineAction, message: 
 }
 
 async function handleOfflineAction(req: any, reply: any, pool: Pool, action: OfflineAction, status: OfflineStatus): Promise<any> {
-  const auth = requireAoActAnyScopeV0(req, reply, ["devices.write"]);
+  const auth = requireAoActAnyScopeV0(req, reply, [OFFLINE_POLICY_SCOPE as any, "devices.write"]);
   if (!auth) return;
   const deviceId = safeText(req.params?.device_id);
   if (!deviceId) return reply.code(400).send(featureBoundaryError(deviceId, action, "设备定位信息缺失。"));
