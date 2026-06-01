@@ -67,6 +67,36 @@ function isFormalAgriculturalTask(body: any): boolean {
   return FORMAL_AGRICULTURAL_ACTION_TYPES_V1.has(operationType);
 }
 
+async function normalizePlanResolvedTargetRefFieldBinding(pool: Pool, body: any): Promise<void> {
+  if (!body || typeof body !== "object") return;
+  if (hasExplicitFieldBinding(body)) return;
+  if (String(body?.target?.kind ?? "").trim().toLowerCase() !== "field") return;
+  const targetRef = normalizeId(body?.target?.ref);
+  const operationPlanId = normalizeId(body?.operation_plan_id);
+  const tenantId = normalizeId(body?.tenant_id);
+  const projectId = normalizeId(body?.project_id);
+  const groupId = normalizeId(body?.group_id);
+  if (!targetRef || !operationPlanId || !tenantId || !projectId || !groupId) return;
+
+  const res = await pool.query(
+    `SELECT 1
+       FROM facts
+      WHERE (record_json::jsonb->>'type') = 'operation_plan_v1'
+        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+        AND (record_json::jsonb#>>'{payload,project_id}') = $2
+        AND (record_json::jsonb#>>'{payload,group_id}') = $3
+        AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $4
+        AND (record_json::jsonb#>>'{payload,field_id}') = $5
+      LIMIT 1`,
+    [tenantId, projectId, groupId, operationPlanId, targetRef]
+  ).catch(() => ({ rowCount: 0 }));
+  if ((res.rowCount ?? 0) <= 0) return;
+
+  body.field_id = targetRef;
+  body.meta = body.meta && typeof body.meta === "object" ? body.meta : {};
+  body.meta.spatial_scope = { kind: "field", field_id: targetRef, source: "operation_plan.field_id" };
+}
+
 // AO-ACT v1 primary routes.
 // New business endpoints must be registered here, not under legacy prefixes.
 export function registerAoActV1PrimaryRoutes(app: FastifyInstance, pool: Pool): void {
@@ -77,8 +107,9 @@ export function registerAoActV1PrimaryRoutes(app: FastifyInstance, pool: Pool): 
     const body = ((req as any).body ?? {}) as any;
     if (!isFormalAgriculturalTask(body)) return;
     normalizeExplicitFieldBinding(body);
+    await normalizePlanResolvedTargetRefFieldBinding(pool, body);
     if (hasExplicitFieldBinding(body)) return;
-    reply.status(422).send({ ok: false, error: FORMAL_OPERATION_FIELD_BINDING_ERROR_V1, message: FORMAL_OPERATION_FIELD_BINDING_MESSAGE_V1 });
+    return reply.status(422).send({ ok: false, error: FORMAL_OPERATION_FIELD_BINDING_ERROR_V1, message: FORMAL_OPERATION_FIELD_BINDING_MESSAGE_V1 });
   });
   registerAoActV1Routes(app, pool);
 }
