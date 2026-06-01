@@ -7,6 +7,8 @@ const root = path.resolve(__dirname, '..', '..');
 const actionsPath = path.join(root, 'apps/server/src/routes/v1/operator_device_offline_actions.ts');
 const operatorPath = path.join(root, 'apps/server/src/routes/v1/operator.ts');
 const modulePath = path.join(root, 'apps/server/src/modules/operator/registerOperatorModule.ts');
+const devicesApiPath = path.join(root, 'apps/web/src/api/operatorDevicesAlerts.ts');
+const devicesPagePath = path.join(root, 'apps/web/src/views/operator/OperatorDevicesAlertsPage.tsx');
 const packagePath = path.join(root, 'package.json');
 
 function read(file) {
@@ -23,6 +25,8 @@ function mustNot(text, needle, label) {
 const actions = read(actionsPath);
 const operator = read(operatorPath);
 const moduleFile = read(modulePath);
+const devicesApi = read(devicesApiPath);
+const devicesPage = read(devicesPagePath);
 const pkg = read(packagePath);
 
 must(actions, '/api/v1/operator/devices/:device_id/offline/ack', 'ack route exists');
@@ -44,6 +48,19 @@ must(moduleFile, 'operator_device_offline_actions.js', 'module imports route');
 must(operator, 'device_id', 'operator facade exposes device id');
 must(operator, 'online_status', 'operator facade exposes online status');
 must(pkg, 'ci:governance:operator-device-offline-actions', 'package script is registered');
+
+must(devicesApi, 'export async function ackDeviceOffline(deviceId: string)', 'frontend ack API exists');
+must(devicesApi, 'export async function markDeviceOfflineFollowup(deviceId: string)', 'frontend followup API exists');
+must(devicesApi, 'export async function createOfflineInspectionTaskCandidate(deviceId: string)', 'frontend task candidate API exists');
+must(devicesApi, '/api/v1/operator/devices/${safeDeviceId}/offline/${action}', 'frontend API calls backend offline route family');
+must(devicesApi, 'postOfflineDeviceAction(deviceId, "ack")', 'frontend ack maps to backend ack');
+must(devicesApi, 'postOfflineDeviceAction(deviceId, "followup")', 'frontend followup maps to backend followup');
+must(devicesApi, 'postOfflineDeviceAction(deviceId, "inspection-task-candidate")', 'frontend candidate maps to backend candidate');
+must(devicesPage, 'submitOfflineDeviceAction(ackDeviceOffline)', 'page confirm handler calls ackDeviceOffline');
+must(devicesPage, 'submitOfflineDeviceAction(markDeviceOfflineFollowup)', 'page manual review handler calls markDeviceOfflineFollowup');
+must(devicesPage, 'submitOfflineDeviceAction(createOfflineInspectionTaskCandidate)', 'page task candidate handler calls backend API');
+mustNot(devicesPage, 'window.setTimeout(', 'page must not simulate offline action success');
+mustNot(devicesPage, 'manual-review', 'page must not synthesize manual review audit id');
 
 for (const token of [
   'acceptance_result_v1',
