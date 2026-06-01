@@ -135,7 +135,7 @@ function extractFunctionBody(text, signatureStart) {
     '影响面积',
     '巡检证据通过 ≠ 已执行喷药',
     '巡检证据通过 ≠ 防治闭环已结束',
-    '巡检证据通过 ≠ ROI / Field Memory',
+    '正式价值结论或客户可见田块记忆',
   ], 'Customer export PDI same-source observation evidence');
 
   const blockedPositiveTreatmentTerms = [
