@@ -38,8 +38,8 @@ export default function FieldMemoryPanel({ fieldId, operationId, embeddedMemory,
   if (!vm || vm.entries.length === 0) {
     return (
       <div className="customerFieldMemoryEmpty">
-        <strong>{vm?.emptyTitle ?? "暂无田块记忆"}</strong>
-        <p>{vm?.emptyDescription ?? "当前系统还没有形成可复用的地块响应、设备可靠性或技能表现记忆。"}</p>
+        <strong>{vm?.emptyTitle ?? "暂无正式田块记忆"}</strong>
+        <p>{vm?.emptyDescription ?? "系统只会在正式验收通过后形成客户可见的田块学习结论；技术调试、模拟或内部记忆不会进入客户页。"}</p>
       </div>
     );
   }
