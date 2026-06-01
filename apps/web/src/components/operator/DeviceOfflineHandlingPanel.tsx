@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { labelOperatorOfflineHandlingStatus } from "../../lib/operatorStatusLabels";
 import type { OperatorDeviceOfflineFocusVm } from "../../viewmodels/operatorDevicesAlertsVm";
 
 export type DeviceOfflineActionState = {
@@ -22,6 +23,10 @@ function ActionResult({ state }: { state: DeviceOfflineActionState }): React.Rea
   if (state.status === "success") return <div className="operatorDevicesActionSuccess">{state.message || `已记录设备离线确认，审计编号：${state.auditId || "offline-audit-local"}`}</div>;
   if (state.status === "disabled") return <div className="operatorDevicesWarning">动作未开放。当前只能记录需人工核查，不能直接创建任务</div>;
   return <div className="operatorDevicesActionError">{state.message || "操作未完成：缺少权限 / 后端接口未开放 / 设备不存在 / 设备明细不可用"}</div>;
+}
+
+function handlingText(value: string): string {
+  return labelOperatorOfflineHandlingStatus(value, value || "处理状态待确认");
 }
 
 export default function DeviceOfflineHandlingPanel({ focus, actionState, onConfirmOffline, onMarkManualReview, onCreateTaskCandidate }: Props): React.ReactElement | null {
@@ -48,7 +53,7 @@ export default function DeviceOfflineHandlingPanel({ focus, actionState, onConfi
         <div><span>最近心跳</span><strong>{focus.lastHeartbeatText}</strong></div>
         <div><span>最近遥测</span><strong>{focus.lastTelemetryText}</strong></div>
         <div><span>数据延迟</span><strong>{focus.delayText}</strong></div>
-        <div><span>处理状态</span><strong>{focus.handlingStatusText}</strong></div>
+        <div><span>处理状态</span><strong>{handlingText(focus.handlingStatusText)}</strong></div>
       </div>
 
       <div className="operatorDevicesWarning">{focus.auditText}</div>

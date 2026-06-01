@@ -6,6 +6,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const mainVisualFiles = [
   'apps/web/src/views/operator/OperatorDevicesAlertsPage.tsx',
   'apps/web/src/viewmodels/operatorDevicesAlertsVm.ts',
+  'apps/web/src/components/operator/DeviceOfflineHandlingPanel.tsx',
   'apps/web/src/components/operator/OperatorEmptyState.tsx',
   'apps/web/src/components/operator/OperatorPageState.tsx',
 ];
@@ -58,17 +59,46 @@ for (const rel of mainVisualFiles) {
 
 const page = read('apps/web/src/views/operator/OperatorDevicesAlertsPage.tsx');
 const vm = read('apps/web/src/viewmodels/operatorDevicesAlertsVm.ts');
+const panel = read('apps/web/src/components/operator/DeviceOfflineHandlingPanel.tsx');
+const labels = read('apps/web/src/lib/operatorStatusLabels.ts');
 for (const required of [
   '当前显示有限设备状态摘要',
   '设备明细接口尚未返回完整列表，当前以统一统计口径展示',
   '当前可见设备',
   '台，其中',
   '台离线',
+  '待处理',
+  '已确认离线',
+  '需人工核查',
+  '已生成维护任务候选',
+  '已关闭',
+  '只读',
 ]) {
-  if (!(page.includes(required) || vm.includes(required))) {
+  if (!(page.includes(required) || vm.includes(required) || panel.includes(required) || labels.includes(required))) {
     console.error(`[operator-product-language] missing required product language: ${required}`);
     failed = true;
   }
+}
+
+if (!/labelOperatorOfflineHandlingStatus\("OPEN"\)/.test(vm) || !/labelOperatorOfflineHandlingStatus\(result\.status\)/.test(page) || !/labelOperatorOfflineHandlingStatus/.test(panel)) {
+  console.error('[operator-product-language] offline handling status must use operator label helper across VM/page/panel');
+  failed = true;
+}
+if (/return\s+["'](?:OPEN|READ_ONLY|FOLLOWUP_REQUIRED|TASK_CANDIDATE_CREATED|ACKED)["']/.test(vm)) {
+  console.error('[operator-product-language] VM must not return raw device offline handling status');
+  failed = true;
+}
+if (/handlingStatusText:\s*["'](?:OPEN|READ_ONLY|FOLLOWUP_REQUIRED|TASK_CANDIDATE_CREATED|ACKED)["']/.test(vm + panel + page)) {
+  console.error('[operator-product-language] raw handling status must not be assigned to visible handlingStatusText');
+  failed = true;
+}
+if (/状态：\$\{replaceOperatorTerms\(result\.status\)\}/.test(page)) {
+  console.error('[operator-product-language] offline action success must not render result.status through generic replaceOperatorTerms');
+  failed = true;
+}
+if (/<strong>\s*(?:FOLLOWUP_REQUIRED|TASK_CANDIDATE_CREATED|READ_ONLY|ACKED|OPEN)\s*<\/strong>/.test(panel + page)) {
+  console.error('[operator-product-language] raw handling status must not be hardcoded in visible markup');
+  failed = true;
 }
 
 if (!page.includes('<details className="operatorTechDetails">') || !page.includes('<summary>技术详情</summary>')) {

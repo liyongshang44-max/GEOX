@@ -1,5 +1,5 @@
 import type { OperatorAlertItem, OperatorAlertStatus, OperatorCredentialStatus, OperatorDeviceItem, OperatorDeviceOnlineStatus, OperatorDevicesAlertsQuery, OperatorDevicesAlertsResponse } from "../api/operatorDevicesAlerts";
-import { mapOperatorStatusLabel, replaceOperatorTerms } from "../lib/operatorStatusLabels";
+import { labelOperatorOfflineHandlingStatus, mapOperatorStatusLabel, replaceOperatorTerms } from "../lib/operatorStatusLabels";
 
 export type OperatorDeviceRowVm = {
   deviceId: string;
@@ -103,11 +103,22 @@ export type OperatorDevicesAlertsVm = {
 };
 
 const numberFmt = new Intl.NumberFormat("zh-CN");
+const PLACEHOLDER_ID_VALUES = new Set(["...", "…", "--", "undefined", "null", "待确认", "未定位到设备", "地块待确认"]);
+
+function isPlaceholderId(value: unknown): boolean {
+  const raw = String(value ?? "").trim();
+  if (!raw) return true;
+  return PLACEHOLDER_ID_VALUES.has(raw) || PLACEHOLDER_ID_VALUES.has(raw.toLowerCase());
+}
 
 function text(value: unknown, fallback = ""): string {
   const raw = String(value ?? "").trim();
   if (!raw || raw === "--" || raw === "undefined" || raw === "null") return fallback;
   return replaceOperatorTerms(raw);
+}
+
+function idText(value: unknown): string {
+  return isPlaceholderId(value) ? "" : String(value ?? "").trim();
 }
 
 function countText(value: number | null | undefined, fallback = "未返回"): string {
@@ -171,7 +182,7 @@ function batteryText(value: number | null | undefined): string {
 }
 
 function operationHref(operationId: unknown): string | null {
-  const id = String(operationId ?? "").trim();
+  const id = idText(operationId);
   return id ? `/customer/operations/${encodeURIComponent(id)}` : null;
 }
 
@@ -182,8 +193,8 @@ function disabledReason(item: OperatorAlertItem): string {
 }
 
 function isTargetDevice(item: OperatorDeviceItem, query?: OperatorDevicesAlertsQuery): boolean {
-  const deviceId = text(query?.deviceId);
-  const fieldId = text(query?.fieldId);
+  const deviceId = idText(query?.deviceId);
+  const fieldId = idText(query?.fieldId);
   if (deviceId && item.deviceId !== deviceId) return false;
   if (fieldId && text(item.fieldId) !== fieldId) return false;
   return Boolean(deviceId);
@@ -268,18 +279,18 @@ function buildScopeVm(response: OperatorDevicesAlertsResponse): OperatorDeviceSc
   };
 }
 
-function handlingStatusText(mode: OperatorDeviceOfflineFocusMode): string {
-  if (mode === "DEVICE_MATCHED") return "OPEN";
-  if (mode === "AGGREGATE_ONLY") return "READ_ONLY";
-  if (mode === "MISSING_LOCATION") return "READ_ONLY";
-  if (mode === "DEVICE_NOT_FOUND") return "FOLLOWUP_REQUIRED";
-  return "READ_ONLY";
+function offlineHandlingStatusText(mode: OperatorDeviceOfflineFocusMode): string {
+  if (mode === "DEVICE_MATCHED") return labelOperatorOfflineHandlingStatus("OPEN");
+  if (mode === "AGGREGATE_ONLY") return labelOperatorOfflineHandlingStatus("READ_ONLY");
+  if (mode === "MISSING_LOCATION") return labelOperatorOfflineHandlingStatus("READ_ONLY");
+  if (mode === "DEVICE_NOT_FOUND") return labelOperatorOfflineHandlingStatus("FOLLOWUP_REQUIRED");
+  return labelOperatorOfflineHandlingStatus("READ_ONLY");
 }
 
 function buildFocusVm(query: OperatorDevicesAlertsQuery | undefined, offlineDevices: OperatorDeviceRowVm[]): OperatorDeviceOfflineFocusVm {
   const focus = text(query?.focus);
-  const deviceId = text(query?.deviceId);
-  const fieldId = text(query?.fieldId);
+  const deviceId = idText(query?.deviceId);
+  const fieldId = idText(query?.fieldId);
   const source = text(query?.source);
   const active = focus === "device_offline" || Boolean(deviceId || fieldId || source === "aggregate");
   const matchedDevice = deviceId ? offlineDevices.find((item) => item.deviceId === deviceId && (!fieldId || item.fieldId === fieldId || item.boundFieldText.includes(fieldId))) ?? null : null;
@@ -301,7 +312,7 @@ function buildFocusVm(query: OperatorDevicesAlertsQuery | undefined, offlineDevi
     lastTelemetryText: matchedDevice?.lastTelemetryText ?? "待设备中心返回",
     delayText: matchedDevice?.delayText ?? "数据延迟待确认",
     statusText: matchedDevice?.statusText ?? (mode === "AGGREGATE_ONLY" ? "聚合统计" : (mode === "MISSING_LOCATION" ? "缺少定位" : "设备明细不可用")),
-    handlingStatusText: handlingStatusText(mode),
+    handlingStatusText: offlineHandlingStatusText(mode),
     auditText: mode === "DEVICE_MATCHED" ? "审计状态：已定位设备，允许记录离线确认。" : "审计状态：只记录排查入口、设备/地块范围、后续人工核查建议。",
     nextSteps: [
       "核对最近心跳与最近遥测时间，确认是否为通信中断、供电问题或设备维护状态。",

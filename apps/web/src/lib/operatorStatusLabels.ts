@@ -6,6 +6,7 @@ export type OperatorStatusDomain =
   | "evidence"
   | "roi"
   | "device"
+  | "offline_handling"
   | "generic";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -36,6 +37,15 @@ const STATUS_LABELS: Record<string, string> = {
   EXECUTION_FAILED: "执行失败",
   EVIDENCE_INSUFFICIENT: "证据不足",
   REVIEW_REQUIRED: "需要复核",
+};
+
+const OFFLINE_HANDLING_LABELS: Record<string, string> = {
+  OPEN: "待处理",
+  ACKED: "已确认离线",
+  FOLLOWUP_REQUIRED: "需人工核查",
+  TASK_CANDIDATE_CREATED: "已生成维护任务候选",
+  CLOSED: "已关闭",
+  READ_ONLY: "只读",
 };
 
 const TERM_LABELS: Record<string, string> = {
@@ -73,16 +83,23 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+export function labelOperatorOfflineHandlingStatus(value: unknown, fallback = "处理状态待确认"): string {
+  const key = normalizeStatus(value);
+  if (!key) return fallback;
+  return OFFLINE_HANDLING_LABELS[key] ?? fallback;
+}
+
 export function labelOperatorStatus(value: unknown, fallback = "状态待确认"): string {
   const key = normalizeStatus(value);
   if (!key) return fallback;
-  return STATUS_LABELS[key] ?? fallback;
+  return STATUS_LABELS[key] ?? OFFLINE_HANDLING_LABELS[key] ?? fallback;
 }
 
 export function mapOperatorStatusLabel(value: unknown, domain: OperatorStatusDomain = "generic", fallback?: string): string {
   const key = normalizeStatus(value);
   if (!key) return fallback ?? "状态待确认";
-  const mapped = STATUS_LABELS[key];
+  if (domain === "offline_handling") return OFFLINE_HANDLING_LABELS[key] ?? fallback ?? "处理状态待确认";
+  const mapped = STATUS_LABELS[key] ?? OFFLINE_HANDLING_LABELS[key];
   if (mapped) return mapped;
   if (domain === "action") return replaceOperatorTerms(String(value ?? ""), fallback ?? "动作待确认");
   if (domain === "roi") return fallback ?? "价值状态待确认";
@@ -107,7 +124,7 @@ export function labelOperatorTerm(value: unknown, fallback = ""): string {
 export function replaceOperatorTerms(value: unknown, fallback = ""): string {
   const raw = String(value ?? "").trim();
   if (!raw) return fallback;
-  const exactStatus = STATUS_LABELS[normalizeStatus(raw)];
+  const exactStatus = STATUS_LABELS[normalizeStatus(raw)] ?? OFFLINE_HANDLING_LABELS[normalizeStatus(raw)];
   if (exactStatus) return exactStatus;
 
   let next = raw;
@@ -116,6 +133,10 @@ export function replaceOperatorTerms(value: unknown, fallback = ""): string {
     next = next.replace(new RegExp(escapeRegExp(term), "g"), TERM_LABELS[term]);
   }
 
+  const orderedOfflineStatuses = Object.keys(OFFLINE_HANDLING_LABELS).sort((a, b) => b.length - a.length);
+  for (const status of orderedOfflineStatuses) {
+    next = next.replace(new RegExp(`\\b${escapeRegExp(status)}\\b`, "g"), OFFLINE_HANDLING_LABELS[status]);
+  }
   const orderedStatuses = Object.keys(STATUS_LABELS).sort((a, b) => b.length - a.length);
   for (const status of orderedStatuses) {
     next = next.replace(new RegExp(`\\b${escapeRegExp(status)}\\b`, "g"), STATUS_LABELS[status]);
@@ -125,5 +146,5 @@ export function replaceOperatorTerms(value: unknown, fallback = ""): string {
 
 export function isRawOperatorStatus(value: unknown): boolean {
   const key = normalizeStatus(value);
-  return Boolean(key && STATUS_LABELS[key]);
+  return Boolean(key && (STATUS_LABELS[key] || OFFLINE_HANDLING_LABELS[key]));
 }
