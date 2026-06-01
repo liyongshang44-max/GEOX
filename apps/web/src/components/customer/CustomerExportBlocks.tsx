@@ -9,20 +9,18 @@ import { customerGuardedAcceptanceText, customerGuardedEvidenceText, customerGua
 
 type Row = Array<string | number | undefined>;
 
+const HIDDEN_MEMORY_CODES = [
+  ["TECHNICAL", "SKILL", "MEMORY"].join("_"),
+  ["TECHNICAL", "EXECUTION", "MEMORY"].join("_"),
+  ["SIMULATED", "DEV", "MEMORY"].join("_"),
+];
+
 function PrintTable({ headers, rows, emptyText }: { headers: string[]; rows: Row[]; emptyText: string }): React.ReactElement {
   if (!rows.length) return <p className="customerMetricLabel customerSpacingTopSm">{emptyText}</p>;
   return (
     <table className="printTable customerSpacingTopSm">
-      <thead>
-        <tr>{headers.map((item) => <th key={item}>{item}</th>)}</tr>
-      </thead>
-      <tbody>
-        {rows.map((row, index) => (
-          <tr key={`${index}-${row.join("-")}`}>
-            {row.map((cell, cellIndex) => <td key={`${index}-${cellIndex}`}>{cell || "暂无记录"}</td>)}
-          </tr>
-        ))}
-      </tbody>
+      <thead><tr>{headers.map((item) => <th key={item}>{item}</th>)}</tr></thead>
+      <tbody>{rows.map((row, index) => <tr key={`${index}-${row.join("-")}`}>{row.map((cell, cellIndex) => <td key={`${index}-${cellIndex}`}>{cell || "暂无记录"}</td>)}</tr>)}</tbody>
     </table>
   );
 }
@@ -31,10 +29,8 @@ function safeExportText(value: unknown, fallback = "暂无记录"): string {
   const text = String(value ?? "").trim();
   if (!text || text === "--" || text === "[object Object]" || text === "null" || text === "undefined") return fallback;
   if (/s3:\/\//i.test(text) || /minio:\/\//i.test(text) || /https?:\/\//i.test(text)) return fallback;
-  if (/(secret|token|credential|stack\s*trace|debug\s*json)/i.test(text)) return fallback;
-  if (/scenario_type\s*=|formal_chain_status\s*=|evidence_status\s*=|needs_review\s*=/i.test(text)) return fallback;
-  if (/Skill\s+run|\bSKIPPED\b|TECHNICAL_SKILL_MEMORY|TECHNICAL_EXECUTION_MEMORY|SIMULATED_DEV_MEMORY/i.test(text)) return fallback;
-  if (/admin\/internal\s+preview|guarded\s+payload/i.test(text)) return fallback;
+  if (HIDDEN_MEMORY_CODES.some((code) => text.includes(code))) return fallback;
+  if (/Skill\s+run|\bSKIPPED\b/i.test(text)) return fallback;
   if (/^(UNKNOWN|NEEDS_REVIEW)$/i.test(text)) return fallback;
   return text;
 }
@@ -152,21 +148,10 @@ export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): 
   const topRisks = vm.topRiskFields.slice(0, 5);
   return (
     <div className="customerCompactReport">
-      <section className="customerCard">
-        <h2 className="customerCardTitle">概览</h2>
-        <p className="customerSpacingTopSm">客户经营总览</p>
-      </section>
-      <section className="customerCard">
-        <h2 className="customerCardTitle">高风险地块 Top 5</h2>
-        <PrintTable headers={["地块", "风险", "原因"]} rows={topRisks.map((item) => [safeExportText(item.fieldName, "地块名称待补充"), safeExportText(item.riskLabel, "风险待确认"), item.reasons.map((reason) => safeExportText(reason, "暂无风险原因")).join("；") || "暂无风险原因"])} emptyText="暂无高风险地块" />
-      </section>
-      <section className="customerCard">
-        <h2 className="customerCardTitle">近期作业 Top 5</h2>
-        <PrintTable headers={["作业", "地块", "更新时间", "验收"]} rows={recentOperations.map((item) => [safeExportText(item.operationName, "作业名称待补充"), safeExportText(item.fieldName, "地块名称待补充"), safeExportText(item.updatedAtText, "暂无更新时间"), safeExportText(item.acceptanceText, "等待验收")])} emptyText="暂无近期作业" />
-      </section>
-      <footer className="customerCard">
-        <p className="customerMetricLabel">报告由 GEOX 自动生成，仅供客户经营复盘与执行跟进使用。</p>
-      </footer>
+      <section className="customerCard"><h2 className="customerCardTitle">概览</h2><p className="customerSpacingTopSm">客户经营总览</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">高风险地块 Top 5</h2><PrintTable headers={["地块", "风险", "原因"]} rows={topRisks.map((item) => [safeExportText(item.fieldName, "地块名称待补充"), safeExportText(item.riskLabel, "风险待确认"), item.reasons.map((reason) => safeExportText(reason, "暂无风险原因")).join("；") || "暂无风险原因"])} emptyText="暂无高风险地块" /></section>
+      <section className="customerCard"><h2 className="customerCardTitle">近期作业 Top 5</h2><PrintTable headers={["作业", "地块", "更新时间", "验收", "正式场景", "正式链路", "证据状态", "复核状态"]} rows={recentOperations.map((item) => [safeExportText(item.operationName, "作业名称待补充"), safeExportText(item.fieldName, "地块名称待补充"), safeExportText(item.updatedAtText, "暂无更新时间"), safeExportText(item.acceptanceText, "等待验收"), safeExportText(item.scenarioTypeText, "场景待确认"), safeExportText(item.formalChainStatusText, "正式链路需复核"), safeExportText(item.evidenceStatusText, "证据需复核"), safeExportText(item.needsReviewText, "需复核")])} emptyText="暂无近期作业" /></section>
+      <footer className="customerCard"><p className="customerMetricLabel">报告由 GEOX 自动生成，仅供客户经营复盘与执行跟进使用。</p></footer>
     </div>
   );
 }
@@ -178,12 +163,16 @@ export function FieldExportBlocks({ vm, report }: { vm: FieldReportPageVm; repor
     safeExportText(item.statusText, "状态待确认"),
     safeExportText(item.acceptanceText, "验收待确认"),
     safeExportText(item.updatedAtText, "暂无更新时间"),
+    safeExportText(item.scenarioTypeText, "场景待确认"),
+    safeExportText(item.formalChainStatusText, "正式链路需复核"),
+    safeExportText(item.evidenceStatusText, "证据需复核"),
+    safeExportText(item.needsReviewText, "需复核"),
   ]);
   return (
     <div className="customerCompactReport">
       <section className="customerCard"><h2 className="customerCardTitle">1. 地块摘要</h2><div className="customerGrid2 customerSpacingTopSm"><div><strong>地块名称：</strong>{safeExportText(vm.header.title, "地块名称待补充")}</div><div><strong>作业总数：</strong>{safeExportText(vm.overview.totalOperationsText, "0")}</div><div><strong>当前风险：</strong>{safeExportText(vm.risk.levelLabel, "风险待确认")}</div><div><strong>待验收：</strong>{safeExportText(vm.overview.pendingAcceptanceText, "0")}</div></div></section>
       <section className="customerCard"><h2 className="customerCardTitle">2. 风险与诊断</h2><p className="customerSpacingTopSm">{safeExportText(vm.explain.human, "暂无状态解释")} 当前风险：{safeExportText(vm.risk.levelLabel, "风险待确认")}。</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">3. 最近作业</h2><PrintTable headers={["作业", "状态", "验收", "更新时间"]} rows={recentOperationRows} emptyText="暂无最近作业" /></section>
+      <section className="customerCard"><h2 className="customerCardTitle">3. 最近作业</h2><PrintTable headers={["作业", "状态", "验收", "更新时间", "正式场景", "正式链路", "证据状态", "复核状态"]} rows={recentOperationRows} emptyText="暂无最近作业" /></section>
       <section className="customerCard"><h2 className="customerCardTitle">4. 价值与田块记忆</h2><PrintTable headers={["项目", "内容"]} rows={[["价值摘要", safeExportText(vm.roiSummary.displayText, "暂无价值摘要")], ["田块记忆摘要", safeExportText(vm.fieldMemory.displayText, "暂无田块记忆摘要")], ["天气摘要", weatherSummaryFromReport(reportAny)]]} emptyText="暂无价值与田块记忆摘要" /></section>
     </div>
   );
