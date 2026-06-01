@@ -1,3 +1,4 @@
+import type { FormalOperationSpatialScopeV1 } from "./formal_operation_spatial_scope_v1.js";
 import type { OperationPlanStatusV1 } from "./operation_plan_v1.js";
 
 export type OperationPlanTransitionV1 = {
@@ -9,8 +10,9 @@ export type OperationPlanTransitionV1 = {
     operation_plan_id: string;
     program_id?: string | null;
     field_id?: string | null;
+    spatial_scope?: FormalOperationSpatialScopeV1 | null;
     season_id?: string | null;
-    from_status: Exclude<OperationPlanStatusV1, "CREATED"> | "CREATED";
+    from_status: OperationPlanStatusV1 | null;
     status: OperationPlanStatusV1;
     trigger: string;
     approval_request_id?: string | null;

@@ -51,6 +51,7 @@
     "ci:governance:base-contract-negative": "node scripts/governance_acceptance/ACCEPTANCE_BASE_CONTRACT_NEGATIVE_RELEASE_GATE_V1.cjs",
     "ci:governance:formal-scenario-no-projection-write": "node scripts/governance_acceptance/ACCEPTANCE_FORMAL_SCENARIO_NO_PROJECTION_WRITE_V1.cjs",
     "ci:governance:operator-device-offline-actions": "node scripts/governance_acceptance/ACCEPTANCE_OPERATOR_DEVICE_OFFLINE_ACTIONS_V1.cjs",
+    "ci:governance:formal-operation-field-binding": "node scripts/governance_acceptance/ACCEPTANCE_FORMAL_OPERATION_FIELD_BINDING_V1.cjs",
     "ci:frontend:customer-trust-gate": "node scripts/governance_acceptance/ACCEPTANCE_FRONTEND_CUSTOMER_TRUST_GATE_V1.cjs",
     "ci:frontend:customer-product-language": "node scripts/frontend_acceptance/ACCEPTANCE_CUSTOMER_PRODUCT_LANGUAGE_V1.cjs",
     "ci:frontend:operator-device-offline-workflow": "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_DEVICE_OFFLINE_WORKFLOW_V1.cjs",

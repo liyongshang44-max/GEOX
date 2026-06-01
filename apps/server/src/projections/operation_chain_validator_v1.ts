@@ -117,8 +117,10 @@ function actionTypeFrom(input: ValidatorInput): string {
       ?? input.prescriptionPayload?.action_type
       ?? input.task?.meta?.operation_type
       ?? input.task?.operation_type
+      ?? input.task?.action_type
       ?? input.operationPlan?.meta?.operation_type
       ?? input.operationPlan?.operation_type
+      ?? input.operationPlan?.action_type
       ?? (reportLooksFertilization ? "FERTILIZATION" : undefined)
       ?? input.rec?.suggested_action?.action_type
       ?? input.report?.operation_type,
@@ -133,6 +135,36 @@ function isIrrigation(input: ValidatorInput): boolean {
 function isFertilization(input: ValidatorInput): boolean {
   const action = actionTypeFrom(input);
   return action.includes("FERTIL") || Boolean(input.report?.fertilization?.fertilization_prescription_id);
+}
+
+function validFieldId(value: unknown): boolean {
+  const raw = text(value);
+  return Boolean(raw && raw !== "..." && raw !== "undefined" && raw !== "null");
+}
+
+function spatialScopeHasFieldBinding(scope: any): boolean {
+  if (!scope || typeof scope !== "object") return false;
+  const kind = upper(scope.kind);
+  if (!kind || kind === "AGGREGATE_ONLY") return false;
+  if (validFieldId(scope.field_id)) return true;
+  if (Array.isArray(scope.field_ids) && scope.field_ids.some(validFieldId)) return true;
+  return false;
+}
+
+function operationHasFieldBinding(input: ValidatorInput, planPayload: any, taskPayload: any): boolean {
+  return Boolean(
+    validFieldId(input.operationPlan?.field_id)
+      || validFieldId(planPayload?.field_id)
+      || validFieldId(input.task?.field_id)
+      || validFieldId(taskPayload?.field_id)
+      || validFieldId(input.report?.identifiers?.field_id)
+      || validFieldId(input.report?.field_id)
+      || spatialScopeHasFieldBinding(input.operationPlan?.spatial_scope)
+      || spatialScopeHasFieldBinding(planPayload?.spatial_scope)
+      || spatialScopeHasFieldBinding(input.task?.spatial_scope)
+      || spatialScopeHasFieldBinding(taskPayload?.spatial_scope)
+      || spatialScopeHasFieldBinding(input.report?.spatial_scope)
+  );
 }
 
 function node(key: string, label: string, status: OperationChainStatusV1, reason: string, source: string): OperationChainItemV1 {
@@ -193,9 +225,12 @@ export function validateOperationChainV1(input: ValidatorInput): OperationChainV
 
   const rec = input.rec ?? payload(recFact);
   const receipt = input.receipt ?? payload(receiptFact);
+  const planPayload = payload(planFact);
+  const taskPayload = payload(taskFact);
   const stage1_sensing_summary = payload(stage1Fact);
   const isHelper = hasHelperOrSimulatedFact(facts);
   const receiptNotAcceptance = receiptBlocksAcceptance(receipt, facts);
+  const fieldBindingPresent = operationHasFieldBinding(input, planPayload, taskPayload);
 
   const soilMoisture = finite(rec?.skill_trace?.inputs?.soil_moisture ?? rec?.diagnosis?.soil_moisture ?? rec?.soil_moisture);
   const threshold = finite(
@@ -249,9 +284,13 @@ export function validateOperationChainV1(input: ValidatorInput): OperationChainV
   const approvalExists = Boolean(input.approval || approvalDecisionFact || latestByType(facts, "approval_request_v1"));
   const approvalStatus: OperationChainStatusV1 = approvalApproved ? "DONE" : approvalExists ? "PENDING" : "MISSING";
 
-  const planStatusText = upper(input.operationPlan?.status ?? payload(planFact)?.status);
+  const fieldBindingStatus: OperationChainStatusV1 = fieldBindingPresent ? "DONE" : "BLOCKED";
+  const planStatusText = upper(input.operationPlan?.status ?? planPayload?.status);
   const operationPlanExists = Boolean(planFact || input.operationPlan);
-  const operationPlanAuthorized = operationPlanExists && approvalApproved && ["APPROVED_FOR_EXECUTION", "READY", "READY_FOR_EXECUTION", "READY_TO_DISPATCH", "ACKED", "SUCCEEDED"].includes(planStatusText);
+  const operationPlanAuthorized = operationPlanExists
+    && approvalApproved
+    && fieldBindingPresent
+    && ["APPROVED", "APPROVED_FOR_EXECUTION", "READY", "READY_FOR_EXECUTION", "READY_TO_DISPATCH", "DISPATCHED", "ACKED", "SUCCEEDED"].includes(planStatusText);
   const operationPlanStatus: OperationChainStatusV1 = !operationPlanExists ? "MISSING" : operationPlanAuthorized ? "DONE" : "BLOCKED";
 
   const taskExists = Boolean(taskFact || input.execution?.act_task_id);
@@ -311,8 +350,9 @@ export function validateOperationChainV1(input: ValidatorInput): OperationChainV
     node("recommendation", "建议", recommendationStatus, recommendationStatus === "DONE" ? "正式建议已关联" : recommendationExists ? "上游诊断依据未通过校验，建议不能作为正式依据" : "缺少正式建议记录", recFact ? factType(recFact) : "operation_report_chain_v1"),
     node("prescription", "处方", prescriptionStatus, prescriptionStatus === "DONE" ? "正式处方已关联" : prescriptionExists ? "上游建议未通过校验，处方不能作为正式处方" : "缺少正式处方事实，不能仅凭作业计划中的处方编号认定处方成立", prescriptionFact ? factType(prescriptionFact) : "operation_report_chain_v1"),
     node("approval", "审批", approvalStatus, approvalApproved ? "审批结果已通过" : approvalExists ? "审批请求存在，但审批结果尚未通过" : "缺少审批记录", approvalDecisionFact ? "approval_decision_v1" : approvalExists ? "approval_request_v1" : "operation_report_chain_v1"),
-    node("operation_plan", "作业计划", operationPlanStatus, operationPlanStatus === "DONE" ? "作业计划已获得审批授权" : operationPlanExists ? "审批未通过，作业计划不能作为正式执行计划" : "缺少作业计划", planFact ? "operation_plan_v1" : "operation_report_chain_v1"),
-    node("execution", "执行", executionStatus, executionStatus === "DONE" ? "执行任务已由正式计划派发" : taskExists ? "上游作业计划未授权，执行任务不能作为正式执行" : "缺少执行任务", taskFact ? "ao_act_task_v0" : "operation_report_chain_v1"),
+    node("field_binding", "地块绑定", fieldBindingStatus, fieldBindingPresent ? "正式作业已绑定地块或明确空间范围" : "缺少地块绑定，需运营复核", operationPlanExists ? "operation_plan_v1" : taskExists ? "ao_act_task_v0" : "operation_report_chain_v1"),
+    node("operation_plan", "作业计划", operationPlanStatus, operationPlanStatus === "DONE" ? "作业计划已获得审批授权并具备地块绑定" : operationPlanExists && !fieldBindingPresent ? "缺少地块绑定，作业计划不能进入正式执行链路" : operationPlanExists ? "审批未通过，作业计划不能作为正式执行计划" : "缺少作业计划", planFact ? "operation_plan_v1" : "operation_report_chain_v1"),
+    node("execution", "执行", executionStatus, executionStatus === "DONE" ? "执行任务已由正式计划派发" : taskExists ? "上游作业计划未授权或缺少地块绑定，执行任务不能作为正式执行" : "缺少执行任务", taskFact ? "ao_act_task_v0" : "operation_report_chain_v1"),
     node("receipt", "回执", receiptStatus, receiptStatus === "DONE" ? "执行回执已记录且具备执行窗口" : receiptStatus === "SIMULATED" ? "该回执来自飞行台/模拟链路，不能作为验收通过依据" : receiptExists ? "回执缺少执行窗口或上游执行未成立" : "缺少执行回执", receiptFact ? factType(receiptFact) : "operation_report_chain_v1"),
     node("evidence", "证据", evidenceStatus, evidenceStatus === "DONE" ? (fertilization ? "施肥分区执行证据链完整" : "证据链完整") : evidenceStatus === "SIMULATED" ? "证据来自模拟链路，不能包装成正式验收证据" : "证据不足或上游回执未成立", fertilization && acceptanceFact ? factType(acceptanceFact) : fertilization && projectedFertilizationZoneEvidence ? "fertilization_report_projection_v1" : "operation_report_chain_v1"),
     node("acceptance", "验收", acceptanceStatus, acceptanceStatus === "DONE" ? "正式验收结论已形成" : acceptanceStatus === "SIMULATED" ? "飞行台回执成功不等于验收通过，验收结论需降级" : acceptanceExists && !acceptanceFormal ? "验收记录缺少 formal_acceptance gate metadata，不能作为正式客户结论" : acceptanceExists ? "上游证据未成立，验收不能作为正式结论" : "缺少验收结论", acceptanceFact ? factType(acceptanceFact) : "operation_report_chain_v1"),
@@ -326,17 +366,18 @@ export function validateOperationChainV1(input: ValidatorInput): OperationChainV
   if (isHelper) chain_flags.push("helper_or_simulated_facts_present");
   if (receiptNotAcceptance) chain_flags.push("receipt_success_is_not_acceptance_pass");
   if (!approvalApproved && approvalExists) chain_flags.push("approval_not_approved");
+  if (!fieldBindingPresent) chain_flags.push("NEEDS_FIELD_BINDING");
   if (irrigation && !stage1FormalTrigger && recommendationExists) chain_flags.push("missing_stage1_sensing_summary_formal_trigger");
   if (fertilization && !fertilizationFormalAssessment) chain_flags.push("missing_fertilization_assessment_fact");
   if (diagnosisStatus === "NEEDS_EVIDENCE") chain_flags.push("diagnosis_needs_core_evidence");
   if (!prescriptionExists && input.prescription) chain_flags.push("prescription_id_without_formal_prescription_fact");
-  if (operationPlanExists && !operationPlanAuthorized) chain_flags.push("operation_plan_without_approved_decision");
+  if (operationPlanExists && !operationPlanAuthorized) chain_flags.push(fieldBindingPresent ? "operation_plan_without_approved_decision" : "operation_plan_without_field_binding");
   if (receiptStatus === "SIMULATED") chain_flags.push("simulated_receipt_not_acceptance_proof");
   if (acceptanceStatus === "SIMULATED") chain_flags.push("simulated_acceptance_not_customer_conclusion");
   if (acceptanceExists && !acceptanceFormal) chain_flags.push("acceptance_result_without_formal_acceptance_gate");
 
   const blocking_reasons = status_chain.filter((item) => ["BLOCKED", "INVALID", "SIMULATED", "NEEDS_EVIDENCE"].includes(item.status)).map((item) => `${item.label}: ${item.reason}`);
-  const mandatoryPassed = status_chain.slice(0, 9).every((item) => item.status === "DONE");
+  const mandatoryPassed = status_chain.slice(0, 10).every((item) => item.status === "DONE");
   const chain_integrity: OperationChainValidationResultV1["chain_integrity"] = mandatoryPassed && !isHelper
     ? "COMPLETE"
     : isHelper || receiptNotAcceptance
