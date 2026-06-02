@@ -61,61 +61,16 @@ const CUSTOMER_VISIBLE_RAW_PATTERNS = [
 ];
 
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
-
-function withTimeout(promise, label, timeoutMs) {
-  let timer;
-  const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs); });
-  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
-}
-
-function requestOk(url) {
-  return new Promise((resolve) => {
-    const req = http.get(url, (res) => { res.resume(); resolve(res.statusCode && res.statusCode >= 200 && res.statusCode < 500); });
-    req.on('error', () => resolve(false));
-    req.setTimeout(1500, () => { req.destroy(); resolve(false); });
-  });
-}
-
-async function waitForHttp(url, timeoutMs) {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    if (await requestOk(url)) return true;
-    await sleep(500);
-  }
-  return false;
-}
-
-function ensurePlaywrightChromiumInstalled() {
-  if (process.env.FRONTEND_AUDIT_SKIP_BROWSER_INSTALL === '1') return;
-  console.log('[frontend-runtime-audit] ensuring Playwright Chromium is installed');
-  const ret = spawnSync('pnpm', ['exec', 'playwright', 'install', 'chromium'], { cwd: ROOT, env: process.env, stdio: 'inherit', timeout: INSTALL_TIMEOUT_MS });
-  if (ret.error) throw new Error(`playwright chromium install failed: ${ret.error.message || ret.error}`);
-  if (ret.signal) throw new Error(`playwright chromium install terminated by signal=${ret.signal}`);
-  if (ret.status !== 0) throw new Error(`playwright chromium install failed with exit=${ret.status}`);
-}
-
-function startWebServerIfNeeded() {
-  if (process.env.FRONTEND_AUDIT_SKIP_WEB_SERVER === '1') return null;
-  const child = spawn('pnpm', ['--filter', '@geox/web', 'dev', '--', '--host', '127.0.0.1', '--port', '5173'], {
-    cwd: ROOT,
-    env: { ...process.env, GEOX_WEB_PROXY_TARGET: API_BASE_URL, VITE_API_BASE_URL: '', VITE_API_BASE: '', BROWSER: 'none' },
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-  child.stdout.on('data', (chunk) => process.stdout.write(`[frontend-audit:web] ${chunk}`));
-  child.stderr.on('data', (chunk) => process.stderr.write(`[frontend-audit:web] ${chunk}`));
-  return child;
-}
-
+function withTimeout(promise, label, timeoutMs) { let timer; const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs); }); return Promise.race([promise, timeout]).finally(() => clearTimeout(timer)); }
+function requestOk(url) { return new Promise((resolve) => { const req = http.get(url, (res) => { res.resume(); resolve(res.statusCode && res.statusCode >= 200 && res.statusCode < 500); }); req.on('error', () => resolve(false)); req.setTimeout(1500, () => { req.destroy(); resolve(false); }); }); }
+async function waitForHttp(url, timeoutMs) { const start = Date.now(); while (Date.now() - start < timeoutMs) { if (await requestOk(url)) return true; await sleep(500); } return false; }
+function ensurePlaywrightChromiumInstalled() { if (process.env.FRONTEND_AUDIT_SKIP_BROWSER_INSTALL === '1') return; console.log('[frontend-runtime-audit] ensuring Playwright Chromium is installed'); const ret = spawnSync('pnpm', ['exec', 'playwright', 'install', 'chromium'], { cwd: ROOT, env: process.env, stdio: 'inherit', timeout: INSTALL_TIMEOUT_MS }); if (ret.error) throw new Error(`playwright chromium install failed: ${ret.error.message || ret.error}`); if (ret.signal) throw new Error(`playwright chromium install terminated by signal=${ret.signal}`); if (ret.status !== 0) throw new Error(`playwright chromium install failed with exit=${ret.status}`); }
+function startWebServerIfNeeded() { if (process.env.FRONTEND_AUDIT_SKIP_WEB_SERVER === '1') return null; const child = spawn('pnpm', ['--filter', '@geox/web', 'dev', '--', '--host', '127.0.0.1', '--port', '5173'], { cwd: ROOT, env: { ...process.env, GEOX_WEB_PROXY_TARGET: API_BASE_URL, VITE_API_BASE_URL: '', VITE_API_BASE: '', BROWSER: 'none' }, stdio: ['ignore', 'pipe', 'pipe'] }); child.stdout.on('data', (chunk) => process.stdout.write(`[frontend-audit:web] ${chunk}`)); child.stderr.on('data', (chunk) => process.stderr.write(`[frontend-audit:web] ${chunk}`)); return child; }
 function safeText(value, max = 500) { return String(value || '').replace(/\s+/g, ' ').trim().slice(0, max); }
 function routeSlug(route) { return route.replace(/^\//, '').replace(/[^a-z0-9_-]+/gi, '_') || 'root'; }
 function mdList(items) { return items.length ? items.map((item) => `- ${safeText(item, 350)}`).join('\n') : '- none'; }
 function addFailure(result, message) { result.failures.push(message); }
-function assertNoCustomerRawVisibleText(bodyText, result) {
-  if (!CUSTOMER_RAW_TEXT_ROUTES.has(result.route)) return;
-  for (const [label, pattern] of CUSTOMER_VISIBLE_RAW_PATTERNS) {
-    if (pattern.test(bodyText)) addFailure(result, `customer visible raw enum/reason leaked: ${label}`);
-  }
-}
+function assertNoCustomerRawVisibleText(bodyText, result) { if (!CUSTOMER_RAW_TEXT_ROUTES.has(result.route)) return; for (const [label, pattern] of CUSTOMER_VISIBLE_RAW_PATTERNS) { if (pattern.test(bodyText)) addFailure(result, `customer visible raw enum/reason leaked: ${label}`); } }
 
 async function assertDashboard1366Layout(page, result) {
   if (result.route !== '/customer/dashboard') return;
@@ -133,7 +88,7 @@ async function assertDashboard1366Layout(page, result) {
     });
     const rightRail = document.querySelector('.customerDashboardRightRail');
     const rightRailRect = rightRail ? rightRail.getBoundingClientRect() : null;
-    const narrowVisibleCards = Array.from(document.querySelectorAll('.customerDashboardRightRail .customerCard, .customerMetricCard')).map((node) => {
+    const narrowVisibleCards = Array.from(document.querySelectorAll('.customerDashboardRightRail .customerCard, .customerDashboardRightRail .customerMetricCard')).map((node) => {
       const rect = node.getBoundingClientRect();
       const text = (node.textContent || '').replace(/\s+/g, ' ').trim();
       return { label: node.getAttribute('class') || node.tagName.toLowerCase(), width: rect.width, textLength: text.length, left: rect.left, right: rect.right };
@@ -142,11 +97,9 @@ async function assertDashboard1366Layout(page, result) {
   }, DASHBOARD_LAYOUT_SELECTORS);
   result.layout1366 = layout;
   if (layout.scrollWidth > layout.viewportWidth) addFailure(result, `dashboard 1366 overflow: scrollWidth=${layout.scrollWidth} clientWidth=${layout.viewportWidth}`);
-  for (const card of layout.cards) {
-    if (card.left < -1 || card.right > layout.viewportWidth + 1) addFailure(result, `dashboard card outside viewport: ${card.label} left=${Math.round(card.left)} right=${Math.round(card.right)} viewport=${layout.viewportWidth}`);
-  }
+  for (const card of layout.cards) { if (card.left < -1 || card.right > layout.viewportWidth + 1) addFailure(result, `dashboard card outside viewport: ${card.label} left=${Math.round(card.left)} right=${Math.round(card.right)} viewport=${layout.viewportWidth}`); }
   if (layout.rightRail && layout.rightRail.width < 520) addFailure(result, `dashboard right rail too narrow at 1366: width=${Math.round(layout.rightRail.width)}`);
-  for (const card of layout.narrowVisibleCards) addFailure(result, `dashboard visible card compressed at 1366: ${card.label} width=${Math.round(card.width)}`);
+  for (const card of layout.narrowVisibleCards) addFailure(result, `dashboard right rail card compressed at 1366: ${card.label} width=${Math.round(card.width)}`);
 }
 
 async function auditRoute(browser, route) { return withTimeout(auditRouteUnsafe(browser, route), `audit route ${route}`, ROUTE_TIMEOUT_MS); }
@@ -154,39 +107,12 @@ async function auditRoute(browser, route) { return withTimeout(auditRouteUnsafe(
 async function auditRouteUnsafe(browser, route) {
   const result = { route, pass: true, visibleTextSample: '', consoleErrors: [], consoleWarnings: [], networkErrors: [], warnings: [], screenshotPath: '', diagnosis: [], failures: [], layout1366: null };
   const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
-  await context.addInitScript(({ token }) => {
-    const tenantContext = { tenant_id: 'tenantA', project_id: 'projectA', group_id: 'groupA' };
-    const meta = { role: 'admin', actor_id: 'frontend-runtime-audit', token_id: 'frontend-runtime-audit', scopes: ['operator.read', 'operator.write', 'customer.read', 'security.admin', 'ao_act.task.write', 'ao_act.receipt.write'] };
-    window.localStorage.setItem('geox_ao_act_token', token);
-    window.sessionStorage.setItem('geox_ao_act_token', token);
-    window.localStorage.setItem('geox_tenant_context', JSON.stringify(tenantContext));
-    window.sessionStorage.setItem('geox_tenant_context', JSON.stringify(tenantContext));
-    window.localStorage.setItem('geox_session_meta', JSON.stringify(meta));
-    window.sessionStorage.setItem('geox_session_meta', JSON.stringify(meta));
-  }, { token: ACCEPTANCE_TOKEN });
-
+  await context.addInitScript(({ token }) => { const tenantContext = { tenant_id: 'tenantA', project_id: 'projectA', group_id: 'groupA' }; const meta = { role: 'admin', actor_id: 'frontend-runtime-audit', token_id: 'frontend-runtime-audit', scopes: ['operator.read', 'operator.write', 'customer.read', 'security.admin', 'ao_act.task.write', 'ao_act.receipt.write'] }; window.localStorage.setItem('geox_ao_act_token', token); window.sessionStorage.setItem('geox_ao_act_token', token); window.localStorage.setItem('geox_tenant_context', JSON.stringify(tenantContext)); window.sessionStorage.setItem('geox_tenant_context', JSON.stringify(tenantContext)); window.localStorage.setItem('geox_session_meta', JSON.stringify(meta)); window.sessionStorage.setItem('geox_session_meta', JSON.stringify(meta)); }, { token: ACCEPTANCE_TOKEN });
   const page = await context.newPage();
-  page.on('console', (msg) => {
-    const text = safeText(msg.text(), 800);
-    if (msg.type() === 'error') result.consoleErrors.push(text);
-    if (msg.type() === 'warning') { result.consoleWarnings.push(text); if (DUPLICATE_KEY_RE.test(text)) addFailure(result, `React duplicate key warning: ${text}`); }
-  });
+  page.on('console', (msg) => { const text = safeText(msg.text(), 800); if (msg.type() === 'error') result.consoleErrors.push(text); if (msg.type() === 'warning') { result.consoleWarnings.push(text); if (DUPLICATE_KEY_RE.test(text)) addFailure(result, `React duplicate key warning: ${text}`); } });
   page.on('pageerror', (err) => result.consoleErrors.push(safeText(err.stack || err.message || err, 800)));
-  page.on('requestfailed', (req) => {
-    const url = req.url();
-    if (/favicon\.ico$/i.test(url)) { result.warnings.push(`favicon request failed: ${url}`); return; }
-    if (!url.includes('/api/')) result.warnings.push(`non-api request failed: ${url} ${req.failure()?.errorText || ''}`);
-  });
-  page.on('response', (res) => {
-    const url = res.url();
-    const status = res.status();
-    if (url.includes('/api/') && (status === 404 || status >= 500)) result.networkErrors.push(`${status} ${url}`);
-    else if (url.includes('/api/') && status >= 400) result.warnings.push(`api auth/permission ${status}: ${url}`);
-    else if (status >= 400 && /favicon\.ico$/i.test(url)) result.warnings.push(`favicon ${status}: ${url}`);
-    else if (status >= 400) result.warnings.push(`non-api ${status}: ${url}`);
-    if (DEVTOOLS_DISABLED && route === '/dev/flight-table' && url.includes('/api/v1/dev/flight-table/')) addFailure(result, `devtools disabled but flight table dev API was requested: ${url}`);
-  });
-
+  page.on('requestfailed', (req) => { const url = req.url(); if (/favicon\.ico$/i.test(url)) { result.warnings.push(`favicon request failed: ${url}`); return; } if (!url.includes('/api/')) result.warnings.push(`non-api request failed: ${url} ${req.failure()?.errorText || ''}`); });
+  page.on('response', (res) => { const url = res.url(); const status = res.status(); if (url.includes('/api/') && (status === 404 || status >= 500)) result.networkErrors.push(`${status} ${url}`); else if (url.includes('/api/') && status >= 400) result.warnings.push(`api auth/permission ${status}: ${url}`); else if (status >= 400 && /favicon\.ico$/i.test(url)) result.warnings.push(`favicon ${status}: ${url}`); else if (status >= 400) result.warnings.push(`non-api ${status}: ${url}`); if (DEVTOOLS_DISABLED && route === '/dev/flight-table' && url.includes('/api/v1/dev/flight-table/')) addFailure(result, `devtools disabled but flight table dev API was requested: ${url}`); });
   try {
     await page.goto(`${WEB_BASE_URL}${route}`, { waitUntil: 'domcontentloaded', timeout: 20_000 });
     await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => undefined);
@@ -204,76 +130,13 @@ async function auditRouteUnsafe(browser, route) {
     await assertDashboard1366Layout(page, result);
     for (const error of result.consoleErrors) addFailure(result, `console.error/pageerror: ${error}`);
     for (const networkError of result.networkErrors) addFailure(result, `/api 404/5xx response: ${networkError}`);
-  } catch (error) {
-    addFailure(result, `navigation/audit exception: ${safeText(error && (error.stack || error.message || error), 900)}`);
-  } finally {
-    fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
-    const screenshotRel = `docs/audit/frontend-runtime-page-audit/${routeSlug(route)}.png`;
-    result.screenshotPath = screenshotRel;
-    await page.screenshot({ path: path.join(ROOT, screenshotRel), fullPage: true }).catch((error) => { result.warnings.push(`screenshot failed: ${safeText(error.message || error)}`); });
-    await context.close().catch(() => undefined);
-  }
+  } catch (error) { addFailure(result, `navigation/audit exception: ${safeText(error && (error.stack || error.message || error), 900)}`); }
+  finally { fs.mkdirSync(SCREENSHOT_DIR, { recursive: true }); const screenshotRel = `docs/audit/frontend-runtime-page-audit/${routeSlug(route)}.png`; result.screenshotPath = screenshotRel; await page.screenshot({ path: path.join(ROOT, screenshotRel), fullPage: true }).catch((error) => { result.warnings.push(`screenshot failed: ${safeText(error.message || error)}`); }); await context.close().catch(() => undefined); }
   result.pass = result.failures.length === 0;
   result.diagnosis = result.pass ? ['runtime page audit passed'] : result.failures;
   return result;
 }
 
-function writeReport(results) {
-  fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
-  const lines = [];
-  lines.push('# Frontend Runtime Page Audit Report', '', `Generated at: ${new Date().toISOString()}`, `Web base URL: ${WEB_BASE_URL}`, `API proxy target: ${API_BASE_URL}`, `Devtools disabled: ${DEVTOOLS_DISABLED ? 'yes' : 'no'}`, `Routes audited: ${ROUTES.length}`);
-  if (process.env.FRONTEND_AUDIT_ROUTES) lines.push(`Route source: FRONTEND_AUDIT_ROUTES`);
-  lines.push('', '| route | status | screenshot | diagnosis |', '| --- | --- | --- | --- |');
-  for (const result of results) lines.push(`| \`${result.route}\` | ${result.pass ? 'PASS' : 'FAIL'} | \`${result.screenshotPath}\` | ${safeText(result.diagnosis.join('; '), 180).replace(/\|/g, '/')} |`);
-  lines.push('');
-  for (const result of results) {
-    lines.push(`## ${result.route}`, '', `- pass/fail: ${result.pass ? 'PASS' : 'FAIL'}`, `- screenshot path: \`${result.screenshotPath}\``, `- visible text sample: ${result.visibleTextSample ? `\`${result.visibleTextSample.replace(/`/g, "'")}\`` : '_empty_'}`);
-    if (result.layout1366) lines.push(`- layout 1366: \`scrollWidth=${result.layout1366.scrollWidth}; clientWidth=${result.layout1366.viewportWidth}; checked=${result.layout1366.cards.length}\``);
-    lines.push('- console errors:', mdList(result.consoleErrors), '- console warnings:', mdList(result.consoleWarnings), '- network 4xx/5xx:', mdList(result.networkErrors), '- warnings:', mdList(result.warnings), '- diagnosis:', mdList(result.diagnosis), '');
-  }
-  fs.writeFileSync(REPORT_PATH, `${lines.join('\n')}\n`);
-}
-
-async function runAudit() {
-  let chromium;
-  try { ({ chromium } = require('@playwright/test')); } catch (error) { throw new Error(`@playwright/test is required for browser runtime audit: ${error.message || error}`); }
-  console.log('[frontend-runtime-audit] route_count', ROUTES.length);
-  console.log('[frontend-runtime-audit] routes', ROUTES.join(', '));
-  console.log('[frontend-runtime-audit] route_timeout_ms', ROUTE_TIMEOUT_MS);
-  console.log('[frontend-runtime-audit] total_timeout_ms', AUDIT_TIMEOUT_MS);
-  ensurePlaywrightChromiumInstalled();
-  let webProcess = null;
-  const alreadyReady = await waitForHttp(WEB_BASE_URL, 1500);
-  if (!alreadyReady) {
-    webProcess = startWebServerIfNeeded();
-    const ready = await waitForHttp(WEB_BASE_URL, 45_000);
-    if (!ready) throw new Error(`frontend web server not ready: ${WEB_BASE_URL}`);
-  }
-  const browser = await chromium.launch({ headless: true });
-  const results = [];
-  try {
-    for (const route of ROUTES) {
-      console.log(`[frontend-runtime-audit] auditing ${route}`);
-      results.push(await auditRoute(browser, route));
-    }
-  } finally {
-    await browser.close().catch(() => undefined);
-    if (webProcess) { webProcess.kill('SIGTERM'); setTimeout(() => webProcess.kill('SIGKILL'), 3000).unref(); }
-  }
-  writeReport(results);
-  const failed = results.filter((result) => !result.pass);
-  if (failed.length) {
-    console.error(`[frontend-runtime-audit] failed routes: ${failed.map((item) => item.route).join(', ')}`);
-    console.error(`[frontend-runtime-audit] report: ${REPORT_PATH}`);
-    process.exit(1);
-  }
-  console.log(`[frontend-runtime-audit] passed ${results.length} routes`);
-  console.log(`[frontend-runtime-audit] report: ${REPORT_PATH}`);
-}
-
-withTimeout(runAudit(), 'frontend runtime page audit', AUDIT_TIMEOUT_MS).catch((error) => {
-  fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
-  fs.writeFileSync(REPORT_PATH, `# Frontend Runtime Page Audit Report\n\nFAIL: ${safeText(error && (error.stack || error.message || error), 1500)}\n`);
-  console.error(error);
-  process.exit(1);
-});
+function writeReport(results) { fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true }); const lines = []; lines.push('# Frontend Runtime Page Audit Report', '', `Generated at: ${new Date().toISOString()}`, `Web base URL: ${WEB_BASE_URL}`, `API proxy target: ${API_BASE_URL}`, `Devtools disabled: ${DEVTOOLS_DISABLED ? 'yes' : 'no'}`, `Routes audited: ${ROUTES.length}`); if (process.env.FRONTEND_AUDIT_ROUTES) lines.push(`Route source: FRONTEND_AUDIT_ROUTES`); lines.push('', '| route | status | screenshot | diagnosis |', '| --- | --- | --- | --- |'); for (const result of results) lines.push(`| \`${result.route}\` | ${result.pass ? 'PASS' : 'FAIL'} | \`${result.screenshotPath}\` | ${safeText(result.diagnosis.join('; '), 180).replace(/\|/g, '/')} |`); lines.push(''); for (const result of results) { lines.push(`## ${result.route}`, '', `- pass/fail: ${result.pass ? 'PASS' : 'FAIL'}`, `- screenshot path: \`${result.screenshotPath}\``, `- visible text sample: ${result.visibleTextSample ? `\`${result.visibleTextSample.replace(/`/g, "'")}\`` : '_empty_'}`); if (result.layout1366) lines.push(`- layout 1366: \`scrollWidth=${result.layout1366.scrollWidth}; clientWidth=${result.layout1366.viewportWidth}; checked=${result.layout1366.cards.length}\``); lines.push('- console errors:', mdList(result.consoleErrors), '- console warnings:', mdList(result.consoleWarnings), '- network 4xx/5xx:', mdList(result.networkErrors), '- warnings:', mdList(result.warnings), '- diagnosis:', mdList(result.diagnosis), ''); } fs.writeFileSync(REPORT_PATH, `${lines.join('\n')}\n`); }
+async function runAudit() { let chromium; try { ({ chromium } = require('@playwright/test')); } catch (error) { throw new Error(`@playwright/test is required for browser runtime audit: ${error.message || error}`); } console.log('[frontend-runtime-audit] route_count', ROUTES.length); console.log('[frontend-runtime-audit] routes', ROUTES.join(', ')); console.log('[frontend-runtime-audit] route_timeout_ms', ROUTE_TIMEOUT_MS); console.log('[frontend-runtime-audit] total_timeout_ms', AUDIT_TIMEOUT_MS); ensurePlaywrightChromiumInstalled(); let webProcess = null; const alreadyReady = await waitForHttp(WEB_BASE_URL, 1500); if (!alreadyReady) { webProcess = startWebServerIfNeeded(); const ready = await waitForHttp(WEB_BASE_URL, 45_000); if (!ready) throw new Error(`frontend web server not ready: ${WEB_BASE_URL}`); } const browser = await chromium.launch({ headless: true }); const results = []; try { for (const route of ROUTES) { console.log(`[frontend-runtime-audit] auditing ${route}`); results.push(await auditRoute(browser, route)); } } finally { await browser.close().catch(() => undefined); if (webProcess) { webProcess.kill('SIGTERM'); setTimeout(() => webProcess.kill('SIGKILL'), 3000).unref(); } } writeReport(results); const failed = results.filter((result) => !result.pass); if (failed.length) { console.error(`[frontend-runtime-audit] failed routes: ${failed.map((item) => item.route).join(', ')}`); console.error(`[frontend-runtime-audit] report: ${REPORT_PATH}`); process.exit(1); } console.log(`[frontend-runtime-audit] passed ${results.length} routes`); console.log(`[frontend-runtime-audit] report: ${REPORT_PATH}`); }
+withTimeout(runAudit(), 'frontend runtime page audit', AUDIT_TIMEOUT_MS).catch((error) => { fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true }); fs.writeFileSync(REPORT_PATH, `# Frontend Runtime Page Audit Report\n\nFAIL: ${safeText(error && (error.stack || error.message || error), 1500)}\n`); console.error(error); process.exit(1); });
