@@ -20,6 +20,21 @@ function mustNot(text, pattern, label) {
     process.exitCode = 1;
   }
 }
+function stringLiterals(text) {
+  const out = [];
+  const re = /(["'`])((?:\\.|(?!\1)[\s\S])*?)\1/g;
+  let match;
+  while ((match = re.exec(text))) out.push(match[2]);
+  return out;
+}
+function mustNotVisibleLiteral(text, pattern, label) {
+  for (const literal of stringLiterals(text)) {
+    if (pattern.test(literal)) {
+      console.error(`[operator-device-offline-workflow] forbidden visible literal ${label}: ${literal.slice(0, 180)}`);
+      process.exitCode = 1;
+    }
+  }
+}
 
 const workbenchApi = read('apps/web/src/api/operatorWorkbench.ts');
 const devicesApi = read('apps/web/src/api/operatorDevicesAlerts.ts');
@@ -27,13 +42,14 @@ const devicesVm = read('apps/web/src/viewmodels/operatorDevicesAlertsVm.ts');
 const devicesPage = read('apps/web/src/views/operator/OperatorDevicesAlertsPage.tsx');
 const handlingPanel = read('apps/web/src/components/operator/DeviceOfflineHandlingPanel.tsx');
 const statusLabels = read('apps/web/src/lib/operatorStatusLabels.ts');
+const operatorProductGate = read('scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_PRODUCT_LANGUAGE_V1.cjs');
 
 must(workbenchApi, /export function isPlaceholderId\(value: unknown\): boolean/, 'workbench exports placeholder id guard');
 must(workbenchApi, /PLACEHOLDER_ID_VALUES = new Set\(\["\.\.\.", "…", "--", "undefined", "null", "待确认", "未定位到设备", "地块待确认"\]\)/, 'workbench placeholder values include required tokens');
 must(workbenchApi, /function idText\(value: unknown\): string \{\s*return isPlaceholderId\(value\) \? ""/, 'workbench idText uses placeholder guard');
 must(workbenchApi, /key\.endsWith\("_id"\) \? idText\(value\) : text\(value\)/, 'appendQuery filters *_id params');
 must(workbenchApi, /if \(deviceId\) return appendQuery\(QUEUE_HREF\.DEVICE_OFFLINE, \{ device_id: deviceId, field_id: fieldId, online_status: "OFFLINE" \}\)/, 'workbench located device URL');
-must(workbenchApi, /source: "aggregate", field_id: fieldId/, 'workbench aggregate URL');
+must(workbenchApi, /source: "aggregate", field_id: fieldId/, 'workbench aggregate URL includes source=aggregate');
 must(workbenchApi, /const safeActionHref = queue === "DEVICE_OFFLINE" \? defaultActionHref\(queue, row\) : text\(row\.action_href, defaultActionHref\(queue, row\)\)/, 'device offline ignores unsafe external action_href');
 mustNot(workbenchApi, /field-device-/, 'no synthetic aggregate device id');
 mustNot(workbenchApi, /DEVICE_OFFLINE[\s\S]{0,120}\/operator\/workbench/, 'offline todo must not fallback to workbench');
@@ -69,8 +85,16 @@ must(devicesVm, /!deviceId \? "MISSING_LOCATION"/, 'missing location mode');
 must(devicesVm, /highlighted: isTargetDevice/, 'target highlight');
 must(devicesVm, /labelOperatorOfflineHandlingStatus\("OPEN"\)/, 'vm maps OPEN handling status');
 must(devicesVm, /labelOperatorOfflineHandlingStatus\("READ_ONLY"\)/, 'vm maps READ_ONLY handling status');
-must(devicesVm, /labelOperatorOfflineHandlingStatus\("FOLLOWUP_REQUIRED"\)/, 'vm maps FOLLOWUP_REQUIRED handling status');
+must(devicesVm, /labelOperatorOfflineHandlingStatus\("FOLLOWUP_REQUIRED"\)/, 'vm maps FOLLOWUP_REQUIRED handling status internally');
 mustNot(devicesVm, /return "OPEN"|return "READ_ONLY"|return "FOLLOWUP_REQUIRED"|return "TASK_CANDIDATE_CREATED"/, 'vm must not return raw handling status');
+mustNotVisibleLiteral(devicesVm + devicesPage + handlingPanel, /device_id\s*=/i, 'device_id=');
+mustNotVisibleLiteral(devicesVm + devicesPage + handlingPanel, /field_id\s*=/i, 'field_id=');
+mustNotVisibleLiteral(devicesVm + devicesPage + handlingPanel, /FOLLOWUP_REQUIRED/, 'FOLLOWUP_REQUIRED');
+
+must(devicesVm + devicesPage + handlingPanel + workbenchApi, /source[=:]"aggregate"|source: "aggregate"|source=aggregate/, 'source=aggregate aggregate provenance');
+must(devicesVm + devicesPage + handlingPanel, /缺少设备定位信息/, 'missing device location text');
+must(devicesVm + devicesPage + handlingPanel + statusLabels, /需人工核查/, 'manual review text');
+must(devicesVm + devicesPage + handlingPanel + statusLabels, /已确认离线/, 'confirmed offline text');
 
 must(devicesPage, /DeviceOfflineHandlingPanel/, 'handling panel rendered');
 must(devicesPage, /labelOperatorOfflineHandlingStatus\(result\.status\)/, 'offline action success status uses handling labels');
@@ -85,6 +109,12 @@ must(handlingPanel, /labelOperatorOfflineHandlingStatus/, 'handling panel applie
 must(handlingPanel, /正在提交处理结果\.\.\./, 'submitting state');
 must(handlingPanel, /已记录设备离线确认，审计编号：/, 'success fallback state');
 must(handlingPanel, /动作未开放。当前只能记录需人工核查，不能直接创建任务/, 'disabled fallback state');
+for (const required of ['device_id=...', 'field_id=...', '处理状态 FOLLOWUP_REQUIRED', 'source=aggregate', '缺少设备定位信息', '需人工核查', '已确认离线']) {
+  if (!operatorProductGate.includes(required)) {
+    console.error(`[operator-device-offline-workflow] operator product language gate must document/check: ${required}`);
+    process.exitCode = 1;
+  }
+}
 
 if (process.exitCode) {
   console.error('[operator-device-offline-workflow] FAIL');
