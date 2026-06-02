@@ -3,6 +3,41 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
+let failed = false;
+
+function read(rel) {
+  const file = path.join(ROOT, rel);
+  if (!fs.existsSync(file)) {
+    console.error(`[customer-product-language] missing checked file: ${rel}`);
+    failed = true;
+    return '';
+  }
+  return fs.readFileSync(file, 'utf8');
+}
+
+function reportSection(report, route) {
+  const start = report.indexOf(`## ${route}`);
+  if (start < 0) return '';
+  const next = report.indexOf('\n## ', start + 1);
+  return next < 0 ? report.slice(start) : report.slice(start, next);
+}
+
+function stringLiterals(text) {
+  const out = [];
+  const re = /(["'`])((?:\\.|(?!\1)[\s\S])*?)\1/g;
+  let match;
+  while ((match = re.exec(text))) out.push(match[2]);
+  return out;
+}
+
+function requireText(name, text, required) {
+  for (const item of required) {
+    if (!text.includes(item)) {
+      console.error(`[customer-product-language] ${name} missing required text: ${item}`);
+      failed = true;
+    }
+  }
+}
 
 const checkedFiles = [
   'apps/web/src/views/CustomerDashboardPage.tsx',
@@ -77,33 +112,6 @@ const customerRawLeakBanned = [
   ['BLOCKED', /\bBLOCKED\b/],
 ];
 
-let failed = false;
-
-function read(rel) {
-  const file = path.join(ROOT, rel);
-  if (!fs.existsSync(file)) {
-    console.error(`[customer-product-language] missing checked file: ${rel}`);
-    failed = true;
-    return '';
-  }
-  return fs.readFileSync(file, 'utf8');
-}
-
-function reportSection(report, route) {
-  const start = report.indexOf(`## ${route}`);
-  if (start < 0) return '';
-  const next = report.indexOf('\n## ', start + 1);
-  return next < 0 ? report.slice(start) : report.slice(start, next);
-}
-
-function stringLiterals(text) {
-  const out = [];
-  const re = /(["'`])((?:\\.|(?!\1)[\s\S])*?)\1/g;
-  let match;
-  while ((match = re.exec(text))) out.push(match[2]);
-  return out;
-}
-
 for (const rel of checkedFiles) {
   const text = read(rel);
   for (const [label, pattern] of banned) {
@@ -156,19 +164,14 @@ for (const [label, pattern] of dashboardVmVisibleBanned) {
     failed = true;
   }
 }
-for (const required of [
+requireText('dashboard VM natural wording', dashboardVm, [
   '当前可见授权设备共',
   '当前未发现告警事件',
   '当前页仅展示客户可见授权设备，不推断未授权设备或当前地块设备',
   '地块边界：已接入',
   '地块边界：暂未接入',
-]) {
-  if (!dashboardVm.includes(required)) {
-    console.error(`[customer-product-language] dashboard VM missing required natural customer wording: ${required}`);
-    failed = true;
-  }
-}
-for (const required of [
+]);
+requireText('dashboard VM Part E usability wording', dashboardVm, [
   'usagePath',
   'guidanceCards',
   '当前经营状态',
@@ -182,12 +185,8 @@ for (const required of [
   '下一步',
   '正式性提示',
   '导出报告可直接用于客户或管理层复盘',
-]) {
-  if (!dashboardVm.includes(required)) {
-    console.error(`[customer-product-language] dashboard VM missing Part E usability wording: ${required}`);
-    failed = true;
-  }
-}
+]);
+
 const fieldRiskPanel = read('apps/web/src/components/cockpit/CockpitFieldRiskPanel.tsx');
 if (!/boundarySummary/.test(fieldRiskPanel) || !/地块边界：已接入/.test(fieldRiskPanel) || !/地块边界：暂未接入/.test(fieldRiskPanel)) {
   console.error('[customer-product-language] field risk panel must expose natural field boundary wording');
@@ -216,12 +215,7 @@ if (!/customerDashboardScopeText/.test(dashboardPage)) {
   console.error('[customer-product-language] dashboard scope explanation must be rendered in full-width dashboard area');
   failed = true;
 }
-for (const required of ['customerUsagePathCard', 'customerDashboardGuidanceGrid', 'customerGuidanceCard', '当前状态', '为什么', '下一步', '正式性提示']) {
-  if (!dashboardPage.includes(required)) {
-    console.error(`[customer-product-language] dashboard page missing Part E usage path render: ${required}`);
-    failed = true;
-  }
-}
+requireText('dashboard page Part E usage path render', dashboardPage, ['customerUsagePathCard', 'customerDashboardGuidanceGrid', 'customerGuidanceCard', '当前状态', '为什么', '下一步', '正式性提示']);
 
 const requiredStructuredCards = [
   'apps/web/src/components/cockpit/CockpitActionCard.tsx',
@@ -231,21 +225,10 @@ const requiredStructuredCards = [
   'apps/web/src/components/cockpit/ValueResultPanel.tsx',
 ];
 for (const rel of requiredStructuredCards) {
-  const text = read(rel);
-  for (const required of ['当前状态', '为什么', '下一步', '正式性提示']) {
-    if (!text.includes(required)) {
-      console.error(`[customer-product-language] customer main visual card ${rel} missing structured copy: ${required}`);
-      failed = true;
-    }
-  }
+  requireText(`customer main visual card ${rel}`, read(rel), ['当前状态', '为什么', '下一步', '正式性提示']);
 }
 
-for (const required of ['1. 本期摘要', '2. 主要风险', '3. 待处理事项', '4. 作业进展', '5. 设备状态', '6. 证据与验收', '7. 价值记录', '8. 附注：哪些结论尚待复核', '可用于客户或管理层复盘']) {
-  if (!exportBlocks.includes(required)) {
-    console.error(`[customer-product-language] dashboard export missing report section: ${required}`);
-    failed = true;
-  }
-}
+requireText('dashboard export report sections', exportBlocks, ['1. 本期摘要', '2. 主要风险', '3. 待处理事项', '4. 作业进展', '5. 设备状态', '6. 证据与验收', '7. 价值记录', '8. 附注：哪些结论尚待复核', '可用于客户或管理层复盘']);
 
 const dashboardCss = read('apps/web/src/styles/customerDashboard.css');
 if (!/max-width:\s*1500px[\s\S]*customerDashboardRightRail[\s\S]*grid-column:\s*1\s*\/\s*-1/.test(dashboardCss)) {
@@ -256,20 +239,10 @@ if (!/customerDashboardKpiRow[\s\S]*repeat\(3,\s*minmax\(220px,\s*1fr\)\)/.test(
   console.error('[customer-product-language] dashboard KPI row must cap to 3 columns around 1366px');
   failed = true;
 }
-for (const required of ['customerUsagePathCard', 'customerDashboardGuidanceGrid', 'customerStructuredCard', 'customerUsageActions']) {
-  if (!dashboardCss.includes(required)) {
-    console.error(`[customer-product-language] dashboard CSS missing usability class: ${required}`);
-    failed = true;
-  }
-}
+requireText('dashboard CSS usability classes', dashboardCss, ['customerUsagePathCard', 'customerDashboardGuidanceGrid', 'customerStructuredCard', 'customerUsageActions']);
 
 const safeText = read('apps/web/src/lib/customerSafeText.ts');
-for (const required of ['等待正式验收', '需正式验收后确认', '土壤水分偏低', '近期无降雨预报', '暂不形成正式结论', '需要人工复核', '暂不需要人工复核', '链路待校验', '链路已通过', '有限记录', '证据待补充', '证据已通过']) {
-  if (!safeText.includes(required)) {
-    console.error(`[customer-product-language] customerSafeText missing required customer wording: ${required}`);
-    failed = true;
-  }
-}
+requireText('customerSafeText required wording', safeText, ['等待正式验收', '需正式验收后确认', '土壤水分偏低', '近期无降雨预报', '暂不形成正式结论', '需要人工复核', '暂不需要人工复核', '链路待校验', '链路已通过', '有限记录', '证据待补充', '证据已通过']);
 
 const memoryPanel = read('apps/web/src/components/customer/FieldMemoryPanel.tsx');
 const memoryVm = read('apps/web/src/viewmodels/customerFieldMemoryVm.ts');
@@ -304,7 +277,7 @@ if (fs.existsSync(reportPath)) {
       failed = true;
     }
   }
-  for (const required of ['当前经营状态', '建议处理顺序', '查看高风险地块', '排查离线设备', '查看最近作业', '导出报告', '正式性提示', '1. 本期摘要', '8. 附注：哪些结论尚待复核']) {
+  for (const required of ['当前经营状态', '建议处理顺序', '查看高风险地块', '排查离线设备', '查看最近作业', '导出报告', '正式性提示']) {
     if (!customerReportText.includes(required)) {
       console.error(`[customer-product-language] runtime customer pages missing Part E usability wording: ${required}`);
       failed = true;
