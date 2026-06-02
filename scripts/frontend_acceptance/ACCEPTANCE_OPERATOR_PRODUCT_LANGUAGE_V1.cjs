@@ -4,6 +4,7 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const mainVisualFiles = [
+  'apps/web/src/views/operator/OperatorWorkbenchPage.tsx',
   'apps/web/src/views/operator/OperatorDevicesAlertsPage.tsx',
   'apps/web/src/viewmodels/operatorDevicesAlertsVm.ts',
   'apps/web/src/components/operator/DeviceOfflineHandlingPanel.tsx',
@@ -58,9 +59,12 @@ for (const rel of mainVisualFiles) {
 }
 
 const page = read('apps/web/src/views/operator/OperatorDevicesAlertsPage.tsx');
+const workbench = read('apps/web/src/views/operator/OperatorWorkbenchPage.tsx');
 const vm = read('apps/web/src/viewmodels/operatorDevicesAlertsVm.ts');
 const panel = read('apps/web/src/components/operator/DeviceOfflineHandlingPanel.tsx');
 const labels = read('apps/web/src/lib/operatorStatusLabels.ts');
+const operatorLayout = read('apps/web/src/layouts/OperatorLayout.tsx');
+const operatorUsabilityCss = read('apps/web/src/styles/operatorUsability.css');
 for (const required of [
   '当前显示有限设备状态摘要',
   '设备明细接口尚未返回完整列表，当前以统一统计口径展示',
@@ -76,6 +80,44 @@ for (const required of [
 ]) {
   if (!(page.includes(required) || vm.includes(required) || panel.includes(required) || labels.includes(required))) {
     console.error(`[operator-product-language] missing required product language: ${required}`);
+    failed = true;
+  }
+}
+
+for (const required of [
+  '处理原则',
+  '先处理设备离线和执行异常，因为它们会影响证据可信度',
+  '再处理待审批、待验收和证据不足',
+  '所有处理动作只写审计记录，不自动生成正式验收或客户价值结论',
+  '处理后果：进入该队列只建立审计和复核链路',
+]) {
+  if (!workbench.includes(required)) {
+    console.error(`[operator-product-language] operator workbench missing handling principle: ${required}`);
+    failed = true;
+  }
+}
+
+for (const required of [
+  '当前处理阶段：排查入口',
+  '本页用于记录设备离线事实和后续处理建议',
+  '它不会直接恢复设备，也不会自动生成正式作业成功、客户 ROI 或 Field Memory',
+  '记录设备确认为离线，用于审计',
+  '记录需要人工现场排查，不直接派单',
+  '创建候选记录，等待人工确认后才可能转成正式任务',
+]) {
+  if (!panel.includes(required)) {
+    console.error(`[operator-product-language] device offline handling panel missing action consequence: ${required}`);
+    failed = true;
+  }
+}
+
+if (!operatorLayout.includes('operatorUsability.css')) {
+  console.error('[operator-product-language] operator usability stylesheet must be loaded by OperatorLayout');
+  failed = true;
+}
+for (const required of ['operatorPrinciplesCard', 'operatorDevicesStageCard', 'operatorDeviceActionHelp', 'operatorQueuePrinciple']) {
+  if (!operatorUsabilityCss.includes(required)) {
+    console.error(`[operator-product-language] operator usability CSS missing class: ${required}`);
     failed = true;
   }
 }
