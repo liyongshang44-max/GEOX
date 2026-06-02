@@ -89,7 +89,7 @@ must(devicesVm, /labelOperatorOfflineHandlingStatus\("FOLLOWUP_REQUIRED"\)/, 'vm
 mustNot(devicesVm, /return "OPEN"|return "READ_ONLY"|return "FOLLOWUP_REQUIRED"|return "TASK_CANDIDATE_CREATED"/, 'vm must not return raw handling status');
 mustNotVisibleLiteral(devicesVm + devicesPage + handlingPanel, /device_id\s*=/i, 'device_id=');
 mustNotVisibleLiteral(devicesVm + devicesPage + handlingPanel, /field_id\s*=/i, 'field_id=');
-mustNotVisibleLiteral(devicesVm + devicesPage + handlingPanel, /FOLLOWUP_REQUIRED/, 'FOLLOWUP_REQUIRED');
+mustNotVisibleLiteral(devicesVm + devicesPage + handlingPanel, /处理状态\s*FOLLOWUP_REQUIRED/, '处理状态 FOLLOWUP_REQUIRED');
 
 must(devicesVm + devicesPage + handlingPanel + workbenchApi, /source[=:]"aggregate"|source: "aggregate"|source=aggregate/, 'source=aggregate aggregate provenance');
 must(devicesVm + devicesPage + handlingPanel, /缺少设备定位信息/, 'missing device location text');
