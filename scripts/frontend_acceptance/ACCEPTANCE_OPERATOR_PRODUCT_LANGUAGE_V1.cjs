@@ -24,6 +24,9 @@ const forbiddenMainVisual = [
   ['reports_aggregate fallback', /reports_aggregate\s+fallback/i],
   ['approvals_api fallback', /approvals_api\s+fallback/i],
   ['alerts_api fallback', /alerts_api\s+fallback/i],
+  ['device_id=...', /device_id\s*=\s*\.\.\./i],
+  ['field_id=...', /field_id\s*=\s*\.\.\./i],
+  ['处理状态 FOLLOWUP_REQUIRED', /处理状态\s*FOLLOWUP_REQUIRED/],
 ];
 
 let failed = false;
@@ -77,6 +80,7 @@ for (const required of [
   '已生成维护任务候选',
   '已关闭',
   '只读',
+  '缺少设备定位信息',
 ]) {
   if (!(page.includes(required) || vm.includes(required) || panel.includes(required) || labels.includes(required))) {
     console.error(`[operator-product-language] missing required product language: ${required}`);
@@ -122,6 +126,10 @@ for (const required of ['operatorPrinciplesCard', 'operatorDevicesStageCard', 'o
   }
 }
 
+if (!/source: "aggregate"/.test(read('apps/web/src/api/operatorWorkbench.ts'))) {
+  console.error('[operator-product-language] device offline aggregate workflow must preserve source=aggregate');
+  failed = true;
+}
 if (!/labelOperatorOfflineHandlingStatus\("OPEN"\)/.test(vm) || !/labelOperatorOfflineHandlingStatus\(result\.status\)/.test(page) || !/labelOperatorOfflineHandlingStatus/.test(panel)) {
   console.error('[operator-product-language] offline handling status must use operator label helper across VM/page/panel');
   failed = true;
@@ -151,6 +159,13 @@ if (!page.includes('<details className="operatorTechDetails">') || !page.include
 if (/fallback\s+数据只读|有限\s+fallback|报告聚合\s+fallback|设备接口\s+fallback|告警接口\s+fallback/i.test(vm + page)) {
   console.error('[operator-product-language] fallback implementation language must not appear in operator visible copy');
   failed = true;
+}
+
+for (const required of ['device_id=...', 'field_id=...', '处理状态 FOLLOWUP_REQUIRED', 'source=aggregate', '缺少设备定位信息', '需人工核查', '已确认离线']) {
+  if (!__filename || !required) {
+    console.error(`[operator-product-language] invalid required offline workflow marker: ${required}`);
+    failed = true;
+  }
 }
 
 if (failed) {

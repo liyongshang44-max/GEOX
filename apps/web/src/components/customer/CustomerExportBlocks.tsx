@@ -20,7 +20,7 @@ const RAW_EXPORT_TOKENS = {
   skipped: ["SKI", "PPED"].join("")
 };
 
-type Row = Array<string | number | undefined>;
+type Row = Array<unknown>;
 
 const HIDDEN_MEMORY_CODES = [
   RAW_EXPORT_TOKENS.technicalSkillMemory,
@@ -34,7 +34,7 @@ function PrintTable({ headers, rows, emptyText }: { headers: string[]; rows: Row
   return (
     <table className="printTable customerSpacingTopSm">
       <thead><tr>{headers.map((item) => <th key={item}>{item}</th>)}</tr></thead>
-      <tbody>{rows.map((row, index) => <tr key={`${index}-${row.join("-")}`}>{row.map((cell, cellIndex) => <td key={`${index}-${cellIndex}`}>{cell || "暂无记录"}</td>)}</tr>)}</tbody>
+      <tbody>{rows.map((row, index) => <tr key={`${index}-${row.map((cell) => safeExportText(cell, "")).join("-")}`}>{row.map((cell, cellIndex) => <td key={`${index}-${cellIndex}`}>{safeExportText(cell)}</td>)}</tr>)}</tbody>
     </table>
   );
 }

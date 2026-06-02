@@ -39,6 +39,15 @@ function requireText(name, text, required) {
   }
 }
 
+function forbidPattern(scope, text, entries) {
+  for (const [label, pattern] of entries) {
+    if (pattern.test(text)) {
+      console.error(`[customer-product-language] ${scope} leaked forbidden text: ${label}`);
+      failed = true;
+    }
+  }
+}
+
 const checkedFiles = [
   'apps/web/src/views/CustomerDashboardPage.tsx',
   'apps/web/src/views/FieldReportPage.tsx',
@@ -106,34 +115,29 @@ const dashboardVmVisibleBanned = [
 ];
 
 const customerRawLeakBanned = [
-  ['PENDING_ACCEPTANCE', /\bPENDING_ACCEPTANCE(?:\b|_)/],
+  ['PENDING_ACCEPTANCE', /\bPENDING_ACCEPTANCE\b/],
+  ['PENDING_ACCEPTANCE_REQUIRES_FORMAL_REVIEW', /PENDING_ACCEPTANCE_REQUIRES_FORMAL_REVIEW/],
   ['soil_moisture_below_threshold', /soil_moisture_below_threshold/],
   ['no_rain_forecast', /no_rain_forecast/],
   ['BLOCKED', /\bBLOCKED\b/],
+  ['raw true table value', /(?:^|[\s：:，,；;|])true(?:$|[\s。！!？?，,；;|])/],
+  ['raw false table value', /(?:^|[\s：:，,；;|])false(?:$|[\s。！!？?，,；;|])/],
+  ['field.geometry', /field\.geometry/i],
+  ['geometry_id', /geometry_id/i],
 ];
 
-for (const rel of checkedFiles) {
-  const text = read(rel);
-  for (const [label, pattern] of banned) {
-    if (pattern.test(text)) {
-      console.error(`[customer-product-language] customer-facing technical language leaked: ${label} in ${rel}`);
-      failed = true;
-    }
-  }
-}
+for (const rel of checkedFiles) forbidPattern(rel, read(rel), banned);
 
 const exportBlocks = read('apps/web/src/components/customer/CustomerExportBlocks.tsx');
-for (const [label, pattern] of customerRawLeakBanned) {
-  if (pattern.test(exportBlocks)) {
-    console.error(`[customer-product-language] customer export raw enum/reason leaked in source: ${label}`);
-    failed = true;
-  }
+forbidPattern('customer export source', exportBlocks, customerRawLeakBanned.slice(0, 5));
+requireText('customer export language helpers', exportBlocks, ['customerReasonText', 'customerOperationStateText', 'customerNeedsReviewText', 'customerEvidenceStateText', 'safeExportText']);
+if (!/key === "true" \|\| key === "false"/.test(exportBlocks) || !/return customerNeedsReviewText\(text\)/.test(exportBlocks)) {
+  console.error('[customer-product-language] export safeExportText must convert true/false through customerNeedsReviewText');
+  failed = true;
 }
-for (const helper of ['customerReasonText', 'customerOperationStateText', 'customerNeedsReviewText', 'customerEvidenceStateText']) {
-  if (!new RegExp(`\\b${helper}\\b`).test(exportBlocks)) {
-    console.error(`[customer-product-language] customer export must use ${helper}`);
-    failed = true;
-  }
+if (/<td[^>]*>\{\s*cell\s*(?:\|\||\?\?)/.test(exportBlocks) || /<td[^>]*>\{\s*cell\s*\}/.test(exportBlocks)) {
+  console.error('[customer-product-language] export table must not render raw table cell values directly');
+  failed = true;
 }
 
 for (const rel of requiredProductLanguageUsages) {
@@ -164,24 +168,8 @@ for (const [label, pattern] of dashboardVmVisibleBanned) {
     failed = true;
   }
 }
-requireText('dashboard VM natural wording', dashboardVm, [
-  '当前可见授权设备共',
-  '当前未发现告警事件',
-  '当前页仅展示客户可见授权设备，不推断未授权设备或当前地块设备',
-  '地块边界：已接入',
-  '地块边界：暂未接入',
-]);
-requireText('dashboard VM Part E data contract wording', dashboardVm, [
-  'usagePath',
-  'guidanceCards',
-  '当前经营状态',
-  '建议处理顺序',
-  '查看高风险地块',
-  '排查离线设备',
-  '查看最近作业证据',
-  '导出客户报告',
-  '导出报告可直接用于客户或管理层复盘',
-]);
+requireText('dashboard VM natural wording', dashboardVm, ['当前可见授权设备共', '当前未发现告警事件', '当前页仅展示客户可见授权设备，不推断未授权设备或当前地块设备', '地块边界：已接入', '地块边界：暂未接入']);
+requireText('dashboard VM Part E data contract wording', dashboardVm, ['usagePath', 'guidanceCards', '当前经营状态', '建议处理顺序', '查看高风险地块', '排查离线设备', '查看最近作业证据', '导出客户报告', '导出报告可直接用于客户或管理层复盘']);
 
 const fieldRiskPanel = read('apps/web/src/components/cockpit/CockpitFieldRiskPanel.tsx');
 if (!/boundarySummary/.test(fieldRiskPanel) || !/地块边界：已接入/.test(fieldRiskPanel) || !/地块边界：暂未接入/.test(fieldRiskPanel)) {
@@ -213,17 +201,7 @@ if (!/customerDashboardScopeText/.test(dashboardPage)) {
 }
 requireText('dashboard page Part E usage path render', dashboardPage, ['customerUsagePathCard', 'customerDashboardGuidanceGrid', 'customerGuidanceCard', '当前状态', '为什么', '下一步', '正式性提示']);
 
-const requiredStructuredCards = [
-  'apps/web/src/components/cockpit/CockpitActionCard.tsx',
-  'apps/web/src/components/cockpit/CockpitFieldRiskPanel.tsx',
-  'apps/web/src/components/cockpit/DeviceHealthCard.tsx',
-  'apps/web/src/components/cockpit/RecentOperationsSection.tsx',
-  'apps/web/src/components/cockpit/ValueResultPanel.tsx',
-];
-for (const rel of requiredStructuredCards) {
-  requireText(`customer main visual card ${rel}`, read(rel), ['当前状态', '为什么', '下一步', '正式性提示']);
-}
-
+for (const rel of ['apps/web/src/components/cockpit/CockpitActionCard.tsx', 'apps/web/src/components/cockpit/CockpitFieldRiskPanel.tsx', 'apps/web/src/components/cockpit/DeviceHealthCard.tsx', 'apps/web/src/components/cockpit/RecentOperationsSection.tsx', 'apps/web/src/components/cockpit/ValueResultPanel.tsx']) requireText(`customer main visual card ${rel}`, read(rel), ['当前状态', '为什么', '下一步', '正式性提示']);
 requireText('dashboard export report sections', exportBlocks, ['1. 本期摘要', '2. 主要风险', '3. 待处理事项', '4. 作业进展', '5. 设备状态', '6. 证据与验收', '7. 价值记录', '8. 附注：哪些结论尚待复核', '可用于客户或管理层复盘']);
 
 const dashboardCss = read('apps/web/src/styles/customerDashboard.css');
@@ -254,36 +232,15 @@ if (!/isCustomerVisibleFormalMemory/.test(memoryVm)) {
 const reportPath = path.join(ROOT, 'docs/audit/FRONTEND_RUNTIME_PAGE_AUDIT_REPORT.md');
 if (fs.existsSync(reportPath)) {
   const report = fs.readFileSync(reportPath, 'utf8');
-  for (const [label, pattern] of banned) {
-    if (pattern.test(report)) {
-      console.error(`[customer-product-language] runtime audit report leaked customer technical language: ${label}`);
-      failed = true;
-    }
-  }
+  forbidPattern('runtime audit report', report, banned);
   const customerReportText = `${reportSection(report, '/customer/dashboard')}\n${reportSection(report, '/customer/export')}`;
-  for (const [label, pattern] of customerRawLeakBanned) {
-    if (pattern.test(customerReportText)) {
-      console.error(`[customer-product-language] runtime customer pages leaked raw enum/reason: ${label}`);
-      failed = true;
-    }
-  }
-  for (const [label, pattern] of dashboardVmVisibleBanned) {
-    if (pattern.test(customerReportText)) {
-      console.error(`[customer-product-language] runtime customer pages leaked dashboard technical language: ${label}`);
-      failed = true;
-    }
-  }
-  for (const required of ['当前经营状态', '建议处理顺序', '查看高风险地块', '排查离线设备', '查看最近作业', '导出报告', '正式性提示']) {
-    if (!customerReportText.includes(required)) {
-      console.error(`[customer-product-language] runtime customer pages missing Part E usability wording: ${required}`);
-      failed = true;
-    }
-  }
+  forbidPattern('runtime customer pages', customerReportText, customerRawLeakBanned);
+  forbidPattern('runtime customer pages', customerReportText, dashboardVmVisibleBanned);
+  requireText('runtime customer pages Part E wording', customerReportText, ['当前经营状态', '建议处理顺序', '查看高风险地块', '排查离线设备', '查看最近作业', '导出报告', '正式性提示']);
 }
 
 if (failed) {
   console.error('[customer-product-language] FAIL');
   process.exit(1);
 }
-
 console.log('[customer-product-language] PASS');

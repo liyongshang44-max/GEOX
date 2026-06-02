@@ -11,6 +11,7 @@ const REQUIRED_GATES = [
   { id: 'runtime_workers', command: 'pnpm run ci:runtime:workers' },
   { id: 'pilot_runtime_security_baseline', command: 'pnpm run ci:runtime:pilot-security-baseline' },
   { id: 'base_contract_p0', command: 'pnpm run ci:base-contract:p0' },
+  { id: 'formal_operation_field_binding', command: 'pnpm run ci:governance:formal-operation-field-binding' },
   { id: 'scenario_pest_disease_inspection', command: 'pnpm run ci:scenario:pest-disease-inspection', timeout_ms: LONG_GATE_TIMEOUT_MS },
   { id: 'scenario_formal_e2e', command: 'pnpm run ci:scenario:formal-e2e', timeout_ms: LONG_GATE_TIMEOUT_MS },
   { id: 'scenario_productization', command: 'pnpm run ci:scenario:productization', timeout_ms: LONG_GATE_TIMEOUT_MS },
