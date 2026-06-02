@@ -15,28 +15,8 @@ const INSTALL_TIMEOUT_MS = Number(process.env.FRONTEND_AUDIT_BROWSER_INSTALL_TIM
 const ROUTE_TIMEOUT_MS = Number(process.env.FRONTEND_AUDIT_ROUTE_TIMEOUT_MS || 45_000);
 const AUDIT_TIMEOUT_MS = Number(process.env.FRONTEND_AUDIT_TOTAL_TIMEOUT_MS || 600_000);
 
-const DEFAULT_ROUTES = [
-  '/customer/dashboard',
-  '/customer/export',
-  '/operator/workbench',
-  '/operator/approvals',
-  '/operator/dispatch',
-  '/operator/acceptance',
-  '/operator/evidence',
-  '/operator/devices-alerts',
-  '/operator/roi-ledger',
-  '/operator/field-memory',
-  '/dev/flight-table',
-];
-
-function parseAuditRoutes() {
-  const raw = String(process.env.FRONTEND_AUDIT_ROUTES || '').trim();
-  if (!raw) return DEFAULT_ROUTES;
-  const routes = raw.split(',').map((item) => item.trim()).filter(Boolean).map((item) => (item.startsWith('/') ? item : `/${item}`));
-  if (routes.length === 0) throw new Error('FRONTEND_AUDIT_ROUTES was set but no routes were parsed');
-  return [...new Set(routes)];
-}
-
+const DEFAULT_ROUTES = ['/customer/dashboard', '/customer/export', '/operator/workbench', '/operator/approvals', '/operator/dispatch', '/operator/acceptance', '/operator/evidence', '/operator/devices-alerts', '/operator/roi-ledger', '/operator/field-memory', '/dev/flight-table'];
+function parseAuditRoutes() { const raw = String(process.env.FRONTEND_AUDIT_ROUTES || '').trim(); if (!raw) return DEFAULT_ROUTES; const routes = raw.split(',').map((item) => item.trim()).filter(Boolean).map((item) => (item.startsWith('/') ? item : `/${item}`)); if (routes.length === 0) throw new Error('FRONTEND_AUDIT_ROUTES was set but no routes were parsed'); return [...new Set(routes)]; }
 const ROUTES = parseAuditRoutes();
 const OPERATOR_ROUTES = new Set(ROUTES.filter((route) => route.startsWith('/operator/')));
 const EXPLICIT_OPERATOR_STATE = /正在加载运营数据|暂无待处理事项|运营数据加载失败|当前账号权限不足|数据范围|更新时间|总数|待处理|正式运营|证据中心|田块记忆|ROI|派发|验收|告警|审批/;
@@ -47,17 +27,18 @@ const VISIBLE_TEXT_MIN_LENGTH = 24;
 const DASHBOARD_LAYOUT_SELECTORS = ['.customerDashboardPage', '.customerDashboardMainGrid', '.customerDashboardRightRail', '.customerDashboardBottomGrid', '.customerDashboardKpiRow', '.customerMetricCard', '.customerCard', '.cockpitRiskTile'];
 const CUSTOMER_RAW_TEXT_ROUTES = new Set(['/customer/dashboard', '/customer/export']);
 const CUSTOMER_VISIBLE_RAW_PATTERNS = [
-  ['PENDING_ACCEPTANCE', /\bPENDING_ACCEPTANCE(?:\b|_)/],
   ['PENDING_ACCEPTANCE_REQUIRES_FORMAL_REVIEW', /PENDING_ACCEPTANCE_REQUIRES_FORMAL_REVIEW/],
+  ['PENDING_ACCEPTANCE', /\bPENDING_ACCEPTANCE\b/],
   ['soil_moisture_below_threshold', /soil_moisture_below_threshold/],
   ['no_rain_forecast', /no_rain_forecast/],
   ['BLOCKED', /\bBLOCKED\b/],
-  ['field.geometry', /field\.geometry|geometry_id/],
+  ['field.geometry', /field\.geometry/i],
+  ['geometry_id', /geometry_id/i],
   ['raw count field', /\b(?:global|visible|field|offline|alert)_devices?_count\b|\balert_events_count\b/],
   ['device scope', /设备\s*scope/i],
   ['field equals copy', /(?:离线设备|告警事件|可见授权设备|当前地块设备)\s*=/],
-  ['raw true', /(?:^|[\s：:，,；;])true(?:$|[\s。！!？?，,；;])/],
-  ['raw false', /(?:^|[\s：:，,；;])false(?:$|[\s。！!？?，,；;])/],
+  ['raw true table value', /(?:^|[\s：:，,；;|])true(?:$|[\s。！!？?，,；;|])/],
+  ['raw false table value', /(?:^|[\s：:，,；;|])false(?:$|[\s。！!？?，,；;|])/],
 ];
 
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
@@ -74,69 +55,16 @@ function assertNoCustomerRawVisibleText(bodyText, result) { if (!CUSTOMER_RAW_TE
 
 async function assertDashboard1366Layout(page, result) {
   if (result.route !== '/customer/dashboard') return;
-  await page.setViewportSize({ width: 1366, height: 900 });
-  await page.waitForTimeout(250);
-  const layout = await page.evaluate((selectors) => {
-    const doc = document.documentElement;
-    const body = document.body;
-    const viewportWidth = window.innerWidth;
-    const scrollWidth = Math.max(doc.scrollWidth, body ? body.scrollWidth : 0);
-    const cards = Array.from(document.querySelectorAll(selectors.join(','))).map((node) => {
-      const rect = node.getBoundingClientRect();
-      const label = node.getAttribute('class') || node.tagName.toLowerCase();
-      return { label, left: rect.left, right: rect.right, width: rect.width };
-    });
-    const rightRail = document.querySelector('.customerDashboardRightRail');
-    const rightRailRect = rightRail ? rightRail.getBoundingClientRect() : null;
-    const narrowVisibleCards = Array.from(document.querySelectorAll('.customerDashboardRightRail .customerCard, .customerDashboardRightRail .customerMetricCard')).map((node) => {
-      const rect = node.getBoundingClientRect();
-      const text = (node.textContent || '').replace(/\s+/g, ' ').trim();
-      return { label: node.getAttribute('class') || node.tagName.toLowerCase(), width: rect.width, textLength: text.length, left: rect.left, right: rect.right };
-    }).filter((item) => item.textLength > 18 && item.width > 0 && item.width < 260);
-    return { viewportWidth, scrollWidth, cards, rightRail: rightRailRect ? { width: rightRailRect.width, left: rightRailRect.left, right: rightRailRect.right } : null, narrowVisibleCards };
-  }, DASHBOARD_LAYOUT_SELECTORS);
+  await page.setViewportSize({ width: 1366, height: 900 }); await page.waitForTimeout(250);
+  const layout = await page.evaluate((selectors) => { const doc = document.documentElement; const body = document.body; const viewportWidth = window.innerWidth; const scrollWidth = Math.max(doc.scrollWidth, body ? body.scrollWidth : 0); const cards = Array.from(document.querySelectorAll(selectors.join(','))).map((node) => { const rect = node.getBoundingClientRect(); const label = node.getAttribute('class') || node.tagName.toLowerCase(); return { label, left: rect.left, right: rect.right, width: rect.width }; }); const rightRail = document.querySelector('.customerDashboardRightRail'); const rightRailRect = rightRail ? rightRail.getBoundingClientRect() : null; const narrowVisibleCards = Array.from(document.querySelectorAll('.customerDashboardRightRail .customerCard, .customerDashboardRightRail .customerMetricCard')).map((node) => { const rect = node.getBoundingClientRect(); const text = (node.textContent || '').replace(/\s+/g, ' ').trim(); return { label: node.getAttribute('class') || node.tagName.toLowerCase(), width: rect.width, textLength: text.length, left: rect.left, right: rect.right }; }).filter((item) => item.textLength > 18 && item.width > 0 && item.width < 260); return { viewportWidth, scrollWidth, cards, rightRail: rightRailRect ? { width: rightRailRect.width, left: rightRailRect.left, right: rightRailRect.right } : null, narrowVisibleCards }; }, DASHBOARD_LAYOUT_SELECTORS);
   result.layout1366 = layout;
   if (layout.scrollWidth > layout.viewportWidth) addFailure(result, `dashboard 1366 overflow: scrollWidth=${layout.scrollWidth} clientWidth=${layout.viewportWidth}`);
   for (const card of layout.cards) { if (card.left < -1 || card.right > layout.viewportWidth + 1) addFailure(result, `dashboard card outside viewport: ${card.label} left=${Math.round(card.left)} right=${Math.round(card.right)} viewport=${layout.viewportWidth}`); }
   if (layout.rightRail && layout.rightRail.width < 520) addFailure(result, `dashboard right rail too narrow at 1366: width=${Math.round(layout.rightRail.width)}`);
   for (const card of layout.narrowVisibleCards) addFailure(result, `dashboard right rail card compressed at 1366: ${card.label} width=${Math.round(card.width)}`);
 }
-
 async function auditRoute(browser, route) { return withTimeout(auditRouteUnsafe(browser, route), `audit route ${route}`, ROUTE_TIMEOUT_MS); }
-
-async function auditRouteUnsafe(browser, route) {
-  const result = { route, pass: true, visibleTextSample: '', consoleErrors: [], consoleWarnings: [], networkErrors: [], warnings: [], screenshotPath: '', diagnosis: [], failures: [], layout1366: null };
-  const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
-  await context.addInitScript(({ token }) => { const tenantContext = { tenant_id: 'tenantA', project_id: 'projectA', group_id: 'groupA' }; const meta = { role: 'admin', actor_id: 'frontend-runtime-audit', token_id: 'frontend-runtime-audit', scopes: ['operator.read', 'operator.write', 'customer.read', 'security.admin', 'ao_act.task.write', 'ao_act.receipt.write'] }; window.localStorage.setItem('geox_ao_act_token', token); window.sessionStorage.setItem('geox_ao_act_token', token); window.localStorage.setItem('geox_tenant_context', JSON.stringify(tenantContext)); window.sessionStorage.setItem('geox_tenant_context', JSON.stringify(tenantContext)); window.localStorage.setItem('geox_session_meta', JSON.stringify(meta)); window.sessionStorage.setItem('geox_session_meta', JSON.stringify(meta)); }, { token: ACCEPTANCE_TOKEN });
-  const page = await context.newPage();
-  page.on('console', (msg) => { const text = safeText(msg.text(), 800); if (msg.type() === 'error') result.consoleErrors.push(text); if (msg.type() === 'warning') { result.consoleWarnings.push(text); if (DUPLICATE_KEY_RE.test(text)) addFailure(result, `React duplicate key warning: ${text}`); } });
-  page.on('pageerror', (err) => result.consoleErrors.push(safeText(err.stack || err.message || err, 800)));
-  page.on('requestfailed', (req) => { const url = req.url(); if (/favicon\.ico$/i.test(url)) { result.warnings.push(`favicon request failed: ${url}`); return; } if (!url.includes('/api/')) result.warnings.push(`non-api request failed: ${url} ${req.failure()?.errorText || ''}`); });
-  page.on('response', (res) => { const url = res.url(); const status = res.status(); if (url.includes('/api/') && (status === 404 || status >= 500)) result.networkErrors.push(`${status} ${url}`); else if (url.includes('/api/') && status >= 400) result.warnings.push(`api auth/permission ${status}: ${url}`); else if (status >= 400 && /favicon\.ico$/i.test(url)) result.warnings.push(`favicon ${status}: ${url}`); else if (status >= 400) result.warnings.push(`non-api ${status}: ${url}`); if (DEVTOOLS_DISABLED && route === '/dev/flight-table' && url.includes('/api/v1/dev/flight-table/')) addFailure(result, `devtools disabled but flight table dev API was requested: ${url}`); });
-  try {
-    await page.goto(`${WEB_BASE_URL}${route}`, { waitUntil: 'domcontentloaded', timeout: 20_000 });
-    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => undefined);
-    await page.waitForTimeout(500);
-    const loadingStillVisible = await page.locator('body').evaluate((body, pattern) => new RegExp(pattern, 'i').test(body.innerText || ''), LOADING_RE.source).catch(() => true);
-    if (loadingStillVisible) await page.waitForTimeout(10_000);
-    const bodyText = await page.locator('body').innerText({ timeout: 5_000 }).catch(() => '');
-    const text = safeText(bodyText, 2000);
-    result.visibleTextSample = safeText(text, 600);
-    assertNoCustomerRawVisibleText(bodyText, result);
-    if (!text || text.length < VISIBLE_TEXT_MIN_LENGTH) addFailure(result, `body text is empty or too short (${text.length})`);
-    if (ROUTE_ERROR_RE.test(text)) addFailure(result, 'RouteErrorBoundary or route runtime error text detected');
-    if (LOADING_RE.test(text)) addFailure(result, 'loading text still visible after 10 seconds');
-    if (OPERATOR_ROUTES.has(route) && !EXPLICIT_OPERATOR_STATE.test(text)) addFailure(result, 'operator page does not expose explicit main content state');
-    await assertDashboard1366Layout(page, result);
-    for (const error of result.consoleErrors) addFailure(result, `console.error/pageerror: ${error}`);
-    for (const networkError of result.networkErrors) addFailure(result, `/api 404/5xx response: ${networkError}`);
-  } catch (error) { addFailure(result, `navigation/audit exception: ${safeText(error && (error.stack || error.message || error), 900)}`); }
-  finally { fs.mkdirSync(SCREENSHOT_DIR, { recursive: true }); const screenshotRel = `docs/audit/frontend-runtime-page-audit/${routeSlug(route)}.png`; result.screenshotPath = screenshotRel; await page.screenshot({ path: path.join(ROOT, screenshotRel), fullPage: true }).catch((error) => { result.warnings.push(`screenshot failed: ${safeText(error.message || error)}`); }); await context.close().catch(() => undefined); }
-  result.pass = result.failures.length === 0;
-  result.diagnosis = result.pass ? ['runtime page audit passed'] : result.failures;
-  return result;
-}
-
+async function auditRouteUnsafe(browser, route) { const result = { route, pass: true, visibleTextSample: '', consoleErrors: [], consoleWarnings: [], networkErrors: [], warnings: [], screenshotPath: '', diagnosis: [], failures: [], layout1366: null }; const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } }); await context.addInitScript(({ token }) => { const tenantContext = { tenant_id: 'tenantA', project_id: 'projectA', group_id: 'groupA' }; const meta = { role: 'admin', actor_id: 'frontend-runtime-audit', token_id: 'frontend-runtime-audit', scopes: ['operator.read', 'operator.write', 'customer.read', 'security.admin', 'ao_act.task.write', 'ao_act.receipt.write'] }; window.localStorage.setItem('geox_ao_act_token', token); window.sessionStorage.setItem('geox_ao_act_token', token); window.localStorage.setItem('geox_tenant_context', JSON.stringify(tenantContext)); window.sessionStorage.setItem('geox_tenant_context', JSON.stringify(tenantContext)); window.localStorage.setItem('geox_session_meta', JSON.stringify(meta)); window.sessionStorage.setItem('geox_session_meta', JSON.stringify(meta)); }, { token: ACCEPTANCE_TOKEN }); const page = await context.newPage(); page.on('console', (msg) => { const text = safeText(msg.text(), 800); if (msg.type() === 'error') result.consoleErrors.push(text); if (msg.type() === 'warning') { result.consoleWarnings.push(text); if (DUPLICATE_KEY_RE.test(text)) addFailure(result, `React duplicate key warning: ${text}`); } }); page.on('pageerror', (err) => result.consoleErrors.push(safeText(err.stack || err.message || err, 800))); page.on('requestfailed', (req) => { const url = req.url(); if (/favicon\.ico$/i.test(url)) { result.warnings.push(`favicon request failed: ${url}`); return; } if (!url.includes('/api/')) result.warnings.push(`non-api request failed: ${url} ${req.failure()?.errorText || ''}`); }); page.on('response', (res) => { const url = res.url(); const status = res.status(); if (url.includes('/api/') && (status === 404 || status >= 500)) result.networkErrors.push(`${status} ${url}`); else if (url.includes('/api/') && status >= 400) result.warnings.push(`api auth/permission ${status}: ${url}`); else if (status >= 400 && /favicon\.ico$/i.test(url)) result.warnings.push(`favicon ${status}: ${url}`); else if (status >= 400) result.warnings.push(`non-api ${status}: ${url}`); if (DEVTOOLS_DISABLED && route === '/dev/flight-table' && url.includes('/api/v1/dev/flight-table/')) addFailure(result, `devtools disabled but flight table dev API was requested: ${url}`); }); try { await page.goto(`${WEB_BASE_URL}${route}`, { waitUntil: 'domcontentloaded', timeout: 20_000 }); await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => undefined); await page.waitForTimeout(500); const loadingStillVisible = await page.locator('body').evaluate((body, pattern) => new RegExp(pattern, 'i').test(body.innerText || ''), LOADING_RE.source).catch(() => true); if (loadingStillVisible) await page.waitForTimeout(10_000); const bodyText = await page.locator('body').innerText({ timeout: 5_000 }).catch(() => ''); const text = safeText(bodyText, 2000); result.visibleTextSample = safeText(text, 600); assertNoCustomerRawVisibleText(bodyText, result); if (!text || text.length < VISIBLE_TEXT_MIN_LENGTH) addFailure(result, `body text is empty or too short (${text.length})`); if (ROUTE_ERROR_RE.test(text)) addFailure(result, 'RouteErrorBoundary or route runtime error text detected'); if (LOADING_RE.test(text)) addFailure(result, 'loading text still visible after 10 seconds'); if (OPERATOR_ROUTES.has(route) && !EXPLICIT_OPERATOR_STATE.test(text)) addFailure(result, 'operator page does not expose explicit main content state'); await assertDashboard1366Layout(page, result); for (const error of result.consoleErrors) addFailure(result, `console.error/pageerror: ${error}`); for (const networkError of result.networkErrors) addFailure(result, `/api 404/5xx response: ${networkError}`); } catch (error) { addFailure(result, `navigation/audit exception: ${safeText(error && (error.stack || error.message || error), 900)}`); } finally { fs.mkdirSync(SCREENSHOT_DIR, { recursive: true }); const screenshotRel = `docs/audit/frontend-runtime-page-audit/${routeSlug(route)}.png`; result.screenshotPath = screenshotRel; await page.screenshot({ path: path.join(ROOT, screenshotRel), fullPage: true }).catch((error) => { result.warnings.push(`screenshot failed: ${safeText(error.message || error)}`); }); await context.close().catch(() => undefined); } result.pass = result.failures.length === 0; result.diagnosis = result.pass ? ['runtime page audit passed'] : result.failures; return result; }
 function writeReport(results) { fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true }); const lines = []; lines.push('# Frontend Runtime Page Audit Report', '', `Generated at: ${new Date().toISOString()}`, `Web base URL: ${WEB_BASE_URL}`, `API proxy target: ${API_BASE_URL}`, `Devtools disabled: ${DEVTOOLS_DISABLED ? 'yes' : 'no'}`, `Routes audited: ${ROUTES.length}`); if (process.env.FRONTEND_AUDIT_ROUTES) lines.push(`Route source: FRONTEND_AUDIT_ROUTES`); lines.push('', '| route | status | screenshot | diagnosis |', '| --- | --- | --- | --- |'); for (const result of results) lines.push(`| \`${result.route}\` | ${result.pass ? 'PASS' : 'FAIL'} | \`${result.screenshotPath}\` | ${safeText(result.diagnosis.join('; '), 180).replace(/\|/g, '/')} |`); lines.push(''); for (const result of results) { lines.push(`## ${result.route}`, '', `- pass/fail: ${result.pass ? 'PASS' : 'FAIL'}`, `- screenshot path: \`${result.screenshotPath}\``, `- visible text sample: ${result.visibleTextSample ? `\`${result.visibleTextSample.replace(/`/g, "'")}\`` : '_empty_'}`); if (result.layout1366) lines.push(`- layout 1366: \`scrollWidth=${result.layout1366.scrollWidth}; clientWidth=${result.layout1366.viewportWidth}; checked=${result.layout1366.cards.length}\``); lines.push('- console errors:', mdList(result.consoleErrors), '- console warnings:', mdList(result.consoleWarnings), '- network 4xx/5xx:', mdList(result.networkErrors), '- warnings:', mdList(result.warnings), '- diagnosis:', mdList(result.diagnosis), ''); } fs.writeFileSync(REPORT_PATH, `${lines.join('\n')}\n`); }
 async function runAudit() { let chromium; try { ({ chromium } = require('@playwright/test')); } catch (error) { throw new Error(`@playwright/test is required for browser runtime audit: ${error.message || error}`); } console.log('[frontend-runtime-audit] route_count', ROUTES.length); console.log('[frontend-runtime-audit] routes', ROUTES.join(', ')); console.log('[frontend-runtime-audit] route_timeout_ms', ROUTE_TIMEOUT_MS); console.log('[frontend-runtime-audit] total_timeout_ms', AUDIT_TIMEOUT_MS); ensurePlaywrightChromiumInstalled(); let webProcess = null; const alreadyReady = await waitForHttp(WEB_BASE_URL, 1500); if (!alreadyReady) { webProcess = startWebServerIfNeeded(); const ready = await waitForHttp(WEB_BASE_URL, 45_000); if (!ready) throw new Error(`frontend web server not ready: ${WEB_BASE_URL}`); } const browser = await chromium.launch({ headless: true }); const results = []; try { for (const route of ROUTES) { console.log(`[frontend-runtime-audit] auditing ${route}`); results.push(await auditRoute(browser, route)); } } finally { await browser.close().catch(() => undefined); if (webProcess) { webProcess.kill('SIGTERM'); setTimeout(() => webProcess.kill('SIGKILL'), 3000).unref(); } } writeReport(results); const failed = results.filter((result) => !result.pass); if (failed.length) { console.error(`[frontend-runtime-audit] failed routes: ${failed.map((item) => item.route).join(', ')}`); console.error(`[frontend-runtime-audit] report: ${REPORT_PATH}`); process.exit(1); } console.log(`[frontend-runtime-audit] passed ${results.length} routes`); console.log(`[frontend-runtime-audit] report: ${REPORT_PATH}`); }
 withTimeout(runAudit(), 'frontend runtime page audit', AUDIT_TIMEOUT_MS).catch((error) => { fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true }); fs.writeFileSync(REPORT_PATH, `# Frontend Runtime Page Audit Report\n\nFAIL: ${safeText(error && (error.stack || error.message || error), 1500)}\n`); console.error(error); process.exit(1); });
