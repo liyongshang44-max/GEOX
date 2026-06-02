@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import type { CustomerRiskFieldVm } from "../../viewmodels/customerDashboardVm";
+import { customerProductText } from "../../lib/customerProductLanguage";
 import { CustomerEmptyState, type CustomerEmptyStateVm } from "../customer";
 
 type Props = {
@@ -19,14 +20,21 @@ function toneClass(tone: CustomerRiskFieldVm["riskTone"]): string {
   return "isNeutral";
 }
 
+function boundarySummary(fields: CustomerRiskFieldVm[]): string {
+  const boundaryCount = fields.filter((field) => field.boundaryAvailable).length;
+  if (!fields.length) return "地块边界：暂未接入。当前没有需要重点关注的风险地块。";
+  if (boundaryCount > 0) return `地块边界：已接入。当前可见 ${boundaryCount} 块风险地块已接入边界。`;
+  return "地块边界：暂未接入。当前风险地块暂未返回边界信息。";
+}
+
 function RiskTile({ field }: { field: CustomerRiskFieldVm }): React.ReactElement {
   const className = `cockpitRiskTile ${toneClass(field.riskTone)}`;
   const content = (
     <>
       <strong>{field.fieldName}</strong>
       <span>{field.riskLabel}</span>
-      <small>{field.reasons[0] || "暂无风险原因"}</small>
-      <small>{field.boundaryText}</small>
+      <small>{customerProductText(field.reasons[0] || "暂无风险原因")}</small>
+      <small>{customerProductText(field.boundaryText)}</small>
       <em>{field.fieldId ? "查看地块" : "暂无入口"}</em>
     </>
   );
@@ -40,14 +48,13 @@ function RiskTile({ field }: { field: CustomerRiskFieldVm }): React.ReactElement
 
 export default function CockpitFieldRiskPanel({ fields, emptyState, mode = "LIST" }: Props): React.ReactElement {
   const visibleFields = fields.slice(0, 6);
-  const boundaryCount = fields.filter((field) => field.boundaryAvailable).length;
 
   return (
     <article id="top-risk-fields" className="customerCard cockpitRiskPanel">
       <div className="customerCardHeaderRow">
         <div>
           <h3 className="customerCardTitle">地块风险分布</h3>
-          <p className="customerMetricLabel">已接入地块边界，可按风险查看地块。边界口径：field.geometry / geometry_id；当前可见 {boundaryCount} 块已接入边界。</p>
+          <p className="customerMetricLabel">{boundarySummary(fields)}</p>
         </div>
         <span className="customerPill">当前授权地块</span>
       </div>
@@ -64,8 +71,8 @@ export default function CockpitFieldRiskPanel({ fields, emptyState, mode = "LIST
                 <strong>{field.fieldName}</strong>
                 <span>{field.riskLabel}</span>
                 <small>{field.secondaryText}</small>
-                <small>{field.boundaryText}</small>
-                <small>{field.reasons.join("；") || "暂无风险原因"}</small>
+                <small>{customerProductText(field.boundaryText)}</small>
+                <small>{field.reasons.map((reason) => customerProductText(reason)).join("；") || "暂无风险原因"}</small>
               </Link>
             ))}
           </div>
