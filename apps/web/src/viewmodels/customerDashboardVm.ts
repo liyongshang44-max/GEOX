@@ -70,11 +70,32 @@ export type CustomerRiskFieldVm = {
   href: string;
 };
 
+export type CustomerUsagePathVm = {
+  title: string;
+  statusText: string;
+  orderTitle: string;
+  steps: string[];
+  actions: Array<{ label: string; href: string }>;
+  formalityNote: string;
+};
+
+export type CustomerGuidanceCardVm = {
+  id: "risk" | "device" | "operations" | "export";
+  title: string;
+  currentStatus: string;
+  why: string;
+  nextStep: string;
+  formality: string;
+  action: { label: string; href: string };
+};
+
 export type CustomerDashboardVm = {
   generatedAtText: string;
   context: { title: string; subtitle: string; actorRoleText: string; scopeText: string };
   header: { eyebrow: string; title: string; subtitle: string; exportAction: { label: string; href: string } };
   summaryScopeText: string;
+  usagePath: CustomerUsagePathVm;
+  guidanceCards: CustomerGuidanceCardVm[];
   kpis: CustomerKpiVm[];
   topRiskFields: CustomerRiskFieldVm[];
   pendingItems: Array<{ id: string; sentence: string; href: string }>;
@@ -95,6 +116,9 @@ export type CustomerDashboardVm = {
     fieldText: string;
     offlineText: string;
     alertText: string;
+    whyText: string;
+    nextStepText: string;
+    formalityText: string;
     empty: boolean;
   };
   roiSummary: {
@@ -104,6 +128,10 @@ export type CustomerDashboardVm = {
     confidenceText?: string;
     assumptionText?: string;
     scopeText: string;
+    currentStatus: string;
+    whyText: string;
+    nextStepText: string;
+    formalityText: string;
     emptyState?: { title: string; description: string; severity: "neutral" | "info" | "warning" };
   };
   emptyStates: Record<string, { title: string; description: string; severity: "neutral" | "info" | "warning" }>;
@@ -119,6 +147,10 @@ export type CustomerActionItemVm = {
   riskTone: "neutral" | "warning" | "danger";
   primaryAction: { label: string; href?: string; disabledReason?: string };
   summary: string;
+  currentStatus: string;
+  why: string;
+  nextStep: string;
+  formality: string;
 };
 export type CustomerDashboardPageVm = CustomerDashboardVm;
 
@@ -153,6 +185,11 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
   const deviceScopeText = "当前页仅展示客户可见授权设备，不推断未授权设备或当前地块设备。";
   const firstRiskFieldId = String((aggregate.top_risk_fields ?? [])[0]?.field_id ?? "");
   const firstRiskFieldHref = firstRiskFieldId ? `/customer/fields/${encodeURIComponent(firstRiskFieldId)}` : "/customer/dashboard";
+  const firstOperationId = String((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id ?? "");
+  const firstOperationHref = firstOperationId ? `/customer/operations/${encodeURIComponent(firstOperationId)}` : "/customer/dashboard";
+  const trustedValueStatus = trustedValueSummary && valueRecords > 0 ? "已有可信价值记录" : "暂无可信价值记录";
+  const operatingStatusText = `有 ${numberFmt.format(highRisk)} 块地块需要关注，${numberFmt.format(offlineDevices)} 台设备离线，${trustedValueStatus}。`;
+  const exportFormalityNote = "导出报告可直接用于客户或管理层复盘；待复核结论会在附注中标明，不能当作正式收益或验收结论。";
   const emptyStates = {
     NO_KPI_SUMMARY: getCustomerEmptyState("NO_KPI_SUMMARY"),
     NO_ROI: getCustomerEmptyState("NO_ROI"),
@@ -197,13 +234,11 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
       href: operationId ? `/customer/operations/${encodeURIComponent(operationId)}` : "/customer/dashboard",
     };
   });
-  const firstOperationId = String((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id ?? "");
-  const firstOperationHref = firstOperationId ? `/customer/operations/${encodeURIComponent(firstOperationId)}` : "/customer/dashboard";
   const actionItems: CustomerActionItemVm[] = [
-    { id: "risk", source: "RECOMMENDATION", title: "集中处理高风险地块", riskLabel: "高风险", riskTone: "danger", fieldId: firstRiskFieldId, primaryAction: { label: "查看地块", href: firstRiskFieldHref }, summary: `${DASHBOARD_SUMMARY_SOURCE} 按风险等级推进复核，避免问题扩大。` },
-    { id: "accept", source: "PENDING_ACCEPTANCE", title: "完成待验收作业并回写结果", riskLabel: pendingAcceptance > 0 ? "待验收" : "已完成", riskTone: pendingAcceptance > 0 ? "warning" : "neutral", operationId: firstOperationId, primaryAction: { label: "查看作业", href: firstOperationHref }, summary: `${DASHBOARD_SUMMARY_SOURCE} 确保作业闭环，提升验收及时率。` },
-    { id: "device", source: "DEVICE_OFFLINE", title: "排查离线设备并恢复数据", riskLabel: offlineDevices > 0 ? "需复核" : "稳定", riskTone: offlineDevices > 0 ? "warning" : "neutral", primaryAction: { label: offlineDevices > 0 ? "查看受影响地块" : "查看设备状态", href: firstRiskFieldHref }, summary: "离线设备需由运营人员复核最近心跳、遥测和绑定地块。客户侧先查看受影响地块与作业证据；未完成复核前不展示执行成功或价值结论。" },
-    { id: "general", source: "GENERAL", title: "处理待办事项", riskLabel: pendingActions > 0 ? "待处理" : "已清空", riskTone: pendingActions > 0 ? "warning" : "neutral", primaryAction: { label: "当前页查看", href: "/customer/dashboard" }, summary: `${DASHBOARD_SUMMARY_SOURCE} 优先关闭待处理事项，保障关键风险先处置。` },
+    { id: "risk", source: "RECOMMENDATION", title: "集中处理高风险地块", riskLabel: "高风险", riskTone: "danger", fieldId: firstRiskFieldId, primaryAction: { label: "查看地块", href: firstRiskFieldHref }, summary: `${DASHBOARD_SUMMARY_SOURCE} 按风险等级推进复核，避免问题扩大。`, currentStatus: `${numberFmt.format(highRisk)} 块地块需要关注。`, why: "风险来自地块状态、作业证据或设备数据的综合判断。", nextStep: "先打开高风险地块，查看风险原因和最近作业证据。", formality: "风险提示用于排查优先级，不等同于正式验收或收益结论。" },
+    { id: "accept", source: "PENDING_ACCEPTANCE", title: "完成待验收作业并回写结果", riskLabel: pendingAcceptance > 0 ? "待验收" : "已完成", riskTone: pendingAcceptance > 0 ? "warning" : "neutral", operationId: firstOperationId, primaryAction: { label: "查看作业", href: firstOperationHref }, summary: `${DASHBOARD_SUMMARY_SOURCE} 确保作业闭环，提升验收及时率。`, currentStatus: `${numberFmt.format(pendingAcceptance)} 条作业等待验收或复核。`, why: "未完成验收会影响客户对作业结果、证据完整性和价值结论的判断。", nextStep: "查看最近作业证据，确认是否具备正式验收条件。", formality: "证据不足或未验收前，不生成正式客户价值结论。" },
+    { id: "device", source: "DEVICE_OFFLINE", title: "排查离线设备并恢复数据", riskLabel: offlineDevices > 0 ? "需复核" : "稳定", riskTone: offlineDevices > 0 ? "warning" : "neutral", primaryAction: { label: offlineDevices > 0 ? "查看受影响地块" : "查看设备状态", href: firstRiskFieldHref }, summary: "离线设备需由运营人员复核最近心跳、遥测和绑定地块。客户侧先查看受影响地块与作业证据；未完成复核前不展示执行成功或价值结论。", currentStatus: `${numberFmt.format(offlineDevices)} 台设备离线。`, why: "设备最近心跳或遥测未返回，可能影响地块状态判断和作业证据可信度。", nextStep: "查看受影响地块，等待运营人员复核设备状态。", formality: "设备恢复和人工复核前，不展示执行成功或价值结论。" },
+    { id: "general", source: "GENERAL", title: "处理待办事项", riskLabel: pendingActions > 0 ? "待处理" : "已清空", riskTone: pendingActions > 0 ? "warning" : "neutral", primaryAction: { label: "当前页查看", href: "/customer/dashboard" }, summary: `${DASHBOARD_SUMMARY_SOURCE} 优先关闭待处理事项，保障关键风险先处置。`, currentStatus: `${numberFmt.format(pendingActions)} 条待处理事项。`, why: "待办事项是客户需要继续追踪的风险、审批、验收或证据问题。", nextStep: "按建议处理顺序逐项进入地块、设备和作业报告。", formality: "待办关闭前，相关结论仍需保留复核提示。" },
   ];
   const roiSummary = {
     totalRoiItems: valueRecords,
@@ -212,14 +247,39 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
     confidenceText: sanitizeCustomerText((aggregate.roi_summary as any)?.confidence_text ?? (trustedValueSummary ? "已通过正式价值门禁" : "未通过正式价值门禁，不形成可信收益结论")),
     assumptionText: sanitizeCustomerText((aggregate.roi_summary as any)?.assumption_text ?? `假设型/估算型记录 ${numberFmt.format(num(aggregate.roi_summary?.assumption_based_items) + num(aggregate.roi_summary?.estimated_items))} 条`),
     scopeText: `${DASHBOARD_SUMMARY_SOURCE} ${customerTrustScopeText()}`,
+    currentStatus: trustedValueSummary && valueRecords > 0 ? `已有 ${numberFmt.format(valueRecords)} 条可信价值记录。` : "暂无可正式使用的可信价值记录。",
+    whyText: "价值记录必须来自正式链路和可解释证据，不能只凭估算或设备异常期间的数据形成。",
+    nextStepText: "查看价值记录明细；若缺少基线、证据或验收，先补齐复核。",
+    formalityText: "未通过正式价值门禁的记录只能作为线索，不能直接给客户或管理层作为 ROI 结论。",
     emptyState: emptyStates.NO_ROI,
   };
+  const usagePath: CustomerUsagePathVm = {
+    title: "当前经营状态",
+    statusText: operatingStatusText,
+    orderTitle: "建议处理顺序：",
+    steps: ["查看高风险地块", "排查离线设备", "查看最近作业证据", "导出客户报告"],
+    actions: [
+      { label: "查看高风险地块", href: "#top-risk-fields" },
+      { label: "排查离线设备", href: "#device-health" },
+      { label: "查看最近作业", href: "#recent-operations" },
+      { label: "导出报告", href: "/customer/export" },
+    ],
+    formalityNote: exportFormalityNote,
+  };
+  const guidanceCards: CustomerGuidanceCardVm[] = [
+    { id: "risk", title: "风险地块", currentStatus: `${numberFmt.format(highRisk)} 块地块需要关注。`, why: "风险来自地块状态、近期作业和证据完整性的综合判断。", nextStep: "先查看高风险地块，确认风险原因和可用证据。", formality: "风险提示用于处理优先级，不替代正式验收结论。", action: { label: "查看高风险地块", href: "#top-risk-fields" } },
+    { id: "device", title: "离线设备", currentStatus: `${numberFmt.format(offlineDevices)} 台离线。`, why: "设备最近心跳或遥测未返回，可能影响地块状态判断。", nextStep: "查看受影响地块，等待运营人员复核设备状态。", formality: "设备恢复和人工复核前，不展示执行成功或价值结论。", action: { label: "排查离线设备", href: "#device-health" } },
+    { id: "operations", title: "最近作业证据", currentStatus: `最近展示 ${numberFmt.format(recentOperations.length)} 条作业记录。`, why: "作业证据决定能否形成正式验收、客户报告和后续田块记忆。", nextStep: "打开最近作业，查看证据状态、验收状态和复核提示。", formality: "证据不足或待复核作业不能生成正式价值结论。", action: { label: "查看最近作业", href: "#recent-operations" } },
+    { id: "export", title: "客户报告", currentStatus: exportFormalityNote, why: "报告需要把风险、待办、作业、设备、证据和价值记录放在同一客户语境下。", nextStep: "导出报告前确认附注中的待复核结论。", formality: "报告可以用于客户沟通；待复核结论必须按附注说明使用。", action: { label: "导出报告", href: "/customer/export" } },
+  ];
 
   return {
     generatedAtText,
     context: { title: CUSTOMER_LABELS.dashboardTitle, subtitle: "经营结果、风险与行动摘要", actorRoleText: "客户", scopeText: "当前可见授权经营范围" },
     header: { eyebrow: "GEOX / 客户看板", title: CUSTOMER_LABELS.dashboardTitle, subtitle: "经营结果、风险与行动摘要", exportAction: { label: "总览导出", href: "/customer/export" } },
     summaryScopeText: `${DASHBOARD_SUMMARY_SOURCE} ${customerTrustScopeText()}`,
+    usagePath,
+    guidanceCards,
     kpis,
     topRiskFields,
     pendingItems: [
@@ -243,6 +303,9 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
       fieldText: "当前地块设备请进入地块报告查看。",
       offlineText: offlineDevices > 0 ? `需优先复核 ${numberFmt.format(offlineDevices)} 台离线设备。` : "当前没有离线设备。",
       alertText,
+      whyText: "设备最近心跳或遥测未返回，可能影响地块状态判断和作业证据可信度。",
+      nextStepText: "由运营人员复核设备状态；客户侧先查看受影响地块和最近作业证据。",
+      formalityText: "设备恢复和人工复核前，不展示执行成功、客户 ROI 或 Field Memory 结论。",
       empty: !aggregate.device_summary,
     },
     roiSummary,
