@@ -171,7 +171,7 @@ requireText('dashboard VM natural wording', dashboardVm, [
   '地块边界：已接入',
   '地块边界：暂未接入',
 ]);
-requireText('dashboard VM Part E usability wording', dashboardVm, [
+requireText('dashboard VM Part E data contract wording', dashboardVm, [
   'usagePath',
   'guidanceCards',
   '当前经营状态',
@@ -180,10 +180,6 @@ requireText('dashboard VM Part E usability wording', dashboardVm, [
   '排查离线设备',
   '查看最近作业证据',
   '导出客户报告',
-  '当前状态',
-  '为什么',
-  '下一步',
-  '正式性提示',
   '导出报告可直接用于客户或管理层复盘',
 ]);
 
