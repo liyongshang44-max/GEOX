@@ -45,6 +45,16 @@ export default function OperatorWorkbenchPage(): React.ReactElement {
       {pageState === "permission-denied" ? <OperatorPageStateView state="permission-denied" reason={errorReason} /> : null}
       {vm ? (
         <div className="operatorWorkbench">
+          <section className="operatorPrinciplesCard" aria-label="运营处理原则">
+            <h2>处理原则</h2>
+            <ol>
+              <li>先处理设备离线和执行异常，因为它们会影响证据可信度。</li>
+              <li>再处理待审批、待验收和证据不足。</li>
+              <li>所有处理动作只写审计记录，不自动生成正式验收或客户价值结论。</li>
+            </ol>
+            <p>动作后果：运营按钮用于记录处理事实、排查建议或候选任务；需要人工确认后，才可能进入正式作业、客户 ROI 或 Field Memory。</p>
+          </section>
+
           <section className="operatorWorkbenchSummary">
             <div><span>数据范围</span><strong>{vm.dataScopeText}</strong></div>
             <div><span>待处理总数</span><strong>{vm.summary.total}</strong></div>
@@ -64,6 +74,7 @@ export default function OperatorWorkbenchPage(): React.ReactElement {
             {vm.queues.map((queue) => (
               <article key={queue.key} className={`operatorQueueCard ${queue.count > 0 ? "hasItems" : ""}`}>
                 <header className="operatorQueueHead"><div><h2>{queue.title}</h2><p>{queue.description}</p></div><span>{queue.count}</span></header>
+                <p className="operatorQueuePrinciple">处理后果：进入该队列只建立审计和复核链路，不自动生成正式验收或客户价值结论。</p>
                 {queue.items.length ? (
                   <div className="operatorTodoList">
                     {queue.items.map((item) => (

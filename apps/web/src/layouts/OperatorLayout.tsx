@@ -1,6 +1,7 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import "../styles/operatorShell.css";
+import "../styles/operatorUsability.css";
 import { fetchSessionMe, type SessionMe } from "../api/session";
 import { hasOperatorPermission, permissionReason, type OperatorPermissionKey } from "../lib/permissions";
 
@@ -61,7 +62,7 @@ export default function OperatorLayout({ title, lead, children }: OperatorLayout
             <h1>{title}</h1>
             <p>{lead}</p>
           </div>
-          <div className="operatorHeaderBadge">权限可见性增强</div>
+          <span className="operatorHeaderBadge">运营专用</span>
         </header>
         <section className="operatorContent">{children}</section>
       </main>

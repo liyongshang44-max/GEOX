@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { fetchCustomerDashboardAggregate, type CustomerDashboardAggregateV1 } from "../api/customerReports";
 import {
   CockpitActionList,
@@ -13,6 +14,11 @@ import RoiLedgerDrawer from "../components/customer/RoiLedgerDrawer";
 import { FormalScenarioBadge } from "../components/customer";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 import { buildCustomerDashboardVm, type CustomerDashboardPageVm } from "../viewmodels/customerDashboardVm";
+
+function UsageAction({ action }: { action: { label: string; href: string } }): React.ReactElement {
+  if (action.href.startsWith("#")) return <a className="customerButton" href={action.href}>{action.label}</a>;
+  return <Link className="customerButton" to={action.href}>{action.label}</Link>;
+}
 
 export default function CustomerDashboardPage(): React.ReactElement {
   const [vm, setVm] = React.useState<CustomerDashboardPageVm | null>(null);
@@ -55,6 +61,9 @@ export default function CustomerDashboardPage(): React.ReactElement {
     fieldText: "当前地块设备请进入地块报告查看。",
     offlineText: "当前没有离线设备。",
     alertText: "当前未发现告警事件。",
+    whyText: "当前未返回设备摘要，不能判断设备对地块状态的影响。",
+    nextStepText: "等待运营人员补齐设备状态或进入地块报告查看可用证据。",
+    formalityText: "设备状态未确认前，不展示执行成功、客户 ROI 或 Field Memory 结论。",
   };
   const acceptanceSummaryVm = {
     title: "执行与验收摘要",
@@ -69,8 +78,44 @@ export default function CustomerDashboardPage(): React.ReactElement {
 
   return (
     <div className="customerDashboardPage">
+      {vm ? (
+        <section className="customerCard customerUsagePathCard" aria-label="客户使用路径">
+          <div>
+            <div className="customerEyebrow">{vm.usagePath.title}</div>
+            <h2 className="customerCardTitle">{vm.usagePath.statusText}</h2>
+            <p className="customerMetricLabel customerSpacingTopXs">{summaryScopeText}</p>
+          </div>
+          <div className="customerUsagePathGrid">
+            <div>
+              <strong>{vm.usagePath.orderTitle}</strong>
+              <ol>{vm.usagePath.steps.map((step) => <li key={step}>{step}</li>)}</ol>
+            </div>
+            <div>
+              <strong>下一步入口：</strong>
+              <div className="customerUsageActions">{vm.usagePath.actions.map((action) => <UsageAction key={action.label} action={action} />)}</div>
+              <p className="customerMetricLabel customerSpacingTopXs">正式性提示：{vm.usagePath.formalityNote}</p>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       {vm ? <p className="customerMetricLabel customerDashboardScopeText customerSpacingBottomSm">{summaryScopeText}</p> : null}
       <CockpitKpiStrip items={kpis} emptyState={emptyStates.NO_KPI_SUMMARY} />
+
+      <section className="customerDashboardGuidanceGrid" aria-label="客户主视觉解释卡片">
+        {(vm?.guidanceCards ?? []).map((card) => (
+          <article key={card.id} className="customerCard customerGuidanceCard">
+            <h3 className="customerCardTitle">{card.title}</h3>
+            <dl>
+              <div><dt>当前状态</dt><dd>{card.currentStatus}</dd></div>
+              <div><dt>为什么</dt><dd>{card.why}</dd></div>
+              <div><dt>下一步</dt><dd>{card.nextStep}</dd></div>
+              <div><dt>正式性提示</dt><dd>{card.formality}</dd></div>
+            </dl>
+            <UsageAction action={card.action} />
+          </article>
+        ))}
+      </section>
 
       <section className="customerDashboardMainGrid">
         <div className="customerDashboardRiskPanel"><CockpitFieldRiskPanel fields={vm?.topRiskFields ?? []} emptyState={emptyStates.NO_RISK_FIELDS} mode="MATRIX" /></div>

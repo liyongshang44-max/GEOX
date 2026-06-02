@@ -172,12 +172,24 @@ function isPdiReport(report?: OperationReportV1 | null): boolean {
 export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): React.ReactElement {
   const recentOperations = vm.recentOperations.slice(0, 5);
   const topRisks = vm.topRiskFields.slice(0, 5);
+  const pendingRows = vm.actionItems.slice(0, 6).map((item) => [safeExportText(item.title, "待处理事项"), safeExportText(item.currentStatus, "状态待确认"), safeExportText(item.nextStep, "下一步待确认"), safeExportText(item.formality, "正式性待确认")]);
+  const reviewNotes = [
+    "风险提示用于处理优先级，不等同于正式验收或收益结论。",
+    "设备恢复和人工复核前，不展示执行成功或价值结论。",
+    "证据不足、待验收或需要复核的作业，不能生成正式客户价值结论。",
+    vm.usagePath.formalityNote,
+  ];
   return (
     <div className="customerCompactReport">
-      <section className="customerCard"><h2 className="customerCardTitle">概览</h2><p className="customerSpacingTopSm">客户经营总览</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">高风险地块 Top 5</h2><PrintTable headers={["地块", "风险", "原因"]} rows={topRisks.map((item) => [safeExportText(item.fieldName, "地块名称待补充"), safeExportText(item.riskLabel, "风险待确认"), item.reasons.map((reason) => safeExportText(reason, "暂无风险原因")).join("；") || "暂无风险原因"])} emptyText="暂无高风险地块" /></section>
-      <section className="customerCard"><h2 className="customerCardTitle">近期作业 Top 5</h2><PrintTable headers={["作业", "地块", "更新时间", "验收", "正式场景", "正式链路", "证据状态", "复核状态"]} rows={recentOperations.map((item) => [safeExportText(item.operationName, "作业名称待补充"), safeExportText(item.fieldName, "地块名称待补充"), safeExportText(item.updatedAtText, "暂无更新时间"), safeExportText(item.acceptanceText, "等待验收"), safeExportText(item.scenarioTypeText, "场景待确认"), safeExportText(item.formalChainStatusText, "正式链路需复核"), safeExportText(item.evidenceStatusText, "证据需复核"), safeExportText(item.needsReviewText, "需复核")])} emptyText="暂无近期作业" /></section>
-      <footer className="customerCard"><p className="customerMetricLabel">报告由 GEOX 自动生成，仅供客户经营复盘与执行跟进使用。</p></footer>
+      <section className="customerCard"><h2 className="customerCardTitle">1. 本期摘要</h2><p className="customerSpacingTopSm">{safeExportText(vm.usagePath.statusText, "当前经营状态待确认")}</p><p className="customerMetricLabel customerSpacingTopXs">{safeExportText(vm.summaryScopeText, "统计范围待确认")}</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">2. 主要风险</h2><PrintTable headers={["地块", "风险", "原因", "下一步"]} rows={topRisks.map((item) => [safeExportText(item.fieldName, "地块名称待补充"), safeExportText(item.riskLabel, "风险待确认"), item.reasons.map((reason) => safeExportText(reason, "暂无风险原因")).join("；") || "暂无风险原因", "查看地块风险原因和最近作业证据"])} emptyText="暂无主要风险" /></section>
+      <section className="customerCard"><h2 className="customerCardTitle">3. 待处理事项</h2><PrintTable headers={["事项", "当前状态", "下一步", "正式性提示"]} rows={pendingRows} emptyText="暂无待处理事项" /></section>
+      <section className="customerCard"><h2 className="customerCardTitle">4. 作业进展</h2><PrintTable headers={["作业", "地块", "更新时间", "验收", "正式链路", "复核状态"]} rows={recentOperations.map((item) => [safeExportText(item.operationName, "作业名称待补充"), safeExportText(item.fieldName, "地块名称待补充"), safeExportText(item.updatedAtText, "暂无更新时间"), safeExportText(item.acceptanceText, "等待验收"), safeExportText(item.formalChainStatusText, "正式链路需复核"), safeExportText(item.needsReviewText, "需复核")])} emptyText="暂无近期作业" /></section>
+      <section className="customerCard"><h2 className="customerCardTitle">5. 设备状态</h2><PrintTable headers={["项目", "内容"]} rows={[["当前状态", safeExportText(vm.deviceHealth.authorizedText, "设备状态待确认")], ["告警", safeExportText(vm.deviceHealth.alertText, "告警状态待确认")], ["为什么", safeExportText(vm.deviceHealth.whyText, "设备影响待确认")], ["下一步", safeExportText(vm.deviceHealth.nextStepText, "等待运营复核")], ["正式性提示", safeExportText(vm.deviceHealth.formalityText, "设备状态未确认前不形成正式结论")]]} emptyText="暂无设备状态" /></section>
+      <section className="customerCard"><h2 className="customerCardTitle">6. 证据与验收</h2><PrintTable headers={["作业", "证据状态", "验收状态", "正式链路"]} rows={recentOperations.map((item) => [safeExportText(item.operationName, "作业名称待补充"), safeExportText(item.evidenceStatusText || item.evidenceText, "证据需复核"), safeExportText(item.acceptanceText, "验收待确认"), safeExportText(item.scenarioSummaryText, "正式链路状态待确认")])} emptyText="暂无证据与验收摘要" /></section>
+      <section className="customerCard"><h2 className="customerCardTitle">7. 价值记录</h2><PrintTable headers={["项目", "内容"]} rows={[["当前状态", safeExportText(vm.roiSummary.currentStatus, "价值记录待确认")], ["为什么", safeExportText(vm.roiSummary.whyText, "价值依据待确认")], ["下一步", safeExportText(vm.roiSummary.nextStepText, "先补齐证据与验收")], ["正式性提示", safeExportText(vm.roiSummary.formalityText, "未通过正式价值门禁前不可作为 ROI 结论")], ["价值摘要", safeExportText(vm.roiSummary.customerValueText, "暂无价值摘要")]]} emptyText="暂无价值记录" /></section>
+      <section className="customerCard"><h2 className="customerCardTitle">8. 附注：哪些结论尚待复核</h2><ul className="customerList customerSpacingTopSm">{reviewNotes.map((item) => <li key={item} className="customerListItem">{safeExportText(item, "复核说明待确认")}</li>)}</ul></section>
+      <footer className="customerCard"><p className="customerMetricLabel">报告由 GEOX 自动生成，可用于客户或管理层复盘；其中待复核结论已在附注中标明，不能当作正式收益或验收结论。</p></footer>
     </div>
   );
 }

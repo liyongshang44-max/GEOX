@@ -18,6 +18,89 @@
   gap: 16px;
 }
 
+.customerUsagePathCard {
+  display: grid;
+  gap: 16px;
+  border-color: rgba(4, 120, 87, .24);
+  background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+}
+
+.customerUsagePathCard h2 {
+  margin: 6px 0 0;
+  font-size: clamp(22px, 2.5vw, 34px);
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.customerUsagePathGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, .8fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.customerUsagePathGrid strong {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--customer-title);
+}
+
+.customerUsagePathGrid ol {
+  margin: 0;
+  padding-left: 22px;
+  line-height: 1.7;
+}
+
+.customerUsageActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.customerDashboardGuidanceGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(210px, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+
+.customerStructuredCard {
+  display: grid;
+  gap: 12px;
+}
+
+.customerStructuredCard dl,
+.customerGuidanceCard dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.customerStructuredCard dl > div,
+.customerGuidanceCard dl > div {
+  display: grid;
+  gap: 3px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  background: var(--customer-surface-muted);
+  border: 1px solid var(--customer-border);
+}
+
+.customerStructuredCard dt,
+.customerGuidanceCard dt {
+  color: var(--customer-muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.customerStructuredCard dd,
+.customerGuidanceCard dd {
+  margin: 0;
+  color: var(--customer-text);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
 .customerDashboardKpiRow {
   display: grid;
   grid-template-columns: repeat(4, minmax(210px, 1fr));
@@ -171,7 +254,8 @@
 }
 
 @media (max-width: 1500px) {
-  .customerDashboardKpiRow {
+  .customerDashboardKpiRow,
+  .customerDashboardGuidanceGrid {
     grid-template-columns: repeat(3, minmax(220px, 1fr));
   }
 
@@ -186,9 +270,11 @@
 }
 
 @media (max-width: 1120px) {
-  .customerDashboardKpiRow {
+  .customerDashboardKpiRow,
+  .customerDashboardGuidanceGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .customerUsagePathGrid,
   .customerDashboardMainGrid,
   .customerDashboardBottomGrid,
   .customerDashboardRightRail {
@@ -198,6 +284,7 @@
 
 @media (max-width: 760px) {
   .customerDashboardKpiRow,
+  .customerDashboardGuidanceGrid,
   .cockpitRiskMatrix {
     grid-template-columns: 1fr;
   }
