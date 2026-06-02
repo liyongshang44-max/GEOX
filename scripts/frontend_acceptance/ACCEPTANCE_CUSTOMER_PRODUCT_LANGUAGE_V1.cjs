@@ -15,6 +15,7 @@ const checkedFiles = [
   'apps/web/src/components/cockpit/RecentOperationsSection.tsx',
   'apps/web/src/components/cockpit/CockpitKpiCard.tsx',
   'apps/web/src/components/cockpit/CockpitActionCard.tsx',
+  'apps/web/src/components/cockpit/CockpitFieldRiskPanel.tsx',
   'apps/web/src/components/cockpit/DeviceHealthCard.tsx',
   'apps/web/src/components/cockpit/ValueResultPanel.tsx',
 ];
@@ -25,6 +26,7 @@ const requiredProductLanguageUsages = [
   'apps/web/src/views/FieldReportPage.tsx',
   'apps/web/src/components/cockpit/CockpitKpiCard.tsx',
   'apps/web/src/components/cockpit/CockpitActionCard.tsx',
+  'apps/web/src/components/cockpit/CockpitFieldRiskPanel.tsx',
   'apps/web/src/components/cockpit/DeviceHealthCard.tsx',
   'apps/web/src/components/cockpit/ValueResultPanel.tsx',
 ];
@@ -165,6 +167,11 @@ for (const required of [
     console.error(`[customer-product-language] dashboard VM missing required natural customer wording: ${required}`);
     failed = true;
   }
+}
+const fieldRiskPanel = read('apps/web/src/components/cockpit/CockpitFieldRiskPanel.tsx');
+if (!/boundarySummary/.test(fieldRiskPanel) || !/地块边界：已接入/.test(fieldRiskPanel) || !/地块边界：暂未接入/.test(fieldRiskPanel)) {
+  console.error('[customer-product-language] field risk panel must expose natural field boundary wording');
+  failed = true;
 }
 for (const [label, pattern] of [
   ['raw scenario type passthrough', /scenarioTypeText:\s*formalVm\.rawScenarioType/],
