@@ -11,6 +11,7 @@ const REQUIRED_GATES = [
   { id: 'runtime_workers', command: 'pnpm run ci:runtime:workers' },
   { id: 'pilot_runtime_security_baseline', command: 'pnpm run ci:runtime:pilot-security-baseline' },
   { id: 'base_contract_p0', command: 'pnpm run ci:base-contract:p0' },
+  { id: 'formal_operation_field_binding', command: 'pnpm run ci:governance:formal-operation-field-binding' },
   { id: 'scenario_pest_disease_inspection', command: 'pnpm run ci:scenario:pest-disease-inspection', timeout_ms: LONG_GATE_TIMEOUT_MS },
   { id: 'scenario_formal_e2e', command: 'pnpm run ci:scenario:formal-e2e', timeout_ms: LONG_GATE_TIMEOUT_MS },
   { id: 'scenario_productization', command: 'pnpm run ci:scenario:productization', timeout_ms: LONG_GATE_TIMEOUT_MS },
@@ -75,12 +76,7 @@ function buildGateEnv() {
   const dotEnvCi = loadDotEnvFile(path.join(ROOT, '.env.ci'));
   const dotEnv = loadDotEnvFile(path.join(ROOT, '.env'));
   const tokenEnv = loadAcceptanceTokens();
-  const env = {
-    ...process.env,
-    ...dotEnv,
-    ...dotEnvCi,
-    ...tokenEnv
-  };
+  const env = { ...process.env, ...dotEnv, ...dotEnvCi, ...tokenEnv };
   env.BASE_URL = env.BASE_URL || 'http://127.0.0.1:3001';
   env.API_BASE_URL = env.API_BASE_URL || env.BASE_URL;
   env.DATABASE_URL = env.DATABASE_URL || `postgres://${env.POSTGRES_USER || 'landos'}:${env.POSTGRES_PASSWORD || ''}@127.0.0.1:5433/${env.POSTGRES_DB || 'landos'}`;
@@ -104,36 +100,16 @@ function runGate(gate, env) {
   const started_at = new Date().toISOString();
   const timeout_ms = gateTimeoutMs(gate);
   console.log(`[controlled-pilot-release-gate] START ${gate.id}: ${gate.command} timeout_ms=${timeout_ms}`);
-  const result = spawnSync(gate.command, {
-    cwd: ROOT,
-    shell: true,
-    encoding: 'utf8',
-    env,
-    maxBuffer: 64 * 1024 * 1024,
-    timeout: timeout_ms,
-    killSignal: 'SIGTERM'
-  });
+  const result = spawnSync(gate.command, { cwd: ROOT, shell: true, encoding: 'utf8', env, maxBuffer: 64 * 1024 * 1024, timeout: timeout_ms, killSignal: 'SIGTERM' });
   const stdout = result.stdout || '';
   const stderr = result.stderr || '';
   const error_text = result.error ? `${result.error.code || 'ERROR'}: ${result.error.message || result.error}` : '';
   const timed_out = result.error?.code === 'ETIMEDOUT';
   const ok = result.status === 0 && !result.error;
   const output_tail = ok ? '' : tail([error_text, stdout, stderr].filter(Boolean).join('\n'));
-  const record = {
-    id: gate.id,
-    command: gate.command,
-    ok,
-    exit_code: result.status,
-    signal: result.signal || null,
-    timeout_ms,
-    timed_out,
-    started_at,
-    finished_at: new Date().toISOString(),
-    output_tail,
-  };
-  if (record.ok) {
-    console.log(`[controlled-pilot-release-gate] PASS ${gate.id}`);
-  } else {
+  const record = { id: gate.id, command: gate.command, ok, exit_code: result.status, signal: result.signal || null, timeout_ms, timed_out, started_at, finished_at: new Date().toISOString(), output_tail };
+  if (record.ok) console.log(`[controlled-pilot-release-gate] PASS ${gate.id}`);
+  else {
     const timeout_suffix = timed_out ? ' timeout=true' : '';
     console.error(`[controlled-pilot-release-gate] FAIL ${gate.id} exit=${record.exit_code} signal=${record.signal}${timeout_suffix}`);
     console.error(`[controlled-pilot-release-gate] ${gate.id} output_tail=${JSON.stringify(output_tail)}`);
@@ -141,102 +117,22 @@ function runGate(gate, env) {
   return record;
 }
 
-function toList(items) {
-  return items.length === 0 ? '- none' : items.map((item) => `- ${item}`).join('\n');
-}
-
-function jsonBlock(value) {
-  return ['```json', JSON.stringify(value, null, 2), '```'].join('\n');
-}
-
-function buildRuntimeWorkerLiveness(results) {
-  const runtimeGate = results.find((gate) => gate.id === 'runtime_workers');
-  const fresh = runtimeGate?.ok === true;
-  return {
-    source: 'worker_runtime_heartbeat_v1',
-    logs_role: 'diagnostic_only',
-    jobs_heartbeat_fresh: fresh,
-    executor_heartbeat_fresh: fresh,
-    gate_id: 'runtime_workers',
-    gate_status: fresh ? 'PASS' : 'FAIL'
-  };
-}
-
+function toList(items) { return items.length === 0 ? '- none' : items.map((item) => `- ${item}`).join('\n'); }
+function jsonBlock(value) { return ['```json', JSON.stringify(value, null, 2), '```'].join('\n'); }
+function buildRuntimeWorkerLiveness(results) { const runtimeGate = results.find((gate) => gate.id === 'runtime_workers'); const fresh = runtimeGate?.ok === true; return { source: 'worker_runtime_heartbeat_v1', logs_role: 'diagnostic_only', jobs_heartbeat_fresh: fresh, executor_heartbeat_fresh: fresh, gate_id: 'runtime_workers', gate_status: fresh ? 'PASS' : 'FAIL' }; }
 function writeReport(summary, passed_gates, failed_gates) {
-  const report = [
-    '# Controlled Pilot Readiness Report',
-    '',
-    `Status: ${summary.status}`,
-    '',
-    '## Passed gates',
-    toList(passed_gates.map((gate) => `${gate.id}: ${gate.command}`)),
-    '',
-    '## Failed gates',
-    toList(failed_gates.map((gate) => `${gate.id}: ${gate.command} (exit=${gate.exit_code}, signal=${gate.signal || 'none'}, timeout=${gate.timed_out ? 'true' : 'false'})`)),
-    '',
-    '## Failed gate output tails',
-    failed_gates.length === 0 ? '- none' : failed_gates.map((gate) => `### ${gate.id}\n\n${jsonBlock({ command: gate.command, exit_code: gate.exit_code, signal: gate.signal, timeout_ms: gate.timeout_ms, timed_out: gate.timed_out, output_tail: gate.output_tail })}`).join('\n\n'),
-    '',
-    '## Runtime worker liveness',
-    jsonBlock(summary.runtime_worker_liveness),
-    '',
-    '## Pilot eligible scenarios',
-    toList(pilot_eligible_scenarios),
-    '',
-    '## Experimental scenarios',
-    toList(experimental_scenarios),
-    '',
-    '## Known limits',
-    toList(known_limits),
-    '',
-    '## Not for sale claims',
-    toList(not_for_sale_claims),
-    '',
-    '## Machine readable summary',
-    jsonBlock(summary),
-    ''
-  ].join('\n');
-
+  const report = ['# Controlled Pilot Readiness Report', '', `Status: ${summary.status}`, '', '## Passed gates', toList(passed_gates.map((gate) => `${gate.id}: ${gate.command}`)), '', '## Failed gates', toList(failed_gates.map((gate) => `${gate.id}: ${gate.command} (exit=${gate.exit_code}, signal=${gate.signal || 'none'}, timeout=${gate.timed_out ? 'true' : 'false'})`)), '', '## Failed gate output tails', failed_gates.length === 0 ? '- none' : failed_gates.map((gate) => `### ${gate.id}\n\n${jsonBlock({ command: gate.command, exit_code: gate.exit_code, signal: gate.signal, timeout_ms: gate.timeout_ms, timed_out: gate.timed_out, output_tail: gate.output_tail })}`).join('\n\n'), '', '## Runtime worker liveness', jsonBlock(summary.runtime_worker_liveness), '', '## Pilot eligible scenarios', toList(pilot_eligible_scenarios), '', '## Experimental scenarios', toList(experimental_scenarios), '', '## Known limits', toList(known_limits), '', '## Not for sale claims', toList(not_for_sale_claims), '', '## Machine readable summary', jsonBlock(summary), ''].join('\n');
   fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
   fs.writeFileSync(REPORT_PATH, report, 'utf8');
 }
 
 const gateEnv = buildGateEnv();
-console.log('[controlled-pilot-release-gate] strict mode environment', {
-  BASE_URL: gateEnv.BASE_URL,
-  API_BASE_URL: gateEnv.API_BASE_URL,
-  DATABASE_URL: gateEnv.DATABASE_URL ? '<set>' : '<missing>',
-  GEOX_RUNTIME_ENV: gateEnv.GEOX_RUNTIME_ENV || '<missing>',
-  ADMIN_TOKEN: gateEnv.ADMIN_TOKEN ? '<set>' : '<missing>',
-  AO_ACT_TOKEN: gateEnv.AO_ACT_TOKEN ? '<set>' : '<missing>',
-  CLIENT_TOKEN: gateEnv.CLIENT_TOKEN ? '<set>' : '<missing>',
-  DEFAULT_GATE_TIMEOUT_MS,
-  LONG_GATE_TIMEOUT_MS
-});
-
+console.log('[controlled-pilot-release-gate] strict mode environment', { BASE_URL: gateEnv.BASE_URL, API_BASE_URL: gateEnv.API_BASE_URL, DATABASE_URL: gateEnv.DATABASE_URL ? '<set>' : '<missing>', GEOX_RUNTIME_ENV: gateEnv.GEOX_RUNTIME_ENV || '<missing>', ADMIN_TOKEN: gateEnv.ADMIN_TOKEN ? '<set>' : '<missing>', AO_ACT_TOKEN: gateEnv.AO_ACT_TOKEN ? '<set>' : '<missing>', CLIENT_TOKEN: gateEnv.CLIENT_TOKEN ? '<set>' : '<missing>', DEFAULT_GATE_TIMEOUT_MS, LONG_GATE_TIMEOUT_MS });
 const results = REQUIRED_GATES.map((gate) => ({ ...gate, ...runGate(gate, gateEnv) }));
 const passed_gates = results.filter((gate) => gate.ok);
 const failed_gates = results.filter((gate) => !gate.ok);
 const runtime_worker_liveness = buildRuntimeWorkerLiveness(results);
-
-const summary = {
-  status: failed_gates.length === 0 ? 'PASS' : 'FAIL',
-  required_gate_count: REQUIRED_GATES.length,
-  passed_gate_count: passed_gates.length,
-  failed_gate_count: failed_gates.length,
-  passed_gate_ids: passed_gates.map((gate) => gate.id),
-  failed_gate_ids: failed_gates.map((gate) => gate.id),
-  runtime_worker_liveness,
-  pilot_eligible_scenarios,
-  experimental_scenarios
-};
-
+const summary = { status: failed_gates.length === 0 ? 'PASS' : 'FAIL', required_gate_count: REQUIRED_GATES.length, passed_gate_count: passed_gates.length, failed_gate_count: failed_gates.length, passed_gate_ids: passed_gates.map((gate) => gate.id), failed_gate_ids: failed_gates.map((gate) => gate.id), runtime_worker_liveness, pilot_eligible_scenarios, experimental_scenarios };
 writeReport(summary, passed_gates, failed_gates);
-process.stdout.write(`${JSON.stringify({
-  ...summary,
-  passed_gates: passed_gates.map((gate) => ({ id: gate.id, command: gate.command, timeout_ms: gate.timeout_ms })),
-  failed_gates: failed_gates.map((gate) => ({ id: gate.id, command: gate.command, exit_code: gate.exit_code, signal: gate.signal, timeout_ms: gate.timeout_ms, timed_out: gate.timed_out, output_tail: gate.output_tail })),
-  known_limits,
-  not_for_sale_claims
-}, null, 2)}\n`);
+process.stdout.write(`${JSON.stringify({ ...summary, passed_gates: passed_gates.map((gate) => ({ id: gate.id, command: gate.command, timeout_ms: gate.timeout_ms })), failed_gates: failed_gates.map((gate) => ({ id: gate.id, command: gate.command, exit_code: gate.exit_code, signal: gate.signal, timeout_ms: gate.timeout_ms, timed_out: gate.timed_out, output_tail: gate.output_tail })), known_limits, not_for_sale_claims }, null, 2)}\n`);
 if (summary.status !== 'PASS') process.exit(1);
