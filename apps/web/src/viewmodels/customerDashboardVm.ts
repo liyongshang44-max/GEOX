@@ -38,6 +38,14 @@ function roiCustomerText(summary: CustomerDashboardAggregateV1["roi_summary"] | 
   return customerValueSummaryText(summary, total, (n) => numberFmt.format(n));
 }
 
+function deviceVisibilityText(visibleDevices: number, offlineDevices: number): string {
+  return `当前可见授权设备共 ${numberFmt.format(visibleDevices)} 台，其中 ${numberFmt.format(offlineDevices)} 台离线。`;
+}
+
+function deviceAlertText(alertEvents: number): string {
+  return alertEvents > 0 ? `当前发现 ${numberFmt.format(alertEvents)} 条告警事件。` : "当前未发现告警事件。";
+}
+
 export type CustomerKpiVm = {
   key: "OPEN_ACTIONS" | "RISK_FIELDS" | "PENDING_ACCEPTANCE" | "OFFLINE_DEVICES" | "RECENT_OPERATIONS" | "VALUE_RECORDS";
   label: string;
@@ -139,7 +147,10 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
   const onlineDevices = Math.max(0, totalDevices - offlineDevices);
   const offlineFields = num(deviceSummary.offline_fields);
   const generatedAtText = toDateTimeText((aggregate as any).generated_at ?? new Date().toISOString());
-  const globalDeviceText = globalDevices === null ? "全域设备：后端未返回；客户页不推断全域设备总量。" : `全域设备：共 ${numberFmt.format(globalDevices)} 台。`;
+  const globalDeviceText = globalDevices === null ? "当前未返回全域设备摘要，客户页不推断未授权设备。" : `当前设备摘要仅用于授权范围展示；全域设备共 ${numberFmt.format(globalDevices)} 台。`;
+  const visibleDeviceText = deviceVisibilityText(visibleDevices, offlineDevices);
+  const alertText = deviceAlertText(alertEvents);
+  const deviceScopeText = "当前页仅展示客户可见授权设备，不推断未授权设备或当前地块设备。";
   const firstRiskFieldId = String((aggregate.top_risk_fields ?? [])[0]?.field_id ?? "");
   const firstRiskFieldHref = firstRiskFieldId ? `/customer/fields/${encodeURIComponent(firstRiskFieldId)}` : "/customer/dashboard";
   const emptyStates = {
@@ -153,19 +164,19 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
     WEATHER_UNAVAILABLE: getCustomerEmptyState("WEATHER_UNAVAILABLE"),
   };
   const kpis: CustomerKpiVm[] = [
-    { key: "OPEN_ACTIONS", label: "待处理事项", value: numberFmt.format(pendingActions), unit: "条", tone: pendingActions > 0 ? "warning" : "good", sourceNote: "customer_dashboard_aggregate_v1.pending_actions_summary.total_open_alerts", customerHint: `${DASHBOARD_SUMMARY_SOURCE} 建议优先处理高风险相关待办。` },
-    { key: "RISK_FIELDS", label: "风险地块", value: numberFmt.format(highRisk), unit: "块", tone: highRisk > 0 ? "danger" : "good", sourceNote: "customer_dashboard_aggregate_v1.fields.at_risk", customerHint: `${DASHBOARD_SUMMARY_SOURCE} 点击中部风险面板可查看地块详情。` },
-    { key: "PENDING_ACCEPTANCE", label: "待验收作业", value: numberFmt.format(pendingAcceptance), unit: "条", tone: pendingAcceptance > 0 ? "warning" : "good", sourceNote: "customer_dashboard_aggregate_v1.pending_actions_summary.pending_acceptance", customerHint: `${DASHBOARD_SUMMARY_SOURCE} 与作业列表使用同一客户摘要来源。` },
-    { key: "OFFLINE_DEVICES", label: "离线设备", value: numberFmt.format(offlineDevices), unit: "台", tone: offlineDevices > 0 ? "warning" : "good", sourceNote: "customer_dashboard_aggregate_v1.device_summary.offline_devices_count/offline_devices", customerHint: `统计范围：可见授权设备 visible_devices_count=${numberFmt.format(visibleDevices)}；offline_devices_count=${numberFmt.format(offlineDevices)}。当前地块设备请进入地块报告查看。` },
-    { key: "VALUE_RECORDS", label: trustedValueSummary ? "可信价值记录" : "价值线索", value: numberFmt.format(valueRecords), unit: "条", tone: trustedValueSummary && valueRecords > 0 ? "good" : "neutral", sourceNote: "customer_dashboard_aggregate_v1.roi_summary.total_roi_items + trust gate", customerHint: `${DASHBOARD_SUMMARY_SOURCE} ${customerTrustScopeText()}` },
-    { key: "RECENT_OPERATIONS", label: "作业记录", value: numberFmt.format(totalOperations), unit: "条", tone: "neutral", sourceNote: "customer_dashboard_aggregate_v1.period_summary.total_operations", customerHint: `${DASHBOARD_SUMMARY_SOURCE} 下方仅展示最近 5 条作业。`, disabledReason: "顶部指标仅展示 5 项，近期作业在列表区展示。" },
+    { key: "OPEN_ACTIONS", label: "待处理事项", value: numberFmt.format(pendingActions), unit: "条", tone: pendingActions > 0 ? "warning" : "good", sourceNote: "客户看板统一摘要中的待处理事项", customerHint: `${DASHBOARD_SUMMARY_SOURCE} 建议优先处理高风险相关待办。` },
+    { key: "RISK_FIELDS", label: "风险地块", value: numberFmt.format(highRisk), unit: "块", tone: highRisk > 0 ? "danger" : "good", sourceNote: "客户看板统一摘要中的风险地块", customerHint: `${DASHBOARD_SUMMARY_SOURCE} 点击中部风险面板可查看地块详情。` },
+    { key: "PENDING_ACCEPTANCE", label: "待验收作业", value: numberFmt.format(pendingAcceptance), unit: "条", tone: pendingAcceptance > 0 ? "warning" : "good", sourceNote: "客户看板统一摘要中的待验收作业", customerHint: `${DASHBOARD_SUMMARY_SOURCE} 与作业列表使用同一客户摘要来源。` },
+    { key: "OFFLINE_DEVICES", label: "离线设备", value: numberFmt.format(offlineDevices), unit: "台", tone: offlineDevices > 0 ? "warning" : "good", sourceNote: "客户看板统一摘要中的离线设备", customerHint: `${visibleDeviceText} ${deviceScopeText}` },
+    { key: "VALUE_RECORDS", label: trustedValueSummary ? "可信价值记录" : "价值线索", value: numberFmt.format(valueRecords), unit: "条", tone: trustedValueSummary && valueRecords > 0 ? "good" : "neutral", sourceNote: "客户看板统一摘要中的价值记录", customerHint: `${DASHBOARD_SUMMARY_SOURCE} ${customerTrustScopeText()}` },
+    { key: "RECENT_OPERATIONS", label: "作业记录", value: numberFmt.format(totalOperations), unit: "条", tone: "neutral", sourceNote: "客户看板统一摘要中的作业记录", customerHint: `${DASHBOARD_SUMMARY_SOURCE} 下方仅展示最近 5 条作业。`, disabledReason: "顶部指标仅展示 5 项，近期作业在列表区展示。" },
   ];
   const topRiskFields: CustomerRiskFieldVm[] = (aggregate.top_risk_fields ?? []).slice(0, 5).map((item, index) => {
     const fieldId = String(item.field_id ?? "");
     const riskTone = item.risk_level === "HIGH" ? "danger" : item.risk_level === "MEDIUM" ? "warning" : "neutral";
     const boundaryAvailable = fieldBoundaryAvailable(item);
     const fieldName = customerDisplayName(item.field_name, `未命名地块 ${index + 1}`);
-    return { fieldId, fieldName, secondaryText: item.field_name ? "授权地块" : "名称待补充，按授权地块序号显示", riskLabel: labelRiskLevel(item.risk_level), riskTone, reasons: (item.risk_reasons ?? []).map((reason) => customerSemanticLabel(reason)).filter(Boolean), boundaryAvailable, boundaryText: boundaryAvailable ? "地块边界已接入" : "暂无地块边界", href: fieldId ? `/customer/fields/${encodeURIComponent(fieldId)}` : "/customer/dashboard" };
+    return { fieldId, fieldName, secondaryText: item.field_name ? "授权地块" : "名称待补充，按授权地块序号显示", riskLabel: labelRiskLevel(item.risk_level), riskTone, reasons: (item.risk_reasons ?? []).map((reason) => customerSemanticLabel(reason)).filter(Boolean), boundaryAvailable, boundaryText: boundaryAvailable ? "地块边界：已接入" : "地块边界：暂未接入", href: fieldId ? `/customer/fields/${encodeURIComponent(fieldId)}` : "/customer/dashboard" };
   });
   const recentOperations: CustomerDashboardVm["recentOperations"] = (aggregate.recent_operations ?? []).slice(0, 5).map((item) => {
     const operationId = String(item.operation_id ?? item.operation_plan_id ?? "");
@@ -186,10 +197,12 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
       href: operationId ? `/customer/operations/${encodeURIComponent(operationId)}` : "/customer/dashboard",
     };
   });
+  const firstOperationId = String((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id ?? "");
+  const firstOperationHref = firstOperationId ? `/customer/operations/${encodeURIComponent(firstOperationId)}` : "/customer/dashboard";
   const actionItems: CustomerActionItemVm[] = [
     { id: "risk", source: "RECOMMENDATION", title: "集中处理高风险地块", riskLabel: "高风险", riskTone: "danger", fieldId: firstRiskFieldId, primaryAction: { label: "查看地块", href: firstRiskFieldHref }, summary: `${DASHBOARD_SUMMARY_SOURCE} 按风险等级推进复核，避免问题扩大。` },
-    { id: "accept", source: "PENDING_ACCEPTANCE", title: "完成待验收作业并回写结果", riskLabel: pendingAcceptance > 0 ? "待验收" : "已完成", riskTone: pendingAcceptance > 0 ? "warning" : "neutral", operationId: String((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id ?? ""), primaryAction: { label: "查看作业", href: ((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id) ? `/customer/operations/${encodeURIComponent(String((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id))}` : "/customer/dashboard" }, summary: `${DASHBOARD_SUMMARY_SOURCE} 确保作业闭环，提升验收及时率。` },
-    { id: "device", source: "DEVICE_OFFLINE", title: "排查离线设备并恢复数据", riskLabel: offlineDevices > 0 ? "需复核" : "稳定", riskTone: offlineDevices > 0 ? "warning" : "neutral", primaryAction: { label: offlineDevices > 0 ? "查看受影响地块" : "查看设备状态", href: firstRiskFieldHref }, summary: `离线设备需由运营人员复核最近心跳、遥测和绑定地块。客户侧先查看受影响地块与作业证据；未完成复核前不展示执行成功或价值结论。` },
+    { id: "accept", source: "PENDING_ACCEPTANCE", title: "完成待验收作业并回写结果", riskLabel: pendingAcceptance > 0 ? "待验收" : "已完成", riskTone: pendingAcceptance > 0 ? "warning" : "neutral", operationId: firstOperationId, primaryAction: { label: "查看作业", href: firstOperationHref }, summary: `${DASHBOARD_SUMMARY_SOURCE} 确保作业闭环，提升验收及时率。` },
+    { id: "device", source: "DEVICE_OFFLINE", title: "排查离线设备并恢复数据", riskLabel: offlineDevices > 0 ? "需复核" : "稳定", riskTone: offlineDevices > 0 ? "warning" : "neutral", primaryAction: { label: offlineDevices > 0 ? "查看受影响地块" : "查看设备状态", href: firstRiskFieldHref }, summary: "离线设备需由运营人员复核最近心跳、遥测和绑定地块。客户侧先查看受影响地块与作业证据；未完成复核前不展示执行成功或价值结论。" },
     { id: "general", source: "GENERAL", title: "处理待办事项", riskLabel: pendingActions > 0 ? "待处理" : "已清空", riskTone: pendingActions > 0 ? "warning" : "neutral", primaryAction: { label: "当前页查看", href: "/customer/dashboard" }, summary: `${DASHBOARD_SUMMARY_SOURCE} 优先关闭待处理事项，保障关键风险先处置。` },
   ];
   const roiSummary = {
@@ -224,12 +237,12 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
       alertEvents,
       offlineFields,
       updatedAtText: deviceSummary.updated_at ? toDateTimeText(deviceSummary.updated_at) : generatedAtText,
-      scopeText: "设备 scope：global_devices_count=全域设备，visible_devices_count=可见授权设备，field_devices_count=当前地块设备，offline_devices_count=离线设备，alert_events_count=告警事件。当前页展示客户可见授权设备，不推断当前地块设备。",
+      scopeText: deviceScopeText,
       globalText: globalDeviceText,
-      authorizedText: `可见授权设备：visible_devices_count=${numberFmt.format(visibleDevices)} 台；在线 ${numberFmt.format(onlineDevices)} 台。`,
-      fieldText: "当前地块设备：field_devices_count 需进入地块报告查看。",
-      offlineText: `离线设备：offline_devices_count=${numberFmt.format(offlineDevices)} 台；离线地块 ${numberFmt.format(offlineFields)} 块。`,
-      alertText: `告警事件：alert_events_count=${numberFmt.format(alertEvents)} 条。`,
+      authorizedText: visibleDeviceText,
+      fieldText: "当前地块设备请进入地块报告查看。",
+      offlineText: offlineDevices > 0 ? `需优先复核 ${numberFmt.format(offlineDevices)} 台离线设备。` : "当前没有离线设备。",
+      alertText,
       empty: !aggregate.device_summary,
     },
     roiSummary,

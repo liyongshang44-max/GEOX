@@ -11,23 +11,22 @@ type Props = {
 export default function DeviceHealthCard({ summary, emptyState }: Props): React.ReactElement {
   if (summary.empty) {
     return (
-      <article className="customerCard">
+      <article className="customerCard deviceHealthCard">
         <h3 className="customerCardTitle">设备状态</h3>
         <CustomerEmptyState vm={emptyState} />
       </article>
     );
   }
 
+  const lines = [summary.authorizedText, summary.alertText, summary.scopeText].map((item) => customerProductText(item)).filter(Boolean);
+
   return (
-    <article className="customerCard">
+    <article className="customerCard deviceHealthCard">
       <h3 className="customerCardTitle">设备状态</h3>
-      <div className="customerMetricLabel">{customerProductText(summary.globalText)}</div>
-      <div className="customerMetricLabel">{customerProductText(summary.authorizedText)}</div>
-      <div className="customerMetricLabel">{customerProductText(summary.fieldText)}</div>
-      <div className="customerMetricLabel">{customerProductText(summary.offlineText)}</div>
-      <div className="customerMetricLabel">{customerProductText(summary.alertText)}</div>
-      <div className="muted">{customerProductText(summary.scopeText)}</div>
-      <div className="muted">最近更新时间：{summary.updatedAtText ?? "暂无更新时间"}</div>
+      <div className="deviceHealthNaturalText">
+        {lines.map((line) => <p key={line}>{line}</p>)}
+      </div>
+      <div className="muted deviceHealthUpdatedAt">最近更新时间：{summary.updatedAtText ?? "暂无更新时间"}</div>
     </article>
   );
 }

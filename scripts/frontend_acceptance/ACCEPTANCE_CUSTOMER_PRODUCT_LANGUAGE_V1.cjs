@@ -15,6 +15,7 @@ const checkedFiles = [
   'apps/web/src/components/cockpit/RecentOperationsSection.tsx',
   'apps/web/src/components/cockpit/CockpitKpiCard.tsx',
   'apps/web/src/components/cockpit/CockpitActionCard.tsx',
+  'apps/web/src/components/cockpit/CockpitFieldRiskPanel.tsx',
   'apps/web/src/components/cockpit/DeviceHealthCard.tsx',
   'apps/web/src/components/cockpit/ValueResultPanel.tsx',
 ];
@@ -25,6 +26,7 @@ const requiredProductLanguageUsages = [
   'apps/web/src/views/FieldReportPage.tsx',
   'apps/web/src/components/cockpit/CockpitKpiCard.tsx',
   'apps/web/src/components/cockpit/CockpitActionCard.tsx',
+  'apps/web/src/components/cockpit/CockpitFieldRiskPanel.tsx',
   'apps/web/src/components/cockpit/DeviceHealthCard.tsx',
   'apps/web/src/components/cockpit/ValueResultPanel.tsx',
 ];
@@ -46,10 +48,26 @@ const banned = [
   ['field_devices_count', /field_devices_count/i],
   ['offline_devices_count', /offline_devices_count/i],
   ['alert_events_count', /alert_events_count/i],
+  ['field.geometry', /field\.geometry/i],
+  ['geometry_id', /geometry_id/i],
+  ['device scope', /设备\s*scope/i],
+  ['device equals copy', /(?:离线设备|告警事件|可见授权设备|当前地块设备)\s*=/],
   ['ROI trust lane', /ROI\s+trust\s+lane/i],
   ['Field Memory trust lane', /Field\s+Memory\s+trust\s+lane/i],
   ['closure chain', /closure\s+chain/i],
   ['Fail-safe', /Fail-safe/i],
+];
+
+const dashboardVmVisibleBanned = [
+  ['global_devices_count', /global_devices_count/i],
+  ['visible_devices_count', /visible_devices_count/i],
+  ['field_devices_count', /field_devices_count/i],
+  ['offline_devices_count', /offline_devices_count/i],
+  ['alert_events_count', /alert_events_count/i],
+  ['field.geometry', /field\.geometry/i],
+  ['geometry_id', /geometry_id/i],
+  ['device scope', /设备\s*scope/i],
+  ['device equals copy', /(?:离线设备|告警事件|可见授权设备|当前地块设备)\s*=/],
 ];
 
 const customerRawLeakBanned = [
@@ -76,6 +94,14 @@ function reportSection(report, route) {
   if (start < 0) return '';
   const next = report.indexOf('\n## ', start + 1);
   return next < 0 ? report.slice(start) : report.slice(start, next);
+}
+
+function stringLiterals(text) {
+  const out = [];
+  const re = /(["'`])((?:\\.|(?!\1)[\s\S])*?)\1/g;
+  let match;
+  while ((match = re.exec(text))) out.push(match[2]);
+  return out;
 }
 
 for (const rel of checkedFiles) {
@@ -123,6 +149,30 @@ if (!/未完成复核前不展示执行成功或价值结论/.test(dashboardVm))
   console.error('[customer-product-language] customer offline device action must preserve no-fake-success/no-value boundary');
   failed = true;
 }
+for (const [label, pattern] of dashboardVmVisibleBanned) {
+  const visibleLiterals = stringLiterals(dashboardVm).filter((literal) => !/^客户看板统一摘要中的/.test(literal));
+  if (visibleLiterals.some((literal) => pattern.test(literal))) {
+    console.error(`[customer-product-language] dashboard VM leaked customer visible technical language: ${label}`);
+    failed = true;
+  }
+}
+for (const required of [
+  '当前可见授权设备共',
+  '当前未发现告警事件',
+  '当前页仅展示客户可见授权设备，不推断未授权设备或当前地块设备',
+  '地块边界：已接入',
+  '地块边界：暂未接入',
+]) {
+  if (!dashboardVm.includes(required)) {
+    console.error(`[customer-product-language] dashboard VM missing required natural customer wording: ${required}`);
+    failed = true;
+  }
+}
+const fieldRiskPanel = read('apps/web/src/components/cockpit/CockpitFieldRiskPanel.tsx');
+if (!/boundarySummary/.test(fieldRiskPanel) || !/地块边界：已接入/.test(fieldRiskPanel) || !/地块边界：暂未接入/.test(fieldRiskPanel)) {
+  console.error('[customer-product-language] field risk panel must expose natural field boundary wording');
+  failed = true;
+}
 for (const [label, pattern] of [
   ['raw scenario type passthrough', /scenarioTypeText:\s*formalVm\.rawScenarioType/],
   ['raw formal chain status passthrough', /formalChainStatusText:\s*formalVm\.formalChainStatus/],
@@ -139,6 +189,22 @@ for (const helper of ['customerFormalChainText', 'customerEvidenceStateText', 'c
     console.error(`[customer-product-language] dashboard VM must use ${helper}`);
     failed = true;
   }
+}
+
+const dashboardPage = read('apps/web/src/views/CustomerDashboardPage.tsx');
+if (!/customerDashboardScopeText/.test(dashboardPage)) {
+  console.error('[customer-product-language] dashboard scope explanation must be rendered in full-width dashboard area');
+  failed = true;
+}
+
+const dashboardCss = read('apps/web/src/styles/customerDashboard.css');
+if (!/max-width:\s*1500px[\s\S]*customerDashboardRightRail[\s\S]*grid-column:\s*1\s*\/\s*-1/.test(dashboardCss)) {
+  console.error('[customer-product-language] dashboard CSS must expand right rail to full width below 1500px');
+  failed = true;
+}
+if (!/customerDashboardKpiRow[\s\S]*repeat\(3,\s*minmax\(220px,\s*1fr\)\)/.test(dashboardCss)) {
+  console.error('[customer-product-language] dashboard KPI row must cap to 3 columns around 1366px');
+  failed = true;
 }
 
 const safeText = read('apps/web/src/lib/customerSafeText.ts');
@@ -173,6 +239,12 @@ if (fs.existsSync(reportPath)) {
   for (const [label, pattern] of customerRawLeakBanned) {
     if (pattern.test(customerReportText)) {
       console.error(`[customer-product-language] runtime customer pages leaked raw enum/reason: ${label}`);
+      failed = true;
+    }
+  }
+  for (const [label, pattern] of dashboardVmVisibleBanned) {
+    if (pattern.test(customerReportText)) {
+      console.error(`[customer-product-language] runtime customer pages leaked dashboard technical language: ${label}`);
       failed = true;
     }
   }
