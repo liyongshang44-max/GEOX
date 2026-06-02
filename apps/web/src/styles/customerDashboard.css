@@ -2,6 +2,13 @@
   display: grid;
   gap: 18px;
   min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.customerDashboardScopeText {
+  max-width: 100%;
+  line-height: 1.6;
 }
 
 .customerDashboardTitleRow {
@@ -13,7 +20,7 @@
 
 .customerDashboardKpiRow {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(210px, 1fr));
   gap: 12px;
 }
 
@@ -23,21 +30,24 @@
 
 .customerDashboardMainGrid {
   display: grid;
-  grid-template-columns: minmax(390px, 1.2fr) minmax(340px, 1fr) minmax(270px, .82fr);
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, .95fr) minmax(320px, .8fr);
   gap: 14px;
   align-items: start;
+  min-width: 0;
 }
 
 .customerDashboardBottomGrid {
   display: grid;
-  grid-template-columns: minmax(460px, 1.2fr) minmax(340px, .9fr);
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, .9fr);
   gap: 14px;
   align-items: start;
+  min-width: 0;
 }
 
 .customerDashboardRiskPanel,
 .customerDashboardActionPanel,
-.customerDashboardRightRail {
+.customerDashboardRightRail,
+.customerDashboardRoiEntry {
   min-width: 0;
 }
 
@@ -45,6 +55,25 @@
   display: grid;
   gap: 14px;
   align-content: start;
+}
+
+.deviceHealthCard {
+  min-width: 0;
+}
+
+.deviceHealthNaturalText {
+  display: grid;
+  gap: 8px;
+}
+
+.deviceHealthNaturalText p {
+  margin: 0;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.deviceHealthUpdatedAt {
+  margin-top: 10px;
 }
 
 .cockpitRiskPanel {
@@ -134,17 +163,27 @@
 }
 
 @media (max-width: 1500px) {
+  .customerDashboardKpiRow {
+    grid-template-columns: repeat(3, minmax(220px, 1fr));
+  }
+
   .customerDashboardMainGrid {
-    grid-template-columns: minmax(360px, 1.08fr) minmax(320px, .96fr) minmax(260px, .78fr);
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr);
+  }
+
+  .customerDashboardRightRail {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 1120px) {
   .customerDashboardKpiRow {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .customerDashboardMainGrid,
-  .customerDashboardBottomGrid {
+  .customerDashboardBottomGrid,
+  .customerDashboardRightRail {
     grid-template-columns: 1fr;
   }
 }
