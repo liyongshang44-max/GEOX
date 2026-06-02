@@ -70,7 +70,7 @@ must(chainValidator, /chain_flags\.push\("NEEDS_FIELD_BINDING"\)/, 'operation ch
 must(chainValidator, /operationPlanAuthorized = operationPlanExists[\s\S]*fieldBindingPresent/, 'operation plan cannot authorize without field binding');
 must(chainValidator, /roiStatus:[\s\S]*acceptanceStatus === "DONE"/, 'ROI remains downstream of formal acceptance');
 must(chainValidator, /memoryStatus:[\s\S]*acceptanceStatus === "DONE"/, 'Field Memory remains downstream of formal acceptance');
-must(chainValidator, /raw === "\.\.\."/, 'chain validator rejects placeholder field ids');
+must(chainValidator, /raw !== "\.\.\."/, 'chain validator rejects placeholder field ids');
 
 must(operationReportChain, /guardRoiLike\(base\.roi, validation\)/, 'customer report guard blocks ROI when chain validation fails');
 must(operationReportChain, /guardFieldMemoryLike\(base\.field_memory, validation\)/, 'customer report guard blocks Field Memory when chain validation fails');
