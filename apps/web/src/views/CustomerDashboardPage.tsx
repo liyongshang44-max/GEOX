@@ -49,12 +49,12 @@ export default function CustomerDashboardPage(): React.ReactElement {
   const summaryScopeText = vm?.summaryScopeText ?? "统计范围：当前可见授权经营范围；来源：客户看板统一摘要。";
   const deviceFallback = {
     empty: true,
-    scopeText: "设备统计范围：当前账号授权可见设备；当前地块设备请进入地块报告查看。",
-    globalText: "全域设备：暂无设备摘要。",
-    authorizedText: "授权可见设备：暂无设备摘要。",
-    fieldText: "当前地块设备：请进入地块报告查看。",
-    offlineText: "离线设备：暂无设备摘要。",
-    alertText: "告警事件：暂无设备摘要。",
+    scopeText: "当前页仅展示客户可见授权设备，不推断未授权设备或当前地块设备。",
+    globalText: "当前未返回全域设备摘要，客户页不推断未授权设备。",
+    authorizedText: "当前暂无可见授权设备摘要。",
+    fieldText: "当前地块设备请进入地块报告查看。",
+    offlineText: "当前没有离线设备。",
+    alertText: "当前未发现告警事件。",
   };
   const acceptanceSummaryVm = {
     title: "执行与验收摘要",
@@ -69,7 +69,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
 
   return (
     <div className="customerDashboardPage">
-      {vm ? <p className="customerMetricLabel customerSpacingBottomSm">{summaryScopeText}</p> : null}
+      {vm ? <p className="customerMetricLabel customerDashboardScopeText customerSpacingBottomSm">{summaryScopeText}</p> : null}
       <CockpitKpiStrip items={kpis} emptyState={emptyStates.NO_KPI_SUMMARY} />
 
       <section className="customerDashboardMainGrid">
