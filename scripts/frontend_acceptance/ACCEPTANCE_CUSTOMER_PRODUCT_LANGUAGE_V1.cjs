@@ -168,6 +168,26 @@ for (const required of [
     failed = true;
   }
 }
+for (const required of [
+  'usagePath',
+  'guidanceCards',
+  '当前经营状态',
+  '建议处理顺序',
+  '查看高风险地块',
+  '排查离线设备',
+  '查看最近作业证据',
+  '导出客户报告',
+  '当前状态',
+  '为什么',
+  '下一步',
+  '正式性提示',
+  '导出报告可直接用于客户或管理层复盘',
+]) {
+  if (!dashboardVm.includes(required)) {
+    console.error(`[customer-product-language] dashboard VM missing Part E usability wording: ${required}`);
+    failed = true;
+  }
+}
 const fieldRiskPanel = read('apps/web/src/components/cockpit/CockpitFieldRiskPanel.tsx');
 if (!/boundarySummary/.test(fieldRiskPanel) || !/地块边界：已接入/.test(fieldRiskPanel) || !/地块边界：暂未接入/.test(fieldRiskPanel)) {
   console.error('[customer-product-language] field risk panel must expose natural field boundary wording');
@@ -196,6 +216,36 @@ if (!/customerDashboardScopeText/.test(dashboardPage)) {
   console.error('[customer-product-language] dashboard scope explanation must be rendered in full-width dashboard area');
   failed = true;
 }
+for (const required of ['customerUsagePathCard', 'customerDashboardGuidanceGrid', 'customerGuidanceCard', '当前状态', '为什么', '下一步', '正式性提示']) {
+  if (!dashboardPage.includes(required)) {
+    console.error(`[customer-product-language] dashboard page missing Part E usage path render: ${required}`);
+    failed = true;
+  }
+}
+
+const requiredStructuredCards = [
+  'apps/web/src/components/cockpit/CockpitActionCard.tsx',
+  'apps/web/src/components/cockpit/CockpitFieldRiskPanel.tsx',
+  'apps/web/src/components/cockpit/DeviceHealthCard.tsx',
+  'apps/web/src/components/cockpit/RecentOperationsSection.tsx',
+  'apps/web/src/components/cockpit/ValueResultPanel.tsx',
+];
+for (const rel of requiredStructuredCards) {
+  const text = read(rel);
+  for (const required of ['当前状态', '为什么', '下一步', '正式性提示']) {
+    if (!text.includes(required)) {
+      console.error(`[customer-product-language] customer main visual card ${rel} missing structured copy: ${required}`);
+      failed = true;
+    }
+  }
+}
+
+for (const required of ['1. 本期摘要', '2. 主要风险', '3. 待处理事项', '4. 作业进展', '5. 设备状态', '6. 证据与验收', '7. 价值记录', '8. 附注：哪些结论尚待复核', '可用于客户或管理层复盘']) {
+  if (!exportBlocks.includes(required)) {
+    console.error(`[customer-product-language] dashboard export missing report section: ${required}`);
+    failed = true;
+  }
+}
 
 const dashboardCss = read('apps/web/src/styles/customerDashboard.css');
 if (!/max-width:\s*1500px[\s\S]*customerDashboardRightRail[\s\S]*grid-column:\s*1\s*\/\s*-1/.test(dashboardCss)) {
@@ -205,6 +255,12 @@ if (!/max-width:\s*1500px[\s\S]*customerDashboardRightRail[\s\S]*grid-column:\s*
 if (!/customerDashboardKpiRow[\s\S]*repeat\(3,\s*minmax\(220px,\s*1fr\)\)/.test(dashboardCss)) {
   console.error('[customer-product-language] dashboard KPI row must cap to 3 columns around 1366px');
   failed = true;
+}
+for (const required of ['customerUsagePathCard', 'customerDashboardGuidanceGrid', 'customerStructuredCard', 'customerUsageActions']) {
+  if (!dashboardCss.includes(required)) {
+    console.error(`[customer-product-language] dashboard CSS missing usability class: ${required}`);
+    failed = true;
+  }
 }
 
 const safeText = read('apps/web/src/lib/customerSafeText.ts');
@@ -245,6 +301,12 @@ if (fs.existsSync(reportPath)) {
   for (const [label, pattern] of dashboardVmVisibleBanned) {
     if (pattern.test(customerReportText)) {
       console.error(`[customer-product-language] runtime customer pages leaked dashboard technical language: ${label}`);
+      failed = true;
+    }
+  }
+  for (const required of ['当前经营状态', '建议处理顺序', '查看高风险地块', '排查离线设备', '查看最近作业', '导出报告', '正式性提示', '1. 本期摘要', '8. 附注：哪些结论尚待复核']) {
+    if (!customerReportText.includes(required)) {
+      console.error(`[customer-product-language] runtime customer pages missing Part E usability wording: ${required}`);
       failed = true;
     }
   }
