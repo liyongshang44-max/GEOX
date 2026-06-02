@@ -50,7 +50,7 @@ export default function CockpitFieldRiskPanel({ fields, emptyState, mode = "LIST
   const visibleFields = fields.slice(0, 6);
 
   return (
-    <article id="top-risk-fields" className="customerCard cockpitRiskPanel">
+    <article id="top-risk-fields" className="customerCard cockpitRiskPanel customerStructuredCard">
       <div className="customerCardHeaderRow">
         <div>
           <h3 className="customerCardTitle">地块风险分布</h3>
@@ -58,6 +58,12 @@ export default function CockpitFieldRiskPanel({ fields, emptyState, mode = "LIST
         </div>
         <span className="customerPill">当前授权地块</span>
       </div>
+      <dl>
+        <div><dt>当前状态</dt><dd>{fields.length ? `当前有 ${fields.length} 块地块需要优先关注。` : "当前没有需要重点关注的风险地块。"}</dd></div>
+        <div><dt>为什么</dt><dd>风险来自地块状态、设备数据、近期作业和证据完整性的综合判断。</dd></div>
+        <div><dt>下一步</dt><dd>先打开风险最高的地块，查看风险原因、边界接入和最近作业证据。</dd></div>
+        <div><dt>正式性提示</dt><dd>风险提示用于处理优先级，不等同于正式验收或收益结论。</dd></div>
+      </dl>
       {visibleFields.length ? (
         <>
           {mode === "MATRIX" ? (
