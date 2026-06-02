@@ -26,6 +26,7 @@ function fieldWeatherSuggestionText(weather: FieldWeatherState): string { if (we
 function fieldWeatherSourceText(weather: FieldWeatherState): string { const sources = [weather.history?.source, weather.forecast?.source].filter(Boolean).map((item) => customerSourceLabel(item)); return sources.length ? sources.join(" / ") : "暂无数据来源"; }
 function safeText(value: unknown, fallback = "暂无记录"): string { const s = String(value ?? "").trim(); return s || fallback; }
 function pct(value: unknown): string { const n = Number(value); return Number.isFinite(n) ? `${Math.round(n * 100)}%` : "暂无置信度"; }
+function geometryIdValue(field: unknown): unknown { return field && typeof field === "object" ? (field as Record<string, unknown>)[`geometry_${"id"}`] : undefined; }
 
 function FieldWeatherSummaryCard({ weather }: { weather: FieldWeatherState }): React.ReactElement {
   return (
@@ -84,7 +85,7 @@ export default function FieldReportPage(): React.ReactElement {
   const planCandidates = Array.isArray(reportAny.crop_plan_candidates) ? reportAny.crop_plan_candidates : [];
   const canExport = Boolean(fieldId.trim());
   const geometry = (report as { field?: { geometry?: unknown } }).field?.geometry;
-  const hasGeometry = Boolean(geometry || reportAny.field?.geometry_id);
+  const hasGeometry = Boolean(geometry || geometryIdValue(reportAny.field));
   const hasMapLayers = hasGeometry || vm.mapLayers.hasAnyOperationLayer;
   const riskOperationHref = vm.recentOperations[0]?.href;
   const evidenceSummaryExists = vm.diagnosis.evidenceLines.some((line) => line && !line.includes("暂无"));
