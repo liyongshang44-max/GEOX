@@ -44,7 +44,7 @@ const ROUTE_ERROR_RE = /RouteErrorBoundary|页面发生错误|Something went wro
 const DUPLICATE_KEY_RE = /Encountered two children with the same key|same key|duplicate key/i;
 const LOADING_RE = /页面加载中|正在加载运营数据|加载中\.\.\.|审批中心加载中|运营数据加载中/i;
 const VISIBLE_TEXT_MIN_LENGTH = 24;
-const DASHBOARD_LAYOUT_SELECTORS = ['.customerDashboardPage', '.customerSummaryGrid', '.cockpitKpiGrid', '.customerActionGrid', '.cockpitGrid', '.customerDashboardSection'];
+const DASHBOARD_LAYOUT_SELECTORS = ['.customerDashboardPage', '.customerDashboardMainGrid', '.customerDashboardRightRail', '.customerDashboardBottomGrid', '.customerDashboardKpiRow', '.customerMetricCard', '.customerCard', '.cockpitRiskTile'];
 const CUSTOMER_RAW_TEXT_ROUTES = new Set(['/customer/dashboard', '/customer/export']);
 const CUSTOMER_VISIBLE_RAW_PATTERNS = [
   ['PENDING_ACCEPTANCE', /\bPENDING_ACCEPTANCE(?:\b|_)/],
@@ -52,6 +52,10 @@ const CUSTOMER_VISIBLE_RAW_PATTERNS = [
   ['soil_moisture_below_threshold', /soil_moisture_below_threshold/],
   ['no_rain_forecast', /no_rain_forecast/],
   ['BLOCKED', /\bBLOCKED\b/],
+  ['field.geometry', /field\.geometry|geometry_id/],
+  ['raw count field', /\b(?:global|visible|field|offline|alert)_devices?_count\b|\balert_events_count\b/],
+  ['device scope', /设备\s*scope/i],
+  ['field equals copy', /(?:离线设备|告警事件|可见授权设备|当前地块设备)\s*=/],
   ['raw true', /(?:^|[\s：:，,；;])true(?:$|[\s。！!？?，,；;])/],
   ['raw false', /(?:^|[\s：:，,；;])false(?:$|[\s。！!？?，,；;])/],
 ];
@@ -127,13 +131,22 @@ async function assertDashboard1366Layout(page, result) {
       const label = node.getAttribute('class') || node.tagName.toLowerCase();
       return { label, left: rect.left, right: rect.right, width: rect.width };
     });
-    return { viewportWidth, scrollWidth, cards };
+    const rightRail = document.querySelector('.customerDashboardRightRail');
+    const rightRailRect = rightRail ? rightRail.getBoundingClientRect() : null;
+    const narrowVisibleCards = Array.from(document.querySelectorAll('.customerDashboardRightRail .customerCard, .customerMetricCard')).map((node) => {
+      const rect = node.getBoundingClientRect();
+      const text = (node.textContent || '').replace(/\s+/g, ' ').trim();
+      return { label: node.getAttribute('class') || node.tagName.toLowerCase(), width: rect.width, textLength: text.length, left: rect.left, right: rect.right };
+    }).filter((item) => item.textLength > 18 && item.width > 0 && item.width < 260);
+    return { viewportWidth, scrollWidth, cards, rightRail: rightRailRect ? { width: rightRailRect.width, left: rightRailRect.left, right: rightRailRect.right } : null, narrowVisibleCards };
   }, DASHBOARD_LAYOUT_SELECTORS);
   result.layout1366 = layout;
   if (layout.scrollWidth > layout.viewportWidth) addFailure(result, `dashboard 1366 overflow: scrollWidth=${layout.scrollWidth} clientWidth=${layout.viewportWidth}`);
   for (const card of layout.cards) {
     if (card.left < -1 || card.right > layout.viewportWidth + 1) addFailure(result, `dashboard card outside viewport: ${card.label} left=${Math.round(card.left)} right=${Math.round(card.right)} viewport=${layout.viewportWidth}`);
   }
+  if (layout.rightRail && layout.rightRail.width < 520) addFailure(result, `dashboard right rail too narrow at 1366: width=${Math.round(layout.rightRail.width)}`);
+  for (const card of layout.narrowVisibleCards) addFailure(result, `dashboard visible card compressed at 1366: ${card.label} width=${Math.round(card.width)}`);
 }
 
 async function auditRoute(browser, route) { return withTimeout(auditRouteUnsafe(browser, route), `audit route ${route}`, ROUTE_TIMEOUT_MS); }
