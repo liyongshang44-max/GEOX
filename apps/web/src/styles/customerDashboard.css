@@ -57,6 +57,14 @@
   align-content: start;
 }
 
+.customerDashboardRightRail .customerMetrics {
+  grid-template-columns: 1fr;
+}
+
+.customerDashboardRightRail .customerMetricCard {
+  min-width: 260px;
+}
+
 .deviceHealthCard {
   min-width: 0;
 }
