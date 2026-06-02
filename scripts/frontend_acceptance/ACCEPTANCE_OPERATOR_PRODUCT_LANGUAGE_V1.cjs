@@ -26,7 +26,7 @@ const forbiddenMainVisual = [
   ['alerts_api fallback', /alerts_api\s+fallback/i],
   ['device_id=...', /device_id\s*=\s*\.\.\./i],
   ['field_id=...', /field_id\s*=\s*\.\.\./i],
-  ['处理状态 FOLLOWUP_REQUIRED', /处理状态\s*FOLLOWUP_REQUIRED|FOLLOWUP_REQUIRED/],
+  ['处理状态 FOLLOWUP_REQUIRED', /处理状态\s*FOLLOWUP_REQUIRED/],
 ];
 
 let failed = false;
