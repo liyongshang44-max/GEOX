@@ -42,6 +42,12 @@ export default function DeviceOfflineHandlingPanel({ focus, actionState, onConfi
         <span>{focus.statusText}</span>
       </header>
 
+      <div className="operatorDevicesStageCard">
+        <strong>当前处理阶段：排查入口</strong>
+        <p>本页用于记录设备离线事实和后续处理建议。</p>
+        <p>它不会直接恢复设备，也不会自动生成正式作业成功、客户 ROI 或 Field Memory。</p>
+      </div>
+
       {focus.mode === "DEVICE_MATCHED" ? <div className="operatorDevicesNotice">正在处理：设备离线</div> : null}
       {focus.mode === "AGGREGATE_ONLY" ? <div className="operatorDevicesWarning">该待办来自聚合统计，当前没有设备明细。</div> : null}
       {focus.mode === "MISSING_LOCATION" ? <div className="operatorDevicesActionError">缺少设备定位信息</div> : null}
@@ -59,6 +65,12 @@ export default function DeviceOfflineHandlingPanel({ focus, actionState, onConfi
       <div className="operatorDevicesWarning">{focus.auditText}</div>
       <div className="operatorDevicesNotice">离线处理只建立排查链路；未完成现场复核前，不生成正式作业成功、客户 ROI 或 Field Memory。</div>
       <ol className="operatorDevicesChecklist">{focus.nextSteps.map((step) => <li key={step}>{step}</li>)}</ol>
+
+      <div className="operatorDeviceActionHelp" aria-label="设备离线动作后果说明">
+        <div><strong>记录设备离线确认</strong><p>记录设备确认为离线，用于审计。</p></div>
+        <div><strong>标记需人工核查</strong><p>记录需要人工现场排查，不直接派单。</p></div>
+        <div><strong>创建维护任务候选</strong><p>创建候选记录，等待人工确认后才可能转成正式任务。</p></div>
+      </div>
 
       <div className="operatorDevicesActions">
         {focus.relatedFieldHref ? <Link to={focus.relatedFieldHref}>查看地块报告</Link> : null}
