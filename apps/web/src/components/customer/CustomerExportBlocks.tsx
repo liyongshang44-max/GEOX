@@ -55,6 +55,29 @@ function valueFromSection(vm: OperationReportPageVm, label: string, fallback = "
   }
   return fallback;
 }
+function pdiEvidenceBasisRows(report?: OperationReportV1 | null): Row[] {
+  const pdi = (report as any)?.pest_disease_inspection;
+  const observationEvidence = pdi?.observation_evidence;
+  // operation_report_v1.pest_disease_inspection.observation_evidence
+  const latest = observationEvidence?.latest_observation ?? {};
+  if (!pdi && !observationEvidence) return [];
+  return [
+    ["巡检单", pdi?.inspection_id],
+    ["评估单", pdi?.assessment_id],
+    ["评估状态", pdi?.assessment_status],
+    ["客户可见", pdi?.customer_visible_eligible],
+    ["观测数量", observationEvidence?.total_observations],
+    ["图片证据", Array.isArray(latest?.media_refs) ? latest.media_refs.length : undefined],
+    ["采集时间", latest?.captured_at_text ?? latest?.captured_at_ts],
+    ["地理位置", latest?.geo_point ? `${latest.geo_point.lat}, ${latest.geo_point.lng}` : undefined],
+    ["设备", latest?.device_profile?.device_model],
+    ["田间记录", latest?.scout_note],
+    ["发生率", latest?.incidence_percent],
+    ["严重度", latest?.severity_percent],
+    ["影响面积", latest?.affected_area_percent],
+    ["证据质量", latest?.evidence_quality]
+  ];
+}
 export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): React.ReactElement {
   const dashboard = vm as any;
   const recentOperations = Array.isArray(dashboard.recentOperations) ? dashboard.recentOperations.slice(0, 5) : [];
@@ -73,8 +96,9 @@ export function OperationExportBlocks({ vm, report }: { vm: OperationReportPageV
   const formalVm = buildFormalScenarioVm(report ?? {});
   const evidenceVm = buildEvidenceVm(report ?? {});
   const reportAny = reportObject(report);
+  const pdiRows = pdiEvidenceBasisRows(report);
   const evidenceStatus = safeExportText(customerGuardedEvidenceText(report ?? {}) || evidenceVm.trustLevel || reportAny["evidence_status"] || reportAny["evidence_summary_status"] || vm.evidenceSummary.statusText, "证据需复核");
   const acceptanceStatus = safeExportText(customerGuardedAcceptanceText(report ?? {}) || reportAny["acceptance_status"] || vm.acceptance.statusText, "验收需复核");
   const statusText = safeExportText(customerGuardedStatusText(report ?? {}) || formalVm.scenarioLabel || vm.conclusion.finalStatusText, "需复核");
-  return <div className="customerCompactReport"><section className="customerCard"><h2 className="customerCardTitle">作业报告头</h2><div className="customerGrid2 customerSpacingTopSm"><div><strong>作业：</strong>{safeExportText(vm.header.title, "作业名称待补充")}</div><div><strong>状态：</strong>{safeExportText(vm.operation.finalStatusLabel, "待确认")}</div><div><strong>正式链路：</strong>{statusText}</div><div><strong>证据门禁：</strong>{evidenceStatus}</div><div><strong>验收门禁：</strong>{acceptanceStatus}</div></div></section><section className="operationClosedLoopGrid">{vm.sections.map((item, index) => <article key={`${item.key}-${index}`} className="customerCard operationClosedLoopCard"><div className="operationClosedLoopHead"><span className="operationStepNo">{index + 1}</span><h2 className="customerCardTitle">{safeExportText(item.title, "作业环节")}</h2><span className="operationStatusBadge">{safeExportText(item.statusText ?? item.status, "待确认")}</span></div><p className="customerSpacingTopSm">{safeExportText(item.summary, "暂无摘要")}</p></article>)}</section><section className="customerCard"><h2 className="customerCardTitle">作业报告同源摘要</h2><PrintTable headers={["项目", "导出内容"]} rows={[["证据包状态", evidenceStatus], ["实际执行摘要", valueFromSection(vm, "执行摘要")], ["实际覆盖状态", valueFromSection(vm, "覆盖状态")], ["天气干扰", safeExportText(reportAny["weather_summary"], "天气摘要未接入报告同源数据。")], ["价值性质", valueFromSection(vm, "实测/估算/假设")], ["田块记忆学习摘要", valueFromSection(vm, "本次结果是否进入田块记忆")], ["页面同源价值门禁", safeExportText(vm.value.fallbackText, "未通过正式价值门禁")], ["页面同源田块记忆", safeExportText(vm.fieldMemory.items.join("；"), "暂无正式田块记忆")]]} emptyText="暂无作业同源摘要" /></section><section className="customerCard"><h2 className="customerCardTitle">证据包摘要</h2><p className="customerSpacingTopSm">{safeExportText(vm.evidenceSummary.summary, "暂无有效证据")}</p><p className="customerMetricLabel customerSpacingTopXs">{safeExportText(vm.evidenceSummary.detail, "暂无补充说明")}</p></section><footer className="customerCard"><p className="customerMetricLabel">报告由 GEOX 自动生成，供作业执行留痕与验收复盘使用。</p></footer></div>;
+  return <div className="customerCompactReport"><section className="customerCard"><h2 className="customerCardTitle">作业报告头</h2><div className="customerGrid2 customerSpacingTopSm"><div><strong>作业：</strong>{safeExportText(vm.header.title, "作业名称待补充")}</div><div><strong>状态：</strong>{safeExportText(vm.operation.finalStatusLabel, "待确认")}</div><div><strong>正式链路：</strong>{statusText}</div><div><strong>证据门禁：</strong>{evidenceStatus}</div><div><strong>验收门禁：</strong>{acceptanceStatus}</div></div></section><section className="operationClosedLoopGrid">{vm.sections.map((item, index) => <article key={`${item.key}-${index}`} className="customerCard operationClosedLoopCard"><div className="operationClosedLoopHead"><span className="operationStepNo">{index + 1}</span><h2 className="customerCardTitle">{safeExportText(item.title, "作业环节")}</h2><span className="operationStatusBadge">{safeExportText(item.statusText ?? item.status, "待确认")}</span></div><p className="customerSpacingTopSm">{safeExportText(item.summary, "暂无摘要")}</p></article>)}</section><section className="customerCard"><h2 className="customerCardTitle">病虫害巡检证据</h2><PrintTable headers={["项目", "内容"]} rows={pdiRows} emptyText="暂无病虫害巡检证据" /></section><section className="customerCard"><h2 className="customerCardTitle">作业报告同源摘要</h2><PrintTable headers={["项目", "导出内容"]} rows={[["证据包状态", evidenceStatus], ["实际执行摘要", valueFromSection(vm, "执行摘要")], ["实际覆盖状态", valueFromSection(vm, "覆盖状态")], ["天气干扰", safeExportText(reportAny["weather_summary"], "天气摘要未接入报告同源数据。")], ["价值性质", valueFromSection(vm, "实测/估算/假设")], ["田块记忆学习摘要", valueFromSection(vm, "本次结果是否进入田块记忆")], ["页面同源价值门禁", safeExportText(vm.value.fallbackText, "未通过正式价值门禁")], ["页面同源田块记忆", safeExportText(vm.fieldMemory.items.join("；"), "暂无正式田块记忆")]]} emptyText="暂无作业同源摘要" /></section><section className="customerCard"><h2 className="customerCardTitle">证据包摘要</h2><p className="customerSpacingTopSm">{safeExportText(vm.evidenceSummary.summary, "暂无有效证据")}</p><p className="customerMetricLabel customerSpacingTopXs">{safeExportText(vm.evidenceSummary.detail, "暂无补充说明")}</p></section><footer className="customerCard"><p className="customerMetricLabel">报告由 GEOX 自动生成，供作业执行留痕与验收复盘使用。</p></footer></div>;
 }
