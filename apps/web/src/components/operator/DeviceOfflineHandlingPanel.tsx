@@ -42,8 +42,8 @@ export default function DeviceOfflineHandlingPanel({ focus, actionState, onConfi
     <section className="operatorDevicesSection operatorDevicesFocusPanel" aria-label="设备离线处理面板">
       <header className="operatorDevicesSectionHead">
         <div>
-          <h2>{focus.title}</h2>
-          <p>{focus.description}</p>
+          <h2>设备离线处理</h2>
+          <p>{focus.title}：{focus.description}</p>
         </div>
         <span>{focus.statusText}</span>
       </header>
@@ -51,7 +51,7 @@ export default function DeviceOfflineHandlingPanel({ focus, actionState, onConfi
       <div className="operatorDevicesStageCard">
         <strong>当前处理阶段：排查入口</strong>
         <p>本页用于记录设备离线事实和后续处理建议。</p>
-        <p>它不会直接恢复设备，也不会自动生成正式作业成功、客户价值结论或田块记忆。</p>
+        <p>它不会直接恢复设备；不生成正式作业成功，不生成客户价值结论，不生成田块记忆。</p>
       </div>
 
       {focus.mode === "DEVICE_MATCHED" ? <div className="operatorDevicesNotice">正在处理：设备离线</div> : null}
@@ -69,7 +69,7 @@ export default function DeviceOfflineHandlingPanel({ focus, actionState, onConfi
       </div>
 
       <div className="operatorDevicesWarning">{focus.auditText}</div>
-      <div className="operatorDevicesNotice">离线处理只建立排查链路；未完成现场复核前，不会直接恢复设备，不会自动生成正式作业成功、客户价值结论或田块记忆。</div>
+      <div className="operatorDevicesNotice">离线处理只建立排查链路；未完成现场复核前，不会直接恢复设备；不生成正式作业成功，不生成客户价值结论，不生成田块记忆。</div>
       {isReadOnlyOrUnlocated ? <div className="operatorDevicesWarning">缺少设备定位时，只能返回运营总队列查看来源；不会创建维护任务候选。</div> : null}
       <ol className="operatorDevicesChecklist">{focus.nextSteps.map((step) => <li key={step}>{step}</li>)}</ol>
 
