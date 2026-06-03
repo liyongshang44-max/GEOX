@@ -51,8 +51,10 @@ function runGate(args, label) {
 }
 function assert(ok, msg) { if (!ok) { console.error(`[controlled-pilot-full-review-seed] ${msg}`); failed = true; } }
 function hasAll(list, expected) { return expected.every((x) => Array.isArray(list) && list.includes(x)); }
-function httpOk(url) { return new Promise((resolve) => { const req = http.get(url, (res) => { res.resume(); resolve(Boolean(res.statusCode && res.statusCode < 500)); }); req.on('error', () => resolve(false)); req.setTimeout(1000, () => { req.destroy(); resolve(false); }); }); }
-function httpGet(url) { return new Promise((resolve) => { const req = http.get(url, { headers: { accept: 'application/json' } }, (res) => { let raw = ''; res.on('data', (d) => { raw += d; }); res.on('end', () => resolve({ status: res.statusCode || 0, raw })); }); req.on('error', (e) => resolve({ status: 0, raw: String(e.message || e) })); req.setTimeout(3000, () => { req.destroy(); resolve({ status: 0, raw: 'timeout' }); }); }); }
+function authTokenForHttp() { return process.env.ADMIN_TOKEN || process.env.TOKEN_ADMIN || process.env.AO_ACT_TOKEN || process.env.GEOX_AO_ACT_TOKEN || process.env.TOKEN || 'admin_token'; }
+function httpHeaders() { const token = authTokenForHttp(); return { accept: 'application/json', authorization: `Bearer ${token}`, 'x-geox-token': token, 'x-geox-ao-act-token': token, 'x-ao-act-token': token }; }
+function httpOk(url) { return new Promise((resolve) => { const req = http.get(url, { headers: httpHeaders() }, (res) => { res.resume(); resolve(Boolean(res.statusCode && res.statusCode < 500)); }); req.on('error', () => resolve(false)); req.setTimeout(1000, () => { req.destroy(); resolve(false); }); }); }
+function httpGet(url) { return new Promise((resolve) => { const req = http.get(url, { headers: httpHeaders() }, (res) => { let raw = ''; res.on('data', (d) => { raw += d; }); res.on('end', () => resolve({ status: res.statusCode || 0, raw })); }); req.on('error', (e) => resolve({ status: 0, raw: String(e.message || e) })); req.setTimeout(3000, () => { req.destroy(); resolve({ status: 0, raw: 'timeout' }); }); }); }
 function includesId(rows, id, keys) { return Array.isArray(rows) && rows.some((row) => keys.some((key) => row && row[key] === id) || JSON.stringify(row || {}).includes(id)); }
 function table(actual, name) { return actual && actual.tables && Array.isArray(actual.tables[name]) ? actual.tables[name] : []; }
 function facts(actual, type) { return actual && actual.facts_by_type && Array.isArray(actual.facts_by_type[type]) ? actual.facts_by_type[type] : []; }
