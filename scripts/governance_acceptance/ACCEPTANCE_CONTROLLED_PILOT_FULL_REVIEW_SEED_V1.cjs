@@ -12,6 +12,7 @@ function read(rel) { const p = path.join(ROOT, rel); if (!fs.existsSync(p)) { co
 function requireText(scope, text, entries) { for (const item of entries) if (!text.includes(item)) { console.error(`[controlled-pilot-full-review-seed] ${scope} missing: ${item}`); failed = true; } }
 function forbid(scope, text, entries) { for (const [label, pattern] of entries) if (pattern.test(text)) { console.error(`[controlled-pilot-full-review-seed] ${scope} forbidden: ${label}`); failed = true; } }
 function runNode(args, allowFail = false) { const r = spawnSync(process.execPath, args, { cwd: ROOT, encoding: 'utf8' }); if (r.status !== 0) { if (allowFail) return null; console.error(r.stdout); console.error(r.stderr); throw new Error(`${args.join(' ')} failed`); } return JSON.parse(r.stdout); }
+function runScript(args, label) { const r = spawnSync(process.execPath, args, { cwd: ROOT, encoding: 'utf8' }); if (r.status !== 0) { console.error(r.stdout); console.error(r.stderr); console.error(`[controlled-pilot-full-review-seed] ${label} failed`); failed = true; } }
 function hasAll(arr, required) { return required.every((x) => arr.includes(x)); }
 function assert(cond, msg) { if (!cond) { console.error(`[controlled-pilot-full-review-seed] ${msg}`); failed = true; } }
 function httpOk(url) { return new Promise((resolve) => { const req = http.get(url, (res) => { res.resume(); resolve(Boolean(res.statusCode && res.statusCode < 500)); }); req.on('error', () => resolve(false)); req.setTimeout(1000, () => { req.destroy(); resolve(false); }); }); }
@@ -19,13 +20,14 @@ function httpOk(url) { return new Promise((resolve) => { const req = http.get(ur
 const seed = read(SEED);
 const readme = read(README);
 const pkgText = read('package.json');
-requireText('package scripts', pkgText, ['seed:controlled-pilot:full-review:dry-run', 'seed:controlled-pilot:full-review:apply', 'acceptance:controlled-pilot:full-review-seed']);
+requireText('package scripts', pkgText, ['seed:controlled-pilot:full-review:dry-run', 'seed:controlled-pilot:full-review:apply', 'seed:controlled-pilot:full-review:export-json', 'seed:controlled-pilot:full-review:verify', 'ci:frontend:customer-pr18h-routes', 'acceptance:controlled-pilot:full-review-seed']);
 requireText('seed static guards', seed, ['ALLOWED_TENANTS', 'demo', 'tenantA', '--apply requires explicit --tenant', "mode: 'dry-run'", 'BEGIN', 'COMMIT', 'ROLLBACK', 'pg_advisory_lock', 'pg_advisory_unlock', 'controlled_pilot_full_review_manifest_v1', 'seed_owned_ids', 'ON CONFLICT', 'export-json', 'export-db-json', 'verify-api', 'verify-clean']);
 requireText('seed schema fields', seed, ['request_id', 'from_status', 'status', 'trigger', 'created_ts', 'trigger_stage', 'formal_eligible', 'is_simulated', 'source_lane', 'FORMAL_OPERATION']);
 requireText('seed scenario coverage', seed, ['field_c8_demo', 'field_1_demo', 'field_device_risk_demo', 'dev_gateway_offline_001', 'alert_aggregate_missing_location_001', 'op_plan_c8_irrigation_formal_001', 'op_plan_c8_irrigation_pending_001', 'approval_c8_pest_pending_001', 'roi_ledger_v1', 'fm_c8_irrigation_response_001']);
 requireText('README seed contract', readme, ['dry-run', 'apply', 'verify', 'cleanup', 'manifest', 'CONTROLLED_PILOT_FULL_REVIEW']);
 forbid('seed source', seed, [['TRUNCATE', /\bTRUNCATE\b/i], ['broad facts tenant delete', /DELETE\s+FROM\s+facts\s+WHERE\s+tenant_id/i], ['broad field tenant delete', /DELETE\s+FROM\s+field_index_v1\s+WHERE\s+tenant_id\s*=\s*\$1\s*(?:;|`)/i], ['production bypass', /NODE_ENV\s*===\s*['"]production['"]/], ['allowed all tenants', /ALLOWED_TENANTS[^\n]+all/i], ['literal dev evidence token', /sim_trace|flight-table|flight_table|dev_source/i]]);
-
+runScript(['scripts/frontend_acceptance/ACCEPTANCE_CUSTOMER_PR18H_ROUTES_V1.cjs'], 'customer PR-18H route gate');
+runScript(['scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_DEVICE_OFFLINE_WORKFLOW_V1.cjs'], 'operator offline workflow gate');
 const dry = runNode([SEED, '--dry-run', '--tenant', 'tenantA']);
 assert(dry.ok === true && dry.apply === false && dry.tenant === 'tenantA', 'dry-run envelope invalid');
 assert(Number(dry.planned?.facts) === 0, 'dry-run planned.facts must be 0');
@@ -42,7 +44,6 @@ assert(exported.facts_by_type.skill_run_v1.every((x) => x.record_json?.payload?.
 assert(hasAll(exported.derived_expectations.operator_workbench_queues || [], ['DEVICE_OFFLINE', 'APPROVAL_PENDING', 'ACCEPTANCE_PENDING']), 'operator workbench expectations incomplete');
 assert(hasAll(exported.derived_expectations.customer_reports || [], ['OVERVIEW', 'FIELD', 'OPERATION', 'EVIDENCE_VALUE']), 'customer report expectations incomplete');
 assert((exported.system_domains || []).length >= 26, 'system domains A-Z coverage missing');
-
 const apiBase = process.env.CONTROLLED_PILOT_VERIFY_API_BASE || process.env.API_BASE_URL || '';
 if (apiBase) {
   httpOk(`${apiBase.replace(/\/+$/, '')}/api/health`).then((ok) => {
