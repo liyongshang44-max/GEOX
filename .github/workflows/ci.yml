@@ -141,6 +141,7 @@ jobs:
           set +a
           export BASE_URL=http://127.0.0.1:3001
           export API_BASE_URL=http://127.0.0.1:3001
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
           node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --dry-run --tenant tenantA
           node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --export-json --tenant tenantA --out acceptance-output/controlled_pilot_full_review.plan.json
           node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --apply --tenant tenantA
@@ -186,6 +187,7 @@ jobs:
           set -a
           source .env.ci
           set +a
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
           pnpm run ci:controlled-pilot
 
       - name: Run Stage-1 fixture raw sample contract gate

@@ -100,7 +100,7 @@ async function auditDashboard1366Layout(page, result) {
   await page.setViewportSize({ width: 1366, height: 900 });
   await page.waitForTimeout(250);
   const layout = await page.evaluate(() => {
-    const viewportWidth = 1366;
+    const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
     const rectOf = (el) => {
       if (!el) return null;
       const rect = el.getBoundingClientRect();

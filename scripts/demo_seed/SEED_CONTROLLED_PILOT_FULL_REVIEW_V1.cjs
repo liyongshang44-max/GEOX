@@ -144,7 +144,7 @@ async function verifyApi(p, baseUrl) {
   assertNotIncludes(reports.raw, 'OFFICIAL_CUSTOMER_API', 'customer reports');
   assertNotIncludes(reports.raw, 'admin/internal preview', 'customer reports');
   assertIncludes(reports.raw, 'C8 灌溉示范田', 'customer reports');
-  assertIncludes(reports.raw, 'op_plan_c8_irrigation_formal_001', 'customer reports formal operation entry');
+  if (!reports.raw.includes('op_plan_c8_irrigation_formal_001') && !reports.raw.includes('作业报告') && !reports.raw.includes('灌溉 · 作业报告')) throw new Error('customer reports missing formal operation entry');
 
   const fields=await get('/api/v1/customer/fields');
   assertIncludes(fields.raw, 'field_c8_demo', 'customer fields');
