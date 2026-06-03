@@ -29,6 +29,7 @@ export default function CustomerReportsCenterPage(): React.ReactElement {
           <h2 className="customerTitle">报告中心</h2>
           <p className="customerSubtitle">{vm?.subtitle ?? "报告中心加载中。"}</p>
           <p className="customerMetricLabel">数据更新时间：{vm?.generatedAtText ?? "暂无更新时间"}</p>
+          {vm ? <p className="customerMetricLabel">数据可信级别：{vm.trustText}</p> : null}
           {vm?.dataScopeNote ? <p className="customerScopeWarning">{vm.dataScopeNote}</p> : null}
         </div>
         <div className="customerActions">
@@ -57,6 +58,7 @@ export default function CustomerReportsCenterPage(): React.ReactElement {
                         <strong>{item.title}</strong>
                         <p>{item.subtitle}</p>
                         <small>{item.coverageText}</small>
+                        <small>数据可信级别：{item.trustText}</small>
                         <small>状态：{item.statusText}</small>
                         <small>更新时间：{item.updatedAtText}</small>
                       </div>
@@ -68,6 +70,7 @@ export default function CustomerReportsCenterPage(): React.ReactElement {
                         <strong>{item.title}</strong>
                         <p>{item.subtitle}</p>
                         <small>{item.coverageText}</small>
+                        <small>数据可信级别：{item.trustText}</small>
                         <small>状态：{item.statusText}</small>
                         <small>更新时间：{item.updatedAtText}</small>
                       </div>
