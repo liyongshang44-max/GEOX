@@ -95,6 +95,13 @@ must(devicesVm + devicesPage + handlingPanel + workbenchApi, /source[=:]"aggrega
 must(devicesVm + devicesPage + handlingPanel, /缺少设备定位信息/, 'missing device location text');
 must(devicesVm + devicesPage + handlingPanel + statusLabels, /需人工核查/, 'manual review text');
 must(devicesVm + devicesPage + handlingPanel + statusLabels, /已确认离线/, 'confirmed offline text');
+must(handlingPanel, /focus\.mode === "AGGREGATE_ONLY"[\s\S]{0,220}缺少设备定位信息/, 'aggregate-only explicitly shows missing location');
+must(handlingPanel, /const isReadOnlyOrUnlocated = focus\.mode === "AGGREGATE_ONLY" \|\| focus\.mode === "MISSING_LOCATION"/, 'aggregate and missing-location read-only guard');
+must(handlingPanel, /const canConfirmOffline = focus\.mode === "DEVICE_MATCHED"/, 'confirm disabled unless located device matched');
+must(handlingPanel, /const canMarkManualReview = focus\.mode === "DEVICE_MATCHED"/, 'manual review disabled unless located device matched');
+must(handlingPanel, /const canCreateTaskCandidate = focus\.mode === "DEVICE_MATCHED"/, 'task candidate disabled unless located device matched');
+must(handlingPanel, /缺少设备定位时，只能返回运营总队列查看来源；不会创建维护任务候选。/, 'missing-location cannot create maintenance task candidate');
+must(handlingPanel, /不会直接恢复设备，不会自动生成正式作业成功、客户价值结论或田块记忆/, 'aggregate-only cannot create formal success/value/memory');
 
 must(devicesPage, /DeviceOfflineHandlingPanel/, 'handling panel rendered');
 must(devicesPage, /labelOperatorOfflineHandlingStatus\(result\.status\)/, 'offline action success status uses handling labels');
