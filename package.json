@@ -95,7 +95,10 @@
     "ci:route-response-ownership": "node scripts/governance_acceptance/ACCEPTANCE_ROUTE_RESPONSE_OWNERSHIP_V1.cjs",
     "ci:governance:runtime-openapi-sales-critical": "node scripts/governance_acceptance/ACCEPTANCE_RUNTIME_OPENAPI_SALES_CRITICAL_V1.cjs",
     "acceptance:runtime-openapi-sales-critical": "pnpm run ci:governance:runtime-openapi-sales-critical",
-    "seed:controlled-pilot:frontend-demo:dry-run": "node scripts/demo_seed/SEED_CONTROLLED_PILOT_FRONTEND_DEMO_V1.cjs --dry-run"
+    "seed:controlled-pilot:frontend-demo:dry-run": "node scripts/demo_seed/SEED_CONTROLLED_PILOT_FRONTEND_DEMO_V1.cjs --dry-run",
+    "seed:controlled-pilot:full-review:dry-run": "node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --dry-run --tenant tenantA",
+    "seed:controlled-pilot:full-review:apply": "node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --apply --tenant tenantA",
+    "acceptance:controlled-pilot:full-review-seed": "node scripts/governance_acceptance/ACCEPTANCE_CONTROLLED_PILOT_FULL_REVIEW_SEED_V1.cjs"
   },
   "volta": { "node": "20.11.1" }
 }
