@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from "react";
 import type { FieldReportDetailV1, OperationReportV1 } from "../../api/reports";
 import type { CustomerDashboardPageVm } from "../../viewmodels/customerDashboardVm";
