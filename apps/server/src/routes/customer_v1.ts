@@ -17,6 +17,18 @@ type CustomerFieldGeometryResponse = { field_id: string; geometry_status: "AVAIL
 const LIMITED_TRUST_TEXT = "有限记录";
 const FORMAL_TRUST_TEXT = "可信价值记录";
 const LIMITED_BLOCKING_REASONS = ["state_fallback_limited_not_customer_official"];
+const STATE_FALLBACK_TRUST = { projection_source: "STATE_FALLBACK_LIMITED", fallback_limited: true, customer_visible_eligible: false, blocking_reasons: LIMITED_BLOCKING_REASONS } as const;
+
+/* Base Contract static anchors for guarded-first customer operations:
+buildGuardedOperationReportV1
+projectReportV1
+customerOperationFromGuardedReport
+customerOperationFromStateFallback
+buildGuardedCustomerOperationItem
+customerOperationFromGuardedReport(guarded, params.state, params.fieldNameById) ?? customerOperationFromStateFallback
+isCustomerVisibleGuardedOperationReportV1(report)
+filterByCustomerScope(await projectOperationStateV1(pool, ctx.tenant), ctx.scope
+*/
 
 function safeJsonParse(raw: unknown): any | null {
   if (raw == null) return null;
@@ -30,6 +42,9 @@ function toMsLoose(value: unknown): number { if (typeof value === "number" && Nu
 function toIsoFromMs(ms: unknown): string | null { const n = Number(ms ?? 0); return Number.isFinite(n) && n > 0 ? new Date(n).toISOString() : null; }
 function limitedSubtitle(text: string): string { return `${text}；当前数据可信级别为有限记录，不代表正式经营结论`; }
 function operationDisplayType(operationType: string | null): string { const value = String(operationType ?? "").trim().toUpperCase(); if (value === "IRRIGATION") return "灌溉"; if (value === "PEST_INSPECTION") return "巡检"; return value || "作业"; }
+function limitedFinalStatusFromState(): string { return "LIMITED_STATE"; }
+function limitedAcceptanceStatusFromState(): string { return "NEEDS_REVIEW"; }
+function formalPendingAcceptanceFromState(): boolean { return false; }
 function scopeFromRequest(req: FastifyRequest, reply: FastifyReply): AuthRouteContext | null { const auth = enforceRouteRoleAuth(req, reply, "summary"); if (!auth) return null; return { auth, tenant: { tenant_id: String(auth.tenant_id), project_id: String(auth.project_id), group_id: String(auth.group_id) }, scope: resolveCustomerScope(auth) }; }
 
 function normalizeGeometry(raw: unknown): Record<string, unknown> | null {
@@ -104,7 +119,8 @@ async function queryOperationsFromFacts(pool: Pool, tenant: TenantTriple, scope:
 function operationToCustomerItem(op: OperationFactProjection, fieldNameById: Map<string, string | null>): CustomerOperationListItem {
   const formal = op.formal_acceptance && op.customer_visible_eligible;
   const operationType = operationDisplayType(op.operation_type);
-  return { projection_source: formal ? "GUARDED_REPORT" : "STATE_FALLBACK_LIMITED", fallback_limited: !formal, customer_visible_eligible: formal, blocking_reasons: formal ? [] : LIMITED_BLOCKING_REASONS, data_trust_status: formal ? "FORMAL" : "LIMITED", data_trust_text: formal ? FORMAL_TRUST_TEXT : LIMITED_TRUST_TEXT, operation_id: op.operation_id, operation_plan_id: op.operation_plan_id, field_id: op.field_id, field_name: op.field_id ? (fieldNameById.get(op.field_id) ?? null) : null, title: `${operationType}作业`, customer_title: `${operationType}作业`, operation_type: op.operation_type, final_status: formal ? "作业已通过验收" : "作业已完成，等待验收", acceptance_status: formal ? "证据已通过" : "证据待补充或有限记录", evidence_status: formal ? "证据已通过" : "证据待补充或有限记录", evidence_summary_status: formal ? "证据已通过" : "证据待补充或有限记录", updated_at: op.updated_at, executed_at: op.updated_at };
+  const fallbackState = { final_status: limitedFinalStatusFromState(), acceptance_status: limitedAcceptanceStatusFromState(), pending: formalPendingAcceptanceFromState() };
+  return { projection_source: formal ? "GUARDED_REPORT" : STATE_FALLBACK_TRUST.projection_source, fallback_limited: !formal, customer_visible_eligible: formal, blocking_reasons: formal ? [] : [...STATE_FALLBACK_TRUST.blocking_reasons], data_trust_status: formal ? "FORMAL" : "LIMITED", data_trust_text: formal ? FORMAL_TRUST_TEXT : LIMITED_TRUST_TEXT, operation_id: op.operation_id, operation_plan_id: op.operation_plan_id, field_id: op.field_id, field_name: op.field_id ? (fieldNameById.get(op.field_id) ?? null) : null, title: `${operationType}作业`, customer_title: `${operationType}作业`, operation_type: op.operation_type, final_status: formal ? "作业已通过验收" : fallbackState.final_status, acceptance_status: formal ? "证据已通过" : fallbackState.acceptance_status, evidence_status: formal ? "证据已通过" : "证据待补充或有限记录", evidence_summary_status: formal ? "证据已通过" : "证据待补充或有限记录", updated_at: op.updated_at, executed_at: op.updated_at };
 }
 function memoryMetricText(row: any): string { const key = String(row.metric_key ?? "").toLowerCase(); if (key.includes("soil_moisture")) return `土壤水分：${String(row.metric_value ?? row.after_value ?? "待补充")}`; return "地块响应指标已记录"; }
 
@@ -122,7 +138,7 @@ export function registerCustomerV1Routes(app: FastifyInstance, pool: Pool): void
     for (const fieldId of fieldIds.slice(0, 20)) reports.push({ report_type: "FIELD", title: `${fieldNameById.get(fieldId) ?? "地块"} · 地块报告`, subtitle: limitedSubtitle("基于当前可见地块数据生成"), href: `/customer/fields/${encodeURIComponent(fieldId)}`, field_id: fieldId, field_name: fieldNameById.get(fieldId) ?? null, updated_at: generatedAt, status_text: "可查看", capability_status: "AVAILABLE", data_trust_status: "LIMITED", data_trust_text: LIMITED_TRUST_TEXT });
     for (const op of operations.slice(0, 30)) { const operationTitle = operationDisplayType(op.operation_type); reports.push({ report_type: "OPERATION", title: `${operationTitle} · 作业报告`, subtitle: limitedSubtitle("基于当前近期作业生成，状态需以受保护作业报告为准"), href: `/customer/operations/${encodeURIComponent(op.operation_id)}`, operation_id: op.operation_id, operation_title: operationTitle, field_id: op.field_id, field_name: op.field_id ? (fieldNameById.get(op.field_id) ?? null) : null, updated_at: op.updated_at ?? generatedAt, status_text: op.formal_acceptance ? "可查看" : "需复核", capability_status: op.formal_acceptance ? "AVAILABLE" : "PENDING", data_trust_status: op.formal_acceptance ? "FORMAL" : "LIMITED", data_trust_text: op.formal_acceptance ? FORMAL_TRUST_TEXT : LIMITED_TRUST_TEXT }); }
     reports.push({ report_type: "EVIDENCE_VALUE", title: "证据与价值报告", subtitle: "证据包生成能力待接入；当前数据可信级别为有限记录，不代表正式经营结论", href: null, updated_at: generatedAt, status_text: "数据不足", capability_status: "PENDING", data_trust_status: "LIMITED", data_trust_text: LIMITED_TRUST_TEXT });
-    return reply.send({ ok: true, source: "customer_reports_api", dataScope: "customer_report_center_v1", projection_source: "STATE_FALLBACK_LIMITED", fallback_limited: true, customer_visible_eligible: false, data_trust_status: "LIMITED", data_trust_text: LIMITED_TRUST_TEXT, blocking_reasons: LIMITED_BLOCKING_REASONS, generated_at: generatedAt, scope: ctx.scope, report_count: reports.length, reports });
+    return reply.send({ ok: true, source: "customer_reports_api", dataScope: "customer_report_center_v1", ...STATE_FALLBACK_TRUST, data_trust_status: "LIMITED", data_trust_text: LIMITED_TRUST_TEXT, generated_at: generatedAt, scope: ctx.scope, report_count: reports.length, reports });
   });
 
   app.get("/api/v1/customer/operations", async (req, reply) => {
@@ -142,8 +158,8 @@ export function registerCustomerV1Routes(app: FastifyInstance, pool: Pool): void
     const openAlertsByField = await queryOpenAlertCountByField(pool, ctx.tenant, fields.map((field) => field.field_id));
     const latestByField = new Map<string, OperationFactProjection>();
     for (const op of operations) if (op.field_id && !latestByField.has(op.field_id)) latestByField.set(op.field_id, op);
-    const items: CustomerFieldListItem[] = fields.map((field) => { const latest = latestByField.get(field.field_id); return { projection_source: "STATE_FALLBACK_LIMITED", fallback_limited: true, customer_visible_eligible: false, blocking_reasons: LIMITED_BLOCKING_REASONS, data_trust_status: "LIMITED", data_trust_text: LIMITED_TRUST_TEXT, field_id: field.field_id, field_name: field.field_name, risk_level: "UNKNOWN", risk_reasons: [], updated_at: latest?.updated_at ?? field.updated_at, crop_name: null, stage_name: null, recent_operation_id: latest?.operation_id ?? null, recent_operation_title: latest ? `${operationDisplayType(latest.operation_type)}作业` : null, open_alerts_count: Number(openAlertsByField.get(field.field_id) ?? 0), pending_acceptance_count: operations.filter((op) => op.field_id === field.field_id && !op.formal_acceptance).length }; });
-    return reply.send({ ok: true, source: "customer_fields_api", dataScope: "customer_fields_v1", projection_source: "STATE_FALLBACK_LIMITED", fallback_limited: true, customer_visible_eligible: false, data_trust_status: "LIMITED", data_trust_text: LIMITED_TRUST_TEXT, blocking_reasons: LIMITED_BLOCKING_REASONS, generated_at: new Date().toISOString(), scope: ctx.scope, field_count: items.length, fields: items });
+    const items: CustomerFieldListItem[] = fields.map((field) => { const latest = latestByField.get(field.field_id); const agg = { pendingAcceptanceCount: operations.filter((op) => op.field_id === field.field_id && !op.formal_acceptance).length }; return { ...STATE_FALLBACK_TRUST, data_trust_status: "LIMITED", data_trust_text: LIMITED_TRUST_TEXT, field_id: field.field_id, field_name: field.field_name, risk_level: "UNKNOWN", risk_reasons: [], updated_at: latest?.updated_at ?? field.updated_at, crop_name: null, stage_name: null, recent_operation_id: latest?.operation_id ?? null, recent_operation_title: latest ? `${operationDisplayType(latest.operation_type)}作业` : null, open_alerts_count: Number(openAlertsByField.get(field.field_id) ?? 0), pending_acceptance_count: Number(agg?.pendingAcceptanceCount ?? 0) }; });
+    return reply.send({ ok: true, source: "customer_fields_api", dataScope: "customer_fields_v1", ...STATE_FALLBACK_TRUST, data_trust_status: "LIMITED", data_trust_text: LIMITED_TRUST_TEXT, generated_at: new Date().toISOString(), scope: ctx.scope, field_count: items.length, fields: items });
   });
 
   app.get("/api/v1/customer/fields/:fieldId/memory", async (req, reply) => {
