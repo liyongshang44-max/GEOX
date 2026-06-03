@@ -6,7 +6,6 @@ const { spawnSync } = require('node:child_process');
 const ROOT = path.resolve(__dirname, '..', '..');
 const SEED = 'scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs';
 const README = 'scripts/demo_seed/README_CONTROLLED_PILOT_FULL_REVIEW_V1.md';
-const PKG = 'package.json';
 let failed = false;
 
 function read(rel) {
@@ -19,19 +18,15 @@ function read(rel) {
   return fs.readFileSync(p, 'utf8');
 }
 function requireText(scope, text, entries) {
-  for (const item of entries) {
-    if (!text.includes(item)) {
-      console.error(`[controlled-pilot-full-review-seed] ${scope} missing: ${item}`);
-      failed = true;
-    }
+  for (const item of entries) if (!text.includes(item)) {
+    console.error(`[controlled-pilot-full-review-seed] ${scope} missing: ${item}`);
+    failed = true;
   }
 }
 function forbid(scope, text, entries) {
-  for (const [label, pattern] of entries) {
-    if (pattern.test(text)) {
-      console.error(`[controlled-pilot-full-review-seed] ${scope} forbidden: ${label}`);
-      failed = true;
-    }
+  for (const [label, pattern] of entries) if (pattern.test(text)) {
+    console.error(`[controlled-pilot-full-review-seed] ${scope} forbidden: ${label}`);
+    failed = true;
   }
 }
 function runNode(args) {
@@ -46,8 +41,7 @@ function runNode(args) {
 
 const seed = read(SEED);
 const readme = read(README);
-const pkgText = read(PKG);
-const pkg = pkgText ? JSON.parse(pkgText) : { scripts: {} };
+const pkgText = read('package.json');
 
 requireText('package scripts', pkgText, [
   'seed:controlled-pilot:full-review:dry-run',
@@ -55,36 +49,18 @@ requireText('package scripts', pkgText, [
   'acceptance:controlled-pilot:full-review-seed',
 ]);
 requireText('seed safety gates', seed, [
-  "ALLOWED_TENANTS",
-  "demo",
-  "tenantA",
-  "--apply requires explicit --tenant",
-  "mode: 'dry-run'",
-  "BEGIN",
-  "COMMIT",
-  "ROLLBACK",
-  "pg_advisory_lock",
-  "pg_advisory_unlock",
-  "controlled_pilot_full_review_manifest_v1",
-  "seed_owned_ids",
-  "full_review_seed_${plan.tenant}_%",
-  "CONTROLLED_PILOT_FULL_REVIEW",
-  "ON CONFLICT",
-  "NEEDS_FIELD_BINDING",
+  'ALLOWED_TENANTS', 'demo', 'tenantA', '--apply requires explicit --tenant', "mode: 'dry-run'",
+  'BEGIN', 'COMMIT', 'ROLLBACK', 'pg_advisory_lock', 'pg_advisory_unlock',
+  'controlled_pilot_full_review_manifest_v1', 'seed_owned_ids', 'prefixOf',
+  'CONTROLLED_PILOT_FULL_REVIEW', 'ON CONFLICT', 'NEEDS_FIELD_BINDING',
 ]);
-requireText('seed scenario ids', seed, [
-  'field_c8_demo',
-  'C8 灌溉示范田',
-  'field_device_risk_demo',
-  'op_plan_c8_irrigation_formal_001',
-  'act_c8_irrigation_formal_001',
-  'receipt_c8_irrigation_formal_001',
-  'acc_c8_irrigation_formal_001',
-  'fm_c8_irrigation_response_001',
-  'op_plan_c8_irrigation_pending_001',
-  'dev_gateway_offline_001',
-  'rec_c8_pest_inspection_pending_001',
-  'approval_c8_pest_pending_001',
+requireText('seed full review scenarios', seed, [
+  'field_c8_demo', 'C8 灌溉示范田', 'field_1_demo', 'field_device_risk_demo',
+  'op_plan_c8_irrigation_formal_001', 'act_c8_irrigation_formal_001', 'receipt_c8_irrigation_formal_001', 'acc_c8_irrigation_formal_001', 'fm_c8_irrigation_response_001',
+  'op_plan_c8_irrigation_pending_001', 'dev_gateway_offline_001', 'alert_aggregate_missing_location_001',
+  'rec_c8_pest_inspection_pending_001', 'approval_c8_pest_pending_001',
+  'soil_moisture_percent', 'soil_moisture_after_percent', 'forecast_rain_72h_mm', 'temperature_max_c',
+  'operation_state_v1', 'approval_requests_v1', 'field_memory_v1', 'device_observation_index_v1',
 ]);
 requireText('README seed contract', readme, ['dry-run', 'apply', 'verify', 'cleanup', 'manifest', 'CONTROLLED_PILOT_FULL_REVIEW']);
 forbid('seed source', seed, [
@@ -93,7 +69,7 @@ forbid('seed source', seed, [
   ['broad field tenant delete', /DELETE\s+FROM\s+field_index_v1\s+WHERE\s+tenant_id\s*=\s*\$1\s*(?:;|`)/i],
   ['production bypass', /NODE_ENV\s*===\s*['"]production['"]/],
   ['allowed all tenants', /ALLOWED_TENANTS[^\n]+all/i],
-  ['dev evidence sim trace', /sim_trace|flight-table|flight_table|dev_source/i],
+  ['literal dev evidence token', /sim_trace|flight-table|flight_table|dev_source/i],
 ]);
 
 const planned = runNode([SEED, '--dry-run', '--tenant', 'tenantA']);
@@ -110,6 +86,10 @@ if (planned.ok !== true || planned.apply !== false || planned.tenant !== 'tenant
 }
 if (Number(planned.planned?.facts || -1) !== 0) {
   console.error('[controlled-pilot-full-review-seed] dry-run planned.facts must be 0');
+  failed = true;
+}
+if (Number(planned.planned?.tables?.operation_state_v1_if_exists || 0) < 2 || Number(planned.planned?.tables?.approval_requests_v1_if_exists || 0) < 1) {
+  console.error('[controlled-pilot-full-review-seed] dry-run must plan optional operator fallback rows');
   failed = true;
 }
 
@@ -129,6 +109,12 @@ forbid('customer reports frontend source', page + vm, [
   ['STATE_FALLBACK_LIMITED visible literal', /STATE_FALLBACK_LIMITED/],
   ['OFFICIAL_CUSTOMER_API visible literal', /OFFICIAL_CUSTOMER_API/],
 ]);
+
+const productLanguage = read('scripts/frontend_acceptance/ACCEPTANCE_CUSTOMER_PRODUCT_LANGUAGE_V1.cjs');
+const runtimeAudit = read('scripts/frontend_acceptance/ACCEPTANCE_FRONTEND_RUNTIME_PAGE_AUDIT_V1.cjs');
+const uiSemantics = read('scripts/frontend_acceptance/ACCEPTANCE_CUSTOMER_UI_SEMANTICS_V1.cjs');
+requireText('frontend acceptance route coverage', productLanguage + runtimeAudit + uiSemantics, ['/customer/reports', '/customer/fields', '/customer/operations']);
+requireText('frontend acceptance raw code gates', productLanguage + runtimeAudit + uiSemantics, ['LIMITED', 'AVAILABLE', 'PENDING', 'UNAVAILABLE', 'STATE_FALLBACK_LIMITED', 'OFFICIAL_CUSTOMER_API']);
 
 if (failed) {
   console.error('[controlled-pilot-full-review-seed] FAIL');
