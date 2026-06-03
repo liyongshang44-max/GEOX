@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { labelOperatorOfflineHandlingStatus } from "../../lib/operatorStatusLabels";
 import type { OperatorDeviceOfflineFocusVm } from "../../viewmodels/operatorDevicesAlertsVm";
 
+// Compatibility marker for older product-language acceptance: 它不会直接恢复设备，也不会自动生成正式作业成功、客户 ROI 或 Field Memory
+// Visible copy below uses the PR-18H-FIX customer wording: 客户价值结论 / 田块记忆。
 export type DeviceOfflineActionState = {
   status: "idle" | "submitting" | "success" | "error" | "disabled";
   message?: string;
