@@ -3,39 +3,26 @@ import type { FieldReportDetailV1, OperationReportV1 } from "../../api/reports";
 import type { CustomerDashboardPageVm } from "../../viewmodels/customerDashboardVm";
 import type { FieldReportPageVm } from "../../viewmodels/fieldReportVm";
 import type { OperationReportPageVm } from "../../viewmodels/operationReportVm";
-import { buildFormalScenarioVm } from "../../lib/formalScenarioViewModel";
-import { buildEvidenceVm } from "../../lib/evidenceViewModel";
 import { customerEvidenceStateText, customerNeedsReviewText, customerOperationStateText, customerReasonText, mapCustomerEnum } from "../../lib/customerSafeText";
-import { customerGuardedAcceptanceText, customerGuardedEvidenceText, customerGuardedStatusText } from "../../lib/customerTrustGate";
+
+type Row = Array<unknown>;
 
 const RAW_EXPORT_TOKENS = {
-  technicalSkillMemory: ["TECHNICAL", "SKILL", "MEMORY"].join("_"),
-  technicalExecutionMemory: ["TECHNICAL", "EXECUTION", "MEMORY"].join("_"),
-  simulatedDevMemory: ["SIMULATED", "DEV", "MEMORY"].join("_"),
   pendingAcceptance: ["PENDING", "ACCEPTANCE"].join("_"),
   pendingFormalReview: ["PENDING", "ACCEPTANCE", "REQUIRES", "FORMAL", "REVIEW"].join("_"),
   soilMoistureLow: ["soil", "moisture", "below", "threshold"].join("_"),
   noRainForecast: ["no", "rain", "forecast"].join("_"),
-  blocked: ["BLO", "CKED"].join(""),
-  skipped: ["SKI", "PPED"].join("")
+  blocked: ["BLO", "CKED"].join("")
 };
 
-type Row = Array<unknown>;
-const HIDDEN_MEMORY_CODES = [RAW_EXPORT_TOKENS.technicalSkillMemory, RAW_EXPORT_TOKENS.technicalExecutionMemory, RAW_EXPORT_TOKENS.simulatedDevMemory];
-const PDI_EXPORT_EVIDENCE_SOURCE = "operation_report_v1.pest_disease_inspection.observation_evidence";
-
-function PrintTable({ headers, rows, emptyText }: { headers: string[]; rows: Row[]; emptyText: string }): React.ReactElement {
-  if (!rows.length) return <p className="customerMetricLabel customerSpacingTopSm">{emptyText}</p>;
-  return <table className="printTable customerSpacingTopSm"><thead><tr>{headers.map((item) => <th key={item}>{item}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={`${index}-${row.map((cell) => safeExportText(cell, "")).join("-")}`}>{row.map((cell, cellIndex) => <td key={`${index}-${cellIndex}`}>{safeExportText(cell)}</td>)}</tr>)}</tbody></table>;
+function normalizeKey(value: unknown): string {
+  return String(value ?? "").trim().replace(/[\s/-]+/g, "_").toLowerCase();
 }
-function normalizeKey(value: unknown): string { return String(value ?? "").trim().replace(/[\s/-]+/g, "_").toLowerCase(); }
+
 function safeExportText(value: unknown, fallback = "暂无记录"): string {
   const text = String(value ?? "").trim();
   if (!text || text === "--" || text === "[object Object]" || text === "null" || text === "undefined") return fallback;
   if (/s3:\/\//i.test(text) || /minio:\/\//i.test(text) || /https?:\/\//i.test(text)) return fallback;
-  if (HIDDEN_MEMORY_CODES.some((code) => text.includes(code))) return fallback;
-  const hiddenOperationPattern = new RegExp(`${["Skill", "run"].join("\\s+")}|\\b${RAW_EXPORT_TOKENS.skipped}\\b`, "i");
-  if (hiddenOperationPattern.test(text)) return fallback;
   if (/\bROI\b/.test(text)) return text.replace(/\bROI\b/g, "价值");
   if (/Field\s+Memory/.test(text)) return text.replace(/Field\s+Memory/g, "田块记忆");
   if (/^(UNKNOWN|NEEDS_REVIEW)$/i.test(text)) return fallback;
@@ -44,26 +31,93 @@ function safeExportText(value: unknown, fallback = "暂无记录"): string {
   if (key === normalizeKey(RAW_EXPORT_TOKENS.pendingFormalReview) || key === normalizeKey(RAW_EXPORT_TOKENS.soilMoistureLow) || key === normalizeKey(RAW_EXPORT_TOKENS.noRainForecast)) return customerReasonText(text);
   if (key === normalizeKey(RAW_EXPORT_TOKENS.pendingAcceptance) || key === normalizeKey(RAW_EXPORT_TOKENS.blocked)) return customerOperationStateText(text);
   if (key.includes("evidence")) return customerEvidenceStateText(text);
-  const mapped = mapCustomerEnum(text, "generic");
-  return mapped || text;
+  return mapCustomerEnum(text, "generic") || text;
 }
-function isObject(value: unknown): value is Record<string, any> { return Boolean(value && typeof value === "object" && !Array.isArray(value)); }
-function formatTs(value: unknown): string { const raw = String(value ?? "").trim(); if (!raw) return "暂无时间"; const n = Number(raw); const ms = Number.isFinite(n) ? n : Date.parse(raw); if (!Number.isFinite(ms) || ms <= 0) return safeExportText(raw, "暂无时间"); return new Date(ms).toLocaleString("zh-CN", { hour12: false }); }
-function mediaRefsText(value: unknown): string { const refs = Array.isArray(value) ? value : []; if (!refs.length) return "暂无图片/媒体引用"; return refs.slice(0, 5).map((item: any) => `${safeExportText(item?.kind, "证据引用")}:${safeExportText(item?.ref_id ?? item?.ref ?? item?.id, "证据引用")}`).join("；"); }
-function geoPointText(value: unknown): string { if (!isObject(value)) return "暂无定位"; const lat = Number(value.lat); const lng = Number(value.lng); if (!Number.isFinite(lat) || !Number.isFinite(lng)) return "暂无定位"; return `${lat}, ${lng}`; }
-function deviceProfileText(value: unknown): string { if (!isObject(value)) return "暂无设备来源"; return safeExportText(value.device_model ?? value.device_type ?? value.device_id, "暂无设备来源"); }
-function pct(value: unknown): string { const n = Number(value); return Number.isFinite(n) ? `${n}%` : "待补充"; }
-function operationReportObject(report?: OperationReportV1 | null): Record<string, any> { return report && typeof report === "object" ? report as unknown as Record<string, any> : {}; }
-function fieldReportObject(report?: FieldReportDetailV1 | null): Record<string, any> { return report && typeof report === "object" ? report as unknown as Record<string, any> : {}; }
-function sectionItemValue(vm: OperationReportPageVm, key: OperationReportPageVm["sections"][number]["key"], label: string, fallback = "暂无记录"): string { const section = vm.sections.find((item) => item.key === key); const row = section?.items.find((item) => item.label === label || item.label.includes(label)); return safeExportText(row?.value, fallback); }
-function weatherSummaryFromReport(reportAny: Record<string, any>): string { const weather = reportAny.weather_interference ?? reportAny.weather_summary ?? reportAny.environment_context ?? reportAny.weather ?? null; if (!isObject(weather)) return "天气摘要未接入报告同源数据。"; return safeExportText(weather.explanation ?? weather.summary ?? weather.interference_summary, "暂无天气摘要。"); }
-function buildOperationSameSourceExportRows(vm: OperationReportPageVm, report?: OperationReportV1 | null): Row[] {
-  const reportAny = operationReportObject(report); const pack = reportAny.evidence_pack_summary ?? {}; const asExecuted = reportAny.as_executed ?? {}; const asApplied = reportAny.as_applied ?? {}; const memory = reportAny.field_memory ?? {};
-  return [["证据包状态", safeExportText(pack.status ?? pack.export_status ?? sectionItemValue(vm, "EVIDENCE", "证据状态", ""), "证据包状态未返回")], ["实际执行摘要", safeExportText(asExecuted.summary ?? asExecuted.result_summary ?? asExecuted.deviation_summary ?? sectionItemValue(vm, "EXECUTION", "执行摘要", ""), "暂无实际执行摘要")], ["实际覆盖状态", safeExportText(asApplied.coverage_status ?? sectionItemValue(vm, "EXECUTION", "覆盖状态", ""), "暂无实际覆盖状态")], ["天气干扰", weatherSummaryFromReport(reportAny)], ["价值性质", sectionItemValue(vm, "ROI", "实测/估算/假设", "暂无价值性质")], ["田块记忆学习摘要", safeExportText(memory.learning_summary ?? memory.summary_text ?? sectionItemValue(vm, "MEMORY", "本次结果是否进入田块记忆", ""), "暂无田块记忆学习摘要")], ["页面同源价值门禁", safeExportText(vm.value.fallbackText, "未通过正式价值门禁")], ["页面同源田块记忆", safeExportText(vm.fieldMemory.items.join("；"), "暂无正式田块记忆")]];
-}
-function pdiEvidenceBasisRows(report?: OperationReportV1 | null): Row[] { const pdi = operationReportObject(report).pest_disease_inspection ?? null; const sourcePath = PDI_EXPORT_EVIDENCE_SOURCE; if (!sourcePath || !isObject(pdi)) return []; const observation_evidence = isObject(pdi.observation_evidence) ? pdi.observation_evidence : {}; const latest = isObject(observation_evidence.latest_observation) ? observation_evidence.latest_observation : {}; return [["巡检编号", safeExportText(pdi.inspection_id, "暂无巡检编号")], ["巡检验收", safeExportText(pdi.acceptance_status, "待复核")], ["客户可见", pdi.customer_visible_eligible === true ? "可展示" : "需补齐正式链路后展示"], ["图片/媒体证据", mediaRefsText(latest.media_refs)], ["采集时间", safeExportText(latest.captured_at_text, formatTs(latest.captured_at_ts))], ["采集位置", geoPointText(latest.geo_point)], ["采集设备", deviceProfileText(latest.device_profile)], ["现场备注", safeExportText(latest.scout_note, "暂无现场备注")], ["发生率", pct(latest.incidence_percent)], ["严重度", pct(latest.severity_percent)], ["影响面积", pct(latest.affected_area_percent)], ["证据质量", safeExportText(latest.evidence_quality, "待补充")], ["观察次数", `${Number(observation_evidence.total_observations ?? 0) || 0} 次`], ["阻塞原因", Array.isArray(pdi.blocking_reasons) && pdi.blocking_reasons.length ? pdi.blocking_reasons.map((x: unknown) => safeExportText(x, "")).filter(Boolean).join("、") : "无"]]; }
-function isPdiReport(report?: OperationReportV1 | null): boolean { const reportAny = operationReportObject(report); const scenario = String(reportAny.formal_scenario?.scenario_type ?? "").toUpperCase(); return scenario === "FORMAL_PEST_DISEASE_INSPECTION" || Boolean(reportAny.pest_disease_inspection); }
 
-export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): React.ReactElement { const recentOperations = vm.recentOperations.slice(0, 5); const topRisks = vm.topRiskFields.slice(0, 5); const pendingRows = vm.actionItems.slice(0, 6).map((item) => [safeExportText(item.title, "待处理事项"), safeExportText(item.currentStatus, "状态待确认"), safeExportText(item.nextStep, "下一步待确认"), safeExportText(item.formality, "正式性待确认")]); const reviewNotes = ["风险提示用于处理优先级，不等同于正式验收或收益结论。", "设备恢复和人工复核前，不展示执行成功或价值结论。", "证据不足、待验收或需要复核的作业，不能生成正式客户价值结论。", vm.usagePath.formalityNote]; return <div className="customerCompactReport"><section className="customerCard"><h2 className="customerCardTitle">1. 本期摘要</h2><p className="customerSpacingTopSm">{safeExportText(vm.usagePath.statusText, "当前经营状态待确认")}</p><p className="customerMetricLabel customerSpacingTopXs">{safeExportText(vm.summaryScopeText, "统计范围待确认")}</p></section><section className="customerCard"><h2 className="customerCardTitle">2. 主要风险</h2><PrintTable headers={["地块", "风险", "原因", "下一步"]} rows={topRisks.map((item) => [safeExportText(item.fieldName, "地块名称待补充"), safeExportText(item.riskLabel, "风险待确认"), item.reasons.map((reason) => safeExportText(reason, "暂无风险原因")).join("；") || "暂无风险原因", "查看地块风险原因和最近作业证据"])} emptyText="暂无主要风险" /></section><section className="customerCard"><h2 className="customerCardTitle">3. 待处理事项</h2><PrintTable headers={["事项", "当前状态", "下一步", "正式性提示"]} rows={pendingRows} emptyText="暂无待处理事项" /></section><section className="customerCard"><h2 className="customerCardTitle">4. 作业进展</h2><PrintTable headers={["作业", "地块", "更新时间", "验收", "正式链路", "复核状态"]} rows={recentOperations.map((item) => [safeExportText(item.operationName, "作业名称待补充"), safeExportText(item.fieldName, "地块名称待补充"), safeExportText(item.updatedAtText, "暂无更新时间"), safeExportText(item.acceptanceText, "等待验收"), safeExportText(item.formalChainStatusText, "正式链路需复核"), safeExportText(item.needsReviewText, "需复核")])} emptyText="暂无近期作业" /></section><section className="customerCard"><h2 className="customerCardTitle">5. 设备状态</h2><PrintTable headers={["项目", "状态"]} rows={[["在线设备", safeExportText(vm.deviceSummary.onlineText, "待确认")], ["离线设备", safeExportText(vm.deviceSummary.offlineText, "待确认")], ["处理提示", safeExportText(vm.deviceSummary.actionText, "待人工核查")]]} emptyText="暂无设备状态" /></section><section className="customerCard"><h2 className="customerCardTitle">6. 证据状态</h2><p className="customerSpacingTopSm">{safeExportText(vm.evidenceSummary.displayText, "证据状态待确认")}</p></section><section className="customerCard"><h2 className="customerCardTitle">7. 价值记录</h2><PrintTable headers={["项目", "内容"]} rows={[["当前状态", safeExportText(vm.roiSummary.currentStatus, "价值记录待确认")], ["为什么", safeExportText(vm.roiSummary.whyText, "价值依据待确认")], ["下一步", safeExportText(vm.roiSummary.nextStepText, "先补齐证据与验收")], ["正式性提示", safeExportText(vm.roiSummary.formalityText, "未通过正式价值门禁前不可作为价值结论")], ["价值摘要", safeExportText(vm.roiSummary.customerValueText, "暂无价值摘要")]]} emptyText="暂无价值记录" /></section><section className="customerCard"><h2 className="customerCardTitle">8. 附注：哪些结论尚待复核</h2><ul className="customerList customerSpacingTopSm">{reviewNotes.map((item) => <li key={item} className="customerListItem">{safeExportText(item, "复核说明待确认")}</li>)}</ul></section><footer className="customerCard"><p className="customerMetricLabel">报告由 GEOX 自动生成，可用于客户或管理层复盘；其中待复核结论已在附注中标明，不能当作正式收益或验收结论。</p></footer></div>; }
-export function FieldExportBlocks({ vm, report }: { vm: FieldReportPageVm; report?: FieldReportDetailV1 | null }): React.ReactElement { const reportAny = fieldReportObject(report); const recentOperationRows = vm.recentOperations.slice(0, 5).map((item) => [safeExportText(item.title, "作业名称待补充"), safeExportText(item.statusText, "状态待确认"), safeExportText(item.acceptanceText, "验收待确认"), safeExportText(item.updatedAtText, "暂无更新时间"), safeExportText(item.scenarioTypeText, "场景待确认"), safeExportText(item.formalChainStatusText, "正式链路需复核"), safeExportText(item.evidenceStatusText, "证据需复核"), safeExportText(item.needsReviewText, "需复核")]); return <div className="customerCompactReport"><section className="customerCard"><h2 className="customerCardTitle">1. 地块摘要</h2><div className="customerGrid2 customerSpacingTopSm"><div><strong>地块名称：</strong>{safeExportText(vm.header.title, "地块名称待补充")}</div><div><strong>作业总数：</strong>{safeExportText(vm.overview.totalOperationsText, "0")}</div><div><strong>当前风险：</strong>{safeExportText(vm.risk.levelLabel, "风险待确认")}</div><div><strong>待验收：</strong>{safeExportText(vm.overview.pendingAcceptanceText, "0")}</div></div></section><section className="customerCard"><h2 className="customerCardTitle">2. 风险与诊断</h2><p className="customerSpacingTopSm">{safeExportText(vm.explain.human, "暂无状态解释")} 当前风险：{safeExportText(vm.risk.levelLabel, "风险待确认")}。</p></section><section className="customerCard"><h2 className="customerCardTitle">3. 最近作业</h2><PrintTable headers={["作业", "状态", "验收", "更新时间", "正式场景", "正式链路", "证据状态", "复核状态"]} rows={recentOperationRows} emptyText="暂无最近作业" /></section><section className="customerCard"><h2 className="customerCardTitle">4. 价值与田块记忆</h2><PrintTable headers={["项目", "内容"]} rows={[["价值摘要", safeExportText(vm.roiSummary.displayText, "暂无价值摘要")], ["田块记忆摘要", safeExportText(vm.fieldMemory.displayText, "暂无田块记忆摘要")], ["天气摘要", weatherSummaryFromReport(reportAny)]]} emptyText="暂无价值与田块记忆摘要" /></section><footer className="customerCard"><p className="customerMetricLabel">报告由 GEOX 自动生成，供经营复盘使用。</p></footer></div>; }
-export function OperationExportBlocks({ vm, report }: { vm: OperationReportPageVm; report?: OperationReportV1 | null }): React.ReactElement { const formalVm = buildFormalScenarioVm(report ?? {}); const evidenceVm = buildEvidenceVm(report ?? {}); const pdiRows = pdiEvidenceBasisRows(report); return <div className="customerCompactReport"><section className="customerCard"><h2 className="customerCardTitle">作业报告头</h2><div className="customerGrid2 customerSpacingTopSm"><div><strong>作业：</strong>{safeExportText(vm.header.title, "作业名称待补充")}</div><div><strong>状态：</strong>{safeExportText(vm.operation.finalStatusLabel, "待确认")}</div><div><strong>正式场景：</strong>{safeExportText(formalVm.scenarioLabel, "待确认")}</div><div><strong>正式链路：</strong>{safeExportText(vm.conclusion.finalStatusText || customerGuardedStatusText(report ?? {}), "需复核")}</div><div><strong>证据门禁：</strong>{safeExportText(vm.evidenceSummary.statusText || customerGuardedEvidenceText(report ?? {}), "需复核")}</div><div><strong>验收门禁：</strong>{safeExportText(vm.acceptance.statusText || customerGuardedAcceptanceText(report ?? {}), "需复核")}</div></div></section><section className="operationClosedLoopGrid">{vm.sections.map((item, index) => <article key={item.key} className="customerCard operationClosedLoopCard"><div className="operationClosedLoopHead"><span className="operationStepNo">{index + 1}</span><h2 className="customerCardTitle">{safeExportText(item.title, "作业环节")}</h2><span className="operationStatusBadge">{safeExportText(item.statusText ?? item.status, "待确认")}</span></div><p className="customerSpacingTopSm">{safeExportText(item.summary, "暂无摘要")}</p></article>)}</section><section className="customerCard"><h2 className="customerCardTitle">作业报告同源摘要</h2><PrintTable headers={["项目", "导出内容"]} rows={buildOperationSameSourceExportRows(vm, report)} emptyText="暂无作业同源摘要" /></section>{isPdiReport(report) ? <section className="customerCard"><h2 className="customerCardTitle">病虫害巡检观察证据</h2><p className="customerMetricLabel customerSpacingTopXs">导出与页面使用同一份巡检观察证据。</p><PrintTable headers={["项目", "内容"]} rows={pdiRows} emptyText="暂无巡检观察证据" /><p className="customerMetricLabel customerSpacingTopSm">边界说明：巡检证据通过 ≠ 已执行喷药；巡检证据通过 ≠ 防治闭环已结束；巡检结果仍需后续处置闭环确认后，才会形成正式价值结论或客户可见田块记忆。</p></section> : null}<section className="customerCard"><h2 className="customerCardTitle">证据包摘要</h2><p className="customerMetricLabel customerSpacingTopXs">统一证据信任级别：{safeExportText(evidenceVm.trustLevel, "证据待补充")}</p><p className="customerSpacingTopSm">{safeExportText(vm.evidenceSummary.summary, "暂无有效证据")}</p><p className="customerMetricLabel customerSpacingTopXs">{safeExportText(vm.evidenceSummary.detail, "暂无补充说明")}</p></section><footer className="customerCard"><p className="customerMetricLabel">报告由 GEOX 自动生成，供作业执行留痕与验收复盘使用。</p></footer></div>; }
+function PrintTable({ headers, rows, emptyText }: { headers: string[]; rows: Row[]; emptyText: string }): React.ReactElement {
+  if (!rows.length) return <p className="customerMetricLabel customerSpacingTopSm">{emptyText}</p>;
+  return (
+    <table className="printTable customerSpacingTopSm">
+      <thead><tr>{headers.map((item) => <th key={item}>{item}</th>)}</tr></thead>
+      <tbody>
+        {rows.map((row, index) => (
+          <tr key={`${index}-${row.map((cell) => safeExportText(cell, "")).join("-")}`}>
+            {row.map((cell, cellIndex) => <td key={`${index}-${cellIndex}`}>{safeExportText(cell)}</td>)}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function reportObject(value?: OperationReportV1 | FieldReportDetailV1 | null): Record<string, unknown> {
+  return value && typeof value === "object" ? value as unknown as Record<string, unknown> : {};
+}
+
+function valueFromSection(vm: OperationReportPageVm, label: string, fallback = "暂无记录"): string {
+  for (const section of vm.sections) {
+    const row = section.items.find((item) => item.label === label || item.label.includes(label));
+    if (row) return safeExportText(row.value, fallback);
+  }
+  return fallback;
+}
+
+export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): React.ReactElement {
+  const recentOperations = vm.recentOperations.slice(0, 5);
+  const topRisks = vm.topRiskFields.slice(0, 5);
+  const pendingRows = vm.actionItems.slice(0, 6).map((item) => [
+    item.title,
+    item.currentStatus,
+    item.nextStep,
+    item.formality
+  ]);
+  const reviewNotes = [
+    "风险提示用于处理优先级，不等同于正式验收或收益结论。",
+    "设备恢复和人工复核前，不展示执行成功或价值结论。",
+    "证据不足、待验收或需要复核的作业，不能生成正式客户价值结论。",
+    vm.usagePath.formalityNote
+  ];
+
+  return (
+    <div className="customerCompactReport">
+      <section className="customerCard"><h2 className="customerCardTitle">1. 本期摘要</h2><p className="customerSpacingTopSm">{safeExportText(vm.usagePath.statusText, "当前经营状态待确认")}</p><p className="customerMetricLabel customerSpacingTopXs">{safeExportText(vm.summaryScopeText, "统计范围待确认")}</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">2. 主要风险</h2><PrintTable headers={["地块", "风险", "原因", "下一步"]} rows={topRisks.map((item) => [item.fieldName, item.riskLabel, item.reasons.map((reason) => safeExportText(reason, "")).filter(Boolean).join("；") || "暂无风险原因", "查看地块风险原因和最近作业证据"])} emptyText="暂无主要风险" /></section>
+      <section className="customerCard"><h2 className="customerCardTitle">3. 待处理事项</h2><PrintTable headers={["事项", "当前状态", "下一步", "正式性提示"]} rows={pendingRows} emptyText="暂无待处理事项" /></section>
+      <section className="customerCard"><h2 className="customerCardTitle">4. 作业进展</h2><PrintTable headers={["作业", "地块", "更新时间", "验收", "正式链路", "复核状态"]} rows={recentOperations.map((item) => [item.operationName, item.fieldName, item.updatedAtText, item.acceptanceText, item.formalChainStatusText, item.needsReviewText])} emptyText="暂无近期作业" /></section>
+      <section className="customerCard"><h2 className="customerCardTitle">5. 设备状态</h2><PrintTable headers={["项目", "状态"]} rows={[["在线设备", vm.deviceSummary.onlineText], ["离线设备", vm.deviceSummary.offlineText], ["处理提示", vm.deviceSummary.actionText]]} emptyText="暂无设备状态" /></section>
+      <section className="customerCard"><h2 className="customerCardTitle">6. 证据状态</h2><p className="customerSpacingTopSm">{safeExportText(vm.evidenceSummary.displayText, "证据状态待确认")}</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">7. 价值记录</h2><PrintTable headers={["项目", "内容"]} rows={[["当前状态", vm.roiSummary.currentStatus], ["为什么", vm.roiSummary.whyText], ["下一步", vm.roiSummary.nextStepText], ["正式性提示", vm.roiSummary.formalityText], ["价值摘要", vm.roiSummary.customerValueText]]} emptyText="暂无价值记录" /></section>
+      <section className="customerCard"><h2 className="customerCardTitle">8. 附注：哪些结论尚待复核</h2><ul className="customerList customerSpacingTopSm">{reviewNotes.map((item, index) => <li key={`${index}-${safeExportText(item, "")}`} className="customerListItem">{safeExportText(item, "复核说明待确认")}</li>)}</ul></section>
+      <footer className="customerCard"><p className="customerMetricLabel">报告由 GEOX 自动生成，可用于客户或管理层复盘；其中待复核结论已在附注中标明，不能当作正式收益或验收结论。</p></footer>
+    </div>
+  );
+}
+
+export function FieldExportBlocks({ vm, report }: { vm: FieldReportPageVm; report?: FieldReportDetailV1 | null }): React.ReactElement {
+  const reportAny = reportObject(report);
+  const weather = reportAny.weather_interference ?? reportAny.weather_summary ?? "天气摘要未接入报告同源数据。";
+  return (
+    <div className="customerCompactReport">
+      <section className="customerCard"><h2 className="customerCardTitle">1. 地块摘要</h2><div className="customerGrid2 customerSpacingTopSm"><div><strong>地块名称：</strong>{safeExportText(vm.header.title, "地块名称待补充")}</div><div><strong>作业总数：</strong>{safeExportText(vm.overview.totalOperationsText, "0")}</div><div><strong>当前风险：</strong>{safeExportText(vm.risk.levelLabel, "风险待确认")}</div><div><strong>待验收：</strong>{safeExportText(vm.overview.pendingAcceptanceText, "0")}</div></div></section>
+      <section className="customerCard"><h2 className="customerCardTitle">2. 风险与诊断</h2><p className="customerSpacingTopSm">{safeExportText(vm.explain.human, "暂无状态解释")} 当前风险：{safeExportText(vm.risk.levelLabel, "风险待确认")}。</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">3. 最近作业</h2><PrintTable headers={["作业", "状态", "验收", "更新时间", "正式场景", "正式链路", "证据状态", "复核状态"]} rows={vm.recentOperations.slice(0, 5).map((item) => [item.title, item.statusText, item.acceptanceText, item.updatedAtText, item.scenarioTypeText, item.formalChainStatusText, item.evidenceStatusText, item.needsReviewText])} emptyText="暂无最近作业" /></section>
+      <section className="customerCard"><h2 className="customerCardTitle">4. 价值与田块记忆</h2><PrintTable headers={["项目", "内容"]} rows={[["价值摘要", vm.roiSummary.displayText], ["田块记忆摘要", vm.fieldMemory.displayText], ["天气摘要", safeExportText(weather, "暂无天气摘要")]]} emptyText="暂无价值与田块记忆摘要" /></section>
+      <footer className="customerCard"><p className="customerMetricLabel">报告由 GEOX 自动生成，供经营复盘使用。</p></footer>
+    </div>
+  );
+}
+
+export function OperationExportBlocks({ vm, report }: { vm: OperationReportPageVm; report?: OperationReportV1 | null }): React.ReactElement {
+  const reportAny = reportObject(report);
+  const evidenceStatus = safeExportText(reportAny.evidence_status ?? reportAny.evidence_summary_status ?? vm.evidenceSummary.statusText, "证据需复核");
+  const acceptanceStatus = safeExportText(reportAny.acceptance_status ?? vm.acceptance.statusText, "验收需复核");
+  return (
+    <div className="customerCompactReport">
+      <section className="customerCard"><h2 className="customerCardTitle">作业报告头</h2><div className="customerGrid2 customerSpacingTopSm"><div><strong>作业：</strong>{safeExportText(vm.header.title, "作业名称待补充")}</div><div><strong>状态：</strong>{safeExportText(vm.operation.finalStatusLabel, "待确认")}</div><div><strong>正式链路：</strong>{safeExportText(vm.conclusion.finalStatusText, "需复核")}</div><div><strong>证据门禁：</strong>{evidenceStatus}</div><div><strong>验收门禁：</strong>{acceptanceStatus}</div></div></section>
+      <section className="operationClosedLoopGrid">{vm.sections.map((item, index) => <article key={`${item.key}-${index}`} className="customerCard operationClosedLoopCard"><div className="operationClosedLoopHead"><span className="operationStepNo">{index + 1}</span><h2 className="customerCardTitle">{safeExportText(item.title, "作业环节")}</h2><span className="operationStatusBadge">{safeExportText(item.statusText ?? item.status, "待确认")}</span></div><p className="customerSpacingTopSm">{safeExportText(item.summary, "暂无摘要")}</p></article>)}</section>
+      <section className="customerCard"><h2 className="customerCardTitle">作业报告同源摘要</h2><PrintTable headers={["项目", "导出内容"]} rows={[["证据包状态", evidenceStatus], ["实际执行摘要", valueFromSection(vm, "执行摘要")], ["实际覆盖状态", valueFromSection(vm, "覆盖状态")], ["天气干扰", safeExportText(reportAny.weather_summary, "天气摘要未接入报告同源数据。")], ["价值性质", valueFromSection(vm, "实测/估算/假设")], ["田块记忆学习摘要", valueFromSection(vm, "本次结果是否进入田块记忆")], ["页面同源价值门禁", safeExportText(vm.value.fallbackText, "未通过正式价值门禁")], ["页面同源田块记忆", safeExportText(vm.fieldMemory.items.join("；"), "暂无正式田块记忆")]]} emptyText="暂无作业同源摘要" /></section>
+      <section className="customerCard"><h2 className="customerCardTitle">证据包摘要</h2><p className="customerSpacingTopSm">{safeExportText(vm.evidenceSummary.summary, "暂无有效证据")}</p><p className="customerMetricLabel customerSpacingTopXs">{safeExportText(vm.evidenceSummary.detail, "暂无补充说明")}</p></section>
+      <footer className="customerCard"><p className="customerMetricLabel">报告由 GEOX 自动生成，供作业执行留痕与验收复盘使用。</p></footer>
+    </div>
+  );
+}
