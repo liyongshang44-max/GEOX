@@ -18,7 +18,7 @@ function arg(name, fallback = null) {
 
 const BASE_URL = (arg('base-url') || process.env.BASE_URL || process.env.API_BASE_URL || '').replace(/\/+$/, '');
 const TENANT = arg('tenant') || process.env.TENANT_ID || 'tenantA';
-const TOKEN = process.env.ADMIN_TOKEN || process.env.AO_ACT_TOKEN || process.env.GEOX_AO_ACT_TOKEN || process.env.TOKEN || 'tenant_a_admin_token';
+const TOKEN = process.env.ADMIN_TOKEN || process.env.GEOX_ACCEPTANCE_TOKEN || process.env.ACCEPTANCE_TOKEN || process.env.AO_ACT_TOKEN || process.env.GEOX_AO_ACT_TOKEN || process.env.TOKEN || 'admin_token';
 const DATABASE_URL = process.env.DATABASE_URL;
 
 function fail(message, detail) {
@@ -43,6 +43,18 @@ async function dbClient() {
   const client = new Client({ connectionString: DATABASE_URL });
   await client.connect();
   return client;
+}
+
+async function assertRuntimeOpenApi() {
+  const r = await http('/api/v1/openapi.json');
+  assert(r.status === 200, 'runtime OpenAPI request failed', r.json || r.text);
+  const paths = r.json?.paths || {};
+  const schemas = r.json?.components?.schemas || {};
+  assert(paths['/api/v1/field-memory/from-acceptance']?.post, 'OpenAPI missing field-memory from-acceptance POST path', paths['/api/v1/field-memory/from-acceptance']);
+  assert(paths['/api/v1/roi-ledger/formalize-from-acceptance']?.post, 'OpenAPI missing ROI formalize-from-acceptance POST path', paths['/api/v1/roi-ledger/formalize-from-acceptance']);
+  for (const name of ['FormalFieldMemoryFromAcceptanceRequest', 'FormalFieldMemoryFromAcceptanceResponse', 'RoiLedgerFormalizeFromAcceptanceRequest', 'RoiLedgerFormalizeFromAcceptanceResponse']) {
+    assert(Boolean(schemas[name]), `OpenAPI missing schema ${name}`, Object.keys(schemas).filter((x) => x.includes('Acceptance') || x.includes('Formal')));
+  }
 }
 
 async function cleanupP0Rows(client) {
@@ -167,7 +179,7 @@ async function assertFieldMemory(client) {
   const noChain = await http('/api/v1/field-memory/from-acceptance', { method: 'POST', body: scoped({ operation_plan_id: FORMAL_OP, acceptance_id: 'p0_fm_no_chain' }) });
   assert(noChain.status === 422 && noChain.json?.error === 'CHAIN_VALIDATION_NOT_PASSED', 'field memory chain negative failed', noChain.json || noChain.text);
 
-  await insertAcceptance(client, 'p0_fm_no_obs', { operation_plan_id: 'op_plan_p0_no_obs', field_id: 'field_1_demo', evidence_refs: [] });
+  await insertAcceptance(client, 'p0_fm_no_obs', { operation_plan_id: 'op_plan_p0_no_obs', field_id: 'p0_no_observations_field', evidence_refs: [] });
   const noObs = await http('/api/v1/field-memory/from-acceptance', { method: 'POST', body: scoped({ operation_plan_id: 'op_plan_p0_no_obs', acceptance_id: 'p0_fm_no_obs' }) });
   assert(noObs.status === 422 && noObs.json?.error === 'OBSERVATION_PAIR_NOT_FOUND', 'field memory missing observation pair negative failed', noObs.json || noObs.text);
 }
@@ -216,6 +228,7 @@ async function assertFieldReport() {
   const client = await dbClient();
   try {
     await cleanupP0Rows(client);
+    await assertRuntimeOpenApi();
     const asExecuted = await assertReceiptStatusMatrix(client);
     await assertRoiFormalization(client, asExecuted.as_executed_id);
     await assertFieldMemory(client);
