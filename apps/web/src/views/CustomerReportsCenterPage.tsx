@@ -52,31 +52,34 @@ export default function CustomerReportsCenterPage(): React.ReactElement {
 
               {group.items.length ? (
                 <div className="customerReportEntryList customerSpacingTopMd">
-                  {group.items.map((item) => item.disabled ? (
-                    <div key={`${group.key}-${item.title}`} className="customerReportEntry isDisabled" aria-disabled="true">
-                      <div>
-                        <strong>{item.title}</strong>
-                        <p>{item.subtitle}</p>
-                        <small>{item.coverageText}</small>
-                        <small>数据可信级别：{item.trustText}</small>
-                        <small>状态：{item.statusText}</small>
-                        <small>更新时间：{item.updatedAtText}</small>
+                  {group.items.map((item, index) => {
+                    const itemKey = `${group.key}-${item.href || item.title}-${index}`;
+                    return item.disabled ? (
+                      <div key={itemKey} className="customerReportEntry isDisabled" aria-disabled="true">
+                        <div>
+                          <strong>{item.title}</strong>
+                          <p>{item.subtitle}</p>
+                          <small>{item.coverageText}</small>
+                          <small>数据可信级别：{item.trustText}</small>
+                          <small>状态：{item.statusText}</small>
+                          <small>更新时间：{item.updatedAtText}</small>
+                        </div>
+                        <span>{item.statusText}</span>
                       </div>
-                      <span>{item.statusText}</span>
-                    </div>
-                  ) : (
-                    <Link key={`${group.key}-${item.title}`} className="customerReportEntry" to={item.href || "/customer/reports"}>
-                      <div>
-                        <strong>{item.title}</strong>
-                        <p>{item.subtitle}</p>
-                        <small>{item.coverageText}</small>
-                        <small>数据可信级别：{item.trustText}</small>
-                        <small>状态：{item.statusText}</small>
-                        <small>更新时间：{item.updatedAtText}</small>
-                      </div>
-                      <span>{item.statusText}</span>
-                    </Link>
-                  ))}
+                    ) : (
+                      <Link key={itemKey} className="customerReportEntry" to={item.href || "/customer/reports"}>
+                        <div>
+                          <strong>{item.title}</strong>
+                          <p>{item.subtitle}</p>
+                          <small>{item.coverageText}</small>
+                          <small>数据可信级别：{item.trustText}</small>
+                          <small>状态：{item.statusText}</small>
+                          <small>更新时间：{item.updatedAtText}</small>
+                        </div>
+                        <span>{item.statusText}</span>
+                      </Link>
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="muted customerSpacingTopMd">暂无可展示报告入口。</p>

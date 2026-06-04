@@ -43,6 +43,7 @@ const devicesPage = read('apps/web/src/views/operator/OperatorDevicesAlertsPage.
 const handlingPanel = read('apps/web/src/components/operator/DeviceOfflineHandlingPanel.tsx');
 const statusLabels = read('apps/web/src/lib/operatorStatusLabels.ts');
 const operatorProductGate = read('scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_PRODUCT_LANGUAGE_V1.cjs');
+const runtimePageAudit = read('scripts/frontend_acceptance/ACCEPTANCE_FRONTEND_RUNTIME_PAGE_AUDIT_V1.cjs');
 
 must(workbenchApi, /export function isPlaceholderId\(value: unknown\): boolean/, 'workbench exports placeholder id guard');
 must(workbenchApi, /PLACEHOLDER_ID_VALUES = new Set\(\["\.\.\.", "…", "--", "undefined", "null", "待确认", "未定位到设备", "地块待确认"\]\)/, 'workbench placeholder values include required tokens');
@@ -100,8 +101,10 @@ must(handlingPanel, /const isReadOnlyOrUnlocated = focus\.mode === "AGGREGATE_ON
 must(handlingPanel, /const canConfirmOffline = focus\.mode === "DEVICE_MATCHED"/, 'confirm disabled unless located device matched');
 must(handlingPanel, /const canMarkManualReview = focus\.mode === "DEVICE_MATCHED"/, 'manual review disabled unless located device matched');
 must(handlingPanel, /const canCreateTaskCandidate = focus\.mode === "DEVICE_MATCHED"/, 'task candidate disabled unless located device matched');
+must(handlingPanel, /<h2>设备离线处理<\/h2>|设备离线排查入口/, 'explicit device offline panel title');
 must(handlingPanel, /缺少设备定位时，只能返回运营总队列查看来源；不会创建维护任务候选。/, 'missing-location cannot create maintenance task candidate');
-must(handlingPanel, /不会直接恢复设备，不会自动生成正式作业成功、客户价值结论或田块记忆/, 'aggregate-only cannot create formal success/value/memory');
+for (const phrase of ['不生成正式作业成功', '不生成客户价值结论', '不生成田块记忆']) must(handlingPanel, new RegExp(phrase), `aggregate-only cannot create ${phrase}`);
+must(runtimePageAudit, /\/operator\/devices-alerts\?focus=device_offline&source=aggregate/, 'runtime audit covers aggregate-only offline route');
 
 must(devicesPage, /DeviceOfflineHandlingPanel/, 'handling panel rendered');
 must(devicesPage, /labelOperatorOfflineHandlingStatus\(result\.status\)/, 'offline action success status uses handling labels');

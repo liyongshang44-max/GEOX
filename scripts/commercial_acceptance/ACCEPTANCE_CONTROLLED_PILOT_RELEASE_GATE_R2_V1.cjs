@@ -6,14 +6,31 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const REPORT = path.join(ROOT, 'docs/audit/CONTROLLED_PILOT_READINESS_REPORT.md');
 const LONG = Number(process.env.CONTROLLED_PILOT_LONG_GATE_TIMEOUT_MS || 24 * 60 * 1000);
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:3001';
-const env = { ...process.env, BASE_URL: BASE, API_BASE_URL: process.env.API_BASE_URL || BASE, TENANT_ID: process.env.TENANT_ID || 'tenantA', PROJECT_ID: process.env.PROJECT_ID || 'projectA', GROUP_ID: process.env.GROUP_ID || 'groupA' };
+const ADMIN_ACCEPTANCE_TOKEN = process.env.ADMIN_TOKEN || process.env.TOKEN_ADMIN || process.env.AO_ACT_TOKEN || process.env.GEOX_AO_ACT_TOKEN || 'admin_token';
+const APPROVER_ACCEPTANCE_TOKEN = process.env.TOKEN_APPROVER || process.env.APPROVER_TOKEN || 'approver_token';
+const env = {
+  ...process.env,
+  BASE_URL: BASE,
+  API_BASE_URL: process.env.API_BASE_URL || BASE,
+  TENANT_ID: process.env.TENANT_ID || 'tenantA',
+  PROJECT_ID: process.env.PROJECT_ID || 'projectA',
+  GROUP_ID: process.env.GROUP_ID || 'groupA',
+  ADMIN_TOKEN: ADMIN_ACCEPTANCE_TOKEN,
+  TOKEN_ADMIN: process.env.TOKEN_ADMIN || ADMIN_ACCEPTANCE_TOKEN,
+  AO_ACT_TOKEN: process.env.AO_ACT_TOKEN || ADMIN_ACCEPTANCE_TOKEN,
+  GEOX_AO_ACT_TOKEN: process.env.GEOX_AO_ACT_TOKEN || ADMIN_ACCEPTANCE_TOKEN,
+  TOKEN: process.env.TOKEN || ADMIN_ACCEPTANCE_TOKEN,
+  TOKEN_APPROVER: APPROVER_ACCEPTANCE_TOKEN,
+  APPROVER_TOKEN: process.env.APPROVER_TOKEN || APPROVER_ACCEPTANCE_TOKEN,
+  GEOX_EXECUTOR_TOKEN: process.env.GEOX_EXECUTOR_TOKEN || APPROVER_ACCEPTANCE_TOKEN,
+};
 const gates = [
   ['runtime_workers', 'pnpm run ci:runtime:workers'],
   ['pilot_runtime_security_baseline', 'pnpm run ci:runtime:pilot-security-baseline'],
   ['base_contract_p0', 'pnpm run ci:base-contract:p0'],
   ['formal_operation_field_binding', 'pnpm run ci:governance:formal-operation-field-binding'],
   ['controlled_pilot_full_review_seed_static', 'pnpm run acceptance:controlled-pilot:full-review-seed'],
-  ['controlled_pilot_full_review_seed_runtime', 'CONTROLLED_PILOT_FULL_REVIEW_RUNTIME=1 node scripts/governance_acceptance/ACCEPTANCE_CONTROLLED_PILOT_FULL_REVIEW_SEED_V1.cjs'],
+  ['controlled_pilot_full_review_seed_runtime', 'node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --cleanup --apply --tenant tenantA && CONTROLLED_PILOT_FULL_REVIEW_RUNTIME=1 node scripts/governance_acceptance/ACCEPTANCE_CONTROLLED_PILOT_FULL_REVIEW_SEED_V1.cjs'],
   ['scenario_pest_disease_inspection', 'pnpm run ci:scenario:pest-disease-inspection'],
   ['scenario_formal_e2e', 'pnpm run ci:scenario:formal-e2e'],
   ['scenario_productization', 'pnpm run ci:scenario:productization'],

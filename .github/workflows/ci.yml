@@ -131,6 +131,24 @@ jobs:
           docker run --rm --network host --entrypoint /bin/sh minio/mc:latest -c 'set -eu; mc alias set local http://127.0.0.1:9000 geoxminio ci-pilot-minio-strong-2026; mc ls local; mc stat local/evidence-exports-v1'
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps
 
+      - name: Apply controlled pilot full review seed
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          mkdir -p acceptance-output
+          set -a
+          source .env.ci
+          set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export API_BASE_URL=http://127.0.0.1:3001
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --dry-run --tenant tenantA
+          node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --export-json --tenant tenantA --out acceptance-output/controlled_pilot_full_review.plan.json
+          node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --apply --tenant tenantA
+          node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --verify --tenant tenantA
+          node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --verify-api --tenant tenantA --base-url http://127.0.0.1:3001
+          node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --export-db-json --tenant tenantA --out acceptance-output/controlled_pilot_full_review.actual.json
+
       - name: Install Playwright Chromium for frontend audit
         timeout-minutes: 5
         run: |
@@ -149,7 +167,6 @@ jobs:
           export API_BASE_URL=http://127.0.0.1:3001
           export GEOX_WEB_PROXY_TARGET=http://127.0.0.1:3001
           export FRONTEND_AUDIT_WEB_BASE_URL=http://127.0.0.1:5173
-          export FRONTEND_AUDIT_ROUTES=/customer/dashboard,/customer/export,/operator/workbench,/operator/approvals,/operator/dispatch,/operator/acceptance,/operator/evidence,/operator/devices-alerts,/operator/roi-ledger,/operator/field-memory,/dev/flight-table
           export FRONTEND_AUDIT_ROUTE_TIMEOUT_MS=35000
           export FRONTEND_AUDIT_TOTAL_TIMEOUT_MS=600000
           export FRONTEND_AUDIT_SKIP_BROWSER_INSTALL=1
@@ -170,6 +187,7 @@ jobs:
           set -a
           source .env.ci
           set +a
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
           pnpm run ci:controlled-pilot
 
       - name: Run Stage-1 fixture raw sample contract gate
@@ -251,6 +269,9 @@ jobs:
             acceptance-output/BASE_CONTRACT_GATE_MATURITY_REPORT.md
             acceptance-output/CONTROLLED_PILOT_READINESS_REPORT.md
             acceptance-output/FRONTEND_RUNTIME_PAGE_AUDIT_REPORT.md
+            acceptance-output/controlled_pilot_full_review.plan.json
+            acceptance-output/controlled_pilot_full_review.actual.json
+            acceptance-output/controlled_pilot_full_review.release_gate.actual.json
             acceptance-output/frontend-runtime-page-audit/**
             acceptance-output/FRONTEND_WEB.log
             acceptance-output/*.log

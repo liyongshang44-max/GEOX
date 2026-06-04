@@ -21,16 +21,16 @@ export function resolveCustomerScope(auth: Pick<AoActAuthContextV0, "role" | "al
 
   if (role === "client") {
     if (allowedFieldIds.length === 0) {
-      return { scope_mode: "DENIED", allowed_field_ids: [], can_preview_all_fields: false, reason: "client has no authorized fields" };
+      return { scope_mode: "DENIED", allowed_field_ids: [], can_preview_all_fields: false, reason: "客户账号尚未绑定可查看地块" };
     }
-    return { scope_mode: "CLIENT_ALLOWLIST", allowed_field_ids: allowedFieldIds, can_preview_all_fields: false, reason: "client authorized fields" };
+    return { scope_mode: "CLIENT_ALLOWLIST", allowed_field_ids: allowedFieldIds, can_preview_all_fields: false, reason: "客户授权地块范围" };
   }
 
   if (allowedFieldIds.length === 0) {
-    return { scope_mode: "INTERNAL_PREVIEW", allowed_field_ids: [], can_preview_all_fields: true, reason: "admin/internal preview" };
+    return { scope_mode: "INTERNAL_PREVIEW", allowed_field_ids: [], can_preview_all_fields: true, reason: "受控试点预览数据" };
   }
 
-  return { scope_mode: "CLIENT_ALLOWLIST", allowed_field_ids: allowedFieldIds, can_preview_all_fields: false, reason: role + " scoped preview" };
+  return { scope_mode: "CLIENT_ALLOWLIST", allowed_field_ids: allowedFieldIds, can_preview_all_fields: false, reason: "受控试点授权地块范围" };
 }
 
 export function isFieldAllowedByCustomerScope(scope: CustomerScopeV1, fieldId: unknown): boolean {
