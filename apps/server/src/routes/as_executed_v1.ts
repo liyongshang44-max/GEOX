@@ -48,6 +48,43 @@ function requireTenantMatchOr404(reply: FastifyReply, auth: TenantTriple, tenant
   return true;
 }
 
+function missingCoveragePercent(coverage: any): boolean {
+  const raw = coverage?.coverage_percent ?? coverage?.coveragePercent;
+  if (raw == null) return true;
+  if (typeof raw === "string" && !raw.trim()) return true;
+  return !Number.isFinite(Number(raw));
+}
+
+async function normalizeWholeFieldAsAppliedCoverage(pool: Pool, tenant: TenantTriple, asApplied: any): Promise<void> {
+  if (!asApplied?.as_applied_id || !asApplied?.field_id) return;
+  const coverage = asApplied.coverage && typeof asApplied.coverage === "object" ? asApplied.coverage : {};
+  if (!missingCoveragePercent(coverage)) return;
+
+  const normalizedCoverage = {
+    ...coverage,
+    coverage_percent: 100,
+  };
+
+  await pool.query(
+    `UPDATE as_applied_map_v1
+        SET coverage = $1::jsonb,
+            updated_at = now()
+      WHERE tenant_id = $2
+        AND project_id = $3
+        AND group_id = $4
+        AND as_applied_id = $5`,
+    [
+      JSON.stringify(normalizedCoverage),
+      tenant.tenant_id,
+      tenant.project_id,
+      tenant.group_id,
+      asApplied.as_applied_id,
+    ],
+  );
+
+  asApplied.coverage = normalizedCoverage;
+}
+
 export function registerAsExecutedV1Routes(app: FastifyInstance, pool: Pool): void {
   app.get("/api/v1/as-executed/health", async () => ({
     ok: true,
@@ -74,6 +111,7 @@ export function registerAsExecutedV1Routes(app: FastifyInstance, pool: Pool): vo
         task_id,
         receipt_id: receipt_id || null,
       });
+      await normalizeWholeFieldAsAppliedCoverage(pool, tenant, result.as_applied);
       return reply.send({
         ok: true,
         as_executed: result.as_executed,
