@@ -132,7 +132,7 @@ jobs:
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps
 
       - name: Apply controlled pilot full review seed
-        timeout-minutes: 5
+        timeout-minutes: 15
         run: |
           set -euo pipefail
           mkdir -p acceptance-output
