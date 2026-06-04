@@ -139,11 +139,14 @@ function toNum(v: unknown): number | null {
 }
 
 function normalizeReceiptStatus(payload: any): "CONFIRMED" | "FAILED" | "INSUFFICIENT_RECEIPT" {
-  const status = String(payload?.status ?? "").trim().toLowerCase();
+  const status = String(payload?.status ?? "").trim().toUpperCase();
   const hasException = payload?.exception && typeof payload.exception === "object";
-  if (status === "executed") return "CONFIRMED";
-  if (status === "not_executed") return "FAILED";
-  if (hasException && status !== "executed") return "FAILED";
+  const confirmedStatuses = new Set(["EXECUTED", "SUCCEEDED", "SUCCESS", "CONFIRMED"]);
+  const failedStatuses = new Set(["NOT_EXECUTED", "FAILED", "ERROR"]);
+
+  if (confirmedStatuses.has(status)) return "CONFIRMED";
+  if (failedStatuses.has(status)) return "FAILED";
+  if (hasException) return "FAILED";
   return "INSUFFICIENT_RECEIPT";
 }
 
