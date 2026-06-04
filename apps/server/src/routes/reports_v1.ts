@@ -380,6 +380,108 @@ async function buildDiagnosticInputsForReportV1(params: {
 type FieldReportDetailResponseV1 = { ok: true; field_report_v1: FieldReportDetailV1 };
 const FIELD_REPORT_OPERATION_LIMIT = 20;
 
+
+function objectFromJsonColumn(value: unknown): any {
+  return parseRecordJson(value) ?? (value && typeof value === "object" ? value : {});
+}
+
+async function queryPrescriptionForReport(pool: Pool, tenant: TenantTriple, s: OperationStateV1): Promise<any | null> {
+  const prescriptionId = toText((s as any).prescription_id);
+  const recommendationId = toText(s.recommendation_id);
+  if (!prescriptionId && !recommendationId) return null;
+  const q = await pool.query(
+    `SELECT prescription_id, operation_amount::jsonb AS operation_amount, operation_type
+       FROM prescription_contract_v1
+      WHERE tenant_id = $1
+        AND project_id = $2
+        AND group_id = $3
+        AND (($4::text IS NOT NULL AND prescription_id = $4) OR ($5::text IS NOT NULL AND recommendation_id = $5))
+      ORDER BY updated_at DESC, created_at DESC, prescription_id DESC
+      LIMIT 1`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, prescriptionId, recommendationId],
+  ).catch(() => ({ rows: [] as any[] }));
+  const row = q.rows?.[0] ?? null;
+  if (!row) return null;
+  const amount = objectFromJsonColumn(row.operation_amount);
+  return {
+    prescription_id: toText(row.prescription_id),
+    amount: toFiniteNumberOrNull(amount?.amount ?? amount?.value),
+    unit: toText(amount?.unit),
+    operation_type: toText(row.operation_type),
+  };
+}
+
+async function queryAsExecutedForReport(pool: Pool, tenant: TenantTriple, s: OperationStateV1): Promise<any | null> {
+  const asExecutedId = toText((s as any).as_executed_id);
+  const taskId = toText(s.task_id ?? s.act_task_id);
+  const receiptId = toText(s.receipt_id);
+  const prescriptionId = toText((s as any).prescription_id);
+  if (!asExecutedId && !taskId && !receiptId && !prescriptionId) return null;
+  const q = await pool.query(
+    `SELECT as_executed_id, planned::jsonb AS planned, executed::jsonb AS executed, deviation::jsonb AS deviation
+       FROM as_executed_record_v1
+      WHERE tenant_id = $1
+        AND project_id = $2
+        AND group_id = $3
+        AND (
+          ($4::text IS NOT NULL AND as_executed_id = $4)
+          OR ($5::text IS NOT NULL AND task_id = $5)
+          OR ($6::text IS NOT NULL AND receipt_id = $6)
+          OR ($7::text IS NOT NULL AND prescription_id = $7)
+        )
+      ORDER BY updated_at DESC, created_at DESC, as_executed_id DESC
+      LIMIT 1`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, asExecutedId, taskId, receiptId, prescriptionId],
+  ).catch(() => ({ rows: [] as any[] }));
+  const row = q.rows?.[0] ?? null;
+  if (!row) return null;
+  const planned = objectFromJsonColumn(row.planned);
+  const executed = objectFromJsonColumn(row.executed);
+  const deviationObj = objectFromJsonColumn(row.deviation);
+  const plannedAmount = toFiniteNumberOrNull(planned?.amount);
+  const executedAmount = toFiniteNumberOrNull(executed?.amount ?? executed?.observed_parameters?.amount);
+  return {
+    as_executed_id: toText(row.as_executed_id),
+    planned_amount: plannedAmount,
+    executed_amount: executedAmount,
+    unit: toText(executed?.unit ?? planned?.unit),
+    deviation: toFiniteNumberOrNull(deviationObj?.amount_delta) ?? (plannedAmount != null && executedAmount != null ? Number((executedAmount - plannedAmount).toFixed(4)) : null),
+    status: toText(executed?.status),
+  };
+}
+
+async function queryAsAppliedForReport(pool: Pool, tenant: TenantTriple, s: OperationStateV1, asExecuted: any | null): Promise<any | null> {
+  const asExecutedId = toText(asExecuted?.as_executed_id ?? (s as any).as_executed_id);
+  const taskId = toText(s.task_id ?? s.act_task_id);
+  const receiptId = toText(s.receipt_id);
+  const prescriptionId = toText((s as any).prescription_id);
+  if (!asExecutedId && !taskId && !receiptId && !prescriptionId) return null;
+  const q = await pool.query(
+    `SELECT field_id, coverage::jsonb AS coverage, application::jsonb AS application
+       FROM as_applied_map_v1
+      WHERE tenant_id = $1
+        AND project_id = $2
+        AND group_id = $3
+        AND (
+          ($4::text IS NOT NULL AND as_executed_id = $4)
+          OR ($5::text IS NOT NULL AND task_id = $5)
+          OR ($6::text IS NOT NULL AND receipt_id = $6)
+          OR ($7::text IS NOT NULL AND prescription_id = $7)
+        )
+      ORDER BY updated_at DESC, created_at DESC, as_applied_id DESC
+      LIMIT 1`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, asExecutedId, taskId, receiptId, prescriptionId],
+  ).catch(() => ({ rows: [] as any[] }));
+  const row = q.rows?.[0] ?? null;
+  if (!row) return null;
+  const coverage = objectFromJsonColumn(row.coverage);
+  const application = objectFromJsonColumn(row.application);
+  return {
+    coverage_percent: toFiniteNumberOrNull(coverage?.coverage_percent ?? application?.avg_coverage_percent ?? application?.coverage_percent),
+    field_id: toText(row.field_id),
+  };
+}
+
 async function queryRoiLedgerForReport(pool: Pool, tenant: TenantTriple, s: OperationStateV1): Promise<any[]> {
   const q = await pool.query(
     `SELECT * FROM roi_ledger_v1
@@ -563,6 +665,9 @@ export async function projectReportV1(params: {
     status: operationState.acceptance?.status,
   } : null;
   const receiptForReport = normalizedReceipt ? { execution_started_at: normalizedReceipt.execution_started_at, execution_finished_at: normalizedReceipt.execution_finished_at } : null;
+  const prescriptionForReport = await queryPrescriptionForReport(pool, tenant, operationState);
+  const asExecutedForReport = await queryAsExecutedForReport(pool, tenant, operationState);
+  const asAppliedForReport = await queryAsAppliedForReport(pool, tenant, operationState, asExecutedForReport);
 
   const operationReport = projectOperationReportV1({
     tenant,
@@ -599,8 +704,11 @@ export async function projectReportV1(params: {
     reportWithFertilization,
     pestDiseaseInspectionView,
   );
-  return {
+  const reportWithExecutionBlocks: any = {
     ...reportWithPestDiseaseInspection,
+    prescription: prescriptionForReport,
+    as_executed: asExecutedForReport ?? (reportWithPestDiseaseInspection as any).as_executed,
+    as_applied: asAppliedForReport ?? (reportWithPestDiseaseInspection as any).as_applied,
     evidence_pack_summary: buildOperationEvidencePackSummaryV1({
       receipt: receiptFact ?? receiptForReport,
       evidence_bundle: evidenceBundle,
@@ -620,6 +728,7 @@ export async function projectReportV1(params: {
       now: new Date(operationReport.generated_at),
     }),
   };
+  return reportWithExecutionBlocks;
 }
 
 export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void {
