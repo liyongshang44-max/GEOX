@@ -3,7 +3,14 @@ import type { Pool } from "pg";
 import { z } from "zod";
 
 import { requireAoActAnyScopeV0 } from "../auth/ao_act_authz_v0.js";
-import { requireFieldAllowedOr404V1, requireTenantMatchOr404V1, tenantFromQueryOrAuthV1 } from "../auth/tenant_scope_v1.js";
+import {
+  requireFieldAllowedOr404V1,
+  requireTenantMatchOr404V1,
+  requireTenantScopeV1,
+  tenantFromBodyOrAuthV1,
+  tenantFromQueryOrAuthV1,
+} from "../auth/tenant_scope_v1.js";
+import { createFormalFieldMemoryFromAcceptanceV1 } from "../services/field_memory_service.js";
 
 const QuerySchema = z.object({
   tenant_id: z.string().optional(),
@@ -69,6 +76,47 @@ export function registerFieldMemoryV1Routes(app: FastifyInstance, pool: Pool): v
     const formal_count = items.filter((item: any) => item.memory_lane === "FORMAL_FIELD_MEMORY" && item.customer_visible_memory === true).length;
     const technical_count = items.length - formal_count;
     return reply.send({ ok: true, total: items.length, formal_count, technical_count, recent: items, summary: { total: items.length, formal_count, technical_count } });
+  });
+
+  app.post("/api/v1/field-memory/from-acceptance", async (req: any, reply: any) => {
+    const auth = requireAoActAnyScopeV0(req, reply, ["field_memory.write"]);
+    if (!auth) return;
+
+    const body: any = req.body ?? {};
+    const tenant = tenantFromBodyOrAuthV1(body, auth);
+    if (!requireTenantScopeV1(reply, tenant)) return;
+    if (!requireTenantMatchOr404V1(reply, auth, tenant)) return;
+
+    const operation_plan_id = String(body?.operation_plan_id ?? "").trim();
+    const acceptance_id = String(body?.acceptance_id ?? "").trim();
+    if (!operation_plan_id) return reply.status(400).send({ ok: false, error: "MISSING_OPERATION_PLAN_ID" });
+    if (!acceptance_id) return reply.status(400).send({ ok: false, error: "MISSING_ACCEPTANCE_ID" });
+
+    try {
+      const result = await createFormalFieldMemoryFromAcceptanceV1(pool, tenant, { operation_plan_id, acceptance_id });
+      return reply.send({
+        ok: true,
+        idempotent: result.idempotent,
+        acceptance: result.acceptance,
+        trust_layer: {
+          memory_lane: "FORMAL_FIELD_MEMORY",
+          trust_level: "FORMAL_ACCEPTED",
+          formal_acceptance_id: result.acceptance.acceptance_id,
+          source_lane: "FORMAL_OPERATION",
+          customer_visible_memory: true,
+          learning_eligible: true,
+        },
+        field_memory: result.field_memory,
+      });
+    } catch (error) {
+      const code = String((error as Error)?.message ?? "");
+      if (code === "ACCEPTANCE_NOT_FOUND") return reply.status(404).send({ ok: false, error: code });
+      if (["ACCEPTANCE_VERDICT_NOT_PASS", "ACCEPTANCE_NOT_FORMAL", "FORMAL_EVIDENCE_NOT_PASSED", "CHAIN_VALIDATION_NOT_PASSED", "ACCEPTANCE_FIELD_ID_MISSING", "OBSERVATION_PAIR_NOT_FOUND"].includes(code)) {
+        return reply.status(422).send({ ok: false, error: code });
+      }
+      req.log.error({ err: error }, "create formal field memory from acceptance failed");
+      return reply.status(500).send({ ok: false, error: "INTERNAL_ERROR" });
+    }
   });
 
   app.get("/api/v1/field-memory", (req, reply) => handler(req, reply));
