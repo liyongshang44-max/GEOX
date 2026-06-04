@@ -701,7 +701,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         },
         OperationReportV1: {
           type: "object",
-          required: ["type", "version", "generated_at", "approval", "why", "operation_title", "customer_title", "identifiers", "as_executed", "as_applied", "execution", "acceptance", "evidence", "cost", "sla", "field_memory", "risk", "roi_ledger", "workflow", "evidence_pack_summary"],
+          required: ["type", "version", "generated_at", "approval", "why", "diagnostic_inputs", "operation_title", "customer_title", "identifiers", "prescription", "as_executed", "as_applied", "execution", "acceptance", "evidence", "cost", "sla", "field_memory", "risk", "roi_ledger", "workflow", "evidence_pack_summary"],
           properties: {
             type: { type: "string", enum: ["operation_report_v1"] },
             version: { type: "string", enum: ["v1"] },
@@ -726,6 +726,46 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
                 objective_text: { type: "string", nullable: true }
               }
             },
+            diagnostic_inputs: {
+              type: "object",
+              required: ["field_id", "devices", "observations", "diagnosis"],
+              properties: {
+                field_id: { type: "string", nullable: true },
+                devices: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    required: ["device_id", "display_name", "capability", "metric", "value", "unit"],
+                    properties: {
+                      device_id: { type: "string" },
+                      display_name: { type: "string", nullable: true },
+                      capability: { type: "string", nullable: true },
+                      metric: { type: "string", nullable: true },
+                      value: { type: "number", nullable: true },
+                      unit: { type: "string", nullable: true },
+                    },
+                    additionalProperties: true,
+                  },
+                },
+                observations: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    required: ["metric", "label", "value", "unit", "role"],
+                    properties: {
+                      metric: { type: "string" },
+                      label: { type: "string" },
+                      value: { type: "number", nullable: true },
+                      unit: { type: "string", nullable: true },
+                      role: { type: "string", enum: ["diagnosis_input"] },
+                    },
+                    additionalProperties: true,
+                  },
+                },
+                diagnosis: { type: "object", required: ["human"], properties: { human: { type: "string", nullable: true } }, additionalProperties: true },
+              },
+              additionalProperties: true,
+            },
             operation_title: { type: "string", nullable: true },
             customer_title: { type: "string", nullable: true },
             identifiers: {
@@ -743,10 +783,28 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
                 receipt_id: { type: "string", nullable: true }
               }
             },
+            prescription: {
+              type: "object",
+              nullable: true,
+              required: ["prescription_id", "amount", "unit", "operation_type"],
+              properties: {
+                prescription_id: { type: "string", nullable: true },
+                amount: { type: "number", nullable: true },
+                unit: { type: "string", nullable: true },
+                operation_type: { type: "string", nullable: true },
+              },
+              additionalProperties: true,
+            },
             as_executed: {
               type: "object",
               required: ["operation_id", "execution_mode", "started_at", "finished_at", "actual_params", "receipt_id", "device_id", "operator_id", "deviation_summary"],
               properties: {
+                as_executed_id: { type: "string", nullable: true },
+                planned_amount: { type: "number", nullable: true },
+                executed_amount: { type: "number", nullable: true },
+                unit: { type: "string", nullable: true },
+                deviation: { type: "number", nullable: true },
+                status: { type: "string", nullable: true },
                 operation_id: { type: "string" },
                 execution_mode: { type: "string", enum: ["DEVICE", "HUMAN"] },
                 started_at: { type: "string", format: "date-time", nullable: true },
@@ -762,6 +820,8 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
               type: "object",
               required: ["operation_id", "coverage_status", "coverage_geojson", "planned_geojson", "applied_amount_summary", "planned_vs_actual_deviation", "evidence_ref"],
               properties: {
+                coverage_percent: { type: "number", nullable: true },
+                field_id: { type: "string", nullable: true },
                 operation_id: { type: "string" },
                 coverage_status: { type: "string", enum: ["AVAILABLE", "MISSING", "NOT_APPLICABLE"] },
                 coverage_geojson: { type: "object", nullable: true, additionalProperties: true },
@@ -1685,6 +1745,22 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           }
         }
       },
+
+    "/api/v1/field-memory/from-acceptance": {
+      post: {
+        tags: ["operations"],
+        summary: "Create formal field memory from a formal acceptance result",
+        security: [{ bearerAuth: [] }],
+        requestBody: { required: true, content: { "application/json": { schema: ref("FormalFieldMemoryFromAcceptanceRequest") } } },
+        responses: {
+          "200": jsonResponse(ref("FormalFieldMemoryFromAcceptanceResponse"), "Formal field memory created or reused from acceptance"),
+          "400": jsonResponse({ type: "object", required: ["ok", "error"], properties: { ok: { type: "boolean", enum: [false] }, error: { type: "string", enum: ["MISSING_OPERATION_PLAN_ID", "MISSING_ACCEPTANCE_ID"] } }, additionalProperties: false }, "Missing required formal field memory input"),
+          "404": jsonResponse({ type: "object", required: ["ok", "error"], properties: { ok: { type: "boolean", enum: [false] }, error: { type: "string", enum: ["ACCEPTANCE_NOT_FOUND"] } }, additionalProperties: false }, "Acceptance result not found"),
+          "422": jsonResponse({ type: "object", required: ["ok", "error"], properties: { ok: { type: "boolean", enum: [false] }, error: { type: "string", enum: ["ACCEPTANCE_VERDICT_NOT_PASS", "ACCEPTANCE_NOT_FORMAL", "FORMAL_EVIDENCE_NOT_PASSED", "CHAIN_VALIDATION_NOT_PASSED", "ACCEPTANCE_FIELD_ID_MISSING", "OBSERVATION_PAIR_NOT_FOUND"] } }, additionalProperties: false }, "Formal field memory gate rejected"),
+          "500": jsonResponse({ type: "object", required: ["ok", "error"], properties: { ok: { type: "boolean", enum: [false] }, error: { type: "string", enum: ["INTERNAL_ERROR"] } }, additionalProperties: false }, "Internal error"),
+        },
+      },
+    },
       "/api/v1/field-memory/summary": {
         get: {
           tags: ["fields"],
@@ -4122,6 +4198,103 @@ function applyP13OpenApiAlignment(spec: any) {
       },
       additionalProperties: false,
     },
+
+    FormalAcceptanceSummaryV1: {
+      type: "object",
+      properties: {
+        acceptance_id: { type: "string" },
+        operation_plan_id: { type: "string" },
+        verdict: { type: "string" },
+      },
+      additionalProperties: true,
+    },
+    FormalFieldMemoryFromAcceptanceRequest: {
+      type: "object",
+      required: ["tenant_id", "project_id", "group_id", "operation_plan_id", "acceptance_id"],
+      properties: {
+        tenant_id: { type: "string" },
+        project_id: { type: "string" },
+        group_id: { type: "string" },
+        operation_plan_id: { type: "string" },
+        acceptance_id: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+    FormalFieldMemoryTrustLayerV1: {
+      type: "object",
+      required: ["memory_lane", "trust_level", "formal_acceptance_id", "source_lane", "customer_visible_memory", "learning_eligible"],
+      properties: {
+        memory_lane: { type: "string", enum: ["FORMAL_FIELD_MEMORY"] },
+        trust_level: { type: "string", enum: ["FORMAL_ACCEPTED"] },
+        formal_acceptance_id: { type: "string" },
+        source_lane: { type: "string", enum: ["FORMAL_OPERATION"] },
+        customer_visible_memory: { type: "boolean" },
+        learning_eligible: { type: "boolean" },
+      },
+      additionalProperties: false,
+    },
+    FormalFieldMemoryFromAcceptanceResponse: {
+      type: "object",
+      required: ["ok", "idempotent", "acceptance", "trust_layer", "field_memory"],
+      properties: {
+        ok: { type: "boolean" },
+        idempotent: { type: "boolean" },
+        acceptance: ref("FormalAcceptanceSummaryV1"),
+        trust_layer: ref("FormalFieldMemoryTrustLayerV1"),
+        field_memory: { type: "object", additionalProperties: true },
+      },
+      additionalProperties: false,
+    },
+    RoiLedgerFormalizeFromAcceptanceRequest: {
+      type: "object",
+      required: ["tenant_id", "project_id", "group_id", "operation_plan_id", "acceptance_id", "as_executed_id"],
+      properties: {
+        tenant_id: { type: "string" },
+        project_id: { type: "string" },
+        group_id: { type: "string" },
+        operation_plan_id: { type: "string" },
+        acceptance_id: { type: "string" },
+        as_executed_id: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+    RoiLedgerFormalizeTrustLayerV1: {
+      type: "object",
+      required: ["source_lane", "trust_level", "formal_acceptance_id", "formal_evidence_passed", "chain_validation_passed", "customer_visible_value"],
+      properties: {
+        source_lane: { type: "string", enum: ["FORMAL_ACCEPTANCE"] },
+        trust_level: { type: "string", enum: ["FORMAL_ACCEPTED"] },
+        formal_acceptance_id: { type: "string" },
+        formal_evidence_passed: { type: "boolean" },
+        chain_validation_passed: { type: "boolean" },
+        customer_visible_value: { type: "boolean" },
+      },
+      additionalProperties: false,
+    },
+    RoiLedgerFormalizedItemV1: {
+      type: "object",
+      properties: {
+        trust_level: { type: "string", enum: ["FORMAL_ACCEPTED"] },
+        source_lane: { type: "string", enum: ["FORMAL_ACCEPTANCE"] },
+        formal_acceptance_id: { type: "string" },
+        formal_evidence_passed: { type: "boolean" },
+        chain_validation_passed: { type: "boolean" },
+        customer_visible_value: { type: "boolean" },
+      },
+      additionalProperties: true,
+    },
+    RoiLedgerFormalizeFromAcceptanceResponse: {
+      type: "object",
+      required: ["ok", "idempotent", "roi_ledgers"],
+      properties: {
+        ok: { type: "boolean" },
+        idempotent: { type: "boolean" },
+        acceptance: ref("FormalAcceptanceSummaryV1"),
+        trust_layer: ref("RoiLedgerFormalizeTrustLayerV1"),
+        roi_ledgers: { type: "array", items: ref("RoiLedgerFormalizedItemV1") },
+      },
+      additionalProperties: false,
+    },
     RulePerformanceResponse: { type: "object", properties: { ok: { type: "boolean" }, items: { type: "array", items: { type: "object", properties: { rule_id: { type: ["string", "null"] }, execution_count: { type: ["integer", "null"] }, success_count: { type: ["integer", "null"] }, failure_count: { type: ["integer", "null"] }, avg_duration_ms: { type: ["number", "null"] } }, additionalProperties: false } }, item: { type: ["object", "null"], properties: { rule_id: { type: ["string", "null"] }, execution_count: { type: ["integer", "null"] }, success_count: { type: ["integer", "null"] }, failure_count: { type: ["integer", "null"] }, avg_duration_ms: { type: ["number", "null"] } }, additionalProperties: false } }, required: ["ok"], additionalProperties: false },
 
   });
@@ -4507,6 +4680,22 @@ function applyP13OpenApiAlignment(spec: any) {
 
     "/api/v1/roi-ledger/health": { get: { tags: ["operations"], summary: "ROI ledger module health", responses: { "200": jsonResponse(ref("GenericOkResponse"), "ROI ledger module health") } } },
     "/api/v1/roi-ledger/from-as-executed": { post: { tags: ["operations"], summary: "Generate ROI ledger entries from as-executed", requestBody: { required: true, content: { "application/json": { schema: ref("RoiLedgerFromAsExecutedRequest") } } }, responses: { "200": jsonResponse(ref("RoiLedgerFromAsExecutedResponse"), "ROI ledger entries created or reused") } } },
+
+    "/api/v1/roi-ledger/formalize-from-acceptance": {
+      post: {
+        tags: ["operations"],
+        summary: "Formalize ROI ledger rows from a formal acceptance result",
+        security: [{ bearerAuth: [] }],
+        requestBody: { required: true, content: { "application/json": { schema: ref("RoiLedgerFormalizeFromAcceptanceRequest") } } },
+        responses: {
+          "200": jsonResponse(ref("RoiLedgerFormalizeFromAcceptanceResponse"), "ROI ledger rows formalized from acceptance"),
+          "400": jsonResponse({ type: "object", required: ["ok", "error"], properties: { ok: { type: "boolean", enum: [false] }, error: { type: "string", enum: ["MISSING_OPERATION_PLAN_ID", "MISSING_ACCEPTANCE_ID", "MISSING_AS_EXECUTED_ID"] } }, additionalProperties: false }, "Missing required formal ROI input"),
+          "404": jsonResponse({ type: "object", required: ["ok", "error"], properties: { ok: { type: "boolean", enum: [false] }, error: { type: "string", enum: ["ACCEPTANCE_NOT_FOUND", "AS_EXECUTED_NOT_FOUND"] } }, additionalProperties: false }, "Formal ROI source record not found"),
+          "422": jsonResponse({ type: "object", required: ["ok", "error"], properties: { ok: { type: "boolean", enum: [false] }, error: { type: "string", enum: ["ACCEPTANCE_VERDICT_NOT_PASS", "ACCEPTANCE_NOT_FORMAL", "FORMAL_EVIDENCE_NOT_PASSED", "CHAIN_VALIDATION_NOT_PASSED", "ROI_LEDGER_NOT_CREATED"] }, reason: { type: "string" } }, additionalProperties: false }, "Formal ROI gate rejected"),
+          "500": jsonResponse({ type: "object", required: ["ok", "error"], properties: { ok: { type: "boolean", enum: [false] }, error: { type: "string", enum: ["INTERNAL_ERROR"] } }, additionalProperties: false }, "Internal error"),
+        },
+      },
+    },
     "/api/v1/roi-ledger/by-as-executed/{as_executed_id}": { get: { tags: ["operations"], summary: "List ROI ledger entries by as-executed", parameters: [pathParam("as_executed_id"), queryParam("tenant_id", { type: "string" }, true), queryParam("project_id", { type: "string" }, true), queryParam("group_id", { type: "string" }, true)], responses: { "200": jsonResponse(ref("RoiLedgerFromAsExecutedResponse"), "ROI ledger entries by as-executed") } } },
     "/api/v1/roi-ledger/by-task/{task_id}": { get: { tags: ["operations"], summary: "List ROI ledger entries by task", parameters: [pathParam("task_id"), queryParam("tenant_id", { type: "string" }, true), queryParam("project_id", { type: "string" }, true), queryParam("group_id", { type: "string" }, true)], responses: { "200": jsonResponse(ref("RoiLedgerFromAsExecutedResponse"), "ROI ledger entries by task") } } },
     "/api/v1/roi-ledger/by-prescription/{prescription_id}": { get: { tags: ["operations"], summary: "List ROI ledger entries by prescription", parameters: [pathParam("prescription_id"), queryParam("tenant_id", { type: "string" }, true), queryParam("project_id", { type: "string" }, true), queryParam("group_id", { type: "string" }, true)], responses: { "200": jsonResponse(ref("RoiLedgerFromAsExecutedResponse"), "ROI ledger entries by prescription") } } },

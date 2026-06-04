@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 
 import { computeCostBreakdown } from "../agronomy/cost_model.js";
+import { buildFormalAcceptedRoiTrustV1, type RoiTrustProjectionV1 } from "./roi_trust_v1.js";
 
 type TenantTriple = {
   tenant_id: string;
@@ -63,6 +64,13 @@ export type RoiLedgerRow = {
     trace_id?: string;
     run_id?: string;
   }>;
+  trust_level?: string;
+  source_lane?: string;
+  formal_acceptance_id?: string | null;
+  formal_evidence_passed?: boolean;
+  chain_validation_passed?: boolean;
+  customer_visible_value?: boolean;
+  trust_reasons?: string[];
   created_at: string;
   updated_at: string;
 };
@@ -87,6 +95,7 @@ type AsAppliedRow = {
 };
 
 type RoiCandidate = {
+  operation_id?: string | null;
   task_id?: string | null;
   as_executed_id?: string | null;
   prescription_id?: string | null;
@@ -137,6 +146,18 @@ function toNum(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+function toBool(v: unknown): boolean {
+  if (typeof v === "boolean") return v;
+  const raw = String(v ?? "").trim().toLowerCase();
+  return raw === "1" || raw === "true" || raw === "yes" || raw === "on";
+}
+
+function textOrNull(v: unknown): string | null {
+  if (v == null) return null;
+  const raw = String(v).trim();
+  return raw || null;
+}
+
 function mapRoiRow(row: any): RoiLedgerRow {
   const confidence = parseJsonMaybe(row.confidence) ?? {};
   return {
@@ -179,6 +200,13 @@ function mapRoiRow(row: any): RoiLedgerRow {
     uncertainty_notes: row.uncertainty_notes == null ? null : String(row.uncertainty_notes),
     skill_trace_id: row.skill_trace_id == null ? null : String(row.skill_trace_id),
     skill_refs: normalizeSkillRefs(parseJsonMaybe(row.skill_refs)),
+    trust_level: textOrNull(row.trust_level) ?? undefined,
+    source_lane: textOrNull(row.source_lane) ?? undefined,
+    formal_acceptance_id: textOrNull(row.formal_acceptance_id),
+    formal_evidence_passed: toBool(row.formal_evidence_passed),
+    chain_validation_passed: toBool(row.chain_validation_passed),
+    customer_visible_value: toBool(row.customer_visible_value),
+    trust_reasons: Array.isArray(parseJsonMaybe(row.trust_reasons)) ? parseJsonMaybe(row.trust_reasons).map((x: unknown) => String(x)) : undefined,
     created_at: String(row.created_at ?? ""),
     updated_at: String(row.updated_at ?? ""),
   };
@@ -675,6 +703,42 @@ async function listAcceptanceEvidenceRefsByTaskId(
   return normalizeEvidenceRefs(out);
 }
 
+
+type AcceptanceResultRowV1 = {
+  fact_id: string;
+  payload: any;
+};
+
+async function getAcceptanceResultById(pool: Pool, input: TenantTriple & { operation_plan_id: string; acceptance_id: string }): Promise<AcceptanceResultRowV1 | null> {
+  const q = await pool.query(
+    `SELECT fact_id, record_json::jsonb AS record_json
+       FROM facts
+      WHERE (record_json::jsonb->>'type') = 'acceptance_result_v1'
+        AND COALESCE(record_json::jsonb#>>'{payload,acceptance_id}', fact_id) = $4
+        AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $5
+        AND COALESCE(record_json::jsonb#>>'{payload,tenant_id}', $1) = $1
+        AND COALESCE(record_json::jsonb#>>'{payload,project_id}', $2) = $2
+        AND COALESCE(record_json::jsonb#>>'{payload,group_id}', $3) = $3
+      ORDER BY occurred_at DESC, fact_id DESC
+      LIMIT 1`,
+    [input.tenant_id, input.project_id, input.group_id, input.acceptance_id, input.operation_plan_id]
+  );
+  const row = q.rows?.[0];
+  if (!row) return null;
+  return { fact_id: String(row.fact_id ?? ""), payload: parseJsonMaybe(row.record_json)?.payload ?? {} };
+}
+
+function acceptanceBool(payload: any, key: string): boolean {
+  return toBool(payload?.[key] ?? payload?.formal_gate?.[key]);
+}
+
+function validateFormalAcceptancePayload(payload: any): void {
+  if (String(payload?.verdict ?? "").trim().toUpperCase() !== "PASS") throw new Error("ACCEPTANCE_VERDICT_NOT_PASS");
+  if (acceptanceBool(payload, "formal_acceptance") !== true) throw new Error("ACCEPTANCE_NOT_FORMAL");
+  if (acceptanceBool(payload, "formal_evidence_passed") !== true) throw new Error("FORMAL_EVIDENCE_NOT_PASSED");
+  if (acceptanceBool(payload, "chain_validation_passed") !== true) throw new Error("CHAIN_VALIDATION_NOT_PASSED");
+}
+
 async function getPrescriptionSkillRef(pool: Pool, input: TenantTriple & { prescription_id: string }): Promise<SkillRefV1 | null> {
   const q = await pool.query(
     `SELECT skill_trace_id, skill_trace
@@ -702,6 +766,7 @@ async function upsertRoiCandidate(pool: Pool, input: {
   candidate: RoiCandidate;
   skill_trace_id?: string | null;
   skill_refs?: SkillRefV1[];
+  trust?: RoiTrustProjectionV1;
 }): Promise<{ row: RoiLedgerRow; idempotent: boolean }> {
   const existing = await pool.query(
     `SELECT *
@@ -716,7 +781,40 @@ async function upsertRoiCandidate(pool: Pool, input: {
   );
 
   if (existing.rows?.[0]) {
-    return { row: mapRoiRow(existing.rows[0]), idempotent: true };
+    if (!input.trust) return { row: mapRoiRow(existing.rows[0]), idempotent: true };
+    const existingRow = mapRoiRow(existing.rows[0]);
+    const alreadyFormal = existingRow.trust_level === input.trust.trust_level
+      && existingRow.source_lane === input.trust.source_lane
+      && existingRow.formal_acceptance_id === input.trust.formal_acceptance_id
+      && existingRow.formal_evidence_passed === input.trust.formal_evidence_passed
+      && existingRow.chain_validation_passed === input.trust.chain_validation_passed
+      && existingRow.customer_visible_value === input.trust.customer_visible_value;
+    const updated = await pool.query(
+      `UPDATE roi_ledger_v1
+          SET trust_level = $1,
+              source_lane = $2,
+              formal_acceptance_id = $3,
+              formal_evidence_passed = $4,
+              chain_validation_passed = $5,
+              customer_visible_value = $6,
+              trust_reasons = $7::jsonb,
+              operation_id = COALESCE(operation_id, $8),
+              updated_at = now()
+        WHERE roi_ledger_id = $9
+        RETURNING *`,
+      [
+        input.trust.trust_level,
+        input.trust.source_lane,
+        input.trust.formal_acceptance_id,
+        input.trust.formal_evidence_passed,
+        input.trust.chain_validation_passed,
+        input.trust.customer_visible_value,
+        JSON.stringify(input.trust.trust_reasons),
+        input.candidate.operation_id ?? null,
+        existingRow.roi_ledger_id,
+      ]
+    );
+    return { row: mapRoiRow(updated.rows[0]), idempotent: alreadyFormal };
   }
 
   const columns = [
@@ -755,6 +853,13 @@ async function upsertRoiCandidate(pool: Pool, input: {
     "uncertainty_notes",
     "skill_trace_id",
     "skill_refs",
+    "trust_level",
+    "source_lane",
+    "formal_acceptance_id",
+    "formal_evidence_passed",
+    "chain_validation_passed",
+    "customer_visible_value",
+    "trust_reasons",
   ] as const;
 
   const values = [
@@ -762,7 +867,7 @@ async function upsertRoiCandidate(pool: Pool, input: {
     input.tenant.tenant_id,
     input.tenant.project_id,
     input.tenant.group_id,
-    null,
+    input.candidate.operation_id ?? null,
     input.asExecuted.task_id,
     input.asExecuted.prescription_id,
     input.asExecuted.as_executed_id,
@@ -793,6 +898,13 @@ async function upsertRoiCandidate(pool: Pool, input: {
     input.candidate.uncertainty_notes,
     input.skill_trace_id ?? null,
     JSON.stringify(normalizeSkillRefs(input.skill_refs ?? [])),
+    input.trust?.trust_level ?? "INTERIM_SUPPORTED",
+    input.trust?.source_lane ?? "AS_EXECUTED_SIGNAL",
+    input.trust?.formal_acceptance_id ?? null,
+    input.trust?.formal_evidence_passed ?? false,
+    input.trust?.chain_validation_passed ?? false,
+    input.trust?.customer_visible_value ?? false,
+    JSON.stringify(input.trust?.trust_reasons ?? []),
   ];
 
   const jsonbColumns = new Set([
@@ -804,6 +916,7 @@ async function upsertRoiCandidate(pool: Pool, input: {
     "evidence_refs",
     "assumptions",
     "skill_refs",
+    "trust_reasons",
   ]);
   const placeholders = columns
     .map((column, idx) => `$${idx + 1}${jsonbColumns.has(column) ? "::jsonb" : ""}`)
@@ -835,7 +948,33 @@ async function upsertRoiCandidate(pool: Pool, input: {
   );
 
   if (!fallback.rows?.[0]) throw new Error("ROI_LEDGER_WRITE_FAILED");
-  return { row: mapRoiRow(fallback.rows[0]), idempotent: true };
+  if (!input.trust) return { row: mapRoiRow(fallback.rows[0]), idempotent: true };
+  const updated = await pool.query(
+    `UPDATE roi_ledger_v1
+        SET trust_level = $1,
+            source_lane = $2,
+            formal_acceptance_id = $3,
+            formal_evidence_passed = $4,
+            chain_validation_passed = $5,
+            customer_visible_value = $6,
+            trust_reasons = $7::jsonb,
+            operation_id = COALESCE(operation_id, $8),
+            updated_at = now()
+      WHERE roi_ledger_id = $9
+      RETURNING *`,
+    [
+      input.trust.trust_level,
+      input.trust.source_lane,
+      input.trust.formal_acceptance_id,
+      input.trust.formal_evidence_passed,
+      input.trust.chain_validation_passed,
+      input.trust.customer_visible_value,
+      JSON.stringify(input.trust.trust_reasons),
+      input.candidate.operation_id ?? null,
+      String(fallback.rows[0].roi_ledger_id ?? ""),
+    ]
+  );
+  return { row: mapRoiRow(updated.rows[0]), idempotent: false };
 }
 
 export async function createRoiLedgersFromAsExecuted(pool: Pool, input: TenantTriple & {
@@ -932,6 +1071,89 @@ export async function createRoiLedgersFromAsExecuted(pool: Pool, input: TenantTr
   return {
     idempotent: allIdempotent,
     roi_ledgers: out,
+  };
+}
+
+
+export async function formalizeRoiLedgersFromAcceptance(pool: Pool, input: TenantTriple & {
+  operation_plan_id: string;
+  acceptance_id: string;
+  as_executed_id: string;
+}): Promise<{
+  idempotent: boolean;
+  acceptance: { acceptance_id: string; operation_plan_id: string; verdict: string; formal_acceptance: boolean; formal_evidence_passed: boolean; chain_validation_passed: boolean };
+  roi_ledgers: RoiLedgerRow[];
+}> {
+  const acceptance = await getAcceptanceResultById(pool, input);
+  if (!acceptance) throw new Error("ACCEPTANCE_NOT_FOUND");
+  validateFormalAcceptancePayload(acceptance.payload);
+
+  const asExecuted = await getAsExecutedById(pool, input);
+  if (!asExecuted) throw new Error("AS_EXECUTED_NOT_FOUND");
+
+  const created = await createRoiLedgersFromAsExecuted(pool, input);
+  if (!Array.isArray(created.roi_ledgers) || created.roi_ledgers.length === 0) {
+    throw new Error("ROI_LEDGER_NOT_CREATED:UNKNOWN_EMPTY_RESULT");
+  }
+
+  const formalAcceptanceId = textOrNull(acceptance.payload?.acceptance_id) ?? acceptance.fact_id;
+  const trust = buildFormalAcceptedRoiTrustV1(formalAcceptanceId);
+  const alreadyFormal = created.roi_ledgers.every((row) => row.trust_level === trust.trust_level
+    && row.source_lane === trust.source_lane
+    && row.formal_acceptance_id === trust.formal_acceptance_id
+    && row.formal_evidence_passed === true
+    && row.chain_validation_passed === true
+    && row.customer_visible_value === true);
+
+  const ids = created.roi_ledgers.map((row) => row.roi_ledger_id).filter(Boolean);
+  const updated = await pool.query(
+    `UPDATE roi_ledger_v1
+        SET operation_id = $1,
+            trust_level = $2,
+            source_lane = $3,
+            formal_acceptance_id = $4,
+            formal_evidence_passed = $5,
+            chain_validation_passed = $6,
+            customer_visible_value = $7,
+            trust_reasons = $8::jsonb,
+            evidence_refs = CASE
+              WHEN COALESCE(evidence_refs, '[]'::jsonb) @> $9::jsonb THEN COALESCE(evidence_refs, '[]'::jsonb)
+              ELSE COALESCE(evidence_refs, '[]'::jsonb) || $9::jsonb
+            END,
+            updated_at = now()
+      WHERE tenant_id = $10
+        AND project_id = $11
+        AND group_id = $12
+        AND roi_ledger_id = ANY($13::text[])
+      RETURNING *`,
+    [
+      input.operation_plan_id,
+      trust.trust_level,
+      trust.source_lane,
+      trust.formal_acceptance_id,
+      trust.formal_evidence_passed,
+      trust.chain_validation_passed,
+      trust.customer_visible_value,
+      JSON.stringify(trust.trust_reasons),
+      JSON.stringify([{ kind: "acceptance_fact", ref: acceptance.fact_id, acceptance_id: formalAcceptanceId }]),
+      input.tenant_id,
+      input.project_id,
+      input.group_id,
+      ids,
+    ]
+  );
+
+  return {
+    idempotent: created.idempotent && alreadyFormal,
+    acceptance: {
+      acceptance_id: formalAcceptanceId,
+      operation_plan_id: input.operation_plan_id,
+      verdict: String(acceptance.payload?.verdict ?? ""),
+      formal_acceptance: acceptanceBool(acceptance.payload, "formal_acceptance"),
+      formal_evidence_passed: acceptanceBool(acceptance.payload, "formal_evidence_passed"),
+      chain_validation_passed: acceptanceBool(acceptance.payload, "chain_validation_passed"),
+    },
+    roi_ledgers: (updated.rows ?? []).map(mapRoiRow),
   };
 }
 

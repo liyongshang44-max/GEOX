@@ -139,11 +139,14 @@ function toNum(v: unknown): number | null {
 }
 
 function normalizeReceiptStatus(payload: any): "CONFIRMED" | "FAILED" | "INSUFFICIENT_RECEIPT" {
-  const status = String(payload?.status ?? "").trim().toLowerCase();
+  const status = String(payload?.status ?? "").trim().toUpperCase();
   const hasException = payload?.exception && typeof payload.exception === "object";
-  if (status === "executed") return "CONFIRMED";
-  if (status === "not_executed") return "FAILED";
-  if (hasException && status !== "executed") return "FAILED";
+  const confirmedStatuses = new Set(["EXECUTED", "SUCCEEDED", "SUCCESS", "CONFIRMED"]);
+  const failedStatuses = new Set(["NOT_EXECUTED", "FAILED", "ERROR"]);
+
+  if (confirmedStatuses.has(status)) return "CONFIRMED";
+  if (failedStatuses.has(status)) return "FAILED";
+  if (hasException) return "FAILED";
   return "INSUFFICIENT_RECEIPT";
 }
 
@@ -242,6 +245,11 @@ function pickExecutedAmount(payload: any, plannedUnit: string | null): { amount:
 
   const executedAmountObs = toNum(observed?.executed_amount);
   if (executedAmountObs != null) return { amount: executedAmountObs, unit: plannedUnit };
+
+  const metricWaterAmount = Array.isArray(payload?.metrics)
+    ? payload.metrics.map((item: any) => toNum(item?.water_mm_actual ?? item?.executed_amount ?? item?.amount)).find((v: number | null) => v != null)
+    : null;
+  if (metricWaterAmount != null) return { amount: metricWaterAmount, unit: plannedUnit };
 
   const water = toNum(payload?.resource_usage?.water_l);
   if (water != null && plannedUnit) {

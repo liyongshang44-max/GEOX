@@ -81,6 +81,31 @@ export type RoiLedgerSummary = {
   customer_text: string;
 };
 
+
+export type DiagnosticInputDeviceV1 = {
+  device_id: string;
+  display_name: string | null;
+  capability: string | null;
+  metric: string | null;
+  value: number | null;
+  unit: string | null;
+};
+
+export type DiagnosticInputObservationV1 = {
+  metric: string;
+  label: string;
+  value: number | null;
+  unit: string | null;
+  role: "diagnosis_input";
+};
+
+export type DiagnosticInputsV1 = {
+  field_id: string | null;
+  devices: DiagnosticInputDeviceV1[];
+  observations: DiagnosticInputObservationV1[];
+  diagnosis: { human: string | null };
+};
+
 export type OperationReportV1 = {
   type: "operation_report_v1";
   version: "v1";
@@ -98,6 +123,7 @@ export type OperationReportV1 = {
     explain_human: string | null;
     objective_text: string | null;
   };
+  diagnostic_inputs?: DiagnosticInputsV1;
   operation_title: string | null;
   customer_title: string | null;
   identifiers: {
@@ -116,7 +142,19 @@ export type OperationReportV1 = {
     act_task_id: string | null;
     receipt_id: string | null;
   };
+  prescription?: {
+    prescription_id: string | null;
+    amount: number | null;
+    unit: string | null;
+    operation_type: string | null;
+  } | null;
   as_executed: {
+    as_executed_id?: string | null;
+    planned_amount?: number | null;
+    executed_amount?: number | null;
+    unit?: string | null;
+    deviation?: number | null;
+    status?: string | null;
     operation_id: string;
     execution_mode: "DEVICE" | "HUMAN";
     started_at: string | null;
@@ -202,6 +240,8 @@ export type OperationReportV1 = {
     low_confidence_items: RoiLedgerSummary[];
   };
   as_applied: {
+    coverage_percent?: number | null;
+    field_id?: string | null;
     operation_id: string;
     coverage_status: "AVAILABLE" | "MISSING" | "NOT_APPLICABLE";
     coverage_geojson: Record<string, unknown> | null;
@@ -587,6 +627,7 @@ export function projectOperationReportV1(input: {
     explain_human?: unknown;
     objective_text?: unknown;
   } | null;
+  diagnostic_inputs?: DiagnosticInputsV1 | null;
   operation_title?: unknown;
   customer_title?: unknown;
   now?: Date;
@@ -881,6 +922,12 @@ export function projectOperationReportV1(input: {
     why: {
       explain_human: toText(input.why?.explain_human),
       objective_text: toText(input.why?.objective_text),
+    },
+    diagnostic_inputs: input.diagnostic_inputs ?? {
+      field_id: toText(input.operation_state.field_id),
+      devices: [],
+      observations: [],
+      diagnosis: { human: toText(input.why?.explain_human) },
     },
     operation_title: toText(input.operation_title),
     customer_title: toText(input.customer_title),
