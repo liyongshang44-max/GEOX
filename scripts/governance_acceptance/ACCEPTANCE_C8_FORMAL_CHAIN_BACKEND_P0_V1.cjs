@@ -31,11 +31,15 @@ function nearly(actual, expected, message) { assert(Math.abs(Number(actual) - Nu
 function headers() { return { accept: 'application/json', 'content-type': 'application/json', authorization: `Bearer ${TOKEN}`, 'x-geox-token': TOKEN, 'x-geox-ao-act-token': TOKEN, 'x-ao-act-token': TOKEN }; }
 async function http(path, { method = 'GET', body } = {}) {
   assert(BASE_URL, '--base-url or BASE_URL/API_BASE_URL is required');
-  const res = await fetch(`${BASE_URL}${path}`, { method, headers: headers(), body: body == null ? undefined : JSON.stringify(body) });
+  const requestBody = body == null ? undefined : JSON.stringify(body);
+  const res = await fetch(`${BASE_URL}${path}`, { method, headers: headers(), body: requestBody });
   const text = await res.text();
   let json = null;
   try { json = text ? JSON.parse(text) : null; } catch {}
-  return { status: res.status, text, json };
+  return { method, path, status: res.status, body: text, text, json, request_body: body ?? null };
+}
+function httpDetail(r) {
+  return { method: r?.method, path: r?.path, status: r?.status, body: r?.json ?? r?.body ?? r?.text ?? null };
 }
 function scoped(extra = {}) { return { tenant_id: TENANT, project_id: PROJECT_ID, group_id: GROUP_ID, ...extra }; }
 async function dbClient() {
@@ -47,7 +51,7 @@ async function dbClient() {
 
 async function assertRuntimeOpenApi() {
   const r = await http('/api/v1/openapi.json');
-  assert(r.status === 200, 'runtime OpenAPI request failed', r.json || r.text);
+  assert(r.status === 200, 'runtime OpenAPI request failed', httpDetail(r));
   const paths = r.json?.paths || {};
   const schemas = r.json?.components?.schemas || {};
   assert(paths['/api/v1/field-memory/from-acceptance']?.post, 'OpenAPI missing field-memory from-acceptance POST path', paths['/api/v1/field-memory/from-acceptance']);
@@ -98,7 +102,7 @@ async function insertReceipt(client, taskId, status, extra = {}) {
 }
 async function asExecutedFromReceipt(taskId, receiptId) {
   const r = await http('/api/v1/as-executed/from-receipt', { method: 'POST', body: scoped({ task_id: taskId, receipt_id: receiptId }) });
-  assert(r.status === 200, `as-executed from receipt failed for ${taskId}`, r.json || r.text);
+  assert(r.status === 200, `as-executed from receipt failed for ${taskId}`, httpDetail(r));
   return r.json.as_executed;
 }
 async function assertReceiptStatusMatrix(client) {
@@ -129,7 +133,7 @@ async function assertReceiptStatusMatrix(client) {
 async function assertRoiFormalization(client, asExecutedId) {
   const body = scoped({ operation_plan_id: FORMAL_OP, acceptance_id: FORMAL_ACC, as_executed_id: asExecutedId });
   const first = await http('/api/v1/roi-ledger/formalize-from-acceptance', { method: 'POST', body });
-  assert(first.status === 200, 'ROI formalize positive case failed', first.json || first.text);
+  assert(first.status === 200, 'ROI formalize positive case failed', httpDetail(first));
   const rows = first.json.roi_ledgers || [];
   assert(rows.length >= 1, 'ROI formalize returned no rows', first.json);
   for (const row of rows) {
@@ -141,7 +145,7 @@ async function assertRoiFormalization(client, asExecutedId) {
     assert(row.customer_visible_value === true, 'ROI customer_visible_value not true', row);
   }
   const second = await http('/api/v1/roi-ledger/formalize-from-acceptance', { method: 'POST', body });
-  assert(second.status === 200, 'ROI formalize idempotent second call failed', second.json || second.text);
+  assert(second.status === 200, 'ROI formalize idempotent second call failed', httpDetail(second));
   assert(second.json.idempotent === true, 'ROI formalize second call should be idempotent=true', second.json);
   const count = await client.query(`SELECT as_executed_id, roi_type, count(*)::int AS count FROM roi_ledger_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND as_executed_id=$4 GROUP BY as_executed_id, roi_type HAVING count(*) > 1`, [TENANT, PROJECT_ID, GROUP_ID, asExecutedId]);
   assert(count.rows.length === 0, 'ROI formalize duplicated roi_type/as_executed rows', count.rows);
@@ -155,15 +159,15 @@ async function assertRoiFormalization(client, asExecutedId) {
   for (const [id, patch, status, code] of negatives) {
     await insertAcceptance(client, id, patch);
     const r = await http('/api/v1/roi-ledger/formalize-from-acceptance', { method: 'POST', body: scoped({ operation_plan_id: FORMAL_OP, acceptance_id: id, as_executed_id: asExecutedId }) });
-    assert(r.status === status && r.json?.error === code, `ROI negative ${id} expected ${status}/${code}`, r.json || r.text);
+    assert(r.status === status && r.json?.error === code, `ROI negative ${id} expected ${status}/${code}`, httpDetail(r));
   }
   const missing = await http('/api/v1/roi-ledger/formalize-from-acceptance', { method: 'POST', body: scoped({ operation_plan_id: FORMAL_OP, acceptance_id: FORMAL_ACC, as_executed_id: 'missing_as_executed_p0' }) });
-  assert(missing.status === 404 && missing.json?.error === 'AS_EXECUTED_NOT_FOUND', 'ROI missing as_executed negative failed', missing.json || missing.text);
+  assert(missing.status === 404 && missing.json?.error === 'AS_EXECUTED_NOT_FOUND', 'ROI missing as_executed negative failed', httpDetail(missing));
 }
 async function assertFieldMemory(client) {
   const body = scoped({ operation_plan_id: FORMAL_OP, acceptance_id: FORMAL_ACC });
   const first = await http('/api/v1/field-memory/from-acceptance', { method: 'POST', body });
-  assert(first.status === 200, 'Field Memory from acceptance positive case failed', first.json || first.text);
+  assert(first.status === 200, 'Field Memory from acceptance positive case failed', httpDetail(first));
   assert(first.json.field_memory?.memory_lane === 'FORMAL_FIELD_MEMORY', 'field memory lane mismatch', first.json.field_memory);
   assert(first.json.field_memory?.trust_level === 'FORMAL_ACCEPTED', 'field memory trust mismatch', first.json.field_memory);
   assert(first.json.field_memory?.formal_acceptance_id === FORMAL_ACC, 'field memory formal acceptance id mismatch', first.json.field_memory);
@@ -171,22 +175,22 @@ async function assertFieldMemory(client) {
   assert(first.json.field_memory?.learning_eligible === true, 'field memory learning eligibility mismatch', first.json.field_memory);
 
   const second = await http('/api/v1/field-memory/from-acceptance', { method: 'POST', body });
-  assert(second.status === 200 && second.json.idempotent === true, 'field memory second call should be idempotent', second.json || second.text);
+  assert(second.status === 200 && second.json.idempotent === true, 'field memory second call should be idempotent', httpDetail(second));
   const count = await client.query(`SELECT count(*)::int AS count FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND formal_acceptance_id=$4 AND memory_type='FIELD_RESPONSE_MEMORY' AND memory_lane='FORMAL_FIELD_MEMORY'`, [TENANT, PROJECT_ID, GROUP_ID, FORMAL_ACC]);
   assert(Number(count.rows[0].count) === 1, 'field memory duplicated formal FIELD_RESPONSE_MEMORY', count.rows[0]);
 
   await insertAcceptance(client, 'p0_fm_no_chain', { chain_validation_passed: false });
   const noChain = await http('/api/v1/field-memory/from-acceptance', { method: 'POST', body: scoped({ operation_plan_id: FORMAL_OP, acceptance_id: 'p0_fm_no_chain' }) });
-  assert(noChain.status === 422 && noChain.json?.error === 'CHAIN_VALIDATION_NOT_PASSED', 'field memory chain negative failed', noChain.json || noChain.text);
+  assert(noChain.status === 422 && noChain.json?.error === 'CHAIN_VALIDATION_NOT_PASSED', 'field memory chain negative failed', httpDetail(noChain));
 
   await insertAcceptance(client, 'p0_fm_no_obs', { operation_plan_id: 'op_plan_p0_no_obs', field_id: 'p0_no_observations_field', evidence_refs: [] });
   const noObs = await http('/api/v1/field-memory/from-acceptance', { method: 'POST', body: scoped({ operation_plan_id: 'op_plan_p0_no_obs', acceptance_id: 'p0_fm_no_obs' }) });
-  assert(noObs.status === 422 && noObs.json?.error === 'OBSERVATION_PAIR_NOT_FOUND', 'field memory missing observation pair negative failed', noObs.json || noObs.text);
+  assert(noObs.status === 422 && noObs.json?.error === 'OBSERVATION_PAIR_NOT_FOUND', 'field memory missing observation pair negative failed', httpDetail(noObs));
 }
 function findBy(arr, pred) { return Array.isArray(arr) ? arr.find(pred) : null; }
 async function assertOperationReport() {
   const r = await http(`/api/v1/reports/operation/${FORMAL_OP}?tenant_id=${TENANT}&project_id=${PROJECT_ID}&group_id=${GROUP_ID}`);
-  assert(r.status === 200, 'operation report request failed', r.json || r.text);
+  assert(r.status === 200, 'operation report request failed', httpDetail(r));
   const report = r.json.operation_report_v1;
   assert(report, 'operation report missing operation_report_v1', r.json);
   const diag = report.diagnostic_inputs;
@@ -217,7 +221,7 @@ async function assertOperationReport() {
 }
 async function assertFieldReport() {
   const r = await http(`/api/v1/reports/field/${FORMAL_FIELD}?tenant_id=${TENANT}&project_id=${PROJECT_ID}&group_id=${GROUP_ID}`);
-  assert(r.status === 200, 'field report request failed', r.json || r.text);
+  assert(r.status === 200, 'field report request failed', httpDetail(r));
   const report = r.json.field_report_v1;
   assert(JSON.stringify(report).includes(FORMAL_OP), 'field report missing C8 formal operation', report);
   assert(Number(report?.device_summary?.total_devices || 0) >= 3, 'field report device_summary.total_devices < 3', report?.device_summary);
