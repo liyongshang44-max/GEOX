@@ -77,12 +77,17 @@ export type FieldReportDetailV1 = DashboardProjectionTrustV1 & {
   version: "v1";
   generated_at: string;
   field: { field_id: string; field_name: string | null };
+  field_context: { field_id: string; field_name: string | null; area_m2: number | null; area_ha: number | null; boundary_geojson: unknown | null };
   overview: { current_risk_level: "LOW" | "MEDIUM" | "HIGH" | "UNKNOWN"; open_alerts_count: number; pending_acceptance_count: number; total_operations_count: number; latest_operation_at: string | null; estimated_total_cost: number; actual_total_cost: number };
   explain: { human: string | null; top_reasons: string[] };
+  sensing_summary: { field_id: string; devices: any[]; observations: any[]; diagnosis: { human: string | null } };
+  decision_summary: { latest_recommendation_id: string | null; explain_human: string | null; objective_text: string | null; prescription_id: string | null; prescription_amount: number | null; prescription_unit: string | null; target_device_id: string | null };
+  execution_summary: { operation_count: number; formal_operation_count: number; latest_operation_id: string | null; latest_operation_status: string | null; as_executed: any | null; as_applied: any | null };
   recent_operations: Array<DashboardProjectionTrustV1 & { operation_plan_id: string; operation_id: string; title: string | null; customer_title: string | null; final_status: string; acceptance_status: string | null; generated_at: string | null }>;
   device_summary: { total_devices: number; online_devices: number; offline_devices: number; last_telemetry_at: string | null };
   next_action: { recommendation_id: string | null; explain_human: string | null; objective_text: string | null; action_type: string | null; priority: string | null } | null;
   value_summary: RoiSummaryTrustV1;
+  learning_summary: { field_response_memory_count: number; formal_field_response_memory_count: number; formal_memory_count: number; latest_formal_acceptance_id: string | null };
 };
 
 const RISK_RANK: Record<OperationReportRiskLevel, number> = { LOW: 0, MEDIUM: 1, HIGH: 2 };
@@ -169,6 +174,71 @@ function safeStateAcceptanceStatus(state: OperationStateV1): string | null { ret
 function dashboardNeedsReview(trust: DashboardProjectionTrustV1, report: OperationReportV1): boolean { return !trust.customer_visible_eligible || Boolean((report as any).formal_scenario?.needs_review); }
 function isTrustedRoiItem(item: any): boolean { return isFormalCustomerValueItem(item); }
 
+
+function numberOrNull(value: unknown): number | null { const n = typeof value === "number" ? value : Number(value); return Number.isFinite(n) ? n : null; }
+function textOrNull(value: unknown): string | null { const s = String(value ?? "").trim(); return s ? s : null; }
+function uniqueBy<T>(items: T[], keyOf: (item: T) => string): T[] { const seen = new Set<string>(); const out: T[] = []; for (const item of items) { const key = keyOf(item); if (!key || seen.has(key)) continue; seen.add(key); out.push(item); } return out; }
+
+function fieldResponseMemories(report: OperationReportV1): any[] {
+  const memory = (report as any).field_memory ?? {};
+  return Array.isArray(memory.field_response_memory) ? memory.field_response_memory : [];
+}
+
+function isFormalFieldResponseMemory(memory: any): boolean {
+  return memory?.memory_type === "FIELD_RESPONSE_MEMORY"
+    && memory?.memory_lane === "FORMAL_FIELD_MEMORY"
+    && memory?.trust_level === "FORMAL_ACCEPTED"
+    && memory?.customer_visible_memory === true
+    && memory?.learning_eligible === true
+    && textOrNull(memory?.formal_acceptance_id) != null;
+}
+
+function buildSensingSummary(params: { field_id: string; reports: OperationReportV1[]; device_summary: { total_devices: number } }): FieldReportDetailV1["sensing_summary"] {
+  const diagnosticInputs = params.reports.map((report) => (report as any).diagnostic_inputs).filter((x) => x && typeof x === "object");
+  const devices = uniqueBy(diagnosticInputs.flatMap((input: any) => Array.isArray(input.devices) ? input.devices : []), (device: any) => String(device?.device_id ?? ""));
+  const observations = uniqueBy(diagnosticInputs.flatMap((input: any) => Array.isArray(input.observations) ? input.observations : []), (obs: any) => `${String(obs?.metric ?? "")}:${String(obs?.role ?? "")}`);
+  const diagnosisHuman = diagnosticInputs.map((input: any) => textOrNull(input?.diagnosis?.human)).find(Boolean) ?? null;
+  return { field_id: params.field_id, devices, observations, diagnosis: { human: diagnosisHuman } };
+}
+
+function buildDecisionSummary(latestReport: OperationReportV1 | null, nextActionSource: OperationReportV1 | null): FieldReportDetailV1["decision_summary"] {
+  const report: any = nextActionSource ?? latestReport ?? {};
+  const prescription = report.prescription ?? {};
+  return {
+    latest_recommendation_id: textOrNull(report.identifiers?.recommendation_id),
+    explain_human: textOrNull(report.why?.explain_human),
+    objective_text: textOrNull(report.why?.objective_text),
+    prescription_id: textOrNull(prescription.prescription_id ?? report.identifiers?.prescription_id),
+    prescription_amount: numberOrNull(prescription.amount),
+    prescription_unit: textOrNull(prescription.unit),
+    target_device_id: textOrNull(report.suggested_action?.target_device_id ?? report.ao_act?.device_id ?? report.as_applied?.field_id),
+  };
+}
+
+function buildExecutionSummary(reportsSorted: OperationReportV1[]): FieldReportDetailV1["execution_summary"] {
+  const latest: any = reportsSorted[0] ?? null;
+  const formalOperationCount = reportsSorted.filter((report) => reportTrust(report).customer_visible_eligible).length;
+  return {
+    operation_count: reportsSorted.length,
+    formal_operation_count: formalOperationCount,
+    latest_operation_id: textOrNull(latest?.identifiers?.operation_id ?? latest?.identifiers?.operation_plan_id),
+    latest_operation_status: latest ? safeReportFinalStatus(latest) : null,
+    as_executed: latest?.as_executed ?? null,
+    as_applied: latest?.as_applied ?? null,
+  };
+}
+
+function buildLearningSummary(reports: OperationReportV1[]): FieldReportDetailV1["learning_summary"] {
+  const memories = reports.flatMap(fieldResponseMemories);
+  const formalMemories = memories.filter(isFormalFieldResponseMemory);
+  return {
+    field_response_memory_count: memories.length,
+    formal_field_response_memory_count: formalMemories.length,
+    formal_memory_count: formalMemories.length,
+    latest_formal_acceptance_id: formalMemories.map((memory: any) => textOrNull(memory.formal_acceptance_id)).find(Boolean) ?? null,
+  };
+}
+
 function isSimulatedOrTechnicalRoiItem(item: any): boolean {
   const valueKind = upper(item?.value_kind);
   const sourceLane = upper(item?.source_lane ?? item?.trust_level ?? item?.memory_lane);
@@ -235,7 +305,7 @@ function limitedRoiSummary(simulatedOrTechnicalItems = 0): RoiSummaryTrustV1 {
   return { total_roi_items: 0, trusted_value_items: 0, hypothesis_items: 0, measured_items: 0, estimated_items: 0, assumption_based_items: 0, insufficient_items: 0, insufficient_evidence_items: 0, simulated_or_technical_items: simulatedOrTechnicalItems, low_confidence_items: 0, water_saved_items: 0, labor_saved_items: 0, early_warning_items: 0, first_pass_acceptance_items: 0, has_customer_visible_value: false, customer_value_text: "暂无可作为客户正式价值结论的记录" };
 }
 
-export function projectFieldReportDetailV1(params: { field_id: string; field_name?: string | null; reports: OperationReportV1[]; open_alerts_count: number; device_summary: { total_devices: number; online_devices: number; offline_devices: number; last_telemetry_at: string | null } }): FieldReportDetailV1 {
+export function projectFieldReportDetailV1(params: { field_id: string; field_name?: string | null; reports: OperationReportV1[]; open_alerts_count: number; device_summary: { total_devices: number; online_devices: number; offline_devices: number; last_telemetry_at: string | null }; field_context?: { area_m2?: number | null; area_ha?: number | null; boundary_geojson?: unknown | null } }): FieldReportDetailV1 {
   const reportsSorted = [...params.reports].sort((a, b) => resolveOperationTimeMs(b) - resolveOperationTimeMs(a));
   const latestReport = reportsSorted[0] ?? null;
   const trusts = reportsSorted.map(reportTrust);
@@ -254,6 +324,8 @@ export function projectFieldReportDetailV1(params: { field_id: string; field_nam
   }
   const topReasons = [...reasonCount.entries()].sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0])).slice(0, 5).map(([reason]) => reason);
   const nextActionSource = reportsSorted.find((report) => Boolean((report as any).why?.explain_human) || Boolean((report as any).identifiers?.recommendation_id)) ?? null;
+  const sensingSummary = buildSensingSummary({ field_id: params.field_id, reports: reportsSorted, device_summary: params.device_summary });
+  const learningSummary = buildLearningSummary(reportsSorted);
 
   return {
     ...aggregateTrust,
@@ -261,6 +333,7 @@ export function projectFieldReportDetailV1(params: { field_id: string; field_nam
     version: "v1",
     generated_at: new Date().toISOString(),
     field: { field_id: params.field_id, field_name: params.field_name ?? null },
+    field_context: { field_id: params.field_id, field_name: params.field_name ?? null, area_m2: numberOrNull(params.field_context?.area_m2), area_ha: numberOrNull(params.field_context?.area_ha), boundary_geojson: params.field_context?.boundary_geojson ?? null },
     overview: {
       current_risk_level: currentRiskLevel,
       open_alerts_count: Number(params.open_alerts_count ?? 0),
@@ -270,11 +343,15 @@ export function projectFieldReportDetailV1(params: { field_id: string; field_nam
       estimated_total_cost: params.reports.reduce((sum, report) => sum + Number((report as any).cost?.estimated_total ?? 0), 0),
       actual_total_cost: params.reports.reduce((sum, report) => sum + Number((report as any).cost?.actual_total ?? 0), 0),
     },
-    explain: { human: (latestReport as any)?.why?.explain_human ?? fallbackExplainByRisk({ current_risk_level: currentRiskLevel, top_reasons: topReasons }), top_reasons: topReasons },
+    explain: { human: (latestReport as any)?.why?.explain_human ?? sensingSummary.diagnosis.human ?? fallbackExplainByRisk({ current_risk_level: currentRiskLevel, top_reasons: topReasons }), top_reasons: topReasons },
+    sensing_summary: sensingSummary,
+    decision_summary: buildDecisionSummary(latestReport, nextActionSource),
+    execution_summary: buildExecutionSummary(reportsSorted),
     recent_operations: reportsSorted.slice(0, 5).map((report) => ({ ...reportTrust(report), operation_plan_id: (report as any).identifiers?.operation_plan_id, operation_id: (report as any).identifiers?.operation_id, title: (report as any).operation_title ?? null, customer_title: (report as any).customer_title ?? null, final_status: safeReportFinalStatus(report), acceptance_status: safeReportAcceptanceStatus(report), generated_at: (report as any).generated_at ?? null })),
     device_summary: { total_devices: Number(params.device_summary.total_devices ?? 0), online_devices: Number(params.device_summary.online_devices ?? 0), offline_devices: Number(params.device_summary.offline_devices ?? 0), last_telemetry_at: params.device_summary.last_telemetry_at ?? null },
     next_action: nextActionSource ? { recommendation_id: (nextActionSource as any).identifiers?.recommendation_id ?? null, explain_human: (nextActionSource as any).why?.explain_human ?? null, objective_text: (nextActionSource as any).why?.objective_text ?? null, action_type: inferActionType(nextActionSource), priority: null } : null,
     value_summary: buildFieldValueSummary(params.reports),
+    learning_summary: learningSummary,
   };
 }
 

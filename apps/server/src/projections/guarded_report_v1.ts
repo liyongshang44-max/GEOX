@@ -12,11 +12,16 @@ function blockingReasons(report: any): string[] { const reasons = [...(Array.isA
 function trustLevelFor(report: any): GuardTrustLevelV1 { if (chainPassed(report)) return "FORMAL_CHAIN_PASSED"; if (isSimulated(report)) return "SIMULATED_DEV_ONLY"; const reasons = blockingReasons(report).join("|").toUpperCase(); if (reasons.includes("EVIDENCE") || reasons.includes("FORMAL")) return "INSUFFICIENT_FORMAL_EVIDENCE"; if (!report?.chain_validation) return "LIMITED_FALLBACK"; return "NEEDS_REVIEW"; }
 function guardStatusFor(trust: GuardTrustLevelV1): GuardStatusV1 { if (trust === "FORMAL_CHAIN_PASSED") return "PASSED"; if (trust === "SIMULATED_DEV_ONLY") return "SIMULATED"; if (trust === "INSUFFICIENT_FORMAL_EVIDENCE") return "INSUFFICIENT_EVIDENCE"; if (trust === "LIMITED_FALLBACK") return "LIMITED"; return "NEEDS_REVIEW"; }
 
+function formalAcceptanceId(item: any): string | null {
+  const value = String(item?.formal_acceptance_id ?? "").trim();
+  return value ? value : null;
+}
+
 export function isFormalCustomerValueItem(item: any): boolean {
   return item?.customer_visible_value === true
     && item?.trust_level === "FORMAL_ACCEPTED"
     && item?.source_lane === "FORMAL_ACCEPTANCE"
-    && Boolean(item?.formal_acceptance_id)
+    && formalAcceptanceId(item) != null
     && item?.formal_evidence_passed === true
     && item?.chain_validation_passed === true;
 }
@@ -37,11 +42,16 @@ function summaryHasFormalCustomerValue(summary: any): boolean {
 function guardRoiLedger(roi: any, trusted: boolean, trust: GuardTrustLevelV1): any {
   const next = clone(roi ?? {});
   const guardItem = (item: any) => {
+    const sourceFormalAcceptanceId = formalAcceptanceId(item);
     const formalValue = trusted && isFormalCustomerValueItem(item);
     return {
       ...item,
+      formal_acceptance_id: formalValue ? sourceFormalAcceptanceId : null,
+      source_lane: formalValue ? "FORMAL_ACCEPTANCE" : item?.source_lane,
+      formal_evidence_passed: formalValue,
+      chain_validation_passed: formalValue,
       customer_visible_value: formalValue,
-      trust_level: item?.trust_level ?? trust,
+      trust_level: formalValue ? "FORMAL_ACCEPTED" : (item?.trust_level ?? trust),
       customer_text: formalValue ? item?.customer_text : "该价值记录未通过正式链路校验，仅作为内部线索。",
     };
   };
@@ -191,7 +201,17 @@ function guardOperationListItem(op: any): any {
 }
 
 function hasFormalOperationInAggregate(payload: any): boolean {
-  return Array.isArray(payload?.recent_operations) && payload.recent_operations.some((op: any) => op?.projection_source === "GUARDED_REPORT" || op?.customer_visible_eligible === true || op?.trust_level === "FORMAL_CHAIN_PASSED");
+  return Array.isArray(payload?.recent_operations) && payload.recent_operations.some((op: any) =>
+    op?.projection_source === "GUARDED_REPORT"
+    && op?.customer_visible_eligible === true
+    && op?.fallback_limited !== true
+    && (op?.trust_level == null || op?.trust_level === "FORMAL_CHAIN_PASSED")
+  );
+}
+
+function hasFormalFieldMemoryInAggregate(payload: any): boolean {
+  return Number(payload?.learning_summary?.formal_field_response_memory_count ?? 0) > 0
+    || Number(payload?.learning_summary?.formal_memory_count ?? 0) > 0;
 }
 
 export function applyGuardedDashboardAggregateV1(aggregate: any): any {
@@ -213,7 +233,7 @@ export function applyGuardedFieldReportV1(fieldReport: any): any {
   if (!fieldReport || typeof fieldReport !== "object") return fieldReport;
   const next = clone(fieldReport);
   next.recent_operations = Array.isArray(next.recent_operations) ? next.recent_operations.map(guardOperationListItem) : [];
-  const hasFormalValue = summaryHasFormalCustomerValue(next.value_summary) && hasFormalOperationInAggregate(next);
+  const hasFormalValue = summaryHasFormalCustomerValue(next.value_summary) && hasFormalOperationInAggregate(next) && hasFormalFieldMemoryInAggregate(next);
   next.value_summary = {
     ...(next.value_summary ?? {}),
     has_customer_visible_value: hasFormalValue,
