@@ -141,6 +141,7 @@ function ensureReportV1ExtendedFields(report: OperationReportV1): OperationRepor
     ...report,
     approval: report.approval ?? { status: null, actor_id: null, actor_name: null, generated_at: null, approved_at: null, note: null },
     why: report.why ?? { explain_human: null, objective_text: null },
+    diagnostic_inputs: (report as any).diagnostic_inputs ?? { field_id: report.identifiers.field_id ?? null, devices: [], observations: [], diagnosis: { human: report.why?.explain_human ?? null } },
     operation_title: report.operation_title ?? null,
     customer_title: report.customer_title ?? report.operation_title ?? null,
     as_executed: (report as any).as_executed ?? {
@@ -212,8 +213,274 @@ function toIsoFromEpochMs(v: unknown): string | null {
   return new Date(n).toISOString();
 }
 
+
+type DiagnosticInputsForReportV1 = NonNullable<OperationReportV1["diagnostic_inputs"]>;
+
+function parseJsonArrayMaybe(v: unknown): any[] {
+  if (Array.isArray(v)) return v;
+  if (typeof v !== "string" || !v.trim()) return [];
+  try {
+    const parsed = JSON.parse(v);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function normalizeDiagnosticMetric(metric: unknown): string | null {
+  const raw = String(metric ?? "").trim();
+  if (!raw) return null;
+  const lower = raw.toLowerCase();
+  if (["soil_moisture", "soil_moisture_pct", "soil_moisture_vwc", "moisture_pct"].includes(lower)) return "soil_moisture_percent";
+  if (lower === "forecast_rain_72h" || lower === "forecast_rain_72h_mm" || lower === "rain_forecast_72h_mm") return "forecast_rain_72h_mm";
+  return raw;
+}
+
+function labelForDiagnosticMetric(metric: string): string {
+  if (metric === "soil_moisture_percent") return "20cm 土层水分";
+  if (metric === "forecast_rain_72h_mm") return "未来 72 小时降雨";
+  return metric;
+}
+
+function capabilityForDiagnosticMetric(metric: string | null, capabilities: any[]): string | null {
+  const normalizedCaps = capabilities.map((item) => String(item ?? "").trim()).filter(Boolean);
+  if (metric === "soil_moisture_percent") return normalizedCaps.find((cap) => cap.includes("soil_moisture")) ?? "soil_moisture_sensor";
+  if (metric === "forecast_rain_72h_mm") return normalizedCaps.find((cap) => cap.includes("weather") || cap.includes("rain")) ?? "weather_sensor";
+  return normalizedCaps[0] ?? null;
+}
+
+function unitForDiagnosticMetric(metric: string, fallback: unknown): string | null {
+  const unit = toText(fallback);
+  if (unit) return unit;
+  if (metric === "soil_moisture_percent") return "%";
+  if (metric === "forecast_rain_72h_mm") return "mm";
+  return null;
+}
+
+function pickRecommendationDiagnosticNumber(recommendationPayload: any, keys: string[]): number | null {
+  const candidates = [
+    recommendationPayload,
+    recommendationPayload?.diagnostic_inputs,
+    recommendationPayload?.diagnosis,
+    recommendationPayload?.weather,
+    recommendationPayload?.current_metrics,
+    recommendationPayload?.inputs,
+    recommendationPayload?.skill_trace?.inputs,
+  ];
+  for (const source of candidates) {
+    for (const key of keys) {
+      const value = toFiniteNumberOrNull(source?.[key]);
+      if (value != null) return value;
+    }
+  }
+  return null;
+}
+
+function fallbackDiagnosticObservationsFromRecommendation(recommendationPayload: any): DiagnosticInputsForReportV1["observations"] {
+  const out: DiagnosticInputsForReportV1["observations"] = [];
+  const soilMoisture = pickRecommendationDiagnosticNumber(recommendationPayload, ["soil_moisture_percent", "soil_moisture_pct", "soil_moisture", "moisture_pct"]);
+  if (soilMoisture != null) {
+    out.push({ metric: "soil_moisture_percent", label: labelForDiagnosticMetric("soil_moisture_percent"), value: soilMoisture, unit: "%", role: "diagnosis_input" });
+  }
+  const forecastRain = pickRecommendationDiagnosticNumber(recommendationPayload, ["forecast_rain_72h_mm", "forecast_rainfall_72h_mm", "rain_forecast_72h_mm"]);
+  if (forecastRain != null) {
+    out.push({ metric: "forecast_rain_72h_mm", label: labelForDiagnosticMetric("forecast_rain_72h_mm"), value: forecastRain, unit: "mm", role: "diagnosis_input" });
+  }
+  return out;
+}
+
+async function buildDiagnosticInputsForReportV1(params: {
+  pool: Pool;
+  tenant: TenantTriple;
+  field_id: string | null;
+  recommendation_payload: any;
+  diagnosis_human: string | null;
+}): Promise<DiagnosticInputsForReportV1> {
+  const { pool, tenant, field_id, recommendation_payload, diagnosis_human } = params;
+  const empty: DiagnosticInputsForReportV1 = { field_id, devices: [], observations: fallbackDiagnosticObservationsFromRecommendation(recommendation_payload), diagnosis: { human: diagnosis_human } };
+  if (!field_id) return empty;
+
+  const deviceQ = await pool.query(
+    `SELECT b.device_id,
+            COALESCE(d.display_name, b.device_id) AS display_name,
+            c.capabilities::jsonb AS capabilities,
+            o.metric,
+            o.value_num,
+            o.unit
+       FROM device_binding_index_v1 b
+       LEFT JOIN device_index_v1 d ON d.tenant_id = b.tenant_id AND d.device_id = b.device_id
+       LEFT JOIN device_capability c ON c.tenant_id = b.tenant_id AND c.device_id = b.device_id
+       LEFT JOIN LATERAL (
+         SELECT metric, value_num, unit
+           FROM device_observation_index_v1
+          WHERE tenant_id = b.tenant_id
+            AND project_id = $2
+            AND group_id = $3
+            AND field_id = b.field_id
+            AND device_id = b.device_id
+            AND metric IN ('soil_moisture_percent','soil_moisture','soil_moisture_pct','soil_moisture_vwc','moisture_pct','forecast_rain_72h_mm','forecast_rain_72h','rain_forecast_72h_mm')
+          ORDER BY observed_at_ts_ms DESC
+          LIMIT 1
+       ) o ON true
+      WHERE b.tenant_id = $1 AND b.field_id = $4
+      ORDER BY b.bound_ts_ms DESC NULLS LAST, b.device_id ASC
+      LIMIT 20`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, field_id],
+  ).catch(() => ({ rows: [] as any[] }));
+
+  const observationQ = await pool.query(
+    `SELECT DISTINCT ON (metric) metric, value_num, unit
+       FROM device_observation_index_v1
+      WHERE tenant_id = $1
+        AND project_id = $2
+        AND group_id = $3
+        AND field_id = $4
+        AND metric IN ('soil_moisture_percent','soil_moisture','soil_moisture_pct','soil_moisture_vwc','moisture_pct','forecast_rain_72h_mm','forecast_rain_72h','rain_forecast_72h_mm')
+      ORDER BY metric, observed_at_ts_ms DESC`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, field_id],
+  ).catch(() => ({ rows: [] as any[] }));
+
+  const devices = (deviceQ.rows ?? []).map((row: any) => {
+    const metric = normalizeDiagnosticMetric(row.metric);
+    const capabilities = parseJsonArrayMaybe(row.capabilities);
+    return {
+      device_id: String(row.device_id ?? ""),
+      display_name: toText(row.display_name) ?? String(row.device_id ?? ""),
+      capability: capabilityForDiagnosticMetric(metric, capabilities),
+      metric,
+      value: toFiniteNumberOrNull(row.value_num),
+      unit: metric ? unitForDiagnosticMetric(metric, row.unit) : toText(row.unit),
+    };
+  }).filter((item: any) => item.device_id);
+
+  const observationByMetric = new Map<string, DiagnosticInputsForReportV1["observations"][number]>();
+  for (const fallback of empty.observations) {
+    if (!observationByMetric.has(fallback.metric)) observationByMetric.set(fallback.metric, fallback);
+  }
+  for (const row of observationQ.rows ?? []) {
+    const metric = normalizeDiagnosticMetric((row as any).metric);
+    if (!metric || observationByMetric.has(metric)) continue;
+    observationByMetric.set(metric, {
+      metric,
+      label: labelForDiagnosticMetric(metric),
+      value: toFiniteNumberOrNull((row as any).value_num),
+      unit: unitForDiagnosticMetric(metric, (row as any).unit),
+      role: "diagnosis_input",
+    });
+  }
+
+  return {
+    field_id,
+    devices,
+    observations: Array.from(observationByMetric.values()),
+    diagnosis: { human: diagnosis_human },
+  };
+}
+
 type FieldReportDetailResponseV1 = { ok: true; field_report_v1: FieldReportDetailV1 };
 const FIELD_REPORT_OPERATION_LIMIT = 20;
+
+
+function objectFromJsonColumn(value: unknown): any {
+  return parseRecordJson(value) ?? (value && typeof value === "object" ? value : {});
+}
+
+async function queryPrescriptionForReport(pool: Pool, tenant: TenantTriple, s: OperationStateV1): Promise<any | null> {
+  const prescriptionId = toText((s as any).prescription_id);
+  const recommendationId = toText(s.recommendation_id);
+  if (!prescriptionId && !recommendationId) return null;
+  const q = await pool.query(
+    `SELECT prescription_id, operation_amount::jsonb AS operation_amount, operation_type
+       FROM prescription_contract_v1
+      WHERE tenant_id = $1
+        AND project_id = $2
+        AND group_id = $3
+        AND (($4::text IS NOT NULL AND prescription_id = $4) OR ($5::text IS NOT NULL AND recommendation_id = $5))
+      ORDER BY updated_at DESC, created_at DESC, prescription_id DESC
+      LIMIT 1`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, prescriptionId, recommendationId],
+  ).catch(() => ({ rows: [] as any[] }));
+  const row = q.rows?.[0] ?? null;
+  if (!row) return null;
+  const amount = objectFromJsonColumn(row.operation_amount);
+  return {
+    prescription_id: toText(row.prescription_id),
+    amount: toFiniteNumberOrNull(amount?.amount ?? amount?.value),
+    unit: toText(amount?.unit),
+    operation_type: toText(row.operation_type),
+  };
+}
+
+async function queryAsExecutedForReport(pool: Pool, tenant: TenantTriple, s: OperationStateV1): Promise<any | null> {
+  const asExecutedId = toText((s as any).as_executed_id);
+  const taskId = toText(s.task_id ?? s.act_task_id);
+  const receiptId = toText(s.receipt_id);
+  const prescriptionId = toText((s as any).prescription_id);
+  if (!asExecutedId && !taskId && !receiptId && !prescriptionId) return null;
+  const q = await pool.query(
+    `SELECT as_executed_id, planned::jsonb AS planned, executed::jsonb AS executed, deviation::jsonb AS deviation
+       FROM as_executed_record_v1
+      WHERE tenant_id = $1
+        AND project_id = $2
+        AND group_id = $3
+        AND (
+          ($4::text IS NOT NULL AND as_executed_id = $4)
+          OR ($5::text IS NOT NULL AND task_id = $5)
+          OR ($6::text IS NOT NULL AND receipt_id = $6)
+          OR ($7::text IS NOT NULL AND prescription_id = $7)
+        )
+      ORDER BY updated_at DESC, created_at DESC, as_executed_id DESC
+      LIMIT 1`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, asExecutedId, taskId, receiptId, prescriptionId],
+  ).catch(() => ({ rows: [] as any[] }));
+  const row = q.rows?.[0] ?? null;
+  if (!row) return null;
+  const planned = objectFromJsonColumn(row.planned);
+  const executed = objectFromJsonColumn(row.executed);
+  const deviationObj = objectFromJsonColumn(row.deviation);
+  const plannedAmount = toFiniteNumberOrNull(planned?.amount);
+  const executedAmount = toFiniteNumberOrNull(executed?.amount ?? executed?.observed_parameters?.amount);
+  return {
+    as_executed_id: toText(row.as_executed_id),
+    planned_amount: plannedAmount,
+    executed_amount: executedAmount,
+    unit: toText(executed?.unit ?? planned?.unit),
+    deviation: toFiniteNumberOrNull(deviationObj?.amount_delta) ?? (plannedAmount != null && executedAmount != null ? Number((executedAmount - plannedAmount).toFixed(4)) : null),
+    status: toText(executed?.status),
+  };
+}
+
+async function queryAsAppliedForReport(pool: Pool, tenant: TenantTriple, s: OperationStateV1, asExecuted: any | null): Promise<any | null> {
+  const asExecutedId = toText(asExecuted?.as_executed_id ?? (s as any).as_executed_id);
+  const taskId = toText(s.task_id ?? s.act_task_id);
+  const receiptId = toText(s.receipt_id);
+  const prescriptionId = toText((s as any).prescription_id);
+  if (!asExecutedId && !taskId && !receiptId && !prescriptionId) return null;
+  const q = await pool.query(
+    `SELECT field_id, coverage::jsonb AS coverage, application::jsonb AS application
+       FROM as_applied_map_v1
+      WHERE tenant_id = $1
+        AND project_id = $2
+        AND group_id = $3
+        AND (
+          ($4::text IS NOT NULL AND as_executed_id = $4)
+          OR ($5::text IS NOT NULL AND task_id = $5)
+          OR ($6::text IS NOT NULL AND receipt_id = $6)
+          OR ($7::text IS NOT NULL AND prescription_id = $7)
+        )
+      ORDER BY updated_at DESC, created_at DESC, as_applied_id DESC
+      LIMIT 1`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, asExecutedId, taskId, receiptId, prescriptionId],
+  ).catch(() => ({ rows: [] as any[] }));
+  const row = q.rows?.[0] ?? null;
+  if (!row) return null;
+  const coverage = objectFromJsonColumn(row.coverage);
+  const application = objectFromJsonColumn(row.application);
+  return {
+    coverage_percent: toFiniteNumberOrNull(coverage?.coverage_percent ?? application?.avg_coverage_percent ?? application?.coverage_percent),
+    field_id: toText(row.field_id),
+  };
+}
 
 async function queryRoiLedgerForReport(pool: Pool, tenant: TenantTriple, s: OperationStateV1): Promise<any[]> {
   const q = await pool.query(
@@ -351,6 +618,13 @@ export async function projectReportV1(params: {
   const recommendationPayload = recommendationFact?.record_json?.payload ?? {};
   const explainHuman = toText(recommendationPayload?.summary ?? recommendationPayload?.action_summary ?? recommendationPayload?.reason);
   const objectiveText = toText(recommendationPayload?.objective_text ?? recommendationPayload?.expected_effect?.[0]?.description ?? recommendationPayload?.expected_effect?.[0]?.metric);
+  const diagnosticInputs = await buildDiagnosticInputsForReportV1({
+    pool,
+    tenant,
+    field_id: operationState.field_id ?? null,
+    recommendation_payload: recommendationPayload,
+    diagnosis_human: explainHuman,
+  });
   const approvalStatus = normalizeApprovalStatus(approvalDecisionFact?.record_json?.payload?.decision, Boolean(approvalRequestFact));
   const operationTitle = deriveOperationTitle(operationState.action_type ?? recommendationPayload?.suggested_action?.action_type);
   const operationStateAny: any = operationState as any;
@@ -391,6 +665,9 @@ export async function projectReportV1(params: {
     status: operationState.acceptance?.status,
   } : null;
   const receiptForReport = normalizedReceipt ? { execution_started_at: normalizedReceipt.execution_started_at, execution_finished_at: normalizedReceipt.execution_finished_at } : null;
+  const prescriptionForReport = await queryPrescriptionForReport(pool, tenant, operationState);
+  const asExecutedForReport = await queryAsExecutedForReport(pool, tenant, operationState);
+  const asAppliedForReport = await queryAsAppliedForReport(pool, tenant, operationState, asExecutedForReport);
 
   const operationReport = projectOperationReportV1({
     tenant,
@@ -418,6 +695,7 @@ export async function projectReportV1(params: {
     roi_ledger: await queryRoiLedgerForReport(pool, tenant, operationState),
     sampling_view: samplingView,
     why: { explain_human: explainHuman, objective_text: objectiveText },
+    diagnostic_inputs: diagnosticInputs,
     operation_title: operationTitle,
     customer_title: operationTitle,
   });
@@ -426,8 +704,15 @@ export async function projectReportV1(params: {
     reportWithFertilization,
     pestDiseaseInspectionView,
   );
-  return {
+  const reportWithExecutionBlocks: OperationReportV1 = {
     ...reportWithPestDiseaseInspection,
+    prescription: prescriptionForReport,
+    as_executed: asExecutedForReport
+      ? { ...(reportWithPestDiseaseInspection as any).as_executed, ...asExecutedForReport }
+      : (reportWithPestDiseaseInspection as any).as_executed,
+    as_applied: asAppliedForReport
+      ? { ...(reportWithPestDiseaseInspection as any).as_applied, ...asAppliedForReport }
+      : (reportWithPestDiseaseInspection as any).as_applied,
     evidence_pack_summary: buildOperationEvidencePackSummaryV1({
       receipt: receiptFact ?? receiptForReport,
       evidence_bundle: evidenceBundle,
@@ -447,6 +732,7 @@ export async function projectReportV1(params: {
       now: new Date(operationReport.generated_at),
     }),
   };
+  return reportWithExecutionBlocks;
 }
 
 export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void {
