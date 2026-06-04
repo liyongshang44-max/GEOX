@@ -770,7 +770,7 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
     });
     const candidateIds = Array.from(new Set([state.operation_id, state.operation_plan_id, state.recommendation_id, state.act_task_id, (state.acceptance as any)?.acceptance_id].map((x) => String(x ?? "").trim()).filter(Boolean)));
     const fm = await pool.query(
-      `SELECT memory_id,memory_type,metric_key,before_value,after_value,delta_value,target_range,confidence,summary_text,evidence_refs,skill_id,skill_trace_ref,occurred_at
+      `SELECT memory_id,memory_type,memory_lane,trust_level,formal_acceptance_id,source_lane,customer_visible_memory,learning_eligible,metric_key,before_value,after_value,delta_value,target_range,confidence,summary_text,evidence_refs,skill_id,skill_trace_ref,occurred_at
        FROM field_memory_v1
        WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3
          AND (operation_id = ANY($4::text[]) OR task_id = ANY($4::text[]) OR recommendation_id = ANY($4::text[]) OR prescription_id = ANY($4::text[]) OR acceptance_id = ANY($4::text[]))
@@ -821,9 +821,28 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       .filter((x) => hasFieldAccess(auth, String(x.field_id ?? "")))
       .sort((a, b) => Number(b.last_event_ts ?? 0) - Number(a.last_event_ts ?? 0))
       .slice(0, FIELD_REPORT_OPERATION_LIMIT);
-    const items = await Promise.all(fieldStates.map(async (state) => ensureReportV1ExtendedFields(await projectReportV1({ pool, tenant, operationState: state }))));
-    const fieldNameQ = await pool.query(`SELECT name FROM field_index_v1 WHERE tenant_id = $1 AND field_id = $2 LIMIT 1`, [tenant.tenant_id, fieldId]).catch(() => ({ rows: [] as any[] }));
+    const items = await Promise.all(fieldStates.map(async (state) => {
+      const projected = ensureReportV1ExtendedFields(await projectReportV1({ pool, tenant, operationState: state }));
+      const candidateIds = Array.from(new Set([state.operation_id, state.operation_plan_id, state.recommendation_id, state.act_task_id, (state.acceptance as any)?.acceptance_id].map((x) => String(x ?? "").trim()).filter(Boolean)));
+      const fm = candidateIds.length > 0 ? await pool.query(
+        `SELECT memory_id,memory_type,memory_lane,trust_level,formal_acceptance_id,source_lane,customer_visible_memory,learning_eligible,metric_key,before_value,after_value,delta_value,target_range,confidence,summary_text,evidence_refs,skill_id,skill_trace_ref,occurred_at
+           FROM field_memory_v1
+          WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3
+            AND (operation_id = ANY($4::text[]) OR task_id = ANY($4::text[]) OR recommendation_id = ANY($4::text[]) OR prescription_id = ANY($4::text[]) OR acceptance_id = ANY($4::text[]))
+          ORDER BY occurred_at DESC LIMIT 50`,
+        [tenant.tenant_id, tenant.project_id, tenant.group_id, candidateIds],
+      ).catch(() => ({ rows: [] as any[] })) : { rows: [] as any[] };
+      const normalizedMemoryRows = (fm.rows ?? []).map((x: any) => normalizeFieldMemoryRow(x));
+      projected.field_memory = {
+        field_response_memory: normalizedMemoryRows.filter((x:any)=>x.memory_type==="FIELD_RESPONSE_MEMORY"),
+        device_reliability_memory: normalizedMemoryRows.filter((x:any)=>x.memory_type==="DEVICE_RELIABILITY_MEMORY"),
+        skill_performance_memory: normalizedMemoryRows.filter((x:any)=>x.memory_type==="SKILL_PERFORMANCE_MEMORY"),
+      };
+      return buildGuardedOperationReportV1({ pool, report: projected });
+    }));
+    const fieldNameQ = await pool.query(`SELECT name, area_m2, area_ha FROM field_index_v1 WHERE tenant_id = $1 AND field_id = $2 LIMIT 1`, [tenant.tenant_id, fieldId]).catch(() => ({ rows: [] as any[] }));
     const fieldName = toText(fieldNameQ.rows?.[0]?.name);
+    const polygonQ = await pool.query(`SELECT polygon_geojson_json FROM field_polygon_v1 WHERE tenant_id = $1 AND field_id = $2 LIMIT 1`, [tenant.tenant_id, fieldId]).catch(() => ({ rows: [] as any[] }));
     const boundDevicesQ = await pool.query(
       `SELECT b.device_id, s.last_telemetry_ts_ms
          FROM device_binding_index_v1 b
@@ -856,6 +875,7 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       reports: items,
       open_alerts_count: openAlertsCount,
       device_summary: { total_devices: boundDeviceIds.length, online_devices: onlineDevices, offline_devices: Math.max(0, boundDeviceIds.length - onlineDevices), last_telemetry_at: toIsoFromEpochMs(lastTelemetryMs) },
+      field_context: { area_m2: toFiniteNumberOrNull(fieldNameQ.rows?.[0]?.area_m2), area_ha: toFiniteNumberOrNull(fieldNameQ.rows?.[0]?.area_ha), boundary_geojson: polygonQ.rows?.[0]?.polygon_geojson_json ?? null },
     });
     const payload: FieldReportDetailResponseV1 = { ok: true, field_report_v1: fieldReport };
     return reply.send(payload);

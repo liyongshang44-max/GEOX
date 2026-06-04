@@ -223,9 +223,19 @@ async function assertFieldReport() {
   const r = await http(`/api/v1/reports/field/${FORMAL_FIELD}?tenant_id=${TENANT}&project_id=${PROJECT_ID}&group_id=${GROUP_ID}`);
   assert(r.status === 200, 'field report request failed', httpDetail(r));
   const report = r.json.field_report_v1;
-  assert(JSON.stringify(report).includes(FORMAL_OP), 'field report missing C8 formal operation', report);
+  assert(report?.field_context?.field_id === FORMAL_FIELD, 'field report field_context.field_id mismatch', report?.field_context);
+  assert(Number(report?.field_context?.area_m2 || 0) > 0, 'field report field_context.area_m2 missing', report?.field_context);
+  assert(report?.field_context?.boundary_geojson, 'field report field_context.boundary_geojson missing', report?.field_context);
   assert(Number(report?.device_summary?.total_devices || 0) >= 3, 'field report device_summary.total_devices < 3', report?.device_summary);
-  assert(JSON.stringify(report).includes('FORMAL_ACCEPTED') || JSON.stringify(report).includes('FORMAL_FIELD_MEMORY') || JSON.stringify(report).includes('field_response_memory'), 'field report missing formal ROI/field memory evidence', report);
+  assert((report?.sensing_summary?.devices || []).some((x) => x.device_id === 'dev_soil_c8_001'), 'field report sensing_summary missing soil device', report?.sensing_summary);
+  assert((report?.sensing_summary?.observations || []).some((x) => x.metric === 'soil_moisture_percent'), 'field report sensing_summary missing soil moisture observation', report?.sensing_summary);
+  assert(report?.decision_summary?.latest_recommendation_id === 'rec_c8_irrigation_001', 'field report decision_summary recommendation mismatch', report?.decision_summary);
+  assert(report?.decision_summary?.prescription_id === 'presc_c8_irrigation_001', 'field report decision_summary prescription mismatch', report?.decision_summary);
+  assert(Number(report?.execution_summary?.formal_operation_count || 0) >= 1, 'field report execution_summary formal operation missing', report?.execution_summary);
+  assert(report?.execution_summary?.latest_operation_id === FORMAL_OP, 'field report execution_summary latest operation mismatch', report?.execution_summary);
+  assert(report?.value_summary?.has_customer_visible_value === true, 'field report value_summary must expose formal customer value', report?.value_summary);
+  assert(Number(report?.learning_summary?.formal_field_response_memory_count || 0) >= 1, 'field report learning_summary formal field memory missing', report?.learning_summary);
+  assert(report?.learning_summary?.latest_formal_acceptance_id === FORMAL_ACC, 'field report learning_summary formal acceptance mismatch', report?.learning_summary);
 }
 
 (async () => {
