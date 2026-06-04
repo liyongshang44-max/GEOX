@@ -131,3 +131,16 @@ export function attachRoiTrustV1<T extends Record<string, any>>(row: T, options?
 export function attachRoiTrustListV1<T extends Record<string, any>>(rows: T[], options?: { default_source_lane?: RoiSourceLaneV1 }): Array<T & RoiTrustProjectionV1> {
   return rows.map((row) => attachRoiTrustV1(row, options));
 }
+
+export function buildFormalAcceptedRoiTrustV1(formalAcceptanceId: string): RoiTrustProjectionV1 {
+  const normalizedAcceptanceId = String(formalAcceptanceId ?? "").trim();
+  return {
+    trust_level: "FORMAL_ACCEPTED",
+    source_lane: "FORMAL_ACCEPTANCE",
+    formal_acceptance_id: normalizedAcceptanceId,
+    formal_evidence_passed: true,
+    chain_validation_passed: true,
+    customer_visible_value: true,
+    trust_reasons: ["FORMAL_ACCEPTANCE_PASS", "FORMAL_EVIDENCE_PASSED", "CHAIN_VALIDATION_PASSED"],
+  };
+}

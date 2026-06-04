@@ -47,9 +47,10 @@ assertIncludes(projection, 'function isTrustedRoiItem(item: any): boolean { retu
 assertIncludes(guardedReport, 'export function isFormalCustomerValueItem', 'guarded report formal ROI helper');
 assertIncludes(guardedReport, 'item?.trust_level === "FORMAL_ACCEPTED"', 'formal ROI trust level condition');
 assertIncludes(guardedReport, 'item?.source_lane === "FORMAL_ACCEPTANCE"', 'formal ROI source lane condition');
-assertIncludes(guardedReport, 'Boolean(item?.formal_acceptance_id)', 'formal ROI formal acceptance condition');
+assertIncludes(guardedReport, 'formalAcceptanceId(item) != null', 'formal ROI formal acceptance condition');
 assertIncludes(guardedReport, 'item?.formal_evidence_passed === true', 'formal ROI evidence condition');
 assertIncludes(guardedReport, 'item?.chain_validation_passed === true', 'formal ROI chain condition');
+assertIncludes(guardedReport, 'hasFormalFieldMemoryInAggregate', 'field report guard must require formal field memory evidence');
 assertIncludes(projection, 'has_customer_visible_value: hasValue', 'ROI customer visible value must be trusted-only');
 assertIncludes(projection, '暂无可作为客户正式价值结论的记录', 'ROI customer text must avoid weak value claim');
 assertNotIncludes(projection, 'valueKind === "MEASURED" && confidence !== "LOW"', 'dashboard trusted ROI must not be measured/confidence-only');
@@ -136,7 +137,8 @@ assertRuntime(reportAgg.roi_summary.has_customer_visible_value === false, 'assum
 assertRuntime(reportAgg.roi_summary.hypothesis_items === 1, 'assumption ROI must be counted as hypothesis');
 assertRuntime(reportAgg.roi_summary.trusted_value_items === 0, 'assumption ROI must not be trusted value');
 
-const formalReport = { ...weakReport, chain_validation: { passed: true, helper_or_simulated: false }, status_chain: [{ key: 'acceptance', status: 'DONE' }], fallback_limited: false, customer_visible_eligible: true, blocking_reasons: [], execution: { ...weakReport.execution, final_status: 'SUCCESS' }, acceptance: { status: 'PASS', formal_acceptance: true }, roi_ledger: { items: [formalRoi] } };
+const formalMemory = { memory_type: 'FIELD_RESPONSE_MEMORY', memory_lane: 'FORMAL_FIELD_MEMORY', trust_level: 'FORMAL_ACCEPTED', customer_visible_memory: true, learning_eligible: true, formal_acceptance_id: 'acc_1' };
+const formalReport = { ...weakReport, chain_validation: { passed: true, helper_or_simulated: false }, status_chain: [{ key: 'acceptance', status: 'DONE' }], fallback_limited: false, customer_visible_eligible: true, blocking_reasons: [], execution: { ...weakReport.execution, final_status: 'SUCCESS' }, acceptance: { status: 'PASS', formal_acceptance: true }, roi_ledger: { items: [formalRoi] }, field_memory: { field_response_memory: [formalMemory] } };
 const formalTrust = customerOperationListTrustFromGuardedReportV1(formalReport);
 assertRuntime(formalTrust.projection_source === 'GUARDED_REPORT', 'guarded formal report must be GUARDED_REPORT');
 assertRuntime(formalTrust.fallback_limited === false, 'guarded formal report must not be fallback limited');
