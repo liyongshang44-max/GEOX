@@ -111,7 +111,7 @@ export function registerFieldMemoryV1Routes(app: FastifyInstance, pool: Pool): v
     } catch (error) {
       const code = String((error as Error)?.message ?? "");
       if (code === "ACCEPTANCE_NOT_FOUND") return reply.status(404).send({ ok: false, error: code });
-      if (["ACCEPTANCE_VERDICT_NOT_PASS", "ACCEPTANCE_NOT_FORMAL", "FORMAL_EVIDENCE_NOT_PASSED", "ACCEPTANCE_FIELD_ID_MISSING", "OBSERVATION_PAIR_NOT_FOUND"].includes(code)) {
+      if (["ACCEPTANCE_VERDICT_NOT_PASS", "ACCEPTANCE_NOT_FORMAL", "FORMAL_EVIDENCE_NOT_PASSED", "CHAIN_VALIDATION_NOT_PASSED", "ACCEPTANCE_FIELD_ID_MISSING", "OBSERVATION_PAIR_NOT_FOUND"].includes(code)) {
         return reply.status(422).send({ ok: false, error: code });
       }
       req.log.error({ err: error }, "create formal field memory from acceptance failed");

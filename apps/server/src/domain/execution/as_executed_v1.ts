@@ -246,6 +246,11 @@ function pickExecutedAmount(payload: any, plannedUnit: string | null): { amount:
   const executedAmountObs = toNum(observed?.executed_amount);
   if (executedAmountObs != null) return { amount: executedAmountObs, unit: plannedUnit };
 
+  const metricWaterAmount = Array.isArray(payload?.metrics)
+    ? payload.metrics.map((item: any) => toNum(item?.water_mm_actual ?? item?.executed_amount ?? item?.amount)).find((v: number | null) => v != null)
+    : null;
+  if (metricWaterAmount != null) return { amount: metricWaterAmount, unit: plannedUnit };
+
   const water = toNum(payload?.resource_usage?.water_l);
   if (water != null && plannedUnit) {
     const unit = plannedUnit.toLowerCase();

@@ -253,13 +253,14 @@ function validateFormalFieldMemoryAcceptanceV1(payload: any): void {
   if (String(payload?.verdict ?? "").trim().toUpperCase() !== "PASS") throw new Error("ACCEPTANCE_VERDICT_NOT_PASS");
   if (acceptanceGateBool(payload, "formal_acceptance") !== true) throw new Error("ACCEPTANCE_NOT_FORMAL");
   if (acceptanceGateBool(payload, "formal_evidence_passed") !== true) throw new Error("FORMAL_EVIDENCE_NOT_PASSED");
+  if (acceptanceGateBool(payload, "chain_validation_passed") !== true) throw new Error("CHAIN_VALIDATION_NOT_PASSED");
 }
 
 function observationPairFromPayload(payload: any, evidenceRef: unknown, source: string): ObservationPairV1 | null {
   const observed = payload?.observed_parameters ?? payload?.metrics ?? payload ?? {};
-  let before = finiteFromKeys(observed, ["pre_soil_moisture", "before_soil_moisture", "soil_moisture_before", "before_value"]);
-  let after = finiteFromKeys(observed, ["post_soil_moisture", "after_soil_moisture", "soil_moisture_after", "after_value"]);
-  const delta = finiteFromKeys(observed, ["soil_moisture_delta", "moisture_delta", "telemetry_delta", "delta_value"]);
+  let before = finiteFromKeys(observed, ["pre_soil_moisture", "before_soil_moisture", "soil_moisture_before", "before_value", "soil_moisture_before_percent", "soil_moisture_percent_before"]);
+  let after = finiteFromKeys(observed, ["post_soil_moisture", "after_soil_moisture", "soil_moisture_after", "after_value", "soil_moisture_after_percent", "soil_moisture_percent_after"]);
+  const delta = finiteFromKeys(observed, ["soil_moisture_delta", "moisture_delta", "telemetry_delta", "delta_value", "delta_percent"]);
   if (before !== undefined && after === undefined && delta !== undefined) after = before + delta;
   if (after !== undefined && before === undefined && delta !== undefined) before = after - delta;
   if (before === undefined || after === undefined) return null;
@@ -270,6 +271,54 @@ function observationPairFromPayload(payload: any, evidenceRef: unknown, source: 
     evidence_refs: evidenceRef == null ? [] : [evidenceRef],
     source,
   };
+}
+
+async function loadAcceptanceObservationPairV1(acceptance: AcceptanceResultForMemoryV1): Promise<ObservationPairV1 | null> {
+  const payload = acceptance.payload ?? {};
+  const candidates = [
+    payload?.metrics,
+    payload?.observed_parameters,
+    payload?.formal_gate?.metrics,
+    payload,
+  ];
+  for (const candidate of candidates) {
+    const pair = observationPairFromPayload(candidate, { kind: "acceptance_fact", ref: acceptance.fact_id }, "acceptance_result_payload");
+    if (pair) return pair;
+  }
+  return null;
+}
+
+async function loadEvidenceArtifactObservationPairV1(db: DbConn, tenant: TenantTriple, acceptance: AcceptanceResultForMemoryV1, operationPlanId: string): Promise<ObservationPairV1 | null> {
+  const payload = acceptance.payload ?? {};
+  const evidenceRefs = normalizeEvidenceRefs(payload.evidence_refs).map((ref) => String(ref).trim()).filter(Boolean);
+  if (evidenceRefs.length === 0) return null;
+  const q = await db.query(
+    `SELECT fact_id, record_json::jsonb AS record_json
+       FROM facts
+      WHERE (record_json::jsonb->>'type') = 'evidence_artifact_v1'
+        AND (
+          fact_id = ANY($4::text[])
+          OR (record_json::jsonb#>>'{payload,evidence_id}') = ANY($4::text[])
+          OR (record_json::jsonb#>>'{payload,artifact_id}') = ANY($4::text[])
+        )
+        AND COALESCE(record_json::jsonb#>>'{payload,operation_plan_id}', record_json::jsonb#>>'{payload,operation_id}', $5) = $5
+        AND COALESCE(record_json::jsonb#>>'{payload,tenant_id}', $1) = $1
+        AND COALESCE(record_json::jsonb#>>'{payload,project_id}', $2) = $2
+        AND COALESCE(record_json::jsonb#>>'{payload,group_id}', $3) = $3
+      ORDER BY occurred_at DESC, fact_id DESC
+      LIMIT 10`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, evidenceRefs, operationPlanId]
+  );
+  for (const row of q.rows ?? []) {
+    const fact = parseJsonMaybe((row as any).record_json) ?? {};
+    const factPayload = fact.payload ?? {};
+    const candidates = [factPayload?.metrics, factPayload?.observed_parameters, factPayload?.metric_payload, factPayload];
+    for (const candidate of candidates) {
+      const pair = observationPairFromPayload(candidate, { kind: "evidence_artifact", ref: String((row as any).fact_id ?? "") }, "evidence_artifact_metric_payload");
+      if (pair) return pair;
+    }
+  }
+  return null;
 }
 
 async function loadReceiptObservationPairV1(db: DbConn, tenant: TenantTriple, acceptance: AcceptanceResultForMemoryV1, operationPlanId: string): Promise<ObservationPairV1 | null> {
@@ -309,7 +358,7 @@ async function loadDeviceObservationPairV1(db: DbConn, tenant: TenantTriple, fie
         AND project_id = $2
         AND group_id = $3
         AND field_id = $4
-        AND metric IN ('soil_moisture', 'soil_moisture_pct', 'soil_moisture_vwc', 'moisture_pct')
+        AND metric IN ('soil_moisture_percent', 'soil_moisture_after_percent', 'soil_moisture', 'soil_moisture_pct', 'soil_moisture_vwc', 'moisture_pct')
         AND value_num IS NOT NULL
       ORDER BY observed_at_ts_ms DESC
       LIMIT 2`,
@@ -375,7 +424,9 @@ export async function createFormalFieldMemoryFromAcceptanceV1(db: DbConn, tenant
 
   const fieldId = textOrNull(acceptance.payload?.field_id);
   if (!fieldId) throw new Error("ACCEPTANCE_FIELD_ID_MISSING");
-  const receiptPair = await loadReceiptObservationPairV1(db, tenant, acceptance, input.operation_plan_id);
+  const acceptancePair = await loadAcceptanceObservationPairV1(acceptance);
+  const evidencePair = acceptancePair ?? await loadEvidenceArtifactObservationPairV1(db, tenant, acceptance, input.operation_plan_id);
+  const receiptPair = evidencePair ?? await loadReceiptObservationPairV1(db, tenant, acceptance, input.operation_plan_id);
   const observationPair = receiptPair ?? await loadDeviceObservationPairV1(db, tenant, fieldId);
   if (!observationPair) throw new Error("OBSERVATION_PAIR_NOT_FOUND");
 

@@ -1,0 +1,229 @@
+#!/usr/bin/env node
+'use strict';
+
+const { Client } = require('pg');
+
+const PROJECT_ID = 'projectA';
+const GROUP_ID = 'groupA';
+const FORMAL_OP = 'op_plan_c8_irrigation_formal_001';
+const FORMAL_ACC = 'acc_c8_irrigation_formal_001';
+const FORMAL_RECEIPT = 'receipt_c8_irrigation_formal_001';
+const FORMAL_TASK = 'act_c8_irrigation_formal_001';
+const FORMAL_FIELD = 'field_c8_demo';
+
+function arg(name, fallback = null) {
+  const idx = process.argv.indexOf(`--${name}`);
+  return idx >= 0 ? process.argv[idx + 1] : fallback;
+}
+
+const BASE_URL = (arg('base-url') || process.env.BASE_URL || process.env.API_BASE_URL || '').replace(/\/+$/, '');
+const TENANT = arg('tenant') || process.env.TENANT_ID || 'tenantA';
+const TOKEN = process.env.ADMIN_TOKEN || process.env.AO_ACT_TOKEN || process.env.GEOX_AO_ACT_TOKEN || process.env.TOKEN || 'tenant_a_admin_token';
+const DATABASE_URL = process.env.DATABASE_URL;
+
+function fail(message, detail) {
+  console.error('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] FAIL:', message);
+  if (detail !== undefined) console.error(JSON.stringify(detail, null, 2));
+  process.exit(1);
+}
+function assert(condition, message, detail) { if (!condition) fail(message, detail); }
+function nearly(actual, expected, message) { assert(Math.abs(Number(actual) - Number(expected)) < 0.0001, `${message}: expected ${expected}, got ${actual}`); }
+function headers() { return { accept: 'application/json', 'content-type': 'application/json', authorization: `Bearer ${TOKEN}`, 'x-geox-token': TOKEN, 'x-geox-ao-act-token': TOKEN, 'x-ao-act-token': TOKEN }; }
+async function http(path, { method = 'GET', body } = {}) {
+  assert(BASE_URL, '--base-url or BASE_URL/API_BASE_URL is required');
+  const res = await fetch(`${BASE_URL}${path}`, { method, headers: headers(), body: body == null ? undefined : JSON.stringify(body) });
+  const text = await res.text();
+  let json = null;
+  try { json = text ? JSON.parse(text) : null; } catch {}
+  return { status: res.status, text, json };
+}
+function scoped(extra = {}) { return { tenant_id: TENANT, project_id: PROJECT_ID, group_id: GROUP_ID, ...extra }; }
+async function dbClient() {
+  assert(DATABASE_URL, 'DATABASE_URL is required for backend P0 acceptance negative/idempotent DB setup');
+  const client = new Client({ connectionString: DATABASE_URL });
+  await client.connect();
+  return client;
+}
+
+async function cleanupP0Rows(client) {
+  await client.query(`DELETE FROM as_applied_map_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND task_id LIKE 'p0_%'`, [TENANT, PROJECT_ID, GROUP_ID]).catch(() => {});
+  await client.query(`DELETE FROM as_executed_record_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND task_id LIKE 'p0_%'`, [TENANT, PROJECT_ID, GROUP_ID]).catch(() => {});
+  await client.query(`DELETE FROM facts WHERE fact_id LIKE 'p0_%'`).catch(() => {});
+}
+
+async function insertAcceptance(client, id, patch) {
+  const payload = scoped({
+    acceptance_id: id,
+    operation_plan_id: patch.operation_plan_id || FORMAL_OP,
+    operation_id: patch.operation_plan_id || FORMAL_OP,
+    act_task_id: patch.act_task_id || `task_${id}`,
+    field_id: patch.field_id || FORMAL_FIELD,
+    verdict: 'PASS',
+    formal_acceptance: true,
+    formal_evidence_passed: true,
+    chain_validation_passed: true,
+    source_lane: 'FORMAL_OPERATION',
+    is_simulated: false,
+    evidence_refs: [],
+    ...patch,
+  });
+  await client.query(
+    `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+     VALUES ($1, now(), 'acceptance-p0-test', $2::jsonb)
+     ON CONFLICT (fact_id) DO UPDATE SET record_json = EXCLUDED.record_json, occurred_at = now()`,
+    [id, JSON.stringify({ type: 'acceptance_result_v1', payload })]
+  );
+}
+async function insertReceipt(client, taskId, status, extra = {}) {
+  const factId = `p0_receipt_${taskId}`;
+  await client.query(
+    `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+     VALUES ($1, now(), 'receipt-p0-test', $2::jsonb)
+     ON CONFLICT (fact_id) DO UPDATE SET record_json = EXCLUDED.record_json, occurred_at = now()`,
+    [factId, JSON.stringify({ type: 'ao_act_receipt_v1', payload: scoped({ receipt_id: factId, task_id: taskId, act_task_id: taskId, status, ...extra }) })]
+  );
+  return factId;
+}
+async function asExecutedFromReceipt(taskId, receiptId) {
+  const r = await http('/api/v1/as-executed/from-receipt', { method: 'POST', body: scoped({ task_id: taskId, receipt_id: receiptId }) });
+  assert(r.status === 200, `as-executed from receipt failed for ${taskId}`, r.json || r.text);
+  return r.json.as_executed;
+}
+async function assertReceiptStatusMatrix(client) {
+  const cases = [
+    ['executed', 'CONFIRMED'], ['EXECUTED', 'CONFIRMED'], ['SUCCEEDED', 'CONFIRMED'], ['SUCCESS', 'CONFIRMED'], ['CONFIRMED', 'CONFIRMED'],
+    ['not_executed', 'FAILED'], ['NOT_EXECUTED', 'FAILED'], ['FAILED', 'FAILED'], ['ERROR', 'FAILED'],
+  ];
+  for (const [status, expected] of cases) {
+    const taskId = `p0_status_${String(status).toLowerCase()}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    const receiptId = await insertReceipt(client, taskId, status);
+    const ae = await asExecutedFromReceipt(taskId, receiptId);
+    assert(ae.executed.status === expected, `receipt status ${status} should map to ${expected}`, ae.executed);
+  }
+  const failedTask = `p0_status_empty_exception_${Date.now()}`;
+  const failedReceipt = await insertReceipt(client, failedTask, '', { exception: { code: 'ERR' } });
+  const failed = await asExecutedFromReceipt(failedTask, failedReceipt);
+  assert(failed.executed.status === 'FAILED', 'empty status + exception should map to FAILED', failed.executed);
+
+  const insufficientTask = `p0_status_empty_${Date.now()}`;
+  const insufficientReceipt = await insertReceipt(client, insufficientTask, '');
+  const insufficient = await asExecutedFromReceipt(insufficientTask, insufficientReceipt);
+  assert(insufficient.executed.status === 'INSUFFICIENT_RECEIPT', 'empty status without exception should map to INSUFFICIENT_RECEIPT', insufficient.executed);
+
+  const formal = await asExecutedFromReceipt(FORMAL_TASK, FORMAL_RECEIPT);
+  assert(formal.executed.status === 'CONFIRMED', 'C8 SUCCEEDED receipt should produce CONFIRMED as_executed', formal.executed);
+  return formal;
+}
+async function assertRoiFormalization(client, asExecutedId) {
+  const body = scoped({ operation_plan_id: FORMAL_OP, acceptance_id: FORMAL_ACC, as_executed_id: asExecutedId });
+  const first = await http('/api/v1/roi-ledger/formalize-from-acceptance', { method: 'POST', body });
+  assert(first.status === 200, 'ROI formalize positive case failed', first.json || first.text);
+  const rows = first.json.roi_ledgers || [];
+  assert(rows.length >= 1, 'ROI formalize returned no rows', first.json);
+  for (const row of rows) {
+    assert(row.trust_level === 'FORMAL_ACCEPTED', 'ROI trust_level not FORMAL_ACCEPTED', row);
+    assert(row.source_lane === 'FORMAL_ACCEPTANCE', 'ROI source_lane not FORMAL_ACCEPTANCE', row);
+    assert(row.formal_acceptance_id === FORMAL_ACC, 'ROI formal_acceptance_id mismatch', row);
+    assert(row.formal_evidence_passed === true, 'ROI formal_evidence_passed not true', row);
+    assert(row.chain_validation_passed === true, 'ROI chain_validation_passed not true', row);
+    assert(row.customer_visible_value === true, 'ROI customer_visible_value not true', row);
+  }
+  const second = await http('/api/v1/roi-ledger/formalize-from-acceptance', { method: 'POST', body });
+  assert(second.status === 200, 'ROI formalize idempotent second call failed', second.json || second.text);
+  assert(second.json.idempotent === true, 'ROI formalize second call should be idempotent=true', second.json);
+  const count = await client.query(`SELECT as_executed_id, roi_type, count(*)::int AS count FROM roi_ledger_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND as_executed_id=$4 GROUP BY as_executed_id, roi_type HAVING count(*) > 1`, [TENANT, PROJECT_ID, GROUP_ID, asExecutedId]);
+  assert(count.rows.length === 0, 'ROI formalize duplicated roi_type/as_executed rows', count.rows);
+
+  const negatives = [
+    ['p0_roi_bad_verdict', { verdict: 'FAIL' }, 422, 'ACCEPTANCE_VERDICT_NOT_PASS'],
+    ['p0_roi_not_formal', { formal_acceptance: false }, 422, 'ACCEPTANCE_NOT_FORMAL'],
+    ['p0_roi_no_evidence', { formal_evidence_passed: false }, 422, 'FORMAL_EVIDENCE_NOT_PASSED'],
+    ['p0_roi_no_chain', { chain_validation_passed: false }, 422, 'CHAIN_VALIDATION_NOT_PASSED'],
+  ];
+  for (const [id, patch, status, code] of negatives) {
+    await insertAcceptance(client, id, patch);
+    const r = await http('/api/v1/roi-ledger/formalize-from-acceptance', { method: 'POST', body: scoped({ operation_plan_id: FORMAL_OP, acceptance_id: id, as_executed_id: asExecutedId }) });
+    assert(r.status === status && r.json?.error === code, `ROI negative ${id} expected ${status}/${code}`, r.json || r.text);
+  }
+  const missing = await http('/api/v1/roi-ledger/formalize-from-acceptance', { method: 'POST', body: scoped({ operation_plan_id: FORMAL_OP, acceptance_id: FORMAL_ACC, as_executed_id: 'missing_as_executed_p0' }) });
+  assert(missing.status === 404 && missing.json?.error === 'AS_EXECUTED_NOT_FOUND', 'ROI missing as_executed negative failed', missing.json || missing.text);
+}
+async function assertFieldMemory(client) {
+  const body = scoped({ operation_plan_id: FORMAL_OP, acceptance_id: FORMAL_ACC });
+  const first = await http('/api/v1/field-memory/from-acceptance', { method: 'POST', body });
+  assert(first.status === 200, 'Field Memory from acceptance positive case failed', first.json || first.text);
+  assert(first.json.field_memory?.memory_lane === 'FORMAL_FIELD_MEMORY', 'field memory lane mismatch', first.json.field_memory);
+  assert(first.json.field_memory?.trust_level === 'FORMAL_ACCEPTED', 'field memory trust mismatch', first.json.field_memory);
+  assert(first.json.field_memory?.formal_acceptance_id === FORMAL_ACC, 'field memory formal acceptance id mismatch', first.json.field_memory);
+  assert(first.json.field_memory?.customer_visible_memory === true, 'field memory customer visibility mismatch', first.json.field_memory);
+  assert(first.json.field_memory?.learning_eligible === true, 'field memory learning eligibility mismatch', first.json.field_memory);
+
+  const second = await http('/api/v1/field-memory/from-acceptance', { method: 'POST', body });
+  assert(second.status === 200 && second.json.idempotent === true, 'field memory second call should be idempotent', second.json || second.text);
+  const count = await client.query(`SELECT count(*)::int AS count FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND formal_acceptance_id=$4 AND memory_type='FIELD_RESPONSE_MEMORY' AND memory_lane='FORMAL_FIELD_MEMORY'`, [TENANT, PROJECT_ID, GROUP_ID, FORMAL_ACC]);
+  assert(Number(count.rows[0].count) === 1, 'field memory duplicated formal FIELD_RESPONSE_MEMORY', count.rows[0]);
+
+  await insertAcceptance(client, 'p0_fm_no_chain', { chain_validation_passed: false });
+  const noChain = await http('/api/v1/field-memory/from-acceptance', { method: 'POST', body: scoped({ operation_plan_id: FORMAL_OP, acceptance_id: 'p0_fm_no_chain' }) });
+  assert(noChain.status === 422 && noChain.json?.error === 'CHAIN_VALIDATION_NOT_PASSED', 'field memory chain negative failed', noChain.json || noChain.text);
+
+  await insertAcceptance(client, 'p0_fm_no_obs', { operation_plan_id: 'op_plan_p0_no_obs', field_id: 'field_1_demo', evidence_refs: [] });
+  const noObs = await http('/api/v1/field-memory/from-acceptance', { method: 'POST', body: scoped({ operation_plan_id: 'op_plan_p0_no_obs', acceptance_id: 'p0_fm_no_obs' }) });
+  assert(noObs.status === 422 && noObs.json?.error === 'OBSERVATION_PAIR_NOT_FOUND', 'field memory missing observation pair negative failed', noObs.json || noObs.text);
+}
+function findBy(arr, pred) { return Array.isArray(arr) ? arr.find(pred) : null; }
+async function assertOperationReport() {
+  const r = await http(`/api/v1/reports/operation/${FORMAL_OP}?tenant_id=${TENANT}&project_id=${PROJECT_ID}&group_id=${GROUP_ID}`);
+  assert(r.status === 200, 'operation report request failed', r.json || r.text);
+  const report = r.json.operation_report_v1;
+  assert(report, 'operation report missing operation_report_v1', r.json);
+  const diag = report.diagnostic_inputs;
+  assert(diag?.field_id === FORMAL_FIELD, 'diagnostic_inputs.field_id mismatch', diag);
+  assert((diag.devices || []).length >= 2, 'diagnostic_inputs.devices must contain at least 2 devices', diag);
+  assert(findBy(diag.devices, (x) => x.device_id === 'dev_soil_c8_001'), 'diagnostic_inputs missing dev_soil_c8_001', diag.devices);
+  assert(findBy(diag.devices, (x) => x.device_id === 'dev_weather_station_c8_001'), 'diagnostic_inputs missing dev_weather_station_c8_001', diag.devices);
+  const soil = findBy(diag.observations, (x) => x.metric === 'soil_moisture_percent');
+  const rain = findBy(diag.observations, (x) => x.metric === 'forecast_rain_72h_mm');
+  assert(soil, 'diagnostic_inputs missing soil_moisture_percent observation', diag.observations);
+  assert(rain, 'diagnostic_inputs missing forecast_rain_72h_mm observation', diag.observations);
+  nearly(soil.value, 18.4, 'soil_moisture_percent observation value');
+  nearly(rain.value, 2, 'forecast_rain_72h_mm observation value');
+  assert(String(diag.diagnosis?.human || '').trim(), 'diagnostic_inputs.diagnosis.human must be non-empty', diag);
+
+  assert(report.prescription?.prescription_id === 'presc_c8_irrigation_001', 'report prescription_id mismatch', report.prescription);
+  nearly(report.prescription?.amount, 22, 'report prescription.amount');
+  assert(report.prescription?.unit === 'mm', 'report prescription.unit mismatch', report.prescription);
+  assert(report.as_executed?.as_executed_id, 'report as_executed_id missing', report.as_executed);
+  nearly(report.as_executed?.planned_amount, 22, 'report as_executed.planned_amount');
+  nearly(report.as_executed?.executed_amount, 21.6, 'report as_executed.executed_amount');
+  assert(report.as_executed?.unit === 'mm', 'report as_executed.unit mismatch', report.as_executed);
+  assert(report.as_executed?.status === 'CONFIRMED', 'report as_executed.status mismatch', report.as_executed);
+  nearly(report.as_applied?.coverage_percent, 100, 'report as_applied.coverage_percent');
+  assert(report.as_applied?.field_id === FORMAL_FIELD, 'report as_applied.field_id mismatch', report.as_applied);
+  assert(report.roi_ledger?.summary?.has_customer_visible_value === true, 'report ROI has_customer_visible_value must be true', report.roi_ledger?.summary);
+  assert((report.field_memory?.field_response_memory || []).length >= 1, 'report field memory response rows missing', report.field_memory);
+}
+async function assertFieldReport() {
+  const r = await http(`/api/v1/reports/field/${FORMAL_FIELD}?tenant_id=${TENANT}&project_id=${PROJECT_ID}&group_id=${GROUP_ID}`);
+  assert(r.status === 200, 'field report request failed', r.json || r.text);
+  const report = r.json.field_report_v1;
+  assert(JSON.stringify(report).includes(FORMAL_OP), 'field report missing C8 formal operation', report);
+  assert(Number(report?.device_summary?.total_devices || 0) >= 3, 'field report device_summary.total_devices < 3', report?.device_summary);
+  assert(JSON.stringify(report).includes('FORMAL_ACCEPTED') || JSON.stringify(report).includes('FORMAL_FIELD_MEMORY') || JSON.stringify(report).includes('field_response_memory'), 'field report missing formal ROI/field memory evidence', report);
+}
+
+(async () => {
+  const client = await dbClient();
+  try {
+    await cleanupP0Rows(client);
+    const asExecuted = await assertReceiptStatusMatrix(client);
+    await assertRoiFormalization(client, asExecuted.as_executed_id);
+    await assertFieldMemory(client);
+    await assertOperationReport();
+    await assertFieldReport();
+    console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] PASS', JSON.stringify({ base_url: BASE_URL, tenant: TENANT, as_executed_id: asExecuted.as_executed_id }));
+  } finally {
+    await cleanupP0Rows(client);
+    await client.end().catch(() => {});
+  }
+})().catch((error) => fail(error?.message || String(error), error?.stack));
