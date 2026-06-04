@@ -147,6 +147,7 @@ jobs:
           node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --apply --tenant tenantA
           node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --verify --tenant tenantA
           node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --verify-api --tenant tenantA --base-url http://127.0.0.1:3001
+          node scripts/governance_acceptance/ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1.cjs --base-url http://127.0.0.1:3001 --tenant tenantA
           node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --export-db-json --tenant tenantA --out acceptance-output/controlled_pilot_full_review.actual.json
 
       - name: Install Playwright Chromium for frontend audit
