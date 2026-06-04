@@ -11,6 +11,7 @@ import {
 } from "../auth/tenant_scope_v1.js";
 import {
   createRoiLedgersFromAsExecuted,
+  formalizeRoiLedgersFromAcceptance,
   listRoiLedgerByAsExecuted,
   listRoiLedgerByField,
   listRoiLedgerByPrescription,
@@ -76,6 +77,63 @@ export function registerRoiLedgerV1Routes(app: FastifyInstance, pool: Pool): voi
         code: String((error as any)?.code ?? ""),
         detail: String((error as any)?.detail ?? ""),
       });
+    }
+  });
+
+  app.post("/api/v1/roi-ledger/formalize-from-acceptance", async (req, reply) => {
+    const auth = requireAoActAnyScopeV0(req, reply, ["roi_ledger.write"]);
+    if (!auth) return;
+
+    const body: any = req.body ?? {};
+    const tenant = tenantFromBodyOrAuthV1(body, auth);
+    if (!requireTenantScopeV1(reply, tenant)) return;
+    if (!requireTenantMatchOr404V1(reply, auth, tenant)) return;
+
+    const operation_plan_id = String(body?.operation_plan_id ?? "").trim();
+    const acceptance_id = String(body?.acceptance_id ?? "").trim();
+    const as_executed_id = String(body?.as_executed_id ?? "").trim();
+    if (!operation_plan_id) return reply.status(400).send({ ok: false, error: "MISSING_OPERATION_PLAN_ID" });
+    if (!acceptance_id) return reply.status(400).send({ ok: false, error: "MISSING_ACCEPTANCE_ID" });
+    if (!as_executed_id) return reply.status(400).send({ ok: false, error: "MISSING_AS_EXECUTED_ID" });
+
+    try {
+      const result = await formalizeRoiLedgersFromAcceptance(pool, {
+        ...tenant,
+        operation_plan_id,
+        acceptance_id,
+        as_executed_id,
+      });
+      return reply.send({
+        ok: true,
+        idempotent: result.idempotent,
+        acceptance: result.acceptance,
+        trust_layer: {
+          source_lane: "FORMAL_ACCEPTANCE",
+          trust_level: "FORMAL_ACCEPTED",
+          formal_acceptance_id: result.acceptance.acceptance_id,
+          formal_evidence_passed: true,
+          chain_validation_passed: true,
+          customer_visible_value: true,
+        },
+        roi_ledgers: attachRoiTrustListV1(result.roi_ledgers, { default_source_lane: "FORMAL_ACCEPTANCE" }),
+      });
+    } catch (error) {
+      const code = String((error as Error)?.message ?? "");
+      if (code === "ACCEPTANCE_NOT_FOUND" || code === "AS_EXECUTED_NOT_FOUND") {
+        return reply.status(404).send({ ok: false, error: code });
+      }
+      if (["ACCEPTANCE_VERDICT_NOT_PASS", "ACCEPTANCE_NOT_FORMAL", "FORMAL_EVIDENCE_NOT_PASSED", "CHAIN_VALIDATION_NOT_PASSED"].includes(code)) {
+        return reply.status(422).send({ ok: false, error: code });
+      }
+      if (code.startsWith("ROI_LEDGER_NOT_CREATED:")) {
+        return reply.status(422).send({
+          ok: false,
+          error: "ROI_LEDGER_NOT_CREATED",
+          reason: code.slice("ROI_LEDGER_NOT_CREATED:".length) || "UNKNOWN",
+        });
+      }
+      req.log.error({ err: error }, "formalize roi ledger from acceptance failed");
+      return reply.status(500).send({ ok: false, error: "INTERNAL_ERROR" });
     }
   });
 
