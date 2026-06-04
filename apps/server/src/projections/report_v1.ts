@@ -142,7 +142,19 @@ export type OperationReportV1 = {
     act_task_id: string | null;
     receipt_id: string | null;
   };
+  prescription?: {
+    prescription_id: string | null;
+    amount: number | null;
+    unit: string | null;
+    operation_type: string | null;
+  } | null;
   as_executed: {
+    as_executed_id?: string | null;
+    planned_amount?: number | null;
+    executed_amount?: number | null;
+    unit?: string | null;
+    deviation?: number | null;
+    status?: string | null;
     operation_id: string;
     execution_mode: "DEVICE" | "HUMAN";
     started_at: string | null;
@@ -228,6 +240,8 @@ export type OperationReportV1 = {
     low_confidence_items: RoiLedgerSummary[];
   };
   as_applied: {
+    coverage_percent?: number | null;
+    field_id?: string | null;
     operation_id: string;
     coverage_status: "AVAILABLE" | "MISSING" | "NOT_APPLICABLE";
     coverage_geojson: Record<string, unknown> | null;

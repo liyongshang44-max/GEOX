@@ -704,11 +704,15 @@ export async function projectReportV1(params: {
     reportWithFertilization,
     pestDiseaseInspectionView,
   );
-  const reportWithExecutionBlocks: any = {
+  const reportWithExecutionBlocks: OperationReportV1 = {
     ...reportWithPestDiseaseInspection,
     prescription: prescriptionForReport,
-    as_executed: asExecutedForReport ?? (reportWithPestDiseaseInspection as any).as_executed,
-    as_applied: asAppliedForReport ?? (reportWithPestDiseaseInspection as any).as_applied,
+    as_executed: asExecutedForReport
+      ? { ...(reportWithPestDiseaseInspection as any).as_executed, ...asExecutedForReport }
+      : (reportWithPestDiseaseInspection as any).as_executed,
+    as_applied: asAppliedForReport
+      ? { ...(reportWithPestDiseaseInspection as any).as_applied, ...asAppliedForReport }
+      : (reportWithPestDiseaseInspection as any).as_applied,
     evidence_pack_summary: buildOperationEvidencePackSummaryV1({
       receipt: receiptFact ?? receiptForReport,
       evidence_bundle: evidenceBundle,

@@ -701,7 +701,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         },
         OperationReportV1: {
           type: "object",
-          required: ["type", "version", "generated_at", "approval", "why", "operation_title", "customer_title", "identifiers", "as_executed", "as_applied", "execution", "acceptance", "evidence", "cost", "sla", "field_memory", "risk", "roi_ledger", "workflow", "evidence_pack_summary"],
+          required: ["type", "version", "generated_at", "approval", "why", "diagnostic_inputs", "operation_title", "customer_title", "identifiers", "prescription", "as_executed", "as_applied", "execution", "acceptance", "evidence", "cost", "sla", "field_memory", "risk", "roi_ledger", "workflow", "evidence_pack_summary"],
           properties: {
             type: { type: "string", enum: ["operation_report_v1"] },
             version: { type: "string", enum: ["v1"] },
@@ -726,6 +726,46 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
                 objective_text: { type: "string", nullable: true }
               }
             },
+            diagnostic_inputs: {
+              type: "object",
+              required: ["field_id", "devices", "observations", "diagnosis"],
+              properties: {
+                field_id: { type: "string", nullable: true },
+                devices: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    required: ["device_id", "display_name", "capability", "metric", "value", "unit"],
+                    properties: {
+                      device_id: { type: "string" },
+                      display_name: { type: "string", nullable: true },
+                      capability: { type: "string", nullable: true },
+                      metric: { type: "string", nullable: true },
+                      value: { type: "number", nullable: true },
+                      unit: { type: "string", nullable: true },
+                    },
+                    additionalProperties: true,
+                  },
+                },
+                observations: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    required: ["metric", "label", "value", "unit", "role"],
+                    properties: {
+                      metric: { type: "string" },
+                      label: { type: "string" },
+                      value: { type: "number", nullable: true },
+                      unit: { type: "string", nullable: true },
+                      role: { type: "string", enum: ["diagnosis_input"] },
+                    },
+                    additionalProperties: true,
+                  },
+                },
+                diagnosis: { type: "object", required: ["human"], properties: { human: { type: "string", nullable: true } }, additionalProperties: true },
+              },
+              additionalProperties: true,
+            },
             operation_title: { type: "string", nullable: true },
             customer_title: { type: "string", nullable: true },
             identifiers: {
@@ -743,10 +783,28 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
                 receipt_id: { type: "string", nullable: true }
               }
             },
+            prescription: {
+              type: "object",
+              nullable: true,
+              required: ["prescription_id", "amount", "unit", "operation_type"],
+              properties: {
+                prescription_id: { type: "string", nullable: true },
+                amount: { type: "number", nullable: true },
+                unit: { type: "string", nullable: true },
+                operation_type: { type: "string", nullable: true },
+              },
+              additionalProperties: true,
+            },
             as_executed: {
               type: "object",
               required: ["operation_id", "execution_mode", "started_at", "finished_at", "actual_params", "receipt_id", "device_id", "operator_id", "deviation_summary"],
               properties: {
+                as_executed_id: { type: "string", nullable: true },
+                planned_amount: { type: "number", nullable: true },
+                executed_amount: { type: "number", nullable: true },
+                unit: { type: "string", nullable: true },
+                deviation: { type: "number", nullable: true },
+                status: { type: "string", nullable: true },
                 operation_id: { type: "string" },
                 execution_mode: { type: "string", enum: ["DEVICE", "HUMAN"] },
                 started_at: { type: "string", format: "date-time", nullable: true },
@@ -762,6 +820,8 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
               type: "object",
               required: ["operation_id", "coverage_status", "coverage_geojson", "planned_geojson", "applied_amount_summary", "planned_vs_actual_deviation", "evidence_ref"],
               properties: {
+                coverage_percent: { type: "number", nullable: true },
+                field_id: { type: "string", nullable: true },
                 operation_id: { type: "string" },
                 coverage_status: { type: "string", enum: ["AVAILABLE", "MISSING", "NOT_APPLICABLE"] },
                 coverage_geojson: { type: "object", nullable: true, additionalProperties: true },
