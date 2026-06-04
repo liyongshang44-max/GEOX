@@ -616,7 +616,7 @@ export async function projectReportV1(params: {
   const acceptancePass = String(acceptanceFact?.record_json?.payload?.verdict ?? "").toUpperCase().includes("PASS");
   const responseTimeMs = buildResponseTimeMs(operationState, normalizedReceipt?.execution_started_at ?? null);
   const recommendationPayload = recommendationFact?.record_json?.payload ?? {};
-  const explainHuman = toText(recommendationPayload?.summary ?? recommendationPayload?.action_summary ?? recommendationPayload?.reason);
+  const explainHuman = toText(recommendationPayload?.diagnosis?.human ?? recommendationPayload?.explain?.human ?? recommendationPayload?.explain_human ?? recommendationPayload?.summary ?? recommendationPayload?.action_summary ?? recommendationPayload?.reason);
   const objectiveText = toText(recommendationPayload?.objective_text ?? recommendationPayload?.expected_effect?.[0]?.description ?? recommendationPayload?.expected_effect?.[0]?.metric);
   const diagnosticInputs = await buildDiagnosticInputsForReportV1({
     pool,
