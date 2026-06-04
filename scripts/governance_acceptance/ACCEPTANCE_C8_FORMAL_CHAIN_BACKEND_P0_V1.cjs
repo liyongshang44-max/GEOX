@@ -228,10 +228,15 @@ async function assertFieldReport() {
   const client = await dbClient();
   try {
     await cleanupP0Rows(client);
+    console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP runtime-openapi');
     await assertRuntimeOpenApi();
+    console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP receipt-status');
     const asExecuted = await assertReceiptStatusMatrix(client);
+    console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP roi-formalize');
     await assertRoiFormalization(client, asExecuted.as_executed_id);
+    console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP field-memory');
     await assertFieldMemory(client);
+    console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP operation-report');
     await assertOperationReport();
     await assertFieldReport();
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] PASS', JSON.stringify({ base_url: BASE_URL, tenant: TENANT, as_executed_id: asExecuted.as_executed_id }));

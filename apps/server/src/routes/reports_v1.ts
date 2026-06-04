@@ -354,6 +354,9 @@ async function buildDiagnosticInputsForReportV1(params: {
   }).filter((item: any) => item.device_id);
 
   const observationByMetric = new Map<string, DiagnosticInputsForReportV1["observations"][number]>();
+  for (const fallback of empty.observations) {
+    if (!observationByMetric.has(fallback.metric)) observationByMetric.set(fallback.metric, fallback);
+  }
   for (const row of observationQ.rows ?? []) {
     const metric = normalizeDiagnosticMetric((row as any).metric);
     if (!metric || observationByMetric.has(metric)) continue;
@@ -364,9 +367,6 @@ async function buildDiagnosticInputsForReportV1(params: {
       unit: unitForDiagnosticMetric(metric, (row as any).unit),
       role: "diagnosis_input",
     });
-  }
-  for (const fallback of empty.observations) {
-    if (!observationByMetric.has(fallback.metric)) observationByMetric.set(fallback.metric, fallback);
   }
 
   return {
