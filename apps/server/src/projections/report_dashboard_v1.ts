@@ -307,7 +307,10 @@ function limitedRoiSummary(simulatedOrTechnicalItems = 0): RoiSummaryTrustV1 {
 
 export function projectFieldReportDetailV1(params: { field_id: string; field_name?: string | null; reports: OperationReportV1[]; open_alerts_count: number; device_summary: { total_devices: number; online_devices: number; offline_devices: number; last_telemetry_at: string | null }; field_context?: { area_m2?: number | null; area_ha?: number | null; boundary_geojson?: unknown | null } }): FieldReportDetailV1 {
   const reportsSorted = [...params.reports].sort((a, b) => resolveOperationTimeMs(b) - resolveOperationTimeMs(a));
+  const formalReportsSorted = reportsSorted.filter((report) => reportTrust(report).customer_visible_eligible);
   const latestReport = reportsSorted[0] ?? null;
+  const latestFormalReport = formalReportsSorted[0] ?? null;
+  const summaryReport = latestFormalReport ?? latestReport;
   const trusts = reportsSorted.map(reportTrust);
   const aggregateTrust: DashboardProjectionTrustV1 = trusts.length && trusts.every((t) => t.customer_visible_eligible)
     ? { projection_source: "GUARDED_REPORT", fallback_limited: false, customer_visible_eligible: true, blocking_reasons: [] }
@@ -323,7 +326,9 @@ export function projectFieldReportDetailV1(params: { field_id: string; field_nam
     }
   }
   const topReasons = [...reasonCount.entries()].sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0])).slice(0, 5).map(([reason]) => reason);
-  const nextActionSource = reportsSorted.find((report) => Boolean((report as any).why?.explain_human) || Boolean((report as any).identifiers?.recommendation_id)) ?? null;
+  const nextActionSource = formalReportsSorted.find((report) => Boolean((report as any).why?.explain_human) || Boolean((report as any).identifiers?.recommendation_id))
+    ?? reportsSorted.find((report) => Boolean((report as any).why?.explain_human) || Boolean((report as any).identifiers?.recommendation_id))
+    ?? null;
   const sensingSummary = buildSensingSummary({ field_id: params.field_id, reports: reportsSorted, device_summary: params.device_summary });
   const learningSummary = buildLearningSummary(reportsSorted);
 
@@ -339,14 +344,14 @@ export function projectFieldReportDetailV1(params: { field_id: string; field_nam
       open_alerts_count: Number(params.open_alerts_count ?? 0),
       pending_acceptance_count: params.reports.filter((r) => reportTrust(r).customer_visible_eligible && upper((r as any).execution?.final_status) === "PENDING_ACCEPTANCE").length,
       total_operations_count: params.reports.length,
-      latest_operation_at: latestReport ? ((latestReport as any).execution?.execution_finished_at ?? latestReport.generated_at ?? null) : null,
+      latest_operation_at: summaryReport ? ((summaryReport as any).execution?.execution_finished_at ?? summaryReport.generated_at ?? null) : null,
       estimated_total_cost: params.reports.reduce((sum, report) => sum + Number((report as any).cost?.estimated_total ?? 0), 0),
       actual_total_cost: params.reports.reduce((sum, report) => sum + Number((report as any).cost?.actual_total ?? 0), 0),
     },
-    explain: { human: (latestReport as any)?.why?.explain_human ?? sensingSummary.diagnosis.human ?? fallbackExplainByRisk({ current_risk_level: currentRiskLevel, top_reasons: topReasons }), top_reasons: topReasons },
+    explain: { human: (summaryReport as any)?.why?.explain_human ?? sensingSummary.diagnosis.human ?? fallbackExplainByRisk({ current_risk_level: currentRiskLevel, top_reasons: topReasons }), top_reasons: topReasons },
     sensing_summary: sensingSummary,
-    decision_summary: buildDecisionSummary(latestReport, nextActionSource),
-    execution_summary: buildExecutionSummary(reportsSorted),
+    decision_summary: buildDecisionSummary(summaryReport, nextActionSource),
+    execution_summary: buildExecutionSummary(formalReportsSorted.length > 0 ? formalReportsSorted : reportsSorted),
     recent_operations: reportsSorted.slice(0, 5).map((report) => ({ ...reportTrust(report), operation_plan_id: (report as any).identifiers?.operation_plan_id, operation_id: (report as any).identifiers?.operation_id, title: (report as any).operation_title ?? null, customer_title: (report as any).customer_title ?? null, final_status: safeReportFinalStatus(report), acceptance_status: safeReportAcceptanceStatus(report), generated_at: (report as any).generated_at ?? null })),
     device_summary: { total_devices: Number(params.device_summary.total_devices ?? 0), online_devices: Number(params.device_summary.online_devices ?? 0), offline_devices: Number(params.device_summary.offline_devices ?? 0), last_telemetry_at: params.device_summary.last_telemetry_at ?? null },
     next_action: nextActionSource ? { recommendation_id: (nextActionSource as any).identifiers?.recommendation_id ?? null, explain_human: (nextActionSource as any).why?.explain_human ?? null, objective_text: (nextActionSource as any).why?.objective_text ?? null, action_type: inferActionType(nextActionSource), priority: null } : null,

@@ -16,6 +16,11 @@ function formalAcceptanceId(item: any): string | null {
   return value ? value : null;
 }
 
+function formalAcceptanceId(item: any): string | null {
+  const value = String(item?.formal_acceptance_id ?? "").trim();
+  return value ? value : null;
+}
+
 export function isFormalCustomerValueItem(item: any): boolean {
   return item?.customer_visible_value === true
     && item?.trust_level === "FORMAL_ACCEPTED"
