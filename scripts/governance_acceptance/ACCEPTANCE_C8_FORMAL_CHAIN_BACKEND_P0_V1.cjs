@@ -217,6 +217,16 @@ async function assertOperationReport() {
   nearly(report.as_applied?.coverage_percent, 100, 'report as_applied.coverage_percent');
   assert(report.as_applied?.field_id === FORMAL_FIELD, 'report as_applied.field_id mismatch', report.as_applied);
   assert(report.roi_ledger?.summary?.has_customer_visible_value === true, 'report ROI has_customer_visible_value must be true', report.roi_ledger?.summary);
+  const formalRoi = (report.roi_ledger?.items || []).find(
+    (x) =>
+      x.trust_level === 'FORMAL_ACCEPTED' &&
+      x.source_lane === 'FORMAL_ACCEPTANCE' &&
+      x.formal_acceptance_id === FORMAL_ACC &&
+      x.formal_evidence_passed === true &&
+      x.chain_validation_passed === true &&
+      x.customer_visible_value === true
+  );
+  assert(formalRoi, 'operation report ROI item lost formal trust fields', report.roi_ledger?.items);
   assert((report.field_memory?.field_response_memory || []).length >= 1, 'report field memory response rows missing', report.field_memory);
 }
 async function assertFieldReport() {

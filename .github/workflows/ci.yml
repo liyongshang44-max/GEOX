@@ -34,6 +34,9 @@ jobs:
       - name: Route response ownership guard
         run: pnpm run ci:route-response-ownership
 
+      - name: PR-18I guarded report hotfix guard
+        run: pnpm run ci:pr18i-guarded-report-hotfix
+
       - name: Typecheck
         run: pnpm -r typecheck
 

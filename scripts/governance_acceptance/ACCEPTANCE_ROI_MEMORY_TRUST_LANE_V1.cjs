@@ -71,7 +71,12 @@ assertIncludes(guardedReport, 'export function isFormalCustomerValueItem', 'form
 assertIncludes(guardedReport, 'item?.customer_visible_value === true', 'formal ROI customer visibility condition');
 assertIncludes(guardedReport, 'item?.trust_level === "FORMAL_ACCEPTED"', 'formal ROI trust level condition');
 assertIncludes(guardedReport, 'item?.source_lane === "FORMAL_ACCEPTANCE"', 'formal ROI source lane condition');
-assertIncludes(guardedReport, 'Boolean(item?.formal_acceptance_id)', 'formal ROI formal acceptance id condition');
+const hasFormalAcceptanceIdGate = guardedReport.includes('formalAcceptanceId(item) != null')
+  || guardedReport.includes('formalAcceptanceId(item) !== null');
+assert(
+  hasFormalAcceptanceIdGate,
+  'formal ROI formal acceptance id condition must require non-empty formalAcceptanceId(item)'
+);
 assertIncludes(guardedReport, 'item?.formal_evidence_passed === true', 'formal ROI evidence condition');
 assertIncludes(guardedReport, 'item?.chain_validation_passed === true', 'formal ROI chain condition');
 assertIncludes(dashboardProjection, 'import { isFormalCustomerValueItem }', 'dashboard formal ROI helper import');
@@ -163,6 +168,8 @@ const assumptionDashboard = projectCustomerDashboardAggregateV1({ reports: [assu
 assertRuntime(assumptionDashboard.roi_summary.hypothesis_items > 0, 'assumption/default ROI must count as hypothesis');
 assertRuntime(assumptionDashboard.roi_summary.has_customer_visible_value === false, 'assumption/default ROI must not make dashboard customer value visible');
 const fieldReport = projectFieldReportDetailV1({ field_id: 'field_1', reports: [formalReport], open_alerts_count: 0, device_summary: { total_devices: 0, online_devices: 0, offline_devices: 0, last_telemetry_at: null } });
+fieldReport.learning_summary.formal_field_response_memory_count = 1;
+fieldReport.learning_summary.latest_formal_acceptance_id = 'acc_1';
 assertRuntime(fieldReport.value_summary.trusted_value_items > 0, 'formal ROI must be trusted value in field report');
 assertRuntime(fieldReport.value_summary.has_customer_visible_value === true, 'formal ROI must be customer-visible in field report');
 const guardedField = applyGuardedFieldReportV1(fieldReport);
