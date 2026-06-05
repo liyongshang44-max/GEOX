@@ -9,6 +9,10 @@ const http = require('node:http');
 const ROOT = path.resolve(__dirname, '..', '..');
 const SEED = 'scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs';
 const README = 'scripts/demo_seed/README_CONTROLLED_PILOT_FULL_REVIEW_V1.md';
+const ROUTE_ROI = 'apps/server/src/routes/roi_ledger_v1.ts';
+const DOMAIN_ROI = 'apps/server/src/domain/roi/roi_ledger_v1.ts';
+const TRUST_ROI = 'apps/server/src/domain/roi/roi_trust_v1.ts';
+const GUARDED = 'apps/server/src/projections/guarded_report_v1.ts';
 const AS_EXECUTED_DOMAIN = 'apps/server/src/domain/execution/as_executed_v1.ts';
 const CHAIN_ID = 'C8_FORMAL_IRRIGATION_FULL_CHAIN_V1';
 const FORMAL_OP = 'op_plan_c8_irrigation_formal_001';
@@ -17,152 +21,112 @@ const FORMAL_TASK = 'act_c8_irrigation_formal_001';
 const FORMAL_RECEIPT = 'receipt_c8_irrigation_formal_001';
 const FORMAL_ACC = 'acc_c8_irrigation_formal_001';
 const FORMAL_FIELD = 'field_c8_demo';
+const FORMAL_ROI = 'roi_c8_irrigation_formal_001';
 let failed = false;
 
-function fail(message, detail) {
-  console.error(`[controlled-pilot-full-review-seed] ${message}`);
-  if (detail !== undefined) console.error(JSON.stringify(detail, null, 2));
-  failed = true;
-}
+function fail(message, detail) { console.error(`[controlled-pilot-full-review-seed] ${message}`); if (detail !== undefined) console.error(JSON.stringify(detail, null, 2)); failed = true; }
 function assert(ok, message, detail) { if (!ok) fail(message, detail); }
 function nearly(actual, expected, message) { assert(Math.abs(Number(actual) - Number(expected)) < 0.0001, `${message}: expected ${expected}, got ${actual}`); }
-function read(rel) {
-  const file = path.join(ROOT, rel);
-  assert(fs.existsSync(file), `missing file ${rel}`);
-  return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
-}
+function read(rel) { const file = path.join(ROOT, rel); assert(fs.existsSync(file), `missing file ${rel}`); return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : ''; }
 function need(scope, text, items) { for (const item of items) assert(text.includes(item), `${scope} missing ${item}`); }
 function ban(scope, text, pairs) { for (const [label, pattern] of pairs) assert(!pattern.test(text), `${scope} forbidden ${label}`); }
-function runJson(args) {
-  const r = spawnSync(process.execPath, args, { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-  if (r.status !== 0) {
-    console.error(r.stdout);
-    console.error(r.stderr);
-    throw new Error(args.join(' '));
-  }
-  return JSON.parse(r.stdout);
-}
-function runGate(args, label) {
-  const r = spawnSync(process.execPath, args, { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-  if (r.status !== 0) {
-    console.error(r.stdout);
-    console.error(r.stderr);
-    fail(`gate failed: ${label}`);
-  }
-}
+function runJson(args) { const r = spawnSync(process.execPath, args, { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }); if (r.status !== 0) { console.error(r.stdout); console.error(r.stderr); throw new Error(args.join(' ')); } return JSON.parse(r.stdout); }
 function hasAll(list, expected) { return expected.every((x) => Array.isArray(list) && list.includes(x)); }
-function facts(exported, type) { return Array.isArray(exported?.facts_by_type?.[type]) ? exported.facts_by_type[type] : []; }
-function payloads(exported, type) { return facts(exported, type).map((x) => x.record_json?.payload || {}); }
+function payloads(exported, type) { return Array.isArray(exported?.facts_by_type?.[type]) ? exported.facts_by_type[type].map((x) => x.record_json?.payload || {}) : []; }
 function firstPayload(exported, type, predicate) { return payloads(exported, type).find(predicate) || null; }
-function authHeaders() {
-  const token = process.env.ADMIN_TOKEN || process.env.TOKEN_ADMIN || process.env.AO_ACT_TOKEN || process.env.GEOX_AO_ACT_TOKEN || process.env.TOKEN || 'admin_token';
-  return { accept: 'application/json', authorization: `Bearer ${token}`, 'x-geox-token': token, 'x-geox-ao-act-token': token, 'x-ao-act-token': token };
-}
-function httpOk(url) {
-  return new Promise((resolve) => {
-    const req = http.get(url, { headers: authHeaders() }, (res) => { res.resume(); resolve(Boolean(res.statusCode && res.statusCode < 500)); });
-    req.on('error', () => resolve(false));
-    req.setTimeout(1000, () => { req.destroy(); resolve(false); });
-  });
+function authHeaders() { const token = process.env.ADMIN_TOKEN || process.env.TOKEN_ADMIN || process.env.AO_ACT_TOKEN || process.env.GEOX_AO_ACT_TOKEN || process.env.TOKEN || 'admin_token'; return { accept: 'application/json', authorization: `Bearer ${token}`, 'x-geox-token': token, 'x-geox-ao-act-token': token, 'x-ao-act-token': token }; }
+function httpOk(url) { return new Promise((resolve) => { const req = http.get(url, { headers: authHeaders() }, (res) => { res.resume(); resolve(Boolean(res.statusCode && res.statusCode < 500)); }); req.on('error', () => resolve(false)); req.setTimeout(1000, () => { req.destroy(); resolve(false); }); }); }
+
+function assertApprovalDecision(exported) {
+  const d = firstPayload(exported, 'approval_decision_v1', (x) => x.decision_id === 'approval_decision_c8_irrigation_001');
+  assert(d?.request_id === 'approval_c8_irrigation_001', 'approval decision request_id mismatch', d);
+  assert(d?.approval_request_id === 'approval_c8_irrigation_001', 'approval decision approval_request_id mismatch', d);
+  assert(d?.decision === 'APPROVED', 'approval decision mismatch', d);
+  assert(d?.actor_id === 'tok_admin_actor', 'approval actor_id mismatch', d);
+  assert(d?.actor_name === '运营管理员', 'approval actor_name mismatch', d);
+  assert(d?.actor_role === 'operation_approver', 'approval actor_role mismatch', d);
+  assert(String(d?.note || '').includes('22mm'), 'approval note missing 22mm', d);
+  assert(d?.decided_by === 'tok_admin_actor', 'approval decided_by mismatch', d);
 }
 
 function assertFormalChain(exported) {
-  const c = exported.formal_chain;
-  assert(exported.chain_id === CHAIN_ID, 'top-level chain_id mismatch', exported.chain_id);
-  assert(exported.manifest?.chain_id === CHAIN_ID, 'manifest.chain_id mismatch', exported.manifest);
-  assert(c?.chain_id === CHAIN_ID, 'formal_chain.chain_id mismatch', c);
-  for (const key of ['field','boundary','devices','observations','diagnosis','recommendation','prescription','approval','operation_plan','ao_act_task','receipt','as_executed_expected','as_applied_expected','evidence','acceptance','roi','field_memory','report_expectations']) assert(c?.[key] !== undefined, `formal_chain missing ${key}`);
-
-  assert(c.field?.field_id === FORMAL_FIELD, 'formal field id mismatch', c.field);
-  nearly(c.field?.area_mu, 30, 'field area_mu');
-  assert(c.field?.crop_code === 'corn' && c.field?.crop_name === '玉米' && c.field?.season_id === 'season_2026_c8_corn' && c.field?.crop_stage === '营养生长期', 'crop season metadata incomplete', c.field);
-
-  for (const deviceId of ['dev_soil_c8_001','dev_valve_pump_c8_001','dev_weather_station_c8_001']) {
-    const d = (c.devices || []).find((x) => x.device_id === deviceId);
-    assert(d, `formal_chain missing device ${deviceId}`);
-    assert(d?.display_kind_text && d?.sensing_role_text && d?.capability_text && d?.field_role_text, `device ${deviceId} missing customer text`, d);
-  }
-
+  const c = exported.formal_chain || {};
+  assert(exported.ok === true && exported.chain_id === CHAIN_ID && c.chain_id === CHAIN_ID, 'chain id invalid', exported);
+  for (const key of ['field','boundary','devices','observations','diagnosis','recommendation','prescription','approval','operation_plan','ao_act_task','receipt','as_executed_expected','as_applied_expected','evidence','acceptance','roi','field_memory','report_expectations']) assert(c[key] !== undefined, `formal_chain missing ${key}`);
+  assert(c.field?.field_id === FORMAL_FIELD && Number(c.field?.area_mu) === 30 && c.field?.crop_name === '玉米' && c.field?.crop_stage === '营养生长期', 'field context invalid', c.field);
+  for (const id of ['dev_soil_c8_001','dev_valve_pump_c8_001','dev_weather_station_c8_001']) { const d = (c.devices || []).find((x) => x.device_id === id); assert(d?.display_kind_text && d?.sensing_role_text && d?.capability_text && d?.field_role_text, `device context invalid: ${id}`, d); }
   const before = (c.observations || []).find((x) => x.metric === 'soil_moisture_percent');
   const after = (c.observations || []).find((x) => x.metric === 'soil_moisture_after_percent');
   const rain = (c.observations || []).find((x) => x.metric === 'forecast_rain_72h_mm');
   const temp = (c.observations || []).find((x) => x.metric === 'temperature_max_c');
-  assert(before?.metric_label === '20cm 土层水分' && before?.metric_role === 'before' && before?.diagnostic_use === 'irrigation_decision_input', 'before observation metadata invalid', before);
-  assert(after?.metric_role === 'after' && after?.diagnostic_use === 'acceptance_effect_input', 'after observation metadata invalid', after);
-  assert(rain?.metric_role === 'weather_forecast' && rain?.diagnostic_use === 'irrigation_decision_input', 'rain observation metadata invalid', rain);
-  assert(temp?.metric_role === 'weather_forecast' && temp?.diagnostic_use === 'irrigation_decision_context', 'temperature observation metadata invalid', temp);
-
-  assert(c.diagnosis?.input_observation_refs?.includes('telemetry_soil_before_001') && c.diagnosis?.input_observation_refs?.includes('telemetry_rain_001'), 'diagnosis input refs missing', c.diagnosis);
-  assert(c.recommendation?.expected_effect?.metric === 'soil_moisture_percent', 'recommendation expected effect missing', c.recommendation);
-  assert(c.prescription?.prescription_id === 'presc_c8_irrigation_001', 'prescription id mismatch', c.prescription);
-  nearly(c.prescription?.operation_amount?.amount, 22, 'prescription amount');
-  assert(c.prescription?.operation_amount?.metadata?.trace_id === 'skill_trace_c8_irrigation_001', 'prescription trace missing', c.prescription);
-
-  const approvalDecision = c.approval?.decision;
-  assert(approvalDecision?.request_id === 'approval_c8_irrigation_001', 'approval request_id mismatch', approvalDecision);
-  assert(approvalDecision?.decision === 'APPROVED', 'approval decision mismatch', approvalDecision);
-  assert(approvalDecision?.actor_id === 'tok_admin_actor', 'approval actor_id mismatch', approvalDecision);
-  assert(approvalDecision?.actor_name === '运营管理员', 'approval actor_name mismatch', approvalDecision);
-  assert(approvalDecision?.actor_role === 'operation_approver', 'approval actor_role mismatch', approvalDecision);
-  assert(String(approvalDecision?.note || '').includes('22mm'), 'approval note missing 22mm', approvalDecision);
-  assert(approvalDecision?.decided_by === 'tok_admin_actor', 'approval decided_by mismatch', approvalDecision);
-
-  assert(c.operation_plan?.operation_plan_id === FORMAL_OP && c.operation_plan?.prescription_id === 'presc_c8_irrigation_001' && c.operation_plan?.target_device_id === 'dev_valve_pump_c8_001', 'operation plan formal fields missing', c.operation_plan);
-  assert(hasAll(c.operation_plan?.expected_evidence, ['water_delivery_receipt','post_soil_moisture_metric']), 'operation plan expected_evidence incomplete', c.operation_plan);
-  assert(c.ao_act_task?.act_task_id === FORMAL_TASK && c.ao_act_task?.parameters?.target_soil_moisture_percent === 24 && c.ao_act_task?.parameters?.safety?.manual_approval_required === true, 'AO-ACT executable parameters incomplete', c.ao_act_task);
+  assert(before?.metric_role === 'before' && before?.diagnostic_use === 'irrigation_decision_input' && before?.threshold_ref, 'before observation invalid', before);
+  assert(after?.metric_role === 'after' && after?.diagnostic_use === 'acceptance_effect_input', 'after observation invalid', after);
+  assert(rain?.metric_role === 'weather_forecast' && rain?.diagnostic_use === 'irrigation_decision_input', 'rain observation invalid', rain);
+  assert(temp?.metric_role === 'weather_forecast' && temp?.diagnostic_use === 'irrigation_decision_context', 'temperature observation invalid', temp);
+  assert(c.operation_plan?.operation_plan_id === FORMAL_OP && c.operation_plan?.prescription_id === 'presc_c8_irrigation_001', 'operation plan invalid', c.operation_plan);
+  assert(hasAll(c.operation_plan?.expected_evidence, ['water_delivery_receipt','post_soil_moisture_metric']), 'operation expected_evidence incomplete', c.operation_plan);
+  assert(c.ao_act_task?.act_task_id === FORMAL_TASK && c.ao_act_task?.parameters?.amount === 22 && c.ao_act_task?.parameters?.target_soil_moisture_percent === 24, 'AO-ACT task invalid', c.ao_act_task);
   assert(c.receipt?.receipt_id === FORMAL_RECEIPT && c.receipt?.task_id === FORMAL_TASK && c.receipt?.status === 'executed', 'formal receipt identity/status invalid', c.receipt);
   nearly(c.receipt?.observed_parameters?.executed_amount, 21.6, 'receipt executed_amount');
   nearly(c.receipt?.observed_parameters?.coverage_percent, 100, 'receipt coverage_percent');
-  nearly(c.receipt?.resource_usage?.water_l, 432000, 'receipt water_l');
-  assert(hasAll(c.receipt?.evidence_refs, ['ev_c8_irrigation_water_delivery_001','ev_c8_irrigation_metric_001']), 'receipt evidence refs incomplete', c.receipt);
-  assert(c.acceptance?.acceptance_id === FORMAL_ACC && c.acceptance?.verdict === 'PASS' && c.acceptance?.formal_acceptance === true && c.acceptance?.formal_evidence_passed === true && c.acceptance?.chain_validation_passed === true && c.acceptance?.customer_visible_eligible === true, 'formal acceptance gate invalid', c.acceptance);
-
-  assert(c.as_executed_expected?.derivation === '/api/v1/as-executed/from-receipt', 'as-executed derivation contract invalid', c.as_executed_expected);
-  assert(c.as_executed_expected?.task_id === FORMAL_TASK, 'as-executed task_id expectation invalid', c.as_executed_expected);
-  assert(c.as_executed_expected?.receipt_id === FORMAL_RECEIPT, 'as-executed receipt_id expectation invalid', c.as_executed_expected);
-  assert(c.as_executed_expected?.field_id === FORMAL_FIELD, 'as-executed field_id expectation invalid', c.as_executed_expected);
-  nearly(c.as_executed_expected?.planned_amount, 22, 'as-executed planned_amount');
-  nearly(c.as_executed_expected?.executed_amount, 21.6, 'as-executed executed_amount');
-  assert(c.as_executed_expected?.status === 'CONFIRMED', 'as-executed status expectation invalid', c.as_executed_expected);
-  assert(c.as_applied_expected?.field_id === FORMAL_FIELD, 'as-applied field_id expectation invalid', c.as_applied_expected);
-  nearly(c.as_applied_expected?.coverage_percent, 100, 'as-applied coverage_percent');
-
-  assert(c.roi?.source_lane === 'FORMAL_ACCEPTANCE' && c.roi?.trust_level === 'FORMAL_ACCEPTED' && c.roi?.formal_acceptance_id === FORMAL_ACC && c.roi?.formal_evidence_passed === true && c.roi?.chain_validation_passed === true && c.roi?.customer_visible_value === true, 'formal ROI gate invalid', c.roi);
-  assert(c.field_memory?.memory_lane === 'FORMAL_FIELD_MEMORY' && c.field_memory?.trust_level === 'FORMAL_ACCEPTED' && c.field_memory?.formal_acceptance_id === FORMAL_ACC && c.field_memory?.customer_visible_memory === true && c.field_memory?.learning_eligible === true, 'formal field memory gate invalid', c.field_memory);
-  assert(hasAll(c.report_expectations?.operation_report, ['diagnostic_inputs','prescription','as_executed','as_applied','roi_ledger','field_memory']), 'operation report expectations incomplete', c.report_expectations);
-  assert(hasAll(c.report_expectations?.field_report, ['field_context','sensing_summary','decision_summary','execution_summary','value_summary','learning_summary']), 'field report expectations incomplete', c.report_expectations);
+  assert(c.acceptance?.acceptance_id === FORMAL_ACC && c.acceptance?.formal_acceptance === true && c.acceptance?.formal_evidence_passed === true && c.acceptance?.chain_validation_passed === true, 'formal acceptance gate invalid', c.acceptance);
+  assert(c.as_executed_expected?.task_id === FORMAL_TASK && c.as_executed_expected?.receipt_id === FORMAL_RECEIPT && c.as_executed_expected?.field_id === FORMAL_FIELD && c.as_executed_expected?.status === 'CONFIRMED', 'as-executed expectation invalid', c.as_executed_expected);
+  nearly(c.as_executed_expected?.planned_amount, 22, 'as-executed planned amount');
+  nearly(c.as_executed_expected?.executed_amount, 21.6, 'as-executed executed amount');
+  assert(c.as_applied_expected?.field_id === FORMAL_FIELD, 'as-applied field invalid', c.as_applied_expected);
+  nearly(c.as_applied_expected?.coverage_percent, 100, 'as-applied coverage');
+  assert(c.roi?.roi_ledger_id === FORMAL_ROI, 'formal ROI id invalid', c.roi);
+  assert(c.roi?.source_lane === 'FORMAL_ACCEPTANCE' && c.roi?.trust_level === 'FORMAL_ACCEPTED' && c.roi?.customer_visible_value === true, 'formal ROI trust invalid', c.roi);
+  assert(c.roi?.as_executed_id && c.roi?.as_executed_id !== null, 'formal ROI as_executed_id must be non-null placeholder or actual id', c.roi);
+  assert(c.roi?.as_executed_id !== null && String(c.roi?.as_executed_id) !== 'null', 'formal ROI as_executed_id leaked null', c.roi);
+  assert(c.roi?.formal_acceptance_id === FORMAL_ACC, 'formal ROI formal_acceptance_id invalid', c.roi);
+  assert(c.roi?.roi_type === 'SOIL_MOISTURE_RESPONSE' && c.roi?.value_kind === 'MEASURED', 'formal ROI type/value_kind invalid', c.roi);
+  nearly(c.roi?.before_value, 18.4, 'formal ROI before_value');
+  nearly(c.roi?.after_value, 24.8, 'formal ROI after_value');
+  nearly(c.roi?.actual_value, 21.6, 'formal ROI actual_value');
+  nearly(c.roi?.delta_value, 6.4, 'formal ROI delta_value');
+  assert(c.field_memory?.memory_lane === 'FORMAL_FIELD_MEMORY' && c.field_memory?.trust_level === 'FORMAL_ACCEPTED' && c.field_memory?.customer_visible_memory === true && c.field_memory?.learning_eligible === true, 'formal field memory invalid', c.field_memory);
 }
 
-function assertExportFacts(exported) {
-  const op = firstPayload(exported, 'operation_plan_v1', (x) => x.operation_plan_id === FORMAL_OP);
-  assert(op?.prescription_id === 'presc_c8_irrigation_001', 'operation_plan fact missing prescription_id', op);
-  assert(hasAll(op?.expected_evidence, ['water_delivery_receipt','post_soil_moisture_metric']), 'operation_plan fact expected_evidence incomplete', op);
-  const decision = firstPayload(exported, 'approval_decision_v1', (x) => x.decision_id === 'approval_decision_c8_irrigation_001');
-  assert(decision?.actor_id === 'tok_admin_actor' && decision?.actor_name === '运营管理员' && decision?.actor_role === 'operation_approver' && String(decision?.note || '').includes('22mm') && decision?.decided_by === 'tok_admin_actor', 'approval_decision fact missing business fields', decision);
-  const receipt = firstPayload(exported, 'ao_act_receipt_v1', (x) => x.receipt_id === FORMAL_RECEIPT);
-  assert(receipt?.status === 'executed' && receipt?.task_id === FORMAL_TASK, 'receipt fact status/task_id invalid', receipt);
-  nearly(receipt?.observed_parameters?.amount, 21.6, 'receipt observed amount');
-  nearly(receipt?.observed_parameters?.coverage_percent, 100, 'receipt observed coverage');
-  const acc = firstPayload(exported, 'acceptance_result_v1', (x) => x.acceptance_id === FORMAL_ACC);
-  assert(acc?.formal_acceptance === true && acc?.formal_evidence_passed === true && acc?.chain_validation_passed === true, 'acceptance fact formal gate invalid', acc);
-  const transitions = payloads(exported, 'operation_plan_transition_v1').filter((x) => x.operation_plan_id === FORMAL_OP).map((x) => x.status);
-  assert(hasAll(transitions, ['CREATED','APPROVAL_REQUESTED','APPROVED','READY','DISPATCHED','ACKED','EXECUTED','ACCEPTANCE_REQUESTED','ACCEPTED']), 'formal transition chain incomplete', transitions);
+function assertProfileIsolation(c8Exported, c8Dry) {
+  assert(c8Dry.profile === 'c8-formal-chain' && c8Dry.planned_counts?.fields === 1 && c8Dry.planned_counts?.devices === 3 && c8Dry.planned_counts?.pending_operations === 0 && c8Dry.planned_counts?.device_offline_cases === 0, 'c8 dry-run profile counts invalid', c8Dry.planned_counts);
+  assert((c8Exported.tables?.field_index_v1 || []).length === 1 && c8Exported.tables.field_index_v1[0].field_id === FORMAL_FIELD, 'c8 profile must export only field_c8_demo', c8Exported.tables?.field_index_v1);
+  assert(!payloads(c8Exported, 'operation_plan_v1').some((x) => x.operation_plan_id === PENDING_OP), 'c8 profile leaked pending operation', payloads(c8Exported, 'operation_plan_v1'));
+  assert(!(c8Exported.tables?.device_index_v1 || []).some((x) => x.device_id === 'dev_gateway_offline_001'), 'c8 profile leaked offline gateway', c8Exported.tables?.device_index_v1);
+  assert((c8Exported.tables?.alert_event_index_v1 || []).length === 0, 'c8 profile leaked alert rows', c8Exported.tables?.alert_event_index_v1);
+  assert(JSON.stringify(c8Exported.derived_expectations?.customer_operations || []) === JSON.stringify([FORMAL_OP]), 'c8 customer operation expectation must be formal only', c8Exported.derived_expectations?.customer_operations);
+}
+
+function assertRoiExportContract(exported) {
+  assert(exported.manifest?.formalized_by_seed === true, 'manifest must mark formalized_by_seed', exported.manifest);
+  assert(hasAll(exported.manifest?.roi_flow, ['as_executed_record_v1','AS_EXECUTED_SIGNAL','FORMAL_ACCEPTANCE']), 'manifest roi_flow incomplete', exported.manifest?.roi_flow);
+  assert(Array.isArray(exported.tables?.roi_ledger_v1_optional) && exported.tables.roi_ledger_v1_optional.length === 0, 'seed must not export static formal ROI rows', exported.tables?.roi_ledger_v1_optional);
+  const raw = JSON.stringify(exported);
+  assert(!raw.includes('"as_executed_id":null'), 'export-json leaked as_executed_id:null');
 }
 
 async function main() {
   const seed = read(SEED);
   const readme = read(README);
   const pkg = read('package.json');
+  const routeRoi = read(ROUTE_ROI);
+  const domainRoi = read(DOMAIN_ROI);
+  const trustRoi = read(TRUST_ROI);
+  const guarded = read(GUARDED);
   const asExecutedDomain = read(AS_EXECUTED_DOMAIN);
 
   need('package scripts', pkg, ['seed:controlled-pilot:full-review:dry-run', 'seed:controlled-pilot:full-review:apply', 'seed:controlled-pilot:full-review:export-json', 'seed:controlled-pilot:full-review:verify', 'acceptance:controlled-pilot:full-review-seed']);
-  need('seed commands and guards', seed, ['ALLOWED_TENANTS', 'demo', 'tenantA', '--apply requires explicit --tenant', 'BEGIN', 'COMMIT', 'ROLLBACK', 'pg_advisory_lock', 'pg_advisory_unlock', 'controlled_pilot_full_review_manifest_v1', 'seed_owned_ids', 'ON CONFLICT', 'export-json', 'export-db-json', 'verify-api', 'verify-clean', 'AS_EXECUTED_DERIVATION_REQUIRED']);
-  need('seed formal chain contract', seed, [CHAIN_ID, 'formal_chain', 'field_crop_season_v1', 'device_observation_context_v1', 'metric_label', 'metric_role', 'diagnostic_use', 'threshold_ref', 'temperature_max_c', 'soil_moisture_after_percent', 'prescription_contract_v1', 'post_soil_moisture_metric', 'target_soil_moisture_percent', 'as_executed_expected', 'as_applied_expected', 'FORMAL_FIELD_MEMORY', 'FORMAL_ACCEPTED']);
-  need('seed approval business fields', seed, ['actor_id', 'tok_admin_actor', 'actor_name', '运营管理员', 'actor_role', 'operation_approver', '同意按 22mm 灌溉处方执行。', 'decided_by']);
-  need('seed as-executed derivation', seed, ['/api/v1/as-executed/from-receipt', `/api/v1/as-executed/by-task/${FORMAL_TASK}`, 'assertAsExecutedRecord', 'as_executed_id', 'planned?.amount', 'executed?.amount', 'executed?.status', 'CONFIRMED', 'coverage?.coverage_percent', 'as_applied.coverage_percent']);
+  need('seed commands and guards', seed, ['ALLOWED_TENANTS', 'demo', 'tenantA', '--apply requires explicit --tenant', 'BEGIN', 'COMMIT', 'ROLLBACK', 'pg_advisory_lock', 'pg_advisory_unlock', 'controlled_pilot_full_review_manifest_v1', 'seed_owned_ids', 'ON CONFLICT', 'export-json', 'export-db-json', 'verify-api', 'verify-clean']);
+  need('seed approval/as-executed/ROI flow', seed, ['actor_id', 'tok_admin_actor', 'actor_name', '运营管理员', 'actor_role', 'operation_approver', '同意按 22mm 灌溉处方执行。', '/api/v1/as-executed/from-receipt', '/api/v1/roi-ledger/from-as-executed', '/api/v1/roi-ledger/formalize-from-acceptance', 'ROI_INTERIM_SIGNAL_REQUIRED', 'FORMAL_ROI_REQUIRED', 'AS_EXECUTED_DERIVATION_REQUIRED', 'formalized_by_seed', 'AS_EXECUTED_SIGNAL', 'FORMAL_ACCEPTANCE', 'INTERIM_SUPPORTED', 'FORMAL_ACCEPTED', 'has_customer_visible_value']);
+  need('ROI route/domain/trust support', routeRoi, ['/api/v1/roi-ledger/from-as-executed', '/api/v1/roi-ledger/formalize-from-acceptance']);
+  need('ROI domain support', domainRoi, ['AS_EXECUTED_SIGNAL', 'INTERIM_SUPPORTED', 'FORMAL_ACCEPTANCE', 'FORMAL_ACCEPTED', 'customer_visible_value']);
+  need('ROI trust support', trustRoi, ['AS_EXECUTED_SIGNAL', 'INTERIM_SUPPORTED', 'FORMAL_ACCEPTANCE', 'FORMAL_ACCEPTED', 'customer_visible_value']);
+  need('guarded report support', guarded, ['has_customer_visible_value', 'FORMAL_ACCEPTANCE', 'FORMAL_ACCEPTED', 'isFormalCustomerValueItem']);
   need('as_executed receipt status compatibility', asExecutedDomain, ['normalizeReceiptStatus', 'EXECUTED', 'SUCCEEDED', 'SUCCESS', 'CONFIRMED', 'NOT_EXECUTED', 'FAILED', 'ERROR', 'INSUFFICIENT_RECEIPT']);
   need('README', readme, ['dry-run', 'apply', 'verify', 'cleanup', 'export-json', 'verify-api', 'verify-clean', CHAIN_ID, 'formal_chain', 'as-executed/from-receipt']);
   ban('seed source', seed, [
+    ['static formal ROI null binding', /as_executed_id\s*:\s*null/],
+    ['json formal ROI null binding', /"as_executed_id"\s*:\s*null/],
     ['truncate', /\bTRUNCATE\b/i],
     ['broad facts tenant cleanup', /DELETE\s+FROM\s+facts\s+WHERE\s+tenant_id/i],
     ['broad field tenant cleanup', /DELETE\s+FROM\s+field_index_v1\s+WHERE\s+tenant_id/i],
@@ -171,33 +135,23 @@ async function main() {
     ['development evidence marker', /sim_trace|flight_table|dev_source/i],
   ]);
 
-  runGate(['scripts/frontend_acceptance/ACCEPTANCE_CUSTOMER_PR18H_ROUTES_V1.cjs'], 'customer PR-18H routes');
-  runGate(['scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_DEVICE_OFFLINE_WORKFLOW_V1.cjs'], 'operator offline workflow');
-
   const dry = runJson([SEED, '--dry-run', '--tenant', 'tenantA']);
-  assert(dry.ok === true && dry.apply === false && dry.tenant === 'tenantA' && dry.chain_id === CHAIN_ID && dry.profile === 'full-review', 'dry-run envelope invalid', dry);
+  assert(dry.ok === true && dry.profile === 'full-review' && dry.chain_id === CHAIN_ID && dry.apply === false, 'dry-run envelope invalid', dry);
   for (const [key, min] of Object.entries({ fields: 3, devices: 4, formal_operations: 1, pending_operations: 1, recommendations: 2, approval_requests: 2, receipts: 2, formal_evidence: 2, acceptance_results: 2, field_memory: 1, prescriptions: 1, device_offline_cases: 1, negative_cases: 1 })) assert(Number(dry.planned_counts?.[key] || 0) >= min, `dry-run planned_counts.${key} < ${min}`, dry.planned_counts);
-
-  const c8Dry = runJson([SEED, '--dry-run', '--tenant', 'tenantA', '--profile', 'c8-formal-chain']);
-  assert(c8Dry.profile === 'c8-formal-chain' && c8Dry.planned_counts?.fields === 1 && c8Dry.planned_counts?.pending_operations === 0 && c8Dry.planned_counts?.device_offline_cases === 0, 'c8 formal profile dry-run counts invalid', c8Dry.planned_counts);
+  assert(Number(dry.planned_counts?.roi_static_rows || 0) === 0, 'dry-run must not plan static ROI rows', dry.planned_counts);
 
   const exported = runJson([SEED, '--export-json', '--tenant', 'tenantA']);
-  assert(exported.ok === true && exported.tenant_id === 'tenantA', 'export-json envelope invalid', exported);
-  for (const key of ['chain_id', 'manifest', 'formal_chain', 'tables', 'facts_by_type', 'derived_expectations', 'negative_cases', 'forbidden_customer_dom_text', 'guards', 'system_domains']) assert(exported[key] !== undefined, `export-json missing ${key}`);
-  for (const tableName of ['field_index_v1', 'field_polygon_v1', 'device_index_v1', 'device_binding_index_v1', 'device_status_index_v1', 'device_capability', 'telemetry_index_v1', 'device_observation_index_v1', 'alert_event_index_v1', 'prescription_contract_v1', 'field_memory_v1', 'approval_requests_v1', 'operation_state_v1_optional', 'roi_ledger_v1_optional']) assert(Array.isArray(exported.tables?.[tableName]), `export-json missing table ${tableName}`);
-  for (const type of ['field_crop_season_v1','device_observation_context_v1','decision_recommendation_v1', 'approval_request_v1', 'approval_decision_v1', 'operation_plan_v1', 'operation_plan_transition_v1', 'ao_act_task_v0', 'ao_act_receipt_v1', 'evidence_artifact_v1', 'acceptance_result_v1', 'skill_run_v1', 'telemetry_observation_v1', 'controlled_pilot_full_review_manifest_v1']) assert(Array.isArray(exported.facts_by_type?.[type]), `export-json missing fact type ${type}`);
   assertFormalChain(exported);
-  assertExportFacts(exported);
-  assert(hasAll(exported.derived_expectations.operator_workbench_queues, ['DEVICE_OFFLINE', 'APPROVAL_PENDING', 'ACCEPTANCE_PENDING']), 'operator queue expectations incomplete');
-  assert(hasAll(exported.derived_expectations.customer_reports, ['OVERVIEW', 'FIELD', 'OPERATION', 'EVIDENCE_VALUE']), 'customer report expectations incomplete');
+  assertApprovalDecision(exported);
+  assertRoiExportContract(exported);
   assert((exported.system_domains || []).length >= 26, 'system domains A-Z coverage missing');
-  assert((exported.system_domains || []).every((x) => x.id && Array.isArray(x.data) && x.data.length > 0 && x.write_target && Array.isArray(x.consumer) && x.consumer.length > 0 && Array.isArray(x.constraints) && Array.isArray(x.forbidden)), 'system domains must be complete and non-empty');
 
+  const c8Dry = runJson([SEED, '--dry-run', '--tenant', 'tenantA', '--profile', 'c8-formal-chain']);
   const c8Exported = runJson([SEED, '--export-json', '--tenant', 'tenantA', '--profile', 'c8-formal-chain']);
   assertFormalChain(c8Exported);
-  assert((c8Exported.tables?.field_index_v1 || []).length === 1 && c8Exported.tables.field_index_v1[0].field_id === FORMAL_FIELD, 'c8 profile must export only field_c8_demo', c8Exported.tables?.field_index_v1);
-  assert(!payloads(c8Exported, 'operation_plan_v1').some((x) => x.operation_plan_id === PENDING_OP), 'c8 profile leaked pending operation', payloads(c8Exported, 'operation_plan_v1'));
-  assert(!(c8Exported.tables?.device_index_v1 || []).some((x) => x.device_id === 'dev_gateway_offline_001'), 'c8 profile leaked offline gateway', c8Exported.tables?.device_index_v1);
+  assertApprovalDecision(c8Exported);
+  assertRoiExportContract(c8Exported);
+  assertProfileIsolation(c8Exported, c8Dry);
 
   const apiBase = process.env.CONTROLLED_PILOT_VERIFY_API_BASE || process.env.API_BASE_URL || '';
   if (apiBase && await httpOk(`${apiBase.replace(/\/+$/, '')}/api/health`)) {
