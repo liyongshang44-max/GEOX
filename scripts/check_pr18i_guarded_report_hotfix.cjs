@@ -62,6 +62,12 @@ for (const forbidden of forbiddenPatterns) {
   }
 }
 
+const oldGatePath = path.join(root, 'scripts/governance_acceptance/ACCEPTANCE_ROI_MEMORY_TRUST_LANE_V1.cjs');
+const oldGateSource = fs.readFileSync(oldGatePath, 'utf8');
+if (oldGateSource.includes('Boolean(item?.formal_acceptance_id)')) {
+  fail('old ROI memory trust lane gate still requires forbidden Boolean formal_acceptance_id pattern');
+}
+
 console.log('[pr18i-guarded-report-hotfix] PASS', {
   target: 'apps/server/src/projections/guarded_report_v1.ts',
   formalAcceptanceHelperCount,
