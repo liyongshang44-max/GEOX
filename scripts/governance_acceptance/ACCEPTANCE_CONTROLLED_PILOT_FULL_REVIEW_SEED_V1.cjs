@@ -8,12 +8,17 @@ const http = require('node:http');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const SEED = 'scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs';
-const README = 'scripts/demo_seed/README_CONTROLLED_PILOT_FULL_REVIEW_V1.md';
-const ROUTE_ROI = 'apps/server/src/routes/roi_ledger_v1.ts';
-const DOMAIN_ROI = 'apps/server/src/domain/roi/roi_ledger_v1.ts';
-const TRUST_ROI = 'apps/server/src/domain/roi/roi_trust_v1.ts';
-const GUARDED = 'apps/server/src/projections/guarded_report_v1.ts';
+const FIELD_MEMORY_SERVICE = 'apps/server/src/services/field_memory_service.ts';
+const FIELD_MEMORY_ROUTE = 'apps/server/src/routes/field_memory_v1.ts';
+const CUSTOMER_ROUTE = 'apps/server/src/routes/customer_v1.ts';
+const REPORTS_ROUTE = 'apps/server/src/routes/reports_v1.ts';
+const DASHBOARD_PROJECTION = 'apps/server/src/projections/report_dashboard_v1.ts';
+const GUARDED_REPORT = 'apps/server/src/projections/guarded_report_v1.ts';
+const ROI_ROUTE = 'apps/server/src/routes/roi_ledger_v1.ts';
+const ROI_DOMAIN = 'apps/server/src/domain/roi/roi_ledger_v1.ts';
+const ROI_TRUST = 'apps/server/src/domain/roi/roi_trust_v1.ts';
 const AS_EXECUTED_DOMAIN = 'apps/server/src/domain/execution/as_executed_v1.ts';
+
 const CHAIN_ID = 'C8_FORMAL_IRRIGATION_FULL_CHAIN_V1';
 const FORMAL_OP = 'op_plan_c8_irrigation_formal_001';
 const PENDING_OP = 'op_plan_c8_irrigation_pending_001';
@@ -21,21 +26,43 @@ const FORMAL_TASK = 'act_c8_irrigation_formal_001';
 const FORMAL_RECEIPT = 'receipt_c8_irrigation_formal_001';
 const FORMAL_ACC = 'acc_c8_irrigation_formal_001';
 const FORMAL_FIELD = 'field_c8_demo';
+const FORMAL_MEMORY = 'fm_c8_irrigation_response_001';
 const FORMAL_ROI = 'roi_c8_irrigation_formal_001';
 let failed = false;
 
-function fail(message, detail) { console.error(`[controlled-pilot-full-review-seed] ${message}`); if (detail !== undefined) console.error(JSON.stringify(detail, null, 2)); failed = true; }
+function fail(message, detail) {
+  console.error(`[controlled-pilot-full-review-seed] ${message}`);
+  if (detail !== undefined) console.error(JSON.stringify(detail, null, 2));
+  failed = true;
+}
 function assert(ok, message, detail) { if (!ok) fail(message, detail); }
 function nearly(actual, expected, message) { assert(Math.abs(Number(actual) - Number(expected)) < 0.0001, `${message}: expected ${expected}, got ${actual}`); }
 function read(rel) { const file = path.join(ROOT, rel); assert(fs.existsSync(file), `missing file ${rel}`); return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : ''; }
 function need(scope, text, items) { for (const item of items) assert(text.includes(item), `${scope} missing ${item}`); }
 function ban(scope, text, pairs) { for (const [label, pattern] of pairs) assert(!pattern.test(text), `${scope} forbidden ${label}`); }
-function runJson(args) { const r = spawnSync(process.execPath, args, { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }); if (r.status !== 0) { console.error(r.stdout); console.error(r.stderr); throw new Error(args.join(' ')); } return JSON.parse(r.stdout); }
+function runJson(args) {
+  const r = spawnSync(process.execPath, args, { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  if (r.status !== 0) {
+    console.error(r.stdout);
+    console.error(r.stderr);
+    throw new Error(args.join(' '));
+  }
+  return JSON.parse(r.stdout);
+}
 function hasAll(list, expected) { return expected.every((x) => Array.isArray(list) && list.includes(x)); }
 function payloads(exported, type) { return Array.isArray(exported?.facts_by_type?.[type]) ? exported.facts_by_type[type].map((x) => x.record_json?.payload || {}) : []; }
 function firstPayload(exported, type, predicate) { return payloads(exported, type).find(predicate) || null; }
-function authHeaders() { const token = process.env.ADMIN_TOKEN || process.env.TOKEN_ADMIN || process.env.AO_ACT_TOKEN || process.env.GEOX_AO_ACT_TOKEN || process.env.TOKEN || 'admin_token'; return { accept: 'application/json', authorization: `Bearer ${token}`, 'x-geox-token': token, 'x-geox-ao-act-token': token, 'x-ao-act-token': token }; }
-function httpOk(url) { return new Promise((resolve) => { const req = http.get(url, { headers: authHeaders() }, (res) => { res.resume(); resolve(Boolean(res.statusCode && res.statusCode < 500)); }); req.on('error', () => resolve(false)); req.setTimeout(1000, () => { req.destroy(); resolve(false); }); }); }
+function authHeaders() {
+  const token = process.env.ADMIN_TOKEN || process.env.TOKEN_ADMIN || process.env.AO_ACT_TOKEN || process.env.GEOX_AO_ACT_TOKEN || process.env.TOKEN || 'admin_token';
+  return { accept: 'application/json', authorization: `Bearer ${token}`, 'x-geox-token': token, 'x-geox-ao-act-token': token, 'x-ao-act-token': token };
+}
+function httpOk(url) {
+  return new Promise((resolve) => {
+    const req = http.get(url, { headers: authHeaders() }, (res) => { res.resume(); resolve(Boolean(res.statusCode && res.statusCode < 500)); });
+    req.on('error', () => resolve(false));
+    req.setTimeout(1000, () => { req.destroy(); resolve(false); });
+  });
+}
 
 function assertApprovalDecision(exported) {
   const d = firstPayload(exported, 'approval_decision_v1', (x) => x.decision_id === 'approval_decision_c8_irrigation_001');
@@ -49,12 +76,29 @@ function assertApprovalDecision(exported) {
   assert(d?.decided_by === 'tok_admin_actor', 'approval decided_by mismatch', d);
 }
 
+function assertFormalFieldMemory(memory) {
+  assert(memory?.memory_id === FORMAL_MEMORY, 'formal memory id mismatch', memory);
+  assert(memory?.memory_type === 'FIELD_RESPONSE_MEMORY', 'formal memory_type mismatch', memory);
+  assert(memory?.memory_lane === 'FORMAL_FIELD_MEMORY', 'formal memory_lane mismatch', memory);
+  assert(memory?.trust_level === 'FORMAL_ACCEPTED', 'formal memory trust_level mismatch', memory);
+  assert(memory?.formal_acceptance_id === FORMAL_ACC, 'formal memory formal_acceptance_id mismatch', memory);
+  assert(memory?.source_lane === 'FORMAL_OPERATION', 'formal memory source_lane mismatch', memory);
+  assert(memory?.customer_visible_memory === true, 'formal memory customer_visible_memory mismatch', memory);
+  assert(memory?.learning_eligible === true, 'formal memory learning_eligible mismatch', memory);
+  nearly(memory?.before_value, 18.4, 'formal memory before_value');
+  nearly(memory?.after_value, 24.8, 'formal memory after_value');
+  nearly(memory?.delta_value, 6.4, 'formal memory delta_value');
+}
+
 function assertFormalChain(exported) {
   const c = exported.formal_chain || {};
   assert(exported.ok === true && exported.chain_id === CHAIN_ID && c.chain_id === CHAIN_ID, 'chain id invalid', exported);
   for (const key of ['field','boundary','devices','observations','diagnosis','recommendation','prescription','approval','operation_plan','ao_act_task','receipt','as_executed_expected','as_applied_expected','evidence','acceptance','roi','field_memory','report_expectations']) assert(c[key] !== undefined, `formal_chain missing ${key}`);
   assert(c.field?.field_id === FORMAL_FIELD && Number(c.field?.area_mu) === 30 && c.field?.crop_name === '玉米' && c.field?.crop_stage === '营养生长期', 'field context invalid', c.field);
-  for (const id of ['dev_soil_c8_001','dev_valve_pump_c8_001','dev_weather_station_c8_001']) { const d = (c.devices || []).find((x) => x.device_id === id); assert(d?.display_kind_text && d?.sensing_role_text && d?.capability_text && d?.field_role_text, `device context invalid: ${id}`, d); }
+  for (const id of ['dev_soil_c8_001','dev_valve_pump_c8_001','dev_weather_station_c8_001']) {
+    const d = (c.devices || []).find((x) => x.device_id === id);
+    assert(d?.display_kind_text && d?.sensing_role_text && d?.capability_text && d?.field_role_text, `device context invalid: ${id}`, d);
+  }
   const before = (c.observations || []).find((x) => x.metric === 'soil_moisture_percent');
   const after = (c.observations || []).find((x) => x.metric === 'soil_moisture_after_percent');
   const rain = (c.observations || []).find((x) => x.metric === 'forecast_rain_72h_mm');
@@ -77,15 +121,14 @@ function assertFormalChain(exported) {
   nearly(c.as_applied_expected?.coverage_percent, 100, 'as-applied coverage');
   assert(c.roi?.roi_ledger_id === FORMAL_ROI, 'formal ROI id invalid', c.roi);
   assert(c.roi?.source_lane === 'FORMAL_ACCEPTANCE' && c.roi?.trust_level === 'FORMAL_ACCEPTED' && c.roi?.customer_visible_value === true, 'formal ROI trust invalid', c.roi);
-  assert(c.roi?.as_executed_id && c.roi?.as_executed_id !== null, 'formal ROI as_executed_id must be non-null placeholder or actual id', c.roi);
-  assert(c.roi?.as_executed_id !== null && String(c.roi?.as_executed_id) !== 'null', 'formal ROI as_executed_id leaked null', c.roi);
+  assert(c.roi?.as_executed_id && String(c.roi.as_executed_id) !== 'null', 'formal ROI as_executed_id must be non-null placeholder or actual id', c.roi);
   assert(c.roi?.formal_acceptance_id === FORMAL_ACC, 'formal ROI formal_acceptance_id invalid', c.roi);
   assert(c.roi?.roi_type === 'SOIL_MOISTURE_RESPONSE' && c.roi?.value_kind === 'MEASURED', 'formal ROI type/value_kind invalid', c.roi);
   nearly(c.roi?.before_value, 18.4, 'formal ROI before_value');
   nearly(c.roi?.after_value, 24.8, 'formal ROI after_value');
   nearly(c.roi?.actual_value, 21.6, 'formal ROI actual_value');
   nearly(c.roi?.delta_value, 6.4, 'formal ROI delta_value');
-  assert(c.field_memory?.memory_lane === 'FORMAL_FIELD_MEMORY' && c.field_memory?.trust_level === 'FORMAL_ACCEPTED' && c.field_memory?.customer_visible_memory === true && c.field_memory?.learning_eligible === true, 'formal field memory invalid', c.field_memory);
+  assertFormalFieldMemory(c.field_memory);
 }
 
 function assertProfileIsolation(c8Exported, c8Dry) {
@@ -105,25 +148,41 @@ function assertRoiExportContract(exported) {
   assert(!raw.includes('"as_executed_id":null'), 'export-json leaked as_executed_id:null');
 }
 
+function assertFieldMemoryExportContract(exported) {
+  const rows = exported.tables?.field_memory_v1 || [];
+  const formal = rows.find((x) => x.memory_id === FORMAL_MEMORY);
+  assertFormalFieldMemory(formal);
+  const technical = rows.find((x) => x.memory_lane === 'TECHNICAL_SKILL_MEMORY' || x.trust_level === 'TECHNICAL_SIGNAL');
+  assert(technical?.customer_visible_memory === false && technical?.learning_eligible === false, 'technical memory must be internal only', technical);
+}
+
 async function main() {
   const seed = read(SEED);
-  const readme = read(README);
-  const pkg = read('package.json');
-  const routeRoi = read(ROUTE_ROI);
-  const domainRoi = read(DOMAIN_ROI);
-  const trustRoi = read(TRUST_ROI);
-  const guarded = read(GUARDED);
+  const fieldMemoryService = read(FIELD_MEMORY_SERVICE);
+  const fieldMemoryRoute = read(FIELD_MEMORY_ROUTE);
+  const customerRoute = read(CUSTOMER_ROUTE);
+  const reportsRoute = read(REPORTS_ROUTE);
+  const dashboardProjection = read(DASHBOARD_PROJECTION);
+  const guardedReport = read(GUARDED_REPORT);
+  const routeRoi = read(ROI_ROUTE);
+  const domainRoi = read(ROI_DOMAIN);
+  const trustRoi = read(ROI_TRUST);
   const asExecutedDomain = read(AS_EXECUTED_DOMAIN);
+  const pkg = read('package.json');
 
   need('package scripts', pkg, ['seed:controlled-pilot:full-review:dry-run', 'seed:controlled-pilot:full-review:apply', 'seed:controlled-pilot:full-review:export-json', 'seed:controlled-pilot:full-review:verify', 'acceptance:controlled-pilot:full-review-seed']);
   need('seed commands and guards', seed, ['ALLOWED_TENANTS', 'demo', 'tenantA', '--apply requires explicit --tenant', 'BEGIN', 'COMMIT', 'ROLLBACK', 'pg_advisory_lock', 'pg_advisory_unlock', 'controlled_pilot_full_review_manifest_v1', 'seed_owned_ids', 'ON CONFLICT', 'export-json', 'export-db-json', 'verify-api', 'verify-clean']);
-  need('seed approval/as-executed/ROI flow', seed, ['actor_id', 'tok_admin_actor', 'actor_name', '运营管理员', 'actor_role', 'operation_approver', '同意按 22mm 灌溉处方执行。', '/api/v1/as-executed/from-receipt', '/api/v1/roi-ledger/from-as-executed', '/api/v1/roi-ledger/formalize-from-acceptance', 'ROI_INTERIM_SIGNAL_REQUIRED', 'FORMAL_ROI_REQUIRED', 'AS_EXECUTED_DERIVATION_REQUIRED', 'formalized_by_seed', 'AS_EXECUTED_SIGNAL', 'FORMAL_ACCEPTANCE', 'INTERIM_SUPPORTED', 'FORMAL_ACCEPTED', 'has_customer_visible_value']);
+  need('seed approval/as-executed/ROI/field-memory flow', seed, ['actor_id', 'tok_admin_actor', 'actor_name', '运营管理员', 'actor_role', 'operation_approver', '同意按 22mm 灌溉处方执行。', '/api/v1/as-executed/from-receipt', '/api/v1/roi-ledger/from-as-executed', '/api/v1/roi-ledger/formalize-from-acceptance', '/api/v1/field-memory/from-acceptance', '/api/v1/customer/fields/', 'FORMAL_FIELD_MEMORY_REQUIRED', 'CUSTOMER_FORMAL_MEMORY_REQUIRED', 'operation report field_memory.field_response_memory.length', 'field report learning_summary.formal_memory_count', 'latest_formal_acceptance_id', 'TECHNICAL_SKILL_MEMORY']);
+  need('field memory service formal gate', fieldMemoryService, ['createFormalFieldMemoryFromAcceptanceV1', 'validateFormalFieldMemoryAcceptanceV1', 'FORMAL_FIELD_MEMORY', 'FORMAL_ACCEPTED', 'formal_acceptance_id', 'customer_visible_memory', 'learning_eligible', 'ACCEPTANCE_VERDICT_NOT_PASS', 'FORMAL_EVIDENCE_NOT_PASSED', 'CHAIN_VALIDATION_NOT_PASSED']);
+  need('field memory route formal derivation', fieldMemoryRoute, ['/api/v1/field-memory/from-acceptance', 'FORMAL_FIELD_MEMORY', 'FORMAL_ACCEPTED', 'customer_visible_memory', 'learning_eligible', 'formal_acceptance_id']);
+  need('customer memory route formal filter', customerRoute, ['/api/v1/customer/fields/:fieldId/memory', "memory_lane = 'FORMAL_FIELD_MEMORY'", "trust_level = 'FORMAL_ACCEPTED'", 'customer_visible_memory = true', 'learning_eligible = true', 'formal_acceptance_id IS NOT NULL']);
+  need('reports route field memory projection', reportsRoute, ['field_memory_v1', 'field_response_memory', 'device_reliability_memory', 'skill_performance_memory']);
+  need('dashboard learning summary formal filter', dashboardProjection, ['isFormalFieldResponseMemory', 'FORMAL_FIELD_MEMORY', 'FORMAL_ACCEPTED', 'customer_visible_memory', 'learning_eligible', 'formal_memory_count', 'latest_formal_acceptance_id']);
+  need('guarded report hides technical field memory', guardedReport, ['isFormalFieldResponseMemory', 'TECHNICAL_SKILL_MEMORY', 'TECHNICAL_SIGNAL', 'formal_memory_filter', 'hidden_counts', 'device_reliability_memory: []', 'skill_performance_memory: []']);
   need('ROI route/domain/trust support', routeRoi, ['/api/v1/roi-ledger/from-as-executed', '/api/v1/roi-ledger/formalize-from-acceptance']);
   need('ROI domain support', domainRoi, ['AS_EXECUTED_SIGNAL', 'INTERIM_SUPPORTED', 'FORMAL_ACCEPTANCE', 'FORMAL_ACCEPTED', 'customer_visible_value']);
   need('ROI trust support', trustRoi, ['AS_EXECUTED_SIGNAL', 'INTERIM_SUPPORTED', 'FORMAL_ACCEPTANCE', 'FORMAL_ACCEPTED', 'customer_visible_value']);
-  need('guarded report support', guarded, ['has_customer_visible_value', 'FORMAL_ACCEPTANCE', 'FORMAL_ACCEPTED', 'isFormalCustomerValueItem']);
   need('as_executed receipt status compatibility', asExecutedDomain, ['normalizeReceiptStatus', 'EXECUTED', 'SUCCEEDED', 'SUCCESS', 'CONFIRMED', 'NOT_EXECUTED', 'FAILED', 'ERROR', 'INSUFFICIENT_RECEIPT']);
-  need('README', readme, ['dry-run', 'apply', 'verify', 'cleanup', 'export-json', 'verify-api', 'verify-clean', CHAIN_ID, 'formal_chain', 'as-executed/from-receipt']);
   ban('seed source', seed, [
     ['static formal ROI null binding', /as_executed_id\s*:\s*null/],
     ['json formal ROI null binding', /"as_executed_id"\s*:\s*null/],
@@ -137,13 +196,14 @@ async function main() {
 
   const dry = runJson([SEED, '--dry-run', '--tenant', 'tenantA']);
   assert(dry.ok === true && dry.profile === 'full-review' && dry.chain_id === CHAIN_ID && dry.apply === false, 'dry-run envelope invalid', dry);
-  for (const [key, min] of Object.entries({ fields: 3, devices: 4, formal_operations: 1, pending_operations: 1, recommendations: 2, approval_requests: 2, receipts: 2, formal_evidence: 2, acceptance_results: 2, field_memory: 1, prescriptions: 1, device_offline_cases: 1, negative_cases: 1 })) assert(Number(dry.planned_counts?.[key] || 0) >= min, `dry-run planned_counts.${key} < ${min}`, dry.planned_counts);
+  for (const [key, min] of Object.entries({ fields: 3, devices: 4, formal_operations: 1, pending_operations: 1, recommendations: 2, approval_requests: 2, receipts: 2, formal_evidence: 2, acceptance_results: 2, field_memory: 1, formal_field_memory: 1, technical_memory: 1, prescriptions: 1, device_offline_cases: 1, negative_cases: 1 })) assert(Number(dry.planned_counts?.[key] || 0) >= min, `dry-run planned_counts.${key} < ${min}`, dry.planned_counts);
   assert(Number(dry.planned_counts?.roi_static_rows || 0) === 0, 'dry-run must not plan static ROI rows', dry.planned_counts);
 
   const exported = runJson([SEED, '--export-json', '--tenant', 'tenantA']);
   assertFormalChain(exported);
   assertApprovalDecision(exported);
   assertRoiExportContract(exported);
+  assertFieldMemoryExportContract(exported);
   assert((exported.system_domains || []).length >= 26, 'system domains A-Z coverage missing');
 
   const c8Dry = runJson([SEED, '--dry-run', '--tenant', 'tenantA', '--profile', 'c8-formal-chain']);
@@ -151,6 +211,7 @@ async function main() {
   assertFormalChain(c8Exported);
   assertApprovalDecision(c8Exported);
   assertRoiExportContract(c8Exported);
+  assertFieldMemoryExportContract(c8Exported);
   assertProfileIsolation(c8Exported, c8Dry);
 
   const apiBase = process.env.CONTROLLED_PILOT_VERIFY_API_BASE || process.env.API_BASE_URL || '';
