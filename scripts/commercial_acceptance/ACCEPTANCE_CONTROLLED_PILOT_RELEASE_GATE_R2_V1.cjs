@@ -30,7 +30,7 @@ const gates = [
   ['base_contract_p0', 'pnpm run ci:base-contract:p0'],
   ['formal_operation_field_binding', 'pnpm run ci:governance:formal-operation-field-binding'],
   ['controlled_pilot_full_review_seed_static', 'pnpm run acceptance:controlled-pilot:full-review-seed'],
-  ['controlled_pilot_full_review_seed_runtime', 'node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --cleanup --apply --tenant tenantA && CONTROLLED_PILOT_FULL_REVIEW_RUNTIME=1 node scripts/governance_acceptance/ACCEPTANCE_CONTROLLED_PILOT_FULL_REVIEW_SEED_V1.cjs'],
+  ['controlled_pilot_full_review_seed_runtime', `node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --cleanup --apply --tenant tenantA && node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --apply --tenant tenantA --base-url ${BASE} && CONTROLLED_PILOT_FULL_REVIEW_RUNTIME=1 node scripts/governance_acceptance/ACCEPTANCE_CONTROLLED_PILOT_FULL_REVIEW_SEED_V1.cjs`],
   ['scenario_pest_disease_inspection', 'pnpm run ci:scenario:pest-disease-inspection'],
   ['scenario_formal_e2e', 'pnpm run ci:scenario:formal-e2e'],
   ['scenario_productization', 'pnpm run ci:scenario:productization'],
