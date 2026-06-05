@@ -79,6 +79,14 @@ export type RoiLedgerSummary = {
   currency: string | null;
 
   customer_text: string;
+
+  trust_level: string | null;
+  source_lane: string | null;
+  formal_acceptance_id: string | null;
+  formal_evidence_passed: boolean;
+  chain_validation_passed: boolean;
+  customer_visible_value: boolean;
+  trust_reasons: string[];
 };
 
 
@@ -742,6 +750,14 @@ export function projectOperationReportV1(input: {
       currency: x?.currency != null ? String(x.currency) : null,
 
       customer_text: buildCustomerText(x),
+
+      trust_level: x?.trust_level ?? null,
+      source_lane: x?.source_lane ?? null,
+      formal_acceptance_id: x?.formal_acceptance_id ?? null,
+      formal_evidence_passed: x?.formal_evidence_passed === true,
+      chain_validation_passed: x?.chain_validation_passed === true,
+      customer_visible_value: x?.customer_visible_value === true,
+      trust_reasons: Array.isArray(x?.trust_reasons) ? x.trust_reasons : [],
     };
   };
   const roiSummaries = roiRows.map(toSummary);
