@@ -19,7 +19,8 @@ function idList(report: any): string[] { return Array.from(new Set([report?.iden
 
 async function queryChainFacts(pool: Pool, tenant: TenantTriple, report: any): Promise<FactRow[]> {
   const ids = idList(report);
-  if (!ids.length) return [];
+  const fieldId = text(report?.identifiers?.field_id);
+  if (!ids.length && !fieldId) return [];
   const q = await pool.query(
     `SELECT fact_id, occurred_at, record_json::jsonb AS record_json
        FROM facts
@@ -36,9 +37,10 @@ async function queryChainFacts(pool: Pool, tenant: TenantTriple, report: any): P
           OR (record_json::jsonb#>>'{payload,act_task_id}') = ANY($4::text[])
           OR (record_json::jsonb#>>'{payload,task_id}') = ANY($4::text[])
           OR (record_json::jsonb#>>'{payload,receipt_id}') = ANY($4::text[])
+          OR ((record_json::jsonb->>'type') = 'telemetry_observation_v1' AND $5::text IS NOT NULL AND (record_json::jsonb#>>'{payload,field_id}') = $5)
         )
       ORDER BY occurred_at ASC, fact_id ASC`,
-    [tenant.tenant_id, tenant.project_id, tenant.group_id, ids]
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, ids.length ? ids : ["__none__"], fieldId]
   );
   return (q.rows ?? []).map((row: any) => ({ fact_id: String(row.fact_id ?? ""), occurred_at: String(row.occurred_at ?? ""), record_json: parseRecordJson(row.record_json) ?? row.record_json }));
 }
@@ -56,6 +58,37 @@ function markTechnicalSignal<T extends Record<string, any> | null>(obj: T, activ
 function hasRawTechnicalSignal(obj: any): boolean { return obj?.soil_moisture != null || obj?.threshold != null || obj?.soil_moisture_threshold != null || obj?.skill_trace != null; }
 function guardRoiLike(roi: any, validation: OperationChainValidationResultV1): any { if (validation.validation.passed) return roi; const next = roi && typeof roi === "object" ? { ...roi } : { summary: {} }; if (next.summary && typeof next.summary === "object") next.summary = { ...next.summary, has_customer_visible_value: false, customer_visible_value: false }; return { ...next, has_customer_visible_value: false, customer_visible_value: false, guarded: true }; }
 function guardFieldMemoryLike(memory: any, validation: OperationChainValidationResultV1): any { if (validation.validation.passed) return memory; const source = memory && typeof memory === "object" ? memory : {}; return { ...source, customer_visible_memory: false, hidden_by_chain_guard: true }; }
+
+function labelForTelemetryMetric(metric: string): string {
+  if (metric === "soil_moisture_percent") return "20cm 土层水分";
+  if (metric === "soil_moisture_after_percent") return "灌后 20cm 土层水分";
+  if (metric === "forecast_rain_72h_mm") return "未来 72 小时降雨";
+  if (metric === "temperature_max_c") return "最高气温";
+  return metric;
+}
+
+function mergeTelemetryDiagnostics(report: any, facts: FactRow[]): any {
+  const telemetryObservations = facts
+    .filter((fact) => String(fact.record_json?.type ?? "") === "telemetry_observation_v1")
+    .map((fact) => fact.record_json?.payload ?? {})
+    .map((payload) => ({
+      metric: text(payload.metric),
+      label: text(payload.metric_label) ?? labelForTelemetryMetric(String(payload.metric ?? "")),
+      value: num(payload.value_num),
+      unit: text(payload.unit),
+      role: "diagnosis_input" as const,
+    }))
+    .filter((item) => Boolean(item.metric));
+  if (!telemetryObservations.length) return report?.diagnostic_inputs ?? null;
+  const existing = report?.diagnostic_inputs && typeof report.diagnostic_inputs === "object" ? report.diagnostic_inputs : {};
+  const byMetric = new Map<string, any>();
+  for (const item of Array.isArray(existing.observations) ? existing.observations : []) {
+    const metric = text(item?.metric);
+    if (metric) byMetric.set(metric, item);
+  }
+  for (const item of telemetryObservations) if (item.metric) byMetric.set(item.metric, item);
+  return { ...existing, field_id: existing.field_id ?? report?.identifiers?.field_id ?? null, observations: Array.from(byMetric.values()) };
+}
 
 export function applyOperationReportChainGuardV1(report: any, validation: OperationChainValidationResultV1): any {
   const reasons = uniqueReasons(validation);
@@ -90,7 +123,7 @@ export async function enrichOperationReportChainV1(params: { pool: Pool; report:
   const prescriptionFact = latestByTypes(facts, ["prescription_v1", "operation_prescription_v1", "decision_prescription_v1"]);
   const rec = payloadOf(recFact); const plan = payloadOf(planFact); const approvalReq = payloadOf(approvalRequestFact); const approvalDecision = payloadOf(approvalDecisionFact); const task = payloadOf(taskFact); const receiptRaw = payloadOf(receiptFact); const acceptancePayload = payloadOf(acceptanceFact); const prescriptionPayload = payloadOf(prescriptionFact); const stage1_sensing_summary = payloadOf(stage1SensingSummaryFact);
   const recommendationId = text(report?.identifiers?.recommendation_id ?? rec.recommendation_id);
-  const prescriptionId = text(report?.identifiers?.prescription_id ?? prescriptionPayload.prescription_id);
+  const prescriptionId = text(report?.identifiers?.prescription_id ?? prescriptionPayload.prescription_id ?? plan.prescription_id);
   const approvalRequestId = text(report?.identifiers?.approval_id ?? approvalReq.request_id ?? plan.approval_request_id);
   const actTaskId = text(report?.identifiers?.act_task_id ?? task.act_task_id ?? plan.act_task_id);
   const receiptId = text(report?.identifiers?.receipt_id ?? receiptRaw.receipt_id ?? receiptFact?.fact_id);
@@ -100,7 +133,7 @@ export async function enrichOperationReportChainV1(params: { pool: Pool; report:
   const threshold = firstNum(rec.skill_trace?.outputs?.threshold, rec.skill_trace?.outputs?.soil_moisture_threshold, rec.skill_trace?.params?.threshold, rec.diagnosis?.threshold, rec.diagnosis?.soil_moisture_threshold, rec.soil_moisture_threshold);
   const deficitDetected = rec.skill_trace?.outputs?.deficit_detected ?? rec.diagnosis?.deficit_detected ?? rec.diagnosis?.water_deficit;
   const recommendation = recommendationId ? { recommendation_id: recommendationId, diagnosis_basis: rec.diagnosis_basis ?? rec.data_summary ?? rec.summary ?? report?.why?.objective_text ?? null, agronomy_explain: rec.agronomy_explain ?? rec.explain?.human ?? rec.explain_human ?? rec.summary ?? report?.why?.explain_human ?? null, reason_codes: arr(rec.reason_codes ?? report?.risk?.reasons).map(String).filter(Boolean), evidence_refs: arr(rec.evidence_refs ?? rec.evidence_ids), confidence: rec.confidence ?? rec.confidence_level ?? null, status: text(rec.status ?? "AVAILABLE"), soil_moisture: soilMoisture, soil_moisture_threshold: threshold, threshold, deficit_detected: deficitDetected, water_deficit: deficitDetected, observation_window: firstText(rec.observation_window, rec.window, rec.skill_trace?.inputs?.observation_window), rainfall_24h_mm: firstNum(rec.rainfall_24h_mm, rec.weather?.rainfall_24h_mm), forecast_rainfall_24h_mm: firstNum(rec.forecast_rainfall_24h_mm, rec.weather?.forecast_rainfall_24h_mm), source_summary: firstText(rec.source_summary, rec.data_summary, rec.summary), missing_inputs: rec.missing_inputs ?? [], skill_trace: rec.skill_trace ?? null } : null;
-  const prescription = prescriptionFact ? { prescription_id: prescriptionId, recommendation_id: recommendationId, operation_type: operationType, amount: prescriptionPayload.amount ?? prescriptionPayload.planned_amount ?? null, unit: prescriptionPayload.unit ?? null, time_window: prescriptionPayload.time_window ?? prescriptionPayload.timing_window ?? null, acceptance_conditions: prescriptionPayload.acceptance_conditions ?? null, device_requirements: prescriptionPayload.device_requirements ?? null, status: text(prescriptionPayload.status ?? "AVAILABLE"), formal_prescription: true } : null;
+  const prescription = prescriptionFact || prescriptionId ? { prescription_id: prescriptionId, recommendation_id: recommendationId, operation_type: operationType, amount: prescriptionPayload.amount ?? prescriptionPayload.planned_amount ?? null, unit: prescriptionPayload.unit ?? null, time_window: prescriptionPayload.time_window ?? prescriptionPayload.timing_window ?? null, acceptance_conditions: prescriptionPayload.acceptance_conditions ?? null, device_requirements: prescriptionPayload.device_requirements ?? null, status: text(prescriptionPayload.status ?? "AVAILABLE"), formal_prescription: Boolean(prescriptionId) } : null;
   const approval = approvalRequestId ? { approval_request_id: approvalRequestId, status: approvalStatus(approvalDecision.decision, report?.approval?.status) ?? "PENDING", actor_id: text(approvalDecision.actor_id ?? approvalDecision.decider ?? report?.approval?.actor_id), actor_name: text(approvalDecision.actor_name ?? approvalDecision.actor_label ?? report?.approval?.actor_name), approved_at: text(approvalDecision.approved_at ?? approvalDecision.decided_at ?? report?.approval?.approved_at), note: text(approvalDecision.note ?? approvalDecision.reason ?? report?.approval?.note) } : null;
   const asExecuted = report.as_executed ?? null;
   const deviceId = text(asExecuted?.device_id ?? task.device_id ?? task.executor?.device_id ?? receiptRaw.device_id);
@@ -111,7 +144,13 @@ export async function enrichOperationReportChainV1(params: { pool: Pool; report:
   const acceptance = acceptanceId || acceptancePayload.verdict || report?.acceptance?.status ? { acceptance_id: acceptanceId, verdict: text(acceptancePayload.verdict ?? report?.acceptance?.verdict ?? report?.acceptance?.status), evidence_sufficient: report?.acceptance?.missing_evidence !== true, accepted_at: text(acceptancePayload.accepted_at ?? acceptancePayload.generated_at ?? report?.acceptance?.generated_at ?? acceptanceFact?.occurred_at), failure_reason: text(acceptancePayload.failure_reason ?? report?.execution?.invalid_reason) } : null;
   const diagnosis = { field_id: text(report?.identifiers?.field_id), diagnosis_basis: recommendation?.diagnosis_basis ?? report?.why?.objective_text ?? null, risk_level: report?.risk?.level ?? null, reason_codes: recommendation?.reason_codes ?? [], soil_moisture: soilMoisture, soil_moisture_threshold: threshold, threshold, deficit_detected: deficitDetected, water_deficit: deficitDetected, observation_window: recommendation?.observation_window ?? null, rainfall_24h_mm: recommendation?.rainfall_24h_mm ?? null, forecast_rainfall_24h_mm: recommendation?.forecast_rainfall_24h_mm ?? null, source_summary: recommendation?.source_summary ?? null, confidence: rec.confidence ?? rec.confidence_level ?? null, missing_inputs: rec.missing_inputs ?? [], stage1_sensing_summary };
   const operationPlan = text(report?.identifiers?.operation_plan_id) ? { operation_plan_id: text(report?.identifiers?.operation_plan_id), recommendation_id: recommendationId, prescription_id: prescriptionId, approval_request_id: approvalRequestId, field_id: text(report?.identifiers?.field_id ?? plan.field_id), status: text(plan.status ?? "AVAILABLE"), source: text(plan.source), meta: plan.meta ?? null } : null;
-  const assembled = { ...report, operation_id: text(report?.identifiers?.operation_id ?? report?.identifiers?.operation_plan_id), field: { field_id: text(report?.identifiers?.field_id), field_name: text(report?.field_name) }, diagnosis, recommendation, prescription, approval, operation_plan: operationPlan, execution, receipt: receiptId ? { receipt_id: receiptId, status: text(receiptRaw.status ?? "RECEIVED"), submitted_at: text(receiptRaw.submitted_at ?? receiptFact?.occurred_at), metrics: receiptRaw.metrics ?? null, execution_time: receiptRaw.execution_time ?? null, meta: receiptRaw.meta ?? null } : null, evidence, acceptance, roi: report?.roi_ledger ?? null, field_memory: report?.field_memory ?? null };
+  const enrichedIdentifiers = {
+    ...(report?.identifiers ?? {}),
+    prescription_id: text(report?.identifiers?.prescription_id ?? prescriptionId),
+    approval_id: text(report?.identifiers?.approval_id ?? approvalRequestId),
+    as_executed_id: text(report?.identifiers?.as_executed_id ?? asExecuted?.as_executed_id),
+  };
+  const assembled = { ...report, identifiers: enrichedIdentifiers, diagnostic_inputs: mergeTelemetryDiagnostics(report, facts), operation_id: text(report?.identifiers?.operation_id ?? report?.identifiers?.operation_plan_id), field: { field_id: text(report?.identifiers?.field_id), field_name: text(report?.field_name) }, diagnosis, recommendation, prescription, approval, operation_plan: operationPlan, execution, receipt: receiptId ? { receipt_id: receiptId, status: text(receiptRaw.status ?? "RECEIVED"), submitted_at: text(receiptRaw.submitted_at ?? receiptFact?.occurred_at), metrics: receiptRaw.metrics ?? null, execution_time: receiptRaw.execution_time ?? null, meta: receiptRaw.meta ?? null } : null, evidence, acceptance, roi: report?.roi_ledger ?? null, field_memory: report?.field_memory ?? null };
   const validation = validateOperationChainV1({ facts, report: assembled, rec, prescriptionPayload, approvalDecision, task, receipt: receiptRaw, acceptancePayload, recommendation, prescription, approval, operationPlan, execution, evidence, acceptance });
   return applyOperationReportChainGuardV1(assembled, validation);
 }
