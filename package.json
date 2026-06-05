@@ -68,7 +68,7 @@
     "ci:p1-smoke:preflight-idempotent": "node scripts/governance_acceptance/ACCEPTANCE_P1_SMOKE_PREFLIGHT_IDEMPOTENT_V1.cjs",
     "ci:stage1-fixture:raw-sample-contract": "node scripts/governance_acceptance/ACCEPTANCE_STAGE1_FIXTURE_RAW_SAMPLE_CONTRACT_V1.cjs",
     "ci:commercial:runtime": "pnpm run ci:runtime:workers",
-    "ci:controlled-pilot": "node scripts/commercial_acceptance/ACCEPTANCE_CONTROLLED_PILOT_RELEASE_GATE_R2_V1.cjs",
+    "ci:controlled-pilot": "node scripts/commercial_acceptance/ACCEPTANCE_CONTROLLED_PILOT_RELEASE_GATE_R2_PR18I_V1.cjs",
     "ci:governance:full-base-contract": "pnpm run ci:governance:fact-envelope && pnpm run ci:governance:appleii-time-coverage && pnpm run ci:governance:problem-state-uncertainty && pnpm run ci:governance:stage1-trigger-evidence-gate && pnpm run ci:governance:aosense-aoact-partition && pnpm run ci:governance:control-kernel-non-action-boundary && pnpm run ci:governance:ruleset-loading-boundary && pnpm run ci:governance:skill-constitution && pnpm run ci:governance:skill-category-boundary && pnpm run ci:governance:api-inventory-enforcement && pnpm run ci:governance:fallback-retirement-enforcement && pnpm run ci:governance:appleii-formal-evidence-dynamic-e2e && pnpm run ci:governance:base-contract-negative && pnpm run ci:governance:runtime-openapi-sales-critical",
     "ci:scenario:formal-irrigation": "node scripts/agronomy_acceptance/ACCEPTANCE_FORMAL_IRRIGATION_E2E_V1.cjs",
     "ci:scenario:device-anomaly": "node scripts/agronomy_acceptance/ACCEPTANCE_DEVICE_ANOMALY_E2E_V1.cjs",
@@ -102,7 +102,7 @@
     "seed:controlled-pilot:full-review:export-json": "node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --export-json --tenant tenantA",
     "seed:controlled-pilot:full-review:apply": "node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --apply --tenant tenantA",
     "seed:controlled-pilot:full-review:verify": "node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --verify --tenant tenantA",
-    "acceptance:controlled-pilot:full-review-seed": "node scripts/governance_acceptance/ACCEPTANCE_CONTROLLED_PILOT_FULL_REVIEW_SEED_V1.cjs",
+    "acceptance:controlled-pilot:full-review-seed": "node scripts/governance_acceptance/ACCEPTANCE_CONTROLLED_PILOT_FULL_REVIEW_SEED_EXPORT_CONTRACT_V1.cjs",
     "ci:governance:c8-formal-chain-backend-p0": "node scripts/governance_acceptance/ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1.cjs",
     "ci:pr18i-guarded-report-hotfix": "node scripts/check_pr18i_guarded_report_hotfix.cjs"
   },
