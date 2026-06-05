@@ -141,8 +141,7 @@ async function main() {
   need('package scripts', pkg, ['seed:controlled-pilot:full-review:dry-run', 'seed:controlled-pilot:full-review:apply', 'seed:controlled-pilot:full-review:export-json', 'seed:controlled-pilot:full-review:verify', 'acceptance:controlled-pilot:full-review-seed']);
   need('seed commands and guards', seed, ['ALLOWED_TENANTS', 'demo', 'tenantA', '--apply requires explicit --tenant', 'BEGIN', 'COMMIT', 'ROLLBACK', 'pg_advisory_lock', 'pg_advisory_unlock', 'controlled_pilot_full_review_manifest_v1', 'seed_owned_ids', 'ON CONFLICT', 'export-json', 'export-db-json', 'verify-api', 'verify-clean']);
   need('seed structured verify-api contract', seed, [
-    'assertOperationReportJson', 'assertFieldReportJson', 'assertCustomerMemoryJson', 'getAsExecutedList', 'getJson', 'postJson', 'assertMetricSet',
-    `GET /api/v1/reports/operation/${FORMAL_OP}`, `GET /api/v1/reports/field/${FORMAL_FIELD}`, `GET /api/v1/as-executed/by-task/${FORMAL_TASK}`, `GET /api/v1/customer/fields/${FORMAL_FIELD}/memory`,
+    'assertOperationReportJson', 'assertFieldReportJson', 'assertCustomerMemoryJson', 'getAsExecutedList', 'getJson', 'postJson', 'assertMetricSet', 'checked_endpoints',
     `/api/v1/reports/operation/${FORMAL_OP}`, `/api/v1/reports/field/${FORMAL_FIELD}`, `/api/v1/as-executed/by-task/${FORMAL_TASK}`, `/api/v1/customer/fields/${FORMAL_FIELD}/memory`,
     'OPERATION_REPORT_JSON_REQUIRED', 'FIELD_REPORT_JSON_REQUIRED', 'AS_EXECUTED_BY_TASK_REQUIRED', 'CUSTOMER_MEMORY_API_REQUIRED',
     'OPERATION_FIELD_ID_MISMATCH', 'OPERATION_RECOMMENDATION_ID_MISMATCH', 'OPERATION_APPROVAL_ID_MISMATCH', 'OPERATION_RECEIPT_ID_MISMATCH', 'OPERATION_PRESCRIPTION_ID_MISMATCH', 'OPERATION_AS_EXECUTED_ID_REQUIRED',
