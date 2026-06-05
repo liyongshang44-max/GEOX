@@ -103,7 +103,8 @@
     "seed:controlled-pilot:full-review:apply": "node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --apply --tenant tenantA",
     "seed:controlled-pilot:full-review:verify": "node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --verify --tenant tenantA",
     "acceptance:controlled-pilot:full-review-seed": "node scripts/governance_acceptance/ACCEPTANCE_CONTROLLED_PILOT_FULL_REVIEW_SEED_V1.cjs",
-    "ci:governance:c8-formal-chain-backend-p0": "node scripts/governance_acceptance/ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1.cjs"
+    "ci:governance:c8-formal-chain-backend-p0": "node scripts/governance_acceptance/ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1.cjs",
+    "ci:pr18i-guarded-report-hotfix": "node scripts/check_pr18i_guarded_report_hotfix.cjs"
   },
   "volta": { "node": "20.11.1" }
 }

@@ -18,6 +18,7 @@ Multiple follow-up PRs were merged after #1915. #1915 had a failed CI run, and #
 
 ## Verification
 
+- `pnpm run ci:pr18i-guarded-report-hotfix`
 - `pnpm -r typecheck`
 - `pnpm -r build`
 - CI `build-test`
