@@ -16,41 +16,6 @@ function formalAcceptanceId(item: any): string | null {
   return value ? value : null;
 }
 
-function formalAcceptanceId(item: any): string | null {
-  const value = String(item?.formal_acceptance_id ?? "").trim();
-  return value ? value : null;
-}
-
-function formalAcceptanceId(item: any): string | null {
-  const value = String(item?.formal_acceptance_id ?? "").trim();
-  return value ? value : null;
-}
-
-function formalAcceptanceId(item: any): string | null {
-  const value = String(item?.formal_acceptance_id ?? "").trim();
-  return value ? value : null;
-}
-
-function formalAcceptanceId(item: any): string | null {
-  const value = String(item?.formal_acceptance_id ?? "").trim();
-  return value ? value : null;
-}
-
-function formalAcceptanceId(item: any): string | null {
-  const value = String(item?.formal_acceptance_id ?? "").trim();
-  return value ? value : null;
-}
-
-function formalAcceptanceId(item: any): string | null {
-  const value = String(item?.formal_acceptance_id ?? "").trim();
-  return value ? value : null;
-}
-
-function formalAcceptanceId(item: any): string | null {
-  const value = String(item?.formal_acceptance_id ?? "").trim();
-  return value ? value : null;
-}
-
 export function isFormalCustomerValueItem(item: any): boolean {
   return item?.customer_visible_value === true
     && item?.trust_level === "FORMAL_ACCEPTED"
@@ -69,7 +34,6 @@ function collectRoiItems(roi: any): any[] {
   return items;
 }
 
-function collectRoiItems(roi: any): any[] { const items: any[] = []; if (Array.isArray(roi?.items)) items.push(...roi.items); for (const key of ["water_saved", "labor_saved", "early_warning_lead_time", "first_pass_acceptance_rate", "low_confidence_items"]) if (Array.isArray(roi?.[key])) items.push(...roi[key]); return items; }
 function summaryHasFormalCustomerValue(summary: any): boolean { return summary?.has_customer_visible_value === true && Number(summary?.trusted_value_items ?? 0) > 0; }
 function hasMeasuredFieldValue(summary: any): boolean { return Number(summary?.measured_items ?? 0) > 0 && Number(summary?.total_roi_items ?? 0) > 0; }
 
