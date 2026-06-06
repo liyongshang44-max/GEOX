@@ -92,6 +92,41 @@ async function withDb(fn) {
   }
 }
 
+function authHeaders(tenant) {
+  const token = process.env.GEOX_AO_ACT_TOKEN || process.env.GEOX_ACCEPTANCE_TOKEN || process.env.ADMIN_TOKEN || 'tenant_a_admin_token';
+  return { accept: 'application/json', 'content-type': 'application/json', authorization: `Bearer ${token}`, 'x-geox-token': token, 'x-geox-ao-act-token': token, 'x-ao-act-token': token, 'x-tenant-id': tenant, 'x-project-id': PROJECT_ID, 'x-group-id': GROUP_ID };
+}
+
+async function postJson(baseUrl, pathName, body, tenant) {
+  const res = await fetch(`${baseUrl}${pathName}`, { method: 'POST', headers: authHeaders(tenant), body: JSON.stringify(body) });
+  const raw = await res.text();
+  let json = null;
+  try { json = raw ? JSON.parse(raw) : null; } catch { json = null; }
+  assertOk(res.status >= 200 && res.status < 300 && json && typeof json === 'object', 'E2E_RUNTIME_POST_FAILED', { path: pathName, status: res.status, raw, json });
+  return json;
+}
+
+function isInterimRoiForAsExecuted(row, asExecutedId) {
+  return Boolean(row && row.source_lane === 'AS_EXECUTED_SIGNAL' && row.trust_level === 'INTERIM_SUPPORTED' && row.customer_visible_value === false && row.as_executed_id === asExecutedId);
+}
+
+async function countInterimRoiRows(tenant, asExecutedId) {
+  return withDb(async (pool) => {
+    const q = await pool.query(
+      `SELECT count(*)::int AS count
+         FROM roi_ledger_v1
+        WHERE tenant_id = $1
+          AND project_id = $2
+          AND group_id = $3
+          AND as_executed_id = $4
+          AND source_lane = 'AS_EXECUTED_SIGNAL'
+          AND trust_level = 'INTERIM_SUPPORTED'`,
+      [tenant, PROJECT_ID, GROUP_ID, asExecutedId],
+    );
+    return Number(q.rows?.[0]?.count || 0);
+  });
+}
+
 async function loadFormalMemoryRow(tenant) {
   return withDb(async (pool) => {
     const q = await pool.query(
@@ -150,6 +185,7 @@ function assertStaticSource(seedPath) {
   assertOk(source.includes('/api/v1/as-executed/from-receipt'), 'E2E_AS_EXECUTED_DERIVATION_API_REQUIRED', null);
   assertOk(source.includes('/api/v1/roi-ledger/from-as-executed'), 'E2E_INTERIM_ROI_DERIVATION_API_REQUIRED', null);
   assertOk(source.includes('/api/v1/roi-ledger/formalize-from-acceptance'), 'E2E_FORMAL_ROI_DERIVATION_API_REQUIRED', null);
+  assertOk(source.includes('ROI_INTERIM_SIGNAL_READBACK_REQUIRED') && source.includes('isInterimRoiForAsExecuted'), 'E2E_INTERIM_ROI_READBACK_DEFENSE_REQUIRED', null);
 }
 
 function assertExportContract(plan) {
@@ -248,7 +284,17 @@ async function runRuntime(args) {
   assertOk(memory.customer_visible_memory === true && memory.learning_eligible === true, 'E2E_FIELD_MEMORY_VISIBILITY_MISMATCH', memory);
   assertOk(memory.formal_acceptance_id === ACCEPTANCE_ID, 'E2E_FIELD_MEMORY_ACCEPTANCE_MISMATCH', memory);
 
-  return { apply, verify, memory };
+  const asExecutedId = verify.interim_roi?.as_executed_id || verify.as_executed?.as_executed_id;
+  assertOk(Boolean(asExecutedId), 'E2E_INTERIM_ROI_AS_EXECUTED_ID_MISSING', verify.interim_roi || verify.as_executed || null);
+  const roiBody = { tenant_id: args.tenant, project_id: PROJECT_ID, group_id: GROUP_ID, as_executed_id: asExecutedId, skill_trace_id: 'skill_trace_c8_irrigation_001' };
+  await postJson(args.baseUrl, '/api/v1/roi-ledger/from-as-executed', roiBody, args.tenant);
+  const secondRoi = await postJson(args.baseUrl, '/api/v1/roi-ledger/from-as-executed', roiBody, args.tenant);
+  const secondRows = Array.isArray(secondRoi.roi_ledgers) ? secondRoi.roi_ledgers : [];
+  assertOk(secondRows.some((row) => isInterimRoiForAsExecuted(row, asExecutedId)), 'E2E_INTERIM_ROI_SECOND_DERIVATION_READBACK_REQUIRED', secondRoi);
+  const interimCount = await countInterimRoiRows(args.tenant, asExecutedId);
+  assertOk(interimCount === 1, 'E2E_INTERIM_ROI_DUPLICATE_ROWS_FORBIDDEN', { as_executed_id: asExecutedId, count: interimCount });
+
+  return { apply, verify, memory, repeated_interim_roi: secondRows.find((row) => isInterimRoiForAsExecuted(row, asExecutedId)), interim_roi_count: interimCount };
 }
 
 async function main() {

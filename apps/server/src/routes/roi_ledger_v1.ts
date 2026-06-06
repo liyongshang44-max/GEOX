@@ -49,6 +49,7 @@ export function registerRoiLedgerV1Routes(app: FastifyInstance, pool: Pool): voi
       return reply.send({
         ok: true,
         idempotent: result.idempotent,
+        mode: result.mode ?? (result.idempotent ? "existing" : "created"),
         trust_layer: {
           default_source_lane: "AS_EXECUTED_SIGNAL",
           default_trust_level: "INTERIM_SUPPORTED",
