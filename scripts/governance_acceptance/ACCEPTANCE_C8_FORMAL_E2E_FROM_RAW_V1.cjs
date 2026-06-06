@@ -11,11 +11,25 @@ const path = require('node:path');
 const PROFILE = 'c8-formal-e2e';
 const DEFAULT_TENANT = 'tenantA';
 const DEFAULT_SEED = 'scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs';
+const TELEMETRY_ROUTE = 'apps/server/src/routes/telemetry_v1.ts';
+const TELEMETRY_MIGRATION = 'apps/server/db/migrations/2026_06_06_c8_formal_e2e_telemetry_projection_v1.sql';
 const FIELD_ID = 'field_c8_demo';
 const TASK_ID = 'act_c8_irrigation_formal_001';
 const OPERATION_ID = 'op_plan_c8_irrigation_formal_001';
 const ACCEPTANCE_ID = 'acc_c8_irrigation_formal_001';
 const MEMORY_ID = 'fm_c8_irrigation_response_001';
+const PROJECT_ID = 'projectA';
+const GROUP_ID = 'groupA';
+
+function loadEnv(file) {
+  if (!fs.existsSync(file)) return;
+  for (const line of fs.readFileSync(file, 'utf8').split(/\r?\n/)) {
+    const m = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/.exec(line);
+    if (m && process.env[m[1]] === undefined) process.env[m[1]] = m[2].replace(/^[\"']|[\"']$/g, '');
+  }
+}
+loadEnv(path.resolve(process.cwd(), '.env.ci'));
+loadEnv(path.resolve(process.cwd(), '.env'));
 
 function parseArgs(argv) {
   const args = { tenant: DEFAULT_TENANT, baseUrl: '', seed: DEFAULT_SEED, runtime: false };
@@ -55,6 +69,47 @@ function runNode(script, cliArgs, code) {
   }
 }
 
+
+function dbConfig() {
+  return process.env.DATABASE_URL || process.env.POSTGRES_URL
+    ? { connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL }
+    : {
+        host: process.env.PGHOST || '127.0.0.1',
+        port: Number(process.env.PGPORT || 5433),
+        user: process.env.PGUSER || 'landos',
+        password: process.env.PGPASSWORD || 'landos_pwd',
+        database: process.env.PGDATABASE || 'landos',
+      };
+}
+
+async function withDb(fn) {
+  const { Pool } = require('pg');
+  const pool = new Pool(dbConfig());
+  try {
+    return await fn(pool);
+  } finally {
+    await pool.end();
+  }
+}
+
+async function loadFormalMemoryRow(tenant) {
+  return withDb(async (pool) => {
+    const q = await pool.query(
+      `SELECT memory_id, source_type, source_id, memory_lane, trust_level,
+              customer_visible_memory, learning_eligible, formal_acceptance_id
+         FROM field_memory_v1
+        WHERE tenant_id = $1
+          AND project_id = $2
+          AND group_id = $3
+          AND memory_id = $4
+        ORDER BY occurred_at DESC
+        LIMIT 1`,
+      [tenant, PROJECT_ID, GROUP_ID, MEMORY_ID],
+    );
+    return q.rows?.[0] || null;
+  });
+}
+
 function tableRows(plan, name) {
   const rows = plan && plan.tables ? plan.tables[name] : undefined;
   return Array.isArray(rows) ? rows : [];
@@ -82,10 +137,15 @@ function assertFactPresent(plan, type) {
 
 function assertStaticSource(seedPath) {
   const source = fs.readFileSync(seedPath, 'utf8');
+  const routeSource = fs.readFileSync(path.resolve(process.cwd(), TELEMETRY_ROUTE), 'utf8');
+  const migrationSource = fs.readFileSync(path.resolve(process.cwd(), TELEMETRY_MIGRATION), 'utf8');
   assertOk(source.includes(PROFILE), 'E2E_PROFILE_LITERAL_REQUIRED', { profile: PROFILE });
   assertOk(source.includes('field_memory_written_by_seed'), 'E2E_FIELD_MEMORY_MANIFEST_FLAG_REQUIRED', null);
   assertOk(source.includes('field_memory_flow'), 'E2E_FIELD_MEMORY_FLOW_REQUIRED', null);
   assertOk(source.includes('/api/v1/device-observations/from-telemetry-facts'), 'E2E_DEVICE_OBSERVATION_DERIVATION_API_REQUIRED', null);
+  assertOk(routeSource.includes('requireAoActScopeV0(req, reply, "telemetry.write")'), 'E2E_DEVICE_OBSERVATION_WRITE_SCOPE_REQUIRED', null);
+  assertOk(!routeSource.includes('CREATE TABLE IF NOT EXISTS telemetry_index_v1') && !routeSource.includes('CREATE TABLE IF NOT EXISTS device_observation_index_v1'), 'E2E_ROUTE_MUST_NOT_CREATE_PROJECTION_TABLES', null);
+  assertOk(migrationSource.includes('CREATE TABLE IF NOT EXISTS telemetry_index_v1') && migrationSource.includes('CREATE TABLE IF NOT EXISTS device_observation_index_v1'), 'E2E_PROJECTION_SCHEMA_MIGRATION_REQUIRED', null);
   assertOk(source.includes('/api/v1/field-memory/from-acceptance'), 'E2E_FIELD_MEMORY_DERIVATION_API_REQUIRED', null);
   assertOk(source.includes('/api/v1/as-executed/from-receipt'), 'E2E_AS_EXECUTED_DERIVATION_API_REQUIRED', null);
   assertOk(source.includes('/api/v1/roi-ledger/from-as-executed'), 'E2E_INTERIM_ROI_DERIVATION_API_REQUIRED', null);
@@ -167,10 +227,11 @@ function assertRuntimeResult(result, code) {
   assertOk(result && result.ok === true, code, result);
 }
 
-function runRuntime(args) {
+async function runRuntime(args) {
   const common = ['--tenant', args.tenant, '--profile', PROFILE, '--base-url', args.baseUrl];
   const apply = runNode(args.seed, ['--apply', ...common], 'E2E_RUNTIME_APPLY_FAILED');
   assertRuntimeResult(apply, 'E2E_RUNTIME_APPLY_NOT_OK');
+  assertOk(apply.as_executed_derivation?.pre_field_memory_count === 0, 'E2E_FIELD_MEMORY_SEEDED_BEFORE_DERIVATION', apply.as_executed_derivation);
 
   const verify = runNode(args.seed, ['--verify-api', ...common], 'E2E_RUNTIME_VERIFY_API_FAILED');
   assertRuntimeResult(verify, 'E2E_RUNTIME_VERIFY_API_NOT_OK');
@@ -179,10 +240,18 @@ function runRuntime(args) {
   assertOk(verify.checked_endpoints === undefined || verify.checked_endpoints.some((x) => String(x).includes('/api/v1/reports/operation')), 'E2E_OPERATION_REPORT_ENDPOINT_NOT_CHECKED', verify.checked_endpoints);
   assertOk(verify.checked_endpoints === undefined || verify.checked_endpoints.some((x) => String(x).includes('/api/v1/reports/field')), 'E2E_FIELD_REPORT_ENDPOINT_NOT_CHECKED', verify.checked_endpoints);
 
-  return { apply, verify };
+  const memory = await loadFormalMemoryRow(args.tenant);
+  assertOk(Boolean(memory), 'E2E_FIELD_MEMORY_ROW_MISSING_AFTER_DERIVATION', null);
+  assertOk(memory.source_type === 'acceptance_result_v1', 'E2E_FIELD_MEMORY_SOURCE_TYPE_MISMATCH', memory);
+  assertOk(memory.source_id === ACCEPTANCE_ID, 'E2E_FIELD_MEMORY_SOURCE_ID_MISMATCH', memory);
+  assertOk(memory.memory_lane === 'FORMAL_FIELD_MEMORY' && memory.trust_level === 'FORMAL_ACCEPTED', 'E2E_FIELD_MEMORY_TRUST_LAYER_MISMATCH', memory);
+  assertOk(memory.customer_visible_memory === true && memory.learning_eligible === true, 'E2E_FIELD_MEMORY_VISIBILITY_MISMATCH', memory);
+  assertOk(memory.formal_acceptance_id === ACCEPTANCE_ID, 'E2E_FIELD_MEMORY_ACCEPTANCE_MISMATCH', memory);
+
+  return { apply, verify, memory };
 }
 
-function main() {
+async function main() {
   const args = parseArgs(process.argv);
   const seedPath = path.resolve(process.cwd(), args.seed);
   assertOk(fs.existsSync(seedPath), 'E2E_SEED_SCRIPT_NOT_FOUND', { seedPath });
@@ -191,7 +260,7 @@ function main() {
   const plan = runNode(args.seed, ['--export-json', '--tenant', args.tenant, '--profile', PROFILE], 'E2E_EXPORT_JSON_FAILED');
   assertExportContract(plan);
 
-  const runtime = args.runtime ? runRuntime(args) : null;
+  const runtime = args.runtime ? await runRuntime(args) : null;
   console.log(JSON.stringify({
     ok: true,
     acceptance: 'ACCEPTANCE_C8_FORMAL_E2E_FROM_RAW_V1',
@@ -216,9 +285,7 @@ function main() {
   }, null, 2));
 }
 
-try {
-  main();
-} catch (error) {
+main().catch((error) => {
   console.error(JSON.stringify({ ok: false, error: String(error && error.message ? error.message : error), detail: error && error.detail ? error.detail : null }, null, 2));
   process.exit(1);
-}
+});

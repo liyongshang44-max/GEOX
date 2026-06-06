@@ -228,36 +228,6 @@ async function ensureDeviceVisible(pool: Pool, tenant_id: string, device_id: str
  * - GET /api/v1/telemetry/metrics
  */
 
-async function ensureC8TelemetryProjectionTables(pool: Pool): Promise<void> {
-  await pool.query(`CREATE TABLE IF NOT EXISTS telemetry_index_v1 (
-    tenant_id text NOT NULL,
-    device_id text NOT NULL,
-    metric text NOT NULL,
-    ts timestamptz NOT NULL,
-    value_num double precision NULL,
-    value_text text NULL,
-    fact_id text NOT NULL,
-    PRIMARY KEY (tenant_id, device_id, metric, ts)
-  )`);
-  await pool.query(`CREATE TABLE IF NOT EXISTS device_observation_index_v1 (
-    tenant_id text NOT NULL,
-    project_id text NULL,
-    group_id text NULL,
-    device_id text NOT NULL,
-    field_id text NULL,
-    metric text NOT NULL,
-    observed_at timestamptz NOT NULL,
-    observed_at_ts_ms bigint NOT NULL,
-    value_num double precision NULL,
-    value_text text NULL,
-    unit text NULL,
-    confidence double precision NULL,
-    quality_flags_json jsonb NOT NULL DEFAULT '[]'::jsonb,
-    fact_id text NOT NULL,
-    PRIMARY KEY (tenant_id, device_id, metric, observed_at_ts_ms)
-  )`);
-}
-
 function text(v: unknown): string {
   return String(v ?? "").trim();
 }
@@ -270,7 +240,7 @@ function finiteOrNull(v: unknown): number | null {
 export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { // Register telemetry v1 routes.
 
   app.post("/api/v1/device-observations/from-telemetry-facts", async (req, reply) => {
-    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read");
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.write");
     if (!auth) return;
     const body: any = (req as any).body ?? {};
     const tenant_id = text(body.tenant_id || auth.tenant_id);
@@ -278,9 +248,25 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
     const group_id = text(body.group_id || auth.group_id);
     const operation_plan_id = text(body.operation_plan_id);
     if (!tenant_id || !project_id || !group_id) return reply.status(400).send({ ok: false, error: "MISSING_TENANT_SCOPE" });
+    if (!operation_plan_id) return reply.status(400).send({ ok: false, error: "MISSING_OPERATION_PLAN_ID" });
     if (tenant_id !== auth.tenant_id || project_id !== auth.project_id || group_id !== auth.group_id) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
 
-    await ensureC8TelemetryProjectionTables(pool);
+    const opQ = await pool.query(
+      `SELECT record_json::jsonb AS record_json
+         FROM facts
+        WHERE (record_json::jsonb->>'type') = 'operation_plan_v1'
+          AND COALESCE(record_json::jsonb#>>'{payload,tenant_id}', $1) = $1
+          AND COALESCE(record_json::jsonb#>>'{payload,project_id}', $2) = $2
+          AND COALESCE(record_json::jsonb#>>'{payload,group_id}', $3) = $3
+          AND COALESCE(record_json::jsonb#>>'{payload,operation_plan_id}', record_json::jsonb#>>'{payload,operation_id}') = $4
+        ORDER BY occurred_at DESC, fact_id DESC
+        LIMIT 1`,
+      [tenant_id, project_id, group_id, operation_plan_id],
+    );
+    if (!opQ.rows?.[0]) return reply.status(404).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND" });
+    const operationPayload = (opQ.rows[0] as any).record_json?.payload ?? {};
+    const operation_field_id = text(operationPayload.field_id);
+
     const q = await pool.query(
       `SELECT fact_id, occurred_at, record_json::jsonb AS record_json
          FROM facts
@@ -288,8 +274,10 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
           AND COALESCE(record_json::jsonb#>>'{payload,tenant_id}', $1) = $1
           AND COALESCE(record_json::jsonb#>>'{payload,project_id}', $2) = $2
           AND COALESCE(record_json::jsonb#>>'{payload,group_id}', $3) = $3
+          AND COALESCE(record_json::jsonb#>>'{payload,operation_plan_id}', record_json::jsonb#>>'{payload,operation_id}') = $4
+          AND ($5::text = '' OR COALESCE(record_json::jsonb#>>'{payload,field_id}', '') = $5)
         ORDER BY occurred_at ASC, fact_id ASC`,
-      [tenant_id, project_id, group_id],
+      [tenant_id, project_id, group_id, operation_plan_id, operation_field_id],
     );
 
     let telemetryCount = 0;
@@ -343,7 +331,7 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
       reply.code(410);
       return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "DEPRECATED_API" }, routePath);
     }
-    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read"); // Enforce scope and obtain tenant context.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.write"); // Enforce scope and obtain tenant context.
     if (!auth) return; // Authorization helper already replied (401/403/404 semantics).
 
     const q: any = (req as any).query ?? {}; // Read query params from request.
@@ -373,7 +361,7 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
   app.get("/api/v1/telemetry/latest", async (req, reply) => { // Compatibility-only latest telemetry view (migration only).
     const routePath = "/api/v1/telemetry/latest" as const;
     try {
-      const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read"); // Require telemetry.read.
+      const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.write"); // Require telemetry.read.
       if (!auth) return; // Auth helper responded.
 
       const q: any = (req as any).query ?? {}; // Parse query params.
@@ -420,7 +408,7 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
   app.get("/api/v1/telemetry/series", async (req, reply) => { // Compatibility-only telemetry series (migration only).
     const routePath = "/api/v1/telemetry/series" as const;
     try {
-      const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read"); // Require telemetry.read.
+      const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.write"); // Require telemetry.read.
       if (!auth) return; // Auth helper responded.
 
       const q: any = (req as any).query ?? {}; // Parse query params.
@@ -471,7 +459,7 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
   app.get("/api/v1/telemetry/metrics", async (req, reply) => { // Compatibility-only telemetry metrics summary (migration only).
     const routePath = "/api/v1/telemetry/metrics" as const;
     try {
-      const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read"); // Require telemetry.read.
+      const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.write"); // Require telemetry.read.
       if (!auth) return; // Auth helper responded.
 
       const q: any = (req as any).query ?? {}; // Parse query params.
