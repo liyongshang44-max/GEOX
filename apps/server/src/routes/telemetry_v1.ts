@@ -331,7 +331,7 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
       reply.code(410);
       return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "DEPRECATED_API" }, routePath);
     }
-    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.write"); // Enforce scope and obtain tenant context.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read"); // Enforce read scope and obtain tenant context.
     if (!auth) return; // Authorization helper already replied (401/403/404 semantics).
 
     const q: any = (req as any).query ?? {}; // Read query params from request.
@@ -361,7 +361,7 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
   app.get("/api/v1/telemetry/latest", async (req, reply) => { // Compatibility-only latest telemetry view (migration only).
     const routePath = "/api/v1/telemetry/latest" as const;
     try {
-      const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.write"); // Require telemetry.read.
+      const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read"); // Require telemetry.read.
       if (!auth) return; // Auth helper responded.
 
       const q: any = (req as any).query ?? {}; // Parse query params.
@@ -408,7 +408,7 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
   app.get("/api/v1/telemetry/series", async (req, reply) => { // Compatibility-only telemetry series (migration only).
     const routePath = "/api/v1/telemetry/series" as const;
     try {
-      const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.write"); // Require telemetry.read.
+      const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read"); // Require telemetry.read.
       if (!auth) return; // Auth helper responded.
 
       const q: any = (req as any).query ?? {}; // Parse query params.
@@ -459,7 +459,7 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
   app.get("/api/v1/telemetry/metrics", async (req, reply) => { // Compatibility-only telemetry metrics summary (migration only).
     const routePath = "/api/v1/telemetry/metrics" as const;
     try {
-      const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.write"); // Require telemetry.read.
+      const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read"); // Require telemetry.read.
       if (!auth) return; // Auth helper responded.
 
       const q: any = (req as any).query ?? {}; // Parse query params.

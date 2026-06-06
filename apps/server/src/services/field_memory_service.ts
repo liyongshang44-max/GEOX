@@ -501,7 +501,7 @@ export async function recordMemoryV1(db: DbConn, tenant_id: string, input: Recor
   const occurred_at = new Date().toISOString();
   const trust = classifyMemoryLaneV1(memory_type, input);
   const source_type = String(input.source_type ?? "").trim() || sourceTypeForMemory(memory_type);
-  const source_id = String(input.source_id ?? "").trim() || trust.formal_acceptance_id ?? input.operation_id ?? skill_trace_ref ?? memory_id;
+  const source_id = String(input.source_id ?? "").trim() || trust.formal_acceptance_id || input.operation_id || skill_trace_ref || memory_id;
 
   await db.query(
     `INSERT INTO field_memory_v1 (

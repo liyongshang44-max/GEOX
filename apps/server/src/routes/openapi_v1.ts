@@ -2536,6 +2536,62 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           }
         }
       },
+      "/api/v1/device-observations/from-telemetry-facts": {
+        post: {
+          tags: ["telemetry"],
+          summary: "Derive telemetry and device-observation projections from scoped telemetry facts",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["tenant_id", "project_id", "group_id", "operation_plan_id"],
+                  properties: {
+                    tenant_id: { type: "string" },
+                    project_id: { type: "string" },
+                    group_id: { type: "string" },
+                    operation_plan_id: { type: "string" }
+                  },
+                  additionalProperties: false
+                }
+              }
+            }
+          },
+          responses: {
+            "200": {
+              description: "Telemetry and device observations derived successfully",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["ok", "operation_plan_id", "source_fact_type", "derived"],
+                    properties: {
+                      ok: { type: "boolean" },
+                      operation_plan_id: { type: "string" },
+                      source_fact_type: { type: "string", enum: ["telemetry_observation_v1"] },
+                      derived: {
+                        type: "object",
+                        required: ["telemetry_index_v1", "device_observation_index_v1"],
+                        properties: {
+                          telemetry_index_v1: { type: "integer" },
+                          device_observation_index_v1: { type: "integer" }
+                        },
+                        additionalProperties: false
+                      },
+                      telemetry_count: { type: "integer" },
+                      device_observation_count: { type: "integer" }
+                    },
+                    additionalProperties: true
+                  }
+                }
+              }
+            },
+            "400": { description: "Missing tenant scope or operation plan id" },
+            "404": { description: "Tenant scope or operation plan not found" }
+          }
+        }
+      },
       "/api/v1/telemetry/latest": {
         get: {
           tags: ["telemetry"],
