@@ -85,6 +85,7 @@ function assertStaticSource(seedPath) {
   assertOk(source.includes(PROFILE), 'E2E_PROFILE_LITERAL_REQUIRED', { profile: PROFILE });
   assertOk(source.includes('field_memory_written_by_seed'), 'E2E_FIELD_MEMORY_MANIFEST_FLAG_REQUIRED', null);
   assertOk(source.includes('field_memory_flow'), 'E2E_FIELD_MEMORY_FLOW_REQUIRED', null);
+  assertOk(source.includes('/api/v1/device-observations/from-telemetry-facts'), 'E2E_DEVICE_OBSERVATION_DERIVATION_API_REQUIRED', null);
   assertOk(source.includes('/api/v1/field-memory/from-acceptance'), 'E2E_FIELD_MEMORY_DERIVATION_API_REQUIRED', null);
   assertOk(source.includes('/api/v1/as-executed/from-receipt'), 'E2E_AS_EXECUTED_DERIVATION_API_REQUIRED', null);
   assertOk(source.includes('/api/v1/roi-ledger/from-as-executed'), 'E2E_INTERIM_ROI_DERIVATION_API_REQUIRED', null);
@@ -105,6 +106,10 @@ function assertExportContract(plan) {
     'report_projection_v1',
     'derived_sensing_state_v1',
     'stage1_sensing_state_v1',
+    'telemetry_index_v1',
+    'device_status_index_v1',
+    'prescription_contract_v1',
+    'approval_requests_v1',
   ]) {
     assertTableEmpty(plan, tableName);
   }
@@ -136,9 +141,16 @@ function assertExportContract(plan) {
   }
 
   assertOk(facts(plan, 'telemetry_observation_v1').length >= 4, 'E2E_RAW_TELEMETRY_FACTS_REQUIRED', { count: facts(plan, 'telemetry_observation_v1').length });
+  assertOk(facts(plan, 'ao_act_receipt_v1').length >= 1, 'E2E_RECEIPT_FACTS_REQUIRED', { count: facts(plan, 'ao_act_receipt_v1').length });
+  assertOk(facts(plan, 'acceptance_result_v1').length >= 1, 'E2E_ACCEPTANCE_FACTS_REQUIRED', { count: facts(plan, 'acceptance_result_v1').length });
   assertOk(facts(plan, 'evidence_artifact_v1').length >= 2, 'E2E_FORMAL_EVIDENCE_FACTS_REQUIRED', { count: facts(plan, 'evidence_artifact_v1').length });
+  for (const type of ['stage1_sensing_summary_v1', 'skill_run_v1', 'value_record_v1']) {
+    assertOk(facts(plan, type).length === 0, `E2E_FORBIDDEN_FACT_${type.toUpperCase()}`, { type, count: facts(plan, type).length });
+  }
 
   const manifest = plan.manifest || {};
+  assertOk(manifest.raw_to_report_e2e === true, 'E2E_RAW_TO_REPORT_MANIFEST_FLAG_REQUIRED', manifest);
+  assertOk(manifest.formalized_by_seed === false, 'E2E_FORMALIZED_BY_SEED_MUST_BE_FALSE', manifest);
   assertOk(manifest.field_memory_written_by_seed === false, 'E2E_FIELD_MEMORY_WRITTEN_BY_SEED_MUST_BE_FALSE', manifest);
   assertOk(Array.isArray(manifest.field_memory_flow), 'E2E_FIELD_MEMORY_FLOW_MISSING', manifest);
   for (const item of ['acceptance_result_v1', 'field-memory/from-acceptance', 'field_memory_v1']) {
@@ -196,6 +208,10 @@ function main() {
       'report_projection_v1',
       'derived_sensing_state_v1',
       'stage1_sensing_state_v1',
+      'telemetry_index_v1',
+      'device_status_index_v1',
+      'prescription_contract_v1',
+      'approval_requests_v1',
     ],
   }, null, 2));
 }

@@ -227,7 +227,116 @@ async function ensureDeviceVisible(pool: Pool, tenant_id: string, device_id: str
  * - GET /api/v1/telemetry/series
  * - GET /api/v1/telemetry/metrics
  */
+
+async function ensureC8TelemetryProjectionTables(pool: Pool): Promise<void> {
+  await pool.query(`CREATE TABLE IF NOT EXISTS telemetry_index_v1 (
+    tenant_id text NOT NULL,
+    device_id text NOT NULL,
+    metric text NOT NULL,
+    ts timestamptz NOT NULL,
+    value_num double precision NULL,
+    value_text text NULL,
+    fact_id text NOT NULL,
+    PRIMARY KEY (tenant_id, device_id, metric, ts)
+  )`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS device_observation_index_v1 (
+    tenant_id text NOT NULL,
+    project_id text NULL,
+    group_id text NULL,
+    device_id text NOT NULL,
+    field_id text NULL,
+    metric text NOT NULL,
+    observed_at timestamptz NOT NULL,
+    observed_at_ts_ms bigint NOT NULL,
+    value_num double precision NULL,
+    value_text text NULL,
+    unit text NULL,
+    confidence double precision NULL,
+    quality_flags_json jsonb NOT NULL DEFAULT '[]'::jsonb,
+    fact_id text NOT NULL,
+    PRIMARY KEY (tenant_id, device_id, metric, observed_at_ts_ms)
+  )`);
+}
+
+function text(v: unknown): string {
+  return String(v ?? "").trim();
+}
+
+function finiteOrNull(v: unknown): number | null {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
 export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { // Register telemetry v1 routes.
+
+  app.post("/api/v1/device-observations/from-telemetry-facts", async (req, reply) => {
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read");
+    if (!auth) return;
+    const body: any = (req as any).body ?? {};
+    const tenant_id = text(body.tenant_id || auth.tenant_id);
+    const project_id = text(body.project_id || auth.project_id);
+    const group_id = text(body.group_id || auth.group_id);
+    const operation_plan_id = text(body.operation_plan_id);
+    if (!tenant_id || !project_id || !group_id) return reply.status(400).send({ ok: false, error: "MISSING_TENANT_SCOPE" });
+    if (tenant_id !== auth.tenant_id || project_id !== auth.project_id || group_id !== auth.group_id) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+
+    await ensureC8TelemetryProjectionTables(pool);
+    const q = await pool.query(
+      `SELECT fact_id, occurred_at, record_json::jsonb AS record_json
+         FROM facts
+        WHERE (record_json::jsonb->>'type') = 'telemetry_observation_v1'
+          AND COALESCE(record_json::jsonb#>>'{payload,tenant_id}', $1) = $1
+          AND COALESCE(record_json::jsonb#>>'{payload,project_id}', $2) = $2
+          AND COALESCE(record_json::jsonb#>>'{payload,group_id}', $3) = $3
+        ORDER BY occurred_at ASC, fact_id ASC`,
+      [tenant_id, project_id, group_id],
+    );
+
+    let telemetryCount = 0;
+    let observationCount = 0;
+    for (const row of q.rows ?? []) {
+      const payload = (row as any).record_json?.payload ?? {};
+      const device_id = text(payload.device_id);
+      const field_id = text(payload.field_id);
+      const metric = text(payload.metric);
+      const observed_at_ts_ms = finiteOrNull(payload.observed_at_ts_ms) ?? Date.parse(String((row as any).occurred_at));
+      const observed_at = Number.isFinite(observed_at_ts_ms) ? new Date(observed_at_ts_ms).toISOString() : new Date(String((row as any).occurred_at)).toISOString();
+      const value_num = finiteOrNull(payload.value_num);
+      if (!device_id || !metric || !Number.isFinite(observed_at_ts_ms)) continue;
+      await pool.query(
+        `INSERT INTO telemetry_index_v1 (tenant_id, device_id, metric, ts, value_num, value_text, fact_id)
+         VALUES ($1,$2,$3,$4::timestamptz,$5,$6,$7)
+         ON CONFLICT (tenant_id, device_id, metric, ts) DO UPDATE SET
+           value_num = EXCLUDED.value_num,
+           value_text = EXCLUDED.value_text,
+           fact_id = EXCLUDED.fact_id`,
+        [tenant_id, device_id, metric, observed_at, value_num, value_num == null ? text(payload.value_text) || null : null, String((row as any).fact_id)],
+      );
+      telemetryCount += 1;
+      if (field_id) {
+        await pool.query(
+          `INSERT INTO device_observation_index_v1
+            (tenant_id, project_id, group_id, device_id, field_id, metric, observed_at, observed_at_ts_ms, value_num, value_text, unit, confidence, quality_flags_json, fact_id)
+           VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10,$11,$12,$13::jsonb,$14)
+           ON CONFLICT (tenant_id, device_id, metric, observed_at_ts_ms) DO UPDATE SET
+             project_id = EXCLUDED.project_id,
+             group_id = EXCLUDED.group_id,
+             field_id = EXCLUDED.field_id,
+             value_num = EXCLUDED.value_num,
+             value_text = EXCLUDED.value_text,
+             unit = EXCLUDED.unit,
+             confidence = EXCLUDED.confidence,
+             quality_flags_json = EXCLUDED.quality_flags_json,
+             fact_id = EXCLUDED.fact_id`,
+          [tenant_id, project_id, group_id, device_id, field_id, metric, observed_at, observed_at_ts_ms, value_num, value_num == null ? text(payload.value_text) || null : null, text(payload.unit) || null, finiteOrNull(payload.confidence) ?? 0.95, JSON.stringify(Array.isArray(payload.quality_flags) ? payload.quality_flags : []), String((row as any).fact_id)],
+        );
+        observationCount += 1;
+      }
+    }
+
+    return reply.send({ ok: true, operation_plan_id: operation_plan_id || null, source_fact_type: "telemetry_observation_v1", derived: { telemetry_index_v1: telemetryCount, device_observation_index_v1: observationCount }, telemetry_count: telemetryCount, device_observation_count: observationCount });
+  });
+
   app.get("/api/telemetry/v1/query", async (req, reply) => { // Compatibility-only telemetry query (migration only).
     const routePath = "/api/telemetry/v1/query" as const;
     if ((req.query as any)?.__internal__ !== "true") {
