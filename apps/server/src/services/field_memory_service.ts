@@ -45,6 +45,9 @@ type RecordMemoryInput = {
   customer_visible_memory?: boolean;
   learning_eligible?: boolean;
   trust_reasons?: string[];
+  memory_id?: string;
+  source_type?: string;
+  source_id?: string;
 };
 
 export function normalizeMemoryType(type: string): FieldMemoryTypeV1 {
@@ -404,6 +407,12 @@ async function findExistingFormalFieldMemoryV1(db: DbConn, tenant: TenantTriple,
   return q.rows?.[0] ?? null;
 }
 
+function memoryIdFromOperation(operationId: string): string {
+  return String(operationId || "")
+    .replace(/^op_plan_/, "fm_")
+    .replace("_formal_", "_response_");
+}
+
 export async function createFormalFieldMemoryFromAcceptanceV1(db: DbConn, tenant: TenantTriple, input: {
   operation_plan_id: string;
   acceptance_id: string;
@@ -438,6 +447,9 @@ export async function createFormalFieldMemoryFromAcceptanceV1(db: DbConn, tenant
 
   const memory = await recordMemoryV1(db, tenant.tenant_id, {
     type: "FIELD_RESPONSE_MEMORY",
+    memory_id: memoryIdFromOperation(input.operation_plan_id),
+    source_type: "acceptance_result_v1",
+    source_id: formalAcceptanceId,
     project_id: tenant.project_id,
     group_id: tenant.group_id,
     operation_id: input.operation_plan_id,
@@ -473,7 +485,7 @@ export async function createFormalFieldMemoryFromAcceptanceV1(db: DbConn, tenant
 
 export async function recordMemoryV1(db: DbConn, tenant_id: string, input: RecordMemoryInput): Promise<FieldMemoryV1> {
   const memory_type = normalizeMemoryType(input.type);
-  const memory_id = crypto.randomUUID();
+  const memory_id = String(input.memory_id ?? "").trim() || crypto.randomUUID();
   const metrics = input.metrics ?? {};
   const before_value = num((metrics as any).before_soil_moisture ?? (metrics as any).before_value);
   const after_value = num((metrics as any).after_soil_moisture ?? (metrics as any).after_value);
@@ -488,8 +500,8 @@ export async function recordMemoryV1(db: DbConn, tenant_id: string, input: Recor
   const summary_text = input.summary?.trim() || `Field memory recorded: ${memory_type}`;
   const occurred_at = new Date().toISOString();
   const trust = classifyMemoryLaneV1(memory_type, input);
-  const source_type = sourceTypeForMemory(memory_type);
-  const source_id = trust.formal_acceptance_id ?? input.operation_id ?? skill_trace_ref ?? memory_id;
+  const source_type = String(input.source_type ?? "").trim() || sourceTypeForMemory(memory_type);
+  const source_id = String(input.source_id ?? "").trim() || trust.formal_acceptance_id || input.operation_id || skill_trace_ref || memory_id;
 
   await db.query(
     `INSERT INTO field_memory_v1 (

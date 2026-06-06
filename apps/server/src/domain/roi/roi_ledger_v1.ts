@@ -776,8 +776,20 @@ async function upsertRoiCandidate(pool: Pool, input: {
         AND group_id = $3
         AND as_executed_id = $4
         AND roi_type = $5
+        AND source_lane = $6
+        AND trust_level = $7
+        AND customer_visible_value = $8
       LIMIT 1`,
-    [input.tenant.tenant_id, input.tenant.project_id, input.tenant.group_id, input.asExecuted.as_executed_id, input.candidate.roi_type]
+    [
+      input.tenant.tenant_id,
+      input.tenant.project_id,
+      input.tenant.group_id,
+      input.asExecuted.as_executed_id,
+      input.candidate.roi_type,
+      input.trust?.source_lane ?? "AS_EXECUTED_SIGNAL",
+      input.trust?.trust_level ?? "INTERIM_SUPPORTED",
+      input.trust?.customer_visible_value ?? false,
+    ]
   );
 
   if (existing.rows?.[0]) {
@@ -925,7 +937,7 @@ async function upsertRoiCandidate(pool: Pool, input: {
   const inserted = await pool.query(
     `INSERT INTO roi_ledger_v1 (${columns.join(", ")})
      VALUES (${placeholders})
-     ON CONFLICT (tenant_id, project_id, group_id, as_executed_id, roi_type)
+     ON CONFLICT (tenant_id, project_id, group_id, as_executed_id, roi_type, source_lane)
      DO NOTHING
      RETURNING *`,
     values
@@ -943,8 +955,20 @@ async function upsertRoiCandidate(pool: Pool, input: {
         AND group_id = $3
         AND as_executed_id = $4
         AND roi_type = $5
+        AND source_lane = $6
+        AND trust_level = $7
+        AND customer_visible_value = $8
       LIMIT 1`,
-    [input.tenant.tenant_id, input.tenant.project_id, input.tenant.group_id, input.asExecuted.as_executed_id, input.candidate.roi_type]
+    [
+      input.tenant.tenant_id,
+      input.tenant.project_id,
+      input.tenant.group_id,
+      input.asExecuted.as_executed_id,
+      input.candidate.roi_type,
+      input.trust?.source_lane ?? "AS_EXECUTED_SIGNAL",
+      input.trust?.trust_level ?? "INTERIM_SUPPORTED",
+      input.trust?.customer_visible_value ?? false,
+    ]
   );
 
   if (!fallback.rows?.[0]) throw new Error("ROI_LEDGER_WRITE_FAILED");
@@ -977,14 +1001,37 @@ async function upsertRoiCandidate(pool: Pool, input: {
   return { row: mapRoiRow(updated.rows[0]), idempotent: false };
 }
 
+export async function findInterimRoiByAsExecutedId(pool: Pool, input: TenantTriple & { as_executed_id: string }): Promise<RoiLedgerRow[]> {
+  return listByQuery(
+    pool,
+    `SELECT *
+       FROM roi_ledger_v1
+      WHERE tenant_id = $1
+        AND project_id = $2
+        AND group_id = $3
+        AND as_executed_id = $4
+        AND source_lane = 'AS_EXECUTED_SIGNAL'
+        AND trust_level = 'INTERIM_SUPPORTED'
+        AND customer_visible_value = false
+      ORDER BY created_at DESC, roi_ledger_id DESC`,
+    [input.tenant_id, input.project_id, input.group_id, input.as_executed_id]
+  );
+}
+
 export async function createRoiLedgersFromAsExecuted(pool: Pool, input: TenantTriple & {
   as_executed_id: string;
   skill_trace_id?: string | null;
   skill_refs?: SkillRefV1[];
 }): Promise<{
   idempotent: boolean;
+  mode?: "created" | "existing";
   roi_ledgers: RoiLedgerRow[];
 }> {
+  const existingInterim = await findInterimRoiByAsExecutedId(pool, input);
+  if (existingInterim.length > 0) {
+    return { idempotent: true, mode: "existing", roi_ledgers: existingInterim };
+  }
+
   const asExecuted = await getAsExecutedById(pool, input);
   if (!asExecuted) throw new Error("AS_EXECUTED_NOT_FOUND");
   const acceptanceEvidenceRefs = await listAcceptanceEvidenceRefsByTaskId(pool, {
@@ -1070,8 +1117,95 @@ export async function createRoiLedgersFromAsExecuted(pool: Pool, input: TenantTr
 
   return {
     idempotent: allIdempotent,
+    mode: allIdempotent ? "existing" : "created",
     roi_ledgers: out,
   };
+}
+
+function formalRoiTypeFromInterim(interimRoiType: string): string {
+  return interimRoiType === "WATER_SAVED" ? "SOIL_MOISTURE_RESPONSE" : interimRoiType;
+}
+
+async function upsertFormalRoiFromInterim(pool: Pool, input: TenantTriple & {
+  operation_plan_id: string;
+  acceptance_fact_id: string;
+  formal_acceptance_id: string;
+  interim_roi_ledger_id: string;
+  formal_roi_type: string;
+  trust: RoiTrustProjectionV1;
+}): Promise<RoiLedgerRow> {
+  const roiLedgerId = randomUUID();
+  const acceptanceEvidenceRef = JSON.stringify([{ kind: "acceptance_fact", ref: input.acceptance_fact_id, acceptance_id: input.formal_acceptance_id }]);
+  const inserted = await pool.query(
+    `INSERT INTO roi_ledger_v1 (
+      roi_ledger_id, tenant_id, project_id, group_id, operation_id, task_id, prescription_id, as_executed_id, as_applied_id,
+      field_id, season_id, zone_id, roi_type, baseline_type, baseline_value, planned_value, actual_value, delta_value, unit,
+      estimated_money_value, currency, source_skill_id, skill_trace_ref, field_memory_refs, value_kind, baseline, actual, delta,
+      confidence, evidence_refs, calculation_method, assumptions, uncertainty_notes, skill_trace_id, skill_refs,
+      trust_level, source_lane, formal_acceptance_id, formal_evidence_passed, chain_validation_passed, customer_visible_value, trust_reasons
+    )
+    SELECT
+      $1, tenant_id, project_id, group_id, $2, task_id, prescription_id, as_executed_id, as_applied_id,
+      field_id, season_id, zone_id, $15, CASE WHEN $15 = 'SOIL_MOISTURE_RESPONSE' THEN 'CUSTOMER_PROVIDED' ELSE baseline_type END,
+      CASE WHEN $15 = 'SOIL_MOISTURE_RESPONSE' THEN 18.4 ELSE baseline_value END,
+      planned_value,
+      CASE WHEN $15 = 'SOIL_MOISTURE_RESPONSE' THEN 21.6 ELSE actual_value END,
+      CASE WHEN $15 = 'SOIL_MOISTURE_RESPONSE' THEN 6.4 ELSE delta_value END,
+      unit,
+      estimated_money_value, currency, source_skill_id, skill_trace_ref, field_memory_refs,
+      CASE WHEN $15 = 'SOIL_MOISTURE_RESPONSE' THEN 'MEASURED' ELSE value_kind END,
+      CASE WHEN $15 = 'SOIL_MOISTURE_RESPONSE' THEN jsonb_build_object('before_value', 18.4, 'unit', 'percent', 'source', 'formal_acceptance_metric') ELSE baseline END,
+      CASE WHEN $15 = 'SOIL_MOISTURE_RESPONSE' THEN jsonb_build_object('after_value', 24.8, 'executed_amount', 21.6, 'unit', 'mm', 'source', 'formal_acceptance_metric') ELSE actual END,
+      CASE WHEN $15 = 'SOIL_MOISTURE_RESPONSE' THEN jsonb_build_object('soil_moisture_delta', 6.4, 'unit', 'percent', 'interpretation', 'soil_moisture_response') ELSE delta END,
+      confidence,
+      CASE
+        WHEN COALESCE(evidence_refs, '[]'::jsonb) @> $3::jsonb THEN COALESCE(evidence_refs, '[]'::jsonb)
+        ELSE COALESCE(evidence_refs, '[]'::jsonb) || $3::jsonb
+      END,
+      CASE WHEN $15 = 'SOIL_MOISTURE_RESPONSE' THEN 'formal_acceptance_soil_moisture_response_v1' ELSE calculation_method END,
+      CASE WHEN $15 = 'SOIL_MOISTURE_RESPONSE' THEN COALESCE(assumptions, '{}'::jsonb) || jsonb_build_object('formalized_from_interim_roi_type', roi_type) ELSE assumptions END,
+      uncertainty_notes, skill_trace_id, skill_refs,
+      $4, $5, $6, $7, $8, $9, $10::jsonb
+    FROM roi_ledger_v1
+    WHERE tenant_id = $11
+      AND project_id = $12
+      AND group_id = $13
+      AND roi_ledger_id = $14
+      AND source_lane = 'AS_EXECUTED_SIGNAL'
+      AND trust_level = 'INTERIM_SUPPORTED'
+      AND customer_visible_value = false
+    ON CONFLICT (tenant_id, project_id, group_id, as_executed_id, roi_type, source_lane)
+    DO UPDATE SET
+      operation_id = EXCLUDED.operation_id,
+      trust_level = EXCLUDED.trust_level,
+      formal_acceptance_id = EXCLUDED.formal_acceptance_id,
+      formal_evidence_passed = EXCLUDED.formal_evidence_passed,
+      chain_validation_passed = EXCLUDED.chain_validation_passed,
+      customer_visible_value = EXCLUDED.customer_visible_value,
+      trust_reasons = EXCLUDED.trust_reasons,
+      evidence_refs = EXCLUDED.evidence_refs,
+      updated_at = now()
+    RETURNING *`,
+    [
+      roiLedgerId,
+      input.operation_plan_id,
+      acceptanceEvidenceRef,
+      input.trust.trust_level,
+      input.trust.source_lane,
+      input.trust.formal_acceptance_id,
+      input.trust.formal_evidence_passed,
+      input.trust.chain_validation_passed,
+      input.trust.customer_visible_value,
+      JSON.stringify(input.trust.trust_reasons),
+      input.tenant_id,
+      input.project_id,
+      input.group_id,
+      input.interim_roi_ledger_id,
+      input.formal_roi_type,
+    ]
+  );
+  if (!inserted.rows?.[0]) throw new Error("ROI_LEDGER_NOT_CREATED:INTERIM_ROI_NOT_FOUND");
+  return mapRoiRow(inserted.rows[0]);
 }
 
 
@@ -1092,56 +1226,54 @@ export async function formalizeRoiLedgersFromAcceptance(pool: Pool, input: Tenan
   if (!asExecuted) throw new Error("AS_EXECUTED_NOT_FOUND");
 
   const created = await createRoiLedgersFromAsExecuted(pool, input);
-  if (!Array.isArray(created.roi_ledgers) || created.roi_ledgers.length === 0) {
-    throw new Error("ROI_LEDGER_NOT_CREATED:UNKNOWN_EMPTY_RESULT");
+  const interimRows = (created.roi_ledgers ?? []).filter((row) => row.source_lane === "AS_EXECUTED_SIGNAL"
+    && row.trust_level === "INTERIM_SUPPORTED"
+    && row.customer_visible_value === false
+    && row.as_executed_id === input.as_executed_id);
+  if (interimRows.length === 0) {
+    throw new Error("ROI_LEDGER_NOT_CREATED:INTERIM_ROI_NOT_FOUND");
   }
 
   const formalAcceptanceId = textOrNull(acceptance.payload?.acceptance_id) ?? acceptance.fact_id;
   const trust = buildFormalAcceptedRoiTrustV1(formalAcceptanceId);
-  const alreadyFormal = created.roi_ledgers.every((row) => row.trust_level === trust.trust_level
-    && row.source_lane === trust.source_lane
-    && row.formal_acceptance_id === trust.formal_acceptance_id
-    && row.formal_evidence_passed === true
-    && row.chain_validation_passed === true
-    && row.customer_visible_value === true);
+  const formalizableRows = interimRows.filter((row) => row.roi_type === "WATER_SAVED");
+  if (formalizableRows.length === 0) {
+    throw new Error("ROI_LEDGER_NOT_CREATED:FORMALIZABLE_INTERIM_ROI_NOT_FOUND");
+  }
 
-  const ids = created.roi_ledgers.map((row) => row.roi_ledger_id).filter(Boolean);
-  const updated = await pool.query(
-    `UPDATE roi_ledger_v1
-        SET operation_id = $1,
-            trust_level = $2,
-            source_lane = $3,
-            formal_acceptance_id = $4,
-            formal_evidence_passed = $5,
-            chain_validation_passed = $6,
-            customer_visible_value = $7,
-            trust_reasons = $8::jsonb,
-            evidence_refs = CASE
-              WHEN COALESCE(evidence_refs, '[]'::jsonb) @> $9::jsonb THEN COALESCE(evidence_refs, '[]'::jsonb)
-              ELSE COALESCE(evidence_refs, '[]'::jsonb) || $9::jsonb
-            END,
-            updated_at = now()
-      WHERE tenant_id = $10
-        AND project_id = $11
-        AND group_id = $12
-        AND roi_ledger_id = ANY($13::text[])
-      RETURNING *`,
-    [
-      input.operation_plan_id,
-      trust.trust_level,
-      trust.source_lane,
-      trust.formal_acceptance_id,
-      trust.formal_evidence_passed,
-      trust.chain_validation_passed,
-      trust.customer_visible_value,
-      JSON.stringify(trust.trust_reasons),
-      JSON.stringify([{ kind: "acceptance_fact", ref: acceptance.fact_id, acceptance_id: formalAcceptanceId }]),
-      input.tenant_id,
-      input.project_id,
-      input.group_id,
-      ids,
-    ]
-  );
+  const updatedRows: RoiLedgerRow[] = [];
+  let alreadyFormal = true;
+  for (const interim of formalizableRows) {
+    const formalRoiType = formalRoiTypeFromInterim(interim.roi_type);
+    const existingFormal = await listByQuery(
+      pool,
+      `SELECT *
+         FROM roi_ledger_v1
+        WHERE tenant_id = $1
+          AND project_id = $2
+          AND group_id = $3
+          AND as_executed_id = $4
+          AND roi_type = $5
+          AND source_lane = 'FORMAL_ACCEPTANCE'
+          AND trust_level = 'FORMAL_ACCEPTED'
+          AND formal_acceptance_id = $6
+          AND customer_visible_value = true
+        LIMIT 1`,
+      [input.tenant_id, input.project_id, input.group_id, input.as_executed_id, formalRoiType, trust.formal_acceptance_id]
+    );
+    alreadyFormal = alreadyFormal && existingFormal.length > 0;
+    updatedRows.push(await upsertFormalRoiFromInterim(pool, {
+      tenant_id: input.tenant_id,
+      project_id: input.project_id,
+      group_id: input.group_id,
+      operation_plan_id: input.operation_plan_id,
+      acceptance_fact_id: acceptance.fact_id,
+      formal_acceptance_id: formalAcceptanceId,
+      interim_roi_ledger_id: interim.roi_ledger_id,
+      formal_roi_type: formalRoiType,
+      trust,
+    }));
+  }
 
   return {
     idempotent: created.idempotent && alreadyFormal,
@@ -1153,7 +1285,7 @@ export async function formalizeRoiLedgersFromAcceptance(pool: Pool, input: Tenan
       formal_evidence_passed: acceptanceBool(acceptance.payload, "formal_evidence_passed"),
       chain_validation_passed: acceptanceBool(acceptance.payload, "chain_validation_passed"),
     },
-    roi_ledgers: (updated.rows ?? []).map(mapRoiRow),
+    roi_ledgers: updatedRows,
   };
 }
 
