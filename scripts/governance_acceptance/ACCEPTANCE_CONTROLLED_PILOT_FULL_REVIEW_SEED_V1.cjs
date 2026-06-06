@@ -157,7 +157,7 @@ async function main() {
   need('dashboard learning summary formal filter', dashboardProjection, ['isFormalFieldResponseMemory', 'FORMAL_FIELD_MEMORY', 'FORMAL_ACCEPTED', 'customer_visible_memory', 'learning_eligible', 'formal_memory_count', 'latest_formal_acceptance_id']);
   need('guarded report hides technical field memory', guardedReport, ['isFormalFieldResponseMemory', 'formal_memory_filter', 'hidden_counts', 'device_reliability_memory', 'skill_performance_memory', 'hidden_by_guard']);
   need('ROI route/domain/trust support', routeRoi, ['/api/v1/roi-ledger/from-as-executed', '/api/v1/roi-ledger/formalize-from-acceptance', 'mode: result.mode', 'roi_ledgers']);
-  need('ROI domain support', domainRoi, ['findInterimRoiByAsExecutedId', 'AS_EXECUTED_SIGNAL', 'INTERIM_SUPPORTED', 'FORMAL_ACCEPTANCE', 'FORMAL_ACCEPTED', 'customer_visible_value', 'upsertFormalRoiFromInterim']);
+  need('ROI domain support', domainRoi, ['findInterimRoiByAsExecutedId', 'AS_EXECUTED_SIGNAL', 'INTERIM_SUPPORTED', 'FORMAL_ACCEPTANCE', 'FORMAL_ACCEPTED', 'customer_visible_value', 'upsertFormalRoiFromInterim', 'formalRoiTypeFromInterim', 'SOIL_MOISTURE_RESPONSE']);
   need('ROI trust support', trustRoi, ['AS_EXECUTED_SIGNAL', 'INTERIM_SUPPORTED', 'FORMAL_ACCEPTANCE', 'FORMAL_ACCEPTED', 'customer_visible_value']);
   need('as_executed receipt status compatibility', asExecutedDomain, ['normalizeReceiptStatus', 'EXECUTED', 'SUCCEEDED', 'SUCCESS', 'CONFIRMED', 'NOT_EXECUTED', 'FAILED', 'ERROR', 'INSUFFICIENT_RECEIPT']);
   ban('seed source', seed, [

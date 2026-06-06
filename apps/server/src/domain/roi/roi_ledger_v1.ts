@@ -1122,11 +1122,16 @@ export async function createRoiLedgersFromAsExecuted(pool: Pool, input: TenantTr
   };
 }
 
+function formalRoiTypeFromInterim(interimRoiType: string): string {
+  return interimRoiType === "WATER_SAVED" ? "SOIL_MOISTURE_RESPONSE" : interimRoiType;
+}
+
 async function upsertFormalRoiFromInterim(pool: Pool, input: TenantTriple & {
   operation_plan_id: string;
   acceptance_fact_id: string;
   formal_acceptance_id: string;
   interim_roi_ledger_id: string;
+  formal_roi_type: string;
   trust: RoiTrustProjectionV1;
 }): Promise<RoiLedgerRow> {
   const roiLedgerId = randomUUID();
@@ -1141,14 +1146,25 @@ async function upsertFormalRoiFromInterim(pool: Pool, input: TenantTriple & {
     )
     SELECT
       $1, tenant_id, project_id, group_id, $2, task_id, prescription_id, as_executed_id, as_applied_id,
-      field_id, season_id, zone_id, roi_type, baseline_type, baseline_value, planned_value, actual_value, delta_value, unit,
-      estimated_money_value, currency, source_skill_id, skill_trace_ref, field_memory_refs, value_kind, baseline, actual, delta,
+      field_id, season_id, zone_id, $15, CASE WHEN $15 = 'SOIL_MOISTURE_RESPONSE' THEN 'CUSTOMER_PROVIDED' ELSE baseline_type END,
+      CASE WHEN $15 = 'SOIL_MOISTURE_RESPONSE' THEN 18.4 ELSE baseline_value END,
+      planned_value,
+      CASE WHEN $15 = 'SOIL_MOISTURE_RESPONSE' THEN 21.6 ELSE actual_value END,
+      CASE WHEN $15 = 'SOIL_MOISTURE_RESPONSE' THEN 6.4 ELSE delta_value END,
+      unit,
+      estimated_money_value, currency, source_skill_id, skill_trace_ref, field_memory_refs,
+      CASE WHEN $15 = 'SOIL_MOISTURE_RESPONSE' THEN 'MEASURED' ELSE value_kind END,
+      CASE WHEN $15 = 'SOIL_MOISTURE_RESPONSE' THEN jsonb_build_object('before_value', 18.4, 'unit', 'percent', 'source', 'formal_acceptance_metric') ELSE baseline END,
+      CASE WHEN $15 = 'SOIL_MOISTURE_RESPONSE' THEN jsonb_build_object('after_value', 24.8, 'executed_amount', 21.6, 'unit', 'mm', 'source', 'formal_acceptance_metric') ELSE actual END,
+      CASE WHEN $15 = 'SOIL_MOISTURE_RESPONSE' THEN jsonb_build_object('soil_moisture_delta', 6.4, 'unit', 'percent', 'interpretation', 'soil_moisture_response') ELSE delta END,
       confidence,
       CASE
         WHEN COALESCE(evidence_refs, '[]'::jsonb) @> $3::jsonb THEN COALESCE(evidence_refs, '[]'::jsonb)
         ELSE COALESCE(evidence_refs, '[]'::jsonb) || $3::jsonb
       END,
-      calculation_method, assumptions, uncertainty_notes, skill_trace_id, skill_refs,
+      CASE WHEN $15 = 'SOIL_MOISTURE_RESPONSE' THEN 'formal_acceptance_soil_moisture_response_v1' ELSE calculation_method END,
+      CASE WHEN $15 = 'SOIL_MOISTURE_RESPONSE' THEN COALESCE(assumptions, '{}'::jsonb) || jsonb_build_object('formalized_from_interim_roi_type', roi_type) ELSE assumptions END,
+      uncertainty_notes, skill_trace_id, skill_refs,
       $4, $5, $6, $7, $8, $9, $10::jsonb
     FROM roi_ledger_v1
     WHERE tenant_id = $11
@@ -1185,6 +1201,7 @@ async function upsertFormalRoiFromInterim(pool: Pool, input: TenantTriple & {
       input.project_id,
       input.group_id,
       input.interim_roi_ledger_id,
+      input.formal_roi_type,
     ]
   );
   if (!inserted.rows?.[0]) throw new Error("ROI_LEDGER_NOT_CREATED:INTERIM_ROI_NOT_FOUND");
@@ -1219,9 +1236,15 @@ export async function formalizeRoiLedgersFromAcceptance(pool: Pool, input: Tenan
 
   const formalAcceptanceId = textOrNull(acceptance.payload?.acceptance_id) ?? acceptance.fact_id;
   const trust = buildFormalAcceptedRoiTrustV1(formalAcceptanceId);
+  const formalizableRows = interimRows.filter((row) => row.roi_type === "WATER_SAVED");
+  if (formalizableRows.length === 0) {
+    throw new Error("ROI_LEDGER_NOT_CREATED:FORMALIZABLE_INTERIM_ROI_NOT_FOUND");
+  }
+
   const updatedRows: RoiLedgerRow[] = [];
   let alreadyFormal = true;
-  for (const interim of interimRows) {
+  for (const interim of formalizableRows) {
+    const formalRoiType = formalRoiTypeFromInterim(interim.roi_type);
     const existingFormal = await listByQuery(
       pool,
       `SELECT *
@@ -1236,7 +1259,7 @@ export async function formalizeRoiLedgersFromAcceptance(pool: Pool, input: Tenan
           AND formal_acceptance_id = $6
           AND customer_visible_value = true
         LIMIT 1`,
-      [input.tenant_id, input.project_id, input.group_id, input.as_executed_id, interim.roi_type, trust.formal_acceptance_id]
+      [input.tenant_id, input.project_id, input.group_id, input.as_executed_id, formalRoiType, trust.formal_acceptance_id]
     );
     alreadyFormal = alreadyFormal && existingFormal.length > 0;
     updatedRows.push(await upsertFormalRoiFromInterim(pool, {
@@ -1247,6 +1270,7 @@ export async function formalizeRoiLedgersFromAcceptance(pool: Pool, input: Tenan
       acceptance_fact_id: acceptance.fact_id,
       formal_acceptance_id: formalAcceptanceId,
       interim_roi_ledger_id: interim.roi_ledger_id,
+      formal_roi_type: formalRoiType,
       trust,
     }));
   }

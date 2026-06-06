@@ -127,6 +127,23 @@ async function countInterimRoiRows(tenant, asExecutedId) {
   });
 }
 
+async function duplicatedRoiTypesByAsExecuted(tenant, asExecutedId) {
+  return withDb(async (pool) => {
+    const q = await pool.query(
+      `SELECT as_executed_id, roi_type, count(*)::int AS count
+         FROM roi_ledger_v1
+        WHERE tenant_id = $1
+          AND project_id = $2
+          AND group_id = $3
+          AND as_executed_id = $4
+        GROUP BY as_executed_id, roi_type
+       HAVING count(*) > 1`,
+      [tenant, PROJECT_ID, GROUP_ID, asExecutedId],
+    );
+    return q.rows || [];
+  });
+}
+
 async function loadFormalMemoryRow(tenant) {
   return withDb(async (pool) => {
     const q = await pool.query(
@@ -186,6 +203,8 @@ function assertStaticSource(seedPath) {
   assertOk(source.includes('/api/v1/roi-ledger/from-as-executed'), 'E2E_INTERIM_ROI_DERIVATION_API_REQUIRED', null);
   assertOk(source.includes('/api/v1/roi-ledger/formalize-from-acceptance'), 'E2E_FORMAL_ROI_DERIVATION_API_REQUIRED', null);
   assertOk(source.includes('ROI_INTERIM_SIGNAL_READBACK_REQUIRED') && source.includes('isInterimRoiForAsExecuted'), 'E2E_INTERIM_ROI_READBACK_DEFENSE_REQUIRED', null);
+  const roiDomainSource = fs.readFileSync(path.resolve(process.cwd(), 'apps/server/src/domain/roi/roi_ledger_v1.ts'), 'utf8');
+  assertOk(roiDomainSource.includes('formalRoiTypeFromInterim') && roiDomainSource.includes('SOIL_MOISTURE_RESPONSE'), 'E2E_FORMAL_ROI_TYPE_MAPPING_REQUIRED', null);
 }
 
 function assertExportContract(plan) {
@@ -293,8 +312,10 @@ async function runRuntime(args) {
   assertOk(secondRows.some((row) => isInterimRoiForAsExecuted(row, asExecutedId)), 'E2E_INTERIM_ROI_SECOND_DERIVATION_READBACK_REQUIRED', secondRoi);
   const interimCount = await countInterimRoiRows(args.tenant, asExecutedId);
   assertOk(interimCount === 1, 'E2E_INTERIM_ROI_DUPLICATE_ROWS_FORBIDDEN', { as_executed_id: asExecutedId, count: interimCount });
+  const duplicatedTypes = await duplicatedRoiTypesByAsExecuted(args.tenant, asExecutedId);
+  assertOk(duplicatedTypes.length === 0, 'E2E_ROI_FORMALIZE_DUPLICATED_ROI_TYPE_FORBIDDEN', duplicatedTypes);
 
-  return { apply, verify, memory, repeated_interim_roi: secondRows.find((row) => isInterimRoiForAsExecuted(row, asExecutedId)), interim_roi_count: interimCount };
+  return { apply, verify, memory, repeated_interim_roi: secondRows.find((row) => isInterimRoiForAsExecuted(row, asExecutedId)), interim_roi_count: interimCount, duplicated_roi_types: duplicatedTypes };
 }
 
 async function main() {
