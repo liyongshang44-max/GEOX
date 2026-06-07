@@ -209,6 +209,7 @@ async function main() {
     ['raw response string include check', /\.raw\.includes\(/],
     ['response body string include check', /\.body\.includes\(/],
     ['verify-api raw has_customer_visible_value check', /has_customer_visible_value[^\n]+raw\.includes/],
+    ['legacy static formal ROI helper', /upsertExactFormalRoi/],
     ['static formal ROI null binding', /as_executed_id\s*:\s*null/],
     ['json formal ROI null binding', /"as_executed_id"\s*:\s*null/],
     ['truncate', /\bTRUNCATE\b/i],
