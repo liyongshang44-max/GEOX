@@ -25,6 +25,7 @@ export type CustomerOperationsIndexRowVm = {
   evidenceText: string;
   statusLine: string;
   evidenceExplanation?: string;
+  summaryText: string;
   completedAtText: string;
   updatedAtText: string;
   href: string;
@@ -126,15 +127,16 @@ function buildFieldName(item: CustomerOperationListItem): string {
   return customerDisplayName(item.field_name, "未命名地块");
 }
 
-function buildRow(item: CustomerOperationListItem): CustomerOperationsIndexRowVm {
+function buildRow(item: CustomerOperationListItem, isFallback: boolean): CustomerOperationsIndexRowVm {
   const operationId = String(item.operation_id ?? item.operation_plan_id ?? "").trim();
-  const statusFilter = mapStatusFilter(item);
+  const statusFilter = isFallback ? "EVIDENCE_INSUFFICIENT" : mapStatusFilter(item);
   const operationTypeText = isPestDiseaseInspectionOperation(item) ? "病虫害巡检" : labelOperationType(item.operation_type);
   const title = buildTitle(operationTypeText, item);
   const fieldName = buildFieldName(item);
-  const finalText = finalStatusText(item);
-  const acceptedText = acceptanceText(item);
-  const evidence = evidenceCopy(item);
+  const finalText = isFallback ? "正式报告条件不足" : finalStatusText(item);
+  const acceptedText = isFallback ? "列表暂不可用" : acceptanceText(item);
+  const evidence = isFallback ? { text: "作业列表暂不可用", explanation: "正式报告条件不足；列表不可使用驾驶舱聚合作为作业结论。" } : evidenceCopy(item);
+  const summaryText = isFallback ? customerSemanticLabel(item.summary, "作业列表暂不可用") : customerSemanticLabel(item.summary, "");
   const completedAtText = toDateTimeText(item.executed_at ?? item.updated_at ?? item.generated_at);
   return {
     operationId,
@@ -148,6 +150,7 @@ function buildRow(item: CustomerOperationListItem): CustomerOperationsIndexRowVm
     evidenceText: evidence.text,
     statusLine: `${finalText} · ${acceptedText} · ${evidence.text}`,
     evidenceExplanation: evidence.explanation,
+    summaryText,
     completedAtText,
     updatedAtText: completedAtText,
     href: operationId ? `/customer/operations/${encodeURIComponent(operationId)}` : "/customer/operations",
@@ -165,8 +168,8 @@ function scopeCopy(response: CustomerOperationsListResponse): { subtitle: string
   if (mode === "INTERNAL_PREVIEW") return { subtitle: "当前展示可见经营范围内的作业。", badge: "经营范围预览", note: scopeReasonText(response.scope?.reason), isPreview: true };
   if (mode === "DENIED") return { subtitle: "暂无授权地块，因此暂无可见作业。", badge: "暂无授权地块", note: scopeReasonText(response.scope?.reason) || "当前账户未授权任何地块", isPreview: false };
   if (mode === "CLIENT_ALLOWLIST") return { subtitle: "查看授权范围内作业、验收进展与报告入口。", badge: `授权作业 ${response.operation_count ?? response.operations.length} 个`, isPreview: false };
-  if (response.dataScope === "FALLBACK_RECENT_ONLY") return { subtitle: "当前展示近期可见作业，完整列表待同步。", badge: "近期作业", note: customerSemanticLabel(response.data_scope_note, "当前仅展示近期作业，非全部作业列表"), isPreview: true };
-  if (response.dataScope === "ERROR_EMPTY") return { subtitle: "作业列表暂不可用，请稍后刷新。", badge: "暂不可用", note: customerSemanticLabel(response.data_scope_note, "作业列表暂不可用，请稍后刷新"), isPreview: true };
+  if (response.dataScope === "FALLBACK_RECENT_ONLY") return { subtitle: "正式报告条件不足，作业列表暂不可用。", badge: "条件不足", note: customerSemanticLabel(response.data_scope_note, "正式报告条件不足，作业列表暂不可用"), isPreview: true };
+  if (response.dataScope === "ERROR_EMPTY") return { subtitle: "正式报告条件不足，作业列表暂不可用，请稍后刷新。", badge: "暂不可用", note: customerSemanticLabel(response.data_scope_note, "正式报告条件不足，作业列表暂不可用，请稍后刷新"), isPreview: true };
   return { subtitle: "查看授权范围内作业、验收进展与报告入口。", badge: "正式列表", isPreview: false };
 }
 
@@ -176,7 +179,8 @@ export function filterCustomerOperations(rows: CustomerOperationsIndexRowVm[], s
 }
 
 export function buildCustomerOperationsIndexVm(response: CustomerOperationsListResponse): CustomerOperationsIndexVm {
-  const rows = (response.operations ?? []).map(buildRow).filter((row) => row.operationId);
+  const isFallback = response.dataScope !== "OFFICIAL_CUSTOMER_API";
+  const rows = (response.operations ?? []).map((item) => buildRow(item, isFallback)).filter((row) => row.operationId);
   const countByStatus = (status: CustomerOperationStatusFilter) => status === "ALL" ? rows.length : rows.filter((row) => row.statusFilter === status).length;
   const scope = scopeCopy(response);
   return {
@@ -184,7 +188,7 @@ export function buildCustomerOperationsIndexVm(response: CustomerOperationsListR
     subtitle: scope.subtitle,
     generatedAtText: toDateTimeText(response.generated_at),
     dataScope: response.dataScope,
-    isFallback: response.dataScope !== "OFFICIAL_CUSTOMER_API",
+    isFallback,
     isPreview: scope.isPreview,
     scopeBadgeText: scope.badge,
     dataScopeNote: scope.note,
@@ -197,6 +201,6 @@ export function buildCustomerOperationsIndexVm(response: CustomerOperationsListR
       { key: "EVIDENCE_INSUFFICIENT", label: "证据不足", count: countByStatus("EVIDENCE_INSUFFICIENT") },
     ],
     rows,
-    emptyState: response.scope?.scope_mode === "DENIED" ? getCustomerEmptyState("NO_AUTHORIZED_FIELDS") : getCustomerEmptyState("NO_RECENT_OPERATIONS"),
+    emptyState: response.scope?.scope_mode === "DENIED" ? getCustomerEmptyState("NO_AUTHORIZED_FIELDS") : isFallback ? { title: "正式报告条件不足", description: "作业列表暂不可用，请稍后刷新。", severity: "warning" } : getCustomerEmptyState("NO_RECENT_OPERATIONS"),
   };
 }

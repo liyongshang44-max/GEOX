@@ -5,6 +5,7 @@ import { customerDisplayName, customerSemanticLabel } from "../lib/customerSeman
 import { customerEvidenceStateText, customerFormalChainText, customerNeedsReviewText } from "../lib/customerSafeText";
 import { customerGuardedAcceptanceText, customerGuardedEvidenceText, customerGuardedStatusText, customerTrustScopeText, customerValueSummaryText, isTrustedDashboardValueSummary } from "../lib/customerTrustGate";
 import { buildFormalScenarioVm } from "../lib/formalScenarioViewModel";
+import { resolveUnifiedOperationFinalStatus } from "../lib/operationStatusUnified";
 
 const numberFmt = new Intl.NumberFormat("zh-CN");
 const DASHBOARD_SUMMARY_SOURCE = "统计范围：当前可见授权经营范围；来源：客户看板统一摘要。";
@@ -31,6 +32,17 @@ function optionalNum(raw: unknown): number | null {
 function fieldBoundaryAvailable(raw: unknown): boolean {
   const item = raw as Record<string, unknown> | null | undefined;
   return Boolean(item?.geometry || item?.geometry_id);
+}
+
+
+function withUnifiedOperationState<T extends Record<string, any>>(item: T): T {
+  const finalStatus = resolveUnifiedOperationFinalStatus({
+    final_status: item.final_status ?? null,
+    operation_state_v1: item.operation_state_v1 ?? null,
+    operation: item.operation ?? null,
+  });
+  if (finalStatus === "UNKNOWN") return item;
+  return { ...item, final_status: finalStatus };
 }
 
 function roiCustomerText(summary: CustomerDashboardAggregateV1["roi_summary"] | undefined): string {
@@ -217,14 +229,15 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
   });
   const recentOperations: CustomerDashboardVm["recentOperations"] = (aggregate.recent_operations ?? []).slice(0, 5).map((item) => {
     const operationId = String(item.operation_id ?? item.operation_plan_id ?? "");
-    const formalVm = buildFormalScenarioVm(item);
+    const statusItem = withUnifiedOperationState(item as any);
+    const formalVm = buildFormalScenarioVm(statusItem);
     return {
       operationId,
       operationName: customerDisplayName(item.customer_title ?? item.title, "未命名作业"),
       fieldName: customerDisplayName(item.field_name, "未命名地块"),
-      stateText: customerGuardedStatusText(item),
-      acceptanceText: customerGuardedAcceptanceText(item),
-      evidenceText: customerGuardedEvidenceText(item),
+      stateText: customerGuardedStatusText(statusItem),
+      acceptanceText: customerGuardedAcceptanceText(statusItem),
+      evidenceText: customerGuardedEvidenceText(statusItem),
       scenarioSummaryText: [formalVm.scenarioLabel, formalVm.chainText, formalVm.evidenceText].filter(Boolean).join("｜"),
       scenarioTypeText: formalVm.scenarioLabel,
       formalChainStatusText: customerFormalChainText(formalVm.formalChainStatus),

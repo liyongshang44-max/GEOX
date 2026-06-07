@@ -9,7 +9,7 @@ const ManualExecutionQualityAnalysisPage = React.lazy(() => import("../../featur
 const CustomerDashboardPage = React.lazy(() => import("../../features/customer/pages/CustomerDashboardPage"));
 const CustomerDashboardExportPage = React.lazy(() => import("../../features/customer/pages/CustomerDashboardExportPage"));
 const CustomerReportExportPage = React.lazy(() => import("../../features/customer/pages/CustomerReportExportPage"));
-const FlightTablePage = React.lazy(() => import("../../views/dev/FlightTablePage"));
+const FlightTablePage = React.lazy(() => import("../../features/dev/flight-table/pages/FlightTablePage"));
 
 function FlightTableDisabledNotice({ features }: { features: RuntimeFeaturesResponseV1 | null }): React.ReactElement {
   return (

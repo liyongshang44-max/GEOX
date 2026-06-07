@@ -67,7 +67,7 @@ export default function CustomerFieldsIndexPage(): React.ReactElement {
                   <strong>{field.fieldName}</strong>
                   <span>{field.riskLabel}</span>
                 </div>
-                <p>{field.reasons.join("；") || "暂无风险原因"}</p>
+                <p>{field.summaryText || field.reasons.join("；") || "暂无风险原因"}</p>
                 <p>{field.cropStageText}</p>
                 <p>最近作业：{field.recentOperationText}</p>
                 <p>更新时间：{field.updatedAtText}</p>
