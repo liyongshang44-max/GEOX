@@ -217,15 +217,9 @@ expectPatterns("src/views/operator/OperatorDevicesAlertsPage.tsx", [
 ], "device-alerts-permission-incomplete");
 
 expectPatterns("src/components/customer/CustomerExportBlocks.tsx", [
-  { pattern: /buildOperationSameSourceExportSummary/, detail: "Operation export must derive P2.2 fields from VM/report same-source payload." },
-  { pattern: /buildFieldSameSourceExportSummary/, detail: "Field export must derive P2.2 fields from VM/report same-source payload." },
-  { pattern: /evidence_pack_summary/, detail: "Operation export must include evidence_pack_summary status." },
-  { pattern: /safeSha256/, detail: "Operation export must safely render sha256." },
-  { pattern: /as_executed/, detail: "Operation export must include as_executed summary." },
-  { pattern: /as_applied/, detail: "Operation export must include as_applied coverage status." },
-  { pattern: /weatherSummaryFromReport/, detail: "Exports must use report payload weather summary instead of direct weather API." },
-  { pattern: /vm\.roiSummary\.displayText/, detail: "Field export must show ROI summary from field VM." },
-  { pattern: /vm\.fieldMemory\.displayText/, detail: "Field export must show Field Memory summary from field VM." },
+  { pattern: /buildCustomerFieldReportMainVisualVm/, detail: "Field export must derive report-backed rows from CustomerReportMainVisualVm." },
+  { pattern: /buildCustomerOperationReportMainVisualVm/, detail: "Operation export must derive report-backed rows from CustomerReportMainVisualVm." },
+  { pattern: /mainVisual\.rows\.map/, detail: "Report-backed exports must render CustomerReportMainVisualVm.rows." },
 ], "customer-export-same-source-incomplete");
 
 expectPatterns("src/views/CustomerReportExportPage.tsx", [
@@ -239,8 +233,9 @@ expectPatterns("scripts/check-customer-export-same-source.mjs", [
   { pattern: /fetchOperatorEvidence/, detail: "Same-source check must ban operator evidence API calls in export pages." },
   { pattern: /fetchOperatorSkillTraces/, detail: "Same-source check must ban operator skill trace API calls in export pages." },
   { pattern: /fetchWeatherHistory/, detail: "Same-source check must ban direct weather API calls in export pages." },
-  { pattern: /buildOperationSameSourceExportSummary/, detail: "Same-source check must require operation export same-source summary." },
-  { pattern: /buildFieldSameSourceExportSummary/, detail: "Same-source check must require field export same-source summary." },
+  { pattern: /buildCustomerOperationReportMainVisualVm/, detail: "Same-source check must require operation CustomerReportMainVisualVm." },
+  { pattern: /buildCustomerFieldReportMainVisualVm/, detail: "Same-source check must require field CustomerReportMainVisualVm." },
+  { pattern: /customerC8FormalReportVm/, detail: "Same-source check must ban C8-only VM dependency from export blocks." },
 ], "same-source-check-incomplete");
 
 expectPatterns("package.json", [

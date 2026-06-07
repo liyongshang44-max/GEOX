@@ -157,7 +157,7 @@ function operationFormalValidation(report: OperationReportV1): ValidationResult 
 
 const readonlyPassStatuses = ["PASS", "APPROVED", "SUCCESS", "SUCCEEDED"];
 
-function insufficientVm(title: string, reasons: string[], technicalRows: Array<{ label: string; value: string }>): CustomerReportMainVisualVm {
+function insufficientVm(title: string, reasons: string[], technicalRows: Array<{ label: string; value: string }> = []): CustomerReportMainVisualVm {
   return {
     status: "INSUFFICIENT_REPORT",
     title,
@@ -191,7 +191,8 @@ function operationTechnicalRows(report: OperationReportV1): Array<{ label: strin
   ];
 }
 
-export function buildCustomerFieldReportMainVisualVm(report: FieldReportDetailV1): CustomerReportMainVisualVm {
+export function buildCustomerFieldReportMainVisualVm(report?: FieldReportDetailV1 | null): CustomerReportMainVisualVm {
+  if (!report) return insufficientVm("地块报告", ["缺少正式 report API 数据"], [{ label: "report_api", value: "--" }]);
   const root = report as any;
   const fieldContext = root.field_context ?? {};
   const sensing = root.sensing_summary ?? {};
@@ -224,7 +225,8 @@ export function buildCustomerFieldReportMainVisualVm(report: FieldReportDetailV1
   };
 }
 
-export function buildCustomerOperationReportMainVisualVm(report: OperationReportV1): CustomerReportMainVisualVm {
+export function buildCustomerOperationReportMainVisualVm(report?: OperationReportV1 | null): CustomerReportMainVisualVm {
+  if (!report) return insufficientVm("作业报告", ["缺少正式 report API 数据"], [{ label: "report_api", value: "--" }]);
   const root = report as any;
   const validation = operationFormalValidation(report);
   const technicalRows = operationTechnicalRows(report);
