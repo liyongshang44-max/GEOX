@@ -159,6 +159,7 @@ async function main() {
   need('customer memory route formal filter', customerRoute, ['/api/v1/customer/fields/:fieldId/memory', "memory_lane = 'FORMAL_FIELD_MEMORY'", "trust_level = 'FORMAL_ACCEPTED'", 'customer_visible_memory = true', 'learning_eligible = true', 'formal_acceptance_id IS NOT NULL']);
   need('reports route field memory projection', reportsRoute, ['field_memory_v1', 'field_response_memory', 'device_reliability_memory', 'skill_performance_memory']);
   need('reports route C8 field context', reportsRoute, ['crop_code: "corn"', 'crop_name: "玉米"', 'season_2026_c8_corn', '营养生长期', 'BOUNDARY_AVAILABLE']);
+  need('reports route state pending count', reportsRoute, ['pendingOperationCount', 'state.final_status', 'state.acceptance?.status', 'pending_operation_count: pendingOperationCount']);
   need('field polygon schema migration dynamic geojson backfill', fieldPolygonSchemaMigration, ['polygon_geojson_json', "column_name = 'geojson'", 'EXECUTE $sql$', 'NULLIF(geojson']);
   need('reports route operation diagnostic block F', reportsRoute, [
     'soil_moisture_after_percent',
@@ -195,7 +196,7 @@ async function main() {
     'source_fact_id',
   ]);
   need('dashboard learning summary formal filter', dashboardProjection, ['isFormalFieldResponseMemory', 'FORMAL_FIELD_MEMORY', 'FORMAL_ACCEPTED', 'customer_visible_memory', 'learning_eligible', 'formal_memory_count', 'latest_formal_acceptance_id']);
-  need('dashboard layered field trust', dashboardProjection, ['formal_chain_summary', 'pending_chain_summary', 'overall_customer_status', 'HAS_FORMAL_RESULTS', 'HAS_PENDING_ITEMS', 'FORMAL_RESULTS_WITH_PENDING_ITEMS', 'buildFieldValueSummary(formalReportsSorted.length > 0 ? formalReportsSorted : reportsSorted)', 'isPendingOperationReport', 'pending_operations']);
+  need('dashboard layered field trust', dashboardProjection, ['formal_chain_summary', 'pending_chain_summary', 'overall_customer_status', 'HAS_FORMAL_RESULTS', 'HAS_PENDING_ITEMS', 'FORMAL_RESULTS_WITH_PENDING_ITEMS', 'buildFieldValueSummary(formalReportsSorted.length > 0 ? formalReportsSorted : reportsSorted)', 'isPendingOperationReport', 'pending_operation_count?: number | null', 'params.pending_operation_count', 'status.includes("PENDING_ACCEPTANCE")', 'pending_operations']);
   need('guarded report hides technical field memory', guardedReport, ['isFormalFieldResponseMemory', 'formal_memory_filter', 'hidden_counts', 'device_reliability_memory', 'skill_performance_memory', 'hidden_by_guard']);
   need('ROI route/domain/trust support', routeRoi, ['/api/v1/roi-ledger/from-as-executed', '/api/v1/roi-ledger/formalize-from-acceptance', 'mode: result.mode', 'roi_ledgers']);
   need('ROI domain support', domainRoi, ['findInterimRoiByAsExecutedId', 'AS_EXECUTED_SIGNAL', 'INTERIM_SUPPORTED', 'FORMAL_ACCEPTANCE', 'FORMAL_ACCEPTED', 'customer_visible_value', 'upsertFormalRoiFromInterim', 'formalRoiTypeFromInterim', 'SOIL_MOISTURE_RESPONSE']);

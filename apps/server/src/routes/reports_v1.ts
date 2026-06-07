@@ -893,6 +893,12 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       .filter((x) => hasFieldAccess(auth, String(x.field_id ?? "")))
       .sort((a, b) => Number(b.last_event_ts ?? 0) - Number(a.last_event_ts ?? 0))
       .slice(0, FIELD_REPORT_OPERATION_LIMIT);
+    const pendingOperationCount = fieldStates.filter((state: any) => {
+      const finalStatus = String(state.final_status ?? "").trim().toUpperCase();
+      const status = String(state.status ?? "").trim().toUpperCase();
+      const acceptanceStatus = String(state.acceptance?.status ?? state.acceptance_status ?? "").trim().toUpperCase();
+      return [finalStatus, status, acceptanceStatus].some((x) => x === "PENDING" || x === "PENDING_ACCEPTANCE" || x === "RUNNING");
+    }).length;
     const items = await Promise.all(fieldStates.map(async (state) => {
       const projected = ensureReportV1ExtendedFields(await projectReportV1({ pool, tenant, operationState: state }));
       const candidateIds = Array.from(new Set([state.operation_id, state.operation_plan_id, state.recommendation_id, state.act_task_id, (state.acceptance as any)?.acceptance_id].map((x) => String(x ?? "").trim()).filter(Boolean)));
@@ -949,6 +955,7 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       field_name: fieldName,
       reports: items,
       open_alerts_count: openAlertsCount,
+      pending_operation_count: pendingOperationCount,
       device_summary: { total_devices: boundDeviceIds.length, online_devices: onlineDevices, offline_devices: Math.max(0, boundDeviceIds.length - onlineDevices), last_telemetry_at: toIsoFromEpochMs(lastTelemetryMs) },
       field_context: { area_m2: fieldAreaM2, area_ha: fieldAreaHa, area_mu: fieldAreaMu, boundary_status: polygonQ.rows?.[0]?.polygon_geojson_json ? "BOUNDARY_AVAILABLE" : "BOUNDARY_MISSING", boundary_geojson: polygonQ.rows?.[0]?.polygon_geojson_json ?? null, crop_code: "corn", crop_name: "玉米", season_id: "season_2026_c8_corn", crop_stage: "营养生长期" },
     });

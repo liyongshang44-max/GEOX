@@ -146,10 +146,26 @@ function safeStateFinalStatus(): string { return "LIMITED_STATE"; }
 function safeStateAcceptanceStatus(state: OperationStateV1): string | null { return state ? "NEEDS_REVIEW" : null; }
 function dashboardNeedsReview(trust: DashboardProjectionTrustV1, report: OperationReportV1): boolean { return !trust.customer_visible_eligible || Boolean((report as any).formal_scenario?.needs_review); }
 function isPendingOperationReport(report: OperationReportV1): boolean {
-  const finalStatus = upper((report as any).execution?.final_status ?? (report as any).final_status);
-  const acceptanceStatus = upper((report as any).acceptance?.status ?? (report as any).acceptance_status);
-  const operationStatus = upper((report as any).operation?.status ?? (report as any).status);
-  return [finalStatus, acceptanceStatus, operationStatus].some((status) => status === "PENDING" || status === "PENDING_ACCEPTANCE" || status === "RUNNING");
+  const directStatuses = [
+    (report as any).execution?.final_status,
+    (report as any).final_status,
+    (report as any).acceptance?.status,
+    (report as any).acceptance_status,
+    (report as any).operation?.status,
+    (report as any).status,
+    (report as any).customer_status,
+    (report as any).chain_status,
+    (report as any).formal_scenario?.formal_chain_status,
+  ].map(upper);
+  const statusChainStatuses = Array.isArray((report as any).status_chain)
+    ? (report as any).status_chain.flatMap((x: any) => [x?.status, x?.reason]).map(upper)
+    : [];
+  const riskReasons = Array.isArray((report as any).risk?.reasons)
+    ? (report as any).risk.reasons.map(upper)
+    : [];
+  return [...directStatuses, ...statusChainStatuses, ...riskReasons].some((status) =>
+    status === "PENDING" || status === "PENDING_ACCEPTANCE" || status === "RUNNING" || status.includes("PENDING_ACCEPTANCE")
+  );
 }
 function isTrustedRoiItem(item: any): boolean { return isFormalCustomerValueItem(item); }
 
@@ -240,7 +256,7 @@ function inferActionType(report: OperationReportV1): string | null { const title
 function cropNameFromReport(report: any): string | null { return textOrNull(report?.field_context?.crop_name) ?? textOrNull(report?.field?.crop_name) ?? textOrNull(report?.recommendation?.crop_name) ?? (upper(report?.recommendation?.crop_code) === "CORN" ? "玉米" : null); }
 function fallbackExplainByRisk(params: { current_risk_level: "LOW" | "MEDIUM" | "HIGH" | "UNKNOWN"; top_reasons: string[] }): string { return params.current_risk_level === "UNKNOWN" ? "Field data is not sufficient for a formal summary" : `Field status: ${params.current_risk_level}`; }
 
-export function projectFieldReportDetailV1(params: { field_id: string; field_name?: string | null; reports: OperationReportV1[]; open_alerts_count: number; device_summary: { total_devices: number; online_devices: number; offline_devices: number; last_telemetry_at: string | null }; field_context?: { area_m2?: number | null; area_ha?: number | null; area_mu?: number | null; boundary_status?: "BOUNDARY_AVAILABLE" | "BOUNDARY_MISSING" | null; boundary_geojson?: unknown | null; crop_code?: string | null; crop_name?: string | null; season_id?: string | null; crop_stage?: string | null } }): FieldReportDetailV1 {
+export function projectFieldReportDetailV1(params: { field_id: string; field_name?: string | null; reports: OperationReportV1[]; open_alerts_count: number; pending_operation_count?: number | null; device_summary: { total_devices: number; online_devices: number; offline_devices: number; last_telemetry_at: string | null }; field_context?: { area_m2?: number | null; area_ha?: number | null; area_mu?: number | null; boundary_status?: "BOUNDARY_AVAILABLE" | "BOUNDARY_MISSING" | null; boundary_geojson?: unknown | null; crop_code?: string | null; crop_name?: string | null; season_id?: string | null; crop_stage?: string | null } }): FieldReportDetailV1 {
   const reportsSorted = [...params.reports].sort((a, b) => resolveOperationTimeMs(b) - resolveOperationTimeMs(a));
   const formalReportsSorted = reportsSorted.filter((report) => reportTrust(report).customer_visible_eligible);
   const latestReport: any = reportsSorted[0] ?? null;
@@ -264,7 +280,7 @@ export function projectFieldReportDetailV1(params: { field_id: string; field_nam
   const seasonId = params.field_context?.season_id ?? textOrNull(summaryReport?.field_context?.season_id ?? summaryReport?.recommendation?.season_id ?? summaryReport?.identifiers?.season_id);
   const cropStage = params.field_context?.crop_stage ?? textOrNull(summaryReport?.field_context?.crop_stage ?? summaryReport?.recommendation?.crop_stage);
   const valueSummary = normalizeFieldValueSummaryForFieldReport(buildFieldValueSummary(formalReportsSorted.length > 0 ? formalReportsSorted : reportsSorted), aggregateTrust);
-  const pendingOperations = reportsSorted.filter(isPendingOperationReport).length;
+  const pendingOperations = Number(params.pending_operation_count ?? reportsSorted.filter(isPendingOperationReport).length);
   const formalChainSummary = { formal_operations: formalReportsSorted.length, customer_visible_value_records: Number(valueSummary.trusted_value_items ?? 0), formal_field_memory_records: learningSummary.formal_memory_count, status: formalReportsSorted.length > 0 ? "HAS_FORMAL_RESULTS" as const : "NO_FORMAL_RESULTS" as const };
   const pendingChainSummary = { pending_operations: pendingOperations, status: pendingOperations > 0 ? "HAS_PENDING_ITEMS" as const : "NO_PENDING_ITEMS" as const };
   const overallCustomerStatus = formalReportsSorted.length > 0 ? (pendingOperations > 0 ? "FORMAL_RESULTS_WITH_PENDING_ITEMS" as const : "FORMAL_RESULTS_ONLY" as const) : "NO_FORMAL_RESULTS" as const;
