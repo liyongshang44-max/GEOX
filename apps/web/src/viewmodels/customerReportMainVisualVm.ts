@@ -177,6 +177,76 @@ function fieldTechnicalRows(report: FieldReportDetailV1): Array<{ label: string;
   ];
 }
 
+function isPestDiseaseInspectionReport(report: OperationReportV1): boolean {
+  const root = report as any;
+  const scenario = text(root.formal_scenario?.scenario_type ?? root.scenario_type).toUpperCase();
+  const operationType = text(root.operation_type ?? root.prescription?.operation_type ?? root.customer_title ?? root.operation_title).toUpperCase();
+  return scenario === "FORMAL_PEST_DISEASE_INSPECTION" || Boolean(root.pest_disease_inspection) || operationType.includes("PEST_DISEASE_INSPECTION");
+}
+
+function pestDiseaseTargetText(value: unknown): string {
+  const key = text(value).toUpperCase();
+  if (key === "PEST") return "虫害";
+  if (key === "DISEASE") return "病害";
+  if (key === "WEED") return "草害";
+  if (key === "UNKNOWN_STRESS") return "未知胁迫";
+  return text(value) || "巡检对象待确认";
+}
+
+function pestDiseaseStatusText(value: unknown): string {
+  const key = text(value).toUpperCase();
+  if (key === "PASS" || key === "APPROVED" || key === "CONFIRMED") return "已记录，仍以正式链路边界为准";
+  if (key === "SUSPECTED" || key === "NEEDS_REVIEW" || key === "PENDING") return "待复核";
+  if (key === "INSUFFICIENT_EVIDENCE" || key === "MISSING") return "证据不足";
+  if (key === "FAIL" || key === "REJECTED" || key === "RULED_OUT") return "未通过";
+  return text(value) || "待确认";
+}
+
+function mediaEvidenceText(mediaRefs: unknown, mediaCount: unknown): string {
+  const count = Array.isArray(mediaRefs) ? mediaRefs.length : numberOrNull(mediaCount);
+  return count && count > 0 ? `${formatNumber(count, 0)} 项媒体证据` : "图片/媒体证据待补充";
+}
+
+function geoPointText(value: any): string {
+  if (!value || typeof value !== "object") return "定位点待补充";
+  const lat = text(value.lat);
+  const lng = text(value.lng ?? value.lon);
+  return lat && lng ? `${lat}, ${lng}` : "定位点待补充";
+}
+
+function buildPestDiseaseInspectionMainVisualVm(report: OperationReportV1, technicalRows: Array<{ label: string; value: string }>): CustomerReportMainVisualVm {
+  const root = report as any;
+  const pdi = root.pest_disease_inspection ?? {};
+  const observationEvidence = pdi.observation_evidence ?? {};
+  const latest = observationEvidence.latest_observation ?? {};
+  const title = text(root.customer_title ?? root.operation_title) || "病虫害巡检报告";
+  if (!root.pest_disease_inspection) return insufficientVm(title, ["缺少病虫害巡检投影"], technicalRows);
+  if (pdi.customer_visible_eligible === false) {
+    const reasons = asArray(pdi.blocking_reasons).map((item) => text(item)).filter(Boolean);
+    return insufficientVm(title, reasons.length ? reasons : ["病虫害巡检报告条件不足"], technicalRows);
+  }
+  return {
+    status: "FORMAL_READY",
+    title,
+    subtitle: "正式 report API 病虫害巡检摘要",
+    rows: [
+      { label: "巡检对象", value: pestDiseaseTargetText(pdi.target_type ?? latest.target_type) },
+      { label: "疑似问题", value: text(pdi.suspected_issue_code ?? latest.suspected_issue_code) || "疑似问题待确认" },
+      { label: "图片/媒体证据", value: mediaEvidenceText(latest.media_refs, pdi.media_count) },
+      { label: "采集时间", value: text(latest.captured_at_text ?? latest.captured_at_ts) || "采集时间待补充" },
+      { label: "定位点", value: geoPointText(latest.geo_point) },
+      { label: "人工复核", value: pdi.reviewed_by_human === true ? "已完成人工复核" : pestDiseaseStatusText(pdi.review_status) },
+      { label: "巡检证据验收", value: pestDiseaseStatusText(pdi.acceptance_status) },
+      { label: "结论边界", value: "巡检证据通过不代表已执行喷药或防治闭环完成" },
+    ],
+    technicalRows: [
+      ...technicalRows,
+      { label: "inspection_id", value: text(pdi.inspection_id) || "--" },
+      { label: "observation_count", value: text(observationEvidence.total_observations ?? 0) },
+    ],
+  };
+}
+
 function operationTechnicalRows(report: OperationReportV1): Array<{ label: string; value: string }> {
   const root = report as any;
   const identifiers = root.identifiers ?? {};
@@ -228,8 +298,9 @@ export function buildCustomerFieldReportMainVisualVm(report?: FieldReportDetailV
 export function buildCustomerOperationReportMainVisualVm(report?: OperationReportV1 | null): CustomerReportMainVisualVm {
   if (!report) return insufficientVm("作业报告", ["缺少正式 report API 数据"], [{ label: "report_api", value: "--" }]);
   const root = report as any;
-  const validation = operationFormalValidation(report);
   const technicalRows = operationTechnicalRows(report);
+  if (isPestDiseaseInspectionReport(report)) return buildPestDiseaseInspectionMainVisualVm(report, technicalRows);
+  const validation = operationFormalValidation(report);
   const title = text(root.customer_title ?? root.operation_title) || "作业报告";
   if (!validation.ok) return insufficientVm(title, validation.reasons, technicalRows);
 
