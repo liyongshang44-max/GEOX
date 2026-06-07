@@ -85,6 +85,7 @@ export type FieldReportDetailV1 = DashboardProjectionTrustV1 & {
     area_mu: number | null;
     boundary_status: "BOUNDARY_AVAILABLE" | "BOUNDARY_MISSING";
     boundary_geojson: unknown | null;
+    crop_code: string | null;
     crop_name: string | null;
     season_id: string | null;
     crop_stage: string | null;
@@ -99,6 +100,9 @@ export type FieldReportDetailV1 = DashboardProjectionTrustV1 & {
   next_action: { recommendation_id: string | null; explain_human: string | null; objective_text: string | null; action_type: string | null; priority: string | null } | null;
   value_summary: RoiSummaryTrustV1;
   learning_summary: { field_response_memory_count: number; formal_field_response_memory_count: number; formal_memory_count: number; latest_formal_acceptance_id: string | null };
+  formal_chain_summary: { formal_operations: number; customer_visible_value_records: number; formal_field_memory_records: number; status: "HAS_FORMAL_RESULTS" | "NO_FORMAL_RESULTS" };
+  pending_chain_summary: { pending_operations: number; status: "HAS_PENDING_ITEMS" | "NO_PENDING_ITEMS" };
+  overall_customer_status: "FORMAL_RESULTS_WITH_PENDING_ITEMS" | "FORMAL_RESULTS_ONLY" | "NO_FORMAL_RESULTS";
 };
 
 const LIMITED_BLOCKING_REASON = "state_fallback_limited_not_customer_official";
@@ -141,6 +145,28 @@ function safeReportAcceptanceStatus(report: OperationReportV1): string | null { 
 function safeStateFinalStatus(): string { return "LIMITED_STATE"; }
 function safeStateAcceptanceStatus(state: OperationStateV1): string | null { return state ? "NEEDS_REVIEW" : null; }
 function dashboardNeedsReview(trust: DashboardProjectionTrustV1, report: OperationReportV1): boolean { return !trust.customer_visible_eligible || Boolean((report as any).formal_scenario?.needs_review); }
+function isPendingOperationReport(report: OperationReportV1): boolean {
+  const directStatuses = [
+    (report as any).execution?.final_status,
+    (report as any).final_status,
+    (report as any).acceptance?.status,
+    (report as any).acceptance_status,
+    (report as any).operation?.status,
+    (report as any).status,
+    (report as any).customer_status,
+    (report as any).chain_status,
+    (report as any).formal_scenario?.formal_chain_status,
+  ].map(upper);
+  const statusChainStatuses = Array.isArray((report as any).status_chain)
+    ? (report as any).status_chain.flatMap((x: any) => [x?.status, x?.reason]).map(upper)
+    : [];
+  const riskReasons = Array.isArray((report as any).risk?.reasons)
+    ? (report as any).risk.reasons.map(upper)
+    : [];
+  return [...directStatuses, ...statusChainStatuses, ...riskReasons].some((status) =>
+    status === "PENDING" || status === "PENDING_ACCEPTANCE" || status === "RUNNING" || status.includes("PENDING_ACCEPTANCE")
+  );
+}
 function isTrustedRoiItem(item: any): boolean { return isFormalCustomerValueItem(item); }
 
 function deriveStateRiskLevel(state: OperationStateV1): OperationReportRiskLevel {
@@ -230,7 +256,7 @@ function inferActionType(report: OperationReportV1): string | null { const title
 function cropNameFromReport(report: any): string | null { return textOrNull(report?.field_context?.crop_name) ?? textOrNull(report?.field?.crop_name) ?? textOrNull(report?.recommendation?.crop_name) ?? (upper(report?.recommendation?.crop_code) === "CORN" ? "玉米" : null); }
 function fallbackExplainByRisk(params: { current_risk_level: "LOW" | "MEDIUM" | "HIGH" | "UNKNOWN"; top_reasons: string[] }): string { return params.current_risk_level === "UNKNOWN" ? "Field data is not sufficient for a formal summary" : `Field status: ${params.current_risk_level}`; }
 
-export function projectFieldReportDetailV1(params: { field_id: string; field_name?: string | null; reports: OperationReportV1[]; open_alerts_count: number; device_summary: { total_devices: number; online_devices: number; offline_devices: number; last_telemetry_at: string | null }; field_context?: { area_m2?: number | null; area_ha?: number | null; area_mu?: number | null; boundary_status?: "BOUNDARY_AVAILABLE" | "BOUNDARY_MISSING" | null; boundary_geojson?: unknown | null; crop_name?: string | null; season_id?: string | null; crop_stage?: string | null } }): FieldReportDetailV1 {
+export function projectFieldReportDetailV1(params: { field_id: string; field_name?: string | null; reports: OperationReportV1[]; open_alerts_count: number; pending_operation_count?: number | null; device_summary: { total_devices: number; online_devices: number; offline_devices: number; last_telemetry_at: string | null }; field_context?: { area_m2?: number | null; area_ha?: number | null; area_mu?: number | null; boundary_status?: "BOUNDARY_AVAILABLE" | "BOUNDARY_MISSING" | null; boundary_geojson?: unknown | null; crop_code?: string | null; crop_name?: string | null; season_id?: string | null; crop_stage?: string | null } }): FieldReportDetailV1 {
   const reportsSorted = [...params.reports].sort((a, b) => resolveOperationTimeMs(b) - resolveOperationTimeMs(a));
   const formalReportsSorted = reportsSorted.filter((report) => reportTrust(report).customer_visible_eligible);
   const latestReport: any = reportsSorted[0] ?? null;
@@ -249,10 +275,16 @@ export function projectFieldReportDetailV1(params: { field_id: string; field_nam
   const areaMu = numberOrNull(params.field_context?.area_mu) ?? (areaHa == null ? null : Number((areaHa * 15).toFixed(4)));
   const boundaryGeojson = params.field_context?.boundary_geojson ?? null;
   const boundaryStatus = params.field_context?.boundary_status ?? (boundaryGeojson ? "BOUNDARY_AVAILABLE" : "BOUNDARY_MISSING");
+  const cropCode = params.field_context?.crop_code ?? textOrNull(summaryReport?.field_context?.crop_code ?? summaryReport?.recommendation?.crop_code ?? latestReport?.field_context?.crop_code ?? latestReport?.recommendation?.crop_code);
   const cropName = params.field_context?.crop_name ?? cropNameFromReport(summaryReport) ?? cropNameFromReport(latestReport);
   const seasonId = params.field_context?.season_id ?? textOrNull(summaryReport?.field_context?.season_id ?? summaryReport?.recommendation?.season_id ?? summaryReport?.identifiers?.season_id);
   const cropStage = params.field_context?.crop_stage ?? textOrNull(summaryReport?.field_context?.crop_stage ?? summaryReport?.recommendation?.crop_stage);
-  return { ...aggregateTrust, type: "field_report_v1", version: "v1", generated_at: new Date().toISOString(), field: { field_id: params.field_id, field_name: params.field_name ?? null }, field_context: { field_id: params.field_id, field_name: params.field_name ?? null, area_m2: numberOrNull(params.field_context?.area_m2), area_ha: areaHa, area_mu: areaMu, boundary_status: boundaryStatus, boundary_geojson: boundaryGeojson, crop_name: cropName, season_id: seasonId, crop_stage: cropStage }, overview: { current_risk_level: currentRiskLevel, open_alerts_count: Number(params.open_alerts_count ?? 0), pending_acceptance_count: params.reports.filter((r) => reportTrust(r).customer_visible_eligible && upper((r as any).execution?.final_status) === "PENDING_ACCEPTANCE").length, total_operations_count: params.reports.length, latest_operation_at: summaryReport ? ((summaryReport as any).execution?.execution_finished_at ?? summaryReport.generated_at ?? null) : null, estimated_total_cost: params.reports.reduce((sum, report) => sum + Number((report as any).cost?.estimated_total ?? 0), 0), actual_total_cost: params.reports.reduce((sum, report) => sum + Number((report as any).cost?.actual_total ?? 0), 0) }, explain: { human: (summaryReport as any)?.why?.explain_human ?? sensingSummary.diagnosis.human ?? fallbackExplainByRisk({ current_risk_level: currentRiskLevel, top_reasons: topReasons }), top_reasons: topReasons }, sensing_summary: sensingSummary, decision_summary: buildDecisionSummary(summaryReport, nextActionSource), execution_summary: buildExecutionSummary(formalReportsSorted.length > 0 ? formalReportsSorted : reportsSorted), recent_operations: reportsSorted.slice(0, 5).map((report) => ({ ...reportTrust(report), operation_plan_id: (report as any).identifiers?.operation_plan_id, operation_id: (report as any).identifiers?.operation_id, title: (report as any).operation_title ?? null, customer_title: (report as any).customer_title ?? null, final_status: safeReportFinalStatus(report), acceptance_status: safeReportAcceptanceStatus(report), generated_at: (report as any).generated_at ?? null })), device_summary: { total_devices: Number(params.device_summary.total_devices ?? 0), online_devices: Number(params.device_summary.online_devices ?? 0), offline_devices: Number(params.device_summary.offline_devices ?? 0), last_telemetry_at: params.device_summary.last_telemetry_at ?? null }, next_action: nextActionSource ? { recommendation_id: (nextActionSource as any).identifiers?.recommendation_id ?? null, explain_human: (nextActionSource as any).why?.explain_human ?? null, objective_text: (nextActionSource as any).why?.objective_text ?? null, action_type: inferActionType(nextActionSource), priority: null } : null, value_summary: normalizeFieldValueSummaryForFieldReport(buildFieldValueSummary(reportsSorted), aggregateTrust), learning_summary: learningSummary };
+  const valueSummary = normalizeFieldValueSummaryForFieldReport(buildFieldValueSummary(formalReportsSorted.length > 0 ? formalReportsSorted : reportsSorted), aggregateTrust);
+  const pendingOperations = Number(params.pending_operation_count ?? reportsSorted.filter(isPendingOperationReport).length);
+  const formalChainSummary = { formal_operations: formalReportsSorted.length, customer_visible_value_records: Number(valueSummary.trusted_value_items ?? 0), formal_field_memory_records: learningSummary.formal_memory_count, status: formalReportsSorted.length > 0 ? "HAS_FORMAL_RESULTS" as const : "NO_FORMAL_RESULTS" as const };
+  const pendingChainSummary = { pending_operations: pendingOperations, status: pendingOperations > 0 ? "HAS_PENDING_ITEMS" as const : "NO_PENDING_ITEMS" as const };
+  const overallCustomerStatus = formalReportsSorted.length > 0 ? (pendingOperations > 0 ? "FORMAL_RESULTS_WITH_PENDING_ITEMS" as const : "FORMAL_RESULTS_ONLY" as const) : "NO_FORMAL_RESULTS" as const;
+  return { ...aggregateTrust, type: "field_report_v1", version: "v1", generated_at: new Date().toISOString(), field: { field_id: params.field_id, field_name: params.field_name ?? null }, field_context: { field_id: params.field_id, field_name: params.field_name ?? null, area_m2: numberOrNull(params.field_context?.area_m2), area_ha: areaHa, area_mu: areaMu, boundary_status: boundaryStatus, boundary_geojson: boundaryGeojson, crop_code: cropCode, crop_name: cropName, season_id: seasonId, crop_stage: cropStage }, overview: { current_risk_level: currentRiskLevel, open_alerts_count: Number(params.open_alerts_count ?? 0), pending_acceptance_count: params.reports.filter((r) => reportTrust(r).customer_visible_eligible && upper((r as any).execution?.final_status) === "PENDING_ACCEPTANCE").length, total_operations_count: params.reports.length, latest_operation_at: summaryReport ? ((summaryReport as any).execution?.execution_finished_at ?? summaryReport.generated_at ?? null) : null, estimated_total_cost: params.reports.reduce((sum, report) => sum + Number((report as any).cost?.estimated_total ?? 0), 0), actual_total_cost: params.reports.reduce((sum, report) => sum + Number((report as any).cost?.actual_total ?? 0), 0) }, explain: { human: (summaryReport as any)?.why?.explain_human ?? sensingSummary.diagnosis.human ?? fallbackExplainByRisk({ current_risk_level: currentRiskLevel, top_reasons: topReasons }), top_reasons: topReasons }, sensing_summary: sensingSummary, decision_summary: buildDecisionSummary(summaryReport, nextActionSource), execution_summary: buildExecutionSummary(formalReportsSorted.length > 0 ? formalReportsSorted : reportsSorted), recent_operations: reportsSorted.slice(0, 5).map((report) => ({ ...reportTrust(report), operation_plan_id: (report as any).identifiers?.operation_plan_id, operation_id: (report as any).identifiers?.operation_id, title: (report as any).operation_title ?? null, customer_title: (report as any).customer_title ?? null, final_status: safeReportFinalStatus(report), acceptance_status: safeReportAcceptanceStatus(report), generated_at: (report as any).generated_at ?? null })), device_summary: { total_devices: Number(params.device_summary.total_devices ?? 0), online_devices: Number(params.device_summary.online_devices ?? 0), offline_devices: Number(params.device_summary.offline_devices ?? 0), last_telemetry_at: params.device_summary.last_telemetry_at ?? null }, next_action: nextActionSource ? { recommendation_id: (nextActionSource as any).identifiers?.recommendation_id ?? null, explain_human: (nextActionSource as any).why?.explain_human ?? null, objective_text: (nextActionSource as any).why?.objective_text ?? null, action_type: inferActionType(nextActionSource), priority: null } : null, value_summary: valueSummary, learning_summary: learningSummary, formal_chain_summary: formalChainSummary, pending_chain_summary: pendingChainSummary, overall_customer_status: overallCustomerStatus };
 }
 
 export function projectCustomerDashboardAggregateV1(params: { reports: OperationReportV1[]; field_name_by_id?: Map<string, string | null>; open_alerts_by_field?: Map<string, number>; pending_acceptance_by_field?: Map<string, number>; pending_actions_summary?: { total_open_alerts: number; unassigned_alerts: number; in_progress_alerts: number; sla_breached_alerts: number; closed_today_alerts: number; pending_acceptance?: number }; device_summary?: { offline_fields: number; total_devices: number; offline_devices: number } }): CustomerDashboardAggregateV1 {
