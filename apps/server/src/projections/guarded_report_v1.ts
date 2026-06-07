@@ -5,7 +5,13 @@ function upper(value: unknown): string { return String(value ?? "").trim().toUpp
 function clone<T>(value: T): T { if (value == null || typeof value !== "object") return value; return JSON.parse(JSON.stringify(value)); }
 function unique(values: unknown[]): string[] { return Array.from(new Set(values.map((x) => String(x ?? "").trim()).filter(Boolean))); }
 function chainPassed(report: any): boolean { return report?.chain_validation?.passed === true && report?.chain_validation?.helper_or_simulated !== true && upper(report?.chain_integrity) === "COMPLETE"; }
-function isSimulated(report: any): boolean { const raw = JSON.stringify(report ?? "").toLowerCase(); return report?.chain_validation?.helper_or_simulated === true || upper(report?.chain_integrity) === "SIMULATED_CHAIN" || raw.includes("simulated"); }
+function isSimulated(report: any): boolean {
+  return report?.chain_validation?.helper_or_simulated === true
+    || upper(report?.chain_integrity) === "SIMULATED_CHAIN"
+    || upper(report?.projection_source) === "SIMULATED_CHAIN_GUARD"
+    || upper(report?.source_lane) === "SIMULATED"
+    || report?.is_simulated === true;
+}
 function blockingReasons(report: any): string[] { return unique([...(Array.isArray(report?.chain_validation?.blocking_reasons) ? report.chain_validation.blocking_reasons : []), ...(Array.isArray(report?.missing_links) ? report.missing_links.map((x: unknown) => `missing:${x}`) : [])]); }
 function trustLevelFor(report: any): GuardTrustLevelV1 { if (chainPassed(report)) return "FORMAL_CHAIN_PASSED"; if (isSimulated(report)) return "SIMULATED_DEV_ONLY"; const reasons = blockingReasons(report).join("|").toUpperCase(); if (reasons.includes("EVIDENCE") || reasons.includes("FORMAL")) return "INSUFFICIENT_FORMAL_EVIDENCE"; if (!report?.chain_validation) return "LIMITED_FALLBACK"; return "NEEDS_REVIEW"; }
 function guardStatusFor(trust: GuardTrustLevelV1): GuardStatusV1 { if (trust === "FORMAL_CHAIN_PASSED") return "PASSED"; if (trust === "SIMULATED_DEV_ONLY") return "SIMULATED"; if (trust === "INSUFFICIENT_FORMAL_EVIDENCE") return "INSUFFICIENT_EVIDENCE"; if (trust === "LIMITED_FALLBACK") return "LIMITED"; return "NEEDS_REVIEW"; }
@@ -24,7 +30,7 @@ function isFormalFieldResponseMemory(item: any): boolean {
 }
 
 function collectRoiItems(roi: any): any[] { const items: any[] = []; if (Array.isArray(roi?.items)) items.push(...roi.items); for (const key of ["water_saved", "labor_saved", "early_warning_lead_time", "first_pass_acceptance_rate", "low_confidence_items"]) if (Array.isArray(roi?.[key])) items.push(...roi[key]); return items; }
-function summaryHasFormalCustomerValue(summary: any): boolean { return summary?.has_customer_visible_value === true && Number(summary?.trusted_value_items ?? 0) > 0; }
+function summaryHasFormalCustomerValue(summary: any): boolean { return Number(summary?.trusted_value_items ?? 0) > 0; }
 function hasMeasuredFieldValue(summary: any): boolean { return Number(summary?.measured_items ?? 0) > 0 && Number(summary?.total_roi_items ?? 0) > 0; }
 
 function guardRoiLedger(roi: any, trusted: boolean, trust: GuardTrustLevelV1): any {
@@ -97,7 +103,18 @@ export function applyGuardedOperationReportV1(report: any): any {
 }
 
 function guardOperationListItem(op: any): any { const finalStatus = upper(op?.final_status); const acceptanceStatus = upper(op?.acceptance_status); const looksFormal = op?.customer_visible_eligible === true || op?.trust_level === "FORMAL_CHAIN_PASSED"; if (looksFormal) return op; return { ...op, final_status: finalStatus === "SUCCESS" ? "NEEDS_REVIEW" : op?.final_status, acceptance_status: acceptanceStatus === "PASS" ? "NEEDS_REVIEW" : op?.acceptance_status, customer_status: op?.customer_status ?? "LIMITED", trust_level: op?.trust_level ?? "LIMITED_FALLBACK", chain_status: op?.chain_status ?? "LIMITED", is_simulated: op?.is_simulated ?? false, needs_review: op?.needs_review ?? true, customer_visible_eligible: false }; }
-function hasFormalOperationInAggregate(payload: any): boolean { return Array.isArray(payload?.recent_operations) && payload.recent_operations.some((op: any) => op?.projection_source === "GUARDED_REPORT" && op?.customer_visible_eligible === true && op?.fallback_limited !== true && (op?.trust_level == null || op?.trust_level === "FORMAL_CHAIN_PASSED")); }
+function hasFormalOperationInAggregate(payload: any): boolean {
+  const topLevelFormal = payload?.projection_source === "GUARDED_REPORT"
+    && payload?.customer_visible_eligible === true
+    && payload?.fallback_limited !== true;
+  const executionFormal = Number(payload?.execution_summary?.formal_operation_count ?? 0) > 0;
+  const recentFormal = Array.isArray(payload?.recent_operations)
+    && payload.recent_operations.some((op: any) => op?.projection_source === "GUARDED_REPORT"
+      && op?.customer_visible_eligible === true
+      && op?.fallback_limited !== true
+      && (op?.trust_level == null || op?.trust_level === "FORMAL_CHAIN_PASSED"));
+  return topLevelFormal || executionFormal || recentFormal;
+}
 function hasFormalFieldMemoryInAggregate(payload: any): boolean { return Number(payload?.learning_summary?.formal_field_response_memory_count ?? 0) > 0 || Number(payload?.learning_summary?.formal_memory_count ?? 0) > 0; }
 
 export function applyGuardedDashboardAggregateV1(aggregate: any): any { if (!aggregate || typeof aggregate !== "object") return aggregate; const next = clone(aggregate); next.recent_operations = Array.isArray(next.recent_operations) ? next.recent_operations.map(guardOperationListItem) : []; const hasFormalValue = summaryHasFormalCustomerValue(next.roi_summary) && hasFormalOperationInAggregate(next); next.roi_summary = { ...(next.roi_summary ?? {}), has_customer_visible_value: hasFormalValue, customer_value_text: hasFormalValue ? next.roi_summary?.customer_value_text : "价值记录需通过正式链路校验后才可作为客户可信收益。", trust_level: hasFormalValue ? "FORMAL_ACCEPTED" : "LIMITED_FALLBACK" }; next.guarded_projection = { enabled: true, source: "dashboard_aggregate_guard", note: "Dashboard summary only exposes formal customer value when ROI and guarded operation chain are both formal." }; return next; }

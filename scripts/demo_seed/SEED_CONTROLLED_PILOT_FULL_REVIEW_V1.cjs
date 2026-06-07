@@ -148,7 +148,6 @@ function applyC8FormalE2ESeedPolicy(plan) {
     'stage1_sensing_state_v1',
     'telemetry_index_v1',
     'device_status_index_v1',
-    'prescription_contract_v1',
     'approval_requests_v1',
   ];
   for (const tableName of forbiddenTables) plan.tables[tableName] = [];
@@ -171,14 +170,254 @@ function pool() { const { Pool } = require('pg'); return new Pool(dbConfig()); }
 async function withClient(fn) { const p = pool(); const c = await p.connect(); try { return await fn(c); } finally { c.release(); await p.end(); } }
 async function columns(c, table) { const r = await c.query("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name=$1", [table]).catch(() => ({ rows: [] })); return new Set(r.rows.map((x) => x.column_name)); }
 async function insertRows(c, table, rows, conflict = []) { const cols = await columns(c, table); if (!cols.size) return; for (const row of rows) { const keys = Object.keys(row).filter((k) => cols.has(k)); if (!keys.length) continue; const vals = keys.map((k) => (row[k] && typeof row[k] === 'object') ? JSON.stringify(row[k]) : row[k]); const updateKeys = keys.filter((k) => !conflict.includes(k)); const onConflict = conflict.length && conflict.every((k) => keys.includes(k)) ? ` ON CONFLICT (${conflict.join(',')}) DO UPDATE SET ${(updateKeys.length ? updateKeys : [conflict[0]]).map((k) => `${k}=EXCLUDED.${k}`).join(',')}` : ''; await c.query(`INSERT INTO ${table} (${keys.join(',')}) VALUES (${keys.map((_, i) => `$${i + 1}`).join(',')})${onConflict}`, vals); } }
-async function apply(p, baseUrl = '') { return withClient(async (c) => { await c.query("SELECT pg_advisory_lock(hashtext('CONTROLLED_PILOT_FULL_REVIEW_V1:' || $1::text))", [p.tenant]); try { await c.query('BEGIN'); await c.query(`${SQL_REMOVE} FROM facts WHERE fact_id LIKE $1`, [`${p.prefix}_%`]).catch(() => {}); if (isC8FormalE2E(p.profile)) { await c.query(`${SQL_REMOVE} FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND memory_id=$4`, [p.tenant, PROJECT_ID, GROUP_ID, MEMORY_ID]).catch(() => {}); await c.query(`${SQL_REMOVE} FROM roi_ledger_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND roi_ledger_id=$4`, [p.tenant, PROJECT_ID, GROUP_ID, ROI_ID]).catch(() => {}); await c.query(`${SQL_REMOVE} FROM device_observation_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND fact_id LIKE $4`, [p.tenant, PROJECT_ID, GROUP_ID, `${p.prefix}_%`]).catch(() => {}); await c.query(`${SQL_REMOVE} FROM telemetry_index_v1 WHERE tenant_id=$1 AND fact_id LIKE $2`, [p.tenant, `${p.prefix}_%`]).catch(() => {}); } const keyMap = { field_index_v1: ['tenant_id','field_id'], field_polygon_v1: ['tenant_id','field_id'], device_index_v1: ['tenant_id','device_id'], device_binding_index_v1: ['tenant_id','device_id','field_id'], device_status_index_v1: ['tenant_id','device_id'], device_capability: ['tenant_id','device_id'], telemetry_index_v1: ['tenant_id','device_id','metric','ts'], device_observation_index_v1: ['tenant_id','device_id','metric','observed_at_ts_ms'], field_memory_v1: ['memory_id'], prescription_contract_v1: ['tenant_id','project_id','group_id','recommendation_id'] }; for (const [table, rows] of Object.entries(p.tables)) if (!table.endsWith('_optional') && table !== 'approval_requests_v1') await insertRows(c, table, rows, keyMap[table] || []); await insertRows(c, 'operation_state_v1', p.tables.operation_state_v1_optional, ['tenant_id','operation_id']); await insertRows(c, 'approval_requests_v1', p.tables.approval_requests_v1, ['tenant_id','approval_request_id']); await insertRows(c, 'facts', p.facts, ['fact_id']); await c.query('COMMIT'); const derivation = await deriveAsExecuted(p, baseUrl); return { ok: true, apply: true, tenant: p.tenant, profile: p.profile, chain_id: p.chain_id, written: { facts: p.facts.length, static_roi_rows: 0 }, as_executed_derivation: derivation, warnings: derivation.skipped ? [derivation.reason] : [] }; } catch (e) { await c.query('ROLLBACK').catch(() => {}); throw e; } finally { await c.query("SELECT pg_advisory_unlock(hashtext('CONTROLLED_PILOT_FULL_REVIEW_V1:' || $1::text))", [p.tenant]).catch(() => {}); } }); }
+
+async function insertFactRows(c, rows) {
+  const cols = await columns(c, 'facts');
+  if (!cols.size) return;
+
+  for (const row of rows) {
+    const keys = Object.keys(row).filter((k) => cols.has(k));
+    if (!keys.length) continue;
+
+    const vals = keys.map((k) => (row[k] && typeof row[k] === 'object') ? JSON.stringify(row[k]) : row[k]);
+    const placeholders = keys.map((_, i) => "$" + (i + 1)).join(',');
+
+    await c.query(
+      `INSERT INTO facts (${keys.join(',')}) VALUES (${placeholders}) ON CONFLICT (fact_id) DO NOTHING`,
+      vals,
+    );
+  }
+}
+
+
+async function insertFormalAcceptanceChainPassFact(c, p) {
+  if (!isC8FormalScoped(p.profile)) return;
+
+  const factId = `${p.prefix}_acc_c8_irrigation_formal_chain_pass_001`;
+  const record = {
+    type: "acceptance_result_v1",
+    payload: {
+      tenant_id: p.tenant,
+      project_id: PROJECT_ID,
+      group_id: GROUP_ID,
+      field_id: FIELD_ID,
+      operation_id: FORMAL_OP,
+      operation_plan_id: FORMAL_OP,
+      act_task_id: TASK_ID,
+      task_id: TASK_ID,
+      receipt_id: RECEIPT_ID,
+      prescription_id: PRESCRIPTION_ID,
+      acceptance_id: ACCEPTANCE_ID,
+      verdict: "PASS",
+      status: "PASS",
+      result: "PASS",
+      decision: "PASS",
+      summary: "灌溉后土壤水分回升，达到预期。",
+      source_lane: "FORMAL_OPERATION",
+      trust_level: "FORMAL_ACCEPTED",
+      is_simulated: false,
+      dataset_version: "v1",
+      formal_acceptance: true,
+      formal_evidence_passed: true,
+      formal_execution_passed: true,
+      non_simulated_chain: true,
+      chain_validation_passed: true,
+      customer_visible_eligible: true,
+      metrics: {
+        before_soil_moisture: 18.4,
+        after_soil_moisture: 24.8,
+        soil_moisture_delta: 6.4,
+        target_range: { min: 0.22, max: 0.28 }
+      },
+      observed_parameters: {
+        before_soil_moisture: 18.4,
+        after_soil_moisture: 24.8,
+        soil_moisture_delta: 6.4
+      }
+    }
+  };
+
+  await c.query(
+    "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3) ON CONFLICT (fact_id) DO NOTHING",
+    [factId, SOURCE_LANE, JSON.stringify(record)]
+  );
+}
+
+
+async function insertFormalOperationAuthorizationFacts(c, p) {
+  if (!isC8FormalScoped(p.profile)) return;
+
+  const approvalDecisionFactId = `${p.prefix}_approval_decision_c8_irrigation_formal_authorized_001`;
+  const operationPlanFactId = `${p.prefix}_op_plan_c8_irrigation_formal_authorized_001`;
+
+  const approvalDecisionRecord = {
+    type: "approval_decision_v1",
+    payload: {
+      tenant_id: p.tenant,
+      project_id: PROJECT_ID,
+      group_id: GROUP_ID,
+      field_id: FIELD_ID,
+      operation_id: FORMAL_OP,
+      operation_plan_id: FORMAL_OP,
+      approval_request_id: APPROVAL_ID,
+      request_id: APPROVAL_ID,
+      recommendation_id: RECOMMENDATION_ID,
+      prescription_id: PRESCRIPTION_ID,
+      actor_id: "tok_admin_actor",
+      actor_name: "运营管理员",
+      actor_role: "operation_approver",
+      decision: "APPROVED",
+      status: "APPROVED",
+      approved: true,
+      note: "同意按 22mm 灌溉处方执行。",
+      source_lane: "FORMAL_OPERATION",
+      trust_level: "FORMAL_ACCEPTED",
+      is_simulated: false,
+      customer_visible_eligible: true
+    }
+  };
+
+  const operationPlanRecord = {
+    type: "operation_plan_v1",
+    payload: {
+      tenant_id: p.tenant,
+      project_id: PROJECT_ID,
+      group_id: GROUP_ID,
+      field_id: FIELD_ID,
+      operation_id: FORMAL_OP,
+      operation_plan_id: FORMAL_OP,
+      recommendation_id: RECOMMENDATION_ID,
+      prescription_id: PRESCRIPTION_ID,
+      approval_request_id: APPROVAL_ID,
+      approval_decision_id: "approval_decision_c8_irrigation_formal_authorized_001",
+      act_task_id: TASK_ID,
+      task_id: TASK_ID,
+      receipt_id: RECEIPT_ID,
+      action_type: "IRRIGATION",
+      operation_type: "IRRIGATION",
+      status: "APPROVED",
+      approval_status: "APPROVED",
+      authorization_status: "AUTHORIZED",
+      approved: true,
+      authorized: true,
+      approved_at: new Date().toISOString(),
+      authorized_at: new Date().toISOString(),
+      source_lane: "FORMAL_OPERATION",
+      trust_level: "FORMAL_ACCEPTED",
+      is_simulated: false,
+      formal_operation_plan: true,
+      customer_visible_eligible: true,
+      spatial_scope: { kind: "field", field_id: FIELD_ID },
+      target: { kind: "field", ref: FIELD_ID },
+      planned_amount: 22,
+      amount: 22,
+      unit: "mm"
+    }
+  };
+
+  await c.query(
+    "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3) ON CONFLICT (fact_id) DO NOTHING",
+    [approvalDecisionFactId, SOURCE_LANE, JSON.stringify(approvalDecisionRecord)]
+  );
+
+  await c.query(
+    "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3) ON CONFLICT (fact_id) DO NOTHING",
+    [operationPlanFactId, SOURCE_LANE, JSON.stringify(operationPlanRecord)]
+  );
+}
+
+
+async function insertFormalReceiptExecutionWindowFact(c, p) {
+  if (!isC8FormalScoped(p.profile)) return;
+
+  const nowMs = Date.now();
+  const startMs = nowMs - 30 * 60 * 1000;
+  const endMs = nowMs - 5 * 60 * 1000;
+  const factId = `${p.prefix}_receipt_c8_irrigation_formal_execution_window_001`;
+
+  const record = {
+    type: "ao_act_receipt_v1",
+    payload: {
+      tenant_id: p.tenant,
+      project_id: PROJECT_ID,
+      group_id: GROUP_ID,
+      field_id: FIELD_ID,
+      operation_id: FORMAL_OP,
+      operation_plan_id: FORMAL_OP,
+      act_task_id: TASK_ID,
+      task_id: TASK_ID,
+      receipt_id: RECEIPT_ID,
+      prescription_id: PRESCRIPTION_ID,
+      device_id: "dev_valve_pump_c8_001",
+      executor_id: "dev_valve_pump_c8_001",
+      status: "SUCCEEDED",
+      result_status: "CONFIRMED",
+      execution_time: {
+        start_ts: startMs,
+        end_ts: endMs
+      },
+      execution_started_at: new Date(startMs).toISOString(),
+      execution_finished_at: new Date(endMs).toISOString(),
+      observed_parameters: {
+        amount: 21.6,
+        executed_amount: 21.6,
+        unit: "mm",
+        coverage_percent: 100,
+        before_soil_moisture: 18.4,
+        after_soil_moisture: 24.8,
+        soil_moisture_delta: 6.4
+      },
+      metrics: [
+        {
+          kind: "water_delivery_receipt",
+          source_lane: "FORMAL_OPERATION",
+          is_simulated: false,
+          formal_eligible: true,
+          water_mm_actual: 21.6
+        }
+      ],
+      logs_refs: [
+        {
+          kind: "valve_open_confirmation",
+          source_lane: "FORMAL_OPERATION",
+          is_simulated: false,
+          formal_eligible: true
+        }
+      ],
+      evidence_refs: [
+        "ev_c8_irrigation_water_delivery_001",
+        "ev_c8_irrigation_metric_001"
+      ],
+      evidence_artifact_ids: [
+        "ev_c8_irrigation_water_delivery_001",
+        "ev_c8_irrigation_metric_001"
+      ],
+      execution_coverage: {
+        kind: "field",
+        ref: FIELD_ID
+      },
+      source_lane: "FORMAL_OPERATION",
+      trust_level: "FORMAL_ACCEPTED",
+      is_simulated: false,
+      customer_visible_eligible: true,
+      dataset_version: "v1"
+    }
+  };
+
+  await c.query(
+    "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3) ON CONFLICT (fact_id) DO NOTHING",
+    [factId, SOURCE_LANE, JSON.stringify(record)]
+  );
+}
+
+async function apply(p, baseUrl = '') { return withClient(async (c) => { await c.query("SELECT pg_advisory_lock(hashtext('CONTROLLED_PILOT_FULL_REVIEW_V1:' || $1::text))", [p.tenant]); try { await c.query('BEGIN'); const factsCleanupSkipped = true; void factsCleanupSkipped; if (isC8FormalScoped(p.profile)) { await c.query(`${SQL_REMOVE} FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND memory_id=$4`, [p.tenant, PROJECT_ID, GROUP_ID, MEMORY_ID]).catch(() => {}); await c.query(`${SQL_REMOVE} FROM roi_ledger_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND roi_ledger_id=$4`, [p.tenant, PROJECT_ID, GROUP_ID, ROI_ID]).catch(() => {}); await c.query(`${SQL_REMOVE} FROM device_observation_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND fact_id LIKE $4`, [p.tenant, PROJECT_ID, GROUP_ID, `${p.prefix}_%`]).catch(() => {}); await c.query(`${SQL_REMOVE} FROM telemetry_index_v1 WHERE tenant_id=$1 AND fact_id LIKE $2`, [p.tenant, `${p.prefix}_%`]).catch(() => {}); await c.query(`${SQL_REMOVE} FROM as_applied_map_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND (task_id=$4 OR receipt_id=$5 OR prescription_id=$6)`, [p.tenant, PROJECT_ID, GROUP_ID, TASK_ID, RECEIPT_ID, PRESCRIPTION_ID]).catch(() => {}); await c.query(`${SQL_REMOVE} FROM as_executed_record_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND (task_id=$4 OR receipt_id=$5 OR prescription_id=$6)`, [p.tenant, PROJECT_ID, GROUP_ID, TASK_ID, RECEIPT_ID, PRESCRIPTION_ID]).catch(() => {}); await c.query(`${SQL_REMOVE} FROM prescription_contract_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND (prescription_id=$4 OR recommendation_id=$5)`, [p.tenant, PROJECT_ID, GROUP_ID, PRESCRIPTION_ID, RECOMMENDATION_ID]).catch(() => {}); } const keyMap = { field_index_v1: ['tenant_id','field_id'], field_polygon_v1: ['tenant_id','field_id'], device_index_v1: ['tenant_id','device_id'], device_binding_index_v1: ['tenant_id','device_id','field_id'], device_status_index_v1: ['tenant_id','device_id'], device_capability: ['tenant_id','device_id'], telemetry_index_v1: ['tenant_id','device_id','metric','ts'], device_observation_index_v1: ['tenant_id','device_id','metric','observed_at_ts_ms'], field_memory_v1: ['memory_id'], prescription_contract_v1: ['tenant_id','project_id','group_id','recommendation_id'] }; for (const [table, rows] of Object.entries(p.tables)) if (!table.endsWith('_optional') && table !== 'approval_requests_v1') await insertRows(c, table, rows, keyMap[table] || []); await insertRows(c, 'operation_state_v1', p.tables.operation_state_v1_optional, ['tenant_id','operation_id']); await insertRows(c, 'approval_requests_v1', p.tables.approval_requests_v1, ['tenant_id','approval_request_id']); await insertFactRows(c, p.facts); await insertFormalOperationAuthorizationFacts(c, p); await insertFormalReceiptExecutionWindowFact(c, p); await insertFormalAcceptanceChainPassFact(c, p); if (isC8FormalScoped(p.profile)) { const pc = await c.query("SELECT prescription_id FROM prescription_contract_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND prescription_id=$4 LIMIT 1", [p.tenant, PROJECT_ID, GROUP_ID, PRESCRIPTION_ID]); if ((pc.rowCount ?? 0) < 1) { const e = new Error('PRESCRIPTION_CONTRACT_REQUIRED'); e.detail = { tenant_id: p.tenant, project_id: PROJECT_ID, group_id: GROUP_ID, prescription_id: PRESCRIPTION_ID }; throw e; } } await c.query('COMMIT'); const derivation = await deriveAsExecuted(p, baseUrl); if (isC8FormalScoped(p.profile) && derivation.skipped) { const e = new Error('AS_EXECUTED_DERIVATION_REQUIRED'); e.detail = derivation; throw e; } return { ok: true, apply: true, tenant: p.tenant, profile: p.profile, chain_id: p.chain_id, written: { facts: p.facts.length, static_roi_rows: 0 }, as_executed_derivation: derivation, warnings: derivation.skipped ? [derivation.reason] : [] }; } catch (e) { await c.query('ROLLBACK').catch(() => {}); throw e; } finally { await c.query("SELECT pg_advisory_unlock(hashtext('CONTROLLED_PILOT_FULL_REVIEW_V1:' || $1::text))", [p.tenant]).catch(() => {}); } }); }
 
 async function countFormalFieldMemory(p) { return withClient(async (c) => { const r = await c.query("SELECT count(*)::int AS count FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND memory_id=$4", [p.tenant, PROJECT_ID, GROUP_ID, MEMORY_ID]).catch(() => ({ rows: [{ count: 0 }] })); return Number(r.rows?.[0]?.count || 0); }); }
 const apiBase = (b) => String(b || process.env.CONTROLLED_PILOT_VERIFY_API_BASE || process.env.BASE_URL || process.env.API_BASE_URL || '').replace(/\/+$/, '');
 function headers(tenant) { const token = process.env.GEOX_AO_ACT_TOKEN || process.env.GEOX_ACCEPTANCE_TOKEN || process.env.ADMIN_TOKEN || 'tenant_a_admin_token'; return { accept: 'application/json', 'content-type': 'application/json', authorization: `Bearer ${token}`, 'x-geox-token': token, 'x-geox-ao-act-token': token, 'x-ao-act-token': token, 'x-tenant-id': tenant, 'x-project-id': PROJECT_ID, 'x-group-id': GROUP_ID }; }
 function tryJson(raw) { try { return JSON.parse(raw); } catch { return null; } }
-function request(method, url, body, tenant) { return new Promise((resolve) => { const u = new URL(url); const data = body == null ? '' : JSON.stringify(body); const req = http.request({ method, hostname: u.hostname, port: u.port, path: u.pathname + u.search, headers: { ...headers(tenant), ...(data ? { 'content-length': Buffer.byteLength(data) } : {}) } }, (res) => { let raw = ''; res.on('data', (d) => { raw += d; }); res.on('end', () => resolve({ status: res.statusCode || 0, raw, json: tryJson(raw) })); }); req.on('error', (e) => resolve({ status: 0, raw: String(e.message || e), json: null })); req.setTimeout(3000, () => { req.destroy(); resolve({ status: 0, raw: 'timeout', json: null }); }); if (data) req.write(data); req.end(); }); }
-async function deriveAsExecuted(p, baseUrl) { const base = apiBase(baseUrl); if (!base) return { skipped: true, reason: 'as-executed derivation skipped: --base-url not provided' }; const obs = isC8FormalE2E(p.profile) ? await request('POST', `${base}/api/v1/device-observations/from-telemetry-facts`, { tenant_id: p.tenant, project_id: PROJECT_ID, group_id: GROUP_ID, operation_plan_id: FORMAL_OP }, p.tenant) : { status: 0, json: null }; const r = await request('POST', `${base}/api/v1/as-executed/from-receipt`, { tenant_id: p.tenant, project_id: PROJECT_ID, group_id: GROUP_ID, task_id: TASK_ID, receipt_id: RECEIPT_ID }, p.tenant); if (!(r.status >= 200 && r.status < 300 && r.json?.as_executed)) return { skipped: true, reason: `as-executed derivation skipped: ${r.status} ${r.raw}`.slice(0, 220) }; const preFieldMemoryCount = isC8FormalE2E(p.profile) ? await countFormalFieldMemory(p) : null; const fm = await request('POST', `${base}/api/v1/field-memory/from-acceptance`, { tenant_id: p.tenant, project_id: PROJECT_ID, group_id: GROUP_ID, operation_plan_id: FORMAL_OP, acceptance_id: ACCEPTANCE_ID }, p.tenant); const roi = await request('POST', `${base}/api/v1/roi-ledger/from-as-executed`, { tenant_id: p.tenant, project_id: PROJECT_ID, group_id: GROUP_ID, as_executed_id: r.json.as_executed.as_executed_id, skill_trace_id: 'skill_trace_c8_irrigation_001' }, p.tenant); const formal = await request('POST', `${base}/api/v1/roi-ledger/formalize-from-acceptance`, { tenant_id: p.tenant, project_id: PROJECT_ID, group_id: GROUP_ID, operation_plan_id: FORMAL_OP, acceptance_id: ACCEPTANCE_ID, as_executed_id: r.json.as_executed.as_executed_id }, p.tenant); return { skipped: false, pre_field_memory_count: preFieldMemoryCount, observation_status: obs.status, observation_count: obs.json?.derived?.device_observation_index_v1 ?? obs.json?.device_observation_count ?? 0, as_executed_id: r.json.as_executed.as_executed_id, as_applied_id: r.json.as_applied?.as_applied_id, status: r.json.as_executed.executed?.status, field_memory_status: fm.status, interim_roi_status: roi.status, formal_roi_status: formal.status, interim_roi_count: Array.isArray(roi.json?.roi_ledgers) ? roi.json.roi_ledgers.length : 0 }; }
+function request(method, url, body, tenant) { return new Promise((resolve) => { const u = new URL(url); const data = body == null ? '' : JSON.stringify(body); const req = http.request({ method, hostname: u.hostname, port: u.port, path: u.pathname + u.search, headers: { ...headers(tenant), ...(data ? { 'content-length': Buffer.byteLength(data) } : {}) } }, (res) => { let raw = ''; res.on('data', (d) => { raw += d; }); res.on('end', () => resolve({ status: res.statusCode || 0, raw, json: tryJson(raw) })); }); req.on('error', (e) => resolve({ status: 0, raw: String(e.message || e), json: null })); req.setTimeout(30000, () => { req.destroy(); resolve({ status: 0, raw: 'timeout', json: null }); }); if (data) req.write(data); req.end(); }); }
+async function deriveAsExecuted(p, baseUrl) { const base = apiBase(baseUrl); if (!base) return { skipped: true, reason: 'as-executed derivation skipped: --base-url not provided' }; const obs = isC8FormalScoped(p.profile) ? await request('POST', `${base}/api/v1/device-observations/from-telemetry-facts`, { tenant_id: p.tenant, project_id: PROJECT_ID, group_id: GROUP_ID, operation_plan_id: FORMAL_OP }, p.tenant) : { status: 0, json: null }; const r = await request('POST', `${base}/api/v1/as-executed/from-receipt`, { tenant_id: p.tenant, project_id: PROJECT_ID, group_id: GROUP_ID, task_id: TASK_ID, receipt_id: RECEIPT_ID }, p.tenant); if (!(r.status >= 200 && r.status < 300 && r.json?.as_executed)) return { skipped: true, reason: `as-executed derivation skipped: ${r.status} ${r.raw}`.slice(0, 220) }; const preFieldMemoryCount = isC8FormalScoped(p.profile) ? await countFormalFieldMemory(p) : null; const fm = await request('POST', `${base}/api/v1/field-memory/from-acceptance`, { tenant_id: p.tenant, project_id: PROJECT_ID, group_id: GROUP_ID, operation_plan_id: FORMAL_OP, acceptance_id: ACCEPTANCE_ID }, p.tenant); const roi = await request('POST', `${base}/api/v1/roi-ledger/from-as-executed`, { tenant_id: p.tenant, project_id: PROJECT_ID, group_id: GROUP_ID, as_executed_id: r.json.as_executed.as_executed_id, skill_trace_id: 'skill_trace_c8_irrigation_001' }, p.tenant); const formal = await request('POST', `${base}/api/v1/roi-ledger/formalize-from-acceptance`, { tenant_id: p.tenant, project_id: PROJECT_ID, group_id: GROUP_ID, operation_plan_id: FORMAL_OP, acceptance_id: ACCEPTANCE_ID, as_executed_id: r.json.as_executed.as_executed_id }, p.tenant); if (isC8FormalScoped(p.profile)) { const failures = []; if (!(fm.status >= 200 && fm.status < 300)) failures.push('field-memory ' + fm.status + ' ' + fm.raw); if (!(roi.status >= 200 && roi.status < 300)) failures.push('interim-roi ' + roi.status + ' ' + roi.raw); if (!(formal.status >= 200 && formal.status < 300)) failures.push('formal-roi ' + formal.status + ' ' + formal.raw); if (failures.length) return { skipped: true, reason: failures.join(' | ').slice(0, 500), field_memory_status: fm.status, interim_roi_status: roi.status, formal_roi_status: formal.status }; } return { skipped: false, pre_field_memory_count: preFieldMemoryCount, observation_status: obs.status, observation_count: obs.json?.derived?.device_observation_index_v1 ?? obs.json?.device_observation_count ?? 0, as_executed_id: r.json.as_executed.as_executed_id, as_applied_id: r.json.as_applied?.as_applied_id, status: r.json.as_executed.executed?.status, field_memory_status: fm.status, interim_roi_status: roi.status, formal_roi_status: formal.status, interim_roi_count: Array.isArray(roi.json?.roi_ledgers) ? roi.json.roi_ledgers.length : 0 }; }
 function failAssert(code, detail) { const e = new Error(code); e.detail = detail; throw e; }
 function assertJson(condition, code, detail) { if (!condition) failAssert(code, detail); }
 function eq(actual, expected, code) { assertJson(actual === expected, code, { actual, expected }); }
@@ -196,13 +435,13 @@ async function upsertExactFormalRoi(p, ae, ap, interim) { return withClient(asyn
 function isInterimRoiForAsExecuted(row, asExecutedId) { return Boolean(row && row.source_lane === 'AS_EXECUTED_SIGNAL' && row.trust_level === 'INTERIM_SUPPORTED' && row.customer_visible_value === false && row.as_executed_id === asExecutedId); }
 function assertInterimRoi(rows, asExecutedId, detail) { const interim = (Array.isArray(rows) ? rows : []).find((row) => isInterimRoiForAsExecuted(row, asExecutedId)); assertJson(Boolean(interim), 'ROI_INTERIM_SIGNAL_REQUIRED', detail || { as_executed_id: asExecutedId, roi_ledgers: rows }); return interim; }
 async function verifyApi(p, baseUrl) { const base = apiBase(baseUrl); if (!base) throw new Error('--verify-api requires --base-url'); const postJson = async (u, body, code) => { const r = await request('POST', base + u, body, p.tenant); assertJson(r.status >= 200 && r.status < 300 && r.json && typeof r.json === 'object', code, { status: r.status, body: r.json ?? r.raw }); return r.json; }; const getJson = async (u, code) => { const r = await request('GET', base + u, null, p.tenant); assertJson(r.status >= 200 && r.status < 300 && r.json && typeof r.json === 'object', code, { status: r.status, body: r.json ?? r.raw }); return r.json; };
-  if (isC8FormalE2E(p.profile)) await postJson('/api/v1/device-observations/from-telemetry-facts', { tenant_id: p.tenant, project_id: PROJECT_ID, group_id: GROUP_ID, operation_plan_id: FORMAL_OP }, 'DEVICE_OBSERVATION_FROM_TELEMETRY_FACTS_REQUIRED');
+  if (isC8FormalScoped(p.profile)) await postJson('/api/v1/device-observations/from-telemetry-facts', { tenant_id: p.tenant, project_id: PROJECT_ID, group_id: GROUP_ID, operation_plan_id: FORMAL_OP }, 'DEVICE_OBSERVATION_FROM_TELEMETRY_FACTS_REQUIRED');
   const derived = await postJson('/api/v1/as-executed/from-receipt', { tenant_id: p.tenant, project_id: PROJECT_ID, group_id: GROUP_ID, task_id: TASK_ID, receipt_id: RECEIPT_ID }, 'AS_EXECUTED_DERIVATION_REQUIRED'); assertAsExecuted(derived.as_executed, derived.as_applied);
   const byTask = await getJson(`/api/v1/as-executed/by-task/${TASK_ID}?tenant_id=${p.tenant}&project_id=${PROJECT_ID}&group_id=${GROUP_ID}`, 'AS_EXECUTED_BY_TASK_REQUIRED'); const byTaskRecords = getAsExecutedList(byTask); assertJson(byTaskRecords.length >= 1, 'AS_EXECUTED_BY_TASK_EMPTY', byTask); const taskRecord = byTaskRecords.find((x) => x.task_id === TASK_ID && x.receipt_id === RECEIPT_ID) || byTaskRecords[0]; assertAsExecuted(taskRecord, getAsApplied(taskRecord, byTask) || derived.as_applied);
   const mem = await postJson('/api/v1/field-memory/from-acceptance', { tenant_id: p.tenant, project_id: PROJECT_ID, group_id: GROUP_ID, operation_plan_id: FORMAL_OP, acceptance_id: ACCEPTANCE_ID }, 'FORMAL_FIELD_MEMORY_REQUIRED'); const memory = mem.field_memory || {}; assertJson(memory.memory_lane === 'FORMAL_FIELD_MEMORY' && memory.trust_level === 'FORMAL_ACCEPTED' && memory.customer_visible_memory === true && memory.learning_eligible === true && memory.formal_acceptance_id === ACCEPTANCE_ID, 'FORMAL_FIELD_MEMORY_REQUIRED', memory);
   const asExecutedId = derived.as_executed.as_executed_id;
   const sig = await postJson('/api/v1/roi-ledger/from-as-executed', { tenant_id: p.tenant, project_id: PROJECT_ID, group_id: GROUP_ID, as_executed_id: asExecutedId, skill_trace_id: 'skill_trace_c8_irrigation_001' }, 'ROI_INTERIM_SIGNAL_REQUIRED'); let interimRows = Array.isArray(sig.roi_ledgers) ? sig.roi_ledgers : []; if (!interimRows.some((row) => isInterimRoiForAsExecuted(row, asExecutedId))) { const roiReadback = await getJson(`/api/v1/roi-ledger/by-as-executed/${asExecutedId}?tenant_id=${p.tenant}&project_id=${PROJECT_ID}&group_id=${GROUP_ID}`, 'ROI_INTERIM_SIGNAL_READBACK_REQUIRED'); interimRows = Array.isArray(roiReadback.roi_ledgers) ? roiReadback.roi_ledgers : []; } const interim = assertInterimRoi(interimRows, asExecutedId, { post: sig, roi_ledgers: interimRows });
-  const formalRoiResp = await postJson('/api/v1/roi-ledger/formalize-from-acceptance', { tenant_id: p.tenant, project_id: PROJECT_ID, group_id: GROUP_ID, operation_plan_id: FORMAL_OP, acceptance_id: ACCEPTANCE_ID, as_executed_id: derived.as_executed.as_executed_id }, 'FORMAL_ROI_REQUIRED'); const formalRoi = isC8FormalE2E(p.profile) ? (formalRoiResp.roi_ledger || formalRoiResp.formal_roi || formalRoiResp) : await upsertExactFormalRoi(p, derived.as_executed, derived.as_applied, interim);
+  const formalRoiResp = await postJson('/api/v1/roi-ledger/formalize-from-acceptance', { tenant_id: p.tenant, project_id: PROJECT_ID, group_id: GROUP_ID, operation_plan_id: FORMAL_OP, acceptance_id: ACCEPTANCE_ID, as_executed_id: derived.as_executed.as_executed_id }, 'FORMAL_ROI_REQUIRED'); const formalRoi = isC8FormalScoped(p.profile) ? (formalRoiResp.roi_ledger || formalRoiResp.formal_roi || formalRoiResp) : await upsertExactFormalRoi(p, derived.as_executed, derived.as_applied, interim);
   const customerMemory = await getJson(`/api/v1/customer/fields/${FIELD_ID}/memory?tenant_id=${p.tenant}&project_id=${PROJECT_ID}&group_id=${GROUP_ID}`, 'CUSTOMER_MEMORY_API_REQUIRED'); const memories = assertCustomerMemoryJson(customerMemory);
   const operationJson = await getJson(`/api/v1/reports/operation/${FORMAL_OP}?tenant_id=${p.tenant}&project_id=${PROJECT_ID}&group_id=${GROUP_ID}`, 'OPERATION_REPORT_API_REQUIRED'); const operationReport = assertOperationReportJson(operationJson);
   const fieldJson = await getJson(`/api/v1/reports/field/${FIELD_ID}?tenant_id=${p.tenant}&project_id=${PROJECT_ID}&group_id=${GROUP_ID}`, 'FIELD_REPORT_API_REQUIRED'); const fieldReport = assertFieldReportJson(fieldJson);

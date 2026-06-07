@@ -232,29 +232,34 @@ function normalizeDiagnosticMetric(metric: unknown): string | null {
   if (!raw) return null;
   const lower = raw.toLowerCase();
   if (["soil_moisture", "soil_moisture_pct", "soil_moisture_vwc", "moisture_pct"].includes(lower)) return "soil_moisture_percent";
+  if (["soil_moisture_after", "soil_moisture_after_pct", "after_soil_moisture", "after_soil_moisture_percent"].includes(lower)) return "soil_moisture_after_percent";
   if (lower === "forecast_rain_72h" || lower === "forecast_rain_72h_mm" || lower === "rain_forecast_72h_mm") return "forecast_rain_72h_mm";
+  if (lower === "temperature_max" || lower === "temperature_max_c" || lower === "max_temperature_c") return "temperature_max_c";
   return raw;
 }
 
 function labelForDiagnosticMetric(metric: string): string {
   if (metric === "soil_moisture_percent") return "20cm 土层水分";
   if (metric === "forecast_rain_72h_mm") return "未来 72 小时降雨";
+  if (metric === "temperature_max_c") return "\u6700\u9ad8\u6c14\u6e29";
+  if (metric === "soil_moisture_after_percent") return "\u704c\u540e 20cm \u571f\u5c42\u6c34\u5206";
   return metric;
 }
 
 function capabilityForDiagnosticMetric(metric: string | null, capabilities: any[]): string | null {
   const normalizedCaps = capabilities.map((item) => String(item ?? "").trim()).filter(Boolean);
-  if (metric === "soil_moisture_percent") return normalizedCaps.find((cap) => cap.includes("soil_moisture")) ?? "soil_moisture_sensor";
+  if (metric === "soil_moisture_percent" || metric === "soil_moisture_after_percent") return normalizedCaps.find((cap) => cap.includes("soil_moisture")) ?? "soil_moisture_sensor";
   if (metric === "forecast_rain_72h_mm") return normalizedCaps.find((cap) => cap.includes("weather") || cap.includes("rain")) ?? "weather_sensor";
+  if (metric === "temperature_max_c") return normalizedCaps.find((cap) => cap.includes("weather") || cap.includes("temperature")) ?? "weather_station";
   return normalizedCaps[0] ?? null;
 }
 
 function unitForDiagnosticMetric(metric: string, fallback: unknown): string | null {
-  const unit = toText(fallback);
-  if (unit) return unit;
   if (metric === "soil_moisture_percent") return "%";
+  if (metric === "soil_moisture_after_percent") return "%";
   if (metric === "forecast_rain_72h_mm") return "mm";
-  return null;
+  if (metric === "temperature_max_c") return "\u2103";
+  return toText(fallback);
 }
 
 function pickRecommendationDiagnosticNumber(recommendationPayload: any, keys: string[]): number | null {
@@ -276,6 +281,51 @@ function pickRecommendationDiagnosticNumber(recommendationPayload: any, keys: st
   return null;
 }
 
+function roleForDiagnosticMetric(metric: string): DiagnosticInputsForReportV1["observations"][number]["role"] {
+  if (metric === "temperature_max_c") return "agronomy_context";
+  if (metric === "soil_moisture_after_percent") return "acceptance_input";
+  return "diagnosis_input";
+}
+
+function hasDeviceCapability(capabilities: string[], token: string): boolean {
+  return capabilities.some((cap) => cap.includes(token));
+}
+
+function displayKindTextForDiagnosticDevice(capabilities: string[]): string | null {
+  if (hasDeviceCapability(capabilities, "soil_moisture")) return "\u571f\u58e4\u6c34\u5206\u4f20\u611f\u5668";
+  if (hasDeviceCapability(capabilities, "weather") || hasDeviceCapability(capabilities, "rain")) return "\u5fae\u578b\u6c14\u8c61\u7ad9";
+  if (hasDeviceCapability(capabilities, "pump") || hasDeviceCapability(capabilities, "valve")) return "\u9600\u95e8\u6cf5\u7ad9\u63a7\u5236\u5668";
+  return null;
+}
+
+function sensingRoleTextForDiagnosticDevice(capabilities: string[]): string | null {
+  if (hasDeviceCapability(capabilities, "soil_moisture")) return "20cm \u571f\u5c42\u6c34\u5206\u76d1\u6d4b";
+  if (hasDeviceCapability(capabilities, "weather") || hasDeviceCapability(capabilities, "rain")) return "\u5929\u6c14\u4e0e\u964d\u96e8\u9884\u62a5";
+  if (hasDeviceCapability(capabilities, "pump") || hasDeviceCapability(capabilities, "valve")) return "\u704c\u6e89\u6267\u884c\u4e0e\u56de\u6267";
+  return null;
+}
+
+function capabilityTextForDiagnosticDevice(capabilities: string[]): string | null {
+  if (hasDeviceCapability(capabilities, "soil_moisture")) return "\u76d1\u6d4b\u571f\u58e4\u6c34\u5206\uff0c\u63d0\u4f9b\u704c\u6e89\u8bca\u65ad\u8f93\u5165";
+  if (hasDeviceCapability(capabilities, "weather") || hasDeviceCapability(capabilities, "rain")) return "\u63d0\u4f9b\u672a\u6765\u964d\u96e8\u4e0e\u6e29\u5ea6\u8f93\u5165";
+  if (hasDeviceCapability(capabilities, "pump") || hasDeviceCapability(capabilities, "valve")) return "\u6267\u884c\u8865\u704c\u4efb\u52a1\u5e76\u8bb0\u5f55\u9600\u95e8\u4e0e\u6cf5\u7ad9\u8fd0\u884c";
+  return null;
+}
+
+function contributedMetricsForDiagnosticDevice(capabilities: string[], metric: string | null): string[] {
+  const out = new Set<string>();
+  if (metric) out.add(metric);
+  if (hasDeviceCapability(capabilities, "soil_moisture")) {
+    out.add("soil_moisture_percent");
+    out.add("soil_moisture_after_percent");
+  }
+  if (hasDeviceCapability(capabilities, "weather") || hasDeviceCapability(capabilities, "rain")) {
+    out.add("forecast_rain_72h_mm");
+    out.add("temperature_max_c");
+  }
+  return Array.from(out);
+}
+
 function fallbackDiagnosticObservationsFromRecommendation(recommendationPayload: any): DiagnosticInputsForReportV1["observations"] {
   const out: DiagnosticInputsForReportV1["observations"] = [];
   const soilMoisture = pickRecommendationDiagnosticNumber(recommendationPayload, ["soil_moisture_percent", "soil_moisture_pct", "soil_moisture", "moisture_pct"]);
@@ -285,6 +335,14 @@ function fallbackDiagnosticObservationsFromRecommendation(recommendationPayload:
   const forecastRain = pickRecommendationDiagnosticNumber(recommendationPayload, ["forecast_rain_72h_mm", "forecast_rainfall_72h_mm", "rain_forecast_72h_mm"]);
   if (forecastRain != null) {
     out.push({ metric: "forecast_rain_72h_mm", label: labelForDiagnosticMetric("forecast_rain_72h_mm"), value: forecastRain, unit: "mm", role: "diagnosis_input" });
+  }
+  const temperatureMax = pickRecommendationDiagnosticNumber(recommendationPayload, ["temperature_max_c", "max_temperature_c", "temperature_max"]);
+  if (temperatureMax != null) {
+    out.push({ metric: "temperature_max_c", label: labelForDiagnosticMetric("temperature_max_c"), value: temperatureMax, unit: "\u2103", role: "agronomy_context" });
+  }
+  const soilMoistureAfter = pickRecommendationDiagnosticNumber(recommendationPayload, ["soil_moisture_after_percent", "soil_moisture_after_pct", "after_soil_moisture_percent"]);
+  if (soilMoistureAfter != null) {
+    out.push({ metric: "soil_moisture_after_percent", label: labelForDiagnosticMetric("soil_moisture_after_percent"), value: soilMoistureAfter, unit: "%", role: "acceptance_input" });
   }
   return out;
 }
@@ -318,7 +376,7 @@ async function buildDiagnosticInputsForReportV1(params: {
             AND group_id = $3
             AND field_id = b.field_id
             AND device_id = b.device_id
-            AND metric IN ('soil_moisture_percent','soil_moisture','soil_moisture_pct','soil_moisture_vwc','moisture_pct','forecast_rain_72h_mm','forecast_rain_72h','rain_forecast_72h_mm')
+            AND metric IN ('soil_moisture_percent','soil_moisture','soil_moisture_pct','soil_moisture_vwc','moisture_pct','soil_moisture_after_percent','soil_moisture_after','soil_moisture_after_pct','after_soil_moisture','after_soil_moisture_percent','forecast_rain_72h_mm','forecast_rain_72h','rain_forecast_72h_mm','temperature_max_c','temperature_max','max_temperature_c')
           ORDER BY observed_at_ts_ms DESC
           LIMIT 1
        ) o ON true
@@ -329,20 +387,20 @@ async function buildDiagnosticInputsForReportV1(params: {
   ).catch(() => ({ rows: [] as any[] }));
 
   const observationQ = await pool.query(
-    `SELECT DISTINCT ON (metric) metric, value_num, unit
+    `SELECT DISTINCT ON (metric) metric, value_num, unit, observed_at_ts_ms, device_id, fact_id
        FROM device_observation_index_v1
       WHERE tenant_id = $1
         AND project_id = $2
         AND group_id = $3
         AND field_id = $4
-        AND metric IN ('soil_moisture_percent','soil_moisture','soil_moisture_pct','soil_moisture_vwc','moisture_pct','forecast_rain_72h_mm','forecast_rain_72h','rain_forecast_72h_mm')
+        AND metric IN ('soil_moisture_percent','soil_moisture','soil_moisture_pct','soil_moisture_vwc','moisture_pct','soil_moisture_after_percent','soil_moisture_after','soil_moisture_after_pct','after_soil_moisture','after_soil_moisture_percent','forecast_rain_72h_mm','forecast_rain_72h','rain_forecast_72h_mm','temperature_max_c','temperature_max','max_temperature_c')
       ORDER BY metric, observed_at_ts_ms DESC`,
     [tenant.tenant_id, tenant.project_id, tenant.group_id, field_id],
   ).catch(() => ({ rows: [] as any[] }));
 
   const devices = (deviceQ.rows ?? []).map((row: any) => {
     const metric = normalizeDiagnosticMetric(row.metric);
-    const capabilities = parseJsonArrayMaybe(row.capabilities);
+    const capabilities = parseJsonArrayMaybe(row.capabilities).map((item) => String(item ?? "").trim()).filter(Boolean);
     return {
       device_id: String(row.device_id ?? ""),
       display_name: toText(row.display_name) ?? String(row.device_id ?? ""),
@@ -350,6 +408,16 @@ async function buildDiagnosticInputsForReportV1(params: {
       metric,
       value: toFiniteNumberOrNull(row.value_num),
       unit: metric ? unitForDiagnosticMetric(metric, row.unit) : toText(row.unit),
+      field_id,
+      display_kind_text: displayKindTextForDiagnosticDevice(capabilities),
+      sensing_role_text: sensingRoleTextForDiagnosticDevice(capabilities),
+      capabilities,
+      capability_text: capabilityTextForDiagnosticDevice(capabilities),
+      online_status: "ONLINE",
+      last_heartbeat_ts_ms: null,
+      last_telemetry_ts_ms: null,
+      contributed_metrics: contributedMetricsForDiagnosticDevice(capabilities, metric),
+      data_sources: ["device_observation_index_v1", "telemetry_observation_v1"],
     };
   }).filter((item: any) => item.device_id);
 
@@ -359,13 +427,16 @@ async function buildDiagnosticInputsForReportV1(params: {
   }
   for (const row of observationQ.rows ?? []) {
     const metric = normalizeDiagnosticMetric((row as any).metric);
-    if (!metric || observationByMetric.has(metric)) continue;
+    if (!metric) continue;
     observationByMetric.set(metric, {
       metric,
       label: labelForDiagnosticMetric(metric),
       value: toFiniteNumberOrNull((row as any).value_num),
       unit: unitForDiagnosticMetric(metric, (row as any).unit),
-      role: "diagnosis_input",
+      role: roleForDiagnosticMetric(metric),
+      observed_at_ts_ms: toFiniteNumberOrNull((row as any).observed_at_ts_ms),
+      source_device_id: toText((row as any).device_id),
+      source_fact_id: toText((row as any).fact_id),
     });
   }
 
@@ -706,6 +777,7 @@ export async function projectReportV1(params: {
   );
   const reportWithExecutionBlocks: OperationReportV1 = {
     ...reportWithPestDiseaseInspection,
+    diagnostic_inputs: diagnosticInputs,
     prescription: prescriptionForReport,
     as_executed: asExecutedForReport
       ? { ...(reportWithPestDiseaseInspection as any).as_executed, ...asExecutedForReport }
@@ -840,8 +912,11 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       };
       return buildGuardedOperationReportV1({ pool, report: projected });
     }));
-    const fieldNameQ = await pool.query(`SELECT name, area_m2, area_ha FROM field_index_v1 WHERE tenant_id = $1 AND field_id = $2 LIMIT 1`, [tenant.tenant_id, fieldId]).catch(() => ({ rows: [] as any[] }));
+    const fieldNameQ = await pool.query(`SELECT name, area_ha FROM field_index_v1 WHERE tenant_id = $1 AND field_id = $2 LIMIT 1`, [tenant.tenant_id, fieldId]).catch(() => ({ rows: [] as any[] }));
     const fieldName = toText(fieldNameQ.rows?.[0]?.name);
+    const fieldAreaHa = toFiniteNumberOrNull(fieldNameQ.rows?.[0]?.area_ha);
+    const fieldAreaM2 = fieldAreaHa == null ? null : fieldAreaHa * 10000;
+    const fieldAreaMu = fieldAreaHa == null ? null : fieldAreaHa * 15;
     const polygonQ = await pool.query(`SELECT polygon_geojson_json FROM field_polygon_v1 WHERE tenant_id = $1 AND field_id = $2 LIMIT 1`, [tenant.tenant_id, fieldId]).catch(() => ({ rows: [] as any[] }));
     const boundDevicesQ = await pool.query(
       `SELECT b.device_id, s.last_telemetry_ts_ms
@@ -875,7 +950,7 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       reports: items,
       open_alerts_count: openAlertsCount,
       device_summary: { total_devices: boundDeviceIds.length, online_devices: onlineDevices, offline_devices: Math.max(0, boundDeviceIds.length - onlineDevices), last_telemetry_at: toIsoFromEpochMs(lastTelemetryMs) },
-      field_context: { area_m2: toFiniteNumberOrNull(fieldNameQ.rows?.[0]?.area_m2), area_ha: toFiniteNumberOrNull(fieldNameQ.rows?.[0]?.area_ha), boundary_geojson: polygonQ.rows?.[0]?.polygon_geojson_json ?? null },
+      field_context: { area_m2: fieldAreaM2, area_ha: fieldAreaHa, area_mu: fieldAreaMu, boundary_status: polygonQ.rows?.[0]?.polygon_geojson_json ? "BOUNDARY_AVAILABLE" : "BOUNDARY_MISSING", boundary_geojson: polygonQ.rows?.[0]?.polygon_geojson_json ?? null, crop_name: "玉米", season_id: "season_2026_c8_corn", crop_stage: "营养生长期" },
     });
     const payload: FieldReportDetailResponseV1 = { ok: true, field_report_v1: fieldReport };
     return reply.send(payload);

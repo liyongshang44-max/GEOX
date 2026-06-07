@@ -12,6 +12,7 @@ const FIELD_MEMORY_SERVICE = 'apps/server/src/services/field_memory_service.ts';
 const FIELD_MEMORY_ROUTE = 'apps/server/src/routes/field_memory_v1.ts';
 const CUSTOMER_ROUTE = 'apps/server/src/routes/customer_v1.ts';
 const REPORTS_ROUTE = 'apps/server/src/routes/reports_v1.ts';
+const REPORT_PROJECTION = 'apps/server/src/projections/report_v1.ts';
 const DASHBOARD_PROJECTION = 'apps/server/src/projections/report_dashboard_v1.ts';
 const GUARDED_REPORT = 'apps/server/src/projections/guarded_report_v1.ts';
 const ROI_ROUTE = 'apps/server/src/routes/roi_ledger_v1.ts';
@@ -130,6 +131,7 @@ async function main() {
   const fieldMemoryRoute = read(FIELD_MEMORY_ROUTE);
   const customerRoute = read(CUSTOMER_ROUTE);
   const reportsRoute = read(REPORTS_ROUTE);
+  const reportProjection = read(REPORT_PROJECTION);
   const dashboardProjection = read(DASHBOARD_PROJECTION);
   const guardedReport = read(GUARDED_REPORT);
   const routeRoi = read(ROI_ROUTE);
@@ -154,6 +156,40 @@ async function main() {
   need('field memory route formal derivation', fieldMemoryRoute, ['/api/v1/field-memory/from-acceptance', 'FORMAL_FIELD_MEMORY', 'FORMAL_ACCEPTED', 'customer_visible_memory', 'learning_eligible', 'formal_acceptance_id']);
   need('customer memory route formal filter', customerRoute, ['/api/v1/customer/fields/:fieldId/memory', "memory_lane = 'FORMAL_FIELD_MEMORY'", "trust_level = 'FORMAL_ACCEPTED'", 'customer_visible_memory = true', 'learning_eligible = true', 'formal_acceptance_id IS NOT NULL']);
   need('reports route field memory projection', reportsRoute, ['field_memory_v1', 'field_response_memory', 'device_reliability_memory', 'skill_performance_memory']);
+  need('reports route operation diagnostic block F', reportsRoute, [
+    'soil_moisture_after_percent',
+    'temperature_max_c',
+    'roleForDiagnosticMetric',
+    'agronomy_context',
+    'acceptance_input',
+    'display_kind_text',
+    'sensing_role_text',
+    'capability_text',
+    'online_status',
+    'last_heartbeat_ts_ms',
+    'last_telemetry_ts_ms',
+    'contributed_metrics',
+    'data_sources',
+    'source_device_id',
+    'source_fact_id',
+  ]);
+  need('report projection diagnostic block F types', reportProjection, [
+    'DiagnosticInputDeviceV1',
+    'display_kind_text',
+    'sensing_role_text',
+    'capabilities?: string[]',
+    'capability_text',
+    'online_status',
+    'last_heartbeat_ts_ms',
+    'last_telemetry_ts_ms',
+    'contributed_metrics',
+    'data_sources',
+    'agronomy_context',
+    'acceptance_input',
+    'observed_at_ts_ms',
+    'source_device_id',
+    'source_fact_id',
+  ]);
   need('dashboard learning summary formal filter', dashboardProjection, ['isFormalFieldResponseMemory', 'FORMAL_FIELD_MEMORY', 'FORMAL_ACCEPTED', 'customer_visible_memory', 'learning_eligible', 'formal_memory_count', 'latest_formal_acceptance_id']);
   need('guarded report hides technical field memory', guardedReport, ['isFormalFieldResponseMemory', 'formal_memory_filter', 'hidden_counts', 'device_reliability_memory', 'skill_performance_memory', 'hidden_by_guard']);
   need('ROI route/domain/trust support', routeRoi, ['/api/v1/roi-ledger/from-as-executed', '/api/v1/roi-ledger/formalize-from-acceptance', 'mode: result.mode', 'roi_ledgers']);

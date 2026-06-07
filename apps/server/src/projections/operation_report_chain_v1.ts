@@ -59,7 +59,73 @@ function hasRawTechnicalSignal(obj: any): boolean { return obj?.soil_moisture !=
 function guardRoiLike(roi: any, validation: OperationChainValidationResultV1): any { if (validation.validation.passed) return roi; const next = roi && typeof roi === "object" ? { ...roi } : { summary: {} }; if (next.summary && typeof next.summary === "object") next.summary = { ...next.summary, has_customer_visible_value: false, customer_visible_value: false }; return { ...next, has_customer_visible_value: false, customer_visible_value: false, guarded: true }; }
 function guardFieldMemoryLike(memory: any, validation: OperationChainValidationResultV1): any { if (validation.validation.passed) return memory; const source = memory && typeof memory === "object" ? memory : {}; return { ...source, customer_visible_memory: false, hidden_by_chain_guard: true }; }
 function labelForTelemetryMetric(metric: string): string { if (metric === "soil_moisture_percent") return "20cm 土层水分"; if (metric === "soil_moisture_after_percent") return "灌后 20cm 土层水分"; if (metric === "forecast_rain_72h_mm") return "未来 72 小时降雨"; if (metric === "temperature_max_c") return "最高气温"; return metric; }
-function mergeTelemetryDiagnostics(report: any, facts: FactRow[]): any { const telemetryObservations = facts.filter((fact) => String(fact.record_json?.type ?? "") === "telemetry_observation_v1").map((fact) => fact.record_json?.payload ?? {}).map((payload) => ({ metric: text(payload.metric), label: text(payload.metric_label) ?? labelForTelemetryMetric(String(payload.metric ?? "")), value: num(payload.value_num), unit: text(payload.unit), role: "diagnosis_input" as const })).filter((item) => Boolean(item.metric)); if (!telemetryObservations.length) return report?.diagnostic_inputs ?? null; const existing = report?.diagnostic_inputs && typeof report.diagnostic_inputs === "object" ? report.diagnostic_inputs : {}; const byMetric = new Map<string, any>(); for (const item of Array.isArray(existing.observations) ? existing.observations : []) { const metric = text(item?.metric); if (metric) byMetric.set(metric, item); } for (const item of telemetryObservations) if (item.metric) byMetric.set(item.metric, item); return { ...existing, field_id: existing.field_id ?? report?.identifiers?.field_id ?? null, observations: Array.from(byMetric.values()) }; }
+function roleForTelemetryDiagnosticMetric(metric: string): "diagnosis_input" | "agronomy_context" | "acceptance_input" {
+  if (metric === "temperature_max_c") return "agronomy_context";
+  if (metric === "soil_moisture_after_percent") return "acceptance_input";
+  return "diagnosis_input";
+}
+
+function unitForTelemetryDiagnosticMetric(metric: string, fallback: unknown): string | null {
+  if (metric === "soil_moisture_percent") return "%";
+  if (metric === "soil_moisture_after_percent") return "%";
+  if (metric === "forecast_rain_72h_mm") return "mm";
+  if (metric === "temperature_max_c") return "\u2103";
+  return text(fallback);
+}
+
+function mergeTelemetryDiagnostics(report: any, facts: FactRow[]): any {
+  const telemetryObservations = facts
+    .filter((fact) => String(fact.record_json?.type ?? "") === "telemetry_observation_v1")
+    .map((fact) => fact.record_json?.payload ?? {})
+    .map((payload) => {
+      const metric = text(payload.metric);
+      if (!metric) return null;
+      return {
+        metric,
+        label: text(payload.metric_label) ?? labelForTelemetryMetric(metric),
+        value: num(payload.value_num),
+        unit: unitForTelemetryDiagnosticMetric(metric, payload.unit),
+        role: roleForTelemetryDiagnosticMetric(metric),
+      };
+    })
+    .filter((item): item is any => Boolean(item?.metric));
+
+  const existing = report?.diagnostic_inputs && typeof report.diagnostic_inputs === "object"
+    ? report.diagnostic_inputs
+    : {};
+
+  if (!telemetryObservations.length) return Object.keys(existing).length > 0 ? existing : null;
+
+  const byMetric = new Map<string, any>();
+
+  for (const item of Array.isArray(existing.observations) ? existing.observations : []) {
+    const metric = text(item?.metric);
+    if (metric) byMetric.set(metric, item);
+  }
+
+  for (const item of telemetryObservations) {
+    const current = byMetric.get(item.metric);
+    if (!current) {
+      byMetric.set(item.metric, item);
+      continue;
+    }
+
+    byMetric.set(item.metric, {
+      ...item,
+      ...current,
+      label: text(current.label) ?? item.label,
+      value: current.value ?? item.value,
+      unit: text(current.unit) ?? item.unit,
+      role: text(current.role) ?? item.role,
+    });
+  }
+
+  return {
+    ...existing,
+    field_id: existing.field_id ?? report?.identifiers?.field_id ?? null,
+    observations: Array.from(byMetric.values()),
+  };
+}
 
 export function applyOperationReportChainGuardV1(report: any, validation: OperationChainValidationResultV1): any { const reasons = uniqueReasons(validation); const passed = validation.validation.passed === true; const simulated = validationIsSimulated(validation, report); const base = { ...report, chain_integrity: validation.chain_integrity, chain_flags: validation.chain_flags, missing_links: validation.missing_links, legacy_warning: validation.legacy_warning, status_chain: validation.status_chain, chain_validation: validation.validation, customer_visible_eligible: passed, blocking_reasons: reasons, projection_source: passed ? "FORMAL_CHAIN" : simulated ? "SIMULATED_CHAIN_GUARD" : "CHAIN_GUARDED_PROJECTION", fallback_limited: !passed }; if (passed) return base; const acceptanceStatus = guardAcceptanceStatus(validation, base); const executionFinalStatus = guardExecutionFinalStatus(validation, base); const evidenceStatus = guardEvidenceStatus(validation, base); const prescriptionStatus = statusOf(validation, "prescription"); const diagnosisTechnical = hasRawTechnicalSignal(base.diagnosis); const recommendationTechnical = hasRawTechnicalSignal(base.recommendation); return { ...base, diagnosis: markTechnicalSignal(base.diagnosis, diagnosisTechnical), recommendation: markTechnicalSignal(base.recommendation, recommendationTechnical), prescription: base.prescription ? { ...base.prescription, status: prescriptionStatus === "DONE" ? (base.prescription.status ?? "AVAILABLE") : "NOT_AVAILABLE", formal_prescription: prescriptionStatus === "DONE", fallback_limited: prescriptionStatus !== "DONE" } : null, execution: base.execution ? { ...base.execution, final_status: executionFinalStatus, customer_status: executionFinalStatus, guarded: true } : { final_status: executionFinalStatus, guarded: true }, evidence: { ...(base.evidence ?? {}), evidence_status: evidenceStatus, trusted: false, formal_evidence_passed: false, guarded: true }, acceptance: base.acceptance ? { ...base.acceptance, status: acceptanceStatus, verdict: null, formal_acceptance: false, evidence_sufficient: false, missing_evidence: true, missing_items: Array.from(new Set([...(Array.isArray(base.acceptance.missing_items) ? base.acceptance.missing_items : []), ...reasons])).slice(0, 30) } : { status: acceptanceStatus, verdict: null, formal_acceptance: false, evidence_sufficient: false, missing_evidence: true, missing_items: reasons.slice(0, 30) }, roi: guardRoiLike(base.roi, validation), roi_ledger: guardRoiLike(base.roi_ledger, validation), field_memory: guardFieldMemoryLike(base.field_memory, validation) }; }
 

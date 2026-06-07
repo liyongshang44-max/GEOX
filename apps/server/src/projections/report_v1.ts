@@ -97,6 +97,16 @@ export type DiagnosticInputDeviceV1 = {
   metric: string | null;
   value: number | null;
   unit: string | null;
+  field_id?: string | null;
+  display_kind_text?: string | null;
+  sensing_role_text?: string | null;
+  capabilities?: string[];
+  capability_text?: string | null;
+  online_status?: string | null;
+  last_heartbeat_ts_ms?: number | null;
+  last_telemetry_ts_ms?: number | null;
+  contributed_metrics?: string[];
+  data_sources?: string[];
 };
 
 export type DiagnosticInputObservationV1 = {
@@ -104,7 +114,10 @@ export type DiagnosticInputObservationV1 = {
   label: string;
   value: number | null;
   unit: string | null;
-  role: "diagnosis_input";
+  role: "diagnosis_input" | "agronomy_context" | "acceptance_input";
+  observed_at_ts_ms?: number | null;
+  source_device_id?: string | null;
+  source_fact_id?: string | null;
 };
 
 export type DiagnosticInputsV1 = {

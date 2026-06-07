@@ -241,7 +241,7 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
 
   app.post("/api/v1/device-observations/from-telemetry-facts", async (req, reply) => {
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.write");
-    if (!auth) return;
+    if (!auth) return reply;
     const body: any = (req as any).body ?? {};
     const tenant_id = text(body.tenant_id || auth.tenant_id);
     const project_id = text(body.project_id || auth.project_id);
