@@ -118,11 +118,45 @@ function buildC8FormalIrrigationFullChainDataset(options) {
   const formal_chain = { chain_id: CHAIN_ID, field, boundary: polygons[0], devices: devices.filter((d) => d[0] !== 'dev_gateway_offline_001').map((d) => ({ device_id: d[0], display_name: d[1], field_id: d[2], capabilities: d[3], display_kind_text: d[4], sensing_role_text: d[5], capability_text: d[6], field_role_text: d[7] })), observations, diagnosis: recommendation.diagnosis, recommendation, prescription: prescription_contract_v1[0], approval: { request: { request_id: APPROVAL_ID }, decision: approvalDecision }, operation_plan: operationPlan, ao_act_task: task, receipt, as_executed_expected: { derivation: '/api/v1/as-executed/from-receipt', planned_amount: 22, executed_amount: 21.6, unit: 'mm', status: 'CONFIRMED', task_id: TASK_ID, receipt_id: RECEIPT_ID, field_id: FIELD_ID }, as_applied_expected: { field_id: FIELD_ID, coverage_percent: 100 }, evidence: fbt.evidence_artifact_v1.map(payloadOf), acceptance, roi, field_memory: formalMemory, report_expectations: { operation_report: ['diagnostic_inputs','prescription','as_executed','as_applied','roi_ledger','field_memory'], field_report: ['field_context','sensing_summary','decision_summary','execution_summary','value_summary','learning_summary'] } };
   const derived_expectations = { customer_reports: ['OVERVIEW','FIELD','OPERATION','EVIDENCE_VALUE'], customer_fields: formalScoped ? ['C8 灌溉示范田'] : ['C8 灌溉示范田','设备影响示范田'], customer_operations: formalScoped ? [FORMAL_OP] : [FORMAL_OP, PENDING_OP], operator_workbench_queues: formalScoped ? [] : ['DEVICE_OFFLINE','APPROVAL_PENDING','ACCEPTANCE_PENDING'], operator_devices_alerts: formalScoped ? [] : ['dev_gateway_offline_001','aggregate_missing_location_001'], pages_to_review: ['/customer/reports','/customer/fields/field_c8_demo','/customer/operations/op_plan_c8_irrigation_formal_001'] };
   const system_domains = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((letter, i) => ({ id: `${letter}_${['tenant','fields','boundaries','crop','devices','bindings','status','capability','observations','weather','recommendations','approvals','operation_plans','transitions','tasks','receipts','evidence','acceptance','roi_flow','field_memory','alerts','queues','reports','operations','forbidden','negative'][i]}`, data: [{ ok: true }], write_target: 'table', consumer: derived_expectations.pages_to_review, constraints: ['controlled pilot review scope'], forbidden: [] }));
-  const plan = { tenant, prefix: pre, profile, chain_id: CHAIN_ID, manifest, tables, facts, facts_by_type: factsByType(facts), formal_chain, derived_expectations, negative_cases: [{ id: 'formal_irrigation_without_field_binding', expected_error: 'NEEDS_FIELD_BINDING', applied: false }], forbidden_customer_dom_text: ['PENDING_ACCEPTANCE','PENDING_ACCEPTANCE_REQUIRES_FORMAL_REVIEW'], guards: ['allowed_tenants_demo_tenantA','apply_requires_explicit_tenant','single_transaction','advisory_lock','upsert_idempotent','manifest_owned_cleanup','no_static_formal_roi_without_as_executed'], system_domains };
-  return formalE2E ? applyC8FormalE2ESeedPolicy(plan) : plan;
+  const rows = tables;
+  const metadata = {
+    chain_id: CHAIN_ID,
+    source_lane: SOURCE_LANE,
+    source: SOURCE,
+    prefix: pre,
+    manifest,
+    facts_by_type: factsByType(facts),
+    formal_chain,
+    derived_expectations,
+    negative_cases: [{ id: 'formal_irrigation_without_field_binding', expected_error: 'NEEDS_FIELD_BINDING', applied: false }],
+    forbidden_customer_dom_text: ['PENDING_ACCEPTANCE','PENDING_ACCEPTANCE_REQUIRES_FORMAL_REVIEW'],
+    guards: ['allowed_tenants_demo_tenantA','apply_requires_explicit_tenant','single_transaction','advisory_lock','upsert_idempotent','manifest_owned_cleanup','no_static_formal_roi_without_as_executed'],
+    system_domains,
+    formal_operation_id: FORMAL_OP,
+    pending_operation_id: PENDING_OP,
+    field_id: FIELD_ID,
+    recommendation_id: RECOMMENDATION_ID,
+    prescription_id: PRESCRIPTION_ID,
+    approval_id: APPROVAL_ID,
+    task_id: TASK_ID,
+    receipt_id: RECEIPT_ID,
+    acceptance_id: ACCEPTANCE_ID,
+  };
+  const dataset = {
+    dataset_id: CHAIN_ID,
+    dataset_version: DATASET_VERSION,
+    tenant_id: tenant,
+    project_id: PROJECT_ID,
+    group_id: GROUP_ID,
+    profile,
+    facts,
+    rows,
+    metadata,
+  };
+  return formalE2E ? applyC8FormalE2ESeedPolicy(dataset) : dataset;
 }
 
-function applyC8FormalE2ESeedPolicy(plan) {
+function applyC8FormalE2ESeedPolicy(dataset) {
   const forbiddenTables = [
     'device_observation_index_v1',
     'operation_state_v1_optional',
@@ -137,16 +171,17 @@ function applyC8FormalE2ESeedPolicy(plan) {
     'device_status_index_v1',
     'approval_requests_v1',
   ];
-  for (const tableName of forbiddenTables) plan.tables[tableName] = [];
-  plan.manifest.raw_to_report_e2e = true;
-  plan.manifest.formalized_by_seed = false;
-  plan.manifest.field_memory_written_by_seed = false;
-  plan.manifest.field_memory_flow = ['acceptance_result_v1', 'POST /api/v1/field-memory/from-acceptance', 'field_memory_v1', 'GET /api/v1/customer/fields/field_c8_demo/memory'];
-  plan.manifest.seed_forbidden_projection_tables = forbiddenTables;
-  const manifestFact = plan.facts.find((f) => f?.record_json?.type === 'controlled_pilot_full_review_manifest_v1');
-  if (manifestFact) manifestFact.record_json.payload = { ...manifestFact.record_json.payload, ...plan.manifest };
-  plan.facts_by_type = factsByType(plan.facts);
-  return plan;
+  for (const tableName of forbiddenTables) dataset.rows[tableName] = [];
+  const manifest = dataset.metadata.manifest;
+  manifest.raw_to_report_e2e = true;
+  manifest.formalized_by_seed = false;
+  manifest.field_memory_written_by_seed = false;
+  manifest.field_memory_flow = ['acceptance_result_v1', 'POST /api/v1/field-memory/from-acceptance', 'field_memory_v1', 'GET /api/v1/customer/fields/field_c8_demo/memory'];
+  manifest.seed_forbidden_projection_tables = forbiddenTables;
+  const manifestFact = dataset.facts.find((f) => f?.record_json?.type === 'controlled_pilot_full_review_manifest_v1');
+  if (manifestFact) manifestFact.record_json.payload = { ...manifestFact.record_json.payload, ...manifest };
+  dataset.metadata.facts_by_type = factsByType(dataset.facts);
+  return dataset;
 }
 
 module.exports = {

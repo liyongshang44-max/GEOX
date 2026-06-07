@@ -76,14 +76,65 @@ const isC8FormalChain = (profile) => profile === 'c8-formal-chain';
 const isC8FormalE2E = (profile) => profile === 'c8-formal-e2e';
 const isC8FormalScoped = (profile) => isC8FormalChain(profile) || isC8FormalE2E(profile);
 const payloadOf = (fact) => fact?.record_json?.payload || {};
+const prefixOf = (tenant) => `full_review_seed_${tenant}`;
+function factsByType(facts) {
+  const out = {};
+  for (const fact of facts) (out[fact.record_json.type] ||= []).push(fact);
+  for (const type of ['field_crop_season_v1','device_observation_context_v1','decision_recommendation_v1','approval_request_v1','approval_decision_v1','operation_plan_v1','operation_plan_transition_v1','ao_act_task_v0','ao_act_receipt_v1','evidence_artifact_v1','acceptance_result_v1','skill_run_v1','telemetry_observation_v1','stage1_sensing_summary_v1','prescription_v1','value_record_v1','controlled_pilot_full_review_manifest_v1']) out[type] ||= [];
+  return out;
+}
+
+function rowsToLegacySeedTables(rows) {
+  return {
+    field_index_v1: rows.field_index_v1 || [],
+    field_polygon_v1: rows.field_polygon_v1 || [],
+    device_index_v1: rows.device_index_v1 || [],
+    device_binding_index_v1: rows.device_binding_index_v1 || [],
+    device_status_index_v1: rows.device_status_index_v1 || [],
+    device_capability: rows.device_capability || [],
+    telemetry_index_v1: rows.telemetry_index_v1 || [],
+    device_observation_index_v1: rows.device_observation_index_v1 || [],
+    alert_event_index_v1: rows.alert_event_index_v1 || [],
+    prescription_contract_v1: rows.prescription_contract_v1 || [],
+    field_memory_v1_optional: rows.field_memory_v1_optional || [],
+    approval_requests_v1: rows.approval_requests_v1 || [],
+    operation_state_v1_optional: rows.operation_state_v1_optional || [],
+    roi_ledger_v1_optional: rows.roi_ledger_v1_optional || [],
+  };
+}
+
+function datasetToSeedPlan(dataset) {
+  const metadata = dataset.metadata || {};
+  const facts = dataset.facts || [];
+  return {
+    dataset,
+    tenant: dataset.tenant_id,
+    tenant_id: dataset.tenant_id,
+    prefix: metadata.prefix || prefixOf(dataset.tenant_id),
+    profile: dataset.profile,
+    chain_id: metadata.chain_id || dataset.dataset_id,
+    source_lane: metadata.source_lane || SOURCE_LANE,
+    dataset_version: dataset.dataset_version,
+    manifest: metadata.manifest,
+    tables: rowsToLegacySeedTables(dataset.rows || {}),
+    facts,
+    facts_by_type: metadata.facts_by_type || factsByType(facts),
+    formal_chain: metadata.formal_chain,
+    derived_expectations: metadata.derived_expectations,
+    negative_cases: metadata.negative_cases || [],
+    forbidden_customer_dom_text: metadata.forbidden_customer_dom_text || [],
+    guards: metadata.guards || [],
+    system_domains: metadata.system_domains || [],
+  };
+}
 
 function makePlan(tenant, profile = 'full-review') {
-  return buildC8FormalIrrigationFullChainDataset({
+  return datasetToSeedPlan(buildC8FormalIrrigationFullChainDataset({
     tenant,
     profile,
     nowMs: nowMs(),
     nowIso: nowIso(),
-  });
+  }));
 }
 
 
