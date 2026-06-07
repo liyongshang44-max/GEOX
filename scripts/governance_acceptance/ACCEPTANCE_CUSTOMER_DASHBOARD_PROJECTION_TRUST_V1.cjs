@@ -51,7 +51,8 @@ assertIncludes(guardedReport, 'formalAcceptanceId(item) != null', 'formal ROI fo
 assertIncludes(guardedReport, 'item?.formal_evidence_passed === true', 'formal ROI evidence condition');
 assertIncludes(guardedReport, 'item?.chain_validation_passed === true', 'formal ROI chain condition');
 assertIncludes(guardedReport, 'hasFormalFieldMemoryInAggregate', 'field report guard must require formal field memory evidence');
-assertIncludes(projection, 'has_customer_visible_value: hasValue', 'ROI customer visible value must be trusted-only');
+assertIncludes(projection, 'const trustedItems = items.filter', 'ROI summary must derive trusted items');
+assertIncludes(projection, 'has_customer_visible_value: trustedItems.length > 0', 'ROI customer visible value must be trusted-only');
 assertIncludes(projection, '暂无可作为客户正式价值结论的记录', 'ROI customer text must avoid weak value claim');
 assertNotIncludes(projection, 'valueKind === "MEASURED" && confidence !== "LOW"', 'dashboard trusted ROI must not be measured/confidence-only');
 assertNotIncludes(projection, '本地块已有 ${total} 条价值记录', 'Field Report must not treat all ROI items as value records');
