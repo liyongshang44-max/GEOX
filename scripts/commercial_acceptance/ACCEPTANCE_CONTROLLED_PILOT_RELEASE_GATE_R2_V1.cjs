@@ -42,8 +42,10 @@ const gates = [
   ['base_contract_p0', 'pnpm run ci:base-contract:p0'],
   ['formal_operation_field_binding', 'pnpm run ci:governance:formal-operation-field-binding'],
   ['controlled_pilot_full_review_seed_static', 'pnpm run acceptance:controlled-pilot:full-review-seed'],
-  ['controlled_pilot_full_review_seed_runtime', `${SEED} --cleanup --apply --tenant ${TENANT_ID} && ${SEED} --apply --tenant ${TENANT_ID} --profile c8-formal-chain --base-url ${BASE} && CONTROLLED_PILOT_FULL_REVIEW_RUNTIME=1 node scripts/governance_acceptance/ACCEPTANCE_CONTROLLED_PILOT_FULL_REVIEW_SEED_V1.cjs`],
-  ['controlled_pilot_verify_api_structured_json', `${SEED} --verify-api --tenant ${TENANT_ID} --profile c8-formal-chain --base-url ${BASE}`],
+  ['controlled_pilot_full_review_seed_runtime', `${SEED} --cleanup --apply --tenant ${TENANT_ID} && ${SEED} --apply --tenant ${TENANT_ID} --base-url ${BASE} && CONTROLLED_PILOT_FULL_REVIEW_RUNTIME=1 node scripts/governance_acceptance/ACCEPTANCE_CONTROLLED_PILOT_FULL_REVIEW_SEED_V1.cjs`],
+  ['controlled_pilot_full_review_verify_api_structured_json', `${SEED} --verify-api --tenant ${TENANT_ID} --base-url ${BASE}`],
+  ['controlled_pilot_c8_formal_chain_seed_runtime', `${SEED} --cleanup --apply --tenant ${TENANT_ID} --profile c8-formal-chain && ${SEED} --apply --tenant ${TENANT_ID} --profile c8-formal-chain --base-url ${BASE}`],
+  ['controlled_pilot_c8_formal_chain_verify_api_structured_json', `${SEED} --verify-api --tenant ${TENANT_ID} --profile c8-formal-chain --base-url ${BASE}`],
   ['scenario_pest_disease_inspection', 'pnpm run ci:scenario:pest-disease-inspection'],
   ['scenario_formal_e2e', 'pnpm run ci:scenario:formal-e2e'],
   ['scenario_productization', 'pnpm run ci:scenario:productization'],
@@ -82,6 +84,7 @@ const lines = [
   '- Required endpoint: GET /api/v1/reports/field/field_c8_demo',
   '- Required endpoint: GET /api/v1/as-executed/by-task/act_c8_irrigation_formal_001',
   '- Required endpoint: GET /api/v1/customer/fields/field_c8_demo/memory',
+  '- Required profiles: default full-review and c8-formal-chain.',
   '- Required mode: JSON parse plus field-level assertions, not raw string includes checks.',
   '',
   '## Failed gate output tails',
@@ -90,5 +93,5 @@ const lines = [
 ];
 fs.mkdirSync(path.dirname(REPORT), { recursive: true });
 fs.writeFileSync(REPORT, `${lines.join('\n')}\n`);
-console.log(JSON.stringify({ status: failed.length ? 'FAIL' : 'PASS', required_gate_count: results.length, failed_gate_ids: failed.map((r) => r.id), structured_verify_api_gate: 'controlled_pilot_verify_api_structured_json' }, null, 2));
+console.log(JSON.stringify({ status: failed.length ? 'FAIL' : 'PASS', required_gate_count: results.length, failed_gate_ids: failed.map((r) => r.id), structured_verify_api_gates: ['controlled_pilot_full_review_verify_api_structured_json', 'controlled_pilot_c8_formal_chain_verify_api_structured_json'] }, null, 2));
 if (failed.length) process.exit(1);

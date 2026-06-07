@@ -19,6 +19,7 @@ const ROI_ROUTE = 'apps/server/src/routes/roi_ledger_v1.ts';
 const ROI_DOMAIN = 'apps/server/src/domain/roi/roi_ledger_v1.ts';
 const ROI_TRUST = 'apps/server/src/domain/roi/roi_trust_v1.ts';
 const AS_EXECUTED_DOMAIN = 'apps/server/src/domain/execution/as_executed_v1.ts';
+const COMMERCIAL_R2_GATE = 'scripts/commercial_acceptance/ACCEPTANCE_CONTROLLED_PILOT_RELEASE_GATE_R2_V1.cjs';
 const FIELD_POLYGON_SCHEMA_MIGRATION = 'apps/server/db/migrations/2026_06_07_field_polygon_and_seed_schema_alignment_v1.sql';
 
 const CHAIN_ID = 'C8_FORMAL_IRRIGATION_FULL_CHAIN_V1';
@@ -140,12 +141,13 @@ async function main() {
   const trustRoi = read(ROI_TRUST);
   const asExecutedDomain = read(AS_EXECUTED_DOMAIN);
   const fieldPolygonSchemaMigration = read(FIELD_POLYGON_SCHEMA_MIGRATION);
+  const commercialR2Gate = read(COMMERCIAL_R2_GATE);
   const pkg = read('package.json');
 
   need('package scripts', pkg, ['seed:controlled-pilot:full-review:dry-run', 'seed:controlled-pilot:full-review:apply', 'seed:controlled-pilot:full-review:export-json', 'seed:controlled-pilot:full-review:verify', 'acceptance:controlled-pilot:full-review-seed']);
   need('seed commands and guards', seed, ['ALLOWED_TENANTS', 'demo', 'tenantA', '--apply requires explicit --tenant', 'BEGIN', 'COMMIT', 'ROLLBACK', 'pg_advisory_lock', 'pg_advisory_unlock', 'controlled_pilot_full_review_manifest_v1', 'seed_owned_ids', 'ON CONFLICT', 'export-json', 'export-db-json', 'verify-api', 'verify-clean']);
   need('seed structured verify-api contract', seed, [
-    'assertOperationReportJson', 'assertFieldReportJson', 'assertCustomerMemoryJson', 'getAsExecutedList', 'getJson', 'postJson', 'assertMetricSet', 'checked_endpoints',
+    'assertOperationReportJson', 'assertFieldReportJson', 'assertCustomerMemoryJson', 'getAsExecutedList', 'getJson', 'postJson', 'assertMetricSet', 'REQUIRED_DIAGNOSTIC_METRICS', 'checked_endpoints',
     '/api/v1/reports/operation/', '/api/v1/reports/field/', '/api/v1/as-executed/by-task/', '/api/v1/customer/fields/',
     'OPERATION_REPORT_JSON_REQUIRED', 'FIELD_REPORT_JSON_REQUIRED', 'AS_EXECUTED_BY_TASK_REQUIRED', 'CUSTOMER_MEMORY_API_REQUIRED',
     'OPERATION_FIELD_ID_MISMATCH', 'OPERATION_RECOMMENDATION_ID_MISMATCH', 'OPERATION_APPROVAL_ID_MISMATCH', 'OPERATION_RECEIPT_ID_MISMATCH', 'OPERATION_PRESCRIPTION_ID_MISMATCH', 'OPERATION_AS_EXECUTED_ID_REQUIRED',
@@ -154,6 +156,7 @@ async function main() {
     'soil_moisture_percent', 'forecast_rain_72h_mm', 'temperature_max_c', 'soil_moisture_after_percent', 'BOUNDARY_AVAILABLE', 'season_2026_c8_corn', 'crop_code', 'formal_chain_summary', 'pending_chain_summary', '运营管理员', 'tok_admin_actor', 'CONFIRMED',
   ]);
   need('seed approval/as-executed/ROI/field-memory flow', seed, ['actor_id', 'tok_admin_actor', 'actor_name', '运营管理员', 'actor_role', 'operation_approver', '同意按 22mm 灌溉处方执行。', '/api/v1/as-executed/from-receipt', '/api/v1/roi-ledger/from-as-executed', '/api/v1/roi-ledger/formalize-from-acceptance', '/api/v1/field-memory/from-acceptance', 'ROI_INTERIM_SIGNAL_READBACK_REQUIRED', 'isInterimRoiForAsExecuted', 'FORMAL_FIELD_MEMORY_REQUIRED', 'CUSTOMER_FORMAL_MEMORY_REQUIRED', 'TECHNICAL_SKILL_MEMORY']);
+  need('commercial release gate structured verify-api profiles', commercialR2Gate, ['controlled_pilot_full_review_verify_api_structured_json', 'controlled_pilot_c8_formal_chain_verify_api_structured_json', '--verify-api --tenant ${TENANT_ID} --base-url ${BASE}', '--verify-api --tenant ${TENANT_ID} --profile c8-formal-chain --base-url ${BASE}', 'JSON parse plus field-level assertions']);
   need('field memory service formal gate', fieldMemoryService, ['createFormalFieldMemoryFromAcceptanceV1', 'validateFormalFieldMemoryAcceptanceV1', 'FORMAL_FIELD_MEMORY', 'FORMAL_ACCEPTED', 'formal_acceptance_id', 'customer_visible_memory', 'learning_eligible', 'ACCEPTANCE_VERDICT_NOT_PASS', 'FORMAL_EVIDENCE_NOT_PASSED', 'CHAIN_VALIDATION_NOT_PASSED']);
   need('field memory route formal derivation', fieldMemoryRoute, ['/api/v1/field-memory/from-acceptance', 'FORMAL_FIELD_MEMORY', 'FORMAL_ACCEPTED', 'customer_visible_memory', 'learning_eligible', 'formal_acceptance_id']);
   need('customer memory route formal filter', customerRoute, ['/api/v1/customer/fields/:fieldId/memory', "memory_lane = 'FORMAL_FIELD_MEMORY'", "trust_level = 'FORMAL_ACCEPTED'", 'customer_visible_memory = true', 'learning_eligible = true', 'formal_acceptance_id IS NOT NULL']);
