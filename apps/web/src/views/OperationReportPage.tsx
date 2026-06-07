@@ -10,6 +10,7 @@ import { customerChainIntegrityLabel, customerSemanticLabel, isCustomerChainComp
 import { customerReasonText, pestDiseaseAcceptanceStatusLabel, pestDiseaseAssessmentStatusLabel, pestDiseaseConfidenceLabel, pestDiseaseEvidenceTierLabel, pestDiseaseInspectionTargetLabel, pestDiseaseReviewStatusLabel, pestDiseaseSeverityLabel } from "../lib/customerScenarioLabels";
 import { labelCustomerApprovalStatus, labelCustomerRoiStatus } from "../lib/customerStatusLabels";
 import { buildOperationReportVm, type CustomerReportSectionVm, type OperationReportPageVm } from "../viewmodels/operationReportVm";
+import { buildC8OperationMainVisualVm } from "../viewmodels/customerC8FormalReportVm";
 import { buildEvidenceVm } from "../lib/evidenceViewModel";
 import { EvidenceGapPanel, EvidenceRefList, EvidenceTrustBadge, EvidenceTrustLegend } from "../components/evidence";
 
@@ -712,6 +713,7 @@ export default function OperationReportPage(): React.ReactElement {
   const vm = buildOperationReportVm(report);
   const chain = normalizeChain(report);
   const reportAny = report as any;
+  const c8MainVisual = buildC8OperationMainVisualVm(report);
   const chainIntegrityRaw = reportAny.chain_integrity;
   const chainIntegrity = customerChainIntegrityLabel(chainIntegrityRaw, "历史/人工链路");
   const legacyWarning = customerText(reportAny.legacy_warning, isCustomerChainComplete(chainIntegrityRaw) ? "" : "该作业为历史/人工链路，缺少正式建议或处方记录。");
@@ -724,6 +726,51 @@ export default function OperationReportPage(): React.ReactElement {
   const evidenceVm = buildEvidenceVm(report);
   const isPestDiseaseInspection = isPestDiseaseInspectionReport(report);
   const heroTitle = isPestDiseaseInspection ? "病虫害巡检报告" : safeOperationTitle;
+
+  if (c8MainVisual) {
+    return (
+      <div className="customerReportCanvas">
+        <div className="customerReportSheet operationReportSheet">
+          <header className="customerHero operationHero">
+            <div className="customerHeroTop">
+              <div>
+                <div className="customerReportLogo">GEOX / 作业报告</div>
+                <h1 className="customerTitle">{c8MainVisual.title}</h1>
+                <p className="customerSubtitle">{c8MainVisual.subtitle}</p>
+              </div>
+              <div className="customerActions">
+                <Link className="customerButton" to="/customer/dashboard">返回总览</Link>
+                {canBackToField ? <Link className="customerButton" to={`/customer/fields/${encodeURIComponent(vm.operation.fieldId)}`}>返回地块</Link> : null}
+                <Link className="customerButton" to={vm.exportHref}>导出报告</Link>
+              </div>
+            </div>
+          </header>
+
+          <section className="customerCard">
+            <div className="customerCardHeaderRow">
+              <div>
+                <h2 className="customerCardTitle">C8 正式作业摘要</h2>
+                <p className="customerMetricLabel">客户主视觉仅展示 report API 返回后的客户可读摘要；内部编号默认折叠。</p>
+              </div>
+              <span className="customerPill">主视觉</span>
+            </div>
+            <div className="customerGrid2 customerSpacingTopSm">
+              {c8MainVisual.rows.map((row) => <div key={row.label}><strong>{row.label}：</strong>{row.value}</div>)}
+            </div>
+          </section>
+
+          <section className="operationTechDetailsMuted">
+            <details>
+              <summary className="operationTechDetailsSummary">展开技术详情</summary>
+              <div className="operationTechDetailsGrid">
+                {c8MainVisual.technicalRows.map((row, index) => <div key={`${row.label}-${index}`}><strong>{row.label}：</strong>{row.value}</div>)}
+              </div>
+            </details>
+          </section>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="customerReportCanvas">
