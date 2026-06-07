@@ -14,6 +14,7 @@ import { customerProductText, customerReviewStateText } from "../lib/customerPro
 import { customerCropLabel, customerMissingInputsText, customerSemanticLabel, customerSourceLabel } from "../lib/customerSemanticLabels";
 import { buildFieldReportVm } from "../viewmodels/fieldReportVm";
 import { buildC8FieldMainVisualVm } from "../viewmodels/customerC8FormalReportVm";
+import { buildCustomerFieldReportMainVisualVm } from "../viewmodels/customerReportMainVisualVm";
 import { buildEvidenceVm } from "../lib/evidenceViewModel";
 import { EvidenceGapPanel, EvidenceRefList, EvidenceTrustBadge, EvidenceTrustLegend } from "../components/evidence";
 import "../styles/weatherInterference.css";
@@ -82,7 +83,9 @@ export default function FieldReportPage(): React.ReactElement {
 
   const vm = buildFieldReportVm(report);
   const reportAny = report as any;
+  const genericMainVisual = buildCustomerFieldReportMainVisualVm(report);
   const c8MainVisual = buildC8FieldMainVisualVm(report);
+  const mainVisual = c8MainVisual ?? genericMainVisual;
   const observability = reportAny.field_observability_profile ?? {};
   const planCandidates = Array.isArray(reportAny.crop_plan_candidates) ? reportAny.crop_plan_candidates : [];
   const canExport = Boolean(fieldId.trim());
@@ -100,15 +103,15 @@ export default function FieldReportPage(): React.ReactElement {
   const noEvidenceState = getCustomerEmptyState("NO_EVIDENCE");
   const evidenceVm = buildEvidenceVm(reportAny.recent_operations?.[0] ?? {});
 
-  if (c8MainVisual) {
+  if (mainVisual) {
     return (
       <div className="customerReportCanvas">
         <div className="customerReportSheet customerPageGapMd fieldReportLayout">
           <section className="customerCard fieldHeaderCard">
             <div>
               <div className="customerEyebrow">GEOX / 地块病历</div>
-              <h1 className="customerTitle">{c8MainVisual.title}</h1>
-              <p className="customerSubtitle">{c8MainVisual.subtitle}</p>
+              <h1 className="customerTitle">{mainVisual.title}</h1>
+              <p className="customerSubtitle">{mainVisual.subtitle}</p>
             </div>
             <div className="customerActionRow">{canExport ? <Link className="customerButton customerButtonPrimary" to={vm.exportHref}>导出</Link> : <span className="muted">导出不可用</span>}</div>
           </section>
@@ -116,20 +119,20 @@ export default function FieldReportPage(): React.ReactElement {
           <section className="customerCard">
             <div className="customerCardHeaderRow">
               <div>
-                <h2 className="customerCardTitle">C8 正式链路摘要</h2>
+                <h2 className="customerCardTitle">正式链路摘要</h2>
                 <p className="customerMetricLabel">客户主视觉仅展示 report API 返回后的客户可读摘要；内部编号默认折叠。</p>
               </div>
               <span className="customerPill">主视觉</span>
             </div>
             <div className="customerGrid2 customerSpacingTopSm">
-              {c8MainVisual.rows.map((row) => <div key={row.label}><strong>{row.label}：</strong>{row.value}</div>)}
+              {mainVisual.rows.map((row) => <div key={row.label}><strong>{row.label}：</strong>{row.value}</div>)}
             </div>
           </section>
 
           <details className="operationTechDetailsMuted">
             <summary className="operationTechDetailsSummary">技术详情（默认折叠）</summary>
             <div className="operationTechDetailsGrid customerSpacingTopSm">
-              {c8MainVisual.technicalRows.map((row, index) => <div key={`${row.label}-${index}`}><strong>{row.label}：</strong>{row.value}</div>)}
+              {mainVisual.technicalRows.map((row, index) => <div key={`${row.label}-${index}`}><strong>{row.label}：</strong>{row.value}</div>)}
             </div>
           </details>
         </div>
