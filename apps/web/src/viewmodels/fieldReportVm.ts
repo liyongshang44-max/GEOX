@@ -5,6 +5,7 @@ import { formatCustomerDate, formatCustomerNumber, formatMoneyOrUnavailable } fr
 import { customerCropLabel, customerDisplayName, customerSemanticLabel, customerSourceLabel, customerStageLabel } from "../lib/customerSemanticLabels";
 import { customerGuardedAcceptanceText, customerGuardedEvidenceText, customerGuardedStatusText, customerTrustScopeText, customerValueSummaryText, isTrustedDashboardValueSummary } from "../lib/customerTrustGate";
 import { buildFormalScenarioVm } from "../lib/formalScenarioViewModel";
+import { resolveUnifiedOperationFinalStatus } from "../lib/operationStatusUnified";
 
 const CROP_UNKNOWN_EXPLANATION = "当前作物季尚未确认。系统可以展示历史作业和地块观测记录，但不会生成作物特定诊断或处方。";
 const CROP_UNKNOWN_DIAGNOSIS_LINES = ["已接入土壤水分、天气与设备观测数据。", "当前作物未确认，因此不形成作物特定诊断结论。"];
@@ -126,6 +127,17 @@ function isCropConfirmed(cropContext: any): boolean {
   return status === "PLANTED_CONFIRMED" || status === "AVAILABLE" || allowCropSpecific;
 }
 
+
+function withUnifiedOperationState<T extends Record<string, any>>(item: T): T {
+  const finalStatus = resolveUnifiedOperationFinalStatus({
+    final_status: item.final_status ?? null,
+    operation_state_v1: item.operation_state_v1 ?? null,
+    operation: item.operation ?? null,
+  });
+  if (finalStatus === "UNKNOWN") return item;
+  return { ...item, final_status: finalStatus };
+}
+
 function buildCurrentRecommendation(report: FieldReportDetailV1, fieldId: string, cropConfirmed: boolean) {
   if (!cropConfirmed) return null;
   const current = (report as any).current_recommendation;
@@ -146,13 +158,14 @@ function buildRecentOperations(report: FieldReportDetailV1, fieldId: string) {
     if (seen.has(operationId)) return null;
     seen.add(operationId);
     const summary = txt(item.summary, "");
-    const formalVm = buildFormalScenarioVm(item);
+    const statusItem = withUnifiedOperationState(item as any);
+    const formalVm = buildFormalScenarioVm(statusItem);
     return {
       operationId,
       title: customerDisplayName(summary || item.customer_title || item.title, operationLabel(item.operation_type, "作业")),
-      statusText: customerGuardedStatusText(item),
-      acceptanceText: customerGuardedAcceptanceText(item),
-      evidenceText: customerGuardedEvidenceText(item),
+      statusText: customerGuardedStatusText(statusItem),
+      acceptanceText: customerGuardedAcceptanceText(statusItem),
+      evidenceText: customerGuardedEvidenceText(statusItem),
       formalScenarioText: [formalVm.scenarioLabel, formalVm.chainText, formalVm.zoneSummaryText].filter(Boolean).join("｜"),
       scenarioTypeText: formalVm.rawScenarioType || "UNKNOWN",
       formalChainStatusText: formalVm.formalChainStatus,

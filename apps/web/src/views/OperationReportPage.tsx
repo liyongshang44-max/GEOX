@@ -119,13 +119,26 @@ function safeAuditValue(value: unknown, fallback = "暂无记录"): string {
   return customerText(value, fallback);
 }
 
-function toCustomerStatus(status: unknown): "DONE" | "AVAILABLE" | "PENDING" | "MISSING" | "NOT_APPLICABLE" {
-  const raw = normalizeKey(status);
-  if (["DONE", "COMPLETE", "COMPLETED", "PASS", "SUCCESS", "SUCCEEDED", "VALID"].includes(raw)) return "DONE";
-  if (raw === "AVAILABLE") return "AVAILABLE";
-  if (["PENDING", "RUNNING", "IN_PROGRESS", "PENDING_ACCEPTANCE"].includes(raw)) return "PENDING";
-  if (raw === "NOT_APPLICABLE") return "NOT_APPLICABLE";
-  return "MISSING";
+type CustomerChainStatus = "DONE" | "AVAILABLE" | "PENDING" | "MISSING" | "NOT_APPLICABLE";
+
+const CUSTOMER_CHAIN_STATUS_BY_KEY: Record<string, CustomerChainStatus> = {
+  DONE: "DONE",
+  COMPLETE: "DONE",
+  COMPLETED: "DONE",
+  PASS: "DONE",
+  SUCCESS: "DONE",
+  SUCCEEDED: "DONE",
+  VALID: "DONE",
+  AVAILABLE: "AVAILABLE",
+  PENDING: "PENDING",
+  RUNNING: "PENDING",
+  IN_PROGRESS: "PENDING",
+  PENDING_ACCEPTANCE: "PENDING",
+  NOT_APPLICABLE: "NOT_APPLICABLE",
+};
+
+function toCustomerStatus(status: unknown): CustomerChainStatus {
+  return CUSTOMER_CHAIN_STATUS_BY_KEY[normalizeKey(status)] ?? "MISSING";
 }
 
 function chainLabel(value: unknown, fallback: string): string {

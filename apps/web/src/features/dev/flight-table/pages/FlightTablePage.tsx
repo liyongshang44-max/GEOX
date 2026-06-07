@@ -24,42 +24,42 @@ import {
   type FlightTableRunV1,
   type FlightTableSkillAssemblyResponseV1,
   type FlightTableSkillFailureTypeV1,
-} from "../../api/flightTable";
+} from "../../../../api/flightTable";
 import {
   runFlightTableDecision,
   type FlightTableDecisionRunResultV1,
-} from "../../api/flightTableDecision";
+} from "../../../../api/flightTableDecision";
 import {
   runFlightTableEvidence,
   type FlightTableEvidenceLaneV1,
   type FlightTableEvidenceRunResultV1,
-} from "../../api/flightTableEvidence";
+} from "../../../../api/flightTableEvidence";
 import {
   runFlightTableOperation,
   type FlightTableOperationRunResultV1,
-} from "../../api/flightTableOperation";
+} from "../../../../api/flightTableOperation";
 import {
   runFlightTableReportLearning,
   type FlightTableReportLearningRunResultV1,
-} from "../../api/flightTableReportLearning";
+} from "../../../../api/flightTableReportLearning";
 import {
   fetchFlightTableTelemetryScenarios,
   publishFlightTableTelemetry,
   verifyFlightTableTelemetry,
   type FlightTableTelemetryResponseV1,
   type FlightTableTelemetryScenarioKeyV1,
-} from "../../api/flightTableTelemetry";
-import { ApiError } from "../../api/client";
-import { readTenantContext } from "../../auth/authStorage";
-import FlightTableShell from "../../components/dev/flight-table/FlightTableShell";
-import type { FieldAssemblyDraftV1 } from "../../components/dev/flight-table/FieldAssemblyCard";
-import type { FieldSpatialDraftV1 } from "../../components/dev/flight-table/FieldSpatialCard";
-import type { DeviceOnboardingDraftV1 } from "../../components/dev/flight-table/DeviceOnboardingWizard";
-import { defaultFlightTableRunId, flightTablePermissionLabel } from "../../viewmodels/flightTableVm";
-import "../../styles/flightTable.css";
-import "../../styles/flightTableSkills.css";
-import "../../styles/flightTableTelemetry.css";
-import "../../styles/flightTableDecision.css";
+} from "../../../../api/flightTableTelemetry";
+import { ApiError } from "../../../../api/client";
+import { readTenantContext } from "../../../../auth/authStorage";
+import FlightTableShell from "../../../../components/dev/flight-table/FlightTableShell";
+import type { FieldAssemblyDraftV1 } from "../../../../components/dev/flight-table/FieldAssemblyCard";
+import type { FieldSpatialDraftV1 } from "../../../../components/dev/flight-table/FieldSpatialCard";
+import type { DeviceOnboardingDraftV1 } from "../../../../components/dev/flight-table/DeviceOnboardingWizard";
+import { defaultFlightTableRunId, flightTablePermissionLabel } from "../../../../viewmodels/flightTableVm";
+import "../../../../styles/flightTable.css";
+import "../../../../styles/flightTableSkills.css";
+import "../../../../styles/flightTableTelemetry.css";
+import "../../../../styles/flightTableDecision.css";
 
 const DEFAULT_TELEMETRY_SCENARIOS: FlightTableTelemetryScenarioKeyV1[] = [
   "before_irrigation_low_moisture",
