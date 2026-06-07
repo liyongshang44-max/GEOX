@@ -14,6 +14,7 @@ export type CustomerFieldsIndexCardVm = {
   updatedAtText: string;
   cropStageText: string;
   recentOperationText: string;
+  summaryText: string;
   href: string;
 };
 
@@ -53,13 +54,29 @@ function riskTone(risk: CustomerFieldRiskFilter | "UNKNOWN"): "danger" | "warnin
   return "neutral";
 }
 
-function buildCard(item: CustomerFieldListItem): CustomerFieldsIndexCardVm {
+function buildCard(item: CustomerFieldListItem, isFallback: boolean): CustomerFieldsIndexCardVm {
   const fieldId = String(item.field_id ?? "").trim();
   const risk = normalizeRisk(item.risk_level as CustomerFieldRiskLevel | string | null | undefined);
+  if (isFallback) {
+    return {
+      fieldId,
+      fieldName: sanitizeCustomerText(item.field_name, "地块名称待补充"),
+      riskLevel: "UNKNOWN",
+      riskLabel: "正式报告条件不足",
+      riskTone: "neutral",
+      reasons: ["地块列表暂不可用"],
+      updatedAtText: toDateTimeText(item.updated_at),
+      cropStageText: "正式报告条件不足",
+      recentOperationText: "地块列表暂不可用",
+      summaryText: sanitizeCustomerText(item.summary, "地块列表暂不可用"),
+      href: fieldId ? `/customer/fields/${encodeURIComponent(fieldId)}` : "/customer/fields",
+    };
+  }
   const cropText = sanitizeCustomerText(item.crop_name, "作物信息待补充");
   const stageText = sanitizeCustomerText(item.stage_name, "生育期待补充");
   const recentOperationTitle = sanitizeCustomerText(item.recent_operation_title, "暂无近期作业");
-  return { fieldId, fieldName: sanitizeCustomerText(item.field_name, "地块名称待补充"), riskLevel: risk, riskLabel: risk === "UNKNOWN" ? "风险待确认" : labelRiskLevel(risk), riskTone: riskTone(risk), reasons: Array.isArray(item.risk_reasons) ? item.risk_reasons.map((x) => sanitizeCustomerText(x)).filter(Boolean) : [], updatedAtText: toDateTimeText(item.updated_at), cropStageText: `${cropText} / ${stageText}`, recentOperationText: recentOperationTitle, href: fieldId ? `/customer/fields/${encodeURIComponent(fieldId)}` : "/customer/fields" };
+  const summaryText = sanitizeCustomerText(item.summary, "");
+  return { fieldId, fieldName: sanitizeCustomerText(item.field_name, "地块名称待补充"), riskLevel: risk, riskLabel: risk === "UNKNOWN" ? "风险待确认" : labelRiskLevel(risk), riskTone: riskTone(risk), reasons: Array.isArray(item.risk_reasons) ? item.risk_reasons.map((x) => sanitizeCustomerText(x)).filter(Boolean) : [], updatedAtText: toDateTimeText(item.updated_at), cropStageText: `${cropText} / ${stageText}`, recentOperationText: recentOperationTitle, summaryText, href: fieldId ? `/customer/fields/${encodeURIComponent(fieldId)}` : "/customer/fields" };
 }
 
 function scopeCopy(response: CustomerFieldsListResponse): { subtitle: string; badge: string; note?: string; isPreview: boolean } {
@@ -67,8 +84,8 @@ function scopeCopy(response: CustomerFieldsListResponse): { subtitle: string; ba
   if (mode === "INTERNAL_PREVIEW") return { subtitle: "内部预览：当前按全域客户视图展示地块。", badge: "内部预览 / 全域预览", note: response.scope?.reason, isPreview: true };
   if (mode === "DENIED") return { subtitle: "暂无授权地块。", badge: "暂无授权地块", note: response.scope?.reason || "当前账户未授权任何地块", isPreview: false };
   if (mode === "CLIENT_ALLOWLIST") return { subtitle: "查看授权地块、风险状态与地块报告入口。", badge: `授权地块 ${response.field_count ?? response.fields.length} 块`, isPreview: false };
-  if (response.dataScope === "FALLBACK_RECENT_ONLY") return { subtitle: "P1-A Preview：当前展示近期/可见地块，非完整授权列表。", badge: "P1-A Preview", note: response.data_scope_note || "当前展示近期/可见地块，非完整授权列表", isPreview: true };
-  if (response.dataScope === "ERROR_EMPTY") return { subtitle: "地块列表暂不可用，请稍后刷新。", badge: "暂不可用", note: response.data_scope_note || "地块列表暂不可用，请稍后刷新", isPreview: true };
+  if (response.dataScope === "FALLBACK_RECENT_ONLY") return { subtitle: "正式报告条件不足，地块列表暂不可用。", badge: "条件不足", note: response.data_scope_note || "正式报告条件不足，地块列表暂不可用", isPreview: true };
+  if (response.dataScope === "ERROR_EMPTY") return { subtitle: "正式报告条件不足，地块列表暂不可用，请稍后刷新。", badge: "暂不可用", note: response.data_scope_note || "正式报告条件不足，地块列表暂不可用，请稍后刷新", isPreview: true };
   return { subtitle: "查看授权地块、风险状态与地块报告入口。", badge: "正式列表", isPreview: false };
 }
 
@@ -78,8 +95,9 @@ export function filterCustomerFields(cards: CustomerFieldsIndexCardVm[], risk: C
 }
 
 export function buildCustomerFieldsIndexVm(response: CustomerFieldsListResponse): CustomerFieldsIndexVm {
-  const cards = (response.fields ?? []).map(buildCard).filter((card) => card.fieldId);
+  const isFallback = response.dataScope !== "OFFICIAL_CUSTOMER_API";
+  const cards = (response.fields ?? []).map((item) => buildCard(item, isFallback)).filter((card) => card.fieldId);
   const countByRisk = (risk: CustomerFieldRiskFilter) => risk === "ALL" ? cards.length : cards.filter((card) => card.riskLevel === risk).length;
   const scope = scopeCopy(response);
-  return { title: "授权地块", subtitle: scope.subtitle, generatedAtText: toDateTimeText(response.generated_at), dataScope: response.dataScope, isFallback: response.dataScope !== "OFFICIAL_CUSTOMER_API", isPreview: scope.isPreview, scopeBadgeText: scope.badge, dataScopeNote: scope.note, filters: [{ key: "ALL", label: "全部", count: countByRisk("ALL") }, { key: "HIGH", label: "高风险", count: countByRisk("HIGH") }, { key: "MEDIUM", label: "中风险", count: countByRisk("MEDIUM") }, { key: "LOW", label: "低风险", count: countByRisk("LOW") }], cards, emptyState: response.scope?.scope_mode === "DENIED" ? getCustomerEmptyState("NO_AUTHORIZED_FIELDS") : getCustomerEmptyState("NO_RISK_FIELDS") };
+  return { title: "授权地块", subtitle: scope.subtitle, generatedAtText: toDateTimeText(response.generated_at), dataScope: response.dataScope, isFallback, isPreview: scope.isPreview, scopeBadgeText: scope.badge, dataScopeNote: scope.note, filters: [{ key: "ALL", label: "全部", count: countByRisk("ALL") }, { key: "HIGH", label: "高风险", count: countByRisk("HIGH") }, { key: "MEDIUM", label: "中风险", count: countByRisk("MEDIUM") }, { key: "LOW", label: "低风险", count: countByRisk("LOW") }], cards, emptyState: response.scope?.scope_mode === "DENIED" ? getCustomerEmptyState("NO_AUTHORIZED_FIELDS") : isFallback ? { title: "正式报告条件不足", description: "地块列表暂不可用，请稍后刷新。", severity: "warning" } : getCustomerEmptyState("NO_RISK_FIELDS") };
 }

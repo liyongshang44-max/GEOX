@@ -66,6 +66,7 @@ export default function CustomerOperationsIndexPage(): React.ReactElement {
                 <div>
                   <strong>{operation.primaryLine}</strong>
                   <small>{operation.statusLine}</small>
+                  {operation.summaryText ? <small>{operation.summaryText}</small> : null}
                   {operation.evidenceExplanation ? <small>{operation.evidenceExplanation}</small> : null}
                 </div>
                 <div>

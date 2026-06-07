@@ -1,5 +1,4 @@
 import { apiRequestWithPolicy, withQuery } from "./client";
-import { fetchCustomerDashboardAggregate, type CustomerDashboardAggregateV1 } from "./customerReports";
 import type { CustomerScopeV1 } from "./session";
 
 export type CustomerDataScope = "OFFICIAL_CUSTOMER_API" | "FALLBACK_RECENT_ONLY" | "ERROR_EMPTY";
@@ -17,6 +16,7 @@ export type CustomerFieldListItem = {
   recent_operation_title?: string | null;
   open_alerts_count?: number | null;
   pending_acceptance_count?: number | null;
+  summary?: string | null;
 };
 
 export type CustomerFieldsListResponse = {
@@ -46,33 +46,27 @@ function normalizeFieldsPayload(payload: unknown): { fields: CustomerFieldListIt
   return { fields: [] };
 }
 
-function toFallbackFields(aggregate: CustomerDashboardAggregateV1): CustomerFieldListItem[] {
-  const byId = new Map<string, CustomerFieldListItem>();
-  for (const item of aggregate.top_risk_fields ?? []) {
-    const fieldId = String(item.field_id ?? "").trim();
-    if (!fieldId) continue;
-    byId.set(fieldId, { field_id: fieldId, field_name: item.field_name ?? null, risk_level: item.risk_level ?? "UNKNOWN", risk_reasons: item.risk_reasons ?? [], updated_at: (aggregate as any).generated_at ?? null });
-  }
-  for (const item of aggregate.recent_operations ?? []) {
-    const fieldId = String((item as any).field_id ?? "").trim();
-    if (!fieldId) continue;
-    const previous = byId.get(fieldId);
-    byId.set(fieldId, { field_id: fieldId, field_name: (item as any).field_name ?? previous?.field_name ?? null, risk_level: previous?.risk_level ?? "UNKNOWN", risk_reasons: previous?.risk_reasons ?? [], updated_at: (item as any).updated_at ?? (item as any).executed_at ?? (aggregate as any).generated_at ?? previous?.updated_at ?? null, recent_operation_id: String((item as any).operation_id ?? (item as any).operation_plan_id ?? "") || null, recent_operation_title: (item as any).customer_title ?? (item as any).title ?? null });
-  }
-  return Array.from(byId.values());
+function emptyCustomerFieldsResponse(note = "正式报告条件不足，地块列表暂不可用，请稍后刷新"): CustomerFieldsListResponse {
+  return {
+    source: "empty_error_state",
+    dataScope: "ERROR_EMPTY",
+    is_fallback: true,
+    generated_at: new Date().toISOString(),
+    field_count: 0,
+    fields: [],
+    data_scope_note: note,
+  };
 }
 
 export async function fetchCustomerFields(): Promise<CustomerFieldsListResponse> {
   try {
     const direct = await apiRequestWithPolicy<CustomerFieldsApiEnvelope>(withQuery("/api/v1/customer/fields"), undefined, { allowedStatuses: [404, 405, 422], silent: true, timeoutMs: 10000 });
-    if (direct.ok) {
-      const normalized = normalizeFieldsPayload(direct.data);
-      return { source: "customer_fields_api", dataScope: "OFFICIAL_CUSTOMER_API", is_fallback: false, generated_at: normalized.generatedAt ?? new Date().toISOString(), scope: normalized.scope, field_count: normalized.fieldCount ?? normalized.fields.length, fields: normalized.fields };
+    if (!direct.ok) {
+      return emptyCustomerFieldsResponse();
     }
-    const aggregate = await fetchCustomerDashboardAggregate({ timeRange: "30d" });
-    const fields = toFallbackFields(aggregate);
-    return { source: "dashboard_aggregate_fallback", dataScope: "FALLBACK_RECENT_ONLY", is_fallback: true, generated_at: (aggregate as any).generated_at ?? new Date().toISOString(), field_count: fields.length, fields, data_scope_note: "当前展示近期/可见地块，非完整授权列表" };
+    const normalized = normalizeFieldsPayload(direct.data);
+    return { source: "customer_fields_api", dataScope: "OFFICIAL_CUSTOMER_API", is_fallback: false, generated_at: normalized.generatedAt ?? new Date().toISOString(), scope: normalized.scope, field_count: normalized.fieldCount ?? normalized.fields.length, fields: normalized.fields };
   } catch {
-    return { source: "empty_error_state", dataScope: "ERROR_EMPTY", is_fallback: true, generated_at: new Date().toISOString(), field_count: 0, fields: [], data_scope_note: "地块列表暂不可用，请稍后刷新" };
+    return emptyCustomerFieldsResponse();
   }
 }
