@@ -713,7 +713,7 @@ export default function OperationReportPage(): React.ReactElement {
   const vm = buildOperationReportVm(report);
   const chain = normalizeChain(report);
   const reportAny = report as any;
-  const c8MainVisual = buildC8OperationMainVisualVm(report, operationId);
+  const c8MainVisual = buildC8OperationMainVisualVm(report);
   const chainIntegrityRaw = reportAny.chain_integrity;
   const chainIntegrity = customerChainIntegrityLabel(chainIntegrityRaw, "历史/人工链路");
   const legacyWarning = customerText(reportAny.legacy_warning, isCustomerChainComplete(chainIntegrityRaw) ? "" : "该作业为历史/人工链路，缺少正式建议或处方记录。");

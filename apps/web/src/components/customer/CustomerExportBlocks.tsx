@@ -141,13 +141,13 @@ function C8ExportBlocks({ title, rows }: { title: string; rows: Array<{ label: s
 }
 
 export function FieldExportBlocks({ vm, report }: { vm: FieldReportPageVm; report?: FieldReportDetailV1 | null }): React.ReactElement {
-  const c8MainVisual = report ? buildC8FieldMainVisualVm(report, vm.header.fieldId) : null;
+  const c8MainVisual = report ? buildC8FieldMainVisualVm(report) : null;
   if (c8MainVisual) return <C8ExportBlocks title={c8MainVisual.title} rows={c8MainVisual.rows} />;
   const weather = reportField(report, "weather_interference") ?? reportField(report, "weather_summary") ?? "天气摘要未接入报告同源数据。";
   return <div className="customerCompactReport"><section className="customerCard"><h2 className="customerCardTitle">1. 地块摘要</h2><div className="customerGrid2 customerSpacingTopSm"><div><strong>地块名称：</strong>{safeExportText(vm.header.title, "地块名称待补充")}</div><div><strong>作业总数：</strong>{safeExportText(vm.overview.totalOperationsText, "0")}</div><div><strong>当前风险：</strong>{safeExportText(vm.risk.levelLabel, "风险待确认")}</div><div><strong>待验收：</strong>{safeExportText(vm.overview.pendingAcceptanceText, "0")}</div></div></section><section className="customerCard"><h2 className="customerCardTitle">2. 风险与诊断</h2><p className="customerSpacingTopSm">{safeExportText(vm.explain.human, "暂无状态解释")} 当前风险：{safeExportText(vm.risk.levelLabel, "风险待确认")}。</p></section><section className="customerCard"><h2 className="customerCardTitle">3. 最近作业</h2><PrintTable headers={["作业", "状态", "验收", "更新时间", "正式场景", "正式链路", "证据状态", "复核状态"]} rows={vm.recentOperations.slice(0, 5).map((item) => [item.title, item.statusText, item.acceptanceText, item.updatedAtText, item.scenarioTypeText, item.formalChainStatusText, item.evidenceStatusText, item.needsReviewText])} emptyText="暂无最近作业" /></section><section className="customerCard"><h2 className="customerCardTitle">4. 价值与田块记忆</h2><PrintTable headers={["项目", "内容"]} rows={[["价值摘要", vm.roiSummary.displayText], ["田块记忆摘要", vm.fieldMemory.displayText], ["天气摘要", safeExportText(weather, "暂无天气摘要")]]} emptyText="暂无价值与田块记忆摘要" /></section><footer className="customerCard"><p className="customerMetricLabel">报告由 GEOX 自动生成，供经营复盘使用。</p></footer></div>;
 }
 export function OperationExportBlocks({ vm, report }: { vm: OperationReportPageVm; report?: OperationReportV1 | null }): React.ReactElement {
-  const c8MainVisual = report ? buildC8OperationMainVisualVm(report, vm.header.internalId) : null;
+  const c8MainVisual = report ? buildC8OperationMainVisualVm(report) : null;
   if (c8MainVisual) return <C8ExportBlocks title={c8MainVisual.title} rows={c8MainVisual.rows} />;
   const formalVm = buildFormalScenarioVm(report ?? {});
   const evidenceVm = buildEvidenceVm(report ?? {});

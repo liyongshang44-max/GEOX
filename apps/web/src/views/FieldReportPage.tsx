@@ -82,7 +82,7 @@ export default function FieldReportPage(): React.ReactElement {
 
   const vm = buildFieldReportVm(report);
   const reportAny = report as any;
-  const c8MainVisual = buildC8FieldMainVisualVm(report, fieldId);
+  const c8MainVisual = buildC8FieldMainVisualVm(report);
   const observability = reportAny.field_observability_profile ?? {};
   const planCandidates = Array.isArray(reportAny.crop_plan_candidates) ? reportAny.crop_plan_candidates : [];
   const canExport = Boolean(fieldId.trim());
