@@ -6,6 +6,58 @@ function isIsoDatetime(value: string): boolean {
   return !Number.isNaN(Date.parse(value));
 }
 
+type OperationWeatherContextSeedV1 = {
+  field_id: string | null;
+  started_at?: unknown;
+  finished_at?: unknown;
+  planned_start_at?: unknown;
+  planned_end_at?: unknown;
+  updated_at?: unknown;
+};
+
+function text(value: unknown): string {
+  return String(value ?? "").trim();
+}
+
+function parseJsonRecord(value: unknown): any {
+  if (value && typeof value === "object") return value;
+  if (typeof value === "string") {
+    try { return JSON.parse(value); } catch { return null; }
+  }
+  return null;
+}
+
+function firstText(...values: unknown[]): string | null {
+  for (const value of values) {
+    const raw = text(value);
+    if (raw) return raw;
+  }
+  return null;
+}
+
+function isoOrNull(value: unknown): string | null {
+  const raw = text(value);
+  if (!raw) return null;
+  const ms = Date.parse(raw);
+  if (!Number.isFinite(ms) || ms <= 0) return null;
+  return new Date(ms).toISOString();
+}
+
+function operationWeatherWindow(op: OperationWeatherContextSeedV1 | null): { from: string; to: string } {
+  const now = Date.now();
+  const fallbackFrom = new Date(now - 24 * 60 * 60 * 1000).toISOString();
+  const fallbackTo = new Date(now).toISOString();
+  const from = isoOrNull(op?.started_at) ?? isoOrNull(op?.planned_start_at) ?? isoOrNull(op?.updated_at) ?? fallbackFrom;
+  const to = isoOrNull(op?.finished_at) ?? isoOrNull(op?.planned_end_at) ?? fallbackTo;
+  return Date.parse(to) > Date.parse(from) ? { from, to } : { from, to: fallbackTo };
+}
+
+function rainfallTotal(...values: Array<number | null | undefined>): number | null {
+  const nums = values.map((value) => Number(value)).filter((value) => Number.isFinite(value));
+  if (!nums.length) return null;
+  return nums.reduce((sum, value) => sum + value, 0);
+}
+
 export function registerWeatherV1Routes(app: FastifyInstance, _pool: Pool): void {
   const provider = createWeatherProviderV1();
   const pool = _pool;
@@ -55,6 +107,113 @@ export function registerWeatherV1Routes(app: FastifyInstance, _pool: Pool): void
       return reply.code(200).send(weather);
     } catch {
       return reply.code(200).send(buildUnavailableWeatherV1({ field_id, from, to, reason: "provider_error" }));
+    }
+  });
+
+  app.get("/api/v1/weather/operation-environment-context", async (req, reply) => {
+    const query = (req as any).query ?? {};
+    const operation_id = String(query.operation_id ?? "").trim();
+
+    if (!operation_id) {
+      return reply.code(400).send({ ok: false, error: "BAD_REQUEST", message: "operation_id is required" });
+    }
+
+    const unavailable = (reason: string, field_id: string | null = null, explanation?: string) => reply.code(200).send({
+      status: "unavailable",
+      unavailable_reason: reason,
+      source: `weather_operation_environment_context_v1:${reason}`,
+      operation_id,
+      field_id,
+      history: null,
+      forecast: null,
+      rainfall_may_explain_soil_moisture_change: null,
+      learning_weather_interference_excluded: null,
+      explanation: explanation ?? "天气环境上下文暂不可用；页面应显示空态，不作为错误处理。",
+    });
+
+    let op: OperationWeatherContextSeedV1 | null = null;
+
+    try {
+      const q = await pool.query(
+        `SELECT *
+           FROM operation_state_v1
+          WHERE operation_id = $1 OR operation_plan_id = $1
+          LIMIT 1`,
+        [operation_id],
+      );
+      const row = q.rows?.[0] ?? null;
+      if (row) {
+        op = {
+          field_id: firstText(row.field_id, row.fieldId),
+          started_at: row.started_at ?? row.execution_started_at ?? row.dispatched_at,
+          finished_at: row.finished_at ?? row.execution_finished_at ?? row.completed_at,
+          planned_start_at: row.planned_start_at ?? row.plan_start_at,
+          planned_end_at: row.planned_end_at ?? row.plan_end_at,
+          updated_at: row.updated_at ?? row.freshness?.updated_at,
+        };
+      }
+    } catch {
+      op = null;
+    }
+
+    if (!op?.field_id) {
+      try {
+        const q = await pool.query(
+          `SELECT record_json
+             FROM facts
+            WHERE record_json::jsonb->>'type' = 'operation_plan_v1'
+              AND (
+                record_json::jsonb#>>'{payload,operation_plan_id}' = $1
+                OR record_json::jsonb#>>'{payload,operation_id}' = $1
+                OR record_json::jsonb#>>'{payload,id}' = $1
+              )
+            ORDER BY occurred_at DESC NULLS LAST, ingested_at DESC NULLS LAST
+            LIMIT 1`,
+          [operation_id],
+        );
+        const parsed = parseJsonRecord(q.rows?.[0]?.record_json);
+        const payload = parsed?.payload ?? {};
+        op = {
+          field_id: firstText(payload.field_id, payload.field_ref?.field_id, payload.target?.field_id),
+          planned_start_at: payload.time_window?.start_ts ?? payload.time_window?.from ?? payload.planned_start_at,
+          planned_end_at: payload.time_window?.end_ts ?? payload.time_window?.to ?? payload.planned_end_at,
+          updated_at: parsed?.occurred_at ?? payload.updated_at,
+        };
+      } catch {
+        op = null;
+      }
+    }
+
+    const field_id = String(op?.field_id ?? "").trim();
+    if (!field_id) return unavailable("operation_field_unavailable", null, "作业未绑定地块，天气环境上下文不可用。");
+
+    const { from, to } = operationWeatherWindow(op);
+    const location = await resolveFieldLocation(field_id);
+    if (!location) return unavailable("location_unavailable", field_id, "作业地块位置不可用，天气环境上下文不可用。");
+
+    try {
+      const [history, forecast] = await Promise.all([
+        provider.getHistory({ field_id, from, to, location }),
+        provider.getForecast({ field_id, location }),
+      ]);
+      const rainfall = rainfallTotal(history.rainfall_mm, forecast.rainfall_mm);
+      const hasRain = rainfall != null ? rainfall > 0 : null;
+      return reply.code(200).send({
+        status: "ok",
+        unavailable_reason: null,
+        source: "weather_operation_environment_context_v1",
+        operation_id,
+        field_id,
+        history,
+        forecast,
+        rainfall_may_explain_soil_moisture_change: hasRain,
+        learning_weather_interference_excluded: hasRain,
+        explanation: hasRain
+          ? "作业影响窗口内存在降雨信号，学习结论应排除或降低天气干扰置信度。"
+          : "作业影响窗口内未发现明显降雨信号，天气仅作为验收背景参考。",
+      });
+    } catch {
+      return unavailable("provider_error", field_id, "天气服务暂不可用，页面应显示天气空态。");
     }
   });
 
