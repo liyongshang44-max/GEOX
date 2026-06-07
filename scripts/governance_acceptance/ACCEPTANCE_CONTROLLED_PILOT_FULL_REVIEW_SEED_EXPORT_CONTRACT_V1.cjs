@@ -60,9 +60,75 @@ function assertC8Profile(exported, dry) {
 }
 const dry = run([SEED, '--dry-run', '--tenant', 'tenantA']);
 must(dry.ok === true && dry.profile === 'full-review' && dry.chain_id === CHAIN && dry.apply === false, 'dry-run envelope invalid', dry);
-for (const [key, min] of Object.entries({ fields: 3, devices: 4, formal_operations: 1, recommendations: 2, approval_requests: 2, receipts: 2, formal_evidence: 2, acceptance_results: 2, field_memory: 1, prescriptions: 1 })) must(Number(dry.planned_counts?.[key] || 0) >= min, `dry-run count too small: ${key}`, dry.planned_counts);
+for (const [key, min] of Object.entries({
+  fields: 3,
+  devices: 4,
+  formal_operations: 1,
+  recommendations: 2,
+  approval_requests: 2,
+  receipts: 2,
+  formal_evidence: 2,
+  acceptance_results: 2,
+  field_memory_optional_compatibility_rows: 1,
+  formal_field_memory_optional_compatibility_rows: 1,
+  prescriptions: 1
+})) {
+  must(
+    Number(dry.planned_counts?.[key] || 0) >= min,
+    `dry-run count too small: ${key}`,
+    dry.planned_counts
+  );
+}
+must(
+  Number(dry.planned_counts?.field_memory_derived_results ?? 0) === 0,
+  'dry-run must not claim derived field memory results',
+  dry.planned_counts
+);
+must(
+  dry.field_memory_contract?.optional_rows_table === 'field_memory_v1_optional',
+  'field memory optional contract missing',
+  dry.field_memory_contract
+);
+must(
+  dry.field_memory_contract?.derived_endpoint === 'POST /api/v1/field-memory/from-acceptance',
+  'field memory derived endpoint contract missing',
+  dry.field_memory_contract
+);
 const exported = run([SEED, '--export-json', '--tenant', 'tenantA']);
 assertFormalChain(exported);
+must(
+  Array.isArray(exported.tables?.field_memory_v1_optional)
+    && exported.tables.field_memory_v1_optional.length >= 1,
+  'export must expose field_memory_v1_optional rows',
+  exported.tables?.field_memory_v1_optional
+);
+must(
+  exported.tables?.field_memory_v1 === undefined
+    || exported.tables.field_memory_v1.length === 0,
+  'export must not expose authoritative field_memory_v1 static rows',
+  exported.tables?.field_memory_v1
+);
+const optionalMemoryRows = exported.tables?.field_memory_v1_optional || [];
+const formalOptionalMemory = optionalMemoryRows.find((x) => x.memory_lane === 'FORMAL_FIELD_MEMORY');
+must(
+  formalOptionalMemory?.compatibility_fallback === true
+    && formalOptionalMemory?.projection_support_only === true
+    && formalOptionalMemory?.not_authoritative_formal_result === true
+    && formalOptionalMemory?.formal_result_must_be_derived === true
+    && String(formalOptionalMemory?.static_seed_row_reason || '').length > 0,
+  'formal optional field memory row must be marked compatibility-only',
+  formalOptionalMemory
+);
+must(
+  exported.manifest?.field_memory_contract?.optional_rows_table === 'field_memory_v1_optional',
+  'manifest field memory contract missing optional table',
+  exported.manifest?.field_memory_contract
+);
+must(
+  exported.manifest?.governance_acceptance?.static_formal_memory_is_only_pass_source === false,
+  'manifest must state static formal memory is not the only pass source',
+  exported.manifest?.governance_acceptance
+);
 const c8Dry = run([SEED, '--dry-run', '--tenant', 'tenantA', '--profile', 'c8-formal-chain']);
 const c8Exported = run([SEED, '--export-json', '--tenant', 'tenantA', '--profile', 'c8-formal-chain']);
 assertFormalChain(c8Exported);
