@@ -46,11 +46,21 @@ BEGIN
       END IF;
     END IF;
 
-    UPDATE field_polygon_v1
-       SET polygon_geojson_json = COALESCE(polygon_geojson_json, NULLIF(geojson, '')::jsonb)
-     WHERE polygon_geojson_json IS NULL
-       AND geojson IS NOT NULL
-       AND btrim(geojson) <> '';
+    IF EXISTS (
+      SELECT 1
+        FROM information_schema.columns
+       WHERE table_schema = 'public'
+         AND table_name = 'field_polygon_v1'
+         AND column_name = 'geojson'
+    ) THEN
+      EXECUTE $sql$
+        UPDATE field_polygon_v1
+           SET polygon_geojson_json = COALESCE(polygon_geojson_json, NULLIF(geojson, '')::jsonb)
+         WHERE polygon_geojson_json IS NULL
+           AND geojson IS NOT NULL
+           AND btrim(geojson) <> ''
+      $sql$;
+    END IF;
   END IF;
 END $$;
 

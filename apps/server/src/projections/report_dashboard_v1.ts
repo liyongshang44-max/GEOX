@@ -145,6 +145,12 @@ function safeReportAcceptanceStatus(report: OperationReportV1): string | null { 
 function safeStateFinalStatus(): string { return "LIMITED_STATE"; }
 function safeStateAcceptanceStatus(state: OperationStateV1): string | null { return state ? "NEEDS_REVIEW" : null; }
 function dashboardNeedsReview(trust: DashboardProjectionTrustV1, report: OperationReportV1): boolean { return !trust.customer_visible_eligible || Boolean((report as any).formal_scenario?.needs_review); }
+function isPendingOperationReport(report: OperationReportV1): boolean {
+  const finalStatus = upper((report as any).execution?.final_status ?? (report as any).final_status);
+  const acceptanceStatus = upper((report as any).acceptance?.status ?? (report as any).acceptance_status);
+  const operationStatus = upper((report as any).operation?.status ?? (report as any).status);
+  return [finalStatus, acceptanceStatus, operationStatus].some((status) => status === "PENDING" || status === "PENDING_ACCEPTANCE" || status === "RUNNING");
+}
 function isTrustedRoiItem(item: any): boolean { return isFormalCustomerValueItem(item); }
 
 function deriveStateRiskLevel(state: OperationStateV1): OperationReportRiskLevel {
@@ -258,7 +264,7 @@ export function projectFieldReportDetailV1(params: { field_id: string; field_nam
   const seasonId = params.field_context?.season_id ?? textOrNull(summaryReport?.field_context?.season_id ?? summaryReport?.recommendation?.season_id ?? summaryReport?.identifiers?.season_id);
   const cropStage = params.field_context?.crop_stage ?? textOrNull(summaryReport?.field_context?.crop_stage ?? summaryReport?.recommendation?.crop_stage);
   const valueSummary = normalizeFieldValueSummaryForFieldReport(buildFieldValueSummary(formalReportsSorted.length > 0 ? formalReportsSorted : reportsSorted), aggregateTrust);
-  const pendingOperations = reportsSorted.filter((report) => !reportTrust(report).customer_visible_eligible).length;
+  const pendingOperations = reportsSorted.filter(isPendingOperationReport).length;
   const formalChainSummary = { formal_operations: formalReportsSorted.length, customer_visible_value_records: Number(valueSummary.trusted_value_items ?? 0), formal_field_memory_records: learningSummary.formal_memory_count, status: formalReportsSorted.length > 0 ? "HAS_FORMAL_RESULTS" as const : "NO_FORMAL_RESULTS" as const };
   const pendingChainSummary = { pending_operations: pendingOperations, status: pendingOperations > 0 ? "HAS_PENDING_ITEMS" as const : "NO_PENDING_ITEMS" as const };
   const overallCustomerStatus = formalReportsSorted.length > 0 ? (pendingOperations > 0 ? "FORMAL_RESULTS_WITH_PENDING_ITEMS" as const : "FORMAL_RESULTS_ONLY" as const) : "NO_FORMAL_RESULTS" as const;
