@@ -15,6 +15,8 @@ const gates = [
   ['pilot_runtime_security_baseline', 'pnpm run ci:runtime:pilot-security-baseline'],
   ['base_contract_p0', 'pnpm run ci:base-contract:p0'],
   ['formal_operation_field_binding', 'pnpm run ci:governance:formal-operation-field-binding'],
+  ['c8_seed_dataset_modularity', 'pnpm run ci:governance:c8-seed-dataset-modularity'],
+  ['customer_report_renderer_boundary', 'pnpm run ci:governance:customer-report-renderer-boundary'],
   ['controlled_pilot_full_review_seed_static', 'pnpm run acceptance:controlled-pilot:full-review-seed'],
   ['controlled_pilot_full_review_seed_runtime', `${seedApply} && pnpm run acceptance:controlled-pilot:full-review-seed`],
   ['scenario_pest_disease_inspection', 'pnpm run ci:scenario:pest-disease-inspection'],

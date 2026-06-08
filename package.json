@@ -52,6 +52,8 @@
     "ci:governance:formal-scenario-no-projection-write": "node scripts/governance_acceptance/ACCEPTANCE_FORMAL_SCENARIO_NO_PROJECTION_WRITE_V1.cjs",
     "ci:governance:operator-device-offline-actions": "node scripts/governance_acceptance/ACCEPTANCE_OPERATOR_DEVICE_OFFLINE_ACTIONS_V1.cjs",
     "ci:governance:formal-operation-field-binding": "node scripts/governance_acceptance/ACCEPTANCE_FORMAL_OPERATION_FIELD_BINDING_V1.cjs",
+    "ci:governance:c8-seed-dataset-modularity": "node scripts/governance_acceptance/ACCEPTANCE_C8_SEED_DATASET_MODULARITY_V1.cjs",
+    "ci:governance:customer-report-renderer-boundary": "node scripts/governance_acceptance/ACCEPTANCE_CUSTOMER_REPORT_RENDERER_BOUNDARY_V1.cjs",
     "ci:frontend:customer-trust-gate": "node scripts/governance_acceptance/ACCEPTANCE_FRONTEND_CUSTOMER_TRUST_GATE_V1.cjs",
     "ci:frontend:customer-product-language": "node scripts/frontend_acceptance/ACCEPTANCE_CUSTOMER_PRODUCT_LANGUAGE_V1.cjs",
     "ci:frontend:customer-pr18h-routes": "node scripts/frontend_acceptance/ACCEPTANCE_CUSTOMER_PR18H_ROUTES_V1.cjs",
