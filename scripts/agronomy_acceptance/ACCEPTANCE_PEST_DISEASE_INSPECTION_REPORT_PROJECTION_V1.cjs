@@ -35,6 +35,7 @@ function assertStaticContracts(root) {
   const reportsRoute = fs.readFileSync(path.join(root, 'apps/server/src/routes/reports_v1.ts'), 'utf8');
   const projection = fs.readFileSync(path.join(root, 'apps/server/src/services/inspection/pest_disease_inspection_projection_v1.ts'), 'utf8');
   const exportBlocks = fs.readFileSync(path.join(root, 'apps/web/src/components/customer/CustomerExportBlocks.tsx'), 'utf8');
+  const reportMainVisual = fs.readFileSync(path.join(root, 'apps/web/src/viewmodels/customerReportMainVisualVm.ts'), 'utf8');
   assert.equal(reportV1.includes('OperationReportPestDiseaseInspectionV1'), true);
   assert.equal(reportV1.includes('pest_disease_inspection?: OperationReportPestDiseaseInspectionV1'), true);
   assert.equal(reportV1.includes('"FORMAL_PEST_DISEASE_INSPECTION"'), true);
@@ -50,8 +51,14 @@ function assertStaticContracts(root) {
   assert.equal(reportsRoute.includes('buildPestDiseaseInspectionReportProjectionV1'), true);
   assert.equal(reportsRoute.includes('mergePestDiseaseInspectionIntoReport'), true);
   assert.equal(reportsRoute.includes('scenario_type: "FORMAL_PEST_DISEASE_INSPECTION"'), true);
-  assert.equal(exportBlocks.includes('operation_report_v1.pest_disease_inspection.observation_evidence'), true);
-  assert.equal(exportBlocks.includes('pdiEvidenceBasisRows'), true);
+  assert.equal(exportBlocks.includes('buildCustomerOperationReportMainVisualVm'), true);
+  assert.equal(exportBlocks.includes('mainVisual.rows.map'), true);
+  assert.equal(exportBlocks.includes('pdiEvidenceBasisRows'), false);
+  assert.equal(exportBlocks.includes('operation_report_v1.pest_disease_inspection.observation_evidence'), false);
+  assert.equal(reportMainVisual.includes('pest_disease_inspection'), true);
+  assert.equal(reportMainVisual.includes('observation_evidence'), true);
+  assert.equal(reportMainVisual.includes('INSUFFICIENT_REPORT'), true);
+  assert.equal(reportMainVisual.includes('缺少正式 report API 数据'), true);
   const pestMergeStart = reportsRoute.indexOf('function mergePestDiseaseInspectionIntoReport');
   const projectReportStart = reportsRoute.indexOf('export async function projectReportV1');
   const pestBlock = pestMergeStart >= 0 && projectReportStart > pestMergeStart ? reportsRoute.slice(pestMergeStart, projectReportStart) : '';

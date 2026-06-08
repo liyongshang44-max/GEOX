@@ -18,6 +18,7 @@ const rels = {
   operationPage: 'apps/web/src/views/OperationReportPage.tsx',
   dashboardPage: 'apps/web/src/views/CustomerDashboardPage.tsx',
   productGate: 'scripts/agronomy_acceptance/ACCEPTANCE_SCENARIO_PRODUCTIZATION_RELEASE_GATE.cjs',
+  reportMainVisualVm: 'apps/web/src/viewmodels/customerReportMainVisualVm.ts',
 };
 
 const failures = [];
@@ -50,6 +51,7 @@ const fieldPage = read(rels.fieldPage);
 const operationPage = read(rels.operationPage);
 const dashboardPage = read(rels.dashboardPage);
 const productGate = read(rels.productGate);
+const reportMainVisualVm = read(rels.reportMainVisualVm);
 
 // Required components exist and expose controlled-pilot summaries.
 for (const symbol of ['FormalScenarioBadge', 'FormalChainSummaryCard', 'ScenarioAcceptanceSummary', 'ScenarioValueMemorySummary', 'FailSafeCustomerNotice']) {
@@ -90,13 +92,14 @@ assert(/FORMAL_FERTILIZATION/, scenarioLabels + formalVm, 'FORMAL_FERTILIZATION 
 assert(/实验性\s*\/\s*non-selling|experimental\s*\/\s*non-selling/i, scenarioLabels + formalVm, 'FORMAL_FERTILIZATION must be marked experimental / non-selling');
 assertNot(/FORMAL_FERTILIZATION[\s\S]{0,120}pilot eligible/i, scenarioLabels + formalVm + formalCards, 'FORMAL_FERTILIZATION must not be wrapped as pilot eligible');
 
-// Export must use the same VM/helper source as pages and carry guarded payload fields.
-assert(/vm\.conclusion\.finalStatusText/, exportBlocks, 'operation export must reuse page VM final status');
-assert(/vm\.evidenceSummary\.statusText/, exportBlocks, 'operation export must reuse page VM evidence status');
-assert(/vm\.acceptance\.statusText/, exportBlocks, 'operation export must reuse page VM acceptance status');
-for (const token of ['scenarioTypeText', 'formalChainStatusText', 'evidenceStatusText', 'needsReviewText']) {
-  assert(new RegExp(token), exportBlocks, `export must include same-source ${token}`);
-}
+// Export must reuse unified report-backed main visual VMs instead of page-field scatter assembly.
+assert(/buildCustomerOperationReportMainVisualVm/, exportBlocks, 'operation export must use buildCustomerOperationReportMainVisualVm');
+assert(/buildCustomerFieldReportMainVisualVm/, exportBlocks, 'field export must use buildCustomerFieldReportMainVisualVm');
+assert(/mainVisual\.rows\.map/, exportBlocks, 'export must render CustomerReportMainVisualVm rows');
+assert(/MainVisualExportBlocks/, exportBlocks, 'export must render through MainVisualExportBlocks');
+assert(/INSUFFICIENT_REPORT/, reportMainVisualVm, 'main visual VM must own insufficient report state');
+assert(/缺少正式 report API 数据/, reportMainVisualVm, 'main visual VM must own missing report wording');
+assert(/FORMAL_READY/, reportMainVisualVm, 'main visual VM must own formal-ready state');
 
 // Fallback / limited data must remain review-only.
 if (!(/fallback_limited/.test(trustGate) && /LIMITED_FALLBACK/.test(trustGate) && /return "LIMITED"/.test(trustGate))) failures.push('fallback / limited data must be explicitly handled');

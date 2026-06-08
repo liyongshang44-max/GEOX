@@ -1,6 +1,6 @@
 import React from "react";
 import { useParams } from "react-router-dom";
-import { fetchFieldReport, type FieldReportDetailV1 } from "../api/reports";
+import { fetchFieldReport, type FieldReportDetailV1 } from "../api/customerReports";
 import { buildFieldReportVm, type FieldReportPageVm } from "../viewmodels/fieldReportVm";
 import { FieldExportBlocks } from "../components/customer/CustomerExportBlocks";
 import PrintReportScaffold from "../components/customer/PrintReportScaffold";

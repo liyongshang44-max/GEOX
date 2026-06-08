@@ -5,7 +5,7 @@ const path = require('node:path');
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 
 const FILES = {
-  reportsApi: 'apps/web/src/api/reports.ts',
+  customerReportsApi: 'apps/web/src/api/customerReports.ts',
   customerDashboardExport: 'apps/web/src/views/CustomerDashboardExportPage.tsx',
   fieldExport: 'apps/web/src/views/FieldReportExportPage.tsx',
   operationExportAlias: 'apps/web/src/views/OperationReportExportPage.tsx',
@@ -13,9 +13,7 @@ const FILES = {
   exportBlocks: 'apps/web/src/components/customer/CustomerExportBlocks.tsx',
   dashboardVm: 'apps/web/src/viewmodels/customerDashboardVm.ts',
   safeText: 'apps/web/src/lib/customerSafeText.ts',
-  formalVm: 'apps/web/src/lib/formalScenarioViewModel.ts',
-  trustGate: 'apps/web/src/lib/customerTrustGate.ts',
-  evidenceVm: 'apps/web/src/lib/evidenceViewModel.ts',
+  reportMainVisualVm: 'apps/web/src/viewmodels/customerReportMainVisualVm.ts',
   scenarioLabels: 'apps/web/src/lib/customerScenarioLabels.ts',
 };
 
@@ -36,7 +34,7 @@ function assertNotContains(text, re, msg, failures) {
 function main() {
   const failures = [];
 
-  const reportsApi = read(FILES.reportsApi);
+  const customerReportsApi = read(FILES.customerReportsApi);
   const dashboardExport = read(FILES.customerDashboardExport);
   const fieldExport = read(FILES.fieldExport);
   const operationExportAlias = read(FILES.operationExportAlias);
@@ -45,17 +43,17 @@ function main() {
   const dashboardVm = read(FILES.dashboardVm);
   const safeText = read(FILES.safeText);
 
-  assertContains(reportsApi, /export\s+async\s+function\s+fetchCustomerDashboardAggregate\s*\(/, 'reports.ts must export fetchCustomerDashboardAggregate', failures);
-  assertContains(reportsApi, /export\s+async\s+function\s+fetchFieldReport\s*\(/, 'reports.ts must export fetchFieldReport', failures);
-  assertContains(reportsApi, /export\s+async\s+function\s+fetchOperationReport\s*\(/, 'reports.ts must export fetchOperationReport', failures);
+  assertContains(customerReportsApi, /fetchCustomerDashboardAggregate/, 'customerReports.ts must expose fetchCustomerDashboardAggregate', failures);
+  assertContains(customerReportsApi, /fetchFieldReport/, 'customerReports.ts must expose fetchFieldReport', failures);
+  assertContains(customerReportsApi, /fetchOperationReport/, 'customerReports.ts must expose fetchOperationReport', failures);
 
-  assertContains(dashboardExport, /from\s+["']\.\.\/api\/reports["']/, 'CustomerDashboardExportPage must import from ../api/reports', failures);
-  assertContains(fieldExport, /from\s+["']\.\.\/api\/reports["']/, 'FieldReportExportPage must import from ../api/reports', failures);
-  assertContains(customerReportExport, /from\s+["']\.\.\/api\/reports["']/, 'CustomerReportExportPage must import from ../api/reports', failures);
-  assertContains(exportBlocks, /from\s+["']\.\.\/\.\.\/api\/reports["']/, 'CustomerExportBlocks must import report types from ../../api/reports', failures);
+  assertContains(dashboardExport, /from\s+["']\.\.\/api\/customerReports["']/, 'CustomerDashboardExportPage must import from ../api/customerReports', failures);
+  assertContains(fieldExport, /from\s+["']\.\.\/api\/customerReports["']/, 'FieldReportExportPage must import from ../api/customerReports', failures);
+  assertContains(customerReportExport, /from\s+["']\.\.\/api\/customerReports["']/, 'CustomerReportExportPage must import from ../api/customerReports', failures);
+  assertContains(exportBlocks, /from\s+["']\.\.\/\.\.\/api\/customerReports["']/, 'CustomerExportBlocks must import report types from ../../api/customerReports', failures);
 
   for (const [name, text] of Object.entries({ dashboardExport, fieldExport, customerReportExport, exportBlocks })) {
-    assertNotContains(text, /from\s+["'][^"']*api\/customerReports["']/, `${name} must not import from api/customerReports`, failures);
+    assertNotContains(text, /from\s+["'][^"']*api\/reports["']/, `${name} must not import from api/reports`, failures);
   }
 
   assertContains(dashboardExport, /fetchCustomerDashboardAggregate\s*\(/, 'CustomerDashboardExportPage must fetch via fetchCustomerDashboardAggregate', failures);
@@ -71,15 +69,21 @@ function main() {
     assertNotContains(customerReportExport, re, `CustomerReportExportPage contains forbidden fetch path: ${re}`, failures);
   }
 
-  read(FILES.formalVm);
-  read(FILES.trustGate);
-  read(FILES.evidenceVm);
+  const reportMainVisual = read(FILES.reportMainVisualVm);
   read(FILES.scenarioLabels);
-  assertContains(exportBlocks, /buildFormalScenarioVm\s*\(/, 'CustomerExportBlocks must use formalScenarioViewModel', failures);
-  assertContains(exportBlocks, /customerGuardedStatusText\s*\(/, 'CustomerExportBlocks must use customerTrustGate status helper', failures);
-  assertContains(exportBlocks, /customerGuardedEvidenceText\s*\(/, 'CustomerExportBlocks must use customerTrustGate evidence helper', failures);
-  assertContains(exportBlocks, /customerGuardedAcceptanceText\s*\(/, 'CustomerExportBlocks must use customerTrustGate acceptance helper', failures);
-  assertContains(exportBlocks, /buildEvidenceVm\s*\(/, 'CustomerExportBlocks must use evidenceViewModel', failures);
+  assertContains(exportBlocks, /buildCustomerFieldReportMainVisualVm\s*\(/, 'CustomerExportBlocks must use buildCustomerFieldReportMainVisualVm', failures);
+  assertContains(exportBlocks, /buildCustomerOperationReportMainVisualVm\s*\(/, 'CustomerExportBlocks must use buildCustomerOperationReportMainVisualVm', failures);
+  assertContains(exportBlocks, /MainVisualExportBlocks/, 'CustomerExportBlocks must render through MainVisualExportBlocks', failures);
+  assertContains(exportBlocks, /mainVisual\.rows\.map/, 'CustomerExportBlocks must render CustomerReportMainVisualVm rows', failures);
+  assertContains(reportMainVisual, /INSUFFICIENT_REPORT/, 'CustomerReportMainVisualVm must own insufficient report state', failures);
+  assertContains(reportMainVisual, /缺少正式 report API 数据/, 'CustomerReportMainVisualVm must own missing report wording', failures);
+
+  assertNotContains(exportBlocks, /buildFormalScenarioVm/, 'export must not build formal scenario directly', failures);
+  assertNotContains(exportBlocks, /buildEvidenceVm/, 'export must not build evidence directly', failures);
+  assertNotContains(exportBlocks, /customerGuardedStatusText/, 'export must not call customerTrustGate status helper directly', failures);
+  assertNotContains(exportBlocks, /customerGuardedEvidenceText/, 'export must not call customerTrustGate evidence helper directly', failures);
+  assertNotContains(exportBlocks, /customerGuardedAcceptanceText/, 'export must not call customerTrustGate acceptance helper directly', failures);
+  assertNotContains(exportBlocks, /pdiEvidenceBasisRows/, 'export must not use legacy PDI evidence rows directly', failures);
 
   assertNotContains(exportBlocks, /\bSUCCESS\b\s*[:=]|\bPASS\b\s*[:=]/, 'CustomerExportBlocks must not hardcode SUCCESS/PASS mapping', failures);
   const rawLeakPatterns = [

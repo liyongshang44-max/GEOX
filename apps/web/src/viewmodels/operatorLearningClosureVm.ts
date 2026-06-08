@@ -133,7 +133,7 @@ export function buildOperatorLearningClosureVm(input: OperatorLearningClosureInp
   const localLearningExcludedReasonText = !operationId
     ? "未选择作业，暂不判断学习排除原因。"
     : weatherExcluded
-      ? "因天气或降雨干扰，本次结果未进入正式学习。"
+      ? "因降雨干扰，本次结果未进入灌溉效果学习。"
       : formalLearning
         ? "已通过正式学习门禁。"
         : signalCount > 0

@@ -1,9 +1,13 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
 import { fetchOperationReport, type OperationReportV1 } from "../api/customerReports";
+import { fetchOperationEnvironmentContext, type OperationEnvironmentContext } from "../api/weather";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ErrorState from "../components/common/ErrorState";
+import FieldGisMap from "../components/FieldGisMap";
 import { FailSafeCustomerNotice, FormalChainSummaryCard, FormalScenarioBadge, ScenarioAcceptanceSummary, ScenarioValueMemorySummary, ZoneRollupSummary } from "../components/customer";
+import FieldMemoryPanel from "../components/customer/FieldMemoryPanel";
+import WeatherInterferencePanel from "../components/customer/WeatherInterferencePanel";
 import { customerTimelineStatusLabel } from "../lib/customerLabels";
 import { customerSafeName, customerSafeTitle } from "../lib/customerSafeText";
 import { customerChainIntegrityLabel, customerSemanticLabel, isCustomerChainComplete } from "../lib/customerSemanticLabels";
@@ -704,20 +708,74 @@ function PestDiseaseAuditChain({ report }: { report: OperationReportV1 }): React
   );
 }
 
+function isGeoJsonLike(value: unknown): boolean {
+  if (!isObject(value)) return false;
+  const type = text(value.type);
+  return ["Feature", "FeatureCollection", "Polygon", "MultiPolygon", "LineString", "MultiLineString"].includes(type);
+}
+
+function reportGeoJson(root: any, paths: string[]): unknown | null {
+  for (const path of paths) {
+    const value = firstValue(root, [path]);
+    if (isGeoJsonLike(value)) return value;
+  }
+  return null;
+}
+
+function reportTrajectorySegments(root: any): Array<{ id: string; label: string; status: "READY"; color: string; coordinates: Array<[number, number]> }> {
+  const raw = firstValue(root, ["as_applied.trajectory_segments", "as_applied.trajectorySegments", "execution.trajectory_segments", "execution.trajectorySegments"]);
+  if (!Array.isArray(raw)) return [];
+  return raw.map((segment: any, index) => {
+    const coordinates = Array.isArray(segment?.coordinates) ? segment.coordinates : Array.isArray(segment?.path) ? segment.path : [];
+    return {
+      id: text(segment?.id ?? segment?.segment_id) || `trajectory-${index}`,
+      label: customerText(segment?.label ?? segment?.name, `轨迹 ${index + 1}`),
+      status: "READY" as const,
+      color: text(segment?.color) || "#2563eb",
+      coordinates: coordinates
+        .map((point: any) => Array.isArray(point) ? [Number(point[0]), Number(point[1])] as [number, number] : [Number(point?.lon ?? point?.lng), Number(point?.lat)] as [number, number])
+        .filter(([lon, lat]) => Number.isFinite(lon) && Number.isFinite(lat)),
+    };
+  }).filter((segment) => segment.coordinates.length > 0);
+}
+
+function EvidencePackMetadataBlock({ report }: { report: OperationReportV1 }): React.ReactElement {
+  const evidencePack = (report as any).evidence_pack_summary ?? (report as any).evidence_pack ?? {};
+  const sha256 = text(evidencePack.sha256 ?? evidencePack.checksum_sha256 ?? evidencePack.checksum) || "暂无文件校验值";
+  return <article className="customerCard"><h3 className="customerCardTitle">证据包元数据</h3><div className="customerGrid2 customerSpacingTopXs"><div><strong>证据包状态：</strong>{customerText(evidencePack.status ?? evidencePack.summary, "证据包摘要待生成")}</div><div><strong>sha256：</strong>{customerText(sha256, "暂无文件校验值")}</div><div><strong>下载状态：</strong>{customerText(evidencePack.download_status, "后端未返回安全下载入口")}</div><div><strong>边界：</strong>只展示后端 report API 返回的证据包元数据。</div></div></article>;
+}
+
+function OperationSpatialExecutionPanel({ report }: { report: OperationReportV1 }): React.ReactElement {
+  const root = report as any;
+  const plannedGeoJson = reportGeoJson(root, ["planned_geojson", "plan.planned_geojson", "prescription.planned_geojson", "prescription.geometry", "operation_plan.planned_geojson"]);
+  const coverageGeoJson = reportGeoJson(root, ["coverage_geojson", "as_applied.coverage_geojson", "as_applied.geometry", "as_applied.coverageGeometry"]);
+  const trajectorySegments = reportTrajectorySegments(root);
+  const asApplied = root.as_applied ?? null;
+  const hasSpatialEvidence = Boolean(plannedGeoJson || coverageGeoJson || trajectorySegments.length);
+  return <article className="customerCard"><h3 className="customerCardTitle">空间执行</h3><p className="customerMetricLabel">计划区域、实际覆盖和执行轨迹仅来自 report API；计划-实际偏差待补充证据来源，不自动作为验收证据。</p>{hasSpatialEvidence ? <FieldGisMap polygonGeoJson={null} plannedGeoJson={plannedGeoJson} coverageGeoJson={coverageGeoJson} heatGeoJson={null} markers={[]} trajectorySegments={trajectorySegments} acceptancePoints={[]} labels={{ plannedLayer: "计划区域", coverageLayer: "实际覆盖", operationTrack: "实际执行轨迹" }} /> : <p className="customerMetricLabel customerSpacingTopSm">暂无可渲染空间图层；as-applied 状态：{customerText(asApplied?.coverage_status ?? asApplied?.summary, "实际覆盖待补充")}</p>}</article>;
+}
+
 export default function OperationReportPage(): React.ReactElement {
   const { operationId = "" } = useParams();
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string>("");
   const [report, setReport] = React.useState<OperationReportV1 | null>(null);
+  const [weatherContext, setWeatherContext] = React.useState<OperationEnvironmentContext | null>(null);
+  const [weatherLoading, setWeatherLoading] = React.useState(false);
 
   React.useEffect(() => {
     let alive = true;
     setLoading(true);
     setError("");
+    setWeatherContext(null);
+    setWeatherLoading(Boolean(operationId));
     void fetchOperationReport(operationId)
       .then((res) => { if (alive) setReport(res); })
       .catch((e: unknown) => { if (alive) setError(String(e instanceof Error ? e.message : "加载失败")); })
       .finally(() => { if (alive) setLoading(false); });
+    void fetchOperationEnvironmentContext({ operationId })
+      .then((context) => { if (alive) setWeatherContext(context); })
+      .finally(() => { if (alive) setWeatherLoading(false); });
     return () => { alive = false; };
   }, [operationId]);
 
@@ -775,6 +833,14 @@ export default function OperationReportPage(): React.ReactElement {
             </div>
           </section>
 
+          <section className="operationMainSectionsGrid">
+            <EvidencePackMetadataBlock report={report} />
+            <OperationSpatialExecutionPanel report={report} />
+            <article className="customerCard"><h3 className="customerCardTitle">天气干扰</h3><WeatherInterferencePanel context={weatherContext} loading={weatherLoading} /></article>
+            <article className="customerCard"><h3 className="customerCardTitle">田块记忆</h3><FieldMemoryPanel fieldId={vm.operation.fieldId} operationId={operationId} embeddedMemory={(report as any).field_memory} compact /></article>
+            <article id="operation-skill-trace" className="customerCard"><h3 className="customerCardTitle">技能运行记录</h3><p className="customerMetricLabel">operation-skill-trace 技术锚点用于追溯技能 / 规则表现，不直接生成客户正式结论。</p></article>
+          </section>
+
           <section className="operationTechDetailsMuted">
             <details>
               <summary className="operationTechDetailsSummary">展开技术详情</summary>
@@ -826,6 +892,11 @@ export default function OperationReportPage(): React.ReactElement {
         </section>
 
         <section className="operationMainSectionsGrid">
+          <EvidencePackMetadataBlock report={report} />
+          <OperationSpatialExecutionPanel report={report} />
+          <article className="customerCard"><h3 className="customerCardTitle">天气干扰</h3><WeatherInterferencePanel context={weatherContext} loading={weatherLoading} /></article>
+          <article className="customerCard"><h3 className="customerCardTitle">田块记忆</h3><FieldMemoryPanel fieldId={vm.operation.fieldId} operationId={operationId} embeddedMemory={(report as any).field_memory} compact /></article>
+          <article id="operation-skill-trace" className="customerCard"><h3 className="customerCardTitle">技能运行记录</h3><p className="customerMetricLabel">operation-skill-trace 技术锚点用于追溯技能 / 规则表现，不直接生成客户正式结论。</p></article>
           {mainSections.map((section) => <MainSectionCard key={section.key} section={section} />)}
         </section>
 

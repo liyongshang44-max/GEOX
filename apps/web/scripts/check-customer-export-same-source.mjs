@@ -18,7 +18,6 @@ const exportBlocksFile = "src/components/customer/CustomerExportBlocks.tsx";
 
 const forbiddenMapSymbols = ["STATUS_MAP", "RISK_MAP", "ACCEPTANCE_MAP"];
 const forbiddenApiTokens = [
-  "../api/reports",
   "../api/admin",
   "../api/debug",
   "../api/devtools",
@@ -55,6 +54,16 @@ const forbiddenExportBlockTokens = [
   "href={row.download",
   "type: \"FeatureCollection\"",
   "type:'FeatureCollection'",
+  "customerC8FormalReportVm",
+  "buildC8FieldMainVisualVm",
+  "buildC8OperationMainVisualVm",
+  "buildFormalScenarioVm",
+  "buildEvidenceVm",
+  "customerGuardedStatusText",
+  "customerGuardedEvidenceText",
+  "customerGuardedAcceptanceText",
+  "buildOperationSameSourceExportSummary",
+  "buildFieldSameSourceExportSummary",
 ];
 
 const requiredUnifiedExportSnippets = [
@@ -74,19 +83,10 @@ const requiredFieldCompatSnippets = [
 ];
 
 const requiredExportBlockSnippets = [
-  "buildOperationSameSourceExportSummary",
-  "buildFieldSameSourceExportSummary",
-  "safeSha256",
-  "weatherSummaryFromReport",
-  "evidence_pack_summary",
-  "as_executed",
-  "as_applied",
-  "mapLayers.summaryText",
-  "vm.roiSummary.displayText",
-  "vm.fieldMemory.displayText",
-  "暂无地块 geometry，导出版不绘制或伪造地块范围。",
-  "暂无近期作业覆盖图层，导出版不伪造覆盖、轨迹或验收点。",
-  "天气摘要未接入报告同源数据。",
+  "buildCustomerFieldReportMainVisualVm",
+  "buildCustomerOperationReportMainVisualVm",
+  "mainVisual.rows.map",
+  "<MainVisualExportBlocks mainVisual={mainVisual} />",
 ];
 
 const offenders = [];
@@ -163,10 +163,15 @@ if (!blocksText) {
   for (const token of forbiddenExportBlockTokens) {
     if (blocksText.includes(token)) addOffender(exportBlocksFile, lineNumber(blocksText, token), "forbidden-export-block-token", token);
   }
-  const operationBlockSignature = "export function OperationExportBlocks({ vm, report }";
-  const fieldBlockSignature = "export function FieldExportBlocks({ vm, report }";
-  if (!blocksText.includes(operationBlockSignature)) addOffender(exportBlocksFile, 1, "operation-block-must-receive-report", operationBlockSignature);
-  if (!blocksText.includes(fieldBlockSignature)) addOffender(exportBlocksFile, 1, "field-block-must-receive-report", fieldBlockSignature);
+
+  const reportMainVisualText = readFile("src/viewmodels/customerReportMainVisualVm.ts") ?? "";
+  for (const snippet of ["INSUFFICIENT_REPORT", "缺少正式 report API 数据"]) {
+    if (!reportMainVisualText.includes(snippet)) addOffender("src/viewmodels/customerReportMainVisualVm.ts", 1, "missing-insufficient-report-vm", `Customer report main visual VM must own insufficient wording: ${snippet}`);
+  }
+  const operationBlockSignature = "export function OperationExportBlocks({";
+  const fieldBlockSignature = "export function FieldExportBlocks({";
+  if (!blocksText.includes(operationBlockSignature) || !blocksText.includes("report?: OperationReportV1 | null")) addOffender(exportBlocksFile, 1, "operation-block-must-receive-report", "OperationExportBlocks must receive report");
+  if (!blocksText.includes(fieldBlockSignature) || !blocksText.includes("report?: FieldReportDetailV1 | null")) addOffender(exportBlocksFile, 1, "field-block-must-receive-report", "FieldExportBlocks must receive report");
 }
 
 const compatFullPath = path.join(appRoot, optionalCompatOperationExport);
