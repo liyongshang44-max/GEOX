@@ -544,9 +544,15 @@ async function verify(p) {
     const counts = await seedLifecycleCounts(c, p);
 
     if (counts.facts < counts.expected_facts) failAssert("SEED_FACTS_MISSING", counts);
-    if (!isC8FormalScoped(p.profile)) {
-      if (counts.operation_state_v1 < counts.expected_operation_state_v1) failAssert("SEED_OPERATION_STATE_MISSING", counts);
-      if (counts.approval_requests_v1 < counts.expected_approval_requests_v1) failAssert("SEED_APPROVAL_REQUESTS_MISSING", counts);
+    const hasOperationStateTable = await relationExists(c, "operation_state_v1");
+    const hasApprovalRequestsTable = await relationExists(c, "approval_requests_v1");
+    const shouldAssertOptionalLegacyTables = !isC8FormalScoped(p.profile);
+
+    if (shouldAssertOptionalLegacyTables && hasOperationStateTable && counts.operation_state_v1 < counts.expected_operation_state_v1) {
+      failAssert("SEED_OPERATION_STATE_MISSING", { ...counts, optional_legacy_table: "operation_state_v1" });
+    }
+    if (shouldAssertOptionalLegacyTables && hasApprovalRequestsTable && counts.approval_requests_v1 < counts.expected_approval_requests_v1) {
+      failAssert("SEED_APPROVAL_REQUESTS_MISSING", { ...counts, optional_legacy_table: "approval_requests_v1" });
     }
 
     if (isC8FormalScoped(p.profile)) {
@@ -574,6 +580,10 @@ async function verify(p) {
         formal_roi: counts.formal_roi_ledger_v1,
         no_static_roi_without_as_executed: counts.static_customer_roi_without_as_executed,
         verify_api_mode: "structured_json_assertions",
+        optional_legacy_tables: {
+          operation_state_v1: hasOperationStateTable,
+          approval_requests_v1: hasApprovalRequestsTable,
+        },
       },
     };
   });
