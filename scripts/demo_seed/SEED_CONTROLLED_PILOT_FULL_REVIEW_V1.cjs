@@ -425,9 +425,313 @@ async function verifyApi(p, baseUrl) { const base = apiBase(baseUrl); if (!base)
   const fieldJson = await getJson(`/api/v1/reports/field/${FIELD_ID}?tenant_id=${p.tenant}&project_id=${PROJECT_ID}&group_id=${GROUP_ID}`, 'FIELD_REPORT_API_REQUIRED'); const fieldReport = assertFieldReportJson(fieldJson, p.profile);
   return { ok: true, verify_api: true, checked_endpoints: [`GET /api/v1/reports/operation/${FORMAL_OP}`, `GET /api/v1/reports/field/${FIELD_ID}`, `GET /api/v1/as-executed/by-task/${TASK_ID}`, `GET /api/v1/customer/fields/${FIELD_ID}/memory`], as_executed: taskRecord, interim_roi: interim, formal_roi: formalRoi, customer_memory_count: memories.length, operation_report_identifiers: operationReport.identifiers, field_report_learning_summary: fieldReport.learning_summary };
 }
-async function verify(p) { return { ok: true, verify: true, tenant: p.tenant, profile: p.profile, chain_id: p.chain_id, checks: { formal_field_memory: 1, no_static_roi_without_as_executed: 0, verify_api_mode: 'structured_json_assertions' } }; }
-async function exportDb(p) { return exportPlan(p); }
-async function cleanup(p, doApply) { return { ok: true, cleanup: true, apply: Boolean(doApply), tenant: p.tenant, profile: p.profile }; }
-async function verifyClean(p) { return { ok: true, verify_clean: true, tenant: p.tenant, profile: p.profile, counts: {} }; }
-async function main() { const a = parseArgs(process.argv); const p = makePlan(a.tenant, a.profile); if (a.mode === 'dry-run') writeOut(dryRun(p), a.out); else if (a.mode === 'export-json') writeOut(exportPlan(p), a.out); else if (a.mode === 'apply') writeOut(await apply(p, a.baseUrl), a.out); else if (a.mode === 'verify') writeOut(await verify(p), a.out); else if (a.mode === 'verify-api') writeOut(await verifyApi(p, a.baseUrl), a.out); else if (a.mode === 'export-db-json') writeOut(await exportDb(p), a.out); else if (a.mode === 'cleanup') writeOut(await cleanup(p, a.apply), a.out); else if (a.mode === 'verify-clean') writeOut(await verifyClean(p), a.out); else writeOut(dryRun(p), a.out); }
+function uniqueText(values) {
+  return Array.from(new Set((values || []).map((value) => String(value ?? "").trim()).filter(Boolean)));
+}
+
+function plannedOperationIds(p) {
+  const fromTables = (p.tables.operation_state_v1_optional || [])
+    .flatMap((row) => [row.operation_id, row.operation_plan_id]);
+  const fromFacts = (p.facts_by_type.operation_plan_v1 || [])
+    .map((fact) => payloadOf(fact).operation_plan_id || payloadOf(fact).operation_id);
+  return uniqueText([...fromTables, ...fromFacts]);
+}
+
+function plannedApprovalRequestIds(p) {
+  const fromTables = (p.tables.approval_requests_v1 || [])
+    .flatMap((row) => [row.approval_request_id, row.request_id]);
+  const fromFacts = (p.facts_by_type.approval_request_v1 || [])
+    .map((fact) => payloadOf(fact).approval_request_id || payloadOf(fact).request_id);
+  return uniqueText([...fromTables, ...fromFacts]);
+}
+
+function plannedFactIds(p) {
+  return uniqueText((p.facts || []).map((fact) => fact.fact_id));
+}
+
+async function countQuery(c, sql, args = []) {
+  const result = await c.query(sql, args).catch(() => ({ rows: [{ count: 0 }] }));
+  return Number(result.rows?.[0]?.count || 0);
+}
+
+async function relationExists(c, table) {
+  const result = await c.query("SELECT to_regclass($1) AS relation_name", [`public.${table}`]);
+  return Boolean(result.rows?.[0]?.relation_name);
+}
+
+async function deleteQuery(c, sql, args = []) {
+  const result = await c.query(sql, args);
+  return Number(result.rowCount || 0);
+}
+
+async function seedLifecycleCounts(c, p) {
+  const factIds = plannedFactIds(p);
+  const operationIds = plannedOperationIds(p);
+  const approvalRequestIds = plannedApprovalRequestIds(p);
+
+  const factCount = factIds.length
+    ? await countQuery(c, "SELECT count(*)::int AS count FROM facts WHERE fact_id = ANY($1::text[])", [factIds])
+    : 0;
+
+  const operationStateCount = operationIds.length
+    ? await countQuery(c, "SELECT count(*)::int AS count FROM operation_state_v1 WHERE tenant_id=$1 AND operation_id = ANY($2::text[])", [p.tenant, operationIds])
+    : 0;
+
+  const approvalRequestCount = approvalRequestIds.length
+    ? await countQuery(c, "SELECT count(*)::int AS count FROM approval_requests_v1 WHERE tenant_id=$1 AND approval_request_id = ANY($2::text[])", [p.tenant, approvalRequestIds])
+    : 0;
+
+  const prescriptionCount = await countQuery(c,
+    "SELECT count(*)::int AS count FROM prescription_contract_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND (prescription_id=$4 OR recommendation_id=$5)",
+    [p.tenant, PROJECT_ID, GROUP_ID, PRESCRIPTION_ID, RECOMMENDATION_ID],
+  );
+
+  const asExecutedCount = await countQuery(c,
+    "SELECT count(*)::int AS count FROM as_executed_record_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND (task_id=$4 OR receipt_id=$5 OR prescription_id=$6)",
+    [p.tenant, PROJECT_ID, GROUP_ID, TASK_ID, RECEIPT_ID, PRESCRIPTION_ID],
+  );
+
+  const asAppliedCount = await countQuery(c,
+    "SELECT count(*)::int AS count FROM as_applied_map_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND (task_id=$4 OR receipt_id=$5 OR prescription_id=$6)",
+    [p.tenant, PROJECT_ID, GROUP_ID, TASK_ID, RECEIPT_ID, PRESCRIPTION_ID],
+  );
+
+  const formalMemoryCount = await countQuery(c,
+    "SELECT count(*)::int AS count FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND formal_acceptance_id=$4 AND memory_lane='FORMAL_FIELD_MEMORY' AND trust_level='FORMAL_ACCEPTED'",
+    [p.tenant, PROJECT_ID, GROUP_ID, ACCEPTANCE_ID],
+  );
+
+  const formalRoiCount = await countQuery(c,
+    "SELECT count(*)::int AS count FROM roi_ledger_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND formal_acceptance_id=$4 AND source_lane='FORMAL_ACCEPTANCE' AND trust_level='FORMAL_ACCEPTED'",
+    [p.tenant, PROJECT_ID, GROUP_ID, ACCEPTANCE_ID],
+  );
+
+  const staticCustomerRoiWithoutAsExecutedCount = await countQuery(c,
+    "SELECT count(*)::int AS count FROM roi_ledger_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND customer_visible_value=true AND (as_executed_id IS NULL OR btrim(as_executed_id)='')",
+    [p.tenant, PROJECT_ID, GROUP_ID],
+  );
+
+  const deviceObservationCount = await countQuery(c,
+    "SELECT count(*)::int AS count FROM device_observation_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND fact_id LIKE $4",
+    [p.tenant, PROJECT_ID, GROUP_ID, `${p.prefix}_%`],
+  );
+
+  const telemetryCount = await countQuery(c,
+    "SELECT count(*)::int AS count FROM telemetry_index_v1 WHERE tenant_id=$1 AND fact_id LIKE $2",
+    [p.tenant, `${p.prefix}_%`],
+  );
+
+  return {
+    facts: factCount,
+    expected_facts: factIds.length,
+    operation_state_v1: operationStateCount,
+    expected_operation_state_v1: operationIds.length,
+    approval_requests_v1: approvalRequestCount,
+    expected_approval_requests_v1: approvalRequestIds.length,
+    prescription_contract_v1: prescriptionCount,
+    as_executed_record_v1: asExecutedCount,
+    as_applied_map_v1: asAppliedCount,
+    formal_field_memory_v1: formalMemoryCount,
+    formal_roi_ledger_v1: formalRoiCount,
+    static_customer_roi_without_as_executed: staticCustomerRoiWithoutAsExecutedCount,
+    device_observation_index_v1: deviceObservationCount,
+    telemetry_index_v1: telemetryCount,
+  };
+}
+
+async function verify(p) {
+  return withClient(async (c) => {
+    const counts = await seedLifecycleCounts(c, p);
+
+    if (counts.facts < counts.expected_facts) failAssert("SEED_FACTS_MISSING", counts);
+    if (!isC8FormalScoped(p.profile)) {
+      if (counts.operation_state_v1 < counts.expected_operation_state_v1) failAssert("SEED_OPERATION_STATE_MISSING", counts);
+      if (counts.approval_requests_v1 < counts.expected_approval_requests_v1) failAssert("SEED_APPROVAL_REQUESTS_MISSING", counts);
+    }
+
+    if (isC8FormalScoped(p.profile)) {
+      if (counts.prescription_contract_v1 < 1) failAssert("SEED_PRESCRIPTION_CONTRACT_MISSING", counts);
+      if (counts.as_executed_record_v1 < 1) failAssert("SEED_AS_EXECUTED_MISSING", counts);
+      if (counts.as_applied_map_v1 < 1) failAssert("SEED_AS_APPLIED_MISSING", counts);
+      if (counts.formal_field_memory_v1 < 1) failAssert("SEED_FORMAL_FIELD_MEMORY_MISSING", counts);
+      if (counts.formal_roi_ledger_v1 < 1) failAssert("SEED_FORMAL_ROI_MISSING", counts);
+    }
+
+    if (counts.static_customer_roi_without_as_executed > 0) {
+      failAssert("SEED_STATIC_CUSTOMER_ROI_WITHOUT_AS_EXECUTED", counts);
+    }
+
+    return {
+      ok: true,
+      verify: true,
+      tenant: p.tenant,
+      profile: p.profile,
+      chain_id: p.chain_id,
+      counts,
+      checks: {
+        db_backed: true,
+        formal_field_memory: counts.formal_field_memory_v1,
+        formal_roi: counts.formal_roi_ledger_v1,
+        no_static_roi_without_as_executed: counts.static_customer_roi_without_as_executed,
+        verify_api_mode: "structured_json_assertions",
+      },
+    };
+  });
+}
+
+async function exportDb(p) {
+  return withClient(async (c) => {
+    const counts = await seedLifecycleCounts(c, p);
+    const factIds = plannedFactIds(p);
+    const factRows = factIds.length
+      ? (await c.query(
+          "SELECT fact_id, occurred_at, record_json::jsonb->>'type' AS type, record_json::jsonb AS record_json FROM facts WHERE fact_id = ANY($1::text[]) ORDER BY occurred_at, fact_id",
+          [factIds],
+        ).catch(() => ({ rows: [] }))).rows
+      : [];
+
+    return {
+      ok: true,
+      export_db: true,
+      tenant: p.tenant,
+      profile: p.profile,
+      chain_id: p.chain_id,
+      counts,
+      facts: factRows,
+    };
+  });
+}
+
+async function cleanup(p, doApply) {
+  return withClient(async (c) => {
+    const before = await seedLifecycleCounts(c, p);
+
+    if (!doApply) {
+      return {
+        ok: true,
+        cleanup: true,
+        dry_run: true,
+        apply: false,
+        tenant: p.tenant,
+        profile: p.profile,
+        before,
+        note: "pass --apply with --cleanup to execute projection cleanup; append-only facts are not deleted",
+      };
+    }
+
+    await c.query("SELECT pg_advisory_lock(hashtext('CONTROLLED_PILOT_FULL_REVIEW_V1:' || $1::text))", [p.tenant]);
+
+    try {
+      await c.query("BEGIN");
+
+      const operationIds = plannedOperationIds(p);
+      const approvalRequestIds = plannedApprovalRequestIds(p);
+
+      const deleted = {
+        field_memory_v1: await deleteQuery(c,
+          "DELETE FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND (field_id=$4 OR formal_acceptance_id=$5 OR operation_id = ANY($6::text[]) OR task_id=$7 OR recommendation_id=$8 OR prescription_id=$9 OR memory_id=$10)",
+          [p.tenant, PROJECT_ID, GROUP_ID, FIELD_ID, ACCEPTANCE_ID, operationIds, TASK_ID, RECOMMENDATION_ID, PRESCRIPTION_ID, MEMORY_ID],
+        ),
+        roi_ledger_v1: await deleteQuery(c,
+          "DELETE FROM roi_ledger_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND (field_id=$4 OR formal_acceptance_id=$5 OR operation_id = ANY($6::text[]) OR task_id=$7 OR prescription_id=$8 OR roi_ledger_id=$9 OR skill_trace_id=$10)",
+          [p.tenant, PROJECT_ID, GROUP_ID, FIELD_ID, ACCEPTANCE_ID, operationIds, TASK_ID, PRESCRIPTION_ID, ROI_ID, "skill_trace_c8_irrigation_001"],
+        ),
+        device_observation_index_v1: await deleteQuery(c,
+          "DELETE FROM device_observation_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND (fact_id LIKE $4 OR fact_id LIKE $5)",
+          [p.tenant, PROJECT_ID, GROUP_ID, `${p.prefix}_%`, `full_review_seed_${p.tenant}_%`],
+        ),
+        telemetry_index_v1: await deleteQuery(c,
+          "DELETE FROM telemetry_index_v1 WHERE tenant_id=$1 AND (fact_id LIKE $2 OR fact_id LIKE $3)",
+          [p.tenant, `${p.prefix}_%`, `full_review_seed_${p.tenant}_%`],
+        ),
+        as_applied_map_v1: await deleteQuery(c,
+          "DELETE FROM as_applied_map_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND (field_id=$4 OR task_id=$5 OR receipt_id=$6 OR prescription_id=$7)",
+          [p.tenant, PROJECT_ID, GROUP_ID, FIELD_ID, TASK_ID, RECEIPT_ID, PRESCRIPTION_ID],
+        ),
+        as_executed_record_v1: await deleteQuery(c,
+          "DELETE FROM as_executed_record_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND (field_id=$4 OR task_id=$5 OR receipt_id=$6 OR prescription_id=$7)",
+          [p.tenant, PROJECT_ID, GROUP_ID, FIELD_ID, TASK_ID, RECEIPT_ID, PRESCRIPTION_ID],
+        ),
+        prescription_contract_v1: await deleteQuery(c,
+          "DELETE FROM prescription_contract_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND (prescription_id=$4 OR recommendation_id=$5)",
+          [p.tenant, PROJECT_ID, GROUP_ID, PRESCRIPTION_ID, RECOMMENDATION_ID],
+        ),
+        operation_state_v1: operationIds.length && await relationExists(c, "operation_state_v1")
+          ? await deleteQuery(c, "DELETE FROM operation_state_v1 WHERE tenant_id=$1 AND operation_id = ANY($2::text[])", [p.tenant, operationIds])
+          : 0,
+        approval_requests_v1: approvalRequestIds.length && await relationExists(c, "approval_requests_v1")
+          ? await deleteQuery(c, "DELETE FROM approval_requests_v1 WHERE tenant_id=$1 AND approval_request_id = ANY($2::text[])", [p.tenant, approvalRequestIds])
+          : 0,
+      };
+
+      await c.query("COMMIT");
+
+      const after = await seedLifecycleCounts(c, p);
+
+      return {
+        ok: true,
+        cleanup: true,
+        dry_run: false,
+        apply: true,
+        tenant: p.tenant,
+        profile: p.profile,
+        append_only_facts_deleted: false,
+        before,
+        deleted,
+        after,
+      };
+    } catch (e) {
+      await c.query("ROLLBACK").catch(() => {});
+      throw e;
+    } finally {
+      await c.query("SELECT pg_advisory_unlock(hashtext('CONTROLLED_PILOT_FULL_REVIEW_V1:' || $1::text))", [p.tenant]).catch(() => {});
+    }
+  });
+}
+
+async function verifyClean(p) {
+  return withClient(async (c) => {
+    const counts = await seedLifecycleCounts(c, p);
+
+    const blocking = {
+      prescription_contract_v1: counts.prescription_contract_v1,
+      as_executed_record_v1: counts.as_executed_record_v1,
+      as_applied_map_v1: counts.as_applied_map_v1,
+      formal_field_memory_v1: counts.formal_field_memory_v1,
+      formal_roi_ledger_v1: counts.formal_roi_ledger_v1,
+      device_observation_index_v1: counts.device_observation_index_v1,
+      telemetry_index_v1: counts.telemetry_index_v1,
+    };
+
+    const dirty = Object.entries(blocking).filter(([, value]) => Number(value) > 0);
+
+    if (dirty.length) {
+      failAssert("SEED_VERIFY_CLEAN_FAILED", { tenant: p.tenant, profile: p.profile, blocking, counts });
+    }
+
+    return {
+      ok: true,
+      verify_clean: true,
+      tenant: p.tenant,
+      profile: p.profile,
+      counts,
+      append_only_facts_ignored: true,
+    };
+  });
+}
+
+async function main() {
+  const a = parseArgs(process.argv);
+  const p = makePlan(a.tenant, a.profile);
+
+  if (a.mode === 'dry-run') writeOut(dryRun(p), a.out);
+  else if (a.mode === 'export-json') writeOut(exportPlan(p), a.out);
+  else if (a.mode === 'apply') writeOut(await apply(p, a.baseUrl), a.out);
+  else if (a.mode === 'verify') writeOut(await verify(p), a.out);
+  else if (a.mode === 'verify-api') writeOut(await verifyApi(p, a.baseUrl), a.out);
+  else if (a.mode === 'export-db-json') writeOut(await exportDb(p), a.out);
+  else if (a.mode === 'cleanup') writeOut(await cleanup(p, a.apply), a.out);
+  else if (a.mode === 'verify-clean') writeOut(await verifyClean(p), a.out);
+  else writeOut(dryRun(p), a.out);
+}
 main().catch((e) => { console.error(JSON.stringify({ ok: false, error: String(e && e.message ? e.message : e), detail: e?.detail ?? null }, null, 2)); process.exit(1); });

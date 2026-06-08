@@ -92,7 +92,7 @@ services:
       context: .
       dockerfile: docker/runtime.Dockerfile
       args:
-        BUILD_COMMAND: pnpm --filter @geox/contracts build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/server build
+        BUILD_COMMAND: pnpm --filter @geox/contracts build && pnpm --filter @geox/control-kernel build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/skill-registry build && pnpm --filter @geox/server build
     image: geox/server-runtime:local
     container_name: geox-v1-server
     working_dir: /app
@@ -204,7 +204,7 @@ services:
       context: .
       dockerfile: docker/runtime.Dockerfile
       args:
-        BUILD_COMMAND: pnpm --filter @geox/contracts build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/server build
+        BUILD_COMMAND: pnpm --filter @geox/contracts build && pnpm --filter @geox/control-kernel build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/skill-registry build && pnpm --filter @geox/server build
     image: geox/jobs-runtime:local
     container_name: geox-v1-jobs
     working_dir: /app
@@ -238,7 +238,7 @@ services:
       context: .
       dockerfile: docker/runtime.Dockerfile
       args:
-        BUILD_COMMAND: pnpm --filter @geox/contracts build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/executor build
+        BUILD_COMMAND: pnpm --filter @geox/contracts build && pnpm --filter @geox/control-kernel build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/skill-registry build && pnpm --filter @geox/executor build
     image: geox/executor-runtime:local
     working_dir: /app
     init: true

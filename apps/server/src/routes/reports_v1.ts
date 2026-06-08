@@ -364,9 +364,19 @@ async function buildDiagnosticInputsForReportV1(params: {
             c.capabilities::jsonb AS capabilities,
             o.metric,
             o.value_num,
-            o.unit
+            o.unit,
+            COALESCE(
+              NULLIF(UPPER(BTRIM(s.status)), ''),
+              CASE
+                WHEN GREATEST(COALESCE(s.last_heartbeat_ts_ms, 0), COALESCE(s.last_telemetry_ts_ms, 0)) > 0 THEN 'ONLINE'
+                ELSE 'UNKNOWN'
+              END
+            ) AS online_status,
+            s.last_heartbeat_ts_ms,
+            s.last_telemetry_ts_ms
        FROM device_binding_index_v1 b
        LEFT JOIN device_index_v1 d ON d.tenant_id = b.tenant_id AND d.device_id = b.device_id
+       LEFT JOIN device_status_index_v1 s ON s.tenant_id = b.tenant_id AND s.project_id = $2 AND s.group_id = $3 AND s.device_id = b.device_id
        LEFT JOIN device_capability c ON c.tenant_id = b.tenant_id AND c.device_id = b.device_id
        LEFT JOIN LATERAL (
          SELECT metric, value_num, unit
@@ -413,9 +423,9 @@ async function buildDiagnosticInputsForReportV1(params: {
       sensing_role_text: sensingRoleTextForDiagnosticDevice(capabilities),
       capabilities,
       capability_text: capabilityTextForDiagnosticDevice(capabilities),
-      online_status: "ONLINE",
-      last_heartbeat_ts_ms: null,
-      last_telemetry_ts_ms: null,
+      online_status: toText((row as any).online_status) ?? "UNKNOWN",
+      last_heartbeat_ts_ms: toFiniteNumberOrNull((row as any).last_heartbeat_ts_ms),
+      last_telemetry_ts_ms: toFiniteNumberOrNull((row as any).last_telemetry_ts_ms),
       contributed_metrics: contributedMetricsForDiagnosticDevice(capabilities, metric),
       data_sources: ["device_observation_index_v1", "telemetry_observation_v1"],
     };

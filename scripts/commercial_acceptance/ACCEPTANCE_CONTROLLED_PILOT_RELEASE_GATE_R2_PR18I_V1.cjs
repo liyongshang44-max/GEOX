@@ -1,4 +1,79 @@
 #!/usr/bin/env node
+// PR18I_STATIC_REGRESSION_GUARDS_V1
+const __pr18iStaticFsV1 = require("node:fs");
+const __pr18iStaticPathV1 = require("node:path");
+
+function __pr18iReadRepoFileV1(relativePath) {
+  return __pr18iStaticFsV1.readFileSync(__pr18iStaticPathV1.resolve(process.cwd(), relativePath), "utf8");
+}
+
+function __pr18iAssertStaticV1(condition, message) {
+  if (!condition) {
+    throw new Error(`[PR18I_STATIC_REGRESSION_GUARD_FAILED] ${message}`);
+  }
+}
+
+function __pr18iStaticRegressionGuardsV1() {
+  const seedSource = __pr18iReadRepoFileV1("scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs");
+  const gateSource = __pr18iReadRepoFileV1("scripts/commercial_acceptance/ACCEPTANCE_CONTROLLED_PILOT_RELEASE_GATE_R2_PR18I_V1.cjs");
+
+  __pr18iAssertStaticV1(
+    !/async\s+function\s+verify\s*\(\s*p\s*\)\s*\{\s*return\s*\{\s*ok\s*:\s*true[\s\S]{0,240}verify\s*:\s*true/.test(seedSource),
+    "seed verify() must not be a fixed ok response",
+  );
+
+  __pr18iAssertStaticV1(
+    !/async\s+function\s+cleanup\s*\(\s*p\s*,\s*doApply\s*\)\s*\{\s*return\s*\{\s*ok\s*:\s*true[\s\S]{0,260}cleanup\s*:\s*true/.test(seedSource),
+    "seed cleanup() must not be a fixed ok response",
+  );
+
+  __pr18iAssertStaticV1(
+    /async\s+function\s+verify\s*\(\s*p\s*\)[\s\S]*seedLifecycleCounts\s*\(\s*c\s*,\s*p\s*\)/.test(seedSource),
+    "seed verify() must use DB-backed seedLifecycleCounts()",
+  );
+
+  __pr18iAssertStaticV1(
+    /async\s+function\s+cleanup\s*\(\s*p\s*,\s*doApply\s*\)[\s\S]*BEGIN[\s\S]*COMMIT[\s\S]*append_only_facts_deleted\s*:\s*false/.test(seedSource),
+    "seed cleanup() must execute DB cleanup transaction and preserve append-only facts",
+  );
+
+  __pr18iAssertStaticV1(
+    /async\s+function\s+verifyClean\s*\(\s*p\s*\)[\s\S]*SEED_VERIFY_CLEAN_FAILED/.test(seedSource),
+    "seed verifyClean() must assert DB-backed clean state",
+  );
+
+  __pr18iAssertStaticV1(
+    !/async\s+function\s+deleteQuery\s*\([\s\S]*catch\s*\(\s*\(\s*\)\s*=>\s*\(\s*\{\s*rowCount\s*:\s*0\s*\}\s*\)\s*\)/.test(seedSource),
+    "deleteQuery() must not swallow SQL errors as rowCount=0",
+  );
+
+  __pr18iAssertStaticV1(
+    gateSource.includes("pnpm run ci:governance:c8-formal-chain-backend-p0"),
+    "PR18I release gate must include ci:governance:c8-formal-chain-backend-p0",
+  );
+
+  __pr18iAssertStaticV1(
+    /--profile\s+c8-formal-chain[\s\S]*--base-url|--profile",\s*"c8-formal-chain"[\s\S]*--base-url/.test(gateSource),
+    "PR18I release gate must run c8-formal-chain seed runtime",
+  );
+
+  __pr18iAssertStaticV1(
+    /--verify-api[\s\S]*--profile\s+c8-formal-chain|--verify-api"[\s\S]*--profile",\s*"c8-formal-chain"/.test(gateSource),
+    "PR18I release gate must run --verify-api with --profile c8-formal-chain",
+  );
+
+  __pr18iAssertStaticV1(
+    gateSource.includes("CONTROLLED_PILOT_PR18I_PHASE=formal-chain-preflight"),
+    "PR18I release gate must preserve formal-chain preflight phase",
+  );
+}
+
+__pr18iStaticRegressionGuardsV1();
+
+if (process.env.CONTROLLED_PILOT_PR18I_STATIC_ONLY === "1") {
+  console.log("[pr18i-static-regression-guards] PASS");
+  process.exit(0);
+}
 const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -81,11 +156,24 @@ const postFullReviewGates = [
 
 function selectGates() {
   if (PHASE === 'formal-chain-preflight') {
-    return [...commonGates, ...formalChainGates];
+    return [
+      ['c8_seed_dataset_modularity', 'pnpm run ci:governance:c8-seed-dataset-modularity'],
+      ['customer_report_renderer_boundary', 'pnpm run ci:governance:customer-report-renderer-boundary'],
+      ...formalChainGates,
+    ];
   }
 
   if (PHASE === 'post-full-review') {
-    return [...commonGates, ...postFullReviewGates];
+    return [
+      ['controlled_pilot_full_review_seed_static', 'pnpm run acceptance:controlled-pilot:full-review-seed'],
+      ['controlled_pilot_full_review_seed_runtime', `${seedApply} && pnpm run acceptance:controlled-pilot:full-review-seed`],
+      ['scenario_pest_disease_inspection', 'pnpm run ci:scenario:pest-disease-inspection'],
+      ['device_anomaly_controlled_pilot', 'node scripts/agronomy_acceptance/ACCEPTANCE_DEVICE_ANOMALY_CONTROLLED_PILOT_V1.cjs'],
+      ['customer_device_anomaly_report', 'node scripts/frontend_acceptance/ACCEPTANCE_CUSTOMER_DEVICE_ANOMALY_REPORT_V1.cjs'],
+      ['runtime_openapi_sales_critical', 'node scripts/governance_acceptance/ACCEPTANCE_RUNTIME_OPENAPI_SALES_CRITICAL_V1.cjs'],
+      ['server_typecheck', 'pnpm --filter @geox/server typecheck'],
+      ['web_typecheck', 'pnpm --filter @geox/web typecheck'],
+    ];
   }
 
   if (PHASE === 'all') {
