@@ -9,6 +9,7 @@ const files = {
   reportSchema: path.join(root, 'apps/server/src/projections/report_v1.ts'),
   operationReportPage: path.join(root, 'apps/web/src/views/OperationReportPage.tsx'),
   exportBlocks: path.join(root, 'apps/web/src/components/customer/CustomerExportBlocks.tsx'),
+  reportMainVisual: path.join(root, 'apps/web/src/viewmodels/customerReportMainVisualVm.ts'),
   formalCards: path.join(root, 'apps/web/src/components/customer/FormalScenarioCards.tsx'),
 };
 
@@ -47,9 +48,10 @@ function extractFunctionBody(text, signatureStart) {
   const operationReportPage = read(files.operationReportPage);
   const exportBlocks = read(files.exportBlocks);
   const formalCards = read(files.formalCards);
+  const reportMainVisual = read(files.reportMainVisual);
   const pdiSectionBody = extractFunctionBody(operationReportPage, 'function buildPestDiseaseInspectionSections(report: OperationReportV1): PestDiseaseSection[]');
   const pdiAuditBody = extractFunctionBody(operationReportPage, 'function PestDiseaseAuditChain({ report }: { report: OperationReportV1 }): React.ReactElement');
-  const operationExportBody = extractFunctionBody(exportBlocks, 'export function OperationExportBlocks({ vm, report }: { vm: OperationReportPageVm; report?: OperationReportV1 | null }): React.ReactElement');
+  const operationExportBody = extractFunctionBody(exportBlocks, 'export function OperationExportBlocks({');
 
   assertAll(projection, [
     'observation_evidence',
@@ -111,32 +113,41 @@ function extractFunctionBody(text, signatureStart) {
   ], 'FormalScenarioCards PDI summary');
 
   assertAll(exportBlocks, [
+    'buildCustomerOperationReportMainVisualVm',
+    'MainVisualExportBlocks',
+    'mainVisual.rows.map',
+  ], 'Customer export must use report-backed main visual VM');
+  assertNone(exportBlocks, [
     'pdiEvidenceBasisRows',
     'operation_report_v1.pest_disease_inspection.observation_evidence',
+    'buildFormalScenarioVm',
+    'buildEvidenceVm',
+    'customerGuardedStatusText',
+    'customerGuardedEvidenceText',
+    'customerGuardedAcceptanceText',
+  ], 'Customer export must not directly assemble PDI/formal/evidence rows');
+
+  assertAll(reportMainVisual, [
+    'isPestDiseaseInspectionReport',
+    'pest_disease_inspection',
     'observation_evidence',
     'latest_observation',
     'media_refs',
     'captured_at_text',
-    'captured_at_ts',
     'geo_point',
     'device_profile',
     'scout_note',
     'incidence_percent',
     'severity_percent',
     'affected_area_percent',
-    '病虫害巡检观察证据',
+    '巡检对象',
     '图片/媒体证据',
     '采集时间',
-    '采集位置',
-    '采集设备',
-    '现场备注',
-    '发生率',
-    '严重度',
-    '影响面积',
-    '巡检证据通过 ≠ 已执行喷药',
-    '巡检证据通过 ≠ 防治闭环已结束',
-    '正式价值结论或客户可见田块记忆',
-  ], 'Customer export PDI same-source observation evidence');
+    '定位点',
+    '人工复核',
+    '巡检证据验收',
+    '巡检证据通过不代表已执行喷药或防治闭环完成',
+  ], 'CustomerReportMainVisualVm PDI report-backed rows');
 
   const blockedPositiveTreatmentTerms = [
     '已喷药',
@@ -150,7 +161,7 @@ function extractFunctionBody(text, signatureStart) {
   ];
   assertNone(pdiSectionBody, blockedPositiveTreatmentTerms, 'OperationReportPage PDI section treatment-complete forbidden claims');
   assertNone(pdiAuditBody, blockedPositiveTreatmentTerms, 'OperationReportPage PDI audit treatment-complete forbidden claims');
-  assertNone(operationExportBody, blockedPositiveTreatmentTerms, 'Customer export PDI treatment-complete forbidden claims');
+  assertNone(operationExportBody + reportMainVisual, blockedPositiveTreatmentTerms, 'Customer export PDI treatment-complete forbidden claims');
 
   console.log('PASS acceptance customer pest disease inspection report v1', files);
 })();

@@ -97,7 +97,9 @@ assert(/buildCustomerOperationReportMainVisualVm/, exportBlocks, 'operation expo
 assert(/buildCustomerFieldReportMainVisualVm/, exportBlocks, 'field export must use buildCustomerFieldReportMainVisualVm');
 assert(/mainVisual\.rows\.map/, exportBlocks, 'export must render CustomerReportMainVisualVm rows');
 assert(/MainVisualExportBlocks/, exportBlocks, 'export must render through MainVisualExportBlocks');
-assert(/INSUFFICIENT_REPORT/, reportMainVisualVm, 'CustomerReportMainVisualVm must expose INSUFFICIENT_REPORT');
+assert(/INSUFFICIENT_REPORT/, reportMainVisualVm, 'main visual VM must own insufficient report state');
+assert(/缺少正式 report API 数据/, reportMainVisualVm, 'main visual VM must own missing report wording');
+assert(/FORMAL_READY/, reportMainVisualVm, 'main visual VM must own formal-ready state');
 
 // Fallback / limited data must remain review-only.
 if (!(/fallback_limited/.test(trustGate) && /LIMITED_FALLBACK/.test(trustGate) && /return "LIMITED"/.test(trustGate))) failures.push('fallback / limited data must be explicitly handled');

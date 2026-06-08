@@ -214,6 +214,16 @@ function geoPointText(value: any): string {
   return lat && lng ? `${lat}, ${lng}` : "定位点待补充";
 }
 
+function deviceProfileText(value: any): string {
+  if (!value || typeof value !== "object") return "采集设备待补充";
+  return text(value.device_model ?? value.device_type ?? value.device_id) || "采集设备待补充";
+}
+
+function percentEvidenceText(value: unknown, fallback: string): string {
+  const n = numberOrNull(value);
+  return n == null ? fallback : `${formatNumber(n)}%`;
+}
+
 function buildPestDiseaseInspectionMainVisualVm(report: OperationReportV1, technicalRows: Array<{ label: string; value: string }>): CustomerReportMainVisualVm {
   const root = report as any;
   const pdi = root.pest_disease_inspection ?? {};
@@ -235,6 +245,11 @@ function buildPestDiseaseInspectionMainVisualVm(report: OperationReportV1, techn
       { label: "图片/媒体证据", value: mediaEvidenceText(latest.media_refs, pdi.media_count) },
       { label: "采集时间", value: text(latest.captured_at_text ?? latest.captured_at_ts) || "采集时间待补充" },
       { label: "定位点", value: geoPointText(latest.geo_point) },
+      { label: "采集设备", value: deviceProfileText(latest.device_profile) },
+      { label: "现场备注", value: text(latest.scout_note) || "现场备注待补充" },
+      { label: "发生率", value: percentEvidenceText(latest.incidence_percent, "发生率待补充") },
+      { label: "严重度", value: percentEvidenceText(latest.severity_percent, "严重度待补充") },
+      { label: "影响面积", value: percentEvidenceText(latest.affected_area_percent, "影响面积待补充") },
       { label: "人工复核", value: pdi.reviewed_by_human === true ? "已完成人工复核" : pestDiseaseStatusText(pdi.review_status) },
       { label: "巡检证据验收", value: pestDiseaseStatusText(pdi.acceptance_status) },
       { label: "结论边界", value: "巡检证据通过不代表已执行喷药或防治闭环完成" },

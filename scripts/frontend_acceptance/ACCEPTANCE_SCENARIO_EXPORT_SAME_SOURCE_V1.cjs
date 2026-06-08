@@ -71,11 +71,12 @@ function main() {
 
   const reportMainVisual = read(FILES.reportMainVisualVm);
   read(FILES.scenarioLabels);
-  assertContains(exportBlocks, /buildCustomerFieldReportMainVisualVm/, 'CustomerExportBlocks must use buildCustomerFieldReportMainVisualVm', failures);
-  assertContains(exportBlocks, /buildCustomerOperationReportMainVisualVm/, 'CustomerExportBlocks must use buildCustomerOperationReportMainVisualVm', failures);
+  assertContains(exportBlocks, /buildCustomerFieldReportMainVisualVm\s*\(/, 'CustomerExportBlocks must use buildCustomerFieldReportMainVisualVm', failures);
+  assertContains(exportBlocks, /buildCustomerOperationReportMainVisualVm\s*\(/, 'CustomerExportBlocks must use buildCustomerOperationReportMainVisualVm', failures);
   assertContains(exportBlocks, /MainVisualExportBlocks/, 'CustomerExportBlocks must render through MainVisualExportBlocks', failures);
   assertContains(exportBlocks, /mainVisual\.rows\.map/, 'CustomerExportBlocks must render CustomerReportMainVisualVm rows', failures);
   assertContains(reportMainVisual, /INSUFFICIENT_REPORT/, 'CustomerReportMainVisualVm must own insufficient report state', failures);
+  assertContains(reportMainVisual, /缺少正式 report API 数据/, 'CustomerReportMainVisualVm must own missing report wording', failures);
 
   assertNotContains(exportBlocks, /buildFormalScenarioVm/, 'export must not build formal scenario directly', failures);
   assertNotContains(exportBlocks, /buildEvidenceVm/, 'export must not build evidence directly', failures);
