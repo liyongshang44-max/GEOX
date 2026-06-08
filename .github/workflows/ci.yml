@@ -143,6 +143,12 @@ jobs:
           export BASE_URL=http://127.0.0.1:3001
           export API_BASE_URL=http://127.0.0.1:3001
           export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          export ADMIN_TOKEN="${GEOX_AO_ACT_TOKEN}"
+          export AO_ACT_TOKEN="${GEOX_AO_ACT_TOKEN}"
+          export TOKEN_ADMIN="${GEOX_AO_ACT_TOKEN}"
+          export TOKEN="${GEOX_AO_ACT_TOKEN}"
+          export TOKEN_APPROVER="${GEOX_EXECUTOR_TOKEN}"
+          export APPROVER_TOKEN="${GEOX_EXECUTOR_TOKEN}"
           pnpm run ci:controlled-pilot
 
       - name: Apply controlled pilot full review seed
