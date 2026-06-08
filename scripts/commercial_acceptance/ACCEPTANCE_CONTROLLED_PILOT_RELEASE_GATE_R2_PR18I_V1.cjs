@@ -11,7 +11,7 @@ const APPROVER = process.env.TOKEN_APPROVER || process.env.APPROVER_TOKEN || 'ap
 const env = { ...process.env, BASE_URL: BASE, API_BASE_URL: process.env.API_BASE_URL || BASE, TENANT_ID: process.env.TENANT_ID || 'tenantA', PROJECT_ID: process.env.PROJECT_ID || 'projectA', GROUP_ID: process.env.GROUP_ID || 'groupA', ADMIN_TOKEN: ADMIN, TOKEN_ADMIN: process.env.TOKEN_ADMIN || ADMIN, AO_ACT_TOKEN: process.env.AO_ACT_TOKEN || ADMIN, GEOX_AO_ACT_TOKEN: process.env.GEOX_AO_ACT_TOKEN || ADMIN, TOKEN: process.env.TOKEN || ADMIN, TOKEN_APPROVER: APPROVER, APPROVER_TOKEN: process.env.APPROVER_TOKEN || APPROVER, GEOX_EXECUTOR_TOKEN: process.env.GEOX_EXECUTOR_TOKEN || APPROVER };
 const SEED = 'node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs';
 const seedApply = `${SEED} --apply --tenant tenantA --base-url ${BASE}`;
-const c8FormalChainApply = `${SEED} --apply --tenant tenantA --profile c8-formal-chain --base-url ${BASE}`;
+const c8FormalChainApply = `${SEED} --cleanup --apply --tenant tenantA --profile c8-formal-chain && ${SEED} --apply --tenant tenantA --profile c8-formal-chain --base-url ${BASE}`;
 const c8FormalChainVerifyApi = `${SEED} --verify-api --tenant tenantA --profile c8-formal-chain --base-url ${BASE}`;
 const gates = [
   ['runtime_workers', 'pnpm run ci:runtime:workers'],
@@ -44,7 +44,7 @@ for (const [id, command] of gates) {
   console.log(`[controlled-pilot-r2-pr18i] ${ok ? 'PASS' : 'FAIL'} ${id}`);
 }
 const failed = results.filter((r) => !r.ok);
-const lines = ['# Controlled Pilot Readiness Report', '', `Status: ${failed.length ? 'FAIL' : 'PASS'}`, '', '## Required gates', ...results.map((r) => `- ${r.ok ? 'PASS' : 'FAIL'} ${r.id}: ${r.command}`), '', '## PR-18I formal-chain runtime contract', '- full-review seed runtime remains required.', '- c8-formal-chain backend P0 is required.', '- c8-formal-chain seed runtime is required and cannot be replaced by full-review runtime.', '- c8-formal-chain structured verify-api is required.', '', '## Failed gate output tails', failed.length ? failed.map((r) => `### ${r.id}\n\n\`\`\`\n${r.output_tail}\n\`\`\``).join('\n\n') : '- none', ''];
+const lines = ['# Controlled Pilot Readiness Report', '', `Status: ${failed.length ? 'FAIL' : 'PASS'}`, '', '## Required gates', ...results.map((r) => `- ${r.ok ? 'PASS' : 'FAIL'} ${r.id}: ${r.command}`), '', '## PR-18I formal-chain runtime contract', '- full-review seed runtime remains required.', '- c8-formal-chain backend P0 is required.', '- c8-formal-chain seed runtime is required and cannot be replaced by full-review runtime.', '- c8-formal-chain seed runtime performs profile cleanup before apply.', '- c8-formal-chain structured verify-api is required.', '', '## Failed gate output tails', failed.length ? failed.map((r) => `### ${r.id}\n\n\`\`\`\n${r.output_tail}\n\`\`\``).join('\n\n') : '- none', ''];
 fs.mkdirSync(path.dirname(REPORT), { recursive: true });
 fs.writeFileSync(REPORT, `${lines.join('\n')}\n`);
 console.log(JSON.stringify({
