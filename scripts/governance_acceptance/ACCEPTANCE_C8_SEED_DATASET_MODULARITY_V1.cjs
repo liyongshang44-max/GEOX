@@ -6,6 +6,4 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const assert = require('node:assert/strict');
-
-const ROOT = path.resolve
+const
