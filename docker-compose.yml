@@ -26,7 +26,7 @@ services:
       context: .
       dockerfile: docker/runtime.Dockerfile
       args:
-        BUILD_COMMAND: pnpm --filter @geox/contracts build && pnpm --filter @geox/server build
+        BUILD_COMMAND: pnpm --filter @geox/contracts build && pnpm --filter @geox/control-kernel build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/skill-registry build && pnpm --filter @geox/server build
     image: geox/server-runtime:local
     container_name: geox-server
     working_dir: /app
@@ -41,7 +41,8 @@ services:
       NODE_ENV: development
       CI: "1"
       PNPM_STORE_DIR: /pnpm-store
-      GEOX_INTERNAL_BASE_URL: http://server:3000  # Container-internal calls use server:3000; host entrypoint is http://127.0.0.1:3001
+      GEOX_INTERNAL_BASE_URL: http://server:3000
+      GEOX_TOKENS_FILE: /app/config/auth/example_tokens.json  # Container-internal calls use server:3000; host entrypoint is http://127.0.0.1:3001
       GEOX_EVIDENCE_STORAGE_MODE: LOCAL_MIRROR  # local/dev baseline only; commercial baseline must use S3_COMPAT.
       GEOX_EVIDENCE_OBJECT_ROOT: runtime/evidence_object_store_v1
 
