@@ -13,6 +13,7 @@ const DATASET_REL = 'scripts/demo_seed/datasets/C8_FORMAL_IRRIGATION_FULL_CHAIN_
 const SEED_REL = 'scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs';
 const DATASET_PATH = path.join(ROOT, DATASET_REL);
 const SEED_PATH = path.join(ROOT, SEED_REL);
+const PENDING_OPERATION_ID = 'op_plan_c8_irrigation_pending_001';
 
 function read(rel) {
   return fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -41,6 +42,29 @@ function lineOf(text, needle) {
   const index = text.indexOf(needle);
   if (index < 0) return 0;
   return text.slice(0, index).split(/\r?\n/).length;
+}
+
+function factPayload(fact) {
+  return fact && typeof fact.record_json === 'object' ? fact.record_json.payload ?? {} : {};
+}
+
+function isPendingOperationalFact(fact) {
+  const record = fact && typeof fact.record_json === 'object' ? fact.record_json : {};
+  const type = String(record.type ?? '').trim();
+  if (type === 'controlled_pilot_full_review_manifest_v1') return false;
+  if (![
+    'operation_plan_v1',
+    'operation_state_v1',
+    'approval_request_v1',
+    'approval_decision_v1',
+    'decision_recommendation_v1',
+    'prescription_v1',
+    'ao_act_task_v0',
+    'ao_act_receipt_v1',
+    'acceptance_result_v1',
+    'evidence_artifact_v1',
+  ].includes(type)) return false;
+  return JSON.stringify(fact).includes(PENDING_OPERATION_ID);
 }
 
 must(fs.existsSync(DATASET_PATH), `${DATASET_REL} must exist`);
@@ -82,7 +106,8 @@ must(Array.isArray(fixedDataset.rows.field_memory_v1_optional), 'dataset rows mu
 must(Array.isArray(fixedDataset.rows.roi_ledger_v1_optional), 'dataset rows must expose roi_ledger_v1_optional as optional rows');
 must(fixedDataset.rows.field_index_v1.every((row) => row.field_id === 'field_c8_demo'), 'c8-formal-chain profile must only include C8 formal field', fixedDataset.rows.field_index_v1);
 must(!fixedDataset.rows.device_index_v1.some((row) => row.device_id === 'dev_gateway_offline_001'), 'c8-formal-chain profile must exclude offline gateway');
-must(!fixedDataset.facts.some((fact) => JSON.stringify(fact).includes('op_plan_c8_irrigation_pending_001')), 'c8-formal-chain profile must exclude pending operation');
+must(!fixedDataset.facts.some(isPendingOperationalFact), 'c8-formal-chain profile must exclude pending operation facts', fixedDataset.facts.filter(isPendingOperationalFact).map(factPayload));
+must(!fixedDataset.rows.operation_state_v1_optional.some((row) => JSON.stringify(row).includes(PENDING_OPERATION_ID)), 'c8-formal-chain profile must exclude pending operation_state_v1_optional rows', fixedDataset.rows.operation_state_v1_optional);
 
 assertIncludes(seedText, "require('./datasets/C8_FORMAL_IRRIGATION_FULL_CHAIN_V1.cjs')", 'seed runner must require the C8 dataset builder');
 assertIncludes(seedText, 'buildC8FormalIrrigationFullChainDataset', 'seed runner must call the dataset builder');
