@@ -134,6 +134,17 @@ jobs:
           docker run --rm --network host --entrypoint /bin/sh minio/mc:latest -c 'set -eu; mc alias set local http://127.0.0.1:9000 geoxminio ci-pilot-minio-strong-2026; mc ls local; mc stat local/evidence-exports-v1'
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps
 
+      - name: Run Controlled Pilot strict release gate
+        timeout-minutes: 45
+        run: |
+          set -a
+          source .env.ci
+          set +a
+          export BASE_URL=http://127.0.0.1:3001
+          export API_BASE_URL=http://127.0.0.1:3001
+          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
+          pnpm run ci:controlled-pilot
+
       - name: Apply controlled pilot full review seed
         timeout-minutes: 15
         run: |
@@ -195,15 +206,6 @@ jobs:
             exit 1
           fi
           pnpm run ci:frontend:runtime-page-audit
-
-      - name: Run Controlled Pilot strict release gate
-        timeout-minutes: 45
-        run: |
-          set -a
-          source .env.ci
-          set +a
-          export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}"
-          pnpm run ci:controlled-pilot
 
       - name: Run Stage-1 fixture raw sample contract gate
         run: |
