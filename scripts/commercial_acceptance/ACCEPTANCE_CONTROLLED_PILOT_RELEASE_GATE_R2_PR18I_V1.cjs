@@ -6,13 +6,19 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const REPORT = path.join(ROOT, 'docs/audit/CONTROLLED_PILOT_READINESS_REPORT.md');
 const LONG = Number(process.env.CONTROLLED_PILOT_LONG_GATE_TIMEOUT_MS || 24 * 60 * 1000);
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:3001';
+const TENANT_ID = process.env.TENANT_ID || 'tenantA';
+const PROJECT_ID = process.env.PROJECT_ID || 'projectA';
+const GROUP_ID = process.env.GROUP_ID || 'groupA';
+const C8_PENDING_OPERATION_ID = 'op_plan_c8_irrigation_pending_001';
 const ADMIN = process.env.ADMIN_TOKEN || process.env.TOKEN_ADMIN || process.env.AO_ACT_TOKEN || process.env.GEOX_AO_ACT_TOKEN || 'admin_token';
 const APPROVER = process.env.TOKEN_APPROVER || process.env.APPROVER_TOKEN || 'approver_token';
-const env = { ...process.env, BASE_URL: BASE, API_BASE_URL: process.env.API_BASE_URL || BASE, TENANT_ID: process.env.TENANT_ID || 'tenantA', PROJECT_ID: process.env.PROJECT_ID || 'projectA', GROUP_ID: process.env.GROUP_ID || 'groupA', ADMIN_TOKEN: ADMIN, TOKEN_ADMIN: process.env.TOKEN_ADMIN || ADMIN, AO_ACT_TOKEN: process.env.AO_ACT_TOKEN || ADMIN, GEOX_AO_ACT_TOKEN: process.env.GEOX_AO_ACT_TOKEN || ADMIN, TOKEN: process.env.TOKEN || ADMIN, TOKEN_APPROVER: APPROVER, APPROVER_TOKEN: process.env.APPROVER_TOKEN || APPROVER, GEOX_EXECUTOR_TOKEN: process.env.GEOX_EXECUTOR_TOKEN || APPROVER };
+const env = { ...process.env, BASE_URL: BASE, API_BASE_URL: process.env.API_BASE_URL || BASE, TENANT_ID, PROJECT_ID, GROUP_ID, ADMIN_TOKEN: ADMIN, TOKEN_ADMIN: process.env.TOKEN_ADMIN || ADMIN, AO_ACT_TOKEN: process.env.AO_ACT_TOKEN || ADMIN, GEOX_AO_ACT_TOKEN: process.env.GEOX_AO_ACT_TOKEN || ADMIN, TOKEN: process.env.TOKEN || ADMIN, TOKEN_APPROVER: APPROVER, APPROVER_TOKEN: process.env.APPROVER_TOKEN || APPROVER, GEOX_EXECUTOR_TOKEN: process.env.GEOX_EXECUTOR_TOKEN || APPROVER };
 const SEED = 'node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs';
-const seedApply = `${SEED} --apply --tenant tenantA --base-url ${BASE}`;
-const c8FormalChainApply = `${SEED} --cleanup --apply --tenant tenantA --profile c8-formal-chain && ${SEED} --apply --tenant tenantA --profile c8-formal-chain --base-url ${BASE}`;
-const c8FormalChainVerifyApi = `${SEED} --verify-api --tenant tenantA --profile c8-formal-chain --base-url ${BASE}`;
+const seedApply = `${SEED} --apply --tenant ${TENANT_ID} --base-url ${BASE}`;
+const c8FormalChainApply = `${SEED} --cleanup --apply --tenant ${TENANT_ID} --profile c8-formal-chain && ${SEED} --apply --tenant ${TENANT_ID} --profile c8-formal-chain --base-url ${BASE}`;
+const c8FormalChainVerifyApi = `${SEED} --verify-api --tenant ${TENANT_ID} --profile c8-formal-chain --base-url ${BASE}`;
+function dbConfig() { return process.env.DATABASE_URL || process.env.POSTGRES_URL ? { connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL } : { host: process.env.PGHOST || '127.0.0.1', port: Number(process.env.PGPORT || 5433), user: process.env.PGUSER || 'landos', password: process.env.PGPASSWORD || 'landos_pwd', database: process.env.PGDATABASE || 'landos' }; }
+async function cleanupC8PendingProjectionRows() { const { Pool } = require('pg'); const pool = new Pool(dbConfig()); try { await pool.query('DELETE FROM operation_state_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND operation_id=$4', [TENANT_ID, PROJECT_ID, GROUP_ID, C8_PENDING_OPERATION_ID]).catch(() => {}); await pool.query('DELETE FROM approval_requests_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND approval_request_id=$4', [TENANT_ID, PROJECT_ID, GROUP_ID, 'approval_c8_irrigation_pending_001']).catch(() => {}); } finally { await pool.end(); } }
 const gates = [
   ['runtime_workers', 'pnpm run ci:runtime:workers'],
   ['pilot_runtime_security_baseline', 'pnpm run ci:runtime:pilot-security-baseline'],
@@ -23,6 +29,7 @@ const gates = [
   ['c8_formal_chain_backend_p0', 'pnpm run ci:governance:c8-formal-chain-backend-p0'],
   ['controlled_pilot_full_review_seed_static', 'pnpm run acceptance:controlled-pilot:full-review-seed'],
   ['controlled_pilot_full_review_seed_runtime', `${seedApply} && pnpm run acceptance:controlled-pilot:full-review-seed`],
+  ['controlled_pilot_c8_formal_chain_projection_cleanup', cleanupC8PendingProjectionRows],
   ['controlled_pilot_c8_formal_chain_seed_runtime', c8FormalChainApply],
   ['controlled_pilot_c8_formal_chain_verify_api_structured_json', c8FormalChainVerifyApi],
   ['scenario_pest_disease_inspection', 'pnpm run ci:scenario:pest-disease-inspection'],
@@ -35,22 +42,6 @@ const gates = [
   ['web_typecheck', 'pnpm --filter @geox/web typecheck'],
 ];
 function tail(text) { const s = String(text || '').trim(); return s.length > 4000 ? s.slice(s.length - 4000) : s; }
-const results = [];
-for (const [id, command] of gates) {
-  console.log(`[controlled-pilot-r2-pr18i] START ${id}`);
-  const r = spawnSync(command, { cwd: ROOT, shell: true, encoding: 'utf8', env, timeout: LONG, maxBuffer: 64 * 1024 * 1024 });
-  const ok = r.status === 0 && !r.error;
-  results.push({ id, command, ok, exit_code: r.status, output_tail: ok ? '' : tail([r.error && r.error.message, r.stdout, r.stderr].filter(Boolean).join('\n')) });
-  console.log(`[controlled-pilot-r2-pr18i] ${ok ? 'PASS' : 'FAIL'} ${id}`);
-}
-const failed = results.filter((r) => !r.ok);
-const lines = ['# Controlled Pilot Readiness Report', '', `Status: ${failed.length ? 'FAIL' : 'PASS'}`, '', '## Required gates', ...results.map((r) => `- ${r.ok ? 'PASS' : 'FAIL'} ${r.id}: ${r.command}`), '', '## PR-18I formal-chain runtime contract', '- full-review seed runtime remains required.', '- c8-formal-chain backend P0 is required.', '- c8-formal-chain seed runtime is required and cannot be replaced by full-review runtime.', '- c8-formal-chain seed runtime performs profile cleanup before apply.', '- c8-formal-chain structured verify-api is required.', '', '## Failed gate output tails', failed.length ? failed.map((r) => `### ${r.id}\n\n\`\`\`\n${r.output_tail}\n\`\`\``).join('\n\n') : '- none', ''];
-fs.mkdirSync(path.dirname(REPORT), { recursive: true });
-fs.writeFileSync(REPORT, `${lines.join('\n')}\n`);
-console.log(JSON.stringify({
-  status: failed.length ? 'FAIL' : 'PASS',
-  required_gate_count: results.length,
-  failed_gate_ids: failed.map((r) => r.id),
-  formal_chain_gates: ['c8_formal_chain_backend_p0', 'controlled_pilot_c8_formal_chain_seed_runtime', 'controlled_pilot_c8_formal_chain_verify_api_structured_json'],
-}, null, 2));
-if (failed.length) process.exit(1);
+async function runGate(id, command) { console.log(`[controlled-pilot-r2-pr18i] START ${id}`); if (typeof command === 'function') { try { await command(); console.log(`[controlled-pilot-r2-pr18i] PASS ${id}`); return { id, command: '[internal projection cleanup]', ok: true, exit_code: 0, output_tail: '' }; } catch (e) { console.log(`[controlled-pilot-r2-pr18i] FAIL ${id}`); return { id, command: '[internal projection cleanup]', ok: false, exit_code: 1, output_tail: tail(e && (e.stack || e.message || String(e))) }; } } const r = spawnSync(command, { cwd: ROOT, shell: true, encoding: 'utf8', env, timeout: LONG, maxBuffer: 64 * 1024 * 1024 }); const ok = r.status === 0 && !r.error; console.log(`[controlled-pilot-r2-pr18i] ${ok ? 'PASS' : 'FAIL'} ${id}`); return { id, command, ok, exit_code: r.status, output_tail: ok ? '' : tail([r.error && r.error.message, r.stdout, r.stderr].filter(Boolean).join('\n')) }; }
+async function main() { const results = []; for (const [id, command] of gates) results.push(await runGate(id, command)); const failed = results.filter((r) => !r.ok); const lines = ['# Controlled Pilot Readiness Report', '', `Status: ${failed.length ? 'FAIL' : 'PASS'}`, '', '## Required gates', ...results.map((r) => `- ${r.ok ? 'PASS' : 'FAIL'} ${r.id}: ${r.command}`), '', '## PR-18I formal-chain runtime contract', '- full-review seed runtime remains required.', '- c8-formal-chain backend P0 is required.', '- c8-formal-chain seed runtime is required and cannot be replaced by full-review runtime.', '- c8-formal-chain projection cleanup removes pending operation_state rows before formal verification.', '- c8-formal-chain seed runtime performs profile cleanup before apply.', '- c8-formal-chain structured verify-api is required.', '', '## Failed gate output tails', failed.length ? failed.map((r) => `### ${r.id}\n\n\`\`\`\n${r.output_tail}\n\`\`\``).join('\n\n') : '- none', '']; fs.mkdirSync(path.dirname(REPORT), { recursive: true }); fs.writeFileSync(REPORT, `${lines.join('\n')}\n`); console.log(JSON.stringify({ status: failed.length ? 'FAIL' : 'PASS', required_gate_count: results.length, failed_gate_ids: failed.map((r) => r.id), formal_chain_gates: ['c8_formal_chain_backend_p0', 'controlled_pilot_c8_formal_chain_projection_cleanup', 'controlled_pilot_c8_formal_chain_seed_runtime', 'controlled_pilot_c8_formal_chain_verify_api_structured_json'], }, null, 2)); if (failed.length) process.exit(1); }
+main().catch((e) => { console.error(e && (e.stack || e.message || String(e))); process.exit(1); });
