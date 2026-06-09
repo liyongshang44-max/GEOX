@@ -745,15 +745,176 @@ function EvidencePackMetadataBlock({ report }: { report: OperationReportV1 }): R
   return <article className="customerCard"><h3 className="customerCardTitle">证据包元数据</h3><div className="customerGrid2 customerSpacingTopXs"><div><strong>证据包状态：</strong>{customerText(evidencePack.status ?? evidencePack.summary, "证据包摘要待生成")}</div><div><strong>sha256：</strong>{customerText(sha256, "暂无文件校验值")}</div><div><strong>下载状态：</strong>{customerText(evidencePack.download_status, "后端未返回安全下载入口")}</div><div><strong>边界：</strong>只展示后端 report API 返回的证据包元数据。</div></div></article>;
 }
 
+
+function operationReportObservation(root: any, metric: string): any | null {
+  const observations = root?.diagnostic_inputs?.observations;
+  if (!Array.isArray(observations)) return null;
+  return observations.find((item: any) => String(item?.metric ?? "").trim() === metric) ?? null;
+}
+
+function operationReportNumber(value: unknown): number | null {
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function operationReportValueWithUnit(value: unknown, unit?: unknown): string {
+  const n = operationReportNumber(value);
+  const u = text(unit).trim();
+  if (n == null) return "";
+  return u ? String(n) + u : String(n);
+}
+
+function OperationReportWeatherPanel({ report, fallbackContext, loading }: { report: OperationReportV1; fallbackContext: OperationEnvironmentContext | null; loading: boolean }): React.ReactElement {
+  const root = report as any;
+  const forecast72h = operationReportObservation(root, "forecast_rain_72h_mm");
+  const temperatureMax = operationReportObservation(root, "temperature_max_c");
+
+  if (forecast72h) {
+    const rainText = operationReportValueWithUnit(forecast72h.value, forecast72h.unit || "mm");
+    const temperatureText = temperatureMax ? operationReportValueWithUnit(temperatureMax.value, temperatureMax.unit || "℃") : "未纳入本次判断";
+    return (
+      <article className="customerCard">
+        <h3 className="customerCardTitle">天气干扰</h3>
+        <div className="customerWeatherBox customerSpacingTopSm">
+          <div className="customerWeatherHeader">
+            <div>
+              <strong>天气干扰说明</strong>
+              <p>天气数据来自 operation report 的诊断输入，用于解释作业背景，不单独替代验收结论。</p>
+            </div>
+            <span className="customerPill">报告内嵌天气输入</span>
+          </div>
+          <div className="customerGrid4 customerSpacingTopSm">
+            <div className="customerMetricCard"><small>未来 72 小时降雨</small><strong>{rainText || "待补充"}</strong></div>
+            <div className="customerMetricCard"><small>最高气温</small><strong>{temperatureText}</strong></div>
+            <div className="customerMetricCard"><small>数据来源</small><strong>{customerText(forecast72h.source_device_id, "report diagnostic inputs")}</strong></div>
+            <div className="customerMetricCard"><small>用途</small><strong>诊断背景</strong></div>
+          </div>
+        </div>
+      </article>
+    );
+  }
+
+  return (
+    <article className="customerCard">
+      <h3 className="customerCardTitle">天气干扰</h3>
+      <WeatherInterferencePanel context={fallbackContext} loading={loading} />
+    </article>
+  );
+}
+
+function operationReportFieldMemoryItems(report: OperationReportV1): any[] {
+  const root = report as any;
+  const memory = root.field_memory ?? {};
+  const candidates = [
+    memory.field_response_memory,
+    memory.customer_visible_memory,
+    memory.items,
+    memory.memories,
+  ];
+  return candidates.flatMap((value) => Array.isArray(value) ? value : []);
+}
+
+function operationReportFormalMemoryVisible(item: any): boolean {
+  if (!item || typeof item !== "object") return false;
+  if (item.customer_visible_memory === true || item.customer_visible === true || item.customer_visible_eligible === true) return true;
+  const lane = String(item.memory_lane ?? item.lane ?? item.visibility ?? "").toUpperCase();
+  const trust = String(item.trust_level ?? item.status ?? "").toUpperCase();
+  if (/FORMAL|CUSTOMER_VISIBLE|ACCEPTED|PASSED/.test(lane)) return true;
+  if (/FORMAL|ACCEPTED|PASSED/.test(trust)) return true;
+  return false;
+}
+
+function OperationReportFieldMemoryPanel({ report, fieldId, operationId }: { report: OperationReportV1; fieldId: unknown; operationId: unknown }): React.ReactElement {
+  const items = operationReportFieldMemoryItems(report).filter(operationReportFormalMemoryVisible);
+
+  if (!items.length) {
+    return (
+      <article className="customerCard">
+        <h3 className="customerCardTitle">田块记忆</h3>
+        <FieldMemoryPanel fieldId={fieldId} operationId={operationId} embeddedMemory={(report as any).field_memory} compact />
+      </article>
+    );
+  }
+
+  return (
+    <article className="customerCard">
+      <h3 className="customerCardTitle">田块记忆</h3>
+      <div className="customerFieldMemoryPanel isCompact">
+        <div className="customerFieldMemoryHeader">
+          <div>
+            <p className="customerFieldMemorySubtitle">当前展示 operation report 内嵌的正式客户可见田块记忆。</p>
+            <small>来源：formal field memory</small>
+          </div>
+          <span>正式记忆</span>
+        </div>
+        <div className="customerFieldMemoryEntries">
+          {items.map((item, index) => {
+            const learned = customerText(item.customer_text ?? item.learned_text ?? item.summary_text ?? item.text, "已形成正式田块记忆");
+            const summary = customerText(item.summary_text ?? item.customer_text ?? item.learned_text, learned);
+            const confidence = customerText(item.confidence ?? item.confidence_score ?? item.trust_level, "可信度待补充");
+            return (
+              <article key={String(item.memory_id ?? item.memory_code ?? index)} className="customerFieldMemoryEntry">
+                <div className="customerFieldMemoryEntryHead">
+                  <strong>田块响应记忆</strong>
+                  <span>{confidence}</span>
+                </div>
+                <div className="customerFieldMemoryLearned">
+                  <span>系统学到了什么</span>
+                  <p>{learned}</p>
+                </div>
+                <p className="customerFieldMemorySummary">{summary}</p>
+              </article>
+            );
+          })}
+        </div>
+      </div>
+    </article>
+  );
+}
+
 function OperationSpatialExecutionPanel({ report }: { report: OperationReportV1 }): React.ReactElement {
   const root = report as any;
   const plannedGeoJson = reportGeoJson(root, ["planned_geojson", "plan.planned_geojson", "prescription.planned_geojson", "prescription.geometry", "operation_plan.planned_geojson"]);
   const coverageGeoJson = reportGeoJson(root, ["coverage_geojson", "as_applied.coverage_geojson", "as_applied.geometry", "as_applied.coverageGeometry"]);
   const trajectorySegments = reportTrajectorySegments(root);
-  const asApplied = root.as_applied ?? null;
+  const asApplied = root.as_applied ?? {};
+  const application = asApplied.application ?? {};
+  const coveragePercent = firstValue(root, ["as_applied.coverage_percent", "as_applied.coveragePercent", "execution.coverage_percent", "execution.coveragePercent"]);
+  const appliedAmount = firstValue(root, ["as_applied.application.applied_amount", "as_applied.applied_amount", "execution.applied_amount"]);
+  const appliedUnit = firstValue(root, ["as_applied.application.applied_unit", "as_applied.applied_unit", "execution.applied_unit"]);
+  const plannedAmount = firstValue(root, ["as_applied.application.planned_amount", "as_applied.planned_amount", "prescription.amount", "operation_plan.planned_amount"]);
+  const plannedUnit = firstValue(root, ["as_applied.application.planned_unit", "as_applied.planned_unit", "prescription.unit", "operation_plan.planned_unit"]);
+  const hasAsAppliedRecord = !isBlank(coveragePercent) || !isBlank(appliedAmount) || !isBlank(plannedAmount) || Object.keys(application).length > 0;
   const hasSpatialEvidence = Boolean(plannedGeoJson || coverageGeoJson || trajectorySegments.length);
-  return <article className="customerCard"><h3 className="customerCardTitle">空间执行</h3><p className="customerMetricLabel">计划区域、实际覆盖和执行轨迹仅来自 report API；计划-实际偏差待补充证据来源，不自动作为验收证据。</p>{hasSpatialEvidence ? <FieldGisMap polygonGeoJson={null} plannedGeoJson={plannedGeoJson} coverageGeoJson={coverageGeoJson} heatGeoJson={null} markers={[]} trajectorySegments={trajectorySegments} acceptancePoints={[]} labels={{ plannedLayer: "计划区域", coverageLayer: "实际覆盖", operationTrack: "实际执行轨迹" }} /> : <p className="customerMetricLabel customerSpacingTopSm">暂无可渲染空间图层；as-applied 状态：{customerText(asApplied?.coverage_status ?? asApplied?.summary, "实际覆盖待补充")}</p>}</article>;
+
+  return (
+    <article className="customerCard">
+      <h3 className="customerCardTitle">空间执行</h3>
+      <p className="customerMetricLabel">计划区域、实际覆盖和执行轨迹仅来自 report API；没有可渲染图层不等于 as-applied 记录缺失。</p>
+
+      {hasAsAppliedRecord ? (
+        <div className="customerGrid3 customerSpacingTopSm">
+          <div className="customerMetricCard"><small>as-applied 状态</small><strong>已形成记录</strong></div>
+          <div className="customerMetricCard"><small>覆盖</small><strong>{operationReportValueWithUnit(coveragePercent, "%") || "待补充"}</strong></div>
+          <div className="customerMetricCard"><small>实际 / 计划</small><strong>{operationReportValueWithUnit(appliedAmount, appliedUnit) || "待补充"} / {operationReportValueWithUnit(plannedAmount, plannedUnit) || "待补充"}</strong></div>
+        </div>
+      ) : (
+        <p className="customerMetricLabel customerSpacingTopSm">实际覆盖记录待补充。</p>
+      )}
+
+      {hasSpatialEvidence ? (
+        <div className="customerSpacingTopSm">
+          <FieldGisMap polygonGeoJson={null} plannedGeoJson={plannedGeoJson} coverageGeoJson={coverageGeoJson} heatGeoJson={null} markers={[]} trajectorySegments={trajectorySegments} acceptancePoints={[]} labels={{ plannedLayer: "计划区域", coverageLayer: "实际覆盖", operationTrack: "实际执行轨迹" }} />
+        </div>
+      ) : hasAsAppliedRecord ? (
+        <p className="customerMetricLabel customerSpacingTopSm">暂无可渲染空间图层；当前报告已保留 as-applied 数值记录，地图图层待后续补充。</p>
+      ) : (
+        <p className="customerMetricLabel customerSpacingTopSm">暂无可渲染空间图层；当前报告尚未形成 as-applied 数值记录，需执行和验收后补充。</p>
+      )}
+    </article>
+  );
 }
+
 
 export default function OperationReportPage(): React.ReactElement {
   const { operationId = "" } = useParams();
@@ -836,9 +997,9 @@ export default function OperationReportPage(): React.ReactElement {
           <section className="operationMainSectionsGrid">
             <EvidencePackMetadataBlock report={report} />
             <OperationSpatialExecutionPanel report={report} />
-            <article className="customerCard"><h3 className="customerCardTitle">天气干扰</h3><WeatherInterferencePanel context={weatherContext} loading={weatherLoading} /></article>
-            <article className="customerCard"><h3 className="customerCardTitle">田块记忆</h3><FieldMemoryPanel fieldId={vm.operation.fieldId} operationId={operationId} embeddedMemory={(report as any).field_memory} compact /></article>
-            <article id="operation-skill-trace" className="customerCard"><h3 className="customerCardTitle">技能运行记录</h3><p className="customerMetricLabel">operation-skill-trace 技术锚点用于追溯技能 / 规则表现，不直接生成客户正式结论。</p></article>
+            <OperationReportWeatherPanel report={report} fallbackContext={weatherContext} loading={weatherLoading} />
+            <OperationReportFieldMemoryPanel report={report} fieldId={vm.operation.fieldId} operationId={operationId} />
+
           </section>
 
           <section className="operationTechDetailsMuted">
@@ -894,9 +1055,9 @@ export default function OperationReportPage(): React.ReactElement {
         <section className="operationMainSectionsGrid">
           <EvidencePackMetadataBlock report={report} />
           <OperationSpatialExecutionPanel report={report} />
-          <article className="customerCard"><h3 className="customerCardTitle">天气干扰</h3><WeatherInterferencePanel context={weatherContext} loading={weatherLoading} /></article>
-          <article className="customerCard"><h3 className="customerCardTitle">田块记忆</h3><FieldMemoryPanel fieldId={vm.operation.fieldId} operationId={operationId} embeddedMemory={(report as any).field_memory} compact /></article>
-          <article id="operation-skill-trace" className="customerCard"><h3 className="customerCardTitle">技能运行记录</h3><p className="customerMetricLabel">operation-skill-trace 技术锚点用于追溯技能 / 规则表现，不直接生成客户正式结论。</p></article>
+          <OperationReportWeatherPanel report={report} fallbackContext={weatherContext} loading={weatherLoading} />
+          <OperationReportFieldMemoryPanel report={report} fieldId={vm.operation.fieldId} operationId={operationId} />
+
           {mainSections.map((section) => <MainSectionCard key={section.key} section={section} />)}
         </section>
 
