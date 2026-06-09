@@ -10,7 +10,7 @@ const SCREENSHOT_DIR = path.join(ROOT, 'docs/audit/frontend-runtime-page-audit')
 const WEB_BASE_URL = String(process.env.FRONTEND_AUDIT_WEB_BASE_URL || 'http://127.0.0.1:5173').replace(/\/+$/, '');
 const API_BASE_URL = String(process.env.API_BASE_URL || process.env.GEOX_WEB_PROXY_TARGET || 'http://127.0.0.1:3001').replace(/\/+$/, '');
 const DEVTOOLS_DISABLED = !['1', 'true', 'yes', 'on'].includes(String(process.env.GEOX_DEVTOOLS_ENABLED || '').toLowerCase());
-const ACCEPTANCE_TOKEN = String(process.env.GEOX_AO_ACT_TOKEN || process.env.GEOX_ACCEPTANCE_TOKEN || 'tenant_a_admin_token');
+const ACCEPTANCE_TOKEN = String(process.env.FRONTEND_AUDIT_TOKEN || process.env.GEOX_ACCEPTANCE_TOKEN || process.env.ADMIN_TOKEN || 'tenant_a_admin_token');
 const INSTALL_TIMEOUT_MS = Number(process.env.FRONTEND_AUDIT_BROWSER_INSTALL_TIMEOUT_MS || 240000);
 const ROUTE_TIMEOUT_MS = Number(process.env.FRONTEND_AUDIT_ROUTE_TIMEOUT_MS || 45000);
 const AUDIT_TIMEOUT_MS = Number(process.env.FRONTEND_AUDIT_TOTAL_TIMEOUT_MS || 600000);
@@ -30,7 +30,44 @@ function withTimeout(promise,label,timeoutMs){let timer;const timeout=new Promis
 function requestOk(url){return new Promise(resolve=>{const req=http.get(url,res=>{res.resume();resolve(Boolean(res.statusCode&&res.statusCode>=200&&res.statusCode<500));});req.on('error',()=>resolve(false));req.setTimeout(1500,()=>{req.destroy();resolve(false);});});}
 async function waitForHttp(url,timeoutMs){const start=Date.now();while(Date.now()-start<timeoutMs){if(await requestOk(url))return true;await sleep(500);}return false;}
 function ensurePlaywrightChromiumInstalled(){if(process.env.FRONTEND_AUDIT_SKIP_BROWSER_INSTALL==='1')return;const ret=spawnSync('pnpm',['exec','playwright','install','chromium'],{cwd:ROOT,env:process.env,stdio:'inherit',timeout:INSTALL_TIMEOUT_MS});if(ret.error)throw new Error(`playwright chromium install failed: ${ret.error.message||ret.error}`);if(ret.status!==0)throw new Error(`playwright chromium install failed with exit=${ret.status}`);}
-function startWebServerIfNeeded(){if(process.env.FRONTEND_AUDIT_SKIP_WEB_SERVER==='1')return null;const child=spawn('pnpm',['--filter','@geox/web','dev','--','--host','127.0.0.1','--port','5173'],{cwd:ROOT,env:{...process.env,GEOX_WEB_PROXY_TARGET:API_BASE_URL,VITE_API_BASE_URL:'',VITE_API_BASE:'',BROWSER:'none'},stdio:['ignore','pipe','pipe']});child.stdout.on('data',c=>process.stdout.write(`[frontend-audit:web] ${c}`));child.stderr.on('data',c=>process.stderr.write(`[frontend-audit:web] ${c}`));return child;}
+function startWebServerIfNeeded() {
+  if (process.env.FRONTEND_AUDIT_SKIP_WEB_SERVER === '1') return null;
+
+  const child = spawn(
+    'pnpm',
+    ['--filter', '@geox/web', 'dev', '--', '--host', '127.0.0.1', '--port', '5173', '--strictPort'],
+    {
+      cwd: ROOT,
+      env: {
+        ...process.env,
+        GEOX_WEB_PROXY_TARGET: API_BASE_URL,
+        VITE_API_BASE_URL: '',
+        VITE_API_BASE: '',
+        BROWSER: 'none',
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    },
+  );
+
+  child.stdout.on('data', (c) => process.stdout.write('[frontend-audit:web] ' + String(c)));
+  child.stderr.on('data', (c) => process.stderr.write('[frontend-audit:web] ' + String(c)));
+
+  return child;
+}
+
+function stopWebServer(child) {
+  if (!child) return;
+
+  try {
+    if (process.platform === 'win32' && child.pid) {
+      spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+      return;
+    }
+
+    child.kill('SIGTERM');
+  } catch {}
+}
+
 function safeText(value,max=500){return String(value||'').replace(/\s+/g,' ').trim().slice(0,max);}
 function routeSlug(route){return route.replace(/^\//,'').replace(/[^a-z0-9_-]+/gi,'_')||'root';}
 function addFailure(result,message){result.failures.push(message);}
@@ -40,5 +77,5 @@ async function auditDashboard1366Layout(page,result){if(result.route!=='/custome
 async function auditRoute(browser,route){try{return await withTimeout(auditRouteUnsafe(browser,route),`audit route ${route}`,ROUTE_TIMEOUT_MS);}catch(error){const result=baseResult(route);addFailure(result,`route audit timeout/exception before report: ${safeText(error&& (error.stack||error.message||error),900)}`);result.diagnosis=result.failures;return result;}}
 async function auditRouteUnsafe(browser,route){const result=baseResult(route);result.pass=true;const context=await browser.newContext({viewport:{width:1440,height:1100}});await context.addInitScript(({token})=>{const tenantContext={tenant_id:'tenantA',project_id:'projectA',group_id:'groupA'};const meta={role:'admin',actor_id:'frontend-runtime-audit',token_id:'frontend-runtime-audit',scopes:['operator.read','operator.write','customer.read','security.admin','ao_act.task.write','ao_act.receipt.write']};window.localStorage.setItem('geox_ao_act_token',token);window.sessionStorage.setItem('geox_ao_act_token',token);window.localStorage.setItem('geox_tenant_context',JSON.stringify(tenantContext));window.sessionStorage.setItem('geox_tenant_context',JSON.stringify(tenantContext));window.localStorage.setItem('geox_session_meta',JSON.stringify(meta));window.sessionStorage.setItem('geox_session_meta',JSON.stringify(meta));},{token:ACCEPTANCE_TOKEN});const page=await context.newPage();page.on('console',msg=>{const t=safeText(msg.text(),800);if(msg.type()==='error')result.consoleErrors.push(t);if(msg.type()==='warning'){result.consoleWarnings.push(t);if(DUPLICATE_KEY_RE.test(t))addFailure(result,`React duplicate key warning: ${t}`);}});page.on('pageerror',err=>result.consoleErrors.push(safeText(err.stack||err.message||err,800)));page.on('response',res=>{const url=res.url();const status=res.status();if(url.includes('/api/')&&(status===404||status>=500))result.networkErrors.push(`${status} ${url}`);if(DEVTOOLS_DISABLED&&route==='/dev/flight-table'&&url.includes('/api/v1/dev/flight-table/'))addFailure(result,`devtools disabled but flight table dev API was requested: ${url}`);});try{await page.goto(`${WEB_BASE_URL}${route}`,{waitUntil:'domcontentloaded',timeout:20000});await page.waitForLoadState('networkidle',{timeout:5000}).catch(()=>undefined);await page.waitForTimeout(500);await auditDashboard1366Layout(page,result);const loadingStillVisible=await page.locator('body').evaluate((body,pattern)=>new RegExp(pattern,'i').test(body.innerText||''),LOADING_RE.source).catch(()=>true);if(loadingStillVisible)await page.waitForTimeout(10000);const bodyText=await page.locator('body').innerText({timeout:5000}).catch(()=>'');const text=safeText(bodyText,2000);result.visibleTextSample=safeText(text,600);assertNoCustomerRawVisibleText(bodyText,result);if(!text||text.length<VISIBLE_TEXT_MIN_LENGTH)addFailure(result,`body text is empty or too short (${text.length})`);if(ROUTE_ERROR_RE.test(text))addFailure(result,'route runtime error text detected');if(LOADING_RE.test(text))addFailure(result,'loading text still visible after 10 seconds');if(OPERATOR_ROUTES.has(route)&&!EXPLICIT_OPERATOR_STATE.test(text))addFailure(result,'operator page does not expose explicit main content state');for(const error of result.consoleErrors)addFailure(result,`console.error/pageerror: ${error}`);for(const networkError of result.networkErrors)addFailure(result,`/api 404/5xx response: ${networkError}`);}catch(error){addFailure(result,`navigation/audit exception: ${safeText(error&&(error.stack||error.message||error),900)}`);}finally{fs.mkdirSync(SCREENSHOT_DIR,{recursive:true});const screenshotRel=`docs/audit/frontend-runtime-page-audit/${routeSlug(route)}.png`;result.screenshotPath=screenshotRel;await page.screenshot({path:path.join(ROOT,screenshotRel),fullPage:true}).catch(error=>{result.warnings.push(`screenshot failed: ${safeText(error.message||error)}`);});await context.close().catch(()=>undefined);}result.pass=result.failures.length===0;result.diagnosis=result.pass?['runtime page audit passed']:result.failures;if(result.layoutDiagnosis)result.diagnosis.unshift(result.layoutDiagnosis);return result;}
 function writeReport(results){fs.mkdirSync(path.dirname(REPORT_PATH),{recursive:true});const lines=[];lines.push('# Frontend Runtime Page Audit Report','',`Generated at: ${new Date().toISOString()}`,`Web base URL: ${WEB_BASE_URL}`,`API proxy target: ${API_BASE_URL}`,`Devtools disabled: ${DEVTOOLS_DISABLED?'yes':'no'}`,`Routes audited: ${ROUTES.length}`,'','| route | status | screenshot | diagnosis |','| --- | --- | --- | --- |');for(const r of results)lines.push(`| \`${r.route}\` | ${r.pass?'PASS':'FAIL'} | \`${r.screenshotPath}\` | ${safeText(r.diagnosis.join('; '),180).replace(/\|/g,'/')} |`);lines.push('');for(const r of results)lines.push(`## ${r.route}`,'',`- pass/fail: ${r.pass?'PASS':'FAIL'}`,`- screenshot path: \`${r.screenshotPath}\``,`- visible text sample: ${r.visibleTextSample?`\`${r.visibleTextSample.replace(/`/g,"'")}\``:'_empty_'}`,r.layoutDiagnosis?`- layout diagnosis: ${r.layoutDiagnosis}`:'- layout diagnosis: n/a',`- failures:\n${r.failures.length?r.failures.map(x=>`  - ${safeText(x,350)}`).join('\n'):'  - none'}`,'');fs.writeFileSync(REPORT_PATH,`${lines.join('\n')}\n`);}
-async function main(){let web=null;let browser=null;const results=[];try{ensurePlaywrightChromiumInstalled();web=startWebServerIfNeeded();if(!(await waitForHttp(WEB_BASE_URL,60000)))throw new Error(`web not reachable: ${WEB_BASE_URL}`);const{chromium}=require('@playwright/test');browser=await chromium.launch({headless:true});for(const route of ROUTES)results.push(await auditRoute(browser,route));}finally{if(browser)await browser.close().catch(()=>undefined);if(results.length)writeReport(results);if(web)web.kill('SIGTERM');}if(results.some(x=>!x.pass))process.exit(1);console.log('[frontend-runtime-audit] PASS');}
+async function main(){let web=null;let browser=null;const results=[];try{ensurePlaywrightChromiumInstalled();web=startWebServerIfNeeded();if(!(await waitForHttp(WEB_BASE_URL,60000)))throw new Error(`web not reachable: ${WEB_BASE_URL}`);const{chromium}=require('@playwright/test');browser=await chromium.launch({headless:true});for(const route of ROUTES)results.push(await auditRoute(browser,route));}finally{if(browser)await browser.close().catch(()=>undefined);if(results.length)writeReport(results);if(web)stopWebServer(web);}if(results.some(x=>!x.pass))process.exit(1);console.log('[frontend-runtime-audit] PASS');}
 withTimeout(main(),'frontend runtime audit',AUDIT_TIMEOUT_MS).catch(error=>{const fallback=baseResult('__audit_runner__');addFailure(fallback,`frontend runtime audit runner failed before route report: ${safeText(error&&(error.stack||error.message||error),900)}`);writeReport([fallback]);console.error('[frontend-runtime-audit] FAIL');console.error(error);process.exit(1);});

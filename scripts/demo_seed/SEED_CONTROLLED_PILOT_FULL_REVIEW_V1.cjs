@@ -405,7 +405,75 @@ function getAsExecutedList(json) { if (Array.isArray(json?.items)) return json.i
 function getAsApplied(record, json) { return record?.as_applied ?? record?.as_applied_map ?? json?.as_applied ?? json?.as_applied_map ?? null; }
 function assertAsExecuted(record, asApplied) { nonEmpty(record?.as_executed_id, 'AS_EXECUTED_ID_REQUIRED'); eq(record?.task_id, TASK_ID, 'AS_EXECUTED_TASK_ID_MISMATCH'); eq(record?.receipt_id, RECEIPT_ID, 'AS_EXECUTED_RECEIPT_ID_MISMATCH'); eq(record?.field_id, FIELD_ID, 'AS_EXECUTED_FIELD_ID_MISMATCH'); numberEq(record?.planned?.amount, 22, 'AS_EXECUTED_PLANNED_AMOUNT_MISMATCH'); numberEq(record?.executed?.amount, 21.6, 'AS_EXECUTED_EXECUTED_AMOUNT_MISMATCH'); eq(record?.executed?.status ?? record?.status, 'CONFIRMED', 'AS_EXECUTED_STATUS_MISMATCH'); eq(asApplied?.field_id, FIELD_ID, 'AS_APPLIED_FIELD_ID_MISMATCH'); numberEq(asApplied?.coverage?.coverage_percent ?? asApplied?.coverage_percent, 100, 'AS_APPLIED_COVERAGE_MISMATCH'); }
 function assertOperationReportJson(json) { const report = json?.operation_report_v1; assertJson(report && typeof report === 'object', 'OPERATION_REPORT_JSON_REQUIRED', json); const ids = report.identifiers ?? {}; eq(ids.field_id, FIELD_ID, 'OPERATION_FIELD_ID_MISMATCH'); eq(ids.recommendation_id, RECOMMENDATION_ID, 'OPERATION_RECOMMENDATION_ID_MISMATCH'); eq(ids.approval_id, APPROVAL_ID, 'OPERATION_APPROVAL_ID_MISMATCH'); eq(ids.receipt_id, RECEIPT_ID, 'OPERATION_RECEIPT_ID_MISMATCH'); eq(ids.prescription_id, PRESCRIPTION_ID, 'OPERATION_PRESCRIPTION_ID_MISMATCH'); nonEmpty(ids.as_executed_id, 'OPERATION_AS_EXECUTED_ID_REQUIRED'); eq(report.approval?.actor_id, 'tok_admin_actor', 'OPERATION_APPROVAL_ACTOR_ID_MISMATCH'); eq(report.approval?.actor_name, '运营管理员', 'OPERATION_APPROVAL_ACTOR_NAME_MISMATCH'); assertMetricSet(report.diagnostic_inputs?.observations, REQUIRED_DIAGNOSTIC_METRICS, 'OPERATION_DIAGNOSTIC_OBSERVATION_MISSING'); eq(report.prescription?.prescription_id, PRESCRIPTION_ID, 'OPERATION_PRESCRIPTION_ID_BLOCK_MISMATCH'); eq(report.as_executed?.status, 'CONFIRMED', 'OPERATION_AS_EXECUTED_STATUS_MISMATCH'); numberEq(report.as_applied?.coverage_percent, 100, 'OPERATION_AS_APPLIED_COVERAGE_MISMATCH'); eq(report.formal_scenario?.customer_visible_eligible, true, 'OPERATION_FORMAL_SCENARIO_CUSTOMER_VISIBLE_MISMATCH'); eq(report.roi_ledger?.summary?.has_customer_visible_value, true, 'OPERATION_ROI_CUSTOMER_VALUE_MISMATCH'); assertJson(Array.isArray(report.field_memory?.field_response_memory) && report.field_memory.field_response_memory.length >= 1, 'OPERATION_FIELD_MEMORY_MISSING', report.field_memory); return report; }
-function assertFieldReportJson(json, profile = 'full-review') { const report = json?.field_report_v1; assertJson(report && typeof report === 'object', 'FIELD_REPORT_JSON_REQUIRED', json); eq(report.field?.field_id, FIELD_ID, 'FIELD_REPORT_FIELD_ID_MISMATCH'); numberEq(report.field_context?.area_mu, 30, 'FIELD_REPORT_AREA_MU_MISMATCH'); eq(report.field_context?.boundary_status, 'BOUNDARY_AVAILABLE', 'FIELD_REPORT_BOUNDARY_STATUS_MISMATCH'); eq(report.field_context?.crop_code, 'corn', 'FIELD_REPORT_CROP_CODE_MISMATCH'); eq(report.field_context?.crop_name, '玉米', 'FIELD_REPORT_CROP_NAME_MISMATCH'); eq(report.field_context?.season_id, SEASON_ID, 'FIELD_REPORT_SEASON_ID_MISMATCH'); assertJson(Array.isArray(report.sensing_summary?.devices) && report.sensing_summary.devices.length >= 3, 'FIELD_REPORT_SENSING_DEVICES_MISMATCH', report.sensing_summary?.devices); assertMetricSet(report.sensing_summary?.observations, REQUIRED_DIAGNOSTIC_METRICS, 'FIELD_REPORT_SENSING_OBSERVATION_MISSING'); eq(report.formal_chain_summary?.formal_operations, 1, 'FIELD_REPORT_FORMAL_OPERATION_COUNT_MISMATCH'); eq(report.value_summary?.has_customer_visible_value, true, 'FIELD_REPORT_CUSTOMER_VALUE_MISMATCH'); assertJson(Number(report.learning_summary?.formal_memory_count ?? 0) >= 1, 'FIELD_REPORT_FORMAL_MEMORY_COUNT_MISMATCH', report.learning_summary); const pendingOps = Number(report.pending_chain_summary?.pending_operations ?? -1); if (profile === 'c8-formal-chain') eq(pendingOps, 0, 'FIELD_REPORT_C8_PENDING_OPERATION_COUNT_MISMATCH'); else assertJson(pendingOps >= 1, 'FIELD_REPORT_FULL_REVIEW_PENDING_OPERATION_COUNT_MISMATCH', report.pending_chain_summary); return report; }
+function assertFieldReportJson(json, profile = 'full-review') {
+  const report = json?.field_report_v1;
+
+  assertJson(report && typeof report === 'object', 'FIELD_REPORT_JSON_REQUIRED', json);
+  eq(report.field?.field_id, FIELD_ID, 'FIELD_REPORT_FIELD_ID_MISMATCH');
+
+  numberEq(report.field_context?.area_mu, 30, 'FIELD_REPORT_AREA_MU_MISMATCH');
+  eq(report.field_context?.boundary_status, 'BOUNDARY_AVAILABLE', 'FIELD_REPORT_BOUNDARY_STATUS_MISMATCH');
+  eq(report.field_context?.crop_code, 'corn', 'FIELD_REPORT_CROP_CODE_MISMATCH');
+  eq(report.field_context?.crop_name, '玉米', 'FIELD_REPORT_CROP_NAME_MISMATCH');
+  eq(report.field_context?.season_id, SEASON_ID, 'FIELD_REPORT_SEASON_ID_MISMATCH');
+
+  assertJson(
+    Array.isArray(report.sensing_summary?.devices) && report.sensing_summary.devices.length >= 3,
+    'FIELD_REPORT_SENSING_DEVICES_MISMATCH',
+    report.sensing_summary?.devices,
+  );
+  assertMetricSet(report.sensing_summary?.observations, REQUIRED_DIAGNOSTIC_METRICS, 'FIELD_REPORT_SENSING_OBSERVATION_MISSING');
+
+  eq(report.projection_source, 'GUARDED_REPORT', 'FIELD_REPORT_PROJECTION_SOURCE_MISMATCH');
+  eq(report.customer_visible_eligible, true, 'FIELD_REPORT_CUSTOMER_VISIBLE_ELIGIBLE_MISMATCH');
+  assertJson(report.fallback_limited !== true, 'FIELD_REPORT_MUST_NOT_BE_FALLBACK_LIMITED', report);
+
+  assertJson(
+    Number(report.formal_chain_summary?.formal_operations ?? 0) >= 1,
+    'FIELD_REPORT_FORMAL_OPERATION_COUNT_MISMATCH',
+    report.formal_chain_summary,
+  );
+  assertJson(
+    Number(report.formal_chain_summary?.customer_visible_value_records ?? 0) >= 1,
+    'FIELD_REPORT_FORMAL_VALUE_RECORD_MISMATCH',
+    report.formal_chain_summary,
+  );
+  assertJson(
+    Number(report.formal_chain_summary?.formal_field_memory_records ?? 0) >= 1,
+    'FIELD_REPORT_FORMAL_MEMORY_RECORD_MISMATCH',
+    report.formal_chain_summary,
+  );
+  eq(report.formal_chain_summary?.status, 'HAS_FORMAL_RESULTS', 'FIELD_REPORT_FORMAL_CHAIN_STATUS_MISMATCH');
+
+  eq(report.value_summary?.has_customer_visible_value, true, 'FIELD_REPORT_CUSTOMER_VALUE_MISMATCH');
+  assertJson(
+    Number(report.learning_summary?.formal_memory_count ?? 0) >= 1,
+    'FIELD_REPORT_FORMAL_MEMORY_COUNT_MISMATCH',
+    report.learning_summary,
+  );
+
+  const pendingOps = Number(report.pending_chain_summary?.pending_operations ?? -1);
+
+  if (profile === 'c8-formal-chain') {
+    assertJson(pendingOps >= 0, 'FIELD_REPORT_C8_PENDING_OPERATION_COUNT_INVALID', report.pending_chain_summary);
+
+    if (pendingOps > 0) {
+      eq(
+        report.overall_customer_status,
+        'FORMAL_RESULTS_WITH_PENDING_ITEMS',
+        'FIELD_REPORT_PENDING_MUST_NOT_DOWNGRADE_FORMAL_RESULTS',
+      );
+    }
+  } else {
+    assertJson(
+      pendingOps >= 1,
+      'FIELD_REPORT_FULL_REVIEW_PENDING_OPERATION_COUNT_MISMATCH',
+      report.pending_chain_summary,
+    );
+  }
+
+  return report;
+}
 function assertCustomerMemoryJson(json, derivedMemoryId = null) { const memories = json?.items || json?.memories || []; assertJson(Array.isArray(memories) && memories.length >= 1, 'CUSTOMER_FORMAL_MEMORY_REQUIRED', json); let sawDerived = false; for (const item of memories) { eq(item.field_id, FIELD_ID, 'CUSTOMER_MEMORY_FIELD_ID_MISMATCH'); eq(item.formal_acceptance_id, ACCEPTANCE_ID, 'CUSTOMER_MEMORY_FORMAL_ACCEPTANCE_MISMATCH'); assertJson(item.memory_lane !== 'TECHNICAL_SKILL_MEMORY' && item.trust_level !== 'TECHNICAL_SIGNAL', 'CUSTOMER_MEMORY_TECHNICAL_LEAK', item); assertJson(item.compatibility_fallback !== true && item.projection_support_only !== true, 'CUSTOMER_MEMORY_STATIC_COMPATIBILITY_ROW_LEAK', item); if (!derivedMemoryId || item.memory_id === derivedMemoryId) sawDerived = true; } assertJson(sawDerived, 'CUSTOMER_MEMORY_DERIVED_ROW_MISSING', { derivedMemoryId, memories }); return memories; }
 function isInterimRoiForAsExecuted(row, asExecutedId) { return Boolean(row && row.source_lane === 'AS_EXECUTED_SIGNAL' && row.trust_level === 'INTERIM_SUPPORTED' && row.customer_visible_value === false && row.as_executed_id === asExecutedId); }
 function assertInterimRoi(rows, asExecutedId, detail) { const interim = (Array.isArray(rows) ? rows : []).find((row) => isInterimRoiForAsExecuted(row, asExecutedId)); assertJson(Boolean(interim), 'ROI_INTERIM_SIGNAL_REQUIRED', detail || { as_executed_id: asExecutedId, roi_ledgers: rows }); return interim; }

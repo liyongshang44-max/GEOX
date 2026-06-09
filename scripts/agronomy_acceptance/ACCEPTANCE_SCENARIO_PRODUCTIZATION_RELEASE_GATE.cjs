@@ -7,6 +7,7 @@ const checks = [
   { dir: "../agronomy_acceptance", file: "ACCEPTANCE_SCENARIO_REPORT_PROJECTION_V1.cjs" },
   { dir: "../frontend_acceptance", file: "ACCEPTANCE_CUSTOMER_FORMAL_SCENARIO_VM_V1.cjs" },
   { dir: "../frontend_acceptance", file: "ACCEPTANCE_CUSTOMER_FORMAL_SCENARIO_REPORT_V1.cjs" },
+  { dir: "../frontend_acceptance", file: "ACCEPTANCE_FRONTEND_RUNTIME_PAGE_AUDIT_V1.cjs" },
   { dir: "../frontend_acceptance", file: "ACCEPTANCE_CUSTOMER_PRODUCT_LANGUAGE_V1.cjs" },
   { dir: "../frontend_acceptance", file: "ACCEPTANCE_OPERATOR_PRODUCT_LANGUAGE_V1.cjs" },
   { dir: "../frontend_acceptance", file: "ACCEPTANCE_OPERATOR_DEVICE_OFFLINE_WORKFLOW_V1.cjs" },
