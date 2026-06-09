@@ -167,7 +167,24 @@ assertRuntime(guardedField.value_summary.has_customer_visible_value === true, 'f
 })();
 `;
 
-const runtime = spawnSync('pnpm', ['--filter', '@geox/server', 'exec', 'tsx', '-e', fixture], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
-if (runtime.status !== 0) { process.stderr.write(runtime.stdout || ''); process.stderr.write(runtime.stderr || ''); fail('runtime fixture failed'); }
+const runtimeFixtureFile = path.join(root, 'apps/server/customer_dashboard_projection_trust_fixture.mjs');
+
+fs.writeFileSync(runtimeFixtureFile, fixture, 'utf8');
+
+const runtime = spawnSync(
+  'pnpm',
+  ['--filter', '@geox/server', 'exec', 'tsx', 'customer_dashboard_projection_trust_fixture.mjs'],
+  { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], shell: false },
+);
+
+try {
+  fs.rmSync(runtimeFixtureFile, { force: true });
+} catch {}
+
+if (runtime.status !== 0) {
+  process.stderr.write(runtime.stdout || '');
+  process.stderr.write(runtime.stderr || '');
+  fail('runtime fixture failed');
+}
 
 console.log('[customer-dashboard-projection-trust] PASS');
