@@ -177,7 +177,16 @@ function selectGates() {
   }
 
   if (PHASE === 'all') {
-    return [...commonGates, ...formalChainGates, ...postFullReviewGates];
+    return [
+      ['runtime_workers', 'pnpm run ci:runtime:workers'],
+      ['pilot_runtime_security_baseline', 'pnpm run ci:runtime:pilot-security-baseline'],
+      ['c8_seed_dataset_modularity', 'pnpm run ci:governance:c8-seed-dataset-modularity'],
+      ['customer_report_renderer_boundary', 'pnpm run ci:governance:customer-report-renderer-boundary'],
+      ...formalChainGates,
+      ['base_contract_p0', 'pnpm run ci:base-contract:p0'],
+      ['formal_operation_field_binding', 'pnpm run ci:governance:formal-operation-field-binding'],
+      ...postFullReviewGates,
+    ];
   }
 
   throw new Error(`Unsupported CONTROLLED_PILOT_PR18I_PHASE: ${PHASE}`);
