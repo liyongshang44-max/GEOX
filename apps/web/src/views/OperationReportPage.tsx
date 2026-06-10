@@ -766,12 +766,14 @@ function operationReportValueWithUnit(value: unknown, unit?: unknown): string {
 
 function OperationReportWeatherPanel({ report, fallbackContext, loading }: { report: OperationReportV1; fallbackContext: OperationEnvironmentContext | null; loading: boolean }): React.ReactElement {
   const root = report as any;
+  const weatherSummary = root.weather_summary ?? {};
   const forecast72h = operationReportObservation(root, "forecast_rain_72h_mm");
   const temperatureMax = operationReportObservation(root, "temperature_max_c");
 
-  if (forecast72h) {
-    const rainText = operationReportValueWithUnit(forecast72h.value, forecast72h.unit || "mm");
-    const temperatureText = temperatureMax ? operationReportValueWithUnit(temperatureMax.value, temperatureMax.unit || "℃") : "未纳入本次判断";
+  if (forecast72h || weatherSummary?.narrative) {
+    const rainText = operationReportValueWithUnit(weatherSummary.rainfall_forecast_mm ?? forecast72h?.value, forecast72h?.unit || "mm");
+    const temperatureText = operationReportValueWithUnit(weatherSummary.max_temperature_c ?? temperatureMax?.value, temperatureMax?.unit || "℃") || "未纳入本次判断";
+    const narrative = customerText(weatherSummary.narrative, "天气输入已纳入本次农事判断。");
     return (
       <article className="customerCard">
         <h3 className="customerCardTitle">天气干扰</h3>
@@ -786,8 +788,7 @@ function OperationReportWeatherPanel({ report, fallbackContext, loading }: { rep
           <div className="customerGrid4 customerSpacingTopSm">
             <div className="customerMetricCard"><small>未来 72 小时降雨</small><strong>{rainText || "待补充"}</strong></div>
             <div className="customerMetricCard"><small>最高气温</small><strong>{temperatureText}</strong></div>
-            <div className="customerMetricCard"><small>数据来源</small><strong>{customerText(forecast72h.source_device_id, "report diagnostic inputs")}</strong></div>
-            <div className="customerMetricCard"><small>用途</small><strong>诊断背景</strong></div>
+            <div className="customerMetricCard customerMetricCardWide"><small>诊断参考</small><strong>{narrative}</strong></div>
           </div>
         </div>
       </article>

@@ -145,6 +145,11 @@ export type OperationReportV1 = {
     objective_text: string | null;
   };
   diagnostic_inputs?: DiagnosticInputsV1;
+  weather_summary?: {
+    rainfall_forecast_mm: number | null;
+    max_temperature_c: number | null;
+    narrative: string | null;
+  } | null;
   operation_title: string | null;
   customer_title: string | null;
   identifiers: {

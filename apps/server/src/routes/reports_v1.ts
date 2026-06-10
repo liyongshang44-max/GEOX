@@ -142,6 +142,7 @@ function ensureReportV1ExtendedFields(report: OperationReportV1): OperationRepor
     approval: report.approval ?? { status: null, actor_id: null, actor_name: null, generated_at: null, approved_at: null, note: null },
     why: report.why ?? { explain_human: null, objective_text: null },
     diagnostic_inputs: (report as any).diagnostic_inputs ?? { field_id: report.identifiers.field_id ?? null, devices: [], observations: [], diagnosis: { human: report.why?.explain_human ?? null } },
+    weather_summary: (report as any).weather_summary ?? buildWeatherSummaryForReportV1(report),
     operation_title: report.operation_title ?? null,
     customer_title: report.customer_title ?? report.operation_title ?? null,
     as_executed: (report as any).as_executed ?? {
@@ -285,6 +286,45 @@ function roleForDiagnosticMetric(metric: string): DiagnosticInputsForReportV1["o
   if (metric === "temperature_max_c") return "agronomy_context";
   if (metric === "soil_moisture_after_percent") return "acceptance_input";
   return "diagnosis_input";
+}
+
+function diagnosticObservationNumber(report: OperationReportV1, metric: string): number | null {
+  const observations = Array.isArray((report as any)?.diagnostic_inputs?.observations)
+    ? (report as any).diagnostic_inputs.observations
+    : [];
+  for (const observation of observations) {
+    if (String(observation?.metric ?? "").trim() !== metric) continue;
+    const n = typeof observation?.value === "number" ? observation.value : Number(observation?.value);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+function buildWeatherSummaryForReportV1(report: OperationReportV1): any {
+  const rainfallForecastMm = diagnosticObservationNumber(report, "forecast_rain_72h_mm");
+  const maxTemperatureC = diagnosticObservationNumber(report, "temperature_max_c");
+
+  if (rainfallForecastMm == null && maxTemperatureC == null) {
+    return null;
+  }
+
+  const rainfallNarrative = rainfallForecastMm == null
+    ? "未来72小时降雨数据暂未形成正式诊断输入。"
+    : rainfallForecastMm <= 5
+      ? `未来72小时预计降雨仅${rainfallForecastMm}mm，不足以恢复目标土壤水分，支持本次补灌判断。`
+      : `未来72小时预计降雨${rainfallForecastMm}mm，需要结合现场土壤水分继续复核。`;
+
+  const temperatureNarrative = maxTemperatureC == null
+    ? null
+    : maxTemperatureC >= 30
+      ? `最高气温${maxTemperatureC}℃，蒸散压力偏高，需要纳入灌溉判断。`
+      : `最高气温${maxTemperatureC}℃，天气背景已纳入灌溉判断。`;
+
+  return {
+    rainfall_forecast_mm: rainfallForecastMm,
+    max_temperature_c: maxTemperatureC,
+    narrative: [rainfallNarrative, temperatureNarrative].filter(Boolean).join(" "),
+  };
 }
 
 function hasDeviceCapability(capabilities: string[], token: string): boolean {
