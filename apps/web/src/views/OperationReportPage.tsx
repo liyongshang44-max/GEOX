@@ -850,7 +850,8 @@ function OperationReportFieldMemoryPanel({ report, fieldId, operationId }: { rep
         <div className="customerFieldMemoryEntries">
           {items.map((item, index) => {
             const learned = customerText(item.customer_text ?? item.learned_text ?? item.summary_text ?? item.text, "已形成正式田块记忆");
-            const summary = customerText(item.summary_text ?? item.customer_text ?? item.learned_text, learned);
+            const summary = customerText(item.customer_summary_text ?? item.customer_detail_text ?? item.detail_text ?? item.explain_text ?? item.description, "");
+            const shouldShowSummary = Boolean(summary && summary !== learned);
             const confidence = customerText(item.confidence ?? item.confidence_score ?? item.trust_level, "可信度待补充");
             return (
               <article key={String(item.memory_id ?? item.memory_code ?? index)} className="customerFieldMemoryEntry">
@@ -862,7 +863,7 @@ function OperationReportFieldMemoryPanel({ report, fieldId, operationId }: { rep
                   <span>系统学到了什么</span>
                   <p>{learned}</p>
                 </div>
-                <p className="customerFieldMemorySummary">{summary}</p>
+                {shouldShowSummary ? <p className="customerFieldMemorySummary">{summary}</p> : null}
               </article>
             );
           })}

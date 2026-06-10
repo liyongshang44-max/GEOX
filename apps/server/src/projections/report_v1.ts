@@ -823,15 +823,41 @@ export function projectOperationReportV1(input: {
     ?? planned.planned_path
     ?? null,
   );
+  const asAppliedApplication = toObject(asAppliedRaw?.application ?? null);
+  const asAppliedCoveragePercent = Number.isFinite(Number(asAppliedRaw?.coverage_percent))
+    ? Number(asAppliedRaw.coverage_percent)
+    : Number.isFinite(Number((asAppliedApplication as any)?.coverage_percent))
+      ? Number((asAppliedApplication as any).coverage_percent)
+      : Number.isFinite(Number((asAppliedApplication as any)?.avg_coverage_percent))
+        ? Number((asAppliedApplication as any).avg_coverage_percent)
+        : null;
+  const asAppliedAmount = Number.isFinite(Number((asAppliedApplication as any)?.applied_amount))
+    ? Number((asAppliedApplication as any).applied_amount)
+    : Number.isFinite(Number((asAppliedApplication as any)?.actual_amount))
+      ? Number((asAppliedApplication as any).actual_amount)
+      : Number.isFinite(Number((asAppliedApplication as any)?.executed_amount))
+        ? Number((asAppliedApplication as any).executed_amount)
+        : null;
+  const plannedAppliedAmount = Number.isFinite(Number((asAppliedApplication as any)?.planned_amount))
+    ? Number((asAppliedApplication as any).planned_amount)
+    : Number.isFinite(Number((asAppliedApplication as any)?.target_amount))
+      ? Number((asAppliedApplication as any).target_amount)
+      : null;
+  const hasAsAppliedRecord = Boolean(asAppliedGeojson)
+    || asAppliedCoveragePercent !== null
+    || asAppliedAmount !== null
+    || plannedAppliedAmount !== null;
+
   const asApplied = {
     operation_id: input.operation_state.operation_id,
-    coverage_status: normalizeCoverageStatus(asAppliedRaw?.coverage_status ?? (asAppliedGeojson ? "AVAILABLE" : "MISSING")),
+    coverage_status: normalizeCoverageStatus(asAppliedRaw?.coverage_status ?? (hasAsAppliedRecord ? "AVAILABLE" : "MISSING")),
     coverage_geojson: asAppliedGeojson,
     planned_geojson: plannedGeojson,
     applied_amount_summary: toText(asAppliedRaw?.applied_amount_summary ?? asAppliedRaw?.amount_summary),
     planned_vs_actual_deviation: toText(asAppliedRaw?.planned_vs_actual_deviation ?? asAppliedRaw?.deviation_summary),
     evidence_ref: toText(asAppliedRaw?.evidence_ref ?? asAppliedRaw?.evidence_id ?? asAppliedRaw?.trace_id),
-    application: toObject(asAppliedRaw?.application ?? null),
+    application: asAppliedApplication,
+    coverage_percent: asAppliedCoveragePercent,
   };
   const zoneApplications = Array.isArray((asApplied as any)?.application?.zone_applications)
     ? (asApplied as any).application.zone_applications
