@@ -918,7 +918,7 @@ function OperationSpatialExecutionPanel({ report }: { report: OperationReportV1 
   const root = report as any;
   const spatialExecution = root.spatial_execution ?? null;
   const plannedGeoJson = reportGeoJson(root, ["planned_geojson", "plan.planned_geojson", "prescription.planned_geojson", "prescription.geometry", "operation_plan.planned_geojson"]);
-  const coverageGeoJson = reportGeoJson(root, ["coverage_geojson", "as_applied.coverage_geojson", "as_applied.geometry", "as_applied.coverageGeometry"]);
+  const coverageGeoJson = reportGeoJson(root, ["spatial_execution.coverage_geojson", "coverage_geojson", "as_applied.coverage_geojson", "as_applied.geometry", "as_applied.coverageGeometry"]);
   const trajectorySegments = reportTrajectorySegments(root);
   const asApplied = root.as_applied ?? {};
   const application = asApplied.application ?? {};

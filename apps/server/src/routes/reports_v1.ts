@@ -947,6 +947,22 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       ],
     ).catch(() => ({ rows: [] as any[] }));
 
+    const asAppliedGeometry = asAppliedMapRows.rows?.[0]?.geometry ?? {};
+    const asAppliedGeometryType = String((asAppliedGeometry as any).type ?? "").trim();
+    const asAppliedFieldRef = asAppliedGeometryType === "field_ref"
+      ? String((asAppliedGeometry as any).field_ref ?? enrichedReport.identifiers.field_id ?? "").trim()
+      : "";
+    const asAppliedFieldPolygonRows = asAppliedFieldRef
+      ? await pool.query(
+        `SELECT polygon_geojson_json
+           FROM field_polygon_v1
+          WHERE tenant_id = $1
+            AND field_id = $2
+          LIMIT 1`,
+        [tenant.tenant_id, asAppliedFieldRef],
+      ).catch(() => ({ rows: [] as any[] }))
+      : { rows: [] as any[] };
+
     const guardedOperationReport = await buildGuardedOperationReportV1({ pool, report: enrichedReport });
     const firstFieldMemoryForCustomerSummary = (enrichedReport as any).field_memory?.field_response_memory?.[0] ?? null;
     if (firstFieldMemoryForCustomerSummary && !(guardedOperationReport as any).customer_memory_summary) {
@@ -965,7 +981,13 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       const application = firstAsAppliedMap.application ?? {};
       const geometry = firstAsAppliedMap.geometry ?? {};
       const geometryType = String((geometry as any).type ?? "").trim();
-      const mapAvailable = ["Polygon", "MultiPolygon", "Feature", "FeatureCollection"].includes(geometryType);
+      const directRenderableGeometry = ["Polygon", "MultiPolygon", "Feature", "FeatureCollection"].includes(geometryType)
+        ? geometry
+        : null;
+      const fieldRefPolygon = asAppliedFieldPolygonRows.rows?.[0]?.polygon_geojson_json ?? null;
+      const resolvedCoverageGeojson = directRenderableGeometry ?? fieldRefPolygon;
+      const resolvedGeometryType = String((resolvedCoverageGeojson as any)?.type ?? "").trim();
+      const mapAvailable = ["Polygon", "MultiPolygon", "Feature", "FeatureCollection"].includes(resolvedGeometryType);
 
       (guardedOperationReport as any).spatial_execution = {
         available: true,
@@ -974,7 +996,8 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
         planned_mm: toFiniteNumberOrNull((application as any).planned_amount ?? (application as any).target_amount),
         map_available: mapAvailable,
         map_url: null,
-        map_unavailable_reason: mapAvailable ? null : (geometryType === "field_ref" ? "AS_APPLIED_GEOMETRY_FIELD_REF_ONLY" : "AS_APPLIED_RENDERABLE_GEOMETRY_MISSING"),
+        map_unavailable_reason: mapAvailable ? null : (geometryType === "field_ref" ? "AS_APPLIED_FIELD_POLYGON_MISSING" : "AS_APPLIED_RENDERABLE_GEOMETRY_MISSING"),
+        coverage_geojson: mapAvailable ? resolvedCoverageGeojson : null,
         evidence_refs: Array.isArray(firstAsAppliedMap.evidence_refs) ? firstAsAppliedMap.evidence_refs : [],
       };
     }

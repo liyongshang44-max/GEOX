@@ -166,6 +166,7 @@ export type OperationReportV1 = {
     map_available: boolean;
     map_url: string | null;
     map_unavailable_reason: string | null;
+    coverage_geojson?: Record<string, unknown> | null;
     evidence_refs?: unknown[];
   } | null;
   operation_title: string | null;
