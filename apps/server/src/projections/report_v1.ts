@@ -169,6 +169,14 @@ export type OperationReportV1 = {
     coverage_geojson?: Record<string, unknown> | null;
     evidence_refs?: unknown[];
   } | null;
+  operation_outcome_summary?: {
+    title: string;
+    summary: string | null;
+    before_value: number | null;
+    after_value: number | null;
+    delta_value: number | null;
+    acceptance_status: string | null;
+  } | null;
   operation_title: string | null;
   customer_title: string | null;
   identifiers: {

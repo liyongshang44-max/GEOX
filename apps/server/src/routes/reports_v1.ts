@@ -1002,6 +1002,26 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       };
     }
 
+    const customerMemoryForOutcome = (guardedOperationReport as any).customer_memory_summary ?? null;
+    const beforeValueForOutcome = toFiniteNumberOrNull(customerMemoryForOutcome?.before_value);
+    const afterValueForOutcome = toFiniteNumberOrNull(customerMemoryForOutcome?.after_value);
+    const deltaValueForOutcome = toFiniteNumberOrNull(customerMemoryForOutcome?.delta_value);
+    if (customerMemoryForOutcome && !(guardedOperationReport as any).operation_outcome_summary) {
+      const acceptanceStatus = String((guardedOperationReport as any).acceptance?.status ?? "").trim() || null;
+      const summary = beforeValueForOutcome != null && afterValueForOutcome != null && deltaValueForOutcome != null
+        ? `soil_moisture_percent:${beforeValueForOutcome}->${afterValueForOutcome};delta_pp:${deltaValueForOutcome};acceptance:${acceptanceStatus ?? "UNKNOWN"}`
+        : ((customerMemoryForOutcome as any).learned ?? null);
+
+      (guardedOperationReport as any).operation_outcome_summary = {
+        title: "OPERATION_OUTCOME_SUMMARY",
+        summary,
+        before_value: beforeValueForOutcome,
+        after_value: afterValueForOutcome,
+        delta_value: deltaValueForOutcome,
+        acceptance_status: acceptanceStatus,
+      };
+    }
+
     const payload: OperationReportSingleResponseV1 = { ok: true, operation_report_v1: guardedOperationReport as OperationReportV1 };
     return reply.send(payload);
   });

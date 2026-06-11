@@ -825,6 +825,41 @@ function operationReportFormalMemoryVisible(item: any): boolean {
   return false;
 }
 
+function OperationOutcomeSummaryPanel({ report }: { report: OperationReportV1 }): React.ReactElement | null {
+  const outcome = (report as any).operation_outcome_summary ?? null;
+  if (!outcome || typeof outcome !== "object") return null;
+
+  const beforeValue = text(outcome.before_value);
+  const afterValue = text(outcome.after_value);
+  const deltaValue = text(outcome.delta_value);
+  const acceptanceStatus = String(outcome.acceptance_status ?? "").trim().toUpperCase();
+  const acceptanceText = acceptanceStatus === "PASS" ? "验收结果为通过。" : "验收结果待补充。";
+  const summaryText = beforeValue && afterValue && deltaValue
+    ? `本次作业后，土壤湿度从 ${beforeValue}% 提升至 ${afterValue}%，较作业前提升 ${deltaValue} 个百分点，${acceptanceText}`
+    : customerText(outcome.summary, "作业结果摘要待补充。");
+
+  return (
+    <article className="customerCard">
+      <h3 className="customerCardTitle">作业结果摘要</h3>
+      <p className="customerMetricLabel">基于正式验收结果和田块响应记忆生成。</p>
+      <div className="customerFieldMemoryPanel isCompact customerSpacingTopSm">
+        <div className="customerFieldMemoryEntries">
+          <article className="customerFieldMemoryEntry">
+            <div className="customerFieldMemoryEntryHead">
+              <strong>本次作业带来的变化</strong>
+              <span>{acceptanceStatus || "待补充"}</span>
+            </div>
+            <div className="customerFieldMemoryLearned">
+              <span>结果说明</span>
+              <p>{summaryText}</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </article>
+  );
+}
+
 function OperationReportFieldMemoryPanel({ report, fieldId, operationId }: { report: OperationReportV1; fieldId: unknown; operationId: unknown }): React.ReactElement {
   const memorySummary = (report as any).customer_memory_summary ?? null;
 
@@ -1043,6 +1078,7 @@ export default function OperationReportPage(): React.ReactElement {
           <section className="operationMainSectionsGrid">
             <EvidencePackMetadataBlock report={report} />
             <OperationSpatialExecutionPanel report={report} />
+            <OperationOutcomeSummaryPanel report={report} />
             <OperationReportWeatherPanel report={report} fallbackContext={weatherContext} loading={weatherLoading} />
             <OperationReportFieldMemoryPanel report={report} fieldId={vm.operation.fieldId} operationId={operationId} />
 
