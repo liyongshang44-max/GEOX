@@ -965,6 +965,7 @@ function OperationSpatialExecutionPanel({ report }: { report: OperationReportV1 
   const hasAsAppliedRecord = Boolean(spatialExecution?.available) || !isBlank(coveragePercent) || !isBlank(appliedAmount) || !isBlank(plannedAmount) || Object.keys(application).length > 0;
   const hasSpatialEvidence = Boolean(spatialExecution?.map_available) && Boolean(plannedGeoJson || coverageGeoJson || trajectorySegments.length);
   const mapUnavailableReason = customerText(spatialExecution?.map_unavailable_reason, "地图图层待补充");
+  const mapUrl = text(spatialExecution?.map_url);
 
   return (
     <article className="customerCard">
@@ -984,6 +985,11 @@ function OperationSpatialExecutionPanel({ report }: { report: OperationReportV1 
       {hasSpatialEvidence ? (
         <div className="customerSpacingTopSm">
           <FieldGisMap polygonGeoJson={null} plannedGeoJson={plannedGeoJson} coverageGeoJson={coverageGeoJson} heatGeoJson={null} markers={[]} trajectorySegments={trajectorySegments} acceptancePoints={[]} labels={{ plannedLayer: "计划区域", coverageLayer: "实际覆盖", operationTrack: "实际执行轨迹" }} />
+          {mapUrl ? (
+            <p className="customerMetricLabel customerSpacingTopSm">
+              <a href={mapUrl} target="_blank" rel="noreferrer">查看覆盖图证据</a>
+            </p>
+          ) : null}
         </div>
       ) : hasAsAppliedRecord ? (
         <p className="customerMetricLabel customerSpacingTopSm">

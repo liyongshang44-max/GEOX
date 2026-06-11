@@ -963,6 +963,29 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       ).catch(() => ({ rows: [] as any[] }))
       : { rows: [] as any[] };
 
+    const asAppliedEvidenceExportRows = await pool.query(
+      `SELECT relation_id, download_url, artifact_ref, status
+         FROM operation_evidence_export_relation_v1
+        WHERE tenant_id = $1
+          AND status = 'COMPLETED'
+          AND download_url IS NOT NULL
+          AND (
+            operation_id = $2
+            OR operation_id = $3
+            OR artifact_ref = ANY($4::text[])
+          )
+        ORDER BY completed_at DESC NULLS LAST, created_at DESC
+        LIMIT 1`,
+      [
+        tenant.tenant_id,
+        enrichedReport.identifiers.operation_id ?? "",
+        enrichedReport.identifiers.operation_plan_id ?? "",
+        Array.from(new Set((asAppliedMapRows.rows?.[0]?.evidence_refs ?? [])
+          .map((ref: any) => typeof ref === "string" ? ref : String(ref?.artifact_id ?? ref?.ref ?? "").trim())
+          .filter(Boolean))),
+      ],
+    ).catch(() => ({ rows: [] as any[] }));
+
     const guardedOperationReport = await buildGuardedOperationReportV1({ pool, report: enrichedReport });
     const firstFieldMemoryForCustomerSummary = (enrichedReport as any).field_memory?.field_response_memory?.[0] ?? null;
     if (firstFieldMemoryForCustomerSummary && !(guardedOperationReport as any).customer_memory_summary) {
@@ -995,7 +1018,7 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
         applied_mm: toFiniteNumberOrNull((application as any).applied_amount ?? (application as any).actual_amount),
         planned_mm: toFiniteNumberOrNull((application as any).planned_amount ?? (application as any).target_amount),
         map_available: mapAvailable,
-        map_url: null,
+        map_url: asAppliedEvidenceExportRows.rows?.[0]?.download_url ?? null,
         map_unavailable_reason: mapAvailable ? null : (geometryType === "field_ref" ? "AS_APPLIED_FIELD_POLYGON_MISSING" : "AS_APPLIED_RENDERABLE_GEOMETRY_MISSING"),
         coverage_geojson: mapAvailable ? resolvedCoverageGeojson : null,
         evidence_refs: Array.isArray(firstAsAppliedMap.evidence_refs) ? firstAsAppliedMap.evidence_refs : [],
