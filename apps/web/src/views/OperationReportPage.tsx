@@ -766,12 +766,14 @@ function operationReportValueWithUnit(value: unknown, unit?: unknown): string {
 
 function OperationReportWeatherPanel({ report, fallbackContext, loading }: { report: OperationReportV1; fallbackContext: OperationEnvironmentContext | null; loading: boolean }): React.ReactElement {
   const root = report as any;
+  const weatherSummary = root.weather_summary ?? {};
   const forecast72h = operationReportObservation(root, "forecast_rain_72h_mm");
   const temperatureMax = operationReportObservation(root, "temperature_max_c");
 
-  if (forecast72h) {
-    const rainText = operationReportValueWithUnit(forecast72h.value, forecast72h.unit || "mm");
-    const temperatureText = temperatureMax ? operationReportValueWithUnit(temperatureMax.value, temperatureMax.unit || "℃") : "未纳入本次判断";
+  if (forecast72h || weatherSummary?.narrative) {
+    const rainText = operationReportValueWithUnit(weatherSummary.rainfall_forecast_mm ?? forecast72h?.value, forecast72h?.unit || "mm");
+    const temperatureText = operationReportValueWithUnit(weatherSummary.max_temperature_c ?? temperatureMax?.value, temperatureMax?.unit || "℃") || "未纳入本次判断";
+    const narrative = customerText(weatherSummary.narrative, "天气输入已纳入本次农事判断。");
     return (
       <article className="customerCard">
         <h3 className="customerCardTitle">天气干扰</h3>
@@ -786,8 +788,7 @@ function OperationReportWeatherPanel({ report, fallbackContext, loading }: { rep
           <div className="customerGrid4 customerSpacingTopSm">
             <div className="customerMetricCard"><small>未来 72 小时降雨</small><strong>{rainText || "待补充"}</strong></div>
             <div className="customerMetricCard"><small>最高气温</small><strong>{temperatureText}</strong></div>
-            <div className="customerMetricCard"><small>数据来源</small><strong>{customerText(forecast72h.source_device_id, "report diagnostic inputs")}</strong></div>
-            <div className="customerMetricCard"><small>用途</small><strong>诊断背景</strong></div>
+            <div className="customerMetricCard customerMetricCardWide"><small>诊断参考</small><strong>{narrative}</strong></div>
           </div>
         </div>
       </article>
@@ -824,7 +825,82 @@ function operationReportFormalMemoryVisible(item: any): boolean {
   return false;
 }
 
+function OperationOutcomeSummaryPanel({ report }: { report: OperationReportV1 }): React.ReactElement | null {
+  const outcome = (report as any).operation_outcome_summary ?? null;
+  if (!outcome || typeof outcome !== "object") return null;
+
+  const beforeValue = text(outcome.before_value);
+  const afterValue = text(outcome.after_value);
+  const deltaValue = text(outcome.delta_value);
+  const acceptanceStatus = String(outcome.acceptance_status ?? "").trim().toUpperCase();
+  const acceptanceText = acceptanceStatus === "PASS" ? "验收结果为通过。" : "验收结果待补充。";
+  const summaryText = beforeValue && afterValue && deltaValue
+    ? `本次作业后，土壤湿度从 ${beforeValue}% 提升至 ${afterValue}%，较作业前提升 ${deltaValue} 个百分点，${acceptanceText}`
+    : customerText(outcome.summary, "作业结果摘要待补充。");
+
+  return (
+    <article className="customerCard">
+      <h3 className="customerCardTitle">作业结果摘要</h3>
+      <p className="customerMetricLabel">基于正式验收结果和田块响应记忆生成。</p>
+      <div className="customerFieldMemoryPanel isCompact customerSpacingTopSm">
+        <div className="customerFieldMemoryEntries">
+          <article className="customerFieldMemoryEntry">
+            <div className="customerFieldMemoryEntryHead">
+              <strong>本次作业带来的变化</strong>
+              <span>{acceptanceStatus || "待补充"}</span>
+            </div>
+            <div className="customerFieldMemoryLearned">
+              <span>结果说明</span>
+              <p>{summaryText}</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </article>
+  );
+}
+
 function OperationReportFieldMemoryPanel({ report, fieldId, operationId }: { report: OperationReportV1; fieldId: unknown; operationId: unknown }): React.ReactElement {
+  const memorySummary = (report as any).customer_memory_summary ?? null;
+
+  if (memorySummary && typeof memorySummary === "object") {
+    const learned = customerText(memorySummary.learned, "已形成正式田块记忆");
+    const confidence = customerText(memorySummary.confidence, "可信度待补充");
+    const beforeValue = text(memorySummary.before_value);
+    const afterValue = text(memorySummary.after_value);
+    const deltaValue = text(memorySummary.delta_value);
+
+    return (
+      <article className="customerCard">
+        <h3 className="customerCardTitle">田块记忆</h3>
+        <div className="customerFieldMemoryPanel isCompact">
+          <div className="customerFieldMemoryHeader">
+            <div>
+              <p className="customerFieldMemorySubtitle">基于正式验收结果生成的客户可见田块响应记忆。</p>
+              <small>来源：正式作业报告</small>
+            </div>
+            <span>正式记忆</span>
+          </div>
+          <div className="customerFieldMemoryEntries">
+            <article className="customerFieldMemoryEntry">
+              <div className="customerFieldMemoryEntryHead">
+                <strong>{customerText(memorySummary.title, "田块响应记忆")}</strong>
+                <span>{confidence}</span>
+              </div>
+              <div className="customerFieldMemoryLearned">
+                <span>系统学到了什么</span>
+                <p>{learned}</p>
+              </div>
+              <p className="customerFieldMemorySummary">
+                灌前 {beforeValue || "待生成"} → 灌后 {afterValue || "待生成"}；变化 {deltaValue || "待生成"} 个百分点
+              </p>
+            </article>
+          </div>
+        </div>
+      </article>
+    );
+  }
+
   const items = operationReportFieldMemoryItems(report).filter(operationReportFormalMemoryVisible);
 
   if (!items.length) {
@@ -850,7 +926,8 @@ function OperationReportFieldMemoryPanel({ report, fieldId, operationId }: { rep
         <div className="customerFieldMemoryEntries">
           {items.map((item, index) => {
             const learned = customerText(item.customer_text ?? item.learned_text ?? item.summary_text ?? item.text, "已形成正式田块记忆");
-            const summary = customerText(item.summary_text ?? item.customer_text ?? item.learned_text, learned);
+            const summary = customerText(item.customer_summary_text ?? item.customer_detail_text ?? item.detail_text ?? item.explain_text ?? item.description, "");
+            const shouldShowSummary = Boolean(summary && summary !== learned);
             const confidence = customerText(item.confidence ?? item.confidence_score ?? item.trust_level, "可信度待补充");
             return (
               <article key={String(item.memory_id ?? item.memory_code ?? index)} className="customerFieldMemoryEntry">
@@ -862,7 +939,7 @@ function OperationReportFieldMemoryPanel({ report, fieldId, operationId }: { rep
                   <span>系统学到了什么</span>
                   <p>{learned}</p>
                 </div>
-                <p className="customerFieldMemorySummary">{summary}</p>
+                {shouldShowSummary ? <p className="customerFieldMemorySummary">{summary}</p> : null}
               </article>
             );
           })}
@@ -874,18 +951,21 @@ function OperationReportFieldMemoryPanel({ report, fieldId, operationId }: { rep
 
 function OperationSpatialExecutionPanel({ report }: { report: OperationReportV1 }): React.ReactElement {
   const root = report as any;
+  const spatialExecution = root.spatial_execution ?? null;
   const plannedGeoJson = reportGeoJson(root, ["planned_geojson", "plan.planned_geojson", "prescription.planned_geojson", "prescription.geometry", "operation_plan.planned_geojson"]);
-  const coverageGeoJson = reportGeoJson(root, ["coverage_geojson", "as_applied.coverage_geojson", "as_applied.geometry", "as_applied.coverageGeometry"]);
+  const coverageGeoJson = reportGeoJson(root, ["spatial_execution.coverage_geojson", "coverage_geojson", "as_applied.coverage_geojson", "as_applied.geometry", "as_applied.coverageGeometry"]);
   const trajectorySegments = reportTrajectorySegments(root);
   const asApplied = root.as_applied ?? {};
   const application = asApplied.application ?? {};
-  const coveragePercent = firstValue(root, ["as_applied.coverage_percent", "as_applied.coveragePercent", "execution.coverage_percent", "execution.coveragePercent"]);
-  const appliedAmount = firstValue(root, ["as_applied.application.applied_amount", "as_applied.applied_amount", "execution.applied_amount"]);
-  const appliedUnit = firstValue(root, ["as_applied.application.applied_unit", "as_applied.applied_unit", "execution.applied_unit"]);
-  const plannedAmount = firstValue(root, ["as_applied.application.planned_amount", "as_applied.planned_amount", "prescription.amount", "operation_plan.planned_amount"]);
-  const plannedUnit = firstValue(root, ["as_applied.application.planned_unit", "as_applied.planned_unit", "prescription.unit", "operation_plan.planned_unit"]);
-  const hasAsAppliedRecord = !isBlank(coveragePercent) || !isBlank(appliedAmount) || !isBlank(plannedAmount) || Object.keys(application).length > 0;
-  const hasSpatialEvidence = Boolean(plannedGeoJson || coverageGeoJson || trajectorySegments.length);
+  const coveragePercent = firstValue(root, ["spatial_execution.coverage_pct", "as_applied.coverage_percent", "as_applied.coveragePercent", "execution.coverage_percent", "execution.coveragePercent"]);
+  const appliedAmount = firstValue(root, ["spatial_execution.applied_mm", "as_applied.application.applied_amount", "as_applied.applied_amount", "execution.applied_amount"]);
+  const appliedUnit = spatialExecution?.applied_mm != null ? "mm" : firstValue(root, ["as_applied.application.applied_unit", "as_applied.applied_unit", "execution.applied_unit"]);
+  const plannedAmount = firstValue(root, ["spatial_execution.planned_mm", "as_applied.application.planned_amount", "as_applied.planned_amount", "prescription.amount", "operation_plan.planned_amount"]);
+  const plannedUnit = spatialExecution?.planned_mm != null ? "mm" : firstValue(root, ["as_applied.application.planned_unit", "as_applied.planned_unit", "prescription.unit", "operation_plan.planned_unit"]);
+  const hasAsAppliedRecord = Boolean(spatialExecution?.available) || !isBlank(coveragePercent) || !isBlank(appliedAmount) || !isBlank(plannedAmount) || Object.keys(application).length > 0;
+  const hasSpatialEvidence = Boolean(spatialExecution?.map_available) && Boolean(plannedGeoJson || coverageGeoJson || trajectorySegments.length);
+  const mapUnavailableReason = customerText(spatialExecution?.map_unavailable_reason, "地图图层待补充");
+  const mapUrl = text(spatialExecution?.map_url);
 
   return (
     <article className="customerCard">
@@ -894,7 +974,7 @@ function OperationSpatialExecutionPanel({ report }: { report: OperationReportV1 
 
       {hasAsAppliedRecord ? (
         <div className="customerGrid3 customerSpacingTopSm">
-          <div className="customerMetricCard"><small>as-applied 状态</small><strong>已形成记录</strong></div>
+          <div className="customerMetricCard"><small>空间执行状态</small><strong>覆盖记录已形成</strong></div>
           <div className="customerMetricCard"><small>覆盖</small><strong>{operationReportValueWithUnit(coveragePercent, "%") || "待补充"}</strong></div>
           <div className="customerMetricCard"><small>实际 / 计划</small><strong>{operationReportValueWithUnit(appliedAmount, appliedUnit) || "待补充"} / {operationReportValueWithUnit(plannedAmount, plannedUnit) || "待补充"}</strong></div>
         </div>
@@ -905,9 +985,16 @@ function OperationSpatialExecutionPanel({ report }: { report: OperationReportV1 
       {hasSpatialEvidence ? (
         <div className="customerSpacingTopSm">
           <FieldGisMap polygonGeoJson={null} plannedGeoJson={plannedGeoJson} coverageGeoJson={coverageGeoJson} heatGeoJson={null} markers={[]} trajectorySegments={trajectorySegments} acceptancePoints={[]} labels={{ plannedLayer: "计划区域", coverageLayer: "实际覆盖", operationTrack: "实际执行轨迹" }} />
+          {mapUrl ? (
+            <p className="customerMetricLabel customerSpacingTopSm">
+              <a href={mapUrl} target="_blank" rel="noreferrer">查看覆盖图证据</a>
+            </p>
+          ) : null}
         </div>
       ) : hasAsAppliedRecord ? (
-        <p className="customerMetricLabel customerSpacingTopSm">暂无可渲染空间图层；当前报告已保留 as-applied 数值记录，地图图层待后续补充。</p>
+        <p className="customerMetricLabel customerSpacingTopSm">
+          地图图层待补充；当前报告已保留正式覆盖数值记录。{mapUnavailableReason ? `原因：${mapUnavailableReason}` : ""}
+        </p>
       ) : (
         <p className="customerMetricLabel customerSpacingTopSm">暂无可渲染空间图层；当前报告尚未形成 as-applied 数值记录，需执行和验收后补充。</p>
       )}
@@ -997,6 +1084,7 @@ export default function OperationReportPage(): React.ReactElement {
           <section className="operationMainSectionsGrid">
             <EvidencePackMetadataBlock report={report} />
             <OperationSpatialExecutionPanel report={report} />
+            <OperationOutcomeSummaryPanel report={report} />
             <OperationReportWeatherPanel report={report} fallbackContext={weatherContext} loading={weatherLoading} />
             <OperationReportFieldMemoryPanel report={report} fieldId={vm.operation.fieldId} operationId={operationId} />
 

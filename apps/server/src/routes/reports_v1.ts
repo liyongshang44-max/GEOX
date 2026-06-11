@@ -142,6 +142,7 @@ function ensureReportV1ExtendedFields(report: OperationReportV1): OperationRepor
     approval: report.approval ?? { status: null, actor_id: null, actor_name: null, generated_at: null, approved_at: null, note: null },
     why: report.why ?? { explain_human: null, objective_text: null },
     diagnostic_inputs: (report as any).diagnostic_inputs ?? { field_id: report.identifiers.field_id ?? null, devices: [], observations: [], diagnosis: { human: report.why?.explain_human ?? null } },
+    weather_summary: (report as any).weather_summary ?? buildWeatherSummaryForReportV1(report),
     operation_title: report.operation_title ?? null,
     customer_title: report.customer_title ?? report.operation_title ?? null,
     as_executed: (report as any).as_executed ?? {
@@ -285,6 +286,45 @@ function roleForDiagnosticMetric(metric: string): DiagnosticInputsForReportV1["o
   if (metric === "temperature_max_c") return "agronomy_context";
   if (metric === "soil_moisture_after_percent") return "acceptance_input";
   return "diagnosis_input";
+}
+
+function diagnosticObservationNumber(report: OperationReportV1, metric: string): number | null {
+  const observations = Array.isArray((report as any)?.diagnostic_inputs?.observations)
+    ? (report as any).diagnostic_inputs.observations
+    : [];
+  for (const observation of observations) {
+    if (String(observation?.metric ?? "").trim() !== metric) continue;
+    const n = typeof observation?.value === "number" ? observation.value : Number(observation?.value);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+function buildWeatherSummaryForReportV1(report: OperationReportV1): any {
+  const rainfallForecastMm = diagnosticObservationNumber(report, "forecast_rain_72h_mm");
+  const maxTemperatureC = diagnosticObservationNumber(report, "temperature_max_c");
+
+  if (rainfallForecastMm == null && maxTemperatureC == null) {
+    return null;
+  }
+
+  const rainfallNarrative = rainfallForecastMm == null
+    ? "未来72小时降雨数据暂未形成正式诊断输入。"
+    : rainfallForecastMm <= 5
+      ? `未来72小时预计降雨仅${rainfallForecastMm}mm，不足以恢复目标土壤水分，支持本次补灌判断。`
+      : `未来72小时预计降雨${rainfallForecastMm}mm，需要结合现场土壤水分继续复核。`;
+
+  const temperatureNarrative = maxTemperatureC == null
+    ? null
+    : maxTemperatureC >= 30
+      ? `最高气温${maxTemperatureC}℃，蒸散压力偏高，需要纳入灌溉判断。`
+      : `最高气温${maxTemperatureC}℃，天气背景已纳入灌溉判断。`;
+
+  return {
+    rainfall_forecast_mm: rainfallForecastMm,
+    max_temperature_c: maxTemperatureC,
+    narrative: [rainfallNarrative, temperatureNarrative].filter(Boolean).join(" "),
+  };
 }
 
 function hasDeviceCapability(capabilities: string[], token: string): boolean {
@@ -884,7 +924,127 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       skill_run_id: enrichedReport.identifiers.skill_run_id ?? skillRunFromFacts,
       as_executed_id: enrichedReport.identifiers.as_executed_id ?? asExecutedFromFacts,
     } as any;
+    const asAppliedMapRows = await pool.query(
+      `SELECT as_applied_id, geometry, coverage, application, evidence_refs
+         FROM as_applied_map_v1
+        WHERE tenant_id = $1
+          AND project_id = $2
+          AND group_id = $3
+          AND (
+            as_executed_id = $4
+            OR task_id = $5
+            OR receipt_id = $6
+          )
+        ORDER BY updated_at DESC
+        LIMIT 1`,
+      [
+        tenant.tenant_id,
+        tenant.project_id,
+        tenant.group_id,
+        enrichedReport.identifiers.as_executed_id ?? "",
+        enrichedReport.identifiers.act_task_id ?? "",
+        enrichedReport.identifiers.receipt_id ?? "",
+      ],
+    ).catch(() => ({ rows: [] as any[] }));
+
+    const asAppliedGeometry = asAppliedMapRows.rows?.[0]?.geometry ?? {};
+    const asAppliedGeometryType = String((asAppliedGeometry as any).type ?? "").trim();
+    const asAppliedFieldRef = asAppliedGeometryType === "field_ref"
+      ? String((asAppliedGeometry as any).field_ref ?? enrichedReport.identifiers.field_id ?? "").trim()
+      : "";
+    const asAppliedFieldPolygonRows = asAppliedFieldRef
+      ? await pool.query(
+        `SELECT polygon_geojson_json
+           FROM field_polygon_v1
+          WHERE tenant_id = $1
+            AND field_id = $2
+          LIMIT 1`,
+        [tenant.tenant_id, asAppliedFieldRef],
+      ).catch(() => ({ rows: [] as any[] }))
+      : { rows: [] as any[] };
+
+    const asAppliedEvidenceExportRows = await pool.query(
+      `SELECT relation_id, download_url, artifact_ref, status
+         FROM operation_evidence_export_relation_v1
+        WHERE tenant_id = $1
+          AND status = 'COMPLETED'
+          AND download_url IS NOT NULL
+          AND (
+            operation_id = $2
+            OR operation_id = $3
+            OR artifact_ref = ANY($4::text[])
+          )
+        ORDER BY completed_at DESC NULLS LAST, created_at DESC
+        LIMIT 1`,
+      [
+        tenant.tenant_id,
+        enrichedReport.identifiers.operation_id ?? "",
+        enrichedReport.identifiers.operation_plan_id ?? "",
+        Array.from(new Set((asAppliedMapRows.rows?.[0]?.evidence_refs ?? [])
+          .map((ref: any) => typeof ref === "string" ? ref : String(ref?.artifact_id ?? ref?.ref ?? "").trim())
+          .filter(Boolean))),
+      ],
+    ).catch(() => ({ rows: [] as any[] }));
+
     const guardedOperationReport = await buildGuardedOperationReportV1({ pool, report: enrichedReport });
+    const firstFieldMemoryForCustomerSummary = (enrichedReport as any).field_memory?.field_response_memory?.[0] ?? null;
+    if (firstFieldMemoryForCustomerSummary && !(guardedOperationReport as any).customer_memory_summary) {
+      (guardedOperationReport as any).customer_memory_summary = {
+        title: "田块响应记忆",
+        learned: (firstFieldMemoryForCustomerSummary as any).customer_text ?? (firstFieldMemoryForCustomerSummary as any).learned_text ?? (firstFieldMemoryForCustomerSummary as any).summary_text ?? null,
+        confidence: (firstFieldMemoryForCustomerSummary as any).confidence ?? (firstFieldMemoryForCustomerSummary as any).confidence_score ?? (firstFieldMemoryForCustomerSummary as any).trust_level ?? null,
+        before_value: (firstFieldMemoryForCustomerSummary as any).before_value ?? null,
+        after_value: (firstFieldMemoryForCustomerSummary as any).after_value ?? null,
+        delta_value: (firstFieldMemoryForCustomerSummary as any).delta_value ?? null,
+      };
+    }
+    const firstAsAppliedMap = asAppliedMapRows.rows?.[0] ?? null;
+    if (firstAsAppliedMap && !(guardedOperationReport as any).spatial_execution) {
+      const coverage = firstAsAppliedMap.coverage ?? {};
+      const application = firstAsAppliedMap.application ?? {};
+      const geometry = firstAsAppliedMap.geometry ?? {};
+      const geometryType = String((geometry as any).type ?? "").trim();
+      const directRenderableGeometry = ["Polygon", "MultiPolygon", "Feature", "FeatureCollection"].includes(geometryType)
+        ? geometry
+        : null;
+      const fieldRefPolygon = asAppliedFieldPolygonRows.rows?.[0]?.polygon_geojson_json ?? null;
+      const resolvedCoverageGeojson = directRenderableGeometry ?? fieldRefPolygon;
+      const resolvedGeometryType = String((resolvedCoverageGeojson as any)?.type ?? "").trim();
+      const mapAvailable = ["Polygon", "MultiPolygon", "Feature", "FeatureCollection"].includes(resolvedGeometryType);
+
+      (guardedOperationReport as any).spatial_execution = {
+        available: true,
+        coverage_pct: toFiniteNumberOrNull((coverage as any).coverage_percent ?? (coverage as any).coverage_pct ?? (application as any).coverage_percent),
+        applied_mm: toFiniteNumberOrNull((application as any).applied_amount ?? (application as any).actual_amount),
+        planned_mm: toFiniteNumberOrNull((application as any).planned_amount ?? (application as any).target_amount),
+        map_available: mapAvailable,
+        map_url: asAppliedEvidenceExportRows.rows?.[0]?.download_url ?? null,
+        map_unavailable_reason: mapAvailable ? null : (geometryType === "field_ref" ? "AS_APPLIED_FIELD_POLYGON_MISSING" : "AS_APPLIED_RENDERABLE_GEOMETRY_MISSING"),
+        coverage_geojson: mapAvailable ? resolvedCoverageGeojson : null,
+        evidence_refs: Array.isArray(firstAsAppliedMap.evidence_refs) ? firstAsAppliedMap.evidence_refs : [],
+      };
+    }
+
+    const customerMemoryForOutcome = (guardedOperationReport as any).customer_memory_summary ?? null;
+    const beforeValueForOutcome = toFiniteNumberOrNull(customerMemoryForOutcome?.before_value);
+    const afterValueForOutcome = toFiniteNumberOrNull(customerMemoryForOutcome?.after_value);
+    const deltaValueForOutcome = toFiniteNumberOrNull(customerMemoryForOutcome?.delta_value);
+    if (customerMemoryForOutcome && !(guardedOperationReport as any).operation_outcome_summary) {
+      const acceptanceStatus = String((guardedOperationReport as any).acceptance?.status ?? "").trim() || null;
+      const summary = beforeValueForOutcome != null && afterValueForOutcome != null && deltaValueForOutcome != null
+        ? `soil_moisture_percent:${beforeValueForOutcome}->${afterValueForOutcome};delta_pp:${deltaValueForOutcome};acceptance:${acceptanceStatus ?? "UNKNOWN"}`
+        : ((customerMemoryForOutcome as any).learned ?? null);
+
+      (guardedOperationReport as any).operation_outcome_summary = {
+        title: "OPERATION_OUTCOME_SUMMARY",
+        summary,
+        before_value: beforeValueForOutcome,
+        after_value: afterValueForOutcome,
+        delta_value: deltaValueForOutcome,
+        acceptance_status: acceptanceStatus,
+      };
+    }
+
     const payload: OperationReportSingleResponseV1 = { ok: true, operation_report_v1: guardedOperationReport as OperationReportV1 };
     return reply.send(payload);
   });

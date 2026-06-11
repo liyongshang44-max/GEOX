@@ -231,7 +231,7 @@ function joinReasonTexts(reasons: string[]): string {
 function formatMemoryLine(item: any): string {
   const before = toNum(item?.before_value);
   const after = toNum(item?.after_value);
-  return `${labelMemoryCode(item?.memory_code ?? item?.code ?? item?.memory_type)}：${labelEmptyFallback(item?.summary_text, "地块响应记录")}（灌前${before ?? "待生成"} → 灌后${after ?? "待生成"}）`;
+  return `${labelMemoryCode(item?.memory_code ?? item?.code ?? item?.memory_type)}：${labelEmptyFallback(item?.customer_text ?? item?.learned_text ?? item?.summary_text, "地块响应记录")}（灌前${before ?? "待生成"} → 灌后${after ?? "待生成"}）`;
 }
 
 function mapApprovalStatusForCustomer(value: unknown): string {
