@@ -150,6 +150,14 @@ export type OperationReportV1 = {
     max_temperature_c: number | null;
     narrative: string | null;
   } | null;
+  customer_memory_summary?: {
+    title: string;
+    learned: string | null;
+    confidence: number | string | null;
+    before_value?: number | null;
+    after_value?: number | null;
+    delta_value?: number | null;
+  } | null;
   operation_title: string | null;
   customer_title: string | null;
   identifiers: {
@@ -1085,7 +1093,7 @@ export function projectOperationReportV1(input: {
         ? ((input as any).field_memory.skill_performance_memory as FieldMemorySummary[])
         : [],
     },
-  
+
     roi_ledger: {
       summary: roiSummary,
       items: roiSummaries,

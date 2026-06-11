@@ -826,6 +826,46 @@ function operationReportFormalMemoryVisible(item: any): boolean {
 }
 
 function OperationReportFieldMemoryPanel({ report, fieldId, operationId }: { report: OperationReportV1; fieldId: unknown; operationId: unknown }): React.ReactElement {
+  const memorySummary = (report as any).customer_memory_summary ?? null;
+
+  if (memorySummary && typeof memorySummary === "object") {
+    const learned = customerText(memorySummary.learned, "已形成正式田块记忆");
+    const confidence = customerText(memorySummary.confidence, "可信度待补充");
+    const beforeValue = text(memorySummary.before_value);
+    const afterValue = text(memorySummary.after_value);
+    const deltaValue = text(memorySummary.delta_value);
+
+    return (
+      <article className="customerCard">
+        <h3 className="customerCardTitle">田块记忆</h3>
+        <div className="customerFieldMemoryPanel isCompact">
+          <div className="customerFieldMemoryHeader">
+            <div>
+              <p className="customerFieldMemorySubtitle">基于正式验收结果生成的客户可见田块响应记忆。</p>
+              <small>来源：正式作业报告</small>
+            </div>
+            <span>正式记忆</span>
+          </div>
+          <div className="customerFieldMemoryEntries">
+            <article className="customerFieldMemoryEntry">
+              <div className="customerFieldMemoryEntryHead">
+                <strong>{customerText(memorySummary.title, "田块响应记忆")}</strong>
+                <span>{confidence}</span>
+              </div>
+              <div className="customerFieldMemoryLearned">
+                <span>系统学到了什么</span>
+                <p>{learned}</p>
+              </div>
+              <p className="customerFieldMemorySummary">
+                灌前 {beforeValue || "待生成"} → 灌后 {afterValue || "待生成"}；变化 {deltaValue || "待生成"} 个百分点
+              </p>
+            </article>
+          </div>
+        </div>
+      </article>
+    );
+  }
+
   const items = operationReportFieldMemoryItems(report).filter(operationReportFormalMemoryVisible);
 
   if (!items.length) {

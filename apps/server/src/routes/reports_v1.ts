@@ -925,6 +925,17 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       as_executed_id: enrichedReport.identifiers.as_executed_id ?? asExecutedFromFacts,
     } as any;
     const guardedOperationReport = await buildGuardedOperationReportV1({ pool, report: enrichedReport });
+    const firstFieldMemoryForCustomerSummary = (enrichedReport as any).field_memory?.field_response_memory?.[0] ?? null;
+    if (firstFieldMemoryForCustomerSummary && !(guardedOperationReport as any).customer_memory_summary) {
+      (guardedOperationReport as any).customer_memory_summary = {
+        title: "田块响应记忆",
+        learned: (firstFieldMemoryForCustomerSummary as any).customer_text ?? (firstFieldMemoryForCustomerSummary as any).learned_text ?? (firstFieldMemoryForCustomerSummary as any).summary_text ?? null,
+        confidence: (firstFieldMemoryForCustomerSummary as any).confidence ?? (firstFieldMemoryForCustomerSummary as any).confidence_score ?? (firstFieldMemoryForCustomerSummary as any).trust_level ?? null,
+        before_value: (firstFieldMemoryForCustomerSummary as any).before_value ?? null,
+        after_value: (firstFieldMemoryForCustomerSummary as any).after_value ?? null,
+        delta_value: (firstFieldMemoryForCustomerSummary as any).delta_value ?? null,
+      };
+    }
     const payload: OperationReportSingleResponseV1 = { ok: true, operation_report_v1: guardedOperationReport as OperationReportV1 };
     return reply.send(payload);
   });
