@@ -924,6 +924,29 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       skill_run_id: enrichedReport.identifiers.skill_run_id ?? skillRunFromFacts,
       as_executed_id: enrichedReport.identifiers.as_executed_id ?? asExecutedFromFacts,
     } as any;
+    const asAppliedMapRows = await pool.query(
+      `SELECT as_applied_id, geometry, coverage, application, evidence_refs
+         FROM as_applied_map_v1
+        WHERE tenant_id = $1
+          AND project_id = $2
+          AND group_id = $3
+          AND (
+            as_executed_id = $4
+            OR task_id = $5
+            OR receipt_id = $6
+          )
+        ORDER BY updated_at DESC
+        LIMIT 1`,
+      [
+        tenant.tenant_id,
+        tenant.project_id,
+        tenant.group_id,
+        enrichedReport.identifiers.as_executed_id ?? "",
+        enrichedReport.identifiers.act_task_id ?? "",
+        enrichedReport.identifiers.receipt_id ?? "",
+      ],
+    ).catch(() => ({ rows: [] as any[] }));
+
     const guardedOperationReport = await buildGuardedOperationReportV1({ pool, report: enrichedReport });
     const firstFieldMemoryForCustomerSummary = (enrichedReport as any).field_memory?.field_response_memory?.[0] ?? null;
     if (firstFieldMemoryForCustomerSummary && !(guardedOperationReport as any).customer_memory_summary) {
@@ -936,6 +959,26 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
         delta_value: (firstFieldMemoryForCustomerSummary as any).delta_value ?? null,
       };
     }
+    const firstAsAppliedMap = asAppliedMapRows.rows?.[0] ?? null;
+    if (firstAsAppliedMap && !(guardedOperationReport as any).spatial_execution) {
+      const coverage = firstAsAppliedMap.coverage ?? {};
+      const application = firstAsAppliedMap.application ?? {};
+      const geometry = firstAsAppliedMap.geometry ?? {};
+      const geometryType = String((geometry as any).type ?? "").trim();
+      const mapAvailable = ["Polygon", "MultiPolygon", "Feature", "FeatureCollection"].includes(geometryType);
+
+      (guardedOperationReport as any).spatial_execution = {
+        available: true,
+        coverage_pct: toFiniteNumberOrNull((coverage as any).coverage_percent ?? (coverage as any).coverage_pct ?? (application as any).coverage_percent),
+        applied_mm: toFiniteNumberOrNull((application as any).applied_amount ?? (application as any).actual_amount),
+        planned_mm: toFiniteNumberOrNull((application as any).planned_amount ?? (application as any).target_amount),
+        map_available: mapAvailable,
+        map_url: null,
+        map_unavailable_reason: mapAvailable ? null : (geometryType === "field_ref" ? "AS_APPLIED_GEOMETRY_FIELD_REF_ONLY" : "AS_APPLIED_RENDERABLE_GEOMETRY_MISSING"),
+        evidence_refs: Array.isArray(firstAsAppliedMap.evidence_refs) ? firstAsAppliedMap.evidence_refs : [],
+      };
+    }
+
     const payload: OperationReportSingleResponseV1 = { ok: true, operation_report_v1: guardedOperationReport as OperationReportV1 };
     return reply.send(payload);
   });

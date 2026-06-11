@@ -158,6 +158,16 @@ export type OperationReportV1 = {
     after_value?: number | null;
     delta_value?: number | null;
   } | null;
+  spatial_execution?: {
+    available: boolean;
+    coverage_pct: number | null;
+    applied_mm: number | null;
+    planned_mm: number | null;
+    map_available: boolean;
+    map_url: string | null;
+    map_unavailable_reason: string | null;
+    evidence_refs?: unknown[];
+  } | null;
   operation_title: string | null;
   customer_title: string | null;
   identifiers: {

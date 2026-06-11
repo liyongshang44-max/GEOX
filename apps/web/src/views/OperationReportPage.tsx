@@ -916,18 +916,20 @@ function OperationReportFieldMemoryPanel({ report, fieldId, operationId }: { rep
 
 function OperationSpatialExecutionPanel({ report }: { report: OperationReportV1 }): React.ReactElement {
   const root = report as any;
+  const spatialExecution = root.spatial_execution ?? null;
   const plannedGeoJson = reportGeoJson(root, ["planned_geojson", "plan.planned_geojson", "prescription.planned_geojson", "prescription.geometry", "operation_plan.planned_geojson"]);
   const coverageGeoJson = reportGeoJson(root, ["coverage_geojson", "as_applied.coverage_geojson", "as_applied.geometry", "as_applied.coverageGeometry"]);
   const trajectorySegments = reportTrajectorySegments(root);
   const asApplied = root.as_applied ?? {};
   const application = asApplied.application ?? {};
-  const coveragePercent = firstValue(root, ["as_applied.coverage_percent", "as_applied.coveragePercent", "execution.coverage_percent", "execution.coveragePercent"]);
-  const appliedAmount = firstValue(root, ["as_applied.application.applied_amount", "as_applied.applied_amount", "execution.applied_amount"]);
-  const appliedUnit = firstValue(root, ["as_applied.application.applied_unit", "as_applied.applied_unit", "execution.applied_unit"]);
-  const plannedAmount = firstValue(root, ["as_applied.application.planned_amount", "as_applied.planned_amount", "prescription.amount", "operation_plan.planned_amount"]);
-  const plannedUnit = firstValue(root, ["as_applied.application.planned_unit", "as_applied.planned_unit", "prescription.unit", "operation_plan.planned_unit"]);
-  const hasAsAppliedRecord = !isBlank(coveragePercent) || !isBlank(appliedAmount) || !isBlank(plannedAmount) || Object.keys(application).length > 0;
-  const hasSpatialEvidence = Boolean(plannedGeoJson || coverageGeoJson || trajectorySegments.length);
+  const coveragePercent = firstValue(root, ["spatial_execution.coverage_pct", "as_applied.coverage_percent", "as_applied.coveragePercent", "execution.coverage_percent", "execution.coveragePercent"]);
+  const appliedAmount = firstValue(root, ["spatial_execution.applied_mm", "as_applied.application.applied_amount", "as_applied.applied_amount", "execution.applied_amount"]);
+  const appliedUnit = spatialExecution?.applied_mm != null ? "mm" : firstValue(root, ["as_applied.application.applied_unit", "as_applied.applied_unit", "execution.applied_unit"]);
+  const plannedAmount = firstValue(root, ["spatial_execution.planned_mm", "as_applied.application.planned_amount", "as_applied.planned_amount", "prescription.amount", "operation_plan.planned_amount"]);
+  const plannedUnit = spatialExecution?.planned_mm != null ? "mm" : firstValue(root, ["as_applied.application.planned_unit", "as_applied.planned_unit", "prescription.unit", "operation_plan.planned_unit"]);
+  const hasAsAppliedRecord = Boolean(spatialExecution?.available) || !isBlank(coveragePercent) || !isBlank(appliedAmount) || !isBlank(plannedAmount) || Object.keys(application).length > 0;
+  const hasSpatialEvidence = Boolean(spatialExecution?.map_available) && Boolean(plannedGeoJson || coverageGeoJson || trajectorySegments.length);
+  const mapUnavailableReason = customerText(spatialExecution?.map_unavailable_reason, "地图图层待补充");
 
   return (
     <article className="customerCard">
@@ -936,7 +938,7 @@ function OperationSpatialExecutionPanel({ report }: { report: OperationReportV1 
 
       {hasAsAppliedRecord ? (
         <div className="customerGrid3 customerSpacingTopSm">
-          <div className="customerMetricCard"><small>as-applied 状态</small><strong>已形成记录</strong></div>
+          <div className="customerMetricCard"><small>空间执行状态</small><strong>覆盖记录已形成</strong></div>
           <div className="customerMetricCard"><small>覆盖</small><strong>{operationReportValueWithUnit(coveragePercent, "%") || "待补充"}</strong></div>
           <div className="customerMetricCard"><small>实际 / 计划</small><strong>{operationReportValueWithUnit(appliedAmount, appliedUnit) || "待补充"} / {operationReportValueWithUnit(plannedAmount, plannedUnit) || "待补充"}</strong></div>
         </div>
@@ -949,7 +951,9 @@ function OperationSpatialExecutionPanel({ report }: { report: OperationReportV1 
           <FieldGisMap polygonGeoJson={null} plannedGeoJson={plannedGeoJson} coverageGeoJson={coverageGeoJson} heatGeoJson={null} markers={[]} trajectorySegments={trajectorySegments} acceptancePoints={[]} labels={{ plannedLayer: "计划区域", coverageLayer: "实际覆盖", operationTrack: "实际执行轨迹" }} />
         </div>
       ) : hasAsAppliedRecord ? (
-        <p className="customerMetricLabel customerSpacingTopSm">暂无可渲染空间图层；当前报告已保留 as-applied 数值记录，地图图层待后续补充。</p>
+        <p className="customerMetricLabel customerSpacingTopSm">
+          地图图层待补充；当前报告已保留正式覆盖数值记录。{mapUnavailableReason ? `原因：${mapUnavailableReason}` : ""}
+        </p>
       ) : (
         <p className="customerMetricLabel customerSpacingTopSm">暂无可渲染空间图层；当前报告尚未形成 as-applied 数值记录，需执行和验收后补充。</p>
       )}
