@@ -117,11 +117,7 @@ export function evaluateAgronomyJudgeV2(input: AgronomyJudgeEvaluateInput): Judg
       evidence_judge_verdict: evidenceVerdict || null,
     },
     outputs: {
-      skill_id: "irrigation_deficit_skill_v1",
-      deficit_detected: deficitSkillOutput.deficit_detected,
-      recommended_amount: deficitSkillOutput.recommended_amount,
-      unit: deficitSkillOutput.unit,
-      requirement_skill_id: "irrigation_requirement_skill_v1",
+      skill_id: "irrigation_requirement_skill_v1",
       requirement_detected: requirementSkillOutput.requirement_detected,
       net_irrigation_requirement_mm: requirementSkillOutput.net_irrigation_requirement_mm,
       gross_irrigation_requirement_mm: requirementSkillOutput.gross_irrigation_requirement_mm,
@@ -129,6 +125,12 @@ export function evaluateAgronomyJudgeV2(input: AgronomyJudgeEvaluateInput): Judg
       rain_credit_mm: requirementSkillOutput.rain_credit_mm,
       et0_adjustment_mm: requirementSkillOutput.et0_adjustment_mm,
       calculation_trace: requirementSkillOutput.calculation_trace,
+      supporting_skill_id: "irrigation_deficit_skill_v1",
+      supporting_deficit: {
+        deficit_detected: deficitSkillOutput.deficit_detected,
+        recommended_amount: deficitSkillOutput.recommended_amount,
+        unit: deficitSkillOutput.unit,
+      },
     },
     confidence: blockedByEvidence
       ? {

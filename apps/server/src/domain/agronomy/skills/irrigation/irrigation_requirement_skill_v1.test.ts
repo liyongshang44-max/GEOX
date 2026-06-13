@@ -1,4 +1,4 @@
-﻿/* apps/server/src/domain/agronomy/skills/irrigation/irrigation_requirement_skill_v1.test.ts */
+/* apps/server/src/domain/agronomy/skills/irrigation/irrigation_requirement_skill_v1.test.ts */
 /* PR18K-C verifies deterministic irrigation requirement calculation without touching database or control actions. */
 
 import test from "node:test";

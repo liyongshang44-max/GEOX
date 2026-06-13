@@ -1,4 +1,4 @@
-﻿/* apps/server/src/domain/judge/agronomy_judge_v2.test.ts */
+/* apps/server/src/domain/judge/agronomy_judge_v2.test.ts */
 /* PR18K-D verifies that Agronomy Judge gates irrigation requirement without creating tasks or writing facts. */
 
 import test from "node:test";
@@ -25,7 +25,8 @@ test("agronomy_judge_v2: emits WATER_DEFICIT when irrigation requirement skill d
   assert.equal(result.verdict, "WATER_DEFICIT");
   assert.equal(result.severity, "HIGH");
   assert.equal(result.reasons.includes("irrigation_requirement_detected"), true);
-  assert.equal((result.outputs as any).requirement_skill_id, "irrigation_requirement_skill_v1");
+  assert.equal((result.outputs as any).skill_id, "irrigation_requirement_skill_v1");
+  assert.equal((result.outputs as any).supporting_skill_id, "irrigation_deficit_skill_v1");
   assert.equal((result.outputs as any).net_irrigation_requirement_mm, 16);
   assert.equal((result.outputs as any).gross_irrigation_requirement_mm, 18.824);
   assert.equal((result.outputs as any).rain_credit_mm, 2);
@@ -74,5 +75,5 @@ test("agronomy_judge_v2: evidence judge block overrides irrigation requirement v
   assert.ok(result.confidence);
   assert.equal(result.confidence.level, "MEDIUM");
   assert.equal(result.confidence.basis, "assumed");
-  assert.equal((result.outputs as any).requirement_skill_id, "irrigation_requirement_skill_v1");
+  assert.equal((result.outputs as any).skill_id, "irrigation_requirement_skill_v1");
 });

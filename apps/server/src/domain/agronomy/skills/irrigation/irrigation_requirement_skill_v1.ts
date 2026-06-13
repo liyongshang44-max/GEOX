@@ -1,4 +1,4 @@
-﻿/* apps/server/src/domain/agronomy/skills/irrigation/irrigation_requirement_skill_v1.ts */
+/* apps/server/src/domain/agronomy/skills/irrigation/irrigation_requirement_skill_v1.ts */
 /* PR18K-C defines a deterministic irrigation requirement calculator that does not write facts or create tasks. */
 
 export type IrrigationRequirementSkillInputV1 = {

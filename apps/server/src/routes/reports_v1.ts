@@ -175,6 +175,7 @@ function ensureReportV1ExtendedFields(report: OperationReportV1): OperationRepor
 }
 
 function toFiniteNumberOrNull(value: unknown): number | null {
+  if (value == null || value === "") return null;
   const n = typeof value === "number" ? value : Number(value);
   return Number.isFinite(n) ? n : null;
 }
