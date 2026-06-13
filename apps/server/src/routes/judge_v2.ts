@@ -21,7 +21,24 @@ function requireTenantMatchOr404(reply: FastifyReply, auth: TenantTriple, target
 
 const TenantSchema = z.object({ tenant_id: z.string().min(1), project_id: z.string().min(1), group_id: z.string().min(1) });
 const EvaluateEvidenceRequestSchema = TenantSchema.extend({ field_id: z.string().min(1).optional(), device_id: z.string().min(1).optional(), soil_moisture: z.number().optional(), observed_at_ts_ms: z.number().optional(), now_ts_ms: z.number().optional(), last_heartbeat_ts_ms: z.number().optional(), last_telemetry_ts_ms: z.number().optional(), evidence_refs: z.array(z.unknown()).optional() });
-const EvaluateAgronomyRequestSchema = TenantSchema.extend({ evidence_judge_id: z.string().min(1).optional(), recommendation_id: z.string().min(1).optional(), prescription_id: z.string().min(1).optional(), field_id: z.string().min(1).optional(), season_id: z.string().min(1).optional(), device_id: z.string().min(1).optional(), soil_moisture: z.number().optional(), evidence_judge_verdict: z.string().min(1).optional(), evidence_refs: z.array(z.unknown()).optional(), source_refs: z.array(z.unknown()).optional() });
+const EvaluateAgronomyRequestSchema = TenantSchema.extend({
+  evidence_judge_id: z.string().min(1).optional(),
+  recommendation_id: z.string().min(1).optional(),
+  prescription_id: z.string().min(1).optional(),
+  field_id: z.string().min(1).optional(),
+  season_id: z.string().min(1).optional(),
+  device_id: z.string().min(1).optional(),
+  soil_moisture: z.number().optional(),
+  target_soil_moisture: z.number().optional(),
+  root_zone_depth_mm: z.number().optional(),
+  rain_forecast_mm_72h: z.number().optional(),
+  et0_mm_72h: z.number().optional(),
+  crop_stage: z.string().min(1).optional(),
+  application_efficiency: z.number().optional(),
+  evidence_judge_verdict: z.string().min(1).optional(),
+  evidence_refs: z.array(z.unknown()).optional(),
+  source_refs: z.array(z.unknown()).optional(),
+});
 const EvaluateExecutionRequestSchema = TenantSchema.extend({ prescription_id: z.string().min(1).optional(), field_id: z.string().min(1).optional(), device_id: z.string().min(1).optional(), receipt: z.object({ receipt_id: z.string().min(1).optional(), task_id: z.string().min(1).optional(), status: z.string().min(1).optional(), evidence_refs: z.array(z.unknown()).optional() }).nullable().optional(), as_executed: z.object({ as_executed_id: z.string().min(1).optional(), task_id: z.string().min(1).optional() }).nullable().optional(), as_applied: z.object({ as_applied_id: z.string().min(1).optional() }).nullable().optional(), pre_soil_moisture: z.number().optional(), post_soil_moisture: z.number().optional(), evidence_refs: z.array(z.unknown()).optional(), source_refs: z.array(z.unknown()).optional() });
 const ReadJudgeRequestSchema = TenantSchema.extend({ judge_id: z.string().min(1) });
 const ListByKindSchema = TenantSchema.extend({ judge_kind: z.enum(["EVIDENCE", "AGRONOMY", "EXECUTION"]), limit: z.coerce.number().int().min(1).max(200).optional() });
