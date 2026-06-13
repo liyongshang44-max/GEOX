@@ -12,6 +12,7 @@ import { evaluateHardRuleHintsV1, getHardRuleRecommendationBlueprintV1 } from ".
 import { diagnoseIrrigationV1 } from "../domain/agronomy/irrigation/irrigation_diagnosis_v1.js";
 import { buildIrrigationRecommendationV1 } from "../domain/agronomy/irrigation/irrigation_recommendation_v1.js";
 import { runIrrigationDeficitSkillV1 } from "../domain/agronomy/skills/irrigation/irrigation_deficit_skill_v1.js";
+import { getLatestWeatherForecastIndexV1 } from "../projections/weather_forecast_v1.js";
 import {
   assertFormalTriggerInputLayer,
   assertNoForbiddenTriggerFields,
@@ -419,7 +420,15 @@ function buildRecommendationsFromStage1Summary(
   body: any,
   stage1Summary: Stage1SummaryRecommendationInputV1,
   snapshotId: string,
-  internalContext?: { sensingOverview?: FieldSensingOverviewInputV1 | null; fertilityState?: any | null },
+  internalContext?: {
+    sensingOverview?: FieldSensingOverviewInputV1 | null;
+    fertilityState?: any | null;
+    weatherForecast?: {
+      forecast_id?: string | null;
+      source_fact_id?: string | null;
+      rainfall_forecast_mm_72h?: number | null;
+    } | null;
+  },
   hardRuleInput?: HardRuleConstraintInputV1 | null,
 ): RecommendationV1[] {
   const field_id = String(body.field_id ?? "").trim();
@@ -501,6 +510,10 @@ function buildRecommendationsFromStage1Summary(
     const normalizedSoilMoisture = Number.isFinite(soilMoisture)
       ? (soilMoisture > 1 ? soilMoisture / 100 : soilMoisture)
       : null;
+    const weatherRainForecastMm = Number.isFinite(Number(internalContext?.weatherForecast?.rainfall_forecast_mm_72h))
+      ? Number(internalContext?.weatherForecast?.rainfall_forecast_mm_72h)
+      : 0;
+    const weatherEvidenceRef = String(internalContext?.weatherForecast?.source_fact_id ?? internalContext?.weatherForecast?.forecast_id ?? "").trim();
     const skillInputs = {
       tenant_id,
       project_id,
@@ -508,18 +521,19 @@ function buildRecommendationsFromStage1Summary(
       field_id,
       soil_moisture: normalizedSoilMoisture ?? Number.NaN,
       crop_stage: resolvedCropStage,
-      rain_forecast_mm: 0,
+      rain_forecast_mm: weatherRainForecastMm,
       evidence_refs: [
         "stage1_sensing_summary_v1:irrigation_effectiveness",
         "stage1_sensing_summary_v1:leak_risk",
         Number.isFinite(soilMoisture) ? "field_sensing_overview_v1:soil_moisture" : "",
+        weatherEvidenceRef,
       ],
     };
     const irrigationDeficitSkill = runIrrigationDeficitSkillV1(skillInputs);
     const diagnosis = diagnoseIrrigationV1({
       soil_moisture: normalizedSoilMoisture,
       soil_moisture_threshold: 0.22,
-      rain_forecast_mm: 0,
+      rain_forecast_mm: weatherRainForecastMm,
       crop_stage: resolvedCropStage,
       observed_at_ts_ms: now,
       evidence_refs: irrigationDeficitSkill.evidence_refs,
@@ -1368,11 +1382,25 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
           salinity_risk: null,
           source: "field_fertility_state_v1"
         };
+    const latestWeatherForecast = await getLatestWeatherForecastIndexV1(pool, tenant, derivedFieldId).catch(() => null);
+
     let recommendations = buildRecommendationsFromStage1Summary(
       body,
       stage1Summary,
       snapshot_id,
-      { sensingOverview: sensingOverview ?? null, fertilityState: fertilityState ?? null },
+      {
+        sensingOverview: sensingOverview ?? null,
+        fertilityState: fertilityState ?? null,
+        weatherForecast: latestWeatherForecast
+          ? {
+              forecast_id: latestWeatherForecast.forecast_id ?? null,
+              source_fact_id: latestWeatherForecast.source_fact_id ?? null,
+              rainfall_forecast_mm_72h: Number.isFinite(Number(latestWeatherForecast.rainfall_forecast_mm_72h))
+                ? Number(latestWeatherForecast.rainfall_forecast_mm_72h)
+                : null,
+            }
+          : null,
+      },
       hardRuleInput
     );
     if (recommendations.length === 0) {
