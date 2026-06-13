@@ -12,6 +12,7 @@ import { evaluateHardRuleHintsV1, getHardRuleRecommendationBlueprintV1 } from ".
 import { diagnoseIrrigationV1 } from "../domain/agronomy/irrigation/irrigation_diagnosis_v1.js";
 import { buildIrrigationRecommendationV1 } from "../domain/agronomy/irrigation/irrigation_recommendation_v1.js";
 import { runIrrigationDeficitSkillV1 } from "../domain/agronomy/skills/irrigation/irrigation_deficit_skill_v1.js";
+import { runIrrigationRequirementSkillV1 } from "../domain/agronomy/skills/irrigation/irrigation_requirement_skill_v1.js";
 import { getLatestWeatherForecastIndexV1 } from "../projections/weather_forecast_v1.js";
 import {
   assertFormalTriggerInputLayer,
@@ -427,6 +428,7 @@ function buildRecommendationsFromStage1Summary(
       forecast_id?: string | null;
       source_fact_id?: string | null;
       rainfall_forecast_mm_72h?: number | null;
+      et0_mm_72h?: number | null;
     } | null;
   },
   hardRuleInput?: HardRuleConstraintInputV1 | null,
@@ -514,6 +516,9 @@ function buildRecommendationsFromStage1Summary(
       ? Number(internalContext?.weatherForecast?.rainfall_forecast_mm_72h)
       : 0;
     const weatherEvidenceRef = String(internalContext?.weatherForecast?.source_fact_id ?? internalContext?.weatherForecast?.forecast_id ?? "").trim();
+    const weatherEt0Mm72h = Number.isFinite(Number(internalContext?.weatherForecast?.et0_mm_72h))
+      ? Number(internalContext?.weatherForecast?.et0_mm_72h)
+      : 0;
     const skillInputs = {
       tenant_id,
       project_id,
@@ -530,15 +535,36 @@ function buildRecommendationsFromStage1Summary(
       ],
     };
     const irrigationDeficitSkill = runIrrigationDeficitSkillV1(skillInputs);
+    const requirementSkillInputs = {
+      tenant_id,
+      project_id,
+      group_id,
+      field_id,
+      soil_moisture: normalizedSoilMoisture,
+      target_soil_moisture: 0.22,
+      root_zone_depth_mm: 300,
+      rain_forecast_mm_72h: weatherRainForecastMm,
+      et0_mm_72h: weatherEt0Mm72h,
+      crop_stage: resolvedCropStage,
+      application_efficiency: 0.85,
+      evidence_refs: skillInputs.evidence_refs,
+    };
+    const irrigationRequirementSkill = runIrrigationRequirementSkillV1(requirementSkillInputs);
+    const requirementSkillTraceConfidence = {
+      level: irrigationRequirementSkill.confidence.level,
+      basis: irrigationRequirementSkill.confidence.basis === "mixed" ? "estimated" as const : irrigationRequirementSkill.confidence.basis,
+      reasons: irrigationRequirementSkill.confidence.reasons,
+    };
+    const irrigationSkillEvidenceRefs = mergeTextList(irrigationDeficitSkill.evidence_refs, irrigationRequirementSkill.evidence_refs);
     const diagnosis = diagnoseIrrigationV1({
       soil_moisture: normalizedSoilMoisture,
       soil_moisture_threshold: 0.22,
       rain_forecast_mm: weatherRainForecastMm,
       crop_stage: resolvedCropStage,
       observed_at_ts_ms: now,
-      evidence_refs: irrigationDeficitSkill.evidence_refs,
+      evidence_refs: irrigationSkillEvidenceRefs,
     });
-    if (irrigationDeficitSkill.deficit_detected && diagnosis.water_deficit) {
+    if (irrigationDeficitSkill.deficit_detected && diagnosis.water_deficit && irrigationRequirementSkill.requirement_detected) {
       const moistureTerm = normalizedSoilMoisture == null ? 0.4 : clamp01((diagnosis.threshold - normalizedSoilMoisture) / diagnosis.threshold);
       const heatTerm = Number.isFinite(canopyTemp) ? clamp01((canopyTemp - 28) / 12) : 0.2;
       const skillConfidenceBonus =
@@ -557,30 +583,36 @@ function buildRecommendationsFromStage1Summary(
         crop_code,
         crop_stage: resolvedCropStage,
         diagnosis,
-        suggested_amount: { amount: irrigationDeficitSkill.recommended_amount, unit: irrigationDeficitSkill.unit },
+        suggested_amount: { amount: irrigationRequirementSkill.gross_irrigation_requirement_mm, unit: irrigationRequirementSkill.unit },
         created_ts: now,
         confidence,
         skill_trace: {
-          skill_id: "irrigation_deficit_skill_v1",
+          skill_id: "irrigation_requirement_skill_v1",
           skill_version: "v1",
           trace_id: `skill_trace_${now}_${field_id}`,
-          inputs: skillInputs,
-          outputs: irrigationDeficitSkill,
-          confidence: irrigationDeficitSkill.confidence,
-          evidence_refs: irrigationDeficitSkill.evidence_refs,
+          inputs: requirementSkillInputs,
+          outputs: {
+            deficit: irrigationDeficitSkill,
+            requirement: irrigationRequirementSkill,
+          },
+          confidence: requirementSkillTraceConfidence,
+          evidence_refs: irrigationSkillEvidenceRefs,
         },
       });
       out.push({
         ...irrigationRecommendation,
         program_id,
         skill_trace: {
-          skill_id: "irrigation_deficit_skill_v1",
+          skill_id: "irrigation_requirement_skill_v1",
           skill_version: "v1",
           trace_id: `skill_trace_${now}_${field_id}`,
-          inputs: skillInputs,
-          outputs: irrigationDeficitSkill,
-          confidence: irrigationDeficitSkill.confidence,
-          evidence_refs: irrigationDeficitSkill.evidence_refs,
+          inputs: requirementSkillInputs,
+          outputs: {
+            deficit: irrigationDeficitSkill,
+            requirement: irrigationRequirementSkill,
+          },
+          confidence: requirementSkillTraceConfidence,
+          evidence_refs: irrigationSkillEvidenceRefs,
         },
         explanation_codes: (supportOverview?.explanation_codes_json ?? []).map((code) => ({ code, source: "field_sensing_overview_v1" })),
       });
@@ -1397,6 +1429,9 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
               source_fact_id: latestWeatherForecast.source_fact_id ?? null,
               rainfall_forecast_mm_72h: Number.isFinite(Number(latestWeatherForecast.rainfall_forecast_mm_72h))
                 ? Number(latestWeatherForecast.rainfall_forecast_mm_72h)
+                : null,
+              et0_mm_72h: Number.isFinite(Number(latestWeatherForecast.et0_mm_72h))
+                ? Number(latestWeatherForecast.et0_mm_72h)
                 : null,
             }
           : null,
