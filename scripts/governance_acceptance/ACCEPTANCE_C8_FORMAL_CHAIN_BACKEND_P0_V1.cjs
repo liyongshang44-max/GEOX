@@ -205,6 +205,13 @@ async function assertOperationReport() {
   nearly(soil.value, 18.4, 'soil_moisture_percent observation value');
   nearly(rain.value, 2, 'forecast_rain_72h_mm observation value');
   assert(String(diag.diagnosis?.human || '').trim(), 'diagnostic_inputs.diagnosis.human must be non-empty', diag);
+  const weatherSummary = report.weather_summary;
+  assert(weatherSummary, 'operation report weather_summary missing', report);
+  assert(weatherSummary.weather_forecast_id === 'wf_c8_irrigation_001', 'operation report weather_summary.weather_forecast_id mismatch', weatherSummary);
+  assert(weatherSummary.source_quality?.provider === 'MOCK', 'operation report weather_summary source provider mismatch', weatherSummary);
+  assert(weatherSummary.source_quality?.provider_status === 'PARTIAL', 'operation report weather_summary provider_status mismatch', weatherSummary);
+  nearly(weatherSummary.rainfall_forecast_mm, 2, 'operation report weather_summary rainfall');
+  nearly(weatherSummary.max_temperature_c, 31, 'operation report weather_summary max temperature');
 
   assert(report.prescription?.prescription_id === 'presc_c8_irrigation_001', 'report prescription_id mismatch', report.prescription);
   nearly(report.prescription?.amount, report.as_executed?.planned_amount, 'report prescription.amount follows as_executed planned_amount');

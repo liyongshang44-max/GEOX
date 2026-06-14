@@ -149,6 +149,14 @@ export type OperationReportV1 = {
     rainfall_forecast_mm: number | null;
     max_temperature_c: number | null;
     narrative: string | null;
+    weather_forecast_id?: string | null;
+    source_quality?: {
+      provider: string | null;
+      source_type: string | null;
+      provider_status: string | null;
+      stale: boolean | null;
+      missing_fields: string[];
+    } | null;
   } | null;
   customer_memory_summary?: {
     title: string;
