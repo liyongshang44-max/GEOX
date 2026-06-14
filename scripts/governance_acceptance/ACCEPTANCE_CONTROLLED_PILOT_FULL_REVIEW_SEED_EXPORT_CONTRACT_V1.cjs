@@ -5,6 +5,7 @@ const SEED = 'scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs';
 const CHAIN = 'C8_FORMAL_IRRIGATION_FULL_CHAIN_V1';
 const FORMAL_OP = 'op_plan_c8_irrigation_formal_001';
 const PENDING_OP = 'op_plan_c8_irrigation_pending_001';
+const FORMAL_REQUIREMENT = 'ireq_c8_irrigation_001';
 function run(args) {
   const r = spawnSync(process.execPath, args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   if (r.status !== 0) { console.error(r.stdout); console.error(r.stderr); process.exit(r.status || 1); }
@@ -20,7 +21,7 @@ function ids(list, key) { return (list || []).map((x) => String(x?.[key] || ''))
 function assertFormalChain(exported) {
   const c = exported.formal_chain || {};
   must(exported.ok === true && exported.chain_id === CHAIN && c.chain_id === CHAIN, 'chain id invalid', exported);
-  for (const k of ['field','boundary','devices','observations','diagnosis','recommendation','prescription','approval','operation_plan','ao_act_task','receipt','as_executed_expected','as_applied_expected','evidence','acceptance','roi','field_memory','production_evidence','report_expectations']) must(c[k] !== undefined, `formal_chain missing ${k}`);
+  for (const k of ['field','boundary','irrigation_requirement','devices','observations','diagnosis','recommendation','prescription','approval','operation_plan','ao_act_task','receipt','as_executed_expected','as_applied_expected','evidence','acceptance','roi','field_memory','production_evidence','report_expectations']) must(c[k] !== undefined, `formal_chain missing ${k}`);
   must(c.field?.field_id === 'field_c8_demo' && c.field?.area_mu === 30 && c.field?.crop_name === '玉米' && c.field?.crop_stage === '营养生长期', 'field context invalid', c.field);
   for (const id of ['dev_soil_c8_001','dev_valve_pump_c8_001','dev_weather_station_c8_001']) { const d = (c.devices || []).find((x) => x.device_id === id); must(d?.display_kind_text && d?.sensing_role_text && d?.capability_text && d?.field_role_text, `device context invalid: ${id}`, d); }
   const before = (c.observations || []).find((x) => x.metric === 'soil_moisture_percent');
@@ -31,6 +32,12 @@ function assertFormalChain(exported) {
   must(rain?.metric_role === 'weather_forecast' && rain?.diagnostic_use === 'irrigation_decision_input', 'rain observation invalid', rain);
   must(c.diagnosis?.input_observation_refs?.includes('telemetry_soil_before_001') && c.diagnosis?.input_observation_refs?.includes('telemetry_rain_001'), 'diagnosis refs missing', c.diagnosis);
   must(c.recommendation?.expected_effect?.metric === 'soil_moisture_percent', 'recommendation expected effect missing', c.recommendation);
+  must(c.irrigation_requirement?.requirement_id === FORMAL_REQUIREMENT, 'irrigation requirement id invalid', c.irrigation_requirement);
+  must(c.irrigation_requirement?.source_forecast_id === 'wf_c8_irrigation_001', 'irrigation requirement forecast binding invalid', c.irrigation_requirement);
+  must(c.irrigation_requirement?.skill_id === 'irrigation_requirement_skill_v1', 'irrigation requirement skill invalid', c.irrigation_requirement);
+  must(close(c.irrigation_requirement?.gross_irrigation_mm, 22), 'irrigation requirement gross amount invalid', c.irrigation_requirement);
+  must(close(c.irrigation_requirement?.gross_irrigation_requirement_mm, 22), 'irrigation requirement gross requirement amount invalid', c.irrigation_requirement);
+  must(c.irrigation_requirement?.unit === 'mm', 'irrigation requirement unit invalid', c.irrigation_requirement);
   must(c.prescription?.prescription_id === 'presc_c8_irrigation_001' && close(c.prescription?.operation_amount?.amount, c.recommendation?.suggested_action?.water_mm) && c.prescription?.operation_amount?.unit === 'mm', 'prescription invalid', c.prescription);
   must(c.operation_plan?.operation_plan_id === FORMAL_OP && c.operation_plan?.prescription_id === 'presc_c8_irrigation_001' && all(c.operation_plan?.expected_evidence, ['water_delivery_receipt','post_soil_moisture_metric']), 'operation plan invalid', c.operation_plan);
   must(c.ao_act_task?.act_task_id === 'act_c8_irrigation_formal_001' && close(c.ao_act_task?.parameters?.amount, c.operation_plan?.planned_amount) && c.ao_act_task?.parameters?.target_soil_moisture_percent === 24 && all(c.ao_act_task?.evidence_requirements, ['water_delivery_receipt','post_soil_moisture_metric']), 'AO-ACT task invalid', c.ao_act_task);
@@ -67,12 +74,24 @@ function assertC8Profile(exported, dry) {
   must(!payloads(exported, 'decision_recommendation_v1').some((x) => x.recommendation_id === 'rec_c8_pest_inspection_pending_001'), 'c8 recommendation facts include pest pending', payloads(exported, 'decision_recommendation_v1'));
   must(JSON.stringify(exported.derived_expectations?.customer_operations || []) === JSON.stringify([FORMAL_OP]), 'c8 customer operation expectation must be formal only', exported.derived_expectations?.customer_operations);
 }
+function assertIrrigationRequirementExport(exported) {
+  const rows = payloads(exported, 'irrigation_requirement_v1');
+  const requirement = rows.find((x) => x.requirement_id === FORMAL_REQUIREMENT);
+  must(requirement?.field_id === 'field_c8_demo', 'irrigation requirement field mismatch', requirement);
+  must(requirement?.source_forecast_id === 'wf_c8_irrigation_001', 'irrigation requirement forecast binding mismatch', requirement);
+  must(requirement?.skill_id === 'irrigation_requirement_skill_v1', 'irrigation requirement skill mismatch', requirement);
+  must(close(requirement?.gross_irrigation_mm, 22), 'irrigation requirement gross amount mismatch', requirement);
+  must(close(requirement?.gross_irrigation_requirement_mm, 22), 'irrigation requirement gross requirement amount mismatch', requirement);
+  must(requirement?.unit === 'mm', 'irrigation requirement unit mismatch', requirement);
+}
+
 const dry = run([SEED, '--dry-run', '--tenant', 'tenantA']);
 must(dry.ok === true && dry.profile === 'full-review' && dry.chain_id === CHAIN && dry.apply === false, 'dry-run envelope invalid', dry);
 for (const [key, min] of Object.entries({
   fields: 3,
   devices: 4,
   formal_operations: 1,
+  irrigation_requirements: 1,
   recommendations: 2,
   approval_requests: 2,
   receipts: 2,
@@ -105,6 +124,7 @@ must(
 );
 const exported = run([SEED, '--export-json', '--tenant', 'tenantA']);
 assertFormalChain(exported);
+assertIrrigationRequirementExport(exported);
 must(
   Array.isArray(exported.tables?.field_memory_v1_optional)
     && exported.tables.field_memory_v1_optional.length >= 1,
@@ -141,5 +161,6 @@ must(
 const c8Dry = run([SEED, '--dry-run', '--tenant', 'tenantA', '--profile', 'c8-formal-chain']);
 const c8Exported = run([SEED, '--export-json', '--tenant', 'tenantA', '--profile', 'c8-formal-chain']);
 assertFormalChain(c8Exported);
+assertIrrigationRequirementExport(c8Exported);
 assertC8Profile(c8Exported, c8Dry);
 console.log('[controlled-pilot-full-review-seed-export] PASS');
