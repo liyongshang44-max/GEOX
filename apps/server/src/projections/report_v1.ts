@@ -158,6 +158,44 @@ export type OperationReportV1 = {
       missing_fields: string[];
     } | null;
   } | null;
+  irrigation_requirement_summary?: {
+    requirement_id: string | null;
+    source_forecast_id: string | null;
+    source_fact_id: string | null;
+    source_observation_refs: string[];
+    skill_id: string | null;
+    skill_version: string | null;
+    skill_run_id: string | null;
+    field_id: string | null;
+    season_id: string | null;
+    crop_code: string | null;
+    crop_stage: string | null;
+    root_zone_soil_moisture_percent: number | null;
+    target_soil_moisture_percent: number | null;
+    target_min_soil_moisture_percent: number | null;
+    target_max_soil_moisture_percent: number | null;
+    rainfall_forecast_mm_72h: number | null;
+    effective_rainfall_mm_72h: number | null;
+    temperature_max_c_72h: number | null;
+    net_irrigation_mm: number | null;
+    gross_irrigation_mm: number | null;
+    gross_irrigation_requirement_mm: number | null;
+    unit: string | null;
+    calculation_method: string | null;
+    calculation_inputs: Record<string, unknown>;
+    source_quality: {
+      status: string | null;
+      source: string | null;
+      deterministic: boolean | null;
+      missing_fields: string[];
+    } | null;
+    binding: {
+      requirement_to_forecast: boolean;
+      requirement_to_field: boolean;
+      report_binding_status: "BOUND" | "MISSING_REQUIREMENT" | "FORECAST_MISMATCH";
+    };
+    narrative: string | null;
+  } | null;
   customer_memory_summary?: {
     title: string;
     learned: string | null;

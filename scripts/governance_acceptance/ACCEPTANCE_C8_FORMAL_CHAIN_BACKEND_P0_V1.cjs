@@ -236,6 +236,21 @@ async function assertOperationReport() {
   nearly(weatherSummary.rainfall_forecast_mm, 2, 'operation report weather_summary rainfall');
   nearly(weatherSummary.max_temperature_c, 31, 'operation report weather_summary max temperature');
 
+  const requirementSummary = report.irrigation_requirement_summary;
+  assert(requirementSummary, 'operation report irrigation_requirement_summary missing', report);
+  assert(requirementSummary.requirement_id === FORMAL_REQUIREMENT, 'operation report requirement_id mismatch', requirementSummary);
+  assert(requirementSummary.source_forecast_id === 'wf_c8_irrigation_001', 'operation report requirement forecast binding mismatch', requirementSummary);
+  assert(requirementSummary.source_fact_id === 'full_review_seed_tenantA_irrigation_requirement_c8_001', 'operation report requirement source_fact_id mismatch', requirementSummary);
+  assert(requirementSummary.skill_id === 'irrigation_requirement_skill_v1', 'operation report requirement skill_id mismatch', requirementSummary);
+  nearly(requirementSummary.gross_irrigation_mm, 22, 'operation report requirement gross_irrigation_mm');
+  nearly(requirementSummary.gross_irrigation_requirement_mm, 22, 'operation report requirement gross_irrigation_requirement_mm');
+  assert(requirementSummary.unit === 'mm', 'operation report requirement unit mismatch', requirementSummary);
+  assert(requirementSummary.source_quality?.status === 'FORMAL_FIXTURE', 'operation report requirement quality status mismatch', requirementSummary);
+  assert(requirementSummary.source_quality?.deterministic === true, 'operation report requirement deterministic flag mismatch', requirementSummary);
+  assert(requirementSummary.binding?.requirement_to_forecast === true, 'operation report requirement_to_forecast binding mismatch', requirementSummary);
+  assert(requirementSummary.binding?.requirement_to_field === true, 'operation report requirement_to_field binding mismatch', requirementSummary);
+  assert(requirementSummary.binding?.report_binding_status === 'BOUND', 'operation report requirement binding status mismatch', requirementSummary);
+
   assert(report.prescription?.prescription_id === 'presc_c8_irrigation_001', 'report prescription_id mismatch', report.prescription);
   nearly(report.prescription?.amount, report.as_executed?.planned_amount, 'report prescription.amount follows as_executed planned_amount');
   assert(report.prescription?.unit === 'mm', 'report prescription.unit mismatch', report.prescription);
