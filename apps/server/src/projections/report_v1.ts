@@ -246,10 +246,28 @@ export type OperationReportV1 = {
     amount: number | null;
     unit: string | null;
     operation_type: string | null;
+    amount_source?: {
+      source_type: string | null;
+      requirement_id: string | null;
+      source_requirement_id: string | null;
+      source_field: string | null;
+      source_fact_id: string | null;
+      source_value_mm: number | null;
+      trace_id: string | null;
+    } | null;
   } | null;
   as_executed: {
     as_executed_id?: string | null;
     planned_amount?: number | null;
+    planned_amount_source?: {
+      source_type: string | null;
+      requirement_id: string | null;
+      source_requirement_id: string | null;
+      source_field: string | null;
+      source_fact_id: string | null;
+      source_value_mm: number | null;
+      trace_id: string | null;
+    } | null;
     executed_amount?: number | null;
     unit?: string | null;
     deviation?: number | null;

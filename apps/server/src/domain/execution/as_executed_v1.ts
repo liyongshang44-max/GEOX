@@ -444,6 +444,19 @@ function toAsExecutedPayload(params: {
 
   const plannedAmount = toNum(params.prescription?.operation_amount?.amount);
   const plannedUnit = params.prescription?.operation_amount?.unit ? String(params.prescription.operation_amount.unit) : null;
+  const operationAmountMetadata =
+    params.prescription?.operation_amount?.metadata && typeof params.prescription.operation_amount.metadata === "object"
+      ? params.prescription.operation_amount.metadata
+      : {};
+  const plannedAmountSource = {
+    source_type: getByPath(operationAmountMetadata, ["source_type"]) ?? null,
+    requirement_id: getByPath(operationAmountMetadata, ["requirement_id"]) ?? getByPath(operationAmountMetadata, ["source_requirement_id"]) ?? null,
+    source_requirement_id: getByPath(operationAmountMetadata, ["source_requirement_id"]) ?? getByPath(operationAmountMetadata, ["requirement_id"]) ?? null,
+    source_field: getByPath(operationAmountMetadata, ["source_field"]) ?? null,
+    source_fact_id: getByPath(operationAmountMetadata, ["source_fact_id"]) ?? null,
+    source_value_mm: toNum(operationAmountMetadata?.source_value_mm),
+    trace_id: getByPath(operationAmountMetadata, ["trace_id"]) ?? params.prescription?.trace_id ?? null,
+  };
   const executedAmountInfo = pickExecutedAmount(payload, plannedUnit);
 
   return {
@@ -466,6 +479,10 @@ function toAsExecutedPayload(params: {
           unit: plannedUnit,
           prescription_id: params.prescription.prescription_id,
           trace_id: params.prescription.trace_id ?? null,
+          requirement_id: plannedAmountSource.requirement_id,
+          source_requirement_id: plannedAmountSource.source_requirement_id,
+          amount_source: plannedAmountSource,
+          planned_amount_source: plannedAmountSource,
           recommendation_id: params.prescription.recommendation_id,
           field_id: params.prescription.field_id,
           season_id: params.prescription.season_id,
@@ -666,7 +683,66 @@ export async function createAsExecutedFromReceipt(pool: Pool, input: CreateAsExe
   let asExecutedIdempotent = false;
 
   if (existing) {
-    asExecuted = existing;
+    const { prescription, confidence, resolved_by } = await resolvePrescription(pool, {
+      tenant: {
+        tenant_id: input.tenant_id,
+        project_id: input.project_id,
+        group_id: input.group_id,
+      },
+      task_id: taskId,
+      receipt,
+    });
+
+    const refreshed = toAsExecutedPayload({
+      input: { ...input, task_id: taskId },
+      receipt,
+      resolvedReceiptId,
+      prescription,
+      prescriptionConfidence: confidence,
+      prescriptionResolvedBy: resolved_by,
+    });
+
+    const existingRequirementId =
+      getByPath(existing.planned, ["amount_source", "requirement_id"])
+      || getByPath(existing.planned, ["planned_amount_source", "requirement_id"])
+      || getByPath(existing.planned, ["requirement_id"]);
+
+    const refreshedRequirementId =
+      getByPath(refreshed.planned, ["amount_source", "requirement_id"])
+      || getByPath(refreshed.planned, ["planned_amount_source", "requirement_id"])
+      || getByPath(refreshed.planned, ["requirement_id"]);
+
+    if (!existingRequirementId && refreshedRequirementId) {
+      const updatedExisting = await pool.query(
+        `UPDATE as_executed_record_v1
+            SET prescription_id = $6,
+                field_id = $7,
+                planned = $8::jsonb,
+                confidence = $9::jsonb,
+                updated_at = now()
+          WHERE tenant_id = $1
+            AND project_id = $2
+            AND group_id = $3
+            AND task_id = $4
+            AND receipt_id = $5
+          RETURNING *`,
+        [
+          input.tenant_id,
+          input.project_id,
+          input.group_id,
+          taskId,
+          resolvedReceiptId,
+          refreshed.prescription_id,
+          refreshed.field_id,
+          JSON.stringify(refreshed.planned),
+          JSON.stringify(refreshed.confidence),
+        ]
+      );
+      asExecuted = updatedExisting.rows?.[0] ? mapAsExecutedRow(updatedExisting.rows[0]) : existing;
+    } else {
+      asExecuted = existing;
+    }
+
     asExecutedIdempotent = true;
   } else {
     const { prescription, confidence, resolved_by } = await resolvePrescription(pool, {
