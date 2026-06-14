@@ -10,6 +10,7 @@ const FORMAL_ACC = 'acc_c8_irrigation_formal_001';
 const FORMAL_RECEIPT = 'receipt_c8_irrigation_formal_001';
 const FORMAL_TASK = 'act_c8_irrigation_formal_001';
 const FORMAL_FIELD = 'field_c8_demo';
+const FORMAL_REQUIREMENT = 'ireq_c8_irrigation_001';
 
 function arg(name, fallback = null) {
   const idx = process.argv.indexOf(`--${name}`);
@@ -188,6 +189,28 @@ async function assertFieldMemory(client) {
   assert(noObs.status === 422 && noObs.json?.error === 'OBSERVATION_PAIR_NOT_FOUND', 'field memory missing observation pair negative failed', httpDetail(noObs));
 }
 function findBy(arr, pred) { return Array.isArray(arr) ? arr.find(pred) : null; }
+async function assertIrrigationRequirementReadback(client) {
+  const result = await client.query(
+    `SELECT requirement_id, field_id, season_id, source_forecast_id, skill_id, gross_irrigation_mm, gross_irrigation_requirement_mm, unit, source_fact_id
+       FROM irrigation_requirement_index_v1
+      WHERE tenant_id=$1
+        AND project_id=$2
+        AND group_id=$3
+        AND requirement_id=$4
+      LIMIT 1`,
+    [TENANT, PROJECT_ID, GROUP_ID, FORMAL_REQUIREMENT]
+  );
+  const row = result.rows?.[0];
+  assert(row, 'irrigation requirement index row missing', result.rows);
+  assert(row.field_id === FORMAL_FIELD, 'irrigation requirement field_id mismatch', row);
+  assert(row.source_forecast_id === 'wf_c8_irrigation_001', 'irrigation requirement forecast binding mismatch', row);
+  assert(row.skill_id === 'irrigation_requirement_skill_v1', 'irrigation requirement skill_id mismatch', row);
+  nearly(row.gross_irrigation_mm, 22, 'irrigation requirement gross_irrigation_mm');
+  nearly(row.gross_irrigation_requirement_mm, 22, 'irrigation requirement gross_irrigation_requirement_mm');
+  assert(row.unit === 'mm', 'irrigation requirement unit mismatch', row);
+  assert(String(row.source_fact_id || '').includes('irrigation_requirement_c8_001'), 'irrigation requirement source_fact_id mismatch', row);
+}
+
 async function assertOperationReport() {
   const r = await http(`/api/v1/reports/operation/${FORMAL_OP}?tenant_id=${TENANT}&project_id=${PROJECT_ID}&group_id=${GROUP_ID}`);
   assert(r.status === 200, 'operation report request failed', httpDetail(r));
@@ -268,6 +291,8 @@ async function assertFieldReport() {
     await assertRoiFormalization(client, asExecuted.as_executed_id);
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP field-memory');
     await assertFieldMemory(client);
+    console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP irrigation-requirement');
+    await assertIrrigationRequirementReadback(client);
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP operation-report');
     await assertOperationReport();
     await assertFieldReport();

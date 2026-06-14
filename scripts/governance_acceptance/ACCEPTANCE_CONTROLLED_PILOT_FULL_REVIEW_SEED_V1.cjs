@@ -31,6 +31,7 @@ const FORMAL_ACC = 'acc_c8_irrigation_formal_001';
 const FORMAL_FIELD = 'field_c8_demo';
 const FORMAL_MEMORY = 'fm_c8_irrigation_response_001';
 const FORMAL_ROI = 'roi_c8_irrigation_formal_001';
+const FORMAL_REQUIREMENT = 'ireq_c8_irrigation_001';
 let failed = false;
 
 function fail(message, detail) { console.error(`[controlled-pilot-full-review-seed] ${message}`); if (detail !== undefined) console.error(JSON.stringify(detail, null, 2)); failed = true; }
@@ -77,12 +78,18 @@ function assertFormalFieldMemory(memory) {
 function assertFormalChain(exported) {
   const c = exported.formal_chain || {};
   assert(exported.ok === true && exported.chain_id === CHAIN_ID && c.chain_id === CHAIN_ID, 'chain id invalid', exported);
-  for (const key of ['field','boundary','devices','observations','diagnosis','recommendation','prescription','approval','operation_plan','ao_act_task','receipt','as_executed_expected','as_applied_expected','evidence','acceptance','roi','field_memory','production_evidence','report_expectations']) assert(c[key] !== undefined, `formal_chain missing ${key}`);
+  for (const key of ['field','boundary','irrigation_requirement','devices','observations','diagnosis','recommendation','prescription','approval','operation_plan','ao_act_task','receipt','as_executed_expected','as_applied_expected','evidence','acceptance','roi','field_memory','production_evidence','report_expectations']) assert(c[key] !== undefined, `formal_chain missing ${key}`);
   const fieldContextForContract = exported.formal_chain?.field || {};
   assert(fieldContextForContract.field_id === FORMAL_FIELD && fieldContextForContract.crop_code === 'corn' && fieldContextForContract.season_id === 'season_2026_c8_corn' && Number(fieldContextForContract.area_mu) === 30 && String(fieldContextForContract.crop_name || '').trim().length > 0 && String(fieldContextForContract.crop_stage || '').trim().length > 0, 'field context invalid', fieldContextForContract);
   for (const id of ['dev_soil_c8_001','dev_valve_pump_c8_001','dev_weather_station_c8_001']) { const d = (c.devices || []).find((x) => x.device_id === id); assert(d?.display_kind_text && d?.sensing_role_text && d?.capability_text && d?.field_role_text, `device context invalid: ${id}`, d); }
   const metrics = new Set((c.observations || []).map((x) => x.metric));
   for (const metric of ['soil_moisture_percent','forecast_rain_72h_mm','temperature_max_c','soil_moisture_after_percent']) assert(metrics.has(metric), `formal chain observation missing ${metric}`, [...metrics]);
+  assert(c.irrigation_requirement?.requirement_id === FORMAL_REQUIREMENT, 'irrigation requirement id invalid', c.irrigation_requirement);
+  assert(c.irrigation_requirement?.source_forecast_id === 'wf_c8_irrigation_001', 'irrigation requirement forecast binding invalid', c.irrigation_requirement);
+  assert(c.irrigation_requirement?.skill_id === 'irrigation_requirement_skill_v1', 'irrigation requirement skill invalid', c.irrigation_requirement);
+  nearly(c.irrigation_requirement?.gross_irrigation_mm, 22, 'irrigation requirement gross_irrigation_mm');
+  nearly(c.irrigation_requirement?.gross_irrigation_requirement_mm, 22, 'irrigation requirement gross_irrigation_requirement_mm');
+  assert(c.irrigation_requirement?.unit === 'mm', 'irrigation requirement unit invalid', c.irrigation_requirement);
   assert(c.operation_plan?.operation_plan_id === FORMAL_OP && c.operation_plan?.prescription_id === 'presc_c8_irrigation_001', 'operation plan invalid', c.operation_plan);
   nearly(c.operation_plan?.planned_amount, c.recommendation?.suggested_action?.water_mm, 'operation plan planned amount follows recommendation');
   nearly(c.prescription?.operation_amount?.amount, c.recommendation?.suggested_action?.water_mm, 'prescription amount follows recommendation');
@@ -142,6 +149,7 @@ function assertManifestSeedOwnership(exported) {
   assert(Array.isArray(owned.fields) && owned.fields.includes(FORMAL_FIELD), 'manifest seed_owned_ids missing formal field', owned);
   assert(Array.isArray(owned.operations) && owned.operations.includes(FORMAL_OP), 'manifest seed_owned_ids missing formal operation', owned);
   assert(Array.isArray(owned.devices) && owned.devices.includes('dev_weather_station_c8_001'), 'manifest seed_owned_ids missing weather device', owned);
+  assert(Array.isArray(owned.irrigation_requirements) && owned.irrigation_requirements.includes(FORMAL_REQUIREMENT), 'manifest seed_owned_ids missing irrigation requirement', owned);
 }
 
 function assertWeatherForecastExportContract(exported) {
@@ -154,6 +162,17 @@ function assertWeatherForecastExportContract(exported) {
   nearly(weather?.temperature_max_c_72h, 31, 'weather temperature_max_c_72h');
   assert(Object.prototype.hasOwnProperty.call(weather || {}, 'et0_mm_72h'), 'weather et0_mm_72h field missing', weather);
   assert(weather?.quality?.provider_status === 'PARTIAL', 'weather provider_status mismatch', weather?.quality);
+}
+
+function assertIrrigationRequirementExportContract(exported) {
+  const requirement = firstPayload(exported, 'irrigation_requirement_v1', (x) => x.requirement_id === FORMAL_REQUIREMENT);
+  assert(requirement?.field_id === FORMAL_FIELD, 'irrigation requirement field_id mismatch', requirement);
+  assert(requirement?.source_forecast_id === 'wf_c8_irrigation_001', 'irrigation requirement source_forecast_id mismatch', requirement);
+  assert(requirement?.skill_id === 'irrigation_requirement_skill_v1', 'irrigation requirement skill_id mismatch', requirement);
+  assert(requirement?.unit === 'mm', 'irrigation requirement unit mismatch', requirement);
+  nearly(requirement?.gross_irrigation_mm, 22, 'irrigation requirement gross_irrigation_mm');
+  nearly(requirement?.gross_irrigation_requirement_mm, 22, 'irrigation requirement gross_irrigation_requirement_mm');
+  assert(Array.isArray(requirement?.source_observation_refs) && requirement.source_observation_refs.includes('telemetry_soil_before_001'), 'irrigation requirement observation refs missing soil input', requirement);
 }
 
 function assertFieldMemoryExportContract(exported) {
@@ -204,6 +223,7 @@ async function main() {
     'BOUNDARY_AVAILABLE', 'formal_chain_summary', 'pending_chain_summary', 'tok_admin_actor', 'CONFIRMED',
   ]);
   need('seed approval/as-executed/ROI/field-memory flow', seed, ['actor_id', 'tok_admin_actor', 'actor_role', 'operation_approver', '/api/v1/as-executed/from-receipt', '/api/v1/roi-ledger/from-as-executed', '/api/v1/roi-ledger/formalize-from-acceptance', '/api/v1/field-memory/from-acceptance', 'ROI_INTERIM_SIGNAL_READBACK_REQUIRED', 'isInterimRoiForAsExecuted', 'FORMAL_FIELD_MEMORY_REQUIRED', 'CUSTOMER_FORMAL_MEMORY_REQUIRED', 'TECHNICAL_SKILL_MEMORY']);
+  need('seed irrigation requirement H2 flow', seed, ['irrigation_requirement_v1', 'irrigation_requirement_index_v1', 'insertIrrigationRequirementIndexRows', 'gross_irrigation_requirement_mm']);
   need('commercial release gate structured verify-api profiles', commercialR2Gate, ['controlled_pilot_full_review_verify_api_structured_json', 'controlled_pilot_c8_formal_chain_verify_api_structured_json', '--verify-api --tenant ${TENANT_ID} --base-url ${BASE}', '--verify-api --tenant ${TENANT_ID} --profile c8-formal-chain --base-url ${BASE}', 'JSON parse plus field-level assertions']);
   need('field memory service formal gate', fieldMemoryService, ['createFormalFieldMemoryFromAcceptanceV1', 'validateFormalFieldMemoryAcceptanceV1', 'FORMAL_FIELD_MEMORY', 'FORMAL_ACCEPTED', 'formal_acceptance_id', 'customer_visible_memory', 'learning_eligible', 'ACCEPTANCE_VERDICT_NOT_PASS', 'FORMAL_EVIDENCE_NOT_PASSED', 'CHAIN_VALIDATION_NOT_PASSED']);
   need('field memory route formal derivation', fieldMemoryRoute, ['/api/v1/field-memory/from-acceptance', 'FORMAL_FIELD_MEMORY', 'FORMAL_ACCEPTED', 'customer_visible_memory', 'learning_eligible', 'formal_acceptance_id']);
@@ -274,6 +294,7 @@ async function main() {
     fields: 3,
     devices: 4,
     formal_operations: 1,
+    irrigation_requirements: 1,
     pending_operations: 1,
     recommendations: 2,
     approval_requests: 2,
@@ -300,6 +321,7 @@ async function main() {
   assertRoiExportContract(exported);
   assertManifestSeedOwnership(exported);
   assertWeatherForecastExportContract(exported);
+  assertIrrigationRequirementExportContract(exported);
   assertFieldMemoryExportContract(exported);
   assert((exported.system_domains || []).length >= 26, 'system domains A-Z coverage missing');
 
@@ -308,6 +330,7 @@ async function main() {
   assertFormalChain(c8Exported);
   assertApprovalDecision(c8Exported);
   assertRoiExportContract(c8Exported);
+  assertIrrigationRequirementExportContract(c8Exported);
   assertFieldMemoryExportContract(c8Exported);
   assertProfileIsolation(c8Exported, c8Dry);
 
