@@ -305,6 +305,10 @@ function diagnosticObservationNumber(report: OperationReportV1, metric: string):
 function buildWeatherSummaryFromValuesForReportV1(
   rainfallForecastMm: number | null,
   maxTemperatureC: number | null,
+  source: {
+    weather_forecast_id?: string | null;
+    source_quality?: NonNullable<OperationReportV1["weather_summary"]>["source_quality"];
+  } = {},
 ): OperationReportV1["weather_summary"] {
   if (rainfallForecastMm == null && maxTemperatureC == null) {
     return null;
@@ -326,6 +330,8 @@ function buildWeatherSummaryFromValuesForReportV1(
     rainfall_forecast_mm: rainfallForecastMm,
     max_temperature_c: maxTemperatureC,
     narrative: [rainfallNarrative, temperatureNarrative].filter(Boolean).join(" "),
+    weather_forecast_id: source.weather_forecast_id ?? null,
+    source_quality: source.source_quality ?? null,
   };
 }
 
@@ -350,9 +356,20 @@ function buildWeatherSummaryFromDiagnosticInputsForReportV1(diagnosticInputs: Di
 
 function buildWeatherSummaryFromWeatherForecastIndexV1(forecast: WeatherForecastIndexV1 | null): OperationReportV1["weather_summary"] {
   if (!forecast) return null;
+  const quality = forecast.quality && typeof forecast.quality === "object" ? forecast.quality as any : {};
   return buildWeatherSummaryFromValuesForReportV1(
     toFiniteNumberOrNull(forecast.rainfall_forecast_mm_72h),
     toFiniteNumberOrNull(forecast.temperature_max_c_72h),
+    {
+      weather_forecast_id: toText(forecast.forecast_id),
+      source_quality: {
+        provider: toText(forecast.provider),
+        source_type: toText(forecast.source_type),
+        provider_status: toText(quality.provider_status),
+        stale: typeof quality.stale === "boolean" ? quality.stale : null,
+        missing_fields: Array.isArray(quality.missing_fields) ? quality.missing_fields.map((x: unknown) => String(x)) : [],
+      },
+    },
   );
 }
 
