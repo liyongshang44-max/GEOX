@@ -54,7 +54,7 @@ function assertApprovalDecision(exported) {
   assert(d?.actor_id === 'tok_admin_actor', 'approval actor_id mismatch', d);
   assert(d?.actor_name === '运营管理员', 'approval actor_name mismatch', d);
   assert(d?.actor_role === 'operation_approver', 'approval actor_role mismatch', d);
-  assert(String(d?.note || '').includes('22mm'), 'approval note missing 22mm', d);
+  assert(/按\\s*\\d+(\\.\\d+)?mm/.test(String(d?.note || '')), 'approval note missing irrigation amount mm', d);
   assert(d?.decided_by === 'tok_admin_actor', 'approval decided_by mismatch', d);
 }
 
@@ -81,15 +81,18 @@ function assertFormalChain(exported) {
   const metrics = new Set((c.observations || []).map((x) => x.metric));
   for (const metric of ['soil_moisture_percent','forecast_rain_72h_mm','temperature_max_c','soil_moisture_after_percent']) assert(metrics.has(metric), `formal chain observation missing ${metric}`, [...metrics]);
   assert(c.operation_plan?.operation_plan_id === FORMAL_OP && c.operation_plan?.prescription_id === 'presc_c8_irrigation_001', 'operation plan invalid', c.operation_plan);
+  nearly(c.operation_plan?.planned_amount, c.recommendation?.suggested_action?.water_mm, 'operation plan planned amount follows recommendation');
+  nearly(c.prescription?.operation_amount?.amount, c.recommendation?.suggested_action?.water_mm, 'prescription amount follows recommendation');
   assert(hasAll(c.operation_plan?.expected_evidence, ['water_delivery_receipt','post_soil_moisture_metric']), 'operation expected_evidence incomplete', c.operation_plan);
-  assert(c.ao_act_task?.act_task_id === FORMAL_TASK && c.ao_act_task?.parameters?.amount === 22 && c.ao_act_task?.parameters?.target_soil_moisture_percent === 24, 'AO-ACT task invalid', c.ao_act_task);
+  assert(c.ao_act_task?.act_task_id === FORMAL_TASK && c.ao_act_task?.parameters?.target_soil_moisture_percent === 24, 'AO-ACT task invalid', c.ao_act_task);
+  nearly(c.ao_act_task?.parameters?.amount, c.operation_plan?.planned_amount, 'AO-ACT task amount follows operation plan planned amount');
   assert(c.receipt?.receipt_id === FORMAL_RECEIPT && c.receipt?.task_id === FORMAL_TASK && c.receipt?.status === 'executed', 'formal receipt identity/status invalid', c.receipt);
   nearly(c.receipt?.observed_parameters?.executed_amount, 21.6, 'receipt executed_amount');
   nearly(c.receipt?.observed_parameters?.coverage_percent, 100, 'receipt coverage_percent');
   assert(c.acceptance?.acceptance_id === FORMAL_ACC && c.acceptance?.formal_acceptance === true && c.acceptance?.formal_evidence_passed === true && c.acceptance?.chain_validation_passed === true, 'formal acceptance gate invalid', c.acceptance);
   assert(c.as_executed_expected?.task_id === FORMAL_TASK && c.as_executed_expected?.receipt_id === FORMAL_RECEIPT && c.as_executed_expected?.field_id === FORMAL_FIELD && c.as_executed_expected?.status === 'CONFIRMED', 'as-executed expectation invalid', c.as_executed_expected);
-  nearly(c.as_executed_expected?.planned_amount, 22, 'as-executed planned amount');
-  nearly(c.as_executed_expected?.executed_amount, 21.6, 'as-executed executed amount');
+  nearly(c.as_executed_expected?.planned_amount, c.operation_plan?.planned_amount, 'as-executed planned amount follows operation plan');
+  nearly(c.as_executed_expected?.executed_amount, c.receipt?.observed_parameters?.executed_amount, 'as-executed executed amount follows receipt');
   assert(c.as_applied_expected?.field_id === FORMAL_FIELD, 'as-applied field invalid', c.as_applied_expected);
   nearly(c.as_applied_expected?.coverage_percent, 100, 'as-applied coverage');
   assert(c.roi?.roi_ledger_id === FORMAL_ROI, 'formal ROI id invalid', c.roi);
@@ -99,7 +102,7 @@ function assertFormalChain(exported) {
   assert(c.roi?.roi_type === 'SOIL_MOISTURE_RESPONSE' && c.roi?.value_kind === 'MEASURED', 'formal ROI type/value_kind invalid', c.roi);
   nearly(c.roi?.before_value, 18.4, 'formal ROI before_value');
   nearly(c.roi?.after_value, 24.8, 'formal ROI after_value');
-  nearly(c.roi?.actual_value, 21.6, 'formal ROI actual_value');
+  nearly(c.roi?.actual_value, c.receipt?.observed_parameters?.executed_amount, 'formal ROI actual_value follows receipt executed amount');
   nearly(c.roi?.delta_value, 6.4, 'formal ROI delta_value');
   assertFormalFieldMemory(c.field_memory);
 }
