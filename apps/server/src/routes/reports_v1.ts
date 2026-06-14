@@ -625,6 +625,45 @@ function objectFromJsonColumn(value: unknown): any {
   return parseRecordJson(value) ?? (value && typeof value === "object" ? value : {});
 }
 
+function buildFormalAmountSourceForReportV1(metadata: any): any | null {
+  if (!metadata || typeof metadata !== "object") return null;
+  const requirementId = toText(metadata.requirement_id ?? metadata.source_requirement_id);
+  const sourceRequirementId = toText(metadata.source_requirement_id ?? metadata.requirement_id);
+  const sourceType = toText(metadata.source_type);
+  const sourceField = toText(metadata.source_field);
+  const sourceFactId = toText(metadata.source_fact_id);
+  const sourceValueMm = toFiniteNumberOrNull(metadata.source_value_mm);
+  const traceId = toText(metadata.trace_id);
+  if (!requirementId && !sourceRequirementId && !sourceType && !sourceField && !sourceFactId && sourceValueMm == null && !traceId) return null;
+  return {
+    source_type: sourceType,
+    requirement_id: requirementId,
+    source_requirement_id: sourceRequirementId,
+    source_field: sourceField,
+    source_fact_id: sourceFactId,
+    source_value_mm: sourceValueMm,
+    trace_id: traceId,
+  };
+}
+
+function buildFormalAmountSourceFromRequirementSummaryForReportV1(summary: OperationReportV1["irrigation_requirement_summary"]): any | null {
+  if (!summary) return null;
+  const requirementId = toText(summary.requirement_id);
+  const sourceFactId = toText(summary.source_fact_id);
+  const gross = toFiniteNumberOrNull(summary.gross_irrigation_requirement_mm ?? summary.gross_irrigation_mm);
+  const skillRunId = toText(summary.skill_run_id);
+  if (!requirementId && !sourceFactId && gross == null && !skillRunId) return null;
+  return {
+    source_type: "irrigation_requirement_v1",
+    requirement_id: requirementId,
+    source_requirement_id: requirementId,
+    source_field: "gross_irrigation_requirement_mm",
+    source_fact_id: sourceFactId,
+    source_value_mm: gross,
+    trace_id: skillRunId,
+  };
+}
+
 async function queryPrescriptionForReport(pool: Pool, tenant: TenantTriple, s: OperationStateV1): Promise<any | null> {
   const prescriptionId = toText((s as any).prescription_id);
   const recommendationId = toText(s.recommendation_id);
@@ -648,6 +687,7 @@ async function queryPrescriptionForReport(pool: Pool, tenant: TenantTriple, s: O
     amount: toFiniteNumberOrNull(amount?.amount ?? amount?.value),
     unit: toText(amount?.unit),
     operation_type: toText(row.operation_type),
+    amount_source: buildFormalAmountSourceForReportV1(amount?.metadata),
   };
 }
 
@@ -683,6 +723,7 @@ async function queryAsExecutedForReport(pool: Pool, tenant: TenantTriple, s: Ope
   return {
     as_executed_id: toText(row.as_executed_id),
     planned_amount: plannedAmount,
+    planned_amount_source: buildFormalAmountSourceForReportV1(planned?.planned_amount_source ?? planned?.amount_source),
     executed_amount: executedAmount,
     unit: toText(executed?.unit ?? planned?.unit),
     deviation: toFiniteNumberOrNull(deviationObj?.amount_delta) ?? (plannedAmount != null && executedAmount != null ? Number((executedAmount - plannedAmount).toFixed(4)) : null),
@@ -925,6 +966,7 @@ export async function projectReportV1(params: {
   const prescriptionForReport = await queryPrescriptionForReport(pool, tenant, operationState);
   const asExecutedForReport = await queryAsExecutedForReport(pool, tenant, operationState);
   const asAppliedForReport = await queryAsAppliedForReport(pool, tenant, operationState, asExecutedForReport);
+  const requirementAmountSourceForReport = buildFormalAmountSourceFromRequirementSummaryForReportV1(irrigationRequirementSummaryForReport);
 
   const operationReport = projectOperationReportV1({
     tenant,
@@ -961,15 +1003,44 @@ export async function projectReportV1(params: {
     reportWithFertilization,
     pestDiseaseInspectionView,
   );
+  const basePrescriptionForReport = (reportWithPestDiseaseInspection as any).prescription ?? null;
+  const mergedPrescriptionForReport = prescriptionForReport
+    ? {
+      ...(basePrescriptionForReport ?? {}),
+      ...prescriptionForReport,
+      amount_source: prescriptionForReport.amount_source ?? basePrescriptionForReport?.amount_source ?? requirementAmountSourceForReport,
+    }
+    : (
+      basePrescriptionForReport
+        ? {
+          ...basePrescriptionForReport,
+          amount_source: basePrescriptionForReport.amount_source ?? requirementAmountSourceForReport,
+        }
+        : null
+    );
+  const baseAsExecutedForReport = (reportWithPestDiseaseInspection as any).as_executed ?? null;
+  const mergedAsExecutedForReport = asExecutedForReport
+    ? {
+      ...(baseAsExecutedForReport ?? {}),
+      ...asExecutedForReport,
+      planned_amount_source: asExecutedForReport.planned_amount_source ?? baseAsExecutedForReport?.planned_amount_source ?? requirementAmountSourceForReport,
+    }
+    : (
+      baseAsExecutedForReport
+        ? {
+          ...baseAsExecutedForReport,
+          planned_amount_source: baseAsExecutedForReport.planned_amount_source ?? requirementAmountSourceForReport,
+        }
+        : baseAsExecutedForReport
+    );
+
   const reportWithExecutionBlocks: OperationReportV1 = {
     ...reportWithPestDiseaseInspection,
     diagnostic_inputs: diagnosticInputs,
     weather_summary: weatherSummaryForReport,
     irrigation_requirement_summary: irrigationRequirementSummaryForReport,
-    prescription: prescriptionForReport,
-    as_executed: asExecutedForReport
-      ? { ...(reportWithPestDiseaseInspection as any).as_executed, ...asExecutedForReport }
-      : (reportWithPestDiseaseInspection as any).as_executed,
+    prescription: mergedPrescriptionForReport,
+    as_executed: mergedAsExecutedForReport,
     as_applied: asAppliedForReport
       ? { ...(reportWithPestDiseaseInspection as any).as_applied, ...asAppliedForReport }
       : (reportWithPestDiseaseInspection as any).as_applied,
@@ -1180,6 +1251,20 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
         after_value: afterValueForOutcome,
         delta_value: deltaValueForOutcome,
         acceptance_status: acceptanceStatus,
+      };
+    }
+
+    const finalRequirementAmountSource = buildFormalAmountSourceFromRequirementSummaryForReportV1(
+      ((guardedOperationReport as any).irrigation_requirement_summary ?? (enrichedReport as any).irrigation_requirement_summary ?? null) as any,
+    );
+    if (finalRequirementAmountSource) {
+      (guardedOperationReport as any).prescription = {
+        ...((guardedOperationReport as any).prescription ?? {}),
+        amount_source: (guardedOperationReport as any).prescription?.amount_source ?? finalRequirementAmountSource,
+      };
+      (guardedOperationReport as any).as_executed = {
+        ...((guardedOperationReport as any).as_executed ?? {}),
+        planned_amount_source: (guardedOperationReport as any).as_executed?.planned_amount_source ?? finalRequirementAmountSource,
       };
     }
 

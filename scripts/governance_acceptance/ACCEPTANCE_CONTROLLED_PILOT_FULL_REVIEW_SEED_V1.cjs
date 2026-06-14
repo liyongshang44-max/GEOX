@@ -8,6 +8,7 @@ const http = require('node:http');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const SEED = 'scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs';
+const C8_DATASET = 'scripts/demo_seed/datasets/C8_FORMAL_IRRIGATION_FULL_CHAIN_V1.cjs';
 const FIELD_MEMORY_SERVICE = 'apps/server/src/services/field_memory_service.ts';
 const FIELD_MEMORY_ROUTE = 'apps/server/src/routes/field_memory_v1.ts';
 const CUSTOMER_ROUTE = 'apps/server/src/routes/customer_v1.ts';
@@ -90,12 +91,20 @@ function assertFormalChain(exported) {
   nearly(c.irrigation_requirement?.gross_irrigation_mm, 22, 'irrigation requirement gross_irrigation_mm');
   nearly(c.irrigation_requirement?.gross_irrigation_requirement_mm, 22, 'irrigation requirement gross_irrigation_requirement_mm');
   assert(c.irrigation_requirement?.unit === 'mm', 'irrigation requirement unit invalid', c.irrigation_requirement);
+  const requirementAmountMm = Number(c.irrigation_requirement?.gross_irrigation_requirement_mm);
+  nearly(c.recommendation?.suggested_action?.water_mm, requirementAmountMm, 'recommendation amount follows irrigation requirement');
+  nearly(c.recommendation?.suggested_action?.amount_mm, requirementAmountMm, 'recommendation amount_mm follows irrigation requirement');
+  assert(c.recommendation?.suggested_action?.amount_source?.requirement_id === FORMAL_REQUIREMENT, 'recommendation amount source requirement mismatch', c.recommendation?.suggested_action);
   assert(c.operation_plan?.operation_plan_id === FORMAL_OP && c.operation_plan?.prescription_id === 'presc_c8_irrigation_001', 'operation plan invalid', c.operation_plan);
-  nearly(c.operation_plan?.planned_amount, c.recommendation?.suggested_action?.water_mm, 'operation plan planned amount follows recommendation');
-  nearly(c.prescription?.operation_amount?.amount, c.recommendation?.suggested_action?.water_mm, 'prescription amount follows recommendation');
+  nearly(c.operation_plan?.planned_amount, requirementAmountMm, 'operation plan planned amount follows irrigation requirement');
+  assert(c.operation_plan?.planned_amount_source?.requirement_id === FORMAL_REQUIREMENT, 'operation plan amount source requirement mismatch', c.operation_plan);
+  nearly(c.prescription?.operation_amount?.amount, requirementAmountMm, 'prescription amount follows irrigation requirement');
+  assert(c.prescription?.operation_amount?.metadata?.requirement_id === FORMAL_REQUIREMENT, 'prescription amount source requirement mismatch', c.prescription);
   assert(hasAll(c.operation_plan?.expected_evidence, ['water_delivery_receipt','post_soil_moisture_metric']), 'operation expected_evidence incomplete', c.operation_plan);
   assert(c.ao_act_task?.act_task_id === FORMAL_TASK && c.ao_act_task?.parameters?.target_soil_moisture_percent === 24, 'AO-ACT task invalid', c.ao_act_task);
-  nearly(c.ao_act_task?.parameters?.amount, c.operation_plan?.planned_amount, 'AO-ACT task amount follows operation plan planned amount');
+  nearly(c.ao_act_task?.parameters?.amount, requirementAmountMm, 'AO-ACT task amount follows irrigation requirement');
+  nearly(c.ao_act_task?.parameters?.amount_mm, requirementAmountMm, 'AO-ACT task amount_mm follows irrigation requirement');
+  assert(c.ao_act_task?.parameters?.amount_source?.requirement_id === FORMAL_REQUIREMENT, 'AO-ACT task amount source requirement mismatch', c.ao_act_task?.parameters);
   assert(c.receipt?.receipt_id === FORMAL_RECEIPT && c.receipt?.task_id === FORMAL_TASK && c.receipt?.status === 'executed', 'formal receipt identity/status invalid', c.receipt);
   nearly(c.receipt?.observed_parameters?.executed_amount, c.as_executed_expected?.executed_amount, 'receipt executed_amount follows as-executed expected');
   nearly(c.receipt?.observed_parameters?.coverage_percent, 100, 'receipt coverage_percent');
@@ -108,10 +117,12 @@ function assertFormalChain(exported) {
   assert(Array.isArray(pe.evidence_artifacts) && pe.evidence_artifacts.length === (c.evidence || []).length && pe.evidence_artifacts.every((x) => x.formal_eligible === true && x.is_simulated === false && x.source_lane === 'FORMAL_OPERATION'), 'production evidence artifacts must be formal non-simulated', pe.evidence_artifacts);
   assert(pe.formal_evidence?.formal_eligible_count === (c.evidence || []).length && pe.formal_evidence?.simulated_count === 0 && pe.formal_evidence_passed === true, 'production evidence formal gate invalid', pe.formal_evidence);
   assert(pe.acceptance?.acceptance_id === c.acceptance?.acceptance_id && pe.acceptance?.formal_acceptance === true && pe.acceptance?.formal_evidence_passed === true, 'production evidence acceptance mirror invalid', pe.acceptance);
-  nearly(pe.as_executed_expected?.planned_amount, c.operation_plan?.planned_amount, 'production evidence planned amount follows operation plan');
+  nearly(pe.as_executed_expected?.planned_amount, requirementAmountMm, 'production evidence planned amount follows irrigation requirement');
+  assert(pe.as_executed_expected?.planned_amount_source?.requirement_id === FORMAL_REQUIREMENT, 'production evidence planned amount source requirement mismatch', pe.as_executed_expected);
   nearly(pe.as_executed_expected?.executed_amount, c.receipt?.observed_parameters?.executed_amount, 'production evidence executed amount follows receipt');
   assert(c.as_executed_expected?.task_id === FORMAL_TASK && c.as_executed_expected?.receipt_id === FORMAL_RECEIPT && c.as_executed_expected?.field_id === FORMAL_FIELD && c.as_executed_expected?.status === 'CONFIRMED', 'as-executed expectation invalid', c.as_executed_expected);
-  nearly(c.as_executed_expected?.planned_amount, c.operation_plan?.planned_amount, 'as-executed planned amount follows operation plan');
+  nearly(c.as_executed_expected?.planned_amount, requirementAmountMm, 'as-executed planned amount follows irrigation requirement');
+  assert(c.as_executed_expected?.planned_amount_source?.requirement_id === FORMAL_REQUIREMENT, 'as-executed expected planned amount source requirement mismatch', c.as_executed_expected);
   nearly(c.as_executed_expected?.executed_amount, c.receipt?.observed_parameters?.executed_amount, 'as-executed executed amount follows receipt');
   assert(c.as_applied_expected?.field_id === FORMAL_FIELD, 'as-applied field invalid', c.as_applied_expected);
   nearly(c.as_applied_expected?.coverage_percent, 100, 'as-applied coverage');
@@ -196,6 +207,7 @@ function assertFieldMemoryExportContract(exported) {
 
 async function main() {
   const seed = read(SEED);
+  const c8Dataset = read(C8_DATASET);
   const fieldMemoryService = read(FIELD_MEMORY_SERVICE);
   const fieldMemoryRoute = read(FIELD_MEMORY_ROUTE);
   const customerRoute = read(CUSTOMER_ROUTE);
@@ -224,6 +236,7 @@ async function main() {
   ]);
   need('seed approval/as-executed/ROI/field-memory flow', seed, ['actor_id', 'tok_admin_actor', 'actor_role', 'operation_approver', '/api/v1/as-executed/from-receipt', '/api/v1/roi-ledger/from-as-executed', '/api/v1/roi-ledger/formalize-from-acceptance', '/api/v1/field-memory/from-acceptance', 'ROI_INTERIM_SIGNAL_READBACK_REQUIRED', 'isInterimRoiForAsExecuted', 'FORMAL_FIELD_MEMORY_REQUIRED', 'CUSTOMER_FORMAL_MEMORY_REQUIRED', 'TECHNICAL_SKILL_MEMORY']);
   need('seed irrigation requirement H2 flow', seed, ['irrigation_requirement_v1', 'irrigation_requirement_index_v1', 'insertIrrigationRequirementIndexRows', 'gross_irrigation_requirement_mm']);
+  need('seed irrigation requirement H4 amount-source flow', c8Dataset, ['formalRequirementAmountSource', 'amount_source_chain', 'planned_amount_source', 'amount_mm', 'source_requirement_id']);
   need('commercial release gate structured verify-api profiles', commercialR2Gate, ['controlled_pilot_full_review_verify_api_structured_json', 'controlled_pilot_c8_formal_chain_verify_api_structured_json', '--verify-api --tenant ${TENANT_ID} --base-url ${BASE}', '--verify-api --tenant ${TENANT_ID} --profile c8-formal-chain --base-url ${BASE}', 'JSON parse plus field-level assertions']);
   need('field memory service formal gate', fieldMemoryService, ['createFormalFieldMemoryFromAcceptanceV1', 'validateFormalFieldMemoryAcceptanceV1', 'FORMAL_FIELD_MEMORY', 'FORMAL_ACCEPTED', 'formal_acceptance_id', 'customer_visible_memory', 'learning_eligible', 'ACCEPTANCE_VERDICT_NOT_PASS', 'FORMAL_EVIDENCE_NOT_PASSED', 'CHAIN_VALIDATION_NOT_PASSED']);
   need('field memory route formal derivation', fieldMemoryRoute, ['/api/v1/field-memory/from-acceptance', 'FORMAL_FIELD_MEMORY', 'FORMAL_ACCEPTED', 'customer_visible_memory', 'learning_eligible', 'formal_acceptance_id']);

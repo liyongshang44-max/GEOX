@@ -129,6 +129,11 @@ async function assertReceiptStatusMatrix(client) {
 
   const formal = await asExecutedFromReceipt(FORMAL_TASK, FORMAL_RECEIPT);
   assert(formal.executed.status === 'CONFIRMED', 'C8 SUCCEEDED receipt should produce CONFIRMED as_executed', formal.executed);
+  nearly(formal.planned?.amount, 22, 'formal as_executed planned amount');
+  assert(formal.planned?.requirement_id === FORMAL_REQUIREMENT, 'formal as_executed planned requirement_id mismatch', formal.planned);
+  assert(formal.planned?.amount_source?.requirement_id === FORMAL_REQUIREMENT, 'formal as_executed planned amount_source requirement mismatch', formal.planned);
+  assert(formal.planned?.amount_source?.source_field === 'gross_irrigation_requirement_mm', 'formal as_executed planned amount_source source_field mismatch', formal.planned);
+  nearly(formal.planned?.amount_source?.source_value_mm, 22, 'formal as_executed planned amount_source source_value_mm');
   return formal;
 }
 async function assertRoiFormalization(client, asExecutedId) {
@@ -254,8 +259,14 @@ async function assertOperationReport() {
   assert(report.prescription?.prescription_id === 'presc_c8_irrigation_001', 'report prescription_id mismatch', report.prescription);
   nearly(report.prescription?.amount, report.as_executed?.planned_amount, 'report prescription.amount follows as_executed planned_amount');
   assert(report.prescription?.unit === 'mm', 'report prescription.unit mismatch', report.prescription);
+  assert(report.prescription?.amount_source?.requirement_id === FORMAL_REQUIREMENT, 'report prescription amount_source requirement mismatch', report.prescription);
+  assert(report.prescription?.amount_source?.source_field === 'gross_irrigation_requirement_mm', 'report prescription amount_source source_field mismatch', report.prescription);
+  nearly(report.prescription?.amount_source?.source_value_mm, 22, 'report prescription amount_source source_value_mm');
   assert(report.as_executed?.as_executed_id, 'report as_executed_id missing', report.as_executed);
   nearly(report.as_executed?.planned_amount, report.prescription?.amount, 'report as_executed.planned_amount follows prescription amount');
+  assert(report.as_executed?.planned_amount_source?.requirement_id === FORMAL_REQUIREMENT, 'report as_executed planned_amount_source requirement mismatch', report.as_executed);
+  assert(report.as_executed?.planned_amount_source?.source_field === 'gross_irrigation_requirement_mm', 'report as_executed planned_amount_source source_field mismatch', report.as_executed);
+  nearly(report.as_executed?.planned_amount_source?.source_value_mm, 22, 'report as_executed planned_amount_source source_value_mm');
 
   assert(report.as_executed?.unit === 'mm', 'report as_executed.unit mismatch', report.as_executed);
   assert(report.as_executed?.status === 'CONFIRMED', 'report as_executed.status mismatch', report.as_executed);
