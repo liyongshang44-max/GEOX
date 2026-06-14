@@ -30,11 +30,11 @@ export function buildIrrigationRecommendationV1(input: IrrigationRecommendationI
   const confidence = Number.isFinite(Number(input.confidence)) ? Number(input.confidence) : 0.83;
   const diagnosis = input.diagnosis;
 
+  const skillTraceEvidenceRefs = Array.isArray(input.skill_trace?.evidence_refs) ? input.skill_trace.evidence_refs : [];
   const evidence_refs = Array.from(
     new Set([
       ...diagnosis.evidence_refs,
-      "weather_mock:rain_forecast_mm=0",
-      "crop_stage:mock_vegetative",
+      ...skillTraceEvidenceRefs,
       `diagnosis:${diagnosis.diagnosis_id}`,
     ].filter(Boolean))
   );

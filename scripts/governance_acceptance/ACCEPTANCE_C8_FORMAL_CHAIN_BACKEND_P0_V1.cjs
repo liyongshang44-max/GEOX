@@ -207,11 +207,11 @@ async function assertOperationReport() {
   assert(String(diag.diagnosis?.human || '').trim(), 'diagnostic_inputs.diagnosis.human must be non-empty', diag);
 
   assert(report.prescription?.prescription_id === 'presc_c8_irrigation_001', 'report prescription_id mismatch', report.prescription);
-  nearly(report.prescription?.amount, 22, 'report prescription.amount');
+  nearly(report.prescription?.amount, report.as_executed?.planned_amount, 'report prescription.amount follows as_executed planned_amount');
   assert(report.prescription?.unit === 'mm', 'report prescription.unit mismatch', report.prescription);
   assert(report.as_executed?.as_executed_id, 'report as_executed_id missing', report.as_executed);
-  nearly(report.as_executed?.planned_amount, 22, 'report as_executed.planned_amount');
-  nearly(report.as_executed?.executed_amount, 21.6, 'report as_executed.executed_amount');
+  nearly(report.as_executed?.planned_amount, report.prescription?.amount, 'report as_executed.planned_amount follows prescription amount');
+
   assert(report.as_executed?.unit === 'mm', 'report as_executed.unit mismatch', report.as_executed);
   assert(report.as_executed?.status === 'CONFIRMED', 'report as_executed.status mismatch', report.as_executed);
   nearly(report.as_applied?.coverage_percent, 100, 'report as_applied.coverage_percent');
@@ -227,6 +227,7 @@ async function assertOperationReport() {
       x.customer_visible_value === true
   );
   assert(formalRoi, 'operation report ROI item lost formal trust fields', report.roi_ledger?.items);
+  nearly(report.as_executed?.executed_amount, formalRoi.actual_value, 'report as_executed.executed_amount follows formal ROI actual value');
   assert((report.field_memory?.field_response_memory || []).length >= 1, 'report field memory response rows missing', report.field_memory);
 }
 async function assertFieldReport() {

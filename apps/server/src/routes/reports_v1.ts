@@ -18,6 +18,7 @@ import { listAlertOperationRelationV1ByOperation, listOperationWorkflowV1 } from
 import { buildSamplingReportViewV1 } from "../services/sampling/sampling_projection_v1.js";
 import { buildFertilizationReportProjectionV1 } from "../services/fertilization/fertilization_projection_v1.js";
 import { buildPestDiseaseInspectionReportProjectionV1 } from "../services/inspection/pest_disease_inspection_projection_v1.js";
+import { getLatestWeatherForecastIndexV1, type WeatherForecastIndexV1 } from "../projections/weather_forecast_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; record_json: any };
@@ -174,6 +175,7 @@ function ensureReportV1ExtendedFields(report: OperationReportV1): OperationRepor
 }
 
 function toFiniteNumberOrNull(value: unknown): number | null {
+  if (value == null || value === "") return null;
   const n = typeof value === "number" ? value : Number(value);
   return Number.isFinite(n) ? n : null;
 }
@@ -300,10 +302,10 @@ function diagnosticObservationNumber(report: OperationReportV1, metric: string):
   return null;
 }
 
-function buildWeatherSummaryForReportV1(report: OperationReportV1): any {
-  const rainfallForecastMm = diagnosticObservationNumber(report, "forecast_rain_72h_mm");
-  const maxTemperatureC = diagnosticObservationNumber(report, "temperature_max_c");
-
+function buildWeatherSummaryFromValuesForReportV1(
+  rainfallForecastMm: number | null,
+  maxTemperatureC: number | null,
+): OperationReportV1["weather_summary"] {
   if (rainfallForecastMm == null && maxTemperatureC == null) {
     return null;
   }
@@ -325,6 +327,37 @@ function buildWeatherSummaryForReportV1(report: OperationReportV1): any {
     max_temperature_c: maxTemperatureC,
     narrative: [rainfallNarrative, temperatureNarrative].filter(Boolean).join(" "),
   };
+}
+
+function diagnosticInputObservationNumber(diagnosticInputs: DiagnosticInputsForReportV1 | undefined | null, metric: string): number | null {
+  const observations = Array.isArray(diagnosticInputs?.observations)
+    ? diagnosticInputs.observations
+    : [];
+  for (const observation of observations) {
+    if (String(observation?.metric ?? "").trim() !== metric) continue;
+    const n = typeof observation?.value === "number" ? observation.value : Number(observation?.value);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+function buildWeatherSummaryFromDiagnosticInputsForReportV1(diagnosticInputs: DiagnosticInputsForReportV1 | undefined | null): OperationReportV1["weather_summary"] {
+  return buildWeatherSummaryFromValuesForReportV1(
+    diagnosticInputObservationNumber(diagnosticInputs, "forecast_rain_72h_mm"),
+    diagnosticInputObservationNumber(diagnosticInputs, "temperature_max_c"),
+  );
+}
+
+function buildWeatherSummaryFromWeatherForecastIndexV1(forecast: WeatherForecastIndexV1 | null): OperationReportV1["weather_summary"] {
+  if (!forecast) return null;
+  return buildWeatherSummaryFromValuesForReportV1(
+    toFiniteNumberOrNull(forecast.rainfall_forecast_mm_72h),
+    toFiniteNumberOrNull(forecast.temperature_max_c_72h),
+  );
+}
+
+function buildWeatherSummaryForReportV1(report: OperationReportV1): OperationReportV1["weather_summary"] {
+  return buildWeatherSummaryFromDiagnosticInputsForReportV1((report as any).diagnostic_inputs);
 }
 
 function hasDeviceCapability(capabilities: string[], token: string): boolean {
@@ -746,6 +779,12 @@ export async function projectReportV1(params: {
     recommendation_payload: recommendationPayload,
     diagnosis_human: explainHuman,
   });
+  const latestWeatherForecast = operationState.field_id
+    ? await getLatestWeatherForecastIndexV1(pool, tenant, operationState.field_id).catch(() => null)
+    : null;
+  const weatherSummaryForReport =
+    buildWeatherSummaryFromWeatherForecastIndexV1(latestWeatherForecast)
+    ?? buildWeatherSummaryFromDiagnosticInputsForReportV1(diagnosticInputs);
   const approvalStatus = normalizeApprovalStatus(approvalDecisionFact?.record_json?.payload?.decision, Boolean(approvalRequestFact));
   const operationTitle = deriveOperationTitle(operationState.action_type ?? recommendationPayload?.suggested_action?.action_type);
   const operationStateAny: any = operationState as any;
@@ -828,6 +867,7 @@ export async function projectReportV1(params: {
   const reportWithExecutionBlocks: OperationReportV1 = {
     ...reportWithPestDiseaseInspection,
     diagnostic_inputs: diagnosticInputs,
+    weather_summary: weatherSummaryForReport,
     prescription: prescriptionForReport,
     as_executed: asExecutedForReport
       ? { ...(reportWithPestDiseaseInspection as any).as_executed, ...asExecutedForReport }

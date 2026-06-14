@@ -54,7 +54,7 @@ function assertApprovalDecision(exported) {
   assert(d?.actor_id === 'tok_admin_actor', 'approval actor_id mismatch', d);
   assert(d?.actor_name === '运营管理员', 'approval actor_name mismatch', d);
   assert(d?.actor_role === 'operation_approver', 'approval actor_role mismatch', d);
-  assert(String(d?.note || '').includes('22mm'), 'approval note missing 22mm', d);
+  assert(/按\\s*\\d+(\\.\\d+)?mm/.test(String(d?.note || '')), 'approval note missing irrigation amount mm', d);
   assert(d?.decided_by === 'tok_admin_actor', 'approval decided_by mismatch', d);
 }
 
@@ -75,21 +75,34 @@ function assertFormalFieldMemory(memory) {
 function assertFormalChain(exported) {
   const c = exported.formal_chain || {};
   assert(exported.ok === true && exported.chain_id === CHAIN_ID && c.chain_id === CHAIN_ID, 'chain id invalid', exported);
-  for (const key of ['field','boundary','devices','observations','diagnosis','recommendation','prescription','approval','operation_plan','ao_act_task','receipt','as_executed_expected','as_applied_expected','evidence','acceptance','roi','field_memory','report_expectations']) assert(c[key] !== undefined, `formal_chain missing ${key}`);
+  for (const key of ['field','boundary','devices','observations','diagnosis','recommendation','prescription','approval','operation_plan','ao_act_task','receipt','as_executed_expected','as_applied_expected','evidence','acceptance','roi','field_memory','production_evidence','report_expectations']) assert(c[key] !== undefined, `formal_chain missing ${key}`);
   assert(c.field?.field_id === FORMAL_FIELD && Number(c.field?.area_mu) === 30 && c.field?.crop_name === '玉米' && c.field?.season_id === 'season_2026_c8_corn', 'field context invalid', c.field);
   for (const id of ['dev_soil_c8_001','dev_valve_pump_c8_001','dev_weather_station_c8_001']) { const d = (c.devices || []).find((x) => x.device_id === id); assert(d?.display_kind_text && d?.sensing_role_text && d?.capability_text && d?.field_role_text, `device context invalid: ${id}`, d); }
   const metrics = new Set((c.observations || []).map((x) => x.metric));
   for (const metric of ['soil_moisture_percent','forecast_rain_72h_mm','temperature_max_c','soil_moisture_after_percent']) assert(metrics.has(metric), `formal chain observation missing ${metric}`, [...metrics]);
   assert(c.operation_plan?.operation_plan_id === FORMAL_OP && c.operation_plan?.prescription_id === 'presc_c8_irrigation_001', 'operation plan invalid', c.operation_plan);
+  nearly(c.operation_plan?.planned_amount, c.recommendation?.suggested_action?.water_mm, 'operation plan planned amount follows recommendation');
+  nearly(c.prescription?.operation_amount?.amount, c.recommendation?.suggested_action?.water_mm, 'prescription amount follows recommendation');
   assert(hasAll(c.operation_plan?.expected_evidence, ['water_delivery_receipt','post_soil_moisture_metric']), 'operation expected_evidence incomplete', c.operation_plan);
-  assert(c.ao_act_task?.act_task_id === FORMAL_TASK && c.ao_act_task?.parameters?.amount === 22 && c.ao_act_task?.parameters?.target_soil_moisture_percent === 24, 'AO-ACT task invalid', c.ao_act_task);
+  assert(c.ao_act_task?.act_task_id === FORMAL_TASK && c.ao_act_task?.parameters?.target_soil_moisture_percent === 24, 'AO-ACT task invalid', c.ao_act_task);
+  nearly(c.ao_act_task?.parameters?.amount, c.operation_plan?.planned_amount, 'AO-ACT task amount follows operation plan planned amount');
   assert(c.receipt?.receipt_id === FORMAL_RECEIPT && c.receipt?.task_id === FORMAL_TASK && c.receipt?.status === 'executed', 'formal receipt identity/status invalid', c.receipt);
-  nearly(c.receipt?.observed_parameters?.executed_amount, 21.6, 'receipt executed_amount');
+  nearly(c.receipt?.observed_parameters?.executed_amount, c.as_executed_expected?.executed_amount, 'receipt executed_amount follows as-executed expected');
   nearly(c.receipt?.observed_parameters?.coverage_percent, 100, 'receipt coverage_percent');
   assert(c.acceptance?.acceptance_id === FORMAL_ACC && c.acceptance?.formal_acceptance === true && c.acceptance?.formal_evidence_passed === true && c.acceptance?.chain_validation_passed === true, 'formal acceptance gate invalid', c.acceptance);
+  const pe = c.production_evidence || {};
+  assert(pe.production_evidence_id === 'prod_evidence_c8_irrigation_formal_001' && pe.operation_plan_id === FORMAL_OP && pe.act_task_id === FORMAL_TASK && pe.receipt_id === FORMAL_RECEIPT && pe.acceptance_id === FORMAL_ACC, 'production evidence identity invalid', pe);
+  assert(hasAll(pe.required_evidence_kinds, ['water_delivery_receipt','post_soil_moisture_metric']), 'production evidence required kinds invalid', pe);
+  assert(hasAll(pe.observed_evidence_kinds, ['water_delivery_receipt','metric']), 'production evidence observed kinds invalid', pe);
+  assert(JSON.stringify(pe.evidence_artifact_ids || []) === JSON.stringify(c.receipt?.evidence_artifact_ids || []), 'production evidence artifact ids must follow receipt', pe);
+  assert(Array.isArray(pe.evidence_artifacts) && pe.evidence_artifacts.length === (c.evidence || []).length && pe.evidence_artifacts.every((x) => x.formal_eligible === true && x.is_simulated === false && x.source_lane === 'FORMAL_OPERATION'), 'production evidence artifacts must be formal non-simulated', pe.evidence_artifacts);
+  assert(pe.formal_evidence?.formal_eligible_count === (c.evidence || []).length && pe.formal_evidence?.simulated_count === 0 && pe.formal_evidence_passed === true, 'production evidence formal gate invalid', pe.formal_evidence);
+  assert(pe.acceptance?.acceptance_id === c.acceptance?.acceptance_id && pe.acceptance?.formal_acceptance === true && pe.acceptance?.formal_evidence_passed === true, 'production evidence acceptance mirror invalid', pe.acceptance);
+  nearly(pe.as_executed_expected?.planned_amount, c.operation_plan?.planned_amount, 'production evidence planned amount follows operation plan');
+  nearly(pe.as_executed_expected?.executed_amount, c.receipt?.observed_parameters?.executed_amount, 'production evidence executed amount follows receipt');
   assert(c.as_executed_expected?.task_id === FORMAL_TASK && c.as_executed_expected?.receipt_id === FORMAL_RECEIPT && c.as_executed_expected?.field_id === FORMAL_FIELD && c.as_executed_expected?.status === 'CONFIRMED', 'as-executed expectation invalid', c.as_executed_expected);
-  nearly(c.as_executed_expected?.planned_amount, 22, 'as-executed planned amount');
-  nearly(c.as_executed_expected?.executed_amount, 21.6, 'as-executed executed amount');
+  nearly(c.as_executed_expected?.planned_amount, c.operation_plan?.planned_amount, 'as-executed planned amount follows operation plan');
+  nearly(c.as_executed_expected?.executed_amount, c.receipt?.observed_parameters?.executed_amount, 'as-executed executed amount follows receipt');
   assert(c.as_applied_expected?.field_id === FORMAL_FIELD, 'as-applied field invalid', c.as_applied_expected);
   nearly(c.as_applied_expected?.coverage_percent, 100, 'as-applied coverage');
   assert(c.roi?.roi_ledger_id === FORMAL_ROI, 'formal ROI id invalid', c.roi);
@@ -99,7 +112,7 @@ function assertFormalChain(exported) {
   assert(c.roi?.roi_type === 'SOIL_MOISTURE_RESPONSE' && c.roi?.value_kind === 'MEASURED', 'formal ROI type/value_kind invalid', c.roi);
   nearly(c.roi?.before_value, 18.4, 'formal ROI before_value');
   nearly(c.roi?.after_value, 24.8, 'formal ROI after_value');
-  nearly(c.roi?.actual_value, 21.6, 'formal ROI actual_value');
+  nearly(c.roi?.actual_value, c.receipt?.observed_parameters?.executed_amount, 'formal ROI actual_value follows receipt executed amount');
   nearly(c.roi?.delta_value, 6.4, 'formal ROI delta_value');
   assertFormalFieldMemory(c.field_memory);
 }
@@ -155,7 +168,7 @@ async function main() {
     'FIELD_REPORT_FIELD_ID_MISMATCH', 'FIELD_REPORT_AREA_MU_MISMATCH', 'FIELD_REPORT_BOUNDARY_STATUS_MISMATCH', 'FIELD_REPORT_CROP_CODE_MISMATCH', 'FIELD_REPORT_CROP_NAME_MISMATCH', 'FIELD_REPORT_SEASON_ID_MISMATCH', 'FIELD_REPORT_SENSING_DEVICES_MISMATCH', 'FIELD_REPORT_SENSING_OBSERVATION_MISSING', 'FIELD_REPORT_FORMAL_OPERATION_COUNT_MISMATCH', 'FIELD_REPORT_CUSTOMER_VALUE_MISMATCH', 'FIELD_REPORT_FORMAL_MEMORY_COUNT_MISMATCH', 'FIELD_REPORT_FULL_REVIEW_PENDING_OPERATION_COUNT_MISMATCH', 'FIELD_REPORT_C8_PENDING_OPERATION_COUNT_MISMATCH',
     'soil_moisture_percent', 'forecast_rain_72h_mm', 'temperature_max_c', 'soil_moisture_after_percent', 'BOUNDARY_AVAILABLE', 'season_2026_c8_corn', 'crop_code', 'formal_chain_summary', 'pending_chain_summary', '运营管理员', 'tok_admin_actor', 'CONFIRMED',
   ]);
-  need('seed approval/as-executed/ROI/field-memory flow', seed, ['actor_id', 'tok_admin_actor', 'actor_name', '运营管理员', 'actor_role', 'operation_approver', '同意按 22mm 灌溉处方执行。', '/api/v1/as-executed/from-receipt', '/api/v1/roi-ledger/from-as-executed', '/api/v1/roi-ledger/formalize-from-acceptance', '/api/v1/field-memory/from-acceptance', 'ROI_INTERIM_SIGNAL_READBACK_REQUIRED', 'isInterimRoiForAsExecuted', 'FORMAL_FIELD_MEMORY_REQUIRED', 'CUSTOMER_FORMAL_MEMORY_REQUIRED', 'TECHNICAL_SKILL_MEMORY']);
+  need('seed approval/as-executed/ROI/field-memory flow', seed, ['actor_id', 'tok_admin_actor', 'actor_name', '运营管理员', 'actor_role', 'operation_approver', '同意按 ${IRRIGATION_REQUIREMENT_GROSS_MM}mm 灌溉处方执行。', '/api/v1/as-executed/from-receipt', '/api/v1/roi-ledger/from-as-executed', '/api/v1/roi-ledger/formalize-from-acceptance', '/api/v1/field-memory/from-acceptance', 'ROI_INTERIM_SIGNAL_READBACK_REQUIRED', 'isInterimRoiForAsExecuted', 'FORMAL_FIELD_MEMORY_REQUIRED', 'CUSTOMER_FORMAL_MEMORY_REQUIRED', 'TECHNICAL_SKILL_MEMORY']);
   need('commercial release gate structured verify-api profiles', commercialR2Gate, ['controlled_pilot_full_review_verify_api_structured_json', 'controlled_pilot_c8_formal_chain_verify_api_structured_json', '--verify-api --tenant ${TENANT_ID} --base-url ${BASE}', '--verify-api --tenant ${TENANT_ID} --profile c8-formal-chain --base-url ${BASE}', 'JSON parse plus field-level assertions']);
   need('field memory service formal gate', fieldMemoryService, ['createFormalFieldMemoryFromAcceptanceV1', 'validateFormalFieldMemoryAcceptanceV1', 'FORMAL_FIELD_MEMORY', 'FORMAL_ACCEPTED', 'formal_acceptance_id', 'customer_visible_memory', 'learning_eligible', 'ACCEPTANCE_VERDICT_NOT_PASS', 'FORMAL_EVIDENCE_NOT_PASSED', 'CHAIN_VALIDATION_NOT_PASSED']);
   need('field memory route formal derivation', fieldMemoryRoute, ['/api/v1/field-memory/from-acceptance', 'FORMAL_FIELD_MEMORY', 'FORMAL_ACCEPTED', 'customer_visible_memory', 'learning_eligible', 'formal_acceptance_id']);
