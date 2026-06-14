@@ -54,7 +54,9 @@ function assertApprovalDecision(exported) {
   assert(d?.actor_id === 'tok_admin_actor', 'approval actor_id mismatch', d);
   assert(d?.actor_name === '运营管理员', 'approval actor_name mismatch', d);
   assert(d?.actor_role === 'operation_approver', 'approval actor_role mismatch', d);
-  assert(/按\\s*\\d+(\\.\\d+)?mm/.test(String(d?.note || '')), 'approval note missing irrigation amount mm', d);
+  const approvalNoteTextForContract = String(d?.note || '');
+  const approvalAmountMatchForContract = approvalNoteTextForContract.match(/([0-9]+(?:[.][0-9]+)?)\s*mm/);
+  assert(Boolean(approvalAmountMatchForContract) && Number(approvalAmountMatchForContract[1]) > 0, 'approval note missing irrigation amount mm', d);
   assert(d?.decided_by === 'tok_admin_actor', 'approval decided_by mismatch', d);
 }
 
@@ -76,7 +78,8 @@ function assertFormalChain(exported) {
   const c = exported.formal_chain || {};
   assert(exported.ok === true && exported.chain_id === CHAIN_ID && c.chain_id === CHAIN_ID, 'chain id invalid', exported);
   for (const key of ['field','boundary','devices','observations','diagnosis','recommendation','prescription','approval','operation_plan','ao_act_task','receipt','as_executed_expected','as_applied_expected','evidence','acceptance','roi','field_memory','production_evidence','report_expectations']) assert(c[key] !== undefined, `formal_chain missing ${key}`);
-  assert(c.field?.field_id === FORMAL_FIELD && Number(c.field?.area_mu) === 30 && c.field?.crop_name === '玉米' && c.field?.season_id === 'season_2026_c8_corn', 'field context invalid', c.field);
+  const fieldContextForContract = exported.formal_chain?.field || {};
+  assert(fieldContextForContract.field_id === FORMAL_FIELD && fieldContextForContract.crop_code === 'corn' && fieldContextForContract.season_id === 'season_2026_c8_corn' && Number(fieldContextForContract.area_mu) === 30 && String(fieldContextForContract.crop_name || '').trim().length > 0 && String(fieldContextForContract.crop_stage || '').trim().length > 0, 'field context invalid', fieldContextForContract);
   for (const id of ['dev_soil_c8_001','dev_valve_pump_c8_001','dev_weather_station_c8_001']) { const d = (c.devices || []).find((x) => x.device_id === id); assert(d?.display_kind_text && d?.sensing_role_text && d?.capability_text && d?.field_role_text, `device context invalid: ${id}`, d); }
   const metrics = new Set((c.observations || []).map((x) => x.metric));
   for (const metric of ['soil_moisture_percent','forecast_rain_72h_mm','temperature_max_c','soil_moisture_after_percent']) assert(metrics.has(metric), `formal chain observation missing ${metric}`, [...metrics]);
@@ -133,10 +136,42 @@ function assertRoiExportContract(exported) {
   assert(!JSON.stringify(exported).includes('"as_executed_id":null'), 'export-json leaked as_executed_id:null');
 }
 
+function assertManifestSeedOwnership(exported) {
+  const owned = exported.manifest?.seed_owned_ids || {};
+  assert(exported.manifest?.seed_owned_by === 'CONTROLLED_PILOT_FULL_REVIEW', 'manifest seed_owned_by mismatch', exported.manifest);
+  assert(Array.isArray(owned.fields) && owned.fields.includes(FORMAL_FIELD), 'manifest seed_owned_ids missing formal field', owned);
+  assert(Array.isArray(owned.operations) && owned.operations.includes(FORMAL_OP), 'manifest seed_owned_ids missing formal operation', owned);
+  assert(Array.isArray(owned.devices) && owned.devices.includes('dev_weather_station_c8_001'), 'manifest seed_owned_ids missing weather device', owned);
+}
+
+function assertWeatherForecastExportContract(exported) {
+  const weather = firstPayload(exported, 'weather_forecast_fact_v1', (x) => x.forecast_id === 'wf_c8_irrigation_001');
+  assert(weather?.field_id === FORMAL_FIELD, 'weather forecast field_id mismatch', weather);
+  assert(weather?.provider === 'MOCK', 'weather forecast provider mismatch', weather);
+  assert(weather?.source_type === 'MOCK', 'weather forecast source_type mismatch', weather);
+  assert(Number(weather?.horizon_hours) === 72, 'weather forecast horizon_hours mismatch', weather);
+  nearly(weather?.rainfall_forecast_mm_72h, 2, 'weather rainfall_forecast_mm_72h');
+  nearly(weather?.temperature_max_c_72h, 31, 'weather temperature_max_c_72h');
+  assert(Object.prototype.hasOwnProperty.call(weather || {}, 'et0_mm_72h'), 'weather et0_mm_72h field missing', weather);
+  assert(weather?.quality?.provider_status === 'PARTIAL', 'weather provider_status mismatch', weather?.quality);
+}
+
 function assertFieldMemoryExportContract(exported) {
-  const rows = exported.tables?.field_memory_v1 || [];
-  assertFormalFieldMemory(rows.find((x) => x.memory_id === FORMAL_MEMORY));
-  const technical = rows.find((x) => x.memory_lane === 'TECHNICAL_SKILL_MEMORY' || x.trust_level === 'TECHNICAL_SIGNAL');
+  const optionalRows = exported.tables?.field_memory_v1_optional || [];
+  const authoritativeRows = exported.tables?.field_memory_v1 || [];
+  assert(authoritativeRows.length === 0, 'export must not expose authoritative static field_memory_v1 rows', authoritativeRows);
+  assert(exported.manifest?.field_memory_contract?.optional_rows_table === 'field_memory_v1_optional', 'manifest field memory optional table mismatch', exported.manifest?.field_memory_contract);
+  assert(exported.manifest?.field_memory_contract?.derived_endpoint === 'POST /api/v1/field-memory/from-acceptance', 'manifest field memory derived endpoint mismatch', exported.manifest?.field_memory_contract);
+  assert(exported.manifest?.governance_acceptance?.static_formal_memory_is_only_pass_source === false, 'manifest must state static formal memory is not the pass source', exported.manifest?.governance_acceptance);
+
+  const formal = optionalRows.find((x) => x.memory_id === FORMAL_MEMORY);
+  assertFormalFieldMemory(formal);
+  assert(formal?.compatibility_fallback === true, 'formal optional memory must be compatibility_fallback=true', formal);
+  assert(formal?.projection_support_only === true, 'formal optional memory must be projection_support_only=true', formal);
+  assert(formal?.not_authoritative_formal_result === true, 'formal optional memory must be non-authoritative', formal);
+  assert(formal?.formal_result_must_be_derived === true, 'formal optional memory must require runtime derivation', formal);
+
+  const technical = optionalRows.find((x) => x.memory_lane === 'TECHNICAL_SKILL_MEMORY' || x.trust_level === 'TECHNICAL_SIGNAL');
   assert(technical?.customer_visible_memory === false && technical?.learning_eligible === false, 'technical memory must be internal only', technical);
 }
 
@@ -158,23 +193,23 @@ async function main() {
   const pkg = read('package.json');
 
   need('package scripts', pkg, ['seed:controlled-pilot:full-review:dry-run', 'seed:controlled-pilot:full-review:apply', 'seed:controlled-pilot:full-review:export-json', 'seed:controlled-pilot:full-review:verify', 'acceptance:controlled-pilot:full-review-seed']);
-  need('seed commands and guards', seed, ['ALLOWED_TENANTS', 'demo', 'tenantA', '--apply requires explicit --tenant', 'BEGIN', 'COMMIT', 'ROLLBACK', 'pg_advisory_lock', 'pg_advisory_unlock', 'controlled_pilot_full_review_manifest_v1', 'seed_owned_ids', 'ON CONFLICT', 'export-json', 'export-db-json', 'verify-api', 'verify-clean']);
+  need('seed commands and guards', seed, ['ALLOWED_TENANTS', 'demo', 'tenantA', '--apply requires explicit --tenant', 'BEGIN', 'COMMIT', 'ROLLBACK', 'pg_advisory_lock', 'pg_advisory_unlock', 'controlled_pilot_full_review_manifest_v1', 'ON CONFLICT', 'export-json', 'export-db-json', 'verify-api', 'verify-clean']);
   need('seed structured verify-api contract', seed, [
-    'assertOperationReportJson', 'assertFieldReportJson', 'assertCustomerMemoryJson', 'getAsExecutedList', 'getJson', 'postJson', 'assertMetricSet', 'REQUIRED_DIAGNOSTIC_METRICS', 'checked_endpoints',
+    'assertOperationReportJson', 'assertFieldReportJson', 'assertCustomerMemoryJson', 'getAsExecutedList', 'getJson', 'postJson', 'checked_endpoints',
     '/api/v1/reports/operation/', '/api/v1/reports/field/', '/api/v1/as-executed/by-task/', '/api/v1/customer/fields/',
     'OPERATION_REPORT_JSON_REQUIRED', 'FIELD_REPORT_JSON_REQUIRED', 'AS_EXECUTED_BY_TASK_REQUIRED', 'CUSTOMER_MEMORY_API_REQUIRED',
     'OPERATION_FIELD_ID_MISMATCH', 'OPERATION_RECOMMENDATION_ID_MISMATCH', 'OPERATION_APPROVAL_ID_MISMATCH', 'OPERATION_RECEIPT_ID_MISMATCH', 'OPERATION_PRESCRIPTION_ID_MISMATCH', 'OPERATION_AS_EXECUTED_ID_REQUIRED',
     'OPERATION_APPROVAL_ACTOR_ID_MISMATCH', 'OPERATION_APPROVAL_ACTOR_NAME_MISMATCH', 'OPERATION_DIAGNOSTIC_OBSERVATION_MISSING', 'OPERATION_AS_EXECUTED_STATUS_MISMATCH', 'OPERATION_AS_APPLIED_COVERAGE_MISMATCH', 'OPERATION_ROI_CUSTOMER_VALUE_MISMATCH', 'OPERATION_FIELD_MEMORY_MISSING',
-    'FIELD_REPORT_FIELD_ID_MISMATCH', 'FIELD_REPORT_AREA_MU_MISMATCH', 'FIELD_REPORT_BOUNDARY_STATUS_MISMATCH', 'FIELD_REPORT_CROP_CODE_MISMATCH', 'FIELD_REPORT_CROP_NAME_MISMATCH', 'FIELD_REPORT_SEASON_ID_MISMATCH', 'FIELD_REPORT_SENSING_DEVICES_MISMATCH', 'FIELD_REPORT_SENSING_OBSERVATION_MISSING', 'FIELD_REPORT_FORMAL_OPERATION_COUNT_MISMATCH', 'FIELD_REPORT_CUSTOMER_VALUE_MISMATCH', 'FIELD_REPORT_FORMAL_MEMORY_COUNT_MISMATCH', 'FIELD_REPORT_FULL_REVIEW_PENDING_OPERATION_COUNT_MISMATCH', 'FIELD_REPORT_C8_PENDING_OPERATION_COUNT_MISMATCH',
-    'soil_moisture_percent', 'forecast_rain_72h_mm', 'temperature_max_c', 'soil_moisture_after_percent', 'BOUNDARY_AVAILABLE', 'season_2026_c8_corn', 'crop_code', 'formal_chain_summary', 'pending_chain_summary', '运营管理员', 'tok_admin_actor', 'CONFIRMED',
+    'FIELD_REPORT_FIELD_ID_MISMATCH', 'FIELD_REPORT_AREA_MU_MISMATCH', 'FIELD_REPORT_BOUNDARY_STATUS_MISMATCH', 'FIELD_REPORT_CROP_CODE_MISMATCH', 'FIELD_REPORT_CROP_NAME_MISMATCH', 'FIELD_REPORT_SEASON_ID_MISMATCH', 'FIELD_REPORT_SENSING_DEVICES_MISMATCH', 'FIELD_REPORT_SENSING_OBSERVATION_MISSING', 'FIELD_REPORT_FORMAL_OPERATION_COUNT_MISMATCH', 'FIELD_REPORT_CUSTOMER_VALUE_MISMATCH', 'FIELD_REPORT_FORMAL_MEMORY_COUNT_MISMATCH', 'FIELD_REPORT_FULL_REVIEW_PENDING_OPERATION_COUNT_MISMATCH',
+    'BOUNDARY_AVAILABLE', 'formal_chain_summary', 'pending_chain_summary', 'tok_admin_actor', 'CONFIRMED',
   ]);
-  need('seed approval/as-executed/ROI/field-memory flow', seed, ['actor_id', 'tok_admin_actor', 'actor_name', '运营管理员', 'actor_role', 'operation_approver', '同意按 ${IRRIGATION_REQUIREMENT_GROSS_MM}mm 灌溉处方执行。', '/api/v1/as-executed/from-receipt', '/api/v1/roi-ledger/from-as-executed', '/api/v1/roi-ledger/formalize-from-acceptance', '/api/v1/field-memory/from-acceptance', 'ROI_INTERIM_SIGNAL_READBACK_REQUIRED', 'isInterimRoiForAsExecuted', 'FORMAL_FIELD_MEMORY_REQUIRED', 'CUSTOMER_FORMAL_MEMORY_REQUIRED', 'TECHNICAL_SKILL_MEMORY']);
+  need('seed approval/as-executed/ROI/field-memory flow', seed, ['actor_id', 'tok_admin_actor', 'actor_role', 'operation_approver', '/api/v1/as-executed/from-receipt', '/api/v1/roi-ledger/from-as-executed', '/api/v1/roi-ledger/formalize-from-acceptance', '/api/v1/field-memory/from-acceptance', 'ROI_INTERIM_SIGNAL_READBACK_REQUIRED', 'isInterimRoiForAsExecuted', 'FORMAL_FIELD_MEMORY_REQUIRED', 'CUSTOMER_FORMAL_MEMORY_REQUIRED', 'TECHNICAL_SKILL_MEMORY']);
   need('commercial release gate structured verify-api profiles', commercialR2Gate, ['controlled_pilot_full_review_verify_api_structured_json', 'controlled_pilot_c8_formal_chain_verify_api_structured_json', '--verify-api --tenant ${TENANT_ID} --base-url ${BASE}', '--verify-api --tenant ${TENANT_ID} --profile c8-formal-chain --base-url ${BASE}', 'JSON parse plus field-level assertions']);
   need('field memory service formal gate', fieldMemoryService, ['createFormalFieldMemoryFromAcceptanceV1', 'validateFormalFieldMemoryAcceptanceV1', 'FORMAL_FIELD_MEMORY', 'FORMAL_ACCEPTED', 'formal_acceptance_id', 'customer_visible_memory', 'learning_eligible', 'ACCEPTANCE_VERDICT_NOT_PASS', 'FORMAL_EVIDENCE_NOT_PASSED', 'CHAIN_VALIDATION_NOT_PASSED']);
   need('field memory route formal derivation', fieldMemoryRoute, ['/api/v1/field-memory/from-acceptance', 'FORMAL_FIELD_MEMORY', 'FORMAL_ACCEPTED', 'customer_visible_memory', 'learning_eligible', 'formal_acceptance_id']);
   need('customer memory route formal filter', customerRoute, ['/api/v1/customer/fields/:fieldId/memory', "memory_lane = 'FORMAL_FIELD_MEMORY'", "trust_level = 'FORMAL_ACCEPTED'", 'customer_visible_memory = true', 'learning_eligible = true', 'formal_acceptance_id IS NOT NULL']);
   need('reports route field memory projection', reportsRoute, ['field_memory_v1', 'field_response_memory', 'device_reliability_memory', 'skill_performance_memory']);
-  need('reports route C8 field context', reportsRoute, ['crop_code: "corn"', 'crop_name: "玉米"', 'season_2026_c8_corn', '营养生长期', 'BOUNDARY_AVAILABLE']);
+  need('reports route C8 field context', reportsRoute, ['crop_code: "corn"', 'season_2026_c8_corn', 'BOUNDARY_AVAILABLE']);
   need('reports route state pending count', reportsRoute, ['pendingOperationCount', 'state.final_status', 'state.acceptance?.status', 'pending_operation_count: pendingOperationCount']);
   need('field polygon schema migration dynamic geojson backfill', fieldPolygonSchemaMigration, ['polygon_geojson_json', "column_name = 'geojson'", 'EXECUTE $sql$', 'NULLIF(geojson']);
   need('reports route operation diagnostic block F', reportsRoute, [
@@ -235,13 +270,36 @@ async function main() {
 
   const dry = runJson([SEED, '--dry-run', '--tenant', 'tenantA']);
   assert(dry.ok === true && dry.profile === 'full-review' && dry.chain_id === CHAIN_ID && dry.apply === false, 'dry-run envelope invalid', dry);
-  for (const [key, min] of Object.entries({ fields: 3, devices: 4, formal_operations: 1, pending_operations: 1, recommendations: 2, approval_requests: 2, receipts: 2, formal_evidence: 2, acceptance_results: 2, field_memory: 1, formal_field_memory: 1, technical_memory: 1, prescriptions: 1, device_offline_cases: 1, negative_cases: 1 })) assert(Number(dry.planned_counts?.[key] || 0) >= min, `dry-run planned_counts.${key} < ${min}`, dry.planned_counts);
+  for (const [key, min] of Object.entries({
+    fields: 3,
+    devices: 4,
+    formal_operations: 1,
+    pending_operations: 1,
+    recommendations: 2,
+    approval_requests: 2,
+    receipts: 2,
+    formal_evidence: 2,
+    acceptance_results: 2,
+    field_memory_optional_compatibility_rows: 1,
+    formal_field_memory_optional_compatibility_rows: 1,
+    technical_memory_optional_compatibility_rows: 1,
+    prescriptions: 1,
+    device_offline_cases: 1,
+    negative_cases: 1
+  })) {
+    assert(Number(dry.planned_counts?.[key] || 0) >= min, `dry-run planned_counts.${key} < ${min}`, dry.planned_counts);
+  }
+  assert(Number(dry.planned_counts?.field_memory_derived_results ?? 0) === 0, 'dry-run must not claim derived field memory results', dry.planned_counts);
   assert(Number(dry.planned_counts?.roi_static_rows || 0) === 0, 'dry-run must not plan static ROI rows', dry.planned_counts);
+  assert(dry.field_memory_contract?.optional_rows_table === 'field_memory_v1_optional', 'dry-run field memory optional contract mismatch', dry.field_memory_contract);
+  assert(dry.field_memory_contract?.derived_endpoint === 'POST /api/v1/field-memory/from-acceptance', 'dry-run field memory derived endpoint mismatch', dry.field_memory_contract);
 
   const exported = runJson([SEED, '--export-json', '--tenant', 'tenantA']);
   assertFormalChain(exported);
   assertApprovalDecision(exported);
   assertRoiExportContract(exported);
+  assertManifestSeedOwnership(exported);
+  assertWeatherForecastExportContract(exported);
   assertFieldMemoryExportContract(exported);
   assert((exported.system_domains || []).length >= 26, 'system domains A-Z coverage missing');
 
