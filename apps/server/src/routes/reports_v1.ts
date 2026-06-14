@@ -19,6 +19,7 @@ import { buildSamplingReportViewV1 } from "../services/sampling/sampling_project
 import { buildFertilizationReportProjectionV1 } from "../services/fertilization/fertilization_projection_v1.js";
 import { buildPestDiseaseInspectionReportProjectionV1 } from "../services/inspection/pest_disease_inspection_projection_v1.js";
 import { getLatestWeatherForecastIndexV1, type WeatherForecastIndexV1 } from "../projections/weather_forecast_v1.js";
+import { getLatestIrrigationRequirementIndexV1, type IrrigationRequirementIndexV1 } from "../projections/irrigation_requirement_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; record_json: any };
@@ -144,6 +145,7 @@ function ensureReportV1ExtendedFields(report: OperationReportV1): OperationRepor
     why: report.why ?? { explain_human: null, objective_text: null },
     diagnostic_inputs: (report as any).diagnostic_inputs ?? { field_id: report.identifiers.field_id ?? null, devices: [], observations: [], diagnosis: { human: report.why?.explain_human ?? null } },
     weather_summary: (report as any).weather_summary ?? buildWeatherSummaryForReportV1(report),
+    irrigation_requirement_summary: (report as any).irrigation_requirement_summary ?? null,
     operation_title: report.operation_title ?? null,
     customer_title: report.customer_title ?? report.operation_title ?? null,
     as_executed: (report as any).as_executed ?? {
@@ -371,6 +373,73 @@ function buildWeatherSummaryFromWeatherForecastIndexV1(forecast: WeatherForecast
       },
     },
   );
+}
+
+
+function buildIrrigationRequirementNarrative(requirement: IrrigationRequirementIndexV1): string | null {
+  const gross = toFiniteNumberOrNull(requirement.gross_irrigation_requirement_mm ?? requirement.gross_irrigation_mm);
+  const target = toFiniteNumberOrNull(requirement.target_soil_moisture_percent);
+  const rootZone = toFiniteNumberOrNull(requirement.root_zone_soil_moisture_percent);
+  if (gross == null) return null;
+  const rootZoneText = rootZone == null ? "" : `???????${rootZone}%?`;
+  const targetText = target == null ? "" : `?????${target}%?`;
+  return `${rootZoneText}${targetText}???????${gross}mm?`;
+}
+
+function buildIrrigationRequirementSummaryFromIndexV1(
+  requirement: IrrigationRequirementIndexV1 | null,
+  reportFieldId: string | null,
+  weatherForecastId: string | null,
+): OperationReportV1["irrigation_requirement_summary"] {
+  if (!requirement) return null;
+
+  const quality = requirement.quality && typeof requirement.quality === "object" ? requirement.quality as any : {};
+  const requirementForecastId = toText(requirement.source_forecast_id);
+  const requirementFieldId = toText(requirement.field_id);
+  const reportField = toText(reportFieldId);
+  const forecast = toText(weatherForecastId);
+  const requirementToForecast = Boolean(requirementForecastId && forecast && requirementForecastId === forecast);
+  const requirementToField = Boolean(requirementFieldId && reportField && requirementFieldId === reportField);
+  const reportBindingStatus = requirementToForecast || !forecast ? "BOUND" : "FORECAST_MISMATCH";
+
+  return {
+    requirement_id: toText(requirement.requirement_id),
+    source_forecast_id: requirementForecastId,
+    source_fact_id: toText(requirement.source_fact_id),
+    source_observation_refs: Array.isArray(requirement.source_observation_refs) ? requirement.source_observation_refs.map(String).filter(Boolean) : [],
+    skill_id: toText(requirement.skill_id),
+    skill_version: toText(requirement.skill_version),
+    skill_run_id: toText(requirement.skill_run_id),
+    field_id: requirementFieldId,
+    season_id: toText(requirement.season_id),
+    crop_code: toText(requirement.crop_code),
+    crop_stage: toText(requirement.crop_stage),
+    root_zone_soil_moisture_percent: toFiniteNumberOrNull(requirement.root_zone_soil_moisture_percent),
+    target_soil_moisture_percent: toFiniteNumberOrNull(requirement.target_soil_moisture_percent),
+    target_min_soil_moisture_percent: toFiniteNumberOrNull(requirement.target_min_soil_moisture_percent),
+    target_max_soil_moisture_percent: toFiniteNumberOrNull(requirement.target_max_soil_moisture_percent),
+    rainfall_forecast_mm_72h: toFiniteNumberOrNull(requirement.rainfall_forecast_mm_72h),
+    effective_rainfall_mm_72h: toFiniteNumberOrNull(requirement.effective_rainfall_mm_72h),
+    temperature_max_c_72h: toFiniteNumberOrNull(requirement.temperature_max_c_72h),
+    net_irrigation_mm: toFiniteNumberOrNull(requirement.net_irrigation_mm),
+    gross_irrigation_mm: toFiniteNumberOrNull(requirement.gross_irrigation_mm),
+    gross_irrigation_requirement_mm: toFiniteNumberOrNull(requirement.gross_irrigation_requirement_mm ?? requirement.gross_irrigation_mm),
+    unit: toText(requirement.unit) ?? "mm",
+    calculation_method: toText(requirement.calculation_method),
+    calculation_inputs: requirement.calculation_inputs && typeof requirement.calculation_inputs === "object" ? requirement.calculation_inputs : {},
+    source_quality: {
+      status: toText(quality.status),
+      source: toText(quality.source),
+      deterministic: typeof quality.deterministic === "boolean" ? quality.deterministic : null,
+      missing_fields: Array.isArray(quality.missing_fields) ? quality.missing_fields.map((x: unknown) => String(x)).filter(Boolean) : [],
+    },
+    binding: {
+      requirement_to_forecast: requirementToForecast,
+      requirement_to_field: requirementToField,
+      report_binding_status: reportBindingStatus,
+    },
+    narrative: buildIrrigationRequirementNarrative(requirement),
+  };
 }
 
 function buildWeatherSummaryForReportV1(report: OperationReportV1): OperationReportV1["weather_summary"] {
@@ -802,6 +871,17 @@ export async function projectReportV1(params: {
   const weatherSummaryForReport =
     buildWeatherSummaryFromWeatherForecastIndexV1(latestWeatherForecast)
     ?? buildWeatherSummaryFromDiagnosticInputsForReportV1(diagnosticInputs);
+  const latestIrrigationRequirement = operationState.field_id
+    ? await getLatestIrrigationRequirementIndexV1(pool, tenant, {
+      field_id: operationState.field_id,
+      source_forecast_id: toText(latestWeatherForecast?.forecast_id),
+    }).catch(() => null)
+    : null;
+  const irrigationRequirementSummaryForReport = buildIrrigationRequirementSummaryFromIndexV1(
+    latestIrrigationRequirement,
+    operationState.field_id ?? null,
+    toText(latestWeatherForecast?.forecast_id),
+  );
   const approvalStatus = normalizeApprovalStatus(approvalDecisionFact?.record_json?.payload?.decision, Boolean(approvalRequestFact));
   const operationTitle = deriveOperationTitle(operationState.action_type ?? recommendationPayload?.suggested_action?.action_type);
   const operationStateAny: any = operationState as any;
@@ -885,6 +965,7 @@ export async function projectReportV1(params: {
     ...reportWithPestDiseaseInspection,
     diagnostic_inputs: diagnosticInputs,
     weather_summary: weatherSummaryForReport,
+    irrigation_requirement_summary: irrigationRequirementSummaryForReport,
     prescription: prescriptionForReport,
     as_executed: asExecutedForReport
       ? { ...(reportWithPestDiseaseInspection as any).as_executed, ...asExecutedForReport }
