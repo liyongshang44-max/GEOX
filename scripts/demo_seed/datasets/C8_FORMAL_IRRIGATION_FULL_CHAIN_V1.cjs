@@ -17,6 +17,7 @@ const PRESCRIPTION_ID = 'presc_c8_irrigation_001';
 const TASK_ID = 'act_c8_irrigation_formal_001';
 const RECEIPT_ID = 'receipt_c8_irrigation_formal_001';
 const ACCEPTANCE_ID = 'acc_c8_irrigation_formal_001';
+const PRODUCTION_EVIDENCE_ID = 'prod_evidence_c8_irrigation_formal_001';
 const MEMORY_ID = 'fm_c8_irrigation_response_001';
 const ROI_ID = 'roi_c8_irrigation_formal_001';
 const APPROVAL_ID = 'approval_c8_irrigation_001';
@@ -43,6 +44,7 @@ const C8_FORMAL_IRRIGATION_FULL_CHAIN_V1 = Object.freeze({
   task_id: TASK_ID,
   receipt_id: RECEIPT_ID,
   acceptance_id: ACCEPTANCE_ID,
+  production_evidence_id: PRODUCTION_EVIDENCE_ID,
   memory_id: MEMORY_ID,
   roi_id: ROI_ID,
   approval_id: APPROVAL_ID,
@@ -145,7 +147,48 @@ function buildC8FormalIrrigationFullChainDataset(options) {
   facts.push(fact('manifest_v1', 'controlled_pilot_full_review_manifest_v1', manifest));
   const fbt = factsByType(facts);
   const roi = { roi_ledger_id: ROI_ID, operation_id: FORMAL_OP, task_id: TASK_ID, prescription_id: PRESCRIPTION_ID, as_executed_id: '<actual_as_executed_id>', formal_acceptance_id: ACCEPTANCE_ID, source_lane: 'FORMAL_ACCEPTANCE', trust_level: 'FORMAL_ACCEPTED', formal_evidence_passed: true, chain_validation_passed: true, customer_visible_value: true, roi_type: 'SOIL_MOISTURE_RESPONSE', value_kind: 'MEASURED', before_value: 18.4, after_value: 24.8, actual_value: executedIrrigationAmountMm, delta_value: 6.4 };
-  const formal_chain = { chain_id: CHAIN_ID, field, boundary: polygons[0], devices: devices.filter((d) => d[0] !== 'dev_gateway_offline_001').map((d) => ({ device_id: d[0], display_name: d[1], field_id: d[2], capabilities: d[3], display_kind_text: d[4], sensing_role_text: d[5], capability_text: d[6], field_role_text: d[7] })), observations, diagnosis: recommendation.diagnosis, recommendation, prescription: prescription_contract_v1[0], approval: { request: { request_id: APPROVAL_ID }, decision: approvalDecision }, operation_plan: operationPlan, ao_act_task: task, receipt, as_executed_expected: { derivation: '/api/v1/as-executed/from-receipt', planned_amount: plannedIrrigationAmountMm, executed_amount: executedIrrigationAmountMm, unit: 'mm', status: 'CONFIRMED', task_id: TASK_ID, receipt_id: RECEIPT_ID, field_id: FIELD_ID }, as_applied_expected: { field_id: FIELD_ID, coverage_percent: 100 }, evidence: fbt.evidence_artifact_v1.map(payloadOf), acceptance, roi, field_memory: formalMemory, report_expectations: { operation_report: ['diagnostic_inputs','prescription','as_executed','as_applied','roi_ledger','field_memory'], field_report: ['field_context','sensing_summary','decision_summary','execution_summary','value_summary','learning_summary'] } };
+  const evidenceArtifacts = fbt.evidence_artifact_v1.map(payloadOf);
+  const production_evidence = {
+    production_evidence_id: PRODUCTION_EVIDENCE_ID,
+    operation_plan_id: FORMAL_OP,
+    operation_id: FORMAL_OP,
+    act_task_id: TASK_ID,
+    task_id: TASK_ID,
+    receipt_id: RECEIPT_ID,
+    acceptance_id: ACCEPTANCE_ID,
+    field_id: FIELD_ID,
+    source_lane: 'FORMAL_OPERATION',
+    formal_evidence_passed: acceptance.formal_evidence_passed === true,
+    chain_validation_passed: acceptance.chain_validation_passed === true,
+    is_simulated: false,
+    required_evidence_kinds: task.evidence_requirements,
+    observed_evidence_kinds: evidenceArtifacts.map((x) => x.kind).filter(Boolean),
+    evidence_artifact_ids: receipt.evidence_artifact_ids,
+    evidence_artifacts: evidenceArtifacts,
+    formal_evidence: {
+      source_lane: 'FORMAL_OPERATION',
+      required_count: task.evidence_requirements.length,
+      observed_count: evidenceArtifacts.length,
+      formal_eligible_count: evidenceArtifacts.filter((x) => x.formal_eligible === true).length,
+      simulated_count: evidenceArtifacts.filter((x) => x.is_simulated === true).length,
+      evidence_levels: Array.from(new Set(evidenceArtifacts.map((x) => x.evidence_level).filter(Boolean)))
+    },
+    acceptance: {
+      acceptance_id: acceptance.acceptance_id,
+      verdict: acceptance.verdict,
+      formal_acceptance: acceptance.formal_acceptance,
+      formal_evidence_passed: acceptance.formal_evidence_passed,
+      chain_validation_passed: acceptance.chain_validation_passed
+    },
+    as_executed_expected: {
+      derivation: '/api/v1/as-executed/from-receipt',
+      planned_amount: plannedIrrigationAmountMm,
+      executed_amount: executedIrrigationAmountMm,
+      unit: 'mm',
+      status: 'CONFIRMED'
+    }
+  };
+  const formal_chain = { chain_id: CHAIN_ID, field, boundary: polygons[0], devices: devices.filter((d) => d[0] !== 'dev_gateway_offline_001').map((d) => ({ device_id: d[0], display_name: d[1], field_id: d[2], capabilities: d[3], display_kind_text: d[4], sensing_role_text: d[5], capability_text: d[6], field_role_text: d[7] })), observations, diagnosis: recommendation.diagnosis, recommendation, prescription: prescription_contract_v1[0], approval: { request: { request_id: APPROVAL_ID }, decision: approvalDecision }, operation_plan: operationPlan, ao_act_task: task, receipt, as_executed_expected: { derivation: '/api/v1/as-executed/from-receipt', planned_amount: plannedIrrigationAmountMm, executed_amount: executedIrrigationAmountMm, unit: 'mm', status: 'CONFIRMED', task_id: TASK_ID, receipt_id: RECEIPT_ID, field_id: FIELD_ID }, as_applied_expected: { field_id: FIELD_ID, coverage_percent: 100 }, evidence: evidenceArtifacts, production_evidence, acceptance, roi, field_memory: formalMemory, report_expectations: { operation_report: ['diagnostic_inputs','prescription','as_executed','as_applied','production_evidence','roi_ledger','field_memory'], field_report: ['field_context','sensing_summary','decision_summary','execution_summary','value_summary','learning_summary'] } };
   const derived_expectations = { customer_reports: ['OVERVIEW','FIELD','OPERATION','EVIDENCE_VALUE'], customer_fields: formalScoped ? ['C8 灌溉示范田'] : ['C8 灌溉示范田','设备影响示范田'], customer_operations: formalScoped ? [FORMAL_OP] : [FORMAL_OP, PENDING_OP], operator_workbench_queues: formalScoped ? [] : ['DEVICE_OFFLINE','APPROVAL_PENDING','ACCEPTANCE_PENDING'], operator_devices_alerts: formalScoped ? [] : ['dev_gateway_offline_001','aggregate_missing_location_001'], pages_to_review: ['/customer/reports','/customer/fields/field_c8_demo','/customer/operations/op_plan_c8_irrigation_formal_001'] };
   const system_domains = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((letter, i) => ({ id: `${letter}_${['tenant','fields','boundaries','crop','devices','bindings','status','capability','observations','weather','recommendations','approvals','operation_plans','transitions','tasks','receipts','evidence','acceptance','roi_flow','field_memory','alerts','queues','reports','operations','forbidden','negative'][i]}`, data: [{ ok: true }], write_target: 'table', consumer: derived_expectations.pages_to_review, constraints: ['controlled pilot review scope'], forbidden: [] }));
   const rows = tables;
@@ -171,6 +214,7 @@ function buildC8FormalIrrigationFullChainDataset(options) {
     task_id: TASK_ID,
     receipt_id: RECEIPT_ID,
     acceptance_id: ACCEPTANCE_ID,
+    production_evidence_id: PRODUCTION_EVIDENCE_ID,
   };
   const dataset = {
     dataset_id: CHAIN_ID,
