@@ -11,6 +11,7 @@ const FORMAL_RECEIPT = 'receipt_c8_irrigation_formal_001';
 const FORMAL_TASK = 'act_c8_irrigation_formal_001';
 const FORMAL_FIELD = 'field_c8_demo';
 const FORMAL_REQUIREMENT = 'ireq_c8_irrigation_001';
+const FORMAL_SKILL_INPUT = 'iskill_input_c8_irrigation_001';
 
 function arg(name, fallback = null) {
   const idx = process.argv.indexOf(`--${name}`);
@@ -194,6 +195,46 @@ async function assertFieldMemory(client) {
   assert(noObs.status === 422 && noObs.json?.error === 'OBSERVATION_PAIR_NOT_FOUND', 'field memory missing observation pair negative failed', httpDetail(noObs));
 }
 function findBy(arr, pred) { return Array.isArray(arr) ? arr.find(pred) : null; }
+async function assertIrrigationSkillInputReadback(client) {
+  const result = await client.query(
+    `SELECT skill_input_id,
+            tenant_id,
+            project_id,
+            group_id,
+            field_id,
+            requirement_id,
+            source_forecast_id,
+            skill_id,
+            skill_version,
+            skill_run_id,
+            input_source,
+            source_refs_json,
+            input_values_json,
+            input_units_json,
+            source_fact_id
+       FROM irrigation_requirement_skill_input_index_v1
+      WHERE tenant_id=$1
+        AND project_id=$2
+        AND group_id=$3
+        AND skill_input_id=$4
+      LIMIT 1`,
+    [TENANT, PROJECT_ID, GROUP_ID, FORMAL_SKILL_INPUT],
+  );
+
+  assert(result.rows.length === 1, 'irrigation skill input index row missing', result.rows);
+  const row = result.rows[0];
+  assert(row.skill_input_id === FORMAL_SKILL_INPUT, 'irrigation skill input id mismatch', row);
+  assert(row.requirement_id === FORMAL_REQUIREMENT, 'irrigation skill input requirement binding mismatch', row);
+  assert(row.source_forecast_id === 'wf_c8_irrigation_001', 'irrigation skill input forecast binding mismatch', row);
+  assert(row.input_source === 'projected_fact_bindings_v1', 'irrigation skill input source mismatch', row);
+  assert(row.source_refs_json?.weather_forecast_id === 'wf_c8_irrigation_001', 'irrigation skill input source_refs weather mismatch', row.source_refs_json);
+  assert(row.source_refs_json?.observation_refs?.soil_moisture_percent === 'telemetry_soil_before_001', 'irrigation skill input soil source ref mismatch', row.source_refs_json);
+  nearly(row.input_values_json?.soil_moisture, 18.4, 'irrigation skill input soil_moisture');
+  nearly(row.input_values_json?.rain_forecast_mm_72h, 2, 'irrigation skill input rain_forecast_mm_72h');
+  nearly(row.input_values_json?.et0_mm_72h, 3.9, 'irrigation skill input et0_mm_72h');
+  assert(String(row.source_fact_id || '').includes('irrigation_requirement_skill_input_c8_001'), 'irrigation skill input source_fact_id mismatch', row);
+}
+
 async function assertIrrigationRequirementReadback(client) {
   const result = await client.query(
     `SELECT requirement_id, field_id, season_id, source_forecast_id, skill_id, net_irrigation_mm, gross_irrigation_mm, gross_irrigation_requirement_mm, unit, calculation_method, calculation_inputs_json, quality_json, source_fact_id
@@ -218,6 +259,8 @@ async function assertIrrigationRequirementReadback(client) {
   assert(row.quality_json?.status === 'SKILL_CALCULATED', 'irrigation requirement quality status mismatch', row.quality_json);
   assert(row.quality_json?.source_binding_status === 'BOUND_TO_PROJECTED_FACTS', 'irrigation requirement source binding status mismatch', row.quality_json);
   assert(row.calculation_inputs_json?.input_source === 'projected_fact_bindings_v1', 'irrigation requirement calculation input source mismatch', row.calculation_inputs_json);
+  assert(row.calculation_inputs_json?.source_input_id === FORMAL_SKILL_INPUT, 'irrigation requirement source_input_id mismatch', row.calculation_inputs_json);
+  assert(String(row.calculation_inputs_json?.source_input_fact_id || '').includes('irrigation_requirement_skill_input_c8_001'), 'irrigation requirement source_input_fact_id mismatch', row.calculation_inputs_json);
   assert(row.calculation_inputs_json?.source_refs?.weather_forecast_id === 'wf_c8_irrigation_001', 'irrigation requirement weather source ref mismatch', row.calculation_inputs_json);
   assert(row.calculation_inputs_json?.source_refs?.observation_refs?.soil_moisture_percent === 'telemetry_soil_before_001', 'irrigation requirement soil source ref mismatch', row.calculation_inputs_json);
   nearly(row.calculation_inputs_json?.et0_mm_72h, 3.9, 'irrigation requirement calculation input et0_mm_72h');
@@ -256,6 +299,7 @@ async function assertOperationReport() {
   assert(requirementSummary.source_fact_id === 'full_review_seed_tenantA_irrigation_requirement_c8_001', 'operation report requirement source_fact_id mismatch', requirementSummary);
   assert(requirementSummary.skill_id === 'irrigation_requirement_skill_v1', 'operation report requirement skill_id mismatch', requirementSummary);
   assert(requirementSummary.calculation_inputs?.input_source === 'projected_fact_bindings_v1', 'operation report requirement input_source mismatch', requirementSummary);
+  assert(requirementSummary.calculation_inputs?.source_input_id === FORMAL_SKILL_INPUT, 'operation report requirement source_input_id mismatch', requirementSummary);
   assert(requirementSummary.calculation_inputs?.source_refs?.weather_forecast_id === 'wf_c8_irrigation_001', 'operation report requirement weather source ref mismatch', requirementSummary);
   nearly(requirementSummary.net_irrigation_mm, 18.7, 'operation report requirement net_irrigation_mm');
   nearly(requirementSummary.gross_irrigation_mm, 22, 'operation report requirement gross_irrigation_mm');
@@ -328,6 +372,8 @@ async function assertFieldReport() {
     await assertRoiFormalization(client, asExecuted.as_executed_id);
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP field-memory');
     await assertFieldMemory(client);
+    console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP irrigation-skill-input');
+    await assertIrrigationSkillInputReadback(client);
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP irrigation-requirement');
     await assertIrrigationRequirementReadback(client);
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP operation-report');
