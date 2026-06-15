@@ -116,15 +116,17 @@ const env = {
 };
 
 const PHASE = process.env.CONTROLLED_PILOT_PR18I_PHASE || 'all';
+const FIXED_NOW_MS = process.env.CONTROLLED_PILOT_SEED_NOW_MS || '1710000000000';
+const seedNowMsArg = `--now-ms ${FIXED_NOW_MS}`;
 
-const seedApply = `${SEED} --apply --tenant ${TENANT} --base-url ${BASE}`;
+const seedApply = `${SEED} --apply --tenant ${TENANT} --base-url ${BASE} ${seedNowMsArg}`;
 
 const c8FormalChainApply =
-  `${SEED} --cleanup --apply --tenant ${TENANT} --profile c8-formal-chain` +
-  ` && ${SEED} --apply --tenant ${TENANT} --profile c8-formal-chain --base-url ${BASE}`;
+  `${SEED} --cleanup --apply --tenant ${TENANT} --profile c8-formal-chain ${seedNowMsArg}` +
+  ` && ${SEED} --apply --tenant ${TENANT} --profile c8-formal-chain --base-url ${BASE} ${seedNowMsArg}`;
 
 const c8FormalChainVerifyApi =
-  `${SEED} --verify-api --tenant ${TENANT} --profile c8-formal-chain --base-url ${BASE}`;
+  `${SEED} --verify-api --tenant ${TENANT} --profile c8-formal-chain --base-url ${BASE} ${seedNowMsArg}`;
 
 const commonGates = [
   ['runtime_workers', 'pnpm run ci:runtime:workers'],
