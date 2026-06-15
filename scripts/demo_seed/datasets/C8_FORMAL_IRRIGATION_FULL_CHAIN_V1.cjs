@@ -130,6 +130,115 @@ function runC8IrrigationRequirementSkillV1(input) {
   };
 }
 
+function deriveC8IrrigationRequirementFromFormalSkillInputV1(params) {
+  const {
+    tenant,
+    projectId,
+    groupId,
+    fieldId,
+    seasonId,
+    requirementId,
+    skillInputArtifact,
+    skillInputFactId,
+    fieldAreaM2,
+    nowIso
+  } = params || {};
+
+  if (!skillInputArtifact || typeof skillInputArtifact !== 'object') throw new Error('skillInputArtifact is required');
+  if (!skillInputArtifact.skill_input_id) throw new Error('skillInputArtifact.skill_input_id is required');
+
+  const inputValues = skillInputArtifact.input_values || {};
+  const skillInput = {
+    tenant_id: tenant,
+    project_id: projectId,
+    group_id: groupId,
+    field_id: fieldId,
+    soil_moisture: inputValues.soil_moisture,
+    target_soil_moisture: inputValues.target_soil_moisture,
+    root_zone_depth_mm: inputValues.root_zone_depth_mm,
+    rain_forecast_mm_72h: inputValues.rain_forecast_mm_72h,
+    et0_mm_72h: inputValues.et0_mm_72h,
+    application_efficiency: inputValues.application_efficiency,
+    evidence_refs: [
+      skillInputArtifact.source_refs?.observation_refs?.soil_moisture_percent,
+      skillInputArtifact.source_refs?.observation_refs?.forecast_rain_72h_mm,
+      skillInputArtifact.source_refs?.observation_refs?.temperature_max_c,
+    ],
+    source_refs: skillInputArtifact.source_refs,
+  };
+
+  const skillOutput = runC8IrrigationRequirementSkillV1(skillInput);
+
+  return {
+    skill_output: skillOutput,
+    requirement: {
+      requirement_id: requirementId,
+      field_id: fieldId,
+      season_id: seasonId,
+      crop_code: skillInputArtifact.crop_code || 'corn',
+      crop_stage: skillInputArtifact.crop_stage || '\u8425\u517b\u751f\u957f\u671f',
+      source_input_id: skillInputArtifact.skill_input_id,
+      source_input_fact_id: skillInputFactId,
+      source_forecast_id: skillInputArtifact.source_forecast_id || skillInputArtifact.source_refs?.weather_forecast_id || null,
+      source_observation_refs: skillOutput.evidence_refs,
+      skill_id: skillInputArtifact.skill_id || 'irrigation_requirement_skill_v1',
+      skill_version: skillInputArtifact.skill_version || 'v1',
+      skill_run_id: skillInputArtifact.skill_run_id || null,
+      root_zone_soil_moisture_percent: skillInput.soil_moisture,
+      target_soil_moisture_percent: skillInput.target_soil_moisture,
+      target_min_soil_moisture_percent: 22,
+      target_max_soil_moisture_percent: 28,
+      rainfall_forecast_mm_72h: skillOutput.calculation_trace.rain_forecast_mm_72h,
+      effective_rainfall_mm_72h: skillOutput.rain_credit_mm,
+      temperature_max_c_72h: 31,
+      et0_mm_72h: skillOutput.calculation_trace.et0_mm_72h,
+      net_irrigation_mm: skillOutput.net_irrigation_requirement_mm,
+      gross_irrigation_mm: skillOutput.gross_irrigation_requirement_mm,
+      gross_irrigation_requirement_mm: skillOutput.gross_irrigation_requirement_mm,
+      unit: skillOutput.unit,
+      calculation_method: 'irrigation_requirement_skill_v1',
+      calculation_inputs: {
+        ...skillInput,
+        soil_moisture_percent: skillInput.soil_moisture,
+        target_soil_moisture_percent: skillInput.target_soil_moisture,
+        forecast_rain_72h_mm: skillInput.rain_forecast_mm_72h,
+        et0_mm_72h: skillInput.et0_mm_72h,
+        temperature_max_c: 31,
+        field_area_m2: fieldAreaM2,
+        input_source: skillInputArtifact.input_source || 'projected_fact_bindings_v1',
+        source_input_id: skillInputArtifact.skill_input_id,
+        source_input_fact_id: skillInputFactId,
+        source_refs: skillInputArtifact.source_refs,
+        source_values: {
+          soil_moisture_percent: skillInput.soil_moisture,
+          rainfall_forecast_mm_72h: skillInput.rain_forecast_mm_72h,
+          et0_mm_72h: skillInput.et0_mm_72h,
+        }
+      },
+      calculation_trace: skillOutput.calculation_trace,
+      confidence: skillOutput.confidence,
+      derivation: {
+        derivation_type: 'irrigation_requirement_from_skill_input_v1',
+        source_type: 'irrigation_requirement_skill_input_v1',
+        source_input_id: skillInputArtifact.skill_input_id,
+        source_input_fact_id: skillInputFactId,
+        formula_version: skillOutput.calculation_trace.formula_version,
+        deterministic: true,
+      },
+      quality: {
+        deterministic: true,
+        source: 'irrigation_requirement_skill_v1',
+        status: 'SKILL_CALCULATED',
+        source_binding_status: 'BOUND_TO_PROJECTED_FACTS',
+        derivation_status: 'DERIVED_FROM_FORMAL_SKILL_INPUT',
+        confidence_level: skillOutput.confidence.level,
+        confidence_basis: skillOutput.confidence.basis
+      },
+      created_at: nowIso
+    }
+  };
+}
+
 function buildC8FormalIrrigationFullChainDataset(options) {
   const { tenant, profile = 'full-review', nowMs, nowIso } = options || {};
   if (!tenant) throw new Error('tenant is required');
@@ -263,62 +372,20 @@ function buildC8FormalIrrigationFullChainDataset(options) {
     },
     created_at: iso
   };
-  const irrigationRequirementSkillOutput = runC8IrrigationRequirementSkillV1(irrigationRequirementSkillInput);
-  const irrigationRequirement = {
-    requirement_id: REQUIREMENT_ID,
-    field_id: FIELD_ID,
-    season_id: SEASON_ID,
-    crop_code: 'corn',
-    crop_stage: '\u8425\u517b\u751f\u957f\u671f',
-    source_forecast_id: 'wf_c8_irrigation_001',
-    source_observation_refs: irrigationRequirementSkillOutput.evidence_refs,
-    skill_id: 'irrigation_requirement_skill_v1',
-    skill_version: 'v1',
-    skill_run_id: 'skill_trace_c8_irrigation_001',
-    root_zone_soil_moisture_percent: irrigationRequirementSkillInput.soil_moisture,
-    target_soil_moisture_percent: IRRIGATION_TARGET_SOIL_MOISTURE_PERCENT,
-    target_min_soil_moisture_percent: 22,
-    target_max_soil_moisture_percent: 28,
-    rainfall_forecast_mm_72h: irrigationRequirementSkillOutput.calculation_trace.rain_forecast_mm_72h,
-    effective_rainfall_mm_72h: irrigationRequirementSkillOutput.rain_credit_mm,
-    temperature_max_c_72h: 31,
-    et0_mm_72h: irrigationRequirementSkillOutput.calculation_trace.et0_mm_72h,
-    net_irrigation_mm: irrigationRequirementSkillOutput.net_irrigation_requirement_mm,
-    gross_irrigation_mm: irrigationRequirementSkillOutput.gross_irrigation_requirement_mm,
-    gross_irrigation_requirement_mm: irrigationRequirementSkillOutput.gross_irrigation_requirement_mm,
-    unit: irrigationRequirementSkillOutput.unit,
-    calculation_method: 'irrigation_requirement_skill_v1',
-    calculation_inputs: {
-      ...irrigationRequirementSkillInput,
-      soil_moisture_percent: irrigationRequirementSkillInput.soil_moisture,
-      target_soil_moisture_percent: IRRIGATION_TARGET_SOIL_MOISTURE_PERCENT,
-      forecast_rain_72h_mm: irrigationRequirementSkillInput.rain_forecast_mm_72h,
-      et0_mm_72h: irrigationRequirementSkillInput.et0_mm_72h,
-      temperature_max_c: 31,
-      field_area_m2: FIELD_AREA_M2,
-      input_source: 'projected_fact_bindings_v1',
-      source_input_id: SKILL_INPUT_ID,
-      source_input_fact_id: `${pre}_irrigation_requirement_skill_input_c8_001`,
-      source_refs: irrigationSkillInputSourceRefs,
-      source_values: {
-        soil_moisture_percent: Number(soilBeforeObservation && soilBeforeObservation.value_num),
-        rainfall_forecast_mm_72h: weatherForecast.rainfall_forecast_mm_72h,
-        temperature_max_c_72h: weatherForecast.temperature_max_c_72h,
-        et0_mm_72h: weatherForecast.et0_mm_72h,
-      }
-    },
-    calculation_trace: irrigationRequirementSkillOutput.calculation_trace,
-    confidence: irrigationRequirementSkillOutput.confidence,
-    quality: {
-      deterministic: true,
-      source: 'irrigation_requirement_skill_v1',
-      status: 'SKILL_CALCULATED',
-      source_binding_status: 'BOUND_TO_PROJECTED_FACTS',
-      confidence_level: irrigationRequirementSkillOutput.confidence.level,
-      confidence_basis: irrigationRequirementSkillOutput.confidence.basis
-    },
-    created_at: iso
-  };
+  const irrigationRequirementDerivation = deriveC8IrrigationRequirementFromFormalSkillInputV1({
+    tenant,
+    projectId: PROJECT_ID,
+    groupId: GROUP_ID,
+    fieldId: FIELD_ID,
+    seasonId: SEASON_ID,
+    requirementId: REQUIREMENT_ID,
+    skillInputArtifact: irrigationRequirementSkillInputArtifact,
+    skillInputFactId: `${pre}_irrigation_requirement_skill_input_c8_001`,
+    fieldAreaM2: FIELD_AREA_M2,
+    nowIso: iso,
+  });
+  const irrigationRequirementSkillOutput = irrigationRequirementDerivation.skill_output;
+  const irrigationRequirement = irrigationRequirementDerivation.requirement;
   const formalRequirementAmountSource = {
     source_type: 'irrigation_requirement_v1',
     requirement_id: REQUIREMENT_ID,
