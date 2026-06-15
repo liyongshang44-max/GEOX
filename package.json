@@ -106,6 +106,7 @@
     "seed:controlled-pilot:full-review:verify": "node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --verify --tenant tenantA",
     "acceptance:controlled-pilot:full-review-seed": "node scripts/governance_acceptance/ACCEPTANCE_CONTROLLED_PILOT_FULL_REVIEW_SEED_EXPORT_CONTRACT_V1.cjs",
     "ci:governance:c8-formal-chain-backend-p0": "node scripts/governance_acceptance/ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1.cjs",
+    "ci:governance:irrigation-requirement-derivation-schema-migration": "node scripts/governance_acceptance/ACCEPTANCE_IRRIGATION_REQUIREMENT_DERIVATION_SCHEMA_MIGRATION_V1.cjs",
     "ci:pr18i-guarded-report-hotfix": "node scripts/check_pr18i_guarded_report_hotfix.cjs",
     "ci:frontend:c8-customer-report-api-source": "node scripts/frontend_acceptance/ACCEPTANCE_C8_CUSTOMER_REPORT_API_SOURCE_V1.cjs"
   },
