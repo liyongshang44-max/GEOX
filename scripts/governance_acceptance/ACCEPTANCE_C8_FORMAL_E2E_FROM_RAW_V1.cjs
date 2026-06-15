@@ -223,6 +223,7 @@ function assertExportContract(plan) {
     'stage1_sensing_state_v1',
     'telemetry_index_v1',
     'device_status_index_v1',
+    'soil_moisture_sensing_window_index_v1',
     'prescription_contract_v1',
     'approval_requests_v1',
   ]) {
@@ -346,6 +347,7 @@ async function main() {
       'stage1_sensing_state_v1',
       'telemetry_index_v1',
       'device_status_index_v1',
+      'soil_moisture_sensing_window_index_v1',
       'prescription_contract_v1',
       'approval_requests_v1',
     ],
