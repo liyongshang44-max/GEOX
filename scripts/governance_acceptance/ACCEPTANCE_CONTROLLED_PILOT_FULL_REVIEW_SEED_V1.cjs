@@ -182,7 +182,7 @@ function assertWeatherForecastExportContract(exported) {
   nearly(weather?.rainfall_forecast_mm_72h, 2, 'weather rainfall_forecast_mm_72h');
   nearly(weather?.temperature_max_c_72h, 31, 'weather temperature_max_c_72h');
   assert(Object.prototype.hasOwnProperty.call(weather || {}, 'et0_mm_72h'), 'weather et0_mm_72h field missing', weather);
-  assert(weather?.quality?.provider_status === 'COMPLETE', 'weather provider_status mismatch', weather?.quality);
+  assert(weather?.quality?.provider_status === 'OK', 'weather provider_status mismatch', weather?.quality);
   nearly(weather?.et0_mm_72h, 3.9, 'weather et0_mm_72h');
 }
 

@@ -186,7 +186,7 @@ function buildC8FormalIrrigationFullChainDataset(options) {
     quality: {
       stale: false,
       missing_fields: [],
-      provider_status: 'COMPLETE',
+      provider_status: 'OK',
     },
     raw_payload: null,
   };
