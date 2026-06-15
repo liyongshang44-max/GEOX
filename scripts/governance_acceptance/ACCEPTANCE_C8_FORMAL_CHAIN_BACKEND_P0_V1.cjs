@@ -275,6 +275,7 @@ async function assertIrrigationRequirementReadback(client) {
   assert(row.calculation_method === 'irrigation_requirement_skill_v1', 'irrigation requirement calculation_method mismatch', row);
   assert(row.quality_json?.status === 'SKILL_CALCULATED', 'irrigation requirement quality status mismatch', row.quality_json);
   assert(row.quality_json?.source_binding_status === 'BOUND_TO_PROJECTED_FACTS', 'irrigation requirement source binding status mismatch', row.quality_json);
+  assert(row.quality_json?.derivation_status === 'DERIVED_FROM_FORMAL_SKILL_INPUT', 'irrigation requirement derivation status mismatch', row.quality_json);
   assert(row.calculation_inputs_json?.input_source === 'projected_fact_bindings_v1', 'irrigation requirement calculation input source mismatch', row.calculation_inputs_json);
   assert(row.calculation_inputs_json?.source_input_id === FORMAL_SKILL_INPUT, 'irrigation requirement source_input_id mismatch', row.calculation_inputs_json);
   assert(String(row.calculation_inputs_json?.source_input_fact_id || '').includes('irrigation_requirement_skill_input_c8_001'), 'irrigation requirement source_input_fact_id mismatch', row.calculation_inputs_json);
