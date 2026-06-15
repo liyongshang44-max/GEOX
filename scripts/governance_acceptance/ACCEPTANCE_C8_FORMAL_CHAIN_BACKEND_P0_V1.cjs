@@ -12,6 +12,8 @@ const FORMAL_TASK = 'act_c8_irrigation_formal_001';
 const FORMAL_FIELD = 'field_c8_demo';
 const FORMAL_REQUIREMENT = 'ireq_c8_irrigation_001';
 const FORMAL_SKILL_INPUT = 'iskill_input_c8_irrigation_001';
+const SENSING_WINDOW_ID = 'sw_c8_soil_moisture_001';
+const SENSING_WINDOW_LAST_OBSERVATION_REF = 'telemetry_soil_moisture_window_c8_006';
 
 function arg(name, fallback = null) {
   const idx = process.argv.indexOf(`--${name}`);
@@ -196,6 +198,37 @@ async function assertFieldMemory(client) {
   assert(noObs.status === 422 && noObs.json?.error === 'OBSERVATION_PAIR_NOT_FOUND', 'field memory missing observation pair negative failed', httpDetail(noObs));
 }
 function findBy(arr, pred) { return Array.isArray(arr) ? arr.find(pred) : null; }
+
+async function assertSoilMoistureSensingWindowReadback(client) {
+  const result = await client.query(
+    `SELECT *
+       FROM soil_moisture_sensing_window_index_v1
+      WHERE window_id = $1
+      LIMIT 1`,
+    [SENSING_WINDOW_ID],
+  );
+
+  assert(result.rows.length === 1, 'soil moisture sensing window index row missing', result.rows);
+  const row = result.rows[0];
+  assert(row.window_id === SENSING_WINDOW_ID, 'soil moisture sensing window window_id mismatch', row);
+  assert(row.tenant_id === TENANT, 'soil moisture sensing window tenant_id mismatch', row);
+  assert(row.project_id === PROJECT_ID, 'soil moisture sensing window project_id mismatch', row);
+  assert(row.group_id === GROUP_ID, 'soil moisture sensing window group_id mismatch', row);
+  assert(row.field_id === FORMAL_FIELD, 'soil moisture sensing window field_id mismatch', row);
+  assert(row.device_id === 'dev_soil_c8_001', 'soil moisture sensing window device_id mismatch', row);
+  assert(row.metric === 'soil_moisture_percent', 'soil moisture sensing window metric mismatch', row);
+  assert(Number(row.expected_interval_ms) === 60000, 'soil moisture sensing window expected_interval_ms mismatch', row);
+  assert(Number(row.actual_points) >= 5, 'soil moisture sensing window actual_points too low', row);
+  assert(Number(row.coverage_ratio) >= 0.2, 'soil moisture sensing window coverage_ratio too low', row);
+  assert(Number(row.max_gap_ms) <= 900000, 'soil moisture sensing window max_gap_ms too high', row);
+  assert(Number(row.gap_count) === 0, 'soil moisture sensing window gap_count mismatch', row);
+  assert(row.quality_status === 'PASS', 'soil moisture sensing window quality_status mismatch', row);
+  assert(row.confidence_json?.level === 'HIGH', 'soil moisture sensing window confidence level mismatch', row.confidence_json);
+  nearly(row.summary_json?.last_value, 18.4, 'soil moisture sensing window summary.last_value');
+  assert(Array.isArray(row.source_fact_ids_json) && row.source_fact_ids_json.length >= 5, 'soil moisture sensing window source_fact_ids_json too short', row.source_fact_ids_json);
+  assert(Array.isArray(row.source_observation_ids_json) && row.source_observation_ids_json.length >= 5, 'soil moisture sensing window source_observation_ids_json too short', row.source_observation_ids_json);
+}
+
 async function assertIrrigationSkillInputReadback(client) {
   const result = await client.query(
     `SELECT skill_input_id,
@@ -229,7 +262,10 @@ async function assertIrrigationSkillInputReadback(client) {
   assert(row.source_forecast_id === 'wf_c8_irrigation_001', 'irrigation skill input forecast binding mismatch', row);
   assert(row.input_source === 'projected_fact_bindings_v1', 'irrigation skill input source mismatch', row);
   assert(row.source_refs_json?.weather_forecast_id === 'wf_c8_irrigation_001', 'irrigation skill input source_refs weather mismatch', row.source_refs_json);
-  assert(row.source_refs_json?.observation_refs?.soil_moisture_percent === 'telemetry_soil_before_001', 'irrigation skill input soil source ref mismatch', row.source_refs_json);
+  assert(row.source_refs_json?.sensing_window_id === SENSING_WINDOW_ID, 'irrigation skill input sensing_window_id mismatch', row.source_refs_json);
+  assert(String(row.source_refs_json?.sensing_window_fact_id || '').includes('soil_moisture_sensing_window_c8_001'), 'irrigation skill input sensing_window_fact_id mismatch', row.source_refs_json);
+  assert(row.source_refs_json?.sensing_window_quality_status === 'PASS', 'irrigation skill input sensing_window_quality_status mismatch', row.source_refs_json);
+  assert(row.source_refs_json?.observation_refs?.soil_moisture_percent === SENSING_WINDOW_LAST_OBSERVATION_REF, 'irrigation skill input soil source ref mismatch', row.source_refs_json);
   nearly(row.input_values_json?.soil_moisture, 18.4, 'irrigation skill input soil_moisture');
   nearly(row.input_values_json?.rain_forecast_mm_72h, 2, 'irrigation skill input rain_forecast_mm_72h');
   nearly(row.input_values_json?.et0_mm_72h, 3.9, 'irrigation skill input et0_mm_72h');
@@ -246,7 +282,9 @@ async function assertIrrigationSkillInputApiReadback() {
   assert(item?.requirement_id === FORMAL_REQUIREMENT, 'irrigation skill input API requirement binding mismatch', item);
   assert(item?.input_source === 'projected_fact_bindings_v1', 'irrigation skill input API input_source mismatch', item);
   assert(item?.source_refs?.weather_forecast_id === 'wf_c8_irrigation_001', 'irrigation skill input API weather source mismatch', item?.source_refs);
-  assert(item?.source_refs?.observation_refs?.soil_moisture_percent === 'telemetry_soil_before_001', 'irrigation skill input API soil source mismatch', item?.source_refs);
+  assert(item?.source_refs?.sensing_window_id === SENSING_WINDOW_ID, 'irrigation skill input API sensing_window_id mismatch', item?.source_refs);
+  assert(item?.source_refs?.sensing_window_quality_status === 'PASS', 'irrigation skill input API sensing_window_quality_status mismatch', item?.source_refs);
+  assert(item?.source_refs?.observation_refs?.soil_moisture_percent === SENSING_WINDOW_LAST_OBSERVATION_REF, 'irrigation skill input API soil source mismatch', item?.source_refs);
   nearly(item?.input_values?.soil_moisture, 18.4, 'irrigation skill input API soil_moisture');
   nearly(item?.input_values?.rain_forecast_mm_72h, 2, 'irrigation skill input API rain_forecast_mm_72h');
   nearly(item?.input_values?.et0_mm_72h, 3.9, 'irrigation skill input API et0_mm_72h');
@@ -280,7 +318,9 @@ async function assertIrrigationRequirementReadback(client) {
   assert(row.calculation_inputs_json?.source_input_id === FORMAL_SKILL_INPUT, 'irrigation requirement source_input_id mismatch', row.calculation_inputs_json);
   assert(String(row.calculation_inputs_json?.source_input_fact_id || '').includes('irrigation_requirement_skill_input_c8_001'), 'irrigation requirement source_input_fact_id mismatch', row.calculation_inputs_json);
   assert(row.calculation_inputs_json?.source_refs?.weather_forecast_id === 'wf_c8_irrigation_001', 'irrigation requirement weather source ref mismatch', row.calculation_inputs_json);
-  assert(row.calculation_inputs_json?.source_refs?.observation_refs?.soil_moisture_percent === 'telemetry_soil_before_001', 'irrigation requirement soil source ref mismatch', row.calculation_inputs_json);
+  assert(row.calculation_inputs_json?.source_refs?.sensing_window_id === SENSING_WINDOW_ID, 'irrigation requirement sensing_window_id mismatch', row.calculation_inputs_json);
+  assert(row.calculation_inputs_json?.source_refs?.sensing_window_quality_status === 'PASS', 'irrigation requirement sensing_window_quality_status mismatch', row.calculation_inputs_json);
+  assert(row.calculation_inputs_json?.source_refs?.observation_refs?.soil_moisture_percent === SENSING_WINDOW_LAST_OBSERVATION_REF, 'irrigation requirement soil source ref mismatch', row.calculation_inputs_json);
   assert(row.derivation_json?.derivation_type === 'irrigation_requirement_from_skill_input_v1', 'irrigation requirement derivation_type mismatch', row.derivation_json);
   assert(row.derivation_json?.source_type === 'irrigation_requirement_skill_input_v1', 'irrigation requirement derivation source_type mismatch', row.derivation_json);
   assert(row.derivation_json?.source_input_id === FORMAL_SKILL_INPUT, 'irrigation requirement derivation source_input_id mismatch', row.derivation_json);
@@ -397,16 +437,18 @@ async function assertFieldReport() {
     await assertRuntimeOpenApi();
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP receipt-status');
     const asExecuted = await assertReceiptStatusMatrix(client);
-    console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP roi-formalize');
-    await assertRoiFormalization(client, asExecuted.as_executed_id);
-    console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP field-memory');
-    await assertFieldMemory(client);
+    console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP soil-moisture-sensing-window');
+    await assertSoilMoistureSensingWindowReadback(client);
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP irrigation-skill-input');
     await assertIrrigationSkillInputReadback(client);
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP irrigation-skill-input-api');
     await assertIrrigationSkillInputApiReadback();
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP irrigation-requirement');
     await assertIrrigationRequirementReadback(client);
+    console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP roi-formalize');
+    await assertRoiFormalization(client, asExecuted.as_executed_id);
+    console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP field-memory');
+    await assertFieldMemory(client);
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP operation-report');
     await assertOperationReport();
     await assertFieldReport();
