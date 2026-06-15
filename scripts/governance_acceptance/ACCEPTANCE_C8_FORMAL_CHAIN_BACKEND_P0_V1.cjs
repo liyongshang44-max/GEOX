@@ -13,6 +13,7 @@ const FORMAL_FIELD = 'field_c8_demo';
 const FORMAL_REQUIREMENT = 'ireq_c8_irrigation_001';
 const FORMAL_SKILL_INPUT = 'iskill_input_c8_irrigation_001';
 const SENSING_WINDOW_ID = 'sw_c8_soil_moisture_001';
+const SENSING_WINDOW_FAIL_ID = 'sw_c8_soil_moisture_fail_001';
 const SENSING_WINDOW_LAST_OBSERVATION_REF = 'telemetry_soil_moisture_window_c8_006';
 
 function arg(name, fallback = null) {
@@ -229,6 +230,35 @@ async function assertSoilMoistureSensingWindowReadback(client) {
   assert(Array.isArray(row.source_observation_ids_json) && row.source_observation_ids_json.length >= 5, 'soil moisture sensing window source_observation_ids_json too short', row.source_observation_ids_json);
 }
 
+
+async function assertSoilMoistureSensingWindowNegativeGuard(client) {
+  const result = await client.query(
+    `SELECT *
+       FROM soil_moisture_sensing_window_index_v1
+      WHERE window_id = $1
+      LIMIT 1`,
+    [SENSING_WINDOW_FAIL_ID],
+  );
+
+  assert(result.rows.length === 1, 'soil moisture sensing window FAIL fixture row missing', result.rows);
+  const row = result.rows[0];
+  assert(row.quality_status === 'FAIL', 'soil moisture sensing window FAIL fixture quality_status mismatch', row);
+  assert(Number(row.actual_points) === 1, 'soil moisture sensing window FAIL fixture actual_points mismatch', row);
+  assert(Number(row.coverage_ratio) < 0.2, 'soil moisture sensing window FAIL fixture coverage_ratio must be below 0.2', row);
+  assert(row.confidence_json?.level === 'LOW', 'soil moisture sensing window FAIL fixture confidence level mismatch', row.confidence_json);
+
+  const skillInput = await client.query(
+    `SELECT skill_input_id, source_refs_json
+       FROM irrigation_requirement_skill_input_index_v1
+      WHERE tenant_id=$1
+        AND project_id=$2
+        AND group_id=$3
+        AND source_refs_json->>'sensing_window_id' = $4`,
+    [TENANT, PROJECT_ID, GROUP_ID, SENSING_WINDOW_FAIL_ID],
+  );
+  assert(skillInput.rows.length === 0, 'FAIL sensing window must not be bound to formal irrigation skill input', skillInput.rows);
+}
+
 async function assertIrrigationSkillInputReadback(client) {
   const result = await client.query(
     `SELECT skill_input_id,
@@ -439,6 +469,8 @@ async function assertFieldReport() {
     const asExecuted = await assertReceiptStatusMatrix(client);
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP soil-moisture-sensing-window');
     await assertSoilMoistureSensingWindowReadback(client);
+    console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP soil-moisture-sensing-window-negative-guard');
+    await assertSoilMoistureSensingWindowNegativeGuard(client);
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP irrigation-skill-input');
     await assertIrrigationSkillInputReadback(client);
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP irrigation-skill-input-api');
