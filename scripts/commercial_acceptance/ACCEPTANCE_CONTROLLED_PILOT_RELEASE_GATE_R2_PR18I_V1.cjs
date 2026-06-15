@@ -100,10 +100,17 @@ const APPROVER =
   process.env.GEOX_EXECUTOR_TOKEN ||
   'approver_token';
 
+const DATABASE_URL =
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL ||
+  `postgres://${encodeURIComponent(process.env.PGUSER || 'landos')}:${encodeURIComponent(process.env.PGPASSWORD || 'landos_pwd')}@${process.env.PGHOST || '127.0.0.1'}:${process.env.PGPORT || '5433'}/${encodeURIComponent(process.env.PGDATABASE || 'landos')}`;
+
 const env = {
   ...process.env,
   BASE_URL: BASE,
   API_BASE_URL: process.env.API_BASE_URL || BASE,
+  DATABASE_URL,
+  POSTGRES_URL: process.env.POSTGRES_URL || DATABASE_URL,
   TENANT_ID: TENANT,
   ADMIN_TOKEN: ADMIN,
   TOKEN_ADMIN: process.env.TOKEN_ADMIN || ADMIN,
