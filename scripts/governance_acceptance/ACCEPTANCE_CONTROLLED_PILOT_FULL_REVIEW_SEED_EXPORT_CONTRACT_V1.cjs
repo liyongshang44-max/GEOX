@@ -9,6 +9,7 @@ const FORMAL_REQUIREMENT = 'ireq_c8_irrigation_001';
 const SENSING_WINDOW_ID = 'sw_c8_soil_moisture_001';
 const SENSING_WINDOW_FAIL_ID = 'sw_c8_soil_moisture_fail_001';
 const SENSING_WINDOW_LAST_OBSERVATION_REF = 'telemetry_soil_moisture_window_c8_006';
+const FIXED_NOW_MS_ARGS = ['--now-ms', '1710000000000'];
 function run(args) {
   const r = spawnSync(process.execPath, args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   if (r.status !== 0) { console.error(r.stdout); console.error(r.stderr); process.exit(r.status || 1); }
@@ -166,7 +167,7 @@ function assertIrrigationRequirementExport(exported) {
   must(close(requirement?.net_irrigation_mm, 18.7), 'irrigation requirement net amount mismatch', requirement);
 }
 
-const dry = run([SEED, '--dry-run', '--tenant', 'tenantA']);
+const dry = run([SEED, '--dry-run', '--tenant', 'tenantA', ...FIXED_NOW_MS_ARGS]);
 must(dry.ok === true && dry.profile === 'full-review' && dry.chain_id === CHAIN && dry.apply === false, 'dry-run envelope invalid', dry);
 for (const [key, min] of Object.entries({
   fields: 3,
@@ -203,7 +204,7 @@ must(
   'field memory derived endpoint contract missing',
   dry.field_memory_contract
 );
-const exported = run([SEED, '--export-json', '--tenant', 'tenantA']);
+const exported = run([SEED, '--export-json', '--tenant', 'tenantA', ...FIXED_NOW_MS_ARGS]);
 assertFormalChain(exported);
 assertIrrigationRequirementExport(exported);
 must(
@@ -239,8 +240,8 @@ must(
   'manifest must state static formal memory is not the only pass source',
   exported.manifest?.governance_acceptance
 );
-const c8Dry = run([SEED, '--dry-run', '--tenant', 'tenantA', '--profile', 'c8-formal-chain']);
-const c8Exported = run([SEED, '--export-json', '--tenant', 'tenantA', '--profile', 'c8-formal-chain']);
+const c8Dry = run([SEED, '--dry-run', '--tenant', 'tenantA', '--profile', 'c8-formal-chain', ...FIXED_NOW_MS_ARGS]);
+const c8Exported = run([SEED, '--export-json', '--tenant', 'tenantA', '--profile', 'c8-formal-chain', ...FIXED_NOW_MS_ARGS]);
 assertFormalChain(c8Exported);
 assertIrrigationRequirementExport(c8Exported);
 assertSoilMoistureSensingWindowExportContract(c8Exported);

@@ -36,6 +36,7 @@ const FORMAL_REQUIREMENT = 'ireq_c8_irrigation_001';
 const SENSING_WINDOW_ID = 'sw_c8_soil_moisture_001';
 const SENSING_WINDOW_FAIL_ID = 'sw_c8_soil_moisture_fail_001';
 const SENSING_WINDOW_LAST_OBSERVATION_REF = 'telemetry_soil_moisture_window_c8_006';
+const FIXED_NOW_MS_ARGS = ['--now-ms', '1710000000000'];
 let failed = false;
 
 function fail(message, detail) { console.error(`[controlled-pilot-full-review-seed] ${message}`); if (detail !== undefined) console.error(JSON.stringify(detail, null, 2)); failed = true; }
@@ -374,7 +375,7 @@ async function main() {
     ['development evidence marker', /sim_trace|flight_table|dev_source/i],
   ]);
 
-  const dry = runJson([SEED, '--dry-run', '--tenant', 'tenantA']);
+  const dry = runJson([SEED, '--dry-run', '--tenant', 'tenantA', ...FIXED_NOW_MS_ARGS]);
   assert(dry.ok === true && dry.profile === 'full-review' && dry.chain_id === CHAIN_ID && dry.apply === false, 'dry-run envelope invalid', dry);
   for (const [key, min] of Object.entries({
     fields: 3,
@@ -401,7 +402,7 @@ async function main() {
   assert(dry.field_memory_contract?.optional_rows_table === 'field_memory_v1_optional', 'dry-run field memory optional contract mismatch', dry.field_memory_contract);
   assert(dry.field_memory_contract?.derived_endpoint === 'POST /api/v1/field-memory/from-acceptance', 'dry-run field memory derived endpoint mismatch', dry.field_memory_contract);
 
-  const exported = runJson([SEED, '--export-json', '--tenant', 'tenantA']);
+  const exported = runJson([SEED, '--export-json', '--tenant', 'tenantA', ...FIXED_NOW_MS_ARGS]);
   assertFormalChain(exported);
   assertApprovalDecision(exported);
   assertRoiExportContract(exported);
@@ -412,8 +413,8 @@ async function main() {
   assertFieldMemoryExportContract(exported);
   assert((exported.system_domains || []).length >= 26, 'system domains A-Z coverage missing');
 
-  const c8Dry = runJson([SEED, '--dry-run', '--tenant', 'tenantA', '--profile', 'c8-formal-chain']);
-  const c8Exported = runJson([SEED, '--export-json', '--tenant', 'tenantA', '--profile', 'c8-formal-chain']);
+  const c8Dry = runJson([SEED, '--dry-run', '--tenant', 'tenantA', '--profile', 'c8-formal-chain', ...FIXED_NOW_MS_ARGS]);
+  const c8Exported = runJson([SEED, '--export-json', '--tenant', 'tenantA', '--profile', 'c8-formal-chain', ...FIXED_NOW_MS_ARGS]);
   assertFormalChain(c8Exported);
   assertApprovalDecision(c8Exported);
   assertRoiExportContract(c8Exported);
@@ -424,7 +425,7 @@ async function main() {
 
   const apiBase = process.env.CONTROLLED_PILOT_VERIFY_API_BASE || process.env.API_BASE_URL || '';
   if (apiBase && await httpOk(`${apiBase.replace(/\/+$/, '')}/api/health`)) {
-    const r = spawnSync(process.execPath, [SEED, '--verify-api', '--tenant', 'tenantA', '--profile', 'c8-formal-chain', '--base-url', apiBase], { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+    const r = spawnSync(process.execPath, [SEED, '--verify-api', '--tenant', 'tenantA', '--profile', 'c8-formal-chain', '--base-url', apiBase, ...FIXED_NOW_MS_ARGS], { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
     if (r.status !== 0) { console.error(r.stdout); console.error(r.stderr); failed = true; }
   }
 
