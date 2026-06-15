@@ -6,6 +6,7 @@ import type { Pool } from "pg";
 
 export const IRRIGATION_REQUIREMENT_INDEX_V1_TABLE = "irrigation_requirement_index_v1";
 
+
 export type IrrigationRequirementTenantTripleV1 = {
   tenant_id: string;
   project_id: string;
@@ -162,7 +163,7 @@ export async function getLatestIrrigationRequirementIndexV1(
             unit,
             calculation_method,
             calculation_inputs_json,
-             derivation_json,
+            derivation_json,
             quality_json,
             source_fact_id,
             created_at
