@@ -41,6 +41,10 @@ function assertFormalChain(exported) {
   must(c.irrigation_requirement?.calculation_method === 'irrigation_requirement_skill_v1', 'irrigation requirement calculation_method invalid', c.irrigation_requirement);
   must(c.irrigation_requirement?.quality?.status === 'SKILL_CALCULATED', 'irrigation requirement quality status invalid', c.irrigation_requirement?.quality);
   must(c.irrigation_requirement?.calculation_trace?.formula_version === 'irrigation_requirement_skill_v1', 'irrigation requirement formula invalid', c.irrigation_requirement?.calculation_trace);
+  must(c.irrigation_requirement?.calculation_inputs?.input_source === 'projected_fact_bindings_v1', 'irrigation requirement input_source invalid', c.irrigation_requirement?.calculation_inputs);
+  must(c.irrigation_requirement?.calculation_inputs?.source_refs?.weather_forecast_id === 'wf_c8_irrigation_001', 'irrigation requirement weather source binding invalid', c.irrigation_requirement?.calculation_inputs);
+  must(c.irrigation_requirement?.calculation_inputs?.source_refs?.observation_refs?.soil_moisture_percent === 'telemetry_soil_before_001', 'irrigation requirement soil source binding invalid', c.irrigation_requirement?.calculation_inputs);
+  must(c.irrigation_requirement?.quality?.source_binding_status === 'BOUND_TO_PROJECTED_FACTS', 'irrigation requirement source binding status invalid', c.irrigation_requirement?.quality);
   must(close(c.irrigation_requirement?.calculation_trace?.soil_water_deficit_mm, 16.8), 'irrigation requirement soil water deficit invalid', c.irrigation_requirement?.calculation_trace);
   must(close(c.irrigation_requirement?.calculation_trace?.et0_adjustment_mm, 3.9), 'irrigation requirement et0 adjustment invalid', c.irrigation_requirement?.calculation_trace);
   must(close(c.irrigation_requirement?.net_irrigation_mm, 18.7), 'irrigation requirement net amount invalid', c.irrigation_requirement);
@@ -96,6 +100,10 @@ function assertIrrigationRequirementExport(exported) {
   must(requirement?.calculation_method === 'irrigation_requirement_skill_v1', 'irrigation requirement calculation method mismatch', requirement);
   must(requirement?.quality?.status === 'SKILL_CALCULATED', 'irrigation requirement quality status mismatch', requirement?.quality);
   must(requirement?.calculation_trace?.formula_version === 'irrigation_requirement_skill_v1', 'irrigation requirement formula mismatch', requirement?.calculation_trace);
+  must(requirement?.calculation_inputs?.input_source === 'projected_fact_bindings_v1', 'irrigation requirement input_source mismatch', requirement?.calculation_inputs);
+  must(requirement?.calculation_inputs?.source_refs?.weather_forecast_id === 'wf_c8_irrigation_001', 'irrigation requirement weather source binding mismatch', requirement?.calculation_inputs);
+  must(requirement?.calculation_inputs?.source_refs?.observation_refs?.forecast_rain_72h_mm === 'telemetry_rain_001', 'irrigation requirement rain source binding mismatch', requirement?.calculation_inputs);
+  must(requirement?.quality?.source_binding_status === 'BOUND_TO_PROJECTED_FACTS', 'irrigation requirement source binding status mismatch', requirement?.quality);
   must(close(requirement?.calculation_trace?.soil_water_deficit_mm, 16.8), 'irrigation requirement soil water deficit mismatch', requirement?.calculation_trace);
   must(close(requirement?.calculation_trace?.et0_adjustment_mm, 3.9), 'irrigation requirement et0 adjustment mismatch', requirement?.calculation_trace);
   must(close(requirement?.net_irrigation_mm, 18.7), 'irrigation requirement net amount mismatch', requirement);

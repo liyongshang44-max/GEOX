@@ -94,6 +94,10 @@ function assertFormalChain(exported) {
   assert(c.irrigation_requirement?.calculation_method === 'irrigation_requirement_skill_v1', 'irrigation requirement calculation_method invalid', c.irrigation_requirement);
   assert(c.irrigation_requirement?.quality?.status === 'SKILL_CALCULATED', 'irrigation requirement quality status invalid', c.irrigation_requirement?.quality);
   assert(c.irrigation_requirement?.calculation_trace?.formula_version === 'irrigation_requirement_skill_v1', 'irrigation requirement formula invalid', c.irrigation_requirement?.calculation_trace);
+  assert(c.irrigation_requirement?.calculation_inputs?.input_source === 'projected_fact_bindings_v1', 'irrigation requirement input_source invalid', c.irrigation_requirement?.calculation_inputs);
+  assert(c.irrigation_requirement?.calculation_inputs?.source_refs?.weather_forecast_id === 'wf_c8_irrigation_001', 'irrigation requirement source weather binding invalid', c.irrigation_requirement?.calculation_inputs);
+  assert(c.irrigation_requirement?.calculation_inputs?.source_refs?.observation_refs?.soil_moisture_percent === 'telemetry_soil_before_001', 'irrigation requirement soil observation binding invalid', c.irrigation_requirement?.calculation_inputs);
+  assert(c.irrigation_requirement?.quality?.source_binding_status === 'BOUND_TO_PROJECTED_FACTS', 'irrigation requirement source binding status invalid', c.irrigation_requirement?.quality);
   nearly(c.irrigation_requirement?.calculation_trace?.soil_water_deficit_mm, 16.8, 'irrigation requirement soil_water_deficit_mm');
   nearly(c.irrigation_requirement?.calculation_trace?.et0_adjustment_mm, 3.9, 'irrigation requirement et0_adjustment_mm');
   nearly(c.irrigation_requirement?.net_irrigation_mm, 18.7, 'irrigation requirement net_irrigation_mm');
@@ -178,7 +182,8 @@ function assertWeatherForecastExportContract(exported) {
   nearly(weather?.rainfall_forecast_mm_72h, 2, 'weather rainfall_forecast_mm_72h');
   nearly(weather?.temperature_max_c_72h, 31, 'weather temperature_max_c_72h');
   assert(Object.prototype.hasOwnProperty.call(weather || {}, 'et0_mm_72h'), 'weather et0_mm_72h field missing', weather);
-  assert(weather?.quality?.provider_status === 'PARTIAL', 'weather provider_status mismatch', weather?.quality);
+  assert(weather?.quality?.provider_status === 'COMPLETE', 'weather provider_status mismatch', weather?.quality);
+  nearly(weather?.et0_mm_72h, 3.9, 'weather et0_mm_72h');
 }
 
 function assertIrrigationRequirementExportContract(exported) {
@@ -190,6 +195,10 @@ function assertIrrigationRequirementExportContract(exported) {
   assert(requirement?.calculation_method === 'irrigation_requirement_skill_v1', 'irrigation requirement calculation_method mismatch', requirement);
   assert(requirement?.quality?.status === 'SKILL_CALCULATED', 'irrigation requirement quality status mismatch', requirement?.quality);
   assert(requirement?.calculation_trace?.formula_version === 'irrigation_requirement_skill_v1', 'irrigation requirement formula mismatch', requirement?.calculation_trace);
+  assert(requirement?.calculation_inputs?.input_source === 'projected_fact_bindings_v1', 'irrigation requirement input_source mismatch', requirement?.calculation_inputs);
+  assert(requirement?.calculation_inputs?.source_refs?.weather_forecast_id === 'wf_c8_irrigation_001', 'irrigation requirement source weather binding mismatch', requirement?.calculation_inputs);
+  assert(requirement?.calculation_inputs?.source_refs?.observation_refs?.forecast_rain_72h_mm === 'telemetry_rain_001', 'irrigation requirement rain observation binding mismatch', requirement?.calculation_inputs);
+  assert(requirement?.quality?.source_binding_status === 'BOUND_TO_PROJECTED_FACTS', 'irrigation requirement source binding status mismatch', requirement?.quality);
   nearly(requirement?.calculation_trace?.soil_water_deficit_mm, 16.8, 'irrigation requirement soil_water_deficit_mm');
   nearly(requirement?.calculation_trace?.et0_adjustment_mm, 3.9, 'irrigation requirement et0_adjustment_mm');
   nearly(requirement?.net_irrigation_mm, 18.7, 'irrigation requirement net_irrigation_mm');
@@ -250,6 +259,7 @@ async function main() {
   need('seed irrigation requirement H2 flow', seed, ['irrigation_requirement_v1', 'irrigation_requirement_index_v1', 'insertIrrigationRequirementIndexRows', 'gross_irrigation_requirement_mm']);
   need('seed irrigation requirement H4 amount-source flow', c8Dataset, ['formalRequirementAmountSource', 'amount_source_chain', 'planned_amount_source', 'amount_mm', 'source_requirement_id']);
   need('seed irrigation requirement H5 skill-calculation flow', c8Dataset, ['runC8IrrigationRequirementSkillV1', 'irrigationRequirementSkillInput', 'irrigationRequirementSkillOutput', 'calculation_trace', 'SKILL_CALCULATED']);
+  need('seed irrigation requirement H6 projected-fact input binding flow', c8Dataset, ['irrigationSkillInputSourceRefs', 'projected_fact_bindings_v1', 'BOUND_TO_PROJECTED_FACTS', 'telemetry_fact_ids', 'weatherForecast']);
   need('commercial release gate structured verify-api profiles', commercialR2Gate, ['controlled_pilot_full_review_verify_api_structured_json', 'controlled_pilot_c8_formal_chain_verify_api_structured_json', '--verify-api --tenant ${TENANT_ID} --base-url ${BASE}', '--verify-api --tenant ${TENANT_ID} --profile c8-formal-chain --base-url ${BASE}', 'JSON parse plus field-level assertions']);
   need('field memory service formal gate', fieldMemoryService, ['createFormalFieldMemoryFromAcceptanceV1', 'validateFormalFieldMemoryAcceptanceV1', 'FORMAL_FIELD_MEMORY', 'FORMAL_ACCEPTED', 'formal_acceptance_id', 'customer_visible_memory', 'learning_eligible', 'ACCEPTANCE_VERDICT_NOT_PASS', 'FORMAL_EVIDENCE_NOT_PASSED', 'CHAIN_VALIDATION_NOT_PASSED']);
   need('field memory route formal derivation', fieldMemoryRoute, ['/api/v1/field-memory/from-acceptance', 'FORMAL_FIELD_MEMORY', 'FORMAL_ACCEPTED', 'customer_visible_memory', 'learning_eligible', 'formal_acceptance_id']);

@@ -216,6 +216,10 @@ async function assertIrrigationRequirementReadback(client) {
   assert(row.unit === 'mm', 'irrigation requirement unit mismatch', row);
   assert(row.calculation_method === 'irrigation_requirement_skill_v1', 'irrigation requirement calculation_method mismatch', row);
   assert(row.quality_json?.status === 'SKILL_CALCULATED', 'irrigation requirement quality status mismatch', row.quality_json);
+  assert(row.quality_json?.source_binding_status === 'BOUND_TO_PROJECTED_FACTS', 'irrigation requirement source binding status mismatch', row.quality_json);
+  assert(row.calculation_inputs_json?.input_source === 'projected_fact_bindings_v1', 'irrigation requirement calculation input source mismatch', row.calculation_inputs_json);
+  assert(row.calculation_inputs_json?.source_refs?.weather_forecast_id === 'wf_c8_irrigation_001', 'irrigation requirement weather source ref mismatch', row.calculation_inputs_json);
+  assert(row.calculation_inputs_json?.source_refs?.observation_refs?.soil_moisture_percent === 'telemetry_soil_before_001', 'irrigation requirement soil source ref mismatch', row.calculation_inputs_json);
   nearly(row.calculation_inputs_json?.et0_mm_72h, 3.9, 'irrigation requirement calculation input et0_mm_72h');
   assert(String(row.source_fact_id || '').includes('irrigation_requirement_c8_001'), 'irrigation requirement source_fact_id mismatch', row);
 }
@@ -241,7 +245,7 @@ async function assertOperationReport() {
   assert(weatherSummary, 'operation report weather_summary missing', report);
   assert(weatherSummary.weather_forecast_id === 'wf_c8_irrigation_001', 'operation report weather_summary.weather_forecast_id mismatch', weatherSummary);
   assert(weatherSummary.source_quality?.provider === 'MOCK', 'operation report weather_summary source provider mismatch', weatherSummary);
-  assert(weatherSummary.source_quality?.provider_status === 'PARTIAL', 'operation report weather_summary provider_status mismatch', weatherSummary);
+  assert(weatherSummary.source_quality?.provider_status === 'COMPLETE', 'operation report weather_summary provider_status mismatch', weatherSummary);
   nearly(weatherSummary.rainfall_forecast_mm, 2, 'operation report weather_summary rainfall');
   nearly(weatherSummary.max_temperature_c, 31, 'operation report weather_summary max temperature');
 
@@ -251,6 +255,8 @@ async function assertOperationReport() {
   assert(requirementSummary.source_forecast_id === 'wf_c8_irrigation_001', 'operation report requirement forecast binding mismatch', requirementSummary);
   assert(requirementSummary.source_fact_id === 'full_review_seed_tenantA_irrigation_requirement_c8_001', 'operation report requirement source_fact_id mismatch', requirementSummary);
   assert(requirementSummary.skill_id === 'irrigation_requirement_skill_v1', 'operation report requirement skill_id mismatch', requirementSummary);
+  assert(requirementSummary.calculation_inputs?.input_source === 'projected_fact_bindings_v1', 'operation report requirement input_source mismatch', requirementSummary);
+  assert(requirementSummary.calculation_inputs?.source_refs?.weather_forecast_id === 'wf_c8_irrigation_001', 'operation report requirement weather source ref mismatch', requirementSummary);
   nearly(requirementSummary.net_irrigation_mm, 18.7, 'operation report requirement net_irrigation_mm');
   nearly(requirementSummary.gross_irrigation_mm, 22, 'operation report requirement gross_irrigation_mm');
   nearly(requirementSummary.gross_irrigation_requirement_mm, 22, 'operation report requirement gross_irrigation_requirement_mm');
