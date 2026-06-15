@@ -68,6 +68,33 @@ function baseCtx(tenant) { return { tenant_id: tenant, project_id: PROJECT_ID, g
 function factsByType(facts) { const out = {}; for (const fact of facts) (out[fact.record_json.type] ||= []).push(fact); for (const type of ['field_crop_season_v1','device_observation_context_v1','decision_recommendation_v1','approval_request_v1','approval_decision_v1','operation_plan_v1','operation_plan_transition_v1','ao_act_task_v0','ao_act_receipt_v1','evidence_artifact_v1','acceptance_result_v1','skill_run_v1','telemetry_observation_v1','weather_forecast_fact_v1','irrigation_requirement_skill_input_v1','irrigation_requirement_v1','stage1_sensing_summary_v1','prescription_v1','value_record_v1','controlled_pilot_full_review_manifest_v1','soil_moisture_sensing_window_v1','soil_moisture_sensing_window_index_v1']) out[type] ||= []; return out; }
 
 
+
+function c8PadNumber(value, size) {
+  return String(value).padStart(size, '0');
+}
+
+function c8IsoFromEpochMs(ms) {
+  const totalMs = Math.trunc(Number(ms));
+  const totalSeconds = Math.floor(totalMs / 1000);
+  const millisecond = ((totalMs % 1000) + 1000) % 1000;
+  const day = Math.floor(totalSeconds / 86400);
+  const secondOfDay = ((totalSeconds % 86400) + 86400) % 86400;
+  const hour = Math.floor(secondOfDay / 3600);
+  const minute = Math.floor((secondOfDay % 3600) / 60);
+  const second = secondOfDay % 60;
+  const z = day + 719468;
+  const era = Math.floor(z / 146097);
+  const doe = z - era * 146097;
+  const yoe = Math.floor((doe - Math.floor(doe / 1460) + Math.floor(doe / 36524) - Math.floor(doe / 146096)) / 365);
+  let year = yoe + era * 400;
+  const doy = doe - (365 * yoe + Math.floor(yoe / 4) - Math.floor(yoe / 100));
+  const mp = Math.floor((5 * doy + 2) / 153);
+  const date = doy - Math.floor((153 * mp + 2) / 5) + 1;
+  const month = mp + (mp < 10 ? 3 : -9);
+  if (month <= 2) year += 1;
+  return `${c8PadNumber(year, 4)}-${c8PadNumber(month, 2)}-${c8PadNumber(date, 2)}T${c8PadNumber(hour, 2)}:${c8PadNumber(minute, 2)}:${c8PadNumber(second, 2)}.${c8PadNumber(millisecond, 3)}Z`;
+}
+
 function c8Average(values) {
   if (!Array.isArray(values) || values.length === 0) return null;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
@@ -83,7 +110,7 @@ function buildC8SoilMoistureWindowPointsV1(ctx) {
   const windowStartMs = ctx.nowMs - (values.length - 1) * expectedIntervalMs;
   return values.map((value, index) => {
     const observedAtMs = windowStartMs + index * expectedIntervalMs;
-    const observedAt = new Date(observedAtMs).toISOString();
+    const observedAt = c8IsoFromEpochMs(observedAtMs);
     const sequence = String(index + 1).padStart(3, '0');
     return {
       fact_id: `${ctx.factPrefix}_telemetry_soil_moisture_window_c8_${sequence}`,
@@ -142,8 +169,8 @@ function deriveC8SoilMoistureSensingWindowV1(ctx, points) {
     field_id: FIELD_ID,
     device_id: 'dev_soil_c8_001',
     metric: 'soil_moisture_percent',
-    window_start: new Date(windowStartMs).toISOString(),
-    window_end: new Date(windowEndMs).toISOString(),
+    window_start: c8IsoFromEpochMs(windowStartMs),
+    window_end: c8IsoFromEpochMs(windowEndMs),
     expected_interval_ms: expectedIntervalMs,
     expected_points: expectedPoints,
     actual_points: actualPoints,
