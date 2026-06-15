@@ -196,7 +196,7 @@ async function assertFieldMemory(client) {
 function findBy(arr, pred) { return Array.isArray(arr) ? arr.find(pred) : null; }
 async function assertIrrigationRequirementReadback(client) {
   const result = await client.query(
-    `SELECT requirement_id, field_id, season_id, source_forecast_id, skill_id, gross_irrigation_mm, gross_irrigation_requirement_mm, unit, source_fact_id
+    `SELECT requirement_id, field_id, season_id, source_forecast_id, skill_id, net_irrigation_mm, gross_irrigation_mm, gross_irrigation_requirement_mm, unit, calculation_method, calculation_inputs_json, quality_json, source_fact_id
        FROM irrigation_requirement_index_v1
       WHERE tenant_id=$1
         AND project_id=$2
@@ -210,9 +210,13 @@ async function assertIrrigationRequirementReadback(client) {
   assert(row.field_id === FORMAL_FIELD, 'irrigation requirement field_id mismatch', row);
   assert(row.source_forecast_id === 'wf_c8_irrigation_001', 'irrigation requirement forecast binding mismatch', row);
   assert(row.skill_id === 'irrigation_requirement_skill_v1', 'irrigation requirement skill_id mismatch', row);
+  nearly(row.net_irrigation_mm, 18.7, 'irrigation requirement net_irrigation_mm');
   nearly(row.gross_irrigation_mm, 22, 'irrigation requirement gross_irrigation_mm');
   nearly(row.gross_irrigation_requirement_mm, 22, 'irrigation requirement gross_irrigation_requirement_mm');
   assert(row.unit === 'mm', 'irrigation requirement unit mismatch', row);
+  assert(row.calculation_method === 'irrigation_requirement_skill_v1', 'irrigation requirement calculation_method mismatch', row);
+  assert(row.quality_json?.status === 'SKILL_CALCULATED', 'irrigation requirement quality status mismatch', row.quality_json);
+  nearly(row.calculation_inputs_json?.et0_mm_72h, 3.9, 'irrigation requirement calculation input et0_mm_72h');
   assert(String(row.source_fact_id || '').includes('irrigation_requirement_c8_001'), 'irrigation requirement source_fact_id mismatch', row);
 }
 
@@ -247,10 +251,11 @@ async function assertOperationReport() {
   assert(requirementSummary.source_forecast_id === 'wf_c8_irrigation_001', 'operation report requirement forecast binding mismatch', requirementSummary);
   assert(requirementSummary.source_fact_id === 'full_review_seed_tenantA_irrigation_requirement_c8_001', 'operation report requirement source_fact_id mismatch', requirementSummary);
   assert(requirementSummary.skill_id === 'irrigation_requirement_skill_v1', 'operation report requirement skill_id mismatch', requirementSummary);
+  nearly(requirementSummary.net_irrigation_mm, 18.7, 'operation report requirement net_irrigation_mm');
   nearly(requirementSummary.gross_irrigation_mm, 22, 'operation report requirement gross_irrigation_mm');
   nearly(requirementSummary.gross_irrigation_requirement_mm, 22, 'operation report requirement gross_irrigation_requirement_mm');
   assert(requirementSummary.unit === 'mm', 'operation report requirement unit mismatch', requirementSummary);
-  assert(requirementSummary.source_quality?.status === 'FORMAL_FIXTURE', 'operation report requirement quality status mismatch', requirementSummary);
+  assert(requirementSummary.source_quality?.status === 'SKILL_CALCULATED', 'operation report requirement quality status mismatch', requirementSummary);
   assert(requirementSummary.source_quality?.deterministic === true, 'operation report requirement deterministic flag mismatch', requirementSummary);
   assert(requirementSummary.binding?.requirement_to_forecast === true, 'operation report requirement_to_forecast binding mismatch', requirementSummary);
   assert(requirementSummary.binding?.requirement_to_field === true, 'operation report requirement_to_field binding mismatch', requirementSummary);
