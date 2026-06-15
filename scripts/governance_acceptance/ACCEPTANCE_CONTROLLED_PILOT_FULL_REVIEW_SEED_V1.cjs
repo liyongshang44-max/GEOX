@@ -91,10 +91,15 @@ function assertFormalChain(exported) {
   nearly(c.irrigation_requirement?.gross_irrigation_mm, 22, 'irrigation requirement gross_irrigation_mm');
   nearly(c.irrigation_requirement?.gross_irrigation_requirement_mm, 22, 'irrigation requirement gross_irrigation_requirement_mm');
   assert(c.irrigation_requirement?.unit === 'mm', 'irrigation requirement unit invalid', c.irrigation_requirement);
+  assert(c.irrigation_requirement_skill_input?.skill_input_id === 'iskill_input_c8_irrigation_001', 'irrigation skill input id invalid', c.irrigation_requirement_skill_input);
+  assert(c.irrigation_requirement_skill_input?.input_source === 'projected_fact_bindings_v1', 'irrigation skill input source invalid', c.irrigation_requirement_skill_input);
+  assert(c.irrigation_requirement_skill_input?.source_refs?.weather_forecast_id === 'wf_c8_irrigation_001', 'irrigation skill input weather binding invalid', c.irrigation_requirement_skill_input);
+  assert(c.irrigation_requirement_skill_input?.source_refs?.observation_refs?.soil_moisture_percent === 'telemetry_soil_before_001', 'irrigation skill input soil binding invalid', c.irrigation_requirement_skill_input);
   assert(c.irrigation_requirement?.calculation_method === 'irrigation_requirement_skill_v1', 'irrigation requirement calculation_method invalid', c.irrigation_requirement);
   assert(c.irrigation_requirement?.quality?.status === 'SKILL_CALCULATED', 'irrigation requirement quality status invalid', c.irrigation_requirement?.quality);
   assert(c.irrigation_requirement?.calculation_trace?.formula_version === 'irrigation_requirement_skill_v1', 'irrigation requirement formula invalid', c.irrigation_requirement?.calculation_trace);
   assert(c.irrigation_requirement?.calculation_inputs?.input_source === 'projected_fact_bindings_v1', 'irrigation requirement input_source invalid', c.irrigation_requirement?.calculation_inputs);
+  assert(c.irrigation_requirement?.calculation_inputs?.source_input_id === 'iskill_input_c8_irrigation_001', 'irrigation requirement source_input_id invalid', c.irrigation_requirement?.calculation_inputs);
   assert(c.irrigation_requirement?.calculation_inputs?.source_refs?.weather_forecast_id === 'wf_c8_irrigation_001', 'irrigation requirement source weather binding invalid', c.irrigation_requirement?.calculation_inputs);
   assert(c.irrigation_requirement?.calculation_inputs?.source_refs?.observation_refs?.soil_moisture_percent === 'telemetry_soil_before_001', 'irrigation requirement soil observation binding invalid', c.irrigation_requirement?.calculation_inputs);
   assert(c.irrigation_requirement?.quality?.source_binding_status === 'BOUND_TO_PROJECTED_FACTS', 'irrigation requirement source binding status invalid', c.irrigation_requirement?.quality);
@@ -195,7 +200,10 @@ function assertIrrigationRequirementExportContract(exported) {
   assert(requirement?.calculation_method === 'irrigation_requirement_skill_v1', 'irrigation requirement calculation_method mismatch', requirement);
   assert(requirement?.quality?.status === 'SKILL_CALCULATED', 'irrigation requirement quality status mismatch', requirement?.quality);
   assert(requirement?.calculation_trace?.formula_version === 'irrigation_requirement_skill_v1', 'irrigation requirement formula mismatch', requirement?.calculation_trace);
+  assert(exported.formal_chain?.irrigation_requirement_skill_input?.skill_input_id === 'iskill_input_c8_irrigation_001', 'exported formal_chain skill input id mismatch', exported.formal_chain?.irrigation_requirement_skill_input);
+  assert(exported.facts_by_type?.irrigation_requirement_skill_input_v1?.length === 1, 'exported facts_by_type missing irrigation_requirement_skill_input_v1', exported.facts_by_type?.irrigation_requirement_skill_input_v1);
   assert(requirement?.calculation_inputs?.input_source === 'projected_fact_bindings_v1', 'irrigation requirement input_source mismatch', requirement?.calculation_inputs);
+  assert(requirement?.calculation_inputs?.source_input_id === 'iskill_input_c8_irrigation_001', 'irrigation requirement source_input_id mismatch', requirement?.calculation_inputs);
   assert(requirement?.calculation_inputs?.source_refs?.weather_forecast_id === 'wf_c8_irrigation_001', 'irrigation requirement source weather binding mismatch', requirement?.calculation_inputs);
   assert(requirement?.calculation_inputs?.source_refs?.observation_refs?.forecast_rain_72h_mm === 'telemetry_rain_001', 'irrigation requirement rain observation binding mismatch', requirement?.calculation_inputs);
   assert(requirement?.quality?.source_binding_status === 'BOUND_TO_PROJECTED_FACTS', 'irrigation requirement source binding status mismatch', requirement?.quality);
@@ -260,6 +268,7 @@ async function main() {
   need('seed irrigation requirement H4 amount-source flow', c8Dataset, ['formalRequirementAmountSource', 'amount_source_chain', 'planned_amount_source', 'amount_mm', 'source_requirement_id']);
   need('seed irrigation requirement H5 skill-calculation flow', c8Dataset, ['runC8IrrigationRequirementSkillV1', 'irrigationRequirementSkillInput', 'irrigationRequirementSkillOutput', 'calculation_trace', 'SKILL_CALCULATED']);
   need('seed irrigation requirement H6 projected-fact input binding flow', c8Dataset, ['irrigationSkillInputSourceRefs', 'projected_fact_bindings_v1', 'BOUND_TO_PROJECTED_FACTS', 'telemetry_fact_ids', 'weatherForecast']);
+  need('seed irrigation requirement H7 formal skill-input artifact flow', c8Dataset, ['irrigationRequirementSkillInputArtifact', 'irrigation_requirement_skill_input_v1', 'source_input_id', 'iskill_input_c8_irrigation_001']);
   need('commercial release gate structured verify-api profiles', commercialR2Gate, ['controlled_pilot_full_review_verify_api_structured_json', 'controlled_pilot_c8_formal_chain_verify_api_structured_json', '--verify-api --tenant ${TENANT_ID} --base-url ${BASE}', '--verify-api --tenant ${TENANT_ID} --profile c8-formal-chain --base-url ${BASE}', 'JSON parse plus field-level assertions']);
   need('field memory service formal gate', fieldMemoryService, ['createFormalFieldMemoryFromAcceptanceV1', 'validateFormalFieldMemoryAcceptanceV1', 'FORMAL_FIELD_MEMORY', 'FORMAL_ACCEPTED', 'formal_acceptance_id', 'customer_visible_memory', 'learning_eligible', 'ACCEPTANCE_VERDICT_NOT_PASS', 'FORMAL_EVIDENCE_NOT_PASSED', 'CHAIN_VALIDATION_NOT_PASSED']);
   need('field memory route formal derivation', fieldMemoryRoute, ['/api/v1/field-memory/from-acceptance', 'FORMAL_FIELD_MEMORY', 'FORMAL_ACCEPTED', 'customer_visible_memory', 'learning_eligible', 'formal_acceptance_id']);
