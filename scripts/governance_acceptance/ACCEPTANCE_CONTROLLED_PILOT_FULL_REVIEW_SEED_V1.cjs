@@ -33,6 +33,9 @@ const FORMAL_FIELD = 'field_c8_demo';
 const FORMAL_MEMORY = 'fm_c8_irrigation_response_001';
 const FORMAL_ROI = 'roi_c8_irrigation_formal_001';
 const FORMAL_REQUIREMENT = 'ireq_c8_irrigation_001';
+const SENSING_WINDOW_ID = 'sw_c8_soil_moisture_001';
+const SENSING_WINDOW_FAIL_ID = 'sw_c8_soil_moisture_fail_001';
+const SENSING_WINDOW_LAST_OBSERVATION_REF = 'telemetry_soil_moisture_window_c8_006';
 let failed = false;
 
 function fail(message, detail) { console.error(`[controlled-pilot-full-review-seed] ${message}`); if (detail !== undefined) console.error(JSON.stringify(detail, null, 2)); failed = true; }
@@ -94,14 +97,18 @@ function assertFormalChain(exported) {
   assert(c.irrigation_requirement_skill_input?.skill_input_id === 'iskill_input_c8_irrigation_001', 'irrigation skill input id invalid', c.irrigation_requirement_skill_input);
   assert(c.irrigation_requirement_skill_input?.input_source === 'projected_fact_bindings_v1', 'irrigation skill input source invalid', c.irrigation_requirement_skill_input);
   assert(c.irrigation_requirement_skill_input?.source_refs?.weather_forecast_id === 'wf_c8_irrigation_001', 'irrigation skill input weather binding invalid', c.irrigation_requirement_skill_input);
-  assert(c.irrigation_requirement_skill_input?.source_refs?.observation_refs?.soil_moisture_percent === 'telemetry_soil_before_001', 'irrigation skill input soil binding invalid', c.irrigation_requirement_skill_input);
+  assert(c.irrigation_requirement_skill_input?.source_refs?.sensing_window_id === SENSING_WINDOW_ID, 'irrigation skill input sensing_window_id invalid', c.irrigation_requirement_skill_input);
+  assert(c.irrigation_requirement_skill_input?.source_refs?.sensing_window_quality_status === 'PASS', 'irrigation skill input sensing_window_quality_status invalid', c.irrigation_requirement_skill_input);
+  assert(c.irrigation_requirement_skill_input?.source_refs?.observation_refs?.soil_moisture_percent === SENSING_WINDOW_LAST_OBSERVATION_REF, 'irrigation skill input soil binding invalid', c.irrigation_requirement_skill_input);
   assert(c.irrigation_requirement?.calculation_method === 'irrigation_requirement_skill_v1', 'irrigation requirement calculation_method invalid', c.irrigation_requirement);
   assert(c.irrigation_requirement?.quality?.status === 'SKILL_CALCULATED', 'irrigation requirement quality status invalid', c.irrigation_requirement?.quality);
   assert(c.irrigation_requirement?.calculation_trace?.formula_version === 'irrigation_requirement_skill_v1', 'irrigation requirement formula invalid', c.irrigation_requirement?.calculation_trace);
   assert(c.irrigation_requirement?.calculation_inputs?.input_source === 'projected_fact_bindings_v1', 'irrigation requirement input_source invalid', c.irrigation_requirement?.calculation_inputs);
   assert(c.irrigation_requirement?.calculation_inputs?.source_input_id === 'iskill_input_c8_irrigation_001', 'irrigation requirement source_input_id invalid', c.irrigation_requirement?.calculation_inputs);
   assert(c.irrigation_requirement?.calculation_inputs?.source_refs?.weather_forecast_id === 'wf_c8_irrigation_001', 'irrigation requirement source weather binding invalid', c.irrigation_requirement?.calculation_inputs);
-  assert(c.irrigation_requirement?.calculation_inputs?.source_refs?.observation_refs?.soil_moisture_percent === 'telemetry_soil_before_001', 'irrigation requirement soil observation binding invalid', c.irrigation_requirement?.calculation_inputs);
+  assert(c.irrigation_requirement?.calculation_inputs?.source_refs?.sensing_window_id === SENSING_WINDOW_ID, 'irrigation requirement sensing window binding invalid', c.irrigation_requirement?.calculation_inputs);
+  assert(c.irrigation_requirement?.calculation_inputs?.source_refs?.sensing_window_quality_status === 'PASS', 'irrigation requirement sensing window status invalid', c.irrigation_requirement?.calculation_inputs);
+  assert(c.irrigation_requirement?.calculation_inputs?.source_refs?.observation_refs?.soil_moisture_percent === SENSING_WINDOW_LAST_OBSERVATION_REF, 'irrigation requirement soil observation binding invalid', c.irrigation_requirement?.calculation_inputs);
   assert(c.irrigation_requirement?.quality?.source_binding_status === 'BOUND_TO_PROJECTED_FACTS', 'irrigation requirement source binding status invalid', c.irrigation_requirement?.quality);
   assert(c.irrigation_requirement?.quality?.derivation_status === 'DERIVED_FROM_FORMAL_SKILL_INPUT', 'irrigation requirement derivation status invalid', c.irrigation_requirement?.quality);
   assert(c.irrigation_requirement?.derivation?.source_input_id === 'iskill_input_c8_irrigation_001', 'irrigation requirement derivation source_input_id invalid', c.irrigation_requirement?.derivation);
@@ -217,7 +224,35 @@ function assertIrrigationRequirementExportContract(exported) {
   nearly(requirement?.net_irrigation_mm, 18.7, 'irrigation requirement net_irrigation_mm');
   nearly(requirement?.gross_irrigation_mm, 22, 'irrigation requirement gross_irrigation_mm');
   nearly(requirement?.gross_irrigation_requirement_mm, 22, 'irrigation requirement gross_irrigation_requirement_mm');
-  assert(Array.isArray(requirement?.source_observation_refs) && requirement.source_observation_refs.includes('telemetry_soil_before_001'), 'irrigation requirement observation refs missing soil input', requirement);
+  assert(Array.isArray(requirement?.source_observation_refs) && requirement.source_observation_refs.includes(SENSING_WINDOW_LAST_OBSERVATION_REF), 'irrigation requirement observation refs missing soil input', requirement);
+}
+
+function assertSoilMoistureSensingWindowExportContract(exported) {
+  const pass = firstPayload(exported, 'soil_moisture_sensing_window_v1', (x) => x.window_id === SENSING_WINDOW_ID);
+  const failFixture = firstPayload(exported, 'soil_moisture_sensing_window_v1', (x) => x.window_id === SENSING_WINDOW_FAIL_ID);
+
+  assert(pass, 'soil_moisture_sensing_window_v1 PASS fixture missing', exported.facts_by_type?.soil_moisture_sensing_window_v1);
+  assert(pass?.field_id === FORMAL_FIELD, 'soil moisture sensing window PASS field_id mismatch', pass);
+  assert(pass?.device_id === 'dev_soil_c8_001', 'soil moisture sensing window PASS device_id mismatch', pass);
+  assert(pass?.metric === 'soil_moisture_percent', 'soil moisture sensing window PASS metric mismatch', pass);
+  assert(Number(pass?.actual_points) >= 5, 'soil moisture sensing window PASS actual_points too low', pass);
+  assert(Number(pass?.coverage_ratio) >= 0.2, 'soil moisture sensing window PASS coverage_ratio too low', pass);
+  assert(Number(pass?.max_gap_ms) <= 900000, 'soil moisture sensing window PASS max_gap_ms too high', pass);
+  assert(pass?.quality_status === 'PASS', 'soil moisture sensing window PASS quality_status mismatch', pass);
+  assert(pass?.confidence?.level === 'HIGH', 'soil moisture sensing window PASS confidence level mismatch', pass?.confidence);
+  nearly(pass?.summary?.last_value, 18.4, 'soil moisture sensing window PASS summary.last_value');
+  assert(Array.isArray(pass?.source_fact_ids) && pass.source_fact_ids.length >= 5, 'soil moisture sensing window PASS source_fact_ids too short', pass?.source_fact_ids);
+  assert(Array.isArray(pass?.source_observation_ids) && pass.source_observation_ids.length >= 5, 'soil moisture sensing window PASS source_observation_ids too short', pass?.source_observation_ids);
+
+  assert(failFixture, 'soil_moisture_sensing_window_v1 FAIL fixture missing', exported.facts_by_type?.soil_moisture_sensing_window_v1);
+  assert(Number(failFixture?.actual_points) === 1, 'soil moisture sensing window FAIL actual_points mismatch', failFixture);
+  assert(Number(failFixture?.coverage_ratio) < 0.2, 'soil moisture sensing window FAIL coverage_ratio must be below 0.2', failFixture);
+  assert(failFixture?.quality_status === 'FAIL', 'soil moisture sensing window FAIL quality_status mismatch', failFixture);
+  assert(failFixture?.confidence?.level === 'LOW', 'soil moisture sensing window FAIL confidence level mismatch', failFixture?.confidence);
+
+  const skillInput = firstPayload(exported, 'irrigation_requirement_skill_input_v1', (x) => x.skill_input_id === 'iskill_input_c8_irrigation_001');
+  assert(skillInput?.source_refs?.sensing_window_id === SENSING_WINDOW_ID, 'skill input source_refs.sensing_window_id mismatch', skillInput?.source_refs);
+  assert(skillInput?.source_refs?.sensing_window_quality_status === 'PASS', 'skill input source_refs.sensing_window_quality_status mismatch', skillInput?.source_refs);
 }
 
 function assertFieldMemoryExportContract(exported) {
@@ -373,6 +408,7 @@ async function main() {
   assertManifestSeedOwnership(exported);
   assertWeatherForecastExportContract(exported);
   assertIrrigationRequirementExportContract(exported);
+  assertSoilMoistureSensingWindowExportContract(exported);
   assertFieldMemoryExportContract(exported);
   assert((exported.system_domains || []).length >= 26, 'system domains A-Z coverage missing');
 
@@ -382,6 +418,7 @@ async function main() {
   assertApprovalDecision(c8Exported);
   assertRoiExportContract(c8Exported);
   assertIrrigationRequirementExportContract(c8Exported);
+  assertSoilMoistureSensingWindowExportContract(c8Exported);
   assertFieldMemoryExportContract(c8Exported);
   assertProfileIsolation(c8Exported, c8Dry);
 
