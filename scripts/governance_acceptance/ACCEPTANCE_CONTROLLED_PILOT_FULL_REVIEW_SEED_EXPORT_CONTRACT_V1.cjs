@@ -38,6 +38,12 @@ function assertFormalChain(exported) {
   must(close(c.irrigation_requirement?.gross_irrigation_mm, 22), 'irrigation requirement gross amount invalid', c.irrigation_requirement);
   must(close(c.irrigation_requirement?.gross_irrigation_requirement_mm, 22), 'irrigation requirement gross requirement amount invalid', c.irrigation_requirement);
   must(c.irrigation_requirement?.unit === 'mm', 'irrigation requirement unit invalid', c.irrigation_requirement);
+  must(c.irrigation_requirement?.calculation_method === 'irrigation_requirement_skill_v1', 'irrigation requirement calculation_method invalid', c.irrigation_requirement);
+  must(c.irrigation_requirement?.quality?.status === 'SKILL_CALCULATED', 'irrigation requirement quality status invalid', c.irrigation_requirement?.quality);
+  must(c.irrigation_requirement?.calculation_trace?.formula_version === 'irrigation_requirement_skill_v1', 'irrigation requirement formula invalid', c.irrigation_requirement?.calculation_trace);
+  must(close(c.irrigation_requirement?.calculation_trace?.soil_water_deficit_mm, 16.8), 'irrigation requirement soil water deficit invalid', c.irrigation_requirement?.calculation_trace);
+  must(close(c.irrigation_requirement?.calculation_trace?.et0_adjustment_mm, 3.9), 'irrigation requirement et0 adjustment invalid', c.irrigation_requirement?.calculation_trace);
+  must(close(c.irrigation_requirement?.net_irrigation_mm, 18.7), 'irrigation requirement net amount invalid', c.irrigation_requirement);
   const requirementAmountMm = Number(c.irrigation_requirement?.gross_irrigation_requirement_mm);
   must(close(c.recommendation?.suggested_action?.water_mm, requirementAmountMm), 'recommendation amount must follow irrigation requirement', c.recommendation);
   must(close(c.recommendation?.suggested_action?.amount_mm, requirementAmountMm), 'recommendation amount_mm must follow irrigation requirement', c.recommendation);
@@ -87,6 +93,12 @@ function assertIrrigationRequirementExport(exported) {
   must(close(requirement?.gross_irrigation_mm, 22), 'irrigation requirement gross amount mismatch', requirement);
   must(close(requirement?.gross_irrigation_requirement_mm, 22), 'irrigation requirement gross requirement amount mismatch', requirement);
   must(requirement?.unit === 'mm', 'irrigation requirement unit mismatch', requirement);
+  must(requirement?.calculation_method === 'irrigation_requirement_skill_v1', 'irrigation requirement calculation method mismatch', requirement);
+  must(requirement?.quality?.status === 'SKILL_CALCULATED', 'irrigation requirement quality status mismatch', requirement?.quality);
+  must(requirement?.calculation_trace?.formula_version === 'irrigation_requirement_skill_v1', 'irrigation requirement formula mismatch', requirement?.calculation_trace);
+  must(close(requirement?.calculation_trace?.soil_water_deficit_mm, 16.8), 'irrigation requirement soil water deficit mismatch', requirement?.calculation_trace);
+  must(close(requirement?.calculation_trace?.et0_adjustment_mm, 3.9), 'irrigation requirement et0 adjustment mismatch', requirement?.calculation_trace);
+  must(close(requirement?.net_irrigation_mm, 18.7), 'irrigation requirement net amount mismatch', requirement);
 }
 
 const dry = run([SEED, '--dry-run', '--tenant', 'tenantA']);

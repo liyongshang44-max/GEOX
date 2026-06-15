@@ -91,6 +91,12 @@ function assertFormalChain(exported) {
   nearly(c.irrigation_requirement?.gross_irrigation_mm, 22, 'irrigation requirement gross_irrigation_mm');
   nearly(c.irrigation_requirement?.gross_irrigation_requirement_mm, 22, 'irrigation requirement gross_irrigation_requirement_mm');
   assert(c.irrigation_requirement?.unit === 'mm', 'irrigation requirement unit invalid', c.irrigation_requirement);
+  assert(c.irrigation_requirement?.calculation_method === 'irrigation_requirement_skill_v1', 'irrigation requirement calculation_method invalid', c.irrigation_requirement);
+  assert(c.irrigation_requirement?.quality?.status === 'SKILL_CALCULATED', 'irrigation requirement quality status invalid', c.irrigation_requirement?.quality);
+  assert(c.irrigation_requirement?.calculation_trace?.formula_version === 'irrigation_requirement_skill_v1', 'irrigation requirement formula invalid', c.irrigation_requirement?.calculation_trace);
+  nearly(c.irrigation_requirement?.calculation_trace?.soil_water_deficit_mm, 16.8, 'irrigation requirement soil_water_deficit_mm');
+  nearly(c.irrigation_requirement?.calculation_trace?.et0_adjustment_mm, 3.9, 'irrigation requirement et0_adjustment_mm');
+  nearly(c.irrigation_requirement?.net_irrigation_mm, 18.7, 'irrigation requirement net_irrigation_mm');
   const requirementAmountMm = Number(c.irrigation_requirement?.gross_irrigation_requirement_mm);
   nearly(c.recommendation?.suggested_action?.water_mm, requirementAmountMm, 'recommendation amount follows irrigation requirement');
   nearly(c.recommendation?.suggested_action?.amount_mm, requirementAmountMm, 'recommendation amount_mm follows irrigation requirement');
@@ -181,6 +187,12 @@ function assertIrrigationRequirementExportContract(exported) {
   assert(requirement?.source_forecast_id === 'wf_c8_irrigation_001', 'irrigation requirement source_forecast_id mismatch', requirement);
   assert(requirement?.skill_id === 'irrigation_requirement_skill_v1', 'irrigation requirement skill_id mismatch', requirement);
   assert(requirement?.unit === 'mm', 'irrigation requirement unit mismatch', requirement);
+  assert(requirement?.calculation_method === 'irrigation_requirement_skill_v1', 'irrigation requirement calculation_method mismatch', requirement);
+  assert(requirement?.quality?.status === 'SKILL_CALCULATED', 'irrigation requirement quality status mismatch', requirement?.quality);
+  assert(requirement?.calculation_trace?.formula_version === 'irrigation_requirement_skill_v1', 'irrigation requirement formula mismatch', requirement?.calculation_trace);
+  nearly(requirement?.calculation_trace?.soil_water_deficit_mm, 16.8, 'irrigation requirement soil_water_deficit_mm');
+  nearly(requirement?.calculation_trace?.et0_adjustment_mm, 3.9, 'irrigation requirement et0_adjustment_mm');
+  nearly(requirement?.net_irrigation_mm, 18.7, 'irrigation requirement net_irrigation_mm');
   nearly(requirement?.gross_irrigation_mm, 22, 'irrigation requirement gross_irrigation_mm');
   nearly(requirement?.gross_irrigation_requirement_mm, 22, 'irrigation requirement gross_irrigation_requirement_mm');
   assert(Array.isArray(requirement?.source_observation_refs) && requirement.source_observation_refs.includes('telemetry_soil_before_001'), 'irrigation requirement observation refs missing soil input', requirement);
@@ -237,6 +249,7 @@ async function main() {
   need('seed approval/as-executed/ROI/field-memory flow', seed, ['actor_id', 'tok_admin_actor', 'actor_role', 'operation_approver', '/api/v1/as-executed/from-receipt', '/api/v1/roi-ledger/from-as-executed', '/api/v1/roi-ledger/formalize-from-acceptance', '/api/v1/field-memory/from-acceptance', 'ROI_INTERIM_SIGNAL_READBACK_REQUIRED', 'isInterimRoiForAsExecuted', 'FORMAL_FIELD_MEMORY_REQUIRED', 'CUSTOMER_FORMAL_MEMORY_REQUIRED', 'TECHNICAL_SKILL_MEMORY']);
   need('seed irrigation requirement H2 flow', seed, ['irrigation_requirement_v1', 'irrigation_requirement_index_v1', 'insertIrrigationRequirementIndexRows', 'gross_irrigation_requirement_mm']);
   need('seed irrigation requirement H4 amount-source flow', c8Dataset, ['formalRequirementAmountSource', 'amount_source_chain', 'planned_amount_source', 'amount_mm', 'source_requirement_id']);
+  need('seed irrigation requirement H5 skill-calculation flow', c8Dataset, ['runC8IrrigationRequirementSkillV1', 'irrigationRequirementSkillInput', 'irrigationRequirementSkillOutput', 'calculation_trace', 'SKILL_CALCULATED']);
   need('commercial release gate structured verify-api profiles', commercialR2Gate, ['controlled_pilot_full_review_verify_api_structured_json', 'controlled_pilot_c8_formal_chain_verify_api_structured_json', '--verify-api --tenant ${TENANT_ID} --base-url ${BASE}', '--verify-api --tenant ${TENANT_ID} --profile c8-formal-chain --base-url ${BASE}', 'JSON parse plus field-level assertions']);
   need('field memory service formal gate', fieldMemoryService, ['createFormalFieldMemoryFromAcceptanceV1', 'validateFormalFieldMemoryAcceptanceV1', 'FORMAL_FIELD_MEMORY', 'FORMAL_ACCEPTED', 'formal_acceptance_id', 'customer_visible_memory', 'learning_eligible', 'ACCEPTANCE_VERDICT_NOT_PASS', 'FORMAL_EVIDENCE_NOT_PASSED', 'CHAIN_VALIDATION_NOT_PASSED']);
   need('field memory route formal derivation', fieldMemoryRoute, ['/api/v1/field-memory/from-acceptance', 'FORMAL_FIELD_MEMORY', 'FORMAL_ACCEPTED', 'customer_visible_memory', 'learning_eligible', 'formal_acceptance_id']);
