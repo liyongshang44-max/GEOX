@@ -183,10 +183,13 @@ export type OperationReportV1 = {
     unit: string | null;
     calculation_method: string | null;
     calculation_inputs: Record<string, unknown>;
+    derivation: Record<string, unknown>;
     source_quality: {
       status: string | null;
       source: string | null;
       deterministic: boolean | null;
+      derivation_status: string | null;
+      source_binding_status: string | null;
       missing_fields: string[];
     } | null;
     binding: {

@@ -254,7 +254,7 @@ async function assertIrrigationSkillInputApiReadback() {
 
 async function assertIrrigationRequirementReadback(client) {
   const result = await client.query(
-    `SELECT requirement_id, field_id, season_id, source_forecast_id, skill_id, net_irrigation_mm, gross_irrigation_mm, gross_irrigation_requirement_mm, unit, calculation_method, calculation_inputs_json, quality_json, source_fact_id
+    `SELECT requirement_id, field_id, season_id, source_forecast_id, skill_id, net_irrigation_mm, gross_irrigation_mm, gross_irrigation_requirement_mm, unit, calculation_method, calculation_inputs_json, derivation_json, quality_json, source_fact_id
        FROM irrigation_requirement_index_v1
       WHERE tenant_id=$1
         AND project_id=$2
@@ -281,6 +281,12 @@ async function assertIrrigationRequirementReadback(client) {
   assert(String(row.calculation_inputs_json?.source_input_fact_id || '').includes('irrigation_requirement_skill_input_c8_001'), 'irrigation requirement source_input_fact_id mismatch', row.calculation_inputs_json);
   assert(row.calculation_inputs_json?.source_refs?.weather_forecast_id === 'wf_c8_irrigation_001', 'irrigation requirement weather source ref mismatch', row.calculation_inputs_json);
   assert(row.calculation_inputs_json?.source_refs?.observation_refs?.soil_moisture_percent === 'telemetry_soil_before_001', 'irrigation requirement soil source ref mismatch', row.calculation_inputs_json);
+  assert(row.derivation_json?.derivation_type === 'irrigation_requirement_from_skill_input_v1', 'irrigation requirement derivation_type mismatch', row.derivation_json);
+  assert(row.derivation_json?.source_type === 'irrigation_requirement_skill_input_v1', 'irrigation requirement derivation source_type mismatch', row.derivation_json);
+  assert(row.derivation_json?.source_input_id === FORMAL_SKILL_INPUT, 'irrigation requirement derivation source_input_id mismatch', row.derivation_json);
+  assert(String(row.derivation_json?.source_input_fact_id || '').includes('irrigation_requirement_skill_input_c8_001'), 'irrigation requirement derivation source_input_fact_id mismatch', row.derivation_json);
+  assert(row.derivation_json?.formula_version === 'irrigation_requirement_skill_v1', 'irrigation requirement derivation formula_version mismatch', row.derivation_json);
+  assert(row.derivation_json?.deterministic === true, 'irrigation requirement derivation deterministic mismatch', row.derivation_json);
   nearly(row.calculation_inputs_json?.et0_mm_72h, 3.9, 'irrigation requirement calculation input et0_mm_72h');
   assert(String(row.source_fact_id || '').includes('irrigation_requirement_c8_001'), 'irrigation requirement source_fact_id mismatch', row);
 }
@@ -319,12 +325,17 @@ async function assertOperationReport() {
   assert(requirementSummary.calculation_inputs?.input_source === 'projected_fact_bindings_v1', 'operation report requirement input_source mismatch', requirementSummary);
   assert(requirementSummary.calculation_inputs?.source_input_id === FORMAL_SKILL_INPUT, 'operation report requirement source_input_id mismatch', requirementSummary);
   assert(requirementSummary.calculation_inputs?.source_refs?.weather_forecast_id === 'wf_c8_irrigation_001', 'operation report requirement weather source ref mismatch', requirementSummary);
+  assert(requirementSummary.derivation?.source_input_id === FORMAL_SKILL_INPUT, 'operation report requirement derivation source_input_id mismatch', requirementSummary);
+  assert(requirementSummary.derivation?.source_type === 'irrigation_requirement_skill_input_v1', 'operation report requirement derivation source_type mismatch', requirementSummary);
+  assert(requirementSummary.derivation?.derivation_type === 'irrigation_requirement_from_skill_input_v1', 'operation report requirement derivation_type mismatch', requirementSummary);
   nearly(requirementSummary.net_irrigation_mm, 18.7, 'operation report requirement net_irrigation_mm');
   nearly(requirementSummary.gross_irrigation_mm, 22, 'operation report requirement gross_irrigation_mm');
   nearly(requirementSummary.gross_irrigation_requirement_mm, 22, 'operation report requirement gross_irrigation_requirement_mm');
   assert(requirementSummary.unit === 'mm', 'operation report requirement unit mismatch', requirementSummary);
   assert(requirementSummary.source_quality?.status === 'SKILL_CALCULATED', 'operation report requirement quality status mismatch', requirementSummary);
   assert(requirementSummary.source_quality?.deterministic === true, 'operation report requirement deterministic flag mismatch', requirementSummary);
+  assert(requirementSummary.source_quality?.derivation_status === 'DERIVED_FROM_FORMAL_SKILL_INPUT', 'operation report requirement derivation status mismatch', requirementSummary);
+  assert(requirementSummary.source_quality?.source_binding_status === 'BOUND_TO_PROJECTED_FACTS', 'operation report requirement source binding status mismatch', requirementSummary);
   assert(requirementSummary.binding?.requirement_to_forecast === true, 'operation report requirement_to_forecast binding mismatch', requirementSummary);
   assert(requirementSummary.binding?.requirement_to_field === true, 'operation report requirement_to_field binding mismatch', requirementSummary);
   assert(requirementSummary.binding?.report_binding_status === 'BOUND', 'operation report requirement binding status mismatch', requirementSummary);

@@ -428,10 +428,13 @@ function buildIrrigationRequirementSummaryFromIndexV1(
     unit: toText(requirement.unit) ?? "mm",
     calculation_method: toText(requirement.calculation_method),
     calculation_inputs: requirement.calculation_inputs && typeof requirement.calculation_inputs === "object" ? requirement.calculation_inputs : {},
+    derivation: requirement.derivation && typeof requirement.derivation === "object" ? requirement.derivation : {},
     source_quality: {
       status: toText(quality.status),
       source: toText(quality.source),
       deterministic: typeof quality.deterministic === "boolean" ? quality.deterministic : null,
+      derivation_status: toText(quality.derivation_status),
+      source_binding_status: toText(quality.source_binding_status),
       missing_fields: Array.isArray(quality.missing_fields) ? quality.missing_fields.map((x: unknown) => String(x)).filter(Boolean) : [],
     },
     binding: {

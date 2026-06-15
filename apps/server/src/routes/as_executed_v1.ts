@@ -93,7 +93,7 @@ export function registerAsExecutedV1Routes(app: FastifyInstance, pool: Pool): vo
 
   app.post("/api/v1/as-executed/from-receipt", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.receipt.write");
-    if (!auth) return;
+    if (!auth) return reply;
     const body: any = req.body ?? {};
     const tenant = tenantFromBodyWithAuth(body, auth);
     if (!requireTenantScope(reply, tenant)) return;
@@ -133,7 +133,7 @@ export function registerAsExecutedV1Routes(app: FastifyInstance, pool: Pool): vo
 
   app.get("/api/v1/as-executed/:as_executed_id", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
-    if (!auth) return;
+    if (!auth) return reply;
     const query: any = req.query ?? {};
     const params: any = req.params ?? {};
     const tenant = tenantFromQueryWithAuth(query, auth);
@@ -152,7 +152,7 @@ export function registerAsExecutedV1Routes(app: FastifyInstance, pool: Pool): vo
 
   app.get("/api/v1/as-executed/by-task/:task_id", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
-    if (!auth) return;
+    if (!auth) return reply;
     const query: any = req.query ?? {};
     const params: any = req.params ?? {};
     const tenant = tenantFromQueryWithAuth(query, auth);
@@ -170,7 +170,7 @@ export function registerAsExecutedV1Routes(app: FastifyInstance, pool: Pool): vo
 
   app.get("/api/v1/as-executed/by-receipt/:receipt_id", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
-    if (!auth) return;
+    if (!auth) return reply;
     const query: any = req.query ?? {};
     const params: any = req.params ?? {};
     const tenant = tenantFromQueryWithAuth(query, auth);
@@ -188,7 +188,7 @@ export function registerAsExecutedV1Routes(app: FastifyInstance, pool: Pool): vo
 
   app.get("/api/v1/as-executed/by-prescription/:prescription_id", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
-    if (!auth) return;
+    if (!auth) return reply;
     const query: any = req.query ?? {};
     const params: any = req.params ?? {};
     const tenant = tenantFromQueryWithAuth(query, auth);
