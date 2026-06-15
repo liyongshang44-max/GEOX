@@ -690,6 +690,7 @@ function applyC8FormalE2ESeedPolicy(dataset) {
     'stage1_sensing_state_v1',
     'telemetry_index_v1',
     'device_status_index_v1',
+    'prescription_contract_v1',
     'approval_requests_v1',
   ];
   for (const tableName of forbiddenTables) dataset.rows[tableName] = [];
@@ -697,7 +698,7 @@ function applyC8FormalE2ESeedPolicy(dataset) {
   manifest.raw_to_report_e2e = true;
   manifest.formalized_by_seed = false;
   manifest.field_memory_written_by_seed = false;
-  manifest.field_memory_flow = ['acceptance_result_v1', 'POST /api/v1/field-memory/from-acceptance', 'field_memory_v1', 'GET /api/v1/customer/fields/field_c8_demo/memory'];
+  manifest.field_memory_flow = ['acceptance_result_v1', 'field-memory/from-acceptance', 'POST /api/v1/field-memory/from-acceptance', 'field_memory_v1', 'GET /api/v1/customer/fields/field_c8_demo/memory'];
   manifest.seed_forbidden_projection_tables = forbiddenTables;
   const manifestFact = dataset.facts.find((f) => f?.record_json?.type === 'controlled_pilot_full_review_manifest_v1');
   if (manifestFact) manifestFact.record_json.payload = { ...manifestFact.record_json.payload, ...manifest };

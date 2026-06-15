@@ -38,6 +38,7 @@ const {
 const SQL_REMOVE = 'DE' + 'LETE';
 const ALLOWED_TENANTS = new Set(['demo', 'tenantA']);
 const ALLOWED_PROFILES = new Set(['full-review', 'c8-formal-chain', 'c8-formal-e2e']);
+const C8_FORMAL_E2E_MANIFEST_GUARD_FIELDS = ['field_memory_written_by_seed', 'field_memory_flow'];
 
 function loadEnv(file) {
   if (!fs.existsSync(file)) return;
@@ -81,7 +82,7 @@ const prefixOf = (tenant) => `full_review_seed_${tenant}`;
 function factsByType(facts) {
   const out = {};
   for (const fact of facts) (out[fact.record_json.type] ||= []).push(fact);
-  for (const type of ['field_crop_season_v1','device_observation_context_v1','decision_recommendation_v1','approval_request_v1','approval_decision_v1','operation_plan_v1','operation_plan_transition_v1','ao_act_task_v0','ao_act_receipt_v1','evidence_artifact_v1','acceptance_result_v1','skill_run_v1','telemetry_observation_v1','weather_forecast_fact_v1','irrigation_requirement_skill_input_v1','irrigation_requirement_v1','stage1_sensing_summary_v1','prescription_v1','value_record_v1','controlled_pilot_full_review_manifest_v1']) out[type] ||= [];
+  for (const type of ['field_crop_season_v1','device_observation_context_v1','decision_recommendation_v1','approval_request_v1','approval_decision_v1','operation_plan_v1','operation_plan_transition_v1','ao_act_task_v0','ao_act_receipt_v1','evidence_artifact_v1','acceptance_result_v1','skill_run_v1','telemetry_observation_v1','weather_forecast_fact_v1','irrigation_requirement_skill_input_v1','irrigation_requirement_v1','stage1_sensing_summary_v1','prescription_v1','value_record_v1','controlled_pilot_full_review_manifest_v1','soil_moisture_sensing_window_v1','soil_moisture_sensing_window_index_v1']) out[type] ||= [];
   return out;
 }
 
@@ -95,6 +96,7 @@ function rowsToLegacySeedTables(rows) {
     device_capability: rows.device_capability || [],
     telemetry_index_v1: rows.telemetry_index_v1 || [],
     device_observation_index_v1: rows.device_observation_index_v1 || [],
+    soil_moisture_sensing_window_index_v1: rows.soil_moisture_sensing_window_index_v1 || [],
     alert_event_index_v1: rows.alert_event_index_v1 || [],
     prescription_contract_v1: rows.prescription_contract_v1 || [],
     field_memory_v1_optional: rows.field_memory_v1_optional || [],
