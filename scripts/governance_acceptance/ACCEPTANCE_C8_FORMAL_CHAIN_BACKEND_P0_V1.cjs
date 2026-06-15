@@ -58,6 +58,7 @@ async function assertRuntimeOpenApi() {
   const schemas = r.json?.components?.schemas || {};
   assert(paths['/api/v1/field-memory/from-acceptance']?.post, 'OpenAPI missing field-memory from-acceptance POST path', paths['/api/v1/field-memory/from-acceptance']);
   assert(paths['/api/v1/roi-ledger/formalize-from-acceptance']?.post, 'OpenAPI missing ROI formalize-from-acceptance POST path', paths['/api/v1/roi-ledger/formalize-from-acceptance']);
+  assert(paths['/api/v1/irrigation-requirement-skill-inputs/{skill_input_id}']?.get, 'OpenAPI missing irrigation skill input GET path', paths['/api/v1/irrigation-requirement-skill-inputs/{skill_input_id}']);
   for (const name of ['FormalFieldMemoryFromAcceptanceRequest', 'FormalFieldMemoryFromAcceptanceResponse', 'RoiLedgerFormalizeFromAcceptanceRequest', 'RoiLedgerFormalizeFromAcceptanceResponse']) {
     assert(Boolean(schemas[name]), `OpenAPI missing schema ${name}`, Object.keys(schemas).filter((x) => x.includes('Acceptance') || x.includes('Formal')));
   }
@@ -235,6 +236,22 @@ async function assertIrrigationSkillInputReadback(client) {
   assert(String(row.source_fact_id || '').includes('irrigation_requirement_skill_input_c8_001'), 'irrigation skill input source_fact_id mismatch', row);
 }
 
+async function assertIrrigationSkillInputApiReadback() {
+  const path = `/api/v1/irrigation-requirement-skill-inputs/${encodeURIComponent(FORMAL_SKILL_INPUT)}?tenant_id=${encodeURIComponent(TENANT)}&project_id=${encodeURIComponent(PROJECT_ID)}&group_id=${encodeURIComponent(GROUP_ID)}`;
+  const r = await http(path);
+  assert(r.status === 200, 'irrigation skill input API readback failed', httpDetail(r));
+  assert(r.json?.ok === true, 'irrigation skill input API ok mismatch', httpDetail(r));
+  const item = r.json?.irrigation_requirement_skill_input_v1;
+  assert(item?.skill_input_id === FORMAL_SKILL_INPUT, 'irrigation skill input API id mismatch', item);
+  assert(item?.requirement_id === FORMAL_REQUIREMENT, 'irrigation skill input API requirement binding mismatch', item);
+  assert(item?.input_source === 'projected_fact_bindings_v1', 'irrigation skill input API input_source mismatch', item);
+  assert(item?.source_refs?.weather_forecast_id === 'wf_c8_irrigation_001', 'irrigation skill input API weather source mismatch', item?.source_refs);
+  assert(item?.source_refs?.observation_refs?.soil_moisture_percent === 'telemetry_soil_before_001', 'irrigation skill input API soil source mismatch', item?.source_refs);
+  nearly(item?.input_values?.soil_moisture, 18.4, 'irrigation skill input API soil_moisture');
+  nearly(item?.input_values?.rain_forecast_mm_72h, 2, 'irrigation skill input API rain_forecast_mm_72h');
+  nearly(item?.input_values?.et0_mm_72h, 3.9, 'irrigation skill input API et0_mm_72h');
+}
+
 async function assertIrrigationRequirementReadback(client) {
   const result = await client.query(
     `SELECT requirement_id, field_id, season_id, source_forecast_id, skill_id, net_irrigation_mm, gross_irrigation_mm, gross_irrigation_requirement_mm, unit, calculation_method, calculation_inputs_json, quality_json, source_fact_id
@@ -374,6 +391,8 @@ async function assertFieldReport() {
     await assertFieldMemory(client);
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP irrigation-skill-input');
     await assertIrrigationSkillInputReadback(client);
+    console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP irrigation-skill-input-api');
+    await assertIrrigationSkillInputApiReadback();
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP irrigation-requirement');
     await assertIrrigationRequirementReadback(client);
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP operation-report');
