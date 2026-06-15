@@ -39,6 +39,7 @@ export type IrrigationRequirementIndexV1 = {
   unit: "mm";
   calculation_method: string;
   calculation_inputs: Record<string, unknown>;
+  derivation: Record<string, unknown>;
   quality: Record<string, unknown>;
   source_fact_id: string | null;
   created_at: string;
@@ -118,6 +119,7 @@ export function mapIrrigationRequirementIndexV1Row(row: any): IrrigationRequirem
     unit: "mm",
     calculation_method: String(row.calculation_method ?? ""),
     calculation_inputs: parseJsonObject(row.calculation_inputs_json),
+    derivation: parseJsonObject(row.derivation_json),
     quality: parseJsonObject(row.quality_json),
     source_fact_id: toText(row.source_fact_id),
     created_at: toIsoString(row.created_at),
@@ -160,6 +162,7 @@ export async function getLatestIrrigationRequirementIndexV1(
             unit,
             calculation_method,
             calculation_inputs_json,
+             derivation_json,
             quality_json,
             source_fact_id,
             created_at

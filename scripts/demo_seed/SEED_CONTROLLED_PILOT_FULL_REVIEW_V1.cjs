@@ -397,12 +397,14 @@ async function ensureIrrigationRequirementIndexForSeed(c) {
       unit text NOT NULL DEFAULT 'mm',
       calculation_method text NOT NULL,
       calculation_inputs_json jsonb NOT NULL DEFAULT '{}'::jsonb,
+      derivation_json jsonb NOT NULL DEFAULT '{}'::jsonb,
       quality_json jsonb NOT NULL DEFAULT '{}'::jsonb,
       source_fact_id text,
       created_at timestamptz NOT NULL DEFAULT now(),
       updated_at timestamptz NOT NULL DEFAULT now()
     )
   `);
+  await c.query(`ALTER TABLE irrigation_requirement_index_v1 ADD COLUMN IF NOT EXISTS derivation_json jsonb NOT NULL DEFAULT '{}'::jsonb`);
 }
 
 async function insertIrrigationRequirementIndexRows(c, p) {
@@ -422,9 +424,9 @@ async function insertIrrigationRequirementIndexRows(c, p) {
         target_min_soil_moisture_percent, target_max_soil_moisture_percent,
         rainfall_forecast_mm_72h, effective_rainfall_mm_72h, temperature_max_c_72h,
         net_irrigation_mm, gross_irrigation_mm, gross_irrigation_requirement_mm,
-        unit, calculation_method, calculation_inputs_json, quality_json, source_fact_id, updated_at
+        unit, calculation_method, calculation_inputs_json, derivation_json, quality_json, source_fact_id, updated_at
       )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26::jsonb,$27::jsonb,$28,now())
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26::jsonb,$27::jsonb,$28::jsonb,$29,now())
       ON CONFLICT (requirement_id) DO UPDATE SET
         tenant_id = EXCLUDED.tenant_id,
         project_id = EXCLUDED.project_id,
@@ -451,6 +453,7 @@ async function insertIrrigationRequirementIndexRows(c, p) {
         unit = EXCLUDED.unit,
         calculation_method = EXCLUDED.calculation_method,
         calculation_inputs_json = EXCLUDED.calculation_inputs_json,
+        derivation_json = EXCLUDED.derivation_json,
         quality_json = EXCLUDED.quality_json,
         source_fact_id = EXCLUDED.source_fact_id,
         updated_at = now()`,
@@ -481,6 +484,7 @@ async function insertIrrigationRequirementIndexRows(c, p) {
         payload.unit || 'mm',
         payload.calculation_method || 'UNKNOWN',
         JSON.stringify(payload.calculation_inputs || {}),
+        JSON.stringify(payload.derivation || {}),
         JSON.stringify(payload.quality || {}),
         fact.fact_id || null
       ]
