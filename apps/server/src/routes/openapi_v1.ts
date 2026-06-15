@@ -1701,6 +1701,42 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           }
         }
       },
+      "/api/v1/irrigation-requirement-skill-inputs/{skill_input_id}": {
+        get: {
+          tags: ["operations"],
+          summary: "Read formal irrigation requirement skill input artifact",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "skill_input_id", in: "path", required: true, schema: { type: "string" } },
+            { name: "tenant_id", in: "query", required: false, schema: { type: "string" } },
+            { name: "project_id", in: "query", required: false, schema: { type: "string" } },
+            { name: "group_id", in: "query", required: false, schema: { type: "string" } }
+          ],
+          responses: {
+            "200": {
+              description: "Formal irrigation skill input artifact returned successfully",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["ok", "irrigation_requirement_skill_input_v1"],
+                    properties: {
+                      ok: { type: "boolean", enum: [true] },
+                      irrigation_requirement_skill_input_v1: { type: "object", additionalProperties: true }
+                    },
+                    additionalProperties: false
+                  }
+                }
+              }
+            },
+            "400": { description: "Missing skill input id" },
+            "401": { description: "Unauthenticated" },
+            "403": { description: "Forbidden" },
+            "404": { description: "Not found" }
+          }
+        }
+      },
+
       "/api/v1/field-memory": {
         get: {
           tags: ["fields"],

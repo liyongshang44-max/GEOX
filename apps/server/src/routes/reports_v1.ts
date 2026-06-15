@@ -20,6 +20,7 @@ import { buildFertilizationReportProjectionV1 } from "../services/fertilization/
 import { buildPestDiseaseInspectionReportProjectionV1 } from "../services/inspection/pest_disease_inspection_projection_v1.js";
 import { getLatestWeatherForecastIndexV1, type WeatherForecastIndexV1 } from "../projections/weather_forecast_v1.js";
 import { getLatestIrrigationRequirementIndexV1, type IrrigationRequirementIndexV1 } from "../projections/irrigation_requirement_v1.js";
+import { getIrrigationRequirementSkillInputIndexV1 } from "../projections/irrigation_requirement_skill_input_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; record_json: any };
@@ -1270,6 +1271,21 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
 
     const payload: OperationReportSingleResponseV1 = { ok: true, operation_report_v1: guardedOperationReport as OperationReportV1 };
     return reply.send(payload);
+  });
+
+  app.get("/api/v1/irrigation-requirement-skill-inputs/:skill_input_id", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant = tenantFromReq(req as any, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const skillInputId = toText((req.params as any)?.skill_input_id);
+    if (!skillInputId) return reply.status(400).send({ ok: false, error: "MISSING_SKILL_INPUT_ID" });
+
+    const skillInput = await getIrrigationRequirementSkillInputIndexV1(pool, tenant, skillInputId);
+    if (!skillInput) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    if (!enforceFieldScopeOrDeny(auth, skillInput.field_id, reply, { asNotFound: true })) return;
+
+    return reply.send({ ok: true, irrigation_requirement_skill_input_v1: skillInput });
   });
 
   app.get("/api/v1/reports/field/:field_id", async (req, reply) => {
