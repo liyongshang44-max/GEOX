@@ -51,7 +51,7 @@ loadEnv(path.resolve(process.cwd(), '.env.ci'));
 loadEnv(path.resolve(process.cwd(), '.env'));
 
 function parseArgs(argv) {
-  const out = { mode: 'dry-run', apply: false, tenant: 'tenantA', explicitTenant: false, profile: 'full-review', out: '', baseUrl: '' };
+  const out = { mode: 'dry-run', apply: false, tenant: 'tenantA', explicitTenant: false, profile: 'full-review', out: '', baseUrl: '', nowMs: null };
   for (let i = 2; i < argv.length; i += 1) {
     const x = argv[i];
     if (x === '--apply') out.apply = true;
@@ -64,10 +64,13 @@ function parseArgs(argv) {
     else if (x.startsWith('--out=')) out.out = x.slice('--out='.length).trim();
     else if (x === '--base-url') out.baseUrl = String(argv[++i] || '').trim();
     else if (x.startsWith('--base-url=')) out.baseUrl = x.slice('--base-url='.length).trim();
+    else if (x === '--now-ms') out.nowMs = Number(argv[++i]);
+    else if (x.startsWith('--now-ms=')) out.nowMs = Number(x.slice('--now-ms='.length));
   }
   if (out.apply && !out.explicitTenant) throw new Error('--apply requires explicit --tenant');
   if (!ALLOWED_TENANTS.has(out.tenant)) throw new Error(`tenant not allowed: ${out.tenant}`);
   if (!ALLOWED_PROFILES.has(out.profile)) throw new Error(`profile not allowed: ${out.profile}`);
+  if (out.nowMs !== null && !Number.isFinite(out.nowMs)) throw new Error('--now-ms must be a finite millisecond epoch');
   if (out.apply && out.mode === 'dry-run') out.mode = 'apply';
   return out;
 }
@@ -131,12 +134,13 @@ function datasetToSeedPlan(dataset) {
   };
 }
 
-function makePlan(tenant, profile = 'full-review') {
+function makePlan(tenant, profile = 'full-review', options = {}) {
+  const planNowMs = Number.isFinite(options.nowMs) ? options.nowMs : nowMs();
   return datasetToSeedPlan(buildC8FormalIrrigationFullChainDataset({
     tenant,
     profile,
-    nowMs: nowMs(),
-    nowIso: nowIso(),
+    nowMs: planNowMs,
+    nowIso: new Date(planNowMs).toISOString(),
   }));
 }
 
@@ -571,6 +575,7 @@ async function ensureSoilMoistureSensingWindowIndexForSeed(c) {
 }
 
 async function insertSoilMoistureSensingWindowIndexRows(c, p) {
+  if (isC8FormalE2E(p.profile)) return;
   const windowFacts = (p.facts || []).filter((fact) => fact?.record_json?.type === 'soil_moisture_sensing_window_v1' && fact?.record_json?.payload);
   if (!windowFacts.length) return;
 
@@ -1135,6 +1140,22 @@ async function verify(p) {
       if (counts.soil_moisture_sensing_window_index_v1_pass < 1) failAssert("SEED_SOIL_MOISTURE_SENSING_WINDOW_PASS_MISSING", counts);
     }
 
+    if (isC8FormalChain(p.profile)) {
+      if (counts.soil_moisture_sensing_window_index_v1_pass < 1) failAssert("SEED_SOIL_MOISTURE_SENSING_WINDOW_PASS_MISSING", counts);
+    }
+
+    if (isC8FormalChain(p.profile)) {
+      if (counts.soil_moisture_sensing_window_index_v1_pass < 1) failAssert("SEED_SOIL_MOISTURE_SENSING_WINDOW_PASS_MISSING", counts);
+    }
+
+    if (isC8FormalChain(p.profile)) {
+      if (counts.soil_moisture_sensing_window_index_v1_pass < 1) failAssert("SEED_SOIL_MOISTURE_SENSING_WINDOW_PASS_MISSING", counts);
+    }
+
+    if (isC8FormalChain(p.profile)) {
+      if (counts.soil_moisture_sensing_window_index_v1_pass < 1) failAssert("SEED_SOIL_MOISTURE_SENSING_WINDOW_PASS_MISSING", counts);
+    }
+
     if (counts.static_customer_roi_without_as_executed > 0) {
       failAssert("SEED_STATIC_CUSTOMER_ROI_WITHOUT_AS_EXECUTED", counts);
     }
@@ -1312,7 +1333,7 @@ async function verifyClean(p) {
 
 async function main() {
   const a = parseArgs(process.argv);
-  const p = makePlan(a.tenant, a.profile);
+  const p = makePlan(a.tenant, a.profile, { nowMs: a.nowMs });
 
   if (a.mode === 'dry-run') writeOut(dryRun(p), a.out);
   else if (a.mode === 'export-json') writeOut(exportPlan(p), a.out);

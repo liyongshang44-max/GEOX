@@ -20,6 +20,8 @@ const ACCEPTANCE_ID = 'acc_c8_irrigation_formal_001';
 const MEMORY_ID = 'fm_c8_irrigation_response_001';
 const PROJECT_ID = 'projectA';
 const GROUP_ID = 'groupA';
+const FIXED_NOW_MS = process.env.CONTROLLED_PILOT_SEED_NOW_MS || '1710000000000';
+const FIXED_NOW_MS_ARGS = ['--now-ms', FIXED_NOW_MS];
 
 function loadEnv(file) {
   if (!fs.existsSync(file)) return;
@@ -223,7 +225,7 @@ function assertExportContract(plan) {
     'stage1_sensing_state_v1',
     'telemetry_index_v1',
     'device_status_index_v1',
-    'prescription_contract_v1',
+    'soil_moisture_sensing_window_index_v1',
     'approval_requests_v1',
   ]) {
     assertTableEmpty(plan, tableName);
@@ -235,6 +237,7 @@ function assertExportContract(plan) {
     'device_index_v1',
     'device_binding_index_v1',
     'device_capability',
+    'prescription_contract_v1',
   ]) {
     assertTablePresent(plan, tableName);
   }
@@ -259,7 +262,7 @@ function assertExportContract(plan) {
   assertOk(facts(plan, 'ao_act_receipt_v1').length >= 1, 'E2E_RECEIPT_FACTS_REQUIRED', { count: facts(plan, 'ao_act_receipt_v1').length });
   assertOk(facts(plan, 'acceptance_result_v1').length >= 1, 'E2E_ACCEPTANCE_FACTS_REQUIRED', { count: facts(plan, 'acceptance_result_v1').length });
   assertOk(facts(plan, 'evidence_artifact_v1').length >= 2, 'E2E_FORMAL_EVIDENCE_FACTS_REQUIRED', { count: facts(plan, 'evidence_artifact_v1').length });
-  for (const type of ['stage1_sensing_summary_v1', 'skill_run_v1', 'value_record_v1']) {
+  for (const type of ['stage1_sensing_summary_v1', 'skill_run_v1', 'value_record_v1', 'soil_moisture_sensing_window_v1', 'soil_moisture_sensing_window_index_v1']) {
     assertOk(facts(plan, type).length === 0, `E2E_FORBIDDEN_FACT_${type.toUpperCase()}`, { type, count: facts(plan, type).length });
   }
 
@@ -271,11 +274,13 @@ function assertExportContract(plan) {
   for (const item of ['acceptance_result_v1', 'field-memory/from-acceptance', 'field_memory_v1']) {
     assertOk(manifest.field_memory_flow.includes(item), 'E2E_FIELD_MEMORY_FLOW_INCOMPLETE', { item, flow: manifest.field_memory_flow });
   }
+  assertOk(Array.isArray(manifest.seed_forbidden_fact_types) && manifest.seed_forbidden_fact_types.includes('soil_moisture_sensing_window_v1'), 'E2E_SENSING_WINDOW_FACTS_FORBIDDEN_MANIFEST_REQUIRED', manifest);
 
   const formalChain = plan.formal_chain || {};
   assertOk(formalChain.operation_plan && formalChain.operation_plan.operation_plan_id === OPERATION_ID, 'E2E_FORMAL_OPERATION_PLAN_REQUIRED', formalChain.operation_plan || null);
   assertOk(formalChain.acceptance && formalChain.acceptance.acceptance_id === ACCEPTANCE_ID, 'E2E_FORMAL_ACCEPTANCE_REQUIRED', formalChain.acceptance || null);
   assertOk(!formalChain.field_memory || formalChain.field_memory.memory_id === MEMORY_ID, 'E2E_FORMAL_CHAIN_MEMORY_POINTER_INVALID', formalChain.field_memory || null);
+  assertOk(!formalChain.soil_moisture_sensing_window && !formalChain.soil_moisture_sensing_window_negative_fixture, 'E2E_SENSING_WINDOW_FORMAL_CHAIN_FIXTURES_FORBIDDEN', formalChain);
 }
 
 function assertRuntimeResult(result, code) {
@@ -283,7 +288,7 @@ function assertRuntimeResult(result, code) {
 }
 
 async function runRuntime(args) {
-  const common = ['--tenant', args.tenant, '--profile', PROFILE, '--base-url', args.baseUrl];
+  const common = ['--tenant', args.tenant, '--profile', PROFILE, '--base-url', args.baseUrl, ...FIXED_NOW_MS_ARGS];
   const apply = runNode(args.seed, ['--apply', ...common], 'E2E_RUNTIME_APPLY_FAILED');
   assertRuntimeResult(apply, 'E2E_RUNTIME_APPLY_NOT_OK');
   assertOk(apply.as_executed_derivation?.pre_field_memory_count === 0, 'E2E_FIELD_MEMORY_SEEDED_BEFORE_DERIVATION', apply.as_executed_derivation);
@@ -324,7 +329,7 @@ async function main() {
   assertOk(fs.existsSync(seedPath), 'E2E_SEED_SCRIPT_NOT_FOUND', { seedPath });
   assertStaticSource(seedPath);
 
-  const plan = runNode(args.seed, ['--export-json', '--tenant', args.tenant, '--profile', PROFILE], 'E2E_EXPORT_JSON_FAILED');
+  const plan = runNode(args.seed, ['--export-json', '--tenant', args.tenant, '--profile', PROFILE, ...FIXED_NOW_MS_ARGS], 'E2E_EXPORT_JSON_FAILED');
   assertExportContract(plan);
 
   const runtime = args.runtime ? await runRuntime(args) : null;
@@ -346,7 +351,7 @@ async function main() {
       'stage1_sensing_state_v1',
       'telemetry_index_v1',
       'device_status_index_v1',
-      'prescription_contract_v1',
+      'soil_moisture_sensing_window_index_v1',
       'approval_requests_v1',
     ],
   }, null, 2));
