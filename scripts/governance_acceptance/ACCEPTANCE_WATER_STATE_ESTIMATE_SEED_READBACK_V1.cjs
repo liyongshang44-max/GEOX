@@ -1,5 +1,5 @@
-// scripts/governance_acceptance/ACCEPTANCE_WATER_STATE_ESTIMATE_SEED_READBACK_V1.cjs
-// Purpose: prove H14 C8 seed projects water_state_estimate_v1 into water_state_estimate_index_v1 with correct evidence bindings.
+﻿// scripts/governance_acceptance/ACCEPTANCE_WATER_STATE_ESTIMATE_SEED_READBACK_V1.cjs
+// Purpose: prove H14 C8 seed projects tenant-scoped water_state_estimate_v1 rows and UNKNOWN guard rows into water_state_estimate_index_v1.
 // Boundary: no irrigation scenario, no recommendation, no prescription, no operation route, no frontend, and no customer page behavior.
 
 const { spawnSync } = require("node:child_process");
@@ -8,6 +8,8 @@ const path = require("node:path");
 const { Pool } = require("pg");
 
 const ACCEPTANCE_NAME = "ACCEPTANCE_WATER_STATE_ESTIMATE_SEED_READBACK_V1";
+const EXPECTED_WATER_STATE_ESTIMATE_ID = "full_review_seed_tenantA_wstate_c8_irrigation_001";
+const EXPECTED_UNKNOWN_WATER_STATE_ESTIMATE_ID = "full_review_seed_tenantA_wstate_c8_irrigation_unknown_001";
 
 function fail(message, detail) {
   console.error(`[${ACCEPTANCE_NAME}] FAIL:`, message);
@@ -35,6 +37,43 @@ function numberEquals(actual, expected, tolerance = 0.000001) {
   return Number.isFinite(Number(actual)) && Math.abs(Number(actual) - expected) <= tolerance;
 }
 
+async function readEstimate(pool, estimateId) {
+  const result = await pool.query(`
+    SELECT
+      estimate_id,
+      tenant_id,
+      project_id,
+      group_id,
+      field_id,
+      season_id,
+      state,
+      root_zone_soil_moisture_percent,
+      target_min_soil_moisture_percent,
+      target_max_soil_moisture_percent,
+      net_irrigation_mm,
+      gross_irrigation_requirement_mm,
+      source_sensing_window_id,
+      source_forecast_id,
+      source_requirement_id,
+      source_input_id,
+      source_sensing_window_fact_id,
+      source_weather_fact_id,
+      source_requirement_fact_id,
+      input_refs_json,
+      evidence_refs_json,
+      calculation_inputs_json,
+      derivation_json,
+      quality_json,
+      confidence_json,
+      source_fact_id
+    FROM public.water_state_estimate_index_v1
+    WHERE estimate_id = $1
+  `, [estimateId]);
+
+  assert(result.rows.length === 1, `expected one H14 water state estimate row for ${estimateId}`, result.rows);
+  return result.rows[0];
+}
+
 (async () => {
   const databaseUrl = process.env.DATABASE_URL;
   assert(databaseUrl, "DATABASE_URL is required");
@@ -50,8 +89,22 @@ function numberEquals(actual, expected, tolerance = 0.000001) {
     await client.query("BEGIN");
     await client.query(migrationSql);
 
-    await client.query("DELETE FROM public.water_state_estimate_index_v1 WHERE estimate_id = 'wstate_c8_irrigation_001'");
-    await client.query("DELETE FROM public.facts WHERE fact_id = 'full_review_seed_tenantA_water_state_estimate_c8_001'");
+    await client.query(
+      "DELETE FROM public.water_state_estimate_index_v1 WHERE estimate_id = ANY($1::text[])",
+      [[
+        "wstate_c8_irrigation_001",
+        EXPECTED_WATER_STATE_ESTIMATE_ID,
+        EXPECTED_UNKNOWN_WATER_STATE_ESTIMATE_ID,
+      ]],
+    );
+
+    await client.query(
+      "DELETE FROM public.facts WHERE fact_id = ANY($1::text[])",
+      [[
+        "full_review_seed_tenantA_water_state_estimate_c8_001",
+        "full_review_seed_tenantA_water_state_estimate_c8_unknown_001",
+      ]],
+    );
 
     await client.query("COMMIT");
   } catch (error) {
@@ -103,51 +156,19 @@ function numberEquals(actual, expected, tolerance = 0.000001) {
   const readPool = new Pool({ connectionString: databaseUrl });
 
   try {
-    const result = await readPool.query(`
-      SELECT
-        estimate_id,
-        tenant_id,
-        project_id,
-        group_id,
-        field_id,
-        season_id,
-        state,
-        root_zone_soil_moisture_percent,
-        target_min_soil_moisture_percent,
-        target_max_soil_moisture_percent,
-        net_irrigation_mm,
-        gross_irrigation_requirement_mm,
-        source_sensing_window_id,
-        source_forecast_id,
-        source_requirement_id,
-        source_input_id,
-        source_sensing_window_fact_id,
-        source_weather_fact_id,
-        source_requirement_fact_id,
-        input_refs_json,
-        evidence_refs_json,
-        calculation_inputs_json,
-        derivation_json,
-        quality_json,
-        confidence_json,
-        source_fact_id
-      FROM public.water_state_estimate_index_v1
-      WHERE estimate_id = 'wstate_c8_irrigation_001'
-    `);
-
-    assert(result.rows.length === 1, "expected one H14 water state estimate index row", result.rows);
-
-    const row = result.rows[0];
+    const row = await readEstimate(readPool, EXPECTED_WATER_STATE_ESTIMATE_ID);
 
     assert(row.state === "MODERATE_DEFICIT", "water state must be MODERATE_DEFICIT", row);
     assert(numberEquals(row.root_zone_soil_moisture_percent, 18.4), "root zone soil moisture mismatch", row);
     assert(numberEquals(row.target_min_soil_moisture_percent, 22), "target min soil moisture mismatch", row);
+    assert(numberEquals(row.target_max_soil_moisture_percent, 28), "target max soil moisture mismatch", row);
     assert(numberEquals(row.net_irrigation_mm, 18.7), "net irrigation mismatch", row);
     assert(numberEquals(row.gross_irrigation_requirement_mm, 22), "gross irrigation mismatch", row);
 
     assert(row.source_sensing_window_id === "sw_c8_soil_moisture_001", "source sensing window mismatch", row);
     assert(row.source_forecast_id === "wf_c8_irrigation_001", "source forecast mismatch", row);
     assert(row.source_requirement_id === "ireq_c8_irrigation_001", "source requirement mismatch", row);
+    assert(row.source_input_id === "iskill_input_c8_irrigation_001", "source input mismatch", row);
 
     assert(row.source_sensing_window_fact_id === "full_review_seed_tenantA_soil_moisture_sensing_window_c8_001", "source sensing window fact mismatch", row);
     assert(row.source_weather_fact_id === "full_review_seed_tenantA_weather_forecast_c8_irrigation_001", "source weather fact mismatch", row);
@@ -186,6 +207,16 @@ function numberEquals(actual, expected, tolerance = 0.000001) {
       assert(evidenceRefs.includes(expectedRef), `evidence ref missing ${expectedRef}`, evidenceRefs);
     }
 
+    const unknown = await readEstimate(readPool, EXPECTED_UNKNOWN_WATER_STATE_ESTIMATE_ID);
+
+    assert(unknown.state === "UNKNOWN", "unknown fixture state must be UNKNOWN", unknown);
+    assert(unknown.source_sensing_window_id === "sw_c8_soil_moisture_fail_001", "unknown source sensing window mismatch", unknown);
+    assert(unknown.source_sensing_window_fact_id === "full_review_seed_tenantA_soil_moisture_sensing_window_c8_fail_001", "unknown source sensing window fact mismatch", unknown);
+    assert(unknown.quality_json?.status === "UNKNOWN", "unknown quality status mismatch", unknown.quality_json);
+    assert(Array.isArray(unknown.quality_json?.reason_codes) && unknown.quality_json.reason_codes.includes("SENSING_WINDOW_NOT_PASS"), "unknown reason code missing", unknown.quality_json);
+    assert(unknown.confidence_json?.level === "LOW", "unknown confidence level mismatch", unknown.confidence_json);
+    assert(unknown.calculation_inputs_json?.sensing_window_quality_status === "FAIL", "unknown sensing quality mismatch", unknown.calculation_inputs_json);
+
     console.log(JSON.stringify({
       ok: true,
       acceptance: ACCEPTANCE_NAME,
@@ -195,6 +226,9 @@ function numberEquals(actual, expected, tolerance = 0.000001) {
       confidence_level: confidence.level,
       quality_status: quality.status,
       source_forecast_id: row.source_forecast_id,
+      unknown_estimate_id: unknown.estimate_id,
+      unknown_state: unknown.state,
+      unknown_confidence_level: unknown.confidence_json?.level,
     }, null, 2));
   } finally {
     await readPool.end();

@@ -640,14 +640,24 @@ async function insertWaterStateEstimateIndexRows(c, p) {
       )
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20::jsonb,$21::jsonb,$22::jsonb,$23::jsonb,$24::jsonb,$25::jsonb,$26,$27,now())
       ON CONFLICT (estimate_id) DO UPDATE SET
+        tenant_id = EXCLUDED.tenant_id,
+        project_id = EXCLUDED.project_id,
+        group_id = EXCLUDED.group_id,
+        field_id = EXCLUDED.field_id,
+        season_id = EXCLUDED.season_id,
         state = EXCLUDED.state,
         root_zone_soil_moisture_percent = EXCLUDED.root_zone_soil_moisture_percent,
         target_min_soil_moisture_percent = EXCLUDED.target_min_soil_moisture_percent,
+        target_max_soil_moisture_percent = EXCLUDED.target_max_soil_moisture_percent,
         net_irrigation_mm = EXCLUDED.net_irrigation_mm,
         gross_irrigation_requirement_mm = EXCLUDED.gross_irrigation_requirement_mm,
         source_sensing_window_id = EXCLUDED.source_sensing_window_id,
         source_forecast_id = EXCLUDED.source_forecast_id,
         source_requirement_id = EXCLUDED.source_requirement_id,
+        source_input_id = EXCLUDED.source_input_id,
+        source_sensing_window_fact_id = EXCLUDED.source_sensing_window_fact_id,
+        source_weather_fact_id = EXCLUDED.source_weather_fact_id,
+        source_requirement_fact_id = EXCLUDED.source_requirement_fact_id,
         input_refs_json = EXCLUDED.input_refs_json,
         evidence_refs_json = EXCLUDED.evidence_refs_json,
         calculation_inputs_json = EXCLUDED.calculation_inputs_json,
@@ -655,6 +665,7 @@ async function insertWaterStateEstimateIndexRows(c, p) {
         quality_json = EXCLUDED.quality_json,
         confidence_json = EXCLUDED.confidence_json,
         source_fact_id = EXCLUDED.source_fact_id,
+        created_at = EXCLUDED.created_at,
         updated_at = now()`,
       [
         payload.estimate_id,

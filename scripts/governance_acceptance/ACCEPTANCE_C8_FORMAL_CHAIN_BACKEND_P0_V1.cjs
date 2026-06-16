@@ -11,7 +11,8 @@ const FORMAL_RECEIPT = 'receipt_c8_irrigation_formal_001';
 const FORMAL_TASK = 'act_c8_irrigation_formal_001';
 const FORMAL_FIELD = 'field_c8_demo';
 const FORMAL_REQUIREMENT = 'ireq_c8_irrigation_001';
-const FORMAL_WATER_STATE = 'wstate_c8_irrigation_001';
+const FORMAL_WATER_STATE_SUFFIX = 'wstate_c8_irrigation_001';
+const FORMAL_WATER_STATE_UNKNOWN_SUFFIX = 'wstate_c8_irrigation_unknown_001';
 const FORMAL_SKILL_INPUT = 'iskill_input_c8_irrigation_001';
 const SENSING_WINDOW_ID = 'sw_c8_soil_moisture_001';
 const SENSING_WINDOW_FAIL_ID = 'sw_c8_soil_moisture_fail_001';
@@ -24,6 +25,8 @@ function arg(name, fallback = null) {
 
 const BASE_URL = (arg('base-url') || process.env.BASE_URL || process.env.API_BASE_URL || '').replace(/\/+$/, '');
 const TENANT = arg('tenant') || process.env.TENANT_ID || 'tenantA';
+const FORMAL_WATER_STATE = `full_review_seed_${TENANT}_${FORMAL_WATER_STATE_SUFFIX}`;
+const FORMAL_WATER_STATE_UNKNOWN = `full_review_seed_${TENANT}_${FORMAL_WATER_STATE_UNKNOWN_SUFFIX}`;
 const TOKEN = process.env.ADMIN_TOKEN || process.env.GEOX_ACCEPTANCE_TOKEN || process.env.ACCEPTANCE_TOKEN || process.env.AO_ACT_TOKEN || process.env.GEOX_AO_ACT_TOKEN || process.env.TOKEN || 'admin_token';
 const DATABASE_URL = process.env.DATABASE_URL;
 
@@ -430,6 +433,46 @@ async function assertWaterStateEstimateReadback(client) {
   assert(Array.isArray(row.evidence_refs_json) && row.evidence_refs_json.includes(FORMAL_REQUIREMENT), 'water state evidence refs missing requirement', row.evidence_refs_json);
   assert(row.calculation_inputs_json?.weather_provider_status === 'OK', 'water state weather provider status mismatch', row.calculation_inputs_json);
   assert(row.calculation_inputs_json?.weather_stale === false, 'water state weather stale mismatch', row.calculation_inputs_json);
+
+  const unknownResult = await client.query(
+    `SELECT
+        estimate_id,
+        tenant_id,
+        project_id,
+        group_id,
+        field_id,
+        state,
+        source_sensing_window_id,
+        source_sensing_window_fact_id,
+        source_forecast_id,
+        source_requirement_id,
+        quality_json,
+        confidence_json,
+        calculation_inputs_json,
+        source_fact_id
+       FROM water_state_estimate_index_v1
+      WHERE tenant_id=$1
+        AND project_id=$2
+        AND group_id=$3
+        AND estimate_id=$4
+      LIMIT 1`,
+    [TENANT, PROJECT_ID, GROUP_ID, FORMAL_WATER_STATE_UNKNOWN],
+  );
+
+  const unknown = unknownResult.rows?.[0];
+  assert(unknown, 'UNKNOWN water state estimate index row missing', unknownResult.rows);
+  assert(unknown.estimate_id === FORMAL_WATER_STATE_UNKNOWN, 'UNKNOWN water state estimate_id mismatch', unknown);
+  assert(unknown.field_id === FORMAL_FIELD, 'UNKNOWN water state field_id mismatch', unknown);
+  assert(unknown.state === 'UNKNOWN', 'UNKNOWN water state must remain UNKNOWN', unknown);
+  assert(unknown.source_sensing_window_id === SENSING_WINDOW_FAIL_ID, 'UNKNOWN water state source_sensing_window_id mismatch', unknown);
+  assert(unknown.source_sensing_window_fact_id === 'full_review_seed_tenantA_soil_moisture_sensing_window_c8_fail_001', 'UNKNOWN water state source_sensing_window_fact_id mismatch', unknown);
+  assert(unknown.source_forecast_id === 'wf_c8_irrigation_001', 'UNKNOWN water state source_forecast_id mismatch', unknown);
+  assert(unknown.source_requirement_id === FORMAL_REQUIREMENT, 'UNKNOWN water state source_requirement_id mismatch', unknown);
+  assert(unknown.source_fact_id === 'full_review_seed_tenantA_water_state_estimate_c8_unknown_001', 'UNKNOWN water state source_fact_id mismatch', unknown);
+  assert(unknown.quality_json?.status === 'UNKNOWN', 'UNKNOWN water state quality status mismatch', unknown.quality_json);
+  assert(Array.isArray(unknown.quality_json?.reason_codes) && unknown.quality_json.reason_codes.includes('SENSING_WINDOW_NOT_PASS'), 'UNKNOWN water state reason code mismatch', unknown.quality_json);
+  assert(unknown.confidence_json?.level === 'LOW', 'UNKNOWN water state confidence level mismatch', unknown.confidence_json);
+  assert(unknown.calculation_inputs_json?.sensing_window_quality_status === 'FAIL', 'UNKNOWN water state sensing window quality mismatch', unknown.calculation_inputs_json);
 }
 
 async function assertOperationReport() {
