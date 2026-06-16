@@ -187,6 +187,11 @@ async function ensureWeatherForecastIndexForSeed(c) {
       latitude double precision,
       longitude double precision,
       generated_at timestamptz NOT NULL,
+      issue_time timestamptz NOT NULL DEFAULT now(),
+      forecast_version text NOT NULL DEFAULT 'v1',
+      provider_run_id text,
+      external_forecast_id text,
+      version_json jsonb NOT NULL DEFAULT '{}'::jsonb,
       valid_from timestamptz NOT NULL,
       valid_to timestamptz NOT NULL,
       horizon_hours integer NOT NULL,
@@ -201,6 +206,56 @@ async function ensureWeatherForecastIndexForSeed(c) {
       updated_at timestamptz NOT NULL DEFAULT now()
     )
   `);
+
+  await c.query(`
+    ALTER TABLE weather_forecast_index_v1
+      ADD COLUMN IF NOT EXISTS issue_time timestamptz,
+      ADD COLUMN IF NOT EXISTS forecast_version text,
+      ADD COLUMN IF NOT EXISTS provider_run_id text,
+      ADD COLUMN IF NOT EXISTS external_forecast_id text,
+      ADD COLUMN IF NOT EXISTS version_json jsonb NOT NULL DEFAULT '{}'::jsonb
+  `);
+
+  await c.query(`
+    UPDATE weather_forecast_index_v1
+       SET issue_time = COALESCE(issue_time, generated_at),
+           forecast_version = COALESCE(forecast_version, forecast_id),
+           version_json = CASE
+             WHEN version_json IS NULL OR version_json = '{}'::jsonb THEN
+               jsonb_build_object(
+                 'forecast_version', COALESCE(forecast_version, forecast_id),
+                 'issue_time', COALESCE(issue_time, generated_at),
+                 'provider_run_id', provider_run_id,
+                 'external_forecast_id', external_forecast_id
+               )
+             ELSE version_json
+           END
+     WHERE issue_time IS NULL
+        OR forecast_version IS NULL
+        OR version_json IS NULL
+        OR version_json = '{}'::jsonb
+  `);
+
+  await c.query(`
+    ALTER TABLE weather_forecast_index_v1
+      ALTER COLUMN issue_time SET NOT NULL,
+      ALTER COLUMN forecast_version SET NOT NULL
+  `);
+
+  await c.query(`
+    CREATE INDEX IF NOT EXISTS idx_weather_forecast_index_v1_scope_latest
+      ON weather_forecast_index_v1 (tenant_id, project_id, group_id, field_id, generated_at DESC)
+  `);
+
+  await c.query(`
+    CREATE INDEX IF NOT EXISTS idx_weather_forecast_index_v1_valid_window
+      ON weather_forecast_index_v1 (field_id, valid_from, valid_to)
+  `);
+
+  await c.query(`
+    CREATE INDEX IF NOT EXISTS idx_weather_forecast_index_v1_usable_lookup
+      ON weather_forecast_index_v1 (tenant_id, project_id, group_id, field_id, valid_from, valid_to, generated_at DESC)
+  `);
 }
 
 async function insertWeatherForecastIndexRows(c, p) {
@@ -211,6 +266,22 @@ async function insertWeatherForecastIndexRows(c, p) {
 
   for (const fact of weatherFacts) {
     const payload = fact.record_json.payload || {};
+    const generatedAt = payload.generated_at || new Date().toISOString();
+    const issueTime = payload.issue_time || generatedAt;
+    const provider = payload.provider || 'MOCK';
+    const sourceType = payload.source_type || 'MOCK';
+    const sourceId = payload.source_id || 'controlled_pilot_seed';
+    const providerRunId = payload.provider_run_id ?? null;
+    const externalForecastId = payload.external_forecast_id ?? null;
+    const forecastVersion = payload.forecast_version || payload.forecast_id || [provider, sourceId, issueTime].join(':');
+    const versionJson = {
+      ...((payload.version && typeof payload.version === 'object' && !Array.isArray(payload.version)) ? payload.version : {}),
+      forecast_version: forecastVersion,
+      issue_time: issueTime,
+      provider_run_id: providerRunId,
+      external_forecast_id: externalForecastId,
+    };
+
     await c.query(
       `INSERT INTO weather_forecast_index_v1 (
         forecast_id,
@@ -224,6 +295,11 @@ async function insertWeatherForecastIndexRows(c, p) {
         latitude,
         longitude,
         generated_at,
+        issue_time,
+        forecast_version,
+        provider_run_id,
+        external_forecast_id,
+        version_json,
         valid_from,
         valid_to,
         horizon_hours,
@@ -236,7 +312,7 @@ async function insertWeatherForecastIndexRows(c, p) {
         source_fact_id,
         updated_at
       )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18::jsonb,$19::jsonb,$20::jsonb,$21,now())
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16::jsonb,$17,$18,$19,$20,$21,$22,$23::jsonb,$24::jsonb,$25::jsonb,$26,now())
       ON CONFLICT (forecast_id) DO UPDATE SET
         tenant_id = EXCLUDED.tenant_id,
         project_id = EXCLUDED.project_id,
@@ -248,6 +324,11 @@ async function insertWeatherForecastIndexRows(c, p) {
         latitude = EXCLUDED.latitude,
         longitude = EXCLUDED.longitude,
         generated_at = EXCLUDED.generated_at,
+        issue_time = EXCLUDED.issue_time,
+        forecast_version = EXCLUDED.forecast_version,
+        provider_run_id = EXCLUDED.provider_run_id,
+        external_forecast_id = EXCLUDED.external_forecast_id,
+        version_json = EXCLUDED.version_json,
         valid_from = EXCLUDED.valid_from,
         valid_to = EXCLUDED.valid_to,
         horizon_hours = EXCLUDED.horizon_hours,
@@ -265,13 +346,18 @@ async function insertWeatherForecastIndexRows(c, p) {
         payload.project_id || PROJECT_ID,
         payload.group_id || GROUP_ID,
         payload.field_id || FIELD_ID,
-        payload.provider || 'MOCK',
-        payload.source_type || 'MOCK',
-        payload.source_id || 'controlled_pilot_seed',
+        provider,
+        sourceType,
+        sourceId,
         payload.latitude ?? null,
         payload.longitude ?? null,
-        payload.generated_at || new Date().toISOString(),
-        payload.valid_from || payload.generated_at || new Date().toISOString(),
+        generatedAt,
+        issueTime,
+        forecastVersion,
+        providerRunId,
+        externalForecastId,
+        JSON.stringify(versionJson),
+        payload.valid_from || generatedAt,
         payload.valid_to || new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
         Number(payload.horizon_hours || 72),
         payload.rainfall_forecast_mm_72h ?? null,
@@ -285,7 +371,6 @@ async function insertWeatherForecastIndexRows(c, p) {
     );
   }
 }
-
 
 async function ensureIrrigationRequirementSkillInputIndexForSeed(c) {
   await c.query(`

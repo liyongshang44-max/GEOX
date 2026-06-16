@@ -387,7 +387,7 @@ async function assertOperationReport() {
   const weatherSummary = report.weather_summary;
   assert(weatherSummary, 'operation report weather_summary missing', report);
   assert(weatherSummary.weather_forecast_id === 'wf_c8_irrigation_001', 'operation report weather_summary.weather_forecast_id mismatch', weatherSummary);
-  assert(weatherSummary.source_quality?.provider === 'MOCK', 'operation report weather_summary source provider mismatch', weatherSummary);
+  assert(weatherSummary.source_quality?.provider === 'C8_EXTERNAL_WEATHER_SAMPLE', 'operation report weather_summary source provider mismatch', weatherSummary);
   assert(weatherSummary.source_quality?.provider_status === 'OK', 'operation report weather_summary provider_status mismatch', weatherSummary);
   nearly(weatherSummary.rainfall_forecast_mm, 2, 'operation report weather_summary rainfall');
   nearly(weatherSummary.max_temperature_c, 31, 'operation report weather_summary max temperature');
