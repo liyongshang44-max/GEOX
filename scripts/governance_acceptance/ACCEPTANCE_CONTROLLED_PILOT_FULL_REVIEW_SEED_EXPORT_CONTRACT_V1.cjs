@@ -6,6 +6,10 @@ const CHAIN = 'C8_FORMAL_IRRIGATION_FULL_CHAIN_V1';
 const FORMAL_OP = 'op_plan_c8_irrigation_formal_001';
 const PENDING_OP = 'op_plan_c8_irrigation_pending_001';
 const FORMAL_REQUIREMENT = 'ireq_c8_irrigation_001';
+const SENSING_WINDOW_ID = 'sw_c8_soil_moisture_001';
+const SENSING_WINDOW_FAIL_ID = 'sw_c8_soil_moisture_fail_001';
+const SENSING_WINDOW_LAST_OBSERVATION_REF = 'telemetry_soil_moisture_window_c8_006';
+const FIXED_NOW_MS_ARGS = ['--now-ms', '1710000000000'];
 function run(args) {
   const r = spawnSync(process.execPath, args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   if (r.status !== 0) { console.error(r.stdout); console.error(r.stderr); process.exit(r.status || 1); }
@@ -30,7 +34,7 @@ function assertFormalChain(exported) {
   must(before?.metric_role === 'before' && before?.diagnostic_use === 'irrigation_decision_input' && before?.threshold_ref, 'before observation invalid', before);
   must(after?.metric_role === 'after' && after?.diagnostic_use === 'acceptance_effect_input', 'after observation invalid', after);
   must(rain?.metric_role === 'weather_forecast' && rain?.diagnostic_use === 'irrigation_decision_input', 'rain observation invalid', rain);
-  must(c.diagnosis?.input_observation_refs?.includes('telemetry_soil_before_001') && c.diagnosis?.input_observation_refs?.includes('telemetry_rain_001'), 'diagnosis refs missing', c.diagnosis);
+  must(c.diagnosis?.input_observation_refs?.includes('telemetry_soil_moisture_window_c8_006') && c.diagnosis?.input_observation_refs?.includes('telemetry_rain_001'), 'diagnosis refs missing', c.diagnosis);
   must(c.recommendation?.expected_effect?.metric === 'soil_moisture_percent', 'recommendation expected effect missing', c.recommendation);
   must(c.irrigation_requirement?.requirement_id === FORMAL_REQUIREMENT, 'irrigation requirement id invalid', c.irrigation_requirement);
   must(c.irrigation_requirement?.source_forecast_id === 'wf_c8_irrigation_001', 'irrigation requirement forecast binding invalid', c.irrigation_requirement);
@@ -41,14 +45,18 @@ function assertFormalChain(exported) {
   must(c.irrigation_requirement_skill_input?.skill_input_id === 'iskill_input_c8_irrigation_001', 'irrigation skill input id invalid', c.irrigation_requirement_skill_input);
   must(c.irrigation_requirement_skill_input?.input_source === 'projected_fact_bindings_v1', 'irrigation skill input source invalid', c.irrigation_requirement_skill_input);
   must(c.irrigation_requirement_skill_input?.source_refs?.weather_forecast_id === 'wf_c8_irrigation_001', 'irrigation skill input weather binding invalid', c.irrigation_requirement_skill_input);
-  must(c.irrigation_requirement_skill_input?.source_refs?.observation_refs?.soil_moisture_percent === 'telemetry_soil_before_001', 'irrigation skill input soil binding invalid', c.irrigation_requirement_skill_input);
+  must(c.irrigation_requirement_skill_input?.source_refs?.sensing_window_id === SENSING_WINDOW_ID, 'irrigation skill input sensing_window_id invalid', c.irrigation_requirement_skill_input);
+  must(c.irrigation_requirement_skill_input?.source_refs?.sensing_window_quality_status === 'PASS', 'irrigation skill input sensing_window_quality_status invalid', c.irrigation_requirement_skill_input);
+  must(c.irrigation_requirement_skill_input?.source_refs?.observation_refs?.soil_moisture_percent === SENSING_WINDOW_LAST_OBSERVATION_REF, 'irrigation skill input soil binding invalid', c.irrigation_requirement_skill_input);
   must(c.irrigation_requirement?.calculation_method === 'irrigation_requirement_skill_v1', 'irrigation requirement calculation_method invalid', c.irrigation_requirement);
   must(c.irrigation_requirement?.quality?.status === 'SKILL_CALCULATED', 'irrigation requirement quality status invalid', c.irrigation_requirement?.quality);
   must(c.irrigation_requirement?.calculation_trace?.formula_version === 'irrigation_requirement_skill_v1', 'irrigation requirement formula invalid', c.irrigation_requirement?.calculation_trace);
   must(c.irrigation_requirement?.calculation_inputs?.input_source === 'projected_fact_bindings_v1', 'irrigation requirement input_source invalid', c.irrigation_requirement?.calculation_inputs);
   must(c.irrigation_requirement?.calculation_inputs?.source_input_id === 'iskill_input_c8_irrigation_001', 'irrigation requirement source_input_id invalid', c.irrigation_requirement?.calculation_inputs);
   must(c.irrigation_requirement?.calculation_inputs?.source_refs?.weather_forecast_id === 'wf_c8_irrigation_001', 'irrigation requirement weather source binding invalid', c.irrigation_requirement?.calculation_inputs);
-  must(c.irrigation_requirement?.calculation_inputs?.source_refs?.observation_refs?.soil_moisture_percent === 'telemetry_soil_before_001', 'irrigation requirement soil source binding invalid', c.irrigation_requirement?.calculation_inputs);
+  must(c.irrigation_requirement?.calculation_inputs?.source_refs?.sensing_window_id === SENSING_WINDOW_ID, 'irrigation requirement sensing window source binding invalid', c.irrigation_requirement?.calculation_inputs);
+  must(c.irrigation_requirement?.calculation_inputs?.source_refs?.sensing_window_quality_status === 'PASS', 'irrigation requirement sensing window status invalid', c.irrigation_requirement?.calculation_inputs);
+  must(c.irrigation_requirement?.calculation_inputs?.source_refs?.observation_refs?.soil_moisture_percent === SENSING_WINDOW_LAST_OBSERVATION_REF, 'irrigation requirement soil source binding invalid', c.irrigation_requirement?.calculation_inputs);
   must(c.irrigation_requirement?.quality?.source_binding_status === 'BOUND_TO_PROJECTED_FACTS', 'irrigation requirement source binding status invalid', c.irrigation_requirement?.quality);
   must(c.irrigation_requirement?.quality?.derivation_status === 'DERIVED_FROM_FORMAL_SKILL_INPUT', 'irrigation requirement derivation status invalid', c.irrigation_requirement?.quality);
   must(c.irrigation_requirement?.derivation?.source_input_id === 'iskill_input_c8_irrigation_001', 'irrigation requirement derivation source_input_id invalid', c.irrigation_requirement?.derivation);
@@ -81,6 +89,43 @@ function assertFormalChain(exported) {
   must(all(c.report_expectations?.operation_report, ['diagnostic_inputs','prescription','as_executed','as_applied','production_evidence','roi_ledger','field_memory']), 'operation report expectations incomplete', c.report_expectations);
   must(all(c.report_expectations?.field_report, ['field_context','sensing_summary','decision_summary','execution_summary','value_summary','learning_summary']), 'field report expectations incomplete', c.report_expectations);
 }
+
+function assertSoilMoistureSensingWindowFixture(label, fixture, expectedStatus) {
+  must(fixture?.window_id === (expectedStatus === 'PASS' ? SENSING_WINDOW_ID : SENSING_WINDOW_FAIL_ID), `${label} window_id invalid`, fixture);
+  if (expectedStatus === 'PASS') {
+    must(fixture.field_id === 'field_c8_demo', `${label} field_id invalid`, fixture);
+    must(fixture.device_id === 'dev_soil_c8_001', `${label} device_id invalid`, fixture);
+    must(fixture.metric === 'soil_moisture_percent', `${label} metric invalid`, fixture);
+    must(Number(fixture.actual_points) >= 5, `${label} actual_points too low`, fixture);
+    must(Number(fixture.coverage_ratio) >= 0.2, `${label} coverage_ratio too low`, fixture);
+    must(Number(fixture.max_gap_ms) <= 900000, `${label} max_gap_ms too high`, fixture);
+    must(fixture.quality_status === 'PASS', `${label} quality_status invalid`, fixture);
+    must(fixture.confidence?.level === 'HIGH', `${label} confidence level invalid`, fixture?.confidence);
+    must(close(fixture.summary?.last_value, 18.4), `${label} summary.last_value invalid`, fixture?.summary);
+    must(Array.isArray(fixture.source_fact_ids) && fixture.source_fact_ids.length >= 5, `${label} source_fact_ids too short`, fixture?.source_fact_ids);
+    must(Array.isArray(fixture.source_observation_ids) && fixture.source_observation_ids.length >= 5, `${label} source_observation_ids too short`, fixture?.source_observation_ids);
+    return;
+  }
+  must(Number(fixture.actual_points) === 1, `${label} actual_points invalid`, fixture);
+  must(Number(fixture.coverage_ratio) < 0.2, `${label} coverage_ratio must be below 0.2`, fixture);
+  must(fixture.quality_status === 'FAIL', `${label} quality_status invalid`, fixture);
+  must(fixture.confidence?.level === 'LOW', `${label} confidence level invalid`, fixture?.confidence);
+}
+
+function assertSoilMoistureSensingWindowExportContract(exported) {
+  const c = exported.formal_chain || {};
+  must(c.soil_moisture_sensing_window, 'formal_chain.soil_moisture_sensing_window missing', c);
+  must(c.soil_moisture_sensing_window_negative_fixture, 'formal_chain.soil_moisture_sensing_window_negative_fixture missing', c);
+  assertSoilMoistureSensingWindowFixture('formal_chain.soil_moisture_sensing_window', c.soil_moisture_sensing_window, 'PASS');
+  assertSoilMoistureSensingWindowFixture('formal_chain.soil_moisture_sensing_window_negative_fixture', c.soil_moisture_sensing_window_negative_fixture, 'FAIL');
+  must(c.irrigation_requirement_skill_input?.source_refs?.sensing_window_id === SENSING_WINDOW_ID, 'formal_chain skill input sensing_window_id mismatch', c.irrigation_requirement_skill_input?.source_refs);
+
+  const passFact = payloads(exported, 'soil_moisture_sensing_window_v1').find((x) => x.window_id === SENSING_WINDOW_ID);
+  const failFact = payloads(exported, 'soil_moisture_sensing_window_v1').find((x) => x.window_id === SENSING_WINDOW_FAIL_ID);
+  assertSoilMoistureSensingWindowFixture('soil_moisture_sensing_window_v1 PASS fact', passFact, 'PASS');
+  assertSoilMoistureSensingWindowFixture('soil_moisture_sensing_window_v1 FAIL fact', failFact, 'FAIL');
+}
+
 function assertC8Profile(exported, dry) {
   must(dry.profile === 'c8-formal-chain' && dry.planned_counts?.fields === 1 && dry.planned_counts?.devices === 3 && dry.planned_counts?.pending_operations === 0 && dry.planned_counts?.device_offline_cases === 0, 'c8 dry-run profile counts invalid', dry);
   must(exported.profile === 'c8-formal-chain', 'c8 export profile invalid', exported.profile);
@@ -122,7 +167,7 @@ function assertIrrigationRequirementExport(exported) {
   must(close(requirement?.net_irrigation_mm, 18.7), 'irrigation requirement net amount mismatch', requirement);
 }
 
-const dry = run([SEED, '--dry-run', '--tenant', 'tenantA']);
+const dry = run([SEED, '--dry-run', '--tenant', 'tenantA', ...FIXED_NOW_MS_ARGS]);
 must(dry.ok === true && dry.profile === 'full-review' && dry.chain_id === CHAIN && dry.apply === false, 'dry-run envelope invalid', dry);
 for (const [key, min] of Object.entries({
   fields: 3,
@@ -159,7 +204,7 @@ must(
   'field memory derived endpoint contract missing',
   dry.field_memory_contract
 );
-const exported = run([SEED, '--export-json', '--tenant', 'tenantA']);
+const exported = run([SEED, '--export-json', '--tenant', 'tenantA', ...FIXED_NOW_MS_ARGS]);
 assertFormalChain(exported);
 assertIrrigationRequirementExport(exported);
 must(
@@ -195,9 +240,10 @@ must(
   'manifest must state static formal memory is not the only pass source',
   exported.manifest?.governance_acceptance
 );
-const c8Dry = run([SEED, '--dry-run', '--tenant', 'tenantA', '--profile', 'c8-formal-chain']);
-const c8Exported = run([SEED, '--export-json', '--tenant', 'tenantA', '--profile', 'c8-formal-chain']);
+const c8Dry = run([SEED, '--dry-run', '--tenant', 'tenantA', '--profile', 'c8-formal-chain', ...FIXED_NOW_MS_ARGS]);
+const c8Exported = run([SEED, '--export-json', '--tenant', 'tenantA', '--profile', 'c8-formal-chain', ...FIXED_NOW_MS_ARGS]);
 assertFormalChain(c8Exported);
 assertIrrigationRequirementExport(c8Exported);
+assertSoilMoistureSensingWindowExportContract(c8Exported);
 assertC8Profile(c8Exported, c8Dry);
 console.log('[controlled-pilot-full-review-seed-export] PASS');
