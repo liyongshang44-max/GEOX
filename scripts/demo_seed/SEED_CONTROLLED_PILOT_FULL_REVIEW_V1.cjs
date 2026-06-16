@@ -498,8 +498,8 @@ async function insertIrrigationRequirementIndexRows(c, p) {
 async function ensureSoilMoistureSensingWindowIndexForSeed(c) {
   await c.query(`
     CREATE TABLE IF NOT EXISTS soil_moisture_sensing_window_index_v1 (
-      window_id text PRIMARY KEY,
       tenant_id text NOT NULL,
+      window_id text NOT NULL,
       project_id text NOT NULL,
       group_id text NOT NULL,
       field_id text NOT NULL,
@@ -526,8 +526,47 @@ async function ensureSoilMoistureSensingWindowIndexForSeed(c) {
       source_observation_ids_json jsonb NOT NULL DEFAULT '[]'::jsonb,
       source_fact_id text,
       created_at timestamptz NOT NULL DEFAULT now(),
-      updated_at timestamptz NOT NULL DEFAULT now()
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      PRIMARY KEY (tenant_id, window_id)
     )
+  `);
+
+  await c.query(`
+    DO $$
+    DECLARE current_pkey text;
+    BEGIN
+      SELECT conname
+        INTO current_pkey
+        FROM pg_constraint
+       WHERE conrelid = 'soil_moisture_sensing_window_index_v1'::regclass
+         AND contype = 'p'
+       LIMIT 1;
+
+      IF current_pkey IS NOT NULL AND NOT EXISTS (
+        SELECT 1
+          FROM pg_constraint con
+         WHERE con.conrelid = 'soil_moisture_sensing_window_index_v1'::regclass
+           AND con.contype = 'p'
+           AND (
+             SELECT array_agg(att.attname::text ORDER BY key_col.ordinality)
+               FROM unnest(con.conkey) WITH ORDINALITY AS key_col(attnum, ordinality)
+               JOIN pg_attribute att
+                 ON att.attrelid = con.conrelid
+                AND att.attnum = key_col.attnum
+           ) = ARRAY['tenant_id', 'window_id']::text[]
+      ) THEN
+        EXECUTE format('ALTER TABLE soil_moisture_sensing_window_index_v1 DROP CONSTRAINT %I', current_pkey);
+      END IF;
+
+      IF NOT EXISTS (
+        SELECT 1
+          FROM pg_constraint
+         WHERE conrelid = 'soil_moisture_sensing_window_index_v1'::regclass
+           AND contype = 'p'
+      ) THEN
+        ALTER TABLE soil_moisture_sensing_window_index_v1 ADD PRIMARY KEY (tenant_id, window_id);
+      END IF;
+    END $$;
   `);
 }
 
@@ -558,8 +597,7 @@ async function insertSoilMoistureSensingWindowIndexRows(c, p) {
         source_fact_id, updated_at
       )
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21::jsonb,$22::jsonb,$23::jsonb,$24::jsonb,$25::jsonb,$26::jsonb,$27,now())
-      ON CONFLICT (window_id) DO UPDATE SET
-        tenant_id = EXCLUDED.tenant_id,
+      ON CONFLICT (tenant_id, window_id) DO UPDATE SET
         project_id = EXCLUDED.project_id,
         group_id = EXCLUDED.group_id,
         field_id = EXCLUDED.field_id,
