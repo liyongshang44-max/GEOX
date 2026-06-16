@@ -202,12 +202,15 @@ function findBy(arr, pred) { return Array.isArray(arr) ? arr.find(pred) : null; 
 
 async function assertSoilMoistureSensingWindowReadback(client) {
   const result = await client.query(
-    `SELECT *
-       FROM soil_moisture_sensing_window_index_v1
-      WHERE window_id = $1
-      LIMIT 1`,
-    [SENSING_WINDOW_ID],
-  );
+	   `SELECT *
+	      FROM soil_moisture_sensing_window_index_v1
+	     WHERE tenant_id = $1
+	       AND project_id = $2
+	       AND group_id = $3
+	       AND window_id = $4
+	     LIMIT 1`,
+	    [TENANT, PROJECT_ID, GROUP_ID, SENSING_WINDOW_ID],
+	  );
 
   assert(result.rows.length === 1, 'soil moisture sensing window index row missing', result.rows);
   const row = result.rows[0];
@@ -233,12 +236,15 @@ async function assertSoilMoistureSensingWindowReadback(client) {
 
 async function assertSoilMoistureSensingWindowNegativeGuard(client) {
   const result = await client.query(
-    `SELECT *
-       FROM soil_moisture_sensing_window_index_v1
-      WHERE window_id = $1
-      LIMIT 1`,
-    [SENSING_WINDOW_FAIL_ID],
-  );
+	   `SELECT *
+	      FROM soil_moisture_sensing_window_index_v1
+	     WHERE tenant_id = $1
+	       AND project_id = $2
+	       AND group_id = $3
+	       AND window_id = $4
+	     LIMIT 1`,
+	    [TENANT, PROJECT_ID, GROUP_ID, SENSING_WINDOW_FAIL_ID],
+	  );
 
   assert(result.rows.length === 1, 'soil moisture sensing window FAIL fixture row missing', result.rows);
   const row = result.rows[0];

@@ -547,14 +547,16 @@ async function ensureSoilMoistureSensingWindowIndexForSeed(c) {
 
       IF current_pkey IS NOT NULL AND NOT EXISTS (
         SELECT 1
-          FROM pg_index idx
-          JOIN pg_attribute a1 ON a1.attrelid = idx.indrelid AND a1.attnum = idx.indkey[0]
-          JOIN pg_attribute a2 ON a2.attrelid = idx.indrelid AND a2.attnum = idx.indkey[1]
-         WHERE idx.indrelid = 'soil_moisture_sensing_window_index_v1'::regclass
-           AND idx.indisprimary
-           AND idx.indnkeyatts = 2
-           AND a1.attname = 'tenant_id'
-           AND a2.attname = 'window_id'
+          FROM pg_constraint con
+         WHERE con.conrelid = 'soil_moisture_sensing_window_index_v1'::regclass
+           AND con.contype = 'p'
+           AND (
+             SELECT array_agg(att.attname ORDER BY key_col.ordinality)
+               FROM unnest(con.conkey) WITH ORDINALITY AS key_col(attnum, ordinality)
+               JOIN pg_attribute att
+                 ON att.attrelid = con.conrelid
+                AND att.attnum = key_col.attnum
+           ) = ARRAY['tenant_id', 'window_id']
       ) THEN
         EXECUTE format('ALTER TABLE soil_moisture_sensing_window_index_v1 DROP CONSTRAINT %I', current_pkey);
       END IF;
@@ -1134,6 +1136,10 @@ async function verify(p) {
       if (counts.as_applied_map_v1 < 1) failAssert("SEED_AS_APPLIED_MISSING", counts);
       if (counts.formal_field_memory_v1 < 1) failAssert("SEED_FORMAL_FIELD_MEMORY_MISSING", counts);
       if (counts.formal_roi_ledger_v1 < 1) failAssert("SEED_FORMAL_ROI_MISSING", counts);
+      if (counts.soil_moisture_sensing_window_index_v1_pass < 1) failAssert("SEED_SOIL_MOISTURE_SENSING_WINDOW_PASS_MISSING", counts);
+    }
+
+    if (isC8FormalChain(p.profile)) {
       if (counts.soil_moisture_sensing_window_index_v1_pass < 1) failAssert("SEED_SOIL_MOISTURE_SENSING_WINDOW_PASS_MISSING", counts);
     }
 
