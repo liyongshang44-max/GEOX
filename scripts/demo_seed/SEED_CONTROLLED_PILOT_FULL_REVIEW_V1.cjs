@@ -85,7 +85,7 @@ const prefixOf = (tenant) => `full_review_seed_${tenant}`;
 function factsByType(facts) {
   const out = {};
   for (const fact of facts) (out[fact.record_json.type] ||= []).push(fact);
-  for (const type of ['field_crop_season_v1','device_observation_context_v1','decision_recommendation_v1','approval_request_v1','approval_decision_v1','operation_plan_v1','operation_plan_transition_v1','ao_act_task_v0','ao_act_receipt_v1','evidence_artifact_v1','acceptance_result_v1','skill_run_v1','telemetry_observation_v1','weather_forecast_fact_v1','irrigation_requirement_skill_input_v1','irrigation_requirement_v1','water_state_estimate_v1','stage1_sensing_summary_v1','prescription_v1','value_record_v1','controlled_pilot_full_review_manifest_v1','soil_moisture_sensing_window_v1','soil_moisture_sensing_window_index_v1']) out[type] ||= [];
+  for (const type of ['field_crop_season_v1','device_observation_context_v1','decision_recommendation_v1','approval_request_v1','approval_decision_v1','operation_plan_v1','operation_plan_transition_v1','ao_act_task_v0','ao_act_receipt_v1','evidence_artifact_v1','acceptance_result_v1','skill_run_v1','telemetry_observation_v1','weather_forecast_fact_v1','irrigation_requirement_skill_input_v1','irrigation_requirement_v1','water_state_estimate_v1','irrigation_scenario_set_v1','stage1_sensing_summary_v1','prescription_v1','value_record_v1','controlled_pilot_full_review_manifest_v1','soil_moisture_sensing_window_v1','soil_moisture_sensing_window_index_v1']) out[type] ||= [];
   return out;
 }
 
@@ -700,6 +700,118 @@ async function insertWaterStateEstimateIndexRows(c, p) {
   }
 }
 
+async function ensureIrrigationScenarioSetIndexForSeed(c) {
+  await c.query(`
+    CREATE TABLE IF NOT EXISTS irrigation_scenario_set_index_v1 (
+      scenario_set_id text PRIMARY KEY,
+      tenant_id text NOT NULL,
+      project_id text NOT NULL,
+      group_id text NOT NULL,
+      field_id text NOT NULL,
+      season_id text NOT NULL,
+      source_water_state_estimate_id text,
+      source_requirement_id text,
+      source_forecast_id text,
+      source_sensing_window_id text,
+      baseline_water_state text,
+      baseline_soil_moisture_percent double precision,
+      target_min_soil_moisture_percent double precision,
+      target_max_soil_moisture_percent double precision,
+      net_irrigation_mm double precision,
+      gross_irrigation_requirement_mm double precision,
+      options_json jsonb NOT NULL DEFAULT '[]'::jsonb,
+      recommended_option_id text,
+      input_refs_json jsonb NOT NULL DEFAULT '{}'::jsonb,
+      evidence_refs_json jsonb NOT NULL DEFAULT '[]'::jsonb,
+      derivation_json jsonb NOT NULL DEFAULT '{}'::jsonb,
+      quality_json jsonb NOT NULL DEFAULT '{}'::jsonb,
+      confidence_json jsonb NOT NULL DEFAULT '{}'::jsonb,
+      source_fact_id text,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await c.query(`CREATE INDEX IF NOT EXISTS idx_irrigation_scenario_set_index_v1_scope_latest ON irrigation_scenario_set_index_v1 (tenant_id, project_id, group_id, field_id, created_at DESC)`);
+  await c.query(`CREATE INDEX IF NOT EXISTS idx_irrigation_scenario_set_index_v1_water_state ON irrigation_scenario_set_index_v1 (source_water_state_estimate_id)`);
+  await c.query(`CREATE INDEX IF NOT EXISTS idx_irrigation_scenario_set_index_v1_requirement ON irrigation_scenario_set_index_v1 (source_requirement_id)`);
+}
+
+async function insertIrrigationScenarioSetIndexRows(c, p) {
+  const scenarioFacts = (p.facts_by_type?.irrigation_scenario_set_v1 || []).filter((fact) => fact?.record_json?.payload);
+  if (!scenarioFacts.length) return;
+  await ensureIrrigationScenarioSetIndexForSeed(c);
+
+  for (const fact of scenarioFacts) {
+    const payload = fact.record_json.payload || {};
+    await c.query(
+      `INSERT INTO irrigation_scenario_set_index_v1 (
+        scenario_set_id, tenant_id, project_id, group_id, field_id, season_id,
+        source_water_state_estimate_id, source_requirement_id, source_forecast_id, source_sensing_window_id,
+        baseline_water_state, baseline_soil_moisture_percent,
+        target_min_soil_moisture_percent, target_max_soil_moisture_percent,
+        net_irrigation_mm, gross_irrigation_requirement_mm,
+        options_json, recommended_option_id,
+        input_refs_json, evidence_refs_json, derivation_json, quality_json, confidence_json,
+        source_fact_id, created_at, updated_at
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17::jsonb,$18,$19::jsonb,$20::jsonb,$21::jsonb,$22::jsonb,$23::jsonb,$24,$25,now())
+      ON CONFLICT (scenario_set_id) DO UPDATE SET
+        tenant_id = EXCLUDED.tenant_id,
+        project_id = EXCLUDED.project_id,
+        group_id = EXCLUDED.group_id,
+        field_id = EXCLUDED.field_id,
+        season_id = EXCLUDED.season_id,
+        source_water_state_estimate_id = EXCLUDED.source_water_state_estimate_id,
+        source_requirement_id = EXCLUDED.source_requirement_id,
+        source_forecast_id = EXCLUDED.source_forecast_id,
+        source_sensing_window_id = EXCLUDED.source_sensing_window_id,
+        baseline_water_state = EXCLUDED.baseline_water_state,
+        baseline_soil_moisture_percent = EXCLUDED.baseline_soil_moisture_percent,
+        target_min_soil_moisture_percent = EXCLUDED.target_min_soil_moisture_percent,
+        target_max_soil_moisture_percent = EXCLUDED.target_max_soil_moisture_percent,
+        net_irrigation_mm = EXCLUDED.net_irrigation_mm,
+        gross_irrigation_requirement_mm = EXCLUDED.gross_irrigation_requirement_mm,
+        options_json = EXCLUDED.options_json,
+        recommended_option_id = EXCLUDED.recommended_option_id,
+        input_refs_json = EXCLUDED.input_refs_json,
+        evidence_refs_json = EXCLUDED.evidence_refs_json,
+        derivation_json = EXCLUDED.derivation_json,
+        quality_json = EXCLUDED.quality_json,
+        confidence_json = EXCLUDED.confidence_json,
+        source_fact_id = EXCLUDED.source_fact_id,
+        created_at = EXCLUDED.created_at,
+        updated_at = now()`,
+      [
+        payload.scenario_set_id,
+        payload.tenant_id || p.tenant,
+        payload.project_id || PROJECT_ID,
+        payload.group_id || GROUP_ID,
+        payload.field_id || FIELD_ID,
+        payload.season_id || SEASON_ID,
+        payload.source_water_state_estimate_id ?? null,
+        payload.source_requirement_id ?? null,
+        payload.source_forecast_id ?? null,
+        payload.source_sensing_window_id ?? null,
+        payload.baseline_water_state ?? null,
+        payload.baseline_soil_moisture_percent ?? null,
+        payload.target_min_soil_moisture_percent ?? null,
+        payload.target_max_soil_moisture_percent ?? null,
+        payload.net_irrigation_mm ?? null,
+        payload.gross_irrigation_requirement_mm ?? null,
+        JSON.stringify(Array.isArray(payload.options) ? payload.options : []),
+        payload.recommended_option_id ?? null,
+        JSON.stringify(payload.input_refs || {}),
+        JSON.stringify(Array.isArray(payload.evidence_refs) ? payload.evidence_refs : []),
+        JSON.stringify(payload.derivation || {}),
+        JSON.stringify(payload.quality || {}),
+        JSON.stringify(payload.confidence || {}),
+        fact.fact_id || null,
+        payload.created_at || new Date().toISOString(),
+      ]
+    );
+  }
+}
+
 async function ensureSoilMoistureSensingWindowIndexForSeed(c) {
   await c.query(`
     CREATE TABLE IF NOT EXISTS soil_moisture_sensing_window_index_v1 (
@@ -1083,7 +1195,7 @@ async function insertFormalReceiptExecutionWindowFact(c, p) {
   );
 }
 
-async function apply(p, baseUrl = '') { return withClient(async (c) => { await c.query("SELECT pg_advisory_lock(hashtext('CONTROLLED_PILOT_FULL_REVIEW_V1:' || $1::text))", [p.tenant]); try { await c.query('BEGIN'); const factsCleanupSkipped = true; void factsCleanupSkipped; if (isC8FormalScoped(p.profile)) { await ensureSoilMoistureSensingWindowIndexForSeed(c); await c.query(`${SQL_REMOVE} FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND memory_id=$4`, [p.tenant, PROJECT_ID, GROUP_ID, MEMORY_ID]).catch(() => {}); await c.query(`${SQL_REMOVE} FROM roi_ledger_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND roi_ledger_id=$4`, [p.tenant, PROJECT_ID, GROUP_ID, ROI_ID]).catch(() => {}); await c.query(`${SQL_REMOVE} FROM device_observation_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND fact_id LIKE $4`, [p.tenant, PROJECT_ID, GROUP_ID, `${p.prefix}_%`]).catch(() => {}); await c.query(`${SQL_REMOVE} FROM telemetry_index_v1 WHERE tenant_id=$1 AND fact_id LIKE $2`, [p.tenant, `${p.prefix}_%`]).catch(() => {}); await c.query(`${SQL_REMOVE} FROM soil_moisture_sensing_window_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND (source_fact_id LIKE $4 OR window_id = ANY($5::text[]))`, [p.tenant, PROJECT_ID, GROUP_ID, `${p.prefix}_%`, ['sw_c8_soil_moisture_001', 'sw_c8_soil_moisture_fail_001']]).catch(() => {}); await c.query(`${SQL_REMOVE} FROM as_applied_map_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND (task_id=$4 OR receipt_id=$5 OR prescription_id=$6)`, [p.tenant, PROJECT_ID, GROUP_ID, TASK_ID, RECEIPT_ID, PRESCRIPTION_ID]).catch(() => {}); await c.query(`${SQL_REMOVE} FROM as_executed_record_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND (task_id=$4 OR receipt_id=$5 OR prescription_id=$6)`, [p.tenant, PROJECT_ID, GROUP_ID, TASK_ID, RECEIPT_ID, PRESCRIPTION_ID]).catch(() => {}); await c.query(`${SQL_REMOVE} FROM prescription_contract_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND (prescription_id=$4 OR recommendation_id=$5)`, [p.tenant, PROJECT_ID, GROUP_ID, PRESCRIPTION_ID, RECOMMENDATION_ID]).catch(() => {}); } const keyMap = { field_index_v1: ['tenant_id','field_id'], field_polygon_v1: ['tenant_id','field_id'], device_index_v1: ['tenant_id','device_id'], device_binding_index_v1: ['tenant_id','device_id','field_id'], device_status_index_v1: ['tenant_id','device_id'], device_capability: ['tenant_id','device_id'], telemetry_index_v1: ['tenant_id','device_id','metric','ts'], device_observation_index_v1: ['tenant_id','device_id','metric','observed_at_ts_ms'], prescription_contract_v1: ['tenant_id','project_id','group_id','recommendation_id'], soil_moisture_sensing_window_index_v1: ['window_id'] }; for (const [table, rows] of Object.entries(p.tables)) if (!table.endsWith('_optional') && table !== 'approval_requests_v1' && table !== 'soil_moisture_sensing_window_index_v1') await insertRows(c, table, rows, keyMap[table] || []); await insertRows(c, 'operation_state_v1', p.tables.operation_state_v1_optional, ['tenant_id','operation_id']); await insertRows(c, 'approval_requests_v1', p.tables.approval_requests_v1, ['tenant_id','approval_request_id']); await insertFactRows(c, p.facts); await insertWeatherForecastIndexRows(c, p); await insertIrrigationRequirementSkillInputIndexRows(c, p); await insertIrrigationRequirementIndexRows(c, p); await insertWaterStateEstimateIndexRows(c, p); await insertSoilMoistureSensingWindowIndexRows(c, p); await insertFormalOperationAuthorizationFacts(c, p); await insertFormalReceiptExecutionWindowFact(c, p); await insertFormalAcceptanceChainPassFact(c, p); if (isC8FormalScoped(p.profile)) { const pc = await c.query("SELECT prescription_id FROM prescription_contract_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND prescription_id=$4 LIMIT 1", [p.tenant, PROJECT_ID, GROUP_ID, PRESCRIPTION_ID]); if ((pc.rowCount ?? 0) < 1) { const e = new Error('PRESCRIPTION_CONTRACT_REQUIRED'); e.detail = { tenant_id: p.tenant, project_id: PROJECT_ID, group_id: GROUP_ID, prescription_id: PRESCRIPTION_ID }; throw e; } } await c.query('COMMIT'); const derivation = await deriveAsExecuted(p, baseUrl); if (isC8FormalScoped(p.profile) && derivation.skipped) { const e = new Error('AS_EXECUTED_DERIVATION_REQUIRED'); e.detail = derivation; throw e; } return { ok: true, apply: true, tenant: p.tenant, profile: p.profile, chain_id: p.chain_id, written: { facts: p.facts.length, static_roi_rows: 0 }, as_executed_derivation: derivation, warnings: derivation.skipped ? [derivation.reason] : [] }; } catch (e) { await c.query('ROLLBACK').catch(() => {}); throw e; } finally { await c.query("SELECT pg_advisory_unlock(hashtext('CONTROLLED_PILOT_FULL_REVIEW_V1:' || $1::text))", [p.tenant]).catch(() => {}); } }); }
+async function apply(p, baseUrl = '') { return withClient(async (c) => { await c.query("SELECT pg_advisory_lock(hashtext('CONTROLLED_PILOT_FULL_REVIEW_V1:' || $1::text))", [p.tenant]); try { await c.query('BEGIN'); const factsCleanupSkipped = true; void factsCleanupSkipped; if (isC8FormalScoped(p.profile)) { await ensureSoilMoistureSensingWindowIndexForSeed(c); await c.query(`${SQL_REMOVE} FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND memory_id=$4`, [p.tenant, PROJECT_ID, GROUP_ID, MEMORY_ID]).catch(() => {}); await c.query(`${SQL_REMOVE} FROM roi_ledger_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND roi_ledger_id=$4`, [p.tenant, PROJECT_ID, GROUP_ID, ROI_ID]).catch(() => {}); await c.query(`${SQL_REMOVE} FROM device_observation_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND fact_id LIKE $4`, [p.tenant, PROJECT_ID, GROUP_ID, `${p.prefix}_%`]).catch(() => {}); await c.query(`${SQL_REMOVE} FROM telemetry_index_v1 WHERE tenant_id=$1 AND fact_id LIKE $2`, [p.tenant, `${p.prefix}_%`]).catch(() => {}); await c.query(`${SQL_REMOVE} FROM soil_moisture_sensing_window_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND (source_fact_id LIKE $4 OR window_id = ANY($5::text[]))`, [p.tenant, PROJECT_ID, GROUP_ID, `${p.prefix}_%`, ['sw_c8_soil_moisture_001', 'sw_c8_soil_moisture_fail_001']]).catch(() => {}); await c.query(`${SQL_REMOVE} FROM as_applied_map_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND (task_id=$4 OR receipt_id=$5 OR prescription_id=$6)`, [p.tenant, PROJECT_ID, GROUP_ID, TASK_ID, RECEIPT_ID, PRESCRIPTION_ID]).catch(() => {}); await c.query(`${SQL_REMOVE} FROM as_executed_record_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND (task_id=$4 OR receipt_id=$5 OR prescription_id=$6)`, [p.tenant, PROJECT_ID, GROUP_ID, TASK_ID, RECEIPT_ID, PRESCRIPTION_ID]).catch(() => {}); await c.query(`${SQL_REMOVE} FROM prescription_contract_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND (prescription_id=$4 OR recommendation_id=$5)`, [p.tenant, PROJECT_ID, GROUP_ID, PRESCRIPTION_ID, RECOMMENDATION_ID]).catch(() => {}); } const keyMap = { field_index_v1: ['tenant_id','field_id'], field_polygon_v1: ['tenant_id','field_id'], device_index_v1: ['tenant_id','device_id'], device_binding_index_v1: ['tenant_id','device_id','field_id'], device_status_index_v1: ['tenant_id','device_id'], device_capability: ['tenant_id','device_id'], telemetry_index_v1: ['tenant_id','device_id','metric','ts'], device_observation_index_v1: ['tenant_id','device_id','metric','observed_at_ts_ms'], prescription_contract_v1: ['tenant_id','project_id','group_id','recommendation_id'], soil_moisture_sensing_window_index_v1: ['window_id'] }; for (const [table, rows] of Object.entries(p.tables)) if (!table.endsWith('_optional') && table !== 'approval_requests_v1' && table !== 'soil_moisture_sensing_window_index_v1') await insertRows(c, table, rows, keyMap[table] || []); await insertRows(c, 'operation_state_v1', p.tables.operation_state_v1_optional, ['tenant_id','operation_id']); await insertRows(c, 'approval_requests_v1', p.tables.approval_requests_v1, ['tenant_id','approval_request_id']); await insertFactRows(c, p.facts); await insertWeatherForecastIndexRows(c, p); await insertIrrigationRequirementSkillInputIndexRows(c, p); await insertIrrigationRequirementIndexRows(c, p); await insertWaterStateEstimateIndexRows(c, p); await insertIrrigationScenarioSetIndexRows(c, p); await insertSoilMoistureSensingWindowIndexRows(c, p); await insertFormalOperationAuthorizationFacts(c, p); await insertFormalReceiptExecutionWindowFact(c, p); await insertFormalAcceptanceChainPassFact(c, p); if (isC8FormalScoped(p.profile)) { const pc = await c.query("SELECT prescription_id FROM prescription_contract_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND prescription_id=$4 LIMIT 1", [p.tenant, PROJECT_ID, GROUP_ID, PRESCRIPTION_ID]); if ((pc.rowCount ?? 0) < 1) { const e = new Error('PRESCRIPTION_CONTRACT_REQUIRED'); e.detail = { tenant_id: p.tenant, project_id: PROJECT_ID, group_id: GROUP_ID, prescription_id: PRESCRIPTION_ID }; throw e; } } await c.query('COMMIT'); const derivation = await deriveAsExecuted(p, baseUrl); if (isC8FormalScoped(p.profile) && derivation.skipped) { const e = new Error('AS_EXECUTED_DERIVATION_REQUIRED'); e.detail = derivation; throw e; } return { ok: true, apply: true, tenant: p.tenant, profile: p.profile, chain_id: p.chain_id, written: { facts: p.facts.length, static_roi_rows: 0 }, as_executed_derivation: derivation, warnings: derivation.skipped ? [derivation.reason] : [] }; } catch (e) { await c.query('ROLLBACK').catch(() => {}); throw e; } finally { await c.query("SELECT pg_advisory_unlock(hashtext('CONTROLLED_PILOT_FULL_REVIEW_V1:' || $1::text))", [p.tenant]).catch(() => {}); } }); }
 
 async function countFormalFieldMemory(p) { return withClient(async (c) => { const r = await c.query("SELECT count(*)::int AS count FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND memory_id=$4", [p.tenant, PROJECT_ID, GROUP_ID, MEMORY_ID]).catch(() => ({ rows: [{ count: 0 }] })); return Number(r.rows?.[0]?.count || 0); }); }
 const apiBase = (b) => String(b || process.env.CONTROLLED_PILOT_VERIFY_API_BASE || process.env.BASE_URL || process.env.API_BASE_URL || '').replace(/\/+$/, '');

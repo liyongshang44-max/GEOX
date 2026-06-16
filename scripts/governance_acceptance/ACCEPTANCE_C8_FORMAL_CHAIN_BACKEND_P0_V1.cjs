@@ -13,6 +13,8 @@ const FORMAL_FIELD = 'field_c8_demo';
 const FORMAL_REQUIREMENT = 'ireq_c8_irrigation_001';
 const FORMAL_WATER_STATE_SUFFIX = 'wstate_c8_irrigation_001';
 const FORMAL_WATER_STATE_UNKNOWN_SUFFIX = 'wstate_c8_irrigation_unknown_001';
+const FORMAL_SCENARIO_SET_SUFFIX = 'iscen_c8_irrigation_001';
+const FORMAL_SCENARIO_SET_UNKNOWN_SUFFIX = 'iscen_c8_irrigation_unknown_001';
 const FORMAL_SKILL_INPUT = 'iskill_input_c8_irrigation_001';
 const SENSING_WINDOW_ID = 'sw_c8_soil_moisture_001';
 const SENSING_WINDOW_FAIL_ID = 'sw_c8_soil_moisture_fail_001';
@@ -27,6 +29,8 @@ const BASE_URL = (arg('base-url') || process.env.BASE_URL || process.env.API_BAS
 const TENANT = arg('tenant') || process.env.TENANT_ID || 'tenantA';
 const FORMAL_WATER_STATE = `full_review_seed_${TENANT}_${FORMAL_WATER_STATE_SUFFIX}`;
 const FORMAL_WATER_STATE_UNKNOWN = `full_review_seed_${TENANT}_${FORMAL_WATER_STATE_UNKNOWN_SUFFIX}`;
+const FORMAL_SCENARIO_SET = `full_review_seed_${TENANT}_${FORMAL_SCENARIO_SET_SUFFIX}`;
+const FORMAL_SCENARIO_SET_UNKNOWN = `full_review_seed_${TENANT}_${FORMAL_SCENARIO_SET_UNKNOWN_SUFFIX}`;
 const TOKEN = process.env.ADMIN_TOKEN || process.env.GEOX_ACCEPTANCE_TOKEN || process.env.ACCEPTANCE_TOKEN || process.env.AO_ACT_TOKEN || process.env.GEOX_AO_ACT_TOKEN || process.env.TOKEN || 'admin_token';
 const DATABASE_URL = process.env.DATABASE_URL;
 
@@ -475,6 +479,165 @@ async function assertWaterStateEstimateReadback(client) {
   assert(unknown.calculation_inputs_json?.sensing_window_quality_status === 'FAIL', 'UNKNOWN water state sensing window quality mismatch', unknown.calculation_inputs_json);
 }
 
+async function assertIrrigationScenarioSetReadback(client) {
+  const result = await client.query(
+    `SELECT
+        scenario_set_id,
+        tenant_id,
+        project_id,
+        group_id,
+        field_id,
+        season_id,
+        source_water_state_estimate_id,
+        source_requirement_id,
+        source_forecast_id,
+        source_sensing_window_id,
+        baseline_water_state,
+        baseline_soil_moisture_percent,
+        target_min_soil_moisture_percent,
+        target_max_soil_moisture_percent,
+        net_irrigation_mm,
+        gross_irrigation_requirement_mm,
+        options_json,
+        recommended_option_id,
+        input_refs_json,
+        evidence_refs_json,
+        derivation_json,
+        quality_json,
+        confidence_json,
+        source_fact_id
+       FROM irrigation_scenario_set_index_v1
+      WHERE tenant_id=$1
+        AND project_id=$2
+        AND group_id=$3
+        AND scenario_set_id=$4
+      LIMIT 1`,
+    [TENANT, PROJECT_ID, GROUP_ID, FORMAL_SCENARIO_SET],
+  );
+
+  const row = result.rows?.[0];
+  assert(row, 'irrigation scenario set index row missing', result.rows);
+  assert(row.scenario_set_id === FORMAL_SCENARIO_SET, 'scenario_set_id mismatch', row);
+  assert(row.tenant_id === TENANT, 'scenario tenant_id mismatch', row);
+  assert(row.project_id === PROJECT_ID, 'scenario project_id mismatch', row);
+  assert(row.group_id === GROUP_ID, 'scenario group_id mismatch', row);
+  assert(row.field_id === FORMAL_FIELD, 'scenario field_id mismatch', row);
+  assert(row.season_id === 'season_2026_c8_corn', 'scenario season_id mismatch', row);
+
+  assert(row.source_water_state_estimate_id === FORMAL_WATER_STATE, 'scenario source water state mismatch', row);
+  assert(row.source_requirement_id === FORMAL_REQUIREMENT, 'scenario source requirement mismatch', row);
+  assert(row.source_forecast_id === 'wf_c8_irrigation_001', 'scenario source forecast mismatch', row);
+  assert(row.source_sensing_window_id === SENSING_WINDOW_ID, 'scenario source sensing window mismatch', row);
+  assert(row.baseline_water_state === 'MODERATE_DEFICIT', 'scenario baseline water state mismatch', row);
+
+  nearly(row.baseline_soil_moisture_percent, 18.4, 'scenario baseline_soil_moisture_percent');
+  nearly(row.target_min_soil_moisture_percent, 22, 'scenario target_min_soil_moisture_percent');
+  nearly(row.target_max_soil_moisture_percent, 28, 'scenario target_max_soil_moisture_percent');
+  nearly(row.net_irrigation_mm, 18.7, 'scenario net_irrigation_mm');
+  nearly(row.gross_irrigation_requirement_mm, 22, 'scenario gross_irrigation_requirement_mm');
+
+  assert(row.recommended_option_id === null, 'H15 scenario must not set recommended_option_id', row);
+  assert(row.quality_json?.status === 'COMPARABLE', 'scenario quality status mismatch', row.quality_json);
+  assert(row.quality_json?.deterministic === true, 'scenario quality deterministic mismatch', row.quality_json);
+  assert(row.confidence_json?.level === 'HIGH', 'scenario confidence level mismatch', row.confidence_json);
+  assert(row.confidence_json?.basis === 'h14_water_state_high_confidence_v1', 'scenario confidence basis mismatch', row.confidence_json);
+  assert(row.source_fact_id === `full_review_seed_${TENANT}_irrigation_scenario_set_c8_001`, 'scenario source_fact_id mismatch', row);
+
+  const options = Array.isArray(row.options_json) ? row.options_json : [];
+  assert(options.length === 3, 'scenario options count mismatch', options);
+
+  const noIrrigation = findBy(options, (x) => x.option_id === 'no_irrigation');
+  const irrigateNow = findBy(options, (x) => x.option_id === 'irrigate_required_now');
+  const delay3d = findBy(options, (x) => x.option_id === 'delay_3d');
+
+  assert(noIrrigation, 'no_irrigation scenario option missing', options);
+  assert(irrigateNow, 'irrigate_required_now scenario option missing', options);
+  assert(delay3d, 'delay_3d scenario option missing', options);
+
+  assert(noIrrigation.action_type === 'NO_IRRIGATION', 'no_irrigation action_type mismatch', noIrrigation);
+  assert(noIrrigation.risk_after === 'MODERATE_DEFICIT', 'no_irrigation risk_after mismatch', noIrrigation);
+  nearly(noIrrigation.projected_soil_moisture_range?.min, 17.0, 'no_irrigation range min');
+  nearly(noIrrigation.projected_soil_moisture_range?.max, 18.6, 'no_irrigation range max');
+
+  assert(irrigateNow.action_type === 'IRRIGATE_NOW', 'irrigate_now action_type mismatch', irrigateNow);
+  assert(irrigateNow.risk_after === 'NORMAL', 'irrigate_now risk_after mismatch', irrigateNow);
+  nearly(irrigateNow.assumed_irrigation_mm, 22, 'irrigate_now assumed irrigation');
+  nearly(irrigateNow.effective_irrigation_mm_within_72h, 22, 'irrigate_now effective irrigation');
+  nearly(irrigateNow.projected_soil_moisture_range?.min, 23.2, 'irrigate_now range min');
+  nearly(irrigateNow.projected_soil_moisture_range?.max, 24.8, 'irrigate_now range max');
+
+  assert(delay3d.action_type === 'DELAY_IRRIGATION', 'delay_3d action_type mismatch', delay3d);
+  assert(delay3d.risk_after === 'MODERATE_DEFICIT', 'delay_3d risk_after mismatch', delay3d);
+  nearly(delay3d.assumed_irrigation_mm, 22, 'delay_3d assumed irrigation');
+  nearly(delay3d.effective_irrigation_mm_within_72h, 0, 'delay_3d effective irrigation must be zero');
+  assert(delay3d.delay_days === 3, 'delay_3d delay_days mismatch', delay3d);
+  nearly(delay3d.projected_soil_moisture_range?.min, 16.3, 'delay_3d range min');
+  nearly(delay3d.projected_soil_moisture_range?.max, 19.3, 'delay_3d range max');
+  assert(delay3d.calculation_trace?.rounding_policy, 'delay_3d rounding policy missing', delay3d);
+
+  assert(row.input_refs_json?.weather_forecast_version && String(row.input_refs_json.weather_forecast_version).includes('c8_external_weather_provider_sample_001:'), 'scenario weather forecast version missing', row.input_refs_json);
+  assert(row.input_refs_json?.weather_provider_run_id === 'provider_run_c8_irrigation_001', 'scenario provider_run_id mismatch', row.input_refs_json);
+  assert(row.input_refs_json?.weather_external_forecast_id === 'external_forecast_c8_irrigation_001', 'scenario external forecast id mismatch', row.input_refs_json);
+  assert(row.derivation_json?.comparison_only === true, 'scenario derivation must be comparison_only', row.derivation_json);
+  assert(row.derivation_json?.no_recommendation === true, 'scenario derivation must be no_recommendation', row.derivation_json);
+  assert(row.derivation_json?.recommended_option_id === null, 'scenario derivation recommended_option_id must be null', row.derivation_json);
+  assert(row.derivation_json?.delay_3d_semantics === 'effective_irrigation_mm_within_72h_is_zero', 'scenario delay_3d semantics mismatch', row.derivation_json);
+
+  for (const expectedRef of [
+    FORMAL_WATER_STATE,
+    SENSING_WINDOW_ID,
+    'wf_c8_irrigation_001',
+    FORMAL_REQUIREMENT,
+    `full_review_seed_${TENANT}_water_state_estimate_c8_001`,
+    `full_review_seed_${TENANT}_soil_moisture_sensing_window_c8_001`,
+    `full_review_seed_${TENANT}_weather_forecast_c8_irrigation_001`,
+    `full_review_seed_${TENANT}_irrigation_requirement_c8_001`,
+  ]) {
+    assert(Array.isArray(row.evidence_refs_json) && row.evidence_refs_json.includes(expectedRef), `scenario evidence ref missing ${expectedRef}`, row.evidence_refs_json);
+  }
+
+  const unknownResult = await client.query(
+    `SELECT
+        scenario_set_id,
+        tenant_id,
+        project_id,
+        group_id,
+        field_id,
+        source_water_state_estimate_id,
+        source_requirement_id,
+        source_forecast_id,
+        source_sensing_window_id,
+        baseline_water_state,
+        options_json,
+        recommended_option_id,
+        quality_json,
+        confidence_json,
+        source_fact_id
+       FROM irrigation_scenario_set_index_v1
+      WHERE tenant_id=$1
+        AND project_id=$2
+        AND group_id=$3
+        AND scenario_set_id=$4
+      LIMIT 1`,
+    [TENANT, PROJECT_ID, GROUP_ID, FORMAL_SCENARIO_SET_UNKNOWN],
+  );
+
+  const unknown = unknownResult.rows?.[0];
+  assert(unknown, 'UNKNOWN irrigation scenario set row missing', unknownResult.rows);
+  assert(unknown.scenario_set_id === FORMAL_SCENARIO_SET_UNKNOWN, 'UNKNOWN scenario_set_id mismatch', unknown);
+  assert(unknown.source_water_state_estimate_id === FORMAL_WATER_STATE_UNKNOWN, 'UNKNOWN scenario source water state mismatch', unknown);
+  assert(unknown.source_requirement_id === FORMAL_REQUIREMENT, 'UNKNOWN scenario source requirement mismatch', unknown);
+  assert(unknown.source_forecast_id === 'wf_c8_irrigation_001', 'UNKNOWN scenario source forecast mismatch', unknown);
+  assert(unknown.source_sensing_window_id === SENSING_WINDOW_FAIL_ID, 'UNKNOWN scenario source sensing window mismatch', unknown);
+  assert(unknown.baseline_water_state === 'UNKNOWN', 'UNKNOWN scenario baseline state mismatch', unknown);
+  assert(unknown.recommended_option_id === null, 'UNKNOWN scenario recommended_option_id must be null', unknown);
+  assert(Array.isArray(unknown.options_json) && unknown.options_json.length === 0, 'UNKNOWN scenario options must be empty', unknown.options_json);
+  assert(unknown.quality_json?.status === 'UNKNOWN', 'UNKNOWN scenario quality status mismatch', unknown.quality_json);
+  assert(Array.isArray(unknown.quality_json?.reason_codes) && unknown.quality_json.reason_codes.includes('WATER_STATE_UNKNOWN'), 'UNKNOWN scenario reason code missing WATER_STATE_UNKNOWN', unknown.quality_json);
+  assert(unknown.confidence_json?.level === 'LOW', 'UNKNOWN scenario confidence level mismatch', unknown.confidence_json);
+  assert(unknown.source_fact_id === `full_review_seed_${TENANT}_irrigation_scenario_set_c8_unknown_001`, 'UNKNOWN scenario source_fact_id mismatch', unknown);
+}
+
 async function assertOperationReport() {
   const r = await http(`/api/v1/reports/operation/${FORMAL_OP}?tenant_id=${TENANT}&project_id=${PROJECT_ID}&group_id=${GROUP_ID}`);
   assert(r.status === 200, 'operation report request failed', httpDetail(r));
@@ -593,6 +756,8 @@ async function assertFieldReport() {
     await assertIrrigationRequirementReadback(client);
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP water-state-estimate');
     await assertWaterStateEstimateReadback(client);
+    console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP irrigation-scenario-set');
+    await assertIrrigationScenarioSetReadback(client);
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP roi-formalize');
     await assertRoiFormalization(client, asExecuted.as_executed_id);
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP field-memory');
