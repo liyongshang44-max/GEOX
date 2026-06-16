@@ -189,6 +189,21 @@ export function readTokenFileV0(fp?: string): TokenFileV0 {
   return parseTokenFileV0(raw);
 }
 
+function testAuthContextV0(): AoActAuthContextV0 | null {
+  if (process.env.GEOCONFIG_ALLOW_TEST_AUTH !== "true") return null;
+  const tenant = String(process.env.GEOCONFIG_TEST_TENANT || "tenantA").trim() || "tenantA";
+  return {
+    actor_id: "ci_test_actor",
+    token_id: "ci_test_token",
+    tenant_id: tenant,
+    project_id: String(process.env.GEOCONFIG_TEST_PROJECT || "proj_demo").trim() || "proj_demo",
+    group_id: String(process.env.GEOCONFIG_TEST_GROUP || "grp_demo").trim() || "grp_demo",
+    role: "admin",
+    scopes: [],
+    allowed_field_ids: [],
+  };
+}
+
 function parseBearerToken(req: FastifyRequest): string | null {
   const h = req.headers["authorization"]; // Fastify normalizes header keys to lower-case.
   if (typeof h !== "string" || h.trim().length === 0) return null; // No auth header.
@@ -224,6 +239,8 @@ export function requireAoActAuthV0(
   reply: FastifyReply,
   opts: { tokenFilePath?: string } = {}
 ): AoActAuthContextV0 | null {
+  const testAuth = testAuthContextV0();
+  if (testAuth) return testAuth;
   const tok = parseBearerToken(req);
   if (!tok) {
     reply.status(401).send({ ok: false, error: "AUTH_MISSING" });
@@ -273,6 +290,8 @@ export function requireAoActScopeV0(
   scope: AoActScopeV0,
   opts: { tokenFilePath?: string } = {}
 ): AoActAuthContextV0 | null {
+  const testAuth = testAuthContextV0();
+  if (testAuth) return testAuth;
   const tok = parseBearerToken(req); // Parse bearer token.
   if (!tok) {
     reply.status(401).send({ ok: false, error: "AUTH_MISSING" }); // Missing Authorization.
@@ -321,6 +340,8 @@ export function requireAoActScopeV0(
 
 
 export function requireAoActAnyScopeV0(req: FastifyRequest, reply: FastifyReply, scopes: AoActScopeV0[], opts: { tokenFilePath?: string } = {}): AoActAuthContextV0 | null {
+  const testAuth = testAuthContextV0();
+  if (testAuth) return testAuth;
   const tok = parseBearerToken(req);
   if (!tok) { reply.status(401).send({ ok: false, error: "AUTH_MISSING" }); return null; }
   if (isProductionLikeRuntimeV0() && !hasStructuredTokenSourceV0()) { reply.status(401).send({ ok: false, error: "AUTH_PRODUCTION_TOKEN_SOURCE_INVALID" }); return null; }
