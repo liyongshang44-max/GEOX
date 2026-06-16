@@ -717,16 +717,29 @@ function applyC8FormalE2ESeedPolicy(dataset) {
     'stage1_sensing_state_v1',
     'telemetry_index_v1',
     'device_status_index_v1',
+    'soil_moisture_sensing_window_index_v1',
     'prescription_contract_v1',
     'approval_requests_v1',
   ];
   for (const tableName of forbiddenTables) dataset.rows[tableName] = [];
+  const forbiddenFactTypes = [
+    'soil_moisture_sensing_window_v1',
+    'soil_moisture_sensing_window_index_v1',
+  ];
+  dataset.facts = dataset.facts.filter((fact) => !forbiddenFactTypes.includes(String(fact?.record_json?.type || '')));
   const manifest = dataset.metadata.manifest;
   manifest.raw_to_report_e2e = true;
   manifest.formalized_by_seed = false;
   manifest.field_memory_written_by_seed = false;
   manifest.field_memory_flow = ['acceptance_result_v1', 'field-memory/from-acceptance', 'POST /api/v1/field-memory/from-acceptance', 'field_memory_v1', 'GET /api/v1/customer/fields/field_c8_demo/memory'];
   manifest.seed_forbidden_projection_tables = forbiddenTables;
+  manifest.seed_forbidden_fact_types = forbiddenFactTypes;
+  manifest.irrigation_requirement_flow = (manifest.irrigation_requirement_flow || []).filter((item) => !forbiddenFactTypes.includes(item) && !forbiddenTables.includes(item));
+  if (dataset.metadata.formal_chain) {
+    delete dataset.metadata.formal_chain.soil_moisture_sensing_window;
+    delete dataset.metadata.formal_chain.soil_moisture_sensing_window_fail_fixture;
+    delete dataset.metadata.formal_chain.soil_moisture_sensing_window_negative_fixture;
+  }
   const manifestFact = dataset.facts.find((f) => f?.record_json?.type === 'controlled_pilot_full_review_manifest_v1');
   if (manifestFact) manifestFact.record_json.payload = { ...manifestFact.record_json.payload, ...manifest };
   dataset.metadata.facts_by_type = factsByType(dataset.facts);

@@ -100,10 +100,17 @@ const APPROVER =
   process.env.GEOX_EXECUTOR_TOKEN ||
   'approver_token';
 
+const DATABASE_URL =
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL ||
+  `postgres://${encodeURIComponent(process.env.PGUSER || 'landos')}:${encodeURIComponent(process.env.PGPASSWORD || 'landos_pwd')}@${process.env.PGHOST || '127.0.0.1'}:${process.env.PGPORT || '5433'}/${encodeURIComponent(process.env.PGDATABASE || 'landos')}`;
+
 const env = {
   ...process.env,
   BASE_URL: BASE,
   API_BASE_URL: process.env.API_BASE_URL || BASE,
+  DATABASE_URL,
+  POSTGRES_URL: process.env.POSTGRES_URL || DATABASE_URL,
   TENANT_ID: TENANT,
   ADMIN_TOKEN: ADMIN,
   TOKEN_ADMIN: process.env.TOKEN_ADMIN || ADMIN,
@@ -116,15 +123,17 @@ const env = {
 };
 
 const PHASE = process.env.CONTROLLED_PILOT_PR18I_PHASE || 'all';
+const FIXED_NOW_MS = process.env.CONTROLLED_PILOT_SEED_NOW_MS || '1710000000000';
+const seedNowMsArg = `--now-ms ${FIXED_NOW_MS}`;
 
-const seedApply = `${SEED} --apply --tenant ${TENANT} --base-url ${BASE}`;
+const seedApply = `${SEED} --apply --tenant ${TENANT} --base-url ${BASE} ${seedNowMsArg}`;
 
 const c8FormalChainApply =
-  `${SEED} --cleanup --apply --tenant ${TENANT} --profile c8-formal-chain` +
-  ` && ${SEED} --apply --tenant ${TENANT} --profile c8-formal-chain --base-url ${BASE}`;
+  `${SEED} --cleanup --apply --tenant ${TENANT} --profile c8-formal-chain ${seedNowMsArg}` +
+  ` && ${SEED} --apply --tenant ${TENANT} --profile c8-formal-chain --base-url ${BASE} ${seedNowMsArg}`;
 
 const c8FormalChainVerifyApi =
-  `${SEED} --verify-api --tenant ${TENANT} --profile c8-formal-chain --base-url ${BASE}`;
+  `${SEED} --verify-api --tenant ${TENANT} --profile c8-formal-chain --base-url ${BASE} ${seedNowMsArg}`;
 
 const commonGates = [
   ['runtime_workers', 'pnpm run ci:runtime:workers'],
