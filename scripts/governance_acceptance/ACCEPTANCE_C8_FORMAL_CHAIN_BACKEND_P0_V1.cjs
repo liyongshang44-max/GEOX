@@ -11,6 +11,7 @@ const FORMAL_RECEIPT = 'receipt_c8_irrigation_formal_001';
 const FORMAL_TASK = 'act_c8_irrigation_formal_001';
 const FORMAL_FIELD = 'field_c8_demo';
 const FORMAL_REQUIREMENT = 'ireq_c8_irrigation_001';
+const FORMAL_WATER_STATE = 'wstate_c8_irrigation_001';
 const FORMAL_SKILL_INPUT = 'iskill_input_c8_irrigation_001';
 const SENSING_WINDOW_ID = 'sw_c8_soil_moisture_001';
 const SENSING_WINDOW_FAIL_ID = 'sw_c8_soil_moisture_fail_001';
@@ -367,6 +368,70 @@ async function assertIrrigationRequirementReadback(client) {
   assert(String(row.source_fact_id || '').includes('irrigation_requirement_c8_001'), 'irrigation requirement source_fact_id mismatch', row);
 }
 
+async function assertWaterStateEstimateReadback(client) {
+  const result = await client.query(
+    `SELECT
+        estimate_id,
+        tenant_id,
+        project_id,
+        group_id,
+        field_id,
+        season_id,
+        state,
+        root_zone_soil_moisture_percent,
+        target_min_soil_moisture_percent,
+        net_irrigation_mm,
+        gross_irrigation_requirement_mm,
+        source_sensing_window_id,
+        source_forecast_id,
+        source_requirement_id,
+        source_sensing_window_fact_id,
+        source_weather_fact_id,
+        source_requirement_fact_id,
+        input_refs_json,
+        evidence_refs_json,
+        calculation_inputs_json,
+        quality_json,
+        confidence_json,
+        source_fact_id
+       FROM water_state_estimate_index_v1
+      WHERE tenant_id=$1
+        AND project_id=$2
+        AND group_id=$3
+        AND estimate_id=$4
+      LIMIT 1`,
+    [TENANT, PROJECT_ID, GROUP_ID, FORMAL_WATER_STATE],
+  );
+
+  const row = result.rows?.[0];
+  assert(row, 'water state estimate index row missing', result.rows);
+  assert(row.estimate_id === FORMAL_WATER_STATE, 'water state estimate_id mismatch', row);
+  assert(row.field_id === FORMAL_FIELD, 'water state field_id mismatch', row);
+  assert(row.state === 'MODERATE_DEFICIT', 'water state must be MODERATE_DEFICIT', row);
+  nearly(row.root_zone_soil_moisture_percent, 18.4, 'water state root_zone_soil_moisture_percent');
+  nearly(row.target_min_soil_moisture_percent, 22, 'water state target_min_soil_moisture_percent');
+  nearly(row.net_irrigation_mm, 18.7, 'water state net_irrigation_mm');
+  nearly(row.gross_irrigation_requirement_mm, 22, 'water state gross_irrigation_requirement_mm');
+  assert(row.source_sensing_window_id === SENSING_WINDOW_ID, 'water state source_sensing_window_id mismatch', row);
+  assert(row.source_forecast_id === 'wf_c8_irrigation_001', 'water state source_forecast_id mismatch', row);
+  assert(row.source_requirement_id === FORMAL_REQUIREMENT, 'water state source_requirement_id mismatch', row);
+  assert(row.source_sensing_window_fact_id === 'full_review_seed_tenantA_soil_moisture_sensing_window_c8_001', 'water state source_sensing_window_fact_id mismatch', row);
+  assert(row.source_weather_fact_id === 'full_review_seed_tenantA_weather_forecast_c8_irrigation_001', 'water state source_weather_fact_id mismatch', row);
+  assert(row.source_requirement_fact_id === 'full_review_seed_tenantA_irrigation_requirement_c8_001', 'water state source_requirement_fact_id mismatch', row);
+  assert(row.source_fact_id === 'full_review_seed_tenantA_water_state_estimate_c8_001', 'water state source_fact_id mismatch', row);
+  assert(row.quality_json?.status === 'ESTIMATED', 'water state quality status mismatch', row.quality_json);
+  assert(row.quality_json?.deterministic === true, 'water state quality deterministic mismatch', row.quality_json);
+  assert(row.confidence_json?.level === 'HIGH', 'water state confidence level mismatch', row.confidence_json);
+  nearly(row.confidence_json?.score, 0.9, 'water state confidence score');
+  assert(row.input_refs_json?.weather_forecast_id === 'wf_c8_irrigation_001', 'water state input_refs weather_forecast_id mismatch', row.input_refs_json);
+  assert(String(row.input_refs_json?.weather_forecast_version || '').includes('c8_external_weather_provider_sample_001:'), 'water state input_refs weather_forecast_version missing', row.input_refs_json);
+  assert(row.input_refs_json?.weather_provider_run_id === 'provider_run_c8_irrigation_001', 'water state input_refs provider_run_id mismatch', row.input_refs_json);
+  assert(row.input_refs_json?.weather_external_forecast_id === 'external_forecast_c8_irrigation_001', 'water state input_refs external_forecast_id mismatch', row.input_refs_json);
+  assert(Array.isArray(row.evidence_refs_json) && row.evidence_refs_json.includes(FORMAL_REQUIREMENT), 'water state evidence refs missing requirement', row.evidence_refs_json);
+  assert(row.calculation_inputs_json?.weather_provider_status === 'OK', 'water state weather provider status mismatch', row.calculation_inputs_json);
+  assert(row.calculation_inputs_json?.weather_stale === false, 'water state weather stale mismatch', row.calculation_inputs_json);
+}
+
 async function assertOperationReport() {
   const r = await http(`/api/v1/reports/operation/${FORMAL_OP}?tenant_id=${TENANT}&project_id=${PROJECT_ID}&group_id=${GROUP_ID}`);
   assert(r.status === 200, 'operation report request failed', httpDetail(r));
@@ -483,6 +548,8 @@ async function assertFieldReport() {
     await assertIrrigationSkillInputApiReadback();
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP irrigation-requirement');
     await assertIrrigationRequirementReadback(client);
+    console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP water-state-estimate');
+    await assertWaterStateEstimateReadback(client);
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP roi-formalize');
     await assertRoiFormalization(client, asExecuted.as_executed_id);
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP field-memory');
