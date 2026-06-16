@@ -1151,6 +1151,10 @@ async function verify(p) {
       if (counts.soil_moisture_sensing_window_index_v1_pass < 1) failAssert("SEED_SOIL_MOISTURE_SENSING_WINDOW_PASS_MISSING", counts);
     }
 
+    if (isC8FormalChain(p.profile)) {
+      if (counts.soil_moisture_sensing_window_index_v1_pass < 1) failAssert("SEED_SOIL_MOISTURE_SENSING_WINDOW_PASS_MISSING", counts);
+    }
+
     if (counts.static_customer_roi_without_as_executed > 0) {
       failAssert("SEED_STATIC_CUSTOMER_ROI_WITHOUT_AS_EXECUTED", counts);
     }

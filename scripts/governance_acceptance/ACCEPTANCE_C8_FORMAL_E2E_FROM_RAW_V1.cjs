@@ -20,6 +20,8 @@ const ACCEPTANCE_ID = 'acc_c8_irrigation_formal_001';
 const MEMORY_ID = 'fm_c8_irrigation_response_001';
 const PROJECT_ID = 'projectA';
 const GROUP_ID = 'groupA';
+const FIXED_NOW_MS = process.env.CONTROLLED_PILOT_SEED_NOW_MS || '1710000000000';
+const FIXED_NOW_MS_ARGS = ['--now-ms', FIXED_NOW_MS];
 
 function loadEnv(file) {
   if (!fs.existsSync(file)) return;
@@ -286,7 +288,7 @@ function assertRuntimeResult(result, code) {
 }
 
 async function runRuntime(args) {
-  const common = ['--tenant', args.tenant, '--profile', PROFILE, '--base-url', args.baseUrl];
+  const common = ['--tenant', args.tenant, '--profile', PROFILE, '--base-url', args.baseUrl, ...FIXED_NOW_MS_ARGS];
   const apply = runNode(args.seed, ['--apply', ...common], 'E2E_RUNTIME_APPLY_FAILED');
   assertRuntimeResult(apply, 'E2E_RUNTIME_APPLY_NOT_OK');
   assertOk(apply.as_executed_derivation?.pre_field_memory_count === 0, 'E2E_FIELD_MEMORY_SEEDED_BEFORE_DERIVATION', apply.as_executed_derivation);
@@ -327,7 +329,7 @@ async function main() {
   assertOk(fs.existsSync(seedPath), 'E2E_SEED_SCRIPT_NOT_FOUND', { seedPath });
   assertStaticSource(seedPath);
 
-  const plan = runNode(args.seed, ['--export-json', '--tenant', args.tenant, '--profile', PROFILE], 'E2E_EXPORT_JSON_FAILED');
+  const plan = runNode(args.seed, ['--export-json', '--tenant', args.tenant, '--profile', PROFILE, ...FIXED_NOW_MS_ARGS], 'E2E_EXPORT_JSON_FAILED');
   assertExportContract(plan);
 
   const runtime = args.runtime ? await runRuntime(args) : null;
