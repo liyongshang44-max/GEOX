@@ -34,7 +34,7 @@ function assertFormalChain(exported) {
   must(before?.metric_role === 'before' && before?.diagnostic_use === 'irrigation_decision_input' && before?.threshold_ref, 'before observation invalid', before);
   must(after?.metric_role === 'after' && after?.diagnostic_use === 'acceptance_effect_input', 'after observation invalid', after);
   must(rain?.metric_role === 'weather_forecast' && rain?.diagnostic_use === 'irrigation_decision_input', 'rain observation invalid', rain);
-  must(c.diagnosis?.input_observation_refs?.includes('telemetry_soil_before_001') && c.diagnosis?.input_observation_refs?.includes('telemetry_rain_001'), 'diagnosis refs missing', c.diagnosis);
+  must(c.diagnosis?.input_observation_refs?.includes('telemetry_soil_moisture_window_c8_006') && c.diagnosis?.input_observation_refs?.includes('telemetry_rain_001'), 'diagnosis refs missing', c.diagnosis);
   must(c.recommendation?.expected_effect?.metric === 'soil_moisture_percent', 'recommendation expected effect missing', c.recommendation);
   must(c.irrigation_requirement?.requirement_id === FORMAL_REQUIREMENT, 'irrigation requirement id invalid', c.irrigation_requirement);
   must(c.irrigation_requirement?.source_forecast_id === 'wf_c8_irrigation_001', 'irrigation requirement forecast binding invalid', c.irrigation_requirement);

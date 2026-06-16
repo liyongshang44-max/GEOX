@@ -584,7 +584,7 @@ function buildC8FormalIrrigationFullChainDataset(options) {
     skill_run_id: irrigationRequirement.skill_run_id
   };
   const plannedIrrigationAmountMm = Number(irrigationRequirement.gross_irrigation_requirement_mm);
-  const recommendation = { recommendation_id: RECOMMENDATION_ID, field_id: FIELD_ID, season_id: SEASON_ID, crop_code: 'corn', crop_stage: '营养生长期', diagnosis: { problem: '土壤水分偏低', input_observation_refs: ['telemetry_soil_before_001', 'telemetry_rain_001'], human: 'C8 20cm 土层水分偏低，且未来 72 小时降雨不足。' }, expected_effect: { metric: 'soil_moisture_percent', target_range: { min: 22, max: 28 } }, suggested_action: { action_type: 'IRRIGATION', water_mm: plannedIrrigationAmountMm, amount_mm: plannedIrrigationAmountMm, target_device_id: 'dev_valve_pump_c8_001', source_requirement_id: REQUIREMENT_ID, amount_source: formalRequirementAmountSource }, irrigation_requirement_id: REQUIREMENT_ID, source_requirement_id: REQUIREMENT_ID, amount_source: formalRequirementAmountSource };
+  const recommendation = { recommendation_id: RECOMMENDATION_ID, field_id: FIELD_ID, season_id: SEASON_ID, crop_code: 'corn', crop_stage: '营养生长期', diagnosis: { problem: '土壤水分偏低', input_observation_refs: ['telemetry_soil_moisture_window_c8_006', 'telemetry_rain_001'], human: 'C8 20cm 土层水分偏低，且未来 72 小时降雨不足。' }, expected_effect: { metric: 'soil_moisture_percent', target_range: { min: 22, max: 28 } }, suggested_action: { action_type: 'IRRIGATION', water_mm: plannedIrrigationAmountMm, amount_mm: plannedIrrigationAmountMm, target_device_id: 'dev_valve_pump_c8_001', source_requirement_id: REQUIREMENT_ID, amount_source: formalRequirementAmountSource }, irrigation_requirement_id: REQUIREMENT_ID, source_requirement_id: REQUIREMENT_ID, amount_source: formalRequirementAmountSource };
   const executedIrrigationAmountMm = Number((plannedIrrigationAmountMm * IRRIGATION_EXECUTION_RATIO).toFixed(3));
   const waterUsageLiters = Math.round(executedIrrigationAmountMm * FIELD_AREA_M2);
   const operationPlan = { operation_plan_id: FORMAL_OP, operation_id: FORMAL_OP, field_id: FIELD_ID, field_name: 'C8 灌溉示范田', season_id: SEASON_ID, recommendation_id: RECOMMENDATION_ID, requirement_id: REQUIREMENT_ID, source_requirement_id: REQUIREMENT_ID, prescription_id: PRESCRIPTION_ID, approval_request_id: APPROVAL_ID, act_task_id: TASK_ID, operation_type: 'IRRIGATION', action_type: 'IRRIGATION', planned_amount: plannedIrrigationAmountMm, planned_unit: 'mm', planned_amount_source: formalRequirementAmountSource, amount_source: formalRequirementAmountSource, target_device_id: 'dev_valve_pump_c8_001', spatial_scope: { kind: 'field', field_id: FIELD_ID }, expected_evidence: ['water_delivery_receipt', 'post_soil_moisture_metric'], before_metrics: { soil_moisture: 18.4 }, after_metrics: { soil_moisture: 24.8 }, final_status: 'SUCCESS', status: 'APPROVED' };
@@ -718,7 +718,6 @@ function applyC8FormalE2ESeedPolicy(dataset) {
     'telemetry_index_v1',
     'device_status_index_v1',
     'soil_moisture_sensing_window_index_v1',
-    'prescription_contract_v1',
     'approval_requests_v1',
   ];
   for (const tableName of forbiddenTables) dataset.rows[tableName] = [];

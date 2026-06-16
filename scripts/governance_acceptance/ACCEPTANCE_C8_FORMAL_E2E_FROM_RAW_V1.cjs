@@ -224,7 +224,6 @@ function assertExportContract(plan) {
     'telemetry_index_v1',
     'device_status_index_v1',
     'soil_moisture_sensing_window_index_v1',
-    'prescription_contract_v1',
     'approval_requests_v1',
   ]) {
     assertTableEmpty(plan, tableName);
@@ -236,6 +235,7 @@ function assertExportContract(plan) {
     'device_index_v1',
     'device_binding_index_v1',
     'device_capability',
+    'prescription_contract_v1',
   ]) {
     assertTablePresent(plan, tableName);
   }
@@ -350,7 +350,6 @@ async function main() {
       'telemetry_index_v1',
       'device_status_index_v1',
       'soil_moisture_sensing_window_index_v1',
-      'prescription_contract_v1',
       'approval_requests_v1',
     ],
   }, null, 2));
