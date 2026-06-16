@@ -1136,6 +1136,15 @@ async function verify(p) {
       if (counts.as_applied_map_v1 < 1) failAssert("SEED_AS_APPLIED_MISSING", counts);
       if (counts.formal_field_memory_v1 < 1) failAssert("SEED_FORMAL_FIELD_MEMORY_MISSING", counts);
       if (counts.formal_roi_ledger_v1 < 1) failAssert("SEED_FORMAL_ROI_MISSING", counts);
+      if (counts.soil_moisture_sensing_window_index_v1_pass < 1) failAssert("SEED_SOIL_MOISTURE_SENSING_WINDOW_PASS_MISSING", counts);
+    }
+
+    if (isC8FormalChain(p.profile)) {
+      if (counts.soil_moisture_sensing_window_index_v1_pass < 1) failAssert("SEED_SOIL_MOISTURE_SENSING_WINDOW_PASS_MISSING", counts);
+    }
+
+    if (isC8FormalChain(p.profile)) {
+      if (counts.soil_moisture_sensing_window_index_v1_pass < 1) failAssert("SEED_SOIL_MOISTURE_SENSING_WINDOW_PASS_MISSING", counts);
     }
 
     if (isC8FormalChain(p.profile)) {
