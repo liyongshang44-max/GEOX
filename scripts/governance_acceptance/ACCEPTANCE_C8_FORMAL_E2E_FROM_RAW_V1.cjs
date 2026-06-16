@@ -223,7 +223,7 @@ function assertExportContract(plan) {
     'stage1_sensing_state_v1',
     'telemetry_index_v1',
     'device_status_index_v1',
-    'prescription_contract_v1',
+    'soil_moisture_sensing_window_index_v1',
     'approval_requests_v1',
   ]) {
     assertTableEmpty(plan, tableName);
@@ -235,6 +235,7 @@ function assertExportContract(plan) {
     'device_index_v1',
     'device_binding_index_v1',
     'device_capability',
+    'prescription_contract_v1',
   ]) {
     assertTablePresent(plan, tableName);
   }
@@ -259,7 +260,7 @@ function assertExportContract(plan) {
   assertOk(facts(plan, 'ao_act_receipt_v1').length >= 1, 'E2E_RECEIPT_FACTS_REQUIRED', { count: facts(plan, 'ao_act_receipt_v1').length });
   assertOk(facts(plan, 'acceptance_result_v1').length >= 1, 'E2E_ACCEPTANCE_FACTS_REQUIRED', { count: facts(plan, 'acceptance_result_v1').length });
   assertOk(facts(plan, 'evidence_artifact_v1').length >= 2, 'E2E_FORMAL_EVIDENCE_FACTS_REQUIRED', { count: facts(plan, 'evidence_artifact_v1').length });
-  for (const type of ['stage1_sensing_summary_v1', 'skill_run_v1', 'value_record_v1']) {
+  for (const type of ['stage1_sensing_summary_v1', 'skill_run_v1', 'value_record_v1', 'soil_moisture_sensing_window_v1', 'soil_moisture_sensing_window_index_v1']) {
     assertOk(facts(plan, type).length === 0, `E2E_FORBIDDEN_FACT_${type.toUpperCase()}`, { type, count: facts(plan, type).length });
   }
 
@@ -271,11 +272,13 @@ function assertExportContract(plan) {
   for (const item of ['acceptance_result_v1', 'field-memory/from-acceptance', 'field_memory_v1']) {
     assertOk(manifest.field_memory_flow.includes(item), 'E2E_FIELD_MEMORY_FLOW_INCOMPLETE', { item, flow: manifest.field_memory_flow });
   }
+  assertOk(Array.isArray(manifest.seed_forbidden_fact_types) && manifest.seed_forbidden_fact_types.includes('soil_moisture_sensing_window_v1'), 'E2E_SENSING_WINDOW_FACTS_FORBIDDEN_MANIFEST_REQUIRED', manifest);
 
   const formalChain = plan.formal_chain || {};
   assertOk(formalChain.operation_plan && formalChain.operation_plan.operation_plan_id === OPERATION_ID, 'E2E_FORMAL_OPERATION_PLAN_REQUIRED', formalChain.operation_plan || null);
   assertOk(formalChain.acceptance && formalChain.acceptance.acceptance_id === ACCEPTANCE_ID, 'E2E_FORMAL_ACCEPTANCE_REQUIRED', formalChain.acceptance || null);
   assertOk(!formalChain.field_memory || formalChain.field_memory.memory_id === MEMORY_ID, 'E2E_FORMAL_CHAIN_MEMORY_POINTER_INVALID', formalChain.field_memory || null);
+  assertOk(!formalChain.soil_moisture_sensing_window && !formalChain.soil_moisture_sensing_window_negative_fixture, 'E2E_SENSING_WINDOW_FORMAL_CHAIN_FIXTURES_FORBIDDEN', formalChain);
 }
 
 function assertRuntimeResult(result, code) {
@@ -346,7 +349,7 @@ async function main() {
       'stage1_sensing_state_v1',
       'telemetry_index_v1',
       'device_status_index_v1',
-      'prescription_contract_v1',
+      'soil_moisture_sensing_window_index_v1',
       'approval_requests_v1',
     ],
   }, null, 2));
