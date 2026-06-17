@@ -15,6 +15,8 @@ const FORMAL_WATER_STATE_SUFFIX = 'wstate_c8_irrigation_001';
 const FORMAL_WATER_STATE_UNKNOWN_SUFFIX = 'wstate_c8_irrigation_unknown_001';
 const FORMAL_SCENARIO_SET_SUFFIX = 'iscen_c8_irrigation_001';
 const FORMAL_SCENARIO_SET_UNKNOWN_SUFFIX = 'iscen_c8_irrigation_unknown_001';
+const FORMAL_RECOMMENDATION = 'rec_c8_irrigation_001';
+const FORMAL_RECOMMENDATION_UNKNOWN = 'rec_c8_irrigation_unknown_001';
 const FORMAL_SKILL_INPUT = 'iskill_input_c8_irrigation_001';
 const SENSING_WINDOW_ID = 'sw_c8_soil_moisture_001';
 const SENSING_WINDOW_FAIL_ID = 'sw_c8_soil_moisture_fail_001';
@@ -668,6 +670,114 @@ async function assertIrrigationScenarioSetReadback(client) {
   assert(unknown.source_fact_id === `full_review_seed_${TENANT}_irrigation_scenario_set_c8_unknown_001`, 'UNKNOWN scenario source_fact_id mismatch', unknown);
 }
 
+
+async function assertDecisionRecommendationReadback(client) {
+  const positiveResult = await client.query(
+    `SELECT *
+       FROM decision_recommendation_index_v1
+      WHERE tenant_id=$1
+        AND project_id=$2
+        AND group_id=$3
+        AND recommendation_id=$4
+      LIMIT 1`,
+    [TENANT, PROJECT_ID, GROUP_ID, FORMAL_RECOMMENDATION],
+  );
+
+  const positive = positiveResult.rows?.[0];
+  assert(positive, 'decision recommendation positive row missing', positiveResult.rows);
+  assert(positive.recommendation_id === FORMAL_RECOMMENDATION, 'recommendation_id mismatch', positive);
+  assert(positive.tenant_id === TENANT, 'recommendation tenant_id mismatch', positive);
+  assert(positive.project_id === PROJECT_ID, 'recommendation project_id mismatch', positive);
+  assert(positive.group_id === GROUP_ID, 'recommendation group_id mismatch', positive);
+  assert(positive.field_id === FORMAL_FIELD, 'recommendation field_id mismatch', positive);
+  assert(positive.season_id === 'season_2026_c8_corn', 'recommendation season_id mismatch', positive);
+
+  assert(positive.recommendation_status === 'RECOMMENDED', 'recommendation_status mismatch', positive);
+  assert(positive.selected_scenario_option_id === 'irrigate_22mm', 'selected_scenario_option_id mismatch', positive);
+  assert(positive.source_water_state_estimate_id === FORMAL_WATER_STATE, 'recommendation source_water_state_estimate_id mismatch', positive);
+  assert(positive.source_scenario_set_id === FORMAL_SCENARIO_SET, 'recommendation source_scenario_set_id mismatch', positive);
+  assert(positive.source_requirement_id === FORMAL_REQUIREMENT, 'recommendation source_requirement_id mismatch', positive);
+  assert(positive.human_approval_required === true, 'recommendation human_approval_required mismatch', positive);
+  assert(positive.source_fact_id === `full_review_seed_${TENANT}_rec_c8_irrigation_001`, 'recommendation source_fact_id mismatch', positive);
+
+  assert(positive.suggested_action_json?.action_type === 'IRRIGATION', 'recommendation suggested action_type mismatch', positive.suggested_action_json);
+  nearly(positive.suggested_action_json?.amount_mm, 22, 'recommendation suggested_action.amount_mm');
+  nearly(positive.suggested_action_json?.water_mm, 22, 'recommendation suggested_action.water_mm');
+  assert(positive.suggested_action_json?.selected_scenario_option_id === 'irrigate_22mm', 'recommendation suggested action option mismatch', positive.suggested_action_json);
+  assert(positive.suggested_action_json?.source_requirement_id === FORMAL_REQUIREMENT, 'recommendation suggested action requirement mismatch', positive.suggested_action_json);
+  assert(positive.suggested_action_json?.source_scenario_set_id === FORMAL_SCENARIO_SET, 'recommendation suggested action scenario mismatch', positive.suggested_action_json);
+
+  assert(positive.scenario_summary_json?.selected_option_id === 'irrigate_22mm', 'recommendation scenario selected option mismatch', positive.scenario_summary_json);
+  assert(positive.scenario_summary_json?.risk_before === 'MODERATE_DEFICIT', 'recommendation scenario risk_before mismatch', positive.scenario_summary_json);
+  assert(positive.scenario_summary_json?.risk_after === 'NORMAL', 'recommendation scenario risk_after mismatch', positive.scenario_summary_json);
+  assert(positive.scenario_summary_json?.risk_delta === 'IMPROVED', 'recommendation scenario risk_delta mismatch', positive.scenario_summary_json);
+  nearly(positive.scenario_summary_json?.assumed_irrigation_mm, 22, 'recommendation scenario assumed_irrigation_mm');
+
+  assert(positive.input_refs_json?.water_state_estimate_id === FORMAL_WATER_STATE, 'recommendation input_refs water_state mismatch', positive.input_refs_json);
+  assert(positive.input_refs_json?.scenario_set_id === FORMAL_SCENARIO_SET, 'recommendation input_refs scenario_set mismatch', positive.input_refs_json);
+  assert(positive.input_refs_json?.requirement_id === FORMAL_REQUIREMENT, 'recommendation input_refs requirement mismatch', positive.input_refs_json);
+  assert(positive.input_refs_json?.selected_scenario_option_id === 'irrigate_22mm', 'recommendation input_refs option mismatch', positive.input_refs_json);
+
+  assert(positive.quality_json?.status === 'RECOMMENDABLE', 'recommendation quality status mismatch', positive.quality_json);
+  assert(positive.quality_json?.input_binding_status === 'INPUTS_BOUND', 'recommendation input binding mismatch', positive.quality_json);
+  assert(Array.isArray(positive.quality_json?.reason_codes) && positive.quality_json.reason_codes.length === 0, 'recommendation positive reason_codes must be empty', positive.quality_json);
+  assert(positive.confidence_json?.level === 'HIGH', 'recommendation confidence level mismatch', positive.confidence_json);
+  assert(Array.isArray(positive.confidence_json?.reasons) && positive.confidence_json.reasons.includes('selected_option_improves_risk'), 'recommendation confidence reasons mismatch', positive.confidence_json);
+  assert(positive.derivation_json?.derivation_type === 'decision_recommendation_from_scenario_requirement_v1', 'recommendation derivation_type mismatch', positive.derivation_json);
+  assert(positive.derivation_json?.rule_version === 'decision_recommendation_v1_from_h15_scenario_set', 'recommendation derivation rule_version mismatch', positive.derivation_json);
+  assert(positive.derivation_json?.selected_scenario_option_id === 'irrigate_22mm', 'recommendation derivation selected option mismatch', positive.derivation_json);
+  assert(positive.derivation_json?.no_direct_execution === true, 'recommendation must not directly execute', positive.derivation_json);
+  assert(positive.derivation_json?.requires_human_approval === true, 'recommendation must require human approval', positive.derivation_json);
+
+  for (const expectedRef of [
+    FORMAL_WATER_STATE,
+    FORMAL_SCENARIO_SET,
+    FORMAL_REQUIREMENT,
+    `full_review_seed_${TENANT}_water_state_estimate_c8_001`,
+    `full_review_seed_${TENANT}_irrigation_scenario_set_c8_001`,
+    `full_review_seed_${TENANT}_irrigation_requirement_c8_001`,
+  ]) {
+    assert(Array.isArray(positive.evidence_refs_json) && positive.evidence_refs_json.includes(expectedRef), `recommendation evidence ref missing ${expectedRef}`, positive.evidence_refs_json);
+  }
+
+  const unknownResult = await client.query(
+    `SELECT *
+       FROM decision_recommendation_index_v1
+      WHERE tenant_id=$1
+        AND project_id=$2
+        AND group_id=$3
+        AND recommendation_id=$4
+      LIMIT 1`,
+    [TENANT, PROJECT_ID, GROUP_ID, FORMAL_RECOMMENDATION_UNKNOWN],
+  );
+
+  const unknown = unknownResult.rows?.[0];
+  assert(unknown, 'UNKNOWN decision recommendation row missing', unknownResult.rows);
+  assert(unknown.recommendation_id === FORMAL_RECOMMENDATION_UNKNOWN, 'UNKNOWN recommendation_id mismatch', unknown);
+  assert(unknown.recommendation_status === 'UNKNOWN', 'UNKNOWN recommendation_status mismatch', unknown);
+  assert(unknown.selected_scenario_option_id === null, 'UNKNOWN selected_scenario_option_id must be null', unknown);
+  assert(unknown.suggested_action_json === null, 'UNKNOWN suggested_action_json must be SQL NULL', unknown);
+  assert(unknown.human_approval_required === false, 'UNKNOWN human_approval_required mismatch', unknown);
+  assert(unknown.source_water_state_estimate_id === FORMAL_WATER_STATE_UNKNOWN, 'UNKNOWN source water state mismatch', unknown);
+  assert(unknown.source_scenario_set_id === FORMAL_SCENARIO_SET_UNKNOWN, 'UNKNOWN source scenario mismatch', unknown);
+  assert(unknown.source_requirement_id === FORMAL_REQUIREMENT, 'UNKNOWN source requirement mismatch', unknown);
+  assert(unknown.quality_json?.status === 'UNKNOWN', 'UNKNOWN quality status mismatch', unknown.quality_json);
+  assert(unknown.quality_json?.input_binding_status === 'INPUT_NOT_USABLE', 'UNKNOWN input binding status mismatch', unknown.quality_json);
+  assert(Array.isArray(unknown.quality_json?.reason_codes) && unknown.quality_json.reason_codes.includes('WATER_STATE_UNKNOWN'), 'UNKNOWN reason_codes missing WATER_STATE_UNKNOWN', unknown.quality_json);
+  assert(unknown.confidence_json?.level === 'LOW', 'UNKNOWN confidence level mismatch', unknown.confidence_json);
+  assert(unknown.derivation_json?.selected_scenario_option_id === null, 'UNKNOWN derivation selected option must be null', unknown.derivation_json);
+  assert(unknown.derivation_json?.requires_human_approval === false, 'UNKNOWN must not require human approval', unknown.derivation_json);
+
+  const downstream = await client.query(
+    `SELECT fact_id, record_json->>'type' AS type
+       FROM facts
+      WHERE record_json::text LIKE $1
+        AND record_json->>'type' IN ('approval_request_v1', 'operation_plan_v1', 'ao_act_task_v0', 'ao_act_task_v1')`,
+    [`%${FORMAL_RECOMMENDATION_UNKNOWN}%`],
+  );
+  assert(downstream.rows.length === 0, 'UNKNOWN recommendation must not flow into approval/operation/AO-ACT facts', downstream.rows);
+}
+
 async function assertOperationReport() {
   const r = await http(`/api/v1/reports/operation/${FORMAL_OP}?tenant_id=${TENANT}&project_id=${PROJECT_ID}&group_id=${GROUP_ID}`);
   assert(r.status === 200, 'operation report request failed', httpDetail(r));
@@ -788,6 +898,8 @@ async function assertFieldReport() {
     await assertWaterStateEstimateReadback(client);
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP irrigation-scenario-set');
     await assertIrrigationScenarioSetReadback(client);
+    console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP decision-recommendation');
+    await assertDecisionRecommendationReadback(client);
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP roi-formalize');
     await assertRoiFormalization(client, asExecuted.as_executed_id);
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP field-memory');
