@@ -19,6 +19,7 @@ export type IrrigationDecisionReportVm = {
     amountText: string;
     riskText: string;
     confidenceText: string;
+    failureConditionText: string;
   }>;
   tone: "success" | "warning" | "danger" | "neutral";
 };
@@ -43,6 +44,7 @@ function optionVm(option: any): IrrigationDecisionReportVm["options"][number] {
     amountText: amountText(option?.assumed_irrigation_mm),
     riskText: riskText(option),
     confidenceText: text(option?.confidence_text, irrigationDecisionConfidenceLabel(option?.confidence?.level)),
+    failureConditionText: text(option?.failure_condition_text, "暂无主要失败条件"),
   };
 }
 

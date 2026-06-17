@@ -39,9 +39,11 @@ assert(page.includes('<IrrigationDecisionReportCard report={report} />'), 'Opera
 assert(customerIndex.includes('IrrigationDecisionReportCard'), 'customer component index must export IrrigationDecisionReportCard');
 assert(card.includes('灌溉决策依据'), 'card must expose customer title');
 assert(card.includes('审批与执行边界'), 'card must render approval/execution boundary');
+assert(card.includes('失败条件') || card.includes('失效条件'), 'card must render scenario failure condition label');
 assert(vm.includes('buildIrrigationDecisionReportVm'), 'VM builder missing');
 assert(vm.includes('当前证据不足，不能生成可执行灌溉建议'), 'VM must provide UNKNOWN customer copy');
 assert(vm.includes('系统建议灌溉 22mm'), 'VM must provide positive recommendation copy');
+assert(vm.includes('failureConditionText'), 'VM must expose scenario failureConditionText');
 assert(labels.includes('灌溉 22mm'), 'labels must map irrigate_22mm');
 assert(labels.includes('风险降低'), 'labels must map risk_delta');
 

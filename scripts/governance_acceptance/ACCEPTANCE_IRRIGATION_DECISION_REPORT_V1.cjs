@@ -34,6 +34,23 @@ function headers() {
   };
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchWithRetry(url, options, attempts = 6) {
+  let lastError = null;
+  for (let i = 1; i <= attempts; i += 1) {
+    try {
+      return await fetch(url, options);
+    } catch (error) {
+      lastError = error;
+      if (i < attempts) await sleep(500 * i);
+    }
+  }
+  throw lastError;
+}
+
 function parseSeedFailure(stdout, stderr) {
   const text = String(stdout || '') + '\n' + String(stderr || '');
   const match = text.match(/\{\s*"ok"\s*:\s*false[\s\S]*?\n\}/);
@@ -73,7 +90,7 @@ function assertNoCustomerRawTokens(value) {
   }
 
   const url = BASE_URL + '/api/v1/reports/operation/' + encodeURIComponent(FORMAL_OP) + '?tenant_id=' + encodeURIComponent(TENANT) + '&project_id=' + encodeURIComponent(PROJECT_ID) + '&group_id=' + encodeURIComponent(GROUP_ID);
-  const res = await fetch(url, { headers: headers() });
+  const res = await fetchWithRetry(url, { headers: headers() });
   const bodyText = await res.text();
   let body = null;
   try { body = JSON.parse(bodyText); } catch {}

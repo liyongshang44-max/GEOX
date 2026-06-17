@@ -165,12 +165,23 @@ function rangeText(range: any): string {
 }
 
 function failureText(conditions: unknown): string {
-  const items = arr(conditions);
+  const items = arr(conditions).map((item) => String(item ?? "").trim()).filter(Boolean);
   if (!items.length) return "无主要失败条件";
-  if (items.includes("PROJECTED_DEFICIT_REMAINS")) return "该情景可能仍不能完全解除缺水风险";
-  if (items.includes("IRRIGATION_DELAY_EXPOSURE")) return "延迟执行会增加水分继续下降的不确定性";
-  if (items.includes("EXECUTION_REQUIRED")) return "该情景依赖后续审批与执行完成";
-  return "存在需要复核的失败条件";
+
+  const normalized = new Set(items.map((item) => item.toLowerCase()));
+  const lines: string[] = [];
+
+  if (normalized.has("projected_deficit_remains")) lines.push("该情景可能仍不能完全解除缺水风险");
+  if (normalized.has("irrigation_delay_exposure")) lines.push("延迟执行会增加水分继续下降的不确定性");
+  if (normalized.has("execution_required")) lines.push("该情景依赖后续审批与执行完成");
+
+  if (normalized.has("rainfall_forecast_deviation_gt_5mm")) lines.push("若实际降雨较预报偏差超过 5mm，需要重新评估情景");
+  if (normalized.has("sensor_coverage_below_threshold")) lines.push("若传感器覆盖低于阈值，需要补充观测后复核");
+  if (normalized.has("actual_application_efficiency_lt_assumed")) lines.push("若实际灌溉效率低于假设值，目标水分可能无法达到");
+  if (normalized.has("execution_receipt_missing")) lines.push("若缺少执行回执，不能确认作业完成");
+  if (normalized.has("device_offline_or_unverified")) lines.push("若设备离线或状态未验证，不能直接进入执行");
+
+  return lines.length ? lines.join("；") : "存在需要复核的失败条件";
 }
 
 async function one(pool: Pool, sql: string, params: unknown[]): Promise<any | null> {

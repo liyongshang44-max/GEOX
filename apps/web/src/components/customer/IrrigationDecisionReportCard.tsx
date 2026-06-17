@@ -38,6 +38,7 @@ export function IrrigationDecisionReportCard({ report }: { report: OperationRepo
                 <strong>{option.amountText}</strong>
                 <span>{option.riskText}</span>
                 <span>可信度：{option.confidenceText}</span>
+                <span>失败条件：{option.failureConditionText}</span>
               </div>
             ))}
           </div>

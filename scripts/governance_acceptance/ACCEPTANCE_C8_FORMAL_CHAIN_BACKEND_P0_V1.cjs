@@ -44,6 +44,23 @@ function fail(message, detail) {
 function assert(condition, message, detail) { if (!condition) fail(message, detail); }
 function nearly(actual, expected, message) { assert(Math.abs(Number(actual) - Number(expected)) < 0.0001, `${message}: expected ${expected}, got ${actual}`); }
 function headers() { return { accept: 'application/json', 'content-type': 'application/json', authorization: `Bearer ${TOKEN}`, 'x-geox-token': TOKEN, 'x-geox-ao-act-token': TOKEN, 'x-ao-act-token': TOKEN }; }
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchWithRetry(url, options, attempts = 6) {
+  let lastError = null;
+  for (let i = 1; i <= attempts; i += 1) {
+    try {
+      return await fetch(url, options);
+    } catch (error) {
+      lastError = error;
+      if (i < attempts) await sleep(500 * i);
+    }
+  }
+  throw lastError;
+}
+
 async function http(path, { method = 'GET', body } = {}) {
   assert(BASE_URL, '--base-url or BASE_URL/API_BASE_URL is required');
   const requestBody = body == null ? undefined : JSON.stringify(body);
