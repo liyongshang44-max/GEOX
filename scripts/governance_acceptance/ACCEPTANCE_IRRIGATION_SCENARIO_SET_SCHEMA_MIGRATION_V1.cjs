@@ -1,4 +1,4 @@
-﻿// scripts/governance_acceptance/ACCEPTANCE_IRRIGATION_SCENARIO_SET_SCHEMA_MIGRATION_V1.cjs
+// scripts/governance_acceptance/ACCEPTANCE_IRRIGATION_SCENARIO_SET_SCHEMA_MIGRATION_V1.cjs
 // Purpose: prove H15 irrigation_scenario_set_index_v1 is created by the formal SQL migration.
 // Boundary: schema acceptance only; no recommendation, approval, operation, AO-ACT, report, frontend, or customer page behavior.
 
@@ -98,6 +98,19 @@ async function assertRequiredColumns(client) {
   }
 }
 
+async function assertOptionsArrayConstraint(client) {
+  const result = await client.query(`
+    SELECT conname, pg_get_constraintdef(oid) AS def
+    FROM pg_constraint
+    WHERE conrelid = 'public.irrigation_scenario_set_index_v1'::regclass
+      AND conname = 'irrigation_scenario_set_index_v1_options_array_check'
+  `);
+
+  assert(result.rows.length === 1, "options_json array CHECK constraint missing", result.rows);
+  assert(String(result.rows[0].def).includes("jsonb_typeof(options_json)"), "options_json CHECK must use jsonb_typeof", result.rows[0]);
+  assert(String(result.rows[0].def).includes("'array'"), "options_json CHECK must require array", result.rows[0]);
+}
+
 async function assertRequiredIndexes(client) {
   const result = await client.query(`
     SELECT indexname
@@ -151,6 +164,7 @@ async function assertRequiredIndexes(client) {
     await client.query(migrationSql);
 
     await assertRequiredColumns(client);
+    await assertOptionsArrayConstraint(client);
     await assertRequiredIndexes(client);
 
     await client.query(`

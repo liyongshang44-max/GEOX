@@ -571,6 +571,27 @@ async function assertIrrigationScenarioSetReadback(client) {
     assert(actual.risk_after === spec.risk_after, `${optionId} risk_after mismatch`, actual);
     assert(actual.risk_delta === spec.risk_delta, `${optionId} risk_delta mismatch`, actual);
     assert(actual.confidence?.level === spec.confidence, `${optionId} confidence level mismatch`, actual);
+    assert(Array.isArray(actual.confidence?.reasons), `${optionId} confidence reasons must be array`, actual);
+    const baseScenarioConfidenceReasons = ['water_state_estimate_available', 'versioned_weather_forecast_available', 'formal_requirement_available'];
+    for (const reason of baseScenarioConfidenceReasons) {
+      assert(actual.confidence.reasons.includes(reason), `${optionId} missing confidence reason ${reason}`, actual);
+    }
+    if (optionId === 'delay_3d') {
+      assert(actual.confidence.reasons.includes('delay_increases_uncertainty'), 'delay_3d missing confidence reason delay_increases_uncertainty', actual);
+    }
+    for (const condition of ['rainfall_forecast_deviation_gt_5mm', 'sensor_coverage_below_threshold', 'weather_provider_status_not_ok']) {
+      assert(Array.isArray(actual.failure_conditions) && actual.failure_conditions.includes(condition), `${optionId} missing shared failure condition ${condition}`, actual);
+    }
+    if (optionId.startsWith('irrigate_')) {
+      for (const condition of ['actual_application_efficiency_lt_assumed', 'post_irrigation_soil_response_not_observed', 'irrigation_execution_not_completed']) {
+        assert(actual.failure_conditions.includes(condition), `${optionId} missing irrigation failure condition ${condition}`, actual);
+      }
+    }
+    if (optionId === 'delay_3d') {
+      for (const condition of ['soil_moisture_declines_faster_than_expected', 'forecast_window_changes_before_execution']) {
+        assert(actual.failure_conditions.includes(condition), `${optionId} missing delay failure condition ${condition}`, actual);
+      }
+    }
     nearly(actual.assumed_irrigation_mm, spec.assumed, `${optionId} assumed_irrigation_mm`);
     nearly(actual.effective_irrigation_mm_within_72h, spec.effective, `${optionId} effective_irrigation_mm_within_72h`);
     assert(actual.delay_days === spec.delay, `${optionId} delay_days mismatch`, actual);

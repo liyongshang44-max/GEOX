@@ -405,19 +405,42 @@ function c8ScenarioRiskDelta(before, after) {
 }
 
 function c8ScenarioOptionConfidence(optionId, riskAfter) {
-  if (riskAfter === 'UNKNOWN') return { level: 'LOW', score: 0.2, basis: 'scenario_option_unknown_risk_v1' };
-  if (optionId === 'delay_3d') return { level: 'LOW', score: 0.45, basis: 'delay_option_higher_uncertainty_v1' };
-  if (optionId === 'no_action' || optionId === 'irrigate_10mm') return { level: 'MEDIUM', score: 0.68, basis: 'formal_scenario_delta_model_v1' };
-  return { level: 'HIGH', score: 0.82, basis: 'formal_scenario_delta_model_v1' };
+  const baseReasons = [
+    'water_state_estimate_available',
+    'versioned_weather_forecast_available',
+    'formal_requirement_available',
+  ];
+
+  if (riskAfter === 'UNKNOWN') return { level: 'LOW', score: 0.2, basis: 'scenario_option_unknown_risk_v1', reasons: baseReasons };
+  if (optionId === 'delay_3d') return { level: 'LOW', score: 0.45, basis: 'delay_option_higher_uncertainty_v1', reasons: [...baseReasons, 'delay_increases_uncertainty'] };
+  if (optionId === 'no_action' || optionId === 'irrigate_10mm') return { level: 'MEDIUM', score: 0.68, basis: 'formal_scenario_delta_model_v1', reasons: baseReasons };
+  return { level: 'HIGH', score: 0.82, basis: 'formal_scenario_delta_model_v1', reasons: baseReasons };
 }
 
 function c8ScenarioFailureConditions(optionId, riskAfter) {
-  const out = [];
+  const out = [
+    'rainfall_forecast_deviation_gt_5mm',
+    'sensor_coverage_below_threshold',
+    'weather_provider_status_not_ok',
+  ];
+
   if (riskAfter !== 'NORMAL') out.push('PROJECTED_DEFICIT_REMAINS');
   if (optionId === 'no_action') out.push('NO_IRRIGATION_APPLIED');
-  if (optionId === 'delay_3d') out.push('IRRIGATION_DELAY_EXPOSURE');
-  if (optionId.startsWith('irrigate_')) out.push('EXECUTION_REQUIRED');
-  return out;
+
+  if (optionId.startsWith('irrigate_')) {
+    out.push('EXECUTION_REQUIRED');
+    out.push('actual_application_efficiency_lt_assumed');
+    out.push('post_irrigation_soil_response_not_observed');
+    out.push('irrigation_execution_not_completed');
+  }
+
+  if (optionId === 'delay_3d') {
+    out.push('IRRIGATION_DELAY_EXPOSURE');
+    out.push('soil_moisture_declines_faster_than_expected');
+    out.push('forecast_window_changes_before_execution');
+  }
+
+  return Array.from(new Set(out));
 }
 
 function buildC8IrrigationScenarioOptionV1(input) {

@@ -734,6 +734,21 @@ async function ensureIrrigationScenarioSetIndexForSeed(c) {
   await c.query(`CREATE INDEX IF NOT EXISTS idx_irrigation_scenario_set_index_v1_scope_latest ON irrigation_scenario_set_index_v1 (tenant_id, project_id, group_id, field_id, created_at DESC)`);
   await c.query(`CREATE INDEX IF NOT EXISTS idx_irrigation_scenario_set_index_v1_water_state ON irrigation_scenario_set_index_v1 (source_water_state_estimate_id)`);
   await c.query(`CREATE INDEX IF NOT EXISTS idx_irrigation_scenario_set_index_v1_requirement ON irrigation_scenario_set_index_v1 (source_requirement_id)`);
+
+  const optionsConstraintResult = await c.query(`
+    SELECT 1
+      FROM pg_constraint
+     WHERE conrelid = 'irrigation_scenario_set_index_v1'::regclass
+       AND conname = 'irrigation_scenario_set_index_v1_options_array_check'
+  `);
+
+  if (!optionsConstraintResult.rows.length) {
+    await c.query(`
+      ALTER TABLE irrigation_scenario_set_index_v1
+        ADD CONSTRAINT irrigation_scenario_set_index_v1_options_array_check
+        CHECK (jsonb_typeof(options_json) = 'array')
+    `);
+  }
 }
 
 async function insertIrrigationScenarioSetIndexRows(c, p) {

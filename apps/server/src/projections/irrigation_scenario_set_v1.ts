@@ -35,6 +35,7 @@ export type IrrigationScenarioOptionV1 = {
     level: "HIGH" | "MEDIUM" | "LOW";
     score: number;
     basis: string;
+    reasons: string[];
   };
   failure_conditions: string[];
   calculation_trace: Record<string, unknown>;
@@ -182,33 +183,74 @@ function riskDelta(before: IrrigationScenarioRiskV1, after: IrrigationScenarioRi
 }
 
 function optionConfidence(optionId: IrrigationScenarioOptionV1["option_id"], riskAfter: IrrigationScenarioRiskV1): IrrigationScenarioOptionV1["confidence"] {
+  const baseReasons = [
+    "water_state_estimate_available",
+    "versioned_weather_forecast_available",
+    "formal_requirement_available",
+  ];
+
   if (riskAfter === "UNKNOWN") {
-    return { level: "LOW", score: 0.2, basis: "scenario_option_unknown_risk_v1" };
+    return {
+      level: "LOW",
+      score: 0.2,
+      basis: "scenario_option_unknown_risk_v1",
+      reasons: baseReasons,
+    };
   }
 
   if (optionId === "delay_3d") {
-    return { level: "LOW", score: 0.45, basis: "delay_option_higher_uncertainty_v1" };
+    return {
+      level: "LOW",
+      score: 0.45,
+      basis: "delay_option_higher_uncertainty_v1",
+      reasons: [...baseReasons, "delay_increases_uncertainty"],
+    };
   }
 
   if (optionId === "no_action" || optionId === "irrigate_10mm") {
-    return { level: "MEDIUM", score: 0.68, basis: "formal_scenario_delta_model_v1" };
+    return {
+      level: "MEDIUM",
+      score: 0.68,
+      basis: "formal_scenario_delta_model_v1",
+      reasons: baseReasons,
+    };
   }
 
-  return { level: "HIGH", score: 0.82, basis: "formal_scenario_delta_model_v1" };
+  return {
+    level: "HIGH",
+    score: 0.82,
+    basis: "formal_scenario_delta_model_v1",
+    reasons: baseReasons,
+  };
 }
 
 function failureConditions(input: {
   option_id: IrrigationScenarioOptionV1["option_id"];
   risk_after: IrrigationScenarioRiskV1;
 }): string[] {
-  const conditions: string[] = [];
+  const conditions: string[] = [
+    "rainfall_forecast_deviation_gt_5mm",
+    "sensor_coverage_below_threshold",
+    "weather_provider_status_not_ok",
+  ];
 
   if (input.risk_after !== "NORMAL") conditions.push("PROJECTED_DEFICIT_REMAINS");
   if (input.option_id === "no_action") conditions.push("NO_IRRIGATION_APPLIED");
-  if (input.option_id === "delay_3d") conditions.push("IRRIGATION_DELAY_EXPOSURE");
-  if (input.option_id.startsWith("irrigate_")) conditions.push("EXECUTION_REQUIRED");
 
-  return conditions;
+  if (input.option_id.startsWith("irrigate_")) {
+    conditions.push("EXECUTION_REQUIRED");
+    conditions.push("actual_application_efficiency_lt_assumed");
+    conditions.push("post_irrigation_soil_response_not_observed");
+    conditions.push("irrigation_execution_not_completed");
+  }
+
+  if (input.option_id === "delay_3d") {
+    conditions.push("IRRIGATION_DELAY_EXPOSURE");
+    conditions.push("soil_moisture_declines_faster_than_expected");
+    conditions.push("forecast_window_changes_before_execution");
+  }
+
+  return Array.from(new Set(conditions));
 }
 
 function weatherCoversAsOf(weather: WeatherForecastIndexV1 | null, asOfIso: string): boolean {
@@ -261,7 +303,7 @@ function buildOption(input: {
     confidence: optionConfidence(input.option_id, riskAfter),
     failure_conditions: failureConditions({ option_id: input.option_id, risk_after: riskAfter }),
     calculation_trace: {
-      formula_version: "irrigation_scenario_delta_model_v1",
+      formula_version: "formal_irrigation_scenario_delta_model_v1",
       baseline_soil_moisture_percent: round6(input.baseline_soil_moisture_percent),
       rainfall_forecast_mm_72h: round6(input.rainfall_forecast_mm_72h),
       et0_mm_72h: round6(input.et0_mm_72h),
@@ -564,6 +606,32 @@ export async function ensureIrrigationScenarioSetIndexV1(pool: DbConn): Promise<
       updated_at timestamptz NOT NULL DEFAULT now()
     )
   `);
+
+  await pool.query(`
+    DO $
+    BEGIN
+      ALTER TABLE irrigation_scenario_set_index_v1
+        ADD CONSTRAINT irrigation_scenario_set_index_v1_options_array_check
+        CHECK (jsonb_typeof(options_json) = 'array');
+    EXCEPTION
+      WHEN duplicate_object THEN NULL;
+    END $;
+  `);
+
+  const optionsConstraintResult = await pool.query(`
+    SELECT 1
+      FROM pg_constraint
+     WHERE conrelid = 'irrigation_scenario_set_index_v1'::regclass
+       AND conname = 'irrigation_scenario_set_index_v1_options_array_check'
+  `);
+
+  if (!optionsConstraintResult.rows.length) {
+    await pool.query(`
+      ALTER TABLE irrigation_scenario_set_index_v1
+        ADD CONSTRAINT irrigation_scenario_set_index_v1_options_array_check
+        CHECK (jsonb_typeof(options_json) = 'array')
+    `);
+  }
 
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_irrigation_scenario_set_index_v1_scope_latest

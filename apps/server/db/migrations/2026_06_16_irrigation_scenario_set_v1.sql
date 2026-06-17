@@ -1,6 +1,6 @@
-﻿-- apps/server/db/migrations/2026_06_16_irrigation_scenario_set_v1.sql
--- Purpose: create H15 irrigation scenario set v1 projection table.
--- Boundary: comparison schema only; no recommendation, approval, operation, AO-ACT, report, frontend, or customer page behavior.
+-- apps/server/db/migrations/2026_06_16_irrigation_scenario_set_v1.sql
+-- Purpose: create and harden H15 irrigation_scenario_set_v1 projection index.
+-- Boundary: comparison-only projection storage; no recommendation, approval, AO-ACT, report, frontend, or customer-page behavior.
 
 CREATE TABLE IF NOT EXISTS public.irrigation_scenario_set_index_v1 (
   scenario_set_id text PRIMARY KEY,
@@ -30,6 +30,13 @@ CREATE TABLE IF NOT EXISTS public.irrigation_scenario_set_index_v1 (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE public.irrigation_scenario_set_index_v1
+  DROP CONSTRAINT IF EXISTS irrigation_scenario_set_index_v1_options_array_check;
+
+ALTER TABLE public.irrigation_scenario_set_index_v1
+  ADD CONSTRAINT irrigation_scenario_set_index_v1_options_array_check
+  CHECK (jsonb_typeof(options_json) = 'array');
 
 CREATE INDEX IF NOT EXISTS idx_irrigation_scenario_set_index_v1_scope_latest
   ON public.irrigation_scenario_set_index_v1 (tenant_id, project_id, group_id, field_id, created_at DESC);

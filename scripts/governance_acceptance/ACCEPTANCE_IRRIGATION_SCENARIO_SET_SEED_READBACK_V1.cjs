@@ -88,7 +88,28 @@ function assertOptionCommon(option, expected) {
   assert(option.risk_delta === expected.risk_delta, `${expected.option_id} risk_delta mismatch`, option);
   assert(option.confidence?.level === expected.confidence_level, `${expected.option_id} confidence level mismatch`, option);
   assert(numberEquals(option.confidence?.score, expected.confidence_score), `${expected.option_id} confidence score mismatch`, option);
+  assert(Array.isArray(option.confidence?.reasons), `${expected.option_id} confidence reasons must be array`, option);
+  const baseConfidenceReasons = ["water_state_estimate_available", "versioned_weather_forecast_available", "formal_requirement_available"];
+  for (const reason of baseConfidenceReasons) {
+    assert(option.confidence.reasons.includes(reason), `${expected.option_id} missing confidence reason ${reason}`, option);
+  }
+  if (expected.option_id === "delay_3d") {
+    assert(option.confidence.reasons.includes("delay_increases_uncertainty"), "delay_3d missing delay confidence reason", option);
+  }
   assert(Array.isArray(option.failure_conditions), `${expected.option_id} failure_conditions must be array`, option);
+  for (const condition of ["rainfall_forecast_deviation_gt_5mm", "sensor_coverage_below_threshold", "weather_provider_status_not_ok"]) {
+    assert(option.failure_conditions.includes(condition), `${expected.option_id} missing shared failure condition ${condition}`, option);
+  }
+  if (expected.option_id.startsWith("irrigate_")) {
+    for (const condition of ["actual_application_efficiency_lt_assumed", "post_irrigation_soil_response_not_observed", "irrigation_execution_not_completed"]) {
+      assert(option.failure_conditions.includes(condition), `${expected.option_id} missing irrigation failure condition ${condition}`, option);
+    }
+  }
+  if (expected.option_id === "delay_3d") {
+    for (const condition of ["soil_moisture_declines_faster_than_expected", "forecast_window_changes_before_execution"]) {
+      assert(option.failure_conditions.includes(condition), `${expected.option_id} missing delay failure condition ${condition}`, option);
+    }
+  }
   assert(numberEquals(option.assumed_irrigation_mm, expected.assumed_irrigation_mm), `${expected.option_id} assumed_irrigation_mm mismatch`, option);
   assert(numberEquals(option.effective_irrigation_mm_within_72h, expected.effective_irrigation_mm_within_72h), `${expected.option_id} effective_irrigation_mm_within_72h mismatch`, option);
   assert(option.delay_days === expected.delay_days, `${expected.option_id} delay_days mismatch`, option);
