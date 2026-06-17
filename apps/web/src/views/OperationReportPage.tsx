@@ -5,7 +5,7 @@ import { fetchOperationEnvironmentContext, type OperationEnvironmentContext } fr
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ErrorState from "../components/common/ErrorState";
 import FieldGisMap from "../components/FieldGisMap";
-import { FailSafeCustomerNotice, FormalChainSummaryCard, FormalScenarioBadge, ScenarioAcceptanceSummary, ScenarioValueMemorySummary, ZoneRollupSummary } from "../components/customer";
+import { FailSafeCustomerNotice, FormalChainSummaryCard, FormalScenarioBadge, IrrigationDecisionReportCard, ScenarioAcceptanceSummary, ScenarioValueMemorySummary, ZoneRollupSummary } from "../components/customer";
 import FieldMemoryPanel from "../components/customer/FieldMemoryPanel";
 import WeatherInterferencePanel from "../components/customer/WeatherInterferencePanel";
 import { customerTimelineStatusLabel } from "../lib/customerLabels";
@@ -1081,6 +1081,8 @@ export default function OperationReportPage(): React.ReactElement {
             </div>
           </section>
 
+          <IrrigationDecisionReportCard report={report} />
+
           <section className="operationMainSectionsGrid">
             <EvidencePackMetadataBlock report={report} />
             <OperationSpatialExecutionPanel report={report} />
@@ -1139,6 +1141,8 @@ export default function OperationReportPage(): React.ReactElement {
           <ZoneRollupSummary data={report} />
           <FailSafeCustomerNotice data={report} />
         </section>
+
+        <IrrigationDecisionReportCard report={report} />
 
         <section className="operationMainSectionsGrid">
           <EvidencePackMetadataBlock report={report} />

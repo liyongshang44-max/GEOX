@@ -21,6 +21,7 @@ import { buildPestDiseaseInspectionReportProjectionV1 } from "../services/inspec
 import { getLatestWeatherForecastIndexV1, type WeatherForecastIndexV1 } from "../projections/weather_forecast_v1.js";
 import { getLatestIrrigationRequirementIndexV1, type IrrigationRequirementIndexV1 } from "../projections/irrigation_requirement_v1.js";
 import { getIrrigationRequirementSkillInputIndexV1 } from "../projections/irrigation_requirement_skill_input_v1.js";
+import { buildIrrigationDecisionReportV1 } from "../projections/irrigation_decision_report_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; record_json: any };
@@ -927,6 +928,14 @@ export async function projectReportV1(params: {
     operationState.field_id ?? null,
     toText(latestWeatherForecast?.forecast_id),
   );
+  const irrigationDecisionReportForReport = await buildIrrigationDecisionReportV1({
+    pool,
+    tenant,
+    operation_id: operationState.operation_id ?? null,
+    operation_plan_id: operationPlanId,
+    field_id: operationState.field_id ?? null,
+    recommendation_id: operationState.recommendation_id ?? null,
+  });
   const approvalStatus = normalizeApprovalStatus(approvalDecisionFact?.record_json?.payload?.decision, Boolean(approvalRequestFact));
   const operationTitle = deriveOperationTitle(operationState.action_type ?? recommendationPayload?.suggested_action?.action_type);
   const operationStateAny: any = operationState as any;
@@ -1043,6 +1052,7 @@ export async function projectReportV1(params: {
     diagnostic_inputs: diagnosticInputs,
     weather_summary: weatherSummaryForReport,
     irrigation_requirement_summary: irrigationRequirementSummaryForReport,
+    irrigation_decision_report_v1: irrigationDecisionReportForReport,
     prescription: mergedPrescriptionForReport,
     as_executed: mergedAsExecutedForReport,
     as_applied: asAppliedForReport
@@ -1271,6 +1281,17 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
         planned_amount_source: (guardedOperationReport as any).as_executed?.planned_amount_source ?? finalRequirementAmountSource,
       };
     }
+
+    const irrigationDecisionReportForFinalResponse = await buildIrrigationDecisionReportV1({
+      pool,
+      tenant,
+      operation_id: state.operation_id ?? null,
+      operation_plan_id: toText((state as any).operation_plan_id) ?? operationId,
+      field_id: state.field_id ?? null,
+      recommendation_id: state.recommendation_id ?? null,
+    });
+
+    (guardedOperationReport as any).irrigation_decision_report_v1 = irrigationDecisionReportForFinalResponse;
 
     const payload: OperationReportSingleResponseV1 = { ok: true, operation_report_v1: guardedOperationReport as OperationReportV1 };
     return reply.send(payload);

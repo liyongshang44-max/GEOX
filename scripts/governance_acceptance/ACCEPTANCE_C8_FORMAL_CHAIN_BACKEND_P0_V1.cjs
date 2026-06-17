@@ -64,6 +64,37 @@ async function dbClient() {
   return client;
 }
 
+async function assertCustomerIrrigationDecisionReport() {
+  const r = await http('/api/v1/reports/operation/' + encodeURIComponent(FORMAL_OP) + '?tenant_id=' + encodeURIComponent(TENANT) + '&project_id=' + encodeURIComponent(PROJECT_ID) + '&group_id=' + encodeURIComponent(GROUP_ID));
+  assert(r.status === 200, 'H17 operation report request failed', httpDetail(r));
+  const decision = r.json?.operation_report_v1?.irrigation_decision_report_v1;
+  assert(decision, 'H17 irrigation_decision_report_v1 missing', r.json?.operation_report_v1);
+  assert(decision.customer_title === '灌溉决策依据', 'H17 customer title mismatch', decision);
+  assert(decision.status?.decision_status === 'RECOMMENDED', 'H17 decision status mismatch', decision.status);
+  assert(decision.status?.customer_visible_eligible === true, 'H17 customer visible mismatch', decision.status);
+  assert(decision.status?.human_approval_required === true, 'H17 approval boundary mismatch', decision.status);
+  assert(decision.status?.no_direct_execution === true, 'H17 no direct execution mismatch', decision.status);
+  assert(decision.fact_section?.sensing_window?.quality_status === 'PASS', 'H17 sensing quality mismatch', decision.fact_section?.sensing_window);
+  assert(decision.fact_section?.weather_forecast?.provider_status === 'OK', 'H17 weather provider mismatch', decision.fact_section?.weather_forecast);
+  nearly(decision.fact_section?.irrigation_requirement?.gross_irrigation_requirement_mm, 22, 'H17 gross irrigation requirement');
+  assert(decision.estimate_section?.state === 'MODERATE_DEFICIT', 'H17 water state mismatch', decision.estimate_section);
+  assert(Array.isArray(decision.scenario_section?.options) && decision.scenario_section.options.length === 5, 'H17 scenario option count mismatch', decision.scenario_section);
+  assert(decision.scenario_section?.selected_option_id === 'irrigate_22mm', 'H17 scenario selected option mismatch', decision.scenario_section);
+  assert(decision.recommendation_section?.recommendation_status === 'RECOMMENDED', 'H17 recommendation status mismatch', decision.recommendation_section);
+  nearly(decision.recommendation_section?.amount_mm, 22, 'H17 recommendation amount');
+  assert(String(decision.customer_summary?.one_liner ?? '').includes('灌溉 22mm'), 'H17 customer summary missing 22mm', decision.customer_summary);
+  const customerText = JSON.stringify({
+    customer_summary: decision.customer_summary,
+    fact_text: decision.fact_section,
+    estimate_text: decision.estimate_section?.customer_text,
+    scenario_text: decision.scenario_section?.customer_text,
+    recommendation_text: decision.recommendation_section,
+  });
+  for (const forbidden of ['field_c8_demo', 'dev_soil_c8_001', 'dev_valve_pump_c8_001', 'full_review_seed_', 'rec_c8_irrigation_001']) {
+    assert(!customerText.includes(forbidden), 'H17 customer text leaks raw token ' + forbidden, customerText);
+  }
+}
+
 async function assertRuntimeOpenApi() {
   const r = await http('/api/v1/openapi.json');
   assert(r.status === 200, 'runtime OpenAPI request failed', httpDetail(r));
@@ -906,6 +937,8 @@ async function assertFieldReport() {
     await assertFieldMemory(client);
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP operation-report');
     await assertOperationReport();
+    console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] STEP customer-irrigation-decision-report');
+    await assertCustomerIrrigationDecisionReport();
     await assertFieldReport();
     console.log('[ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1] PASS', JSON.stringify({ base_url: BASE_URL, tenant: TENANT, as_executed_id: asExecuted.as_executed_id }));
   } finally {

@@ -22,6 +22,7 @@ function mergeReportCompatibility(baseReport: any, enrichedReport: any): any {
     execution: chainExecution ? { ...(baseReport.execution ?? {}), ...chainExecution } : (baseReport.execution ?? null),
     evidence: { ...(baseReport.evidence ?? {}), ...(chainEvidence ?? {}) },
     acceptance: chainAcceptance ? { ...(baseReport.acceptance ?? {}), ...chainAcceptance } : (baseReport.acceptance ?? null),
+    irrigation_decision_report_v1: enrichedReport?.irrigation_decision_report_v1 ?? baseReport?.irrigation_decision_report_v1 ?? null,
   };
 }
 
