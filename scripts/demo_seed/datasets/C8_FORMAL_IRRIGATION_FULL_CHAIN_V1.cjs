@@ -15,6 +15,7 @@ const PENDING_OP = 'op_plan_c8_irrigation_pending_001';
 const RECOMMENDATION_ID = 'rec_c8_irrigation_001';
 const REQUIREMENT_ID = 'ireq_c8_irrigation_001';
 const WATER_STATE_ESTIMATE_ID = 'wstate_c8_irrigation_001';
+const SCENARIO_SET_ID = 'iscen_c8_irrigation_001';
 const SKILL_INPUT_ID = 'iskill_input_c8_irrigation_001';
 const PRESCRIPTION_ID = 'presc_c8_irrigation_001';
 const TASK_ID = 'act_c8_irrigation_formal_001';
@@ -47,6 +48,7 @@ const C8_FORMAL_IRRIGATION_FULL_CHAIN_V1 = Object.freeze({
   recommendation_id: RECOMMENDATION_ID,
   requirement_id: REQUIREMENT_ID,
   water_state_estimate_id: WATER_STATE_ESTIMATE_ID,
+  irrigation_scenario_set_id: SCENARIO_SET_ID,
   skill_input_id: SKILL_INPUT_ID,
   prescription_id: PRESCRIPTION_ID,
   task_id: TASK_ID,
@@ -67,7 +69,7 @@ const isC8FormalE2E = (profile) => profile === 'c8-formal-e2e';
 const isC8FormalScoped = (profile) => isC8FormalChain(profile) || isC8FormalE2E(profile);
 const payloadOf = (fact) => fact?.record_json?.payload || {};
 function baseCtx(tenant) { return { tenant_id: tenant, project_id: PROJECT_ID, group_id: GROUP_ID, chain_id: CHAIN_ID, source_lane: SOURCE_LANE, dataset_version: DATASET_VERSION }; }
-function factsByType(facts) { const out = {}; for (const fact of facts) (out[fact.record_json.type] ||= []).push(fact); for (const type of ['field_crop_season_v1','device_observation_context_v1','decision_recommendation_v1','approval_request_v1','approval_decision_v1','operation_plan_v1','operation_plan_transition_v1','ao_act_task_v0','ao_act_receipt_v1','evidence_artifact_v1','acceptance_result_v1','skill_run_v1','telemetry_observation_v1','weather_forecast_fact_v1','irrigation_requirement_skill_input_v1','irrigation_requirement_v1','water_state_estimate_v1','stage1_sensing_summary_v1','prescription_v1','value_record_v1','controlled_pilot_full_review_manifest_v1','soil_moisture_sensing_window_v1','soil_moisture_sensing_window_index_v1']) out[type] ||= []; return out; }
+function factsByType(facts) { const out = {}; for (const fact of facts) (out[fact.record_json.type] ||= []).push(fact); for (const type of ['field_crop_season_v1','device_observation_context_v1','decision_recommendation_v1','approval_request_v1','approval_decision_v1','operation_plan_v1','operation_plan_transition_v1','ao_act_task_v0','ao_act_receipt_v1','evidence_artifact_v1','acceptance_result_v1','skill_run_v1','telemetry_observation_v1','weather_forecast_fact_v1','irrigation_requirement_skill_input_v1','irrigation_requirement_v1','water_state_estimate_v1','irrigation_scenario_set_v1','stage1_sensing_summary_v1','prescription_v1','value_record_v1','controlled_pilot_full_review_manifest_v1','soil_moisture_sensing_window_v1','soil_moisture_sensing_window_index_v1']) out[type] ||= []; return out; }
 
 
 
@@ -383,6 +385,287 @@ function deriveC8IrrigationRequirementFromFormalSkillInputV1(params) {
   };
 }
 
+function c8Round1(value) {
+  return Math.round(Number(value) * 10) / 10;
+}
+
+function c8ScenarioRiskAfter(rangeMin, targetMin) {
+  if (!Number.isFinite(Number(rangeMin)) || !Number.isFinite(Number(targetMin))) return 'UNKNOWN';
+  if (Number(rangeMin) >= Number(targetMin)) return 'NORMAL';
+  if (Number(rangeMin) >= 20) return 'LIGHT_DEFICIT';
+  return 'MODERATE_DEFICIT';
+}
+
+function c8ScenarioRiskDelta(before, after) {
+  const rank = { NORMAL: 0, LIGHT_DEFICIT: 1, MODERATE_DEFICIT: 2 };
+  if (!(before in rank) || !(after in rank)) return 'UNKNOWN';
+  if (rank[after] < rank[before]) return 'IMPROVED';
+  if (rank[after] > rank[before]) return 'WORSENED';
+  return 'UNCHANGED';
+}
+
+function c8ScenarioOptionConfidence(optionId, riskAfter) {
+  const baseReasons = [
+    'water_state_estimate_available',
+    'versioned_weather_forecast_available',
+    'formal_requirement_available',
+  ];
+
+  if (riskAfter === 'UNKNOWN') return { level: 'LOW', score: 0.2, basis: 'scenario_option_unknown_risk_v1', reasons: baseReasons };
+  if (optionId === 'delay_3d') return { level: 'LOW', score: 0.45, basis: 'delay_option_higher_uncertainty_v1', reasons: [...baseReasons, 'delay_increases_uncertainty'] };
+  if (optionId === 'no_action' || optionId === 'irrigate_10mm') return { level: 'MEDIUM', score: 0.68, basis: 'formal_scenario_delta_model_v1', reasons: baseReasons };
+  return { level: 'HIGH', score: 0.82, basis: 'formal_scenario_delta_model_v1', reasons: baseReasons };
+}
+
+function c8ScenarioFailureConditions(optionId, riskAfter) {
+  const out = [
+    'rainfall_forecast_deviation_gt_5mm',
+    'sensor_coverage_below_threshold',
+    'weather_provider_status_not_ok',
+  ];
+
+  if (riskAfter !== 'NORMAL') out.push('PROJECTED_DEFICIT_REMAINS');
+  if (optionId === 'no_action') out.push('NO_IRRIGATION_APPLIED');
+
+  if (optionId.startsWith('irrigate_')) {
+    out.push('EXECUTION_REQUIRED');
+    out.push('actual_application_efficiency_lt_assumed');
+    out.push('post_irrigation_soil_response_not_observed');
+    out.push('irrigation_execution_not_completed');
+  }
+
+  if (optionId === 'delay_3d') {
+    out.push('IRRIGATION_DELAY_EXPOSURE');
+    out.push('soil_moisture_declines_faster_than_expected');
+    out.push('forecast_window_changes_before_execution');
+  }
+
+  return Array.from(new Set(out));
+}
+
+function buildC8IrrigationScenarioOptionV1(input) {
+  const rootZoneDepthMm = Number(input.root_zone_depth_mm);
+  const applicationEfficiency = Number(input.application_efficiency);
+  const rainfall = Number(input.rainfall_forecast_mm_72h);
+  const et0 = Number(input.et0_mm_72h);
+  const baseline = Number(input.baseline_soil_moisture_percent);
+  const targetMin = Number(input.target_min_soil_moisture_percent);
+  const effectiveIrrigation = Number(input.effective_irrigation_mm_within_72h);
+  const weatherDeltaPercent = ((rainfall - et0) / rootZoneDepthMm) * 100;
+  const irrigationDeltaPercent = ((effectiveIrrigation * applicationEfficiency) / rootZoneDepthMm) * 100;
+  const projectedCenter = baseline + weatherDeltaPercent + irrigationDeltaPercent;
+  const rangeMinRaw = projectedCenter - Number(input.uncertainty_margin_percent);
+  const rangeMaxRaw = projectedCenter + Number(input.uncertainty_margin_percent);
+  const riskAfter = c8ScenarioRiskAfter(rangeMinRaw, targetMin);
+
+  return {
+    option_id: input.option_id,
+    action_type: input.action_type,
+    assumed_irrigation_mm: Number(input.assumed_irrigation_mm),
+    effective_irrigation_mm_within_72h: effectiveIrrigation,
+    delay_days: Number(input.delay_days),
+    projected_soil_moisture_range: {
+      min: c8Round1(rangeMinRaw),
+      max: c8Round1(rangeMaxRaw),
+      unit: '%',
+    },
+    risk_before: input.risk_before,
+    risk_after: riskAfter,
+    risk_delta: c8ScenarioRiskDelta(input.risk_before, riskAfter),
+    confidence: c8ScenarioOptionConfidence(input.option_id, riskAfter),
+    failure_conditions: c8ScenarioFailureConditions(input.option_id, riskAfter),
+    calculation_trace: {
+      formula_version: 'formal_irrigation_scenario_delta_model_v1',
+      baseline_soil_moisture_percent: baseline,
+      rainfall_forecast_mm_72h: c8RoundQuality(rainfall),
+      et0_mm_72h: c8RoundQuality(et0),
+      root_zone_depth_mm: c8RoundQuality(rootZoneDepthMm),
+      application_efficiency: c8RoundQuality(applicationEfficiency),
+      weather_delta_percent: c8RoundQuality(weatherDeltaPercent),
+      irrigation_delta_percent: c8RoundQuality(irrigationDeltaPercent),
+      projected_center_percent: c8RoundQuality(projectedCenter),
+      uncertainty_margin_percent: Number(input.uncertainty_margin_percent),
+      rounding_policy: 'risk_before_rounding_range_min_max_rounded_1_decimal',
+    },
+  };
+}
+
+function deriveC8IrrigationScenarioSetV1(params) {
+  const waterState = params.water_state_estimate || {};
+  const requirement = params.irrigation_requirement || {};
+  const weather = params.weather_forecast || {};
+  const sensingWindow = params.sensing_window || {};
+  const requirementInputs = requirement.calculation_inputs || {};
+  const reasonCodes = [];
+  const asOf = params.created_at;
+
+  if (!waterState.estimate_id) reasonCodes.push('WATER_STATE_MISSING');
+  if (waterState.state === 'UNKNOWN') reasonCodes.push('WATER_STATE_UNKNOWN');
+  if (waterState.quality?.status !== 'ESTIMATED') reasonCodes.push('WATER_STATE_NOT_ESTIMATED');
+  if (!requirement.requirement_id) reasonCodes.push('IRRIGATION_REQUIREMENT_MISSING');
+  if (!weather.forecast_id) reasonCodes.push('WEATHER_FORECAST_MISSING');
+  if (weather.quality?.provider_status !== 'OK') reasonCodes.push('WEATHER_PROVIDER_NOT_OK');
+  if (weather.quality && weather.quality.stale === true) reasonCodes.push('WEATHER_FORECAST_STALE');
+
+  const asOfMs = Date.parse(asOf);
+  const validFromMs = Date.parse(weather.valid_from);
+  const validToMs = Date.parse(weather.valid_to);
+  if (!Number.isFinite(asOfMs) || !Number.isFinite(validFromMs) || !Number.isFinite(validToMs) || validFromMs > asOfMs || asOfMs > validToMs) {
+    reasonCodes.push('WEATHER_FORECAST_NOT_VALID_FOR_AS_OF');
+  }
+
+  if (sensingWindow.quality_status && sensingWindow.quality_status !== 'PASS') reasonCodes.push('SENSING_WINDOW_NOT_PASS');
+
+  const baseline = Number(waterState.root_zone_soil_moisture_percent);
+  const targetMin = Number(waterState.target_min_soil_moisture_percent);
+  const gross = Number(waterState.gross_irrigation_requirement_mm);
+  const rainfall = Number(weather.rainfall_forecast_mm_72h);
+  const et0 = Number(weather.et0_mm_72h);
+  const rootZoneDepthMm = Number(requirementInputs.root_zone_depth_mm);
+  const applicationEfficiency = Number(requirementInputs.application_efficiency);
+
+  if (!Number.isFinite(baseline)) reasonCodes.push('BASELINE_SOIL_MOISTURE_NOT_FINITE');
+  if (!Number.isFinite(targetMin)) reasonCodes.push('TARGET_MIN_NOT_FINITE');
+  if (!Number.isFinite(gross)) reasonCodes.push('GROSS_IRRIGATION_NOT_FINITE');
+  if (!Number.isFinite(rainfall)) reasonCodes.push('RAINFALL_NOT_FINITE');
+  if (!Number.isFinite(et0)) reasonCodes.push('ET0_NOT_FINITE');
+  if (!Number.isFinite(rootZoneDepthMm) || rootZoneDepthMm <= 0) reasonCodes.push('ROOT_ZONE_DEPTH_NOT_FINITE');
+  if (!Number.isFinite(applicationEfficiency) || applicationEfficiency <= 0) reasonCodes.push('APPLICATION_EFFICIENCY_NOT_FINITE');
+
+  const comparable = reasonCodes.length === 0;
+  const common = {
+    baseline_soil_moisture_percent: baseline,
+    target_min_soil_moisture_percent: targetMin,
+    rainfall_forecast_mm_72h: rainfall,
+    et0_mm_72h: et0,
+    root_zone_depth_mm: rootZoneDepthMm,
+    application_efficiency: applicationEfficiency,
+    risk_before: waterState.state || 'UNKNOWN',
+  };
+
+  const options = comparable ? [
+    buildC8IrrigationScenarioOptionV1({
+      option_id: 'no_action',
+      action_type: 'NO_ACTION',
+      assumed_irrigation_mm: 0,
+      effective_irrigation_mm_within_72h: 0,
+      delay_days: 0,
+      uncertainty_margin_percent: 0.8,
+      ...common,
+    }),
+    buildC8IrrigationScenarioOptionV1({
+      option_id: 'irrigate_10mm',
+      action_type: 'IRRIGATE',
+      assumed_irrigation_mm: 10,
+      effective_irrigation_mm_within_72h: 10,
+      delay_days: 0,
+      uncertainty_margin_percent: 0.8,
+      ...common,
+    }),
+    buildC8IrrigationScenarioOptionV1({
+      option_id: 'irrigate_20mm',
+      action_type: 'IRRIGATE',
+      assumed_irrigation_mm: 20,
+      effective_irrigation_mm_within_72h: 20,
+      delay_days: 0,
+      uncertainty_margin_percent: 0.8,
+      ...common,
+    }),
+    buildC8IrrigationScenarioOptionV1({
+      option_id: 'irrigate_22mm',
+      action_type: 'IRRIGATE',
+      assumed_irrigation_mm: 22,
+      effective_irrigation_mm_within_72h: 22,
+      delay_days: 0,
+      uncertainty_margin_percent: 0.8,
+      ...common,
+    }),
+    buildC8IrrigationScenarioOptionV1({
+      option_id: 'delay_3d',
+      action_type: 'DELAY_IRRIGATION',
+      assumed_irrigation_mm: 22,
+      effective_irrigation_mm_within_72h: 0,
+      delay_days: 3,
+      uncertainty_margin_percent: 1.5,
+      ...common,
+    }),
+  ] : [];
+
+  return {
+    scenario_set_id: params.scenario_set_id,
+    field_id: FIELD_ID,
+    season_id: SEASON_ID,
+    source_water_state_estimate_id: waterState.estimate_id || null,
+    source_requirement_id: requirement.requirement_id || null,
+    source_forecast_id: weather.forecast_id || null,
+    source_sensing_window_id: sensingWindow.window_id || waterState.source_sensing_window_id || null,
+    baseline_water_state: waterState.state || null,
+    baseline_soil_moisture_percent: Number.isFinite(baseline) ? baseline : null,
+    target_min_soil_moisture_percent: waterState.target_min_soil_moisture_percent ?? requirement.target_min_soil_moisture_percent ?? null,
+    target_max_soil_moisture_percent: waterState.target_max_soil_moisture_percent ?? requirement.target_max_soil_moisture_percent ?? null,
+    net_irrigation_mm: waterState.net_irrigation_mm ?? requirement.net_irrigation_mm ?? null,
+    gross_irrigation_requirement_mm: waterState.gross_irrigation_requirement_mm ?? requirement.gross_irrigation_requirement_mm ?? null,
+    options,
+    recommended_option_id: null,
+    input_refs: {
+      as_of: asOf,
+      water_state_estimate_id: waterState.estimate_id || null,
+      water_state_fact_id: params.water_state_fact_id || null,
+      sensing_window_id: sensingWindow.window_id || waterState.source_sensing_window_id || null,
+      sensing_window_fact_id: params.sensing_window_fact_id || waterState.source_sensing_window_fact_id || null,
+      weather_forecast_id: weather.forecast_id || null,
+      weather_fact_id: params.weather_fact_id || null,
+      weather_forecast_version: weather.forecast_version || null,
+      weather_provider_run_id: weather.provider_run_id || null,
+      weather_external_forecast_id: weather.external_forecast_id || null,
+      weather_valid_from: weather.valid_from || null,
+      weather_valid_to: weather.valid_to || null,
+      weather_provider_status: weather.quality?.provider_status || null,
+      requirement_id: requirement.requirement_id || null,
+      requirement_fact_id: params.requirement_fact_id || null,
+      requirement_calculation_inputs: requirementInputs,
+      root_zone_depth_mm: Number.isFinite(rootZoneDepthMm) ? rootZoneDepthMm : null,
+      application_efficiency: Number.isFinite(applicationEfficiency) ? applicationEfficiency : null,
+    },
+    evidence_refs: [
+      waterState.estimate_id,
+      sensingWindow.window_id || waterState.source_sensing_window_id,
+      weather.forecast_id,
+      requirement.requirement_id,
+      params.water_state_fact_id,
+      params.sensing_window_fact_id || waterState.source_sensing_window_fact_id,
+      params.weather_fact_id,
+      params.requirement_fact_id,
+    ].map(String).filter(Boolean),
+    derivation: {
+      derivation_type: 'formal_irrigation_scenario_set_from_h14_water_state_v1',
+      deterministic: true,
+      rule_version: 'formal_irrigation_scenario_delta_model_v1',
+      comparison_only: true,
+      no_recommendation: true,
+      recommended_option_id: null,
+      fixed_option_ids: ['no_action', 'irrigate_10mm', 'irrigate_20mm', 'irrigate_22mm', 'delay_3d'],
+      reason_codes: reasonCodes,
+      delay_3d_semantics: 'effective_irrigation_mm_within_72h_is_zero',
+    },
+    quality: {
+      status: comparable ? 'COMPARABLE' : 'UNKNOWN',
+      reason_codes: reasonCodes,
+      deterministic: true,
+    },
+    confidence: comparable ? {
+      level: 'HIGH',
+      score: 0.86,
+      basis: 'h14_water_state_high_confidence_v1',
+    } : {
+      level: 'LOW',
+      score: 0.2,
+      basis: 'scenario_set_not_comparable_when_water_state_unknown_v1',
+    },
+    created_at: params.created_at,
+  };
+}
+
 function buildC8FormalIrrigationFullChainDataset(options) {
   const { tenant, profile = 'full-review', nowMs, nowIso } = options || {};
   if (!tenant) throw new Error('tenant is required');
@@ -398,6 +681,8 @@ function buildC8FormalIrrigationFullChainDataset(options) {
   const SENSING_WINDOW_FAIL_FACT_ID = `${FACT_PREFIX}_soil_moisture_sensing_window_c8_fail_001`;
   const WATER_STATE_ESTIMATE_ID_SCOPED = `${FACT_PREFIX}_${WATER_STATE_ESTIMATE_ID}`;
   const WATER_STATE_UNKNOWN_ESTIMATE_ID = `${FACT_PREFIX}_wstate_c8_irrigation_unknown_001`;
+  const IRRIGATION_SCENARIO_SET_ID_SCOPED = `${FACT_PREFIX}_${SCENARIO_SET_ID}`;
+  const IRRIGATION_SCENARIO_UNKNOWN_SET_ID = `${FACT_PREFIX}_iscen_c8_irrigation_unknown_001`;
   const ctx = baseCtx(tenant);
   const ts = nowMs;
   const iso = nowIso;
@@ -782,6 +1067,30 @@ function buildC8FormalIrrigationFullChainDataset(options) {
     },
     created_at: iso,
   };
+  const irrigationScenarioSet = deriveC8IrrigationScenarioSetV1({
+    scenario_set_id: IRRIGATION_SCENARIO_SET_ID_SCOPED,
+    water_state_estimate: waterStateEstimate,
+    irrigation_requirement: irrigationRequirement,
+    weather_forecast: weatherForecast,
+    sensing_window: sensingWindow,
+    water_state_fact_id: `${pre}_water_state_estimate_c8_001`,
+    sensing_window_fact_id: SENSING_WINDOW_FACT_ID,
+    weather_fact_id: `${pre}_weather_forecast_c8_irrigation_001`,
+    requirement_fact_id: `${pre}_irrigation_requirement_c8_001`,
+    created_at: iso,
+  });
+  const irrigationScenarioSetUnknown = deriveC8IrrigationScenarioSetV1({
+    scenario_set_id: IRRIGATION_SCENARIO_UNKNOWN_SET_ID,
+    water_state_estimate: waterStateEstimateUnknown,
+    irrigation_requirement: irrigationRequirement,
+    weather_forecast: weatherForecast,
+    sensing_window: sensingWindowFail,
+    water_state_fact_id: `${pre}_water_state_estimate_c8_unknown_001`,
+    sensing_window_fact_id: SENSING_WINDOW_FAIL_FACT_ID,
+    weather_fact_id: `${pre}_weather_forecast_c8_irrigation_001`,
+    requirement_fact_id: `${pre}_irrigation_requirement_c8_001`,
+    created_at: iso,
+  });
   const formalRequirementAmountSource = {
     source_type: 'irrigation_requirement_v1',
     requirement_id: REQUIREMENT_ID,
@@ -808,7 +1117,7 @@ function buildC8FormalIrrigationFullChainDataset(options) {
     { fact_id: `${SENSING_WINDOW_FACT_ID}_index`, occurred_at: iso, source: SOURCE, record_json: { type: 'soil_moisture_sensing_window_index_v1', payload: { ...ctx, ...sensingWindowIndex } } },
     { fact_id: SENSING_WINDOW_FAIL_FACT_ID, occurred_at: iso, source: SOURCE, record_json: { type: 'soil_moisture_sensing_window_v1', payload: { ...ctx, ...sensingWindowFail } } },
     { fact_id: `${SENSING_WINDOW_FAIL_FACT_ID}_index`, occurred_at: iso, source: SOURCE, record_json: { type: 'soil_moisture_sensing_window_index_v1', payload: { ...ctx, ...sensingWindowFailIndex } } },
-    fact('weather_forecast_c8_irrigation_001', 'weather_forecast_fact_v1', weatherForecast), fact('weather_forecast_c8_irrigation_stale_001', 'weather_forecast_fact_v1', staleWeatherForecast), fact('irrigation_requirement_skill_input_c8_001', 'irrigation_requirement_skill_input_v1', irrigationRequirementSkillInputArtifact), fact('irrigation_requirement_c8_001', 'irrigation_requirement_v1', irrigationRequirement), fact('water_state_estimate_c8_001', 'water_state_estimate_v1', waterStateEstimate), fact('water_state_estimate_c8_unknown_001', 'water_state_estimate_v1', waterStateEstimateUnknown), ...devices.map((d) => fact(`device_context_${d[0]}`, 'device_observation_context_v1', { device_id: d[0], field_id: d[2], display_name: d[1], display_kind_text: d[4], sensing_role_text: d[5], capability_text: d[6], field_role_text: d[7], online_status: d[0] === 'dev_gateway_offline_001' ? 'OFFLINE' : 'ONLINE' })), fact('rec_c8_irrigation_001', 'decision_recommendation_v1', recommendation), fact('stage1_c8_irrigation_sensing_001', 'stage1_sensing_summary_v1', { stage1_sensing_summary_id: 'stage1_c8_irrigation_sensing_001', recommendation_id: RECOMMENDATION_ID, operation_plan_id: FORMAL_OP, operation_id: FORMAL_OP, field_id: FIELD_ID, source_lane: 'FORMAL_OPERATION', formal_trigger: true, formal_evidence_passed: true, passed: true, status: 'PASSED', is_simulated: false, metrics: { soil_moisture_percent: 18.4, forecast_rain_72h_mm: 2 } }), fact('presc_c8_irrigation_001', 'prescription_v1', { prescription_id: PRESCRIPTION_ID, recommendation_id: RECOMMENDATION_ID, requirement_id: REQUIREMENT_ID, source_requirement_id: REQUIREMENT_ID, operation_plan_id: FORMAL_OP, operation_id: FORMAL_OP, field_id: FIELD_ID, season_id: SEASON_ID, operation_type: 'IRRIGATION', action_type: 'IRRIGATION', amount: plannedIrrigationAmountMm, planned_amount: plannedIrrigationAmountMm, unit: 'mm', amount_source: formalRequirementAmountSource, status: 'AVAILABLE' }), fact('approval_c8_irrigation_001', 'approval_request_v1', { request_id: APPROVAL_ID, approval_request_id: APPROVAL_ID, recommendation_id: RECOMMENDATION_ID, operation_plan_id: FORMAL_OP, field_id: FIELD_ID, status: 'APPROVED' }), fact('approval_decision_c8_irrigation_001', 'approval_decision_v1', approvalDecision), fact(FORMAL_OP, 'operation_plan_v1', operationPlan), ...['CREATED','APPROVAL_REQUESTED','APPROVED','READY','DISPATCHED','ACKED','EXECUTED','ACCEPTANCE_REQUESTED','ACCEPTED'].map((status, i) => fact(`${FORMAL_OP}_transition_${i + 1}`, 'operation_plan_transition_v1', { operation_plan_id: FORMAL_OP, operation_id: FORMAL_OP, field_id: FIELD_ID, status, approval_request_id: APPROVAL_ID, act_task_id: TASK_ID })), fact(TASK_ID, 'ao_act_task_v0', task), fact(RECEIPT_ID, 'ao_act_receipt_v1', receipt), fact('ev_c8_irrigation_water_delivery_001', 'evidence_artifact_v1', { evidence_id: 'ev_c8_irrigation_water_delivery_001', operation_plan_id: FORMAL_OP, operation_id: FORMAL_OP, act_task_id: TASK_ID, field_id: FIELD_ID, kind: 'water_delivery_receipt', source_lane: 'FORMAL_OPERATION', formal_eligible: true, is_simulated: false, evidence_level: 'FORMAL' }), fact('ev_c8_irrigation_metric_001', 'evidence_artifact_v1', { evidence_id: 'ev_c8_irrigation_metric_001', operation_plan_id: FORMAL_OP, operation_id: FORMAL_OP, act_task_id: TASK_ID, field_id: FIELD_ID, kind: 'metric', source_lane: 'FORMAL_OPERATION', formal_eligible: true, is_simulated: false, evidence_level: 'FORMAL' }), fact(ACCEPTANCE_ID, 'acceptance_result_v1', acceptance), fact('value_c8_irrigation_formal_001', 'value_record_v1', { value_record_id: 'value_c8_irrigation_formal_001', operation_plan_id: FORMAL_OP, operation_id: FORMAL_OP, field_id: FIELD_ID, value_text: '灌溉后土壤水分回升，形成可信价值记录。', customer_visible_eligible: true })];
+    fact('weather_forecast_c8_irrigation_001', 'weather_forecast_fact_v1', weatherForecast), fact('weather_forecast_c8_irrigation_stale_001', 'weather_forecast_fact_v1', staleWeatherForecast), fact('irrigation_requirement_skill_input_c8_001', 'irrigation_requirement_skill_input_v1', irrigationRequirementSkillInputArtifact), fact('irrigation_requirement_c8_001', 'irrigation_requirement_v1', irrigationRequirement), fact('water_state_estimate_c8_001', 'water_state_estimate_v1', waterStateEstimate), fact('water_state_estimate_c8_unknown_001', 'water_state_estimate_v1', waterStateEstimateUnknown), fact('irrigation_scenario_set_c8_001', 'irrigation_scenario_set_v1', irrigationScenarioSet), fact('irrigation_scenario_set_c8_unknown_001', 'irrigation_scenario_set_v1', irrigationScenarioSetUnknown), ...devices.map((d) => fact(`device_context_${d[0]}`, 'device_observation_context_v1', { device_id: d[0], field_id: d[2], display_name: d[1], display_kind_text: d[4], sensing_role_text: d[5], capability_text: d[6], field_role_text: d[7], online_status: d[0] === 'dev_gateway_offline_001' ? 'OFFLINE' : 'ONLINE' })), fact('rec_c8_irrigation_001', 'decision_recommendation_v1', recommendation), fact('stage1_c8_irrigation_sensing_001', 'stage1_sensing_summary_v1', { stage1_sensing_summary_id: 'stage1_c8_irrigation_sensing_001', recommendation_id: RECOMMENDATION_ID, operation_plan_id: FORMAL_OP, operation_id: FORMAL_OP, field_id: FIELD_ID, source_lane: 'FORMAL_OPERATION', formal_trigger: true, formal_evidence_passed: true, passed: true, status: 'PASSED', is_simulated: false, metrics: { soil_moisture_percent: 18.4, forecast_rain_72h_mm: 2 } }), fact('presc_c8_irrigation_001', 'prescription_v1', { prescription_id: PRESCRIPTION_ID, recommendation_id: RECOMMENDATION_ID, requirement_id: REQUIREMENT_ID, source_requirement_id: REQUIREMENT_ID, operation_plan_id: FORMAL_OP, operation_id: FORMAL_OP, field_id: FIELD_ID, season_id: SEASON_ID, operation_type: 'IRRIGATION', action_type: 'IRRIGATION', amount: plannedIrrigationAmountMm, planned_amount: plannedIrrigationAmountMm, unit: 'mm', amount_source: formalRequirementAmountSource, status: 'AVAILABLE' }), fact('approval_c8_irrigation_001', 'approval_request_v1', { request_id: APPROVAL_ID, approval_request_id: APPROVAL_ID, recommendation_id: RECOMMENDATION_ID, operation_plan_id: FORMAL_OP, field_id: FIELD_ID, status: 'APPROVED' }), fact('approval_decision_c8_irrigation_001', 'approval_decision_v1', approvalDecision), fact(FORMAL_OP, 'operation_plan_v1', operationPlan), ...['CREATED','APPROVAL_REQUESTED','APPROVED','READY','DISPATCHED','ACKED','EXECUTED','ACCEPTANCE_REQUESTED','ACCEPTED'].map((status, i) => fact(`${FORMAL_OP}_transition_${i + 1}`, 'operation_plan_transition_v1', { operation_plan_id: FORMAL_OP, operation_id: FORMAL_OP, field_id: FIELD_ID, status, approval_request_id: APPROVAL_ID, act_task_id: TASK_ID })), fact(TASK_ID, 'ao_act_task_v0', task), fact(RECEIPT_ID, 'ao_act_receipt_v1', receipt), fact('ev_c8_irrigation_water_delivery_001', 'evidence_artifact_v1', { evidence_id: 'ev_c8_irrigation_water_delivery_001', operation_plan_id: FORMAL_OP, operation_id: FORMAL_OP, act_task_id: TASK_ID, field_id: FIELD_ID, kind: 'water_delivery_receipt', source_lane: 'FORMAL_OPERATION', formal_eligible: true, is_simulated: false, evidence_level: 'FORMAL' }), fact('ev_c8_irrigation_metric_001', 'evidence_artifact_v1', { evidence_id: 'ev_c8_irrigation_metric_001', operation_plan_id: FORMAL_OP, operation_id: FORMAL_OP, act_task_id: TASK_ID, field_id: FIELD_ID, kind: 'metric', source_lane: 'FORMAL_OPERATION', formal_eligible: true, is_simulated: false, evidence_level: 'FORMAL' }), fact(ACCEPTANCE_ID, 'acceptance_result_v1', acceptance), fact('value_c8_irrigation_formal_001', 'value_record_v1', { value_record_id: 'value_c8_irrigation_formal_001', operation_plan_id: FORMAL_OP, operation_id: FORMAL_OP, field_id: FIELD_ID, value_text: '灌溉后土壤水分回升，形成可信价值记录。', customer_visible_eligible: true })];
   if (!formalScoped) facts.push(fact('rec_c8_irrigation_pending_001', 'decision_recommendation_v1', { recommendation_id: 'rec_c8_irrigation_pending_001', field_id: FIELD_ID }), fact('approval_c8_irrigation_pending_001', 'approval_request_v1', { request_id: 'approval_c8_irrigation_pending_001', operation_plan_id: PENDING_OP, status: 'APPROVED' }), fact(PENDING_OP, 'operation_plan_v1', { operation_plan_id: PENDING_OP, operation_id: PENDING_OP, field_id: FIELD_ID, final_status: 'PENDING_ACCEPTANCE' }), fact('act_c8_irrigation_pending_001', 'ao_act_task_v0', { act_task_id: 'act_c8_irrigation_pending_001', operation_plan_id: PENDING_OP, field_id: FIELD_ID }), fact('receipt_c8_irrigation_pending_001', 'ao_act_receipt_v1', { receipt_id: 'receipt_c8_irrigation_pending_001', act_task_id: 'act_c8_irrigation_pending_001', operation_plan_id: PENDING_OP, status: 'executed' }), fact('acc_c8_irrigation_pending_001', 'acceptance_result_v1', { acceptance_id: 'acc_c8_irrigation_pending_001', operation_plan_id: PENDING_OP, verdict: 'PENDING', formal_acceptance: false }), fact('rec_c8_pest_inspection_pending_001', 'decision_recommendation_v1', { recommendation_id: 'rec_c8_pest_inspection_pending_001', field_id: FIELD_ID }), fact('approval_c8_pest_pending_001', 'approval_request_v1', { request_id: 'approval_c8_pest_pending_001', field_id: FIELD_ID, status: 'PENDING' }), fact('marker_aggregate_missing_location_001', 'controlled_pilot_full_review_marker_v1', { marker_id: 'aggregate_missing_location_001', scenario: 'D', source: 'aggregate', status: 'READ_ONLY' }));
   for (const observation of observations) facts.push(fact(observation.fact_id.replace(`${pre}_`, ''), 'telemetry_observation_v1', { observation_id: observation.observation_id, device_id: observation.device_id, field_id: observation.field_id, metric: observation.metric, metric_label: observation.metric_label, metric_role: observation.metric_role, diagnostic_use: observation.diagnostic_use, threshold_ref: observation.threshold_ref, operation_plan_id: FORMAL_OP, operation_id: FORMAL_OP, value_num: observation.value_num, unit: observation.unit, ts: observation.ts, observed_at: observation.observed_at, observed_at_ts_ms: observation.observed_at_ts_ms, confidence: observation.confidence, quality_flags_json: observation.quality_flags_json }));
   if (!formalE2E) for (const stage of ['before_recommendation','after_recommendation','before_dispatch','before_acceptance']) facts.push(fact(`skill_run_${stage}_001`, 'skill_run_v1', { skill_run_id: `skill_run_${stage}_001`, trigger_stage: stage, field_id: FIELD_ID, operation_plan_id: FORMAL_OP, operation_id: FORMAL_OP, skill_id: 'agronomy_irrigation_v1', version: 'v1', result_status: 'SUCCESS', error_code: 'NONE' }));
@@ -822,8 +1131,8 @@ function buildC8FormalIrrigationFullChainDataset(options) {
   const alert_event_index_v1 = formalScoped ? [] : [{ tenant_id: tenant, event_id: 'alert_dev_gateway_offline_001', rule_id: 'rule_device_offline_001', object_type: 'device', object_id: 'dev_gateway_offline_001', metric: 'heartbeat', status: 'OPEN', raised_ts_ms: ts }, { tenant_id: tenant, event_id: 'alert_aggregate_missing_location_001', rule_id: 'rule_aggregate_missing_location_001', object_type: 'aggregate', object_id: 'aggregate_missing_location_001', metric: 'location', status: 'READ_ONLY', raised_ts_ms: ts }];
   const operation_state_v1_optional = [{ tenant_id: tenant, project_id: PROJECT_ID, group_id: GROUP_ID, operation_id: FORMAL_OP, operation_plan_id: FORMAL_OP, field_id: FIELD_ID, task_id: TASK_ID, act_task_id: TASK_ID, receipt_id: RECEIPT_ID, recommendation_id: RECOMMENDATION_ID, requirement_id: REQUIREMENT_ID, prescription_id: PRESCRIPTION_ID, approval_request_id: APPROVAL_ID, planned_amount: plannedIrrigationAmountMm, planned_unit: 'mm', amount_source: formalRequirementAmountSource, final_status: 'SUCCESS', status: 'SUCCESS', action_type: 'IRRIGATION' }].concat(formalScoped ? [] : [{ tenant_id: tenant, operation_id: PENDING_OP, operation_plan_id: PENDING_OP, field_id: FIELD_ID, final_status: 'PENDING_ACCEPTANCE', status: 'PENDING_ACCEPTANCE' }]);
   const tables = { field_index_v1: fields, field_polygon_v1: polygons, device_index_v1, device_binding_index_v1, device_status_index_v1, device_capability, telemetry_index_v1: observations.map((o) => ({ tenant_id: tenant, device_id: o.device_id, metric: o.metric, ts: o.ts, value_num: o.value_num, fact_id: o.fact_id })), device_observation_index_v1: observations, soil_moisture_sensing_window_index_v1: [sensingWindowIndex, sensingWindowFailIndex], alert_event_index_v1, prescription_contract_v1, field_memory_v1_optional, approval_requests_v1: formalScoped ? [] : [{ tenant_id: tenant, request_id: 'approval_c8_pest_pending_001', approval_request_id: 'approval_c8_pest_pending_001', field_id: FIELD_ID, status: 'PENDING' }], operation_state_v1_optional, roi_ledger_v1_optional: [] };
-  const owned = { fields: ['field_c8_demo','field_1_demo','field_device_risk_demo'], devices: ['dev_soil_c8_001','dev_valve_pump_c8_001','dev_gateway_offline_001','dev_weather_station_c8_001'], operations: [FORMAL_OP, PENDING_OP], approval_requests: [APPROVAL_ID,'approval_c8_irrigation_pending_001','approval_c8_pest_pending_001'], field_memory_optional: [MEMORY_ID, 'fm_c8_technical_skill_001'], prescriptions: [PRESCRIPTION_ID], alerts: ['alert_dev_gateway_offline_001','alert_aggregate_missing_location_001'], roi_ledgers: [ROI_ID], irrigation_requirements: [REQUIREMENT_ID] };
-  const manifest = { ...ctx, seed_owned_by: SOURCE_LANE, seed_owned_ids: owned, profile, formalized_by_seed: true, field_memory_written_by_seed: false, field_memory_flow: ['acceptance_result_v1','POST /api/v1/field-memory/from-acceptance','GET /api/v1/customer/fields/field_c8_demo/memory'], field_memory_contract: { optional_rows_table: 'field_memory_v1_optional', derived_table: 'field_memory_v1', derived_endpoint: 'POST /api/v1/field-memory/from-acceptance', customer_verification_endpoint: 'GET /api/v1/customer/fields/field_c8_demo/memory' }, governance_acceptance: { static_formal_memory_retained_reason: 'Optional compatibility/projection fixture retained for export and dry-run contract review only; apply skips *_optional tables.', static_formal_memory_is_only_pass_source: false, required_formal_memory_source: 'POST /api/v1/field-memory/from-acceptance', required_customer_memory_verification: 'GET /api/v1/customer/fields/field_c8_demo/memory' }, roi_flow: ['as_executed_record_v1','AS_EXECUTED_SIGNAL','FORMAL_ACCEPTANCE'], irrigation_requirement_flow: ['telemetry_observation_v1','soil_moisture_sensing_window_v1','soil_moisture_sensing_window_index_v1','weather_forecast_fact_v1','telemetry_index_v1','device_observation_index_v1','irrigation_requirement_skill_input','irrigation_requirement_v1','irrigation_requirement_index_v1','decision_recommendation_v1','prescription_contract_v1','operation_plan_v1','ao_act_task_v0'], amount_source_chain: ['irrigation_requirement_v1.gross_irrigation_requirement_mm','decision_recommendation_v1.suggested_action.water_mm','prescription_contract_v1.operation_amount.amount','operation_plan_v1.planned_amount','ao_act_task_v0.parameters.amount_mm'], profile_scope: formalScoped ? { formal_chain_only: true, includes_pending_irrigation: false, includes_pest_pending: false, includes_offline_gateway: false, includes_aggregate_missing_location: false, includes_control_fields: false } : { formal_chain_only: false } };
+  const owned = { fields: ['field_c8_demo','field_1_demo','field_device_risk_demo'], devices: ['dev_soil_c8_001','dev_valve_pump_c8_001','dev_gateway_offline_001','dev_weather_station_c8_001'], operations: [FORMAL_OP, PENDING_OP], approval_requests: [APPROVAL_ID,'approval_c8_irrigation_pending_001','approval_c8_pest_pending_001'], field_memory_optional: [MEMORY_ID, 'fm_c8_technical_skill_001'], prescriptions: [PRESCRIPTION_ID], alerts: ['alert_dev_gateway_offline_001','alert_aggregate_missing_location_001'], roi_ledgers: [ROI_ID], irrigation_requirements: [REQUIREMENT_ID], irrigation_scenario_sets: [IRRIGATION_SCENARIO_SET_ID_SCOPED, IRRIGATION_SCENARIO_UNKNOWN_SET_ID] };
+  const manifest = { ...ctx, seed_owned_by: SOURCE_LANE, seed_owned_ids: owned, profile, formalized_by_seed: true, field_memory_written_by_seed: false, field_memory_flow: ['acceptance_result_v1','POST /api/v1/field-memory/from-acceptance','GET /api/v1/customer/fields/field_c8_demo/memory'], field_memory_contract: { optional_rows_table: 'field_memory_v1_optional', derived_table: 'field_memory_v1', derived_endpoint: 'POST /api/v1/field-memory/from-acceptance', customer_verification_endpoint: 'GET /api/v1/customer/fields/field_c8_demo/memory' }, governance_acceptance: { static_formal_memory_retained_reason: 'Optional compatibility/projection fixture retained for export and dry-run contract review only; apply skips *_optional tables.', static_formal_memory_is_only_pass_source: false, required_formal_memory_source: 'POST /api/v1/field-memory/from-acceptance', required_customer_memory_verification: 'GET /api/v1/customer/fields/field_c8_demo/memory' }, roi_flow: ['as_executed_record_v1','AS_EXECUTED_SIGNAL','FORMAL_ACCEPTANCE'], irrigation_requirement_flow: ['telemetry_observation_v1','soil_moisture_sensing_window_v1','soil_moisture_sensing_window_index_v1','weather_forecast_fact_v1','telemetry_index_v1','device_observation_index_v1','irrigation_requirement_skill_input','irrigation_requirement_v1','irrigation_requirement_index_v1','water_state_estimate_v1','water_state_estimate_index_v1','irrigation_scenario_set_v1','irrigation_scenario_set_index_v1','decision_recommendation_v1','prescription_contract_v1','operation_plan_v1','ao_act_task_v0'], amount_source_chain: ['irrigation_requirement_v1.gross_irrigation_requirement_mm','decision_recommendation_v1.suggested_action.water_mm','prescription_contract_v1.operation_amount.amount','operation_plan_v1.planned_amount','ao_act_task_v0.parameters.amount_mm'], profile_scope: formalScoped ? { formal_chain_only: true, includes_pending_irrigation: false, includes_pest_pending: false, includes_offline_gateway: false, includes_aggregate_missing_location: false, includes_control_fields: false } : { formal_chain_only: false } };
   facts.push(fact('manifest_v1', 'controlled_pilot_full_review_manifest_v1', manifest));
   const fbt = factsByType(facts);
   const roi = { roi_ledger_id: ROI_ID, operation_id: FORMAL_OP, task_id: TASK_ID, prescription_id: PRESCRIPTION_ID, as_executed_id: '<actual_as_executed_id>', formal_acceptance_id: ACCEPTANCE_ID, source_lane: 'FORMAL_ACCEPTANCE', trust_level: 'FORMAL_ACCEPTED', formal_evidence_passed: true, chain_validation_passed: true, customer_visible_value: true, roi_type: 'SOIL_MOISTURE_RESPONSE', value_kind: 'MEASURED', before_value: 18.4, after_value: 24.8, actual_value: executedIrrigationAmountMm, delta_value: 6.4 };
@@ -870,7 +1179,7 @@ function buildC8FormalIrrigationFullChainDataset(options) {
       status: 'CONFIRMED'
     }
   };
-  const formal_chain = { chain_id: CHAIN_ID, field, weather_forecast_version: weatherForecast, weather_forecast_stale_negative_fixture: staleWeatherForecast, soil_moisture_sensing_window: sensingWindow, soil_moisture_sensing_window_fail_fixture: sensingWindowFail, soil_moisture_sensing_window_negative_fixture: sensingWindowFail, boundary: polygons[0], irrigation_requirement_skill_input: irrigationRequirementSkillInputArtifact, irrigation_requirement: irrigationRequirement, water_state_estimate: waterStateEstimate, water_state_estimate_unknown_fixture: waterStateEstimateUnknown, devices: devices.filter((d) => d[0] !== 'dev_gateway_offline_001').map((d) => ({ device_id: d[0], display_name: d[1], field_id: d[2], capabilities: d[3], display_kind_text: d[4], sensing_role_text: d[5], capability_text: d[6], field_role_text: d[7] })), observations, diagnosis: recommendation.diagnosis, recommendation, prescription: prescription_contract_v1[0], approval: { request: { request_id: APPROVAL_ID }, decision: approvalDecision }, operation_plan: operationPlan, ao_act_task: task, receipt, as_executed_expected: { derivation: '/api/v1/as-executed/from-receipt', requirement_id: REQUIREMENT_ID, planned_amount: plannedIrrigationAmountMm, planned_amount_source: formalRequirementAmountSource, executed_amount: executedIrrigationAmountMm, unit: 'mm', status: 'CONFIRMED', task_id: TASK_ID, receipt_id: RECEIPT_ID, field_id: FIELD_ID }, as_applied_expected: { field_id: FIELD_ID, coverage_percent: 100 }, evidence: evidenceArtifacts, production_evidence, acceptance, roi, field_memory: formalMemory, report_expectations: { operation_report: ['diagnostic_inputs','prescription','as_executed','as_applied','production_evidence','roi_ledger','field_memory'], field_report: ['field_context','sensing_summary','decision_summary','execution_summary','value_summary','learning_summary'] } };
+  const formal_chain = { chain_id: CHAIN_ID, field, weather_forecast_version: weatherForecast, weather_forecast_stale_negative_fixture: staleWeatherForecast, soil_moisture_sensing_window: sensingWindow, soil_moisture_sensing_window_fail_fixture: sensingWindowFail, soil_moisture_sensing_window_negative_fixture: sensingWindowFail, boundary: polygons[0], irrigation_requirement_skill_input: irrigationRequirementSkillInputArtifact, irrigation_requirement: irrigationRequirement, water_state_estimate: waterStateEstimate, water_state_estimate_unknown_fixture: waterStateEstimateUnknown, irrigation_scenario_set: irrigationScenarioSet, irrigation_scenario_set_unknown_fixture: irrigationScenarioSetUnknown, devices: devices.filter((d) => d[0] !== 'dev_gateway_offline_001').map((d) => ({ device_id: d[0], display_name: d[1], field_id: d[2], capabilities: d[3], display_kind_text: d[4], sensing_role_text: d[5], capability_text: d[6], field_role_text: d[7] })), observations, diagnosis: recommendation.diagnosis, recommendation, prescription: prescription_contract_v1[0], approval: { request: { request_id: APPROVAL_ID }, decision: approvalDecision }, operation_plan: operationPlan, ao_act_task: task, receipt, as_executed_expected: { derivation: '/api/v1/as-executed/from-receipt', requirement_id: REQUIREMENT_ID, planned_amount: plannedIrrigationAmountMm, planned_amount_source: formalRequirementAmountSource, executed_amount: executedIrrigationAmountMm, unit: 'mm', status: 'CONFIRMED', task_id: TASK_ID, receipt_id: RECEIPT_ID, field_id: FIELD_ID }, as_applied_expected: { field_id: FIELD_ID, coverage_percent: 100 }, evidence: evidenceArtifacts, production_evidence, acceptance, roi, field_memory: formalMemory, report_expectations: { operation_report: ['diagnostic_inputs','prescription','as_executed','as_applied','production_evidence','roi_ledger','field_memory'], field_report: ['field_context','sensing_summary','decision_summary','execution_summary','value_summary','learning_summary'] } };
   const derived_expectations = { customer_reports: ['OVERVIEW','FIELD','OPERATION','EVIDENCE_VALUE'], customer_fields: formalScoped ? ['C8 灌溉示范田'] : ['C8 灌溉示范田','设备影响示范田'], customer_operations: formalScoped ? [FORMAL_OP] : [FORMAL_OP, PENDING_OP], operator_workbench_queues: formalScoped ? [] : ['DEVICE_OFFLINE','APPROVAL_PENDING','ACCEPTANCE_PENDING'], operator_devices_alerts: formalScoped ? [] : ['dev_gateway_offline_001','aggregate_missing_location_001'], pages_to_review: ['/customer/reports','/customer/fields/field_c8_demo','/customer/operations/op_plan_c8_irrigation_formal_001'] };
   const system_domains = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((letter, i) => ({ id: `${letter}_${['tenant','fields','boundaries','crop','devices','bindings','status','capability','observations','weather','recommendations','approvals','operation_plans','transitions','tasks','receipts','evidence','acceptance','roi_flow','field_memory','alerts','queues','reports','operations','forbidden','negative'][i]}`, data: [{ ok: true }], write_target: 'table', consumer: derived_expectations.pages_to_review, constraints: ['controlled pilot review scope'], forbidden: [] }));
   const rows = tables;
@@ -894,6 +1203,8 @@ function buildC8FormalIrrigationFullChainDataset(options) {
     requirement_id: REQUIREMENT_ID,
     water_state_estimate_id: WATER_STATE_ESTIMATE_ID_SCOPED,
     water_state_estimate_unknown_id: WATER_STATE_UNKNOWN_ESTIMATE_ID,
+    irrigation_scenario_set_id: IRRIGATION_SCENARIO_SET_ID_SCOPED,
+    irrigation_scenario_set_unknown_id: IRRIGATION_SCENARIO_UNKNOWN_SET_ID,
     skill_input_id: SKILL_INPUT_ID,
     prescription_id: PRESCRIPTION_ID,
     approval_id: APPROVAL_ID,
