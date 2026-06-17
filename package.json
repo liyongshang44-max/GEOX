@@ -1,7 +1,10 @@
 {
   "name": "geox",
   "private": true,
-  "workspaces": ["packages/*", "apps/*"],
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "devDependencies": {
     "@playwright/test": "^1.60.0",
     "@types/better-sqlite3": "^7.6.0",
@@ -114,7 +117,11 @@
     "ci:governance:irrigation-scenario-set-schema-migration": "node scripts/governance_acceptance/ACCEPTANCE_IRRIGATION_SCENARIO_SET_SCHEMA_MIGRATION_V1.cjs",
     "ci:governance:irrigation-scenario-set-seed-readback": "node scripts/governance_acceptance/ACCEPTANCE_IRRIGATION_SCENARIO_SET_SEED_READBACK_V1.cjs",
     "ci:pr18i-guarded-report-hotfix": "node scripts/check_pr18i_guarded_report_hotfix.cjs",
-    "ci:frontend:c8-customer-report-api-source": "node scripts/frontend_acceptance/ACCEPTANCE_C8_CUSTOMER_REPORT_API_SOURCE_V1.cjs"
+    "ci:frontend:c8-customer-report-api-source": "node scripts/frontend_acceptance/ACCEPTANCE_C8_CUSTOMER_REPORT_API_SOURCE_V1.cjs",
+    "ci:governance:decision-recommendation-schema-migration": "node scripts/governance_acceptance/ACCEPTANCE_DECISION_RECOMMENDATION_SCHEMA_MIGRATION_V1.cjs",
+    "ci:governance:decision-recommendation-seed-readback": "node scripts/governance_acceptance/ACCEPTANCE_DECISION_RECOMMENDATION_SEED_READBACK_V1.cjs"
   },
-  "volta": { "node": "20.11.1" }
+  "volta": {
+    "node": "20.11.1"
+  }
 }
