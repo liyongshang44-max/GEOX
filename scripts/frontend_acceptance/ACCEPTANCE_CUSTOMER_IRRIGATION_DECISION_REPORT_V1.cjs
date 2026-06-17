@@ -33,6 +33,7 @@ const labels = read('apps/web/src/lib/irrigationDecisionLabels.ts');
 const customerIndex = read('apps/web/src/components/customer/index.ts');
 const exportPagePath = path.join(ROOT, 'apps/web/src/views/CustomerReportExportPage.tsx');
 const exportPage = fs.existsSync(exportPagePath) ? fs.readFileSync(exportPagePath, 'utf8') : '';
+const exportBlocks = read('apps/web/src/components/customer/CustomerExportBlocks.tsx');
 
 assert(page.includes('IrrigationDecisionReportCard'), 'OperationReportPage must import/use IrrigationDecisionReportCard');
 assert(page.includes('<IrrigationDecisionReportCard report={report} />'), 'OperationReportPage must render H17 card from operation report');
@@ -69,5 +70,13 @@ if (exportPage) {
   assert(!exportPage.includes('decision_recommendation_index_v1'), 'export page must not fetch recommendation index directly');
   assert(!exportPage.includes('irrigation_scenario_set_index_v1'), 'export page must not fetch scenario index directly');
 }
+
+assert(exportBlocks.includes('buildIrrigationDecisionReportVm'), 'export blocks must reuse H17 irrigation decision VM');
+assert(exportBlocks.includes('OperationIrrigationDecisionExportBlock'), 'export blocks must render irrigation decision report');
+assert(exportBlocks.includes('灌溉决策依据'), 'export blocks must include irrigation decision title');
+assert(exportBlocks.includes('失败条件'), 'export blocks must export scenario failure conditions');
+assert(exportBlocks.includes('审批与执行边界'), 'export blocks must export approval and execution boundary');
+assert(!exportBlocks.includes('decision_recommendation_index_v1'), 'export blocks must not fetch recommendation index directly');
+assert(!exportBlocks.includes('irrigation_scenario_set_index_v1'), 'export blocks must not fetch scenario index directly');
 
 console.log('[' + ACCEPTANCE + '] PASS');
