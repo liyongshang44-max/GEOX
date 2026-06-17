@@ -1,5 +1,5 @@
-﻿// scripts/governance_acceptance/ACCEPTANCE_IRRIGATION_SCENARIO_SET_SEED_READBACK_V1.cjs
-// Purpose: prove H15 C8 seed projects comparable and UNKNOWN irrigation scenario sets into irrigation_scenario_set_index_v1.
+// scripts/governance_acceptance/ACCEPTANCE_IRRIGATION_SCENARIO_SET_SEED_READBACK_V1.cjs
+// Purpose: prove H15 C8 seed projects formal 5-option irrigation scenario sets into irrigation_scenario_set_index_v1.
 // Boundary: scenario comparison only; no recommendation, approval, operation plan, AO-ACT, report, frontend, or customer page behavior.
 
 const { spawnSync } = require("node:child_process");
@@ -77,6 +77,31 @@ async function readScenario(pool, scenarioSetId) {
 function getOption(row, optionId) {
   const options = Array.isArray(row.options_json) ? row.options_json : [];
   return options.find((option) => option && option.option_id === optionId);
+}
+
+function assertOptionCommon(option, expected) {
+  assert(option, `${expected.option_id} option missing`);
+  assert(option.option_id === expected.option_id, `${expected.option_id} option_id mismatch`, option);
+  assert(option.action_type === expected.action_type, `${expected.option_id} action_type mismatch`, option);
+  assert(option.risk_before === "MODERATE_DEFICIT", `${expected.option_id} risk_before mismatch`, option);
+  assert(option.risk_after === expected.risk_after, `${expected.option_id} risk_after mismatch`, option);
+  assert(option.risk_delta === expected.risk_delta, `${expected.option_id} risk_delta mismatch`, option);
+  assert(option.confidence?.level === expected.confidence_level, `${expected.option_id} confidence level mismatch`, option);
+  assert(numberEquals(option.confidence?.score, expected.confidence_score), `${expected.option_id} confidence score mismatch`, option);
+  assert(Array.isArray(option.failure_conditions), `${expected.option_id} failure_conditions must be array`, option);
+  assert(numberEquals(option.assumed_irrigation_mm, expected.assumed_irrigation_mm), `${expected.option_id} assumed_irrigation_mm mismatch`, option);
+  assert(numberEquals(option.effective_irrigation_mm_within_72h, expected.effective_irrigation_mm_within_72h), `${expected.option_id} effective_irrigation_mm_within_72h mismatch`, option);
+  assert(option.delay_days === expected.delay_days, `${expected.option_id} delay_days mismatch`, option);
+  assert(numberEquals(option.projected_soil_moisture_range?.min, expected.range_min), `${expected.option_id} range min mismatch`, option);
+  assert(numberEquals(option.projected_soil_moisture_range?.max, expected.range_max), `${expected.option_id} range max mismatch`, option);
+  assert(option.calculation_trace?.formula_version === "formal_irrigation_scenario_delta_model_v1", `${expected.option_id} formula version mismatch`, option);
+  assert(option.calculation_trace?.root_zone_depth_mm === 300, `${expected.option_id} root zone depth mismatch`, option);
+  assert(option.calculation_trace?.application_efficiency === 0.85, `${expected.option_id} application efficiency mismatch`, option);
+  assert(option.calculation_trace?.rounding_policy === "risk_before_rounding_range_min_max_rounded_1_decimal", `${expected.option_id} rounding policy mismatch`, option);
+
+  for (const condition of expected.failure_conditions) {
+    assert(option.failure_conditions.includes(condition), `${expected.option_id} missing failure condition ${condition}`, option);
+  }
 }
 
 (async () => {
@@ -180,56 +205,101 @@ function getOption(row, optionId) {
     assert(row.recommended_option_id === null, "H15 must not recommend an option", row);
     assert(row.quality_json?.status === "COMPARABLE", "quality status mismatch", row.quality_json);
     assert(row.confidence_json?.level === "HIGH", "confidence level mismatch", row.confidence_json);
-    assert(numberEquals(row.confidence_json?.score, 0.86), "confidence score mismatch", row.confidence_json);
     assert(row.source_fact_id === "full_review_seed_tenantA_irrigation_scenario_set_c8_001", "source fact mismatch", row);
 
+    assert(row.input_refs_json?.root_zone_depth_mm === 300, "root zone depth must come from requirement calculation inputs", row.input_refs_json);
+    assert(row.input_refs_json?.application_efficiency === 0.85, "application efficiency must come from requirement calculation inputs", row.input_refs_json);
+    assert(row.input_refs_json?.weather_provider_status === "OK", "weather provider status mismatch", row.input_refs_json);
+    assert(row.input_refs_json?.weather_valid_from, "weather valid_from missing", row.input_refs_json);
+    assert(row.input_refs_json?.weather_valid_to, "weather valid_to missing", row.input_refs_json);
+
     const options = Array.isArray(row.options_json) ? row.options_json : [];
-    assert(options.length === 3, "expected exactly 3 comparable scenario options", options);
+    const expectedOptionIds = ["no_action", "irrigate_10mm", "irrigate_20mm", "irrigate_22mm", "delay_3d"];
+    assert(options.length === 5, "expected exactly 5 formal scenario options", options);
+    assert(JSON.stringify(options.map((option) => option.option_id)) === JSON.stringify(expectedOptionIds), "formal option order mismatch", options);
 
-    const noIrrigation = getOption(row, "no_irrigation");
-    const irrigateNow = getOption(row, "irrigate_required_now");
-    const delay3d = getOption(row, "delay_3d");
+    const expectedOptions = [
+      {
+        option_id: "no_action",
+        action_type: "NO_ACTION",
+        assumed_irrigation_mm: 0,
+        effective_irrigation_mm_within_72h: 0,
+        delay_days: 0,
+        risk_after: "MODERATE_DEFICIT",
+        risk_delta: "UNCHANGED",
+        confidence_level: "MEDIUM",
+        confidence_score: 0.68,
+        range_min: 17.0,
+        range_max: 18.6,
+        failure_conditions: ["PROJECTED_DEFICIT_REMAINS", "NO_IRRIGATION_APPLIED"],
+      },
+      {
+        option_id: "irrigate_10mm",
+        action_type: "IRRIGATE",
+        assumed_irrigation_mm: 10,
+        effective_irrigation_mm_within_72h: 10,
+        delay_days: 0,
+        risk_after: "MODERATE_DEFICIT",
+        risk_delta: "UNCHANGED",
+        confidence_level: "MEDIUM",
+        confidence_score: 0.68,
+        range_min: 19.8,
+        range_max: 21.4,
+        failure_conditions: ["PROJECTED_DEFICIT_REMAINS", "EXECUTION_REQUIRED"],
+      },
+      {
+        option_id: "irrigate_20mm",
+        action_type: "IRRIGATE",
+        assumed_irrigation_mm: 20,
+        effective_irrigation_mm_within_72h: 20,
+        delay_days: 0,
+        risk_after: "NORMAL",
+        risk_delta: "IMPROVED",
+        confidence_level: "HIGH",
+        confidence_score: 0.82,
+        range_min: 22.6,
+        range_max: 24.2,
+        failure_conditions: ["EXECUTION_REQUIRED"],
+      },
+      {
+        option_id: "irrigate_22mm",
+        action_type: "IRRIGATE",
+        assumed_irrigation_mm: 22,
+        effective_irrigation_mm_within_72h: 22,
+        delay_days: 0,
+        risk_after: "NORMAL",
+        risk_delta: "IMPROVED",
+        confidence_level: "HIGH",
+        confidence_score: 0.82,
+        range_min: 23.2,
+        range_max: 24.8,
+        failure_conditions: ["EXECUTION_REQUIRED"],
+      },
+      {
+        option_id: "delay_3d",
+        action_type: "DELAY_IRRIGATION",
+        assumed_irrigation_mm: 22,
+        effective_irrigation_mm_within_72h: 0,
+        delay_days: 3,
+        risk_after: "MODERATE_DEFICIT",
+        risk_delta: "UNCHANGED",
+        confidence_level: "LOW",
+        confidence_score: 0.45,
+        range_min: 16.3,
+        range_max: 19.3,
+        failure_conditions: ["PROJECTED_DEFICIT_REMAINS", "IRRIGATION_DELAY_EXPOSURE"],
+      },
+    ];
 
-    assert(noIrrigation, "no_irrigation option missing", options);
-    assert(irrigateNow, "irrigate_required_now option missing", options);
-    assert(delay3d, "delay_3d option missing", options);
-
-    assert(noIrrigation.action_type === "NO_IRRIGATION", "no_irrigation action mismatch", noIrrigation);
-    assert(noIrrigation.risk_after === "MODERATE_DEFICIT", "no_irrigation risk mismatch", noIrrigation);
-    assert(numberEquals(noIrrigation.projected_soil_moisture_range?.min, 17.0), "no_irrigation range min mismatch", noIrrigation);
-    assert(numberEquals(noIrrigation.projected_soil_moisture_range?.max, 18.6), "no_irrigation range max mismatch", noIrrigation);
-
-    assert(irrigateNow.action_type === "IRRIGATE_NOW", "irrigate_now action mismatch", irrigateNow);
-    assert(irrigateNow.risk_after === "NORMAL", "irrigate_now risk mismatch", irrigateNow);
-    assert(numberEquals(irrigateNow.assumed_irrigation_mm, 22), "irrigate_now assumed amount mismatch", irrigateNow);
-    assert(numberEquals(irrigateNow.effective_irrigation_mm_within_72h, 22), "irrigate_now effective amount mismatch", irrigateNow);
-    assert(numberEquals(irrigateNow.projected_soil_moisture_range?.min, 23.2), "irrigate_now range min mismatch", irrigateNow);
-    assert(numberEquals(irrigateNow.projected_soil_moisture_range?.max, 24.8), "irrigate_now range max mismatch", irrigateNow);
-
-    assert(delay3d.action_type === "DELAY_IRRIGATION", "delay_3d action mismatch", delay3d);
-    assert(delay3d.risk_after === "MODERATE_DEFICIT", "delay_3d risk mismatch", delay3d);
-    assert(numberEquals(delay3d.assumed_irrigation_mm, 22), "delay_3d assumed amount mismatch", delay3d);
-    assert(numberEquals(delay3d.effective_irrigation_mm_within_72h, 0), "delay_3d effective amount must be zero", delay3d);
-    assert(delay3d.delay_days === 3, "delay_3d days mismatch", delay3d);
-    assert(numberEquals(delay3d.projected_soil_moisture_range?.min, 16.3), "delay_3d range min mismatch", delay3d);
-    assert(numberEquals(delay3d.projected_soil_moisture_range?.max, 19.3), "delay_3d range max mismatch", delay3d);
-
-    assert(row.input_refs_json?.weather_forecast_version && String(row.input_refs_json.weather_forecast_version).includes("c8_external_weather_provider_sample_001:"), "weather forecast version missing", row.input_refs_json);
-    assert(row.input_refs_json?.weather_provider_run_id === "provider_run_c8_irrigation_001", "provider run mismatch", row.input_refs_json);
-    assert(row.input_refs_json?.weather_external_forecast_id === "external_forecast_c8_irrigation_001", "external forecast mismatch", row.input_refs_json);
-
-    for (const expectedRef of [
-      EXPECTED_WATER_STATE_ID,
-      "sw_c8_soil_moisture_001",
-      "wf_c8_irrigation_001",
-      "ireq_c8_irrigation_001",
-      "full_review_seed_tenantA_water_state_estimate_c8_001",
-      "full_review_seed_tenantA_soil_moisture_sensing_window_c8_001",
-      "full_review_seed_tenantA_weather_forecast_c8_irrigation_001",
-      "full_review_seed_tenantA_irrigation_requirement_c8_001",
-    ]) {
-      assert(row.evidence_refs_json.includes(expectedRef), `evidence ref missing ${expectedRef}`, row.evidence_refs_json);
+    for (const expected of expectedOptions) {
+      assertOptionCommon(getOption(row, expected.option_id), expected);
     }
+
+    assert(row.derivation_json?.comparison_only === true, "scenario derivation must be comparison_only", row.derivation_json);
+    assert(row.derivation_json?.no_recommendation === true, "scenario derivation must be no_recommendation", row.derivation_json);
+    assert(row.derivation_json?.recommended_option_id === null, "scenario derivation recommended_option_id must be null", row.derivation_json);
+    assert(JSON.stringify(row.derivation_json?.fixed_option_ids) === JSON.stringify(expectedOptionIds), "fixed option ids mismatch", row.derivation_json);
+    assert(row.derivation_json?.delay_3d_semantics === "effective_irrigation_mm_within_72h_is_zero", "delay_3d semantics mismatch", row.derivation_json);
 
     const unknown = await readScenario(readPool, EXPECTED_UNKNOWN_SCENARIO_SET_ID);
 
@@ -248,9 +318,10 @@ function getOption(row, optionId) {
       tolerated_late_seed_failure: toleratedLateSeedFailure,
       scenario_set_id: row.scenario_set_id,
       options_count: options.length,
+      option_ids: options.map((option) => option.option_id),
       recommended_option_id: row.recommended_option_id,
-      delay_3d_risk_after: delay3d.risk_after,
-      delay_3d_effective_irrigation_mm_within_72h: delay3d.effective_irrigation_mm_within_72h,
+      delay_3d_risk_after: getOption(row, "delay_3d").risk_after,
+      delay_3d_effective_irrigation_mm_within_72h: getOption(row, "delay_3d").effective_irrigation_mm_within_72h,
       unknown_scenario_set_id: unknown.scenario_set_id,
       unknown_options_count: unknown.options_json.length,
       unknown_quality_status: unknown.quality_json?.status,

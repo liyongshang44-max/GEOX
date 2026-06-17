@@ -1,23 +1,25 @@
 // apps/server/src/projections/irrigation_scenario_set_v1.ts
-// Purpose: build and project H15 irrigation scenario sets from H14 water state, irrigation requirement, and weather evidence.
+// Purpose: build and project H15 formal irrigation scenario sets from H14 water state, irrigation requirement, and weather evidence.
 // Boundary: comparison only; no recommendation, approval, operation plan, AO-ACT task, frontend, or customer page behavior.
 
 import type { Pool, PoolClient } from "pg";
 import { createHash, randomUUID } from "node:crypto";
-import type { WaterStateEstimateIndexV1 } from "./water_state_estimate_v1.js";
+import type { WaterStateEstimateIndexV1, WaterStateV1 } from "./water_state_estimate_v1.js";
 import type { IrrigationRequirementIndexV1 } from "./irrigation_requirement_v1.js";
 import type { WeatherForecastIndexV1 } from "./weather_forecast_v1.js";
 import type { SoilMoistureSensingWindowIndexV1 } from "./soil_moisture_sensing_window_v1.js";
 
 export const IRRIGATION_SCENARIO_SET_INDEX_V1_TABLE = "irrigation_scenario_set_index_v1";
 
-export type IrrigationScenarioRiskAfterV1 = "NORMAL" | "LIGHT_DEFICIT" | "MODERATE_DEFICIT" | "UNKNOWN";
+export type IrrigationScenarioRiskV1 = "NORMAL" | "LIGHT_DEFICIT" | "MODERATE_DEFICIT" | "UNKNOWN";
+
+export type IrrigationScenarioRiskDeltaV1 = "IMPROVED" | "UNCHANGED" | "WORSENED" | "UNKNOWN";
 
 export type IrrigationScenarioQualityStatusV1 = "COMPARABLE" | "UNKNOWN";
 
 export type IrrigationScenarioOptionV1 = {
-  option_id: string;
-  action_type: "NO_IRRIGATION" | "IRRIGATE_NOW" | "DELAY_IRRIGATION";
+  option_id: "no_action" | "irrigate_10mm" | "irrigate_20mm" | "irrigate_22mm" | "delay_3d";
+  action_type: "NO_ACTION" | "IRRIGATE" | "DELAY_IRRIGATION";
   assumed_irrigation_mm: number;
   effective_irrigation_mm_within_72h: number;
   delay_days: number;
@@ -26,7 +28,15 @@ export type IrrigationScenarioOptionV1 = {
     max: number | null;
     unit: "%";
   };
-  risk_after: IrrigationScenarioRiskAfterV1;
+  risk_before: IrrigationScenarioRiskV1;
+  risk_after: IrrigationScenarioRiskV1;
+  risk_delta: IrrigationScenarioRiskDeltaV1;
+  confidence: {
+    level: "HIGH" | "MEDIUM" | "LOW";
+    score: number;
+    basis: string;
+  };
+  failure_conditions: string[];
   calculation_trace: Record<string, unknown>;
 };
 
@@ -148,15 +158,72 @@ function stableScenarioSetId(input: {
   return "iscen_" + createHash("sha256").update(raw).digest("hex").slice(0, 24);
 }
 
-function riskFromRangeMin(rangeMin: number | null, targetMin: number | null): IrrigationScenarioRiskAfterV1 {
+function riskFromRangeMin(rangeMin: number | null, targetMin: number | null): IrrigationScenarioRiskV1 {
   if (rangeMin == null || targetMin == null) return "UNKNOWN";
   if (rangeMin >= targetMin) return "NORMAL";
   if (rangeMin >= 20) return "LIGHT_DEFICIT";
   return "MODERATE_DEFICIT";
 }
 
+function riskRank(risk: IrrigationScenarioRiskV1): number | null {
+  if (risk === "NORMAL") return 0;
+  if (risk === "LIGHT_DEFICIT") return 1;
+  if (risk === "MODERATE_DEFICIT") return 2;
+  return null;
+}
+
+function riskDelta(before: IrrigationScenarioRiskV1, after: IrrigationScenarioRiskV1): IrrigationScenarioRiskDeltaV1 {
+  const beforeRank = riskRank(before);
+  const afterRank = riskRank(after);
+  if (beforeRank == null || afterRank == null) return "UNKNOWN";
+  if (afterRank < beforeRank) return "IMPROVED";
+  if (afterRank > beforeRank) return "WORSENED";
+  return "UNCHANGED";
+}
+
+function optionConfidence(optionId: IrrigationScenarioOptionV1["option_id"], riskAfter: IrrigationScenarioRiskV1): IrrigationScenarioOptionV1["confidence"] {
+  if (riskAfter === "UNKNOWN") {
+    return { level: "LOW", score: 0.2, basis: "scenario_option_unknown_risk_v1" };
+  }
+
+  if (optionId === "delay_3d") {
+    return { level: "LOW", score: 0.45, basis: "delay_option_higher_uncertainty_v1" };
+  }
+
+  if (optionId === "no_action" || optionId === "irrigate_10mm") {
+    return { level: "MEDIUM", score: 0.68, basis: "formal_scenario_delta_model_v1" };
+  }
+
+  return { level: "HIGH", score: 0.82, basis: "formal_scenario_delta_model_v1" };
+}
+
+function failureConditions(input: {
+  option_id: IrrigationScenarioOptionV1["option_id"];
+  risk_after: IrrigationScenarioRiskV1;
+}): string[] {
+  const conditions: string[] = [];
+
+  if (input.risk_after !== "NORMAL") conditions.push("PROJECTED_DEFICIT_REMAINS");
+  if (input.option_id === "no_action") conditions.push("NO_IRRIGATION_APPLIED");
+  if (input.option_id === "delay_3d") conditions.push("IRRIGATION_DELAY_EXPOSURE");
+  if (input.option_id.startsWith("irrigate_")) conditions.push("EXECUTION_REQUIRED");
+
+  return conditions;
+}
+
+function weatherCoversAsOf(weather: WeatherForecastIndexV1 | null, asOfIso: string): boolean {
+  if (!weather) return false;
+
+  const asOfMs = Date.parse(asOfIso);
+  const validFromMs = Date.parse(weather.valid_from);
+  const validToMs = Date.parse(weather.valid_to);
+
+  if (!Number.isFinite(asOfMs) || !Number.isFinite(validFromMs) || !Number.isFinite(validToMs)) return false;
+  return validFromMs <= asOfMs && asOfMs <= validToMs;
+}
+
 function buildOption(input: {
-  option_id: string;
+  option_id: IrrigationScenarioOptionV1["option_id"];
   action_type: IrrigationScenarioOptionV1["action_type"];
   assumed_irrigation_mm: number;
   effective_irrigation_mm_within_72h: number;
@@ -168,12 +235,14 @@ function buildOption(input: {
   root_zone_depth_mm: number;
   application_efficiency: number;
   uncertainty_margin_percent: number;
+  risk_before: IrrigationScenarioRiskV1;
 }): IrrigationScenarioOptionV1 {
   const weatherDeltaPercent = (input.rainfall_forecast_mm_72h - input.et0_mm_72h) / input.root_zone_depth_mm * 100;
   const irrigationDeltaPercent = input.effective_irrigation_mm_within_72h * input.application_efficiency / input.root_zone_depth_mm * 100;
   const center = input.baseline_soil_moisture_percent + weatherDeltaPercent + irrigationDeltaPercent;
   const rangeMinRaw = center - input.uncertainty_margin_percent;
   const rangeMaxRaw = center + input.uncertainty_margin_percent;
+  const riskAfter = riskFromRangeMin(rangeMinRaw, input.target_min_soil_moisture_percent);
 
   return {
     option_id: input.option_id,
@@ -186,15 +255,23 @@ function buildOption(input: {
       max: round1(rangeMaxRaw),
       unit: "%",
     },
-    risk_after: riskFromRangeMin(rangeMinRaw, input.target_min_soil_moisture_percent),
+    risk_before: input.risk_before,
+    risk_after: riskAfter,
+    risk_delta: riskDelta(input.risk_before, riskAfter),
+    confidence: optionConfidence(input.option_id, riskAfter),
+    failure_conditions: failureConditions({ option_id: input.option_id, risk_after: riskAfter }),
     calculation_trace: {
       formula_version: "irrigation_scenario_delta_model_v1",
       baseline_soil_moisture_percent: round6(input.baseline_soil_moisture_percent),
+      rainfall_forecast_mm_72h: round6(input.rainfall_forecast_mm_72h),
+      et0_mm_72h: round6(input.et0_mm_72h),
+      root_zone_depth_mm: round6(input.root_zone_depth_mm),
+      application_efficiency: round6(input.application_efficiency),
       weather_delta_percent: round6(weatherDeltaPercent),
       irrigation_delta_percent: round6(irrigationDeltaPercent),
       projected_center_percent: round6(center),
       uncertainty_margin_percent: input.uncertainty_margin_percent,
-      rounding_policy: "range_min_max_rounded_to_1_decimal_after_risk_classification",
+      rounding_policy: "risk_before_rounding_range_min_max_rounded_to_1_decimal",
     },
   };
 }
@@ -240,19 +317,24 @@ export function buildIrrigationScenarioSetV1(input: {
   const requirement = input.irrigationRequirement;
   const weather = input.weatherForecast;
   const sensingWindow = input.sensingWindow;
+  const asOfIso = isoOrNow(input.created_at ?? waterState?.created_at ?? weather?.generated_at);
 
   const sourceWaterStateId = textOrNull(waterState?.estimate_id);
   const sourceRequirementId = textOrNull(requirement?.requirement_id ?? waterState?.source_requirement_id);
   const sourceForecastId = textOrNull(weather?.forecast_id ?? waterState?.source_forecast_id ?? requirement?.source_forecast_id);
   const sourceSensingWindowId = textOrNull(sensingWindow?.window_id ?? waterState?.source_sensing_window_id);
 
+  const requirementInputs = parseJsonObject(requirement?.calculation_inputs);
   const reasonCodes: string[] = [];
 
   if (!waterState) reasonCodes.push("WATER_STATE_MISSING");
   if (waterState && waterState.state === "UNKNOWN") reasonCodes.push("WATER_STATE_UNKNOWN");
+  if (waterState && waterState.quality?.status !== "ESTIMATED") reasonCodes.push("WATER_STATE_NOT_ESTIMATED");
   if (!requirement) reasonCodes.push("IRRIGATION_REQUIREMENT_MISSING");
   if (!weather) reasonCodes.push("WEATHER_FORECAST_MISSING");
+  if (weather && weather.quality?.provider_status !== "OK") reasonCodes.push("WEATHER_PROVIDER_NOT_OK");
   if (weather?.quality?.stale === true) reasonCodes.push("WEATHER_FORECAST_STALE");
+  if (weather && !weatherCoversAsOf(weather, asOfIso)) reasonCodes.push("WEATHER_FORECAST_NOT_VALID_FOR_AS_OF");
   if (!sensingWindow) reasonCodes.push("SENSING_WINDOW_MISSING");
   if (sensingWindow && sensingWindow.quality_status !== "PASS") reasonCodes.push("SENSING_WINDOW_NOT_PASS");
 
@@ -263,64 +345,80 @@ export function buildIrrigationScenarioSetV1(input: {
   const grossIrrigation = numberOrNull(waterState?.gross_irrigation_requirement_mm ?? requirement?.gross_irrigation_requirement_mm ?? requirement?.gross_irrigation_mm);
   const rainfall = numberOrNull(weather?.rainfall_forecast_mm_72h ?? requirement?.rainfall_forecast_mm_72h);
   const et0 = numberOrNull(weather?.et0_mm_72h);
+  const rootZoneDepthMm = numberOrNull(requirementInputs.root_zone_depth_mm);
+  const applicationEfficiency = numberOrNull(requirementInputs.application_efficiency);
 
   if (baselineSoil == null) reasonCodes.push("BASELINE_SOIL_MOISTURE_NOT_FINITE");
   if (targetMin == null) reasonCodes.push("TARGET_MIN_NOT_FINITE");
   if (grossIrrigation == null) reasonCodes.push("GROSS_IRRIGATION_NOT_FINITE");
   if (rainfall == null) reasonCodes.push("RAINFALL_NOT_FINITE");
   if (et0 == null) reasonCodes.push("ET0_NOT_FINITE");
+  if (rootZoneDepthMm == null || rootZoneDepthMm <= 0) reasonCodes.push("ROOT_ZONE_DEPTH_NOT_FINITE");
+  if (applicationEfficiency == null || applicationEfficiency <= 0) reasonCodes.push("APPLICATION_EFFICIENCY_NOT_FINITE");
 
   const status: IrrigationScenarioQualityStatusV1 = reasonCodes.length ? "UNKNOWN" : "COMPARABLE";
   const options: IrrigationScenarioOptionV1[] = [];
+  const baselineRisk = (waterState?.state ?? "UNKNOWN") as WaterStateV1;
 
   if (status === "COMPARABLE") {
-    const rootZoneDepthMm = 300;
-    const applicationEfficiency = 0.85;
-    const gross = grossIrrigation!;
+    const common = {
+      baseline_soil_moisture_percent: baselineSoil!,
+      target_min_soil_moisture_percent: targetMin!,
+      rainfall_forecast_mm_72h: rainfall!,
+      et0_mm_72h: et0!,
+      root_zone_depth_mm: rootZoneDepthMm!,
+      application_efficiency: applicationEfficiency!,
+      risk_before: baselineRisk as IrrigationScenarioRiskV1,
+    };
 
     options.push(buildOption({
-      option_id: "no_irrigation",
-      action_type: "NO_IRRIGATION",
+      option_id: "no_action",
+      action_type: "NO_ACTION",
       assumed_irrigation_mm: 0,
       effective_irrigation_mm_within_72h: 0,
       delay_days: 0,
-      baseline_soil_moisture_percent: baselineSoil!,
-      target_min_soil_moisture_percent: targetMin!,
-      rainfall_forecast_mm_72h: rainfall!,
-      et0_mm_72h: et0!,
-      root_zone_depth_mm: rootZoneDepthMm,
-      application_efficiency: applicationEfficiency,
       uncertainty_margin_percent: 0.8,
+      ...common,
     }));
 
     options.push(buildOption({
-      option_id: "irrigate_required_now",
-      action_type: "IRRIGATE_NOW",
-      assumed_irrigation_mm: gross,
-      effective_irrigation_mm_within_72h: gross,
+      option_id: "irrigate_10mm",
+      action_type: "IRRIGATE",
+      assumed_irrigation_mm: 10,
+      effective_irrigation_mm_within_72h: 10,
       delay_days: 0,
-      baseline_soil_moisture_percent: baselineSoil!,
-      target_min_soil_moisture_percent: targetMin!,
-      rainfall_forecast_mm_72h: rainfall!,
-      et0_mm_72h: et0!,
-      root_zone_depth_mm: rootZoneDepthMm,
-      application_efficiency: applicationEfficiency,
       uncertainty_margin_percent: 0.8,
+      ...common,
+    }));
+
+    options.push(buildOption({
+      option_id: "irrigate_20mm",
+      action_type: "IRRIGATE",
+      assumed_irrigation_mm: 20,
+      effective_irrigation_mm_within_72h: 20,
+      delay_days: 0,
+      uncertainty_margin_percent: 0.8,
+      ...common,
+    }));
+
+    options.push(buildOption({
+      option_id: "irrigate_22mm",
+      action_type: "IRRIGATE",
+      assumed_irrigation_mm: 22,
+      effective_irrigation_mm_within_72h: 22,
+      delay_days: 0,
+      uncertainty_margin_percent: 0.8,
+      ...common,
     }));
 
     options.push(buildOption({
       option_id: "delay_3d",
       action_type: "DELAY_IRRIGATION",
-      assumed_irrigation_mm: gross,
+      assumed_irrigation_mm: 22,
       effective_irrigation_mm_within_72h: 0,
       delay_days: 3,
-      baseline_soil_moisture_percent: baselineSoil!,
-      target_min_soil_moisture_percent: targetMin!,
-      rainfall_forecast_mm_72h: rainfall!,
-      et0_mm_72h: et0!,
-      root_zone_depth_mm: rootZoneDepthMm,
-      application_efficiency: applicationEfficiency,
       uncertainty_margin_percent: 1.5,
+      ...common,
     }));
   }
 
@@ -354,6 +452,7 @@ export function buildIrrigationScenarioSetV1(input: {
     options,
     recommended_option_id: null,
     input_refs: {
+      as_of: asOfIso,
       water_state_estimate_id: sourceWaterStateId,
       water_state_fact_id: textOrNull(waterState?.source_fact_id),
       sensing_window_id: sourceSensingWindowId,
@@ -363,8 +462,14 @@ export function buildIrrigationScenarioSetV1(input: {
       weather_forecast_version: textOrNull(weather?.forecast_version ?? waterState?.input_refs?.weather_forecast_version),
       weather_provider_run_id: textOrNull(weather?.provider_run_id ?? waterState?.input_refs?.weather_provider_run_id),
       weather_external_forecast_id: textOrNull(weather?.external_forecast_id ?? waterState?.input_refs?.weather_external_forecast_id),
+      weather_valid_from: textOrNull(weather?.valid_from),
+      weather_valid_to: textOrNull(weather?.valid_to),
+      weather_provider_status: textOrNull(weather?.quality?.provider_status),
       requirement_id: sourceRequirementId,
       requirement_fact_id: textOrNull(requirement?.source_fact_id ?? waterState?.source_requirement_fact_id),
+      requirement_calculation_inputs: requirementInputs,
+      root_zone_depth_mm: rootZoneDepthMm,
+      application_efficiency: applicationEfficiency,
     },
     evidence_refs: [
       sourceWaterStateId,
@@ -377,12 +482,13 @@ export function buildIrrigationScenarioSetV1(input: {
       textOrNull(requirement?.source_fact_id ?? waterState?.source_requirement_fact_id),
     ].filter((value): value is string => Boolean(value)),
     derivation: {
-      derivation_type: "irrigation_scenario_set_from_h14_water_state_v1",
+      derivation_type: "formal_irrigation_scenario_set_from_h14_water_state_v1",
       deterministic: true,
-      rule_version: "irrigation_scenario_delta_model_v1",
+      rule_version: "formal_irrigation_scenario_delta_model_v1",
       comparison_only: true,
       no_recommendation: true,
       recommended_option_id: null,
+      fixed_option_ids: ["no_action", "irrigate_10mm", "irrigate_20mm", "irrigate_22mm", "delay_3d"],
       reason_codes: reasonCodes,
       delay_3d_semantics: "effective_irrigation_mm_within_72h_is_zero",
     },
@@ -392,7 +498,7 @@ export function buildIrrigationScenarioSetV1(input: {
       deterministic: true,
     },
     confidence: confidenceFromWaterState(waterState, status),
-    created_at: isoOrNow(input.created_at),
+    created_at: asOfIso,
   };
 }
 
