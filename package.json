@@ -119,7 +119,9 @@
     "ci:pr18i-guarded-report-hotfix": "node scripts/check_pr18i_guarded_report_hotfix.cjs",
     "ci:frontend:c8-customer-report-api-source": "node scripts/frontend_acceptance/ACCEPTANCE_C8_CUSTOMER_REPORT_API_SOURCE_V1.cjs",
     "ci:governance:decision-recommendation-schema-migration": "node scripts/governance_acceptance/ACCEPTANCE_DECISION_RECOMMENDATION_SCHEMA_MIGRATION_V1.cjs",
-    "ci:governance:decision-recommendation-seed-readback": "node scripts/governance_acceptance/ACCEPTANCE_DECISION_RECOMMENDATION_SEED_READBACK_V1.cjs"
+    "ci:governance:decision-recommendation-seed-readback": "node scripts/governance_acceptance/ACCEPTANCE_DECISION_RECOMMENDATION_SEED_READBACK_V1.cjs",
+    "ci:governance:irrigation-decision-report": "node scripts/governance_acceptance/ACCEPTANCE_IRRIGATION_DECISION_REPORT_V1.cjs",
+    "ci:frontend:customer-irrigation-decision-report": "node scripts/frontend_acceptance/ACCEPTANCE_CUSTOMER_IRRIGATION_DECISION_REPORT_V1.cjs"
   },
   "volta": {
     "node": "20.11.1"

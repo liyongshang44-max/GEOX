@@ -17,3 +17,5 @@ export type { CustomerTechnicalFoldoutVm } from "./CustomerTechnicalFoldout";
 export { default as CustomerExportButton } from "./CustomerExportButton";
 export type { CustomerExportButtonVm } from "./CustomerExportButton";
 export { FormalScenarioBadge, FormalChainSummaryCard, ScenarioAcceptanceSummary, ScenarioValueMemorySummary, ZoneRollupSummary, FailSafeCustomerNotice } from "./FormalScenarioCards";
+
+export { IrrigationDecisionReportCard } from "./IrrigationDecisionReportCard";

@@ -2,6 +2,7 @@ import { evaluateRisk } from "../domain/risk_engine.js";
 import type { FertilizationReportProjectionV1 } from "../services/fertilization/fertilization_projection_v1.js";
 import type { PestDiseaseInspectionReportProjectionV1 } from "../services/inspection/pest_disease_inspection_projection_v1.js";
 import type { OperationStateV1 } from "./operation_state_v1.js";
+import type { IrrigationDecisionReportV1 } from "./irrigation_decision_report_v1.js";
 import { applyDeviceAnomalyReportGuardV1 } from "./device_anomaly_report_v1.js";
 
 export type OperationReportRiskLevel = "LOW" | "MEDIUM" | "HIGH";
@@ -199,6 +200,7 @@ export type OperationReportV1 = {
     };
     narrative: string | null;
   } | null;
+  irrigation_decision_report_v1?: IrrigationDecisionReportV1 | null;
   customer_memory_summary?: {
     title: string;
     learned: string | null;
