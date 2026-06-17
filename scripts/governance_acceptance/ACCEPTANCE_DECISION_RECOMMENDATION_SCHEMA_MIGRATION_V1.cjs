@@ -86,6 +86,22 @@ function assert(condition, message, detail) {
     `);
     assert(constraints.rows.length === 2, 'required constraints missing', constraints.rows);
 
+    const primaryKey = await client.query(`
+      SELECT a.attname
+        FROM pg_index i
+        JOIN pg_attribute a
+          ON a.attrelid = i.indrelid
+         AND a.attnum = ANY(i.indkey)
+       WHERE i.indrelid = 'public.decision_recommendation_index_v1'::regclass
+         AND i.indisprimary
+       ORDER BY array_position(i.indkey, a.attnum)
+    `);
+    assert(
+      primaryKey.rows.map((row) => row.attname).join(', ') === 'tenant_id, project_id, group_id, recommendation_id',
+      'primary key must be tenant/project/group scoped',
+      primaryKey.rows
+    );
+
     const indexes = await client.query(`
       SELECT indexname
         FROM pg_indexes

@@ -3,7 +3,7 @@
 -- Boundary: projection/index only; no approval, operation plan, AO-ACT, report API, frontend, or customer-page behavior.
 
 CREATE TABLE IF NOT EXISTS public.decision_recommendation_index_v1 (
-  recommendation_id text PRIMARY KEY,
+  recommendation_id text NOT NULL,
   tenant_id text NOT NULL,
   project_id text NOT NULL,
   group_id text NOT NULL,
@@ -30,6 +30,13 @@ CREATE TABLE IF NOT EXISTS public.decision_recommendation_index_v1 (
   CONSTRAINT decision_recommendation_index_v1_unknown_empty_action_check
     CHECK (recommendation_status <> 'UNKNOWN' OR (selected_scenario_option_id IS NULL AND suggested_action_json IS NULL))
 );
+
+ALTER TABLE public.decision_recommendation_index_v1
+  DROP CONSTRAINT IF EXISTS decision_recommendation_index_v1_pkey;
+
+ALTER TABLE public.decision_recommendation_index_v1
+  ADD CONSTRAINT decision_recommendation_index_v1_pkey
+  PRIMARY KEY (tenant_id, project_id, group_id, recommendation_id);
 
 CREATE INDEX IF NOT EXISTS idx_decision_recommendation_index_v1_scope_latest
   ON public.decision_recommendation_index_v1 (tenant_id, project_id, group_id, field_id, created_at DESC);
