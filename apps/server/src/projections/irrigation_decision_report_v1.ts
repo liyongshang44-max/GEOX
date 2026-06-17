@@ -193,11 +193,78 @@ async function one(pool: Pool, sql: string, params: unknown[]): Promise<any | nu
   }
 }
 
-async function readRecommendation(pool: Pool, tenant: TenantTriple, fieldId: string | null, recommendationId: string | null): Promise<any | null> {
+function deepText(payload: any, path: string[]): string | null {
+  let current = payload;
+  for (const key of path) current = current?.[key];
+  return text(current);
+}
+
+function extractRecommendationIdFromPayload(payload: any): string | null {
+  return text(payload?.recommendation_id)
+    ?? text(payload?.decision_recommendation_id)
+    ?? text(payload?.source_recommendation_id)
+    ?? deepText(payload, ["input_refs", "recommendation_id"])
+    ?? deepText(payload, ["source_refs", "recommendation_id"])
+    ?? deepText(payload, ["recommendation_ref", "ref_id"])
+    ?? deepText(payload, ["recommendation", "ref_id"])
+    ?? deepText(payload, ["approval_request", "recommendation_id"])
+    ?? deepText(payload, ["links", "recommendation_id"])
+    ?? null;
+}
+
+async function readOperationPlanPayload(pool: Pool, tenant: TenantTriple, operationPlanId: string | null): Promise<any | null> {
+  if (!operationPlanId) return null;
+
+  const indexedPlan = await one(
+    pool,
+    "SELECT * FROM operation_plan_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND operation_plan_id=$4 LIMIT 1",
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, operationPlanId],
+  );
+  if (indexedPlan) return indexedPlan;
+
+  const factPlan = await one(
+    pool,
+    "SELECT record_json->'payload' AS payload FROM facts WHERE record_json->>'type'='operation_plan_v1' AND record_json->'payload'->>'tenant_id'=$1 AND record_json->'payload'->>'project_id'=$2 AND record_json->'payload'->>'group_id'=$3 AND (record_json->'payload'->>'operation_plan_id'=$4 OR record_json->'payload'->>'operation_id'=$4) ORDER BY occurred_at DESC LIMIT 1",
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, operationPlanId],
+  );
+  return factPlan?.payload ?? null;
+}
+
+async function readApprovalRequestPayload(pool: Pool, tenant: TenantTriple, approvalRequestId: string | null): Promise<any | null> {
+  if (!approvalRequestId) return null;
+
+  const approval = await one(
+    pool,
+    "SELECT record_json->'payload' AS payload FROM facts WHERE record_json->>'type'='approval_request_v1' AND record_json->'payload'->>'tenant_id'=$1 AND record_json->'payload'->>'project_id'=$2 AND record_json->'payload'->>'group_id'=$3 AND (record_json->'payload'->>'approval_request_id'=$4 OR record_json->'payload'->>'request_id'=$4) ORDER BY occurred_at DESC LIMIT 1",
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, approvalRequestId],
+  );
+  return approval?.payload ?? null;
+}
+
+async function resolveOperationBoundRecommendationId(pool: Pool, tenant: TenantTriple, operationPlanId: string | null, explicitRecommendationId: string | null): Promise<string | null> {
+  if (explicitRecommendationId) return explicitRecommendationId;
+  if (!operationPlanId) return null;
+
+  const operationPlan = await readOperationPlanPayload(pool, tenant, operationPlanId);
+  const directRecommendationId = extractRecommendationIdFromPayload(operationPlan);
+  if (directRecommendationId) return directRecommendationId;
+
+  const approvalRequestId = text(operationPlan?.approval_request_id)
+    ?? text(operationPlan?.request_id)
+    ?? deepText(operationPlan, ["approval_request", "approval_request_id"])
+    ?? deepText(operationPlan, ["input_refs", "approval_request_id"])
+    ?? null;
+
+  const approvalRequest = await readApprovalRequestPayload(pool, tenant, approvalRequestId);
+  return extractRecommendationIdFromPayload(approvalRequest);
+}
+
+async function readRecommendation(pool: Pool, tenant: TenantTriple, recommendationId: string | null): Promise<any | null> {
+  if (!recommendationId) return null;
   return one(
     pool,
-    "SELECT * FROM decision_recommendation_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND ($4::text IS NULL OR recommendation_id=$4) AND ($5::text IS NULL OR field_id=$5) ORDER BY created_at DESC, recommendation_id DESC LIMIT 1",
-    [tenant.tenant_id, tenant.project_id, tenant.group_id, recommendationId, fieldId],
+    "SELECT * FROM decision_recommendation_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND recommendation_id=$4 LIMIT 1",
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, recommendationId],
   );
 }
 
@@ -218,7 +285,10 @@ export async function buildIrrigationDecisionReportV1(params: {
   field_id: string | null;
   recommendation_id: string | null;
 }): Promise<IrrigationDecisionReportV1 | null> {
-  const recommendation = await readRecommendation(params.pool, params.tenant, params.field_id, params.recommendation_id);
+  const boundRecommendationId = await resolveOperationBoundRecommendationId(params.pool, params.tenant, params.operation_plan_id, params.recommendation_id);
+  if (!boundRecommendationId) return null;
+
+  const recommendation = await readRecommendation(params.pool, params.tenant, boundRecommendationId);
   if (!recommendation) return null;
 
   const recommendationStatus = String(recommendation.recommendation_status ?? "UNKNOWN").toUpperCase();
@@ -244,9 +314,21 @@ export async function buildIrrigationDecisionReportV1(params: {
   const scenarioOptions = arr(scenarioSet?.options_json);
   const selectedOption = scenarioOptions.find((option) => text(option?.option_id) === selectedOptionId) ?? null;
   const amountMm = num(suggestedAction.amount_mm ?? suggestedAction.water_mm ?? scenarioSummary.assumed_irrigation_mm ?? selectedOption?.assumed_irrigation_mm);
-  const recommendable = recommendationStatus === "RECOMMENDED" && selectedOptionId != null && amountMm != null;
+
+  const missingJoinedReasons = [
+    waterState ? null : "WATER_STATE_ESTIMATE_MISSING",
+    scenarioSet ? null : "IRRIGATION_SCENARIO_SET_MISSING",
+    requirement ? null : "IRRIGATION_REQUIREMENT_MISSING",
+    weather ? null : "WEATHER_FORECAST_MISSING",
+    sensing ? null : "SENSING_WINDOW_MISSING",
+    selectedOption ? null : "SELECTED_SCENARIO_OPTION_MISSING",
+  ].filter((reason): reason is string => Boolean(reason));
+
+  const hasRequiredJoinedRows = missingJoinedReasons.length === 0;
+  const recommendable = recommendationStatus === "RECOMMENDED" && selectedOptionId != null && amountMm != null && hasRequiredJoinedRows;
   const blockingReasons = Array.from(new Set([
     ...arr(quality.reason_codes).map(String),
+    ...missingJoinedReasons,
     ...(recommendable ? [] : ["RECOMMENDATION_NOT_USABLE_FOR_CUSTOMER"]),
   ]));
 
@@ -325,10 +407,10 @@ export async function buildIrrigationDecisionReportV1(params: {
     recommendation_status: decisionStatus,
     selected_scenario_option_id: recommendable ? selectedOptionId : null,
     amount_mm: recommendable ? amountMm : null,
-    action_text: recommendable ? "系统建议灌溉 " + amountMm + "mm" : "当前证据不足，不能生成可执行灌溉建议。",
+    action_text: recommendable ? "系统建议灌溉 " + amountMm + "mm" : "当前决策证据链不完整，不能展示可执行灌溉建议。",
     reason_text: recommendable
       ? "该建议由水分状态估计、正式灌溉需求和五个灌溉情景比较共同形成。"
-      : "水分状态或情景比较不可用，系统阻断可执行建议展示。",
+      : "当前决策证据链不完整，系统阻断可执行建议展示。",
     approval_boundary_text: recommendable
       ? "本报告不直接触发作业；执行仍需人工审批、作业计划、AO-ACT 和回执验收。"
       : "证据不足时不会进入审批、作业计划或 AO-ACT 执行。",
@@ -365,8 +447,8 @@ export async function buildIrrigationDecisionReportV1(params: {
       boundary_line: "本报告不直接触发作业；执行仍需人工审批、作业计划、AO-ACT 和回执验收。",
     } : {
       headline: "灌溉决策依据",
-      one_liner: "当前证据不足，不能生成可执行灌溉建议。",
-      evidence_line: "水分状态或情景比较未达到客户可见建议条件。",
+      one_liner: "当前决策证据链不完整，不能展示可执行灌溉建议。",
+      evidence_line: "当前决策证据链不完整，不能展示可执行灌溉建议。",
       scenario_line: "情景比较结果不可用于生成可执行建议。",
       recommendation_line: "未生成可执行灌溉建议。",
       boundary_line: "证据不足时不会进入审批、作业计划或 AO-ACT 执行。",

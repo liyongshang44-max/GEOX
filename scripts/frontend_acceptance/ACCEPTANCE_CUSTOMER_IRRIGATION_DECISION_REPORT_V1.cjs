@@ -40,10 +40,14 @@ assert(customerIndex.includes('IrrigationDecisionReportCard'), 'customer compone
 assert(card.includes('灌溉决策依据'), 'card must expose customer title');
 assert(card.includes('审批与执行边界'), 'card must render approval/execution boundary');
 assert(card.includes('失败条件') || card.includes('失效条件'), 'card must render scenario failure condition label');
+assert(!card.includes('irrigate_22mm'), 'card must not render raw selected option id');
+assert(!card.includes('amount_mm'), 'card must not calculate or inject executable 22mm suggestion');
 assert(vm.includes('buildIrrigationDecisionReportVm'), 'VM builder missing');
-assert(vm.includes('当前证据不足，不能生成可执行灌溉建议'), 'VM must provide UNKNOWN customer copy');
+assert(vm.includes('当前决策证据链不完整，不能展示可执行灌溉建议。'), 'VM must provide BLOCKED/UNKNOWN customer copy');
 assert(vm.includes('系统建议灌溉 22mm'), 'VM must provide positive recommendation copy');
 assert(vm.includes('failureConditionText'), 'VM must expose scenario failureConditionText');
+assert(vm.includes('当前决策证据链不完整，不能展示可执行灌溉建议。'), 'VM must hard-block incomplete evidence copy');
+assert(!vm.includes('summary.one_liner, "当前决策证据链不完整'), 'blocked VM must use hard-coded blocked copy rather than report summary one_liner');
 assert(labels.includes('灌溉 22mm'), 'labels must map irrigate_22mm');
 assert(labels.includes('风险降低'), 'labels must map risk_delta');
 

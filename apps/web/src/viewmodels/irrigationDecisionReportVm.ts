@@ -65,12 +65,12 @@ export function buildIrrigationDecisionReportVm(report: OperationReportV1): Irri
     return {
       visible: true,
       headline: "灌溉决策依据",
-      oneLiner: text(summary.one_liner, "当前证据不足，不能生成可执行灌溉建议。"),
-      evidenceLine: text(summary.evidence_line, "水分状态或情景比较未达到客户可见建议条件。"),
+      oneLiner: "当前决策证据链不完整，不能展示可执行灌溉建议。",
+      evidenceLine: "当前决策证据链不完整，不能展示可执行灌溉建议。",
       stateLine: "水分状态：" + irrigationDecisionStateLabel(estimate.state),
-      scenarioLine: text(summary.scenario_line, "情景比较结果不可用于生成可执行建议。"),
-      recommendationLine: text(summary.recommendation_line, "未生成可执行灌溉建议。"),
-      boundaryLine: text(summary.boundary_line, "证据不足时不会进入审批、作业计划或 AO-ACT 执行。"),
+      scenarioLine: "情景比较结果不可用于生成可执行建议。",
+      recommendationLine: "未生成可执行灌溉建议。",
+      boundaryLine: "证据不足时不会进入审批、作业计划或 AO-ACT 执行。",
       options,
       tone: "warning",
     };
