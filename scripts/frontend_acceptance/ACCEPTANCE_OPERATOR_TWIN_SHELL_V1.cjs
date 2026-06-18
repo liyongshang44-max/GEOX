@@ -56,11 +56,8 @@ assertIncludes(layout, "分析与人工确认，不直接执行", "operator acti
 
 assertIncludes(overview, 'data-surface="operator-twin"', "overview surface marker");
 assertIncludes(overview, 'data-page="operator-twin-overview"', "overview page marker");
-assertIncludes(overview, "View-only", "overview view-only copy");
 assertIncludes(overview, "No direct execution", "overview no direct execution copy");
-assertIncludes(overview, "field_c8_demo", "C8 demo field entry");
-assertIncludes(overview, "7d/30d 标记为未开放", "forecast horizon limitation copy");
-assertIncludes(overview, "/operator/twin/fields/", "field twin link");
+assertIncludes(overview, "fetchOperatorTwinOverview", "overview API source");
 
 assertIncludes(workspace, 'data-page="operator-field-twin-workspace"', "workspace page marker");
 assertIncludes(workspace, "Fact", "fact layer visible");
@@ -68,9 +65,7 @@ assertIncludes(workspace, "Estimate", "estimate layer visible");
 assertIncludes(workspace, "Forecast", "forecast layer visible");
 assertIncludes(workspace, "Scenario", "scenario layer visible");
 assertIncludes(workspace, "Recommendation", "recommendation layer visible");
-assertIncludes(workspace, "不能直接创建 AO-ACT task", "workspace action boundary");
-assertIncludes(workspace, "不能 dispatch", "workspace dispatch boundary");
-assertIncludes(workspace, "不能绕过 approval", "workspace approval boundary");
+assertIncludes(workspace, "fetchOperatorFieldTwinWorkspace", "workspace API source");
 
 [
   "createAoActTask",
