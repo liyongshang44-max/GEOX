@@ -6,6 +6,7 @@ import { LocaleProvider } from "../lib/locale";
 import AppShell from "./AppShell";
 import AdminLayout from "../layouts/AdminLayout";
 import CustomerLayout from "../layouts/CustomerLayout";
+import OperatorLayout from "../layouts/OperatorLayout";
 import RequireSession from "./RequireSession";
 import { type AppBreadcrumbItem } from "../components/layout/AppBreadcrumb";
 import { renderDashboardRoutes } from "./routes/dashboardRoutes";
@@ -44,6 +45,8 @@ const FieldReportPage = React.lazy(() => import("../features/fields/pages/FieldR
 const FieldReportExportPage = React.lazy(() => import("../features/fields/pages/FieldReportExportPage"));
 const OperationReportPage = React.lazy(() => import("../features/operations/pages/OperationReportPage"));
 const CustomerReportExportPage = React.lazy(() => import("../features/customer/pages/CustomerReportExportPage"));
+const OperatorTwinOverviewPage = React.lazy(() => import("../features/operator/pages/OperatorTwinOverviewPage"));
+const OperatorFieldTwinWorkspacePage = React.lazy(() => import("../features/operator/pages/OperatorFieldTwinWorkspacePage"));
 
 const RouteFallback = <div className="card" style={{ padding: 16 }}>页面加载中...</div>;
 
@@ -235,6 +238,7 @@ function AppRoutes({ expert }: { expert: boolean }): React.ReactElement {
           <Route path="/dashboard" element={<Navigate to="/customer/dashboard" replace />} />
           <Route path="/dashboard/customer" element={<Navigate to="/customer/dashboard" replace />} />
           <Route path="/dashboard/export" element={<Navigate to="/customer/export" replace />} />
+          <Route path="/operator/*" element={<OperatorShell />} />
           <Route path="/fields/:fieldId/report" element={<LegacyParamRedirect to="/customer/fields/:fieldId" />} />
           <Route path="/fields/:fieldId/report/export" element={<LegacyParamRedirect to="/customer/fields/:fieldId/export" />} />
           <Route path="/operations/:operationId/report" element={<LegacyParamRedirect to="/customer/operations/:operationId" />} />
@@ -307,6 +311,27 @@ function CustomerShell(): React.ReactElement {
   );
 }
 
+
+function OperatorRoutes(): React.ReactElement {
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to="twin" replace />} />
+      <Route path="twin" element={<OperatorTwinOverviewPage />} />
+      <Route path="twin/fields/:fieldId" element={<OperatorFieldTwinWorkspacePage />} />
+      <Route path="*" element={<Navigate to="twin" replace />} />
+    </Routes>
+  );
+}
+
+function OperatorShell(): React.ReactElement {
+  return (
+    <OperatorLayout>
+      <React.Suspense fallback={RouteFallback}>
+        <OperatorRoutes />
+      </React.Suspense>
+    </OperatorLayout>
+  );
+}
 
 function AdminShell(): React.ReactElement {
   return (
