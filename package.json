@@ -138,7 +138,8 @@
     "ci:frontend:operator-twin-inventory-degrade-guard": "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_TWIN_INVENTORY_DEGRADE_GUARD_V1.cjs",
     "ci:frontend:customer-operator-inventory-boundary": "node scripts/frontend_acceptance/ACCEPTANCE_CUSTOMER_OPERATOR_INVENTORY_BOUNDARY_V1.cjs",
     "ci:frontend:customer-report-route-contract": "node scripts/frontend_acceptance/ACCEPTANCE_CUSTOMER_REPORT_ROUTE_CONTRACT_V1.cjs",
-    "ci:frontend:customer-report-api-consumption-contract": "node scripts/frontend_acceptance/ACCEPTANCE_CUSTOMER_REPORT_API_CONSUMPTION_CONTRACT_V1.cjs"
+    "ci:frontend:customer-report-api-consumption-contract": "node scripts/frontend_acceptance/ACCEPTANCE_CUSTOMER_REPORT_API_CONSUMPTION_CONTRACT_V1.cjs",
+    "ci:frontend:customer-report-payload-boundary": "node scripts/frontend_acceptance/ACCEPTANCE_CUSTOMER_REPORT_PAYLOAD_BOUNDARY_V1.cjs"
   },
   "volta": {
     "node": "20.11.1"
