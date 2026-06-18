@@ -130,12 +130,26 @@ const tableContracts = [
       "project_id",
       "group_id",
       "field_id",
-      "sensing_window_id",
-      "window_start_at",
-      "window_end_at",
+      "window_id",
+      "device_id",
+      "metric",
+      "window_start",
+      "window_end",
+      "expected_interval_ms",
+      "expected_points",
+      "actual_points",
       "coverage_ratio",
+      "max_gap_ms",
+      "quality_status",
+      "confidence_json",
+      "summary_json",
+      "config_snapshot_json",
       "evidence_refs_json",
-      "computed_at",
+      "source_fact_ids_json",
+      "source_observation_ids_json",
+      "source_fact_id",
+      "created_at",
+      "updated_at",
     ],
   },
   {
@@ -246,5 +260,57 @@ assert(
   "package script ci:governance:operator-twin-source-index-contract missing or incorrect",
   { actual: pkg.scripts && pkg.scripts["ci:governance:operator-twin-source-index-contract"] }
 );
+
+// field_index_v1 existing write-path compatibility
+const fieldIndexBlock = extractCreateTableBlock(sql, "field_index_v1");
+
+[
+  "tenant_id text NOT NULL",
+  "field_id text NOT NULL",
+  "project_id text NOT NULL DEFAULT",
+  "group_id text NOT NULL DEFAULT",
+  "name text",
+  "field_name text",
+  "area_ha numeric",
+  "status text",
+  "created_ts_ms bigint",
+  "updated_ts_ms bigint",
+  "PRIMARY KEY (tenant_id, field_id)",
+  "UNIQUE (tenant_id, project_id, group_id, field_id)",
+].forEach((token) => {
+  assertIncludes(fieldIndexBlock, token, "field_index_v1 write-path compatibility token " + token);
+});
+
+assertIncludes(doc, "PRIMARY KEY (tenant_id, field_id)", "field_index_v1 doc write-path primary key");
+assertIncludes(doc, "ON CONFLICT (tenant_id, field_id)", "field_index_v1 doc legacy upsert compatibility");
+
+// soil_moisture_sensing_window_index_v1 existing write-path compatibility
+const soilWindowBlock = extractCreateTableBlock(sql, "soil_moisture_sensing_window_index_v1");
+
+[
+  "window_id text NOT NULL",
+  "window_start timestamptz",
+  "window_end timestamptz",
+  "expected_interval_ms integer",
+  "expected_points integer",
+  "actual_points integer",
+  "min_total_samples_required integer",
+  "min_samples_per_required_metric integer",
+  "coverage_ratio numeric",
+  "min_coverage_ratio numeric",
+  "max_gap_ms integer",
+  "max_allowed_gap_ms integer",
+  "gap_count integer",
+  "quality_status text",
+  "source_fact_id text",
+  "source_fact_ids_json jsonb",
+  "source_observation_ids_json jsonb",
+  "PRIMARY KEY (tenant_id, window_id)",
+  "UNIQUE (tenant_id, project_id, group_id, field_id, window_id)",
+].forEach((token) => {
+  assertIncludes(soilWindowBlock, token, "soil_moisture_sensing_window_index_v1 write-path compatibility token " + token);
+});
+
+assertIncludes(doc, "ON CONFLICT (tenant_id, window_id)", "soil window doc upsert compatibility");
 
 console.log("[operator-twin-source-index-contract] PASS");

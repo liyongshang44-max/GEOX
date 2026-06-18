@@ -1,6 +1,6 @@
--- db/contracts/operator_twin_source_indexes_v1.sql
--- Purpose: define the minimum scoped source-index DDL contract required by Operator Twin read APIs.
--- Boundary: this file is a contract reference, not an automatic migration.
+-- path: apps/server/db/migrations/2026_06_18_operator_twin_source_indexes_v1.sql
+-- Purpose: create the scoped source-index tables required by Operator Twin read APIs.
+-- Boundary: schema-only migration; no facts, recommendations, approvals, tasks, receipts, or execution records are inserted.
 
 CREATE TABLE IF NOT EXISTS field_index_v1 (
   tenant_id text NOT NULL,

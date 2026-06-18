@@ -31,14 +31,26 @@ The field workspace must additionally constrain reads by field_id.
 Minimum columns:
 
 - tenant_id
+- field_id
 - project_id
 - group_id
-- field_id
+- name
 - field_name
 - crop
+- area_ha
+- status
+- created_ts_ms
+- updated_ts_ms
 - updated_at
 
-Purpose: field inventory projection for Operator Twin.
+Keys:
+
+- PRIMARY KEY (tenant_id, field_id)
+- UNIQUE (tenant_id, project_id, group_id, field_id)
+
+Purpose: canonical field projection used by existing field write/read routes and Operator Twin scoped reads.
+
+Compatibility note: field_index_v1 is an existing write-path projection. The field routes upsert on ON CONFLICT (tenant_id, field_id) and write name, area_ha, status, created_ts_ms, and updated_ts_ms. Operator Twin adds project_id and group_id as scope columns with default values for legacy/mainline field writes.
 
 ### water_state_estimate_index_v1
 
@@ -64,14 +76,40 @@ Minimum columns:
 - project_id
 - group_id
 - field_id
-- sensing_window_id
-- window_start_at
-- window_end_at
+- window_id
+- device_id
+- metric
+- window_start
+- window_end
+- expected_interval_ms
+- expected_points
+- actual_points
+- min_total_samples_required
+- min_samples_per_required_metric
 - coverage_ratio
+- min_coverage_ratio
+- max_gap_ms
+- max_allowed_gap_ms
+- gap_count
+- quality_status
+- confidence_json
+- summary_json
+- config_snapshot_json
 - evidence_refs_json
-- computed_at
+- source_fact_ids_json
+- source_observation_ids_json
+- source_fact_id
+- created_at
+- updated_at
+
+Keys:
+
+- PRIMARY KEY (tenant_id, window_id)
+- UNIQUE (tenant_id, project_id, group_id, field_id, window_id)
 
 Purpose: scoped sensing-window evidence for water-state estimation.
+
+Compatibility note: this table follows the existing H12/C8 sensing-window write path. The seed/upsert path uses ON CONFLICT (tenant_id, window_id) and writes min_total_samples_required, min_samples_per_required_metric, min_coverage_ratio, max_allowed_gap_ms, gap_count, quality_status, source_fact_id, source_fact_ids_json, and source_observation_ids_json.
 
 ### weather_forecast_index_v1
 
