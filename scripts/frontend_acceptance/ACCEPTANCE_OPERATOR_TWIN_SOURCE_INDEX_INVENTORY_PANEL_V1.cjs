@@ -40,6 +40,10 @@ assertIncludes(api, "approvalReady: false", "approvalReady false typing");
 assertIncludes(api, "taskCreationReady: false", "taskCreationReady false typing");
 
 assertIncludes(page, "fetchOperatorTwinSourceIndexInventory", "overview page fetches inventory");
+assertIncludes(page, "fetchOperatorTwinOverview(scope)", "overview fetch remains independent");
+assertIncludes(page, "setInventoryLoadState(\"error\")", "inventory failure degrades only inventory panel");
+assertIncludes(page, "inventoryError", "inventory error is panel-local");
+assertNotIncludes(page, "Promise.all([fetchOperatorTwinOverview(scope), fetchOperatorTwinSourceIndexInventory(scope)])", "inventory failure must not hide overview");
 assertIncludes(page, "SourceIndexInventoryCard", "source-index inventory card");
 assertIncludes(page, "data-card=\"operator-twin-source-index-inventory\"", "inventory card marker");
 assertIncludes(page, "data-table=\"operator-twin-source-index-inventory\"", "inventory table marker");

@@ -34,11 +34,23 @@ function formatInventoryTimestamp(value: number | null): string {
   return date.toISOString();
 }
 
-function SourceIndexInventoryCard({ inventory }: { inventory: OperatorTwinSourceIndexInventoryV1 | null }): React.ReactElement {
+function SourceIndexInventoryCard({
+  inventory,
+  loadState,
+  error,
+}: {
+  inventory: OperatorTwinSourceIndexInventoryV1 | null;
+  loadState: "idle" | "loading" | "ready" | "error";
+  error: string | null;
+}): React.ReactElement {
   return (
     <article className="customerCard" data-card="operator-twin-source-index-inventory">
       <h3>Source Index Inventory</h3>
-      {!inventory ? <p>source index inventory 尚未加载。</p> : null}
+      {loadState === "loading" ? <p>source index inventory 正在加载。</p> : null}
+      {loadState === "error" ? (
+        <p>source index inventory 暂不可用：{error ?? "OPERATOR_TWIN_SOURCE_INDEX_INVENTORY_UNAVAILABLE"}</p>
+      ) : null}
+      {!inventory && loadState !== "loading" && loadState !== "error" ? <p>source index inventory 尚未加载。</p> : null}
       {inventory ? (
         <>
           <p>
@@ -98,6 +110,8 @@ export default function OperatorTwinOverviewPage(): React.ReactElement {
   const [state, setState] = React.useState<RuntimeState>("loading");
   const [overview, setOverview] = React.useState<OperatorTwinOverviewV1 | null>(null);
   const [inventory, setInventory] = React.useState<OperatorTwinSourceIndexInventoryV1 | null>(null);
+  const [inventoryLoadState, setInventoryLoadState] = React.useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [inventoryError, setInventoryError] = React.useState<string | null>(null);
   const [errorText, setErrorText] = React.useState("");
 
   React.useEffect(() => {
@@ -106,21 +120,33 @@ export default function OperatorTwinOverviewPage(): React.ReactElement {
     setErrorText("");
     setOverview(null);
     setInventory(null);
+    setInventoryLoadState("loading");
+    setInventoryError(null);
 
-    void Promise.all([fetchOperatorTwinOverview(scope), fetchOperatorTwinSourceIndexInventory(scope)])
-      .then(([overviewResponse, inventoryResponse]) => {
+    void fetchOperatorTwinOverview(scope)
+      .then((response) => {
         if (!alive) return;
-        const nextOverview = overviewResponse.operator_twin_overview_v1;
-        const nextInventory = inventoryResponse.operator_twin_source_index_inventory_v1;
+        const nextOverview = response.operator_twin_overview_v1;
         setOverview(nextOverview);
-        setInventory(nextInventory);
         setState(nextOverview.fields.length > 0 ? "ready" : "empty");
+      })
+      .catch(() => {
+        if (!alive) return;
+        setState("error");
+      });
+
+    void fetchOperatorTwinSourceIndexInventory(scope)
+      .then((response) => {
+        if (!alive) return;
+        setInventory(response.operator_twin_source_index_inventory_v1);
+        setInventoryLoadState("ready");
+        setInventoryError(null);
       })
       .catch((error: unknown) => {
         if (!alive) return;
-        setOverview(null);
-        setErrorText(error instanceof Error ? error.message : "OPERATOR_TWIN_OVERVIEW_LOAD_FAILED");
-        setState("error");
+        setInventory(null);
+        setInventoryLoadState("error");
+        setInventoryError(error instanceof Error ? error.message : "OPERATOR_TWIN_SOURCE_INDEX_INVENTORY_FAILED");
       });
 
     return () => {
@@ -153,7 +179,7 @@ export default function OperatorTwinOverviewPage(): React.ReactElement {
       {overview ? (
         <div className="customerSectionGrid">
           <ScopePolicyCard policy={overview.scope_policy} />
-          <SourceIndexInventoryCard inventory={inventory} />
+          <SourceIndexInventoryCard inventory={inventory} loadState={inventoryLoadState} error={inventoryError} />
 
           <article className="customerCard">
             <h3>田块状态矩阵</h3>
