@@ -26,6 +26,14 @@ function assertNotIncludes(text, needle, label) {
   assert(!text.includes(needle), "forbidden token present: " + label, { needle });
 }
 
+function assertRegex(text, regex, label) {
+  assert(regex.test(text), "missing required regex: " + label, { regex: String(regex) });
+}
+
+function assertNotRegex(text, regex, label) {
+  assert(!regex.test(text), "forbidden regex present: " + label, { regex: String(regex) });
+}
+
 function sliceFrom(text, startNeedle, endNeedle) {
   const start = text.indexOf(startNeedle);
   assert(start >= 0, "start marker not found", { startNeedle });
@@ -81,6 +89,45 @@ const FORBIDDEN_CUSTOMER_ROUTE_TOKENS = [
   "sendTask",
   "POST /api/control/ao_act/task",
 ];
+
+const topLevelCustomerRoutePattern = new RegExp(
+  String.raw`<Route\\s+path=["']/customer/\\*["'][^>]*element=\\{<([^>\\s/]+)\\s*/?>\\}\\s*/?>`,
+  "g"
+);
+
+const topLevelCustomerRouteMatches = [...appRoutesBlock.matchAll(topLevelCustomerRoutePattern)];
+
+if (topLevelCustomerRouteMatches.length > 0) {
+  assert(
+    topLevelCustomerRouteMatches.length === 1,
+    "customer top-level route must be unique when present",
+    { count: topLevelCustomerRouteMatches.length }
+  );
+
+  assert(
+    topLevelCustomerRouteMatches[0][1] === "CustomerShell",
+    "customer top-level route must mount CustomerShell when present",
+    { actual: topLevelCustomerRouteMatches[0][1] }
+  );
+}
+
+assertNotRegex(
+  appRoutesBlock,
+  new RegExp(String.raw`<Route\\s+path=["']/customer/\\*["'][^>]*element=\\{<OperatorShell\\s*/?>\\}\\s*/?>`),
+  "customer top-level route must not mount OperatorShell"
+);
+
+assertNotRegex(
+  appRoutesBlock,
+  new RegExp(String.raw`<Route\\s+path=["']/customer/\\*["'][^>]*element=\\{<AdminShell\\s*/?>\\}\\s*/?>`),
+  "customer top-level route must not mount AdminShell"
+);
+
+assertNotRegex(
+  appRoutesBlock,
+  new RegExp(String.raw`<Route\\s+path=["']/customer/\\*["'][^>]*element=\\{<OperatorTwinOverviewPage\\s*/?>\\}\\s*/?>`),
+  "customer top-level route must not mount OperatorTwinOverviewPage"
+);
 
 assertIncludes(appRoutesBlock, '<Route path="/operator/*" element={<OperatorShell />} />', "operator root remains isolated under /operator/*");
 assertIncludes(appRoutesBlock, "{renderDashboardRoutes(expert)}", "dashboard route renderer included");
