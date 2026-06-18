@@ -49,6 +49,7 @@ const contractSql = readText("db/contracts/operator_twin_source_indexes_v1.sql")
 const migrationSql = readText("apps/server/db/migrations/2026_06_18_operator_twin_source_indexes_v1.sql");
 const doc = readText("docs/db/GEOX_OPERATOR_TWIN_SOURCE_INDEX_WRITE_PATH_COMPAT_V1.md");
 const fieldRoute = readText("apps/server/src/routes/fields_v1.ts");
+const flightTableGeometry = readText("apps/server/src/services/flight_table/flight_table_geometry_v1.ts");
 const packageJsonText = readText("package.json");
 
 [
@@ -65,7 +66,9 @@ const packageJsonText = readText("package.json");
       "project_id text NOT NULL DEFAULT",
       "group_id text NOT NULL DEFAULT",
       "name text",
+      "geojson_json jsonb",
       "area_ha numeric",
+      "area_m2 numeric",
       "status text",
       "created_ts_ms bigint",
       "updated_ts_ms bigint",
@@ -137,6 +140,19 @@ assertIncludes(fieldRoute, "ON CONFLICT (tenant_id, field_id)", "field route mus
 ].forEach((token) => {
   assertIncludes(fieldRoute, token, "field route write path must still reference " + token);
 });
+
+[
+  "geojson_json",
+  "area_m2",
+].forEach((token) => {
+  assertIncludes(flightTableGeometry, token, "flight-table geometry write path must still reference " + token);
+});
+
+assertIncludes(
+  flightTableGeometry,
+  "field_index_v1",
+  "flight-table geometry writer must still target field_index_v1"
+);
 
 assertIncludes(doc, "ON CONFLICT (tenant_id, field_id)", "compatibility doc must record field_index_v1 write-path conflict target");
 assertIncludes(doc, "ON CONFLICT (tenant_id, window_id)", "compatibility doc must record soil window write-path conflict target");

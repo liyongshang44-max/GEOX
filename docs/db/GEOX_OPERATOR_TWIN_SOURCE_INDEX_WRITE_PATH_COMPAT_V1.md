@@ -21,7 +21,7 @@ Current covered tables:
 
 ## field_index_v1 compatibility
 
-Existing field routes write to field_index_v1 and use:
+Existing field routes and flight-table geometry writers write to field_index_v1 and use:
 
 - tenant_id
 - field_id
@@ -30,6 +30,8 @@ Existing field routes write to field_index_v1 and use:
 - status
 - created_ts_ms
 - updated_ts_ms
+- geojson_json
+- area_m2
 
 Existing conflict target:
 
@@ -94,3 +96,12 @@ Forbidden drift names inside this table block:
 ## Non-goals
 
 This contract does not introduce recommendations, approvals, dispatch, AO-ACT tasks, receipts, execution records, or customer reports.
+
+Additional field geometry writer:
+
+- apps/server/src/services/flight_table/flight_table_geometry_v1.ts
+
+This writer updates:
+
+- geojson_json
+- area_m2
