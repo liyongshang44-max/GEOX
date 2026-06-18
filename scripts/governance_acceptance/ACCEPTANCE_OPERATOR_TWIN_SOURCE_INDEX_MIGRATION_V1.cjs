@@ -136,4 +136,24 @@ const fieldIndexMigrationBlock = extractCreateTableBlock(migrationSql, "field_in
   assertIncludes(fieldIndexMigrationBlock, token, "field_index_v1 migration compatibility token " + token);
 });
 
+// soil_moisture_sensing_window_index_v1 migration write-path compatibility
+const soilWindowMigrationBlock = extractCreateTableBlock(migrationSql, "soil_moisture_sensing_window_index_v1");
+
+[
+  "window_id text NOT NULL",
+  "window_start timestamptz",
+  "window_end timestamptz",
+  "min_total_samples_required integer",
+  "min_samples_per_required_metric integer",
+  "min_coverage_ratio numeric",
+  "max_allowed_gap_ms integer",
+  "gap_count integer",
+  "quality_status text",
+  "source_fact_id text",
+  "PRIMARY KEY (tenant_id, window_id)",
+  "UNIQUE (tenant_id, project_id, group_id, field_id, window_id)",
+].forEach((token) => {
+  assertIncludes(soilWindowMigrationBlock, token, "soil_moisture_sensing_window_index_v1 migration compatibility token " + token);
+});
+
 console.log("[operator-twin-source-index-migration] PASS");

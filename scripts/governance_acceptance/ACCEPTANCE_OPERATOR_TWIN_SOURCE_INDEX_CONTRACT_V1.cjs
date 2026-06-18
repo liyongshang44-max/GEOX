@@ -284,4 +284,33 @@ const fieldIndexBlock = extractCreateTableBlock(sql, "field_index_v1");
 assertIncludes(doc, "PRIMARY KEY (tenant_id, field_id)", "field_index_v1 doc write-path primary key");
 assertIncludes(doc, "ON CONFLICT (tenant_id, field_id)", "field_index_v1 doc legacy upsert compatibility");
 
+// soil_moisture_sensing_window_index_v1 existing write-path compatibility
+const soilWindowBlock = extractCreateTableBlock(sql, "soil_moisture_sensing_window_index_v1");
+
+[
+  "window_id text NOT NULL",
+  "window_start timestamptz",
+  "window_end timestamptz",
+  "expected_interval_ms integer",
+  "expected_points integer",
+  "actual_points integer",
+  "min_total_samples_required integer",
+  "min_samples_per_required_metric integer",
+  "coverage_ratio numeric",
+  "min_coverage_ratio numeric",
+  "max_gap_ms integer",
+  "max_allowed_gap_ms integer",
+  "gap_count integer",
+  "quality_status text",
+  "source_fact_id text",
+  "source_fact_ids_json jsonb",
+  "source_observation_ids_json jsonb",
+  "PRIMARY KEY (tenant_id, window_id)",
+  "UNIQUE (tenant_id, project_id, group_id, field_id, window_id)",
+].forEach((token) => {
+  assertIncludes(soilWindowBlock, token, "soil_moisture_sensing_window_index_v1 write-path compatibility token " + token);
+});
+
+assertIncludes(doc, "ON CONFLICT (tenant_id, window_id)", "soil window doc upsert compatibility");
+
 console.log("[operator-twin-source-index-contract] PASS");

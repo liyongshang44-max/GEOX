@@ -84,8 +84,13 @@ Minimum columns:
 - expected_interval_ms
 - expected_points
 - actual_points
+- min_total_samples_required
+- min_samples_per_required_metric
 - coverage_ratio
+- min_coverage_ratio
 - max_gap_ms
+- max_allowed_gap_ms
+- gap_count
 - quality_status
 - confidence_json
 - summary_json
@@ -97,9 +102,15 @@ Minimum columns:
 - created_at
 - updated_at
 
+Keys:
+
+- PRIMARY KEY (tenant_id, window_id)
+- UNIQUE (tenant_id, project_id, group_id, field_id, window_id)
+
 Purpose: scoped sensing-window evidence for water-state estimation.
 
-Important: this table follows the existing H12 sensing-window projection helper. Downstream preflight and runtime readers use window_id, quality_status, and source_fact_id.
+Compatibility note: this table follows the existing H12/C8 sensing-window write path. The seed/upsert path uses ON CONFLICT (tenant_id, window_id) and writes min_total_samples_required, min_samples_per_required_metric, min_coverage_ratio, max_allowed_gap_ms, gap_count, quality_status, source_fact_id, source_fact_ids_json, and source_observation_ids_json.
+
 ### weather_forecast_index_v1
 
 Minimum columns:

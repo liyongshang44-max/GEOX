@@ -45,8 +45,13 @@ CREATE TABLE IF NOT EXISTS soil_moisture_sensing_window_index_v1 (
   expected_interval_ms integer,
   expected_points integer,
   actual_points integer,
+  min_total_samples_required integer,
+  min_samples_per_required_metric integer,
   coverage_ratio numeric,
+  min_coverage_ratio numeric,
   max_gap_ms integer,
+  max_allowed_gap_ms integer,
+  gap_count integer,
   quality_status text,
   confidence_json jsonb,
   summary_json jsonb,
@@ -57,7 +62,8 @@ CREATE TABLE IF NOT EXISTS soil_moisture_sensing_window_index_v1 (
   source_fact_id text,
   created_at timestamptz,
   updated_at timestamptz,
-  PRIMARY KEY (tenant_id, project_id, group_id, field_id, window_id)
+  PRIMARY KEY (tenant_id, window_id),
+  UNIQUE (tenant_id, project_id, group_id, field_id, window_id)
 );
 
 CREATE TABLE IF NOT EXISTS weather_forecast_index_v1 (
