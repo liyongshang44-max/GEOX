@@ -30,6 +30,36 @@ export type OperatorTwinBoundaryRule = {
   label: string;
 };
 
+export type OperatorTwinSourceIndexInventoryRow = {
+  table_name: string;
+  label: string;
+  available: boolean;
+  row_count: number;
+  latest_ts_ms: number | null;
+  latest_evidence_refs: string[];
+  scope_columns_present: string[];
+  missing_reason: string | null;
+};
+
+export type OperatorTwinSourceIndexInventoryV1 = {
+  version: "v1";
+  surface: "OPERATOR";
+  report_kind: "OPERATOR_TWIN_SOURCE_INDEX_INVENTORY";
+  request_scope: OperatorTwinRequestScope & { fieldId?: string | null; field_id?: string | null };
+  scope_policy: OperatorTwinScopePolicy;
+  source_indexes: OperatorTwinSourceIndexInventoryRow[];
+  summary: {
+    table_count: number;
+    available_table_count: number;
+    total_row_count: number;
+    write_ready: false;
+    approval_ready: false;
+    dispatch_ready: false;
+    task_creation_ready: false;
+  };
+  boundary_rules: OperatorTwinBoundaryRule[];
+};
+
 export type OperatorTwinOverviewField = {
   field_id: string;
   field_name: string;
@@ -123,6 +153,18 @@ export type OperatorFieldTwinWorkspaceV1 = {
   boundary_rules: OperatorTwinBoundaryRule[];
 };
 
+export type OperatorTwinSourceIndexInventoryResponse = {
+  ok: boolean;
+  source: "operator_twin_source_index_inventory_api";
+  dataScope: "OFFICIAL_OPERATOR_TWIN_API";
+  generated_at: string;
+  writeReady: false;
+  dispatchReady: false;
+  approvalReady: false;
+  taskCreationReady: false;
+  operator_twin_source_index_inventory_v1: OperatorTwinSourceIndexInventoryV1;
+};
+
 export type OperatorTwinOverviewResponse = {
   ok: boolean;
   source: "operator_twin_overview_api";
@@ -168,6 +210,22 @@ export function buildOperatorTwinScopeQuery(scope?: OperatorTwinRequestScope | n
 
 function withScope(path: string, scope?: OperatorTwinRequestScope | null): string {
   return path + buildOperatorTwinScopeQuery(scope);
+}
+
+export async function fetchOperatorTwinSourceIndexInventory(
+  scope?: OperatorTwinRequestScope | null
+): Promise<OperatorTwinSourceIndexInventoryResponse> {
+  const response = await apiRequestWithPolicy<OperatorTwinSourceIndexInventoryResponse>(
+    withScope("/api/v1/operator/twin/source-indexes", scope),
+    undefined,
+    { dedupe: true, silent: true, timeoutMs: 10000 }
+  );
+
+  if (!response.ok || !response.data) {
+    throw new Error("OPERATOR_TWIN_SOURCE_INDEX_INVENTORY_API_FAILED");
+  }
+
+  return response.data;
 }
 
 export async function fetchOperatorTwinOverview(scope?: OperatorTwinRequestScope | null): Promise<OperatorTwinOverviewResponse> {

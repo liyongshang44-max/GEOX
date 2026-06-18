@@ -133,7 +133,8 @@
     "ci:governance:operator-twin-source-index-migration": "node scripts/governance_acceptance/ACCEPTANCE_OPERATOR_TWIN_SOURCE_INDEX_MIGRATION_V1.cjs",
     "ci:governance:operator-twin-source-index-write-path-compat": "node scripts/governance_acceptance/ACCEPTANCE_OPERATOR_TWIN_SOURCE_INDEX_WRITE_PATH_COMPAT_V1.cjs",
     "ci:governance:operator-twin-source-index-inventory-api": "node scripts/governance_acceptance/ACCEPTANCE_OPERATOR_TWIN_SOURCE_INDEX_INVENTORY_API_V1.cjs",
-    "ci:runtime:operator-twin-source-index-inventory-api": "node scripts/runtime_acceptance/ACCEPTANCE_OPERATOR_TWIN_SOURCE_INDEX_INVENTORY_API_RUNTIME_V1.cjs"
+    "ci:runtime:operator-twin-source-index-inventory-api": "node scripts/runtime_acceptance/ACCEPTANCE_OPERATOR_TWIN_SOURCE_INDEX_INVENTORY_API_RUNTIME_V1.cjs",
+    "ci:frontend:operator-twin-source-index-inventory-panel": "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_TWIN_SOURCE_INDEX_INVENTORY_PANEL_V1.cjs"
   },
   "volta": {
     "node": "20.11.1"
