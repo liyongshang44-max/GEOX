@@ -16,6 +16,9 @@ const CUSTOMER_SURFACE_ROOTS = [
   "apps/web/src/features/customer/pages",
   "apps/web/src/features/fields/pages",
   "apps/web/src/features/operations/pages",
+  "apps/web/src/views/CustomerDashboardPage.tsx",
+  "apps/web/src/views/FieldReportPage.tsx",
+  "apps/web/src/views/OperationReportPage.tsx",
   "apps/web/src/components/customer",
   "apps/web/src/layouts/CustomerLayout.tsx",
 ];
@@ -138,6 +141,9 @@ const requiredCustomerFiles = [
   "apps/web/src/features/customer/pages/CustomerDashboardPage.tsx",
   "apps/web/src/features/fields/pages/FieldReportPage.tsx",
   "apps/web/src/features/operations/pages/OperationReportPage.tsx",
+  "apps/web/src/views/CustomerDashboardPage.tsx",
+  "apps/web/src/views/FieldReportPage.tsx",
+  "apps/web/src/views/OperationReportPage.tsx",
 ];
 
 for (const filePath of requiredCustomerFiles) {
