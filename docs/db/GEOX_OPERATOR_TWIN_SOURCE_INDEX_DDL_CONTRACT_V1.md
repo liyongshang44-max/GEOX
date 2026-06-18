@@ -37,7 +37,9 @@ Minimum columns:
 - name
 - field_name
 - crop
+- geojson_json
 - area_ha
+- area_m2
 - status
 - created_ts_ms
 - updated_ts_ms
@@ -48,9 +50,9 @@ Keys:
 - PRIMARY KEY (tenant_id, field_id)
 - UNIQUE (tenant_id, project_id, group_id, field_id)
 
-Purpose: canonical field projection used by existing field write/read routes and Operator Twin scoped reads.
+Purpose: canonical field projection used by existing field write/read routes, flight-table geometry updates, and Operator Twin scoped reads.
 
-Compatibility note: field_index_v1 is an existing write-path projection. The field routes upsert on ON CONFLICT (tenant_id, field_id) and write name, area_ha, status, created_ts_ms, and updated_ts_ms. Operator Twin adds project_id and group_id as scope columns with default values for legacy/mainline field writes.
+Compatibility note: field_index_v1 is an existing write-path projection. The field routes upsert on ON CONFLICT (tenant_id, field_id) and write name, area_ha, status, created_ts_ms, and updated_ts_ms. Flight-table geometry updates also write geojson_json and area_m2. Operator Twin adds project_id and group_id as scope columns with default values for legacy/mainline field writes.
 
 ### water_state_estimate_index_v1
 
