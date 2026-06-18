@@ -26,6 +26,71 @@ function assertNotIncludes(text, needle, label) {
   assert(!text.includes(needle), "forbidden token present: " + label, { needle });
 }
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function extractCreateTableBlock(sql, tableName) {
+  const pattern = new RegExp(
+    "CREATE\\s+TABLE\\s+IF\\s+NOT\\s+EXISTS\\s+" +
+      escapeRegExp(tableName) +
+      "\\s*\\([\\s\\S]*?\\n\\);",
+    "i"
+  );
+
+  const match = sql.match(pattern);
+
+  assert(match && match[0], "missing CREATE TABLE block: " + tableName, { tableName });
+
+  return match[0];
+}
+
+function hasColumnInTableBlock(sql, tableName, columnName) {
+  const block = extractCreateTableBlock(sql, tableName);
+  const pattern = new RegExp("(^|\\n)\\s*" + escapeRegExp(columnName) + "\\b", "i");
+
+  return pattern.test(block);
+}
+
+function hasRequiredTextScopeColumnInTableBlock(sql, tableName, columnName) {
+  const block = extractCreateTableBlock(sql, tableName);
+  const pattern = new RegExp(
+    "(^|\\n)\\s*" + escapeRegExp(columnName) + "\\s+text\\s+NOT\\s+NULL\\s*,?",
+    "i"
+  );
+
+  return pattern.test(block);
+}
+
+function assertColumnInTableBlock(sql, tableName, columnName) {
+  assert(
+    hasColumnInTableBlock(sql, tableName, columnName),
+    "missing column in table block: " + tableName + "." + columnName,
+    { tableName, columnName, block: extractCreateTableBlock(sql, tableName) }
+  );
+}
+
+function assertRequiredTextScopeColumnInTableBlock(sql, tableName, columnName) {
+  assert(
+    hasRequiredTextScopeColumnInTableBlock(sql, tableName, columnName),
+    "missing required text scope column in table block: " + tableName + "." + columnName,
+    { tableName, columnName, block: extractCreateTableBlock(sql, tableName) }
+  );
+}
+
+function removeColumnLineFromTableBlock(sql, tableName, columnName) {
+  const block = extractCreateTableBlock(sql, tableName);
+  const pattern = new RegExp("(^|\\n)\\s*" + escapeRegExp(columnName) + "\\s+[^\\n]*\\n?", "i");
+  const mutatedBlock = block.replace(pattern, "$1");
+
+  assert(mutatedBlock !== block, "negative self-test could not remove column from table block", {
+    tableName,
+    columnName,
+  });
+
+  return sql.replace(block, mutatedBlock);
+}
+
 const docPath = "docs/db/GEOX_OPERATOR_TWIN_SOURCE_INDEX_DDL_CONTRACT_V1.md";
 const sqlPath = "db/contracts/operator_twin_source_indexes_v1.sql";
 const routePath = "apps/server/src/routes/v1/operator_twin.ts";
@@ -39,52 +104,116 @@ const sql = readText(sqlPath);
 const route = readText(routePath);
 const pkg = JSON.parse(readText(packagePath));
 
-const tables = [
-  "field_index_v1",
-  "water_state_estimate_index_v1",
-  "soil_moisture_sensing_window_index_v1",
-  "weather_forecast_index_v1",
-  "irrigation_scenario_set_index_v1",
-  "decision_recommendation_index_v1"
+const tableContracts = [
+  {
+    table: "field_index_v1",
+    columns: ["tenant_id", "project_id", "group_id", "field_id", "field_name", "crop", "updated_at"],
+  },
+  {
+    table: "water_state_estimate_index_v1",
+    columns: [
+      "tenant_id",
+      "project_id",
+      "group_id",
+      "field_id",
+      "water_state",
+      "confidence_level",
+      "confidence_score",
+      "evidence_refs_json",
+      "computed_at",
+    ],
+  },
+  {
+    table: "soil_moisture_sensing_window_index_v1",
+    columns: [
+      "tenant_id",
+      "project_id",
+      "group_id",
+      "field_id",
+      "sensing_window_id",
+      "window_start_at",
+      "window_end_at",
+      "coverage_ratio",
+      "evidence_refs_json",
+      "computed_at",
+    ],
+  },
+  {
+    table: "weather_forecast_index_v1",
+    columns: [
+      "tenant_id",
+      "project_id",
+      "group_id",
+      "field_id",
+      "forecast_id",
+      "forecast_horizon",
+      "provider",
+      "evidence_refs_json",
+      "generated_at",
+    ],
+  },
+  {
+    table: "irrigation_scenario_set_index_v1",
+    columns: [
+      "tenant_id",
+      "project_id",
+      "group_id",
+      "field_id",
+      "scenario_set_id",
+      "options_json",
+      "evidence_refs_json",
+      "generated_at",
+    ],
+  },
+  {
+    table: "decision_recommendation_index_v1",
+    columns: [
+      "tenant_id",
+      "project_id",
+      "group_id",
+      "field_id",
+      "recommendation_id",
+      "suggested_action_json",
+      "action_type",
+      "amount_mm",
+      "evidence_refs_json",
+      "generated_at",
+    ],
+  },
 ];
 
 const sharedScopeColumns = ["tenant_id", "project_id", "group_id", "field_id"];
 
-for (const table of tables) {
-  assertIncludes(doc, table, "doc table " + table);
-  assertIncludes(sql, "CREATE TABLE IF NOT EXISTS " + table, "sql table " + table);
-  assertIncludes(route, table, "route scoped source table " + table);
+for (const contract of tableContracts) {
+  assertIncludes(doc, contract.table, "doc table " + contract.table);
+  assertIncludes(sql, "CREATE TABLE IF NOT EXISTS " + contract.table, "sql table " + contract.table);
+  assertIncludes(route, contract.table, "route scoped source table " + contract.table);
+
+  const ddlBlock = extractCreateTableBlock(sql, contract.table);
+
+  for (const column of contract.columns) {
+    assertIncludes(doc, column, "doc required column " + contract.table + "." + column);
+    assertColumnInTableBlock(sql, contract.table, column);
+  }
 
   for (const column of sharedScopeColumns) {
-    assertIncludes(doc, column, "doc shared scope column " + column);
-    assertIncludes(sql, column + " text NOT NULL", "sql shared scope column " + table + "." + column);
-  }
-}
+    assertRequiredTextScopeColumnInTableBlock(sql, contract.table, column);
 
-[
-  "field_name",
-  "crop",
-  "water_state",
-  "confidence_level",
-  "confidence_score",
-  "sensing_window_id",
-  "window_start_at",
-  "window_end_at",
-  "coverage_ratio",
-  "forecast_id",
-  "forecast_horizon",
-  "provider",
-  "scenario_set_id",
-  "options_json",
-  "recommendation_id",
-  "suggested_action_json",
-  "action_type",
-  "amount_mm",
-  "evidence_refs_json"
-].forEach((column) => {
-  assertIncludes(doc, column, "doc required column " + column);
-  assertIncludes(sql, column, "sql required column " + column);
-});
+    const mutatedSql = removeColumnLineFromTableBlock(sql, contract.table, column);
+
+    assert(
+      !hasRequiredTextScopeColumnInTableBlock(mutatedSql, contract.table, column),
+      "negative self-test failed: table-block scope guard did not detect removed column",
+      { table: contract.table, column }
+    );
+  }
+
+  assert(
+    ddlBlock.includes("PRIMARY KEY"),
+    "table block must define a primary key: " + contract.table,
+    { table: contract.table, ddlBlock }
+  );
+}
 
 assertIncludes(route, "OPERATOR_TWIN_SCOPED_INDEX_TABLES", "route scoped index table constant");
 assertIncludes(route, "TENANT_SCOPE_COLUMNS", "route scope columns constant");
@@ -105,13 +234,15 @@ assertIncludes(route, "no_action_baseline_present", "route real scenario baselin
   "INSERT INTO",
   "ao_act_task",
   "approval_decision",
-  "dispatch"
+  "dispatch",
 ].forEach((token) => {
   assertNotIncludes(sql, token, "SQL contract must not contain mutation/execution token " + token);
 });
 
 assert(
-  pkg.scripts && pkg.scripts["ci:governance:operator-twin-source-index-contract"] === "node scripts/governance_acceptance/ACCEPTANCE_OPERATOR_TWIN_SOURCE_INDEX_CONTRACT_V1.cjs",
+  pkg.scripts &&
+    pkg.scripts["ci:governance:operator-twin-source-index-contract"] ===
+      "node scripts/governance_acceptance/ACCEPTANCE_OPERATOR_TWIN_SOURCE_INDEX_CONTRACT_V1.cjs",
   "package script ci:governance:operator-twin-source-index-contract missing or incorrect",
   { actual: pkg.scripts && pkg.scripts["ci:governance:operator-twin-source-index-contract"] }
 );
