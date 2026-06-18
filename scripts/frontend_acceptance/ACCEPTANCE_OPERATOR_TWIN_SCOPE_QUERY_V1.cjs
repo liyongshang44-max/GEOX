@@ -1,8 +1,4 @@
-// scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_TWIN_SCOPE_QUERY_V1.cjs
-// Purpose: verify Operator Twin frontend propagates tenant/project/group query scope.
-// Boundary: scope propagation is read-only and must not introduce approval, dispatch, or AO-ACT writes.
-
-const fs = require("fs");
+﻿const fs = require("fs");
 const path = require("path");
 
 const ROOT = path.resolve(__dirname, "..", "..");
@@ -75,7 +71,9 @@ assertIncludes(workspace, "workspace.scope_policy", "workspace renders scope pol
   "sendTask",
   "POST /api/v1/control",
   "POST /api/control/ao_act/task"
-].forEach((token) => assertNotIncludes(api + overview + workspace, "operator twin frontend scope query must not include " + token));
+].forEach((token) => {
+  assertNotIncludes(api + overview + workspace, token, "operator twin frontend scope query must not include " + token);
+});
 
 assert(
   pkg.scripts && pkg.scripts["ci:frontend:operator-twin-scope-query"] === "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_TWIN_SCOPE_QUERY_V1.cjs",
