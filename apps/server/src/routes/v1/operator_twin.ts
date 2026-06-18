@@ -7,6 +7,21 @@ import type { Pool } from "pg";
 
 const DATA_SCOPE = "OFFICIAL_OPERATOR_TWIN_API";
 
+const TENANT_SCOPE_COLUMNS = ["tenant_id", "project_id", "group_id"] as const;
+
+const OPERATOR_TWIN_SCOPED_INDEX_TABLES = [
+  "field_index_v1",
+  "water_state_estimate_index_v1",
+  "soil_moisture_sensing_window_index_v1",
+  "weather_forecast_index_v1",
+  "irrigation_scenario_set_index_v1",
+  "decision_recommendation_index_v1",
+] as const;
+
+const SCOPE_REQUIRED_REASON = "TENANT_PROJECT_OR_GROUP_SCOPE_REQUIRED";
+
+const TABLE_SCOPE_COLUMNS_REQUIRED_REASON = "INDEX_TABLE_SCOPE_COLUMNS_REQUIRED";
+
 type Row = Record<string, any>;
 
 type RequestScope = {
@@ -231,13 +246,16 @@ async function readRows(pool: Pool, table: string, scope: RequestScope, limit = 
   if (!(await tableExists(pool, table))) return [];
 
   const columns = await readColumns(pool, table);
-  const scopedColumns = ["tenant_id", "project_id", "group_id"].filter((column) => columns.has(column));
-  if (scopedColumns.length === 0) return [];
+  const scopedColumns = TENANT_SCOPE_COLUMNS.filter((column) => columns.has(column));
+  if (scopedColumns.length === 0) {
+    void TABLE_SCOPE_COLUMNS_REQUIRED_REASON;
+    return [];
+  }
 
   const clauses: string[] = [];
   const values: unknown[] = [];
 
-  const scopePairs: Array<[string, string | null]> = [
+  const scopePairs: Array<[typeof TENANT_SCOPE_COLUMNS[number], string | null]> = [
     ["tenant_id", scope.tenantId],
     ["project_id", scope.projectId],
     ["group_id", scope.groupId],
@@ -540,6 +558,13 @@ async function buildOverview(pool: Pool, scope: RequestScope): Promise<Row> {
     surface: "OPERATOR",
     report_kind: "OPERATOR_TWIN_OVERVIEW",
     request_scope: scope,
+    scope_policy: {
+      required: true,
+      accepted_scope_keys: [...TENANT_SCOPE_COLUMNS],
+      scope_applied: hasTenantScope(scope),
+      missing_reason: hasTenantScope(scope) ? null : SCOPE_REQUIRED_REASON,
+      index_tables: [...OPERATOR_TWIN_SCOPED_INDEX_TABLES],
+    },
     fields,
     data_gaps: defaultDataGaps(hasAnyScenario),
     boundary_rules: defaultBoundaryRules(),
@@ -571,6 +596,14 @@ async function buildFieldWorkspace(pool: Pool, scope: RequestScope, fieldId: str
     surface: "OPERATOR",
     report_kind: "OPERATOR_FIELD_TWIN_WORKSPACE",
     request_scope: fieldScope,
+    scope_policy: {
+      required: true,
+      accepted_scope_keys: [...TENANT_SCOPE_COLUMNS],
+      scope_applied: hasTenantScope(fieldScope),
+      missing_reason: hasTenantScope(fieldScope) ? null : SCOPE_REQUIRED_REASON,
+      index_tables: [...OPERATOR_TWIN_SCOPED_INDEX_TABLES],
+      field_scope_required: true,
+    },
     field_context: {
       field_id: normalizedFieldId,
       field_name: fieldDisplayName(normalizedFieldId, source.fields),
