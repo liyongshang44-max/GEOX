@@ -1,5 +1,5 @@
 // apps/server/src/routes/v1/operator_twin.ts
-// Purpose: expose read-only Operator Twin Workbench projections.
+// Purpose: expose scoped, read-only Operator Twin Workbench projections.
 // Boundary: these routes must not write facts, create recommendations, approve, dispatch, or create AO-ACT tasks.
 
 import type { FastifyInstance } from "fastify";
@@ -8,6 +8,13 @@ import type { Pool } from "pg";
 const DATA_SCOPE = "OFFICIAL_OPERATOR_TWIN_API";
 
 type Row = Record<string, any>;
+
+type RequestScope = {
+  tenantId: string | null;
+  projectId: string | null;
+  groupId: string | null;
+  fieldId: string | null;
+};
 
 type TwinGap = {
   gap_code: string;
@@ -38,6 +45,16 @@ type TwinLayer = {
   body: string;
   status: "AVAILABLE" | "LIMITED" | "NOT_AVAILABLE";
   evidence_refs: string[];
+};
+
+type TwinSource = {
+  scope: RequestScope;
+  fields: Row[];
+  waterByField: Map<string, Row>;
+  sensingByField: Map<string, Row>;
+  weatherByField: Map<string, Row>;
+  scenarioByField: Map<string, Row>;
+  recommendationByField: Map<string, Row>;
 };
 
 function nowIso(): string {
@@ -100,6 +117,13 @@ function firstText(...values: unknown[]): string {
   return "";
 }
 
+function firstValue(...values: unknown[]): unknown {
+  for (const value of values) {
+    if (value !== undefined && value !== null && String(value).trim() !== "") return value;
+  }
+  return null;
+}
+
 function fieldIdOf(row: Row): string {
   return firstText(row.field_id, row.fieldId, row.target_field_id, row.subject_field_id, safeJson(row.context_json)?.field_id);
 }
@@ -132,6 +156,59 @@ function tsNumber(row: Row): number {
   return best;
 }
 
+function identifier(name: string): string {
+  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) {
+    throw new Error("UNSAFE_SQL_IDENTIFIER");
+  }
+  return name;
+}
+
+function queryValue(req: any, key: string): unknown {
+  return req?.query?.[key] ?? req?.query?.[key.replace(/_([a-z])/g, (_match: string, letter: string) => letter.toUpperCase())];
+}
+
+function headerValue(req: any, key: string): unknown {
+  return req?.headers?.[key] ?? req?.headers?.[key.toLowerCase()];
+}
+
+function extractRequestScope(req: any, fieldIdFromPath?: string | null): RequestScope {
+  const user = req?.user ?? req?.auth ?? req?.principal ?? {};
+  return {
+    tenantId: nullableText(
+      firstValue(
+        user.tenant_id,
+        user.tenantId,
+        queryValue(req, "tenant_id"),
+        queryValue(req, "tenantId"),
+        headerValue(req, "x-tenant-id")
+      )
+    ),
+    projectId: nullableText(
+      firstValue(
+        user.project_id,
+        user.projectId,
+        queryValue(req, "project_id"),
+        queryValue(req, "projectId"),
+        headerValue(req, "x-project-id")
+      )
+    ),
+    groupId: nullableText(
+      firstValue(
+        user.group_id,
+        user.groupId,
+        queryValue(req, "group_id"),
+        queryValue(req, "groupId"),
+        headerValue(req, "x-group-id")
+      )
+    ),
+    fieldId: nullableText(fieldIdFromPath ?? queryValue(req, "field_id") ?? queryValue(req, "fieldId")),
+  };
+}
+
+function hasTenantScope(scope: RequestScope): boolean {
+  return Boolean(scope.tenantId || scope.projectId || scope.groupId);
+}
+
 async function tableExists(pool: Pool, table: string): Promise<boolean> {
   const result = await pool
     .query("SELECT to_regclass($1)::text AS name", ["public." + table])
@@ -139,11 +216,50 @@ async function tableExists(pool: Pool, table: string): Promise<boolean> {
   return Boolean(result.rows?.[0]?.name);
 }
 
-async function readRows(pool: Pool, table: string, limit = 500): Promise<Row[]> {
-  if (!(await tableExists(pool, table))) return [];
+async function readColumns(pool: Pool, table: string): Promise<Set<string>> {
   const result = await pool
-    .query("SELECT * FROM " + table + " LIMIT $1", [limit])
+    .query(
+      "SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1",
+      [table]
+    )
     .catch(() => ({ rows: [] as Row[] }));
+  return new Set((result.rows ?? []).map((row) => String(row.column_name)));
+}
+
+async function readRows(pool: Pool, table: string, scope: RequestScope, limit = 500): Promise<Row[]> {
+  if (!hasTenantScope(scope)) return [];
+  if (!(await tableExists(pool, table))) return [];
+
+  const columns = await readColumns(pool, table);
+  const scopedColumns = ["tenant_id", "project_id", "group_id"].filter((column) => columns.has(column));
+  if (scopedColumns.length === 0) return [];
+
+  const clauses: string[] = [];
+  const values: unknown[] = [];
+
+  const scopePairs: Array<[string, string | null]> = [
+    ["tenant_id", scope.tenantId],
+    ["project_id", scope.projectId],
+    ["group_id", scope.groupId],
+  ];
+
+  for (const [column, value] of scopePairs) {
+    if (!value) continue;
+    if (!columns.has(column)) continue;
+    values.push(value);
+    clauses.push(identifier(column) + " = $" + values.length);
+  }
+
+  if (!clauses.length) return [];
+
+  if (scope.fieldId && columns.has("field_id")) {
+    values.push(scope.fieldId);
+    clauses.push("field_id = $" + values.length);
+  }
+
+  values.push(limit);
+  const sql = "SELECT * FROM " + identifier(table) + " WHERE " + clauses.join(" AND ") + " LIMIT $" + values.length;
+  const result = await pool.query(sql, values).catch(() => ({ rows: [] as Row[] }));
   return result.rows ?? [];
 }
 
@@ -202,22 +318,29 @@ function waterStateText(row: Row | null | undefined): string {
 }
 
 function dataCoverageText(sensing: Row | null | undefined, weather: Row | null | undefined): string {
-  const sensingStatus = firstText(sensing?.quality_status, sensing?.status, sensing?.coverage_status);
-  const weatherVersion = firstText(weather?.forecast_version, weather?.provider_run_id, weather?.external_forecast_id);
   if (sensing && weather) return "土壤水分窗口与天气版本可用于灌溉判断";
   if (sensing) return "土壤水分窗口可用，天气版本待确认";
   if (weather) return "天气版本可用，土壤水分窗口待确认";
-  if (sensingStatus || weatherVersion) return "数据覆盖部分可用";
   return "数据覆盖待确认";
 }
 
-function defaultDataGaps(): TwinGap[] {
-  return [
+function defaultDataGaps(hasScenario: boolean): TwinGap[] {
+  const gaps: TwinGap[] = [
     { gap_code: "SEVEN_DAY_FORECAST_RUN_MISSING", label: "7 天风险预测尚未作为正式 forecast_run_v1 固化", severity: "INFO" },
     { gap_code: "THIRTY_DAY_TREND_MISSING", label: "30 天趋势尚未建模", severity: "INFO" },
     { gap_code: "NITROGEN_DISEASE_ECONOMICS_MISSING", label: "氮素状态、病害风险、经济比较尚未接入", severity: "INFO" },
     { gap_code: "SUBMIT_SCENARIO_TO_RECOMMENDATION_NOT_OPEN", label: "Submit Scenario to Recommendation 尚未开放", severity: "INFO" },
   ];
+
+  if (!hasScenario) {
+    gaps.unshift({
+      gap_code: "IRRIGATION_SCENARIO_SET_MISSING",
+      label: "未找到 irrigation_scenario_set_index_v1 证据，情景比较不可用",
+      severity: "WARNING",
+    });
+  }
+
+  return gaps;
 }
 
 function defaultBoundaryRules(): TwinBoundaryRule[] {
@@ -227,31 +350,72 @@ function defaultBoundaryRules(): TwinBoundaryRule[] {
     { rule_code: "NO_APPROVAL_BYPASS", label: "本页面不绕过 approval" },
     { rule_code: "FORECAST_IS_NOT_FACT", label: "Forecast 不能当作 Fact" },
     { rule_code: "SCENARIO_IS_NOT_TASK", label: "Scenario 不能当作 Task" },
-    { rule_code: "NO_ACTION_BASELINE_REQUIRED", label: "no_action baseline 后续情景比较必须保留" },
-  ];
-}
-
-function defaultScenarioOptions(): Row[] {
-  return [
-    { option_id: "no_action", customer_label: "不处理" },
-    { option_id: "irrigate_10mm", customer_label: "灌溉 10mm" },
-    { option_id: "irrigate_20mm", customer_label: "灌溉 20mm" },
-    { option_id: "irrigate_22mm", customer_label: "灌溉 22mm" },
-    { option_id: "delay_3d", customer_label: "延迟 3 天" },
+    { rule_code: "NO_ACTION_BASELINE_REQUIRED", label: "no_action baseline 后续情景比较必须由真实 scenario 证据提供" },
   ];
 }
 
 function scenarioOptions(row: Row | null | undefined): Row[] {
-  if (!row) return defaultScenarioOptions();
+  if (!row) return [];
   const direct = asArray(row.options_json ?? row.options ?? row.scenario_options_json ?? row.scenarios_json);
   if (direct.length > 0) return direct;
   const payload = safeJson(row.payload_json ?? row.raw_payload ?? row.record_json);
   const payloadOptions = asArray(payload?.options ?? payload?.scenario_options);
-  return payloadOptions.length > 0 ? payloadOptions : defaultScenarioOptions();
+  return payloadOptions.length > 0 ? payloadOptions : [];
+}
+
+function optionId(option: Row): string {
+  return firstText(option.option_id, option.id, option.scenario_id, option.action_type, option.label);
+}
+
+function hasNoActionBaseline(options: Row[]): boolean {
+  return options.some((option) => optionId(option) === "no_action");
+}
+
+function suggestedActionPayload(row: Row | null | undefined): Row | null {
+  if (!row) return null;
+  const direct = safeJson(row.suggested_action_json ?? row.suggested_action);
+  if (direct) return direct;
+
+  const payload = safeJson(row.payload_json ?? row.raw_payload ?? row.record_json);
+  const nested = safeJson(payload?.suggested_action_json ?? payload?.suggested_action);
+  if (nested) return nested;
+
+  if (payload && typeof payload.suggested_action === "object") return payload.suggested_action;
+  return null;
+}
+
+function recommendationActionType(row: Row | null | undefined): string | null {
+  const suggested = suggestedActionPayload(row);
+  return nullableText(
+    firstValue(
+      row?.action_type,
+      row?.recommended_action_type,
+      row?.recommendation_action_type,
+      suggested?.action_type,
+      suggested?.actionType,
+      suggested?.type
+    )
+  );
+}
+
+function recommendationAmountMm(row: Row | null | undefined): number | string | null {
+  const suggested = suggestedActionPayload(row);
+  const value = firstValue(
+    row?.amount_mm,
+    row?.recommended_amount_mm,
+    row?.irrigation_amount_mm,
+    suggested?.amount_mm,
+    suggested?.amountMm,
+    suggested?.irrigation_mm,
+    suggested?.water_mm
+  );
+
+  if (value === null || value === undefined) return null;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : safeText(value);
 }
 
 function buildLayers(input: {
-  fieldId: string;
   sensing: Row | null;
   weather: Row | null;
   waterState: Row | null;
@@ -285,8 +449,10 @@ function buildLayers(input: {
     {
       layer: "Scenario",
       title: "情景",
-      body: "情景比较必须包含 no_action baseline，并只能进入 recommendation / approval 链路。",
-      status: input.scenario ? "AVAILABLE" : "LIMITED",
+      body: input.scenario
+        ? "情景比较必须包含真实 no_action baseline，并只能进入 recommendation / approval 链路。"
+        : "未找到情景证据，不能展示默认或虚构情景。",
+      status: input.scenario ? "AVAILABLE" : "NOT_AVAILABLE",
       evidence_refs: collectEvidenceRefs(input.scenario),
     },
     {
@@ -301,24 +467,18 @@ function buildLayers(input: {
   ];
 }
 
-async function buildTwinSource(pool: Pool): Promise<{
-  fields: Row[];
-  waterByField: Map<string, Row>;
-  sensingByField: Map<string, Row>;
-  weatherByField: Map<string, Row>;
-  scenarioByField: Map<string, Row>;
-  recommendationByField: Map<string, Row>;
-}> {
+async function buildTwinSource(pool: Pool, scope: RequestScope): Promise<TwinSource> {
   const [fields, water, sensing, weather, scenarios, recommendations] = await Promise.all([
-    readRows(pool, "field_index_v1", 500),
-    readRows(pool, "water_state_estimate_index_v1", 500),
-    readRows(pool, "soil_moisture_sensing_window_index_v1", 500),
-    readRows(pool, "weather_forecast_index_v1", 500),
-    readRows(pool, "irrigation_scenario_set_index_v1", 500),
-    readRows(pool, "decision_recommendation_index_v1", 500),
+    readRows(pool, "field_index_v1", scope, 500),
+    readRows(pool, "water_state_estimate_index_v1", scope, 500),
+    readRows(pool, "soil_moisture_sensing_window_index_v1", scope, 500),
+    readRows(pool, "weather_forecast_index_v1", scope, 500),
+    readRows(pool, "irrigation_scenario_set_index_v1", scope, 500),
+    readRows(pool, "decision_recommendation_index_v1", scope, 500),
   ]);
 
   return {
+    scope,
     fields,
     waterByField: latestByField(water),
     sensingByField: latestByField(sensing),
@@ -328,7 +488,7 @@ async function buildTwinSource(pool: Pool): Promise<{
   };
 }
 
-function fieldIdsFromSource(source: Awaited<ReturnType<typeof buildTwinSource>>): string[] {
+function fieldIdsFromSource(source: TwinSource): string[] {
   const ids = new Set<string>();
   for (const row of source.fields) {
     const id = fieldIdOf(row);
@@ -337,13 +497,12 @@ function fieldIdsFromSource(source: Awaited<ReturnType<typeof buildTwinSource>>)
   for (const map of [source.waterByField, source.sensingByField, source.weatherByField, source.scenarioByField, source.recommendationByField]) {
     for (const id of map.keys()) ids.add(id);
   }
-  if (ids.size === 0) ids.add("field_c8_demo");
   return [...ids].sort();
 }
 
 function fieldDisplayName(fieldId: string, fields: Row[]): string {
   const row = fields.find((item) => fieldIdOf(item) === fieldId);
-  return firstText(row?.display_name, row?.field_name, row?.name, fieldId === "field_c8_demo" ? "C8 示范田" : fieldId);
+  return firstText(row?.display_name, row?.field_name, row?.name, fieldId);
 }
 
 function cropText(fieldId: string, fields: Row[]): string {
@@ -351,7 +510,7 @@ function cropText(fieldId: string, fields: Row[]): string {
   return firstText(row?.crop, row?.crop_type, row?.crop_name, row?.season_crop, "作物阶段待确认");
 }
 
-function buildFieldRow(fieldId: string, source: Awaited<ReturnType<typeof buildTwinSource>>): TwinFieldRow {
+function buildFieldRow(fieldId: string, source: TwinSource): TwinFieldRow {
   const water = source.waterByField.get(fieldId) ?? null;
   const sensing = source.sensingByField.get(fieldId) ?? null;
   const weather = source.weatherByField.get(fieldId) ?? null;
@@ -371,16 +530,18 @@ function buildFieldRow(fieldId: string, source: Awaited<ReturnType<typeof buildT
   };
 }
 
-async function buildOverview(pool: Pool): Promise<Row> {
-  const source = await buildTwinSource(pool);
+async function buildOverview(pool: Pool, scope: RequestScope): Promise<Row> {
+  const source = await buildTwinSource(pool, scope);
   const fields = fieldIdsFromSource(source).map((fieldId) => buildFieldRow(fieldId, source));
+  const hasAnyScenario = source.scenarioByField.size > 0;
 
   return {
     version: "v1",
     surface: "OPERATOR",
     report_kind: "OPERATOR_TWIN_OVERVIEW",
+    request_scope: scope,
     fields,
-    data_gaps: defaultDataGaps(),
+    data_gaps: defaultDataGaps(hasAnyScenario),
     boundary_rules: defaultBoundaryRules(),
     summary: {
       field_count: fields.length,
@@ -392,19 +553,24 @@ async function buildOverview(pool: Pool): Promise<Row> {
   };
 }
 
-async function buildFieldWorkspace(pool: Pool, fieldId: string): Promise<Row> {
-  const source = await buildTwinSource(pool);
-  const normalizedFieldId = safeText(fieldId) || "field_c8_demo";
+async function buildFieldWorkspace(pool: Pool, scope: RequestScope, fieldId: string): Promise<Row> {
+  const normalizedFieldId = safeText(fieldId);
+  const fieldScope = { ...scope, fieldId: normalizedFieldId };
+  const source = await buildTwinSource(pool, fieldScope);
+
   const sensing = source.sensingByField.get(normalizedFieldId) ?? null;
   const weather = source.weatherByField.get(normalizedFieldId) ?? null;
   const waterState = source.waterByField.get(normalizedFieldId) ?? null;
   const scenario = source.scenarioByField.get(normalizedFieldId) ?? null;
   const recommendation = source.recommendationByField.get(normalizedFieldId) ?? null;
+  const options = scenarioOptions(scenario);
+  const noActionBaselinePresent = scenario ? hasNoActionBaseline(options) : false;
 
   return {
     version: "v1",
     surface: "OPERATOR",
     report_kind: "OPERATOR_FIELD_TWIN_WORKSPACE",
+    request_scope: fieldScope,
     field_context: {
       field_id: normalizedFieldId,
       field_name: fieldDisplayName(normalizedFieldId, source.fields),
@@ -429,40 +595,42 @@ async function buildFieldWorkspace(pool: Pool, fieldId: string): Promise<Row> {
       reason: "LONG_RANGE_FORECAST_RUN_NOT_AVAILABLE",
     },
     scenario_comparison: {
-      no_action_baseline_present: true,
-      options: scenarioOptions(scenario).map((option) => ({
-        option_id: firstText(option.option_id, option.id, option.scenario_id),
-        label: firstText(option.customer_label, option.label, option.option_id, option.id),
+      no_action_baseline_present: noActionBaselinePresent,
+      options: options.map((option) => ({
+        option_id: optionId(option),
+        label: firstText(option.customer_label, option.label, optionId(option)),
         risk_delta: nullableText(option.risk_delta),
         confidence_text: nullableText(option.confidence_text ?? option.confidence),
         failure_conditions: asArray(option.failure_conditions ?? option.failure_conditions_json).map((item) => safeText(item)).filter(Boolean),
       })),
       evidence_refs: collectEvidenceRefs(scenario),
+      status: scenario ? "AVAILABLE" : "NOT_AVAILABLE",
+      unavailable_reason: scenario ? null : "IRRIGATION_SCENARIO_SET_MISSING",
     },
     recommendation_candidate: {
       recommendation_id: nullableText(recommendation?.recommendation_id ?? recommendation?.id),
-      action_type: nullableText(recommendation?.action_type ?? recommendation?.recommended_action_type),
-      amount_mm: recommendation?.amount_mm ?? recommendation?.recommended_amount_mm ?? null,
+      action_type: recommendationActionType(recommendation),
+      amount_mm: recommendationAmountMm(recommendation),
       human_approval_required: true,
       no_direct_execution: true,
       evidence_refs: collectEvidenceRefs(recommendation),
     },
     layers: buildLayers({
-      fieldId: normalizedFieldId,
       sensing,
       weather,
       waterState,
       scenario,
       recommendation,
     }),
-    data_gaps: defaultDataGaps(),
+    data_gaps: defaultDataGaps(Boolean(scenario)),
     boundary_rules: defaultBoundaryRules(),
   };
 }
 
 export function registerOperatorTwinReadRoutes(app: FastifyInstance, pool: Pool): void {
-  app.get("/api/v1/operator/twin", async (_req, reply) => {
-    const overview = await buildOverview(pool);
+  app.get("/api/v1/operator/twin", async (req: any, reply) => {
+    const scope = extractRequestScope(req);
+    const overview = await buildOverview(pool, scope);
     return reply.send({
       ...basePayload("operator_twin_overview_api"),
       operator_twin_overview_v1: overview,
@@ -471,7 +639,8 @@ export function registerOperatorTwinReadRoutes(app: FastifyInstance, pool: Pool)
 
   app.get("/api/v1/operator/twin/fields/:field_id", async (req: any, reply) => {
     const fieldId = safeText(req.params?.field_id);
-    const workspace = await buildFieldWorkspace(pool, fieldId);
+    const scope = extractRequestScope(req, fieldId);
+    const workspace = await buildFieldWorkspace(pool, scope, fieldId);
     return reply.send({
       ...basePayload("operator_field_twin_workspace_api"),
       operator_field_twin_workspace_v1: workspace,

@@ -1,8 +1,4 @@
-// scripts/governance_acceptance/ACCEPTANCE_OPERATOR_TWIN_READ_API_V1.cjs
-// Purpose: verify Operator Twin read API source boundary.
-// Boundary: Operator Twin API must be read-only and must not create recommendations, approvals, dispatches, or AO-ACT tasks.
-
-const fs = require("fs");
+﻿const fs = require("fs");
 const path = require("path");
 
 const ROOT = path.resolve(__dirname, "..", "..");
@@ -41,12 +37,31 @@ assertIncludes(route, 'app.get("/api/v1/operator/twin"', "operator twin overview
 assertIncludes(route, 'app.get("/api/v1/operator/twin/fields/:field_id"', "operator field twin route");
 assertIncludes(route, "operator_twin_overview_v1", "overview projection key");
 assertIncludes(route, "operator_field_twin_workspace_v1", "field workspace projection key");
+
+assertIncludes(route, "extractRequestScope", "request scope extraction");
+assertIncludes(route, "tenant_id", "tenant scope column");
+assertIncludes(route, "project_id", "project scope column");
+assertIncludes(route, "group_id", "group scope column");
+assertIncludes(route, "field_id", "field scope column");
+assertIncludes(route, "hasTenantScope", "tenant/project/group scope guard");
+assertIncludes(route, " WHERE ", "scoped WHERE clause");
+assertIncludes(route, 'readRows(pool, "field_index_v1", scope', "field index scoped read");
+assertIncludes(route, 'readRows(pool, "decision_recommendation_index_v1", scope', "recommendation index scoped read");
+
+assertIncludes(route, "suggested_action_json", "suggested_action_json parser");
+assertIncludes(route, "recommendationActionType", "recommendation action parser");
+assertIncludes(route, "recommendationAmountMm", "recommendation amount parser");
+
+assertIncludes(route, "IRRIGATION_SCENARIO_SET_MISSING", "missing scenario condition");
+assertIncludes(route, "no_action_baseline_present: noActionBaselinePresent", "real no_action baseline flag");
+assertIncludes(route, 'status: scenario ? "AVAILABLE" : "NOT_AVAILABLE"', "scenario availability status");
+assertNotIncludes(route, "defaultScenarioOptions", "must not synthesize default scenario options");
+assertNotIncludes(route, "no_action_baseline_present: true", "must not always claim no_action baseline exists");
+
 assertIncludes(route, "writeReady: false", "writeReady false");
 assertIncludes(route, "dispatchReady: false", "dispatchReady false");
 assertIncludes(route, "approvalReady: false", "approvalReady false");
 assertIncludes(route, "taskCreationReady: false", "taskCreationReady false");
-assertIncludes(route, "no_action_baseline_present", "no_action baseline boundary");
-assertIncludes(route, "forecast_horizon_limited", "forecast horizon limitation");
 
 [
   "app.post(",
