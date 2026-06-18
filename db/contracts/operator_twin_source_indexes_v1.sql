@@ -31,13 +31,27 @@ CREATE TABLE IF NOT EXISTS soil_moisture_sensing_window_index_v1 (
   project_id text NOT NULL,
   group_id text NOT NULL,
   field_id text NOT NULL,
-  sensing_window_id text NOT NULL,
-  window_start_at timestamptz,
-  window_end_at timestamptz,
+  window_id text NOT NULL,
+  device_id text,
+  metric text,
+  window_start timestamptz,
+  window_end timestamptz,
+  expected_interval_ms integer,
+  expected_points integer,
+  actual_points integer,
   coverage_ratio numeric,
+  max_gap_ms integer,
+  quality_status text,
+  confidence_json jsonb,
+  summary_json jsonb,
+  config_snapshot_json jsonb,
   evidence_refs_json jsonb,
-  computed_at timestamptz,
-  PRIMARY KEY (tenant_id, project_id, group_id, field_id, sensing_window_id)
+  source_fact_ids_json jsonb,
+  source_observation_ids_json jsonb,
+  source_fact_id text,
+  created_at timestamptz,
+  updated_at timestamptz,
+  PRIMARY KEY (tenant_id, project_id, group_id, field_id, window_id)
 );
 
 CREATE TABLE IF NOT EXISTS weather_forecast_index_v1 (

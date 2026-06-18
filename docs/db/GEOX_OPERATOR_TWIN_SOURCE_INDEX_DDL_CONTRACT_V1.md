@@ -64,15 +64,30 @@ Minimum columns:
 - project_id
 - group_id
 - field_id
-- sensing_window_id
-- window_start_at
-- window_end_at
+- window_id
+- device_id
+- metric
+- window_start
+- window_end
+- expected_interval_ms
+- expected_points
+- actual_points
 - coverage_ratio
+- max_gap_ms
+- quality_status
+- confidence_json
+- summary_json
+- config_snapshot_json
 - evidence_refs_json
-- computed_at
+- source_fact_ids_json
+- source_observation_ids_json
+- source_fact_id
+- created_at
+- updated_at
 
 Purpose: scoped sensing-window evidence for water-state estimation.
 
+Important: this table follows the existing H12 sensing-window projection helper. Downstream preflight and runtime readers use window_id, quality_status, and source_fact_id.
 ### weather_forecast_index_v1
 
 Minimum columns:
