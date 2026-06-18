@@ -1,71 +1,147 @@
+// apps/web/src/layouts/OperatorLayout.tsx
+// Purpose: provide the dedicated operator shell used by existing operator pages and the new Operator Twin Workbench.
+// Boundary: this shell must not become the Customer Delivery Portal or the Admin Control Plane Console.
+
 import React from "react";
-import { NavLink } from "react-router-dom";
-import "../styles/operatorShell.css";
-import "../styles/operatorUsability.css";
-import { fetchSessionMe, type SessionMe } from "../api/session";
-import { hasOperatorPermission, permissionReason, type OperatorPermissionKey } from "../lib/permissions";
+import { NavLink, useLocation } from "react-router-dom";
 
 type OperatorLayoutProps = {
-  title: string;
-  lead: string;
   children: React.ReactNode;
+  title?: string;
+  lead?: string;
 };
 
-const OPERATOR_NAV: Array<{ to: string; label: string; description: string; perm?: OperatorPermissionKey }> = [
-  { to: "/operator/workbench", label: "总队列", description: "跨域待处理事项" },
-  { to: "/operator/approvals", label: "审批中心", description: "建议与处方审批", perm: "approve" },
-  { to: "/operator/dispatch", label: "派发状态", description: "任务分派与回执", perm: "dispatch" },
-  { to: "/operator/acceptance", label: "验收中心", description: "执行结果复核", perm: "acceptance" },
-  { to: "/operator/evidence", label: "证据中心", description: "证据完整性检查", perm: "export_evidence" },
-  { to: "/operator/devices-alerts", label: "设备与告警", description: "设备状态与告警事件" },
-  { to: "/operator/roi-ledger", label: "ROI 明细账", description: "价值记录追溯" },
-  { to: "/operator/field-memory", label: "田块记忆", description: "田块学习明细" },
+type OperatorNavItem = {
+  key: string;
+  label: string;
+  to: string;
+  hint: string;
+  disabled?: boolean;
+};
+
+const OPERATOR_NAV_ITEMS: OperatorNavItem[] = [
+  {
+    key: "twin",
+    label: "Twin 总览",
+    to: "/operator/twin",
+    hint: "查看需要预测分析的田块、低置信判断与数据缺口。",
+  },
+  {
+    key: "forecast",
+    label: "预测",
+    to: "/operator/twin",
+    hint: "预测面板将在后续 H 阶段开放。",
+    disabled: true,
+  },
+  {
+    key: "scenarios",
+    label: "情景",
+    to: "/operator/twin",
+    hint: "情景比较将在后续 H 阶段开放。",
+    disabled: true,
+  },
+  {
+    key: "evidence",
+    label: "证据质量",
+    to: "/operator/twin",
+    hint: "证据质量面板将在后续 H 阶段开放。",
+    disabled: true,
+  },
+  {
+    key: "calibration",
+    label: "校准回放",
+    to: "/operator/twin",
+    hint: "预测回放和模型校准将在后续 H 阶段开放。",
+    disabled: true,
+  },
 ];
 
-export default function OperatorLayout({ title, lead, children }: OperatorLayoutProps): React.ReactElement {
-  const [session, setSession] = React.useState<SessionMe | null>(null);
-  React.useEffect(() => {
-    let alive = true;
-    fetchSessionMe().then((x) => { if (alive) setSession(x); }).catch(() => { if (alive) setSession(null); });
-    return () => { alive = false; };
-  }, []);
+function isItemActive(pathname: string, item: OperatorNavItem): boolean {
+  if (item.key === "twin") return pathname === "/operator/twin" || pathname.startsWith("/operator/twin/fields/");
+  return false;
+}
+
+function resolveTitle(pathname: string): string {
+  if (pathname === "/operator/twin") return "操作员数字孪生工作台";
+  if (pathname.startsWith("/operator/twin/fields/")) return "地块 Twin 工作区";
+  return "操作员工作台";
+}
+
+function resolveLead(pathname: string): string {
+  if (pathname === "/operator/twin") return "查看田块状态、预测缺口、低置信判断与人工确认入口。";
+  if (pathname.startsWith("/operator/twin/fields/")) return "按 Fact / Estimate / Forecast / Scenario 分层查看单地块数字孪生状态。";
+  return "操作员侧用于分析、复核和人工确认，不承担客户报告或后台治理职责。";
+}
+
+export default function OperatorLayout({
+  children,
+  title,
+  lead,
+}: OperatorLayoutProps): React.ReactElement {
+  const location = useLocation();
+  const resolvedTitle = title ?? resolveTitle(location.pathname);
+  const resolvedLead = lead ?? resolveLead(location.pathname);
+
   return (
-    <div className="operatorShell">
-      <aside className="operatorSidebar" aria-label="运营导航">
-        <div className="operatorBrand">
-          <span>GEOX</span>
-          <strong>运营工作台</strong>
+    <div className="customerShell operatorShell" data-layout="operator-shell">
+      <aside className="customerShellSidebar operatorShellSidebar" aria-label="操作员导航">
+        <div className="customerShellBrand" aria-label="GEOX Operator Twin">
+          <span className="customerShellLogoMark" aria-hidden="true" />
+          <span>GEOX Operator Twin</span>
         </div>
-        <nav className="operatorNav">
-          {OPERATOR_NAV.map((item) => {
-            const allowed = !item.perm || hasOperatorPermission(session, item.perm);
-            const reason = item.perm ? permissionReason(session, item.perm) : "";
-            return (
-              <div key={item.to}>
-                <NavLink to={item.to} className={({ isActive }) => `operatorNavItem ${isActive ? "isActive" : ""}`}>
-                  <span>{item.label}{allowed ? "" : "（无权限）"}</span>
-                  <small>{allowed ? item.description : reason}</small>
-                </NavLink>
-              </div>
-            );
-          })}
+
+        <nav className="customerShellNav" aria-label="操作员数字孪生导航">
+          {OPERATOR_NAV_ITEMS.map((item) =>
+            item.disabled ? (
+              <span
+                key={item.key}
+                className="customerShellNavItem customerShellNavItemDisabled"
+                title={item.hint}
+                aria-disabled="true"
+              >
+                <span>{item.label}</span>
+              </span>
+            ) : (
+              <NavLink
+                key={item.key}
+                to={item.to}
+                title={item.hint}
+                className={() => "customerShellNavItem" + (isItemActive(location.pathname, item) ? " isActive" : "")}
+              >
+                <span>{item.label}</span>
+              </NavLink>
+            )
+          )}
         </nav>
-        <div className="operatorBoundaryNote">
-          运营层用于处理审批、派发、验收、证据复核、设备告警、价值记录与田块记忆追溯，不进入客户主界面。
+
+        <div className="customerShellMeta">
+          <div>产品面</div>
+          <strong>Operator Twin Workbench</strong>
+          <div>边界</div>
+          <strong>分析与人工确认，不直接执行</strong>
+        </div>
+
+        <div className="customerShellFooterNote">
+          情景只能进入 recommendation / approval 链路，不能直接变成 AO-ACT task。
         </div>
       </aside>
 
-      <main className="operatorMain">
-        <header className="operatorHeader">
-          <div>
-            <div className="operatorEyebrow">运营工作台</div>
-            <h1>{title}</h1>
-            <p>{lead}</p>
+      <div className="customerShellMainWrap">
+        <header className="customerShellTopbar">
+          <div className="customerShellHeading">
+            <h1 className="customerShellTitle">{resolvedTitle}</h1>
+            <div className="customerShellContext">{resolvedLead}</div>
           </div>
-          <span className="operatorHeaderBadge">运营专用</span>
+          <div className="customerShellTopActions">
+            <span className="customerShellUserMuted">
+              View-only v1<br />
+              <small>Operator shell</small>
+            </span>
+          </div>
         </header>
-        <section className="operatorContent">{children}</section>
-      </main>
+
+        <main className="customerLayoutMain">{children}</main>
+      </div>
     </div>
   );
 }
