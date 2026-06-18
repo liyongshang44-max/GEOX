@@ -7,8 +7,10 @@ import { Link, useSearchParams } from "react-router-dom";
 import {
   buildOperatorTwinScopeQuery,
   fetchOperatorTwinOverview,
+  fetchOperatorTwinSourceIndexInventory,
   type OperatorTwinOverviewV1,
   type OperatorTwinRequestScope,
+  type OperatorTwinSourceIndexInventoryV1,
   type OperatorTwinScopePolicy,
 } from "../../../api/operatorTwin";
 
@@ -20,6 +22,62 @@ function scopeFromSearchParams(searchParams: URLSearchParams): OperatorTwinReque
     project_id: searchParams.get("project_id"),
     group_id: searchParams.get("group_id"),
   };
+}
+
+function formatInventoryTimestamp(value: number | null): string {
+  if (value === null || value === undefined) return "none";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return String(value);
+
+  return date.toISOString();
+}
+
+function SourceIndexInventoryCard({ inventory }: { inventory: OperatorTwinSourceIndexInventoryV1 | null }): React.ReactElement {
+  return (
+    <article className="customerCard" data-card="operator-twin-source-index-inventory">
+      <h3>Source Index Inventory</h3>
+      {!inventory ? <p>source index inventory 尚未加载。</p> : null}
+      {inventory ? (
+        <>
+          <p>
+            table_count：{inventory.summary.table_count}；available_table_count：{inventory.summary.available_table_count}；total_row_count：{inventory.summary.total_row_count}
+          </p>
+          <div className="customerTableWrap">
+            <table className="customerTable" data-table="operator-twin-source-index-inventory">
+              <thead>
+                <tr>
+                  <th>source index</th>
+                  <th>available</th>
+                  <th>row_count</th>
+                  <th>latest_ts</th>
+                  <th>scope_columns</th>
+                  <th>evidence_refs</th>
+                </tr>
+              </thead>
+              <tbody>
+                {inventory.source_indexes.map((row) => (
+                  <tr key={row.table_name}>
+                    <td>
+                      <strong>{row.label}</strong>
+                      <br />
+                      <small>{row.table_name}</small>
+                    </td>
+                    <td>{row.available ? "true" : "false"}</td>
+                    <td>{row.row_count}</td>
+                    <td>{formatInventoryTimestamp(row.latest_ts_ms)}</td>
+                    <td>{row.scope_columns_present.join(", ") || "none"}</td>
+                    <td>{row.latest_evidence_refs.length > 0 ? row.latest_evidence_refs.join(", ") : "none"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : null}
+    </article>
+  );
 }
 
 function ScopePolicyCard({ policy }: { policy: OperatorTwinScopePolicy }): React.ReactElement {
@@ -39,6 +97,7 @@ export default function OperatorTwinOverviewPage(): React.ReactElement {
   const scopeQueryString = React.useMemo(() => buildOperatorTwinScopeQuery(scope), [scope]);
   const [state, setState] = React.useState<RuntimeState>("loading");
   const [overview, setOverview] = React.useState<OperatorTwinOverviewV1 | null>(null);
+  const [inventory, setInventory] = React.useState<OperatorTwinSourceIndexInventoryV1 | null>(null);
   const [errorText, setErrorText] = React.useState("");
 
   React.useEffect(() => {
@@ -46,12 +105,15 @@ export default function OperatorTwinOverviewPage(): React.ReactElement {
     setState("loading");
     setErrorText("");
     setOverview(null);
+    setInventory(null);
 
-    void fetchOperatorTwinOverview(scope)
-      .then((response) => {
+    void Promise.all([fetchOperatorTwinOverview(scope), fetchOperatorTwinSourceIndexInventory(scope)])
+      .then(([overviewResponse, inventoryResponse]) => {
         if (!alive) return;
-        const nextOverview = response.operator_twin_overview_v1;
+        const nextOverview = overviewResponse.operator_twin_overview_v1;
+        const nextInventory = inventoryResponse.operator_twin_source_index_inventory_v1;
         setOverview(nextOverview);
+        setInventory(nextInventory);
         setState(nextOverview.fields.length > 0 ? "ready" : "empty");
       })
       .catch((error: unknown) => {
@@ -91,6 +153,7 @@ export default function OperatorTwinOverviewPage(): React.ReactElement {
       {overview ? (
         <div className="customerSectionGrid">
           <ScopePolicyCard policy={overview.scope_policy} />
+          <SourceIndexInventoryCard inventory={inventory} />
 
           <article className="customerCard">
             <h3>田块状态矩阵</h3>
