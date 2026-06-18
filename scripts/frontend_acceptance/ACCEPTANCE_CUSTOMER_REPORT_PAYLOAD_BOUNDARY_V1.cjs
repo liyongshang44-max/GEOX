@@ -15,12 +15,39 @@ const REQUIRED_FILES = [
   "apps/web/src/views/OperationReportPage.tsx",
   "apps/web/src/viewmodels/customerDashboardViewModel.ts",
   "apps/web/src/viewmodels/customerReportMainVisualVm.ts",
+  "apps/web/src/viewmodels/customerDashboardVm.ts",
+  "apps/web/src/viewmodels/fieldReportVm.ts",
+  "apps/web/src/viewmodels/operationReportVm.ts",
+  "apps/web/src/viewmodels/customerC8FormalReportVm.ts",
 ];
 
 const REQUIRED_REPORT_ENDPOINT_TOKENS = [
   "/api/v1/reports/operation/",
   "/api/v1/reports/field/",
   "/api/v1/reports/customer-dashboard/aggregate",
+];
+
+const REQUIRED_VIEWMODEL_BUILDER_LINKS = [
+  {
+    filePath: "apps/web/src/views/CustomerDashboardPage.tsx",
+    token: "buildCustomerDashboardVm",
+  },
+  {
+    filePath: "apps/web/src/views/FieldReportPage.tsx",
+    token: "buildFieldReportVm",
+  },
+  {
+    filePath: "apps/web/src/views/FieldReportPage.tsx",
+    token: "buildC8FieldMainVisualVm",
+  },
+  {
+    filePath: "apps/web/src/views/OperationReportPage.tsx",
+    token: "buildOperationReportVm",
+  },
+  {
+    filePath: "apps/web/src/views/OperationReportPage.tsx",
+    token: "buildC8OperationMainVisualVm",
+  },
 ];
 
 const FORBIDDEN_PAYLOAD_TOKENS = [
@@ -97,6 +124,14 @@ const reportsApi = readText("apps/web/src/api/reports.ts");
 
 for (const token of REQUIRED_REPORT_ENDPOINT_TOKENS) {
   assert(reportsApi.includes(token), "official customer report endpoint token missing", { token });
+}
+
+for (const link of REQUIRED_VIEWMODEL_BUILDER_LINKS) {
+  assert(
+    readText(link.filePath).includes(link.token),
+    "customer report page must keep active viewmodel builder under payload boundary scan",
+    link
+  );
 }
 
 const filesToScan = [...REQUIRED_FILES];
