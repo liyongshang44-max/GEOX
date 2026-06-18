@@ -62,8 +62,17 @@ type TwinLayer = {
   evidence_refs: string[];
 };
 
-type TwinSource = {
-  scope: RequestScope;
+type SourceIndexInventoryRow = {
+  table_name: string;
+  available: boolean;
+  row_count: number;
+  latest_ts_ms: number | null;
+  latest_evidence_refs: string[];
+  scope_columns_present: string[];
+  missing_reason: string | null;
+};
+
+type TwinSource = {  scope: RequestScope;
   fields: Row[];
   waterByField: Map<string, Row>;
   sensingByField: Map<string, Row>;
@@ -485,6 +494,141 @@ function buildLayers(input: {
   ];
 }
 
+function tableDisplayLabel(tableName: string): string {
+  if (tableName === "field_index_v1") return "Field Index";
+  if (tableName === "water_state_estimate_index_v1") return "Water State Estimate";
+  if (tableName === "soil_moisture_sensing_window_index_v1") return "Soil Moisture Sensing Window";
+  if (tableName === "weather_forecast_index_v1") return "Weather Forecast";
+  if (tableName === "irrigation_scenario_set_index_v1") return "Irrigation Scenario Set";
+  if (tableName === "decision_recommendation_index_v1") return "Decision Recommendation";
+  return tableName;
+}
+
+function latestTimestampExpression(columns: Set<string>): string {
+  const candidates = [
+    "updated_ts_ms",
+    "created_ts_ms",
+    "computed_ts_ms",
+    "generated_ts_ms",
+    "occurred_ts_ms",
+  ];
+
+  for (const column of candidates) {
+    if (columns.has(column)) return "MAX(" + identifier(column) + ")::bigint";
+  }
+
+  return "NULL::bigint";
+}
+
+async function countScopedRows(pool: Pool, table: string, scope: RequestScope): Promise<{ rowCount: number; latestTsMs: number | null; scopeColumnsPresent: string[]; missingReason: string | null }> {
+  if (!hasTenantScope(scope)) {
+    return { rowCount: 0, latestTsMs: null, scopeColumnsPresent: [], missingReason: SCOPE_REQUIRED_REASON };
+  }
+
+  if (!(await tableExists(pool, table))) {
+    return { rowCount: 0, latestTsMs: null, scopeColumnsPresent: [], missingReason: "SOURCE_INDEX_TABLE_NOT_FOUND" };
+  }
+
+  const columns = await readColumns(pool, table);
+  const scopedColumns = TENANT_SCOPE_COLUMNS.filter((column) => columns.has(column));
+
+  if (scopedColumns.length === 0) {
+    return { rowCount: 0, latestTsMs: null, scopeColumnsPresent: [], missingReason: TABLE_SCOPE_COLUMNS_REQUIRED_REASON };
+  }
+
+  const clauses: string[] = [];
+  const values: unknown[] = [];
+
+  const scopePairs: Array<[typeof TENANT_SCOPE_COLUMNS[number], string | null]> = [
+    ["tenant_id", scope.tenantId],
+    ["project_id", scope.projectId],
+    ["group_id", scope.groupId],
+  ];
+
+  for (const [column, value] of scopePairs) {
+    if (!value) continue;
+    if (!columns.has(column)) continue;
+    values.push(value);
+    clauses.push(identifier(column) + " = $" + values.length);
+  }
+
+  if (scope.fieldId && columns.has("field_id")) {
+    values.push(scope.fieldId);
+    clauses.push("field_id = $" + values.length);
+  }
+
+  if (!clauses.length) {
+    return { rowCount: 0, latestTsMs: null, scopeColumnsPresent: [...scopedColumns], missingReason: SCOPE_REQUIRED_REASON };
+  }
+
+  const sql =
+    "SELECT COUNT(*)::int AS row_count, " +
+    latestTimestampExpression(columns) +
+    " AS latest_ts_ms FROM " +
+    identifier(table) +
+    " WHERE " +
+    clauses.join(" AND ");
+
+  const result = await pool.query(sql, values).catch(() => ({ rows: [] as Row[] }));
+  const row = result.rows?.[0] ?? {};
+  const rowCount = Number(row.row_count ?? 0);
+  const latest = row.latest_ts_ms === null || row.latest_ts_ms === undefined ? null : Number(row.latest_ts_ms);
+
+  return {
+    rowCount: Number.isFinite(rowCount) ? rowCount : 0,
+    latestTsMs: Number.isFinite(latest) ? latest : null,
+    scopeColumnsPresent: [...scopedColumns],
+    missingReason: null,
+  };
+}
+
+async function buildSourceIndexInventory(pool: Pool, scope: RequestScope): Promise<Row> {
+  const rows: SourceIndexInventoryRow[] = [];
+
+  for (const tableName of OPERATOR_TWIN_SCOPED_INDEX_TABLES) {
+    const summary = await countScopedRows(pool, tableName, scope);
+    const latestRows = await readRows(pool, tableName, scope, 3);
+    const evidenceRefs = latestRows.flatMap((row) => collectEvidenceRefs(row)).filter(Boolean);
+
+    rows.push({
+      table_name: tableName,
+      available: summary.rowCount > 0,
+      row_count: summary.rowCount,
+      latest_ts_ms: summary.latestTsMs,
+      latest_evidence_refs: [...new Set(evidenceRefs)].slice(0, 10),
+      scope_columns_present: summary.scopeColumnsPresent,
+      missing_reason: summary.missingReason,
+    });
+  }
+
+  return {
+    version: "v1",
+    surface: "OPERATOR",
+    report_kind: "OPERATOR_TWIN_SOURCE_INDEX_INVENTORY",
+    request_scope: scope,
+    scope_policy: {
+      required: true,
+      accepted_scope_keys: [...TENANT_SCOPE_COLUMNS],
+      scope_applied: hasTenantScope(scope),
+      missing_reason: hasTenantScope(scope) ? null : SCOPE_REQUIRED_REASON,
+      index_tables: [...OPERATOR_TWIN_SCOPED_INDEX_TABLES],
+    },
+    source_indexes: rows.map((row) => ({
+      ...row,
+      label: tableDisplayLabel(row.table_name),
+    })),
+    summary: {
+      table_count: rows.length,
+      available_table_count: rows.filter((row) => row.available).length,
+      total_row_count: rows.reduce((sum, row) => sum + row.row_count, 0),
+      write_ready: false,
+      approval_ready: false,
+      dispatch_ready: false,
+      task_creation_ready: false,
+    },
+    boundary_rules: defaultBoundaryRules(),
+  };
+}
 async function buildTwinSource(pool: Pool, scope: RequestScope): Promise<TwinSource> {
   const [fields, water, sensing, weather, scenarios, recommendations] = await Promise.all([
     readRows(pool, "field_index_v1", scope, 500),
@@ -670,6 +814,14 @@ export function registerOperatorTwinReadRoutes(app: FastifyInstance, pool: Pool)
     });
   });
 
+  app.get("/api/v1/operator/twin/source-indexes", async (req: any, reply) => {
+    const scope = extractRequestScope(req);
+    const inventory = await buildSourceIndexInventory(pool, scope);
+    return reply.send({
+      ...basePayload("operator_twin_source_index_inventory_api"),
+      operator_twin_source_index_inventory_v1: inventory,
+    });
+  });
   app.get("/api/v1/operator/twin/fields/:field_id", async (req: any, reply) => {
     const fieldId = safeText(req.params?.field_id);
     const scope = extractRequestScope(req, fieldId);
