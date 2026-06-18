@@ -1,23 +1,8 @@
 // apps/web/src/api/operatorTwin.ts
-// Purpose: fetch scoped, read-only Operator Twin Workbench projections.
+// Purpose: fetch read-only Operator Twin Workbench projections.
 // Boundary: this API client must not submit recommendations, approvals, dispatches, or AO-ACT tasks.
 
-import { apiRequestWithPolicy } from "./client";
-
-export type OperatorTwinRequestScope = {
-  tenant_id?: string | null;
-  project_id?: string | null;
-  group_id?: string | null;
-};
-
-export type OperatorTwinScopePolicy = {
-  required: boolean;
-  accepted_scope_keys: string[];
-  scope_applied: boolean;
-  missing_reason: string | null;
-  index_tables: string[];
-  field_scope_required?: boolean;
-};
+import { apiRequestWithPolicy, withQuery } from "./client";
 
 export type OperatorTwinGap = {
   gap_code: string;
@@ -46,8 +31,6 @@ export type OperatorTwinOverviewV1 = {
   version: "v1";
   surface: "OPERATOR";
   report_kind: "OPERATOR_TWIN_OVERVIEW";
-  request_scope: OperatorTwinRequestScope;
-  scope_policy: OperatorTwinScopePolicy;
   fields: OperatorTwinOverviewField[];
   data_gaps: OperatorTwinGap[];
   boundary_rules: OperatorTwinBoundaryRule[];
@@ -72,8 +55,6 @@ export type OperatorFieldTwinWorkspaceV1 = {
   version: "v1";
   surface: "OPERATOR";
   report_kind: "OPERATOR_FIELD_TWIN_WORKSPACE";
-  request_scope: OperatorTwinRequestScope & { fieldId?: string | null; field_id?: string | null };
-  scope_policy: OperatorTwinScopePolicy;
   field_context: {
     field_id: string;
     field_name: string;
@@ -107,8 +88,6 @@ export type OperatorFieldTwinWorkspaceV1 = {
       failure_conditions: string[];
     }>;
     evidence_refs: string[];
-    status: "AVAILABLE" | "NOT_AVAILABLE";
-    unavailable_reason: string | null;
   };
   recommendation_candidate: {
     recommendation_id: string | null;
@@ -147,32 +126,9 @@ export type OperatorFieldTwinWorkspaceResponse = {
   operator_field_twin_workspace_v1: OperatorFieldTwinWorkspaceV1;
 };
 
-function cleanScopeValue(value: string | null | undefined): string {
-  return String(value ?? "").trim();
-}
-
-export function buildOperatorTwinScopeQuery(scope?: OperatorTwinRequestScope | null): string {
-  const params = new URLSearchParams();
-
-  const tenantId = cleanScopeValue(scope?.tenant_id);
-  const projectId = cleanScopeValue(scope?.project_id);
-  const groupId = cleanScopeValue(scope?.group_id);
-
-  if (tenantId) params.set("tenant_id", tenantId);
-  if (projectId) params.set("project_id", projectId);
-  if (groupId) params.set("group_id", groupId);
-
-  const query = params.toString();
-  return query ? "?" + query : "";
-}
-
-function withScope(path: string, scope?: OperatorTwinRequestScope | null): string {
-  return path + buildOperatorTwinScopeQuery(scope);
-}
-
-export async function fetchOperatorTwinOverview(scope?: OperatorTwinRequestScope | null): Promise<OperatorTwinOverviewResponse> {
+export async function fetchOperatorTwinOverview(): Promise<OperatorTwinOverviewResponse> {
   const response = await apiRequestWithPolicy<OperatorTwinOverviewResponse>(
-    withScope("/api/v1/operator/twin", scope),
+    withQuery("/api/v1/operator/twin"),
     undefined,
     { dedupe: true, silent: true, timeoutMs: 10000 }
   );
@@ -184,13 +140,10 @@ export async function fetchOperatorTwinOverview(scope?: OperatorTwinRequestScope
   return response.data;
 }
 
-export async function fetchOperatorFieldTwinWorkspace(
-  fieldId: string,
-  scope?: OperatorTwinRequestScope | null
-): Promise<OperatorFieldTwinWorkspaceResponse> {
+export async function fetchOperatorFieldTwinWorkspace(fieldId: string): Promise<OperatorFieldTwinWorkspaceResponse> {
   const safeFieldId = encodeURIComponent(String(fieldId || "").trim());
   const response = await apiRequestWithPolicy<OperatorFieldTwinWorkspaceResponse>(
-    withScope("/api/v1/operator/twin/fields/" + safeFieldId, scope),
+    withQuery("/api/v1/operator/twin/fields/" + safeFieldId),
     undefined,
     { dedupe: true, silent: true, timeoutMs: 10000 }
   );

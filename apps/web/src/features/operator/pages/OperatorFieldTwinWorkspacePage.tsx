@@ -1,44 +1,15 @@
 // apps/web/src/features/operator/pages/OperatorFieldTwinWorkspacePage.tsx
-// Purpose: render the API-backed field-centered Operator Twin workspace with explicit scope propagation.
+// Purpose: render the API-backed field-centered Operator Twin workspace.
 // Boundary: this page separates Fact, Estimate, Forecast, Scenario, and Recommendation; it does not execute actions.
 
 import React from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
-import {
-  buildOperatorTwinScopeQuery,
-  fetchOperatorFieldTwinWorkspace,
-  type OperatorFieldTwinWorkspaceV1,
-  type OperatorTwinRequestScope,
-  type OperatorTwinScopePolicy,
-} from "../../../api/operatorTwin";
+import { Link, useParams } from "react-router-dom";
+import { fetchOperatorFieldTwinWorkspace, type OperatorFieldTwinWorkspaceV1 } from "../../../api/operatorTwin";
 
 type RuntimeState = "loading" | "ready" | "error";
 
-function scopeFromSearchParams(searchParams: URLSearchParams): OperatorTwinRequestScope {
-  return {
-    tenant_id: searchParams.get("tenant_id"),
-    project_id: searchParams.get("project_id"),
-    group_id: searchParams.get("group_id"),
-  };
-}
-
-function ScopePolicyCard({ policy }: { policy: OperatorTwinScopePolicy }): React.ReactElement {
-  return (
-    <article className="customerCard" data-card="operator-twin-scope-policy">
-      <h3>Scope Policy</h3>
-      <p>scope_applied：{policy.scope_applied ? "true" : "false"}</p>
-      <p>missing_reason：{policy.missing_reason ?? "none"}</p>
-      <p>accepted_scope_keys：{policy.accepted_scope_keys.join(", ")}</p>
-      <p>field_scope_required：{policy.field_scope_required ? "true" : "false"}</p>
-    </article>
-  );
-}
-
 export default function OperatorFieldTwinWorkspacePage(): React.ReactElement {
   const params = useParams();
-  const [searchParams] = useSearchParams();
-  const scope = React.useMemo(() => scopeFromSearchParams(searchParams), [searchParams]);
-  const scopeQueryString = React.useMemo(() => buildOperatorTwinScopeQuery(scope), [scope]);
   const fieldId = String(params.fieldId ?? "").trim() || "field_c8_demo";
   const [state, setState] = React.useState<RuntimeState>("loading");
   const [workspace, setWorkspace] = React.useState<OperatorFieldTwinWorkspaceV1 | null>(null);
@@ -50,7 +21,7 @@ export default function OperatorFieldTwinWorkspacePage(): React.ReactElement {
     setWorkspace(null);
     setErrorText("");
 
-    void fetchOperatorFieldTwinWorkspace(fieldId, scope)
+    void fetchOperatorFieldTwinWorkspace(fieldId)
       .then((response) => {
         if (!alive) return;
         setWorkspace(response.operator_field_twin_workspace_v1);
@@ -66,7 +37,7 @@ export default function OperatorFieldTwinWorkspacePage(): React.ReactElement {
     return () => {
       alive = false;
     };
-  }, [fieldId, scope]);
+  }, [fieldId]);
 
   return (
     <section className="customerReportPage" data-surface="operator-twin" data-page="operator-field-twin-workspace">
@@ -76,11 +47,11 @@ export default function OperatorFieldTwinWorkspacePage(): React.ReactElement {
           <h2>地块 Twin 工作区</h2>
           <p>
             当前地块：<strong>{workspace?.field_context.field_name ?? fieldId}</strong>。
-            本页保留 tenant_id / project_id / group_id 查询范围，并按事实、估计、预测、情景和建议候选分层展示。
+            本页按事实、估计、预测、情景和建议候选分层展示，避免把预测或情景误认为已批准作业。
           </p>
         </div>
         <div className="customerReportHeroActions">
-          <Link className="customerSecondaryButton" to={"/operator/twin" + scopeQueryString}>返回 Twin 总览</Link>
+          <Link className="customerSecondaryButton" to="/operator/twin">返回 Twin 总览</Link>
         </div>
       </div>
 
@@ -89,8 +60,6 @@ export default function OperatorFieldTwinWorkspacePage(): React.ReactElement {
 
       {workspace ? (
         <div className="customerSectionGrid">
-          <ScopePolicyCard policy={workspace.scope_policy} />
-
           <article className="customerCard">
             <h3>当前状态</h3>
             <p>{workspace.current_state.state_text}</p>
@@ -123,8 +92,6 @@ export default function OperatorFieldTwinWorkspacePage(): React.ReactElement {
 
           <article className="customerCard">
             <h3>情景比较边界</h3>
-            <p>状态：{workspace.scenario_comparison.status}</p>
-            <p>不可用原因：{workspace.scenario_comparison.unavailable_reason ?? "none"}</p>
             <p>no_action baseline：{workspace.scenario_comparison.no_action_baseline_present ? "存在" : "缺失"}</p>
             <ul className="customerList">
               {workspace.scenario_comparison.options.map((option) => (

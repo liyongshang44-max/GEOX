@@ -126,8 +126,7 @@
     "ci:frontend:operator-twin-shell": "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_TWIN_SHELL_V1.cjs",
     "ci:governance:operator-twin-read-api": "node scripts/governance_acceptance/ACCEPTANCE_OPERATOR_TWIN_READ_API_V1.cjs",
     "ci:frontend:operator-twin-api-source": "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_TWIN_API_SOURCE_V1.cjs",
-    "ci:governance:operator-twin-scope-contract": "node scripts/governance_acceptance/ACCEPTANCE_OPERATOR_TWIN_SCOPE_CONTRACT_V1.cjs",
-    "ci:frontend:operator-twin-scope-query": "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_TWIN_SCOPE_QUERY_V1.cjs"
+    "ci:governance:operator-twin-scope-contract": "node scripts/governance_acceptance/ACCEPTANCE_OPERATOR_TWIN_SCOPE_CONTRACT_V1.cjs"
   },
   "volta": {
     "node": "20.11.1"
