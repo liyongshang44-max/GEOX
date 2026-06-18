@@ -284,8 +284,19 @@ async function readRows(pool: Pool, table: string, scope: RequestScope, limit = 
     clauses.push("field_id = $" + values.length);
   }
 
+  const orderExpression = latestTimestampOrderExpression(columns);
+  const orderClause = orderExpression === "NULL::bigint" ? "" : " ORDER BY " + orderExpression + " DESC NULLS LAST";
+
   values.push(limit);
-  const sql = "SELECT * FROM " + identifier(table) + " WHERE " + clauses.join(" AND ") + " LIMIT $" + values.length;
+  const sql =
+    "SELECT * FROM " +
+    identifier(table) +
+    " WHERE " +
+    clauses.join(" AND ") +
+    orderClause +
+    " LIMIT $" +
+    values.length;
+
   const result = await pool.query(sql, values).catch(() => ({ rows: [] as Row[] }));
   return result.rows ?? [];
 }
@@ -504,20 +515,47 @@ function tableDisplayLabel(tableName: string): string {
   return tableName;
 }
 
-function latestTimestampExpression(columns: Set<string>): string {
-  const candidates = [
-    "updated_ts_ms",
-    "created_ts_ms",
-    "computed_ts_ms",
-    "generated_ts_ms",
-    "occurred_ts_ms",
-  ];
+const INVENTORY_FRESHNESS_COLUMN_CANDIDATES = [
+  "updated_ts_ms",
+  "created_ts_ms",
+  "computed_ts_ms",
+  "generated_ts_ms",
+  "occurred_ts_ms",
+  "updated_at",
+  "created_at",
+  "computed_at",
+  "generated_at",
+  "occurred_at",
+] as const;
 
-  for (const column of candidates) {
-    if (columns.has(column)) return "MAX(" + identifier(column) + ")::bigint";
+function timestampValueExpression(column: string): string {
+  const safeColumn = identifier(column);
+
+  if (column.endsWith("_ts_ms")) {
+    return safeColumn + "::bigint";
+  }
+
+  return "FLOOR(EXTRACT(EPOCH FROM " + safeColumn + ") * 1000)::bigint";
+}
+
+function latestTimestampValueExpression(columns: Set<string>): string {
+  for (const column of INVENTORY_FRESHNESS_COLUMN_CANDIDATES) {
+    if (columns.has(column)) return timestampValueExpression(column);
   }
 
   return "NULL::bigint";
+}
+
+function latestTimestampExpression(columns: Set<string>): string {
+  const expression = latestTimestampValueExpression(columns);
+
+  if (expression === "NULL::bigint") return expression;
+
+  return "MAX(" + expression + ")::bigint";
+}
+
+function latestTimestampOrderExpression(columns: Set<string>): string {
+  return latestTimestampValueExpression(columns);
 }
 
 async function countScopedRows(pool: Pool, table: string, scope: RequestScope): Promise<{ rowCount: number; latestTsMs: number | null; scopeColumnsPresent: string[]; missingReason: string | null }> {

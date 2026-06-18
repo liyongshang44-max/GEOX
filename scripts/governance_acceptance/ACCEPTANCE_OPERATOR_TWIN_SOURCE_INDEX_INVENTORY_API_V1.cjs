@@ -35,6 +35,15 @@ assertIncludes(route, "OPERATOR_TWIN_SOURCE_INDEX_INVENTORY", "inventory report 
 assertIncludes(route, "buildSourceIndexInventory", "inventory builder");
 assertIncludes(route, "countScopedRows", "scoped row counter");
 assertIncludes(route, "latest_evidence_refs", "latest evidence refs");
+assertIncludes(route, "DESC NULLS LAST", "evidence sampling newest rows first");
+assertIncludes(route, "ORDER BY", "evidence sampling order by freshness");
+assertIncludes(route, "latestTimestampOrderExpression", "shared evidence ordering freshness expression");
+assertIncludes(route, "EXTRACT(EPOCH FROM", "timestamptz to epoch milliseconds conversion");
+assertIncludes(route, "generated_at", "generated_at freshness support");
+assertIncludes(route, "computed_at", "computed_at freshness support");
+assertIncludes(route, "created_at", "created_at freshness support");
+assertIncludes(route, "updated_at", "updated_at freshness support");
+assertIncludes(route, "INVENTORY_FRESHNESS_COLUMN_CANDIDATES", "freshness column candidate list");
 assertIncludes(route, "source_indexes", "source index list");
 assertIncludes(route, "available_table_count", "available table count summary");
 assertIncludes(route, "total_row_count", "total row count summary");
