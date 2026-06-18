@@ -31,14 +31,26 @@ The field workspace must additionally constrain reads by field_id.
 Minimum columns:
 
 - tenant_id
+- field_id
 - project_id
 - group_id
-- field_id
+- name
 - field_name
 - crop
+- area_ha
+- status
+- created_ts_ms
+- updated_ts_ms
 - updated_at
 
-Purpose: field inventory projection for Operator Twin.
+Keys:
+
+- PRIMARY KEY (tenant_id, field_id)
+- UNIQUE (tenant_id, project_id, group_id, field_id)
+
+Purpose: canonical field projection used by existing field write/read routes and Operator Twin scoped reads.
+
+Compatibility note: field_index_v1 is an existing write-path projection. The field routes upsert on ON CONFLICT (tenant_id, field_id) and write name, area_ha, status, created_ts_ms, and updated_ts_ms. Operator Twin adds project_id and group_id as scope columns with default values for legacy/mainline field writes.
 
 ### water_state_estimate_index_v1
 

@@ -117,4 +117,23 @@ assert(
   { actual: pkg.scripts && pkg.scripts["ci:governance:operator-twin-source-index-migration"] }
 );
 
+// field_index_v1 migration write-path compatibility
+const fieldIndexMigrationBlock = extractCreateTableBlock(migrationSql, "field_index_v1");
+
+[
+  "tenant_id text NOT NULL",
+  "field_id text NOT NULL",
+  "project_id text NOT NULL DEFAULT",
+  "group_id text NOT NULL DEFAULT",
+  "name text",
+  "area_ha numeric",
+  "status text",
+  "created_ts_ms bigint",
+  "updated_ts_ms bigint",
+  "PRIMARY KEY (tenant_id, field_id)",
+  "UNIQUE (tenant_id, project_id, group_id, field_id)",
+].forEach((token) => {
+  assertIncludes(fieldIndexMigrationBlock, token, "field_index_v1 migration compatibility token " + token);
+});
+
 console.log("[operator-twin-source-index-migration] PASS");

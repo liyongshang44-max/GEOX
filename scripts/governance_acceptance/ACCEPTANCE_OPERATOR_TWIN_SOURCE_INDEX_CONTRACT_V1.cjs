@@ -261,4 +261,27 @@ assert(
   { actual: pkg.scripts && pkg.scripts["ci:governance:operator-twin-source-index-contract"] }
 );
 
+// field_index_v1 existing write-path compatibility
+const fieldIndexBlock = extractCreateTableBlock(sql, "field_index_v1");
+
+[
+  "tenant_id text NOT NULL",
+  "field_id text NOT NULL",
+  "project_id text NOT NULL DEFAULT",
+  "group_id text NOT NULL DEFAULT",
+  "name text",
+  "field_name text",
+  "area_ha numeric",
+  "status text",
+  "created_ts_ms bigint",
+  "updated_ts_ms bigint",
+  "PRIMARY KEY (tenant_id, field_id)",
+  "UNIQUE (tenant_id, project_id, group_id, field_id)",
+].forEach((token) => {
+  assertIncludes(fieldIndexBlock, token, "field_index_v1 write-path compatibility token " + token);
+});
+
+assertIncludes(doc, "PRIMARY KEY (tenant_id, field_id)", "field_index_v1 doc write-path primary key");
+assertIncludes(doc, "ON CONFLICT (tenant_id, field_id)", "field_index_v1 doc legacy upsert compatibility");
+
 console.log("[operator-twin-source-index-contract] PASS");

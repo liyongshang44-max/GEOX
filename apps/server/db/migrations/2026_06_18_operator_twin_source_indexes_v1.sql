@@ -4,13 +4,19 @@
 
 CREATE TABLE IF NOT EXISTS field_index_v1 (
   tenant_id text NOT NULL,
-  project_id text NOT NULL,
-  group_id text NOT NULL,
   field_id text NOT NULL,
+  project_id text NOT NULL DEFAULT 'P_DEFAULT',
+  group_id text NOT NULL DEFAULT 'G_DEFAULT',
+  name text,
   field_name text,
   crop text,
+  area_ha numeric,
+  status text,
+  created_ts_ms bigint,
+  updated_ts_ms bigint,
   updated_at timestamptz,
-  PRIMARY KEY (tenant_id, project_id, group_id, field_id)
+  PRIMARY KEY (tenant_id, field_id),
+  UNIQUE (tenant_id, project_id, group_id, field_id)
 );
 
 CREATE TABLE IF NOT EXISTS water_state_estimate_index_v1 (
