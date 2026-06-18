@@ -5,6 +5,7 @@ import type { FieldReportPageVm } from "../../viewmodels/fieldReportVm";
 import type { OperationReportPageVm } from "../../viewmodels/operationReportVm";
 import { customerEvidenceStateText, customerNeedsReviewText, customerOperationStateText, customerReasonText, mapCustomerEnum } from "../../lib/customerSafeText";
 import { buildCustomerFieldReportMainVisualVm, buildCustomerOperationReportMainVisualVm } from "../../viewmodels/customerReportMainVisualVm";
+import { buildIrrigationDecisionReportVm } from "../../viewmodels/irrigationDecisionReportVm";
 
 type Row = Array<unknown>;
 
@@ -78,7 +79,49 @@ export function FieldExportBlocks({ vm: _vm, report }: { vm: FieldReportPageVm; 
   return <MainVisualExportBlocks mainVisual={mainVisual} />;
 }
 
+function OperationIrrigationDecisionExportBlock({ report }: { report?: OperationReportV1 | null }): React.ReactElement | null {
+  if (!report) return null;
+  const vm = buildIrrigationDecisionReportVm(report);
+  if (!vm?.visible) return null;
+
+  const optionRows: Row[] = vm.options.map((option) => [
+    option.label,
+    option.amountText,
+    option.riskText,
+    option.confidenceText,
+    option.failureConditionText
+  ]);
+
+  return (
+    <section className="customerCard">
+      <h2 className="customerCardTitle">灌溉决策依据</h2>
+      <p className="customerSpacingTopSm">{safeExportText(vm.oneLiner, "当前决策证据链不完整，不能展示可执行灌溉建议。")}</p>
+      <PrintTable
+        headers={["项目", "内容"]}
+        rows={[
+          ["决策结论", vm.recommendationLine],
+          ["证据基础", vm.evidenceLine],
+          ["水分状态", vm.stateLine],
+          ["情景比较", vm.scenarioLine],
+          ["审批与执行边界", vm.boundaryLine]
+        ]}
+        emptyText="暂无灌溉决策依据"
+      />
+      <PrintTable
+        headers={["情景", "水量", "风险变化", "可信度", "失败条件"]}
+        rows={optionRows}
+        emptyText="暂无灌溉情景比较"
+      />
+    </section>
+  );
+}
+
 export function OperationExportBlocks({ vm: _vm, report }: { vm: OperationReportPageVm; report?: OperationReportV1 | null }): React.ReactElement {
   const mainVisual = buildCustomerOperationReportMainVisualVm(report);
-  return <MainVisualExportBlocks mainVisual={mainVisual} />;
+  return (
+    <>
+      <MainVisualExportBlocks mainVisual={mainVisual} />
+      <OperationIrrigationDecisionExportBlock report={report} />
+    </>
+  );
 }
