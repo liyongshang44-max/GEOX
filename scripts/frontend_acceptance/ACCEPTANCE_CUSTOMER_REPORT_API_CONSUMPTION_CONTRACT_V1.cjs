@@ -16,7 +16,6 @@ const CUSTOMER_SURFACE_ROOTS = [
   "apps/web/src/features/customer/pages",
   "apps/web/src/features/fields/pages",
   "apps/web/src/features/operations/pages",
-  "apps/web/src/views",
   "apps/web/src/components/customer",
   "apps/web/src/layouts/CustomerLayout.tsx",
 ];
