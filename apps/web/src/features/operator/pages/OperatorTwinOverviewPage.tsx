@@ -1,49 +1,43 @@
 // apps/web/src/features/operator/pages/OperatorTwinOverviewPage.tsx
-// Purpose: render the first view-only Operator Twin overview shell.
-// Boundary: H18-B intentionally does not run forecasts, submit recommendations, approve, dispatch, or create AO-ACT tasks.
+// Purpose: render the API-backed read-only Operator Twin overview.
+// Boundary: this page does not run forecasts, submit recommendations, approve, dispatch, or create AO-ACT tasks.
 
 import React from "react";
 import { Link } from "react-router-dom";
+import { fetchOperatorTwinOverview, type OperatorTwinOverviewV1 } from "../../../api/operatorTwin";
 
-type TwinStatusRow = {
-  fieldId: string;
-  fieldName: string;
-  currentState: string;
-  confidence: string;
-  dataCoverage: string;
-  forecastWindow: string;
-  nextStep: string;
-};
-
-const DEMO_ROWS: TwinStatusRow[] = [
-  {
-    fieldId: "field_c8_demo",
-    fieldName: "C8 示范田",
-    currentState: "水分状态：中度缺水",
-    confidence: "中等置信",
-    dataCoverage: "土壤水分窗口与天气版本可用于灌溉判断",
-    forecastWindow: "短期窗口可用；7d/30d 标记为未开放",
-    nextStep: "复核情景比较并进入人工确认",
-  },
-];
-
-const DATA_GAPS = [
-  "7 天风险预测尚未作为正式 forecast_run_v1 固化",
-  "30 天趋势尚未建模",
-  "氮素状态、病害风险、经济比较尚未接入",
-  "Submit Scenario to Recommendation 尚未开放",
-];
-
-const BOUNDARY_RULES = [
-  "本页面不创建 AO-ACT task",
-  "本页面不 dispatch",
-  "本页面不绕过 approval",
-  "Forecast 不能当作 Fact",
-  "Scenario 不能当作 Task",
-  "no_action baseline 后续情景比较必须保留",
-];
+type RuntimeState = "loading" | "ready" | "empty" | "error";
 
 export default function OperatorTwinOverviewPage(): React.ReactElement {
+  const [state, setState] = React.useState<RuntimeState>("loading");
+  const [overview, setOverview] = React.useState<OperatorTwinOverviewV1 | null>(null);
+  const [errorText, setErrorText] = React.useState("");
+
+  React.useEffect(() => {
+    let alive = true;
+    setState("loading");
+    setErrorText("");
+    setOverview(null);
+
+    void fetchOperatorTwinOverview()
+      .then((response) => {
+        if (!alive) return;
+        const nextOverview = response.operator_twin_overview_v1;
+        setOverview(nextOverview);
+        setState(nextOverview.fields.length > 0 ? "ready" : "empty");
+      })
+      .catch((error: unknown) => {
+        if (!alive) return;
+        setOverview(null);
+        setErrorText(error instanceof Error ? error.message : "OPERATOR_TWIN_OVERVIEW_LOAD_FAILED");
+        setState("error");
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   return (
     <section className="customerReportPage" data-surface="operator-twin" data-page="operator-twin-overview">
       <div className="customerReportHero">
@@ -51,71 +45,77 @@ export default function OperatorTwinOverviewPage(): React.ReactElement {
           <p className="customerEyebrow">Operator Twin Workbench</p>
           <h2>田块预测与情景推演入口</h2>
           <p>
-            该页面用于操作员查看田块状态、数据缺口、低置信判断和人工确认入口。
-            当前版本为只读壳，不运行预测、不提交 recommendation、不审批、不执行。
+            该页面读取 operator_twin_overview_v1，只展示只读状态、数据缺口和人工确认边界。
+            当前版本不运行预测、不提交 recommendation、不审批、不执行。
           </p>
         </div>
         <div className="customerReportHeroActions">
-          <span className="customerStatusPill">View-only</span>
+          <span className="customerStatusPill">API-backed</span>
           <span className="customerStatusPill">No direct execution</span>
         </div>
       </div>
 
-      <div className="customerSectionGrid">
-        <article className="customerCard">
-          <h3>田块状态矩阵</h3>
-          <div className="customerTableWrap">
-            <table className="customerTable">
-              <thead>
-                <tr>
-                  <th>田块</th>
-                  <th>当前状态</th>
-                  <th>置信度</th>
-                  <th>数据覆盖</th>
-                  <th>预测窗口</th>
-                  <th>入口</th>
-                </tr>
-              </thead>
-              <tbody>
-                {DEMO_ROWS.map((row) => (
-                  <tr key={row.fieldId}>
-                    <td>
-                      <strong>{row.fieldName}</strong>
-                      <br />
-                      <small>{row.fieldId}</small>
-                    </td>
-                    <td>{row.currentState}</td>
-                    <td>{row.confidence}</td>
-                    <td>{row.dataCoverage}</td>
-                    <td>{row.forecastWindow}</td>
-                    <td>
-                      <Link to={"/operator/twin/fields/" + row.fieldId}>进入 Field Twin</Link>
-                    </td>
+      {state === "loading" ? <div className="customerCard">Operator Twin 数据加载中...</div> : null}
+      {state === "error" ? <div className="customerCard">Operator Twin 数据加载失败：{errorText}</div> : null}
+      {state === "empty" ? <div className="customerCard">暂无可展示田块 Twin 数据。</div> : null}
+
+      {overview ? (
+        <div className="customerSectionGrid">
+          <article className="customerCard">
+            <h3>田块状态矩阵</h3>
+            <div className="customerTableWrap">
+              <table className="customerTable">
+                <thead>
+                  <tr>
+                    <th>田块</th>
+                    <th>当前状态</th>
+                    <th>置信度</th>
+                    <th>数据覆盖</th>
+                    <th>预测窗口</th>
+                    <th>入口</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </article>
+                </thead>
+                <tbody>
+                  {overview.fields.map((row) => (
+                    <tr key={row.field_id}>
+                      <td>
+                        <strong>{row.field_name}</strong>
+                        <br />
+                        <small>{row.field_id}</small>
+                      </td>
+                      <td>{row.current_state_text}</td>
+                      <td>{row.confidence_text}</td>
+                      <td>{row.data_coverage_text}</td>
+                      <td>{row.forecast_window_text}</td>
+                      <td>
+                        <Link to={row.twin_href}>进入 Field Twin</Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </article>
 
-        <article className="customerCard">
-          <h3>数据缺口</h3>
-          <ul className="customerList">
-            {DATA_GAPS.map((gap) => (
-              <li key={gap}>{gap}</li>
-            ))}
-          </ul>
-        </article>
+          <article className="customerCard">
+            <h3>数据缺口</h3>
+            <ul className="customerList">
+              {overview.data_gaps.map((gap) => (
+                <li key={gap.gap_code}>{gap.label}</li>
+              ))}
+            </ul>
+          </article>
 
-        <article className="customerCard">
-          <h3>人工确认边界</h3>
-          <ul className="customerList">
-            {BOUNDARY_RULES.map((rule) => (
-              <li key={rule}>{rule}</li>
-            ))}
-          </ul>
-        </article>
-      </div>
+          <article className="customerCard">
+            <h3>人工确认边界</h3>
+            <ul className="customerList">
+              {overview.boundary_rules.map((rule) => (
+                <li key={rule.rule_code}>{rule.label}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+      ) : null}
     </section>
   );
 }

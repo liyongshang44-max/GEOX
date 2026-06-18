@@ -1,41 +1,43 @@
 // apps/web/src/features/operator/pages/OperatorFieldTwinWorkspacePage.tsx
-// Purpose: render the first view-only field-centered Operator Twin workspace.
+// Purpose: render the API-backed field-centered Operator Twin workspace.
 // Boundary: this page separates Fact, Estimate, Forecast, Scenario, and Recommendation; it does not execute actions.
 
 import React from "react";
 import { Link, useParams } from "react-router-dom";
+import { fetchOperatorFieldTwinWorkspace, type OperatorFieldTwinWorkspaceV1 } from "../../../api/operatorTwin";
 
-const STATE_LAYERS = [
-  {
-    layer: "Fact",
-    title: "事实",
-    body: "土壤水分观测窗口、天气预报版本和作业记录来自正式后端事实链。",
-  },
-  {
-    layer: "Estimate",
-    title: "估计",
-    body: "当前 C8 水分状态可由 water_state_estimate_v1 表示为中度缺水。",
-  },
-  {
-    layer: "Forecast",
-    title: "预测",
-    body: "短期预测窗口可展示能力边界；7d/30d 仍需后续 forecast_run_v1 固化。",
-  },
-  {
-    layer: "Scenario",
-    title: "情景",
-    body: "后续情景比较必须包含 no_action、10mm、20mm、22mm、delay_3d 等方案。",
-  },
-  {
-    layer: "Recommendation",
-    title: "建议候选",
-    body: "建议候选只能进入 recommendation / approval 链路，不能直接成为 AO-ACT task。",
-  },
-];
+type RuntimeState = "loading" | "ready" | "error";
 
 export default function OperatorFieldTwinWorkspacePage(): React.ReactElement {
   const params = useParams();
-  const fieldId = String(params.fieldId ?? "").trim() || "unknown-field";
+  const fieldId = String(params.fieldId ?? "").trim() || "field_c8_demo";
+  const [state, setState] = React.useState<RuntimeState>("loading");
+  const [workspace, setWorkspace] = React.useState<OperatorFieldTwinWorkspaceV1 | null>(null);
+  const [errorText, setErrorText] = React.useState("");
+
+  React.useEffect(() => {
+    let alive = true;
+    setState("loading");
+    setWorkspace(null);
+    setErrorText("");
+
+    void fetchOperatorFieldTwinWorkspace(fieldId)
+      .then((response) => {
+        if (!alive) return;
+        setWorkspace(response.operator_field_twin_workspace_v1);
+        setState("ready");
+      })
+      .catch((error: unknown) => {
+        if (!alive) return;
+        setWorkspace(null);
+        setErrorText(error instanceof Error ? error.message : "OPERATOR_FIELD_TWIN_WORKSPACE_LOAD_FAILED");
+        setState("error");
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [fieldId]);
 
   return (
     <section className="customerReportPage" data-surface="operator-twin" data-page="operator-field-twin-workspace">
@@ -44,8 +46,8 @@ export default function OperatorFieldTwinWorkspacePage(): React.ReactElement {
           <p className="customerEyebrow">Field Twin Workspace</p>
           <h2>地块 Twin 工作区</h2>
           <p>
-            当前地块：<strong>{fieldId}</strong>。本页按事实、估计、预测、情景和建议候选分层展示，
-            避免把预测或情景误认为已批准作业。
+            当前地块：<strong>{workspace?.field_context.field_name ?? fieldId}</strong>。
+            本页按事实、估计、预测、情景和建议候选分层展示，避免把预测或情景误认为已批准作业。
           </p>
         </div>
         <div className="customerReportHeroActions">
@@ -53,28 +55,73 @@ export default function OperatorFieldTwinWorkspacePage(): React.ReactElement {
         </div>
       </div>
 
-      <div className="customerSectionGrid">
-        {STATE_LAYERS.map((item) => (
-          <article className="customerCard" key={item.layer} data-layer={item.layer}>
-            <p className="customerEyebrow">{item.layer}</p>
-            <h3>{item.title}</h3>
-            <p>{item.body}</p>
-          </article>
-        ))}
+      {state === "loading" ? <div className="customerCard">Field Twin 数据加载中...</div> : null}
+      {state === "error" ? <div className="customerCard">Field Twin 数据加载失败：{errorText}</div> : null}
 
-        <article className="customerCard">
-          <h3>只读动作边界</h3>
-          <p>
-            H18-B 仅建立 Operator Twin 壳。提交情景、生成 recommendation、审批和执行均未开放。
-          </p>
-          <ul className="customerList">
-            <li>不能直接创建 AO-ACT task</li>
-            <li>不能 dispatch</li>
-            <li>不能绕过 approval</li>
-            <li>不能把 scenario 当作 task</li>
-          </ul>
-        </article>
-      </div>
+      {workspace ? (
+        <div className="customerSectionGrid">
+          <article className="customerCard">
+            <h3>当前状态</h3>
+            <p>{workspace.current_state.state_text}</p>
+            <p>置信度：{workspace.current_state.confidence_text}</p>
+            <p>分类：{workspace.current_state.classification}</p>
+          </article>
+
+          <article className="customerCard">
+            <h3>数据覆盖</h3>
+            <p>{workspace.data_coverage.coverage_text}</p>
+            <p>土壤水分窗口：{workspace.data_coverage.sensing_available ? "可用" : "待确认"}</p>
+            <p>天气版本：{workspace.data_coverage.weather_available ? "可用" : "待确认"}</p>
+          </article>
+
+          <article className="customerCard">
+            <h3>预测窗口</h3>
+            <p>可用窗口：{workspace.forecast_window.available_horizon}</p>
+            <p>长周期限制：{workspace.forecast_window.forecast_horizon_limited ? "是" : "否"}</p>
+            <p>未开放窗口：{workspace.forecast_window.unavailable_horizons.join("、")}</p>
+          </article>
+
+          {workspace.layers.map((item) => (
+            <article className="customerCard" key={item.layer} data-layer={item.layer}>
+              <p className="customerEyebrow">{item.layer}</p>
+              <h3>{item.title}</h3>
+              <p>{item.body}</p>
+              <p>状态：{item.status}</p>
+            </article>
+          ))}
+
+          <article className="customerCard">
+            <h3>情景比较边界</h3>
+            <p>no_action baseline：{workspace.scenario_comparison.no_action_baseline_present ? "存在" : "缺失"}</p>
+            <ul className="customerList">
+              {workspace.scenario_comparison.options.map((option) => (
+                <li key={option.option_id || option.label}>
+                  {option.label || option.option_id}
+                  {option.risk_delta ? " · " + option.risk_delta : ""}
+                </li>
+              ))}
+            </ul>
+          </article>
+
+          <article className="customerCard">
+            <h3>建议候选</h3>
+            <p>建议 ID：{workspace.recommendation_candidate.recommendation_id ?? "待确认"}</p>
+            <p>动作类型：{workspace.recommendation_candidate.action_type ?? "待确认"}</p>
+            <p>数量：{workspace.recommendation_candidate.amount_mm ?? "待确认"}</p>
+            <p>必须人工审批：{workspace.recommendation_candidate.human_approval_required ? "是" : "否"}</p>
+            <p>禁止直接执行：{workspace.recommendation_candidate.no_direct_execution ? "是" : "否"}</p>
+          </article>
+
+          <article className="customerCard">
+            <h3>只读动作边界</h3>
+            <ul className="customerList">
+              {workspace.boundary_rules.map((rule) => (
+                <li key={rule.rule_code}>{rule.label}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+      ) : null}
     </section>
   );
 }
