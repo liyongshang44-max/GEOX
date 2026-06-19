@@ -62,3 +62,4 @@ The suite currently covers:
 - `ci:runtime:customer-report-payload-boundary`
 - `ci:customer-dashboard-aggregate-server-contract`
 - `ci:customer-report-server-projector-contract`
+- `ci:customer-report-server-route-registration-contract`

@@ -39,6 +39,8 @@ const REQUIRED_WORKFLOW_TOKENS = [
 const REQUIRED_SUITE_TOKENS = [
   "ci:customer-report-server-projector-contract",
   "node scripts/runtime_acceptance/ACCEPTANCE_CUSTOMER_REPORT_SERVER_PROJECTOR_CONTRACT_V1.cjs",
+  "ci:customer-report-server-route-registration-contract",
+  "node scripts/runtime_acceptance/ACCEPTANCE_CUSTOMER_REPORT_SERVER_ROUTE_REGISTRATION_CONTRACT_V1.cjs",
   "ci:customer-dashboard-aggregate-server-contract",
   "node scripts/runtime_acceptance/ACCEPTANCE_CUSTOMER_DASHBOARD_AGGREGATE_SERVER_CONTRACT_V1.cjs",
 ];
