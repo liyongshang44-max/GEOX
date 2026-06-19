@@ -352,6 +352,8 @@ function isLowConfidence(row: Row | null | undefined): boolean {
   const scoreValue = firstValue(row.confidence_score, confidenceJson?.score);
   const score = scoreValue === null || scoreValue === undefined ? NaN : Number(scoreValue);
 
+  if (!level && !Number.isFinite(score)) return true;
+  if (level.includes("PENDING") || level.includes("UNKNOWN") || level.includes("待确认")) return true;
   if (level.includes("LOW") || level.includes("低")) return true;
   if (Number.isFinite(score) && score < 0.6) return true;
   return false;
