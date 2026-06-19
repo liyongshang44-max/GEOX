@@ -61,6 +61,7 @@ const REQUIRED_SERVER_TOKENS = [
   "options:",
   "risk_delta",
   "confidence_text",
+  "confidenceText(option)",
   "failure_conditions",
   "evidence_refs",
   "unavailable_reason",
@@ -82,6 +83,7 @@ const FORBIDDEN_PAGE_TOKENS = [
 ];
 
 const FORBIDDEN_SERVER_TOKENS = [
+  "confidence_text: nullableText(option.confidence_text ?? option.confidence)",
   "status: scenarioComparison.status === \"AVAILABLE\" ? \"AVAILABLE\" : \"NOT_AVAILABLE\"",
   "INSERT INTO ao_act_task",
   "ao_act_task_v0",

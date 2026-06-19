@@ -161,6 +161,7 @@ function assertScenarioOption(option) {
   assert(isString(option.label), "Scenario label must be string", option);
   assert(option.risk_delta === null || isString(option.risk_delta), "Scenario risk_delta must be string or null", option);
   assert(option.confidence_text === null || isString(option.confidence_text), "Scenario confidence_text must be string or null", option);
+  assert(option.confidence_text !== "[object Object]", "Scenario confidence_text must not stringify structured confidence", option);
   assert(Array.isArray(option.failure_conditions), "Scenario failure_conditions must be array", option);
   for (const failureCondition of option.failure_conditions) {
     assert(isString(failureCondition), "Scenario failure condition must be string", option);

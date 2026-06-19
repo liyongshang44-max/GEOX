@@ -950,7 +950,7 @@ async function buildFieldWorkspace(pool: Pool, scope: RequestScope, fieldId: str
         option_id: optionId(option),
         label: firstText(option.customer_label, option.label, optionId(option)),
         risk_delta: nullableText(option.risk_delta),
-        confidence_text: nullableText(option.confidence_text ?? option.confidence),
+        confidence_text: confidenceText(option),
         failure_conditions: asArray(option.failure_conditions ?? option.failure_conditions_json).map((item) => safeText(item)).filter(Boolean),
       })),
       evidence_refs: collectEvidenceRefs(scenario),
