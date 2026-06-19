@@ -190,6 +190,39 @@ export type OperatorFieldTwinForecastPanelV1 = {
   boundary_rules: OperatorTwinBoundaryRule[];
 };
 
+
+export type OperatorScenarioCompareOption = {
+  option_id: string;
+  label: string;
+  risk_delta: string | null;
+  confidence_text: string | null;
+  failure_conditions: string[];
+};
+
+export type OperatorScenarioCompareV1 = {
+  no_action_baseline_present: boolean;
+  options: OperatorScenarioCompareOption[];
+  evidence_refs: string[];
+  status: "AVAILABLE" | "NOT_AVAILABLE";
+  unavailable_reason: string | null;
+};
+
+export type OperatorFieldTwinScenarioCompareV1 = {
+  version: "v1";
+  surface: "OPERATOR";
+  report_kind: "OPERATOR_FIELD_TWIN_SCENARIO_COMPARE";
+  request_scope: OperatorTwinRequestScope & { fieldId?: string | null; field_id?: string | null };
+  scope_policy: OperatorTwinScopePolicy;
+  field_context: {
+    field_id: string;
+    field_name: string;
+    crop_text: string;
+  };
+  scenario_compare_v1: OperatorScenarioCompareV1;
+  data_gaps: OperatorTwinGap[];
+  boundary_rules: OperatorTwinBoundaryRule[];
+};
+
 export type OperatorTwinSourceIndexInventoryResponse = {
   ok: boolean;
   source: "operator_twin_source_index_inventory_api";
@@ -237,6 +270,19 @@ export type OperatorFieldTwinForecastPanelResponse = {
   approvalReady: false;
   taskCreationReady: false;
   operator_field_twin_forecast_panel_v1: OperatorFieldTwinForecastPanelV1;
+};
+
+
+export type OperatorFieldTwinScenarioCompareResponse = {
+  ok: boolean;
+  source: "operator_field_twin_scenario_compare_api";
+  dataScope: "OFFICIAL_OPERATOR_TWIN_API";
+  generated_at: string;
+  writeReady: false;
+  dispatchReady: false;
+  approvalReady: false;
+  taskCreationReady: false;
+  operator_field_twin_scenario_compare_v1: OperatorFieldTwinScenarioCompareV1;
 };
 
 function cleanScopeValue(value: string | null | undefined): string {
@@ -324,6 +370,25 @@ export async function fetchOperatorFieldTwinForecastPanel(
 
   if (!response.ok || !response.data) {
     throw new Error("OPERATOR_FIELD_TWIN_FORECAST_PANEL_API_FAILED");
+  }
+
+  return response.data;
+}
+
+
+export async function fetchOperatorFieldTwinScenarioCompare(
+  fieldId: string,
+  scope?: OperatorTwinRequestScope | null
+): Promise<OperatorFieldTwinScenarioCompareResponse> {
+  const safeFieldId = encodeURIComponent(String(fieldId || "").trim());
+  const response = await apiRequestWithPolicy<OperatorFieldTwinScenarioCompareResponse>(
+    withScope("/api/v1/operator/twin/fields/" + safeFieldId + "/scenarios", scope),
+    undefined,
+    { dedupe: true, silent: true, timeoutMs: 10000 }
+  );
+
+  if (!response.ok || !response.data) {
+    throw new Error("OPERATOR_FIELD_TWIN_SCENARIO_COMPARE_API_FAILED");
   }
 
   return response.data;

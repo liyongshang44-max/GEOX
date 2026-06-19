@@ -600,6 +600,36 @@ async function buildFieldForecastPanel(pool: Pool, scope: RequestScope, fieldId:
   };
 }
 
+
+async function buildFieldScenarioCompare(pool: Pool, scope: RequestScope, fieldId: string): Promise<Row> {
+  const workspace = await buildFieldWorkspace(pool, scope, fieldId);
+  const scenarioComparison = workspace.scenario_comparison ?? {};
+
+  return {
+    version: "v1",
+    surface: "OPERATOR",
+    report_kind: "OPERATOR_FIELD_TWIN_SCENARIO_COMPARE",
+    request_scope: workspace.request_scope,
+    scope_policy: workspace.scope_policy,
+    field_context: workspace.field_context,
+    scenario_compare_v1: {
+      no_action_baseline_present: Boolean(scenarioComparison.no_action_baseline_present),
+      options: asArray(scenarioComparison.options).map((option) => ({
+        option_id: firstText(option.option_id, option.id, option.label),
+        label: firstText(option.label, option.option_id, option.id),
+        risk_delta: nullableText(option.risk_delta),
+        confidence_text: nullableText(option.confidence_text),
+        failure_conditions: asArray(option.failure_conditions).map((item) => safeText(item)).filter(Boolean),
+      })),
+      evidence_refs: asArray(scenarioComparison.evidence_refs).map((item) => safeText(item)).filter(Boolean),
+      status: scenarioComparison.status === "AVAILABLE" ? "AVAILABLE" : "NOT_AVAILABLE",
+      unavailable_reason: nullableText(scenarioComparison.unavailable_reason),
+    },
+    data_gaps: workspace.data_gaps,
+    boundary_rules: defaultBoundaryRules(),
+  };
+}
+
 function tableDisplayLabel(tableName: string): string {
   if (tableName === "field_index_v1") return "Field Index";
   if (tableName === "water_state_estimate_index_v1") return "Water State Estimate";
@@ -977,6 +1007,17 @@ export function registerOperatorTwinReadRoutes(app: FastifyInstance, pool: Pool)
     return reply.send({
       ...basePayload("operator_field_twin_forecast_panel_api"),
       operator_field_twin_forecast_panel_v1: panel,
+    });
+  });
+
+
+  app.get("/api/v1/operator/twin/fields/:field_id/scenarios", async (req: any, reply) => {
+    const fieldId = safeText(req.params?.field_id);
+    const scope = extractRequestScope(req, fieldId);
+    const compare = await buildFieldScenarioCompare(pool, scope, fieldId);
+    return reply.send({
+      ...basePayload("operator_field_twin_scenario_compare_api"),
+      operator_field_twin_scenario_compare_v1: compare,
     });
   });
 }
