@@ -212,7 +212,13 @@ export default function OperatorTwinOverviewPage(): React.ReactElement {
                       <td>{row.data_coverage_text}</td>
                       <td>{row.forecast_window_text}</td>
                       <td>
-                        <Link to={row.twin_href + scopeQueryString}>进入 Field Twin</Link>
+                        <Link
+                          data-link="operator-field-twin-workspace"
+                          data-field-id={row.field_id}
+                          to={row.twin_href + scopeQueryString}
+                        >
+                          进入 Field Twin
+                        </Link>
                       </td>
                     </tr>
                   ))}
