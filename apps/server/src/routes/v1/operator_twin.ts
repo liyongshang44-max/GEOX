@@ -604,6 +604,18 @@ async function buildFieldForecastPanel(pool: Pool, scope: RequestScope, fieldId:
 async function buildFieldScenarioCompare(pool: Pool, scope: RequestScope, fieldId: string): Promise<Row> {
   const workspace = await buildFieldWorkspace(pool, scope, fieldId);
   const scenarioComparison = workspace.scenario_comparison ?? {};
+  const noActionBaselinePresent = Boolean(scenarioComparison.no_action_baseline_present);
+  const options = asArray(scenarioComparison.options).map((option) => ({
+    option_id: firstText(option.option_id, option.id, option.label),
+    label: firstText(option.label, option.option_id, option.id),
+    risk_delta: nullableText(option.risk_delta),
+    confidence_text: nullableText(option.confidence_text),
+    failure_conditions: asArray(option.failure_conditions).map((item) => safeText(item)).filter(Boolean),
+  }));
+  const scenarioCompareAvailable = noActionBaselinePresent && options.length > 0;
+  const unavailableReason = scenarioCompareAvailable
+    ? nullableText(scenarioComparison.unavailable_reason)
+    : firstText(scenarioComparison.unavailable_reason, "NO_ACTION_BASELINE_OR_OPTIONS_NOT_AVAILABLE");
 
   return {
     version: "v1",
@@ -613,17 +625,11 @@ async function buildFieldScenarioCompare(pool: Pool, scope: RequestScope, fieldI
     scope_policy: workspace.scope_policy,
     field_context: workspace.field_context,
     scenario_compare_v1: {
-      no_action_baseline_present: Boolean(scenarioComparison.no_action_baseline_present),
-      options: asArray(scenarioComparison.options).map((option) => ({
-        option_id: firstText(option.option_id, option.id, option.label),
-        label: firstText(option.label, option.option_id, option.id),
-        risk_delta: nullableText(option.risk_delta),
-        confidence_text: nullableText(option.confidence_text),
-        failure_conditions: asArray(option.failure_conditions).map((item) => safeText(item)).filter(Boolean),
-      })),
+      no_action_baseline_present: noActionBaselinePresent,
+      options,
       evidence_refs: asArray(scenarioComparison.evidence_refs).map((item) => safeText(item)).filter(Boolean),
-      status: scenarioComparison.status === "AVAILABLE" ? "AVAILABLE" : "NOT_AVAILABLE",
-      unavailable_reason: nullableText(scenarioComparison.unavailable_reason),
+      status: scenarioCompareAvailable ? "AVAILABLE" : "NOT_AVAILABLE",
+      unavailable_reason: unavailableReason,
     },
     data_gaps: workspace.data_gaps,
     boundary_rules: defaultBoundaryRules(),

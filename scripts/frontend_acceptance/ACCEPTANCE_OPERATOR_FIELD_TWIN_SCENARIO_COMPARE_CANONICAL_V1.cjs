@@ -53,6 +53,9 @@ const REQUIRED_API_TOKENS = [
 
 const REQUIRED_SERVER_TOKENS = [
   "buildFieldScenarioCompare",
+  "noActionBaselinePresent",
+  "scenarioCompareAvailable",
+  "NO_ACTION_BASELINE_OR_OPTIONS_NOT_AVAILABLE",
   "scenario_compare_v1",
   "no_action_baseline_present",
   "options:",
@@ -79,6 +82,7 @@ const FORBIDDEN_PAGE_TOKENS = [
 ];
 
 const FORBIDDEN_SERVER_TOKENS = [
+  "status: scenarioComparison.status === \"AVAILABLE\" ? \"AVAILABLE\" : \"NOT_AVAILABLE\"",
   "INSERT INTO ao_act_task",
   "ao_act_task_v0",
   "approval_decision_v1",
