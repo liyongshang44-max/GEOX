@@ -91,6 +91,31 @@ function EvidenceSummary({ workspace }: { workspace: OperatorFieldTwinWorkspaceV
   );
 }
 
+function DataGapSummary({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }): React.ReactElement {
+  const hasDataGaps = workspace.data_gaps.length > 0;
+
+  return (
+    <article
+      className="customerCard"
+      data-card="DataGapSummary"
+      data-gap-status={hasDataGaps ? "DATA_GAPS_PRESENT" : "NO_DATA_GAPS"}
+    >
+      <p className="customerEyebrow">DataGapSummary</p>
+      <h3>数据缺口</h3>
+      {hasDataGaps ? null : <p>当前 workspace 未返回数据缺口。</p>}
+      <ul className="customerList">
+        {workspace.data_gaps.map((gap, index) => (
+          <li key={gap.gap_code || gap.label || String(index)}>
+            {gap.label || gap.gap_code || "未命名缺口"}
+            {gap.severity ? " · " + gap.severity : ""}
+          </li>
+        ))}
+      </ul>
+    </article>
+  );
+}
+
+
 function RecommendationCandidate({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }): React.ReactElement {
   return (
     <article className="customerCard" data-card="RecommendationCandidate">
@@ -213,6 +238,7 @@ export default function OperatorFieldTwinWorkspacePage(): React.ReactElement {
           <TwinStateVectorCard workspace={workspace} />
           <DataCoverageMatrix workspace={workspace} />
           <EvidenceSummary workspace={workspace} />
+          <DataGapSummary workspace={workspace} />
 
           {workspace.layers.map((layer) => (
             <LayerCard key={layer.layer} layer={layer} />
