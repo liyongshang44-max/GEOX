@@ -41,6 +41,8 @@ const REQUIRED_SUITE_TOKENS = [
   "node scripts/runtime_acceptance/ACCEPTANCE_CUSTOMER_REPORT_SERVER_PROJECTOR_CONTRACT_V1.cjs",
   "ci:customer-report-server-route-registration-contract",
   "node scripts/runtime_acceptance/ACCEPTANCE_CUSTOMER_REPORT_SERVER_ROUTE_REGISTRATION_CONTRACT_V1.cjs",
+  "ci:customer-report-response-envelope-contract",
+  "node scripts/runtime_acceptance/ACCEPTANCE_CUSTOMER_REPORT_RESPONSE_ENVELOPE_CONTRACT_V1.cjs",
   "ci:customer-dashboard-aggregate-server-contract",
   "node scripts/runtime_acceptance/ACCEPTANCE_CUSTOMER_DASHBOARD_AGGREGATE_SERVER_CONTRACT_V1.cjs",
 ];

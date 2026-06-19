@@ -63,3 +63,4 @@ The suite currently covers:
 - `ci:customer-dashboard-aggregate-server-contract`
 - `ci:customer-report-server-projector-contract`
 - `ci:customer-report-server-route-registration-contract`
+- `ci:customer-report-response-envelope-contract`
