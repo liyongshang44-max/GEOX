@@ -1,6 +1,6 @@
 // scripts/runtime_acceptance/ACCEPTANCE_CUSTOMER_REPORT_RUNTIME_PAYLOAD_BOUNDARY_V1.cjs
 // Purpose: verify customer report runtime JSON payload boundary through real HTTP responses.
-// Boundary: customer report APIs must not expose Operator/Admin/Control/Source-Index/raw/debug/internal payload fields.
+// Boundary: customer report APIs must not expose Operator, Admin, Control, Source-Index, raw/debug, or internal payload fields.
 
 const BASE_URL = String(process.env.GEOX_BASE_URL || process.env.BASE_URL || "http://127.0.0.1:3001").replace(/\/$/, "");
 
@@ -10,39 +10,13 @@ const GROUP_ID = String(process.env.GEOX_GROUP_ID || process.env.GROUP_ID || "gr
 const FIELD_ID = String(process.env.GEOX_FIELD_ID || process.env.FIELD_ID || "field_c8_demo");
 const OPERATION_ID = String(process.env.GEOX_OPERATION_ID || process.env.OPERATION_ID || "op_plan_c8_irrigation_formal_001");
 
-const MAX_ATTEMPTS = 10;
-const RETRY_DELAY_MS = 750;
-
 const AUTHORIZATION = String(process.env.GEOX_AUTHORIZATION || process.env.AUTHORIZATION || "").trim();
 const BEARER_TOKEN = String(process.env.GEOX_BEARER_TOKEN || process.env.BEARER_TOKEN || "").trim();
+const AO_ACT_TOKEN = String(process.env.GEOX_AO_ACT_TOKEN || "").trim();
+const GEOX_TOKEN = String(process.env.GEOX_TOKEN || "").trim();
 
-function assertAsciiHeaderValue(name, value) {
-  if (!value) return;
-
-  assert(!/[<>]/.test(value), "runtime auth header contains placeholder delimiters; replace it with a real credential", {
-    name,
-  });
-
-  assert(/^[\x20-\x7E]+$/.test(value), "runtime auth header must contain ASCII header-safe characters only", {
-    name,
-  });
-}
-
-function authHeaders() {
-  const headers = {};
-
-  assertAsciiHeaderValue("GEOX_AUTHORIZATION/AUTHORIZATION", AUTHORIZATION);
-  assertAsciiHeaderValue("GEOX_BEARER_TOKEN/BEARER_TOKEN", BEARER_TOKEN);
-
-  if (AUTHORIZATION) {
-    headers.authorization = AUTHORIZATION;
-  } else if (BEARER_TOKEN) {
-    headers.authorization = "Bearer " + BEARER_TOKEN;
-  }
-
-
-  return headers;
-}
+const MAX_ATTEMPTS = 10;
+const RETRY_DELAY_MS = 750;
 
 const FORBIDDEN_KEYS = new Set([
   "operator_twin_source_index_inventory_v1",
@@ -100,6 +74,42 @@ function assert(condition, message, detail) {
   }
 }
 
+function assertAsciiHeaderValue(name, value) {
+  if (!value) return;
+
+  assert(!/[<>]/.test(value), "runtime auth header contains placeholder delimiters; replace it with a real credential", {
+    name,
+  });
+
+  assert(/^[\x20-\x7E]+$/.test(value), "runtime auth header must contain ASCII header-safe characters only", {
+    name,
+  });
+}
+
+function resolvedAuthorizationHeader() {
+  assertAsciiHeaderValue("GEOX_AUTHORIZATION/AUTHORIZATION", AUTHORIZATION);
+  assertAsciiHeaderValue("GEOX_BEARER_TOKEN/BEARER_TOKEN", BEARER_TOKEN);
+  assertAsciiHeaderValue("GEOX_AO_ACT_TOKEN", AO_ACT_TOKEN);
+  assertAsciiHeaderValue("GEOX_TOKEN", GEOX_TOKEN);
+
+  if (AUTHORIZATION) return AUTHORIZATION;
+  if (BEARER_TOKEN) return "Bearer " + BEARER_TOKEN;
+  if (AO_ACT_TOKEN) return "Bearer " + AO_ACT_TOKEN;
+  if (GEOX_TOKEN) return "Bearer " + GEOX_TOKEN;
+
+  return "";
+}
+
+function authHeaders() {
+  const authorization = resolvedAuthorizationHeader();
+
+  if (!authorization) {
+    return {};
+  }
+
+  return { authorization };
+}
+
 function scopeQuery(extra = {}) {
   const params = new URLSearchParams();
 
@@ -151,7 +161,7 @@ async function fetchJson(routePath) {
           throw new Error(
             "GET " +
               routePath +
-              " failed with AUTH_MISSING. Set GEOX_AUTHORIZATION or GEOX_BEARER_TOKEN before running this runtime acceptance."
+              " failed with AUTH_MISSING. Set GEOX_AUTHORIZATION, GEOX_BEARER_TOKEN, GEOX_AO_ACT_TOKEN, or GEOX_TOKEN before running this runtime acceptance."
           );
         }
 
