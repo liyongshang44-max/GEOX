@@ -157,6 +157,39 @@ export type OperatorFieldTwinWorkspaceV1 = {
   boundary_rules: OperatorTwinBoundaryRule[];
 };
 
+
+export type OperatorForecastRiskTimelineItem = {
+  horizon: string;
+  risk_text: string;
+  confidence_text: string;
+  evidence_refs: string[];
+};
+
+export type OperatorForecastWindowV1 = {
+  available_horizon: string;
+  forecast_horizon_limited: boolean;
+  unavailable_horizons: string[];
+  reason: string;
+  evidence_refs: string[];
+  risk_timeline: OperatorForecastRiskTimelineItem[];
+};
+
+export type OperatorFieldTwinForecastPanelV1 = {
+  version: "v1";
+  surface: "OPERATOR";
+  report_kind: "OPERATOR_FIELD_TWIN_FORECAST_PANEL";
+  request_scope: OperatorTwinRequestScope & { fieldId?: string | null; field_id?: string | null };
+  scope_policy: OperatorTwinScopePolicy;
+  field_context: {
+    field_id: string;
+    field_name: string;
+    crop_text: string;
+  };
+  forecast_window_v1: OperatorForecastWindowV1;
+  data_gaps: OperatorTwinGap[];
+  boundary_rules: OperatorTwinBoundaryRule[];
+};
+
 export type OperatorTwinSourceIndexInventoryResponse = {
   ok: boolean;
   source: "operator_twin_source_index_inventory_api";
@@ -191,6 +224,19 @@ export type OperatorFieldTwinWorkspaceResponse = {
   approvalReady: false;
   taskCreationReady: false;
   operator_field_twin_workspace_v1: OperatorFieldTwinWorkspaceV1;
+};
+
+
+export type OperatorFieldTwinForecastPanelResponse = {
+  ok: boolean;
+  source: "operator_field_twin_forecast_panel_api";
+  dataScope: "OFFICIAL_OPERATOR_TWIN_API";
+  generated_at: string;
+  writeReady: false;
+  dispatchReady: false;
+  approvalReady: false;
+  taskCreationReady: false;
+  operator_field_twin_forecast_panel_v1: OperatorFieldTwinForecastPanelV1;
 };
 
 function cleanScopeValue(value: string | null | undefined): string {
@@ -259,6 +305,25 @@ export async function fetchOperatorFieldTwinWorkspace(
 
   if (!response.ok || !response.data) {
     throw new Error("OPERATOR_FIELD_TWIN_WORKSPACE_API_FAILED");
+  }
+
+  return response.data;
+}
+
+
+export async function fetchOperatorFieldTwinForecastPanel(
+  fieldId: string,
+  scope?: OperatorTwinRequestScope | null
+): Promise<OperatorFieldTwinForecastPanelResponse> {
+  const safeFieldId = encodeURIComponent(String(fieldId || "").trim());
+  const response = await apiRequestWithPolicy<OperatorFieldTwinForecastPanelResponse>(
+    withScope("/api/v1/operator/twin/fields/" + safeFieldId + "/forecast", scope),
+    undefined,
+    { dedupe: true, silent: true, timeoutMs: 10000 }
+  );
+
+  if (!response.ok || !response.data) {
+    throw new Error("OPERATOR_FIELD_TWIN_FORECAST_PANEL_API_FAILED");
   }
 
   return response.data;
