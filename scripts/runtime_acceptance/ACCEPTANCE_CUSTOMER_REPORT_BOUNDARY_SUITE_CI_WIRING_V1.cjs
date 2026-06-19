@@ -23,6 +23,8 @@ const REQUIRED_DOC_TOKENS = [
   "ci:customer-report-boundary-suite",
   "ci:customer-dashboard-aggregate-server-contract",
   "ci:customer-report-server-projector-contract",
+  "ci:customer-report-server-route-registration-contract",
+  "ci:customer-report-response-envelope-contract",
   "GEOX_BASE_URL",
   "GEOX_AO_ACT_TOKEN",
   "GEOX_TOKEN",
