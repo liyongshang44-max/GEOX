@@ -824,6 +824,8 @@ async function buildFieldWorkspace(pool: Pool, scope: RequestScope, fieldId: str
     },
     current_state: {
       state_text: waterStateText(waterState),
+      risk_text: riskText(waterState, recommendation, scenario),
+      low_confidence: isLowConfidence(waterState ?? recommendation ?? scenario),
       confidence_text: confidenceText(waterState),
       classification: "Estimate",
       evidence_refs: collectEvidenceRefs(waterState),

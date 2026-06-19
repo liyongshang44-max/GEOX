@@ -113,6 +113,8 @@ export type OperatorFieldTwinWorkspaceV1 = {
   };
   current_state: {
     state_text: string;
+    risk_text: string;
+    low_confidence: boolean;
     confidence_text: string;
     classification: "Estimate";
     evidence_refs: string[];
