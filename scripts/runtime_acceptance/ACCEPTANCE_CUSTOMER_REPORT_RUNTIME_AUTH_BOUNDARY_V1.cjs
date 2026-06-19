@@ -12,6 +12,8 @@ const OPERATION_ID = String(process.env.GEOX_OPERATION_ID || process.env.OPERATI
 
 const AUTHORIZATION = String(process.env.GEOX_AUTHORIZATION || process.env.AUTHORIZATION || "").trim();
 const BEARER_TOKEN = String(process.env.GEOX_BEARER_TOKEN || process.env.BEARER_TOKEN || "").trim();
+const AO_ACT_TOKEN = String(process.env.GEOX_AO_ACT_TOKEN || "").trim();
+const GEOX_TOKEN = String(process.env.GEOX_TOKEN || "").trim();
 
 const MAX_ATTEMPTS = 10;
 const RETRY_DELAY_MS = 750;
@@ -39,19 +41,28 @@ function assertAsciiHeaderValue(name, value) {
   });
 }
 
-function supportedAuthorizationHeaders() {
+function resolvedAuthorizationHeader() {
   assertAsciiHeaderValue("GEOX_AUTHORIZATION/AUTHORIZATION", AUTHORIZATION);
   assertAsciiHeaderValue("GEOX_BEARER_TOKEN/BEARER_TOKEN", BEARER_TOKEN);
+  assertAsciiHeaderValue("GEOX_AO_ACT_TOKEN", AO_ACT_TOKEN);
+  assertAsciiHeaderValue("GEOX_TOKEN", GEOX_TOKEN);
 
-  if (AUTHORIZATION) {
-    return { authorization: AUTHORIZATION };
+  if (AUTHORIZATION) return AUTHORIZATION;
+  if (BEARER_TOKEN) return "Bearer " + BEARER_TOKEN;
+  if (AO_ACT_TOKEN) return "Bearer " + AO_ACT_TOKEN;
+  if (GEOX_TOKEN) return "Bearer " + GEOX_TOKEN;
+
+  return "";
+}
+
+function supportedAuthorizationHeaders() {
+  const authorization = resolvedAuthorizationHeader();
+
+  if (!authorization) {
+    throw new Error("Set GEOX_AUTHORIZATION, GEOX_BEARER_TOKEN, GEOX_AO_ACT_TOKEN, or GEOX_TOKEN before running this runtime acceptance.");
   }
 
-  if (BEARER_TOKEN) {
-    return { authorization: "Bearer " + BEARER_TOKEN };
-  }
-
-  throw new Error("Set GEOX_AUTHORIZATION or GEOX_BEARER_TOKEN before running this runtime acceptance.");
+  return { authorization };
 }
 
 function baseHeaders(extra = {}) {
