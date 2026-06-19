@@ -65,6 +65,8 @@ export type OperatorTwinOverviewField = {
   field_name: string;
   crop_text: string;
   current_state_text: string;
+  risk_text: string;
+  low_confidence: boolean;
   confidence_text: string;
   data_coverage_text: string;
   forecast_window_text: string;

@@ -122,7 +122,7 @@ export default function OperatorLayout({
         </div>
 
         <div className="customerShellFooterNote">
-          情景只能进入 recommendation / approval 链路，不能直接变成 AO-ACT task。
+          Scenario 不能当作 Task；情景只能进入 recommendation / approval 链路，不能直接变成 AO-ACT task。
         </div>
       </aside>
 
