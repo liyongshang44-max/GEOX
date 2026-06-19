@@ -10,6 +10,7 @@ const ROOT = path.resolve(__dirname, "..", "..");
 
 const DOC_PATH = "docs/ci/CI_ACCEPTANCE_SECRETS.md";
 const WORKFLOW_PATH = ".github/workflows/ci.yml";
+const SUITE_PATH = "scripts/runtime_acceptance/ACCEPTANCE_CUSTOMER_REPORT_BOUNDARY_SUITE_V1.cjs";
 const SECTION_TITLE = "## Customer Report Boundary Suite";
 
 const SUITE_SCRIPT_NAME = "ci:customer-report-boundary-suite";
@@ -33,6 +34,13 @@ const REQUIRED_WORKFLOW_TOKENS = [
   "pnpm run ci:customer-report-boundary-suite",
   "GEOX_BASE_URL=http://127.0.0.1:3001",
   "source .env.ci",
+];
+
+const REQUIRED_SUITE_TOKENS = [
+  "ci:customer-report-server-projector-contract",
+  "node scripts/runtime_acceptance/ACCEPTANCE_CUSTOMER_REPORT_SERVER_PROJECTOR_CONTRACT_V1.cjs",
+  "ci:customer-dashboard-aggregate-server-contract",
+  "node scripts/runtime_acceptance/ACCEPTANCE_CUSTOMER_DASHBOARD_AGGREGATE_SERVER_CONTRACT_V1.cjs",
 ];
 
 const FORBIDDEN_SECTION_TOKENS = [
@@ -95,6 +103,7 @@ function main() {
 
   const doc = read(DOC_PATH);
   const workflow = read(WORKFLOW_PATH);
+  const suite = read(SUITE_PATH);
   const section = extractSection(doc, SECTION_TITLE);
   const pkg = JSON.parse(read("package.json"));
 
@@ -120,6 +129,13 @@ function main() {
   for (const token of REQUIRED_WORKFLOW_TOKENS) {
     assert(workflow.includes(token), "customer report boundary suite CI workflow missing required token", {
       workflowPath: WORKFLOW_PATH,
+      token,
+    });
+  }
+
+  for (const token of REQUIRED_SUITE_TOKENS) {
+    assert(suite.includes(token), "customer report boundary suite missing required server contract token", {
+      suitePath: SUITE_PATH,
       token,
     });
   }
