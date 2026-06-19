@@ -158,7 +158,8 @@
     "ci:runtime:operator-field-twin-forecast-panel-shape": "node scripts/runtime_acceptance/ACCEPTANCE_OPERATOR_FIELD_TWIN_FORECAST_PANEL_RUNTIME_SHAPE_V1.cjs",
     "ci:h22:operator-field-twin-forecast-panel": "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_FIELD_TWIN_FORECAST_PANEL_SUITE_V1.cjs",
     "ci:frontend:operator-field-twin-scenario-compare-canonical": "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_FIELD_TWIN_SCENARIO_COMPARE_CANONICAL_V1.cjs",
-    "ci:runtime:operator-field-twin-scenario-compare-shape": "node scripts/runtime_acceptance/ACCEPTANCE_OPERATOR_FIELD_TWIN_SCENARIO_COMPARE_RUNTIME_SHAPE_V1.cjs"
+    "ci:runtime:operator-field-twin-scenario-compare-shape": "node scripts/runtime_acceptance/ACCEPTANCE_OPERATOR_FIELD_TWIN_SCENARIO_COMPARE_RUNTIME_SHAPE_V1.cjs",
+    "ci:h23:operator-field-twin-scenario-compare": "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_FIELD_TWIN_SCENARIO_COMPARE_SUITE_V1.cjs"
   },
   "volta": {
     "node": "20.11.1"
