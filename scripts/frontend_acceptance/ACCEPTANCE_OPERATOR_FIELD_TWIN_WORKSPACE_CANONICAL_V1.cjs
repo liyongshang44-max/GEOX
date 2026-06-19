@@ -61,10 +61,14 @@ const REQUIRED_SERVER_TOKENS = [
   "report_kind: \"OPERATOR_FIELD_TWIN_WORKSPACE\"",
   "field_scope_required: true",
   "risk_text: riskText(waterState, recommendation, scenario)",
-  "low_confidence: isLowConfidence(waterState ?? recommendation ?? scenario)",
+  "low_confidence: isLowConfidence(waterState)",
   "no_direct_execution: true",
   "human_approval_required: true",
   "defaultBoundaryRules()",
+];
+
+const FORBIDDEN_SERVER_TOKENS = [
+  "low_confidence: isLowConfidence(waterState ?? recommendation ?? scenario)",
 ];
 
 const FORBIDDEN_PAGE_TOKENS = [
@@ -125,6 +129,7 @@ function main() {
   assertTokens(api, REQUIRED_API_TOKENS, API_PATH, "H21 operator field twin workspace API contract missing");
   assertTokens(server, REQUIRED_SERVER_TOKENS, SERVER_ROUTE_PATH, "H21 operator field twin workspace server contract missing");
 
+  assertNoTokens(server, FORBIDDEN_SERVER_TOKENS, SERVER_ROUTE_PATH, "H21 current_state low_confidence must not fall back to scenario or recommendation");
   assertNoTokens(page, FORBIDDEN_PAGE_TOKENS, PAGE_PATH, "H21 operator field twin workspace page contains forbidden action/control token");
   assertPackageScriptPinned();
 
