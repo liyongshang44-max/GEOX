@@ -15,7 +15,6 @@ const RETRY_DELAY_MS = 750;
 
 const AUTHORIZATION = String(process.env.GEOX_AUTHORIZATION || process.env.AUTHORIZATION || "").trim();
 const BEARER_TOKEN = String(process.env.GEOX_BEARER_TOKEN || process.env.BEARER_TOKEN || "").trim();
-const COOKIE = String(process.env.GEOX_COOKIE || process.env.COOKIE || "").trim();
 
 function assertAsciiHeaderValue(name, value) {
   if (!value) return;
@@ -34,7 +33,6 @@ function authHeaders() {
 
   assertAsciiHeaderValue("GEOX_AUTHORIZATION/AUTHORIZATION", AUTHORIZATION);
   assertAsciiHeaderValue("GEOX_BEARER_TOKEN/BEARER_TOKEN", BEARER_TOKEN);
-  assertAsciiHeaderValue("GEOX_COOKIE/COOKIE", COOKIE);
 
   if (AUTHORIZATION) {
     headers.authorization = AUTHORIZATION;
@@ -42,9 +40,6 @@ function authHeaders() {
     headers.authorization = "Bearer " + BEARER_TOKEN;
   }
 
-  if (COOKIE) {
-    headers.cookie = COOKIE;
-  }
 
   return headers;
 }
@@ -156,7 +151,7 @@ async function fetchJson(routePath) {
           throw new Error(
             "GET " +
               routePath +
-              " failed with AUTH_MISSING. Set GEOX_AUTHORIZATION, GEOX_BEARER_TOKEN, or GEOX_COOKIE before running this runtime acceptance."
+              " failed with AUTH_MISSING. Set GEOX_AUTHORIZATION or GEOX_BEARER_TOKEN before running this runtime acceptance."
           );
         }
 
@@ -214,7 +209,92 @@ function assertNoForbiddenPayload(value, routePath, jsonPath = "$") {
   }
 }
 
-async function assertCustomerReport(routePath, expectedProjectionKey) {
+function assertAllowedReportProjectionShape(payload, routePath, shapeKind) {
+  const topLevelKeys = Object.keys(payload);
+
+  if (shapeKind === "operation") {
+    const operationReport =
+      payload.operation_report_v1 && typeof payload.operation_report_v1 === "object"
+        ? payload.operation_report_v1
+        : payload;
+
+    assert(
+      operationReport &&
+        typeof operationReport === "object" &&
+        operationReport.type === "operation_report_v1" &&
+        operationReport.identifiers &&
+        typeof operationReport.identifiers === "object",
+      "operation report runtime payload missing required operation_report_v1 projection shape",
+      {
+        routePath,
+        topLevelKeys,
+        type: operationReport && operationReport.type,
+        hasIdentifiers: Boolean(operationReport && operationReport.identifiers),
+      }
+    );
+
+    return;
+  }
+
+  if (shapeKind === "field") {
+    const fieldReport =
+      payload.field_report_v1 && typeof payload.field_report_v1 === "object"
+        ? payload.field_report_v1
+        : payload;
+
+    assert(
+      fieldReport &&
+        typeof fieldReport === "object" &&
+        fieldReport.type === "field_report_v1" &&
+        fieldReport.field &&
+        typeof fieldReport.field === "object",
+      "field report runtime payload missing required field_report_v1 projection shape",
+      {
+        routePath,
+        topLevelKeys,
+        type: fieldReport && fieldReport.type,
+        hasField: Boolean(fieldReport && fieldReport.field),
+      }
+    );
+
+    return;
+  }
+
+  if (shapeKind === "dashboard") {
+    const aggregate =
+      payload.customer_dashboard_aggregate_v1 && typeof payload.customer_dashboard_aggregate_v1 === "object"
+        ? payload.customer_dashboard_aggregate_v1
+        : payload.aggregate && typeof payload.aggregate === "object"
+          ? payload.aggregate
+          : payload.data && typeof payload.data === "object"
+            ? payload.data
+            : payload;
+
+    assert(
+      aggregate &&
+        typeof aggregate === "object" &&
+        aggregate.fields &&
+        typeof aggregate.fields === "object" &&
+        Array.isArray(aggregate.recent_operations) &&
+        aggregate.risk_summary &&
+        typeof aggregate.risk_summary === "object",
+      "customer dashboard runtime payload missing required aggregate projection shape",
+      {
+        routePath,
+        topLevelKeys,
+        hasFields: Boolean(aggregate && aggregate.fields),
+        hasRecentOperations: Boolean(aggregate && Array.isArray(aggregate.recent_operations)),
+        hasRiskSummary: Boolean(aggregate && aggregate.risk_summary),
+      }
+    );
+
+    return;
+  }
+
+  throw new Error("UNKNOWN_REPORT_SHAPE_KIND " + shapeKind);
+}
+
+async function assertCustomerReport(routePath, shapeKind) {
   const payload = await fetchJson(routePath);
 
   assert(payload && typeof payload === "object", "customer report runtime payload must be object", {
@@ -223,30 +303,23 @@ async function assertCustomerReport(routePath, expectedProjectionKey) {
   });
 
   assertNoForbiddenPayload(payload, routePath);
-
-  if (expectedProjectionKey) {
-    assert(payload[expectedProjectionKey] || payload.ok === true, "customer report runtime payload missing expected projection/envelope", {
-      routePath,
-      expectedProjectionKey,
-      topLevelKeys: Object.keys(payload),
-    });
-  }
+  assertAllowedReportProjectionShape(payload, routePath, shapeKind);
 }
 
 async function main() {
   await assertCustomerReport(
     "/api/v1/reports/operation/" + encodeURIComponent(OPERATION_ID) + scopeQuery(),
-    "operation_report_v1"
+    "operation"
   );
 
   await assertCustomerReport(
     "/api/v1/reports/field/" + encodeURIComponent(FIELD_ID) + scopeQuery(),
-    "field_report_v1"
+    "field"
   );
 
   await assertCustomerReport(
     "/api/v1/reports/customer-dashboard/aggregate" + scopeQuery({ "field_ids[]": [FIELD_ID], time_range: "season" }),
-    "customer_dashboard_aggregate_v1"
+    "dashboard"
   );
 
   console.log("[customer-report-runtime-payload-boundary] PASS");
