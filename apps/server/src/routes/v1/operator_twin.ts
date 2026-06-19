@@ -47,6 +47,8 @@ type TwinFieldRow = {
   field_name: string;
   crop_text: string;
   current_state_text: string;
+  risk_text: string;
+  low_confidence: boolean;
   confidence_text: string;
   data_coverage_text: string;
   forecast_window_text: string;
@@ -341,6 +343,33 @@ function confidenceText(row: Row | null | undefined): string {
   if (level) return level;
   if (score) return "score " + score;
   return "置信度待确认";
+}
+
+function isLowConfidence(row: Row | null | undefined): boolean {
+  if (!row) return true;
+  const confidenceJson = safeJson(row.confidence_json ?? row.confidence);
+  const level = firstText(row.confidence_level, row.confidence_text, confidenceJson?.level, confidenceJson?.confidence_level).toUpperCase();
+  const scoreValue = firstValue(row.confidence_score, confidenceJson?.score);
+  const score = scoreValue === null || scoreValue === undefined ? NaN : Number(scoreValue);
+
+  if (!level && !Number.isFinite(score)) return true;
+  if (level.includes("PENDING") || level.includes("UNKNOWN") || level.includes("待确认")) return true;
+  if (level.includes("LOW") || level.includes("低")) return true;
+  if (Number.isFinite(score) && score < 0.6) return true;
+  return false;
+}
+
+function riskText(water: Row | null | undefined, recommendation: Row | null | undefined, scenario: Row | null | undefined): string {
+  const stateJson = safeJson(water?.state_json ?? water?.estimate_json ?? water?.response_json);
+  const state = firstText(water?.water_state, water?.state, water?.status, water?.estimate_state, stateJson?.water_state, stateJson?.state).toUpperCase();
+
+  if (state === "MODERATE_DEFICIT") return "RISK: WATER_DEFICIT_MODERATE";
+  if (state === "LIGHT_DEFICIT") return "RISK: WATER_DEFICIT_LIGHT";
+  if (state === "NORMAL") return "RISK: NORMAL";
+
+  if (recommendation) return "RISK: RECOMMENDATION_REVIEW_REQUIRED";
+  if (scenario) return "RISK: SCENARIO_REVIEW_REQUIRED";
+  return "RISK: DATA_GAP";
 }
 
 function waterStateText(row: Row | null | undefined): string {
@@ -722,7 +751,9 @@ function buildFieldRow(fieldId: string, source: TwinSource): TwinFieldRow {
     field_name: fieldDisplayName(fieldId, source.fields),
     crop_text: cropText(fieldId, source.fields),
     current_state_text: waterStateText(water),
+    risk_text: riskText(water, recommendation, scenario),
     confidence_text: confidenceText(water ?? recommendation ?? scenario),
+    low_confidence: isLowConfidence(water ?? recommendation ?? scenario),
     data_coverage_text: dataCoverageText(sensing, weather),
     forecast_window_text: "短期窗口可用；7d/30d 标记为未开放",
     next_step_text: recommendation ? "复核建议候选并进入人工确认" : "复核情景比较并进入人工确认",

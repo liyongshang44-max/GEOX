@@ -189,7 +189,9 @@ export default function OperatorTwinOverviewPage(): React.ReactElement {
                   <tr>
                     <th>田块</th>
                     <th>当前状态</th>
+                    <th>风险</th>
                     <th>置信度</th>
+                    <th>低置信</th>
                     <th>数据覆盖</th>
                     <th>预测窗口</th>
                     <th>入口</th>
@@ -204,7 +206,9 @@ export default function OperatorTwinOverviewPage(): React.ReactElement {
                         <small>{row.field_id}</small>
                       </td>
                       <td>{row.current_state_text}</td>
+                      <td>{row.risk_text}</td>
                       <td>{row.confidence_text}</td>
+                      <td>{row.low_confidence ? "LOW_CONFIDENCE" : "CONFIDENCE_OK"}</td>
                       <td>{row.data_coverage_text}</td>
                       <td>{row.forecast_window_text}</td>
                       <td>
