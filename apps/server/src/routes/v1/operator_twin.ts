@@ -549,6 +549,9 @@ function forecastRiskTimeline(workspace: Row): Row[] {
   const risk = firstText(workspace?.current_state?.risk_text, "RISK: DATA_GAP");
   const confidence = firstText(workspace?.current_state?.confidence_text, "置信度待确认");
   const refs = forecastEvidenceRefs(workspace);
+  const unavailableHorizons = asArray(workspace?.forecast_window?.unavailable_horizons)
+    .map((item) => safeText(item))
+    .filter(Boolean);
 
   return [
     {
@@ -559,10 +562,16 @@ function forecastRiskTimeline(workspace: Row): Row[] {
     },
     {
       horizon: "24-72h",
-      risk_text: workspace?.forecast_window?.forecast_horizon_limited ? "RISK: FORECAST_WINDOW_LIMITED" : risk,
+      risk_text: risk,
       confidence_text: confidence,
       evidence_refs: refs,
     },
+    ...unavailableHorizons.map((horizon) => ({
+      horizon,
+      risk_text: "RISK: FORECAST_WINDOW_LIMITED",
+      confidence_text: "预测窗口不可用",
+      evidence_refs: refs,
+    })),
   ];
 }
 

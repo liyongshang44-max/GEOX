@@ -54,6 +54,9 @@ const REQUIRED_SERVER_TOKENS = [
   "forecast_window_v1",
   "forecastRiskTimeline",
   "forecastEvidenceRefs",
+  "unavailableHorizons",
+  "risk_text: risk",
+  "RISK: FORECAST_WINDOW_LIMITED",
   '"/api/v1/operator/twin/fields/:field_id/forecast"',
   "operator_field_twin_forecast_panel_api",
   "operator_field_twin_forecast_panel_v1",
@@ -75,6 +78,7 @@ const FORBIDDEN_PAGE_TOKENS = [
 ];
 
 const FORBIDDEN_SERVER_TOKENS = [
+  'risk_text: workspace?.forecast_window?.forecast_horizon_limited ? "RISK: FORECAST_WINDOW_LIMITED" : risk',
   "INSERT INTO ao_act_task",
   "ao_act_task_v0",
   "approval_decision_v1",
