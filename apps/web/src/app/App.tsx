@@ -47,6 +47,7 @@ const OperationReportPage = React.lazy(() => import("../features/operations/page
 const CustomerReportExportPage = React.lazy(() => import("../features/customer/pages/CustomerReportExportPage"));
 const OperatorTwinOverviewPage = React.lazy(() => import("../features/operator/pages/OperatorTwinOverviewPage"));
 const OperatorFieldTwinWorkspacePage = React.lazy(() => import("../features/operator/pages/OperatorFieldTwinWorkspacePage"));
+const OperatorFieldTwinForecastPage = React.lazy(() => import("../features/operator/pages/OperatorFieldTwinForecastPage"));
 
 const RouteFallback = <div className="card" style={{ padding: 16 }}>页面加载中...</div>;
 
@@ -318,6 +319,7 @@ function OperatorRoutes(): React.ReactElement {
       <Route path="/" element={<Navigate to="twin" replace />} />
       <Route path="twin" element={<OperatorTwinOverviewPage />} />
       <Route path="twin/fields/:fieldId" element={<OperatorFieldTwinWorkspacePage />} />
+      <Route path="twin/fields/:fieldId/forecast" element={<OperatorFieldTwinForecastPage />} />
       <Route path="*" element={<Navigate to="twin" replace />} />
     </Routes>
   );

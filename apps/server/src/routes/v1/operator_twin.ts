@@ -534,6 +534,72 @@ function buildLayers(input: {
   ];
 }
 
+
+function forecastEvidenceRefs(workspace: Row): string[] {
+  const refs = [
+    ...asArray(workspace?.current_state?.evidence_refs),
+    ...asArray(workspace?.data_coverage?.evidence_refs),
+    ...asArray(workspace?.layers).flatMap((layer) => asArray(layer?.evidence_refs)),
+  ];
+
+  return [...new Set(refs.map((value) => safeText(value)).filter(Boolean))].slice(0, 10);
+}
+
+function forecastRiskTimeline(workspace: Row): Row[] {
+  const risk = firstText(workspace?.current_state?.risk_text, "RISK: DATA_GAP");
+  const confidence = firstText(workspace?.current_state?.confidence_text, "置信度待确认");
+  const refs = forecastEvidenceRefs(workspace);
+  const unavailableHorizons = asArray(workspace?.forecast_window?.unavailable_horizons)
+    .map((item) => safeText(item))
+    .filter(Boolean);
+
+  return [
+    {
+      horizon: "0-24h",
+      risk_text: risk,
+      confidence_text: confidence,
+      evidence_refs: refs,
+    },
+    {
+      horizon: "24-72h",
+      risk_text: risk,
+      confidence_text: confidence,
+      evidence_refs: refs,
+    },
+    ...unavailableHorizons.map((horizon) => ({
+      horizon,
+      risk_text: "RISK: FORECAST_WINDOW_LIMITED",
+      confidence_text: "预测窗口不可用",
+      evidence_refs: refs,
+    })),
+  ];
+}
+
+async function buildFieldForecastPanel(pool: Pool, scope: RequestScope, fieldId: string): Promise<Row> {
+  const workspace = await buildFieldWorkspace(pool, scope, fieldId);
+  const forecastWindow = workspace.forecast_window ?? {};
+  const evidenceRefs = forecastEvidenceRefs(workspace);
+
+  return {
+    version: "v1",
+    surface: "OPERATOR",
+    report_kind: "OPERATOR_FIELD_TWIN_FORECAST_PANEL",
+    request_scope: workspace.request_scope,
+    scope_policy: workspace.scope_policy,
+    field_context: workspace.field_context,
+    forecast_window_v1: {
+      available_horizon: firstText(forecastWindow.available_horizon, "72h"),
+      forecast_horizon_limited: Boolean(forecastWindow.forecast_horizon_limited),
+      unavailable_horizons: asArray(forecastWindow.unavailable_horizons).map((item) => safeText(item)).filter(Boolean),
+      reason: firstText(forecastWindow.reason, "LONG_RANGE_FORECAST_RUN_NOT_AVAILABLE"),
+      evidence_refs: evidenceRefs,
+      risk_timeline: forecastRiskTimeline(workspace),
+    },
+    data_gaps: workspace.data_gaps,
+    boundary_rules: defaultBoundaryRules(),
+  };
+}
+
 function tableDisplayLabel(tableName: string): string {
   if (tableName === "field_index_v1") return "Field Index";
   if (tableName === "water_state_estimate_index_v1") return "Water State Estimate";
@@ -900,6 +966,17 @@ export function registerOperatorTwinReadRoutes(app: FastifyInstance, pool: Pool)
     return reply.send({
       ...basePayload("operator_field_twin_workspace_api"),
       operator_field_twin_workspace_v1: workspace,
+    });
+  });
+
+
+  app.get("/api/v1/operator/twin/fields/:field_id/forecast", async (req: any, reply) => {
+    const fieldId = safeText(req.params?.field_id);
+    const scope = extractRequestScope(req, fieldId);
+    const panel = await buildFieldForecastPanel(pool, scope, fieldId);
+    return reply.send({
+      ...basePayload("operator_field_twin_forecast_panel_api"),
+      operator_field_twin_forecast_panel_v1: panel,
     });
   });
 }
