@@ -34,3 +34,29 @@ Expected behavior:
 - print: `skip cleanup: .env.ci missing`
 - exit successfully (no `exit 1`)
 - avoid creating a second failure that masks the primary secret-missing failure
+
+## Customer Report Boundary Suite
+
+The customer report boundary suite must be run through the dedicated package script:
+
+```powershell
+pnpm run ci:customer-report-boundary-suite
+```
+
+Required runtime environment:
+
+- `GEOX_BASE_URL`
+- one of:
+  - `GEOX_AO_ACT_TOKEN`
+  - `GEOX_TOKEN`
+
+The suite intentionally does not advertise cookie-only authentication. Customer report runtime acceptance derives the HTTP `Authorization: Bearer ...` header from the accepted CI token variables above.
+
+The suite currently covers:
+
+- `ci:frontend:customer-operator-inventory-boundary`
+- `ci:frontend:customer-report-route-contract`
+- `ci:frontend:customer-report-api-consumption-contract`
+- `ci:frontend:customer-report-payload-boundary`
+- `ci:runtime:customer-report-auth-boundary`
+- `ci:runtime:customer-report-payload-boundary`
