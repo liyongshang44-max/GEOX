@@ -233,6 +233,21 @@ jobs:
           export API_BASE_URL=http://127.0.0.1:3001
           pnpm run ci:p1-smoke:preflight-idempotent
 
+
+      - name: Run customer report boundary suite wiring gate
+        run: |
+          pnpm run ci:customer-report-boundary-suite-wiring
+
+      - name: Run customer report boundary suite
+        timeout-minutes: 15
+        run: |
+          set -euo pipefail
+          set -a
+          source .env.ci
+          set +a
+          export GEOX_BASE_URL=http://127.0.0.1:3001
+          pnpm run ci:customer-report-boundary-suite
+
       - name: Run acceptance suite
         run: |
           set -a
