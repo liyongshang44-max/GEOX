@@ -30,6 +30,14 @@ const REQUIRED_SCRIPT_MAP = {
 
   "ci:runtime:customer-report-payload-boundary":
     "node scripts/runtime_acceptance/ACCEPTANCE_CUSTOMER_REPORT_RUNTIME_PAYLOAD_BOUNDARY_V1.cjs",
+  "ci:customer-dashboard-aggregate-server-contract":
+    "node scripts/runtime_acceptance/ACCEPTANCE_CUSTOMER_DASHBOARD_AGGREGATE_SERVER_CONTRACT_V1.cjs",
+  "ci:customer-report-server-projector-contract":
+    "node scripts/runtime_acceptance/ACCEPTANCE_CUSTOMER_REPORT_SERVER_PROJECTOR_CONTRACT_V1.cjs",
+  "ci:customer-report-server-route-registration-contract":
+    "node scripts/runtime_acceptance/ACCEPTANCE_CUSTOMER_REPORT_SERVER_ROUTE_REGISTRATION_CONTRACT_V1.cjs",
+  "ci:customer-report-response-envelope-contract":
+    "node scripts/runtime_acceptance/ACCEPTANCE_CUSTOMER_REPORT_RESPONSE_ENVELOPE_CONTRACT_V1.cjs",
 };
 
 function assert(condition, message, detail) {
