@@ -144,7 +144,8 @@
     "ci:runtime:customer-report-auth-boundary": "node scripts/runtime_acceptance/ACCEPTANCE_CUSTOMER_REPORT_RUNTIME_AUTH_BOUNDARY_V1.cjs",
     "ci:customer-report-boundary-suite": "node scripts/runtime_acceptance/ACCEPTANCE_CUSTOMER_REPORT_BOUNDARY_SUITE_V1.cjs",
     "ci:customer-report-boundary-suite-wiring": "node scripts/runtime_acceptance/ACCEPTANCE_CUSTOMER_REPORT_BOUNDARY_SUITE_CI_WIRING_V1.cjs",
-    "ci:customer-report-server-projector-contract": "node scripts/runtime_acceptance/ACCEPTANCE_CUSTOMER_REPORT_SERVER_PROJECTOR_CONTRACT_V1.cjs"
+    "ci:customer-report-server-projector-contract": "node scripts/runtime_acceptance/ACCEPTANCE_CUSTOMER_REPORT_SERVER_PROJECTOR_CONTRACT_V1.cjs",
+    "ci:customer-dashboard-aggregate-server-contract": "node scripts/runtime_acceptance/ACCEPTANCE_CUSTOMER_DASHBOARD_AGGREGATE_SERVER_CONTRACT_V1.cjs"
   },
   "volta": {
     "node": "20.11.1"

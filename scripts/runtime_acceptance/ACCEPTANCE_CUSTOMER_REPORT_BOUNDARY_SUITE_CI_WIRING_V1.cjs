@@ -20,6 +20,7 @@ const WIRING_SCRIPT_COMMAND = "node scripts/runtime_acceptance/ACCEPTANCE_CUSTOM
 
 const REQUIRED_DOC_TOKENS = [
   "ci:customer-report-boundary-suite",
+  "ci:customer-dashboard-aggregate-server-contract",
   "ci:customer-report-server-projector-contract",
   "GEOX_BASE_URL",
   "GEOX_AO_ACT_TOKEN",
