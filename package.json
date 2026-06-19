@@ -150,7 +150,8 @@
     "ci:customer-report-response-envelope-contract": "node scripts/runtime_acceptance/ACCEPTANCE_CUSTOMER_REPORT_RESPONSE_ENVELOPE_CONTRACT_V1.cjs",
     "ci:frontend:operator-twin-overview-canonical": "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_TWIN_OVERVIEW_CANONICAL_V1.cjs",
     "ci:frontend:operator-field-twin-workspace-canonical": "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_FIELD_TWIN_WORKSPACE_CANONICAL_V1.cjs",
-    "ci:runtime:operator-field-twin-workspace-shape": "node scripts/runtime_acceptance/ACCEPTANCE_OPERATOR_FIELD_TWIN_WORKSPACE_RUNTIME_SHAPE_V1.cjs"
+    "ci:runtime:operator-field-twin-workspace-shape": "node scripts/runtime_acceptance/ACCEPTANCE_OPERATOR_FIELD_TWIN_WORKSPACE_RUNTIME_SHAPE_V1.cjs",
+    "ci:frontend:operator-field-twin-workspace-navigation": "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_FIELD_TWIN_WORKSPACE_NAVIGATION_V1.cjs"
   },
   "volta": {
     "node": "20.11.1"
