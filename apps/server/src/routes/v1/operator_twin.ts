@@ -151,7 +151,7 @@ function firstValue(...values: unknown[]): unknown {
 }
 
 function fieldIdOf(row: Row): string {
-  return firstText(row.field_id, row.fieldId, row.target_field_id, row.subject_field_id, safeJson(row.context_json)?.field_id);
+  return firstText(row.field_id, row.fieldId, row.target_field_id, row.subject_field_id, safeJson(row.context_json)?.field_id, safeJson(row.record_json)?.payload?.field_id, safeJson(row.record_json)?.entity?.field_id);
 }
 
 function tsNumber(row: Row): number {
@@ -325,6 +325,7 @@ function collectEvidenceRefs(row: Row | null | undefined): string[] {
     row.forecast_id,
     row.scenario_set_id,
     row.recommendation_id,
+    row.fact_id,
   ];
   const jsonRefs = asArray(row.evidence_refs_json ?? row.evidence_refs);
   for (const item of jsonRefs) {
@@ -1019,7 +1020,7 @@ function replayItem(stage: string, label: string, sourceTable: string, row: Row 
     status: row ? "AVAILABLE" : "NOT_AVAILABLE",
     occurred_at: row && tsNumber(row) ? new Date(tsNumber(row)).toISOString() : null,
     source_table: sourceTable,
-    ref_id: nullableText(firstValue(row?.id, row?.record_id, row?.recommendation_id, row?.scenario_set_id, row?.task_id, row?.receipt_id)),
+    ref_id: nullableText(firstValue(row?.id, row?.record_id, row?.recommendation_id, row?.scenario_set_id, row?.task_id, row?.receipt_id, row?.fact_id, safeJson(row?.record_json)?.payload?.operation_plan_id, safeJson(row?.record_json)?.payload?.act_task_id, safeJson(row?.record_json)?.payload?.receipt_id, safeJson(row?.record_json)?.payload?.acceptance_id)),
     evidence_refs: collectEvidenceRefs(row),
     replay_notes: row ? ["Official projection row available for replay."] : [sourceTable + " not available; replay gap is preserved."],
   };
@@ -1028,6 +1029,53 @@ function replayItem(stage: string, label: string, sourceTable: string, row: Row 
 async function latestOptionalRow(pool: Pool, table: string, scope: RequestScope): Promise<Row | null> {
   const rows = await readRows(pool, table, scope, 1);
   return rows[0] ?? null;
+}
+
+function factScopeClause(jsonPath: "payload" | "entity", key: string): string {
+  return "record_json::jsonb#>>'{" + jsonPath + "," + key + "}'";
+}
+
+async function latestOptionalFactByType(pool: Pool, type: string, scope: RequestScope): Promise<Row | null> {
+  if (!hasTenantScope(scope)) return null;
+  if (!(await tableExists(pool, "facts"))) return null;
+
+  const clauses = ["(record_json::jsonb->>'type') = $1"];
+  const values: unknown[] = [type];
+  const scoped: Array<[keyof RequestScope, string]> = [
+    ["tenantId", "tenant_id"],
+    ["projectId", "project_id"],
+    ["groupId", "group_id"],
+    ["fieldId", "field_id"],
+  ];
+
+  for (const [scopeKey, jsonKey] of scoped) {
+    const value = scope[scopeKey];
+    if (!value) continue;
+    values.push(value);
+    clauses.push("(" + [
+      factScopeClause("payload", jsonKey),
+      factScopeClause("entity", jsonKey),
+      "record_json::jsonb->>'" + jsonKey + "'",
+    ].map((expr) => expr + " = $" + values.length).join(" OR ") + ")");
+  }
+
+  const sql =
+    "SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json, " +
+    "record_json::jsonb->'payload' AS payload_json, " +
+    "record_json::jsonb#>>'{payload,field_id}' AS field_id, " +
+    "record_json::jsonb#>>'{payload,tenant_id}' AS tenant_id, " +
+    "record_json::jsonb#>>'{payload,project_id}' AS project_id, " +
+    "record_json::jsonb#>>'{payload,group_id}' AS group_id " +
+    "FROM facts WHERE " + clauses.join(" AND ") + " ORDER BY occurred_at DESC, fact_id DESC LIMIT 1";
+
+  const result = await pool.query(sql, values).catch(() => ({ rows: [] as Row[] }));
+  return result.rows?.[0] ?? null;
+}
+
+async function latestOptionalProjectionOrFactRow(pool: Pool, tableOrType: string, scope: RequestScope): Promise<Row | null> {
+  const indexed = await latestOptionalRow(pool, tableOrType, scope);
+  if (indexed) return indexed;
+  return latestOptionalFactByType(pool, tableOrType, scope);
 }
 
 async function buildFieldCalibrationReplay(pool: Pool, scope: RequestScope, fieldId: string): Promise<Row> {
@@ -1040,11 +1088,11 @@ async function buildFieldCalibrationReplay(pool: Pool, scope: RequestScope, fiel
     latestOptionalRow(pool, "weather_forecast_index_v1", fieldScope),
     latestOptionalRow(pool, "irrigation_scenario_set_index_v1", fieldScope),
     latestOptionalRow(pool, "decision_recommendation_index_v1", fieldScope),
-    latestOptionalRow(pool, "operation_plan_v1", fieldScope),
-    latestOptionalRow(pool, "ao_act_" + "task_v0", fieldScope),
-    latestOptionalRow(pool, "ao_act_receipt_v1", fieldScope).then(async (row) => row ?? latestOptionalRow(pool, "ao_act_receipt_v0", fieldScope)),
-    latestOptionalRow(pool, "as_executed_record_v1", fieldScope),
-    latestOptionalRow(pool, "acceptance_result_v1", fieldScope),
+    latestOptionalProjectionOrFactRow(pool, "operation_plan_v1", fieldScope),
+    latestOptionalProjectionOrFactRow(pool, "ao_act_" + "task_v0", fieldScope),
+    latestOptionalProjectionOrFactRow(pool, "ao_act_receipt_v1", fieldScope).then(async (row) => row ?? latestOptionalProjectionOrFactRow(pool, "ao_act_receipt_v0", fieldScope)),
+    latestOptionalProjectionOrFactRow(pool, "as_executed_record_v1", fieldScope),
+    latestOptionalProjectionOrFactRow(pool, "acceptance_result_v1", fieldScope),
   ]);
 
   const replayGaps: TwinGap[] = [];
