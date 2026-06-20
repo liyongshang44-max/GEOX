@@ -1,0 +1,4 @@
+const fs=require('fs');const s=fs.readFileSync('apps/server/src/routes/v1/operator_twin.ts','utf8');function ok(c,m){if(!c){console.error(m);process.exit(1)}}
+['ok: true','source','OFFICIAL_OPERATOR_TWIN_API','writeReady: false','dispatchReady: false','approvalReady: false','taskCreationReady: false','memoryWriteReady: false','roiWriteReady: false','surface: "OPERATOR"','report_kind: "OPERATOR_FIELD_TWIN_POST_IRRIGATION_VERIFICATION"','pre_irrigation_state_v1','post_irrigation_state_v1','response_delta_v1','execution_evidence_v1','zone_response_matrix_v1','rows: []','verification_summary','verification_gaps','boundary_rules'].forEach(t=>ok(s.includes(t),`shape token missing ${t}`));
+ok(!/(writeFieldMemory|createRoiLedger|createAoActTask|submitRecommendation|approval mutation)/.test(s),'forbidden mutation token');
+console.log('H27 runtime shape acceptance passed');

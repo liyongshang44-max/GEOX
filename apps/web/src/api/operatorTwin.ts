@@ -328,6 +328,62 @@ export type OperatorFieldTwinCalibrationReplayV1 = {
   boundary_rules: OperatorTwinBoundaryRule[];
 };
 
+export type OperatorIrrigationStateSnapshot = {
+  available: boolean;
+  source: string | null;
+  observed_at: string | null;
+  soil_moisture_value: number | null;
+  water_state: string | null;
+  confidence: string | null;
+  evidence_refs: string[];
+};
+
+export type OperatorIrrigationResponseDelta = {
+  status: string;
+  delta_value: number | null;
+  delta_direction: "INCREASED" | "DECREASED" | "UNCHANGED" | "UNKNOWN" | string;
+  meets_expected_response: boolean | null;
+  reason_codes: string[];
+};
+
+export type OperatorExecutionEvidence = {
+  receipt_available: boolean;
+  as_executed_available: boolean;
+  acceptance_available: boolean;
+  operation_report_available: boolean;
+  evidence_refs: string[];
+};
+
+export type OperatorZoneResponseMatrix = {
+  rows: Array<Record<string, unknown>>;
+};
+
+export type OperatorPostIrrigationVerificationSummary = {
+  status: string;
+  reason: string;
+  field_memory_candidate: boolean;
+  roi_candidate: boolean;
+  write_ready: false;
+};
+
+export type OperatorFieldTwinPostIrrigationVerificationV1 = {
+  version: "v1";
+  surface: "OPERATOR";
+  report_kind: "OPERATOR_FIELD_TWIN_POST_IRRIGATION_VERIFICATION";
+  request_scope: OperatorTwinRequestScope & { fieldId?: string | null; field_id?: string | null };
+  scope_policy: OperatorTwinScopePolicy;
+  field_context: { field_id: string; field_name: string; crop_text: string };
+  operation_context: { operation_id: string | null; task_id: string | null; receipt_id: string | null; as_executed_id: string | null; acceptance_result_id: string | null };
+  pre_irrigation_state_v1: OperatorIrrigationStateSnapshot;
+  post_irrigation_state_v1: OperatorIrrigationStateSnapshot;
+  response_delta_v1: OperatorIrrigationResponseDelta;
+  execution_evidence_v1: OperatorExecutionEvidence;
+  zone_response_matrix_v1: OperatorZoneResponseMatrix;
+  verification_summary: OperatorPostIrrigationVerificationSummary;
+  verification_gaps: OperatorTwinGap[];
+  boundary_rules: OperatorTwinBoundaryRule[];
+};
+
 export type OperatorTwinSourceIndexInventoryResponse = {
   ok: boolean;
   source: "operator_twin_source_index_inventory_api";
@@ -412,6 +468,20 @@ export type OperatorFieldTwinCalibrationReplayResponse = {
   approvalReady: false;
   taskCreationReady: false;
   operator_field_twin_calibration_replay_v1: OperatorFieldTwinCalibrationReplayV1;
+};
+
+export type OperatorFieldTwinPostIrrigationVerificationResponse = {
+  ok: boolean;
+  source: "operator_field_twin_post_irrigation_verification_api";
+  dataScope: "OFFICIAL_OPERATOR_TWIN_API";
+  generated_at: string;
+  writeReady: false;
+  dispatchReady: false;
+  approvalReady: false;
+  taskCreationReady: false;
+  memoryWriteReady: false;
+  roiWriteReady: false;
+  operator_field_twin_post_irrigation_verification_v1: OperatorFieldTwinPostIrrigationVerificationV1;
 };
 
 function cleanScopeValue(value: string | null | undefined): string {
@@ -540,6 +610,23 @@ export async function fetchOperatorFieldTwinForecastPanel(
   return response.data;
 }
 
+export async function fetchOperatorFieldTwinPostIrrigationVerification(
+  fieldId: string,
+  scope?: OperatorTwinRequestScope | null
+): Promise<OperatorFieldTwinPostIrrigationVerificationResponse> {
+  const safeFieldId = encodeURIComponent(String(fieldId || "").trim());
+  const response = await apiRequestWithPolicy<OperatorFieldTwinPostIrrigationVerificationResponse>(
+    withScope("/api/v1/operator/twin/fields/" + safeFieldId + "/post-irrigation", scope),
+    undefined,
+    { dedupe: true, silent: true, timeoutMs: 10000 }
+  );
+
+  if (!response.ok || !response.data) {
+    throw new Error("OPERATOR_FIELD_TWIN_POST_IRRIGATION_VERIFICATION_API_FAILED");
+  }
+
+  return response.data;
+}
 
 export async function fetchOperatorFieldTwinScenarioCompare(
   fieldId: string,
