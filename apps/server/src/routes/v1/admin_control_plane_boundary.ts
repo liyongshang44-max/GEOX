@@ -15,6 +15,7 @@ export function adminControlPlaneEnvelope(kind: AdminControlPlaneKind, payload: 
     customerReportReady: false,
     operatorTwinReady: false,
     recommendationAuthoringReady: false,
+    approvalReady: false,
     approvalBypassReady: false,
     taskCreationReady: false,
     dispatchReady: false,

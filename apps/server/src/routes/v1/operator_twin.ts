@@ -95,6 +95,7 @@ function basePayload(source: string): Row {
     ok: true,
     source,
     dataScope: DATA_SCOPE,
+    surface: "OPERATOR",
     generated_at: nowIso(),
     writeReady: false,
     dispatchReady: false,
@@ -2556,6 +2557,10 @@ export function registerOperatorTwinReadRoutes(
       );
       return reply.send({
         ...basePayload("operator_field_twin_post_irrigation_verification_api"),
+        field_id: fieldId,
+        status: "NOT_AVAILABLE",
+        unavailable_reason: "NO_CONFIRMED_SOURCE_FACT",
+        evidence_refs: [],
         operator_field_twin_post_irrigation_verification_v1: verification,
       });
     },
@@ -2569,6 +2574,10 @@ export function registerOperatorTwinReadRoutes(
       const replay = await buildFieldCalibrationReplay(pool, scope, fieldId);
       return reply.send({
         ...basePayload("operator_field_twin_calibration_replay_api"),
+        field_id: fieldId,
+        status: "NOT_AVAILABLE",
+        unavailable_reason: "NO_CONFIRMED_SOURCE_FACT",
+        evidence_refs: [],
         operator_field_twin_calibration_replay_v1: replay,
       });
     },
@@ -2582,6 +2591,10 @@ export function registerOperatorTwinReadRoutes(
       const evidence = await buildFieldEvidenceQuality(pool, scope, fieldId);
       return reply.send({
         ...basePayload("operator_field_twin_evidence_quality_api"),
+        field_id: fieldId,
+        status: "NOT_AVAILABLE",
+        unavailable_reason: "NO_CONFIRMED_SOURCE_FACT",
+        evidence_refs: [],
         operator_field_twin_evidence_quality_v1: evidence,
       });
     },
