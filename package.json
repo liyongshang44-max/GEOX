@@ -162,7 +162,10 @@
     "ci:h23:operator-field-twin-scenario-compare": "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_FIELD_TWIN_SCENARIO_COMPARE_SUITE_V1.cjs",
     "ci:frontend:operator-twin-presentation-surface": "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_TWIN_PRESENTATION_SURFACE_V1.cjs",
     "ci:operator-twin-runtime-suite": "node scripts/runtime_acceptance/ACCEPTANCE_OPERATOR_TWIN_RUNTIME_SUITE_V1.cjs",
-    "ci:governance:pr-metadata-contract": "node scripts/governance_acceptance/ACCEPTANCE_PR_METADATA_CONTRACT_V1.cjs"
+    "ci:governance:pr-metadata-contract": "node scripts/governance_acceptance/ACCEPTANCE_PR_METADATA_CONTRACT_V1.cjs",
+    "ci:frontend:operator-field-twin-evidence-page-canonical": "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_FIELD_TWIN_EVIDENCE_PAGE_CANONICAL_V1.cjs",
+    "ci:governance:operator-field-twin-evidence-source-guard": "node scripts/governance_acceptance/ACCEPTANCE_OPERATOR_FIELD_TWIN_EVIDENCE_SOURCE_GUARD_V1.cjs",
+    "ci:runtime:operator-field-twin-evidence-quality-shape": "node scripts/runtime_acceptance/ACCEPTANCE_OPERATOR_FIELD_TWIN_EVIDENCE_QUALITY_SHAPE_V1.cjs"
   },
   "volta": {
     "node": "20.11.1"

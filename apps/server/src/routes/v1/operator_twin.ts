@@ -977,6 +977,77 @@ async function buildFieldWorkspace(pool: Pool, scope: RequestScope, fieldId: str
   };
 }
 
+async function buildFieldEvidenceQuality(pool: Pool, scope: RequestScope, fieldId: string): Promise<Row> {
+  const normalizedFieldId = safeText(fieldId);
+  const fieldScope = { ...scope, fieldId: normalizedFieldId };
+  const workspace = await buildFieldWorkspace(pool, fieldScope, normalizedFieldId);
+  const inventory = await buildSourceIndexInventory(pool, fieldScope);
+  const rows = asArray(inventory.source_indexes);
+
+  const traceStageByTable: Record<string, string> = {
+    field_index_v1: "Fact",
+    soil_moisture_sensing_window_index_v1: "Fact",
+    water_state_estimate_index_v1: "Estimate",
+    weather_forecast_index_v1: "Forecast",
+    irrigation_scenario_set_index_v1: "Scenario",
+    decision_recommendation_index_v1: "Recommendation",
+  };
+
+  const coverageRows = rows.map((row) => ({
+    metric: String(row.table_name || "").replace(/_index_v1$/, ""),
+    source_table: row.table_name,
+    available: Boolean(row.available),
+    row_count: Number(row.row_count ?? 0),
+    latest_ts_ms: row.latest_ts_ms ?? null,
+    coverage_ratio: null,
+    max_gap_ms: null,
+    missing_windows: row.available ? [] : [row.missing_reason || "SOURCE_INDEX_WINDOW_MISSING"],
+    quality_flags: row.available ? [] : [row.missing_reason || "NO_SCOPED_ROWS"],
+    confidence_penalty: row.available ? null : "LIMITED_BY_MISSING_SOURCE_INDEX",
+    evidence_refs: asArray(row.latest_evidence_refs).map((item) => safeText(item)).filter(Boolean),
+  }));
+
+  const lowQualityReasons = coverageRows
+    .filter((row) => !row.available || row.quality_flags.length > 0)
+    .map((row) => ({
+      source_table: row.source_table,
+      reason: row.quality_flags[0] || "LIMITED_SOURCE_INDEX_QUALITY",
+      evidence_refs: row.evidence_refs,
+      missing_windows: row.missing_windows,
+    }));
+
+  return {
+    version: "v1",
+    surface: "OPERATOR",
+    report_kind: "OPERATOR_FIELD_TWIN_EVIDENCE_QUALITY",
+    request_scope: workspace.request_scope,
+    scope_policy: workspace.scope_policy,
+    field_context: workspace.field_context,
+    evidence_trace_v1: {
+      trace_items: rows.map((row) => ({
+        stage: traceStageByTable[row.table_name] || "Fact",
+        label: tableDisplayLabel(row.table_name),
+        source_table: row.table_name,
+        available: Boolean(row.available),
+        latest_ts_ms: row.latest_ts_ms ?? null,
+        evidence_refs: asArray(row.latest_evidence_refs).map((item) => safeText(item)).filter(Boolean),
+        quality_flags: row.available ? [] : [row.missing_reason || "NO_SCOPED_ROWS"],
+      })),
+    },
+    data_coverage_matrix_v1: { rows: coverageRows },
+    quality_summary: {
+      status: lowQualityReasons.length > 0 ? "LIMITED" : "AVAILABLE",
+      blocking_reason: hasTenantScope(fieldScope) ? null : SCOPE_REQUIRED_REASON,
+      low_quality_reasons: lowQualityReasons,
+      simulation_data_present: false,
+      official_data_qualified: hasTenantScope(fieldScope),
+    },
+    source_index_inventory: inventory,
+    data_gaps: workspace.data_gaps,
+    boundary_rules: defaultBoundaryRules(),
+  };
+}
+
 export function registerOperatorTwinReadRoutes(app: FastifyInstance, pool: Pool): void {
   app.get("/api/v1/operator/twin", async (req: any, reply) => {
     const scope = extractRequestScope(req);
@@ -1005,6 +1076,17 @@ export function registerOperatorTwinReadRoutes(app: FastifyInstance, pool: Pool)
     });
   });
 
+
+
+  app.get("/api/v1/operator/twin/fields/:field_id/evidence", async (req: any, reply) => {
+    const fieldId = safeText(req.params?.field_id);
+    const scope = extractRequestScope(req, fieldId);
+    const evidence = await buildFieldEvidenceQuality(pool, scope, fieldId);
+    return reply.send({
+      ...basePayload("operator_field_twin_evidence_quality_api"),
+      operator_field_twin_evidence_quality_v1: evidence,
+    });
+  });
 
   app.get("/api/v1/operator/twin/fields/:field_id/forecast", async (req: any, reply) => {
     const fieldId = safeText(req.params?.field_id);

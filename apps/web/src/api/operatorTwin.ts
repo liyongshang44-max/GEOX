@@ -223,6 +223,60 @@ export type OperatorFieldTwinScenarioCompareV1 = {
   boundary_rules: OperatorTwinBoundaryRule[];
 };
 
+export type OperatorEvidenceTraceItem = {
+  stage: "Fact" | "Estimate" | "Forecast" | "Scenario" | "Recommendation" | string;
+  label: string;
+  source_table: string;
+  available: boolean;
+  latest_ts_ms: number | null;
+  evidence_refs: string[];
+  quality_flags: string[];
+};
+
+export type OperatorDataCoverageRow = {
+  metric: string;
+  source_table: string;
+  available: boolean;
+  row_count: number;
+  latest_ts_ms: number | null;
+  coverage_ratio: number | null;
+  max_gap_ms: number | null;
+  missing_windows: string[];
+  quality_flags: string[];
+  confidence_penalty: string | null;
+  evidence_refs: string[];
+};
+
+export type OperatorLowQualityReason = {
+  source_table: string;
+  reason: string;
+  evidence_refs: string[];
+  missing_windows: string[];
+};
+
+export type OperatorQualitySummary = {
+  status: "AVAILABLE" | "LIMITED" | "BLOCKING" | string;
+  blocking_reason: string | null;
+  low_quality_reasons: OperatorLowQualityReason[];
+  simulation_data_present: boolean;
+  official_data_qualified: boolean;
+};
+
+export type OperatorFieldTwinEvidenceQualityV1 = {
+  version: "v1";
+  surface: "OPERATOR";
+  report_kind: "OPERATOR_FIELD_TWIN_EVIDENCE_QUALITY";
+  request_scope: OperatorTwinRequestScope & { fieldId?: string | null; field_id?: string | null };
+  scope_policy: OperatorTwinScopePolicy;
+  field_context: { field_id: string; field_name: string; crop_text: string };
+  evidence_trace_v1: { trace_items: OperatorEvidenceTraceItem[] };
+  data_coverage_matrix_v1: { rows: OperatorDataCoverageRow[] };
+  quality_summary: OperatorQualitySummary;
+  source_index_inventory: OperatorTwinSourceIndexInventoryV1;
+  data_gaps: OperatorTwinGap[];
+  boundary_rules: OperatorTwinBoundaryRule[];
+};
+
 export type OperatorTwinSourceIndexInventoryResponse = {
   ok: boolean;
   source: "operator_twin_source_index_inventory_api";
@@ -283,6 +337,18 @@ export type OperatorFieldTwinScenarioCompareResponse = {
   approvalReady: false;
   taskCreationReady: false;
   operator_field_twin_scenario_compare_v1: OperatorFieldTwinScenarioCompareV1;
+};
+
+export type OperatorFieldTwinEvidenceQualityResponse = {
+  ok: boolean;
+  source: "operator_field_twin_evidence_quality_api";
+  dataScope: "OFFICIAL_OPERATOR_TWIN_API";
+  generated_at: string;
+  writeReady: false;
+  dispatchReady: false;
+  approvalReady: false;
+  taskCreationReady: false;
+  operator_field_twin_evidence_quality_v1: OperatorFieldTwinEvidenceQualityV1;
 };
 
 function cleanScopeValue(value: string | null | undefined): string {
@@ -356,6 +422,24 @@ export async function fetchOperatorFieldTwinWorkspace(
   return response.data;
 }
 
+
+export async function fetchOperatorFieldTwinEvidenceQuality(
+  fieldId: string,
+  scope?: OperatorTwinRequestScope | null
+): Promise<OperatorFieldTwinEvidenceQualityResponse> {
+  const safeFieldId = encodeURIComponent(String(fieldId || "").trim());
+  const response = await apiRequestWithPolicy<OperatorFieldTwinEvidenceQualityResponse>(
+    withScope("/api/v1/operator/twin/fields/" + safeFieldId + "/evidence", scope),
+    undefined,
+    { dedupe: true, silent: true, timeoutMs: 10000 }
+  );
+
+  if (!response.ok || !response.data) {
+    throw new Error("OPERATOR_FIELD_TWIN_EVIDENCE_QUALITY_API_FAILED");
+  }
+
+  return response.data;
+}
 
 export async function fetchOperatorFieldTwinForecastPanel(
   fieldId: string,
