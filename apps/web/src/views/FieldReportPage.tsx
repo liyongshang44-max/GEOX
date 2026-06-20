@@ -2,6 +2,8 @@ import React from "react";
 import { Link, useParams } from "react-router-dom";
 import { fetchFieldReport, type FieldReportDetailV1 } from "../api/customerReports";
 import { fetchWeatherForecast, fetchWeatherHistory, type WeatherResult } from "../api/weather";
+import { fetchCustomerConfirmedTwinSummary, type CustomerConfirmedTwinSummaryResponse } from "../api/customer";
+import CustomerConfirmedTwinSummaryCard from "../features/customer/components/CustomerConfirmedTwinSummaryCard";
 import ErrorState from "../components/common/ErrorState";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import CustomerEmptyState from "../components/customer/CustomerEmptyState";
@@ -56,11 +58,18 @@ export default function FieldReportPage(): React.ReactElement {
   const [error, setError] = React.useState("");
   const [roiDrawerOpen, setRoiDrawerOpen] = React.useState(false);
   const [weather, setWeather] = React.useState<FieldWeatherState>({ loading: false, history: null, forecast: null });
+  const [confirmedTwinSummary, setConfirmedTwinSummary] = React.useState<CustomerConfirmedTwinSummaryResponse | null>(null);
 
   React.useEffect(() => {
     let alive = true;
     setLoading(true);
     void fetchFieldReport(fieldId).then((res) => { if (!alive) return; setReport(res); setError(""); }).catch((e: unknown) => { if (!alive) return; setError(String(e instanceof Error ? e.message : "加载失败")); }).finally(() => { if (!alive) return; setLoading(false); });
+    return () => { alive = false; };
+  }, [fieldId]);
+
+  React.useEffect(() => {
+    let alive = true;
+    void fetchCustomerConfirmedTwinSummary(fieldId).then((res) => { if (alive) setConfirmedTwinSummary(res); }).catch(() => { if (alive) setConfirmedTwinSummary(null); });
     return () => { alive = false; };
   }, [fieldId]);
 
@@ -116,6 +125,8 @@ export default function FieldReportPage(): React.ReactElement {
             <div className="customerActionRow">{canExport ? <Link className="customerButton customerButtonPrimary" to={vm.exportHref}>导出</Link> : <span className="muted">导出不可用</span>}</div>
           </section>
 
+          <CustomerConfirmedTwinSummaryCard summary={confirmedTwinSummary?.customer_confirmed_twin_summary_v1} />
+
           <section className="customerCard">
             <div className="customerCardHeaderRow">
               <div>
@@ -147,6 +158,8 @@ export default function FieldReportPage(): React.ReactElement {
           <div><div className="customerEyebrow">GEOX / 地块病历</div><h1 className="customerTitle">{vm.field.fieldName}</h1><div className="customerMetaRow"><span>作物阶段：{vm.cropContext.stageText}</span><span className={`riskBadge riskBadge${vm.risk.tone}`}>风险：{vm.risk.levelLabel}</span></div></div>
           <div className="customerActionRow">{canExport ? <Link className="customerButton customerButtonPrimary" to={vm.exportHref}>导出</Link> : <span className="muted">导出不可用</span>}</div>
         </section>
+
+        <CustomerConfirmedTwinSummaryCard summary={confirmedTwinSummary?.customer_confirmed_twin_summary_v1} />
 
         <section className="customerCard mapPlaceholderCard fieldMapLayerCard">
           <div className="customerCardHeaderRow"><div><h3 className="customerCardTitle">地块范围与作业空间</h3><p className="customerMetricLabel">{vm.mapLayers.summaryText}</p></div><span className="customerPill">主视觉</span></div>
