@@ -10,6 +10,7 @@ const checks = [
   ['runtime field workspace shape', 'ci:runtime:operator-field-twin-workspace-shape'],
   ['runtime forecast panel shape', 'ci:runtime:operator-field-twin-forecast-panel-shape'],
   ['runtime scenario compare shape', 'ci:runtime:operator-field-twin-scenario-compare-shape'],
+  ['runtime evidence quality shape', 'ci:runtime:operator-field-twin-evidence-quality-shape'],
 ];
 
 for (const [label, script] of checks) {
