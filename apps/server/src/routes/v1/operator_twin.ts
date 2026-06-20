@@ -97,6 +97,8 @@ function basePayload(source: string): Row {
     dispatchReady: false,
     approvalReady: false,
     taskCreationReady: false,
+    memoryWriteReady: false,
+    roiWriteReady: false,
   };
 }
 
@@ -1146,6 +1148,214 @@ async function buildFieldCalibrationReplay(pool: Pool, scope: RequestScope, fiel
   };
 }
 
+function stateSnapshot(row: Row | null, phase: "PRE" | "POST"): Row {
+  const payload = safeJson(row?.payload_json ?? row?.payload ?? row?.record_json?.payload ?? row?.record_json) ?? {};
+  const summary = safeJson(row?.summary_json ?? payload.summary_json ?? payload.summary) ?? {};
+  const value = numberOrNull(firstValue(
+    row?.soil_moisture_value,
+    row?.vwc,
+    row?.vwc_percent,
+    row?.soil_moisture,
+    row?.mean_vwc,
+    row?.root_zone_soil_moisture_percent,
+    row?.root_zone_vwc_percent,
+    payload.soil_moisture_value,
+    payload.vwc,
+    payload.vwc_percent,
+    payload.soil_moisture,
+    payload.mean_vwc,
+    payload.root_zone_soil_moisture_percent,
+    payload.root_zone_vwc_percent,
+    summary.last_value,
+    summary.mean_value,
+    summary.root_zone_soil_moisture_percent,
+    summary.root_zone_vwc_percent
+  ));
+  const waterState = nullableText(firstValue(
+    row?.water_state,
+    row?.water_state_code,
+    row?.state,
+    row?.state_code,
+    row?.deficit_classification,
+    row?.classification,
+    payload.water_state,
+    payload.water_state_code,
+    payload.state,
+    payload.state_code,
+    payload.deficit_classification,
+    payload.classification
+  ));
+  const observedMs = row ? tsNumber(row) : 0;
+  return {
+    available: Boolean(row),
+    source: row ? firstText(row.source_table, row.source, row.table_name, phase === "PRE" ? "soil_moisture_sensing_window_index_v1" : "soil_moisture_sensing_window_index_v1") : null,
+    observed_at: observedMs ? new Date(observedMs).toISOString() : null,
+    soil_moisture_value: value,
+    water_state: waterState,
+    confidence: nullableText(firstValue(row?.confidence, row?.confidence_text, payload.confidence, payload.confidence_text)),
+    evidence_refs: collectEvidenceRefs(row),
+  };
+}
+
+function rowLooksPost(row: Row): boolean {
+  const blob = JSON.stringify(row).toLowerCase();
+  return blob.includes("post") || blob.includes("after") || blob.includes("irrigation_response");
+}
+
+function rowLooksPre(row: Row): boolean {
+  const blob = JSON.stringify(row).toLowerCase();
+  return blob.includes("pre") || blob.includes("before") || blob.includes("baseline");
+}
+
+function timestampMsFromValue(value: unknown): number | null {
+  if (value === undefined || value === null || value === "") return null;
+  const n = Number(value);
+  if (Number.isFinite(n)) return n;
+  const d = new Date(String(value));
+  return Number.isFinite(d.getTime()) ? d.getTime() : null;
+}
+
+function executionWindowEndMs(...rows: Array<Row | null | undefined>): number | null {
+  let best: number | null = null;
+  for (const row of rows) {
+    if (!row) continue;
+    const payload = safeJson(row.payload_json ?? row.payload ?? row.record_json?.payload ?? row.record_json) ?? {};
+    const candidates = [
+      row.completed_at,
+      row.executed_at,
+      row.execution_completed_at,
+      row.operation_end_at,
+      row.window_end,
+      row.end_at,
+      payload.completed_at,
+      payload.executed_at,
+      payload.execution_completed_at,
+      payload.operation_end_at,
+      payload.window_end,
+      payload.end_at,
+    ];
+    for (const candidate of candidates) {
+      const ms = timestampMsFromValue(candidate);
+      if (ms !== null && (best === null || ms > best)) best = ms;
+    }
+  }
+  return best;
+}
+
+function observationTimestampMs(row: Row): number | null {
+  const payload = safeJson(row.payload_json ?? row.payload ?? row.record_json?.payload ?? row.record_json) ?? {};
+  const candidates = [row.observed_at, row.window_end, row.updated_at, row.created_at, payload.observed_at, payload.window_end, payload.updated_at, payload.created_at];
+  for (const candidate of candidates) {
+    const ms = timestampMsFromValue(candidate);
+    if (ms !== null) return ms;
+  }
+  const fallback = tsNumber(row);
+  return fallback || null;
+}
+
+function findRowAfterExecutionWindow(rows: Row[], ...executionRows: Array<Row | null | undefined>): Row | null {
+  const endMs = executionWindowEndMs(...executionRows);
+  if (endMs === null) return null;
+  const maxPostWindowMs = 7 * 24 * 60 * 60 * 1000;
+  return rows.find((row) => {
+    const observedMs = observationTimestampMs(row);
+    return observedMs !== null && observedMs > endMs && observedMs <= endMs + maxPostWindowMs;
+  }) ?? null;
+}
+
+async function latestOperationReport(pool: Pool, scope: RequestScope): Promise<Row | null> {
+  return (await latestOptionalProjectionOrFactRow(pool, "operation_report_v1", scope))
+    ?? (await latestOptionalFactByType(pool, "operation_report_projection", scope));
+}
+
+async function buildFieldPostIrrigationVerification(pool: Pool, scope: RequestScope, fieldId: string): Promise<Row> {
+  const normalizedFieldId = safeText(fieldId);
+  const fieldScope = { ...scope, fieldId: normalizedFieldId };
+  const workspace = await buildFieldWorkspace(pool, fieldScope, normalizedFieldId);
+  const evidenceQuality = await buildFieldEvidenceQuality(pool, fieldScope, normalizedFieldId);
+  const calibrationReplay = await buildFieldCalibrationReplay(pool, fieldScope, normalizedFieldId);
+  const sensingRows = await readRows(pool, "soil_moisture_sensing_window_index_v1", fieldScope, 10);
+  const waterRows = await readRows(pool, "water_state_estimate_index_v1", fieldScope, 10);
+  const combined = [...sensingRows, ...waterRows].sort((a, b) => tsNumber(a) - tsNumber(b));
+  const preRow = combined.find(rowLooksPre) ?? combined[0] ?? null;
+  const [operationPlan, receipt, asExecuted, acceptance, operationReport] = await Promise.all([
+    latestOptionalProjectionOrFactRow(pool, "operation_plan_v1", fieldScope),
+    latestOptionalProjectionOrFactRow(pool, "ao_act_receipt_v1", fieldScope).then(async (row) => row ?? latestOptionalProjectionOrFactRow(pool, "ao_act_receipt_v0", fieldScope)),
+    latestOptionalProjectionOrFactRow(pool, "as_executed_record_v1", fieldScope),
+    latestOptionalProjectionOrFactRow(pool, "acceptance_result_v1", fieldScope),
+    latestOperationReport(pool, fieldScope),
+  ]);
+  const explicitPostRow = [...combined].reverse().find(rowLooksPost) ?? null;
+  const operationWindowPostRow = findRowAfterExecutionWindow(combined, receipt, asExecuted, operationPlan);
+  const postRow = explicitPostRow ?? operationWindowPostRow ?? null;
+
+  const pre = stateSnapshot(preRow, "PRE");
+  const post = stateSnapshot(postRow, "POST");
+  const deltaValue = pre.soil_moisture_value !== null && post.soil_moisture_value !== null ? Number((post.soil_moisture_value - pre.soil_moisture_value).toFixed(3)) : null;
+  const evidenceReady = Boolean(receipt && asExecuted);
+  const qualityStatus = firstText(evidenceQuality.quality_summary?.status).toUpperCase();
+  const lowConfidence = ["FAIL", "LOW", "LIMITED", "BLOCKING"].some((token) => qualityStatus.includes(token));
+  const gaps: TwinGap[] = [];
+  if (!post.available) gaps.push({ gap_code: "POST_IRRIGATION_OBSERVATION_NOT_AVAILABLE", label: "未找到灌后 soil moisture / water state observation，不能验证灌后响应。", severity: "BLOCKING" });
+  if (!receipt) gaps.push({ gap_code: "AO_ACT_RECEIPT_NOT_AVAILABLE", label: "未找到 receipt 支撑执行链。", severity: "WARNING" });
+  if (!asExecuted) gaps.push({ gap_code: "AS_EXECUTED_RECORD_NOT_AVAILABLE", label: "未找到 as-executed record 支撑执行链。", severity: "WARNING" });
+  if (lowConfidence) gaps.push({ gap_code: "LOW_CONFIDENCE", label: "证据质量为 LOW/FAIL/LIMITED/BLOCKING，结果只能低置信展示。", severity: "WARNING" });
+
+  let status = "UNKNOWN";
+  if (!post.available) status = "NOT_VERIFIABLE";
+  else if (lowConfidence) status = "LOW_CONFIDENCE";
+  else if (!evidenceReady) status = "EXECUTION_EVIDENCE_MISSING";
+  else if (deltaValue !== null && deltaValue > 0) status = "RESPONSE_OBSERVED";
+  else if (deltaValue !== null && deltaValue <= 0) status = "NO_RESPONSE_OBSERVED";
+
+  return {
+    version: "v1",
+    surface: "OPERATOR",
+    report_kind: "OPERATOR_FIELD_TWIN_POST_IRRIGATION_VERIFICATION",
+    request_scope: workspace.request_scope,
+    scope_policy: workspace.scope_policy,
+    field_context: workspace.field_context,
+    operation_context: {
+      operation_id: nullableText(firstValue(operationPlan?.operation_id, operationPlan?.id, safeJson(operationPlan?.payload_json)?.operation_id)),
+      task_id: nullableText(firstValue(operationPlan?.task_id, receipt?.task_id, safeJson(receipt?.payload_json)?.task_id)),
+      receipt_id: nullableText(firstValue(receipt?.receipt_id, receipt?.id, receipt?.fact_id, safeJson(receipt?.payload_json)?.receipt_id)),
+      as_executed_id: nullableText(firstValue(asExecuted?.as_executed_id, asExecuted?.id, asExecuted?.fact_id, safeJson(asExecuted?.payload_json)?.as_executed_id)),
+      acceptance_result_id: nullableText(firstValue(acceptance?.acceptance_result_id, acceptance?.id, acceptance?.fact_id, safeJson(acceptance?.payload_json)?.acceptance_result_id)),
+    },
+    pre_irrigation_state_v1: pre,
+    post_irrigation_state_v1: post,
+    response_delta_v1: {
+      status,
+      delta_value: deltaValue,
+      delta_direction: deltaValue === null ? "UNKNOWN" : deltaValue > 0 ? "INCREASED" : deltaValue < 0 ? "DECREASED" : "UNCHANGED",
+      meets_expected_response: status === "RESPONSE_OBSERVED" ? true : status === "NO_RESPONSE_OBSERVED" ? false : null,
+      reason_codes: gaps.map((gap) => gap.gap_code),
+    },
+    execution_evidence_v1: {
+      receipt_available: Boolean(receipt),
+      as_executed_available: Boolean(asExecuted),
+      acceptance_available: Boolean(acceptance),
+      operation_report_available: Boolean(operationReport),
+      evidence_refs: [receipt, asExecuted, acceptance, operationReport].flatMap((row) => collectEvidenceRefs(row)).slice(0, 20),
+    },
+    zone_response_matrix_v1: { rows: [] },
+    verification_summary: {
+      status,
+      reason: gaps[0]?.gap_code ?? status,
+      field_memory_candidate: status === "RESPONSE_OBSERVED",
+      roi_candidate: status === "RESPONSE_OBSERVED",
+      write_ready: false,
+    },
+    verification_gaps: gaps,
+    boundary_rules: [
+      ...defaultBoundaryRules(),
+      { rule_code: "READ_ONLY_POST_IRRIGATION_VERIFICATION", label: "本页只读，用于验证灌后响应证据，不写入 Field Memory，不写 ROI，不创建 task。" },
+      { rule_code: "FACTS_FALLBACK_PRESERVED", label: "execution-chain 读取复用 projection + facts fallback。" },
+    ],
+    reused_projection_refs: { evidence_quality_report_kind: evidenceQuality.report_kind, calibration_replay_report_kind: calibrationReplay.report_kind },
+  };
+}
+
 async function buildFieldEvidenceQuality(pool: Pool, scope: RequestScope, fieldId: string): Promise<Row> {
   const normalizedFieldId = safeText(fieldId);
   const fieldScope = { ...scope, fieldId: normalizedFieldId };
@@ -1285,6 +1495,15 @@ export function registerOperatorTwinReadRoutes(app: FastifyInstance, pool: Pool)
     });
   });
 
+  app.get("/api/v1/operator/twin/fields/:field_id/post-irrigation", async (req: any, reply) => {
+    const fieldId = safeText(req.params?.field_id);
+    const scope = extractRequestScope(req, fieldId);
+    const verification = await buildFieldPostIrrigationVerification(pool, scope, fieldId);
+    return reply.send({
+      ...basePayload("operator_field_twin_post_irrigation_verification_api"),
+      operator_field_twin_post_irrigation_verification_v1: verification,
+    });
+  });
 
 
   app.get("/api/v1/operator/twin/fields/:field_id/calibration", async (req: any, reply) => {
