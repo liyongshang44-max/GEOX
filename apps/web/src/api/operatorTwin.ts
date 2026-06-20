@@ -241,6 +241,18 @@ export type OperatorDataCoverageRow = {
   latest_ts_ms: number | null;
   coverage_ratio: number | null;
   max_gap_ms: number | null;
+  actual_points?: number | null;
+  expected_points?: number | null;
+  quality_status?: string | null;
+  confidence?: string | null;
+  coverage_details?: {
+    coverage_ratio: number | null;
+    max_gap_ms: number | null;
+    actual_points: number | null;
+    expected_points: number | null;
+    quality_status: string | null;
+    confidence: string | null;
+  } | null;
   missing_windows: string[];
   quality_flags: string[];
   confidence_penalty: string | null;
