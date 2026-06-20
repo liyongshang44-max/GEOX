@@ -159,7 +159,10 @@
     "ci:h22:operator-field-twin-forecast-panel": "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_FIELD_TWIN_FORECAST_PANEL_SUITE_V1.cjs",
     "ci:frontend:operator-field-twin-scenario-compare-canonical": "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_FIELD_TWIN_SCENARIO_COMPARE_CANONICAL_V1.cjs",
     "ci:runtime:operator-field-twin-scenario-compare-shape": "node scripts/runtime_acceptance/ACCEPTANCE_OPERATOR_FIELD_TWIN_SCENARIO_COMPARE_RUNTIME_SHAPE_V1.cjs",
-    "ci:h23:operator-field-twin-scenario-compare": "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_FIELD_TWIN_SCENARIO_COMPARE_SUITE_V1.cjs"
+    "ci:h23:operator-field-twin-scenario-compare": "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_FIELD_TWIN_SCENARIO_COMPARE_SUITE_V1.cjs",
+    "ci:frontend:operator-twin-presentation-surface": "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_TWIN_PRESENTATION_SURFACE_V1.cjs",
+    "ci:operator-twin-runtime-suite": "node scripts/runtime_acceptance/ACCEPTANCE_OPERATOR_TWIN_RUNTIME_SUITE_V1.cjs",
+    "ci:governance:pr-metadata-contract": "node scripts/governance_acceptance/ACCEPTANCE_PR_METADATA_CONTRACT_V1.cjs"
   },
   "volta": {
     "node": "20.11.1"
