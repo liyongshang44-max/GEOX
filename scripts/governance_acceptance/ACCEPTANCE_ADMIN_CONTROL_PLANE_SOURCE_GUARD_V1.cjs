@@ -1,0 +1,7 @@
+const fs=require("fs"), path=require("path"); const ROOT=path.resolve(__dirname,"..",".."); const read=p=>fs.readFileSync(path.join(ROOT,p),"utf8"); const assert=(c,m,d)=>{if(!c)throw new Error(m+(d?"\n"+JSON.stringify(d,null,2):""));};
+const route="apps/server/src/routes/v1/admin_control_plane.ts", boundary="apps/server/src/routes/v1/admin_control_plane_boundary.ts"; const txt=read(route)+read(boundary); const mod=read("apps/server/src/modules/admin/registerAdminModule.ts");
+["/api/v1/admin/dashboard","/api/v1/admin/fields","/api/v1/admin/operations","/api/v1/admin/devices","/api/v1/admin/alerts","/api/v1/admin/evidence","/api/v1/admin/skills","/api/v1/admin/acceptance","/api/v1/admin/healthz"].forEach(p=>assert(txt.includes(p)||txt.includes("/api/v1/admin/${kind}"),"missing route "+p));
+["admin_control_plane_api","INTERNAL_ADMIN_CONTROL_PLANE","ADMIN","writeReady: false","customerReportReady: false","operatorTwinReady: false","recommendationAuthoringReady: false","approvalBypassReady: false","taskCreationReady: false","dispatchReady: false"].forEach(t=>assert(txt.includes(t),"missing envelope token "+t));
+assert(mod.includes("registerAdminControlPlaneV1Routes"), "Admin module does not register control plane routes");
+[/\bINSERT\b/i,/\bUPDATE\b/i,/\bDELETE\b/i,/pool\.query\s*\(/ ,/from .*customer.*projector/i,/from .*operator.*scenario.*submit/i,/submitOperatorScenarioRecommendation/].forEach(rx=>assert(!rx.test(txt),"forbidden Admin route source token "+rx));
+console.log("ACCEPTANCE_ADMIN_CONTROL_PLANE_SOURCE_GUARD_V1 passed");
