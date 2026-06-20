@@ -1,0 +1,13 @@
+const fs = require("fs"); const path = require("path"); const ROOT = path.resolve(__dirname, "..", "..");
+const read = (p) => fs.readFileSync(path.join(ROOT,p),"utf8"); const assert=(c,m,d)=>{if(!c)throw new Error(m+(d?"\n"+JSON.stringify(d,null,2):""));};
+const app = read("apps/web/src/app/App.tsx");
+assert(app.includes("LegacyAdminAcceptancePage") && app.includes('path="/legacy/admin/acceptance" element={<LegacyAdminAcceptancePage />}'), "legacy acceptance runner must stay wired to views/AdminAcceptancePage");
+assert(app.includes("AdminControlPlaneAcceptancePage") && app.includes('path="acceptance" element={<AdminControlPlaneAcceptancePage />}'), "admin acceptance must use the control-plane read-only page");
+const pageDir = path.join(ROOT,"apps/web/src/features/admin/pages");
+const files = fs.readdirSync(pageDir).filter(f=>/^Admin.*Page\.tsx$/.test(f));
+const all = files.map(f=>read("apps/web/src/features/admin/pages/"+f)).join("\n") + read("apps/web/src/features/admin/components/AdminControlPlaneShell.tsx");
+["dashboard","fields","operations","devices","alerts","evidence","skills","acceptance","healthz"].forEach(r=>assert(app.includes(`path=\"${r}\"`) || all.includes(`/admin/${r}`), `/admin/${r} missing`));
+["adminControlPlanePage","adminControlPlaneHero","adminPanel","adminPanelGrid","adminTable","adminList","adminPill","adminBoundaryNotice","adminStatusRail","adminHealthBadge","adminEvidenceList","adminQueuePanel"].forEach(c=>assert(read("apps/web/src/styles/adminControlPlane.css").includes("."+c), "missing admin class "+c));
+assert(/adminControlPlane(Page|Hero)/.test(all), "Admin pages must use adminControlPlane classes");
+["customerReportPage","customerCard","customerTable","customerList","customerStatusPill","operatorWorkbenchPage","operatorPanel","operatorTable","operatorPill","operatorBoundaryNotice","SubmitScenarioToRecommendationPanel","submitOperatorScenarioRecommendation","createAoActTask","dispatchNow","approveNow","createOperationPlan","writeFieldMemory","createRoiLedger"].forEach(t=>assert(!all.includes(t), "forbidden Admin token present: "+t));
+console.log("ACCEPTANCE_ADMIN_CONTROL_PLANE_SURFACE_V1 passed");

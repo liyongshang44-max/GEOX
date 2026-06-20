@@ -177,7 +177,11 @@
     "ci:frontend:operator-scenario-submit-recommendation": "node scripts/frontend_acceptance/ACCEPTANCE_OPERATOR_SCENARIO_SUBMIT_RECOMMENDATION_PAGE_V1.cjs",
     "ci:governance:operator-scenario-submit-recommendation-source-guard": "node scripts/governance_acceptance/ACCEPTANCE_OPERATOR_SCENARIO_SUBMIT_RECOMMENDATION_SOURCE_GUARD_V1.cjs",
     "ci:runtime:operator-scenario-submit-boundary": "node scripts/runtime_acceptance/ACCEPTANCE_OPERATOR_SCENARIO_SUBMIT_BOUNDARY_V1.cjs",
-    "ci:runtime:operator-scenario-submit-rejection": "node scripts/runtime_acceptance/ACCEPTANCE_OPERATOR_SCENARIO_SUBMIT_REJECTION_V1.cjs"
+    "ci:runtime:operator-scenario-submit-rejection": "node scripts/runtime_acceptance/ACCEPTANCE_OPERATOR_SCENARIO_SUBMIT_REJECTION_V1.cjs",
+    "ci:frontend:admin-control-plane-surface": "node scripts/frontend_acceptance/ACCEPTANCE_ADMIN_CONTROL_PLANE_SURFACE_V1.cjs",
+    "ci:governance:admin-control-plane-source-guard": "node scripts/governance_acceptance/ACCEPTANCE_ADMIN_CONTROL_PLANE_SOURCE_GUARD_V1.cjs",
+    "ci:runtime:admin-control-plane-shape": "node scripts/runtime_acceptance/ACCEPTANCE_ADMIN_CONTROL_PLANE_SHAPE_V1.cjs",
+    "ci:governance:three-surface-admin-boundary": "node scripts/governance_acceptance/ACCEPTANCE_THREE_SURFACE_ADMIN_BOUNDARY_V1.cjs"
   },
   "volta": {
     "node": "20.11.1"

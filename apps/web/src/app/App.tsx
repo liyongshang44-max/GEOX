@@ -25,12 +25,21 @@ const JudgeConfigPage = React.lazy(() => import("../views/JudgeConfigPage"));
 const SimConfigPage = React.lazy(() => import("../views/SimConfigPage"));
 const AdminHealthPage = React.lazy(() => import("../features/admin/pages/AdminHealthPage"));
 const AdminImportPage = React.lazy(() => import("../features/admin/pages/AdminImportPage"));
-const AdminAcceptancePage = React.lazy(() => import("../features/admin/pages/AdminAcceptancePage"));
+const LegacyAdminAcceptancePage = React.lazy(() => import("../views/AdminAcceptancePage"));
 const ApprovalRequestsPage = React.lazy(() => import("../views/ApprovalRequestsPage"));
 const DevToolsPage = React.lazy(() => import("../views/DevToolsPage"));
 const SettingsPage = React.lazy(() => import("../views/SettingsPage"));
 const LoginPage = React.lazy(() => import("../views/LoginPage"));
 
+const AdminControlPlaneDashboardPage = React.lazy(() => import("../features/admin/pages/AdminDashboardPage"));
+const AdminFieldsPage = React.lazy(() => import("../features/admin/pages/AdminFieldsPage"));
+const AdminOperationsPage = React.lazy(() => import("../features/admin/pages/AdminOperationsPage"));
+const AdminDevicesPage = React.lazy(() => import("../features/admin/pages/AdminDevicesPage"));
+const AdminAlertsPage = React.lazy(() => import("../features/admin/pages/AdminAlertsPage"));
+const AdminEvidencePage = React.lazy(() => import("../features/admin/pages/AdminEvidencePage"));
+const AdminSkillsPage = React.lazy(() => import("../features/admin/pages/AdminSkillsPage"));
+const AdminControlPlaneAcceptancePage = React.lazy(() => import("../features/admin/pages/AdminControlPlaneAcceptancePage"));
+const AdminHealthzPage = React.lazy(() => import("../features/admin/pages/AdminHealthzPage"));
 const CommercialDashboardPage = React.lazy(() => import("../features/dashboard/pages/CommercialDashboardPage"));
 const FieldsPage = React.lazy(() => import("../features/fields/pages/FieldsPage"));
 const DevicesPage = React.lazy(() => import("../features/devices/pages/DevicesPage"));
@@ -274,7 +283,7 @@ function AppRoutes({ expert }: { expert: boolean }): React.ReactElement {
           <Route path="/legacy/sim/config" element={<SimConfigPage />} />
           <Route path="/legacy/admin/healthz" element={<AdminHealthPage />} />
           <Route path="/legacy/admin/import" element={<AdminImportPage />} />
-          <Route path="/legacy/admin/acceptance" element={<AdminAcceptancePage />} />
+          <Route path="/legacy/admin/acceptance" element={<LegacyAdminAcceptancePage />} />
           <Route path="/legacy/control/approvals" element={<ApprovalRequestsPage />} />
           <Route path="/judge/run" element={<Navigate to="/legacy/judge/run" replace />} />
           <Route path="/judge/records" element={<Navigate to="/legacy/judge/records" replace />} />
@@ -349,24 +358,24 @@ function AdminShell(): React.ReactElement {
       topBar={{
         breadcrumbs: [{ label: "平台控制台", to: "/dashboard" }, { label: "后台管理" }],
         title: "后台管理",
-        lead: "后台管理入口，面向 /admin/* 维护导入、验收与健康检查。",
-        primaryAction: { label: "返回总览", to: "/dashboard" },
+        lead: "Admin Control Plane：内部治理、执行状态、证据、设备、技能、验收、健康与审计边界。",
+        primaryAction: { label: "查看客户门户（外部跳转）", to: "/customer/dashboard" },
       }}
     >
       <React.Suspense fallback={RouteFallback}>
         <Routes>
           <Route path="/" element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<CommercialDashboardPage expert={false} />} />
-          <Route path="fields" element={<FieldsPage />} />
-          <Route path="operations" element={<OperationsPage />} />
-          <Route path="devices" element={<DevicesPage />} />
-          <Route path="alerts" element={<AlertsPage />} />
-          <Route path="evidence" element={<EvidenceCenterPage />} />
-          <Route path="skills" element={<SkillRegistryPage />} />
-          <Route path="operations/:operationId/debug" element={<AdminOperationDebugPage />} />
-          <Route path="healthz" element={<AdminHealthPage />} />
-          <Route path="import" element={<AdminImportPage />} />
-          <Route path="acceptance" element={<AdminAcceptancePage />} />
+          <Route path="dashboard" element={<AdminControlPlaneDashboardPage />} />
+          <Route path="fields" element={<AdminFieldsPage />} />
+          <Route path="operations" element={<AdminOperationsPage />} />
+          <Route path="devices" element={<AdminDevicesPage />} />
+          <Route path="alerts" element={<AdminAlertsPage />} />
+          <Route path="evidence" element={<AdminEvidencePage />} />
+          <Route path="skills" element={<AdminSkillsPage />} />
+          <Route path="acceptance" element={<AdminControlPlaneAcceptancePage />} />
+          <Route path="healthz" element={<AdminHealthzPage />} />
+          <Route path="import" element={<Navigate to="dashboard" replace />} />
+          <Route path="operations/:operationId/debug" element={<Navigate to="operations" replace />} />
           <Route path="*" element={<Navigate to="dashboard" replace />} />
         </Routes>
       </React.Suspense>
