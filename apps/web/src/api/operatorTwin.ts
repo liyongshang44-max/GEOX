@@ -289,6 +289,45 @@ export type OperatorFieldTwinEvidenceQualityV1 = {
   boundary_rules: OperatorTwinBoundaryRule[];
 };
 
+export type OperatorReplayTimelineItem = {
+  stage: string;
+  label: string;
+  status: "AVAILABLE" | "NOT_AVAILABLE" | "NOT_READY" | string;
+  occurred_at: string | null;
+  source_table: string;
+  ref_id: string | null;
+  evidence_refs: string[];
+  replay_notes: string[];
+};
+
+export type OperatorCalibrationInputs = {
+  prediction_sources: Array<Record<string, unknown>>;
+  execution_sources: Array<Record<string, unknown>>;
+  outcome_sources: Array<Record<string, unknown>>;
+  evidence_quality_refs: string[];
+};
+
+export type OperatorCalibrationSummary = {
+  status: "NOT_READY" | string;
+  reason: string;
+  available_for_review: boolean;
+  write_ready: false;
+};
+
+export type OperatorFieldTwinCalibrationReplayV1 = {
+  version: "v1";
+  surface: "OPERATOR";
+  report_kind: "OPERATOR_FIELD_TWIN_CALIBRATION_REPLAY";
+  request_scope: OperatorTwinRequestScope & { fieldId?: string | null; field_id?: string | null };
+  scope_policy: OperatorTwinScopePolicy;
+  field_context: { field_id: string; field_name: string; crop_text: string };
+  replay_timeline_v1: { items: OperatorReplayTimelineItem[] };
+  calibration_inputs_v1: OperatorCalibrationInputs;
+  calibration_summary: OperatorCalibrationSummary;
+  replay_gaps: OperatorTwinGap[];
+  boundary_rules: OperatorTwinBoundaryRule[];
+};
+
 export type OperatorTwinSourceIndexInventoryResponse = {
   ok: boolean;
   source: "operator_twin_source_index_inventory_api";
@@ -363,6 +402,18 @@ export type OperatorFieldTwinEvidenceQualityResponse = {
   operator_field_twin_evidence_quality_v1: OperatorFieldTwinEvidenceQualityV1;
 };
 
+export type OperatorFieldTwinCalibrationReplayResponse = {
+  ok: boolean;
+  source: "operator_field_twin_calibration_replay_api";
+  dataScope: "OFFICIAL_OPERATOR_TWIN_API";
+  generated_at: string;
+  writeReady: false;
+  dispatchReady: false;
+  approvalReady: false;
+  taskCreationReady: false;
+  operator_field_twin_calibration_replay_v1: OperatorFieldTwinCalibrationReplayV1;
+};
+
 function cleanScopeValue(value: string | null | undefined): string {
   return String(value ?? "").trim();
 }
@@ -434,6 +485,24 @@ export async function fetchOperatorFieldTwinWorkspace(
   return response.data;
 }
 
+
+export async function fetchOperatorFieldTwinCalibrationReplay(
+  fieldId: string,
+  scope?: OperatorTwinRequestScope | null
+): Promise<OperatorFieldTwinCalibrationReplayResponse> {
+  const safeFieldId = encodeURIComponent(String(fieldId || "").trim());
+  const response = await apiRequestWithPolicy<OperatorFieldTwinCalibrationReplayResponse>(
+    withScope("/api/v1/operator/twin/fields/" + safeFieldId + "/calibration", scope),
+    undefined,
+    { dedupe: true, silent: true, timeoutMs: 10000 }
+  );
+
+  if (!response.ok || !response.data) {
+    throw new Error("OPERATOR_FIELD_TWIN_CALIBRATION_REPLAY_API_FAILED");
+  }
+
+  return response.data;
+}
 
 export async function fetchOperatorFieldTwinEvidenceQuality(
   fieldId: string,

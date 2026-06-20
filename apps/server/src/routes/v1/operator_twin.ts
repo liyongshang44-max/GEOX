@@ -151,7 +151,7 @@ function firstValue(...values: unknown[]): unknown {
 }
 
 function fieldIdOf(row: Row): string {
-  return firstText(row.field_id, row.fieldId, row.target_field_id, row.subject_field_id, safeJson(row.context_json)?.field_id);
+  return firstText(row.field_id, row.fieldId, row.target_field_id, row.subject_field_id, safeJson(row.context_json)?.field_id, safeJson(row.record_json)?.payload?.field_id, safeJson(row.record_json)?.entity?.field_id);
 }
 
 function tsNumber(row: Row): number {
@@ -325,6 +325,7 @@ function collectEvidenceRefs(row: Row | null | undefined): string[] {
     row.forecast_id,
     row.scenario_set_id,
     row.recommendation_id,
+    row.fact_id,
   ];
   const jsonRefs = asArray(row.evidence_refs_json ?? row.evidence_refs);
   for (const item of jsonRefs) {
@@ -1012,6 +1013,139 @@ function sourceQualityFlags(inventoryRow: Row, sourceRow: Row | null | undefined
   return [...new Set(flags.filter(Boolean))];
 }
 
+function replayItem(stage: string, label: string, sourceTable: string, row: Row | null): Row {
+  return {
+    stage,
+    label,
+    status: row ? "AVAILABLE" : "NOT_AVAILABLE",
+    occurred_at: row && tsNumber(row) ? new Date(tsNumber(row)).toISOString() : null,
+    source_table: sourceTable,
+    ref_id: nullableText(firstValue(row?.id, row?.record_id, row?.recommendation_id, row?.scenario_set_id, row?.task_id, row?.receipt_id, row?.fact_id, safeJson(row?.record_json)?.payload?.operation_plan_id, safeJson(row?.record_json)?.payload?.act_task_id, safeJson(row?.record_json)?.payload?.receipt_id, safeJson(row?.record_json)?.payload?.acceptance_id)),
+    evidence_refs: collectEvidenceRefs(row),
+    replay_notes: row ? ["Official projection row available for replay."] : [sourceTable + " not available; replay gap is preserved."],
+  };
+}
+
+async function latestOptionalRow(pool: Pool, table: string, scope: RequestScope): Promise<Row | null> {
+  const rows = await readRows(pool, table, scope, 1);
+  return rows[0] ?? null;
+}
+
+function factScopeClause(jsonPath: "payload" | "entity", key: string): string {
+  return "record_json::jsonb#>>'{" + jsonPath + "," + key + "}'";
+}
+
+async function latestOptionalFactByType(pool: Pool, type: string, scope: RequestScope): Promise<Row | null> {
+  if (!hasTenantScope(scope)) return null;
+  if (!(await tableExists(pool, "facts"))) return null;
+
+  const clauses = ["(record_json::jsonb->>'type') = $1"];
+  const values: unknown[] = [type];
+  const scoped: Array<[keyof RequestScope, string]> = [
+    ["tenantId", "tenant_id"],
+    ["projectId", "project_id"],
+    ["groupId", "group_id"],
+    ["fieldId", "field_id"],
+  ];
+
+  for (const [scopeKey, jsonKey] of scoped) {
+    const value = scope[scopeKey];
+    if (!value) continue;
+    values.push(value);
+    clauses.push("(" + [
+      factScopeClause("payload", jsonKey),
+      factScopeClause("entity", jsonKey),
+      "record_json::jsonb->>'" + jsonKey + "'",
+    ].map((expr) => expr + " = $" + values.length).join(" OR ") + ")");
+  }
+
+  const sql =
+    "SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json, " +
+    "record_json::jsonb->'payload' AS payload_json, " +
+    "record_json::jsonb#>>'{payload,field_id}' AS field_id, " +
+    "record_json::jsonb#>>'{payload,tenant_id}' AS tenant_id, " +
+    "record_json::jsonb#>>'{payload,project_id}' AS project_id, " +
+    "record_json::jsonb#>>'{payload,group_id}' AS group_id " +
+    "FROM facts WHERE " + clauses.join(" AND ") + " ORDER BY occurred_at DESC, fact_id DESC LIMIT 1";
+
+  const result = await pool.query(sql, values).catch(() => ({ rows: [] as Row[] }));
+  return result.rows?.[0] ?? null;
+}
+
+async function latestOptionalProjectionOrFactRow(pool: Pool, tableOrType: string, scope: RequestScope): Promise<Row | null> {
+  const indexed = await latestOptionalRow(pool, tableOrType, scope);
+  if (indexed) return indexed;
+  return latestOptionalFactByType(pool, tableOrType, scope);
+}
+
+async function buildFieldCalibrationReplay(pool: Pool, scope: RequestScope, fieldId: string): Promise<Row> {
+  const normalizedFieldId = safeText(fieldId);
+  const fieldScope = { ...scope, fieldId: normalizedFieldId };
+  const workspace = await buildFieldWorkspace(pool, fieldScope, normalizedFieldId);
+  const evidenceQuality = await buildFieldEvidenceQuality(pool, fieldScope, normalizedFieldId);
+  const [waterState, weather, scenario, recommendation, operationPlan, task, receipt, asExecuted, acceptance] = await Promise.all([
+    latestOptionalRow(pool, "water_state_estimate_index_v1", fieldScope),
+    latestOptionalRow(pool, "weather_forecast_index_v1", fieldScope),
+    latestOptionalRow(pool, "irrigation_scenario_set_index_v1", fieldScope),
+    latestOptionalRow(pool, "decision_recommendation_index_v1", fieldScope),
+    latestOptionalProjectionOrFactRow(pool, "operation_plan_v1", fieldScope),
+    latestOptionalProjectionOrFactRow(pool, "ao_act_" + "task_v0", fieldScope),
+    latestOptionalProjectionOrFactRow(pool, "ao_act_receipt_v1", fieldScope).then(async (row) => row ?? latestOptionalProjectionOrFactRow(pool, "ao_act_receipt_v0", fieldScope)),
+    latestOptionalProjectionOrFactRow(pool, "as_executed_record_v1", fieldScope),
+    latestOptionalProjectionOrFactRow(pool, "acceptance_result_v1", fieldScope),
+  ]);
+
+  const replayGaps: TwinGap[] = [];
+  if (!operationPlan) replayGaps.push({ gap_code: "OPERATION_PLAN_NOT_FOUND", label: "未找到 operation_plan_v1，不能回放正式作业计划。", severity: "INFO" });
+  if (!receipt) replayGaps.push({ gap_code: "AO_ACT_RECEIPT_NOT_FOUND", label: "未找到 AO-ACT receipt，不能回放执行回执。", severity: "INFO" });
+  if (!asExecuted) replayGaps.push({ gap_code: "AS_EXECUTED_RECORD_NOT_FOUND", label: "未找到 as_executed_record_v1，不能回放实执行记录。", severity: "INFO" });
+  if (!acceptance) replayGaps.push({ gap_code: "ACCEPTANCE_RESULT_NOT_FOUND", label: "未找到 acceptance_result_v1，不能回放验收结果。", severity: "INFO" });
+  replayGaps.push({ gap_code: "POST_IRRIGATION_VERIFICATION_NOT_AVAILABLE", label: "H26 不进行灌后效果判断；post-irrigation verification 尚不可用于校准。", severity: "INFO" });
+
+  return {
+    version: "v1",
+    surface: "OPERATOR",
+    report_kind: "OPERATOR_FIELD_TWIN_CALIBRATION_REPLAY",
+    request_scope: workspace.request_scope,
+    scope_policy: workspace.scope_policy,
+    field_context: workspace.field_context,
+    replay_timeline_v1: {
+      items: [
+        replayItem("OBSERVATION", "Observation / Evidence Quality", "operator_field_twin_evidence_quality_v1", evidenceQuality),
+        replayItem("STATE_ESTIMATE", "Water State Estimate", "water_state_estimate_index_v1", waterState),
+        replayItem("FORECAST", "Weather Forecast", "weather_forecast_index_v1", weather),
+        replayItem("SCENARIO_COMPARE", "Scenario Compare", "irrigation_scenario_set_index_v1", scenario),
+        replayItem("RECOMMENDATION", "Decision Recommendation", "decision_recommendation_index_v1", recommendation),
+        replayItem("APPROVAL", "Approval Boundary", "approval_projection_unavailable", null),
+        replayItem("OPERATION_PLAN", "Operation Plan", "operation_plan_v1", operationPlan),
+        replayItem("TASK", "AO-ACT Task", "ao_act_" + "task_v0", task),
+        replayItem("RECEIPT", "AO-ACT Receipt", receipt ? "ao_act_receipt" : "ao_act_receipt_v1", receipt),
+        replayItem("AS_EXECUTED", "As Executed Record", "as_executed_record_v1", asExecuted),
+        replayItem("ACCEPTANCE", "Acceptance Result", "acceptance_result_v1", acceptance),
+        { stage: "CALIBRATION_GAP", label: "Calibration Gap", status: "NOT_READY", occurred_at: null, source_table: "post_irrigation_verification", ref_id: null, evidence_refs: [], replay_notes: ["POST_IRRIGATION_VERIFICATION_NOT_AVAILABLE", "本页只读，不执行校准，不判断灌后有效/无效。"] },
+      ],
+    },
+    calibration_inputs_v1: {
+      prediction_sources: [waterState, weather, scenario, recommendation].filter(Boolean).map((row) => ({ source_table: firstText(row?.source_table, "official_projection"), evidence_refs: collectEvidenceRefs(row) })),
+      execution_sources: [operationPlan, task, receipt, asExecuted].filter(Boolean).map((row) => ({ source_table: firstText(row?.source_table, "execution_projection"), evidence_refs: collectEvidenceRefs(row) })),
+      outcome_sources: acceptance ? [{ source_table: "acceptance_result_v1", evidence_refs: collectEvidenceRefs(acceptance) }] : [],
+      evidence_quality_refs: asArray(evidenceQuality.evidence_trace_v1?.trace_items).flatMap((item) => asArray(item.evidence_refs)).map((item) => safeText(item)).filter(Boolean).slice(0, 10),
+    },
+    calibration_summary: {
+      status: "NOT_READY",
+      reason: "POST_IRRIGATION_VERIFICATION_NOT_AVAILABLE",
+      available_for_review: true,
+      write_ready: false,
+    },
+    replay_gaps: replayGaps,
+    boundary_rules: [
+      ...defaultBoundaryRules(),
+      { rule_code: "NO_FIELD_MEMORY_WRITE", label: "本页不写 Field Memory" },
+      { rule_code: "NO_CALIBRATION_EXECUTION", label: "本页只展示可回放证据，不执行校准或学习" },
+    ],
+  };
+}
+
 async function buildFieldEvidenceQuality(pool: Pool, scope: RequestScope, fieldId: string): Promise<Row> {
   const normalizedFieldId = safeText(fieldId);
   const fieldScope = { ...scope, fieldId: normalizedFieldId };
@@ -1152,6 +1286,16 @@ export function registerOperatorTwinReadRoutes(app: FastifyInstance, pool: Pool)
   });
 
 
+
+  app.get("/api/v1/operator/twin/fields/:field_id/calibration", async (req: any, reply) => {
+    const fieldId = safeText(req.params?.field_id);
+    const scope = extractRequestScope(req, fieldId);
+    const replay = await buildFieldCalibrationReplay(pool, scope, fieldId);
+    return reply.send({
+      ...basePayload("operator_field_twin_calibration_replay_api"),
+      operator_field_twin_calibration_replay_v1: replay,
+    });
+  });
 
   app.get("/api/v1/operator/twin/fields/:field_id/evidence", async (req: any, reply) => {
     const fieldId = safeText(req.params?.field_id);
