@@ -50,6 +50,9 @@ const SkillRegistryPage = React.lazy(() => import("../features/skills/pages/Skil
 const AdminOperationDebugPage = React.lazy(() => import("../features/dashboard/pages/AdminOperationDebugPage"));
 const CustomerDashboardPage = React.lazy(() => import("../features/customer/pages/CustomerDashboardPage"));
 const CustomerDashboardExportPage = React.lazy(() => import("../features/customer/pages/CustomerDashboardExportPage"));
+const CustomerFieldsIndexPage = React.lazy(() => import("../features/customer/pages/CustomerFieldsIndexPage"));
+const CustomerOperationsIndexPage = React.lazy(() => import("../features/customer/pages/CustomerOperationsIndexPage"));
+const CustomerReportsCenterPage = React.lazy(() => import("../views/CustomerReportsCenterPage"));
 const FieldReportPage = React.lazy(() => import("../features/fields/pages/FieldReportPage"));
 const FieldReportExportPage = React.lazy(() => import("../features/fields/pages/FieldReportExportPage"));
 const OperationReportPage = React.lazy(() => import("../features/operations/pages/OperationReportPage"));
@@ -306,9 +309,12 @@ function CustomerRoutes(): React.ReactElement {
       <Route path="/" element={<Navigate to="dashboard" replace />} />
       <Route path="dashboard" element={<CustomerDashboardPage />} />
       <Route path="export" element={<CustomerDashboardExportPage />} />
+      <Route path="fields" element={<CustomerFieldsIndexPage />} />
       <Route path="fields/:fieldId" element={<FieldReportPage />} />
       <Route path="fields/:fieldId/export" element={<FieldReportExportPage />} />
+      <Route path="operations" element={<CustomerOperationsIndexPage />} />
       <Route path="operations/:operationId" element={<OperationReportPage />} />
+      <Route path="reports" element={<CustomerReportsCenterPage />} />
       <Route path="operations/:operationId/export" element={<CustomerReportExportPage />} />
       <Route path="*" element={<Navigate to="dashboard" replace />} />
     </Routes>

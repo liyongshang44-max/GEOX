@@ -1,0 +1,13 @@
+#!/usr/bin/env node
+const fs=require('fs'), path=require('path'); const root=path.resolve(__dirname,'../..'); const r=p=>fs.readFileSync(path.join(root,p),'utf8'); const ok=(c,m)=>{if(!c)throw new Error(m)};
+const app=r('apps/web/src/app/App.tsx'), custApi=r('apps/web/src/api/customer.ts'), opApi=r('apps/web/src/api/operatorTwin.ts'), adminRoute=r('apps/server/src/routes/v1/admin_control_plane.ts'), inv=r('apps/server/src/routes/api_route_inventory_v1.ts'), pkg=JSON.parse(r('package.json'));
+const customerBlock=app.slice(app.indexOf('function CustomerRoutes'), app.indexOf('function CustomerShell')); ok(!/operator|admin|debug|control/i.test(customerBlock.replace(/Customer/g,'')), '/customer routes cross-register other surfaces');
+const operatorBlock=app.slice(app.indexOf('function OperatorRoutes'), app.indexOf('function OperatorShell')); ok(!/customer|admin|debug|control/i.test(operatorBlock.replace(/Operator/g,'')), '/operator routes cross-register other surfaces');
+const adminBlock=app.slice(app.indexOf('function AdminRoutes'), app.indexOf('function AppRoutes')); ok(!/twin\/fields.*forecast|twin\/fields.*scenarios|CustomerReportPage|OperatorFieldTwin/.test(adminBlock), '/admin routes host customer/operator main UI');
+ok(!custApi.includes('/api/v1/operator/')&&!custApi.includes('/api/v1/admin/'), 'customer API crosses operator/admin');
+for (const t of ['createApprovalDecision','createOperationPlan','createAoActTask','dispatchNow','/api/v1/control/approvals','/api/v1/ao-act/tasks']) ok(!opApi.includes(t), 'operator API forbidden write token '+t);
+for (const t of ['INSERT INTO facts','pool.query','app.post','createRecommendation','createApprovalDecision','dispatchNow']) ok(!adminRoute.includes(t), 'admin API forbidden write token '+t);
+for (const p of ['/api/v1/customer/fields/:field_id/confirmed-twin-summary','/api/v1/operator/twin/fields/:field_id','/api/v1/operator/twin/fields/:field_id/scenarios','/api/v1/admin/dashboard','/api/v1/admin/operations','/api/v1/admin/evidence']) ok(inv.includes(p)||adminRoute.includes(p), 'route inventory missing '+p);
+ok(fs.existsSync(path.join(root,'docs/frontend/FRONTEND_SURFACE_CONTRACT_V1.md'))||r('scripts/frontend_acceptance/ACCEPTANCE_FRONTEND_SURFACE_CONTRACT_V1.cjs'), 'PRD surface contract missing');
+for (const s of ['ci:frontend:three-surfaces-e2e','ci:governance:three-surface-route-boundary-e2e','ci:runtime:decision-to-delivery-e2e','ci:runtime:three-surface-no-cross-write','ci:governance:frontend-prd-v0-2-final-manifest']) ok(pkg.scripts[s], 'package script missing '+s);
+console.log('[three-surface-route-boundary-e2e] PASS');

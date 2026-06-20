@@ -185,7 +185,13 @@
     "ci:frontend:customer-confirmed-twin-summary-surface": "node scripts/frontend_acceptance/ACCEPTANCE_CUSTOMER_CONFIRMED_TWIN_SUMMARY_SURFACE_V1.cjs",
     "ci:governance:customer-confirmed-twin-summary-source-guard": "node scripts/governance_acceptance/ACCEPTANCE_CUSTOMER_CONFIRMED_TWIN_SUMMARY_SOURCE_GUARD_V1.cjs",
     "ci:runtime:customer-confirmed-twin-summary-shape": "node scripts/runtime_acceptance/ACCEPTANCE_CUSTOMER_CONFIRMED_TWIN_SUMMARY_SHAPE_V1.cjs",
-    "ci:runtime:customer-confirmed-twin-summary-seeded": "node scripts/runtime_acceptance/ACCEPTANCE_CUSTOMER_CONFIRMED_TWIN_SUMMARY_SEEDED_V1.cjs"
+    "ci:runtime:customer-confirmed-twin-summary-seeded": "node scripts/runtime_acceptance/ACCEPTANCE_CUSTOMER_CONFIRMED_TWIN_SUMMARY_SEEDED_V1.cjs",
+    "ci:frontend:three-surfaces-e2e": "node scripts/frontend_acceptance/ACCEPTANCE_FRONTEND_THREE_SURFACES_E2E_V1.cjs",
+    "ci:governance:three-surface-route-boundary-e2e": "node scripts/governance_acceptance/ACCEPTANCE_THREE_SURFACE_ROUTE_BOUNDARY_E2E_V1.cjs",
+    "ci:runtime:decision-to-delivery-e2e": "node scripts/runtime_acceptance/ACCEPTANCE_DECISION_TO_DELIVERY_E2E_V1.cjs",
+    "ci:runtime:three-surface-no-cross-write": "node scripts/runtime_acceptance/ACCEPTANCE_THREE_SURFACE_NO_CROSS_WRITE_V1.cjs",
+    "ci:governance:frontend-prd-v0-2-final-manifest": "node scripts/governance_acceptance/ACCEPTANCE_FRONTEND_PRD_V0_2_FINAL_MANIFEST_V1.cjs",
+    "ci:prd-v0-2-final": "pnpm run ci:frontend:three-surfaces-e2e && pnpm run ci:governance:three-surface-route-boundary-e2e && pnpm run ci:runtime:decision-to-delivery-e2e && pnpm run ci:runtime:three-surface-no-cross-write && pnpm run ci:governance:frontend-prd-v0-2-final-manifest"
   },
   "volta": {
     "node": "20.11.1"
