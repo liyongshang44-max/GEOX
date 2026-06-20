@@ -27,7 +27,8 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
       { name: "security", description: "Security audit, fail-safe, and manual takeover" },
       { name: "judge", description: "Judge V2 evaluation and result query" },
       { name: "dashboard", description: "Commercial dashboard overview" },
-      { name: "customer", description: "Customer facade read-only APIs" }
+      { name: "customer", description: "Customer facade read-only APIs" },
+      { name: "Operator Twin", description: "Operator Twin Workbench read and recommendation submission APIs" }
     ],
     components: {
       securitySchemes: {
@@ -4747,6 +4748,52 @@ function applyP13OpenApiAlignment(spec: any) {
 
 
   Object.assign(spec.paths, {
+    "/api/v1/operator/twin/fields/{field_id}": {
+      get: {
+        tags: ["Operator Twin"],
+        summary: "Get Operator Field Twin Workspace",
+        operationId: "getOperatorFieldTwinWorkspaceV1",
+        security: [{ bearerAuth: [] }],
+        parameters: [pathParam("field_id")],
+        responses: {
+          "200": jsonResponse({ type: "object", required: ["ok", "source", "operator_field_twin_workspace_v1"], properties: { ok: { type: "boolean" }, source: { type: "string" }, operator_field_twin_workspace_v1: { type: "object" } } }, "Operator field twin workspace response"),
+          "400": { description: "Bad request" },
+          "401": { description: "Unauthorized" },
+          "500": { description: "Internal error" },
+        },
+      },
+    },
+    "/api/v1/operator/twin/fields/{field_id}/scenarios": {
+      get: {
+        tags: ["Operator Twin"],
+        summary: "Get Operator Field Twin Scenario Compare",
+        operationId: "getOperatorFieldTwinScenarioCompareV1",
+        security: [{ bearerAuth: [] }],
+        parameters: [pathParam("field_id")],
+        responses: {
+          "200": jsonResponse({ type: "object", required: ["ok", "source", "operator_field_twin_scenario_compare_v1"], properties: { ok: { type: "boolean" }, source: { type: "string" }, operator_field_twin_scenario_compare_v1: { type: "object" } } }, "Operator field twin scenario compare response"),
+          "400": { description: "Bad request" },
+          "401": { description: "Unauthorized" },
+          "500": { description: "Internal error" },
+        },
+      },
+    },
+    "/api/v1/operator/twin/fields/{field_id}/scenarios/{scenario_set_id}/options/{option_id}/submit-recommendation": {
+      post: {
+        tags: ["Operator Twin"],
+        summary: "Submit Operator Scenario Recommendation",
+        operationId: "submitOperatorScenarioRecommendationV1",
+        security: [{ bearerAuth: [] }],
+        parameters: [pathParam("field_id"), pathParam("scenario_set_id"), pathParam("option_id")],
+        requestBody: { required: true, content: { "application/json": { schema: { type: "object", properties: { tenant_id: { type: "string" }, project_id: { type: "string" }, group_id: { type: "string" }, operator_id: { type: "string" }, submission_reason: { type: "string" }, idempotency_key: { type: "string" } } } } } },
+        responses: {
+          "200": jsonResponse({ type: "object", required: ["ok", "source", "operator_scenario_recommendation_submission_v1"], properties: { ok: { type: "boolean" }, source: { type: "string" }, operator_scenario_recommendation_submission_v1: { type: "object" } } }, "Operator scenario recommendation submission response"),
+          "400": { description: "Bad request" },
+          "401": { description: "Unauthorized" },
+          "500": { description: "Internal error" },
+        },
+      },
+    },
     "/api/v1/actions/task": { post: { tags: ["operations"], summary: "Create AO-ACT task", requestBody: { required: true, content: { "application/json": { schema: ref("ActionTaskRequest") } } }, responses: { "200": jsonResponse(ref("ActionTaskResponse"), "AO-ACT task accepted") } } },
     "/api/v1/actions/task/from-variable-prescription": { post: { tags: ["operations"], summary: "Create AO-ACT task from variable prescription", requestBody: { required: true, content: { "application/json": { schema: ref("VariableActionTaskFromPrescriptionRequest") } } }, responses: { "200": jsonResponse(ref("VariableActionTaskFromPrescriptionResponse"), "Variable action task accepted") } } },
     "/api/v1/actions/receipt": { post: { tags: ["operations"], summary: "Submit AO-ACT receipt", requestBody: { required: true, content: { "application/json": { schema: ref("ActionReceiptRequest") } } }, responses: { "200": jsonResponse(ref("ActionReceiptResponse"), "AO-ACT receipt accepted") } } },
