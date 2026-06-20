@@ -25,7 +25,7 @@ function scopeFromSearchParams(searchParams: URLSearchParams): OperatorTwinReque
 
 function ScopePolicyCard({ policy }: { policy: OperatorTwinScopePolicy }): React.ReactElement {
   return (
-    <article className="customerCard" data-card="operator-twin-scope-policy">
+    <article className="operatorPanel" data-card="operator-twin-scope-policy">
       <h3>Scope Policy</h3>
       <p>scope_applied：{policy.scope_applied ? "true" : "false"}</p>
       <p>missing_reason：{policy.missing_reason ?? "none"}</p>
@@ -37,8 +37,8 @@ function ScopePolicyCard({ policy }: { policy: OperatorTwinScopePolicy }): React
 
 function TwinStateVectorCard({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }): React.ReactElement {
   return (
-    <article className="customerCard" data-card="TwinStateVectorCard">
-      <p className="customerEyebrow">TwinStateVectorCard</p>
+    <article className="operatorPanel" data-card="TwinStateVectorCard">
+      <p className="operatorEyebrow">TwinStateVectorCard</p>
       <h3>状态向量</h3>
       <p>{workspace.current_state.state_text}</p>
       <p>风险：{workspace.current_state.risk_text}</p>
@@ -51,10 +51,10 @@ function TwinStateVectorCard({ workspace }: { workspace: OperatorFieldTwinWorksp
 
 function DataCoverageMatrix({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }): React.ReactElement {
   return (
-    <article className="customerCard" data-card="DataCoverageMatrix">
-      <p className="customerEyebrow">DataCoverageMatrix</p>
+    <article className="operatorPanel" data-card="DataCoverageMatrix">
+      <p className="operatorEyebrow">DataCoverageMatrix</p>
       <h3>数据覆盖矩阵</h3>
-      <ul className="customerList">
+      <ul className="operatorList">
         <li>覆盖摘要：{workspace.data_coverage.coverage_text}</li>
         <li>土壤水分窗口：{workspace.data_coverage.sensing_available ? "AVAILABLE" : "MISSING_OR_LIMITED"}</li>
         <li>天气版本：{workspace.data_coverage.weather_available ? "AVAILABLE" : "MISSING_OR_LIMITED"}</li>
@@ -78,11 +78,11 @@ function EvidenceSummary({ workspace }: { workspace: OperatorFieldTwinWorkspaceV
   const uniqueRefs = [...new Set(refs.filter(Boolean))];
 
   return (
-    <article className="customerCard" data-card="EvidenceSummary">
-      <p className="customerEyebrow">EvidenceSummary</p>
+    <article className="operatorPanel" data-card="EvidenceSummary">
+      <p className="operatorEyebrow">EvidenceSummary</p>
       <h3>证据摘要</h3>
       {uniqueRefs.length === 0 ? <p>当前 workspace 未返回 evidence_refs。</p> : null}
-      <ul className="customerList">
+      <ul className="operatorList">
         {uniqueRefs.map((ref) => (
           <li key={ref}>{ref}</li>
         ))}
@@ -96,14 +96,14 @@ function DataGapSummary({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1
 
   return (
     <article
-      className="customerCard"
+      className="operatorPanel"
       data-card="DataGapSummary"
       data-gap-status={hasDataGaps ? "DATA_GAPS_PRESENT" : "NO_DATA_GAPS"}
     >
-      <p className="customerEyebrow">DataGapSummary</p>
+      <p className="operatorEyebrow">DataGapSummary</p>
       <h3>数据缺口</h3>
       {hasDataGaps ? null : <p>当前 workspace 未返回数据缺口。</p>}
-      <ul className="customerList">
+      <ul className="operatorList">
         {workspace.data_gaps.map((gap, index) => (
           <li key={gap.gap_code || gap.label || String(index)}>
             {gap.label || gap.gap_code || "未命名缺口"}
@@ -118,8 +118,8 @@ function DataGapSummary({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1
 
 function RecommendationCandidate({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }): React.ReactElement {
   return (
-    <article className="customerCard" data-card="RecommendationCandidate">
-      <p className="customerEyebrow">RecommendationCandidate</p>
+    <article className="operatorPanel" data-card="RecommendationCandidate">
+      <p className="operatorEyebrow">RecommendationCandidate</p>
       <h3>建议候选</h3>
       <p>建议 ID：{workspace.recommendation_candidate.recommendation_id ?? "待确认"}</p>
       <p>动作类型：{workspace.recommendation_candidate.action_type ?? "待确认"}</p>
@@ -132,8 +132,8 @@ function RecommendationCandidate({ workspace }: { workspace: OperatorFieldTwinWo
 
 function LayerCard({ layer }: { layer: OperatorTwinLayer }): React.ReactElement {
   return (
-    <article className="customerCard" data-layer={layer.layer}>
-      <p className="customerEyebrow">{layer.layer}</p>
+    <article className="operatorPanel" data-layer={layer.layer}>
+      <p className="operatorEyebrow">{layer.layer}</p>
       <h3>{layer.title}</h3>
       <p>{layer.body}</p>
       <p>状态：{layer.status}</p>
@@ -143,12 +143,12 @@ function LayerCard({ layer }: { layer: OperatorTwinLayer }): React.ReactElement 
 
 function ScenarioBoundaryCard({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }): React.ReactElement {
   return (
-    <article className="customerCard" data-card="ScenarioBoundaryCard">
+    <article className="operatorPanel" data-card="ScenarioBoundaryCard">
       <h3>情景比较边界</h3>
       <p>状态：{workspace.scenario_comparison.status}</p>
       <p>不可用原因：{workspace.scenario_comparison.unavailable_reason ?? "none"}</p>
       <p>no_action baseline：{workspace.scenario_comparison.no_action_baseline_present ? "存在" : "缺失"}</p>
-      <ul className="customerList">
+      <ul className="operatorList">
         {workspace.scenario_comparison.options.map((option) => (
           <li key={option.option_id || option.label}>
             {option.label || option.option_id}
@@ -163,9 +163,9 @@ function ScenarioBoundaryCard({ workspace }: { workspace: OperatorFieldTwinWorks
 
 function ReadOnlyBoundaryCard({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }): React.ReactElement {
   return (
-    <article className="customerCard" data-card="ReadOnlyBoundaryCard">
+    <article className="operatorPanel" data-card="ReadOnlyBoundaryCard">
       <h3>只读动作边界</h3>
-      <ul className="customerList">
+      <ul className="operatorList">
         {workspace.boundary_rules.map((rule) => (
           <li key={rule.rule_code}>{rule.label}</li>
         ))}
@@ -210,30 +210,30 @@ export default function OperatorFieldTwinWorkspacePage(): React.ReactElement {
 
   return (
     <section
-      className="customerReportPage"
+      className="operatorWorkbenchPage"
       data-surface="operator-twin"
       data-page="operator-field-twin-workspace"
       data-contract="operator_field_twin_workspace_v1"
     >
-      <div className="customerReportHero">
+      <div className="operatorWorkbenchHero">
         <div>
-          <p className="customerEyebrow">Field-centered workspace</p>
+          <p className="operatorEyebrow">Field-centered workspace</p>
           <h2>地块 Twin 工作区</h2>
           <p>
             当前地块：<strong>{workspace?.field_context.field_name ?? fieldId}</strong>。
             本页以 field_id 为入口，operation_id 不作为入口；并按事实、估计、预测、情景和建议候选分层展示。
           </p>
         </div>
-        <div className="customerReportHeroActions">
-          <Link className="customerSecondaryButton" to={"/operator/twin" + scopeQueryString}>返回 Twin 总览</Link>
+        <div className="operatorWorkbenchHeroActions">
+          <Link className="operatorActionLink" to={"/operator/twin" + scopeQueryString}>返回 Twin 总览</Link>
         </div>
       </div>
 
-      {state === "loading" ? <div className="customerCard">Field Twin 数据加载中...</div> : null}
-      {state === "error" ? <div className="customerCard">Field Twin 数据加载失败：{errorText}</div> : null}
+      {state === "loading" ? <div className="operatorPanel">Field Twin 数据加载中...</div> : null}
+      {state === "error" ? <div className="operatorPanel">Field Twin 数据加载失败：{errorText}</div> : null}
 
       {workspace ? (
-        <div className="customerSectionGrid">
+        <div className="operatorPanelGrid">
           <ScopePolicyCard policy={workspace.scope_policy} />
           <TwinStateVectorCard workspace={workspace} />
           <DataCoverageMatrix workspace={workspace} />

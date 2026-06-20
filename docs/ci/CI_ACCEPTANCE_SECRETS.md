@@ -64,3 +64,12 @@ The suite currently covers:
 - `ci:customer-report-server-projector-contract`
 - `ci:customer-report-server-route-registration-contract`
 - `ci:customer-report-response-envelope-contract`
+
+## PR metadata contract
+
+`ci:governance:pr-metadata-contract` can run without secrets by checking the repository PR template. If CI exposes pull request metadata, pass these environment variables for stricter validation:
+
+- `GITHUB_PR_TITLE`
+- `GITHUB_PR_BODY`
+
+The guard rejects empty bodies, missing required sections, and low-signal titles such as `a`, `fix`, `tmp`, or `test`.

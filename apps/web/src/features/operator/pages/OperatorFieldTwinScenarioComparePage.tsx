@@ -24,10 +24,10 @@ function scopeFromSearchParams(searchParams: URLSearchParams): OperatorTwinReque
 
 function ScenarioCompareTable({ options }: { options: OperatorScenarioCompareOption[] }): React.ReactElement {
   return (
-    <article className="customerCard" data-card="ScenarioCompareTable">
-      <p className="customerEyebrow">ScenarioCompareTable</p>
+    <article className="operatorPanel" data-card="ScenarioCompareTable">
+      <p className="operatorEyebrow">ScenarioCompareTable</p>
       <h3>情景比较</h3>
-      <table className="customerTable">
+      <table className="operatorTable">
         <thead>
           <tr>
             <th>option_id</th>
@@ -57,10 +57,10 @@ function ScenarioStatusCard({ panel }: { panel: OperatorFieldTwinScenarioCompare
   const compare = panel.scenario_compare_v1;
 
   return (
-    <article className="customerCard" data-card="ScenarioCompareStatus">
-      <p className="customerEyebrow">scenario_compare_v1</p>
+    <article className="operatorPanel" data-card="ScenarioCompareStatus">
+      <p className="operatorEyebrow">scenario_compare_v1</p>
       <h3>比较状态</h3>
-      <ul className="customerList">
+      <ul className="operatorList">
         <li>status：{compare.status}</li>
         <li>no_action_baseline_present：{compare.no_action_baseline_present ? "true" : "false"}</li>
         <li>unavailable_reason：{compare.unavailable_reason ?? "none"}</li>
@@ -72,9 +72,9 @@ function ScenarioStatusCard({ panel }: { panel: OperatorFieldTwinScenarioCompare
 
 function ScenarioBoundaryCard({ panel }: { panel: OperatorFieldTwinScenarioCompareV1 }): React.ReactElement {
   return (
-    <article className="customerCard" data-card="ScenarioCompareBoundary">
+    <article className="operatorPanel" data-card="ScenarioCompareBoundary">
       <h3>情景边界</h3>
-      <ul className="customerList">
+      <ul className="operatorList">
         {panel.boundary_rules.map((rule) => (
           <li key={rule.rule_code}>{rule.label}</li>
         ))}
@@ -120,32 +120,32 @@ export default function OperatorFieldTwinScenarioComparePage(): React.ReactEleme
 
   return (
     <section
-      className="customerReportPage"
+      className="operatorWorkbenchPage"
       data-surface="operator-twin"
       data-page="operator-field-twin-scenario-compare"
       data-contract="scenario_compare_v1"
     >
-      <div className="customerReportHero">
+      <div className="operatorWorkbenchHero">
         <div>
-          <p className="customerEyebrow">Scenario Compare</p>
+          <p className="operatorEyebrow">Scenario Compare</p>
           <h2>地块情景比较</h2>
           <p>
             当前地块：<strong>{panel?.field_context.field_name ?? fieldId}</strong>。
             本页只展示 scenario_compare_v1、no_action_baseline_present、options、risk_delta、confidence_text、failure_conditions、evidence_refs 与 unavailable_reason。
           </p>
         </div>
-        <div className="customerReportHeroActions">
-          <Link className="customerSecondaryButton" to={"/operator/twin/fields/" + encodeURIComponent(fieldId) + scopeQueryString}>返回 Field Twin</Link>
-          <Link className="customerSecondaryButton" to={"/operator/twin/fields/" + encodeURIComponent(fieldId) + "/forecast" + scopeQueryString}>查看 Forecast</Link>
-          <Link className="customerSecondaryButton" to={"/operator/twin" + scopeQueryString}>返回 Twin 总览</Link>
+        <div className="operatorWorkbenchHeroActions">
+          <Link className="operatorActionLink" to={"/operator/twin/fields/" + encodeURIComponent(fieldId) + scopeQueryString}>返回 Field Twin</Link>
+          <Link className="operatorActionLink" to={"/operator/twin/fields/" + encodeURIComponent(fieldId) + "/forecast" + scopeQueryString}>查看 Forecast</Link>
+          <Link className="operatorActionLink" to={"/operator/twin" + scopeQueryString}>返回 Twin 总览</Link>
         </div>
       </div>
 
-      {state === "loading" ? <div className="customerCard">Scenario Compare 数据加载中...</div> : null}
-      {state === "error" ? <div className="customerCard">Scenario Compare 数据加载失败：{errorText}</div> : null}
+      {state === "loading" ? <div className="operatorPanel">Scenario Compare 数据加载中...</div> : null}
+      {state === "error" ? <div className="operatorPanel">Scenario Compare 数据加载失败：{errorText}</div> : null}
 
       {panel ? (
-        <div className="customerSectionGrid">
+        <div className="operatorPanelGrid">
           <ScenarioStatusCard panel={panel} />
           <ScenarioCompareTable options={panel.scenario_compare_v1.options} />
           <ScenarioBoundaryCard panel={panel} />

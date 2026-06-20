@@ -44,7 +44,7 @@ function SourceIndexInventoryCard({
   error: string | null;
 }): React.ReactElement {
   return (
-    <article className="customerCard" data-card="operator-twin-source-index-inventory">
+    <article className="operatorPanel" data-card="operator-twin-source-index-inventory">
       <h3>Source Index Inventory</h3>
       {loadState === "loading" ? <p>source index inventory 正在加载。</p> : null}
       {loadState === "error" ? (
@@ -56,8 +56,8 @@ function SourceIndexInventoryCard({
           <p>
             table_count：{inventory.summary.table_count}；available_table_count：{inventory.summary.available_table_count}；total_row_count：{inventory.summary.total_row_count}
           </p>
-          <div className="customerTableWrap">
-            <table className="customerTable" data-table="operator-twin-source-index-inventory">
+          <div className="operatorTableWrap">
+            <table className="operatorTable" data-table="operator-twin-source-index-inventory">
               <thead>
                 <tr>
                   <th>source index</th>
@@ -94,7 +94,7 @@ function SourceIndexInventoryCard({
 
 function ScopePolicyCard({ policy }: { policy: OperatorTwinScopePolicy }): React.ReactElement {
   return (
-    <article className="customerCard" data-card="operator-twin-scope-policy">
+    <article className="operatorPanel" data-card="operator-twin-scope-policy">
       <h3>Scope Policy</h3>
       <p>scope_applied：{policy.scope_applied ? "true" : "false"}</p>
       <p>missing_reason：{policy.missing_reason ?? "none"}</p>
@@ -155,36 +155,36 @@ export default function OperatorTwinOverviewPage(): React.ReactElement {
   }, [scope]);
 
   return (
-    <section className="customerReportPage" data-surface="operator-twin" data-page="operator-twin-overview">
-      <div className="customerReportHero">
+    <section className="operatorWorkbenchPage" data-surface="operator-twin" data-page="operator-twin-overview">
+      <div className="operatorWorkbenchHero">
         <div>
-          <p className="customerEyebrow">Operator Twin Workbench</p>
+          <p className="operatorEyebrow">Operator Twin Workbench</p>
           <h2>田块预测与情景推演入口</h2>
           <p>
             该页面读取 operator_twin_overview_v1，并把 tenant_id / project_id / group_id 作为只读查询范围传给后端。
             当前版本不运行预测、不提交 recommendation、不审批、不执行。
           </p>
         </div>
-        <div className="customerReportHeroActions">
-          <span className="customerStatusPill">API-backed</span>
-          <span className="customerStatusPill">Scoped read</span>
-          <span className="customerStatusPill">No direct execution</span>
+        <div className="operatorWorkbenchHeroActions">
+          <span className="operatorPill">API-backed</span>
+          <span className="operatorPill">Scoped read</span>
+          <span className="operatorPill">No direct execution</span>
         </div>
       </div>
 
-      {state === "loading" ? <div className="customerCard">Operator Twin 数据加载中...</div> : null}
-      {state === "error" ? <div className="customerCard">Operator Twin 数据加载失败：{errorText}</div> : null}
-      {state === "empty" ? <div className="customerCard">暂无可展示田块 Twin 数据。请确认 URL 中的 tenant_id / project_id / group_id。</div> : null}
+      {state === "loading" ? <div className="operatorPanel">Operator Twin 数据加载中...</div> : null}
+      {state === "error" ? <div className="operatorPanel">Operator Twin 数据加载失败：{errorText}</div> : null}
+      {state === "empty" ? <div className="operatorPanel">暂无可展示田块 Twin 数据。请确认 URL 中的 tenant_id / project_id / group_id。</div> : null}
 
       {overview ? (
-        <div className="customerSectionGrid">
+        <div className="operatorPanelGrid">
           <ScopePolicyCard policy={overview.scope_policy} />
           <SourceIndexInventoryCard inventory={inventory} loadState={inventoryLoadState} error={inventoryError} />
 
-          <article className="customerCard">
+          <article className="operatorPanel">
             <h3>田块状态矩阵</h3>
-            <div className="customerTableWrap">
-              <table className="customerTable">
+            <div className="operatorTableWrap">
+              <table className="operatorTable">
                 <thead>
                   <tr>
                     <th>田块</th>
@@ -227,18 +227,18 @@ export default function OperatorTwinOverviewPage(): React.ReactElement {
             </div>
           </article>
 
-          <article className="customerCard">
+          <article className="operatorPanel">
             <h3>数据缺口</h3>
-            <ul className="customerList">
+            <ul className="operatorList">
               {overview.data_gaps.map((gap) => (
                 <li key={gap.gap_code}>{gap.label}</li>
               ))}
             </ul>
           </article>
 
-          <article className="customerCard">
+          <article className="operatorPanel">
             <h3>人工确认边界</h3>
-            <ul className="customerList">
+            <ul className="operatorList">
               {overview.boundary_rules.map((rule) => (
                 <li key={rule.rule_code}>{rule.label}</li>
               ))}

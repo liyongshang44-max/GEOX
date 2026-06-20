@@ -24,10 +24,10 @@ function scopeFromSearchParams(searchParams: URLSearchParams): OperatorTwinReque
 
 function ForecastRiskTimeline({ items }: { items: OperatorForecastRiskTimelineItem[] }): React.ReactElement {
   return (
-    <article className="customerCard" data-card="ForecastRiskTimeline">
-      <p className="customerEyebrow">ForecastRiskTimeline</p>
+    <article className="operatorPanel" data-card="ForecastRiskTimeline">
+      <p className="operatorEyebrow">ForecastRiskTimeline</p>
       <h3>预测风险时间线</h3>
-      <ul className="customerList">
+      <ul className="operatorList">
         {items.map((item) => (
           <li key={item.horizon}>
             <strong>{item.horizon}</strong>
@@ -47,10 +47,10 @@ function ForecastWindowCard({ panel }: { panel: OperatorFieldTwinForecastPanelV1
   const forecast = panel.forecast_window_v1;
 
   return (
-    <article className="customerCard" data-card="ForecastWindowCard">
-      <p className="customerEyebrow">forecast_window_v1</p>
+    <article className="operatorPanel" data-card="ForecastWindowCard">
+      <p className="operatorEyebrow">forecast_window_v1</p>
       <h3>预测窗口</h3>
-      <ul className="customerList">
+      <ul className="operatorList">
         <li>available_horizon：{forecast.available_horizon}</li>
         <li>forecast_horizon_limited：{forecast.forecast_horizon_limited ? "true" : "false"}</li>
         <li>unavailable_horizons：{forecast.unavailable_horizons.join("、") || "none"}</li>
@@ -63,9 +63,9 @@ function ForecastWindowCard({ panel }: { panel: OperatorFieldTwinForecastPanelV1
 
 function ForecastBoundaryCard({ panel }: { panel: OperatorFieldTwinForecastPanelV1 }): React.ReactElement {
   return (
-    <article className="customerCard" data-card="ForecastBoundaryCard">
+    <article className="operatorPanel" data-card="ForecastBoundaryCard">
       <h3>预测边界</h3>
-      <ul className="customerList">
+      <ul className="operatorList">
         {panel.boundary_rules.map((rule) => (
           <li key={rule.rule_code}>{rule.label}</li>
         ))}
@@ -111,31 +111,31 @@ export default function OperatorFieldTwinForecastPage(): React.ReactElement {
 
   return (
     <section
-      className="customerReportPage"
+      className="operatorWorkbenchPage"
       data-surface="operator-twin"
       data-page="operator-field-twin-forecast-panel"
       data-contract="forecast_window_v1"
     >
-      <div className="customerReportHero">
+      <div className="operatorWorkbenchHero">
         <div>
-          <p className="customerEyebrow">Forecast Panel</p>
+          <p className="operatorEyebrow">Forecast Panel</p>
           <h2>地块预测窗口</h2>
           <p>
             当前地块：<strong>{panel?.field_context.field_name ?? fieldId}</strong>。
             本页只展示 forecast_window_v1、unavailable_horizons、reason、evidence_refs 与 ForecastRiskTimeline。
           </p>
         </div>
-        <div className="customerReportHeroActions">
-          <Link className="customerSecondaryButton" to={"/operator/twin/fields/" + encodeURIComponent(fieldId) + scopeQueryString}>返回 Field Twin</Link>
-          <Link className="customerSecondaryButton" to={"/operator/twin" + scopeQueryString}>返回 Twin 总览</Link>
+        <div className="operatorWorkbenchHeroActions">
+          <Link className="operatorActionLink" to={"/operator/twin/fields/" + encodeURIComponent(fieldId) + scopeQueryString}>返回 Field Twin</Link>
+          <Link className="operatorActionLink" to={"/operator/twin" + scopeQueryString}>返回 Twin 总览</Link>
         </div>
       </div>
 
-      {state === "loading" ? <div className="customerCard">Forecast Panel 数据加载中...</div> : null}
-      {state === "error" ? <div className="customerCard">Forecast Panel 数据加载失败：{errorText}</div> : null}
+      {state === "loading" ? <div className="operatorPanel">Forecast Panel 数据加载中...</div> : null}
+      {state === "error" ? <div className="operatorPanel">Forecast Panel 数据加载失败：{errorText}</div> : null}
 
       {panel ? (
-        <div className="customerSectionGrid">
+        <div className="operatorPanelGrid">
           <ForecastWindowCard panel={panel} />
           <ForecastRiskTimeline items={panel.forecast_window_v1.risk_timeline} />
           <ForecastBoundaryCard panel={panel} />
