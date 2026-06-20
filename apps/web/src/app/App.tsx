@@ -327,7 +327,7 @@ function OperatorRoutes(): React.ReactElement {
       <Route path="twin/fields/:fieldId/scenarios" element={<OperatorFieldTwinScenarioComparePage />} />
       <Route path="twin/fields/:fieldId/evidence" element={<OperatorFieldTwinEvidencePage />} />
       <Route path="twin/fields/:fieldId/calibration" element={<OperatorFieldTwinCalibrationPage />} />
-            <Route path="twin/fields/:fieldId/post-irrigation" element={<OperatorFieldTwinPostIrrigationPage />} />
+      <Route path="twin/fields/:fieldId/post-irrigation" element={<OperatorFieldTwinPostIrrigationPage />} />
       <Route path="*" element={<Navigate to="twin" replace />} />
     </Routes>
   );

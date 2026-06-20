@@ -1150,11 +1150,41 @@ async function buildFieldCalibrationReplay(pool: Pool, scope: RequestScope, fiel
 
 function stateSnapshot(row: Row | null, phase: "PRE" | "POST"): Row {
   const payload = safeJson(row?.payload_json ?? row?.payload ?? row?.record_json?.payload ?? row?.record_json) ?? {};
+  const summary = safeJson(row?.summary_json ?? payload.summary_json ?? payload.summary) ?? {};
   const value = numberOrNull(firstValue(
-    row?.soil_moisture_value, row?.vwc, row?.vwc_percent, row?.soil_moisture, row?.mean_vwc,
-    payload.soil_moisture_value, payload.vwc, payload.vwc_percent, payload.soil_moisture, payload.mean_vwc
+    row?.soil_moisture_value,
+    row?.vwc,
+    row?.vwc_percent,
+    row?.soil_moisture,
+    row?.mean_vwc,
+    row?.root_zone_soil_moisture_percent,
+    row?.root_zone_vwc_percent,
+    payload.soil_moisture_value,
+    payload.vwc,
+    payload.vwc_percent,
+    payload.soil_moisture,
+    payload.mean_vwc,
+    payload.root_zone_soil_moisture_percent,
+    payload.root_zone_vwc_percent,
+    summary.last_value,
+    summary.mean_value,
+    summary.root_zone_soil_moisture_percent,
+    summary.root_zone_vwc_percent
   ));
-  const waterState = nullableText(firstValue(row?.water_state, row?.state, row?.classification, payload.water_state, payload.state, payload.classification));
+  const waterState = nullableText(firstValue(
+    row?.water_state,
+    row?.water_state_code,
+    row?.state,
+    row?.state_code,
+    row?.deficit_classification,
+    row?.classification,
+    payload.water_state,
+    payload.water_state_code,
+    payload.state,
+    payload.state_code,
+    payload.deficit_classification,
+    payload.classification
+  ));
   const observedMs = row ? tsNumber(row) : 0;
   return {
     available: Boolean(row),
@@ -1177,6 +1207,62 @@ function rowLooksPre(row: Row): boolean {
   return blob.includes("pre") || blob.includes("before") || blob.includes("baseline");
 }
 
+function timestampMsFromValue(value: unknown): number | null {
+  if (value === undefined || value === null || value === "") return null;
+  const n = Number(value);
+  if (Number.isFinite(n)) return n;
+  const d = new Date(String(value));
+  return Number.isFinite(d.getTime()) ? d.getTime() : null;
+}
+
+function executionWindowEndMs(...rows: Array<Row | null | undefined>): number | null {
+  let best: number | null = null;
+  for (const row of rows) {
+    if (!row) continue;
+    const payload = safeJson(row.payload_json ?? row.payload ?? row.record_json?.payload ?? row.record_json) ?? {};
+    const candidates = [
+      row.completed_at,
+      row.executed_at,
+      row.execution_completed_at,
+      row.operation_end_at,
+      row.window_end,
+      row.end_at,
+      payload.completed_at,
+      payload.executed_at,
+      payload.execution_completed_at,
+      payload.operation_end_at,
+      payload.window_end,
+      payload.end_at,
+    ];
+    for (const candidate of candidates) {
+      const ms = timestampMsFromValue(candidate);
+      if (ms !== null && (best === null || ms > best)) best = ms;
+    }
+  }
+  return best;
+}
+
+function observationTimestampMs(row: Row): number | null {
+  const payload = safeJson(row.payload_json ?? row.payload ?? row.record_json?.payload ?? row.record_json) ?? {};
+  const candidates = [row.observed_at, row.window_end, row.updated_at, row.created_at, payload.observed_at, payload.window_end, payload.updated_at, payload.created_at];
+  for (const candidate of candidates) {
+    const ms = timestampMsFromValue(candidate);
+    if (ms !== null) return ms;
+  }
+  const fallback = tsNumber(row);
+  return fallback || null;
+}
+
+function findRowAfterExecutionWindow(rows: Row[], ...executionRows: Array<Row | null | undefined>): Row | null {
+  const endMs = executionWindowEndMs(...executionRows);
+  if (endMs === null) return null;
+  const maxPostWindowMs = 7 * 24 * 60 * 60 * 1000;
+  return rows.find((row) => {
+    const observedMs = observationTimestampMs(row);
+    return observedMs !== null && observedMs > endMs && observedMs <= endMs + maxPostWindowMs;
+  }) ?? null;
+}
+
 async function latestOperationReport(pool: Pool, scope: RequestScope): Promise<Row | null> {
   return (await latestOptionalProjectionOrFactRow(pool, "operation_report_v1", scope))
     ?? (await latestOptionalFactByType(pool, "operation_report_projection", scope));
@@ -1192,7 +1278,6 @@ async function buildFieldPostIrrigationVerification(pool: Pool, scope: RequestSc
   const waterRows = await readRows(pool, "water_state_estimate_index_v1", fieldScope, 10);
   const combined = [...sensingRows, ...waterRows].sort((a, b) => tsNumber(a) - tsNumber(b));
   const preRow = combined.find(rowLooksPre) ?? combined[0] ?? null;
-  const postRow = [...combined].reverse().find(rowLooksPost) ?? (combined.length > 1 ? combined[combined.length - 1] : null);
   const [operationPlan, receipt, asExecuted, acceptance, operationReport] = await Promise.all([
     latestOptionalProjectionOrFactRow(pool, "operation_plan_v1", fieldScope),
     latestOptionalProjectionOrFactRow(pool, "ao_act_receipt_v1", fieldScope).then(async (row) => row ?? latestOptionalProjectionOrFactRow(pool, "ao_act_receipt_v0", fieldScope)),
@@ -1200,6 +1285,9 @@ async function buildFieldPostIrrigationVerification(pool: Pool, scope: RequestSc
     latestOptionalProjectionOrFactRow(pool, "acceptance_result_v1", fieldScope),
     latestOperationReport(pool, fieldScope),
   ]);
+  const explicitPostRow = [...combined].reverse().find(rowLooksPost) ?? null;
+  const operationWindowPostRow = findRowAfterExecutionWindow(combined, receipt, asExecuted, operationPlan);
+  const postRow = explicitPostRow ?? operationWindowPostRow ?? null;
 
   const pre = stateSnapshot(preRow, "PRE");
   const post = stateSnapshot(postRow, "POST");
