@@ -25,7 +25,7 @@ const JudgeConfigPage = React.lazy(() => import("../views/JudgeConfigPage"));
 const SimConfigPage = React.lazy(() => import("../views/SimConfigPage"));
 const AdminHealthPage = React.lazy(() => import("../features/admin/pages/AdminHealthPage"));
 const AdminImportPage = React.lazy(() => import("../features/admin/pages/AdminImportPage"));
-const AdminAcceptancePage = React.lazy(() => import("../features/admin/pages/AdminAcceptancePage"));
+const LegacyAdminAcceptancePage = React.lazy(() => import("../views/AdminAcceptancePage"));
 const ApprovalRequestsPage = React.lazy(() => import("../views/ApprovalRequestsPage"));
 const DevToolsPage = React.lazy(() => import("../views/DevToolsPage"));
 const SettingsPage = React.lazy(() => import("../views/SettingsPage"));
@@ -38,7 +38,7 @@ const AdminDevicesPage = React.lazy(() => import("../features/admin/pages/AdminD
 const AdminAlertsPage = React.lazy(() => import("../features/admin/pages/AdminAlertsPage"));
 const AdminEvidencePage = React.lazy(() => import("../features/admin/pages/AdminEvidencePage"));
 const AdminSkillsPage = React.lazy(() => import("../features/admin/pages/AdminSkillsPage"));
-const AdminControlPlaneAcceptancePage = React.lazy(() => import("../features/admin/pages/AdminAcceptancePage"));
+const AdminControlPlaneAcceptancePage = React.lazy(() => import("../features/admin/pages/AdminControlPlaneAcceptancePage"));
 const AdminHealthzPage = React.lazy(() => import("../features/admin/pages/AdminHealthzPage"));
 const CommercialDashboardPage = React.lazy(() => import("../features/dashboard/pages/CommercialDashboardPage"));
 const FieldsPage = React.lazy(() => import("../features/fields/pages/FieldsPage"));
@@ -283,7 +283,7 @@ function AppRoutes({ expert }: { expert: boolean }): React.ReactElement {
           <Route path="/legacy/sim/config" element={<SimConfigPage />} />
           <Route path="/legacy/admin/healthz" element={<AdminHealthPage />} />
           <Route path="/legacy/admin/import" element={<AdminImportPage />} />
-          <Route path="/legacy/admin/acceptance" element={<AdminAcceptancePage />} />
+          <Route path="/legacy/admin/acceptance" element={<LegacyAdminAcceptancePage />} />
           <Route path="/legacy/control/approvals" element={<ApprovalRequestsPage />} />
           <Route path="/judge/run" element={<Navigate to="/legacy/judge/run" replace />} />
           <Route path="/judge/records" element={<Navigate to="/legacy/judge/records" replace />} />
@@ -359,7 +359,7 @@ function AdminShell(): React.ReactElement {
         breadcrumbs: [{ label: "平台控制台", to: "/dashboard" }, { label: "后台管理" }],
         title: "后台管理",
         lead: "Admin Control Plane：内部治理、执行状态、证据、设备、技能、验收、健康与审计边界。",
-        primaryAction: { label: "查看客户门户", to: "/customer/dashboard" },
+        primaryAction: { label: "查看客户门户（外部跳转）", to: "/customer/dashboard" },
       }}
     >
       <React.Suspense fallback={RouteFallback}>
