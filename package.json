@@ -191,7 +191,9 @@
     "ci:runtime:decision-to-delivery-e2e": "node scripts/runtime_acceptance/ACCEPTANCE_DECISION_TO_DELIVERY_E2E_V1.cjs",
     "ci:runtime:three-surface-no-cross-write": "node scripts/runtime_acceptance/ACCEPTANCE_THREE_SURFACE_NO_CROSS_WRITE_V1.cjs",
     "ci:governance:frontend-prd-v0-2-final-manifest": "node scripts/governance_acceptance/ACCEPTANCE_FRONTEND_PRD_V0_2_FINAL_MANIFEST_V1.cjs",
-    "ci:prd-v0-2-final": "pnpm run ci:frontend:three-surfaces-e2e && pnpm run ci:governance:three-surface-route-boundary-e2e && pnpm run ci:runtime:decision-to-delivery-e2e && pnpm run ci:runtime:three-surface-no-cross-write && pnpm run ci:governance:frontend-prd-v0-2-final-manifest"
+    "ci:prd-v0-2-final": "pnpm run ci:frontend:three-surfaces-e2e && pnpm run ci:governance:three-surface-route-boundary-e2e && pnpm run ci:runtime:decision-to-delivery-e2e && pnpm run ci:runtime:three-surface-no-cross-write && pnpm run ci:governance:frontend-prd-v0-2-final-manifest",
+    "seed:three-surface-local-demo": "node scripts/dev_seed/SEED_THREE_SURFACE_LOCAL_DEMO_V1.cjs",
+    "ci:runtime:three-surface-local-page-smoke": "node scripts/runtime_acceptance/ACCEPTANCE_THREE_SURFACE_LOCAL_PAGE_SMOKE_V1.cjs"
   },
   "volta": {
     "node": "20.11.1"

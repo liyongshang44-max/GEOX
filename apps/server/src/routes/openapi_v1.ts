@@ -4763,6 +4763,51 @@ function applyP13OpenApiAlignment(spec: any) {
         },
       },
     },
+    "/api/v1/operator/twin/fields/{field_id}/evidence": {
+      get: {
+        tags: ["Operator Twin"],
+        summary: "Get Operator Field Twin Evidence Quality",
+        operationId: "getOperatorFieldTwinEvidenceQualityV1",
+        security: [{ bearerAuth: [] }],
+        parameters: [pathParam("field_id")],
+        responses: {
+          "200": jsonResponse({ type: "object", required: ["ok", "surface", "writeReady", "approvalReady", "taskCreationReady", "dispatchReady"], properties: { ok: { type: "boolean" }, surface: { type: "string", enum: ["OPERATOR"] }, writeReady: { type: "boolean", enum: [false] }, approvalReady: { type: "boolean", enum: [false] }, taskCreationReady: { type: "boolean", enum: [false] }, dispatchReady: { type: "boolean", enum: [false] }, field_id: { type: "string" }, status: { type: "string" }, unavailable_reason: { type: "string", nullable: true }, evidence_refs: { type: "array", items: { type: "string" } }, operator_field_twin_evidence_quality_v1: { type: "object" } } }, "Operator read-only empty-safe response"),
+          "400": { description: "Bad request" },
+          "401": { description: "Unauthorized" },
+          "500": { description: "Internal error" },
+        },
+      },
+    },
+    "/api/v1/operator/twin/fields/{field_id}/calibration": {
+      get: {
+        tags: ["Operator Twin"],
+        summary: "Get Operator Field Twin Calibration Replay",
+        operationId: "getOperatorFieldTwinCalibrationReplayV1",
+        security: [{ bearerAuth: [] }],
+        parameters: [pathParam("field_id")],
+        responses: {
+          "200": jsonResponse({ type: "object", required: ["ok", "surface", "writeReady", "approvalReady", "taskCreationReady", "dispatchReady"], properties: { ok: { type: "boolean" }, surface: { type: "string", enum: ["OPERATOR"] }, writeReady: { type: "boolean", enum: [false] }, approvalReady: { type: "boolean", enum: [false] }, taskCreationReady: { type: "boolean", enum: [false] }, dispatchReady: { type: "boolean", enum: [false] }, field_id: { type: "string" }, status: { type: "string" }, unavailable_reason: { type: "string", nullable: true }, evidence_refs: { type: "array", items: { type: "string" } }, operator_field_twin_calibration_replay_v1: { type: "object" } } }, "Operator read-only empty-safe response"),
+          "400": { description: "Bad request" },
+          "401": { description: "Unauthorized" },
+          "500": { description: "Internal error" },
+        },
+      },
+    },
+    "/api/v1/operator/twin/fields/{field_id}/post-irrigation": {
+      get: {
+        tags: ["Operator Twin"],
+        summary: "Get Operator Field Twin Post-Irrigation Verification",
+        operationId: "getOperatorFieldTwinPostIrrigationVerificationV1",
+        security: [{ bearerAuth: [] }],
+        parameters: [pathParam("field_id")],
+        responses: {
+          "200": jsonResponse({ type: "object", required: ["ok", "surface", "writeReady", "approvalReady", "taskCreationReady", "dispatchReady"], properties: { ok: { type: "boolean" }, surface: { type: "string", enum: ["OPERATOR"] }, writeReady: { type: "boolean", enum: [false] }, approvalReady: { type: "boolean", enum: [false] }, taskCreationReady: { type: "boolean", enum: [false] }, dispatchReady: { type: "boolean", enum: [false] }, field_id: { type: "string" }, status: { type: "string" }, unavailable_reason: { type: "string", nullable: true }, evidence_refs: { type: "array", items: { type: "string" } }, operator_field_twin_post_irrigation_verification_v1: { type: "object" } } }, "Operator read-only empty-safe response"),
+          "400": { description: "Bad request" },
+          "401": { description: "Unauthorized" },
+          "500": { description: "Internal error" },
+        },
+      },
+    },
     "/api/v1/operator/twin/fields/{field_id}/scenarios": {
       get: {
         tags: ["Operator Twin"],
