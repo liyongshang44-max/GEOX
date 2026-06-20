@@ -1,6 +1,6 @@
 // apps/web/src/api/operatorTwin.ts
 // Purpose: fetch scoped, read-only Operator Twin Workbench projections.
-// Boundary: this API client must not submit recommendations, approvals, dispatches, or AO-ACT tasks.
+// Boundary: this API client may submit scenario options only to recommendation; it must not approve, dispatch, or create AO-ACT tasks.
 
 import { apiRequestWithPolicy } from "./client";
 
@@ -45,7 +45,10 @@ export type OperatorTwinSourceIndexInventoryV1 = {
   version: "v1";
   surface: "OPERATOR";
   report_kind: "OPERATOR_TWIN_SOURCE_INDEX_INVENTORY";
-  request_scope: OperatorTwinRequestScope & { fieldId?: string | null; field_id?: string | null };
+  request_scope: OperatorTwinRequestScope & {
+    fieldId?: string | null;
+    field_id?: string | null;
+  };
   scope_policy: OperatorTwinScopePolicy;
   source_indexes: OperatorTwinSourceIndexInventoryRow[];
   summary: {
@@ -104,7 +107,10 @@ export type OperatorFieldTwinWorkspaceV1 = {
   version: "v1";
   surface: "OPERATOR";
   report_kind: "OPERATOR_FIELD_TWIN_WORKSPACE";
-  request_scope: OperatorTwinRequestScope & { fieldId?: string | null; field_id?: string | null };
+  request_scope: OperatorTwinRequestScope & {
+    fieldId?: string | null;
+    field_id?: string | null;
+  };
   scope_policy: OperatorTwinScopePolicy;
   field_context: {
     field_id: string;
@@ -157,7 +163,6 @@ export type OperatorFieldTwinWorkspaceV1 = {
   boundary_rules: OperatorTwinBoundaryRule[];
 };
 
-
 export type OperatorForecastRiskTimelineItem = {
   horizon: string;
   risk_text: string;
@@ -178,7 +183,10 @@ export type OperatorFieldTwinForecastPanelV1 = {
   version: "v1";
   surface: "OPERATOR";
   report_kind: "OPERATOR_FIELD_TWIN_FORECAST_PANEL";
-  request_scope: OperatorTwinRequestScope & { fieldId?: string | null; field_id?: string | null };
+  request_scope: OperatorTwinRequestScope & {
+    fieldId?: string | null;
+    field_id?: string | null;
+  };
   scope_policy: OperatorTwinScopePolicy;
   field_context: {
     field_id: string;
@@ -190,7 +198,6 @@ export type OperatorFieldTwinForecastPanelV1 = {
   boundary_rules: OperatorTwinBoundaryRule[];
 };
 
-
 export type OperatorScenarioCompareOption = {
   option_id: string;
   label: string;
@@ -200,6 +207,7 @@ export type OperatorScenarioCompareOption = {
 };
 
 export type OperatorScenarioCompareV1 = {
+  scenario_set_id?: string | null;
   no_action_baseline_present: boolean;
   options: OperatorScenarioCompareOption[];
   evidence_refs: string[];
@@ -211,7 +219,10 @@ export type OperatorFieldTwinScenarioCompareV1 = {
   version: "v1";
   surface: "OPERATOR";
   report_kind: "OPERATOR_FIELD_TWIN_SCENARIO_COMPARE";
-  request_scope: OperatorTwinRequestScope & { fieldId?: string | null; field_id?: string | null };
+  request_scope: OperatorTwinRequestScope & {
+    fieldId?: string | null;
+    field_id?: string | null;
+  };
   scope_policy: OperatorTwinScopePolicy;
   field_context: {
     field_id: string;
@@ -224,7 +235,13 @@ export type OperatorFieldTwinScenarioCompareV1 = {
 };
 
 export type OperatorEvidenceTraceItem = {
-  stage: "Fact" | "Estimate" | "Forecast" | "Scenario" | "Recommendation" | string;
+  stage:
+    | "Fact"
+    | "Estimate"
+    | "Forecast"
+    | "Scenario"
+    | "Recommendation"
+    | string;
   label: string;
   source_table: string;
   available: boolean;
@@ -278,7 +295,10 @@ export type OperatorFieldTwinEvidenceQualityV1 = {
   version: "v1";
   surface: "OPERATOR";
   report_kind: "OPERATOR_FIELD_TWIN_EVIDENCE_QUALITY";
-  request_scope: OperatorTwinRequestScope & { fieldId?: string | null; field_id?: string | null };
+  request_scope: OperatorTwinRequestScope & {
+    fieldId?: string | null;
+    field_id?: string | null;
+  };
   scope_policy: OperatorTwinScopePolicy;
   field_context: { field_id: string; field_name: string; crop_text: string };
   evidence_trace_v1: { trace_items: OperatorEvidenceTraceItem[] };
@@ -318,7 +338,10 @@ export type OperatorFieldTwinCalibrationReplayV1 = {
   version: "v1";
   surface: "OPERATOR";
   report_kind: "OPERATOR_FIELD_TWIN_CALIBRATION_REPLAY";
-  request_scope: OperatorTwinRequestScope & { fieldId?: string | null; field_id?: string | null };
+  request_scope: OperatorTwinRequestScope & {
+    fieldId?: string | null;
+    field_id?: string | null;
+  };
   scope_policy: OperatorTwinScopePolicy;
   field_context: { field_id: string; field_name: string; crop_text: string };
   replay_timeline_v1: { items: OperatorReplayTimelineItem[] };
@@ -370,10 +393,19 @@ export type OperatorFieldTwinPostIrrigationVerificationV1 = {
   version: "v1";
   surface: "OPERATOR";
   report_kind: "OPERATOR_FIELD_TWIN_POST_IRRIGATION_VERIFICATION";
-  request_scope: OperatorTwinRequestScope & { fieldId?: string | null; field_id?: string | null };
+  request_scope: OperatorTwinRequestScope & {
+    fieldId?: string | null;
+    field_id?: string | null;
+  };
   scope_policy: OperatorTwinScopePolicy;
   field_context: { field_id: string; field_name: string; crop_text: string };
-  operation_context: { operation_id: string | null; task_id: string | null; receipt_id: string | null; as_executed_id: string | null; acceptance_result_id: string | null };
+  operation_context: {
+    operation_id: string | null;
+    task_id: string | null;
+    receipt_id: string | null;
+    as_executed_id: string | null;
+    acceptance_result_id: string | null;
+  };
   pre_irrigation_state_v1: OperatorIrrigationStateSnapshot;
   post_irrigation_state_v1: OperatorIrrigationStateSnapshot;
   response_delta_v1: OperatorIrrigationResponseDelta;
@@ -420,7 +452,6 @@ export type OperatorFieldTwinWorkspaceResponse = {
   operator_field_twin_workspace_v1: OperatorFieldTwinWorkspaceV1;
 };
 
-
 export type OperatorFieldTwinForecastPanelResponse = {
   ok: boolean;
   source: "operator_field_twin_forecast_panel_api";
@@ -433,7 +464,6 @@ export type OperatorFieldTwinForecastPanelResponse = {
   operator_field_twin_forecast_panel_v1: OperatorFieldTwinForecastPanelV1;
 };
 
-
 export type OperatorFieldTwinScenarioCompareResponse = {
   ok: boolean;
   source: "operator_field_twin_scenario_compare_api";
@@ -444,6 +474,52 @@ export type OperatorFieldTwinScenarioCompareResponse = {
   approvalReady: false;
   taskCreationReady: false;
   operator_field_twin_scenario_compare_v1: OperatorFieldTwinScenarioCompareV1;
+};
+
+export type OperatorScenarioRecommendationSubmissionRequest =
+  OperatorTwinRequestScope & {
+    operator_id: string;
+    submission_reason: string;
+    idempotency_key?: string | null;
+  };
+
+export type OperatorScenarioRecommendationSubmissionV1 = {
+  version: "v1";
+  surface: "OPERATOR";
+  submission_id: string;
+  field_id: string;
+  scenario_set_id: string;
+  selected_option_id: string;
+  recommendation_id: string | null;
+  status:
+    | "SUBMITTED_TO_RECOMMENDATION"
+    | "REJECTED_NO_ACTION"
+    | "REJECTED_SCENARIO_NOT_FOUND"
+    | "REJECTED_OPTION_NOT_FOUND"
+    | "REJECTED_EVIDENCE_BLOCKING"
+    | "REJECTED_SCOPE_MISMATCH"
+    | "REJECTED_DUPLICATE"
+    | string;
+  approval_created: false;
+  operation_plan_created: false;
+  task_created: false;
+  dispatch_created: false;
+  evidence_refs: string[];
+  boundary_rules: OperatorTwinBoundaryRule[];
+  fact_id?: string | null;
+  recommendation_fact_id?: string | null;
+};
+
+export type OperatorScenarioRecommendationSubmissionResponse = {
+  ok: boolean;
+  source: "operator_scenario_recommendation_submission_api";
+  dataScope: "OFFICIAL_OPERATOR_TWIN_API";
+  generated_at: string;
+  writeReady: true;
+  dispatchReady: false;
+  approvalReady: false;
+  taskCreationReady: false;
+  operator_scenario_recommendation_submission_v1: OperatorScenarioRecommendationSubmissionV1;
 };
 
 export type OperatorFieldTwinEvidenceQualityResponse = {
@@ -488,7 +564,9 @@ function cleanScopeValue(value: string | null | undefined): string {
   return String(value ?? "").trim();
 }
 
-export function buildOperatorTwinScopeQuery(scope?: OperatorTwinRequestScope | null): string {
+export function buildOperatorTwinScopeQuery(
+  scope?: OperatorTwinRequestScope | null,
+): string {
   const params = new URLSearchParams();
 
   const tenantId = cleanScopeValue(scope?.tenant_id);
@@ -503,18 +581,22 @@ export function buildOperatorTwinScopeQuery(scope?: OperatorTwinRequestScope | n
   return query ? "?" + query : "";
 }
 
-function withScope(path: string, scope?: OperatorTwinRequestScope | null): string {
+function withScope(
+  path: string,
+  scope?: OperatorTwinRequestScope | null,
+): string {
   return path + buildOperatorTwinScopeQuery(scope);
 }
 
 export async function fetchOperatorTwinSourceIndexInventory(
-  scope?: OperatorTwinRequestScope | null
+  scope?: OperatorTwinRequestScope | null,
 ): Promise<OperatorTwinSourceIndexInventoryResponse> {
-  const response = await apiRequestWithPolicy<OperatorTwinSourceIndexInventoryResponse>(
-    withScope("/api/v1/operator/twin/source-indexes", scope),
-    undefined,
-    { dedupe: true, silent: true, timeoutMs: 10000 }
-  );
+  const response =
+    await apiRequestWithPolicy<OperatorTwinSourceIndexInventoryResponse>(
+      withScope("/api/v1/operator/twin/source-indexes", scope),
+      undefined,
+      { dedupe: true, silent: true, timeoutMs: 10000 },
+    );
 
   if (!response.ok || !response.data) {
     throw new Error("OPERATOR_TWIN_SOURCE_INDEX_INVENTORY_API_FAILED");
@@ -523,11 +605,13 @@ export async function fetchOperatorTwinSourceIndexInventory(
   return response.data;
 }
 
-export async function fetchOperatorTwinOverview(scope?: OperatorTwinRequestScope | null): Promise<OperatorTwinOverviewResponse> {
+export async function fetchOperatorTwinOverview(
+  scope?: OperatorTwinRequestScope | null,
+): Promise<OperatorTwinOverviewResponse> {
   const response = await apiRequestWithPolicy<OperatorTwinOverviewResponse>(
     withScope("/api/v1/operator/twin", scope),
     undefined,
-    { dedupe: true, silent: true, timeoutMs: 10000 }
+    { dedupe: true, silent: true, timeoutMs: 10000 },
   );
 
   if (!response.ok || !response.data) {
@@ -539,14 +623,15 @@ export async function fetchOperatorTwinOverview(scope?: OperatorTwinRequestScope
 
 export async function fetchOperatorFieldTwinWorkspace(
   fieldId: string,
-  scope?: OperatorTwinRequestScope | null
+  scope?: OperatorTwinRequestScope | null,
 ): Promise<OperatorFieldTwinWorkspaceResponse> {
   const safeFieldId = encodeURIComponent(String(fieldId || "").trim());
-  const response = await apiRequestWithPolicy<OperatorFieldTwinWorkspaceResponse>(
-    withScope("/api/v1/operator/twin/fields/" + safeFieldId, scope),
-    undefined,
-    { dedupe: true, silent: true, timeoutMs: 10000 }
-  );
+  const response =
+    await apiRequestWithPolicy<OperatorFieldTwinWorkspaceResponse>(
+      withScope("/api/v1/operator/twin/fields/" + safeFieldId, scope),
+      undefined,
+      { dedupe: true, silent: true, timeoutMs: 10000 },
+    );
 
   if (!response.ok || !response.data) {
     throw new Error("OPERATOR_FIELD_TWIN_WORKSPACE_API_FAILED");
@@ -555,17 +640,20 @@ export async function fetchOperatorFieldTwinWorkspace(
   return response.data;
 }
 
-
 export async function fetchOperatorFieldTwinCalibrationReplay(
   fieldId: string,
-  scope?: OperatorTwinRequestScope | null
+  scope?: OperatorTwinRequestScope | null,
 ): Promise<OperatorFieldTwinCalibrationReplayResponse> {
   const safeFieldId = encodeURIComponent(String(fieldId || "").trim());
-  const response = await apiRequestWithPolicy<OperatorFieldTwinCalibrationReplayResponse>(
-    withScope("/api/v1/operator/twin/fields/" + safeFieldId + "/calibration", scope),
-    undefined,
-    { dedupe: true, silent: true, timeoutMs: 10000 }
-  );
+  const response =
+    await apiRequestWithPolicy<OperatorFieldTwinCalibrationReplayResponse>(
+      withScope(
+        "/api/v1/operator/twin/fields/" + safeFieldId + "/calibration",
+        scope,
+      ),
+      undefined,
+      { dedupe: true, silent: true, timeoutMs: 10000 },
+    );
 
   if (!response.ok || !response.data) {
     throw new Error("OPERATOR_FIELD_TWIN_CALIBRATION_REPLAY_API_FAILED");
@@ -576,14 +664,18 @@ export async function fetchOperatorFieldTwinCalibrationReplay(
 
 export async function fetchOperatorFieldTwinEvidenceQuality(
   fieldId: string,
-  scope?: OperatorTwinRequestScope | null
+  scope?: OperatorTwinRequestScope | null,
 ): Promise<OperatorFieldTwinEvidenceQualityResponse> {
   const safeFieldId = encodeURIComponent(String(fieldId || "").trim());
-  const response = await apiRequestWithPolicy<OperatorFieldTwinEvidenceQualityResponse>(
-    withScope("/api/v1/operator/twin/fields/" + safeFieldId + "/evidence", scope),
-    undefined,
-    { dedupe: true, silent: true, timeoutMs: 10000 }
-  );
+  const response =
+    await apiRequestWithPolicy<OperatorFieldTwinEvidenceQualityResponse>(
+      withScope(
+        "/api/v1/operator/twin/fields/" + safeFieldId + "/evidence",
+        scope,
+      ),
+      undefined,
+      { dedupe: true, silent: true, timeoutMs: 10000 },
+    );
 
   if (!response.ok || !response.data) {
     throw new Error("OPERATOR_FIELD_TWIN_EVIDENCE_QUALITY_API_FAILED");
@@ -594,14 +686,18 @@ export async function fetchOperatorFieldTwinEvidenceQuality(
 
 export async function fetchOperatorFieldTwinForecastPanel(
   fieldId: string,
-  scope?: OperatorTwinRequestScope | null
+  scope?: OperatorTwinRequestScope | null,
 ): Promise<OperatorFieldTwinForecastPanelResponse> {
   const safeFieldId = encodeURIComponent(String(fieldId || "").trim());
-  const response = await apiRequestWithPolicy<OperatorFieldTwinForecastPanelResponse>(
-    withScope("/api/v1/operator/twin/fields/" + safeFieldId + "/forecast", scope),
-    undefined,
-    { dedupe: true, silent: true, timeoutMs: 10000 }
-  );
+  const response =
+    await apiRequestWithPolicy<OperatorFieldTwinForecastPanelResponse>(
+      withScope(
+        "/api/v1/operator/twin/fields/" + safeFieldId + "/forecast",
+        scope,
+      ),
+      undefined,
+      { dedupe: true, silent: true, timeoutMs: 10000 },
+    );
 
   if (!response.ok || !response.data) {
     throw new Error("OPERATOR_FIELD_TWIN_FORECAST_PANEL_API_FAILED");
@@ -612,17 +708,23 @@ export async function fetchOperatorFieldTwinForecastPanel(
 
 export async function fetchOperatorFieldTwinPostIrrigationVerification(
   fieldId: string,
-  scope?: OperatorTwinRequestScope | null
+  scope?: OperatorTwinRequestScope | null,
 ): Promise<OperatorFieldTwinPostIrrigationVerificationResponse> {
   const safeFieldId = encodeURIComponent(String(fieldId || "").trim());
-  const response = await apiRequestWithPolicy<OperatorFieldTwinPostIrrigationVerificationResponse>(
-    withScope("/api/v1/operator/twin/fields/" + safeFieldId + "/post-irrigation", scope),
-    undefined,
-    { dedupe: true, silent: true, timeoutMs: 10000 }
-  );
+  const response =
+    await apiRequestWithPolicy<OperatorFieldTwinPostIrrigationVerificationResponse>(
+      withScope(
+        "/api/v1/operator/twin/fields/" + safeFieldId + "/post-irrigation",
+        scope,
+      ),
+      undefined,
+      { dedupe: true, silent: true, timeoutMs: 10000 },
+    );
 
   if (!response.ok || !response.data) {
-    throw new Error("OPERATOR_FIELD_TWIN_POST_IRRIGATION_VERIFICATION_API_FAILED");
+    throw new Error(
+      "OPERATOR_FIELD_TWIN_POST_IRRIGATION_VERIFICATION_API_FAILED",
+    );
   }
 
   return response.data;
@@ -630,17 +732,52 @@ export async function fetchOperatorFieldTwinPostIrrigationVerification(
 
 export async function fetchOperatorFieldTwinScenarioCompare(
   fieldId: string,
-  scope?: OperatorTwinRequestScope | null
+  scope?: OperatorTwinRequestScope | null,
 ): Promise<OperatorFieldTwinScenarioCompareResponse> {
   const safeFieldId = encodeURIComponent(String(fieldId || "").trim());
-  const response = await apiRequestWithPolicy<OperatorFieldTwinScenarioCompareResponse>(
-    withScope("/api/v1/operator/twin/fields/" + safeFieldId + "/scenarios", scope),
-    undefined,
-    { dedupe: true, silent: true, timeoutMs: 10000 }
-  );
+  const response =
+    await apiRequestWithPolicy<OperatorFieldTwinScenarioCompareResponse>(
+      withScope(
+        "/api/v1/operator/twin/fields/" + safeFieldId + "/scenarios",
+        scope,
+      ),
+      undefined,
+      { dedupe: true, silent: true, timeoutMs: 10000 },
+    );
 
   if (!response.ok || !response.data) {
     throw new Error("OPERATOR_FIELD_TWIN_SCENARIO_COMPARE_API_FAILED");
+  }
+
+  return response.data;
+}
+
+export async function submitOperatorScenarioRecommendation(
+  fieldId: string,
+  scenarioSetId: string,
+  optionId: string,
+  body: OperatorScenarioRecommendationSubmissionRequest,
+): Promise<OperatorScenarioRecommendationSubmissionResponse> {
+  const safeFieldId = encodeURIComponent(String(fieldId || "").trim());
+  const safeScenarioSetId = encodeURIComponent(
+    String(scenarioSetId || "").trim(),
+  );
+  const safeOptionId = encodeURIComponent(String(optionId || "").trim());
+  const response =
+    await apiRequestWithPolicy<OperatorScenarioRecommendationSubmissionResponse>(
+      "/api/v1/operator/twin/fields/" +
+        safeFieldId +
+        "/scenarios/" +
+        safeScenarioSetId +
+        "/options/" +
+        safeOptionId +
+        "/submit-recommendation",
+      { method: "POST", body: JSON.stringify(body) },
+      { silent: true, timeoutMs: 10000 },
+    );
+
+  if (!response.ok || !response.data) {
+    throw new Error("OPERATOR_SCENARIO_RECOMMENDATION_SUBMISSION_API_FAILED");
   }
 
   return response.data;

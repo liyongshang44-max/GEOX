@@ -1,9 +1,10 @@
 // apps/web/src/features/operator/pages/OperatorFieldTwinScenarioComparePage.tsx
 // Purpose: render the H23 field-scoped scenario comparison panel for Operator Twin.
-// Boundary: this page compares scenarios only; it does not submit recommendations, approve, dispatch, or create AO-ACT tasks.
+// Boundary: this page compares scenarios and may submit a scenario option to recommendation only; it does not approve, dispatch, or create AO-ACT tasks.
 
 import React from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
+import { SubmitScenarioToRecommendationPanel } from "../components/SubmitScenarioToRecommendationPanel";
 import {
   buildOperatorTwinScopeQuery,
   fetchOperatorFieldTwinScenarioCompare,
@@ -14,7 +15,9 @@ import {
 
 type RuntimeState = "loading" | "ready" | "error";
 
-function scopeFromSearchParams(searchParams: URLSearchParams): OperatorTwinRequestScope {
+function scopeFromSearchParams(
+  searchParams: URLSearchParams,
+): OperatorTwinRequestScope {
   return {
     tenant_id: searchParams.get("tenant_id"),
     project_id: searchParams.get("project_id"),
@@ -22,7 +25,11 @@ function scopeFromSearchParams(searchParams: URLSearchParams): OperatorTwinReque
   };
 }
 
-function ScenarioCompareTable({ options }: { options: OperatorScenarioCompareOption[] }): React.ReactElement {
+function ScenarioCompareTable({
+  options,
+}: {
+  options: OperatorScenarioCompareOption[];
+}): React.ReactElement {
   return (
     <article className="operatorPanel" data-card="ScenarioCompareTable">
       <p className="operatorEyebrow">ScenarioCompareTable</p>
@@ -53,7 +60,11 @@ function ScenarioCompareTable({ options }: { options: OperatorScenarioCompareOpt
   );
 }
 
-function ScenarioStatusCard({ panel }: { panel: OperatorFieldTwinScenarioCompareV1 }): React.ReactElement {
+function ScenarioStatusCard({
+  panel,
+}: {
+  panel: OperatorFieldTwinScenarioCompareV1;
+}): React.ReactElement {
   const compare = panel.scenario_compare_v1;
 
   return (
@@ -62,7 +73,10 @@ function ScenarioStatusCard({ panel }: { panel: OperatorFieldTwinScenarioCompare
       <h3>比较状态</h3>
       <ul className="operatorList">
         <li>status：{compare.status}</li>
-        <li>no_action_baseline_present：{compare.no_action_baseline_present ? "true" : "false"}</li>
+        <li>
+          no_action_baseline_present：
+          {compare.no_action_baseline_present ? "true" : "false"}
+        </li>
         <li>unavailable_reason：{compare.unavailable_reason ?? "none"}</li>
         <li>evidence_refs：{compare.evidence_refs.join(", ") || "none"}</li>
       </ul>
@@ -70,7 +84,11 @@ function ScenarioStatusCard({ panel }: { panel: OperatorFieldTwinScenarioCompare
   );
 }
 
-function ScenarioBoundaryCard({ panel }: { panel: OperatorFieldTwinScenarioCompareV1 }): React.ReactElement {
+function ScenarioBoundaryCard({
+  panel,
+}: {
+  panel: OperatorFieldTwinScenarioCompareV1;
+}): React.ReactElement {
   return (
     <article className="operatorPanel" data-card="ScenarioCompareBoundary">
       <h3>情景边界</h3>
@@ -79,7 +97,10 @@ function ScenarioBoundaryCard({ panel }: { panel: OperatorFieldTwinScenarioCompa
           <li key={rule.rule_code}>{rule.label}</li>
         ))}
       </ul>
-      <p>Scenario Compare 只做比较；不提交 recommendation，不创建 AO-ACT task，不进入 approval 或 dispatch。</p>
+      <p>
+        Scenario Compare 可以提交到 recommendation；不会自动审批，不会创建
+        operation plan，不会创建 AO-ACT task，不 dispatch。
+      </p>
     </article>
   );
 }
@@ -87,11 +108,18 @@ function ScenarioBoundaryCard({ panel }: { panel: OperatorFieldTwinScenarioCompa
 export default function OperatorFieldTwinScenarioComparePage(): React.ReactElement {
   const params = useParams();
   const [searchParams] = useSearchParams();
-  const scope = React.useMemo(() => scopeFromSearchParams(searchParams), [searchParams]);
-  const scopeQueryString = React.useMemo(() => buildOperatorTwinScopeQuery(scope), [scope]);
+  const scope = React.useMemo(
+    () => scopeFromSearchParams(searchParams),
+    [searchParams],
+  );
+  const scopeQueryString = React.useMemo(
+    () => buildOperatorTwinScopeQuery(scope),
+    [scope],
+  );
   const fieldId = String(params.fieldId ?? "").trim() || "field_c8_demo";
   const [state, setState] = React.useState<RuntimeState>("loading");
-  const [panel, setPanel] = React.useState<OperatorFieldTwinScenarioCompareV1 | null>(null);
+  const [panel, setPanel] =
+    React.useState<OperatorFieldTwinScenarioCompareV1 | null>(null);
   const [errorText, setErrorText] = React.useState("");
 
   React.useEffect(() => {
@@ -109,7 +137,11 @@ export default function OperatorFieldTwinScenarioComparePage(): React.ReactEleme
       .catch((error: unknown) => {
         if (!alive) return;
         setPanel(null);
-        setErrorText(error instanceof Error ? error.message : "OPERATOR_FIELD_TWIN_SCENARIO_COMPARE_LOAD_FAILED");
+        setErrorText(
+          error instanceof Error
+            ? error.message
+            : "OPERATOR_FIELD_TWIN_SCENARIO_COMPARE_LOAD_FAILED",
+        );
         setState("error");
       });
 
@@ -130,26 +162,76 @@ export default function OperatorFieldTwinScenarioComparePage(): React.ReactEleme
           <p className="operatorEyebrow">Scenario Compare</p>
           <h2>地块情景比较</h2>
           <p>
-            当前地块：<strong>{panel?.field_context.field_name ?? fieldId}</strong>。
-            本页只展示 scenario_compare_v1、no_action_baseline_present、options、risk_delta、confidence_text、failure_conditions、evidence_refs 与 unavailable_reason。
+            当前地块：
+            <strong>{panel?.field_context.field_name ?? fieldId}</strong>。
+            本页只展示
+            scenario_compare_v1、no_action_baseline_present、options、risk_delta、confidence_text、failure_conditions、evidence_refs
+            与 unavailable_reason。
           </p>
         </div>
         <div className="operatorWorkbenchHeroActions">
-          <Link className="operatorActionLink" to={"/operator/twin/fields/" + encodeURIComponent(fieldId) + scopeQueryString}>返回 Field Twin</Link>
-          <Link className="operatorActionLink" to={"/operator/twin/fields/" + encodeURIComponent(fieldId) + "/forecast" + scopeQueryString}>查看 Forecast</Link>
-          <Link className="operatorActionLink" to={"/operator/twin/fields/" + encodeURIComponent(fieldId) + "/evidence" + scopeQueryString}>Evidence</Link>
-          <Link className="operatorActionLink" to={"/operator/twin" + scopeQueryString}>返回 Twin 总览</Link>
+          <Link
+            className="operatorActionLink"
+            to={
+              "/operator/twin/fields/" +
+              encodeURIComponent(fieldId) +
+              scopeQueryString
+            }
+          >
+            返回 Field Twin
+          </Link>
+          <Link
+            className="operatorActionLink"
+            to={
+              "/operator/twin/fields/" +
+              encodeURIComponent(fieldId) +
+              "/forecast" +
+              scopeQueryString
+            }
+          >
+            查看 Forecast
+          </Link>
+          <Link
+            className="operatorActionLink"
+            to={
+              "/operator/twin/fields/" +
+              encodeURIComponent(fieldId) +
+              "/evidence" +
+              scopeQueryString
+            }
+          >
+            Evidence
+          </Link>
+          <Link
+            className="operatorActionLink"
+            to={"/operator/twin" + scopeQueryString}
+          >
+            返回 Twin 总览
+          </Link>
         </div>
       </div>
 
-      {state === "loading" ? <div className="operatorPanel">Scenario Compare 数据加载中...</div> : null}
-      {state === "error" ? <div className="operatorPanel">Scenario Compare 数据加载失败：{errorText}</div> : null}
+      {state === "loading" ? (
+        <div className="operatorPanel">Scenario Compare 数据加载中...</div>
+      ) : null}
+      {state === "error" ? (
+        <div className="operatorPanel">
+          Scenario Compare 数据加载失败：{errorText}
+        </div>
+      ) : null}
 
       {panel ? (
         <div className="operatorPanelGrid">
           <ScenarioStatusCard panel={panel} />
           <ScenarioCompareTable options={panel.scenario_compare_v1.options} />
           <ScenarioBoundaryCard panel={panel} />
+          <SubmitScenarioToRecommendationPanel
+            fieldId={fieldId}
+            scenarioSetId={panel.scenario_compare_v1.scenario_set_id ?? ""}
+            options={panel.scenario_compare_v1.options}
+            evidenceRefs={panel.scenario_compare_v1.evidence_refs}
+            scope={scope}
+          />
         </div>
       ) : null}
     </section>
