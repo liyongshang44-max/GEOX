@@ -99,25 +99,51 @@ function operationToCustomerItem(op: OperationFactProjection, fieldNameById: Map
 
 const CUSTOMER_CONFIRMED_TWIN_BOUNDARY_RULES = ["CUSTOMER_SUMMARY_ONLY", "NO_FORECAST_RUN", "NO_SCENARIO_EDIT", "NO_RECOMMENDATION_SUBMIT", "NO_APPROVAL", "NO_DISPATCH", "NO_TASK_CREATION"] as const;
 
+type FactLink = { path: string[]; value: string | null | undefined };
 function factPayload(row: any): any { return safeJsonParse(row?.record_json)?.payload ?? safeJsonParse(row?.record_json) ?? {}; }
 function upperText(value: unknown, fallback: string): string { return String(value ?? fallback).trim().toUpperCase() || fallback; }
-async function latestFactPayload(pool: Pool, tenant: TenantTriple, type: string, fieldId: string, extra = ""): Promise<any | null> {
-  const q = await pool.query(`SELECT record_json FROM facts WHERE record_json::jsonb->>'type' = $4 AND record_json::jsonb#>>'{payload,tenant_id}' = $1 AND (record_json::jsonb#>>'{payload,project_id}' = $2 OR COALESCE(record_json::jsonb#>>'{payload,project_id}','') = '') AND (record_json::jsonb#>>'{payload,group_id}' = $3 OR COALESCE(record_json::jsonb#>>'{payload,group_id}','') = '') AND (record_json::jsonb#>>'{payload,field_id}' = $5 OR record_json::jsonb#>>'{payload,spatial_scope,field_id}' = $5) ${extra} ORDER BY occurred_at DESC, fact_id DESC LIMIT 1`, [tenant.tenant_id, tenant.project_id, tenant.group_id, type, fieldId]).catch(() => ({ rows: [] as any[] }));
+function uniqueText(values: unknown[]): string[] { return Array.from(new Set(values.map((value) => String(value ?? "").trim()).filter(Boolean))); }
+function jsonbPath(path: string[]): string { return `{payload,${path.join(",")}}`; }
+async function latestFactPayload(pool: Pool, tenant: TenantTriple, type: string, fieldId: string, links: FactLink[] = []): Promise<any | null> {
+  const params: any[] = [tenant.tenant_id, tenant.project_id, tenant.group_id, type, fieldId];
+  const linkSql: string[] = [];
+  for (const link of links) {
+    const value = String(link.value ?? "").trim();
+    if (!value) continue;
+    params.push(value);
+    linkSql.push(`record_json::jsonb#>>'${jsonbPath(link.path)}' = $${params.length}`);
+  }
+  if (links.length > 0 && linkSql.length === 0) return null;
+  const q = await pool.query(`SELECT record_json FROM facts WHERE record_json::jsonb->>'type' = $4 AND record_json::jsonb#>>'{payload,tenant_id}' = $1 AND (record_json::jsonb#>>'{payload,project_id}' = $2 OR COALESCE(record_json::jsonb#>>'{payload,project_id}','') = '') AND (record_json::jsonb#>>'{payload,group_id}' = $3 OR COALESCE(record_json::jsonb#>>'{payload,group_id}','') = '') AND (record_json::jsonb#>>'{payload,field_id}' = $5 OR record_json::jsonb#>>'{payload,spatial_scope,field_id}' = $5) ${linkSql.length ? `AND (${linkSql.join(" OR ")})` : ""} ORDER BY occurred_at DESC, fact_id DESC LIMIT 1`, params).catch(() => ({ rows: [] as any[] }));
   return q.rows?.[0] ? factPayload(q.rows[0]) : null;
 }
 async function customerConfirmedTwinSummary(pool: Pool, tenant: TenantTriple, fieldId: string): Promise<any> {
   const submission = await latestFactPayload(pool, tenant, "operator_scenario_recommendation_submission_v1", fieldId);
   if (!submission) return { version: "v1", field_id: fieldId, summary_status: "NOT_AVAILABLE", reason: "NO_CONFIRMED_OPERATOR_RECOMMENDATION", state_summary: null, risk_summary: null, recommendation_summary: null, evidence_summary: { evidence_refs: [], evidence_count: 0, quality_status: "UNKNOWN", missing_reasons: ["NO_CONFIRMED_OPERATOR_RECOMMENDATION"] }, boundary_rules: [...CUSTOMER_CONFIRMED_TWIN_BOUNDARY_RULES] };
   const recommendationId = textOrNull(submission.recommendation_id ?? submission.decision_recommendation_id ?? submission.recommendation?.recommendation_id);
-  const recommendation = recommendationId ? await latestFactPayload(pool, tenant, "decision_recommendation_v1", fieldId, `AND (record_json::jsonb#>>'{payload,recommendation_id}' = '${recommendationId.replace(/'/g, "''")}' OR record_json::jsonb#>>'{payload,decision_recommendation_id}' = '${recommendationId.replace(/'/g, "''")}')`) : await latestFactPayload(pool, tenant, "decision_recommendation_v1", fieldId);
+  const recommendation = await latestFactPayload(pool, tenant, "decision_recommendation_v1", fieldId, [
+    { path: ["recommendation_id"], value: recommendationId },
+    { path: ["decision_recommendation_id"], value: recommendationId },
+  ]);
   const rec = recommendation ?? submission.recommendation ?? {};
-  const evidence = await latestFactPayload(pool, tenant, "operator_field_twin_evidence_quality_v1", fieldId);
-  const refs = Array.isArray(evidence?.evidence_refs) ? evidence.evidence_refs : Array.isArray(submission.evidence_refs) ? submission.evidence_refs : [];
-  const approval = await latestFactPayload(pool, tenant, "approval_request_v1", fieldId);
-  const plan = await latestFactPayload(pool, tenant, "operation_plan_v1", fieldId);
-  const task = await latestFactPayload(pool, tenant, "ao_act_task_v0", fieldId);
+  const recIds = uniqueText([recommendationId, rec.recommendation_id, rec.decision_recommendation_id]);
+  const evidence = await latestFactPayload(pool, tenant, "operator_field_twin_evidence_quality_v1", fieldId, recIds.flatMap((id) => ([{ path: ["recommendation_id"], value: id }, { path: ["decision_recommendation_id"], value: id }])));
+  const refs = Array.isArray(evidence?.evidence_refs) ? evidence.evidence_refs : Array.isArray(rec.evidence_refs) ? rec.evidence_refs : Array.isArray(submission.evidence_refs) ? submission.evidence_refs : [];
+  const approval = await latestFactPayload(pool, tenant, "approval_request_v1", fieldId, recIds.flatMap((id) => ([{ path: ["recommendation_id"], value: id }, { path: ["decision_recommendation_id"], value: id }])));
+  const approvalIds = uniqueText([approval?.approval_request_id, approval?.request_id]);
+  const planLinks = [
+    ...recIds.flatMap((id) => ([{ path: ["recommendation_id"], value: id }, { path: ["decision_recommendation_id"], value: id }])),
+    ...approvalIds.flatMap((id) => ([{ path: ["approval_request_id"], value: id }, { path: ["request_id"], value: id }]))
+  ];
+  const plan = await latestFactPayload(pool, tenant, "operation_plan_v1", fieldId, planLinks);
+  const planIds = uniqueText([plan?.operation_plan_id, plan?.operation_id]);
+  const taskLinks = [
+    ...recIds.flatMap((id) => ([{ path: ["recommendation_id"], value: id }, { path: ["decision_recommendation_id"], value: id }])),
+    ...planIds.flatMap((id) => ([{ path: ["operation_plan_id"], value: id }, { path: ["operation_id"], value: id }]))
+  ];
+  const task = await latestFactPayload(pool, tenant, "ao_act_task_v0", fieldId, taskLinks);
   const amount = rec.amount_mm ?? rec.irrigation_amount_mm ?? rec.prescription?.amount_mm ?? submission.amount_mm ?? null;
-  return { version: "v1", field_id: fieldId, summary_status: "AVAILABLE", confirmed_at: textOrNull(submission.submitted_at ?? submission.confirmed_at ?? submission.created_at) ?? new Date().toISOString(), confirmed_by: "OPERATOR", state_summary: { water_state: upperText(submission.water_state ?? rec.water_state, "MODERATE_DEFICIT"), crop_stage: textOrNull(submission.crop_stage ?? rec.crop_stage), confidence: upperText(submission.confidence ?? rec.confidence, "MEDIUM"), status_text: textOrNull(submission.status_text ?? rec.status_text) ?? "Operator 已确认的正式状态摘要" }, risk_summary: { primary_risk: upperText(submission.primary_risk ?? rec.primary_risk, "WATER_DEFICIT"), risk_level: upperText(submission.risk_level ?? rec.risk_level, "MODERATE"), time_window: textOrNull(submission.time_window ?? rec.time_window) ?? "72h", confidence: upperText(submission.risk_confidence ?? rec.confidence, "MEDIUM") }, recommendation_summary: { recommendation_id: recommendationId ?? textOrNull(rec.recommendation_id) ?? "rec_confirmed", recommendation_type: upperText(rec.recommendation_type ?? rec.action_type ?? submission.recommendation_type, "IRRIGATION"), action_summary: textOrNull(rec.action_summary ?? rec.summary) ?? "Irrigation recommended", amount_mm: amount == null ? null : Number(amount), human_approval_required: rec.human_approval_required !== false, approval_status: textOrNull(approval?.status ?? approval?.approval_status) ?? "PENDING_OR_NOT_CREATED", operation_plan_status: textOrNull(plan?.status ?? plan?.final_status) ?? "NOT_CREATED", task_status: textOrNull(task?.status ?? task?.task_status) ?? "NOT_CREATED" }, evidence_summary: { evidence_refs: refs, evidence_count: refs.length, quality_status: upperText(evidence?.quality_status, refs.length ? "SUFFICIENT" : "UNKNOWN"), missing_reasons: Array.isArray(evidence?.missing_reasons) ? evidence.missing_reasons : [] }, boundary_rules: [...CUSTOMER_CONFIRMED_TWIN_BOUNDARY_RULES] };
+  return { version: "v1", field_id: fieldId, summary_status: "AVAILABLE", confirmed_at: textOrNull(submission.submitted_at ?? submission.confirmed_at ?? submission.created_at) ?? new Date().toISOString(), confirmed_by: "OPERATOR", state_summary: { water_state: upperText(submission.water_state ?? rec.water_state, "MODERATE_DEFICIT"), crop_stage: textOrNull(submission.crop_stage ?? rec.crop_stage), confidence: upperText(submission.confidence ?? rec.confidence, "MEDIUM"), status_text: textOrNull(submission.status_text ?? rec.status_text) ?? "Operator 已确认的正式状态摘要" }, risk_summary: { primary_risk: upperText(submission.primary_risk ?? rec.primary_risk, "WATER_DEFICIT"), risk_level: upperText(submission.risk_level ?? rec.risk_level, "MODERATE"), time_window: textOrNull(submission.time_window ?? rec.time_window) ?? "72h", confidence: upperText(submission.risk_confidence ?? rec.confidence, "MEDIUM") }, recommendation_summary: { recommendation_id: recIds[0] ?? "rec_confirmed", recommendation_type: upperText(rec.recommendation_type ?? rec.action_type ?? submission.recommendation_type, "IRRIGATION"), action_summary: textOrNull(rec.action_summary ?? rec.summary) ?? "Irrigation recommended", amount_mm: amount == null ? null : Number(amount), human_approval_required: rec.human_approval_required !== false, approval_status: textOrNull(approval?.status ?? approval?.approval_status) ?? "NOT_LINKED", operation_plan_status: textOrNull(plan?.status ?? plan?.final_status) ?? "NOT_CREATED", task_status: textOrNull(task?.status ?? task?.task_status) ?? "NOT_CREATED" }, evidence_summary: { evidence_refs: refs, evidence_count: refs.length, quality_status: upperText(evidence?.quality_status, refs.length ? "SUFFICIENT" : "UNKNOWN"), missing_reasons: Array.isArray(evidence?.missing_reasons) ? evidence.missing_reasons : [] }, boundary_rules: [...CUSTOMER_CONFIRMED_TWIN_BOUNDARY_RULES] };
 }
 
 function memoryMetricText(row: any): string { const key = String(row.metric_key ?? "").toLowerCase(); if (key.includes("soil_moisture")) return `土壤水分：${String(row.metric_value ?? row.after_value ?? "待补充")}`; return "地块响应指标已记录"; }

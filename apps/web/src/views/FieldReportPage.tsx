@@ -69,7 +69,11 @@ export default function FieldReportPage(): React.ReactElement {
 
   React.useEffect(() => {
     let alive = true;
-    void fetchCustomerConfirmedTwinSummary(fieldId).then((res) => { if (alive) setConfirmedTwinSummary(res); }).catch(() => { if (alive) setConfirmedTwinSummary(null); });
+    setConfirmedTwinSummary(null);
+    void fetchCustomerConfirmedTwinSummary(fieldId).then((res) => {
+      const summary = res?.customer_confirmed_twin_summary_v1;
+      if (alive && summary?.field_id === fieldId) setConfirmedTwinSummary(res);
+    }).catch(() => { if (alive) setConfirmedTwinSummary(null); });
     return () => { alive = false; };
   }, [fieldId]);
 

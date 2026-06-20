@@ -4940,6 +4940,16 @@ function applyP13OpenApiAlignment(spec: any) {
       }
     },
 
+    "/api/v1/customer/fields/{field_id}/confirmed-twin-summary": {
+      get: {
+        tags: ["customer"],
+        summary: "Read customer confirmed twin summary",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: "field_id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { "200": { description: "Customer confirmed twin summary" } }
+      }
+    },
+
     "/api/v1/customer/fields/{fieldId}/geometry": {
       get: {
         tags: ["customer"],
