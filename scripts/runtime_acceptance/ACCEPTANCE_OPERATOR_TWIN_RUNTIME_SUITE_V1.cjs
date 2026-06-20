@@ -11,6 +11,7 @@ const checks = [
   ['runtime forecast panel shape', 'ci:runtime:operator-field-twin-forecast-panel-shape'],
   ['runtime scenario compare shape', 'ci:runtime:operator-field-twin-scenario-compare-shape'],
   ['runtime evidence quality shape', 'ci:runtime:operator-field-twin-evidence-quality-shape'],
+  ['runtime calibration replay shape', 'ci:runtime:operator-field-twin-calibration-replay-shape'],
 ];
 
 for (const [label, script] of checks) {
