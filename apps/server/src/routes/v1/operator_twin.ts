@@ -864,13 +864,21 @@ async function latestScenarioSetById(
   fieldId: string,
   scenarioSetId: string,
 ): Promise<Row | null> {
-  const rows = await readRows(
-    pool,
-    "irrigation_scenario_set_index_v1",
-    { ...scope, fieldId },
-    100,
-  );
-  return rows.find((row) => scenarioSetIdOf(row) === scenarioSetId) ?? null;
+  if (!scope.tenantId) return null;
+  if (!(await tableExists(pool, "irrigation_scenario_set_index_v1"))) return null;
+  const result = await pool
+    .query(
+      `SELECT *
+         FROM irrigation_scenario_set_index_v1
+        WHERE tenant_id = $1
+          AND field_id = $2
+          AND scenario_set_id = $3
+        ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST
+        LIMIT 1`,
+      [scope.tenantId, fieldId, scenarioSetId],
+    )
+    .catch(() => ({ rows: [] as Row[] }));
+  return result.rows?.[0] ?? null;
 }
 
 async function latestSubmissionByIdempotencyKey(
