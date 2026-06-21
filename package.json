@@ -222,7 +222,11 @@
     "ci:recommendation-approval-request": "pnpm run ci:governance:recommendation-approval-request-boundary && pnpm run ci:runtime:recommendation-approval-request",
     "ci:governance:recommendation-approval-decision-boundary": "node scripts/governance_acceptance/ACCEPTANCE_RECOMMENDATION_APPROVAL_DECISION_BOUNDARY_V1.cjs",
     "ci:runtime:recommendation-approval-decision": "node scripts/runtime_acceptance/ACCEPTANCE_RECOMMENDATION_APPROVAL_DECISION_RUNTIME_V1.cjs",
-    "ci:recommendation-approval-decision": "pnpm run ci:governance:recommendation-approval-decision-boundary && pnpm run ci:runtime:recommendation-approval-decision"
+    "ci:recommendation-approval-decision": "pnpm run ci:governance:recommendation-approval-decision-boundary && pnpm run ci:runtime:recommendation-approval-decision",
+    "ci:governance:operation-plan-index-schema-migration": "node scripts/governance_acceptance/ACCEPTANCE_OPERATION_PLAN_INDEX_SCHEMA_MIGRATION_V1.cjs",
+    "ci:governance:operation-plan-from-approved-decision-boundary": "node scripts/governance_acceptance/ACCEPTANCE_OPERATION_PLAN_FROM_APPROVED_DECISION_BOUNDARY_V1.cjs",
+    "ci:runtime:operation-plan-from-approved-decision": "node scripts/runtime_acceptance/ACCEPTANCE_OPERATION_PLAN_FROM_APPROVED_DECISION_RUNTIME_V1.cjs",
+    "ci:operation-plan-from-approved-decision": "pnpm run ci:governance:operation-plan-index-schema-migration && pnpm run ci:governance:operation-plan-from-approved-decision-boundary && pnpm run ci:runtime:operation-plan-from-approved-decision"
   },
   "volta": {
     "node": "20.11.1"
