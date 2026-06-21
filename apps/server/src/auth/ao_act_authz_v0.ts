@@ -35,6 +35,7 @@ export type AoActScopeV0 =
   | "approval.request"
   | "approval.decide"
   | "approval.read"
+  | "operation.plan.create"
   | "action.task.create"
   | "action.task.dispatch"
   | "action.receipt.submit"

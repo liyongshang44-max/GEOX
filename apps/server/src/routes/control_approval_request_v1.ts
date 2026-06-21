@@ -5,6 +5,8 @@ import type { Pool } from "pg"; // Postgres pool typing.
 import { randomUUID } from "node:crypto"; // Generate UUIDs for request/decision ids.
 import { buildRecommendationApprovalRequestSubmissionV1 } from "../domain/approval/recommendation_approval_request_builder_v1.js";
 import { buildRecommendationApprovalDecisionSubmissionV1 } from "../domain/approval/recommendation_approval_decision_builder_v1.js";
+import { buildOperationPlanFromApprovalDecisionV1 } from "../domain/operations/operation_plan_from_approval_decision_builder_v1.js";
+import { upsertOperationPlanIndexV1 } from "../projections/operation_plan_index_v1.js";
 
 import { requireAoActAnyScopeV0, requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js"; // Reuse AO-ACT token/scope auth for Sprint 25 approval runtime.
 import {
@@ -212,6 +214,27 @@ async function latestScopedApprovalRequestById(pool: Pool, scope: { tenantId: st
        AND (record_json::jsonb#>>'{payload,request_id}') = $6
      ORDER BY occurred_at DESC, fact_id DESC
      LIMIT 1`, [scope.tenantId, scope.projectId, scope.groupId, scope.fieldId, scope.zoneId, requestId]);
+  const row = res.rows?.[0];
+  return row ? { fact_id: String(row.fact_id ?? ""), payload: parseRecordJsonMaybe(row.record_json)?.payload ?? row.record_json?.payload ?? null } : null;
+}
+
+async function latestOperationPlanSubmissionByIdempotency(pool: Pool, tenantId: string, key: string): Promise<any | null> {
+  if (!tenantId || !key) return null;
+  const res = await pool.query(`SELECT record_json::jsonb AS record_json FROM facts WHERE (record_json::jsonb->>'type') = 'operator_approval_decision_operation_plan_submission_v1' AND (record_json::jsonb#>>'{payload,tenant_id}') = $1 AND (record_json::jsonb#>>'{payload,idempotency_key}') = $2 ORDER BY occurred_at DESC, fact_id DESC LIMIT 1`, [tenantId, key]);
+  const record = parseRecordJsonMaybe(res.rows?.[0]?.record_json) ?? res.rows?.[0]?.record_json;
+  return record?.payload ?? null;
+}
+
+async function latestScopedApprovalDecisionById(pool: Pool, scope: { tenantId: string; projectId: string; groupId: string; fieldId: string; zoneId: string | null }, decisionId: string): Promise<{ fact_id: string; payload: any } | null> {
+  if (!scope.tenantId || !scope.projectId || !scope.groupId || !scope.fieldId || !decisionId) return null;
+  const res = await pool.query(`SELECT fact_id, record_json::jsonb AS record_json FROM facts WHERE (record_json::jsonb->>'type') = 'approval_decision_v1' AND (record_json::jsonb#>>'{payload,tenant_id}') = $1 AND (record_json::jsonb#>>'{payload,project_id}') = $2 AND (record_json::jsonb#>>'{payload,group_id}') = $3 AND (record_json::jsonb#>>'{payload,field_id}') = $4 AND COALESCE(record_json::jsonb#>>'{payload,zone_id}', '') = COALESCE($5, '') AND (record_json::jsonb#>>'{payload,decision_id}') = $6 ORDER BY occurred_at DESC, fact_id DESC LIMIT 1`, [scope.tenantId, scope.projectId, scope.groupId, scope.fieldId, scope.zoneId, decisionId]);
+  const row = res.rows?.[0];
+  return row ? { fact_id: String(row.fact_id ?? ""), payload: parseRecordJsonMaybe(row.record_json)?.payload ?? row.record_json?.payload ?? null } : null;
+}
+
+async function latestApprovalRequestApprovedTransitionForDecision(pool: Pool, tenant: TenantTriple, requestId: string | null, decisionId: string): Promise<{ fact_id: string; payload: any } | null> {
+  if (!requestId || !decisionId) return null;
+  const res = await pool.query(`SELECT fact_id, record_json::jsonb AS record_json FROM facts WHERE (record_json::jsonb->>'type') = 'approval_request_v1' AND (record_json::jsonb#>>'{payload,tenant_id}') = $1 AND (record_json::jsonb#>>'{payload,project_id}') = $2 AND (record_json::jsonb#>>'{payload,group_id}') = $3 AND (record_json::jsonb#>>'{payload,request_id}') = $4 AND (record_json::jsonb#>>'{payload,status}') = 'APPROVED' AND (record_json::jsonb#>>'{payload,decision_id}') = $5 ORDER BY occurred_at DESC, fact_id DESC LIMIT 1`, [tenant.tenant_id, tenant.project_id, tenant.group_id, requestId, decisionId]);
   const row = res.rows?.[0];
   return row ? { fact_id: String(row.fact_id ?? ""), payload: parseRecordJsonMaybe(row.record_json)?.payload ?? row.record_json?.payload ?? null } : null;
 }
@@ -615,9 +638,47 @@ async function handleApprovalApprove(req: any, reply: any, pool: Pool) {
   }
 }
 
+async function handleCreateOperationPlanFromApprovalDecision(req: any, reply: any, pool: Pool) {
+  const auth = requireAoActScopeV0(req, reply, "operation.plan.create");
+  if (!auth) return;
+  if (!(auth.role === "operator" || auth.role === "admin")) return reply.status(403).send({ ok: false, error: "ROLE_OPERATOR_OR_ADMIN_REQUIRED" });
+  const body: any = req.body ?? {};
+  let tenant: TenantTriple;
+  try { tenant = assertTenantTriple(body); } catch { return reply.status(400).send({ surface: "OPERATOR", status: "REJECTED_INVALID_INPUT", operation_plan_created: false, operation_plan_transition_created: false, task_created: false, dispatch_created: false, receipt_created: false, roi_created: false, field_memory_created: false, no_direct_execution: true }); }
+  if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+  const idempotencyKey = String(body.idempotency_key ?? "").trim();
+  const prior = await latestOperationPlanSubmissionByIdempotency(pool, tenant.tenant_id, idempotencyKey);
+  if (prior) return reply.send({ ...prior, status: "REJECTED_DUPLICATE", duplicate: true });
+  const decisionId = String((req.params as any)?.decision_id ?? "").trim();
+  const fieldId = String(body.field_id ?? "").trim();
+  const zoneId = body.zone_id === undefined || body.zone_id === null ? null : String(body.zone_id).trim();
+  const decision = await latestScopedApprovalDecisionById(pool, { tenantId: tenant.tenant_id, projectId: tenant.project_id, groupId: tenant.group_id, fieldId, zoneId }, decisionId);
+  const requestId = String(decision?.payload?.approval_request_id ?? decision?.payload?.request_id ?? decision?.payload?.source_approval_request_id ?? "").trim() || null;
+  const requestTransition = await latestApprovalRequestApprovedTransitionForDecision(pool, tenant, requestId, decisionId);
+  const createdTs = Date.now();
+  const createdAt = new Date(createdTs).toISOString();
+  const submission = buildOperationPlanFromApprovalDecisionV1({ tenant_id: tenant.tenant_id, project_id: tenant.project_id, group_id: tenant.group_id, field_id: fieldId, zone_id: zoneId, operator_id: String(body.operator_id ?? auth.actor_id).trim(), idempotency_key: idempotencyKey, submission_reason: String(body.submission_reason ?? "").trim(), sourceApprovalDecision: decision?.payload ?? null, sourceApprovalDecisionFactId: decision?.fact_id ?? null, sourceApprovalRequestTransition: requestTransition?.payload ?? null, sourceApprovalRequestFactId: requestTransition?.fact_id ?? null, submission_id: "sub_" + randomUUID().replace(/-/g, ""), operation_plan_id: "opl_" + randomUUID().replace(/-/g, ""), created_ts: createdTs, created_at: createdAt });
+  if (submission.status !== "OPERATION_PLAN_CREATED") return reply.status(400).send(submission);
+  const planFactId = "fact_" + randomUUID();
+  const submissionFactId = "fact_" + randomUUID();
+  const payload: any = { ...submission, operation_plan_fact_id: planFactId };
+  const planPayload = { ...((submission as any).operation_plan_v1 ?? {}), approval_decision_fact_id: decision?.fact_id ?? null };
+  payload.operation_plan_v1 = planPayload;
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", [submissionFactId, "operator_approval_decision_operation_plan_api", JSON.stringify({ type: "operator_approval_decision_operation_plan_submission_v1", payload })]);
+    await client.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", [planFactId, "operator_approval_decision_operation_plan_api", JSON.stringify({ type: "operation_plan_v1", payload: planPayload })]);
+    await upsertOperationPlanIndexV1(client, { operation_plan_id: String(planPayload.operation_plan_id), tenant_id: tenant.tenant_id, project_id: tenant.project_id, group_id: tenant.group_id, field_id: fieldId, zone_id: zoneId, spatial_scope_json: planPayload.spatial_scope ?? null, season_id: planPayload.season_id ?? null, program_id: planPayload.program_id ?? null, recommendation_id: planPayload.recommendation_id ?? null, recommendation_fact_id: planPayload.recommendation_fact_id ?? null, approval_request_id: planPayload.approval_request_id ?? null, approval_decision: planPayload.approval_decision ?? null, approval_decision_fact_id: decision?.fact_id ?? null, status: String(planPayload.status), act_task_id: null, receipt_fact_id: null, source_fact_id: planFactId, created_ts: Number(planPayload.created_ts), updated_ts: Number(planPayload.updated_ts) });
+    await client.query("COMMIT");
+    return reply.send(payload);
+  } catch (e: any) { await client.query("ROLLBACK").catch(() => undefined); return reply.status(500).send({ ok: false, error: e?.message ?? "INTERNAL_ERROR" }); } finally { client.release(); }
+}
+
 export function registerApprovalRequestV1Routes(app: FastifyInstance, pool: Pool) {
   app.post("/api/v1/operator/recommendations/:recommendation_id/request-approval", async (req, reply) => handleRecommendationApprovalRequest(req, reply, pool));
   app.post("/api/v1/operator/approval-requests/:request_id/decision", async (req, reply) => handleRecommendationApprovalDecision(req, reply, pool));
+  app.post("/api/v1/operator/approval-decisions/:decision_id/create-operation-plan", async (req, reply) => handleCreateOperationPlanFromApprovalDecision(req, reply, pool));
   app.post("/api/v1/approvals/request", async (req, reply) => handleApprovalRequest(req, reply, pool));
   app.get("/api/v1/approvals/requests", async (req, reply) => handleApprovalRequestsList(req, reply, pool));
   app.post("/api/v1/approvals/approve", async (req, reply) => {
