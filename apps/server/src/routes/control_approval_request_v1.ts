@@ -3,6 +3,7 @@
 import type { FastifyInstance } from "fastify"; // Fastify instance typing.
 import type { Pool } from "pg"; // Postgres pool typing.
 import { randomUUID } from "node:crypto"; // Generate UUIDs for request/decision ids.
+import { buildRecommendationApprovalRequestSubmissionV1 } from "../domain/approval/recommendation_approval_request_builder_v1.js";
 
 import { requireAoActAnyScopeV0, requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js"; // Reuse AO-ACT token/scope auth for Sprint 25 approval runtime.
 import {
@@ -146,6 +147,90 @@ function logLegacyApprovalWarning(req: any, legacyPath: string): void {
     }, "deprecated legacy approval API used");
   } catch {
     // ignore logging failures on compatibility path
+  }
+}
+
+async function latestRecommendationById(pool: Pool, scope: { tenantId: string; projectId: string; groupId: string; fieldId: string; zoneId: string | null }, recommendationId: string): Promise<{ fact_id: string; payload: any } | null> {
+  if (!scope.tenantId || !scope.projectId || !scope.groupId || !scope.fieldId || !recommendationId) return null;
+  const res = await pool.query(`
+    SELECT fact_id, record_json::jsonb AS record_json
+      FROM facts
+     WHERE (record_json::jsonb->>'type') = 'decision_recommendation_v1'
+       AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+       AND (record_json::jsonb#>>'{payload,project_id}') = $2
+       AND (record_json::jsonb#>>'{payload,group_id}') = $3
+       AND (record_json::jsonb#>>'{payload,field_id}') = $4
+       AND COALESCE(record_json::jsonb#>>'{payload,zone_id}', '') = COALESCE($5, '')
+       AND (record_json::jsonb#>>'{payload,recommendation_id}') = $6
+     ORDER BY occurred_at DESC, fact_id DESC
+     LIMIT 1`, [scope.tenantId, scope.projectId, scope.groupId, scope.fieldId, scope.zoneId, recommendationId]);
+  const row = res.rows?.[0];
+  return row ? { fact_id: String(row.fact_id ?? ""), payload: parseRecordJsonMaybe(row.record_json)?.payload ?? row.record_json?.payload ?? null } : null;
+}
+
+async function latestRecommendationApprovalSubmissionByIdempotency(pool: Pool, tenantId: string, key: string): Promise<any | null> {
+  if (!tenantId || !key) return null;
+  const res = await pool.query(`
+    SELECT record_json::jsonb AS record_json
+      FROM facts
+     WHERE (record_json::jsonb->>'type') = 'operator_recommendation_approval_request_submission_v1'
+       AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+       AND (record_json::jsonb#>>'{payload,idempotency_key}') = $2
+     ORDER BY occurred_at DESC, fact_id DESC
+     LIMIT 1`, [tenantId, key]);
+  const record = parseRecordJsonMaybe(res.rows?.[0]?.record_json) ?? res.rows?.[0]?.record_json;
+  return record?.payload ?? null;
+}
+
+async function handleRecommendationApprovalRequest(req: any, reply: any, pool: Pool) {
+  const auth = requireAoActAnyScopeV0(req, reply, ["approval.request", "recommendation.approval_request"]);
+  if (!auth) return;
+  (req as any).auth = auth;
+  const body: any = req.body ?? {};
+  let tenant: TenantTriple;
+  try { tenant = assertTenantTriple(body); } catch (e: any) { return reply.status(400).send({ ok: false, error: e?.message ?? "BAD_REQUEST" }); }
+  if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+  const idempotencyKey = String(body.idempotency_key ?? "").trim();
+  const prior = await latestRecommendationApprovalSubmissionByIdempotency(pool, tenant.tenant_id, idempotencyKey);
+  if (prior) return reply.send({ ...prior, status: "REJECTED_DUPLICATE", duplicate: true });
+
+  const recommendationId = String((req.params as any)?.recommendation_id ?? "").trim();
+  const requestZoneId = body.zone_id === undefined || body.zone_id === null ? null : String(body.zone_id).trim();
+  const found = await latestRecommendationById(pool, { tenantId: tenant.tenant_id, projectId: tenant.project_id, groupId: tenant.group_id, fieldId: String(body.field_id ?? "").trim(), zoneId: requestZoneId }, recommendationId);
+  const submission = buildRecommendationApprovalRequestSubmissionV1({
+    tenant_id: tenant.tenant_id,
+    project_id: tenant.project_id,
+    group_id: tenant.group_id,
+    field_id: String(body.field_id ?? "").trim(),
+    zone_id: requestZoneId,
+    operator_id: String(body.operator_id ?? "").trim(),
+    idempotency_key: idempotencyKey,
+    submission_reason: String(body.submission_reason ?? "").trim(),
+    sourceRecommendation: found?.payload ?? null,
+    sourceRecommendationFactId: found?.fact_id ?? null,
+    submission_id: "sub_" + randomUUID().replace(/-/g, ""),
+    approval_request_id: "apr_pending_" + randomUUID().replace(/-/g, ""),
+    created_at: new Date().toISOString(),
+    time_window: body.time_window,
+  });
+  if (submission.status !== "SUBMITTED_TO_APPROVAL_REQUEST" || !submission.approval_request_v1) return reply.status(400).send(submission);
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const created = await createApprovalRequestV1(client, auth, submission.approval_request_v1);
+    const payload = { ...submission, approval_request_id: created.request_id, approval_request_fact_id: created.fact_id };
+    await client.query(
+      "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+      ["fact_" + randomUUID(), "operator_recommendation_approval_request_submission_api", JSON.stringify({ type: "operator_recommendation_approval_request_submission_v1", payload })],
+    );
+    await client.query("COMMIT");
+    return reply.send(payload);
+  } catch (e: any) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    return reply.status(500).send({ ok: false, error: e?.message ?? "INTERNAL_ERROR" });
+  } finally {
+    client.release();
   }
 }
 
@@ -444,6 +529,7 @@ async function handleApprovalApprove(req: any, reply: any, pool: Pool) {
 }
 
 export function registerApprovalRequestV1Routes(app: FastifyInstance, pool: Pool) {
+  app.post("/api/v1/operator/recommendations/:recommendation_id/request-approval", async (req, reply) => handleRecommendationApprovalRequest(req, reply, pool));
   app.post("/api/v1/approvals/request", async (req, reply) => handleApprovalRequest(req, reply, pool));
   app.get("/api/v1/approvals/requests", async (req, reply) => handleApprovalRequestsList(req, reply, pool));
   app.post("/api/v1/approvals/approve", async (req, reply) => {
