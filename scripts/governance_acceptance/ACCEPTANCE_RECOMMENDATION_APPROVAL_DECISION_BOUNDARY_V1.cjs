@@ -1,21 +1,139 @@
 // scripts/governance_acceptance/ACCEPTANCE_RECOMMENDATION_APPROVAL_DECISION_BOUNDARY_V1.cjs
-const fs = require('node:fs'); const path = require('node:path'); const assert = require('node:assert/strict');
-const root = path.resolve(__dirname, '../..'); const read = (p) => fs.readFileSync(path.join(root,p),'utf8');
-const route = read('apps/server/src/routes/control_approval_request_v1.ts');
-const builder = read('apps/server/src/domain/approval/recommendation_approval_decision_builder_v1.ts');
-const roles = read('apps/server/src/domain/auth/roles.ts');
-function ok(c,m){assert.ok(c,m); console.log('ok - '+m)}
-ok(route.includes('/api/v1/operator/approval-requests/:request_id/decision'), 'route exists');
-ok(route.includes("approval_request_v1") && route.includes('latestScopedApprovalRequestById'), 'route reads approval_request_v1 by scope');
-ok(route.includes("type: \"approval_decision_v1\""), 'route writes approval_decision_v1');
-ok(route.includes("operator_recommendation_approval_decision_submission_v1"), 'route writes operator_recommendation_approval_decision_submission_v1');
-ok(route.includes("type: \"approval_request_v1\"") && route.includes('approval_request_transition_v1'), 'route appends approval_request_v1 transition');
-const h = route.slice(route.indexOf('async function handleRecommendationApprovalDecision'), route.indexOf('async function handleRecommendationApprovalRequest'));
-for (const bad of ['/api/v1/actions/task','operation_plan_v1','operation_plan_transition_v1','ao_act_task_v0','roi_ledger_v1','field_memory_v1']) ok(!h.includes(bad), `decision route does not create/call ${bad}`);
-for (const bad of ['from "pg"','from "fastify"','routes/','process.env','Date.now','new Date','randomUUID']) ok(!builder.includes(bad), `builder excludes ${bad}`);
-ok(/approver:\s*\[[^\]]*"approval\.decide"/.test(roles) && /admin:\s*\["\*"\]/.test(roles), 'auth matrix gives approval.decide to approver/admin');
-ok(!/operator:\s*\[[^\]]*"approval\.decide"/.test(roles), 'operator role does not get approval.decide');
-const files = []; function walk(d){ for(const e of fs.readdirSync(d,{withFileTypes:true})){ if(['node_modules','.git','dist','build'].includes(e.name)) continue; const p=path.join(d,e.name); if(e.isDirectory()) walk(p); else if(/\.(ts|tsx|js|jsx)$/.test(e.name)) files.push(p); }}
-for (const d of ['apps/server/src/routes','apps/web/src']) { const full=path.join(root,d); if(fs.existsSync(full)) walk(full); }
-for (const f of files.filter(f=>/customer/i.test(f))) { const s=fs.readFileSync(f,'utf8'); ok(!s.includes('operator_recommendation_approval_decision_submission_v1'), `customer file hides operator decision submission ${path.relative(root,f)}`); ok(!s.includes('approval_decision_v1') || s.includes('confirmed'), `customer file hides unconfirmed approval_decision_v1 ${path.relative(root,f)}`); }
-console.log('ACCEPTANCE_RECOMMENDATION_APPROVAL_DECISION_BOUNDARY_V1 passed');
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+
+const REPO_ROOT = path.resolve(__dirname, "../..");
+
+function readRepoFile(relativePath) {
+  return fs.readFileSync(path.join(REPO_ROOT, relativePath), "utf8");
+}
+
+function pass(message) {
+  console.log(`ok - ${message}`);
+}
+
+function must(condition, message, detail) {
+  assert.ok(condition, detail || message);
+  pass(message);
+}
+
+function routeHandlerSource(routeSource) {
+  const start = routeSource.indexOf("async function handleRecommendationApprovalDecision");
+  const end = routeSource.indexOf("async function handleRecommendationApprovalRequest");
+  assert.ok(start >= 0 && end > start, "H37 decision handler source must be locatable");
+  return routeSource.slice(start, end);
+}
+
+function listSourceFiles(relativeDirectory) {
+  const directory = path.join(REPO_ROOT, relativeDirectory);
+  const output = [];
+
+  if (!fs.existsSync(directory)) return output;
+
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    if (["node_modules", ".git", "dist", "build"].includes(entry.name)) continue;
+
+    const fullPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      output.push(...listSourceFiles(path.relative(REPO_ROOT, fullPath)));
+      continue;
+    }
+
+    if (/\.(ts|tsx|js|jsx)$/.test(entry.name)) {
+      output.push(fullPath);
+    }
+  }
+
+  return output;
+}
+
+function assertCustomerFilesDoNotExposeDecisionFacts() {
+  const files = [
+    ...listSourceFiles("apps/server/src/routes"),
+    ...listSourceFiles("apps/web/src"),
+  ].filter((filePath) => /customer/i.test(filePath));
+
+  for (const filePath of files) {
+    const source = fs.readFileSync(filePath, "utf8");
+    const relativePath = path.relative(REPO_ROOT, filePath);
+
+    must(
+      !source.includes("operator_recommendation_approval_decision_submission_v1"),
+      `customer file hides operator decision submission ${relativePath}`,
+    );
+    must(
+      !source.includes("approval_decision_v1") || source.includes("confirmed"),
+      `customer file hides unconfirmed approval_decision_v1 ${relativePath}`,
+    );
+  }
+}
+
+const routeSource = readRepoFile("apps/server/src/routes/control_approval_request_v1.ts");
+const builderSource = readRepoFile("apps/server/src/domain/approval/recommendation_approval_decision_builder_v1.ts");
+const roleSource = readRepoFile("apps/server/src/domain/auth/roles.ts");
+const h37RouteSource = routeHandlerSource(routeSource);
+
+must(
+  routeSource.includes('/api/v1/operator/approval-requests/:request_id/decision'),
+  "route exists",
+);
+must(
+  h37RouteSource.includes("approval_request_v1")
+    && h37RouteSource.includes("latestScopedApprovalRequestById"),
+  "route reads approval_request_v1 by full scope helper",
+);
+must(
+  h37RouteSource.includes('type: "approval_decision_v1"'),
+  "route writes approval_decision_v1",
+);
+must(
+  h37RouteSource.includes("operator_recommendation_approval_decision_submission_v1"),
+  "route writes operator_recommendation_approval_decision_submission_v1",
+);
+must(
+  h37RouteSource.includes('type: "approval_request_v1"')
+    && h37RouteSource.includes("approval_request_transition_v1"),
+  "route appends approval_request_v1 status transition",
+);
+
+for (const forbidden of [
+  "/api/v1/actions/task",
+  "/api/v1/approvals/approve",
+  "operation_plan_v1",
+  "operation_plan_transition_v1",
+  "ao_act_task_v0",
+  "roi_ledger_v1",
+  "field_memory_v1",
+]) {
+  must(
+    !h37RouteSource.includes(forbidden),
+    `decision route does not call/create ${forbidden}`,
+  );
+}
+
+for (const forbidden of [
+  'from "pg"',
+  'from "fastify"',
+  "routes/",
+  "process.env",
+  "Date.now",
+  "new Date",
+  "randomUUID",
+]) {
+  must(!builderSource.includes(forbidden), `builder excludes ${forbidden}`);
+}
+
+must(
+  /approver:\s*\[[^\]]*"approval\.decide"/.test(roleSource)
+    && /admin:\s*\["\*"\]/.test(roleSource),
+  "auth matrix gives approval.decide to approver/admin",
+);
+must(
+  !/operator:\s*\[[^\]]*"approval\.decide"/.test(roleSource),
+  "operator role does not get approval.decide",
+);
+
+assertCustomerFilesDoNotExposeDecisionFacts();
+
+console.log("ACCEPTANCE_RECOMMENDATION_APPROVAL_DECISION_BOUNDARY_V1 passed");

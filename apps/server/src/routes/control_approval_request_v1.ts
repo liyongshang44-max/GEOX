@@ -248,10 +248,19 @@ async function handleRecommendationApprovalDecision(req: any, reply: any, pool: 
     await client.query("BEGIN");
     const decisionFactId = "fact_" + randomUUID();
     const transitionFactId = "fact_" + randomUUID();
-    const payload = { ...submission, approval_decision_fact_id: decisionFactId };
+    const approvalRequestTransitionPayload = {
+      ...((submission.approval_request_transition_v1 ?? {}) as Record<string, unknown>),
+      approval_decision_fact_id: decisionFactId,
+    };
+    const payload = {
+      ...submission,
+      approval_decision_fact_id: decisionFactId,
+      approval_request_transition_fact_id: transitionFactId,
+      approval_request_transition_v1: approvalRequestTransitionPayload,
+    };
     await client.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", ["fact_" + randomUUID(), "operator_recommendation_approval_decision_api", JSON.stringify({ type: "operator_recommendation_approval_decision_submission_v1", payload })]);
     await client.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", [decisionFactId, "operator_recommendation_approval_decision_api", JSON.stringify({ type: "approval_decision_v1", payload: submission.approval_decision_v1 })]);
-    await client.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", [transitionFactId, "operator_recommendation_approval_decision_api", JSON.stringify({ type: "approval_request_v1", payload: submission.approval_request_transition_v1 })]);
+    await client.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", [transitionFactId, "operator_recommendation_approval_decision_api", JSON.stringify({ type: "approval_request_v1", payload: approvalRequestTransitionPayload })]);
     await client.query("COMMIT");
     return reply.send(payload);
   } catch (e: any) {
