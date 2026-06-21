@@ -79,8 +79,11 @@ function trim(value: unknown): string {
 }
 
 function evidenceRefs(scenarioSet: RootZoneIrrigationScenarioSetPayloadV1): string[] {
-  const refs = scenarioSet.derivation?.evidence_refs;
-  return Array.isArray(refs) ? [...new Set(refs.map(trim).filter(Boolean))] : [];
+  return [
+    `root_zone_irrigation_scenario_set_index_v1:${trim(scenarioSet.scenario_set_id)}`,
+    `root_zone_soil_water_forecast_v1:${trim(scenarioSet.source_forecast_id)}`,
+    trim(scenarioSet.source_forecast_ref),
+  ].filter((value, index, values) => value && values.indexOf(value) === index);
 }
 
 function base(input: RootZoneScenarioRecommendationSubmissionInputV1, status: RootZoneScenarioRecommendationSubmissionStatusV1): OperatorRootZoneScenarioRecommendationSubmissionPayloadV1 {
@@ -121,7 +124,7 @@ function base(input: RootZoneScenarioRecommendationSubmissionInputV1, status: Ro
 }
 
 export function buildRootZoneScenarioRecommendationSubmissionV1(input: RootZoneScenarioRecommendationSubmissionInputV1): OperatorRootZoneScenarioRecommendationSubmissionPayloadV1 {
-  if (![input.tenant_id, input.project_id, input.group_id, input.field_id, input.zone_id, input.operator_id, input.idempotency_key, input.submission_reason].every((value) => trim(value))) {
+  if (![input.tenant_id, input.project_id, input.group_id, input.field_id, input.zone_id, input.operator_id, input.idempotency_key, input.submission_reason, input.submission_id, input.recommendation_id].every((value) => trim(value))) {
     return base(input, "REJECTED_INVALID_INPUT");
   }
   const scenarioSet = input.scenarioSet;
