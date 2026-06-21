@@ -1,21 +1,92 @@
 // scripts/governance_acceptance/ACCEPTANCE_SOIL_WATER_POTENTIAL_MODEL_BOUNDARY_V1.cjs
-const fs = require('node:fs'); const path = require('node:path'); require('tsx/cjs');
-const NAME='ACCEPTANCE_SOIL_WATER_POTENTIAL_MODEL_BOUNDARY_V1';
-function assert(c,m,d){ if(!c){ console.error(`[${NAME}] FAIL: ${m}`, d||''); process.exit(1);} }
-const file=path.join(process.cwd(),'apps/server/src/domain/soil_water/van_genuchten_v1.ts');
-assert(fs.existsSync(file),'model module missing');
-const src=fs.readFileSync(file,'utf8');
-assert(src.startsWith('// apps/server/src/domain/soil_water/van_genuchten_v1.ts'),'first-line path comment missing');
-const { estimateVanGenuchtenMatricPotentialV1 } = require(file);
-const input={theta:0.28,theta_r:0.08,theta_s:0.43,alpha_per_kpa:0.035,n:1.56};
-const a=estimateVanGenuchtenMatricPotentialV1(input); const b=estimateVanGenuchtenMatricPotentialV1(input);
-assert(a.ok && a.input_status==='ESTIMATED' && Number.isFinite(a.matric_potential_kpa) && a.matric_potential_kpa<0,'valid input did not estimate finite negative',a);
-assert(JSON.stringify(a)===JSON.stringify(b),'same input must produce identical output',{a,b});
-assert(estimateVanGenuchtenMatricPotentialV1({...input,theta:0.08}).input_status==='INVALID_INPUT','theta <= theta_r must be invalid');
-assert(estimateVanGenuchtenMatricPotentialV1({...input,theta:0.43}).input_status==='INVALID_INPUT','theta >= theta_s must be invalid');
-assert(estimateVanGenuchtenMatricPotentialV1({...input,alpha_per_kpa:0}).input_status==='INVALID_INPUT','alpha <= 0 must be invalid');
-assert(estimateVanGenuchtenMatricPotentialV1({...input,n:1}).input_status==='INVALID_INPUT','n <= 1 must be invalid');
-assert(!/from\s+["']pg["']|require\(["']pg["']\)/.test(src),'model module must not import pg');
-assert(!/routes?\//.test(src),'model module must not import server route modules');
-for (const word of ['recommendation','approval','operation','ao_act','dispatch','roi','field_memory']) assert(!src.toLowerCase().includes(word),'model module references forbidden boundary string '+word);
-console.log(`[${NAME}] PASS`);
+// Purpose: prove the H31 van Genuchten model is deterministic, pure, and guarded.
+
+const fs = require("node:fs");
+const path = require("node:path");
+require("tsx/cjs");
+
+const ACCEPTANCE_NAME = "ACCEPTANCE_SOIL_WATER_POTENTIAL_MODEL_BOUNDARY_V1";
+
+function fail(message, detail) {
+  console.error(`[${ACCEPTANCE_NAME}] FAIL: ${message}`);
+  if (detail !== undefined) console.error(typeof detail === "string" ? detail : JSON.stringify(detail, null, 2));
+  process.exit(1);
+}
+
+function assert(condition, message, detail) {
+  if (!condition) fail(message, detail);
+}
+
+function assertInvalid(result, label) {
+  assert(result.ok === false, `${label}: ok must be false`, result);
+  assert(result.input_status === "INVALID_INPUT", `${label}: status must be INVALID_INPUT`, result);
+  assert(result.matric_potential_kpa === null, `${label}: matric potential must be null`, result);
+  assert(result.effective_saturation === null, `${label}: saturation must be null`, result);
+  assert(result.available_water_fraction === null, `${label}: available water must be null`, result);
+  assert(Array.isArray(result.blocking_reasons) && result.blocking_reasons.length > 0, `${label}: reason required`, result);
+}
+
+const modelPath = path.join(process.cwd(), "apps/server/src/domain/soil_water/van_genuchten_v1.ts");
+assert(fs.existsSync(modelPath), "model module missing", modelPath);
+
+const source = fs.readFileSync(modelPath, "utf8").replace(/^\uFEFF/, "");
+assert(source.startsWith("// apps/server/src/domain/soil_water/van_genuchten_v1.ts"), "first-line path comment missing");
+
+const { estimateVanGenuchtenMatricPotentialV1 } = require(modelPath);
+const validInput = {
+  theta: 0.28,
+  theta_r: 0.08,
+  theta_s: 0.43,
+  alpha_per_kpa: 0.035,
+  n: 1.56,
+};
+
+const firstResult = estimateVanGenuchtenMatricPotentialV1(validInput);
+const secondResult = estimateVanGenuchtenMatricPotentialV1(validInput);
+
+assert(firstResult.ok === true, "valid input returns ok=true", firstResult);
+assert(firstResult.input_status === "ESTIMATED", "valid input returns ESTIMATED", firstResult);
+assert(
+  Number.isFinite(firstResult.matric_potential_kpa) && firstResult.matric_potential_kpa < 0,
+  "valid input returns finite negative matric_potential_kpa",
+  firstResult,
+);
+assert(JSON.stringify(firstResult) === JSON.stringify(secondResult), "same input returns byte-identical output");
+
+assertInvalid(estimateVanGenuchtenMatricPotentialV1({ ...validInput, theta: 0.08 }), "theta <= theta_r");
+assertInvalid(estimateVanGenuchtenMatricPotentialV1({ ...validInput, theta: 0.43 }), "theta >= theta_s");
+assertInvalid(estimateVanGenuchtenMatricPotentialV1({ ...validInput, theta_r: 0.43 }), "theta_r >= theta_s");
+assertInvalid(estimateVanGenuchtenMatricPotentialV1({ ...validInput, alpha_per_kpa: 0 }), "alpha <= 0");
+assertInvalid(estimateVanGenuchtenMatricPotentialV1({ ...validInput, n: 1 }), "n <= 1");
+assertInvalid(estimateVanGenuchtenMatricPotentialV1({ ...validInput, m: 0 }), "m <= 0");
+assertInvalid(estimateVanGenuchtenMatricPotentialV1({ ...validInput, theta: Number.NaN }), "non-finite theta");
+assertInvalid(
+  estimateVanGenuchtenMatricPotentialV1({ ...validInput, alpha_per_kpa: Number.POSITIVE_INFINITY }),
+  "non-finite alpha",
+);
+
+const forbiddenPatterns = [
+  /from\s+["']pg["']/,
+  /require\(["']pg["']\)/,
+  /express/,
+  /router/,
+  /app\.get/,
+  /app\.post/,
+  /process\.env/,
+  /Date\.now/,
+  /new\s+Date/,
+  /randomUUID/,
+  /recommendation/,
+  /approval/,
+  /operation_plan/,
+  /ao_act/,
+  /dispatch/,
+  /roi_ledger/,
+  /field_memory/,
+];
+
+for (const pattern of forbiddenPatterns) {
+  assert(!pattern.test(source), `model module contains forbidden boundary token ${pattern}`);
+}
+
+console.log(`[${ACCEPTANCE_NAME}] PASS`);
