@@ -7,8 +7,12 @@ const prefix = 'h39_operation_plan_transition_acceptance_';
 const DATABASE_URL = process.env.DATABASE_URL;
 const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:3001';
 const TOKEN = process.env.GEOX_ACCEPTANCE_TOKEN;
+const APPROVER_ONLY_TOKEN = process.env.GEOX_APPROVER_ONLY_TOKEN || process.env.GEOX_APPROVER_ACCEPTANCE_TOKEN || 'set-via-env-or-external-secret-file-approver';
+const CLIENT_TOKEN = process.env.GEOX_CLIENT_TOKEN || process.env.GEOX_CLIENT_ACCEPTANCE_TOKEN || 'set-via-env-or-external-secret-file-client';
 if (!DATABASE_URL) throw new Error('DATABASE_URL required');
 if (!TOKEN) throw new Error('GEOX_ACCEPTANCE_TOKEN required');
+if (!APPROVER_ONLY_TOKEN) throw new Error('GEOX_APPROVER_ONLY_TOKEN required');
+if (!CLIENT_TOKEN) throw new Error('GEOX_CLIENT_TOKEN required');
 const pool = new Pool({ connectionString: DATABASE_URL });
 const id = () => prefix + crypto.randomUUID().replace(/-/g, '');
 async function insertFact(factId, type, payload) { await pool.query('INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)', [factId, 'h39_operation_plan_transition_acceptance', JSON.stringify({ type, payload })]); }
@@ -30,8 +34,8 @@ const baseBody = (key, source='CREATED', target='APPROVED', patch={}) => ({ tena
     const mismatch=id(); touched.push(mismatch); await seed(mismatch,'CREATED'); res = await post(mismatch, baseBody(id(),'APPROVED','READY')); assert.equal(res.json.status, 'REJECTED_SOURCE_STATUS_MISMATCH');
     const scope=id(); touched.push(scope); await seed(scope,'CREATED'); res = await post(scope, baseBody(id(),'CREATED','APPROVED',{field_id:'wrong_field'})); assert.equal(res.json.status, 'REJECTED_SCOPE_MISMATCH');
     for (const extra of [{act_task_id:'task_x'},{receipt_fact_id:'receipt_x'}]) { const p=id(); touched.push(p); await seed(p,'CREATED',extra); res = await post(p, baseBody(id())); assert.equal(res.json.status, 'REJECTED_DOWNSTREAM_ALREADY_CREATED'); }
-    if (process.env.GEOX_APPROVER_ONLY_TOKEN) { res = await post(plan, baseBody(id(),'READY','APPROVED'), process.env.GEOX_APPROVER_ONLY_TOKEN); assert([401,403].includes(res.statusCode)); }
-    if (process.env.GEOX_CLIENT_TOKEN) { res = await post(plan, baseBody(id(),'READY','APPROVED'), process.env.GEOX_CLIENT_TOKEN); assert([401,403].includes(res.statusCode)); }
+    res = await post(plan, baseBody(id(),'READY','APPROVED'), APPROVER_ONLY_TOKEN); assert([401,403].includes(res.statusCode), 'approver-only token is rejected');
+    res = await post(plan, baseBody(id(),'READY','APPROVED'), CLIENT_TOKEN); assert([401,403].includes(res.statusCode), 'client/viewer token is rejected');
     console.log('ACCEPTANCE_OPERATION_PLAN_TRANSITION_RUNTIME_V1 passed');
   } finally {
     await pool.query("DELETE FROM facts WHERE fact_id LIKE 'fact_h39_operation_plan_transition_acceptance_%' OR source='h39_operation_plan_transition_acceptance' OR (record_json::jsonb#>>'{payload,operation_plan_id}') LIKE $1", [prefix+'%']).catch(()=>{});

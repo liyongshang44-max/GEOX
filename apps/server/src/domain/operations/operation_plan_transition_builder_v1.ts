@@ -123,7 +123,7 @@ export function buildOperationPlanTransitionV1(input: OperationPlanTransitionInp
   if (!scopeOk) return base(input, "REJECTED_SCOPE_MISMATCH", null);
 
   if (nullableText(idx.act_task_id) || nullableText(idx.receipt_fact_id) || nullableText(plan.act_task_id) || nullableText(plan.receipt_fact_id)) return base(input, "REJECTED_DOWNSTREAM_ALREADY_CREATED", null);
-  if (text(idx.status) !== text(input.source_status) || text(plan.status) !== text(idx.status)) return base(input, "REJECTED_SOURCE_STATUS_MISMATCH", null);
+  if (text(idx.status) !== text(input.source_status)) return base(input, "REJECTED_SOURCE_STATUS_MISMATCH", null);
   if (text(plan.approval_decision) !== "APPROVE" || !nullableText(plan.approval_decision_fact_id)) return base(input, "REJECTED_OPERATION_PLAN_NOT_FOUND", null);
 
   const transition = {
