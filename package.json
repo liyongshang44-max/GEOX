@@ -208,7 +208,12 @@
     "ci:governance:root-zone-soil-water-forecast-model-boundary": "node scripts/governance_acceptance/ACCEPTANCE_ROOT_ZONE_SOIL_WATER_FORECAST_MODEL_BOUNDARY_V1.cjs",
     "ci:governance:root-zone-soil-water-forecast-customer-boundary": "node scripts/governance_acceptance/ACCEPTANCE_ROOT_ZONE_SOIL_WATER_FORECAST_CUSTOMER_BOUNDARY_V1.cjs",
     "ci:runtime:root-zone-soil-water-forecast": "node scripts/runtime_acceptance/ACCEPTANCE_ROOT_ZONE_SOIL_WATER_FORECAST_RUNTIME_V1.cjs",
-    "ci:root-zone-soil-water-forecast": "pnpm run ci:governance:root-zone-soil-water-forecast-schema-migration && pnpm run ci:governance:root-zone-soil-water-forecast-model-boundary && pnpm run ci:governance:root-zone-soil-water-forecast-customer-boundary && pnpm run ci:runtime:root-zone-soil-water-forecast"
+    "ci:root-zone-soil-water-forecast": "pnpm run ci:governance:root-zone-soil-water-forecast-schema-migration && pnpm run ci:governance:root-zone-soil-water-forecast-model-boundary && pnpm run ci:governance:root-zone-soil-water-forecast-customer-boundary && pnpm run ci:runtime:root-zone-soil-water-forecast",
+    "ci:governance:root-zone-irrigation-scenario-schema-migration": "node scripts/governance_acceptance/ACCEPTANCE_ROOT_ZONE_IRRIGATION_SCENARIO_SCHEMA_MIGRATION_V1.cjs",
+    "ci:governance:root-zone-irrigation-scenario-model-boundary": "node scripts/governance_acceptance/ACCEPTANCE_ROOT_ZONE_IRRIGATION_SCENARIO_MODEL_BOUNDARY_V1.cjs",
+    "ci:governance:root-zone-irrigation-scenario-customer-boundary": "node scripts/governance_acceptance/ACCEPTANCE_ROOT_ZONE_IRRIGATION_SCENARIO_CUSTOMER_BOUNDARY_V1.cjs",
+    "ci:runtime:root-zone-irrigation-scenario": "node scripts/runtime_acceptance/ACCEPTANCE_ROOT_ZONE_IRRIGATION_SCENARIO_RUNTIME_V1.cjs",
+    "ci:root-zone-irrigation-scenario": "pnpm run ci:governance:root-zone-irrigation-scenario-schema-migration && pnpm run ci:governance:root-zone-irrigation-scenario-model-boundary && pnpm run ci:governance:root-zone-irrigation-scenario-customer-boundary && pnpm run ci:runtime:root-zone-irrigation-scenario"
   },
   "volta": {
     "node": "20.11.1"
