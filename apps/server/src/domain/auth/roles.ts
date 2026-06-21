@@ -9,7 +9,7 @@ export const ROLE_SCOPE_MATRIX_V1: Record<AuthRole, (AoActScopeV0 | "*")[]> = {
   agronomist: ["recommendation.write","recommendation.read","prescription.write","prescription.read","prescription.submit_approval","field.zone.read","field_memory.read","roi_ledger.read","skill.read","skill.trace.write","telemetry.read","inspection.read","inspection.write"],
   approver: ["approval.read","approval.decide","prescription.read","recommendation.read","field.zone.read","inspection.read"],
   executor: ["action.read","action.receipt.submit","ao_act.receipt.write","field.zone.read","skill.run.write","telemetry.write"],
-  operator: ["action.read","action.task.create","action.task.dispatch","action.receipt.submit","judge.execution.write","acceptance.evaluate","field.zone.read","skill.read","skill.run.write","telemetry.read","telemetry.write","inspection.read","inspection.write"],
+  operator: ["recommendation.approval_request","action.read","action.task.create","action.task.dispatch","action.receipt.submit","judge.execution.write","acceptance.evaluate","field.zone.read","skill.read","skill.run.write","telemetry.read","telemetry.write","inspection.read","inspection.write"],
   auditor: ["recommendation.read","prescription.read","approval.read","action.read","judge.read","acceptance.read","field_memory.read","roi_ledger.read","security.audit.read","skill.read","telemetry.read","inspection.read"],
   viewer: ["recommendation.read","prescription.read","action.read","field_memory.read","roi_ledger.read","field.zone.read","telemetry.read"],
   client: ["recommendation.read","prescription.read","action.read","field_memory.read","roi_ledger.read","field.zone.read","skill.read"],

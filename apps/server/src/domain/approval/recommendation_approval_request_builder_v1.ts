@@ -105,16 +105,22 @@ export function buildRecommendationApprovalRequestSubmissionV1(input: Recommenda
   if (!required.every(text) || !win || !Number.isFinite(Number(win.start_ts)) || !Number.isFinite(Number(win.end_ts)) || Number(win.start_ts) >= Number(win.end_ts)) return base(input, "REJECTED_INVALID_INPUT");
   const rec = input.sourceRecommendation;
   if (!rec) return base(input, "REJECTED_RECOMMENDATION_NOT_FOUND");
-  if (["tenant_id", "project_id", "group_id", "field_id"].some((k) => text((rec as any)[k]) !== text((input as any)[k])) || (input.zone_id !== null && text((rec as any).zone_id) !== text(input.zone_id))) return base(input, "REJECTED_SCOPE_MISMATCH");
+  if (["tenant_id", "project_id", "group_id", "field_id"].some((k) => text((rec as any)[k]) !== text((input as any)[k])) || text((rec as any).zone_id) !== text(input.zone_id)) return base(input, "REJECTED_SCOPE_MISMATCH");
   if (text(rec.status) !== "CANDIDATE") return base(input, "REJECTED_RECOMMENDATION_NOT_CANDIDATE");
   if (rec.human_approval_required !== true) return base(input, "REJECTED_NOT_HUMAN_APPROVAL_REQUIRED");
   if (rec.no_direct_execution !== true) return base(input, "REJECTED_DIRECT_EXECUTION_FORBIDDEN");
   if (["approval_created", "operation_plan_created", "task_created", "dispatch_created", "roi_created", "field_memory_created"].some((k) => (rec as any)[k] === true)) return base(input, "REJECTED_DOWNSTREAM_ALREADY_CREATED");
   if (text(rec.source) !== "ROOT_ZONE_SCENARIO_SELECTION" || text(rec.recommendation_kind) !== "IRRIGATION_CANDIDATE_FROM_SCENARIO") return base(input, "REJECTED_RECOMMENDATION_NOT_CANDIDATE");
+  if (!text(rec.source_option_id) || evidence(rec.evidence_refs).length < 1) return base(input, "REJECTED_RECOMMENDATION_NOT_CANDIDATE");
 
   const proposed = (rec.proposed_action && typeof rec.proposed_action === "object") ? rec.proposed_action as Record<string, unknown> : {};
-  const amount = Number(proposed.total_irrigation_mm ?? proposed.total_effective_irrigation_mm ?? (rec as any).amount_mm ?? 0);
-  const parameters = { irrigation_mm: Number.isFinite(amount) ? amount : 0, source_option_id: text(rec.source_option_id) };
+  const actionType = text(proposed.action_type);
+  const amount = Number(proposed.total_irrigation_mm);
+  const effectiveAmount = Number(proposed.total_effective_irrigation_mm);
+  if (!["IRRIGATE", "DELAYED_IRRIGATION"].includes(actionType)) return base(input, "REJECTED_RECOMMENDATION_NOT_CANDIDATE");
+  if (!Number.isFinite(amount) || amount <= 0) return base(input, "REJECTED_RECOMMENDATION_NOT_CANDIDATE");
+  if (!Number.isFinite(effectiveAmount) || effectiveAmount < 0) return base(input, "REJECTED_RECOMMENDATION_NOT_CANDIDATE");
+  const parameters = { irrigation_mm: amount, effective_irrigation_mm: effectiveAmount, source_option_id: text(rec.source_option_id) };
   const approvalBody = {
     tenant_id: text(input.tenant_id), project_id: text(input.project_id), group_id: text(input.group_id), field_id: text(input.field_id), zone_id: input.zone_id,
     issuer: { kind: "human", id: text(input.operator_id), namespace: "operator_recommendation_approval_request_submission_v1" },
