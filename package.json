@@ -229,7 +229,10 @@
     "ci:operation-plan-from-approved-decision": "pnpm run ci:governance:operation-plan-index-schema-migration && pnpm run ci:governance:operation-plan-from-approved-decision-boundary && pnpm run ci:runtime:operation-plan-from-approved-decision",
     "ci:governance:operation-plan-transition-boundary": "node scripts/governance_acceptance/ACCEPTANCE_OPERATION_PLAN_TRANSITION_BOUNDARY_V1.cjs",
     "ci:runtime:operation-plan-transition": "node scripts/runtime_acceptance/ACCEPTANCE_OPERATION_PLAN_TRANSITION_RUNTIME_V1.cjs",
-    "ci:operation-plan-transition": "pnpm run ci:governance:operation-plan-transition-boundary && pnpm run ci:runtime:operation-plan-transition"
+    "ci:operation-plan-transition": "pnpm run ci:governance:operation-plan-transition-boundary && pnpm run ci:runtime:operation-plan-transition",
+    "ci:governance:task-from-ready-operation-plan-boundary": "node scripts/governance_acceptance/ACCEPTANCE_TASK_FROM_READY_OPERATION_PLAN_BOUNDARY_V1.cjs",
+    "ci:runtime:task-from-ready-operation-plan": "node scripts/runtime_acceptance/ACCEPTANCE_TASK_FROM_READY_OPERATION_PLAN_RUNTIME_V1.cjs",
+    "ci:task-from-ready-operation-plan": "pnpm run ci:governance:task-from-ready-operation-plan-boundary && pnpm run ci:runtime:task-from-ready-operation-plan"
   },
   "volta": {
     "node": "20.11.1"

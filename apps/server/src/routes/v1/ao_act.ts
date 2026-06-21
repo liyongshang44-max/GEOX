@@ -103,7 +103,7 @@ export function registerAoActV1PrimaryRoutes(app: FastifyInstance, pool: Pool): 
   app.addHook("preValidation", async (req, reply) => {
     const path = String((req as any).url ?? "").split("?")[0] ?? "";
     if (String((req as any).method ?? "").toUpperCase() !== "POST") return;
-    if (path !== "/api/v1/actions/task" && path !== "/api/v1/actions/task/from-variable-prescription") return;
+    if (path !== "/api/v1/actions/task" && path !== "/api/v1/actions/task/from-variable-prescription" && path !== "/api/v1/actions/task/from-operation-plan") return;
     const body = ((req as any).body ?? {}) as any;
     if (!isFormalAgriculturalTask(body)) return;
     normalizeExplicitFieldBinding(body);

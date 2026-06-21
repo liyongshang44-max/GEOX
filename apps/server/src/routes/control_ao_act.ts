@@ -33,6 +33,7 @@ import { loadManualOperationByCommandId } from "../domain/controlplane/task_serv
 import { actionReceiptRequestSchemaV1, validateActionReceiptMetaV1 } from "../contracts/action_receipt_v1.js";
 import { getPrescriptionById } from "../domain/prescription/prescription_contract_v1.js";
 import { buildVariableActionTaskPayloadV1 } from "../domain/prescription/variable_action_task_v1.js";
+import { buildAoActTaskFromReadyOperationPlanV1 } from "../domain/controlplane/ao_act_task_from_operation_plan_builder_v1.js";
 import { createFailSafeEventV1, createManualTakeoverV1, evaluateDeviceDispatchSafetyV1, findOpenFailSafeForDeviceV1 } from "../services/fail_safe_service_v1.js";
 import { auditContextFromRequestV1, recordSecurityAuditEventV1 } from "../services/security_audit_service_v1.js";
 import { resolveDeviceSkillBindingForTask } from "../services/skills/skill_binding_service.js";
@@ -769,12 +770,12 @@ type AoActTaskCoreResultV1 =
   | { ok: false; status: number; error: string; detail?: any };
 
 async function createAoActTaskCoreV1(input: {
-  pool: Pool;
+  pool: any;
   req: any;
   auth: any;
   tenant: TenantTripleV0;
   body: any;
-  source: "api/v1/actions/task" | "api/v1/actions/task/from-variable-prescription";
+  source: "api/v1/actions/task" | "api/v1/actions/task/from-variable-prescription" | "api/v1/actions/task/from-operation-plan";
 }): Promise<AoActTaskCoreResultV1> {
   try {
     const { pool, req, auth, tenant, body, source } = input;
@@ -1330,6 +1331,57 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
   }
 
   app.post("/api/v1/actions/task", async (req, reply) => handleAoActTaskV1(app, pool, req, reply, false));
+
+  app.post("/api/v1/actions/task/from-operation-plan", async (req, reply) => {
+    const source = "api/v1/actions/task/from-operation-plan";
+    try {
+      const auth = requireAoActAnyScopeV0(req, reply, ["action.task.create"]);
+      if (!auth) return;
+      if (!requireActionTaskCreateRoleV1(reply, auth)) return;
+      const body = z.object({ tenant_id: z.string().min(1), project_id: z.string().min(1), group_id: z.string().min(1), field_id: z.string().min(1), zone_id: z.string().nullable().optional(), operation_plan_id: z.string().min(1), operator_id: z.string().min(1), idempotency_key: z.string().min(1), projection_reason: z.string().min(1) }).parse(req.body ?? {});
+      const tenant = assertTenantFieldsPresentV0(body, "body");
+      if (!requireTenantMatchOr404V0(auth, tenant, reply)) return;
+
+      const dup = await pool.query(`SELECT fact_id, record_json FROM facts WHERE (record_json::jsonb->>'type')='operator_operation_plan_task_projection_submission_v1' AND (record_json::jsonb#>>'{payload,tenant_id}')=$1 AND (record_json::jsonb#>>'{payload,idempotency_key}')=$2 ORDER BY occurred_at DESC, fact_id DESC LIMIT 1`, [tenant.tenant_id, body.idempotency_key]);
+      if ((dup.rowCount ?? 0) > 0) return { ok: true, duplicate: true, status: "REJECTED_DUPLICATE", task_created: false, dispatch_created: false, receipt_created: false, acceptance_created: false, roi_created: false, field_memory_created: false };
+
+      const idxRes = await pool.query(`SELECT * FROM public.operation_plan_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND (($5::text IS NULL AND zone_id IS NULL) OR zone_id=$5) AND operation_plan_id=$6 LIMIT 1`, [body.tenant_id, body.project_id, body.group_id, body.field_id, body.zone_id ?? null, body.operation_plan_id]);
+      const operationPlanIndexRecord = idxRes.rows[0] ?? null;
+      const opRes = await pool.query(`SELECT fact_id, record_json FROM facts WHERE (record_json::jsonb->>'type')='operation_plan_v1' AND (record_json::jsonb#>>'{payload,tenant_id}')=$1 AND (record_json::jsonb#>>'{payload,project_id}')=$2 AND (record_json::jsonb#>>'{payload,group_id}')=$3 AND (record_json::jsonb#>>'{payload,operation_plan_id}')=$4 ORDER BY occurred_at DESC, fact_id DESC LIMIT 1`, [body.tenant_id, body.project_id, body.group_id, body.operation_plan_id]);
+      const operationPlanFact = opRes.rows[0]?.record_json ?? null;
+      const approvalRequestId = String(operationPlanFact?.payload?.approval_request_id ?? operationPlanIndexRecord?.approval_request_id ?? "").trim();
+      const arRes = approvalRequestId ? await pool.query(`SELECT fact_id, record_json FROM facts WHERE (record_json::jsonb->>'type')='approval_request_v1' AND (record_json::jsonb#>>'{payload,tenant_id}')=$1 AND (record_json::jsonb#>>'{payload,project_id}')=$2 AND (record_json::jsonb#>>'{payload,group_id}')=$3 AND (record_json::jsonb#>>'{payload,field_id}')=$4 AND (($5::text IS NULL AND (record_json::jsonb#>>'{payload,zone_id}') IS NULL) OR (record_json::jsonb#>>'{payload,zone_id}')=$5) AND (record_json::jsonb#>>'{payload,request_id}')=$6 AND (record_json::jsonb#>>'{payload,status}')='APPROVED' ORDER BY occurred_at DESC, fact_id DESC LIMIT 1`, [body.tenant_id, body.project_id, body.group_id, body.field_id, body.zone_id ?? null, approvalRequestId]) : { rows: [], rowCount: 0 } as any;
+      const nowIso = new Date().toISOString();
+      const submissionId = `op_task_projection_${randomUUID().replace(/-/g, "")}`;
+      const built = buildAoActTaskFromReadyOperationPlanV1({ ...body, zone_id: body.zone_id ?? null, operationPlanIndexRecord, operationPlanFact, operationPlanFactId: opRes.rows[0]?.fact_id ?? null, approvalRequestTransition: arRes.rows[0]?.record_json ?? null, approvalRequestFactId: arRes.rows[0]?.fact_id ?? null, submission_id: submissionId, created_at: nowIso });
+      if (!built.aoActTaskRequest) return { ok: false, ...built.submission };
+
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        const created = await createAoActTaskCoreV1({ pool: client, req, auth, tenant, body: built.aoActTaskRequest, source });
+        if (!created.ok) {
+          await client.query("ROLLBACK");
+          return errorPayload(reply, created.status, { ok: false, error: created.error, ...(created.detail ? { detail: created.detail } : {}) });
+        }
+        const submission = { ...built.submission, status: "AO_ACT_TASK_PROJECTED", task_created: true, act_task_id: created.act_task_id, ao_act_task_fact_id: created.fact_id };
+        const subFactId = randomUUID();
+        await client.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", [subFactId, source, { type: "operator_operation_plan_task_projection_submission_v1", payload: submission }]);
+        const updated = await client.query(`UPDATE public.operation_plan_index_v1 SET act_task_id=$1, source_fact_id=$2, updated_ts=$3, receipt_fact_id=NULL, updated_at=now() WHERE operation_plan_id=$4 AND tenant_id=$5 AND project_id=$6 AND group_id=$7 AND act_task_id IS NULL AND receipt_fact_id IS NULL RETURNING operation_plan_id`, [created.act_task_id, created.fact_id, Date.now(), body.operation_plan_id, body.tenant_id, body.project_id, body.group_id]);
+        if ((updated.rowCount ?? 0) !== 1) throw new Error("OPERATION_PLAN_INDEX_UPDATE_FAILED");
+        await client.query("COMMIT");
+        return { ok: true, ...submission };
+      } catch (e) {
+        await client.query("ROLLBACK").catch(() => undefined);
+        throw e;
+      } finally {
+        client.release();
+      }
+    } catch (e: any) {
+      return errorPayload(reply, 400, { ok: false, status: "REJECTED_INVALID_INPUT", error: e?.message ?? "BAD_REQUEST", task_created: false, dispatch_created: false, receipt_created: false, acceptance_created: false, roi_created: false, field_memory_created: false });
+    }
+  });
+
   app.post("/api/v1/actions/task/from-variable-prescription", async (req, reply) => {
     try {
       const auth = requireAoActAnyScopeV0(req, reply, ["action.task.create", "ao_act.task.write"]);
