@@ -5,6 +5,8 @@
 import { randomUUID } from "crypto";
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
+import { buildRootZoneScenarioRecommendationSubmissionV1 } from "../../domain/soil_water/root_zone_scenario_recommendation_submission_builder_v1.js";
+import { mapRootZoneIrrigationScenarioSetRowV1 } from "../../projections/root_zone_irrigation_scenario_set_v1.js";
 
 const DATA_SCOPE = "OFFICIAL_OPERATOR_TWIN_API";
 
@@ -942,6 +944,158 @@ async function insertOperatorScenarioRecommendationFacts(
     await pool.query("ROLLBACK").catch(() => undefined);
     throw error;
   }
+}
+
+async function latestRootZoneScenarioSetById(
+  pool: Pool,
+  scope: {
+    tenantId: string;
+    projectId: string;
+    groupId: string;
+    fieldId: string;
+    zoneId: string;
+  },
+  scenarioSetId: string,
+): Promise<Row | null> {
+  if (!scope.tenantId || !scope.projectId || !scope.groupId || !scope.fieldId || !scope.zoneId) return null;
+  if (!(await tableExists(pool, "root_zone_irrigation_scenario_set_index_v1"))) return null;
+  const result = await pool
+    .query(
+      `SELECT *
+         FROM root_zone_irrigation_scenario_set_index_v1
+        WHERE tenant_id = $1
+          AND project_id = $2
+          AND group_id = $3
+          AND field_id = $4
+          AND zone_id = $5
+          AND scenario_set_id = $6
+        ORDER BY updated_at DESC NULLS LAST, computed_at DESC NULLS LAST
+        LIMIT 1`,
+      [scope.tenantId, scope.projectId, scope.groupId, scope.fieldId, scope.zoneId, scenarioSetId],
+    )
+    .catch(() => ({ rows: [] as Row[] }));
+  return result.rows?.[0] ?? null;
+}
+
+async function latestRootZoneScenarioSetCandidateById(
+  pool: Pool,
+  tenantId: string,
+  fieldId: string,
+  scenarioSetId: string,
+): Promise<Row | null> {
+  if (!tenantId || !fieldId || !scenarioSetId) return null;
+  if (!(await tableExists(pool, "root_zone_irrigation_scenario_set_index_v1"))) return null;
+  const result = await pool
+    .query(
+      `SELECT *
+         FROM root_zone_irrigation_scenario_set_index_v1
+        WHERE tenant_id = $1
+          AND field_id = $2
+          AND scenario_set_id = $3
+        ORDER BY updated_at DESC NULLS LAST, computed_at DESC NULLS LAST
+        LIMIT 1`,
+      [tenantId, fieldId, scenarioSetId],
+    )
+    .catch(() => ({ rows: [] as Row[] }));
+  return result.rows?.[0] ?? null;
+}
+
+async function latestRootZoneSubmissionByIdempotencyKey(
+  pool: Pool,
+  tenantId: string,
+  key: string,
+): Promise<Row | null> {
+  if (!key || !(await tableExists(pool, "facts"))) return null;
+  const result = await pool
+    .query(
+      `SELECT fact_id, occurred_at, record_json::jsonb AS record_json
+       FROM facts
+      WHERE (record_json::jsonb->>'type') = 'operator_root_zone_scenario_recommendation_submission_v1'
+        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+        AND (record_json::jsonb#>>'{payload,idempotency_key}') = $2
+      ORDER BY occurred_at DESC, fact_id DESC LIMIT 1`,
+      [tenantId, key],
+    )
+    .catch(() => ({ rows: [] as Row[] }));
+  return result.rows?.[0] ?? null;
+}
+
+async function insertOperatorRootZoneScenarioRecommendationFacts(
+  pool: Pool,
+  submission: Row,
+  recommendation: Row,
+): Promise<{ submissionFactId: string; recommendationFactId: string }> {
+  const occurredAt = nowIso();
+  const submissionFactId = "fact_" + randomUUID();
+  const recommendationFactId = "fact_" + randomUUID();
+  await pool.query("BEGIN");
+  try {
+    const submissionPayload = { ...submission, recommendation_fact_id: recommendationFactId };
+    await pool.query(
+      "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, $2::timestamptz, $3, $4::jsonb)",
+      [submissionFactId, occurredAt, "operator_root_zone_scenario_recommendation_submission_api", JSON.stringify({ type: "operator_root_zone_scenario_recommendation_submission_v1", payload: submissionPayload })],
+    );
+    await pool.query(
+      "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, $2::timestamptz, $3, $4::jsonb)",
+      [recommendationFactId, occurredAt, "operator_root_zone_scenario_recommendation_submission_api", JSON.stringify({ type: "decision_recommendation_v1", payload: recommendation })],
+    );
+    await pool.query("COMMIT");
+    return { submissionFactId, recommendationFactId };
+  } catch (error) {
+    await pool.query("ROLLBACK").catch(() => undefined);
+    throw error;
+  }
+}
+
+async function buildOperatorRootZoneScenarioRecommendationSubmission(
+  pool: Pool,
+  params: { fieldId: string; scenarioSetId: string; optionId: string; body: Row },
+): Promise<Row> {
+  const body = params.body ?? {};
+  const tenantId = safeText(body.tenant_id);
+  const idempotencyKey = safeText(body.idempotency_key);
+  const duplicate = await latestRootZoneSubmissionByIdempotencyKey(pool, tenantId, idempotencyKey);
+  if (duplicate?.record_json?.payload) {
+    return { ...duplicate.record_json.payload, status: "REJECTED_DUPLICATE", duplicate: true };
+  }
+  const scopedRow = await latestRootZoneScenarioSetById(
+    pool,
+    {
+      tenantId,
+      projectId: safeText(body.project_id),
+      groupId: safeText(body.group_id),
+      fieldId: params.fieldId,
+      zoneId: safeText(body.zone_id),
+    },
+    params.scenarioSetId,
+  );
+  const candidateRow =
+    scopedRow ??
+    (await latestRootZoneScenarioSetCandidateById(
+      pool,
+      tenantId,
+      params.fieldId,
+      params.scenarioSetId,
+    ));
+  const scenarioSet = candidateRow ? mapRootZoneIrrigationScenarioSetRowV1(candidateRow) : null;
+  const submission = buildRootZoneScenarioRecommendationSubmissionV1({
+    tenant_id: tenantId,
+    project_id: safeText(body.project_id),
+    group_id: safeText(body.group_id),
+    field_id: params.fieldId,
+    zone_id: safeText(body.zone_id),
+    scenarioSet,
+    selected_option_id: params.optionId,
+    operator_id: safeText(body.operator_id),
+    idempotency_key: idempotencyKey,
+    submission_reason: safeText(body.submission_reason),
+    submission_id: "sub_" + randomUUID(),
+    recommendation_id: "rec_" + randomUUID(),
+    created_at: nowIso(),
+  });
+  if (submission.status !== "SUBMITTED_TO_RECOMMENDATION") return submission;
+  const factIds = await insertOperatorRootZoneScenarioRecommendationFacts(pool, submission, submission.decision_recommendation_v1 ?? {});
+  return { ...submission, fact_id: factIds.submissionFactId, recommendation_fact_id: factIds.recommendationFactId };
 }
 
 async function buildOperatorScenarioRecommendationSubmission(
@@ -2622,6 +2776,33 @@ export function registerOperatorTwinReadRoutes(
       return reply.send({
         ...basePayload("operator_field_twin_scenario_compare_api"),
         operator_field_twin_scenario_compare_v1: compare,
+      });
+    },
+  );
+
+
+  app.post(
+    "/api/v1/operator/twin/fields/:field_id/root-zone-scenarios/:scenario_set_id/options/:option_id/submit-recommendation",
+    async (req: any, reply) => {
+      const submission = await buildOperatorRootZoneScenarioRecommendationSubmission(
+        pool,
+        {
+          fieldId: safeText(req.params?.field_id),
+          scenarioSetId: safeText(req.params?.scenario_set_id),
+          optionId: safeText(req.params?.option_id),
+          body: req.body ?? {},
+        },
+      );
+      const ok =
+        submission.status === "SUBMITTED_TO_RECOMMENDATION" ||
+        submission.status === "REJECTED_DUPLICATE";
+      return reply.code(ok ? 200 : 400).send({
+        ...basePayload("operator_root_zone_scenario_recommendation_submission_api"),
+        writeReady: true,
+        dispatchReady: false,
+        approvalReady: false,
+        taskCreationReady: false,
+        operator_root_zone_scenario_recommendation_submission_v1: submission,
       });
     },
   );
