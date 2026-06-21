@@ -130,6 +130,7 @@ function defaultScopesFromEnv(): AoActScopeV0[] {
     "fields.write",
     "inspection.read",
     "inspection.write",
+    "operation.plan.create",
     "telemetry.read",
     "telemetry.write",
   ];

@@ -232,9 +232,9 @@ async function latestScopedApprovalDecisionById(pool: Pool, scope: { tenantId: s
   return row ? { fact_id: String(row.fact_id ?? ""), payload: parseRecordJsonMaybe(row.record_json)?.payload ?? row.record_json?.payload ?? null } : null;
 }
 
-async function latestApprovalRequestApprovedTransitionForDecision(pool: Pool, tenant: TenantTriple, requestId: string | null, decisionId: string): Promise<{ fact_id: string; payload: any } | null> {
-  if (!requestId || !decisionId) return null;
-  const res = await pool.query(`SELECT fact_id, record_json::jsonb AS record_json FROM facts WHERE (record_json::jsonb->>'type') = 'approval_request_v1' AND (record_json::jsonb#>>'{payload,tenant_id}') = $1 AND (record_json::jsonb#>>'{payload,project_id}') = $2 AND (record_json::jsonb#>>'{payload,group_id}') = $3 AND (record_json::jsonb#>>'{payload,request_id}') = $4 AND (record_json::jsonb#>>'{payload,status}') = 'APPROVED' AND (record_json::jsonb#>>'{payload,decision_id}') = $5 ORDER BY occurred_at DESC, fact_id DESC LIMIT 1`, [tenant.tenant_id, tenant.project_id, tenant.group_id, requestId, decisionId]);
+async function latestApprovalRequestApprovedTransitionForDecision(pool: Pool, scope: { tenantId: string; projectId: string; groupId: string; fieldId: string; zoneId: string | null }, requestId: string | null, decisionId: string): Promise<{ fact_id: string; payload: any } | null> {
+  if (!requestId || !decisionId || !scope.fieldId) return null;
+  const res = await pool.query(`SELECT fact_id, record_json::jsonb AS record_json FROM facts WHERE (record_json::jsonb->>'type') = 'approval_request_v1' AND (record_json::jsonb#>>'{payload,tenant_id}') = $1 AND (record_json::jsonb#>>'{payload,project_id}') = $2 AND (record_json::jsonb#>>'{payload,group_id}') = $3 AND (record_json::jsonb#>>'{payload,field_id}') = $4 AND COALESCE(record_json::jsonb#>>'{payload,zone_id}', '') = COALESCE($5, '') AND (record_json::jsonb#>>'{payload,request_id}') = $6 AND (record_json::jsonb#>>'{payload,status}') = 'APPROVED' AND (record_json::jsonb#>>'{payload,decision_id}') = $7 ORDER BY occurred_at DESC, fact_id DESC LIMIT 1`, [scope.tenantId, scope.projectId, scope.groupId, scope.fieldId, scope.zoneId, requestId, decisionId]);
   const row = res.rows?.[0];
   return row ? { fact_id: String(row.fact_id ?? ""), payload: parseRecordJsonMaybe(row.record_json)?.payload ?? row.record_json?.payload ?? null } : null;
 }
@@ -654,7 +654,7 @@ async function handleCreateOperationPlanFromApprovalDecision(req: any, reply: an
   const zoneId = body.zone_id === undefined || body.zone_id === null ? null : String(body.zone_id).trim();
   const decision = await latestScopedApprovalDecisionById(pool, { tenantId: tenant.tenant_id, projectId: tenant.project_id, groupId: tenant.group_id, fieldId, zoneId }, decisionId);
   const requestId = String(decision?.payload?.approval_request_id ?? decision?.payload?.request_id ?? decision?.payload?.source_approval_request_id ?? "").trim() || null;
-  const requestTransition = await latestApprovalRequestApprovedTransitionForDecision(pool, tenant, requestId, decisionId);
+  const requestTransition = await latestApprovalRequestApprovedTransitionForDecision(pool, { tenantId: tenant.tenant_id, projectId: tenant.project_id, groupId: tenant.group_id, fieldId, zoneId }, requestId, decisionId);
   const createdTs = Date.now();
   const createdAt = new Date(createdTs).toISOString();
   const submission = buildOperationPlanFromApprovalDecisionV1({ tenant_id: tenant.tenant_id, project_id: tenant.project_id, group_id: tenant.group_id, field_id: fieldId, zone_id: zoneId, operator_id: String(body.operator_id ?? auth.actor_id).trim(), idempotency_key: idempotencyKey, submission_reason: String(body.submission_reason ?? "").trim(), sourceApprovalDecision: decision?.payload ?? null, sourceApprovalDecisionFactId: decision?.fact_id ?? null, sourceApprovalRequestTransition: requestTransition?.payload ?? null, sourceApprovalRequestFactId: requestTransition?.fact_id ?? null, submission_id: "sub_" + randomUUID().replace(/-/g, ""), operation_plan_id: "opl_" + randomUUID().replace(/-/g, ""), created_ts: createdTs, created_at: createdAt });

@@ -1,5 +1,129 @@
 // scripts/governance_acceptance/ACCEPTANCE_OPERATION_PLAN_INDEX_SCHEMA_MIGRATION_V1.cjs
-const fs=require('fs'); const {Pool}=require('pg');
-const file='apps/server/db/migrations/2026_06_21_operation_plan_index_v1.sql';
-function ok(c,m){if(!c){console.error('FAIL:',m);process.exit(1)} console.log('PASS:',m)}
-(async()=>{ok(fs.existsSync(file),'migration file exists'); const sql=fs.readFileSync(file,'utf8'); ok(/operation_plan_index_v1/.test(sql),'table ddl present'); ok(/spatial_scope_json jsonb/i.test(sql),'spatial_scope_json is JSONB'); for (const idx of ['idx_operation_plan_index_v1_scope_latest','idx_operation_plan_index_v1_approval_request','idx_operation_plan_index_v1_approval_decision_fact','idx_operation_plan_index_v1_recommendation']) ok(sql.includes(idx),`index ${idx} present`); const pool=new Pool({connectionString:process.env.DATABASE_URL}); const c=await pool.connect(); try{await c.query('BEGIN'); await c.query(sql); const cols=(await c.query(`select column_name,data_type from information_schema.columns where table_schema='public' and table_name='operation_plan_index_v1'`)).rows; for (const col of ['operation_plan_id','tenant_id','project_id','group_id','field_id','zone_id','spatial_scope_json','status','created_ts','updated_ts']) ok(cols.some(r=>r.column_name===col),`column ${col} exists`); await c.query(`insert into public.operation_plan_index_v1(operation_plan_id,tenant_id,project_id,group_id,status,created_ts,updated_ts) values('h38_schema_probe','t','p','g','CREATED',1,1) on conflict do nothing`); ok((await c.query(`select 1 from public.operation_plan_index_v1 where operation_plan_id='h38_schema_probe'`)).rowCount===1,'probe row can be inserted'); await c.query(sql); ok(true,'migration is idempotent'); await c.query('ROLLBACK'); ok(true,'rollback removes probe row');} finally{c.release(); await pool.end();}})().catch(e=>{console.error(e);process.exit(1)});
+const fs = require("fs");
+const { Pool } = require("pg");
+
+const MIGRATION = "apps/server/db/migrations/2026_06_21_operation_plan_index_v1.sql";
+const PROBE_ID = "h38_schema_probe";
+
+function assert(condition, message, detail) {
+  if (!condition) {
+    const suffix = detail ? ` ${JSON.stringify(detail)}` : "";
+    throw new Error(`${message}${suffix}`);
+  }
+  console.log(`PASS: ${message}`);
+}
+
+async function tableExists(client) {
+  const result = await client.query("SELECT to_regclass('public.operation_plan_index_v1')::text AS name");
+  return result.rows[0]?.name === "operation_plan_index_v1";
+}
+
+async function probeRowExists(client) {
+  if (!(await tableExists(client))) return false;
+  const result = await client.query(
+    "SELECT 1 FROM public.operation_plan_index_v1 WHERE operation_plan_id = $1 LIMIT 1",
+    [PROBE_ID],
+  );
+  return result.rowCount === 1;
+}
+
+async function main() {
+  assert(fs.existsSync(MIGRATION), "migration file exists");
+
+  const sql = fs.readFileSync(MIGRATION, "utf8");
+  assert(sql.includes("operation_plan_index_v1"), "operation_plan_index_v1 table DDL is present");
+  assert(/spatial_scope_json\s+jsonb/i.test(sql), "spatial_scope_json is JSONB");
+
+  for (const indexName of [
+    "idx_operation_plan_index_v1_scope_latest",
+    "idx_operation_plan_index_v1_approval_request",
+    "idx_operation_plan_index_v1_approval_decision_fact",
+    "idx_operation_plan_index_v1_recommendation",
+  ]) {
+    assert(sql.includes(indexName), `required index ${indexName} exists in migration`);
+  }
+
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const client = await pool.connect();
+  let rolledBack = false;
+
+  try {
+    await client.query("BEGIN");
+    await client.query(sql);
+    assert(await tableExists(client), "operation_plan_index_v1 table exists after migration inside transaction");
+
+    const columns = await client.query(
+      "SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'operation_plan_index_v1'",
+    );
+    const columnMap = new Map(columns.rows.map((row) => [row.column_name, row.data_type]));
+
+    for (const columnName of [
+      "operation_plan_id",
+      "tenant_id",
+      "project_id",
+      "group_id",
+      "field_id",
+      "zone_id",
+      "spatial_scope_json",
+      "season_id",
+      "program_id",
+      "recommendation_id",
+      "recommendation_fact_id",
+      "approval_request_id",
+      "approval_decision",
+      "approval_decision_fact_id",
+      "status",
+      "act_task_id",
+      "receipt_fact_id",
+      "source_fact_id",
+      "created_ts",
+      "updated_ts",
+      "updated_at",
+    ]) {
+      assert(columnMap.has(columnName), `required column ${columnName} exists`);
+    }
+
+    assert(columnMap.get("spatial_scope_json") === "jsonb", "spatial_scope_json column has jsonb type");
+
+    const indexes = await client.query(
+      "SELECT indexname FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'operation_plan_index_v1'",
+    );
+    const indexNames = new Set(indexes.rows.map((row) => row.indexname));
+    for (const indexName of [
+      "idx_operation_plan_index_v1_scope_latest",
+      "idx_operation_plan_index_v1_approval_request",
+      "idx_operation_plan_index_v1_approval_decision_fact",
+      "idx_operation_plan_index_v1_recommendation",
+    ]) {
+      assert(indexNames.has(indexName), `required index ${indexName} exists after migration`);
+    }
+
+    await client.query(
+      "INSERT INTO public.operation_plan_index_v1 (operation_plan_id, tenant_id, project_id, group_id, status, created_ts, updated_ts) VALUES ($1, 'tenant_probe', 'project_probe', 'group_probe', 'CREATED', 1, 1)",
+      [PROBE_ID],
+    );
+    assert(await probeRowExists(client), "probe row can be inserted");
+
+    await client.query(sql);
+    assert(true, "migration is idempotent");
+
+    await client.query("ROLLBACK");
+    rolledBack = true;
+  } finally {
+    if (!rolledBack) await client.query("ROLLBACK").catch(() => undefined);
+    client.release();
+  }
+
+  const verificationClient = await pool.connect();
+  try {
+    assert(!(await probeRowExists(verificationClient)), "rollback removes probe row");
+  } finally {
+    verificationClient.release();
+    await pool.end();
+  }
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
