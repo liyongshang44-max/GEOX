@@ -193,7 +193,12 @@
     "ci:governance:frontend-prd-v0-2-final-manifest": "node scripts/governance_acceptance/ACCEPTANCE_FRONTEND_PRD_V0_2_FINAL_MANIFEST_V1.cjs",
     "ci:prd-v0-2-final": "pnpm run ci:frontend:three-surfaces-e2e && pnpm run ci:governance:three-surface-route-boundary-e2e && pnpm run ci:runtime:decision-to-delivery-e2e && pnpm run ci:runtime:three-surface-no-cross-write && pnpm run ci:governance:frontend-prd-v0-2-final-manifest",
     "seed:three-surface-local-demo": "node scripts/dev_seed/SEED_THREE_SURFACE_LOCAL_DEMO_V1.cjs",
-    "ci:runtime:three-surface-local-page-smoke": "node scripts/runtime_acceptance/ACCEPTANCE_THREE_SURFACE_LOCAL_PAGE_SMOKE_V1.cjs"
+    "ci:runtime:three-surface-local-page-smoke": "node scripts/runtime_acceptance/ACCEPTANCE_THREE_SURFACE_LOCAL_PAGE_SMOKE_V1.cjs",
+    "ci:governance:soil-water-potential-schema-migration": "node scripts/governance_acceptance/ACCEPTANCE_SOIL_WATER_POTENTIAL_SCHEMA_MIGRATION_V1.cjs",
+    "ci:governance:soil-water-potential-model-boundary": "node scripts/governance_acceptance/ACCEPTANCE_SOIL_WATER_POTENTIAL_MODEL_BOUNDARY_V1.cjs",
+    "ci:runtime:soil-water-potential-estimate": "node scripts/runtime_acceptance/ACCEPTANCE_SOIL_WATER_POTENTIAL_ESTIMATE_RUNTIME_V1.cjs",
+    "ci:soil-water-potential-foundation": "pnpm run ci:governance:soil-water-potential-schema-migration && pnpm run ci:governance:soil-water-potential-model-boundary && pnpm run ci:governance:soil-water-potential-customer-boundary && pnpm run ci:runtime:soil-water-potential-estimate",
+    "ci:governance:soil-water-potential-customer-boundary": "node scripts/governance_acceptance/ACCEPTANCE_SOIL_WATER_POTENTIAL_CUSTOMER_BOUNDARY_V1.cjs"
   },
   "volta": {
     "node": "20.11.1"
