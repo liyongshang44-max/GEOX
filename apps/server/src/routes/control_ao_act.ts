@@ -770,7 +770,7 @@ type AoActTaskCoreResultV1 =
   | { ok: false; status: number; error: string; detail?: any };
 
 async function createAoActTaskCoreV1(input: {
-  pool: Pool;
+  pool: any;
   req: any;
   auth: any;
   tenant: TenantTripleV0;
@@ -1350,22 +1350,33 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
       const opRes = await pool.query(`SELECT fact_id, record_json FROM facts WHERE (record_json::jsonb->>'type')='operation_plan_v1' AND (record_json::jsonb#>>'{payload,tenant_id}')=$1 AND (record_json::jsonb#>>'{payload,project_id}')=$2 AND (record_json::jsonb#>>'{payload,group_id}')=$3 AND (record_json::jsonb#>>'{payload,operation_plan_id}')=$4 ORDER BY occurred_at DESC, fact_id DESC LIMIT 1`, [body.tenant_id, body.project_id, body.group_id, body.operation_plan_id]);
       const operationPlanFact = opRes.rows[0]?.record_json ?? null;
       const approvalRequestId = String(operationPlanFact?.payload?.approval_request_id ?? operationPlanIndexRecord?.approval_request_id ?? "").trim();
-      const arRes = approvalRequestId ? await pool.query(`SELECT fact_id, record_json FROM facts WHERE (record_json::jsonb->>'type')='approval_request_v1' AND (record_json::jsonb#>>'{payload,tenant_id}')=$1 AND (record_json::jsonb#>>'{payload,project_id}')=$2 AND (record_json::jsonb#>>'{payload,group_id}')=$3 AND (record_json::jsonb#>>'{payload,request_id}')=$4 ORDER BY occurred_at DESC, fact_id DESC LIMIT 1`, [body.tenant_id, body.project_id, body.group_id, approvalRequestId]) : { rows: [], rowCount: 0 } as any;
+      const arRes = approvalRequestId ? await pool.query(`SELECT fact_id, record_json FROM facts WHERE (record_json::jsonb->>'type')='approval_request_v1' AND (record_json::jsonb#>>'{payload,tenant_id}')=$1 AND (record_json::jsonb#>>'{payload,project_id}')=$2 AND (record_json::jsonb#>>'{payload,group_id}')=$3 AND (record_json::jsonb#>>'{payload,field_id}')=$4 AND (($5::text IS NULL AND (record_json::jsonb#>>'{payload,zone_id}') IS NULL) OR (record_json::jsonb#>>'{payload,zone_id}')=$5) AND (record_json::jsonb#>>'{payload,request_id}')=$6 AND (record_json::jsonb#>>'{payload,status}')='APPROVED' ORDER BY occurred_at DESC, fact_id DESC LIMIT 1`, [body.tenant_id, body.project_id, body.group_id, body.field_id, body.zone_id ?? null, approvalRequestId]) : { rows: [], rowCount: 0 } as any;
       const nowIso = new Date().toISOString();
       const submissionId = `op_task_projection_${randomUUID().replace(/-/g, "")}`;
       const built = buildAoActTaskFromReadyOperationPlanV1({ ...body, zone_id: body.zone_id ?? null, operationPlanIndexRecord, operationPlanFact, operationPlanFactId: opRes.rows[0]?.fact_id ?? null, approvalRequestTransition: arRes.rows[0]?.record_json ?? null, approvalRequestFactId: arRes.rows[0]?.fact_id ?? null, submission_id: submissionId, created_at: nowIso });
-      if (!built.aoActTaskRequest) {
-        const factId = randomUUID();
-        await pool.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", [factId, source, { type: "operator_operation_plan_task_projection_submission_v1", payload: built.submission }]);
-        return { ok: false, ...built.submission };
+      if (!built.aoActTaskRequest) return { ok: false, ...built.submission };
+
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        const created = await createAoActTaskCoreV1({ pool: client, req, auth, tenant, body: built.aoActTaskRequest, source });
+        if (!created.ok) {
+          await client.query("ROLLBACK");
+          return errorPayload(reply, created.status, { ok: false, error: created.error, ...(created.detail ? { detail: created.detail } : {}) });
+        }
+        const submission = { ...built.submission, status: "AO_ACT_TASK_PROJECTED", task_created: true, act_task_id: created.act_task_id, ao_act_task_fact_id: created.fact_id };
+        const subFactId = randomUUID();
+        await client.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", [subFactId, source, { type: "operator_operation_plan_task_projection_submission_v1", payload: submission }]);
+        const updated = await client.query(`UPDATE public.operation_plan_index_v1 SET act_task_id=$1, source_fact_id=$2, updated_ts=$3, receipt_fact_id=NULL, updated_at=now() WHERE operation_plan_id=$4 AND tenant_id=$5 AND project_id=$6 AND group_id=$7 AND act_task_id IS NULL AND receipt_fact_id IS NULL RETURNING operation_plan_id`, [created.act_task_id, created.fact_id, Date.now(), body.operation_plan_id, body.tenant_id, body.project_id, body.group_id]);
+        if ((updated.rowCount ?? 0) !== 1) throw new Error("OPERATION_PLAN_INDEX_UPDATE_FAILED");
+        await client.query("COMMIT");
+        return { ok: true, ...submission };
+      } catch (e) {
+        await client.query("ROLLBACK").catch(() => undefined);
+        throw e;
+      } finally {
+        client.release();
       }
-      const created = await createAoActTaskCoreV1({ pool, req, auth, tenant, body: built.aoActTaskRequest, source });
-      if (!created.ok) return errorPayload(reply, created.status, { ok: false, error: created.error, ...(created.detail ? { detail: created.detail } : {}) });
-      const submission = { ...built.submission, status: "AO_ACT_TASK_PROJECTED", task_created: true, act_task_id: created.act_task_id, ao_act_task_fact_id: created.fact_id };
-      const subFactId = randomUUID();
-      await pool.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", [subFactId, source, { type: "operator_operation_plan_task_projection_submission_v1", payload: submission }]);
-      await pool.query(`UPDATE public.operation_plan_index_v1 SET act_task_id=$1, source_fact_id=$2, updated_ts=$3, receipt_fact_id=NULL, updated_at=now() WHERE operation_plan_id=$4 AND tenant_id=$5 AND project_id=$6 AND group_id=$7`, [created.act_task_id, created.fact_id, Date.now(), body.operation_plan_id, body.tenant_id, body.project_id, body.group_id]);
-      return { ok: true, ...submission };
     } catch (e: any) {
       return errorPayload(reply, 400, { ok: false, status: "REJECTED_INVALID_INPUT", error: e?.message ?? "BAD_REQUEST", task_created: false, dispatch_created: false, receipt_created: false, acceptance_created: false, roi_created: false, field_memory_created: false });
     }

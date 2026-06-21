@@ -1,3 +1,4 @@
+// apps/server/src/domain/controlplane/ao_act_task_from_operation_plan_builder_v1.ts
 export type OperatorOperationPlanTaskProjectionStatusV1 =
   | "AO_ACT_TASK_PROJECTED"
   | "REJECTED_OPERATION_PLAN_NOT_FOUND"
@@ -55,6 +56,7 @@ export function buildAoActTaskFromReadyOperationPlanV1(input: AoActTaskFromReady
   else if (!input.operationPlanFact || s((input.operationPlanFact as any).type ?? "operation_plan_v1") !== "operation_plan_v1" || s(op.operation_plan_id) !== operationPlanId || s(op.approval_decision) !== "APPROVE" || isEmpty(op.approval_request_id) || isEmpty(op.approval_decision_fact_id)) status = "REJECTED_INVALID_INPUT";
   else if (!input.approvalRequestTransition) status = "REJECTED_APPROVAL_REQUEST_NOT_FOUND";
   else if (s((input.approvalRequestTransition as any).type ?? "approval_request_v1") !== "approval_request_v1" || s(ar.status) !== "APPROVED" || s(ar.request_id) !== s(op.approval_request_id)) status = "REJECTED_APPROVAL_REQUEST_NOT_APPROVED";
+  else if (["tenant_id","project_id","group_id","field_id"].some((k) => s((ar as any)[k]) !== s((input as any)[k])) || s(ar.zone_id ?? "") !== s(input.zone_id ?? "")) status = "REJECTED_SCOPE_MISMATCH";
   else if (!proposal || s(proposal.action_type) !== "IRRIGATE" || !obj(proposal.time_window) || !obj(proposal.parameter_schema) || !obj(proposal.parameters) || !obj(proposal.constraints) || obj(proposal.meta)?.no_direct_execution !== true || obj(proposal.meta)?.skip_auto_task_issue !== true || obj(proposal.meta)?.allow_auto_task_issue !== false) status = "REJECTED_APPROVAL_REQUEST_NOT_APPROVED";
 
   const approvalRequestId = s(op.approval_request_id) || null;
