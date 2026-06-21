@@ -4,6 +4,7 @@ import type { FastifyInstance } from "fastify"; // Fastify instance typing.
 import type { Pool } from "pg"; // Postgres pool typing.
 import { randomUUID } from "node:crypto"; // Generate UUIDs for request/decision ids.
 import { buildRecommendationApprovalRequestSubmissionV1 } from "../domain/approval/recommendation_approval_request_builder_v1.js";
+import { buildRecommendationApprovalDecisionSubmissionV1 } from "../domain/approval/recommendation_approval_decision_builder_v1.js";
 
 import { requireAoActAnyScopeV0, requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js"; // Reuse AO-ACT token/scope auth for Sprint 25 approval runtime.
 import {
@@ -180,6 +181,83 @@ async function latestRecommendationApprovalSubmissionByIdempotency(pool: Pool, t
      LIMIT 1`, [tenantId, key]);
   const record = parseRecordJsonMaybe(res.rows?.[0]?.record_json) ?? res.rows?.[0]?.record_json;
   return record?.payload ?? null;
+}
+
+
+async function latestRecommendationApprovalDecisionSubmissionByIdempotency(pool: Pool, tenantId: string, key: string): Promise<any | null> {
+  if (!tenantId || !key) return null;
+  const res = await pool.query(`
+    SELECT record_json::jsonb AS record_json
+      FROM facts
+     WHERE (record_json::jsonb->>'type') = 'operator_recommendation_approval_decision_submission_v1'
+       AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+       AND (record_json::jsonb#>>'{payload,idempotency_key}') = $2
+     ORDER BY occurred_at DESC, fact_id DESC
+     LIMIT 1`, [tenantId, key]);
+  const record = parseRecordJsonMaybe(res.rows?.[0]?.record_json) ?? res.rows?.[0]?.record_json;
+  return record?.payload ?? null;
+}
+
+async function latestScopedApprovalRequestById(pool: Pool, scope: { tenantId: string; projectId: string; groupId: string; fieldId: string; zoneId: string | null }, requestId: string): Promise<{ fact_id: string; payload: any } | null> {
+  if (!scope.tenantId || !scope.projectId || !scope.groupId || !scope.fieldId || !requestId) return null;
+  const res = await pool.query(`
+    SELECT fact_id, record_json::jsonb AS record_json
+      FROM facts
+     WHERE (record_json::jsonb->>'type') = 'approval_request_v1'
+       AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+       AND (record_json::jsonb#>>'{payload,project_id}') = $2
+       AND (record_json::jsonb#>>'{payload,group_id}') = $3
+       AND (record_json::jsonb#>>'{payload,field_id}') = $4
+       AND COALESCE(record_json::jsonb#>>'{payload,zone_id}', '') = COALESCE($5, '')
+       AND (record_json::jsonb#>>'{payload,request_id}') = $6
+     ORDER BY occurred_at DESC, fact_id DESC
+     LIMIT 1`, [scope.tenantId, scope.projectId, scope.groupId, scope.fieldId, scope.zoneId, requestId]);
+  const row = res.rows?.[0];
+  return row ? { fact_id: String(row.fact_id ?? ""), payload: parseRecordJsonMaybe(row.record_json)?.payload ?? row.record_json?.payload ?? null } : null;
+}
+
+async function handleRecommendationApprovalDecision(req: any, reply: any, pool: Pool) {
+  const auth = requireAoActScopeV0(req, reply, "approval.decide");
+  if (!auth) return;
+  (req as any).auth = auth;
+  if (!requireApprovalDeciderRoleV1(reply, auth)) return;
+  const body: any = req.body ?? {};
+  let tenant: TenantTriple;
+  try { tenant = assertTenantTriple(body); } catch (e: any) { return reply.status(400).send({ ok: false, error: e?.message ?? "BAD_REQUEST", status: "REJECTED_INVALID_INPUT" }); }
+  if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+  const requestId = String((req.params as any)?.request_id ?? "").trim();
+  const decision = String(body.decision ?? "").trim().toUpperCase();
+  const idempotencyKey = String(body.idempotency_key ?? "").trim();
+  const reason = String(body.decision_reason ?? "").trim();
+  if (!requestId || !["APPROVED", "REJECTED"].includes(decision) || !idempotencyKey || !reason) {
+    return reply.status(400).send({ surface: "OPERATOR", status: "REJECTED_INVALID_INPUT", decision: null, approval_decision_created: false, operation_plan_created: false, operation_plan_transition_created: false, task_created: false, dispatch_created: false, receipt_created: false, roi_created: false, field_memory_created: false, no_direct_execution: true });
+  }
+  const prior = await latestRecommendationApprovalDecisionSubmissionByIdempotency(pool, tenant.tenant_id, idempotencyKey);
+  if (prior) return reply.send({ ...prior, status: "REJECTED_DUPLICATE", duplicate: true });
+  const zoneId = body.zone_id === undefined || body.zone_id === null ? null : String(body.zone_id).trim();
+  const found = await latestScopedApprovalRequestById(pool, { tenantId: tenant.tenant_id, projectId: tenant.project_id, groupId: tenant.group_id, fieldId: String(body.field_id ?? "").trim(), zoneId }, requestId);
+  const submission = buildRecommendationApprovalDecisionSubmissionV1({
+    tenant_id: tenant.tenant_id, project_id: tenant.project_id, group_id: tenant.group_id, field_id: String(body.field_id ?? "").trim(), zone_id: zoneId,
+    approver_id: String(body.approver_id ?? auth.actor_id).trim(), approver_token_id: auth.token_id, idempotency_key: idempotencyKey, decision_reason: reason, decision: decision as any,
+    sourceApprovalRequest: found?.payload ?? null, sourceApprovalRequestFactId: found?.fact_id ?? null,
+    submission_id: "sub_" + randomUUID().replace(/-/g, ""), approval_decision_id: "apd_" + randomUUID().replace(/-/g, ""), created_at: new Date().toISOString(),
+  });
+  if (submission.status !== "DECISION_RECORDED") return reply.status(400).send(submission);
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const decisionFactId = "fact_" + randomUUID();
+    const transitionFactId = "fact_" + randomUUID();
+    const payload = { ...submission, approval_decision_fact_id: decisionFactId };
+    await client.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", ["fact_" + randomUUID(), "operator_recommendation_approval_decision_api", JSON.stringify({ type: "operator_recommendation_approval_decision_submission_v1", payload })]);
+    await client.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", [decisionFactId, "operator_recommendation_approval_decision_api", JSON.stringify({ type: "approval_decision_v1", payload: submission.approval_decision_v1 })]);
+    await client.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", [transitionFactId, "operator_recommendation_approval_decision_api", JSON.stringify({ type: "approval_request_v1", payload: submission.approval_request_transition_v1 })]);
+    await client.query("COMMIT");
+    return reply.send(payload);
+  } catch (e: any) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    return reply.status(500).send({ ok: false, error: e?.message ?? "INTERNAL_ERROR" });
+  } finally { client.release(); }
 }
 
 async function handleRecommendationApprovalRequest(req: any, reply: any, pool: Pool) {
@@ -530,6 +608,7 @@ async function handleApprovalApprove(req: any, reply: any, pool: Pool) {
 
 export function registerApprovalRequestV1Routes(app: FastifyInstance, pool: Pool) {
   app.post("/api/v1/operator/recommendations/:recommendation_id/request-approval", async (req, reply) => handleRecommendationApprovalRequest(req, reply, pool));
+  app.post("/api/v1/operator/approval-requests/:request_id/decision", async (req, reply) => handleRecommendationApprovalDecision(req, reply, pool));
   app.post("/api/v1/approvals/request", async (req, reply) => handleApprovalRequest(req, reply, pool));
   app.get("/api/v1/approvals/requests", async (req, reply) => handleApprovalRequestsList(req, reply, pool));
   app.post("/api/v1/approvals/approve", async (req, reply) => {

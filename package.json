@@ -219,7 +219,10 @@
     "ci:root-zone-scenario-submit-recommendation": "pnpm run ci:governance:root-zone-scenario-submit-recommendation-boundary && pnpm run ci:runtime:root-zone-scenario-submit-recommendation",
     "ci:governance:recommendation-approval-request-boundary": "node scripts/governance_acceptance/ACCEPTANCE_RECOMMENDATION_APPROVAL_REQUEST_BOUNDARY_V1.cjs",
     "ci:runtime:recommendation-approval-request": "node scripts/runtime_acceptance/ACCEPTANCE_RECOMMENDATION_APPROVAL_REQUEST_RUNTIME_V1.cjs",
-    "ci:recommendation-approval-request": "pnpm run ci:governance:recommendation-approval-request-boundary && pnpm run ci:runtime:recommendation-approval-request"
+    "ci:recommendation-approval-request": "pnpm run ci:governance:recommendation-approval-request-boundary && pnpm run ci:runtime:recommendation-approval-request",
+    "ci:governance:recommendation-approval-decision-boundary": "node scripts/governance_acceptance/ACCEPTANCE_RECOMMENDATION_APPROVAL_DECISION_BOUNDARY_V1.cjs",
+    "ci:runtime:recommendation-approval-decision": "node scripts/runtime_acceptance/ACCEPTANCE_RECOMMENDATION_APPROVAL_DECISION_RUNTIME_V1.cjs",
+    "ci:recommendation-approval-decision": "pnpm run ci:governance:recommendation-approval-decision-boundary && pnpm run ci:runtime:recommendation-approval-decision"
   },
   "volta": {
     "node": "20.11.1"
