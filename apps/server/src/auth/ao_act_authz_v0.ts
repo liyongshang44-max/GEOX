@@ -36,6 +36,7 @@ export type AoActScopeV0 =
   | "approval.decide"
   | "approval.read"
   | "operation.plan.create"
+  | "operation.plan.transition"
   | "action.task.create"
   | "action.task.dispatch"
   | "action.receipt.submit"
@@ -131,6 +132,7 @@ function defaultScopesFromEnv(): AoActScopeV0[] {
     "inspection.read",
     "inspection.write",
     "operation.plan.create",
+    "operation.plan.transition",
     "telemetry.read",
     "telemetry.write",
   ];
