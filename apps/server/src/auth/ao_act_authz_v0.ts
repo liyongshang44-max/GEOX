@@ -28,6 +28,7 @@ export type AoActScopeV0 =
   | "evidence_export.write"
   | "recommendation.write"
   | "recommendation.read"
+  | "recommendation.approval_request"
   | "prescription.write"
   | "prescription.read"
   | "prescription.submit_approval"
