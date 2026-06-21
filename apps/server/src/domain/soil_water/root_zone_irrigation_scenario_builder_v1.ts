@@ -155,6 +155,10 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+function finiteOrFallback(value: unknown, fallback: number): number {
+  return isFiniteNumber(value) ? value : fallback;
+}
+
 function stableJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
 
@@ -250,6 +254,7 @@ function invalidInputReasons(input: RootZoneIrrigationScenarioBuildInputV1): str
   for (const day of dailyForecast) {
     if (!isFiniteNumber(day.projected_available_water_mm)) reasons.push("non_finite_projected_available_water_mm");
     if (!isFiniteNumber(day.net_water_change_mm)) reasons.push("non_finite_net_water_change_mm");
+    if (!isFiniteNumber(day.projected_available_water_fraction)) reasons.push("non_finite_projected_available_water_fraction");
     if (dayIndexes.has(day.day_index)) reasons.push("duplicate_day_index");
     if (dates.has(day.date)) reasons.push("duplicate_date");
     dayIndexes.add(day.day_index);
@@ -314,23 +319,29 @@ function buildOption(
   const irrigationEvents = definition.events.map((event) => ({
     day_index: event.day_index,
     irrigation_mm: event.irrigation_mm,
-    application_efficiency: input.application_efficiency,
+    application_efficiency: safeEfficiency,
     effective_irrigation_mm: round6(event.irrigation_mm * safeEfficiency),
   }));
 
   let previousProjectedAvailableWaterMm = 0;
   const dailyProjection = dailyForecast.map((day, index) => {
+    const comparableInput = inputStatus === "COMPARABLE";
+    const baselineAvailableWaterMm = finiteOrFallback(day.projected_available_water_mm, 0);
+    const baselineNetWaterChangeMm = finiteOrFallback(day.net_water_change_mm, 0);
+    const baselineAvailableWaterFraction = isFiniteNumber(day.projected_available_water_fraction)
+      ? day.projected_available_water_fraction
+      : round6(baselineAvailableWaterMm / capacity);
     const effectiveIrrigationMm = irrigationEvents
       .filter((event) => event.day_index === day.day_index)
       .reduce((sum, event) => sum + event.effective_irrigation_mm, 0);
     const rawProjectedAvailableWaterMm =
       index === 0
-        ? day.projected_available_water_mm + effectiveIrrigationMm
-        : previousProjectedAvailableWaterMm + day.net_water_change_mm + effectiveIrrigationMm;
+        ? baselineAvailableWaterMm + effectiveIrrigationMm
+        : previousProjectedAvailableWaterMm + baselineNetWaterChangeMm + effectiveIrrigationMm;
     const projectedAvailableWaterMm = Math.max(0, Math.min(capacity, rawProjectedAvailableWaterMm));
     const boundApplied: RootZoneSoilWaterForecastBoundAppliedV1 =
       rawProjectedAvailableWaterMm < 0 ? "LOWER_BOUND" : rawProjectedAvailableWaterMm > capacity ? "UPPER_BOUND" : "NONE";
-    const baselineAwf = round6(day.projected_available_water_mm / capacity);
+    const baselineAwf = round6(baselineAvailableWaterMm / capacity);
     const projectedAwf = round6(projectedAvailableWaterMm / capacity);
 
     previousProjectedAvailableWaterMm = projectedAvailableWaterMm;
@@ -339,12 +350,12 @@ function buildOption(
       return {
         day_index: day.day_index,
         date: day.date,
-        baseline_available_water_fraction: day.projected_available_water_fraction,
-        projected_available_water_fraction: day.projected_available_water_fraction,
+        baseline_available_water_fraction: comparableInput ? day.projected_available_water_fraction : baselineAvailableWaterFraction,
+        projected_available_water_fraction: comparableInput ? day.projected_available_water_fraction : baselineAvailableWaterFraction,
         delta_vs_baseline_fraction: 0,
-        projected_available_water_mm: day.projected_available_water_mm,
-        forecast_water_status: day.forecast_water_status,
-        bound_applied: day.bound_applied,
+        projected_available_water_mm: comparableInput ? day.projected_available_water_mm : baselineAvailableWaterMm,
+        forecast_water_status: comparableInput ? day.forecast_water_status : classifyAwf(baselineAvailableWaterFraction),
+        bound_applied: comparableInput ? day.bound_applied : "NONE",
       };
     }
 
@@ -392,7 +403,7 @@ function buildOption(
       basis: "deterministic_hypothetical_irrigation_comparison",
     },
     calculation_trace: {
-      application_efficiency: input.application_efficiency,
+      application_efficiency: safeEfficiency,
       model_version: ROOT_ZONE_IRRIGATION_SCENARIO_MODEL_VERSION_V1,
       source: "H33_baseline_net_water_change_mm",
     },
@@ -434,7 +445,7 @@ export function buildRootZoneIrrigationScenarioSetV1(
     blocking_reasons: blockingReasons,
     calculation_inputs: {
       source_forecast_id: sourceForecast?.forecast_id ?? "",
-      application_efficiency: input.application_efficiency,
+      application_efficiency: finiteOrFallback(input.application_efficiency, 0),
     },
     derivation: {
       thresholds: AWF_THRESHOLDS_V1,

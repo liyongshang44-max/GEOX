@@ -124,9 +124,19 @@ function option(output, optionId) {
   return found;
 }
 
-function assertNoNanProjection(output) {
+function assertDeepFiniteProjectionPayload(output) {
   for (const scenarioOption of output.options) {
+    for (const event of scenarioOption.irrigation_events) {
+      assert(Number.isFinite(event.day_index), "irrigation event day_index remains finite", event);
+      assert(Number.isFinite(event.irrigation_mm), "irrigation event irrigation_mm remains finite", event);
+      assert(Number.isFinite(event.effective_irrigation_mm), "irrigation event effective_irrigation_mm remains finite", event);
+      if (typeof event.application_efficiency === "number") {
+        assert(Number.isFinite(event.application_efficiency), "irrigation event application_efficiency remains finite", event);
+      }
+    }
+
     for (const day of scenarioOption.daily_projection) {
+      assert(Number.isFinite(day.baseline_available_water_fraction), "projection baseline AWF remains finite", day);
       assert(Number.isFinite(day.projected_available_water_mm), "projection mm remains finite", day);
       assert(Number.isFinite(day.projected_available_water_fraction), "projection AWF remains finite", day);
       assert(Number.isFinite(day.delta_vs_baseline_fraction), "projection delta remains finite", day);
@@ -190,9 +200,9 @@ assert(
 
 assert(build({ application_efficiency: 0 }).input_status === "INVALID_INPUT", "invalid application_efficiency returns INVALID_INPUT");
 assert(build({ application_efficiency: Number.NaN }).input_status === "INVALID_INPUT", "NaN application_efficiency returns INVALID_INPUT");
-assertNoNanProjection(build({ application_efficiency: Number.NaN }));
+assertDeepFiniteProjectionPayload(build({ application_efficiency: Number.NaN }));
 assert(build({ application_efficiency: Number.POSITIVE_INFINITY }).input_status === "INVALID_INPUT", "Infinity application_efficiency returns INVALID_INPUT");
-assertNoNanProjection(build({ application_efficiency: Number.POSITIVE_INFINITY }));
+assertDeepFiniteProjectionPayload(build({ application_efficiency: Number.POSITIVE_INFINITY }));
 assert(build({ sourceForecast: makeForecast({ zone_id: "other" }) }).input_status === "INVALID_INPUT", "source forecast scope mismatch returns INVALID_INPUT");
 assert(build({ sourceForecast: makeForecast({ forecast_status: "UNKNOWN" }) }).input_status === "INSUFFICIENT_FORECAST", "forecast_status not ESTIMATED returns INSUFFICIENT_FORECAST");
 assert(build({ sourceForecast: makeForecast({ horizon_days: 6 }) }).input_status === "INSUFFICIENT_FORECAST", "sourceForecast.horizon_days !== 7 returns INSUFFICIENT_FORECAST");
@@ -202,5 +212,44 @@ assert(build({ sourceForecast: makeForecast({ daily_forecast: makeDailyForecast(
 assert(build({ sourceForecast: makeForecast({ daily_forecast: makeDailyForecast().map((day, index) => (index === 1 ? { ...day, date: "2026-06-21" } : day)) }) }).input_status === "INVALID_INPUT", "duplicate date returns INVALID_INPUT");
 assert(build({ sourceForecast: makeForecast({ daily_forecast: makeDailyForecast().map((day, index) => (index === 0 ? { ...day, projected_available_water_fraction: 0.99 } : day)) }) }).input_status === "INVALID_INPUT", "baseline AWF inconsistent with mm/capacity returns INVALID_INPUT");
 assert(build({ sourceForecast: makeForecast({ determinism_hash: "" }) }).input_status === "INSUFFICIENT_FORECAST", "missing source forecast determinism_hash returns INSUFFICIENT_FORECAST");
+
+const nonFiniteProjectedMm = build({
+  sourceForecast: makeForecast({
+    daily_forecast: makeDailyForecast().map((day, index) =>
+      index === 0 ? { ...day, projected_available_water_mm: Number.NaN } : day,
+    ),
+  }),
+});
+assert(
+  nonFiniteProjectedMm.input_status === "INVALID_INPUT",
+  "non_finite_projected_available_water_mm returns INVALID_INPUT",
+);
+assertDeepFiniteProjectionPayload(nonFiniteProjectedMm);
+
+const nonFiniteNetWaterChange = build({
+  sourceForecast: makeForecast({
+    daily_forecast: makeDailyForecast().map((day, index) =>
+      index === 1 ? { ...day, net_water_change_mm: Number.POSITIVE_INFINITY } : day,
+    ),
+  }),
+});
+assert(
+  nonFiniteNetWaterChange.input_status === "INVALID_INPUT",
+  "non_finite_net_water_change_mm returns INVALID_INPUT",
+);
+assertDeepFiniteProjectionPayload(nonFiniteNetWaterChange);
+
+const nonFiniteBaselineAwf = build({
+  sourceForecast: makeForecast({
+    daily_forecast: makeDailyForecast().map((day, index) =>
+      index === 0 ? { ...day, projected_available_water_fraction: Number.NaN } : day,
+    ),
+  }),
+});
+assert(
+  nonFiniteBaselineAwf.input_status === "INVALID_INPUT",
+  "non_finite baseline projected_available_water_fraction returns INVALID_INPUT",
+);
+assertDeepFiniteProjectionPayload(nonFiniteBaselineAwf);
 
 console.log(`[${ACCEPTANCE_NAME}] PASS`);
