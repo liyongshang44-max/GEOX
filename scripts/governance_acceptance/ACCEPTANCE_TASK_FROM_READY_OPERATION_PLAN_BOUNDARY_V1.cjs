@@ -6,6 +6,8 @@ const gate = fs.readFileSync('apps/server/src/routes/v1/ao_act.ts','utf8');
 const builder = fs.readFileSync('apps/server/src/domain/controlplane/ao_act_task_from_operation_plan_builder_v1.ts','utf8');
 const opRoute = route.slice(route.indexOf('app.post(\"/api/v1/actions/task/from-operation-plan\"'), route.indexOf('app.post(\"/api/v1/actions/task/from-variable-prescription\"'));
 const roles = fs.readFileSync('apps/server/src/domain/auth/roles.ts','utf8');
+const openapiOverlay = fs.readFileSync('apps/server/src/routes/openapi_sales_critical_overlay_v1.ts','utf8');
+const inventory = fs.readFileSync('apps/server/src/routes/api_route_inventory_v1.ts','utf8');
 assert(route.includes('app.post("/api/v1/actions/task/from-operation-plan"'), 'route exists under /api/v1/actions');
 assert(!route.includes('app.post("/api/control/ao_act/task/from-operation-plan"'), 'no legacy route');
 assert(route.includes('requireAoActAnyScopeV0(req, reply, ["action.task.create"]'), 'requires action.task.create');
@@ -23,6 +25,8 @@ assert(gate.includes('/api/v1/actions/task/from-operation-plan'), 'field-binding
 assert(/operator:\s*\[[^\]]*"action\.task\.create"/.test(roles), 'operator allowed action.task.create');
 assert(/admin:\s*\["\*"\]/.test(roles), 'admin wildcard allowed');
 assert(!/approver:\s*\[[^\]]*"action\.task\.create"/.test(roles), 'approver lacks action.task.create');
+for (const doc of [openapiOverlay, inventory]) assert(doc.includes('/api/v1/actions/task/from-operation-plan'), 'OpenAPI/inventory documents route');
+for (const token of ['TaskFromOperationPlanRequestV1','TaskFromOperationPlanResponseV1','bearerAuth','action.task.create','act-service / executor-service','release_gate_candidate']) assert(openapiOverlay.includes(token), 'OpenAPI overlay contains '+token);
 const customerFiles = [...fs.readdirSync('apps/server/src/routes').filter(f=>f.includes('customer')).map(f=>'apps/server/src/routes/'+f)];
 for (const f of customerFiles) { const s=fs.readFileSync(f,'utf8'); assert(!s.includes('operator_operation_plan_task_projection_submission_v1'), 'customer does not expose projection '+f); }
 console.log('[task-from-ready-operation-plan-boundary] PASS');
