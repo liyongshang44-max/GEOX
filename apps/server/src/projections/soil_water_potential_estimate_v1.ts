@@ -9,21 +9,7 @@ import type {
   SoilWaterPotentialInputStatusV1,
   SoilWaterPotentialThetaUnitV1,
 } from "../domain/soil_water/soil_water_potential_builder_v1.js";
-import { buildSoilWaterPotentialEstimateV1 } from "../domain/soil_water/soil_water_potential_builder_v1.js";
 import { ensureSoilHydraulicProfileIndexV1 } from "./soil_hydraulic_profile_v1.js";
-
-export {
-  SOIL_WATER_POTENTIAL_MODEL_VERSION_V1,
-  buildSoilWaterPotentialEstimateV1,
-  classifySoilWaterPotentialV1,
-} from "../domain/soil_water/soil_water_potential_builder_v1.js";
-
-export type {
-  SoilWaterPotentialClassV1,
-  SoilWaterPotentialEstimatePayloadV1,
-  SoilWaterPotentialInputStatusV1,
-  SoilWaterPotentialThetaUnitV1,
-} from "../domain/soil_water/soil_water_potential_builder_v1.js";
 
 export const SOIL_WATER_POTENTIAL_ESTIMATE_INDEX_V1_TABLE =
   "soil_water_potential_estimate_index_v1";

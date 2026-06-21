@@ -14,6 +14,9 @@ const FORBIDDEN_TOKENS = [
   "soil_water_potential_estimate_v1",
   "soil_water_potential_estimate_index_v1",
   "matric_potential_kpa",
+  "soilWaterPotentialEstimate",
+  "soilWaterPotentialEstimateIndex",
+  "matricPotentialKpa",
 ];
 
 function fail(message, detail) {

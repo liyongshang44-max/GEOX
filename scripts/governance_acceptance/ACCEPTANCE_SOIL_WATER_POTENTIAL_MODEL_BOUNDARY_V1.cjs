@@ -1,5 +1,5 @@
 // scripts/governance_acceptance/ACCEPTANCE_SOIL_WATER_POTENTIAL_MODEL_BOUNDARY_V1.cjs
-// Purpose: prove the H31 van Genuchten model is deterministic, pure, and guarded.
+// Purpose: prove the H31 soil water potential domain model and builder are deterministic, pure, and guarded.
 
 const fs = require("node:fs");
 const path = require("node:path");
@@ -26,12 +26,24 @@ function assertInvalid(result, label) {
   assert(Array.isArray(result.blocking_reasons) && result.blocking_reasons.length > 0, `${label}: reason required`, result);
 }
 
-const modelPath = path.join(process.cwd(), "apps/server/src/domain/soil_water/van_genuchten_v1.ts");
-assert(fs.existsSync(modelPath), "model module missing", modelPath);
+const domainFiles = [
+  {
+    path: path.join(process.cwd(), "apps/server/src/domain/soil_water/van_genuchten_v1.ts"),
+    firstLine: "// apps/server/src/domain/soil_water/van_genuchten_v1.ts",
+  },
+  {
+    path: path.join(process.cwd(), "apps/server/src/domain/soil_water/soil_water_potential_builder_v1.ts"),
+    firstLine: "// apps/server/src/domain/soil_water/soil_water_potential_builder_v1.ts",
+  },
+];
 
-const source = fs.readFileSync(modelPath, "utf8").replace(/^\uFEFF/, "");
-assert(source.startsWith("// apps/server/src/domain/soil_water/van_genuchten_v1.ts"), "first-line path comment missing");
+for (const file of domainFiles) {
+  assert(fs.existsSync(file.path), "domain module missing", file.path);
+  const source = fs.readFileSync(file.path, "utf8").replace(/^\uFEFF/, "");
+  assert(source.startsWith(file.firstLine), "first-line path comment missing", file.path);
+}
 
+const modelPath = domainFiles[0].path;
 const { estimateVanGenuchtenMatricPotentialV1 } = require(modelPath);
 const validInput = {
   theta: 0.28,
@@ -79,14 +91,19 @@ const forbiddenPatterns = [
   /recommendation/,
   /approval/,
   /operation_plan/,
-  /ao_act/,
+  /ao_act/i,
   /dispatch/,
   /roi_ledger/,
   /field_memory/,
+  /INSERT\s+INTO\s+facts/i,
+  /soil_water_potential_estimate_fact_/,
 ];
 
-for (const pattern of forbiddenPatterns) {
-  assert(!pattern.test(source), `model module contains forbidden boundary token ${pattern}`);
+for (const file of domainFiles) {
+  const source = fs.readFileSync(file.path, "utf8").replace(/^\uFEFF/, "");
+  for (const pattern of forbiddenPatterns) {
+    assert(!pattern.test(source), `${path.basename(file.path)} contains forbidden boundary token ${pattern}`);
+  }
 }
 
 console.log(`[${ACCEPTANCE_NAME}] PASS`);
