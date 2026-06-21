@@ -213,7 +213,10 @@
     "ci:governance:root-zone-irrigation-scenario-model-boundary": "node scripts/governance_acceptance/ACCEPTANCE_ROOT_ZONE_IRRIGATION_SCENARIO_MODEL_BOUNDARY_V1.cjs",
     "ci:governance:root-zone-irrigation-scenario-customer-boundary": "node scripts/governance_acceptance/ACCEPTANCE_ROOT_ZONE_IRRIGATION_SCENARIO_CUSTOMER_BOUNDARY_V1.cjs",
     "ci:runtime:root-zone-irrigation-scenario": "node scripts/runtime_acceptance/ACCEPTANCE_ROOT_ZONE_IRRIGATION_SCENARIO_RUNTIME_V1.cjs",
-    "ci:root-zone-irrigation-scenario": "pnpm run ci:governance:root-zone-irrigation-scenario-schema-migration && pnpm run ci:governance:root-zone-irrigation-scenario-model-boundary && pnpm run ci:governance:root-zone-irrigation-scenario-customer-boundary && pnpm run ci:runtime:root-zone-irrigation-scenario"
+    "ci:root-zone-irrigation-scenario": "pnpm run ci:governance:root-zone-irrigation-scenario-schema-migration && pnpm run ci:governance:root-zone-irrigation-scenario-model-boundary && pnpm run ci:governance:root-zone-irrigation-scenario-customer-boundary && pnpm run ci:runtime:root-zone-irrigation-scenario",
+    "ci:governance:root-zone-scenario-submit-recommendation-boundary": "node scripts/governance_acceptance/ACCEPTANCE_ROOT_ZONE_SCENARIO_SUBMIT_RECOMMENDATION_BOUNDARY_V1.cjs",
+    "ci:runtime:root-zone-scenario-submit-recommendation": "node scripts/runtime_acceptance/ACCEPTANCE_ROOT_ZONE_SCENARIO_SUBMIT_RECOMMENDATION_RUNTIME_V1.cjs",
+    "ci:root-zone-scenario-submit-recommendation": "pnpm run ci:governance:root-zone-scenario-submit-recommendation-boundary && pnpm run ci:runtime:root-zone-scenario-submit-recommendation"
   },
   "volta": {
     "node": "20.11.1"
