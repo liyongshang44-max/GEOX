@@ -244,7 +244,10 @@
     "ci:evidence-artifact-from-as-executed": "pnpm run ci:governance:evidence-artifact-from-as-executed-boundary && pnpm run ci:runtime:evidence-artifact-from-as-executed",
     "ci:governance:acceptance-result-from-evidence-artifacts-boundary": "node scripts/governance_acceptance/ACCEPTANCE_RESULT_FROM_EVIDENCE_ARTIFACTS_V1_BOUNDARY.cjs",
     "ci:runtime:acceptance-result-from-evidence-artifacts": "node scripts/runtime_acceptance/ACCEPTANCE_RESULT_FROM_EVIDENCE_ARTIFACTS_V1_RUNTIME.cjs",
-    "ci:acceptance-result-from-evidence-artifacts": "pnpm run ci:governance:acceptance-result-from-evidence-artifacts-boundary && pnpm run ci:runtime:acceptance-result-from-evidence-artifacts"
+    "ci:acceptance-result-from-evidence-artifacts": "pnpm run ci:governance:acceptance-result-from-evidence-artifacts-boundary && pnpm run ci:runtime:acceptance-result-from-evidence-artifacts",
+    "ci:governance:water-response-verification-from-acceptance-boundary": "node scripts/governance_acceptance/ACCEPTANCE_WATER_RESPONSE_VERIFICATION_FROM_ACCEPTANCE_V1_BOUNDARY.cjs",
+    "ci:runtime:water-response-verification-from-acceptance": "node scripts/runtime_acceptance/ACCEPTANCE_WATER_RESPONSE_VERIFICATION_FROM_ACCEPTANCE_V1_RUNTIME.cjs",
+    "ci:water-response-verification-from-acceptance": "pnpm run ci:governance:water-response-verification-from-acceptance-boundary && pnpm run ci:runtime:water-response-verification-from-acceptance"
   },
   "volta": {
     "node": "20.11.1"
