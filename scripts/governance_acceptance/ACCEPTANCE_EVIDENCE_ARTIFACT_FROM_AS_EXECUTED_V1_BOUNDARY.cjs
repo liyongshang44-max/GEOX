@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+// scripts/governance_acceptance/ACCEPTANCE_EVIDENCE_ARTIFACT_FROM_AS_EXECUTED_V1_BOUNDARY.cjs
 const fs=require('fs'), assert=require('assert'); const r=p=>fs.readFileSync(p,'utf8'); const ok=(c,m)=>{assert(c,m);console.log('ok - '+m)};
 const route=r('apps/server/src/routes/evidence_artifact_from_as_executed_v1.ts'), builder=r('apps/server/src/domain/evidence/evidence_artifact_from_as_executed_v1.ts'), roles=r('apps/server/src/domain/auth/roles.ts'), auth=r('apps/server/src/auth/ao_act_authz_v0.ts'), openapi=r('apps/server/src/routes/openapi_v1.ts'), inv=r('apps/server/src/routes/api_route_inventory_v1.ts');
 ok(route.includes('app.post("/api/v1/evidence-artifacts/from-as-executed"'), 'Route exists: POST /api/v1/evidence-artifacts/from-as-executed');

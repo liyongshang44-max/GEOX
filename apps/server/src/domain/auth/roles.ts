@@ -1,3 +1,4 @@
+// apps/server/src/domain/auth/roles.ts
 import type { AoActScopeV0 } from "../../auth/ao_act_authz_v0.js";
 
 export type AuthRole = "admin" | "operator" | "viewer" | "client" | "executor" | "agronomist" | "approver" | "auditor" | "support";

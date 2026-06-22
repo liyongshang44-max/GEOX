@@ -1,3 +1,4 @@
+// apps/server/src/routes/api_route_inventory_v1.ts
 export type ApiRouteInventoryAudienceV1 = "customer" | "operator" | "admin" | "internal" | "legacy" | "system";
 export type ApiRouteInventoryBoundaryV1 = "official" | "compat" | "debug" | "internal";
 export type ApiRouteInventoryPathMatchV1 = "exact" | "group";
