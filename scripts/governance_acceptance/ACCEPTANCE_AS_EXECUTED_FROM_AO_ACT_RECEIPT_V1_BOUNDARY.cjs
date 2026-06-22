@@ -15,6 +15,7 @@ ok(routeFile.includes('registerAsExecutedV1Routes') && start >= 0, 'route stays 
 ok(helper.includes('createAsExecutedFromReceipt') || helper.includes('as_executed_record_v1'), 'route reuses existing createAsExecutedFromReceipt or existing as_executed_record_v1 table');
 ok(helper.includes('ao_act_receipt_v1'), 'route reads ao_act_receipt_v1');
 ok(helper.includes('operation_plan_index_v1'), 'route reads operation_plan_index_v1');
+ok(helper.includes("record_json::jsonb#>>'{payload,tenant_id}'") && helper.includes("record_json::jsonb#>>'{payload,field_id}'") && helper.includes("record_json::jsonb#>>'{payload,zone_id}'"), 'receipt lookup prefers scoped matches before validation');
 ok(helper.includes('createAsExecutedFromReceipt') || helper.includes('as_executed_record_v1'), 'route writes as_executed_record_v1');
 ok(helper.includes('createAsExecutedFromReceipt') || helper.includes('as_applied_map_v1'), 'route writes as_applied_map_v1 only as existing as-executed companion projection');
 for (const t of ['acceptance_result_v1','evidence_artifact_v1','roi_ledger_v1','field_memory_v1','operation_plan_transition_v1']) ok(!route.match(new RegExp(`type:\\s*["']${t}`)) && !helper.match(new RegExp(`INSERT\\s+INTO\\s+${t}`,'i')), `route does not write ${t}`);

@@ -70,7 +70,15 @@ export async function createAsExecutedFromAoActReceiptV1(pool: Pool, input: Crea
     `SELECT fact_id, record_json::jsonb AS record_json
        FROM facts
       WHERE ((record_json::jsonb#>>'{payload,ao_act_receipt_id}') = $7 OR fact_id = $7)
-      ORDER BY occurred_at DESC, fact_id DESC
+      ORDER BY CASE
+        WHEN (record_json::jsonb#>>'{payload,tenant_id}') = $1
+         AND (record_json::jsonb#>>'{payload,project_id}') = $2
+         AND (record_json::jsonb#>>'{payload,group_id}') = $3
+         AND (record_json::jsonb#>>'{payload,field_id}') = $4
+         AND COALESCE(record_json::jsonb#>>'{payload,zone_id}','') = COALESCE($5,'')
+        THEN 0 ELSE 1 END,
+        occurred_at DESC,
+        fact_id DESC
       LIMIT 1`,
     [input.tenant_id, input.project_id, input.group_id, input.field_id, input.zone_id, input.act_task_id, input.receipt_id],
   );
