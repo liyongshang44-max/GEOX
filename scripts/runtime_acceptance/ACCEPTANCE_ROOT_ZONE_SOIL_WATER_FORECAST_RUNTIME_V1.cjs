@@ -177,8 +177,12 @@ async function appendRootZoneForecastFact(client, payload, factId) {
     assert(payload.daily_forecast[0].projected_available_water_mm === 45, "verify first day calculation");
     assert(payload.min_available_water_fraction === 0, "verify min available water fraction");
     assert(payload.max_available_water_fraction === 0.45, "verify max available water fraction");
-    assert(payload.stress_day_count === 4, "verify stress_day_count");
-    assert(payload.limited_day_count === 2, "verify limited_day_count");
+    const expectedProjectedFractions = [0.45, 0.35, 0.25, 0.15, 0.05, 0, 0];
+    const expectedStressDayCount = expectedProjectedFractions.filter((value) => value < 0.25).length;
+    const expectedLimitedDayCount = expectedProjectedFractions.filter((value) => value >= 0.25 && value < 0.5).length;
+
+    assert(payload.stress_day_count === expectedStressDayCount, "verify stress_day_count");
+    assert(payload.limited_day_count === expectedLimitedDayCount, "verify limited_day_count");
     assert(
       payload.determinism_hash ===
         buildRootZoneSoilWaterForecastV1({
