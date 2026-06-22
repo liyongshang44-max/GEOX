@@ -235,7 +235,10 @@
     "ci:task-from-ready-operation-plan": "pnpm run ci:governance:task-from-ready-operation-plan-boundary && pnpm run ci:runtime:task-from-ready-operation-plan",
     "ci:governance:ao-act-receipt-v1-boundary": "node scripts/governance_acceptance/ACCEPTANCE_AO_ACT_RECEIPT_V1_BOUNDARY.cjs",
     "ci:runtime:ao-act-receipt-v1": "node scripts/runtime_acceptance/ACCEPTANCE_AO_ACT_RECEIPT_V1_RUNTIME.cjs",
-    "ci:ao-act-receipt-v1": "pnpm run ci:governance:ao-act-receipt-v1-boundary && pnpm run ci:runtime:ao-act-receipt-v1"
+    "ci:ao-act-receipt-v1": "pnpm run ci:governance:ao-act-receipt-v1-boundary && pnpm run ci:runtime:ao-act-receipt-v1",
+    "ci:governance:as-executed-from-ao-act-receipt-v1-boundary": "node scripts/governance_acceptance/ACCEPTANCE_AS_EXECUTED_FROM_AO_ACT_RECEIPT_V1_BOUNDARY.cjs",
+    "ci:runtime:as-executed-from-ao-act-receipt-v1": "node scripts/runtime_acceptance/ACCEPTANCE_AS_EXECUTED_FROM_AO_ACT_RECEIPT_V1_RUNTIME.cjs",
+    "ci:as-executed-from-ao-act-receipt-v1": "pnpm run ci:governance:as-executed-from-ao-act-receipt-v1-boundary && pnpm run ci:runtime:as-executed-from-ao-act-receipt-v1"
   },
   "volta": {
     "node": "20.11.1"
