@@ -1,12 +1,67 @@
 # GEOX Repository SSOT
 
-This file is the repository-level single source of truth for documentation entry and governance.
+This file is the repository-level single source of truth for documentation entry, authority layering, and governance conflict resolution.
 
 ## Repository-level SSOT
 
 The only repository-level SSOT is `docs/SSOT.md`.
 
-All other documents in `docs/**`, `README_MIGRATION.md`, `docs/controlplane/**`, `docs/controlplane/constitution/**`, and `docs/delivery/**` are domain-specific references, derived notes, or historical records unless this document explicitly states otherwise.
+This means `docs/SSOT.md` owns:
+
+- documentation entrypoint governance
+- authority layering between documentation groups
+- conflict-resolution rules between repository-level and domain-level documents
+- repository-wide API entry classification
+- repository-wide database contract source classification
+- repository-wide runtime delivery classification
+
+`docs/SSOT.md` does not restate every frozen Sprint, tag, acceptance command, or domain contract. Those records remain in their assigned domain references.
+
+## Authority layering
+
+GEOX uses layered authority. A lower or domain-specific document may be authoritative only inside the domain explicitly assigned here. It must not claim repository-level SSOT status.
+
+| Layer | Authority | Scope | Conflict rule |
+|---|---|---|---|
+| Repository entry and governance | `docs/SSOT.md` | Documentation entry, authority model, repository-wide classification | Wins over all documents on repository-level governance |
+| Migration / freeze index | `README_MIGRATION.md` | Sprint numbering, freeze snapshots, tag meaning, acceptance entrypoints, frozen capability boundaries | Wins only inside Sprint / Tag / Freeze state |
+| Control constitution references | `docs/controlplane/constitution/README.md` and the documents listed there | Control-plane semantic prohibitions and constitution-level control semantics | Wins only inside control-plane constitution semantics, unless it conflicts with this SSOT's repository-level authority model |
+| Control-plane contracts | `docs/controlplane/**` | AO-ACT, execution, audit, authz, and control-plane contracts | Domain reference only; must defer to the constitution layer and this SSOT |
+| Delivery references | `docs/delivery/**` | Delivery envelope, acceptance aggregation, evidence export packaging | Domain reference only; must not define runtime semantics unless separately frozen in `README_MIGRATION.md` |
+| QA references | `docs/qa/**` | Test plans, audit notes, validation references | Domain reference only; must not define product or runtime authority |
+| Commercial references | `docs/commercial/**` | Customer-facing or commercial packaging references | Domain reference only; must not override engineering or governance contracts |
+| Contract proposals | `docs/contracts/v2/**` | Proposed Base Contract v2 governance baseline | Proposed baseline only; no completion or runtime authority by itself |
+| Root README | `README.md` | Repository landing page for humans | Navigation only; not an authority source |
+
+## Domain authority rules
+
+### `README_MIGRATION.md`
+
+`README_MIGRATION.md` is the canonical migration and freeze index for:
+
+- Sprint numbering and scope
+- freeze snapshots
+- git tags that lock governance and execution semantics
+- acceptance commands that prove frozen invariants
+- hard boundaries attached to frozen milestones
+
+It may say it is the only canonical Sprint / Tag / Freeze index. That claim is valid only for Sprint / Tag / Freeze state. It must not be interpreted as repository-level SSOT status.
+
+If a document conflicts with `README_MIGRATION.md` about Sprint / Tag / Freeze state, `README_MIGRATION.md` wins.
+
+If `README_MIGRATION.md` conflicts with `docs/SSOT.md` about repository-level entry, authority layering, API entry classification, DB contract source classification, or runtime delivery classification, `docs/SSOT.md` wins.
+
+### `docs/controlplane/constitution/**`
+
+The control-plane constitution documents may define semantic prohibitions and order-of-authority rules inside the control-plane domain.
+
+They must not claim repository-level SSOT status. Their authority is domain-specific and is recognized through this SSOT.
+
+### Other domain documents
+
+All other documents in `docs/**` are domain-specific references, derived views, proposals, or historical records unless this document explicitly assigns them authority.
+
+No other document may create a competing repository-level authority model.
 
 ## Canonical repository rules
 
@@ -49,7 +104,7 @@ Runtime delivery must use build artifacts.
 
 - `docs/SSOT.md`
 
-### Domain references
+### Recognized domain references
 
 These are domain-specific references, not repository-level SSOT documents:
 
@@ -60,11 +115,14 @@ These are domain-specific references, not repository-level SSOT documents:
 - `docs/qa/**`
 - `docs/commercial/**`
 - `docs/ci/**`
+- `docs/contracts/v2/**`
 
 ### Root README
 
 - `README.md` is the repository landing page
 - `README.md` must point to `docs/SSOT.md` as the documentation entry
+- `README.md` may link to `README_MIGRATION.md` as the Sprint / Tag / Freeze index
+- `README.md` must not claim to be a governance authority
 
 ## Navigation
 
@@ -72,6 +130,10 @@ These are domain-specific references, not repository-level SSOT documents:
 
 - `README.md`
 - `docs/SSOT.md`
+
+### Freeze and milestone reference
+
+- `README_MIGRATION.md`
 
 ### Core engineering references
 
@@ -93,9 +155,40 @@ These are domain-specific references, not repository-level SSOT documents:
 
 Only `docs/SSOT.md` may declare repository-level SSOT status.
 
-All subdomain documents must use domain-reference language instead of repository-level SSOT language.
+Domain documents may declare domain authority only when the domain is explicitly recognized in this file. They must use domain-reference language and must not claim repository-level governance authority.
 
-## Bare /api/* path classification
+Any new index-like document must declare one of the following statuses in its first section:
+
+- `repository-level SSOT` — forbidden unless the file is `docs/SSOT.md`
+- `domain reference` — allowed only for a named domain recognized here
+- `derived view` — allowed, but must link to its authority source
+- `historical record` — allowed, but must not define current authority
+- `proposal` — allowed, but must not claim implementation or runtime authority
+
+## Forbidden competing authority files
+
+Do not introduce a competing repository-level authority file, including:
+
+- `SPRINT_INDEX.md` as repository-level authority
+- `MIGRATION_INDEX.md` as repository-level authority
+- `GOVERNANCE_INDEX.md` as repository-level authority
+- `CHANGELOG.md` as repository-level authority
+- any new `SSOT*.md` outside `docs/SSOT.md`
+
+A file may use those names only if its first section marks it as non-authoritative and links to the relevant authority source.
+
+## Conflict resolution
+
+When two documents appear to conflict, resolve in this order:
+
+1. Identify the conflict domain.
+2. If the conflict is about repository-level entry, authority layering, API entry classification, DB contract source, or runtime delivery model, `docs/SSOT.md` wins.
+3. If the conflict is about Sprint / Tag / Freeze state, `README_MIGRATION.md` wins.
+4. If the conflict is about control-plane constitution semantics, the constitution document recognized by `docs/controlplane/constitution/README.md` wins inside that domain, unless it conflicts with this SSOT's repository-level authority model.
+5. If the conflict is about implementation behavior, code and migrations prove actual behavior; documentation must be corrected to match proven runtime facts.
+6. If the conflict cannot be classified, treat `docs/SSOT.md` as the temporary authority and open a governance issue before changing semantics.
+
+## Bare `/api/*` path classification
 
 Bare `/api/*` paths are not repository-level default public API entry points. Each remaining bare path must be explicitly classified as one of the following:
 
@@ -105,10 +198,10 @@ Bare `/api/*` paths are not repository-level default public API entry points. Ea
 
 Current repository classification:
 
-- `apps/server/src/routes/agronomy_v0.ts` → legacy compatibility
-- `apps/server/src/routes/judge_config.ts` → internal / experimental
-- `apps/server/src/routes/raw.ts` → legacy compatibility
-- `apps/server/src/routes/series.ts` → legacy compatibility
-- `apps/server/src/routes/sim_config.ts` → internal / experimental
+- `apps/server/src/routes/agronomy_v0.ts` -> legacy compatibility
+- `apps/server/src/routes/judge_config.ts` -> internal / experimental
+- `apps/server/src/routes/raw.ts` -> legacy compatibility
+- `apps/server/src/routes/series.ts` -> legacy compatibility
+- `apps/server/src/routes/sim_config.ts` -> internal / experimental
 
 These routes must not be treated as the default external API surface. The default external API surface remains `/api/v1/*`.
