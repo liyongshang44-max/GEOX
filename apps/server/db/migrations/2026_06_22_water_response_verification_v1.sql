@@ -1,3 +1,4 @@
+-- apps/server/db/migrations/2026_06_22_water_response_verification_v1.sql
 CREATE TABLE IF NOT EXISTS public.water_response_verification_index_v1 (
   verification_id text PRIMARY KEY, tenant_id text NOT NULL, project_id text NOT NULL, group_id text NOT NULL, field_id text NOT NULL, zone_id text NOT NULL,
   acceptance_id text NOT NULL, acceptance_result_fact_id text NOT NULL, as_executed_id text NOT NULL, task_id text NOT NULL, receipt_id text NOT NULL, operation_plan_id text,
