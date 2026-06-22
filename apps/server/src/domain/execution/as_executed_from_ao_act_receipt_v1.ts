@@ -97,7 +97,7 @@ export async function createAsExecutedFromAoActReceiptV1(pool: Pool, input: Crea
     project_id: input.project_id,
     group_id: input.group_id,
     task_id: input.act_task_id,
-    receipt_id: input.receipt_id,
+    receipt_id: text(receiptRow.fact_id),
   });
   if (result.idempotent) return { ...base("REJECTED_DUPLICATE"), duplicate: true };
   return { ...base("AS_EXECUTED_RECORDED"), as_executed_created: true, as_applied_created: true, as_executed: result.as_executed, as_applied: result.as_applied };

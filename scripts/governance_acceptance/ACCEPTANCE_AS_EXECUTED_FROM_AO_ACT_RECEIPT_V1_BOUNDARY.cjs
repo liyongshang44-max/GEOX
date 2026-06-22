@@ -5,6 +5,8 @@ const read = p => fs.readFileSync(p,'utf8'); const ok=(c,m)=>{assert(c,m);consol
 const routeFile = read('apps/server/src/routes/as_executed_v1.ts');
 const helper = read('apps/server/src/domain/execution/as_executed_from_ao_act_receipt_v1.ts');
 const roles = read('apps/server/src/domain/auth/roles.ts');
+const openapi = read('apps/server/src/routes/openapi_v1.ts');
+const inventory = read('apps/server/src/routes/api_route_inventory_v1.ts');
 const start = routeFile.indexOf('app.post("/api/v1/as-executed/from-ao-act-receipt-v1"');
 const next = routeFile.indexOf('app.get(', start + 10);
 const route = routeFile.slice(start, next > start ? next : undefined);
@@ -23,4 +25,7 @@ ok(!/approver:[^\n]*ao_act\.receipt\.write/.test(roles) && !/client:[^\n]*ao_act
 ok(!helper.includes('process.env'), 'builder/helper does not read process.env');
 ok(!helper.match(/Date\.now|new Date|randomUUID/), 'builder/helper does not use Date.now/new Date/randomUUID');
 for (const p of fs.readdirSync('apps/server/src/routes').filter(f=>/customer|delivery|reports|dashboard/.test(f)).map(f=>'apps/server/src/routes/'+f)) ok(!/as_executed_record_v1[\s\S]{0,160}(final|accepted delivery|customer final)/i.test(read(p)), `${p} does not expose as_executed_record_v1 as final accepted delivery`);
+
+ok(openapi.includes('/api/v1/as-executed/from-ao-act-receipt-v1') && openapi.includes('security: [{ bearerAuth: [] }]') && openapi.includes('auth_scope: "ao_act.receipt.write"') && openapi.includes('x-geox-governance'), 'OpenAPI includes security/auth_scope/governance metadata');
+ok(inventory.includes('route_path: "/api/v1/as-executed/from-ao-act-receipt-v1"') && inventory.includes('path_match: "exact"') && inventory.includes('auth_scope: "ao_act.receipt.write"'), 'API inventory includes exact H42 route path');
 console.log('ACCEPTANCE_AS_EXECUTED_FROM_AO_ACT_RECEIPT_V1_BOUNDARY passed');

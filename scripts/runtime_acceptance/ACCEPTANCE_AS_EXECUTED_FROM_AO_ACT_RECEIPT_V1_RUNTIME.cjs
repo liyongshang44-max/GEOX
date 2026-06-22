@@ -22,8 +22,8 @@ async function neg(name, mut, expected){ const plan=id(name+'plan'), task=id(nam
 (async()=>{ const made=[]; try{
   const plan=id('plan'), task=id('task'), rid=id('receipt'); const fid=await fact('ao_act_receipt_v1', receiptPayload(plan,task,rid)); made.push(plan,task,rid); await idx(plan,task,fid);
   let r=await post(body(plan,task,rid)); assert.equal(r.status,200); assert.equal(r.json?.status,'AS_EXECUTED_RECORDED'); assert.equal(r.json?.as_executed_created,true); assert.equal(r.json?.as_applied_created,true); assert.equal(r.json?.acceptance_created,false); assert.equal(r.json?.evidence_artifact_created,false); assert.equal(r.json?.roi_created,false); assert.equal(r.json?.field_memory_created,false);
-  let c=await counts(task,rid); assert.equal(c.ae,1); assert.equal(c.am,1);
-  r=await post(body(plan,task,rid)); assert.equal(r.json?.status,'REJECTED_DUPLICATE'); assert.equal(r.json?.duplicate,true); c=await counts(task,rid); assert.equal(c.ae,1); assert.equal(c.am,1);
+  let c=await counts(task,fid); assert.equal(c.ae,1); assert.equal(c.am,1);
+  r=await post(body(plan,task,rid)); assert.equal(r.json?.status,'REJECTED_DUPLICATE'); assert.equal(r.json?.duplicate,true); c=await counts(task,fid); assert.equal(c.ae,1); assert.equal(c.am,1);
   r=await post(body(id('missingplan'),id('missingtask'),id('missingreceipt'))); assert.equal(r.json?.status,'REJECTED_RECEIPT_NOT_FOUND');
   await neg('not_v1', null, 'REJECTED_RECEIPT_NOT_V1');
   await neg('missing_index', null, 'REJECTED_OPERATION_PLAN_NOT_FOUND');
