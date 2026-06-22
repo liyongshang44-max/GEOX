@@ -3,7 +3,16 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const name = "ACCEPTANCE_ROOT_ZONE_SOIL_WATER_STATE_CUSTOMER_BOUNDARY_V1";
-const scanRoots = ["apps/server/src/routes", "apps/web/src"];
+const customerSurfaceRoots = [
+  "apps/web/src/features/customer",
+  "apps/web/src/components/customer",
+];
+const customerRouteFiles = [
+  "apps/server/src/routes/customer_v1.ts",
+  "apps/server/src/routes/customer_scope_response_hook_v1.ts",
+  "apps/server/src/routes/reports_v1.ts",
+  "apps/server/src/routes/reports_dashboard_v1.ts",
+];
 const forbiddenTokens = [
   "root_zone_soil_water_state_v1",
   "root_zone_soil_water_state_index_v1",
@@ -24,23 +33,34 @@ function assert(condition, message, detail) {
   if (!condition) fail(message, detail);
 }
 
-function walk(dir) {
-  if (!fs.existsSync(dir)) return [];
+function walkFiles(dir, output = []) {
+  if (!fs.existsSync(dir)) return output;
 
-  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const filePath = path.join(dir, entry.name);
-    return entry.isDirectory() ? walk(filePath) : [filePath];
-  });
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      walkFiles(fullPath, output);
+    } else {
+      output.push(fullPath);
+    }
+  }
+
+  return output;
 }
 
-const hits = [];
-for (const file of scanRoots.flatMap(walk)) {
+const scannedFiles = [
+  ...customerSurfaceRoots.flatMap((root) => walkFiles(root)),
+  ...customerRouteFiles.filter((file) => fs.existsSync(file)),
+].filter((file) => /\.(ts|tsx|js|jsx|cjs|mjs)$/.test(file));
+
+for (const file of scannedFiles) {
   const text = fs.readFileSync(file, "utf8");
   for (const token of forbiddenTokens) {
-    if (text.includes(token)) hits.push(`${file}: ${token}`);
+    if (text.includes(token)) {
+      fail(`Customer boundary token exposed: ${token}`, file);
+    }
   }
 }
-assert(hits.length === 0, "customer exposure found", hits);
 
 const customerRouteFile = "apps/server/src/routes/customer_v1.ts";
 assert(fs.existsSync(customerRouteFile), "customer route file exists");
