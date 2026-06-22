@@ -238,7 +238,10 @@
     "ci:ao-act-receipt-v1": "pnpm run ci:governance:ao-act-receipt-v1-boundary && pnpm run ci:runtime:ao-act-receipt-v1",
     "ci:governance:as-executed-from-ao-act-receipt-v1-boundary": "node scripts/governance_acceptance/ACCEPTANCE_AS_EXECUTED_FROM_AO_ACT_RECEIPT_V1_BOUNDARY.cjs",
     "ci:runtime:as-executed-from-ao-act-receipt-v1": "node scripts/runtime_acceptance/ACCEPTANCE_AS_EXECUTED_FROM_AO_ACT_RECEIPT_V1_RUNTIME.cjs",
-    "ci:as-executed-from-ao-act-receipt-v1": "pnpm run ci:governance:as-executed-from-ao-act-receipt-v1-boundary && pnpm run ci:runtime:as-executed-from-ao-act-receipt-v1"
+    "ci:as-executed-from-ao-act-receipt-v1": "pnpm run ci:governance:as-executed-from-ao-act-receipt-v1-boundary && pnpm run ci:runtime:as-executed-from-ao-act-receipt-v1",
+    "ci:governance:evidence-artifact-from-as-executed-boundary": "node scripts/governance_acceptance/ACCEPTANCE_EVIDENCE_ARTIFACT_FROM_AS_EXECUTED_V1_BOUNDARY.cjs",
+    "ci:runtime:evidence-artifact-from-as-executed": "node scripts/runtime_acceptance/ACCEPTANCE_EVIDENCE_ARTIFACT_FROM_AS_EXECUTED_V1_RUNTIME.cjs",
+    "ci:evidence-artifact-from-as-executed": "pnpm run ci:governance:evidence-artifact-from-as-executed-boundary && pnpm run ci:runtime:evidence-artifact-from-as-executed"
   },
   "volta": {
     "node": "20.11.1"

@@ -1,0 +1,23 @@
+#!/usr/bin/env node
+const fs=require('fs'), assert=require('assert'); const r=p=>fs.readFileSync(p,'utf8'); const ok=(c,m)=>{assert(c,m);console.log('ok - '+m)};
+const route=r('apps/server/src/routes/evidence_artifact_from_as_executed_v1.ts'), builder=r('apps/server/src/domain/evidence/evidence_artifact_from_as_executed_v1.ts'), roles=r('apps/server/src/domain/auth/roles.ts'), auth=r('apps/server/src/auth/ao_act_authz_v0.ts'), openapi=r('apps/server/src/routes/openapi_v1.ts'), inv=r('apps/server/src/routes/api_route_inventory_v1.ts');
+ok(route.includes('app.post("/api/v1/evidence-artifacts/from-as-executed"'), 'Route exists: POST /api/v1/evidence-artifacts/from-as-executed');
+ok(route.includes('built.artifacts') && builder.includes('type: "evidence_artifact_v1"'), 'Route writes evidence_artifact_v1');
+ok(route.includes('operator_as_executed_evidence_artifact_submission_v1'), 'Route writes operator_as_executed_evidence_artifact_submission_v1');
+ok(route.includes('FROM as_executed_record_v1'), 'Route reads as_executed_record_v1');
+for(const t of ['acceptance_result_v1','water_response_verification_v1','roi_ledger_v1','field_memory_v1']) ok(!route.includes(`type:"${t}`)&&!route.includes(`type: "${t}`), `Route does not write ${t}`);
+ok(!/fetch\(|http\.get|https\.get|download/i.test(route), 'Route does not download URLs');
+ok(!/readFile|createReadStream|parse.*media|parse.*image|parse.*log/i.test(route), 'Route does not parse evidence/log/media contents');
+ok(!/from "pg"|from 'pg'|fastify|routes\//i.test(builder), 'Builder does not import pg / Fastify / routes');
+ok(!builder.includes('process.env'), 'Builder does not read process.env');
+ok(!/Date\.now|new Date|randomUUID/.test(builder), 'Builder does not use Date.now / new Date / randomUUID');
+ok(builder.includes('type: "evidence_artifact_v1"') && !/execution_evidence_v1|formal_evidence_v1|as_executed_evidence_v1|irrigation_evidence_v1/.test(builder), 'Builder produces evidence_artifact_v1, not any parallel evidence type');
+ok(builder.includes('source_lane:"FORMAL_OPERATION"') || builder.includes('source_lane: "FORMAL_OPERATION"'), 'Builder sets source_lane = FORMAL_OPERATION only for non-dev pointers');
+ok(builder.includes('flight-table') && builder.includes('flight_table') && builder.includes('dev://') && builder.includes('simulated://') && builder.includes('REJECTED_DEV_EVIDENCE_NOT_FORMAL'), 'Builder rejects flight-table/dev/simulated pointers from formal lane');
+ok(route.includes('requireAoActScopeV0(req, reply, "evidence.artifact.write")') && auth.includes('"evidence.artifact.write"'), 'Route requires evidence.artifact.write');
+ok(route.includes('"executor", "operator", "admin"') && /executor:[^\n]*evidence\.artifact\.write/.test(roles) && /operator:[^\n]*evidence\.artifact\.write/.test(roles) && /admin:\s*\["\*"\]/.test(roles), 'Executor/operator/admin are allowed');
+ok(!/approver:[^\n]*evidence\.artifact\.write/.test(roles)&&!/client:[^\n]*evidence\.artifact\.write/.test(roles)&&!/viewer:[^\n]*evidence\.artifact\.write/.test(roles), 'Approver/client/viewer are rejected');
+ok(openapi.includes('/api/v1/evidence-artifacts/from-as-executed') && openapi.includes('security: [{ bearerAuth: [] }]') && openapi.includes('auth_scope: "evidence.artifact.write"') && openapi.includes('owner: "evidence-service / act-service"') && openapi.includes('boundary: "official"'), 'OpenAPI includes exact route with security/auth_scope/governance metadata');
+ok(inv.includes('route_path: "/api/v1/evidence-artifacts/from-as-executed"') && inv.includes('path_match: "exact"') && inv.includes('customer_navigation_allowed: false'), 'API inventory includes exact route');
+for(const p of fs.readdirSync('apps/server/src/routes').filter(f=>/customer|delivery|reports|dashboard/.test(f)).map(f=>'apps/server/src/routes/'+f)) ok(!/evidence_artifact_v1[\s\S]{0,120}(accepted delivery|final accepted|customer final)/i.test(r(p)), `${p} does not expose evidence_artifact_v1 as accepted delivery`);
+console.log('ACCEPTANCE_EVIDENCE_ARTIFACT_FROM_AS_EXECUTED_V1_BOUNDARY passed');

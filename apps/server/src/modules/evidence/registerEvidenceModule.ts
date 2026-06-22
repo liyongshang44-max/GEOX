@@ -6,6 +6,7 @@ import { registerEvidenceReportV1Routes } from "../../routes/evidence_report_v1.
 import { registerEvidenceExportJobsV1Routes } from "../../routes/evidence_export_jobs_v1.js";
 import { registerDeliveryEvidenceExportV1Routes } from "../../routes/delivery_evidence_export_v1.js";
 import { registerAuditExportV1Routes } from "../../routes/audit_export_v1.js";
+import { registerEvidenceArtifactFromAsExecutedV1Routes } from "../../routes/evidence_artifact_from_as_executed_v1.js";
 
 export function registerEvidenceModule(app: FastifyInstance, pool: Pool): void {
   registerEvidenceBundleV1Routes(app, pool);
@@ -13,4 +14,5 @@ export function registerEvidenceModule(app: FastifyInstance, pool: Pool): void {
   registerEvidenceExportJobsV1Routes(app, pool);
   registerDeliveryEvidenceExportV1Routes(app, pool);
   registerAuditExportV1Routes(app, pool);
+  registerEvidenceArtifactFromAsExecutedV1Routes(app, pool);
 }

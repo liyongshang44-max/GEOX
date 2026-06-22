@@ -26,6 +26,7 @@ export type AoActScopeV0 =
   | "alerts.write"
   | "evidence_export.read"
   | "evidence_export.write"
+  | "evidence.artifact.write"
   | "recommendation.write"
   | "recommendation.read"
   | "recommendation.approval_request"
@@ -127,6 +128,7 @@ function defaultScopesFromEnv(): AoActScopeV0[] {
     "devices.write",
     "evidence_export.read",
     "evidence_export.write",
+    "evidence.artifact.write",
     "fields.read",
     "fields.write",
     "inspection.read",
