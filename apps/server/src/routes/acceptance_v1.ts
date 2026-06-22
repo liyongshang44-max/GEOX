@@ -8,6 +8,7 @@ import type { AcceptanceResultV1Payload } from "@geox/contracts";
 
 import { requireAoActAnyScopeV0 } from "../auth/ao_act_authz_v0.js";
 import { evaluateAcceptanceV1 } from "../domain/acceptance/engine_v1.js";
+import { buildAcceptanceResultFromEvidenceArtifactsV1 } from "../domain/acceptance/acceptance_result_from_evidence_artifacts_v1.js";
 import { evidencePolicyFromReceiptV1, type FormalEvidenceSourceLaneV1, type FormalEvidencePolicyResultV1 } from "../domain/evidence/formal_evidence_policy_v1.js";
 import { appendSkillRunFact, appendSkillTraceFact, digestJson } from "../domain/skill_registry/facts.js";
 import { listJudgeResultsV2, loadJudgeResultV2 } from "../domain/judge/judge_result_v2.js";
@@ -44,6 +45,21 @@ const EvaluateRequestSchema = z.object({
   judge_result_ids: z.array(z.string().min(1)).optional(),
   execution_judge_id: z.string().min(1).optional()
 });
+
+
+const FromEvidenceArtifactsRequestSchema = z.object({
+  tenant_id: z.string().min(1), project_id: z.string().min(1), group_id: z.string().min(1), field_id: z.string().min(1), zone_id: z.string().nullable().optional(),
+  as_executed_id: z.string().min(1), task_id: z.string().min(1), receipt_id: z.string().min(1), operation_plan_id: z.string().nullable().optional(),
+  operator_id: z.string().min(1), idempotency_key: z.string().min(1), acceptance_reason: z.string().min(1), evidence_artifact_ids: z.array(z.string().min(1)).min(1),
+});
+
+function h44ResponseCode(status: string): number {
+  if (status === "ACCEPTANCE_RESULT_RECORDED") return 200;
+  if (status === "REJECTED_AS_EXECUTED_NOT_FOUND" || status === "REJECTED_EVIDENCE_ARTIFACT_NOT_FOUND") return 404;
+  if (status === "REJECTED_DUPLICATE") return 409;
+  if (status === "REJECTED_INVALID_INPUT") return 400;
+  return 422;
+}
 
 const AcceptanceReadQuerySchema = z.object({
   tenant_id: z.string().min(1),
@@ -356,6 +372,45 @@ function buildAcceptanceMetrics(params: { evaluated: { score?: number; metrics: 
 }
 
 export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): void {
+
+  app.post("/api/v1/acceptance/from-evidence-artifacts", async (req, reply) => {
+    const auth = requireAoActAnyScopeV0(req, reply, ["acceptance.evaluate"]);
+    if (!auth) return;
+    if (!["operator", "admin"].includes(String(auth.role))) return reply.status(403).send({ ok: false, error: "AUTH_ROLE_SCOPE_DENIED" });
+    let body: z.infer<typeof FromEvidenceArtifactsRequestSchema>;
+    try { body = FromEvidenceArtifactsRequestSchema.parse((req as any).body ?? {}); }
+    catch { return reply.status(400).send({ ok: false, status: "REJECTED_INVALID_INPUT", acceptance_created: false, water_response_verification_created: false, roi_created: false, field_memory_created: false, customer_delivery_created: false }); }
+    const tenant: TenantTriple = { tenant_id: body.tenant_id, project_id: body.project_id, group_id: body.group_id };
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+
+    const duplicate = await pool.query(`SELECT fact_id, record_json::jsonb AS record_json FROM facts WHERE (record_json::jsonb->>'type')='operator_acceptance_result_submission_v1' AND (record_json::jsonb#>>'{payload,tenant_id}')=$1 AND (record_json::jsonb#>>'{payload,idempotency_key}')=$2 ORDER BY occurred_at DESC, fact_id DESC LIMIT 1`, [tenant.tenant_id, body.idempotency_key]);
+    if (duplicate.rows?.length) {
+      const payload = normalizeRecordJson(duplicate.rows[0].record_json)?.payload ?? {};
+      return reply.status(409).send({ ok: false, ...payload, status: "REJECTED_DUPLICATE", duplicate: true, acceptance_created: false, water_response_verification_created: false, roi_created: false, field_memory_created: false, customer_delivery_created: false });
+    }
+
+    const asExec = await pool.query(`SELECT * FROM as_executed_record_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND as_executed_id=$5 AND task_id=$6 AND receipt_id=$7 LIMIT 1`, [tenant.tenant_id, tenant.project_id, tenant.group_id, body.field_id, body.as_executed_id, body.task_id, body.receipt_id]);
+    const artifactRows = await pool.query(`SELECT fact_id, record_json::jsonb AS record_json FROM facts WHERE (record_json::jsonb->>'type')='evidence_artifact_v1' AND ((record_json::jsonb#>>'{payload,artifact_id}') = ANY($1::text[]) OR fact_id = ANY($1::text[]))`, [body.evidence_artifact_ids]);
+    if ((artifactRows.rows ?? []).length !== body.evidence_artifact_ids.length) {
+      const builtMissing = buildAcceptanceResultFromEvidenceArtifactsV1({ ...tenant, field_id: body.field_id, zone_id: body.zone_id ?? null, operator_id: body.operator_id, idempotency_key: body.idempotency_key, acceptance_reason: body.acceptance_reason, asExecutedRecord: asExec.rows?.[0] ?? null, evidenceArtifacts: [], as_executed_id: body.as_executed_id, task_id: body.task_id, receipt_id: body.receipt_id, operation_plan_id: body.operation_plan_id ?? null, submission_id: `sub_${randomUUID()}`, acceptance_id: `acc_${randomUUID()}`, evaluated_at: new Date().toISOString() });
+      builtMissing.submission.status = asExec.rows?.[0] ? "REJECTED_EVIDENCE_ARTIFACT_NOT_FOUND" : "REJECTED_AS_EXECUTED_NOT_FOUND";
+      return reply.status(h44ResponseCode(builtMissing.submission.status)).send({ ok: false, ...builtMissing.submission });
+    }
+    const artifacts = (artifactRows.rows ?? []).map((r: any) => ({ fact_id: String(r.fact_id), ...normalizeRecordJson(r.record_json) }));
+    const acceptanceId = `acc_${randomUUID()}`;
+    const built = buildAcceptanceResultFromEvidenceArtifactsV1({ ...tenant, field_id: body.field_id, zone_id: body.zone_id ?? null, operator_id: body.operator_id, idempotency_key: body.idempotency_key, acceptance_reason: body.acceptance_reason, asExecutedRecord: asExec.rows?.[0] ?? null, evidenceArtifacts: artifacts, as_executed_id: body.as_executed_id, task_id: body.task_id, receipt_id: body.receipt_id, operation_plan_id: body.operation_plan_id ?? null, submission_id: `sub_${randomUUID()}`, acceptance_id: acceptanceId, evaluated_at: new Date().toISOString() });
+    if (!built.acceptanceResult) return reply.status(h44ResponseCode(built.submission.status)).send({ ok: false, ...built.submission });
+    const parsedPayload = GeoxContracts.AcceptanceResultV1PayloadSchema.parse(built.acceptanceResult.payload);
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", [built.submission.submission_id, "operator_acceptance_result_from_evidence_artifacts_api", JSON.stringify({ type: "operator_acceptance_result_submission_v1", payload: built.submission })]);
+      await client.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", [acceptanceId, "operator_acceptance_result_from_evidence_artifacts_api", JSON.stringify({ type: "acceptance_result_v1", payload: parsedPayload })]);
+      await client.query("COMMIT");
+    } catch (e) { await client.query("ROLLBACK"); throw e; } finally { client.release(); }
+    return reply.send({ ok: true, ...built.submission, acceptance_result_fact_id: acceptanceId });
+  });
+
   app.post("/api/v1/acceptance/evaluate", async (req, reply) => {
     try {
       const auth = requireAoActAnyScopeV0(req, reply, ["acceptance.evaluate", "ao_act.task.write"]);

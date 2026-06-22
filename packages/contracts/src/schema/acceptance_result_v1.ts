@@ -11,6 +11,11 @@ export const AcceptanceMetricsV1Schema = z.object({
   in_field_ratio: z.number().finite(),
   telemetry_delta: z.number().finite(),
 
+  // H44 execution evidence artifact acceptance metrics.
+  artifact_count: z.number().finite().optional(),
+  formal_artifact_count: z.number().finite().optional(),
+  required_artifact_count: z.number().finite().optional(),
+
   // Step9 Variable Acceptance V1 metrics.
   // Optional to preserve compatibility with ordinary acceptance results.
   zone_application_count: z.number().finite().optional(),
