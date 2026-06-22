@@ -241,13 +241,13 @@ async function latestApprovalRequestApprovedTransitionForDecision(pool: Pool, sc
 
 async function handleRecommendationApprovalDecision(req: any, reply: any, pool: Pool) {
   const auth = requireAoActScopeV0(req, reply, "approval.decide");
-  if (!auth) return;
+  if (!auth) return reply;
   (req as any).auth = auth;
-  if (!requireApprovalDeciderRoleV1(reply, auth)) return;
+  if (!requireApprovalDeciderRoleV1(reply, auth)) return reply;
   const body: any = req.body ?? {};
   let tenant: TenantTriple;
   try { tenant = assertTenantTriple(body); } catch (e: any) { return reply.status(400).send({ ok: false, error: e?.message ?? "BAD_REQUEST", status: "REJECTED_INVALID_INPUT" }); }
-  if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+  if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;
   const requestId = String((req.params as any)?.request_id ?? "").trim();
   const decision = String(body.decision ?? "").trim().toUpperCase();
   const idempotencyKey = String(body.idempotency_key ?? "").trim();
@@ -299,7 +299,7 @@ async function handleRecommendationApprovalRequest(req: any, reply: any, pool: P
   const body: any = req.body ?? {};
   let tenant: TenantTriple;
   try { tenant = assertTenantTriple(body); } catch (e: any) { return reply.status(400).send({ ok: false, error: e?.message ?? "BAD_REQUEST" }); }
-  if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+  if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;
   const idempotencyKey = String(body.idempotency_key ?? "").trim();
   const prior = await latestRecommendationApprovalSubmissionByIdempotency(pool, tenant.tenant_id, idempotencyKey);
   if (prior) return reply.send({ ...prior, status: "REJECTED_DUPLICATE", duplicate: true });
@@ -347,12 +347,12 @@ async function handleRecommendationApprovalRequest(req: any, reply: any, pool: P
 async function handleApprovalRequest(req: any, reply: any, pool: Pool) {
   try {
     const auth = requireAoActAnyScopeV0(req, reply, ["approval.request", "prescription.submit_approval", "ao_act.task.write"]);
-    if (!auth) return;
+    if (!auth) return reply;
     (req as any).auth = auth;
 
     const body: any = req.body ?? {};
     const tenant = assertTenantTriple(body);
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;
     const created = await createApprovalRequestV1(pool, auth, body);
     return reply.send(created);
   } catch (e: any) {
@@ -362,7 +362,7 @@ async function handleApprovalRequest(req: any, reply: any, pool: Pool) {
 
 async function handleApprovalRequestsList(req: any, reply: any, pool: Pool) {
   const auth = requireAoActAnyScopeV0(req, reply, ["approval.read", "ao_act.index.read"]);
-  if (!auth) return;
+  if (!auth) return reply;
   (req as any).auth = auth;
 
   const q: any = (req as any).query ?? {};
@@ -372,7 +372,7 @@ async function handleApprovalRequestsList(req: any, reply: any, pool: Pool) {
     group_id: isNonEmptyString(q.group_id) ? q.group_id : ""
   };
   if (!tenant.tenant_id || !tenant.project_id || !tenant.group_id) return badRequest(reply, "MISSING_TENANT_TRIPLE");
-  if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+  if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;
 
   const limit = parseLimit(q.limit, 20, 200);
   const sql = `
@@ -399,9 +399,9 @@ async function handleApprovalRequestsList(req: any, reply: any, pool: Pool) {
 async function handleApprovalApprove(req: any, reply: any, pool: Pool) {
   try {
     const auth = requireAoActAnyScopeV0(req, reply, ["approval.decide", "ao_act.task.write"]);
-    if (!auth) return;
+    if (!auth) return reply;
     (req as any).auth = auth;
-    if (!requireApprovalDeciderRoleV1(reply, auth)) return;
+    if (!requireApprovalDeciderRoleV1(reply, auth)) return reply;
 
     const body: any = req.body ?? {};
     if (!isNonEmptyString(body.request_id)) return badRequest(reply, "MISSING_OR_INVALID:request_id");
@@ -429,7 +429,7 @@ async function handleApprovalApprove(req: any, reply: any, pool: Pool) {
       project_id: String(payload.project_id ?? ""),
       group_id: String(payload.group_id ?? "")
     };
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;
     if (String(payload.status ?? "") !== "PENDING") return badRequest(reply, "REQUEST_NOT_PENDING");
     const requesterActorId = String(payload?.requested_by_actor_id ?? payload?.issuer?.id ?? payload?.created_by_actor_id ?? payload?.actor_id ?? "").trim();
     const requesterTokenId = String(payload?.requested_by_token_id ?? payload?.created_by_token_id ?? "").trim();
@@ -640,12 +640,12 @@ async function handleApprovalApprove(req: any, reply: any, pool: Pool) {
 
 async function handleCreateOperationPlanFromApprovalDecision(req: any, reply: any, pool: Pool) {
   const auth = requireAoActScopeV0(req, reply, "operation.plan.create");
-  if (!auth) return;
+  if (!auth) return reply;
   if (!(auth.role === "operator" || auth.role === "admin")) return reply.status(403).send({ ok: false, error: "ROLE_OPERATOR_OR_ADMIN_REQUIRED" });
   const body: any = req.body ?? {};
   let tenant: TenantTriple;
   try { tenant = assertTenantTriple(body); } catch { return reply.status(400).send({ surface: "OPERATOR", status: "REJECTED_INVALID_INPUT", operation_plan_created: false, operation_plan_transition_created: false, task_created: false, dispatch_created: false, receipt_created: false, roi_created: false, field_memory_created: false, no_direct_execution: true }); }
-  if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+  if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;
   const idempotencyKey = String(body.idempotency_key ?? "").trim();
   const prior = await latestOperationPlanSubmissionByIdempotency(pool, tenant.tenant_id, idempotencyKey);
   if (prior) return reply.send({ ...prior, status: "REJECTED_DUPLICATE", duplicate: true });
