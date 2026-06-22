@@ -46,6 +46,7 @@ export type AoActScopeV0 =
   | "judge.read"
   | "acceptance.evaluate"
   | "acceptance.read"
+  | "water_response.verify"
   | "field_memory.read"
   | "field_memory.write"
   | "roi_ledger.write"
