@@ -294,7 +294,7 @@ async function handleRecommendationApprovalDecision(req: any, reply: any, pool: 
 
 async function handleRecommendationApprovalRequest(req: any, reply: any, pool: Pool) {
   const auth = requireAoActAnyScopeV0(req, reply, ["approval.request", "recommendation.approval_request"]);
-  if (!auth) return;
+  if (!auth) return reply;
   (req as any).auth = auth;
   const body: any = req.body ?? {};
   let tenant: TenantTriple;
