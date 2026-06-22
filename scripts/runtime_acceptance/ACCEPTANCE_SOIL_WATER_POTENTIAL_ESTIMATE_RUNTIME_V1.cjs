@@ -110,8 +110,13 @@ async function upsertSensingWindow(client, scope, ids, computedAt) {
         expected_interval_ms,
         expected_points,
         actual_points,
+        min_total_samples_required,
+        min_samples_per_required_metric,
         coverage_ratio,
+        min_coverage_ratio,
         max_gap_ms,
+        max_allowed_gap_ms,
+        gap_count,
         quality_status,
         confidence_json,
         summary_json,
@@ -125,7 +130,7 @@ async function upsertSensingWindow(client, scope, ids, computedAt) {
       )
       VALUES (
         $1, $2, $3, $4, $5, $6, 'volumetric_water_content_percent',
-        $7, $7, 900000, 4, 4, 1, 0, 'PASS',
+        $7, $7, 900000, 4, 4, 3, 1, 1, 0.2, 0, 900000, 0, 'PASS',
         $8::jsonb, $9::jsonb, $10::jsonb, $11::jsonb,
         $12::jsonb, $13::jsonb, $14, $7, $7
       )
