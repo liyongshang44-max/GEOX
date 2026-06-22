@@ -140,7 +140,7 @@ async function seedPair(pool, runId, label, decisionOverrides = {}, requestOverr
   const ids = {
     ...scoped,
     request_id: `${runId}_${label}_request`,
-    decision_id: `${runId}_${label}_decision`,
+    decision_id: `h38_dec_${crypto.randomUUID().replace(/-/g, "").slice(0, 24)}`,
     recommendation_id: `${runId}_${label}_recommendation`,
     recommendation_fact_id: `${runId}_${label}_recommendation_fact`,
     submission_id: `${runId}_${label}_submission`,
