@@ -1184,9 +1184,11 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     for (const [k, v] of Object.entries(observed)) {
       if (schemaEntries.size && !schemaEntries.has(k)) return reject("REJECTED_INVALID_INPUT");
       const decl: any = schemaEntries.get(k) ?? {};
-      if (decl.type && decl.type !== typeof v && !(decl.type === "integer" && Number.isInteger(v))) return reject("REJECTED_INVALID_INPUT");
-      if (typeof v === "number" && ((decl.minimum !== undefined && v < Number(decl.minimum)) || (decl.maximum !== undefined && v > Number(decl.maximum)))) return reject("REJECTED_INVALID_INPUT");
-      if (Array.isArray(decl.enum) && !decl.enum.includes(v)) return reject("REJECTED_INVALID_INPUT");
+      if (decl.type && decl.type !== "enum" && decl.type !== typeof v && !(decl.type === "integer" && Number.isInteger(v))) return reject("REJECTED_INVALID_INPUT");
+      const min = decl.minimum ?? decl.min;
+      const max = decl.maximum ?? decl.max;
+      if (typeof v === "number" && ((min !== undefined && v < Number(min)) || (max !== undefined && v > Number(max)))) return reject("REJECTED_INVALID_INPUT");
+      if ((decl.type === "enum" || Array.isArray(decl.enum)) && Array.isArray(decl.enum) && !decl.enum.includes(v)) return reject("REJECTED_INVALID_INPUT");
     }
 
     const idx = await pool.query(`SELECT * FROM public.operation_plan_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND COALESCE(zone_id,'')=COALESCE($5,'') AND operation_plan_id=$6 LIMIT 1`, [tenant.tenant_id, tenant.project_id, tenant.group_id, field_id, zone_id, operation_plan_id]);

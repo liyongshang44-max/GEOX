@@ -83,7 +83,8 @@ export function validateH41ApprovalRequestTransitionV1(input: { approvalRequestT
   const proposal = obj(ar.proposal);
   const meta = obj(proposal?.meta);
   const source = s(meta?.source);
-  if (!proposal || !(source === "OPERATION_PLAN_READY_V1" || source === "DECISION_APPROVAL_CHAIN_V1" || source === "DECISION/APPROVAL")) return "REJECTED_APPROVAL_REQUEST_NOT_APPROVED";
+  if (!proposal || !(source === "DECISION_RECOMMENDATION_V1" || source === "OPERATION_PLAN_READY_V1" || source === "DECISION_APPROVAL_CHAIN_V1" || source === "DECISION/APPROVAL")) return "REJECTED_APPROVAL_REQUEST_NOT_APPROVED";
+  if (source === "DECISION_RECOMMENDATION_V1" && s(meta?.approval_intent) !== "REQUEST_HUMAN_APPROVAL_ONLY") return "REJECTED_APPROVAL_REQUEST_NOT_APPROVED";
   if (meta?.no_direct_execution !== true || meta?.skip_auto_task_issue !== true || meta?.allow_auto_task_issue !== false) return "REJECTED_APPROVAL_REQUEST_NOT_APPROVED";
   if (s(proposal.action_type) !== s(input.task.action_type)) return "REJECTED_APPROVAL_REQUEST_NOT_APPROVED";
   return null;
