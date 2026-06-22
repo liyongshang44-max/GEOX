@@ -1,7 +1,6 @@
 // scripts/governance_acceptance/ACCEPTANCE_WATER_RESPONSE_VERIFICATION_FROM_ACCEPTANCE_V1_BOUNDARY.cjs
 
 const fs = require('fs');
-const childProcess = require('child_process');
 
 function read(path) {
   return fs.readFileSync(path, 'utf8');
@@ -16,6 +15,33 @@ function ok(condition, message, detail) {
 
 function firstLineIsPathComment(path, prefix) {
   return read(path).split(/\r?\n/, 1)[0] === prefix;
+}
+
+function collectTextFiles(dir) {
+  if (!fs.existsSync(dir)) return [];
+  const out = [];
+
+  for (const name of fs.readdirSync(dir)) {
+    const path = `${dir}/${name}`;
+    const stat = fs.statSync(path);
+
+    if (stat.isDirectory()) {
+      out.push(...collectTextFiles(path));
+      continue;
+    }
+
+    if (/\.(ts|tsx|js|jsx|json|css|html|md)$/.test(name)) {
+      out.push(path);
+    }
+  }
+
+  return out;
+}
+
+function scanFilesForPattern(dir, pattern) {
+  return collectTextFiles(dir)
+    .map((path) => ({ path, text: fs.readFileSync(path, 'utf8') }))
+    .filter((x) => pattern.test(x.text));
 }
 
 const files = {
@@ -35,6 +61,7 @@ ok(firstLineIsPathComment(files.governance, `// ${files.governance}`), 'governan
 const route = read(files.route);
 const builder = read(files.builder);
 const runtime = read(files.runtime);
+const governance = read(files.governance);
 const roles = read('apps/server/src/domain/auth/roles.ts');
 const auth = read('apps/server/src/auth/ao_act_authz_v0.ts');
 const openapi = read('apps/server/src/routes/openapi_v1.ts');
@@ -55,6 +82,11 @@ for (const forbidden of ['roi_ledger_v1', 'field_memory_v1', 'operation_state_v1
 ok(!/from\s+["']pg["']|Fastify|routes\//.test(builder), 'builder does not import pg/Fastify/routes');
 ok(!builder.includes('process.env'), 'builder does not read process.env');
 ok(!/Date\.now|new Date|randomUUID/.test(builder), 'builder does not create time/id');
+ok(builder.includes('function timestampValue'), 'builder defines Date-object-safe timestamp extractor');
+ok(builder.includes('value instanceof Date'), 'builder handles pg Date objects');
+ok(builder.includes('toISOString()'), 'builder serializes pg Date objects to ISO timestamp');
+ok(builder.includes('const preComputedAt = timestampValue(input.preState, "computed_at");'), 'builder uses timestamp extractor for preState.computed_at');
+ok(builder.includes('const postComputedAt = timestampValue(input.postState, "computed_at");'), 'builder uses timestamp extractor for postState.computed_at');
 ok(builder.includes('executionEndAtFromAsExecuted'), 'builder extracts execution_end_at');
 ok(builder.includes('postComputedMs <= executionEndMs'), 'builder enforces post state after execution_end_at');
 ok(builder.includes('postComputedMs - executionEndMs'), 'builder computes delay from execution_end_at when available');
@@ -119,10 +151,14 @@ ok(runtime.includes('REJECTED_SCOPE_MISMATCH'), 'runtime asserts scope mismatch 
 ok(runtime.includes('REJECTED_STATE_TIME_ORDER'), 'runtime asserts state time order rejection');
 ok(runtime.includes('NOT_VERIFIABLE'), 'runtime asserts NOT_VERIFIABLE');
 
-const web = fs.existsSync('apps/web/src')
-  ? childProcess.execSync('rg -n "water_response_verification_v1|verify-from-acceptance" apps/web/src || true', { encoding: 'utf8' })
-  : '';
+const webMatches = scanFilesForPattern(
+  'apps/web/src',
+  /water_response_verification_v1|verify-from-acceptance/,
+);
+const web = webMatches.map((x) => `${x.path}\n${x.text}`).join('\n');
 ok(!/confirmed delivery|customer final|customer delivery/i.test(web), 'customer files do not expose water_response_verification_v1 as confirmed delivery');
 ok(!h44Route.includes('type: "water_response_verification_v1"') && !h44Route.includes("type:'water_response_verification_v1'"), 'H44 acceptance route remains separate');
+ok(!/\bexecSync\s*\([^)]*\brg\b/.test(governance), 'governance does not depend on ripgrep');
+ok(!governance.includes('||' + ' true'), 'governance does not depend on shell true fallback');
 
 console.log('[h45-boundary] PASS');

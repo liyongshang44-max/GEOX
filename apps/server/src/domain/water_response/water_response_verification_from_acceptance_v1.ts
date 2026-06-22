@@ -63,6 +63,20 @@ function stringValue(record: any, key: string): string {
   return typeof value === "string" ? value : "";
 }
 
+function timestampValue(record: any, key: string): string {
+  const value = record?.[key] ?? record?.payload?.[key];
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (value instanceof Date && Number.isFinite(value.getTime())) {
+    return value.toISOString();
+  }
+
+  return "";
+}
+
 function numberValue(record: any, key: string): number | null {
   const value = record?.[key] ?? record?.payload?.[key];
   return typeof value === "number" && Number.isFinite(value) ? value : null;
@@ -166,8 +180,8 @@ export function buildWaterResponseVerificationFromAcceptanceV1(input: WaterRespo
 
   if (!stateScopeMatches) return rejection(input, "REJECTED_SCOPE_MISMATCH");
 
-  const preComputedAt = stringValue(input.preState, "computed_at");
-  const postComputedAt = stringValue(input.postState, "computed_at");
+  const preComputedAt = timestampValue(input.preState, "computed_at");
+  const postComputedAt = timestampValue(input.postState, "computed_at");
   const preComputedMs = Date.parse(preComputedAt);
   const postComputedMs = Date.parse(postComputedAt);
 
