@@ -11,7 +11,7 @@ import { ensureRulePerformanceTable, listRulePerformance } from "../domain/agron
 import { evaluateHardRuleHintsV1, getHardRuleRecommendationBlueprintV1 } from "../domain/decision_engine_v1.js";
 import { diagnoseIrrigationV1 } from "../domain/agronomy/irrigation/irrigation_diagnosis_v1.js";
 import { buildIrrigationRecommendationV1 } from "../domain/agronomy/irrigation/irrigation_recommendation_v1.js";
-import { buildAoActReceiptFromTaskV1 } from "../domain/controlplane/ao_act_receipt_from_task_builder_v1.js";
+import { buildAoActReceiptFromTaskV1, validateH41ApprovalRequestTransitionV1, validateH41ObservedParametersV1, validateH41TaskEligibilityV1 } from "../domain/controlplane/ao_act_receipt_from_task_builder_v1.js";
 import { runIrrigationDeficitSkillV1 } from "../domain/agronomy/skills/irrigation/irrigation_deficit_skill_v1.js";
 import { runIrrigationRequirementSkillV1 } from "../domain/agronomy/skills/irrigation/irrigation_requirement_skill_v1.js";
 import { getLatestWeatherForecastIndexV1 } from "../projections/weather_forecast_v1.js";
@@ -1110,6 +1110,26 @@ function recommendationFormalTriggerEligibleForApproval(payload: any): boolean {
   });
 }
 
+async function loadApprovedApprovalRequestForReceiptV1(pool: Pool, tenant: TenantTriple, scope: { field_id: string; zone_id: string | null; request_id: string }): Promise<any | null> {
+  const res = await pool.query(
+    `SELECT fact_id, occurred_at, record_json
+     FROM facts
+     WHERE (record_json::jsonb->>'type') = 'approval_request_v1'
+       AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+       AND (record_json::jsonb#>>'{payload,project_id}') = $2
+       AND (record_json::jsonb#>>'{payload,group_id}') = $3
+       AND (record_json::jsonb#>>'{payload,field_id}') = $4
+       AND COALESCE(record_json::jsonb#>>'{payload,zone_id}','') = COALESCE($5,'')
+       AND (record_json::jsonb#>>'{payload,request_id}') = $6
+       AND (record_json::jsonb#>>'{payload,status}') = 'APPROVED'
+     ORDER BY occurred_at DESC, fact_id DESC
+     LIMIT 1`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, scope.field_id, scope.zone_id, scope.request_id]
+  );
+  if (!res.rows?.length) return null;
+  return { fact_id: String(res.rows[0].fact_id), occurred_at: String(res.rows[0].occurred_at), record_json: parseJsonMaybe(res.rows[0].record_json) ?? res.rows[0].record_json };
+}
+
 export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool): void {
 
   app.post("/api/v1/actions/receipt/from-task", async (req, reply) => {
@@ -1151,20 +1171,33 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     const taskFact = await loadTaskFactByTaskId(pool, tenant, act_task_id);
     if (!taskFact) return reject("REJECTED_TASK_NOT_FOUND", 404);
     const task = taskFact.record_json?.payload ?? {};
-    const taskOk = taskFact.record_json?.type === "ao_act_task_v0" && task.tenant_id === tenant.tenant_id && task.project_id === tenant.project_id && task.group_id === tenant.group_id && task.operation_plan_id === operation_plan_id && task.act_task_id === act_task_id && String(task.approval_request_id ?? "").trim() && String(task.action_type ?? "").trim() && task.time_window && task.parameter_schema && task.parameters && task.constraints && task.meta?.source === "OPERATION_PLAN_READY_V1" && task.meta?.projected_from_ready_operation_plan === true;
-    if (!taskOk) return reject("REJECTED_TASK_NOT_FROM_OPERATION_PLAN", 409);
-    if (String(task.field_id ?? field_id) !== field_id || String(task.zone_id ?? zone_id ?? "") !== String(zone_id ?? "")) return reject("REJECTED_SCOPE_MISMATCH", 409);
-    const schemaObj = task.parameter_schema && typeof task.parameter_schema === "object" ? task.parameter_schema : {};
-    const keys = new Set(Object.keys((schemaObj as any).properties ?? schemaObj));
-    for (const [k, v] of Object.entries(observed)) {
-      if (keys.size && !keys.has(k)) return reject("REJECTED_INVALID_INPUT");
-      const decl: any = ((schemaObj as any).properties ?? schemaObj)[k] ?? {};
-      if (decl.type && decl.type !== typeof v && !(decl.type === "integer" && Number.isInteger(v))) return reject("REJECTED_INVALID_INPUT");
-      if (typeof v === "number" && ((decl.minimum !== undefined && v < Number(decl.minimum)) || (decl.maximum !== undefined && v > Number(decl.maximum)))) return reject("REJECTED_INVALID_INPUT");
-      if (Array.isArray(decl.enum) && !decl.enum.includes(v)) return reject("REJECTED_INVALID_INPUT");
-    }
+    const taskEligibilityError = validateH41TaskEligibilityV1({ task, tenant_id: tenant.tenant_id, project_id: tenant.project_id, group_id: tenant.group_id, field_id, zone_id, operation_plan_id, act_task_id });
+    if (taskFact.record_json?.type !== "ao_act_task_v0" || taskEligibilityError === "REJECTED_TASK_NOT_FROM_OPERATION_PLAN") return reject("REJECTED_TASK_NOT_FROM_OPERATION_PLAN", 409);
+    if (taskEligibilityError === "REJECTED_SCOPE_MISMATCH") return reject("REJECTED_SCOPE_MISMATCH", 409);
+    const approvalRequestId = String(task.approval_request_id ?? "").trim();
+    const approvalFact = await loadApprovedApprovalRequestForReceiptV1(pool, tenant, { field_id, zone_id, request_id: approvalRequestId });
+    const approvalError = validateH41ApprovalRequestTransitionV1({ approvalRequestTransition: approvalFact?.record_json ?? null, task, tenant_id: tenant.tenant_id, project_id: tenant.project_id, group_id: tenant.group_id, field_id, zone_id });
+    if (approvalError === "REJECTED_APPROVAL_REQUEST_NOT_FOUND") return reject("REJECTED_APPROVAL_REQUEST_NOT_FOUND", 404);
+    if (approvalError === "REJECTED_SCOPE_MISMATCH") return reject("REJECTED_SCOPE_MISMATCH", 409);
+    if (approvalError) return reject("REJECTED_APPROVAL_REQUEST_NOT_APPROVED", 409);
+    const observedParametersError = validateH41ObservedParametersV1({
+      schema: task.parameter_schema,
+      observed_parameters: observed,
+    });
+    if (observedParametersError) return reject(observedParametersError);
 
-    const idx = await pool.query(`SELECT * FROM public.operation_plan_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND COALESCE(zone_id,'')=COALESCE($5,'') AND operation_plan_id=$6 LIMIT 1`, [tenant.tenant_id, tenant.project_id, tenant.group_id, field_id, zone_id, operation_plan_id]);
+    const idx = await pool.query(
+      `SELECT *
+       FROM public.operation_plan_index_v1
+       WHERE tenant_id=$1
+         AND project_id=$2
+         AND group_id=$3
+         AND field_id=$4
+         AND COALESCE(zone_id,'')=COALESCE($5,'')
+         AND operation_plan_id=$6
+       LIMIT 1`,
+      [tenant.tenant_id, tenant.project_id, tenant.group_id, field_id, zone_id, operation_plan_id],
+    );
     if (!idx.rows.length) return reject("REJECTED_OPERATION_PLAN_NOT_FOUND", 404);
     const indexRow = idx.rows[0];
     if (String(indexRow.act_task_id ?? "") !== act_task_id) return reject("REJECTED_OPERATION_PLAN_TASK_MISMATCH", 409);
@@ -1173,14 +1206,46 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     const created_at_ts = Date.now();
     const created_at = new Date(created_at_ts).toISOString();
     const built = buildAoActReceiptFromTaskV1({
-      tenant_id: tenant.tenant_id, project_id: tenant.project_id, group_id: tenant.group_id, field_id, zone_id,
-      operation_plan_id, act_task_id, aoActTask: task, aoActTaskFactId: taskFact.fact_id, operationPlanIndexRecord: indexRow,
-      executor_id, execution_time: { start_ts: Number(body.execution_time.start_ts), end_ts: Number(body.execution_time.end_ts) },
-      execution_coverage: body.execution_coverage, resource_usage: body.resource_usage ?? { fuel_l:null, electric_kwh:null, water_l:null, chemical_ml:null },
-      evidence_refs: body.evidence_refs, logs_refs: body.logs_refs, status: body.status, constraint_check: body.constraint_check,
-      observed_parameters: observed, device_refs: devices, idempotency_key, command_id,
-      submission_id: `sub_${randomUUID().replace(/-/g, "")}`, ao_act_receipt_id: `receipt_${randomUUID().replace(/-/g, "")}`, created_at, created_at_ts,
+      tenant_id: tenant.tenant_id,
+      project_id: tenant.project_id,
+      group_id: tenant.group_id,
+      field_id,
+      zone_id,
+      operation_plan_id,
+      act_task_id,
+      aoActTask: task,
+      aoActTaskFactId: taskFact.fact_id,
+      approvalRequestTransition: approvalFact?.record_json ?? null,
+      approvalRequestFactId: approvalFact?.fact_id ?? null,
+      operationPlanIndexRecord: indexRow,
+      executor_id,
+      execution_time: {
+        start_ts: Number(body.execution_time.start_ts),
+        end_ts: Number(body.execution_time.end_ts),
+      },
+      execution_coverage: body.execution_coverage,
+      resource_usage: body.resource_usage ?? {
+        fuel_l: null,
+        electric_kwh: null,
+        water_l: null,
+        chemical_ml: null,
+      },
+      evidence_refs: body.evidence_refs,
+      logs_refs: body.logs_refs,
+      status: body.status,
+      constraint_check: body.constraint_check,
+      observed_parameters: observed,
+      device_refs: devices,
+      idempotency_key,
+      command_id,
+      submission_id: `sub_${randomUUID().replace(/-/g, "")}`,
+      ao_act_receipt_id: `receipt_${randomUUID().replace(/-/g, "")}`,
+      created_at,
+      created_at_ts,
     });
+    if (!built.receipt || built.submission.status !== "AO_ACT_RECEIPT_RECORDED") {
+      return reject(String(built.submission.status), 409);
+    }
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
@@ -1192,7 +1257,22 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       const submission = { ...built.submission, ao_act_receipt_fact_id: receiptFactId };
       await client.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", [submissionFactId, "api/v1/actions/receipt/from-task", { type: "executor_ao_act_receipt_submission_v1", payload: submission }]);
       await client.query("COMMIT");
-      return reply.send({ ok: true, status: "AO_ACT_RECEIPT_RECORDED", fact_id: receiptFactId, receipt_fact_id: receiptFactId, submission_fact_id: submissionFactId, receipt: built.receipt });
+      return reply.send({
+        ok: true,
+        status: "AO_ACT_RECEIPT_RECORDED",
+        fact_id: receiptFactId,
+        receipt_fact_id: receiptFactId,
+        submission_fact_id: submissionFactId,
+        receipt_created: true,
+        as_executed_created: false,
+        acceptance_created: false,
+        operation_plan_transition_created: false,
+        roi_created: false,
+        field_memory_created: false,
+        no_acceptance_created: true,
+        no_effect_judgement: true,
+        receipt: built.receipt,
+      });
     } catch (e) {
       await client.query("ROLLBACK").catch(() => undefined);
       throw e;

@@ -17,6 +17,12 @@ ok(!route.includes('app.post("/api/control/ao_act/receipt/from-task"'), 'route i
 ok(route.includes('requireAoActScopeV0(req, reply, "action.receipt.submit")'), 'route requires action.receipt.submit');
 ok(route.includes('ao_act_task_v0'), 'route reads ao_act_task_v0');
 ok(route.includes('operation_plan_index_v1'), 'route reads operation_plan_index_v1');
+ok(routeFile.includes("approval_request_v1") && routeFile.includes("loadApprovedApprovalRequestForReceiptV1"), 'route reads linked approval_request_v1');
+ok(routeFile.includes("record_json::jsonb#>>'{payload,tenant_id}'") && routeFile.includes("record_json::jsonb#>>'{payload,project_id}'") && routeFile.includes("record_json::jsonb#>>'{payload,group_id}'") && routeFile.includes("record_json::jsonb#>>'{payload,field_id}'") && routeFile.includes("record_json::jsonb#>>'{payload,zone_id}'") && routeFile.includes("record_json::jsonb#>>'{payload,request_id}'") && routeFile.includes("record_json::jsonb#>>'{payload,status}') = 'APPROVED'"), 'approval_request_v1 query is full scope and APPROVED only');
+ok(builder.includes("DECISION_RECOMMENDATION_V1") && builder.includes("REQUEST_HUMAN_APPROVAL_ONLY"), 'builder accepts real H36/H37 approval request source and approval intent');
+ok(builder.includes("no_direct_execution") && builder.includes("skip_auto_task_issue") && builder.includes("allow_auto_task_issue"), 'builder validates approval proposal execution guard meta');
+ok(builder.includes('h41EligibilityStatus') && builder.includes('receipt: AoActReceiptPayloadV1 | null = rejected ? null'), 'builder single entry returns rejected submission with null receipt');
+ok(builder.includes("decl.minimum ?? decl.min") && builder.includes("decl.maximum ?? decl.max") && builder.includes('decl.type !== "enum"'), 'builder validates AO-ACT parameter_schema.keys min/max and enum type');
 ok(route.includes('ao_act_receipt_v1'), 'route writes ao_act_receipt_v1');
 ok(route.includes('executor_ao_act_receipt_submission_v1'), 'route writes executor_ao_act_receipt_submission_v1');
 ok(route.includes('receipt_fact_id=$1') && route.includes('source_fact_id=$1'), 'route updates operation_plan_index_v1 receipt_fact_id');
