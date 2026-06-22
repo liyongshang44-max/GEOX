@@ -11,7 +11,7 @@ import { ensureRulePerformanceTable, listRulePerformance } from "../domain/agron
 import { evaluateHardRuleHintsV1, getHardRuleRecommendationBlueprintV1 } from "../domain/decision_engine_v1.js";
 import { diagnoseIrrigationV1 } from "../domain/agronomy/irrigation/irrigation_diagnosis_v1.js";
 import { buildIrrigationRecommendationV1 } from "../domain/agronomy/irrigation/irrigation_recommendation_v1.js";
-import { buildAoActReceiptFromTaskV1, h41ParameterSchemaEntriesV1, validateH41ApprovalRequestTransitionV1, validateH41TaskEligibilityV1 } from "../domain/controlplane/ao_act_receipt_from_task_builder_v1.js";
+import { buildAoActReceiptFromTaskV1, validateH41ApprovalRequestTransitionV1, validateH41ObservedParametersV1, validateH41TaskEligibilityV1 } from "../domain/controlplane/ao_act_receipt_from_task_builder_v1.js";
 import { runIrrigationDeficitSkillV1 } from "../domain/agronomy/skills/irrigation/irrigation_deficit_skill_v1.js";
 import { runIrrigationRequirementSkillV1 } from "../domain/agronomy/skills/irrigation/irrigation_requirement_skill_v1.js";
 import { getLatestWeatherForecastIndexV1 } from "../projections/weather_forecast_v1.js";
@@ -1180,18 +1180,24 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     if (approvalError === "REJECTED_APPROVAL_REQUEST_NOT_FOUND") return reject("REJECTED_APPROVAL_REQUEST_NOT_FOUND", 404);
     if (approvalError === "REJECTED_SCOPE_MISMATCH") return reject("REJECTED_SCOPE_MISMATCH", 409);
     if (approvalError) return reject("REJECTED_APPROVAL_REQUEST_NOT_APPROVED", 409);
-    const schemaEntries = h41ParameterSchemaEntriesV1(task.parameter_schema);
-    for (const [k, v] of Object.entries(observed)) {
-      if (schemaEntries.size && !schemaEntries.has(k)) return reject("REJECTED_INVALID_INPUT");
-      const decl: any = schemaEntries.get(k) ?? {};
-      if (decl.type && decl.type !== "enum" && decl.type !== typeof v && !(decl.type === "integer" && Number.isInteger(v))) return reject("REJECTED_INVALID_INPUT");
-      const min = decl.minimum ?? decl.min;
-      const max = decl.maximum ?? decl.max;
-      if (typeof v === "number" && ((min !== undefined && v < Number(min)) || (max !== undefined && v > Number(max)))) return reject("REJECTED_INVALID_INPUT");
-      if ((decl.type === "enum" || Array.isArray(decl.enum)) && Array.isArray(decl.enum) && !decl.enum.includes(v)) return reject("REJECTED_INVALID_INPUT");
-    }
+    const observedParametersError = validateH41ObservedParametersV1({
+      schema: task.parameter_schema,
+      observed_parameters: observed,
+    });
+    if (observedParametersError) return reject(observedParametersError);
 
-    const idx = await pool.query(`SELECT * FROM public.operation_plan_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND COALESCE(zone_id,'')=COALESCE($5,'') AND operation_plan_id=$6 LIMIT 1`, [tenant.tenant_id, tenant.project_id, tenant.group_id, field_id, zone_id, operation_plan_id]);
+    const idx = await pool.query(
+      `SELECT *
+       FROM public.operation_plan_index_v1
+       WHERE tenant_id=$1
+         AND project_id=$2
+         AND group_id=$3
+         AND field_id=$4
+         AND COALESCE(zone_id,'')=COALESCE($5,'')
+         AND operation_plan_id=$6
+       LIMIT 1`,
+      [tenant.tenant_id, tenant.project_id, tenant.group_id, field_id, zone_id, operation_plan_id],
+    );
     if (!idx.rows.length) return reject("REJECTED_OPERATION_PLAN_NOT_FOUND", 404);
     const indexRow = idx.rows[0];
     if (String(indexRow.act_task_id ?? "") !== act_task_id) return reject("REJECTED_OPERATION_PLAN_TASK_MISMATCH", 409);
@@ -1200,14 +1206,46 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     const created_at_ts = Date.now();
     const created_at = new Date(created_at_ts).toISOString();
     const built = buildAoActReceiptFromTaskV1({
-      tenant_id: tenant.tenant_id, project_id: tenant.project_id, group_id: tenant.group_id, field_id, zone_id,
-      operation_plan_id, act_task_id, aoActTask: task, aoActTaskFactId: taskFact.fact_id, operationPlanIndexRecord: indexRow,
-      executor_id, execution_time: { start_ts: Number(body.execution_time.start_ts), end_ts: Number(body.execution_time.end_ts) },
-      execution_coverage: body.execution_coverage, resource_usage: body.resource_usage ?? { fuel_l:null, electric_kwh:null, water_l:null, chemical_ml:null },
-      evidence_refs: body.evidence_refs, logs_refs: body.logs_refs, status: body.status, constraint_check: body.constraint_check,
-      observed_parameters: observed, device_refs: devices, idempotency_key, command_id,
-      submission_id: `sub_${randomUUID().replace(/-/g, "")}`, ao_act_receipt_id: `receipt_${randomUUID().replace(/-/g, "")}`, created_at, created_at_ts,
+      tenant_id: tenant.tenant_id,
+      project_id: tenant.project_id,
+      group_id: tenant.group_id,
+      field_id,
+      zone_id,
+      operation_plan_id,
+      act_task_id,
+      aoActTask: task,
+      aoActTaskFactId: taskFact.fact_id,
+      approvalRequestTransition: approvalFact?.record_json ?? null,
+      approvalRequestFactId: approvalFact?.fact_id ?? null,
+      operationPlanIndexRecord: indexRow,
+      executor_id,
+      execution_time: {
+        start_ts: Number(body.execution_time.start_ts),
+        end_ts: Number(body.execution_time.end_ts),
+      },
+      execution_coverage: body.execution_coverage,
+      resource_usage: body.resource_usage ?? {
+        fuel_l: null,
+        electric_kwh: null,
+        water_l: null,
+        chemical_ml: null,
+      },
+      evidence_refs: body.evidence_refs,
+      logs_refs: body.logs_refs,
+      status: body.status,
+      constraint_check: body.constraint_check,
+      observed_parameters: observed,
+      device_refs: devices,
+      idempotency_key,
+      command_id,
+      submission_id: `sub_${randomUUID().replace(/-/g, "")}`,
+      ao_act_receipt_id: `receipt_${randomUUID().replace(/-/g, "")}`,
+      created_at,
+      created_at_ts,
     });
+    if (!built.receipt || built.submission.status !== "AO_ACT_RECEIPT_RECORDED") {
+      return reject(String(built.submission.status), 409);
+    }
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
@@ -1219,7 +1257,22 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       const submission = { ...built.submission, ao_act_receipt_fact_id: receiptFactId };
       await client.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", [submissionFactId, "api/v1/actions/receipt/from-task", { type: "executor_ao_act_receipt_submission_v1", payload: submission }]);
       await client.query("COMMIT");
-      return reply.send({ ok: true, status: "AO_ACT_RECEIPT_RECORDED", fact_id: receiptFactId, receipt_fact_id: receiptFactId, submission_fact_id: submissionFactId, receipt_created: true, as_executed_created: false, acceptance_created: false, operation_plan_transition_created: false, roi_created: false, field_memory_created: false, no_acceptance_created: true, no_effect_judgement: true, receipt: built.receipt });
+      return reply.send({
+        ok: true,
+        status: "AO_ACT_RECEIPT_RECORDED",
+        fact_id: receiptFactId,
+        receipt_fact_id: receiptFactId,
+        submission_fact_id: submissionFactId,
+        receipt_created: true,
+        as_executed_created: false,
+        acceptance_created: false,
+        operation_plan_transition_created: false,
+        roi_created: false,
+        field_memory_created: false,
+        no_acceptance_created: true,
+        no_effect_judgement: true,
+        receipt: built.receipt,
+      });
     } catch (e) {
       await client.query("ROLLBACK").catch(() => undefined);
       throw e;

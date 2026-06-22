@@ -11,6 +11,8 @@ export type ExecutorAoActReceiptSubmissionStatusV1 =
   | "REJECTED_OPERATION_PLAN_TASK_MISMATCH"
   | "REJECTED_RECEIPT_ALREADY_CREATED"
   | "REJECTED_SCOPE_MISMATCH"
+  | "REJECTED_APPROVAL_REQUEST_NOT_FOUND"
+  | "REJECTED_APPROVAL_REQUEST_NOT_APPROVED"
   | "REJECTED_DUPLICATE"
   | "REJECTED_INVALID_INPUT";
 
@@ -18,6 +20,7 @@ export type AoActReceiptFromTaskInputV1 = {
   tenant_id: string; project_id: string; group_id: string; field_id: string; zone_id: string | null;
   operation_plan_id: string; act_task_id: string;
   aoActTask: Record<string, unknown> | null; aoActTaskFactId: string | null;
+  approvalRequestTransition: Record<string, unknown> | null; approvalRequestFactId: string | null;
   operationPlanIndexRecord: Record<string, unknown> | null;
   executor_id: ExecutorIdV1;
   execution_time: { start_ts: number; end_ts: number };
@@ -90,14 +93,69 @@ export function validateH41ApprovalRequestTransitionV1(input: { approvalRequestT
   return null;
 }
 
+export function validateH41ObservedParametersV1(input: {
+  schema: unknown;
+  observed_parameters: Record<string, number | boolean | string>;
+}): string | null {
+  const schemaEntries = h41ParameterSchemaEntriesV1(input.schema);
+  for (const [k, v] of Object.entries(input.observed_parameters)) {
+    if (schemaEntries.size && !schemaEntries.has(k)) return "REJECTED_INVALID_INPUT";
+    const decl: any = schemaEntries.get(k) ?? {};
+    if (
+      decl.type
+      && decl.type !== "enum"
+      && decl.type !== typeof v
+      && !(decl.type === "integer" && Number.isInteger(v))
+    ) return "REJECTED_INVALID_INPUT";
+    const min = decl.minimum ?? decl.min;
+    const max = decl.maximum ?? decl.max;
+    if (
+      typeof v === "number"
+      && ((min !== undefined && v < Number(min)) || (max !== undefined && v > Number(max)))
+    ) return "REJECTED_INVALID_INPUT";
+    if (
+      (decl.type === "enum" || Array.isArray(decl.enum))
+      && Array.isArray(decl.enum)
+      && !decl.enum.includes(v)
+    ) return "REJECTED_INVALID_INPUT";
+  }
+  return null;
+}
+
+function h41EligibilityStatus(input: AoActReceiptFromTaskInputV1): ExecutorAoActReceiptSubmissionStatusV1 | null {
+  if (!input.aoActTask || !input.aoActTaskFactId) return "REJECTED_TASK_NOT_FOUND";
+  if (!input.operationPlanIndexRecord) return "REJECTED_OPERATION_PLAN_NOT_FOUND";
+  const taskError = validateH41TaskEligibilityV1({
+    task: input.aoActTask, tenant_id: input.tenant_id, project_id: input.project_id,
+    group_id: input.group_id, field_id: input.field_id, zone_id: input.zone_id,
+    operation_plan_id: input.operation_plan_id, act_task_id: input.act_task_id,
+  });
+  if (taskError) return taskError as ExecutorAoActReceiptSubmissionStatusV1;
+  const approvalError = validateH41ApprovalRequestTransitionV1({
+    approvalRequestTransition: input.approvalRequestTransition, task: input.aoActTask,
+    tenant_id: input.tenant_id, project_id: input.project_id, group_id: input.group_id,
+    field_id: input.field_id, zone_id: input.zone_id,
+  });
+  if (approvalError) return approvalError as ExecutorAoActReceiptSubmissionStatusV1;
+  return validateH41ObservedParametersV1({
+    schema: input.aoActTask.parameter_schema,
+    observed_parameters: input.observed_parameters,
+  }) as ExecutorAoActReceiptSubmissionStatusV1 | null;
+}
+
 const boundaryRules = [
   { rule_code: "H41_RECEIPT_ONLY", label: "Record AO-ACT receipt without acceptance, ROI, or Field Memory" },
   { rule_code: "H41_NO_OPERATION_PLAN_TRANSITION", label: "Do not create operation_plan_transition_v1 or terminal operation_plan_v1" },
   { rule_code: "H41_UPDATE_INDEX_RECEIPT_POINTER", label: "Update operation_plan_index_v1.receipt_fact_id only after receipt fact append" },
 ];
 
-export function buildAoActReceiptFromTaskV1(input: AoActReceiptFromTaskInputV1): { submission: ExecutorAoActReceiptSubmissionPayloadV1; receipt: AoActReceiptPayloadV1 | null } {
-  const receipt: AoActReceiptPayloadV1 = {
+export function buildAoActReceiptFromTaskV1(input: AoActReceiptFromTaskInputV1): {
+  submission: ExecutorAoActReceiptSubmissionPayloadV1;
+  receipt: AoActReceiptPayloadV1 | null;
+} {
+  const status = h41EligibilityStatus(input) ?? "AO_ACT_RECEIPT_RECORDED";
+  const rejected = status !== "AO_ACT_RECEIPT_RECORDED";
+  const receipt: AoActReceiptPayloadV1 | null = rejected ? null : {
     version: "v1",
     tenant_id: input.tenant_id,
     project_id: input.project_id,
@@ -150,8 +208,8 @@ export function buildAoActReceiptFromTaskV1(input: AoActReceiptFromTaskInputV1):
     command_id: input.command_id,
     ao_act_receipt_id: input.ao_act_receipt_id,
     ao_act_receipt_fact_id: null,
-    status: "AO_ACT_RECEIPT_RECORDED",
-    receipt_created: true,
+    status,
+    receipt_created: !rejected,
     as_executed_created: false,
     acceptance_created: false,
     operation_plan_transition_created: false,

@@ -2,37 +2,287 @@
 const assert = require('assert');
 const { Pool } = require('pg');
 const crypto = require('crypto');
+
 const PREFIX = 'h41_ao_act_receipt_v1_acceptance_';
 const DATABASE_URL = process.env.DATABASE_URL || 'postgres://landos:landos_pwd@127.0.0.1:5433/landos';
 const BASE = process.env.BASE_URL || process.env.THREE_SURFACE_BASE_URL || 'http://127.0.0.1:3001';
 const TOK = process.env.GEOX_EXECUTOR_ACCEPTANCE_TOKEN || 'set-via-env-or-external-secret-file-executor';
 const APPROVER = process.env.GEOX_APPROVER_ONLY_TOKEN || 'set-via-env-or-external-secret-file-approver';
 const CLIENT = process.env.GEOX_CLIENT_TOKEN || 'set-via-env-or-external-secret-file-client';
-const scope = { tenant_id: process.env.GEOX_TENANT_ID || 'tenantA', project_id: process.env.GEOX_PROJECT_ID || 'projectA', group_id: process.env.GEOX_GROUP_ID || 'groupA', field_id: process.env.THREE_SURFACE_FIELD_ID || 'field_demo_001', zone_id: 'zoneA' };
+const scope = {
+  tenant_id: process.env.GEOX_TENANT_ID || 'tenantA',
+  project_id: process.env.GEOX_PROJECT_ID || 'projectA',
+  group_id: process.env.GEOX_GROUP_ID || 'groupA',
+  field_id: process.env.THREE_SURFACE_FIELD_ID || 'field_demo_001',
+  zone_id: 'zoneA',
+};
 const pool = new Pool({ connectionString: DATABASE_URL });
-const id = () => PREFIX + crypto.randomUUID().replace(/-/g,'');
-async function fact(type, payload){ const fid='fact_'+id(); await pool.query('INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1,NOW(),$2,$3::jsonb)', [fid, PREFIX, {type,payload}]); return fid; }
-async function count(type, plan){ const r=await pool.query("SELECT count(*)::int c FROM facts WHERE (record_json::jsonb->>'type')=$1 AND record_json::jsonb::text LIKE $2", [type, `%${plan}%`]); return r.rows[0].c; }
-async function post(body, token=TOK){ const r=await fetch(BASE+'/api/v1/actions/receipt/from-task',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+token},body:JSON.stringify(body)}); let j=null; try{j=await r.json()}catch{} return {status:r.status,json:j}; }
-function approvalPayload(task, extra={}){ return { ...scope, request_id: 'req_'+task, status: 'APPROVED', proposal:{ action_type:'IRRIGATE', time_window:{start_ts:1,end_ts:2}, parameter_schema:{ keys:[{name:'duration_sec',type:'number',min:1,max:7200}]}, parameters:{duration_sec:1800}, constraints:{}, meta:{source:'DECISION_RECOMMENDATION_V1', approval_intent:'REQUEST_HUMAN_APPROVAL_ONLY', no_direct_execution:true, skip_auto_task_issue:true, allow_auto_task_issue:false}}, ...extra }; }
-function taskPayload(plan, task, extra={}){ return { ...scope, operation_plan_id: plan, act_task_id: task, approval_request_id: 'req_'+task, action_type:'IRRIGATE', time_window:{start_ts:1,end_ts:2}, parameter_schema:{ keys:[{name:'duration_sec',type:'number',min:1,max:7200}]}, parameters:{duration_sec:1800}, constraints:{}, meta:{source:'OPERATION_PLAN_READY_V1', projected_from_ready_operation_plan:true}, ...extra }; }
-async function seedChain(plan, task, taskExtra={}, approvalExtra={}){ await fact('approval_request_v1', approvalPayload(task, approvalExtra)); await fact('ao_act_task_v0', taskPayload(plan, task, taskExtra)); await idx(plan, task); }
-async function idx(plan, task, extra={}){ const now=Date.now(); await pool.query(`INSERT INTO public.operation_plan_index_v1 (operation_plan_id,tenant_id,project_id,group_id,field_id,zone_id,spatial_scope_json,status,act_task_id,receipt_fact_id,source_fact_id,created_ts,updated_ts) VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12,$13) ON CONFLICT (operation_plan_id) DO UPDATE SET act_task_id=EXCLUDED.act_task_id, receipt_fact_id=EXCLUDED.receipt_fact_id, status=EXCLUDED.status, updated_ts=EXCLUDED.updated_ts`, [plan,scope.tenant_id,scope.project_id,scope.group_id,scope.field_id,scope.zone_id,JSON.stringify({zone_id:scope.zone_id}),extra.status||'READY',task,extra.receipt_fact_id??null,extra.source_fact_id??null,now,now]); }
-function body(plan, task, idem='idem'){ return { ...scope, operation_plan_id: plan, act_task_id: task, executor_id:{kind:'human',id:'executor_demo',namespace:'operator'}, execution_time:{start_ts:1760000000000,end_ts:1760003600000}, execution_coverage:{kind:'field',ref:scope.field_id}, resource_usage:{fuel_l:null,electric_kwh:null,water_l:20000,chemical_ml:null}, evidence_refs:[{kind:'operator_photo',ref:'evidence://receipt/photo/001'}], logs_refs:[{kind:'executor_log',ref:'log://receipt/001'}], status:'executed', constraint_check:{violated:false,violations:[]}, observed_parameters:{duration_sec:1800}, device_refs:[], meta:{idempotency_key:idem, command_id:task, source:'AO_ACT_TASK_V0'} }; }
-async function cleanup(){ await pool.query("DELETE FROM facts WHERE source=$1 OR record_json::jsonb::text LIKE $2", [PREFIX, `%${PREFIX}%`]).catch(()=>{}); await pool.query('DELETE FROM public.operation_plan_index_v1 WHERE operation_plan_id LIKE $1', [PREFIX+'%']).catch(()=>{}); }
-async function expectReject(label, mutate, expected){ const plan=id(), task=id(); await seedChain(plan, task); const b=body(plan,task,label); mutate && await mutate(b,plan,task); const r=await post(b); assert.equal(r.json?.status, expected, label); }
-(async()=>{ try{ await cleanup(); await pool.query(`CREATE TABLE IF NOT EXISTS public.operation_plan_index_v1 (operation_plan_id text PRIMARY KEY, tenant_id text NOT NULL, project_id text NOT NULL, group_id text NOT NULL, field_id text, zone_id text, spatial_scope_json jsonb, status text NOT NULL, act_task_id text, receipt_fact_id text, source_fact_id text, created_ts bigint NOT NULL, updated_ts bigint NOT NULL, updated_at timestamptz NOT NULL DEFAULT now())`);
-  const plan=id(), task=id(); await fact('approval_request_v1', approvalPayload(task)); await fact('ao_act_task_v0', taskPayload(plan, task)); await idx(plan, task, {status:'READY'}); const r=await post(body(plan,task,'stable-key')); assert.equal(r.json?.status,'AO_ACT_RECEIPT_RECORDED'); assert.equal(r.json?.receipt_created,true); assert.equal(r.json?.as_executed_created,false); assert.equal(r.json?.acceptance_created,false); assert.equal(r.json?.operation_plan_transition_created,false); assert.equal(r.json?.roi_created,false); assert.equal(r.json?.field_memory_created,false); assert.equal(r.json?.no_acceptance_created,true); assert.equal(r.json?.no_effect_judgement,true); assert.equal(await count('executor_ao_act_receipt_submission_v1',plan),1); assert.equal(await count('ao_act_receipt_v1',plan),1); const row=(await pool.query('SELECT act_task_id,status,receipt_fact_id FROM operation_plan_index_v1 WHERE operation_plan_id=$1',[plan])).rows[0]; assert(row.receipt_fact_id); assert.equal(row.act_task_id,task); assert.equal(row.status,'READY'); for (const t of ['operation_plan_transition_v1','as_executed_record_v1','acceptance_result_v1','roi_ledger_v1','field_memory_v1']) assert.equal(await count(t,plan),0,t); assert.equal(await count('operation_plan_v1',plan),0);
-  const beforeSub=await count('executor_ao_act_receipt_submission_v1',plan); const dup=await post(body(plan,task,'stable-key')); assert.equal(dup.json?.status,'REJECTED_DUPLICATE'); assert.equal(await count('ao_act_receipt_v1',plan),1); assert.equal(await count('executor_ao_act_receipt_submission_v1',plan),beforeSub);
-  await expectReject('missing_task', async(_b,plan)=>{ await pool.query('DELETE FROM facts WHERE record_json::jsonb::text LIKE $1',[`%${plan}%`]); }, 'REJECTED_TASK_NOT_FOUND');
-  await expectReject('not_from_plan', async(_b,plan,task)=>{ await pool.query('DELETE FROM facts WHERE record_json::jsonb::text LIKE $1',[`%${plan}%`]); await fact('approval_request_v1', approvalPayload(task)); await fact('ao_act_task_v0', taskPayload(plan,task,{meta:{source:'OTHER'}})); }, 'REJECTED_TASK_NOT_FROM_OPERATION_PLAN');
-  await expectReject('missing_index', async(_b,plan)=>{ await pool.query('DELETE FROM operation_plan_index_v1 WHERE operation_plan_id=$1',[plan]); }, 'REJECTED_OPERATION_PLAN_NOT_FOUND');
-  await expectReject('mismatch', async(_b,plan)=>{ await pool.query('UPDATE operation_plan_index_v1 SET act_task_id=$2 WHERE operation_plan_id=$1',[plan,'different']); }, 'REJECTED_OPERATION_PLAN_TASK_MISMATCH');
-  await expectReject('already', async(_b,plan)=>{ await pool.query('UPDATE operation_plan_index_v1 SET receipt_fact_id=$2 WHERE operation_plan_id=$1',[plan,'existing']); }, 'REJECTED_RECEIPT_ALREADY_CREATED');
-  await expectReject('no_evidence', b=>{ b.evidence_refs=[]; }, 'REJECTED_INVALID_INPUT'); await expectReject('no_logs', b=>{ b.logs_refs=[]; }, 'REJECTED_INVALID_INPUT'); await expectReject('bad_cmd', b=>{ b.meta.command_id='bad'; }, 'REJECTED_INVALID_INPUT'); await expectReject('bad_time', b=>{ b.execution_time.start_ts=2; b.execution_time.end_ts=1; }, 'REJECTED_INVALID_INPUT'); await expectReject('bad_param', b=>{ b.observed_parameters.extra=1; }, 'REJECTED_INVALID_INPUT'); await expectReject('bad_param_min', b=>{ b.observed_parameters.duration_sec=0; }, 'REJECTED_INVALID_INPUT');
-  await expectReject('missing_approval_request', async(_b,plan,task)=>{ await pool.query("DELETE FROM facts WHERE (record_json::jsonb->>'type')='approval_request_v1' AND record_json::jsonb::text LIKE $1",[`%${task}%`]); }, 'REJECTED_APPROVAL_REQUEST_NOT_FOUND');
-  await expectReject('non_approved_approval_request', async(_b,plan,task)=>{ await pool.query("DELETE FROM facts WHERE (record_json::jsonb->>'type')='approval_request_v1' AND record_json::jsonb::text LIKE $1",[`%${task}%`]); await fact('approval_request_v1', approvalPayload(task,{status:'PENDING'})); }, 'REJECTED_APPROVAL_REQUEST_NOT_FOUND');
-  await expectReject('invalid_action_type', async(_b,plan,task)=>{ await pool.query("DELETE FROM facts WHERE (record_json::jsonb->>'type')='ao_act_task_v0' AND record_json::jsonb::text LIKE $1",[`%${task}%`]); await fact('ao_act_task_v0', taskPayload(plan,task,{action_type:'IRRIGATION'})); }, 'REJECTED_TASK_NOT_FROM_OPERATION_PLAN');
-  const authPlan=id(), authTask=id(); await seedChain(authPlan, authTask); assert([401,403].includes((await post(body(authPlan,authTask,'approver'), APPROVER)).status), 'approver rejected'); assert([401,403].includes((await post(body(authPlan,authTask,'client'), CLIENT)).status), 'client rejected');
-  console.log('ACCEPTANCE_AO_ACT_RECEIPT_V1_RUNTIME passed');
-} finally { await cleanup(); await pool.end(); } })().catch(e=>{ console.error(e); process.exit(1); });
+const id = () => PREFIX + crypto.randomUUID().replace(/-/g, '');
+
+async function fact(type, payload) {
+  const fid = 'fact_' + id();
+  await pool.query(
+    'INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1,NOW(),$2,$3::jsonb)',
+    [fid, PREFIX, { type, payload }],
+  );
+  return fid;
+}
+
+async function count(type, plan) {
+  const r = await pool.query(
+    "SELECT count(*)::int c FROM facts WHERE (record_json::jsonb->>'type')=$1 AND record_json::jsonb::text LIKE $2",
+    [type, `%${plan}%`],
+  );
+  return r.rows[0].c;
+}
+
+async function post(body, token = TOK) {
+  const r = await fetch(BASE + '/api/v1/actions/receipt/from-task', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token },
+    body: JSON.stringify(body),
+  });
+  let json = null;
+  try { json = await r.json(); } catch {}
+  return { status: r.status, json };
+}
+
+function approvalPayload(task, extra = {}) {
+  return {
+    ...scope,
+    request_id: 'req_' + task,
+    status: 'APPROVED',
+    proposal: {
+      action_type: 'IRRIGATE',
+      time_window: { start_ts: 1, end_ts: 2 },
+      parameter_schema: { keys: [{ name: 'duration_sec', type: 'number', min: 1, max: 7200 }] },
+      parameters: { duration_sec: 1800 },
+      constraints: {},
+      meta: {
+        source: 'DECISION_RECOMMENDATION_V1',
+        approval_intent: 'REQUEST_HUMAN_APPROVAL_ONLY',
+        no_direct_execution: true,
+        skip_auto_task_issue: true,
+        allow_auto_task_issue: false,
+      },
+    },
+    ...extra,
+  };
+}
+
+function taskPayload(plan, task, extra = {}) {
+  return {
+    ...scope,
+    operation_plan_id: plan,
+    act_task_id: task,
+    approval_request_id: 'req_' + task,
+    action_type: 'IRRIGATE',
+    time_window: { start_ts: 1, end_ts: 2 },
+    parameter_schema: { keys: [{ name: 'duration_sec', type: 'number', min: 1, max: 7200 }] },
+    parameters: { duration_sec: 1800 },
+    constraints: {},
+    meta: { source: 'OPERATION_PLAN_READY_V1', projected_from_ready_operation_plan: true },
+    ...extra,
+  };
+}
+
+async function idx(plan, task, extra = {}) {
+  const now = Date.now();
+  await pool.query(
+    `INSERT INTO public.operation_plan_index_v1
+      (operation_plan_id,tenant_id,project_id,group_id,field_id,zone_id,spatial_scope_json,
+       status,act_task_id,receipt_fact_id,source_fact_id,created_ts,updated_ts)
+     VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12,$13)
+     ON CONFLICT (operation_plan_id) DO UPDATE SET
+       act_task_id=EXCLUDED.act_task_id,
+       receipt_fact_id=EXCLUDED.receipt_fact_id,
+       status=EXCLUDED.status,
+       updated_ts=EXCLUDED.updated_ts`,
+    [
+      plan,
+      scope.tenant_id,
+      scope.project_id,
+      scope.group_id,
+      scope.field_id,
+      scope.zone_id,
+      JSON.stringify({ zone_id: scope.zone_id }),
+      extra.status || 'READY',
+      task,
+      extra.receipt_fact_id ?? null,
+      extra.source_fact_id ?? null,
+      now,
+      now,
+    ],
+  );
+}
+
+async function seedChain(plan, task, taskExtra = {}, approvalExtra = {}) {
+  await fact('approval_request_v1', approvalPayload(task, approvalExtra));
+  await fact('ao_act_task_v0', taskPayload(plan, task, taskExtra));
+  await idx(plan, task);
+}
+
+function body(plan, task, idem = 'idem') {
+  return {
+    ...scope,
+    operation_plan_id: plan,
+    act_task_id: task,
+    executor_id: { kind: 'human', id: 'executor_demo', namespace: 'operator' },
+    execution_time: { start_ts: 1760000000000, end_ts: 1760003600000 },
+    execution_coverage: { kind: 'field', ref: scope.field_id },
+    resource_usage: { fuel_l: null, electric_kwh: null, water_l: 20000, chemical_ml: null },
+    evidence_refs: [{ kind: 'operator_photo', ref: 'evidence://receipt/photo/001' }],
+    logs_refs: [{ kind: 'executor_log', ref: 'log://receipt/001' }],
+    status: 'executed',
+    constraint_check: { violated: false, violations: [] },
+    observed_parameters: { duration_sec: 1800 },
+    device_refs: [],
+    meta: { idempotency_key: idem, command_id: task, source: 'AO_ACT_TASK_V0' },
+  };
+}
+
+async function cleanup() {
+  await pool.query(
+    'DELETE FROM facts WHERE source=$1 OR record_json::jsonb::text LIKE $2',
+    [PREFIX, `%${PREFIX}%`],
+  ).catch(() => {});
+  await pool.query(
+    'DELETE FROM public.operation_plan_index_v1 WHERE operation_plan_id LIKE $1',
+    [PREFIX + '%'],
+  ).catch(() => {});
+}
+
+async function expectReject(label, mutate, expected) {
+  const plan = id();
+  const task = id();
+  await seedChain(plan, task);
+  const b = body(plan, task, label);
+  if (mutate) await mutate(b, plan, task);
+  const r = await post(b);
+  assert.equal(r.json?.status, expected, label);
+}
+
+(async () => {
+  try {
+    await cleanup();
+    await pool.query(`CREATE TABLE IF NOT EXISTS public.operation_plan_index_v1 (
+      operation_plan_id text PRIMARY KEY,
+      tenant_id text NOT NULL,
+      project_id text NOT NULL,
+      group_id text NOT NULL,
+      field_id text,
+      zone_id text,
+      spatial_scope_json jsonb,
+      status text NOT NULL,
+      act_task_id text,
+      receipt_fact_id text,
+      source_fact_id text,
+      created_ts bigint NOT NULL,
+      updated_ts bigint NOT NULL,
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )`);
+
+    const plan = id();
+    const task = id();
+    await fact('approval_request_v1', approvalPayload(task));
+    await fact('ao_act_task_v0', taskPayload(plan, task));
+    await idx(plan, task, { status: 'READY' });
+    const r = await post(body(plan, task, 'stable-key'));
+    assert.equal(r.json?.status, 'AO_ACT_RECEIPT_RECORDED');
+    assert.equal(r.json?.receipt_created, true);
+    assert.equal(r.json?.as_executed_created, false);
+    assert.equal(r.json?.acceptance_created, false);
+    assert.equal(r.json?.operation_plan_transition_created, false);
+    assert.equal(r.json?.roi_created, false);
+    assert.equal(r.json?.field_memory_created, false);
+    assert.equal(r.json?.no_acceptance_created, true);
+    assert.equal(r.json?.no_effect_judgement, true);
+    assert.equal(await count('executor_ao_act_receipt_submission_v1', plan), 1);
+    assert.equal(await count('ao_act_receipt_v1', plan), 1);
+    const row = (await pool.query(
+      'SELECT act_task_id,status,receipt_fact_id FROM operation_plan_index_v1 WHERE operation_plan_id=$1',
+      [plan],
+    )).rows[0];
+    assert(row.receipt_fact_id);
+    assert.equal(row.act_task_id, task);
+    assert.equal(row.status, 'READY');
+    for (const type of [
+      'operation_plan_transition_v1',
+      'as_executed_record_v1',
+      'acceptance_result_v1',
+      'roi_ledger_v1',
+      'field_memory_v1',
+    ]) {
+      assert.equal(await count(type, plan), 0, type);
+    }
+    assert.equal(await count('operation_plan_v1', plan), 0);
+
+    const beforeSub = await count('executor_ao_act_receipt_submission_v1', plan);
+    const dup = await post(body(plan, task, 'stable-key'));
+    assert.equal(dup.json?.status, 'REJECTED_DUPLICATE');
+    assert.equal(await count('ao_act_receipt_v1', plan), 1);
+    assert.equal(await count('executor_ao_act_receipt_submission_v1', plan), beforeSub);
+
+    await expectReject('missing_task', async (_b, p) => {
+      await pool.query('DELETE FROM facts WHERE record_json::jsonb::text LIKE $1', [`%${p}%`]);
+    }, 'REJECTED_TASK_NOT_FOUND');
+    await expectReject('not_from_plan', async (_b, p, t) => {
+      await pool.query('DELETE FROM facts WHERE record_json::jsonb::text LIKE $1', [`%${p}%`]);
+      await fact('approval_request_v1', approvalPayload(t));
+      await fact('ao_act_task_v0', taskPayload(p, t, { meta: { source: 'OTHER' } }));
+    }, 'REJECTED_TASK_NOT_FROM_OPERATION_PLAN');
+    await expectReject('missing_index', async (_b, p) => {
+      await pool.query('DELETE FROM operation_plan_index_v1 WHERE operation_plan_id=$1', [p]);
+    }, 'REJECTED_OPERATION_PLAN_NOT_FOUND');
+    await expectReject('mismatch', async (_b, p) => {
+      await pool.query('UPDATE operation_plan_index_v1 SET act_task_id=$2 WHERE operation_plan_id=$1', [p, 'different']);
+    }, 'REJECTED_OPERATION_PLAN_TASK_MISMATCH');
+    await expectReject('already', async (_b, p) => {
+      await pool.query('UPDATE operation_plan_index_v1 SET receipt_fact_id=$2 WHERE operation_plan_id=$1', [p, 'existing']);
+    }, 'REJECTED_RECEIPT_ALREADY_CREATED');
+    await expectReject('no_evidence', (b) => { b.evidence_refs = []; }, 'REJECTED_INVALID_INPUT');
+    await expectReject('no_logs', (b) => { b.logs_refs = []; }, 'REJECTED_INVALID_INPUT');
+    await expectReject('bad_cmd', (b) => { b.meta.command_id = 'bad'; }, 'REJECTED_INVALID_INPUT');
+    await expectReject('bad_time', (b) => {
+      b.execution_time.start_ts = 2;
+      b.execution_time.end_ts = 1;
+    }, 'REJECTED_INVALID_INPUT');
+    await expectReject('bad_param', (b) => { b.observed_parameters.extra = 1; }, 'REJECTED_INVALID_INPUT');
+    await expectReject('bad_param_min', (b) => {
+      b.observed_parameters.duration_sec = 0;
+    }, 'REJECTED_INVALID_INPUT');
+    await expectReject('missing_approval_request', async (_b, _p, t) => {
+      await pool.query(
+        "DELETE FROM facts WHERE (record_json::jsonb->>'type')='approval_request_v1' AND record_json::jsonb::text LIKE $1",
+        [`%${t}%`],
+      );
+    }, 'REJECTED_APPROVAL_REQUEST_NOT_FOUND');
+    await expectReject('non_approved_approval_request', async (_b, _p, t) => {
+      await pool.query(
+        "DELETE FROM facts WHERE (record_json::jsonb->>'type')='approval_request_v1' AND record_json::jsonb::text LIKE $1",
+        [`%${t}%`],
+      );
+      await fact('approval_request_v1', approvalPayload(t, { status: 'PENDING' }));
+    }, 'REJECTED_APPROVAL_REQUEST_NOT_FOUND');
+    await expectReject('invalid_action_type', async (_b, p, t) => {
+      await pool.query(
+        "DELETE FROM facts WHERE (record_json::jsonb->>'type')='ao_act_task_v0' AND record_json::jsonb::text LIKE $1",
+        [`%${t}%`],
+      );
+      await fact('ao_act_task_v0', taskPayload(p, t, { action_type: 'IRRIGATION' }));
+    }, 'REJECTED_TASK_NOT_FROM_OPERATION_PLAN');
+
+    const authPlan = id();
+    const authTask = id();
+    await seedChain(authPlan, authTask);
+    assert([401, 403].includes((await post(body(authPlan, authTask, 'approver'), APPROVER)).status));
+    assert([401, 403].includes((await post(body(authPlan, authTask, 'client'), CLIENT)).status));
+    console.log('ACCEPTANCE_AO_ACT_RECEIPT_V1_RUNTIME passed');
+  } finally {
+    await cleanup();
+    await pool.end();
+  }
+})().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
