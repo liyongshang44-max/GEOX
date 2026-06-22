@@ -48,7 +48,7 @@ function responseCodeForStatus(status: string): number {
 export function registerWaterResponseVerificationV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/water-response/verify-from-acceptance", async (req, reply) => {
     const auth = requireAoActAnyScopeV0(req, reply, ["water_response.verify"]);
-    if (!auth) return;
+    if (!auth) return reply;
     if (!["operator", "agronomist", "admin"].includes(String(auth.role))) {
       return reply.status(403).send({ ok: false, error: "AUTH_ROLE_SCOPE_DENIED" });
     }

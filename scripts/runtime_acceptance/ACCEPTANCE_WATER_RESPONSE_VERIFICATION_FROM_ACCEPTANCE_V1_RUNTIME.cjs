@@ -54,7 +54,16 @@ async function post(body, token = tokens.operator) {
 }
 
 async function cleanup(pool) {
-  await pool.query(`DELETE FROM water_response_verification_index_v1 WHERE verification_id LIKE $1`, [`${prefix}%`]).catch(() => {});
+  await pool.query(
+    `DELETE FROM water_response_verification_index_v1
+     WHERE acceptance_id LIKE $1
+        OR as_executed_id LIKE $1
+        OR task_id LIKE $1
+        OR receipt_id LIKE $1
+        OR pre_state_id LIKE $1
+        OR post_state_id LIKE $1`,
+    [`${prefix}%`],
+  ).catch(() => {});
   await pool.query(`DELETE FROM facts WHERE fact_id LIKE $1 OR record_json::jsonb::text LIKE $2`, [`${prefix}%`, `%${prefix}%`]).catch(() => {});
   await pool.query(`DELETE FROM root_zone_soil_water_state_index_v1 WHERE state_id LIKE $1`, [`${prefix}%`]).catch(() => {});
   await pool.query(`DELETE FROM as_executed_record_v1 WHERE as_executed_id LIKE $1`, [`${prefix}%`]).catch(() => {});
@@ -190,7 +199,15 @@ async function main() {
     assert.equal(await countFacts(pool, 'operator_water_response_verification_submission_v1'), 1);
     assert.equal(await countFacts(pool, 'water_response_verification_v1'), 1);
 
-    const indexCount = await pool.query(`SELECT count(*)::int AS c FROM water_response_verification_index_v1 WHERE verification_id LIKE $1`, [`${prefix}%`]);
+    const verificationFactId = success.json?.water_response_verification_fact_id || success.json?.verification_id;
+    assert(verificationFactId, "missing water_response_verification_fact_id or verification_id");
+
+    const indexCount = await pool.query(
+      `SELECT count(*)::int AS c
+       FROM water_response_verification_index_v1
+       WHERE verification_id=$1 OR source_fact_id=$1`,
+      [verificationFactId],
+    );
     assert.equal(indexCount.rows[0].c, 1);
 
     const duplicate = await post(successBody, tokens.operator);
