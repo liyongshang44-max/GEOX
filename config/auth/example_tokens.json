@@ -187,6 +187,7 @@
       "revoked": false,
       "scopes": [
         "water_response.verify",
+        "recommendation.approval_request",
         "acceptance.evaluate",
         "evidence.artifact.write",
         "ao_act.receipt.write",

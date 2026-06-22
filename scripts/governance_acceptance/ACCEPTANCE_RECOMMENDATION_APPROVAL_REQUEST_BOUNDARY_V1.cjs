@@ -8,7 +8,7 @@ const routePath = 'apps/server/src/routes/control_approval_request_v1.ts';
 const builderPath = 'apps/server/src/domain/approval/recommendation_approval_request_builder_v1.ts';
 const rolesPath = 'apps/server/src/domain/auth/roles.ts';
 const route = read(routePath);
-const h36 = route.slice(route.indexOf('async function latestRecommendationById'), route.indexOf('async function handleApprovalRequest'));
+const h36 = route.slice(route.indexOf('async function handleRecommendationApprovalRequest'), route.indexOf('async function handleApprovalRequest'));
 const builder = read(builderPath);
 const roles = read(rolesPath);
 assert(route.includes('/api/v1/operator/recommendations/:recommendation_id/request-approval'), 'operator recommendation request-approval route exists');
