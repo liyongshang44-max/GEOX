@@ -1,3 +1,4 @@
+// apps/server/src/routes/as_executed_v1.ts
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { Pool } from "pg";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
@@ -9,6 +10,7 @@ import {
   listAsExecutedByTask,
   listAsExecutedByPrescription,
 } from "../domain/execution/as_executed_v1.js";
+import { createAsExecutedFromAoActReceiptV1 } from "../domain/execution/as_executed_from_ao_act_receipt_v1.js";
 
 type TenantTriple = {
   tenant_id: string;
@@ -129,6 +131,33 @@ export function registerAsExecutedV1Routes(app: FastifyInstance, pool: Pool): vo
       req.log.error({ err: error }, "create as-executed from receipt failed");
       return reply.status(500).send({ ok: false, error: "INTERNAL_ERROR" });
     }
+  });
+
+  app.post("/api/v1/as-executed/from-ao-act-receipt-v1", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.receipt.write");
+    if (!auth) return reply;
+    if (!["executor", "operator", "admin"].includes(String(auth.role))) {
+      return reply.status(403).send({ ok: false, error: "AUTH_ROLE_SCOPE_DENIED" });
+    }
+    const body: any = req.body ?? {};
+    const tenant = tenantFromBodyWithAuth(body, auth);
+    if (!requireTenantScope(reply, tenant)) return;
+    if (!requireTenantMatchOr404(reply, auth, tenant)) return;
+    const result = await createAsExecutedFromAoActReceiptV1(pool, {
+      ...tenant,
+      field_id: String(body?.field_id ?? "").trim(),
+      zone_id: body?.zone_id == null ? null : String(body.zone_id).trim(),
+      operation_plan_id: String(body?.operation_plan_id ?? "").trim(),
+      act_task_id: String(body?.act_task_id ?? "").trim(),
+      receipt_id: String(body?.receipt_id ?? "").trim(),
+      idempotency_key: body?.idempotency_key == null ? null : String(body.idempotency_key).trim(),
+    });
+    const code = result.status === "AS_EXECUTED_RECORDED" ? 200
+      : result.status === "REJECTED_RECEIPT_NOT_FOUND" || result.status === "REJECTED_OPERATION_PLAN_NOT_FOUND" ? 404
+      : result.status === "REJECTED_INVALID_INPUT" ? 400
+      : result.status === "REJECTED_DUPLICATE" ? 409
+      : 422;
+    return reply.status(code).send(result);
   });
 
   app.get("/api/v1/as-executed/:as_executed_id", async (req, reply) => {
