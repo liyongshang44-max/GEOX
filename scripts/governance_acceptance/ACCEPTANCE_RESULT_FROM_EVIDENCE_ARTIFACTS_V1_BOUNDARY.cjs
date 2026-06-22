@@ -1,3 +1,4 @@
+// scripts/governance_acceptance/ACCEPTANCE_RESULT_FROM_EVIDENCE_ARTIFACTS_V1_BOUNDARY.cjs
 const fs = require('fs');
 function r(p){ return fs.readFileSync(p,'utf8'); }
 function ok(c,m){ if(!c){ console.error('FAIL',m); process.exit(1); } console.log('PASS',m); }
@@ -22,6 +23,9 @@ ok(!/from ['"](?:pg|fastify)|from ['"].*routes|require\(['"](?:pg|fastify)/.test
 ok(!builder.includes('process.env'), 'Builder does not read process.env');
 ok(!/Date\.now|new Date|randomUUID/.test(builder), 'Builder does not use Date.now / new Date / randomUUID');
 ok(!/fetch\(|http\.|https\.|artifact_ref.*readFile|parse image|parse log/i.test(builder), 'Builder does not download or parse evidence URLs');
+ok(builder.includes('s.pointer_only !== true') && builder.includes('s.no_acceptance_created !== true') && builder.includes('s.no_effect_judgement !== true') && builder.includes('p.source !== "AS_EXECUTED_RECORD_V1"'), 'Builder validates pointer_only / no_acceptance_created / no_effect_judgement and payload.source');
+ok(builder.includes('source_lane === "SIMULATED_DEV_ONLY"') && builder.includes('source_lane === "DEBUG_ONLY"') && builder.includes('evidence_level === "DEBUG"') && builder.includes('is_simulated === true') && builder.includes('startsWith("dev://")') && builder.includes('startsWith("simulated://")') && builder.includes('flight-table') && builder.includes('flight_table') && !builder.includes('/dev|debug|simulated/'), 'Builder uses precise dev/simulated indicators without naked /dev/ substring regex');
+ok(h44.includes('field_id=$4') && h44.includes('as_executed_id=$5') && h44.includes('task_id=$6') && h44.includes('receipt_id=$7'), 'Route uses full-scope as_executed lookup');
 ok(h44.includes('acceptance.evaluate'), 'Route requires acceptance.evaluate');
 ok(roles.includes('operator:') && roles.includes('"acceptance.evaluate"') && roles.includes('admin: ["*"]'), 'Operator/admin are allowed');
 ok(!/approver:[^\n]*acceptance\.evaluate/.test(roles) && !/executor:[^\n]*acceptance\.evaluate/.test(roles) && !/client:[^\n]*acceptance\.evaluate/.test(roles) && !/viewer:[^\n]*acceptance\.evaluate/.test(roles) && auth.includes('isScopeAllowedForRoleV1'), 'Approver/executor/client/viewer are rejected unless explicitly granted acceptance.evaluate');
