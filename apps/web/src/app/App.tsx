@@ -52,7 +52,7 @@ const CustomerDashboardPage = React.lazy(() => import("../features/customer/page
 const CustomerDashboardExportPage = React.lazy(() => import("../features/customer/pages/CustomerDashboardExportPage"));
 const CustomerFieldsIndexPage = React.lazy(() => import("../features/customer/pages/CustomerFieldsIndexPage"));
 const CustomerOperationsIndexPage = React.lazy(() => import("../features/customer/pages/CustomerOperationsIndexPage"));
-const CustomerReportsCenterPage = React.lazy(() => import("../views/CustomerReportsCenterPage"));
+const CustomerReportsCenterPage = React.lazy(() => import("../features/customer/pages/CustomerReportsCenterPage"));
 const FieldReportPage = React.lazy(() => import("../features/fields/pages/FieldReportPage"));
 const FieldReportExportPage = React.lazy(() => import("../features/fields/pages/FieldReportExportPage"));
 const OperationReportPage = React.lazy(() => import("../features/operations/pages/OperationReportPage"));
