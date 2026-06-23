@@ -25,23 +25,46 @@ function hasFlag(name) { return process.argv.includes(name); }
 function iso(ms) { return new Date(ms).toISOString(); }
 function prefix(tenant) { return `full_review_seed_${tenant}`; }
 function json(value) { return JSON.stringify(value); }
+function sameSet(a, b) { return a.length === b.length && a.every((x) => b.includes(x)); }
 function fact(tenant, suffix, type, payload, occurredAt) {
   return { fact_id: `${prefix(tenant)}_${suffix}`, occurred_at: occurredAt, source: SOURCE, record_json: json({ type, payload: { tenant_id: tenant, project_id: PROJECT_ID, group_id: GROUP_ID, field_id: FIELD_ID, ...payload } }) };
 }
 async function tableExists(client, table) { const r = await client.query('SELECT to_regclass($1)::text AS name', [`public.${table}`]); return Boolean(r.rows[0]?.name); }
 async function tableColumns(client, table) { const r = await client.query("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name=$1", [table]); return new Set(r.rows.map((x) => String(x.column_name))); }
+async function uniqueColumnSets(client, table) {
+  const result = await client.query(`
+    SELECT array_agg(a.attname ORDER BY ord.n) AS columns
+      FROM pg_class t
+      JOIN pg_namespace ns ON ns.oid = t.relnamespace
+      JOIN pg_index i ON i.indrelid = t.oid
+      JOIN unnest(i.indkey) WITH ORDINALITY AS ord(attnum, n) ON true
+      JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ord.attnum
+     WHERE ns.nspname = 'public'
+       AND t.relname = $1
+       AND i.indisunique = true
+     GROUP BY i.indexrelid
+  `, [table]);
+  return result.rows.map((row) => row.columns.map((column) => String(column)));
+}
+function chooseConflictColumns(uniqueSets, preferred, keys) {
+  const usablePreferred = preferred.filter((key) => keys.includes(key));
+  const exact = uniqueSets.find((set) => sameSet(set, usablePreferred));
+  if (exact) return exact;
+  return uniqueSets.find((set) => set.every((key) => keys.includes(key))) ?? [];
+}
 async function insertFacts(client, rows) { for (const row of rows) await client.query('INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1,$2::timestamptz,$3,$4::jsonb) ON CONFLICT (fact_id) DO UPDATE SET occurred_at=EXCLUDED.occurred_at, source=EXCLUDED.source, record_json=EXCLUDED.record_json', [row.fact_id, row.occurred_at, row.source, row.record_json]); }
 async function insertRows(client, table, rows, conflictKeys) {
   if (!(await tableExists(client, table))) return;
   const cols = await tableColumns(client, table);
+  const uniqueSets = await uniqueColumnSets(client, table);
   for (const row of rows) {
     const keys = Object.keys(row).filter((key) => cols.has(key));
     if (!keys.length) continue;
     const values = keys.map((key) => row[key]);
     const placeholders = keys.map((_, i) => `$${i + 1}`);
-    const conflict = conflictKeys.filter((key) => cols.has(key));
+    const conflict = chooseConflictColumns(uniqueSets, conflictKeys.filter((key) => cols.has(key)), keys);
     const updateKeys = keys.filter((key) => !conflict.includes(key));
-    const conflictSql = conflict.length ? ` ON CONFLICT (${conflict.join(',')}) DO UPDATE SET ${(updateKeys.length ? updateKeys : [conflict[0]]).map((key) => `${key}=EXCLUDED.${key}`).join(',')}` : '';
+    const conflictSql = conflict.length ? ` ON CONFLICT (${conflict.join(',')}) DO UPDATE SET ${(updateKeys.length ? updateKeys : [conflict[0]]).map((key) => `${key}=EXCLUDED.${key}`).join(',')}` : ' ON CONFLICT DO NOTHING';
     await client.query(`INSERT INTO ${table} (${keys.join(',')}) VALUES (${placeholders.join(',')})${conflictSql}`, values);
   }
 }

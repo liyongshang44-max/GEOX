@@ -29,6 +29,8 @@ ok(seed.includes('water_response_verification_v1'), 'seed includes water_respons
 ok(seed.includes('water_response_verification_index_v1'), 'seed includes water_response_verification_index_v1');
 ok(seed.includes('--include-base-seed'), 'base seed requires explicit include flag');
 ok(seed.includes('skipped_by_default'), 'seed skips base seed by default');
+ok(seed.includes('uniqueColumnSets'), 'seed detects live unique indexes');
+ok(seed.includes('chooseConflictColumns'), 'seed chooses schema-aware conflict columns');
 ok(!seed.includes("insertRows(client, 'roi_ledger_v1'"), 'seed does not write roi_ledger_v1');
 ok(!seed.includes("insertRows(client, 'field_memory_v1'"), 'seed does not write field_memory_v1');
 ok(!seed.includes("insertRows(client, 'operation_state_v1'"), 'seed does not write operation_state_v1');
