@@ -69,7 +69,7 @@ export async function createAsExecutedFromAoActReceiptV1(pool: Pool, input: Crea
   const receipt = await pool.query(
     `SELECT fact_id, record_json::jsonb AS record_json
        FROM facts
-      WHERE ((record_json::jsonb#>>'{payload,ao_act_receipt_id}') = $7 OR fact_id = $7)
+      WHERE ((record_json::jsonb#>>'{payload,ao_act_receipt_id}') = $6 OR fact_id = $6)
       ORDER BY CASE
         WHEN (record_json::jsonb#>>'{payload,tenant_id}') = $1
          AND (record_json::jsonb#>>'{payload,project_id}') = $2
@@ -80,7 +80,7 @@ export async function createAsExecutedFromAoActReceiptV1(pool: Pool, input: Crea
         occurred_at DESC,
         fact_id DESC
       LIMIT 1`,
-    [input.tenant_id, input.project_id, input.group_id, input.field_id, input.zone_id, input.act_task_id, input.receipt_id],
+    [input.tenant_id, input.project_id, input.group_id, input.field_id, input.zone_id, input.receipt_id],
   );
   if (!receipt.rows?.length) return rejected("REJECTED_RECEIPT_NOT_FOUND");
   const receiptRow = receipt.rows[0];
