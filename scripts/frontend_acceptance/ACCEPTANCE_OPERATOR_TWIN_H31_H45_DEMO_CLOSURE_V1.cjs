@@ -27,6 +27,8 @@ for (const forbidden of ['TASK_NOT_LINKED', 'RECEIPT_MISSING', 'AS_EXECUTED_MISS
 ok(seed.includes('as_executed_record_v1'), 'seed includes as_executed_record_v1');
 ok(seed.includes('water_response_verification_v1'), 'seed includes water_response_verification_v1');
 ok(seed.includes('water_response_verification_index_v1'), 'seed includes water_response_verification_index_v1');
+ok(seed.includes('--include-base-seed'), 'base seed requires explicit include flag');
+ok(seed.includes('skipped_by_default'), 'seed skips base seed by default');
 ok(!seed.includes("insertRows(client, 'roi_ledger_v1'"), 'seed does not write roi_ledger_v1');
 ok(!seed.includes("insertRows(client, 'field_memory_v1'"), 'seed does not write field_memory_v1');
 ok(!seed.includes("insertRows(client, 'operation_state_v1'"), 'seed does not write operation_state_v1');
@@ -34,6 +36,7 @@ ok(!seed.includes("insertRows(client, 'operation_state_v1'"), 'seed does not wri
 const run = spawnSync(process.execPath, ['scripts/demo_seed/SEED_OPERATOR_TWIN_H31_H45_DEMO_CLOSURE_V1.cjs', '--dry-run', '--tenant', 'tenantA'], { encoding: 'utf8' });
 ok(run.status === 0, 'seed dry-run succeeds');
 const payload = JSON.parse(run.stdout);
+ok(payload.base_seed === 'skipped_by_default', 'dry-run declares base seed skipped by default');
 ok(payload.generated_facts.includes('as_executed_record_v1'), 'dry-run lists as_executed_record_v1');
 ok(payload.generated_facts.includes('water_response_verification_v1'), 'dry-run lists water_response_verification_v1');
 ok(payload.written_index_tables.includes('water_response_verification_index_v1'), 'dry-run lists water_response_verification_index_v1');

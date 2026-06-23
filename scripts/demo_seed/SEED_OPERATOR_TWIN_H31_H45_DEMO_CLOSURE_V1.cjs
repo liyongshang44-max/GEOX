@@ -2,7 +2,7 @@
 'use strict';
 
 // scripts/demo_seed/SEED_OPERATOR_TWIN_H31_H45_DEMO_CLOSURE_V1.cjs
-// Purpose: apply a read-demo H31-H45 closure seed for Operator Twin pages.
+// Purpose: apply a read-demo H31-H45 closure seed for Operator Twin pages without invoking the broader base seed by default.
 // Boundary: writes demo facts/read models only; it does not write ROI, Field Memory, reports, or customer confirmed delivery.
 
 const path = require('node:path');
@@ -21,6 +21,7 @@ const WATER_RESPONSE_ID = 'wrv_c8_irrigation_formal_001';
 const SOURCE = 'scripts/demo_seed/operator_twin_h31_h45_demo_closure_v1';
 
 function arg(name, fallback) { const i = process.argv.indexOf(name); return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : fallback; }
+function hasFlag(name) { return process.argv.includes(name); }
 function iso(ms) { return new Date(ms).toISOString(); }
 function prefix(tenant) { return `full_review_seed_${tenant}`; }
 function json(value) { return JSON.stringify(value); }
@@ -62,13 +63,13 @@ function closureRows(tenant) {
 async function main() {
   const tenant = arg('--tenant', 'tenantA');
   const profile = arg('--profile', 'c8-formal-chain');
-  const dryRun = process.argv.includes('--dry-run');
-  const skipBase = process.argv.includes('--skip-base-seed');
+  const dryRun = hasFlag('--dry-run');
+  const includeBase = hasFlag('--include-base-seed') && !hasFlag('--skip-base-seed');
   const rows = closureRows(tenant);
-  const summary = { ok: true, seed: 'operator_twin_h31_h45_demo_closure_v1', tenant_id: tenant, project_id: PROJECT_ID, group_id: GROUP_ID, field_id: FIELD_ID, generated_facts: rows.facts.map((row) => JSON.parse(row.record_json).type), written_index_tables: Object.keys(rows.indexes), not_written: ['roi_ledger_v1', 'field_memory_v1', 'operation_state_v1', 'customer_delivery', 'projectReportV1', 'field_report'] };
+  const summary = { ok: true, seed: 'operator_twin_h31_h45_demo_closure_v1', tenant_id: tenant, project_id: PROJECT_ID, group_id: GROUP_ID, field_id: FIELD_ID, base_seed: includeBase ? 'included_explicitly' : 'skipped_by_default', generated_facts: rows.facts.map((row) => JSON.parse(row.record_json).type), written_index_tables: Object.keys(rows.indexes), not_written: ['roi_ledger_v1', 'field_memory_v1', 'operation_state_v1', 'customer_delivery', 'projectReportV1', 'field_report'] };
   if (dryRun) return console.log(JSON.stringify(summary, null, 2));
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required');
-  if (!skipBase) { const base = path.join(__dirname, 'SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs'); const r = spawnSync(process.execPath, [base, '--apply', '--tenant', tenant, '--profile', profile], { stdio: 'inherit' }); if (r.status !== 0) process.exit(r.status ?? 1); }
+  if (includeBase) { const base = path.join(__dirname, 'SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs'); const r = spawnSync(process.execPath, [base, '--apply', '--tenant', tenant, '--profile', profile], { stdio: 'inherit' }); if (r.status !== 0) process.exit(r.status ?? 1); }
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   const client = await pool.connect();
   try { await client.query('BEGIN'); await insertFacts(client, rows.facts); await insertRows(client, 'soil_moisture_sensing_window_index_v1', rows.indexes.soil_moisture_sensing_window_index_v1, ['tenant_id', 'project_id', 'group_id', 'field_id', 'window_id']); await insertRows(client, 'water_state_estimate_index_v1', rows.indexes.water_state_estimate_index_v1, ['tenant_id', 'project_id', 'group_id', 'field_id', 'estimate_id']); await insertRows(client, 'water_response_verification_index_v1', rows.indexes.water_response_verification_index_v1, ['tenant_id', 'project_id', 'group_id', 'field_id', 'verification_id']); await client.query('COMMIT'); } catch (error) { await client.query('ROLLBACK').catch(() => undefined); throw error; } finally { client.release(); await pool.end(); }
