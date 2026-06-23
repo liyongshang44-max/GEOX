@@ -38,12 +38,12 @@ async function loadScopedOperationPlanIndex(pool: Pool, body: any, operationPlan
 export function registerOperationPlanV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/operator/operation-plans/:operation_plan_id/transition", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "operation.plan.transition");
-    if (!auth) return;
+    if (!auth) return reply;
     if (!(auth.role === "operator" || auth.role === "admin")) return reply.status(403).send({ ok: false, error: "ROLE_OPERATOR_OR_ADMIN_REQUIRED" });
     const body: any = req.body ?? {};
     let tenant: any;
     try { tenant = assertTenantTriple(body); } catch { return reply.status(400).send({ surface: "OPERATOR", status: "REJECTED_INVALID_INPUT", operation_plan_transition_created: false, task_created: false, dispatch_created: false, receipt_created: false, roi_created: false, field_memory_created: false, no_direct_execution: true }); }
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;
     const operationPlanId = String((req.params as any)?.operation_plan_id ?? "").trim();
     const idempotencyKey = String(body.idempotency_key ?? "").trim();
     const prior = await latestTransitionSubmissionByIdempotency(pool, tenant.tenant_id, idempotencyKey);
