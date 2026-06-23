@@ -1,5 +1,5 @@
 // apps/web/src/features/operator/pages/OperatorFieldTwinPostIrrigationPage.tsx
-// Purpose: render the H27 read-only post-irrigation response verification page.
+// Purpose: render the H27/H45 read-only post-irrigation response verification page.
 // Boundary: this page validates evidence only; it does not write Field Memory, ROI, facts, control sends, approvals, recommendations, or tasks.
 
 import React from "react";
@@ -17,12 +17,23 @@ import {
 
 type RuntimeState = "loading" | "ready" | "error";
 
+type TailStage = {
+  code: string;
+  label: string;
+  status: string;
+  ref: string;
+};
+
 function scopeFromSearchParams(searchParams: URLSearchParams): OperatorTwinRequestScope {
   return { tenant_id: searchParams.get("tenant_id"), project_id: searchParams.get("project_id"), group_id: searchParams.get("group_id") };
 }
 
 function ValueLine({ label, value }: { label: string; value: React.ReactNode }): React.ReactElement {
   return <li><strong>{label}:</strong> {value ?? "none"}</li>;
+}
+
+function fieldTwinPath(fieldId: string, suffix: string, scopeQueryString: string): string {
+  return "/operator/twin/fields/" + encodeURIComponent(fieldId) + suffix + scopeQueryString;
 }
 
 export function PostIrrigationStateComparePanel({ pre, post }: { pre: OperatorIrrigationStateSnapshot; post: OperatorIrrigationStateSnapshot }): React.ReactElement {
@@ -45,6 +56,23 @@ export function VerificationGapList({ verification }: { verification: OperatorFi
   return <article className="operatorPanel" data-card="VerificationGapList"><p className="operatorEyebrow">verification_gaps</p><h3>Verification Gaps</h3><ul className="operatorList">{verification.verification_gaps.length ? verification.verification_gaps.map((gap) => <li key={gap.gap_code}>{gap.gap_code} · {gap.severity} · {gap.label}</li>) : <li>No blocking verification gaps.</li>}</ul></article>;
 }
 
+function buildExecutionTailStages(verification: OperatorFieldTwinPostIrrigationVerificationV1): TailStage[] {
+  return [
+    { code: "H40", label: "AO-ACT Task", status: verification.operation_context.task_id ? "TASK_LINKED" : "TASK_NOT_LINKED", ref: verification.operation_context.task_id ?? "none" },
+    { code: "H41", label: "AO-ACT Receipt", status: verification.execution_evidence_v1.receipt_available ? "RECEIPT_AVAILABLE" : "RECEIPT_MISSING", ref: verification.operation_context.receipt_id ?? "none" },
+    { code: "H42", label: "As-Executed Record", status: verification.execution_evidence_v1.as_executed_available ? "AS_EXECUTED_AVAILABLE" : "AS_EXECUTED_MISSING", ref: verification.operation_context.as_executed_id ?? "none" },
+    { code: "H43", label: "Evidence Artifact", status: verification.execution_evidence_v1.evidence_refs.length > 0 ? "EVIDENCE_LINKED" : "EVIDENCE_NOT_LINKED", ref: verification.execution_evidence_v1.evidence_refs.join(", ") || "none" },
+    { code: "H44", label: "Acceptance Result", status: verification.execution_evidence_v1.acceptance_available ? "ACCEPTANCE_AVAILABLE" : "ACCEPTANCE_MISSING", ref: verification.operation_context.acceptance_result_id ?? "none" },
+    { code: "H45", label: "Water Response Verification", status: verification.verification_summary.status, ref: verification.response_delta_v1.reason_codes.join(", ") || verification.verification_summary.reason },
+  ];
+}
+
+function ExecutionTailChainPanel({ verification }: { verification: OperatorFieldTwinPostIrrigationVerificationV1 }): React.ReactElement {
+  const stages = buildExecutionTailStages(verification);
+
+  return <article className="operatorPanel" data-card="ExecutionTailChainPanel" data-contract="h40_h45_execution_tail_read_only"><p className="operatorEyebrow">H40-H45 execution tail</p><h3>执行后链路</h3><p>该表只读串联 task、receipt、as-executed、evidence、acceptance 和 water response，不创建后续 Field Memory 或 ROI。</p><table className="operatorTable" data-table="h40-h45-execution-tail"><thead><tr><th>stage</th><th>node</th><th>status</th><th>ref</th></tr></thead><tbody>{stages.map((stage) => <tr key={stage.code} data-stage={stage.code.toLowerCase()}><td>{stage.code}</td><td>{stage.label}</td><td><span className="operatorPill">{stage.status}</span></td><td>{stage.ref}</td></tr>)}</tbody></table></article>;
+}
+
 export default function OperatorFieldTwinPostIrrigationPage(): React.ReactElement {
   const params = useParams();
   const [searchParams] = useSearchParams();
@@ -57,5 +85,5 @@ export default function OperatorFieldTwinPostIrrigationPage(): React.ReactElemen
 
   React.useEffect(() => { let alive = true; setState("loading"); setVerification(null); setErrorText(""); void fetchOperatorFieldTwinPostIrrigationVerification(fieldId, scope).then((response) => { if (!alive) return; setVerification(response.operator_field_twin_post_irrigation_verification_v1); setState("ready"); }).catch((error: unknown) => { if (!alive) return; setErrorText(error instanceof Error ? error.message : "OPERATOR_FIELD_TWIN_POST_IRRIGATION_LOAD_FAILED"); setState("error"); }); return () => { alive = false; }; }, [fieldId, scope]);
 
-  return <section className="operatorWorkbenchPage" data-surface="operator-twin" data-page="operator-field-twin-post-irrigation" data-contract="operator_field_twin_post_irrigation_verification_v1"><div className="operatorWorkbenchHero"><div><p className="operatorEyebrow">Operator Post-Irrigation Verification</p><h2>灌后响应验证</h2><p>本页只读，用于验证灌后响应证据，不写入 Field Memory，不写 ROI，不创建 task。</p><span className="operatorPill">read-only verification projection</span></div><div className="operatorWorkbenchHeroActions"><Link className="operatorActionLink" to={"/operator/twin/fields/" + encodeURIComponent(fieldId) + scopeQueryString}>Workspace</Link><Link className="operatorActionLink" to={"/operator/twin/fields/" + encodeURIComponent(fieldId) + "/forecast" + scopeQueryString}>Forecast</Link><Link className="operatorActionLink" to={"/operator/twin/fields/" + encodeURIComponent(fieldId) + "/evidence" + scopeQueryString}>Evidence</Link><Link className="operatorActionLink" to={"/operator/twin/fields/" + encodeURIComponent(fieldId) + "/calibration" + scopeQueryString}>Calibration</Link></div></div>{state === "loading" ? <div className="operatorPanel">Post-irrigation verification 数据加载中...</div> : null}{state === "error" ? <div className="operatorPanel">Post-irrigation verification 数据加载失败：{errorText}</div> : null}{verification ? <div className="operatorPanelGrid"><PostIrrigationStateComparePanel pre={verification.pre_irrigation_state_v1} post={verification.post_irrigation_state_v1} /><ResponseDeltaPanel delta={verification.response_delta_v1} /><ExecutionEvidencePanel evidence={verification.execution_evidence_v1} /><ZoneResponseMatrixPanel matrix={verification.zone_response_matrix_v1} /><article className="operatorPanel"><p className="operatorEyebrow">verification_summary</p><h3>Verification Summary</h3><ul className="operatorList"><ValueLine label="status" value={<span className="operatorPill">{verification.verification_summary.status}</span>} /><ValueLine label="reason" value={verification.verification_summary.reason} /><ValueLine label="field_memory_candidate" value={String(verification.verification_summary.field_memory_candidate)} /><ValueLine label="roi_candidate" value={String(verification.verification_summary.roi_candidate)} /><ValueLine label="write_ready" value={String(verification.verification_summary.write_ready)} /></ul></article><VerificationGapList verification={verification} /><article className="operatorPanel operatorBoundaryNotice"><p className="operatorEyebrow">boundary_rules</p><h3>Boundary Rules</h3><ul className="operatorList">{verification.boundary_rules.map((rule) => <li key={rule.rule_code}>{rule.rule_code}：{rule.label}</li>)}</ul></article></div> : null}</section>;
+  return <section className="operatorWorkbenchPage" data-surface="operator-twin" data-page="operator-field-twin-post-irrigation" data-contract="operator_field_twin_post_irrigation_verification_v1"><div className="operatorWorkbenchHero"><div><p className="operatorEyebrow">Operator Post-Irrigation Verification</p><h2>灌后响应验证</h2><p>本页只读，用于验证灌后响应证据，不写入 Field Memory，不写 ROI，不创建 task。</p><span className="operatorPill">read-only verification projection</span></div><div className="operatorWorkbenchHeroActions"><Link className="operatorActionLink" to={fieldTwinPath(fieldId, "", scopeQueryString)}>Workspace</Link><Link className="operatorActionLink" to={fieldTwinPath(fieldId, "/forecast", scopeQueryString)}>Forecast</Link><Link className="operatorActionLink" to={fieldTwinPath(fieldId, "/scenarios", scopeQueryString)}>Scenarios</Link><Link className="operatorActionLink" to={fieldTwinPath(fieldId, "/evidence", scopeQueryString)}>Evidence</Link><Link className="operatorActionLink" to={fieldTwinPath(fieldId, "/calibration", scopeQueryString)}>Calibration</Link></div></div>{state === "loading" ? <div className="operatorPanel">Post-irrigation verification 数据加载中...</div> : null}{state === "error" ? <div className="operatorPanel">Post-irrigation verification 数据加载失败：{errorText}</div> : null}{verification ? <div className="operatorPanelGrid"><ExecutionTailChainPanel verification={verification} /><PostIrrigationStateComparePanel pre={verification.pre_irrigation_state_v1} post={verification.post_irrigation_state_v1} /><ResponseDeltaPanel delta={verification.response_delta_v1} /><ExecutionEvidencePanel evidence={verification.execution_evidence_v1} /><ZoneResponseMatrixPanel matrix={verification.zone_response_matrix_v1} /><article className="operatorPanel"><p className="operatorEyebrow">verification_summary</p><h3>Verification Summary</h3><ul className="operatorList"><ValueLine label="status" value={<span className="operatorPill">{verification.verification_summary.status}</span>} /><ValueLine label="reason" value={verification.verification_summary.reason} /><ValueLine label="field_memory_candidate" value={String(verification.verification_summary.field_memory_candidate)} /><ValueLine label="roi_candidate" value={String(verification.verification_summary.roi_candidate)} /><ValueLine label="write_ready" value={String(verification.verification_summary.write_ready)} /></ul></article><VerificationGapList verification={verification} /><article className="operatorPanel operatorBoundaryNotice"><p className="operatorEyebrow">boundary_rules</p><h3>Boundary Rules</h3><ul className="operatorList">{verification.boundary_rules.map((rule) => <li key={rule.rule_code}>{rule.rule_code}：{rule.label}</li>)}</ul></article></div> : null}</section>;
 }
