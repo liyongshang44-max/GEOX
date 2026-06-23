@@ -1134,13 +1134,13 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
 
   app.post("/api/v1/actions/receipt/from-task", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "action.receipt.submit");
-    if (!auth) return;
+    if (!auth) return reply;
     if (!["executor", "operator", "admin"].includes(String(auth.role))) {
       return reply.status(403).send({ ok: false, error: "AUTH_ROLE_SCOPE_DENIED" });
     }
     const body: any = req.body ?? {};
     const tenant: TenantTriple = { tenant_id: String(body.tenant_id ?? ""), project_id: String(body.project_id ?? ""), group_id: String(body.group_id ?? "") };
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;
     const field_id = String(body.field_id ?? "").trim();
     const zone_id = body.zone_id == null ? null : String(body.zone_id).trim();
     const operation_plan_id = String(body.operation_plan_id ?? "").trim();
