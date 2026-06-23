@@ -880,7 +880,7 @@ async function handleAoActTaskV1(app: FastifyInstance, pool: Pool, req: any, rep
     logLegacyAoActWarning(app, req, legacyAoActRouteV1("task"));
   }
   const auth = requireAoActAnyScopeV0(req, reply, ["action.task.create", "ao_act.task.write"]);
-  if (!auth) return;
+  if (!auth) return reply;
   if (!requireActionTaskCreateRoleV1(reply, auth)) {
     const raw = (req as any).body ?? {};
     const tenant_id = String(raw.tenant_id ?? auth.tenant_id ?? "").trim();
@@ -889,7 +889,7 @@ async function handleAoActTaskV1(app: FastifyInstance, pool: Pool, req: any, rep
     if (tenant_id && project_id && group_id) {
       await recordSecurityAuditEventV1(pool, { tenant_id, project_id, group_id, ...auditContextFromRequestV1(req, auth), action: "security.denied", target_type: "act_task", result: "DENY", error_code: "ACTION_TASK_CREATE_ROLE_DENIED", source: "api/v1/actions/task" }).catch(() => undefined);
     }
-    return;
+    return reply;
   }
   const result = await createAoActTaskCoreV1({ pool, req, auth, tenant: { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id }, body: (req as any).body ?? {}, source: "api/v1/actions/task" });
   if (!result.ok) return reply.status(result.status).send({ ok: false, error: result.error, ...(result.detail ? { detail: result.detail } : {}) });
@@ -1336,11 +1336,11 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
     const source = "api/v1/actions/task/from-operation-plan";
     try {
       const auth = requireAoActAnyScopeV0(req, reply, ["action.task.create"]);
-      if (!auth) return;
-      if (!requireActionTaskCreateRoleV1(reply, auth)) return;
+      if (!auth) return reply;
+      if (!requireActionTaskCreateRoleV1(reply, auth)) return reply;
       const body = z.object({ tenant_id: z.string().min(1), project_id: z.string().min(1), group_id: z.string().min(1), field_id: z.string().min(1), zone_id: z.string().nullable().optional(), operation_plan_id: z.string().min(1), operator_id: z.string().min(1), idempotency_key: z.string().min(1), projection_reason: z.string().min(1) }).parse(req.body ?? {});
       const tenant = assertTenantFieldsPresentV0(body, "body");
-      if (!requireTenantMatchOr404V0(auth, tenant, reply)) return;
+      if (!requireTenantMatchOr404V0(auth, tenant, reply)) return reply;
 
       const dup = await pool.query(`SELECT fact_id, record_json FROM facts WHERE (record_json::jsonb->>'type')='operator_operation_plan_task_projection_submission_v1' AND (record_json::jsonb#>>'{payload,tenant_id}')=$1 AND (record_json::jsonb#>>'{payload,idempotency_key}')=$2 ORDER BY occurred_at DESC, fact_id DESC LIMIT 1`, [tenant.tenant_id, body.idempotency_key]);
       if ((dup.rowCount ?? 0) > 0) return { ok: true, duplicate: true, status: "REJECTED_DUPLICATE", task_created: false, dispatch_created: false, receipt_created: false, acceptance_created: false, roi_created: false, field_memory_created: false };
