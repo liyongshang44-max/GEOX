@@ -375,13 +375,13 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
 
   app.post("/api/v1/acceptance/from-evidence-artifacts", async (req, reply) => {
     const auth = requireAoActAnyScopeV0(req, reply, ["acceptance.evaluate"]);
-    if (!auth) return;
+    if (!auth) return reply;
     if (!["operator", "admin"].includes(String(auth.role))) return reply.status(403).send({ ok: false, error: "AUTH_ROLE_SCOPE_DENIED" });
     let body: z.infer<typeof FromEvidenceArtifactsRequestSchema>;
     try { body = FromEvidenceArtifactsRequestSchema.parse((req as any).body ?? {}); }
     catch { return reply.status(400).send({ ok: false, status: "REJECTED_INVALID_INPUT", acceptance_created: false, water_response_verification_created: false, roi_created: false, field_memory_created: false, customer_delivery_created: false }); }
     const tenant: TenantTriple = { tenant_id: body.tenant_id, project_id: body.project_id, group_id: body.group_id };
-    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return reply;
 
     const duplicate = await pool.query(`SELECT fact_id, record_json::jsonb AS record_json FROM facts WHERE (record_json::jsonb->>'type')='operator_acceptance_result_submission_v1' AND (record_json::jsonb#>>'{payload,tenant_id}')=$1 AND (record_json::jsonb#>>'{payload,idempotency_key}')=$2 ORDER BY occurred_at DESC, fact_id DESC LIMIT 1`, [tenant.tenant_id, body.idempotency_key]);
     if (duplicate.rows?.length) {
