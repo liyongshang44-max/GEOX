@@ -2,6 +2,18 @@
 const fs = require('fs');
 function r(p){ return fs.readFileSync(p,'utf8'); }
 function ok(c,m){ if(!c){ console.error('FAIL',m); process.exit(1); } console.log('PASS',m); }
+
+function listFilesRecursive(relativeDir) {
+  if (!fs.existsSync(relativeDir)) return [];
+  const out = [];
+  for (const entry of fs.readdirSync(relativeDir, { withFileTypes: true })) {
+    const full = require('path').join(relativeDir, entry.name);
+    if (entry.isDirectory()) out.push(...listFilesRecursive(full));
+    else if (entry.isFile()) out.push(full.replace(/\\/g, '/'));
+  }
+  return out;
+}
+
 const route = r('apps/server/src/routes/acceptance_v1.ts');
 const start = route.indexOf('app.post("/api/v1/acceptance/from-evidence-artifacts"');
 const end = route.indexOf('app.post("/api/v1/acceptance/evaluate"', start);
@@ -12,7 +24,7 @@ const roles = r('apps/server/src/domain/auth/roles.ts');
 const auth = r('apps/server/src/auth/ao_act_authz_v0.ts');
 const openapi = r('apps/server/src/routes/openapi_v1.ts');
 const inv = r('apps/server/src/routes/api_route_inventory_v1.ts');
-const web = fs.existsSync('apps/web/src') ? require('child_process').execSync("rg -n \"acceptance_result_v1|from-evidence-artifacts\" apps/web/src || true",{encoding:'utf8'}) : '';
+const web = fs.existsSync('apps/web/src') ? listFilesRecursive('apps/web/src').map((file) => r(file)).filter((txt) => /acceptance_result_v1|from-evidence-artifacts/.test(txt)).join('\n') : '';
 ok(h44.includes('acceptance_result_v1'), 'Route uses acceptance_result_v1');
 ok(h44.includes('operator_acceptance_result_submission_v1'), 'Route writes operator_acceptance_result_submission_v1');
 ok(h44.includes('as_executed_record_v1'), 'Route reads as_executed_record_v1');
