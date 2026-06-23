@@ -1,6 +1,6 @@
 // apps/web/src/features/operator/pages/OperatorFieldTwinWorkspacePage.tsx
 // Purpose: render the API-backed field-centered Operator Twin workspace with explicit scope propagation.
-// Boundary: this page separates Fact, Estimate, Forecast, Scenario, and Recommendation; it does not execute actions.
+// Boundary: this page separates Fact, Estimate, Forecast, Scenario, Recommendation, and read-only downstream chain context; it does not execute actions.
 
 import React from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
@@ -14,6 +14,14 @@ import {
 } from "../../../api/operatorTwin";
 
 type RuntimeState = "loading" | "ready" | "error";
+
+type ChainStage = {
+  code: string;
+  label: string;
+  status: string;
+  evidence: string;
+  href?: string;
+};
 
 function scopeFromSearchParams(searchParams: URLSearchParams): OperatorTwinRequestScope {
   return {
@@ -115,7 +123,6 @@ function DataGapSummary({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1
   );
 }
 
-
 function RecommendationCandidate({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }): React.ReactElement {
   return (
     <article className="operatorPanel" data-card="RecommendationCandidate">
@@ -174,6 +181,116 @@ function ReadOnlyBoundaryCard({ workspace }: { workspace: OperatorFieldTwinWorks
   );
 }
 
+function chainHref(fieldId: string, suffix: string, scopeQueryString: string): string {
+  return "/operator/twin/fields/" + encodeURIComponent(fieldId) + suffix + scopeQueryString;
+}
+
+function buildDecisionChainStages(
+  workspace: OperatorFieldTwinWorkspaceV1,
+  fieldId: string,
+  scopeQueryString: string,
+): ChainStage[] {
+  const scenarioCount = workspace.scenario_comparison.options.length;
+  const recommendationId = workspace.recommendation_candidate.recommendation_id;
+
+  return [
+    {
+      code: "H31",
+      label: "Soil Water Potential",
+      status: workspace.current_state.evidence_refs.length > 0 ? "AVAILABLE" : "EVIDENCE_LIMITED",
+      evidence: workspace.current_state.evidence_refs.join(", ") || "current_state.evidence_refs empty",
+    },
+    {
+      code: "H32",
+      label: "Root-Zone Soil Water State",
+      status: workspace.current_state.low_confidence ? "LOW_CONFIDENCE" : "AVAILABLE",
+      evidence: workspace.current_state.state_text,
+    },
+    {
+      code: "H33",
+      label: "Root-Zone Forecast",
+      status: workspace.forecast_window.forecast_horizon_limited ? "LIMITED" : "AVAILABLE",
+      evidence: workspace.forecast_window.available_horizon + " · " + workspace.forecast_window.reason,
+      href: chainHref(fieldId, "/forecast", scopeQueryString),
+    },
+    {
+      code: "H34",
+      label: "Irrigation Scenario Comparison",
+      status: workspace.scenario_comparison.status,
+      evidence: scenarioCount > 0 ? `${scenarioCount} scenario options` : (workspace.scenario_comparison.unavailable_reason ?? "no scenario option"),
+      href: chainHref(fieldId, "/scenarios", scopeQueryString),
+    },
+    {
+      code: "H35",
+      label: "Scenario Option To Recommendation Candidate",
+      status: recommendationId ? "RECOMMENDATION_CANDIDATE_PRESENT" : "NO_RECOMMENDATION_CANDIDATE",
+      evidence: recommendationId ?? "not submitted from Operator Twin",
+      href: chainHref(fieldId, "/scenarios", scopeQueryString),
+    },
+    {
+      code: "H36-H39",
+      label: "Approval Request / Decision / Operation Plan / Transition",
+      status: "DOWNSTREAM_BACKEND_CHAIN",
+      evidence: "Read in downstream execution evidence after approval; this panel does not create approval or operation_plan facts.",
+    },
+    {
+      code: "H40-H42",
+      label: "AO-ACT Task / Receipt / As-Executed Record",
+      status: "DOWNSTREAM_EXECUTION_CHAIN",
+      evidence: "Open post-irrigation verification to inspect task_id, receipt_id, and as_executed_id.",
+      href: chainHref(fieldId, "/post-irrigation", scopeQueryString),
+    },
+    {
+      code: "H43-H44",
+      label: "Evidence Artifact / Acceptance Result",
+      status: "DOWNSTREAM_EVIDENCE_ACCEPTANCE_CHAIN",
+      evidence: "Open evidence and post-irrigation verification to inspect evidence_refs and acceptance_result_id.",
+      href: chainHref(fieldId, "/evidence", scopeQueryString),
+    },
+    {
+      code: "H45",
+      label: "Water Response Verification",
+      status: "POST_IRRIGATION_READ_SURFACE",
+      evidence: "Open post-irrigation verification. This page does not write ROI or Field Memory.",
+      href: chainHref(fieldId, "/post-irrigation", scopeQueryString),
+    },
+  ];
+}
+
+function DecisionToWaterResponseChainCard({ workspace, fieldId, scopeQueryString }: { workspace: OperatorFieldTwinWorkspaceV1; fieldId: string; scopeQueryString: string }): React.ReactElement {
+  const stages = buildDecisionChainStages(workspace, fieldId, scopeQueryString);
+
+  return (
+    <article className="operatorPanel" data-card="DecisionToWaterResponseChainCard" data-contract="h31_h45_read_only_chain_v1">
+      <p className="operatorEyebrow">H31-H45 Decision-to-Water-Response</p>
+      <h3>决策到水分响应闭环</h3>
+      <p>本卡只串联已成立的后端读面，不审批、不派单、不创建 AO-ACT task、不写 ROI、不写 Field Memory。</p>
+      <div className="operatorTableWrap">
+        <table className="operatorTable" data-table="h31-h45-decision-chain">
+          <thead>
+            <tr>
+              <th>阶段</th>
+              <th>链路节点</th>
+              <th>只读状态</th>
+              <th>证据 / 入口</th>
+            </tr>
+          </thead>
+          <tbody>
+            {stages.map((stage) => (
+              <tr key={stage.code} data-stage={stage.code.toLowerCase()}>
+                <td>{stage.code}</td>
+                <td>{stage.label}</td>
+                <td><span className="operatorPill">{stage.status}</span></td>
+                <td>{stage.href ? <Link to={stage.href}>{stage.evidence}</Link> : stage.evidence}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </article>
+  );
+}
+
 export default function OperatorFieldTwinWorkspacePage(): React.ReactElement {
   const params = useParams();
   const [searchParams] = useSearchParams();
@@ -221,14 +338,15 @@ export default function OperatorFieldTwinWorkspacePage(): React.ReactElement {
           <h2>地块 Twin 工作区</h2>
           <p>
             当前地块：<strong>{workspace?.field_context.field_name ?? fieldId}</strong>。
-            本页以 field_id 为入口，operation_id 不作为入口；并按事实、估计、预测、情景和建议候选分层展示。
+            本页以 field_id 为入口，operation_id 不作为入口；并按事实、估计、预测、情景、建议候选和执行后验证分层展示。
           </p>
         </div>
         <div className="operatorWorkbenchHeroActions">
-          <Link className="operatorActionLink" to={"/operator/twin/fields/" + encodeURIComponent(fieldId) + scopeQueryString}>Workspace</Link>
-          <Link className="operatorActionLink" to={"/operator/twin/fields/" + encodeURIComponent(fieldId) + "/forecast" + scopeQueryString}>Forecast</Link>
-          <Link className="operatorActionLink" to={"/operator/twin/fields/" + encodeURIComponent(fieldId) + "/scenarios" + scopeQueryString}>Scenarios</Link>
-          <Link className="operatorActionLink" to={"/operator/twin/fields/" + encodeURIComponent(fieldId) + "/evidence" + scopeQueryString}>Evidence</Link>
+          <Link className="operatorActionLink" to={chainHref(fieldId, "", scopeQueryString)}>Workspace</Link>
+          <Link className="operatorActionLink" to={chainHref(fieldId, "/forecast", scopeQueryString)}>Forecast</Link>
+          <Link className="operatorActionLink" to={chainHref(fieldId, "/scenarios", scopeQueryString)}>Scenarios</Link>
+          <Link className="operatorActionLink" to={chainHref(fieldId, "/evidence", scopeQueryString)}>Evidence</Link>
+          <Link className="operatorActionLink" to={chainHref(fieldId, "/post-irrigation", scopeQueryString)}>Post-Irrigation</Link>
           <Link className="operatorActionLink" to={"/operator/twin" + scopeQueryString}>返回 Twin 总览</Link>
         </div>
       </div>
@@ -250,6 +368,7 @@ export default function OperatorFieldTwinWorkspacePage(): React.ReactElement {
 
           <ScenarioBoundaryCard workspace={workspace} />
           <RecommendationCandidate workspace={workspace} />
+          <DecisionToWaterResponseChainCard workspace={workspace} fieldId={fieldId} scopeQueryString={scopeQueryString} />
           <ReadOnlyBoundaryCard workspace={workspace} />
         </div>
       ) : null}
