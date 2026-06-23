@@ -31,6 +31,8 @@ ok(seed.includes('--include-base-seed'), 'base seed requires explicit include fl
 ok(seed.includes('skipped_by_default'), 'seed skips base seed by default');
 ok(seed.includes('uniqueColumnSets'), 'seed detects live unique indexes');
 ok(seed.includes('chooseConflictColumns'), 'seed chooses schema-aware conflict columns');
+ok(seed.includes('columns_json') && seed.includes('JSON.parse(row.columns_json'), 'seed parses live unique columns as json');
+ok(!seed.includes("row.columns.map"), 'seed does not assume pg array decoding');
 ok(!seed.includes("insertRows(client, 'roi_ledger_v1'"), 'seed does not write roi_ledger_v1');
 ok(!seed.includes("insertRows(client, 'field_memory_v1'"), 'seed does not write field_memory_v1');
 ok(!seed.includes("insertRows(client, 'operation_state_v1'"), 'seed does not write operation_state_v1');
