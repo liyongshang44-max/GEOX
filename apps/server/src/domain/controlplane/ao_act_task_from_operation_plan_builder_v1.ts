@@ -63,7 +63,7 @@ export function buildAoActTaskFromReadyOperationPlanV1(input: AoActTaskFromReady
   const taskRequest = status === "AO_ACT_TASK_PROJECTED" && proposal && approvalRequestId ? {
     tenant_id: input.tenant_id, project_id: input.project_id, group_id: input.group_id,
     operation_plan_id: operationPlanId, approval_request_id: approvalRequestId,
-    program_id: op.program_id ?? idx?.program_id ?? null, field_id: input.field_id, season_id: op.season_id ?? idx?.season_id ?? null,
+    ...(s(op.program_id ?? idx?.program_id) ? { program_id: s(op.program_id ?? idx?.program_id) } : {}), field_id: input.field_id, ...(s(op.season_id ?? idx?.season_id) ? { season_id: s(op.season_id ?? idx?.season_id) } : {}),
     issuer: { kind: "human", id: input.operator_id, namespace: "operator_operation_plan_task_projection_submission_v1" },
     action_type: "IRRIGATE", target: proposal.target ?? { kind: "field", ref: input.field_id },
     time_window: proposal.time_window, parameter_schema: proposal.parameter_schema, parameters: proposal.parameters, constraints: proposal.constraints,
