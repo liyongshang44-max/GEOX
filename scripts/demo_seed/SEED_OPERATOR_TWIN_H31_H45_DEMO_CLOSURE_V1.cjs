@@ -33,7 +33,7 @@ async function tableExists(client, table) { const r = await client.query('SELECT
 async function tableColumns(client, table) { const r = await client.query("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name=$1", [table]); return new Set(r.rows.map((x) => String(x.column_name))); }
 async function uniqueColumnSets(client, table) {
   const result = await client.query(`
-    SELECT array_agg(a.attname ORDER BY ord.n) AS columns
+    SELECT jsonb_agg(a.attname ORDER BY ord.n)::text AS columns_json
       FROM pg_class t
       JOIN pg_namespace ns ON ns.oid = t.relnamespace
       JOIN pg_index i ON i.indrelid = t.oid
@@ -44,7 +44,7 @@ async function uniqueColumnSets(client, table) {
        AND i.indisunique = true
      GROUP BY i.indexrelid
   `, [table]);
-  return result.rows.map((row) => row.columns.map((column) => String(column)));
+  return result.rows.map((row) => JSON.parse(row.columns_json || '[]').map((column) => String(column)));
 }
 function chooseConflictColumns(uniqueSets, preferred, keys) {
   const usablePreferred = preferred.filter((key) => keys.includes(key));
