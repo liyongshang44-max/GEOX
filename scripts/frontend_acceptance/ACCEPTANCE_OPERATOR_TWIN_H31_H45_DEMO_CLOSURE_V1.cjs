@@ -28,6 +28,8 @@ ok(seed.includes('as_executed_record_v1'), 'seed includes as_executed_record_v1'
 ok(seed.includes('water_response_verification_v1'), 'seed includes water_response_verification_v1');
 ok(seed.includes('water_response_verification_index_v1'), 'seed includes water_response_verification_index_v1');
 ok(seed.includes('skipped_by_default'), 'seed skips base seed by default');
+ok(seed.includes("const SEASON_ID = 'season_2026_c8_corn'"), 'seed defines season id');
+ok(seed.includes('season_id: SEASON_ID'), 'seed writes season id into closure rows');
 ok(seed.includes('expected_interval_ms: 60000'), 'seed supplies expected_interval_ms');
 ok(seed.includes('min_total_samples_required: 3'), 'seed supplies min_total_samples_required');
 ok(seed.includes('max_allowed_gap_ms: 120000'), 'seed supplies max_allowed_gap_ms');
@@ -40,6 +42,7 @@ const run = spawnSync(process.execPath, ['scripts/demo_seed/SEED_OPERATOR_TWIN_H
 ok(run.status === 0, 'seed dry-run succeeds');
 const payload = JSON.parse(run.stdout);
 ok(payload.base_seed === 'skipped_by_default', 'dry-run declares base seed skipped by default');
+ok(payload.season_id === 'season_2026_c8_corn', 'dry-run declares season id');
 ok(payload.generated_facts.includes('as_executed_record_v1'), 'dry-run lists as_executed_record_v1');
 ok(payload.generated_facts.includes('water_response_verification_v1'), 'dry-run lists water_response_verification_v1');
 ok(payload.written_index_tables.includes('water_response_verification_index_v1'), 'dry-run lists water_response_verification_index_v1');
