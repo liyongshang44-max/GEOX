@@ -5,6 +5,7 @@
 // Purpose: verify the Operator Twin demo closure wires H31-H45 read surfaces.
 // Boundary: this static check must not write facts, create approvals, dispatch, create tasks, write ROI, or write Field Memory.
 // H51.3 boundary: the seed must contain a schema-contract preflight before writing projection index rows.
+// H51.4 boundary: the read model must project H45 verification verdict fields into response_summary.
 
 const fs = require('node:fs');
 const { spawnSync } = require('node:child_process');
@@ -34,6 +35,19 @@ ok(post.includes('fetchOperatorTwinH31H45Closure'), 'post-irrigation page reads 
 for (const forbidden of ['TASK_NOT_LINKED', 'RECEIPT_MISSING', 'AS_EXECUTED_MISSING', 'ACCEPTANCE_MISSING']) {
   ok(!post.includes(forbidden), forbidden + ' not rendered');
 }
+
+ok(route.includes('responseSummaryFromWaterResponse'), 'route centralizes H45 response summary mapping');
+ok(route.includes('firstNumber'), 'route preserves numeric H45 response deltas');
+ok(route.includes('waterResponse?.response_verdict'), 'route reads index response_verdict');
+ok(route.includes('waterResponse?.class_transition'), 'route reads index class_transition');
+ok(route.includes('available_water_fraction_delta'), 'route reads available water fraction delta');
+ok(route.includes('weighted_matric_potential_kpa_delta'), 'route reads weighted matric potential delta');
+ok(route.includes('response_verdict: responseVerdict || null'), 'response_summary exposes response_verdict');
+ok(route.includes('class_transition: classTransition || null'), 'response_summary exposes class_transition');
+ok(route.includes('status: firstText(responseVerdict, "UNKNOWN")'), 'response_summary status uses response verdict before UNKNOWN');
+ok(route.includes('verification_id: firstText(waterResponsePayload.verification_id, waterResponse?.verification_id)'), 'response_summary exposes verification id');
+ok(route.includes('row.verification_id'), 'index verification id is included in evidence refs');
+ok(route.includes('firstText(responseSummary.response_verdict, responseSummary.class_transition'), 'H45 stage summary reads response verdict and class transition');
 
 ok(seed.includes('as_executed_record_v1'), 'seed includes as_executed_record_v1');
 ok(seed.includes('evidence_artifact_v1'), 'seed includes evidence_artifact_v1');
