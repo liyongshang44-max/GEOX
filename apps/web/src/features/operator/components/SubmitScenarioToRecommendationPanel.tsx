@@ -1,3 +1,6 @@
+// apps/web/src/features/operator/components/SubmitScenarioToRecommendationPanel.tsx
+// Purpose: render the recommendation-only scenario submission panel for Operator Twin.
+// Boundary: this component can submit a selected scenario into recommendation only; it does not approve, dispatch, create an operation plan, or create AO-ACT tasks.
 import React from "react";
 import {
   submitOperatorScenarioRecommendation,
@@ -13,6 +16,16 @@ type Props = {
   evidenceRefs: string[];
   scope: OperatorTwinRequestScope;
 };
+
+function emptyText(value: string | number | null | undefined): string {
+  const raw = String(value ?? "").trim();
+  if (!raw || raw === "none" || raw === "n/a") return "无";
+  return raw;
+}
+
+function listText(values: string[]): string {
+  return values.length > 0 ? values.join("、") : "无";
+}
 
 export function SubmitScenarioToRecommendationPanel({
   fieldId,
@@ -62,19 +75,12 @@ export function SubmitScenarioToRecommendationPanel({
       className="operatorPanel"
       data-card="SubmitScenarioToRecommendationPanel"
     >
-      <p className="operatorEyebrow">Scenario → Recommendation</p>
-      <h3>Submit Scenario to Recommendation</h3>
-      <p>
-        提交后只会生成 recommendation，不会自动审批，不会创建 operation
-        plan，不会创建 AO-ACT task。
-      </p>
-      <p>
-        Boundary: recommendation only; approval_created=false,
-        operation_plan_created=false, task_created=false,
-        dispatch_created=false.
-      </p>
+      <p className="operatorEyebrow">情景 → 建议候选</p>
+      <h3>提交情景为建议候选</h3>
+      <p>提交后只会生成建议候选，不会自动审批，不会创建作业计划，不会创建 AO-ACT 任务。</p>
+      <p>边界：仅生成建议候选；approval_created=false，operation_plan_created=false，task_created=false，dispatch_created=false。</p>
       <label>
-        选择 option
+        选择情景选项
         <select
           value={selectedOptionId}
           onChange={(event) => setSelectedOptionId(event.target.value)}
@@ -88,24 +94,24 @@ export function SubmitScenarioToRecommendationPanel({
       </label>
       {selectedOption ? (
         <ul className="operatorList">
-          <li>confidence：{selectedOption.confidence_text ?? "n/a"}</li>
-          <li>risk_delta：{selectedOption.risk_delta ?? "n/a"}</li>
-          <li>evidence_refs：{evidenceRefs.join(", ") || "none"}</li>
+          <li>置信度：{emptyText(selectedOption.confidence_text)}</li>
+          <li>风险变化：{emptyText(selectedOption.risk_delta)}</li>
+          <li>证据引用：{listText(evidenceRefs)}</li>
         </ul>
       ) : null}
       <label>
-        operator_id
+        操作员 ID
         <input
           value={operatorId}
           onChange={(event) => setOperatorId(event.target.value)}
         />
       </label>
       <label>
-        submission reason
+        提交理由
         <textarea
           value={reason}
           onChange={(event) => setReason(event.target.value)}
-          placeholder="Irrigate 22mm option selected after evidence review"
+          placeholder="基于证据审查，选择该灌溉情景作为建议候选"
         />
       </label>
       <button
@@ -113,13 +119,13 @@ export function SubmitScenarioToRecommendationPanel({
         onClick={onSubmit}
         disabled={submitting || !selectedOptionId || !reason.trim()}
       >
-        Submit to Recommendation
+        提交为建议候选
       </button>
       {result ? (
         <div className="operatorResult">
-          <p>status：{result.status}</p>
-          <p>submission_id：{result.submission_id || "n/a"}</p>
-          <p>recommendation_id：{result.recommendation_id ?? "n/a"}</p>
+          <p>状态：{result.status}</p>
+          <p>提交 ID：{result.submission_id || "无"}</p>
+          <p>建议候选 ID：{result.recommendation_id ?? "无"}</p>
         </div>
       ) : null}
     </article>
