@@ -1,6 +1,6 @@
 // apps/web/src/api/operatorTwinClosure.ts
 // Purpose: fetch the read-only H31-H45 Operator Twin demo closure projection.
-// Boundary: this client only reads closure state; it must not approve, dispatch, create AO-ACT tasks, write ROI, or write Field Memory.
+// Boundary: this client reads closure state only.
 import { apiRequestWithPolicy } from "./client";
 import { buildOperatorTwinScopeQuery, type OperatorTwinBoundaryRule, type OperatorTwinRequestScope } from "./operatorTwin";
 
@@ -28,9 +28,16 @@ export type OperatorTwinClosureExecutionTail = {
 
 export type OperatorTwinClosureResponseSummary = {
   status: string;
+  response_verdict?: string | null;
+  class_transition?: string | null;
+  verification_id?: string | null;
+  pre_state_id?: string | null;
+  post_state_id?: string | null;
   before_value?: number | string | null;
   after_value?: number | string | null;
   delta_value?: number | string | null;
+  available_water_fraction_delta?: number | string | null;
+  weighted_matric_potential_kpa_delta?: number | string | null;
   write_ready: false;
   roi_write_ready: false;
   field_memory_write_ready: false;
