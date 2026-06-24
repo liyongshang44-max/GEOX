@@ -14,11 +14,16 @@ const ZONE_ID = 'zone_c8_root_zone_001';
 const SEASON_ID = 'season_2026_c8_corn';
 const PRE_STATE_ID = 'wstate_c8_irrigation_001';
 const OPERATION_ID = 'op_plan_c8_irrigation_formal_001';
+const TRANSITION_ID = 'plan_transition_c8_irrigation_ready_001';
 const TASK_ID = 'act_c8_irrigation_formal_001';
 const RECEIPT_ID = 'receipt_c8_irrigation_formal_001';
 const ACCEPTANCE_ID = 'acc_c8_irrigation_formal_001';
 const AS_EXECUTED_ID = 'as_executed_c8_irrigation_formal_001';
 const WATER_RESPONSE_ID = 'wrv_c8_irrigation_formal_001';
+const PRE_STATE_ID = 'wstate_c8_irrigation_pre_001';
+const POST_STATE_ID = 'wstate_c8_irrigation_post_response_001';
+const POST_WINDOW_ID = 'sw_c8_soil_moisture_post_irrigation_001';
+const EVIDENCE_ID = 'ev_c8_irrigation_water_delivery_001';
 const SOURCE = 'scripts/demo_seed/operator_twin_h31_h45_demo_closure_v1';
 
 function arg(name, fallback) { const i = process.argv.indexOf(name); return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : fallback; }
@@ -61,6 +66,11 @@ function closureRows(tenant) {
   const executedEndMs = nowMs - 900000;
   const postEndMs = executedEndMs + 180000;
   const occurredAt = iso(postEndMs);
+  const preStateFactId = factId(tenant, 'water_state_estimate_c8_pre_irrigation_001');
+  const postWindowFactId = factId(tenant, 'soil_moisture_sensing_window_c8_post_irrigation_001');
+  const postStateFactId = factId(tenant, 'water_state_estimate_c8_post_response_001');
+  const responseFactId = factId(tenant, 'water_response_verification_c8_001');
+  const acceptanceFactId = factId(tenant, 'acceptance_result_c8_irrigation_formal_001');
   const common = { tenant_id: tenant, project_id: PROJECT_ID, group_id: GROUP_ID, field_id: FIELD_ID, season_id: SEASON_ID };
   const windowFactId = factId(tenant, 'soil_moisture_sensing_window_c8_post_irrigation_001');
   const waterStateFactId = factId(tenant, 'water_state_estimate_c8_post_response_001');
