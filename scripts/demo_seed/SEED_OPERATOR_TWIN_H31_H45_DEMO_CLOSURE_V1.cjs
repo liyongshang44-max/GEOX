@@ -13,21 +13,17 @@ const GROUP_ID = 'groupA';
 const FIELD_ID = 'field_c8_demo';
 const ZONE_ID = 'zone_c8_root_zone_001';
 const SEASON_ID = 'season_2026_c8_corn';
-const PRE_STATE_ID = 'wstate_c8_irrigation_001';
 const OPERATION_ID = 'op_plan_c8_irrigation_formal_001';
 const TRANSITION_ID = 'plan_transition_c8_irrigation_ready_001';
 const TASK_ID = 'act_c8_irrigation_formal_001';
 const RECEIPT_ID = 'receipt_c8_irrigation_formal_001';
 const ACCEPTANCE_ID = 'acc_c8_irrigation_formal_001';
 const AS_EXECUTED_ID = 'as_executed_c8_irrigation_formal_001';
+const EVIDENCE_ID = 'ev_c8_irrigation_water_delivery_001';
 const PRE_WATER_STATE_ID = 'wstate_c8_irrigation_pre_001';
 const POST_WATER_STATE_ID = 'wstate_c8_irrigation_post_response_001';
 const POST_SENSING_WINDOW_ID = 'sw_c8_soil_moisture_post_irrigation_001';
 const WATER_RESPONSE_ID = 'wrv_c8_irrigation_formal_001';
-const PRE_STATE_ID = 'wstate_c8_irrigation_pre_001';
-const POST_STATE_ID = 'wstate_c8_irrigation_post_response_001';
-const POST_WINDOW_ID = 'sw_c8_soil_moisture_post_irrigation_001';
-const EVIDENCE_ID = 'ev_c8_irrigation_water_delivery_001';
 const SOURCE = 'scripts/demo_seed/operator_twin_h31_h45_demo_closure_v1';
 
 const INDEX_TABLES = Object.freeze([
@@ -195,6 +191,7 @@ function demoClosureIds(tenant) {
     post_state_id: POST_WATER_STATE_ID,
     sensing_window_id: POST_SENSING_WINDOW_ID,
     as_executed_id: AS_EXECUTED_ID,
+    evidence_id: EVIDENCE_ID,
     verification_id: WATER_RESPONSE_ID,
     operation_plan_id: OPERATION_ID,
     task_id: TASK_ID,
@@ -251,6 +248,7 @@ function closureRows(tenant) {
   const preWaterStateFactId = factId(tenant, 'water_state_estimate_c8_pre_001');
   const postWaterStateFactId = factId(tenant, 'water_state_estimate_c8_post_response_001');
   const asExecutedFactId = factId(tenant, 'as_executed_c8_irrigation_formal_001');
+  const evidenceFactId = factId(tenant, 'evidence_artifact_c8_irrigation_water_delivery_001');
   const waterResponseFactId = factId(tenant, 'water_response_verification_c8_001');
   const acceptanceResultFactId = factId(tenant, 'acceptance_result_c8_irrigation_formal_001');
 
@@ -375,7 +373,61 @@ function closureRows(tenant) {
       after_soil_moisture: 24.8,
       soil_moisture_delta: 6.4,
     },
-    evidence_refs: [ids.receipt_id, 'ev_c8_irrigation_water_delivery_001', 'ev_c8_irrigation_metric_001'],
+    evidence_refs: [ids.receipt_id, ids.evidence_id, 'ev_c8_irrigation_metric_001'],
+  };
+
+  const evidencePayload = {
+    ...common,
+    evidence_id: ids.evidence_id,
+    artifact_id: ids.evidence_id,
+    evidence_artifact_id: ids.evidence_id,
+    artifact_type: 'IRRIGATION_DELIVERY_EVIDENCE',
+    source_kind: 'AO_ACT_RECEIPT',
+    subject_kind: 'as_executed_record_v1',
+    subject_ref_id: ids.as_executed_id,
+    operation_id: ids.operation_plan_id,
+    operation_plan_id: ids.operation_plan_id,
+    act_task_id: ids.task_id,
+    task_id: ids.task_id,
+    receipt_id: ids.receipt_id,
+    as_executed_id: ids.as_executed_id,
+    captured_at: iso(executedEndMs),
+    uri: 'demo://operator-twin/c8/irrigation-water-delivery',
+    pointer: {
+      kind: 'demo_pointer',
+      uri: 'demo://operator-twin/c8/irrigation-water-delivery',
+    },
+    summary: {
+      evidence_subject: 'irrigation_water_delivery',
+      executed_amount_mm: 21.6,
+      post_soil_moisture_percent: 24.8,
+    },
+    evidence_refs: [ids.receipt_id, ids.as_executed_id, ids.sensing_window_id],
+  };
+
+  const acceptanceResultPayload = {
+    ...common,
+    acceptance_id: ids.acceptance_id,
+    acceptance_result_id: ids.acceptance_id,
+    operation_id: ids.operation_plan_id,
+    operation_plan_id: ids.operation_plan_id,
+    act_task_id: ids.task_id,
+    task_id: ids.task_id,
+    receipt_id: ids.receipt_id,
+    as_executed_id: ids.as_executed_id,
+    evidence_artifact_id: ids.evidence_id,
+    status: 'ACCEPTED',
+    verdict: 'ACCEPTED',
+    acceptance_status: 'ACCEPTED',
+    checked_at: occurredAt,
+    accepted_at: occurredAt,
+    metrics: {
+      planned_amount_mm: 22,
+      executed_amount_mm: 21.6,
+      delivery_delta_mm: -0.4,
+      post_soil_moisture_percent: 24.8,
+    },
+    evidence_refs: [ids.evidence_id, ids.as_executed_id, ids.sensing_window_id],
   };
 
   const responsePayload = {
@@ -409,7 +461,7 @@ function closureRows(tenant) {
     field_memory_candidate: false,
     roi_candidate: false,
     write_ready: false,
-    evidence_refs: [ids.sensing_window_id, ids.receipt_id, ids.as_executed_id, ids.acceptance_id],
+    evidence_refs: [ids.sensing_window_id, ids.receipt_id, ids.as_executed_id, ids.evidence_id, ids.acceptance_id],
   };
 
   const waterResponseIndex = {
@@ -445,6 +497,8 @@ function closureRows(tenant) {
       fact(tenant, 'water_state_estimate_c8_pre_001', 'water_state_estimate_v1', preWaterStateIndex, preObservedAt),
       fact(tenant, 'water_state_estimate_c8_post_response_001', 'water_state_estimate_v1', postWaterStateIndex, occurredAt),
       fact(tenant, 'as_executed_c8_irrigation_formal_001', 'as_executed_record_v1', asExecutedPayload, occurredAt),
+      fact(tenant, 'evidence_artifact_c8_irrigation_water_delivery_001', 'evidence_artifact_v1', evidencePayload, occurredAt),
+      fact(tenant, 'acceptance_result_c8_irrigation_formal_001', 'acceptance_result_v1', acceptanceResultPayload, occurredAt),
       fact(tenant, 'water_response_verification_c8_001', 'water_response_verification_v1', responsePayload, occurredAt),
     ],
     indexes: {
