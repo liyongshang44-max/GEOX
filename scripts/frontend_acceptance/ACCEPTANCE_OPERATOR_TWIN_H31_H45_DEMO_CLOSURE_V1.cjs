@@ -7,6 +7,7 @@
 // H51.3 boundary: the seed must contain a schema-contract preflight before writing projection index rows.
 // H51.4 boundary: the read model must project H45 verification verdict fields into response_summary.
 // H51.5 boundary: the H40-H45 operator frontend must render Chinese readable copy, not raw engineering-only labels.
+// H51.6 boundary: forecast and scenario pages must render Chinese readable labels while preserving audit codes.
 
 const fs = require('node:fs');
 const { spawnSync } = require('node:child_process');
@@ -25,6 +26,9 @@ const register = read('apps/server/src/modules/operator/registerOperatorModule.t
 const api = read('apps/web/src/api/operatorTwinClosure.ts');
 const workspace = read('apps/web/src/features/operator/pages/OperatorFieldTwinWorkspacePage.tsx');
 const post = read('apps/web/src/features/operator/pages/OperatorFieldTwinPostIrrigationPage.tsx');
+const forecast = read('apps/web/src/features/operator/pages/OperatorFieldTwinForecastPage.tsx');
+const scenario = read('apps/web/src/features/operator/pages/OperatorFieldTwinScenarioComparePage.tsx');
+const scenarioSubmit = read('apps/web/src/features/operator/components/SubmitScenarioToRecommendationPanel.tsx');
 const evidenceTrace = read('apps/web/src/features/operator/components/EvidenceTracePanel.tsx');
 const coverageMatrix = read('apps/web/src/features/operator/components/DataCoverageMatrix.tsx');
 const qualitySummary = read('apps/web/src/features/operator/components/QualitySummaryPanel.tsx');
@@ -51,6 +55,22 @@ ok(coverageMatrix.includes('数据覆盖矩阵'), 'H51.5 coverage matrix compone
 ok(qualitySummary.includes('证据质量结论'), 'H51.5 quality summary component is Chinese');
 ok(api.includes('class_transition?: string | null'), 'H51.5 web client types expose class_transition');
 ok(api.includes('available_water_fraction_delta?: number | string | null'), 'H51.5 web client types expose water fraction delta');
+
+ok(forecast.includes('预测窗口数据加载中'), 'H51.6 forecast page loading copy is Chinese');
+ok(forecast.includes('可用预测窗口') && forecast.includes('预测窗口是否受限'), 'H51.6 forecast window labels are Chinese');
+ok(forecast.includes('不可用窗口') && forecast.includes('限制原因') && forecast.includes('证据引用'), 'H51.6 forecast evidence and reason labels are Chinese');
+ok(forecast.includes('预测风险时间线') && forecast.includes('风险：') && forecast.includes('置信度：'), 'H51.6 forecast risk timeline labels are Chinese');
+ok(forecast.includes('预测页只展示预测窗口和风险时间线'), 'H51.6 forecast boundary copy is Chinese');
+ok(!forecast.includes('Forecast Panel 数据加载中') && !forecast.includes('available_horizon：') && !forecast.includes('evidence_refs：'), 'H51.6 forecast raw English labels are not rendered');
+
+ok(scenario.includes('情景比较数据加载中'), 'H51.6 scenario page loading copy is Chinese');
+ok(scenario.includes('无动作基线是否存在') && scenario.includes('不可用原因'), 'H51.6 scenario status labels are Chinese');
+ok(scenario.includes('<th>选项 ID</th>') && scenario.includes('<th>风险变化</th>') && scenario.includes('<th>失败条件</th>'), 'H51.6 scenario table labels are Chinese');
+ok(scenario.includes('情景比较可以提交为建议候选'), 'H51.6 scenario boundary copy is Chinese');
+ok(!scenario.includes('Scenario Compare 数据加载中') && !scenario.includes('no_action_baseline_present：') && !scenario.includes('evidence_refs：'), 'H51.6 scenario raw English labels are not rendered');
+ok(scenarioSubmit.includes('提交情景为建议候选') && scenarioSubmit.includes('选择情景选项'), 'H51.6 scenario submit panel title and selector are Chinese');
+ok(scenarioSubmit.includes('操作员 ID') && scenarioSubmit.includes('提交理由') && scenarioSubmit.includes('提交为建议候选'), 'H51.6 scenario submit form labels are Chinese');
+ok(scenarioSubmit.includes('仅生成建议候选') && scenarioSubmit.includes('approval_created=false'), 'H51.6 scenario submit boundary remains explicit');
 
 ok(route.includes('responseSummaryFromWaterResponse'), 'route centralizes H45 response summary mapping');
 ok(route.includes('firstNumber'), 'route preserves numeric H45 response deltas');
