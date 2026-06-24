@@ -27,12 +27,11 @@ for (const forbidden of ['TASK_NOT_LINKED', 'RECEIPT_MISSING', 'AS_EXECUTED_MISS
 ok(seed.includes('as_executed_record_v1'), 'seed includes as_executed_record_v1');
 ok(seed.includes('water_response_verification_v1'), 'seed includes water_response_verification_v1');
 ok(seed.includes('water_response_verification_index_v1'), 'seed includes water_response_verification_index_v1');
-ok(seed.includes('--include-base-seed'), 'base seed requires explicit include flag');
 ok(seed.includes('skipped_by_default'), 'seed skips base seed by default');
-ok(seed.includes('uniqueColumnSets'), 'seed detects live unique indexes');
-ok(seed.includes('chooseConflictColumns'), 'seed chooses schema-aware conflict columns');
-ok(seed.includes('columns_json') && seed.includes('JSON.parse(row.columns_json'), 'seed parses live unique columns as json');
-ok(!seed.includes("row.columns.map"), 'seed does not assume pg array decoding');
+ok(seed.includes('expected_interval_ms: 60000'), 'seed supplies expected_interval_ms');
+ok(seed.includes('min_total_samples_required: 3'), 'seed supplies min_total_samples_required');
+ok(seed.includes('max_allowed_gap_ms: 120000'), 'seed supplies max_allowed_gap_ms');
+ok(seed.includes('deleteExistingRow'), 'seed deletes matching demo row before insert');
 ok(!seed.includes("insertRows(client, 'roi_ledger_v1'"), 'seed does not write roi_ledger_v1');
 ok(!seed.includes("insertRows(client, 'field_memory_v1'"), 'seed does not write field_memory_v1');
 ok(!seed.includes("insertRows(client, 'operation_state_v1'"), 'seed does not write operation_state_v1');
