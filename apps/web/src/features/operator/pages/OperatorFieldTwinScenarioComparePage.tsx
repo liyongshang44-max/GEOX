@@ -25,6 +25,56 @@ function scopeFromSearchParams(
   };
 }
 
+function boolText(value: boolean): string {
+  return value ? "是" : "否";
+}
+
+function emptyText(value: string | number | null | undefined): string {
+  const raw = String(value ?? "").trim();
+  if (!raw || raw === "none" || raw === "n/a") return "无";
+  return raw;
+}
+
+function listText(values: string[]): string {
+  return values.length > 0 ? values.join("、") : "无";
+}
+
+function statusText(value: string | null | undefined): string {
+  const raw = emptyText(value);
+  const labels: Record<string, string> = {
+    AVAILABLE: "可用",
+    NOT_AVAILABLE: "不可用",
+    LIMITED: "受限",
+    UNKNOWN: "未知",
+  };
+  const label = labels[raw] ?? raw;
+  return label === raw ? raw : label + "（" + raw + "）";
+}
+
+function reasonText(value: string | null | undefined): string {
+  const raw = emptyText(value);
+  const labels: Record<string, string> = {
+    NO_ACTION_BASELINE_OR_OPTIONS_NOT_AVAILABLE: "无动作基线或情景选项不可用",
+    NO_ACTION_BASELINE_REQUIRED: "缺少无动作基线",
+    SCENARIO_OPTIONS_MISSING: "缺少情景选项",
+  };
+  const label = labels[raw] ?? raw;
+  return label === raw ? raw : label + "（" + raw + "）";
+}
+
+function boundaryRuleText(label: string): string {
+  return label
+    .replace(/dispatch/g, "派单")
+    .replace(/approval/g, "审批")
+    .replace(/recommendation/g, "建议候选")
+    .replace(/operation plan/g, "作业计划")
+    .replace(/Scenario Compare/g, "情景比较")
+    .replace(/Scenario/g, "情景")
+    .replace(/Task/g, "任务")
+    .replace(/Fact/g, "事实")
+    .replace(/Forecast/g, "预测");
+}
+
 function ScenarioCompareTable({
   options,
 }: {
@@ -32,16 +82,16 @@ function ScenarioCompareTable({
 }): React.ReactElement {
   return (
     <article className="operatorPanel" data-card="ScenarioCompareTable">
-      <p className="operatorEyebrow">ScenarioCompareTable</p>
+      <p className="operatorEyebrow">情景比较表</p>
       <h3>情景比较</h3>
       <table className="operatorTable">
         <thead>
           <tr>
-            <th>option_id</th>
-            <th>label</th>
-            <th>risk_delta</th>
-            <th>confidence_text</th>
-            <th>failure_conditions</th>
+            <th>选项 ID</th>
+            <th>标签</th>
+            <th>风险变化</th>
+            <th>置信度</th>
+            <th>失败条件</th>
           </tr>
         </thead>
         <tbody>
@@ -49,9 +99,9 @@ function ScenarioCompareTable({
             <tr key={option.option_id || option.label}>
               <td>{option.option_id}</td>
               <td>{option.label}</td>
-              <td>{option.risk_delta ?? "n/a"}</td>
-              <td>{option.confidence_text ?? "n/a"}</td>
-              <td>{option.failure_conditions.join("、") || "none"}</td>
+              <td>{emptyText(option.risk_delta)}</td>
+              <td>{emptyText(option.confidence_text)}</td>
+              <td>{listText(option.failure_conditions)}</td>
             </tr>
           ))}
         </tbody>
@@ -69,16 +119,13 @@ function ScenarioStatusCard({
 
   return (
     <article className="operatorPanel" data-card="ScenarioCompareStatus">
-      <p className="operatorEyebrow">scenario_compare_v1</p>
+      <p className="operatorEyebrow">情景比较（scenario_compare_v1）</p>
       <h3>比较状态</h3>
       <ul className="operatorList">
-        <li>status：{compare.status}</li>
-        <li>
-          no_action_baseline_present：
-          {compare.no_action_baseline_present ? "true" : "false"}
-        </li>
-        <li>unavailable_reason：{compare.unavailable_reason ?? "none"}</li>
-        <li>evidence_refs：{compare.evidence_refs.join(", ") || "none"}</li>
+        <li>状态：{statusText(compare.status)}</li>
+        <li>无动作基线是否存在：{boolText(compare.no_action_baseline_present)}</li>
+        <li>不可用原因：{reasonText(compare.unavailable_reason)}</li>
+        <li>证据引用：{listText(compare.evidence_refs)}</li>
       </ul>
     </article>
   );
@@ -94,13 +141,10 @@ function ScenarioBoundaryCard({
       <h3>情景边界</h3>
       <ul className="operatorList">
         {panel.boundary_rules.map((rule) => (
-          <li key={rule.rule_code}>{rule.label}</li>
+          <li key={rule.rule_code}>{boundaryRuleText(rule.label)}</li>
         ))}
       </ul>
-      <p>
-        Scenario Compare 可以提交到 recommendation；不会自动审批，不会创建
-        operation plan，不会创建 AO-ACT task，不 dispatch。
-      </p>
+      <p>情景比较可以提交为建议候选；不会自动审批，不会创建作业计划，不会创建 AO-ACT 任务，不派单。</p>
     </article>
   );
 }
@@ -159,14 +203,12 @@ export default function OperatorFieldTwinScenarioComparePage(): React.ReactEleme
     >
       <div className="operatorWorkbenchHero">
         <div>
-          <p className="operatorEyebrow">Scenario Compare</p>
+          <p className="operatorEyebrow">情景比较</p>
           <h2>地块情景比较</h2>
           <p>
             当前地块：
             <strong>{panel?.field_context.field_name ?? fieldId}</strong>。
-            本页只展示
-            scenario_compare_v1、no_action_baseline_present、options、risk_delta、confidence_text、failure_conditions、evidence_refs
-            与 unavailable_reason。
+            本页只展示情景比较状态、无动作基线、情景选项、风险变化、置信度、失败条件、证据引用与不可用原因。
           </p>
         </div>
         <div className="operatorWorkbenchHeroActions">
@@ -178,7 +220,7 @@ export default function OperatorFieldTwinScenarioComparePage(): React.ReactEleme
               scopeQueryString
             }
           >
-            返回 Field Twin
+            返回地块 Twin
           </Link>
           <Link
             className="operatorActionLink"
@@ -189,7 +231,7 @@ export default function OperatorFieldTwinScenarioComparePage(): React.ReactEleme
               scopeQueryString
             }
           >
-            查看 Forecast
+            查看预测
           </Link>
           <Link
             className="operatorActionLink"
@@ -200,7 +242,7 @@ export default function OperatorFieldTwinScenarioComparePage(): React.ReactEleme
               scopeQueryString
             }
           >
-            Evidence
+            证据
           </Link>
           <Link
             className="operatorActionLink"
@@ -212,11 +254,11 @@ export default function OperatorFieldTwinScenarioComparePage(): React.ReactEleme
       </div>
 
       {state === "loading" ? (
-        <div className="operatorPanel">Scenario Compare 数据加载中...</div>
+        <div className="operatorPanel">情景比较数据加载中...</div>
       ) : null}
       {state === "error" ? (
         <div className="operatorPanel">
-          Scenario Compare 数据加载失败：{errorText}
+          情景比较数据加载失败：{errorText}
         </div>
       ) : null}
 
