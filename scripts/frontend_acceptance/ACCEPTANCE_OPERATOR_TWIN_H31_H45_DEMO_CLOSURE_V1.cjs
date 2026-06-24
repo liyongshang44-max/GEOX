@@ -36,9 +36,12 @@ for (const forbidden of ['TASK_NOT_LINKED', 'RECEIPT_MISSING', 'AS_EXECUTED_MISS
 }
 
 ok(seed.includes('as_executed_record_v1'), 'seed includes as_executed_record_v1');
+ok(seed.includes('evidence_artifact_v1'), 'seed includes evidence_artifact_v1');
+ok(seed.includes('acceptance_result_v1'), 'seed includes acceptance_result_v1');
 ok(seed.includes('water_response_verification_v1'), 'seed includes water_response_verification_v1');
 ok(seed.includes('water_response_verification_index_v1'), 'seed includes water_response_verification_index_v1');
 ok(seed.includes('skipped_by_default'), 'seed skips base seed by default');
+ok(seed.includes("const ZONE_ID = 'zone_c8_root_zone_001'"), 'seed defines zone id');
 ok(seed.includes("const SEASON_ID = 'season_2026_c8_corn'"), 'seed defines season id');
 ok(seed.includes("const ZONE_ID = 'zone_c8_root_zone_001'"), 'seed defines zone id');
 ok(seed.includes("const PRE_WATER_STATE_ID = 'wstate_c8_irrigation_pre_001'"), 'seed defines pre-state id');
@@ -82,6 +85,8 @@ ok(payload.as_executed_id === 'as_executed_c8_irrigation_formal_001', 'dry-run d
 ok(payload.verification_id === 'wrv_c8_irrigation_formal_001', 'dry-run declares verification id');
 ok(payload.preflight_error_code === 'SEED_ROW_MISSING_REQUIRED_COLUMNS', 'dry-run declares preflight error code');
 ok(payload.generated_facts.includes('as_executed_record_v1'), 'dry-run lists as_executed_record_v1');
+ok(payload.generated_facts.includes('evidence_artifact_v1'), 'dry-run lists evidence_artifact_v1');
+ok(payload.generated_facts.includes('acceptance_result_v1'), 'dry-run lists acceptance_result_v1');
 ok(payload.generated_facts.includes('water_response_verification_v1'), 'dry-run lists water_response_verification_v1');
 ok(payload.written_index_tables.includes('water_response_verification_index_v1'), 'dry-run lists water_response_verification_index_v1');
 ok(payload.not_written.includes('roi_ledger_v1'), 'dry-run declares roi_ledger_v1 not written');
