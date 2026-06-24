@@ -6,6 +6,7 @@
 // Boundary: this static check must not write facts, create approvals, dispatch, create tasks, write ROI, or write Field Memory.
 // H51.3 boundary: the seed must contain a schema-contract preflight before writing projection index rows.
 // H51.4 boundary: the read model must project H45 verification verdict fields into response_summary.
+// H51.5 boundary: the H40-H45 operator frontend must render Chinese readable copy, not raw engineering-only labels.
 
 const fs = require('node:fs');
 const { spawnSync } = require('node:child_process');
@@ -24,6 +25,9 @@ const register = read('apps/server/src/modules/operator/registerOperatorModule.t
 const api = read('apps/web/src/api/operatorTwinClosure.ts');
 const workspace = read('apps/web/src/features/operator/pages/OperatorFieldTwinWorkspacePage.tsx');
 const post = read('apps/web/src/features/operator/pages/OperatorFieldTwinPostIrrigationPage.tsx');
+const evidenceTrace = read('apps/web/src/features/operator/components/EvidenceTracePanel.tsx');
+const coverageMatrix = read('apps/web/src/features/operator/components/DataCoverageMatrix.tsx');
+const qualitySummary = read('apps/web/src/features/operator/components/QualitySummaryPanel.tsx');
 const seed = read('scripts/demo_seed/SEED_OPERATOR_TWIN_H31_H45_DEMO_CLOSURE_V1.cjs');
 
 ok(route.includes('/api/v1/operator/twin/fields/:fieldId/h31-h45-closure'), 'closure route exists');
@@ -35,6 +39,18 @@ ok(post.includes('fetchOperatorTwinH31H45Closure'), 'post-irrigation page reads 
 for (const forbidden of ['TASK_NOT_LINKED', 'RECEIPT_MISSING', 'AS_EXECUTED_MISSING', 'ACCEPTANCE_MISSING']) {
   ok(!post.includes(forbidden), forbidden + ' not rendered');
 }
+
+ok(post.includes('灌后结论'), 'H51.5 post page has Chinese conclusion card');
+ok(post.includes('这次灌溉是否有效'), 'H51.5 post page asks operator-facing question');
+ok(post.includes('已观察到灌后响应'), 'H51.5 post page translates RESPONSE_OBSERVED');
+ok(post.includes('灌前中度缺水，灌后恢复正常'), 'H51.5 post page translates class transition');
+ok(post.includes('查看') && post.includes('条证据引用'), 'H51.5 post page collapses long evidence refs');
+ok(post.includes('本页不会执行的动作'), 'H51.5 post page renders Chinese boundary copy');
+ok(evidenceTrace.includes('证据追踪'), 'H51.5 evidence trace component is Chinese');
+ok(coverageMatrix.includes('数据覆盖矩阵'), 'H51.5 coverage matrix component is Chinese');
+ok(qualitySummary.includes('证据质量结论'), 'H51.5 quality summary component is Chinese');
+ok(api.includes('class_transition?: string | null'), 'H51.5 web client types expose class_transition');
+ok(api.includes('available_water_fraction_delta?: number | string | null'), 'H51.5 web client types expose water fraction delta');
 
 ok(route.includes('responseSummaryFromWaterResponse'), 'route centralizes H45 response summary mapping');
 ok(route.includes('firstNumber'), 'route preserves numeric H45 response deltas');
