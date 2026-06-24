@@ -46,6 +46,18 @@ function firstText(...values: unknown[]): string {
   return "";
 }
 
+// H51.4 read-model helper: keep numeric response evidence stable across fact payloads and projection index rows.
+function firstNumber(...values: unknown[]): number | null {
+  for (const value of values) {
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    const raw = text(value);
+    if (!raw) continue;
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
+}
+
 function normalizeFieldId(raw: unknown): string {
   const value = text(raw);
   if (!value || value === ":fieldId" || value === "fieldId") return DEMO_FIELD_ID;
@@ -165,11 +177,35 @@ function refs(...rows: Array<Row | null | undefined>): string[] {
   for (const row of rows) {
     if (!row) continue;
     const payload = payloadOf(row);
-    out.push(firstText(row.fact_id, payload.fact_id, payload.id, payload.recommendation_id, payload.operation_plan_id, payload.act_task_id, payload.receipt_id, payload.as_executed_id, payload.acceptance_id, payload.verification_id));
+    out.push(firstText(row.fact_id, row.verification_id, row.acceptance_id, row.as_executed_id, row.receipt_id, row.task_id, payload.fact_id, payload.id, payload.recommendation_id, payload.operation_plan_id, payload.act_task_id, payload.receipt_id, payload.as_executed_id, payload.acceptance_id, payload.verification_id));
     const rawRefs = payload.evidence_refs;
     if (Array.isArray(rawRefs)) for (const ref of rawRefs) out.push(firstText(ref));
   }
   return out.filter(Boolean);
+}
+
+// H51.4 read-model mapper: project H45 verification evidence into the operator response summary.
+function responseSummaryFromWaterResponse(waterResponse: Row | null | undefined, waterResponsePayload: Row): Row {
+  const responseVerdict = firstText(waterResponsePayload.response_verdict, waterResponsePayload.responseVerdict, waterResponse?.response_verdict, waterResponse?.responseVerdict, waterResponsePayload.status, waterResponsePayload.verification_status, waterResponse?.status);
+  const classTransition = firstText(waterResponsePayload.class_transition, waterResponsePayload.classTransition, waterResponse?.class_transition, waterResponse?.classTransition);
+  const availableWaterFractionDelta = firstNumber(waterResponsePayload.available_water_fraction_delta, waterResponsePayload.availableWaterFractionDelta, waterResponse?.available_water_fraction_delta, waterResponse?.availableWaterFractionDelta);
+  const weightedMatricPotentialKpaDelta = firstNumber(waterResponsePayload.weighted_matric_potential_kpa_delta, waterResponsePayload.weightedMatricPotentialKpaDelta, waterResponse?.weighted_matric_potential_kpa_delta, waterResponse?.weightedMatricPotentialKpaDelta);
+  return {
+    status: firstText(responseVerdict, "UNKNOWN"),
+    response_verdict: responseVerdict || null,
+    class_transition: classTransition || null,
+    verification_id: firstText(waterResponsePayload.verification_id, waterResponse?.verification_id) || null,
+    pre_state_id: firstText(waterResponsePayload.pre_state_id, waterResponsePayload.preStateId, waterResponse?.pre_state_id, waterResponse?.preStateId) || null,
+    post_state_id: firstText(waterResponsePayload.post_state_id, waterResponsePayload.postStateId, waterResponse?.post_state_id, waterResponse?.postStateId) || null,
+    before_value: firstNumber(waterResponsePayload.before_value, waterResponsePayload.before_soil_moisture, waterResponse?.before_value, waterResponse?.before_soil_moisture),
+    after_value: firstNumber(waterResponsePayload.after_value, waterResponsePayload.after_soil_moisture, waterResponse?.after_value, waterResponse?.after_soil_moisture),
+    delta_value: firstNumber(waterResponsePayload.delta_value, waterResponsePayload.soil_moisture_delta, waterResponse?.delta_value, waterResponse?.soil_moisture_delta, availableWaterFractionDelta),
+    available_water_fraction_delta: availableWaterFractionDelta,
+    weighted_matric_potential_kpa_delta: weightedMatricPotentialKpaDelta,
+    write_ready: false,
+    roi_write_ready: false,
+    field_memory_write_ready: false,
+  };
 }
 
 async function buildClosure(pool: Pool, scope: ClosureScope): Promise<Row> {
@@ -193,6 +229,7 @@ async function buildClosure(pool: Pool, scope: ClosureScope): Promise<Row> {
   ]);
   const waterResponse = waterResponseIndex ?? waterResponseFact;
   const waterResponsePayload = payloadOf(waterResponse);
+  const responseSummary = responseSummaryFromWaterResponse(waterResponse, waterResponsePayload);
   const inventoryTypes = ["soil_moisture_sensing_window_v1", "water_state_estimate_v1", "weather_forecast_fact_v1", "irrigation_scenario_set_v1", "decision_recommendation_v1", "approval_request_v1", "approval_decision_v1", "operation_plan_v1", "operation_plan_transition_v1", "ao_act_task_v0", "ao_act_receipt_v1", "as_executed_record_v1", "evidence_artifact_v1", "acceptance_result_v1", "water_response_verification_v1"];
   const factInventory = await Promise.all(inventoryTypes.map(async (type) => ({ source_kind: "fact", name: type, available: (await countFactRows(pool, type, scope)) > 0 })));
   const tableInventory = await Promise.all(["water_response_verification_index_v1", "soil_moisture_sensing_window_index_v1"].map(async (table) => ({ source_kind: "index", name: table, available: (await countTableRows(pool, table, scope)) > 0 })));
@@ -208,7 +245,7 @@ async function buildClosure(pool: Pool, scope: ClosureScope): Promise<Row> {
       stage("H36-H39", "Approval Request / Decision / Operation Plan / Transition", Boolean(approvalRequest && approvalDecision && operationPlan && transition), refs(approvalRequest, approvalDecision, operationPlan, transition), "H36-H39 approval and operation plan available"),
       stage("H40-H42", "AO-ACT Task / Receipt / As-Executed", Boolean(task && receipt && asExecuted), refs(task, receipt, asExecuted), "H40-H42 task, receipt, and as-executed available"),
       stage("H43-H44", "Evidence Artifact / Acceptance Result", Boolean(evidence && acceptance), refs(evidence, acceptance), "H43-H44 evidence and acceptance available"),
-      stage("H45", "Water Response Verification", Boolean(waterResponse), refs(waterResponse), firstText(waterResponsePayload.status, waterResponsePayload.verification_status, "H45 response verification available")),
+      stage("H45", "Water Response Verification", Boolean(waterResponse), refs(waterResponse), firstText(responseSummary.response_verdict, responseSummary.class_transition, "H45 response verification available")),
     ],
     execution_tail: {
       task_id: firstText(payloadOf(task).act_task_id, payloadOf(task).task_id),
@@ -217,15 +254,7 @@ async function buildClosure(pool: Pool, scope: ClosureScope): Promise<Row> {
       acceptance_result_id: firstText(payloadOf(acceptance).acceptance_id, payloadOf(acceptance).acceptance_result_id),
       water_response_verification_id: firstText(waterResponsePayload.verification_id, waterResponse?.verification_id),
     },
-    response_summary: {
-      status: firstText(waterResponsePayload.status, waterResponsePayload.verification_status, waterResponse?.status, "UNKNOWN"),
-      before_value: waterResponsePayload.before_value ?? waterResponsePayload.before_soil_moisture ?? waterResponse?.before_value ?? null,
-      after_value: waterResponsePayload.after_value ?? waterResponsePayload.after_soil_moisture ?? waterResponse?.after_value ?? null,
-      delta_value: waterResponsePayload.delta_value ?? waterResponsePayload.soil_moisture_delta ?? waterResponse?.delta_value ?? null,
-      write_ready: false,
-      roi_write_ready: false,
-      field_memory_write_ready: false,
-    },
+    response_summary: responseSummary,
     boundary_rules: [
       { rule_code: "READ_ONLY", label: "本端点只读，不创建 approval / dispatch / AO-ACT task。" },
       { rule_code: "NO_ROI_WRITE", label: "本端点不写 ROI ledger。" },
