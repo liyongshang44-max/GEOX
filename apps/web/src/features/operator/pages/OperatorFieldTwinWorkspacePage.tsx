@@ -1,6 +1,6 @@
 // apps/web/src/features/operator/pages/OperatorFieldTwinWorkspacePage.tsx
 // Purpose: render the API-backed field-centered Operator Twin workspace with explicit scope propagation.
-// Boundary: this page separates Fact, Estimate, Forecast, Scenario, Recommendation, and read-only downstream chain context; it does not execute actions.
+// Boundary: this page separates Fact, Estimate, 预测, Scenario, Recommendation, and read-only downstream chain context; it does not execute actions.
 
 import React from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
@@ -39,19 +39,19 @@ function scopeFromSearchParams(searchParams: URLSearchParams): OperatorTwinReque
 function ScopePolicyCard({ policy }: { policy: OperatorTwinScopePolicy }): React.ReactElement {
   return (
     <article className="operatorPanel" data-card="operator-twin-scope-policy">
-      <h3>Scope Policy</h3>
-      <p>scope_applied：{policy.scope_applied ? "true" : "false"}</p>
-      <p>missing_reason：{policy.missing_reason ?? "none"}</p>
-      <p>accepted_scope_keys：{policy.accepted_scope_keys.join(", ")}</p>
-      <p>field_scope_required：{policy.field_scope_required ? "true" : "false"}</p>
+      <h3>作用域策略</h3>
+      <p>作用域已应用：{policy.scope_applied ? "true" : "false"}</p>
+      <p>缺失原因：{policy.missing_reason ?? "none"}</p>
+      <p>已接受作用域键：{policy.accepted_scope_keys.join(", ")}</p>
+      <p>必须指定地块作用域：{policy.field_scope_required ? "true" : "false"}</p>
     </article>
   );
 }
 
-function TwinStateVectorCard({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }): React.ReactElement {
+function 状态向量({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }): React.ReactElement {
   return (
-    <article className="operatorPanel" data-card="TwinStateVectorCard">
-      <p className="operatorEyebrow">TwinStateVectorCard</p>
+    <article className="operatorPanel" data-card="状态向量">
+      <p className="operatorEyebrow">状态向量</p>
       <h3>状态向量</h3>
       <p>{workspace.current_state.state_text}</p>
       <p>风险：{workspace.current_state.risk_text}</p>
@@ -64,8 +64,8 @@ function TwinStateVectorCard({ workspace }: { workspace: OperatorFieldTwinWorksp
 
 function DataCoverageMatrix({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }): React.ReactElement {
   return (
-    <article className="operatorPanel" data-card="DataCoverageMatrix">
-      <p className="operatorEyebrow">DataCoverageMatrix</p>
+    <article className="operatorPanel" data-card="数据覆盖矩阵">
+      <p className="operatorEyebrow">数据覆盖矩阵</p>
       <h3>数据覆盖矩阵</h3>
       <ul className="operatorList">
         <li>覆盖摘要：{workspace.data_coverage.coverage_text}</li>
@@ -79,7 +79,7 @@ function DataCoverageMatrix({ workspace }: { workspace: OperatorFieldTwinWorkspa
   );
 }
 
-function EvidenceSummary({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }): React.ReactElement {
+function 证据摘要({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }): React.ReactElement {
   const refs = [
     ...workspace.current_state.evidence_refs,
     ...workspace.data_coverage.evidence_refs,
@@ -91,10 +91,10 @@ function EvidenceSummary({ workspace }: { workspace: OperatorFieldTwinWorkspaceV
   const uniqueRefs = [...new Set(refs.filter(Boolean))];
 
   return (
-    <article className="operatorPanel" data-card="EvidenceSummary">
-      <p className="operatorEyebrow">EvidenceSummary</p>
+    <article className="operatorPanel" data-card="证据摘要">
+      <p className="operatorEyebrow">证据摘要</p>
       <h3>证据摘要</h3>
-      {uniqueRefs.length === 0 ? <p>当前 workspace 未返回 evidence_refs。</p> : null}
+      {uniqueRefs.length === 0 ? <p>当前工作区未返回证据引用。</p> : null}
       <ul className="operatorList">
         {uniqueRefs.map((ref) => (
           <li key={ref}>{ref}</li>
@@ -104,18 +104,18 @@ function EvidenceSummary({ workspace }: { workspace: OperatorFieldTwinWorkspaceV
   );
 }
 
-function DataGapSummary({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }): React.ReactElement {
+function 数据缺口({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }): React.ReactElement {
   const hasDataGaps = workspace.data_gaps.length > 0;
 
   return (
     <article
       className="operatorPanel"
-      data-card="DataGapSummary"
+      data-card="数据缺口"
       data-gap-status={hasDataGaps ? "DATA_GAPS_PRESENT" : "NO_DATA_GAPS"}
     >
-      <p className="operatorEyebrow">DataGapSummary</p>
+      <p className="operatorEyebrow">数据缺口</p>
       <h3>数据缺口</h3>
-      {hasDataGaps ? null : <p>当前 workspace 未返回数据缺口。</p>}
+      {hasDataGaps ? null : <p>当前工作区未返回数据缺口。</p>}
       <ul className="operatorList">
         {workspace.data_gaps.map((gap, index) => (
           <li key={gap.gap_code || gap.label || String(index)}>
@@ -128,10 +128,10 @@ function DataGapSummary({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1
   );
 }
 
-function RecommendationCandidate({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }): React.ReactElement {
+function 建议候选详情({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }): React.ReactElement {
   return (
-    <article className="operatorPanel" data-card="RecommendationCandidate">
-      <p className="operatorEyebrow">RecommendationCandidate</p>
+    <article className="operatorPanel" data-card="建议候选详情">
+      <p className="operatorEyebrow">建议候选详情</p>
       <h3>建议候选</h3>
       <p>建议 ID：{workspace.recommendation_candidate.recommendation_id ?? "待确认"}</p>
       <p>动作类型：{workspace.recommendation_candidate.action_type ?? "待确认"}</p>
@@ -220,12 +220,12 @@ function buildDecisionChainStages(
   return [
     { code: "H31", label: "Soil Water Potential", status: workspace.current_state.evidence_refs.length > 0 ? "AVAILABLE" : "EVIDENCE_LIMITED", evidence: workspace.current_state.evidence_refs.join(", ") || "current_state.evidence_refs empty" },
     { code: "H32", label: "Root-Zone Soil Water State", status: workspace.current_state.low_confidence ? "LOW_CONFIDENCE" : "AVAILABLE", evidence: workspace.current_state.state_text },
-    { code: "H33", label: "Root-Zone Forecast", status: workspace.forecast_window.forecast_horizon_limited ? "LIMITED" : "AVAILABLE", evidence: workspace.forecast_window.available_horizon + " · " + workspace.forecast_window.reason, href: chainHref(fieldId, "/forecast", scopeQueryString) },
+    { code: "H33", label: "Root-Zone 预测", status: workspace.forecast_window.forecast_horizon_limited ? "LIMITED" : "AVAILABLE", evidence: workspace.forecast_window.available_horizon + " · " + workspace.forecast_window.reason, href: chainHref(fieldId, "/forecast", scopeQueryString) },
     { code: "H34", label: "Irrigation Scenario Comparison", status: workspace.scenario_comparison.status, evidence: scenarioCount > 0 ? `${scenarioCount} scenario options` : (workspace.scenario_comparison.unavailable_reason ?? "no scenario option"), href: chainHref(fieldId, "/scenarios", scopeQueryString) },
     { code: "H35", label: "Scenario Option To Recommendation Candidate", status: recommendationId ? "RECOMMENDATION_CANDIDATE_PRESENT" : "NO_RECOMMENDATION_CANDIDATE", evidence: recommendationId ?? "not submitted from Operator Twin", href: chainHref(fieldId, "/scenarios", scopeQueryString) },
     { code: "H36-H39", label: "Approval Request / Decision / Operation Plan / Transition", status: "DOWNSTREAM_BACKEND_CHAIN", evidence: "Read in downstream execution evidence after approval; this panel does not create approval or operation_plan facts." },
     { code: "H40-H42", label: "AO-ACT Task / Receipt / As-Executed Record", status: "DOWNSTREAM_EXECUTION_CHAIN", evidence: "Open post-irrigation verification to inspect task_id, receipt_id, and as_executed_id.", href: chainHref(fieldId, "/post-irrigation", scopeQueryString) },
-    { code: "H43-H44", label: "Evidence Artifact / Acceptance Result", status: "DOWNSTREAM_EVIDENCE_ACCEPTANCE_CHAIN", evidence: "Open evidence and post-irrigation verification to inspect evidence_refs and acceptance_result_id.", href: chainHref(fieldId, "/evidence", scopeQueryString) },
+    { code: "H43-H44", label: "证据 Artifact / Acceptance Result", status: "DOWNSTREAM_EVIDENCE_ACCEPTANCE_CHAIN", evidence: "Open evidence and post-irrigation verification to inspect evidence_refs and acceptance_result_id.", href: chainHref(fieldId, "/evidence", scopeQueryString) },
     { code: "H45", label: "Water Response Verification", status: "POST_IRRIGATION_READ_SURFACE", evidence: "Open post-irrigation verification. This page does not write ROI or Field Memory.", href: chainHref(fieldId, "/post-irrigation", scopeQueryString) },
   ];
 }
@@ -235,7 +235,7 @@ function DecisionToWaterResponseChainCard({ workspace, fieldId, scopeQueryString
 
   return (
     <article className="operatorPanel" data-card="DecisionToWaterResponseChainCard" data-contract="h31_h45_read_only_chain_v1">
-      <p className="operatorEyebrow">H31-H45 Decision-to-Water-Response</p>
+      <p className="operatorEyebrow">H31-H45 决策到水分响应闭环</p>
       <h3>决策到水分响应闭环</h3>
       <p>本卡只串联已成立的后端读面，不审批、不派单、不创建 AO-ACT task、不写 ROI、不写 Field Memory。</p>
       <div className="operatorTableWrap">
@@ -255,27 +255,27 @@ export default function OperatorFieldTwinWorkspacePage(): React.ReactElement {
   const scopeQueryString = React.useMemo(() => buildOperatorTwinScopeQuery(scope), [scope]);
   const fieldId = normalizeOperatorTwinDemoFieldId(params.fieldId);
   const [state, setState] = React.useState<RuntimeState>("loading");
-  const [workspace, setWorkspace] = React.useState<OperatorFieldTwinWorkspaceV1 | null>(null);
+  const [workspace, set工作区] = React.useState<OperatorFieldTwinWorkspaceV1 | null>(null);
   const [closure, setClosure] = React.useState<OperatorTwinH31H45ClosureV1 | null>(null);
   const [errorText, setErrorText] = React.useState("");
 
   React.useEffect(() => {
     let alive = true;
     setState("loading");
-    setWorkspace(null);
+    set工作区(null);
     setClosure(null);
     setErrorText("");
 
     void Promise.all([fetchOperatorFieldTwinWorkspace(fieldId, scope), fetchOperatorTwinH31H45Closure(fieldId, scope)])
       .then(([workspaceResponse, closureResponse]) => {
         if (!alive) return;
-        setWorkspace(workspaceResponse.operator_field_twin_workspace_v1);
+        set工作区(workspaceResponse.operator_field_twin_workspace_v1);
         setClosure(closureResponse.operator_twin_h31_h45_closure_v1);
         setState("ready");
       })
       .catch((error: unknown) => {
         if (!alive) return;
-        setWorkspace(null);
+        set工作区(null);
         setClosure(null);
         setErrorText(error instanceof Error ? error.message : "OPERATOR_FIELD_TWIN_WORKSPACE_LOAD_FAILED");
         setState("error");
@@ -288,16 +288,16 @@ export default function OperatorFieldTwinWorkspacePage(): React.ReactElement {
     <section className="operatorWorkbenchPage" data-surface="operator-twin" data-page="operator-field-twin-workspace" data-contract="operator_field_twin_workspace_v1">
       <div className="operatorWorkbenchHero">
         <div>
-          <p className="operatorEyebrow">Field-centered workspace</p>
+          <p className="operatorEyebrow">地块中心工作区</p>
           <h2>地块 Twin 工作区</h2>
           <p>当前地块：<strong>{workspace?.field_context.field_name ?? fieldId}</strong>。本页以 field_id 为入口，operation_id 不作为入口；并按事实、估计、预测、情景、建议候选和执行后验证分层展示。</p>
         </div>
         <div className="operatorWorkbenchHeroActions">
-          <Link className="operatorActionLink" to={chainHref(fieldId, "", scopeQueryString)}>Workspace</Link>
-          <Link className="operatorActionLink" to={chainHref(fieldId, "/forecast", scopeQueryString)}>Forecast</Link>
-          <Link className="operatorActionLink" to={chainHref(fieldId, "/scenarios", scopeQueryString)}>Scenarios</Link>
-          <Link className="operatorActionLink" to={chainHref(fieldId, "/evidence", scopeQueryString)}>Evidence</Link>
-          <Link className="operatorActionLink" to={chainHref(fieldId, "/post-irrigation", scopeQueryString)}>Post-Irrigation</Link>
+          <Link className="operatorActionLink" to={chainHref(fieldId, "", scopeQueryString)}>工作区</Link>
+          <Link className="operatorActionLink" to={chainHref(fieldId, "/forecast", scopeQueryString)}>预测</Link>
+          <Link className="operatorActionLink" to={chainHref(fieldId, "/scenarios", scopeQueryString)}>情景</Link>
+          <Link className="operatorActionLink" to={chainHref(fieldId, "/evidence", scopeQueryString)}>证据</Link>
+          <Link className="operatorActionLink" to={chainHref(fieldId, "/post-irrigation", scopeQueryString)}>灌后验证</Link>
           <Link className="operatorActionLink" to={"/operator/twin" + scopeQueryString}>返回 Twin 总览</Link>
         </div>
       </div>
@@ -308,13 +308,13 @@ export default function OperatorFieldTwinWorkspacePage(): React.ReactElement {
       {workspace ? (
         <div className="operatorPanelGrid">
           <ScopePolicyCard policy={workspace.scope_policy} />
-          <TwinStateVectorCard workspace={workspace} />
+          <状态向量 workspace={workspace} />
           <DataCoverageMatrix workspace={workspace} />
-          <EvidenceSummary workspace={workspace} />
-          <DataGapSummary workspace={workspace} />
+          <证据摘要 workspace={workspace} />
+          <数据缺口 workspace={workspace} />
           {workspace.layers.map((layer) => <LayerCard key={layer.layer} layer={layer} />)}
           <ScenarioBoundaryCard workspace={workspace} />
-          <RecommendationCandidate workspace={workspace} />
+          <建议候选详情 workspace={workspace} />
           <DecisionToWaterResponseChainCard workspace={workspace} fieldId={fieldId} scopeQueryString={scopeQueryString} closure={closure} />
           <ReadOnlyBoundaryCard workspace={workspace} />
         </div>

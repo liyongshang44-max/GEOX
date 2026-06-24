@@ -1,5 +1,5 @@
 // apps/web/src/layouts/OperatorLayout.tsx
-// Purpose: provide the dedicated operator shell used by existing operator pages and the new Operator Twin Workbench.
+// Purpose: provide the dedicated operator shell used by existing operator pages and the new 操作员数字孪生工作台.
 // Boundary: this shell must not become the Customer Delivery Portal or the Admin Control Plane Console.
 
 import React from "react";
@@ -69,7 +69,7 @@ function resolveTitle(pathname: string): string {
 
 function resolveLead(pathname: string): string {
   if (pathname === "/operator/twin") return "查看田块状态、预测缺口、低置信判断与人工确认入口。";
-  if (pathname.startsWith("/operator/twin/fields/")) return "按 Fact / Estimate / Forecast / Scenario 分层查看单地块数字孪生状态。";
+  if (pathname.startsWith("/operator/twin/fields/")) return "按事实、估计、预测、情景分层查看单地块数字孪生状态。";
   return "操作员侧用于分析、复核和人工确认，不承担客户报告或后台治理职责。";
 }
 
@@ -85,9 +85,9 @@ export default function OperatorLayout({
   return (
     <div className="customerShell operatorShell" data-layout="operator-shell">
       <aside className="customerShellSidebar operatorShellSidebar" aria-label="操作员导航">
-        <div className="customerShellBrand" aria-label="GEOX Operator Twin">
+        <div className="customerShellBrand" aria-label="GEOX 操作员 Twin">
           <span className="customerShellLogoMark" aria-hidden="true" />
-          <span>GEOX Operator Twin</span>
+          <span>GEOX 操作员 Twin</span>
         </div>
 
         <nav className="customerShellNav" aria-label="操作员数字孪生导航">
@@ -116,7 +116,7 @@ export default function OperatorLayout({
 
         <div className="customerShellMeta">
           <div>产品面</div>
-          <strong>Operator Twin Workbench</strong>
+          <strong>操作员数字孪生工作台</strong>
           <div>边界</div>
           <strong>分析与人工确认，不直接执行</strong>
         </div>
@@ -134,8 +134,8 @@ export default function OperatorLayout({
           </div>
           <div className="customerShellTopActions">
             <span className="customerShellUserMuted">
-              View-only v1<br />
-              <small>Operator shell</small>
+              只读 v1<br />
+              <small>操作员壳层</small>
             </span>
           </div>
         </header>
