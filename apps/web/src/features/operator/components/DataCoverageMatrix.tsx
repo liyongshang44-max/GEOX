@@ -1,4 +1,4 @@
-// apps/web/src/features/operator/components/DataCoverageMatrix.tsx
+// apps/web/src/features/operator/components/数据覆盖矩阵.tsx
 // Purpose: render read-only data coverage rows in Chinese for Operator Twin review.
 import React from "react";
 import type { OperatorDataCoverageRow } from "../../../api/operatorTwin";
@@ -14,7 +14,7 @@ function emptyText(value: string | number | null | undefined): string {
 
 export default function DataCoverageMatrix({ rows }: { rows: OperatorDataCoverageRow[] }): React.ReactElement {
   return (
-    <article className="operatorPanel" data-card="DataCoverageMatrix">
+    <article className="operatorPanel" data-card="数据覆盖矩阵">
       <p className="operatorEyebrow">数据覆盖</p>
       <h3>数据覆盖矩阵</h3>
       <table className="operatorTable">
