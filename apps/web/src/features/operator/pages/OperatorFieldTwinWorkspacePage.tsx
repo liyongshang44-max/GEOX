@@ -36,19 +36,107 @@ function scopeFromSearchParams(searchParams: URLSearchParams): OperatorTwinReque
   };
 }
 
+function boolText(value: boolean): string {
+  return value ? "是" : "否";
+}
+
+function emptyText(value: string | number | null | undefined): string {
+  const raw = String(value ?? "").trim();
+  return raw || "无";
+}
+
+function statusText(value: string | null | undefined): string {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "无";
+  const labels: Record<string, string> = {
+    AVAILABLE: "可用",
+    LIMITED: "受限",
+    NOT_AVAILABLE: "不可用",
+    MISSING_OR_LIMITED: "缺失或受限",
+    EVIDENCE_LIMITED: "证据受限",
+    LOW_CONFIDENCE: "低置信",
+    CONFIDENCE_OK: "置信正常",
+    INFO: "信息",
+    WARNING: "警告",
+    BLOCKING: "阻塞",
+    RECOMMENDATION_CANDIDATE_PRESENT: "已有建议候选",
+    NO_RECOMMENDATION_CANDIDATE: "暂无建议候选",
+    DOWNSTREAM_BACKEND_CHAIN: "下游后端链路",
+    DOWNSTREAM_EXECUTION_CHAIN: "下游执行链路",
+    DOWNSTREAM_EVIDENCE_ACCEPTANCE_CHAIN: "下游证据与验收链路",
+    POST_IRRIGATION_READ_SURFACE: "灌后只读验证面",
+  };
+  const label = labels[raw] ?? raw;
+  return label === raw ? raw : label + "（" + raw + "）";
+}
+
+function layerLabel(value: string): string {
+  const labels: Record<string, string> = {
+    Fact: "事实",
+    Estimate: "估计",
+    Forecast: "预测",
+    Scenario: "情景",
+    Recommendation: "建议候选",
+  };
+  return (labels[value] ?? value) + "（" + value + "）";
+}
+
+function chainNodeLabel(stage: ChainStage): string {
+  const labels: Record<string, string> = {
+    H31: "土壤水势",
+    H32: "根区水分状态",
+    H33: "根区预测",
+    H34: "灌溉情景比较",
+    H35: "情景到建议候选",
+    "H31-H35": "证据 / 状态 / 预测 / 情景 / 建议候选",
+    "H36-H39": "审批请求 / 审批决策 / 作业计划 / 状态流转",
+    "H40-H42": "AO-ACT 任务 / 回执 / 实执记录",
+    "H43-H44": "执行证据 / 验收结果",
+    H45: "水分响应验证",
+  };
+  const label = labels[stage.code] ?? stage.label;
+  return label + "（" + stage.code + "）";
+}
+
+function evidenceText(value: string): string {
+  const raw = emptyText(value);
+  if (raw === "none") return "无";
+  if (raw === "read-only closure evidence available") return "只读闭环证据可用";
+  if (raw === "current_state.evidence_refs empty") return "当前状态未返回证据引用";
+  if (raw === "not submitted from Operator Twin") return "尚未由操作员 Twin 提交";
+  if (raw.includes("scenario options")) return raw.replace("scenario options", "个情景选项");
+  if (raw === "no scenario option") return "没有情景选项";
+  if (raw === "Read in downstream execution evidence after approval; this panel does not create approval or operation_plan facts.") return "审批后读取下游执行证据；本卡不创建 approval 或 operation_plan 事实。";
+  if (raw === "Open post-irrigation verification to inspect task_id, receipt_id, and as_executed_id.") return "打开灌后验证页查看 task_id、receipt_id 和 as_executed_id。";
+  if (raw === "Open evidence and post-irrigation verification to inspect evidence_refs and acceptance_result_id.") return "打开证据页和灌后验证页查看 evidence_refs 与 acceptance_result_id。";
+  if (raw === "Open post-irrigation verification. This page does not write ROI or Field Memory.") return "打开灌后验证页；本页不写 ROI 或 Field Memory。";
+  return raw;
+}
+
+function boundaryRuleText(label: string): string {
+  return label
+    .replace(/dispatch/g, "派单")
+    .replace(/approval/g, "审批")
+    .replace(/recommendation/g, "建议候选")
+    .replace(/Scenario/g, "情景")
+    .replace(/Task/g, "任务")
+    .replace(/Fact/g, "事实")
+    .replace(/Forecast/g, "预测");
+}
+
 function ScopePolicyCard({ policy }: { policy: OperatorTwinScopePolicy }): React.ReactElement {
   return (
     <article className="operatorPanel" data-card="operator-twin-scope-policy">
       <h3>作用域策略</h3>
-      <p>作用域已应用：{policy.scope_applied ? "true" : "false"}</p>
-      <p>缺失原因：{policy.missing_reason ?? "none"}</p>
+      <p>作用域已应用：{boolText(policy.scope_applied)}</p>
+      <p>缺失原因：{emptyText(policy.missing_reason)}</p>
       <p>已接受作用域键：{policy.accepted_scope_keys.join(", ")}</p>
-      <p>必须指定地块作用域：{policy.field_scope_required ? "true" : "false"}</p>
+      <p>必须指定地块作用域：{boolText(Boolean(policy.field_scope_required))}</p>
     </article>
   );
 }
 
-function 状态向量({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }): React.ReactElement {
+function StateVectorCard({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }): React.ReactElement {
   return (
     <article className="operatorPanel" data-card="状态向量">
       <p className="operatorEyebrow">状态向量</p>
@@ -56,8 +144,8 @@ function 状态向量({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }
       <p>{workspace.current_state.state_text}</p>
       <p>风险：{workspace.current_state.risk_text}</p>
       <p>置信度：{workspace.current_state.confidence_text}</p>
-      <p>低置信：{workspace.current_state.low_confidence ? "LOW_CONFIDENCE" : "CONFIDENCE_OK"}</p>
-      <p>分类：{workspace.current_state.classification}</p>
+      <p>低置信：{workspace.current_state.low_confidence ? "低置信（LOW_CONFIDENCE）" : "置信正常（CONFIDENCE_OK）"}</p>
+      <p>分类：{layerLabel(workspace.current_state.classification)}</p>
     </article>
   );
 }
@@ -69,17 +157,17 @@ function DataCoverageMatrix({ workspace }: { workspace: OperatorFieldTwinWorkspa
       <h3>数据覆盖矩阵</h3>
       <ul className="operatorList">
         <li>覆盖摘要：{workspace.data_coverage.coverage_text}</li>
-        <li>土壤水分窗口：{workspace.data_coverage.sensing_available ? "AVAILABLE" : "MISSING_OR_LIMITED"}</li>
-        <li>天气版本：{workspace.data_coverage.weather_available ? "AVAILABLE" : "MISSING_OR_LIMITED"}</li>
+        <li>土壤水分窗口：{workspace.data_coverage.sensing_available ? "可用（AVAILABLE）" : "缺失或受限（MISSING_OR_LIMITED）"}</li>
+        <li>天气版本：{workspace.data_coverage.weather_available ? "可用（AVAILABLE）" : "缺失或受限（MISSING_OR_LIMITED）"}</li>
         <li>可用预测窗口：{workspace.forecast_window.available_horizon}</li>
-        <li>未开放窗口：{workspace.forecast_window.unavailable_horizons.join("、") || "none"}</li>
+        <li>未开放窗口：{workspace.forecast_window.unavailable_horizons.join("、") || "无"}</li>
         <li>限制原因：{workspace.forecast_window.reason}</li>
       </ul>
     </article>
   );
 }
 
-function 证据摘要({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }): React.ReactElement {
+function EvidenceSummaryCard({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }): React.ReactElement {
   const refs = [
     ...workspace.current_state.evidence_refs,
     ...workspace.data_coverage.evidence_refs,
@@ -104,7 +192,7 @@ function 证据摘要({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }
   );
 }
 
-function 数据缺口({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }): React.ReactElement {
+function DataGapSummaryCard({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }): React.ReactElement {
   const hasDataGaps = workspace.data_gaps.length > 0;
 
   return (
@@ -120,7 +208,7 @@ function 数据缺口({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }
         {workspace.data_gaps.map((gap, index) => (
           <li key={gap.gap_code || gap.label || String(index)}>
             {gap.label || gap.gap_code || "未命名缺口"}
-            {gap.severity ? " · " + gap.severity : ""}
+            {gap.severity ? " · " + statusText(gap.severity) : ""}
           </li>
         ))}
       </ul>
@@ -128,7 +216,7 @@ function 数据缺口({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }
   );
 }
 
-function 建议候选详情({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }): React.ReactElement {
+function RecommendationCandidateCard({ workspace }: { workspace: OperatorFieldTwinWorkspaceV1 }): React.ReactElement {
   return (
     <article className="operatorPanel" data-card="建议候选详情">
       <p className="operatorEyebrow">建议候选详情</p>
@@ -145,10 +233,10 @@ function 建议候选详情({ workspace }: { workspace: OperatorFieldTwinWorkspa
 function LayerCard({ layer }: { layer: OperatorTwinLayer }): React.ReactElement {
   return (
     <article className="operatorPanel" data-layer={layer.layer}>
-      <p className="operatorEyebrow">{layer.layer}</p>
+      <p className="operatorEyebrow">{layerLabel(layer.layer)}</p>
       <h3>{layer.title}</h3>
       <p>{layer.body}</p>
-      <p>状态：{layer.status}</p>
+      <p>状态：{statusText(layer.status)}</p>
     </article>
   );
 }
@@ -157,9 +245,9 @@ function ScenarioBoundaryCard({ workspace }: { workspace: OperatorFieldTwinWorks
   return (
     <article className="operatorPanel" data-card="ScenarioBoundaryCard">
       <h3>情景比较边界</h3>
-      <p>状态：{workspace.scenario_comparison.status}</p>
-      <p>不可用原因：{workspace.scenario_comparison.unavailable_reason ?? "none"}</p>
-      <p>no_action baseline：{workspace.scenario_comparison.no_action_baseline_present ? "存在" : "缺失"}</p>
+      <p>状态：{statusText(workspace.scenario_comparison.status)}</p>
+      <p>不可用原因：{emptyText(workspace.scenario_comparison.unavailable_reason)}</p>
+      <p>无动作基线：{workspace.scenario_comparison.no_action_baseline_present ? "存在" : "缺失"}</p>
       <ul className="operatorList">
         {workspace.scenario_comparison.options.map((option) => (
           <li key={option.option_id || option.label}>
@@ -168,7 +256,7 @@ function ScenarioBoundaryCard({ workspace }: { workspace: OperatorFieldTwinWorks
           </li>
         ))}
       </ul>
-      <p>Scenario 不能当作 Task；本页只读，不提交 recommendation。</p>
+      <p>情景不能当作任务；本页只读，不提交建议候选。</p>
     </article>
   );
 }
@@ -179,7 +267,7 @@ function ReadOnlyBoundaryCard({ workspace }: { workspace: OperatorFieldTwinWorks
       <h3>只读动作边界</h3>
       <ul className="operatorList">
         {workspace.boundary_rules.map((rule) => (
-          <li key={rule.rule_code}>{rule.label}</li>
+          <li key={rule.rule_code}>{boundaryRuleText(rule.label)}</li>
         ))}
       </ul>
     </article>
@@ -241,7 +329,7 @@ function DecisionToWaterResponseChainCard({ workspace, fieldId, scopeQueryString
       <div className="operatorTableWrap">
         <table className="operatorTable" data-table="h31-h45-decision-chain">
           <thead><tr><th>阶段</th><th>链路节点</th><th>只读状态</th><th>证据 / 入口</th></tr></thead>
-          <tbody>{stages.map((stage) => <tr key={stage.code} data-stage={stage.code.toLowerCase()}><td>{stage.code}</td><td>{stage.label}</td><td><span className="operatorPill">{stage.status}</span></td><td>{stage.href ? <Link to={stage.href}>{stage.evidence}</Link> : stage.evidence}</td></tr>)}</tbody>
+          <tbody>{stages.map((stage) => <tr key={stage.code} data-stage={stage.code.toLowerCase()}><td>{stage.code}</td><td>{chainNodeLabel(stage)}</td><td><span className="operatorPill">{statusText(stage.status)}</span></td><td>{stage.href ? <Link to={stage.href}>{evidenceText(stage.evidence)}</Link> : evidenceText(stage.evidence)}</td></tr>)}</tbody>
         </table>
       </div>
     </article>
@@ -255,27 +343,27 @@ export default function OperatorFieldTwinWorkspacePage(): React.ReactElement {
   const scopeQueryString = React.useMemo(() => buildOperatorTwinScopeQuery(scope), [scope]);
   const fieldId = normalizeOperatorTwinDemoFieldId(params.fieldId);
   const [state, setState] = React.useState<RuntimeState>("loading");
-  const [workspace, set工作区] = React.useState<OperatorFieldTwinWorkspaceV1 | null>(null);
+  const [workspace, setWorkspace] = React.useState<OperatorFieldTwinWorkspaceV1 | null>(null);
   const [closure, setClosure] = React.useState<OperatorTwinH31H45ClosureV1 | null>(null);
   const [errorText, setErrorText] = React.useState("");
 
   React.useEffect(() => {
     let alive = true;
     setState("loading");
-    set工作区(null);
+    setWorkspace(null);
     setClosure(null);
     setErrorText("");
 
     void Promise.all([fetchOperatorFieldTwinWorkspace(fieldId, scope), fetchOperatorTwinH31H45Closure(fieldId, scope)])
       .then(([workspaceResponse, closureResponse]) => {
         if (!alive) return;
-        set工作区(workspaceResponse.operator_field_twin_workspace_v1);
+        setWorkspace(workspaceResponse.operator_field_twin_workspace_v1);
         setClosure(closureResponse.operator_twin_h31_h45_closure_v1);
         setState("ready");
       })
       .catch((error: unknown) => {
         if (!alive) return;
-        set工作区(null);
+        setWorkspace(null);
         setClosure(null);
         setErrorText(error instanceof Error ? error.message : "OPERATOR_FIELD_TWIN_WORKSPACE_LOAD_FAILED");
         setState("error");
@@ -302,19 +390,19 @@ export default function OperatorFieldTwinWorkspacePage(): React.ReactElement {
         </div>
       </div>
 
-      {state === "loading" ? <div className="operatorPanel">Field Twin 数据加载中...</div> : null}
-      {state === "error" ? <div className="operatorPanel">Field Twin 数据加载失败：{errorText}</div> : null}
+      {state === "loading" ? <div className="operatorPanel">地块 Twin 数据加载中...</div> : null}
+      {state === "error" ? <div className="operatorPanel">地块 Twin 数据加载失败：{errorText}</div> : null}
 
       {workspace ? (
         <div className="operatorPanelGrid">
           <ScopePolicyCard policy={workspace.scope_policy} />
-          <状态向量 workspace={workspace} />
+          <StateVectorCard workspace={workspace} />
           <DataCoverageMatrix workspace={workspace} />
-          <证据摘要 workspace={workspace} />
-          <数据缺口 workspace={workspace} />
+          <EvidenceSummaryCard workspace={workspace} />
+          <DataGapSummaryCard workspace={workspace} />
           {workspace.layers.map((layer) => <LayerCard key={layer.layer} layer={layer} />)}
           <ScenarioBoundaryCard workspace={workspace} />
-          <建议候选详情 workspace={workspace} />
+          <RecommendationCandidateCard workspace={workspace} />
           <DecisionToWaterResponseChainCard workspace={workspace} fieldId={fieldId} scopeQueryString={scopeQueryString} closure={closure} />
           <ReadOnlyBoundaryCard workspace={workspace} />
         </div>

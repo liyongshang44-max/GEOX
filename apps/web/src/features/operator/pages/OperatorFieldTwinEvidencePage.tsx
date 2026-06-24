@@ -10,7 +10,7 @@ import {
   type OperatorFieldTwinEvidenceQualityV1,
   type OperatorTwinRequestScope,
 } from "../../../api/operatorTwin";
-import 证据TracePanel from "../components/EvidenceTracePanel";
+import EvidenceTracePanel from "../components/EvidenceTracePanel";
 import DataCoverageMatrix from "../components/DataCoverageMatrix";
 import QualitySummaryPanel from "../components/QualitySummaryPanel";
 import LowQualityReasonList from "../components/LowQualityReasonList";
@@ -25,6 +25,30 @@ function scopeFromSearchParams(searchParams: URLSearchParams): OperatorTwinReque
   };
 }
 
+function sourceIndexText(tableName: string): string {
+  const labels: Record<string, string> = {
+    field_index_v1: "地块索引",
+    water_state_estimate_index_v1: "水分状态估计索引",
+    soil_moisture_sensing_window_index_v1: "土壤水分感知窗口索引",
+    weather_forecast_index_v1: "天气预测索引",
+    irrigation_scenario_set_index_v1: "灌溉情景集索引",
+    decision_recommendation_index_v1: "决策建议索引",
+  };
+  const label = labels[tableName] ?? tableName;
+  return label === tableName ? tableName : label + "（" + tableName + "）";
+}
+
+function boundaryRuleText(label: string): string {
+  return label
+    .replace(/dispatch/g, "派单")
+    .replace(/approval/g, "审批")
+    .replace(/recommendation/g, "建议候选")
+    .replace(/Scenario/g, "情景")
+    .replace(/Task/g, "任务")
+    .replace(/Fact/g, "事实")
+    .replace(/Forecast/g, "预测");
+}
+
 function SourceIndexInventoryPanel({ evidence }: { evidence: OperatorFieldTwinEvidenceQualityV1 }): React.ReactElement {
   return (
     <article className="operatorPanel" data-card="SourceIndexInventory">
@@ -35,8 +59,8 @@ function SourceIndexInventoryPanel({ evidence }: { evidence: OperatorFieldTwinEv
         <tbody>
           {evidence.source_index_inventory.source_indexes.map((row) => (
             <tr key={row.table_name}>
-              <td>{row.table_name}</td><td>{row.available ? "是" : "否"}</td><td>{row.row_count}</td>
-              <td>{row.missing_reason ?? "none"}</td><td>{row.latest_evidence_refs.join(", ") || "无"}</td>
+              <td>{sourceIndexText(row.table_name)}</td><td>{row.available ? "是" : "否"}</td><td>{row.row_count}</td>
+              <td>{row.missing_reason ?? "无"}</td><td>{row.latest_evidence_refs.join(", ") || "无"}</td>
             </tr>
           ))}
         </tbody>
@@ -50,7 +74,7 @@ function BoundaryRulesPanel({ evidence }: { evidence: OperatorFieldTwinEvidenceQ
     <article className="operatorPanel operatorBoundaryNotice" data-card="BoundaryRules">
       <h3>只读边界</h3>
       <ul className="operatorList">
-        {evidence.boundary_rules.map((rule) => <li key={rule.rule_code}>{rule.rule_code}：{rule.label} · 证据引用：边界策略</li>)}
+        {evidence.boundary_rules.map((rule) => <li key={rule.rule_code}>{rule.rule_code}：{boundaryRuleText(rule.label)} · 证据引用：边界策略</li>)}
       </ul>
     </article>
   );
@@ -63,19 +87,19 @@ export default function OperatorFieldTwinEvidencePage(): React.ReactElement {
   const scopeQueryString = React.useMemo(() => buildOperatorTwinScopeQuery(scope), [scope]);
   const fieldId = String(params.fieldId ?? "").trim() || "field_c8_demo";
   const [state, setState] = React.useState<RuntimeState>("loading");
-  const [evidence, set证据] = React.useState<OperatorFieldTwinEvidenceQualityV1 | null>(null);
+  const [evidence, setEvidence] = React.useState<OperatorFieldTwinEvidenceQualityV1 | null>(null);
   const [errorText, setErrorText] = React.useState("");
 
   React.useEffect(() => {
     let alive = true;
     setState("loading");
-    set证据(null);
+    setEvidence(null);
     setErrorText("");
 
     void fetchOperatorFieldTwinEvidenceQuality(fieldId, scope)
       .then((response) => {
         if (!alive) return;
-        set证据(response.operator_field_twin_evidence_quality_v1);
+        setEvidence(response.operator_field_twin_evidence_quality_v1);
         setState("ready");
       })
       .catch((error: unknown) => {
@@ -91,9 +115,9 @@ export default function OperatorFieldTwinEvidencePage(): React.ReactElement {
     <section className="operatorWorkbenchPage" data-surface="operator-twin" data-page="operator-field-twin-evidence-quality" data-contract="operator_field_twin_evidence_quality_v1">
       <div className="operatorWorkbenchHero">
         <div>
-          <p className="operatorEyebrow">Operator 证据</p>
+          <p className="operatorEyebrow">操作员证据</p>
           <h2>证据与数据质量</h2>
-          <p>用于复核当前 Twin 判断的证据链、数据覆盖率、低质量原因和数据缺口。本页只读，不生成 recommendation，不审批，不创建 task。</p>
+          <p>用于复核当前 Twin 判断的证据链、数据覆盖率、低质量原因和数据缺口。本页只读，不生成建议候选，不审批，不创建任务。</p>
           <span className="operatorPill">只读证据质量</span>
         </div>
         <div className="operatorWorkbenchHeroActions">
@@ -104,12 +128,12 @@ export default function OperatorFieldTwinEvidencePage(): React.ReactElement {
         </div>
       </div>
 
-      {state === "loading" ? <div className="operatorPanel">证据 Quality 数据加载中...</div> : null}
-      {state === "error" ? <div className="operatorPanel">证据 Quality 数据加载失败：{errorText}</div> : null}
+      {state === "loading" ? <div className="operatorPanel">证据质量数据加载中...</div> : null}
+      {state === "error" ? <div className="operatorPanel">证据质量数据加载失败：{errorText}</div> : null}
 
       {evidence ? (
         <div className="operatorPanelGrid">
-          <证据TracePanel items={evidence.evidence_trace_v1.trace_items} />
+          <EvidenceTracePanel items={evidence.evidence_trace_v1.trace_items} />
           <DataCoverageMatrix rows={evidence.data_coverage_matrix_v1.rows} />
           <QualitySummaryPanel summary={evidence.quality_summary} />
           <SourceIndexInventoryPanel evidence={evidence} />
