@@ -1,4 +1,4 @@
-// apps/web/src/features/operator/components/数据覆盖矩阵.tsx
+// apps/web/src/features/operator/components/DataCoverageMatrix.tsx
 // Purpose: render read-only data coverage rows in Chinese for Operator Twin review.
 import React from "react";
 import type { OperatorDataCoverageRow } from "../../../api/operatorTwin";
@@ -12,6 +12,26 @@ function emptyText(value: string | number | null | undefined): string {
   return String(value);
 }
 
+function timeText(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "无";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toISOString();
+}
+
+function metricText(value: string): string {
+  const labels: Record<string, string> = {
+    field: "地块",
+    water_state_estimate: "水分状态估计",
+    soil_moisture_sensing_window: "土壤水分感知窗口",
+    weather_forecast: "天气预测",
+    irrigation_scenario_set: "灌溉情景集",
+    decision_recommendation: "决策建议",
+  };
+  const label = labels[value] ?? value;
+  return label === value ? value : label + "（" + value + "）";
+}
+
 export default function DataCoverageMatrix({ rows }: { rows: OperatorDataCoverageRow[] }): React.ReactElement {
   return (
     <article className="operatorPanel" data-card="数据覆盖矩阵">
@@ -22,10 +42,10 @@ export default function DataCoverageMatrix({ rows }: { rows: OperatorDataCoverag
         <tbody>
           {rows.map((row) => (
             <tr key={row.source_table}>
-              <td>{row.metric}</td>
+              <td>{metricText(row.metric)}</td>
               <td>{boolText(row.available)}</td>
               <td>{row.row_count}</td>
-              <td>{emptyText(row.latest_ts_ms)}</td>
+              <td>{timeText(row.latest_ts_ms)}</td>
               <td>{emptyText(row.quality_flags.concat(row.missing_windows).join("，"))}</td>
               <td>{row.evidence_refs.length}</td>
             </tr>
