@@ -1,7 +1,7 @@
 // apps/web/src/features/operator/pages/OperatorEvidenceTwinPage.tsx
-// Purpose: render the H52 Operator Evidence Twin read-only page skeleton for the Water Stress Loop P0.
-// Boundary: this page skeleton does not fetch APIs, does not submit recommendations, does not approve, does not dispatch, and does not create AO-ACT tasks.
-// H52.1-a guardrail: this component consumes the route fieldId only; it does not expand scope into backend, seed, DB, or write actions.
+// Purpose: render the H52/H53 Operator Evidence Twin read-only page for the Water Stress Loop P0 and sensing readback.
+// Boundary: this page fetches only the read model; it does not submit recommendations, approve, dispatch, or create AO-ACT tasks.
+// H52.1-a guardrail: this component consumes route fieldId and read-only evidence twin data; it does not write facts, seed data, DB rows, or action records.
 
 import React from "react";
 import { useParams } from "react-router-dom";
@@ -10,6 +10,7 @@ import {
   type EvidenceTwinBoundaryRuleV1,
   type EvidenceTwinGapV1,
   type EvidenceTwinNodeV1,
+  type OperatorEvidenceTwinEnvelopeV1,
   type OperatorEvidenceTwinV1,
   type WaterStressLoopStepV1,
   type WaterStressScenarioOptionV1,
@@ -22,6 +23,7 @@ function statusText(value: string | null | undefined): string {
     LIMITED: "受限",
     MISSING: "缺失",
     BLOCKING: "阻塞",
+    DERIVED_PENDING: "待推导",
     NOT_APPLICABLE: "不适用",
     UNKNOWN: "未知",
     NOT_VERIFIABLE: "不可验证",
@@ -36,10 +38,28 @@ function emptyText(value: string | number | null | undefined): string {
   return raw || "未提供";
 }
 
+function payloadValue(node: EvidenceTwinNodeV1, key: string): string {
+  const value = node.expand_payload?.[key];
+  if (value === null || value === undefined) return "未提供";
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
 function fieldIdFromParams(value: string | null | undefined): string {
   const raw = String(value ?? "").trim();
   if (!raw || raw === ":fieldId" || raw === "fieldId" || raw.startsWith(":")) return "field_c8_demo";
   return raw;
+}
+
+function evidenceTwinApiBase(): string {
+  if (typeof window === "undefined") return "";
+  return window.location.port === "5173" ? "http://127.0.0.1:3001" : "";
+}
+
+function evidenceTwinReadUrl(fieldId: string): string {
+  const encodedFieldId = encodeURIComponent(fieldId);
+  const query = new URLSearchParams({ loop: "water-stress", tenant_id: "tenantA", project_id: "projectA", group_id: "groupA" });
+  return evidenceTwinApiBase() + "/api/v1/operator/fields/" + encodedFieldId + "/evidence-twin?" + query.toString();
 }
 
 function refCountText(node: EvidenceTwinNodeV1): string {
@@ -133,6 +153,39 @@ function LineageCard({ twin }: { twin: OperatorEvidenceTwinV1 }): React.ReactEle
   );
 }
 
+function SensingReadbackCard({ twin, source }: { twin: OperatorEvidenceTwinV1; source: string }): React.ReactElement {
+  const soilNodes = twin.water_stress_loop.inputs.soil_moisture;
+  const weatherNodes = twin.water_stress_loop.inputs.weather_forecast;
+  return (
+    <article className="operatorPanel" data-card="h53-sensing-readback" data-read-source={source}>
+      <p className="operatorEyebrow">H53.1 Sensing readback</p>
+      <h3>感知数据只读回读</h3>
+      <p>本区只展示 RawSignal / Observation 层数据；State、Scenario、AO-ACT、Acceptance 仍必须由后续链路生成。</p>
+      <div className="operatorTableWrap">
+        <table className="operatorTable" data-table="h53-sensing-readback">
+          <thead>
+            <tr><th>来源</th><th>状态</th><th>metric</th><th>soil_moisture_percent</th><th>coverage_ratio</th><th>quality_status</th><th>rainfall_forecast_mm_72h</th><th>et0_mm_72h</th></tr>
+          </thead>
+          <tbody>
+            {[...soilNodes, ...weatherNodes].map((node) => (
+              <tr key={node.id} data-sensing-node={node.id}>
+                <td>{node.label}</td>
+                <td>{statusText(node.status)}</td>
+                <td>{payloadValue(node, "metric")}</td>
+                <td>{payloadValue(node, "soil_moisture_percent")}</td>
+                <td>{payloadValue(node, "coverage_ratio")}</td>
+                <td>{payloadValue(node, "quality_status")}</td>
+                <td>{payloadValue(node, "rainfall_forecast_mm_72h")}</td>
+                <td>{payloadValue(node, "et0_mm_72h")}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </article>
+  );
+}
+
 function WaterStressStepTable({ steps }: { steps: WaterStressLoopStepV1[] }): React.ReactElement {
   return (
     <article className="operatorPanel" data-card="h52-water-stress-loop" data-loop="water_stress_loop_v1">
@@ -209,7 +262,7 @@ function ScenarioReadOnlyPanel({ twin }: { twin: OperatorEvidenceTwinV1 }): Reac
 function VerificationReadOnlyPanel({ twin }: { twin: OperatorEvidenceTwinV1 }): React.ReactElement {
   const loop = twin.water_stress_loop;
   const verificationGap = twin.gaps.find((gapItem) => gapItem.gap_code === "WATER_RESPONSE_VERIFICATION_MISSING");
-  const acceptanceGap = twin.gaps.find((gapItem) => gapItem.gap_code === "ACCEPTANCE_RESULT_MISSING");
+  const acceptanceGap = twin.gaps.find((gapItem) => gapItem.gap_code === "ACCEPTANCE_RESULT_MISSING" || gapItem.gap_code === "ACCEPTANCE_NOT_CREATED_IN_SENSING_ONLY");
   const rows: Array<{ code: string; node: EvidenceTwinNodeV1 }> = [
     { code: "AS_EXECUTED", node: loop.as_executed },
     { code: "EVIDENCE", node: loop.evidence },
@@ -282,22 +335,47 @@ function BoundaryPanel({ rules }: { rules: EvidenceTwinBoundaryRuleV1[] }): Reac
   );
 }
 
+function isEnvelope(value: unknown): value is OperatorEvidenceTwinEnvelopeV1 {
+  const row = value as OperatorEvidenceTwinEnvelopeV1 | null;
+  return Boolean(row && row.ok === true && row.operator_evidence_twin_v1);
+}
+
 export default function OperatorEvidenceTwinPage(): React.ReactElement {
   const params = useParams();
   const fieldId = fieldIdFromParams(params.fieldId);
-  const envelope = React.useMemo(
+  const fallbackEnvelope = React.useMemo(
     () => buildOperatorEvidenceTwinEnvelope({ fieldId, generatedAt: "2026-06-25T00:00:00.000Z" }),
     [fieldId],
   );
+  const [remoteEnvelope, setRemoteEnvelope] = React.useState<OperatorEvidenceTwinEnvelopeV1 | null>(null);
+  const [readSource, setReadSource] = React.useState("adapter_fallback");
+
+  React.useEffect(() => {
+    let cancelled = false;
+    fetch(evidenceTwinReadUrl(fieldId), { headers: { Accept: "application/json" } })
+      .then((response) => response.json())
+      .then((json) => {
+        if (!cancelled && isEnvelope(json)) {
+          setRemoteEnvelope(json);
+          setReadSource("operator_evidence_twin_api");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setReadSource("adapter_fallback");
+      });
+    return () => { cancelled = true; };
+  }, [fieldId]);
+
+  const envelope = remoteEnvelope ?? fallbackEnvelope;
   const twin = envelope.operator_evidence_twin_v1;
 
   return (
-    <section className="operatorWorkbenchPage" data-surface="operator-evidence-twin" data-page="h52-operator-evidence-twin" data-contract="operator_evidence_twin_v1">
+    <section className="operatorWorkbenchPage" data-surface="operator-evidence-twin" data-page="h52-operator-evidence-twin" data-contract="operator_evidence_twin_v1" data-read-source={readSource}>
       <div className="operatorWorkbenchHero">
         <div>
           <p className="operatorEyebrow">操作员证据孪生</p>
           <h2>地块证据孪生</h2>
-          <p>本页是 H52 只读页面骨架，用于展示一块地从原始信号到状态、建议候选、执行证据和灌后验证的证据链。</p>
+          <p>本页是只读证据孪生页面，用于展示一块地从原始信号到状态、建议候选、执行证据和灌后验证的证据链。H53.1 只接入感知数据回读。</p>
         </div>
         <div className="operatorWorkbenchHeroActions" data-write-ready={String(envelope.writeReady)} data-dispatch-ready={String(envelope.dispatchReady)} data-approval-ready={String(envelope.approvalReady)} data-task-creation-ready={String(envelope.taskCreationReady)}>
           <span className="operatorActionLink">只读</span>
@@ -311,6 +389,7 @@ export default function OperatorEvidenceTwinPage(): React.ReactElement {
         <FieldHeaderCard twin={twin} />
         <CurrentStateCard twin={twin} />
         <LineageCard twin={twin} />
+        <SensingReadbackCard twin={twin} source={readSource} />
         <WaterStressStepTable steps={twin.water_stress_loop.steps} />
         <ScenarioReadOnlyPanel twin={twin} />
         <VerificationReadOnlyPanel twin={twin} />
