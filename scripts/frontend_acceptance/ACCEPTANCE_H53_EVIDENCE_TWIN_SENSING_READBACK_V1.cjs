@@ -2,7 +2,7 @@
 'use strict';
 
 // scripts/frontend_acceptance/ACCEPTANCE_H53_EVIDENCE_TWIN_SENSING_READBACK_V1.cjs
-// Purpose: lock H53.1 frontend readback boundaries for Operator Evidence Twin sensing data.
+// Purpose: lock H53.1/H53.1a frontend readback boundaries and readable sensing display for Operator Evidence Twin.
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -32,9 +32,40 @@ function main() {
   const seed = read(SEED);
 
   assertOk(page.includes('data-card="h53-sensing-readback"'), 'SENSING_READBACK_CARD_REQUIRED', null);
+  assertOk(page.includes('data-card="h53-sensing-soil-moisture"'), 'SOIL_MOISTURE_CARD_REQUIRED', null);
+  assertOk(page.includes('data-card="h53-sensing-window"'), 'SENSING_WINDOW_CARD_REQUIRED', null);
+  assertOk(page.includes('data-card="h53-weather-forecast"'), 'WEATHER_FORECAST_CARD_REQUIRED', null);
+  assertOk(page.includes('data-card="h53-pending-stage-groups"'), 'PENDING_STAGE_GROUPS_REQUIRED', null);
+  assertOk(page.includes('data-stage="system-derivation"'), 'SYSTEM_DERIVATION_STAGE_REQUIRED', null);
+  assertOk(page.includes('data-stage="operator-control-flow"'), 'OPERATOR_CONTROL_STAGE_REQUIRED', null);
+  assertOk(page.includes('data-stage="closure-memory"'), 'CLOSURE_MEMORY_STAGE_REQUIRED', null);
+
   assertOk(page.includes('soil_moisture_percent'), 'SOIL_MOISTURE_COPY_REQUIRED', null);
   assertOk(page.includes('coverage_ratio'), 'COVERAGE_RATIO_COPY_REQUIRED', null);
-  assertOk(page.includes('rainfall_forecast_mm_72h'), 'WEATHER_FORECAST_COPY_REQUIRED', null);
+  assertOk(page.includes('quality_status'), 'QUALITY_STATUS_COPY_REQUIRED', null);
+  assertOk(page.includes('actual_points'), 'ACTUAL_POINTS_COPY_REQUIRED', null);
+  assertOk(page.includes('expected_points'), 'EXPECTED_POINTS_COPY_REQUIRED', null);
+  assertOk(page.includes('rainfall_forecast_mm_72h'), 'WEATHER_RAINFALL_COPY_REQUIRED', null);
+  assertOk(page.includes('et0_mm_72h'), 'WEATHER_ET0_COPY_REQUIRED', null);
+  assertOk(page.includes('temperature_max_c_72h'), 'WEATHER_TEMPERATURE_COPY_REQUIRED', null);
+
+  for (const token of [
+    'WaterStressState / 水分压力状态',
+    'Forecast / 水分预测',
+    'Scenario / 情景',
+    'Recommendation / 建议候选',
+    'Approval / 审批',
+    'Operation / 作业计划',
+    'AO-ACT',
+    'AsExecuted',
+    'Acceptance / 验收',
+    'Verification / 灌后验证',
+    'ROI',
+    'Field Memory',
+  ]) {
+    assertOk(page.includes(token), 'PENDING_NODE_STAGE_COPY_REQUIRED', { token });
+  }
+
   assertOk(page.includes('fetch(evidenceTwinReadUrl(fieldId)'), 'READ_ONLY_FETCH_REQUIRED', null);
   assertOk(page.includes('method') === false || page.includes('method: "GET"'), 'ONLY_GET_FETCH_ALLOWED', null);
 
