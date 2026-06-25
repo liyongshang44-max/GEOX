@@ -41,7 +41,7 @@ ok(page.includes('猎鹰 1 号'), 'page renders Falcon 1 subtitle');
 ok(page.includes('RawSignal → Observation → StateEstimate → Evidence → Verification'), 'page renders evidence lineage chain');
 ok(page.includes('data-table="h52-water-stress-steps"'), 'page renders Water Stress Loop step table');
 ok(page.includes('data-step={step.step_code}'), 'page renders step codes from adapter data');
-ok(adapter.includes('step_code: "RAW_SIGNAL"') && adapter.includes('step_code: "OBSERVATION"') && adapter.includes('step_code: "WATER_STRESS_STATE"'), 'adapter provides first three Water Stress Loop nodes');
+ok(adapter.includes('"RAW_SIGNAL", "OBSERVATION", "WATER_STRESS_STATE"') && adapter.includes('RAW_SIGNAL: rawSignal') && adapter.includes('OBSERVATION: observation') && adapter.includes('WATER_STRESS_STATE: waterState'), 'adapter provides first three Water Stress Loop nodes');
 ok(page.includes('allowed_actions=[]'), 'page explicitly shows empty allowed actions');
 ok(page.includes('data-write-ready={String(envelope.writeReady)}'), 'page exposes writeReady=false as data attr');
 ok(page.includes('data-dispatch-ready={String(envelope.dispatchReady)}'), 'page exposes dispatchReady=false as data attr');
