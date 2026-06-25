@@ -40,13 +40,13 @@ ok(page.includes('水分压力闭环'), 'page renders water stress loop label');
 ok(page.includes('猎鹰 1 号'), 'page renders Falcon 1 subtitle');
 ok(page.includes('RawSignal → Observation → StateEstimate → Evidence → Verification'), 'page renders evidence lineage chain');
 ok(page.includes('data-table="h52-water-stress-steps"'), 'page renders Water Stress Loop step table');
-ok(page.includes('RAW_SIGNAL') && page.includes('OBSERVATION') && page.includes('WATER_STRESS_STATE'), 'page imports step codes through rendered step table data');
+ok(page.includes('原始信号') && page.includes('标准化观测') && page.includes('水分压力状态'), 'page renders first three Water Stress Loop nodes');
 ok(page.includes('allowed_actions=[]'), 'page explicitly shows empty allowed actions');
 ok(page.includes('data-write-ready={String(envelope.writeReady)}'), 'page exposes writeReady=false as data attr');
 ok(page.includes('data-dispatch-ready={String(envelope.dispatchReady)}'), 'page exposes dispatchReady=false as data attr');
 ok(page.includes('data-approval-ready={String(envelope.approvalReady)}'), 'page exposes approvalReady=false as data attr');
 ok(page.includes('data-task-creation-ready={String(envelope.taskCreationReady)}'), 'page exposes taskCreationReady=false as data attr');
-ok(page.includes('只读') && page.includes('不审批') && page.includes('不派单') && page.includes('不创建 AO-ACT task'), 'page displays read-only action boundaries');
+ok(page.includes('只读') && page.includes('不审批') && page.includes('不派单') && page.includes('不创建 AO-ACT task'), 'page displays negative read-only action boundaries');
 ok(page.includes('缺口显式'), 'page renders explicit gaps section');
 ok(page.includes('只读边界'), 'page renders boundary rules section');
 ok(page.includes('旧入口策略：URL-only'), 'page keeps legacy route policy visible');
@@ -58,7 +58,10 @@ ok(!page.includes('fetchOperator'), 'page does not call Operator Twin fetchers')
 ok(!page.includes('useEffect'), 'page skeleton has no runtime data-loading effect');
 ok(!page.includes('<button'), 'page contains no button element');
 ok(!page.includes('提交为建议候选'), 'page contains no submit-recommendation copy');
-ok(!page.includes('创建 AO-ACT task'), 'page contains no task creation command copy except negative boundary is checked separately');
+ok(!page.includes('生成建议'), 'page contains no positive recommendation-generation command copy');
+ok(!page.includes('提交 receipt'), 'page contains no receipt-submission command copy');
+ok(!page.includes('写 ROI'), 'page contains no ROI-write command copy');
+ok(!page.includes('写 Field Memory'), 'page contains no Field Memory-write command copy');
 
 ok(adapter.includes('report_kind: "OPERATOR_EVIDENCE_TWIN"'), 'adapter still targets final Evidence Twin report kind');
 ok(!app.includes('OperatorEvidenceTwinPage'), 'App routes are not changed in this PR');
