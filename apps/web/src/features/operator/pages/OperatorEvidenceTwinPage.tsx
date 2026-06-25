@@ -38,13 +38,6 @@ function emptyText(value: string | number | null | undefined): string {
   return raw || "未提供";
 }
 
-function payloadValue(node: EvidenceTwinNodeV1, key: string): string {
-  const value = node.expand_payload?.[key];
-  if (value === null || value === undefined) return "未提供";
-  if (typeof value === "object") return JSON.stringify(value);
-  return String(value);
-}
-
 function fieldIdFromParams(value: string | null | undefined): string {
   const raw = String(value ?? "").trim();
   if (!raw || raw === ":fieldId" || raw === "fieldId" || raw.startsWith(":")) return "field_c8_demo";
@@ -84,6 +77,65 @@ function expandPayloadText(node: EvidenceTwinNodeV1): string {
   if (!node.expand_payload) return "未提供 expand_payload";
   const keys = Object.keys(node.expand_payload);
   return keys.length > 0 ? keys.join(" / ") : "expand_payload 为空";
+}
+
+function payloadRaw(node: EvidenceTwinNodeV1 | null | undefined, key: string): unknown {
+  return node?.expand_payload?.[key];
+}
+
+function payloadText(node: EvidenceTwinNodeV1 | null | undefined, key: string): string {
+  const value = payloadRaw(node, key);
+  if (value === null || value === undefined || value === "") return "未提供";
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
+function payloadNumber(node: EvidenceTwinNodeV1 | null | undefined, key: string): number | null {
+  const parsed = Number(payloadRaw(node, key));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function numberText(value: number | null, suffix = ""): string {
+  if (!Number.isFinite(Number(value))) return "未提供";
+  const fixed = Number(value).toFixed(3).replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1");
+  return fixed + suffix;
+}
+
+function firstAvailableNode(nodes: EvidenceTwinNodeV1[], keys: string[]): EvidenceTwinNodeV1 | null {
+  const available = nodes.find((node) => node.status === "AVAILABLE" && keys.some((key) => payloadRaw(node, key) !== undefined && payloadRaw(node, key) !== null));
+  return available ?? nodes.find((node) => node.status === "AVAILABLE") ?? nodes[0] ?? null;
+}
+
+function availabilityText(node: EvidenceTwinNodeV1 | null): string {
+  return node ? statusText(node.status) : "缺失（MISSING）";
+}
+
+function miniCardStyle(): React.CSSProperties {
+  return {
+    border: "1px solid rgba(15, 23, 42, 0.08)",
+    borderRadius: 14,
+    padding: 14,
+    background: "rgba(255, 255, 255, 0.72)",
+    minWidth: 0,
+  };
+}
+
+function metricValueStyle(): React.CSSProperties {
+  return {
+    fontSize: 22,
+    lineHeight: 1.2,
+    fontWeight: 700,
+    margin: "6px 0 4px",
+  };
+}
+
+function miniGridStyle(): React.CSSProperties {
+  return {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+    gap: 12,
+    marginTop: 12,
+  };
 }
 
 function FieldHeaderCard({ twin }: { twin: OperatorEvidenceTwinV1 }): React.ReactElement {
@@ -154,33 +206,116 @@ function LineageCard({ twin }: { twin: OperatorEvidenceTwinV1 }): React.ReactEle
 }
 
 function SensingReadbackCard({ twin, source }: { twin: OperatorEvidenceTwinV1; source: string }): React.ReactElement {
-  const soilNodes = twin.water_stress_loop.inputs.soil_moisture;
-  const weatherNodes = twin.water_stress_loop.inputs.weather_forecast;
+  const soilNode = firstAvailableNode(twin.water_stress_loop.inputs.soil_moisture, ["soil_moisture_percent", "value_num"]);
+  const windowNode = firstAvailableNode(twin.water_stress_loop.inputs.soil_moisture, ["coverage_ratio", "quality_status"]);
+  const weatherNode = firstAvailableNode(twin.water_stress_loop.inputs.weather_forecast, ["rainfall_forecast_mm_72h", "et0_mm_72h", "temperature_max_c_72h"]);
+  const soilMoisture = payloadNumber(soilNode, "soil_moisture_percent") ?? payloadNumber(soilNode, "value_num");
+  const coverageRatio = payloadNumber(windowNode, "coverage_ratio");
+  const qualityStatus = payloadText(windowNode, "quality_status");
+  const rainfall = payloadNumber(weatherNode, "rainfall_forecast_mm_72h");
+  const et0 = payloadNumber(weatherNode, "et0_mm_72h");
+  const tempMax = payloadNumber(weatherNode, "temperature_max_c_72h");
+
   return (
     <article className="operatorPanel" data-card="h53-sensing-readback" data-read-source={source}>
-      <p className="operatorEyebrow">H53.1 Sensing readback</p>
-      <h3>感知数据只读回读</h3>
-      <p>本区只展示 RawSignal / Observation 层数据；State、Scenario、AO-ACT、Acceptance 仍必须由后续链路生成。</p>
-      <div className="operatorTableWrap">
-        <table className="operatorTable" data-table="h53-sensing-readback">
-          <thead>
-            <tr><th>来源</th><th>状态</th><th>metric</th><th>soil_moisture_percent</th><th>coverage_ratio</th><th>quality_status</th><th>rainfall_forecast_mm_72h</th><th>et0_mm_72h</th></tr>
-          </thead>
-          <tbody>
-            {[...soilNodes, ...weatherNodes].map((node) => (
-              <tr key={node.id} data-sensing-node={node.id}>
-                <td>{node.label}</td>
-                <td>{statusText(node.status)}</td>
-                <td>{payloadValue(node, "metric")}</td>
-                <td>{payloadValue(node, "soil_moisture_percent")}</td>
-                <td>{payloadValue(node, "coverage_ratio")}</td>
-                <td>{payloadValue(node, "quality_status")}</td>
-                <td>{payloadValue(node, "rainfall_forecast_mm_72h")}</td>
-                <td>{payloadValue(node, "et0_mm_72h")}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <p className="operatorEyebrow">H53.1a sensing readback display</p>
+      <h3>感知数据已回读，状态仍待推导</h3>
+      <p>本区只把 RawSignal / Observation 层整理成人能读懂的感知卡片；WaterStressState、Scenario、AO-ACT、Acceptance 不在本阶段生成。</p>
+      <div style={miniGridStyle()} data-section="h53-sensing-cards">
+        <section style={miniCardStyle()} data-card="h53-sensing-soil-moisture">
+          <p className="operatorEyebrow">Soil Moisture</p>
+          <div style={metricValueStyle()}>{numberText(soilMoisture, " %")}</div>
+          <ul className="operatorList">
+            <li>状态：{availabilityText(soilNode)}</li>
+            <li>metric：{payloadText(soilNode, "metric")}</li>
+            <li>来源：telemetry_index_v1 / device_observation_index_v1</li>
+            <li>引用：{soilNode ? refCountText(soilNode) : "0 条引用"}</li>
+          </ul>
+        </section>
+        <section style={miniCardStyle()} data-card="h53-sensing-window">
+          <p className="operatorEyebrow">Sensing Window</p>
+          <div style={metricValueStyle()}>{numberText(coverageRatio)}</div>
+          <ul className="operatorList">
+            <li>coverage_ratio：{numberText(coverageRatio)}</li>
+            <li>quality_status：{qualityStatus}</li>
+            <li>actual_points：{payloadText(windowNode, "actual_points")}</li>
+            <li>expected_points：{payloadText(windowNode, "expected_points")}</li>
+            <li>max_gap_ms：{payloadText(windowNode, "max_gap_ms")}</li>
+          </ul>
+        </section>
+        <section style={miniCardStyle()} data-card="h53-weather-forecast">
+          <p className="operatorEyebrow">Weather Forecast Input</p>
+          <div style={metricValueStyle()}>{numberText(rainfall, " mm")}</div>
+          <ul className="operatorList">
+            <li>rainfall_forecast_mm_72h：{numberText(rainfall, " mm")}</li>
+            <li>et0_mm_72h：{numberText(et0, " mm")}</li>
+            <li>temperature_max_c_72h：{numberText(tempMax, " ℃")}</li>
+            <li>状态：{availabilityText(weatherNode)}</li>
+          </ul>
+        </section>
+      </div>
+    </article>
+  );
+}
+
+function PendingStageCard({ twin }: { twin: OperatorEvidenceTwinV1 }): React.ReactElement {
+  const loop = twin.water_stress_loop;
+  const stages: Array<{ id: string; title: string; summary: string; nodes: Array<{ label: string; node: EvidenceTwinNodeV1 | null; code: string }> }> = [
+    {
+      id: "system-derivation",
+      title: "等待系统推导",
+      summary: "这些节点应该由 WaterStressState / Forecast / Scenario / Recommendation engine 生成，不能由 sensing-only seed 填充。",
+      nodes: [
+        { label: "WaterStressState / 水分压力状态", node: loop.water_stress_state, code: "water_stress_state" },
+        { label: "Forecast / 水分预测", node: loop.forecast, code: "forecast" },
+        { label: "Scenario / 情景", node: loop.scenario, code: "scenario" },
+        { label: "Recommendation / 建议候选", node: loop.recommendation, code: "recommendation" },
+      ],
+    },
+    {
+      id: "operator-control-flow",
+      title: "等待人审与控制流程",
+      summary: "这些节点依赖已有控制链路：RecommendationCandidate → Human Approval → OperationPlan → AO-ACT → Receipt / AsExecuted → Evidence。",
+      nodes: [
+        { label: "Approval / 审批", node: loop.approval, code: "approval" },
+        { label: "Operation / 作业计划", node: loop.operation, code: "operation" },
+        { label: "AO-ACT", node: loop.ao_act, code: "ao_act" },
+        { label: "AsExecuted", node: loop.as_executed, code: "as_executed" },
+        { label: "Evidence", node: loop.evidence, code: "evidence" },
+      ],
+    },
+    {
+      id: "closure-memory",
+      title: "等待验收与闭环沉淀",
+      summary: "这些节点只能在 receipt、execution evidence、acceptance gate 之后生成；ROI / Field Memory 不属于 H53.1a 写入范围。",
+      nodes: [
+        { label: "Acceptance / 验收", node: loop.acceptance, code: "acceptance" },
+        { label: "Verification / 灌后验证", node: loop.verification, code: "verification" },
+        { label: "ROI", node: null, code: "roi" },
+        { label: "Field Memory", node: null, code: "field_memory" },
+      ],
+    },
+  ];
+
+  return (
+    <article className="operatorPanel" data-card="h53-pending-stage-groups">
+      <p className="operatorEyebrow">H53.1a pending stage groups</p>
+      <h3>后续节点按生成阶段分组</h3>
+      <p>当前页面不是“数据没有填满”，而是 sensing input 已就绪，后续节点等待对应系统推导或显式流程触发。</p>
+      <div style={miniGridStyle()}>
+        {stages.map((stage) => (
+          <section key={stage.id} style={miniCardStyle()} data-stage={stage.id}>
+            <p className="operatorEyebrow">{stage.title}</p>
+            <p>{stage.summary}</p>
+            <ul className="operatorList">
+              {stage.nodes.map((item) => (
+                <li key={item.code} data-pending-node={item.code}>
+                  {item.label}：{item.node ? statusText(item.node.status) : "待后续闭环生成（NOT_CREATED_IN_H53_1A）"}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
       </div>
     </article>
   );
@@ -190,8 +325,8 @@ function WaterStressStepTable({ steps }: { steps: WaterStressLoopStepV1[] }): Re
   return (
     <article className="operatorPanel" data-card="h52-water-stress-loop" data-loop="water_stress_loop_v1">
       <p className="operatorEyebrow">水分压力闭环 · 猎鹰 1 号</p>
-      <h3>水分压力闭环</h3>
-      <p>本表只展示闭环节点，不触发审批、派单、AO-ACT task 创建或任何写入。</p>
+      <h3>水分压力闭环原始节点表</h3>
+      <p>本表保留工程级节点明细，不触发审批、派单、AO-ACT task 创建或任何写入。</p>
       <div className="operatorTableWrap">
         <table className="operatorTable" data-table="h52-water-stress-steps">
           <thead>
@@ -375,7 +510,7 @@ export default function OperatorEvidenceTwinPage(): React.ReactElement {
         <div>
           <p className="operatorEyebrow">操作员证据孪生</p>
           <h2>地块证据孪生</h2>
-          <p>本页是只读证据孪生页面，用于展示一块地从原始信号到状态、建议候选、执行证据和灌后验证的证据链。H53.1 只接入感知数据回读。</p>
+          <p>本页是只读证据孪生页面，用于展示一块地从原始信号到状态、建议候选、执行证据和灌后验证的证据链。H53.1a 将感知数据整理为可读卡片，并把后续节点按生成阶段分组。</p>
         </div>
         <div className="operatorWorkbenchHeroActions" data-write-ready={String(envelope.writeReady)} data-dispatch-ready={String(envelope.dispatchReady)} data-approval-ready={String(envelope.approvalReady)} data-task-creation-ready={String(envelope.taskCreationReady)}>
           <span className="operatorActionLink">只读</span>
@@ -390,6 +525,7 @@ export default function OperatorEvidenceTwinPage(): React.ReactElement {
         <CurrentStateCard twin={twin} />
         <LineageCard twin={twin} />
         <SensingReadbackCard twin={twin} source={readSource} />
+        <PendingStageCard twin={twin} />
         <WaterStressStepTable steps={twin.water_stress_loop.steps} />
         <ScenarioReadOnlyPanel twin={twin} />
         <VerificationReadOnlyPanel twin={twin} />
