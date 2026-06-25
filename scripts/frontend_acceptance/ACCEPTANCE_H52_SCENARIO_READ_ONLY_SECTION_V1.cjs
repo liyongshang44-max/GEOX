@@ -28,8 +28,9 @@ const acceptance = read(acceptancePath);
 const guardrail = read(guardrailPath);
 const scenarioPage = read(scenarioPagePath);
 
-ok(guardrail.includes('Scenario compare 只迁移 read part'), 'H52.1-a requires Scenario read-only migration only');
-ok(guardrail.includes('不得迁移 `SubmitScenarioToRecommendationPanel`'), 'H52.1-a forbids migrating submit panel');
+ok(guardrail.includes('## 8. Scenario 只迁移 read part'), 'H52.1-a requires Scenario read-only migration only');
+ok(guardrail.includes('H52.2 P0 只迁移第一类'), 'H52.1-a limits Scenario migration to read display');
+ok(guardrail.includes('不得迁移：') && guardrail.includes('SubmitScenarioToRecommendationPanel'), 'H52.1-a forbids migrating submit panel');
 ok(acceptance.includes('scenario.options = []'), 'acceptance requires scenario options gap when empty');
 ok(acceptance.includes('no_action_baseline_present = false'), 'acceptance requires no-action baseline gap when false');
 ok(acceptance.includes('提交 scenario'), 'acceptance identifies scenario submission as forbidden');
