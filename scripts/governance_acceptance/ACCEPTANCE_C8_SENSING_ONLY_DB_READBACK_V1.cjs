@@ -12,7 +12,13 @@ const DB = process.env.DATABASE_URL || 'postgres://landos:landos_pwd@127.0.0.1:5
 const BASE = process.env.GEOX_BASE_URL || 'http://127.0.0.1:3001';
 const TOKEN = process.env.GEOX_ACCEPTANCE_TOKEN || 'set-via-env-or-external-secret-file-admin';
 const FIELD_ID = 'field_c8_demo';
-const SCOPE = ['tenantA', 'projectA', 'groupA', FIELD_ID];
+
+const SCOPE_VALUES = {
+  tenant_id: 'tenantA',
+  project_id: 'projectA',
+  group_id: 'groupA',
+  field_id: FIELD_ID,
+};
 
 const REQUIRED_FACT_TYPES = [
   'telemetry_observation_v1',
@@ -67,28 +73,76 @@ function assert(condition, code, details = {}) {
   if (!condition) fail(code, details);
 }
 
+async function tableColumns(client, table) {
+  const result = await client.query(
+    "select column_name from information_schema.columns where table_schema='public' and table_name=$1",
+    [table],
+  );
+  return new Set(result.rows.map((row) => row.column_name));
+}
+
+function scopedCountQuery(table, columns) {
+  assert(REQUIRED_TABLES.includes(table), 'UNSAFE_TABLE_NAME', { table });
+
+  const filters = [];
+  const values = [];
+
+  for (const key of ['tenant_id', 'project_id', 'group_id', 'field_id']) {
+    if (columns.has(key)) {
+      values.push(SCOPE_VALUES[key]);
+      filters.push(`${key}=$${values.length}`);
+    }
+  }
+
+  const whereSql = filters.length ? ` where ${filters.join(' and ')}` : '';
+  const appliedColumns = filters.map((item) => item.split('=')[0]);
+
+  return {
+    sql: `select count(*)::int as count from ${table}${whereSql}`,
+    values,
+    appliedColumns,
+  };
+}
+
 async function readDb() {
   const client = new Client({ connectionString: DB });
   await client.connect();
+
   try {
     const factRows = await client.query(
-      `select record_json::jsonb->>'type' as type, count(*)::int as count from facts where source=$1 group by 1`,
+      "select record_json::jsonb->>'type' as type, count(*)::int as count from facts where source=$1 group by 1",
       [SOURCE],
     );
+
     const factCounts = Object.fromEntries(factRows.rows.map((row) => [row.type, Number(row.count || 0)]));
-    for (const type of REQUIRED_FACT_TYPES) assert((factCounts[type] || 0) > 0, 'REQUIRED_FACT_TYPE_MISSING', { type, factCounts });
-    for (const type of FORBIDDEN_FACT_TYPES) assert((factCounts[type] || 0) === 0, 'FORBIDDEN_FACT_TYPE_PRESENT', { type, factCounts });
+
+    for (const type of REQUIRED_FACT_TYPES) {
+      assert((factCounts[type] || 0) > 0, 'REQUIRED_FACT_TYPE_MISSING', { type, factCounts });
+    }
+
+    for (const type of FORBIDDEN_FACT_TYPES) {
+      assert((factCounts[type] || 0) === 0, 'FORBIDDEN_FACT_TYPE_PRESENT', { type, factCounts });
+    }
 
     const tableCounts = {};
+    const tableScopeColumns = {};
+
     for (const table of REQUIRED_TABLES) {
-      const result = await client.query(
-        `select count(*)::int as count from ${table} where tenant_id=$1 and project_id=$2 and group_id=$3 and field_id=$4`,
-        SCOPE,
-      );
+      const columns = await tableColumns(client, table);
+      const query = scopedCountQuery(table, columns);
+      const result = await client.query(query.sql, query.values);
+
       tableCounts[table] = Number(result.rows[0]?.count || 0);
-      assert(tableCounts[table] > 0, 'REQUIRED_TABLE_EMPTY', { table, tableCounts });
+      tableScopeColumns[table] = query.appliedColumns;
+
+      assert(tableCounts[table] > 0, 'REQUIRED_TABLE_EMPTY', {
+        table,
+        applied_scope_columns: query.appliedColumns,
+        tableCounts,
+      });
     }
-    return { factCounts, tableCounts };
+
+    return { factCounts, tableCounts, tableScopeColumns };
   } finally {
     await client.end();
   }
@@ -96,32 +150,50 @@ async function readDb() {
 
 async function readApi() {
   const url = new URL(`/api/v1/operator/fields/${FIELD_ID}/evidence-twin`, BASE);
+
   url.searchParams.set('loop', 'water-stress');
-  url.searchParams.set('tenant_id', SCOPE[0]);
-  url.searchParams.set('project_id', SCOPE[1]);
-  url.searchParams.set('group_id', SCOPE[2]);
+  url.searchParams.set('tenant_id', SCOPE_VALUES.tenant_id);
+  url.searchParams.set('project_id', SCOPE_VALUES.project_id);
+  url.searchParams.set('group_id', SCOPE_VALUES.group_id);
+
   const response = await fetch(url, { headers: { authorization: `Bearer ${TOKEN}` } });
   const text = await response.text();
-  assert(response.status === 200, 'ENDPOINT_NOT_200', { status: response.status, body: text.slice(0, 1000) });
+
+  assert(response.status === 200, 'ENDPOINT_NOT_200', {
+    status: response.status,
+    body: text.slice(0, 1000),
+  });
+
   return JSON.parse(text);
 }
 
 function checkClosedWritePolicy(node, code) {
   assert(node?.write_policy?.write_ready === false, code, { write_policy: node?.write_policy });
-  assert(Array.isArray(node?.write_policy?.allowed_actions) && node.write_policy.allowed_actions.length === 0, code, { write_policy: node?.write_policy });
+  assert(
+    Array.isArray(node?.write_policy?.allowed_actions) && node.write_policy.allowed_actions.length === 0,
+    code,
+    { write_policy: node?.write_policy },
+  );
 }
 
 function validateApi(payload) {
   assert(payload.ok === true, 'API_OK_FALSE', { ok: payload.ok });
-  for (const flag of ['writeReady', 'dispatchReady', 'approvalReady', 'taskCreationReady', 'memoryWriteReady', 'roiWriteReady']) assert(payload[flag] === false, 'BOUNDARY_FLAG_NOT_FALSE', { flag, value: payload[flag] });
+
+  for (const flag of ['writeReady', 'dispatchReady', 'approvalReady', 'taskCreationReady', 'memoryWriteReady', 'roiWriteReady']) {
+    assert(payload[flag] === false, 'BOUNDARY_FLAG_NOT_FALSE', { flag, value: payload[flag] });
+  }
 
   const loop = payload.operator_evidence_twin_v1?.water_stress_loop;
+
   assert(loop?.inputs, 'LOOP_INPUTS_MISSING');
   assert((loop.inputs.soil_moisture || []).some((node) => node.status === 'AVAILABLE'), 'SOIL_MOISTURE_NOT_AVAILABLE');
   assert((loop.inputs.weather_forecast || []).some((node) => node.status === 'AVAILABLE'), 'WEATHER_FORECAST_NOT_AVAILABLE');
 
   for (const key of PENDING_NODES) {
-    assert(loop[key]?.status === 'DERIVED_PENDING', 'DERIVED_NODE_NOT_PENDING', { key, status: loop[key]?.status });
+    assert(loop[key]?.status === 'DERIVED_PENDING', 'DERIVED_NODE_NOT_PENDING', {
+      key,
+      status: loop[key]?.status,
+    });
     checkClosedWritePolicy(loop[key], 'DERIVED_NODE_WRITE_POLICY_OPEN');
   }
 }
@@ -129,11 +201,22 @@ function validateApi(payload) {
 async function main() {
   const db = await readDb();
   const api = await readApi();
+
   validateApi(api);
-  console.log(JSON.stringify({ ok: true, acceptance: 'ACCEPTANCE_C8_SENSING_ONLY_DB_READBACK_V1', db }, null, 2));
+
+  console.log(JSON.stringify({
+    ok: true,
+    acceptance: 'ACCEPTANCE_C8_SENSING_ONLY_DB_READBACK_V1',
+    db,
+  }, null, 2));
 }
 
 main().catch((error) => {
-  console.error(JSON.stringify({ ok: false, acceptance: 'ACCEPTANCE_C8_SENSING_ONLY_DB_READBACK_V1', error: error.message, details: error.details || null }, null, 2));
+  console.error(JSON.stringify({
+    ok: false,
+    acceptance: 'ACCEPTANCE_C8_SENSING_ONLY_DB_READBACK_V1',
+    error: error.message,
+    details: error.details || null,
+  }, null, 2));
   process.exit(1);
 });
