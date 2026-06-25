@@ -1,9 +1,10 @@
 // apps/web/src/features/operator/pages/OperatorEvidenceTwinPage.tsx
 // Purpose: render the H52 Operator Evidence Twin read-only page skeleton for the Water Stress Loop P0.
 // Boundary: this page skeleton does not fetch APIs, does not submit recommendations, does not approve, does not dispatch, and does not create AO-ACT tasks.
-// H52.1-a guardrail: this component is intentionally not wired into routes in this PR to avoid route-governance expansion.
+// H52.1-a guardrail: this component consumes the route fieldId only; it does not expand scope into backend, seed, DB, or write actions.
 
 import React from "react";
+import { useParams } from "react-router-dom";
 import {
   buildOperatorEvidenceTwinEnvelope,
   type EvidenceTwinBoundaryRuleV1,
@@ -32,6 +33,12 @@ function statusText(value: string | null | undefined): string {
 function emptyText(value: string | number | null | undefined): string {
   const raw = String(value ?? "").trim();
   return raw || "未提供";
+}
+
+function fieldIdFromParams(value: string | null | undefined): string {
+  const raw = String(value ?? "").trim();
+  if (!raw || raw === ":fieldId" || raw === "fieldId" || raw.startsWith(":")) return "field_c8_demo";
+  return raw;
 }
 
 function refCountText(node: EvidenceTwinNodeV1): string {
@@ -163,9 +170,11 @@ function BoundaryPanel({ rules }: { rules: EvidenceTwinBoundaryRuleV1[] }): Reac
 }
 
 export default function OperatorEvidenceTwinPage(): React.ReactElement {
+  const params = useParams();
+  const fieldId = fieldIdFromParams(params.fieldId);
   const envelope = React.useMemo(
-    () => buildOperatorEvidenceTwinEnvelope({ fieldId: "field_c8_demo", generatedAt: "2026-06-25T00:00:00.000Z" }),
-    [],
+    () => buildOperatorEvidenceTwinEnvelope({ fieldId, generatedAt: "2026-06-25T00:00:00.000Z" }),
+    [fieldId],
   );
   const twin = envelope.operator_evidence_twin_v1;
 
