@@ -27,6 +27,7 @@ const adapter = read(adapterPath);
 const acceptance = read(acceptancePath);
 const guardrail = read(guardrailPath);
 const scenarioPage = read(scenarioPagePath);
+const pageWithoutNegativeTaskBoundary = page.replaceAll('不创建 AO-ACT task', '');
 
 ok(guardrail.includes('## 8. Scenario 只迁移 read part'), 'H52.1-a requires Scenario read-only migration only');
 ok(guardrail.includes('H52.2 P0 只迁移第一类'), 'H52.1-a limits Scenario migration to read display');
@@ -71,6 +72,7 @@ ok(!page.includes('提交为建议候选'), 'H52 page contains no legacy submit-
 ok(!page.includes('Submit Scenario'), 'H52 page contains no Submit Scenario copy');
 ok(!page.includes('Submit Recommendation'), 'H52 page contains no Submit Recommendation copy');
 ok(!page.includes('创建 approval'), 'H52 page contains no approval creation command copy');
-ok(!page.includes('创建 AO-ACT task'), 'H52 page contains no task creation command copy');
+ok(page.includes('不创建 AO-ACT task'), 'H52 page displays negative AO-ACT task boundary copy');
+ok(!pageWithoutNegativeTaskBoundary.includes('创建 AO-ACT task'), 'H52 page contains no positive task creation command copy');
 
 console.log('[h52-scenario-read-only-section] PASS');
