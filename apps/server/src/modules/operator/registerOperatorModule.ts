@@ -9,6 +9,7 @@ import { registerOperatorDispatchActionRoutes } from "../../routes/v1/operator_d
 import { registerOperatorLearningValidationRoutes } from "../../routes/v1/operator_learning_validation.js";
 import { registerOperatorDeviceOfflineActionRoutes } from "../../routes/v1/operator_device_offline_actions.js";
 import { registerOperatorTwinReadRoutes } from "../../routes/v1/operator_twin.js";
+import { registerOperatorEvidenceTwinReadRoutes } from "../../routes/v1/operator_evidence_twin.js";
 import { registerOperatorTwinH31H45ClosureRoutes } from "../../routes/v1/operator_twin_h31_h45_closure.js";
 import { registerOperationPlanV1Routes } from "../../routes/control_operation_plan_v1.js";
 
@@ -21,6 +22,7 @@ export function registerOperatorModule(app: FastifyInstance, pool: Pool): void {
   registerOperatorLearningValidationRoutes(app, pool);
   registerOperatorDeviceOfflineActionRoutes(app, pool);
   registerOperatorTwinReadRoutes(app, pool);
+  registerOperatorEvidenceTwinReadRoutes(app, pool);
   registerOperatorTwinH31H45ClosureRoutes(app, pool);
   registerOperationPlanV1Routes(app, pool);
 }
