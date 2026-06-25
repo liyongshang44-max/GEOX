@@ -265,9 +265,53 @@ function weatherIndexRowsFromFacts(facts) {
     });
 }
 
+function soilMoistureWindowRowsFromFacts(facts) {
+  return facts
+    .filter((fact) => factType(fact) === 'soil_moisture_sensing_window_v1')
+    .map((fact) => {
+      const payload = fact.record_json.payload || {};
+      const minSamplesPerRequiredMetric = Number(
+        typeof payload.min_samples_per_required_metric === 'object' && payload.min_samples_per_required_metric !== null
+          ? payload.min_samples_per_required_metric[payload.metric]
+          : payload.min_samples_per_required_metric,
+      );
+      return {
+        window_id: payload.window_id || fact.fact_id,
+        tenant_id: payload.tenant_id,
+        project_id: payload.project_id,
+        group_id: payload.group_id,
+        field_id: payload.field_id,
+        device_id: payload.device_id || 'dev_soil_c8_001',
+        metric: payload.metric || 'soil_moisture_percent',
+        window_start: payload.window_start,
+        window_end: payload.window_end,
+        expected_interval_ms: Number(payload.expected_interval_ms || 60000),
+        expected_points: Number(payload.expected_points || payload.actual_points || 1),
+        actual_points: Number(payload.actual_points || 1),
+        min_total_samples_required: Number(payload.min_total_samples_required || 1),
+        min_samples_per_required_metric: Number.isFinite(minSamplesPerRequiredMetric) ? minSamplesPerRequiredMetric : Number(payload.min_total_samples_required || 1),
+        coverage_ratio: Number(payload.coverage_ratio ?? 1),
+        min_coverage_ratio: Number(payload.min_coverage_ratio ?? 0),
+        max_gap_ms: payload.max_gap_ms == null ? null : Number(payload.max_gap_ms),
+        max_allowed_gap_ms: Number(payload.max_allowed_gap_ms || 900000),
+        gap_count: Number(payload.gap_count || 0),
+        quality_status: payload.quality_status || 'UNKNOWN',
+        confidence_json: payload.confidence || {},
+        summary_json: payload.summary || {},
+        config_snapshot_json: payload.config_snapshot || {},
+        evidence_refs_json: Array.isArray(payload.evidence_refs) ? payload.evidence_refs : [],
+        source_fact_ids_json: Array.isArray(payload.source_fact_ids) ? payload.source_fact_ids : [],
+        source_observation_ids_json: Array.isArray(payload.source_observation_ids) ? payload.source_observation_ids : [],
+        source_fact_id: fact.fact_id,
+      };
+    })
+    .filter((row) => row.window_start && row.window_end);
+}
+
 function filterRows(rows, facts) {
   const out = {};
   for (const table of ALLOWED_TABLES) out[table] = Array.isArray(rows?.[table]) ? rows[table] : [];
+  out.soil_moisture_sensing_window_index_v1 = soilMoistureWindowRowsFromFacts(facts);
   if (!out.weather_forecast_index_v1.length) out.weather_forecast_index_v1 = weatherIndexRowsFromFacts(facts);
   return out;
 }
