@@ -12,6 +12,7 @@ import {
   type EvidenceTwinNodeV1,
   type OperatorEvidenceTwinV1,
   type WaterStressLoopStepV1,
+  type WaterStressScenarioOptionV1,
 } from "../evidenceTwin/evidenceTwinAdapter";
 
 function statusText(value: string | null | undefined): string {
@@ -44,6 +45,10 @@ function fieldIdFromParams(value: string | null | undefined): string {
 function refCountText(node: EvidenceTwinNodeV1): string {
   const count = node.evidence_refs.length + node.source_refs.length;
   return String(count) + " 条引用";
+}
+
+function refsText(option: WaterStressScenarioOptionV1): string {
+  return option.evidence_refs.length > 0 ? option.evidence_refs.map((ref) => ref.label ?? ref.ref_id).join(" / ") : "未提供引用";
 }
 
 function FieldHeaderCard({ twin }: { twin: OperatorEvidenceTwinV1 }): React.ReactElement {
@@ -141,6 +146,51 @@ function WaterStressStepTable({ steps }: { steps: WaterStressLoopStepV1[] }): Re
   );
 }
 
+function ScenarioReadOnlyPanel({ twin }: { twin: OperatorEvidenceTwinV1 }): React.ReactElement {
+  const scenario = twin.water_stress_loop.scenario;
+  const scenarioBoundary = twin.boundary_rules.find((rule) => rule.rule_code === "SCENARIO_IS_NOT_TASK");
+
+  return (
+    <article className="operatorPanel" data-card="h52-scenario-read-only" data-scenario-read-only="true">
+      <p className="operatorEyebrow">Scenario read-only section</p>
+      <h3>灌溉情景只读</h3>
+      <p>情景用于比较可能路径，不是任务，不在本页转化为审批、作业计划或 AO-ACT。</p>
+      <ul className="operatorList">
+        <li>Scenario status：{statusText(scenario.status)}</li>
+        <li>No-action baseline：{scenario.no_action_baseline_present ? "存在" : "缺失"}</li>
+        <li>Scenario set：{emptyText(scenario.scenario_set_id)}</li>
+        <li>Unavailable reason：{emptyText(scenario.unavailable_reason)}</li>
+        <li>Boundary：{scenarioBoundary ? scenarioBoundary.rule_code : "SCENARIO_IS_NOT_TASK"}</li>
+        <li>Evidence refs：{String(scenario.evidence_refs.length)} 条</li>
+      </ul>
+      <div className="operatorTableWrap">
+        <table className="operatorTable" data-table="h52-scenario-options">
+          <thead>
+            <tr><th>Option</th><th>Label</th><th>Irrigation mm</th><th>Scheduled day</th><th>Risk delta</th><th>Confidence</th><th>Evidence refs</th></tr>
+          </thead>
+          <tbody>
+            {scenario.options.length > 0 ? scenario.options.map((option) => (
+              <tr key={option.option_id || option.label} data-scenario-option={option.option_id || option.label}>
+                <td>{emptyText(option.option_id)}</td>
+                <td>{emptyText(option.label)}</td>
+                <td>{emptyText(option.irrigation_amount_mm)}</td>
+                <td>{emptyText(option.scheduled_day)}</td>
+                <td>{emptyText(option.risk_delta)}</td>
+                <td>{emptyText(option.confidence.label)}</td>
+                <td>{refsText(option)}</td>
+              </tr>
+            )) : (
+              <tr data-scenario-option="empty">
+                <td colSpan={7}>SCENARIO_OPTIONS_MISSING：未提供情景选项，前端不补默认情景。</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </article>
+  );
+}
+
 function GapPanel({ gaps }: { gaps: EvidenceTwinGapV1[] }): React.ReactElement {
   return (
     <article className="operatorPanel" data-card="h52-gaps">
@@ -199,6 +249,7 @@ export default function OperatorEvidenceTwinPage(): React.ReactElement {
         <CurrentStateCard twin={twin} />
         <LineageCard twin={twin} />
         <WaterStressStepTable steps={twin.water_stress_loop.steps} />
+        <ScenarioReadOnlyPanel twin={twin} />
         <GapPanel gaps={twin.gaps} />
         <BoundaryPanel rules={twin.boundary_rules} />
       </div>
