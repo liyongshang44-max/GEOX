@@ -10,6 +10,7 @@ const OperatorEvidencePage = React.lazy(() => import("../../features/operator/pa
 const OperatorDevicesAlertsPage = React.lazy(() => import("../../features/operator/pages/OperatorDevicesAlertsPage"));
 const OperatorRoiLedgerPage = React.lazy(() => import("../../features/operator/pages/OperatorRoiLedgerPage"));
 const OperatorFieldMemoryPage = React.lazy(() => import("../../features/operator/pages/OperatorFieldMemoryPage"));
+const OperatorEvidenceTwinPage = React.lazy(() => import("../../features/operator/pages/OperatorEvidenceTwinPage"));
 
 export function renderOperatorRoutes(): React.ReactElement[] {
   return [
@@ -22,5 +23,7 @@ export function renderOperatorRoutes(): React.ReactElement[] {
     <Route key="operator-devices-alerts" path="/operator/devices-alerts" element={<RouteErrorBoundary><OperatorDevicesAlertsPage /></RouteErrorBoundary>} />,
     <Route key="operator-roi-ledger" path="/operator/roi-ledger" element={<RouteErrorBoundary><OperatorRoiLedgerPage /></RouteErrorBoundary>} />,
     <Route key="operator-field-memory" path="/operator/field-memory" element={<RouteErrorBoundary><OperatorFieldMemoryPage /></RouteErrorBoundary>} />,
+    <Route key="h52-evidence-twin" path="/app/operator/fields/:fieldId/evidence-twin" element={<RouteErrorBoundary><OperatorEvidenceTwinPage /></RouteErrorBoundary>} />,
+    <Route key="h52-water-stress-loop" path="/app/operator/fields/:fieldId/evidence-twin/water-stress" element={<RouteErrorBoundary><OperatorEvidenceTwinPage /></RouteErrorBoundary>} />,
   ];
 }
