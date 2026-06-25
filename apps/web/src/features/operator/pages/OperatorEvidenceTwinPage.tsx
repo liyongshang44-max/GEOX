@@ -51,6 +51,21 @@ function refsText(option: WaterStressScenarioOptionV1): string {
   return option.evidence_refs.length > 0 ? option.evidence_refs.map((ref) => ref.label ?? ref.ref_id).join(" / ") : "未提供引用";
 }
 
+function nodeRefsText(node: EvidenceTwinNodeV1): string {
+  const refs = [...node.source_refs, ...node.evidence_refs];
+  return refs.length > 0 ? refs.map((ref) => ref.label ?? ref.ref_id).join(" / ") : "证据引用缺失";
+}
+
+function blockingReasonsText(node: EvidenceTwinNodeV1): string {
+  return node.quality.blocking_reasons.length > 0 ? node.quality.blocking_reasons.join(" / ") : "无阻塞原因";
+}
+
+function expandPayloadText(node: EvidenceTwinNodeV1): string {
+  if (!node.expand_payload) return "未提供 expand_payload";
+  const keys = Object.keys(node.expand_payload);
+  return keys.length > 0 ? keys.join(" / ") : "expand_payload 为空";
+}
+
 function FieldHeaderCard({ twin }: { twin: OperatorEvidenceTwinV1 }): React.ReactElement {
   return (
     <article className="operatorPanel" data-card="h52-field-header">
@@ -191,6 +206,54 @@ function ScenarioReadOnlyPanel({ twin }: { twin: OperatorEvidenceTwinV1 }): Reac
   );
 }
 
+function VerificationReadOnlyPanel({ twin }: { twin: OperatorEvidenceTwinV1 }): React.ReactElement {
+  const loop = twin.water_stress_loop;
+  const verificationGap = twin.gaps.find((gapItem) => gapItem.gap_code === "WATER_RESPONSE_VERIFICATION_MISSING");
+  const acceptanceGap = twin.gaps.find((gapItem) => gapItem.gap_code === "ACCEPTANCE_RESULT_MISSING");
+  const rows: Array<{ code: string; node: EvidenceTwinNodeV1 }> = [
+    { code: "AS_EXECUTED", node: loop.as_executed },
+    { code: "EVIDENCE", node: loop.evidence },
+    { code: "ACCEPTANCE", node: loop.acceptance },
+    { code: "VERIFICATION", node: loop.verification },
+  ];
+
+  return (
+    <article className="operatorPanel" data-card="h52-verification-read-only" data-verification-read-only="true">
+      <p className="operatorEyebrow">Post-Irrigation Verification read-only section</p>
+      <h3>灌后验证只读</h3>
+      <p>本区只展示执行尾部、执行证据、验收结果和灌后水分响应验证，不提交回执、不写验收或验证事实。</p>
+      <ul className="operatorList">
+        <li>Verification status：{statusText(loop.verification.status)}</li>
+        <li>Acceptance status：{statusText(loop.acceptance.status)}</li>
+        <li>Execution evidence status：{statusText(loop.evidence.status)}</li>
+        <li>Verification gap：{verificationGap ? verificationGap.gap_code : "WATER_RESPONSE_VERIFICATION_MISSING"}</li>
+        <li>Acceptance gap：{acceptanceGap ? acceptanceGap.gap_code : loop.acceptance.status === "MISSING" ? "ACCEPTANCE_RESULT_MISSING" : "未阻塞"}</li>
+      </ul>
+      <div className="operatorTableWrap">
+        <table className="operatorTable" data-table="h52-post-irrigation-verification-nodes">
+          <thead>
+            <tr><th>Code</th><th>Node</th><th>Kind</th><th>Status</th><th>Schema</th><th>Refs</th><th>Blocking</th><th>Payload</th></tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.code} data-verification-node={row.code}>
+                <td>{row.code}</td>
+                <td>{row.node.label}</td>
+                <td>{row.node.kind}</td>
+                <td>{statusText(row.node.status)}</td>
+                <td>{emptyText(row.node.schema_ref)}</td>
+                <td>{nodeRefsText(row.node)}</td>
+                <td>{blockingReasonsText(row.node)}</td>
+                <td>{expandPayloadText(row.node)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </article>
+  );
+}
+
 function GapPanel({ gaps }: { gaps: EvidenceTwinGapV1[] }): React.ReactElement {
   return (
     <article className="operatorPanel" data-card="h52-gaps">
@@ -250,6 +313,7 @@ export default function OperatorEvidenceTwinPage(): React.ReactElement {
         <LineageCard twin={twin} />
         <WaterStressStepTable steps={twin.water_stress_loop.steps} />
         <ScenarioReadOnlyPanel twin={twin} />
+        <VerificationReadOnlyPanel twin={twin} />
         <GapPanel gaps={twin.gaps} />
         <BoundaryPanel rules={twin.boundary_rules} />
       </div>
