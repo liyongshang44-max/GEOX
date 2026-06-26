@@ -53,6 +53,9 @@ requireIncludes('h57_preflight_doc', preflightDoc, [
 requireIncludes('roi_route', roiRoute, [
   '/api/v1/roi-ledger/from-as-executed',
   '/api/v1/roi-ledger/formalize-from-acceptance',
+  'roi_ledger.write',
+  'requireTenantScopeV1',
+  'requireTenantMatchOr404V1',
   'AS_EXECUTED_SIGNAL',
   'FORMAL_ACCEPTANCE',
   'FORMAL_ACCEPTED',
@@ -63,6 +66,19 @@ requireIncludes('roi_route', roiRoute, [
 requireIncludes('roi_domain', roiDomain, [
   'createRoiLedgersFromAsExecuted',
   'formalizeRoiLedgersFromAcceptance',
+  'getAcceptanceResultById',
+  'validateFormalAcceptancePayload',
+  'ACCEPTANCE_VERDICT_NOT_PASS',
+  'ACCEPTANCE_NOT_FORMAL',
+  'FORMAL_EVIDENCE_NOT_PASSED',
+  'CHAIN_VALIDATION_NOT_PASSED',
+  'AS_EXECUTED_SIGNAL',
+  'INTERIM_SUPPORTED',
+  'customer_visible_value === false',
+  'FORMAL_ACCEPTANCE',
+  'FORMAL_ACCEPTED',
+  'customer_visible_value = true',
+  'FORMALIZABLE_INTERIM_ROI_NOT_FOUND',
 ]);
 
 requireIncludes('roi_acceptance', roiAcceptance, [
@@ -91,6 +107,8 @@ console.log(JSON.stringify({
   roi_lane_split_present: true,
   as_executed_signal_not_customer_visible: true,
   formal_acceptance_customer_visible: true,
+  formal_acceptance_gate_protected: true,
+  interim_roi_required_before_formal_roi: true,
   roi_acceptance_from_as_executed_present: true,
   formal_roi_runtime_acceptance_not_claimed: true,
   roi_field_memory_separated: true,
