@@ -20,6 +20,8 @@ function fail(error, details = {}) { console.error(JSON.stringify({ ok:false, ac
 function ok(x, e, d = {}) { if (!x) fail(e, d); }
 function read(file) { return fs.readFileSync(path.resolve(process.cwd(), file), 'utf8'); }
 function has(file, token) { ok(read(file).includes(token), 'TOKEN_MISSING', { file, token }); }
+function lower(value) { return String(value || '').toLowerCase(); }
+function noPost(value, code) { ok(!lower(value).includes('post_irrigation'), code, { value }); }
 
 function staticChecks() {
   has('scripts/h53/DERIVE_H53_3_FORECAST_SCENARIO_V1.cjs', SRC);
@@ -27,6 +29,7 @@ function staticChecks() {
   has('scripts/h53/DERIVE_H53_3_FORECAST_SCENARIO_V1.cjs', 'root_zone_soil_water_forecast_v1');
   has('scripts/h53/DERIVE_H53_3_FORECAST_SCENARIO_V1.cjs', 'irrigation_scenario_set_v1');
   has('scripts/h53/DERIVE_H53_3_FORECAST_SCENARIO_V1.cjs', 'recommendation_created:false');
+  has('apps/server/src/routes/v1/operator_evidence_twin.ts', "NOT LIKE '%post_irrigation%'");
 }
 
 async function dbChecks() {
@@ -65,12 +68,15 @@ async function endpointCheck() {
   const body = await response.text();
   ok(response.status === 200, 'ENDPOINT_NOT_200', { status: response.status, body: body.slice(0,1000) });
   const json = JSON.parse(body);
-  const loop = json.operator_evidence_twin_v1?.water_stress_loop;
+  const twin = json.operator_evidence_twin_v1;
+  const loop = twin?.water_stress_loop;
   ok(loop?.forecast?.status === 'AVAILABLE', 'FORECAST_NOT_AVAILABLE_IN_ENDPOINT', { status: loop?.forecast?.status });
   ok(loop?.scenario?.status === 'AVAILABLE', 'SCENARIO_NOT_AVAILABLE_IN_ENDPOINT', { status: loop?.scenario?.status });
   ok(loop?.recommendation?.status === 'DERIVED_PENDING', 'RECOMMENDATION_SHOULD_STAY_PENDING', { status: loop?.recommendation?.status });
   ok(loop?.approval?.status === 'DERIVED_PENDING', 'APPROVAL_SHOULD_STAY_PENDING', { status: loop?.approval?.status });
-  return { skipped:false, forecast: loop.forecast.expand_payload, scenario_set_id: loop.scenario.scenario_set_id, option_count: loop.scenario.options.length };
+  const sensingWindow = loop?.inputs?.soil_moisture?.find((item) => item?.schema_ref === 'soil_moisture_sensing_window_index_v1');
+  noPost(sensingWindow?.expand_payload?.window_id, 'ENDPOINT_SENSING_WINDOW_POST_IRRIGATION');
+  return { skipped:false, forecast: loop.forecast.expand_payload, scenario_set_id: loop.scenario.scenario_set_id, option_count: loop.scenario.options.length, sensing_window_id: sensingWindow?.expand_payload?.window_id };
 }
 
 (async function main(){ staticChecks(); const db = await dbChecks(); const endpoint = await endpointCheck(); console.log(JSON.stringify({ ok:true, acceptance:'ACCEPTANCE_H53_3_FORECAST_SCENARIO_V1', db, endpoint }, null, 2)); })().catch((error)=>fail(error.message));
