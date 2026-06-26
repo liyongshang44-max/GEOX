@@ -1,7 +1,7 @@
 // apps/web/src/features/operator/pages/OperatorEvidenceTwinPage.tsx
-// Purpose: render the H52/H53 Operator Evidence Twin read-only page for the Water Stress Loop P0 and sensing readback.
+// Purpose: render the H52/H53 Operator Evidence Twin read-only page for Water Stress sensing readback and downstream gap visibility.
 // Boundary: this page fetches only the read model; it does not submit recommendations, approve, dispatch, or create AO-ACT tasks.
-// H52.1-a guardrail: this component consumes route fieldId and read-only evidence twin data; it does not write facts, seed data, DB rows, or action records.
+// H53.1a guardrail: this component reorganizes sensing and pending-stage presentation only; it does not change backend contracts or create write actions.
 
 import React from "react";
 import { useParams } from "react-router-dom";
@@ -16,6 +16,21 @@ import {
   type WaterStressScenarioOptionV1,
 } from "../evidenceTwin/evidenceTwinAdapter";
 
+type DisplayMetric = {
+  label: string;
+  value: string;
+  unit?: string;
+  source: string;
+  status: string;
+};
+
+type PhaseRow = {
+  phase: string;
+  intent: string;
+  nodes: EvidenceTwinNodeV1[];
+  expected_output: string;
+};
+
 function statusText(value: string | null | undefined): string {
   const raw = String(value ?? "").trim();
   const labels: Record<string, string> = {
@@ -23,12 +38,12 @@ function statusText(value: string | null | undefined): string {
     LIMITED: "受限",
     MISSING: "缺失",
     BLOCKING: "阻塞",
-    DERIVED_PENDING: "待推导",
+    DERIVED_PENDING: "待系统生成",
     NOT_APPLICABLE: "不适用",
     UNKNOWN: "未知",
     NOT_VERIFIABLE: "不可验证",
     INFO: "信息",
-    WARNING: "警告",
+    WARNING: "提示",
   };
   return labels[raw] ? labels[raw] + "（" + raw + "）" : raw || "未知";
 }
@@ -55,6 +70,33 @@ function evidenceTwinReadUrl(fieldId: string): string {
   return evidenceTwinApiBase() + "/api/v1/operator/fields/" + encodedFieldId + "/evidence-twin?" + query.toString();
 }
 
+function asNumber(value: unknown): number | null {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function textValue(value: unknown): string {
+  if (value === null || value === undefined) return "未提供";
+  if (typeof value === "number") return Number.isFinite(value) ? String(value) : "未提供";
+  if (typeof value === "object") return JSON.stringify(value);
+  const raw = String(value).trim();
+  return raw || "未提供";
+}
+
+function payloadValue(node: EvidenceTwinNodeV1 | null | undefined, key: string): string {
+  if (!node?.expand_payload) return "未提供";
+  return textValue(node.expand_payload[key]);
+}
+
+function payloadNumber(node: EvidenceTwinNodeV1 | null | undefined, keys: string[]): number | null {
+  if (!node?.expand_payload) return null;
+  for (const key of keys) {
+    const parsed = asNumber(node.expand_payload[key]);
+    if (parsed !== null) return parsed;
+  }
+  return null;
+}
+
 function refCountText(node: EvidenceTwinNodeV1): string {
   const count = node.evidence_refs.length + node.source_refs.length;
   return String(count) + " 条引用";
@@ -73,69 +115,34 @@ function blockingReasonsText(node: EvidenceTwinNodeV1): string {
   return node.quality.blocking_reasons.length > 0 ? node.quality.blocking_reasons.join(" / ") : "无阻塞原因";
 }
 
-function expandPayloadText(node: EvidenceTwinNodeV1): string {
-  if (!node.expand_payload) return "未提供 expand_payload";
-  const keys = Object.keys(node.expand_payload);
-  return keys.length > 0 ? keys.join(" / ") : "expand_payload 为空";
+function latestAvailableNode(nodes: EvidenceTwinNodeV1[], keys: string[]): EvidenceTwinNodeV1 | null {
+  return nodes.find((node) => node.status === "AVAILABLE" && keys.some((key) => node.expand_payload?.[key] !== undefined && node.expand_payload?.[key] !== null)) ?? null;
 }
 
-function payloadRaw(node: EvidenceTwinNodeV1 | null | undefined, key: string): unknown {
-  return node?.expand_payload?.[key];
+function phaseStatus(nodes: EvidenceTwinNodeV1[]): string {
+  if (nodes.some((node) => node.status === "AVAILABLE")) return "AVAILABLE";
+  if (nodes.some((node) => node.status === "DERIVED_PENDING")) return "DERIVED_PENDING";
+  if (nodes.some((node) => node.status === "MISSING")) return "MISSING";
+  return nodes[0]?.status ?? "UNKNOWN";
 }
 
-function payloadText(node: EvidenceTwinNodeV1 | null | undefined, key: string): string {
-  const value = payloadRaw(node, key);
-  if (value === null || value === undefined || value === "") return "未提供";
-  if (typeof value === "object") return JSON.stringify(value);
-  return String(value);
+function writePolicyText(node: EvidenceTwinNodeV1): string {
+  return node.write_policy.write_ready ? "允许写入" : "只读 / allowed_actions=[]";
 }
 
-function payloadNumber(node: EvidenceTwinNodeV1 | null | undefined, key: string): number | null {
-  const parsed = Number(payloadRaw(node, key));
-  return Number.isFinite(parsed) ? parsed : null;
+function compactNodeList(nodes: EvidenceTwinNodeV1[]): string {
+  return nodes.map((node) => node.label + "：" + statusText(node.status)).join("；");
 }
 
-function numberText(value: number | null, suffix = ""): string {
-  if (!Number.isFinite(Number(value))) return "未提供";
-  const fixed = Number(value).toFixed(3).replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1");
-  return fixed + suffix;
-}
-
-function firstAvailableNode(nodes: EvidenceTwinNodeV1[], keys: string[]): EvidenceTwinNodeV1 | null {
-  const available = nodes.find((node) => node.status === "AVAILABLE" && keys.some((key) => payloadRaw(node, key) !== undefined && payloadRaw(node, key) !== null));
-  return available ?? nodes.find((node) => node.status === "AVAILABLE") ?? nodes[0] ?? null;
-}
-
-function availabilityText(node: EvidenceTwinNodeV1 | null): string {
-  return node ? statusText(node.status) : "缺失（MISSING）";
-}
-
-function miniCardStyle(): React.CSSProperties {
-  return {
-    border: "1px solid rgba(15, 23, 42, 0.08)",
-    borderRadius: 14,
-    padding: 14,
-    background: "rgba(255, 255, 255, 0.72)",
-    minWidth: 0,
-  };
-}
-
-function metricValueStyle(): React.CSSProperties {
-  return {
-    fontSize: 22,
-    lineHeight: 1.2,
-    fontWeight: 700,
-    margin: "6px 0 4px",
-  };
-}
-
-function miniGridStyle(): React.CSSProperties {
-  return {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-    gap: 12,
-    marginTop: 12,
-  };
+function metricCard(metric: DisplayMetric): React.ReactElement {
+  return (
+    <div className="operatorPanel" data-sensing-metric={metric.label}>
+      <p className="operatorEyebrow">{metric.source}</p>
+      <h3>{metric.value}{metric.unit ? " " + metric.unit : ""}</h3>
+      <p>{metric.label}</p>
+      <p>状态：{statusText(metric.status)}</p>
+    </div>
+  );
 }
 
 function FieldHeaderCard({ twin }: { twin: OperatorEvidenceTwinV1 }): React.ReactElement {
@@ -164,6 +171,174 @@ function CurrentStateCard({ twin }: { twin: OperatorEvidenceTwinV1 }): React.Rea
         <li>置信度：{emptyText(twin.current_state.confidence.label)}</li>
         <li>证据引用：{String(twin.current_state.evidence_refs.length)} 条</li>
       </ul>
+    </article>
+  );
+}
+
+function H531aStatusSummaryCard({ twin, source }: { twin: OperatorEvidenceTwinV1; source: string }): React.ReactElement {
+  const loop = twin.water_stress_loop;
+  const sensingAvailable =
+    loop.inputs.soil_moisture.some((node) => node.status === "AVAILABLE")
+    || loop.inputs.weather_forecast.some((node) => node.status === "AVAILABLE");
+  const derivedPending = [loop.water_stress_state, loop.forecast, loop.scenario, loop.recommendation].every((node) => node.status === "DERIVED_PENDING");
+  const controlPending = [loop.approval, loop.operation, loop.ao_act, loop.as_executed, loop.evidence, loop.acceptance, loop.verification].every((node) => node.status === "DERIVED_PENDING");
+
+  return (
+    <article className="operatorPanel" data-card="h53-1a-status-summary" data-read-source={source}>
+      <p className="operatorEyebrow">H53.1a operator display summary</p>
+      <h3>感知已回读，状态待系统生成</h3>
+      <p>本页已经读到 RawSignal / Observation / sensing window / weather forecast。后续 State、Scenario、Recommendation、Approval、AO-ACT、Acceptance 不在 H53.1a 页面触发。</p>
+      <ul className="operatorList">
+        <li>读模型来源：{source}</li>
+        <li>感知输入：{sensingAvailable ? "已回读" : "未回读"}</li>
+        <li>系统推导层：{derivedPending ? "待系统生成" : "部分已生成"}</li>
+        <li>流程控制层：{controlPending ? "未进入控制链" : "部分已进入控制链"}</li>
+      </ul>
+    </article>
+  );
+}
+
+function SensingReadbackCard({ twin, source }: { twin: OperatorEvidenceTwinV1; source: string }): React.ReactElement {
+  const loop = twin.water_stress_loop;
+  const soilValueNode = latestAvailableNode(loop.inputs.soil_moisture, ["soil_moisture_percent", "value_num"]);
+  const windowNode = latestAvailableNode(loop.inputs.soil_moisture, ["coverage_ratio", "quality_status", "expected_points", "actual_points"]);
+  const weatherNode = latestAvailableNode(loop.inputs.weather_forecast, ["rainfall_forecast_mm_72h", "et0_mm_72h", "temperature_max_c_72h"]);
+  const soilMoisturePercent = payloadNumber(soilValueNode, ["soil_moisture_percent", "value_num"]);
+  const coverageRatio = payloadNumber(windowNode, ["coverage_ratio"]);
+  const rainfall = payloadNumber(weatherNode, ["rainfall_forecast_mm_72h"]);
+  const et0 = payloadNumber(weatherNode, ["et0_mm_72h"]);
+
+  const metrics: DisplayMetric[] = [
+    {
+      label: "soil_moisture_percent",
+      value: soilMoisturePercent === null ? "未提供" : String(soilMoisturePercent),
+      unit: "%",
+      source: soilValueNode?.schema_ref ?? "telemetry_index_v1 / device_observation_index_v1",
+      status: soilValueNode?.status ?? "MISSING",
+    },
+    {
+      label: "coverage_ratio",
+      value: coverageRatio === null ? "未提供" : String(coverageRatio),
+      source: windowNode?.schema_ref ?? "soil_moisture_sensing_window_index_v1",
+      status: windowNode?.status ?? "MISSING",
+    },
+    {
+      label: "rainfall_forecast_mm_72h",
+      value: rainfall === null ? "未提供" : String(rainfall),
+      unit: "mm",
+      source: weatherNode?.schema_ref ?? "weather_forecast_index_v1",
+      status: weatherNode?.status ?? "MISSING",
+    },
+    {
+      label: "et0_mm_72h",
+      value: et0 === null ? "未提供" : String(et0),
+      unit: "mm",
+      source: weatherNode?.schema_ref ?? "weather_forecast_index_v1",
+      status: weatherNode?.status ?? "MISSING",
+    },
+  ];
+
+  return (
+    <article className="operatorPanel" data-card="h53-sensing-readback" data-card-version="h53-1a" data-read-source={source}>
+      <p className="operatorEyebrow">H53.1a sensing readback</p>
+      <h3>感知数据回读</h3>
+      <p>这里把 sensing-only 数据拆成操作员可读卡片；不把 State、Scenario、AO-ACT、Acceptance 提前伪装成结果。</p>
+      <div className="operatorPanelGrid" data-card="h53-1a-sensing-metric-cards">
+        {metrics.map((metric) => (
+          <React.Fragment key={metric.label}>{metricCard(metric)}</React.Fragment>
+        ))}
+      </div>
+      <div className="operatorTableWrap">
+        <table className="operatorTable" data-table="h53-1a-sensing-detail">
+          <thead>
+            <tr><th>输入层</th><th>节点</th><th>状态</th><th>关键字段</th><th>引用</th></tr>
+          </thead>
+          <tbody>
+            <tr data-sensing-row="soil_moisture_percent">
+              <td>Soil Moisture</td>
+              <td>{soilValueNode?.label ?? "未回读"}</td>
+              <td>{statusText(soilValueNode?.status)}</td>
+              <td>soil_moisture_percent={metrics[0].value}%；metric={payloadValue(soilValueNode, "metric")}</td>
+              <td>{soilValueNode ? refCountText(soilValueNode) : "0 条引用"}</td>
+            </tr>
+            <tr data-sensing-row="sensing_window">
+              <td>Sensing Window</td>
+              <td>{windowNode?.label ?? "未回读"}</td>
+              <td>{statusText(windowNode?.status)}</td>
+              <td>coverage_ratio={metrics[1].value}；quality_status={payloadValue(windowNode, "quality_status")}；actual_points={payloadValue(windowNode, "actual_points")}；expected_points={payloadValue(windowNode, "expected_points")}</td>
+              <td>{windowNode ? refCountText(windowNode) : "0 条引用"}</td>
+            </tr>
+            <tr data-sensing-row="weather_forecast">
+              <td>Weather Forecast</td>
+              <td>{weatherNode?.label ?? "未回读"}</td>
+              <td>{statusText(weatherNode?.status)}</td>
+              <td>rainfall_forecast_mm_72h={metrics[2].value} mm；et0_mm_72h={metrics[3].value} mm；temperature_max_c_72h={payloadValue(weatherNode, "temperature_max_c_72h")}</td>
+              <td>{weatherNode ? refCountText(weatherNode) : "0 条引用"}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </article>
+  );
+}
+
+function PhaseGroupedPendingCard({ twin }: { twin: OperatorEvidenceTwinV1 }): React.ReactElement {
+  const loop = twin.water_stress_loop;
+  const phases: PhaseRow[] = [
+    {
+      phase: "已完成输入层",
+      intent: "系统已经可读回感知输入。",
+      nodes: [...loop.inputs.soil_moisture, ...loop.inputs.weather_forecast],
+      expected_output: "RawSignal / Observation / Sensing Window / Weather Forecast Input",
+    },
+    {
+      phase: "等待系统推导",
+      intent: "由后续 derivation engine 生成，不由 seed 或页面写入。",
+      nodes: [loop.water_stress_state, loop.forecast, loop.scenario, loop.recommendation],
+      expected_output: "WaterStressState / Forecast / Scenario / RecommendationCandidate",
+    },
+    {
+      phase: "等待人工与控制链",
+      intent: "仓库已有控制链能力，但 H53.1a 页面不触发审批、作业计划或 AO-ACT。",
+      nodes: [loop.approval, loop.operation, loop.ao_act],
+      expected_output: "Human Approval / OperationPlan / AO-ACT Task",
+    },
+    {
+      phase: "等待执行与验收闭环",
+      intent: "必须依赖执行回执、实执记录、证据和验收。",
+      nodes: [loop.as_executed, loop.evidence, loop.acceptance, loop.verification],
+      expected_output: "AsExecuted / Evidence / Acceptance / WaterResponseVerification",
+    },
+    {
+      phase: "等待经营沉淀",
+      intent: "只在正式验收和闭环证据成立后进入。",
+      nodes: [],
+      expected_output: "ROI / Field Memory",
+    },
+  ];
+
+  return (
+    <article className="operatorPanel" data-card="h53-1a-pending-phases">
+      <p className="operatorEyebrow">Pending nodes grouped by stage</p>
+      <h3>后续输出阶段</h3>
+      <p>这些节点最终应由系统或控制流程输出，但当前页面只展示状态，不触发写动作。</p>
+      <div className="operatorTableWrap">
+        <table className="operatorTable" data-table="h53-1a-pending-phases">
+          <thead>
+            <tr><th>阶段</th><th>当前状态</th><th>应该输出什么</th><th>为什么还没有生成</th></tr>
+          </thead>
+          <tbody>
+            {phases.map((phase) => (
+              <tr key={phase.phase} data-phase={phase.phase}>
+                <td>{phase.phase}</td>
+                <td>{phase.nodes.length ? statusText(phaseStatus(phase.nodes)) : "待正式验收后生成"}</td>
+                <td>{phase.expected_output}</td>
+                <td>{phase.intent}{phase.nodes.length ? "；" + compactNodeList(phase.nodes) : "。"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </article>
   );
 }
@@ -205,128 +380,12 @@ function LineageCard({ twin }: { twin: OperatorEvidenceTwinV1 }): React.ReactEle
   );
 }
 
-function SensingReadbackCard({ twin, source }: { twin: OperatorEvidenceTwinV1; source: string }): React.ReactElement {
-  const soilNode = firstAvailableNode(twin.water_stress_loop.inputs.soil_moisture, ["soil_moisture_percent", "value_num"]);
-  const windowNode = firstAvailableNode(twin.water_stress_loop.inputs.soil_moisture, ["coverage_ratio", "quality_status"]);
-  const weatherNode = firstAvailableNode(twin.water_stress_loop.inputs.weather_forecast, ["rainfall_forecast_mm_72h", "et0_mm_72h", "temperature_max_c_72h"]);
-  const soilMoisture = payloadNumber(soilNode, "soil_moisture_percent") ?? payloadNumber(soilNode, "value_num");
-  const coverageRatio = payloadNumber(windowNode, "coverage_ratio");
-  const qualityStatus = payloadText(windowNode, "quality_status");
-  const rainfall = payloadNumber(weatherNode, "rainfall_forecast_mm_72h");
-  const et0 = payloadNumber(weatherNode, "et0_mm_72h");
-  const tempMax = payloadNumber(weatherNode, "temperature_max_c_72h");
-
-  return (
-    <article className="operatorPanel" data-card="h53-sensing-readback" data-read-source={source}>
-      <p className="operatorEyebrow">H53.1a sensing readback display</p>
-      <h3>感知数据已回读，状态仍待推导</h3>
-      <p>本区只把 RawSignal / Observation 层整理成人能读懂的感知卡片；WaterStressState、Scenario、AO-ACT、Acceptance 不在本阶段生成。</p>
-      <div style={miniGridStyle()} data-section="h53-sensing-cards">
-        <section style={miniCardStyle()} data-card="h53-sensing-soil-moisture">
-          <p className="operatorEyebrow">Soil Moisture</p>
-          <div style={metricValueStyle()}>{numberText(soilMoisture, " %")}</div>
-          <ul className="operatorList">
-            <li>状态：{availabilityText(soilNode)}</li>
-            <li>metric：{payloadText(soilNode, "metric")}</li>
-            <li>来源：telemetry_index_v1 / device_observation_index_v1</li>
-            <li>引用：{soilNode ? refCountText(soilNode) : "0 条引用"}</li>
-          </ul>
-        </section>
-        <section style={miniCardStyle()} data-card="h53-sensing-window">
-          <p className="operatorEyebrow">Sensing Window</p>
-          <div style={metricValueStyle()}>{numberText(coverageRatio)}</div>
-          <ul className="operatorList">
-            <li>coverage_ratio：{numberText(coverageRatio)}</li>
-            <li>quality_status：{qualityStatus}</li>
-            <li>actual_points：{payloadText(windowNode, "actual_points")}</li>
-            <li>expected_points：{payloadText(windowNode, "expected_points")}</li>
-            <li>max_gap_ms：{payloadText(windowNode, "max_gap_ms")}</li>
-          </ul>
-        </section>
-        <section style={miniCardStyle()} data-card="h53-weather-forecast">
-          <p className="operatorEyebrow">Weather Forecast Input</p>
-          <div style={metricValueStyle()}>{numberText(rainfall, " mm")}</div>
-          <ul className="operatorList">
-            <li>rainfall_forecast_mm_72h：{numberText(rainfall, " mm")}</li>
-            <li>et0_mm_72h：{numberText(et0, " mm")}</li>
-            <li>temperature_max_c_72h：{numberText(tempMax, " ℃")}</li>
-            <li>状态：{availabilityText(weatherNode)}</li>
-          </ul>
-        </section>
-      </div>
-    </article>
-  );
-}
-
-function PendingStageCard({ twin }: { twin: OperatorEvidenceTwinV1 }): React.ReactElement {
-  const loop = twin.water_stress_loop;
-  const stages: Array<{ id: string; title: string; summary: string; nodes: Array<{ label: string; node: EvidenceTwinNodeV1 | null; code: string }> }> = [
-    {
-      id: "system-derivation",
-      title: "等待系统推导",
-      summary: "这些节点应该由 WaterStressState / Forecast / Scenario / Recommendation engine 生成，不能由 sensing-only seed 填充。",
-      nodes: [
-        { label: "WaterStressState / 水分压力状态", node: loop.water_stress_state, code: "water_stress_state" },
-        { label: "Forecast / 水分预测", node: loop.forecast, code: "forecast" },
-        { label: "Scenario / 情景", node: loop.scenario, code: "scenario" },
-        { label: "Recommendation / 建议候选", node: loop.recommendation, code: "recommendation" },
-      ],
-    },
-    {
-      id: "operator-control-flow",
-      title: "等待人审与控制流程",
-      summary: "这些节点依赖已有控制链路：RecommendationCandidate → Human Approval → OperationPlan → AO-ACT → Receipt / AsExecuted → Evidence。",
-      nodes: [
-        { label: "Approval / 审批", node: loop.approval, code: "approval" },
-        { label: "Operation / 作业计划", node: loop.operation, code: "operation" },
-        { label: "AO-ACT", node: loop.ao_act, code: "ao_act" },
-        { label: "AsExecuted", node: loop.as_executed, code: "as_executed" },
-        { label: "Evidence", node: loop.evidence, code: "evidence" },
-      ],
-    },
-    {
-      id: "closure-memory",
-      title: "等待验收与闭环沉淀",
-      summary: "这些节点只能在 receipt、execution evidence、acceptance gate 之后生成；ROI / Field Memory 不属于 H53.1a 写入范围。",
-      nodes: [
-        { label: "Acceptance / 验收", node: loop.acceptance, code: "acceptance" },
-        { label: "Verification / 灌后验证", node: loop.verification, code: "verification" },
-        { label: "ROI", node: null, code: "roi" },
-        { label: "Field Memory", node: null, code: "field_memory" },
-      ],
-    },
-  ];
-
-  return (
-    <article className="operatorPanel" data-card="h53-pending-stage-groups">
-      <p className="operatorEyebrow">H53.1a pending stage groups</p>
-      <h3>后续节点按生成阶段分组</h3>
-      <p>当前页面不是“数据没有填满”，而是 sensing input 已就绪，后续节点等待对应系统推导或显式流程触发。</p>
-      <div style={miniGridStyle()}>
-        {stages.map((stage) => (
-          <section key={stage.id} style={miniCardStyle()} data-stage={stage.id}>
-            <p className="operatorEyebrow">{stage.title}</p>
-            <p>{stage.summary}</p>
-            <ul className="operatorList">
-              {stage.nodes.map((item) => (
-                <li key={item.code} data-pending-node={item.code}>
-                  {item.label}：{item.node ? statusText(item.node.status) : "待后续闭环生成（NOT_CREATED_IN_H53_1A）"}
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
-      </div>
-    </article>
-  );
-}
-
 function WaterStressStepTable({ steps }: { steps: WaterStressLoopStepV1[] }): React.ReactElement {
   return (
     <article className="operatorPanel" data-card="h52-water-stress-loop" data-loop="water_stress_loop_v1">
       <p className="operatorEyebrow">水分压力闭环 · 猎鹰 1 号</p>
-      <h3>水分压力闭环原始节点表</h3>
-      <p>本表保留工程级节点明细，不触发审批、派单、AO-ACT task 创建或任何写入。</p>
+      <h3>水分压力闭环</h3>
+      <p>本表只展示闭环节点，不触发审批、派单、AO-ACT task 创建或任何写入。</p>
       <div className="operatorTableWrap">
         <table className="operatorTable" data-table="h52-water-stress-steps">
           <thead>
@@ -339,7 +398,7 @@ function WaterStressStepTable({ steps }: { steps: WaterStressLoopStepV1[] }): Re
                 <td>{step.label}</td>
                 <td>{step.kind}</td>
                 <td>{statusText(step.status)}</td>
-                <td>{step.write_policy.write_ready ? "允许写入" : "只读 / allowed_actions=[]"}</td>
+                <td>{writePolicyText(step)}</td>
               </tr>
             ))}
           </tbody>
@@ -420,7 +479,7 @@ function VerificationReadOnlyPanel({ twin }: { twin: OperatorEvidenceTwinV1 }): 
       <div className="operatorTableWrap">
         <table className="operatorTable" data-table="h52-post-irrigation-verification-nodes">
           <thead>
-            <tr><th>Code</th><th>Node</th><th>Kind</th><th>Status</th><th>Schema</th><th>Refs</th><th>Blocking</th><th>Payload</th></tr>
+            <tr><th>Code</th><th>Node</th><th>Kind</th><th>Status</th><th>Refs</th><th>Blocking</th></tr>
           </thead>
           <tbody>
             {rows.map((row) => (
@@ -429,10 +488,8 @@ function VerificationReadOnlyPanel({ twin }: { twin: OperatorEvidenceTwinV1 }): 
                 <td>{row.node.label}</td>
                 <td>{row.node.kind}</td>
                 <td>{statusText(row.node.status)}</td>
-                <td>{emptyText(row.node.schema_ref)}</td>
                 <td>{nodeRefsText(row.node)}</td>
                 <td>{blockingReasonsText(row.node)}</td>
-                <td>{expandPayloadText(row.node)}</td>
               </tr>
             ))}
           </tbody>
@@ -510,7 +567,7 @@ export default function OperatorEvidenceTwinPage(): React.ReactElement {
         <div>
           <p className="operatorEyebrow">操作员证据孪生</p>
           <h2>地块证据孪生</h2>
-          <p>本页是只读证据孪生页面，用于展示一块地从原始信号到状态、建议候选、执行证据和灌后验证的证据链。H53.1a 将感知数据整理为可读卡片，并把后续节点按生成阶段分组。</p>
+          <p>本页是只读证据孪生页面。H53.1a 只整理 sensing 回读展示，并把后续系统推导、人工审批、执行验收分阶段显示为待生成。</p>
         </div>
         <div className="operatorWorkbenchHeroActions" data-write-ready={String(envelope.writeReady)} data-dispatch-ready={String(envelope.dispatchReady)} data-approval-ready={String(envelope.approvalReady)} data-task-creation-ready={String(envelope.taskCreationReady)}>
           <span className="operatorActionLink">只读</span>
@@ -521,11 +578,12 @@ export default function OperatorEvidenceTwinPage(): React.ReactElement {
       </div>
 
       <div className="operatorPanelGrid">
+        <H531aStatusSummaryCard twin={twin} source={readSource} />
         <FieldHeaderCard twin={twin} />
         <CurrentStateCard twin={twin} />
-        <LineageCard twin={twin} />
         <SensingReadbackCard twin={twin} source={readSource} />
-        <PendingStageCard twin={twin} />
+        <PhaseGroupedPendingCard twin={twin} />
+        <LineageCard twin={twin} />
         <WaterStressStepTable steps={twin.water_stress_loop.steps} />
         <ScenarioReadOnlyPanel twin={twin} />
         <VerificationReadOnlyPanel twin={twin} />
