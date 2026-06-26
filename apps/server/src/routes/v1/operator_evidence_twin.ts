@@ -16,7 +16,7 @@ const H53_3_VERSION = "h53.3.v1";
 const H53_4_SOURCE = "H53_4_RECOMMENDATION_CANDIDATE_DERIVATION_V1";
 const H53_4_VERSION = "h53.4.v1";
 
-const STEP_DEFINITIONS = [
+const STEP_DEFINITIONS: Array<[string, number, string, string]> = [
   ["RAW_SIGNAL", 1, "原始信号", "raw_signal"],
   ["OBSERVATION", 2, "标准化观测", "observation"],
   ["WATER_STRESS_STATE", 3, "水分压力状态", "state_estimate"],
@@ -30,41 +30,19 @@ const STEP_DEFINITIONS = [
   ["EVIDENCE", 11, "执行证据", "evidence"],
   ["ACCEPTANCE", 12, "执行验收", "acceptance"],
   ["VERIFICATION", 13, "灌后水分响应验证", "verification"],
-] as const;
+];
 
-function text(value: unknown): string {
-  return String(value ?? "").trim();
-}
-
-function n(value: unknown): number | null {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function j(value: unknown): any {
-  if (!value) return null;
-  if (typeof value === "object") return value;
-  try { return JSON.parse(String(value)); } catch { return null; }
-}
-
-function arr(value: unknown): any[] {
-  const parsed = j(value);
-  if (Array.isArray(value)) return value;
-  return Array.isArray(parsed) ? parsed : [];
-}
-
-function ref(kind: string, id: unknown, schema: string | null = null) {
-  const refId = text(id);
-  return refId ? { kind, ref_id: refId, schema_ref: schema, label: refId, href: null } : null;
-}
-
-function refs(...items: Array<{ kind: string; id: unknown; schema?: string | null }>) {
-  return items.map((item) => ref(item.kind, item.id, item.schema ?? null)).filter(Boolean);
-}
-
-function writePolicy() {
-  return { write_ready: false, allowed_actions: [] };
-}
+function text(value: unknown): string { return String(value ?? "").trim(); }
+function n(value: unknown): number | null { const parsed = Number(value); return Number.isFinite(parsed) ? parsed : null; }
+function j(value: unknown): any { if (!value) return null; if (typeof value === "object") return value; try { return JSON.parse(String(value)); } catch { return null; } }
+function arr(value: unknown): any[] { const parsed = j(value); if (Array.isArray(value)) return value; return Array.isArray(parsed) ? parsed : []; }
+function rawPayload(row: Row | null): Row { return row ? (j(row.payload_json) ?? j(row.raw_payload_json) ?? j(row.record_json)?.payload ?? row) : {}; }
+function ts(row: Row | null, key: string): number | null { const value = row?.[key] ?? rawPayload(row)?.[key]; const numeric = Number(value); if (Number.isFinite(numeric)) return numeric; const parsed = Date.parse(String(value ?? "")); return Number.isFinite(parsed) ? parsed : null; }
+function ref(kind: string, id: unknown, schema: string | null = null) { const refId = text(id); return refId ? { kind, ref_id: refId, schema_ref: schema, label: refId, href: null } : null; }
+function refs(...items: Array<{ kind: string; id: unknown; schema?: string | null }>) { return items.map((item) => ref(item.kind, item.id, item.schema ?? null)).filter(Boolean); }
+function writePolicy() { return { write_ready: false, allowed_actions: [] }; }
+function gap(code: string, label: string, severity: string, nodeIds: string[] = []) { return { gap_code: code, label, severity, related_node_ids: nodeIds, suggested_resolution: null }; }
+function boundary(code: string, label: string, severity = "BLOCKING") { return { rule_code: code, label, severity, enforced: true }; }
 
 function node(args: { id: string; label: string; kind: string; schemaRef: string | null; status: string; sourceRefs?: any[]; evidenceRefs?: any[]; expandPayload?: Row | null; blockingReasons?: string[]; confidenceLabel?: string | null; confidenceScore?: number | null; latestTsMs?: number | null }) {
   return {
@@ -84,21 +62,8 @@ function node(args: { id: string; label: string; kind: string; schemaRef: string
   };
 }
 
-function missing(id: string, label: string, kind: string, schemaRef: string | null, code: string) {
-  return node({ id, label, kind, schemaRef, status: "MISSING", expandPayload: { gap_code: code }, blockingReasons: [code] });
-}
-
-function statusNode(code: string, label: string, kind: string, schema: string, gapCode: string) {
-  return node({ id: "derived_pending:" + code.toLowerCase(), label, kind, schemaRef: schema, status: "DERIVED_PENDING", expandPayload: { gap_code: gapCode, reason: "This node still waits for a later derivation or control-flow step." }, blockingReasons: [gapCode] });
-}
-
-function gap(code: string, label: string, severity: string, nodeIds: string[] = []) {
-  return { gap_code: code, label, severity, related_node_ids: nodeIds, suggested_resolution: null };
-}
-
-function boundary(code: string, label: string, severity = "BLOCKING") {
-  return { rule_code: code, label, severity, enforced: true };
-}
+function missing(id: string, label: string, kind: string, schemaRef: string | null, code: string) { return node({ id, label, kind, schemaRef, status: "MISSING", expandPayload: { gap_code: code }, blockingReasons: [code] }); }
+function statusNode(code: string, label: string, kind: string, schema: string, gapCode: string) { return node({ id: "derived_pending:" + code.toLowerCase(), label, kind, schemaRef: schema, status: "DERIVED_PENDING", expandPayload: { gap_code: gapCode, reason: "This node still waits for a later derivation or control-flow step." }, blockingReasons: [gapCode] }); }
 
 function scopeFrom(req: any, fieldId: string): Scope {
   const user = req?.user ?? req?.auth ?? req?.principal ?? {};
@@ -112,50 +77,16 @@ function scopeFrom(req: any, fieldId: string): Scope {
   };
 }
 
-function scoped(scope: Scope): boolean {
-  return Boolean(scope.tenantId && scope.projectId && scope.groupId && scope.fieldId);
-}
+function scoped(scope: Scope): boolean { return Boolean(scope.tenantId && scope.projectId && scope.groupId && scope.fieldId); }
+async function tableExists(pool: Pool, table: string): Promise<boolean> { const r = await pool.query("SELECT to_regclass($1)::text AS name", ["public." + table]).catch(() => ({ rows: [{ name: null }] as Row[] })); return Boolean(r.rows?.[0]?.name); }
+async function one(pool: Pool, sql: string, values: unknown[]): Promise<Row | null> { const r = await pool.query(sql, values).catch(() => ({ rows: [] as Row[] })); return r.rows?.[0] ?? null; }
+async function rows(pool: Pool, sql: string, values: unknown[]): Promise<Row[]> { const r = await pool.query(sql, values).catch(() => ({ rows: [] as Row[] })); return r.rows ?? []; }
 
-async function tableExists(pool: Pool, table: string): Promise<boolean> {
-  const r = await pool.query("SELECT to_regclass($1)::text AS name", ["public." + table]).catch(() => ({ rows: [{ name: null }] as Row[] }));
-  return Boolean(r.rows?.[0]?.name);
-}
-
-async function one(pool: Pool, sql: string, values: unknown[]): Promise<Row | null> {
-  const r = await pool.query(sql, values).catch(() => ({ rows: [] as Row[] }));
-  return r.rows?.[0] ?? null;
-}
-
-async function rows(pool: Pool, sql: string, values: unknown[]): Promise<Row[]> {
-  const r = await pool.query(sql, values).catch(() => ({ rows: [] as Row[] }));
-  return r.rows ?? [];
-}
-
-async function latestField(pool: Pool, scope: Scope) {
-  if (!scoped(scope) || !(await tableExists(pool, "field_index_v1"))) return null;
-  return one(pool, "SELECT * FROM field_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 LIMIT 1", [scope.tenantId, scope.projectId, scope.groupId, scope.fieldId]);
-}
-
-async function boundDevices(pool: Pool, scope: Scope) {
-  if (!scoped(scope) || !(await tableExists(pool, "device_binding_index_v1"))) return [];
-  return rows(pool, "SELECT device_id FROM device_binding_index_v1 WHERE tenant_id=$1 AND field_id=$2", [scope.tenantId, scope.fieldId]);
-}
-
-async function latestTelemetry(pool: Pool, scope: Scope, devices: string[]) {
-  if (!scope.tenantId || !devices.length || !(await tableExists(pool, "telemetry_index_v1"))) return null;
-  return one(pool, "SELECT * FROM telemetry_index_v1 WHERE tenant_id=$1 AND device_id = ANY($2::text[]) AND metric='soil_moisture_percent' ORDER BY ts DESC LIMIT 1", [scope.tenantId, devices]);
-}
-
-async function latestObservation(pool: Pool, scope: Scope) {
-  if (!scoped(scope) || !(await tableExists(pool, "device_observation_index_v1"))) return null;
-  return one(pool, "SELECT * FROM device_observation_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND metric='soil_moisture_percent' ORDER BY observed_at DESC LIMIT 1", [scope.tenantId, scope.projectId, scope.groupId, scope.fieldId]);
-}
-
-async function latestWindow(pool: Pool, scope: Scope) {
-  if (!scoped(scope) || !(await tableExists(pool, "soil_moisture_sensing_window_index_v1"))) return null;
-  return one(pool, "SELECT * FROM soil_moisture_sensing_window_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND lower(coalesce(window_id,'')) NOT LIKE '%post_irrigation%' ORDER BY updated_at DESC NULLS LAST, window_end DESC LIMIT 1", [scope.tenantId, scope.projectId, scope.groupId, scope.fieldId]);
-}
-
+async function latestField(pool: Pool, scope: Scope) { if (!scoped(scope) || !(await tableExists(pool, "field_index_v1"))) return null; return one(pool, "SELECT * FROM field_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 LIMIT 1", [scope.tenantId, scope.projectId, scope.groupId, scope.fieldId]); }
+async function boundDevices(pool: Pool, scope: Scope) { if (!scoped(scope) || !(await tableExists(pool, "device_binding_index_v1"))) return []; return rows(pool, "SELECT device_id FROM device_binding_index_v1 WHERE tenant_id=$1 AND field_id=$2", [scope.tenantId, scope.fieldId]); }
+async function latestTelemetry(pool: Pool, scope: Scope, devices: string[]) { if (!scope.tenantId || !devices.length || !(await tableExists(pool, "telemetry_index_v1"))) return null; return one(pool, "SELECT * FROM telemetry_index_v1 WHERE tenant_id=$1 AND device_id = ANY($2::text[]) AND metric='soil_moisture_percent' ORDER BY ts DESC LIMIT 1", [scope.tenantId, devices]); }
+async function latestObservation(pool: Pool, scope: Scope) { if (!scoped(scope) || !(await tableExists(pool, "device_observation_index_v1"))) return null; return one(pool, "SELECT * FROM device_observation_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND metric='soil_moisture_percent' ORDER BY observed_at DESC LIMIT 1", [scope.tenantId, scope.projectId, scope.groupId, scope.fieldId]); }
+async function latestWindow(pool: Pool, scope: Scope) { if (!scoped(scope) || !(await tableExists(pool, "soil_moisture_sensing_window_index_v1"))) return null; return one(pool, "SELECT * FROM soil_moisture_sensing_window_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND lower(coalesce(window_id,'')) NOT LIKE '%post_irrigation%' ORDER BY updated_at DESC NULLS LAST, window_end DESC LIMIT 1", [scope.tenantId, scope.projectId, scope.groupId, scope.fieldId]); }
 async function latestWeather(pool: Pool, scope: Scope) {
   if (!scoped(scope)) return null;
   if (await tableExists(pool, "weather_forecast_index_v1")) {
@@ -165,75 +96,54 @@ async function latestWeather(pool: Pool, scope: Scope) {
   if (!(await tableExists(pool, "facts"))) return null;
   return one(pool, "SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json, record_json::jsonb->'payload' AS payload_json FROM facts WHERE (record_json::jsonb->>'type')='weather_forecast_fact_v1' AND (record_json::jsonb#>>'{payload,tenant_id}')=$1 AND (record_json::jsonb#>>'{payload,project_id}')=$2 AND (record_json::jsonb#>>'{payload,group_id}')=$3 AND (record_json::jsonb#>>'{payload,field_id}')=$4 ORDER BY occurred_at DESC LIMIT 1", [scope.tenantId, scope.projectId, scope.groupId, scope.fieldId]);
 }
-
-async function latestH532WaterState(pool: Pool, scope: Scope) {
+async function latestFact(pool: Pool, scope: Scope, source: string, version: string, type: string) {
   if (!scoped(scope) || !(await tableExists(pool, "facts"))) return null;
-  return one(pool, "SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json, record_json::jsonb->'payload' AS payload_json FROM facts WHERE source=$1 AND (record_json::jsonb->>'type')='water_state_estimate_v1' AND (record_json::jsonb#>>'{payload,derivation_version}')=$2 AND (record_json::jsonb#>>'{payload,tenant_id}')=$3 AND (record_json::jsonb#>>'{payload,project_id}')=$4 AND (record_json::jsonb#>>'{payload,group_id}')=$5 AND (record_json::jsonb#>>'{payload,field_id}')=$6 ORDER BY occurred_at DESC, fact_id DESC LIMIT 1", [H53_2_SOURCE, H53_2_VERSION, scope.tenantId, scope.projectId, scope.groupId, scope.fieldId]);
+  return one(pool, "SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json, record_json::jsonb->'payload' AS payload_json FROM facts WHERE source=$1 AND (record_json::jsonb->>'type')=$2 AND (record_json::jsonb#>>'{payload,derivation_version}')=$3 AND (record_json::jsonb#>>'{payload,tenant_id}')=$4 AND (record_json::jsonb#>>'{payload,project_id}')=$5 AND (record_json::jsonb#>>'{payload,group_id}')=$6 AND (record_json::jsonb#>>'{payload,field_id}')=$7 ORDER BY occurred_at DESC, fact_id DESC LIMIT 1", [source, type, version, scope.tenantId, scope.projectId, scope.groupId, scope.fieldId]);
 }
+async function latestH532WaterState(pool: Pool, scope: Scope) { return latestFact(pool, scope, H53_2_SOURCE, H53_2_VERSION, "water_state_estimate_v1"); }
+async function latestH533Forecast(pool: Pool, scope: Scope) { return latestFact(pool, scope, H53_3_SOURCE, H53_3_VERSION, "root_zone_soil_water_forecast_v1"); }
+async function latestH533Scenario(pool: Pool, scope: Scope) { return latestFact(pool, scope, H53_3_SOURCE, H53_3_VERSION, "irrigation_scenario_set_v1"); }
+async function latestH534Recommendation(pool: Pool, scope: Scope) { return latestFact(pool, scope, H53_4_SOURCE, H53_4_VERSION, "decision_recommendation_v1"); }
 
-async function latestH533Forecast(pool: Pool, scope: Scope) {
-  if (!scoped(scope) || !(await tableExists(pool, "facts"))) return null;
-  return one(pool, "SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json, record_json::jsonb->'payload' AS payload_json FROM facts WHERE source=$1 AND (record_json::jsonb->>'type')='root_zone_soil_water_forecast_v1' AND (record_json::jsonb#>>'{payload,derivation_version}')=$2 AND (record_json::jsonb#>>'{payload,tenant_id}')=$3 AND (record_json::jsonb#>>'{payload,project_id}')=$4 AND (record_json::jsonb#>>'{payload,group_id}')=$5 AND (record_json::jsonb#>>'{payload,field_id}')=$6 ORDER BY occurred_at DESC, fact_id DESC LIMIT 1", [H53_3_SOURCE, H53_3_VERSION, scope.tenantId, scope.projectId, scope.groupId, scope.fieldId]);
-}
-
-async function latestH533Scenario(pool: Pool, scope: Scope) {
-  if (!scoped(scope) || !(await tableExists(pool, "facts"))) return null;
-  return one(pool, "SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json, record_json::jsonb->'payload' AS payload_json FROM facts WHERE source=$1 AND (record_json::jsonb->>'type')='irrigation_scenario_set_v1' AND (record_json::jsonb#>>'{payload,derivation_version}')=$2 AND (record_json::jsonb#>>'{payload,tenant_id}')=$3 AND (record_json::jsonb#>>'{payload,project_id}')=$4 AND (record_json::jsonb#>>'{payload,group_id}')=$5 AND (record_json::jsonb#>>'{payload,field_id}')=$6 ORDER BY occurred_at DESC, fact_id DESC LIMIT 1", [H53_3_SOURCE, H53_3_VERSION, scope.tenantId, scope.projectId, scope.groupId, scope.fieldId]);
-}
-
-async function latestH534Recommendation(pool: Pool, scope: Scope) {
-  if (!scoped(scope) || !(await tableExists(pool, "facts"))) return null;
-  return one(pool, "SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json, record_json::jsonb->'payload' AS payload_json FROM facts WHERE source=$1 AND (record_json::jsonb->>'type')='decision_recommendation_v1' AND (record_json::jsonb#>>'{payload,derivation_version}')=$2 AND (record_json::jsonb#>>'{payload,tenant_id}')=$3 AND (record_json::jsonb#>>'{payload,project_id}')=$4 AND (record_json::jsonb#>>'{payload,group_id}')=$5 AND (record_json::jsonb#>>'{payload,field_id}')=$6 ORDER BY occurred_at DESC, fact_id DESC LIMIT 1", [H53_4_SOURCE, H53_4_VERSION, scope.tenantId, scope.projectId, scope.groupId, scope.fieldId]);
-}
-
-function rawPayload(row: Row | null) {
-  return row ? (j(row.payload_json) ?? j(row.raw_payload_json) ?? j(row.record_json)?.payload ?? row) : {};
-}
-
-function ts(row: Row | null, key: string) {
-  const value = row?.[key] ?? rawPayload(row)?.[key];
-  const numeric = Number(value);
-  if (Number.isFinite(numeric)) return numeric;
-  const parsed = Date.parse(String(value ?? ""));
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function rawSignalNode(row: Row | null) {
-  return row ? node({ id: "raw_signal:soil_moisture_percent", label: "土壤水分原始信号", kind: "raw_signal", schemaRef: "telemetry_index_v1", status: "AVAILABLE", sourceRefs: refs({ kind: "fact", id: row.fact_id, schema: "telemetry_index_v1" }), expandPayload: { metric: row.metric, value_num: n(row.value_num), value_text: row.value_text ?? null, device_id: row.device_id, soil_moisture_percent: n(row.value_num) }, latestTsMs: ts(row, "ts") }) : missing("missing:raw_signal", "原始信号", "raw_signal", "telemetry_index_v1", "RAW_SIGNAL_SOURCE_NOT_EXPOSED");
-}
-
-function observationNode(row: Row | null) {
-  return row ? node({ id: "observation:soil_moisture_percent", label: "土壤水分标准化观测", kind: "observation", schemaRef: "device_observation_index_v1", status: "AVAILABLE", sourceRefs: refs({ kind: "observation", id: row.fact_id, schema: "device_observation_index_v1" }), expandPayload: { metric: row.metric, value_num: n(row.value_num), unit: row.unit ?? null, confidence: n(row.confidence), device_id: row.device_id, soil_moisture_percent: n(row.value_num) }, latestTsMs: n(row.observed_at_ts_ms) ?? ts(row, "observed_at") }) : missing("missing:observation", "标准化观测", "observation", "device_observation_index_v1", "OBSERVATION_SOURCE_NOT_EXPOSED");
-}
-
-function windowNode(row: Row | null) {
-  return row ? node({ id: "observation_window:soil_moisture", label: "土壤水分感知窗口", kind: "observation", schemaRef: "soil_moisture_sensing_window_index_v1", status: "AVAILABLE", sourceRefs: refs({ kind: "observation", id: row.source_fact_id, schema: "soil_moisture_sensing_window_index_v1" }), expandPayload: { window_id: row.window_id, metric: row.metric, coverage_ratio: n(row.coverage_ratio), quality_status: row.quality_status, actual_points: n(row.actual_points), expected_points: n(row.expected_points), max_gap_ms: n(row.max_gap_ms) }, confidenceLabel: text(j(row.confidence_json)?.level ?? row.quality_status), confidenceScore: n(j(row.confidence_json)?.score), latestTsMs: ts(row, "window_end") }) : missing("missing:soil_moisture_window", "土壤水分感知窗口", "observation", "soil_moisture_sensing_window_index_v1", "SOIL_MOISTURE_SENSING_WINDOW_MISSING");
-}
-
-function weatherNode(row: Row | null) {
-  const payload = rawPayload(row);
-  return row ? node({ id: "forecast_input:weather", label: "天气预报输入", kind: "forecast", schemaRef: row.forecast_id ? "weather_forecast_index_v1" : "weather_forecast_fact_v1", status: "AVAILABLE", sourceRefs: refs({ kind: "forecast", id: row.source_fact_id ?? row.fact_id ?? row.forecast_id, schema: row.forecast_id ? "weather_forecast_index_v1" : "weather_forecast_fact_v1" }), expandPayload: { forecast_id: row.forecast_id ?? payload.forecast_id ?? null, rainfall_forecast_mm_72h: n(row.rainfall_forecast_mm_72h ?? payload.rainfall_forecast_mm_72h), temperature_max_c_72h: n(row.temperature_max_c_72h ?? payload.temperature_max_c_72h), et0_mm_72h: n(row.et0_mm_72h ?? payload.et0_mm_72h), provider: row.provider ?? payload.provider ?? null }, latestTsMs: ts(row, "generated_at") ?? ts(row, "occurred_at") }) : missing("missing:weather_forecast", "天气预报输入", "forecast", "weather_forecast_fact_v1", "WEATHER_FORECAST_INPUT_MISSING");
-}
-
-function waterStateNode(row: Row | null) {
-  const payload = rawPayload(row);
-  return row ? node({ id: "water_state:" + text(payload.estimate_id ?? row.fact_id), label: "水分压力状态", kind: "state_estimate", schemaRef: "water_state_estimate_v1", status: "AVAILABLE", sourceRefs: refs({ kind: "fact", id: row.fact_id, schema: "water_state_estimate_v1" }), evidenceRefs: arr(payload.evidence_refs), expandPayload: { estimate_id: payload.estimate_id ?? row.fact_id, state: payload.state ?? payload.water_state ?? null, water_state: payload.water_state ?? payload.state ?? null, latest_soil_moisture_percent: n(payload.latest_soil_moisture_percent), rainfall_forecast_mm_72h: n(payload.rainfall_forecast_mm_72h), et0_mm_72h: n(payload.et0_mm_72h), water_balance_72h_mm: n(payload.water_balance_72h_mm), derivation_version: payload.derivation_version, determinism_hash: payload.determinism_hash, source_lane: payload.source_lane, source_profile: payload.source_profile }, confidenceLabel: text(payload.confidence_level ?? payload.confidence?.level), confidenceScore: n(payload.confidence_score ?? payload.confidence?.score), latestTsMs: ts(row, "occurred_at") }) : statusNode("WATER_STRESS_STATE", "水分压力状态", "state_estimate", "water_state_estimate_index_v1", "WATER_STRESS_STATE_DERIVED_PENDING");
-}
-
-function forecastNode(row: Row | null) {
-  const payload = rawPayload(row);
-  return row ? node({ id: "forecast:" + text(payload.forecast_id ?? row.fact_id), label: "水分预测", kind: "forecast", schemaRef: "root_zone_soil_water_forecast_v1", status: "AVAILABLE", sourceRefs: refs({ kind: "fact", id: row.fact_id, schema: "root_zone_soil_water_forecast_v1" }), evidenceRefs: arr(payload.evidence_refs), expandPayload: { forecast_id: payload.forecast_id, horizon_days: n(payload.horizon_days), forecast_status: payload.forecast_status, daily_forecast: arr(payload.daily_forecast), min_available_water_fraction: n(payload.min_available_water_fraction), max_available_water_fraction: n(payload.max_available_water_fraction), stress_day_count: n(payload.stress_day_count), limited_day_count: n(payload.limited_day_count), derivation_version: payload.derivation_version, determinism_hash: payload.determinism_hash }, confidenceLabel: text(payload.confidence?.level), confidenceScore: n(payload.confidence?.score), latestTsMs: ts(row, "occurred_at") }) : statusNode("FORECAST", "水分预测", "forecast", "root_zone_soil_water_forecast_v1", "FORECAST_DERIVED_PENDING");
-}
-
-function scenarioNode(row: Row | null) {
-  const payload = rawPayload(row);
-  const options = arr(payload.options);
-  return row ? { ...node({ id: "scenario:" + text(payload.scenario_set_id ?? row.fact_id), label: "灌溉情景", kind: "scenario", schemaRef: "irrigation_scenario_set_v1", status: "AVAILABLE", sourceRefs: refs({ kind: "fact", id: row.fact_id, schema: "irrigation_scenario_set_v1" }), evidenceRefs: arr(payload.evidence_refs), expandPayload: { scenario_set_id: payload.scenario_set_id, source_forecast_id: payload.source_forecast_id, input_status: payload.input_status, derivation_version: payload.derivation_version, determinism_hash: payload.determinism_hash, recommendation_created: payload.recommendation_created, approval_created: payload.approval_created, task_created: payload.task_created } }), scenario_set_id: payload.scenario_set_id, no_action_baseline_present: payload.no_action_baseline_present === true, options, unavailable_reason: null } : { ...statusNode("SCENARIO", "灌溉情景", "scenario", "irrigation_scenario_set_v1", "SCENARIO_DERIVED_PENDING"), scenario_set_id: null, no_action_baseline_present: false, options: [], unavailable_reason: "SCENARIO_DERIVED_PENDING" };
-}
+function rawSignalNode(row: Row | null) { return row ? node({ id: "raw_signal:soil_moisture_percent", label: "土壤水分原始信号", kind: "raw_signal", schemaRef: "telemetry_index_v1", status: "AVAILABLE", sourceRefs: refs({ kind: "fact", id: row.fact_id, schema: "telemetry_index_v1" }), expandPayload: { metric: row.metric, value_num: n(row.value_num), value_text: row.value_text ?? null, device_id: row.device_id, soil_moisture_percent: n(row.value_num) }, latestTsMs: ts(row, "ts") }) : missing("missing:raw_signal", "原始信号", "raw_signal", "telemetry_index_v1", "RAW_SIGNAL_SOURCE_NOT_EXPOSED"); }
+function observationNode(row: Row | null) { return row ? node({ id: "observation:soil_moisture_percent", label: "土壤水分标准化观测", kind: "observation", schemaRef: "device_observation_index_v1", status: "AVAILABLE", sourceRefs: refs({ kind: "observation", id: row.fact_id, schema: "device_observation_index_v1" }), expandPayload: { metric: row.metric, value_num: n(row.value_num), unit: row.unit ?? null, confidence: n(row.confidence), device_id: row.device_id, soil_moisture_percent: n(row.value_num) }, latestTsMs: n(row.observed_at_ts_ms) ?? ts(row, "observed_at") }) : missing("missing:observation", "标准化观测", "observation", "device_observation_index_v1", "OBSERVATION_SOURCE_NOT_EXPOSED"); }
+function windowNode(row: Row | null) { return row ? node({ id: "observation_window:soil_moisture", label: "土壤水分感知窗口", kind: "observation", schemaRef: "soil_moisture_sensing_window_index_v1", status: "AVAILABLE", sourceRefs: refs({ kind: "observation", id: row.source_fact_id, schema: "soil_moisture_sensing_window_index_v1" }), expandPayload: { window_id: row.window_id, metric: row.metric, coverage_ratio: n(row.coverage_ratio), quality_status: row.quality_status, actual_points: n(row.actual_points), expected_points: n(row.expected_points), max_gap_ms: n(row.max_gap_ms) }, confidenceLabel: text(j(row.confidence_json)?.level ?? row.quality_status), confidenceScore: n(j(row.confidence_json)?.score), latestTsMs: ts(row, "window_end") }) : missing("missing:soil_moisture_window", "土壤水分感知窗口", "observation", "soil_moisture_sensing_window_index_v1", "SOIL_MOISTURE_SENSING_WINDOW_MISSING"); }
+function weatherNode(row: Row | null) { const payload = rawPayload(row); return row ? node({ id: "forecast_input:weather", label: "天气预报输入", kind: "forecast", schemaRef: row.forecast_id ? "weather_forecast_index_v1" : "weather_forecast_fact_v1", status: "AVAILABLE", sourceRefs: refs({ kind: "forecast", id: row.source_fact_id ?? row.fact_id ?? row.forecast_id, schema: row.forecast_id ? "weather_forecast_index_v1" : "weather_forecast_fact_v1" }), expandPayload: { forecast_id: row.forecast_id ?? payload.forecast_id ?? null, rainfall_forecast_mm_72h: n(row.rainfall_forecast_mm_72h ?? payload.rainfall_forecast_mm_72h), temperature_max_c_72h: n(row.temperature_max_c_72h ?? payload.temperature_max_c_72h), et0_mm_72h: n(row.et0_mm_72h ?? payload.et0_mm_72h), provider: row.provider ?? payload.provider ?? null }, latestTsMs: ts(row, "generated_at") ?? ts(row, "occurred_at") }) : missing("missing:weather_forecast", "天气预报输入", "forecast", "weather_forecast_fact_v1", "WEATHER_FORECAST_INPUT_MISSING"); }
+function waterStateNode(row: Row | null) { const payload = rawPayload(row); return row ? node({ id: "water_state:" + text(payload.estimate_id ?? row.fact_id), label: "水分压力状态", kind: "state_estimate", schemaRef: "water_state_estimate_v1", status: "AVAILABLE", sourceRefs: refs({ kind: "fact", id: row.fact_id, schema: "water_state_estimate_v1" }), evidenceRefs: arr(payload.evidence_refs), expandPayload: { estimate_id: payload.estimate_id ?? row.fact_id, state: payload.state ?? payload.water_state ?? null, water_state: payload.water_state ?? payload.state ?? null, latest_soil_moisture_percent: n(payload.latest_soil_moisture_percent), rainfall_forecast_mm_72h: n(payload.rainfall_forecast_mm_72h), et0_mm_72h: n(payload.et0_mm_72h), water_balance_72h_mm: n(payload.water_balance_72h_mm), derivation_version: payload.derivation_version, determinism_hash: payload.determinism_hash, source_lane: payload.source_lane, source_profile: payload.source_profile }, confidenceLabel: text(payload.confidence_level ?? payload.confidence?.level), confidenceScore: n(payload.confidence_score ?? payload.confidence?.score), latestTsMs: ts(row, "occurred_at") }) : statusNode("WATER_STRESS_STATE", "水分压力状态", "state_estimate", "water_state_estimate_index_v1", "WATER_STRESS_STATE_DERIVED_PENDING"); }
+function forecastNode(row: Row | null) { const payload = rawPayload(row); return row ? node({ id: "forecast:" + text(payload.forecast_id ?? row.fact_id), label: "水分预测", kind: "forecast", schemaRef: "root_zone_soil_water_forecast_v1", status: "AVAILABLE", sourceRefs: refs({ kind: "fact", id: row.fact_id, schema: "root_zone_soil_water_forecast_v1" }), evidenceRefs: arr(payload.evidence_refs), expandPayload: { forecast_id: payload.forecast_id, horizon_days: n(payload.horizon_days), forecast_status: payload.forecast_status, daily_forecast: arr(payload.daily_forecast), min_available_water_fraction: n(payload.min_available_water_fraction), max_available_water_fraction: n(payload.max_available_water_fraction), stress_day_count: n(payload.stress_day_count), limited_day_count: n(payload.limited_day_count), derivation_version: payload.derivation_version, determinism_hash: payload.determinism_hash }, confidenceLabel: text(payload.confidence?.level), confidenceScore: n(payload.confidence?.score), latestTsMs: ts(row, "occurred_at") }) : statusNode("FORECAST", "水分预测", "forecast", "root_zone_soil_water_forecast_v1", "FORECAST_DERIVED_PENDING"); }
+function scenarioNode(row: Row | null) { const payload = rawPayload(row); const options = arr(payload.options); return row ? { ...node({ id: "scenario:" + text(payload.scenario_set_id ?? row.fact_id), label: "灌溉情景", kind: "scenario", schemaRef: "irrigation_scenario_set_v1", status: "AVAILABLE", sourceRefs: refs({ kind: "fact", id: row.fact_id, schema: "irrigation_scenario_set_v1" }), evidenceRefs: arr(payload.evidence_refs), expandPayload: { scenario_set_id: payload.scenario_set_id, source_forecast_id: payload.source_forecast_id, input_status: payload.input_status, derivation_version: payload.derivation_version, determinism_hash: payload.determinism_hash, recommendation_created: payload.recommendation_created, approval_created: payload.approval_created, task_created: payload.task_created } }), scenario_set_id: payload.scenario_set_id, no_action_baseline_present: payload.no_action_baseline_present === true, options, unavailable_reason: null } : { ...statusNode("SCENARIO", "灌溉情景", "scenario", "irrigation_scenario_set_v1", "SCENARIO_DERIVED_PENDING"), scenario_set_id: null, no_action_baseline_present: false, options: [], unavailable_reason: "SCENARIO_DERIVED_PENDING" }; }
 
 function recommendationNode(row: Row | null) {
+  if (!row) {
+    return { ...statusNode("RECOMMENDATION", "建议候选", "recommendation", "decision_recommendation_v1", "RECOMMENDATION_DERIVED_PENDING"), recommendation_id: null, selected_scenario_option_id: null, action_type: null, amount_mm: null, human_approval_required: true, no_direct_execution: true, approval_created: false, operation_plan_created: false, task_created: false, dispatch_created: false };
+  }
   const payload = rawPayload(row);
-  return row ? { ...node({ id: "recommendation:" + text(payload.recommendation_id ?? row.fact_id), label: "建议候选", kind: "recommendation", schemaRef: "decision_recommendation_v1", status: "AVAILABLE", sourceRefs: refs({ kind: "fact", id: row.fact_id, schema: "decision_recommendation_v1" }), evidenceRefs: arr(payload.evidence_refs), expandPayload: { recommendation_id: payload.recommendation_id, recommendation_status: payload.recommendation_status, selected_scenario_option_id: payload.selected_scenario_option_id, suggested_action: payload.suggested_action ?? payload.suggested_action_json ?? null, scenario_summary: payload.scenario_summary ?? payload.scenario_summary_json ?? null, derivation_version: payload.derivation_version, determinism_hash: payload.determinism_hash, human_approval_required: payload.human_approval_required === true, no_direct_execution: payload.no_direct_execution === true, approval_created: payload.approval_created === true, operation_plan_created: payload.operation_plan_created === true, task_created: payload.task_created === true } }, confidenceLabel: text(payload.confidence?.level), confidenceScore: n(payload.confidence?.score), latestTsMs: ts(row, "occurred_at") }), recommendation_id: payload.recommendation_id, selected_scenario_option_id: payload.selected_scenario_option_id ?? null, action_type: payload.suggested_action?.action_type ?? payload.suggested_action_json?.action_type ?? null, amount_mm: n(payload.suggested_action?.amount_mm ?? payload.suggested_action_json?.amount_mm), human_approval_required: payload.human_approval_required === true, no_direct_execution: payload.no_direct_execution === true, approval_created: payload.approval_created === true, operation_plan_created: payload.operation_plan_created === true, task_created: payload.task_created === true, dispatch_created: false } : { ...statusNode("RECOMMENDATION", "建议候选", "recommendation", "decision_recommendation_v1", "RECOMMENDATION_DERIVED_PENDING"), recommendation_id: null, selected_scenario_option_id: null, action_type: null, amount_mm: null, human_approval_required: true, no_direct_execution: true, approval_created: false, operation_plan_created: false, task_created: false, dispatch_created: false };
+  const suggestedAction = payload.suggested_action ?? payload.suggested_action_json ?? null;
+  return {
+    ...node({
+      id: "recommendation:" + text(payload.recommendation_id ?? row.fact_id),
+      label: "建议候选",
+      kind: "recommendation",
+      schemaRef: "decision_recommendation_v1",
+      status: "AVAILABLE",
+      sourceRefs: refs({ kind: "fact", id: row.fact_id, schema: "decision_recommendation_v1" }),
+      evidenceRefs: arr(payload.evidence_refs),
+      expandPayload: { recommendation_id: payload.recommendation_id, recommendation_status: payload.recommendation_status, selected_scenario_option_id: payload.selected_scenario_option_id, suggested_action: suggestedAction, scenario_summary: payload.scenario_summary ?? payload.scenario_summary_json ?? null, derivation_version: payload.derivation_version, determinism_hash: payload.determinism_hash, human_approval_required: payload.human_approval_required === true, no_direct_execution: payload.no_direct_execution === true, approval_created: payload.approval_created === true, operation_plan_created: payload.operation_plan_created === true, task_created: payload.task_created === true },
+      confidenceLabel: text(payload.confidence?.level),
+      confidenceScore: n(payload.confidence?.score),
+      latestTsMs: ts(row, "occurred_at"),
+    }),
+    recommendation_id: payload.recommendation_id,
+    selected_scenario_option_id: payload.selected_scenario_option_id ?? null,
+    action_type: suggestedAction?.action_type ?? null,
+    amount_mm: n(suggestedAction?.amount_mm),
+    human_approval_required: payload.human_approval_required === true,
+    no_direct_execution: payload.no_direct_execution === true,
+    approval_created: payload.approval_created === true,
+    operation_plan_created: payload.operation_plan_created === true,
+    task_created: payload.task_created === true,
+    dispatch_created: false,
+  };
 }
 
 function sourceInventory(telemetry: Row | null, observation: Row | null, window: Row | null, weather: Row | null, waterState: Row | null, forecast: Row | null, scenario: Row | null, recommendation: Row | null) {
