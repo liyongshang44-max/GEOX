@@ -49,10 +49,28 @@ async function tableColumns(client, table) {
   return new Set(r.rows.map((row) => row.column_name));
 }
 
+function markerValues(row) {
+  return [
+    row?.window_id,
+    row?.source_fact_id,
+    row?.fact_id,
+    row?.observation_id,
+    row?.source_observation_id,
+    ...asArray(row?.source_observation_ids_json),
+  ].map((value) => text(value).toLowerCase());
+}
+
+function isPostIrrigationRow(row) {
+  return markerValues(row).some((value) => value.includes('post_irrigation'));
+}
+
 function rejectPostIrrigationInput(input) {
-  const values = [input.source_sensing_window_id, input.source_sensing_window_fact_id, input.source_observation_id, input.source_observation_fact_id]
-    .map((value) => text(value).toLowerCase());
+  const values = [input.source_sensing_window_id, input.source_sensing_window_fact_id, input.source_observation_id, input.source_observation_fact_id].map((value) => text(value).toLowerCase());
   if (values.some((value) => value.includes('post_irrigation'))) die('POST_IRRIGATION_INPUT_FORBIDDEN_IN_H53_2_CURRENT_STATE', { values });
+}
+
+function firstExisting(columns, candidates) {
+  return candidates.filter((candidate) => columns.has(candidate));
 }
 
 async function readInputs(client) {
@@ -62,33 +80,30 @@ async function readInputs(client) {
   );
   if (!manifest.rows.length) die('H53_1_SENSING_ONLY_MANIFEST_MISSING');
 
-  const window = await client.query(
+  const windows = await client.query(
     `select * from soil_moisture_sensing_window_index_v1
       where tenant_id=$1 and project_id=$2 and group_id=$3 and field_id=$4
-        and lower(coalesce(window_id,'')) not like '%post_irrigation%'
-        and lower(coalesce(source_fact_id,'')) not like '%post_irrigation%'
-      order by updated_at desc nulls last, window_end desc
-      limit 1`,
+      order by updated_at desc nulls last, window_end desc`,
     [SCOPE.tenant_id, SCOPE.project_id, SCOPE.group_id, SCOPE.field_id],
   );
-  if (!window.rows.length) die('CURRENT_SOIL_MOISTURE_SENSING_WINDOW_MISSING');
+  const win = windows.rows.find((row) => !isPostIrrigationRow(row));
+  if (!win) die('CURRENT_SOIL_MOISTURE_SENSING_WINDOW_MISSING', { available_window_ids: windows.rows.map((row) => row.window_id) });
 
-  const win = window.rows[0];
   const sourceObservationIds = asArray(win.source_observation_ids_json).map(text).filter(Boolean);
+  const observationColumns = await tableColumns(client, 'device_observation_index_v1');
+  const values = [SCOPE.tenant_id, SCOPE.project_id, SCOPE.group_id, SCOPE.field_id];
+  const filters = ["tenant_id=$1", "project_id=$2", "group_id=$3", "field_id=$4", "metric='soil_moisture_percent'"];
+  const identityColumns = firstExisting(observationColumns, ['fact_id', 'source_fact_id', 'observation_id']);
+  if (sourceObservationIds.length > 0 && identityColumns.length > 0) {
+    values.push(sourceObservationIds);
+    const placeholder = `$${values.length}`;
+    filters.push('(' + identityColumns.map((column) => `${column} = any(${placeholder}::text[])`).join(' or ') + ')');
+  }
   const observation = await client.query(
-    `select * from device_observation_index_v1
-      where tenant_id=$1 and project_id=$2 and group_id=$3 and field_id=$4 and metric='soil_moisture_percent'
-        and (
-          cardinality($5::text[]) = 0
-          or fact_id = any($5::text[])
-          or source_fact_id = any($5::text[])
-          or observation_id = any($5::text[])
-        )
-      order by observed_at desc
-      limit 1`,
-    [SCOPE.tenant_id, SCOPE.project_id, SCOPE.group_id, SCOPE.field_id, sourceObservationIds],
+    `select * from device_observation_index_v1 where ${filters.join(' and ')} order by observed_at desc limit 1`,
+    values,
   );
-  if (!observation.rows.length) die('SOIL_MOISTURE_OBSERVATION_FOR_CURRENT_WINDOW_MISSING', { sourceObservationIds });
+  if (!observation.rows.length) die('SOIL_MOISTURE_OBSERVATION_FOR_CURRENT_WINDOW_MISSING', { sourceObservationIds, identityColumns });
 
   const weather = await client.query(
     "select * from weather_forecast_index_v1 where tenant_id=$1 and project_id=$2 and group_id=$3 and field_id=$4 order by generated_at desc limit 1",
@@ -103,7 +118,7 @@ async function readInputs(client) {
     observation_fact_id: text(obs.fact_id || obs.source_fact_id),
     source_observation_id: text(obs.observation_id || obs.fact_id || obs.source_fact_id),
     source_sensing_window_id: text(win.window_id),
-    source_sensing_window_fact_id: text(win.source_fact_id),
+    source_sensing_window_fact_id: text(win.source_fact_id || win.fact_id),
     source_weather_forecast_id: text(wx.forecast_id),
     source_weather_forecast_fact_id: text(wx.source_fact_id || wx.forecast_id),
     soil_moisture_percent: num(obs.value_num),
