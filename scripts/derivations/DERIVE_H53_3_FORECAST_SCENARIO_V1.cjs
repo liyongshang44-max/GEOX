@@ -1,2 +1,3 @@
 'use strict';
-console.log(JSON.stringify({ ok: true, derivation: 'DERIVE_H53_3_FORECAST_SCENARIO_V1' }, null, 2));
+const DB = process.env.DATABASE_URL;
+console.log(JSON.stringify({ ok: true, db: Boolean(DB) }, null, 2));
