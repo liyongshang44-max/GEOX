@@ -69,8 +69,19 @@ function rejectPostIrrigationInput(input) {
   if (values.some((value) => value.includes('post_irrigation'))) die('POST_IRRIGATION_INPUT_FORBIDDEN_IN_H53_2_CURRENT_STATE', { values });
 }
 
-function firstExisting(columns, candidates) {
-  return candidates.filter((candidate) => columns.has(candidate));
+function observationIdentityValues(row) {
+  return [row?.fact_id, row?.source_fact_id, row?.observation_id].map(text).filter(Boolean);
+}
+
+function chooseObservation(candidateRows, sourceObservationIds) {
+  const currentRows = candidateRows.filter((row) => !isPostIrrigationRow(row));
+  if (!currentRows.length) return null;
+  const wanted = new Set(sourceObservationIds.map(text).filter(Boolean));
+  if (wanted.size > 0) {
+    const exact = currentRows.find((row) => observationIdentityValues(row).some((value) => wanted.has(value)));
+    if (exact) return exact;
+  }
+  return currentRows[0];
 }
 
 async function readInputs(client) {
@@ -91,19 +102,16 @@ async function readInputs(client) {
 
   const sourceObservationIds = asArray(win.source_observation_ids_json).map(text).filter(Boolean);
   const observationColumns = await tableColumns(client, 'device_observation_index_v1');
-  const values = [SCOPE.tenant_id, SCOPE.project_id, SCOPE.group_id, SCOPE.field_id];
-  const filters = ["tenant_id=$1", "project_id=$2", "group_id=$3", "field_id=$4", "metric='soil_moisture_percent'"];
-  const identityColumns = firstExisting(observationColumns, ['fact_id', 'source_fact_id', 'observation_id']);
-  if (sourceObservationIds.length > 0 && identityColumns.length > 0) {
-    values.push(sourceObservationIds);
-    const placeholder = `$${values.length}`;
-    filters.push('(' + identityColumns.map((column) => `${column} = any(${placeholder}::text[])`).join(' or ') + ')');
-  }
-  const observation = await client.query(
-    `select * from device_observation_index_v1 where ${filters.join(' and ')} order by observed_at desc limit 1`,
-    values,
+  const orderColumn = observationColumns.has('observed_at') ? 'observed_at' : observationColumns.has('created_at') ? 'created_at' : 'fact_id';
+  const observationRows = await client.query(
+    `select * from device_observation_index_v1
+      where tenant_id=$1 and project_id=$2 and group_id=$3 and field_id=$4 and metric='soil_moisture_percent'
+      order by ${orderColumn} desc
+      limit 50`,
+    [SCOPE.tenant_id, SCOPE.project_id, SCOPE.group_id, SCOPE.field_id],
   );
-  if (!observation.rows.length) die('SOIL_MOISTURE_OBSERVATION_FOR_CURRENT_WINDOW_MISSING', { sourceObservationIds, identityColumns });
+  const obs = chooseObservation(observationRows.rows, sourceObservationIds);
+  if (!obs) die('SOIL_MOISTURE_OBSERVATION_FOR_CURRENT_WINDOW_MISSING', { sourceObservationIds, candidateCount: observationRows.rows.length });
 
   const weather = await client.query(
     "select * from weather_forecast_index_v1 where tenant_id=$1 and project_id=$2 and group_id=$3 and field_id=$4 order by generated_at desc limit 1",
@@ -111,7 +119,6 @@ async function readInputs(client) {
   );
   if (!weather.rows.length) die('WEATHER_FORECAST_INPUT_MISSING');
 
-  const obs = observation.rows[0];
   const wx = weather.rows[0];
   const input = {
     manifest_fact_id: manifest.rows[0].fact_id,
