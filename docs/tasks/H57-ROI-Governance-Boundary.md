@@ -64,6 +64,8 @@ source_lane = FORMAL_ACCEPTANCE
 
 It must require formal acceptance and chain validation.
 
+It must also require an existing interim ROI row before formal ROI is created.
+
 ## Field Memory separation
 
 H57 does not create Field Memory.
@@ -107,6 +109,8 @@ h57_roi_governance_boundary = PASS
 roi_lane_split_present = true
 as_executed_signal_not_customer_visible = true
 formal_acceptance_customer_visible = true
+formal_acceptance_gate_protected = true
+interim_roi_required_before_formal_roi = true
 roi_field_memory_separated = true
 next_step = H58_FIELD_MEMORY_GOVERNANCE_BOUNDARY
 ```
