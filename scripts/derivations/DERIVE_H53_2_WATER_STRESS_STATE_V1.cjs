@@ -2,8 +2,9 @@
 'use strict';
 
 // scripts/derivations/DERIVE_H53_2_WATER_STRESS_STATE_V1.cjs
-// Purpose: derive a deterministic H53.2 water_state_estimate_v1 from H53.1 sensing-only inputs.
+// Purpose: derive a deterministic H53.2 water_state_estimate_v1 from H53.1 current sensing-only inputs.
 // Boundary: this script only writes water_state_estimate_v1 and water_state_estimate_index_v1; it does not write forecast, scenario, recommendation, approval, AO-ACT, receipt, evidence, acceptance, verification, ROI, or Field Memory.
+// H53.2 guardrail: the current-state derivation must not use post-irrigation sensing windows as its input.
 
 const crypto = require('node:crypto');
 const { Client } = require('pg');
@@ -15,28 +16,13 @@ const VERSION = 'h53.2.v1';
 const SCOPE = { tenant_id: 'tenantA', project_id: 'projectA', group_id: 'groupA', field_id: 'field_c8_demo' };
 const SEASON_ID = 'season_h53_2_c8_demo';
 
-const forbiddenFactTypes = [
-  'root_zone_soil_water_state_v1',
-  'root_zone_soil_water_forecast_v1',
-  'irrigation_scenario_set_v1',
-  'decision_recommendation_v1',
-  'approval_request_v1',
-  'approval_decision_v1',
-  'operation_plan_v1',
-  'ao_act_task_v0',
-  'ao_act_receipt_v1',
-  'as_executed_record_v1',
-  'evidence_artifact_v1',
-  'acceptance_result_v1',
-  'water_response_verification_v1',
-  'roi_ledger_v1',
-  'field_memory_v1',
-];
+const forbiddenFactTypes = ['root_zone_soil_water_state_v1','root_zone_soil_water_forecast_v1','irrigation_scenario_set_v1','decision_recommendation_v1','approval_request_v1','approval_decision_v1','operation_plan_v1','ao_act_task_v0','ao_act_receipt_v1','as_executed_record_v1','evidence_artifact_v1','acceptance_result_v1','water_response_verification_v1','roi_ledger_v1','field_memory_v1'];
 
 function arg(name) { return process.argv.includes(name); }
 function text(value) { return String(value ?? '').trim(); }
 function num(value) { const n = Number(value); return Number.isFinite(n) ? n : null; }
-function json(value) { if (!value) return null; if (typeof value === 'object') return value; try { return JSON.parse(String(value)); } catch { return null; } }
+function parseJson(value) { if (!value) return null; if (typeof value === 'object') return value; try { return JSON.parse(String(value)); } catch { return null; } }
+function asArray(value) { const parsed = parseJson(value); if (Array.isArray(value)) return value; return Array.isArray(parsed) ? parsed : []; }
 function hashOf(value) { return crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex'); }
 function die(error, details = {}) { console.error(JSON.stringify({ ok:false, derivation:'DERIVE_H53_2_WATER_STRESS_STATE_V1', error, details }, null, 2)); process.exit(1); }
 
@@ -63,6 +49,12 @@ async function tableColumns(client, table) {
   return new Set(r.rows.map((row) => row.column_name));
 }
 
+function rejectPostIrrigationInput(input) {
+  const values = [input.source_sensing_window_id, input.source_sensing_window_fact_id, input.source_observation_id, input.source_observation_fact_id]
+    .map((value) => text(value).toLowerCase());
+  if (values.some((value) => value.includes('post_irrigation'))) die('POST_IRRIGATION_INPUT_FORBIDDEN_IN_H53_2_CURRENT_STATE', { values });
+}
+
 async function readInputs(client) {
   const manifest = await client.query(
     "select fact_id, record_json::jsonb as record_json from facts where source=$1 and record_json::jsonb->>'type'='sensing_only_manifest_v1' order by occurred_at desc limit 1",
@@ -70,17 +62,33 @@ async function readInputs(client) {
   );
   if (!manifest.rows.length) die('H53_1_SENSING_ONLY_MANIFEST_MISSING');
 
-  const observation = await client.query(
-    "select * from device_observation_index_v1 where tenant_id=$1 and project_id=$2 and group_id=$3 and field_id=$4 and metric='soil_moisture_percent' order by observed_at desc limit 1",
-    [SCOPE.tenant_id, SCOPE.project_id, SCOPE.group_id, SCOPE.field_id],
-  );
-  if (!observation.rows.length) die('SOIL_MOISTURE_OBSERVATION_MISSING');
-
   const window = await client.query(
-    "select * from soil_moisture_sensing_window_index_v1 where tenant_id=$1 and project_id=$2 and group_id=$3 and field_id=$4 order by updated_at desc nulls last, window_end desc limit 1",
+    `select * from soil_moisture_sensing_window_index_v1
+      where tenant_id=$1 and project_id=$2 and group_id=$3 and field_id=$4
+        and lower(coalesce(window_id,'')) not like '%post_irrigation%'
+        and lower(coalesce(source_fact_id,'')) not like '%post_irrigation%'
+      order by updated_at desc nulls last, window_end desc
+      limit 1`,
     [SCOPE.tenant_id, SCOPE.project_id, SCOPE.group_id, SCOPE.field_id],
   );
-  if (!window.rows.length) die('SOIL_MOISTURE_SENSING_WINDOW_MISSING');
+  if (!window.rows.length) die('CURRENT_SOIL_MOISTURE_SENSING_WINDOW_MISSING');
+
+  const win = window.rows[0];
+  const sourceObservationIds = asArray(win.source_observation_ids_json).map(text).filter(Boolean);
+  const observation = await client.query(
+    `select * from device_observation_index_v1
+      where tenant_id=$1 and project_id=$2 and group_id=$3 and field_id=$4 and metric='soil_moisture_percent'
+        and (
+          cardinality($5::text[]) = 0
+          or fact_id = any($5::text[])
+          or source_fact_id = any($5::text[])
+          or observation_id = any($5::text[])
+        )
+      order by observed_at desc
+      limit 1`,
+    [SCOPE.tenant_id, SCOPE.project_id, SCOPE.group_id, SCOPE.field_id, sourceObservationIds],
+  );
+  if (!observation.rows.length) die('SOIL_MOISTURE_OBSERVATION_FOR_CURRENT_WINDOW_MISSING', { sourceObservationIds });
 
   const weather = await client.query(
     "select * from weather_forecast_index_v1 where tenant_id=$1 and project_id=$2 and group_id=$3 and field_id=$4 order by generated_at desc limit 1",
@@ -89,9 +97,8 @@ async function readInputs(client) {
   if (!weather.rows.length) die('WEATHER_FORECAST_INPUT_MISSING');
 
   const obs = observation.rows[0];
-  const win = window.rows[0];
   const wx = weather.rows[0];
-  return {
+  const input = {
     manifest_fact_id: manifest.rows[0].fact_id,
     observation_fact_id: text(obs.fact_id || obs.source_fact_id),
     source_observation_id: text(obs.observation_id || obs.fact_id || obs.source_fact_id),
@@ -107,7 +114,10 @@ async function readInputs(client) {
     rainfall_forecast_mm_72h: num(wx.rainfall_forecast_mm_72h),
     et0_mm_72h: num(wx.et0_mm_72h),
     temperature_max_c_72h: num(wx.temperature_max_c_72h),
+    source_input_role: 'CURRENT_STATE_INPUT',
   };
+  rejectPostIrrigationInput(input);
+  return input;
 }
 
 function buildPayload(input) {
@@ -140,6 +150,7 @@ function buildPayload(input) {
       source_lane: 'H53_1_SENSING_ONLY_INPUTS',
       source_profile: 'c8-sensing-only',
       source_chain_id: 'C8_SENSING_ONLY_V1',
+      source_input_role: input.source_input_role,
       source_manifest_fact_id: input.manifest_fact_id,
       source_observation_id: input.source_observation_id,
       source_observation_fact_id: input.observation_fact_id,
@@ -156,6 +167,8 @@ function buildPayload(input) {
         name: 'H53_2_SIMPLE_SOIL_MOISTURE_THRESHOLD_V1',
         thresholds: { severe_deficit_lt: 16, moderate_deficit_lt: 22, adequate_lt: 30 },
         no_recommendation_created: true,
+        current_state_only: true,
+        post_irrigation_window_forbidden: true,
       },
       determinism_hash,
     },
