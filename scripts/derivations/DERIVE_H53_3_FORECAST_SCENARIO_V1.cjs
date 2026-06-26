@@ -1,3 +1,3 @@
 'use strict';
-const DB = process.env.DATABASE_URL;
-console.log(JSON.stringify({ ok: true, db: Boolean(DB) }, null, 2));
+const fs = require('node:fs');
+console.log(JSON.stringify({ ok: true, hasFs: Boolean(fs) }, null, 2));
