@@ -2,6 +2,7 @@ import React from "react";
 import { Navigate, NavLink, useLocation } from "react-router-dom";
 import { CUSTOMER_SHELL_LABELS } from "../lib/customerLabels";
 import { fetchSessionMe, type SessionMe } from "../api/session";
+import RuntimeTextGuard from "../components/common/RuntimeTextGuard";
 
 const CustomerFieldsIndexPage = React.lazy(() => import("../views/CustomerFieldsIndexPage"));
 const CustomerOperationsIndexPage = React.lazy(() => import("../views/CustomerOperationsIndexPage"));
@@ -89,10 +90,11 @@ export default function CustomerLayout({ children }: CustomerLayoutProps): React
 
   if (location.pathname === "/customer/fields/index") return <Navigate to="/customer/fields" replace />;
   if (location.pathname === "/customer/operations/index") return <Navigate to="/customer/operations" replace />;
-  if (isExportRoute) return <main className="customerLayoutMain customerLayoutPrintOnly">{children}</main>;
+  if (isExportRoute) return <main className="customerLayoutMain customerLayoutPrintOnly"><RuntimeTextGuard />{children}</main>;
 
   return (
     <div className="customerShell" data-layout="customer-shell">
+      <RuntimeTextGuard />
       <aside className="customerShellSidebar" aria-label="客户导航">
         <div className="customerShellBrand" aria-label={CUSTOMER_SHELL_LABELS.brand}>
           <span className="customerShellLogoMark" aria-hidden="true" />
