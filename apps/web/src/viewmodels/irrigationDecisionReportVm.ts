@@ -29,6 +29,15 @@ function text(value: unknown, fallback = ""): string {
   return raw || fallback;
 }
 
+function customerLine(value: unknown, fallback = ""): string {
+  const raw = text(value, fallback);
+  return raw
+    .replace(/AO-ACT/gi, "执行任务")
+    .replace(/report API/gi, "正式报告")
+    .replace(/Field\s+Memory/gi, "田块记忆")
+    .replace(/\bROI\b/gi, "价值记录");
+}
+
 function amountText(value: unknown): string {
   const n = typeof value === "number" ? value : Number(value);
   return Number.isFinite(n) ? String(n) + "mm" : "水量待确认";
@@ -44,7 +53,7 @@ function optionVm(option: any): IrrigationDecisionReportVm["options"][number] {
     amountText: amountText(option?.assumed_irrigation_mm),
     riskText: riskText(option),
     confidenceText: text(option?.confidence_text, irrigationDecisionConfidenceLabel(option?.confidence?.level)),
-    failureConditionText: text(option?.failure_condition_text, "暂无主要失败条件"),
+    failureConditionText: customerLine(option?.failure_condition_text, "暂无主要失败条件"),
   };
 }
 
@@ -70,7 +79,7 @@ export function buildIrrigationDecisionReportVm(report: OperationReportV1): Irri
       stateLine: "水分状态：" + irrigationDecisionStateLabel(estimate.state),
       scenarioLine: "情景比较结果不可用于生成可执行建议。",
       recommendationLine: "未生成可执行灌溉建议。",
-      boundaryLine: "证据不足时不会进入审批、作业计划或 AO-ACT 执行。",
+      boundaryLine: "证据不足时不会进入审批、作业计划或执行任务。",
       options,
       tone: "warning",
     };
@@ -78,13 +87,13 @@ export function buildIrrigationDecisionReportVm(report: OperationReportV1): Irri
 
   return {
     visible: true,
-    headline: text(summary.headline, "灌溉决策依据"),
-    oneLiner: text(summary.one_liner, "系统建议灌溉 22mm，但需要人工审批后才能进入执行。"),
-    evidenceLine: text(summary.evidence_line, "该建议基于通过质量检查的土壤水分连续窗口、可回放天气预报版本和正式灌溉需求计算。"),
-    stateLine: text(estimate.customer_text, "当前水分状态为" + irrigationDecisionStateLabel(estimate.state) + "。"),
-    scenarioLine: text(summary.scenario_line, "五个情景已比较；灌溉 22mm 可将风险从中度缺水改善到正常。"),
-    recommendationLine: text(recommendation.action_text, "系统建议灌溉 22mm"),
-    boundaryLine: text(summary.boundary_line, "本报告不直接触发作业；执行仍需审批、作业计划、AO-ACT 和回执验收。"),
+    headline: customerLine(summary.headline, "灌溉决策依据"),
+    oneLiner: customerLine(summary.one_liner, "系统建议灌溉 22mm，但需要人工审批后才能进入执行。"),
+    evidenceLine: customerLine(summary.evidence_line, "该建议基于通过质量检查的土壤水分连续窗口、可回放天气预报版本和正式灌溉需求计算。"),
+    stateLine: customerLine(estimate.customer_text, "当前水分状态为" + irrigationDecisionStateLabel(estimate.state) + "。"),
+    scenarioLine: customerLine(summary.scenario_line, "五个情景已比较；灌溉 22mm 可将风险从中度缺水改善到正常。"),
+    recommendationLine: customerLine(recommendation.action_text, "系统建议灌溉 22mm"),
+    boundaryLine: customerLine(summary.boundary_line, "本报告不直接触发作业；执行仍需审批、作业计划、执行任务和回执验收。"),
     options,
     tone: "success",
   };
