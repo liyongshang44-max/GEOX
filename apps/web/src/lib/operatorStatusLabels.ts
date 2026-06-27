@@ -79,6 +79,7 @@ const TERM_LABELS: Record<string, string> = {
   "operation report": "作业报告",
   "as-applied": "实际覆盖记录",
   "permission.allowed": "会话权限结果",
+  "operator_evidence_export": "证据导出权限",
   "job detail": "任务详情",
   ROI: "价值记录",
   "Field Memory": "田块记忆",
@@ -145,6 +146,7 @@ export function replaceOperatorTerms(value: unknown, fallback = ""): string {
 
   next = next
     .replace(/\bck_[A-Za-z0-9_-]+\b/g, "人员账号已隐藏")
+    .replace(/\btok_[A-Za-z0-9_-]+\b/g, "人员账号已隐藏")
     .replace(/\bdev_[A-Za-z0-9_-]+\b/g, "设备编号已隐藏")
     .replace(/\bfield_[A-Za-z0-9_-]+\b/g, "地块编号已隐藏")
     .replace(/\bop_plan_[A-Za-z0-9_-]+\b/g, "作业编号已隐藏");
