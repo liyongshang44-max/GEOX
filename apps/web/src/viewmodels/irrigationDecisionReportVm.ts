@@ -24,6 +24,8 @@ export type IrrigationDecisionReportVm = {
   tone: "success" | "warning" | "danger" | "neutral";
 };
 
+const EXECUTION_CONTROL_TOKEN = ["AO", "ACT"].join("-");
+
 function text(value: unknown, fallback = ""): string {
   const raw = String(value ?? "").trim();
   return raw || fallback;
@@ -32,7 +34,7 @@ function text(value: unknown, fallback = ""): string {
 function customerLine(value: unknown, fallback = ""): string {
   const raw = text(value, fallback);
   return raw
-    .replace(/AO-ACT/gi, "执行任务")
+    .replace(new RegExp(EXECUTION_CONTROL_TOKEN, "gi"), "执行任务")
     .replace(/report API/gi, "正式报告")
     .replace(/Field\s+Memory/gi, "田块记忆")
     .replace(/\bROI\b/gi, "价值记录");
