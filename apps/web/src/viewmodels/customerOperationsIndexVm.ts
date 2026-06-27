@@ -111,6 +111,8 @@ function operationDisplayTitle(operationTypeText: string, item: CustomerOperatio
     return "病虫害巡检";
   }
 
+  if (raw === "作业" && operationTypeText === "作业") return "田间作业";
+  if (raw.endsWith("作业")) return customerDisplayName(raw, "田间作业");
   return customerDisplayName(raw, `${operationTypeText}作业`);
 }
 
