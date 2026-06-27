@@ -4,6 +4,7 @@
 
 import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import "../styles/operatorShell.css";
 
 type OperatorLayoutProps = {
   children: React.ReactNode;
@@ -122,7 +123,7 @@ export default function OperatorLayout({
         </div>
 
         <div className="customerShellFooterNote">
-          Scenario 不能当作 Task；情景只能进入 recommendation / approval 链路，不能直接变成 AO-ACT task。
+          情景只能进入建议、审批和人工确认链路，不能直接变成正式任务。
         </div>
       </aside>
 

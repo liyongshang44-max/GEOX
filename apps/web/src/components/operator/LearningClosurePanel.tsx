@@ -9,7 +9,7 @@ export default function LearningClosurePanel({ vm }: { vm: OperatorLearningClosu
       <header className="operatorLearningClosureHead">
         <div>
           <h2>学习闭环</h2>
-          <p>作业结果 → 证据 → 验收 → ROI → Field Memory → Skill / Rule Performance</p>
+          <p>请选择作业后查看完整学习链路。</p>
         </div>
         <span className={`operatorLearningClosureBadge ${vm.learningEffectiveTone}`}>{vm.learningEffectiveText}</span>
       </header>

@@ -10,6 +10,7 @@ export type OperatorStatusDomain =
   | "generic";
 
 const STATUS_LABELS: Record<string, string> = {
+  IRRIGATION: "灌溉任务",
   IRRIGATE: "灌溉",
   PENDING: "待处理",
   PENDING_ACCEPTANCE: "待验收",
@@ -49,9 +50,10 @@ const OFFLINE_HANDLING_LABELS: Record<string, string> = {
 };
 
 const TERM_LABELS: Record<string, string> = {
-  "AO-ACT task": "执行任务",
-  "AO-ACT Task": "执行任务",
-  "ao-act task": "执行任务",
+  "AO-ACT task": "正式任务",
+  "AO-ACT Task": "正式任务",
+  "ao-act task": "正式任务",
+  "AO-ACT": "正式任务链路",
   Dispatch: "派发",
   dispatch: "派发",
   ACK: "接单确认",
@@ -73,6 +75,15 @@ const TERM_LABELS: Record<string, string> = {
   Checksum: "文件校验值",
   operation_state: "作业状态",
   OperationState: "作业状态",
+  "report API": "正式报告数据",
+  "operation report": "作业报告",
+  "as-applied": "实际覆盖记录",
+  "permission.allowed": "会话权限结果",
+  "operator_evidence_export": "证据导出权限",
+  "job detail": "任务详情",
+  ROI: "价值记录",
+  "Field Memory": "田块记忆",
+  "Skill / Rule Performance": "技能表现",
 };
 
 function normalizeStatus(value: unknown): string {
@@ -132,6 +143,13 @@ export function replaceOperatorTerms(value: unknown, fallback = ""): string {
   for (const term of orderedTerms) {
     next = next.replace(new RegExp(escapeRegExp(term), "g"), TERM_LABELS[term]);
   }
+
+  next = next
+    .replace(/\bck_[A-Za-z0-9_-]+\b/g, "人员账号已隐藏")
+    .replace(/\btok_[A-Za-z0-9_-]+\b/g, "人员账号已隐藏")
+    .replace(/\bdev_[A-Za-z0-9_-]+\b/g, "设备编号已隐藏")
+    .replace(/\bfield_[A-Za-z0-9_-]+\b/g, "地块编号已隐藏")
+    .replace(/\bop_plan_[A-Za-z0-9_-]+\b/g, "作业编号已隐藏");
 
   const orderedOfflineStatuses = Object.keys(OFFLINE_HANDLING_LABELS).sort((a, b) => b.length - a.length);
   for (const status of orderedOfflineStatuses) {
