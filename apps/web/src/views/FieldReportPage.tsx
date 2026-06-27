@@ -135,7 +135,7 @@ export default function FieldReportPage(): React.ReactElement {
             <div className="customerCardHeaderRow">
               <div>
                 <h2 className="customerCardTitle">正式链路摘要</h2>
-                <p className="customerMetricLabel">客户主视觉仅展示 report API 返回后的客户可读摘要；内部编号默认折叠。</p>
+                <p className="customerMetricLabel">客户主视觉仅展示客户可读摘要；内部编号默认折叠。</p>
               </div>
               <span className="customerPill">主视觉</span>
             </div>
