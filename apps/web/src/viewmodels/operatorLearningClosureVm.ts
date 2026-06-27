@@ -92,8 +92,9 @@ function rawLearningSignals(memoryRows: OperatorFieldMemoryRowVm[], skillTrace: 
   return memorySignals + traceSignals;
 }
 
-function backendValidationText(validation: OperatorLearningValidationV1 | null | undefined): string {
-  if (!validation) return "后端学习门禁未返回，当前使用前端有限降级判断。";
+function backendValidationText(validation: OperatorLearningValidationV1 | null | undefined, operationId: string): string {
+  if (!operationId) return "请选择作业查看学习闭环。";
+  if (!validation) return "尚未返回正式学习门禁结果；请选择已完成验收的作业或稍后刷新。";
   return `${validation.learning_validation_status}；正式田块记忆 ${validation.formal_memory_count} 条，可信价值 ${validation.trusted_value_count} 条，原始信号 ${validation.raw_signal_count} 条。`;
 }
 
@@ -131,7 +132,7 @@ export function buildOperatorLearningClosureVm(input: OperatorLearningClosureInp
   const signalCount = rawLearningSignals(memoryRows, input.skillTrace);
 
   const localLearningExcludedReasonText = !operationId
-    ? "未选择作业，暂不判断学习排除原因。"
+    ? "请选择作业查看学习闭环。"
     : weatherExcluded
       ? "因降雨干扰，本次结果未进入灌溉效果学习。"
       : formalLearning
@@ -141,7 +142,7 @@ export function buildOperatorLearningClosureVm(input: OperatorLearningClosureInp
           : "暂无通过正式学习门禁的证据。";
 
   const localLearningEffectiveText = !operationId
-    ? "需选择作业后判断"
+    ? "请选择作业查看学习闭环"
     : weatherExcluded
       ? "未生效"
       : formalLearning
@@ -170,24 +171,24 @@ export function buildOperatorLearningClosureVm(input: OperatorLearningClosureInp
 
   const vm: OperatorLearningClosureVm = {
     operationIdText: operationId || "未选择作业",
-    evidenceStatusText: operationId ? formalEvidenceStatus(roiRows, memoryRows) : "需选择作业后追溯证据",
-    acceptanceResultText: operationId ? acceptanceResult(memoryRows, roiRows) : "需选择作业后追溯验收",
-    roiEntryText: operationId ? `${roiRows.length} 条价值记录；${roiRows.filter((row) => row.customerVisibleValue).length} 条通过正式价值门禁` : "需选择作业后追溯价值记录",
+    evidenceStatusText: operationId ? formalEvidenceStatus(roiRows, memoryRows) : "请选择作业查看学习闭环",
+    acceptanceResultText: operationId ? acceptanceResult(memoryRows, roiRows) : "请选择作业查看学习闭环",
+    roiEntryText: operationId ? `${roiRows.length} 条价值记录；${roiRows.filter((row) => row.customerVisibleValue).length} 条通过正式价值门禁` : "请选择作业查看学习闭环",
     fieldMemoryEntryText: validation
       ? `${validation.raw_counts.field_memory_rows} 条田块记忆；${validation.formal_memory_count} 条通过后端正式学习门禁`
-      : operationId ? `${memoryRows.length} 条田块记忆；${memoryRows.filter((row) => row.learningGateText === "已通过正式学习门禁").length} 条正式学习` : "需选择作业后追溯田块记忆",
+      : operationId ? `${memoryRows.length} 条田块记忆；${memoryRows.filter((row) => row.learningGateText === "已通过正式学习门禁").length} 条正式学习` : "请选择作业查看学习闭环",
     skillTraceText: validation
       ? `${validation.raw_counts.skill_trace_rows} 条技能运行记录；${validation.raw_signal_count} 条仅作为原始信号`
-      : operationId ? skillTraceText(input.skillTrace) : "需选择作业后追溯技能运行记录",
-    performanceText: operationId ? performanceText(input.performance) : "需选择作业后追溯技能 / 规则表现",
+      : operationId ? skillTraceText(input.skillTrace) : "请选择作业查看学习闭环",
+    performanceText: operationId ? performanceText(input.performance) : "请选择作业查看学习闭环",
     learningEffectiveText,
     learningExcludedReasonText,
     learningEffectiveTone,
-    backendValidationText: backendValidationText(validation),
+    backendValidationText: backendValidationText(validation, operationId),
     rows: [],
     actions: actionLinks(operationId, fieldId),
   };
-  vm.rows = [
+  vm.rows = operationId ? [
     { label: "作业编号", value: vm.operationIdText },
     { label: "后端学习门禁", value: vm.backendValidationText },
     { label: "证据状态", value: vm.evidenceStatusText },
@@ -198,6 +199,8 @@ export function buildOperatorLearningClosureVm(input: OperatorLearningClosureInp
     { label: "技能 / 规则表现", value: vm.performanceText },
     { label: "学习是否生效", value: vm.learningEffectiveText },
     { label: "学习排除原因", value: vm.learningExcludedReasonText },
+  ] : [
+    { label: "学习闭环", value: "请选择作业查看学习闭环" },
   ];
   return vm;
 }

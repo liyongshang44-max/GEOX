@@ -1,0 +1,28 @@
+#!/usr/bin/env node
+'use strict';
+const fs = require('node:fs');
+const read = (p) => fs.readFileSync(p, 'utf8');
+const assert = (cond, msg) => { if (!cond) throw new Error(msg); console.log('[pui] ok:', msg); };
+const customer = read('apps/web/src/viewmodels/customerReportMainVisualVm.ts');
+const summary = read('apps/web/src/features/customer/components/CustomerConfirmedTwinSummaryCard.tsx');
+const learning = read('apps/web/src/viewmodels/operatorLearningClosureVm.ts');
+const irrigation = read('apps/web/src/viewmodels/irrigationDecisionReportVm.ts');
+const operations = read('apps/web/src/viewmodels/customerOperationsIndexVm.ts');
+const fieldPage = read('apps/web/src/views/FieldReportPage.tsx');
+assert(customer.includes('正式报告尚未形成'), 'customer fallback language');
+assert(customer.includes('建议记录'), 'recommendation label');
+assert(customer.includes('处方记录'), 'prescription label');
+assert(customer.includes('执行记录'), 'execution label');
+assert(customer.includes('验收记录'), 'acceptance label');
+assert(customer.includes('价值记录'), 'value label');
+assert(customer.includes('田块记忆'), 'field memory label');
+assert(!customer.includes('正式 report API 条件不足'), 'customer fallback wording closed');
+assert(summary.includes('customerReason(summary?.reason)'), 'summary reason mapper');
+assert(!summary.includes('operator confirmation / recommendation submission'), 'summary caption is localized');
+assert(learning.includes('请选择作业查看学习闭环'), 'operator learning empty state');
+assert(!learning.includes('后端学习门禁未返回，当前使用前端有限降级判断。'), 'operator learning fallback warning removed');
+assert(irrigation.includes('执行任务'), 'irrigation execution boundary is product language');
+assert(!irrigation.includes('AO-ACT'), 'irrigation customer VM hides raw control name');
+assert(!operations.includes('raw PASS'), 'customer operations list hides raw pass wording');
+assert(fieldPage.includes('客户主视觉仅展示客户可读摘要'), 'field report shell product copy');
+console.log('[pui] PASS');

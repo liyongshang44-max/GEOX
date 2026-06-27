@@ -16,6 +16,57 @@ function text(value: unknown): string {
   return String(value ?? "").trim();
 }
 
+const CUSTOMER_REASON_BY_CODE: Record<string, string> = {
+  NO_CONFIRMED_OPERATOR_RECOMMENDATION: "暂无运营人员确认的正式建议",
+  CUSTOMER_SUMMARY_ONLY: "当前仅有客户摘要，正式报告仍待补齐",
+  NO_FORECAST_RUN: "缺少可回放预测结果",
+  NO_SCENARIO_EDIT: "情景尚未完成确认",
+  NO_RECOMMENDATION_SUBMIT: "建议尚未提交",
+  NO_APPROVAL: "审批尚未完成",
+  NO_DISPATCH: "任务尚未派发",
+  NO_TASK_CREATION: "作业任务尚未创建",
+  SCENARIO_OPTIONS_MISSING: "情景比较结果待补齐",
+  ACCEPTANCE_RESULT_MISSING: "验收结果待补齐",
+  WATER_RESPONSE_VERIFICATION_MISSING: "灌后效果验证待补齐",
+};
+
+function customerVisibleReason(value: unknown): string {
+  const raw = text(value);
+  if (!raw) return "条件待补齐";
+  const direct = CUSTOMER_REASON_BY_CODE[raw.toUpperCase()];
+  if (direct) return direct;
+
+  let safe = raw
+    .replace(/正式\s*report\s*API\s*条件不足/gi, "正式报告尚未形成")
+    .replace(/正式\s*report\s*API\s*数据/gi, "正式报告数据")
+    .replace(/report\s*API/gi, "正式报告")
+    .replace(/recommendation_id/gi, "建议记录")
+    .replace(/prescription_id/gi, "处方记录")
+    .replace(/as_executed_id/gi, "执行记录")
+    .replace(/acceptance_id/gi, "验收记录")
+    .replace(/operation_id/gi, "作业记录")
+    .replace(/operation_plan_id/gi, "作业计划记录")
+    .replace(/field_id/gi, "地块记录")
+    .replace(/approval_id/gi, "审批记录")
+    .replace(/receipt_id/gi, "执行回执")
+    .replace(/AO-ACT/gi, "执行任务")
+    .replace(/Field\s+Memory/gi, "田块记忆")
+    .replace(/\bROI\b/gi, "价值记录");
+
+  if (/\bNO_[A-Z0-9_]+\b/.test(safe) || /\b[A-Z0-9]+_MISSING\b/.test(safe)) {
+    return "正式链路仍有待补齐环节";
+  }
+  if (/\b[A-Z][A-Z0-9]+_[A-Z0-9_]{2,}\b/.test(safe)) {
+    return "正式链路仍有待补齐环节";
+  }
+  return safe;
+}
+
+function customerVisibleReasons(reasons: string[]): string[] {
+  const mapped = reasons.map(customerVisibleReason).filter(Boolean);
+  return [...new Set(mapped.length ? mapped : ["正式链路仍有待补齐环节"])];
+}
+
 function asArray(value: unknown): any[] {
   return Array.isArray(value) ? value : [];
 }
@@ -132,13 +183,13 @@ function operationFormalValidation(report: OperationReportV1): ValidationResult 
   const identifiers = root.identifiers ?? {};
   const reasons: string[] = [];
   for (const [label, value] of [
-    ["operation_id", identifiers.operation_id ?? identifiers.operation_plan_id],
-    ["field_id", identifiers.field_id ?? root.field_id],
-    ["recommendation_id", identifiers.recommendation_id],
-    ["approval_id", identifiers.approval_id ?? root.approval?.approval_id ?? root.approval?.request_id],
-    ["receipt_id", identifiers.receipt_id ?? root.as_executed?.receipt_id ?? root.execution?.receipt_id],
-    ["prescription_id", identifiers.prescription_id ?? root.prescription?.prescription_id],
-    ["as_executed_id", identifiers.as_executed_id ?? root.as_executed?.as_executed_id],
+    ["作业记录", identifiers.operation_id ?? identifiers.operation_plan_id],
+    ["地块记录", identifiers.field_id ?? root.field_id],
+    ["建议记录", identifiers.recommendation_id],
+    ["审批记录", identifiers.approval_id ?? root.approval?.approval_id ?? root.approval?.request_id],
+    ["执行回执", identifiers.receipt_id ?? root.as_executed?.receipt_id ?? root.execution?.receipt_id],
+    ["处方记录", identifiers.prescription_id ?? root.prescription?.prescription_id],
+    ["执行记录", identifiers.as_executed_id ?? root.as_executed?.as_executed_id],
   ] as Array<[string, unknown]>) {
     if (!text(value)) reasons.push(`缺少 ${label}`);
   }
@@ -161,8 +212,8 @@ function insufficientVm(title: string, reasons: string[], technicalRows: Array<{
   return {
     status: "INSUFFICIENT_REPORT",
     title,
-    subtitle: "正式 report API 条件不足",
-    rows: [{ label: "正式报告条件", value: reasons.length ? reasons.join("、") : "条件不足" }],
+    subtitle: "正式报告尚未形成",
+    rows: [{ label: "仍需补齐", value: customerVisibleReasons(reasons).join("、") }],
     technicalRows,
   };
 }
@@ -170,10 +221,10 @@ function insufficientVm(title: string, reasons: string[], technicalRows: Array<{
 function fieldTechnicalRows(report: FieldReportDetailV1): Array<{ label: string; value: string }> {
   const root = report as any;
   return [
-    { label: "report_api", value: fieldId(report) ? `/api/v1/reports/field/${fieldId(report)}` : "--" },
-    { label: "field_id", value: fieldId(report) || "--" },
-    { label: "value_gate", value: root.value_summary?.has_customer_visible_value === true ? "passed" : "not_passed" },
-    { label: "formal_memory_count", value: text(root.learning_summary?.formal_memory_count ?? root.learning_summary?.formal_field_response_memory_count ?? 0) },
+    { label: "报告入口", value: fieldId(report) ? `/api/v1/reports/field/${fieldId(report)}` : "--" },
+    { label: "地块记录", value: fieldId(report) || "--" },
+    { label: "价值门禁", value: root.value_summary?.has_customer_visible_value === true ? "已通过" : "未通过" },
+    { label: "正式记忆数量", value: text(root.learning_summary?.formal_memory_count ?? root.learning_summary?.formal_field_response_memory_count ?? 0) },
   ];
 }
 
@@ -238,7 +289,7 @@ function buildPestDiseaseInspectionMainVisualVm(report: OperationReportV1, techn
   return {
     status: "FORMAL_READY",
     title,
-    subtitle: "正式 report API 病虫害巡检摘要",
+    subtitle: "病虫害巡检摘要",
     rows: [
       { label: "巡检对象", value: pestDiseaseTargetText(pdi.target_type ?? latest.target_type) },
       { label: "疑似问题", value: text(pdi.suspected_issue_code ?? latest.suspected_issue_code) || "疑似问题待确认" },
@@ -256,8 +307,8 @@ function buildPestDiseaseInspectionMainVisualVm(report: OperationReportV1, techn
     ],
     technicalRows: [
       ...technicalRows,
-      { label: "inspection_id", value: text(pdi.inspection_id) || "--" },
-      { label: "observation_count", value: text(observationEvidence.total_observations ?? 0) },
+      { label: "巡检记录", value: text(pdi.inspection_id) || "--" },
+      { label: "观测数量", value: text(observationEvidence.total_observations ?? 0) },
     ],
   };
 }
@@ -266,18 +317,18 @@ function operationTechnicalRows(report: OperationReportV1): Array<{ label: strin
   const root = report as any;
   const identifiers = root.identifiers ?? {};
   return [
-    { label: "report_api", value: operationId(report) ? `/api/v1/reports/operation/${operationId(report)}` : "--" },
-    { label: "operation_id", value: operationId(report) || "--" },
-    { label: "recommendation_id", value: text(identifiers.recommendation_id) || "--" },
-    { label: "prescription_id", value: text(identifiers.prescription_id ?? root.prescription?.prescription_id) || "--" },
-    { label: "approval_id", value: text(identifiers.approval_id ?? root.approval?.approval_id ?? root.approval?.request_id) || "--" },
-    { label: "receipt_id", value: text(identifiers.receipt_id ?? root.as_executed?.receipt_id ?? root.execution?.receipt_id) || "--" },
-    { label: "as_executed_id", value: text(identifiers.as_executed_id ?? root.as_executed?.as_executed_id) || "--" },
+    { label: "报告入口", value: operationId(report) ? `/api/v1/reports/operation/${operationId(report)}` : "--" },
+    { label: "作业记录", value: operationId(report) || "--" },
+    { label: "建议记录", value: text(identifiers.recommendation_id) || "--" },
+    { label: "处方记录", value: text(identifiers.prescription_id ?? root.prescription?.prescription_id) || "--" },
+    { label: "审批记录", value: text(identifiers.approval_id ?? root.approval?.approval_id ?? root.approval?.request_id) || "--" },
+    { label: "执行回执", value: text(identifiers.receipt_id ?? root.as_executed?.receipt_id ?? root.execution?.receipt_id) || "--" },
+    { label: "执行记录", value: text(identifiers.as_executed_id ?? root.as_executed?.as_executed_id) || "--" },
   ];
 }
 
 export function buildCustomerFieldReportMainVisualVm(report?: FieldReportDetailV1 | null): CustomerReportMainVisualVm {
-  if (!report) return insufficientVm("地块报告", ["缺少正式 report API 数据"], [{ label: "report_api", value: "--" }]);
+  if (!report) return insufficientVm("地块报告", ["缺少正式报告数据"], [{ label: "报告入口", value: "--" }]);
   const root = report as any;
   const fieldContext = root.field_context ?? {};
   const sensing = root.sensing_summary ?? {};
@@ -294,7 +345,7 @@ export function buildCustomerFieldReportMainVisualVm(report?: FieldReportDetailV
   return {
     status: "FORMAL_READY",
     title,
-    subtitle: "正式 report API 客户摘要",
+    subtitle: "客户可读摘要",
     rows: [
       { label: "面积", value: `${formatNumber(areaMu, 0)} 亩` },
       { label: "边界", value: hasBoundary(fieldContext) ? "已接入" : "暂未接入" },
@@ -311,7 +362,7 @@ export function buildCustomerFieldReportMainVisualVm(report?: FieldReportDetailV
 }
 
 export function buildCustomerOperationReportMainVisualVm(report?: OperationReportV1 | null): CustomerReportMainVisualVm {
-  if (!report) return insufficientVm("作业报告", ["缺少正式 report API 数据"], [{ label: "report_api", value: "--" }]);
+  if (!report) return insufficientVm("作业报告", ["缺少正式报告数据"], [{ label: "报告入口", value: "--" }]);
   const root = report as any;
   const technicalRows = operationTechnicalRows(report);
   if (isPestDiseaseInspectionReport(report)) return buildPestDiseaseInspectionMainVisualVm(report, technicalRows);
@@ -334,7 +385,7 @@ export function buildCustomerOperationReportMainVisualVm(report?: OperationRepor
   return {
     status: "FORMAL_READY",
     title,
-    subtitle: "正式 report API 客户摘要",
+    subtitle: "客户可读摘要",
     rows: [
       { label: "为什么做", value: why },
       { label: "建议", value: `补灌 ${formatNumber(prescriptionAmount, 0)}${prescriptionUnit}` },

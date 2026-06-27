@@ -95,7 +95,7 @@ function acceptanceText(item: CustomerOperationListItem): string {
 function evidenceCopy(item: CustomerOperationListItem): { text: string; explanation?: string } {
   if (isEvidenceInsufficient(item) && !isFormalAcceptancePass(item)) return { text: "等待补充证据" };
   const text = customerGuardedEvidenceText(item);
-  if (!isCustomerFormalChainPassed(item)) return { text, explanation: "列表主文案以客户信任门禁为准；回执成功或 raw PASS 不能单独形成正式结论。" };
+  if (!isCustomerFormalChainPassed(item)) return { text, explanation: "列表主文案以客户信任门禁为准；回执成功或原始状态通过不能单独形成正式结论。" };
   return { text };
 }
 
