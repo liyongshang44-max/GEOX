@@ -4,6 +4,7 @@
 
 import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import "../styles/operatorShell.css";
 
 type OperatorLayoutProps = {
   children: React.ReactNode;
