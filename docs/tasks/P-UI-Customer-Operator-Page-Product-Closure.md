@@ -20,36 +20,20 @@ It does not create a new H-line.
 
 Customer-facing main visual sections must not show raw engineering codes.
 
-Customer pages must not show internal identifiers such as recommendation, prescription, execution, acceptance, operation, field, approval, or receipt identifier labels in the main visual.
+Customer pages must not show internal identifiers in the main visual.
 
-Customer pages must not show internal module names such as AO-ACT, ROI, or Field Memory in the main visual.
+Customer pages must not show internal module names such as execution-control internals, raw value-ledger internals, or raw memory internals in the main visual.
 
-Customer pages should say:
+Customer pages should use product language:
 
 ```text
 正式报告尚未形成
-仍缺少正式验收与价值记录
 建议记录
 处方记录
 执行记录
 验收记录
 价值记录
 田块记忆
-```
-
-Customer pages must not say:
-
-```text
-正式 report API 条件不足
-NO_* code
-*_MISSING code
-recommendation_id
-prescription_id
-as_executed_id
-acceptance_id
-AO-ACT
-ROI
-Field Memory
 ```
 
 ## Technical details
@@ -60,7 +44,7 @@ They must not become the customer main visual.
 
 ## Operator page rules
 
-ROI and Field Memory operator pages may keep internal traceability, but their default empty state must not show backend fallback judgment as the main visual.
+Operator pages may keep internal traceability, but their default empty state must not show backend fallback judgment as the main visual.
 
 When no operation is selected, the learning closure panel must show only:
 
@@ -71,7 +55,7 @@ When no operation is selected, the learning closure panel must show only:
 ## Acceptance commands
 
 ```powershell
-node scripts/frontend_acceptance/ACCEPTANCE_PAGE_PRODUCT_CLOSURE_V1.cjs
+node scripts/qa/P_UI_PAGE_PRODUCT_CLOSURE_CHECK.cjs
 pnpm run typecheck:web
 pnpm run ci:frontend:runtime-page-audit
 ```
@@ -79,5 +63,5 @@ pnpm run ci:frontend:runtime-page-audit
 Expected result:
 
 ```text
-[P-UI-page-product-closure] PASS
+[pui] PASS
 ```
