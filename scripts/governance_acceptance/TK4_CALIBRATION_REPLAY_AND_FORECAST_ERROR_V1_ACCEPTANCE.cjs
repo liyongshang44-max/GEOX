@@ -12,7 +12,7 @@ const REQUIRED_FILES = {
   snapshotMigration: 'apps/server/db/migrations/2026_06_28_field_state_snapshot_v1.sql',
   forecastMigration: 'apps/server/db/migrations/2026_06_28_forecast_run_v1.sql',
   scenarioMigration: 'apps/server/db/migrations/2026_06_28_scenario_set_v1.sql',
-  calibrationMigration: 'apps/server/db/migrations/2026_06_28_calibration_replay_and_forecast_error_v1.sql',
+  calibrationMigration: 'apps/server/db/migrations/2026_06_28_tk4_calibration_replay_and_forecast_error_v1.sql',
   snapshotBuilder: 'apps/server/src/domain/twin_kernel/field_state_snapshot_v1.ts',
   forecastBuilder: 'apps/server/src/domain/twin_kernel/forecast_run_v1.ts',
   scenarioBuilder: 'apps/server/src/domain/twin_kernel/scenario_set_v1.ts',
