@@ -3,8 +3,12 @@
 ## Stage
 
 ```text
-Post Twin Kernel v1 / Production Hardening & Integration Prep
+Post-Twin-Kernel-v1 Productionization
 ```
+
+## Stage goal
+
+Move Twin Kernel v1 from a bounded human-gated execution-to-learning kernel into a quasi-production agricultural digital twin system that can accept real data, support multi-operator workflow, govern ROI and Field Memory, and connect to execution systems without breaking the human gate.
 
 ## Baseline
 
@@ -36,7 +40,7 @@ TK16 is accepted as a configurable multi-scope regression harness framework.
 
 TK16 must not be described as full strong fixture coverage.
 
-The strong fixture requirement remains open for post-v1:
+The strong fixture requirement remains open inside P1:
 
 ```text
 At least 3 project/group/field scopes.
@@ -47,11 +51,50 @@ Decision cycles must not cross seasons.
 Field Memory records must not cross crops.
 ```
 
+## Formal phase line
+
+The formal post-v1 phase line is:
+
+```text
+P1 Production Hardening
+P2 Real Adapter Integration
+P3 Operator UX Refinement
+P4 Policy-Controlled ROI
+P5 Policy-Controlled Field Memory Governance
+P6 Execution System Integration
+```
+
+## Dependency structure
+
+The phase line has two dependency layers.
+
+The foundation layer is:
+
+```text
+P1 → P2 → P3
+```
+
+The governance and execution layer is:
+
+```text
+P4 → P5 → P6
+```
+
+The preferred merge order remains:
+
+```text
+P1 → P2 → P3 → P4 → P5 → P6
+```
+
+P3 may be developed partly in parallel with P4 and P5.
+
+However, the merge order should keep P3 before P4 and P5 because ROI policy and Field Memory governance change the practical meaning of operator workflow.
+
 ## Phase constraint
 
-Post-v1 hardening must not rewrite Twin Kernel v1 completion facts.
+Post-v1 work must not rewrite Twin Kernel v1 completion facts.
 
-Post-v1 hardening must not make the kernel autonomous unless a later policy-controlled task explicitly changes the boundary.
+Post-v1 work must not make the kernel autonomous unless a later policy-controlled task explicitly changes the boundary.
 
 The following remain absent by design until explicitly introduced:
 
@@ -66,18 +109,224 @@ automatic Field Memory policy write
 automatic model update
 ```
 
-## Execution order
+## P1 — Production Hardening
+
+### Purpose
+
+Move the system from acceptance fixture happy path to production-interface stability.
+
+P1 is the prerequisite for every later phase.
+
+Without P1, real adapters, ROI policy, Field Memory governance, and execution integration would expand an unstable surface.
+
+### Scope
+
+```text
+multi tenant / project / group / field fixtures
+strict multi-scope fixture pack
+idempotency hardening
+route-level negative tests
+structured error taxonomy
+DB index and query-cost checks
+Docker startup hardening
+migration runner hardening
+repeatable local acceptance commands
+```
+
+### Meaning of completion
+
+After P1, the system should tolerate:
+
+```text
+wrong input
+missing input
+repeated requests
+startup order variance
+migration state variance
+multi-scope data isolation
+case-local production pointer refs
+```
+
+### P1 internal tasks
 
 ```text
 POSTV1-01 Production Hardening Baseline
 POSTV1-02 Strong Multi-Scope Fixture Pack
 POSTV1-03 Ingestion Idempotency & Error Taxonomy
 POSTV1-04 Route Negative Runtime Matrix
-POSTV1-05 Adapter Contract Registry
-POSTV1-06 Operator UX Closure Cards
-POSTV1-07 Policy-Controlled ROI Preview
-POSTV1-08 Field Memory Governance Policy
-POSTV1-09 Execution Adapter Bridge
+POSTV1-05 DB Index / Query Cost Audit
+POSTV1-06 Docker Startup / Migration Runner Baseline
+```
+
+## P2 — Real Adapter Integration
+
+### Purpose
+
+Make `production_source_refs_v0` usable by external systems while preserving the raw payload and semantic boundary.
+
+P2 must not allow adapters to smuggle business meaning into Twin Kernel internals.
+
+### Scope
+
+```text
+source_system registry
+source_contract_version registry
+source_event_id duplicate semantics
+adapter checkpoint policy
+raw payload pointer policy
+opaque payload boundary
+ingest replay tool
+ingest repair tool
+adapter failure ledger
+```
+
+### Boundary
+
+```text
+External payloads remain raw or pointer-based.
+Adapters cannot create recommendations.
+Adapters cannot create approvals.
+Adapters cannot create AO-ACT tasks.
+Adapters cannot create formal ROI.
+Adapters cannot create formal Field Memory.
+```
+
+## P3 — Operator UX Refinement
+
+### Purpose
+
+Move the TK17 production workflow shell from existence proof to usable operator workbench.
+
+### Scope
+
+```text
+decision queue search
+queue filters
+session status display
+review status display
+trace link display
+formalization before / after comparison
+business closure status cards
+missing closure reason display
+error state display
+disabled state display
+```
+
+### Boundary
+
+```text
+No automatic formalization.
+No dispatch UI unless P6 explicitly introduces an approved bridge.
+No priority scoring.
+No risk coloring.
+No autonomous next action.
+```
+
+## P4 — Policy-Controlled ROI
+
+### Purpose
+
+Introduce traceable ROI preview under explicit policy and evidence inputs.
+
+P4 is not automatic ROI decisioning.
+
+### Hard boundary
+
+```text
+ROI preview is not formal ROI.
+ROI dry-run is not a decision.
+ROI policy cannot advance decision_cycle_v1.
+ROI policy cannot update decision_cycle_v1 external refs.
+Operator approval remains required before formal ROI.
+Operator formalization action remains the only formal ROI path.
+```
+
+### Scope
+
+```text
+ROI policy config
+ROI input schema
+cost / yield / water / labor input normalization
+preview-only ROI endpoint or read model
+ROI policy evidence refs
+ROI preview determinism hash
+operator approve then formalize flow
+```
+
+## P5 — Policy-Controlled Field Memory Governance
+
+### Purpose
+
+Govern Field Memory before long-term memory writes affect system behavior.
+
+P5 must precede P6 because execution integration can amplify bad memory.
+
+### Scope
+
+```text
+memory candidate review queue
+duplicate memory detection
+conflict memory detection
+evidence sufficiency gate
+memory versioning
+supersede lifecycle
+retract lifecycle
+formal memory audit readback
+```
+
+### Hard boundary
+
+```text
+Field Memory governance is not model update governance.
+Writing memory and updating a model are two separate gates.
+No automatic model update.
+No automatic policy promotion.
+No silent overwrite of existing memory.
+No low-evidence formal memory write.
+```
+
+## P6 — Execution System Integration
+
+### Purpose
+
+Connect the approved operation context to AO-ACT and real execution systems without introducing autonomous execution.
+
+P6 is the most sensitive phase.
+
+### Scope
+
+```text
+operation plan to AO-ACT task human approval bridge
+executor registry
+receipt adapter
+as-executed observation adapter
+acceptance gate
+partial completion read model
+execution failure read model
+repair / replay for execution receipts
+```
+
+### Hard boundary
+
+```text
+operation plan → AO-ACT task requires human review.
+AO-ACT task is not created automatically by Twin Kernel.
+Receipt adapter only ingests receipts.
+As-executed adapter only ingests facts.
+Acceptance gate cannot auto-pass.
+Partial completion and failure must be readable.
+Trace readback cannot cause execution side effects.
+```
+
+## Current execution order inside P1
+
+```text
+POSTV1-01 Production Hardening Baseline
+POSTV1-02 Strong Multi-Scope Fixture Pack
+POSTV1-03 Ingestion Idempotency & Error Taxonomy
+POSTV1-04 Route Negative Runtime Matrix
+POSTV1-05 DB Index / Query Cost Audit
+POSTV1-06 Docker Startup / Migration Runner Baseline
 ```
 
 ## POSTV1-01 — Production Hardening Baseline
@@ -140,7 +389,6 @@ business closure remains case-local
 
 ```text
 No new kernel semantics.
-No performance optimization.
 No adapter integration.
 Only fixture coverage and isolation regression.
 ```
@@ -194,91 +442,67 @@ No new routes.
 No schema expansion unless required by an observed bug.
 ```
 
-## POSTV1-05 — Adapter Contract Registry
+## POSTV1-05 — DB Index / Query Cost Audit
 
 ### Goal
 
-Define known source systems and their source ref contract versions.
+Audit the production hardening query surfaces before real adapters increase write and read volume.
 
 ### Scope
 
 ```text
-source_system registry
-source_contract_version registry
-adapter checkpoint rules
-raw payload pointer policy
-repair/replay policy
+production_ingestion_event_v0 lookup path
+operator decision queue lookup path
+trace readback lookup path
+business closure lookup path
+field_learning_candidate_v1 lookup path
+index inventory
+basic EXPLAIN readout acceptance
 ```
 
 ### Boundary
 
 ```text
-No actual external adapter yet.
-No ingestion of private vendor payloads into semantic fields.
+No premature performance tuning.
+No table redesign unless an observed query path is missing an index.
+No semantic change.
 ```
 
-## POSTV1-06 — Operator UX Closure Cards
+## POSTV1-06 — Docker Startup / Migration Runner Baseline
 
 ### Goal
 
-Expose the TK18 business closure readback in the operator production workflow UX.
+Make local and deployment startup less dependent on manual command memory.
 
 ### Scope
 
 ```text
-closure status card
-trace link
-ROI / Field Memory pointer display
-missing closure reason display
-error state display
+server startup check
+Postgres health dependency
+migration application check
+missing migration diagnostic
+port mapping diagnostic
+acceptance preflight output
 ```
 
 ### Boundary
 
 ```text
-No automatic formalization.
-No dispatch UI.
-No priority/risk scoring.
+No infrastructure migration to another platform.
+No cloud deployment work.
+No new runtime semantics.
 ```
 
-## POSTV1-07 — Policy-Controlled ROI Preview
+## Next-phase placeholders
 
-### Goal
-
-Add preview-only ROI calculation under explicit policy and evidence inputs.
-
-### Boundary
+After P1 completes, the next phase entries are:
 
 ```text
-Preview is not formal ROI.
-Preview cannot update decision_cycle_v1 external refs.
-Operator action remains required to formalize ROI.
+P2 Real Adapter Integration
+P3 Operator UX Refinement
+P4 Policy-Controlled ROI
+P5 Policy-Controlled Field Memory Governance
+P6 Execution System Integration
 ```
 
-## POSTV1-08 — Field Memory Governance Policy
-
-### Goal
-
-Add governance around Field Memory candidates before formal memory writes are accepted.
-
-### Boundary
-
-```text
-No automatic model update.
-No automatic policy promotion.
-No silent overwrite of existing memory.
-```
-
-## POSTV1-09 — Execution Adapter Bridge
-
-### Goal
-
-Design the explicit bridge from approved operation context to AO-ACT and receipt/as-executed adapters.
-
-### Boundary
-
-```text
-No bypass of human approval.
-No automatic dispatch from forecast or scenario.
-No execution side effects from trace readback.
-```
+These should not begin until P1 has a completion review, unless the work is explicitly marked as parallel exploratory work and not merged into main before P1 completion.
