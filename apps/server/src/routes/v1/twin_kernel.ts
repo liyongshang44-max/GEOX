@@ -5,7 +5,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { buildFieldStateSnapshotV1, type FieldStateSnapshotScopeV1 } from "../../domain/twin_kernel/field_state_snapshot_v1.js";
-import { buildForecastRunV1 } from "../../domain/twin_kernel/forecast_run_v1.js";
+import { buildForecastRunV1, type ForecastRunSnapshotRowV1 } from "../../domain/twin_kernel/forecast_run_v1.js";
 
 type Row = Record<string, unknown>;
 
@@ -43,6 +43,14 @@ function firstText(...values: unknown[]): string {
     if (raw) return raw;
   }
   return "";
+}
+
+function record(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function evidenceArray(value: unknown): Array<Record<string, string>> {
+  return Array.isArray(value) ? (value.filter((item) => item && typeof item === "object") as Array<Record<string, string>>) : [];
 }
 
 function queryValue(req: any, key: string): unknown {
@@ -100,90 +108,48 @@ async function queryOne(pool: Pool, sql: string, values: unknown[]): Promise<Row
 }
 
 async function readFieldRow(pool: Pool, scope: FieldStateSnapshotScopeV1): Promise<Row | null> {
-  return queryOne(
-    pool,
-    `SELECT * FROM field_index_v1
-     WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3 AND field_id = $4
-     LIMIT 1`,
-    [scope.tenant_id, scope.project_id, scope.group_id, scope.field_id],
-  );
+  return queryOne(pool, `SELECT * FROM field_index_v1 WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3 AND field_id = $4 LIMIT 1`, [scope.tenant_id, scope.project_id, scope.group_id, scope.field_id]);
 }
 
 async function readWaterRow(pool: Pool, scope: FieldStateSnapshotScopeV1): Promise<Row | null> {
-  return queryOne(
-    pool,
-    `SELECT * FROM water_state_estimate_index_v1
-     WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3 AND field_id = $4
-     ORDER BY computed_at DESC NULLS LAST
-     LIMIT 1`,
-    [scope.tenant_id, scope.project_id, scope.group_id, scope.field_id],
-  );
+  return queryOne(pool, `SELECT * FROM water_state_estimate_index_v1 WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3 AND field_id = $4 ORDER BY computed_at DESC NULLS LAST LIMIT 1`, [scope.tenant_id, scope.project_id, scope.group_id, scope.field_id]);
 }
 
 async function readSensingRow(pool: Pool, scope: FieldStateSnapshotScopeV1): Promise<Row | null> {
-  return queryOne(
-    pool,
-    `SELECT * FROM soil_moisture_sensing_window_index_v1
-     WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3 AND field_id = $4
-     ORDER BY updated_at DESC NULLS LAST, window_end DESC NULLS LAST, created_at DESC NULLS LAST
-     LIMIT 1`,
-    [scope.tenant_id, scope.project_id, scope.group_id, scope.field_id],
-  );
+  return queryOne(pool, `SELECT * FROM soil_moisture_sensing_window_index_v1 WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3 AND field_id = $4 ORDER BY updated_at DESC NULLS LAST, window_end DESC NULLS LAST, created_at DESC NULLS LAST LIMIT 1`, [scope.tenant_id, scope.project_id, scope.group_id, scope.field_id]);
 }
 
 async function readWeatherRow(pool: Pool, scope: FieldStateSnapshotScopeV1): Promise<Row | null> {
-  return queryOne(
-    pool,
-    `SELECT * FROM weather_forecast_index_v1
-     WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3 AND field_id = $4
-     ORDER BY generated_at DESC NULLS LAST
-     LIMIT 1`,
-    [scope.tenant_id, scope.project_id, scope.group_id, scope.field_id],
-  );
+  return queryOne(pool, `SELECT * FROM weather_forecast_index_v1 WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3 AND field_id = $4 ORDER BY generated_at DESC NULLS LAST LIMIT 1`, [scope.tenant_id, scope.project_id, scope.group_id, scope.field_id]);
 }
 
 async function readSnapshotRow(pool: Pool, snapshotId: string): Promise<Row | null> {
   return queryOne(pool, "SELECT * FROM field_state_snapshot_v1 WHERE snapshot_id = $1 LIMIT 1", [snapshotId]);
 }
 
+function toForecastRunSnapshotRow(row: Row): ForecastRunSnapshotRowV1 {
+  return {
+    snapshot_id: firstText(row.snapshot_id),
+    tenant_id: firstText(row.tenant_id),
+    project_id: firstText(row.project_id),
+    group_id: firstText(row.group_id),
+    field_id: firstText(row.field_id),
+    as_of_ts: row.as_of_ts instanceof Date ? row.as_of_ts.toISOString() : firstText(row.as_of_ts),
+    status: firstText(row.status),
+    state_vector_json: record(row.state_vector_json),
+    confidence_json: record(row.confidence_json),
+    evidence_refs_json: evidenceArray(row.evidence_refs_json),
+    determinism_hash: firstText(row.determinism_hash),
+  };
+}
+
 async function insertSnapshot(pool: Pool, snapshot: ReturnType<typeof buildFieldStateSnapshotV1>): Promise<Row> {
   const result = await pool.query(
-    `INSERT INTO field_state_snapshot_v1 (
-       snapshot_id,
-       tenant_id,
-       project_id,
-       group_id,
-       field_id,
-       season_id,
-       as_of_ts,
-       status,
-       state_vector_json,
-       confidence_json,
-       evidence_refs_json,
-       source_indexes_json,
-       blocking_reasons_json,
-       determinism_hash
-     ) VALUES (
-       $1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9::jsonb,$10::jsonb,$11::jsonb,$12::jsonb,$13::jsonb,$14
-     )
+    `INSERT INTO field_state_snapshot_v1 (snapshot_id,tenant_id,project_id,group_id,field_id,season_id,as_of_ts,status,state_vector_json,confidence_json,evidence_refs_json,source_indexes_json,blocking_reasons_json,determinism_hash)
+     VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9::jsonb,$10::jsonb,$11::jsonb,$12::jsonb,$13::jsonb,$14)
      ON CONFLICT (snapshot_id) DO NOTHING
      RETURNING *`,
-    [
-      snapshot.snapshot_id,
-      snapshot.tenant_id,
-      snapshot.project_id,
-      snapshot.group_id,
-      snapshot.field_id,
-      snapshot.season_id,
-      snapshot.as_of_ts,
-      snapshot.status,
-      JSON.stringify(snapshot.state_vector_json),
-      JSON.stringify(snapshot.confidence_json),
-      JSON.stringify(snapshot.evidence_refs_json),
-      JSON.stringify(snapshot.source_indexes_json),
-      JSON.stringify(snapshot.blocking_reasons_json),
-      snapshot.determinism_hash,
-    ],
+    [snapshot.snapshot_id, snapshot.tenant_id, snapshot.project_id, snapshot.group_id, snapshot.field_id, snapshot.season_id, snapshot.as_of_ts, snapshot.status, JSON.stringify(snapshot.state_vector_json), JSON.stringify(snapshot.confidence_json), JSON.stringify(snapshot.evidence_refs_json), JSON.stringify(snapshot.source_indexes_json), JSON.stringify(snapshot.blocking_reasons_json), snapshot.determinism_hash],
   );
   if (result.rows[0]) return result.rows[0] as Row;
   const existing = await queryOne(pool, "SELECT * FROM field_state_snapshot_v1 WHERE snapshot_id = $1 LIMIT 1", [snapshot.snapshot_id]);
@@ -193,48 +159,11 @@ async function insertSnapshot(pool: Pool, snapshot: ReturnType<typeof buildField
 
 async function insertForecastRun(pool: Pool, forecast: ReturnType<typeof buildForecastRunV1>): Promise<Row> {
   const result = await pool.query(
-    `INSERT INTO forecast_run_v1 (
-       forecast_run_id,
-       snapshot_id,
-       tenant_id,
-       project_id,
-       group_id,
-       field_id,
-       as_of_ts,
-       horizon_days,
-       model_version,
-       status,
-       input_refs_json,
-       forecast_points_json,
-       risk_timeline_json,
-       uncertainty_json,
-       assumptions_json,
-       blocking_reasons_json,
-       determinism_hash
-     ) VALUES (
-       $1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10,$11::jsonb,$12::jsonb,$13::jsonb,$14::jsonb,$15::jsonb,$16::jsonb,$17
-     )
+    `INSERT INTO forecast_run_v1 (forecast_run_id,snapshot_id,tenant_id,project_id,group_id,field_id,as_of_ts,horizon_days,model_version,status,input_refs_json,forecast_points_json,risk_timeline_json,uncertainty_json,assumptions_json,blocking_reasons_json,determinism_hash)
+     VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10,$11::jsonb,$12::jsonb,$13::jsonb,$14::jsonb,$15::jsonb,$16::jsonb,$17)
      ON CONFLICT (forecast_run_id) DO NOTHING
      RETURNING *`,
-    [
-      forecast.forecast_run_id,
-      forecast.snapshot_id,
-      forecast.tenant_id,
-      forecast.project_id,
-      forecast.group_id,
-      forecast.field_id,
-      forecast.as_of_ts,
-      forecast.horizon_days,
-      forecast.model_version,
-      forecast.status,
-      JSON.stringify(forecast.input_refs_json),
-      JSON.stringify(forecast.forecast_points_json),
-      JSON.stringify(forecast.risk_timeline_json),
-      JSON.stringify(forecast.uncertainty_json),
-      JSON.stringify(forecast.assumptions_json),
-      JSON.stringify(forecast.blocking_reasons_json),
-      forecast.determinism_hash,
-    ],
+    [forecast.forecast_run_id, forecast.snapshot_id, forecast.tenant_id, forecast.project_id, forecast.group_id, forecast.field_id, forecast.as_of_ts, forecast.horizon_days, forecast.model_version, forecast.status, JSON.stringify(forecast.input_refs_json), JSON.stringify(forecast.forecast_points_json), JSON.stringify(forecast.risk_timeline_json), JSON.stringify(forecast.uncertainty_json), JSON.stringify(forecast.assumptions_json), JSON.stringify(forecast.blocking_reasons_json), forecast.determinism_hash],
   );
   if (result.rows[0]) return result.rows[0] as Row;
   const existing = await queryOne(pool, "SELECT * FROM forecast_run_v1 WHERE forecast_run_id = $1 LIMIT 1", [forecast.forecast_run_id]);
@@ -288,9 +217,7 @@ function exposeForecastRunRow(row: Row): Row {
 export function registerTwinKernelV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/twin-kernel/field-state-snapshots", async (req, reply) => {
     const scope = extractScope(req);
-    if (!scope) {
-      return reply.code(400).send({ ok: false, error: "TENANT_PROJECT_GROUP_FIELD_SCOPE_REQUIRED" });
-    }
+    if (!scope) return reply.code(400).send({ ok: false, error: "TENANT_PROJECT_GROUP_FIELD_SCOPE_REQUIRED" });
     let asOfTs: string;
     try {
       asOfTs = extractAsOfTs(req);
@@ -298,21 +225,10 @@ export function registerTwinKernelV1Routes(app: FastifyInstance, pool: Pool): vo
       return reply.code(400).send({ ok: false, error: "INVALID_AS_OF_TS" });
     }
     const seasonId = extractSeasonId(req);
-    const sources = {
-      field: await readFieldRow(pool, scope),
-      water: await readWaterRow(pool, scope),
-      sensing: await readSensingRow(pool, scope),
-      weather: await readWeatherRow(pool, scope),
-    };
+    const sources = { field: await readFieldRow(pool, scope), water: await readWaterRow(pool, scope), sensing: await readSensingRow(pool, scope), weather: await readWeatherRow(pool, scope) };
     const snapshot = buildFieldStateSnapshotV1({ scope, season_id: seasonId, as_of_ts: asOfTs, sources });
     const row = await insertSnapshot(pool, snapshot);
-    return reply.send({
-      ok: true,
-      object_type: "field_state_snapshot_v1",
-      write_ready: true,
-      downstream_write_ready: false,
-      snapshot: exposeSnapshotRow(row),
-    });
+    return reply.send({ ok: true, object_type: "field_state_snapshot_v1", write_ready: true, downstream_write_ready: false, snapshot: exposeSnapshotRow(row) });
   });
 
   app.get("/api/v1/twin-kernel/field-state-snapshots/:snapshot_id", async (req: any, reply) => {
@@ -329,15 +245,9 @@ export function registerTwinKernelV1Routes(app: FastifyInstance, pool: Pool): vo
     const snapshotRow = await readSnapshotRow(pool, snapshotId);
     if (!snapshotRow) return reply.code(404).send({ ok: false, error: "FIELD_STATE_SNAPSHOT_NOT_FOUND" });
     const modelVersion = extractModelVersion(req) || undefined;
-    const forecast = buildForecastRunV1({ snapshot: snapshotRow as any, model_version: modelVersion });
+    const forecast = buildForecastRunV1({ snapshot: toForecastRunSnapshotRow(snapshotRow), model_version: modelVersion });
     const row = await insertForecastRun(pool, forecast);
-    return reply.send({
-      ok: true,
-      object_type: "forecast_run_v1",
-      write_ready: true,
-      downstream_write_ready: false,
-      forecast_run: exposeForecastRunRow(row),
-    });
+    return reply.send({ ok: true, object_type: "forecast_run_v1", write_ready: true, downstream_write_ready: false, forecast_run: exposeForecastRunRow(row) });
   });
 
   app.get("/api/v1/twin-kernel/forecast-runs/:forecast_run_id", async (req: any, reply) => {
