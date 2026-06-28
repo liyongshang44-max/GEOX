@@ -1,11 +1,12 @@
 // apps/server/src/routes/v1/twin_kernel.ts
-// Purpose: expose minimal Twin Kernel write/read routes for field_state_snapshot_v1 and forecast_run_v1.
-// Boundary: these routes do not write scenarios, recommendations, approvals, tasks, receipts, ROI, Field Memory, calibration, learning, or decision-cycle records.
+// Purpose: expose minimal Twin Kernel write/read routes for field_state_snapshot_v1, forecast_run_v1, and scenario_set_v1.
+// Boundary: these routes do not write recommendations, approvals, tasks, receipts, ROI, Field Memory, calibration, learning, or decision-cycle records.
 
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { buildFieldStateSnapshotV1, type FieldStateSnapshotScopeV1 } from "../../domain/twin_kernel/field_state_snapshot_v1.js";
 import { buildForecastRunV1, type ForecastRunSnapshotRowV1 } from "../../domain/twin_kernel/forecast_run_v1.js";
+import { buildScenarioSetV1, type ScenarioSetForecastRunRowV1 } from "../../domain/twin_kernel/scenario_set_v1.js";
 
 type Row = Record<string, unknown>;
 
@@ -27,8 +28,12 @@ type SnapshotRequestBody = {
 type ForecastRequestBody = {
   snapshot_id?: unknown;
   snapshotId?: unknown;
+  forecast_run_id?: unknown;
+  forecastRunId?: unknown;
   model_version?: unknown;
   modelVersion?: unknown;
+  scenario_model_version?: unknown;
+  scenarioModelVersion?: unknown;
 };
 
 type TwinKernelRequestBody = SnapshotRequestBody & ForecastRequestBody;
@@ -47,6 +52,10 @@ function firstText(...values: unknown[]): string {
 
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function recordArray(value: unknown): Array<Record<string, unknown>> {
+  return Array.isArray(value) ? (value.filter((item) => item && typeof item === "object") as Array<Record<string, unknown>>) : [];
 }
 
 function evidenceArray(value: unknown): Array<Record<string, string>> {
@@ -97,9 +106,19 @@ function extractSnapshotId(req: any): string {
   return firstText(body.snapshot_id, body.snapshotId, queryValue(req, "snapshot_id"));
 }
 
+function extractForecastRunId(req: any): string {
+  const body = extractBody(req);
+  return firstText(body.forecast_run_id, body.forecastRunId, queryValue(req, "forecast_run_id"));
+}
+
 function extractModelVersion(req: any): string | null {
   const body = extractBody(req);
   return firstText(body.model_version, body.modelVersion, queryValue(req, "model_version")) || null;
+}
+
+function extractScenarioModelVersion(req: any): string | null {
+  const body = extractBody(req);
+  return firstText(body.scenario_model_version, body.scenarioModelVersion, queryValue(req, "scenario_model_version")) || null;
 }
 
 async function queryOne(pool: Pool, sql: string, values: unknown[]): Promise<Row | null> {
@@ -127,6 +146,10 @@ async function readSnapshotRow(pool: Pool, snapshotId: string): Promise<Row | nu
   return queryOne(pool, "SELECT * FROM field_state_snapshot_v1 WHERE snapshot_id = $1 LIMIT 1", [snapshotId]);
 }
 
+async function readForecastRunRow(pool: Pool, forecastRunId: string): Promise<Row | null> {
+  return queryOne(pool, "SELECT * FROM forecast_run_v1 WHERE forecast_run_id = $1 LIMIT 1", [forecastRunId]);
+}
+
 function toForecastRunSnapshotRow(row: Row): ForecastRunSnapshotRowV1 {
   return {
     snapshot_id: firstText(row.snapshot_id),
@@ -143,6 +166,25 @@ function toForecastRunSnapshotRow(row: Row): ForecastRunSnapshotRowV1 {
   };
 }
 
+function toScenarioSetForecastRunRow(row: Row): ScenarioSetForecastRunRowV1 {
+  return {
+    forecast_run_id: firstText(row.forecast_run_id),
+    tenant_id: firstText(row.tenant_id),
+    project_id: firstText(row.project_id),
+    group_id: firstText(row.group_id),
+    field_id: firstText(row.field_id),
+    as_of_ts: row.as_of_ts instanceof Date ? row.as_of_ts.toISOString() : firstText(row.as_of_ts),
+    horizon_days: Number(row.horizon_days),
+    model_version: firstText(row.model_version),
+    status: firstText(row.status),
+    forecast_points_json: recordArray(row.forecast_points_json),
+    risk_timeline_json: recordArray(row.risk_timeline_json),
+    uncertainty_json: record(row.uncertainty_json),
+    assumptions_json: record(row.assumptions_json),
+    determinism_hash: firstText(row.determinism_hash),
+  };
+}
+
 async function insertSnapshot(pool: Pool, snapshot: ReturnType<typeof buildFieldStateSnapshotV1>): Promise<Row> {
   const result = await pool.query(
     `INSERT INTO field_state_snapshot_v1 (snapshot_id,tenant_id,project_id,group_id,field_id,season_id,as_of_ts,status,state_vector_json,confidence_json,evidence_refs_json,source_indexes_json,blocking_reasons_json,determinism_hash)
@@ -152,7 +194,7 @@ async function insertSnapshot(pool: Pool, snapshot: ReturnType<typeof buildField
     [snapshot.snapshot_id, snapshot.tenant_id, snapshot.project_id, snapshot.group_id, snapshot.field_id, snapshot.season_id, snapshot.as_of_ts, snapshot.status, JSON.stringify(snapshot.state_vector_json), JSON.stringify(snapshot.confidence_json), JSON.stringify(snapshot.evidence_refs_json), JSON.stringify(snapshot.source_indexes_json), JSON.stringify(snapshot.blocking_reasons_json), snapshot.determinism_hash],
   );
   if (result.rows[0]) return result.rows[0] as Row;
-  const existing = await queryOne(pool, "SELECT * FROM field_state_snapshot_v1 WHERE snapshot_id = $1 LIMIT 1", [snapshot.snapshot_id]);
+  const existing = await readSnapshotRow(pool, snapshot.snapshot_id);
   if (!existing) throw new Error("FIELD_STATE_SNAPSHOT_INSERT_FAILED");
   return existing;
 }
@@ -166,52 +208,35 @@ async function insertForecastRun(pool: Pool, forecast: ReturnType<typeof buildFo
     [forecast.forecast_run_id, forecast.snapshot_id, forecast.tenant_id, forecast.project_id, forecast.group_id, forecast.field_id, forecast.as_of_ts, forecast.horizon_days, forecast.model_version, forecast.status, JSON.stringify(forecast.input_refs_json), JSON.stringify(forecast.forecast_points_json), JSON.stringify(forecast.risk_timeline_json), JSON.stringify(forecast.uncertainty_json), JSON.stringify(forecast.assumptions_json), JSON.stringify(forecast.blocking_reasons_json), forecast.determinism_hash],
   );
   if (result.rows[0]) return result.rows[0] as Row;
-  const existing = await queryOne(pool, "SELECT * FROM forecast_run_v1 WHERE forecast_run_id = $1 LIMIT 1", [forecast.forecast_run_id]);
+  const existing = await readForecastRunRow(pool, forecast.forecast_run_id);
   if (!existing) throw new Error("FORECAST_RUN_INSERT_FAILED");
   return existing;
 }
 
+async function insertScenarioSet(pool: Pool, scenarioSet: ReturnType<typeof buildScenarioSetV1>): Promise<Row> {
+  const result = await pool.query(
+    `INSERT INTO scenario_set_v1 (scenario_set_id,forecast_run_id,tenant_id,project_id,group_id,field_id,as_of_ts,scenario_model_version,status,input_refs_json,baseline_scenario_json,option_scenarios_json,comparison_axes_json,constraints_json,assumptions_json,blocking_reasons_json,determinism_hash)
+     VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10::jsonb,$11::jsonb,$12::jsonb,$13::jsonb,$14::jsonb,$15::jsonb,$16::jsonb,$17)
+     ON CONFLICT (scenario_set_id) DO NOTHING
+     RETURNING *`,
+    [scenarioSet.scenario_set_id, scenarioSet.forecast_run_id, scenarioSet.tenant_id, scenarioSet.project_id, scenarioSet.group_id, scenarioSet.field_id, scenarioSet.as_of_ts, scenarioSet.scenario_model_version, scenarioSet.status, JSON.stringify(scenarioSet.input_refs_json), JSON.stringify(scenarioSet.baseline_scenario_json), JSON.stringify(scenarioSet.option_scenarios_json), JSON.stringify(scenarioSet.comparison_axes_json), JSON.stringify(scenarioSet.constraints_json), JSON.stringify(scenarioSet.assumptions_json), JSON.stringify(scenarioSet.blocking_reasons_json), scenarioSet.determinism_hash],
+  );
+  if (result.rows[0]) return result.rows[0] as Row;
+  const existing = await queryOne(pool, "SELECT * FROM scenario_set_v1 WHERE scenario_set_id = $1 LIMIT 1", [scenarioSet.scenario_set_id]);
+  if (!existing) throw new Error("SCENARIO_SET_INSERT_FAILED");
+  return existing;
+}
+
 function exposeSnapshotRow(row: Row): Row {
-  return {
-    snapshot_id: row.snapshot_id,
-    tenant_id: row.tenant_id,
-    project_id: row.project_id,
-    group_id: row.group_id,
-    field_id: row.field_id,
-    season_id: row.season_id ?? null,
-    as_of_ts: row.as_of_ts instanceof Date ? row.as_of_ts.toISOString() : row.as_of_ts,
-    status: row.status,
-    state_vector_json: row.state_vector_json,
-    confidence_json: row.confidence_json,
-    evidence_refs_json: row.evidence_refs_json,
-    source_indexes_json: row.source_indexes_json,
-    blocking_reasons_json: row.blocking_reasons_json,
-    determinism_hash: row.determinism_hash,
-    created_at: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
-  };
+  return { snapshot_id: row.snapshot_id, tenant_id: row.tenant_id, project_id: row.project_id, group_id: row.group_id, field_id: row.field_id, season_id: row.season_id ?? null, as_of_ts: row.as_of_ts instanceof Date ? row.as_of_ts.toISOString() : row.as_of_ts, status: row.status, state_vector_json: row.state_vector_json, confidence_json: row.confidence_json, evidence_refs_json: row.evidence_refs_json, source_indexes_json: row.source_indexes_json, blocking_reasons_json: row.blocking_reasons_json, determinism_hash: row.determinism_hash, created_at: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at };
 }
 
 function exposeForecastRunRow(row: Row): Row {
-  return {
-    forecast_run_id: row.forecast_run_id,
-    snapshot_id: row.snapshot_id,
-    tenant_id: row.tenant_id,
-    project_id: row.project_id,
-    group_id: row.group_id,
-    field_id: row.field_id,
-    as_of_ts: row.as_of_ts instanceof Date ? row.as_of_ts.toISOString() : row.as_of_ts,
-    horizon_days: row.horizon_days,
-    model_version: row.model_version,
-    status: row.status,
-    input_refs_json: row.input_refs_json,
-    forecast_points_json: row.forecast_points_json,
-    risk_timeline_json: row.risk_timeline_json,
-    uncertainty_json: row.uncertainty_json,
-    assumptions_json: row.assumptions_json,
-    blocking_reasons_json: row.blocking_reasons_json,
-    determinism_hash: row.determinism_hash,
-    created_at: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
-  };
+  return { forecast_run_id: row.forecast_run_id, snapshot_id: row.snapshot_id, tenant_id: row.tenant_id, project_id: row.project_id, group_id: row.group_id, field_id: row.field_id, as_of_ts: row.as_of_ts instanceof Date ? row.as_of_ts.toISOString() : row.as_of_ts, horizon_days: row.horizon_days, model_version: row.model_version, status: row.status, input_refs_json: row.input_refs_json, forecast_points_json: row.forecast_points_json, risk_timeline_json: row.risk_timeline_json, uncertainty_json: row.uncertainty_json, assumptions_json: row.assumptions_json, blocking_reasons_json: row.blocking_reasons_json, determinism_hash: row.determinism_hash, created_at: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at };
+}
+
+function exposeScenarioSetRow(row: Row): Row {
+  return { scenario_set_id: row.scenario_set_id, forecast_run_id: row.forecast_run_id, tenant_id: row.tenant_id, project_id: row.project_id, group_id: row.group_id, field_id: row.field_id, as_of_ts: row.as_of_ts instanceof Date ? row.as_of_ts.toISOString() : row.as_of_ts, scenario_model_version: row.scenario_model_version, status: row.status, input_refs_json: row.input_refs_json, baseline_scenario_json: row.baseline_scenario_json, option_scenarios_json: row.option_scenarios_json, comparison_axes_json: row.comparison_axes_json, constraints_json: row.constraints_json, assumptions_json: row.assumptions_json, blocking_reasons_json: row.blocking_reasons_json, determinism_hash: row.determinism_hash, created_at: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at };
 }
 
 export function registerTwinKernelV1Routes(app: FastifyInstance, pool: Pool): void {
@@ -219,11 +244,7 @@ export function registerTwinKernelV1Routes(app: FastifyInstance, pool: Pool): vo
     const scope = extractScope(req);
     if (!scope) return reply.code(400).send({ ok: false, error: "TENANT_PROJECT_GROUP_FIELD_SCOPE_REQUIRED" });
     let asOfTs: string;
-    try {
-      asOfTs = extractAsOfTs(req);
-    } catch {
-      return reply.code(400).send({ ok: false, error: "INVALID_AS_OF_TS" });
-    }
+    try { asOfTs = extractAsOfTs(req); } catch { return reply.code(400).send({ ok: false, error: "INVALID_AS_OF_TS" }); }
     const seasonId = extractSeasonId(req);
     const sources = { field: await readFieldRow(pool, scope), water: await readWaterRow(pool, scope), sensing: await readSensingRow(pool, scope), weather: await readWeatherRow(pool, scope) };
     const snapshot = buildFieldStateSnapshotV1({ scope, season_id: seasonId, as_of_ts: asOfTs, sources });
@@ -253,8 +274,27 @@ export function registerTwinKernelV1Routes(app: FastifyInstance, pool: Pool): vo
   app.get("/api/v1/twin-kernel/forecast-runs/:forecast_run_id", async (req: any, reply) => {
     const forecastRunId = firstText(req?.params?.forecast_run_id);
     if (!forecastRunId) return reply.code(400).send({ ok: false, error: "FORECAST_RUN_ID_REQUIRED" });
-    const row = await queryOne(pool, "SELECT * FROM forecast_run_v1 WHERE forecast_run_id = $1 LIMIT 1", [forecastRunId]);
+    const row = await readForecastRunRow(pool, forecastRunId);
     if (!row) return reply.code(404).send({ ok: false, error: "FORECAST_RUN_NOT_FOUND" });
     return reply.send({ ok: true, object_type: "forecast_run_v1", forecast_run: exposeForecastRunRow(row) });
+  });
+
+  app.post("/api/v1/twin-kernel/scenario-sets", async (req, reply) => {
+    const forecastRunId = extractForecastRunId(req);
+    if (!forecastRunId) return reply.code(400).send({ ok: false, error: "FORECAST_RUN_ID_REQUIRED" });
+    const forecastRunRow = await readForecastRunRow(pool, forecastRunId);
+    if (!forecastRunRow) return reply.code(404).send({ ok: false, error: "FORECAST_RUN_NOT_FOUND" });
+    const scenarioModelVersion = extractScenarioModelVersion(req) || undefined;
+    const scenarioSet = buildScenarioSetV1({ forecastRun: toScenarioSetForecastRunRow(forecastRunRow), scenario_model_version: scenarioModelVersion });
+    const row = await insertScenarioSet(pool, scenarioSet);
+    return reply.send({ ok: true, object_type: "scenario_set_v1", write_ready: true, downstream_write_ready: false, scenario_set: exposeScenarioSetRow(row) });
+  });
+
+  app.get("/api/v1/twin-kernel/scenario-sets/:scenario_set_id", async (req: any, reply) => {
+    const scenarioSetId = firstText(req?.params?.scenario_set_id);
+    if (!scenarioSetId) return reply.code(400).send({ ok: false, error: "SCENARIO_SET_ID_REQUIRED" });
+    const row = await queryOne(pool, "SELECT * FROM scenario_set_v1 WHERE scenario_set_id = $1 LIMIT 1", [scenarioSetId]);
+    if (!row) return reply.code(404).send({ ok: false, error: "SCENARIO_SET_NOT_FOUND" });
+    return reply.send({ ok: true, object_type: "scenario_set_v1", scenario_set: exposeScenarioSetRow(row) });
   });
 }
