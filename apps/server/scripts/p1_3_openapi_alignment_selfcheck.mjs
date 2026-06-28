@@ -43,6 +43,7 @@ const temporaryOpenApiWarningPatterns = [
   /^\/api\/v1\/sla\/summary$/,
   /^\/api\/v1\/operator\/learning-validation$/,
   /^\/api\/v1\/operator\/operations\/.+\/learning-validation$/,
+  /^\/api\/v1\/twin-kernel(?:\/|$)/,
 ];
 
 const salesCriticalRoutePatterns = [
