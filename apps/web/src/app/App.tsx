@@ -58,6 +58,7 @@ const FieldReportExportPage = React.lazy(() => import("../features/fields/pages/
 const OperationReportPage = React.lazy(() => import("../features/operations/pages/OperationReportPage"));
 const CustomerReportExportPage = React.lazy(() => import("../features/customer/pages/CustomerReportExportPage"));
 const OperatorTwinOverviewPage = React.lazy(() => import("../features/operator/pages/OperatorTwinOverviewPage"));
+const OperatorProductionWorkflowPage = React.lazy(() => import("../features/operator/pages/OperatorProductionWorkflowPage"));
 const OperatorFieldTwinWorkspacePage = React.lazy(() => import("../features/operator/pages/OperatorFieldTwinWorkspacePage"));
 const OperatorFieldTwinForecastPage = React.lazy(() => import("../features/operator/pages/OperatorFieldTwinForecastPage"));
 const OperatorFieldTwinScenarioComparePage = React.lazy(() => import("../features/operator/pages/OperatorFieldTwinScenarioComparePage"));
@@ -338,6 +339,7 @@ function OperatorRoutes(): React.ReactElement {
     <Routes>
       <Route path="/" element={<Navigate to="twin" replace />} />
       <Route path="twin" element={<OperatorTwinOverviewPage />} />
+      <Route path="twin/production-workflow" element={<OperatorProductionWorkflowPage />} />
       <Route path="twin/fields/:fieldId" element={<OperatorFieldTwinWorkspacePage />} />
       <Route path="twin/fields/:fieldId/forecast" element={<OperatorFieldTwinForecastPage />} />
       <Route path="twin/fields/:fieldId/scenarios" element={<OperatorFieldTwinScenarioComparePage />} />
