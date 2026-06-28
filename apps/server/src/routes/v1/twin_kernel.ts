@@ -1,6 +1,6 @@
 // apps/server/src/routes/v1/twin_kernel.ts
-// Purpose: expose minimal Twin Kernel write/read routes from state snapshot through TK5 field learning candidate.
-// Boundary: these routes do not write formal Field Memory, ROI, recommendations, approvals, tasks, receipts, model parameters, or decision cycles.
+// Purpose: expose minimal Twin Kernel write/read routes from state snapshot through TK6 decision cycle.
+// Boundary: these routes do not write recommendations, approvals, tasks, receipts, acceptance, ROI, Field Memory, model parameters, or downstream operations.
 
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
@@ -9,6 +9,7 @@ import { buildForecastRunV1, type ForecastRunSnapshotRowV1 } from "../../domain/
 import { buildScenarioSetV1, type ScenarioSetForecastRunRowV1 } from "../../domain/twin_kernel/scenario_set_v1.js";
 import { buildCalibrationReplayAndForecastErrorV1, type CalibrationForecastRunRowV1, type CalibrationObservedPayloadV1, type CalibrationScenarioSetRowV1 } from "../../domain/twin_kernel/calibration_replay_v1.js";
 import { buildFieldLearningCandidateV1, type FieldLearningCalibrationReplayRowV1, type FieldLearningForecastErrorRowV1, type FieldLearningFormalGateRefsV1 } from "../../domain/twin_kernel/field_learning_candidate_v1.js";
+import { buildDecisionCycleV1, type DecisionCalibrationReplayRowV1, type DecisionExternalRefsV1, type DecisionFieldLearningCandidateRowV1, type DecisionForecastErrorRowV1, type DecisionForecastRunRowV1, type DecisionScenarioSetRowV1 } from "../../domain/twin_kernel/decision_cycle_v1.js";
 
 type Row = Record<string, unknown>;
 
@@ -40,6 +41,8 @@ type TwinKernelRequestBody = SnapshotRequestBody & {
   forecastErrorId?: unknown;
   field_learning_candidate_id?: unknown;
   fieldLearningCandidateId?: unknown;
+  decision_cycle_id?: unknown;
+  decisionCycleId?: unknown;
   selected_option_id?: unknown;
   selectedOptionId?: unknown;
   model_version?: unknown;
@@ -65,6 +68,24 @@ type TwinKernelRequestBody = SnapshotRequestBody & {
   postIrrigationVerificationId?: unknown;
   formal_evidence_ref_id?: unknown;
   formalEvidenceRefId?: unknown;
+  external_refs?: unknown;
+  externalRefs?: unknown;
+  recommendation_id?: unknown;
+  recommendationId?: unknown;
+  approval_id?: unknown;
+  approvalId?: unknown;
+  operation_plan_id?: unknown;
+  operationPlanId?: unknown;
+  act_task_id?: unknown;
+  actTaskId?: unknown;
+  receipt_id?: unknown;
+  receiptId?: unknown;
+  as_executed_id?: unknown;
+  asExecutedId?: unknown;
+  roi_entry_id?: unknown;
+  roiEntryId?: unknown;
+  field_memory_id?: unknown;
+  fieldMemoryId?: unknown;
 };
 
 function text(value: unknown): string {
@@ -164,6 +185,16 @@ function extractForecastErrorId(req: any): string {
   return firstText(body.forecast_error_id, body.forecastErrorId, queryValue(req, "forecast_error_id"));
 }
 
+function extractFieldLearningCandidateId(req: any): string {
+  const body = extractBody(req);
+  return firstText(body.field_learning_candidate_id, body.fieldLearningCandidateId, queryValue(req, "field_learning_candidate_id"));
+}
+
+function extractDecisionCycleId(req: any): string {
+  const body = extractBody(req);
+  return firstText(body.decision_cycle_id, body.decisionCycleId, queryValue(req, "decision_cycle_id"));
+}
+
 function extractModelVersion(req: any): string | null {
   const body = extractBody(req);
   return firstText(body.model_version, body.modelVersion, queryValue(req, "model_version")) || null;
@@ -195,6 +226,23 @@ function extractFormalGateRefs(req: any): FieldLearningFormalGateRefsV1 {
     formal_evidence_ref_id: firstText(nested.formal_evidence_ref_id, nested.formalEvidenceRefId, body.formal_evidence_ref_id, body.formalEvidenceRefId),
     field_memory_gate_route: firstText(nested.field_memory_gate_route, nested.fieldMemoryGateRoute),
     evidence_refs: evidenceArray(nested.evidence_refs ?? nested.evidenceRefs ?? body.evidence_refs ?? body.evidenceRefs),
+  };
+}
+
+function extractDecisionExternalRefs(req: any): DecisionExternalRefsV1 {
+  const body = extractBody(req);
+  const nested = record(body.external_refs ?? body.externalRefs);
+  return {
+    recommendation_id: firstText(nested.recommendation_id, nested.recommendationId, body.recommendation_id, body.recommendationId),
+    approval_id: firstText(nested.approval_id, nested.approvalId, body.approval_id, body.approvalId),
+    operation_plan_id: firstText(nested.operation_plan_id, nested.operationPlanId, body.operation_plan_id, body.operationPlanId),
+    act_task_id: firstText(nested.act_task_id, nested.actTaskId, body.act_task_id, body.actTaskId),
+    receipt_id: firstText(nested.receipt_id, nested.receiptId, body.receipt_id, body.receiptId),
+    as_executed_id: firstText(nested.as_executed_id, nested.asExecutedId, body.as_executed_id, body.asExecutedId),
+    acceptance_id: firstText(nested.acceptance_id, nested.acceptanceId, body.acceptance_id, body.acceptanceId),
+    post_irrigation_verification_id: firstText(nested.post_irrigation_verification_id, nested.postIrrigationVerificationId, body.post_irrigation_verification_id, body.postIrrigationVerificationId),
+    roi_entry_id: firstText(nested.roi_entry_id, nested.roiEntryId, body.roi_entry_id, body.roiEntryId),
+    field_memory_id: firstText(nested.field_memory_id, nested.fieldMemoryId, body.field_memory_id, body.fieldMemoryId),
   };
 }
 
@@ -243,6 +291,10 @@ async function readFieldLearningCandidateRow(pool: Pool, candidateId: string): P
   return queryOne(pool, "SELECT * FROM field_learning_candidate_v1 WHERE field_learning_candidate_id = $1 LIMIT 1", [candidateId]);
 }
 
+async function readDecisionCycleRow(pool: Pool, cycleId: string): Promise<Row | null> {
+  return queryOne(pool, "SELECT * FROM decision_cycle_v1 WHERE decision_cycle_id = $1 LIMIT 1", [cycleId]);
+}
+
 function toForecastRunSnapshotRow(row: Row): ForecastRunSnapshotRowV1 {
   return { snapshot_id: firstText(row.snapshot_id), tenant_id: firstText(row.tenant_id), project_id: firstText(row.project_id), group_id: firstText(row.group_id), field_id: firstText(row.field_id), as_of_ts: row.as_of_ts instanceof Date ? row.as_of_ts.toISOString() : firstText(row.as_of_ts), status: firstText(row.status), state_vector_json: record(row.state_vector_json), confidence_json: record(row.confidence_json), evidence_refs_json: evidenceArray(row.evidence_refs_json), determinism_hash: firstText(row.determinism_hash) };
 }
@@ -265,6 +317,26 @@ function toFieldLearningCalibrationReplayRow(row: Row): FieldLearningCalibration
 
 function toFieldLearningForecastErrorRow(row: Row): FieldLearningForecastErrorRowV1 {
   return { forecast_error_id: firstText(row.forecast_error_id), calibration_replay_id: firstText(row.calibration_replay_id), forecast_run_id: firstText(row.forecast_run_id), scenario_set_id: firstText(row.scenario_set_id), tenant_id: firstText(row.tenant_id), project_id: firstText(row.project_id), group_id: firstText(row.group_id), field_id: firstText(row.field_id), as_of_ts: row.as_of_ts instanceof Date ? row.as_of_ts.toISOString() : firstText(row.as_of_ts), error_metric: firstText(row.error_metric), error_value: row.error_value === null || row.error_value === undefined ? null : Number(row.error_value), error_direction: firstText(row.error_direction), predicted_json: record(row.predicted_json), observed_json: record(row.observed_json), evidence_refs_json: evidenceArray(row.evidence_refs_json), blocking_reasons_json: stringArray(row.blocking_reasons_json), determinism_hash: firstText(row.determinism_hash) };
+}
+
+function toDecisionForecastRunRow(row: Row): DecisionForecastRunRowV1 {
+  return { forecast_run_id: firstText(row.forecast_run_id), snapshot_id: firstText(row.snapshot_id), tenant_id: firstText(row.tenant_id), project_id: firstText(row.project_id), group_id: firstText(row.group_id), field_id: firstText(row.field_id), as_of_ts: row.as_of_ts instanceof Date ? row.as_of_ts.toISOString() : firstText(row.as_of_ts), status: firstText(row.status), determinism_hash: firstText(row.determinism_hash) };
+}
+
+function toDecisionScenarioSetRow(row: Row): DecisionScenarioSetRowV1 {
+  return { scenario_set_id: firstText(row.scenario_set_id), forecast_run_id: firstText(row.forecast_run_id), tenant_id: firstText(row.tenant_id), project_id: firstText(row.project_id), group_id: firstText(row.group_id), field_id: firstText(row.field_id), as_of_ts: row.as_of_ts instanceof Date ? row.as_of_ts.toISOString() : firstText(row.as_of_ts), status: firstText(row.status), determinism_hash: firstText(row.determinism_hash) };
+}
+
+function toDecisionCalibrationReplayRow(row: Row): DecisionCalibrationReplayRowV1 {
+  return { calibration_replay_id: firstText(row.calibration_replay_id), forecast_run_id: firstText(row.forecast_run_id), scenario_set_id: firstText(row.scenario_set_id), tenant_id: firstText(row.tenant_id), project_id: firstText(row.project_id), group_id: firstText(row.group_id), field_id: firstText(row.field_id), as_of_ts: row.as_of_ts instanceof Date ? row.as_of_ts.toISOString() : firstText(row.as_of_ts), status: firstText(row.status), determinism_hash: firstText(row.determinism_hash) };
+}
+
+function toDecisionForecastErrorRow(row: Row): DecisionForecastErrorRowV1 {
+  return { forecast_error_id: firstText(row.forecast_error_id), calibration_replay_id: firstText(row.calibration_replay_id), forecast_run_id: firstText(row.forecast_run_id), scenario_set_id: firstText(row.scenario_set_id), tenant_id: firstText(row.tenant_id), project_id: firstText(row.project_id), group_id: firstText(row.group_id), field_id: firstText(row.field_id), as_of_ts: row.as_of_ts instanceof Date ? row.as_of_ts.toISOString() : firstText(row.as_of_ts), error_direction: firstText(row.error_direction), determinism_hash: firstText(row.determinism_hash) };
+}
+
+function toDecisionFieldLearningCandidateRow(row: Row): DecisionFieldLearningCandidateRowV1 {
+  return { field_learning_candidate_id: firstText(row.field_learning_candidate_id), calibration_replay_id: firstText(row.calibration_replay_id), forecast_error_id: firstText(row.forecast_error_id), tenant_id: firstText(row.tenant_id), project_id: firstText(row.project_id), group_id: firstText(row.group_id), field_id: firstText(row.field_id), as_of_ts: row.as_of_ts instanceof Date ? row.as_of_ts.toISOString() : firstText(row.as_of_ts), candidate_status: firstText(row.candidate_status), determinism_hash: firstText(row.determinism_hash) };
 }
 
 async function insertSnapshot(pool: Pool, snapshot: ReturnType<typeof buildFieldStateSnapshotV1>): Promise<Row> {
@@ -315,6 +387,14 @@ async function insertFieldLearningCandidate(pool: Pool, candidate: ReturnType<ty
   return existing;
 }
 
+async function insertDecisionCycle(pool: Pool, cycle: ReturnType<typeof buildDecisionCycleV1>): Promise<Row> {
+  const result = await pool.query(`INSERT INTO decision_cycle_v1 (decision_cycle_id,snapshot_id,forecast_run_id,scenario_set_id,calibration_replay_id,forecast_error_id,field_learning_candidate_id,tenant_id,project_id,group_id,field_id,as_of_ts,cycle_status,current_stage,external_refs_json,state_machine_json,human_gate_json,boundary_flags_json,blocking_reasons_json,determinism_hash) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::timestamptz,$13,$14,$15::jsonb,$16::jsonb,$17::jsonb,$18::jsonb,$19::jsonb,$20) ON CONFLICT (decision_cycle_id) DO NOTHING RETURNING *`, [cycle.decision_cycle_id, cycle.snapshot_id, cycle.forecast_run_id, cycle.scenario_set_id, cycle.calibration_replay_id, cycle.forecast_error_id, cycle.field_learning_candidate_id, cycle.tenant_id, cycle.project_id, cycle.group_id, cycle.field_id, cycle.as_of_ts, cycle.cycle_status, cycle.current_stage, JSON.stringify(cycle.external_refs_json), JSON.stringify(cycle.state_machine_json), JSON.stringify(cycle.human_gate_json), JSON.stringify(cycle.boundary_flags_json), JSON.stringify(cycle.blocking_reasons_json), cycle.determinism_hash]);
+  if (result.rows[0]) return result.rows[0] as Row;
+  const existing = await readDecisionCycleRow(pool, cycle.decision_cycle_id);
+  if (!existing) throw new Error("DECISION_CYCLE_INSERT_FAILED");
+  return existing;
+}
+
 function iso(rowValue: unknown): unknown {
   return rowValue instanceof Date ? rowValue.toISOString() : rowValue;
 }
@@ -341,6 +421,10 @@ function exposeForecastErrorRow(row: Row): Row {
 
 function exposeFieldLearningCandidateRow(row: Row): Row {
   return { field_learning_candidate_id: row.field_learning_candidate_id, calibration_replay_id: row.calibration_replay_id, forecast_error_id: row.forecast_error_id, tenant_id: row.tenant_id, project_id: row.project_id, group_id: row.group_id, field_id: row.field_id, as_of_ts: iso(row.as_of_ts), candidate_status: row.candidate_status, learning_scope: row.learning_scope, learning_statement_json: row.learning_statement_json, supporting_evidence_refs_json: row.supporting_evidence_refs_json, counter_evidence_refs_json: row.counter_evidence_refs_json, confidence_json: row.confidence_json, formal_gate_refs_json: row.formal_gate_refs_json, h58_gate_status_json: row.h58_gate_status_json, blocking_reasons_json: row.blocking_reasons_json, determinism_hash: row.determinism_hash, created_at: iso(row.created_at) };
+}
+
+function exposeDecisionCycleRow(row: Row): Row {
+  return { decision_cycle_id: row.decision_cycle_id, snapshot_id: row.snapshot_id, forecast_run_id: row.forecast_run_id, scenario_set_id: row.scenario_set_id, calibration_replay_id: row.calibration_replay_id, forecast_error_id: row.forecast_error_id, field_learning_candidate_id: row.field_learning_candidate_id, tenant_id: row.tenant_id, project_id: row.project_id, group_id: row.group_id, field_id: row.field_id, as_of_ts: iso(row.as_of_ts), cycle_status: row.cycle_status, current_stage: row.current_stage, external_refs_json: row.external_refs_json, state_machine_json: row.state_machine_json, human_gate_json: row.human_gate_json, boundary_flags_json: row.boundary_flags_json, blocking_reasons_json: row.blocking_reasons_json, determinism_hash: row.determinism_hash, created_at: iso(row.created_at) };
 }
 
 export function registerTwinKernelV1Routes(app: FastifyInstance, pool: Pool): void {
@@ -451,5 +535,35 @@ export function registerTwinKernelV1Routes(app: FastifyInstance, pool: Pool): vo
     const row = await readFieldLearningCandidateRow(pool, candidateId);
     if (!row) return reply.code(404).send({ ok: false, error: "FIELD_LEARNING_CANDIDATE_NOT_FOUND" });
     return reply.send({ ok: true, object_type: "field_learning_candidate_v1", field_learning_candidate: exposeFieldLearningCandidateRow(row) });
+  });
+
+  app.post("/api/v1/twin-kernel/decision-cycles", async (req, reply) => {
+    const candidateId = extractFieldLearningCandidateId(req);
+    if (!candidateId) return reply.code(400).send({ ok: false, error: "FIELD_LEARNING_CANDIDATE_ID_REQUIRED" });
+    const candidateRow = await readFieldLearningCandidateRow(pool, candidateId);
+    if (!candidateRow) return reply.code(404).send({ ok: false, error: "FIELD_LEARNING_CANDIDATE_NOT_FOUND" });
+    const errorId = firstText(candidateRow.forecast_error_id);
+    const errorRow = await readForecastErrorRow(pool, errorId);
+    if (!errorRow) return reply.code(404).send({ ok: false, error: "FORECAST_ERROR_NOT_FOUND" });
+    const replayId = firstText(candidateRow.calibration_replay_id);
+    const replayRow = await readCalibrationReplayRow(pool, replayId);
+    if (!replayRow) return reply.code(404).send({ ok: false, error: "CALIBRATION_REPLAY_NOT_FOUND" });
+    const scenarioSetId = firstText(replayRow.scenario_set_id);
+    const scenarioSetRow = await readScenarioSetRow(pool, scenarioSetId);
+    if (!scenarioSetRow) return reply.code(404).send({ ok: false, error: "SCENARIO_SET_NOT_FOUND" });
+    const forecastRunId = firstText(errorRow.forecast_run_id);
+    const forecastRunRow = await readForecastRunRow(pool, forecastRunId);
+    if (!forecastRunRow) return reply.code(404).send({ ok: false, error: "FORECAST_RUN_NOT_FOUND" });
+    const cycle = buildDecisionCycleV1({ forecastRun: toDecisionForecastRunRow(forecastRunRow), scenarioSet: toDecisionScenarioSetRow(scenarioSetRow), calibrationReplay: toDecisionCalibrationReplayRow(replayRow), forecastError: toDecisionForecastErrorRow(errorRow), fieldLearningCandidate: toDecisionFieldLearningCandidateRow(candidateRow), external_refs: extractDecisionExternalRefs(req) });
+    const row = await insertDecisionCycle(pool, cycle);
+    return reply.send({ ok: true, object_type: "decision_cycle_v1", write_ready: true, downstream_write_ready: false, automatic_task_created: false, decision_cycle: exposeDecisionCycleRow(row) });
+  });
+
+  app.get("/api/v1/twin-kernel/decision-cycles/:decision_cycle_id", async (req: any, reply) => {
+    const cycleId = firstText(req?.params?.decision_cycle_id) || extractDecisionCycleId(req);
+    if (!cycleId) return reply.code(400).send({ ok: false, error: "DECISION_CYCLE_ID_REQUIRED" });
+    const row = await readDecisionCycleRow(pool, cycleId);
+    if (!row) return reply.code(404).send({ ok: false, error: "DECISION_CYCLE_NOT_FOUND" });
+    return reply.send({ ok: true, object_type: "decision_cycle_v1", decision_cycle: exposeDecisionCycleRow(row) });
   });
 }
