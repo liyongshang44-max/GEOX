@@ -44,10 +44,6 @@ function record(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }
 
-function recordArray(value: unknown): Array<Record<string, unknown>> {
-  return Array.isArray(value) ? (value.filter((item) => item && typeof item === "object") as Array<Record<string, unknown>>) : [];
-}
-
 function iso(value: unknown): unknown {
   return value instanceof Date ? value.toISOString() : value;
 }
@@ -253,7 +249,8 @@ export function registerTwinKernelProductionIngestionRoutes(app: FastifyInstance
       try { occurredAt = parseTs(occurredAtRaw, "INVALID_OCCURRED_AT"); } catch { return reply.code(400).send({ ok: false, error: "INVALID_OCCURRED_AT" }); }
     }
     const rawRefs = sourceRefs(input);
-    const mappedRefs = cleanMappedRefs(mapProductionRefs(rawRefs));
+    const decisionRefs = mapProductionRefs(rawRefs);
+    const mappedRefs = cleanMappedRefs(decisionRefs);
     const candidate = await readFieldLearningCandidate(pool, candidateId);
     if (!candidate) return reply.code(404).send({ ok: false, error: "FIELD_LEARNING_CANDIDATE_NOT_FOUND" });
     const forecastError = await readForecastError(pool, text(candidate.forecast_error_id));
@@ -267,7 +264,7 @@ export function registerTwinKernelProductionIngestionRoutes(app: FastifyInstance
     const sourceEventId = sourceEventIdRaw || `prod_evt_${hashPayload({ source_system: sourceSystem, field_learning_candidate_id: candidateId, source_refs: rawRefs, ingested_at: ingestedAt }).slice(0, 24)}`;
     const eventId = `ping_${hashPayload({ object_type: "production_ingestion_event_v0", source_system: sourceSystem, source_event_id: sourceEventId }).slice(0, 24)}`;
     const ingestionEvent = await insertProductionIngestionEvent(pool, { eventId, sourceSystem, sourceEventId, candidate, occurredAt, ingestedBy, ingestedAt, rawRefs, mappedRefs });
-    const decisionCycle = buildDecisionCycleV1({ forecastRun: toDecisionForecastRunRow(forecastRun), scenarioSet: toDecisionScenarioSetRow(scenarioSet), calibrationReplay: toDecisionCalibrationReplayRow(calibrationReplay), forecastError: toDecisionForecastErrorRow(forecastError), fieldLearningCandidate: toDecisionFieldLearningCandidateRow(candidate), external_refs: mappedRefs });
+    const decisionCycle = buildDecisionCycleV1({ forecastRun: toDecisionForecastRunRow(forecastRun), scenarioSet: toDecisionScenarioSetRow(scenarioSet), calibrationReplay: toDecisionCalibrationReplayRow(calibrationReplay), forecastError: toDecisionForecastErrorRow(forecastError), fieldLearningCandidate: toDecisionFieldLearningCandidateRow(candidate), external_refs: decisionRefs });
     const decisionCycleRow = await insertDecisionCycle(pool, decisionCycle);
     const linkedEvent = await updateIngestionDecisionCycle(pool, eventId, text(decisionCycleRow.decision_cycle_id));
     return reply.send({ ok: true, object_type: "production_ingestion_event_v0", companion_object_type: "decision_cycle_v1", write_ready: true, downstream_write_ready: false, automatic_business_decision_created: false, automatic_recommendation_created: false, automatic_approval_created: false, automatic_task_created: false, automatic_receipt_created: false, automatic_acceptance_created: false, automatic_roi_created: false, automatic_field_memory_created: false, model_update_created: false, production_ingestion_event: exposeProductionIngestionEvent(linkedEvent), decision_cycle: exposeDecisionCycle(decisionCycleRow) });
