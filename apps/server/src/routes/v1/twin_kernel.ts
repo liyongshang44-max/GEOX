@@ -1,6 +1,6 @@
 // apps/server/src/routes/v1/twin_kernel.ts
-// Purpose: expose minimal Twin Kernel write/read routes from state snapshot through TK4 calibration replay and forecast error.
-// Boundary: these routes do not write learning candidates, Field Memory, ROI, recommendations, approvals, tasks, receipts, or decision cycles.
+// Purpose: expose minimal Twin Kernel write/read routes from state snapshot through TK5 field learning candidate.
+// Boundary: these routes do not write formal Field Memory, ROI, recommendations, approvals, tasks, receipts, model parameters, or decision cycles.
 
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
@@ -8,6 +8,7 @@ import { buildFieldStateSnapshotV1, type FieldStateSnapshotScopeV1 } from "../..
 import { buildForecastRunV1, type ForecastRunSnapshotRowV1 } from "../../domain/twin_kernel/forecast_run_v1.js";
 import { buildScenarioSetV1, type ScenarioSetForecastRunRowV1 } from "../../domain/twin_kernel/scenario_set_v1.js";
 import { buildCalibrationReplayAndForecastErrorV1, type CalibrationForecastRunRowV1, type CalibrationObservedPayloadV1, type CalibrationScenarioSetRowV1 } from "../../domain/twin_kernel/calibration_replay_v1.js";
+import { buildFieldLearningCandidateV1, type FieldLearningCalibrationReplayRowV1, type FieldLearningForecastErrorRowV1, type FieldLearningFormalGateRefsV1 } from "../../domain/twin_kernel/field_learning_candidate_v1.js";
 
 type Row = Record<string, unknown>;
 
@@ -33,6 +34,12 @@ type TwinKernelRequestBody = SnapshotRequestBody & {
   forecastRunId?: unknown;
   scenario_set_id?: unknown;
   scenarioSetId?: unknown;
+  calibration_replay_id?: unknown;
+  calibrationReplayId?: unknown;
+  forecast_error_id?: unknown;
+  forecastErrorId?: unknown;
+  field_learning_candidate_id?: unknown;
+  fieldLearningCandidateId?: unknown;
   selected_option_id?: unknown;
   selectedOptionId?: unknown;
   model_version?: unknown;
@@ -50,6 +57,14 @@ type TwinKernelRequestBody = SnapshotRequestBody & {
   verificationRefId?: unknown;
   evidence_refs?: unknown;
   evidenceRefs?: unknown;
+  formal_gate_refs?: unknown;
+  formalGateRefs?: unknown;
+  acceptance_id?: unknown;
+  acceptanceId?: unknown;
+  post_irrigation_verification_id?: unknown;
+  postIrrigationVerificationId?: unknown;
+  formal_evidence_ref_id?: unknown;
+  formalEvidenceRefId?: unknown;
 };
 
 function text(value: unknown): string {
@@ -75,6 +90,10 @@ function record(value: unknown): Record<string, unknown> {
 
 function recordArray(value: unknown): Array<Record<string, unknown>> {
   return Array.isArray(value) ? (value.filter((item) => item && typeof item === "object") as Array<Record<string, unknown>>) : [];
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.map((item) => text(item)).filter(Boolean) : [];
 }
 
 function evidenceArray(value: unknown): Array<Record<string, string>> {
@@ -140,6 +159,11 @@ function extractSelectedOptionId(req: any): string | null {
   return firstText(body.selected_option_id, body.selectedOptionId, queryValue(req, "selected_option_id")) || null;
 }
 
+function extractForecastErrorId(req: any): string {
+  const body = extractBody(req);
+  return firstText(body.forecast_error_id, body.forecastErrorId, queryValue(req, "forecast_error_id"));
+}
+
 function extractModelVersion(req: any): string | null {
   const body = extractBody(req);
   return firstText(body.model_version, body.modelVersion, queryValue(req, "model_version")) || null;
@@ -158,6 +182,18 @@ function extractObservedPayload(req: any): CalibrationObservedPayloadV1 {
     post_soil_moisture_percent: numberOrUndefined(nested.post_soil_moisture_percent ?? nested.postSoilMoisturePercent ?? body.post_soil_moisture_percent ?? body.postSoilMoisturePercent),
     observed_water_state: firstText(nested.observed_water_state, nested.observedWaterState, body.observed_water_state, body.observedWaterState),
     verification_ref_id: firstText(nested.verification_ref_id, nested.verificationRefId, body.verification_ref_id, body.verificationRefId),
+    evidence_refs: evidenceArray(nested.evidence_refs ?? nested.evidenceRefs ?? body.evidence_refs ?? body.evidenceRefs),
+  };
+}
+
+function extractFormalGateRefs(req: any): FieldLearningFormalGateRefsV1 {
+  const body = extractBody(req);
+  const nested = record(body.formal_gate_refs ?? body.formalGateRefs);
+  return {
+    acceptance_id: firstText(nested.acceptance_id, nested.acceptanceId, body.acceptance_id, body.acceptanceId),
+    post_irrigation_verification_id: firstText(nested.post_irrigation_verification_id, nested.postIrrigationVerificationId, body.post_irrigation_verification_id, body.postIrrigationVerificationId),
+    formal_evidence_ref_id: firstText(nested.formal_evidence_ref_id, nested.formalEvidenceRefId, body.formal_evidence_ref_id, body.formalEvidenceRefId),
+    field_memory_gate_route: firstText(nested.field_memory_gate_route, nested.fieldMemoryGateRoute),
     evidence_refs: evidenceArray(nested.evidence_refs ?? nested.evidenceRefs ?? body.evidence_refs ?? body.evidenceRefs),
   };
 }
@@ -195,6 +231,18 @@ async function readScenarioSetRow(pool: Pool, scenarioSetId: string): Promise<Ro
   return queryOne(pool, "SELECT * FROM scenario_set_v1 WHERE scenario_set_id = $1 LIMIT 1", [scenarioSetId]);
 }
 
+async function readCalibrationReplayRow(pool: Pool, replayId: string): Promise<Row | null> {
+  return queryOne(pool, "SELECT * FROM calibration_replay_v1 WHERE calibration_replay_id = $1 LIMIT 1", [replayId]);
+}
+
+async function readForecastErrorRow(pool: Pool, errorId: string): Promise<Row | null> {
+  return queryOne(pool, "SELECT * FROM forecast_error_v1 WHERE forecast_error_id = $1 LIMIT 1", [errorId]);
+}
+
+async function readFieldLearningCandidateRow(pool: Pool, candidateId: string): Promise<Row | null> {
+  return queryOne(pool, "SELECT * FROM field_learning_candidate_v1 WHERE field_learning_candidate_id = $1 LIMIT 1", [candidateId]);
+}
+
 function toForecastRunSnapshotRow(row: Row): ForecastRunSnapshotRowV1 {
   return { snapshot_id: firstText(row.snapshot_id), tenant_id: firstText(row.tenant_id), project_id: firstText(row.project_id), group_id: firstText(row.group_id), field_id: firstText(row.field_id), as_of_ts: row.as_of_ts instanceof Date ? row.as_of_ts.toISOString() : firstText(row.as_of_ts), status: firstText(row.status), state_vector_json: record(row.state_vector_json), confidence_json: record(row.confidence_json), evidence_refs_json: evidenceArray(row.evidence_refs_json), determinism_hash: firstText(row.determinism_hash) };
 }
@@ -209,6 +257,14 @@ function toCalibrationForecastRunRow(row: Row): CalibrationForecastRunRowV1 {
 
 function toCalibrationScenarioSetRow(row: Row): CalibrationScenarioSetRowV1 {
   return { scenario_set_id: firstText(row.scenario_set_id), forecast_run_id: firstText(row.forecast_run_id), tenant_id: firstText(row.tenant_id), project_id: firstText(row.project_id), group_id: firstText(row.group_id), field_id: firstText(row.field_id), as_of_ts: row.as_of_ts instanceof Date ? row.as_of_ts.toISOString() : firstText(row.as_of_ts), status: firstText(row.status), baseline_scenario_json: record(row.baseline_scenario_json), option_scenarios_json: recordArray(row.option_scenarios_json), determinism_hash: firstText(row.determinism_hash) };
+}
+
+function toFieldLearningCalibrationReplayRow(row: Row): FieldLearningCalibrationReplayRowV1 {
+  return { calibration_replay_id: firstText(row.calibration_replay_id), forecast_run_id: firstText(row.forecast_run_id), scenario_set_id: firstText(row.scenario_set_id), tenant_id: firstText(row.tenant_id), project_id: firstText(row.project_id), group_id: firstText(row.group_id), field_id: firstText(row.field_id), as_of_ts: row.as_of_ts instanceof Date ? row.as_of_ts.toISOString() : firstText(row.as_of_ts), status: firstText(row.status), selected_option_id: firstText(row.selected_option_id) || null, predicted_json: record(row.predicted_json), observed_json: record(row.observed_json), error_summary_json: record(row.error_summary_json), reason_candidates_json: recordArray(row.reason_candidates_json), evidence_refs_json: evidenceArray(row.evidence_refs_json), blocking_reasons_json: stringArray(row.blocking_reasons_json), determinism_hash: firstText(row.determinism_hash) };
+}
+
+function toFieldLearningForecastErrorRow(row: Row): FieldLearningForecastErrorRowV1 {
+  return { forecast_error_id: firstText(row.forecast_error_id), calibration_replay_id: firstText(row.calibration_replay_id), forecast_run_id: firstText(row.forecast_run_id), scenario_set_id: firstText(row.scenario_set_id), tenant_id: firstText(row.tenant_id), project_id: firstText(row.project_id), group_id: firstText(row.group_id), field_id: firstText(row.field_id), as_of_ts: row.as_of_ts instanceof Date ? row.as_of_ts.toISOString() : firstText(row.as_of_ts), error_metric: firstText(row.error_metric), error_value: row.error_value === null || row.error_value === undefined ? null : Number(row.error_value), error_direction: firstText(row.error_direction), predicted_json: record(row.predicted_json), observed_json: record(row.observed_json), evidence_refs_json: evidenceArray(row.evidence_refs_json), blocking_reasons_json: stringArray(row.blocking_reasons_json), determinism_hash: firstText(row.determinism_hash) };
 }
 
 async function insertSnapshot(pool: Pool, snapshot: ReturnType<typeof buildFieldStateSnapshotV1>): Promise<Row> {
@@ -238,7 +294,7 @@ async function insertScenarioSet(pool: Pool, scenarioSet: ReturnType<typeof buil
 async function insertCalibrationReplay(pool: Pool, replay: ReturnType<typeof buildCalibrationReplayAndForecastErrorV1>["calibrationReplay"]): Promise<Row> {
   const result = await pool.query(`INSERT INTO calibration_replay_v1 (calibration_replay_id,forecast_run_id,scenario_set_id,tenant_id,project_id,group_id,field_id,as_of_ts,selected_option_id,status,input_refs_json,predicted_json,observed_json,error_summary_json,reason_candidates_json,evidence_refs_json,blocking_reasons_json,determinism_hash) VALUES ($1,$2,$3,$4,$5,$6,$7,$8::timestamptz,$9,$10,$11::jsonb,$12::jsonb,$13::jsonb,$14::jsonb,$15::jsonb,$16::jsonb,$17::jsonb,$18) ON CONFLICT (calibration_replay_id) DO NOTHING RETURNING *`, [replay.calibration_replay_id, replay.forecast_run_id, replay.scenario_set_id, replay.tenant_id, replay.project_id, replay.group_id, replay.field_id, replay.as_of_ts, replay.selected_option_id, replay.status, JSON.stringify(replay.input_refs_json), JSON.stringify(replay.predicted_json), JSON.stringify(replay.observed_json), JSON.stringify(replay.error_summary_json), JSON.stringify(replay.reason_candidates_json), JSON.stringify(replay.evidence_refs_json), JSON.stringify(replay.blocking_reasons_json), replay.determinism_hash]);
   if (result.rows[0]) return result.rows[0] as Row;
-  const existing = await queryOne(pool, "SELECT * FROM calibration_replay_v1 WHERE calibration_replay_id = $1 LIMIT 1", [replay.calibration_replay_id]);
+  const existing = await readCalibrationReplayRow(pool, replay.calibration_replay_id);
   if (!existing) throw new Error("CALIBRATION_REPLAY_INSERT_FAILED");
   return existing;
 }
@@ -246,8 +302,16 @@ async function insertCalibrationReplay(pool: Pool, replay: ReturnType<typeof bui
 async function insertForecastError(pool: Pool, error: ReturnType<typeof buildCalibrationReplayAndForecastErrorV1>["forecastError"]): Promise<Row> {
   const result = await pool.query(`INSERT INTO forecast_error_v1 (forecast_error_id,calibration_replay_id,forecast_run_id,scenario_set_id,tenant_id,project_id,group_id,field_id,as_of_ts,error_metric,error_value,error_direction,predicted_json,observed_json,evidence_refs_json,blocking_reasons_json,determinism_hash) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::timestamptz,$10,$11,$12,$13::jsonb,$14::jsonb,$15::jsonb,$16::jsonb,$17) ON CONFLICT (forecast_error_id) DO NOTHING RETURNING *`, [error.forecast_error_id, error.calibration_replay_id, error.forecast_run_id, error.scenario_set_id, error.tenant_id, error.project_id, error.group_id, error.field_id, error.as_of_ts, error.error_metric, error.error_value, error.error_direction, JSON.stringify(error.predicted_json), JSON.stringify(error.observed_json), JSON.stringify(error.evidence_refs_json), JSON.stringify(error.blocking_reasons_json), error.determinism_hash]);
   if (result.rows[0]) return result.rows[0] as Row;
-  const existing = await queryOne(pool, "SELECT * FROM forecast_error_v1 WHERE forecast_error_id = $1 LIMIT 1", [error.forecast_error_id]);
+  const existing = await readForecastErrorRow(pool, error.forecast_error_id);
   if (!existing) throw new Error("FORECAST_ERROR_INSERT_FAILED");
+  return existing;
+}
+
+async function insertFieldLearningCandidate(pool: Pool, candidate: ReturnType<typeof buildFieldLearningCandidateV1>): Promise<Row> {
+  const result = await pool.query(`INSERT INTO field_learning_candidate_v1 (field_learning_candidate_id,calibration_replay_id,forecast_error_id,tenant_id,project_id,group_id,field_id,as_of_ts,candidate_status,learning_scope,learning_statement_json,supporting_evidence_refs_json,counter_evidence_refs_json,confidence_json,formal_gate_refs_json,h58_gate_status_json,blocking_reasons_json,determinism_hash) VALUES ($1,$2,$3,$4,$5,$6,$7,$8::timestamptz,$9,$10,$11::jsonb,$12::jsonb,$13::jsonb,$14::jsonb,$15::jsonb,$16::jsonb,$17::jsonb,$18) ON CONFLICT (field_learning_candidate_id) DO NOTHING RETURNING *`, [candidate.field_learning_candidate_id, candidate.calibration_replay_id, candidate.forecast_error_id, candidate.tenant_id, candidate.project_id, candidate.group_id, candidate.field_id, candidate.as_of_ts, candidate.candidate_status, candidate.learning_scope, JSON.stringify(candidate.learning_statement_json), JSON.stringify(candidate.supporting_evidence_refs_json), JSON.stringify(candidate.counter_evidence_refs_json), JSON.stringify(candidate.confidence_json), JSON.stringify(candidate.formal_gate_refs_json), JSON.stringify(candidate.h58_gate_status_json), JSON.stringify(candidate.blocking_reasons_json), candidate.determinism_hash]);
+  if (result.rows[0]) return result.rows[0] as Row;
+  const existing = await readFieldLearningCandidateRow(pool, candidate.field_learning_candidate_id);
+  if (!existing) throw new Error("FIELD_LEARNING_CANDIDATE_INSERT_FAILED");
   return existing;
 }
 
@@ -273,6 +337,10 @@ function exposeCalibrationReplayRow(row: Row): Row {
 
 function exposeForecastErrorRow(row: Row): Row {
   return { forecast_error_id: row.forecast_error_id, calibration_replay_id: row.calibration_replay_id, forecast_run_id: row.forecast_run_id, scenario_set_id: row.scenario_set_id, tenant_id: row.tenant_id, project_id: row.project_id, group_id: row.group_id, field_id: row.field_id, as_of_ts: iso(row.as_of_ts), error_metric: row.error_metric, error_value: row.error_value, error_direction: row.error_direction, predicted_json: row.predicted_json, observed_json: row.observed_json, evidence_refs_json: row.evidence_refs_json, blocking_reasons_json: row.blocking_reasons_json, determinism_hash: row.determinism_hash, created_at: iso(row.created_at) };
+}
+
+function exposeFieldLearningCandidateRow(row: Row): Row {
+  return { field_learning_candidate_id: row.field_learning_candidate_id, calibration_replay_id: row.calibration_replay_id, forecast_error_id: row.forecast_error_id, tenant_id: row.tenant_id, project_id: row.project_id, group_id: row.group_id, field_id: row.field_id, as_of_ts: iso(row.as_of_ts), candidate_status: row.candidate_status, learning_scope: row.learning_scope, learning_statement_json: row.learning_statement_json, supporting_evidence_refs_json: row.supporting_evidence_refs_json, counter_evidence_refs_json: row.counter_evidence_refs_json, confidence_json: row.confidence_json, formal_gate_refs_json: row.formal_gate_refs_json, h58_gate_status_json: row.h58_gate_status_json, blocking_reasons_json: row.blocking_reasons_json, determinism_hash: row.determinism_hash, created_at: iso(row.created_at) };
 }
 
 export function registerTwinKernelV1Routes(app: FastifyInstance, pool: Pool): void {
@@ -351,7 +419,7 @@ export function registerTwinKernelV1Routes(app: FastifyInstance, pool: Pool): vo
   app.get("/api/v1/twin-kernel/calibration-replays/:calibration_replay_id", async (req: any, reply) => {
     const replayId = firstText(req?.params?.calibration_replay_id);
     if (!replayId) return reply.code(400).send({ ok: false, error: "CALIBRATION_REPLAY_ID_REQUIRED" });
-    const row = await queryOne(pool, "SELECT * FROM calibration_replay_v1 WHERE calibration_replay_id = $1 LIMIT 1", [replayId]);
+    const row = await readCalibrationReplayRow(pool, replayId);
     if (!row) return reply.code(404).send({ ok: false, error: "CALIBRATION_REPLAY_NOT_FOUND" });
     return reply.send({ ok: true, object_type: "calibration_replay_v1", calibration_replay: exposeCalibrationReplayRow(row) });
   });
@@ -359,8 +427,29 @@ export function registerTwinKernelV1Routes(app: FastifyInstance, pool: Pool): vo
   app.get("/api/v1/twin-kernel/forecast-errors/:forecast_error_id", async (req: any, reply) => {
     const errorId = firstText(req?.params?.forecast_error_id);
     if (!errorId) return reply.code(400).send({ ok: false, error: "FORECAST_ERROR_ID_REQUIRED" });
-    const row = await queryOne(pool, "SELECT * FROM forecast_error_v1 WHERE forecast_error_id = $1 LIMIT 1", [errorId]);
+    const row = await readForecastErrorRow(pool, errorId);
     if (!row) return reply.code(404).send({ ok: false, error: "FORECAST_ERROR_NOT_FOUND" });
     return reply.send({ ok: true, object_type: "forecast_error_v1", forecast_error: exposeForecastErrorRow(row) });
+  });
+
+  app.post("/api/v1/twin-kernel/field-learning-candidates", async (req, reply) => {
+    const errorId = extractForecastErrorId(req);
+    if (!errorId) return reply.code(400).send({ ok: false, error: "FORECAST_ERROR_ID_REQUIRED" });
+    const errorRow = await readForecastErrorRow(pool, errorId);
+    if (!errorRow) return reply.code(404).send({ ok: false, error: "FORECAST_ERROR_NOT_FOUND" });
+    const replayId = firstText(errorRow.calibration_replay_id);
+    const replayRow = await readCalibrationReplayRow(pool, replayId);
+    if (!replayRow) return reply.code(404).send({ ok: false, error: "CALIBRATION_REPLAY_NOT_FOUND" });
+    const candidate = buildFieldLearningCandidateV1({ calibrationReplay: toFieldLearningCalibrationReplayRow(replayRow), forecastError: toFieldLearningForecastErrorRow(errorRow), formal_gate_refs: extractFormalGateRefs(req) });
+    const row = await insertFieldLearningCandidate(pool, candidate);
+    return reply.send({ ok: true, object_type: "field_learning_candidate_v1", write_ready: true, downstream_write_ready: false, formal_field_memory_write_created: false, field_learning_candidate: exposeFieldLearningCandidateRow(row) });
+  });
+
+  app.get("/api/v1/twin-kernel/field-learning-candidates/:field_learning_candidate_id", async (req: any, reply) => {
+    const candidateId = firstText(req?.params?.field_learning_candidate_id);
+    if (!candidateId) return reply.code(400).send({ ok: false, error: "FIELD_LEARNING_CANDIDATE_ID_REQUIRED" });
+    const row = await readFieldLearningCandidateRow(pool, candidateId);
+    if (!row) return reply.code(404).send({ ok: false, error: "FIELD_LEARNING_CANDIDATE_NOT_FOUND" });
+    return reply.send({ ok: true, object_type: "field_learning_candidate_v1", field_learning_candidate: exposeFieldLearningCandidateRow(row) });
   });
 }
