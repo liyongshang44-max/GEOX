@@ -109,7 +109,7 @@ async function readRoiEntry(pool: Pool, roiEntryId: string): Promise<Row | null>
 }
 
 async function readFieldMemory(pool: Pool, fieldMemoryId: string): Promise<Row | null> {
-  return queryOne(pool, "SELECT * FROM field_memory_v1 WHERE field_memory_id = $1 LIMIT 1", [fieldMemoryId]);
+  return queryOne(pool, "SELECT * FROM field_memory_v1 WHERE memory_id = $1 OR field_memory_id = $1 LIMIT 1", [fieldMemoryId]);
 }
 
 function exposeDecisionCycle(row: Row): Row {
@@ -121,7 +121,7 @@ function exposeRoiEntry(row: Row): Row {
 }
 
 function exposeFieldMemory(row: Row): Row {
-  return { field_memory_id: row.field_memory_id, decision_cycle_id: row.decision_cycle_id, field_learning_candidate_id: row.field_learning_candidate_id, tenant_id: row.tenant_id, project_id: row.project_id, group_id: row.group_id, field_id: row.field_id, as_of_ts: iso(row.as_of_ts), memory_status: row.memory_status, formalized_by: row.formalized_by, formalized_at: iso(row.formalized_at), memory_statement_json: row.memory_statement_json, evidence_refs_json: row.evidence_refs_json, source_object_refs_json: row.source_object_refs_json, model_update_created: row.model_update_created, created_at: iso(row.created_at) };
+  return { field_memory_id: row.field_memory_id ?? row.memory_id, memory_id: row.memory_id ?? row.field_memory_id, decision_cycle_id: row.decision_cycle_id, field_learning_candidate_id: row.field_learning_candidate_id, tenant_id: row.tenant_id, project_id: row.project_id, group_id: row.group_id, field_id: row.field_id, as_of_ts: iso(row.as_of_ts), memory_status: row.memory_status, formalized_by: row.formalized_by, formalized_at: iso(row.formalized_at), memory_statement_json: row.memory_statement_json, evidence_refs_json: row.evidence_refs_json, source_object_refs_json: row.source_object_refs_json, model_update_created: row.model_update_created, created_at: iso(row.created_at) };
 }
 
 function nextStateMachine(row: Row, completedStages: string[]): Array<Record<string, unknown>> {
@@ -213,11 +213,11 @@ export function registerTwinKernelFormalizationRoutes(app: FastifyInstance, pool
     const memoryStatement = Object.keys(record(input.memory_statement ?? input.memoryStatement)).length > 0 ? record(input.memory_statement ?? input.memoryStatement) : record(candidate.learning_statement_json);
     const refs = evidenceRefs(input.evidence_refs ?? input.evidenceRefs);
     const inserted = await pool.query(
-      `INSERT INTO field_memory_v1 (field_memory_id,decision_cycle_id,field_learning_candidate_id,tenant_id,project_id,group_id,field_id,as_of_ts,memory_status,formalized_by,formalized_at,memory_statement_json,evidence_refs_json,source_object_refs_json,model_update_created)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8::timestamptz,$9,$10,$11::timestamptz,$12::jsonb,$13::jsonb,$14::jsonb,$15)
-       ON CONFLICT (field_memory_id) DO NOTHING
+      `INSERT INTO field_memory_v1 (memory_id,field_memory_id,decision_cycle_id,field_learning_candidate_id,tenant_id,project_id,group_id,field_id,as_of_ts,memory_status,formalized_by,formalized_at,memory_statement_json,evidence_refs_json,source_object_refs_json,model_update_created,memory_type,evidence_refs,source_type,source_id,occurred_at)
+       VALUES ($1,$1,$2,$3,$4,$5,$6,$7,$8::timestamptz,$9,$10,$11::timestamptz,$12::jsonb,$13::jsonb,$14::jsonb,$15,$16,$17::jsonb,$18,$19,$11::timestamptz)
+       ON CONFLICT (memory_id) DO NOTHING
        RETURNING *`,
-      [fieldMemoryId, decisionCycleId, candidateId, decisionCycle.tenant_id, decisionCycle.project_id, decisionCycle.group_id, decisionCycle.field_id, decisionCycle.as_of_ts, "FORMAL_MEMORY_WRITTEN", formalizedBy, formalizedAt, JSON.stringify(memoryStatement), JSON.stringify(refs), JSON.stringify(sourceRefs), false],
+      [fieldMemoryId, decisionCycleId, candidateId, decisionCycle.tenant_id, decisionCycle.project_id, decisionCycle.group_id, decisionCycle.field_id, decisionCycle.as_of_ts, "FORMAL_MEMORY_WRITTEN", formalizedBy, formalizedAt, JSON.stringify(memoryStatement), JSON.stringify(refs), JSON.stringify(sourceRefs), false, "FORMAL_FIELD_MEMORY", JSON.stringify(refs), "twin_kernel_formalization_v0", decisionCycleId],
     );
     const memoryRow = (inserted.rows[0] as Row | undefined) ?? await readFieldMemory(pool, fieldMemoryId);
     if (!memoryRow) return reply.code(500).send({ ok: false, error: "FIELD_MEMORY_WRITE_FAILED" });
