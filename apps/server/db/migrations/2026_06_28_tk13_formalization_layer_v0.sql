@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS field_memory_v1 (
   memory_statement_json jsonb DEFAULT '{}'::jsonb,
   evidence_refs_json jsonb DEFAULT '[]'::jsonb,
   source_object_refs_json jsonb DEFAULT '{}'::jsonb,
-  model_update_created boolean DEFAULT false,
+  model_update_created boolean NOT NULL DEFAULT false,
   created_at timestamptz DEFAULT now()
 );
 
@@ -81,6 +81,9 @@ UPDATE field_memory_v1 SET evidence_refs_json = '[]'::jsonb WHERE evidence_refs_
 UPDATE field_memory_v1 SET source_object_refs_json = '{}'::jsonb WHERE source_object_refs_json IS NULL;
 UPDATE field_memory_v1 SET model_update_created = false WHERE model_update_created IS NULL;
 UPDATE field_memory_v1 SET created_at = now() WHERE created_at IS NULL;
+
+ALTER TABLE field_memory_v1 ALTER COLUMN model_update_created SET DEFAULT false;
+ALTER TABLE field_memory_v1 ALTER COLUMN model_update_created SET NOT NULL;
 
 CREATE INDEX IF NOT EXISTS field_memory_v1_decision_cycle_id_idx ON field_memory_v1(decision_cycle_id);
 CREATE INDEX IF NOT EXISTS field_memory_v1_candidate_id_idx ON field_memory_v1(field_learning_candidate_id);
