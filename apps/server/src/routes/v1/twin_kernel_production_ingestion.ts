@@ -28,6 +28,24 @@ type ProductionIngestionBody = {
   productionSourceRefs?: unknown;
 };
 
+type ProductionIngestionErrorCode =
+  | "FIELD_LEARNING_CANDIDATE_ID_REQUIRED"
+  | "SOURCE_SYSTEM_REQUIRED"
+  | "INGESTED_BY_REQUIRED"
+  | "INGESTED_AT_REQUIRED"
+  | "INVALID_INGESTED_AT"
+  | "INVALID_OCCURRED_AT"
+  | "MALFORMED_SOURCE_REFS"
+  | "FIELD_LEARNING_CANDIDATE_NOT_FOUND"
+  | "FORECAST_ERROR_NOT_FOUND"
+  | "CALIBRATION_REPLAY_NOT_FOUND"
+  | "SCENARIO_SET_NOT_FOUND"
+  | "FORECAST_RUN_NOT_FOUND"
+  | "SOURCE_EVENT_ID_CONFLICT"
+  | "PRODUCTION_INGESTION_EVENT_WRITE_FAILED"
+  | "PRODUCTION_INGESTION_EVENT_LINK_FAILED"
+  | "DUPLICATE_DECISION_CYCLE_NOT_FOUND";
+
 function text(value: unknown): string {
   return String(value ?? "").trim();
 }
@@ -60,8 +78,12 @@ function canonical(value: unknown): unknown {
   return value;
 }
 
+function canonicalJson(value: unknown): string {
+  return JSON.stringify(canonical(value));
+}
+
 function hashPayload(value: unknown): string {
-  return createHash("sha256").update(JSON.stringify(canonical(value))).digest("hex");
+  return createHash("sha256").update(canonicalJson(value)).digest("hex");
 }
 
 function body(req: any): ProductionIngestionBody {
@@ -78,8 +100,28 @@ function parseTs(value: string, errorCode: string): string {
   return date.toISOString();
 }
 
-function sourceRefs(input: ProductionIngestionBody): Record<string, unknown> {
-  return record(input.source_refs ?? input.sourceRefs ?? input.production_source_refs ?? input.productionSourceRefs);
+function hasOwn(input: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(input, key);
+}
+
+function sourceRefsValue(input: ProductionIngestionBody): unknown {
+  const raw = input as Record<string, unknown>;
+  for (const key of ["source_refs", "sourceRefs", "production_source_refs", "productionSourceRefs"]) {
+    if (hasOwn(raw, key)) return raw[key];
+  }
+  return undefined;
+}
+
+function parseSourceRefs(input: ProductionIngestionBody): { refs: Record<string, unknown>; errorCode: ProductionIngestionErrorCode | null } {
+  const value = sourceRefsValue(input);
+  if (value === undefined || value === null) return { refs: {}, errorCode: null };
+  if (!value || typeof value !== "object" || Array.isArray(value)) return { refs: {}, errorCode: "MALFORMED_SOURCE_REFS" };
+  const refs = value as Record<string, unknown>;
+  for (const [key, refValue] of Object.entries(refs)) {
+    if (!key.trim()) return { refs: {}, errorCode: "MALFORMED_SOURCE_REFS" };
+    if (refValue !== null && typeof refValue === "object") return { refs: {}, errorCode: "MALFORMED_SOURCE_REFS" };
+  }
+  return { refs, errorCode: null };
 }
 
 function refText(refs: Record<string, unknown>, ...keys: string[]): string {
@@ -126,6 +168,30 @@ function boundaryFlags(): Record<string, boolean> {
     automatic_field_memory_created: false,
     model_updated: false,
   };
+}
+
+function errorPayload(code: ProductionIngestionErrorCode, status: number, details: Record<string, unknown> = {}): Row {
+  return {
+    ok: false,
+    object_type: "production_ingestion_event_v0",
+    error: code,
+    error_code: code,
+    structured_error: {
+      code,
+      status,
+      category: "production_ingestion",
+      details,
+    },
+  };
+}
+
+function fail(reply: any, status: number, code: ProductionIngestionErrorCode, details: Record<string, unknown> = {}): any {
+  return reply.code(status).send(errorPayload(code, status, details));
+}
+
+function eventsConflict(event: Row, candidateId: string, rawRefs: Record<string, unknown>): boolean {
+  if (text(event.field_learning_candidate_id) !== candidateId) return true;
+  return canonicalJson(event.raw_source_refs_json ?? {}) !== canonicalJson(rawRefs);
 }
 
 async function queryOne(pool: Pool, sql: string, values: unknown[]): Promise<Row | null> {
@@ -203,7 +269,7 @@ async function insertDecisionCycle(pool: Pool, decisionCycle: ReturnType<typeof 
   return existing;
 }
 
-async function insertProductionIngestionEvent(pool: Pool, input: { eventId: string; sourceSystem: string; sourceEventId: string; candidate: Row; occurredAt: string | null; ingestedBy: string; ingestedAt: string; rawRefs: Record<string, unknown>; mappedRefs: Record<string, string | null> }): Promise<Row> {
+async function insertProductionIngestionEvent(pool: Pool, input: { eventId: string; sourceSystem: string; sourceEventId: string; candidate: Row; occurredAt: string | null; ingestedBy: string; ingestedAt: string; rawRefs: Record<string, unknown>; mappedRefs: Record<string, string | null> }): Promise<{ event: Row; inserted: boolean }> {
   const result = await pool.query(
     `INSERT INTO production_ingestion_event_v0 (production_ingestion_event_id,source_system,source_event_id,field_learning_candidate_id,tenant_id,project_id,group_id,field_id,as_of_ts,occurred_at,ingested_by,ingested_at,raw_source_refs_json,mapped_external_refs_json,boundary_flags_json)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::timestamptz,$10::timestamptz,$11,$12::timestamptz,$13::jsonb,$14::jsonb,$15::jsonb)
@@ -211,9 +277,10 @@ async function insertProductionIngestionEvent(pool: Pool, input: { eventId: stri
      RETURNING *`,
     [input.eventId, input.sourceSystem, input.sourceEventId, input.candidate.field_learning_candidate_id, input.candidate.tenant_id, input.candidate.project_id, input.candidate.group_id, input.candidate.field_id, input.candidate.as_of_ts, input.occurredAt, input.ingestedBy, input.ingestedAt, JSON.stringify(input.rawRefs), JSON.stringify(input.mappedRefs), JSON.stringify(boundaryFlags())],
   );
-  const event = (result.rows[0] as Row | undefined) ?? await readProductionIngestionEvent(pool, input.eventId);
+  if (result.rows[0]) return { event: result.rows[0] as Row, inserted: true };
+  const event = await readProductionIngestionEvent(pool, input.eventId);
   if (!event) throw new Error("PRODUCTION_INGESTION_EVENT_WRITE_FAILED");
-  return event;
+  return { event, inserted: false };
 }
 
 async function updateIngestionDecisionCycle(pool: Pool, eventId: string, decisionCycleId: string): Promise<Row> {
@@ -238,35 +305,53 @@ export function registerTwinKernelProductionIngestionRoutes(app: FastifyInstance
     const ingestedBy = bodyText(input, "ingested_by", "ingestedBy");
     const ingestedAtRaw = bodyText(input, "ingested_at", "ingestedAt");
     const occurredAtRaw = bodyText(input, "occurred_at", "occurredAt");
-    if (!candidateId) return reply.code(400).send({ ok: false, error: "FIELD_LEARNING_CANDIDATE_ID_REQUIRED" });
-    if (!sourceSystem) return reply.code(400).send({ ok: false, error: "SOURCE_SYSTEM_REQUIRED" });
-    if (!ingestedBy) return reply.code(400).send({ ok: false, error: "INGESTED_BY_REQUIRED" });
-    if (!ingestedAtRaw) return reply.code(400).send({ ok: false, error: "INGESTED_AT_REQUIRED" });
+    if (!candidateId) return fail(reply, 400, "FIELD_LEARNING_CANDIDATE_ID_REQUIRED");
+    if (!sourceSystem) return fail(reply, 400, "SOURCE_SYSTEM_REQUIRED");
+    if (!ingestedBy) return fail(reply, 400, "INGESTED_BY_REQUIRED");
+    if (!ingestedAtRaw) return fail(reply, 400, "INGESTED_AT_REQUIRED");
+
     let ingestedAt: string;
     let occurredAt: string | null = null;
-    try { ingestedAt = parseTs(ingestedAtRaw, "INVALID_INGESTED_AT"); } catch { return reply.code(400).send({ ok: false, error: "INVALID_INGESTED_AT" }); }
+    try { ingestedAt = parseTs(ingestedAtRaw, "INVALID_INGESTED_AT"); } catch { return fail(reply, 400, "INVALID_INGESTED_AT", { field: "ingested_at" }); }
     if (occurredAtRaw) {
-      try { occurredAt = parseTs(occurredAtRaw, "INVALID_OCCURRED_AT"); } catch { return reply.code(400).send({ ok: false, error: "INVALID_OCCURRED_AT" }); }
+      try { occurredAt = parseTs(occurredAtRaw, "INVALID_OCCURRED_AT"); } catch { return fail(reply, 400, "INVALID_OCCURRED_AT", { field: "occurred_at" }); }
     }
-    const rawRefs = sourceRefs(input);
+
+    const parsedRefs = parseSourceRefs(input);
+    if (parsedRefs.errorCode) return fail(reply, 400, parsedRefs.errorCode, { field: "source_refs" });
+    const rawRefs = parsedRefs.refs;
     const decisionRefs = mapProductionRefs(rawRefs);
     const mappedRefs = cleanMappedRefs(decisionRefs);
     const candidate = await readFieldLearningCandidate(pool, candidateId);
-    if (!candidate) return reply.code(404).send({ ok: false, error: "FIELD_LEARNING_CANDIDATE_NOT_FOUND" });
+    if (!candidate) return fail(reply, 404, "FIELD_LEARNING_CANDIDATE_NOT_FOUND", { field_learning_candidate_id: candidateId });
     const forecastError = await readForecastError(pool, text(candidate.forecast_error_id));
-    if (!forecastError) return reply.code(404).send({ ok: false, error: "FORECAST_ERROR_NOT_FOUND" });
+    if (!forecastError) return fail(reply, 404, "FORECAST_ERROR_NOT_FOUND", { forecast_error_id: text(candidate.forecast_error_id) });
     const calibrationReplay = await readCalibrationReplay(pool, text(candidate.calibration_replay_id));
-    if (!calibrationReplay) return reply.code(404).send({ ok: false, error: "CALIBRATION_REPLAY_NOT_FOUND" });
+    if (!calibrationReplay) return fail(reply, 404, "CALIBRATION_REPLAY_NOT_FOUND", { calibration_replay_id: text(candidate.calibration_replay_id) });
     const scenarioSet = await readScenarioSet(pool, text(calibrationReplay.scenario_set_id));
-    if (!scenarioSet) return reply.code(404).send({ ok: false, error: "SCENARIO_SET_NOT_FOUND" });
+    if (!scenarioSet) return fail(reply, 404, "SCENARIO_SET_NOT_FOUND", { scenario_set_id: text(calibrationReplay.scenario_set_id) });
     const forecastRun = await readForecastRun(pool, text(forecastError.forecast_run_id));
-    if (!forecastRun) return reply.code(404).send({ ok: false, error: "FORECAST_RUN_NOT_FOUND" });
+    if (!forecastRun) return fail(reply, 404, "FORECAST_RUN_NOT_FOUND", { forecast_run_id: text(forecastError.forecast_run_id) });
+
     const sourceEventId = sourceEventIdRaw || `prod_evt_${hashPayload({ source_system: sourceSystem, field_learning_candidate_id: candidateId, source_refs: rawRefs, ingested_at: ingestedAt }).slice(0, 24)}`;
     const eventId = `ping_${hashPayload({ object_type: "production_ingestion_event_v0", source_system: sourceSystem, source_event_id: sourceEventId }).slice(0, 24)}`;
-    const ingestionEvent = await insertProductionIngestionEvent(pool, { eventId, sourceSystem, sourceEventId, candidate, occurredAt, ingestedBy, ingestedAt, rawRefs, mappedRefs });
+    const insertion = await insertProductionIngestionEvent(pool, { eventId, sourceSystem, sourceEventId, candidate, occurredAt, ingestedBy, ingestedAt, rawRefs, mappedRefs });
+
+    if (!insertion.inserted) {
+      if (eventsConflict(insertion.event, candidateId, rawRefs)) {
+        return fail(reply, 409, "SOURCE_EVENT_ID_CONFLICT", { source_system: sourceSystem, source_event_id: sourceEventId, production_ingestion_event_id: eventId });
+      }
+      const existingDecisionCycleId = text(insertion.event.decision_cycle_id);
+      if (existingDecisionCycleId) {
+        const existingDecisionCycle = await readDecisionCycle(pool, existingDecisionCycleId);
+        if (!existingDecisionCycle) return fail(reply, 500, "DUPLICATE_DECISION_CYCLE_NOT_FOUND", { decision_cycle_id: existingDecisionCycleId });
+        return reply.send({ ok: true, object_type: "production_ingestion_event_v0", companion_object_type: "decision_cycle_v1", write_ready: false, downstream_write_ready: false, idempotent_replay: true, duplicate_source_event: true, stable_duplicate_response: true, automatic_business_decision_created: false, automatic_recommendation_created: false, automatic_approval_created: false, automatic_task_created: false, automatic_receipt_created: false, automatic_acceptance_created: false, automatic_roi_created: false, automatic_field_memory_created: false, model_update_created: false, production_ingestion_event: exposeProductionIngestionEvent(insertion.event), decision_cycle: exposeDecisionCycle(existingDecisionCycle) });
+      }
+    }
+
     const decisionCycle = buildDecisionCycleV1({ forecastRun: toDecisionForecastRunRow(forecastRun), scenarioSet: toDecisionScenarioSetRow(scenarioSet), calibrationReplay: toDecisionCalibrationReplayRow(calibrationReplay), forecastError: toDecisionForecastErrorRow(forecastError), fieldLearningCandidate: toDecisionFieldLearningCandidateRow(candidate), external_refs: decisionRefs });
     const decisionCycleRow = await insertDecisionCycle(pool, decisionCycle);
     const linkedEvent = await updateIngestionDecisionCycle(pool, eventId, text(decisionCycleRow.decision_cycle_id));
-    return reply.send({ ok: true, object_type: "production_ingestion_event_v0", companion_object_type: "decision_cycle_v1", write_ready: true, downstream_write_ready: false, automatic_business_decision_created: false, automatic_recommendation_created: false, automatic_approval_created: false, automatic_task_created: false, automatic_receipt_created: false, automatic_acceptance_created: false, automatic_roi_created: false, automatic_field_memory_created: false, model_update_created: false, production_ingestion_event: exposeProductionIngestionEvent(linkedEvent), decision_cycle: exposeDecisionCycle(decisionCycleRow) });
+    return reply.send({ ok: true, object_type: "production_ingestion_event_v0", companion_object_type: "decision_cycle_v1", write_ready: true, downstream_write_ready: false, idempotent_replay: false, duplicate_source_event: false, stable_duplicate_response: false, automatic_business_decision_created: false, automatic_recommendation_created: false, automatic_approval_created: false, automatic_task_created: false, automatic_receipt_created: false, automatic_acceptance_created: false, automatic_roi_created: false, automatic_field_memory_created: false, model_update_created: false, production_ingestion_event: exposeProductionIngestionEvent(linkedEvent), decision_cycle: exposeDecisionCycle(decisionCycleRow) });
   });
 }
