@@ -19,6 +19,11 @@ type SystemDerivedRow = {
   determinismHash: string;
 };
 
+type JsonBlockOptions = {
+  maxHeight?: number;
+  compact?: boolean;
+};
+
 const SYSTEM_DERIVED_OBJECTS = [
   "field_state_snapshot_v1",
   "forecast_run_v1",
@@ -35,6 +40,17 @@ const MISSING_FORMALIZATION_TOKENS = [
   "H58_FORMAL_WRITE_NOT_CREATED_BY_TWIN_KERNEL",
 ];
 
+const AUTO_WRITE_FLAG_KEYS = [
+  "automatic_recommendation_created",
+  "automatic_approval_created",
+  "automatic_task_created",
+  "automatic_receipt_created",
+  "automatic_acceptance_created",
+  "automatic_roi_created",
+  "automatic_field_memory_created",
+  "model_updated",
+];
+
 function record(value: unknown): TwinTraceJsonRecord {
   return value && typeof value === "object" && !Array.isArray(value) ? value as TwinTraceJsonRecord : {};
 }
@@ -45,6 +61,13 @@ function array(value: unknown): unknown[] {
 
 function text(value: unknown): string {
   return String(value ?? "").trim();
+}
+
+function shortHash(value: unknown): string {
+  const raw = text(value);
+  if (!raw || raw === "无") return "无";
+  if (raw.length <= 18) return raw;
+  return raw.slice(0, 10) + "…" + raw.slice(-6);
 }
 
 function objectIdForType(objectType: string, value: TwinTraceJsonRecord): string {
@@ -89,8 +112,53 @@ function systemDerivedRows(trace: TwinTraceReadModelV1): SystemDerivedRow[] {
   });
 }
 
-function jsonBlock(value: unknown): React.ReactElement {
-  return <pre className="operatorJsonBlock">{JSON.stringify(value ?? null, null, 2)}</pre>;
+function jsonBlock(value: unknown, options: JsonBlockOptions = {}): React.ReactElement {
+  return (
+    <pre
+      className="operatorJsonBlock"
+      data-polish="bounded-json-block"
+      style={{
+        maxHeight: options.maxHeight ?? 280,
+        overflow: "auto",
+        fontSize: options.compact ? 11 : 12,
+        lineHeight: 1.45,
+        whiteSpace: "pre-wrap",
+        wordBreak: "break-word",
+      }}
+    >
+      {JSON.stringify(value ?? null, null, 2)}
+    </pre>
+  );
+}
+
+function CollapsibleJsonCard({
+  title,
+  eyebrow,
+  dataCard,
+  children,
+  value,
+  defaultOpen = false,
+  maxHeight = 280,
+}: {
+  title: string;
+  eyebrow: string;
+  dataCard: string;
+  children?: React.ReactNode;
+  value: unknown;
+  defaultOpen?: boolean;
+  maxHeight?: number;
+}): React.ReactElement {
+  return (
+    <article className="operatorPanel" data-card={dataCard} data-polish="collapsible-json-card">
+      <p className="operatorEyebrow">{eyebrow}</p>
+      <h3>{title}</h3>
+      {children}
+      <details open={defaultOpen} data-polish="json-details">
+        <summary>查看 JSON</summary>
+        {jsonBlock(value, { maxHeight, compact: true })}
+      </details>
+    </article>
+  );
 }
 
 function ListCard({ title, items, dataCard }: { title: string; items: unknown[]; dataCard: string }): React.ReactElement {
@@ -107,17 +175,20 @@ function ListCard({ title, items, dataCard }: { title: string; items: unknown[];
 
 function ProvenanceCard({ trace }: { trace: TwinTraceReadModelV1 }): React.ReactElement {
   return (
-    <article className="operatorPanel" data-card="provenance-classes">
-      <p className="operatorEyebrow">Provenance</p>
-      <h3>来源分层</h3>
+    <CollapsibleJsonCard
+      title="来源分层"
+      eyebrow="Provenance"
+      dataCard="provenance-classes"
+      value={trace.provenance_classes}
+      maxHeight={220}
+    >
       <ul className="operatorList">
         <li>entered_collected：录入 / 采集 / source index 输入</li>
         <li>system_derived：Twin Kernel 生成对象</li>
         <li>human_confirmed：人工确认与正式门控引用</li>
         <li>pointer_refs：外部链路引用，不在本页创建</li>
       </ul>
-      {jsonBlock(trace.provenance_classes)}
-    </article>
+    </CollapsibleJsonCard>
   );
 }
 
@@ -125,25 +196,35 @@ function SystemDerivedCard({ trace }: { trace: TwinTraceReadModelV1 }): React.Re
   const rows = systemDerivedRows(trace);
 
   return (
-    <article className="operatorPanel" data-card="system-derived-objects">
+    <article className="operatorPanel" data-card="system-derived-objects" data-polish="short-hash-table">
       <p className="operatorEyebrow">System Derived</p>
       <h3>系统推导对象</h3>
       <div className="operatorTableWrap">
         <table className="operatorTable" data-table="twin-trace-system-derived">
-          <thead><tr><th>对象</th><th>ID</th><th>状态</th><th>determinism_hash</th></tr></thead>
+          <thead><tr><th>对象</th><th>ID</th><th>状态</th><th>hash</th></tr></thead>
           <tbody>
             {rows.map((row) => (
               <tr key={row.objectType} data-object-type={row.objectType}>
                 <td>{row.objectType}</td>
-                <td>{row.objectId}</td>
+                <td title={row.objectId}>{shortHash(row.objectId)}</td>
                 <td>{row.status}</td>
-                <td>{row.determinismHash}</td>
+                <td title={row.determinismHash}>{shortHash(row.determinismHash)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
     </article>
+  );
+}
+
+function BoundaryFlagsSummary({ boundaryFlags }: { boundaryFlags: TwinTraceJsonRecord }): React.ReactElement {
+  return (
+    <ul className="operatorList" data-polish="boundary-flag-summary">
+      {AUTO_WRITE_FLAG_KEYS.map((key) => (
+        <li key={key}>{key}：{boundaryFlags[key] === true ? "true" : "false"}</li>
+      ))}
+    </ul>
   );
 }
 
@@ -170,34 +251,45 @@ function DecisionAnswerCard({ trace }: { trace: TwinTraceReadModelV1 }): React.R
           <li key={token} data-missing-formalization={token}>{missingFormalization.includes(token) ? token : token + "：未返回"}</li>
         ))}
       </ul>
-      <h4>boundary_flags</h4>
-      {jsonBlock(boundaryFlags)}
+      <h4>automatic write flags</h4>
+      <BoundaryFlagsSummary boundaryFlags={boundaryFlags} />
+      <details data-polish="boundary-json-details">
+        <summary>查看 boundary_flags JSON</summary>
+        {jsonBlock(boundaryFlags, { maxHeight: 220, compact: true })}
+      </details>
     </article>
   );
 }
 
 function PointerRefsCard({ trace }: { trace: TwinTraceReadModelV1 }): React.ReactElement {
   return (
-    <article className="operatorPanel" data-card="pointer-refs">
-      <p className="operatorEyebrow">Pointer Refs</p>
-      <h3>外部引用</h3>
+    <CollapsibleJsonCard
+      title="外部引用"
+      eyebrow="Pointer Refs"
+      dataCard="pointer-refs"
+      value={trace.pointer_refs}
+      maxHeight={220}
+    >
       <p>本页只显示 pointer_refs，不创建 recommendation、approval、operation_plan、AO-ACT task、receipt、acceptance、ROI 或 Field Memory。</p>
-      {jsonBlock(trace.pointer_refs)}
-    </article>
+    </CollapsibleJsonCard>
   );
 }
 
 function TraceRawCard({ trace }: { trace: TwinTraceReadModelV1 }): React.ReactElement {
   return (
-    <article className="operatorPanel" data-card="trace-raw-readback">
-      <p className="operatorEyebrow">Raw Readback</p>
-      <h3>原始回读</h3>
-      {jsonBlock({
+    <CollapsibleJsonCard
+      title="原始回读"
+      eyebrow="Raw Readback"
+      dataCard="trace-raw-readback"
+      value={{
         entered_collected: trace.entered_collected,
         human_confirmed: trace.human_confirmed,
         answers: trace.answers,
-      })}
-    </article>
+      }}
+      maxHeight={360}
+    >
+      <p>默认折叠长 JSON；用于审计追溯，不作为操作建议。</p>
+    </CollapsibleJsonCard>
   );
 }
 
@@ -243,6 +335,7 @@ export default function OperatorTwinTraceReadbackPage(): React.ReactElement {
       data-contract="twin_trace_v1_read_model"
       data-boundary="read-only-no-post"
       data-api-path="/api/v1/twin-kernel/traces/:decision_cycle_id"
+      data-polish="tk12-usability-v1"
     >
       <div className="operatorWorkbenchHero">
         <div>
@@ -272,9 +365,9 @@ export default function OperatorTwinTraceReadbackPage(): React.ReactElement {
               <li>downstream_write_ready：{trace.downstream_write_ready ? "true" : "false"}</li>
             </ul>
           </article>
-          <ProvenanceCard trace={trace} />
           <SystemDerivedCard trace={trace} />
           <DecisionAnswerCard trace={trace} />
+          <ProvenanceCard trace={trace} />
           <PointerRefsCard trace={trace} />
           <ListCard title="系统推导对象清单" dataCard="system-derived-token-list" items={SYSTEM_DERIVED_OBJECTS} />
           <TraceRawCard trace={trace} />
