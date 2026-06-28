@@ -285,11 +285,11 @@ function main() {
     contract,
     request_body_derived_passthrough_blocked: true,
     determinism_hash_user_input_blocked: true,
-    request_body,
+    request_body: requestBody,
     builder_hash_derivation_present: true,
     builders,
     downstream_write_boundary_preserved: true,
-    route_write_boundary,
+    route_write_boundary: routeWriteBoundary,
     allowed_request_body_class: [
       'scope',
       'object ids',
