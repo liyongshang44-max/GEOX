@@ -7,7 +7,7 @@ TK13 adds the first explicit formalization layer for the Twin Kernel chain.
 It addresses the formal gaps exposed by trace readback:
 
 ```text
-ROI_FORMORMALIZATION_MISSING
+ROI_FORMALIZATION_MISSING
 FORMAL_FIELD_MEMORY_MISSING
 ```
 
@@ -90,6 +90,18 @@ FORMAL_MEMORY_WRITTEN
 
 They do not change forecast, scenario, calibration, or learning objects.
 
+## TK13.1 freeze note
+
+TK13 is closed after PR #2113 and is now treated as an established Twin Kernel formalization layer.
+
+```text
+merge_commit_sha: 15ae86f21cd0fb7f337895db8ca26bf9a5cca743
+next_task_line: docs/tasks/TWIN-KERNEL-NEXT-TASK-LINE.md
+stage: Twin Kernel v1 Completion / Operator Workflow & Productionization Prep
+```
+
+TK13.1 does not expand the Twin Kernel ontology and does not add business capability. It only freezes the next task line and makes the TK13 acceptance fixture repeatable.
+
 ## Acceptance command
 
 ```powershell
@@ -104,3 +116,18 @@ Runtime preconditions:
 4. Existing `field_learning_candidate_id = flc_c23a3ace34c48ce59c205110` is available.
 
 The acceptance creates a separate TK13 decision cycle, formalizes ROI and Field Memory on that cycle, and verifies trace readback. It does not mutate the original TK10 decision cycle.
+
+## TK13.1 acceptance idempotency
+
+The TK13 acceptance must be safe to run repeatedly.
+
+```powershell
+node scripts/governance_acceptance/TK13_FORMALIZATION_LAYER_V0.cjs
+node scripts/governance_acceptance/TK13_FORMALIZATION_LAYER_V0.cjs
+```
+
+Both consecutive runs must return `ok: true`.
+
+The acceptance fixture must generate run-scoped `external_refs` so each run creates a fresh deterministic `decision_cycle_id`. The second run must not fail because a previous run already advanced a deterministic decision cycle to `CALIBRATED`.
+
+This idempotency rule is limited to the acceptance fixture. It does not change route semantics, formalization object semantics, or Twin Kernel state-machine semantics.
