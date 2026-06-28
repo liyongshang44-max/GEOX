@@ -51,7 +51,7 @@ const REQUIRED_CALIBRATION_BUILDER_TOKENS = [
   'OVER_ESTIMATED_RESPONSE',
   'UNDER_ESTIMATED_RESPONSE',
   'reason_candidates_json',
-  'field_learning_candidate',
+  'learning candidates',
   'createHash',
 ];
 
