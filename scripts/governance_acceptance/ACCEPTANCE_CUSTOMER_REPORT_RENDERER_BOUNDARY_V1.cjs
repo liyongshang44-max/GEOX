@@ -44,7 +44,7 @@ for (const token of [
   'export function buildCustomerOperationReportMainVisualVm',
   'FORMAL_READY',
   'INSUFFICIENT_REPORT',
-  '正式 report API 数据',
+  '正式\\s*report\\s*API\\s*数据',
   'fieldFormalValidation',
   'operationFormalValidation',
   'pest_disease_inspection',
