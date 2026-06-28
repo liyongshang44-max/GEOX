@@ -1,10 +1,11 @@
 // apps/server/src/routes/v1/twin_kernel.ts
-// Purpose: expose the minimal Twin Kernel write/read route for field_state_snapshot_v1.
-// Boundary: this route writes only field_state_snapshot_v1 and never writes forecast, scenario, recommendation, approval, task, receipt, ROI, Field Memory, calibration, or learning records.
+// Purpose: expose minimal Twin Kernel write/read routes for field_state_snapshot_v1 and forecast_run_v1.
+// Boundary: these routes do not write scenarios, recommendations, approvals, tasks, receipts, ROI, Field Memory, calibration, learning, or decision-cycle records.
 
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { buildFieldStateSnapshotV1, type FieldStateSnapshotScopeV1 } from "../../domain/twin_kernel/field_state_snapshot_v1.js";
+import { buildForecastRunV1 } from "../../domain/twin_kernel/forecast_run_v1.js";
 
 type Row = Record<string, unknown>;
 
@@ -22,6 +23,15 @@ type SnapshotRequestBody = {
   as_of_ts?: unknown;
   asOfTs?: unknown;
 };
+
+type ForecastRequestBody = {
+  snapshot_id?: unknown;
+  snapshotId?: unknown;
+  model_version?: unknown;
+  modelVersion?: unknown;
+};
+
+type TwinKernelRequestBody = SnapshotRequestBody & ForecastRequestBody;
 
 function text(value: unknown): string {
   return String(value ?? "").trim();
@@ -47,8 +57,8 @@ function bodyValue(body: SnapshotRequestBody, snakeKey: keyof SnapshotRequestBod
   return body[snakeKey] ?? body[camelKey];
 }
 
-function extractBody(req: any): SnapshotRequestBody {
-  return req?.body && typeof req.body === "object" ? (req.body as SnapshotRequestBody) : {};
+function extractBody(req: any): TwinKernelRequestBody {
+  return req?.body && typeof req.body === "object" ? (req.body as TwinKernelRequestBody) : {};
 }
 
 function extractScope(req: any): FieldStateSnapshotScopeV1 | null {
@@ -72,6 +82,16 @@ function extractAsOfTs(req: any): string {
 function extractSeasonId(req: any): string | null {
   const body = extractBody(req);
   return firstText(bodyValue(body, "season_id", "seasonId"), queryValue(req, "season_id")) || null;
+}
+
+function extractSnapshotId(req: any): string {
+  const body = extractBody(req);
+  return firstText(body.snapshot_id, body.snapshotId, queryValue(req, "snapshot_id"));
+}
+
+function extractModelVersion(req: any): string | null {
+  const body = extractBody(req);
+  return firstText(body.model_version, body.modelVersion, queryValue(req, "model_version")) || null;
 }
 
 async function queryOne(pool: Pool, sql: string, values: unknown[]): Promise<Row | null> {
@@ -122,6 +142,10 @@ async function readWeatherRow(pool: Pool, scope: FieldStateSnapshotScopeV1): Pro
   );
 }
 
+async function readSnapshotRow(pool: Pool, snapshotId: string): Promise<Row | null> {
+  return queryOne(pool, "SELECT * FROM field_state_snapshot_v1 WHERE snapshot_id = $1 LIMIT 1", [snapshotId]);
+}
+
 async function insertSnapshot(pool: Pool, snapshot: ReturnType<typeof buildFieldStateSnapshotV1>): Promise<Row> {
   const result = await pool.query(
     `INSERT INTO field_state_snapshot_v1 (
@@ -167,6 +191,57 @@ async function insertSnapshot(pool: Pool, snapshot: ReturnType<typeof buildField
   return existing;
 }
 
+async function insertForecastRun(pool: Pool, forecast: ReturnType<typeof buildForecastRunV1>): Promise<Row> {
+  const result = await pool.query(
+    `INSERT INTO forecast_run_v1 (
+       forecast_run_id,
+       snapshot_id,
+       tenant_id,
+       project_id,
+       group_id,
+       field_id,
+       as_of_ts,
+       horizon_days,
+       model_version,
+       status,
+       input_refs_json,
+       forecast_points_json,
+       risk_timeline_json,
+       uncertainty_json,
+       assumptions_json,
+       blocking_reasons_json,
+       determinism_hash
+     ) VALUES (
+       $1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10,$11::jsonb,$12::jsonb,$13::jsonb,$14::jsonb,$15::jsonb,$16::jsonb,$17
+     )
+     ON CONFLICT (forecast_run_id) DO NOTHING
+     RETURNING *`,
+    [
+      forecast.forecast_run_id,
+      forecast.snapshot_id,
+      forecast.tenant_id,
+      forecast.project_id,
+      forecast.group_id,
+      forecast.field_id,
+      forecast.as_of_ts,
+      forecast.horizon_days,
+      forecast.model_version,
+      forecast.status,
+      JSON.stringify(forecast.input_refs_json),
+      JSON.stringify(forecast.forecast_points_json),
+      JSON.stringify(forecast.risk_timeline_json),
+      JSON.stringify(forecast.uncertainty_json),
+      JSON.stringify(forecast.assumptions_json),
+      JSON.stringify(forecast.blocking_reasons_json),
+      forecast.determinism_hash,
+    ],
+  );
+  if (result.rows[0]) return result.rows[0] as Row;
+  const existing = await queryOne(pool, "SELECT * FROM forecast_run_v1 WHERE forecast_run_id = $1 LIMIT 1", [forecast.forecast_run_id]);
+  if (!existing) throw new Error("FORECAST_RUN_INSERT_FAILED");
+  return existing;
+}
+
 function exposeSnapshotRow(row: Row): Row {
   return {
     snapshot_id: row.snapshot_id,
@@ -181,6 +256,29 @@ function exposeSnapshotRow(row: Row): Row {
     confidence_json: row.confidence_json,
     evidence_refs_json: row.evidence_refs_json,
     source_indexes_json: row.source_indexes_json,
+    blocking_reasons_json: row.blocking_reasons_json,
+    determinism_hash: row.determinism_hash,
+    created_at: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
+  };
+}
+
+function exposeForecastRunRow(row: Row): Row {
+  return {
+    forecast_run_id: row.forecast_run_id,
+    snapshot_id: row.snapshot_id,
+    tenant_id: row.tenant_id,
+    project_id: row.project_id,
+    group_id: row.group_id,
+    field_id: row.field_id,
+    as_of_ts: row.as_of_ts instanceof Date ? row.as_of_ts.toISOString() : row.as_of_ts,
+    horizon_days: row.horizon_days,
+    model_version: row.model_version,
+    status: row.status,
+    input_refs_json: row.input_refs_json,
+    forecast_points_json: row.forecast_points_json,
+    risk_timeline_json: row.risk_timeline_json,
+    uncertainty_json: row.uncertainty_json,
+    assumptions_json: row.assumptions_json,
     blocking_reasons_json: row.blocking_reasons_json,
     determinism_hash: row.determinism_hash,
     created_at: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
@@ -220,8 +318,33 @@ export function registerTwinKernelV1Routes(app: FastifyInstance, pool: Pool): vo
   app.get("/api/v1/twin-kernel/field-state-snapshots/:snapshot_id", async (req: any, reply) => {
     const snapshotId = firstText(req?.params?.snapshot_id);
     if (!snapshotId) return reply.code(400).send({ ok: false, error: "SNAPSHOT_ID_REQUIRED" });
-    const row = await queryOne(pool, "SELECT * FROM field_state_snapshot_v1 WHERE snapshot_id = $1 LIMIT 1", [snapshotId]);
+    const row = await readSnapshotRow(pool, snapshotId);
     if (!row) return reply.code(404).send({ ok: false, error: "FIELD_STATE_SNAPSHOT_NOT_FOUND" });
     return reply.send({ ok: true, object_type: "field_state_snapshot_v1", snapshot: exposeSnapshotRow(row) });
+  });
+
+  app.post("/api/v1/twin-kernel/forecast-runs", async (req, reply) => {
+    const snapshotId = extractSnapshotId(req);
+    if (!snapshotId) return reply.code(400).send({ ok: false, error: "SNAPSHOT_ID_REQUIRED" });
+    const snapshotRow = await readSnapshotRow(pool, snapshotId);
+    if (!snapshotRow) return reply.code(404).send({ ok: false, error: "FIELD_STATE_SNAPSHOT_NOT_FOUND" });
+    const modelVersion = extractModelVersion(req) || undefined;
+    const forecast = buildForecastRunV1({ snapshot: snapshotRow as any, model_version: modelVersion });
+    const row = await insertForecastRun(pool, forecast);
+    return reply.send({
+      ok: true,
+      object_type: "forecast_run_v1",
+      write_ready: true,
+      downstream_write_ready: false,
+      forecast_run: exposeForecastRunRow(row),
+    });
+  });
+
+  app.get("/api/v1/twin-kernel/forecast-runs/:forecast_run_id", async (req: any, reply) => {
+    const forecastRunId = firstText(req?.params?.forecast_run_id);
+    if (!forecastRunId) return reply.code(400).send({ ok: false, error: "FORECAST_RUN_ID_REQUIRED" });
+    const row = await queryOne(pool, "SELECT * FROM forecast_run_v1 WHERE forecast_run_id = $1 LIMIT 1", [forecastRunId]);
+    if (!row) return reply.code(404).send({ ok: false, error: "FORECAST_RUN_NOT_FOUND" });
+    return reply.send({ ok: true, object_type: "forecast_run_v1", forecast_run: exposeForecastRunRow(row) });
   });
 }
