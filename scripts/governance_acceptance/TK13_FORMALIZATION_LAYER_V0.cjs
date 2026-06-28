@@ -7,26 +7,32 @@ const path = require("path");
 
 const ROOT = process.cwd();
 const BASE_URL = String(process.env.TWIN_KERNEL_BASE_URL || "http://127.0.0.1:3001").replace(/\/$/, "");
+const RUN_ID = String(process.env.TK13_ACCEPTANCE_RUN_ID || `run_${Date.now()}_${process.pid}_${Math.random().toString(16).slice(2, 10)}`).replace(/[^A-Za-z0-9_-]/g, "_");
 
 const FILES = {
   migration: "apps/server/db/migrations/2026_06_28_tk13_formalization_layer_v0.sql",
   route: "apps/server/src/routes/v1/twin_kernel_formalization.ts",
   module: "apps/server/src/modules/twin_kernel/registerTwinKernelModule.ts",
   doc: "docs/tasks/TK13-Formalization-Layer-v0.md",
+  nextTaskLine: "docs/tasks/TWIN-KERNEL-NEXT-TASK-LINE.md",
 };
+
+function runRef(stem) {
+  return `${stem}_${RUN_ID}`;
+}
 
 const DEFAULTS = {
   fieldLearningCandidateId: "flc_c23a3ace34c48ce59c205110",
   formalizedBy: "tk13_acceptance_operator",
   formalizedAt: "2026-06-28T00:00:00.000Z",
-  recommendationId: "rec_tk13_candidate_001",
-  approvalId: "appr_tk13_human_001",
-  operationPlanId: "op_plan_tk13_irrigation_001",
-  actTaskId: "act_tk13_irrigation_001",
-  receiptId: "receipt_tk13_irrigation_001",
-  asExecutedId: "asexec_tk13_irrigation_001",
-  acceptanceId: "acc_tk13_formal_001",
-  postIrrigationVerificationId: "wrv_tk13_irrigation_001",
+  recommendationId: runRef("rec_tk13_candidate_001"),
+  approvalId: runRef("appr_tk13_human_001"),
+  operationPlanId: runRef("op_plan_tk13_irrigation_001"),
+  actTaskId: runRef("act_tk13_irrigation_001"),
+  receiptId: runRef("receipt_tk13_irrigation_001"),
+  asExecutedId: runRef("asexec_tk13_irrigation_001"),
+  acceptanceId: runRef("acc_tk13_formal_001"),
+  postIrrigationVerificationId: runRef("wrv_tk13_irrigation_001"),
 };
 
 const assertions = [];
@@ -61,6 +67,19 @@ function containsAll(content, tokens) {
   return tokens.every((token) => content.includes(token));
 }
 
+function externalRefsAreRunScoped(defaults, runId) {
+  return [
+    defaults.recommendationId,
+    defaults.approvalId,
+    defaults.operationPlanId,
+    defaults.actTaskId,
+    defaults.receiptId,
+    defaults.asExecutedId,
+    defaults.acceptanceId,
+    defaults.postIrrigationVerificationId,
+  ].every((value) => String(value).includes(runId));
+}
+
 async function requestJson(method, pathName, body) {
   const response = await fetch(`${BASE_URL}${pathName}`, {
     method,
@@ -88,11 +107,15 @@ async function main() {
   const route = read(FILES.route);
   const moduleFile = read(FILES.module);
   const doc = read(FILES.doc);
+  const nextTaskLine = read(FILES.nextTaskLine);
 
   assert("migration_tables_present", containsAll(migration, ["CREATE TABLE IF NOT EXISTS roi_entry_v1", "CREATE TABLE IF NOT EXISTS field_memory_v1", "model_update_created boolean NOT NULL DEFAULT false"]), { file: FILES.migration });
   assert("routes_present", containsAll(route, ["/api/v1/twin-kernel/formalizations/roi", "/api/v1/twin-kernel/formalizations/field-memory", "updateDecisionCycleFormalRefs", "automatic_roi_created: false", "automatic_field_memory_created: false", "model_update_created: false"]), { file: FILES.route });
   assert("module_registered", moduleFile.includes("registerTwinKernelFormalizationRoutes"), { file: FILES.module });
   assert("doc_boundary_present", containsAll(doc, ["explicit formalization layer", "roi_entry_v1", "field_memory_v1", "does not update model parameters"]), { file: FILES.doc });
+  assert("tk13_1_freeze_documented", containsAll(doc, ["TK13.1 freeze note", "TWIN-KERNEL-NEXT-TASK-LINE.md", "acceptance fixture repeatable"]), { file: FILES.doc });
+  assert("next_task_line_present", containsAll(nextTaskLine, ["Twin Kernel v1 Completion / Operator Workflow & Productionization Prep", "TK13.1", "TK14", "TK15", "TK16", "TK17", "TK18"]), { file: FILES.nextTaskLine });
+  assert("run_scoped_external_refs_ready", externalRefsAreRunScoped(DEFAULTS, RUN_ID), { run_id: RUN_ID });
 
   const decisionResp = await requestJson("POST", "/api/v1/twin-kernel/decision-cycles", {
     field_learning_candidate_id: DEFAULTS.fieldLearningCandidateId,
@@ -109,7 +132,7 @@ async function main() {
   });
   const decisionCycle = record(decisionResp.decision_cycle);
   const decisionCycleId = String(decisionCycle.decision_cycle_id || "");
-  assert("tk13_decision_cycle_ready", decisionResp.ok === true && decisionCycleId.startsWith("dc_") && decisionCycle.current_stage === "ACCEPTED", { decision_cycle_id: decisionCycleId, current_stage: decisionCycle.current_stage });
+  assert("tk13_decision_cycle_ready", decisionResp.ok === true && decisionCycleId.startsWith("dc_") && decisionCycle.current_stage === "ACCEPTED", { decision_cycle_id: decisionCycleId, current_stage: decisionCycle.current_stage, run_id: RUN_ID });
 
   const roiResp = await requestJson("POST", "/api/v1/twin-kernel/formalizations/roi", {
     decision_cycle_id: decisionCycleId,
@@ -118,6 +141,7 @@ async function main() {
     roi_summary: {
       roi_basis: "acceptance_runtime_smoke",
       calculation_status: "FORMALIZED_BY_EXTERNAL_INPUT",
+      fixture_run_id: RUN_ID,
     },
     evidence_refs: [
       { kind: "acceptance", ref_id: DEFAULTS.acceptanceId },
@@ -136,6 +160,7 @@ async function main() {
       memory_type: "FIELD_WATER_RESPONSE_FORMAL_MEMORY",
       source_candidate_id: DEFAULTS.fieldLearningCandidateId,
       write_status: "FORMAL_MEMORY_WRITTEN",
+      fixture_run_id: RUN_ID,
     },
     evidence_refs: [
       { kind: "field_learning_candidate", ref_id: DEFAULTS.fieldLearningCandidateId },
@@ -160,6 +185,7 @@ async function main() {
     ok: true,
     acceptance: "TK13_FORMALIZATION_LAYER_V0",
     base_url: BASE_URL,
+    run_id: RUN_ID,
     decision_cycle_id: decisionCycleId,
     roi_entry_id: roiEntry.roi_entry_id,
     field_memory_id: fieldMemory.field_memory_id,
@@ -169,7 +195,7 @@ async function main() {
       forbidden_auto_writes_absent: decisionAnswer.forbidden_auto_writes_absent,
     },
     assertions,
-    next_step: "FORMALIZATION_LAYER_READY_FOR_PAGE_READBACK",
+    next_step: "TWIN_KERNEL_NEXT_TASK_LINE_READY_FOR_TK14_OPERATOR_WORKFLOW",
   }, null, 2));
 }
 
@@ -177,6 +203,8 @@ main().catch((error) => {
   console.error(JSON.stringify({
     ok: false,
     acceptance: "TK13_FORMALIZATION_LAYER_V0",
+    base_url: BASE_URL,
+    run_id: RUN_ID,
     error: error.message,
     details: error.details || error.response || null,
     assertions,
