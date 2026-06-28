@@ -144,7 +144,7 @@ const ALLOWED_REQUEST_BODY_INPUT_KEYS = [
 const BUILDER_REQUIREMENTS = [
   { file: FILES.snapshotBuilder, fn: 'buildFieldStateSnapshotV1', tokens: ['snapshot_id', 'state_vector_json', 'confidence_json', 'source_indexes_json', 'determinism_hash'] },
   { file: FILES.forecastBuilder, fn: 'buildForecastRunV1', tokens: ['forecast_run_id', 'forecast_points_json', 'risk_timeline_json', 'uncertainty_json', 'determinism_hash'] },
-  { file: FILES.scenarioBuilder, fn: 'buildScenarioSetV1', tokens: ['scenario_set_id', 'baseline_scenario_json', 'option_scenarios_json', 'failure_conditions', 'determinism_hash'] },
+  { file: FILES.scenarioBuilder, fn: 'buildScenarioSetV1', tokens: ['scenario_set_id', 'baseline_scenario_json', 'option_scenarios_json', 'comparison_axes_json', 'determinism_hash'] },
   { file: FILES.calibrationBuilder, fn: 'buildCalibrationReplayAndForecastErrorV1', tokens: ['calibration_replay_id', 'forecast_error_id', 'predicted_json', 'error_summary_json', 'error_direction', 'determinism_hash'] },
   { file: FILES.learningBuilder, fn: 'buildFieldLearningCandidateV1', tokens: ['field_learning_candidate_id', 'learning_statement_json', 'supporting_evidence_refs_json', 'h58_gate_status_json', 'determinism_hash'] },
   { file: FILES.decisionBuilder, fn: 'buildDecisionCycleV1', tokens: ['decision_cycle_id', 'state_machine_json', 'human_gate_json', 'boundary_flags_json', 'determinism_hash'] },
