@@ -1,0 +1,62 @@
+{
+  "schema": "real_adapter_negative_runtime_matrix_v1",
+  "version": "1.0.0",
+  "phase": "P2 Real Adapter Integration",
+  "task": "P2-05 Real Adapter Negative Runtime Matrix",
+  "entry_condition": {
+    "previous_task": "P2-04 Production Ingestion Adapter Boundary",
+    "previous_tag": "p2_04_production_ingestion_adapter_boundary",
+    "previous_next_step": "P2_05_REAL_ADAPTER_NEGATIVE_RUNTIME_MATRIX"
+  },
+  "runtime_harness": {
+    "source_file": "scripts/p2_sandbox/real_adapter_negative_runtime_matrix.cjs",
+    "loopback_only": true,
+    "depends_on": "scripts/p2_sandbox/irrigation_http_v1_sandbox_harness.cjs"
+  },
+  "source_files": {
+    "registry": "apps/executor/src/adapters/registry.ts",
+    "dispatch_once": "apps/executor/src/run_dispatch_once.ts",
+    "irrigation_real": "apps/executor/src/adapters/irrigation_real_adapter.ts",
+    "irrigation_http_v1": "apps/executor/src/adapters/irrigation_http_v1.ts",
+    "irrigation_simulator": "apps/executor/src/adapters/irrigation_simulator.ts",
+    "mqtt": "apps/executor/src/adapters/mqtt.ts",
+    "production_ingestion_boundary": "docs/controlplane/GEOX-CP-ProductionIngestionAdapterBoundary-v1.json"
+  },
+  "matrix_cases": [
+    { "case": "registry_missing_adapter_type", "kind": "static_source_token", "source_file_key": "registry", "token": "ADAPTER_TYPE_REQUIRED" },
+    { "case": "registry_duplicate_adapter_type", "kind": "static_source_token", "source_file_key": "registry", "token": "ADAPTER_ALREADY_REGISTERED" },
+    { "case": "registry_unknown_adapter_type", "kind": "static_source_token", "source_file_key": "registry", "token": "ADAPTER_NOT_FOUND" },
+    { "case": "dispatch_unsupported_action", "kind": "static_source_token", "source_file_key": "dispatch_once", "token": "ADAPTER_UNSUPPORTED_ACTION" },
+    { "case": "dispatch_adapter_validate_failed", "kind": "static_source_token", "source_file_key": "dispatch_once", "token": "ADAPTER_VALIDATE_FAILED" },
+    { "case": "irrigation_real_missing_outbox_fact", "kind": "static_source_token", "source_file_key": "irrigation_real", "token": "MISSING_OUTBOX_FACT_ID" },
+    { "case": "irrigation_real_missing_device", "kind": "static_source_token", "source_file_key": "irrigation_real", "token": "MISSING_DEVICE_ID" },
+    { "case": "irrigation_real_capability_missing", "kind": "static_source_token", "source_file_key": "irrigation_real", "token": "DEVICE_CAPABILITY_MISSING_IRRIGATION" },
+    { "case": "mqtt_missing_outbox_fact", "kind": "static_source_token", "source_file_key": "mqtt", "token": "MISSING_OUTBOX_FACT_ID" },
+    { "case": "mqtt_missing_topic", "kind": "static_source_token", "source_file_key": "mqtt", "token": "MISSING_TOPIC" },
+    { "case": "mqtt_publish_failed", "kind": "static_source_token", "source_file_key": "mqtt", "token": "PUBLISH_FAILED" },
+    { "case": "irrigation_http_missing_device", "kind": "runtime_sandbox_case", "expected_code": "MISSING_DEVICE_ID" },
+    { "case": "irrigation_http_missing_operation_plan", "kind": "runtime_sandbox_case", "expected_code": "MISSING_OPERATION_PLAN_ID" },
+    { "case": "irrigation_http_device_reject", "kind": "runtime_sandbox_case", "expected_code": "DEVICE_REJECT" },
+    { "case": "irrigation_http_transport_error", "kind": "runtime_sandbox_case", "expected_code": "HTTP_ERROR" },
+    { "case": "production_ingestion_has_no_adapter_coupling", "kind": "static_boundary_manifest", "source_file_key": "production_ingestion_boundary", "token": "no_adapter_invocation" }
+  ],
+  "boundary": {
+    "loopback_only": true,
+    "no_live_device_integration": true,
+    "no_broker_connection": true,
+    "no_geox_server_route_call": true,
+    "no_db_mutation": true,
+    "no_new_route": true,
+    "no_db_migration": true,
+    "no_table_schema_change": true,
+    "no_ui": true,
+    "no_scheduler": true,
+    "no_autonomous_execution": true,
+    "no_automatic_receipt_creation": true,
+    "no_automatic_acceptance_creation": true,
+    "no_automatic_roi_creation": true,
+    "no_automatic_field_memory_creation": true,
+    "no_model_update": true
+  },
+  "next_step": "P2_06_OPERATOR_CONTROLLED_PILOT_DRY_RUN"
+}
