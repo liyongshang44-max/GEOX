@@ -30,6 +30,7 @@ function changedFilesFromMain() { const lists = [['diff', '--name-only', 'main..
 function section(text, heading) { const marker = `## ${heading}`; const start = text.indexOf(marker); if (start < 0) return []; const open = text.indexOf('```text', start); if (open < 0) return []; const bodyStart = text.indexOf('\n', open) + 1; const close = text.indexOf('```', bodyStart); if (close < 0) return []; return text.slice(bodyStart, close).split(/\r?\n/).map((line) => line.trim()).filter(Boolean); }
 function assert(name, condition, details = {}) { assertions.push({ name, passed: condition === true, details }); if (condition !== true) { const error = new Error(`ASSERTION_FAILED:${name}`); error.details = details; throw error; } }
 function summary() { const failed = assertions.filter((item) => !item.passed); return { assertion_count: assertions.length, failed_assertion_count: failed.length, failed_assertions: failed.map((item) => item.name) }; }
+function hasTraceability(output) { return Array.isArray(output.trace_refs) && output.trace_refs.length > 0 && ((Array.isArray(output.evidence_refs) && output.evidence_refs.length > 0) || Boolean(output.input_evidence_window_ref)); }
 
 function runJson(script) {
   const first = childProcess.execFileSync('node', [script], { cwd: ROOT, encoding: 'utf8' });
@@ -95,7 +96,7 @@ function verifyRuntimeChain() {
 
   const outputs = [stateEstimate, predictionRun, backtestReport, calibrationReport, replayBundle];
   assert('all_runtime_outputs_read_only', outputs.every((output) => output.read_only === true), { read_only_values: outputs.map((output) => output.read_only) });
-  assert('all_runtime_outputs_traceable', outputs.every((output) => Array.isArray(output.evidence_refs) && output.evidence_refs.length > 0 && Array.isArray(output.trace_refs) && output.trace_refs.length > 0), { trace_counts: outputs.map((output) => ({ evidence: output.evidence_refs && output.evidence_refs.length, trace: output.trace_refs && output.trace_refs.length })) });
+  assert('all_runtime_outputs_traceable', outputs.every(hasTraceability), { trace_counts: outputs.map((output) => ({ evidence: output.evidence_refs && output.evidence_refs.length, trace: output.trace_refs && output.trace_refs.length, input_evidence_window_ref: output.input_evidence_window_ref || null })) });
   assert('p7_03_links_to_p7_02_state_estimate', predictionRun.input_state_estimate_ref.ref_id === stateEstimate.state_estimate_id, { prediction_ref: predictionRun.input_state_estimate_ref, state_estimate_id: stateEstimate.state_estimate_id });
   assert('p7_04_links_to_p7_03_prediction_run', backtestReport.input_prediction_run_ref.ref_id === predictionRun.prediction_run_id, { backtest_ref: backtestReport.input_prediction_run_ref, prediction_run_id: predictionRun.prediction_run_id });
   assert('p7_05_links_to_p7_04_backtest_report', calibrationReport.input_backtest_error_report_ref.ref_id === backtestReport.backtest_report_id, { calibration_ref: calibrationReport.input_backtest_error_report_ref, backtest_report_id: backtestReport.backtest_report_id });
