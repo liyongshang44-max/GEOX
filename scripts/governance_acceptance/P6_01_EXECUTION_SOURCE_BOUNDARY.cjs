@@ -72,7 +72,7 @@ function verifyCurrentDoc() {
   assert('forbidden_execution_source_ref_kind_count', forbiddenKinds.length === 21, { forbiddenKinds });
   assert('forbidden_execution_semantic_count', forbiddenSemantics.length === 19, { forbiddenSemantics });
   assert('execution_source_record_field_count', record.length === 13, { record });
-  assert('p6_02_handoff_rule_count', handoff.length === 9, { handoff });
+  assert('p6_02_handoff_rule_count', handoff.length === 10, { handoff });
   assert('secondary_review_rules_verified', secondary.length === 5 && secondary.every((line) => line.endsWith('= true')), { secondary });
   assert('allowed_changed_files_documented', ALLOWED_CHANGED_FILES.every((file) => allowed.includes(file)), { allowed });
   assert('forbidden_directories_documented', FORBIDDEN_PREFIXES.every((prefix) => forbiddenDirs.includes(prefix)), { forbiddenDirs });
