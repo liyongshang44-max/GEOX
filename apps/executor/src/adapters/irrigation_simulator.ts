@@ -1,7 +1,12 @@
-import type { Adapter, AdapterRuntimeContext, AoActTask } from "./index";
+import type { Adapter, AdapterRuntimeContext, AoActTask, AdapterSupportInput } from "./index";
 import type { ExecutorApi } from "../lib/executor_api";
 
 const DEBUG_PREFIX = "[executor-smoke-debug]";
+
+function actionTypeFromSupportInput(input: AdapterSupportInput): string {
+  if (typeof input === "string") return input;
+  return String(input?.task_type ?? input?.meta?.task_type ?? input?.action_type ?? "");
+}
 
 function normalizeIrrigationAction(raw: unknown): string {
   const action = String(raw ?? "").trim().toLowerCase();
@@ -86,9 +91,10 @@ export function createIrrigationSimulatorAdapter(ctx: AdapterRuntimeContext, api
   return {
     type: "irrigation_simulator",
     adapter_type: "irrigation_simulator",
-    supports(action_type: string): boolean {
-      const t = String(action_type ?? "").trim().toUpperCase();
-      return normalizeIrrigationAction(action_type) === "irrigate" || t === "FERTILIZE";
+    supports(input: AdapterSupportInput): boolean {
+      const actionType = actionTypeFromSupportInput(input);
+      const t = String(actionType ?? "").trim().toUpperCase();
+      return normalizeIrrigationAction(actionType) === "irrigate" || t === "FERTILIZE";
     },
     validate(task: AoActTask) {
       const taskType = String((task as any)?.task_type ?? task?.meta?.task_type ?? task?.action_type ?? "").trim().toUpperCase();
