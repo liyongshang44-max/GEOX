@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import mqtt from "mqtt";
-import type { Adapter, AoActTask } from "./index";
+import type { Adapter, AoActTask, AdapterSupportInput } from "./index";
 import type { ExecutorApi } from "../lib/executor_api";
 
 function normalizeOutboundActionType(raw: any): string {
@@ -15,7 +15,11 @@ function mqttOptionsFromEnv(): mqtt.IClientOptions {
   return username || password ? { username, password, connectTimeout: 5000, reconnectPeriod: 0 } : { connectTimeout: 5000, reconnectPeriod: 0 };
 }
 
-function resolveTopic(task: AoActTask): string {
+function taskFromSupportInput(input: AdapterSupportInput): Partial<AoActTask> {
+  return typeof input === "string" ? { adapter_type: input, action_type: input, meta: {}, parameters: {} } : input;
+}
+
+function resolveTopic(task: Partial<AoActTask>): string {
   const meta = (task?.meta ?? {}) as Record<string, unknown>;
   const explicitTopic = String(meta?.topic ?? task?.downlink_topic ?? (task as any)?.topic ?? "").trim();
   if (explicitTopic) return explicitTopic;
@@ -98,11 +102,12 @@ export function createMqttAdapter(api: ExecutorApi): Adapter {
   return {
     type: "mqtt",
     adapter_type: "mqtt",
-    supports(task: any): boolean {
+    supports(input: AdapterSupportInput): boolean {
+      const task = taskFromSupportInput(input);
       const adapterType = String(task?.adapter_type ?? "").trim().toLowerCase();
       const meta = task?.meta ?? {};
       const deviceId = String(meta?.device_id ?? task?.device_id ?? "").trim();
-      const topic = String(meta?.topic ?? task?.topic ?? task?.downlink_topic ?? "").trim();
+      const topic = String(meta?.topic ?? (task as any)?.topic ?? task?.downlink_topic ?? "").trim();
       return adapterType === "mqtt" && (!!deviceId || !!topic);
     },
     validate(task: AoActTask) {
