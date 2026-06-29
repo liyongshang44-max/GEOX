@@ -49,6 +49,10 @@ function containsAll(text, tokens) {
   return tokens.every((token) => text.includes(token));
 }
 
+function hasOwn(value, key) {
+  return value && typeof value === 'object' && Object.prototype.hasOwnProperty.call(value, key);
+}
+
 function runRef(stem) {
   return `${stem}_${RUN_ID}`;
 }
@@ -115,15 +119,29 @@ function staticAudit() {
   assert('route_preserves_boundaries', containsAll(route, ['automatic_business_decision_created: false', 'automatic_recommendation_created: false', 'automatic_approval_created: false', 'automatic_task_created: false', 'automatic_receipt_created: false', 'automatic_acceptance_created: false', 'automatic_roi_created: false', 'automatic_field_memory_created: false', 'model_update_created: false']), { file: FILES.route });
 }
 
+function assertRuntimeExposesPostv103Fields(first) {
+  const required = ['idempotent_replay', 'duplicate_source_event', 'stable_duplicate_response', 'write_ready'];
+  const missing = required.filter((key) => !hasOwn(first.json, key));
+  assert('runtime_response_exposes_postv103_flags', first.status !== 200 || missing.length === 0, {
+    status: first.status,
+    missing_response_fields: missing,
+    response_keys: Object.keys(record(first.json)).sort(),
+    first_response: first.json,
+    hint: 'The checked-out files contain POSTV1-03, but the running API appears to be serving an older production ingestion route. Restart/rebuild the server process and rerun this acceptance.',
+  });
+}
+
 async function main() {
   staticAudit();
   const body = validBody();
 
   const first = await requestJson('POST', '/api/v1/twin-kernel/production-ingestion/source-refs', body);
+  assertRuntimeExposesPostv103Fields(first);
   const firstEvent = record(first.json.production_ingestion_event);
   const firstDecision = record(first.json.decision_cycle);
   assert('first_write_succeeds', first.status === 200 && first.json.ok === true && first.json.idempotent_replay === false && first.json.duplicate_source_event === false && first.json.write_ready === true && String(firstEvent.production_ingestion_event_id || '').startsWith('ping_') && String(firstDecision.decision_cycle_id || '').startsWith('dc_'), {
     status: first.status,
+    first_response: first.json,
     production_ingestion_event: firstEvent,
     decision_cycle: firstDecision,
   });
@@ -133,6 +151,7 @@ async function main() {
   const duplicateDecision = record(duplicate.json.decision_cycle);
   assert('duplicate_is_stable_idempotent_replay', duplicate.status === 200 && duplicate.json.ok === true && duplicate.json.idempotent_replay === true && duplicate.json.duplicate_source_event === true && duplicate.json.stable_duplicate_response === true && duplicate.json.write_ready === false && duplicateEvent.production_ingestion_event_id === firstEvent.production_ingestion_event_id && duplicateDecision.decision_cycle_id === firstDecision.decision_cycle_id, {
     status: duplicate.status,
+    duplicate_response: duplicate.json,
     production_ingestion_event: duplicateEvent,
     decision_cycle: duplicateDecision,
   });
@@ -197,7 +216,7 @@ main().catch((error) => {
     error: error.message,
     details: error.details || error.response || null,
     assertions,
-    hint: 'Ensure the API server is running and POSTV1_03_FIELD_LEARNING_CANDIDATE_ID points to a persisted field_learning_candidate_v1 row.',
+    hint: 'Ensure the API server is running, the POSTV1-03 branch is checked out, and the server process has been restarted/rebuilt after pulling route changes.',
   }, null, 2));
   process.exit(1);
 });
