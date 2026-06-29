@@ -37,7 +37,7 @@ const P1_TASKS = [
     title: 'Route Negative Runtime Matrix',
     doc: 'docs/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md',
     acceptance: 'scripts/governance_acceptance/POSTV1_04_ROUTE_NEGATIVE_RUNTIME_MATRIX.cjs',
-    requiredDocTokens: ['POSTV1-04', 'Route Negative Runtime Matrix', 'No new route'],
+    requiredDocTokens: ['POSTV1-04', 'negative runtime acceptance matrix', 'No new route'],
   },
   {
     id: 'POSTV1-05',
