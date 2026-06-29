@@ -74,18 +74,22 @@ function tryGit(args) {
   }
 }
 
+function gitSucceeds(args) {
+  try {
+    childProcess.execFileSync('git', args, { cwd: ROOT, stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function changedFilesFromMain() {
   const output = tryGit(['diff', '--name-only', 'main...HEAD']);
   return output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
 }
 
 function refExists(ref) {
-  try {
-    childProcess.execFileSync('git', ['rev-parse', '--verify', ref], { cwd: ROOT, stdio: 'ignore' });
-    return true;
-  } catch {
-    return false;
-  }
+  return gitSucceeds(['rev-parse', '--verify', ref]);
 }
 
 function fencedSectionLines(text, heading) {
@@ -128,7 +132,7 @@ function verifyRequiredFiles() {
 function verifyP3Completion() {
   const p3Doc = read(P3_DOC);
   const p3Script = read(P3_SCRIPT);
-  const p3CommitReachable = tryGit(['merge-base', '--is-ancestor', P3_COMMIT, 'HEAD']) === '';
+  const p3CommitReachable = gitSucceeds(['merge-base', '--is-ancestor', P3_COMMIT, 'HEAD']);
   const p3TagExists = refExists(`refs/tags/${P3_TAG}`) || refExists(`${P3_TAG}^{}`);
 
   assert('p3_completion_doc_verified', containsAll(p3Doc, [
