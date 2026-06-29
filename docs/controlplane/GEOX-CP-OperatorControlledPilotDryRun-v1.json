@@ -1,0 +1,77 @@
+{
+  "schema": "operator_controlled_pilot_dry_run_v1",
+  "version": "1.0.0",
+  "phase": "P2 Real Adapter Integration",
+  "task": "P2-06 Operator-Controlled Pilot Dry Run",
+  "entry_condition": {
+    "previous_task": "P2-05 Real Adapter Negative Runtime Matrix",
+    "previous_tag": "p2_05_real_adapter_negative_runtime_matrix",
+    "previous_next_step": "P2_06_OPERATOR_CONTROLLED_PILOT_DRY_RUN"
+  },
+  "dry_run_harness": {
+    "source_file": "scripts/p2_sandbox/operator_controlled_pilot_dry_run.cjs",
+    "loopback_only": true,
+    "depends_on": [
+      "scripts/p2_sandbox/irrigation_http_v1_sandbox_harness.cjs",
+      "scripts/p2_sandbox/real_adapter_negative_runtime_matrix.cjs"
+    ]
+  },
+  "operator_gate_required_fields": [
+    "operator_id",
+    "operator_attestation",
+    "approval_ref_id",
+    "operation_plan_ref_id",
+    "act_task_ref_id",
+    "dry_run_only",
+    "human_gate"
+  ],
+  "pilot_scope": {
+    "adapter_type": "irrigation_http_v1",
+    "action_type": "irrigate",
+    "target_device_id": "sandbox-device-001",
+    "runtime": "local_loopback_sandbox",
+    "effect": "simulated_ack_only"
+  },
+  "required_report_flags": {
+    "operator_controlled": true,
+    "dry_run_only": true,
+    "human_gate": true,
+    "matrix_preflight_ok": true,
+    "sandbox_ack_observed": true,
+    "live_device_connected": false,
+    "broker_connected": false,
+    "geox_server_called": false,
+    "db_mutated": false,
+    "receipt_created": false,
+    "roi_created": false,
+    "field_memory_created": false,
+    "model_updated": false
+  },
+  "dry_run_cases": [
+    { "case": "operator_gate_missing", "expected_code": "OPERATOR_GATE_REQUIRED" },
+    { "case": "operator_gate_passed", "expected_code": "OPERATOR_GATE_ACCEPTED" },
+    { "case": "negative_matrix_preflight", "expected_code": "MATRIX_PREFLIGHT_OK" },
+    { "case": "sandbox_ack", "expected_code": "SANDBOX_ACK" },
+    { "case": "no_live_side_effects", "expected_code": "NO_LIVE_SIDE_EFFECTS" }
+  ],
+  "boundary": {
+    "dry_run_only": true,
+    "loopback_only": true,
+    "no_live_device_integration": true,
+    "no_broker_connection": true,
+    "no_geox_server_route_call": true,
+    "no_db_mutation": true,
+    "no_new_route": true,
+    "no_db_migration": true,
+    "no_table_schema_change": true,
+    "no_ui": true,
+    "no_scheduler": true,
+    "no_autonomous_execution": true,
+    "no_automatic_receipt_creation": true,
+    "no_automatic_acceptance_creation": true,
+    "no_automatic_roi_creation": true,
+    "no_automatic_field_memory_creation": true,
+    "no_model_update": true
+  },
+  "next_step": "P2_COMPLETION_REVIEW_BEFORE_P3"
+}
