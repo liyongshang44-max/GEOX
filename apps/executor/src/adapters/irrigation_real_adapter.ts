@@ -1,4 +1,4 @@
-import type { Adapter, AdapterRuntimeContext, AoActTask } from "./index";
+import type { Adapter, AdapterRuntimeContext, AoActTask, AdapterSupportInput } from "./index";
 
 async function httpJson(url: string, token: string, init?: RequestInit): Promise<any> {
   const headers: Record<string, string> = { Accept: "application/json", Authorization: `Bearer ${token}` };
@@ -9,6 +9,11 @@ async function httpJson(url: string, token: string, init?: RequestInit): Promise
   try { obj = text ? JSON.parse(text) : {}; } catch { obj = { _non_json: text }; }
   if (!res.ok) throw new Error(`http ${res.status}: ${text}`);
   return obj;
+}
+
+function actionTypeFromSupportInput(input: AdapterSupportInput): string {
+  if (typeof input === "string") return input;
+  return String(input?.task_type ?? input?.meta?.task_type ?? input?.action_type ?? "");
 }
 
 async function loadCapabilities(ctx: AdapterRuntimeContext, task: AoActTask, device_id: string): Promise<string[] | null> {
@@ -25,8 +30,8 @@ export function createIrrigationRealAdapter(ctx: AdapterRuntimeContext): Adapter
   return {
     type: "irrigation_real",
     adapter_type: "irrigation_real",
-    supports(action_type: string): boolean {
-      const normalized = String(action_type ?? "").trim().toLowerCase();
+    supports(input: AdapterSupportInput): boolean {
+      const normalized = String(actionTypeFromSupportInput(input) ?? "").trim().toLowerCase();
       return normalized === "irrigation.start" || normalized === "irrigate";
     },
     validate(task: AoActTask) {
