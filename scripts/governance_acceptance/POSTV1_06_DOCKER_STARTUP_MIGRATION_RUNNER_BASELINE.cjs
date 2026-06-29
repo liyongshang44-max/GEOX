@@ -70,6 +70,10 @@ function containsAll(text, tokens) {
   return tokens.every((token) => text.includes(token));
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function listSqlMigrations() {
   const dir = abs('apps/server/db/migrations');
   assert('migration_directory_exists', fs.existsSync(dir), { dir });
@@ -94,13 +98,23 @@ function staticAudit() {
 }
 
 async function serverHealthAudit() {
-  const response = await fetch(`${BASE_URL}/api/v1/fields`, { headers: { authorization: 'Bearer x' } }).catch((error) => {
-    const wrapped = new Error(`SERVER_HEALTH_FETCH_FAILED:${error.message}`);
-    wrapped.details = { base_url: BASE_URL };
-    throw wrapped;
-  });
-  assert('server_health_reachable', response.status >= 200 && response.status < 500, { base_url: BASE_URL, status: response.status });
-  return { status: response.status };
+  const attempts = [];
+  for (let attempt = 1; attempt <= 12; attempt += 1) {
+    try {
+      const response = await fetch(`${BASE_URL}/api/v1/fields`, { headers: { authorization: 'Bearer x' } });
+      attempts.push({ attempt, status: response.status });
+      if (response.status >= 200 && response.status < 500) {
+        assert('server_health_reachable', true, { base_url: BASE_URL, status: response.status, attempts });
+        return { status: response.status, attempts };
+      }
+    } catch (error) {
+      attempts.push({ attempt, error: String(error && error.message ? error.message : error) });
+    }
+    await sleep(1000);
+  }
+  const wrapped = new Error('SERVER_HEALTH_FETCH_FAILED');
+  wrapped.details = { base_url: BASE_URL, attempts };
+  throw wrapped;
 }
 
 async function tableExists(client, tableName) {
@@ -143,6 +157,7 @@ async function main() {
     compose_services_verified: ['postgres', 'server', 'executor'],
     server_health_reachable: true,
     server_health_status: server.status,
+    server_health_attempts: server.attempts,
     postgres_reachable: true,
     migration_sql_file_count: migrationFiles.length,
     critical_db_objects_verified: true,
