@@ -51,6 +51,7 @@ function verifyP5Doc() {
   assert('current_doc_has_gate', doc.includes(ACCEPTANCE), { ACCEPTANCE });
   assert('current_doc_has_p4_tag', doc.includes(P4_TAG), { P4_TAG });
   assert('current_doc_has_next_step', doc.includes(NEXT_STEP), { NEXT_STEP });
+  assert('current_doc_blocks_automatic_learning', doc.includes('automatic_learning') && doc.includes('p5_00_creates_automatic_learning = false'), { CURRENT_DOC });
 
   const taskSeq = section(doc, 'P5 task sequence');
   const scope = section(doc, 'P5 governance scope');
@@ -66,7 +67,7 @@ function verifyP5Doc() {
 
   assert('p5_task_sequence_count', taskSeq.length === 6, { taskSeq });
   assert('governance_scope_count', scope.length === 7, { scope });
-  assert('non_goal_count', nonGoals.length === 17, { nonGoals });
+  assert('non_goal_count', nonGoals.length === 18, { nonGoals });
   assert('governance_principle_count', principles.length === 10, { principles });
   assert('deferred_to_p6_boundary_count', deferred.length === 5, { deferred });
   assert('blocked_semantic_count', blocked.length === 15, { blocked });
