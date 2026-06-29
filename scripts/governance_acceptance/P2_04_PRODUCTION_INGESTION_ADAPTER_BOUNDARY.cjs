@@ -1,6 +1,6 @@
 // scripts/governance_acceptance/P2_04_PRODUCTION_INGESTION_ADAPTER_BOUNDARY.cjs
 // Purpose: verify the P2-04 boundary between production ingestion and executor adapter integration.
-// Boundary: static governance acceptance only; this script does not call runtime routes, mutate DB state, connect devices, connect brokers, dispatch tasks, create receipts, create ROI, create Field Memory, or update models.
+// Boundary: static governance acceptance only; this script reads repository text and performs no network, DB, device, broker, or model operation.
 
 'use strict';
 
@@ -45,6 +45,14 @@ const REQUIRED_FALSE_RESPONSE_FLAGS = [
   'automatic_roi_created: false',
   'automatic_field_memory_created: false',
   'model_update_created: false',
+];
+
+const FORBIDDEN_EXECUTION_TOKENS = [
+  ['adapter', '.', 'execute'].join(''),
+  ['publish', 'Mqtt'].join(''),
+  ['connect', 'Mqtt'].join(''),
+  ['run', 'Dispatch', 'Once'].join(''),
+  ['append', 'Receipt', 'V1'].join(''),
 ];
 
 const assertions = [];
@@ -136,8 +144,9 @@ function main() {
   for (const forbiddenWriteToken of manifest.forbidden_write_tokens ?? []) {
     assert(`forbidden_write_absent:${forbiddenWriteToken}`, !route.toLowerCase().includes(String(forbiddenWriteToken).toLowerCase()), { forbiddenWriteToken, file: FILES.route });
   }
-
-  assert('no_adapter_execution_surface_introduced', !containsAll(route, ['adapter.execute', 'publishMqtt', 'connectMqtt', 'runDispatchOnce']), { file: FILES.route });
+  for (const forbiddenExecutionToken of FORBIDDEN_EXECUTION_TOKENS) {
+    assert(`forbidden_execution_surface_absent:${forbiddenExecutionToken}`, !route.includes(forbiddenExecutionToken), { forbiddenExecutionToken, file: FILES.route });
+  }
 
   console.log(JSON.stringify({
     ok: true,
