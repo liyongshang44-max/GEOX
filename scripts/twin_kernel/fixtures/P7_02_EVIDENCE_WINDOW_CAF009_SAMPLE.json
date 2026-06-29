@@ -1,0 +1,113 @@
+{
+  "evidence_window_contract_version": "p7_01_twin_evidence_window_contract",
+  "evidence_window_id": "ew_caf009_soil_moisture_sample_20090609_0000_0400_v0",
+  "project_id": "P_DEFAULT",
+  "subject_ref": {
+    "kind": "sensor_group",
+    "ref_id": "G_CAF"
+  },
+  "sensor_ref": {
+    "kind": "sensor",
+    "ref_id": "CAF009"
+  },
+  "sensor_group_ref": {
+    "kind": "sensor_group",
+    "ref_id": "G_CAF"
+  },
+  "metric_refs": [
+    "soil_moisture_vwc_5cm",
+    "soil_moisture_vwc_10cm",
+    "soil_moisture_vwc_20cm"
+  ],
+  "metric_kind": "soil_moisture",
+  "unit": "vwc_fraction",
+  "window_start_ts": "2009-06-09T00:00:00.000Z",
+  "window_end_ts": "2009-06-09T04:00:00.000Z",
+  "expected_interval_ms": 3600000,
+  "observed_interval_summary": {
+    "observed_interval_min_ms": 3600000,
+    "observed_interval_max_ms": 3600000,
+    "observed_interval_median_ms": 3600000
+  },
+  "sample_count": 5,
+  "expected_sample_count": 5,
+  "coverage_ratio": 1,
+  "gap_summary": {
+    "missing_sample_count": 0,
+    "max_gap_ms": 3600000,
+    "gap_count": 0
+  },
+  "quality_flags": [],
+  "source_ref_kind": "raw_sample_window_ref",
+  "source_ref_ids": [
+    "raw_sample_CAF009_20090609T000000Z",
+    "raw_sample_CAF009_20090609T010000Z",
+    "raw_sample_CAF009_20090609T020000Z",
+    "raw_sample_CAF009_20090609T030000Z",
+    "raw_sample_CAF009_20090609T040000Z"
+  ],
+  "samples": [
+    {
+      "sample_ref": "raw_sample_CAF009_20090609T000000Z",
+      "ts": "2009-06-09T00:00:00.000Z",
+      "metrics": {
+        "soil_moisture_vwc_5cm": 0.214,
+        "soil_moisture_vwc_10cm": 0.231,
+        "soil_moisture_vwc_20cm": 0.247
+      }
+    },
+    {
+      "sample_ref": "raw_sample_CAF009_20090609T010000Z",
+      "ts": "2009-06-09T01:00:00.000Z",
+      "metrics": {
+        "soil_moisture_vwc_5cm": 0.213,
+        "soil_moisture_vwc_10cm": 0.231,
+        "soil_moisture_vwc_20cm": 0.246
+      }
+    },
+    {
+      "sample_ref": "raw_sample_CAF009_20090609T020000Z",
+      "ts": "2009-06-09T02:00:00.000Z",
+      "metrics": {
+        "soil_moisture_vwc_5cm": 0.212,
+        "soil_moisture_vwc_10cm": 0.230,
+        "soil_moisture_vwc_20cm": 0.246
+      }
+    },
+    {
+      "sample_ref": "raw_sample_CAF009_20090609T030000Z",
+      "ts": "2009-06-09T03:00:00.000Z",
+      "metrics": {
+        "soil_moisture_vwc_5cm": 0.211,
+        "soil_moisture_vwc_10cm": 0.229,
+        "soil_moisture_vwc_20cm": 0.245
+      }
+    },
+    {
+      "sample_ref": "raw_sample_CAF009_20090609T040000Z",
+      "ts": "2009-06-09T04:00:00.000Z",
+      "metrics": {
+        "soil_moisture_vwc_5cm": 0.210,
+        "soil_moisture_vwc_10cm": 0.229,
+        "soil_moisture_vwc_20cm": 0.245
+      }
+    }
+  ],
+  "evidence_refs": [
+    {
+      "kind": "raw_sample_window_ref",
+      "ref_id": "ew_caf009_soil_moisture_sample_20090609_0000_0400_v0"
+    }
+  ],
+  "trace_refs": [
+    {
+      "kind": "p7_01_evidence_window_contract",
+      "ref_id": "docs/tasks/P7-01-Twin-Evidence-Window-Contract.md"
+    }
+  ],
+  "provenance_ref": {
+    "kind": "fixture",
+    "ref_id": "scripts/twin_kernel/fixtures/P7_02_EVIDENCE_WINDOW_CAF009_SAMPLE.json"
+  },
+  "determinism_hash": "fixture_input_hash_external_to_p7_02"
+}
