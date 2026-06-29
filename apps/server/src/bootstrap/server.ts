@@ -1,3 +1,6 @@
+// apps/server/src/bootstrap/server.ts
+// Purpose: bootstrap the Fastify server, apply SQL migrations, start background workers, and expose startup diagnostics.
+
 import { createApp } from "../app.js";
 import { resolveServerConfig } from "../config/index.js";
 import { runSqlMigrations } from "../infra/migrations.js";
@@ -16,7 +19,8 @@ export async function startServer(): Promise<void> {
 
   const { app, pool } = createApp({ config, paths });
 
-  await runSqlMigrations(pool);
+  const migrationSummary = await runSqlMigrations(pool);
+  app.log.info({ migration_summary: migrationSummary }, "sql_migrations_completed");
   startBackgroundWorkers(pool);
 
   const shutdown = async (signal: string): Promise<void> => {
