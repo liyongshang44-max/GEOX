@@ -1,3 +1,14 @@
+// apps/executor/src/adapters/index.ts
+// Purpose: expose executor runtime adapter types aligned with the P2 canonical adapter contract.
+// Boundary: type exports only; this file does not dispatch tasks, connect devices, create receipts, or start live adapters.
+
+export type AoActTaskRuntime = {
+  executor_id?: string;
+  lease_token?: string;
+  lease_until_ts?: number;
+  attempt_no?: number;
+};
+
 export type AoActTask = {
   tenant_id: string;
   project_id: string;
@@ -16,12 +27,7 @@ export type AoActTask = {
   downlink_topic?: string | null;
   qos?: number | null;
   retain?: boolean | null;
-  runtime?: {
-    executor_id?: string;
-    lease_token?: string;
-    lease_until_ts?: number;
-    attempt_no?: number;
-  };
+  runtime?: AoActTaskRuntime;
 };
 
 export type DispatchContext = {
@@ -34,21 +40,29 @@ export type DispatchContext = {
   attempt_no?: number;
 };
 
-export interface ExecutorAdapter {
-  type: string;
-  execute(task: AoActTask): Promise<{
-    status: "SUCCEEDED" | "FAILED";
-    meta?: any;
-  }>;
-}
+export type AdapterSupportInput = string | AoActTask;
 
-export type ExecutorAdapterV1 = ExecutorAdapter & {
-  adapter_type: string;
-  supports?: (action_type: string) => boolean;
-  validate?: (task: AoActTask) => { ok: true } | { ok: false; reason: string };
+export type AdapterValidationResult =
+  | { ok: true }
+  | { ok: false; reason: string };
+
+export type AdapterExecutionResult = {
+  status: "SUCCEEDED" | "FAILED";
+  meta?: Record<string, unknown>;
 };
 
+export interface ExecutorAdapter {
+  type: string;
+  adapter_type: string;
+  execute(task: AoActTask): Promise<AdapterExecutionResult>;
+  supports?: (input: AdapterSupportInput) => boolean;
+  validate?: (task: AoActTask) => AdapterValidationResult;
+}
+
+export type ExecutorAdapterV1 = ExecutorAdapter;
+
 export type Adapter = ExecutorAdapterV1;
+
 export type AdapterRuntimeContext = DispatchContext;
 
 export { createAdapterRegistry, findAdapterByType } from "./registry";
