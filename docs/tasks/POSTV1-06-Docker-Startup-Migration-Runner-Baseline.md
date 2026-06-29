@@ -4,7 +4,7 @@
 
 POSTV1-06 closes P1 Production Hardening with a local Docker startup and migration-runner baseline.
 
-The goal is to reduce dependence on manual command memory. The server already applies SQL migrations during startup; POSTV1-06 makes that behavior more observable and adds a preflight acceptance for service names, ports, server health, Postgres reachability, migration directory resolution, and critical migrated DB objects.
+The server already applies SQL migrations during startup. This task makes that behavior more observable and adds a preflight acceptance for service names, port mapping, server health, Postgres reachability, migration directory resolution, and critical migrated DB objects.
 
 ## Phase
 
@@ -14,8 +14,6 @@ P1 Production Hardening
 ```
 
 ## Second audit result
-
-Before implementation, repository facts were:
 
 ```text
 POSTV1-01 Production Hardening Baseline is complete.
@@ -27,21 +25,7 @@ No POSTV1-06 PR exists.
 No pv1-06 branch exists.
 ```
 
-Docker/startup facts:
-
-```text
-docker compose service names are postgres, server, executor.
-The server container name is geox-server.
-The Postgres container name is geox-postgres.
-The server host port is 3001 and maps to container port 3000.
-The Postgres host port is 5433 and maps to container port 5432.
-The server depends on Postgres health before startup.
-The server already calls runSqlMigrations(pool) before listening.
-```
-
 ## Scope
-
-POSTV1-06 changes:
 
 ```text
 apps/server/src/infra/migrations.ts
@@ -56,7 +40,7 @@ The migration runner keeps the same execution model:
 
 ```text
 find the SQL migration directory
-sort *.sql files
+sort SQL files
 run each non-empty SQL file through the existing pg pool
 throw if no migration directory exists
 ```
@@ -75,18 +59,15 @@ startup log message: sql_migrations_completed
 
 ## Acceptance coverage
 
-The acceptance performs:
-
 ```text
 static task-line audit
-static docker-compose service/port audit
+static docker-compose service and port audit
 static migration-runner diagnostic audit
 static startup log audit
-docker compose service-name readout
-server health preflight against http://127.0.0.1:3001 by default
-Postgres connectivity preflight against postgres://landos:landos_pwd@127.0.0.1:5433/landos by default
+server health preflight
+Postgres connectivity preflight
 migration directory and SQL-file count readout
-critical migrated table/index readback
+critical migrated table and index readback
 POSTV1-05 operator queue index readback
 ```
 
@@ -116,19 +97,12 @@ No model update.
 node scripts/governance_acceptance/POSTV1_06_DOCKER_STARTUP_MIGRATION_RUNNER_BASELINE.cjs
 ```
 
-Default environment:
-
-```text
-GEOX_BASE_URL = http://127.0.0.1:3001
-DATABASE_URL = postgres://landos:landos_pwd@127.0.0.1:5433/landos
-```
-
 ## Expected result
 
 ```text
 ok = true
 acceptance = POSTV1_06_DOCKER_STARTUP_MIGRATION_RUNNER_BASELINE
-compose_services = [postgres, server, executor]
+compose_services_verified = [postgres, server, executor]
 server_health_reachable = true
 postgres_reachable = true
 migration_sql_file_count >= 1
