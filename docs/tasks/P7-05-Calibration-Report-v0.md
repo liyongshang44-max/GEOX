@@ -4,7 +4,7 @@
 
 P7-05 creates a read-only calibration report v0 from the P7-04 backtest error report.
 
-The output is a calibration report only. It may describe unapplied calibration candidates derived from backtest bias. It must not apply parameters, write a model, write Field Memory, create replay output, create execution output, create API routes, or create frontend authority.
+The output is allowed to output `calibration_report` only. It may describe unapplied calibration candidates derived from backtest bias. It must not apply parameters, write a model, write Field Memory, create replay output, create execution output, create API routes, or create frontend authority.
 
 ## Gate
 
