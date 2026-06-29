@@ -1,4 +1,4 @@
-// scripts/governance_acceptance/P7_02_SOIL_MOISTURE_STATE_ESTIMATE_V0.cjs
+﻿// scripts/governance_acceptance/P7_02_SOIL_MOISTURE_STATE_ESTIMATE_V0.cjs
 // Purpose: verify the P7-02 Soil Moisture State Estimate v0 gate.
 // Boundary: verifies a read-only local twin-kernel CLI and static contract files without DB, frontend, API, execution, Field Memory, or model writes.
 
@@ -89,7 +89,7 @@ function verifyCurrentDoc() {
   assert('state_estimate_state_count', states.length === 8, { states });
   assert('allowed_runtime_side_effect_count', allowedSideEffects.length === 6, { allowedSideEffects });
   assert('prohibited_state_estimate_semantic_count', prohibited.length === 20, { prohibited });
-  assert('p7_03_handoff_rule_count', handoff.length === 12, { handoff });
+  assert('p7_03_handoff_rule_count', handoff.length === 13, { handoff });
   assert('secondary_review_rules_verified', secondary.length === 6 && secondary.every((line) => line.endsWith('= true')), { secondary });
   assert('allowed_changed_files_documented', ALLOWED_CHANGED_FILES.every((file) => allowed.includes(file)), { allowed });
   assert('forbidden_directories_documented', FORBIDDEN_PREFIXES.every((prefix) => forbiddenDirs.includes(prefix)), { forbiddenDirs });
@@ -138,3 +138,4 @@ try {
   console.error(JSON.stringify({ ok: false, acceptance: ACCEPTANCE, error: error.message, details: error.details || null, assertions }, null, 2));
   process.exit(1);
 }
+

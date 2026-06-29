@@ -1,4 +1,4 @@
-# docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md
+﻿# docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md
 
 ## Purpose
 
@@ -310,7 +310,7 @@ state_estimate_result_vocabulary_count = 4
 state_estimate_state_count = 8
 allowed_runtime_side_effect_count = 6
 prohibited_state_estimate_semantic_count = 20
-p7_03_handoff_rule_count = 12
+p7_03_handoff_rule_count = 13
 secondary_review_required = true
 changed_file_count = 4
 no_frontend_changed_by_this_task = true
@@ -325,3 +325,4 @@ next_step = P7_03_PREDICTION_RUN_V0
 ```text
 P7_03_PREDICTION_RUN_V0
 ```
+
