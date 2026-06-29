@@ -1,4 +1,4 @@
-import type { Adapter, AdapterRuntimeContext, AoActTask } from "./index";
+import type { Adapter, AdapterRuntimeContext, AoActTask, AdapterSupportInput } from "./index";
 
 async function postJson(url: string, token: string, body: any): Promise<any> {
   const res = await fetch(url, {
@@ -17,6 +17,11 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function actionTypeFromSupportInput(input: AdapterSupportInput): string {
+  if (typeof input === "string") return input;
+  return String(input?.task_type ?? input?.meta?.task_type ?? input?.action_type ?? "");
+}
+
 function resolveDeviceCommandUrl(ctx: AdapterRuntimeContext, task: AoActTask, deviceId: string): string {
   const mockUrl = String(task.meta?.mock_http_url ?? process.env.GEOX_IRRIGATION_HTTP_MOCK_URL ?? "").trim();
   if (mockUrl) return `${mockUrl.replace(/\/$/, "")}/device/${encodeURIComponent(deviceId)}/irrigate`;
@@ -27,8 +32,9 @@ export function createIrrigationHttpV1Adapter(ctx: AdapterRuntimeContext): Adapt
   return {
     type: "irrigation_http_v1",
     adapter_type: "irrigation_http_v1",
-    supports(action_type: string): boolean {
-      return ["irrigation.start", "irrigate"].includes(String(action_type ?? "").trim().toLowerCase());
+    supports(input: AdapterSupportInput): boolean {
+      const actionType = actionTypeFromSupportInput(input);
+      return ["irrigation.start", "irrigate"].includes(String(actionType ?? "").trim().toLowerCase());
     },
     validate(task: AoActTask) {
       if (!String(task.device_id ?? task.meta?.device_id ?? "").trim()) return { ok: false as const, reason: "MISSING_DEVICE_ID" };
