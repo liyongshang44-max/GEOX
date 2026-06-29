@@ -103,6 +103,15 @@ function containsAll(text, tokens) {
   return tokens.every((token) => text.includes(token));
 }
 
+function assertionSummary() {
+  const failed = assertions.filter((item) => item.passed !== true);
+  return {
+    assertion_count: assertions.length,
+    failed_assertion_count: failed.length,
+    failed_assertions: failed.map((item) => item.name),
+  };
+}
+
 function staticAudit() {
   for (const [name, file] of Object.entries(FILES)) assert(`${name}_exists`, fs.existsSync(abs(file)), { file });
   const taskLine = read(FILES.taskLine);
@@ -146,10 +155,10 @@ async function explain(client, name, sql, values, expectedText) {
   const plan = result.rows[0]['QUERY PLAN'][0].Plan;
   const planText = collectPlanText(plan).join(' | ');
   const totalCost = Number(plan['Total Cost']);
-  const item = { name, node_type: plan['Node Type'], total_cost: totalCost, plan_text: planText };
+  const item = { name, node_type: plan['Node Type'], total_cost: totalCost, expected_index: expectedText, index_visible: planText.includes(expectedText), plan_text: planText };
   explainPlans.push(item);
   assert(`${name}_cost_readable`, Number.isFinite(totalCost) && totalCost >= 0, item);
-  assert(`${name}_expected_index_visible`, planText.includes(expectedText), { expectedText, item });
+  assert(`${name}_expected_index_visible`, item.index_visible === true, item);
 }
 
 async function dbAudit() {
@@ -159,7 +168,7 @@ async function dbAudit() {
     await client.query(read(FILES.migration));
     for (const table of REQUIRED_TABLES) assert(`${table}_exists`, await tableExists(client, table), { table });
     const indexes = await indexMap(client);
-    for (const indexName of REQUIRED_INDEXES) assert(`${indexName}_exists`, indexes.has(indexName), { indexName, available: [...indexes.keys()].sort() });
+    for (const indexName of REQUIRED_INDEXES) assert(`${indexName}_exists`, indexes.has(indexName), { indexName });
     const queueIndexDef = String(record(indexes.get('decision_cycle_v1_operator_queue_idx')).indexdef || '');
     assert('operator_queue_index_is_partial', queueIndexDef.includes('WHERE') && queueIndexDef.includes('cycle_status') && queueIndexDef.includes('acceptance_id') && queueIndexDef.includes('roi_entry_id') && queueIndexDef.includes('field_memory_id'), { queueIndexDef });
 
@@ -191,11 +200,30 @@ async function dbAudit() {
 async function main() {
   staticAudit();
   const db = await dbAudit();
-  const operatorQueueIndexVerified = explainPlans.some((plan) => plan.name === 'operator_decision_queue_lookup' && plan.plan_text.includes('decision_cycle_v1_operator_queue_idx'));
-  console.log(JSON.stringify({ ok: true, acceptance: ACCEPTANCE, database_url_source: process.env.DATABASE_URL ? 'DATABASE_URL' : process.env.POSTGRES_URL ? 'POSTGRES_URL' : 'default_local_compose_5433', ...db, explain_plan_count: explainPlans.length, operator_queue_index_verified: operatorQueueIndexVerified, explain_plans: explainPlans, assertions, next_step: 'POSTV1-06_DOCKER_STARTUP_MIGRATION_RUNNER_BASELINE' }, null, 2));
+  const operatorQueueIndexVerified = explainPlans.some((plan) => plan.name === 'operator_decision_queue_lookup' && plan.index_visible === true);
+  console.log(JSON.stringify({
+    ok: true,
+    acceptance: ACCEPTANCE,
+    database_url_source: process.env.DATABASE_URL ? 'DATABASE_URL' : process.env.POSTGRES_URL ? 'POSTGRES_URL' : 'default_local_compose_5433',
+    ...db,
+    explain_plan_count: explainPlans.length,
+    operator_queue_index_verified: operatorQueueIndexVerified,
+    explain_plan_summary: explainPlans.map((plan) => ({ name: plan.name, node_type: plan.node_type, total_cost: plan.total_cost, expected_index: plan.expected_index, index_visible: plan.index_visible })),
+    ...assertionSummary(),
+    next_step: 'POSTV1-06_DOCKER_STARTUP_MIGRATION_RUNNER_BASELINE',
+  }, null, 2));
 }
 
 main().catch((error) => {
-  console.error(JSON.stringify({ ok: false, acceptance: ACCEPTANCE, database_url_source: process.env.DATABASE_URL ? 'DATABASE_URL' : process.env.POSTGRES_URL ? 'POSTGRES_URL' : 'default_local_compose_5433', error: error.message, details: error.details || null, explain_plans: explainPlans, assertions, hint: 'Ensure geox-postgres is reachable on 127.0.0.1:5433, or set DATABASE_URL to the active PostgreSQL connection string.' }, null, 2));
+  console.error(JSON.stringify({
+    ok: false,
+    acceptance: ACCEPTANCE,
+    database_url_source: process.env.DATABASE_URL ? 'DATABASE_URL' : process.env.POSTGRES_URL ? 'POSTGRES_URL' : 'default_local_compose_5433',
+    error: error.message,
+    details: error.details || null,
+    explain_plans: explainPlans,
+    assertions,
+    hint: 'Ensure geox-postgres is reachable on 127.0.0.1:5433, or set DATABASE_URL to the active PostgreSQL connection string.',
+  }, null, 2));
   process.exit(1);
 });
