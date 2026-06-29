@@ -1,0 +1,112 @@
+{
+  "schema": "production_ingestion_adapter_boundary_v1",
+  "version": "1.0.0",
+  "phase": "P2 Real Adapter Integration",
+  "task": "P2-04 Production Ingestion Adapter Boundary",
+  "route": {
+    "source_file": "apps/server/src/routes/v1/twin_kernel_production_ingestion.ts",
+    "method": "POST",
+    "path": "/api/v1/twin-kernel/production-ingestion/source-refs",
+    "object_type": "production_ingestion_event_v0",
+    "companion_object_type": "decision_cycle_v1"
+  },
+  "allowed_writes": [
+    {
+      "table": "production_ingestion_event_v0",
+      "purpose": "store production source refs and mapped external refs"
+    },
+    {
+      "table": "decision_cycle_v1",
+      "purpose": "store Twin Kernel decision-cycle mapping object"
+    }
+  ],
+  "allowed_source_refs": [
+    "recommendation_ref_id",
+    "approval_ref_id",
+    "operation_plan_ref_id",
+    "task_ref_id",
+    "receipt_ref_id",
+    "as_executed_ref_id",
+    "observation_ref_id",
+    "acceptance_ref_id",
+    "verification_ref_id"
+  ],
+  "pointer_only_semantics": {
+    "recommendation_id": "mapped pointer only; route must not create recommendation records",
+    "approval_id": "mapped pointer only; route must not create approval records",
+    "operation_plan_id": "mapped pointer only; route must not create operation plan records",
+    "act_task_id": "mapped pointer only; route must not create AO-ACT task records",
+    "receipt_id": "mapped pointer only; route must not create receipt records",
+    "as_executed_id": "mapped pointer only; route must not create as-executed records",
+    "acceptance_id": "mapped pointer only; route must not create acceptance records",
+    "post_irrigation_verification_id": "mapped pointer only; route must not create verification records",
+    "roi_entry_id": "forced null by boundary",
+    "field_memory_id": "forced null by boundary"
+  },
+  "required_response_flags": {
+    "downstream_write_ready": false,
+    "automatic_business_decision_created": false,
+    "automatic_recommendation_created": false,
+    "automatic_approval_created": false,
+    "automatic_task_created": false,
+    "automatic_receipt_created": false,
+    "automatic_acceptance_created": false,
+    "automatic_roi_created": false,
+    "automatic_field_memory_created": false,
+    "model_update_created": false
+  },
+  "required_boundary_flags_json": {
+    "production_ingestion_only": true,
+    "automatic_recommendation_created": false,
+    "automatic_approval_created": false,
+    "automatic_task_created": false,
+    "automatic_receipt_created": false,
+    "automatic_acceptance_created": false,
+    "automatic_roi_created": false,
+    "automatic_field_memory_created": false,
+    "model_updated": false
+  },
+  "forbidden_runtime_import_tokens": [
+    "createAdapterRegistry",
+    "findAdapterByType",
+    "runDispatchOnce",
+    "createMqttAdapter",
+    "createIrrigationRealAdapter",
+    "createIrrigationHttpV1Adapter",
+    "createIrrigationSimulatorAdapter"
+  ],
+  "forbidden_write_tokens": [
+    "INSERT INTO ao_act",
+    "INSERT INTO ao_act_task",
+    "INSERT INTO ao_act_receipt",
+    "INSERT INTO acceptance",
+    "INSERT INTO roi",
+    "INSERT INTO field_memory",
+    "INSERT INTO operation_plan",
+    "INSERT INTO recommendation",
+    "INSERT INTO approval"
+  ],
+  "boundary": {
+    "no_adapter_invocation": true,
+    "no_live_device_integration": true,
+    "no_broker_connection": true,
+    "no_executor_runtime_start": true,
+    "no_new_route": true,
+    "no_db_migration": true,
+    "no_table_schema_change": true,
+    "no_ui": true,
+    "no_scheduler": true,
+    "no_priority_logic": true,
+    "no_retry_policy_change": true,
+    "no_autonomous_execution": true,
+    "no_automatic_recommendation": true,
+    "no_automatic_approval": true,
+    "no_automatic_ao_act_task_creation": true,
+    "no_automatic_receipt_creation": true,
+    "no_automatic_acceptance_creation": true,
+    "no_automatic_roi_creation": true,
+    "no_automatic_field_memory_creation": true,
+    "no_model_update": true
+  },
+  "next_step": "P2_05_REAL_ADAPTER_NEGATIVE_RUNTIME_MATRIX"
+}
