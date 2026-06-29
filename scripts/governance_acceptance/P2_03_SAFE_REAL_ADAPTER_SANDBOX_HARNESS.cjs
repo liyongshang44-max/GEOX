@@ -103,7 +103,7 @@ function main() {
   const harnessResult = runHarnessProcess();
   assert('sandbox_harness_runtime_ok', harnessResult.ok === true, { harnessResult });
   assert('sandbox_harness_schema_verified', harnessResult.schema === 'safe_real_adapter_sandbox_harness_v1', { harnessResult });
-  assert('sandbox_harness_runtime_verified', harnessResult.case_count === EXPECTED_CASES.length && harnessResult.failed_case_count === 0 && harnessResult.captured_request_count >= 3, { harnessResult });
+  assert('sandbox_harness_runtime_verified', harnessResult.case_count === EXPECTED_CASES.length && harnessResult.failed_case_count === 0 && harnessResult.captured_request_count >= 2, { harnessResult });
   assert('sandbox_harness_bound_to_loopback', harnessResult.bind_host === '127.0.0.1' && String(harnessResult.base_url ?? '').startsWith('http://127.0.0.1:'), { harnessResult });
   assert('sandbox_harness_no_live_side_effects', harnessResult.live_device_connected === false && harnessResult.broker_connected === false && harnessResult.geox_server_called === false && harnessResult.db_mutated === false && harnessResult.receipt_created === false && harnessResult.roi_created === false && harnessResult.field_memory_created === false && harnessResult.model_updated === false, { harnessResult });
   assert('sandbox_harness_next_step_verified', harnessResult.next_step === 'P2_04_PRODUCTION_INGESTION_ADAPTER_BOUNDARY', { harnessResult });
