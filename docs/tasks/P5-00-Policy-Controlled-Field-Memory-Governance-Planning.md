@@ -8,7 +8,7 @@ The purpose is to freeze the P5 planning charter, entry conditions, task sequenc
 
 P5 is not a Field Memory write implementation. P5 is not automatic learning. P5 is not model update automation. P5 is not execution integration. P5 is policy-controlled governance for determining whether evidence-backed, traceable, operator-gated material may be considered eligible for later Field Memory formalization.
 
-P5-00 does not implement runtime routes, read models, frontend display, database schema, scheduler behavior, adapter behavior, execution integration, recommendation logic, priority scoring, prescription logic, profit prediction, AO-ACT task creation, receipt creation, Field Memory write, model update, or automatic formalization.
+P5-00 does not implement runtime routes, read models, frontend display, database schema, scheduler behavior, adapter behavior, execution integration, recommendation logic, priority scoring, prescription logic, profit prediction, AO-ACT task creation, receipt creation, Field Memory write, automatic learning, model update, or automatic formalization.
 
 ## Gate
 
@@ -74,6 +74,7 @@ frontend_display_implementation
 database_schema_or_migration
 scheduler_or_adapter_change
 execution_integration
+automatic_learning
 model_update_automation
 recommendation_generation
 priority_score_generation
@@ -165,6 +166,7 @@ p5_00_changes_adapter = false
 p5_00_changes_execution = false
 p5_00_creates_field_memory_write_path = false
 p5_00_creates_field_memory_read_model = false
+p5_00_creates_automatic_learning = false
 p5_00_creates_model_update = false
 p5_00_creates_recommendation = false
 p5_00_creates_priority_score = false
@@ -201,7 +203,7 @@ p4_completion_verified = true
 p4_completion_tag_verified = true
 p5_task_sequence_count = 6
 governance_scope_count = 7
-non_goal_count = 17
+non_goal_count = 18
 governance_principle_count = 10
 deferred_to_p6_boundary_count = 5
 blocked_semantic_count = 15
