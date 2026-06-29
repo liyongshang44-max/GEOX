@@ -1,0 +1,70 @@
+{
+  "actuals_fixture_version": "p7_04_backtest_actuals_fixture_v0",
+  "actuals_fixture_id": "actuals_caf009_soil_moisture_20090609_0500_0700_v0",
+  "project_id": "P_DEFAULT",
+  "subject_ref": {
+    "kind": "sensor_group",
+    "ref_id": "G_CAF"
+  },
+  "sensor_ref": {
+    "kind": "sensor",
+    "ref_id": "CAF009"
+  },
+  "sensor_group_ref": {
+    "kind": "sensor_group",
+    "ref_id": "G_CAF"
+  },
+  "input_evidence_window_ref": {
+    "kind": "twin_evidence_window_ref",
+    "ref_id": "ew_caf009_soil_moisture_sample_20090609_0000_0400_v0"
+  },
+  "metric_kind": "soil_moisture",
+  "unit": "vwc_fraction",
+  "target_window_start_ts": "2009-06-09T05:00:00.000Z",
+  "target_window_end_ts": "2009-06-09T07:00:00.000Z",
+  "actual_points": [
+    {
+      "actual_ref": "raw_sample_CAF009_20090609T050000Z",
+      "target_ts": "2009-06-09T05:00:00.000Z",
+      "metrics": {
+        "soil_moisture_vwc_5cm": 0.209,
+        "soil_moisture_vwc_10cm": 0.228,
+        "soil_moisture_vwc_20cm": 0.244
+      }
+    },
+    {
+      "actual_ref": "raw_sample_CAF009_20090609T060000Z",
+      "target_ts": "2009-06-09T06:00:00.000Z",
+      "metrics": {
+        "soil_moisture_vwc_5cm": 0.208,
+        "soil_moisture_vwc_10cm": 0.228,
+        "soil_moisture_vwc_20cm": 0.244
+      }
+    },
+    {
+      "actual_ref": "raw_sample_CAF009_20090609T070000Z",
+      "target_ts": "2009-06-09T07:00:00.000Z",
+      "metrics": {
+        "soil_moisture_vwc_5cm": 0.207,
+        "soil_moisture_vwc_10cm": 0.227,
+        "soil_moisture_vwc_20cm": 0.243
+      }
+    }
+  ],
+  "evidence_refs": [
+    {
+      "kind": "actual_observation_fixture",
+      "ref_id": "actuals_caf009_soil_moisture_20090609_0500_0700_v0"
+    }
+  ],
+  "trace_refs": [
+    {
+      "kind": "p7_04_actuals_fixture",
+      "ref_id": "scripts/twin_kernel/fixtures/P7_04_BACKTEST_ACTUALS_CAF009_SAMPLE.json"
+    }
+  ],
+  "provenance_ref": {
+    "kind": "fixture",
+    "ref_id": "scripts/twin_kernel/fixtures/P7_04_BACKTEST_ACTUALS_CAF009_SAMPLE.json"
+  }
+}
