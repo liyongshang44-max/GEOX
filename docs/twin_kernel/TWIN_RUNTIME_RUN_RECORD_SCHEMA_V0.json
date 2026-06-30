@@ -1,0 +1,20 @@
+{
+  "schema_version": "twin_runtime_run_record_schema_v0",
+  "runtime_run_id_is_deterministic": true,
+  "runtime_run_idempotency_key_is_deterministic": true,
+  "required_fields": [
+    "runtime_run_id",
+    "runtime_run_idempotency_key",
+    "runtime_case_id",
+    "run_mode",
+    "write_mode",
+    "data_mode",
+    "input_window",
+    "forecast_window",
+    "observation_window",
+    "candidate_counts",
+    "trace_event_refs",
+    "checkpoint_ref",
+    "p12_handoff_ref"
+  ]
+}

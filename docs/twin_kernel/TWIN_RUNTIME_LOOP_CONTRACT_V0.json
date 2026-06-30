@@ -1,0 +1,25 @@
+{
+  "schema_version": "twin_runtime_loop_contract_v0",
+  "runner_contract_version": "p13_manual_runner_v0",
+  "required_steps": [
+    "resolve_registry_case",
+    "resolve_source_data_contract",
+    "resolve_input_window",
+    "generate_state_snapshot_candidate",
+    "generate_forecast_run_candidate",
+    "close_actual_observation_window",
+    "generate_forecast_error_candidate",
+    "generate_calibration_candidate",
+    "emit_runtime_trace",
+    "emit_checkpoint",
+    "emit_p12_handoff_bundle"
+  ],
+  "server_route_allowed": false,
+  "scheduler_allowed": false,
+  "automatic_persistence_allowed": false,
+  "model_update_allowed": false,
+  "field_memory_write_allowed": false,
+  "recommendation_allowed": false,
+  "ao_act_allowed": false,
+  "dashboard_authority_allowed": false
+}

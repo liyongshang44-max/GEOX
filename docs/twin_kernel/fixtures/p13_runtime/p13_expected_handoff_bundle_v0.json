@@ -1,0 +1,12 @@
+{
+  "schema_version": "p12_handoff_bundle_v0",
+  "runtime_case_id": "p13_caf009_soil_moisture_single_cycle_v0",
+  "candidate_schema_version": "candidate_twin_object_envelope_v0",
+  "candidate_set_kind": "runtime_core_cycle_5",
+  "candidate_count": 5,
+  "p12_adapter_invoked": false,
+  "persistence_execution_allowed": false,
+  "human_authorization_required": true,
+  "write_allowed": false,
+  "handoff_is_not_p12_execution": true
+}

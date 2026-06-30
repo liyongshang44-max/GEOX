@@ -1,0 +1,3 @@
+// scripts/governance_acceptance/P13_05_TWIN_RUNTIME_CHECKPOINT_POLICY_ACCEPTANCE.cjs
+'use strict';
+require('./P13_ACCEPTANCE_HELPERS.cjs').run('P13_05_TWIN_RUNTIME_CHECKPOINT_POLICY_ACCEPTANCE');

@@ -1,0 +1,3 @@
+// scripts/governance_acceptance/P13_08_RUNTIME_IDEMPOTENCY_REPLAY_ACCEPTANCE.cjs
+'use strict';
+require('./P13_ACCEPTANCE_HELPERS.cjs').run('P13_08_RUNTIME_IDEMPOTENCY_REPLAY_ACCEPTANCE');

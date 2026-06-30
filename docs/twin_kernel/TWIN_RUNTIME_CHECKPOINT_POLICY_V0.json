@@ -1,0 +1,19 @@
+{
+  "schema_version": "twin_runtime_checkpoint_policy_v0",
+  "checkpoint_required": true,
+  "checkpoint_storage_mode": "stdout_or_temp_test_state",
+  "checkpoint_db_write_allowed": false,
+  "checkpoint_repo_write_allowed": false,
+  "checkpoint_persistence_allowed": false,
+  "checkpoint_replay_supported": true,
+  "partial_failure_recovery_policy_defined": true,
+  "checkpoint_steps": [
+    "source_contract_resolved",
+    "state_snapshot_candidate",
+    "forecast_run_candidate",
+    "actual_observation_closed",
+    "forecast_error_candidate",
+    "calibration_candidate",
+    "p12_handoff_bundle"
+  ]
+}
