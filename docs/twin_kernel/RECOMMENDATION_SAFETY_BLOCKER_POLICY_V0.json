@@ -1,0 +1,8 @@
+{
+  "schema_version": "recommendation_safety_blocker_policy_v0",
+  "blockers": ["missing_p15_read_model", "wrong_source_phase", "observation_only_input", "blocked_input", "review_required_input", "missing_bridge_target_phase", "bridge_input_only_false", "confidence_read_model_not_emitted", "use_eligibility_read_model_not_emitted", "persisted_read_model_detected", "db_write_detected", "forbidden_payload_semantics_detected", "conflicting_confidence_and_eligibility"],
+  "forbidden_exact_keys_or_values": ["recommended_action", "next_action", "priority", "severity", "prescription", "dispatchable", "auto_trigger", "action_type", "action_parameters", "executor", "action_time_window", "operation_time_window", "execution_time_window", "material_rate", "spray_rate", "irrigation_amount", "fertilizer_amount", "recommendation_approved", "action_approved", "ao_act_eligible", "ao_act_authority", "dispatch_readiness", "operator_instruction", "profit_expectation", "yield_promise", "expected_profit", "expected_yield", "roi_judgment"],
+  "allowed_exact_keys_or_values": ["recommendation_bridge_packet", "recommendation_bridge_packet_id", "recommendation_candidate_envelope", "recommendation_candidate_envelope_id", "evidence_window_ref", "forecast_window_ref", "observation_window_ref"],
+  "recursive_scan_mode": "exact_key_or_exact_value",
+  "substring_scan_allowed": false
+}

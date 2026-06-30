@@ -1,0 +1,10 @@
+{
+  "schema_version": "recommendation_bridge_packet_schema_v0",
+  "required_fields": ["recommendation_bridge_packet_id", "source_confidence_read_model_id", "source_use_eligibility_read_model_id", "twin_subject_ref", "runtime_case_id", "bridge_policy_version", "bridge_input_accepted", "safety_blockers", "source_refs", "policy_refs"],
+  "recommendation_bridge_packet_emitted": true,
+  "persisted_recommendation_bridge_packet_count": 0,
+  "db_write_count": 0,
+  "bridge_packet_is_not_recommendation": true,
+  "bridge_packet_is_not_action_approval": true,
+  "bridge_packet_is_not_ao_act_authority": true
+}

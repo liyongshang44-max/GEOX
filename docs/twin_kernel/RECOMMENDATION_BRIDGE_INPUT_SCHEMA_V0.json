@@ -1,0 +1,15 @@
+{
+  "schema_version": "recommendation_bridge_input_schema_v0",
+  "required_fields": ["source_phase", "source_confidence_read_model_id", "source_use_eligibility_read_model_id", "twin_subject_ref", "runtime_case_id", "confidence_level", "use_eligibility_status", "bridge_target_phase", "bridge_input_only", "read_model_only", "confidence_read_model_emitted", "use_eligibility_read_model_emitted", "persisted_confidence_read_model_count", "persisted_use_eligibility_read_model_count", "db_write_count", "source_refs", "policy_refs"],
+  "source_phase": "P15",
+  "use_eligibility_status": "bridge_input_eligible",
+  "bridge_target_phase": "P16",
+  "bridge_input_only": true,
+  "read_model_only": true,
+  "confidence_read_model_emitted": true,
+  "use_eligibility_read_model_emitted": true,
+  "persisted_confidence_read_model_count": 0,
+  "persisted_use_eligibility_read_model_count": 0,
+  "db_write_count": 0,
+  "confidence_level_high_alone_is_not_bridge_eligibility": true
+}
