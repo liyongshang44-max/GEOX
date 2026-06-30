@@ -1,12 +1,15 @@
 {
   "schema_version": "replay_case_manifest_v0",
   "case_id": "p8_real_evidence_closed_loop_caf009_soil_moisture_v0",
-  "status": "p9_03_case_manifest",
+  "status": "p9_04_model_manifest_linked",
   "phase": "P9 Twin Kernel Convergence / Freeze Registry / Replay Case Governance",
   "authority_source": "README_MIGRATION.md",
   "line_authority_contract": "docs/twin_kernel/TWIN_KERNEL_LINE_AUTHORITY_CONTRACT_V0.md",
   "replay_registry": "docs/twin_kernel/REPLAY_REGISTRY_V0.json",
+  "model_version_manifest": "docs/twin_kernel/model_versions/p8_real_soil_moisture_model_version_manifest_v0.json",
+  "model_version_manifest_schema_version": "model_version_manifest_v0",
   "acceptance": "scripts/governance_acceptance/P9_03_REPLAY_CASE_MANIFEST_V0_ACCEPTANCE.cjs",
+  "model_version_acceptance": "scripts/governance_acceptance/P9_04_MODEL_VERSION_MANIFEST_V0_ACCEPTANCE.cjs",
   "case_identity": {
     "source_line_id": "offline_real_evidence_replay_kernel",
     "case_class": "existing_real_evidence_closed_loop_replay",
@@ -96,6 +99,14 @@
     "manual_completion_acceptance": "scripts/governance_acceptance/P8_10_REAL_EVIDENCE_CLOSED_LOOP_COMPLETION_REVIEW.cjs",
     "case_manifest_does_not_execute_replay": true
   },
+  "model_policy": {
+    "model_version_manifest": "docs/twin_kernel/model_versions/p8_real_soil_moisture_model_version_manifest_v0.json",
+    "model_version_manifest_schema_version": "model_version_manifest_v0",
+    "model_update_allowed": false,
+    "trained_model": false,
+    "calibration_candidate_applied": false,
+    "automatic_learning_loop": false
+  },
   "hard_boundaries": [
     "runtime_read_only",
     "no_db_write_by_replay_runtime",
@@ -113,7 +124,8 @@
     "no_new_replay_case",
     "no_replay_execution_by_manifest_acceptance",
     "no_persisted_twin_object_creation",
-    "no_model_version_manifest_creation"
+    "no_model_update",
+    "no_model_state_write"
   ],
   "next_step": "P9-04 Model Version Manifest v0"
 }
