@@ -91,3 +91,29 @@ committed_artifact_paths_required = false
 ```
 
 The registry records artifact kinds and generator scripts only. It does not require committed replay output files and it does not make offline replay artifacts persisted server Twin Kernel objects.
+
+---
+
+## P9-03 Replay Case Manifest v0
+
+Case manifest:
+
+```text
+docs/twin_kernel/replay_cases/p8_real_evidence_closed_loop_caf009_soil_moisture_v0.json
+```
+
+Acceptance:
+
+```text
+scripts/governance_acceptance/P9_03_REPLAY_CASE_MANIFEST_V0_ACCEPTANCE.cjs
+```
+
+Manifest properties:
+
+```text
+case_manifest_schema_version = replay_case_manifest_v0
+case_manifest_does_not_execute_replay = true
+committed_artifact_paths_required = false
+```
+
+The manifest records the fixed P8 data scope, runtime chain, artifact policy, determinism policy, and hard boundaries. It does not run replay scripts, seed `raw_samples`, create committed artifact files, or create persisted Twin Kernel objects.
