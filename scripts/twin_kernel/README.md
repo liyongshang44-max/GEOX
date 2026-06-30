@@ -35,9 +35,9 @@ P8_09_PRODUCT_REPLAY_DEMO_REPORT_V0.cjs
 
 ## P8 manual data precondition
 
-P8 runtime expects the CAF009 history and holdout windows to already exist in local Postgres `raw_samples`.
+P8 runtime expects the CAF009 history and holdout windows to already exist in local Postgres raw_samples.
 
-The replay runtime must not seed those rows itself.
+The replay runtime must not create those rows itself.
 
 ```text
 history_window = 2009-06-09T00:00:00.000Z -> 2009-06-09T04:00:00.000Z
@@ -64,7 +64,7 @@ not_ao_act_task_creator
 
 Future replay harness work should add explicit case manifests and data-prep contracts before adding more replay cases.
 
-A data-prep script may write `raw_samples`, but it must be clearly classified as acceptance data setup, not replay runtime.
+A data-prep script may write raw_samples, but it must be clearly classified as acceptance data setup, not replay runtime.
 
 ---
 
@@ -116,7 +116,7 @@ case_manifest_does_not_execute_replay = true
 committed_artifact_paths_required = false
 ```
 
-The manifest records the fixed P8 data scope, runtime chain, artifact policy, determinism policy, and hard boundaries. It does not run replay scripts, seed `raw_samples`, create committed artifact files, or create persisted Twin Kernel objects.
+The manifest records the fixed P8 data scope, runtime chain, artifact policy, determinism policy, and hard boundaries. It does not run replay scripts, create committed artifact files, or create persisted Twin Kernel objects.
 
 ---
 
@@ -148,3 +148,24 @@ calibration_candidate_applied = false
 ```
 
 The model version manifest records deterministic replay model versions only. It does not train a model, create a model artifact file, write model state, apply calibration candidates, or change replay algorithms.
+
+---
+
+## P9-05 Acceptance Entry Unification
+
+Acceptance entrypoints manifest:
+
+```text
+docs/twin_kernel/ACCEPTANCE_ENTRYPOINTS_V0.json
+```
+
+Unified runner:
+
+```text
+suite_id = p9-twin-kernel
+run_command = node scripts/acceptance/run_acceptance.cjs --suite p9-twin-kernel
+list_command = node scripts/acceptance/run_acceptance.cjs --suite p9-twin-kernel --list
+default_suite_preserved = legacy
+```
+
+The unified suite lists and runs the P9 governance acceptance chain from P9-00 through P9-05. It does not change replay scripts, server runtime, database schema, frontend state, or model state.
