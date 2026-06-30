@@ -294,8 +294,53 @@ no_model_update
 no_persisted_twin_object_creation
 ```
 
+---
+
+## P9-06 Replay Artifact Mapping Contract v0
+
+Mapping contract:
+
+- docs/twin_kernel/REPLAY_ARTIFACT_MAPPING_CONTRACT_V0.json
+
+Task:
+
+- docs/tasks/P9-06-Replay-Artifact-Mapping-Contract-v0.md
+
+Acceptance:
+
+- node scripts/governance_acceptance/P9_06_REPLAY_ARTIFACT_MAPPING_CONTRACT_V0_ACCEPTANCE.cjs
+
+Mapping scope:
+
+```text
+source_line_id = offline_real_evidence_replay_kernel
+target_line_id = server_persisted_twin_kernel
+candidate_mapping_only = true
+future_adapter_required = true
+automatic_materialization_allowed = false
+p8_artifacts_are_not_persisted_twin_objects = true
+```
+
+Boundary:
+
+```text
+mapping_contract_only
+no_mapping_execution
+no_runtime_code_change
+no_server_route_change
+no_frontend_change
+no_database_migration
+no_replay_algorithm_change
+no_model_update
+no_field_memory_write
+no_db_write
+no_fact_write
+no_ao_act_task
+no_persisted_twin_object_creation
+```
+
 Next:
 
 ```text
-P9-06 Replay Artifact Mapping Contract v0
+P9-07 Twin Kernel Convergence Completion Review
 ```
