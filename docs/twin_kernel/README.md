@@ -217,8 +217,47 @@ no_persisted_twin_object_creation
 no_model_version_manifest_creation
 ```
 
+---
+
+## P9-04 Model Version Manifest v0
+
+Model version manifest:
+
+- docs/twin_kernel/model_versions/p8_real_soil_moisture_model_version_manifest_v0.json
+
+Task:
+
+- docs/tasks/P9-04-Model-Version-Manifest-v0.md
+
+Acceptance:
+
+- node scripts/governance_acceptance/P9_04_MODEL_VERSION_MANIFEST_V0_ACCEPTANCE.cjs
+
+Registered model scope:
+
+```text
+model_set_id = p8_real_soil_moisture_replay_model_set_v0
+model_set_kind = deterministic_heuristic_replay_models
+trained_model = false
+model_update_allowed = false
+calibration_candidate_applied = false
+automatic_learning_loop = false
+```
+
+Boundary:
+
+```text
+no_training_run
+no_model_artifact_file
+no_model_state_write
+no_model_update
+no_calibration_application
+no_replay_algorithm_change
+no_persisted_twin_object_creation
+```
+
 Next:
 
 ```text
-P9-04 Model Version Manifest v0
+P9-05 Acceptance Entry Unification
 ```
