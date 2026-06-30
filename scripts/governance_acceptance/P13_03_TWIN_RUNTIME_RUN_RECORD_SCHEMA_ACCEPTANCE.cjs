@@ -1,0 +1,3 @@
+// scripts/governance_acceptance/P13_03_TWIN_RUNTIME_RUN_RECORD_SCHEMA_ACCEPTANCE.cjs
+'use strict';
+require('./P13_ACCEPTANCE_HELPERS.cjs').run('P13_03_TWIN_RUNTIME_RUN_RECORD_SCHEMA_ACCEPTANCE');

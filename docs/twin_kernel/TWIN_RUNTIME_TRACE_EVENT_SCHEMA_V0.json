@@ -1,0 +1,18 @@
+{
+  "schema_version": "twin_runtime_trace_event_schema_v0",
+  "timestamp_source": "deterministic_declared_timestamp",
+  "current_time_allowed": false,
+  "required_fields": [
+    "event_id",
+    "runtime_run_id",
+    "runtime_run_idempotency_key",
+    "runtime_case_id",
+    "step",
+    "input_refs",
+    "output_refs",
+    "policy_refs",
+    "decision",
+    "blocked_reason",
+    "timestamp"
+  ]
+}

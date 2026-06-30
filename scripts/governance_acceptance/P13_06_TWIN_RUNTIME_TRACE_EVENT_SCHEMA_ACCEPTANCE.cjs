@@ -1,0 +1,3 @@
+// scripts/governance_acceptance/P13_06_TWIN_RUNTIME_TRACE_EVENT_SCHEMA_ACCEPTANCE.cjs
+'use strict';
+require('./P13_ACCEPTANCE_HELPERS.cjs').run('P13_06_TWIN_RUNTIME_TRACE_EVENT_SCHEMA_ACCEPTANCE');

@@ -1,0 +1,21 @@
+{
+  "schema_version": "p12_handoff_bundle_schema_v0",
+  "candidate_schema_version": "candidate_twin_object_envelope_v0",
+  "candidate_set_kind": "runtime_core_cycle_5",
+  "candidate_target_object_types": [
+    "field_state_snapshot_v1",
+    "forecast_run_v1",
+    "calibration_replay_v1",
+    "forecast_error_v1",
+    "field_learning_candidate_v1"
+  ],
+  "persisted_target_object_ref": null,
+  "write_allowed": false,
+  "p12_adapter_invoked": false,
+  "persistence_execution_allowed": false,
+  "human_authorization_required": true,
+  "automatic_persistence_created": false,
+  "handoff_is_not_p12_execution": true,
+  "existing_p12_adapter_directly_executable": false,
+  "future_execution_requires_later_phase_or_adapter_extension": true
+}

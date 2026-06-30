@@ -1,0 +1,25 @@
+{
+  "schema_version": "twin_runtime_dedupe_policy_v0",
+  "runtime_run_id_prefix": "trun_",
+  "runtime_run_idempotency_key_prefix": "tridem_",
+  "idempotency_inputs": [
+    "runtime_case_id",
+    "input_window",
+    "forecast_window",
+    "observation_window",
+    "model_version_set",
+    "source_contract_hash",
+    "runner_contract_version"
+  ],
+  "forbidden_inputs": [
+    "created_at",
+    "current_time",
+    "random_uuid",
+    "local_filepath",
+    "process_id",
+    "machine_name"
+  ],
+  "duplicate_run_created_count_must_be": 0,
+  "same_run_idempotency_key_reused_required": true,
+  "same_candidate_hashes_reused_required": true
+}

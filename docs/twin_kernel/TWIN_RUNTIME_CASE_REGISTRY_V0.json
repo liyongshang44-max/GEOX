@@ -1,0 +1,24 @@
+{
+  "schema_version": "twin_runtime_case_registry_v0",
+  "registry_status": "manual_runner_only",
+  "scheduler_allowed": false,
+  "automatic_run_allowed": false,
+  "default_data_mode": "committed_fixture",
+  "raw_samples_required_by_default": false,
+  "p8_replay_invoked_by_default": false,
+  "p12_adapter_invoked_by_default": false,
+  "cases": [
+    {
+      "runtime_case_id": "p13_caf009_soil_moisture_single_cycle_v0",
+      "source_case_id": "p8_real_evidence_closed_loop_caf009_soil_moisture_v0",
+      "project_id": "P_DEFAULT",
+      "sensor_group_id": "G_CAF",
+      "sensor_id": "CAF009",
+      "metric_kind": "soil_moisture",
+      "cycle_kind": "state_forecast_observation_error_calibration_candidate",
+      "manual_run_only": true,
+      "write_disabled_default": true,
+      "fixture_ref": "docs/twin_kernel/fixtures/p13_runtime/p13_caf009_single_cycle_runtime_case_v0.json"
+    }
+  ]
+}

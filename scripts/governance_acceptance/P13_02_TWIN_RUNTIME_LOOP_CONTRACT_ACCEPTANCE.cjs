@@ -1,0 +1,3 @@
+// scripts/governance_acceptance/P13_02_TWIN_RUNTIME_LOOP_CONTRACT_ACCEPTANCE.cjs
+'use strict';
+require('./P13_ACCEPTANCE_HELPERS.cjs').run('P13_02_TWIN_RUNTIME_LOOP_CONTRACT_ACCEPTANCE');
