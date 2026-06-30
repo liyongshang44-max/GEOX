@@ -1355,3 +1355,137 @@ Post-P15 baseline:
 - P15 does not prove recommendation generation, recommendation safety bridge, AO-ACT execution, dashboard projection, production model activation, Field Memory learning, or model training.
 - P16 may begin Twin-to-Recommendation Safety Bridge only under a new phase contract.
 
+
+---
+
+## P16 Twin-to-Recommendation Safety Bridge v0 Freeze Closure
+
+Key anchors:
+
+- Branch: main
+- Baseline tag: p15_twin_confidence_use_eligibility_read_model_v0
+- Baseline commit: 6d2ad339
+- Final closure tag: p16_twin_to_recommendation_safety_bridge_v0
+- Acceptance:
+  - node scripts/governance_acceptance/P16_07_FORBIDDEN_PAYLOAD_SEMANTICS_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P16_08_TWIN_TO_RECOMMENDATION_SAFETY_BRIDGE_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P16_09_OBSERVATION_ONLY_INPUT_BLOCKED_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P16_10_BLOCKED_HIGH_ERROR_INPUT_BLOCKED_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P16_11_REVIEW_REQUIRED_INPUT_BLOCKED_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P16_12_WRONG_SOURCE_CONFLICTING_ELIGIBILITY_BLOCKED_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P16_13_RECOMMENDATION_BRIDGE_IDEMPOTENCY_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P16_14_COMPLETION_REVIEW_ACCEPTANCE.cjs
+
+Frozen scope:
+
+- P16 Twin-to-Recommendation Safety Bridge v0 is complete.
+- P15 bridge_input_eligible read models can pass a deterministic safety bridge.
+- Eligible path can emit a recommendation bridge packet.
+- Eligible path can emit a non-persisted, review-required recommendation candidate envelope.
+- Blocked inputs do not emit bridge packet or candidate envelope.
+- Candidate envelope is boundary-only.
+- Candidate envelope is not a recommendation.
+- Safety bridge is not action approval.
+- Bridge output is not AO-ACT authority.
+- P16 cannot bypass P15 use-eligibility.
+- P16 cannot generate agronomic prescription.
+
+Freeze closure result:
+
+- all_prior_p16_acceptance_passed = true
+- eligible_bridge_input_passed = true
+- eligible_bridge_packet_emitted = true
+- eligible_recommendation_candidate_envelope_emitted = true
+- blocked_inputs_bridge_packet_emitted = false
+- blocked_inputs_candidate_envelope_emitted = false
+- observation_only_input_blocked = true
+- blocked_high_error_input_blocked = true
+- review_required_input_blocked = true
+- wrong_source_phase_blocked = true
+- conflicting_confidence_eligibility_blocked = true
+- forbidden_payload_request_blocked = true
+- forbidden_semantics_recursive_scan_passed = true
+- recursive_scan_mode = exact_key_or_exact_value
+- substring_scan_allowed = false
+- same_bridge_packet_id_reused = true
+- same_recommendation_candidate_envelope_id_reused = true
+- duplicate_candidate_envelope_created_count = 0
+- persisted_recommendation_bridge_packet_count = 0
+- persisted_recommendation_candidate_count = 0
+- db_write_count = 0
+- recommendation_candidate_is_not_recommendation = true
+- safety_bridge_is_not_action_approval = true
+- bridge_output_is_not_ao_act_authority = true
+- cannot_bypass_p15_use_eligibility = true
+- cannot_generate_agronomic_prescription = true
+- candidate_content_class = boundary_only
+- candidate_requires_human_review = true
+- candidate_requires_downstream_policy_review = true
+- candidate_review_phase_required = true
+- future_recommendation_governance_phase_required = true
+- candidate_has_no_action_payload = true
+- candidate_contains_action_payload = false
+- candidate_contains_agronomic_prescription = false
+- candidate_contains_operator_instruction = false
+- recommendation_created = false
+- recommendation_approved = false
+- action_approval_created = false
+- action_approval_allowed = false
+- ao_act_task_created = false
+- ao_act_authority_allowed = false
+- dispatch_created = false
+- dashboard_authority = false
+- ranking_allowed = false
+- triage_allowed = false
+- dashboard_sort_key_allowed = false
+- operator_attention_signal_allowed = false
+- field_memory_write_count = 0
+- runtime_model_update_count = 0
+- state_file_must_be_os_temp = true
+- repo_write_allowed = false
+- fixture_mutation_allowed = false
+- db_write_allowed = false
+- server_runtime_surface_changed = false
+- production_runtime_surface_changed = false
+- db_surface_changed = false
+- frontend_surface_changed = false
+- package_surface_changed = false
+- ci_surface_changed = false
+- upstream_contract_surface_changed = false
+- forbidden_surface_diff_count = 0
+
+Hard boundaries:
+
+- No recommendation
+- No recommendation approval
+- No action approval
+- No AO-ACT task
+- No AO-ACT authority
+- No dispatch
+- No dashboard authority
+- No ranking
+- No triage
+- No dashboard sort key
+- No operator attention signal
+- No agronomic prescription
+- No action payload
+- No persisted recommendation bridge packet
+- No persisted recommendation candidate
+- No DB write
+- No Field Memory write
+- No runtime model update
+- No server runtime surface change
+- No production runtime surface change
+- No frontend surface change
+- No package manager change
+- No CI change
+- No upstream P12/P13/P14/P15 contract change
+- No TWIN_CONFIDENCE_* contract change
+- No TWIN_USE_ELIGIBILITY_* contract change
+
+Post-P16 baseline:
+
+- Next phase must start after tag p16_twin_to_recommendation_safety_bridge_v0.
+- P16 proves that P15 bridge_input_eligible read models can pass a deterministic safety bridge and emit a non-persisted, review-required recommendation candidate envelope.
+- P16 does not prove recommendation generation, recommendation approval, action approval, AO-ACT execution, agronomic prescription, dashboard ranking, production model activation, Field Memory learning, or model training.
+
