@@ -117,3 +117,34 @@ committed_artifact_paths_required = false
 ```
 
 The manifest records the fixed P8 data scope, runtime chain, artifact policy, determinism policy, and hard boundaries. It does not run replay scripts, seed `raw_samples`, create committed artifact files, or create persisted Twin Kernel objects.
+
+---
+
+## P9-04 Model Version Manifest v0
+
+Model version manifest:
+
+```text
+docs/twin_kernel/model_versions/p8_real_soil_moisture_model_version_manifest_v0.json
+```
+
+Acceptance:
+
+```text
+scripts/governance_acceptance/P9_04_MODEL_VERSION_MANIFEST_V0_ACCEPTANCE.cjs
+```
+
+Registered model set:
+
+```text
+model_set_kind = deterministic_heuristic_replay_models
+weighted_recent_mean_v1
+linear_recent_window_trend_v1
+state_uncertainty_growth_v1
+real_backtest_bias_summary_v1
+automatic_learning_loop = false
+model_update_allowed = false
+calibration_candidate_applied = false
+```
+
+The model version manifest records deterministic replay model versions only. It does not train a model, create a model artifact file, write model state, apply calibration candidates, or change replay algorithms.
