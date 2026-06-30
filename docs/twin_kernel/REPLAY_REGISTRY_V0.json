@@ -1,12 +1,13 @@
 {
   "schema_version": "replay_registry_v0",
   "registry_id": "twin_kernel_replay_registry_v0",
-  "status": "p9_02_governance_registry",
+  "status": "p9_03_case_manifest_linked",
   "phase": "P9 Twin Kernel Convergence / Freeze Registry / Replay Case Governance",
   "authority_source": "README_MIGRATION.md",
   "line_authority_contract": "docs/twin_kernel/TWIN_KERNEL_LINE_AUTHORITY_CONTRACT_V0.md",
   "domain_reference": "docs/twin_kernel/README.md",
   "acceptance": "scripts/governance_acceptance/P9_02_REPLAY_REGISTRY_V0_ACCEPTANCE.cjs",
+  "case_manifest_acceptance": "scripts/governance_acceptance/P9_03_REPLAY_CASE_MANIFEST_V0_ACCEPTANCE.cjs",
   "scope": {
     "line_id": "offline_real_evidence_replay_kernel",
     "registry_class": "offline_replay_registry",
@@ -20,6 +21,8 @@
       "case_id": "p8_real_evidence_closed_loop_caf009_soil_moisture_v0",
       "status": "registered_existing_case",
       "source_line_id": "offline_real_evidence_replay_kernel",
+      "case_manifest_path": "docs/twin_kernel/replay_cases/p8_real_evidence_closed_loop_caf009_soil_moisture_v0.json",
+      "case_manifest_schema_version": "replay_case_manifest_v0",
       "completion_acceptance": "scripts/governance_acceptance/P8_10_REAL_EVIDENCE_CLOSED_LOOP_COMPLETION_REVIEW.cjs",
       "completion_tag": "p8_real_evidence_closed_loop_demo_completion",
       "main_merge_tag": "p8_real_evidence_closed_loop_demo_main_merge",
