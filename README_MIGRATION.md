@@ -855,3 +855,81 @@ Post-P10 baseline:
 - Any persistence work requires a new phase and a new contract.
 - P11 must not treat P10 candidate envelopes as persisted runtime objects without a new persistence policy, object identity policy, idempotency policy, migration/table policy, rollback policy, audit policy, operator review gate, and human authorization gate.
 
+
+---
+
+## P11 Controlled Persistence Preconditions / Runtime Adapter Design Gate Freeze Closure
+
+Key anchors:
+
+- Branch: main
+- Baseline tag: p10_runtime_reconciliation_read_only_adapter_proof
+- Baseline commit: 38e1ea82
+- Final closure tag: p11_controlled_persistence_preconditions_runtime_adapter_design_gate
+- Acceptance:
+  - node scripts/governance_acceptance/P11_09_PERSISTENCE_PREFLIGHT_PROOF_V0_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P11_10_COMPLETION_REVIEW_ACCEPTANCE.cjs
+
+Frozen scope:
+
+- P11 Controlled Persistence Preconditions / Runtime Adapter Design Gate is complete.
+- All 7 P10 candidate envelopes are covered by persistence preflight policies.
+- Deterministic future object identity keys can be derived.
+- Deterministic future idempotency keys can be derived.
+- Future persistence requires operator review and human authorization.
+- Future schema/table design is proposed but not implemented.
+- Rollback, supersession, audit, and projection policies exist.
+- P11 remains policy-covered but not persisted.
+
+Freeze closure result:
+
+- candidate_count = 7
+- policy_coverage_count = 7
+- future_object_identity_key_count = 7
+- future_idempotency_key_count = 7
+- persistence_execution_allowed = false
+- implementation_readiness_status = blocked_until_P12
+- persisted_object_count = 0
+- persistence_intent_created = false
+- write_count = 0
+- db_write_count = 0
+- fact_write_count = 0
+- audit_write_count = 0
+- field_memory_write_count = 0
+- model_update_count = 0
+- ao_act_task_count = 0
+- runtime_surface_changed = false
+- forbidden_path_diff_count = 0
+
+Hard boundaries:
+
+- No runtime code change
+- No server route change
+- No frontend change
+- No database migration
+- No seed change
+- No package manager change
+- No CI change
+- No persisted Twin object creation
+- No fact write
+- No DB write
+- No Field Memory write
+- No model update
+- No calibration application
+- No AO-ACT task
+- No dispatch
+- No receipt
+- No dashboard authority
+- No runtime adapter implementation
+- No table creation
+- No P8 replay invocation
+- No automatic persistence intent
+- No automatic human authorization
+
+Post-P11 baseline:
+
+- Next phase must start after tag p11_controlled_persistence_preconditions_runtime_adapter_design_gate.
+- P11 proves policy coverage for future controlled persistence only.
+- P11 does not prove persisted object creation, server runtime adapter operation, DB migration correctness, production write safety, dashboard use, recommendation use, or AO-ACT use.
+- P12 may only begin controlled persistence adapter implementation after a new phase contract.
+
