@@ -1,0 +1,15 @@
+{
+  "schema_version": "action_intent_class_candidate_taxonomy_v0",
+  "allowed_values": ["water_management_translation_candidate", "soil_condition_translation_candidate", "crop_protection_translation_candidate", "field_access_translation_candidate", "observation_followup_translation_candidate", "logistics_translation_candidate", "harvest_readiness_translation_candidate"],
+  "forbidden_values": ["IRRIGATE", "SPRAY", "PLOW", "HARROW", "SEED", "TRANSPORT", "HARVEST"],
+  "action_intent_class_candidate_is_taxonomy_only": true,
+  "action_intent_class_candidate_is_not_action_type": true,
+  "action_intent_class_candidate_is_not_action_proposal": true,
+  "action_intent_class_candidate_is_not_operator_instruction": true,
+  "action_intent_class_candidate_requires_p21_parameter_proposal": true,
+  "action_intent_class_candidate_requires_p22_preflight": true,
+  "action_intent_class_candidate_has_no_one_to_one_ao_act_mapping": true,
+  "action_intent_class_candidate_does_not_select_ao_act_action_type": true,
+  "action_intent_class_candidate_does_not_select_machine_operation": true,
+  "action_intent_class_candidate_does_not_imply_operator_action": true
+}

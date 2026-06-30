@@ -1,0 +1,12 @@
+{
+  "schema_version": "action_translation_candidate_boundary_allowlist_v0",
+  "allowed_values": ["translation_candidate_only", "requires_parameter_proposal", "requires_preflight", "requires_human_action_review", "requires_ao_act_policy_review", "requires_human_dispatch_gate"],
+  "forbidden_values": ["dispatch_ready", "execution_ready", "action_approved", "ao_act_ready", "operator_should_act", "ready_for_parameterization", "ready_for_preflight", "ready_for_dispatch", "ready_for_execution"],
+  "candidate_action_boundary_values_from_allowlist": true,
+  "candidate_action_boundary_contains_only_non_executable_boundaries": true,
+  "candidate_action_boundary_is_not_dispatch_ready": true,
+  "candidate_action_boundary_is_not_execution_ready": true,
+  "candidate_action_boundary_is_not_action_approved": true,
+  "candidate_action_boundary_is_not_ao_act_ready": true,
+  "candidate_action_boundary_is_not_operator_instruction": true
+}

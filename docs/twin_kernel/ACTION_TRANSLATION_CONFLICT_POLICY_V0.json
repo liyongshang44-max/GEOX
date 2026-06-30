@@ -1,0 +1,15 @@
+{
+  "schema_version": "action_translation_conflict_policy_v0",
+  "same_source_pair_changed_translation_output_conflict_requires_review": true,
+  "changed_translation_output_does_not_overwrite_existing_candidate": true,
+  "existing_translation_candidate_unchanged": true,
+  "existing_translation_policy_unchanged": true,
+  "changed_translation_conflict_packet_emitted": true,
+  "changed_translation_conflict_packet_persisted": false,
+  "duplicate_translation_candidate_created_count": 0,
+  "duplicate_translation_output_created_count": 0,
+  "existing_translation_candidate_overwritten": false,
+  "existing_translation_candidate_deleted": false,
+  "existing_translation_policy_replaced": false,
+  "silent_translation_output_overwrite_allowed": false
+}
