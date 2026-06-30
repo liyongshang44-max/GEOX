@@ -65,3 +65,29 @@ not_ao_act_task_creator
 Future replay harness work should add explicit case manifests and data-prep contracts before adding more replay cases.
 
 A data-prep script may write `raw_samples`, but it must be clearly classified as acceptance data setup, not replay runtime.
+
+---
+
+## P9-02 Replay Registry v0
+
+Registry:
+
+```text
+docs/twin_kernel/REPLAY_REGISTRY_V0.json
+```
+
+Acceptance:
+
+```text
+scripts/governance_acceptance/P9_02_REPLAY_REGISTRY_V0_ACCEPTANCE.cjs
+```
+
+Registered P8 replay case:
+
+```text
+case_id = p8_real_evidence_closed_loop_caf009_soil_moisture_v0
+artifact_materialization = stdout_json_contract
+committed_artifact_paths_required = false
+```
+
+The registry records artifact kinds and generator scripts only. It does not require committed replay output files and it does not make offline replay artifacts persisted server Twin Kernel objects.
