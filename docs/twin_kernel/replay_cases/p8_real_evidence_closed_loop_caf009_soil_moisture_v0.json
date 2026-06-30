@@ -1,15 +1,18 @@
 {
   "schema_version": "replay_case_manifest_v0",
   "case_id": "p8_real_evidence_closed_loop_caf009_soil_moisture_v0",
-  "status": "p9_04_model_manifest_linked",
+  "status": "p9_06_mapping_contract_linked",
   "phase": "P9 Twin Kernel Convergence / Freeze Registry / Replay Case Governance",
   "authority_source": "README_MIGRATION.md",
   "line_authority_contract": "docs/twin_kernel/TWIN_KERNEL_LINE_AUTHORITY_CONTRACT_V0.md",
   "replay_registry": "docs/twin_kernel/REPLAY_REGISTRY_V0.json",
   "model_version_manifest": "docs/twin_kernel/model_versions/p8_real_soil_moisture_model_version_manifest_v0.json",
   "model_version_manifest_schema_version": "model_version_manifest_v0",
+  "replay_artifact_mapping_contract": "docs/twin_kernel/REPLAY_ARTIFACT_MAPPING_CONTRACT_V0.json",
+  "replay_artifact_mapping_contract_schema_version": "replay_artifact_mapping_contract_v0",
   "acceptance": "scripts/governance_acceptance/P9_03_REPLAY_CASE_MANIFEST_V0_ACCEPTANCE.cjs",
   "model_version_acceptance": "scripts/governance_acceptance/P9_04_MODEL_VERSION_MANIFEST_V0_ACCEPTANCE.cjs",
+  "artifact_mapping_acceptance": "scripts/governance_acceptance/P9_06_REPLAY_ARTIFACT_MAPPING_CONTRACT_V0_ACCEPTANCE.cjs",
   "case_identity": {
     "source_line_id": "offline_real_evidence_replay_kernel",
     "case_class": "existing_real_evidence_closed_loop_replay",
@@ -91,7 +94,9 @@
     "artifact_materialization": "stdout_json_contract",
     "committed_artifact_paths_required": false,
     "committed_artifact_files_created_by_p9_03": false,
-    "artifact_mapping_contract_created_by_p9_03": false
+    "artifact_mapping_contract_created_by_p9_03": false,
+    "artifact_mapping_contract": "docs/twin_kernel/REPLAY_ARTIFACT_MAPPING_CONTRACT_V0.json",
+    "artifact_mapping_executable": false
   },
   "determinism_policy": {
     "fixed_case_windows": true,
@@ -123,9 +128,10 @@
     "calibration_candidate_is_not_model_update",
     "no_new_replay_case",
     "no_replay_execution_by_manifest_acceptance",
+    "no_mapping_execution",
     "no_persisted_twin_object_creation",
     "no_model_update",
     "no_model_state_write"
   ],
-  "next_step": "P9-04 Model Version Manifest v0"
+  "next_step": "P9-07 Twin Kernel Convergence Completion Review"
 }
