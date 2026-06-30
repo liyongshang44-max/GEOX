@@ -1,0 +1,2448 @@
+{
+  "generated_at": "2026-06-30T04:47:22.817Z",
+  "acceptance": "POST_P8_02_NON_MAINLINE_ARCHIVE_PLAN",
+  "source_report": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+  "output_plan": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+  "candidate_count": 340,
+  "archive_candidate_count": 50,
+  "manual_inspection_count": 257,
+  "protected_current_count": 66,
+  "first_archive_batch_size": 20,
+  "first_archive_batch": [
+    {
+      "file": "docs/tasks/P1-Completion-Review-Before-P2.md",
+      "destination": "docs/legacy/tasks/P1-Completion-Review-Before-P2.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P2-01-Adapter-Contract-Reconciliation.md",
+      "destination": "docs/legacy/tasks/P2-01-Adapter-Contract-Reconciliation.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P2-02-Adapter-Capability-Manifest-and-Registry-Audit.md",
+      "destination": "docs/legacy/tasks/P2-02-Adapter-Capability-Manifest-and-Registry-Audit.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P2-03-Safe-Real-Adapter-Sandbox-Harness.md",
+      "destination": "docs/legacy/tasks/P2-03-Safe-Real-Adapter-Sandbox-Harness.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P2-04-Production-Ingestion-Adapter-Boundary.md",
+      "destination": "docs/legacy/tasks/P2-04-Production-Ingestion-Adapter-Boundary.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P2-05-Real-Adapter-Negative-Runtime-Matrix.md",
+      "destination": "docs/legacy/tasks/P2-05-Real-Adapter-Negative-Runtime-Matrix.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P2-06-Operator-Controlled-Pilot-Dry-Run.md",
+      "destination": "docs/legacy/tasks/P2-06-Operator-Controlled-Pilot-Dry-Run.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P2-Completion-Review-Before-P3.md",
+      "destination": "docs/legacy/tasks/P2-Completion-Review-Before-P3.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P2-Real-Adapter-Integration-Planning.md",
+      "destination": "docs/legacy/tasks/P2-Real-Adapter-Integration-Planning.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P3-01-Operator-Workflow-Surface-Inventory.md",
+      "destination": "docs/legacy/tasks/P3-01-Operator-Workflow-Surface-Inventory.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P3-02-Operator-Preflight-Read-Model-Planning.md",
+      "destination": "docs/legacy/tasks/P3-02-Operator-Preflight-Read-Model-Planning.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P3-03-Operator-Gate-Read-Model-Planning.md",
+      "destination": "docs/legacy/tasks/P3-03-Operator-Gate-Read-Model-Planning.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P3-04-Dry-Run-Report-Read-Model-Planning.md",
+      "destination": "docs/legacy/tasks/P3-04-Dry-Run-Report-Read-Model-Planning.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P3-05-Operator-Audit-Trail-Planning.md",
+      "destination": "docs/legacy/tasks/P3-05-Operator-Audit-Trail-Planning.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P3-06-Operator-UX-Negative-Boundary-Matrix.md",
+      "destination": "docs/legacy/tasks/P3-06-Operator-UX-Negative-Boundary-Matrix.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P3-07-Operator-UX-Completion-Review-Before-P4.md",
+      "destination": "docs/legacy/tasks/P3-07-Operator-UX-Completion-Review-Before-P4.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P3-Operator-UX-Refinement-Planning.md",
+      "destination": "docs/legacy/tasks/P3-Operator-UX-Refinement-Planning.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P4-01-ROI-Source-Boundary-Reconciliation.md",
+      "destination": "docs/legacy/tasks/P4-01-ROI-Source-Boundary-Reconciliation.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P4-02-ROI-Policy-Gate-Contract.md",
+      "destination": "docs/legacy/tasks/P4-02-ROI-Policy-Gate-Contract.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P4-03-ROI-Read-Model-Output-Contract.md",
+      "destination": "docs/legacy/tasks/P4-03-ROI-Read-Model-Output-Contract.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    }
+  ],
+  "archive_candidates": [
+    {
+      "file": "docs/tasks/P1-Completion-Review-Before-P2.md",
+      "destination": "docs/legacy/tasks/P1-Completion-Review-Before-P2.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P2-01-Adapter-Contract-Reconciliation.md",
+      "destination": "docs/legacy/tasks/P2-01-Adapter-Contract-Reconciliation.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P2-02-Adapter-Capability-Manifest-and-Registry-Audit.md",
+      "destination": "docs/legacy/tasks/P2-02-Adapter-Capability-Manifest-and-Registry-Audit.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P2-03-Safe-Real-Adapter-Sandbox-Harness.md",
+      "destination": "docs/legacy/tasks/P2-03-Safe-Real-Adapter-Sandbox-Harness.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P2-04-Production-Ingestion-Adapter-Boundary.md",
+      "destination": "docs/legacy/tasks/P2-04-Production-Ingestion-Adapter-Boundary.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P2-05-Real-Adapter-Negative-Runtime-Matrix.md",
+      "destination": "docs/legacy/tasks/P2-05-Real-Adapter-Negative-Runtime-Matrix.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P2-06-Operator-Controlled-Pilot-Dry-Run.md",
+      "destination": "docs/legacy/tasks/P2-06-Operator-Controlled-Pilot-Dry-Run.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P2-Completion-Review-Before-P3.md",
+      "destination": "docs/legacy/tasks/P2-Completion-Review-Before-P3.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P2-Real-Adapter-Integration-Planning.md",
+      "destination": "docs/legacy/tasks/P2-Real-Adapter-Integration-Planning.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P3-01-Operator-Workflow-Surface-Inventory.md",
+      "destination": "docs/legacy/tasks/P3-01-Operator-Workflow-Surface-Inventory.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P3-02-Operator-Preflight-Read-Model-Planning.md",
+      "destination": "docs/legacy/tasks/P3-02-Operator-Preflight-Read-Model-Planning.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P3-03-Operator-Gate-Read-Model-Planning.md",
+      "destination": "docs/legacy/tasks/P3-03-Operator-Gate-Read-Model-Planning.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P3-04-Dry-Run-Report-Read-Model-Planning.md",
+      "destination": "docs/legacy/tasks/P3-04-Dry-Run-Report-Read-Model-Planning.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P3-05-Operator-Audit-Trail-Planning.md",
+      "destination": "docs/legacy/tasks/P3-05-Operator-Audit-Trail-Planning.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P3-06-Operator-UX-Negative-Boundary-Matrix.md",
+      "destination": "docs/legacy/tasks/P3-06-Operator-UX-Negative-Boundary-Matrix.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P3-07-Operator-UX-Completion-Review-Before-P4.md",
+      "destination": "docs/legacy/tasks/P3-07-Operator-UX-Completion-Review-Before-P4.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P3-Operator-UX-Refinement-Planning.md",
+      "destination": "docs/legacy/tasks/P3-Operator-UX-Refinement-Planning.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P4-01-ROI-Source-Boundary-Reconciliation.md",
+      "destination": "docs/legacy/tasks/P4-01-ROI-Source-Boundary-Reconciliation.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P4-02-ROI-Policy-Gate-Contract.md",
+      "destination": "docs/legacy/tasks/P4-02-ROI-Policy-Gate-Contract.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P4-03-ROI-Read-Model-Output-Contract.md",
+      "destination": "docs/legacy/tasks/P4-03-ROI-Read-Model-Output-Contract.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+      "destination": "docs/legacy/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "destination": "docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "destination": "docs/legacy/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "destination": "docs/legacy/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "destination": "docs/legacy/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "destination": "docs/legacy/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "destination": "docs/legacy/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "destination": "docs/legacy/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "destination": "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "destination": "docs/legacy/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P6-01-Execution-Source-Boundary.md",
+      "destination": "docs/legacy/tasks/P6-01-Execution-Source-Boundary.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "destination": "docs/legacy/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "destination": "docs/legacy/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "destination": "docs/legacy/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "destination": "docs/legacy/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+      "destination": "docs/legacy/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P6-07-Execution-Completion-Review.md",
+      "destination": "docs/legacy/tasks/P6-07-Execution-Completion-Review.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
+      "destination": "docs/legacy/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "destination": "docs/legacy/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "destination": "docs/legacy/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P7-03-Prediction-Run-v0.md",
+      "destination": "docs/legacy/tasks/P7-03-Prediction-Run-v0.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "destination": "docs/legacy/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P7-05-Calibration-Report-v0.md",
+      "destination": "docs/legacy/tasks/P7-05-Calibration-Report-v0.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
+      "destination": "docs/legacy/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "destination": "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "scripts/twin_kernel/P7_02_SOIL_MOISTURE_STATE_ESTIMATE_V0.cjs",
+      "destination": "scripts/legacy/replay/P7_02_SOIL_MOISTURE_STATE_ESTIMATE_V0.cjs",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "scripts/twin_kernel/P7_03_PREDICTION_RUN_V0.cjs",
+      "destination": "scripts/legacy/replay/P7_03_PREDICTION_RUN_V0.cjs",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "scripts/twin_kernel/P7_04_BACKTEST_ERROR_REPORT_V0.cjs",
+      "destination": "scripts/legacy/replay/P7_04_BACKTEST_ERROR_REPORT_V0.cjs",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "scripts/twin_kernel/P7_05_CALIBRATION_REPORT_V0.cjs",
+      "destination": "scripts/legacy/replay/P7_05_CALIBRATION_REPORT_V0.cjs",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    },
+    {
+      "file": "scripts/twin_kernel/P7_06_REPLAY_EXPERIMENT_BUNDLE_V0.cjs",
+      "destination": "scripts/legacy/replay/P7_06_REPLAY_EXPERIMENT_BUNDLE_V0.cjs",
+      "classification": "historical_record_candidate_for_archive_after_audit",
+      "strong_reference_count": 0,
+      "action": "archive_candidate_after_manual_review"
+    }
+  ],
+  "manual_inspection": [
+    {
+      "file": "docs/tasks/H53.2-Preflight-Capability-Audit.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/H53.2-WaterStressState-Derivation.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/H53.3-Forecast-Scenario.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/H53.4-Recommendation-Candidate.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/H54-Final-Index.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/H54.0-Control-Connector-Preflight.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/H54.3-Approval-Decision-Linkage.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/H54.4-Operation-Plan-Linkage.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/H54.5-Task-Linkage.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/H54.6-Linkage.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/H54.7-As-Executed-Linkage.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/H54.8-Evidence-Artifact-Linkage.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/H55-Acceptance-Boundary.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/H55-Final-Index.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/H56-Water-Response-Verification-Boundary.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/H57-ROI-Governance-Boundary.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/H58-Field-Memory-Governance-Boundary.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/P-UI-Customer-Operator-Page-Product-Closure.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/P-UI-VISUAL-Final-Page-Visual-Closure.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/TK-DATA-Provenance-Contract-v1.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/TK0-Twin-Kernel-Preflight.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/TK1-Field-State-Snapshot-v1.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/TK10-Persisted-Twin-Trace-Runtime-Acceptance-v1.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/TK11-Twin-Trace-Readback-Page-Acceptance-v1.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/TK12-Twin-Trace-Readback-Page-Usability-Polish-v1.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/TK13-Formalization-Layer-v0.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/TK14-Operator-Workflow-v0.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/TK15-Production-Ingestion-v0.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/TK16-Multi-Scope-Regression-Harness-v0.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/TK17-Production-UX-v0.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/TK18-Execution-to-Learning-Business-Closure-v0.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/TK2-Forecast-Run-v1.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/TK3-Scenario-Set-v1.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/TK4-Calibration-Replay-and-Forecast-Error-v1.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/TK5-Field-Learning-Candidate-v1.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/TK6-Decision-Cycle-v1.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/TK9-Source-Index-Compatibility-and-Decision-Stage-Hotfix-v1.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/TWIN-KERNEL-NEXT-TASK-LINE.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/TWIN-KERNEL-Runtime-Value-Trace-Acceptance.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/TWIN-KERNEL-Trace-Read-Model-API-Readback.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "docs/tasks/TWIN-KERNEL-V1-COMPLETION-REVIEW.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/DELIVERY/ACCEPTANCE_DELIVERY_ENVELOPE_V0_RUNNER.cjs",
+      "classification": "delivery_domain_reference_or_legacy_compatibility",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/DELIVERY/ACCEPTANCE_DELIVERY_ENVELOPE_V0.ps1",
+      "classification": "delivery_domain_reference_or_legacy_compatibility",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/DELIVERY/EXPORT_EVIDENCE_PACK_V0_RUNNER.cjs",
+      "classification": "delivery_domain_reference_or_legacy_compatibility",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/DELIVERY/EXPORT_EVIDENCE_PACK_V0.ps1",
+      "classification": "delivery_domain_reference_or_legacy_compatibility",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_ADMIN_CONTROL_PLANE_SOURCE_GUARD_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_AO_ACT_AO_SENSE_BOUNDARY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_AO_ACT_RECEIPT_V1_BOUNDARY.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_AO_ACT_VERSION_BOUNDARY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_AOSENSE_AOACT_PARTITION_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_API_GOVERNANCE_BASELINE_V2.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_API_INVENTORY_ENFORCEMENT_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_APPLEII_FORMAL_EVIDENCE_DYNAMIC_E2E_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_APPLEII_TIME_COVERAGE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_AS_EXECUTED_FROM_AO_ACT_RECEIPT_V1_BOUNDARY.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_BASE_CONTRACT_DYNAMIC_NEGATIVE_E2E_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_BASE_CONTRACT_NEGATIVE_CHAIN_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_BASE_CONTRACT_NEGATIVE_RELEASE_GATE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_BASE_CONTRACT_P0_RELEASE_GATE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_C8_FORMAL_CHAIN_BACKEND_P0_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 2,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_C8_FORMAL_E2E_FROM_RAW_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_C8_SEED_DATASET_MODULARITY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_C8_SENSING_ONLY_DB_READBACK_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_C8_SENSING_ONLY_SEED_CONTRACT_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_CONTRACT_ALIGNMENT_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_CONTROL_KERNEL_NON_ACTION_BOUNDARY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_CONTROLLED_PILOT_FULL_REVIEW_SEED_EXPORT_CONTRACT_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_CONTROLLED_PILOT_FULL_REVIEW_SEED_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_CUSTOMER_CONFIRMED_TWIN_SUMMARY_SOURCE_GUARD_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_CUSTOMER_DASHBOARD_PROJECTION_TRUST_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_CUSTOMER_REPORT_RENDERER_BOUNDARY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_DECISION_RECOMMENDATION_SCHEMA_MIGRATION_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_DECISION_RECOMMENDATION_SEED_READBACK_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_DEVTOOLS_SIMULATOR_NOT_FORMAL_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_EVIDENCE_ARTIFACT_FROM_AS_EXECUTED_V1_BOUNDARY.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_FACT_ENVELOPE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_FALLBACK_RETIREMENT_ENFORCEMENT_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_FERTILIZATION_NO_PROJECTION_WRITE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_FERTILIZATION_SKILL_BOUNDARY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_FIELD_MEMORY_TRUST_LANE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_FLIGHT_TABLE_NOT_CUSTOMER_VALID_CHAIN_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_FLIGHT_TABLE_NOT_FORMAL_EVIDENCE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_FORMAL_ACCEPTANCE_GATE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_FORMAL_OPERATION_FIELD_BINDING_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_FORMAL_SCENARIO_KERNEL_USAGE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_FORMAL_SCENARIO_NO_PROJECTION_WRITE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_FRONTEND_CUSTOMER_TRUST_GATE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_FRONTEND_PRD_V0_2_FINAL_MANIFEST_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_H53_2_CURRENT_INPUT_GUARD_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_H53_2_PREFLIGHT_CAPABILITY_AUDIT_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_H53_2_WATER_STRESS_STATE_DERIVATION_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_H54_1_RECOMMENDATION_APPROVAL_REQUEST_GATE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_H54_2_ACTIONABLE_IRRIGATION_APPROVAL_ADAPTER_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_H54_3_APPROVAL_DECISION_LINKAGE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_H54_4_OPERATION_PLAN_LINKAGE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_H54_5_TASK_LINKAGE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_H54_6_LINKAGE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_H54_7_AS_EXECUTED_LINKAGE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_H54_8_EVIDENCE_ARTIFACT_LINKAGE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_H54_CONTROL_CONNECTOR_PREFLIGHT_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_H54_FINAL_INDEX_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_H55_ACCEPTANCE_BOUNDARY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_H55_INDEX_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_IRRIGATION_DECISION_REPORT_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_IRRIGATION_REQUIREMENT_DERIVATION_SCHEMA_MIGRATION_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_IRRIGATION_SCENARIO_SET_SCHEMA_MIGRATION_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_IRRIGATION_SCENARIO_SET_SEED_READBACK_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_LEGACY_DIAGNOSTICS_LEARNING_BOUNDARY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_NO_VARIABLE_TASK_PREHANDLER_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_OPERATION_PLAN_FROM_APPROVED_DECISION_BOUNDARY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_OPERATION_PLAN_INDEX_SCHEMA_MIGRATION_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_OPERATION_PLAN_TRANSITION_BOUNDARY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_OPERATION_REPORT_GUARDED_PAYLOAD_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_OPERATION_STATE_TRUST_GATE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_OPERATOR_BACKEND_LEARNING_VALIDATION_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_OPERATOR_DEVICE_OFFLINE_ACTIONS_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_OPERATOR_FIELD_TWIN_CALIBRATION_SOURCE_GUARD_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_OPERATOR_FIELD_TWIN_EVIDENCE_SOURCE_GUARD_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_OPERATOR_FIELD_TWIN_POST_IRRIGATION_SOURCE_GUARD_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_OPERATOR_LEARNING_NOT_OBJECT_EXISTENCE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_OPERATOR_SCENARIO_SUBMIT_RECOMMENDATION_SOURCE_GUARD_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_OPERATOR_TWIN_READ_API_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_OPERATOR_TWIN_SCOPE_CONTRACT_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_OPERATOR_TWIN_SOURCE_INDEX_CONTRACT_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_OPERATOR_TWIN_SOURCE_INDEX_INVENTORY_API_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_OPERATOR_TWIN_SOURCE_INDEX_MIGRATION_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_OPERATOR_TWIN_SOURCE_INDEX_WRITE_PATH_COMPAT_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_P06_FORMAL_SCENARIO_ARCHITECTURE_CLOSURE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_P1_SMOKE_PREFLIGHT_IDEMPOTENT_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_PEST_DISEASE_INSPECTION_NO_PROJECTION_WRITE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_PEST_DISEASE_MAIN_CHAIN_ALIGNMENT_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_PEST_DISEASE_SKILL_BOUNDARY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_PILOT_RUNTIME_SECURITY_BASELINE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_PR_METADATA_CONTRACT_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_PROBLEM_STATE_UNCERTAINTY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_RECOMMENDATION_APPROVAL_DECISION_BOUNDARY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_RECOMMENDATION_APPROVAL_REQUEST_BOUNDARY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_REPORT_GUARD_ROUTE_COVERAGE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_RESULT_FROM_EVIDENCE_ARTIFACTS_V1_BOUNDARY.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_ROI_MEMORY_TRUST_LANE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_ROOT_ZONE_IRRIGATION_SCENARIO_CUSTOMER_BOUNDARY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_ROOT_ZONE_IRRIGATION_SCENARIO_MODEL_BOUNDARY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_ROOT_ZONE_IRRIGATION_SCENARIO_SCHEMA_MIGRATION_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_ROOT_ZONE_SCENARIO_SUBMIT_RECOMMENDATION_BOUNDARY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_ROOT_ZONE_SOIL_WATER_FORECAST_CUSTOMER_BOUNDARY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_ROOT_ZONE_SOIL_WATER_FORECAST_MODEL_BOUNDARY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_ROOT_ZONE_SOIL_WATER_FORECAST_SCHEMA_MIGRATION_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_ROOT_ZONE_SOIL_WATER_STATE_CUSTOMER_BOUNDARY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_ROOT_ZONE_SOIL_WATER_STATE_MODEL_BOUNDARY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_ROOT_ZONE_SOIL_WATER_STATE_SCHEMA_MIGRATION_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_ROUTE_RESPONSE_OWNERSHIP_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_RULESET_LOADING_BOUNDARY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_RUNTIME_OPENAPI_SALES_CRITICAL_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_RUNTIME_WORKERS_HEARTBEAT_NEGATIVE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_RUNTIME_WORKERS_PRODUCTION_PACKAGING_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_SAMPLING_NO_PROJECTION_WRITE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_SKILL_CATEGORY_BOUNDARY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_SKILL_CONSTITUTION_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_SOIL_WATER_POTENTIAL_CUSTOMER_BOUNDARY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_SOIL_WATER_POTENTIAL_MODEL_BOUNDARY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_SOIL_WATER_POTENTIAL_SCHEMA_MIGRATION_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_STAGE1_FIXTURE_RAW_SAMPLE_CONTRACT_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_STAGE1_TRIGGER_EVIDENCE_GATE_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_TASK_FROM_READY_OPERATION_PLAN_BOUNDARY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_THREE_SURFACE_ADMIN_BOUNDARY_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_THREE_SURFACE_ROUTE_BOUNDARY_E2E_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_VARIABLE_TASK_NOT_AUTO_ACKED_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_WATER_RESPONSE_VERIFICATION_FROM_ACCEPTANCE_V1_BOUNDARY.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_WATER_STATE_ESTIMATE_SCHEMA_MIGRATION_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_WATER_STATE_ESTIMATE_SEED_READBACK_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_WEATHER_FORECAST_VERSION_SCHEMA_MIGRATION_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/ACCEPTANCE_WEATHER_FORECAST_VERSION_SEED_READBACK_V1.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 1,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/H56_CHECK.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/H57_PREFLIGHT_AUDIT.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/H57_ROI_GOVERNANCE_BOUNDARY.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/H58_FIELD_MEMORY_GOVERNANCE_BOUNDARY.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P1_COMPLETION_REVIEW_BEFORE_P2.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P2_01_ADAPTER_CONTRACT_RECONCILIATION.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P2_02_ADAPTER_CAPABILITY_MANIFEST_AND_REGISTRY_AUDIT.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P2_03_SAFE_REAL_ADAPTER_SANDBOX_HARNESS.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P2_04_PRODUCTION_INGESTION_ADAPTER_BOUNDARY.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P2_05_REAL_ADAPTER_NEGATIVE_RUNTIME_MATRIX.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P2_06_OPERATOR_CONTROLLED_PILOT_DRY_RUN.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P2_COMPLETION_REVIEW_BEFORE_P3.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P2_REAL_ADAPTER_INTEGRATION_PLANNING.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P3_01_OPERATOR_WORKFLOW_SURFACE_INVENTORY.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P3_02_OPERATOR_PREFLIGHT_READ_MODEL_PLANNING.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P3_03_OPERATOR_GATE_READ_MODEL_PLANNING.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P3_04_DRY_RUN_REPORT_READ_MODEL_PLANNING.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P3_05_OPERATOR_AUDIT_TRAIL_PLANNING.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P3_06_OPERATOR_UX_NEGATIVE_BOUNDARY_MATRIX.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P3_07_OPERATOR_UX_COMPLETION_REVIEW_BEFORE_P4.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P3_OPERATOR_UX_REFINEMENT_PLANNING.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P4_01_ROI_SOURCE_BOUNDARY_RECONCILIATION.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P4_02_ROI_POLICY_GATE_CONTRACT.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P4_03_ROI_READ_MODEL_OUTPUT_CONTRACT.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P4_04_ROI_NEGATIVE_BOUNDARY_MATRIX.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P4_05_ROI_COMPLETION_REVIEW_BEFORE_P5.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P4_POLICY_CONTROLLED_ROI_PLANNING.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P5_00_POLICY_CONTROLLED_FIELD_MEMORY_GOVERNANCE_PLANNING.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P5_01_FIELD_MEMORY_ELIGIBILITY_SOURCE_BOUNDARY.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P5_02_FIELD_MEMORY_POLICY_GATE_CONTRACT.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P5_03_FIELD_MEMORY_FORMALIZATION_OUTPUT_CONTRACT.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P5_04_FIELD_MEMORY_NEGATIVE_BOUNDARY_MATRIX.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P5_05_FIELD_MEMORY_COMPLETION_REVIEW_BEFORE_P6.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P6_00_EXECUTION_SYSTEM_INTEGRATION_PLANNING.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P6_01_EXECUTION_SOURCE_BOUNDARY.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P6_02_EXECUTION_AUTHORIZATION_GATE_CONTRACT.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P6_03_EXECUTION_DISPATCH_OUTPUT_CONTRACT.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P6_04_EXECUTION_RECEIPT_INTAKE_CONTRACT.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P6_05_EXECUTION_AUDIT_TRACE_CONTRACT.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P6_06_EXECUTION_NEGATIVE_BOUNDARY_MATRIX.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P7_00_TWIN_KERNEL_MINIMAL_RUNTIME_PLANNING.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P7_01_TWIN_EVIDENCE_WINDOW_CONTRACT.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P7_02_SOIL_MOISTURE_STATE_ESTIMATE_V0.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P7_03_PREDICTION_RUN_V0.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P7_04_BACKTEST_ERROR_REPORT_V0.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P7_05_CALIBRATION_REPORT_V0.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P7_06_REPLAY_EXPERIMENT_BUNDLE_V0.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/P7_07_TWIN_KERNEL_COMPLETION_REVIEW.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/POSTV1_01_PRODUCTION_HARDENING_BASELINE.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/POSTV1_02_STRONG_MULTI_SCOPE_FIXTURE_PACK.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/POSTV1_03_INGESTION_IDEMPOTENCY_ERROR_TAXONOMY.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/POSTV1_04_ROUTE_NEGATIVE_RUNTIME_MATRIX.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/POSTV1_05_DB_INDEX_QUERY_COST_AUDIT.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/POSTV1_06_DOCKER_STARTUP_MIGRATION_RUNNER_BASELINE.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/POSTV1_PHASE_LINE_FREEZE.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK_DATA_PROVENANCE_CONTRACT_V1.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK0_TWIN_KERNEL_PREFLIGHT_AUDIT.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK1_FIELD_STATE_SNAPSHOT_V1_ACCEPTANCE.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK10_PERSISTED_TWIN_TRACE_RUNTIME_ACCEPTANCE_V1.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 2,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK13_FORMALIZATION_LAYER_V0.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK14_OPERATOR_WORKFLOW_V0.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK15_PRODUCTION_INGESTION_V0.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK16_MULTI_SCOPE_REGRESSION_HARNESS.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK18_EXECUTION_TO_LEARNING_BUSINESS_CLOSURE_V0.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK2_FORECAST_RUN_V1_ACCEPTANCE.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK3_SCENARIO_SET_V1_ACCEPTANCE.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK4_CALIBRATION_REPLAY_AND_FORECAST_ERROR_V1_ACCEPTANCE.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK5_FIELD_LEARNING_CANDIDATE_V1_ACCEPTANCE.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK6_DECISION_CYCLE_V1_ACCEPTANCE.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK9_SOURCE_INDEX_AND_DECISION_STAGE_HOTFIX_V1.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/TWIN_KERNEL_RUNTIME_VALUE_TRACE_ACCEPTANCE.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/TWIN_KERNEL_TRACE_READ_MODEL_API_READBACK.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/governance_acceptance/TWIN_KERNEL_V1_COMPLETION_REVIEW.cjs",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 0,
+      "action": "manual_inspection_required"
+    },
+    {
+      "file": "scripts/twin_kernel/README.md",
+      "classification": "unknown_inspect_before_use",
+      "strong_reference_count": 5,
+      "action": "manual_inspection_required"
+    }
+  ],
+  "protected_current": [
+    {
+      "file": "docs/tasks/P8-00-Real-Evidence-Closed-Loop-Planning.md",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/P8-01-Real-Evidence-Source-Contract.md",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/P8-02-Real-Evidence-Window-Builder-v0.md",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/P8-03-Holdout-Window-Split-Contract.md",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/P8-04-Real-State-Estimate-Runtime-v1.md",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/P8-05-Real-Prediction-Run-v1.md",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/P8-06-Real-Actual-Observation-Window-v0.md",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/P8-07-Real-Backtest-Error-Report-v1.md",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/P8-08-Real-Calibration-Report-v1.md",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/P8-09-Product-Replay-Demo-Report-v0.md",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/P8-10-Real-Evidence-Closed-Loop-Completion-Review.md",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 1,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/POST-P8-00-Repository-Convergence-Planning.md",
+      "classification": "current_convergence_reference",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/POST-P8-01-Freeze-Index-and-Reference-Audit.md",
+      "classification": "current_convergence_reference",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/TK-DATA-Provenance-Contract-v1.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/TK0-Twin-Kernel-Preflight.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/TK1-Field-State-Snapshot-v1.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/TK10-Persisted-Twin-Trace-Runtime-Acceptance-v1.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/TK11-Twin-Trace-Readback-Page-Acceptance-v1.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/TK12-Twin-Trace-Readback-Page-Usability-Polish-v1.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/TK13-Formalization-Layer-v0.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/TK14-Operator-Workflow-v0.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/TK15-Production-Ingestion-v0.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/TK16-Multi-Scope-Regression-Harness-v0.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/TK17-Production-UX-v0.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/TK18-Execution-to-Learning-Business-Closure-v0.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/TK2-Forecast-Run-v1.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/TK3-Scenario-Set-v1.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/TK4-Calibration-Replay-and-Forecast-Error-v1.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/TK5-Field-Learning-Candidate-v1.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/TK6-Decision-Cycle-v1.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "docs/tasks/TK9-Source-Index-Compatibility-and-Decision-Stage-Hotfix-v1.md",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/P8_00_REAL_EVIDENCE_CLOSED_LOOP_PLANNING.cjs",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/P8_01_REAL_EVIDENCE_SOURCE_CONTRACT.cjs",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/P8_02_REAL_EVIDENCE_WINDOW_BUILDER_V0.cjs",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 1,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/P8_03_HOLDOUT_WINDOW_SPLIT_CONTRACT.cjs",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/P8_04_REAL_STATE_ESTIMATE_RUNTIME_V1.cjs",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 1,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/P8_05_REAL_PREDICTION_RUN_V1.cjs",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 1,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/P8_06_REAL_ACTUAL_OBSERVATION_WINDOW_V0.cjs",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 1,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/P8_07_REAL_BACKTEST_ERROR_REPORT_V1.cjs",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 1,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/P8_08_REAL_CALIBRATION_REPORT_V1.cjs",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 1,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/P8_09_PRODUCT_REPLAY_DEMO_REPORT_V0.cjs",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 1,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/P8_10_REAL_EVIDENCE_CLOSED_LOOP_COMPLETION_REVIEW.cjs",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 4,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/POST_P8_01_FREEZE_INDEX_AND_REFERENCE_AUDIT.cjs",
+      "classification": "current_convergence_reference",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/POST_P8_REPOSITORY_CONVERGENCE_ACCEPTANCE.cjs",
+      "classification": "current_convergence_reference",
+      "strong_reference_count": 2,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK_DATA_PROVENANCE_CONTRACT_V1.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK0_TWIN_KERNEL_PREFLIGHT_AUDIT.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK1_FIELD_STATE_SNAPSHOT_V1_ACCEPTANCE.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK10_PERSISTED_TWIN_TRACE_RUNTIME_ACCEPTANCE_V1.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 2,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK13_FORMALIZATION_LAYER_V0.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK14_OPERATOR_WORKFLOW_V0.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK15_PRODUCTION_INGESTION_V0.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK16_MULTI_SCOPE_REGRESSION_HARNESS.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK18_EXECUTION_TO_LEARNING_BUSINESS_CLOSURE_V0.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK2_FORECAST_RUN_V1_ACCEPTANCE.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK3_SCENARIO_SET_V1_ACCEPTANCE.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK4_CALIBRATION_REPLAY_AND_FORECAST_ERROR_V1_ACCEPTANCE.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK5_FIELD_LEARNING_CANDIDATE_V1_ACCEPTANCE.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK6_DECISION_CYCLE_V1_ACCEPTANCE.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/governance_acceptance/TK9_SOURCE_INDEX_AND_DECISION_STAGE_HOTFIX_V1.cjs",
+      "classification": "current_domain_reference_or_historical_record",
+      "strong_reference_count": 0,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/twin_kernel/P8_02_REAL_EVIDENCE_WINDOW_BUILDER_V0.cjs",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 1,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/twin_kernel/P8_04_REAL_STATE_ESTIMATE_RUNTIME_V1.cjs",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 1,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/twin_kernel/P8_05_REAL_PREDICTION_RUN_V1.cjs",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 1,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/twin_kernel/P8_06_REAL_ACTUAL_OBSERVATION_WINDOW_V0.cjs",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 1,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/twin_kernel/P8_07_REAL_BACKTEST_ERROR_REPORT_V1.cjs",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 1,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/twin_kernel/P8_08_REAL_CALIBRATION_REPORT_V1.cjs",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 1,
+      "action": "protect_current_reference"
+    },
+    {
+      "file": "scripts/twin_kernel/P8_09_PRODUCT_REPLAY_DEMO_REPORT_V0.cjs",
+      "classification": "current_domain_reference",
+      "strong_reference_count": 1,
+      "action": "protect_current_reference"
+    }
+  ],
+  "deletion_policy": "No delete or move is performed by POST-P8-02. POST-P8-03 must make a small explicit migration batch and prove replacement paths."
+}
