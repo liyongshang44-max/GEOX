@@ -1,0 +1,14 @@
+{
+  "artifact_kind": "real_backtest_error_report_v1",
+  "schema_version": "real_backtest_error_report_v1",
+  "case_id": "p8_real_evidence_closed_loop_caf009_soil_moisture_v0",
+  "data_availability_class": "committed_fixture",
+  "error_summary_json": {
+    "unit": "vwc_fraction",
+    "mae": 0.0013,
+    "bias": -0.0013,
+    "point_count": 3
+  },
+  "prediction_refs": ["real_soil_moisture_prediction_run_v1"],
+  "actual_refs": ["real_actual_observation_window_v0"]
+}

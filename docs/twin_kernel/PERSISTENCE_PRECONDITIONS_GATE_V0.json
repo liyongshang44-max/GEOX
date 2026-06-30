@@ -1,0 +1,18 @@
+{
+  "schema_version": "persistence_preconditions_gate_v0",
+  "persistence_preconditions_defined": true,
+  "persistence_execution_allowed": false,
+  "persistence_readiness_status": "blocked_until_P11",
+  "future_persistence_requires_new_phase": true,
+  "p11_required_new_policies": [
+    "persistence_policy_v1",
+    "idempotency_policy",
+    "object_identity_policy",
+    "migration_or_table_policy",
+    "rollback_policy",
+    "audit_policy",
+    "read_model_projection_policy",
+    "operator_review_gate",
+    "human_authorization_gate"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "artifact_kind": "real_actual_observation_window_v0",
+  "schema_version": "real_actual_observation_window_v0",
+  "case_id": "p8_real_evidence_closed_loop_caf009_soil_moisture_v0",
+  "data_availability_class": "committed_fixture",
+  "actual_window_refs": ["raw_samples:CAF009:2009-06-09T05:00:00.000Z"],
+  "observed_payload": {
+    "unit": "vwc_fraction",
+    "points": [
+      { "ts": "2009-06-09T05:00:00.000Z", "soil_moisture_mean": 0.184 },
+      { "ts": "2009-06-09T06:00:00.000Z", "soil_moisture_mean": 0.183 },
+      { "ts": "2009-06-09T07:00:00.000Z", "soil_moisture_mean": 0.183 }
+    ]
+  },
+  "evidence_refs": [
+    { "kind": "raw_sample_pointer", "ref_id": "fixture_raw_CAF009_20090609_0500" }
+  ]
+}

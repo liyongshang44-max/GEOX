@@ -1,0 +1,17 @@
+{
+  "artifact_kind": "real_calibration_report_v1",
+  "schema_version": "real_calibration_report_v1",
+  "case_id": "p8_real_evidence_closed_loop_caf009_soil_moisture_v0",
+  "data_availability_class": "committed_fixture",
+  "calibration_candidate_json": {
+    "candidate_only": true,
+    "bias_summary": -0.0013,
+    "applied_to_model": false
+  },
+  "learning_candidate_json": {
+    "field_memory_write_ref": null,
+    "model_update_ref": null,
+    "automatic_learning_loop": false
+  },
+  "model_version_refs": ["real_backtest_bias_summary_v1"]
+}

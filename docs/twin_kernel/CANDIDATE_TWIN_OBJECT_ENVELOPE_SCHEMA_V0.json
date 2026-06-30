@@ -1,0 +1,57 @@
+{
+  "schema_version": "candidate_twin_object_envelope_schema_v0",
+  "schema_id": "p10_candidate_twin_object_envelope_schema_v0",
+  "status": "p10_03_candidate_envelope_schema",
+  "phase": "P10 Runtime Reconciliation Contract / Non-Persisted Candidate Adapter Proof",
+  "authority_source": "README_MIGRATION.md",
+  "acceptance": "scripts/governance_acceptance/P10_03_CANDIDATE_TWIN_OBJECT_ENVELOPE_SCHEMA_V0_ACCEPTANCE.cjs",
+  "envelope_schema_version": "candidate_twin_object_envelope_v0",
+  "candidate_id_prefix": "cand_",
+  "required_forced_fields": {
+    "schema_version": "candidate_twin_object_envelope_v0",
+    "source_line_id": "offline_real_evidence_replay_kernel",
+    "target_line_id": "server_persisted_twin_kernel",
+    "target_object_type_authority": "descriptive_only",
+    "persisted_target_object_ref": null,
+    "persistence_status": "not_persisted",
+    "write_allowed": false,
+    "execution_authority": "none",
+    "model_update_allowed": false,
+    "field_memory_write_allowed": false,
+    "ao_act_task_allowed": false,
+    "dashboard_authority": false
+  },
+  "allowed_candidate_target_object_types": [
+    "field_state_snapshot_v1",
+    "forecast_run_v1",
+    "calibration_replay_v1",
+    "forecast_error_v1",
+    "field_learning_candidate_v1",
+    "twin_trace_v1_read_model"
+  ],
+  "forbidden_fields": [
+    "fact_id",
+    "persisted_object_id",
+    "field_state_snapshot_id",
+    "forecast_run_id",
+    "calibration_replay_id",
+    "forecast_error_id",
+    "field_learning_candidate_id",
+    "ao_act_task_id",
+    "dispatch_id",
+    "receipt_id",
+    "operation_plan_id",
+    "recommendation_id",
+    "authorization_id"
+  ],
+  "bundle_schema": {
+    "schema_version": "candidate_twin_object_bundle_v0",
+    "persistence_status": "not_persisted",
+    "write_count": 0,
+    "db_write_count": 0,
+    "fact_write_count": 0,
+    "field_memory_write_count": 0,
+    "model_update_count": 0,
+    "ao_act_task_count": 0
+  }
+}

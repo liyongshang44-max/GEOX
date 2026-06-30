@@ -1,0 +1,55 @@
+{
+  "schema_version": "source_data_contract_v0",
+  "contract_id": "p10_source_data_contract_v0",
+  "status": "p10_02_source_data_contract",
+  "phase": "P10 Runtime Reconciliation Contract / Non-Persisted Candidate Adapter Proof",
+  "authority_source": "README_MIGRATION.md",
+  "case_manifest": "docs/twin_kernel/replay_cases/p8_real_evidence_closed_loop_caf009_soil_moisture_v0.json",
+  "acceptance": "scripts/governance_acceptance/P10_02_SOURCE_DATA_CONTRACT_V0_ACCEPTANCE.cjs",
+  "data_availability_classes": [
+    "external_manual_precondition",
+    "committed_fixture",
+    "ci_seeded_contract",
+    "production_source_index"
+  ],
+  "case_source_contract": {
+    "case_id": "p8_real_evidence_closed_loop_caf009_soil_moisture_v0",
+    "source_line_id": "offline_real_evidence_replay_kernel",
+    "source_table": "raw_samples",
+    "project_id": "P_DEFAULT",
+    "sensor_group_id": "G_CAF",
+    "sensor_id": "CAF009",
+    "metric_kind": "soil_moisture",
+    "expected_interval_ms": 3600000,
+    "history_window": {
+      "start_ts": "2009-06-09T00:00:00.000Z",
+      "end_ts": "2009-06-09T04:00:00.000Z"
+    },
+    "prediction_window": {
+      "start_ts": "2009-06-09T05:00:00.000Z",
+      "end_ts": "2009-06-09T07:00:00.000Z"
+    },
+    "actual_window": {
+      "start_ts": "2009-06-09T05:00:00.000Z",
+      "end_ts": "2009-06-09T07:00:00.000Z"
+    },
+    "data_availability_class": "external_manual_precondition"
+  },
+  "default_adapter_fixture_contract": {
+    "data_availability_class": "committed_fixture",
+    "fixture_directory": "docs/twin_kernel/fixtures/p10_canonical_sample_artifacts",
+    "fresh_clone_requires_raw_samples": false,
+    "ci_requires_raw_samples": false,
+    "p8_replay_invoked_by_default": false
+  },
+  "read_mutation_policy": {
+    "source_data_may_be_read": true,
+    "source_data_may_be_seeded_by_reconciliation_runtime": false,
+    "source_data_may_be_mutated": false,
+    "raw_samples_append_only_assumption": true,
+    "ci_requires_raw_samples": false,
+    "fresh_clone_requires_raw_samples": false,
+    "no_raw_samples_seed_introduced": true,
+    "no_db_write_introduced": true
+  }
+}

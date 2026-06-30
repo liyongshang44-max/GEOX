@@ -1,0 +1,52 @@
+{
+  "schema_version": "model_version_reconciliation_contract_v0",
+  "contract_id": "p10_model_version_reconciliation_contract_v0",
+  "status": "p10_05_model_version_reconciliation_contract",
+  "phase": "P10 Runtime Reconciliation Contract / Non-Persisted Candidate Adapter Proof",
+  "authority_source": "README_MIGRATION.md",
+  "source_model_version_manifest": "docs/twin_kernel/model_versions/p8_real_soil_moisture_model_version_manifest_v0.json",
+  "candidate_envelope_schema": "docs/twin_kernel/CANDIDATE_TWIN_OBJECT_ENVELOPE_SCHEMA_V0.json",
+  "acceptance": "scripts/governance_acceptance/P10_05_MODEL_VERSION_RECONCILIATION_CONTRACT_V0_ACCEPTANCE.cjs",
+  "model_set": {
+    "model_set_id": "p8_real_soil_moisture_replay_model_set_v0",
+    "model_set_kind": "deterministic_heuristic_replay_models",
+    "trained_model": false,
+    "external_model_dependency": false,
+    "learned_parameter_state": false,
+    "model_update_allowed": false,
+    "calibration_candidate_applied": false,
+    "automatic_learning_loop": false,
+    "model_artifact_file_created_by_p10": false
+  },
+  "model_version_count": 5,
+  "model_version_ids": [
+    "weighted_recent_mean_v1",
+    "linear_recent_window_trend_v1",
+    "observed_window_range_mean_v1",
+    "state_uncertainty_growth_v1",
+    "real_backtest_bias_summary_v1"
+  ],
+  "allowed_candidate_ref_locations": [
+    "candidate_envelope.model_version_refs",
+    "candidate_envelope.provenance",
+    "candidate_envelope.explanation_metadata"
+  ],
+  "forbidden_ref_locations": [
+    "model registry write",
+    "model state write",
+    "Field Memory",
+    "AO-ACT",
+    "dispatch",
+    "receipt",
+    "persisted object write"
+  ],
+  "write_policy": {
+    "model_registry_write_allowed": false,
+    "model_state_write_allowed": false,
+    "field_memory_write_allowed": false,
+    "ao_act_task_allowed": false,
+    "dispatch_allowed": false,
+    "receipt_allowed": false,
+    "persisted_object_write_allowed": false
+  }
+}
