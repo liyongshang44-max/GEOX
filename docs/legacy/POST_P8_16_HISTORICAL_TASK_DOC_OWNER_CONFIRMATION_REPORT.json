@@ -1,0 +1,35 @@
+{
+  "generated_at": "2026-06-30T08:06:20.671Z",
+  "report": "POST_P8_16_HISTORICAL_TASK_DOC_OWNER_CONFIRMATION_REPORT",
+  "input_preview_report": "docs/legacy/POST_P8_15_HISTORICAL_TASK_DOC_REFERENCE_UPDATE_PREVIEW_REPORT.json",
+  "input_gate_report": "docs/legacy/POST_P8_14_HISTORICAL_TASK_DOC_REFERENCE_UPDATE_APPLY_GATE_REPORT.json",
+  "output_report": "docs/legacy/POST_P8_16_HISTORICAL_TASK_DOC_OWNER_CONFIRMATION_REPORT.json",
+  "selected_group": "historical_task_doc",
+  "owner_confirmation_recorded": true,
+  "owner_confirmation_scope": "governance_progression_only",
+  "owner_confirmation_source": "interactive_operator_instruction_next_step",
+  "source_file_count": 48,
+  "plan_item_count": 371,
+  "exact_reference_count": 585,
+  "observed_exact_reference_count": 585,
+  "affected_referencing_file_count": 75,
+  "preview_mismatch_count": 0,
+  "apply_allowed": false,
+  "source_file_change_allowed": false,
+  "file_move_allowed": false,
+  "conditions": {
+    "owner_confirmation_recorded": true,
+    "preview_report_generated": true,
+    "preview_counts_matched": true,
+    "apply_gate_open": false
+  },
+  "policy": {
+    "owner_record_only": true,
+    "no_source_file_write": true,
+    "no_file_move": true,
+    "no_delete": true,
+    "no_reference_change": true,
+    "future_apply_requires_gate_recheck": true
+  },
+  "next_step": "POST_P8_17_HISTORICAL_TASK_DOC_APPLY_GATE_RECHECK"
+}
