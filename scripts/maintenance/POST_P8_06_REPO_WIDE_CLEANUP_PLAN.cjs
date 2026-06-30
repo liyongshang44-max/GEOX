@@ -62,8 +62,20 @@ const NON_REWRITE_REFERENCE_PREFIXES = [
   'seeds/',
   'docker/',
   'scripts/acceptance/',
+  'scripts/governance_acceptance/',
+  'docs/tasks/P8-',
+  'docs/tasks/POST-P8-',
 ];
-const NON_REWRITE_REFERENCE_FILES = new Set(['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml']);
+const NON_REWRITE_REFERENCE_FILES = new Set([
+  'package.json',
+  'pnpm-lock.yaml',
+  'pnpm-workspace.yaml',
+  'docs/SSOT.md',
+  'docs/REPOSITORY_HANDOFF_MAP.md',
+  'docs/twin_kernel/README.md',
+  'scripts/README.md',
+  'scripts/twin_kernel/README.md',
+]);
 const REWRITE_ALLOWED_PREFIXES = [
   'docs/',
   'scripts/',
@@ -105,6 +117,12 @@ function isStrongEntrypoint(file) {
   return STRONG_ENTRYPOINT_PREFIXES.some((prefix) => file.startsWith(prefix));
 }
 
+function isTwinBoundaryTaskDoc(file) {
+  if (/^docs\/tasks\/TK/.test(file)) return true;
+  if (/^docs\/tasks\/TWIN-KERNEL/.test(file)) return true;
+  return false;
+}
+
 function destinationFor(file) {
   if (file.startsWith('docs/tasks/')) return `docs/legacy/tasks/${path.basename(file)}`;
   if (file.startsWith('scripts/twin_kernel/')) return `scripts/legacy/replay/${path.basename(file)}`;
@@ -126,6 +144,7 @@ function exactReferenceSources(file, textSources) {
 }
 
 function isHistoricalArchivableShape(file) {
+  if (isTwinBoundaryTaskDoc(file)) return false;
   if (/^docs\/tasks\//.test(file)) return true;
   if (/^scripts\/twin_kernel\/P[0-7]_/.test(file)) return true;
   if (/^scripts\/governance_acceptance\//.test(file) && !file.includes('P8_') && !file.includes('POST_P8_')) return true;
@@ -142,6 +161,7 @@ function isRewriteAllowedReferenceSource(ref) {
 
 function classify(file, exactRefs, strongRefs) {
   if (isProtected(file)) return { action: 'keep', reason: 'protected_current_or_runtime_surface' };
+  if (isTwinBoundaryTaskDoc(file)) return { action: 'manual_review', reason: 'twin_boundary_task_doc_requires_manual_review' };
   if (isHistoricalArchivableShape(file)) {
     const nonRewriteRefs = exactRefs.filter((ref) => !isRewriteAllowedReferenceSource(ref));
     if (nonRewriteRefs.length === 0) {
@@ -203,6 +223,7 @@ function main() {
       archive_rewrite_requires_only_rewrite_allowed_references: true,
       delete_requires_generated_artifact_policy: true,
       current_runtime_surfaces_are_protected: true,
+      twin_boundary_task_docs_require_manual_review: true,
       non_rewrite_reference_prefixes: NON_REWRITE_REFERENCE_PREFIXES,
       rewrite_allowed_prefixes: REWRITE_ALLOWED_PREFIXES,
     },
