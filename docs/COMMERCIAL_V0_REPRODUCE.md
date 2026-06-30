@@ -37,7 +37,7 @@ git checkout geox_system_commercial_v0
 2) Run reproduce:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/REPRODUCE_GEOX_SYSTEM_COMMERCIAL_V0.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/legacy/powershell/REPRODUCE_GEOX_SYSTEM_COMMERCIAL_V0.ps1
 ```
 
 Expected output:

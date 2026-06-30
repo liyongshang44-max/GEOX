@@ -42,7 +42,7 @@ Receipt evidence linkage
   { kind: "marker_v1", ref_id: "<marker_fact_id>" }
 
 3) Acceptance update (Sprint 4)
-- scripts/ACCEPTANCE_APPLEIII_AOSENSE.ps1 MUST assert:
+- scripts/legacy/powershell/ACCEPTANCE_APPLEIII_AOSENSE.ps1 MUST assert:
   1) next_task returns the created task before receipt exists.
   2) after receipt is created, next_task returns 204.
 

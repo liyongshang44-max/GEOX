@@ -23,25 +23,25 @@
   "no_strong_reference_count": 235,
   "candidates": [
     {
-      "file": "docs/tasks/H53.2-Preflight-Capability-Audit.md",
+      "file": "docs/legacy/tasks/H53.2-Preflight-Capability-Audit.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H53.2-WaterStressState-Derivation.md",
+      "file": "docs/legacy/tasks/H53.2-WaterStressState-Derivation.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H53.3-Forecast-Scenario.md",
+      "file": "docs/legacy/tasks/H53.3-Forecast-Scenario.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H53.4-Recommendation-Candidate.md",
+      "file": "docs/legacy/tasks/H53.4-Recommendation-Candidate.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
@@ -143,13 +143,13 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P-UI-Customer-Operator-Page-Product-Closure.md",
+      "file": "docs/legacy/tasks/P-UI-Customer-Operator-Page-Product-Closure.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P-UI-VISUAL-Final-Page-Visual-Closure.md",
+      "file": "docs/legacy/tasks/P-UI-VISUAL-Final-Page-Visual-Closure.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
@@ -685,56 +685,56 @@
       "strong_references": []
     },
     {
-      "file": "scripts/DELIVERY/ACCEPTANCE_DELIVERY_ENVELOPE_V0.ps1",
+      "file": "scripts/legacy/delivery/ACCEPTANCE_DELIVERY_ENVELOPE_V0.ps1",
       "classification": "delivery_domain_reference_or_legacy_compatibility",
       "strong_reference_count": 1,
       "strong_references": [
         {
           "source": "README_MIGRATION.md",
           "tokens": [
-            "scripts/DELIVERY/ACCEPTANCE_DELIVERY_ENVELOPE_V0.ps1",
+            "scripts/legacy/delivery/ACCEPTANCE_DELIVERY_ENVELOPE_V0.ps1",
             "ACCEPTANCE_DELIVERY_ENVELOPE_V0"
           ]
         }
       ]
     },
     {
-      "file": "scripts/DELIVERY/ACCEPTANCE_DELIVERY_ENVELOPE_V0_RUNNER.cjs",
+      "file": "scripts/legacy/delivery/ACCEPTANCE_DELIVERY_ENVELOPE_V0_RUNNER.cjs",
       "classification": "delivery_domain_reference_or_legacy_compatibility",
       "strong_reference_count": 1,
       "strong_references": [
         {
           "source": "README_MIGRATION.md",
           "tokens": [
-            "scripts/DELIVERY/ACCEPTANCE_DELIVERY_ENVELOPE_V0_RUNNER.cjs",
+            "scripts/legacy/delivery/ACCEPTANCE_DELIVERY_ENVELOPE_V0_RUNNER.cjs",
             "ACCEPTANCE_DELIVERY_ENVELOPE_V0_RUNNER"
           ]
         }
       ]
     },
     {
-      "file": "scripts/DELIVERY/EXPORT_EVIDENCE_PACK_V0.ps1",
+      "file": "scripts/legacy/delivery/EXPORT_EVIDENCE_PACK_V0.ps1",
       "classification": "delivery_domain_reference_or_legacy_compatibility",
       "strong_reference_count": 1,
       "strong_references": [
         {
           "source": "README_MIGRATION.md",
           "tokens": [
-            "scripts/DELIVERY/EXPORT_EVIDENCE_PACK_V0.ps1",
+            "scripts/legacy/delivery/EXPORT_EVIDENCE_PACK_V0.ps1",
             "EXPORT_EVIDENCE_PACK_V0"
           ]
         }
       ]
     },
     {
-      "file": "scripts/DELIVERY/EXPORT_EVIDENCE_PACK_V0_RUNNER.cjs",
+      "file": "scripts/legacy/delivery/EXPORT_EVIDENCE_PACK_V0_RUNNER.cjs",
       "classification": "delivery_domain_reference_or_legacy_compatibility",
       "strong_reference_count": 1,
       "strong_references": [
         {
           "source": "README_MIGRATION.md",
           "tokens": [
-            "scripts/DELIVERY/EXPORT_EVIDENCE_PACK_V0_RUNNER.cjs",
+            "scripts/legacy/delivery/EXPORT_EVIDENCE_PACK_V0_RUNNER.cjs",
             "EXPORT_EVIDENCE_PACK_V0_RUNNER"
           ]
         }
