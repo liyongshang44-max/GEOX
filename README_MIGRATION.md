@@ -933,3 +933,89 @@ Post-P11 baseline:
 - P11 does not prove persisted object creation, server runtime adapter operation, DB migration correctness, production write safety, dashboard use, recommendation use, or AO-ACT use.
 - P12 may only begin controlled persistence adapter implementation after a new phase contract.
 
+
+---
+
+## P12 Controlled Persistence Adapter v0 / Human-Gated Twin Object Materialization Freeze Closure
+
+Key anchors:
+
+- Branch: main
+- Baseline tag: p11_controlled_persistence_preconditions_runtime_adapter_design_gate
+- Baseline commit: 6673ee53
+- Final closure tag: p12_controlled_persistence_adapter_human_gated_materialization_v0
+- Acceptance:
+  - node scripts/governance_acceptance/P12_07_CONTROLLED_PERSISTENCE_ADAPTER_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P12_08_UNAUTHORIZED_NEGATIVE_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P12_09_IDEMPOTENCY_REPLAY_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P12_10_CONFLICT_REQUIRES_REVIEW_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P12_12_COMPLETION_REVIEW_ACCEPTANCE.cjs
+
+Frozen scope:
+
+- P12 Controlled Persistence Adapter v0 / Human-Gated Twin Object Materialization is complete.
+- P11 policy-covered candidate envelopes can be materialized only with explicit human authorization.
+- Deterministic object identity is used.
+- Deterministic idempotency prevents duplicate writes.
+- Same identity with different payload is blocked as conflict_requires_review.
+- Audit events are created for authorized persistence.
+- Source refs preserve provenance.
+- Lifecycle state supports active, superseded, and retracted.
+- No dashboard, recommendation, AO-ACT, Field Memory, or model authority is granted.
+
+Freeze closure result:
+
+- candidate_count = 7
+- authorized_candidate_count = 7
+- persisted_object_count = 7
+- created_object_count = 7
+- created_version_count = 7
+- source_ref_count = 7
+- audit_event_count = 7
+- idempotency_key_count = 7
+- first_run_created_object_count = 7
+- second_run_created_object_count = 0
+- second_run_duplicate_same_object_count = 7
+- total_object_count_after_second_run = 7
+- total_idempotency_key_count_after_second_run = 7
+- unauthorized_write_blocked = true
+- wrong_scope_write_blocked = true
+- conflict_requires_review = true
+- silent_overwrite = false
+- dashboard_authority = false
+- recommendation_created = false
+- ao_act_task_created = false
+- fact_write_count = 0
+- field_memory_write_count = 0
+- model_update_count = 0
+- runtime_surface_changed = false
+- forbidden_path_diff_count = 0
+
+Hard boundaries:
+
+- No frontend change
+- No dashboard action
+- No recommendation creation
+- No AO-ACT task creation
+- No dispatch
+- No receipt
+- No Field Memory write
+- No model update
+- No calibration application to active model
+- No automatic learning
+- No automatic persistence without explicit authorization
+- No raw_samples mutation
+- No P8 replay invocation by default
+- No bulk production write
+- No scheduler or background job
+- No CI secret dependency
+- No public server route
+- No package manager change
+
+Post-P12 baseline:
+
+- Next phase must start after tag p12_controlled_persistence_adapter_human_gated_materialization_v0.
+- P12 proves internal controlled persistence adapter v0 only.
+- P12 does not prove dashboard usability, recommendation correctness, AO-ACT execution readiness, model learning readiness, production authorization UX, or production multi-user concurrency.
+- P13 may consider server internal API, operator review UI, read-model projection, lifecycle operations, and production authorization hardening only under a new phase contract.
+
