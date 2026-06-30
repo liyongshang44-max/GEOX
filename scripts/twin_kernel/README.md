@@ -169,3 +169,30 @@ default_suite_preserved = legacy
 ```
 
 The unified suite lists and runs the P9 governance acceptance chain from P9-00 through P9-05. It does not change replay scripts, server runtime, database schema, frontend state, or model state.
+
+---
+
+## P9-06 Replay Artifact Mapping Contract v0
+
+Mapping contract:
+
+```text
+docs/twin_kernel/REPLAY_ARTIFACT_MAPPING_CONTRACT_V0.json
+```
+
+Acceptance:
+
+```text
+scripts/governance_acceptance/P9_06_REPLAY_ARTIFACT_MAPPING_CONTRACT_V0_ACCEPTANCE.cjs
+```
+
+Mapping rule:
+
+```text
+candidate_mapping_only = true
+not_executable_without_future_adapter
+p8_artifacts_are_not_persisted_twin_objects = true
+automatic_materialization_allowed = false
+```
+
+The mapping contract describes possible future target object classes only. It does not execute mappings, write persisted Twin Kernel objects, write facts, update models, create Field Memory, or create AO-ACT tasks.
