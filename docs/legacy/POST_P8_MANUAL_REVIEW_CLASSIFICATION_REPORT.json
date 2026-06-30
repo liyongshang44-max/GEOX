@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-30T05:55:42.203Z",
+  "generated_at": "2026-06-30T06:49:36.991Z",
   "report": "POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT",
   "input_plan": "docs/legacy/POST_P8_REPO_WIDE_CLEANUP_PLAN.json",
   "output_report": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
@@ -11464,5 +11464,5 @@
     "no_runtime_change": true,
     "next_step_requires_group_decision": true
   },
-  "git_head": "e0db5cf3b44731d892671080cda28aa5670b0daf"
+  "git_head": "6c27522575fedf9316a133efdf738cbfc6f9ac3b"
 }
