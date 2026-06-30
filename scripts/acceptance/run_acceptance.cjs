@@ -85,6 +85,18 @@ const STEP_DEFINITIONS_BY_SUITE = {
       command: 'node scripts/governance_acceptance/P9_05_ACCEPTANCE_ENTRY_UNIFICATION_ACCEPTANCE.cjs',
       logFile: 'P9_05_ACCEPTANCE_ENTRY_UNIFICATION.log',
       notes: 'Verifies P9-05 acceptance entrypoint unification.'
+    },
+    {
+      id: 'P9_06_REPLAY_ARTIFACT_MAPPING_CONTRACT_V0',
+      command: 'node scripts/governance_acceptance/P9_06_REPLAY_ARTIFACT_MAPPING_CONTRACT_V0_ACCEPTANCE.cjs',
+      logFile: 'P9_06_REPLAY_ARTIFACT_MAPPING_CONTRACT_V0.log',
+      notes: 'Verifies P9-06 replay artifact mapping contract v0.'
+    },
+    {
+      id: 'P9_07_TWIN_KERNEL_CONVERGENCE_COMPLETION_REVIEW',
+      command: 'node scripts/governance_acceptance/P9_07_TWIN_KERNEL_CONVERGENCE_COMPLETION_REVIEW_ACCEPTANCE.cjs',
+      logFile: 'P9_07_TWIN_KERNEL_CONVERGENCE_COMPLETION_REVIEW.log',
+      notes: 'Verifies P9-07 Twin Kernel convergence completion review.'
     }
   ]
 };
