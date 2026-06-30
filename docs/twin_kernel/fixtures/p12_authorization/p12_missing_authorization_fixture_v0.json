@@ -1,0 +1,9 @@
+{
+  "schema_version": "p12_missing_authorization_fixture_v0",
+  "authorization_ref": null,
+  "operator_review_ref": null,
+  "actor": "human_operator",
+  "authorization_scope": null,
+  "human_authorization_present": false,
+  "persistence_execution_allowed": false
+}

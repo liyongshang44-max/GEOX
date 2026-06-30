@@ -1,0 +1,15 @@
+{
+  "schema_version": "persistence_execution_authority_contract_v0",
+  "phase": "P12",
+  "controlled_persistence_execution_allowed": true,
+  "default_write_allowed": false,
+  "explicit_human_authorization_required": true,
+  "operator_review_required": true,
+  "server_route_allowed": false,
+  "dashboard_authority": false,
+  "ao_act_authority": false,
+  "field_memory_write_allowed": false,
+  "model_update_allowed": false,
+  "automatic_persistence_allowed": false,
+  "public_http_route_allowed": false
+}

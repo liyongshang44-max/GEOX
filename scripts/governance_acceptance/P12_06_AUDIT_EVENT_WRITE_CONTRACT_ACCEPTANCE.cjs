@@ -1,0 +1,3 @@
+// scripts/governance_acceptance/P12_06_AUDIT_EVENT_WRITE_CONTRACT_ACCEPTANCE.cjs
+'use strict';
+require('./P12_ACCEPTANCE_HELPERS.cjs').run('P12_06_AUDIT_EVENT_WRITE_CONTRACT_ACCEPTANCE');

@@ -1,0 +1,28 @@
+{
+  "schema_version": "persisted_twin_object_schema_contract_v0",
+  "object_id_prefix": "tobj_",
+  "version_id_prefix": "tobjv_",
+  "required_tables": [
+    "twin_objects",
+    "twin_object_versions",
+    "twin_object_source_refs",
+    "twin_object_audit_events",
+    "twin_object_idempotency_keys"
+  ],
+  "forbidden_fields": [
+    "recommendation_id",
+    "ao_act_task_id",
+    "dispatch_id",
+    "receipt_id",
+    "field_memory_id",
+    "model_update_id",
+    "dashboard_authority"
+  ],
+  "authority_grants": {
+    "dashboard_authority": false,
+    "recommendation_authority": false,
+    "ao_act_authority": false,
+    "field_memory_authority": false,
+    "model_update_authority": false
+  }
+}

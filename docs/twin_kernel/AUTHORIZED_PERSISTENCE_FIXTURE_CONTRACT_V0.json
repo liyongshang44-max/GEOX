@@ -1,0 +1,20 @@
+{
+  "schema_version": "authorized_persistence_fixture_contract_v0",
+  "required_fields": [
+    "schema_version",
+    "authorization_ref",
+    "operator_review_ref",
+    "actor",
+    "authorization_scope",
+    "human_authorization_present",
+    "persistence_execution_allowed"
+  ],
+  "required_scope_fields": [
+    "case_id",
+    "candidate_bundle_schema_version",
+    "preflight_report_schema_version",
+    "allowed_candidate_ids"
+  ],
+  "acceptance_pass_is_authorization": false,
+  "dashboard_view_is_authorization": false
+}

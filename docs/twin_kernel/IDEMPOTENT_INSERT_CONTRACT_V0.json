@@ -1,0 +1,11 @@
+{
+  "schema_version": "idempotent_insert_contract_v0",
+  "rules": {
+    "same_identity_same_payload_hash": "duplicate_same_object",
+    "same_identity_different_payload_hash": "conflict_requires_review",
+    "different_identity": "insert_object_version_source_ref_audit_idempotency"
+  },
+  "silent_overwrite_allowed": false,
+  "duplicate_object_creation_allowed": false,
+  "conflict_write_allowed": false
+}

@@ -1,0 +1,19 @@
+{
+  "schema_version": "audit_event_write_contract_v0",
+  "successful_persistence_audit_event_required": true,
+  "blocked_decision_audit_required": true,
+  "conflict_decision_audit_required": true,
+  "required_fields": [
+    "actor",
+    "authorization_ref",
+    "operator_review_ref",
+    "source_candidate_id",
+    "future_object_identity_key",
+    "idempotency_key",
+    "policy_version",
+    "decision",
+    "blocked_reason",
+    "timestamp",
+    "source_evidence_refs"
+  ]
+}
