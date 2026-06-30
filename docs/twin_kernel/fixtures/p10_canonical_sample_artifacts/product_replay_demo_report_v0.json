@@ -1,0 +1,23 @@
+{
+  "artifact_kind": "product_replay_demo_report_v0",
+  "schema_version": "product_replay_demo_report_v0",
+  "case_id": "p8_real_evidence_closed_loop_caf009_soil_moisture_v0",
+  "data_availability_class": "committed_fixture",
+  "trace_steps_json": [
+    "past evidence window selected",
+    "state estimated",
+    "future estimated",
+    "actual observation compared",
+    "error summarized",
+    "calibration candidate reported without application"
+  ],
+  "explanation_metadata": {
+    "audience": "external_replay_demo",
+    "prediction_is_authorization": false,
+    "calibration_candidate_is_model_update": false
+  },
+  "evidence_refs": [
+    { "kind": "artifact_ref", "ref_id": "real_evidence_window_v0" },
+    { "kind": "artifact_ref", "ref_id": "real_backtest_error_report_v1" }
+  ]
+}
