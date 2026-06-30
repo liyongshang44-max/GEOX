@@ -1,0 +1,21 @@
+{
+  "schema_version": "recommendation_read_model_template_allowlist_v0",
+  "template_allowlist_committed": true,
+  "template_count": 9,
+  "template_id_required": true,
+  "template_id_from_committed_allowlist": true,
+  "template_text_hash_matches_template_id": true,
+  "rendered_text_sections_match_committed_templates": true,
+  "rendered_text_contains_only_allowed_template_outputs": true,
+  "templates": {
+    "recommendation_title_context_label_v0": {"section": "recommendation_title", "text": "Governed recommendation context for {twin_subject_ref}"},
+    "recommendation_rationale_governance_explanation_v0": {"section": "recommendation_rationale", "text": "This read model summarizes an approved governance record. It does not authorize action."},
+    "evidence_summary_refs_available_v0": {"section": "evidence_summary", "text": "Evidence references are available through the cited source refs."},
+    "uncertainty_summary_refs_available_v0": {"section": "uncertainty_summary", "text": "Uncertainty remains represented by the cited uncertainty refs."},
+    "constraints_summary_review_only_v0": {"section": "constraints_summary", "text": "Constraints are summarized for review. They are not executable parameters."},
+    "approval_governance_status_only_v0": {"section": "approval_governance_summary", "text": "Human approval was recorded for governance status only."},
+    "human_review_before_downstream_translation_or_approval_v0": {"section": "human_review_required", "text": "Further human review is required before downstream action translation or approval."},
+    "downstream_action_translation_required_v0": {"section": "downstream_action_translation_required", "text": "Downstream action translation is required before any action candidate can be proposed."},
+    "downstream_action_approval_required_v0": {"section": "downstream_action_approval_required", "text": "Downstream action approval is required before any execution task can exist."}
+  }
+}
