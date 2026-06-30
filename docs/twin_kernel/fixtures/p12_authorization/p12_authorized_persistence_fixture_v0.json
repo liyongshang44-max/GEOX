@@ -1,0 +1,25 @@
+{
+  "schema_version": "p12_authorized_persistence_fixture_v0",
+  "authorization_ref": "auth_p12_controlled_persistence_caf009_v0",
+  "operator_review_ref": "review_p12_controlled_persistence_caf009_v0",
+  "actor": "human_operator",
+  "authorization_scope": {
+    "case_id": "p8_real_evidence_closed_loop_caf009_soil_moisture_v0",
+    "candidate_bundle_schema_version": "candidate_twin_object_bundle_v0",
+    "preflight_report_schema_version": "persistence_preflight_report_v0",
+    "allowed_candidate_ids": [
+      "cand_p10_01_real_evidence_window_v0",
+      "cand_p10_02_real_soil_moisture_state_estimate_v1",
+      "cand_p10_03_real_soil_moisture_prediction_run_v1",
+      "cand_p10_04_real_actual_observation_window_v0",
+      "cand_p10_05_real_backtest_error_report_v1",
+      "cand_p10_06_real_calibration_report_v1",
+      "cand_p10_07_product_replay_demo_report_v0"
+    ]
+  },
+  "human_authorization_present": true,
+  "persistence_execution_allowed": true,
+  "dashboard_authority_granted": false,
+  "ao_act_authority_granted": false,
+  "model_update_authority_granted": false
+}

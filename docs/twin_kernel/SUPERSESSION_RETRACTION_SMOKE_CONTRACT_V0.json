@@ -1,0 +1,12 @@
+{
+  "schema_version": "supersession_retraction_smoke_contract_v0",
+  "hard_delete_allowed": false,
+  "silent_overwrite_allowed": false,
+  "supported_lifecycle_states": [
+    "active",
+    "superseded",
+    "retracted"
+  ],
+  "supersession_event_requires_audit": true,
+  "retraction_event_requires_audit": true
+}

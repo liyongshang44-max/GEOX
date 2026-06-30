@@ -1,0 +1,6 @@
+{
+  "schema_version": "p12_conflicting_candidate_payload_fixture_v0",
+  "source_candidate_id": "cand_p10_01_real_evidence_window_v0",
+  "same_identity_different_payload_hash": true,
+  "conflicting_payload_hash": "conflict_hash_p12_v0"
+}

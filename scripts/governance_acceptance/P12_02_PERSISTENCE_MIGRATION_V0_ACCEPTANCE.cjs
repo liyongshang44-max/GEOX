@@ -1,0 +1,3 @@
+// scripts/governance_acceptance/P12_02_PERSISTENCE_MIGRATION_V0_ACCEPTANCE.cjs
+'use strict';
+require('./P12_ACCEPTANCE_HELPERS.cjs').run('P12_02_PERSISTENCE_MIGRATION_V0_ACCEPTANCE');
