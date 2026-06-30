@@ -1,0 +1,15 @@
+{
+  "schema_version": "recommendation_render_conflict_policy_v0",
+  "same_approved_record_changed_render_output_conflict_requires_review": true,
+  "changed_render_output_does_not_overwrite_existing_read_model": true,
+  "existing_read_model_unchanged": true,
+  "existing_render_policy_unchanged": true,
+  "changed_render_conflict_packet_emitted": true,
+  "changed_render_conflict_packet_persisted": false,
+  "duplicate_read_model_created_count": 0,
+  "duplicate_render_output_created_count": 0,
+  "existing_read_model_overwritten": false,
+  "existing_read_model_deleted": false,
+  "existing_render_policy_replaced": false,
+  "silent_render_output_overwrite_allowed": false
+}
