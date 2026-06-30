@@ -1,0 +1,17 @@
+{
+  "schema_version": "idempotency_policy_v1",
+  "status": "p11_03_design_only",
+  "idempotency_key_prefix": "idem_",
+  "future_idempotency_only": true,
+  "deduplication_write_allowed": false,
+  "rules": {
+    "same_identity_same_payload_hash": "duplicate_same_object",
+    "same_identity_different_payload_hash": "conflict_requires_review",
+    "different_identity": "new_candidate_line"
+  },
+  "required_inputs": [
+    "future_object_identity_key",
+    "candidate_payload_canonical_hash",
+    "policy_version"
+  ]
+}

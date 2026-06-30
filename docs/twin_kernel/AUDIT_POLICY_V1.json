@@ -1,0 +1,19 @@
+{
+  "schema_version": "audit_policy_v1",
+  "status": "p11_05_design_only",
+  "audit_write_allowed_by_p11": false,
+  "future_audit_required": true,
+  "required_future_audit_fields": [
+    "actor",
+    "authorization_ref",
+    "operator_review_ref",
+    "source_candidate_id",
+    "future_object_identity_key",
+    "idempotency_key",
+    "policy_version",
+    "decision",
+    "blocked_reason",
+    "timestamp",
+    "source_evidence_refs"
+  ]
+}

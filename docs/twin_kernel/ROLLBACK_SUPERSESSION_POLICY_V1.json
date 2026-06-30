@@ -1,0 +1,16 @@
+{
+  "schema_version": "rollback_supersession_policy_v1",
+  "status": "p11_06_design_only",
+  "append_only_required": true,
+  "hard_delete_allowed": false,
+  "silent_overwrite_allowed": false,
+  "rollback_must_be_audited": true,
+  "original_evidence_must_remain_traceable": true,
+  "state_machine": [
+    "candidate",
+    "persisted_active",
+    "superseded",
+    "retracted"
+  ],
+  "p11_uses_state_machine": false
+}
