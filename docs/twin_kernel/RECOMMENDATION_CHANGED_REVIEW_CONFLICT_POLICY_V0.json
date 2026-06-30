@@ -1,0 +1,15 @@
+{
+  "schema_version": "recommendation_changed_review_conflict_policy_v0",
+  "same_candidate_changed_review_decision_conflict_requires_review": true,
+  "changed_review_decision_does_not_overwrite_existing_decision": true,
+  "existing_review_decision_unchanged": true,
+  "existing_draft_envelope_unchanged": true,
+  "changed_review_decision_conflict_packet_emitted": true,
+  "changed_review_decision_conflict_packet_persisted": false,
+  "duplicate_review_decision_created_count": 0,
+  "duplicate_draft_envelope_created_count": 0,
+  "existing_review_decision_overwritten": false,
+  "existing_draft_envelope_replaced": false,
+  "existing_draft_envelope_deleted": false,
+  "silent_review_decision_overwrite_allowed": false
+}

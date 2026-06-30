@@ -1,0 +1,12 @@
+{
+  "schema_version": "recommendation_review_decision_schema_v0",
+  "required_fields": ["recommendation_review_decision_id", "recommendation_review_packet_id", "review_decision", "reviewer_ref", "review_policy_version", "decision_reason", "source_refs", "policy_refs"],
+  "allowed_review_decisions": ["accepted_for_draft", "rejected", "needs_more_evidence"],
+  "forbidden_review_decisions": ["approved", "approved_for_action", "approved_for_ao_act", "dispatch_ready", "operator_should_act"],
+  "review_decision_emitted": true,
+  "persisted_review_decision_count": 0,
+  "approved_recommendation_count": 0,
+  "action_approval_count": 0,
+  "ao_act_task_count": 0,
+  "db_write_count": 0
+}
