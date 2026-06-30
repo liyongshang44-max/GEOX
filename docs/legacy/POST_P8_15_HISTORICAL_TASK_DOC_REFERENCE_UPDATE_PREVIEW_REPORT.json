@@ -1,0 +1,4338 @@
+{
+  "generated_at": "2026-06-30T07:59:05.764Z",
+  "report": "POST_P8_15_HISTORICAL_TASK_DOC_REFERENCE_UPDATE_PREVIEW_REPORT",
+  "input_plan_report": "docs/legacy/POST_P8_13_HISTORICAL_TASK_DOC_REFERENCE_UPDATE_PLAN.json",
+  "input_gate_report": "docs/legacy/POST_P8_14_HISTORICAL_TASK_DOC_REFERENCE_UPDATE_APPLY_GATE_REPORT.json",
+  "output_report": "docs/legacy/POST_P8_15_HISTORICAL_TASK_DOC_REFERENCE_UPDATE_PREVIEW_REPORT.json",
+  "selected_group": "historical_task_doc",
+  "reference_update_file_count": 48,
+  "reference_update_plan_item_count": 371,
+  "expected_exact_reference_count": 585,
+  "observed_exact_reference_count": 585,
+  "affected_referencing_file_count": 75,
+  "mismatch_count": 0,
+  "apply_allowed": false,
+  "gate_open": false,
+  "referencing_file_summaries": [
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "expected_exact_reference_count": 48,
+      "observed_exact_reference_count": 48,
+      "plan_item_count": 48,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "expected_exact_reference_count": 258,
+      "observed_exact_reference_count": 258,
+      "plan_item_count": 48,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "expected_exact_reference_count": 30,
+      "observed_exact_reference_count": 30,
+      "plan_item_count": 30,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "expected_exact_reference_count": 48,
+      "observed_exact_reference_count": 48,
+      "plan_item_count": 48,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "expected_exact_reference_count": 48,
+      "observed_exact_reference_count": 48,
+      "plan_item_count": 48,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/tasks/P1-Completion-Review-Before-P2.md",
+      "expected_exact_reference_count": 6,
+      "observed_exact_reference_count": 6,
+      "plan_item_count": 6,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/tasks/P4-01-ROI-Source-Boundary-Reconciliation.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "expected_exact_reference_count": 5,
+      "observed_exact_reference_count": 5,
+      "plan_item_count": 5,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P6-01-Execution-Source-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P6-07-Execution-Completion-Review.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P7-03-Prediction-Run-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P7-05-Calibration-Report-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "expected_exact_reference_count": 8,
+      "observed_exact_reference_count": 8,
+      "plan_item_count": 7,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P8-00-Real-Evidence-Closed-Loop-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/ACCEPTANCE_H54_FINAL_INDEX_V1.cjs",
+      "expected_exact_reference_count": 11,
+      "observed_exact_reference_count": 11,
+      "plan_item_count": 10,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/H57_PREFLIGHT_AUDIT.cjs",
+      "expected_exact_reference_count": 4,
+      "observed_exact_reference_count": 4,
+      "plan_item_count": 4,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/H57_ROI_GOVERNANCE_BOUNDARY.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/H58_FIELD_MEMORY_GOVERNANCE_BOUNDARY.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P1_COMPLETION_REVIEW_BEFORE_P2.cjs",
+      "expected_exact_reference_count": 7,
+      "observed_exact_reference_count": 7,
+      "plan_item_count": 7,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P2_REAL_ADAPTER_INTEGRATION_PLANNING.cjs",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P4_01_ROI_SOURCE_BOUNDARY_RECONCILIATION.cjs",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P4_04_ROI_NEGATIVE_BOUNDARY_MATRIX.cjs",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P4_05_ROI_COMPLETION_REVIEW_BEFORE_P5.cjs",
+      "expected_exact_reference_count": 3,
+      "observed_exact_reference_count": 3,
+      "plan_item_count": 3,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P4_POLICY_CONTROLLED_ROI_PLANNING.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_00_POLICY_CONTROLLED_FIELD_MEMORY_GOVERNANCE_PLANNING.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_01_FIELD_MEMORY_ELIGIBILITY_SOURCE_BOUNDARY.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_02_FIELD_MEMORY_POLICY_GATE_CONTRACT.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_03_FIELD_MEMORY_FORMALIZATION_OUTPUT_CONTRACT.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_04_FIELD_MEMORY_NEGATIVE_BOUNDARY_MATRIX.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_05_FIELD_MEMORY_COMPLETION_REVIEW_BEFORE_P6.cjs",
+      "expected_exact_reference_count": 6,
+      "observed_exact_reference_count": 6,
+      "plan_item_count": 6,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_00_EXECUTION_SYSTEM_INTEGRATION_PLANNING.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_01_EXECUTION_SOURCE_BOUNDARY.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_02_EXECUTION_AUTHORIZATION_GATE_CONTRACT.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_03_EXECUTION_DISPATCH_OUTPUT_CONTRACT.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_04_EXECUTION_RECEIPT_INTAKE_CONTRACT.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_05_EXECUTION_AUDIT_TRACE_CONTRACT.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_06_EXECUTION_NEGATIVE_BOUNDARY_MATRIX.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs",
+      "expected_exact_reference_count": 10,
+      "observed_exact_reference_count": 10,
+      "plan_item_count": 8,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_00_TWIN_KERNEL_MINIMAL_RUNTIME_PLANNING.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_01_TWIN_EVIDENCE_WINDOW_CONTRACT.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_02_SOIL_MOISTURE_STATE_ESTIMATE_V0.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_03_PREDICTION_RUN_V0.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_04_BACKTEST_ERROR_REPORT_V0.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_05_CALIBRATION_REPORT_V0.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_06_REPLAY_EXPERIMENT_BUNDLE_V0.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_07_TWIN_KERNEL_COMPLETION_REVIEW.cjs",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_01_PRODUCTION_HARDENING_BASELINE.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_02_STRONG_MULTI_SCOPE_FIXTURE_PACK.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_03_INGESTION_IDEMPOTENCY_ERROR_TAXONOMY.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_04_ROUTE_NEGATIVE_RUNTIME_MATRIX.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_05_DB_INDEX_QUERY_COST_AUDIT.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_06_DOCKER_STARTUP_MIGRATION_RUNNER_BASELINE.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_PHASE_LINE_FREEZE.cjs",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "plan_item_count": 2,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/TK0_TWIN_KERNEL_PREFLIGHT_AUDIT.cjs",
+      "expected_exact_reference_count": 3,
+      "observed_exact_reference_count": 3,
+      "plan_item_count": 3,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/TK5_FIELD_LEARNING_CANDIDATE_V1_ACCEPTANCE.cjs",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/twin_kernel/fixtures/P7_02_EVIDENCE_WINDOW_CAF009_SAMPLE.json",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/twin_kernel/P7_06_REPLAY_EXPERIMENT_BUNDLE_V0.cjs",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "plan_item_count": 1,
+      "all_counts_matched": true,
+      "apply_allowed": false
+    }
+  ],
+  "checks": [
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/H54-Final-Index.md",
+      "planned_destination": "docs/legacy/tasks/H54-Final-Index.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/H54.0-Control-Connector-Preflight.md",
+      "planned_destination": "docs/legacy/tasks/H54.0-Control-Connector-Preflight.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
+      "planned_destination": "docs/legacy/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
+      "planned_destination": "docs/legacy/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/H54.3-Approval-Decision-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.3-Approval-Decision-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/H54.4-Operation-Plan-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.4-Operation-Plan-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/H54.5-Task-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.5-Task-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/H54.6-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.6-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/H54.7-As-Executed-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.7-As-Executed-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/H54.8-Evidence-Artifact-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.8-Evidence-Artifact-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/H55-Acceptance-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H55-Acceptance-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/H55-Final-Index.md",
+      "planned_destination": "docs/legacy/tasks/H55-Final-Index.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/H56-Water-Response-Verification-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H56-Water-Response-Verification-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
+      "planned_destination": "docs/legacy/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/H57-ROI-Governance-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H57-ROI-Governance-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/H58-Field-Memory-Governance-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H58-Field-Memory-Governance-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "planned_destination": "docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "planned_destination": "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/P6-01-Execution-Source-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/P6-01-Execution-Source-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/P6-07-Execution-Completion-Review.md",
+      "planned_destination": "docs/legacy/tasks/P6-07-Execution-Completion-Review.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/P7-03-Prediction-Run-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-03-Prediction-Run-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/P7-05-Calibration-Report-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-05-Calibration-Report-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "planned_destination": "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "planned_destination": "docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "source_file": "docs/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/H54-Final-Index.md",
+      "planned_destination": "docs/legacy/tasks/H54-Final-Index.md",
+      "expected_exact_reference_count": 3,
+      "observed_exact_reference_count": 3,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/H54.0-Control-Connector-Preflight.md",
+      "planned_destination": "docs/legacy/tasks/H54.0-Control-Connector-Preflight.md",
+      "expected_exact_reference_count": 4,
+      "observed_exact_reference_count": 4,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
+      "planned_destination": "docs/legacy/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
+      "expected_exact_reference_count": 5,
+      "observed_exact_reference_count": 5,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
+      "planned_destination": "docs/legacy/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
+      "expected_exact_reference_count": 4,
+      "observed_exact_reference_count": 4,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/H54.3-Approval-Decision-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.3-Approval-Decision-Linkage.md",
+      "expected_exact_reference_count": 4,
+      "observed_exact_reference_count": 4,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/H54.4-Operation-Plan-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.4-Operation-Plan-Linkage.md",
+      "expected_exact_reference_count": 4,
+      "observed_exact_reference_count": 4,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/H54.5-Task-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.5-Task-Linkage.md",
+      "expected_exact_reference_count": 4,
+      "observed_exact_reference_count": 4,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/H54.6-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.6-Linkage.md",
+      "expected_exact_reference_count": 4,
+      "observed_exact_reference_count": 4,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/H54.7-As-Executed-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.7-As-Executed-Linkage.md",
+      "expected_exact_reference_count": 4,
+      "observed_exact_reference_count": 4,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/H54.8-Evidence-Artifact-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.8-Evidence-Artifact-Linkage.md",
+      "expected_exact_reference_count": 4,
+      "observed_exact_reference_count": 4,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/H55-Acceptance-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H55-Acceptance-Boundary.md",
+      "expected_exact_reference_count": 4,
+      "observed_exact_reference_count": 4,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/H55-Final-Index.md",
+      "planned_destination": "docs/legacy/tasks/H55-Final-Index.md",
+      "expected_exact_reference_count": 3,
+      "observed_exact_reference_count": 3,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/H56-Water-Response-Verification-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H56-Water-Response-Verification-Boundary.md",
+      "expected_exact_reference_count": 4,
+      "observed_exact_reference_count": 4,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
+      "planned_destination": "docs/legacy/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
+      "expected_exact_reference_count": 5,
+      "observed_exact_reference_count": 5,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/H57-ROI-Governance-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H57-ROI-Governance-Boundary.md",
+      "expected_exact_reference_count": 4,
+      "observed_exact_reference_count": 4,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/H58-Field-Memory-Governance-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H58-Field-Memory-Governance-Boundary.md",
+      "expected_exact_reference_count": 4,
+      "observed_exact_reference_count": 4,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+      "expected_exact_reference_count": 5,
+      "observed_exact_reference_count": 5,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "planned_destination": "docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "expected_exact_reference_count": 11,
+      "observed_exact_reference_count": 11,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "expected_exact_reference_count": 4,
+      "observed_exact_reference_count": 4,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "expected_exact_reference_count": 6,
+      "observed_exact_reference_count": 6,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "expected_exact_reference_count": 6,
+      "observed_exact_reference_count": 6,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "expected_exact_reference_count": 6,
+      "observed_exact_reference_count": 6,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "expected_exact_reference_count": 6,
+      "observed_exact_reference_count": 6,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "expected_exact_reference_count": 6,
+      "observed_exact_reference_count": 6,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "planned_destination": "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "expected_exact_reference_count": 14,
+      "observed_exact_reference_count": 14,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "expected_exact_reference_count": 6,
+      "observed_exact_reference_count": 6,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/P6-01-Execution-Source-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/P6-01-Execution-Source-Boundary.md",
+      "expected_exact_reference_count": 6,
+      "observed_exact_reference_count": 6,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "expected_exact_reference_count": 6,
+      "observed_exact_reference_count": 6,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "expected_exact_reference_count": 6,
+      "observed_exact_reference_count": 6,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "expected_exact_reference_count": 6,
+      "observed_exact_reference_count": 6,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "expected_exact_reference_count": 5,
+      "observed_exact_reference_count": 5,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+      "expected_exact_reference_count": 5,
+      "observed_exact_reference_count": 5,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/P6-07-Execution-Completion-Review.md",
+      "planned_destination": "docs/legacy/tasks/P6-07-Execution-Completion-Review.md",
+      "expected_exact_reference_count": 5,
+      "observed_exact_reference_count": 5,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
+      "expected_exact_reference_count": 3,
+      "observed_exact_reference_count": 3,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "expected_exact_reference_count": 5,
+      "observed_exact_reference_count": 5,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "expected_exact_reference_count": 7,
+      "observed_exact_reference_count": 7,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/P7-03-Prediction-Run-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-03-Prediction-Run-v0.md",
+      "expected_exact_reference_count": 6,
+      "observed_exact_reference_count": 6,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "expected_exact_reference_count": 7,
+      "observed_exact_reference_count": 7,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/P7-05-Calibration-Report-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-05-Calibration-Report-v0.md",
+      "expected_exact_reference_count": 6,
+      "observed_exact_reference_count": 6,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
+      "expected_exact_reference_count": 5,
+      "observed_exact_reference_count": 5,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "planned_destination": "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "expected_exact_reference_count": 20,
+      "observed_exact_reference_count": 20,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "planned_destination": "docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "expected_exact_reference_count": 4,
+      "observed_exact_reference_count": 4,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "expected_exact_reference_count": 7,
+      "observed_exact_reference_count": 7,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
+      "expected_exact_reference_count": 3,
+      "observed_exact_reference_count": 3,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
+      "expected_exact_reference_count": 3,
+      "observed_exact_reference_count": 3,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
+      "expected_exact_reference_count": 3,
+      "observed_exact_reference_count": 3,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
+      "expected_exact_reference_count": 3,
+      "observed_exact_reference_count": 3,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "source_file": "docs/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
+      "expected_exact_reference_count": 3,
+      "observed_exact_reference_count": 3,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/H54-Final-Index.md",
+      "planned_destination": "docs/legacy/tasks/H54-Final-Index.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/H54.0-Control-Connector-Preflight.md",
+      "planned_destination": "docs/legacy/tasks/H54.0-Control-Connector-Preflight.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
+      "planned_destination": "docs/legacy/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
+      "planned_destination": "docs/legacy/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/H54.3-Approval-Decision-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.3-Approval-Decision-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/H54.4-Operation-Plan-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.4-Operation-Plan-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/H54.5-Task-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.5-Task-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/H54.6-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.6-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/H54.7-As-Executed-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.7-As-Executed-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/H54.8-Evidence-Artifact-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.8-Evidence-Artifact-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/H55-Acceptance-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H55-Acceptance-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/H55-Final-Index.md",
+      "planned_destination": "docs/legacy/tasks/H55-Final-Index.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/H56-Water-Response-Verification-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H56-Water-Response-Verification-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
+      "planned_destination": "docs/legacy/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/H57-ROI-Governance-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H57-ROI-Governance-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/H58-Field-Memory-Governance-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H58-Field-Memory-Governance-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "planned_destination": "docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "planned_destination": "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/P6-01-Execution-Source-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/P6-01-Execution-Source-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "source_file": "docs/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/H54-Final-Index.md",
+      "planned_destination": "docs/legacy/tasks/H54-Final-Index.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/H54.0-Control-Connector-Preflight.md",
+      "planned_destination": "docs/legacy/tasks/H54.0-Control-Connector-Preflight.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
+      "planned_destination": "docs/legacy/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
+      "planned_destination": "docs/legacy/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/H54.3-Approval-Decision-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.3-Approval-Decision-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/H54.4-Operation-Plan-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.4-Operation-Plan-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/H54.5-Task-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.5-Task-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/H54.6-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.6-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/H54.7-As-Executed-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.7-As-Executed-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/H54.8-Evidence-Artifact-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.8-Evidence-Artifact-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/H55-Acceptance-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H55-Acceptance-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/H55-Final-Index.md",
+      "planned_destination": "docs/legacy/tasks/H55-Final-Index.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/H56-Water-Response-Verification-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H56-Water-Response-Verification-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
+      "planned_destination": "docs/legacy/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/H57-ROI-Governance-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H57-ROI-Governance-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/H58-Field-Memory-Governance-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H58-Field-Memory-Governance-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "planned_destination": "docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "planned_destination": "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/P6-01-Execution-Source-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/P6-01-Execution-Source-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/P6-07-Execution-Completion-Review.md",
+      "planned_destination": "docs/legacy/tasks/P6-07-Execution-Completion-Review.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/P7-03-Prediction-Run-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-03-Prediction-Run-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/P7-05-Calibration-Report-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-05-Calibration-Report-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "planned_destination": "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "planned_destination": "docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "source_file": "docs/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/H54-Final-Index.md",
+      "planned_destination": "docs/legacy/tasks/H54-Final-Index.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/H54.0-Control-Connector-Preflight.md",
+      "planned_destination": "docs/legacy/tasks/H54.0-Control-Connector-Preflight.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
+      "planned_destination": "docs/legacy/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
+      "planned_destination": "docs/legacy/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/H54.3-Approval-Decision-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.3-Approval-Decision-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/H54.4-Operation-Plan-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.4-Operation-Plan-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/H54.5-Task-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.5-Task-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/H54.6-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.6-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/H54.7-As-Executed-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.7-As-Executed-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/H54.8-Evidence-Artifact-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.8-Evidence-Artifact-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/H55-Acceptance-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H55-Acceptance-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/H55-Final-Index.md",
+      "planned_destination": "docs/legacy/tasks/H55-Final-Index.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/H56-Water-Response-Verification-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H56-Water-Response-Verification-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
+      "planned_destination": "docs/legacy/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/H57-ROI-Governance-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H57-ROI-Governance-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/H58-Field-Memory-Governance-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H58-Field-Memory-Governance-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "planned_destination": "docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "planned_destination": "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/P6-01-Execution-Source-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/P6-01-Execution-Source-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/P6-07-Execution-Completion-Review.md",
+      "planned_destination": "docs/legacy/tasks/P6-07-Execution-Completion-Review.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/P7-03-Prediction-Run-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-03-Prediction-Run-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/P7-05-Calibration-Report-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-05-Calibration-Report-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "planned_destination": "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "planned_destination": "docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "source_file": "docs/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/tasks/P1-Completion-Review-Before-P2.md",
+      "source_file": "docs/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/tasks/P1-Completion-Review-Before-P2.md",
+      "source_file": "docs/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/tasks/P1-Completion-Review-Before-P2.md",
+      "source_file": "docs/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/tasks/P1-Completion-Review-Before-P2.md",
+      "source_file": "docs/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/tasks/P1-Completion-Review-Before-P2.md",
+      "source_file": "docs/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/tasks/P1-Completion-Review-Before-P2.md",
+      "source_file": "docs/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/legacy/tasks/P4-01-ROI-Source-Boundary-Reconciliation.md",
+      "source_file": "docs/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "source_file": "docs/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "source_file": "docs/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "source_file": "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "planned_destination": "docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "source_file": "docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "source_file": "docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "source_file": "docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "source_file": "docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "source_file": "docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "source_file": "docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "source_file": "docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "source_file": "docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "source_file": "docs/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "source_file": "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "planned_destination": "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P6-01-Execution-Source-Boundary.md",
+      "source_file": "docs/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "source_file": "docs/tasks/P6-01-Execution-Source-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/P6-01-Execution-Source-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "source_file": "docs/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "source_file": "docs/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "source_file": "docs/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+      "source_file": "docs/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P6-07-Execution-Completion-Review.md",
+      "source_file": "docs/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "source_file": "docs/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "source_file": "docs/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P7-03-Prediction-Run-v0.md",
+      "source_file": "docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "source_file": "docs/tasks/P7-03-Prediction-Run-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-03-Prediction-Run-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P7-05-Calibration-Report-v0.md",
+      "source_file": "docs/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
+      "source_file": "docs/tasks/P7-05-Calibration-Report-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-05-Calibration-Report-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "source_file": "docs/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "source_file": "docs/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "source_file": "docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "source_file": "docs/tasks/P7-03-Prediction-Run-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-03-Prediction-Run-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "source_file": "docs/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "source_file": "docs/tasks/P7-05-Calibration-Report-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-05-Calibration-Report-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "source_file": "docs/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/P8-00-Real-Evidence-Closed-Loop-Planning.md",
+      "source_file": "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "planned_destination": "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "source_file": "docs/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "docs/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "source_file": "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "planned_destination": "docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/ACCEPTANCE_H54_FINAL_INDEX_V1.cjs",
+      "source_file": "docs/tasks/H54-Final-Index.md",
+      "planned_destination": "docs/legacy/tasks/H54-Final-Index.md",
+      "expected_exact_reference_count": 2,
+      "observed_exact_reference_count": 2,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/ACCEPTANCE_H54_FINAL_INDEX_V1.cjs",
+      "source_file": "docs/tasks/H54.0-Control-Connector-Preflight.md",
+      "planned_destination": "docs/legacy/tasks/H54.0-Control-Connector-Preflight.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/ACCEPTANCE_H54_FINAL_INDEX_V1.cjs",
+      "source_file": "docs/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
+      "planned_destination": "docs/legacy/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/ACCEPTANCE_H54_FINAL_INDEX_V1.cjs",
+      "source_file": "docs/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
+      "planned_destination": "docs/legacy/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/ACCEPTANCE_H54_FINAL_INDEX_V1.cjs",
+      "source_file": "docs/tasks/H54.3-Approval-Decision-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.3-Approval-Decision-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/ACCEPTANCE_H54_FINAL_INDEX_V1.cjs",
+      "source_file": "docs/tasks/H54.4-Operation-Plan-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.4-Operation-Plan-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/ACCEPTANCE_H54_FINAL_INDEX_V1.cjs",
+      "source_file": "docs/tasks/H54.5-Task-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.5-Task-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/ACCEPTANCE_H54_FINAL_INDEX_V1.cjs",
+      "source_file": "docs/tasks/H54.6-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.6-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/ACCEPTANCE_H54_FINAL_INDEX_V1.cjs",
+      "source_file": "docs/tasks/H54.7-As-Executed-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.7-As-Executed-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/ACCEPTANCE_H54_FINAL_INDEX_V1.cjs",
+      "source_file": "docs/tasks/H54.8-Evidence-Artifact-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.8-Evidence-Artifact-Linkage.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/H57_PREFLIGHT_AUDIT.cjs",
+      "source_file": "docs/tasks/H54-Final-Index.md",
+      "planned_destination": "docs/legacy/tasks/H54-Final-Index.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/H57_PREFLIGHT_AUDIT.cjs",
+      "source_file": "docs/tasks/H55-Acceptance-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H55-Acceptance-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/H57_PREFLIGHT_AUDIT.cjs",
+      "source_file": "docs/tasks/H55-Final-Index.md",
+      "planned_destination": "docs/legacy/tasks/H55-Final-Index.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/H57_PREFLIGHT_AUDIT.cjs",
+      "source_file": "docs/tasks/H56-Water-Response-Verification-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H56-Water-Response-Verification-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/H57_ROI_GOVERNANCE_BOUNDARY.cjs",
+      "source_file": "docs/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
+      "planned_destination": "docs/legacy/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/H57_ROI_GOVERNANCE_BOUNDARY.cjs",
+      "source_file": "docs/tasks/H57-ROI-Governance-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H57-ROI-Governance-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/H58_FIELD_MEMORY_GOVERNANCE_BOUNDARY.cjs",
+      "source_file": "docs/tasks/H57-ROI-Governance-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H57-ROI-Governance-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/H58_FIELD_MEMORY_GOVERNANCE_BOUNDARY.cjs",
+      "source_file": "docs/tasks/H58-Field-Memory-Governance-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H58-Field-Memory-Governance-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P1_COMPLETION_REVIEW_BEFORE_P2.cjs",
+      "source_file": "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "planned_destination": "docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P1_COMPLETION_REVIEW_BEFORE_P2.cjs",
+      "source_file": "docs/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P1_COMPLETION_REVIEW_BEFORE_P2.cjs",
+      "source_file": "docs/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P1_COMPLETION_REVIEW_BEFORE_P2.cjs",
+      "source_file": "docs/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P1_COMPLETION_REVIEW_BEFORE_P2.cjs",
+      "source_file": "docs/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P1_COMPLETION_REVIEW_BEFORE_P2.cjs",
+      "source_file": "docs/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P1_COMPLETION_REVIEW_BEFORE_P2.cjs",
+      "source_file": "docs/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P2_REAL_ADAPTER_INTEGRATION_PLANNING.cjs",
+      "source_file": "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "planned_destination": "docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P4_01_ROI_SOURCE_BOUNDARY_RECONCILIATION.cjs",
+      "source_file": "docs/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P4_04_ROI_NEGATIVE_BOUNDARY_MATRIX.cjs",
+      "source_file": "docs/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P4_05_ROI_COMPLETION_REVIEW_BEFORE_P5.cjs",
+      "source_file": "docs/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P4_05_ROI_COMPLETION_REVIEW_BEFORE_P5.cjs",
+      "source_file": "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "planned_destination": "docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P4_05_ROI_COMPLETION_REVIEW_BEFORE_P5.cjs",
+      "source_file": "docs/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P4_POLICY_CONTROLLED_ROI_PLANNING.cjs",
+      "source_file": "docs/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P4_POLICY_CONTROLLED_ROI_PLANNING.cjs",
+      "source_file": "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "planned_destination": "docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_00_POLICY_CONTROLLED_FIELD_MEMORY_GOVERNANCE_PLANNING.cjs",
+      "source_file": "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "planned_destination": "docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_00_POLICY_CONTROLLED_FIELD_MEMORY_GOVERNANCE_PLANNING.cjs",
+      "source_file": "docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_01_FIELD_MEMORY_ELIGIBILITY_SOURCE_BOUNDARY.cjs",
+      "source_file": "docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_01_FIELD_MEMORY_ELIGIBILITY_SOURCE_BOUNDARY.cjs",
+      "source_file": "docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_02_FIELD_MEMORY_POLICY_GATE_CONTRACT.cjs",
+      "source_file": "docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_02_FIELD_MEMORY_POLICY_GATE_CONTRACT.cjs",
+      "source_file": "docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_03_FIELD_MEMORY_FORMALIZATION_OUTPUT_CONTRACT.cjs",
+      "source_file": "docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_03_FIELD_MEMORY_FORMALIZATION_OUTPUT_CONTRACT.cjs",
+      "source_file": "docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_04_FIELD_MEMORY_NEGATIVE_BOUNDARY_MATRIX.cjs",
+      "source_file": "docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_04_FIELD_MEMORY_NEGATIVE_BOUNDARY_MATRIX.cjs",
+      "source_file": "docs/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_05_FIELD_MEMORY_COMPLETION_REVIEW_BEFORE_P6.cjs",
+      "source_file": "docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_05_FIELD_MEMORY_COMPLETION_REVIEW_BEFORE_P6.cjs",
+      "source_file": "docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_05_FIELD_MEMORY_COMPLETION_REVIEW_BEFORE_P6.cjs",
+      "source_file": "docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_05_FIELD_MEMORY_COMPLETION_REVIEW_BEFORE_P6.cjs",
+      "source_file": "docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_05_FIELD_MEMORY_COMPLETION_REVIEW_BEFORE_P6.cjs",
+      "source_file": "docs/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_05_FIELD_MEMORY_COMPLETION_REVIEW_BEFORE_P6.cjs",
+      "source_file": "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "planned_destination": "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_00_EXECUTION_SYSTEM_INTEGRATION_PLANNING.cjs",
+      "source_file": "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "planned_destination": "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_00_EXECUTION_SYSTEM_INTEGRATION_PLANNING.cjs",
+      "source_file": "docs/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_01_EXECUTION_SOURCE_BOUNDARY.cjs",
+      "source_file": "docs/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_01_EXECUTION_SOURCE_BOUNDARY.cjs",
+      "source_file": "docs/tasks/P6-01-Execution-Source-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/P6-01-Execution-Source-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_02_EXECUTION_AUTHORIZATION_GATE_CONTRACT.cjs",
+      "source_file": "docs/tasks/P6-01-Execution-Source-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/P6-01-Execution-Source-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_02_EXECUTION_AUTHORIZATION_GATE_CONTRACT.cjs",
+      "source_file": "docs/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_03_EXECUTION_DISPATCH_OUTPUT_CONTRACT.cjs",
+      "source_file": "docs/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_03_EXECUTION_DISPATCH_OUTPUT_CONTRACT.cjs",
+      "source_file": "docs/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_04_EXECUTION_RECEIPT_INTAKE_CONTRACT.cjs",
+      "source_file": "docs/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_04_EXECUTION_RECEIPT_INTAKE_CONTRACT.cjs",
+      "source_file": "docs/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_05_EXECUTION_AUDIT_TRACE_CONTRACT.cjs",
+      "source_file": "docs/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_05_EXECUTION_AUDIT_TRACE_CONTRACT.cjs",
+      "source_file": "docs/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_06_EXECUTION_NEGATIVE_BOUNDARY_MATRIX.cjs",
+      "source_file": "docs/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_06_EXECUTION_NEGATIVE_BOUNDARY_MATRIX.cjs",
+      "source_file": "docs/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs",
+      "source_file": "docs/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs",
+      "source_file": "docs/tasks/P6-01-Execution-Source-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/P6-01-Execution-Source-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs",
+      "source_file": "docs/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs",
+      "source_file": "docs/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs",
+      "source_file": "docs/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs",
+      "source_file": "docs/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs",
+      "source_file": "docs/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+      "expected_exact_reference_count": 3,
+      "observed_exact_reference_count": 3,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs",
+      "source_file": "docs/tasks/P6-07-Execution-Completion-Review.md",
+      "planned_destination": "docs/legacy/tasks/P6-07-Execution-Completion-Review.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_00_TWIN_KERNEL_MINIMAL_RUNTIME_PLANNING.cjs",
+      "source_file": "docs/tasks/P6-07-Execution-Completion-Review.md",
+      "planned_destination": "docs/legacy/tasks/P6-07-Execution-Completion-Review.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_00_TWIN_KERNEL_MINIMAL_RUNTIME_PLANNING.cjs",
+      "source_file": "docs/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_01_TWIN_EVIDENCE_WINDOW_CONTRACT.cjs",
+      "source_file": "docs/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_01_TWIN_EVIDENCE_WINDOW_CONTRACT.cjs",
+      "source_file": "docs/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_02_SOIL_MOISTURE_STATE_ESTIMATE_V0.cjs",
+      "source_file": "docs/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_02_SOIL_MOISTURE_STATE_ESTIMATE_V0.cjs",
+      "source_file": "docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_03_PREDICTION_RUN_V0.cjs",
+      "source_file": "docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_03_PREDICTION_RUN_V0.cjs",
+      "source_file": "docs/tasks/P7-03-Prediction-Run-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-03-Prediction-Run-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_04_BACKTEST_ERROR_REPORT_V0.cjs",
+      "source_file": "docs/tasks/P7-03-Prediction-Run-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-03-Prediction-Run-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_04_BACKTEST_ERROR_REPORT_V0.cjs",
+      "source_file": "docs/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_05_CALIBRATION_REPORT_V0.cjs",
+      "source_file": "docs/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_05_CALIBRATION_REPORT_V0.cjs",
+      "source_file": "docs/tasks/P7-05-Calibration-Report-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-05-Calibration-Report-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_06_REPLAY_EXPERIMENT_BUNDLE_V0.cjs",
+      "source_file": "docs/tasks/P7-05-Calibration-Report-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-05-Calibration-Report-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_06_REPLAY_EXPERIMENT_BUNDLE_V0.cjs",
+      "source_file": "docs/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_07_TWIN_KERNEL_COMPLETION_REVIEW.cjs",
+      "source_file": "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "planned_destination": "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_01_PRODUCTION_HARDENING_BASELINE.cjs",
+      "source_file": "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "planned_destination": "docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_01_PRODUCTION_HARDENING_BASELINE.cjs",
+      "source_file": "docs/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_02_STRONG_MULTI_SCOPE_FIXTURE_PACK.cjs",
+      "source_file": "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "planned_destination": "docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_02_STRONG_MULTI_SCOPE_FIXTURE_PACK.cjs",
+      "source_file": "docs/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_03_INGESTION_IDEMPOTENCY_ERROR_TAXONOMY.cjs",
+      "source_file": "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "planned_destination": "docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_03_INGESTION_IDEMPOTENCY_ERROR_TAXONOMY.cjs",
+      "source_file": "docs/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_04_ROUTE_NEGATIVE_RUNTIME_MATRIX.cjs",
+      "source_file": "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "planned_destination": "docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_04_ROUTE_NEGATIVE_RUNTIME_MATRIX.cjs",
+      "source_file": "docs/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_05_DB_INDEX_QUERY_COST_AUDIT.cjs",
+      "source_file": "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "planned_destination": "docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_05_DB_INDEX_QUERY_COST_AUDIT.cjs",
+      "source_file": "docs/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_06_DOCKER_STARTUP_MIGRATION_RUNNER_BASELINE.cjs",
+      "source_file": "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "planned_destination": "docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_06_DOCKER_STARTUP_MIGRATION_RUNNER_BASELINE.cjs",
+      "source_file": "docs/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_PHASE_LINE_FREEZE.cjs",
+      "source_file": "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "planned_destination": "docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_PHASE_LINE_FREEZE.cjs",
+      "source_file": "docs/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/TK0_TWIN_KERNEL_PREFLIGHT_AUDIT.cjs",
+      "source_file": "docs/tasks/H56-Water-Response-Verification-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H56-Water-Response-Verification-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/TK0_TWIN_KERNEL_PREFLIGHT_AUDIT.cjs",
+      "source_file": "docs/tasks/H57-ROI-Governance-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H57-ROI-Governance-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/TK0_TWIN_KERNEL_PREFLIGHT_AUDIT.cjs",
+      "source_file": "docs/tasks/H58-Field-Memory-Governance-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H58-Field-Memory-Governance-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/TK5_FIELD_LEARNING_CANDIDATE_V1_ACCEPTANCE.cjs",
+      "source_file": "docs/tasks/H58-Field-Memory-Governance-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H58-Field-Memory-Governance-Boundary.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/twin_kernel/fixtures/P7_02_EVIDENCE_WINDOW_CAF009_SAMPLE.json",
+      "source_file": "docs/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    },
+    {
+      "referencing_file": "scripts/twin_kernel/P7_06_REPLAY_EXPERIMENT_BUNDLE_V0.cjs",
+      "source_file": "docs/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "expected_exact_reference_count": 1,
+      "observed_exact_reference_count": 1,
+      "count_matched": true,
+      "file_exists": true,
+      "apply_allowed": false
+    }
+  ],
+  "policy": {
+    "preview_report_only": true,
+    "no_source_file_write": true,
+    "no_file_move": true,
+    "no_delete": true,
+    "no_reference_change": true
+  },
+  "next_step": "POST_P8_16_HISTORICAL_TASK_DOC_OWNER_APPROVAL_RECORD"
+}
