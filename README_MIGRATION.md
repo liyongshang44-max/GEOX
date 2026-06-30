@@ -721,3 +721,77 @@ Related post-merge convergence:
 - docs/twin_kernel/README.md
 - docs/legacy/POST_P8_NON_MAINLINE_CANDIDATES.md
 
+﻿
+---
+
+## P9-00 Twin Kernel Dual-Line Freeze Backfill Snapshot
+
+Key anchors:
+
+- Branch: p9-00-twin-kernel-freeze-index-backfill
+- Authority source: README_MIGRATION.md
+- Domain reference: docs/twin_kernel/README.md
+- Acceptance: node scripts/governance_acceptance/P9_00_TWIN_KERNEL_FREEZE_INDEX_BACKFILL_ACCEPTANCE.cjs
+
+Frozen scope:
+
+- server_persisted_twin_kernel = product runtime line
+- offline_real_evidence_replay_kernel = offline replay / validation line
+- P8 remains an offline real-evidence replay line.
+- Persisted server Twin Kernel remains the product runtime line.
+- No silent crossing between the two Twin Kernel lines is allowed before a future reconciliation contract exists.
+
+Hard boundaries:
+
+- No runtime code change
+- No server route change
+- No frontend change
+- No database migration
+- No seed change
+- No replay algorithm change
+- No model update
+- No Field Memory write
+- No AO-ACT task
+- No dispatch
+- No receipt
+- No dashboard authority
+
+---
+
+## P9-00 POST-P8 Historical Task Doc Cleanup Freeze Backfill Snapshot
+
+Key anchors:
+
+- Branch: main
+- Tag: post_p8_historical_task_doc_apply_bundle_main_merge
+- Commit: 3e9663fc071ffe355d9dbcdc1f095ad40b3e6912
+- Acceptance: node scripts/governance_acceptance/POST_P8_18_HISTORICAL_TASK_DOC_APPLY_BUNDLE_ACCEPTANCE.cjs
+- Report: docs/legacy/POST_P8_18_HISTORICAL_TASK_DOC_APPLY_BUNDLE_REPORT.json
+
+Frozen scope:
+
+- POST-P8 historical_task_doc cleanup apply bundle
+- moved_file_count = 48
+- reference_update_plan_item_count = 371
+- runtime_surface_diff_count = 0
+- Historical task documents selected by POST-P8-18 have been moved into docs/legacy/tasks.
+- Exact references from the apply bundle have been updated.
+- Runtime surface remained unchanged.
+
+Cleanup closure:
+
+- POST-P8 historical_task_doc cleanup is complete and no further POST-P8 historical cleanup gate is added by P9-00.
+
+Hard boundaries:
+
+- No continuation of POST-P8 cleanup as a P9 task
+- No runtime code change
+- No server route change
+- No frontend change
+- No database migration
+- No seed change
+- No Twin Kernel runtime persistence change
+- No replay case registry change in P9-00
+- No model version manifest change in P9-00
+- No replay artifact mapping change in P9-00
+

@@ -105,3 +105,286 @@ acceptance_entrypoint
 ```
 
 No task may silently make P8 offline replay artifacts behave as persisted server Twin objects, and no task may silently make persisted server Twin routes depend on P8 local replay scripts.
+
+---
+
+## P9-01 Twin Kernel Line Authority Contract v0
+
+Contract:
+
+- docs/twin_kernel/TWIN_KERNEL_LINE_AUTHORITY_CONTRACT_V0.md
+
+Acceptance:
+
+- node scripts/governance_acceptance/P9_01_TWIN_KERNEL_LINE_AUTHORITY_CONTRACT_ACCEPTANCE.cjs
+
+Frozen authority boundary:
+
+- server_persisted_twin_kernel remains the production persisted runtime line.
+- offline_real_evidence_replay_kernel remains the offline validation replay line.
+- P8 artifacts are not persisted Twin Kernel objects.
+- No silent crossing between the two Twin Kernel lines is allowed before a future reconciliation contract exists.
+
+Hard boundaries:
+
+```text
+no_runtime_code_change
+no_server_route_change
+no_frontend_change
+no_database_migration
+no_seed_change
+no_replay_algorithm_change
+no_model_update
+no_field_memory_write
+no_ao_act_task
+no_dispatch
+no_receipt
+```
+
+---
+
+## P9-02 Replay Registry v0
+
+Registry:
+
+- docs/twin_kernel/REPLAY_REGISTRY_V0.json
+
+Task:
+
+- docs/tasks/P9-02-Replay-Registry-v0.md
+
+Acceptance:
+
+- node scripts/governance_acceptance/P9_02_REPLAY_REGISTRY_V0_ACCEPTANCE.cjs
+
+Registered scope:
+
+```text
+case_id = p8_real_evidence_closed_loop_caf009_soil_moisture_v0
+line_id = offline_real_evidence_replay_kernel
+artifact_materialization = stdout_json_contract
+committed_artifact_paths_required = false
+```
+
+Boundary:
+
+```text
+no_new_replay_case
+no_committed_replay_artifact_file
+no_replay_execution
+no_replay_algorithm_change
+no_persisted_twin_object_creation
+no_artifact_mapping_contract_creation
+no_model_version_manifest_creation
+```
+
+---
+
+## P9-03 Replay Case Manifest v0
+
+Case manifest:
+
+- docs/twin_kernel/replay_cases/p8_real_evidence_closed_loop_caf009_soil_moisture_v0.json
+
+Task:
+
+- docs/tasks/P9-03-Replay-Case-Manifest-v0.md
+
+Acceptance:
+
+- node scripts/governance_acceptance/P9_03_REPLAY_CASE_MANIFEST_V0_ACCEPTANCE.cjs
+
+Registered manifest scope:
+
+```text
+case_id = p8_real_evidence_closed_loop_caf009_soil_moisture_v0
+case_manifest_schema_version = replay_case_manifest_v0
+source_line_id = offline_real_evidence_replay_kernel
+case_manifest_does_not_execute_replay = true
+committed_artifact_paths_required = false
+```
+
+Boundary:
+
+```text
+no_new_replay_case
+no_replay_execution
+no_replay_algorithm_change
+no_data_prep_script
+no_raw_samples_seed
+no_committed_replay_artifact_file
+no_persisted_twin_object_creation
+no_model_version_manifest_creation
+```
+
+---
+
+## P9-04 Model Version Manifest v0
+
+Model version manifest:
+
+- docs/twin_kernel/model_versions/p8_real_soil_moisture_model_version_manifest_v0.json
+
+Task:
+
+- docs/tasks/P9-04-Model-Version-Manifest-v0.md
+
+Acceptance:
+
+- node scripts/governance_acceptance/P9_04_MODEL_VERSION_MANIFEST_V0_ACCEPTANCE.cjs
+
+Registered model scope:
+
+```text
+model_set_id = p8_real_soil_moisture_replay_model_set_v0
+model_set_kind = deterministic_heuristic_replay_models
+trained_model = false
+model_update_allowed = false
+calibration_candidate_applied = false
+automatic_learning_loop = false
+```
+
+Boundary:
+
+```text
+no_training_run
+no_model_artifact_file
+no_model_state_write
+no_model_update
+no_calibration_application
+no_replay_algorithm_change
+no_persisted_twin_object_creation
+```
+
+---
+
+## P9-05 Acceptance Entry Unification
+
+Acceptance entrypoints manifest:
+
+- docs/twin_kernel/ACCEPTANCE_ENTRYPOINTS_V0.json
+
+Task:
+
+- docs/tasks/P9-05-Acceptance-Entry-Unification.md
+
+Acceptance:
+
+- node scripts/governance_acceptance/P9_05_ACCEPTANCE_ENTRY_UNIFICATION_ACCEPTANCE.cjs
+
+Unified runner:
+
+```text
+suite_id = p9-twin-kernel
+run_command = node scripts/acceptance/run_acceptance.cjs --suite p9-twin-kernel
+list_command = node scripts/acceptance/run_acceptance.cjs --suite p9-twin-kernel --list
+default_suite_preserved = legacy
+```
+
+Boundary:
+
+```text
+acceptance_entrypoint_change_only
+no_runtime_code_change
+no_server_route_change
+no_frontend_change
+no_database_migration
+no_replay_algorithm_change
+no_model_update
+no_persisted_twin_object_creation
+```
+
+---
+
+## P9-06 Replay Artifact Mapping Contract v0
+
+Mapping contract:
+
+- docs/twin_kernel/REPLAY_ARTIFACT_MAPPING_CONTRACT_V0.json
+
+Task:
+
+- docs/tasks/P9-06-Replay-Artifact-Mapping-Contract-v0.md
+
+Acceptance:
+
+- node scripts/governance_acceptance/P9_06_REPLAY_ARTIFACT_MAPPING_CONTRACT_V0_ACCEPTANCE.cjs
+
+Mapping scope:
+
+```text
+source_line_id = offline_real_evidence_replay_kernel
+target_line_id = server_persisted_twin_kernel
+candidate_mapping_only = true
+future_adapter_required = true
+automatic_materialization_allowed = false
+p8_artifacts_are_not_persisted_twin_objects = true
+```
+
+Boundary:
+
+```text
+mapping_contract_only
+no_mapping_execution
+no_runtime_code_change
+no_server_route_change
+no_frontend_change
+no_database_migration
+no_replay_algorithm_change
+no_model_update
+no_field_memory_write
+no_db_write
+no_fact_write
+no_ao_act_task
+no_persisted_twin_object_creation
+```
+
+---
+
+## P9-07 Twin Kernel Convergence Completion Review
+
+Completion review:
+
+- docs/twin_kernel/TWIN_KERNEL_CONVERGENCE_COMPLETION_REVIEW_V0.json
+
+Task:
+
+- docs/tasks/P9-07-Twin-Kernel-Convergence-Completion-Review.md
+
+Acceptance:
+
+- node scripts/governance_acceptance/P9_07_TWIN_KERNEL_CONVERGENCE_COMPLETION_REVIEW_ACCEPTANCE.cjs
+
+Completion state:
+
+```text
+governance_convergence_complete = true
+runtime_convergence_status = not_started
+kernel_lines_merged = false
+p8_artifacts_are_persisted_twin_objects = false
+future_reconciliation_contract_required_before_runtime_convergence = true
+```
+
+Boundary:
+
+```text
+completion_review_only
+no_runtime_code_change
+no_server_route_change
+no_frontend_change
+no_database_migration
+no_replay_algorithm_change
+no_model_update
+no_field_memory_write
+no_db_write
+no_fact_write
+no_ao_act_task
+no_persisted_twin_object_creation
+no_kernel_line_merge
+```
+
+Next:
+
+```text
+P9 branch ready for PR or main merge review
+```

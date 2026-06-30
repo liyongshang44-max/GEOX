@@ -1,0 +1,119 @@
+{
+  "schema_version": "acceptance_entrypoints_v0",
+  "manifest_id": "twin_kernel_acceptance_entrypoints_v0",
+  "status": "p9_07_completion_review_linked",
+  "phase": "P9 Twin Kernel Convergence / Freeze Registry / Replay Case Governance",
+  "authority_source": "README_MIGRATION.md",
+  "line_authority_contract": "docs/twin_kernel/TWIN_KERNEL_LINE_AUTHORITY_CONTRACT_V0.md",
+  "replay_registry": "docs/twin_kernel/REPLAY_REGISTRY_V0.json",
+  "case_manifest": "docs/twin_kernel/replay_cases/p8_real_evidence_closed_loop_caf009_soil_moisture_v0.json",
+  "model_version_manifest": "docs/twin_kernel/model_versions/p8_real_soil_moisture_model_version_manifest_v0.json",
+  "artifact_mapping_contract": "docs/twin_kernel/REPLAY_ARTIFACT_MAPPING_CONTRACT_V0.json",
+  "completion_review": "docs/twin_kernel/TWIN_KERNEL_CONVERGENCE_COMPLETION_REVIEW_V0.json",
+  "acceptance": "scripts/governance_acceptance/P9_05_ACCEPTANCE_ENTRY_UNIFICATION_ACCEPTANCE.cjs",
+  "completion_acceptance": "scripts/governance_acceptance/P9_07_TWIN_KERNEL_CONVERGENCE_COMPLETION_REVIEW_ACCEPTANCE.cjs",
+  "unified_runner": {
+    "path": "scripts/acceptance/run_acceptance.cjs",
+    "suite_id": "p9-twin-kernel",
+    "list_command": "node scripts/acceptance/run_acceptance.cjs --suite p9-twin-kernel --list",
+    "run_command": "node scripts/acceptance/run_acceptance.cjs --suite p9-twin-kernel",
+    "default_suite_preserved": "legacy"
+  },
+  "entrypoints": [
+    {
+      "order": 0,
+      "task_id": "P9-00",
+      "entry_id": "P9_00_TWIN_KERNEL_FREEZE_INDEX_BACKFILL",
+      "script": "scripts/governance_acceptance/P9_00_TWIN_KERNEL_FREEZE_INDEX_BACKFILL_ACCEPTANCE.cjs",
+      "command": "node scripts/governance_acceptance/P9_00_TWIN_KERNEL_FREEZE_INDEX_BACKFILL_ACCEPTANCE.cjs",
+      "expected_ok": true,
+      "expected_next_step": "P9-01 Twin Kernel Line Authority Contract"
+    },
+    {
+      "order": 1,
+      "task_id": "P9-01",
+      "entry_id": "P9_01_TWIN_KERNEL_LINE_AUTHORITY_CONTRACT",
+      "script": "scripts/governance_acceptance/P9_01_TWIN_KERNEL_LINE_AUTHORITY_CONTRACT_ACCEPTANCE.cjs",
+      "command": "node scripts/governance_acceptance/P9_01_TWIN_KERNEL_LINE_AUTHORITY_CONTRACT_ACCEPTANCE.cjs",
+      "expected_ok": true,
+      "expected_next_step": "P9-02 Replay Registry v0"
+    },
+    {
+      "order": 2,
+      "task_id": "P9-02",
+      "entry_id": "P9_02_REPLAY_REGISTRY_V0",
+      "script": "scripts/governance_acceptance/P9_02_REPLAY_REGISTRY_V0_ACCEPTANCE.cjs",
+      "command": "node scripts/governance_acceptance/P9_02_REPLAY_REGISTRY_V0_ACCEPTANCE.cjs",
+      "expected_ok": true,
+      "expected_next_step": "P9-03 Replay Case Manifest v0"
+    },
+    {
+      "order": 3,
+      "task_id": "P9-03",
+      "entry_id": "P9_03_REPLAY_CASE_MANIFEST_V0",
+      "script": "scripts/governance_acceptance/P9_03_REPLAY_CASE_MANIFEST_V0_ACCEPTANCE.cjs",
+      "command": "node scripts/governance_acceptance/P9_03_REPLAY_CASE_MANIFEST_V0_ACCEPTANCE.cjs",
+      "expected_ok": true,
+      "expected_next_step": "P9-04 Model Version Manifest v0"
+    },
+    {
+      "order": 4,
+      "task_id": "P9-04",
+      "entry_id": "P9_04_MODEL_VERSION_MANIFEST_V0",
+      "script": "scripts/governance_acceptance/P9_04_MODEL_VERSION_MANIFEST_V0_ACCEPTANCE.cjs",
+      "command": "node scripts/governance_acceptance/P9_04_MODEL_VERSION_MANIFEST_V0_ACCEPTANCE.cjs",
+      "expected_ok": true,
+      "expected_next_step": "P9-05 Acceptance Entry Unification"
+    },
+    {
+      "order": 5,
+      "task_id": "P9-05",
+      "entry_id": "P9_05_ACCEPTANCE_ENTRY_UNIFICATION",
+      "script": "scripts/governance_acceptance/P9_05_ACCEPTANCE_ENTRY_UNIFICATION_ACCEPTANCE.cjs",
+      "command": "node scripts/governance_acceptance/P9_05_ACCEPTANCE_ENTRY_UNIFICATION_ACCEPTANCE.cjs",
+      "expected_ok": true,
+      "expected_next_step": "P9-06 Replay Artifact Mapping Contract v0"
+    },
+    {
+      "order": 6,
+      "task_id": "P9-06",
+      "entry_id": "P9_06_REPLAY_ARTIFACT_MAPPING_CONTRACT_V0",
+      "script": "scripts/governance_acceptance/P9_06_REPLAY_ARTIFACT_MAPPING_CONTRACT_V0_ACCEPTANCE.cjs",
+      "command": "node scripts/governance_acceptance/P9_06_REPLAY_ARTIFACT_MAPPING_CONTRACT_V0_ACCEPTANCE.cjs",
+      "expected_ok": true,
+      "expected_next_step": "P9-07 Twin Kernel Convergence Completion Review"
+    },
+    {
+      "order": 7,
+      "task_id": "P9-07",
+      "entry_id": "P9_07_TWIN_KERNEL_CONVERGENCE_COMPLETION_REVIEW",
+      "script": "scripts/governance_acceptance/P9_07_TWIN_KERNEL_CONVERGENCE_COMPLETION_REVIEW_ACCEPTANCE.cjs",
+      "command": "node scripts/governance_acceptance/P9_07_TWIN_KERNEL_CONVERGENCE_COMPLETION_REVIEW_ACCEPTANCE.cjs",
+      "expected_ok": true,
+      "expected_next_step": "P9 branch ready for PR or main merge review"
+    }
+  ],
+  "boundaries": [
+    "acceptance_entrypoint_change_only",
+    "no_runtime_code_change",
+    "no_server_route_change",
+    "no_frontend_change",
+    "no_database_migration",
+    "no_seed_change",
+    "no_replay_algorithm_change",
+    "no_prediction_algorithm_change",
+    "no_training_run",
+    "no_model_state_write",
+    "no_model_update",
+    "no_calibration_application",
+    "no_field_memory_write",
+    "no_db_write",
+    "no_fact_write",
+    "no_ao_act_task",
+    "no_dispatch",
+    "no_receipt",
+    "no_persisted_twin_object_creation",
+    "no_kernel_line_merge"
+  ],
+  "next_step": "P9 branch ready for PR or main merge review"
+}

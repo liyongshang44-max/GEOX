@@ -1,0 +1,202 @@
+{
+  "schema_version": "replay_artifact_mapping_contract_v0",
+  "contract_id": "p8_replay_to_persisted_twin_artifact_mapping_contract_v0",
+  "status": "p9_06_mapping_contract",
+  "phase": "P9 Twin Kernel Convergence / Freeze Registry / Replay Case Governance",
+  "authority_source": "README_MIGRATION.md",
+  "line_authority_contract": "docs/twin_kernel/TWIN_KERNEL_LINE_AUTHORITY_CONTRACT_V0.md",
+  "replay_registry": "docs/twin_kernel/REPLAY_REGISTRY_V0.json",
+  "case_manifest": "docs/twin_kernel/replay_cases/p8_real_evidence_closed_loop_caf009_soil_moisture_v0.json",
+  "model_version_manifest": "docs/twin_kernel/model_versions/p8_real_soil_moisture_model_version_manifest_v0.json",
+  "acceptance_entrypoints_manifest": "docs/twin_kernel/ACCEPTANCE_ENTRYPOINTS_V0.json",
+  "acceptance": "scripts/governance_acceptance/P9_06_REPLAY_ARTIFACT_MAPPING_CONTRACT_V0_ACCEPTANCE.cjs",
+  "scope": {
+    "case_id": "p8_real_evidence_closed_loop_caf009_soil_moisture_v0",
+    "source_line_id": "offline_real_evidence_replay_kernel",
+    "target_line_id": "server_persisted_twin_kernel",
+    "contract_class": "candidate_artifact_mapping_contract",
+    "executable_mapping": false,
+    "runtime_effect": "none",
+    "persistence_effect": "none",
+    "server_route_effect": "none",
+    "frontend_effect": "none"
+  },
+  "mapping_policy": {
+    "p8_artifacts_are_not_persisted_twin_objects": true,
+    "candidate_mapping_only": true,
+    "future_adapter_required": true,
+    "source_data_contract_required": true,
+    "persistence_policy_required": true,
+    "read_only_vs_write_boundary_required": true,
+    "acceptance_entrypoint_required": true,
+    "automatic_materialization_allowed": false,
+    "db_write_allowed": false,
+    "fact_write_allowed": false,
+    "field_memory_write_allowed": false,
+    "model_update_allowed": false,
+    "ao_act_task_allowed": false
+  },
+  "mapping_records": [
+    {
+      "source_artifact_kind": "real_evidence_window_v0",
+      "source_generator": "scripts/twin_kernel/P8_02_REAL_EVIDENCE_WINDOW_BUILDER_V0.cjs",
+      "target_object_type": "field_state_snapshot_v1",
+      "target_surface": "apps/server/src/domain/twin_kernel/field_state_snapshot_v1.ts",
+      "candidate_target_fields": [
+        "source_indexes_json.sensing",
+        "evidence_refs_json",
+        "source_indexes_json.water"
+      ],
+      "mapping_status": "not_executable_without_future_adapter",
+      "adapter_requirements": [
+        "tenant_id_resolution",
+        "field_id_resolution",
+        "subject_ref_to_field_scope_mapping",
+        "source_data_contract"
+      ],
+      "write_allowed": false
+    },
+    {
+      "source_artifact_kind": "real_soil_moisture_state_estimate_v1",
+      "source_generator": "scripts/twin_kernel/P8_04_REAL_STATE_ESTIMATE_RUNTIME_V1.cjs",
+      "target_object_type": "field_state_snapshot_v1",
+      "target_surface": "apps/server/src/domain/twin_kernel/field_state_snapshot_v1.ts",
+      "candidate_target_fields": [
+        "state_vector_json.soil_moisture",
+        "confidence_json",
+        "evidence_refs_json"
+      ],
+      "mapping_status": "not_executable_without_future_adapter",
+      "adapter_requirements": [
+        "unit_conversion_policy",
+        "confidence_mapping_policy",
+        "field_scope_mapping",
+        "persistence_policy"
+      ],
+      "write_allowed": false
+    },
+    {
+      "source_artifact_kind": "real_soil_moisture_prediction_run_v1",
+      "source_generator": "scripts/twin_kernel/P8_05_REAL_PREDICTION_RUN_V1.cjs",
+      "target_object_type": "forecast_run_v1",
+      "target_surface": "apps/server/src/domain/twin_kernel/forecast_run_v1.ts",
+      "candidate_target_fields": [
+        "forecast_points_json",
+        "uncertainty_json",
+        "input_refs_json"
+      ],
+      "mapping_status": "not_executable_without_future_adapter",
+      "adapter_requirements": [
+        "horizon_policy_mapping",
+        "hourly_to_daily_contract",
+        "model_version_mapping",
+        "snapshot_ref_mapping"
+      ],
+      "compatibility_notes": [
+        "P8 prediction is 3 hourly steps.",
+        "Persisted forecast_run_v1 is seven-day water-state forecast shaped."
+      ],
+      "write_allowed": false
+    },
+    {
+      "source_artifact_kind": "real_actual_observation_window_v0",
+      "source_generator": "scripts/twin_kernel/P8_06_REAL_ACTUAL_OBSERVATION_WINDOW_V0.cjs",
+      "target_object_type": "calibration_replay_v1",
+      "target_surface": "apps/server/src/domain/twin_kernel/calibration_replay_v1.ts",
+      "candidate_target_fields": [
+        "observed_payload",
+        "evidence_refs",
+        "actual_window_refs"
+      ],
+      "mapping_status": "not_executable_without_future_adapter",
+      "adapter_requirements": [
+        "observed_payload_schema_mapping",
+        "verification_ref_policy",
+        "calibration_replay_input_contract"
+      ],
+      "write_allowed": false
+    },
+    {
+      "source_artifact_kind": "real_backtest_error_report_v1",
+      "source_generator": "scripts/twin_kernel/P8_07_REAL_BACKTEST_ERROR_REPORT_V1.cjs",
+      "target_object_type": "forecast_error_v1",
+      "target_surface": "apps/server/src/domain/twin_kernel/calibration_replay_v1.ts",
+      "candidate_target_fields": [
+        "error_summary_json",
+        "forecast_error_json",
+        "input_refs_json"
+      ],
+      "mapping_status": "not_executable_without_future_adapter",
+      "adapter_requirements": [
+        "forecast_run_ref_mapping",
+        "actual_observation_ref_mapping",
+        "error_metric_contract"
+      ],
+      "write_allowed": false
+    },
+    {
+      "source_artifact_kind": "real_calibration_report_v1",
+      "source_generator": "scripts/twin_kernel/P8_08_REAL_CALIBRATION_REPORT_V1.cjs",
+      "target_object_type": "field_learning_candidate_v1",
+      "target_surface": "apps/server/src/domain/twin_kernel/field_learning_candidate_v1.ts",
+      "candidate_target_fields": [
+        "candidate_json",
+        "formal_gate_refs_json",
+        "input_refs_json"
+      ],
+      "mapping_status": "not_executable_without_future_adapter",
+      "adapter_requirements": [
+        "formal_gate_contract",
+        "calibration_candidate_review_policy",
+        "model_update_gate_policy",
+        "field_memory_gate_policy"
+      ],
+      "write_allowed": false,
+      "calibration_application_allowed": false,
+      "model_update_allowed": false,
+      "field_memory_write_allowed": false
+    },
+    {
+      "source_artifact_kind": "product_replay_demo_report_v0",
+      "source_generator": "scripts/twin_kernel/P8_09_PRODUCT_REPLAY_DEMO_REPORT_V0.cjs",
+      "target_object_type": "twin_trace_v1_read_model",
+      "target_surface": "apps/server/src/routes/v1/twin_kernel_trace.ts",
+      "candidate_target_fields": [
+        "trace_refs",
+        "read_model_summary",
+        "acceptance_refs"
+      ],
+      "mapping_status": "not_executable_without_future_adapter",
+      "adapter_requirements": [
+        "trace_ref_contract",
+        "read_model_projection_contract",
+        "acceptance_entrypoint_binding"
+      ],
+      "write_allowed": false
+    }
+  ],
+  "hard_boundaries": [
+    "mapping_contract_only",
+    "no_mapping_execution",
+    "no_runtime_code_change",
+    "no_server_route_change",
+    "no_frontend_change",
+    "no_database_migration",
+    "no_seed_change",
+    "no_replay_algorithm_change",
+    "no_prediction_algorithm_change",
+    "no_training_run",
+    "no_model_state_write",
+    "no_model_update",
+    "no_calibration_application",
+    "no_field_memory_write",
+    "no_db_write",
+    "no_fact_write",
+    "no_ao_act_task",
+    "no_dispatch",
+    "no_receipt",
+    "no_persisted_twin_object_creation",
+    "p8_artifacts_are_not_persisted_twin_objects"
+  ],
+  "next_step": "P9-07 Twin Kernel Convergence Completion Review"
+}

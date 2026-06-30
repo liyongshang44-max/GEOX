@@ -10,50 +10,102 @@ const outputDir = path.join(repoRoot, 'acceptance-output');
 const reportJsonPath = path.join(outputDir, 'report.json');
 const reportHtmlPath = path.join(outputDir, 'report.html');
 
-const STEP_DEFINITIONS = [
-  {
-    id: 'SERVER_SELFCHECK',
-    pnpmArgs: ['--filter', '@geox/server', 'run', 'test:p1:selfcheck'],
-    logFile: 'SERVER_SELFCHECK.log',
-    notes: 'Runs p1 minimal selfcheck to validate baseline skill loop invariants.'
-  },
-  {
-    id: 'P1_SMOKE',
-    pnpmArgs: ['--filter', '@geox/server', 'run', 'test:p1:smoke'],
-    logFile: 'P1_SMOKE.log',
-    notes: 'Runs p1 minimal smoke scenario against current server behavior.'
-  },
-  {
-    id: 'P1_ACCEPTANCE_SMOKE',
-    pnpmArgs: ['--filter', '@geox/server', 'run', 'test:p1:acceptance-smoke'],
-    logFile: 'P1_ACCEPTANCE_SMOKE.log',
-    notes: 'Runs acceptance-oriented p1 smoke and checks acceptance verdict transitions.'
-  },
-  {
-    id: 'EVIDENCE_EXPORT_S3_SMOKE',
-    pnpmArgs: ['--filter', '@geox/server', 'run', 'test:evidence-export:s3-smoke'],
-    logFile: 'EVIDENCE_EXPORT_S3_SMOKE.log',
-    notes: 'Runs evidence export S3 smoke flow to confirm export path availability.'
-  },
-  {
-    id: 'OPENAPI_SELFCHECK',
-    pnpmArgs: ['--filter', '@geox/server', 'run', 'test:p1:openapi-selfcheck'],
-    logFile: 'OPENAPI_SELFCHECK.log',
-    notes: 'Runs OpenAPI selfcheck for p1-3 alignment sanity.'
-  },
-  {
-    id: 'RUNTIME_OPENAPI_SALES_CRITICAL',
-    pnpmArgs: ['run', 'ci:governance:runtime-openapi-sales-critical'],
-    logFile: 'RUNTIME_OPENAPI_SALES_CRITICAL.log',
-    notes: 'Fetches runtime /api/v1/openapi.json and validates sales-critical OpenAPI JSON paths, schemas, operations, security, responses, and x-geox-governance.'
-  }
-].map((step) => ({
-  ...step,
-  command: `pnpm ${step.pnpmArgs.join(' ')}`
-}));
+const STEP_DEFINITIONS_BY_SUITE = {
+  legacy: [
+    {
+      id: 'SERVER_SELFCHECK',
+      pnpmArgs: ['--filter', '@geox/server', 'run', 'test:p1:selfcheck'],
+      logFile: 'SERVER_SELFCHECK.log',
+      notes: 'Runs p1 minimal selfcheck to validate baseline skill loop invariants.'
+    },
+    {
+      id: 'P1_SMOKE',
+      pnpmArgs: ['--filter', '@geox/server', 'run', 'test:p1:smoke'],
+      logFile: 'P1_SMOKE.log',
+      notes: 'Runs p1 minimal smoke scenario against current server behavior.'
+    },
+    {
+      id: 'P1_ACCEPTANCE_SMOKE',
+      pnpmArgs: ['--filter', '@geox/server', 'run', 'test:p1:acceptance-smoke'],
+      logFile: 'P1_ACCEPTANCE_SMOKE.log',
+      notes: 'Runs acceptance-oriented p1 smoke and checks acceptance verdict transitions.'
+    },
+    {
+      id: 'EVIDENCE_EXPORT_S3_SMOKE',
+      pnpmArgs: ['--filter', '@geox/server', 'run', 'test:evidence-export:s3-smoke'],
+      logFile: 'EVIDENCE_EXPORT_S3_SMOKE.log',
+      notes: 'Runs evidence export S3 smoke flow to confirm export path availability.'
+    },
+    {
+      id: 'OPENAPI_SELFCHECK',
+      pnpmArgs: ['--filter', '@geox/server', 'run', 'test:p1:openapi-selfcheck'],
+      logFile: 'OPENAPI_SELFCHECK.log',
+      notes: 'Runs OpenAPI selfcheck for p1-3 alignment sanity.'
+    },
+    {
+      id: 'RUNTIME_OPENAPI_SALES_CRITICAL',
+      pnpmArgs: ['run', 'ci:governance:runtime-openapi-sales-critical'],
+      logFile: 'RUNTIME_OPENAPI_SALES_CRITICAL.log',
+      notes: 'Fetches runtime /api/v1/openapi.json and validates sales-critical OpenAPI JSON paths, schemas, operations, security, responses, and x-geox-governance.'
+    }
+  ],
+  'p9-twin-kernel': [
+    {
+      id: 'P9_00_TWIN_KERNEL_FREEZE_INDEX_BACKFILL',
+      command: 'node scripts/governance_acceptance/P9_00_TWIN_KERNEL_FREEZE_INDEX_BACKFILL_ACCEPTANCE.cjs',
+      logFile: 'P9_00_TWIN_KERNEL_FREEZE_INDEX_BACKFILL.log',
+      notes: 'Verifies P9-00 freeze index backfill anchors.'
+    },
+    {
+      id: 'P9_01_TWIN_KERNEL_LINE_AUTHORITY_CONTRACT',
+      command: 'node scripts/governance_acceptance/P9_01_TWIN_KERNEL_LINE_AUTHORITY_CONTRACT_ACCEPTANCE.cjs',
+      logFile: 'P9_01_TWIN_KERNEL_LINE_AUTHORITY_CONTRACT.log',
+      notes: 'Verifies P9-01 Twin Kernel line authority contract.'
+    },
+    {
+      id: 'P9_02_REPLAY_REGISTRY_V0',
+      command: 'node scripts/governance_acceptance/P9_02_REPLAY_REGISTRY_V0_ACCEPTANCE.cjs',
+      logFile: 'P9_02_REPLAY_REGISTRY_V0.log',
+      notes: 'Verifies P9-02 replay registry v0.'
+    },
+    {
+      id: 'P9_03_REPLAY_CASE_MANIFEST_V0',
+      command: 'node scripts/governance_acceptance/P9_03_REPLAY_CASE_MANIFEST_V0_ACCEPTANCE.cjs',
+      logFile: 'P9_03_REPLAY_CASE_MANIFEST_V0.log',
+      notes: 'Verifies P9-03 replay case manifest v0.'
+    },
+    {
+      id: 'P9_04_MODEL_VERSION_MANIFEST_V0',
+      command: 'node scripts/governance_acceptance/P9_04_MODEL_VERSION_MANIFEST_V0_ACCEPTANCE.cjs',
+      logFile: 'P9_04_MODEL_VERSION_MANIFEST_V0.log',
+      notes: 'Verifies P9-04 model version manifest v0.'
+    },
+    {
+      id: 'P9_05_ACCEPTANCE_ENTRY_UNIFICATION',
+      command: 'node scripts/governance_acceptance/P9_05_ACCEPTANCE_ENTRY_UNIFICATION_ACCEPTANCE.cjs',
+      logFile: 'P9_05_ACCEPTANCE_ENTRY_UNIFICATION.log',
+      notes: 'Verifies P9-05 acceptance entrypoint unification.'
+    },
+    {
+      id: 'P9_06_REPLAY_ARTIFACT_MAPPING_CONTRACT_V0',
+      command: 'node scripts/governance_acceptance/P9_06_REPLAY_ARTIFACT_MAPPING_CONTRACT_V0_ACCEPTANCE.cjs',
+      logFile: 'P9_06_REPLAY_ARTIFACT_MAPPING_CONTRACT_V0.log',
+      notes: 'Verifies P9-06 replay artifact mapping contract v0.'
+    },
+    {
+      id: 'P9_07_TWIN_KERNEL_CONVERGENCE_COMPLETION_REVIEW',
+      command: 'node scripts/governance_acceptance/P9_07_TWIN_KERNEL_CONVERGENCE_COMPLETION_REVIEW_ACCEPTANCE.cjs',
+      logFile: 'P9_07_TWIN_KERNEL_CONVERGENCE_COMPLETION_REVIEW.log',
+      notes: 'Verifies P9-07 Twin Kernel convergence completion review.'
+    }
+  ]
+};
 
-const args = new Set(process.argv.slice(2));
-if (args.has('--list')) {
+const cli = parseArgs(process.argv.slice(2));
+const suiteId = cli.suite || 'legacy';
+const STEP_DEFINITIONS = selectSuite(suiteId);
+
+if (cli.list) {
   console.log(STEP_DEFINITIONS.map((step) => `${step.id}: ${step.command}`).join('\n'));
   process.exit(0);
 }
@@ -69,7 +121,7 @@ ensureOutputDir(outputDir);
 
   for (const step of STEP_DEFINITIONS) {
     const envOverrides = {};
-    if (step.id === 'P1_ACCEPTANCE_SMOKE') {
+    if (suiteId === 'legacy' && step.id === 'P1_ACCEPTANCE_SMOKE') {
       if (!runtimeContext.operationPlanIdFromP1) {
         results.push({
           id: step.id,
@@ -86,7 +138,7 @@ ensureOutputDir(outputDir);
 
     const result = await runStep(step, envOverrides);
 
-    if (step.id === 'P1_SMOKE' && result.passed) {
+    if (suiteId === 'legacy' && step.id === 'P1_SMOKE' && result.passed) {
       const operationPlanId = extractOperationPlanIdFromP1Output(result.output);
       if (operationPlanId) {
         runtimeContext.operationPlanIdFromP1 = operationPlanId;
@@ -103,6 +155,7 @@ ensureOutputDir(outputDir);
   const ok = results.every((step) => step.passed);
   const summary = {
     ok,
+    suite_id: suiteId,
     started_at: startedAt.toISOString(),
     ended_at: endedAt.toISOString(),
     duration_ms: endedAt.getTime() - startedAt.getTime(),
@@ -117,13 +170,15 @@ ensureOutputDir(outputDir);
   fs.writeFileSync(reportJsonPath, JSON.stringify(summary, null, 2), 'utf8');
   fs.writeFileSync(reportHtmlPath, buildHtml(summary), 'utf8');
 
-  console.log(`\n[acceptance] report json: ${path.relative(repoRoot, reportJsonPath)}`);
+  console.log(`\n[acceptance] suite: ${suiteId}`);
+  console.log(`[acceptance] report json: ${path.relative(repoRoot, reportJsonPath)}`);
   console.log(`[acceptance] report html: ${path.relative(repoRoot, reportHtmlPath)}`);
 
   process.exit(ok ? 0 : 1);
 })().catch((error) => {
   const failure = {
     ok: false,
+    suite_id: suiteId,
     error: error && error.stack ? error.stack : String(error),
     generated_at: new Date().toISOString(),
     steps: []
@@ -135,6 +190,69 @@ ensureOutputDir(outputDir);
   process.exit(1);
 });
 
+function parseArgs(argv) {
+  const parsed = {
+    list: false,
+    suite: '',
+  };
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+
+    if (arg === '--list') {
+      parsed.list = true;
+      continue;
+    }
+
+    if (arg === '--suite') {
+      parsed.suite = String(argv[index + 1] || '').trim();
+      index += 1;
+      continue;
+    }
+
+    if (arg.startsWith('--suite=')) {
+      parsed.suite = arg.slice('--suite='.length).trim();
+      continue;
+    }
+
+    if (arg === '--help' || arg === '-h') {
+      printHelpAndExit();
+    }
+
+    throw new Error(`UNKNOWN_ARGUMENT:${arg}`);
+  }
+
+  return parsed;
+}
+
+function printHelpAndExit() {
+  const suites = Object.keys(STEP_DEFINITIONS_BY_SUITE).join(', ');
+  console.log([
+    'Usage: node scripts/acceptance/run_acceptance.cjs [--suite <suite-id>] [--list]',
+    '',
+    `Available suites: ${suites}`,
+    '',
+    'Default suite: legacy',
+  ].join('\n'));
+  process.exit(0);
+}
+
+function selectSuite(requestedSuiteId) {
+  if (!Object.hasOwn(STEP_DEFINITIONS_BY_SUITE, requestedSuiteId)) {
+    throw new Error(`UNKNOWN_ACCEPTANCE_SUITE:${requestedSuiteId}`);
+  }
+
+  return STEP_DEFINITIONS_BY_SUITE[requestedSuiteId].map(normalizeStep);
+}
+
+function normalizeStep(step) {
+  const command = step.command || `pnpm ${step.pnpmArgs.join(' ')}`;
+  return {
+    ...step,
+    command,
+  };
+}
+
 function ensureOutputDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
 }
@@ -143,7 +261,14 @@ function resolveStepCommand(command, isWindows) {
   const parts = String(command || '').trim().split(/\s+/).filter(Boolean);
   const rawCmd = parts[0] || '';
   const cmdArgs = parts.slice(1);
-  const executable = isWindows && rawCmd === 'pnpm' ? 'pnpm.cmd' : rawCmd;
+  let executable = rawCmd;
+
+  if (rawCmd === 'node') {
+    executable = process.execPath;
+  } else if (isWindows && rawCmd === 'pnpm') {
+    executable = 'pnpm.cmd';
+  }
+
   if (!executable) throw new Error('INVALID_STEP_COMMAND');
   return { executable, cmdArgs };
 }
@@ -249,26 +374,6 @@ function runStep(step, envOverrides = {}) {
   });
 }
 
-function resolvePnpmSpawn(pnpmArgs) {
-  const npmExecPath = String(process.env.npm_execpath || '').trim();
-  if (npmExecPath && /\.(cjs|mjs|js)$/i.test(npmExecPath) && fs.existsSync(npmExecPath)) {
-    return {
-      cmd: process.execPath,
-      args: [npmExecPath, ...pnpmArgs],
-      shell: false,
-      display: `${process.execPath} ${npmExecPath} ${pnpmArgs.join(' ')}`
-    };
-  }
-
-  const cmd = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
-  return {
-    cmd,
-    args: pnpmArgs,
-    shell: false,
-    display: `${cmd} ${pnpmArgs.join(' ')}`
-  };
-}
-
 function extractOperationPlanIdFromP1Output(output) {
   const text = String(output || '');
   const lines = text.split(/\r?\n/).reverse();
@@ -324,6 +429,7 @@ function buildHtml(summary) {
 <body>
   <h1>${escapeHtml(title)}</h1>
   <div class="status">Overall: ${ok ? 'PASS' : 'FAIL'}</div>
+  <div>Suite: ${escapeHtml(String(summary.suite_id || 'N/A'))}</div>
   <div>Started at: ${escapeHtml(String(summary.started_at || 'N/A'))}</div>
   <div>Ended at: ${escapeHtml(String(summary.ended_at || 'N/A'))}</div>
   <div>Total duration (ms): ${escapeHtml(String(summary.duration_ms || 'N/A'))}</div>

@@ -35,9 +35,9 @@ P8_09_PRODUCT_REPLAY_DEMO_REPORT_V0.cjs
 
 ## P8 manual data precondition
 
-P8 runtime expects the CAF009 history and holdout windows to already exist in local Postgres `raw_samples`.
+P8 runtime expects the CAF009 history and holdout windows to already exist in local Postgres raw_samples.
 
-The replay runtime must not seed those rows itself.
+The replay runtime must not create those rows itself.
 
 ```text
 history_window = 2009-06-09T00:00:00.000Z -> 2009-06-09T04:00:00.000Z
@@ -64,4 +64,162 @@ not_ao_act_task_creator
 
 Future replay harness work should add explicit case manifests and data-prep contracts before adding more replay cases.
 
-A data-prep script may write `raw_samples`, but it must be clearly classified as acceptance data setup, not replay runtime.
+A data-prep script may write raw_samples, but it must be clearly classified as acceptance data setup, not replay runtime.
+
+---
+
+## P9-02 Replay Registry v0
+
+Registry:
+
+```text
+docs/twin_kernel/REPLAY_REGISTRY_V0.json
+```
+
+Acceptance:
+
+```text
+scripts/governance_acceptance/P9_02_REPLAY_REGISTRY_V0_ACCEPTANCE.cjs
+```
+
+Registered P8 replay case:
+
+```text
+case_id = p8_real_evidence_closed_loop_caf009_soil_moisture_v0
+artifact_materialization = stdout_json_contract
+committed_artifact_paths_required = false
+```
+
+The registry records artifact kinds and generator scripts only. It does not require committed replay output files and it does not make offline replay artifacts persisted server Twin Kernel objects.
+
+---
+
+## P9-03 Replay Case Manifest v0
+
+Case manifest:
+
+```text
+docs/twin_kernel/replay_cases/p8_real_evidence_closed_loop_caf009_soil_moisture_v0.json
+```
+
+Acceptance:
+
+```text
+scripts/governance_acceptance/P9_03_REPLAY_CASE_MANIFEST_V0_ACCEPTANCE.cjs
+```
+
+Manifest properties:
+
+```text
+case_manifest_schema_version = replay_case_manifest_v0
+case_manifest_does_not_execute_replay = true
+committed_artifact_paths_required = false
+```
+
+The manifest records the fixed P8 data scope, runtime chain, artifact policy, determinism policy, and hard boundaries. It does not run replay scripts, create committed artifact files, or create persisted Twin Kernel objects.
+
+---
+
+## P9-04 Model Version Manifest v0
+
+Model version manifest:
+
+```text
+docs/twin_kernel/model_versions/p8_real_soil_moisture_model_version_manifest_v0.json
+```
+
+Acceptance:
+
+```text
+scripts/governance_acceptance/P9_04_MODEL_VERSION_MANIFEST_V0_ACCEPTANCE.cjs
+```
+
+Registered model set:
+
+```text
+model_set_kind = deterministic_heuristic_replay_models
+weighted_recent_mean_v1
+linear_recent_window_trend_v1
+state_uncertainty_growth_v1
+real_backtest_bias_summary_v1
+automatic_learning_loop = false
+model_update_allowed = false
+calibration_candidate_applied = false
+```
+
+The model version manifest records deterministic replay model versions only. It does not train a model, create a model artifact file, write model state, apply calibration candidates, or change replay algorithms.
+
+---
+
+## P9-05 Acceptance Entry Unification
+
+Acceptance entrypoints manifest:
+
+```text
+docs/twin_kernel/ACCEPTANCE_ENTRYPOINTS_V0.json
+```
+
+Unified runner:
+
+```text
+suite_id = p9-twin-kernel
+run_command = node scripts/acceptance/run_acceptance.cjs --suite p9-twin-kernel
+list_command = node scripts/acceptance/run_acceptance.cjs --suite p9-twin-kernel --list
+default_suite_preserved = legacy
+```
+
+The unified suite lists and runs the P9 governance acceptance chain from P9-00 through P9-05. It does not change replay scripts, server runtime, database schema, frontend state, or model state.
+
+---
+
+## P9-06 Replay Artifact Mapping Contract v0
+
+Mapping contract:
+
+```text
+docs/twin_kernel/REPLAY_ARTIFACT_MAPPING_CONTRACT_V0.json
+```
+
+Acceptance:
+
+```text
+scripts/governance_acceptance/P9_06_REPLAY_ARTIFACT_MAPPING_CONTRACT_V0_ACCEPTANCE.cjs
+```
+
+Mapping rule:
+
+```text
+candidate_mapping_only = true
+not_executable_without_future_adapter
+p8_artifacts_are_not_persisted_twin_objects = true
+automatic_materialization_allowed = false
+```
+
+The mapping contract describes possible future target object classes only. It does not execute mappings, write persisted Twin Kernel objects, write facts, update models, create Field Memory, or create AO-ACT tasks.
+
+---
+
+## P9-07 Twin Kernel Convergence Completion Review
+
+Completion review:
+
+```text
+docs/twin_kernel/TWIN_KERNEL_CONVERGENCE_COMPLETION_REVIEW_V0.json
+```
+
+Acceptance:
+
+```text
+scripts/governance_acceptance/P9_07_TWIN_KERNEL_CONVERGENCE_COMPLETION_REVIEW_ACCEPTANCE.cjs
+```
+
+Completion state:
+
+```text
+governance_convergence_complete = true
+runtime_convergence_status = not_started
+kernel_lines_merged = false
+future_reconciliation_contract_required_before_runtime_convergence = true
+```
+
+P9-07 is a governance completion review only. It does not merge the server persisted Twin Kernel line with the offline replay line, and it does not change replay scripts.
