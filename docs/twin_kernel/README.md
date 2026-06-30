@@ -177,3 +177,48 @@ no_persisted_twin_object_creation
 no_artifact_mapping_contract_creation
 no_model_version_manifest_creation
 ```
+
+---
+
+## P9-03 Replay Case Manifest v0
+
+Case manifest:
+
+- docs/twin_kernel/replay_cases/p8_real_evidence_closed_loop_caf009_soil_moisture_v0.json
+
+Task:
+
+- docs/tasks/P9-03-Replay-Case-Manifest-v0.md
+
+Acceptance:
+
+- node scripts/governance_acceptance/P9_03_REPLAY_CASE_MANIFEST_V0_ACCEPTANCE.cjs
+
+Registered manifest scope:
+
+```text
+case_id = p8_real_evidence_closed_loop_caf009_soil_moisture_v0
+case_manifest_schema_version = replay_case_manifest_v0
+source_line_id = offline_real_evidence_replay_kernel
+case_manifest_does_not_execute_replay = true
+committed_artifact_paths_required = false
+```
+
+Boundary:
+
+```text
+no_new_replay_case
+no_replay_execution
+no_replay_algorithm_change
+no_data_prep_script
+no_raw_samples_seed
+no_committed_replay_artifact_file
+no_persisted_twin_object_creation
+no_model_version_manifest_creation
+```
+
+Next:
+
+```text
+P9-04 Model Version Manifest v0
+```
