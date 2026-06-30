@@ -256,8 +256,46 @@ no_replay_algorithm_change
 no_persisted_twin_object_creation
 ```
 
+---
+
+## P9-05 Acceptance Entry Unification
+
+Acceptance entrypoints manifest:
+
+- docs/twin_kernel/ACCEPTANCE_ENTRYPOINTS_V0.json
+
+Task:
+
+- docs/tasks/P9-05-Acceptance-Entry-Unification.md
+
+Acceptance:
+
+- node scripts/governance_acceptance/P9_05_ACCEPTANCE_ENTRY_UNIFICATION_ACCEPTANCE.cjs
+
+Unified runner:
+
+```text
+suite_id = p9-twin-kernel
+run_command = node scripts/acceptance/run_acceptance.cjs --suite p9-twin-kernel
+list_command = node scripts/acceptance/run_acceptance.cjs --suite p9-twin-kernel --list
+default_suite_preserved = legacy
+```
+
+Boundary:
+
+```text
+acceptance_entrypoint_change_only
+no_runtime_code_change
+no_server_route_change
+no_frontend_change
+no_database_migration
+no_replay_algorithm_change
+no_model_update
+no_persisted_twin_object_creation
+```
+
 Next:
 
 ```text
-P9-05 Acceptance Entry Unification
+P9-06 Replay Artifact Mapping Contract v0
 ```
