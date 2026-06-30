@@ -1654,3 +1654,176 @@ Post-P17 baseline:
 - P17 proves that P16 recommendation candidate envelopes can pass a deterministic review gate and emit a non-persisted draft recommendation governance envelope.
 - P17 does not prove approved recommendation, recommendation body generation, operator action, action approval, AO-ACT execution, agronomic prescription, dashboard projection, production model activation, Field Memory learning, or model training.
 
+
+---
+
+## P18 Recommendation Approval Governance Gate v0 Freeze Closure
+
+Key anchors:
+
+- Branch: main
+- Baseline tag: p17_recommendation_candidate_review_draft_governance_gate_v0
+- Baseline commit: 011508c6
+- Implementation branch: p18-v0
+- Final closure tag: p18_recommendation_approval_governance_gate_v0
+
+Frozen scope:
+
+- P18 Recommendation Approval Governance Gate v0 is complete.
+- P17 draft recommendation governance envelopes can enter a deterministic recommendation approval governance gate.
+- Approved emits a non-persisted approved recommendation governance record.
+- Approved means governance record only.
+- Approved does not mean action approval.
+- Approved does not mean operator instruction.
+- Approved does not mean AO-ACT authority.
+- Approved does not mean dispatch authority.
+- Approved does not mean recommendation body generated.
+- Approved recommendation governance record is governance status only.
+- Rejected emits no approved recommendation governance record.
+- Needs-revision emits no approved recommendation governance record and emits only a revision request boundary.
+- Revision request boundary is not recommendation body, has no recommendation content, is not action request, is not AO-SENSE, has no operator instruction, has no dispatch payload, and has no AO-ACT payload.
+- Human approval is recorded and traceable.
+- Human approval is not action approval, not dispatch approval, and not AO-ACT approval.
+- Same draft plus changed approval decision cannot overwrite existing approval result.
+- Changed approval decision emits a conflict packet requiring review.
+- Wrong source phase is blocked.
+- Draft with action payload is blocked.
+- Draft with agronomic prescription is blocked.
+- Draft with operator instruction is blocked.
+- Draft with recommendation body is blocked.
+- Approved recommendation governance record contains no recommendation body.
+- Approved recommendation governance record contains no recommendation content.
+- Approved recommendation governance record contains no executable action payload.
+- Approved recommendation governance record contains no agronomic prescription.
+- Approved recommendation governance record contains no operator instruction.
+- Approved recommendation governance record contains no dispatch instruction.
+- Approved recommendation governance record contains no AO-ACT payload.
+- Approved recommendation governance record contains no rank or priority.
+- Recommendation approval is not action approval.
+- Approved recommendation governance record is not AO-ACT authority.
+- Approved recommendation governance record is not dispatch authority.
+- P18 cannot bypass P17 draft recommendation governance.
+- Exact-key/exact-value recursive scan blocks forbidden action, dispatch, AO-ACT, prescription, recommendation body, ranking, and priority semantics.
+- Approval packet, approval decision, approved governance record, and changed-approval conflict packet ids are deterministic and idempotent.
+
+Freeze closure result:
+
+- all_prior_p18_acceptance_passed = true
+- eligible_draft_approval_passed = true
+- approval_packet_emitted = true
+- approval_decision_emitted = true
+- approved_recommendation_governance_record_emitted = true
+- approved_means_governance_record_only = true
+- approved_does_not_mean_action_approval = true
+- approved_does_not_mean_operator_instruction = true
+- approved_does_not_mean_ao_act_authority = true
+- approved_does_not_mean_dispatch_authority = true
+- approved_does_not_mean_recommendation_body_generated = true
+- approved_record_is_governance_status_only = true
+- human_approval_recorded = true
+- human_approval_is_not_action_approval = true
+- human_approval_is_not_dispatch_approval = true
+- human_approval_is_not_ao_act_approval = true
+- human_approval_does_not_create_operator_instruction = true
+- rejected_draft_blocked = true
+- rejected_draft_approved_record_emitted = false
+- needs_revision_draft_blocked = true
+- needs_revision_approved_record_emitted = false
+- revision_request_boundary_emitted = true
+- revision_request_is_not_recommendation_body = true
+- revision_request_has_no_recommendation_content = true
+- revision_request_is_not_action_request = true
+- revision_request_is_not_ao_sense = true
+- revision_request_has_no_operator_instruction = true
+- revision_request_has_no_dispatch_payload = true
+- revision_request_has_no_ao_act_payload = true
+- malformed_draft_blocked = true
+- blocked_source_draft_blocked = true
+- wrong_source_phase_blocked = true
+- draft_with_action_payload_blocked = true
+- draft_with_agronomic_prescription_blocked = true
+- draft_with_operator_instruction_blocked = true
+- draft_with_recommendation_body_blocked = true
+- forbidden_action_payload_blocked = true
+- same_draft_changed_approval_decision_conflict_requires_review = true
+- changed_approval_decision_does_not_overwrite_existing_decision = true
+- existing_approval_decision_unchanged = true
+- existing_approved_record_unchanged = true
+- changed_approval_decision_conflict_packet_emitted = true
+- changed_approval_decision_conflict_packet_persisted = false
+- duplicate_approval_decision_created_count = 0
+- duplicate_approved_record_created_count = 0
+- blocked_inputs_approval_packet_emitted = false
+- blocked_inputs_approved_record_emitted = false
+- forbidden_semantics_recursive_scan_passed = true
+- recursive_scan_mode = exact_key_or_exact_value
+- substring_scan_allowed = false
+- same_approval_packet_id_reused = true
+- same_approval_decision_id_reused = true
+- same_approved_recommendation_governance_record_id_reused = true
+- persisted_approval_packet_count = 0
+- persisted_approval_decision_count = 0
+- persisted_approved_recommendation_governance_record_count = 0
+- persisted_recommendation_count = 0
+- approved_action_count = 0
+- ao_act_task_count = 0
+- db_write_count = 0
+- recommendation_body_created = false
+- recommendation_content_created = false
+- action_plan_created = false
+- recommendation_created = false
+- recommendation_approved = false
+- action_approval_created = false
+- action_approval_allowed = false
+- ao_act_task_created = false
+- ao_act_authority_allowed = false
+- dispatch_created = false
+- dashboard_authority = false
+- ranking_allowed = false
+- triage_allowed = false
+- dashboard_sort_key_allowed = false
+- operator_attention_signal_allowed = false
+- field_memory_write_count = 0
+- runtime_model_update_count = 0
+- server_runtime_surface_changed = false
+- production_runtime_surface_changed = false
+- db_surface_changed = false
+- frontend_surface_changed = false
+- package_surface_changed = false
+- ci_surface_changed = false
+- upstream_contract_surface_changed = false
+- forbidden_surface_diff_count = 0
+- failed_assertion_count = 0
+
+Hard boundaries:
+
+- No recommendation body generation
+- No recommendation content generation
+- No operator-facing recommendation read model
+- No operator action
+- No action plan
+- No action approval
+- No AO-ACT task
+- No AO-ACT authority
+- No dispatch
+- No dashboard authority
+- No ranking
+- No triage
+- No dashboard sort key
+- No operator attention signal
+- No DB write
+- No Field Memory write
+- No runtime model update
+- No server runtime surface change
+- No production runtime surface change
+- No frontend surface change
+- No package manager change
+- No CI change
+- No upstream P12/P13/P14/P15/P16/P17 contract change
+
+Post-P18 baseline:
+
+- Next phase must start after tag p18_recommendation_approval_governance_gate_v0.
+- P18 proves that P17 draft recommendation governance envelopes can pass a deterministic approval gate and emit a non-persisted approved recommendation governance record.
+- P18 does not prove recommendation body generation, operator-facing recommendation read model, operator action, action approval, AO-ACT execution, agronomic prescription, dashboard projection, production model activation, Field Memory learning, or model training.
+
