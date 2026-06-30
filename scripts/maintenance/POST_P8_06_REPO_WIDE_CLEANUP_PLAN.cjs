@@ -52,13 +52,27 @@ const STRONG_ENTRYPOINTS = [
   'scripts/acceptance/run_acceptance.cjs',
 ];
 const STRONG_ENTRYPOINT_PREFIXES = ['.github/workflows/'];
+const NON_REWRITE_REFERENCE_PREFIXES = [
+  '.github/',
+  'apps/',
+  'packages/',
+  'db/',
+  'prisma/',
+  'migrations/',
+  'seeds/',
+  'docker/',
+  'scripts/acceptance/',
+];
+const NON_REWRITE_REFERENCE_FILES = new Set(['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml']);
+const REWRITE_ALLOWED_PREFIXES = [
+  'docs/',
+  'scripts/',
+  'README_MIGRATION.md',
+  'README.md',
+];
 
 function abs(file) {
   return path.resolve(ROOT, file);
-}
-
-function exists(file) {
-  return fs.existsSync(abs(file));
 }
 
 function execGit(args) {
@@ -111,19 +125,35 @@ function exactReferenceSources(file, textSources) {
   return references.sort();
 }
 
+function isHistoricalArchivableShape(file) {
+  if (/^docs\/tasks\//.test(file)) return true;
+  if (/^scripts\/twin_kernel\/P[0-7]_/.test(file)) return true;
+  if (/^scripts\/governance_acceptance\//.test(file) && !file.includes('P8_') && !file.includes('POST_P8_')) return true;
+  if (/^scripts\/DELIVERY\//.test(file)) return true;
+  if (/^scripts\/[^/]+\.ps1$/i.test(file)) return true;
+  return false;
+}
+
+function isRewriteAllowedReferenceSource(ref) {
+  if (NON_REWRITE_REFERENCE_FILES.has(ref)) return false;
+  if (NON_REWRITE_REFERENCE_PREFIXES.some((prefix) => ref.startsWith(prefix))) return false;
+  return REWRITE_ALLOWED_PREFIXES.some((prefix) => ref.startsWith(prefix));
+}
+
 function classify(file, exactRefs, strongRefs) {
   if (isProtected(file)) return { action: 'keep', reason: 'protected_current_or_runtime_surface' };
+  if (isHistoricalArchivableShape(file)) {
+    const nonRewriteRefs = exactRefs.filter((ref) => !isRewriteAllowedReferenceSource(ref));
+    if (nonRewriteRefs.length === 0) {
+      if (exactRefs.length === 0) return { action: 'archive', reason: 'historical_file_unreferenced' };
+      return { action: 'archive_rewrite', reason: 'historical_file_referenced_only_by_rewrite_allowed_text', rewrite_reference_count: exactRefs.length };
+    }
+    return { action: 'manual_review', reason: 'historical_file_referenced_by_non_rewrite_source' };
+  }
   if (strongRefs.length > 0) return { action: 'manual_review', reason: 'referenced_by_strong_entrypoint' };
   if (exactRefs.some((ref) => !ref.startsWith('docs/legacy/') && !ref.startsWith('scripts/legacy/'))) {
     return { action: 'manual_review', reason: 'referenced_by_current_non_legacy_file' };
   }
-  if (/^docs\/tasks\//.test(file)) return { action: 'archive', reason: 'historical_task_doc_unreferenced' };
-  if (/^scripts\/twin_kernel\/P[0-7]_/.test(file)) return { action: 'archive', reason: 'historical_replay_script_unreferenced' };
-  if (/^scripts\/governance_acceptance\//.test(file) && !file.includes('P8_') && !file.includes('POST_P8_')) {
-    return { action: 'archive', reason: 'historical_governance_acceptance_unreferenced' };
-  }
-  if (/^scripts\/DELIVERY\//.test(file)) return { action: 'archive', reason: 'historical_delivery_script_unreferenced' };
-  if (/^scripts\/[^/]+\.ps1$/i.test(file)) return { action: 'archive', reason: 'historical_powershell_script_unreferenced' };
   if (/^(dist|build|coverage|\.turbo|\.next|tmp|temp|out)\//.test(file)) return { action: 'delete', reason: 'tracked_generated_artifact_unreferenced' };
   return { action: 'manual_review', reason: 'unknown_or_domain_specific' };
 }
@@ -134,24 +164,29 @@ function main() {
   const strongTextSources = textSources.filter((source) => isStrongEntrypoint(source.file));
 
   const items = files.map((file) => {
-    const exactRefs = isTextFile(file) ? exactReferenceSources(file, textSources) : [];
-    const strongRefs = isTextFile(file) ? exactReferenceSources(file, strongTextSources) : [];
+    const exactRefs = exactReferenceSources(file, textSources);
+    const strongRefs = exactReferenceSources(file, strongTextSources);
     const classification = classify(file, exactRefs, strongRefs);
+    const destination = classification.action === 'archive' || classification.action === 'archive_rewrite' ? destinationFor(file) : null;
     return {
       file,
       action: classification.action,
       reason: classification.reason,
-      destination: classification.action === 'archive' ? destinationFor(file) : null,
+      destination,
       exact_reference_count: exactRefs.length,
-      exact_references: exactRefs.slice(0, 50),
+      exact_references: exactRefs.slice(0, 100),
       strong_reference_count: strongRefs.length,
       strong_references: strongRefs,
+      rewrite_reference_count: classification.rewrite_reference_count || 0,
+      rewrite_references: classification.action === 'archive_rewrite' ? exactRefs : [],
     };
   });
 
   const summary = {
     keep_count: items.filter((item) => item.action === 'keep').length,
     archive_candidate_count: items.filter((item) => item.action === 'archive').length,
+    archive_rewrite_candidate_count: items.filter((item) => item.action === 'archive_rewrite').length,
+    archive_total_candidate_count: items.filter((item) => item.action === 'archive' || item.action === 'archive_rewrite').length,
     delete_candidate_count: items.filter((item) => item.action === 'delete').length,
     manual_review_count: items.filter((item) => item.action === 'manual_review').length,
   };
@@ -164,10 +199,12 @@ function main() {
     strong_entrypoint_count: strongTextSources.length,
     output_plan: OUTPUT_PLAN,
     policy: {
-      archive_requires_no_strong_reference: true,
-      archive_requires_no_current_exact_reference: true,
+      archive_without_rewrite_requires_no_exact_reference: true,
+      archive_rewrite_requires_only_rewrite_allowed_references: true,
       delete_requires_generated_artifact_policy: true,
       current_runtime_surfaces_are_protected: true,
+      non_rewrite_reference_prefixes: NON_REWRITE_REFERENCE_PREFIXES,
+      rewrite_allowed_prefixes: REWRITE_ALLOWED_PREFIXES,
     },
     ...summary,
     items,
