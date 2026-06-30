@@ -1,0 +1,3 @@
+// scripts/governance_acceptance/P14_11_CHANGED_REVIEW_CONFLICT_ACCEPTANCE.cjs
+'use strict';
+require('./P14_ACCEPTANCE_HELPERS.cjs').run('P14_11_CHANGED_REVIEW_CONFLICT_ACCEPTANCE');

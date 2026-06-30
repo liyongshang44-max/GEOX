@@ -1,0 +1,9 @@
+{
+  "schema_version": "p14_human_calibration_review_fixture_v0",
+  "human_calibration_review_present": true,
+  "review_actor": "human_operator",
+  "reviewer_ref": "reviewer_p14_fixture",
+  "review_decision": "accepted",
+  "review_reason": "fixture acceptance for future model version proposal governance",
+  "review_policy_version": "calibration_review_decision_schema_v0"
+}

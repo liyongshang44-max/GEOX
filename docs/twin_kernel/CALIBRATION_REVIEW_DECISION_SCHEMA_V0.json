@@ -1,0 +1,20 @@
+{
+  "schema_version": "calibration_review_decision_schema_v0",
+  "allowed_decisions": ["accepted", "rejected"],
+  "forbidden_decisions": [
+    "auto_accepted",
+    "auto_rejected",
+    "implicit_acceptance",
+    "acceptance_pass_as_review",
+    "dashboard_action_as_review"
+  ],
+  "required_fields": [
+    "review_actor",
+    "reviewer_ref",
+    "review_decision",
+    "review_reason",
+    "review_policy_version",
+    "review_idempotency_key"
+  ],
+  "review_idempotency_key_is_deterministic": true
+}

@@ -1,0 +1,6 @@
+{
+  "schema_version": "p14_changed_review_conflict_fixture_v0",
+  "same_candidate_changed_review": true,
+  "changed_review_decision": "rejected",
+  "changed_review_reason": "conflicting fixture review should not overwrite accepted decision"
+}
