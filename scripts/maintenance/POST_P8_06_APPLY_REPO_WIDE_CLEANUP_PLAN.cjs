@@ -1,6 +1,6 @@
 // scripts/maintenance/POST_P8_06_APPLY_REPO_WIDE_CLEANUP_PLAN.cjs
-// Purpose: apply archive moves from the repository-wide cleanup plan and rewrite allowed text references.
-// Boundary: moves only archive/archive_rewrite files; never moves runtime, frontend, database, package, CI, current P8, or current POST-P8 files.
+// Purpose: apply archive moves from the repository-wide cleanup plan and rewrite safe text references.
+// Boundary: moves only safe archive/archive_rewrite files; never moves runtime, frontend, database, package, CI, current P8, current POST-P8, or governance acceptance anchors.
 
 'use strict';
 
@@ -24,12 +24,12 @@ const FORBIDDEN_PREFIXES = [
   'docs/tasks/P8-',
   'docs/tasks/POST-P8-',
   'scripts/twin_kernel/P8_',
-  'scripts/governance_acceptance/P8_',
-  'scripts/governance_acceptance/POST_P8_',
+  'scripts/governance_acceptance/',
   'scripts/maintenance/POST_P8_',
 ];
 const FORBIDDEN_FILES = new Set([
   'README.md',
+  'README_MIGRATION.md',
   'package.json',
   'pnpm-lock.yaml',
   'pnpm-workspace.yaml',
@@ -49,8 +49,20 @@ const REWRITE_FORBIDDEN_PREFIXES = [
   'seeds/',
   'docker/',
   'scripts/acceptance/',
+  'scripts/governance_acceptance/',
+  'docs/tasks/P8-',
+  'docs/tasks/POST-P8-',
 ];
-const REWRITE_FORBIDDEN_FILES = new Set(['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml']);
+const REWRITE_FORBIDDEN_FILES = new Set([
+  'package.json',
+  'pnpm-lock.yaml',
+  'pnpm-workspace.yaml',
+  'docs/SSOT.md',
+  'docs/REPOSITORY_HANDOFF_MAP.md',
+  'docs/twin_kernel/README.md',
+  'scripts/README.md',
+  'scripts/twin_kernel/README.md',
+]);
 
 function abs(file) {
   return path.resolve(ROOT, file);
@@ -74,6 +86,14 @@ function isForbidden(file) {
 
 function isRewriteForbidden(file) {
   return REWRITE_FORBIDDEN_FILES.has(file) || REWRITE_FORBIDDEN_PREFIXES.some((prefix) => file.startsWith(prefix));
+}
+
+function isSafeCandidate(item) {
+  if (!item || typeof item !== 'object') return false;
+  if (item.action !== 'archive' && item.action !== 'archive_rewrite') return false;
+  if (isForbidden(String(item.file || ''))) return false;
+  const rewriteReferences = Array.isArray(item.rewrite_references) ? item.rewrite_references : [];
+  return !rewriteReferences.some((ref) => isRewriteForbidden(String(ref || '')));
 }
 
 function rewriteReferences(item) {
@@ -121,9 +141,12 @@ function moveOne(item) {
 try {
   if (!exists(PLAN_PATH)) throw new Error(`MISSING_PLAN:${PLAN_PATH}`);
   const plan = readJson(PLAN_PATH);
-  const candidates = (Array.isArray(plan.items) ? plan.items : [])
+  const allCandidates = (Array.isArray(plan.items) ? plan.items : [])
     .filter((item) => item.action === 'archive' || item.action === 'archive_rewrite')
-    .filter((item) => !isForbidden(String(item.file || '')))
+    .filter((item) => !isForbidden(String(item.file || '')));
+  const skippedUnsafeCandidates = allCandidates.filter((item) => !isSafeCandidate(item));
+  const candidates = allCandidates
+    .filter(isSafeCandidate)
     .slice(0, Number.isFinite(LIMIT) ? LIMIT : undefined);
   const results = [];
   for (const item of candidates) results.push(moveOne(item));
@@ -134,11 +157,18 @@ try {
     apply: APPLY,
     plan: PLAN_PATH,
     candidate_count: candidates.length,
+    skipped_unsafe_candidate_count: skippedUnsafeCandidates.length,
     migrated_count: results.filter((item) => item.status === 'migrated').length,
     already_migrated_count: results.filter((item) => item.status === 'already_migrated').length,
     would_migrate_count: results.filter((item) => item.status === 'would_migrate').length,
     rewritten_reference_file_count: [...new Set(results.flatMap((item) => item.rewritten || []))].length,
     results,
+    skipped_unsafe_candidates: skippedUnsafeCandidates.map((item) => ({
+      file: item.file,
+      action: item.action,
+      destination: item.destination,
+      forbidden_rewrite_references: (Array.isArray(item.rewrite_references) ? item.rewrite_references : []).filter((ref) => isRewriteForbidden(String(ref || ''))),
+    })).slice(0, 100),
   }, null, 2));
 } catch (error) {
   console.error(JSON.stringify({ ok: false, action: 'POST_P8_06_APPLY_REPO_WIDE_CLEANUP_PLAN', error: error.message }, null, 2));
