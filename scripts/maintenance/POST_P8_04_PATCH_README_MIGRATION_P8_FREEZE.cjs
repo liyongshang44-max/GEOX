@@ -28,7 +28,7 @@ Key anchors:
 Frozen scope:
 
 - P8 real evidence closed-loop replay demo
-- Real `raw_samples` evidence window
+- Real raw_samples evidence window
 - Real soil moisture state estimate
 - Real soil moisture prediction run
 - Real actual holdout observation window
