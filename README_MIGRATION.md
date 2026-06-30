@@ -1231,3 +1231,127 @@ Post-P14 baseline:
 - P14 does not prove production model activation, runtime use of a promoted model, automatic learning, Field Memory learning, confidence/use-eligibility read model, recommendation generation, AO-ACT execution, or dashboard projection.
 - P15 may begin Twin Confidence / Use-Eligibility Read Model only under a new phase contract.
 
+
+---
+
+## P15 Twin Confidence / Use-Eligibility Read Model v0 Freeze Closure
+
+Key anchors:
+
+- Branch: main
+- Baseline tag: p14_calibration_review_model_version_promotion_gate_v0
+- Baseline commit: b37fb802
+- Final closure tag: p15_twin_confidence_use_eligibility_read_model_v0
+- Acceptance:
+  - node scripts/governance_acceptance/P15_07_TWIN_CONFIDENCE_USE_ELIGIBILITY_READ_MODEL_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P15_08_LOW_EVIDENCE_OBSERVATION_ONLY_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P15_09_HIGH_FORECAST_ERROR_BLOCKED_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P15_10_MISSING_CALIBRATION_REVIEW_REQUIRED_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P15_11_STALE_MODEL_LINEAGE_BLOCKED_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P15_12_FORBIDDEN_RECOMMENDATION_REQUEST_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P15_13_READ_MODEL_IDEMPOTENCY_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P15_14_COMPLETION_REVIEW_ACCEPTANCE.cjs
+
+Frozen scope:
+
+- P15 Twin Confidence / Use-Eligibility Read Model v0 is complete.
+- Committed Twin runtime / calibration governance fixtures can be projected into deterministic confidence read models.
+- Confidence read model is emitted, not persisted.
+- Use-eligibility read model is emitted, not persisted.
+- Evidence freshness uses declared_as_of_ts, not current time.
+- bridge_input_eligible means P16 input only.
+- P15 confidence is not recommendation authority.
+- P15 eligibility is not action approval.
+- P15 read model is not production runtime activation.
+
+Freeze closure result:
+
+- all_prior_p15_acceptance_passed = true
+- eligible_confidence_read_model_passed = true
+- low_evidence_observation_only_passed = true
+- high_error_blocked_passed = true
+- missing_calibration_review_required_passed = true
+- stale_model_lineage_blocked_passed = true
+- forbidden_recommendation_request_passed = true
+- read_model_idempotency_passed = true
+- eligible_fixture_confidence_level = high
+- eligible_fixture_use_eligibility_status = bridge_input_eligible
+- low_evidence_fixture_confidence_level = low
+- low_evidence_fixture_use_eligibility_status = observation_only
+- high_error_fixture_confidence_level = low
+- high_error_fixture_use_eligibility_status = blocked
+- missing_calibration_review_fixture_confidence_level = medium
+- missing_calibration_review_fixture_use_eligibility_status = review_required
+- stale_model_lineage_fixture_confidence_level = low
+- stale_model_lineage_fixture_use_eligibility_status = blocked
+- forbidden_recommendation_request_blocked = true
+- forbidden_semantics_recursive_scan_passed = true
+- same_confidence_read_model_id_reused = true
+- same_use_eligibility_read_model_id_reused = true
+- duplicate_read_model_created_count = 0
+- confidence_read_model_emitted = true
+- use_eligibility_read_model_emitted = true
+- persisted_confidence_read_model_count = 0
+- persisted_use_eligibility_read_model_count = 0
+- db_write_count = 0
+- read_model_only = true
+- bridge_target_phase = P16
+- bridge_input_only = true
+- recommendation_created = false
+- recommendation_candidate_created = false
+- recommendation_generation_allowed = false
+- recommendation_approval_allowed = false
+- action_approval_created = false
+- action_approval_allowed = false
+- ao_act_task_created = false
+- ao_act_authority_allowed = false
+- runtime_model_update_count = 0
+- field_memory_write_count = 0
+- dashboard_authority = false
+- state_file_must_be_os_temp = true
+- repo_write_allowed = false
+- fixture_mutation_allowed = false
+- db_write_allowed = false
+- server_runtime_surface_changed = false
+- production_runtime_surface_changed = false
+- db_surface_changed = false
+- frontend_surface_changed = false
+- package_surface_changed = false
+- ci_surface_changed = false
+- upstream_contract_surface_changed = false
+- forbidden_surface_diff_count = 0
+
+Hard boundaries:
+
+- No persisted confidence read model
+- No persisted use-eligibility read model
+- No DB write
+- No current-time freshness
+- No system-clock freshness
+- No recommendation
+- No recommendation candidate
+- No recommendation approval
+- No action approval
+- No AO-ACT task
+- No AO-ACT authority
+- No runtime model update
+- No Field Memory write
+- No dashboard authority
+- No dashboard ranking
+- No production runtime activation
+- No P13 runner invocation by default
+- No P14 gate invocation by default
+- No raw_samples dependency by default
+- No P8 replay invocation by default
+- No P12 adapter invocation by default
+- No package manager change
+- No CI change
+- No upstream P12/P13/P14 contract change
+
+Post-P15 baseline:
+
+- Next phase must start after tag p15_twin_confidence_use_eligibility_read_model_v0.
+- P15 proves that Twin evidence, forecast error, calibration governance, and model lineage can be projected into deterministic confidence and use-eligibility read models.
+- P15 does not prove recommendation generation, recommendation safety bridge, AO-ACT execution, dashboard projection, production model activation, Field Memory learning, or model training.
+- P16 may begin Twin-to-Recommendation Safety Bridge only under a new phase contract.
+
