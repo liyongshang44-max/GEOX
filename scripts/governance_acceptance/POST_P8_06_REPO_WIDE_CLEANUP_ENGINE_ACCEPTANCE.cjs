@@ -99,9 +99,12 @@ try {
   assert('repo_wide_plan_generated', exists(PLAN_PATH), { plan: PLAN_PATH });
 
   const plan = readJson(PLAN_PATH);
+  const archiveItems = plan.items.filter((item) => item.action === 'archive' || item.action === 'archive_rewrite');
   assert('plan_name_valid', plan.plan === 'POST_P8_REPO_WIDE_CLEANUP_PLAN', { plan: plan.plan });
   assert('tracked_file_count_positive', plan.tracked_file_count > 0, { tracked_file_count: plan.tracked_file_count });
-  assert('archive_candidate_count_positive', plan.archive_candidate_count > 0, { archive_candidate_count: plan.archive_candidate_count });
+  assert('archive_total_candidate_count_positive', archiveItems.length > 0, { archive_total_candidate_count: archiveItems.length });
+  assert('archive_total_candidate_count_matches_summary', plan.archive_total_candidate_count === archiveItems.length, { archive_total_candidate_count: plan.archive_total_candidate_count, computed: archiveItems.length });
+  assert('archive_rewrite_candidate_count_non_negative', plan.archive_rewrite_candidate_count >= 0, { archive_rewrite_candidate_count: plan.archive_rewrite_candidate_count });
   assert('manual_review_count_positive', plan.manual_review_count > 0, { manual_review_count: plan.manual_review_count });
   assert('delete_candidate_count_non_negative', plan.delete_candidate_count >= 0, { delete_candidate_count: plan.delete_candidate_count });
 
@@ -111,11 +114,14 @@ try {
     assert(`protected_current_file_kept:${file}`, item.action === 'keep', { file, action: item.action, reason: item.reason });
   }
 
-  const forbiddenArchive = plan.items.filter((item) => item.action === 'archive' && FORBIDDEN_RUNTIME_PREFIXES.some((prefix) => item.file.startsWith(prefix)));
+  const forbiddenArchive = archiveItems.filter((item) => FORBIDDEN_RUNTIME_PREFIXES.some((prefix) => item.file.startsWith(prefix)));
   assert('no_runtime_surface_archive_candidates', forbiddenArchive.length === 0, { forbiddenArchive: forbiddenArchive.slice(0, 20) });
 
-  const currentP8Archive = plan.items.filter((item) => item.action === 'archive' && (item.file.includes('/P8_') || item.file.includes('/P8-')));
+  const currentP8Archive = archiveItems.filter((item) => item.file.includes('/P8_') || item.file.includes('/P8-'));
   assert('no_current_p8_archive_candidates', currentP8Archive.length === 0, { currentP8Archive });
+
+  const invalidRewrite = plan.items.filter((item) => item.action === 'archive_rewrite' && (!Array.isArray(item.rewrite_references) || item.rewrite_references.length === 0));
+  assert('archive_rewrite_candidates_have_references', invalidRewrite.length === 0, { invalidRewrite: invalidRewrite.slice(0, 20) });
 
   const changed = changedFilesFromMain();
   const runtimeChanged = changed.filter((file) => FORBIDDEN_RUNTIME_PREFIXES.some((prefix) => file.startsWith(prefix)));
@@ -128,6 +134,8 @@ try {
     tracked_file_count: plan.tracked_file_count,
     text_file_count: plan.text_file_count,
     archive_candidate_count: plan.archive_candidate_count,
+    archive_rewrite_candidate_count: plan.archive_rewrite_candidate_count,
+    archive_total_candidate_count: plan.archive_total_candidate_count,
     delete_candidate_count: plan.delete_candidate_count,
     manual_review_count: plan.manual_review_count,
     protected_current_material_verified: true,
