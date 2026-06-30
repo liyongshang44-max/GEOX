@@ -1,5 +1,5 @@
 // scripts/governance_acceptance/P9_05_ACCEPTANCE_ENTRY_UNIFICATION_ACCEPTANCE.cjs
-// Purpose: verify P9-05 acceptance entrypoint unification without executing runtime or replay algorithms.
+// Purpose: verify P9 acceptance entrypoint unification without executing runtime or replay algorithms.
 // Boundary: read-only file-system governance verification plus list-only runner inspection; no runtime, DB, fact, Field Memory, model, AO-ACT, dispatch, receipt, or frontend surface is changed.
 
 'use strict';
@@ -24,6 +24,8 @@ const EXPECTED_ENTRYPOINTS = [
   ['P9-03', 'P9_03_REPLAY_CASE_MANIFEST_V0', 'scripts/governance_acceptance/P9_03_REPLAY_CASE_MANIFEST_V0_ACCEPTANCE.cjs'],
   ['P9-04', 'P9_04_MODEL_VERSION_MANIFEST_V0', 'scripts/governance_acceptance/P9_04_MODEL_VERSION_MANIFEST_V0_ACCEPTANCE.cjs'],
   ['P9-05', 'P9_05_ACCEPTANCE_ENTRY_UNIFICATION', 'scripts/governance_acceptance/P9_05_ACCEPTANCE_ENTRY_UNIFICATION_ACCEPTANCE.cjs'],
+  ['P9-06', 'P9_06_REPLAY_ARTIFACT_MAPPING_CONTRACT_V0', 'scripts/governance_acceptance/P9_06_REPLAY_ARTIFACT_MAPPING_CONTRACT_V0_ACCEPTANCE.cjs'],
+  ['P9-07', 'P9_07_TWIN_KERNEL_CONVERGENCE_COMPLETION_REVIEW', 'scripts/governance_acceptance/P9_07_TWIN_KERNEL_CONVERGENCE_COMPLETION_REVIEW_ACCEPTANCE.cjs'],
 ];
 
 const assertions = [];
@@ -162,6 +164,7 @@ function verifyDocs() {
     'node scripts/acceptance/run_acceptance.cjs --suite p9-twin-kernel',
     'default_suite_preserved = legacy',
     'P9-06 Replay Artifact Mapping Contract v0',
+    'P9-07 Twin Kernel Convergence Completion Review',
   ]), {});
 
   assert('scripts_readme_links_p9_05_entrypoints', containsAll(scriptsReadme, [
@@ -169,6 +172,7 @@ function verifyDocs() {
     ENTRYPOINTS,
     'p9-twin-kernel',
     'default_suite_preserved = legacy',
+    'P9-07 Twin Kernel Convergence Completion Review',
   ]), {});
 }
 
