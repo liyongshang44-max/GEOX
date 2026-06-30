@@ -37,7 +37,7 @@ function sha256(value) {
 
 function artifactChain(calibrationReport) {
   return [
-    { stage: 'P7_01_EVIDENCE_WINDOW_CONTRACT', artifact_ref: calibrationReport.input_evidence_window_ref, runtime_ref: { kind: 'contract_doc', ref_id: 'docs/tasks/P7-01-Twin-Evidence-Window-Contract.md' } },
+    { stage: 'P7_01_EVIDENCE_WINDOW_CONTRACT', artifact_ref: calibrationReport.input_evidence_window_ref, runtime_ref: { kind: 'contract_doc', ref_id: 'docs/legacy/tasks/P7-01-Twin-Evidence-Window-Contract.md' } },
     { stage: 'P7_02_SOIL_MOISTURE_STATE_ESTIMATE_V0', artifact_ref: calibrationReport.input_state_estimate_ref, runtime_ref: { kind: 'runtime_script', ref_id: 'scripts/twin_kernel/P7_02_SOIL_MOISTURE_STATE_ESTIMATE_V0.cjs' } },
     { stage: 'P7_03_PREDICTION_RUN_V0', artifact_ref: calibrationReport.input_prediction_run_ref, runtime_ref: { kind: 'runtime_script', ref_id: 'scripts/twin_kernel/P7_03_PREDICTION_RUN_V0.cjs' } },
     { stage: 'P7_04_BACKTEST_ERROR_REPORT_V0', artifact_ref: calibrationReport.input_backtest_error_report_ref, runtime_ref: { kind: 'runtime_script', ref_id: 'scripts/twin_kernel/P7_04_BACKTEST_ERROR_REPORT_V0.cjs' } },

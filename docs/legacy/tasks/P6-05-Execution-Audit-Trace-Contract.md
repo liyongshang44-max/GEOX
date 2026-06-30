@@ -20,7 +20,7 @@ P6_05_EXECUTION_AUDIT_TRACE_CONTRACT
 
 ```text
 previous_gate: P6_04_EXECUTION_RECEIPT_INTAKE_CONTRACT
-previous_doc: docs/tasks/P6-04-Execution-Receipt-Intake-Contract.md
+previous_doc: docs/legacy/tasks/P6-04-Execution-Receipt-Intake-Contract.md
 previous_acceptance: scripts/governance_acceptance/P6_04_EXECUTION_RECEIPT_INTAKE_CONTRACT.cjs
 previous_commit: 952480f5e532261abfedafe2ebe1b97cdd0129c0
 p5_completion_tag: p5_policy_controlled_field_memory_governance_completion_before_p6

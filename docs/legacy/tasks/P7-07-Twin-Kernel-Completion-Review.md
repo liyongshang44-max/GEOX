@@ -16,7 +16,7 @@ P7_07_TWIN_KERNEL_COMPLETION_REVIEW
 
 ```text
 previous_gate: P7_06_REPLAY_EXPERIMENT_BUNDLE_V0
-previous_doc: docs/tasks/P7-06-Replay-Experiment-Bundle-v0.md
+previous_doc: docs/legacy/tasks/P7-06-Replay-Experiment-Bundle-v0.md
 previous_acceptance: scripts/governance_acceptance/P7_06_REPLAY_EXPERIMENT_BUNDLE_V0.cjs
 previous_commit: 00729ef9beefca48973cf4dbee2cdd3ec08369ba
 p6_completion_tag: p6_execution_system_integration_completion
@@ -60,13 +60,13 @@ scripts/twin_kernel/P7_06_REPLAY_EXPERIMENT_BUNDLE_V0.cjs
 ## Contract docs reviewed
 
 ```text
-docs/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md
-docs/tasks/P7-01-Twin-Evidence-Window-Contract.md
-docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md
-docs/tasks/P7-03-Prediction-Run-v0.md
-docs/tasks/P7-04-Backtest-Error-Report-v0.md
-docs/tasks/P7-05-Calibration-Report-v0.md
-docs/tasks/P7-06-Replay-Experiment-Bundle-v0.md
+docs/legacy/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md
+docs/legacy/tasks/P7-01-Twin-Evidence-Window-Contract.md
+docs/legacy/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md
+docs/legacy/tasks/P7-03-Prediction-Run-v0.md
+docs/legacy/tasks/P7-04-Backtest-Error-Report-v0.md
+docs/legacy/tasks/P7-05-Calibration-Report-v0.md
+docs/legacy/tasks/P7-06-Replay-Experiment-Bundle-v0.md
 ```
 
 ## Acceptance scripts reviewed

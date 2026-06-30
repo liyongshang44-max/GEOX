@@ -14,8 +14,8 @@ const RUN_ID = String(process.env.POSTV1_04_RUN_ID || `run_${Date.now()}_${proce
 const FIELD_LEARNING_CANDIDATE_ID = String(process.env.POSTV1_04_FIELD_LEARNING_CANDIDATE_ID || process.env.POSTV1_03_FIELD_LEARNING_CANDIDATE_ID || 'flc_c23a3ace34c48ce59c205110');
 
 const FILES = {
-  taskLine: 'docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md',
-  taskDoc: 'docs/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md',
+  taskLine: 'docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md',
+  taskDoc: 'docs/legacy/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md',
   tk13Route: 'apps/server/src/routes/v1/twin_kernel_formalization.ts',
   tk14Route: 'apps/server/src/routes/v1/twin_kernel_operator_workflow.ts',
   tk15Route: 'apps/server/src/routes/v1/twin_kernel_production_ingestion.ts',

@@ -11,7 +11,7 @@ const ROOT = process.cwd();
 const ACCEPTANCE = 'P2_REAL_ADAPTER_INTEGRATION_PLANNING';
 
 const FILES = {
-  taskLine: 'docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md',
+  taskLine: 'docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md',
   p1ReviewDoc: 'docs/tasks/P1-Completion-Review-Before-P2.md',
   p1ReviewAcceptance: 'scripts/governance_acceptance/P1_COMPLETION_REVIEW_BEFORE_P2.cjs',
   p2PlanningDoc: 'docs/tasks/P2-Real-Adapter-Integration-Planning.md',

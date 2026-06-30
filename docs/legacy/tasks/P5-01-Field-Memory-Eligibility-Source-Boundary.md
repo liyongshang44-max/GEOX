@@ -20,7 +20,7 @@ P5_01_FIELD_MEMORY_ELIGIBILITY_SOURCE_BOUNDARY
 
 ```text
 previous_gate: P5_00_POLICY_CONTROLLED_FIELD_MEMORY_GOVERNANCE_PLANNING
-previous_doc: docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md
+previous_doc: docs/legacy/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md
 previous_acceptance: scripts/governance_acceptance/P5_00_POLICY_CONTROLLED_FIELD_MEMORY_GOVERNANCE_PLANNING.cjs
 previous_commit: 40ad9d333050b7aae874228c3af414de4a988317
 p4_completion_tag: p4_policy_controlled_roi_completion_before_p5

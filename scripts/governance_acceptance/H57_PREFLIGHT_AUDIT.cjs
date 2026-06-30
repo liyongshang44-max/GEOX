@@ -14,10 +14,10 @@ function fail(error, details = {}) {
 
 const requiredFiles = {
   merged_chain: [
-    'docs/tasks/H54-Final-Index.md',
-    'docs/tasks/H55-Acceptance-Boundary.md',
-    'docs/tasks/H55-Final-Index.md',
-    'docs/tasks/H56-Water-Response-Verification-Boundary.md',
+    'docs/legacy/tasks/H54-Final-Index.md',
+    'docs/legacy/tasks/H55-Acceptance-Boundary.md',
+    'docs/legacy/tasks/H55-Final-Index.md',
+    'docs/legacy/tasks/H56-Water-Response-Verification-Boundary.md',
     'scripts/governance_acceptance/H56_CHECK.cjs',
   ],
   roi: [

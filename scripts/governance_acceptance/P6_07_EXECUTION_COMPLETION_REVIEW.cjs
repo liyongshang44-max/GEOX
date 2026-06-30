@@ -18,42 +18,42 @@ const P6_06_COMMIT = '0117a4913a757af0e117c8e4f41f9c3504a55746';
 const PRIOR_TASKS = [
   {
     gate: 'P6_00_EXECUTION_SYSTEM_INTEGRATION_PLANNING',
-    doc: 'docs/tasks/P6-00-Execution-System-Integration-Planning.md',
+    doc: 'docs/legacy/tasks/P6-00-Execution-System-Integration-Planning.md',
     script: 'scripts/governance_acceptance/P6_00_EXECUTION_SYSTEM_INTEGRATION_PLANNING.cjs',
   },
   {
     gate: 'P6_01_EXECUTION_SOURCE_BOUNDARY',
-    doc: 'docs/tasks/P6-01-Execution-Source-Boundary.md',
+    doc: 'docs/legacy/tasks/P6-01-Execution-Source-Boundary.md',
     script: 'scripts/governance_acceptance/P6_01_EXECUTION_SOURCE_BOUNDARY.cjs',
   },
   {
     gate: 'P6_02_EXECUTION_AUTHORIZATION_GATE_CONTRACT',
-    doc: 'docs/tasks/P6-02-Execution-Authorization-Gate-Contract.md',
+    doc: 'docs/legacy/tasks/P6-02-Execution-Authorization-Gate-Contract.md',
     script: 'scripts/governance_acceptance/P6_02_EXECUTION_AUTHORIZATION_GATE_CONTRACT.cjs',
   },
   {
     gate: 'P6_03_EXECUTION_DISPATCH_OUTPUT_CONTRACT',
-    doc: 'docs/tasks/P6-03-Execution-Dispatch-Output-Contract.md',
+    doc: 'docs/legacy/tasks/P6-03-Execution-Dispatch-Output-Contract.md',
     script: 'scripts/governance_acceptance/P6_03_EXECUTION_DISPATCH_OUTPUT_CONTRACT.cjs',
   },
   {
     gate: 'P6_04_EXECUTION_RECEIPT_INTAKE_CONTRACT',
-    doc: 'docs/tasks/P6-04-Execution-Receipt-Intake-Contract.md',
+    doc: 'docs/legacy/tasks/P6-04-Execution-Receipt-Intake-Contract.md',
     script: 'scripts/governance_acceptance/P6_04_EXECUTION_RECEIPT_INTAKE_CONTRACT.cjs',
   },
   {
     gate: 'P6_05_EXECUTION_AUDIT_TRACE_CONTRACT',
-    doc: 'docs/tasks/P6-05-Execution-Audit-Trace-Contract.md',
+    doc: 'docs/legacy/tasks/P6-05-Execution-Audit-Trace-Contract.md',
     script: 'scripts/governance_acceptance/P6_05_EXECUTION_AUDIT_TRACE_CONTRACT.cjs',
   },
   {
     gate: 'P6_06_EXECUTION_NEGATIVE_BOUNDARY_MATRIX',
-    doc: 'docs/tasks/P6-06-Execution-Negative-Boundary-Matrix.md',
+    doc: 'docs/legacy/tasks/P6-06-Execution-Negative-Boundary-Matrix.md',
     script: 'scripts/governance_acceptance/P6_06_EXECUTION_NEGATIVE_BOUNDARY_MATRIX.cjs',
   },
 ];
 
-const CURRENT_DOC = 'docs/tasks/P6-07-Execution-Completion-Review.md';
+const CURRENT_DOC = 'docs/legacy/tasks/P6-07-Execution-Completion-Review.md';
 const CURRENT_SCRIPT = 'scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs';
 const ALLOWED_CHANGED_FILES = [CURRENT_DOC, CURRENT_SCRIPT];
 const FORBIDDEN_PREFIXES = ['apps/web/', 'apps/server/', 'apps/executor/', 'packages/contracts/', 'packages/', 'db/', 'migrations/', 'scripts/demo_seed/', 'scripts/runtime/'];
@@ -79,8 +79,8 @@ function verifyEntry() {
     const doc = read(task.doc);
     assert(`prior_doc_has_gate:${task.gate}`, doc.includes(task.gate), { doc: task.doc });
   }
-  const p606Doc = read('docs/tasks/P6-06-Execution-Negative-Boundary-Matrix.md');
-  assert('p6_06_doc_handoff_verified', p606Doc.includes('P6_07_EXECUTION_COMPLETION_REVIEW') && p606Doc.includes('p6_07_handoff_rule_count = 10'), { doc: 'docs/tasks/P6-06-Execution-Negative-Boundary-Matrix.md' });
+  const p606Doc = read('docs/legacy/tasks/P6-06-Execution-Negative-Boundary-Matrix.md');
+  assert('p6_06_doc_handoff_verified', p606Doc.includes('P6_07_EXECUTION_COMPLETION_REVIEW') && p606Doc.includes('p6_07_handoff_rule_count = 10'), { doc: 'docs/legacy/tasks/P6-06-Execution-Negative-Boundary-Matrix.md' });
 }
 
 function verifyCurrentDoc() {

@@ -12,15 +12,15 @@ const ROOT = process.cwd();
 const ACCEPTANCE = 'P4_05_ROI_COMPLETION_REVIEW_BEFORE_P5';
 const NEXT_STEP = 'P5_POLICY_CONTROLLED_FIELD_MEMORY_GOVERNANCE';
 const COMPLETION_TAG = 'p4_policy_controlled_roi_completion_before_p5';
-const CURRENT_DOC = 'docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md';
+const CURRENT_DOC = 'docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md';
 const CURRENT_SCRIPT = 'scripts/governance_acceptance/P4_05_ROI_COMPLETION_REVIEW_BEFORE_P5.cjs';
 
 const PRIOR_TASKS = [
-  ['P4_00', 'P4_POLICY_CONTROLLED_ROI_PLANNING', 'docs/tasks/P4-Policy-Controlled-ROI-Planning.md', 'scripts/governance_acceptance/P4_POLICY_CONTROLLED_ROI_PLANNING.cjs', '7fb55a690cfff90ef81a9f62e45809552cd38cba'],
+  ['P4_00', 'P4_POLICY_CONTROLLED_ROI_PLANNING', 'docs/legacy/tasks/P4-Policy-Controlled-ROI-Planning.md', 'scripts/governance_acceptance/P4_POLICY_CONTROLLED_ROI_PLANNING.cjs', '7fb55a690cfff90ef81a9f62e45809552cd38cba'],
   ['P4_01', 'P4_01_ROI_SOURCE_BOUNDARY_RECONCILIATION', 'docs/tasks/P4-01-ROI-Source-Boundary-Reconciliation.md', 'scripts/governance_acceptance/P4_01_ROI_SOURCE_BOUNDARY_RECONCILIATION.cjs', 'f6bdd572685403a87faa268a70cc86c027f348b2'],
   ['P4_02', 'P4_02_ROI_POLICY_GATE_CONTRACT', 'docs/tasks/P4-02-ROI-Policy-Gate-Contract.md', 'scripts/governance_acceptance/P4_02_ROI_POLICY_GATE_CONTRACT.cjs', 'b8341272a990494ebba483ff644bb3837b89ec34'],
   ['P4_03', 'P4_03_ROI_READ_MODEL_OUTPUT_CONTRACT', 'docs/tasks/P4-03-ROI-Read-Model-Output-Contract.md', 'scripts/governance_acceptance/P4_03_ROI_READ_MODEL_OUTPUT_CONTRACT.cjs', 'c6077ab5c9505cdacb07c823397a3d5584a3d328'],
-  ['P4_04', 'P4_04_ROI_NEGATIVE_BOUNDARY_MATRIX', 'docs/tasks/P4-04-ROI-Negative-Boundary-Matrix.md', 'scripts/governance_acceptance/P4_04_ROI_NEGATIVE_BOUNDARY_MATRIX.cjs', '89a0f62ea5c15c0df3fe01ab478d6098b64ada95'],
+  ['P4_04', 'P4_04_ROI_NEGATIVE_BOUNDARY_MATRIX', 'docs/legacy/tasks/P4-04-ROI-Negative-Boundary-Matrix.md', 'scripts/governance_acceptance/P4_04_ROI_NEGATIVE_BOUNDARY_MATRIX.cjs', '89a0f62ea5c15c0df3fe01ab478d6098b64ada95'],
 ];
 
 const ALLOWED_CHANGED_FILES = [CURRENT_DOC, CURRENT_SCRIPT];

@@ -20,7 +20,7 @@ P5_03_FIELD_MEMORY_FORMALIZATION_OUTPUT_CONTRACT
 
 ```text
 previous_gate: P5_02_FIELD_MEMORY_POLICY_GATE_CONTRACT
-previous_doc: docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md
+previous_doc: docs/legacy/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md
 previous_acceptance: scripts/governance_acceptance/P5_02_FIELD_MEMORY_POLICY_GATE_CONTRACT.cjs
 previous_commit: bf28e642e7aab7f2ca29714363d3919a65a3f26e
 p4_completion_tag: p4_policy_controlled_roi_completion_before_p5

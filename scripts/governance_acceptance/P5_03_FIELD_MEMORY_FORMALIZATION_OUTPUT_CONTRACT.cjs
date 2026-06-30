@@ -13,9 +13,9 @@ const ACCEPTANCE = 'P5_03_FIELD_MEMORY_FORMALIZATION_OUTPUT_CONTRACT';
 const NEXT_STEP = 'P5_04_FIELD_MEMORY_NEGATIVE_BOUNDARY_MATRIX';
 const P4_TAG = 'p4_policy_controlled_roi_completion_before_p5';
 const P5_02_COMMIT = 'bf28e642e7aab7f2ca29714363d3919a65a3f26e';
-const P5_02_DOC = 'docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md';
+const P5_02_DOC = 'docs/legacy/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md';
 const P5_02_SCRIPT = 'scripts/governance_acceptance/P5_02_FIELD_MEMORY_POLICY_GATE_CONTRACT.cjs';
-const CURRENT_DOC = 'docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md';
+const CURRENT_DOC = 'docs/legacy/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md';
 const CURRENT_SCRIPT = 'scripts/governance_acceptance/P5_03_FIELD_MEMORY_FORMALIZATION_OUTPUT_CONTRACT.cjs';
 
 const ALLOWED_CHANGED_FILES = [CURRENT_DOC, CURRENT_SCRIPT];

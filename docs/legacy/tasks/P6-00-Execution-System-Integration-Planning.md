@@ -20,7 +20,7 @@ P6_00_EXECUTION_SYSTEM_INTEGRATION_PLANNING
 
 ```text
 p5_completion_gate: P5_05_FIELD_MEMORY_COMPLETION_REVIEW_BEFORE_P6
-p5_completion_doc: docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md
+p5_completion_doc: docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md
 p5_completion_acceptance: scripts/governance_acceptance/P5_05_FIELD_MEMORY_COMPLETION_REVIEW_BEFORE_P6.cjs
 p5_completion_commit: bdcffe967c83442cee4798d6c550f64c3aca082d
 p5_completion_tag: p5_policy_controlled_field_memory_governance_completion_before_p6

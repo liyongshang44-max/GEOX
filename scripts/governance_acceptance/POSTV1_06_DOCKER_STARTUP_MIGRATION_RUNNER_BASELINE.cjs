@@ -14,8 +14,8 @@ const BASE_URL = String(process.env.GEOX_BASE_URL || process.env.TWIN_KERNEL_BAS
 const DATABASE_URL = process.env.DATABASE_URL || process.env.POSTGRES_URL || 'postgres://landos:landos_pwd@127.0.0.1:5433/landos';
 
 const FILES = {
-  taskLine: 'docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md',
-  taskDoc: 'docs/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md',
+  taskLine: 'docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md',
+  taskDoc: 'docs/legacy/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md',
   compose: 'docker-compose.yml',
   dockerfile: 'docker/runtime.Dockerfile',
   serverBootstrap: 'apps/server/src/bootstrap/server.ts',

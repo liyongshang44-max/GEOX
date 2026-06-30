@@ -13,15 +13,15 @@ const ACCEPTANCE = 'P5_05_FIELD_MEMORY_COMPLETION_REVIEW_BEFORE_P6';
 const NEXT_STEP = 'P6_EXECUTION_SYSTEM_INTEGRATION';
 const P4_TAG = 'p4_policy_controlled_roi_completion_before_p5';
 const COMPLETION_TAG = 'p5_policy_controlled_field_memory_governance_completion_before_p6';
-const CURRENT_DOC = 'docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md';
+const CURRENT_DOC = 'docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md';
 const CURRENT_SCRIPT = 'scripts/governance_acceptance/P5_05_FIELD_MEMORY_COMPLETION_REVIEW_BEFORE_P6.cjs';
 
 const PRIOR_TASKS = [
-  ['P5_00', 'P5_00_POLICY_CONTROLLED_FIELD_MEMORY_GOVERNANCE_PLANNING', 'docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md', 'scripts/governance_acceptance/P5_00_POLICY_CONTROLLED_FIELD_MEMORY_GOVERNANCE_PLANNING.cjs', '40ad9d333050b7aae874228c3af414de4a988317'],
-  ['P5_01', 'P5_01_FIELD_MEMORY_ELIGIBILITY_SOURCE_BOUNDARY', 'docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md', 'scripts/governance_acceptance/P5_01_FIELD_MEMORY_ELIGIBILITY_SOURCE_BOUNDARY.cjs', 'f04f8bde02545c3442410ef78353c4e573d95307'],
-  ['P5_02', 'P5_02_FIELD_MEMORY_POLICY_GATE_CONTRACT', 'docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md', 'scripts/governance_acceptance/P5_02_FIELD_MEMORY_POLICY_GATE_CONTRACT.cjs', 'bf28e642e7aab7f2ca29714363d3919a65a3f26e'],
-  ['P5_03', 'P5_03_FIELD_MEMORY_FORMALIZATION_OUTPUT_CONTRACT', 'docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md', 'scripts/governance_acceptance/P5_03_FIELD_MEMORY_FORMALIZATION_OUTPUT_CONTRACT.cjs', 'a4af4e348c47f72610bcb0b13f4b30bb87ce5b47'],
-  ['P5_04', 'P5_04_FIELD_MEMORY_NEGATIVE_BOUNDARY_MATRIX', 'docs/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md', 'scripts/governance_acceptance/P5_04_FIELD_MEMORY_NEGATIVE_BOUNDARY_MATRIX.cjs', '2dd775097d3da316eb7ed4e4f57af72419ad9b9c'],
+  ['P5_00', 'P5_00_POLICY_CONTROLLED_FIELD_MEMORY_GOVERNANCE_PLANNING', 'docs/legacy/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md', 'scripts/governance_acceptance/P5_00_POLICY_CONTROLLED_FIELD_MEMORY_GOVERNANCE_PLANNING.cjs', '40ad9d333050b7aae874228c3af414de4a988317'],
+  ['P5_01', 'P5_01_FIELD_MEMORY_ELIGIBILITY_SOURCE_BOUNDARY', 'docs/legacy/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md', 'scripts/governance_acceptance/P5_01_FIELD_MEMORY_ELIGIBILITY_SOURCE_BOUNDARY.cjs', 'f04f8bde02545c3442410ef78353c4e573d95307'],
+  ['P5_02', 'P5_02_FIELD_MEMORY_POLICY_GATE_CONTRACT', 'docs/legacy/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md', 'scripts/governance_acceptance/P5_02_FIELD_MEMORY_POLICY_GATE_CONTRACT.cjs', 'bf28e642e7aab7f2ca29714363d3919a65a3f26e'],
+  ['P5_03', 'P5_03_FIELD_MEMORY_FORMALIZATION_OUTPUT_CONTRACT', 'docs/legacy/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md', 'scripts/governance_acceptance/P5_03_FIELD_MEMORY_FORMALIZATION_OUTPUT_CONTRACT.cjs', 'a4af4e348c47f72610bcb0b13f4b30bb87ce5b47'],
+  ['P5_04', 'P5_04_FIELD_MEMORY_NEGATIVE_BOUNDARY_MATRIX', 'docs/legacy/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md', 'scripts/governance_acceptance/P5_04_FIELD_MEMORY_NEGATIVE_BOUNDARY_MATRIX.cjs', '2dd775097d3da316eb7ed4e4f57af72419ad9b9c'],
 ];
 
 const ALLOWED_CHANGED_FILES = [CURRENT_DOC, CURRENT_SCRIPT];

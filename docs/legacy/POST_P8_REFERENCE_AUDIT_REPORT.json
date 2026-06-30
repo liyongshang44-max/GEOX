@@ -47,97 +47,97 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H54-Final-Index.md",
+      "file": "docs/legacy/tasks/H54-Final-Index.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H54.0-Control-Connector-Preflight.md",
+      "file": "docs/legacy/tasks/H54.0-Control-Connector-Preflight.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
+      "file": "docs/legacy/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
+      "file": "docs/legacy/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H54.3-Approval-Decision-Linkage.md",
+      "file": "docs/legacy/tasks/H54.3-Approval-Decision-Linkage.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H54.4-Operation-Plan-Linkage.md",
+      "file": "docs/legacy/tasks/H54.4-Operation-Plan-Linkage.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H54.5-Task-Linkage.md",
+      "file": "docs/legacy/tasks/H54.5-Task-Linkage.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H54.6-Linkage.md",
+      "file": "docs/legacy/tasks/H54.6-Linkage.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H54.7-As-Executed-Linkage.md",
+      "file": "docs/legacy/tasks/H54.7-As-Executed-Linkage.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H54.8-Evidence-Artifact-Linkage.md",
+      "file": "docs/legacy/tasks/H54.8-Evidence-Artifact-Linkage.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H55-Acceptance-Boundary.md",
+      "file": "docs/legacy/tasks/H55-Acceptance-Boundary.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H55-Final-Index.md",
+      "file": "docs/legacy/tasks/H55-Final-Index.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H56-Water-Response-Verification-Boundary.md",
+      "file": "docs/legacy/tasks/H56-Water-Response-Verification-Boundary.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
+      "file": "docs/legacy/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H57-ROI-Governance-Boundary.md",
+      "file": "docs/legacy/tasks/H57-ROI-Governance-Boundary.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H58-Field-Memory-Governance-Boundary.md",
+      "file": "docs/legacy/tasks/H58-Field-Memory-Governance-Boundary.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
@@ -275,151 +275,151 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+      "file": "docs/legacy/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
       "classification": "historical_record_candidate_for_archive_after_audit",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "file": "docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
       "classification": "historical_record_candidate_for_archive_after_audit",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "file": "docs/legacy/tasks/P4-Policy-Controlled-ROI-Planning.md",
       "classification": "historical_record_candidate_for_archive_after_audit",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "file": "docs/legacy/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
       "classification": "historical_record_candidate_for_archive_after_audit",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "file": "docs/legacy/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
       "classification": "historical_record_candidate_for_archive_after_audit",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "file": "docs/legacy/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
       "classification": "historical_record_candidate_for_archive_after_audit",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "file": "docs/legacy/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
       "classification": "historical_record_candidate_for_archive_after_audit",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "file": "docs/legacy/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
       "classification": "historical_record_candidate_for_archive_after_audit",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "file": "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
       "classification": "historical_record_candidate_for_archive_after_audit",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "file": "docs/legacy/tasks/P6-00-Execution-System-Integration-Planning.md",
       "classification": "historical_record_candidate_for_archive_after_audit",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P6-01-Execution-Source-Boundary.md",
+      "file": "docs/legacy/tasks/P6-01-Execution-Source-Boundary.md",
       "classification": "historical_record_candidate_for_archive_after_audit",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "file": "docs/legacy/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
       "classification": "historical_record_candidate_for_archive_after_audit",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "file": "docs/legacy/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
       "classification": "historical_record_candidate_for_archive_after_audit",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "file": "docs/legacy/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
       "classification": "historical_record_candidate_for_archive_after_audit",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "file": "docs/legacy/tasks/P6-05-Execution-Audit-Trace-Contract.md",
       "classification": "historical_record_candidate_for_archive_after_audit",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+      "file": "docs/legacy/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
       "classification": "historical_record_candidate_for_archive_after_audit",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P6-07-Execution-Completion-Review.md",
+      "file": "docs/legacy/tasks/P6-07-Execution-Completion-Review.md",
       "classification": "historical_record_candidate_for_archive_after_audit",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
+      "file": "docs/legacy/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
       "classification": "historical_record_candidate_for_archive_after_audit",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "file": "docs/legacy/tasks/P7-01-Twin-Evidence-Window-Contract.md",
       "classification": "historical_record_candidate_for_archive_after_audit",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "file": "docs/legacy/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
       "classification": "historical_record_candidate_for_archive_after_audit",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P7-03-Prediction-Run-v0.md",
+      "file": "docs/legacy/tasks/P7-03-Prediction-Run-v0.md",
       "classification": "historical_record_candidate_for_archive_after_audit",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "file": "docs/legacy/tasks/P7-04-Backtest-Error-Report-v0.md",
       "classification": "historical_record_candidate_for_archive_after_audit",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P7-05-Calibration-Report-v0.md",
+      "file": "docs/legacy/tasks/P7-05-Calibration-Report-v0.md",
       "classification": "historical_record_candidate_for_archive_after_audit",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
+      "file": "docs/legacy/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
       "classification": "historical_record_candidate_for_archive_after_audit",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "file": "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
       "classification": "historical_record_candidate_for_archive_after_audit",
       "strong_reference_count": 0,
       "strong_references": []
@@ -511,43 +511,43 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "file": "docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "file": "docs/legacy/tasks/POSTV1-01-Production-Hardening-Baseline.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
+      "file": "docs/legacy/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
+      "file": "docs/legacy/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
+      "file": "docs/legacy/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
+      "file": "docs/legacy/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []
     },
     {
-      "file": "docs/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
+      "file": "docs/legacy/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "strong_references": []

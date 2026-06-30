@@ -8,8 +8,8 @@ const path = require("path");
 const ROOT = process.cwd();
 
 const FILES = {
-  postV1TaskLine: "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
-  postV101Doc: "docs/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+  postV1TaskLine: "docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+  postV101Doc: "docs/legacy/tasks/POSTV1-01-Production-Hardening-Baseline.md",
   completionReview: "docs/tasks/TWIN-KERNEL-V1-COMPLETION-REVIEW.md",
   oldTaskLine: "docs/tasks/TWIN-KERNEL-NEXT-TASK-LINE.md",
   runtimeHardening: "docs/security/GEOX_RUNTIME_HARDENING_V1.md",

@@ -13,9 +13,9 @@ const ACCEPTANCE = 'P6_03_EXECUTION_DISPATCH_OUTPUT_CONTRACT';
 const NEXT_STEP = 'P6_04_EXECUTION_RECEIPT_INTAKE_CONTRACT';
 const P5_TAG = 'p5_policy_controlled_field_memory_governance_completion_before_p6';
 const P6_02_COMMIT = '17b71da756bec86f8e39beb3c9363c7c49271bc3';
-const P6_02_DOC = 'docs/tasks/P6-02-Execution-Authorization-Gate-Contract.md';
+const P6_02_DOC = 'docs/legacy/tasks/P6-02-Execution-Authorization-Gate-Contract.md';
 const P6_02_SCRIPT = 'scripts/governance_acceptance/P6_02_EXECUTION_AUTHORIZATION_GATE_CONTRACT.cjs';
-const CURRENT_DOC = 'docs/tasks/P6-03-Execution-Dispatch-Output-Contract.md';
+const CURRENT_DOC = 'docs/legacy/tasks/P6-03-Execution-Dispatch-Output-Contract.md';
 const CURRENT_SCRIPT = 'scripts/governance_acceptance/P6_03_EXECUTION_DISPATCH_OUTPUT_CONTRACT.cjs';
 
 const ALLOWED_CHANGED_FILES = [CURRENT_DOC, CURRENT_SCRIPT];

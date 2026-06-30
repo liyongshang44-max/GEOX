@@ -182,36 +182,36 @@
       "group": "historical_task_doc",
       "count": 48,
       "sample_files": [
-        "docs/tasks/H54-Final-Index.md",
-        "docs/tasks/H54.0-Control-Connector-Preflight.md",
-        "docs/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
-        "docs/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
-        "docs/tasks/H54.3-Approval-Decision-Linkage.md",
-        "docs/tasks/H54.4-Operation-Plan-Linkage.md",
-        "docs/tasks/H54.5-Task-Linkage.md",
-        "docs/tasks/H54.6-Linkage.md",
-        "docs/tasks/H54.7-As-Executed-Linkage.md",
-        "docs/tasks/H54.8-Evidence-Artifact-Linkage.md",
-        "docs/tasks/H55-Acceptance-Boundary.md",
-        "docs/tasks/H55-Final-Index.md",
-        "docs/tasks/H56-Water-Response-Verification-Boundary.md",
-        "docs/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
-        "docs/tasks/H57-ROI-Governance-Boundary.md",
-        "docs/tasks/H58-Field-Memory-Governance-Boundary.md",
-        "docs/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
-        "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
-        "docs/tasks/P4-Policy-Controlled-ROI-Planning.md",
-        "docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
-        "docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
-        "docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
-        "docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
-        "docs/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
-        "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
-        "docs/tasks/P6-00-Execution-System-Integration-Planning.md",
-        "docs/tasks/P6-01-Execution-Source-Boundary.md",
-        "docs/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
-        "docs/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
-        "docs/tasks/P6-04-Execution-Receipt-Intake-Contract.md"
+        "docs/legacy/tasks/H54-Final-Index.md",
+        "docs/legacy/tasks/H54.0-Control-Connector-Preflight.md",
+        "docs/legacy/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
+        "docs/legacy/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
+        "docs/legacy/tasks/H54.3-Approval-Decision-Linkage.md",
+        "docs/legacy/tasks/H54.4-Operation-Plan-Linkage.md",
+        "docs/legacy/tasks/H54.5-Task-Linkage.md",
+        "docs/legacy/tasks/H54.6-Linkage.md",
+        "docs/legacy/tasks/H54.7-As-Executed-Linkage.md",
+        "docs/legacy/tasks/H54.8-Evidence-Artifact-Linkage.md",
+        "docs/legacy/tasks/H55-Acceptance-Boundary.md",
+        "docs/legacy/tasks/H55-Final-Index.md",
+        "docs/legacy/tasks/H56-Water-Response-Verification-Boundary.md",
+        "docs/legacy/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
+        "docs/legacy/tasks/H57-ROI-Governance-Boundary.md",
+        "docs/legacy/tasks/H58-Field-Memory-Governance-Boundary.md",
+        "docs/legacy/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+        "docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+        "docs/legacy/tasks/P4-Policy-Controlled-ROI-Planning.md",
+        "docs/legacy/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+        "docs/legacy/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+        "docs/legacy/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+        "docs/legacy/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+        "docs/legacy/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+        "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+        "docs/legacy/tasks/P6-00-Execution-System-Integration-Planning.md",
+        "docs/legacy/tasks/P6-01-Execution-Source-Boundary.md",
+        "docs/legacy/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+        "docs/legacy/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+        "docs/legacy/tasks/P6-04-Execution-Receipt-Intake-Contract.md"
       ]
     },
     {
@@ -3752,8 +3752,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H54-Final-Index.md",
-      "normalized_file": "docs/tasks/H54-Final-Index.md",
+      "file": "docs/legacy/tasks/H54-Final-Index.md",
+      "normalized_file": "docs/legacy/tasks/H54-Final-Index.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 4,
@@ -3767,8 +3767,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H54.0-Control-Connector-Preflight.md",
-      "normalized_file": "docs/tasks/H54.0-Control-Connector-Preflight.md",
+      "file": "docs/legacy/tasks/H54.0-Control-Connector-Preflight.md",
+      "normalized_file": "docs/legacy/tasks/H54.0-Control-Connector-Preflight.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 3,
@@ -3781,8 +3781,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
-      "normalized_file": "docs/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
+      "file": "docs/legacy/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
+      "normalized_file": "docs/legacy/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 3,
@@ -3795,8 +3795,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
-      "normalized_file": "docs/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
+      "file": "docs/legacy/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
+      "normalized_file": "docs/legacy/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 3,
@@ -3809,8 +3809,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H54.3-Approval-Decision-Linkage.md",
-      "normalized_file": "docs/tasks/H54.3-Approval-Decision-Linkage.md",
+      "file": "docs/legacy/tasks/H54.3-Approval-Decision-Linkage.md",
+      "normalized_file": "docs/legacy/tasks/H54.3-Approval-Decision-Linkage.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 3,
@@ -3823,8 +3823,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H54.4-Operation-Plan-Linkage.md",
-      "normalized_file": "docs/tasks/H54.4-Operation-Plan-Linkage.md",
+      "file": "docs/legacy/tasks/H54.4-Operation-Plan-Linkage.md",
+      "normalized_file": "docs/legacy/tasks/H54.4-Operation-Plan-Linkage.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 3,
@@ -3837,8 +3837,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H54.5-Task-Linkage.md",
-      "normalized_file": "docs/tasks/H54.5-Task-Linkage.md",
+      "file": "docs/legacy/tasks/H54.5-Task-Linkage.md",
+      "normalized_file": "docs/legacy/tasks/H54.5-Task-Linkage.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 3,
@@ -3851,8 +3851,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H54.6-Linkage.md",
-      "normalized_file": "docs/tasks/H54.6-Linkage.md",
+      "file": "docs/legacy/tasks/H54.6-Linkage.md",
+      "normalized_file": "docs/legacy/tasks/H54.6-Linkage.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 3,
@@ -3865,8 +3865,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H54.7-As-Executed-Linkage.md",
-      "normalized_file": "docs/tasks/H54.7-As-Executed-Linkage.md",
+      "file": "docs/legacy/tasks/H54.7-As-Executed-Linkage.md",
+      "normalized_file": "docs/legacy/tasks/H54.7-As-Executed-Linkage.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 3,
@@ -3879,8 +3879,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H54.8-Evidence-Artifact-Linkage.md",
-      "normalized_file": "docs/tasks/H54.8-Evidence-Artifact-Linkage.md",
+      "file": "docs/legacy/tasks/H54.8-Evidence-Artifact-Linkage.md",
+      "normalized_file": "docs/legacy/tasks/H54.8-Evidence-Artifact-Linkage.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 3,
@@ -3893,8 +3893,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H55-Acceptance-Boundary.md",
-      "normalized_file": "docs/tasks/H55-Acceptance-Boundary.md",
+      "file": "docs/legacy/tasks/H55-Acceptance-Boundary.md",
+      "normalized_file": "docs/legacy/tasks/H55-Acceptance-Boundary.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 3,
@@ -3907,8 +3907,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H55-Final-Index.md",
-      "normalized_file": "docs/tasks/H55-Final-Index.md",
+      "file": "docs/legacy/tasks/H55-Final-Index.md",
+      "normalized_file": "docs/legacy/tasks/H55-Final-Index.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 3,
@@ -3921,8 +3921,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H56-Water-Response-Verification-Boundary.md",
-      "normalized_file": "docs/tasks/H56-Water-Response-Verification-Boundary.md",
+      "file": "docs/legacy/tasks/H56-Water-Response-Verification-Boundary.md",
+      "normalized_file": "docs/legacy/tasks/H56-Water-Response-Verification-Boundary.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 4,
@@ -3936,8 +3936,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
-      "normalized_file": "docs/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
+      "file": "docs/legacy/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
+      "normalized_file": "docs/legacy/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 3,
@@ -3950,8 +3950,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H57-ROI-Governance-Boundary.md",
-      "normalized_file": "docs/tasks/H57-ROI-Governance-Boundary.md",
+      "file": "docs/legacy/tasks/H57-ROI-Governance-Boundary.md",
+      "normalized_file": "docs/legacy/tasks/H57-ROI-Governance-Boundary.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 5,
@@ -3966,8 +3966,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/H58-Field-Memory-Governance-Boundary.md",
-      "normalized_file": "docs/tasks/H58-Field-Memory-Governance-Boundary.md",
+      "file": "docs/legacy/tasks/H58-Field-Memory-Governance-Boundary.md",
+      "normalized_file": "docs/legacy/tasks/H58-Field-Memory-Governance-Boundary.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 5,
@@ -3982,8 +3982,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
-      "normalized_file": "docs/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+      "file": "docs/legacy/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+      "normalized_file": "docs/legacy/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 5,
@@ -3991,15 +3991,15 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+        "docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
         "scripts/governance_acceptance/P4_04_ROI_NEGATIVE_BOUNDARY_MATRIX.cjs",
         "scripts/governance_acceptance/P4_05_ROI_COMPLETION_REVIEW_BEFORE_P5.cjs"
       ],
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
-      "normalized_file": "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "file": "docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "normalized_file": "docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 5,
@@ -4007,15 +4007,15 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+        "docs/legacy/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
         "scripts/governance_acceptance/P4_05_ROI_COMPLETION_REVIEW_BEFORE_P5.cjs",
         "scripts/governance_acceptance/P5_00_POLICY_CONTROLLED_FIELD_MEMORY_GOVERNANCE_PLANNING.cjs"
       ],
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P4-Policy-Controlled-ROI-Planning.md",
-      "normalized_file": "docs/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "file": "docs/legacy/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "normalized_file": "docs/legacy/tasks/P4-Policy-Controlled-ROI-Planning.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 7,
@@ -4024,7 +4024,7 @@
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
         "docs/legacy/tasks/P4-01-ROI-Source-Boundary-Reconciliation.md",
-        "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+        "docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
         "scripts/governance_acceptance/P4_01_ROI_SOURCE_BOUNDARY_RECONCILIATION.cjs",
         "scripts/governance_acceptance/P4_05_ROI_COMPLETION_REVIEW_BEFORE_P5.cjs",
         "scripts/governance_acceptance/P4_POLICY_CONTROLLED_ROI_PLANNING.cjs"
@@ -4032,8 +4032,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
-      "normalized_file": "docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "file": "docs/legacy/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "normalized_file": "docs/legacy/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 7,
@@ -4041,8 +4041,8 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
-        "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+        "docs/legacy/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+        "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
         "scripts/governance_acceptance/P5_00_POLICY_CONTROLLED_FIELD_MEMORY_GOVERNANCE_PLANNING.cjs",
         "scripts/governance_acceptance/P5_01_FIELD_MEMORY_ELIGIBILITY_SOURCE_BOUNDARY.cjs",
         "scripts/governance_acceptance/P5_05_FIELD_MEMORY_COMPLETION_REVIEW_BEFORE_P6.cjs"
@@ -4050,8 +4050,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
-      "normalized_file": "docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "file": "docs/legacy/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "normalized_file": "docs/legacy/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 7,
@@ -4059,8 +4059,8 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
-        "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+        "docs/legacy/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+        "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
         "scripts/governance_acceptance/P5_01_FIELD_MEMORY_ELIGIBILITY_SOURCE_BOUNDARY.cjs",
         "scripts/governance_acceptance/P5_02_FIELD_MEMORY_POLICY_GATE_CONTRACT.cjs",
         "scripts/governance_acceptance/P5_05_FIELD_MEMORY_COMPLETION_REVIEW_BEFORE_P6.cjs"
@@ -4068,8 +4068,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
-      "normalized_file": "docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "file": "docs/legacy/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "normalized_file": "docs/legacy/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 7,
@@ -4077,8 +4077,8 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
-        "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+        "docs/legacy/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+        "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
         "scripts/governance_acceptance/P5_02_FIELD_MEMORY_POLICY_GATE_CONTRACT.cjs",
         "scripts/governance_acceptance/P5_03_FIELD_MEMORY_FORMALIZATION_OUTPUT_CONTRACT.cjs",
         "scripts/governance_acceptance/P5_05_FIELD_MEMORY_COMPLETION_REVIEW_BEFORE_P6.cjs"
@@ -4086,8 +4086,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
-      "normalized_file": "docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "file": "docs/legacy/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "normalized_file": "docs/legacy/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 7,
@@ -4095,8 +4095,8 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
-        "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+        "docs/legacy/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+        "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
         "scripts/governance_acceptance/P5_03_FIELD_MEMORY_FORMALIZATION_OUTPUT_CONTRACT.cjs",
         "scripts/governance_acceptance/P5_04_FIELD_MEMORY_NEGATIVE_BOUNDARY_MATRIX.cjs",
         "scripts/governance_acceptance/P5_05_FIELD_MEMORY_COMPLETION_REVIEW_BEFORE_P6.cjs"
@@ -4104,8 +4104,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
-      "normalized_file": "docs/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "file": "docs/legacy/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "normalized_file": "docs/legacy/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 5,
@@ -4113,15 +4113,15 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+        "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
         "scripts/governance_acceptance/P5_04_FIELD_MEMORY_NEGATIVE_BOUNDARY_MATRIX.cjs",
         "scripts/governance_acceptance/P5_05_FIELD_MEMORY_COMPLETION_REVIEW_BEFORE_P6.cjs"
       ],
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
-      "normalized_file": "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "file": "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "normalized_file": "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 5,
@@ -4129,15 +4129,15 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P6-00-Execution-System-Integration-Planning.md",
+        "docs/legacy/tasks/P6-00-Execution-System-Integration-Planning.md",
         "scripts/governance_acceptance/P5_05_FIELD_MEMORY_COMPLETION_REVIEW_BEFORE_P6.cjs",
         "scripts/governance_acceptance/P6_00_EXECUTION_SYSTEM_INTEGRATION_PLANNING.cjs"
       ],
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P6-00-Execution-System-Integration-Planning.md",
-      "normalized_file": "docs/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "file": "docs/legacy/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "normalized_file": "docs/legacy/tasks/P6-00-Execution-System-Integration-Planning.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 6,
@@ -4145,7 +4145,7 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P6-01-Execution-Source-Boundary.md",
+        "docs/legacy/tasks/P6-01-Execution-Source-Boundary.md",
         "scripts/governance_acceptance/P6_00_EXECUTION_SYSTEM_INTEGRATION_PLANNING.cjs",
         "scripts/governance_acceptance/P6_01_EXECUTION_SOURCE_BOUNDARY.cjs",
         "scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs"
@@ -4153,8 +4153,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P6-01-Execution-Source-Boundary.md",
-      "normalized_file": "docs/tasks/P6-01-Execution-Source-Boundary.md",
+      "file": "docs/legacy/tasks/P6-01-Execution-Source-Boundary.md",
+      "normalized_file": "docs/legacy/tasks/P6-01-Execution-Source-Boundary.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 6,
@@ -4162,7 +4162,7 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+        "docs/legacy/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
         "scripts/governance_acceptance/P6_01_EXECUTION_SOURCE_BOUNDARY.cjs",
         "scripts/governance_acceptance/P6_02_EXECUTION_AUTHORIZATION_GATE_CONTRACT.cjs",
         "scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs"
@@ -4170,8 +4170,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
-      "normalized_file": "docs/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "file": "docs/legacy/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "normalized_file": "docs/legacy/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 6,
@@ -4179,7 +4179,7 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+        "docs/legacy/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
         "scripts/governance_acceptance/P6_02_EXECUTION_AUTHORIZATION_GATE_CONTRACT.cjs",
         "scripts/governance_acceptance/P6_03_EXECUTION_DISPATCH_OUTPUT_CONTRACT.cjs",
         "scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs"
@@ -4187,8 +4187,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
-      "normalized_file": "docs/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "file": "docs/legacy/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "normalized_file": "docs/legacy/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 6,
@@ -4196,7 +4196,7 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+        "docs/legacy/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
         "scripts/governance_acceptance/P6_03_EXECUTION_DISPATCH_OUTPUT_CONTRACT.cjs",
         "scripts/governance_acceptance/P6_04_EXECUTION_RECEIPT_INTAKE_CONTRACT.cjs",
         "scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs"
@@ -4204,8 +4204,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
-      "normalized_file": "docs/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "file": "docs/legacy/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "normalized_file": "docs/legacy/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 6,
@@ -4213,7 +4213,7 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+        "docs/legacy/tasks/P6-05-Execution-Audit-Trace-Contract.md",
         "scripts/governance_acceptance/P6_04_EXECUTION_RECEIPT_INTAKE_CONTRACT.cjs",
         "scripts/governance_acceptance/P6_05_EXECUTION_AUDIT_TRACE_CONTRACT.cjs",
         "scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs"
@@ -4221,8 +4221,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P6-05-Execution-Audit-Trace-Contract.md",
-      "normalized_file": "docs/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "file": "docs/legacy/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "normalized_file": "docs/legacy/tasks/P6-05-Execution-Audit-Trace-Contract.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 6,
@@ -4230,7 +4230,7 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+        "docs/legacy/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
         "scripts/governance_acceptance/P6_05_EXECUTION_AUDIT_TRACE_CONTRACT.cjs",
         "scripts/governance_acceptance/P6_06_EXECUTION_NEGATIVE_BOUNDARY_MATRIX.cjs",
         "scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs"
@@ -4238,8 +4238,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
-      "normalized_file": "docs/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+      "file": "docs/legacy/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+      "normalized_file": "docs/legacy/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 5,
@@ -4247,15 +4247,15 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P6-07-Execution-Completion-Review.md",
+        "docs/legacy/tasks/P6-07-Execution-Completion-Review.md",
         "scripts/governance_acceptance/P6_06_EXECUTION_NEGATIVE_BOUNDARY_MATRIX.cjs",
         "scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs"
       ],
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P6-07-Execution-Completion-Review.md",
-      "normalized_file": "docs/tasks/P6-07-Execution-Completion-Review.md",
+      "file": "docs/legacy/tasks/P6-07-Execution-Completion-Review.md",
+      "normalized_file": "docs/legacy/tasks/P6-07-Execution-Completion-Review.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 4,
@@ -4269,8 +4269,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
-      "normalized_file": "docs/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
+      "file": "docs/legacy/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
+      "normalized_file": "docs/legacy/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 6,
@@ -4278,16 +4278,16 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P7-01-Twin-Evidence-Window-Contract.md",
-        "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+        "docs/legacy/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+        "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
         "scripts/governance_acceptance/P7_00_TWIN_KERNEL_MINIMAL_RUNTIME_PLANNING.cjs",
         "scripts/governance_acceptance/P7_01_TWIN_EVIDENCE_WINDOW_CONTRACT.cjs"
       ],
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P7-01-Twin-Evidence-Window-Contract.md",
-      "normalized_file": "docs/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "file": "docs/legacy/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "normalized_file": "docs/legacy/tasks/P7-01-Twin-Evidence-Window-Contract.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 8,
@@ -4295,8 +4295,8 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
-        "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+        "docs/legacy/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+        "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
         "scripts/governance_acceptance/P7_01_TWIN_EVIDENCE_WINDOW_CONTRACT.cjs",
         "scripts/governance_acceptance/P7_02_SOIL_MOISTURE_STATE_ESTIMATE_V0.cjs",
         "scripts/twin_kernel/P7_06_REPLAY_EXPERIMENT_BUNDLE_V0.cjs",
@@ -4305,8 +4305,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
-      "normalized_file": "docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "file": "docs/legacy/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "normalized_file": "docs/legacy/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 6,
@@ -4314,16 +4314,16 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P7-03-Prediction-Run-v0.md",
-        "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+        "docs/legacy/tasks/P7-03-Prediction-Run-v0.md",
+        "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
         "scripts/governance_acceptance/P7_02_SOIL_MOISTURE_STATE_ESTIMATE_V0.cjs",
         "scripts/governance_acceptance/P7_03_PREDICTION_RUN_V0.cjs"
       ],
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P7-03-Prediction-Run-v0.md",
-      "normalized_file": "docs/tasks/P7-03-Prediction-Run-v0.md",
+      "file": "docs/legacy/tasks/P7-03-Prediction-Run-v0.md",
+      "normalized_file": "docs/legacy/tasks/P7-03-Prediction-Run-v0.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 6,
@@ -4331,16 +4331,16 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P7-04-Backtest-Error-Report-v0.md",
-        "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+        "docs/legacy/tasks/P7-04-Backtest-Error-Report-v0.md",
+        "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
         "scripts/governance_acceptance/P7_03_PREDICTION_RUN_V0.cjs",
         "scripts/governance_acceptance/P7_04_BACKTEST_ERROR_REPORT_V0.cjs"
       ],
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P7-04-Backtest-Error-Report-v0.md",
-      "normalized_file": "docs/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "file": "docs/legacy/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "normalized_file": "docs/legacy/tasks/P7-04-Backtest-Error-Report-v0.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 6,
@@ -4348,16 +4348,16 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P7-05-Calibration-Report-v0.md",
-        "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+        "docs/legacy/tasks/P7-05-Calibration-Report-v0.md",
+        "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
         "scripts/governance_acceptance/P7_04_BACKTEST_ERROR_REPORT_V0.cjs",
         "scripts/governance_acceptance/P7_05_CALIBRATION_REPORT_V0.cjs"
       ],
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P7-05-Calibration-Report-v0.md",
-      "normalized_file": "docs/tasks/P7-05-Calibration-Report-v0.md",
+      "file": "docs/legacy/tasks/P7-05-Calibration-Report-v0.md",
+      "normalized_file": "docs/legacy/tasks/P7-05-Calibration-Report-v0.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 6,
@@ -4365,16 +4365,16 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
-        "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+        "docs/legacy/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
+        "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
         "scripts/governance_acceptance/P7_05_CALIBRATION_REPORT_V0.cjs",
         "scripts/governance_acceptance/P7_06_REPLAY_EXPERIMENT_BUNDLE_V0.cjs"
       ],
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
-      "normalized_file": "docs/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
+      "file": "docs/legacy/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
+      "normalized_file": "docs/legacy/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 4,
@@ -4382,14 +4382,14 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+        "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
         "scripts/governance_acceptance/P7_06_REPLAY_EXPERIMENT_BUNDLE_V0.cjs"
       ],
       "strong_references": []
     },
     {
-      "file": "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
-      "normalized_file": "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "file": "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "normalized_file": "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 4,
@@ -4403,8 +4403,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
-      "normalized_file": "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "file": "docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "normalized_file": "docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 13,
@@ -4412,7 +4412,7 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+        "docs/legacy/tasks/POSTV1-01-Production-Hardening-Baseline.md",
         "scripts/governance_acceptance/P1_COMPLETION_REVIEW_BEFORE_P2.cjs",
         "scripts/governance_acceptance/P2_REAL_ADAPTER_INTEGRATION_PLANNING.cjs",
         "scripts/governance_acceptance/P4_POLICY_CONTROLLED_ROI_PLANNING.cjs",
@@ -4427,8 +4427,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/POSTV1-01-Production-Hardening-Baseline.md",
-      "normalized_file": "docs/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "file": "docs/legacy/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "normalized_file": "docs/legacy/tasks/POSTV1-01-Production-Hardening-Baseline.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 7,
@@ -4437,7 +4437,7 @@
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
         "docs/legacy/tasks/P1-Completion-Review-Before-P2.md",
-        "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+        "docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
         "scripts/governance_acceptance/P1_COMPLETION_REVIEW_BEFORE_P2.cjs",
         "scripts/governance_acceptance/POSTV1_01_PRODUCTION_HARDENING_BASELINE.cjs",
         "scripts/governance_acceptance/POSTV1_PHASE_LINE_FREEZE.cjs"
@@ -4445,8 +4445,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
-      "normalized_file": "docs/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
+      "file": "docs/legacy/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
+      "normalized_file": "docs/legacy/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 5,
@@ -4461,8 +4461,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
-      "normalized_file": "docs/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
+      "file": "docs/legacy/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
+      "normalized_file": "docs/legacy/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 5,
@@ -4477,8 +4477,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
-      "normalized_file": "docs/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
+      "file": "docs/legacy/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
+      "normalized_file": "docs/legacy/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 5,
@@ -4493,8 +4493,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
-      "normalized_file": "docs/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
+      "file": "docs/legacy/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
+      "normalized_file": "docs/legacy/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 5,
@@ -4509,8 +4509,8 @@
       "strong_references": []
     },
     {
-      "file": "docs/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
-      "normalized_file": "docs/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
+      "file": "docs/legacy/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
+      "normalized_file": "docs/legacy/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
       "manual_review_group": "historical_task_doc",
       "reason": "historical_file_referenced_by_non_rewrite_source",
       "exact_reference_count": 5,
@@ -4795,7 +4795,7 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+        "docs/legacy/tasks/POSTV1-01-Production-Hardening-Baseline.md",
         "docs/tasks/TK13-Formalization-Layer-v0.md",
         "scripts/governance_acceptance/POSTV1_01_PRODUCTION_HARDENING_BASELINE.cjs",
         "scripts/governance_acceptance/TK13_FORMALIZATION_LAYER_V0.cjs",
@@ -4842,7 +4842,7 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+        "docs/legacy/tasks/POSTV1-01-Production-Hardening-Baseline.md",
         "scripts/governance_acceptance/POSTV1_01_PRODUCTION_HARDENING_BASELINE.cjs",
         "scripts/governance_acceptance/POSTV1_PHASE_LINE_FREEZE.cjs",
         "scripts/governance_acceptance/TWIN_KERNEL_V1_COMPLETION_REVIEW.cjs"
@@ -5689,8 +5689,8 @@
       "strong_reference_count": 0,
       "exact_references": [
         "docs/security/GEOX_SECURITY_COMMERCIAL_GATE_V1.md",
-        "docs/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
-        "docs/tasks/H58-Field-Memory-Governance-Boundary.md",
+        "docs/legacy/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
+        "docs/legacy/tasks/H58-Field-Memory-Governance-Boundary.md",
         "scripts/agronomy_acceptance/ACCEPTANCE_COMMERCIAL_MVP0_RELEASE_GATE.cjs",
         "scripts/agronomy_acceptance/ACCEPTANCE_RELEASE_AUDIT_EVIDENCE_BUNDLE_V1.cjs",
         "scripts/governance_acceptance/H57_PREFLIGHT_AUDIT.cjs",
@@ -6023,8 +6023,8 @@
       "strong_reference_count": 0,
       "exact_references": [
         "docs/audit/SCRIPT_INVENTORY.md",
-        "docs/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
-        "docs/tasks/H57-ROI-Governance-Boundary.md",
+        "docs/legacy/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
+        "docs/legacy/tasks/H57-ROI-Governance-Boundary.md",
         "scripts/governance_acceptance/ACCEPTANCE_AO_ACT_VERSION_BOUNDARY_V1.cjs",
         "scripts/governance_acceptance/H57_PREFLIGHT_AUDIT.cjs",
         "scripts/governance_acceptance/H57_ROI_GOVERNANCE_BOUNDARY.cjs"
@@ -8230,7 +8230,7 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
+        "docs/legacy/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
         "scripts/governance_acceptance/ACCEPTANCE_H54_FINAL_INDEX_V1.cjs"
       ],
       "strong_references": []
@@ -8245,7 +8245,7 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
+        "docs/legacy/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
         "scripts/governance_acceptance/ACCEPTANCE_H54_FINAL_INDEX_V1.cjs"
       ],
       "strong_references": []
@@ -8260,7 +8260,7 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/H54.3-Approval-Decision-Linkage.md",
+        "docs/legacy/tasks/H54.3-Approval-Decision-Linkage.md",
         "scripts/governance_acceptance/ACCEPTANCE_H54_FINAL_INDEX_V1.cjs"
       ],
       "strong_references": []
@@ -8275,7 +8275,7 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/H54.4-Operation-Plan-Linkage.md",
+        "docs/legacy/tasks/H54.4-Operation-Plan-Linkage.md",
         "scripts/governance_acceptance/ACCEPTANCE_H54_FINAL_INDEX_V1.cjs"
       ],
       "strong_references": []
@@ -8290,7 +8290,7 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/H54.5-Task-Linkage.md",
+        "docs/legacy/tasks/H54.5-Task-Linkage.md",
         "scripts/governance_acceptance/ACCEPTANCE_H54_FINAL_INDEX_V1.cjs"
       ],
       "strong_references": []
@@ -8305,7 +8305,7 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/H54.6-Linkage.md",
+        "docs/legacy/tasks/H54.6-Linkage.md",
         "scripts/governance_acceptance/ACCEPTANCE_H54_FINAL_INDEX_V1.cjs"
       ],
       "strong_references": []
@@ -8320,7 +8320,7 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/H54.7-As-Executed-Linkage.md",
+        "docs/legacy/tasks/H54.7-As-Executed-Linkage.md",
         "scripts/governance_acceptance/ACCEPTANCE_H54_FINAL_INDEX_V1.cjs"
       ],
       "strong_references": []
@@ -8335,7 +8335,7 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/H54.8-Evidence-Artifact-Linkage.md",
+        "docs/legacy/tasks/H54.8-Evidence-Artifact-Linkage.md",
         "scripts/governance_acceptance/ACCEPTANCE_H54_FINAL_INDEX_V1.cjs"
       ],
       "strong_references": []
@@ -8350,7 +8350,7 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/H54.0-Control-Connector-Preflight.md",
+        "docs/legacy/tasks/H54.0-Control-Connector-Preflight.md",
         "scripts/governance_acceptance/ACCEPTANCE_H54_FINAL_INDEX_V1.cjs"
       ],
       "strong_references": []
@@ -9694,7 +9694,7 @@
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
         "docs/legacy/tasks/P4-01-ROI-Source-Boundary-Reconciliation.md",
         "docs/legacy/tasks/P4-02-ROI-Policy-Gate-Contract.md",
-        "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+        "docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
         "scripts/governance_acceptance/P4_02_ROI_POLICY_GATE_CONTRACT.cjs",
         "scripts/governance_acceptance/P4_05_ROI_COMPLETION_REVIEW_BEFORE_P5.cjs"
       ],
@@ -9712,7 +9712,7 @@
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
         "docs/legacy/tasks/P4-02-ROI-Policy-Gate-Contract.md",
         "docs/legacy/tasks/P4-03-ROI-Read-Model-Output-Contract.md",
-        "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+        "docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
         "scripts/governance_acceptance/P4_03_ROI_READ_MODEL_OUTPUT_CONTRACT.cjs",
         "scripts/governance_acceptance/P4_05_ROI_COMPLETION_REVIEW_BEFORE_P5.cjs"
       ],
@@ -9729,8 +9729,8 @@
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
         "docs/legacy/tasks/P4-03-ROI-Read-Model-Output-Contract.md",
-        "docs/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
-        "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+        "docs/legacy/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+        "docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
         "scripts/governance_acceptance/P4_04_ROI_NEGATIVE_BOUNDARY_MATRIX.cjs",
         "scripts/governance_acceptance/P4_05_ROI_COMPLETION_REVIEW_BEFORE_P5.cjs"
       ],
@@ -9746,8 +9746,8 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
-        "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+        "docs/legacy/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+        "docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
         "scripts/governance_acceptance/P4_05_ROI_COMPLETION_REVIEW_BEFORE_P5.cjs"
       ],
       "strong_references": []
@@ -9762,8 +9762,8 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
-        "docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+        "docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+        "docs/legacy/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
         "scripts/governance_acceptance/P5_00_POLICY_CONTROLLED_FIELD_MEMORY_GOVERNANCE_PLANNING.cjs"
       ],
       "strong_references": []
@@ -9779,8 +9779,8 @@
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
         "docs/legacy/tasks/P4-01-ROI-Source-Boundary-Reconciliation.md",
-        "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
-        "docs/tasks/P4-Policy-Controlled-ROI-Planning.md",
+        "docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+        "docs/legacy/tasks/P4-Policy-Controlled-ROI-Planning.md",
         "scripts/governance_acceptance/P4_01_ROI_SOURCE_BOUNDARY_RECONCILIATION.cjs",
         "scripts/governance_acceptance/P4_05_ROI_COMPLETION_REVIEW_BEFORE_P5.cjs"
       ],
@@ -9796,9 +9796,9 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
-        "docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
-        "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+        "docs/legacy/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+        "docs/legacy/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+        "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
         "scripts/governance_acceptance/P5_01_FIELD_MEMORY_ELIGIBILITY_SOURCE_BOUNDARY.cjs",
         "scripts/governance_acceptance/P5_05_FIELD_MEMORY_COMPLETION_REVIEW_BEFORE_P6.cjs"
       ],
@@ -9814,9 +9814,9 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
-        "docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
-        "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+        "docs/legacy/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+        "docs/legacy/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+        "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
         "scripts/governance_acceptance/P5_02_FIELD_MEMORY_POLICY_GATE_CONTRACT.cjs",
         "scripts/governance_acceptance/P5_05_FIELD_MEMORY_COMPLETION_REVIEW_BEFORE_P6.cjs"
       ],
@@ -9832,9 +9832,9 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
-        "docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
-        "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+        "docs/legacy/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+        "docs/legacy/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+        "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
         "scripts/governance_acceptance/P5_03_FIELD_MEMORY_FORMALIZATION_OUTPUT_CONTRACT.cjs",
         "scripts/governance_acceptance/P5_05_FIELD_MEMORY_COMPLETION_REVIEW_BEFORE_P6.cjs"
       ],
@@ -9850,9 +9850,9 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
-        "docs/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
-        "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+        "docs/legacy/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+        "docs/legacy/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+        "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
         "scripts/governance_acceptance/P5_04_FIELD_MEMORY_NEGATIVE_BOUNDARY_MATRIX.cjs",
         "scripts/governance_acceptance/P5_05_FIELD_MEMORY_COMPLETION_REVIEW_BEFORE_P6.cjs"
       ],
@@ -9868,8 +9868,8 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
-        "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+        "docs/legacy/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+        "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
         "scripts/governance_acceptance/P5_05_FIELD_MEMORY_COMPLETION_REVIEW_BEFORE_P6.cjs"
       ],
       "strong_references": []
@@ -9884,8 +9884,8 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
-        "docs/tasks/P6-00-Execution-System-Integration-Planning.md",
+        "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+        "docs/legacy/tasks/P6-00-Execution-System-Integration-Planning.md",
         "scripts/governance_acceptance/P6_00_EXECUTION_SYSTEM_INTEGRATION_PLANNING.cjs"
       ],
       "strong_references": []
@@ -9900,8 +9900,8 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P6-00-Execution-System-Integration-Planning.md",
-        "docs/tasks/P6-01-Execution-Source-Boundary.md",
+        "docs/legacy/tasks/P6-00-Execution-System-Integration-Planning.md",
+        "docs/legacy/tasks/P6-01-Execution-Source-Boundary.md",
         "scripts/governance_acceptance/P6_01_EXECUTION_SOURCE_BOUNDARY.cjs",
         "scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs"
       ],
@@ -9917,8 +9917,8 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P6-01-Execution-Source-Boundary.md",
-        "docs/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+        "docs/legacy/tasks/P6-01-Execution-Source-Boundary.md",
+        "docs/legacy/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
         "scripts/governance_acceptance/P6_02_EXECUTION_AUTHORIZATION_GATE_CONTRACT.cjs",
         "scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs"
       ],
@@ -9934,8 +9934,8 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
-        "docs/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+        "docs/legacy/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+        "docs/legacy/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
         "scripts/governance_acceptance/P6_03_EXECUTION_DISPATCH_OUTPUT_CONTRACT.cjs",
         "scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs"
       ],
@@ -9951,8 +9951,8 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
-        "docs/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+        "docs/legacy/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+        "docs/legacy/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
         "scripts/governance_acceptance/P6_04_EXECUTION_RECEIPT_INTAKE_CONTRACT.cjs",
         "scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs"
       ],
@@ -9968,8 +9968,8 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
-        "docs/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+        "docs/legacy/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+        "docs/legacy/tasks/P6-05-Execution-Audit-Trace-Contract.md",
         "scripts/governance_acceptance/P6_05_EXECUTION_AUDIT_TRACE_CONTRACT.cjs",
         "scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs"
       ],
@@ -9985,8 +9985,8 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P6-05-Execution-Audit-Trace-Contract.md",
-        "docs/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+        "docs/legacy/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+        "docs/legacy/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
         "scripts/governance_acceptance/P6_06_EXECUTION_NEGATIVE_BOUNDARY_MATRIX.cjs",
         "scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs"
       ],
@@ -10002,8 +10002,8 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
-        "docs/tasks/P6-07-Execution-Completion-Review.md",
+        "docs/legacy/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+        "docs/legacy/tasks/P6-07-Execution-Completion-Review.md",
         "scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs"
       ],
       "strong_references": []
@@ -10018,7 +10018,7 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P6-07-Execution-Completion-Review.md",
+        "docs/legacy/tasks/P6-07-Execution-Completion-Review.md",
         "scripts/governance_acceptance/P7_00_TWIN_KERNEL_MINIMAL_RUNTIME_PLANNING.cjs"
       ],
       "strong_references": []
@@ -10033,9 +10033,9 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
-        "docs/tasks/P7-01-Twin-Evidence-Window-Contract.md",
-        "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+        "docs/legacy/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
+        "docs/legacy/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+        "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
         "scripts/governance_acceptance/P7_01_TWIN_EVIDENCE_WINDOW_CONTRACT.cjs"
       ],
       "strong_references": []
@@ -10050,9 +10050,9 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P7-01-Twin-Evidence-Window-Contract.md",
-        "docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
-        "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+        "docs/legacy/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+        "docs/legacy/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+        "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
         "scripts/governance_acceptance/P7_02_SOIL_MOISTURE_STATE_ESTIMATE_V0.cjs"
       ],
       "strong_references": []
@@ -10067,9 +10067,9 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
-        "docs/tasks/P7-03-Prediction-Run-v0.md",
-        "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+        "docs/legacy/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+        "docs/legacy/tasks/P7-03-Prediction-Run-v0.md",
+        "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
         "scripts/governance_acceptance/P7_03_PREDICTION_RUN_V0.cjs",
         "scripts/twin_kernel/P7_06_REPLAY_EXPERIMENT_BUNDLE_V0.cjs"
       ],
@@ -10085,9 +10085,9 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P7-03-Prediction-Run-v0.md",
-        "docs/tasks/P7-04-Backtest-Error-Report-v0.md",
-        "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+        "docs/legacy/tasks/P7-03-Prediction-Run-v0.md",
+        "docs/legacy/tasks/P7-04-Backtest-Error-Report-v0.md",
+        "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
         "scripts/governance_acceptance/P7_04_BACKTEST_ERROR_REPORT_V0.cjs",
         "scripts/twin_kernel/P7_06_REPLAY_EXPERIMENT_BUNDLE_V0.cjs"
       ],
@@ -10103,9 +10103,9 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P7-04-Backtest-Error-Report-v0.md",
-        "docs/tasks/P7-05-Calibration-Report-v0.md",
-        "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+        "docs/legacy/tasks/P7-04-Backtest-Error-Report-v0.md",
+        "docs/legacy/tasks/P7-05-Calibration-Report-v0.md",
+        "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
         "scripts/governance_acceptance/P7_05_CALIBRATION_REPORT_V0.cjs",
         "scripts/twin_kernel/P7_06_REPLAY_EXPERIMENT_BUNDLE_V0.cjs"
       ],
@@ -10121,9 +10121,9 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P7-05-Calibration-Report-v0.md",
-        "docs/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
-        "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+        "docs/legacy/tasks/P7-05-Calibration-Report-v0.md",
+        "docs/legacy/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
+        "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
         "scripts/governance_acceptance/P7_06_REPLAY_EXPERIMENT_BUNDLE_V0.cjs",
         "scripts/twin_kernel/P7_06_REPLAY_EXPERIMENT_BUNDLE_V0.cjs"
       ],
@@ -10140,8 +10140,8 @@
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
         "docs/legacy/tasks/P1-Completion-Review-Before-P2.md",
-        "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
-        "docs/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+        "docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+        "docs/legacy/tasks/POSTV1-01-Production-Hardening-Baseline.md",
         "scripts/governance_acceptance/P1_COMPLETION_REVIEW_BEFORE_P2.cjs",
         "scripts/governance_acceptance/POSTV1_PHASE_LINE_FREEZE.cjs"
       ],
@@ -10158,7 +10158,7 @@
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
         "docs/legacy/tasks/P1-Completion-Review-Before-P2.md",
-        "docs/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
+        "docs/legacy/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
         "scripts/governance_acceptance/P1_COMPLETION_REVIEW_BEFORE_P2.cjs",
         "scripts/governance_acceptance/POSTV1_03_INGESTION_IDEMPOTENCY_ERROR_TAXONOMY.cjs"
       ],
@@ -10175,7 +10175,7 @@
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
         "docs/legacy/tasks/P1-Completion-Review-Before-P2.md",
-        "docs/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
+        "docs/legacy/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
         "scripts/governance_acceptance/P1_COMPLETION_REVIEW_BEFORE_P2.cjs",
         "scripts/governance_acceptance/POSTV1_04_ROUTE_NEGATIVE_RUNTIME_MATRIX.cjs"
       ],
@@ -10192,7 +10192,7 @@
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
         "docs/legacy/tasks/P1-Completion-Review-Before-P2.md",
-        "docs/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
+        "docs/legacy/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
         "scripts/governance_acceptance/P1_COMPLETION_REVIEW_BEFORE_P2.cjs"
       ],
       "strong_references": []
@@ -10208,7 +10208,7 @@
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
         "docs/legacy/tasks/P1-Completion-Review-Before-P2.md",
-        "docs/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
+        "docs/legacy/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
         "scripts/governance_acceptance/P1_COMPLETION_REVIEW_BEFORE_P2.cjs"
       ],
       "strong_references": []
@@ -10224,7 +10224,7 @@
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
         "docs/legacy/tasks/P1-Completion-Review-Before-P2.md",
-        "docs/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
+        "docs/legacy/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
         "scripts/governance_acceptance/P1_COMPLETION_REVIEW_BEFORE_P2.cjs"
       ],
       "strong_references": []
@@ -10347,7 +10347,7 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+        "docs/legacy/tasks/POSTV1-01-Production-Hardening-Baseline.md",
         "docs/tasks/TWIN-KERNEL-V1-COMPLETION-REVIEW.md",
         "scripts/governance_acceptance/POSTV1_01_PRODUCTION_HARDENING_BASELINE.cjs"
       ],
@@ -10454,7 +10454,7 @@
       "exact_reference_count": 2,
       "strong_reference_count": 0,
       "exact_references": [
-        "docs/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
+        "docs/legacy/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
         "scripts/governance_acceptance/ACCEPTANCE_H54_1_RECOMMENDATION_APPROVAL_REQUEST_GATE_V1.cjs"
       ],
       "strong_references": []
@@ -11102,7 +11102,7 @@
       "exact_reference_count": 3,
       "strong_reference_count": 1,
       "exact_references": [
-        "docs/tasks/H55-Acceptance-Boundary.md",
+        "docs/legacy/tasks/H55-Acceptance-Boundary.md",
         "package.json",
         "scripts/governance_acceptance/ACCEPTANCE_H55_ACCEPTANCE_BOUNDARY_V1.cjs"
       ],
@@ -11232,7 +11232,7 @@
       "exact_reference_count": 3,
       "strong_reference_count": 1,
       "exact_references": [
-        "docs/tasks/H56-Water-Response-Verification-Boundary.md",
+        "docs/legacy/tasks/H56-Water-Response-Verification-Boundary.md",
         "package.json",
         "scripts/governance_acceptance/ACCEPTANCE_WATER_RESPONSE_VERIFICATION_FROM_ACCEPTANCE_V1_BOUNDARY.cjs"
       ],
@@ -11284,8 +11284,8 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
-        "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+        "docs/legacy/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+        "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
         "scripts/governance_acceptance/P7_02_SOIL_MOISTURE_STATE_ESTIMATE_V0.cjs",
         "scripts/governance_acceptance/P7_03_PREDICTION_RUN_V0.cjs",
         "scripts/governance_acceptance/P7_07_TWIN_KERNEL_COMPLETION_REVIEW.cjs",
@@ -11303,8 +11303,8 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P7-03-Prediction-Run-v0.md",
-        "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+        "docs/legacy/tasks/P7-03-Prediction-Run-v0.md",
+        "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
         "scripts/governance_acceptance/P7_03_PREDICTION_RUN_V0.cjs",
         "scripts/governance_acceptance/P7_04_BACKTEST_ERROR_REPORT_V0.cjs",
         "scripts/governance_acceptance/P7_07_TWIN_KERNEL_COMPLETION_REVIEW.cjs",
@@ -11322,8 +11322,8 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P7-04-Backtest-Error-Report-v0.md",
-        "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+        "docs/legacy/tasks/P7-04-Backtest-Error-Report-v0.md",
+        "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
         "scripts/governance_acceptance/P7_04_BACKTEST_ERROR_REPORT_V0.cjs",
         "scripts/governance_acceptance/P7_05_CALIBRATION_REPORT_V0.cjs",
         "scripts/governance_acceptance/P7_07_TWIN_KERNEL_COMPLETION_REVIEW.cjs",
@@ -11341,8 +11341,8 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P7-05-Calibration-Report-v0.md",
-        "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+        "docs/legacy/tasks/P7-05-Calibration-Report-v0.md",
+        "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
         "scripts/governance_acceptance/P7_05_CALIBRATION_REPORT_V0.cjs",
         "scripts/governance_acceptance/P7_06_REPLAY_EXPERIMENT_BUNDLE_V0.cjs",
         "scripts/governance_acceptance/P7_07_TWIN_KERNEL_COMPLETION_REVIEW.cjs",
@@ -11360,8 +11360,8 @@
       "exact_references": [
         "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
         "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
-        "docs/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
-        "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+        "docs/legacy/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
+        "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
         "scripts/governance_acceptance/P7_06_REPLAY_EXPERIMENT_BUNDLE_V0.cjs",
         "scripts/governance_acceptance/P7_07_TWIN_KERNEL_COMPLETION_REVIEW.cjs"
       ],
@@ -11375,7 +11375,7 @@
       "exact_reference_count": 9,
       "strong_reference_count": 0,
       "exact_references": [
-        "docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+        "docs/legacy/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
         "scripts/governance_acceptance/P7_02_SOIL_MOISTURE_STATE_ESTIMATE_V0.cjs",
         "scripts/governance_acceptance/P7_03_PREDICTION_RUN_V0.cjs",
         "scripts/governance_acceptance/P7_04_BACKTEST_ERROR_REPORT_V0.cjs",
@@ -11395,7 +11395,7 @@
       "exact_reference_count": 5,
       "strong_reference_count": 0,
       "exact_references": [
-        "docs/tasks/P7-04-Backtest-Error-Report-v0.md",
+        "docs/legacy/tasks/P7-04-Backtest-Error-Report-v0.md",
         "scripts/governance_acceptance/P7_04_BACKTEST_ERROR_REPORT_V0.cjs",
         "scripts/twin_kernel/P7_04_BACKTEST_ERROR_REPORT_V0.cjs",
         "scripts/twin_kernel/P7_05_CALIBRATION_REPORT_V0.cjs",

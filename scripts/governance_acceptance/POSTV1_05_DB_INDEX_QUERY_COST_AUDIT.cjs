@@ -13,8 +13,8 @@ const ACCEPTANCE = 'POSTV1_05_DB_INDEX_QUERY_COST_AUDIT';
 const DATABASE_URL = process.env.DATABASE_URL || process.env.POSTGRES_URL || 'postgres://landos:landos_pwd@127.0.0.1:5433/landos';
 
 const FILES = {
-  taskLine: 'docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md',
-  taskDoc: 'docs/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md',
+  taskLine: 'docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md',
+  taskDoc: 'docs/legacy/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md',
   migration: 'apps/server/db/migrations/2026_06_29_postv1_05_query_cost_audit_indexes.sql',
   twinKernelRoute: 'apps/server/src/routes/v1/twin_kernel.ts',
   traceRoute: 'apps/server/src/routes/v1/twin_kernel_trace.ts',

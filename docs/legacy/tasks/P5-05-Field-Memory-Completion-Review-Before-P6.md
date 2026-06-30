@@ -18,27 +18,27 @@ P5_05_FIELD_MEMORY_COMPLETION_REVIEW_BEFORE_P6
 
 ```text
 P5_00 gate: P5_00_POLICY_CONTROLLED_FIELD_MEMORY_GOVERNANCE_PLANNING
-P5_00 doc: docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md
+P5_00 doc: docs/legacy/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md
 P5_00 acceptance: scripts/governance_acceptance/P5_00_POLICY_CONTROLLED_FIELD_MEMORY_GOVERNANCE_PLANNING.cjs
 P5_00 commit: 40ad9d333050b7aae874228c3af414de4a988317
 
 P5_01 gate: P5_01_FIELD_MEMORY_ELIGIBILITY_SOURCE_BOUNDARY
-P5_01 doc: docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md
+P5_01 doc: docs/legacy/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md
 P5_01 acceptance: scripts/governance_acceptance/P5_01_FIELD_MEMORY_ELIGIBILITY_SOURCE_BOUNDARY.cjs
 P5_01 commit: f04f8bde02545c3442410ef78353c4e573d95307
 
 P5_02 gate: P5_02_FIELD_MEMORY_POLICY_GATE_CONTRACT
-P5_02 doc: docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md
+P5_02 doc: docs/legacy/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md
 P5_02 acceptance: scripts/governance_acceptance/P5_02_FIELD_MEMORY_POLICY_GATE_CONTRACT.cjs
 P5_02 commit: bf28e642e7aab7f2ca29714363d3919a65a3f26e
 
 P5_03 gate: P5_03_FIELD_MEMORY_FORMALIZATION_OUTPUT_CONTRACT
-P5_03 doc: docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md
+P5_03 doc: docs/legacy/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md
 P5_03 acceptance: scripts/governance_acceptance/P5_03_FIELD_MEMORY_FORMALIZATION_OUTPUT_CONTRACT.cjs
 P5_03 commit: a4af4e348c47f72610bcb0b13f4b30bb87ce5b47
 
 P5_04 gate: P5_04_FIELD_MEMORY_NEGATIVE_BOUNDARY_MATRIX
-P5_04 doc: docs/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md
+P5_04 doc: docs/legacy/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md
 P5_04 acceptance: scripts/governance_acceptance/P5_04_FIELD_MEMORY_NEGATIVE_BOUNDARY_MATRIX.cjs
 P5_04 commit: 2dd775097d3da316eb7ed4e4f57af72419ad9b9c
 ```

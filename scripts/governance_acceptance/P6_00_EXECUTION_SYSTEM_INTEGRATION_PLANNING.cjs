@@ -13,9 +13,9 @@ const ACCEPTANCE = 'P6_00_EXECUTION_SYSTEM_INTEGRATION_PLANNING';
 const NEXT_STEP = 'P6_01_EXECUTION_SOURCE_BOUNDARY';
 const P5_TAG = 'p5_policy_controlled_field_memory_governance_completion_before_p6';
 const P5_COMMIT = 'bdcffe967c83442cee4798d6c550f64c3aca082d';
-const P5_DOC = 'docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md';
+const P5_DOC = 'docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md';
 const P5_SCRIPT = 'scripts/governance_acceptance/P5_05_FIELD_MEMORY_COMPLETION_REVIEW_BEFORE_P6.cjs';
-const CURRENT_DOC = 'docs/tasks/P6-00-Execution-System-Integration-Planning.md';
+const CURRENT_DOC = 'docs/legacy/tasks/P6-00-Execution-System-Integration-Planning.md';
 const CURRENT_SCRIPT = 'scripts/governance_acceptance/P6_00_EXECUTION_SYSTEM_INTEGRATION_PLANNING.cjs';
 
 const ALLOWED_CHANGED_FILES = [CURRENT_DOC, CURRENT_SCRIPT];

@@ -20,7 +20,7 @@ P6_06_EXECUTION_NEGATIVE_BOUNDARY_MATRIX
 
 ```text
 previous_gate: P6_05_EXECUTION_AUDIT_TRACE_CONTRACT
-previous_doc: docs/tasks/P6-05-Execution-Audit-Trace-Contract.md
+previous_doc: docs/legacy/tasks/P6-05-Execution-Audit-Trace-Contract.md
 previous_acceptance: scripts/governance_acceptance/P6_05_EXECUTION_AUDIT_TRACE_CONTRACT.cjs
 previous_commit: 213855b7811de56ca0949aa699ac5ea1fe9b2b4c
 p5_completion_tag: p5_policy_controlled_field_memory_governance_completion_before_p6

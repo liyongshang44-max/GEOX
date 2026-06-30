@@ -17,32 +17,32 @@ P1_COMPLETION_REVIEW_BEFORE_P2
 ```text
 POSTV1-01 Production Hardening Baseline
 commit: 14a312354270e03675c4e1bb5cd82f3fbbe0ec98
-artifact doc: docs/tasks/POSTV1-01-Production-Hardening-Baseline.md
+artifact doc: docs/legacy/tasks/POSTV1-01-Production-Hardening-Baseline.md
 acceptance: scripts/governance_acceptance/POSTV1_01_PRODUCTION_HARDENING_BASELINE.cjs
 
 POSTV1-02 Strong Multi-Scope Fixture Pack
 commit/tag: postv1_02_strong_multi_scope_fixture_pack
-artifact doc: docs/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md
+artifact doc: docs/legacy/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md
 acceptance: scripts/governance_acceptance/POSTV1_02_STRONG_MULTI_SCOPE_FIXTURE_PACK.cjs
 
 POSTV1-03 Ingestion Idempotency & Error Taxonomy
 commit/tag: postv1_03_ingestion_idempotency_error_taxonomy
-artifact doc: docs/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md
+artifact doc: docs/legacy/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md
 acceptance: scripts/governance_acceptance/POSTV1_03_INGESTION_IDEMPOTENCY_ERROR_TAXONOMY.cjs
 
 POSTV1-04 Route Negative Runtime Matrix
 commit/tag: postv1_04_route_negative_runtime_matrix
-artifact doc: docs/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md
+artifact doc: docs/legacy/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md
 acceptance: scripts/governance_acceptance/POSTV1_04_ROUTE_NEGATIVE_RUNTIME_MATRIX.cjs
 
 POSTV1-05 DB Index / Query Cost Audit
 commit/tag: postv1_05_db_index_query_cost_audit
-artifact doc: docs/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md
+artifact doc: docs/legacy/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md
 acceptance: scripts/governance_acceptance/POSTV1_05_DB_INDEX_QUERY_COST_AUDIT.cjs
 
 POSTV1-06 Docker Startup / Migration Runner Baseline
 commit/tag: postv1_06_docker_startup_migration_runner_baseline
-artifact doc: docs/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md
+artifact doc: docs/legacy/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md
 acceptance: scripts/governance_acceptance/POSTV1_06_DOCKER_STARTUP_MIGRATION_RUNNER_BASELINE.cjs
 ```
 

@@ -20,7 +20,7 @@ P5_02_FIELD_MEMORY_POLICY_GATE_CONTRACT
 
 ```text
 previous_gate: P5_01_FIELD_MEMORY_ELIGIBILITY_SOURCE_BOUNDARY
-previous_doc: docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md
+previous_doc: docs/legacy/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md
 previous_acceptance: scripts/governance_acceptance/P5_01_FIELD_MEMORY_ELIGIBILITY_SOURCE_BOUNDARY.cjs
 previous_commit: f04f8bde02545c3442410ef78353c4e573d95307
 p4_completion_tag: p4_policy_controlled_roi_completion_before_p5

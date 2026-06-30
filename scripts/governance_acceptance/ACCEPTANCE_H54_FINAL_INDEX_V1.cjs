@@ -14,16 +14,16 @@ function fail(error, details = {}) {
 }
 
 const requiredFiles = [
-  'docs/tasks/H54.0-Control-Connector-Preflight.md',
-  'docs/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md',
-  'docs/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md',
-  'docs/tasks/H54.3-Approval-Decision-Linkage.md',
-  'docs/tasks/H54.4-Operation-Plan-Linkage.md',
-  'docs/tasks/H54.5-Task-Linkage.md',
-  'docs/tasks/H54.6-Linkage.md',
-  'docs/tasks/H54.7-As-Executed-Linkage.md',
-  'docs/tasks/H54.8-Evidence-Artifact-Linkage.md',
-  'docs/tasks/H54-Final-Index.md',
+  'docs/legacy/tasks/H54.0-Control-Connector-Preflight.md',
+  'docs/legacy/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md',
+  'docs/legacy/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md',
+  'docs/legacy/tasks/H54.3-Approval-Decision-Linkage.md',
+  'docs/legacy/tasks/H54.4-Operation-Plan-Linkage.md',
+  'docs/legacy/tasks/H54.5-Task-Linkage.md',
+  'docs/legacy/tasks/H54.6-Linkage.md',
+  'docs/legacy/tasks/H54.7-As-Executed-Linkage.md',
+  'docs/legacy/tasks/H54.8-Evidence-Artifact-Linkage.md',
+  'docs/legacy/tasks/H54-Final-Index.md',
   'scripts/governance_acceptance/ACCEPTANCE_H54_CONTROL_CONNECTOR_PREFLIGHT_V1.cjs',
   'scripts/governance_acceptance/ACCEPTANCE_H54_1_RECOMMENDATION_APPROVAL_REQUEST_GATE_V1.cjs',
   'scripts/governance_acceptance/ACCEPTANCE_H54_2_ACTIONABLE_IRRIGATION_APPROVAL_ADAPTER_V1.cjs',
@@ -41,7 +41,7 @@ for (const filePath of requiredFiles) {
   }
 }
 
-const finalIndex = fs.readFileSync(path.join(process.cwd(), 'docs/tasks/H54-Final-Index.md'), 'utf8');
+const finalIndex = fs.readFileSync(path.join(process.cwd(), 'docs/legacy/tasks/H54-Final-Index.md'), 'utf8');
 const requiredTokens = ['H54.0', 'H54.1', 'H54.2', 'H54.3', 'H54.4', 'H54.5', 'H54.6', 'H54.7', 'H54.8'];
 for (const token of requiredTokens) {
   if (!finalIndex.includes(token)) fail('FINAL_INDEX_TOKEN_MISSING', { token });

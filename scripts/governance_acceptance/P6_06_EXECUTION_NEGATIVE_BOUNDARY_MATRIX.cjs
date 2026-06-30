@@ -13,9 +13,9 @@ const ACCEPTANCE = 'P6_06_EXECUTION_NEGATIVE_BOUNDARY_MATRIX';
 const NEXT_STEP = 'P6_07_EXECUTION_COMPLETION_REVIEW';
 const P5_TAG = 'p5_policy_controlled_field_memory_governance_completion_before_p6';
 const P6_05_COMMIT = '213855b7811de56ca0949aa699ac5ea1fe9b2b4c';
-const P6_05_DOC = 'docs/tasks/P6-05-Execution-Audit-Trace-Contract.md';
+const P6_05_DOC = 'docs/legacy/tasks/P6-05-Execution-Audit-Trace-Contract.md';
 const P6_05_SCRIPT = 'scripts/governance_acceptance/P6_05_EXECUTION_AUDIT_TRACE_CONTRACT.cjs';
-const CURRENT_DOC = 'docs/tasks/P6-06-Execution-Negative-Boundary-Matrix.md';
+const CURRENT_DOC = 'docs/legacy/tasks/P6-06-Execution-Negative-Boundary-Matrix.md';
 const CURRENT_SCRIPT = 'scripts/governance_acceptance/P6_06_EXECUTION_NEGATIVE_BOUNDARY_MATRIX.cjs';
 
 const ALLOWED_CHANGED_FILES = [CURRENT_DOC, CURRENT_SCRIPT];

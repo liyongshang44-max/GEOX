@@ -20,7 +20,7 @@ P5_04_FIELD_MEMORY_NEGATIVE_BOUNDARY_MATRIX
 
 ```text
 previous_gate: P5_03_FIELD_MEMORY_FORMALIZATION_OUTPUT_CONTRACT
-previous_doc: docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md
+previous_doc: docs/legacy/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md
 previous_acceptance: scripts/governance_acceptance/P5_03_FIELD_MEMORY_FORMALIZATION_OUTPUT_CONTRACT.cjs
 previous_commit: a4af4e348c47f72610bcb0b13f4b30bb87ce5b47
 p4_completion_tag: p4_policy_controlled_roi_completion_before_p5

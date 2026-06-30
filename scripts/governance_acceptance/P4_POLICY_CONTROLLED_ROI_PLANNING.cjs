@@ -10,11 +10,11 @@ const childProcess = require('node:child_process');
 
 const ROOT = process.cwd();
 const ACCEPTANCE = 'P4_POLICY_CONTROLLED_ROI_PLANNING';
-const CURRENT_DOC = 'docs/tasks/P4-Policy-Controlled-ROI-Planning.md';
+const CURRENT_DOC = 'docs/legacy/tasks/P4-Policy-Controlled-ROI-Planning.md';
 const CURRENT_SCRIPT = 'scripts/governance_acceptance/P4_POLICY_CONTROLLED_ROI_PLANNING.cjs';
 const P3_DOC = 'docs/tasks/P3-07-Operator-UX-Completion-Review-Before-P4.md';
 const P3_SCRIPT = 'scripts/governance_acceptance/P3_07_OPERATOR_UX_COMPLETION_REVIEW_BEFORE_P4.cjs';
-const PHASE_LINE_DOC = 'docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md';
+const PHASE_LINE_DOC = 'docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md';
 const P3_COMMIT = 'b905c1bd2fefd39867e8b51c8f8d094dd1e57542';
 const P3_TAG = 'p3_operator_ux_completion_before_p4';
 const NEXT_STEP = 'P4_01_ROI_SOURCE_BOUNDARY_RECONCILIATION';

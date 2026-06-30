@@ -12,7 +12,7 @@
   "planned_target_root": "docs/legacy/tasks",
   "planned_items": [
     {
-      "source_file": "docs/tasks/H54-Final-Index.md",
+      "source_file": "docs/legacy/tasks/H54-Final-Index.md",
       "planned_destination": "docs/legacy/tasks/H54-Final-Index.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -26,7 +26,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/H54.0-Control-Connector-Preflight.md",
+      "source_file": "docs/legacy/tasks/H54.0-Control-Connector-Preflight.md",
       "planned_destination": "docs/legacy/tasks/H54.0-Control-Connector-Preflight.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -40,7 +40,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
+      "source_file": "docs/legacy/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
       "planned_destination": "docs/legacy/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -54,7 +54,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
+      "source_file": "docs/legacy/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
       "planned_destination": "docs/legacy/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -68,7 +68,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/H54.3-Approval-Decision-Linkage.md",
+      "source_file": "docs/legacy/tasks/H54.3-Approval-Decision-Linkage.md",
       "planned_destination": "docs/legacy/tasks/H54.3-Approval-Decision-Linkage.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -82,7 +82,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/H54.4-Operation-Plan-Linkage.md",
+      "source_file": "docs/legacy/tasks/H54.4-Operation-Plan-Linkage.md",
       "planned_destination": "docs/legacy/tasks/H54.4-Operation-Plan-Linkage.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -96,7 +96,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/H54.5-Task-Linkage.md",
+      "source_file": "docs/legacy/tasks/H54.5-Task-Linkage.md",
       "planned_destination": "docs/legacy/tasks/H54.5-Task-Linkage.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -110,7 +110,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/H54.6-Linkage.md",
+      "source_file": "docs/legacy/tasks/H54.6-Linkage.md",
       "planned_destination": "docs/legacy/tasks/H54.6-Linkage.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -124,7 +124,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/H54.7-As-Executed-Linkage.md",
+      "source_file": "docs/legacy/tasks/H54.7-As-Executed-Linkage.md",
       "planned_destination": "docs/legacy/tasks/H54.7-As-Executed-Linkage.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -138,7 +138,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/H54.8-Evidence-Artifact-Linkage.md",
+      "source_file": "docs/legacy/tasks/H54.8-Evidence-Artifact-Linkage.md",
       "planned_destination": "docs/legacy/tasks/H54.8-Evidence-Artifact-Linkage.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -152,7 +152,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/H55-Acceptance-Boundary.md",
+      "source_file": "docs/legacy/tasks/H55-Acceptance-Boundary.md",
       "planned_destination": "docs/legacy/tasks/H55-Acceptance-Boundary.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -166,7 +166,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/H55-Final-Index.md",
+      "source_file": "docs/legacy/tasks/H55-Final-Index.md",
       "planned_destination": "docs/legacy/tasks/H55-Final-Index.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -180,7 +180,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/H56-Water-Response-Verification-Boundary.md",
+      "source_file": "docs/legacy/tasks/H56-Water-Response-Verification-Boundary.md",
       "planned_destination": "docs/legacy/tasks/H56-Water-Response-Verification-Boundary.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -194,7 +194,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
+      "source_file": "docs/legacy/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
       "planned_destination": "docs/legacy/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -208,7 +208,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/H57-ROI-Governance-Boundary.md",
+      "source_file": "docs/legacy/tasks/H57-ROI-Governance-Boundary.md",
       "planned_destination": "docs/legacy/tasks/H57-ROI-Governance-Boundary.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -222,7 +222,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/H58-Field-Memory-Governance-Boundary.md",
+      "source_file": "docs/legacy/tasks/H58-Field-Memory-Governance-Boundary.md",
       "planned_destination": "docs/legacy/tasks/H58-Field-Memory-Governance-Boundary.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -236,7 +236,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+      "source_file": "docs/legacy/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
       "planned_destination": "docs/legacy/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -250,7 +250,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "source_file": "docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
       "planned_destination": "docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -264,7 +264,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "source_file": "docs/legacy/tasks/P4-Policy-Controlled-ROI-Planning.md",
       "planned_destination": "docs/legacy/tasks/P4-Policy-Controlled-ROI-Planning.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -278,7 +278,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "source_file": "docs/legacy/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
       "planned_destination": "docs/legacy/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -292,7 +292,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "source_file": "docs/legacy/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
       "planned_destination": "docs/legacy/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -306,7 +306,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "source_file": "docs/legacy/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
       "planned_destination": "docs/legacy/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -320,7 +320,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "source_file": "docs/legacy/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
       "planned_destination": "docs/legacy/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -334,7 +334,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "source_file": "docs/legacy/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
       "planned_destination": "docs/legacy/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -348,7 +348,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "source_file": "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
       "planned_destination": "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -362,7 +362,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "source_file": "docs/legacy/tasks/P6-00-Execution-System-Integration-Planning.md",
       "planned_destination": "docs/legacy/tasks/P6-00-Execution-System-Integration-Planning.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -376,7 +376,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/P6-01-Execution-Source-Boundary.md",
+      "source_file": "docs/legacy/tasks/P6-01-Execution-Source-Boundary.md",
       "planned_destination": "docs/legacy/tasks/P6-01-Execution-Source-Boundary.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -390,7 +390,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "source_file": "docs/legacy/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
       "planned_destination": "docs/legacy/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -404,7 +404,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "source_file": "docs/legacy/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
       "planned_destination": "docs/legacy/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -418,7 +418,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "source_file": "docs/legacy/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
       "planned_destination": "docs/legacy/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -432,7 +432,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "source_file": "docs/legacy/tasks/P6-05-Execution-Audit-Trace-Contract.md",
       "planned_destination": "docs/legacy/tasks/P6-05-Execution-Audit-Trace-Contract.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -446,7 +446,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+      "source_file": "docs/legacy/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
       "planned_destination": "docs/legacy/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -460,7 +460,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/P6-07-Execution-Completion-Review.md",
+      "source_file": "docs/legacy/tasks/P6-07-Execution-Completion-Review.md",
       "planned_destination": "docs/legacy/tasks/P6-07-Execution-Completion-Review.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -474,7 +474,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
+      "source_file": "docs/legacy/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
       "planned_destination": "docs/legacy/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -488,7 +488,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "source_file": "docs/legacy/tasks/P7-01-Twin-Evidence-Window-Contract.md",
       "planned_destination": "docs/legacy/tasks/P7-01-Twin-Evidence-Window-Contract.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -502,7 +502,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "source_file": "docs/legacy/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
       "planned_destination": "docs/legacy/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -516,7 +516,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/P7-03-Prediction-Run-v0.md",
+      "source_file": "docs/legacy/tasks/P7-03-Prediction-Run-v0.md",
       "planned_destination": "docs/legacy/tasks/P7-03-Prediction-Run-v0.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -530,7 +530,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "source_file": "docs/legacy/tasks/P7-04-Backtest-Error-Report-v0.md",
       "planned_destination": "docs/legacy/tasks/P7-04-Backtest-Error-Report-v0.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -544,7 +544,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/P7-05-Calibration-Report-v0.md",
+      "source_file": "docs/legacy/tasks/P7-05-Calibration-Report-v0.md",
       "planned_destination": "docs/legacy/tasks/P7-05-Calibration-Report-v0.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -558,7 +558,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
+      "source_file": "docs/legacy/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
       "planned_destination": "docs/legacy/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -572,7 +572,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "source_file": "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
       "planned_destination": "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -586,7 +586,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "source_file": "docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
       "planned_destination": "docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -600,7 +600,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "source_file": "docs/legacy/tasks/POSTV1-01-Production-Hardening-Baseline.md",
       "planned_destination": "docs/legacy/tasks/POSTV1-01-Production-Hardening-Baseline.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -614,7 +614,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
+      "source_file": "docs/legacy/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
       "planned_destination": "docs/legacy/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -628,7 +628,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
+      "source_file": "docs/legacy/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
       "planned_destination": "docs/legacy/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -642,7 +642,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
+      "source_file": "docs/legacy/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
       "planned_destination": "docs/legacy/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -656,7 +656,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
+      "source_file": "docs/legacy/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
       "planned_destination": "docs/legacy/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,
@@ -670,7 +670,7 @@
       ]
     },
     {
-      "source_file": "docs/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
+      "source_file": "docs/legacy/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
       "planned_destination": "docs/legacy/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
       "plan_action": "candidate_after_reference_audit",
       "apply_now_allowed": false,

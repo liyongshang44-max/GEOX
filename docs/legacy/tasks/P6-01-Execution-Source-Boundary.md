@@ -20,7 +20,7 @@ P6_01_EXECUTION_SOURCE_BOUNDARY
 
 ```text
 previous_gate: P6_00_EXECUTION_SYSTEM_INTEGRATION_PLANNING
-previous_doc: docs/tasks/P6-00-Execution-System-Integration-Planning.md
+previous_doc: docs/legacy/tasks/P6-00-Execution-System-Integration-Planning.md
 previous_acceptance: scripts/governance_acceptance/P6_00_EXECUTION_SYSTEM_INTEGRATION_PLANNING.cjs
 previous_commit: 11c61eee14b7e84c9eea79ae2339ec5ff6bf17b8
 p5_completion_tag: p5_policy_controlled_field_memory_governance_completion_before_p6

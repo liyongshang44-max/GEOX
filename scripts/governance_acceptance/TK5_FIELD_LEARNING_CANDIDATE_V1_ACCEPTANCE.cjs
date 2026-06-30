@@ -9,7 +9,7 @@ const ROOT = process.cwd();
 
 const REQUIRED_FILES = {
   task: 'docs/tasks/TK5-Field-Learning-Candidate-v1.md',
-  h58: 'docs/tasks/H58-Field-Memory-Governance-Boundary.md',
+  h58: 'docs/legacy/tasks/H58-Field-Memory-Governance-Boundary.md',
   snapshotMigration: 'apps/server/db/migrations/2026_06_28_field_state_snapshot_v1.sql',
   forecastMigration: 'apps/server/db/migrations/2026_06_28_forecast_run_v1.sql',
   scenarioMigration: 'apps/server/db/migrations/2026_06_28_scenario_set_v1.sql',

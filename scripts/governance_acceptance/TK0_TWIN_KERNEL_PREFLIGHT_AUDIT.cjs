@@ -120,7 +120,7 @@ function main() {
   const sourceIndexSql = requireTokens('apps/server/db/migrations/2026_06_18_operator_twin_source_indexes_v1.sql', SOURCE_INDEXES);
   const operatorTwinRoute = requireTokens('apps/server/src/routes/v1/operator_twin.ts', ROUTE_TOKENS.concat(SOURCE_INDEXES));
 
-  const waterResponse = requireTokens('docs/tasks/H56-Water-Response-Verification-Boundary.md', [
+  const waterResponse = requireTokens('docs/legacy/tasks/H56-Water-Response-Verification-Boundary.md', [
     'water_response_verification_index_v1',
     'acceptance_result_v1',
     'as_executed_record_v1',
@@ -134,14 +134,14 @@ function main() {
     'response_verdict text NOT NULL',
   ]);
 
-  const roi = requireTokens('docs/tasks/H57-ROI-Governance-Boundary.md', [
+  const roi = requireTokens('docs/legacy/tasks/H57-ROI-Governance-Boundary.md', [
     'POST /api/v1/roi-ledger/from-as-executed',
     'POST /api/v1/roi-ledger/formalize-from-acceptance',
     'customer_visible_value = false',
     'customer_visible_value = true',
   ]);
 
-  const fieldMemory = requireTokens('docs/tasks/H58-Field-Memory-Governance-Boundary.md', [
+  const fieldMemory = requireTokens('docs/legacy/tasks/H58-Field-Memory-Governance-Boundary.md', [
     'POST /api/v1/field-memory/from-acceptance',
     'verdict = PASS',
     'learning_eligible = true',

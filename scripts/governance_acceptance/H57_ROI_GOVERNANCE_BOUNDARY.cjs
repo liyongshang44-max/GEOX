@@ -29,8 +29,8 @@ function requireExcludes(name, text, tokens) {
   }
 }
 
-const doc = read('docs/tasks/H57-ROI-Governance-Boundary.md');
-const preflightDoc = read('docs/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md');
+const doc = read('docs/legacy/tasks/H57-ROI-Governance-Boundary.md');
+const preflightDoc = read('docs/legacy/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md');
 const roiRoute = read('apps/server/src/routes/roi_ledger_v1.ts');
 const roiDomain = read('apps/server/src/domain/roi/roi_ledger_v1.ts');
 const roiAcceptance = read('scripts/agronomy_acceptance/ACCEPTANCE_ROI_LEDGER_V1.cjs');

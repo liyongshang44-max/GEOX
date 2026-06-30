@@ -20,7 +20,7 @@ P5_00_POLICY_CONTROLLED_FIELD_MEMORY_GOVERNANCE_PLANNING
 
 ```text
 p4_completion_gate: P4_05_ROI_COMPLETION_REVIEW_BEFORE_P5
-p4_completion_doc: docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md
+p4_completion_doc: docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md
 p4_completion_acceptance: scripts/governance_acceptance/P4_05_ROI_COMPLETION_REVIEW_BEFORE_P5.cjs
 p4_completion_commit: bc786fc672d604854ae0124cb4e52d6df9ce7868
 p4_completion_tag: p4_policy_controlled_roi_completion_before_p5

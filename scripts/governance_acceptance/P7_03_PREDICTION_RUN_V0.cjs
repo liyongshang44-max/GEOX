@@ -13,11 +13,11 @@ const ACCEPTANCE = 'P7_03_PREDICTION_RUN_V0';
 const NEXT_STEP = 'P7_04_BACKTEST_ERROR_REPORT_V0';
 const P6_COMPLETION_TAG = 'p6_execution_system_integration_completion';
 const P7_02_COMMIT = '4c7aacb216f5a40ce015618d6a8cccf296838248';
-const P7_02_DOC = 'docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md';
+const P7_02_DOC = 'docs/legacy/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md';
 const P7_02_SCRIPT = 'scripts/governance_acceptance/P7_02_SOIL_MOISTURE_STATE_ESTIMATE_V0.cjs';
 const P7_02_RUNTIME = 'scripts/twin_kernel/P7_02_SOIL_MOISTURE_STATE_ESTIMATE_V0.cjs';
 const P7_02_FIXTURE = 'scripts/twin_kernel/fixtures/P7_02_EVIDENCE_WINDOW_CAF009_SAMPLE.json';
-const CURRENT_DOC = 'docs/tasks/P7-03-Prediction-Run-v0.md';
+const CURRENT_DOC = 'docs/legacy/tasks/P7-03-Prediction-Run-v0.md';
 const CURRENT_SCRIPT = 'scripts/governance_acceptance/P7_03_PREDICTION_RUN_V0.cjs';
 const RUNTIME_SCRIPT = 'scripts/twin_kernel/P7_03_PREDICTION_RUN_V0.cjs';
 

@@ -29,8 +29,8 @@ function requireExcludes(name, text, tokens) {
   }
 }
 
-const h57Doc = read('docs/tasks/H57-ROI-Governance-Boundary.md');
-const h58Doc = read('docs/tasks/H58-Field-Memory-Governance-Boundary.md');
+const h57Doc = read('docs/legacy/tasks/H57-ROI-Governance-Boundary.md');
+const h58Doc = read('docs/legacy/tasks/H58-Field-Memory-Governance-Boundary.md');
 const fieldMemoryRoute = read('apps/server/src/routes/field_memory_v1.ts');
 const fieldMemoryService = read('apps/server/src/services/field_memory_service.ts');
 const fieldMemoryAcceptance = read('scripts/agronomy_acceptance/ACCEPTANCE_FIELD_MEMORY_V1.cjs');

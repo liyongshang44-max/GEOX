@@ -13,9 +13,9 @@ const ACCEPTANCE = 'P5_00_POLICY_CONTROLLED_FIELD_MEMORY_GOVERNANCE_PLANNING';
 const NEXT_STEP = 'P5_01_FIELD_MEMORY_ELIGIBILITY_SOURCE_BOUNDARY';
 const P4_TAG = 'p4_policy_controlled_roi_completion_before_p5';
 const P4_COMMIT = 'bc786fc672d604854ae0124cb4e52d6df9ce7868';
-const P4_DOC = 'docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md';
+const P4_DOC = 'docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md';
 const P4_SCRIPT = 'scripts/governance_acceptance/P4_05_ROI_COMPLETION_REVIEW_BEFORE_P5.cjs';
-const CURRENT_DOC = 'docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md';
+const CURRENT_DOC = 'docs/legacy/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md';
 const CURRENT_SCRIPT = 'scripts/governance_acceptance/P5_00_POLICY_CONTROLLED_FIELD_MEMORY_GOVERNANCE_PLANNING.cjs';
 
 const ALLOWED_CHANGED_FILES = [CURRENT_DOC, CURRENT_SCRIPT];

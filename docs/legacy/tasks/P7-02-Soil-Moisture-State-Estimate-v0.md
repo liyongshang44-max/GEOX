@@ -20,7 +20,7 @@ P7_02_SOIL_MOISTURE_STATE_ESTIMATE_V0
 
 ```text
 previous_gate: P7_01_TWIN_EVIDENCE_WINDOW_CONTRACT
-previous_doc: docs/tasks/P7-01-Twin-Evidence-Window-Contract.md
+previous_doc: docs/legacy/tasks/P7-01-Twin-Evidence-Window-Contract.md
 previous_acceptance: scripts/governance_acceptance/P7_01_TWIN_EVIDENCE_WINDOW_CONTRACT.cjs
 previous_commit: 71389510e1c10ca71c2ddaefa5548bc91879bfd5
 p6_completion_tag: p6_execution_system_integration_completion

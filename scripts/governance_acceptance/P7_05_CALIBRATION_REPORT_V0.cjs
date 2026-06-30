@@ -13,10 +13,10 @@ const ACCEPTANCE = 'P7_05_CALIBRATION_REPORT_V0';
 const NEXT_STEP = 'P7_06_REPLAY_EXPERIMENT_BUNDLE_V0';
 const P6_COMPLETION_TAG = 'p6_execution_system_integration_completion';
 const P7_04_COMMIT = 'e5eb8705474993e4aeee2c24e92ff710c1b7f4e0';
-const P7_04_DOC = 'docs/tasks/P7-04-Backtest-Error-Report-v0.md';
+const P7_04_DOC = 'docs/legacy/tasks/P7-04-Backtest-Error-Report-v0.md';
 const P7_04_SCRIPT = 'scripts/governance_acceptance/P7_04_BACKTEST_ERROR_REPORT_V0.cjs';
 const P7_04_RUNTIME = 'scripts/twin_kernel/P7_04_BACKTEST_ERROR_REPORT_V0.cjs';
-const CURRENT_DOC = 'docs/tasks/P7-05-Calibration-Report-v0.md';
+const CURRENT_DOC = 'docs/legacy/tasks/P7-05-Calibration-Report-v0.md';
 const CURRENT_SCRIPT = 'scripts/governance_acceptance/P7_05_CALIBRATION_REPORT_V0.cjs';
 const RUNTIME_SCRIPT = 'scripts/twin_kernel/P7_05_CALIBRATION_REPORT_V0.cjs';
 

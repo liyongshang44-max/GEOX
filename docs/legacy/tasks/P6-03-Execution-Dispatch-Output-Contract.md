@@ -20,7 +20,7 @@ P6_03_EXECUTION_DISPATCH_OUTPUT_CONTRACT
 
 ```text
 previous_gate: P6_02_EXECUTION_AUTHORIZATION_GATE_CONTRACT
-previous_doc: docs/tasks/P6-02-Execution-Authorization-Gate-Contract.md
+previous_doc: docs/legacy/tasks/P6-02-Execution-Authorization-Gate-Contract.md
 previous_acceptance: scripts/governance_acceptance/P6_02_EXECUTION_AUTHORIZATION_GATE_CONTRACT.cjs
 previous_commit: 17b71da756bec86f8e39beb3c9363c7c49271bc3
 p5_completion_tag: p5_policy_controlled_field_memory_governance_completion_before_p6

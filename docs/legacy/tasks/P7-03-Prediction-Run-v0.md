@@ -20,7 +20,7 @@ P7_03_PREDICTION_RUN_V0
 
 ```text
 previous_gate: P7_02_SOIL_MOISTURE_STATE_ESTIMATE_V0
-previous_doc: docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md
+previous_doc: docs/legacy/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md
 previous_acceptance: scripts/governance_acceptance/P7_02_SOIL_MOISTURE_STATE_ESTIMATE_V0.cjs
 previous_commit: 4c7aacb216f5a40ce015618d6a8cccf296838248
 p6_completion_tag: p6_execution_system_integration_completion
