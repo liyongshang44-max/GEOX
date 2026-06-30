@@ -140,3 +140,40 @@ no_ao_act_task
 no_dispatch
 no_receipt
 ```
+
+---
+
+## P9-02 Replay Registry v0
+
+Registry:
+
+- docs/twin_kernel/REPLAY_REGISTRY_V0.json
+
+Task:
+
+- docs/tasks/P9-02-Replay-Registry-v0.md
+
+Acceptance:
+
+- node scripts/governance_acceptance/P9_02_REPLAY_REGISTRY_V0_ACCEPTANCE.cjs
+
+Registered scope:
+
+```text
+case_id = p8_real_evidence_closed_loop_caf009_soil_moisture_v0
+line_id = offline_real_evidence_replay_kernel
+artifact_materialization = stdout_json_contract
+committed_artifact_paths_required = false
+```
+
+Boundary:
+
+```text
+no_new_replay_case
+no_committed_replay_artifact_file
+no_replay_execution
+no_replay_algorithm_change
+no_persisted_twin_object_creation
+no_artifact_mapping_contract_creation
+no_model_version_manifest_creation
+```
