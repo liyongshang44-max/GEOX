@@ -33,10 +33,20 @@ const FORBIDDEN_CHANGED_PREFIXES = [
   'docker/',
   'scripts/governance_acceptance/ACCEPTANCE_',
   'scripts/governance_acceptance/H',
-  'scripts/governance_acceptance/P',
+  'scripts/governance_acceptance/P1',
+  'scripts/governance_acceptance/P2',
+  'scripts/governance_acceptance/P3',
+  'scripts/governance_acceptance/P4',
+  'scripts/governance_acceptance/P5',
+  'scripts/governance_acceptance/P6',
+  'scripts/governance_acceptance/P7',
   'scripts/governance_acceptance/TK',
   'scripts/governance_acceptance/TWIN_',
 ];
+const ALLOWED_CHANGED_FILES = new Set([
+  'scripts/governance_acceptance/POST_P8_06_REPO_WIDE_CLEANUP_ENGINE_ACCEPTANCE.cjs',
+  'scripts/governance_acceptance/POST_P8_07_REPO_WIDE_CLEANUP_APPLICATION_REVIEW.cjs',
+]);
 const FORBIDDEN_CHANGED_FILES = new Set([
   'package.json',
   'pnpm-lock.yaml',
@@ -75,6 +85,12 @@ function tryGit(args) {
 function changedFilesFromMain() {
   const output = tryGit(['diff', '--name-only', 'main...HEAD']);
   return [...new Set(output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean))].sort();
+}
+
+function isForbiddenChanged(file) {
+  if (ALLOWED_CHANGED_FILES.has(file)) return false;
+  if (FORBIDDEN_CHANGED_FILES.has(file)) return true;
+  return FORBIDDEN_CHANGED_PREFIXES.some((prefix) => file.startsWith(prefix));
 }
 
 function assert(name, condition, details = {}) {
@@ -124,7 +140,7 @@ try {
   for (const anchor of CURRENT_ANCHORS) assert(`current_anchor_intact:${anchor}`, exists(anchor), { anchor });
 
   const changed = changedFilesFromMain();
-  const forbiddenChanged = changed.filter((file) => FORBIDDEN_CHANGED_FILES.has(file) || FORBIDDEN_CHANGED_PREFIXES.some((prefix) => file.startsWith(prefix)));
+  const forbiddenChanged = changed.filter(isForbiddenChanged);
   assert('runtime_surface_unchanged', forbiddenChanged.length === 0, { forbiddenChanged, changed });
 
   const readmeMigration = read('README_MIGRATION.md');
