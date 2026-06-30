@@ -105,3 +105,38 @@ acceptance_entrypoint
 ```
 
 No task may silently make P8 offline replay artifacts behave as persisted server Twin objects, and no task may silently make persisted server Twin routes depend on P8 local replay scripts.
+
+---
+
+## P9-01 Twin Kernel Line Authority Contract v0
+
+Contract:
+
+- docs/twin_kernel/TWIN_KERNEL_LINE_AUTHORITY_CONTRACT_V0.md
+
+Acceptance:
+
+- node scripts/governance_acceptance/P9_01_TWIN_KERNEL_LINE_AUTHORITY_CONTRACT_ACCEPTANCE.cjs
+
+Frozen authority boundary:
+
+- server_persisted_twin_kernel remains the production persisted runtime line.
+- offline_real_evidence_replay_kernel remains the offline validation replay line.
+- P8 artifacts are not persisted Twin Kernel objects.
+- No silent crossing between the two Twin Kernel lines is allowed before a future reconciliation contract exists.
+
+Hard boundaries:
+
+```text
+no_runtime_code_change
+no_server_route_change
+no_frontend_change
+no_database_migration
+no_seed_change
+no_replay_algorithm_change
+no_model_update
+no_field_memory_write
+no_ao_act_task
+no_dispatch
+no_receipt
+```
