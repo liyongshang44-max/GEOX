@@ -1,0 +1,28 @@
+{
+  "schema_version": "twin_use_eligibility_read_model_schema_v0",
+  "required_fields": [
+    "use_eligibility_read_model_id",
+    "confidence_read_model_id",
+    "twin_subject_ref",
+    "runtime_case_id",
+    "use_eligibility_status",
+    "eligibility_reasons",
+    "eligibility_blockers",
+    "source_refs",
+    "policy_refs",
+    "bridge_target_phase",
+    "bridge_input_only"
+  ],
+  "use_eligibility_read_model_emitted": true,
+  "persisted_use_eligibility_read_model_count": 0,
+  "bridge_target_phase": "P16",
+  "bridge_input_only": true,
+  "recommendation_generation_allowed": false,
+  "recommendation_approval_allowed": false,
+  "action_approval_allowed": false,
+  "ao_act_authority_allowed": false,
+  "recommendation_created": false,
+  "recommendation_candidate_created": false,
+  "action_approval_created": false,
+  "ao_act_task_created": false
+}

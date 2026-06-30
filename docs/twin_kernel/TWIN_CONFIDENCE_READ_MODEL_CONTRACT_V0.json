@@ -1,0 +1,19 @@
+{
+  "schema_version": "twin_confidence_read_model_contract_v0",
+  "phase": "P15",
+  "read_model_only": true,
+  "confidence_is_not_recommendation_authority": true,
+  "eligibility_is_not_action_approval": true,
+  "read_model_is_not_production_runtime_activation": true,
+  "recommendation_authority_allowed": false,
+  "recommendation_generation_allowed": false,
+  "action_approval_allowed": false,
+  "runtime_model_update_allowed": false,
+  "field_memory_write_allowed": false,
+  "ao_act_allowed": false,
+  "dashboard_authority_allowed": false,
+  "dashboard_projection_required": false,
+  "confidence_read_model_emitted_allowed": true,
+  "persisted_confidence_read_model_allowed": false,
+  "db_write_allowed": false
+}
