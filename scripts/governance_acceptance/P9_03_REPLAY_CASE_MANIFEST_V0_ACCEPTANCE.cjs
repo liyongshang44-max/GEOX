@@ -140,8 +140,21 @@ function verifyPoliciesAndBoundaries(manifest) {
     'no_new_replay_case',
     'no_replay_execution_by_manifest_acceptance',
     'no_persisted_twin_object_creation',
-    'no_model_version_manifest_creation',
   ]), { hard_boundaries: manifest.hard_boundaries });
+
+  const legacyNoModelVersionCreation = Array.isArray(manifest.hard_boundaries) && manifest.hard_boundaries.includes('no_model_version_manifest_creation');
+  const evolvedModelManifestBoundary = manifest.model_policy &&
+    manifest.model_policy.model_update_allowed === false &&
+    manifest.model_policy.trained_model === false &&
+    manifest.model_policy.calibration_candidate_applied === false &&
+    Array.isArray(manifest.hard_boundaries) &&
+    manifest.hard_boundaries.includes('no_model_update') &&
+    manifest.hard_boundaries.includes('no_model_state_write');
+
+  assert('case_manifest_model_boundary_is_forward_compatible', legacyNoModelVersionCreation || evolvedModelManifestBoundary, {
+    hard_boundaries: manifest.hard_boundaries,
+    model_policy: manifest.model_policy || null,
+  });
 }
 
 function verifyDocs() {
