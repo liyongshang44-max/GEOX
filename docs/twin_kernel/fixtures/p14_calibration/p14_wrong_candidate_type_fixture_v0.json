@@ -1,0 +1,6 @@
+{
+  "schema_version": "candidate_twin_object_envelope_v0",
+  "candidate_id": "cand_p14_wrong_forecast_error_candidate_v0",
+  "candidate_target_object_type": "forecast_error_v1",
+  "candidate_hash": "p14_wrong_candidate_hash_v0"
+}

@@ -1,0 +1,17 @@
+{
+  "schema_version": "calibration_review_packet_schema_v0",
+  "review_required": true,
+  "required_fields": [
+    "calibration_candidate_id",
+    "candidate_target_object_type",
+    "source_runtime_case_id",
+    "source_runtime_run_id",
+    "forecast_error_ref",
+    "candidate_hash",
+    "model_version_set",
+    "proposed_adjustment_summary",
+    "evidence_refs",
+    "review_required"
+  ],
+  "required_candidate_target_object_type": "field_learning_candidate_v1"
+}

@@ -1,0 +1,5 @@
+{
+  "schema_version": "p14_missing_promotion_authorization_fixture_v0",
+  "promotion_authorization_present": false,
+  "promotion_authorization_ref": null
+}

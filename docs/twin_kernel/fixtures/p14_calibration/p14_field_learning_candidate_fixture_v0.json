@@ -1,0 +1,24 @@
+{
+  "schema_version": "candidate_twin_object_envelope_v0",
+  "candidate_id": "cand_p14_field_learning_candidate_v0",
+  "candidate_target_object_type": "field_learning_candidate_v1",
+  "source_runtime_case_id": "p13_caf009_soil_moisture_single_cycle_v0",
+  "source_runtime_run_id": "trun_c9c891307785dec993aadef29d6cf7b790a6e2a126c57022",
+  "forecast_error_ref": "cand_p13_forecast_error_candidate",
+  "candidate_hash": "p14_field_learning_candidate_hash_v0",
+  "model_version_set": [
+    "deterministic_state_estimator_v0",
+    "deterministic_forecast_model_v0",
+    "deterministic_error_model_v0",
+    "deterministic_calibration_candidate_model_v0"
+  ],
+  "proposed_adjustment_summary": "fixture calibration delta from P13 committed candidate",
+  "evidence_refs": [
+    { "kind": "p13_runtime_fixture", "ref_id": "p13_caf009_single_cycle_runtime_case_v0" }
+  ],
+  "review_required": true,
+  "p13_runner_invoked_by_default": false,
+  "raw_samples_required_by_default": false,
+  "p8_replay_invoked_by_default": false,
+  "p12_adapter_invoked_by_default": false
+}

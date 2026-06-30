@@ -1,0 +1,17 @@
+{
+  "schema_version": "calibration_review_gate_contract_v0",
+  "phase": "P14",
+  "input_candidate_type": "field_learning_candidate_v1",
+  "human_review_required": true,
+  "automatic_review_allowed": false,
+  "accepted_decision_allowed": true,
+  "rejected_decision_allowed": true,
+  "model_version_proposal_allowed_after_acceptance": true,
+  "model_version_proposal_allowed_after_rejection": false,
+  "automatic_model_update_allowed": false,
+  "field_memory_write_allowed": false,
+  "p13_runner_invoked_by_default": false,
+  "raw_samples_required_by_default": false,
+  "p8_replay_invoked_by_default": false,
+  "p12_adapter_invoked_by_default": false
+}

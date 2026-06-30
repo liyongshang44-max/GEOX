@@ -1,0 +1,8 @@
+{
+  "schema_version": "p14_promotion_authorization_fixture_v0",
+  "promotion_authorization_present": true,
+  "promotion_authorization_ref": "promo_auth_p14_fixture_v0",
+  "promotion_policy_version": "model_version_promotion_gate_contract_v0",
+  "promotion_decision": "approved_for_future_activation",
+  "production_model_activation_allowed": false
+}

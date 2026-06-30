@@ -1,0 +1,6 @@
+{
+  "schema_version": "p14_auto_promotion_request_fixture_v0",
+  "automatic_promotion_requested": true,
+  "dashboard_action_as_review": false,
+  "acceptance_pass_as_review": false
+}

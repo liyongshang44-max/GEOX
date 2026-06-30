@@ -1,0 +1,14 @@
+{
+  "schema_version": "model_version_proposal_schema_v0",
+  "required_fields": [
+    "source_calibration_review_decision_id",
+    "source_calibration_candidate_id",
+    "proposal_model_version_id"
+  ],
+  "proposal_is_not_active_model": true,
+  "runtime_model_registry_mutation_allowed": false,
+  "production_model_activation_allowed": false,
+  "runtime_model_update_count": 0,
+  "active_model_assignment_count": 0,
+  "model_registry_write_count": 0
+}

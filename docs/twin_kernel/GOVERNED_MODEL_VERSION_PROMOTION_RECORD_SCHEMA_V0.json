@@ -1,0 +1,18 @@
+{
+  "schema_version": "governed_model_version_promotion_record_schema_v0",
+  "required_fields": [
+    "promotion_record_id",
+    "source_model_version_proposal_id",
+    "source_calibration_review_decision_id",
+    "promotion_authorization_ref",
+    "promotion_decision"
+  ],
+  "promotion_decision": "approved_for_future_activation",
+  "governed_model_version_promotion_record_emitted": true,
+  "persisted_promotion_record_count": 0,
+  "active_model_assignment_created": false,
+  "active_model_assignment_count": 0,
+  "runtime_model_registry_mutated": false,
+  "model_registry_write_count": 0,
+  "production_model_activation_allowed": false
+}

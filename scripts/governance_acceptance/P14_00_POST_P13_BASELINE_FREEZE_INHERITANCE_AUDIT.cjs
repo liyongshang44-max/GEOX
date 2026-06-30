@@ -1,0 +1,3 @@
+// scripts/governance_acceptance/P14_00_POST_P13_BASELINE_FREEZE_INHERITANCE_AUDIT.cjs
+'use strict';
+require('./P14_ACCEPTANCE_HELPERS.cjs').run('P14_00_POST_P13_BASELINE_FREEZE_INHERITANCE_AUDIT');
