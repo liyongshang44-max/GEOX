@@ -1019,3 +1019,114 @@ Post-P12 baseline:
 - P12 does not prove dashboard usability, recommendation correctness, AO-ACT execution readiness, model learning readiness, production authorization UX, or production multi-user concurrency.
 - P13 may consider server internal API, operator review UI, read-model projection, lifecycle operations, and production authorization hardening only under a new phase contract.
 
+
+---
+
+## P13 Continuous Twin Runtime Loop / Manual Registry Runner v0 Freeze Closure
+
+Key anchors:
+
+- Branch: main
+- Baseline tag: p12_controlled_persistence_adapter_human_gated_materialization_v0
+- Baseline commit: 676a2767
+- Final closure tag: p13_continuous_twin_runtime_loop_manual_registry_runner_v0
+- Acceptance:
+  - node scripts/governance_acceptance/P13_07_MANUAL_TWIN_RUNTIME_LOOP_RUNNER_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P13_08_RUNTIME_IDEMPOTENCY_REPLAY_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P13_09_CHECKPOINT_RECOVERY_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P13_10_P12_HANDOFF_BOUNDARY_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P13_11_COMPLETION_REVIEW_ACCEPTANCE.cjs
+
+Frozen scope:
+
+- P13 Continuous Twin Runtime Loop / Manual Registry Runner v0 is complete.
+- One manual registry case can run a complete state-forecast-observation-error-calibration-candidate cycle.
+- Default data mode is committed_fixture.
+- raw_samples are not required by default.
+- P8 replay is not invoked by default.
+- Runtime run id and runtime idempotency key are deterministic.
+- Duplicate runtime runs are not created.
+- Checkpoint recovery is real recovery, not full restart.
+- P12 handoff bundle is produced.
+- P13 handoff is not P12 execution.
+- P12 adapter is not invoked automatically.
+
+Freeze closure result:
+
+- manual_runner_mode = true
+- default_data_mode = committed_fixture
+- raw_samples_required_by_default = false
+- p8_replay_invoked_by_default = false
+- runtime_cycle_count = 1
+- input_window_resolved = true
+- state_snapshot_candidate_count = 1
+- forecast_run_candidate_count = 1
+- actual_observation_window_count = 1
+- forecast_error_candidate_count = 1
+- calibration_candidate_count = 1
+- runtime_trace_event_count >= 7
+- checkpoint_created = true
+- checkpoint_replay_supported = true
+- simulated_failure_after_step = forecast_run_candidate
+- failure_produced_checkpoint = true
+- resume_reads_checkpoint = true
+- resume_starts_after_checkpoint_step = true
+- previous_candidate_hashes_reused = true
+- duplicate_candidate_created = false
+- final_cycle_completed = true
+- final_runtime_run_idempotency_key_unchanged = true
+- first_run_created_count = 1
+- second_run_created_count = 0
+- duplicate_run_created_count = 0
+- same_run_idempotency_key_reused = true
+- same_candidate_hashes_reused = true
+- runtime_run_id_unchanged = true
+- p12_handoff_bundle_created = true
+- candidate_schema_version = candidate_twin_object_envelope_v0
+- candidate_set_kind = runtime_core_cycle_5
+- p12_handoff_candidate_count = 5
+- persisted_target_object_ref = null
+- write_allowed = false
+- p12_adapter_invoked = false
+- persistence_execution_allowed = false
+- human_authorization_required = true
+- automatic_persistence_created = false
+- handoff_is_not_p12_execution = true
+- field_memory_write_count = 0
+- model_update_count = 0
+- recommendation_created = false
+- ao_act_task_created = false
+- dashboard_authority = false
+- server_runtime_surface_changed = false
+- production_runtime_surface_changed = false
+- db_surface_changed = false
+- frontend_surface_changed = false
+- forbidden_surface_diff_count = 0
+
+Hard boundaries:
+
+- No scheduler
+- No cron
+- No event-driven auto-run
+- No automatic persistence
+- No P12 adapter execution
+- No DB write
+- No server runtime surface change
+- No frontend surface change
+- No Field Memory write
+- No model update
+- No recommendation creation
+- No AO-ACT task creation
+- No dispatch
+- No receipt
+- No dashboard authority
+- No package manager change
+- No CI change
+
+Post-P13 baseline:
+
+- Next phase must start after tag p13_continuous_twin_runtime_loop_manual_registry_runner_v0.
+- P13 proves one manual registry-driven Twin state-forecast-observation-error-calibration-candidate cycle with deterministic idempotency, runtime trace, checkpoint recovery, and P12 handoff boundary.
+- P13 does not prove production scheduler readiness, event-driven runtime readiness, automatic persistence, model version promotion, Field Memory learning, recommendation generation, AO-ACT execution, or dashboard projection.
+- P14 may begin Calibration Review / Model Version Promotion Gate only under a new phase contract.
+
