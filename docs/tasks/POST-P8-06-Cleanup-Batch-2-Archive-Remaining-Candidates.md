@@ -1,4 +1,4 @@
-# docs/tasks/POST-P8-06-Cleanup-Batch-2-Archive-Remaining-Candidates.md
+# docs/tasks/POST-P8-06-Repository-Wide-Cleanup-Engine.md
 
 ## Status
 
@@ -11,74 +11,83 @@ Base cleanup gate: POST_P8_05_REPOSITORY_CONVERGENCE_COMPLETION_REVIEW
 
 ## Purpose
 
-POST-P8-06 performs cleanup batch 2 after the post-P8 convergence PR.
+POST-P8-06 replaces manual batch cleanup with a repository-wide cleanup engine.
 
-Batch 1 proved that historical task documents can be moved to `docs/legacy/tasks/` while preserving content and without changing runtime surfaces. Batch 2 continues that cleanup against the remaining zero-strong-reference archive candidates from `docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json`.
+The previous batch-by-batch approach is too slow for the current repository. The repository contains many historical docs, old acceptance scripts, old PowerShell smoke scripts, delivery artifacts, replay prototypes, and domain-specific records. A fixed 20-file or 30-file migration list does not scale.
 
-## Scope
+This task introduces a mechanical cleanup planner that scans the whole tracked repository and produces a policy-driven cleanup plan.
 
-Batch 2 moves:
-
-```text
-remaining P4 historical task docs
-P5 historical task docs
-P6 historical task docs
-P7 historical task docs
-P7 offline replay scripts
-```
-
-Destinations:
+## Method
 
 ```text
-docs/legacy/tasks/
-scripts/legacy/replay/
+1. Read git-tracked files from git ls-files.
+2. Read strong entrypoints: package.json, .github workflows, docs/SSOT.md, README_MIGRATION.md, README.md, handoff docs, script guides, and acceptance runner.
+3. Scan all text files for exact-path references.
+4. Classify every file into keep, archive, delete, or manual_review.
+5. Generate docs/legacy/POST_P8_REPO_WIDE_CLEANUP_PLAN.json.
+6. Optionally apply archive moves using the generated plan.
 ```
 
-## Maintenance command
+## Policy
+
+```text
+keep:
+  - server runtime
+  - frontend runtime
+  - packages
+  - database migrations
+  - package.json and CI
+  - docs/SSOT.md
+  - README_MIGRATION.md
+  - current P8 docs/scripts
+  - current POST-P8 convergence docs/scripts
+  - docs/REPOSITORY_HANDOFF_MAP.md
+  - docs/twin_kernel/README.md
+
+archive:
+  - historical docs/tasks not current and not referenced by current files
+  - old replay scripts not current and not referenced by current files
+  - old PowerShell acceptance scripts not referenced by current files
+  - delivery scripts/docs not referenced by current files
+
+delete:
+  - generated/cache/build artifacts if tracked and not referenced
+  - empty obsolete placeholder files if tracked and not referenced
+
+manual_review:
+  - files with current references
+  - unknown domain docs
+  - old governance acceptance scripts with uncertain semantics
+  - frontend pages/routes
+  - server routes/modules
+```
+
+## Scripts
+
+```text
+scripts/maintenance/POST_P8_06_REPO_WIDE_CLEANUP_PLAN.cjs
+scripts/maintenance/POST_P8_06_APPLY_REPO_WIDE_CLEANUP_PLAN.cjs
+scripts/governance_acceptance/POST_P8_06_REPO_WIDE_CLEANUP_ENGINE_ACCEPTANCE.cjs
+```
+
+## Commands
+
+Generate plan:
 
 ```powershell
-node scripts/maintenance/POST_P8_06_ARCHIVE_BATCH_2.cjs
+node scripts/maintenance/POST_P8_06_REPO_WIDE_CLEANUP_PLAN.cjs
 ```
 
-## Acceptance command
+Apply archive plan:
 
 ```powershell
-node scripts/governance_acceptance/POST_P8_06_CLEANUP_BATCH_2_ACCEPTANCE.cjs
+node scripts/maintenance/POST_P8_06_APPLY_REPO_WIDE_CLEANUP_PLAN.cjs --apply
 ```
 
-## Batch 2 candidates
+Acceptance:
 
-```text
-docs/tasks/P4-04-ROI-Negative-Boundary-Matrix.md
-docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md
-docs/tasks/P4-Policy-Controlled-ROI-Planning.md
-docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md
-docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md
-docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md
-docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md
-docs/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md
-docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md
-docs/tasks/P6-00-Execution-System-Integration-Planning.md
-docs/tasks/P6-01-Execution-Source-Boundary.md
-docs/tasks/P6-02-Execution-Authorization-Gate-Contract.md
-docs/tasks/P6-03-Execution-Dispatch-Output-Contract.md
-docs/tasks/P6-04-Execution-Receipt-Intake-Contract.md
-docs/tasks/P6-05-Execution-Audit-Trace-Contract.md
-docs/tasks/P6-06-Execution-Negative-Boundary-Matrix.md
-docs/tasks/P6-07-Execution-Completion-Review.md
-docs/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md
-docs/tasks/P7-01-Twin-Evidence-Window-Contract.md
-docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md
-docs/tasks/P7-03-Prediction-Run-v0.md
-docs/tasks/P7-04-Backtest-Error-Report-v0.md
-docs/tasks/P7-05-Calibration-Report-v0.md
-docs/tasks/P7-06-Replay-Experiment-Bundle-v0.md
-docs/tasks/P7-07-Twin-Kernel-Completion-Review.md
-scripts/twin_kernel/P7_02_SOIL_MOISTURE_STATE_ESTIMATE_V0.cjs
-scripts/twin_kernel/P7_03_PREDICTION_RUN_V0.cjs
-scripts/twin_kernel/P7_04_BACKTEST_ERROR_REPORT_V0.cjs
-scripts/twin_kernel/P7_05_CALIBRATION_REPORT_V0.cjs
-scripts/twin_kernel/P7_06_REPLAY_EXPERIMENT_BUNDLE_V0.cjs
+```powershell
+node scripts/governance_acceptance/POST_P8_06_REPO_WIDE_CLEANUP_ENGINE_ACCEPTANCE.cjs
 ```
 
 ## Boundary
@@ -98,18 +107,18 @@ no_current_p8_acceptance_moved
 
 ```text
 ok = true
-acceptance = POST_P8_06_CLEANUP_BATCH_2_ACCEPTANCE
-migrated_file_count = 30
-docs_tasks_sources_absent = true
-legacy_destinations_present = true
-p8_current_material_intact = true
+acceptance = POST_P8_06_REPO_WIDE_CLEANUP_ENGINE_ACCEPTANCE
+repo_wide_plan_generated = true
+tracked_file_count > 0
+archive_candidate_count > 0
+protected_current_material_verified = true
 runtime_surface_unchanged = true
 ```
 
 ## Next step
 
 ```text
-POST_P8_07_MANUAL_INSPECTION_CLASSIFICATION
+POST_P8_07_REPO_WIDE_CLEANUP_APPLICATION_REVIEW
 ```
 
-After batch 2, archive-plan zero-reference candidates are exhausted. The next cleanup step should classify manual-inspection candidates such as H53/H54 docs, legacy PowerShell scripts, and old governance acceptance files before moving or deleting them.
+After the whole-repo plan is generated, the next step should apply all low-risk archive moves in one migration rather than continuing manual small batches.
