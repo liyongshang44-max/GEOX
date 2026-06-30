@@ -1,0 +1,27 @@
+{
+  "schema_version": "twin_confidence_component_schema_v0",
+  "required_components": [
+    "evidence_completeness",
+    "evidence_freshness",
+    "trace_completeness",
+    "forecast_horizon_fit",
+    "forecast_error_status",
+    "calibration_review_status",
+    "model_lineage_status",
+    "promotion_governance_status",
+    "source_contract_status"
+  ],
+  "required_fields_per_component": [
+    "component_name",
+    "component_status",
+    "component_reason",
+    "source_refs",
+    "policy_refs"
+  ],
+  "allowed_component_statuses": ["pass", "warn", "fail", "not_applicable"],
+  "component_status_is_internal_policy_status": true,
+  "dashboard_color_signal_allowed": false,
+  "dashboard_priority_allowed": false,
+  "ranking_allowed": false,
+  "operator_action_hint_allowed": false
+}

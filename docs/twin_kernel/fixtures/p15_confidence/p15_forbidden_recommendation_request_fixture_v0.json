@@ -1,0 +1,1 @@
+{"schema_version":"p15_forbidden_request_fixture_v0","fixture_kind":"forbidden-request","twin_subject_ref":"field:P_DEFAULT:G_CAF:CAF009","runtime_case_id":"p13_caf009_soil_moisture_single_cycle_v0","declared_as_of_ts":"2009-06-09T08:00:00.000Z","forbidden_bridge_request":true,"expected_blocked":true}

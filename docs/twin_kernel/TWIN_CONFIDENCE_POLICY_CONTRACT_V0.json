@@ -1,0 +1,19 @@
+{
+  "schema_version": "twin_confidence_policy_contract_v0",
+  "confidence_levels": ["high", "medium", "low", "blocked"],
+  "deterministic_aggregation": true,
+  "freshness_as_of_ts": "declared_as_of_ts",
+  "current_time_allowed": false,
+  "system_clock_allowed": false,
+  "random_uuid_allowed": false,
+  "llm_judgment_allowed": false,
+  "model_training_allowed": false,
+  "aggregation_policy": {
+    "eligible": "high",
+    "low-evidence": "low",
+    "high-error": "low",
+    "missing-calibration-review": "medium",
+    "stale-model-lineage": "low",
+    "hard-blocker": "blocked"
+  }
+}

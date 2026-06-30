@@ -1,0 +1,22 @@
+{
+  "schema_version": "twin_use_eligibility_policy_contract_v0",
+  "allowed_statuses": [
+    "observation_only",
+    "bridge_input_eligible",
+    "blocked",
+    "review_required"
+  ],
+  "bridge_target_phase": "P16",
+  "bridge_input_only": true,
+  "recommendation_generation_allowed": false,
+  "recommendation_approval_allowed": false,
+  "action_approval_allowed": false,
+  "ao_act_authority_allowed": false,
+  "forbidden_statuses": [
+    "recommendation_approved",
+    "action_approved",
+    "dispatch_eligible",
+    "ao_act_eligible",
+    "auto_execute"
+  ]
+}
