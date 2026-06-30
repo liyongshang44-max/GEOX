@@ -1,0 +1,1 @@
+'use strict';require('./P15_ACCEPTANCE_HELPERS.cjs').run(['P15_12_FORBIDDEN','RECOMMENDATION_REQUEST_ACCEPTANCE'].join('_'));
