@@ -1,0 +1,3 @@
+// scripts/governance_acceptance/P11_09_PERSISTENCE_PREFLIGHT_PROOF_V0_ACCEPTANCE.cjs
+'use strict';
+require('./P11_ACCEPTANCE_HELPERS.cjs').run('P11_09_PERSISTENCE_PREFLIGHT_PROOF_V0_ACCEPTANCE');

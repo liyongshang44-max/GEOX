@@ -1,0 +1,28 @@
+{
+  "schema_version": "object_identity_policy_v1",
+  "status": "p11_02_design_only",
+  "identity_key_prefix": "objkey_",
+  "deterministic_identity_required": true,
+  "future_identity_only": true,
+  "creates_persisted_object_id": false,
+  "allowed_identity_inputs": [
+    "schema_version",
+    "candidate_target_object_type",
+    "source_line_id",
+    "target_line_id",
+    "case_id",
+    "source_artifact_kind",
+    "source_time_window",
+    "model_version_refs",
+    "candidate_payload_canonical_hash"
+  ],
+  "forbidden_identity_inputs": [
+    "database_sequence",
+    "random_uuid",
+    "created_at_timestamp",
+    "runtime_request_id",
+    "dashboard_action",
+    "human_readable_title"
+  ],
+  "derivation": "future_object_identity_key = objkey_sha256(schema_version,candidate_target_object_type,case_id,source_artifact_kind,source_time_window,model_version_refs,candidate_payload_canonical_hash)"
+}

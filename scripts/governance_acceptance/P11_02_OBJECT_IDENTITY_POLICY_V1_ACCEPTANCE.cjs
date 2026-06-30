@@ -1,0 +1,3 @@
+// scripts/governance_acceptance/P11_02_OBJECT_IDENTITY_POLICY_V1_ACCEPTANCE.cjs
+'use strict';
+require('./P11_ACCEPTANCE_HELPERS.cjs').run('P11_02_OBJECT_IDENTITY_POLICY_V1_ACCEPTANCE');

@@ -1,0 +1,31 @@
+{
+  "schema_version": "persistence_policy_v1",
+  "status": "p11_01_design_only",
+  "phase": "P11 Controlled Persistence Preconditions / Runtime Adapter Design Gate",
+  "baseline_tag": "p10_runtime_reconciliation_read_only_adapter_proof",
+  "baseline_commit": "38e1ea82",
+  "persistence_policy_status": "design_only",
+  "persistence_execution_allowed": false,
+  "automatic_persistence_allowed": false,
+  "human_authorization_required": true,
+  "operator_review_required": true,
+  "db_write_allowed_by_p11": false,
+  "allowed_candidate_target_object_types": [
+    "field_state_snapshot_v1",
+    "forecast_run_v1",
+    "calibration_replay_v1",
+    "forecast_error_v1",
+    "field_learning_candidate_v1",
+    "twin_trace_v1_read_model"
+  ],
+  "blocked_operations": [
+    "persisted_twin_object_creation",
+    "db_write",
+    "fact_write",
+    "field_memory_write",
+    "model_update",
+    "ao_act_task",
+    "dispatch",
+    "receipt"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": "persistence_schema_proposal_v1",
+  "status": "p11_04_proposal_only",
+  "proposal_only": true,
+  "migration_created": false,
+  "table_created": false,
+  "db_write_allowed": false,
+  "implementation_blocked_until_P12": true,
+  "future_table_family": [
+    "twin_objects",
+    "twin_object_versions",
+    "twin_object_source_refs",
+    "twin_object_audit_events",
+    "twin_object_idempotency_keys"
+  ],
+  "forbidden_by_p11": [
+    "migration_file",
+    "prisma_schema_change",
+    "seed_change",
+    "runtime_write_entrypoint"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": "operator_review_human_authorization_gate_v1",
+  "status": "p11_07_design_only",
+  "operator_review_required": true,
+  "human_authorization_required": true,
+  "authorization_must_be_explicit": true,
+  "authorization_must_name_candidate_bundle": true,
+  "authorization_must_name_policy_versions": true,
+  "authorization_must_name_persistence_scope": true,
+  "authorization_cannot_be_inferred_from_dashboard_view": true,
+  "authorization_cannot_be_inferred_from_acceptance_pass": true,
+  "automatic_human_authorization_allowed": false
+}

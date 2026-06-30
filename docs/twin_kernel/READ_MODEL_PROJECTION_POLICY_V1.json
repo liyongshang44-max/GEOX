@@ -1,0 +1,11 @@
+{
+  "schema_version": "read_model_projection_policy_v1",
+  "status": "p11_08_design_only",
+  "persisted_object_is_dashboard_authority": false,
+  "read_model_projection_is_recommendation": false,
+  "read_model_projection_is_ao_act_task": false,
+  "read_model_projection_is_dispatch": false,
+  "dashboard_display_requires_explicit_projection_policy": true,
+  "projection_must_preserve_uncertainty": true,
+  "projection_must_preserve_provenance": true
+}
