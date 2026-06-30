@@ -1827,3 +1827,201 @@ Post-P18 baseline:
 - P18 proves that P17 draft recommendation governance envelopes can pass a deterministic approval gate and emit a non-persisted approved recommendation governance record.
 - P18 does not prove recommendation body generation, operator-facing recommendation read model, operator action, action approval, AO-ACT execution, agronomic prescription, dashboard projection, production model activation, Field Memory learning, or model training.
 
+
+---
+
+## P19 Operator-Facing Recommendation Read Model v0 Freeze Closure
+
+Key anchors:
+
+- Branch: main
+- Baseline tag: p18_recommendation_approval_governance_gate_v0
+- Baseline commit: 00b186e9
+- Merge commit: 7c9857a9
+- Final closure tag: p19_operator_facing_recommendation_read_model_v0
+
+Frozen scope:
+
+- P19 Operator-Facing Recommendation Read Model v0 is complete.
+- P18 approved recommendation governance records can emit a non-persisted operator-facing recommendation read model using committed controlled explanatory text templates.
+- P19 is a governance explanation layer for humans.
+- P19 is not recommendation authority.
+- P19 is not operator instruction.
+- P19 is not execution guidance.
+- P19 is not action plan.
+- P19 is not action approval.
+- P19 is not AO-ACT authority.
+- P19 is not dispatch authority.
+- P19 is not agronomic prescription.
+- P19 is not dashboard ranking.
+- P19 cannot bypass P18 recommendation approval governance.
+- P19 cannot create executable action payload.
+- P19 cannot create action parameters.
+- P19 cannot create freeform recommendation body.
+- P19 cannot create priority, rank, urgency, score, or attention signal.
+- P19 same approved governance record plus changed render output cannot overwrite existing read model.
+
+Controlled copy closure:
+
+- rendered_text_section_count = 9
+- rendered_text_sections_match_committed_templates = true
+- rendered_text_contains_only_allowed_template_outputs = true
+- rendered_text_hash_reused = true
+- template_id_required = true
+- template_id_from_committed_allowlist = true
+- template_text_hash_matches_template_id = true
+- copy_scan_mode = committed_template_allowlist
+- structural_scan_mode = exact_key_or_exact_value
+- substring_scan_allowed = false
+- controlled_copy_templates_only = true
+- freeform_recommendation_text_allowed = false
+- freeform_recommendation_body_allowed = false
+- llm_text_generation_allowed = false
+- operator_preference_personalization_allowed = false
+- current_time_in_copy_allowed = false
+- imperative_language_allowed = false
+
+Read model closure:
+
+- eligible_approved_record_read_model_passed = true
+- operator_recommendation_read_model_emitted = true
+- recommendation_title_emitted = true
+- recommendation_title_is_context_label_only = true
+- recommendation_rationale_emitted = true
+- recommendation_rationale_is_governance_explanation_only = true
+- recommendation_rationale_contains_no_actionable_claim = true
+- evidence_summary_emitted = true
+- uncertainty_summary_emitted = true
+- constraints_summary_emitted = true
+- approval_governance_summary_emitted = true
+- human_review_required_emitted = true
+- human_review_required_before_downstream_action_translation_or_approval = true
+- human_review_required_is_not_operator_task = true
+- human_review_required_is_not_action_request = true
+- human_review_required_is_not_ao_sense = true
+- downstream_action_translation_required_emitted = true
+- downstream_action_approval_required_emitted = true
+
+Boundary closure:
+
+- operator_facing_read_model_is_not_recommendation_authority = true
+- operator_facing_read_model_is_not_operator_instruction = true
+- operator_facing_read_model_is_not_execution_guidance = true
+- read_model_content_class = explanatory_only
+- read_model_display_mode = read_only
+- read_model_copy_mode = controlled_templates_only
+- read_model_is_explanatory_only = true
+- read_model_is_read_only = true
+- read_model_is_not_action_plan = true
+- read_model_is_not_action_approval = true
+- read_model_is_not_ao_act_authority = true
+- read_model_is_not_dispatch_authority = true
+- read_model_is_not_agronomic_prescription = true
+- read_model_requires_downstream_action_translation = true
+- read_model_requires_downstream_action_approval = true
+- read_model_has_no_executable_action_payload = true
+- read_model_contains_action_payload = false
+- read_model_contains_action_parameters = false
+- read_model_contains_agronomic_prescription = false
+- read_model_contains_operator_instruction = false
+- read_model_contains_dispatch_instruction = false
+- read_model_contains_ao_act_payload = false
+- read_model_contains_freeform_recommendation_body = false
+- read_model_contains_prescriptive_language = false
+- read_model_contains_rank_or_priority = false
+- read_model_contains_urgency_signal = false
+- read_model_contains_operator_attention_signal = false
+
+Blocked source closure:
+
+- wrong_source_phase_blocked = true
+- wrong_source_object_kind_blocked = true
+- draft_source_blocked = true
+- approval_packet_source_blocked = true
+- approval_decision_source_blocked = true
+- rejected_approval_source_blocked = true
+- needs_revision_source_blocked = true
+- malformed_approved_record_blocked = true
+- approved_record_with_action_payload_blocked = true
+- approved_record_with_agronomic_prescription_blocked = true
+- approved_record_with_operator_instruction_blocked = true
+- approved_record_with_dispatch_instruction_blocked = true
+- approved_record_with_ao_act_payload_blocked = true
+- approved_record_with_recommendation_body_blocked = true
+- approved_record_with_recommendation_content_blocked = true
+- approved_record_with_rank_or_priority_blocked = true
+- approved_record_with_action_plan_blocked = true
+- forbidden_copy_semantics_detected = true
+- forbidden_copy_blocked = true
+- forbidden_copy_read_model_emitted = false
+- forbidden_exact_text_values_blocked = true
+
+Scoring / ranking closure:
+
+- confidence_to_action_mapping_allowed = false
+- read_model_actionability_score_allowed = false
+- operator_decision_support_score_allowed = false
+- approved_record_with_actionability_score_blocked = true
+- approved_record_with_operator_decision_support_score_blocked = true
+- approved_record_with_confidence_to_action_mapping_blocked = true
+- ranking_allowed = false
+- triage_allowed = false
+- dashboard_sort_key_allowed = false
+- operator_attention_signal_allowed = false
+- priority_signal_allowed = false
+- urgency_signal_allowed = false
+
+Idempotency / conflict closure:
+
+- same_operator_recommendation_read_model_id_reused = true
+- same_rendered_text_hash_reused = true
+- same_render_output_hash_reused = true
+- same_approved_record_changed_render_output_conflict_requires_review = true
+- changed_render_output_does_not_overwrite_existing_read_model = true
+- existing_read_model_unchanged = true
+- existing_render_policy_unchanged = true
+- changed_render_conflict_packet_emitted = true
+- changed_render_conflict_packet_persisted = false
+- duplicate_read_model_created_count = 0
+- duplicate_render_output_created_count = 0
+
+No-effect closure:
+
+- persisted_operator_recommendation_read_model_count = 0
+- persisted_recommendation_body_count = 0
+- persisted_recommendation_content_count = 0
+- persisted_recommendation_count = 0
+- approved_action_count = 0
+- ao_act_task_count = 0
+- dispatch_count = 0
+- db_write_count = 0
+- recommendation_body_created = false
+- recommendation_content_created = false
+- freeform_recommendation_body_created = false
+- action_plan_created = false
+- action_translation_candidate_created = false
+- action_parameter_proposal_created = false
+- action_approval_created = false
+- action_approval_allowed = false
+- ao_act_task_created = false
+- ao_act_authority_allowed = false
+- dispatch_created = false
+- dashboard_authority = false
+- field_memory_write_count = 0
+- runtime_model_update_count = 0
+- server_runtime_surface_changed = false
+- production_runtime_surface_changed = false
+- db_surface_changed = false
+- frontend_surface_changed = false
+- package_surface_changed = false
+- ci_surface_changed = false
+- upstream_contract_surface_changed = false
+- forbidden_surface_diff_count = 0
+- failed_assertion_count = 0
+
+Post-P19 baseline:
+
+- Next phase must start after tag p19_operator_facing_recommendation_read_model_v0.
+- P19 proves that P18 approved recommendation governance records can emit a non-persisted operator-facing recommendation read model using committed controlled explanatory text templates.
+- P19 does not prove action translation candidate, action parameter proposal, operator action, action approval, AO-ACT execution, dispatch, agronomic prescription, dashboard projection, Field Memory learning, or model training.
+
