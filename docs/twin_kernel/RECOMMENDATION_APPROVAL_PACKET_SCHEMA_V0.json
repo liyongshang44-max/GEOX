@@ -1,0 +1,11 @@
+{
+  "schema_version": "recommendation_approval_packet_schema_v0",
+  "required_fields": ["recommendation_approval_packet_id", "source_draft_recommendation_governance_envelope_id", "source_recommendation_review_decision_id", "source_recommendation_candidate_envelope_id", "source_recommendation_bridge_packet_id", "twin_subject_ref", "runtime_case_id", "approval_policy_version", "approval_input_accepted", "approval_blockers", "human_approval_refs", "review_refs", "candidate_refs", "source_refs", "policy_refs"],
+  "approval_packet_emitted": true,
+  "persisted_approval_packet_count": 0,
+  "db_write_count": 0,
+  "approval_packet_is_not_recommendation_body": true,
+  "approval_packet_is_not_action_plan": true,
+  "approval_packet_is_not_action_approval": true,
+  "approval_packet_is_not_ao_act_authority": true
+}
