@@ -1,0 +1,74 @@
+{
+  "generated_at": "2026-06-30T07:47:48.934Z",
+  "report": "POST_P8_14_HISTORICAL_TASK_DOC_REFERENCE_UPDATE_APPLY_GATE_REPORT",
+  "input_plan_report": "docs/legacy/POST_P8_13_HISTORICAL_TASK_DOC_REFERENCE_UPDATE_PLAN.json",
+  "output_report": "docs/legacy/POST_P8_14_HISTORICAL_TASK_DOC_REFERENCE_UPDATE_APPLY_GATE_REPORT.json",
+  "selected_group": "historical_task_doc",
+  "reference_update_file_count": 48,
+  "reference_update_plan_item_count": 371,
+  "reference_update_exact_reference_count": 585,
+  "affected_referencing_file_count": 75,
+  "apply_gate_open": false,
+  "reference_update_apply_allowed": false,
+  "unsatisfied_required_condition_count": 5,
+  "unsatisfied_required_conditions": [
+    "owner_confirmation_recorded",
+    "dry_run_report_generated",
+    "runtime_surface_diff_zero",
+    "post_update_audit_would_be_zero",
+    "archive_move_gate_separate"
+  ],
+  "conditions": [
+    {
+      "key": "plan_acceptance_passed",
+      "required": true,
+      "satisfied": true,
+      "evidence": "docs/legacy/POST_P8_13_HISTORICAL_TASK_DOC_REFERENCE_UPDATE_PLAN.json"
+    },
+    {
+      "key": "expected_exact_reference_count_matched",
+      "required": true,
+      "satisfied": true,
+      "evidence": "585"
+    },
+    {
+      "key": "owner_confirmation_recorded",
+      "required": true,
+      "satisfied": false,
+      "evidence": null
+    },
+    {
+      "key": "dry_run_report_generated",
+      "required": true,
+      "satisfied": false,
+      "evidence": null
+    },
+    {
+      "key": "runtime_surface_diff_zero",
+      "required": true,
+      "satisfied": false,
+      "evidence": null
+    },
+    {
+      "key": "post_update_audit_would_be_zero",
+      "required": true,
+      "satisfied": false,
+      "evidence": null
+    },
+    {
+      "key": "archive_move_gate_separate",
+      "required": true,
+      "satisfied": false,
+      "evidence": null
+    }
+  ],
+  "policy": {
+    "gate_report_only": true,
+    "no_file_move": true,
+    "no_delete": true,
+    "no_reference_change": true,
+    "future_apply_requires_all_conditions": true,
+    "archive_move_requires_separate_gate": true
+  },
+  "next_step": "POST_P8_15_HISTORICAL_TASK_DOC_REFERENCE_UPDATE_DRY_RUN"
+}
