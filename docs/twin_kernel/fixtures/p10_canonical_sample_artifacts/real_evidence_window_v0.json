@@ -1,0 +1,23 @@
+{
+  "artifact_kind": "real_evidence_window_v0",
+  "schema_version": "real_evidence_window_v0",
+  "case_id": "p8_real_evidence_closed_loop_caf009_soil_moisture_v0",
+  "data_availability_class": "committed_fixture",
+  "project_id": "P_DEFAULT",
+  "sensor_group_id": "G_CAF",
+  "sensor_id": "CAF009",
+  "metric_kind": "soil_moisture",
+  "window": {
+    "start_ts": "2009-06-09T00:00:00.000Z",
+    "end_ts": "2009-06-09T04:00:00.000Z",
+    "expected_interval_ms": 3600000
+  },
+  "sample_count": 5,
+  "source_indexes_json": {
+    "sensing": ["raw_samples:CAF009:2009-06-09T00:00:00.000Z"],
+    "water": ["vwc_fraction:depth_1", "vwc_fraction:depth_2"]
+  },
+  "evidence_refs": [
+    { "kind": "raw_sample_pointer", "ref_id": "fixture_raw_CAF009_20090609_0000" }
+  ]
+}
