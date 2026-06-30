@@ -1,0 +1,21 @@
+{
+  "artifact_kind": "real_soil_moisture_state_estimate_v1",
+  "schema_version": "real_soil_moisture_state_estimate_v1",
+  "case_id": "p8_real_evidence_closed_loop_caf009_soil_moisture_v0",
+  "data_availability_class": "committed_fixture",
+  "estimated_at": "2009-06-09T04:00:00.000Z",
+  "state_vector_json": {
+    "soil_moisture": {
+      "unit": "vwc_fraction",
+      "mean": 0.184,
+      "depth_profile": { "d1": 0.191, "d2": 0.183, "d3": 0.178 }
+    }
+  },
+  "confidence_json": {
+    "confidence_class": "fixture_deterministic",
+    "uncertainty_mean": 0.012
+  },
+  "evidence_refs": [
+    { "kind": "artifact_ref", "ref_id": "real_evidence_window_v0" }
+  ]
+}
