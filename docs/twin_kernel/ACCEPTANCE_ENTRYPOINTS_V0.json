@@ -1,14 +1,17 @@
 {
   "schema_version": "acceptance_entrypoints_v0",
   "manifest_id": "twin_kernel_acceptance_entrypoints_v0",
-  "status": "p9_05_acceptance_entry_unification",
+  "status": "p9_07_completion_review_linked",
   "phase": "P9 Twin Kernel Convergence / Freeze Registry / Replay Case Governance",
   "authority_source": "README_MIGRATION.md",
   "line_authority_contract": "docs/twin_kernel/TWIN_KERNEL_LINE_AUTHORITY_CONTRACT_V0.md",
   "replay_registry": "docs/twin_kernel/REPLAY_REGISTRY_V0.json",
   "case_manifest": "docs/twin_kernel/replay_cases/p8_real_evidence_closed_loop_caf009_soil_moisture_v0.json",
   "model_version_manifest": "docs/twin_kernel/model_versions/p8_real_soil_moisture_model_version_manifest_v0.json",
+  "artifact_mapping_contract": "docs/twin_kernel/REPLAY_ARTIFACT_MAPPING_CONTRACT_V0.json",
+  "completion_review": "docs/twin_kernel/TWIN_KERNEL_CONVERGENCE_COMPLETION_REVIEW_V0.json",
   "acceptance": "scripts/governance_acceptance/P9_05_ACCEPTANCE_ENTRY_UNIFICATION_ACCEPTANCE.cjs",
+  "completion_acceptance": "scripts/governance_acceptance/P9_07_TWIN_KERNEL_CONVERGENCE_COMPLETION_REVIEW_ACCEPTANCE.cjs",
   "unified_runner": {
     "path": "scripts/acceptance/run_acceptance.cjs",
     "suite_id": "p9-twin-kernel",
@@ -70,6 +73,24 @@
       "command": "node scripts/governance_acceptance/P9_05_ACCEPTANCE_ENTRY_UNIFICATION_ACCEPTANCE.cjs",
       "expected_ok": true,
       "expected_next_step": "P9-06 Replay Artifact Mapping Contract v0"
+    },
+    {
+      "order": 6,
+      "task_id": "P9-06",
+      "entry_id": "P9_06_REPLAY_ARTIFACT_MAPPING_CONTRACT_V0",
+      "script": "scripts/governance_acceptance/P9_06_REPLAY_ARTIFACT_MAPPING_CONTRACT_V0_ACCEPTANCE.cjs",
+      "command": "node scripts/governance_acceptance/P9_06_REPLAY_ARTIFACT_MAPPING_CONTRACT_V0_ACCEPTANCE.cjs",
+      "expected_ok": true,
+      "expected_next_step": "P9-07 Twin Kernel Convergence Completion Review"
+    },
+    {
+      "order": 7,
+      "task_id": "P9-07",
+      "entry_id": "P9_07_TWIN_KERNEL_CONVERGENCE_COMPLETION_REVIEW",
+      "script": "scripts/governance_acceptance/P9_07_TWIN_KERNEL_CONVERGENCE_COMPLETION_REVIEW_ACCEPTANCE.cjs",
+      "command": "node scripts/governance_acceptance/P9_07_TWIN_KERNEL_CONVERGENCE_COMPLETION_REVIEW_ACCEPTANCE.cjs",
+      "expected_ok": true,
+      "expected_next_step": "P9 branch ready for PR or main merge review"
     }
   ],
   "boundaries": [
@@ -91,7 +112,8 @@
     "no_ao_act_task",
     "no_dispatch",
     "no_receipt",
-    "no_persisted_twin_object_creation"
+    "no_persisted_twin_object_creation",
+    "no_kernel_line_merge"
   ],
-  "next_step": "P9-06 Replay Artifact Mapping Contract v0"
+  "next_step": "P9 branch ready for PR or main merge review"
 }
