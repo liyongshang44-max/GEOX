@@ -1130,3 +1130,104 @@ Post-P13 baseline:
 - P13 does not prove production scheduler readiness, event-driven runtime readiness, automatic persistence, model version promotion, Field Memory learning, recommendation generation, AO-ACT execution, or dashboard projection.
 - P14 may begin Calibration Review / Model Version Promotion Gate only under a new phase contract.
 
+
+---
+
+## P14 Calibration Review / Model Version Promotion Gate v0 Freeze Closure
+
+Key anchors:
+
+- Branch: main
+- Baseline tag: p13_continuous_twin_runtime_loop_manual_registry_runner_v0
+- Baseline commit: 61072729
+- Final closure tag: p14_calibration_review_model_version_promotion_gate_v0
+- Acceptance:
+  - node scripts/governance_acceptance/P14_07_CALIBRATION_REVIEW_PROMOTION_GATE_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P14_08_REJECTED_CALIBRATION_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P14_09_NEGATIVE_AUTHORIZATION_CANDIDATE_BOUNDARY_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P14_10_CALIBRATION_REVIEW_IDEMPOTENCY_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P14_11_CHANGED_REVIEW_CONFLICT_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P14_12_COMPLETION_REVIEW_ACCEPTANCE.cjs
+
+Frozen scope:
+
+- P14 Calibration Review / Model Version Promotion Gate v0 is complete.
+- field_learning_candidate_v1 calibration candidate can enter human review.
+- Accepted calibration can create a model version proposal.
+- Rejected calibration cannot create a model version proposal.
+- Promotion requires explicit authorization.
+- Governed future-activation promotion record can be emitted.
+- Promotion record is a governance output, not production activation.
+- Review, idempotency, and conflict behavior are deterministic.
+- Missing review, missing authorization, wrong candidate type, and auto-promotion are blocked.
+- Changed review cannot silently overwrite an existing decision.
+
+Freeze closure result:
+
+- all_prior_p14_acceptance_passed = true
+- accepted_calibration_path_passed = true
+- rejected_calibration_path_passed = true
+- negative_authorization_boundary_passed = true
+- calibration_review_idempotency_passed = true
+- changed_review_conflict_passed = true
+- calibration_candidate_count = 1
+- accepted_path_model_version_proposal_created = true
+- rejected_path_model_version_proposal_created = false
+- governed_model_version_promotion_record_emitted = true
+- persisted_promotion_record_count = 0
+- missing_review_blocked = true
+- missing_authorization_blocked = true
+- wrong_candidate_type_blocked = true
+- auto_promotion_blocked = true
+- duplicate_promotion_record_created_count = 0
+- same_candidate_changed_review_conflict_requires_review = true
+- changed_review_does_not_overwrite_existing_decision = true
+- existing_review_decision_unchanged = true
+- promotion_is_not_production_model_activation = true
+- active_model_assignment_created = false
+- active_model_assignment_count = 0
+- runtime_model_registry_mutated = false
+- model_registry_write_count = 0
+- production_model_activation_allowed = false
+- runtime_model_update_count = 0
+- field_memory_write_count = 0
+- recommendation_created = false
+- ao_act_task_created = false
+- dashboard_authority = false
+- server_runtime_surface_changed = false
+- production_runtime_surface_changed = false
+- db_surface_changed = false
+- frontend_surface_changed = false
+- package_surface_changed = false
+- ci_surface_changed = false
+- forbidden_surface_diff_count = 0
+
+Hard boundaries:
+
+- No production model activation
+- No active model assignment
+- No runtime model registry mutation
+- No forecast runner model replacement
+- No runtime model update
+- No persisted promotion record
+- No DB write
+- No server runtime surface change
+- No frontend surface change
+- No Field Memory write
+- No recommendation creation
+- No AO-ACT task creation
+- No dashboard authority
+- No P13 runner invocation by default
+- No raw_samples dependency by default
+- No P8 replay invocation by default
+- No P12 adapter invocation by default
+- No package manager change
+- No CI change
+
+Post-P14 baseline:
+
+- Next phase must start after tag p14_calibration_review_model_version_promotion_gate_v0.
+- P14 proves that a field_learning_candidate_v1 calibration candidate can pass human review and a governed future-activation promotion gate without activating production runtime models.
+- P14 does not prove production model activation, runtime use of a promoted model, automatic learning, Field Memory learning, confidence/use-eligibility read model, recommendation generation, AO-ACT execution, or dashboard projection.
+- P15 may begin Twin Confidence / Use-Eligibility Read Model only under a new phase contract.
+
