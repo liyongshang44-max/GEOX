@@ -21,7 +21,7 @@ New endpoints (Sprint 3)
 - Response: { ok: true, items: [{ fact_id, occurred_at, source, record_json }] }
 
 Acceptance update
-- scripts/ACCEPTANCE_APPLEIII_AOSENSE.ps1 MUST assert that:
+- scripts/legacy/powershell/ACCEPTANCE_APPLEIII_AOSENSE.ps1 MUST assert that:
   - created task appears in GET /tasks projection
   - created receipt appears in GET /receipts projection filtered by task_id
 - Judge rerun remains non-regression only.

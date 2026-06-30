@@ -4,9 +4,9 @@ Status: COMMERCIAL FREEZE (System-level)
 
 Tag target: geox_system_commercial_v0
 
-Acceptance target: scripts/ACCEPTANCE_GEOX_SYSTEM_COMMERCIAL_V0.ps1 (invoked via `pnpm acceptance:system:commercial:v0`)
+Acceptance target: scripts/legacy/powershell/ACCEPTANCE_GEOX_SYSTEM_COMMERCIAL_V0.ps1 (invoked via `pnpm acceptance:system:commercial:v0`)
 
-Deploy target: scripts/DEPLOY_GEOX_SYSTEM_COMMERCIAL_V0.ps1 (invoked via `pnpm deploy:commercial:v0`)
+Deploy target: scripts/legacy/powershell/DEPLOY_GEOX_SYSTEM_COMMERCIAL_V0.ps1 (invoked via `pnpm deploy:commercial:v0`)
 
 ## 0. Definition (MUST BE FIRST)
 
@@ -158,7 +158,7 @@ This document is the required freeze doc for Sprint 24:
 
 Other freeze outputs (tracked separately):
 
-- Acceptance script: scripts/ACCEPTANCE_GEOX_SYSTEM_COMMERCIAL_V0.ps1
-- Deploy script: scripts/DEPLOY_GEOX_SYSTEM_COMMERCIAL_V0.ps1
+- Acceptance script: scripts/legacy/powershell/ACCEPTANCE_GEOX_SYSTEM_COMMERCIAL_V0.ps1
+- Deploy script: scripts/legacy/powershell/DEPLOY_GEOX_SYSTEM_COMMERCIAL_V0.ps1
 - Tag target: geox_system_commercial_v0
 - Manifest: (to be produced in the next task)

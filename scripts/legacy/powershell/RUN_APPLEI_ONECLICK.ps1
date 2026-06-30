@@ -4,7 +4,7 @@
 # - Starts geox-web   (docker) on Web port (default :5173)
 # - Starts device ingest via venv python (COM port -> /api/raw)
 # - Asserts series sample count grows (3 rounds)
-# - Runs backend acceptance script: scripts/ACCEPTANCE_WEB2_BACKEND.ps1 -DisableCanopy
+# - Runs backend acceptance script: scripts/legacy/powershell/ACCEPTANCE_WEB2_BACKEND.ps1 -DisableCanopy
 #
 # IMPORTANT (A mode = LIVE):
 # - Device ingest is kept running by default (live streaming).
@@ -304,7 +304,7 @@ try {
     $acc = Join-Path $repoRoot "scripts\ACCEPTANCE_WEB2_BACKEND.ps1"
     if (-not (Test-Path $acc)) { Fail "Acceptance script missing: $acc" }
 
-    Info "Running backend acceptance: scripts/ACCEPTANCE_WEB2_BACKEND.ps1 -DisableCanopy -base $Base"
+    Info "Running backend acceptance: scripts/legacy/powershell/ACCEPTANCE_WEB2_BACKEND.ps1 -DisableCanopy -base $Base"
     & powershell -ExecutionPolicy Bypass -File $acc -DisableCanopy -base $Base
     Ok "Backend acceptance PASS"
   } else {

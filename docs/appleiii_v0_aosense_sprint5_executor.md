@@ -6,12 +6,12 @@ Scope
 - Executor identity is audit evidence only, written as a `marker_v1` with a structured `note` prefix.
 
 Deliverables
-1) `scripts/EXECUTOR_AOSENSE_DEMO.ps1`
+1) `scripts/legacy/powershell/EXECUTOR_AOSENSE_DEMO.ps1`
 - Implements: poll `GET /api/v1/sense/next-task` → write executor audit marker → write receipt referencing marker.
 - Uses retry to tolerate server warmup (`curl: (52)`).
 - `-DryRun` supported (fetch-only).
 
-2) `scripts/ACCEPTANCE_APPLEIII_EXECUTOR.ps1`
+2) `scripts/legacy/powershell/ACCEPTANCE_APPLEIII_EXECUTOR.ps1`
 - Creates a task from Judge AO-SENSE.
 - Asserts `next_task` returns it.
 - Invokes executor client once.

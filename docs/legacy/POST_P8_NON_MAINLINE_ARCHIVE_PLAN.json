@@ -504,25 +504,25 @@
   ],
   "manual_inspection": [
     {
-      "file": "docs/tasks/H53.2-Preflight-Capability-Audit.md",
+      "file": "docs/legacy/tasks/H53.2-Preflight-Capability-Audit.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "action": "manual_inspection_required"
     },
     {
-      "file": "docs/tasks/H53.2-WaterStressState-Derivation.md",
+      "file": "docs/legacy/tasks/H53.2-WaterStressState-Derivation.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "action": "manual_inspection_required"
     },
     {
-      "file": "docs/tasks/H53.3-Forecast-Scenario.md",
+      "file": "docs/legacy/tasks/H53.3-Forecast-Scenario.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "action": "manual_inspection_required"
     },
     {
-      "file": "docs/tasks/H53.4-Recommendation-Candidate.md",
+      "file": "docs/legacy/tasks/H53.4-Recommendation-Candidate.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "action": "manual_inspection_required"
@@ -624,13 +624,13 @@
       "action": "manual_inspection_required"
     },
     {
-      "file": "docs/tasks/P-UI-Customer-Operator-Page-Product-Closure.md",
+      "file": "docs/legacy/tasks/P-UI-Customer-Operator-Page-Product-Closure.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "action": "manual_inspection_required"
     },
     {
-      "file": "docs/tasks/P-UI-VISUAL-Final-Page-Visual-Closure.md",
+      "file": "docs/legacy/tasks/P-UI-VISUAL-Final-Page-Visual-Closure.md",
       "classification": "unknown_inspect_before_use",
       "strong_reference_count": 0,
       "action": "manual_inspection_required"
@@ -810,25 +810,25 @@
       "action": "manual_inspection_required"
     },
     {
-      "file": "scripts/DELIVERY/ACCEPTANCE_DELIVERY_ENVELOPE_V0_RUNNER.cjs",
+      "file": "scripts/legacy/delivery/ACCEPTANCE_DELIVERY_ENVELOPE_V0_RUNNER.cjs",
       "classification": "delivery_domain_reference_or_legacy_compatibility",
       "strong_reference_count": 1,
       "action": "manual_inspection_required"
     },
     {
-      "file": "scripts/DELIVERY/ACCEPTANCE_DELIVERY_ENVELOPE_V0.ps1",
+      "file": "scripts/legacy/delivery/ACCEPTANCE_DELIVERY_ENVELOPE_V0.ps1",
       "classification": "delivery_domain_reference_or_legacy_compatibility",
       "strong_reference_count": 1,
       "action": "manual_inspection_required"
     },
     {
-      "file": "scripts/DELIVERY/EXPORT_EVIDENCE_PACK_V0_RUNNER.cjs",
+      "file": "scripts/legacy/delivery/EXPORT_EVIDENCE_PACK_V0_RUNNER.cjs",
       "classification": "delivery_domain_reference_or_legacy_compatibility",
       "strong_reference_count": 1,
       "action": "manual_inspection_required"
     },
     {
-      "file": "scripts/DELIVERY/EXPORT_EVIDENCE_PACK_V0.ps1",
+      "file": "scripts/legacy/delivery/EXPORT_EVIDENCE_PACK_V0.ps1",
       "classification": "delivery_domain_reference_or_legacy_compatibility",
       "strong_reference_count": 1,
       "action": "manual_inspection_required"

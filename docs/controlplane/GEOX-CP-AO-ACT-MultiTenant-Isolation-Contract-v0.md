@@ -136,5 +136,5 @@ tenant_id + project_id + group_id + executor_id + idempotency_key
 4) tokenB 写租户B receipt 引用租户A 的 device_ref：FAIL（404）
 
 冻结前必须提供：
-- scripts/ACCEPTANCE_AO_ACT_MULTITENANT_ISOLATION_V0.ps1
+- scripts/legacy/powershell/ACCEPTANCE_AO_ACT_MULTITENANT_ISOLATION_V0.ps1
 - scripts/ACCEPTANCE_AO_ACT_MULTITENANT_ISOLATION_V0_RUNNER.cjs

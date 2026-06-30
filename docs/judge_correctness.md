@@ -1,6 +1,6 @@
 # Judge 可重复验收闭环（正确性口径说明）
 
-本文与 `scripts/judge_acceptance.ps1` 绑定，解释验收脚本中几个最容易产生争议的“口径”与其冻结来源。本文不引入任何 Judge 新语义，仅阐明脚本如何计算与断言。
+本文与 `scripts/legacy/powershell/judge_acceptance.ps1` 绑定，解释验收脚本中几个最容易产生争议的“口径”与其冻结来源。本文不引入任何 Judge 新语义，仅阐明脚本如何计算与断言。
 
 ## 1. expected_interval_ms 的来源（canonical reference）
 

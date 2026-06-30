@@ -188,7 +188,7 @@ Frozen scope:
 
 Acceptance:
 
-- scripts/ACCEPTANCE_SPRINT12_AO_ACT_READMODEL_NEGATIVE.ps1
+- scripts/legacy/powershell/ACCEPTANCE_SPRINT12_AO_ACT_READMODEL_NEGATIVE.ps1
 
 Hard boundaries:
 
@@ -211,7 +211,7 @@ Frozen scope:
 
 Acceptance:
 
-- scripts/ACCEPTANCE_SPRINT14_AGRONOMY_INTERPRETATION_V1_NEGATIVE.ps1
+- scripts/legacy/powershell/ACCEPTANCE_SPRINT14_AGRONOMY_INTERPRETATION_V1_NEGATIVE.ps1
 
 Hard boundaries:
 
@@ -234,7 +234,7 @@ Frozen scope:
 
 Acceptance:
 
-- scripts/ACCEPTANCE_SPRINT15_DECISION_PLAN_NEGATIVE.ps1
+- scripts/legacy/powershell/ACCEPTANCE_SPRINT15_DECISION_PLAN_NEGATIVE.ps1
 
 Hard boundaries:
 
@@ -257,7 +257,7 @@ Frozen scope:
 
 Acceptance:
 
-- scripts/ACCEPTANCE_SPRINT16_DECISION_PLAN_V0_NEGATIVE.ps1
+- scripts/legacy/powershell/ACCEPTANCE_SPRINT16_DECISION_PLAN_V0_NEGATIVE.ps1
 
 Hard boundaries:
 
@@ -304,7 +304,7 @@ Tag: apple_iii_ao_act_authz_v0
 
 Acceptance:
 
-- scripts/ACCEPTANCE_AO_ACT_AUTHZ_V0.ps1
+- scripts/legacy/powershell/ACCEPTANCE_AO_ACT_AUTHZ_V0.ps1
 
 Hard boundaries:
 
@@ -321,7 +321,7 @@ Tag: apple_iii_ao_act_idempotency_v0
 
 Acceptance:
 
-- scripts/ACCEPTANCE_AO_ACT_IDEMPOTENCY_V0.ps1
+- scripts/legacy/powershell/ACCEPTANCE_AO_ACT_IDEMPOTENCY_V0.ps1
 
 Hard boundaries:
 
@@ -343,7 +343,7 @@ Frozen scope:
 
 Acceptance:
 
-- scripts/ACCEPTANCE_AO_ACT_DEVICE_ADAPTER_V0.ps1
+- scripts/legacy/powershell/ACCEPTANCE_AO_ACT_DEVICE_ADAPTER_V0.ps1
 
 Hard boundaries:
 
@@ -368,7 +368,7 @@ Frozen scope:
 
 Acceptance:
 
-- scripts/ACCEPTANCE_AO_ACT_MULTITENANT_ISOLATION_V0.ps1
+- scripts/legacy/powershell/ACCEPTANCE_AO_ACT_MULTITENANT_ISOLATION_V0.ps1
 
 Return code semantics (frozen):
 
@@ -415,17 +415,17 @@ No new services
 
 No runtime behavior change
 
-scripts/DELIVERY/ACCEPTANCE_DELIVERY_ENVELOPE_V0.ps1
+scripts/legacy/delivery/ACCEPTANCE_DELIVERY_ENVELOPE_V0.ps1
 
-scripts/DELIVERY/ACCEPTANCE_DELIVERY_ENVELOPE_V0_RUNNER.cjs
+scripts/legacy/delivery/ACCEPTANCE_DELIVERY_ENVELOPE_V0_RUNNER.cjs
 
 Executes existing acceptance scripts as a closed set
 
 Aggregates results into a single delivery report
 
-scripts/DELIVERY/EXPORT_EVIDENCE_PACK_V0.ps1
+scripts/legacy/delivery/EXPORT_EVIDENCE_PACK_V0.ps1
 
-scripts/DELIVERY/EXPORT_EVIDENCE_PACK_V0_RUNNER.cjs
+scripts/legacy/delivery/EXPORT_EVIDENCE_PACK_V0_RUNNER.cjs
 
 Explicit, manual export of evidence pack for a given act_task_id
 
@@ -442,7 +442,7 @@ Derived view only
 Acceptance (delivery-level):
 
 powershell -NoProfile -ExecutionPolicy Bypass `
-  -File scripts/DELIVERY/ACCEPTANCE_DELIVERY_ENVELOPE_V0.ps1
+  -File scripts/legacy/delivery/ACCEPTANCE_DELIVERY_ENVELOPE_V0.ps1
 
 
 Acceptance outputs (frozen semantics):
@@ -460,7 +460,7 @@ Evidence export (explicit, non-automatic):
 $env:GEOX_AO_ACT_TOKEN_EXPORT="<set-real-export-token-via-env>"
 
 powershell -NoProfile -ExecutionPolicy Bypass `
-  -File scripts/DELIVERY/EXPORT_EVIDENCE_PACK_V0.ps1 `
+  -File scripts/legacy/delivery/EXPORT_EVIDENCE_PACK_V0.ps1 `
   -TenantId <tenant_id> `
   -ProjectId <project_id> `
   -GroupId <group_id> `
@@ -540,7 +540,7 @@ Approval approval issues AO-ACT tasks by calling the existing AO-ACT endpoint in
 Acceptance
 
 powershell -NoProfile -ExecutionPolicy Bypass `
-  -File scripts/ACCEPTANCE_SPRINT25_APPROVAL_REQUEST_V1_SMOKE.ps1
+  -File scripts/legacy/powershell/ACCEPTANCE_SPRINT25_APPROVAL_REQUEST_V1_SMOKE.ps1
 
 Hard boundaries (must remain true)
 
@@ -583,7 +583,7 @@ Artifacts are written under runtime/evidence_exports_v1/ (runtime is excluded fr
 Acceptance
 
 powershell -NoProfile -ExecutionPolicy Bypass `
-  -File scripts/ACCEPTANCE_SPRINT26_EVIDENCE_EXPORT_V1_SMOKE.ps1
+  -File scripts/legacy/powershell/ACCEPTANCE_SPRINT26_EVIDENCE_EXPORT_V1_SMOKE.ps1
 
 Hard boundaries (must remain true)
 
@@ -596,7 +596,7 @@ No scheduler, no background executor, no coupling to Judge/ProblemState
 
 - Added apps/executor (pnpm workspace app) with a run-once executor adapter.
 - Executor v1 reads AO-ACT index (tenant-filtered), appends ao_act_receipt_v0 for tasks without receipts, then triggers evidence_export_api_v1 job and waits for completion.
-- Added acceptance: scripts/ACCEPTANCE_SPRINT27_EXECUTOR_RUNTIME_V1_SMOKE.ps1 (creates approval_request_v1 -> approves -> runs executor -> verifies receipt).
+- Added acceptance: scripts/legacy/powershell/ACCEPTANCE_SPRINT27_EXECUTOR_RUNTIME_V1_SMOKE.ps1 (creates approval_request_v1 -> approves -> runs executor -> verifies receipt).
 
 Governance: executor is explicit/run-once; no infinite auto-scheduling loop, and no cross-tenant enumeration.
 
@@ -622,7 +622,7 @@ Dev run (Windows minimal)
 Acceptance
 
 powershell -NoProfile -ExecutionPolicy Bypass `
-  -File scripts/ACCEPTANCE_SPRINTA1_TELEMETRY_MQTT_SMOKE.ps1
+  -File scripts/legacy/powershell/ACCEPTANCE_SPRINTA1_TELEMETRY_MQTT_SMOKE.ps1
 ## Sprint A1/A2 · Telemetry ingest + Devices/Credentials + Telemetry query (v1)
 
 本次交付新增了 Telemetry 侧闭环（MQTT→ingest→append-only facts→query），并引入 Devices/Credentials 管理接口。
