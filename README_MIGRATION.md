@@ -1489,3 +1489,168 @@ Post-P16 baseline:
 - P16 proves that P15 bridge_input_eligible read models can pass a deterministic safety bridge and emit a non-persisted, review-required recommendation candidate envelope.
 - P16 does not prove recommendation generation, recommendation approval, action approval, AO-ACT execution, agronomic prescription, dashboard ranking, production model activation, Field Memory learning, or model training.
 
+
+---
+
+## P17 Recommendation Candidate Review / Draft Recommendation Governance Gate v0 Freeze Closure
+
+Key anchors:
+
+- Branch: main
+- Baseline tag: p16_twin_to_recommendation_safety_bridge_v0
+- Baseline commit: 64f6f236
+- Implementation branch: p17-v0
+- Merge commit: e4cff56b
+- Final closure tag: p17_recommendation_candidate_review_draft_governance_gate_v0
+- Acceptance:
+  - node scripts/governance_acceptance/P17_08_RECOMMENDATION_CANDIDATE_REVIEW_GATE_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P17_09_REJECTED_CANDIDATE_BLOCKED_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P17_10_NEEDS_MORE_EVIDENCE_CANDIDATE_BLOCKED_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P17_11_MALFORMED_BLOCKED_SOURCE_CANDIDATE_BLOCKED_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P17_12_FORBIDDEN_ACTION_PAYLOAD_BLOCKED_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P17_13_RECOMMENDATION_REVIEW_IDEMPOTENCY_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P17_14_CHANGED_REVIEW_DECISION_CONFLICT_ACCEPTANCE.cjs
+  - node scripts/governance_acceptance/P17_15_COMPLETION_REVIEW_ACCEPTANCE.cjs
+
+Frozen scope:
+
+- P17 Recommendation Candidate Review / Draft Recommendation Governance Gate v0 is complete.
+- P16 recommendation candidate envelopes can enter a deterministic recommendation review gate.
+- Accepted-for-draft review can emit a non-persisted draft recommendation governance envelope.
+- Rejected candidate emits no draft recommendation governance envelope.
+- Needs-more-evidence emits no draft recommendation governance envelope and emits only an evidence request boundary.
+- Evidence request boundary is not AO-SENSE, not action request, not operator instruction, and not dispatch payload.
+- Same candidate plus changed review decision cannot overwrite existing review result.
+- Changed review decision emits a conflict packet requiring review.
+- Draft recommendation governance envelope is not an approved recommendation.
+- Draft recommendation governance envelope contains no recommendation body.
+- Draft recommendation governance envelope contains no prescriptive language.
+- Draft recommendation governance envelope contains no rank or priority.
+- Recommendation governance is not action approval.
+- Draft recommendation is not AO-ACT authority.
+- P17 cannot bypass P16 safety bridge.
+- P17 cannot create executable action payload.
+- P17 cannot create agronomic prescription.
+
+Freeze closure result:
+
+- all_prior_p17_acceptance_passed = true
+- eligible_candidate_review_passed = true
+- review_packet_emitted = true
+- review_decision_emitted = true
+- draft_recommendation_governance_envelope_emitted = true
+- rejected_candidate_blocked = true
+- rejected_candidate_draft_envelope_emitted = false
+- needs_more_evidence_candidate_blocked = true
+- needs_more_evidence_draft_envelope_emitted = false
+- evidence_request_boundary_emitted = true
+- evidence_request_is_not_ao_sense = true
+- evidence_request_is_not_action_request = true
+- evidence_request_has_no_operator_instruction = true
+- evidence_request_has_no_dispatch_payload = true
+- malformed_candidate_blocked = true
+- blocked_source_candidate_blocked = true
+- forbidden_action_payload_blocked = true
+- same_candidate_changed_review_decision_conflict_requires_review = true
+- changed_review_decision_does_not_overwrite_existing_decision = true
+- existing_review_decision_unchanged = true
+- existing_draft_envelope_unchanged = true
+- changed_review_decision_conflict_packet_emitted = true
+- changed_review_decision_conflict_packet_persisted = false
+- duplicate_review_decision_created_count = 0
+- duplicate_draft_envelope_created_count = 0
+- blocked_inputs_review_packet_emitted = false
+- blocked_inputs_draft_envelope_emitted = false
+- forbidden_semantics_recursive_scan_passed = true
+- recursive_scan_mode = exact_key_or_exact_value
+- substring_scan_allowed = false
+- same_review_packet_id_reused = true
+- same_review_decision_id_reused = true
+- same_draft_recommendation_governance_envelope_id_reused = true
+- persisted_review_packet_count = 0
+- persisted_review_decision_count = 0
+- persisted_draft_recommendation_count = 0
+- persisted_recommendation_count = 0
+- approved_recommendation_count = 0
+- db_write_count = 0
+- draft_recommendation_is_not_approved_recommendation = true
+- recommendation_governance_is_not_action_approval = true
+- draft_recommendation_is_not_ao_act_authority = true
+- cannot_bypass_p16_safety_bridge = true
+- cannot_create_executable_action_payload = true
+- cannot_create_agronomic_prescription = true
+- draft_content_class = governance_only
+- draft_requires_human_approval = true
+- draft_requires_downstream_policy_approval = true
+- draft_has_no_executable_action_payload = true
+- draft_contains_action_payload = false
+- draft_contains_agronomic_prescription = false
+- draft_contains_operator_instruction = false
+- draft_contains_dispatch_instruction = false
+- draft_contains_ao_act_payload = false
+- draft_contains_recommendation_body = false
+- draft_contains_prescriptive_language = false
+- draft_contains_rank_or_priority = false
+- recommendation_created = false
+- recommendation_approved = false
+- action_approval_created = false
+- action_approval_allowed = false
+- ao_act_task_created = false
+- ao_act_authority_allowed = false
+- dispatch_created = false
+- dashboard_authority = false
+- ranking_allowed = false
+- triage_allowed = false
+- dashboard_sort_key_allowed = false
+- operator_attention_signal_allowed = false
+- field_memory_write_count = 0
+- runtime_model_update_count = 0
+- state_file_must_be_os_temp = true
+- repo_write_allowed = false
+- fixture_mutation_allowed = false
+- db_write_allowed = false
+- server_runtime_surface_changed = false
+- production_runtime_surface_changed = false
+- db_surface_changed = false
+- frontend_surface_changed = false
+- package_surface_changed = false
+- ci_surface_changed = false
+- upstream_contract_surface_changed = false
+- forbidden_surface_diff_count = 0
+
+Hard boundaries:
+
+- No approved recommendation
+- No recommendation body generation
+- No recommendation approval
+- No action approval
+- No AO-ACT task
+- No AO-ACT authority
+- No dispatch
+- No dashboard authority
+- No ranking
+- No triage
+- No dashboard sort key
+- No operator attention signal
+- No executable action payload
+- No agronomic prescription
+- No persisted review packet
+- No persisted review decision
+- No persisted draft recommendation
+- No persisted recommendation
+- No DB write
+- No Field Memory write
+- No runtime model update
+- No server runtime surface change
+- No production runtime surface change
+- No frontend surface change
+- No package manager change
+- No CI change
+- No upstream P12/P13/P14/P15/P16 contract change
+
+Post-P17 baseline:
+
+- Next phase must start after tag p17_recommendation_candidate_review_draft_governance_gate_v0.
+- P17 proves that P16 recommendation candidate envelopes can pass a deterministic review gate and emit a non-persisted draft recommendation governance envelope.
+- P17 does not prove approved recommendation, recommendation body generation, operator action, action approval, AO-ACT execution, agronomic prescription, dashboard projection, production model activation, Field Memory learning, or model training.
+
