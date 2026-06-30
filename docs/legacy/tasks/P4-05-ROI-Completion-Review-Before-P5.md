@@ -18,7 +18,7 @@ P4_05_ROI_COMPLETION_REVIEW_BEFORE_P5
 
 ```text
 P4_00 gate: P4_POLICY_CONTROLLED_ROI_PLANNING
-P4_00 doc: docs/tasks/P4-Policy-Controlled-ROI-Planning.md
+P4_00 doc: docs/legacy/tasks/P4-Policy-Controlled-ROI-Planning.md
 P4_00 acceptance: scripts/governance_acceptance/P4_POLICY_CONTROLLED_ROI_PLANNING.cjs
 P4_00 commit: 7fb55a690cfff90ef81a9f62e45809552cd38cba
 
@@ -38,7 +38,7 @@ P4_03 acceptance: scripts/governance_acceptance/P4_03_ROI_READ_MODEL_OUTPUT_CONT
 P4_03 commit: c6077ab5c9505cdacb07c823397a3d5584a3d328
 
 P4_04 gate: P4_04_ROI_NEGATIVE_BOUNDARY_MATRIX
-P4_04 doc: docs/tasks/P4-04-ROI-Negative-Boundary-Matrix.md
+P4_04 doc: docs/legacy/tasks/P4-04-ROI-Negative-Boundary-Matrix.md
 P4_04 acceptance: scripts/governance_acceptance/P4_04_ROI_NEGATIVE_BOUNDARY_MATRIX.cjs
 P4_04 commit: 89a0f62ea5c15c0df3fe01ab478d6098b64ada95
 ```

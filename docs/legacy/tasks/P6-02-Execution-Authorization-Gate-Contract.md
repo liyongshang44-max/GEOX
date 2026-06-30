@@ -20,7 +20,7 @@ P6_02_EXECUTION_AUTHORIZATION_GATE_CONTRACT
 
 ```text
 previous_gate: P6_01_EXECUTION_SOURCE_BOUNDARY
-previous_doc: docs/tasks/P6-01-Execution-Source-Boundary.md
+previous_doc: docs/legacy/tasks/P6-01-Execution-Source-Boundary.md
 previous_acceptance: scripts/governance_acceptance/P6_01_EXECUTION_SOURCE_BOUNDARY.cjs
 previous_commit: 415110413fb7836bc9a36ec189f9760d091aae64
 p5_completion_tag: p5_policy_controlled_field_memory_governance_completion_before_p6

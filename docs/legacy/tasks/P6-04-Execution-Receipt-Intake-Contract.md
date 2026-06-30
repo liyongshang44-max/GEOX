@@ -20,7 +20,7 @@ P6_04_EXECUTION_RECEIPT_INTAKE_CONTRACT
 
 ```text
 previous_gate: P6_03_EXECUTION_DISPATCH_OUTPUT_CONTRACT
-previous_doc: docs/tasks/P6-03-Execution-Dispatch-Output-Contract.md
+previous_doc: docs/legacy/tasks/P6-03-Execution-Dispatch-Output-Contract.md
 previous_acceptance: scripts/governance_acceptance/P6_03_EXECUTION_DISPATCH_OUTPUT_CONTRACT.cjs
 previous_commit: 5253e0b15e966fb52fb1b3dd776eee8579426d98
 p5_completion_tag: p5_policy_controlled_field_memory_governance_completion_before_p6

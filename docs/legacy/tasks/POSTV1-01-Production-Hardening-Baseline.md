@@ -52,7 +52,7 @@ This preserves the Twin Kernel v1 completion statement while preventing an infla
 POSTV1-01 adds:
 
 ```text
-docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md
+docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md
 docs/tasks/POSTV1-01-Production-Hardening-Baseline.md
 scripts/governance_acceptance/POSTV1_01_PRODUCTION_HARDENING_BASELINE.cjs
 ```

@@ -13,9 +13,9 @@ const ACCEPTANCE = 'P7_00_TWIN_KERNEL_MINIMAL_RUNTIME_PLANNING';
 const NEXT_STEP = 'P7_01_TWIN_EVIDENCE_WINDOW_CONTRACT';
 const P6_COMPLETION_TAG = 'p6_execution_system_integration_completion';
 const P6_COMPLETION_COMMIT = 'f7e8f88bc905b62f5f4a26ef2e049813763ac84d';
-const P6_COMPLETION_DOC = 'docs/tasks/P6-07-Execution-Completion-Review.md';
+const P6_COMPLETION_DOC = 'docs/legacy/tasks/P6-07-Execution-Completion-Review.md';
 const P6_COMPLETION_SCRIPT = 'scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs';
-const CURRENT_DOC = 'docs/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md';
+const CURRENT_DOC = 'docs/legacy/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md';
 const CURRENT_SCRIPT = 'scripts/governance_acceptance/P7_00_TWIN_KERNEL_MINIMAL_RUNTIME_PLANNING.cjs';
 
 const ALLOWED_CHANGED_FILES = [CURRENT_DOC, CURRENT_SCRIPT];

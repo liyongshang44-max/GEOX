@@ -18,7 +18,7 @@ P4_01_ROI_SOURCE_BOUNDARY_RECONCILIATION
 
 ```text
 previous_gate: P4_POLICY_CONTROLLED_ROI_PLANNING
-previous_doc: docs/tasks/P4-Policy-Controlled-ROI-Planning.md
+previous_doc: docs/legacy/tasks/P4-Policy-Controlled-ROI-Planning.md
 previous_acceptance: scripts/governance_acceptance/P4_POLICY_CONTROLLED_ROI_PLANNING.cjs
 previous_commit: 7fb55a690cfff90ef81a9f62e45809552cd38cba
 p4_00_status: accepted_on_main

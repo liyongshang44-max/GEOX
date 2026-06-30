@@ -13,10 +13,10 @@ const ACCEPTANCE = 'P7_06_REPLAY_EXPERIMENT_BUNDLE_V0';
 const NEXT_STEP = 'P7_07_TWIN_KERNEL_COMPLETION_REVIEW';
 const P6_COMPLETION_TAG = 'p6_execution_system_integration_completion';
 const P7_05_COMMIT = '9df61364cc5ef526da47b3a8f166116c93cc5afe';
-const P7_05_DOC = 'docs/tasks/P7-05-Calibration-Report-v0.md';
+const P7_05_DOC = 'docs/legacy/tasks/P7-05-Calibration-Report-v0.md';
 const P7_05_SCRIPT = 'scripts/governance_acceptance/P7_05_CALIBRATION_REPORT_V0.cjs';
 const P7_05_RUNTIME = 'scripts/twin_kernel/P7_05_CALIBRATION_REPORT_V0.cjs';
-const CURRENT_DOC = 'docs/tasks/P7-06-Replay-Experiment-Bundle-v0.md';
+const CURRENT_DOC = 'docs/legacy/tasks/P7-06-Replay-Experiment-Bundle-v0.md';
 const CURRENT_SCRIPT = 'scripts/governance_acceptance/P7_06_REPLAY_EXPERIMENT_BUNDLE_V0.cjs';
 const RUNTIME_SCRIPT = 'scripts/twin_kernel/P7_06_REPLAY_EXPERIMENT_BUNDLE_V0.cjs';
 

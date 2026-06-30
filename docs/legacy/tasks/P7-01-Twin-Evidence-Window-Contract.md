@@ -20,7 +20,7 @@ P7_01_TWIN_EVIDENCE_WINDOW_CONTRACT
 
 ```text
 previous_gate: P7_00_TWIN_KERNEL_MINIMAL_RUNTIME_PLANNING
-previous_doc: docs/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md
+previous_doc: docs/legacy/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md
 previous_acceptance: scripts/governance_acceptance/P7_00_TWIN_KERNEL_MINIMAL_RUNTIME_PLANNING.cjs
 previous_commit: e3a50dfde49635f4f65a8841b839f691bf5fc710
 p6_completion_tag: p6_execution_system_integration_completion

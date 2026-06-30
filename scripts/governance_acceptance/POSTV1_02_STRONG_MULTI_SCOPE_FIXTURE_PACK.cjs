@@ -15,8 +15,8 @@ const DATABASE_URL = String(process.env.DATABASE_URL || 'postgres://landos:lando
 const RUN_ID = String(process.env.POSTV1_02_RUN_ID || `run_${Date.now()}_${process.pid}_${Math.random().toString(16).slice(2, 10)}`).replace(/[^A-Za-z0-9_-]/g, '_');
 
 const REQUIRED_FILES = {
-  taskLine: 'docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md',
-  taskDoc: 'docs/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md',
+  taskLine: 'docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md',
+  taskDoc: 'docs/legacy/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md',
   tk16Acceptance: 'scripts/governance_acceptance/TK16_MULTI_SCOPE_REGRESSION_HARNESS.cjs',
   tk18Acceptance: 'scripts/governance_acceptance/TK18_EXECUTION_TO_LEARNING_BUSINESS_CLOSURE_V0.cjs',
   twinKernelRoute: 'apps/server/src/routes/v1/twin_kernel.ts',

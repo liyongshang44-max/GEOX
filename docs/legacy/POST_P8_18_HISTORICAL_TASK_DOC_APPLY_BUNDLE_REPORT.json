@@ -1,0 +1,573 @@
+{
+  "generated_at": "2026-06-30T08:46:30.384Z",
+  "report": "POST_P8_18_HISTORICAL_TASK_DOC_APPLY_BUNDLE_REPORT",
+  "selected_group": "historical_task_doc",
+  "input_plan_report": "docs/legacy/POST_P8_13_HISTORICAL_TASK_DOC_REFERENCE_UPDATE_PLAN.json",
+  "input_preview_report": "docs/legacy/POST_P8_15_HISTORICAL_TASK_DOC_REFERENCE_UPDATE_PREVIEW_REPORT.json",
+  "input_owner_report": "docs/legacy/POST_P8_16_HISTORICAL_TASK_DOC_OWNER_CONFIRMATION_REPORT.json",
+  "output_report": "docs/legacy/POST_P8_18_HISTORICAL_TASK_DOC_APPLY_BUNDLE_REPORT.json",
+  "moved_file_count": 48,
+  "source_file_count": 48,
+  "destination_file_count": 48,
+  "affected_referencing_file_count": 75,
+  "reference_update_plan_item_count": 371,
+  "replacement_count": 585,
+  "expected_replacement_count": 585,
+  "old_exact_reference_count_after": 0,
+  "new_exact_reference_count_after": 658,
+  "missing_destination_file_count": 0,
+  "remaining_source_file_count": 0,
+  "broken_reference_count": 0,
+  "runtime_surface_diff_count": 0,
+  "changed_file_count": 3,
+  "runtime_surface_files": [],
+  "missing_destinations": [],
+  "remaining_sources": [],
+  "apply_allowed": true,
+  "applied": true,
+  "move_results": [
+    {
+      "source_file": "docs/tasks/H54-Final-Index.md",
+      "planned_destination": "docs/legacy/tasks/H54-Final-Index.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/H54.0-Control-Connector-Preflight.md",
+      "planned_destination": "docs/legacy/tasks/H54.0-Control-Connector-Preflight.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
+      "planned_destination": "docs/legacy/tasks/H54.1-Recommendation-Approval-Request-Connector-Gate.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
+      "planned_destination": "docs/legacy/tasks/H54.2-Actionable-Irrigation-Approval-Adapter.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/H54.3-Approval-Decision-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.3-Approval-Decision-Linkage.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/H54.4-Operation-Plan-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.4-Operation-Plan-Linkage.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/H54.5-Task-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.5-Task-Linkage.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/H54.6-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.6-Linkage.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/H54.7-As-Executed-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.7-As-Executed-Linkage.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/H54.8-Evidence-Artifact-Linkage.md",
+      "planned_destination": "docs/legacy/tasks/H54.8-Evidence-Artifact-Linkage.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/H55-Acceptance-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H55-Acceptance-Boundary.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/H55-Final-Index.md",
+      "planned_destination": "docs/legacy/tasks/H55-Final-Index.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/H56-Water-Response-Verification-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H56-Water-Response-Verification-Boundary.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
+      "planned_destination": "docs/legacy/tasks/H57-Preflight-Evaluation-Roi-FieldMemory-Audit.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/H57-ROI-Governance-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H57-ROI-Governance-Boundary.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/H58-Field-Memory-Governance-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/H58-Field-Memory-Governance-Boundary.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/P4-04-ROI-Negative-Boundary-Matrix.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "planned_destination": "docs/legacy/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P4-Policy-Controlled-ROI-Planning.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "planned_destination": "docs/legacy/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/P6-01-Execution-Source-Boundary.md",
+      "planned_destination": "docs/legacy/tasks/P6-01-Execution-Source-Boundary.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/P6-07-Execution-Completion-Review.md",
+      "planned_destination": "docs/legacy/tasks/P6-07-Execution-Completion-Review.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
+      "planned_destination": "docs/legacy/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "planned_destination": "docs/legacy/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/P7-03-Prediction-Run-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-03-Prediction-Run-v0.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/P7-05-Calibration-Report-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-05-Calibration-Report-v0.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
+      "planned_destination": "docs/legacy/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "planned_destination": "docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "planned_destination": "docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md",
+      "moved": true
+    },
+    {
+      "source_file": "docs/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
+      "planned_destination": "docs/legacy/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md",
+      "moved": true
+    }
+  ],
+  "reference_update_results": [
+    {
+      "referencing_file": "docs/legacy/POST_P8_10_HISTORICAL_TASK_DOC_CLEANUP_PLAN.json",
+      "replacement_count": 48
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_CLASSIFICATION_REPORT.json",
+      "replacement_count": 258
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_MANUAL_REVIEW_GROUP_DECISION_REPORT.json",
+      "replacement_count": 30
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_NON_MAINLINE_ARCHIVE_PLAN.json",
+      "replacement_count": 48
+    },
+    {
+      "referencing_file": "docs/legacy/POST_P8_REFERENCE_AUDIT_REPORT.json",
+      "replacement_count": 48
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/ACCEPTANCE_H54_FINAL_INDEX_V1.cjs",
+      "replacement_count": 11
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/H57_PREFLIGHT_AUDIT.cjs",
+      "replacement_count": 4
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/TK0_TWIN_KERNEL_PREFLIGHT_AUDIT.cjs",
+      "replacement_count": 3
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/H57_ROI_GOVERNANCE_BOUNDARY.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/H58_FIELD_MEMORY_GOVERNANCE_BOUNDARY.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/TK5_FIELD_LEARNING_CANDIDATE_V1_ACCEPTANCE.cjs",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "docs/tasks/P4-05-ROI-Completion-Review-Before-P5.md",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P4_04_ROI_NEGATIVE_BOUNDARY_MATRIX.cjs",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P4_05_ROI_COMPLETION_REVIEW_BEFORE_P5.cjs",
+      "replacement_count": 3
+    },
+    {
+      "referencing_file": "docs/tasks/P5-00-Policy-Controlled-Field-Memory-Governance-Planning.md",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_00_POLICY_CONTROLLED_FIELD_MEMORY_GOVERNANCE_PLANNING.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "docs/legacy/tasks/P4-01-ROI-Source-Boundary-Reconciliation.md",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P4_01_ROI_SOURCE_BOUNDARY_RECONCILIATION.cjs",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P4_POLICY_CONTROLLED_ROI_PLANNING.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "docs/tasks/P5-01-Field-Memory-Eligibility-Source-Boundary.md",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "docs/tasks/P5-05-Field-Memory-Completion-Review-Before-P6.md",
+      "replacement_count": 5
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_01_FIELD_MEMORY_ELIGIBILITY_SOURCE_BOUNDARY.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_05_FIELD_MEMORY_COMPLETION_REVIEW_BEFORE_P6.cjs",
+      "replacement_count": 6
+    },
+    {
+      "referencing_file": "docs/tasks/P5-02-Field-Memory-Policy-Gate-Contract.md",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_02_FIELD_MEMORY_POLICY_GATE_CONTRACT.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "docs/tasks/P5-03-Field-Memory-Formalization-Output-Contract.md",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_03_FIELD_MEMORY_FORMALIZATION_OUTPUT_CONTRACT.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "docs/tasks/P5-04-Field-Memory-Negative-Boundary-Matrix.md",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P5_04_FIELD_MEMORY_NEGATIVE_BOUNDARY_MATRIX.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "docs/tasks/P6-00-Execution-System-Integration-Planning.md",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_00_EXECUTION_SYSTEM_INTEGRATION_PLANNING.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "docs/tasks/P6-01-Execution-Source-Boundary.md",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_01_EXECUTION_SOURCE_BOUNDARY.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_07_EXECUTION_COMPLETION_REVIEW.cjs",
+      "replacement_count": 10
+    },
+    {
+      "referencing_file": "docs/tasks/P6-02-Execution-Authorization-Gate-Contract.md",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_02_EXECUTION_AUTHORIZATION_GATE_CONTRACT.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "docs/tasks/P6-03-Execution-Dispatch-Output-Contract.md",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_03_EXECUTION_DISPATCH_OUTPUT_CONTRACT.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "docs/tasks/P6-04-Execution-Receipt-Intake-Contract.md",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_04_EXECUTION_RECEIPT_INTAKE_CONTRACT.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "docs/tasks/P6-05-Execution-Audit-Trace-Contract.md",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_05_EXECUTION_AUDIT_TRACE_CONTRACT.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "docs/tasks/P6-06-Execution-Negative-Boundary-Matrix.md",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P6_06_EXECUTION_NEGATIVE_BOUNDARY_MATRIX.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "docs/tasks/P6-07-Execution-Completion-Review.md",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_00_TWIN_KERNEL_MINIMAL_RUNTIME_PLANNING.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "docs/tasks/P7-01-Twin-Evidence-Window-Contract.md",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "docs/tasks/P7-07-Twin-Kernel-Completion-Review.md",
+      "replacement_count": 8
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_01_TWIN_EVIDENCE_WINDOW_CONTRACT.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "docs/tasks/P7-02-Soil-Moisture-State-Estimate-v0.md",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_02_SOIL_MOISTURE_STATE_ESTIMATE_V0.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "scripts/twin_kernel/fixtures/P7_02_EVIDENCE_WINDOW_CAF009_SAMPLE.json",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "scripts/twin_kernel/P7_06_REPLAY_EXPERIMENT_BUNDLE_V0.cjs",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "docs/tasks/P7-03-Prediction-Run-v0.md",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_03_PREDICTION_RUN_V0.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "docs/tasks/P7-04-Backtest-Error-Report-v0.md",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_04_BACKTEST_ERROR_REPORT_V0.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "docs/tasks/P7-05-Calibration-Report-v0.md",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_05_CALIBRATION_REPORT_V0.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "docs/tasks/P7-06-Replay-Experiment-Bundle-v0.md",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_06_REPLAY_EXPERIMENT_BUNDLE_V0.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "docs/tasks/P8-00-Real-Evidence-Closed-Loop-Planning.md",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P7_07_TWIN_KERNEL_COMPLETION_REVIEW.cjs",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "docs/tasks/POSTV1-01-Production-Hardening-Baseline.md",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P1_COMPLETION_REVIEW_BEFORE_P2.cjs",
+      "replacement_count": 7
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/P2_REAL_ADAPTER_INTEGRATION_PLANNING.cjs",
+      "replacement_count": 1
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_01_PRODUCTION_HARDENING_BASELINE.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_02_STRONG_MULTI_SCOPE_FIXTURE_PACK.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_03_INGESTION_IDEMPOTENCY_ERROR_TAXONOMY.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_04_ROUTE_NEGATIVE_RUNTIME_MATRIX.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_05_DB_INDEX_QUERY_COST_AUDIT.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_06_DOCKER_STARTUP_MIGRATION_RUNNER_BASELINE.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "scripts/governance_acceptance/POSTV1_PHASE_LINE_FREEZE.cjs",
+      "replacement_count": 2
+    },
+    {
+      "referencing_file": "docs/legacy/tasks/P1-Completion-Review-Before-P2.md",
+      "replacement_count": 6
+    },
+    {
+      "referencing_file": "docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md",
+      "replacement_count": 1
+    }
+  ],
+  "next_step": "POST_P8_19_HISTORICAL_TASK_DOC_APPLY_BUNDLE_FINAL_TAG"
+}

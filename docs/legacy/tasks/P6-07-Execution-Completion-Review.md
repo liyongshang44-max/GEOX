@@ -20,7 +20,7 @@ P6_07_EXECUTION_COMPLETION_REVIEW
 
 ```text
 previous_gate: P6_06_EXECUTION_NEGATIVE_BOUNDARY_MATRIX
-previous_doc: docs/tasks/P6-06-Execution-Negative-Boundary-Matrix.md
+previous_doc: docs/legacy/tasks/P6-06-Execution-Negative-Boundary-Matrix.md
 previous_acceptance: scripts/governance_acceptance/P6_06_EXECUTION_NEGATIVE_BOUNDARY_MATRIX.cjs
 previous_commit: 0117a4913a757af0e117c8e4f41f9c3504a55746
 p5_completion_tag: p5_policy_controlled_field_memory_governance_completion_before_p6

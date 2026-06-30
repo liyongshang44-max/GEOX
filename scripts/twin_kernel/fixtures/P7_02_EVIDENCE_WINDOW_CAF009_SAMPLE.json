@@ -102,7 +102,7 @@
   "trace_refs": [
     {
       "kind": "p7_01_evidence_window_contract",
-      "ref_id": "docs/tasks/P7-01-Twin-Evidence-Window-Contract.md"
+      "ref_id": "docs/legacy/tasks/P7-01-Twin-Evidence-Window-Contract.md"
     }
   ],
   "provenance_ref": {

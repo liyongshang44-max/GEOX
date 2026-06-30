@@ -13,9 +13,9 @@ const ACCEPTANCE = 'P7_01_TWIN_EVIDENCE_WINDOW_CONTRACT';
 const NEXT_STEP = 'P7_02_SOIL_MOISTURE_STATE_ESTIMATE_V0';
 const P6_COMPLETION_TAG = 'p6_execution_system_integration_completion';
 const P7_00_COMMIT = 'e3a50dfde49635f4f65a8841b839f691bf5fc710';
-const P7_00_DOC = 'docs/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md';
+const P7_00_DOC = 'docs/legacy/tasks/P7-00-Twin-Kernel-Minimal-Runtime-Planning.md';
 const P7_00_SCRIPT = 'scripts/governance_acceptance/P7_00_TWIN_KERNEL_MINIMAL_RUNTIME_PLANNING.cjs';
-const CURRENT_DOC = 'docs/tasks/P7-01-Twin-Evidence-Window-Contract.md';
+const CURRENT_DOC = 'docs/legacy/tasks/P7-01-Twin-Evidence-Window-Contract.md';
 const CURRENT_SCRIPT = 'scripts/governance_acceptance/P7_01_TWIN_EVIDENCE_WINDOW_CONTRACT.cjs';
 
 const ALLOWED_CHANGED_FILES = [CURRENT_DOC, CURRENT_SCRIPT];

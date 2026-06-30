@@ -16,7 +16,7 @@ P7_05_CALIBRATION_REPORT_V0
 
 ```text
 previous_gate: P7_04_BACKTEST_ERROR_REPORT_V0
-previous_doc: docs/tasks/P7-04-Backtest-Error-Report-v0.md
+previous_doc: docs/legacy/tasks/P7-04-Backtest-Error-Report-v0.md
 previous_acceptance: scripts/governance_acceptance/P7_04_BACKTEST_ERROR_REPORT_V0.cjs
 previous_commit: e5eb8705474993e4aeee2c24e92ff710c1b7f4e0
 p6_completion_tag: p6_execution_system_integration_completion

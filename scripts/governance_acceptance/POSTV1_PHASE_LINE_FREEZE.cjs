@@ -8,8 +8,8 @@ const ROOT = process.cwd();
 const ACCEPTANCE = 'POSTV1_PHASE_LINE_FREEZE';
 
 const FILES = {
-  taskLine: 'docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md',
-  postv101: 'docs/tasks/POSTV1-01-Production-Hardening-Baseline.md',
+  taskLine: 'docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md',
+  postv101: 'docs/legacy/tasks/POSTV1-01-Production-Hardening-Baseline.md',
   completionReview: 'docs/tasks/TWIN-KERNEL-V1-COMPLETION-REVIEW.md',
   postv101Acceptance: 'scripts/governance_acceptance/POSTV1_01_PRODUCTION_HARDENING_BASELINE.cjs',
 };

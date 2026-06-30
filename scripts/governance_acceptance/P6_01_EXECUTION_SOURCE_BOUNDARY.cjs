@@ -13,9 +13,9 @@ const ACCEPTANCE = 'P6_01_EXECUTION_SOURCE_BOUNDARY';
 const NEXT_STEP = 'P6_02_EXECUTION_AUTHORIZATION_GATE_CONTRACT';
 const P5_TAG = 'p5_policy_controlled_field_memory_governance_completion_before_p6';
 const P6_00_COMMIT = '11c61eee14b7e84c9eea79ae2339ec5ff6bf17b8';
-const P6_00_DOC = 'docs/tasks/P6-00-Execution-System-Integration-Planning.md';
+const P6_00_DOC = 'docs/legacy/tasks/P6-00-Execution-System-Integration-Planning.md';
 const P6_00_SCRIPT = 'scripts/governance_acceptance/P6_00_EXECUTION_SYSTEM_INTEGRATION_PLANNING.cjs';
-const CURRENT_DOC = 'docs/tasks/P6-01-Execution-Source-Boundary.md';
+const CURRENT_DOC = 'docs/legacy/tasks/P6-01-Execution-Source-Boundary.md';
 const CURRENT_SCRIPT = 'scripts/governance_acceptance/P6_01_EXECUTION_SOURCE_BOUNDARY.cjs';
 
 const ALLOWED_CHANGED_FILES = [CURRENT_DOC, CURRENT_SCRIPT];

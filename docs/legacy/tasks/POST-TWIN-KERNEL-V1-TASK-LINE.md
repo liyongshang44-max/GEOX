@@ -339,7 +339,7 @@ Create the post-v1 task line and freeze the hardening baseline without changing 
 
 ```text
 docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md
-docs/tasks/POSTV1-01-Production-Hardening-Baseline.md
+docs/legacy/tasks/POSTV1-01-Production-Hardening-Baseline.md
 scripts/governance_acceptance/POSTV1_01_PRODUCTION_HARDENING_BASELINE.cjs
 ```
 

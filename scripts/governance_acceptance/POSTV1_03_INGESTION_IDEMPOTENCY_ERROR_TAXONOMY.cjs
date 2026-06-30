@@ -14,8 +14,8 @@ const RUN_ID = String(process.env.POSTV1_03_RUN_ID || `run_${Date.now()}_${proce
 const FIELD_LEARNING_CANDIDATE_ID = String(process.env.POSTV1_03_FIELD_LEARNING_CANDIDATE_ID || 'flc_c23a3ace34c48ce59c205110');
 
 const FILES = {
-  taskLine: 'docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md',
-  taskDoc: 'docs/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md',
+  taskLine: 'docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md',
+  taskDoc: 'docs/legacy/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md',
   route: 'apps/server/src/routes/v1/twin_kernel_production_ingestion.ts',
   tk15Acceptance: 'scripts/governance_acceptance/TK15_PRODUCTION_INGESTION_V0.cjs',
   postv102Acceptance: 'scripts/governance_acceptance/POSTV1_02_STRONG_MULTI_SCOPE_FIXTURE_PACK.cjs',

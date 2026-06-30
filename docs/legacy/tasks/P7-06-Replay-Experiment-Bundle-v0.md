@@ -16,7 +16,7 @@ P7_06_REPLAY_EXPERIMENT_BUNDLE_V0
 
 ```text
 previous_gate: P7_05_CALIBRATION_REPORT_V0
-previous_doc: docs/tasks/P7-05-Calibration-Report-v0.md
+previous_doc: docs/legacy/tasks/P7-05-Calibration-Report-v0.md
 previous_acceptance: scripts/governance_acceptance/P7_05_CALIBRATION_REPORT_V0.cjs
 previous_commit: 9df61364cc5ef526da47b3a8f166116c93cc5afe
 p6_completion_tag: p6_execution_system_integration_completion

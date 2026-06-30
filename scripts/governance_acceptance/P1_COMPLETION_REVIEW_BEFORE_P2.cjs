@@ -14,49 +14,49 @@ const P1_TASKS = [
   {
     id: 'POSTV1-01',
     title: 'Production Hardening Baseline',
-    doc: 'docs/tasks/POSTV1-01-Production-Hardening-Baseline.md',
+    doc: 'docs/legacy/tasks/POSTV1-01-Production-Hardening-Baseline.md',
     acceptance: 'scripts/governance_acceptance/POSTV1_01_PRODUCTION_HARDENING_BASELINE.cjs',
     requiredDocTokens: ['POSTV1-01', 'production hardening baseline', 'does not add runtime behavior'],
   },
   {
     id: 'POSTV1-02',
     title: 'Strong Multi-Scope Fixture Pack',
-    doc: 'docs/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md',
+    doc: 'docs/legacy/tasks/POSTV1-02-Strong-Multi-Scope-Fixture-Pack.md',
     acceptance: 'scripts/governance_acceptance/POSTV1_02_STRONG_MULTI_SCOPE_FIXTURE_PACK.cjs',
     requiredDocTokens: ['POSTV1-02', 'strong multi-scope fixture coverage', 'at least six runtime cases'],
   },
   {
     id: 'POSTV1-03',
     title: 'Ingestion Idempotency & Error Taxonomy',
-    doc: 'docs/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md',
+    doc: 'docs/legacy/tasks/POSTV1-03-Ingestion-Idempotency-Error-Taxonomy.md',
     acceptance: 'scripts/governance_acceptance/POSTV1_03_INGESTION_IDEMPOTENCY_ERROR_TAXONOMY.cjs',
     requiredDocTokens: ['POSTV1-03', 'idempotency', 'structured error'],
   },
   {
     id: 'POSTV1-04',
     title: 'Route Negative Runtime Matrix',
-    doc: 'docs/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md',
+    doc: 'docs/legacy/tasks/POSTV1-04-Route-Negative-Runtime-Matrix.md',
     acceptance: 'scripts/governance_acceptance/POSTV1_04_ROUTE_NEGATIVE_RUNTIME_MATRIX.cjs',
     requiredDocTokens: ['POSTV1-04', 'negative runtime acceptance matrix', 'No new route'],
   },
   {
     id: 'POSTV1-05',
     title: 'DB Index / Query Cost Audit',
-    doc: 'docs/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md',
+    doc: 'docs/legacy/tasks/POSTV1-05-DB-Index-Query-Cost-Audit.md',
     acceptance: 'scripts/governance_acceptance/POSTV1_05_DB_INDEX_QUERY_COST_AUDIT.cjs',
     requiredDocTokens: ['POSTV1-05', 'decision_cycle_v1_operator_queue_idx', 'basic EXPLAIN'],
   },
   {
     id: 'POSTV1-06',
     title: 'Docker Startup / Migration Runner Baseline',
-    doc: 'docs/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md',
+    doc: 'docs/legacy/tasks/POSTV1-06-Docker-Startup-Migration-Runner-Baseline.md',
     acceptance: 'scripts/governance_acceptance/POSTV1_06_DOCKER_STARTUP_MIGRATION_RUNNER_BASELINE.cjs',
     requiredDocTokens: ['POSTV1-06', 'sql_migrations_completed', 'p1_completed = true'],
   },
 ];
 
 const REVIEW_DOC = 'docs/tasks/P1-Completion-Review-Before-P2.md';
-const TASK_LINE = 'docs/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md';
+const TASK_LINE = 'docs/legacy/tasks/POST-TWIN-KERNEL-V1-TASK-LINE.md';
 
 const assertions = [];
 

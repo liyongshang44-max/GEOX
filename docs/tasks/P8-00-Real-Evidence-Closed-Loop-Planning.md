@@ -19,7 +19,7 @@ P8_00_REAL_EVIDENCE_CLOSED_LOOP_PLANNING
 ```text
 previous_stage = P7 Twin Kernel Minimal Runtime
 previous_completion_tag = p7_twin_kernel_minimal_runtime_completion
-previous_completion_doc = docs/tasks/P7-07-Twin-Kernel-Completion-Review.md
+previous_completion_doc = docs/legacy/tasks/P7-07-Twin-Kernel-Completion-Review.md
 p8_scope_explicitly_opened = true
 ```
 

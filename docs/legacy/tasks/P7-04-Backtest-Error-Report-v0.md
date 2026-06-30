@@ -20,7 +20,7 @@ P7_04_BACKTEST_ERROR_REPORT_V0
 
 ```text
 previous_gate: P7_03_PREDICTION_RUN_V0
-previous_doc: docs/tasks/P7-03-Prediction-Run-v0.md
+previous_doc: docs/legacy/tasks/P7-03-Prediction-Run-v0.md
 previous_acceptance: scripts/governance_acceptance/P7_03_PREDICTION_RUN_V0.cjs
 previous_commit: 9848df3605ca3e99b49888f33fd2510fd147015a
 p6_completion_tag: p6_execution_system_integration_completion
