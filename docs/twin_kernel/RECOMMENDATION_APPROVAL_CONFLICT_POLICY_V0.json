@@ -1,0 +1,15 @@
+{
+  "schema_version": "recommendation_approval_conflict_policy_v0",
+  "same_draft_changed_approval_decision_conflict_requires_review": true,
+  "changed_approval_decision_does_not_overwrite_existing_decision": true,
+  "existing_approval_decision_unchanged": true,
+  "existing_approved_record_unchanged": true,
+  "changed_approval_decision_conflict_packet_emitted": true,
+  "changed_approval_decision_conflict_packet_persisted": false,
+  "duplicate_approval_decision_created_count": 0,
+  "duplicate_approved_record_created_count": 0,
+  "existing_approval_decision_overwritten": false,
+  "existing_approved_record_replaced": false,
+  "existing_approved_record_deleted": false,
+  "silent_approval_decision_overwrite_allowed": false
+}

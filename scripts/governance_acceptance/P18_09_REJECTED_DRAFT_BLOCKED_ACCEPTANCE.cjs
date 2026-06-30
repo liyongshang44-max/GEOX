@@ -1,0 +1,1 @@
+'use strict';require('./P18_ACCEPTANCE_HELPERS.cjs').run('P18_09_REJECTED_DRAFT_BLOCKED_ACCEPTANCE');
