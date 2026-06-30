@@ -22,6 +22,7 @@ const ALLOWED_GROUPS = new Set([
   'root_repo_config',
   'environment_example_config',
   'environment_config',
+  'environment_or_auth_config',
   'acceptance_fixture_or_case',
   'dataset_or_fixture',
   'generated_or_legacy_evidence',
