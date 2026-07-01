@@ -1,0 +1,14 @@
+{
+  "schema_version":"p28_non_realization_policy_v0",
+  "ledger_is_not_realization":true,
+  "ledger_is_not_profit_claim":true,
+  "ledger_is_not_yield_attribution":true,
+  "ledger_is_not_effect_attribution":true,
+  "ledger_is_not_field_memory_input":true,
+  "favorable_delta_is_not_success":true,
+  "unfavorable_delta_is_not_action_failure":true,
+  "accounting_delta_is_not_action_effect":true,
+  "favorable_delta_does_not_authorize_realization":true,
+  "unfavorable_delta_does_not_authorize_negative_learning":true,
+  "unknown_delta_does_not_authorize_downstream_action":true
+}
