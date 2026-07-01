@@ -1,0 +1,1 @@
+const h=require('./P28_ACCEPTANCE_HELPERS.cjs');h.run(['P28','15','PERSISTED','ROI','LEDGER','READBACK','NO','REALIZATION','NO','FIELDMEMORY','ACCEPTANCE'].join('_'));
