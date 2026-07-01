@@ -2773,3 +2773,176 @@ Post-P22 baseline:
 - P22 proves that P21 action parameter proposal envelopes can emit a non-persisted AO-ACT preflight safety packet for proposal-level safety assessment before P23 human dispatch gate.
 - P22 does not prove selected action type, final action parameters, AO-ACT preflight pass, AO-ACT payload validity, AO-ACT task creation, dispatch availability, executor, operation time window, operator action, field task, Field Memory learning, or model training.
 
+
+---
+
+## P23 Human Dispatch / AO-ACT Task Creation Gate v0 Freeze Closure
+
+Key anchors:
+
+- Branch: main
+- Baseline tag: p22_ao_act_preflight_safety_bridge_v0
+- Baseline commit: ac322c7fc29b6d7cbb3d4f0dc432dacdc87bbe7c
+- Merge commit: 55e0a13ef63664cbfda1e678417f9e01c4f8e155
+- Final closure tag: p23_human_dispatch_ao_act_task_creation_gate_v0
+
+Frozen scope:
+
+- P23 Human Dispatch / AO-ACT Task Creation Gate v0 is complete.
+- Eligible P22 AO-ACT preflight safety packets can enter a human dispatch gate.
+- P23 can emit a deterministic, human-gated AO-ACT task creation gate packet.
+- P23 can emit a deterministic AO-ACT task envelope with task_status = created_not_executed.
+- P23 is human-gated task creation only.
+- P23 is not production AO-ACT task persistence.
+- P23 is not control-plane dispatch.
+- P23 is not execution.
+- P23 is not receipt intake.
+- P23 is not outcome review.
+- P23 is not effect attribution.
+- P23 is not Field Memory.
+- P23 is not model update.
+
+Human dispatch / AO-ACT policy review closure:
+
+- eligible_human_dispatch_task_creation_passed = true
+- human_dispatch_decision_record_emitted = true
+- human_dispatch_decision = approved_for_ao_act_task_creation
+- human_dispatch_decision_is_manual = true
+- human_dispatch_decision_does_not_confirm_executor_availability = true
+- human_dispatch_decision_does_not_confirm_field_readiness = true
+- human_dispatch_decision_does_not_confirm_weather_window = true
+- human_dispatch_decision_does_not_confirm_resource_availability = true
+- ao_act_policy_review_record_required = true
+- ao_act_policy_review_completed_before_task_creation = true
+- ao_act_policy_review_decision_required = true
+- ao_act_policy_review_decision_must_be_approved_for_task_creation = true
+- ao_act_policy_review_is_not_human_dispatch_decision = true
+- ao_act_policy_review_missing_blocked = true
+- ao_act_policy_review_not_completed_blocked = true
+- ao_act_policy_review_not_approved_blocked = true
+
+Task creation closure:
+
+- ao_act_task_creation_gate_packet_emitted = true
+- ao_act_task_envelope_created = true
+- task_status = created_not_executed
+- dispatch_authority_kind = human
+- human_selected_action_type_created = true
+- human_selected_action_type_from_p21_candidate_set = true
+- human_selected_action_type_requires_human_dispatch_decision = true
+- human_selected_action_type_is_not_system_selected = true
+- human_selected_action_type_is_not_llm_selected = true
+- human_finalized_task_parameters_created = true
+- human_finalized_task_parameters_from_p21_parameter_candidates = true
+- human_finalized_task_parameters_within_p21_bounds = true
+- human_finalized_task_parameters_match_p21_templates = true
+- human_finalized_task_parameters_require_human_dispatch_decision = true
+- human_finalized_task_parameters_require_p22_preflight_safety_packet = true
+- human_finalized_task_parameters_are_not_rate_recommendation_authority = true
+- human_finalized_task_parameters_do_not_claim_optimality = true
+- human_finalized_task_parameters_do_not_claim_safety_effectiveness = true
+- human_finalized_task_parameters_do_not_claim_yield_effect = true
+
+Dispatch input boundary closure:
+
+- executor_ref_created = true
+- executor_ref_required = true
+- executor_ref_is_pointer_only = true
+- executor_ref_does_not_confirm_execution = true
+- executor_ref_does_not_confirm_availability = true
+- executor_ref_does_not_confirm_acceptance = true
+- executor_ref_does_not_create_assignment_acceptance = true
+- executor_ref_does_not_create_executor_ack = true
+- executor_ack_created = false
+- assignment_acceptance_created = false
+- target_ref_created = true
+- target_ref_required = true
+- target_ref_is_pointer_only = true
+- target_ref_from_upstream_trace_or_human_dispatch_input = true
+- target_ref_does_not_confirm_field_access = true
+- target_ref_does_not_confirm_execution_area_completed = true
+- operation_time_window_created = true
+- operation_time_window_required = true
+- operation_time_window_start_before_end_required = true
+- operation_time_window_does_not_confirm_execution_started = true
+- operation_time_window_does_not_confirm_execution_completed = true
+- created_at_ref_created = true
+- created_at_ref_required = true
+- created_at_ref_from_human_dispatch_decision_ts = true
+- created_at_ref_does_not_use_system_clock = true
+- created_at_ref_does_not_prove_execution_started = true
+
+Receipt requirement closure:
+
+- receipt_required = true
+- receipt_requirement_is_requirement_only = true
+- receipt_requirement_does_not_create_receipt = true
+- receipt_requirement_does_not_confirm_future_receipt = true
+- receipt_expected_from_executor_ref_is_not_executor_ack = true
+
+Persistence / control-plane boundary closure:
+
+- ao_act_task_envelope_is_not_persisted_ao_act_task = true
+- ao_act_task_creation_packet_is_not_persisted_fact = true
+- ao_act_task_envelope_is_not_control_plane_dispatch = true
+- production_ao_act_task_endpoint_invoked = false
+- production_dispatch_endpoint_invoked = false
+- control_ao_act_task_endpoint_invoked = false
+- control_ao_act_receipt_endpoint_invoked = false
+- db_write_count = 0
+- facts_write_count = 0
+- persisted_ao_act_task_count = 0
+- ao_act_task_fact_created = false
+- ao_act_receipt_fact_created = false
+
+No execution / no outcome closure:
+
+- execution_started = false
+- execution_completed = false
+- execution_receipt_created = false
+- execution_evidence_created = false
+- outcome_review_created = false
+- effect_attribution_created = false
+- field_memory_record_created = false
+- runtime_model_update_created = false
+
+Idempotency / conflict closure:
+
+- task_creation_output_hash_required = true
+- task_creation_output_hash_reused = true
+- task_creation_output_contains_only_allowed_boundary_fields = true
+- task_creation_output_contains_no_execution_receipt_fields = true
+- task_creation_output_contains_no_outcome_fields = true
+- first_task_creation_packet_emitted_count = 1
+- second_task_creation_packet_emitted_count = 0
+- same_ao_act_task_creation_gate_packet_id_reused = true
+- same_ao_act_task_id_reused = true
+- same_task_creation_output_hash_reused = true
+- duplicate_task_creation_packet_created_count = 0
+- duplicate_ao_act_task_envelope_created_count = 0
+- same_source_preflight_changed_task_creation_output_conflict_requires_review = true
+- changed_task_creation_output_does_not_overwrite_existing_packet = true
+- existing_task_creation_packet_unchanged = true
+- existing_ao_act_task_envelope_unchanged = true
+- existing_task_creation_policy_unchanged = true
+- changed_task_creation_conflict_packet_emitted = true
+- changed_task_creation_conflict_packet_persisted = false
+
+Surface closure:
+
+- forbidden_surface_diff_count = 0
+- server_runtime_surface_changed = false
+- production_runtime_surface_changed = false
+- db_surface_changed = false
+- frontend_surface_changed = false
+- package_surface_changed = false
+- ci_surface_changed = false
+- upstream_contract_surface_changed = false
+- failed_assertion_count = 0
+
+Post-P23 baseline:
+
+- Next phase must start after tag p23_human_dispatch_ao_act_task_creation_gate_v0.
+- P23 proves deterministic human-gated AO-ACT task creation packet / task envelope generation.
+- P23 does not prove production AO-ACT task persistence, control-plane dispatch, facts write, executor acceptance, executor ack, assignment acceptance, operation start, operation completion, receipt, execution evidence, outcome, effect attribution, Field Memory, or model update.
+
