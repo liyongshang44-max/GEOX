@@ -2222,3 +2222,283 @@ Post-P20 baseline:
 - P20 proves that matched P19 operator-facing recommendation read models and P18 approved recommendation governance records can emit a non-persisted, non-executable, review-required action translation candidate envelope.
 - P20 does not prove action parameter proposal, final action type, final action parameters, operator action, action approval, AO-ACT preflight, AO-ACT execution, dispatch, agronomic prescription, dashboard projection, Field Memory learning, or model training.
 
+
+---
+
+## P21 Action Parameter Proposal Gate v0 Freeze Closure
+
+Key anchors:
+
+- Branch: main
+- Baseline tag: p20_recommendation_to_action_translation_candidate_v0
+- Baseline commit: 1665b95a69ed3bd2f1cf70cdc7951730daa3cbde
+- Merge commit: 55b0d36e
+- Final closure tag: p21_action_parameter_proposal_gate_v0
+
+Frozen scope:
+
+- P21 Action Parameter Proposal Gate v0 is complete.
+- P20 action translation candidate envelopes can emit a non-persisted, non-executable, non-approved, preflight-required action parameter proposal envelope.
+- P21 is a parameter candidate proposal gate.
+- P21 is not a parameter determination gate.
+- P21 is not selected action type.
+- P21 is not final action type.
+- P21 is not approved action type.
+- P21 is not final action parameters.
+- P21 is not approved action parameters.
+- P21 is not executable parameters.
+- P21 is not AO-ACT preflight.
+- P21 is not AO-ACT task creation.
+- P21 is not dispatch.
+- P21 is not operator instruction.
+- P21 is not agronomic prescription.
+
+Eligible proposal closure:
+
+- eligible_action_parameter_proposal_passed = true
+- action_parameter_proposal_envelope_emitted = true
+- action_type_candidate_set_emitted = true
+- parameter_template_refs_emitted = true
+- parameter_proposal_candidates_emitted = true
+- parameter_candidate_ranges_emitted = true
+- parameter_candidate_options_emitted = true
+
+Action type candidate closure:
+
+- action_type_candidate_set_from_committed_compatibility_table = true
+- action_type_candidate_set_contains_only_allowlisted_ao_act_types = true
+- action_type_candidate_is_not_selected_action_type = true
+- action_type_candidate_is_not_final_action_type = true
+- action_type_candidate_is_not_approved_action_type = true
+- action_type_candidate_requires_p22_preflight = true
+- action_type_candidate_requires_p23_human_dispatch_gate = true
+- single_action_type_candidate_does_not_mean_selected_action_type = true
+- action_type_candidate_selection_status = unselected
+- selected_action_type_created = false
+- action_type_selection_created = false
+
+Compatibility table closure:
+
+- compatibility_table_is_not_agronomic_reasoning = true
+- compatibility_table_is_not_best_action_selection = true
+- compatibility_table_is_not_action_recommendation = true
+- compatibility_table_does_not_rank_action_types = true
+- observation_followup_has_no_action_parameter_proposal_in_p21 = true
+- observation_followup_does_not_create_ao_sense = true
+- observation_followup_does_not_create_ao_act_task = true
+- observation_followup_requires_separate_observation_route = true
+- observation_followup_does_not_create_operator_observation_task = true
+- observation_followup_does_not_create_field_visit_request = true
+
+Parameter template closure:
+
+- parameter_template_allowlist_is_committed = true
+- parameter_template_id_required = true
+- parameter_template_id_from_committed_allowlist = true
+- parameter_template_action_type_candidate_match_required = true
+- parameter_template_units_from_committed_allowlist = true
+- parameter_template_bounds_from_committed_allowlist = true
+- parameter_template_does_not_authorize_execution = true
+- parameter_template_does_not_create_ao_act_payload = true
+
+Parameter proposal closure:
+
+- parameter_proposal_candidates_are_candidate_only = true
+- parameter_proposal_candidates_are_not_selected_parameters = true
+- parameter_proposal_candidates_are_not_final_parameters = true
+- parameter_proposal_candidates_are_not_approved_parameters = true
+- parameter_proposal_candidates_are_not_executable_parameters = true
+- parameter_proposal_candidates_require_p22_preflight = true
+- parameter_proposal_candidates_require_p23_human_dispatch_gate = true
+- parameter_proposal_candidates_require_human_review = true
+- parameter_proposal_candidates_require_ao_act_policy_review = true
+- parameter_proposal_candidates_from_committed_templates = true
+
+Single parameter / candidate value closure:
+
+- single_parameter_candidate_does_not_mean_final_parameter = true
+- parameter_candidate_selection_status = unselected
+- selected_parameter_value_created = false
+- candidate_value_is_unselected = true
+- candidate_value_is_review_input_only = true
+- candidate_value_is_not_final_value = true
+- candidate_value_is_not_approved_value = true
+- candidate_value_is_not_execution_value = true
+- candidate_value_is_not_dispatch_value = true
+- candidate_value_is_not_prescription = true
+- candidate_value_requires_p22_preflight = true
+- candidate_value_requires_p23_human_dispatch_gate = true
+- candidate_value_does_not_authorize_material_application = true
+- candidate_value_does_not_authorize_machine_setting = true
+- candidate_value_does_not_authorize_operator_execution = true
+
+Operator-facing closure:
+
+- parameter_proposal_is_not_operator_facing_instruction = true
+- parameter_proposal_display_to_operator_allowed = false
+- parameter_proposal_requires_downstream_review_before_operator_display = true
+
+Downstream gate closure:
+
+- human_action_review_required = true
+- ao_act_policy_review_required = true
+- p22_ao_act_preflight_required = true
+- p23_human_dispatch_gate_required = true
+- human_action_review_required_is_not_operator_task = true
+- human_action_review_required_is_not_action_request = true
+- human_action_review_required_is_not_dispatch_instruction = true
+- human_action_review_required_is_not_ao_sense = true
+- ao_act_policy_review_required_is_not_ao_act_authority = true
+- ao_act_policy_review_required_is_not_preflight_pass = true
+- ao_act_policy_review_required_is_not_task_creation = true
+- p22_ao_act_preflight_required_does_not_create_preflight_request = true
+- p22_ao_act_preflight_required_does_not_create_ao_act_packet = true
+- p23_human_dispatch_gate_required_does_not_create_dispatch = true
+
+Blocked source closure:
+
+- missing_p20_action_translation_candidate_envelope_blocked = true
+- wrong_source_phase_blocked = true
+- wrong_source_object_kind_blocked = true
+- malformed_p20_translation_candidate_blocked = true
+- p20_source_pair_integrity_not_verified_blocked = true
+- p20_cross_phase_trace_refs_not_aligned_blocked = true
+- p20_candidate_boundary_not_allowlisted_blocked = true
+- p20_candidate_boundary_contains_executable_boundary_blocked = true
+- p20_intent_class_not_taxonomy_only_blocked = true
+- p20_intent_class_implies_operator_action_blocked = true
+- p20_intent_class_selects_ao_act_action_type_blocked = true
+- p20_required_preflight_checks_already_executed_blocked = true
+- p20_preflight_request_already_created_blocked = true
+- p20_ao_act_packet_already_created_blocked = true
+- p20_parameter_collection_already_authorized_blocked = true
+
+Blocked candidate / parameter closure:
+
+- intent_class_without_p21_action_parameter_route_blocked = true
+- action_type_candidate_not_allowlisted_blocked = true
+- action_type_candidate_not_compatible_with_intent_blocked = true
+- action_type_candidate_marked_final_blocked = true
+- action_type_candidate_marked_approved_blocked = true
+- parameter_template_not_allowlisted_blocked = true
+- parameter_template_action_type_mismatch_blocked = true
+- parameter_key_not_in_template_blocked = true
+- parameter_unit_mismatch_blocked = true
+- parameter_value_type_mismatch_blocked = true
+- parameter_value_out_of_bounds_blocked = true
+- freeform_parameter_key_detected_blocked = true
+- freeform_parameter_unit_detected_blocked = true
+- freeform_parameter_value_detected_blocked = true
+- candidate_with_final_action_type_blocked = true
+- candidate_with_approved_action_type_blocked = true
+- candidate_with_final_parameters_blocked = true
+- candidate_with_approved_parameters_blocked = true
+- candidate_with_executable_parameters_blocked = true
+- candidate_with_executor_blocked = true
+- candidate_with_operation_time_window_blocked = true
+- candidate_with_preflight_request_blocked = true
+- candidate_with_ao_act_packet_blocked = true
+- candidate_with_ao_act_payload_blocked = true
+- candidate_with_dispatch_payload_blocked = true
+- candidate_with_action_approval_blocked = true
+- candidate_with_preflight_pass_blocked = true
+- candidate_with_dispatch_ready_blocked = true
+- candidate_with_priority_or_rank_blocked = true
+- candidate_with_actionability_score_blocked = true
+
+Hash / idempotency / conflict closure:
+
+- parameter_proposal_output_hash_required = true
+- parameter_proposal_output_hash_reused = true
+- parameter_proposal_output_contains_only_allowed_boundary_fields = true
+- parameter_proposal_output_contains_no_executable_action_fields = true
+- same_action_parameter_proposal_envelope_id_reused = true
+- same_parameter_proposal_output_hash_reused = true
+- same_source_candidate_changed_parameter_proposal_conflict_requires_review = true
+- changed_parameter_proposal_does_not_overwrite_existing_proposal = true
+- existing_parameter_proposal_unchanged = true
+- existing_parameter_policy_unchanged = true
+- changed_parameter_proposal_conflict_packet_emitted = true
+- changed_parameter_proposal_conflict_packet_persisted = false
+- duplicate_parameter_proposal_created_count = 0
+- duplicate_parameter_output_created_count = 0
+
+No-effect closure:
+
+- persisted_action_parameter_proposal_count = 0
+- persisted_action_type_candidate_count = 0
+- persisted_selected_action_type_count = 0
+- persisted_final_action_type_count = 0
+- persisted_final_action_parameters_count = 0
+- persisted_ao_act_preflight_packet_count = 0
+- persisted_ao_act_task_count = 0
+- db_write_count = 0
+- final_action_type_created = false
+- approved_action_type_created = false
+- selected_action_type_created = false
+- action_type_selection_created = false
+- execution_action_type_created = false
+- dispatch_action_type_created = false
+- ao_act_action_type_created = false
+- final_action_parameters_created = false
+- approved_action_parameters_created = false
+- executable_parameters_created = false
+- ao_act_parameters_created = false
+- dispatch_parameters_created = false
+- task_parameters_created = false
+- executor_created = false
+- operator_created = false
+- machine_created = false
+- crew_created = false
+- operation_time_window_created = false
+- action_time_window_created = false
+- execution_time_window_created = false
+- preflight_request_created = false
+- ao_act_packet_created = false
+- ao_act_payload_created = false
+- ao_act_preflight_packet_created = false
+- ao_act_task_created = false
+- dispatch_payload_created = false
+- dispatch_ready_created = false
+- dispatch_created = false
+- field_task_created = false
+- operator_instruction_created = false
+- execution_guidance_created = false
+- agronomic_prescription_created = false
+- dashboard_ranking_created = false
+- ranking_allowed = false
+- triage_allowed = false
+- dashboard_sort_key_allowed = false
+- operator_attention_signal_allowed = false
+- priority_signal_allowed = false
+- urgency_signal_allowed = false
+- confidence_to_action_mapping_allowed = false
+- actionability_score_allowed = false
+- operator_decision_support_score_allowed = false
+- parameter_proposal_actionability_score_allowed = false
+- parameter_proposal_priority_score_allowed = false
+- field_memory_write_count = 0
+- runtime_model_update_count = 0
+
+Surface closure:
+
+- state_file_must_be_os_temp = true
+- repo_write_allowed = false
+- fixture_mutation_allowed = false
+- db_write_allowed = false
+- server_runtime_surface_changed = false
+- production_runtime_surface_changed = false
+- db_surface_changed = false
+- frontend_surface_changed = false
+- package_surface_changed = false
+- ci_surface_changed = false
+- upstream_contract_surface_changed = false
+- forbidden_surface_diff_count = 0
+- failed_assertion_count = 0
+
+Post-P21 baseline:
+
+- Next phase must start after tag p21_action_parameter_proposal_gate_v0.
+- P21 proves that P20 action translation candidate envelopes can emit a non-persisted, non-executable, non-approved, preflight-required action parameter proposal envelope.
+- P21 does not prove selected action type, final action type, final action parameters, operator action, action approval, AO-ACT preflight, AO-ACT execution, dispatch, agronomic prescription, dashboard projection, Field Memory learning, or model training.
+
