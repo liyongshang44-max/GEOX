@@ -1,0 +1,45 @@
+{
+  "schema_version": "action_parameter_proposal_template_allowlist_v0",
+  "parameter_template_allowlist_is_committed": true,
+  "parameter_template_id_required": true,
+  "parameter_template_id_from_committed_allowlist": true,
+  "parameter_template_action_type_candidate_match_required": true,
+  "parameter_template_units_from_committed_allowlist": true,
+  "parameter_template_bounds_from_committed_allowlist": true,
+  "parameter_template_does_not_authorize_execution": true,
+  "parameter_template_does_not_create_ao_act_payload": true,
+  "templates": {
+    "IRRIGATE": [
+      {"template_id":"water_application_depth_mm_candidate_range","parameter_key":"water_application_depth_mm_candidate_range","parameter_kind":"range","unit":"mm","min":0,"max":80},
+      {"template_id":"irrigation_duration_minutes_candidate_range","parameter_key":"irrigation_duration_minutes_candidate_range","parameter_kind":"range","unit":"minutes","min":0,"max":720},
+      {"template_id":"irrigation_zone_ref_candidate","parameter_key":"irrigation_zone_ref_candidate","parameter_kind":"ref","unit":"ref"}
+    ],
+    "SPRAY": [
+      {"template_id":"spray_material_ref_candidate","parameter_key":"spray_material_ref_candidate","parameter_kind":"ref","unit":"ref"},
+      {"template_id":"spray_area_ref_candidate","parameter_key":"spray_area_ref_candidate","parameter_kind":"ref","unit":"ref"},
+      {"template_id":"spray_volume_l_per_ha_candidate_range","parameter_key":"spray_volume_l_per_ha_candidate_range","parameter_kind":"range","unit":"l_per_ha","min":0,"max":1000}
+    ],
+    "PLOW": [
+      {"template_id":"tillage_depth_cm_candidate_range","parameter_key":"tillage_depth_cm_candidate_range","parameter_kind":"range","unit":"cm","min":0,"max":60},
+      {"template_id":"tillage_area_ref_candidate","parameter_key":"tillage_area_ref_candidate","parameter_kind":"ref","unit":"ref"}
+    ],
+    "HARROW": [
+      {"template_id":"harrow_pass_count_candidate_range","parameter_key":"harrow_pass_count_candidate_range","parameter_kind":"range","unit":"count","min":0,"max":8},
+      {"template_id":"harrow_area_ref_candidate","parameter_key":"harrow_area_ref_candidate","parameter_kind":"ref","unit":"ref"}
+    ],
+    "SEED": [
+      {"template_id":"seed_material_ref_candidate","parameter_key":"seed_material_ref_candidate","parameter_kind":"ref","unit":"ref"},
+      {"template_id":"seed_rate_kg_per_ha_candidate_range","parameter_key":"seed_rate_kg_per_ha_candidate_range","parameter_kind":"range","unit":"kg_per_ha","min":0,"max":400},
+      {"template_id":"seeding_area_ref_candidate","parameter_key":"seeding_area_ref_candidate","parameter_kind":"ref","unit":"ref"}
+    ],
+    "TRANSPORT": [
+      {"template_id":"transport_material_ref_candidate","parameter_key":"transport_material_ref_candidate","parameter_kind":"ref","unit":"ref"},
+      {"template_id":"transport_quantity_candidate_range","parameter_key":"transport_quantity_candidate_range","parameter_kind":"range","unit":"quantity","min":0,"max":100000},
+      {"template_id":"transport_route_ref_candidate","parameter_key":"transport_route_ref_candidate","parameter_kind":"ref","unit":"ref"}
+    ],
+    "HARVEST": [
+      {"template_id":"harvest_area_ref_candidate","parameter_key":"harvest_area_ref_candidate","parameter_kind":"ref","unit":"ref"},
+      {"template_id":"harvest_moisture_threshold_candidate_range","parameter_key":"harvest_moisture_threshold_candidate_range","parameter_kind":"range","unit":"percent","min":0,"max":100}
+    ]
+  }
+}

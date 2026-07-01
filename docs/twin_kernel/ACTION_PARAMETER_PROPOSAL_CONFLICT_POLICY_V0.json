@@ -1,0 +1,15 @@
+{
+  "schema_version": "action_parameter_proposal_conflict_policy_v0",
+  "same_source_candidate_changed_parameter_proposal_conflict_requires_review": true,
+  "changed_parameter_proposal_does_not_overwrite_existing_proposal": true,
+  "existing_parameter_proposal_unchanged": true,
+  "existing_parameter_policy_unchanged": true,
+  "changed_parameter_proposal_conflict_packet_emitted": true,
+  "changed_parameter_proposal_conflict_packet_persisted": false,
+  "duplicate_parameter_proposal_created_count": 0,
+  "duplicate_parameter_output_created_count": 0,
+  "existing_parameter_proposal_overwritten": false,
+  "existing_parameter_proposal_deleted": false,
+  "existing_parameter_policy_replaced": false,
+  "silent_parameter_proposal_overwrite_allowed": false
+}
