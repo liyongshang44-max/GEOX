@@ -1,0 +1,17 @@
+{
+  "schema_version": "formal_acceptance_authorization_schema_v0",
+  "formal_acceptance_authorization_required": true,
+  "acceptance_review_scope_required": true,
+  "allowed_scopes": ["operation.acceptance.review", "ao_act.acceptance.write"],
+  "allowed_roles": ["admin", "operator", "reviewer"],
+  "receipt_submit_scope_is_not_acceptance_scope": true,
+  "executor_role_cannot_formally_accept_own_receipt_by_default": true,
+  "same_actor_receipt_and_acceptance_requires_explicit_override": true,
+  "same_actor_override_reason_required": true,
+  "same_actor_override_audit_required": true,
+  "tenant_triple_from_authz_must_match_payload": true,
+  "cross_tenant_acceptance_blocked": true,
+  "p26_acceptance_authorization_is_governance_contract": true,
+  "existing_acceptance_evaluate_scope_is_not_p26_scope": true,
+  "existing_acceptance_endpoint_authz_not_claimed_as_p26_authz": true
+}
