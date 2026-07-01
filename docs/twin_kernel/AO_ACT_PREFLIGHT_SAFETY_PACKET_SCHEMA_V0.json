@@ -1,0 +1,23 @@
+{
+  "schema_version": "ao_act_preflight_safety_packet_schema_v0",
+  "required_fields": ["ao_act_preflight_safety_packet_id", "source_action_parameter_proposal_envelope_id", "source_action_translation_candidate_envelope_id", "source_operator_recommendation_read_model_id", "source_approved_recommendation_governance_record_id", "source_draft_recommendation_governance_envelope_id", "source_recommendation_review_decision_id", "source_recommendation_candidate_envelope_id", "source_recommendation_bridge_packet_id", "twin_subject_ref", "runtime_case_id", "preflight_bridge_version", "preflight_policy_version", "preflight_scope", "preflight_safety_status", "preflight_candidate_assessments", "ao_act_schema_compatibility_assessment", "ao_act_forbidden_key_assessment", "parameter_template_safety_assessment", "parameter_bounds_safety_assessment", "candidate_value_safety_assessment", "p23_missing_dispatch_inputs_summary", "p23_human_dispatch_gate_required", "ao_act_policy_review_required", "source_parameter_proposal_refs", "source_translation_refs", "source_read_model_refs", "approved_governance_refs", "evidence_refs", "uncertainty_refs", "constraint_refs", "human_approval_refs", "review_refs", "candidate_refs", "source_refs", "policy_refs", "preflight_guardrail_refs", "preflight_blocker_summary", "preflight_safety_output_hash"],
+  "ao_act_preflight_safety_packet_emitted": true,
+  "preflight_scope": "proposal_level_policy_safety",
+  "preflight_packet_content_class": "preflight_safety_assessment_only",
+  "preflight_packet_execution_status": "non_executable",
+  "preflight_packet_review_status": "human_dispatch_review_required",
+  "preflight_packet_dispatch_status": "not_dispatchable",
+  "preflight_packet_task_status": "task_not_created",
+  "ao_act_preflight_safety_packet_is_not_action_approval": true,
+  "ao_act_preflight_safety_packet_is_not_dispatch_approval": true,
+  "ao_act_preflight_safety_packet_is_not_ao_act_task": true,
+  "ao_act_preflight_safety_packet_is_not_executable_payload": true,
+  "ao_act_preflight_safety_packet_is_not_operator_instruction": true,
+  "ao_act_preflight_safety_packet_is_not_execution_guidance": true,
+  "ao_act_preflight_safety_packet_is_not_agronomic_prescription": true,
+  "ao_act_preflight_safety_packet_is_not_ao_act_preflight_packet": true,
+  "ao_act_preflight_safety_packet_does_not_create_preflight_request": true,
+  "ao_act_preflight_safety_packet_does_not_authorize_preflight_pass": true,
+  "ao_act_preflight_packet_created": false,
+  "ao_act_preflight_passed": false
+}
