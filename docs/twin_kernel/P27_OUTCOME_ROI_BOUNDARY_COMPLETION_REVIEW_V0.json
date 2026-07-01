@@ -1,26 +1,14 @@
 {
   "schema_version": "p27_outcome_roi_boundary_completion_review_v0",
-  "baseline_tag": "p26_formal_acceptance_outcome_boundary_gate_v0_closure",
-  "baseline_commit": "5ff6a82771f4a3ef36a88f4cd3eba9031c683bc5",
-  "expected_final_tag": "p27_policy_controlled_outcome_roi_boundary_gate_v0",
-  "expected_closure_tag": "p27_policy_controlled_outcome_roi_boundary_gate_v0_closure",
-  "completion_status": "pr_review_ready",
-  "final_closure_status": "pending_tag_verification",
-  "final_tag_created": false,
+  "completion_status": "complete",
+  "final_closure_status": "tag_main_verified",
+  "final_tag_created": true,
   "main_equals_final_tag": false,
-  "closure_tag_created": false,
-  "main_equals_closure_tag": false,
-  "merge_required_before_complete": true,
-  "tag_verification_required_after_merge": true,
-  "closure_patch_required_after_final_tag": true,
-  "completion_scope": {
-    "controlled_outcome_roi_write_mode": "controlled_fixture_gate",
-    "production_outcome_runtime_endpoint_not_claimed": true,
-    "production_roi_runtime_endpoint_not_claimed": true,
-    "server_runtime_change_required": false,
-    "outcome_review_v1_created": true,
-    "roi_boundary_v1_created": true,
-    "forbidden_downstream_fact_count_must_be_zero": true,
-    "forbidden_surface_diff_count": 0
-  }
+  "closure_tag_created": true,
+  "main_equals_closure_tag": true,
+  "merge_required_before_complete": false,
+  "tag_verification_required_after_merge": false,
+  "closure_patch_required_after_final_tag": false,
+  "final_tag": "p27_policy_controlled_outcome_roi_boundary_gate_v0",
+  "final_commit": "2b2380e5bfaef04c37af61e3c2ba153491d0dcda"
 }
