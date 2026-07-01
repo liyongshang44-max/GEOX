@@ -1,0 +1,1 @@
+{"fixture_kind":"same-receipt-different-idempotency-key","expected_blocker":"same_receipt_different_idempotency_key","policy":"blocked_by_p26_gate_not_endpoint"}
