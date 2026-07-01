@@ -1,0 +1,1 @@
+{"fixture_kind":"authz-missing","expected_blockers":["authorization_header_missing","receipt_submit_scope_missing"]}
