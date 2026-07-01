@@ -1,0 +1,19 @@
+{
+  "schema_version":"p28_completion_review_v0",
+  "baseline_tag":"p27_policy_controlled_outcome_roi_boundary_gate_v0_closure",
+  "baseline_commit":"cda89ec3b2462bee6e118a5434272b067f9d16b3",
+  "expected_final_tag":"p28_policy_controlled_roi_ledger_gate_v0",
+  "expected_closure_tag":"p28_policy_controlled_roi_ledger_gate_v0_closure",
+  "completion_status":"pr_review_ready",
+  "final_closure_status":"pending_tag_verification",
+  "final_tag_created":false,
+  "main_equals_final_tag":false,
+  "closure_tag_created":false,
+  "main_equals_closure_tag":false,
+  "main_equals_final_tag_may_be_false_after_closure_patch":true,
+  "main_equals_closure_tag_must_be_true_after_closure_patch":true,
+  "merge_required_before_complete":true,
+  "tag_verification_required_after_merge":true,
+  "closure_patch_required_after_final_tag":true,
+  "completion_scope":{"controlled_roi_ledger_write_mode":"controlled_fixture_gate","production_roi_ledger_runtime_endpoint_not_claimed":true,"server_runtime_change_required":false,"roi_ledger_v1_created":true,"forbidden_downstream_fact_count_must_be_zero":true,"forbidden_surface_diff_count":0}
+}
