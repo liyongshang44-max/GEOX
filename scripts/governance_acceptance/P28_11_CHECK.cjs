@@ -1,0 +1,1 @@
+const h=require('./P28_ACCEPTANCE_HELPERS.cjs');h.run(['P28','11','AUTHORIZATION','MISSING','NOT','APPROVED','SCOPE','BLOCKED','ACCEPTANCE'].join('_'));
