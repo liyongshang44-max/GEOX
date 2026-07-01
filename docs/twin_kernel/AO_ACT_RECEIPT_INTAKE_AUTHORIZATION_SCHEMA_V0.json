@@ -1,0 +1,16 @@
+{
+  "schema_version": "ao_act_receipt_intake_authorization_schema_v0",
+  "authorization_header_required": true,
+  "receipt_submit_scope_required": true,
+  "allowed_scopes": ["action.receipt.submit", "ao_act.receipt.write"],
+  "allowed_roles": ["admin", "operator", "executor"],
+  "tenant_triple_required": true,
+  "tenant_triple_from_authz_must_match_payload": true,
+  "cross_tenant_receipt_intake_blocked": true,
+  "cross_scope_task_lookup_returns_404": true,
+  "controlled_receipt_intake_authorization_required": true,
+  "receipt_intake_allowed_decision": "approved_for_ao_act_receipt_intake",
+  "receipt_intake_authorization_is_not_acceptance": true,
+  "receipt_intake_authorization_is_not_outcome_review": true,
+  "receipt_intake_authorization_is_not_field_memory": true
+}
