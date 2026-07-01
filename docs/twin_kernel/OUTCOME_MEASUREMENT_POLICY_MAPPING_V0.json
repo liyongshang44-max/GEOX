@@ -1,0 +1,19 @@
+{
+  "schema_version": "outcome_measurement_policy_mapping_v0",
+  "outcome_measurement_refs_required": true,
+  "measurement_window_required": true,
+  "comparison_basis_required": true,
+  "measurement_refs_pointer_only": true,
+  "measurement_payload_not_parsed_by_p27_runner": true,
+  "measurement_refs_must_be_distinct_from_acceptance_evidence_refs": true,
+  "outcome_measurement_ref_formal_eligibility_required": true,
+  "comparison_basis_ref_required": true,
+  "comparison_basis_ref_is_pointer_only": true,
+  "comparison_basis_payload_not_parsed_by_p27_runner": true,
+  "outcome_measurement_policy_result_required": true,
+  "measurement_window_policy_result_required": true,
+  "comparison_basis_policy_result_required": true,
+  "review_state_REVIEWED_requires_measurement_policy_passed": true,
+  "review_state_REVIEWED_requires_measurement_window_passed": true,
+  "review_state_REVIEWED_requires_comparison_basis_passed": true
+}
