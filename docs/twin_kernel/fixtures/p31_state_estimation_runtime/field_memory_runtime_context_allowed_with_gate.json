@@ -1,0 +1,1 @@
+{"fixture":"field_memory_runtime_context_allowed_with_gate","expected_memory_context_refs_included":true,"expected_memory_record_payload_not_parsed_as_training_data":true,"expected_model_update_created":false,"expected_model_activation_created":false}

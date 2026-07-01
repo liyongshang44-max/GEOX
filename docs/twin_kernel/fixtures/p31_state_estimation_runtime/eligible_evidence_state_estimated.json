@@ -1,0 +1,1 @@
+{"fixture":"eligible_evidence_state_estimated","expected_estimate_state":"STATE_ESTIMATED","expected_twin_state_estimate_created":true,"expected_forecast_created":false,"expected_model_update_created":false,"expected_recommendation_update_created":false,"expected_next_action_created":false}

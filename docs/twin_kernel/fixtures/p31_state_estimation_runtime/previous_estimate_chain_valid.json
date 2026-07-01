@@ -1,0 +1,1 @@
+{"fixture":"previous_estimate_chain_valid","expected_first_estimate_created":true,"expected_second_estimate_created":true,"expected_second_previous_estimate_ref_matches_first":true,"expected_first_estimate_not_mutated":true}
