@@ -1,0 +1,9 @@
+{
+  "fixture_kind": "eligible-receipt",
+  "source_phase": "P24",
+  "source_fact_type": "ao_act_task_v0",
+  "persisted_ao_act_task_fact_readback_passed": true,
+  "operation_plan_status": "ACKED",
+  "receipt_status": "executed",
+  "expected_result": "eligible_for_p25_controlled_receipt_intake"
+}
