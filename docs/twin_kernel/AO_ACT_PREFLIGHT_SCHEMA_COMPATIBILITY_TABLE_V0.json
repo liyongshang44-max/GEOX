@@ -1,0 +1,15 @@
+{
+  "schema_version": "ao_act_preflight_schema_compatibility_table_v0",
+  "checks": ["ao_act_action_type_candidate_allowlist_check", "ao_act_parameter_key_template_check", "ao_act_parameter_kind_check", "ao_act_parameter_unit_check", "ao_act_candidate_value_type_check", "ao_act_candidate_value_bounds_check", "ao_act_forbidden_key_check", "ao_act_payload_shadow_check", "ao_act_task_shadow_check", "ao_act_dispatch_shadow_check"],
+  "ao_act_schema_compatibility_is_preflight_only": true,
+  "ao_act_schema_compatibility_does_not_create_payload": true,
+  "ao_act_schema_compatibility_does_not_create_task": true,
+  "ao_act_schema_compatibility_does_not_create_dispatch": true,
+  "ao_act_schema_compatibility_does_not_select_action_type": true,
+  "ao_act_schema_compatibility_does_not_finalize_parameters": true,
+  "ao_act_payload_shadow_check_is_static_schema_assessment_only": true,
+  "ao_act_payload_shadow_check_does_not_materialize_payload": true,
+  "ao_act_task_shadow_check_does_not_materialize_task": true,
+  "ao_act_dispatch_shadow_check_does_not_materialize_dispatch": true,
+  "shadow_check_output_contains_no_executable_payload": true
+}

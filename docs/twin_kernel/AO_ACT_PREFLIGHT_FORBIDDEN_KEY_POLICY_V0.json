@@ -1,0 +1,9 @@
+{
+  "schema_version": "ao_act_preflight_forbidden_key_policy_v0",
+  "forbidden_key_scan_mode": "exact_key_or_exact_value",
+  "substring_scan_allowed": false,
+  "forbidden_key_detected_blocks_preflight": true,
+  "forbidden_key_detected_does_not_emit_task": true,
+  "forbidden_key_detected_does_not_emit_dispatch": true,
+  "forbidden_exact_keys_or_values": ["selected_action_type", "final_action_type", "approved_action_type", "execution_action_type", "dispatch_action_type", "ao_act_action_type", "selected_parameters", "final_parameters", "approved_parameters", "executable_parameters", "ao_act_parameters", "dispatch_parameters", "task_parameters", "executor", "operator", "crew", "machine", "operation_time_window", "action_time_window", "execution_time_window", "dispatch_time_window", "ao_act_payload", "ao_act_task", "ao_act_packet", "ao_act_preflight_packet", "ao_act_executable_payload", "dispatch_payload", "dispatch_ready", "dispatchable", "field_task", "task_id", "operator_instruction", "operator_should_act", "execution_guidance", "prescription", "agronomic_prescription", "priority", "rank", "urgency", "attention_signal", "actionability_score", "operator_decision_support_score", "confidence_to_action_mapping", "auto_execute", "auto_dispatch"]
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": "ao_act_preflight_safety_conflict_policy_v0",
+  "same_source_proposal_changed_preflight_safety_output_conflict_requires_review": true,
+  "changed_preflight_safety_output_does_not_overwrite_existing_packet": true,
+  "existing_preflight_safety_packet_unchanged": true,
+  "existing_preflight_policy_unchanged": true,
+  "changed_preflight_safety_conflict_packet_emitted": true,
+  "changed_preflight_safety_conflict_packet_persisted": false,
+  "duplicate_preflight_safety_packet_created_count": 0,
+  "duplicate_preflight_safety_output_created_count": 0,
+  "existing_preflight_safety_packet_overwritten": false,
+  "existing_preflight_safety_packet_deleted": false,
+  "existing_preflight_policy_replaced": false,
+  "silent_preflight_safety_overwrite_allowed": false
+}
