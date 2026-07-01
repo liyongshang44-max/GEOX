@@ -1,0 +1,19 @@
+{
+  "schema_version": "outcome_roi_boundary_gate_contract_v0",
+  "phase": "P27",
+  "baseline_tag": "p26_formal_acceptance_outcome_boundary_gate_v0_closure",
+  "baseline_commit": "5ff6a82771f4a3ef36a88f4cd3eba9031c683bc5",
+  "source_phase_required": "P26",
+  "source_fact_type_required": "acceptance_result_v1",
+  "target_fact_types": ["outcome_review_v1", "roi_boundary_v1"],
+  "formal_acceptance_is_required": true,
+  "outcome_review_is_observation_review_only": true,
+  "roi_boundary_is_future_gate_candidate_only": true,
+  "roi_review_eligible_is_review_candidate_only": true,
+  "controlled_outcome_roi_write_mode": "controlled_fixture_gate",
+  "production_outcome_runtime_endpoint_not_claimed": true,
+  "production_roi_runtime_endpoint_not_claimed": true,
+  "controlled_fixture_gate_is_not_production_outcome_runtime": true,
+  "controlled_fixture_gate_is_not_production_roi_runtime": true,
+  "server_runtime_change_required": false
+}
