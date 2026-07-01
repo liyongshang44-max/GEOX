@@ -1,0 +1,18 @@
+{
+  "schema_version":"roi_ledger_authorization_schema_v0",
+  "roi_ledger_authorization_required":true,
+  "allowed_scopes":["roi.ledger.write","roi.ledger.review"],
+  "allowed_roles":["admin","finance_reviewer","roi_reviewer"],
+  "outcome_review_scope_is_not_roi_ledger_scope":true,
+  "roi_boundary_review_scope_is_not_roi_ledger_scope":true,
+  "acceptance_review_scope_is_not_roi_ledger_scope":true,
+  "executor_cannot_write_roi_ledger_by_default":true,
+  "same_actor_boundary_and_ledger_requires_explicit_override":true,
+  "same_actor_override_reason_required":true,
+  "same_actor_override_audit_required":true,
+  "same_actor_override_policy_ref_required":true,
+  "roi_ledger_reviewer_must_not_be_executor_by_default":true,
+  "roi_ledger_reviewer_must_not_be_p27_boundary_reviewer_by_default":true,
+  "tenant_triple_from_authz_must_match_payload":true,
+  "cross_tenant_roi_ledger_blocked":true
+}
