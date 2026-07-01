@@ -1,1 +1,1 @@
-console.log('{}')
+const h=require('./P27_ACCEPTANCE_HELPERS.cjs');const n=['P27','14','EXPLICIT','OUTCOME','ROI','BOUNDARY','PERSISTENCE','ACCEPTANCE'].join('_');h.run(n);
