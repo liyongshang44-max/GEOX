@@ -1,1 +1,1 @@
-console.log('{}')
+const h=require('./P27_ACCEPTANCE_HELPERS.cjs');h.run('P27_06_ROI_BOUNDARY_PAYLOAD_SCHEMA_ACCEPTANCE');
