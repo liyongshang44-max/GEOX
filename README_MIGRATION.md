@@ -2025,3 +2025,200 @@ Post-P19 baseline:
 - P19 proves that P18 approved recommendation governance records can emit a non-persisted operator-facing recommendation read model using committed controlled explanatory text templates.
 - P19 does not prove action translation candidate, action parameter proposal, operator action, action approval, AO-ACT execution, dispatch, agronomic prescription, dashboard projection, Field Memory learning, or model training.
 
+
+---
+
+## P20 Recommendation-to-Action Translation Candidate v0 Freeze Closure
+
+Key anchors:
+
+- Branch: main
+- Baseline tag: p19_operator_facing_recommendation_read_model_v0
+- Baseline commit: ea9b14da
+- Merge commit: 38b0aa0c
+- Final closure tag: p20_recommendation_to_action_translation_candidate_v0
+
+Frozen scope:
+
+- P20 Recommendation-to-Action Translation Candidate v0 is complete.
+- P19 operator-facing recommendation read models and P18 approved recommendation governance records can emit a non-persisted, non-executable, review-required action translation candidate envelope.
+- P20 is an action translation candidate boundary.
+- P20 is not an action proposal.
+- P20 is not action approval.
+- P20 is not AO-ACT preflight approval.
+- P20 is not AO-ACT authority.
+- P20 is not dispatch authority.
+- P20 is not operator instruction.
+- P20 is not execution guidance.
+- P20 is not agronomic prescription.
+- P20 is not dashboard ranking.
+
+Source pair closure:
+
+- source_pair_integrity_verified = true
+- source_pair_mismatch_blocked = true
+- cross_phase_trace_refs_aligned = true
+- source_approved_record_id_mismatch_blocked = true
+- twin_subject_ref_mismatch_blocked = true
+- runtime_case_id_mismatch_blocked = true
+- draft_governance_envelope_id_mismatch_blocked = true
+- recommendation_candidate_envelope_id_mismatch_blocked = true
+- recommendation_bridge_packet_id_mismatch_blocked = true
+- cross_phase_trace_refs_not_aligned_blocked = true
+
+Candidate closure:
+
+- eligible_source_pair_translation_passed = true
+- action_translation_candidate_envelope_emitted = true
+- action_intent_class_candidate_emitted = true
+- candidate_action_boundary_emitted = true
+- candidate_content_class = translation_boundary_only
+- candidate_execution_status = non_executable
+- candidate_review_status = review_required
+- candidate_action_boundary_values_from_allowlist = true
+- candidate_action_boundary_contains_only_non_executable_boundaries = true
+
+Intent-class closure:
+
+- action_intent_class_candidate_is_taxonomy_only = true
+- action_intent_class_candidate_is_not_action_type = true
+- action_intent_class_candidate_is_not_action_proposal = true
+- action_intent_class_candidate_is_not_operator_instruction = true
+- action_intent_class_candidate_requires_p21_parameter_proposal = true
+- action_intent_class_candidate_requires_p22_preflight = true
+- action_intent_class_candidate_has_no_one_to_one_ao_act_mapping = true
+- action_intent_class_candidate_does_not_select_ao_act_action_type = true
+- action_intent_class_candidate_does_not_select_machine_operation = true
+- action_intent_class_candidate_does_not_imply_operator_action = true
+
+Preflight closure:
+
+- required_preflight_checks_are_requirements_only = true
+- required_preflight_checks_not_executed_in_p20 = true
+- required_preflight_checks_passed = false
+- required_preflight_checks_do_not_create_preflight_request = true
+- required_preflight_checks_do_not_create_ao_act_packet = true
+- required_preflight_checks_do_not_authorize_parameter_collection = true
+- ao_act_preflight_packet_emitted = false
+- ao_act_preflight_passed = false
+- preflight_request_created = false
+- ao_act_packet_created = false
+- parameter_collection_authorized = false
+
+No-action closure:
+
+- candidate_has_no_final_action_type = true
+- candidate_has_no_final_action_parameters = true
+- candidate_has_no_executor = true
+- candidate_has_no_operation_time_window = true
+- candidate_has_no_preflight_request = true
+- candidate_has_no_ao_act_packet = true
+- candidate_has_no_ao_act_payload = true
+- candidate_has_no_dispatch_payload = true
+- candidate_has_no_field_task = true
+- candidate_contains_no_rank_or_priority = true
+- candidate_contains_no_actionability_score = true
+- candidate_contains_no_confidence_to_action_mapping = true
+
+Blocked output closure:
+
+- candidate_with_final_action_type_blocked = true
+- candidate_with_final_action_parameters_blocked = true
+- candidate_with_parameter_schema_blocked = true
+- candidate_with_parameter_bounds_blocked = true
+- candidate_with_executor_blocked = true
+- candidate_with_operation_time_window_blocked = true
+- candidate_with_preflight_request_blocked = true
+- candidate_with_ao_act_packet_blocked = true
+- candidate_with_ao_act_payload_blocked = true
+- candidate_with_dispatch_payload_blocked = true
+- candidate_with_action_approval_blocked = true
+- candidate_with_preflight_pass_blocked = true
+- candidate_with_dispatch_ready_blocked = true
+- candidate_with_priority_or_rank_blocked = true
+- candidate_with_actionability_score_blocked = true
+
+Idempotency / conflict closure:
+
+- translation_output_hash_required = true
+- translation_output_hash_reused = true
+- translation_output_contains_only_allowed_boundary_fields = true
+- translation_output_contains_no_executable_action_fields = true
+- same_action_translation_candidate_envelope_id_reused = true
+- same_translation_output_hash_reused = true
+- same_source_pair_changed_translation_output_conflict_requires_review = true
+- changed_translation_output_does_not_overwrite_existing_candidate = true
+- existing_translation_candidate_unchanged = true
+- existing_translation_policy_unchanged = true
+- changed_translation_conflict_packet_emitted = true
+- changed_translation_conflict_packet_persisted = false
+- duplicate_translation_candidate_created_count = 0
+- duplicate_translation_output_created_count = 0
+
+No-effect closure:
+
+- persisted_action_translation_candidate_count = 0
+- persisted_action_proposal_count = 0
+- persisted_action_parameter_proposal_count = 0
+- persisted_ao_act_preflight_packet_count = 0
+- persisted_ao_act_task_count = 0
+- db_write_count = 0
+- action_proposal_created = false
+- action_parameter_proposal_created = false
+- final_action_type_created = false
+- final_action_parameters_created = false
+- proposed_action_type_created = false
+- action_type_created = false
+- executor_created = false
+- operator_created = false
+- machine_created = false
+- crew_created = false
+- operation_time_window_created = false
+- action_time_window_created = false
+- execution_time_window_created = false
+- ao_act_preflight_packet_created = false
+- ao_act_task_created = false
+- field_task_created = false
+- dispatch_payload_created = false
+- dispatch_ready_created = false
+- dispatch_created = false
+- operator_instruction_created = false
+- execution_guidance_created = false
+- agronomic_prescription_created = false
+- dashboard_ranking_created = false
+- ranking_allowed = false
+- triage_allowed = false
+- dashboard_sort_key_allowed = false
+- operator_attention_signal_allowed = false
+- priority_signal_allowed = false
+- urgency_signal_allowed = false
+- confidence_to_action_mapping_allowed = false
+- read_model_actionability_score_allowed = false
+- operator_decision_support_score_allowed = false
+- translation_candidate_actionability_score_allowed = false
+- translation_candidate_priority_score_allowed = false
+- field_memory_write_count = 0
+- runtime_model_update_count = 0
+
+Surface closure:
+
+- state_file_must_be_os_temp = true
+- repo_write_allowed = false
+- fixture_mutation_allowed = false
+- db_write_allowed = false
+- server_runtime_surface_changed = false
+- production_runtime_surface_changed = false
+- db_surface_changed = false
+- frontend_surface_changed = false
+- package_surface_changed = false
+- ci_surface_changed = false
+- upstream_contract_surface_changed = false
+- forbidden_surface_diff_count = 0
+- failed_assertion_count = 0
+
+Post-P20 baseline:
+
+- Next phase must start after tag p20_recommendation_to_action_translation_candidate_v0.
+- P20 proves that matched P19 operator-facing recommendation read models and P18 approved recommendation governance records can emit a non-persisted, non-executable, review-required action translation candidate envelope.
+- P20 does not prove action parameter proposal, final action type, final action parameters, operator action, action approval, AO-ACT preflight, AO-ACT execution, dispatch, agronomic prescription, dashboard projection, Field Memory learning, or model training.
+
