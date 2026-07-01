@@ -1,0 +1,17 @@
+{
+  "schema_version": "outcome_review_payload_schema_v0",
+  "target_fact_type": "outcome_review_v1",
+  "allowed_review_states": ["REVIEWED", "INSUFFICIENT_OUTCOME_WINDOW", "INSUFFICIENT_MEASUREMENT", "POLICY_BLOCKED"],
+  "required_fields": ["tenant_id", "project_id", "group_id", "operation_plan_id", "act_task_id", "receipt_fact_id", "operation_plan_transition_fact_id", "operation_plan_fact_id", "acceptance_result_fact_id", "acceptance_id", "outcome_review_id", "review_state", "source_verdict", "formal_acceptance", "formal_evidence_passed", "outcome_window", "measurement_refs", "comparison_basis", "observed_outcome_summary", "uncertainty_notes", "blocking_reasons", "reviewer_ref", "reviewed_at_ts", "meta.source_refs", "meta.policy_refs", "meta.idempotency_key"],
+  "observed_outcome_summary_is_observation_only": true,
+  "observed_outcome_summary_does_not_claim_causality": true,
+  "comparison_basis_is_not_counterfactual_proof": true,
+  "measurement_delta_is_not_action_effect": true,
+  "outcome_review_does_not_rank_action_quality": true,
+  "observed_outcome_summary_must_be_bounded_observation_only": true,
+  "observed_outcome_summary_must_not_include_causal_language": true,
+  "observed_outcome_summary_must_not_include_profit_or_yield_claim": true,
+  "observed_outcome_summary_must_not_include_recommendation": true,
+  "outcome_review_does_not_authorize_roi_ledger": true,
+  "outcome_review_does_not_authorize_field_memory": true
+}

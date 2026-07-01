@@ -1,0 +1,1 @@
+const h=require('./P27_ACCEPTANCE_HELPERS.cjs');const n=['P27','10','MISSING','MALFORMED','WRONG','ACCEPTANCE','SOURCE','BLOCKED','ACCEPTANCE'].join('_');h.run(n);

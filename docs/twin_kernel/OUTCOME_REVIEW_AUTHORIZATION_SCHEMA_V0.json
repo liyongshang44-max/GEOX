@@ -1,0 +1,13 @@
+{
+  "schema_version": "outcome_review_authorization_schema_v0",
+  "outcome_review_authorization_required": true,
+  "roi_boundary_authorization_required": true,
+  "allowed_scopes": ["operation.outcome.review", "roi.boundary.review"],
+  "allowed_roles": ["admin", "reviewer", "finance_reviewer", "agronomy_reviewer"],
+  "acceptance_review_scope_is_not_outcome_review_scope": true,
+  "receipt_submit_scope_is_not_outcome_review_scope": true,
+  "executor_cannot_review_roi_by_default": true,
+  "same_actor_acceptance_and_outcome_review_requires_explicit_override": true,
+  "tenant_triple_from_authz_must_match_payload": true,
+  "cross_tenant_outcome_review_blocked": true
+}

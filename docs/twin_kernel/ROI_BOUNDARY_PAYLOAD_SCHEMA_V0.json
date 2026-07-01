@@ -1,0 +1,15 @@
+{
+  "schema_version": "roi_boundary_payload_schema_v0",
+  "target_fact_type": "roi_boundary_v1",
+  "roi_review_eligible_is_review_candidate_only": true,
+  "roi_review_eligible_true_requires_outcome_review_state_REVIEWED": true,
+  "roi_review_eligible_true_requires_measurement_policy_passed": true,
+  "roi_review_eligible_true_requires_comparison_basis_passed": true,
+  "roi_ledger_allowed": false,
+  "roi_realization_allowed": false,
+  "required_future_roi_gate": "P28",
+  "required_future_field_memory_gate": "P28_OR_LATER",
+  "required_future_model_update_gate": "P29_OR_LATER",
+  "roi_boundary_v1_must_reference_outcome_review_fact_id": true,
+  "roi_boundary_v1_source_outcome_review_must_be_same_run": true
+}
