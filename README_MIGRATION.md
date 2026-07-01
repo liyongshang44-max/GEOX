@@ -2946,3 +2946,73 @@ Post-P23 baseline:
 - P23 proves deterministic human-gated AO-ACT task creation packet / task envelope generation.
 - P23 does not prove production AO-ACT task persistence, control-plane dispatch, facts write, executor acceptance, executor ack, assignment acceptance, operation start, operation completion, receipt, execution evidence, outcome, effect attribution, Field Memory, or model update.
 
+
+---
+
+## P24 AO-ACT Task Controlled Persistence Gate v0 Freeze Closure
+
+Key anchors:
+
+- Branch: p24-v0
+- PR: #2173
+- Baseline tag: p23_human_dispatch_ao_act_task_creation_gate_v0
+- Baseline commit: 06e15bfc4091418f1a40f0540f7dcb2a99c592c4
+- Final tag after merge: p24_ao_act_task_controlled_persistence_gate_v0
+
+Frozen scope:
+
+- P24 consumes P23 human-gated AO-ACT task creation gate packets.
+- P24 persists an AO-ACT control-plane task record only through the controlled AO-ACT task creation path.
+- Primary path: /api/v1/actions/task.
+- Public wrapper path: /api/v1/ao-act/tasks.
+- Legacy /api/control/ao_act/task is compatibility fallback only and is not invoked by default.
+- Persisted fact type: ao_act_task_v0.
+- Persisted task fact is a control-plane task record only.
+
+Acceptance:
+
+- node scripts/governance_acceptance/P24_00_POST_P23_BASELINE_FREEZE_INHERITANCE_AUDIT.cjs
+- node scripts/governance_acceptance/P24_01_AO_ACT_TASK_CONTROLLED_PERSISTENCE_GATE_CONTRACT_ACCEPTANCE.cjs
+- node scripts/governance_acceptance/P24_02_P23_TASK_CREATION_PACKET_INPUT_BOUNDARY_ACCEPTANCE.cjs
+- node scripts/governance_acceptance/P24_03_CONTROLLED_PERSISTENCE_AUTHORIZATION_CONTRACT_ACCEPTANCE.cjs
+- node scripts/governance_acceptance/P24_04_AO_ACT_V0_CONTROL_PLANE_TASK_PAYLOAD_MAPPING_ACCEPTANCE.cjs
+- node scripts/governance_acceptance/P24_05_PERSISTED_AO_ACT_TASK_FACT_READBACK_SCHEMA_ACCEPTANCE.cjs
+- node scripts/governance_acceptance/P24_06_TASK_PERSISTENCE_BOUNDARY_NO_EFFECT_POLICY_ACCEPTANCE.cjs
+- node scripts/governance_acceptance/P24_07_P23_TASK_ENVELOPE_NON_BYPASS_ACCEPTANCE.cjs
+- node scripts/governance_acceptance/P24_08_AO_ACT_TASK_CONTROLLED_PERSISTENCE_GATE_ACCEPTANCE.cjs
+- node scripts/governance_acceptance/P24_09_MISSING_MALFORMED_WRONG_SOURCE_BLOCKED_ACCEPTANCE.cjs
+- node scripts/governance_acceptance/P24_10_AUTHORIZATION_MISSING_NOT_APPROVED_SCOPE_BLOCKED_ACCEPTANCE.cjs
+- node scripts/governance_acceptance/P24_11_AO_ACT_PAYLOAD_MAPPING_FORBIDDEN_FIELD_BLOCKED_ACCEPTANCE.cjs
+- node scripts/governance_acceptance/P24_12_IDEMPOTENCY_DUPLICATE_SOURCE_CHANGED_PAYLOAD_CONFLICT_ACCEPTANCE.cjs
+- node scripts/governance_acceptance/P24_13_EXPLICIT_CONTROL_PLANE_TASK_PERSISTENCE_ACCEPTANCE.cjs
+- node scripts/governance_acceptance/P24_14_PERSISTED_READBACK_NO_RECEIPT_NO_EXECUTION_NO_OUTCOME_ACCEPTANCE.cjs
+- node scripts/governance_acceptance/P24_15_COMPLETION_REVIEW_ACCEPTANCE.cjs
+
+Controlled-write proof:
+
+- control_plane_task_endpoint = /api/v1/actions/task
+- ao_act_task_fact_created = true
+- persisted_ao_act_task_v0_count_delta = 1
+- total_control_plane_fact_write_count = 1
+- persisted_ao_act_task_fact_readback_passed = true
+- facts_insert_sql_used = false
+- direct_facts_table_insert_blocked = true
+
+Hard boundaries:
+
+- ao_act_task_v0 fact is not a dispatch order.
+- ao_act_task_v0 fact is not an executor assignment.
+- ao_act_task_v0 fact is not a machine command.
+- ao_act_task_v0 fact is not an operator instruction.
+- ao_act_task_v0 fact is not execution authority.
+- P24 creates no ao_act_receipt fact.
+- P24 invokes no receipt endpoint.
+- P24 creates no dispatch.
+- P24 starts no execution.
+- P24 creates no executor ack.
+- P24 creates no assignment acceptance.
+- P24 creates no outcome review.
+- P24 creates no effect attribution.
+- P24 creates no Field Memory record.
+- P24 creates no runtime model update.
+
