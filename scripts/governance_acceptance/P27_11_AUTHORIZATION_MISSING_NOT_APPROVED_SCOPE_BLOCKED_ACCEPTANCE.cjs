@@ -1,1 +1,1 @@
-console.log('{}')
+const p=require('path');const h=require('./P27_ACCEPTANCE_HELPERS.cjs');h.run(p.basename(__filename,'.cjs'))
