@@ -1,0 +1,7 @@
+{
+  "fixture_kind": "eligible-formal-pass",
+  "source_phase": "P25",
+  "required_source_facts": ["ao_act_receipt_v0", "operation_plan_transition_v1", "operation_plan_v1"],
+  "formal_evidence_passed": true,
+  "expected_result": "eligible_for_p26_formal_acceptance_result_v1"
+}
