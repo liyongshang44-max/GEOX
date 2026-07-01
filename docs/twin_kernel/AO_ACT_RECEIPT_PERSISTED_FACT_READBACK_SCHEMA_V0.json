@@ -1,0 +1,16 @@
+{
+  "schema_version": "ao_act_receipt_persisted_fact_readback_schema_v0",
+  "persisted_receipt_fact_id_required": true,
+  "persisted_fact_type_must_be_ao_act_receipt_v0": true,
+  "persisted_receipt_act_task_id_matches_p24_task": true,
+  "persisted_receipt_tenant_triple_matches_p24_task": true,
+  "persisted_receipt_executor_ref_matches_request": true,
+  "persisted_receipt_execution_time_matches_request": true,
+  "persisted_receipt_observed_parameters_match_request": true,
+  "persisted_receipt_source_refs_include_p24_task_fact_id": true,
+  "persisted_receipt_policy_refs_include_p25_receipt_intake_gate": true,
+  "ao_act_receipt_fact_readback_required": true,
+  "operation_plan_transition_fact_readback_required": true,
+  "operation_plan_terminal_update_fact_readback_required": true,
+  "response_fact_ids_alone_do_not_count_as_readback": true
+}
