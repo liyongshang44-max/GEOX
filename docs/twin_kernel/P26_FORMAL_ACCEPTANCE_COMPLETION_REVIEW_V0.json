@@ -3,12 +3,14 @@
   "baseline_tag": "p25_ao_act_receipt_controlled_intake_gate_v0",
   "baseline_commit": "7aee08b4e6ad26123386c8c538f8ae44c7cfad68",
   "expected_final_tag": "p26_formal_acceptance_outcome_boundary_gate_v0",
-  "completion_status": "pr_review_ready",
-  "final_closure_status": "pending_tag_verification",
-  "final_tag_created": false,
-  "main_equals_final_tag": false,
-  "merge_required_before_complete": true,
-  "tag_verification_required_after_merge": true,
+  "completion_status": "complete",
+  "final_closure_status": "tag_main_verified",
+  "final_tag_created": true,
+  "main_equals_final_tag": true,
+  "merge_required_before_complete": false,
+  "tag_verification_required_after_merge": false,
+  "final_tag": "p26_formal_acceptance_outcome_boundary_gate_v0",
+  "final_commit": "28efad44377a0f2e3583bae134b028e91e061ce8",
   "completion_scope": {
     "controlled_acceptance_write_mode": "controlled_fixture_gate",
     "acceptance_result_write_is_governance_fixture_gate": true,
@@ -28,8 +30,10 @@
     "roi_ledger_v1_created": false,
     "field_memory_candidate_v1_created": false,
     "field_memory_record_v1_created": false,
+    "runtime_model_update_v1_created": false,
     "recommendation_update_v1_created": false,
     "problem_state_transition_v1_created": false,
+    "forbidden_downstream_fact_count_must_be_zero": true,
     "forbidden_surface_diff_count": 0
   }
 }
