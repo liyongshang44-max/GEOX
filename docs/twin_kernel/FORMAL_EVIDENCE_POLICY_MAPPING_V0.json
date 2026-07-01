@@ -1,0 +1,22 @@
+{
+  "schema_version": "formal_evidence_policy_mapping_v0",
+  "formal_evidence_required_for_formal_pass": true,
+  "formal_evidence_required_for_formal_fail": true,
+  "receipt_presence_does_not_count_as_formal_evidence": true,
+  "operation_plan_terminal_status_does_not_count_as_formal_evidence": true,
+  "sim_trace_does_not_count_as_formal_evidence": true,
+  "flight_table_does_not_count_as_formal_evidence": true,
+  "dev_artifact_does_not_count_as_formal_evidence": true,
+  "formal_evidence_source_must_be_pointer_only": true,
+  "formal_evidence_ref_must_point_to_existing_fact_or_artifact": true,
+  "formal_evidence_ref_cross_tenant_blocked": true,
+  "formal_evidence_ref_content_not_interpreted": true,
+  "formal_evidence_ref_classification_only": true,
+  "image_video_log_content_not_parsed_by_p26": true,
+  "formal_evidence_binary_payload_not_parsed_by_p26_runner": true,
+  "formal_evidence_metadata_may_be_checked_by_p26_runner": true,
+  "formal_evidence_source_lane_checked": true,
+  "formal_evidence_level_checked": true,
+  "formal_eligible_flag_checked": true,
+  "debug_or_simulated_marker_checked": true
+}
