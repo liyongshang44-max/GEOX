@@ -1,0 +1,1 @@
+require('./P30_ACCEPTANCE_HELPERS.cjs').run('P30_03_AUTH_ACCEPTANCE');
