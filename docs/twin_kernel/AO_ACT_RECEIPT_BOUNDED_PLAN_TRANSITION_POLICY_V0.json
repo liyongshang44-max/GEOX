@@ -13,6 +13,8 @@
   "operation_plan_status_succeeded_does_not_mean_agronomic_success": true,
   "operation_plan_status_failed_does_not_mean_agronomic_failure": true,
   "operation_plan_status_failed_does_not_mean_outcome_failure": true,
+  "operation_plan_succeeded_is_not_outcome_success": true,
+  "operation_plan_failed_is_not_outcome_failure": true,
   "operation_plan_terminal_update_is_not_acceptance_result": true,
   "operation_plan_terminal_update_is_not_outcome_review": true,
   "operation_plan_terminal_update_is_not_effect_attribution": true,
