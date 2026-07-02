@@ -1,0 +1,1 @@
+{"schema_version":"p37_determinism_policy_v0","determinism_hash_required":true,"same_source_plan_same_execution_scope_same_runner_config_must_produce_same_determinism_hash":true,"non_deterministic_trial_execution_blocked":true,"random_seed_must_be_explicit":true,"implicit_randomness_blocked":true}
