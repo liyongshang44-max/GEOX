@@ -1,0 +1,1 @@
+{"schema_version":"p38_determinism_policy_v0","determinism_hash_required":true,"same_source_execution_set_same_result_scope_same_extraction_policy_must_produce_same_determinism_hash":true,"non_deterministic_result_extraction_blocked":true,"implicit_result_interpretation_blocked":true,"result_extraction_order_must_be_stable":true}
