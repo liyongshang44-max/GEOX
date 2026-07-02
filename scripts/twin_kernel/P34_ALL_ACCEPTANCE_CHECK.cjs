@@ -1,0 +1,47 @@
+// scripts/twin_kernel/P34_ALL_ACCEPTANCE_CHECK.cjs
+'use strict';
+const fs=require('node:fs'),cp=require('node:child_process');
+const J=p=>JSON.parse(fs.readFileSync(p,'utf8'));
+const R=a=>JSON.parse(cp.execFileSync(process.execPath,['scripts/twin_kernel/P34_15_CONTROLLED_FORECAST_ACCURACY_REVIEW_RUNNER_V0.cjs',...a],{encoding:'utf8'}));
+const BT='p33_controlled_twin_projection_use_activation_gate_v0_closure',BC='3ddea102d4772282a47249471c6c3e37b8bdd78f';
+const c=J('docs/twin_kernel/P34_FORECAST_ACCURACY_REVIEW_CONTRACT_V0.json'),rs=J('docs/twin_kernel/P34_FORECAST_ACCURACY_REVIEW_SCHEMA_V0.json'),cs=J('docs/twin_kernel/P34_PROJECTION_OBSERVATION_COMPARISON_SCHEMA_V0.json'),sp=J('docs/twin_kernel/P34_SOURCE_ACTIVE_PROJECTION_CONTEXT_POLICY_V0.json'),op=J('docs/twin_kernel/P34_OBSERVED_FUTURE_EVIDENCE_POLICY_V0.json'),wp=J('docs/twin_kernel/P34_REVIEW_WINDOW_HORIZON_POLICY_V0.json'),ap=J('docs/twin_kernel/P34_ATOMIC_REVIEW_COMPARISON_LOCAL_LEDGER_POLICY_V0.json'),mp=J('docs/twin_kernel/P34_METRIC_RESIDUAL_SEMANTICS_POLICY_V0.json'),au=J('docs/twin_kernel/P34_AUTHORIZATION_HUMAN_REVIEW_POLICY_V0.json'),ip=J('docs/twin_kernel/P34_IDEMPOTENCY_POLICY_V0.json'),dp=J('docs/twin_kernel/P34_DETERMINISM_POLICY_V0.json'),ch=J('docs/twin_kernel/P34_ACCURACY_REVIEW_CHAIN_POLICY_V0.json'),nc=J('docs/twin_kernel/P34_NO_CALIBRATION_NO_MODEL_UPDATE_POLICY_V0.json'),nd=J('docs/twin_kernel/P34_NO_RECOMMENDATION_NO_ACTION_NO_ROI_NO_FIELD_MEMORY_POLICY_V0.json');
+const d1=R([]),d2=R([]),cw=R(['--mode','controlled-write']),chain=R(['--mode','controlled-two-step-review-chain']);
+const bx=f=>R(['--fixture',f]).review_state;
+const tests=[
+['P34_00_baseline_is_p33_closure',c.baseline_tag===BT&&c.baseline_commit===BC],
+['P34_00_p33_stale_warning_recorded',c.p33_external_closure_tag_verified&&c.p33_completion_review_closure_ledger_stale_warning&&c.p33_completion_review_ledger_cleanup_required_before_p34_freeze===false],
+['P34_01_only_review_and_comparison_allowed',JSON.stringify(c.allowed_created_fact_types)===JSON.stringify(['forecast_accuracy_review_v1','projection_observation_comparison_v1'])],
+['P34_02_review_schema_fields',rs.required_fields.includes('forecast_accuracy_review_id')&&rs.required_fields.includes('observed_evidence_mapping_policy_ref')&&rs.required_fields.includes('source_pointer_expired_at_review_time')],
+['P34_03_comparison_schema_fields',cs.required_fields.includes('projection_observation_comparison_id')&&cs.required_fields.includes('residual_summary')&&cs.required_fields.includes('unreviewable_dimensions')],
+['P34_04_p33_context_required_and_bypass_blocked',sp.p33_active_projection_pointer_ref_required&&sp.p33_projection_use_activation_ref_required&&bx('p32-direct-bypass')==='POLICY_BLOCKED'&&bx('raw-evidence-bypass')==='POLICY_BLOCKED'&&bx('manual-projection')==='POLICY_BLOCKED'],
+['P34_04_source_mismatch_blocked',bx('p33-mismatch')==='SOURCE_CONTEXT_MISMATCH'&&bx('p32-mismatch')==='SOURCE_CONTEXT_MISMATCH'&&bx('cross-tenant')==='CROSS_TENANT_BLOCKED'],
+['P34_04_missing_and_not_activated_blocked',bx('missing-active-pointer')==='MISSING_ACTIVE_PROJECTION_POINTER'&&bx('missing-activation')==='MISSING_PROJECTION_USE_ACTIVATION'&&bx('missing-source-run')==='MISSING_SOURCE_FORECAST_RUN'&&bx('missing-source-projection')==='MISSING_SOURCE_PROJECTION'&&bx('source-not-activated')==='SOURCE_PROJECTION_NOT_ACTIVATED'],
+['P34_04_expired_pointer_allows_historical_review',sp.expired_pointer_does_not_block_historical_accuracy_review&&d1.source_pointer_expired_at_review_time===true&&d1.review_state==='FORECAST_REVIEW_COMPLETED'],
+['P34_04_does_not_reactivate_or_extend_pointer',sp.p34_review_does_not_reactivate_expired_pointer&&sp.p34_review_does_not_extend_activation_use_window&&sp.p34_review_does_not_create_new_active_projection_pointer],
+['P34_05_observed_evidence_mapping_required',op.observed_evidence_mapping_policy_ref_required&&op.only_mapped_observation_values_may_be_compared&&op.raw_payload_direct_metric_computation_forbidden&&bx('dimension-mapping')==='DIMENSION_MAPPING_BLOCKED'],
+['P34_05_observed_evidence_time_blocked',bx('evidence-outside-window')==='OBSERVATION_WINDOW_BLOCKED'&&bx('evidence-before-projection')==='OBSERVATION_WINDOW_BLOCKED'],
+['P34_05_observed_evidence_not_reality_or_update',op.observed_evidence_is_not_reality&&op.observed_evidence_is_not_ground_truth&&op.observed_evidence_must_not_update_model_weights&&op.observed_evidence_must_not_create_action],
+['P34_06_window_policy',wp.review_before_observation_window_complete_blocked&&wp.future_observation_evidence_blocked&&bx('window-incomplete')==='OBSERVATION_WINDOW_BLOCKED'&&bx('future-observation')==='FUTURE_OBSERVATION_BLOCKED'],
+['P34_06_sufficiency_and_unreviewable_dimensions',wp.overall_minimum_observation_coverage_failure_blocks_review&&wp.dimension_level_missing_observation_does_not_block_review_if_overall_coverage_policy_passes&&wp.unreviewable_dimension_must_not_contribute_to_error_summary&&bx('observed-insufficient')==='OBSERVED_EVIDENCE_INSUFFICIENT'&&d1.unreviewable_dimensions.includes('CANOPY_TEMP_BELIEF')&&!Object.keys(d1.error_summary.absolute_error_by_dimension).includes('CANOPY_TEMP_BELIEF')],
+['P34_06_missing_evidence_blocked',bx('observed-missing')==='OBSERVED_EVIDENCE_MISSING'],
+['P34_07_atomic_local_ledger_policy',ap.forecast_accuracy_review_v1_and_projection_observation_comparison_v1_must_be_created_atomically&&ap.local_atomic_accuracy_review_ledger_only&&ap.facts_table_persistence_not_claimed],
+['P34_07_controlled_write_readback',cw.forecast_accuracy_review_v1_created&&cw.projection_observation_comparison_v1_created&&cw.atomic_review_comparison_pair_created&&cw.review_readback_passed&&cw.comparison_readback_passed],
+['P34_07_cross_refs',cw.comparison_must_reference_accuracy_review_id&&cw.review_must_reference_comparison_id],
+['P34_08_metric_residual_semantics',mp.residual_summary_allowed&&mp.error_summary_allowed&&mp.residual_is_not_model_update&&mp.residual_is_not_projection_ranking&&mp.metric_score_must_not_rank_models&&mp.metric_score_must_not_rank_projections],
+['P34_08_ranking_language_blocked',bx('ranking-language')==='RANKING_LANGUAGE_BLOCKED'],
+['P34_09_authorization_policy',au.authorization_ref_required&&au.human_review_gate_ref_required&&au.authorization_does_not_authorize_calibration_model_update_recommendation_or_action],
+['P34_10_idempotency_duplicate_scope',ip.idempotency_key_required&&ip.same_review_scope_duplicate_blocked&&bx('duplicate-scope')==='DUPLICATE_REVIEW_SCOPE_BLOCKED'&&d1.idempotency_key===d2.idempotency_key],
+['P34_11_determinism_stable',dp.determinism_hash_required&&dp.non_deterministic_review_blocked&&d1.determinism_hash===d2.determinism_hash&&bx('nondeterministic')==='NON_DETERMINISTIC_BLOCKED'],
+['P34_12_review_chain_append_only',ch.accuracy_review_chain_hash_required&&ch.previous_review_payload_must_not_be_mutated&&chain.previous_review_payload_must_not_be_mutated&&chain.accuracy_review_chain_hash_required],
+['P34_13_no_calibration_model_update',nc.prediction_calibration_v1_created===false&&nc.runtime_model_update_v1_created===false&&nc.model_version_activation_v1_created===false&&nc.calibration_candidate_created===false&&bx('calibration-language')==='CALIBRATION_LANGUAGE_BLOCKED'&&bx('model-update-language')==='MODEL_UPDATE_LANGUAGE_BLOCKED'&&bx('model-activation-language')==='MODEL_ACTIVATION_LANGUAGE_BLOCKED'],
+['P34_14_no_recommendation_action_roi_field_memory_learning',nd.review_must_not_create_downstream_facts&&bx('recommendation-language')==='RECOMMENDATION_LANGUAGE_BLOCKED'&&bx('action-language')==='ACTION_LANGUAGE_BLOCKED'&&bx('roi-language')==='ROI_LANGUAGE_BLOCKED'&&bx('field-memory-language')==='FIELD_MEMORY_LANGUAGE_BLOCKED'&&bx('learning-language')==='LEARNING_LANGUAGE_BLOCKED'],
+['P34_14_problem_state_effect_attribution_blocked',bx('problem-state-language')==='PROBLEM_STATE_LANGUAGE_BLOCKED'&&bx('effect-attribution-language')==='EFFECT_ATTRIBUTION_LANGUAGE_BLOCKED'],
+['P34_15_runner_modes_pass',d1.ok&&cw.ok&&chain.ok],
+['P34_15_runner_output_fields',!!d1.runtime_run_id&&!!d1.forecast_accuracy_review_id&&!!d1.projection_observation_comparison_id&&!!d1.source_projection_context_hash&&!!d1.observed_evidence_set_hash&&!!d1.review_scope_hash&&!!d1.determinism_hash],
+['P34_16_blocked_states_create_no_targets',R(['--fixture','calibration-language']).forecast_accuracy_review_v1_created===false&&R(['--fixture','action-language']).projection_observation_comparison_v1_created===false],
+['P34_17_no_forbidden_downstream_facts',d1.forbidden_downstream_fact_count===0&&cw.forbidden_downstream_fact_count===0&&chain.forbidden_downstream_fact_count===0],
+['P34_18_completion_review_ready',fs.existsSync('docs/tasks/P34-Controlled-Forecast-Accuracy-Review-Backtest-Boundary-Gate-v0.md')&&fs.existsSync('scripts/twin_kernel/P34_15_CONTROLLED_FORECAST_ACCURACY_REVIEW_RUNNER_V0.cjs')&&fs.existsSync('docs/twin_kernel/P34_FORECAST_ACCURACY_REVIEW_COMPLETION_REVIEW_V0.json')]
+];
+const failed=tests.filter(([,ok])=>!ok).map(([n])=>n),ok=failed.length===0;
+console.log(JSON.stringify({ok,acceptance:'P34_ALL_ACCEPTANCE',phase:'P34',baseline_tag:c.baseline_tag,baseline_commit:c.baseline_commit,assertion_count:tests.length,failed_assertion_count:failed.length,failed_assertions:failed,dry_run_determinism_hash:d1.determinism_hash,controlled_write_determinism_hash:cw.determinism_hash,first_review_chain_hash:chain.first_accuracy_review_chain_hash,second_review_chain_hash:chain.second_accuracy_review_chain_hash},null,2));
+if(!ok)process.exit(1);
