@@ -63,6 +63,7 @@ check('review_stage', review.completion_status === 'implementation_ready_for_rev
 check('allowed_five', Array.isArray(contract.allowed_created_fact_types) && contract.allowed_created_fact_types.length === 5);
 check('ledger_policy', contract.controlled_write_only_writes_controlled_recommendation_from_twin_ledger_v0 === true);
 check('candidate_only_contract', contract.candidate_only === true || contract.recommendation_candidate_from_twin_v1_is_candidate_not_recommendation_approval === true);
+check('contract_top_non_actionability', contract.recommendation_candidate_from_twin_v1_is_not_approved_recommendation === true && contract.recommendation_governance_review_is_not_dispatch_authorization === true && contract.recommendation_safety_case_is_not_field_operation_permission === true && contract.p46_must_not_create_approved_recommendation_v1 === true && contract.p46_must_not_create_operator_instruction_v1 === true && contract.p46_must_not_create_ao_act_task_v0 === true && contract.p46_must_not_create_roi_realization_v1 === true && contract.p46_must_not_create_field_memory_record_v1 === true);
 
 check('p42_required_records', p42.required_records.length === 4);
 check('p42_policy', p42.record_set_hash_required === true && p42.tenant_project_group_subject_must_match === true && p42.source_refs_must_be_pointer_only === true && p42.missing_source_blocks_p46 === true);
