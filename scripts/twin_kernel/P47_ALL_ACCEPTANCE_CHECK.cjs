@@ -59,34 +59,28 @@ const noTargetRecords = (result) =>
 check('baseline_tag', contract.baseline_tag === 'p46_recommendation_from_twin_governance_gate_v0_closure');
 check('baseline_commit', contract.baseline_commit === '3008e889294c201f5a0fa4778763cbe452d1cafe');
 check('p46_final_facts', contract.p46_final_tag === 'p46_recommendation_from_twin_governance_gate_v0' && contract.p46_final_commit === '46006306d416972f28a14cf852cace5ac2deefd4');
-check('review_stage', review.completion_status === 'implementation_ready_for_review' && review.final_closure_status === 'not_started');
-
+check('review_stage', review.completion_status === 'complete' && review.final_closure_status === 'final_tag_main_verified' && review.final_tag_created === true && review.final_commit === 'a06030299c8d55cf46ff483acb278959162b6e76');
 check('allowed_five', Array.isArray(contract.allowed_created_fact_types) && contract.allowed_created_fact_types.length === 5);
 check('forbidden_types', Array.isArray(contract.forbidden_created_fact_types) && contract.forbidden_created_fact_types.includes('ao_act_task_v0') && contract.forbidden_created_fact_types.includes('ao_act_receipt_v0') && contract.forbidden_created_fact_types.includes('field_memory_record_v1'));
 check('ledger_policy', contract.controlled_write_only_writes_controlled_dispatch_boundary_ledger_v0 === true);
 check('contract_non_execution', contract.dispatch_boundary_only === true && contract.ao_act_task_creation_packet_from_twin_v1_is_not_ao_act_task_v0 === true && contract.p47_must_not_call_control_ao_act_task_endpoint === true && contract.p47_must_not_dispatch_to_machine === true);
 check('contract_authorization_nonclaim', contract.ao_act_dispatch_authorization_review_v1_is_boundary_review_not_dispatch_authorization === true && contract.AO_ACT_DISPATCH_BOUNDARY_REVIEW_PASSED_is_not_ao_act_task_authorization === true && contract.AO_ACT_DISPATCH_BOUNDARY_REVIEW_PASSED_is_not_machine_dispatch_authorization === true && contract.AO_ACT_DISPATCH_BOUNDARY_REVIEW_PASSED_is_not_operator_instruction === true);
-
 check('p46_source_records', Array.isArray(sourceP46.required_records) && sourceP46.required_records.length === 5);
 check('p46_source_hash', sourceP46.source_p46_record_set_hash_required === true && sourceP46.source_p42_p43_p44_p45_hashes_must_be_preserved === true);
 check('p46_source_nonclaims', sourceP46.p46_candidate_must_mark_not_action === true && sourceP46.p46_candidate_must_mark_not_ao_act_dispatch === true && sourceP46.p46_candidate_must_mark_not_operator_instruction === true);
 check('p46_contract_revalidation', sourceP46.p46_contract_must_mark_recommendation_candidate_from_twin_v1_is_not_approved_recommendation === true && sourceP46.p46_contract_must_mark_recommendation_governance_review_is_not_dispatch_authorization === true && sourceP46.p46_contract_must_mark_p46_must_not_create_ao_act_task_v0 === true && sourceP46.p46_contract_must_mark_p46_must_not_create_field_memory_record_v1 === true);
 check('p46_bypass_blocked', sourceP46.recommendation_candidate_to_ao_act_without_p46_full_record_set_blocked === true && sourceP46.manual_action_payload_without_p46_candidate_blocked === true && sourceP46.ao_act_packet_without_human_dispatch_governance_blocked === true);
-
 check('action_type_allowlist', Array.isArray(actionType.allowed_action_types_v0) && actionType.allowed_action_types_v0.length === 7 && actionType.allowed_action_types_v0.includes('IRRIGATE'));
 check('action_type_blocks', actionType.action_type_required === true && actionType.unknown_action_type_blocks_p47 === true && actionType.compound_action_without_explicit_policy_blocked === true);
 check('action_type_nonclaim', actionType.allowed_action_type_does_not_mean_action_should_be_done === true && actionType.allowed_action_type_does_not_mean_dispatch_authorized === true && actionType.allowed_action_type_does_not_mean_machine_execution === true);
-
 check('target_policy', target.target_required === true && Array.isArray(target.target_kind_allowed) && target.target_kind_allowed.includes('field') && target.target_must_not_expand_subject_scope === true && target.unbounded_target_blocked === true);
 check('target_nonclaim', target.target_ref_is_not_machine_route === true && target.target_ref_is_not_execution_path === true && target.target_ref_is_not_operator_instruction === true);
 check('time_window_policy', timeWindow.time_window_required === true && timeWindow.time_window_start_ts_required === true && timeWindow.time_window_end_ts_required === true && timeWindow.open_ended_time_window_blocked === true && timeWindow.time_window_before_authorization_blocked === true);
 check('time_window_nonclaim', timeWindow.time_window_is_not_machine_schedule === true && timeWindow.time_window_is_not_execution_commitment === true && timeWindow.time_window_is_not_operator_instruction === true);
-
 check('parameter_policy', parameter.parameter_schema_required === true && parameter.parameters_required === true && parameter.parameters_must_match_schema_keys_exactly === true && parameter.parameter_object_values_forbidden === true && parameter.parameter_array_values_forbidden === true);
 check('parameter_blocks', parameter.missing_parameter_blocks_p47 === true && parameter.extra_parameter_blocks_p47 === true && parameter.parameter_type_mismatch_blocks_p47 === true && parameter.parameter_range_violation_blocks_p47 === true);
 check('constraints_policy', constraints.constraints_values_must_be_atomic === true && constraints.constraints_object_values_forbidden === true && constraints.constraints_array_values_forbidden === true && constraints.constraint_must_not_encode_recommendation === true && constraints.constraint_must_not_encode_roi === true);
 check('forbidden_keys_policy', Array.isArray(forbidden.forbidden_keys) && forbidden.forbidden_keys.includes('mode') && forbidden.forbidden_keys.includes('field_memory') && forbidden.forbidden_key_anywhere_blocks_p47 === true);
-
 check('human_policy', human.human_dispatch_governance_ref_required === true && human.human_dispatch_approval_identity_ref_required === true && human.human_dispatch_scope_hash_required === true && human.machine_only_dispatch_forbidden === true && human.auto_dispatch_from_recommendation_forbidden === true);
 check('human_nonclaims', human.human_dispatch_approval_ref_is_boundary_governance_ref === true && human.human_dispatch_approval_ref_is_not_task_creation_permission === true && human.human_dispatch_approval_ref_is_not_machine_command === true && human.human_dispatch_approval_ref_is_not_execution_permission === true);
 check('safety_policy', safety.ao_act_dispatch_safety_case_v1_is_dispatch_safety_context === true && safety.ao_act_dispatch_safety_case_v1_is_not_execution_permission === true && safety.blocked_execution_claims_required === true && safety.blocked_roi_claims_required === true && safety.blocked_effect_claims_required === true);
@@ -103,10 +97,8 @@ for (const schema of schemas) {
 }
 check('schema_packet_required', schemas[2].required_fields.includes('action_type') && schemas[2].required_fields.includes('issuer_ref') && schemas[2].required_fields.includes('target') && schemas[2].required_fields.includes('time_window') && schemas[2].required_fields.includes('parameter_schema') && schemas[2].required_fields.includes('parameters') && schemas[2].required_fields.includes('constraints'));
 check('schema_packet_nonclaims', schemas[2].required_fields.includes('not_ao_act_task_v0') && schemas[2].required_fields.includes('not_dispatched') && schemas[2].required_fields.includes('not_executed') && schemas[2].required_fields.includes('not_received') && schemas[2].required_fields.includes('not_outcome') && schemas[2].required_fields.includes('not_roi') && schemas[2].required_fields.includes('not_effect_attribution') && schemas[2].required_fields.includes('not_field_memory'));
-
 check('file_set_docs', fs.readdirSync('docs/twin_kernel').filter((name) => name.startsWith('P47_') && name.endsWith('.json')).length === 22);
 check('file_set_scripts', fs.readdirSync('scripts/twin_kernel').filter((name) => name.startsWith('P47_') && name.endsWith('.cjs')).length === 3);
-
 check('dry_deterministic', dry.determinism_hash === dry2.determinism_hash);
 check('dry_zero_write', noTargetRecords(dry));
 check('context_zero_write', noTargetRecords(contextMode));
