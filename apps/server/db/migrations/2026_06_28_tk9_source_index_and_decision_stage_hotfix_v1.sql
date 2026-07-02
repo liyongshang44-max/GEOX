@@ -81,14 +81,20 @@ BEGIN
 END;
 $$;
 
-DROP TRIGGER IF EXISTS tk9_decision_cycle_current_stage_normalize_v1 ON decision_cycle_v1;
+-- CI/runtime compatibility guard: the TK9 stage-normalization hook is only applicable when decision_cycle_v1 exists in the active migration set.
+DO $tk9_decision_cycle_guard$
+BEGIN
+  IF to_regclass('public.decision_cycle_v1') IS NOT NULL THEN
+    DROP TRIGGER IF EXISTS tk9_decision_cycle_current_stage_normalize_v1 ON decision_cycle_v1;
 
-CREATE TRIGGER tk9_decision_cycle_current_stage_normalize_v1
-BEFORE INSERT OR UPDATE OF current_stage, state_machine_json ON decision_cycle_v1
-FOR EACH ROW
-EXECUTE FUNCTION tk9_normalize_decision_cycle_current_stage_v1();
+    CREATE TRIGGER tk9_decision_cycle_current_stage_normalize_v1
+    BEFORE INSERT OR UPDATE OF current_stage, state_machine_json ON decision_cycle_v1
+    FOR EACH ROW
+    EXECUTE FUNCTION tk9_normalize_decision_cycle_current_stage_v1();
 
--- Normalize existing rows after trigger creation.
-UPDATE decision_cycle_v1
-SET current_stage = current_stage
-WHERE state_machine_json IS NOT NULL;
+    UPDATE decision_cycle_v1
+    SET current_stage = current_stage
+    WHERE state_machine_json IS NOT NULL;
+  END IF;
+END;
+$tk9_decision_cycle_guard$;
