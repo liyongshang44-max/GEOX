@@ -1,0 +1,1 @@
+{"schema_version":"p32_no_evaluation_policy_v0","review_forbidden":true,"score_forbidden":true,"correctness_claim_forbidden":true,"error_estimation_forbidden":true,"projection_is_not_evaluation":true,"calibration_result_forbidden":true,"backtest_result_forbidden":true,"residual_field_forbidden":true}
