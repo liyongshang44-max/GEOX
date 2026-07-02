@@ -16,6 +16,10 @@ export type SqlMigrationRunSummary = {
   migration_files: string[];
 };
 
+function compareSqlMigrationNames(a: string, b: string): number {
+  return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+}
+
 export async function runSqlMigrations(pool: Pool): Promise<SqlMigrationRunSummary> {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
@@ -33,7 +37,7 @@ export async function runSqlMigrations(pool: Pool): Promise<SqlMigrationRunSumma
     throw new Error(`SQL_MIGRATIONS_DIRECTORY_NOT_FOUND:${candidateDirs.join(",")}`);
   }
 
-  const files = fs.readdirSync(migrationsDir).filter((name) => name.endsWith(".sql")).sort();
+  const files = fs.readdirSync(migrationsDir).filter((name) => name.endsWith(".sql")).sort(compareSqlMigrationNames);
   let appliedFileCount = 0;
   let skippedEmptyFileCount = 0;
 
