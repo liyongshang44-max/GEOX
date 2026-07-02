@@ -1,4 +1,4 @@
-﻿// scripts/twin_kernel/P36_ALL_ACCEPTANCE_CHECK.cjs
+// scripts/twin_kernel/P36_ALL_ACCEPTANCE_CHECK.cjs
 'use strict';
 
 const fs = require('node:fs');
@@ -82,7 +82,10 @@ check('P36_20_controlled_write_outputs_atomic_pair', controlledWrite.ok === true
 check('P36_20_controlled_write_readback', controlledWrite.plan_readback_passed === true && controlledWrite.pointer_readback_passed === true);
 check('P36_20_cross_reference_integrity', controlledWrite.context_pointer_must_reference_trial_plan_id === true && controlledWrite.trial_plan_must_reference_context_pointer_id === true);
 check('P36_22_trial_context_chain_outputs', trialContextChain.ok === true && hasOwn(trialContextChain, 'first_offline_calibration_trial_plan_chain_hash') && hasOwn(trialContextChain, 'second_offline_calibration_trial_context_pointer_chain_hash'));
-check('P36_23_completion_review_pr_stage', completion.completion_status === 'implementation_ready_for_review' && completion.final_closure_status === 'not_started' && completion.expected_final_tag === 'p36_controlled_offline_calibration_trial_plan_gate_v0');
+check('P36_23_completion_review_stage_valid', (
+  (completion.completion_status === 'implementation_ready_for_review' && completion.final_closure_status === 'not_started') ||
+  (completion.completion_status === 'complete' && completion.final_closure_status === 'final_tag_main_verified' && completion.final_tag === 'p36_controlled_offline_calibration_trial_plan_gate_v0' && completion.final_commit === '387b40d54e506da4175f7a42051d635bbe53a882' && completion.closure_tag_created === false && completion.closure_tag_required_after_closure_patch_merge === true)
+) && completion.expected_final_tag === 'p36_controlled_offline_calibration_trial_plan_gate_v0');
 
 const blockedFixtures = [
   'mc', 'mp', 'mm', 'nr', 'ct', 'sm', 'ex', 'ss', 'fc', 'fs',
