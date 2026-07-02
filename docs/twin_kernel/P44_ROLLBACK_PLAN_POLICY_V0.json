@@ -1,0 +1,1 @@
+{"schema_version":"p44_rollback_plan_policy_v0","rollback_plan_required":true,"rollback_registration_only":true,"future_gate_required_for_rollback_execution":true}
