@@ -1,0 +1,29 @@
+{
+  "schema_version": "geox_p51_evidence_packet_v1",
+  "phase": "P51",
+  "baseline_tag": "p50_replay_backed_production_twin_demo_runtime_v0_closure",
+  "baseline_commit": "9006f0229f2cca0da66160faea83823074f38b45",
+  "evidence_refs": {
+    "contract_doc": "docs/live_evidence_gateway/GEOX-P51-LIVE-EVIDENCE-GATEWAY-V1.md",
+    "standards_audit": "docs/live_evidence_gateway/GEOX-P51-STANDARDS-ALIGNMENT-AUDIT.md",
+    "standard_mapping": "docs/live_evidence_gateway/GEOX-P51-SENSORTHINGS-SOSA-SENML-MAPPING.json",
+    "geox_mapping": "docs/live_evidence_gateway/GEOX-P51-GEOX-COMPATIBILITY-MAPPING.json",
+    "adapter_contract": "docs/live_evidence_gateway/GEOX-P51-DEVICE-ADAPTER-CONTRACT.json",
+    "boundary_policy": "docs/live_evidence_gateway/GEOX-P51-EVIDENCE-INGRESS-BOUNDARY-POLICY.json",
+    "capability_matrix": "docs/live_evidence_gateway/GEOX-P51-LIVE-EVIDENCE-GATEWAY-CAPABILITY-MATRIX.json",
+    "manifest": "fixtures/live_evidence_gateway/P51_GATEWAY_INPUT_MANIFEST.json",
+    "senml_fixture": "fixtures/live_evidence_gateway/P51_SENML_DEVICE_SAMPLE_FIXTURE.jsonl",
+    "negative_manifest": "fixtures/live_evidence_gateway/P51_NEGATIVE_FIXTURE_MANIFEST.json",
+    "runner": "scripts/live_evidence_gateway/P51_LIVE_EVIDENCE_GATEWAY_RUNNER.cjs",
+    "acceptance": "scripts/live_evidence_gateway/P51_LIVE_EVIDENCE_GATEWAY_ACCEPTANCE.cjs"
+  },
+  "output_refs": {
+    "ledger": "acceptance-output/P51_LIVE_EVIDENCE_GATEWAY_LEDGER.jsonl",
+    "report": "acceptance-output/P51_LIVE_EVIDENCE_GATEWAY_REPORT.json",
+    "snapshot": "acceptance-output/P51_GATEWAY_VIEWER_SNAPSHOT.json"
+  },
+  "source_truth_mode": "controlled_senml_fixture",
+  "device_source_simulated": true,
+  "live_gateway_path_proof": true,
+  "completion_status": "implementation_ready_for_review"
+}
