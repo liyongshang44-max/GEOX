@@ -8,8 +8,12 @@ const cp = require('node:child_process');
 const MATRIX_PATH = 'docs/twin_runtime_v1/GEOX-TWIN-RUNTIME-V1-CAPABILITY-MATRIX.json';
 const PACKET_PATH = 'docs/twin_runtime_v1/GEOX-TWIN-RUNTIME-V1-E2E-EVIDENCE-PACKET.json';
 const FREEZE_DOC_PATH = 'docs/twin_runtime_v1/GEOX-TWIN-RUNTIME-V1-PILOT-FREEZE.md';
+const CLOSURE_REVIEW_PATH = 'docs/twin_runtime_v1/GEOX-TWIN-RUNTIME-V1-PILOT-FREEZE-CLOSURE-REVIEW.json';
 const BASELINE_TAG = 'p48_end_to_end_production_twin_pilot_closure_gate_v0_closure_boundary_errata_v0';
 const BASELINE_COMMIT = '9564ee212e59f6f2700e72a4ff620bfc04d264b9';
+const FINAL_TAG = 'p49_twin_runtime_v1_pilot_freeze_evidence_package_v0';
+const FINAL_COMMIT = 'c73331746ee7b5fcb828c3ba928b0ccc0e298d73';
+const EXPECTED_CLOSURE_TAG = 'p49_twin_runtime_v1_pilot_freeze_evidence_package_v0_closure';
 
 const checks = [];
 const check = (name, value) => checks.push([name, Boolean(value)]);
@@ -42,6 +46,8 @@ const expectedFiles = [
   'docs/twin_runtime_v1/GEOX-TWIN-RUNTIME-V1-E2E-EVIDENCE-PACKET.json',
   'scripts/twin_runtime_v1/TWIN_RUNTIME_V1_E2E_ACCEPTANCE.cjs'
 ];
+const closureReviewExists = fs.existsSync(CLOSURE_REVIEW_PATH);
+const allowedChangedFiles = closureReviewExists ? [...expectedFiles, CLOSURE_REVIEW_PATH] : expectedFiles;
 
 check('freeze_doc_exists', fs.existsSync(FREEZE_DOC_PATH));
 check('matrix_exists', fs.existsSync(MATRIX_PATH));
@@ -60,10 +66,29 @@ check('expected_files', JSON.stringify(packet.expected_changed_files) === JSON.s
 const diff = git(['diff', '--name-only', BASELINE_TAG, 'HEAD']);
 if (diff) {
   const changed = diff.split(/\r?\n/).filter(Boolean).sort();
-  check('changed_files_exact', JSON.stringify(changed) === JSON.stringify([...expectedFiles].sort()));
+  check('changed_files_exact_or_post_final_metadata', JSON.stringify(changed) === JSON.stringify([...allowedChangedFiles].sort()));
   check('no_forbidden_surface_changed', !changed.some((path) => packet.forbidden_surfaces.some((surface) => surface.endsWith('/') ? path.startsWith(surface) : path === surface)));
 } else {
   check('diff_check_skipped_when_baseline_ref_unavailable', true);
+}
+
+if (closureReviewExists) {
+  const closure = readJson(CLOSURE_REVIEW_PATH);
+  check('closure_phase', closure.phase === 'P49');
+  check('closure_schema', closure.schema_version === 'geox_twin_runtime_v1_p49_closure_review_v0');
+  check('closure_baseline', closure.baseline_tag === BASELINE_TAG && closure.baseline_commit === BASELINE_COMMIT);
+  check('closure_final_ref', closure.final_tag === FINAL_TAG && closure.final_commit === FINAL_COMMIT);
+  check('closure_expected_tag', closure.expected_closure_tag === EXPECTED_CLOSURE_TAG);
+  check('closure_tag_pending', closure.closure_tag_created === false && closure.closure_tag === null && closure.closure_commit === null);
+  check('closure_tag_required_after_merge', closure.closure_tag_required_after_closure_patch_merge === true);
+  check('closure_complete', closure.completion_status === 'complete');
+  check('closure_ready_for_tag', closure.final_closure_status === 'closure_metadata_ready_for_tag_after_merge');
+  check('closure_limited_result', closure.freeze_result === 'PASS_WITH_LIMITATIONS' && closure.runtime_v1_freeze_allowed === false);
+  check('closure_no_full_claim', closure.full_runtime_v1_freeze_claim === 'not_allowed');
+  check('closure_no_matrix_or_packet_change', closure.closure_does_not_change_capability_matrix === true && closure.closure_does_not_change_evidence_packet === true);
+  check('closure_truth_gates_preserved', closure.closure_does_not_claim_first_class_state_estimate_generation === true && closure.closure_does_not_claim_next_forecast_active_model_consumption === true);
+} else {
+  check('closure_review_optional_before_closure_patch', true);
 }
 
 check('capability_count_10', Array.isArray(matrix.capabilities) && matrix.capabilities.length === 10);
@@ -122,6 +147,7 @@ console.log(JSON.stringify({
   baseline_commit: matrix.baseline_commit,
   freeze_result: matrix.freeze_result,
   runtime_v1_freeze_allowed: matrix.runtime_v1_freeze_allowed,
+  closure_review_present: closureReviewExists,
   capability_count: matrix.capabilities.length,
   assertion_count: checks.length,
   failed_assertion_count: failed.length,
