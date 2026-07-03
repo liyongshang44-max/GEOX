@@ -1,0 +1,25 @@
+{
+  "schema_version": "geox_p50_expected_traceability_snapshot_v0",
+  "phase": "P50",
+  "expected_demo_record_types": [
+    "replay_demo_input_manifest_v1",
+    "replay_demo_evidence_partition_v1",
+    "replay_demo_runtime_cycle_v1",
+    "replay_demo_state_estimate_v1",
+    "replay_demo_forecast_run_v1",
+    "replay_demo_prediction_v1",
+    "replay_demo_later_evidence_release_v1",
+    "replay_demo_residual_v1",
+    "replay_demo_calibration_review_v1",
+    "replay_demo_model_candidate_v1",
+    "replay_demo_shadow_evaluation_v1",
+    "replay_demo_active_model_consumption_v1",
+    "replay_demo_next_forecast_run_v1",
+    "replay_demo_traceability_packet_v1",
+    "replay_demo_capability_matrix_v1"
+  ],
+  "expected_capabilities": ["D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D12"],
+  "expected_nonclaims_all_true": true,
+  "expected_full_runtime_v1_freeze_allowed": false,
+  "expected_p49_result_remains": "PASS_WITH_LIMITATIONS"
+}
