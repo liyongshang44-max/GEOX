@@ -1,0 +1,40 @@
+{
+  "schema_version": "geox_p51_review_addendum_v1",
+  "phase": "P51",
+  "pr": 2229,
+  "review_result": "accepted_with_explicit_limitations",
+  "formal_conclusion": "controlled standards-aligned fixture gateway proof",
+  "not_claimed": [
+    "device-path simulation gateway v1 fully proven",
+    "multi-device gateway proof",
+    "multi-pack ingestion window proof",
+    "duplicate handling proof",
+    "clock skew reporting proof"
+  ],
+  "source_truth_mode": "controlled_senml_fixture",
+  "source_truth_mode_note": "This is narrower than device_path_simulation. It proves a controlled SenML fixture gateway path, not a fuller device-path simulator.",
+  "fixture_limitations": {
+    "pack_count": 1,
+    "device_count": 1,
+    "observation_count": 5,
+    "health_envelope_count": 1,
+    "duplicate_case_present": false,
+    "clock_skew_warning_present": false,
+    "window_aggregation_present": false
+  },
+  "missing_capabilities_from_fuller_p51_spec": [
+    "gateway_ingestion_window_v1",
+    "gateway_traceability_readback_v1",
+    "device_clock_skew_report_v1",
+    "duplicate_same_payload_dedupe",
+    "duplicate_conflict_block"
+  ],
+  "correct_boundary_confirmations": {
+    "health_envelope_scope": "device_evidence_health_only",
+    "runtime_health_v1_claimed": false,
+    "production_ingest_claimed": false,
+    "field_pilot_claimed": false
+  },
+  "completion_review_status_note": "The existing completion review remains implementation_ready_for_review and final_status remains not_started until merge, final tag, and closure patch are completed.",
+  "recommended_next_strengthening": "A later P51 hardening patch or P52 should add at least 24 packs, at least 2 devices, duplicate behavior, ingestion window records, traceability readback, and clock skew reporting."
+}
