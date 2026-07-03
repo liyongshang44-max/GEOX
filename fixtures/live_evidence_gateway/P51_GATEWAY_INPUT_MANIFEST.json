@@ -39,7 +39,7 @@
   },
   "expected_pack_count": 24,
   "expected_device_count": 2,
-  "expected_observation_count": 20,
+  "expected_observation_count": 21,
   "expected_health_envelope_count": 2,
   "expected_duplicate_same_payload_deduped_count": 1,
   "expected_duplicate_conflict_blocked_count": 1,
