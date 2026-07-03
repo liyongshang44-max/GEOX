@@ -4,14 +4,19 @@
   "snapshot_type": "viewer_ready_gateway_snapshot",
   "device_source_simulated": true,
   "live_gateway_path_proof": true,
+  "source_truth_mode": "device_path_simulation",
   "field_id": "field_p51_alpha",
-  "device_id": "gw_soil_001",
+  "device_count": 2,
   "metric_count": 5,
-  "health_envelope_count": 1,
+  "health_envelope_count": 2,
+  "observation_count": 20,
   "required_sections": [
     "gateway_scope",
     "observation_summary",
     "health_evidence",
+    "ingestion_window_ref",
+    "traceability_readback_count",
+    "clock_skew_summary",
     "standards_refs",
     "geox_compatibility_refs"
   ]
