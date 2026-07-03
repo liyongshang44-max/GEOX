@@ -1,0 +1,36 @@
+{
+  "schema_version": "geox_p57_full_runtime_freeze_input_manifest_v1",
+  "phase": "P57",
+  "task_line": "P57 GEOX-FULL-RUNTIME-V1-FREEZE / Replay-backed Audit Freeze",
+  "baseline_tag": "p56_replay_execution_authorization_gate_v1_closure",
+  "baseline_commit": "0637e311e330ee09c1dc84d75018a206168b5231",
+  "as_of_ts": "2026-07-03T00:00:00.000Z",
+  "freeze_binding": {
+    "freeze_package": "GEOX-FULL-RUNTIME-V1-FREEZE",
+    "full_runtime_v1_frozen": true,
+    "full_runtime_mode": "replay_backed_production_demo",
+    "replay_backed_production_demo_frozen": true,
+    "live_device_production_runtime_v1_frozen": false
+  },
+  "source_refs": {
+    "p56_closure": "docs/replay_execution_gate/GEOX-P56-REPLAY-EXECUTION-AUTHORIZATION-GATE-CLOSURE-REVIEW.json",
+    "p56_evidence_packet": "docs/replay_execution_gate/GEOX-P56-REPLAY-EXECUTION-AUTHORIZATION-GATE-EVIDENCE-PACKET.json",
+    "p56_capability_matrix": "docs/replay_execution_gate/GEOX-P56-REPLAY-EXECUTION-AUTHORIZATION-GATE-CAPABILITY-MATRIX.json",
+    "p56_boundary_policy": "docs/replay_execution_gate/GEOX-P56-REPLAY-EXECUTION-AUTHORIZATION-GATE-BOUNDARY-POLICY.json",
+    "p55_closure": "docs/runtime_health_service/GEOX-P55-RUNTIME-HEALTH-SERVICE-GATE-CLOSURE-REVIEW.json",
+    "p55_evidence_packet": "docs/runtime_health_service/GEOX-P55-RUNTIME-HEALTH-SERVICE-GATE-EVIDENCE-PACKET.json",
+    "p54_closure": "docs/field_pilot_readiness/GEOX-P54-FIELD-PILOT-READINESS-REVIEW-GATE-CLOSURE-REVIEW.json",
+    "p53_closure": "docs/field_pilot_plan/GEOX-P53-CONTROLLED-FIELD-PILOT-PLAN-GATE-CLOSURE-REVIEW.json",
+    "p52_closure": "docs/twin_runtime_health/GEOX-P52-TWIN-RUNTIME-HEALTH-CLOSURE-REVIEW.json",
+    "p51_5_closure": "docs/live_evidence_gateway/GEOX-P51-5-DEMO-VIEWER-CLOSURE-REVIEW.json",
+    "p51_5_snapshot": "apps/web/public/demo-runtime/p51-gateway-viewer-snapshot.json",
+    "p51_closure": "docs/live_evidence_gateway/GEOX-P51-LIVE-EVIDENCE-GATEWAY-CLOSURE-REVIEW.json",
+    "p50_evidence_packet": "docs/twin_demo_runtime/GEOX-P50-DEMO-RUNTIME-EVIDENCE-PACKET.json",
+    "p50_capability_matrix": "docs/twin_demo_runtime/GEOX-P50-DEMO-RUNTIME-CAPABILITY-MATRIX.json",
+    "control_to_ao_act_non_goals": "docs/controlplane/constitution/GEOX-Control-to-AO-ACT-Instantiation-NonGoals-v0.md"
+  },
+  "expected_dimension_count": 24,
+  "expected_result": "FULL_RUNTIME_V1_REPLAY_BACKED_FROZEN_WITH_LIMITATIONS",
+  "expected_acceptance_count": 75,
+  "expected_negative_fixture_count": 37
+}

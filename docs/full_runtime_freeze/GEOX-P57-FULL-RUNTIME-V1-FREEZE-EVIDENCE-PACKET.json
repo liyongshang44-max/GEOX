@@ -1,0 +1,31 @@
+{
+  "schema_version": "geox_p57_full_runtime_v1_replay_backed_freeze_evidence_packet_v1",
+  "phase": "P57",
+  "task_line": "P57 GEOX-FULL-RUNTIME-V1-FREEZE / Replay-backed Audit Freeze",
+  "baseline_tag": "p56_replay_execution_authorization_gate_v1_closure",
+  "baseline_commit": "0637e311e330ee09c1dc84d75018a206168b5231",
+  "formal_conclusion": "controlled replay-backed full runtime v1 freeze audit proof",
+  "evidence_refs": {
+    "contract_doc": "docs/full_runtime_freeze/GEOX-P57-FULL-RUNTIME-V1-FREEZE-REPLAY-BACKED-AUDIT-V1.md",
+    "boundary_policy": "docs/full_runtime_freeze/GEOX-P57-FULL-RUNTIME-V1-FREEZE-BOUNDARY-POLICY.json",
+    "capability_matrix": "docs/full_runtime_freeze/GEOX-P57-FULL-RUNTIME-V1-FREEZE-CAPABILITY-MATRIX.json",
+    "input_manifest": "fixtures/full_runtime_freeze/P57_FULL_RUNTIME_FREEZE_INPUT_MANIFEST.json",
+    "expected_report": "fixtures/full_runtime_freeze/P57_EXPECTED_FULL_RUNTIME_FREEZE_REPORT.json",
+    "expected_gate": "fixtures/full_runtime_freeze/P57_EXPECTED_FULL_RUNTIME_FREEZE_GATE.json",
+    "negative_manifest": "fixtures/full_runtime_freeze/P57_NEGATIVE_FIXTURE_MANIFEST.json",
+    "runner": "scripts/full_runtime_freeze/P57_FULL_RUNTIME_FREEZE_RUNNER.cjs",
+    "acceptance": "scripts/full_runtime_freeze/P57_FULL_RUNTIME_FREEZE_ACCEPTANCE.cjs"
+  },
+  "hard_source_refs": {
+    "p56_closure": "docs/replay_execution_gate/GEOX-P56-REPLAY-EXECUTION-AUTHORIZATION-GATE-CLOSURE-REVIEW.json",
+    "p56_evidence_packet": "docs/replay_execution_gate/GEOX-P56-REPLAY-EXECUTION-AUTHORIZATION-GATE-EVIDENCE-PACKET.json",
+    "p55_closure": "docs/runtime_health_service/GEOX-P55-RUNTIME-HEALTH-SERVICE-GATE-CLOSURE-REVIEW.json",
+    "p54_closure": "docs/field_pilot_readiness/GEOX-P54-FIELD-PILOT-READINESS-REVIEW-GATE-CLOSURE-REVIEW.json",
+    "p53_closure": "docs/field_pilot_plan/GEOX-P53-CONTROLLED-FIELD-PILOT-PLAN-GATE-CLOSURE-REVIEW.json",
+    "p52_closure": "docs/twin_runtime_health/GEOX-P52-TWIN-RUNTIME-HEALTH-CLOSURE-REVIEW.json",
+    "p51_5_closure": "docs/live_evidence_gateway/GEOX-P51-5-DEMO-VIEWER-CLOSURE-REVIEW.json",
+    "p51_closure": "docs/live_evidence_gateway/GEOX-P51-LIVE-EVIDENCE-GATEWAY-CLOSURE-REVIEW.json",
+    "p50_evidence_packet": "docs/twin_demo_runtime/GEOX-P50-DEMO-RUNTIME-EVIDENCE-PACKET.json"
+  },
+  "completion_status": "implementation_ready_for_review"
+}

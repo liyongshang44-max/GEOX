@@ -1,0 +1,16 @@
+{
+  "schema_version": "geox_p57_expected_full_runtime_freeze_gate_v1",
+  "replay_backed_freeze_gate": {
+    "allowed": true,
+    "result": "FULL_RUNTIME_V1_REPLAY_BACKED_FROZEN_WITH_LIMITATIONS"
+  },
+  "live_device_production_freeze_gate": {
+    "allowed": false
+  },
+  "real_world_execution_gate": {
+    "allowed": false
+  },
+  "downstream_creation_gate": {
+    "allowed": false
+  }
+}

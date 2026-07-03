@@ -1,0 +1,27 @@
+{
+  "schema_version": "geox_p57_full_runtime_v1_replay_backed_freeze_capability_matrix_v1",
+  "phase": "P57",
+  "task_line": "P57 GEOX-FULL-RUNTIME-V1-FREEZE / Replay-backed Audit Freeze",
+  "baseline_tag": "p56_replay_execution_authorization_gate_v1_closure",
+  "formal_conclusion": "controlled replay-backed full runtime v1 freeze audit proof",
+  "capabilities": [
+    { "capability_id": "P57-A01", "name": "P56 closure baseline inherited", "status": "PASS" },
+    { "capability_id": "P57-A02", "name": "P56 acceptance 42/0 verified", "status": "PASS" },
+    { "capability_id": "P57-A03", "name": "P56 P57 review gate verified", "status": "PASS" },
+    { "capability_id": "P57-A04", "name": "P55 runtime service closure verified", "status": "PASS" },
+    { "capability_id": "P57-A05", "name": "P54 readiness closure verified", "status": "PASS" },
+    { "capability_id": "P57-A06", "name": "P53 plan closure verified", "status": "PASS" },
+    { "capability_id": "P57-A07", "name": "P52 health closure verified", "status": "PASS" },
+    { "capability_id": "P57-A08", "name": "P51.5 gateway viewer closure verified", "status": "PASS" },
+    { "capability_id": "P57-A09", "name": "P51 gateway closure verified", "status": "PASS" },
+    { "capability_id": "P57-A10", "name": "P50 demo runtime evidence verified", "status": "PASS" },
+    { "capability_id": "P57-A11", "name": "freeze package generated", "status": "PASS" },
+    { "capability_id": "P57-A12", "name": "replay-backed mode binding verified", "status": "PASS" },
+    { "capability_id": "P57-A13", "name": "live runtime freeze blocked", "status": "PASS" },
+    { "capability_id": "P57-A14", "name": "real-world nonclaims preserved", "status": "PASS" },
+    { "capability_id": "P57-A15", "name": "downstream creation nonclaims preserved", "status": "PASS" },
+    { "capability_id": "P57-A16", "name": "controlled output only", "status": "PASS" }
+  ],
+  "capability_count": 16,
+  "result": "PASS"
+}
