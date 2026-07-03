@@ -1,0 +1,34 @@
+{
+  "schema_version": "geox_p50_demo_runtime_capability_matrix_v0",
+  "phase": "P50",
+  "task_line": "P50 Replay-backed Production Twin Demo Runtime",
+  "baseline_tag": "p49_twin_runtime_v1_pilot_freeze_evidence_package_v0_closure",
+  "baseline_commit": "ea00d8b3a70f6dd1e7e61f7415c2444fd6b76a23",
+  "source_truth_mode": "historical_replay",
+  "time_shifted_live_demo": true,
+  "p49_result_remains": "PASS_WITH_LIMITATIONS",
+  "runtime_v1_freeze_allowed": false,
+  "full_runtime_v1_freeze_claim": "not_allowed",
+  "pass_rule": "all_D1_to_D12_PASS",
+  "capabilities": [
+    {"capability_id":"D1","name":"historical_replay_manifest_loaded","status":"PASS","required_refs":["P50_REPLAY_INPUT_MANIFEST"],"policy_refs":["P50_DEMO_RUNTIME_BOUNDARY_POLICY_V0"]},
+    {"capability_id":"D2","name":"evidence_partitioned_by_demo_as_of_ts","status":"PASS","required_refs":["replay_demo_evidence_partition_v1"],"policy_refs":["P50_TIME_FENCE_POLICY_V0"]},
+    {"capability_id":"D3","name":"runtime_cycle_consumed_only_pre_as_of_evidence","status":"PASS","required_refs":["replay_demo_runtime_cycle_v1"],"policy_refs":["P50_NO_FUTURE_LEAKAGE_POLICY_V0"]},
+    {"capability_id":"D4","name":"demo_state_estimate_generated","status":"PASS","required_refs":["replay_demo_state_estimate_v1"],"policy_refs":["P50_DEMO_STATE_ESTIMATE_POLICY_V0"]},
+    {"capability_id":"D5","name":"forecast_generated_without_future_observation","status":"PASS","required_refs":["replay_demo_forecast_run_v1","replay_demo_prediction_v1"],"policy_refs":["P50_DEMO_FORECAST_POLICY_V0"]},
+    {"capability_id":"D6","name":"later_evidence_released_after_time_gate","status":"PASS","required_refs":["replay_demo_later_evidence_release_v1"],"policy_refs":["P50_LATER_EVIDENCE_RELEASE_POLICY_V0"]},
+    {"capability_id":"D7","name":"residual_computed_from_released_evidence","status":"PASS","required_refs":["replay_demo_residual_v1"],"policy_refs":["P50_DEMO_RESIDUAL_POLICY_V0"]},
+    {"capability_id":"D8","name":"calibration_review_recorded","status":"PASS","required_refs":["replay_demo_calibration_review_v1"],"policy_refs":["P50_DEMO_CALIBRATION_REVIEW_POLICY_V0"]},
+    {"capability_id":"D9","name":"active_model_config_consumption_recorded","status":"PASS","required_refs":["replay_demo_active_model_consumption_v1"],"policy_refs":["P50_DEMO_ACTIVE_MODEL_CONSUMPTION_POLICY_V0"]},
+    {"capability_id":"D10","name":"next_forecast_consumed_active_model_config","status":"PASS","required_refs":["replay_demo_next_forecast_run_v1"],"policy_refs":["P50_DEMO_NEXT_FORECAST_POLICY_V0"]},
+    {"capability_id":"D11","name":"traceability_packet_generated","status":"PASS","required_refs":["replay_demo_traceability_packet_v1"],"policy_refs":["P50_TRACEABILITY_POLICY_V0"]},
+    {"capability_id":"D12","name":"no_forbidden_downstream_created","status":"PASS","required_refs":["P50_NONCLAIMS"],"policy_refs":["P50_DEMO_RUNTIME_BOUNDARY_POLICY_V0"]}
+  ],
+  "p50_demo_posture": {
+    "p50_q2_demo_state_estimate_generated": true,
+    "p50_q10_demo_next_forecast_consumed_active_model": true,
+    "p49_matrix_not_mutated": true,
+    "p49_result_remains_PASS_WITH_LIMITATIONS": true,
+    "full_runtime_v1_freeze_allowed_remains_false_until_full_freeze_gate": true
+  }
+}
