@@ -1,9 +1,12 @@
 {
   "schema_version": "geox_p52_twin_runtime_health_boundary_policy_v1",
   "phase": "P52",
+  "task_line": "P52 Controlled Twin Runtime Health Gate v1",
   "baseline_tag": "p51_5_gateway_backed_twin_demo_viewer_v0_closure",
   "baseline_commit": "e764c0f36fbf50dfecf5de2ac8ce9dd2367eecd9",
-  "mode": "controlled_twin_runtime_health_gate",
+  "mode": "artifact_level_controlled_health_gate",
+  "production_runtime_health_service_implemented": false,
+  "p50_concrete_hash_recomputation_claimed": false,
   "allowed_changed_roots": [
     "docs/twin_runtime_health/",
     "fixtures/twin_runtime_health/",
@@ -19,6 +22,13 @@
     "package.json",
     "pnpm-lock.yaml"
   ],
+  "forbidden_runtime_inputs": [
+    "acceptance-output/",
+    "production database",
+    "server healthz",
+    "frontend route runtime state",
+    "telemetry-ingest live output"
+  ],
   "allowed_output_files": [
     "acceptance-output/P52_TWIN_RUNTIME_HEALTH_LEDGER.jsonl",
     "acceptance-output/P52_TWIN_RUNTIME_HEALTH_REPORT.json"
@@ -27,5 +37,5 @@
   "field_pilot_execution_allowed": false,
   "production_runtime_monitoring_enabled": false,
   "full_runtime_v1_freeze_allowed": false,
-  "p50_completion_authority_requires_closure_doc": true
+  "p50_completion_review_is_optional_context_only": true
 }
