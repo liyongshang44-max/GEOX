@@ -1,0 +1,51 @@
+{
+  "schema_version": "geox_p56_replay_execution_authorization_gate_boundary_policy_v1",
+  "phase": "P56",
+  "task_line": "P56 Controlled Replay Execution Authorization Gate v1",
+  "baseline_tag": "p55_runtime_health_service_gate_v1_closure",
+  "baseline_commit": "10e45c72a171ca3ebd5bc62edd03da675b14a39f",
+  "allowed_changed_roots": [
+    "docs/replay_execution_gate/",
+    "fixtures/replay_execution_gate/",
+    "scripts/replay_execution_gate/"
+  ],
+  "forbidden_changed_roots": [
+    "apps/server/",
+    "apps/web/",
+    "apps/telemetry-ingest/",
+    "packages/contracts/",
+    "migrations/",
+    ".github/"
+  ],
+  "mode": {
+    "source_runtime_health_service_mode": "replay_backed_production_demo",
+    "replay_execution_authorization_only": true,
+    "replay_execution_started": false,
+    "real_field_execution_allowed": false,
+    "live_device_production_freeze_allowed": false,
+    "full_runtime_v1_freeze_allowed": false
+  },
+  "allowed_output_files": [
+    "acceptance-output/P56_REPLAY_EXECUTION_GATE_LEDGER.jsonl",
+    "acceptance-output/P56_REPLAY_EXECUTION_GATE_REPORT.json"
+  ],
+  "forbidden_record_types": [
+    "field_pilot_execution_v1",
+    "field_pilot_execution_start_v1",
+    "real_field_execution_v1",
+    "live_device_deployment_v1",
+    "production_gateway_rollout_v1",
+    "live_runtime_monitoring_v1",
+    "ao_act_task_v0",
+    "ao_act_receipt_v0",
+    "machine_dispatch_v1",
+    "execution_outcome_v1",
+    "roi_realization_v1",
+    "effect_attribution_v1",
+    "field_memory_record_v1",
+    "learning_signal_v1",
+    "training_run_v1",
+    "full_runtime_v1_freeze_v1",
+    "live_device_production_runtime_v1"
+  ]
+}
