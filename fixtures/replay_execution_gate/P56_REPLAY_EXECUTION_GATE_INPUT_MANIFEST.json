@@ -1,0 +1,39 @@
+{
+  "schema_version": "geox_p56_replay_gate_input_manifest_v1",
+  "phase": "P56",
+  "task_line": "P56 Controlled Replay Execution Authorization Gate v1",
+  "baseline_tag": "p55_runtime_health_service_gate_v1_closure",
+  "baseline_commit": "10e45c72a171ca3ebd5bc62edd03da675b14a39f",
+  "as_of_ts": "2026-07-03T00:00:00.000Z",
+  "replay_gate_packet": {
+    "exists": true,
+    "scope": "replay_backed_freeze_preparation",
+    "human_boundary_preserved": true
+  },
+  "replay_window": {
+    "exists": true,
+    "time_fence_enforced": true,
+    "source_mode": "replay_backed_production_demo"
+  },
+  "source_refs": {
+    "p55_closure": "docs/runtime_health_service/GEOX-P55-RUNTIME-HEALTH-SERVICE-GATE-CLOSURE-REVIEW.json",
+    "p55_evidence_packet": "docs/runtime_health_service/GEOX-P55-RUNTIME-HEALTH-SERVICE-GATE-EVIDENCE-PACKET.json",
+    "p55_capability_matrix": "docs/runtime_health_service/GEOX-P55-RUNTIME-HEALTH-SERVICE-GATE-CAPABILITY-MATRIX.json",
+    "p55_boundary_policy": "docs/runtime_health_service/GEOX-P55-RUNTIME-HEALTH-SERVICE-GATE-BOUNDARY-POLICY.json",
+    "p55_runtime_builder": "apps/server/src/runtime_health/p55_runtime_health_service_gate_v1.ts",
+    "p55_runtime_route": "apps/server/src/routes/runtime_health_service_gate_v1.ts",
+    "p54_closure": "docs/field_pilot_readiness/GEOX-P54-FIELD-PILOT-READINESS-REVIEW-GATE-CLOSURE-REVIEW.json",
+    "p53_closure": "docs/field_pilot_plan/GEOX-P53-CONTROLLED-FIELD-PILOT-PLAN-GATE-CLOSURE-REVIEW.json",
+    "p52_closure": "docs/twin_runtime_health/GEOX-P52-TWIN-RUNTIME-HEALTH-CLOSURE-REVIEW.json",
+    "p51_5_snapshot": "apps/web/public/demo-runtime/p51-gateway-viewer-snapshot.json",
+    "control_to_ao_act_non_goals": "docs/controlplane/constitution/GEOX-Control-to-AO-ACT-Instantiation-NonGoals-v0.md"
+  },
+  "expected_dimension_ids": ["E1", "E2", "E3", "E4", "E5", "E6", "E7", "E8", "E9", "E10", "E11", "E12", "E13", "E14"],
+  "expected_result": "REPLAY_EXECUTION_AUTHORIZED_WITH_LIMITATIONS",
+  "expected_gate": {
+    "p57_replay_backed_freeze_review_allowed": true,
+    "real_field_execution_allowed": false,
+    "live_device_production_freeze_allowed": false,
+    "full_runtime_v1_freeze_allowed": false
+  }
+}
