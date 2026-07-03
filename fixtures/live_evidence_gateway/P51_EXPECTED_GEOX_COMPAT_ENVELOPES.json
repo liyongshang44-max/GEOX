@@ -1,0 +1,28 @@
+{
+  "schema_version": "geox_p51_expected_geox_compat_envelopes_v1",
+  "phase": "P51",
+  "expected_raw_sample_count": 5,
+  "expected_device_observation_count": 5,
+  "raw_sample_required": {
+    "source": "gateway",
+    "interpolated": false,
+    "synthetic": false,
+    "qc_quality": "ok"
+  },
+  "device_observation_required": {
+    "type": "device_observation_v1",
+    "schema_version": "1.0.0",
+    "tenant_id": "tenant_p51_demo",
+    "project_id": "project_p51_demo",
+    "group_id": "group_p51_demo",
+    "field_id": "field_p51_alpha",
+    "device_id": "gw_soil_001"
+  },
+  "expected_units": {
+    "soil_moisture": "%VWC",
+    "soil_temperature": "°C",
+    "air_temperature": "°C",
+    "air_humidity": "%RH",
+    "water_pressure": "kPa"
+  }
+}
