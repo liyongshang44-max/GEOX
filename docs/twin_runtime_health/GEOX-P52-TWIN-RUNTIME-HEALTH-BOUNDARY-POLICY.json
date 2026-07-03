@@ -1,0 +1,31 @@
+{
+  "schema_version": "geox_p52_twin_runtime_health_boundary_policy_v1",
+  "phase": "P52",
+  "baseline_tag": "p51_5_gateway_backed_twin_demo_viewer_v0_closure",
+  "baseline_commit": "e764c0f36fbf50dfecf5de2ac8ce9dd2367eecd9",
+  "mode": "controlled_twin_runtime_health_gate",
+  "allowed_changed_roots": [
+    "docs/twin_runtime_health/",
+    "fixtures/twin_runtime_health/",
+    "scripts/twin_runtime_health/"
+  ],
+  "forbidden_changed_surfaces": [
+    "apps/server/",
+    "apps/web/",
+    "apps/telemetry-ingest/",
+    "packages/contracts/",
+    "migrations/",
+    ".github/",
+    "package.json",
+    "pnpm-lock.yaml"
+  ],
+  "allowed_output_files": [
+    "acceptance-output/P52_TWIN_RUNTIME_HEALTH_LEDGER.jsonl",
+    "acceptance-output/P52_TWIN_RUNTIME_HEALTH_REPORT.json"
+  ],
+  "record_type_prefix": "p52_twin_runtime_health_",
+  "field_pilot_execution_allowed": false,
+  "production_runtime_monitoring_enabled": false,
+  "full_runtime_v1_freeze_allowed": false,
+  "p50_completion_authority_requires_closure_doc": true
+}
