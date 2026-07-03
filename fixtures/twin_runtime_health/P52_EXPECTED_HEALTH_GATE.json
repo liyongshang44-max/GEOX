@@ -1,0 +1,8 @@
+{
+  "schema_version": "geox_p52_expected_health_gate_v1",
+  "p53_field_pilot_plan_allowed": true,
+  "field_pilot_execution_allowed": false,
+  "production_runtime_monitoring_enabled": false,
+  "full_runtime_v1_freeze_allowed": false,
+  "gate_reason": "No BLOCKED health dimension exists; one gateway clock-skew warning is preserved as a planning limitation."
+}
