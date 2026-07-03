@@ -1,0 +1,31 @@
+{
+  "schema_version": "geox_p50_demo_runtime_review_addendum_v0",
+  "phase": "P50",
+  "baseline_tag": "p49_twin_runtime_v1_pilot_freeze_evidence_package_v0_closure",
+  "baseline_commit": "ea00d8b3a70f6dd1e7e61f7415c2444fd6b76a23",
+  "review_items": [
+    {
+      "review_item_id": "P50_REVIEW_NEGATIVE_FIXTURE_MODE",
+      "status": "RESOLVED_BY_METADATA",
+      "manifest_ref": "fixtures/twin_demo_runtime/P50_NEGATIVE_FIXTURE_MANIFEST.json",
+      "negative_fixture_mode": "symbolic_blocked_branch",
+      "independent_mutation_fixture_files_present": false,
+      "accepted_for_p50": true,
+      "future_strengthening_target": "P51_or_P52_real_bad_sample_fixtures"
+    },
+    {
+      "review_item_id": "P50_REVIEW_NEXT_FORECAST_ACTIVE_REF_STRICTNESS",
+      "status": "RESOLVED_BY_POLICY_AND_RUNNER",
+      "current_runner_full_comparison": true,
+      "required_acceptance_strengthening": {
+        "compare_next_source_active_model_ref_to_active_consumption_active_model_ref": true,
+        "compare_next_source_active_config_ref_to_active_consumption_active_config_ref": true,
+        "compare_active_consumption_active_model_ref_to_active_model_config_model_ref": true,
+        "compare_active_consumption_active_config_ref_to_active_model_config_id": true
+      },
+      "blocking_for_p50": false
+    }
+  ],
+  "p49_result_remains": "PASS_WITH_LIMITATIONS",
+  "runtime_v1_freeze_allowed": false
+}
