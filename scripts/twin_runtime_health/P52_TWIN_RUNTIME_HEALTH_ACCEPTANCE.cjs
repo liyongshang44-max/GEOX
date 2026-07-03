@@ -100,8 +100,9 @@ check('34_changed_fixture_changes_hash', deterministicA.deterministic_hash !== c
 
 const negative = runJson([RUNNER, '--mode', 'controlled-negative']);
 check('35_negative_fixtures_all_blocked', negative.ok === true && negative.negative_result_count === 9 && negative.blocked_count === 9);
-check('36_p50_review_only_path_blocked', negative.results.some((row) => row.scenario_id === 'stale_p50_completion_only' && row.blocked === true && row.target_records_created === 0));
-check('37_no_downstream_record_types', ledgerRows.every((row) => row.record_type.startsWith('p52_twin_runtime_health_')));
+check('36_missing_traceability_negative_blocked', negative.results.some((row) => row.scenario_id === 'missing_traceability' && row.blocked === true && row.target_records_created === 0));
+check('37_p50_review_only_path_blocked', negative.results.some((row) => row.scenario_id === 'stale_p50_completion_only' && row.blocked === true && row.target_records_created === 0));
+check('38_no_downstream_record_types', ledgerRows.every((row) => row.record_type.startsWith('p52_twin_runtime_health_')));
 
 const failed = checks.filter(([, ok]) => !ok).map(([name]) => name);
 
