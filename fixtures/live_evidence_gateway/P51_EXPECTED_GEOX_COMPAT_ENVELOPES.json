@@ -1,8 +1,8 @@
 {
   "schema_version": "geox_p51_expected_geox_compat_envelopes_v1",
   "phase": "P51",
-  "expected_raw_sample_count": 20,
-  "expected_device_observation_count": 20,
+  "expected_raw_sample_count": 21,
+  "expected_device_observation_count": 21,
   "expected_device_count": 2,
   "raw_sample_required": {
     "source": "gateway",
