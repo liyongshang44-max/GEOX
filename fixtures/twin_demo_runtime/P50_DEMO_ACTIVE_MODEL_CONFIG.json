@@ -1,0 +1,14 @@
+{
+  "schema_version": "geox_p50_demo_model_config_v0",
+  "model_config_id": "p50_demo_active_model_config_v0",
+  "model_ref": "replay_demo_model:active:soil_moisture_linear_v0",
+  "candidate_ref": "p50_demo_model_candidate_v0",
+  "demo_scoped": true,
+  "historical_replay_sourced": true,
+  "not_production_model": true,
+  "state_variables": ["soil_moisture_state", "soil_temperature_state", "evidence_coverage_state"],
+  "forecast_metric": "soil_moisture_vwc",
+  "linear_hourly_delta": -0.00135,
+  "prediction_interval_half_width": 0.010,
+  "policy_ref": "P50_DEMO_ACTIVE_MODEL_CONSUMPTION_POLICY_V0"
+}
