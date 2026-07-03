@@ -71,7 +71,7 @@ function applyMutation(manifest, source, mutation) {
   if (mutation === 'set:mode=live_device_production_runtime') nextManifest.runtime_health_service_mode = 'live_device_production_runtime';
   if (mutation === 'set:time_fence=false') nextManifest.time_fence_enforced = false;
   if (mutation === 'set:snapshot=false') nextManifest.gateway_backed_snapshot_used = false;
-  if (mutation === 'set:source_truth=live_device' && nextSource.p51_5_snapshot) nextSource.p51_5_snapshot.source_truth_mode = 'live_device';
+  if (mutation === 'set:source_truth=live_device' && nextSource.p51_5_snapshot?.identity) nextSource.p51_5_snapshot.identity.source_truth_mode = 'live_device';
   if (mutation === 'set:real_device_deployed=true') nextSource.flags.real_device_deployed = true;
   if (mutation === 'set:live_device_claimed=true') nextSource.flags.live_device_claimed = true;
   if (mutation === 'set:live_runtime_monitoring_active=true') nextSource.flags.live_runtime_monitoring_active = true;
@@ -94,13 +94,17 @@ function dimension(dimension_id, name, ok, warn, reason) {
   return { dimension_id, name, status: ok ? (warn ? 'WARN' : 'OK') : 'BLOCKED', reason };
 }
 
+function getSnapshotSourceTruthMode(source) {
+  return source.p51_5_snapshot?.identity?.source_truth_mode ?? source.p51_5_snapshot?.source_truth_mode ?? null;
+}
+
 function buildDimensions(manifest, source) {
   const refsExist = Object.values(source.present).every(Boolean);
   const p54AcceptanceOk = source.p54_closure?.acceptance?.assertion_count === 42 && source.p54_closure?.acceptance?.failed_assertion_count === 0;
   const p54GateOk = source.p54_closure?.gate_result?.p55_runtime_health_service_gate_allowed === true && source.p54_closure?.gate_result?.field_pilot_execution_allowed === false && source.p54_closure?.gate_result?.full_runtime_v1_freeze_allowed === false;
   const modeOk = manifest.runtime_health_service_mode === 'replay_backed_production_demo';
   const timeFenceOk = manifest.time_fence_enforced === true;
-  const snapshotOk = manifest.gateway_backed_snapshot_used === true && source.p51_5_snapshot?.source_truth_mode === 'device_path_simulation';
+  const snapshotOk = manifest.gateway_backed_snapshot_used === true && getSnapshotSourceTruthMode(source) === 'device_path_simulation';
   const evidenceOk = Boolean(source.p54_evidence_packet && source.p52_closure && source.p51_5_snapshot);
   const routeOk = manifest.expected_route?.method === 'GET' && manifest.expected_route?.path === '/api/v1/runtime-health/service-gate';
   const routeReadOnlyOk = source.flags.route_read_only !== false && source.flags.db_write_allowed !== true;
