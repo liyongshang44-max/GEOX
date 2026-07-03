@@ -1,0 +1,7 @@
+{
+  "case_id": "missing_base_time",
+  "expected_error": "SENML_BASE_TIME_REQUIRED",
+  "pack": [
+    { "bn": "urn:geox:p51:device:gw_soil_001:", "bu": "%", "n": "soil_moisture", "v": 23.1 }
+  ]
+}
