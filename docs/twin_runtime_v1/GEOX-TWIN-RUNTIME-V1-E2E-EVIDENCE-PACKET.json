@@ -1,0 +1,59 @@
+{
+  "schema_version": "geox_twin_runtime_v1_e2e_evidence_packet_v0",
+  "file_path": "docs/twin_runtime_v1/GEOX-TWIN-RUNTIME-V1-E2E-EVIDENCE-PACKET.json",
+  "phase": "P49",
+  "freeze_name": "TWIN_RUNTIME_V1_PILOT_FREEZE",
+  "runtime_name": "GEOX Production-Governed Digital Twin Runtime v1",
+  "baseline": {
+    "tag": "p48_end_to_end_production_twin_pilot_closure_gate_v0_closure_boundary_errata_v0",
+    "commit": "9564ee212e59f6f2700e72a4ff620bfc04d264b9"
+  },
+  "source_chain": {
+    "p37": {"source_ref": "P37_GOVERNED_RECORD_SET_REF", "record_set_hash": "b37b37b37b37b37b37b37b37b37b37b37b37b37b37b37b37b37b37b37b37b371"},
+    "p38": {"source_ref": "P38_GOVERNED_RECORD_SET_REF", "record_set_hash": "b38b38b38b38b38b38b38b38b38b38b38b38b38b38b38b38b38b38b38b38b381"},
+    "p39": {"source_ref": "P39_GOVERNED_RECORD_SET_REF", "record_set_hash": "b39b39b39b39b39b39b39b39b39b39b39b39b39b39b39b39b39b39b39b39b391"},
+    "p40": {"source_ref": "P40_GOVERNED_RECORD_SET_REF", "record_set_hash": "b40b40b40b40b40b40b40b40b40b40b40b40b40b40b40b40b40b40b40b40b401"},
+    "p41": {"source_ref": "P41_GOVERNED_RECORD_SET_REF", "record_set_hash": "b41b41b41b41b41b41b41b41b41b41b41b41b41b41b41b41b41b41b41b41b411"},
+    "p42": {"source_ref": "P42_GOVERNED_RECORD_SET_REF", "record_set_hash": "b42b42b42b42b42b42b42b42b42b42b42b42b42b42b42b42b42b42b42b42b421"},
+    "p43": {"source_ref": "P43_GOVERNED_RECORD_SET_REF", "record_set_hash": "b43b43b43b43b43b43b43b43b43b43b43b43b43b43b43b43b43b43b43b43b431"},
+    "p44": {"source_ref": "P44_GOVERNED_RECORD_SET_REF", "record_set_hash": "b44b44b44b44b44b44b44b44b44b44b44b44b44b44b44b44b44b44b44b44b441"},
+    "p45": {"source_ref": "P45_GOVERNED_RECORD_SET_REF", "record_set_hash": "b45b45b45b45b45b45b45b45b45b45b45b45b45b45b45b45b45b45b45b45b451"},
+    "p46": {"source_ref": "P46_GOVERNED_RECORD_SET_REF", "record_set_hash": "b46b46b46b46b46b46b46b46b46b46b46b46b46b46b46b46b46b46b46b46b461"},
+    "p47": {"source_ref": "P47_GOVERNED_RECORD_SET_REF", "record_set_hash": "b47b47b47b47b47b47b47b47b47b47b47b47b47b47b47b47b47b47b47b47b471"},
+    "p48": {"source_ref": "P48_GOVERNED_RECORD_SET_REF", "record_set_hash": "b48b48b48b48b48b48b48b48b48b48b48b48b48b48b48b48b48b48b48b48b481", "baseline_tag": "p48_end_to_end_production_twin_pilot_closure_gate_v0_closure_boundary_errata_v0", "baseline_commit": "9564ee212e59f6f2700e72a4ff620bfc04d264b9"}
+  },
+  "capability_matrix_ref": "docs/twin_runtime_v1/GEOX-TWIN-RUNTIME-V1-CAPABILITY-MATRIX.json",
+  "e2e_hashes": {
+    "source_chain_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb1",
+    "capability_matrix_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb2",
+    "e2e_evidence_packet_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb3",
+    "determinism_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb4"
+  },
+  "policy_refs": ["P49_TWIN_RUNTIME_V1_PILOT_FREEZE_EVIDENCE_POLICY_V0", "P48_END_TO_END_TRACEABILITY_POLICY_V0", "P48_NO_DOWNSTREAM_POLICY_REF", "P48_BOUNDARY_ERRATA_V0"],
+  "source_refs": ["P37_GOVERNED_SOURCE_REF", "P38_GOVERNED_SOURCE_REF", "P39_GOVERNED_SOURCE_REF", "P40_GOVERNED_SOURCE_REF", "P41_GOVERNED_SOURCE_REF", "P42_GOVERNED_SOURCE_REF", "P43_GOVERNED_SOURCE_REF", "P44_GOVERNED_SOURCE_REF", "P45_GOVERNED_SOURCE_REF", "P46_GOVERNED_SOURCE_REF", "P47_GOVERNED_SOURCE_REF", "P48_GOVERNED_SOURCE_REF"],
+  "idempotency_key": "p49:e2e:twin-runtime-v1-pilot-freeze:9564ee212e59f6f2700e72a4ff620bfc04d264b9",
+  "nonclaims": {
+    "not_new_runtime_service": true,
+    "not_demo_runtime": true,
+    "not_device_gateway": true,
+    "not_production_rollout": true,
+    "not_ao_act_task_created": true,
+    "not_machine_dispatched": true,
+    "not_execution_recorded": true,
+    "not_receipt_recorded": true,
+    "not_roi_realized": true,
+    "not_effect_attributed": true,
+    "not_field_memory_committed": true,
+    "not_learning_signal_created": true
+  },
+  "expected_changed_files": [
+    "docs/twin_runtime_v1/GEOX-TWIN-RUNTIME-V1-PILOT-FREEZE.md",
+    "docs/twin_runtime_v1/GEOX-TWIN-RUNTIME-V1-CAPABILITY-MATRIX.json",
+    "docs/twin_runtime_v1/GEOX-TWIN-RUNTIME-V1-E2E-EVIDENCE-PACKET.json",
+    "scripts/twin_runtime_v1/TWIN_RUNTIME_V1_E2E_ACCEPTANCE.cjs"
+  ],
+  "forbidden_surfaces": ["apps/server/", "apps/web/", "apps/server/db/migrations/", ".github/", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml"],
+  "freeze_result": "PASS_WITH_LIMITATIONS",
+  "runtime_v1_freeze_allowed": false,
+  "runtime_v1_freeze_claim": "limited_evidence_package_not_full_runtime_v1_freeze"
+}
