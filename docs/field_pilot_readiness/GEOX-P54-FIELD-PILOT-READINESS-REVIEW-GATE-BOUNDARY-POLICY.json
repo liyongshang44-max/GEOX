@@ -1,0 +1,54 @@
+{
+  "schema_version": "geox_p54_field_pilot_readiness_review_gate_boundary_policy_v1",
+  "phase": "P54",
+  "task_line": "P54 Controlled Field Pilot Readiness Review Gate v1",
+  "baseline_tag": "p53_field_pilot_plan_v1_closure",
+  "baseline_commit": "567d15359bfdc8008262fea402479be6a14d5312",
+  "mode": "controlled_field_pilot_readiness_review_gate",
+  "source_truth_scope": "committed_artifacts_only",
+  "allowed_changed_roots": [
+    "docs/field_pilot_readiness/",
+    "fixtures/field_pilot_readiness/",
+    "scripts/field_pilot_readiness/"
+  ],
+  "forbidden_changed_surfaces": [
+    "apps/server/",
+    "apps/web/",
+    "apps/telemetry-ingest/",
+    "packages/contracts/",
+    "migrations/",
+    ".github/",
+    "package.json",
+    "pnpm-lock.yaml"
+  ],
+  "forbidden_runtime_inputs": [
+    "acceptance-output/",
+    "production database",
+    "server healthz",
+    "frontend runtime state",
+    "telemetry-ingest live output",
+    "AO-ACT task table",
+    "AO-ACT receipt table",
+    "dispatch records",
+    "execution records",
+    "ROI records",
+    "Field Memory records"
+  ],
+  "allowed_output_files": [
+    "acceptance-output/P54_FIELD_PILOT_READINESS_LEDGER.jsonl",
+    "acceptance-output/P54_FIELD_PILOT_READINESS_REPORT.json"
+  ],
+  "allowed_record_type_prefix": "p54_field_pilot_readiness_",
+  "readiness_review_result": "READY_FOR_RUNTIME_HEALTH_SERVICE_GATE_WITH_LIMITATIONS",
+  "p55_runtime_health_service_gate_allowed": true,
+  "field_pilot_execution_allowed": false,
+  "runtime_health_service_implemented": false,
+  "live_runtime_monitoring_active": false,
+  "real_device_deployed": false,
+  "production_gateway_online": false,
+  "ao_act_task_creation_allowed": false,
+  "dispatch_allowed": false,
+  "roi_allowed": false,
+  "field_memory_allowed": false,
+  "full_runtime_v1_freeze_allowed": false
+}
