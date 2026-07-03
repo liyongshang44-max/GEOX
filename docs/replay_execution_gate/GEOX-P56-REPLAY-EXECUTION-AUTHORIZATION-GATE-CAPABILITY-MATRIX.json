@@ -1,0 +1,25 @@
+{
+  "schema_version": "geox_p56_replay_execution_authorization_gate_capability_matrix_v1",
+  "phase": "P56",
+  "task_line": "P56 Controlled Replay Execution Authorization Gate v1",
+  "baseline_tag": "p55_runtime_health_service_gate_v1_closure",
+  "formal_conclusion": "controlled replay execution authorization gate proof",
+  "capabilities": [
+    { "capability_id": "P56-R1", "name": "P55 closure baseline inherited", "status": "PASS" },
+    { "capability_id": "P56-R2", "name": "P55 acceptance 46/0 verified", "status": "PASS" },
+    { "capability_id": "P56-R3", "name": "P55 replay mode verified", "status": "PASS" },
+    { "capability_id": "P56-R4", "name": "P55 P56 gate verified", "status": "PASS" },
+    { "capability_id": "P56-R5", "name": "P55 read-only service surface verified", "status": "PASS" },
+    { "capability_id": "P56-R6", "name": "time fence verified", "status": "PASS" },
+    { "capability_id": "P56-R7", "name": "gateway-backed snapshot verified", "status": "PASS" },
+    { "capability_id": "P56-R8", "name": "replay gate packet generated", "status": "PASS" },
+    { "capability_id": "P56-R9", "name": "replay window generated", "status": "PASS" },
+    { "capability_id": "P56-R10", "name": "human boundary preserved", "status": "PASS" },
+    { "capability_id": "P56-R11", "name": "Control to AO-ACT non-instantiation preserved", "status": "PASS" },
+    { "capability_id": "P56-R12", "name": "real-world execution claims blocked", "status": "PASS" },
+    { "capability_id": "P56-R13", "name": "downstream creation claims blocked", "status": "PASS" },
+    { "capability_id": "P56-R14", "name": "P57 replay-backed freeze review gate generated", "status": "PASS" }
+  ],
+  "capability_count": 14,
+  "result": "PASS"
+}
