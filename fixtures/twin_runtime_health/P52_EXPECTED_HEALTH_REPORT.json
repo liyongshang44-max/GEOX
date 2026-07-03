@@ -1,0 +1,11 @@
+{
+  "schema_version": "geox_p52_expected_health_report_v1",
+  "runtime_health_result": "READY_WITH_WARNINGS",
+  "dimension_count": 13,
+  "blocked_dimension_count": 0,
+  "warn_dimension_count": 1,
+  "expected_warn_dimension_id": "H9",
+  "expected_warn_reason": "gateway clock skew warning preserved from P51",
+  "p53_field_pilot_plan_allowed": true,
+  "field_pilot_execution_allowed": false
+}
