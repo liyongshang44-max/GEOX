@@ -1,0 +1,43 @@
+{
+  "schema_version": "geox_p51_gateway_input_manifest_v1",
+  "phase": "P51",
+  "manifest_id": "p51_gateway_manifest_soil_demo_v1",
+  "baseline_tag": "p50_replay_backed_production_twin_demo_runtime_v0_closure",
+  "baseline_commit": "9006f0229f2cca0da66160faea83823074f38b45",
+  "tenant_id": "tenant_p51_demo",
+  "project_id": "project_p51_demo",
+  "group_id": "group_p51_demo",
+  "field_id": "field_p51_alpha",
+  "device_id": "gw_soil_001",
+  "credential_id": "cred_p51_demo_001",
+  "credential_hash_ref": "sha256:credential_hash_pointer_only",
+  "device_source_simulated": true,
+  "live_gateway_path_proof": true,
+  "real_live_device_proof": false,
+  "source_truth_mode": "controlled_senml_fixture",
+  "ingested_at": "2026-02-01T00:10:00.000Z",
+  "senml_fixture_ref": "fixtures/live_evidence_gateway/P51_SENML_DEVICE_SAMPLE_FIXTURE.jsonl",
+  "negative_manifest_ref": "fixtures/live_evidence_gateway/P51_NEGATIVE_FIXTURE_MANIFEST.json",
+  "unit_conversion_profile": {
+    "soil_moisture_m3m3_to_percent_vwc": {
+      "enabled": true,
+      "from_unit": "m3/m3",
+      "to_unit": "%VWC",
+      "factor": 100
+    }
+  },
+  "expected_observation_count": 5,
+  "expected_health_envelope_count": 1,
+  "expected_metrics": [
+    "soil_moisture",
+    "soil_temperature",
+    "air_temperature",
+    "air_humidity",
+    "water_pressure"
+  ],
+  "acceptance_output": {
+    "ledger": "acceptance-output/P51_LIVE_EVIDENCE_GATEWAY_LEDGER.jsonl",
+    "report": "acceptance-output/P51_LIVE_EVIDENCE_GATEWAY_REPORT.json",
+    "snapshot": "acceptance-output/P51_GATEWAY_VIEWER_SNAPSHOT.json"
+  }
+}
