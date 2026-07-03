@@ -1,0 +1,29 @@
+{
+  "schema_version": "geox_p51_standard_mapping_v1",
+  "phase": "P51",
+  "baseline_tag": "p50_replay_backed_production_twin_demo_runtime_v0_closure",
+  "senml_profile": {
+    "pack_type": "array_of_records",
+    "base_fields_supported": ["bn", "bt", "bu"],
+    "record_fields_supported": ["n", "u", "v", "t"],
+    "resolved_time_required": true,
+    "relative_time_must_resolve_against_base_time": true
+  },
+  "sensorthings_projection": {
+    "Observation.phenomenonTime": "resolved_observed_at",
+    "Observation.resultTime": "manifest.ingested_at",
+    "Observation.result": "canonical_value",
+    "Datastream.name": "canonical_metric",
+    "ObservedProperty.name": "canonical_metric",
+    "FeatureOfInterest.name": "manifest.field_id",
+    "Thing.name": "device_id"
+  },
+  "sosa_projection": {
+    "type": "sosa:Observation",
+    "madeBySensor": "device_id",
+    "observedProperty": "canonical_metric",
+    "hasFeatureOfInterest": "field_id",
+    "hasSimpleResult": "canonical_value_and_unit",
+    "resultTime": "manifest.ingested_at"
+  }
+}
