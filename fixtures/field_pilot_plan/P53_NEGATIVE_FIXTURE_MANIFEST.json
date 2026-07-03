@@ -16,8 +16,8 @@
     "fixtures/field_pilot_plan/negative/field_memory_flag.json",
     "fixtures/field_pilot_plan/negative/full_runtime_freeze_flag.json",
     "fixtures/field_pilot_plan/negative/missing_human_role_matrix.json",
-    "fixtures/field_pilot_plan/negative/missing_stop_rules.json",
-    "fixtures/field_pilot_plan/negative/missing_traceability_protocol.json",
+    "fixtures/field_pilot_plan/negative/safety_rules_absent.json",
+    "fixtures/field_pilot_plan/negative/traceability_protocol_absent.json",
     "fixtures/field_pilot_plan/negative/p54_readiness_without_complete_plan.json",
     "fixtures/field_pilot_plan/negative/candidate_site_real_commitment_flag.json"
   ]
