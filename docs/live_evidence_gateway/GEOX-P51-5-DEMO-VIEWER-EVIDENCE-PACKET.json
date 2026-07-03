@@ -1,0 +1,28 @@
+{
+  "schema_version": "geox_p51_5_demo_viewer_evidence_packet_v0",
+  "phase": "P51.5",
+  "baseline_tag": "p51_live_evidence_gateway_v1_closure",
+  "baseline_commit": "ce60c327f13fae358c8ea47a65e2daa8534814bd",
+  "formal_conclusion": "gateway-backed read-only frontend demo viewer proof",
+  "route": "/operator/twin/gateway-demo",
+  "source_snapshot": "apps/web/public/demo-runtime/p51-gateway-viewer-snapshot.json",
+  "evidence_refs": {
+    "contract_doc": "docs/live_evidence_gateway/GEOX-P51-5-GATEWAY-BACKED-TWIN-DEMO-VIEWER-V0.md",
+    "boundary_policy": "docs/live_evidence_gateway/GEOX-P51-5-DEMO-VIEWER-BOUNDARY-POLICY.json",
+    "capability_matrix": "docs/live_evidence_gateway/GEOX-P51-5-DEMO-VIEWER-CAPABILITY-MATRIX.json",
+    "snapshot": "apps/web/public/demo-runtime/p51-gateway-viewer-snapshot.json",
+    "api_client": "apps/web/src/api/operatorGatewayDemo.ts",
+    "types": "apps/web/src/features/operator/gatewayDemo/gatewayDemoTypes.ts",
+    "view_model": "apps/web/src/features/operator/gatewayDemo/gatewayDemoViewModel.ts",
+    "page": "apps/web/src/features/operator/pages/OperatorGatewayDemoViewerPage.tsx",
+    "route": "apps/web/src/app/App.tsx",
+    "nav": "apps/web/src/layouts/OperatorLayout.tsx",
+    "acceptance": "scripts/frontend_acceptance/P51_5_GATEWAY_BACKED_TWIN_DEMO_VIEWER_V0.cjs"
+  },
+  "source_snapshot_origin": {
+    "source": "acceptance-output/P51_GATEWAY_VIEWER_SNAPSHOT.json",
+    "generated_by": "scripts/live_evidence_gateway/P51_LIVE_EVIDENCE_GATEWAY_RUNNER.cjs --mode controlled-write",
+    "p51_acceptance_hash": "d8ac78e13b0fa69dce68d580622308d1e08946d6751a438a57cea7a3169db63d"
+  },
+  "completion_status": "implementation_ready_for_review"
+}

@@ -59,6 +59,7 @@ const OperationReportPage = React.lazy(() => import("../features/operations/page
 const CustomerReportExportPage = React.lazy(() => import("../features/customer/pages/CustomerReportExportPage"));
 const OperatorTwinOverviewPage = React.lazy(() => import("../features/operator/pages/OperatorTwinOverviewPage"));
 const OperatorProductionWorkflowPage = React.lazy(() => import("../features/operator/pages/OperatorProductionWorkflowPage"));
+const OperatorGatewayDemoViewerPage = React.lazy(() => import("../features/operator/pages/OperatorGatewayDemoViewerPage"));
 const OperatorFieldTwinWorkspacePage = React.lazy(() => import("../features/operator/pages/OperatorFieldTwinWorkspacePage"));
 const OperatorFieldTwinForecastPage = React.lazy(() => import("../features/operator/pages/OperatorFieldTwinForecastPage"));
 const OperatorFieldTwinScenarioComparePage = React.lazy(() => import("../features/operator/pages/OperatorFieldTwinScenarioComparePage"));
@@ -83,6 +84,7 @@ function LegacyParamRedirect({ to }: { to: string }): React.ReactElement {
 }
 
 function titleForPath(pathname: string): string {
+  if (pathname === "/operator/twin/gateway-demo") return "Gateway 支撑的 Twin Demo Viewer";
   if (pathname === "/" || pathname === "/dashboard") return "平台控制台";
   if (pathname === "/dashboard/customer") return "客户看板";
   if (pathname === "/dashboard/export" || pathname === "/customer/export") return "客户看板导出";
@@ -121,6 +123,7 @@ function titleForPath(pathname: string): string {
 }
 
 function leadForPath(pathname: string): string {
+  if (pathname === "/operator/twin/gateway-demo") return "只读展示 P51 gateway-backed snapshot：device-path simulation、标准映射、去重、clock skew、ingestion window 与 traceability。";
   if (pathname === "/" || pathname === "/dashboard") return "以平台控制台为主入口，统一监控田块、设备、作业、技能与证据状态。";
   if (pathname === "/dashboard/customer") return "面向客户的简化看板，仅展示4个关键区块。";
   if (pathname === "/dashboard/export" || pathname === "/customer/export") return "客户看板导出版，保留地块状态、经营汇总、待处理事项、Top 风险地块与近期动作。";
@@ -160,6 +163,7 @@ function leadForPath(pathname: string): string {
 
 type BreadcrumbItem = AppBreadcrumbItem;
 function breadcrumbsForPath(pathname: string): BreadcrumbItem[] {
+  if (pathname === "/operator/twin/gateway-demo") return [{ label: "平台控制台", to: "/dashboard" }, { label: "操作员 Twin", to: "/operator/twin" }, { label: "Gateway Demo" }];
   if (pathname === "/" || pathname === "/dashboard") return [{ label: "平台控制台" }];
   if (pathname === "/dashboard/customer") return [{ label: "平台控制台", to: "/dashboard" }, { label: "客户看板" }];
   if (pathname === "/dashboard/export" || pathname === "/customer/export") return [{ label: "平台控制台", to: "/dashboard" }, { label: "客户看板导出" }];
@@ -198,6 +202,7 @@ function breadcrumbsForPath(pathname: string): BreadcrumbItem[] {
 }
 
 function primaryActionForPath(pathname: string): { label: string; to: string } {
+  if (pathname === "/operator/twin/gateway-demo") return { label: "返回 Twin 总览", to: "/operator/twin" };
   if (pathname === "/" || pathname === "/dashboard") return { label: "新建田块", to: "/fields/new" };
   if (pathname.startsWith("/fields/") && pathname.endsWith("/report/export")) return { label: "返回地块报告", to: pathname.replace(/\/export$/, "") };
   if (pathname.startsWith("/fields/") && pathname.endsWith("/report")) return { label: "返回田块详情", to: pathname.replace(/\/report$/, "") };
@@ -340,6 +345,7 @@ function OperatorRoutes(): React.ReactElement {
       <Route path="/" element={<Navigate to="twin" replace />} />
       <Route path="twin" element={<OperatorTwinOverviewPage />} />
       <Route path="twin/production-workflow" element={<OperatorProductionWorkflowPage />} />
+      <Route path="twin/gateway-demo" element={<OperatorGatewayDemoViewerPage />} />
       <Route path="twin/fields/:fieldId" element={<OperatorFieldTwinWorkspacePage />} />
       <Route path="twin/fields/:fieldId/forecast" element={<OperatorFieldTwinForecastPage />} />
       <Route path="twin/fields/:fieldId/scenarios" element={<OperatorFieldTwinScenarioComparePage />} />

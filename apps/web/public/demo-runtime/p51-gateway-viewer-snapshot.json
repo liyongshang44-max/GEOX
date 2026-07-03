@@ -1,0 +1,107 @@
+{
+  "schema_version": "geox_p51_5_gateway_viewer_snapshot_v0",
+  "phase": "P51.5",
+  "source_phase": "P51",
+  "source_snapshot_ref": "acceptance-output/P51_GATEWAY_VIEWER_SNAPSHOT.json",
+  "source_snapshot_checked_in_as": "apps/web/public/demo-runtime/p51-gateway-viewer-snapshot.json",
+  "generated_by": "scripts/live_evidence_gateway/P51_LIVE_EVIDENCE_GATEWAY_RUNNER.cjs --mode controlled-write",
+  "baseline_tag": "p51_live_evidence_gateway_v1_closure",
+  "baseline_commit": "ce60c327f13fae358c8ea47a65e2daa8534814bd",
+  "p51_final_tag": "p51_live_evidence_gateway_v1",
+  "p51_final_commit": "abd89623f609479118b1998791f4e5f5afcb6381",
+  "p51_acceptance": {
+    "assertion_count": 151,
+    "failed_assertion_count": 0,
+    "deterministic_hash": "d8ac78e13b0fa69dce68d580622308d1e08946d6751a438a57cea7a3169db63d"
+  },
+  "identity": {
+    "phase": "P51.5",
+    "source_truth_mode": "device_path_simulation",
+    "device_source_simulated": true,
+    "real_live_device_proof": false,
+    "production_gateway": false,
+    "field_pilot": false,
+    "runtime_health_v1": false,
+    "read_only": true
+  },
+  "gateway_summary": {
+    "input_pack_count": 24,
+    "device_count": 2,
+    "accepted_observation_count": 21,
+    "health_envelope_count": 2,
+    "metric_count": 5,
+    "device_ids": ["gw_soil_001", "gw_soil_002"],
+    "gateway_window_start": "2026-02-01T00:00:00.000Z",
+    "gateway_window_end": "2026-02-01T00:20:00.000Z"
+  },
+  "standards_chain": [
+    { "layer": "SenML-like pack", "summary": "24 simulated device-path packs resolved with base fields", "ref": "fixtures/live_evidence_gateway/P51_SENML_DEVICE_SAMPLE_FIXTURE.jsonl" },
+    { "layer": "SensorThings-style Observation", "summary": "21 accepted observations projected for frontend review", "ref": "p51_sensorthings_observation_v1" },
+    { "layer": "SOSA-style semantic observation", "summary": "observed property, sensor, feature, result, and result time are mapped", "ref": "p51_sosa_observation_v1" },
+    { "layer": "GEOX RawSampleFactEnvelopeV1 compatibility", "summary": "gateway source, stable fact ids, non-synthetic and non-interpolated flags", "ref": "p51_geox_raw_sample_envelope_v1" },
+    { "layer": "GEOX DeviceObservationV1 compatibility", "summary": "tenant/project/group/field/device scope with quality flags", "ref": "p51_device_observation_compat_v1" }
+  ],
+  "device_health": [
+    { "device_id": "gw_soil_001", "battery_percent": null, "rssi_dbm": null, "fw_ver": null, "health_scope": "device_evidence_health_only" },
+    { "device_id": "gw_soil_002", "battery_percent": 82, "rssi_dbm": -62, "fw_ver": "p51-fw-0.2", "health_scope": "device_evidence_health_only" }
+  ],
+  "duplicate_summary": {
+    "duplicate_same_payload_deduped_count": 1,
+    "duplicate_conflict_blocked_count": 1,
+    "copy": "Gateway path recorded duplicate handling behavior."
+  },
+  "clock_skew_summary": {
+    "clock_skew_ok_count": 20,
+    "clock_skew_warn_count": 1,
+    "clock_skew_blocked_count": 0,
+    "warn_ms": 120000,
+    "block_ms": 600000,
+    "boundary_copy": "Clock skew is a gateway evidence timing signal, not runtime health, field risk, or a device fault conclusion."
+  },
+  "ingestion_window": {
+    "record_type": "p51_gateway_ingestion_window_v1",
+    "window_id": "window_p51_gateway_20260201_0000_0020",
+    "input_pack_count": 24,
+    "device_count": 2,
+    "accepted_observation_count": 21,
+    "duplicate_same_payload_deduped_count": 1,
+    "duplicate_conflict_blocked_count": 1,
+    "clock_skew_warn_count": 1
+  },
+  "traceability_readback": {
+    "record_type": "p51_gateway_traceability_readback_v1",
+    "trace_count": 21,
+    "rows": [
+      { "metric": "soil_moisture", "device_id": "gw_soil_001", "raw_sample_fact_id": "fact_0339d4a85d6ad8a68aaee0628a6c4f17", "device_observation_ref": "gw_soil_001|soil_moisture|2026-02-01T00:00:00.000Z", "sensorthings_id": "sta_1b4411a2d3b51fd1a910909a", "sosa_result_time": "2026-02-01T00:00:10.000Z" },
+      { "metric": "soil_temperature", "device_id": "gw_soil_001", "raw_sample_fact_id": "fact_40d44ef1d3e6f19571aa23b61f577600", "device_observation_ref": "gw_soil_001|soil_temperature|2026-02-01T00:01:00.000Z", "sensorthings_id": "sta_225ba3d32819ecf50032f62c", "sosa_result_time": "2026-02-01T00:01:10.000Z" },
+      { "metric": "soil_moisture", "device_id": "gw_soil_002", "raw_sample_fact_id": "fact_4303daa270ae2d9a6058123706e91605", "device_observation_ref": "gw_soil_002|soil_moisture|2026-02-01T00:00:00.000Z", "sensorthings_id": "sta_44bb62795a112891667056db", "sosa_result_time": "2026-02-01T00:00:15.000Z" }
+    ]
+  },
+  "hashes": {
+    "resolved_senml_hash": "3c79a699c1e08494fb9de944f97149663c318d3d8b7062563ac4d3d4dd2b7b15",
+    "sensorthings_hash": "df81c2de1471df07647a73f7127fa9b15cf7c17f0a44efc32a10d2fe7ba5ae5c",
+    "sosa_hash": "c7a9a6e6bc286cf1255c39c13c844ba445d719052d04a0a943020242155e38ae",
+    "geox_raw_hash": "31c3f5ef4b8bd64287fc697eae48646f9d5fb676cf2c36bc6247e44da3a2d35f",
+    "device_observation_hash": "d9c3300d17cbd7b6d5ac9b6deca759f8974c8c049e577db3ef34a8c2e6fcb5dd",
+    "health_hash": "04dc0e6a1b44de6efee4a34cde0f223f7a90aca73a13f7d09e088d9341e4a390",
+    "ingestion_window_hash": "bd9afe15b963256a9f0f85317e4d13d65d7a9e3fac81c474e73027fe46f5a3b5",
+    "traceability_hash": "98a7a5de4c1d7939a20ca1d4d955f06c534dc55f4aa86b44d2ad218b3a7a5a9e",
+    "clock_skew_hash": "aa55b73027078c999ff6191ee7cbd5cc248049a2f9b0ec4fedf6a04fd7bfa01b",
+    "duplicate_hash": "af83a4a7b5b6773c21c6cc3de7e9a5c5e5842a0d7d8217181e3528ef7375a1e1"
+  },
+  "nonclaims": [
+    { "label": "not real live device", "value": true },
+    { "label": "not production MQTT ingest rollout", "value": true },
+    { "label": "not field pilot", "value": true },
+    { "label": "not Runtime Health v1", "value": true },
+    { "label": "not AO-ACT", "value": true },
+    { "label": "not ROI", "value": true },
+    { "label": "not Field Memory", "value": true },
+    { "label": "not Full Runtime v1 Freeze", "value": true }
+  ],
+  "evidence_refs": [
+    "docs/live_evidence_gateway/GEOX-P51-LIVE-EVIDENCE-GATEWAY-CLOSURE-REVIEW.json",
+    "docs/live_evidence_gateway/GEOX-P51-LIVE-EVIDENCE-GATEWAY-EVIDENCE-PACKET.json",
+    "scripts/live_evidence_gateway/P51_LIVE_EVIDENCE_GATEWAY_ACCEPTANCE.cjs"
+  ]
+}

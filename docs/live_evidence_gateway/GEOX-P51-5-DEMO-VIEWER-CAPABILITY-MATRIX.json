@@ -1,0 +1,25 @@
+{
+  "schema_version": "geox_p51_5_demo_viewer_capability_matrix_v0",
+  "phase": "P51.5",
+  "baseline_tag": "p51_live_evidence_gateway_v1_closure",
+  "formal_conclusion": "gateway-backed read-only frontend demo viewer proof",
+  "capabilities": [
+    { "capability_id": "V1", "name": "P51 closure baseline inherited", "status": "PASS" },
+    { "capability_id": "V2", "name": "gateway viewer snapshot checked in", "status": "PASS" },
+    { "capability_id": "V3", "name": "frontend route registered", "status": "PASS" },
+    { "capability_id": "V4", "name": "operator navigation entry added", "status": "PASS" },
+    { "capability_id": "V5", "name": "snapshot adapter reads static artifact", "status": "PASS" },
+    { "capability_id": "V6", "name": "no production write surface added", "status": "PASS" },
+    { "capability_id": "V7", "name": "source truth mode displayed", "status": "PASS" },
+    { "capability_id": "V8", "name": "24 packs 2 devices 21 observations displayed", "status": "PASS" },
+    { "capability_id": "V9", "name": "standards mapping chain displayed", "status": "PASS" },
+    { "capability_id": "V10", "name": "duplicate handling displayed", "status": "PASS" },
+    { "capability_id": "V11", "name": "clock skew summary displayed", "status": "PASS" },
+    { "capability_id": "V12", "name": "ingestion window displayed", "status": "PASS" },
+    { "capability_id": "V13", "name": "traceability readback displayed", "status": "PASS" },
+    { "capability_id": "V14", "name": "nonclaims panel displayed", "status": "PASS" },
+    { "capability_id": "V15", "name": "frontend acceptance covers page boundaries", "status": "PASS" }
+  ],
+  "capability_count": 15,
+  "result": "PASS"
+}
