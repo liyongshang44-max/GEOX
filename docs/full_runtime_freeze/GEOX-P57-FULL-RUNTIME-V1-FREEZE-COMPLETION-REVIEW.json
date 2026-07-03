@@ -4,8 +4,8 @@
   "task_line": "P57 GEOX-FULL-RUNTIME-V1-FREEZE / Replay-backed Audit Freeze",
   "baseline_tag": "p56_replay_execution_authorization_gate_v1_closure",
   "baseline_commit": "0637e311e330ee09c1dc84d75018a206168b5231",
-  "completion_status": "implementation_ready_for_review",
-  "final_status": "not_started",
+  "completion_status": "final_tag_verified_closure_ready",
+  "final_status": "final_tag_created",
   "formal_conclusion": "controlled replay-backed full runtime v1 freeze audit proof",
   "freeze_result": "FULL_RUNTIME_V1_REPLAY_BACKED_FROZEN_WITH_LIMITATIONS",
   "freeze_package": "GEOX-FULL-RUNTIME-V1-FREEZE",
@@ -27,9 +27,12 @@
   "audit_dimension_count": 24,
   "expected_acceptance_count": 75,
   "expected_negative_fixture_count": 37,
-  "expected_final_tag": "p57_full_runtime_v1_replay_backed_freeze_v1",
+  "final_tag": "p57_full_runtime_v1_replay_backed_freeze_v1",
+  "final_commit": "c2c7a02c57e47622fb572f691615fa8922bd249c",
   "expected_closure_tag": "p57_full_runtime_v1_replay_backed_freeze_v1_closure",
-  "merge_required_before_complete": true,
-  "tag_verification_required_after_merge": true,
-  "closure_patch_required_after_final_tag": true
+  "merge_required_before_complete": false,
+  "tag_verification_required_after_merge": false,
+  "closure_patch_required_after_final_tag": true,
+  "closure_tag_required_after_closure_patch_merge": true,
+  "closure_review_ref": "docs/full_runtime_freeze/GEOX-P57-FULL-RUNTIME-V1-FREEZE-CLOSURE-REVIEW.json"
 }
