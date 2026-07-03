@@ -4,8 +4,8 @@
   "task_line": "P52 Controlled Twin Runtime Health Gate v1",
   "baseline_tag": "p51_5_gateway_backed_twin_demo_viewer_v0_closure",
   "baseline_commit": "e764c0f36fbf50dfecf5de2ac8ce9dd2367eecd9",
-  "completion_status": "implementation_ready_for_review",
-  "final_status": "not_started",
+  "completion_status": "final_tag_verified_closure_ready",
+  "final_status": "final_tag_created",
   "formal_conclusion": "controlled artifact-level twin runtime health gate proof",
   "health_scope": "artifact_level_controlled_health_gate",
   "production_runtime_health_service_implemented": false,
@@ -22,9 +22,12 @@
   "field_pilot_execution_allowed": false,
   "production_runtime_monitoring_enabled": false,
   "full_runtime_v1_freeze_allowed": false,
-  "expected_final_tag": "p52_twin_runtime_health_v1",
+  "final_tag": "p52_twin_runtime_health_v1",
+  "final_commit": "755d0be9349dfb42ec24acf814378430df4feb24",
   "expected_closure_tag": "p52_twin_runtime_health_v1_closure",
-  "merge_required_before_complete": true,
-  "tag_verification_required_after_merge": true,
-  "closure_patch_required_after_final_tag": true
+  "merge_required_before_complete": false,
+  "tag_verification_required_after_merge": false,
+  "closure_patch_required_after_final_tag": true,
+  "closure_tag_required_after_closure_patch_merge": true,
+  "closure_review_ref": "docs/twin_runtime_health/GEOX-P52-TWIN-RUNTIME-HEALTH-CLOSURE-REVIEW.json"
 }
