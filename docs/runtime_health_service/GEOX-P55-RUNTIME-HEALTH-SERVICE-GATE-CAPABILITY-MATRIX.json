@@ -1,0 +1,25 @@
+{
+  "schema_version": "geox_p55_runtime_health_service_gate_capability_matrix_v1",
+  "phase": "P55",
+  "task_line": "P55 Controlled Runtime Health Service Gate v1",
+  "baseline_tag": "p54_field_pilot_readiness_review_gate_v1_closure",
+  "formal_conclusion": "controlled replay-backed runtime health service gate proof",
+  "capabilities": [
+    { "capability_id": "P55-R1", "name": "P54 closure baseline inherited", "status": "PASS" },
+    { "capability_id": "P55-R2", "name": "P54 acceptance 42/0 verified", "status": "PASS" },
+    { "capability_id": "P55-R3", "name": "P54 P55 gate allowed verified", "status": "PASS" },
+    { "capability_id": "P55-R4", "name": "replay-backed production demo mode declared", "status": "PASS" },
+    { "capability_id": "P55-R5", "name": "time fence enforced", "status": "PASS" },
+    { "capability_id": "P55-R6", "name": "gateway-backed snapshot used", "status": "PASS" },
+    { "capability_id": "P55-R7", "name": "runtime chain evidence refs preserved", "status": "PASS" },
+    { "capability_id": "P55-R8", "name": "deterministic health report generated", "status": "PASS" },
+    { "capability_id": "P55-R9", "name": "production-shaped read-only health surface added", "status": "PASS" },
+    { "capability_id": "P55-R10", "name": "GET-only route verified", "status": "PASS" },
+    { "capability_id": "P55-R11", "name": "downstream nonclaims preserved", "status": "PASS" },
+    { "capability_id": "P55-R12", "name": "P56 replay gate generated", "status": "PASS" },
+    { "capability_id": "P55-R13", "name": "negative fixtures block invalid claims", "status": "PASS" },
+    { "capability_id": "P55-R14", "name": "controlled output only", "status": "PASS" }
+  ],
+  "capability_count": 14,
+  "result": "PASS"
+}
