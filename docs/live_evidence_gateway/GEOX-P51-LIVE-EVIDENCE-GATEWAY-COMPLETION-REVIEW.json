@@ -1,0 +1,18 @@
+{
+  "schema_version": "geox_p51_completion_review_v1",
+  "phase": "P51",
+  "baseline_tag": "p50_replay_backed_production_twin_demo_runtime_v0_closure",
+  "baseline_commit": "9006f0229f2cca0da66160faea83823074f38b45",
+  "completion_status": "implementation_ready_for_review",
+  "final_status": "not_started",
+  "expected_final_tag": "p51_live_evidence_gateway_v1",
+  "expected_closure_tag": "p51_live_evidence_gateway_v1_closure",
+  "acceptance_script": "scripts/live_evidence_gateway/P51_LIVE_EVIDENCE_GATEWAY_ACCEPTANCE.cjs",
+  "source_truth_mode": "controlled_senml_fixture",
+  "device_source_simulated": true,
+  "live_gateway_path_proof": true,
+  "capability_count": 14,
+  "merge_required_before_complete": true,
+  "tag_verification_required_after_merge": true,
+  "closure_patch_required_after_final_tag": true
+}
