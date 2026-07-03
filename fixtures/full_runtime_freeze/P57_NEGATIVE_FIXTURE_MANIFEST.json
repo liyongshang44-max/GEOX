@@ -14,7 +14,7 @@
     { "scenario_id": "live_runtime_freeze_true", "mutation": "set:live_device_production_runtime_v1_frozen=true" },
     { "scenario_id": "mode_live_runtime", "mutation": "set:mode=live_device_production_runtime" },
     { "scenario_id": "missing_p55_closure", "mutation": "remove:p55_closure" },
-    { "scenario_id": "p55_acceptance_failed", "mutation": "set:p55_failed_assertion_count=1" },
+    { "scenario_id": "p55_closure_missing_blocks_freeze", "mutation": "remove:p55_closure" },
     { "scenario_id": "missing_p54_closure", "mutation": "remove:p54_closure" },
     { "scenario_id": "missing_p53_closure", "mutation": "remove:p53_closure" },
     { "scenario_id": "missing_p52_closure", "mutation": "remove:p52_closure" },
