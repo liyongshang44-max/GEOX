@@ -1,0 +1,48 @@
+{
+  "schema_version": "geox_p53_controlled_field_pilot_plan_gate_boundary_policy_v1",
+  "phase": "P53",
+  "task_line": "P53 Controlled Field Pilot Plan Gate v1",
+  "baseline_tag": "p52_twin_runtime_health_v1_closure",
+  "baseline_commit": "39bf0e7177219409dddff0481b412df8b71cd8d3",
+  "mode": "controlled_field_pilot_plan_gate",
+  "source_truth_scope": "committed_artifacts_only",
+  "allowed_changed_roots": [
+    "docs/field_pilot_plan/",
+    "fixtures/field_pilot_plan/",
+    "scripts/field_pilot_plan/"
+  ],
+  "forbidden_changed_surfaces": [
+    "apps/server/",
+    "apps/web/",
+    "apps/telemetry-ingest/",
+    "packages/contracts/",
+    "migrations/",
+    ".github/",
+    "package.json",
+    "pnpm-lock.yaml"
+  ],
+  "forbidden_runtime_inputs": [
+    "acceptance-output/",
+    "production database",
+    "server healthz",
+    "frontend runtime state",
+    "telemetry-ingest live output",
+    "AO-ACT task table",
+    "AO-ACT receipt table",
+    "dispatch records",
+    "execution records"
+  ],
+  "allowed_output_files": [
+    "acceptance-output/P53_FIELD_PILOT_PLAN_LEDGER.jsonl",
+    "acceptance-output/P53_FIELD_PILOT_PLAN_REPORT.json"
+  ],
+  "allowed_record_type_prefix": "p53_field_pilot_plan_",
+  "field_pilot_plan_allowed": true,
+  "field_pilot_execution_allowed": false,
+  "ao_act_task_creation_allowed": false,
+  "dispatch_allowed": false,
+  "roi_allowed": false,
+  "field_memory_allowed": false,
+  "full_runtime_v1_freeze_allowed": false,
+  "p54_readiness_review_allowed": true
+}

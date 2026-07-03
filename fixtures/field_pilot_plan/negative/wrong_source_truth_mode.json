@@ -1,0 +1,10 @@
+{
+  "schema_version": "geox_p53_negative_fixture_v1",
+  "scenario_id": "wrong_source_truth_mode",
+  "scenario": "wrong_source_truth_mode",
+  "source_truth_mode": "historical_replay",
+  "expected_result_state": "BLOCKED",
+  "field_pilot_plan_allowed": false,
+  "field_pilot_execution_allowed": false,
+  "target_records_created": 0
+}

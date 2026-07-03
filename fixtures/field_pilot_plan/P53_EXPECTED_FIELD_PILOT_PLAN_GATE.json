@@ -1,0 +1,24 @@
+{
+  "schema_version": "geox_p53_expected_field_pilot_plan_gate_v1",
+  "field_pilot_plan_gate": {
+    "allowed": true,
+    "reason": "P52 allows P53 planning and the P53 plan sections are complete."
+  },
+  "field_pilot_execution_gate": {
+    "allowed": false,
+    "reason": "P53 is a planning gate only."
+  },
+  "p54_readiness_review_gate": {
+    "allowed": true,
+    "reason": "Plan review can proceed only while execution remains false."
+  },
+  "field_pilot_plan_result": "PLAN_READY_WITH_LIMITATIONS",
+  "field_pilot_plan_allowed": true,
+  "field_pilot_execution_allowed": false,
+  "ao_act_task_creation_allowed": false,
+  "dispatch_allowed": false,
+  "roi_allowed": false,
+  "field_memory_allowed": false,
+  "full_runtime_v1_freeze_allowed": false,
+  "p54_readiness_review_allowed": true
+}

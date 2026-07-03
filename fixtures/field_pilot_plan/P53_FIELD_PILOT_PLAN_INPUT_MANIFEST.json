@@ -1,0 +1,56 @@
+{
+  "schema_version": "geox_p53_field_pilot_plan_input_manifest_v1",
+  "phase": "P53",
+  "task_line": "P53 Controlled Field Pilot Plan Gate v1",
+  "plan_type": "controlled_field_pilot_plan_gate",
+  "baseline_tag": "p52_twin_runtime_health_v1_closure",
+  "baseline_commit": "39bf0e7177219409dddff0481b412df8b71cd8d3",
+  "as_of_ts": "2026-07-03T00:00:00.000Z",
+  "source_refs": {
+    "p52_closure": "docs/twin_runtime_health/GEOX-P52-TWIN-RUNTIME-HEALTH-CLOSURE-REVIEW.json",
+    "p52_evidence_packet": "docs/twin_runtime_health/GEOX-P52-TWIN-RUNTIME-HEALTH-EVIDENCE-PACKET.json",
+    "p52_capability_matrix": "docs/twin_runtime_health/GEOX-P52-TWIN-RUNTIME-HEALTH-CAPABILITY-MATRIX.json",
+    "p52_boundary_policy": "docs/twin_runtime_health/GEOX-P52-TWIN-RUNTIME-HEALTH-BOUNDARY-POLICY.json",
+    "p51_5_closure": "docs/live_evidence_gateway/GEOX-P51-5-DEMO-VIEWER-CLOSURE-REVIEW.json",
+    "p51_5_capability_matrix": "docs/live_evidence_gateway/GEOX-P51-5-DEMO-VIEWER-CAPABILITY-MATRIX.json",
+    "p51_5_snapshot": "apps/web/public/demo-runtime/p51-gateway-viewer-snapshot.json",
+    "p51_closure": "docs/live_evidence_gateway/GEOX-P51-LIVE-EVIDENCE-GATEWAY-CLOSURE-REVIEW.json",
+    "p51_evidence_packet": "docs/live_evidence_gateway/GEOX-P51-LIVE-EVIDENCE-GATEWAY-EVIDENCE-PACKET.json",
+    "p50_evidence_packet": "docs/twin_demo_runtime/GEOX-P50-DEMO-RUNTIME-EVIDENCE-PACKET.json",
+    "control_to_ao_act_non_goals": "docs/controlplane/constitution/GEOX-Control-to-AO-ACT-Instantiation-NonGoals-v0.md"
+  },
+  "required_plan_sections": [
+    "plan_identity",
+    "source_evidence_chain",
+    "candidate_site_scope",
+    "evidence_collection_protocol",
+    "device_gateway_readiness_checklist",
+    "human_role_matrix",
+    "safety_stop_rules",
+    "rollback_plan",
+    "entry_gate",
+    "exit_gate",
+    "go_no_go_gate",
+    "limitation_register",
+    "traceability_packet",
+    "nonclaims_register"
+  ],
+  "fixed_candidate_field_refs": [
+    "field-candidate://p53/demo-field-candidate-001",
+    "field-candidate://p53/demo-field-candidate-002"
+  ],
+  "forbidden_source_prefixes": [
+    "acceptance-output/"
+  ],
+  "expected_result": "PLAN_READY_WITH_LIMITATIONS",
+  "expected_gate": {
+    "field_pilot_plan_allowed": true,
+    "field_pilot_execution_allowed": false,
+    "ao_act_task_creation_allowed": false,
+    "dispatch_allowed": false,
+    "roi_allowed": false,
+    "field_memory_allowed": false,
+    "full_runtime_v1_freeze_allowed": false,
+    "p54_readiness_review_allowed": true
+  }
+}

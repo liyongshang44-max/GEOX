@@ -1,0 +1,37 @@
+{
+  "schema_version": "geox_p53_controlled_field_pilot_plan_gate_evidence_packet_v1",
+  "phase": "P53",
+  "task_line": "P53 Controlled Field Pilot Plan Gate v1",
+  "baseline_tag": "p52_twin_runtime_health_v1_closure",
+  "baseline_commit": "39bf0e7177219409dddff0481b412df8b71cd8d3",
+  "formal_conclusion": "controlled field pilot planning gate proof",
+  "evidence_refs": {
+    "contract_doc": "docs/field_pilot_plan/GEOX-P53-CONTROLLED-FIELD-PILOT-PLAN-GATE-V1.md",
+    "boundary_policy": "docs/field_pilot_plan/GEOX-P53-CONTROLLED-FIELD-PILOT-PLAN-GATE-BOUNDARY-POLICY.json",
+    "capability_matrix": "docs/field_pilot_plan/GEOX-P53-CONTROLLED-FIELD-PILOT-PLAN-GATE-CAPABILITY-MATRIX.json",
+    "input_manifest": "fixtures/field_pilot_plan/P53_FIELD_PILOT_PLAN_INPUT_MANIFEST.json",
+    "expected_report": "fixtures/field_pilot_plan/P53_EXPECTED_FIELD_PILOT_PLAN_REPORT.json",
+    "expected_gate": "fixtures/field_pilot_plan/P53_EXPECTED_FIELD_PILOT_PLAN_GATE.json",
+    "negative_manifest": "fixtures/field_pilot_plan/P53_NEGATIVE_FIXTURE_MANIFEST.json",
+    "runner": "scripts/field_pilot_plan/P53_FIELD_PILOT_PLAN_RUNNER.cjs",
+    "acceptance": "scripts/field_pilot_plan/P53_FIELD_PILOT_PLAN_ACCEPTANCE.cjs"
+  },
+  "hard_source_refs": {
+    "p52_closure": "docs/twin_runtime_health/GEOX-P52-TWIN-RUNTIME-HEALTH-CLOSURE-REVIEW.json",
+    "p52_evidence_packet": "docs/twin_runtime_health/GEOX-P52-TWIN-RUNTIME-HEALTH-EVIDENCE-PACKET.json",
+    "p52_capability_matrix": "docs/twin_runtime_health/GEOX-P52-TWIN-RUNTIME-HEALTH-CAPABILITY-MATRIX.json",
+    "p52_boundary_policy": "docs/twin_runtime_health/GEOX-P52-TWIN-RUNTIME-HEALTH-BOUNDARY-POLICY.json",
+    "p51_5_closure": "docs/live_evidence_gateway/GEOX-P51-5-DEMO-VIEWER-CLOSURE-REVIEW.json",
+    "p51_5_snapshot": "apps/web/public/demo-runtime/p51-gateway-viewer-snapshot.json",
+    "p51_closure": "docs/live_evidence_gateway/GEOX-P51-LIVE-EVIDENCE-GATEWAY-CLOSURE-REVIEW.json",
+    "p51_evidence_packet": "docs/live_evidence_gateway/GEOX-P51-LIVE-EVIDENCE-GATEWAY-EVIDENCE-PACKET.json",
+    "p50_evidence_packet": "docs/twin_demo_runtime/GEOX-P50-DEMO-RUNTIME-EVIDENCE-PACKET.json"
+  },
+  "expected_outputs": {
+    "field_pilot_plan_result": "PLAN_READY_WITH_LIMITATIONS",
+    "field_pilot_plan_allowed": true,
+    "field_pilot_execution_allowed": false,
+    "p54_readiness_review_allowed": true
+  },
+  "completion_status": "implementation_ready_for_review"
+}

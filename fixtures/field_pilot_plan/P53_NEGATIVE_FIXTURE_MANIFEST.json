@@ -1,0 +1,24 @@
+{
+  "schema_version": "geox_p53_negative_fixture_manifest_v1",
+  "phase": "P53",
+  "negative_fixture_refs": [
+    "fixtures/field_pilot_plan/negative/missing_p52_closure.json",
+    "fixtures/field_pilot_plan/negative/p52_plan_not_allowed.json",
+    "fixtures/field_pilot_plan/negative/p52_execution_allowed_true.json",
+    "fixtures/field_pilot_plan/negative/missing_p51_5_snapshot.json",
+    "fixtures/field_pilot_plan/negative/wrong_source_truth_mode.json",
+    "fixtures/field_pilot_plan/negative/real_device_deployment_flag.json",
+    "fixtures/field_pilot_plan/negative/production_gateway_rollout_flag.json",
+    "fixtures/field_pilot_plan/negative/field_execution_flag.json",
+    "fixtures/field_pilot_plan/negative/ao_act_task_flag.json",
+    "fixtures/field_pilot_plan/negative/dispatch_flag.json",
+    "fixtures/field_pilot_plan/negative/roi_flag.json",
+    "fixtures/field_pilot_plan/negative/field_memory_flag.json",
+    "fixtures/field_pilot_plan/negative/full_runtime_freeze_flag.json",
+    "fixtures/field_pilot_plan/negative/missing_human_role_matrix.json",
+    "fixtures/field_pilot_plan/negative/safety_rules_absent.json",
+    "fixtures/field_pilot_plan/negative/traceability_protocol_absent.json",
+    "fixtures/field_pilot_plan/negative/p54_readiness_without_complete_plan.json",
+    "fixtures/field_pilot_plan/negative/candidate_site_real_commitment_flag.json"
+  ]
+}
