@@ -1,0 +1,9 @@
+{
+  "schema_version": "geox_p53_negative_fixture_v1",
+  "scenario_id": "p54_readiness_without_complete_plan",
+  "scenario": "p54_readiness_without_complete_plan",
+  "expected_result_state": "BLOCKED",
+  "field_pilot_plan_allowed": false,
+  "field_pilot_execution_allowed": false,
+  "target_records_created": 0
+}
