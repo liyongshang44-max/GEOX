@@ -13,6 +13,8 @@ const run = (args) => JSON.parse(cp.execFileSync(
 
 const checks = [];
 const check = (name, value) => checks.push([name, Boolean(value)]);
+const checkTrueKeys = (prefix, object, keys) => keys.forEach((key) => check(prefix + '.' + key, object[key] === true));
+const checkFalseKeys = (prefix, object, keys) => keys.forEach((key) => check(prefix + '.' + key, object[key] === false));
 
 const contract = readJson('docs/twin_kernel/P48_END_TO_END_PRODUCTION_TWIN_PILOT_CLOSURE_CONTRACT_V0.json');
 const review = readJson('docs/twin_kernel/P48_END_TO_END_PRODUCTION_TWIN_PILOT_CLOSURE_COMPLETION_REVIEW_V0.json');
@@ -59,178 +61,245 @@ check('baseline_tag', contract.baseline_tag === 'p47_ao_act_from_twin_dispatch_b
 check('baseline_commit', contract.baseline_commit === '6d9b8bd491b275e6be30448fa69c8c1973f2b1be');
 check('p47_final_tag', contract.p47_final_tag === 'p47_ao_act_from_twin_dispatch_boundary_gate_v0');
 check('p47_final_commit', contract.p47_final_commit === 'a06030299c8d55cf46ff483acb278959162b6e76');
-check('p47_completion_required', contract.p47_completion_status_required === 'complete');
-check('p47_closure_required', contract.p47_final_closure_status_required === 'final_tag_main_verified');
-check('p47_closure_identical', contract.p47_closure_tag_main_identical_at_freeze === true);
-check('review_status', review.completion_status === 'implementation_ready_for_review');
-check('review_closure_status', review.final_closure_status === 'not_started');
-check('review_expected_final_tag', review.expected_final_tag === 'p48_end_to_end_production_twin_pilot_closure_gate_v0');
-check('review_expected_closure_tag', review.expected_closure_tag === 'p48_end_to_end_production_twin_pilot_closure_gate_v0_closure');
-check('review_flags', review.final_tag_created === false && review.closure_tag_created === false);
+check('p47_closure_required', contract.p47_completion_status_required === 'complete' && contract.p47_final_closure_status_required === 'final_tag_main_verified' && contract.p47_closure_tag_main_identical_at_freeze === true);
+check('review_complete', review.completion_status === 'complete');
+check('review_final_verified', review.final_closure_status === 'final_tag_main_verified');
+check('review_final_tag', review.final_tag_created === true && review.final_tag === 'p48_end_to_end_production_twin_pilot_closure_gate_v0');
+check('review_final_commit', review.final_commit === '640768fe90444b49cc3a04ca38675f9a08d3a3c3');
+check('review_final_identical', review.final_tag_main_verified === true && review.main_equals_final_tag_at_final_tag_verification === true);
+check('review_closure_pending', review.closure_tag_created === false && review.closure_tag_required_after_closure_patch_merge === true);
+check('review_done_flags', review.merge_required_before_complete === false && review.tag_verification_required_after_merge === false && review.closure_patch_required_after_final_tag === false);
+
 check('allowed_five', Array.isArray(contract.allowed_created_fact_types) && contract.allowed_created_fact_types.length === 5);
+check('allowed_context', contract.allowed_created_fact_types.includes('production_twin_pilot_context_v1'));
+check('allowed_readiness', contract.allowed_created_fact_types.includes('production_twin_pilot_readiness_review_v1'));
+check('allowed_task_readiness', contract.allowed_created_fact_types.includes('controlled_pilot_task_persistence_readiness_v1'));
+check('allowed_traceability', contract.allowed_created_fact_types.includes('production_twin_pilot_traceability_readback_v1'));
+check('allowed_closure_report', contract.allowed_created_fact_types.includes('production_twin_pilot_closure_report_v1'));
 check('forbidden_task', contract.forbidden_created_fact_types.includes('ao_act_task_v0'));
 check('forbidden_receipt', contract.forbidden_created_fact_types.includes('ao_act_receipt_v0'));
-check('forbidden_field_memory', contract.forbidden_created_fact_types.includes('field_memory_record_v1'));
+check('forbidden_machine', contract.forbidden_created_fact_types.includes('machine_dispatch_v1'));
+check('forbidden_effect', contract.forbidden_created_fact_types.includes('effect_attribution_v1'));
+check('forbidden_fm', contract.forbidden_created_fact_types.includes('field_memory_record_v1'));
 check('controlled_ledger', contract.controlled_production_twin_pilot_closure_ledger_v0 === true);
 check('ledger_path', contract.controlled_pilot_closure_ledger_path === 'acceptance-output/P48_CONTROLLED_END_TO_END_PRODUCTION_TWIN_PILOT_CLOSURE_LEDGER.jsonl');
-check('ledger_only_policy', contract.controlled_write_only_writes_controlled_pilot_closure_ledger_v0 === true);
-check('contract_pilot_closure_only', contract.pilot_closure_only === true);
-check('contract_not_rollout', contract.production_twin_pilot_readiness_review_v1_is_not_production_rollout_approval === true);
-check('contract_not_machine_auth', contract.production_twin_pilot_readiness_review_v1_is_not_machine_execution_authorization === true);
-check('contract_not_task', contract.controlled_pilot_task_persistence_readiness_v1_is_not_ao_act_task_v0 === true);
-check('contract_not_persistence', contract.controlled_pilot_task_persistence_readiness_v1_is_not_task_persistence === true);
-check('contract_not_deploy', contract.production_twin_pilot_closure_report_v1_is_not_production_deployment === true);
-check('contract_not_autonomous', contract.production_twin_pilot_closure_report_v1_is_not_autonomous_operation === true);
-check('contract_block_task', contract.p48_must_not_create_ao_act_task_v0 === true);
-check('contract_block_endpoint', contract.p48_must_not_call_control_ao_act_task_endpoint === true);
-check('contract_block_receipt', contract.p48_must_not_create_ao_act_receipt_v0 === true);
-check('contract_block_machine', contract.p48_must_not_dispatch_to_machine === true);
-check('contract_block_roi', contract.p48_must_not_create_roi_realization_v1 === true);
-check('contract_block_effect', contract.p48_must_not_create_effect_attribution_v1 === true);
-check('contract_block_fm', contract.p48_must_not_create_field_memory_record_v1 === true);
-check('contract_block_learning', contract.p48_must_not_create_learning_signal_v1 === true);
+check('ledger_only', contract.controlled_write_only_writes_controlled_pilot_closure_ledger_v0 === true);
+
+checkTrueKeys('contract', contract, [
+  'pilot_closure_only',
+  'production_twin_pilot_readiness_review_v1_is_not_production_rollout_approval',
+  'production_twin_pilot_readiness_review_v1_is_not_machine_execution_authorization',
+  'controlled_pilot_task_persistence_readiness_v1_is_not_ao_act_task_v0',
+  'controlled_pilot_task_persistence_readiness_v1_is_not_task_persistence',
+  'production_twin_pilot_closure_report_v1_is_not_production_deployment',
+  'production_twin_pilot_closure_report_v1_is_not_autonomous_operation',
+  'p48_must_not_create_ao_act_task_v0',
+  'p48_must_not_call_control_ao_act_task_endpoint',
+  'p48_must_not_create_ao_act_receipt_v0',
+  'p48_must_not_dispatch_to_machine',
+  'p48_must_not_create_roi_realization_v1',
+  'p48_must_not_create_effect_attribution_v1',
+  'p48_must_not_create_field_memory_record_v1',
+  'p48_must_not_create_learning_signal_v1'
+]);
 
 check('source_chain_count', sourceChain.required_source_refs.length === 11);
-check('source_chain_hash', sourceChain.source_p37_to_p47_chain_hash_required === true);
-check('source_record_hashes', sourceChain.source_record_set_hashes_required === true);
-check('source_scope_match', sourceChain.tenant_project_group_subject_must_match === true);
-check('source_no_recreate', sourceChain.p48_must_not_recreate_p37_p47_artifacts === true);
-check('source_no_mutate', sourceChain.p48_must_not_mutate_p37_p47_artifacts === true);
-check('source_no_replace', sourceChain.p48_must_not_replace_any_upstream_governance_record === true);
-check('source_missing_blocks', sourceChain.missing_any_required_source_blocks_p48 === true);
-check('source_hash_mismatch_blocks', sourceChain.source_chain_hash_mismatch_blocks_p48 === true);
-check('source_scope_mismatch_blocks', sourceChain.source_scope_mismatch_blocks_p48 === true);
-check('source_manual_payload_blocked', sourceChain.manual_pilot_closure_payload_without_governed_chain_blocked === true);
+checkTrueKeys('sourceChain', sourceChain, [
+  'source_p37_to_p47_chain_hash_required',
+  'source_record_set_hashes_required',
+  'tenant_project_group_subject_must_match',
+  'p48_must_not_recreate_p37_p47_artifacts',
+  'p48_must_not_mutate_p37_p47_artifacts',
+  'p48_must_not_replace_any_upstream_governance_record',
+  'missing_any_required_source_blocks_p48',
+  'source_chain_hash_mismatch_blocks_p48',
+  'source_scope_mismatch_blocks_p48',
+  'manual_pilot_closure_payload_without_governed_chain_blocked'
+]);
 
-check('p46_records_count', sourceP46.required_p46_records.length === 5);
-check('p46_hash_required', sourceP46.source_p46_record_set_hash_required === true);
-check('p46_candidate_required', sourceP46.p46_recommendation_candidate_ref_required === true);
-check('p46_chain_verified', sourceP46.p46_recommendation_governance_chain_verified_required === true);
-check('p46_not_approved', sourceP46.p48_must_not_treat_p46_candidate_as_approved_recommendation === true);
-check('p46_not_dispatch_auth', sourceP46.p48_must_not_treat_p46_governance_review_as_dispatch_authorization === true);
-check('p46_no_create_candidate', sourceP46.p48_must_not_create_recommendation_candidate_from_twin_v1 === true);
-check('p46_missing_blocked', sourceP46.pilot_closure_without_p46_recommendation_governance_blocked === true);
+check('p46_required_count', sourceP46.required_p46_records.length === 5);
+checkTrueKeys('sourceP46', sourceP46, [
+  'source_p46_record_set_hash_required',
+  'p46_recommendation_candidate_ref_required',
+  'p46_recommendation_governance_chain_verified_required',
+  'p48_must_not_treat_p46_candidate_as_approved_recommendation',
+  'p48_must_not_treat_p46_governance_review_as_dispatch_authorization',
+  'p48_must_not_create_recommendation_candidate_from_twin_v1',
+  'pilot_closure_without_p46_recommendation_governance_blocked'
+]);
 
-check('p47_records_count', sourceP47.required_p47_records.length === 5);
-check('p47_hash_required', sourceP47.source_p47_record_set_hash_required === true);
-check('p47_packet_required', sourceP47.p47_task_creation_packet_ref_required === true);
-check('p47_chain_verified', sourceP47.p47_dispatch_boundary_chain_verified_required === true);
-check('p47_packet_not_task', sourceP47.p48_must_not_treat_p47_task_creation_packet_as_ao_act_task === true);
-check('p47_review_not_auth', sourceP47.p48_must_not_treat_p47_dispatch_boundary_review_as_execution_authorization === true);
-check('p47_marker_not_persistence_auth', sourceP47.p48_must_not_treat_p47_future_p48_marker_as_task_persistence_authorization === true);
-check('p47_packet_flags_required', sourceP47.p47_packet_not_ao_act_task_v0_required === true && sourceP47.p47_packet_not_dispatched_required === true && sourceP47.p47_packet_not_executed_required === true);
-check('p47_missing_blocked', sourceP47.pilot_closure_without_p47_dispatch_boundary_blocked === true);
-check('p47_revalidation_blocked', sourceP47.p47_packet_revalidation_failed_blocks_p48 === true);
+check('p47_required_count', sourceP47.required_p47_records.length === 5);
+checkTrueKeys('sourceP47', sourceP47, [
+  'source_p47_record_set_hash_required',
+  'p47_task_creation_packet_ref_required',
+  'p47_dispatch_boundary_chain_verified_required',
+  'p48_must_not_treat_p47_task_creation_packet_as_ao_act_task',
+  'p48_must_not_treat_p47_dispatch_boundary_review_as_execution_authorization',
+  'p48_must_not_treat_p47_future_p48_marker_as_task_persistence_authorization',
+  'p47_packet_not_ao_act_task_v0_required',
+  'p47_packet_not_dispatched_required',
+  'p47_packet_not_executed_required',
+  'pilot_closure_without_p47_dispatch_boundary_blocked',
+  'p47_packet_revalidation_failed_blocks_p48'
+]);
 
-check('scope_ref_required', scope.pilot_scope_policy_ref_required === true);
 check('scope_include_count', scope.pilot_scope_must_include.length === 10);
-check('scope_hash_required', scope.pilot_scope_hash_required === true);
-check('scope_window_start', scope.pilot_window_start_ts_required === true);
-check('scope_window_end', scope.pilot_window_end_ts_required === true);
-check('scope_window_finite', scope.pilot_window_must_be_finite === true);
-check('scope_cross_tenant_blocked', scope.cross_tenant_pilot_closure_blocked === true);
-check('scope_cross_project_blocked', scope.cross_project_pilot_closure_blocked === true);
-check('scope_cross_group_blocked', scope.cross_group_pilot_closure_blocked === true);
-check('scope_expansion_blocked', scope.subject_scope_expansion_blocked === true);
-check('scope_unbounded_blocked', scope.unbounded_pilot_scope_blocked === true);
-check('scope_not_rollout', scope.pilot_scope_is_not_global_rollout === true);
-check('scope_not_autonomous', scope.pilot_scope_is_not_autonomous_operation_scope === true);
-check('scope_not_commercial', scope.pilot_scope_is_not_commercial_deployment_scope === true);
+checkTrueKeys('scope', scope, [
+  'pilot_scope_policy_ref_required',
+  'pilot_scope_hash_required',
+  'pilot_window_start_ts_required',
+  'pilot_window_end_ts_required',
+  'pilot_window_must_be_finite',
+  'cross_tenant_pilot_closure_blocked',
+  'cross_project_pilot_closure_blocked',
+  'cross_group_pilot_closure_blocked',
+  'subject_scope_expansion_blocked',
+  'unbounded_pilot_scope_blocked',
+  'pilot_scope_is_not_global_rollout',
+  'pilot_scope_is_not_autonomous_operation_scope',
+  'pilot_scope_is_not_commercial_deployment_scope'
+]);
 
-check('trace_ref_required', traceability.end_to_end_traceability_policy_ref_required === true);
-check('trace_p37_required', traceability.p37_trace_ref_required === true);
-check('trace_p47_required', traceability.p47_trace_ref_required === true);
-check('trace_hashes_required', traceability.source_record_set_hashes_required === true);
-check('trace_policy_refs_required', traceability.policy_refs_required === true);
-check('trace_human_refs_required', traceability.human_governance_refs_required === true);
-check('trace_report_ref_required', traceability.closure_report_ref_required === true);
-check('trace_incomplete_blocked', traceability.traceability_incomplete_blocks_p48 === true);
-check('trace_hash_mismatch_blocked', traceability.source_hash_mismatch_blocks_p48 === true);
-check('trace_scope_mismatch_blocked', traceability.scope_mismatch_blocks_p48 === true);
-check('trace_not_success', traceability.traceability_complete_is_not_execution_success === true);
-check('trace_not_quality', traceability.traceability_complete_is_not_model_quality_claim === true);
-check('trace_not_roi', traceability.traceability_complete_is_not_roi_claim === true);
-check('trace_not_effect', traceability.traceability_complete_is_not_effect_attribution === true);
+checkTrueKeys('traceability', traceability, [
+  'end_to_end_traceability_policy_ref_required',
+  'p37_trace_ref_required',
+  'p38_trace_ref_required',
+  'p39_trace_ref_required',
+  'p40_trace_ref_required',
+  'p41_trace_ref_required',
+  'p42_trace_ref_required',
+  'p43_trace_ref_required',
+  'p44_trace_ref_required',
+  'p45_trace_ref_required',
+  'p46_trace_ref_required',
+  'p47_trace_ref_required',
+  'source_record_set_hashes_required',
+  'policy_refs_required',
+  'human_governance_refs_required',
+  'closure_report_ref_required',
+  'traceability_incomplete_blocks_p48',
+  'source_hash_mismatch_blocks_p48',
+  'scope_mismatch_blocks_p48',
+  'traceability_complete_is_not_execution_success',
+  'traceability_complete_is_not_model_quality_claim',
+  'traceability_complete_is_not_roi_claim',
+  'traceability_complete_is_not_effect_attribution'
+]);
 
-check('task_readiness_record', taskReadiness.controlled_pilot_task_persistence_readiness_v1_is_readiness_record === true);
-check('task_readiness_not_task', taskReadiness.controlled_pilot_task_persistence_readiness_v1_is_not_ao_act_task_v0 === true);
-check('task_readiness_not_persistence', taskReadiness.controlled_pilot_task_persistence_readiness_v1_is_not_task_persistence === true);
-check('task_readiness_not_machine', taskReadiness.controlled_pilot_task_persistence_readiness_v1_is_not_machine_dispatch === true);
-check('task_readiness_not_execution', taskReadiness.controlled_pilot_task_persistence_readiness_v1_is_not_execution === true);
-check('task_readiness_not_receipt', taskReadiness.controlled_pilot_task_persistence_readiness_v1_is_not_receipt === true);
-check('task_readiness_packet_required', taskReadiness.p47_task_creation_packet_ref_required === true);
-check('task_readiness_p47_flags', taskReadiness.p47_packet_not_ao_act_task_v0_required === true && taskReadiness.p47_packet_not_dispatched_required === true && taskReadiness.p47_packet_not_executed_required === true);
-check('task_readiness_ao_act_revalidation', taskReadiness.ao_act_action_type_allowlist_revalidated === true && taskReadiness.ao_act_target_scope_revalidated === true && taskReadiness.ao_act_time_window_revalidated === true && taskReadiness.ao_act_parameter_schema_revalidated === true && taskReadiness.ao_act_constraints_schema_revalidated === true && taskReadiness.ao_act_forbidden_keys_revalidated === true);
-check('task_readiness_future_human', taskReadiness.human_final_task_persistence_governance_required_for_future_gate === true);
+checkTrueKeys('taskReadiness', taskReadiness, [
+  'controlled_pilot_task_persistence_readiness_v1_is_readiness_record',
+  'controlled_pilot_task_persistence_readiness_v1_is_not_ao_act_task_v0',
+  'controlled_pilot_task_persistence_readiness_v1_is_not_task_persistence',
+  'controlled_pilot_task_persistence_readiness_v1_is_not_machine_dispatch',
+  'controlled_pilot_task_persistence_readiness_v1_is_not_execution',
+  'controlled_pilot_task_persistence_readiness_v1_is_not_receipt',
+  'p47_task_creation_packet_ref_required',
+  'p47_packet_not_ao_act_task_v0_required',
+  'p47_packet_not_dispatched_required',
+  'p47_packet_not_executed_required',
+  'ao_act_action_type_allowlist_revalidated',
+  'ao_act_target_scope_revalidated',
+  'ao_act_time_window_revalidated',
+  'ao_act_parameter_schema_revalidated',
+  'ao_act_constraints_schema_revalidated',
+  'ao_act_forbidden_keys_revalidated',
+  'human_final_task_persistence_governance_required_for_future_gate'
+]);
 
-check('non_auto_ref', nonAuto.pilot_non_autonomous_operation_policy_ref_required === true);
-check('non_auto_human_gate', nonAuto.human_gate_required === true);
-check('non_auto_nonclaims', nonAuto.operation_boundary_nonclaims_required === true);
+checkTrueKeys('nonAuto', nonAuto, ['pilot_non_autonomous_operation_policy_ref_required', 'human_gate_required', 'operation_boundary_nonclaims_required']);
 
-check('closure_report_is_report', closureReport.production_twin_pilot_closure_report_v1_is_end_to_end_pilot_closure_report === true);
-check('closure_not_deploy', closureReport.production_twin_pilot_closure_report_v1_is_not_production_deployment === true);
-check('closure_not_auto', closureReport.production_twin_pilot_closure_report_v1_is_not_autonomous_operation === true);
-check('closure_not_roi', closureReport.production_twin_pilot_closure_report_v1_is_not_roi_report === true);
-check('closure_not_effect', closureReport.production_twin_pilot_closure_report_v1_is_not_effect_attribution === true);
-check('closure_not_fm', closureReport.production_twin_pilot_closure_report_v1_is_not_field_memory === true);
-check('closure_not_learning', closureReport.production_twin_pilot_closure_report_v1_is_not_learning_signal === true);
-check('closure_required_summaries', closureReport.pilot_scope_summary_required === true && closureReport.end_to_end_traceability_summary_required === true && closureReport.runtime_chain_summary_required === true && closureReport.recommendation_chain_summary_required === true && closureReport.dispatch_boundary_summary_required === true && closureReport.task_persistence_readiness_summary_required === true);
-check('closure_required_limits', closureReport.known_limitations_required === true && closureReport.future_work_required_required === true && closureReport.non_autonomous_operation_nonclaims_required === true);
+checkTrueKeys('closureReport', closureReport, [
+  'production_twin_pilot_closure_report_v1_is_end_to_end_pilot_closure_report',
+  'production_twin_pilot_closure_report_v1_is_not_production_deployment',
+  'production_twin_pilot_closure_report_v1_is_not_autonomous_operation',
+  'production_twin_pilot_closure_report_v1_is_not_roi_report',
+  'production_twin_pilot_closure_report_v1_is_not_effect_attribution',
+  'production_twin_pilot_closure_report_v1_is_not_field_memory',
+  'production_twin_pilot_closure_report_v1_is_not_learning_signal',
+  'pilot_scope_summary_required',
+  'end_to_end_traceability_summary_required',
+  'runtime_chain_summary_required',
+  'recommendation_chain_summary_required',
+  'dispatch_boundary_summary_required',
+  'task_persistence_readiness_summary_required',
+  'known_limitations_required',
+  'future_work_required_required',
+  'non_autonomous_operation_nonclaims_required'
+]);
 
-check('future_input_marker', future.eligible_as_future_post_pilot_input_ref === true);
-check('future_not_deployment', future.future_post_pilot_input_ref_is_not_production_deployment === true);
-check('future_not_task', future.future_post_pilot_input_ref_is_not_ao_act_task === true);
-check('future_not_machine', future.future_post_pilot_input_ref_is_not_machine_dispatch === true);
-check('future_not_execution', future.future_post_pilot_input_ref_is_not_execution === true);
-check('future_revalidate', future.future_post_pilot_gate_must_revalidate_all_p48_records === true);
-check('future_policy_human', future.future_post_pilot_gate_must_require_explicit_policy === true && future.future_post_pilot_gate_must_require_human_governance === true);
+checkTrueKeys('future', future, [
+  'eligible_as_future_post_pilot_input_ref',
+  'future_post_pilot_input_ref_is_not_production_deployment',
+  'future_post_pilot_input_ref_is_not_ao_act_task',
+  'future_post_pilot_input_ref_is_not_machine_dispatch',
+  'future_post_pilot_input_ref_is_not_execution',
+  'future_post_pilot_gate_must_revalidate_all_p48_records',
+  'future_post_pilot_gate_must_require_explicit_policy',
+  'future_post_pilot_gate_must_require_human_governance'
+]);
 
-check('idempotency_key_required', idempotency.idempotency_key_required === true);
-check('idempotency_scope_hash_required', idempotency.production_twin_pilot_closure_scope_hash_required === true);
 check('idempotency_domain_count', idempotency.production_twin_pilot_closure_scope_hash_domain.length === 19);
-check('idempotency_duplicate_blocked', idempotency.same_upstream_chain_same_pilot_scope_duplicate_closure_blocked === true);
-check('idempotency_context_change_blocked', idempotency.changed_context_payload_same_scope_blocked === true);
-check('idempotency_readiness_change_blocked', idempotency.changed_readiness_payload_same_scope_blocked === true);
-check('idempotency_task_readiness_change_blocked', idempotency.changed_task_readiness_payload_same_scope_blocked === true);
-check('idempotency_trace_change_blocked', idempotency.changed_traceability_payload_same_scope_blocked === true);
-check('idempotency_report_change_blocked', idempotency.changed_closure_report_payload_same_scope_blocked === true);
+checkTrueKeys('idempotency', idempotency, [
+  'idempotency_key_required',
+  'production_twin_pilot_closure_scope_hash_required',
+  'same_upstream_chain_same_pilot_scope_duplicate_closure_blocked',
+  'changed_context_payload_same_scope_blocked',
+  'changed_readiness_payload_same_scope_blocked',
+  'changed_task_readiness_payload_same_scope_blocked',
+  'changed_traceability_payload_same_scope_blocked',
+  'changed_closure_report_payload_same_scope_blocked'
+]);
 
-check('det_hash_required', determinism.determinism_hash_required === true);
-check('det_same_sources', determinism.same_p37_to_p47_sources_same_policy_must_produce_same_pilot_closure_hash === true);
-check('det_asof_required', determinism.as_of_ts_required === true);
-check('det_no_now', determinism.implicit_now_for_hashing_forbidden === true);
-check('det_no_latest_forecast', determinism.implicit_latest_forecast_lookup_forbidden === true);
-check('det_no_latest_recommendation', determinism.implicit_latest_recommendation_lookup_forbidden === true);
-check('det_no_latest_packet', determinism.implicit_latest_dispatch_packet_lookup_forbidden === true);
-check('det_no_latest_task', determinism.implicit_latest_ao_act_task_lookup_forbidden === true);
-check('det_no_roi', determinism.implicit_roi_lookup_forbidden === true);
-check('det_no_effect', determinism.implicit_effect_lookup_forbidden === true);
-check('det_no_fm', determinism.implicit_field_memory_lookup_forbidden === true);
-check('det_sorted_refs', determinism.source_refs_must_be_sorted_deterministically === true && determinism.policy_refs_must_be_sorted_deterministically === true);
+checkTrueKeys('determinism', determinism, [
+  'determinism_hash_required',
+  'same_p37_to_p47_sources_same_policy_must_produce_same_pilot_closure_hash',
+  'as_of_ts_required',
+  'implicit_now_for_hashing_forbidden',
+  'implicit_latest_forecast_lookup_forbidden',
+  'implicit_latest_recommendation_lookup_forbidden',
+  'implicit_latest_dispatch_packet_lookup_forbidden',
+  'implicit_latest_ao_act_task_lookup_forbidden',
+  'implicit_roi_lookup_forbidden',
+  'implicit_effect_lookup_forbidden',
+  'implicit_field_memory_lookup_forbidden',
+  'source_refs_must_be_sorted_deterministically',
+  'policy_refs_must_be_sorted_deterministically'
+]);
 
-check('chain_context', chain.production_twin_pilot_context_chain_hash_required === true);
-check('chain_readiness', chain.production_twin_pilot_readiness_review_chain_hash_required === true);
-check('chain_task_readiness', chain.controlled_pilot_task_persistence_readiness_chain_hash_required === true);
-check('chain_traceability', chain.production_twin_pilot_traceability_readback_chain_hash_required === true);
-check('chain_closure', chain.production_twin_pilot_closure_report_chain_hash_required === true);
-check('chain_no_mutate_context', chain.previous_production_twin_pilot_context_payload_must_not_be_mutated === true);
-check('chain_no_mutate_report', chain.previous_production_twin_pilot_closure_report_payload_must_not_be_mutated === true);
+checkTrueKeys('chain', chain, [
+  'production_twin_pilot_context_chain_hash_required',
+  'previous_production_twin_pilot_context_payload_must_not_be_mutated',
+  'production_twin_pilot_readiness_review_chain_hash_required',
+  'previous_production_twin_pilot_readiness_review_payload_must_not_be_mutated',
+  'controlled_pilot_task_persistence_readiness_chain_hash_required',
+  'previous_controlled_pilot_task_persistence_readiness_payload_must_not_be_mutated',
+  'production_twin_pilot_traceability_readback_chain_hash_required',
+  'previous_production_twin_pilot_traceability_readback_payload_must_not_be_mutated',
+  'production_twin_pilot_closure_report_chain_hash_required',
+  'previous_production_twin_pilot_closure_report_payload_must_not_be_mutated'
+]);
 
-check('no_task_policy', noDownstream.ao_act_task_v0_created === false);
-check('no_receipt_policy', noDownstream.ao_act_receipt_v0_created === false);
-check('no_machine_policy', noDownstream.machine_dispatch_created === false);
-check('no_execution_policy', noDownstream.execution_created === false);
-check('no_operator_policy', noDownstream.operator_instruction_v1_created === false);
-check('no_rollout_policy', noDownstream.production_rollout_created === false);
-check('no_autonomous_policy', noDownstream.autonomous_operation_created === false);
-check('no_commercial_policy', noDownstream.commercial_deployment_created === false);
-check('no_roi_policy', noDownstream.roi_realization_v1_created === false);
-check('no_effect_policy', noDownstream.effect_attribution_v1_created === false);
-check('no_fm_policy', noDownstream.field_memory_record_v1_created === false);
-check('no_learning_policy', noDownstream.learning_signal_v1_created === false);
-check('no_endpoint_policy', noDownstream.control_ao_act_task_endpoint_called === false);
-check('forbidden_zero_policy', noDownstream.forbidden_downstream_fact_count_required_zero === true);
-check('forbidden_claims_policy', noDownstream.forbidden_claims.includes('field_memory_committed') && noDownstream.forbidden_claims.includes('learning_signal_created'));
+checkFalseKeys('noDownstream', noDownstream, [
+  'ao_act_task_v0_created',
+  'ao_act_receipt_v0_created',
+  'machine_dispatch_created',
+  'execution_created',
+  'operator_instruction_v1_created',
+  'operation_plan_v1_created',
+  'next_action_v1_created',
+  'production_rollout_created',
+  'autonomous_operation_created',
+  'commercial_deployment_created',
+  'roi_realization_v1_created',
+  'effect_attribution_v1_created',
+  'field_memory_candidate_v1_created',
+  'field_memory_record_v1_created',
+  'training_run_v1_created',
+  'learning_signal_v1_created',
+  'control_ao_act_task_endpoint_called'
+]);
+check('noDownstream.zero_required', noDownstream.forbidden_downstream_fact_count_required_zero === true);
+check('noDownstream.claims', noDownstream.forbidden_claims.includes('field_memory_committed') && noDownstream.forbidden_claims.includes('learning_signal_created'));
 
 for (const schema of schemas) {
   check('schema_core_' + schema.object_type, Array.isArray(schema.required_fields) && schema.required_fields.includes('determinism_hash') && schema.required_fields.includes('idempotency_key') && schema.required_fields.some((field) => field.endsWith('chain_hash')));
