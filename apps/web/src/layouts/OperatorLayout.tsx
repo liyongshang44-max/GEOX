@@ -25,19 +25,19 @@ const OPERATOR_NAV_ITEMS: OperatorNavItem[] = [
     key: "twin",
     label: "Twin 总览",
     to: "/operator/twin",
-    hint: "查看田块状态、判断置信度与数据缺口。",
+    hint: "查看需要预测分析的田块、低置信判断与数据缺口。",
   },
   {
     key: "production-workflow",
     label: "生产工作流",
     to: "/operator/twin/production-workflow",
-    hint: "显式接入生产来源引用，并由操作员推进 formalization；不自动执行。",
+    hint: "显式接入生产来源引用，并由操作员推进 formalization；不自动派单。",
   },
   {
     key: "gateway-demo",
     label: "Gateway Demo",
     to: "/operator/twin/gateway-demo",
-    hint: "展示 P51 gateway-backed snapshot；只读，不接真实设备，不执行。",
+    hint: "展示 P51 gateway-backed snapshot；只读，不接真实设备，不派单。",
   },
   {
     key: "forecast",
@@ -86,7 +86,7 @@ function resolveTitle(pathname: string): string {
 
 function resolveLead(pathname: string): string {
   if (pathname === "/operator/twin") return "查看田块状态、预测缺口、低置信判断与人工确认入口。";
-  if (pathname === "/operator/twin/production-workflow") return "接入生产来源引用，并由操作员显式推进 session、review 与 formalization。";
+  if (pathname === "/operator/twin/production-workflow") return "接入生产来源引用，并由操作员显式推进 session、review、ROI 与 Field Memory formalization。";
   if (pathname === "/operator/twin/gateway-demo") return "只读展示 P51 gateway-backed snapshot：device-path simulation、标准映射、去重、clock skew、ingestion window 与 traceability。";
   if (pathname.startsWith("/operator/twin/fields/")) return "按事实、估计、预测、情景分层查看单地块数字孪生状态。";
   return "操作员侧用于分析、复核和人工确认，不承担客户报告或后台治理职责。";
@@ -141,7 +141,7 @@ export default function OperatorLayout({
         </div>
 
         <div className="customerShellFooterNote">
-          情景只能进入建议、审批和人工确认链路，不能直接形成作业输出。
+          情景只能进入建议、审批和人工确认链路，不能直接变成正式任务。
         </div>
       </aside>
 
