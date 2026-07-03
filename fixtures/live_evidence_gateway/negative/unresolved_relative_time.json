@@ -2,6 +2,6 @@
   "case_id": "unresolved_relative_time",
   "expected_error": "RELATIVE_TIME_UNRESOLVED",
   "pack": [
-    { "bn": "urn:geox:p51:device:gw_soil_001:", "bt": "relative", "bu": "%", "n": "soil_moisture", "v": 23.1, "t": 60 }
+    { "bn": "urn:geox:p51:device:gw_soil_001:", "bt": 1769904000, "bu": "%", "n": "soil_moisture", "v": 23.1, "t": "relative" }
   ]
 }
