@@ -1,0 +1,7 @@
+{
+  "schema_version": "geox_p52_negative_fixture_v1",
+  "scenario_id": "stale_p50_completion_only",
+  "expected_result_state": "BLOCKED",
+  "target_records_created": 0,
+  "scenario": "p50_review_only_path"
+}
