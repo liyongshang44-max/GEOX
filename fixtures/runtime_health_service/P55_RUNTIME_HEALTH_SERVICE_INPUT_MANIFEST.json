@@ -1,0 +1,33 @@
+{
+  "schema_version": "geox_p55_runtime_health_service_input_manifest_v1",
+  "phase": "P55",
+  "task_line": "P55 Controlled Runtime Health Service Gate v1",
+  "baseline_tag": "p54_field_pilot_readiness_review_gate_v1_closure",
+  "baseline_commit": "62f3d03ff793f218c8e10485b6d99547a7b98d9e",
+  "runtime_health_service_mode": "replay_backed_production_demo",
+  "as_of_ts": "2026-07-03T00:00:00.000Z",
+  "time_fence_enforced": true,
+  "gateway_backed_snapshot_used": true,
+  "source_refs": {
+    "p54_closure": "docs/field_pilot_readiness/GEOX-P54-FIELD-PILOT-READINESS-REVIEW-GATE-CLOSURE-REVIEW.json",
+    "p54_evidence_packet": "docs/field_pilot_readiness/GEOX-P54-FIELD-PILOT-READINESS-REVIEW-GATE-EVIDENCE-PACKET.json",
+    "p54_capability_matrix": "docs/field_pilot_readiness/GEOX-P54-FIELD-PILOT-READINESS-REVIEW-GATE-CAPABILITY-MATRIX.json",
+    "p54_boundary_policy": "docs/field_pilot_readiness/GEOX-P54-FIELD-PILOT-READINESS-REVIEW-GATE-BOUNDARY-POLICY.json",
+    "p51_5_snapshot": "apps/web/public/demo-runtime/p51-gateway-viewer-snapshot.json",
+    "p52_closure": "docs/twin_runtime_health/GEOX-P52-TWIN-RUNTIME-HEALTH-CLOSURE-REVIEW.json",
+    "control_to_ao_act_non_goals": "docs/controlplane/constitution/GEOX-Control-to-AO-ACT-Instantiation-NonGoals-v0.md"
+  },
+  "expected_dimension_ids": ["H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "H9", "H10", "H11", "H12"],
+  "expected_route": {
+    "method": "GET",
+    "path": "/api/v1/runtime-health/service-gate"
+  },
+  "expected_result": "REPLAY_BACKED_RUNTIME_HEALTH_SERVICE_GATE_READY_WITH_LIMITATIONS",
+  "expected_gate": {
+    "p56_replay_gate_allowed": true,
+    "p56_gate_mode": "replay_authorization_only",
+    "field_pilot_execution_allowed": false,
+    "real_device_execution_allowed": false,
+    "full_runtime_v1_freeze_allowed": false
+  }
+}

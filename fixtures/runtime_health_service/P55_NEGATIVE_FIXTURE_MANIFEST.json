@@ -1,0 +1,29 @@
+{
+  "schema_version": "geox_p55_negative_fixture_manifest_v1",
+  "phase": "P55",
+  "negative_fixture_count": 22,
+  "fixtures": [
+    { "scenario_id": "missing_p54_closure", "mutation": "remove:p54_closure" },
+    { "scenario_id": "p54_acceptance_failed", "mutation": "set:p54_failed_assertion_count=1" },
+    { "scenario_id": "p54_p55_gate_false", "mutation": "set:p54_p55_gate=false" },
+    { "scenario_id": "wrong_mode_live", "mutation": "set:mode=live_device_production_runtime" },
+    { "scenario_id": "time_fence_false", "mutation": "set:time_fence=false" },
+    { "scenario_id": "snapshot_not_used", "mutation": "set:snapshot=false" },
+    { "scenario_id": "source_truth_wrong", "mutation": "set:source_truth=live_device" },
+    { "scenario_id": "real_device_flag", "mutation": "set:real_device_deployed=true" },
+    { "scenario_id": "live_device_flag", "mutation": "set:live_device_claimed=true" },
+    { "scenario_id": "live_monitoring_flag", "mutation": "set:live_runtime_monitoring_active=true" },
+    { "scenario_id": "production_gateway_flag", "mutation": "set:production_gateway_online=true" },
+    { "scenario_id": "field_execution_flag", "mutation": "set:field_pilot_execution_allowed=true" },
+    { "scenario_id": "real_execution_flag", "mutation": "set:real_device_execution_allowed=true" },
+    { "scenario_id": "ao_act_flag", "mutation": "set:ao_act_task_creation_allowed=true" },
+    { "scenario_id": "dispatch_flag", "mutation": "set:dispatch_allowed=true" },
+    { "scenario_id": "roi_flag", "mutation": "set:roi_allowed=true" },
+    { "scenario_id": "field_memory_flag", "mutation": "set:field_memory_allowed=true" },
+    { "scenario_id": "full_freeze_flag", "mutation": "set:full_runtime_v1_freeze_allowed=true" },
+    { "scenario_id": "route_post_declared", "mutation": "set:route_method=POST" },
+    { "scenario_id": "route_write_declared", "mutation": "set:route_read_only=false" },
+    { "scenario_id": "db_write_declared", "mutation": "set:db_write_allowed=true" },
+    { "scenario_id": "forbidden_record_type", "mutation": "add:ao_act_task_v0" }
+  ]
+}

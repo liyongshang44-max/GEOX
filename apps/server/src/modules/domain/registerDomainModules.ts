@@ -19,6 +19,7 @@ import { registerJudgeModule } from "../judge/registerJudgeModule.js";
 import { registerFieldMemoryModule } from "../field_memory/registerFieldMemoryModule.js";
 import { registerOperatorModule } from "../operator/registerOperatorModule.js";
 import { registerTwinKernelModule } from "../twin_kernel/registerTwinKernelModule.js";
+import { registerRuntimeHealthModule } from "../runtime_health/registerRuntimeHealthModule.js";
 
 type RegisterDomainModulesOptions = {
   mediaDir: string;
@@ -43,4 +44,5 @@ export function registerDomainModules(app: FastifyInstance, pool: Pool, options:
   registerRoiLedgerModule(app, pool);
   registerOperatorModule(app, pool);
   registerTwinKernelModule(app, pool);
+  registerRuntimeHealthModule(app);
 }
