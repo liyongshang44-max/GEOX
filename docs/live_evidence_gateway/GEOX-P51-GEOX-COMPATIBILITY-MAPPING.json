@@ -1,0 +1,46 @@
+{
+  "schema_version": "geox_p51_geox_compatibility_mapping_v1",
+  "phase": "P51",
+  "raw_sample_source_enum_note": "current GEOX source enum includes device, gateway, system, human, import, sim; P51 uses gateway only",
+  "raw_sample_fact_envelope_v1": {
+    "sample_id": "deterministic sample id",
+    "sensor_id": "device_id",
+    "group_id": "manifest.group_id",
+    "project_id": "manifest.project_id",
+    "field_id": "manifest.field_id",
+    "ts_ms": "resolved observed timestamp ms",
+    "metric": "canonical metric",
+    "value": "canonical numeric value",
+    "unit": "canonical unit",
+    "qc_quality": "ok or suspect",
+    "source": "gateway",
+    "payload_json": "standards mapping pointers",
+    "fact_id": "deterministic fact id",
+    "interpolated": false,
+    "synthetic": false
+  },
+  "device_observation_v1": {
+    "type": "device_observation_v1",
+    "schema_version": "1.0.0",
+    "tenant_id": "manifest.tenant_id",
+    "project_id": "manifest.project_id",
+    "group_id": "manifest.group_id",
+    "field_id": "manifest.field_id",
+    "device_id": "device_id",
+    "observed_at": "resolved observed timestamp ISO",
+    "ingested_at": "manifest.ingested_at",
+    "metric_key": "canonical metric",
+    "metric_value": "canonical numeric value",
+    "metric_unit": "canonical unit",
+    "confidence": "gateway confidence number",
+    "quality_flags": "gateway quality flags",
+    "explanation_codes": "mapping explanation codes"
+  },
+  "metric_catalog_snapshot": {
+    "soil_moisture": { "unit": "%VWC", "aliases": ["%", "VWC%"], "min": 0, "max": 100 },
+    "soil_temperature": { "unit": "°C", "aliases": ["C", "celsius", "℃"], "min": -40, "max": 85 },
+    "air_temperature": { "unit": "°C", "aliases": ["C", "celsius"], "min": -40, "max": 85 },
+    "air_humidity": { "unit": "%RH", "aliases": ["%", "RH%"], "min": 0, "max": 100 },
+    "water_pressure": { "unit": "kPa", "aliases": ["kpa", "KPA", "kilopascal"], "min": 0, "max": 1600 }
+  }
+}
