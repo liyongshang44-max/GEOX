@@ -9,7 +9,7 @@
   "device_count": 2,
   "metric_count": 5,
   "health_envelope_count": 2,
-  "observation_count": 20,
+  "observation_count": 21,
   "required_sections": [
     "gateway_scope",
     "observation_summary",
