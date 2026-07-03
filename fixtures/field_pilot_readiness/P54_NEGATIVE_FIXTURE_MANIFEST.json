@@ -12,14 +12,14 @@
     "fixtures/field_pilot_readiness/negative/p53_field_memory_allowed_true.json",
     "fixtures/field_pilot_readiness/negative/p53_full_freeze_allowed_true.json",
     "fixtures/field_pilot_readiness/negative/p53_real_site_selected_true.json",
-    "fixtures/field_pilot_readiness/negative/p53_field_owner_committed_true.json",
+    "fixtures/field_pilot_readiness/negative/site_commitment_flag.json",
     "fixtures/field_pilot_readiness/negative/p53_operation_scheduled_true.json",
     "fixtures/field_pilot_readiness/negative/human_role_matrix_absent.json",
     "fixtures/field_pilot_readiness/negative/safety_rules_absent.json",
     "fixtures/field_pilot_readiness/negative/rollback_plan_absent.json",
     "fixtures/field_pilot_readiness/negative/traceability_packet_absent.json",
     "fixtures/field_pilot_readiness/negative/control_boundary_absent.json",
-    "fixtures/field_pilot_readiness/negative/runtime_service_claim_flag.json",
+    "fixtures/field_pilot_readiness/negative/p55_claim_flag.json",
     "fixtures/field_pilot_readiness/negative/execution_claim_flag.json",
     "fixtures/field_pilot_readiness/negative/full_freeze_claim_flag.json"
   ]
