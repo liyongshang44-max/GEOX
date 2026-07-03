@@ -1,0 +1,31 @@
+{
+  "schema_version": "geox_p56_replay_execution_authorization_gate_evidence_packet_v1",
+  "phase": "P56",
+  "task_line": "P56 Controlled Replay Execution Authorization Gate v1",
+  "baseline_tag": "p55_runtime_health_service_gate_v1_closure",
+  "baseline_commit": "10e45c72a171ca3ebd5bc62edd03da675b14a39f",
+  "formal_conclusion": "controlled replay execution authorization gate proof",
+  "evidence_refs": {
+    "contract_doc": "docs/replay_execution_gate/GEOX-P56-REPLAY-EXECUTION-AUTHORIZATION-GATE-V1.md",
+    "boundary_policy": "docs/replay_execution_gate/GEOX-P56-REPLAY-EXECUTION-AUTHORIZATION-GATE-BOUNDARY-POLICY.json",
+    "capability_matrix": "docs/replay_execution_gate/GEOX-P56-REPLAY-EXECUTION-AUTHORIZATION-GATE-CAPABILITY-MATRIX.json",
+    "input_manifest": "fixtures/replay_execution_gate/P56_REPLAY_EXECUTION_GATE_INPUT_MANIFEST.json",
+    "expected_report": "fixtures/replay_execution_gate/P56_EXPECTED_REPLAY_EXECUTION_GATE_REPORT.json",
+    "expected_gate": "fixtures/replay_execution_gate/P56_EXPECTED_REPLAY_EXECUTION_GATE.json",
+    "negative_manifest": "fixtures/replay_execution_gate/P56_NEGATIVE_FIXTURE_MANIFEST.json",
+    "runner": "scripts/replay_execution_gate/P56_REPLAY_EXECUTION_GATE_RUNNER.cjs",
+    "acceptance": "scripts/replay_execution_gate/P56_REPLAY_EXECUTION_GATE_ACCEPTANCE.cjs"
+  },
+  "hard_source_refs": {
+    "p55_closure": "docs/runtime_health_service/GEOX-P55-RUNTIME-HEALTH-SERVICE-GATE-CLOSURE-REVIEW.json",
+    "p55_evidence_packet": "docs/runtime_health_service/GEOX-P55-RUNTIME-HEALTH-SERVICE-GATE-EVIDENCE-PACKET.json",
+    "p55_capability_matrix": "docs/runtime_health_service/GEOX-P55-RUNTIME-HEALTH-SERVICE-GATE-CAPABILITY-MATRIX.json",
+    "p55_boundary_policy": "docs/runtime_health_service/GEOX-P55-RUNTIME-HEALTH-SERVICE-GATE-BOUNDARY-POLICY.json",
+    "p54_closure": "docs/field_pilot_readiness/GEOX-P54-FIELD-PILOT-READINESS-REVIEW-GATE-CLOSURE-REVIEW.json",
+    "p53_closure": "docs/field_pilot_plan/GEOX-P53-CONTROLLED-FIELD-PILOT-PLAN-GATE-CLOSURE-REVIEW.json",
+    "p52_closure": "docs/twin_runtime_health/GEOX-P52-TWIN-RUNTIME-HEALTH-CLOSURE-REVIEW.json",
+    "p51_5_snapshot": "apps/web/public/demo-runtime/p51-gateway-viewer-snapshot.json",
+    "control_to_ao_act_non_goals": "docs/controlplane/constitution/GEOX-Control-to-AO-ACT-Instantiation-NonGoals-v0.md"
+  },
+  "completion_status": "implementation_ready_for_review"
+}
