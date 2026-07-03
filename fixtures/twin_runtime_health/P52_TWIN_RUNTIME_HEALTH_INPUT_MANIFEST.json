@@ -1,0 +1,39 @@
+{
+  "schema_version": "geox_p52_twin_runtime_health_input_manifest_v1",
+  "phase": "P52",
+  "baseline_tag": "p51_5_gateway_backed_twin_demo_viewer_v0_closure",
+  "baseline_commit": "e764c0f36fbf50dfecf5de2ac8ce9dd2367eecd9",
+  "as_of_ts": "2026-07-03T00:00:00.000Z",
+  "source_refs": {
+    "p50_closure": "docs/twin_demo_runtime/P50-CLOSURE.md",
+    "p50_completion_review": "docs/twin_demo_runtime/GEOX-P50-DEMO-RUNTIME-COMPLETION-REVIEW.json",
+    "p50_evidence_packet": "docs/twin_demo_runtime/GEOX-P50-DEMO-RUNTIME-EVIDENCE-PACKET.json",
+    "p51_closure": "docs/live_evidence_gateway/GEOX-P51-LIVE-EVIDENCE-GATEWAY-CLOSURE-REVIEW.json",
+    "p51_evidence_packet": "docs/live_evidence_gateway/GEOX-P51-LIVE-EVIDENCE-GATEWAY-EVIDENCE-PACKET.json",
+    "p51_5_closure": "docs/live_evidence_gateway/GEOX-P51-5-DEMO-VIEWER-CLOSURE-REVIEW.json",
+    "p51_5_snapshot": "apps/web/public/demo-runtime/p51-gateway-viewer-snapshot.json"
+  },
+  "health_dimensions": [
+    "H1 baseline_integrity_health",
+    "H2 p50_runtime_chain_health",
+    "H3 p51_gateway_path_health",
+    "H4 p51_5_viewer_snapshot_health",
+    "H5 source_truth_boundary_health",
+    "H6 traceability_health",
+    "H7 deterministic_hash_health",
+    "H8 timing_order_health",
+    "H9 gateway_clock_skew_health",
+    "H10 duplicate_handling_health",
+    "H11 device_evidence_health_scope_boundary",
+    "H12 no_downstream_creation_health",
+    "H13 p53_planning_readiness_health"
+  ],
+  "allowed_record_type_prefix": "p52_twin_runtime_health_",
+  "expected_result": "READY_WITH_WARNINGS",
+  "expected_gate": {
+    "p53_field_pilot_plan_allowed": true,
+    "field_pilot_execution_allowed": false,
+    "production_runtime_monitoring_enabled": false,
+    "full_runtime_v1_freeze_allowed": false
+  }
+}
