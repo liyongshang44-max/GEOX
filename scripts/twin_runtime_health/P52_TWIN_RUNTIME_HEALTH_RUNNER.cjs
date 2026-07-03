@@ -33,8 +33,12 @@ function sha(value) {
   return crypto.createHash('sha256').update(stable(value)).digest('hex');
 }
 
+function resolvePath(filePath) {
+  return path.isAbsolute(filePath) ? filePath : path.join(process.cwd(), filePath);
+}
+
 function readText(filePath) {
-  return fs.readFileSync(path.join(process.cwd(), filePath), 'utf8');
+  return fs.readFileSync(resolvePath(filePath), 'utf8');
 }
 
 function readJson(filePath) {
@@ -42,7 +46,7 @@ function readJson(filePath) {
 }
 
 function exists(filePath) {
-  return fs.existsSync(path.join(process.cwd(), filePath));
+  return fs.existsSync(resolvePath(filePath));
 }
 
 function parseP50Closure(text) {
@@ -101,7 +105,7 @@ function evaluate(manifest, source) {
   rows.push(dim('H1', 'baseline_integrity_health', manifest.baseline_tag === 'p51_5_gateway_backed_twin_demo_viewer_v0_closure' && manifest.baseline_commit === 'e764c0f36fbf50dfecf5de2ac8ce9dd2367eecd9' ? 'OK' : 'BLOCKED', 'P52 baseline must match the P51.5 closure tag and commit.', [manifest.baseline_tag]));
   rows.push(dim('H2', 'p50_runtime_chain_health', source.present.p50_closure && source.p50_closure?.assertion_count === 146 && source.p50_closure?.failed_assertion_count === 0 && source.present.p50_evidence_packet ? 'OK' : 'BLOCKED', 'P50 requires P50-CLOSURE.md with acceptance 146/0; completion review alone is insufficient.', [source.refs.p50_closure, source.refs.p50_completion_review, source.refs.p50_evidence_packet]));
   rows.push(dim('H3', 'p51_gateway_path_health', source.p51_closure?.acceptance?.assertion_count === 151 && source.p51_closure?.acceptance?.failed_assertion_count === 0 ? 'OK' : 'BLOCKED', 'P51 closure must preserve acceptance 151/0.', [source.refs.p51_closure, source.refs.p51_evidence_packet]));
-  rows.push(dim('H4', 'p51_5_viewer_snapshot_health', source.p51_5_closure?.acceptance?.assertion_count === 57 && source.p51_5_closure?.acceptance?.failed_assertion_count === 0 && source.present.p51_5_snapshot ? 'OK' : 'BLOCKED', 'P51.5 closure and checked-in snapshot must be present.', [source.refs.p51_5_closure, source.refs.p51_5_snapshot]));
+  rows.push(dim('H4', 'p51_5_viewer_snapshot_health', source.p51_5_closure?.acceptance?.assertion_count === 57 && source.p51_5_closure?.acceptance?.failed_assertion_count === 0 && source.present.p51_5_snapshot && Array.isArray(snapshot?.nonclaims) && snapshot.nonclaims.length >= 8 ? 'OK' : 'BLOCKED', 'P51.5 closure and checked-in snapshot must be present.', [source.refs.p51_5_closure, source.refs.p51_5_snapshot]));
   rows.push(dim('H5', 'source_truth_boundary_health', snapshot?.identity?.source_truth_mode === 'device_path_simulation' && source.p50_evidence_packet?.source_truth_mode === 'historical_replay' ? 'OK' : 'BLOCKED', 'P50 remains historical replay and P51.5 remains device-path simulation.', [source.refs.p50_evidence_packet, source.refs.p51_5_snapshot]));
   rows.push(dim('H6', 'traceability_health', snapshot?.traceability_readback?.trace_count === 21 ? 'OK' : 'BLOCKED', 'Traceability readback must preserve 21 accepted gateway traces.', [source.refs.p51_5_snapshot]));
   rows.push(dim('H7', 'deterministic_hash_health', Boolean(source.p50_closure?.deterministic_hash && source.p51_closure?.acceptance?.deterministic_hash && snapshot?.hashes && Object.keys(snapshot.hashes).length >= 8) ? 'OK' : 'BLOCKED', 'P50, P51, and P51.5 hashes must remain available.', [source.refs.p50_closure, source.refs.p51_closure, source.refs.p51_5_snapshot]));
