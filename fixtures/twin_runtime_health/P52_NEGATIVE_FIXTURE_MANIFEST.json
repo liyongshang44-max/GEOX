@@ -1,0 +1,15 @@
+{
+  "schema_version": "geox_p52_negative_fixture_manifest_v1",
+  "phase": "P52",
+  "negative_fixture_refs": [
+    "fixtures/twin_runtime_health/negative/missing_p51_5_snapshot.json",
+    "fixtures/twin_runtime_health/negative/wrong_source_truth_mode.json",
+    "fixtures/twin_runtime_health/negative/missing_traceability.json",
+    "fixtures/twin_runtime_health/negative/missing_nonclaims.json",
+    "fixtures/twin_runtime_health/negative/production_runtime_claim.json",
+    "fixtures/twin_runtime_health/negative/field_pilot_execution_claim.json",
+    "fixtures/twin_runtime_health/negative/ao_act_claim.json",
+    "fixtures/twin_runtime_health/negative/full_runtime_freeze_claim.json",
+    "fixtures/twin_runtime_health/negative/stale_p50_completion_only.json"
+  ]
+}
