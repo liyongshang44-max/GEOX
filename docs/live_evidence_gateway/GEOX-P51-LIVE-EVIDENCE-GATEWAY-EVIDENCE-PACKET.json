@@ -11,6 +11,7 @@
     "adapter_contract": "docs/live_evidence_gateway/GEOX-P51-DEVICE-ADAPTER-CONTRACT.json",
     "boundary_policy": "docs/live_evidence_gateway/GEOX-P51-EVIDENCE-INGRESS-BOUNDARY-POLICY.json",
     "capability_matrix": "docs/live_evidence_gateway/GEOX-P51-LIVE-EVIDENCE-GATEWAY-CAPABILITY-MATRIX.json",
+    "review_addendum": "docs/live_evidence_gateway/GEOX-P51-LIVE-EVIDENCE-GATEWAY-REVIEW-ADDENDUM.json",
     "manifest": "fixtures/live_evidence_gateway/P51_GATEWAY_INPUT_MANIFEST.json",
     "senml_fixture": "fixtures/live_evidence_gateway/P51_SENML_DEVICE_SAMPLE_FIXTURE.jsonl",
     "negative_manifest": "fixtures/live_evidence_gateway/P51_NEGATIVE_FIXTURE_MANIFEST.json",
@@ -22,7 +23,9 @@
     "report": "acceptance-output/P51_LIVE_EVIDENCE_GATEWAY_REPORT.json",
     "snapshot": "acceptance-output/P51_GATEWAY_VIEWER_SNAPSHOT.json"
   },
-  "source_truth_mode": "controlled_senml_fixture",
+  "source_truth_mode": "device_path_simulation",
+  "formal_conclusion": "controlled standards-aligned device-path simulation gateway proof",
+  "capability_count": 21,
   "device_source_simulated": true,
   "live_gateway_path_proof": true,
   "completion_status": "implementation_ready_for_review"
