@@ -1,7 +1,8 @@
 {
   "schema_version": "geox_p51_expected_sensorthings_observations_v1",
   "phase": "P51",
-  "expected_count": 5,
+  "expected_count": 20,
+  "expected_device_count": 2,
   "required_fields": [
     "phenomenonTime",
     "resultTime",
