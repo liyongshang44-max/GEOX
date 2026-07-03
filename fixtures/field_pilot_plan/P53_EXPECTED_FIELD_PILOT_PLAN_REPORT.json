@@ -1,0 +1,20 @@
+{
+  "schema_version": "geox_p53_expected_field_pilot_plan_report_v1",
+  "phase": "P53",
+  "task_line": "P53 Controlled Field Pilot Plan Gate v1",
+  "plan_type": "controlled_field_pilot_plan_gate",
+  "field_pilot_plan_result": "PLAN_READY_WITH_LIMITATIONS",
+  "required_section_count": 14,
+  "field_pilot_plan_allowed": true,
+  "field_pilot_execution_allowed": false,
+  "ao_act_task_creation_allowed": false,
+  "dispatch_allowed": false,
+  "roi_allowed": false,
+  "field_memory_allowed": false,
+  "full_runtime_v1_freeze_allowed": false,
+  "p54_readiness_review_allowed": true,
+  "real_site_selected": false,
+  "field_owner_committed": false,
+  "field_operation_scheduled": false,
+  "candidate_site_scope_kind": "DEMO_FIELD_CANDIDATE"
+}
