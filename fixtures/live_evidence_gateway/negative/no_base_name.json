@@ -1,0 +1,7 @@
+{
+  "case_id": "no_base_name",
+  "expected_error": "BASE_NAME_REQUIRED",
+  "pack": [
+    { "bt": 1769904000, "bu": "%", "n": "soil_moisture", "v": 23.1 }
+  ]
+}

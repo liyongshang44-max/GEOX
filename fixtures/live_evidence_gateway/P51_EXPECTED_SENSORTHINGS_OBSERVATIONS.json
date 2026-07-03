@@ -1,0 +1,29 @@
+{
+  "schema_version": "geox_p51_expected_sensorthings_observations_v1",
+  "phase": "P51",
+  "expected_count": 21,
+  "expected_device_count": 2,
+  "required_fields": [
+    "phenomenonTime",
+    "resultTime",
+    "result",
+    "Datastream",
+    "ObservedProperty",
+    "FeatureOfInterest",
+    "Thing"
+  ],
+  "expected_metrics": [
+    "soil_moisture",
+    "soil_temperature",
+    "air_temperature",
+    "air_humidity",
+    "water_pressure"
+  ],
+  "expected_units": {
+    "soil_moisture": "%VWC",
+    "soil_temperature": "°C",
+    "air_temperature": "°C",
+    "air_humidity": "%RH",
+    "water_pressure": "kPa"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "case_id": "missing_value",
+  "expected_error": "VALUE_REQUIRED",
+  "pack": [
+    { "bn": "urn:geox:p51:device:gw_soil_001:", "bt": 1769904000, "bu": "%", "n": "soil_moisture" }
+  ]
+}

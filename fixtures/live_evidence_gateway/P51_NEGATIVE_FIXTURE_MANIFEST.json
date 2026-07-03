@@ -1,0 +1,23 @@
+{
+  "schema_version": "geox_p51_negative_fixture_manifest_v1",
+  "phase": "P51",
+  "negative_fixture_mode": "real_bad_sample_files",
+  "independent_mutation_fixture_files_present": true,
+  "fixture_dir": "fixtures/live_evidence_gateway/negative",
+  "expected_blocked_fixtures": [
+    "missing_base_time.json",
+    "no_base_name.json",
+    "unresolved_relative_time.json",
+    "unsupported_unit_without_profile.json",
+    "unsupported_metric.json",
+    "missing_value.json",
+    "bad_credential.json",
+    "runtime_health_claim.json",
+    "production_ingest_claim.json",
+    "field_pilot_claim.json"
+  ],
+  "required_result": {
+    "result_state": "BLOCKED",
+    "target_records_created": 0
+  }
+}

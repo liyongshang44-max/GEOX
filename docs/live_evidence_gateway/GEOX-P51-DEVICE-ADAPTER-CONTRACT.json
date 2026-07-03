@@ -1,0 +1,31 @@
+{
+  "schema_version": "geox_p51_device_adapter_contract_v1",
+  "phase": "P51",
+  "device_source": "simulated",
+  "gateway_path": "controlled_live_like",
+  "adapter_input": {
+    "format": "senml_json_pack_jsonl",
+    "required_pack_fields": ["bn", "bt"],
+    "required_record_fields": ["n", "v"],
+    "optional_record_fields": ["u", "t"],
+    "heartbeat_record_names": ["battery_percent", "rssi_dbm", "fw_ver"]
+  },
+  "adapter_output": {
+    "records": [
+      "p51_gateway_input_manifest_v1",
+      "p51_resolved_senml_record_v1",
+      "p51_sensorthings_observation_v1",
+      "p51_sosa_observation_v1",
+      "p51_geox_raw_sample_envelope_v1",
+      "p51_device_observation_compat_v1",
+      "p51_sensor_health_envelope_v1",
+      "p51_gateway_snapshot_v1"
+    ],
+    "write_scope": "acceptance-output only"
+  },
+  "credential_policy": {
+    "credential_required_in_fixture": true,
+    "credential_secret_persisted": false,
+    "credential_hash_pointer_allowed": true
+  }
+}

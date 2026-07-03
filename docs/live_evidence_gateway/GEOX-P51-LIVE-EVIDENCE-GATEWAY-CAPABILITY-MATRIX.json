@@ -1,0 +1,32 @@
+{
+  "schema_version": "geox_p51_live_evidence_gateway_capability_matrix_v1",
+  "phase": "P51",
+  "baseline_tag": "p50_replay_backed_production_twin_demo_runtime_v0_closure",
+  "baseline_commit": "9006f0229f2cca0da66160faea83823074f38b45",
+  "formal_conclusion": "controlled standards-aligned device-path simulation gateway proof",
+  "capabilities": [
+    { "capability_id": "G1", "name": "P50 closure baseline derived", "status": "PASS" },
+    { "capability_id": "G2", "name": "Device path simulation source truth mode recorded", "status": "PASS" },
+    { "capability_id": "G3", "name": "At least 24 SenML packs parsed", "status": "PASS" },
+    { "capability_id": "G4", "name": "At least 2 devices represented", "status": "PASS" },
+    { "capability_id": "G5", "name": "Base fields resolved", "status": "PASS" },
+    { "capability_id": "G6", "name": "Metric and unit catalog snapshot applied", "status": "PASS" },
+    { "capability_id": "G7", "name": "Soil moisture explicit m3/m3 conversion profile applied", "status": "PASS" },
+    { "capability_id": "G8", "name": "SensorThings-style observations generated", "status": "PASS" },
+    { "capability_id": "G9", "name": "SOSA-style observations generated", "status": "PASS" },
+    { "capability_id": "G10", "name": "GEOX raw sample envelopes generated", "status": "PASS" },
+    { "capability_id": "G11", "name": "DeviceObservationV1 compatibility envelopes generated", "status": "PASS" },
+    { "capability_id": "G12", "name": "Device evidence health envelopes generated", "status": "PASS" },
+    { "capability_id": "G13", "name": "Duplicate same payload dedupe recorded", "status": "PASS" },
+    { "capability_id": "G14", "name": "Duplicate conflict block recorded", "status": "PASS" },
+    { "capability_id": "G15", "name": "Device clock skew warning report generated", "status": "PASS" },
+    { "capability_id": "G16", "name": "Gateway ingestion window generated", "status": "PASS" },
+    { "capability_id": "G17", "name": "Gateway traceability readback generated", "status": "PASS" },
+    { "capability_id": "G18", "name": "Viewer-ready gateway snapshot generated", "status": "PASS" },
+    { "capability_id": "G19", "name": "Real negative fixture files blocked", "status": "PASS" },
+    { "capability_id": "G20", "name": "Controlled output only", "status": "PASS" },
+    { "capability_id": "G21", "name": "No production surface changes", "status": "PASS" }
+  ],
+  "capability_count": 21,
+  "result": "PASS"
+}

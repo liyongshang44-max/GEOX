@@ -1,0 +1,7 @@
+{
+  "case_id": "unsupported_metric",
+  "expected_error": "METRIC_UNSUPPORTED",
+  "pack": [
+    { "bn": "urn:geox:p51:device:gw_soil_001:", "bt": 1769904000, "bu": "count", "n": "yield_prediction", "v": 5 }
+  ]
+}
