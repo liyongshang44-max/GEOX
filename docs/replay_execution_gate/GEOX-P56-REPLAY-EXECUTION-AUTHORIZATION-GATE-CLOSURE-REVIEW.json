@@ -1,0 +1,41 @@
+{
+  "schema_version": "geox_p56_replay_execution_authorization_gate_closure_review_v0",
+  "phase": "P56",
+  "task_line": "P56 Controlled Replay Execution Authorization Gate v1",
+  "closure_name": "P56_CONTROLLED_REPLAY_EXECUTION_AUTHORIZATION_GATE_V1_CLOSURE",
+  "baseline_tag": "p55_runtime_health_service_gate_v1_closure",
+  "baseline_commit": "10e45c72a171ca3ebd5bc62edd03da675b14a39f",
+  "final_tag": "p56_replay_execution_authorization_gate_v1",
+  "final_commit": "b58188705cde8ce4d0de0e1b71af3db40e88bfa7",
+  "expected_closure_tag": "p56_replay_execution_authorization_gate_v1_closure",
+  "formal_conclusion": "controlled replay execution authorization gate proof",
+  "replay_execution_authorization_result": "REPLAY_EXECUTION_AUTHORIZED_WITH_LIMITATIONS",
+  "acceptance": {
+    "script": "scripts/replay_execution_gate/P56_REPLAY_EXECUTION_GATE_ACCEPTANCE.cjs",
+    "assertion_count": 42,
+    "failed_assertion_count": 0,
+    "negative_fixture_count": 21
+  },
+  "gate_result": {
+    "replay_execution_authorized": true,
+    "replay_execution_authorization_recorded": true,
+    "replay_execution_started": false,
+    "p57_replay_backed_freeze_review_allowed": true,
+    "real_field_execution_allowed": false,
+    "full_runtime_v1_freeze_allowed": false
+  },
+  "nonclaims": {
+    "real_field_execution_started": false,
+    "real_device_deployed": false,
+    "live_runtime_monitoring_active": false,
+    "ao_act_task_created": false,
+    "dispatch_enabled": false,
+    "execution_outcome_created": false,
+    "roi_computed": false,
+    "field_memory_learned": false,
+    "full_runtime_v1_frozen": false,
+    "live_device_production_runtime_frozen": false
+  },
+  "next_allowed_phase_after_closure": "P57 GEOX-FULL-RUNTIME-V1-FREEZE replay-backed review",
+  "closure_status": "ready_for_closure_tag_after_merge"
+}
