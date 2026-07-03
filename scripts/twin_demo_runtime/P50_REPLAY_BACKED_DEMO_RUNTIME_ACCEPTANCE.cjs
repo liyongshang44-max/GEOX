@@ -34,6 +34,7 @@ const git = (args) => {
 
 const manifest = readJson(MANIFEST_PATH);
 const evidence = readJsonl(EVIDENCE_PATH);
+const activeConfig = readJson('fixtures/twin_demo_runtime/P50_DEMO_ACTIVE_MODEL_CONFIG.json');
 const boundary = readJson(BOUNDARY_PATH);
 const matrix = readJson(MATRIX_PATH);
 const packet = readJson(PACKET_PATH);
@@ -122,7 +123,8 @@ check('forecast_inputs_pre_as_of_only', Date.parse(writeResult.forecast_inputs_m
 check('later_release_after_forecast', Date.parse(writeResult.later_evidence_min_observed_at) >= Date.parse(manifest.forecast_horizon_start_ts));
 check('residual_inputs_released_only', writeResult.residual_inputs_all_released === true);
 check('active_before_next_forecast', Date.parse(manifest.next_forecast_issued_at) >= Date.parse(manifest.active_model_consumed_at));
-check('next_forecast_refs_active_model', writeResult.next_forecast_source_active_model_ref && writeResult.next_forecast_source_active_config_ref === writeResult.active_model_config_ref);
+check('next_forecast_refs_active_model', writeResult.next_forecast_source_active_model_ref === activeConfig.model_ref);
+check('next_forecast_refs_active_config', writeResult.next_forecast_source_active_config_ref === activeConfig.model_config_id);
 check('demo_q2_posture', writeResult.demo_state_estimate_generated === true);
 check('demo_q10_posture', writeResult.specific_demo_next_forecast_consumed_active_model === true);
 check('nonclaims_true', ['not_production_runtime','not_live_device_gateway','not_real_live_sensor','not_ao_act_task','not_machine_dispatch','not_execution','not_roi','not_field_memory','not_learning'].every((key) => writeResult[key] === true));
