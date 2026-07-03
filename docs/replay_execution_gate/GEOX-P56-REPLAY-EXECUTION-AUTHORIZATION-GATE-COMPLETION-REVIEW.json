@@ -4,8 +4,8 @@
   "task_line": "P56 Controlled Replay Execution Authorization Gate v1",
   "baseline_tag": "p55_runtime_health_service_gate_v1_closure",
   "baseline_commit": "10e45c72a171ca3ebd5bc62edd03da675b14a39f",
-  "completion_status": "implementation_ready_for_review",
-  "final_status": "not_started",
+  "completion_status": "final_tag_verified_closure_ready",
+  "final_status": "final_tag_created",
   "formal_conclusion": "controlled replay execution authorization gate proof",
   "replay_execution_authorization_result": "REPLAY_EXECUTION_AUTHORIZED_WITH_LIMITATIONS",
   "replay_execution_authorized": true,
@@ -23,9 +23,12 @@
   "full_runtime_v1_freeze_allowed": false,
   "p57_replay_backed_freeze_review_allowed": true,
   "live_device_production_freeze_allowed": false,
-  "expected_final_tag": "p56_replay_execution_authorization_gate_v1",
+  "final_tag": "p56_replay_execution_authorization_gate_v1",
+  "final_commit": "b58188705cde8ce4d0de0e1b71af3db40e88bfa7",
   "expected_closure_tag": "p56_replay_execution_authorization_gate_v1_closure",
-  "merge_required_before_complete": true,
-  "tag_verification_required_after_merge": true,
-  "closure_patch_required_after_final_tag": true
+  "merge_required_before_complete": false,
+  "tag_verification_required_after_merge": false,
+  "closure_patch_required_after_final_tag": true,
+  "closure_tag_required_after_closure_patch_merge": true,
+  "closure_review_ref": "docs/replay_execution_gate/GEOX-P56-REPLAY-EXECUTION-AUTHORIZATION-GATE-CLOSURE-REVIEW.json"
 }
