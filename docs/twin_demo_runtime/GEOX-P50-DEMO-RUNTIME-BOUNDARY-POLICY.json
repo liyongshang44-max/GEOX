@@ -1,0 +1,55 @@
+{
+  "schema_version": "geox_p50_demo_runtime_boundary_policy_v0",
+  "phase": "P50",
+  "policy_id": "P50_DEMO_RUNTIME_BOUNDARY_POLICY_V0",
+  "baseline_tag": "p49_twin_runtime_v1_pilot_freeze_evidence_package_v0_closure",
+  "baseline_commit": "ea00d8b3a70f6dd1e7e61f7415c2444fd6b76a23",
+  "source_truth_mode_must_equal": "historical_replay",
+  "time_shifted_live_demo_required": true,
+  "demo_as_of_ts_required": true,
+  "explicit_demo_clock_required": true,
+  "implicit_now_for_demo_clock_forbidden": true,
+  "implicit_latest_lookup_forbidden": true,
+  "forecast_future_observation_access_forbidden": true,
+  "later_evidence_release_must_be_time_gated": true,
+  "residual_must_use_released_later_evidence_only": true,
+  "calibration_review_must_follow_residual": true,
+  "active_model_consumption_must_precede_next_forecast": true,
+  "demo_records_must_be_demo_scoped": true,
+  "controlled_write_targets": [
+    "acceptance-output/P50_REPLAY_BACKED_DEMO_RUNTIME_LEDGER.jsonl",
+    "acceptance-output/P50_REPLAY_BACKED_DEMO_RUNTIME_REPORT.json"
+  ],
+  "forbidden_changed_surfaces": [
+    "apps/server/",
+    "apps/web/",
+    "apps/server/db/migrations/",
+    ".github/",
+    "package.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml"
+  ],
+  "allowed_changed_roots": [
+    "docs/twin_demo_runtime/",
+    "scripts/twin_demo_runtime/",
+    "fixtures/twin_demo_runtime/"
+  ],
+  "nonclaims_required": {
+    "not_production_runtime": true,
+    "not_live_device_gateway": true,
+    "not_real_live_sensor": true,
+    "not_runtime_health_service": true,
+    "not_field_pilot": true,
+    "not_ao_act_task": true,
+    "not_machine_dispatch": true,
+    "not_execution": true,
+    "not_receipt": true,
+    "not_roi": true,
+    "not_effect_attribution": true,
+    "not_field_memory": true,
+    "not_learning": true,
+    "not_full_runtime_v1_freeze": true
+  },
+  "p49_result_must_remain": "PASS_WITH_LIMITATIONS",
+  "runtime_v1_freeze_allowed_must_remain": false
+}

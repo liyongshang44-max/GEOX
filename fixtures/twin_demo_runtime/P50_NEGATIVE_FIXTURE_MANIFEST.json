@@ -1,0 +1,31 @@
+{
+  "schema_version": "geox_p50_negative_fixture_manifest_v0",
+  "phase": "P50",
+  "negative_fixture_mode": "symbolic_blocked_branch",
+  "independent_mutation_fixture_files_present": false,
+  "acceptance_status": "accepted_for_p50_demo_runtime_v0",
+  "future_strengthening_target": "P51_or_P52_real_bad_sample_fixtures",
+  "reason": "P50 demonstrates replay-backed runtime behavior in a demo namespace. Negative cases are represented as runner-level blocked branches that create zero target records and zero downstream facts. Later live-ingress or health phases may introduce independent bad-sample fixtures.",
+  "required_blocked_fixtures": [
+    "future_evidence_leakage_into_forecast",
+    "missing_demo_as_of_ts",
+    "source_truth_mode_live_sensor_claim",
+    "later_evidence_released_before_forecast",
+    "residual_uses_unreleased_future_evidence",
+    "calibration_before_residual",
+    "next_forecast_missing_active_model_ref",
+    "next_forecast_active_config_mismatch",
+    "ao_act_task_language_leak",
+    "machine_dispatch_language_leak",
+    "production_rollout_language_leak",
+    "full_runtime_v1_freeze_claim_leak",
+    "roi_effect_field_memory_language_leak",
+    "implicit_now_clock",
+    "implicit_latest_lookup"
+  ],
+  "required_result": {
+    "result_state_prefix": "BLOCKED_",
+    "target_records_created": 0,
+    "forbidden_downstream_fact_count": 0
+  }
+}
