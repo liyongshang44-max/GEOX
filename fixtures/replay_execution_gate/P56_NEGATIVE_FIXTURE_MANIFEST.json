@@ -1,0 +1,28 @@
+{
+  "schema_version": "geox_p56_negative_fixture_manifest_v1",
+  "phase": "P56",
+  "negative_fixture_count": 21,
+  "fixtures": [
+    { "scenario_id": "missing_p55_closure", "mutation": "remove:p55_closure" },
+    { "scenario_id": "p55_acceptance_failed", "mutation": "set:p55_failed_assertion_count=1" },
+    { "scenario_id": "p55_replay_gate_not_allowed", "mutation": "set:p55_replay_gate=false" },
+    { "scenario_id": "p55_mode_live_device_runtime", "mutation": "set:p55_mode=live_device_production_runtime" },
+    { "scenario_id": "p55_field_execution_allowed_true", "mutation": "set:p55_field_gate=true" },
+    { "scenario_id": "p55_real_device_deployed_true", "mutation": "set:real_device_deployed=true" },
+    { "scenario_id": "p55_live_device_claimed_true", "mutation": "set:live_device_claimed=true" },
+    { "scenario_id": "p55_full_freeze_allowed_true", "mutation": "set:p55_full_freeze=true" },
+    { "scenario_id": "missing_runtime_health_service_surface", "mutation": "remove:p55_surface" },
+    { "scenario_id": "missing_time_fence", "mutation": "set:time_fence=false" },
+    { "scenario_id": "missing_gateway_snapshot", "mutation": "set:snapshot=false" },
+    { "scenario_id": "missing_replay_authorization_packet", "mutation": "set:packet=false" },
+    { "scenario_id": "real_field_execution_claim", "mutation": "flag:real_field_execution_claimed" },
+    { "scenario_id": "field_pilot_execution_started_claim", "mutation": "flag:field_pilot_execution_started" },
+    { "scenario_id": "ao_act_task_claim", "mutation": "flag:ao_act_task_creation_allowed" },
+    { "scenario_id": "dispatch_claim", "mutation": "flag:dispatch_allowed" },
+    { "scenario_id": "execution_outcome_claim", "mutation": "flag:execution_outcome_created" },
+    { "scenario_id": "roi_claim", "mutation": "flag:roi_allowed" },
+    { "scenario_id": "field_memory_claim", "mutation": "flag:field_memory_allowed" },
+    { "scenario_id": "full_freeze_claim", "mutation": "flag:full_runtime_v1_freeze_allowed" },
+    { "scenario_id": "live_device_production_freeze_claim", "mutation": "flag:live_device_production_freeze_allowed" }
+  ]
+}
