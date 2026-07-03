@@ -1,0 +1,20 @@
+{
+  "schema_version": "geox_p52_expected_health_report_v1",
+  "health_scope": "artifact_level_controlled_health_gate",
+  "runtime_health_result": "READY_WITH_WARNINGS",
+  "dimension_count": 13,
+  "blocked_dimension_count": 0,
+  "warn_dimension_count": 1,
+  "expected_warn_dimension_id": "H10",
+  "warning_reasons": [
+    "controlled_artifact_based_health_only",
+    "not_live_runtime_monitoring",
+    "not_real_live_device",
+    "clock_skew_warning_present",
+    "p50_hashes_declared_as_computed_by_runner"
+  ],
+  "p50_concrete_hash_recomputation_claimed": false,
+  "production_runtime_health_service_implemented": false,
+  "p53_field_pilot_plan_allowed": true,
+  "field_pilot_execution_allowed": false
+}

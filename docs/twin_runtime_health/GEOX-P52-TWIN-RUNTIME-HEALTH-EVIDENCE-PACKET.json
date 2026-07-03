@@ -1,0 +1,48 @@
+{
+  "schema_version": "geox_p52_twin_runtime_health_evidence_packet_v1",
+  "phase": "P52",
+  "task_line": "P52 Controlled Twin Runtime Health Gate v1",
+  "baseline_tag": "p51_5_gateway_backed_twin_demo_viewer_v0_closure",
+  "baseline_commit": "e764c0f36fbf50dfecf5de2ac8ce9dd2367eecd9",
+  "formal_conclusion": "controlled artifact-level twin runtime health gate proof",
+  "evidence_refs": {
+    "contract_doc": "docs/twin_runtime_health/GEOX-P52-TWIN-RUNTIME-HEALTH-V1.md",
+    "boundary_policy": "docs/twin_runtime_health/GEOX-P52-TWIN-RUNTIME-HEALTH-BOUNDARY-POLICY.json",
+    "capability_matrix": "docs/twin_runtime_health/GEOX-P52-TWIN-RUNTIME-HEALTH-CAPABILITY-MATRIX.json",
+    "input_manifest": "fixtures/twin_runtime_health/P52_TWIN_RUNTIME_HEALTH_INPUT_MANIFEST.json",
+    "expected_report": "fixtures/twin_runtime_health/P52_EXPECTED_HEALTH_REPORT.json",
+    "expected_gate": "fixtures/twin_runtime_health/P52_EXPECTED_HEALTH_GATE.json",
+    "negative_manifest": "fixtures/twin_runtime_health/P52_NEGATIVE_FIXTURE_MANIFEST.json",
+    "runner": "scripts/twin_runtime_health/P52_TWIN_RUNTIME_HEALTH_RUNNER.cjs",
+    "acceptance": "scripts/twin_runtime_health/P52_TWIN_RUNTIME_HEALTH_ACCEPTANCE.cjs"
+  },
+  "hard_source_refs": {
+    "p50_evidence_packet": "docs/twin_demo_runtime/GEOX-P50-DEMO-RUNTIME-EVIDENCE-PACKET.json",
+    "p50_capability_matrix": "docs/twin_demo_runtime/GEOX-P50-DEMO-RUNTIME-CAPABILITY-MATRIX.json",
+    "p51_evidence_packet": "docs/live_evidence_gateway/GEOX-P51-LIVE-EVIDENCE-GATEWAY-EVIDENCE-PACKET.json",
+    "p51_capability_matrix": "docs/live_evidence_gateway/GEOX-P51-LIVE-EVIDENCE-GATEWAY-CAPABILITY-MATRIX.json",
+    "p51_closure": "docs/live_evidence_gateway/GEOX-P51-LIVE-EVIDENCE-GATEWAY-CLOSURE-REVIEW.json",
+    "p51_5_closure": "docs/live_evidence_gateway/GEOX-P51-5-DEMO-VIEWER-CLOSURE-REVIEW.json",
+    "p51_5_capability_matrix": "docs/live_evidence_gateway/GEOX-P51-5-DEMO-VIEWER-CAPABILITY-MATRIX.json",
+    "p51_5_snapshot": "apps/web/public/demo-runtime/p51-gateway-viewer-snapshot.json"
+  },
+  "optional_source_refs": {
+    "p50_completion_review": "docs/twin_demo_runtime/GEOX-P50-DEMO-RUNTIME-COMPLETION-REVIEW.json"
+  },
+  "expected_outputs": {
+    "runtime_health_result": "READY_WITH_WARNINGS",
+    "p53_field_pilot_plan_allowed": true,
+    "field_pilot_execution_allowed": false,
+    "production_runtime_monitoring_enabled": false,
+    "full_runtime_v1_freeze_allowed": false
+  },
+  "warning_reasons": [
+    "controlled_artifact_based_health_only",
+    "not_live_runtime_monitoring",
+    "not_real_live_device",
+    "clock_skew_warning_present",
+    "p50_hashes_declared_as_computed_by_runner"
+  ],
+  "p50_concrete_hash_recomputation_claimed": false,
+  "completion_status": "implementation_ready_for_review"
+}

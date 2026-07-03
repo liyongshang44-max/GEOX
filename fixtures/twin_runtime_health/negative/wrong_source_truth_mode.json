@@ -1,0 +1,8 @@
+{
+  "schema_version": "geox_p52_negative_fixture_v1",
+  "scenario_id": "wrong_source_truth_mode",
+  "expected_result_state": "BLOCKED",
+  "target_records_created": 0,
+  "scenario": "wrong_source_truth_mode",
+  "source_truth_mode": "historical_replay"
+}

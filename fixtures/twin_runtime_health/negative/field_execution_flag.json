@@ -1,0 +1,7 @@
+{
+  "schema_version": "geox_p52_negative_fixture_v1",
+  "scenario_id": "field_execution_flag",
+  "expected_result_state": "BLOCKED",
+  "target_records_created": 0,
+  "scenario": "field_execution_flag"
+}
