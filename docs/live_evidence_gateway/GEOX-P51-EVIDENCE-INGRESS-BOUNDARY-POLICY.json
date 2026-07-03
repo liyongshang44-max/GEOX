@@ -1,0 +1,31 @@
+{
+  "schema_version": "geox_p51_evidence_ingress_boundary_policy_v1",
+  "phase": "P51",
+  "baseline_tag": "p50_replay_backed_production_twin_demo_runtime_v0_closure",
+  "baseline_commit": "9006f0229f2cca0da66160faea83823074f38b45",
+  "allowed_changed_roots": [
+    "docs/live_evidence_gateway/",
+    "fixtures/live_evidence_gateway/",
+    "scripts/live_evidence_gateway/"
+  ],
+  "forbidden_changed_surfaces": [
+    "apps/server/",
+    "apps/web/",
+    "apps/telemetry-ingest/",
+    "packages/contracts/",
+    "migrations/",
+    ".github/",
+    "package.json",
+    "pnpm-lock.yaml"
+  ],
+  "execution_mode": "controlled_runner_only",
+  "device_source_simulated": true,
+  "live_gateway_path_proof": true,
+  "real_live_device_proof": false,
+  "runtime_health_v1": false,
+  "field_pilot": false,
+  "ao_act": false,
+  "roi": false,
+  "field_memory": false,
+  "acceptance_output_only": true
+}
