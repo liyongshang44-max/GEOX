@@ -1,0 +1,29 @@
+{
+  "schema_version": "geox_p53_controlled_field_pilot_plan_gate_capability_matrix_v1",
+  "phase": "P53",
+  "task_line": "P53 Controlled Field Pilot Plan Gate v1",
+  "baseline_tag": "p52_twin_runtime_health_v1_closure",
+  "formal_conclusion": "controlled field pilot planning gate proof",
+  "capabilities": [
+    { "capability_id": "F1", "name": "P52 closure baseline inherited", "status": "PASS" },
+    { "capability_id": "F2", "name": "P52 health gate loaded", "status": "PASS" },
+    { "capability_id": "F3", "name": "P52 plan permission verified", "status": "PASS" },
+    { "capability_id": "F4", "name": "P52 execution forbidden state verified", "status": "PASS" },
+    { "capability_id": "F5", "name": "P50 runtime evidence refs loaded", "status": "PASS" },
+    { "capability_id": "F6", "name": "P51 gateway evidence refs loaded", "status": "PASS" },
+    { "capability_id": "F7", "name": "P51.5 viewer snapshot loaded", "status": "PASS" },
+    { "capability_id": "F8", "name": "source truth boundary preserved", "status": "PASS" },
+    { "capability_id": "F9", "name": "candidate site scope generated", "status": "PASS" },
+    { "capability_id": "F10", "name": "evidence collection protocol generated", "status": "PASS" },
+    { "capability_id": "F11", "name": "device and gateway readiness checklist generated", "status": "PASS" },
+    { "capability_id": "F12", "name": "human role matrix generated", "status": "PASS" },
+    { "capability_id": "F13", "name": "safety and stop rules generated", "status": "PASS" },
+    { "capability_id": "F14", "name": "rollback plan generated", "status": "PASS" },
+    { "capability_id": "F15", "name": "entry and exit gates generated", "status": "PASS" },
+    { "capability_id": "F16", "name": "P53 go no-go gate generated", "status": "PASS" },
+    { "capability_id": "F17", "name": "negative fixtures block execution paths", "status": "PASS" },
+    { "capability_id": "F18", "name": "controlled output only", "status": "PASS" }
+  ],
+  "capability_count": 18,
+  "result": "PASS"
+}
