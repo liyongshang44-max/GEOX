@@ -1,0 +1,17 @@
+{
+  "schema_version": "geox_p56_expected_replay_gate_v1",
+  "p57_review_gate": {
+    "allowed": true,
+    "mode": "replay_backed_freeze_review"
+  },
+  "real_world_gate": {
+    "allowed": false
+  },
+  "live_freeze_gate": {
+    "allowed": false
+  },
+  "full_freeze_gate": {
+    "allowed": false
+  },
+  "result": "REPLAY_EXECUTION_AUTHORIZED_WITH_LIMITATIONS"
+}
