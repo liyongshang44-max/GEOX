@@ -1,0 +1,7 @@
+{
+  "case_id": "runtime_health_claim",
+  "expected_error": "BOUNDARY_CLAIM_FORBIDDEN",
+  "pack": [
+    { "bn": "urn:geox:p51:device:gw_soil_001:", "bt": 1769904000, "bu": "%", "n": "soil_moisture", "v": 23.1, "claim": "runtime_health_report_v1" }
+  ]
+}
