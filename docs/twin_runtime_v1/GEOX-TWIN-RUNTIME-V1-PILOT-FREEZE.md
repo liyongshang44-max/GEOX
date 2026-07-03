@@ -88,9 +88,13 @@ Reason:
 ```text
 Q2 = PASS_WITH_LIMITATIONS
 Q10 = PASS_WITH_LIMITATIONS
+hash_ref_boundary = governed_pointer_hash_refs_only
+source_derived_digest_verification = not_performed
 ```
 
 This package therefore freezes the evidence posture, but it does not claim the full `GEOX Production-Governed Digital Twin Runtime v1`.
+
+Hash/ref boundary: matrix and packet hash fields are governed evidence references and deterministic package-level checks. They are not recomputed cryptographic digests of the upstream P37-P48 source artifact contents. Full Runtime v1 freeze would require source-derived digest verification across the upstream governed record sets.
 
 ## 6. Next line
 
