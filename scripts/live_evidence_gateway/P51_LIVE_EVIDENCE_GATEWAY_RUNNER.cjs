@@ -1,12 +1,10 @@
 // scripts/live_evidence_gateway/P51_LIVE_EVIDENCE_GATEWAY_RUNNER.cjs
 'use strict';
 
-// Load Node core modules only so the runner works without workspace builds.
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 
-// Keep every path explicit so P51 stays self-contained.
 const MANIFEST_PATH = 'fixtures/live_evidence_gateway/P51_GATEWAY_INPUT_MANIFEST.json';
 const SENML_PATH = 'fixtures/live_evidence_gateway/P51_SENML_DEVICE_SAMPLE_FIXTURE.jsonl';
 const NEGATIVE_MANIFEST_PATH = 'fixtures/live_evidence_gateway/P51_NEGATIVE_FIXTURE_MANIFEST.json';
@@ -14,7 +12,6 @@ const LEDGER_PATH = 'acceptance-output/P51_LIVE_EVIDENCE_GATEWAY_LEDGER.jsonl';
 const REPORT_PATH = 'acceptance-output/P51_LIVE_EVIDENCE_GATEWAY_REPORT.json';
 const SNAPSHOT_PATH = 'acceptance-output/P51_GATEWAY_VIEWER_SNAPSHOT.json';
 
-// Freeze the P51 metric catalog from the current GEOX contracts snapshot.
 const METRICS = Object.freeze({
   soil_moisture: { unit: '%VWC', aliases: ['%', 'VWC%', 'm3/m3'], min: 0, max: 100 },
   soil_temperature: { unit: '°C', aliases: ['C', 'celsius', '℃'], min: -40, max: 85 },
@@ -23,7 +20,6 @@ const METRICS = Object.freeze({
   water_pressure: { unit: 'kPa', aliases: ['kpa', 'KPA', 'kilopascal'], min: 0, max: 1600 },
 });
 
-// Keep compatibility aliases local to P51 instead of importing production packages.
 const METRIC_ALIASES = Object.freeze({
   soil_temp: 'soil_temperature',
   soil_temp_c: 'soil_temperature',
@@ -34,15 +30,12 @@ const METRIC_ALIASES = Object.freeze({
   water_pressure_kpa: 'water_pressure',
 });
 
-// Keep health evidence separate from runtime health.
 const HEALTH_NAMES = new Set(['battery_percent', 'rssi_dbm', 'fw_ver']);
 
-// Compute stable SHA-256 ids and hashes.
 function sha256Hex(value) {
   return crypto.createHash('sha256').update(String(value), 'utf8').digest('hex');
 }
 
-// Stable stringify keeps deterministic hashes independent of object insertion order.
 function stableStringify(value) {
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
   if (value && typeof value === 'object') {
@@ -51,60 +44,62 @@ function stableStringify(value) {
   return JSON.stringify(value);
 }
 
-// Read JSON from disk.
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
-// Read JSONL where each line can contain one SenML pack.
 function readJsonl(filePath) {
   return fs.readFileSync(filePath, 'utf8').trim().split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
 }
 
-// Derive the device id from the P51 base name convention.
 function deviceIdFromBaseName(baseName) {
   const match = String(baseName || '').match(/device:([^:]+):?$/);
   if (!match) throw new Error('BASE_NAME_UNSUPPORTED');
   return match[1];
 }
 
-// Canonicalize metric names with P51 frozen aliases.
+function credentialForDevice(manifest, deviceId) {
+  const devices = Array.isArray(manifest.devices) ? manifest.devices : [];
+  const row = devices.find((item) => item.device_id === deviceId);
+  return row?.credential_id || manifest.credential_id;
+}
+
 function canonicalMetric(rawMetric) {
   const normalized = String(rawMetric || '').trim().toLowerCase().replace(/\s+/g, '_');
   return METRIC_ALIASES[normalized] || normalized;
 }
 
-// Canonicalize unit and optionally convert m3/m3 soil moisture to %VWC.
 function canonicalValueUnit(metric, value, unit, manifest) {
   const spec = METRICS[metric];
   if (!spec) throw new Error('METRIC_UNSUPPORTED');
   const incomingUnit = String(unit || '').trim();
   if (!Number.isFinite(value)) throw new Error('VALUE_REQUIRED');
-
   if (metric === 'soil_moisture' && incomingUnit === 'm3/m3') {
     const profile = manifest.unit_conversion_profile?.soil_moisture_m3m3_to_percent_vwc;
     if (!profile?.enabled) throw new Error('UNIT_UNSUPPORTED');
     return { value: value * Number(profile.factor), unit: spec.unit, explanation: 'converted_m3m3_to_percent_vwc' };
   }
-
   if (incomingUnit === spec.unit || (spec.aliases || []).includes(incomingUnit)) {
     return { value, unit: spec.unit, explanation: incomingUnit === spec.unit ? 'canonical_unit' : 'alias_unit_normalized' };
   }
-
   throw new Error('UNIT_UNSUPPORTED');
 }
 
-// Block P51 boundary leaks encoded in fixtures.
 function assertNoBoundaryClaim(record) {
   const claim = String(record.claim || '').trim();
   if (!claim) return;
-  if (claim.includes('runtime_health') || claim.includes('production') || claim.includes('field_pilot')) {
-    throw new Error('BOUNDARY_CLAIM_FORBIDDEN');
-  }
+  if (claim.includes('runtime_health') || claim.includes('production') || claim.includes('field_pilot')) throw new Error('BOUNDARY_CLAIM_FORBIDDEN');
 }
 
-// Resolve a SenML pack into metric observations and health evidence.
-function resolveSenmlPack(pack, manifest) {
+function clockSkewStatus(skewMs, manifest) {
+  const warnMs = Number(manifest.clock_skew_policy?.warn_ms ?? 120000);
+  const blockMs = Number(manifest.clock_skew_policy?.block_ms ?? 600000);
+  if (skewMs >= blockMs) return 'BLOCKED';
+  if (skewMs >= warnMs) return 'WARN';
+  return 'OK';
+}
+
+function resolveSenmlPack(pack, manifest, packIndex = 0) {
   if (!Array.isArray(pack) || pack.length < 1) throw new Error('SENML_PACK_REQUIRED');
   const base = pack[0];
   if (!base.bn) throw new Error('BASE_NAME_REQUIRED');
@@ -112,8 +107,11 @@ function resolveSenmlPack(pack, manifest) {
 
   const deviceId = deviceIdFromBaseName(base.bn);
   const packCredential = pack.find((record) => typeof record.credential === 'string')?.credential;
-  if (packCredential && packCredential !== manifest.credential_id) throw new Error('CREDENTIAL_MISMATCH');
+  const expectedCredential = credentialForDevice(manifest, deviceId);
+  if (packCredential && expectedCredential && packCredential !== expectedCredential) throw new Error('CREDENTIAL_MISMATCH');
 
+  const packId = `pack_${String(packIndex + 1).padStart(3, '0')}_${sha256Hex(stableStringify(pack)).slice(0, 16)}`;
+  const gatewayReceivedSeconds = Number(base.gt ?? base.bt);
   const observations = [];
   const health = {};
 
@@ -121,9 +119,13 @@ function resolveSenmlPack(pack, manifest) {
     assertNoBoundaryClaim(record);
     const name = String(record.n || '').trim();
     if (!name) continue;
-    const tsSeconds = base.bt + Number(record.t || 0);
+    const offset = Number(record.t || 0);
+    const tsSeconds = base.bt + offset;
     if (!Number.isFinite(tsSeconds)) throw new Error('RELATIVE_TIME_UNRESOLVED');
     const observedMs = Math.round(tsSeconds * 1000);
+    const skewMs = Math.abs(Math.round((gatewayReceivedSeconds - tsSeconds) * 1000));
+    const skewStatus = clockSkewStatus(skewMs, manifest);
+    if (skewStatus === 'BLOCKED') throw new Error('CLOCK_SKEW_BLOCKED');
 
     if (HEALTH_NAMES.has(name)) {
       health[name] = Object.prototype.hasOwnProperty.call(record, 'vs') ? record.vs : record.v;
@@ -139,27 +141,31 @@ function resolveSenmlPack(pack, manifest) {
     const qc = canonical.value >= spec.min && canonical.value <= spec.max ? 'ok' : 'suspect';
 
     observations.push({
+      pack_id: packId,
+      pack_index: packIndex,
       device_id: deviceId,
       metric,
       value: Number(canonical.value.toFixed(6)),
       unit: canonical.unit,
       observed_at_ts_ms: observedMs,
       observed_at: new Date(observedMs).toISOString(),
+      gateway_received_at: new Date(Math.round(gatewayReceivedSeconds * 1000)).toISOString(),
+      clock_skew_ms: skewMs,
+      clock_skew_status: skewStatus,
       qc_quality: qc,
       explanation: canonical.explanation,
     });
   }
 
-  return { device_id: deviceId, observations, health };
+  return { pack_id: packId, pack_index: packIndex, device_id: deviceId, observations, health };
 }
 
-// Build SensorThings-style observations from resolved records.
 function toSensorThingsObservation(manifest, obs) {
   const id = `sta_${sha256Hex(`${manifest.manifest_id}|${obs.device_id}|${obs.metric}|${obs.observed_at_ts_ms}`).slice(0, 24)}`;
   return {
     '@iot.id': id,
     phenomenonTime: obs.observed_at,
-    resultTime: manifest.ingested_at,
+    resultTime: obs.gateway_received_at,
     result: obs.value,
     resultUnit: obs.unit,
     Datastream: { name: obs.metric },
@@ -169,7 +175,6 @@ function toSensorThingsObservation(manifest, obs) {
   };
 }
 
-// Build SOSA-style semantic observations.
 function toSosaObservation(manifest, obs) {
   return {
     '@type': 'sosa:Observation',
@@ -177,11 +182,10 @@ function toSosaObservation(manifest, obs) {
     'sosa:observedProperty': obs.metric,
     'sosa:hasFeatureOfInterest': manifest.field_id,
     'sosa:hasSimpleResult': `${obs.value} ${obs.unit}`,
-    'sosa:resultTime': manifest.ingested_at,
+    'sosa:resultTime': obs.gateway_received_at,
   };
 }
 
-// Build GEOX RawSampleFactEnvelopeV1-compatible envelope.
 function toRawSampleEnvelope(manifest, obs) {
   const idBase = `${manifest.tenant_id}|${manifest.field_id}|${obs.device_id}|${obs.metric}|${obs.observed_at_ts_ms}`;
   return {
@@ -196,11 +200,7 @@ function toRawSampleEnvelope(manifest, obs) {
     unit: obs.unit,
     qc_quality: obs.qc_quality,
     source: 'gateway',
-    payload_json: {
-      p51_manifest_id: manifest.manifest_id,
-      standards_refs: ['SenML', 'SensorThings-Sensing', 'SOSA'],
-      explanation: obs.explanation,
-    },
+    payload_json: { p51_manifest_id: manifest.manifest_id, pack_id: obs.pack_id, clock_skew_status: obs.clock_skew_status, standards_refs: ['SenML', 'SensorThings-Sensing', 'SOSA'], explanation: obs.explanation },
     fact_id: `fact_${sha256Hex(`raw|${idBase}`).slice(0, 32)}`,
     created_at: manifest.ingested_at,
     interpolated: false,
@@ -208,7 +208,6 @@ function toRawSampleEnvelope(manifest, obs) {
   };
 }
 
-// Build GEOX DeviceObservationV1-compatible envelope.
 function toDeviceObservation(manifest, obs) {
   return {
     type: 'device_observation_v1',
@@ -219,83 +218,77 @@ function toDeviceObservation(manifest, obs) {
     field_id: manifest.field_id,
     device_id: obs.device_id,
     observed_at: obs.observed_at,
-    ingested_at: manifest.ingested_at,
+    ingested_at: obs.gateway_received_at,
     metric_key: obs.metric,
     metric_value: obs.value,
     metric_unit: obs.unit,
     confidence: obs.qc_quality === 'ok' ? 0.9 : 0.45,
-    quality_flags: obs.qc_quality === 'ok' ? ['OK'] : ['SUSPECT'],
-    explanation_codes: ['p51_senml_gateway_mapping', obs.explanation],
+    quality_flags: obs.clock_skew_status === 'WARN' ? ['OK', 'CLOCK_SKEW_WARN'] : ['OK'],
+    explanation_codes: ['p51_senml_gateway_mapping', obs.explanation, `clock_skew_${obs.clock_skew_status.toLowerCase()}`],
   };
 }
 
-// Build device evidence health envelope only, not runtime health.
 function toHealthEnvelope(manifest, deviceId, health) {
-  return {
-    record_type: 'p51_sensor_health_envelope_v1',
-    device_id: deviceId,
-    field_id: manifest.field_id,
-    observed_at: manifest.ingested_at,
-    battery_percent: health.battery_percent ?? null,
-    rssi_dbm: health.rssi_dbm ?? null,
-    fw_ver: health.fw_ver ?? null,
-    health_scope: 'device_evidence_health_only',
-  };
+  return { record_type: 'p51_sensor_health_envelope_v1', device_id: deviceId, field_id: manifest.field_id, observed_at: manifest.ingested_at, battery_percent: health.battery_percent ?? null, rssi_dbm: health.rssi_dbm ?? null, fw_ver: health.fw_ver ?? null, health_scope: 'device_evidence_health_only' };
 }
 
-// Build viewer-ready snapshot for later UI/read-model discussion.
-function toSnapshot(manifest, observations, healthEnvelope, hashes) {
-  return {
-    schema_version: 'geox_p51_gateway_viewer_snapshot_v1',
-    phase: 'P51',
-    snapshot_type: 'viewer_ready_gateway_snapshot',
-    gateway_scope: {
-      tenant_id: manifest.tenant_id,
-      project_id: manifest.project_id,
-      group_id: manifest.group_id,
-      field_id: manifest.field_id,
-      device_id: manifest.device_id,
-      device_source_simulated: true,
-      live_gateway_path_proof: true,
-    },
-    observation_summary: {
-      count: observations.length,
-      metrics: observations.map((obs) => obs.metric),
-      first_observed_at: observations[0]?.observed_at || null,
-      last_observed_at: observations.at(-1)?.observed_at || null,
-    },
-    health_evidence: healthEnvelope,
-    standards_refs: ['SenML', 'SensorThings-Sensing', 'SOSA'],
-    geox_compatibility_refs: ['RawSampleFactEnvelopeV1', 'DeviceObservationV1'],
-    hashes,
-  };
+function buildClockSkewReport(manifest, observations) {
+  const rows = observations.map((obs) => ({ pack_id: obs.pack_id, device_id: obs.device_id, metric: obs.metric, observed_at: obs.observed_at, gateway_received_at: obs.gateway_received_at, clock_skew_ms: obs.clock_skew_ms, status: obs.clock_skew_status }));
+  return { record_type: 'p51_device_clock_skew_report_v1', field_id: manifest.field_id, warn_ms: manifest.clock_skew_policy.warn_ms, block_ms: manifest.clock_skew_policy.block_ms, ok_count: rows.filter((row) => row.status === 'OK').length, warn_count: rows.filter((row) => row.status === 'WARN').length, blocked_count: 0, rows };
 }
 
-// Build all P51 records from the controlled fixture.
+function buildIngestionWindow(manifest, packs, observations, duplicateEvents, clockSkewReport) {
+  const deviceIds = Array.from(new Set(packs.map((pack) => pack.device_id))).sort();
+  return { record_type: 'p51_gateway_ingestion_window_v1', window_id: `window_${sha256Hex(`${manifest.manifest_id}|${manifest.gateway_window_start}|${manifest.gateway_window_end}`).slice(0, 24)}`, start: manifest.gateway_window_start, end: manifest.gateway_window_end, input_pack_count: packs.length, device_count: deviceIds.length, device_ids: deviceIds, accepted_observation_count: observations.length, duplicate_same_payload_deduped_count: duplicateEvents.filter((item) => item.action === 'DEDUPED_DUPLICATE_SAME_PAYLOAD').length, duplicate_conflict_blocked_count: duplicateEvents.filter((item) => item.action === 'BLOCKED_DUPLICATE_CONFLICT').length, clock_skew_ok_count: clockSkewReport.ok_count, clock_skew_warn_count: clockSkewReport.warn_count, clock_skew_blocked_count: clockSkewReport.blocked_count };
+}
+
+function buildTraceabilityReadback(rawSamples, deviceObservations, sensorThings, sosa) {
+  return { record_type: 'p51_gateway_traceability_readback_v1', trace_count: rawSamples.length, rows: rawSamples.map((raw, index) => ({ pack_id: raw.payload_json.pack_id, device_id: raw.sensor_id, metric: raw.metric, ts_ms: raw.ts_ms, raw_sample_fact_id: raw.fact_id, device_observation_ref: `${deviceObservations[index].device_id}|${deviceObservations[index].metric_key}|${Date.parse(deviceObservations[index].observed_at)}`, sensorthings_id: sensorThings[index]['@iot.id'], sosa_result_time: sosa[index]['sosa:resultTime'] })) };
+}
+
+function toSnapshot(manifest, observations, healthEnvelopes, hashes, ingestionWindow, traceabilityReadback, clockSkewReport) {
+  return { schema_version: 'geox_p51_gateway_viewer_snapshot_v1', phase: 'P51', snapshot_type: 'viewer_ready_gateway_snapshot', gateway_scope: { tenant_id: manifest.tenant_id, project_id: manifest.project_id, group_id: manifest.group_id, field_id: manifest.field_id, device_ids: Array.from(new Set(observations.map((obs) => obs.device_id))).sort(), device_source_simulated: true, live_gateway_path_proof: true, source_truth_mode: manifest.source_truth_mode }, observation_summary: { count: observations.length, metrics: Array.from(new Set(observations.map((obs) => obs.metric))).sort(), first_observed_at: observations[0]?.observed_at || null, last_observed_at: observations.at(-1)?.observed_at || null }, health_evidence: healthEnvelopes, ingestion_window_ref: ingestionWindow.window_id, traceability_readback_count: traceabilityReadback.trace_count, clock_skew_summary: { ok_count: clockSkewReport.ok_count, warn_count: clockSkewReport.warn_count, blocked_count: clockSkewReport.blocked_count }, standards_refs: ['SenML', 'SensorThings-Sensing', 'SOSA'], geox_compatibility_refs: ['RawSampleFactEnvelopeV1', 'DeviceObservationV1'], hashes };
+}
+
 function buildRun(manifestPath = MANIFEST_PATH, senmlPath = SENML_PATH) {
   const manifest = readJson(manifestPath);
-  const packs = readJsonl(senmlPath);
-  const resolved = packs.flatMap((pack) => {
-    const out = resolveSenmlPack(pack, manifest);
-    return [{ kind: 'pack', out }];
-  });
-  const pack = resolved[0].out;
-  const observations = pack.observations;
-  const healthEnvelope = toHealthEnvelope(manifest, pack.device_id, pack.health);
+  const rawPacks = readJsonl(senmlPath);
+  const packs = rawPacks.map((pack, index) => resolveSenmlPack(pack, manifest, index));
+  const seen = new Map();
+  const observations = [];
+  const duplicateEvents = [];
+
+  for (const pack of packs) {
+    for (const obs of pack.observations) {
+      const key = `${obs.device_id}|${obs.metric}|${obs.observed_at_ts_ms}`;
+      const signature = stableStringify({ value: obs.value, unit: obs.unit });
+      const previous = seen.get(key);
+      if (!previous) {
+        seen.set(key, { signature, first_pack_id: obs.pack_id });
+        observations.push(obs);
+      } else if (previous.signature === signature) {
+        duplicateEvents.push({ record_type: 'p51_duplicate_event_v1', action: 'DEDUPED_DUPLICATE_SAME_PAYLOAD', key, first_pack_id: previous.first_pack_id, duplicate_pack_id: obs.pack_id });
+      } else {
+        duplicateEvents.push({ record_type: 'p51_duplicate_event_v1', action: 'BLOCKED_DUPLICATE_CONFLICT', key, first_pack_id: previous.first_pack_id, conflict_pack_id: obs.pack_id });
+      }
+    }
+  }
+
+  const healthByDevice = new Map((manifest.devices || []).map((device) => [device.device_id, {}]));
+  for (const pack of packs) {
+    const existing = healthByDevice.get(pack.device_id) || {};
+    healthByDevice.set(pack.device_id, { ...existing, ...pack.health });
+  }
+  const healthEnvelopes = Array.from(healthByDevice.entries()).map(([deviceId, health]) => toHealthEnvelope(manifest, deviceId, health));
   const sensorThings = observations.map((obs) => toSensorThingsObservation(manifest, obs));
   const sosa = observations.map((obs) => toSosaObservation(manifest, obs));
   const rawSamples = observations.map((obs) => toRawSampleEnvelope(manifest, obs));
   const deviceObservations = observations.map((obs) => toDeviceObservation(manifest, obs));
-
-  const hashes = {
-    resolved_senml_hash: sha256Hex(stableStringify(observations)),
-    sensorthings_hash: sha256Hex(stableStringify(sensorThings)),
-    sosa_hash: sha256Hex(stableStringify(sosa)),
-    geox_raw_hash: sha256Hex(stableStringify(rawSamples)),
-    device_observation_hash: sha256Hex(stableStringify(deviceObservations)),
-    health_hash: sha256Hex(stableStringify(healthEnvelope)),
-  };
-  const snapshot = toSnapshot(manifest, observations, healthEnvelope, hashes);
+  const clockSkewReport = buildClockSkewReport(manifest, observations);
+  const ingestionWindow = buildIngestionWindow(manifest, packs, observations, duplicateEvents, clockSkewReport);
+  const traceabilityReadback = buildTraceabilityReadback(rawSamples, deviceObservations, sensorThings, sosa);
+  const hashes = { resolved_senml_hash: sha256Hex(stableStringify(observations)), sensorthings_hash: sha256Hex(stableStringify(sensorThings)), sosa_hash: sha256Hex(stableStringify(sosa)), geox_raw_hash: sha256Hex(stableStringify(rawSamples)), device_observation_hash: sha256Hex(stableStringify(deviceObservations)), health_hash: sha256Hex(stableStringify(healthEnvelopes)), ingestion_window_hash: sha256Hex(stableStringify(ingestionWindow)), traceability_hash: sha256Hex(stableStringify(traceabilityReadback)), clock_skew_hash: sha256Hex(stableStringify(clockSkewReport)), duplicate_hash: sha256Hex(stableStringify(duplicateEvents)) };
+  const snapshot = toSnapshot(manifest, observations, healthEnvelopes, hashes, ingestionWindow, traceabilityReadback, clockSkewReport);
   const records = [
     { record_type: 'p51_gateway_input_manifest_v1', demo_scoped: true, payload: manifest },
     ...observations.map((payload) => ({ record_type: 'p51_resolved_senml_record_v1', demo_scoped: true, payload })),
@@ -303,18 +296,17 @@ function buildRun(manifestPath = MANIFEST_PATH, senmlPath = SENML_PATH) {
     ...sosa.map((payload) => ({ record_type: 'p51_sosa_observation_v1', demo_scoped: true, payload })),
     ...rawSamples.map((payload) => ({ record_type: 'p51_geox_raw_sample_envelope_v1', demo_scoped: true, payload })),
     ...deviceObservations.map((payload) => ({ record_type: 'p51_device_observation_compat_v1', demo_scoped: true, payload })),
-    { record_type: 'p51_sensor_health_envelope_v1', demo_scoped: true, payload: healthEnvelope },
+    ...healthEnvelopes.map((payload) => ({ record_type: 'p51_sensor_health_envelope_v1', demo_scoped: true, payload })),
+    ...duplicateEvents.map((payload) => ({ record_type: 'p51_duplicate_event_v1', demo_scoped: true, payload })),
+    { record_type: 'p51_device_clock_skew_report_v1', demo_scoped: true, payload: clockSkewReport },
+    { record_type: 'p51_gateway_ingestion_window_v1', demo_scoped: true, payload: ingestionWindow },
+    { record_type: 'p51_gateway_traceability_readback_v1', demo_scoped: true, payload: traceabilityReadback },
     { record_type: 'p51_gateway_snapshot_v1', demo_scoped: true, payload: snapshot },
-  ].map((record, index) => ({
-    ...record,
-    idempotency_key: `p51:${index}:${sha256Hex(stableStringify(record)).slice(0, 24)}`,
-  }));
-
+  ].map((record, index) => ({ ...record, idempotency_key: `p51:${index}:${sha256Hex(stableStringify(record)).slice(0, 24)}` }));
   const deterministic_hash = sha256Hex(stableStringify(records));
-  return { manifest, observations, healthEnvelope, sensorThings, sosa, rawSamples, deviceObservations, snapshot, records, hashes, deterministic_hash };
+  return { manifest, packs, observations, healthEnvelopes, duplicateEvents, ingestionWindow, clockSkewReport, traceabilityReadback, sensorThings, sosa, rawSamples, deviceObservations, snapshot, records, hashes, deterministic_hash };
 }
 
-// Write only acceptance-output artifacts.
 function writeOutputs(run) {
   fs.mkdirSync('acceptance-output', { recursive: true });
   fs.writeFileSync(LEDGER_PATH, `${run.records.map((record) => JSON.stringify(record)).join('\n')}\n`, 'utf8');
@@ -322,28 +314,10 @@ function writeOutputs(run) {
   fs.writeFileSync(REPORT_PATH, JSON.stringify(toReport(run), null, 2), 'utf8');
 }
 
-// Build user-facing report JSON.
 function toReport(run) {
-  return {
-    ok: true,
-    phase: 'P51',
-    source_truth_mode: run.manifest.source_truth_mode,
-    device_source_simulated: true,
-    live_gateway_path_proof: true,
-    real_live_device_proof: false,
-    observation_count: run.observations.length,
-    health_envelope_count: 1,
-    metric_count: new Set(run.observations.map((obs) => obs.metric)).size,
-    raw_sample_count: run.rawSamples.length,
-    device_observation_count: run.deviceObservations.length,
-    target_records_created: 0,
-    acceptance_output_only: true,
-    deterministic_hash: run.deterministic_hash,
-    ...run.hashes,
-  };
+  return { ok: true, phase: 'P51', source_truth_mode: run.manifest.source_truth_mode, device_source_simulated: true, live_gateway_path_proof: true, real_live_device_proof: false, input_pack_count: run.packs.length, device_count: new Set(run.packs.map((pack) => pack.device_id)).size, observation_count: run.observations.length, health_envelope_count: run.healthEnvelopes.length, metric_count: new Set(run.observations.map((obs) => obs.metric)).size, raw_sample_count: run.rawSamples.length, device_observation_count: run.deviceObservations.length, duplicate_same_payload_deduped_count: run.duplicateEvents.filter((item) => item.action === 'DEDUPED_DUPLICATE_SAME_PAYLOAD').length, duplicate_conflict_blocked_count: run.duplicateEvents.filter((item) => item.action === 'BLOCKED_DUPLICATE_CONFLICT').length, clock_skew_warning_count: run.clockSkewReport.warn_count, ingestion_window_count: 1, traceability_readback_count: 1, target_records_created: 0, acceptance_output_only: true, deterministic_hash: run.deterministic_hash, ...run.hashes };
 }
 
-// Run one real negative fixture and require it to block before producing records.
 function runNegative(fileName) {
   const manifest = readJson(MANIFEST_PATH);
   const negativeManifest = readJson(NEGATIVE_MANIFEST_PATH);
@@ -352,23 +326,14 @@ function runNegative(fileName) {
   let blocked = false;
   let error = null;
   try {
-    resolveSenmlPack(bad.pack, manifest);
+    resolveSenmlPack(bad.pack, manifest, 0);
   } catch (err) {
     blocked = true;
     error = String(err.message || err);
   }
-  return {
-    ok: blocked && error === bad.expected_error,
-    phase: 'P51',
-    negative_fixture: fileName,
-    result_state: blocked ? 'BLOCKED' : 'UNBLOCKED',
-    expected_error: bad.expected_error,
-    actual_error: error,
-    target_records_created: 0,
-  };
+  return { ok: blocked && error === bad.expected_error, phase: 'P51', negative_fixture: fileName, result_state: blocked ? 'BLOCKED' : 'UNBLOCKED', expected_error: bad.expected_error, actual_error: error, target_records_created: 0 };
 }
 
-// Parse command line flags.
 const args = process.argv.slice(2);
 const modeArg = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'dry-run';
 const negativeArg = args.includes('--negative') ? args[args.indexOf('--negative') + 1] : null;
@@ -380,10 +345,4 @@ if (negativeArg) {
 
 const run = buildRun();
 if (modeArg === 'controlled-write') writeOutputs(run);
-
-console.log(JSON.stringify({
-  ...toReport(run),
-  mode: modeArg,
-  records: run.records,
-  snapshot: run.snapshot,
-}, null, 2));
+console.log(JSON.stringify({ ...toReport(run), mode: modeArg, records: run.records, snapshot: run.snapshot }, null, 2));
