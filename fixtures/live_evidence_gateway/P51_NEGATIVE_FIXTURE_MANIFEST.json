@@ -6,7 +6,7 @@
   "fixture_dir": "fixtures/live_evidence_gateway/negative",
   "expected_blocked_fixtures": [
     "missing_base_time.json",
-    "missing_base_name.json",
+    "no_base_name.json",
     "unresolved_relative_time.json",
     "unsupported_unit_without_profile.json",
     "unsupported_metric.json",
