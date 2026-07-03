@@ -1,0 +1,54 @@
+{
+  "schema_version": "geox_p54_field_pilot_readiness_input_manifest_v1",
+  "phase": "P54",
+  "task_line": "P54 Controlled Field Pilot Readiness Review Gate v1",
+  "review_type": "controlled_field_pilot_readiness_review_gate",
+  "baseline_tag": "p53_field_pilot_plan_v1_closure",
+  "baseline_commit": "567d15359bfdc8008262fea402479be6a14d5312",
+  "as_of_ts": "2026-07-03T00:00:00.000Z",
+  "source_refs": {
+    "p53_closure": "docs/field_pilot_plan/GEOX-P53-CONTROLLED-FIELD-PILOT-PLAN-GATE-CLOSURE-REVIEW.json",
+    "p53_evidence_packet": "docs/field_pilot_plan/GEOX-P53-CONTROLLED-FIELD-PILOT-PLAN-GATE-EVIDENCE-PACKET.json",
+    "p53_capability_matrix": "docs/field_pilot_plan/GEOX-P53-CONTROLLED-FIELD-PILOT-PLAN-GATE-CAPABILITY-MATRIX.json",
+    "p53_boundary_policy": "docs/field_pilot_plan/GEOX-P53-CONTROLLED-FIELD-PILOT-PLAN-GATE-BOUNDARY-POLICY.json",
+    "p53_input_manifest": "fixtures/field_pilot_plan/P53_FIELD_PILOT_PLAN_INPUT_MANIFEST.json",
+    "p53_expected_report": "fixtures/field_pilot_plan/P53_EXPECTED_FIELD_PILOT_PLAN_REPORT.json",
+    "p53_expected_gate": "fixtures/field_pilot_plan/P53_EXPECTED_FIELD_PILOT_PLAN_GATE.json",
+    "p53_acceptance": "scripts/field_pilot_plan/P53_FIELD_PILOT_PLAN_ACCEPTANCE.cjs",
+    "p52_closure": "docs/twin_runtime_health/GEOX-P52-TWIN-RUNTIME-HEALTH-CLOSURE-REVIEW.json",
+    "p51_5_closure": "docs/live_evidence_gateway/GEOX-P51-5-DEMO-VIEWER-CLOSURE-REVIEW.json",
+    "p51_5_snapshot": "apps/web/public/demo-runtime/p51-gateway-viewer-snapshot.json",
+    "control_to_ao_act_non_goals": "docs/controlplane/constitution/GEOX-Control-to-AO-ACT-Instantiation-NonGoals-v0.md"
+  },
+  "expected_dimension_ids": [
+    "R1",
+    "R2",
+    "R3",
+    "R4",
+    "R5",
+    "R6",
+    "R7",
+    "R8",
+    "R9",
+    "R10",
+    "R11",
+    "R12"
+  ],
+  "forbidden_source_prefixes": [
+    "acceptance-output/"
+  ],
+  "expected_result": "READY_FOR_RUNTIME_HEALTH_SERVICE_GATE_WITH_LIMITATIONS",
+  "expected_gate": {
+    "p55_runtime_health_service_gate_allowed": true,
+    "field_pilot_execution_allowed": false,
+    "full_runtime_v1_freeze_allowed": false,
+    "runtime_health_service_implemented": false,
+    "live_runtime_monitoring_active": false,
+    "real_device_deployed": false,
+    "production_gateway_online": false,
+    "ao_act_task_creation_allowed": false,
+    "dispatch_allowed": false,
+    "roi_allowed": false,
+    "field_memory_allowed": false
+  }
+}
