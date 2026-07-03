@@ -1,0 +1,17 @@
+{
+  "schema_version": "geox_p55_expected_runtime_health_gate_v1",
+  "p56_replay_gate": {
+    "allowed": true,
+    "mode": "replay_authorization_only",
+    "reason": "P55 replay-backed health gate is ready for P56 replay gate review."
+  },
+  "field_pilot_execution_gate": {
+    "allowed": false,
+    "reason": "P55 does not start field execution."
+  },
+  "full_runtime_freeze_gate": {
+    "allowed": false,
+    "reason": "P55 cannot freeze Full Runtime v1."
+  },
+  "runtime_health_service_gate_result": "REPLAY_BACKED_RUNTIME_HEALTH_SERVICE_GATE_READY_WITH_LIMITATIONS"
+}
