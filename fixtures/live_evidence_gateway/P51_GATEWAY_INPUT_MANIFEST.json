@@ -11,11 +11,22 @@
   "device_id": "gw_soil_001",
   "credential_id": "cred_p51_demo_001",
   "credential_hash_ref": "sha256:credential_hash_pointer_only",
+  "devices": [
+    { "device_id": "gw_soil_001", "credential_id": "cred_p51_demo_001" },
+    { "device_id": "gw_soil_002", "credential_id": "cred_p51_demo_002" }
+  ],
   "device_source_simulated": true,
   "live_gateway_path_proof": true,
   "real_live_device_proof": false,
-  "source_truth_mode": "controlled_senml_fixture",
+  "source_truth_mode": "device_path_simulation",
   "ingested_at": "2026-02-01T00:10:00.000Z",
+  "gateway_received_at": "2026-02-01T00:10:00.000Z",
+  "gateway_window_start": "2026-02-01T00:00:00.000Z",
+  "gateway_window_end": "2026-02-01T00:20:00.000Z",
+  "clock_skew_policy": {
+    "warn_ms": 120000,
+    "block_ms": 600000
+  },
   "senml_fixture_ref": "fixtures/live_evidence_gateway/P51_SENML_DEVICE_SAMPLE_FIXTURE.jsonl",
   "negative_manifest_ref": "fixtures/live_evidence_gateway/P51_NEGATIVE_FIXTURE_MANIFEST.json",
   "unit_conversion_profile": {
@@ -26,8 +37,15 @@
       "factor": 100
     }
   },
-  "expected_observation_count": 5,
-  "expected_health_envelope_count": 1,
+  "expected_pack_count": 24,
+  "expected_device_count": 2,
+  "expected_observation_count": 20,
+  "expected_health_envelope_count": 2,
+  "expected_duplicate_same_payload_deduped_count": 1,
+  "expected_duplicate_conflict_blocked_count": 1,
+  "expected_clock_skew_warning_count": 1,
+  "expected_ingestion_window_count": 1,
+  "expected_traceability_readback_count": 1,
   "expected_metrics": [
     "soil_moisture",
     "soil_temperature",
