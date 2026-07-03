@@ -1,0 +1,26 @@
+{
+  "schema_version": "geox_p54_negative_fixture_manifest_v1",
+  "phase": "P54",
+  "negative_fixture_refs": [
+    "fixtures/field_pilot_readiness/negative/missing_p53_closure.json",
+    "fixtures/field_pilot_readiness/negative/p53_acceptance_failed.json",
+    "fixtures/field_pilot_readiness/negative/p53_plan_not_allowed.json",
+    "fixtures/field_pilot_readiness/negative/p53_execution_allowed_true.json",
+    "fixtures/field_pilot_readiness/negative/p53_ao_act_allowed_true.json",
+    "fixtures/field_pilot_readiness/negative/p53_dispatch_allowed_true.json",
+    "fixtures/field_pilot_readiness/negative/p53_roi_allowed_true.json",
+    "fixtures/field_pilot_readiness/negative/p53_field_memory_allowed_true.json",
+    "fixtures/field_pilot_readiness/negative/p53_full_freeze_allowed_true.json",
+    "fixtures/field_pilot_readiness/negative/p53_real_site_selected_true.json",
+    "fixtures/field_pilot_readiness/negative/p53_field_owner_committed_true.json",
+    "fixtures/field_pilot_readiness/negative/p53_operation_scheduled_true.json",
+    "fixtures/field_pilot_readiness/negative/human_role_matrix_absent.json",
+    "fixtures/field_pilot_readiness/negative/safety_rules_absent.json",
+    "fixtures/field_pilot_readiness/negative/rollback_plan_absent.json",
+    "fixtures/field_pilot_readiness/negative/traceability_packet_absent.json",
+    "fixtures/field_pilot_readiness/negative/control_boundary_absent.json",
+    "fixtures/field_pilot_readiness/negative/runtime_service_claim_flag.json",
+    "fixtures/field_pilot_readiness/negative/execution_claim_flag.json",
+    "fixtures/field_pilot_readiness/negative/full_freeze_claim_flag.json"
+  ]
+}
