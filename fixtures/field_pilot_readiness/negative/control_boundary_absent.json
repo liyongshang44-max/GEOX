@@ -1,0 +1,10 @@
+{
+  "schema_version": "geox_p54_negative_fixture_v1",
+  "scenario_id": "control_boundary_absent",
+  "scenario": "control_boundary_absent",
+  "expected_result_state": "BLOCKED",
+  "p55_runtime_health_service_gate_allowed": false,
+  "field_pilot_execution_allowed": false,
+  "full_runtime_v1_freeze_allowed": false,
+  "target_records_created": 0
+}
