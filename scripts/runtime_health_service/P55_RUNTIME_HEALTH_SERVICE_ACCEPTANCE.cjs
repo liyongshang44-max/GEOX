@@ -66,7 +66,8 @@ check('19_p54_next_phase_p55', p54Closure.next_allowed_phase_after_closure === '
 check('20_p54_nonclaims_preserved', p54Closure.nonclaims.runtime_health_service_implemented === false && p54Closure.nonclaims.field_pilot_started === false && p54Closure.nonclaims.full_runtime_v1_frozen === false);
 
 const p51Snapshot = readJson(manifest.source_refs.p51_5_snapshot);
-check('21_gateway_snapshot_source_truth', exists(manifest.source_refs.p51_5_snapshot) && p51Snapshot.source_truth_mode === 'device_path_simulation');
+const p51SnapshotSourceTruthMode = p51Snapshot.identity?.source_truth_mode ?? p51Snapshot.source_truth_mode ?? null;
+check('21_gateway_snapshot_source_truth', exists(manifest.source_refs.p51_5_snapshot) && p51SnapshotSourceTruthMode === 'device_path_simulation');
 check('22_source_refs_do_not_use_acceptance_output', Object.values(manifest.source_refs).every((ref) => !ref.startsWith('acceptance-output/')));
 
 const routeText = read(ROUTE_FILE);
