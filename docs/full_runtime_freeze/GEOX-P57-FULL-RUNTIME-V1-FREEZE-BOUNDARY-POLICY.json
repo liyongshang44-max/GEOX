@@ -1,0 +1,37 @@
+{
+  "schema_version": "geox_p57_full_runtime_v1_replay_backed_freeze_boundary_policy_v1",
+  "phase": "P57",
+  "task_line": "P57 GEOX-FULL-RUNTIME-V1-FREEZE / Replay-backed Audit Freeze",
+  "baseline_tag": "p56_replay_execution_authorization_gate_v1_closure",
+  "baseline_commit": "0637e311e330ee09c1dc84d75018a206168b5231",
+  "allowed_changed_roots": [
+    "docs/full_runtime_freeze/",
+    "fixtures/full_runtime_freeze/",
+    "scripts/full_runtime_freeze/"
+  ],
+  "forbidden_changed_roots": [
+    "apps/server/",
+    "apps/web/",
+    "apps/telemetry-ingest/",
+    "packages/contracts/",
+    "migrations/",
+    ".github/"
+  ],
+  "freeze_binding": {
+    "freeze_package": "GEOX-FULL-RUNTIME-V1-FREEZE",
+    "full_runtime_v1_frozen": true,
+    "full_runtime_mode": "replay_backed_production_demo",
+    "replay_backed_production_demo_frozen": true,
+    "live_device_production_runtime_v1_frozen": false
+  },
+  "nonclaim_groups": {
+    "live_runtime_scope": false,
+    "real_world_scope": false,
+    "downstream_creation_scope": false,
+    "learning_or_value_scope": false
+  },
+  "allowed_output_files": [
+    "acceptance-output/P57_FULL_RUNTIME_FREEZE_LEDGER.jsonl",
+    "acceptance-output/P57_FULL_RUNTIME_FREEZE_REPORT.json"
+  ]
+}
