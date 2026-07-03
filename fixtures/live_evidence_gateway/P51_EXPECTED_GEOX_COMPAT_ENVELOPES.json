@@ -1,8 +1,9 @@
 {
   "schema_version": "geox_p51_expected_geox_compat_envelopes_v1",
   "phase": "P51",
-  "expected_raw_sample_count": 5,
-  "expected_device_observation_count": 5,
+  "expected_raw_sample_count": 20,
+  "expected_device_observation_count": 20,
+  "expected_device_count": 2,
   "raw_sample_required": {
     "source": "gateway",
     "interpolated": false,
@@ -15,8 +16,7 @@
     "tenant_id": "tenant_p51_demo",
     "project_id": "project_p51_demo",
     "group_id": "group_p51_demo",
-    "field_id": "field_p51_alpha",
-    "device_id": "gw_soil_001"
+    "field_id": "field_p51_alpha"
   },
   "expected_units": {
     "soil_moisture": "%VWC",
