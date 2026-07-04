@@ -1,5 +1,5 @@
 // apps/web/src/features/operator/fieldRuntime/fieldRuntimeViewModel.ts
-// Purpose: provide the Field Runtime ViewModel contract for layout, tabs, route identity, boundary copy, and migrated read-only tab states through H60-G.
+// Purpose: provide the Field Runtime ViewModel contract for layout, tabs, route identity, boundary copy, and migrated read-only tab states through H60-H.
 // Boundary: this file builds local UI state only; read-only data is mapped by Field Runtime adapters.
 
 export type FieldRuntimeTabKey =
@@ -184,14 +184,18 @@ export const FIELD_RUNTIME_TABS: FieldRuntimeTabDefinition[] = [
     key: "residual",
     label: "Residual",
     pathSuffix: "residual",
-    status: "limited",
-    phase: "reserved for H60-H",
+    status: "available",
+    phase: "H60-H residual verification tab",
     boundaryCopy: [
-      "Residual route is reserved for H60-H.",
-      "Residual is an accuracy / response review.",
+      "Residual content is derived from the existing read-only Operator Field Twin post-irrigation verification read model.",
+      "Residual / Verification is displayed for review only.",
       "Residual is not causal proof.",
       "Residual does not write ROI.",
       "Residual does not write Field Memory.",
+      "Residual does not create recommendation.",
+      "Residual does not create task.",
+      "No approval / dispatch / AO-ACT task is created.",
+      "Downstream candidate flags are metadata only.",
     ],
   },
   {
