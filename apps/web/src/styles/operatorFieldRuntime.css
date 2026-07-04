@@ -1,5 +1,5 @@
 /* apps/web/src/styles/operatorFieldRuntime.css */
-/* Purpose: style Field Runtime layout, boundary banner, tabs, H60-D panels, and tab stubs without inline styles. */
+/* Purpose: style Field Runtime layout, boundary banner, tabs, H60-D panels, H60-E evidence panels, and tab stubs without inline styles. */
 
 .operatorFieldRuntime {
   display: grid;
@@ -248,12 +248,120 @@
   background: #fbfcf8;
 }
 
+.operatorFieldRuntime__evidenceGrid,
+.operatorFieldRuntime__evidenceTrace,
+.operatorFieldRuntime__evidenceTraceList,
+.operatorFieldRuntime__evidenceGapList {
+  display: grid;
+  gap: 16px;
+}
+
+.operatorFieldRuntime__evidenceTraceItem {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #e4ebdd;
+  border-radius: 18px;
+  background: #f8faf5;
+}
+
+.operatorFieldRuntime__coverageTable,
+.operatorFieldRuntime__sourceIndexTable {
+  display: grid;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.operatorFieldRuntime__tableHeader,
+.operatorFieldRuntime__tableRow {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.6fr) repeat(4, minmax(110px, 1fr));
+  gap: 10px;
+  align-items: start;
+  min-width: 760px;
+  padding: 10px 12px;
+  border: 1px solid #e4ebdd;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.operatorFieldRuntime__tableHeader {
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: #526151;
+}
+
+.operatorFieldRuntime__tableRow small,
+.operatorFieldRuntime__tableNote {
+  display: block;
+  margin-top: 4px;
+  color: #526151;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.operatorFieldRuntime__qualitySummary,
+.operatorFieldRuntime__evidenceBoundary {
+  background: #fbfcf8;
+}
+
+.operatorFieldRuntime__qualityBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid #dfe8d8;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #526151;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.operatorFieldRuntime__evidenceRefs summary {
+  cursor: pointer;
+  color: #2a3828;
+  font-weight: 850;
+}
+
+.operatorFieldRuntime__evidenceRefs ul {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.operatorFieldRuntime__evidenceDetailList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.operatorFieldRuntime__evidenceDetailList div {
+  display: grid;
+  gap: 4px;
+}
+
+.operatorFieldRuntime__evidenceDetailList dt {
+  color: #526151;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.operatorFieldRuntime__evidenceDetailList dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 900px) {
   .operatorFieldRuntime__contentGrid,
   .operatorFieldRuntime__summaryGrid,
   .operatorFieldRuntime__metricGrid,
   .operatorFieldRuntime__stateVector,
-  .operatorFieldRuntime__coverageMatrix {
+  .operatorFieldRuntime__coverageMatrix,
+  .operatorFieldRuntime__evidenceDetailList {
     grid-template-columns: 1fr;
   }
 }
