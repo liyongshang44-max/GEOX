@@ -11,6 +11,8 @@ import FieldRuntimeEvidenceQualityPanel from "./FieldRuntimeEvidenceQualityPanel
 import FieldRuntimeEvidenceTracePanel from "./FieldRuntimeEvidenceTracePanel";
 import FieldRuntimeSourceIndexPanel from "./FieldRuntimeSourceIndexPanel";
 
+const FIELD_RUNTIME_EVIDENCE_SOURCE_LABEL = "source: operator_field_twin_evidence_quality_v1";
+
 type FieldRuntimeEvidenceTabPanelProps = {
   loadState?: FieldRuntimeEvidenceLoadState;
 };
@@ -28,14 +30,14 @@ export default function FieldRuntimeEvidenceTabPanel({ loadState }: FieldRuntime
 
   const evidence = loadState.evidence;
   return (
-    <div className="operatorFieldRuntime__evidenceGrid" data-h60e="evidence-tab-ready">
+    <div className="operatorFieldRuntime__evidenceGrid" data-h60e="evidence-tab-ready" data-evidence-source={evidence.source}>
       <article className="operatorFieldRuntime__panel" data-h60e-panel="evidence-intro">
         <div className="operatorFieldRuntime__panelHeader">
           <div>
             <p className="operatorFieldRuntime__eyebrow">Evidence</p>
             <h2 className="operatorFieldRuntime__panelTitle">Evidence</h2>
           </div>
-          <span className="operatorFieldRuntime__panelMeta">source: {evidence.source}</span>
+          <span className="operatorFieldRuntime__panelMeta">{FIELD_RUNTIME_EVIDENCE_SOURCE_LABEL}</span>
         </div>
         <p className="operatorFieldRuntime__stubLead">Evidence content is derived from the existing read-only Operator Field Twin evidence quality read model.</p>
         <p className="operatorFieldRuntime__stubLead">Full Evidence trace is displayed for review only.</p>
