@@ -9,6 +9,7 @@ import FieldRuntimeLayout from "./FieldRuntimeLayout";
 import { buildFieldRuntimeViewModel, type FieldRuntimeRouteKey } from "./fieldRuntimeViewModel";
 import { loadFieldRuntimeEvidence, type FieldRuntimeEvidenceLoadState } from "./fieldRuntimeEvidenceAdapter";
 import { loadFieldRuntimeForecast, type FieldRuntimeForecastLoadState } from "./fieldRuntimeForecastAdapter";
+import { loadFieldRuntimeResidual, type FieldRuntimeResidualLoadState } from "./fieldRuntimeResidualAdapter";
 import { loadFieldRuntimeScenario, type FieldRuntimeScenarioLoadState } from "./fieldRuntimeScenarioAdapter";
 import { loadFieldRuntimeWorkspaceOverview, type FieldRuntimeWorkspaceLoadState } from "./fieldRuntimeWorkspaceAdapter";
 
@@ -40,6 +41,10 @@ function shouldLoadScenario(tab: FieldRuntimeRouteKey, fieldId: string): boolean
   return tab === "scenario" && fieldId !== "not-selected";
 }
 
+function shouldLoadResidual(tab: FieldRuntimeRouteKey, fieldId: string): boolean {
+  return tab === "residual" && fieldId !== "not-selected";
+}
+
 export default function FieldRuntimeRoutePage({ tab }: FieldRuntimeRoutePageProps): React.ReactElement {
   const params = useParams();
   const [searchParams] = useSearchParams();
@@ -51,74 +56,77 @@ export default function FieldRuntimeRoutePage({ tab }: FieldRuntimeRoutePageProp
   const [evidenceLoadState, setEvidenceLoadState] = React.useState<FieldRuntimeEvidenceLoadState>({ status: "idle", message: "Evidence read model is not loaded for this route." });
   const [forecastLoadState, setForecastLoadState] = React.useState<FieldRuntimeForecastLoadState>({ status: "idle", message: "Forecast read model is not loaded for this route." });
   const [scenarioLoadState, setScenarioLoadState] = React.useState<FieldRuntimeScenarioLoadState>({ status: "idle", message: "Scenario read model is not loaded for this route." });
+  const [residualLoadState, setResidualLoadState] = React.useState<FieldRuntimeResidualLoadState>({ status: "idle", message: "Residual read model is not loaded for this route." });
 
   React.useEffect(() => {
     let alive = true;
-
     if (!shouldLoadWorkspace(tab, fieldId)) {
       setWorkspaceLoadState({ status: "idle", message: "Select a field before loading Field Runtime Overview or State." });
       return () => { alive = false; };
     }
-
     setWorkspaceLoadState({ status: "loading" });
     void loadFieldRuntimeWorkspaceOverview(fieldId, scope).then((result) => {
       if (!alive) return;
       setWorkspaceLoadState(result);
     });
-
     return () => { alive = false; };
   }, [fieldId, scope, tab]);
 
   React.useEffect(() => {
     let alive = true;
-
     if (!shouldLoadEvidence(tab, fieldId)) {
       setEvidenceLoadState({ status: "idle", message: "Select a field before loading Field Runtime Evidence." });
       return () => { alive = false; };
     }
-
     setEvidenceLoadState({ status: "loading" });
     void loadFieldRuntimeEvidence(fieldId, scope).then((result) => {
       if (!alive) return;
       setEvidenceLoadState(result);
     });
-
     return () => { alive = false; };
   }, [fieldId, scope, tab]);
 
   React.useEffect(() => {
     let alive = true;
-
     if (!shouldLoadForecast(tab, fieldId)) {
       setForecastLoadState({ status: "idle", message: "Select a field before loading Field Runtime Forecast." });
       return () => { alive = false; };
     }
-
     setForecastLoadState({ status: "loading" });
     void loadFieldRuntimeForecast(fieldId, scope).then((result) => {
       if (!alive) return;
       setForecastLoadState(result);
     });
-
     return () => { alive = false; };
   }, [fieldId, scope, tab]);
 
   React.useEffect(() => {
     let alive = true;
-
     if (!shouldLoadScenario(tab, fieldId)) {
       setScenarioLoadState({ status: "idle", message: "Select a field before loading Field Runtime Scenario." });
       return () => { alive = false; };
     }
-
     setScenarioLoadState({ status: "loading" });
     void loadFieldRuntimeScenario(fieldId, scope).then((result) => {
       if (!alive) return;
       setScenarioLoadState(result);
     });
-
     return () => { alive = false; };
   }, [fieldId, scope, tab]);
 
-  return <FieldRuntimeLayout viewModel={viewModel} workspaceLoadState={workspaceLoadState} evidenceLoadState={evidenceLoadState} forecastLoadState={forecastLoadState} scenarioLoadState={scenarioLoadState} />;
+  React.useEffect(() => {
+    let alive = true;
+    if (!shouldLoadResidual(tab, fieldId)) {
+      setResidualLoadState({ status: "idle", message: "Select a field before loading Field Runtime Residual / Verification." });
+      return () => { alive = false; };
+    }
+    setResidualLoadState({ status: "loading" });
+    void loadFieldRuntimeResidual(fieldId, scope).then((result) => {
+      if (!alive) return;
+      setResidualLoadState(result);
+    });
+    return () => { alive = false; };
+  }, [fieldId, scope, tab]);
+
+  return <FieldRuntimeLayout viewModel={viewModel} workspaceLoadState={workspaceLoadState} evidenceLoadState={evidenceLoadState} forecastLoadState={forecastLoadState} scenarioLoadState={scenarioLoadState} residualLoadState={residualLoadState} />;
 }
