@@ -1,5 +1,5 @@
 /* apps/web/src/styles/operatorFieldRuntime.css */
-/* Purpose: style Field Runtime layout, boundary banner, tabs, H60-D panels, H60-E evidence panels, and tab stubs without inline styles. */
+/* Purpose: style Field Runtime layout, boundary banner, tabs, H60-D panels, H60-E evidence panels, H60-F forecast panels, and tab stubs without inline styles. */
 
 .operatorFieldRuntime {
   display: grid;
@@ -251,12 +251,16 @@
 .operatorFieldRuntime__evidenceGrid,
 .operatorFieldRuntime__evidenceTrace,
 .operatorFieldRuntime__evidenceTraceList,
-.operatorFieldRuntime__evidenceGapList {
+.operatorFieldRuntime__evidenceGapList,
+.operatorFieldRuntime__forecastGrid,
+.operatorFieldRuntime__forecastTimeline,
+.operatorFieldRuntime__forecastTimelineList {
   display: grid;
   gap: 16px;
 }
 
-.operatorFieldRuntime__evidenceTraceItem {
+.operatorFieldRuntime__evidenceTraceItem,
+.operatorFieldRuntime__forecastTimelineItem {
   display: grid;
   gap: 12px;
   padding: 16px;
@@ -302,7 +306,10 @@
 }
 
 .operatorFieldRuntime__qualitySummary,
-.operatorFieldRuntime__evidenceBoundary {
+.operatorFieldRuntime__evidenceBoundary,
+.operatorFieldRuntime__forecastWindow,
+.operatorFieldRuntime__forecastEvidence,
+.operatorFieldRuntime__forecastBoundary {
   background: #fbfcf8;
 }
 
@@ -319,13 +326,15 @@
   font-weight: 900;
 }
 
-.operatorFieldRuntime__evidenceRefs summary {
+.operatorFieldRuntime__evidenceRefs summary,
+.operatorFieldRuntime__forecastRefs summary {
   cursor: pointer;
   color: #2a3828;
   font-weight: 850;
 }
 
-.operatorFieldRuntime__evidenceRefs ul {
+.operatorFieldRuntime__evidenceRefs ul,
+.operatorFieldRuntime__forecastRefs ul {
   display: grid;
   gap: 6px;
   margin: 8px 0 0;
@@ -353,6 +362,12 @@
 .operatorFieldRuntime__evidenceDetailList dd {
   margin: 0;
   overflow-wrap: anywhere;
+}
+
+.operatorFieldRuntime__forecastReason {
+  margin: 0;
+  color: #526151;
+  font-weight: 800;
 }
 
 @media (max-width: 900px) {

@@ -1,5 +1,5 @@
 // apps/web/src/features/operator/fieldRuntime/fieldRuntimeViewModel.ts
-// Purpose: provide the Field Runtime ViewModel contract for layout, tabs, route identity, boundary copy, H60-D overview/state slots, and H60-E evidence tab state.
+// Purpose: provide the Field Runtime ViewModel contract for layout, tabs, route identity, boundary copy, and migrated read-only tab states through H60-F.
 // Boundary: this file builds local UI state only; read-only data is mapped by Field Runtime adapters.
 
 export type FieldRuntimeTabKey =
@@ -150,13 +150,16 @@ export const FIELD_RUNTIME_TABS: FieldRuntimeTabDefinition[] = [
     key: "forecast",
     label: "Forecast",
     pathSuffix: "forecast",
-    status: "limited",
-    phase: "reserved for H60-F",
+    status: "available",
+    phase: "H60-F forecast tab",
     boundaryCopy: [
-      "Forecast route is reserved for H60-F.",
+      "Forecast content is derived from the existing read-only Operator Field Twin forecast panel.",
+      "Forecast window is displayed for review only.",
       "Forecast is not a recommendation.",
       "Forecast does not create task.",
       "Forecast does not imply action.",
+      "No scenario comparison is performed.",
+      "No approval / dispatch / AO-ACT task is created.",
     ],
   },
   {
