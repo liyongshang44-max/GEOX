@@ -26,6 +26,7 @@ const H59_ALLOWED_CHANGED_FILE_PATTERNS = [
   /^apps\/web\/src\/layouts\/OperatorLayout\.tsx$/,
   /^apps\/web\/src\/styles\/operatorShell\.css$/,
   /^docs\/frontend-productization\/H59-OPERATOR-RUNTIME-CONSOLE-SHELL\.md$/,
+  /^scripts\/frontend_acceptance\/ACCEPTANCE_H58_FRONTEND_PRODUCTIZATION_PLAN_V1\.cjs$/,
   /^scripts\/frontend_acceptance\/ACCEPTANCE_H59_OPERATOR_RUNTIME_CONSOLE_SHELL_V1\.cjs$/,
   /^apps\/web\/src\/features\/operator\/runtimeConsole\/.+$/,
 ];
