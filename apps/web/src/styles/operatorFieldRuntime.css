@@ -155,7 +155,9 @@
 .operatorFieldRuntime__forecastTimelineList,
 .operatorFieldRuntime__scenarioGrid,
 .operatorFieldRuntime__scenarioOptions,
-.operatorFieldRuntime__scenarioOptionList {
+.operatorFieldRuntime__scenarioOptionList,
+.operatorFieldRuntime__residualGrid,
+.operatorFieldRuntime__residualGapList {
   display: grid;
   gap: 16px;
 }
@@ -205,7 +207,8 @@
 .operatorFieldRuntime__summaryGrid,
 .operatorFieldRuntime__metricGrid,
 .operatorFieldRuntime__stateVector,
-.operatorFieldRuntime__coverageMatrix {
+.operatorFieldRuntime__coverageMatrix,
+.operatorFieldRuntime__residualMetadata {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
@@ -260,7 +263,15 @@
 .operatorFieldRuntime__forecastBoundary,
 .operatorFieldRuntime__scenarioStatus,
 .operatorFieldRuntime__scenarioEvidence,
-.operatorFieldRuntime__scenarioBoundary {
+.operatorFieldRuntime__scenarioBoundary,
+.operatorFieldRuntime__verificationSummary,
+.operatorFieldRuntime__prePostState,
+.operatorFieldRuntime__responseDelta,
+.operatorFieldRuntime__executionEvidence,
+.operatorFieldRuntime__zoneResponse,
+.operatorFieldRuntime__verificationGaps,
+.operatorFieldRuntime__executionTail,
+.operatorFieldRuntime__residualBoundary {
   background: #fbfcf8;
 }
 
@@ -278,7 +289,8 @@
 }
 
 .operatorFieldRuntime__coverageTable,
-.operatorFieldRuntime__sourceIndexTable {
+.operatorFieldRuntime__sourceIndexTable,
+.operatorFieldRuntime__residualTable {
   display: grid;
   gap: 8px;
   overflow-x: auto;
@@ -297,7 +309,21 @@
   background: #ffffff;
 }
 
-.operatorFieldRuntime__tableHeader {
+.operatorFieldRuntime__residualTableHeader,
+.operatorFieldRuntime__residualTableRow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 10px;
+  align-items: start;
+  min-width: 640px;
+  padding: 10px 12px;
+  border: 1px solid #e4ebdd;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.operatorFieldRuntime__tableHeader,
+.operatorFieldRuntime__residualTableHeader {
   font-size: 12px;
   font-weight: 900;
   text-transform: uppercase;
@@ -315,7 +341,8 @@
 
 .operatorFieldRuntime__evidenceRefs summary,
 .operatorFieldRuntime__forecastRefs summary,
-.operatorFieldRuntime__scenarioRefs summary {
+.operatorFieldRuntime__scenarioRefs summary,
+.operatorFieldRuntime__residualRefs summary {
   cursor: pointer;
   color: #2a3828;
   font-weight: 850;
@@ -323,7 +350,8 @@
 
 .operatorFieldRuntime__evidenceRefs ul,
 .operatorFieldRuntime__forecastRefs ul,
-.operatorFieldRuntime__scenarioRefs ul {
+.operatorFieldRuntime__scenarioRefs ul,
+.operatorFieldRuntime__residualRefs ul {
   display: grid;
   gap: 6px;
   margin: 8px 0 0;
@@ -378,7 +406,8 @@
   .operatorFieldRuntime__stateVector,
   .operatorFieldRuntime__coverageMatrix,
   .operatorFieldRuntime__evidenceDetailList,
-  .operatorFieldRuntime__scenarioDetailList {
+  .operatorFieldRuntime__scenarioDetailList,
+  .operatorFieldRuntime__residualMetadata {
     grid-template-columns: 1fr;
   }
 }
