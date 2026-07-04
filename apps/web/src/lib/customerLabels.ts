@@ -1,3 +1,4 @@
+// apps/web/src/lib/customerLabels.ts
 import {
   customerStatusLabel as mapStatusLabel,
   labelCustomerAcceptanceVerdict,
@@ -14,11 +15,12 @@ export const CUSTOMER_SHELL_LABELS = {
   navFields: "地块",
   navOperations: "作业",
   navReports: "报告",
-  shellRole: "客户视图",
+  navExport: "导出",
+  shellRole: "客户门户",
   accountFallback: "客户账户",
   scopePending: "授权范围待确认",
   searchPlaceholder: "搜索功能暂未开放",
-  sidebarFooter: "客户报告入口",
+  sidebarFooter: "客户可见报告与授权范围",
 } as const;
 
 export const CUSTOMER_LABELS = {
@@ -218,10 +220,11 @@ export function labelEvidenceQuality(raw: unknown): string {
 }
 
 export function labelConfidenceHint(raw: unknown): string {
-  const score = typeof raw === "number" ? raw : Number(raw);
-  if (!Number.isFinite(score)) return "收益为估算值，可信度有限";
-  if (score < 0.6) return "收益为估算值，可信度有限";
-  return "可信度较高";
+  const key = normalizeKey(raw);
+  if (key === "HIGH") return "可信度高";
+  if (key === "MEDIUM") return "可信度中";
+  if (key === "LOW") return "可信度低";
+  return textOrFallback(raw, "可信度未标注");
 }
 
 export function labelAcceptanceStatus(raw: unknown): string {
@@ -246,5 +249,5 @@ export function customerTimelineStatusLabel(raw: unknown): string {
   if (key === "SIMULATED") return "模拟记录";
   if (key === "MISSING") return "暂无记录";
   if (key === "NOT_APPLICABLE") return "不适用";
-  return mapStatusLabel(raw, "generic");
+  return customerStatusLabel(raw);
 }
