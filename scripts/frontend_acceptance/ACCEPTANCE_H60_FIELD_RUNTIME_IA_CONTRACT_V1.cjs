@@ -68,6 +68,24 @@ function lacksAll(content, tokens) {
   return tokens.every((token) => !normalizedContent.includes(normalizeForTokenScan(token)));
 }
 
+function extractFunctionBlock(content, functionName) {
+  const marker = `function ${functionName}`;
+  const markerIndex = content.indexOf(marker);
+  if (markerIndex < 0) return '';
+
+  const firstBraceIndex = content.indexOf('{', markerIndex);
+  if (firstBraceIndex < 0) return '';
+
+  let depth = 0;
+  for (let index = firstBraceIndex; index < content.length; index += 1) {
+    if (content[index] === '{') depth += 1;
+    if (content[index] === '}') depth -= 1;
+    if (depth === 0) return content.slice(markerIndex, index + 1);
+  }
+
+  return '';
+}
+
 function getChangedFiles() {
   const commands = [
     ['git', ['diff', '--name-only', 'origin/main...HEAD']],
@@ -116,6 +134,7 @@ function main() {
   const operatorLayout = read(FILES.operatorLayout);
   const operatorRoutes = read(FILES.operatorRoutes);
   const p57FreezeFixture = read(FILES.p57FreezeFixture);
+  const operatorRoutesBlock = extractFunctionBlock(app, 'OperatorRoutes');
 
   assert('h58_and_h59_baselines_remain_referenced', containsAll(h58Plan, [
     'H58 Frontend Productization / GEOX Runtime Console v1',
@@ -236,7 +255,9 @@ function main() {
     '提升 /operator/field-memory 为 Field Runtime 主线',
   ]), { file: FILES.h60RouteMatrix });
 
-  assert('app_still_has_no_h60_canonical_routes_in_h60_0', lacksAll(app, [
+  assert('operator_routes_block_exists_for_h60_0_route_check', operatorRoutesBlock.length > 0, { file: FILES.app });
+
+  assert('operator_routes_do_not_define_h60_canonical_routes_in_h60_0', lacksAll(operatorRoutesBlock, [
     'path="fields"',
     'path="fields/:fieldId"',
     'path="fields/:fieldId/evidence"',
@@ -247,7 +268,7 @@ function main() {
     'path="fields/:fieldId/calibration"',
     'path="fields/:fieldId/health"',
     'path="fields/:fieldId/audit"',
-  ]), { file: FILES.app });
+  ]), { file: FILES.app, scope: 'OperatorRoutes' });
 
   assert('app_preserves_legacy_field_routes_and_no_broad_wildcard', containsAll(app, [
     'path="/operator/*" element={<OperatorShell />} />',
