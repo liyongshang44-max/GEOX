@@ -22,13 +22,13 @@ type AdminNavItem = {
 };
 
 const ADMIN_NAV_ITEMS: AdminNavItem[] = [
-  { key: "dashboard", label: "鎬昏", to: "/admin/dashboard", status: "enabled" },
-  { key: "fields", label: "鍦板潡", to: "/admin/fields", status: "enabled" },
-  { key: "operations", label: "浣滀笟", to: "/admin/operations", status: "enabled" },
-  { key: "devices", label: "璁惧", to: "/admin/devices", status: "enabled" },
-  { key: "evidence", label: "璇佹嵁", to: "/admin/evidence", status: "enabled" },
-  { key: "health", label: "杩愯鍋ュ悍", to: "/admin/healthz", status: "enabled" },
-  { key: "config", label: "閰嶇疆", to: "/admin/skills", status: "enabled" },
+  { key: "dashboard", label: "Dashboard", to: "/admin/dashboard", status: "enabled" },
+  { key: "fields", label: "Fields", to: "/admin/fields", status: "enabled" },
+  { key: "operations", label: "Operations", to: "/admin/operations", status: "enabled" },
+  { key: "devices", label: "Devices", to: "/admin/devices", status: "enabled" },
+  { key: "evidence", label: "Evidence", to: "/admin/evidence", status: "enabled" },
+  { key: "health", label: "Runtime Health", to: "/admin/healthz", status: "enabled" },
+  { key: "config", label: "Config", to: "/admin/skills", status: "enabled" },
 ];
 
 function isNavActive(pathname: string, item: AdminNavItem): boolean {
@@ -47,7 +47,7 @@ export default function AdminLayout({ topBar, children }: AdminLayoutProps): Rea
 
   return (
     <div className="adminShell" data-layout="admin-console-shell">
-      <aside className="adminShellSidebar" aria-label="鍚庡彴绠＄悊瀵艰埅">
+      <aside className="adminShellSidebar" aria-label="Admin navigation">
         <div className="adminShellBrand" aria-label="Admin Console">
           <span className="adminShellLogoMark" aria-hidden="true" />
           <span>Admin Console</span>
