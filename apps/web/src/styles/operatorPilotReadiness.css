@@ -1,0 +1,91 @@
+/* apps/web/src/styles/operatorPilotReadiness.css */
+/* Purpose: style the H63 Pilot Readiness read-only product surface. */
+
+.operatorPilotReadiness {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+}
+
+.operatorPilotReadiness__hero,
+.operatorPilotReadiness__panel {
+  display: grid;
+  gap: 14px;
+  border: 1px solid #d8e4d1;
+  border-radius: 18px;
+  background: #ffffff;
+  padding: 18px;
+}
+
+.operatorPilotReadiness__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.operatorPilotReadiness__hero h1,
+.operatorPilotReadiness__panel h2 {
+  margin: 0;
+  color: #172016;
+}
+
+.operatorPilotReadiness__lead,
+.operatorPilotReadiness__tableRow span,
+.operatorPilotReadiness__meta dd {
+  color: #526151;
+  font-weight: 750;
+  line-height: 1.55;
+}
+
+.operatorPilotReadiness__eyebrow,
+.operatorPilotReadiness__tableHeader,
+.operatorPilotReadiness__meta dt {
+  color: #526151;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.operatorPilotReadiness__panelHeader {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.operatorPilotReadiness__meta,
+.operatorPilotReadiness__table {
+  display: grid;
+  gap: 10px;
+}
+
+.operatorPilotReadiness__meta {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.operatorPilotReadiness__meta div,
+.operatorPilotReadiness__tableHeader,
+.operatorPilotReadiness__tableRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(160px, 1fr));
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e4ebdd;
+  border-radius: 14px;
+  background: #f8faf5;
+  overflow-wrap: anywhere;
+}
+
+.operatorPilotReadiness__meta dd {
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .operatorPilotReadiness__grid,
+  .operatorPilotReadiness__meta,
+  .operatorPilotReadiness__tableHeader,
+  .operatorPilotReadiness__tableRow {
+    grid-template-columns: 1fr;
+  }
+}
