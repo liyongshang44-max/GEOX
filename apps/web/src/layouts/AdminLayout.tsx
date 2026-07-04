@@ -1,5 +1,5 @@
 // apps/web/src/layouts/AdminLayout.tsx
-// Purpose: render the H65 Admin Console as an independent shell instead of delegating to AppShell.
+// Purpose: render the H65 Admin Console as an independent shell.
 // Boundary: this layout owns admin chrome only; it does not create records or open execution workflows.
 
 import React from "react";
@@ -22,13 +22,13 @@ type AdminNavItem = {
 };
 
 const ADMIN_NAV_ITEMS: AdminNavItem[] = [
-  { key: "dashboard", label: "总览", to: "/admin/dashboard", status: "enabled" },
-  { key: "fields", label: "地块", to: "/admin/fields", status: "enabled" },
-  { key: "operations", label: "作业", to: "/admin/operations", status: "enabled" },
-  { key: "devices", label: "设备", to: "/admin/devices", status: "enabled" },
-  { key: "evidence", label: "证据", to: "/admin/evidence", status: "enabled" },
-  { key: "health", label: "运行健康", to: "/admin/healthz", status: "enabled" },
-  { key: "config", label: "配置", to: "/admin/skills", status: "enabled" },
+  { key: "dashboard", label: "鎬昏", to: "/admin/dashboard", status: "enabled" },
+  { key: "fields", label: "鍦板潡", to: "/admin/fields", status: "enabled" },
+  { key: "operations", label: "浣滀笟", to: "/admin/operations", status: "enabled" },
+  { key: "devices", label: "璁惧", to: "/admin/devices", status: "enabled" },
+  { key: "evidence", label: "璇佹嵁", to: "/admin/evidence", status: "enabled" },
+  { key: "health", label: "杩愯鍋ュ悍", to: "/admin/healthz", status: "enabled" },
+  { key: "config", label: "閰嶇疆", to: "/admin/skills", status: "enabled" },
 ];
 
 function isNavActive(pathname: string, item: AdminNavItem): boolean {
@@ -47,7 +47,7 @@ export default function AdminLayout({ topBar, children }: AdminLayoutProps): Rea
 
   return (
     <div className="adminShell" data-layout="admin-console-shell">
-      <aside className="adminShellSidebar" aria-label="后台管理导航">
+      <aside className="adminShellSidebar" aria-label="鍚庡彴绠＄悊瀵艰埅">
         <div className="adminShellBrand" aria-label="Admin Console">
           <span className="adminShellLogoMark" aria-hidden="true" />
           <span>Admin Console</span>
@@ -89,6 +89,7 @@ export default function AdminLayout({ topBar, children }: AdminLayoutProps): Rea
             <h1 className="adminShellTitle">{topBar.title}</h1>
             <div className="adminShellContext">{topBar.lead}</div>
           </div>
+
           <div className="adminShellMeta adminShellTopMeta" aria-label="Admin route policy">
             <div>Route family</div>
             <strong>/admin/*</strong>
