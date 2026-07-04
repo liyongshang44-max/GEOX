@@ -10,6 +10,7 @@ const files = {
   operator: 'apps/web/src/layouts/OperatorLayout.tsx',
   customer: 'apps/web/src/layouts/CustomerLayout.tsx',
   admin: 'apps/web/src/layouts/AdminLayout.tsx',
+  customerLabels: 'apps/web/src/lib/customerLabels.ts',
   runtimeLayout: 'apps/web/src/features/operator/fieldRuntime/FieldRuntimeLayout.tsx',
   runtimeRoute: 'apps/web/src/features/operator/fieldRuntime/FieldRuntimeRoutePage.tsx',
   runtimeVm: 'apps/web/src/features/operator/fieldRuntime/fieldRuntimeViewModel.ts',
@@ -19,6 +20,25 @@ const files = {
   doc: 'docs/frontend-productization/H66-DESIGN-SYSTEM-HARDENING.md',
   acceptance: 'scripts/frontend_acceptance/ACCEPTANCE_H66_DESIGN_SYSTEM_HARDENING_V1.cjs',
 };
+const replayDemoFiles = [
+  'apps/web/src/features/operator/replayDemo/ReplayDemoHero.tsx',
+  'apps/web/src/features/operator/replayDemo/ReplayDemoPage.tsx',
+  'apps/web/src/features/operator/replayDemo/ReplayDemoHashesPanel.tsx',
+  'apps/web/src/features/operator/replayDemo/ReplayDemoNarrativePanel.tsx',
+  'apps/web/src/features/operator/replayDemo/ReplayDemoBoundaryBanner.tsx',
+  'apps/web/src/features/operator/replayDemo/ReplayDemoSnapshotIdsPanel.tsx',
+  'apps/web/src/features/operator/replayDemo/ReplayDemoIngestionPanel.tsx',
+  'apps/web/src/features/operator/replayDemo/ReplayDemoStandardsPanel.tsx',
+  'apps/web/src/features/operator/replayDemo/ReplayDemoSnapshotPanel.tsx',
+  'apps/web/src/features/operator/replayDemo/ReplayDemoGatewayPathPanel.tsx',
+  'apps/web/src/features/operator/replayDemo/ReplayDemoTraceabilityPanel.tsx',
+  'apps/web/src/features/operator/replayDemo/ReplayDemoDeviceEvidencePanel.tsx',
+  'apps/web/src/features/operator/replayDemo/ReplayDemoBoundaryClaimsPanel.tsx',
+];
+const pilotReadinessFiles = [
+  'apps/web/src/features/operator/pilotReadiness/OperatorPilotPage.tsx',
+  'apps/web/src/features/operator/pilotReadiness/pilotReadinessViewModel.ts',
+];
 const allow = [
   /^apps\/web\/src\/layouts\/OperatorLayout\.tsx$/,
   /^apps\/web\/src\/layouts\/CustomerLayout\.tsx$/,
@@ -101,6 +121,8 @@ function runtimeChangedFiles(diff) {
 }
 try {
   Object.values(files).forEach((file) => assert('exists:' + file, exists(file), { file }));
+  replayDemoFiles.forEach((file) => assert('exists:' + file, exists(file), { file }));
+  pilotReadinessFiles.forEach((file) => assert('exists:' + file, exists(file), { file }));
   const diff = changedFiles();
   assert('changed_files_allowlist', diff.every((file) => matchesAny(file, allow)), { diff });
   assert('blocked_files_unchanged', diff.every((file) => !matchesAny(file, block)), { diff });
@@ -108,7 +130,18 @@ try {
   const runtimeFiles = runtimeChangedFiles(diff);
   const runtimeText = runtimeFiles.map((file) => read(file)).join('\n');
   assert('no_backend_or_write_surface', lacksAll(runtimeText, writeTokens), { runtimeFiles });
-  const formalFiles = [files.operator, files.customer, files.admin, files.runtimeLayout, files.runtimeRoute, files.runtimeVm, files.runtimeStub];
+  const formalFiles = [
+    files.operator,
+    files.customer,
+    files.admin,
+    files.customerLabels,
+    files.runtimeLayout,
+    files.runtimeRoute,
+    files.runtimeVm,
+    files.runtimeStub,
+    ...replayDemoFiles,
+    ...pilotReadinessFiles,
+  ];
   const formalText = formalFiles.map((file) => stripCommentsAndDataAttrs(read(file))).join('\n');
   assert('no_mojibake', !mojibakeRanges.some((pattern) => pattern.test(formalText)), { formalFiles });
   assert('no_visible_phase_copy', lacksAll(formalText, phaseTokens), { phaseTokens });
