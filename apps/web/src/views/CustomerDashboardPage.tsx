@@ -63,7 +63,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
     alertText: "当前未发现告警事件。",
     whyText: "当前未返回设备摘要，不能判断设备对地块状态的影响。",
     nextStepText: "等待运营人员补齐设备状态或进入地块报告查看可用证据。",
-    formalityText: "设备状态未确认前，不展示执行成功、客户 ROI 或 Field Memory 结论。",
+    formalityText: "设备状态未确认前，不展示执行成功、客户价值或长期记忆结论。",
   };
   const acceptanceSummaryVm = {
     title: "执行与验收摘要",
