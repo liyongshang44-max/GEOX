@@ -42,7 +42,7 @@ const OPERATOR_NAV_ITEMS: OperatorNavItem[] = [
     key: "evidence",
     label: "Evidence",
     to: "/operator/twin",
-    hint: "Evidence Center enters formal navigation after route behavior acceptance; current evidence capabilities remain preserved by URL or field drawer.",
+    hint: "Evidence Center enters formal navigation after route behavior review; current evidence capabilities remain preserved by URL or field drawer.",
     status: "coming-soon",
   },
   {
@@ -77,7 +77,7 @@ const OPERATOR_NAV_ITEMS: OperatorNavItem[] = [
     key: "settings",
     label: "Settings",
     to: "/operator/twin",
-    hint: "Operator settings are planned for a later route acceptance; this shell freezes the product navigation slot.",
+    hint: "Operator settings are planned for a later route review; this shell freezes the product navigation slot.",
     status: "coming-soon",
   },
 ];
