@@ -1,5 +1,5 @@
 // apps/web/src/features/operator/fieldRuntime/fieldRuntimeViewModel.ts
-// Purpose: provide the Field Runtime ViewModel contract for layout, tabs, route identity, boundary copy, and migrated read-only tab states through H62.
+// Purpose: provide the Field Runtime ViewModel contract for layout, tabs, route identity, and boundary copy.
 // Boundary: this file builds local UI state only; read-only data is mapped by Field Runtime adapters.
 
 export type FieldRuntimeTabKey =
@@ -106,18 +106,26 @@ export type FieldRuntimeViewModel = {
   routeCopy: FieldRuntimeRouteCopy;
 };
 
+const COMMON_REVIEW_BOUNDARY = [
+  "Read-only review surface.",
+  "Traceability only.",
+  "No runtime mutation.",
+  "No external system command.",
+  "No value ledger mutation.",
+  "No long-term field record mutation.",
+  "No model state mutation.",
+];
+
 export const FIELD_RUNTIME_TABS: FieldRuntimeTabDefinition[] = [
   {
     key: "overview",
     label: "Overview",
     pathSuffix: "",
     status: "available",
-    phase: "H60-D workspace-derived overview",
+    phase: "Field Runtime Overview",
     boundaryCopy: [
       "Overview content is derived from the existing read-only Operator Field Twin workspace.",
-      "No facts are written.",
-      "No recommendation is created.",
-      "No dispatch or AO-ACT task is created.",
+      ...COMMON_REVIEW_BOUNDARY,
     ],
   },
   {
@@ -125,13 +133,11 @@ export const FIELD_RUNTIME_TABS: FieldRuntimeTabDefinition[] = [
     label: "Evidence",
     pathSuffix: "evidence",
     status: "available",
-    phase: "H60-E evidence quality tab",
+    phase: "Evidence Review",
     boundaryCopy: [
       "Evidence content is derived from the existing read-only Operator Field Twin evidence quality read model.",
       "Full Evidence trace is displayed for review only.",
-      "No facts are written.",
-      "No recommendation is created.",
-      "No approval / dispatch / AO-ACT task is created.",
+      ...COMMON_REVIEW_BOUNDARY,
     ],
   },
   {
@@ -139,10 +145,11 @@ export const FIELD_RUNTIME_TABS: FieldRuntimeTabDefinition[] = [
     label: "State",
     pathSuffix: "state",
     status: "available",
-    phase: "H60-D workspace-derived state",
+    phase: "State Review",
     boundaryCopy: [
       "State content is derived from the existing read-only Operator Field Twin workspace.",
       "This shell does not generate state estimates.",
+      ...COMMON_REVIEW_BOUNDARY,
     ],
   },
   {
@@ -150,15 +157,14 @@ export const FIELD_RUNTIME_TABS: FieldRuntimeTabDefinition[] = [
     label: "Forecast",
     pathSuffix: "forecast",
     status: "available",
-    phase: "H60-F forecast tab",
+    phase: "Forecast Review",
     boundaryCopy: [
       "Forecast content is derived from the existing read-only Operator Field Twin forecast panel.",
       "Forecast window is displayed for review only.",
       "Forecast is not a recommendation.",
-      "Forecast does not create task.",
       "Forecast does not imply action.",
       "No scenario comparison is performed.",
-      "No approval / dispatch / AO-ACT task is created.",
+      ...COMMON_REVIEW_BOUNDARY,
     ],
   },
   {
@@ -166,17 +172,16 @@ export const FIELD_RUNTIME_TABS: FieldRuntimeTabDefinition[] = [
     label: "Scenario",
     pathSuffix: "scenario",
     status: "available",
-    phase: "H60-G scenario read-only review",
+    phase: "Scenario Review",
     boundaryCopy: [
       "Scenario content is derived from the existing read-only Operator Field Twin scenario compare read model.",
       "Scenario Review is displayed for comparison only.",
       "Scenario is not a recommendation.",
       "Scenario does not create recommendation.",
-      "Scenario does not create task.",
       "Scenario does not imply action.",
-      "No scenario submission exists in canonical Field Runtime.",
-      "No approval / dispatch / AO-ACT task is created.",
-      "Legacy scenario submission, if needed, remains isolated under /operator/twin/fields/:fieldId/scenarios.",
+      "Scenario submission remains outside canonical Field Runtime.",
+      "Legacy scenario submission remains isolated under the preserved scenario route family.",
+      ...COMMON_REVIEW_BOUNDARY,
     ],
   },
   {
@@ -184,17 +189,13 @@ export const FIELD_RUNTIME_TABS: FieldRuntimeTabDefinition[] = [
     label: "Residual",
     pathSuffix: "residual",
     status: "available",
-    phase: "H60-H residual verification tab",
+    phase: "Residual Verification",
     boundaryCopy: [
       "Residual content is derived from the existing read-only Operator Field Twin post-irrigation verification read model.",
       "Residual / Verification is displayed for review only.",
       "Residual is not causal proof.",
-      "Residual does not write ROI.",
-      "Residual does not write Field Memory.",
-      "Residual does not create recommendation.",
-      "Residual does not create task.",
-      "No approval / dispatch / AO-ACT task is created.",
       "Downstream candidate flags are metadata only.",
+      ...COMMON_REVIEW_BOUNDARY,
     ],
   },
   {
@@ -202,13 +203,13 @@ export const FIELD_RUNTIME_TABS: FieldRuntimeTabDefinition[] = [
     label: "Calibration",
     pathSuffix: "calibration",
     status: "available",
-    phase: "H60-I calibration review tab",
+    phase: "Calibration Review",
     boundaryCopy: [
       "Calibration content is derived from the existing read-only Operator Field Twin calibration replay read model.",
       "Calibration Review is displayed for replay review only.",
       "Calibration route is read-only.",
-      "Review availability and write-readiness flags are metadata only.",
-      "No approval / dispatch / AO-ACT task is created.",
+      "Review availability and readiness flags are metadata only.",
+      ...COMMON_REVIEW_BOUNDARY,
     ],
   },
   {
@@ -216,16 +217,15 @@ export const FIELD_RUNTIME_TABS: FieldRuntimeTabDefinition[] = [
     label: "Health",
     pathSuffix: "health",
     status: "available",
-    phase: "H62 runtime health review",
+    phase: "Runtime Health Review",
     boundaryCopy: [
       "Runtime Health content is derived from local Field Runtime health metadata and replay-backed source availability.",
       "Runtime Health Review is displayed for review only.",
       "Runtime Health does not claim live device connection.",
       "Runtime Health does not claim production gateway online.",
       "Runtime Health does not claim continuous production monitoring.",
-      "Runtime Health does not dispatch or create AO-ACT tasks.",
-      "Runtime Health does not write facts, ROI, or Field Memory.",
       "Replay Demo source remains checked-in snapshot only.",
+      ...COMMON_REVIEW_BOUNDARY,
     ],
   },
   {
@@ -233,46 +233,77 @@ export const FIELD_RUNTIME_TABS: FieldRuntimeTabDefinition[] = [
     label: "Audit",
     pathSuffix: "audit",
     status: "available",
-    phase: "H60-K audit tab",
+    phase: "Audit Review",
     boundaryCopy: [
       "Audit content is derived from local Field Runtime route, source, contract, and boundary metadata.",
       "Audit is displayed for traceability review only.",
       "Audit does not create product conclusions.",
-      "Audit does not rank, recommend, approve, dispatch, or update model state.",
-      "Audit does not write facts, ROI, or Field Memory.",
       "Trace Readback Bridge links to existing Twin Trace Readback when decision_cycle_id is provided.",
-      "Health is available as H62 runtime health review.",
+      "Health is available as Runtime Health Review.",
+      ...COMMON_REVIEW_BOUNDARY,
     ],
   },
 ];
 
 const FIELD_LIST_COPY: FieldRuntimeRouteCopy = {
   title: "Field Runtime List",
-  phase: "H60-D list route remains unbound",
+  phase: "Field Runtime List",
   lines: [
     "Field Runtime list route is not field-scoped yet.",
     "Select a field before opening Overview, State, or other Field Runtime tabs.",
-    "No field list data is loaded in H60-D.",
+    "No field list data is loaded on this route.",
   ],
 };
 
 function findTabCopy(routeKey: FieldRuntimeRouteKey): FieldRuntimeRouteCopy {
-  if (routeKey === "fields") return FIELD_LIST_COPY;
+  if (routeKey === "fields") {
+    return FIELD_LIST_COPY;
+  }
+
   const tab = FIELD_RUNTIME_TABS.find((candidate) => candidate.key === routeKey);
-  if (!tab) return FIELD_LIST_COPY;
-  return { title: tab.label, phase: tab.phase, lines: tab.boundaryCopy };
+
+  if (!tab) {
+    return FIELD_LIST_COPY;
+  }
+
+  return {
+    title: tab.label,
+    phase: tab.phase,
+    lines: tab.boundaryCopy,
+  };
 }
 
-export function buildCanonicalFieldRuntimePath(fieldId: string, tab: FieldRuntimeTabDefinition): string {
+export function buildCanonicalFieldRuntimePath(
+  fieldId: string,
+  tab: FieldRuntimeTabDefinition,
+): string {
   const safeFieldId = fieldId || "not-selected";
-  if (tab.key === "overview") return `/operator/fields/${safeFieldId}`;
+
+  if (tab.key === "overview") {
+    return `/operator/fields/${safeFieldId}`;
+  }
+
   return `/operator/fields/${safeFieldId}/${tab.pathSuffix}`;
 }
 
-export function buildFieldRuntimeViewModel(routeKey: FieldRuntimeRouteKey, fieldId: string): FieldRuntimeViewModel {
+export function buildFieldRuntimeViewModel(
+  routeKey: FieldRuntimeRouteKey,
+  fieldId: string,
+): FieldRuntimeViewModel {
   const safeFieldId = fieldId || "not-selected";
   const activeTab = routeKey === "fields" ? null : routeKey;
   const tab = FIELD_RUNTIME_TABS.find((candidate) => candidate.key === routeKey) || FIELD_RUNTIME_TABS[0];
   const currentRoute = routeKey === "fields" ? "/operator/fields" : buildCanonicalFieldRuntimePath(safeFieldId, tab);
-  return { fieldId: safeFieldId, activeTab, routeKey, currentRoute, sourceRouteFamily: "canonical_operator_field_runtime", runtimeMode: "Replay-backed Demo", readOnly: true, tabs: FIELD_RUNTIME_TABS, routeCopy: findTabCopy(routeKey) };
+
+  return {
+    fieldId: safeFieldId,
+    activeTab,
+    routeKey,
+    currentRoute,
+    sourceRouteFamily: "canonical_operator_field_runtime",
+    runtimeMode: "Replay-backed Demo",
+    readOnly: true,
+    tabs: FIELD_RUNTIME_TABS,
+    routeCopy: findTabCopy(routeKey),
+  };
 }
