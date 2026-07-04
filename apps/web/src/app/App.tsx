@@ -17,6 +17,7 @@ import { renderCustomerOperationsRoutes } from "./routes/customerOperationsRoute
 import { renderProgramsRoutes } from "./routes/programsRoutes";
 import { renderEvidenceRoutes } from "./routes/evidenceRoutes";
 import { renderSkillsRoutes } from "./routes/skillsRoutes";
+import OperatorFieldRuntimeRoutes from "./routes/operatorFieldRuntimeRoutes";
 import { trackMainActionClick, usePageEnterEvent } from "../shared/telemetry/pageEvents";
 
 const JudgeRunPage = React.lazy(() => import("../views/JudgeRunPage"));
@@ -338,11 +339,11 @@ function CustomerShell(): React.ReactElement {
   );
 }
 
-
 function OperatorRoutes(): React.ReactElement {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="twin" replace />} />
+      <Route path="fields/*" element={<OperatorFieldRuntimeRoutes />} />
       <Route path="twin" element={<OperatorTwinOverviewPage />} />
       <Route path="twin/production-workflow" element={<OperatorProductionWorkflowPage />} />
       <Route path="twin/gateway-demo" element={<OperatorGatewayDemoViewerPage />} />
