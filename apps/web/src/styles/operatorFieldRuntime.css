@@ -1,5 +1,5 @@
 /* apps/web/src/styles/operatorFieldRuntime.css */
-/* Purpose: style Field Runtime layout, boundary banner, tabs, H60-D panels, H60-E evidence panels, H60-F forecast panels, and tab stubs without inline styles. */
+/* Purpose: style Field Runtime layout, boundary banner, tabs, migrated runtime panels, and tab stubs without inline styles. */
 
 .operatorFieldRuntime {
   display: grid;
@@ -144,7 +144,18 @@
   text-transform: uppercase;
 }
 
-.operatorFieldRuntime__tabPanel {
+.operatorFieldRuntime__tabPanel,
+.operatorFieldRuntime__contentGrid,
+.operatorFieldRuntime__evidenceGrid,
+.operatorFieldRuntime__evidenceTrace,
+.operatorFieldRuntime__evidenceTraceList,
+.operatorFieldRuntime__evidenceGapList,
+.operatorFieldRuntime__forecastGrid,
+.operatorFieldRuntime__forecastTimeline,
+.operatorFieldRuntime__forecastTimelineList,
+.operatorFieldRuntime__scenarioGrid,
+.operatorFieldRuntime__scenarioOptions,
+.operatorFieldRuntime__scenarioOptionList {
   display: grid;
   gap: 16px;
 }
@@ -175,7 +186,9 @@
   color: #172016;
 }
 
-.operatorFieldRuntime__stubLead {
+.operatorFieldRuntime__stubLead,
+.operatorFieldRuntime__forecastReason,
+.operatorFieldRuntime__scenarioNotice {
   margin: 0;
   color: #526151;
   font-weight: 750;
@@ -187,12 +200,6 @@
   margin: 0;
   padding-left: 20px;
   color: #243021;
-}
-
-.operatorFieldRuntime__contentGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
 }
 
 .operatorFieldRuntime__summaryGrid,
@@ -233,40 +240,41 @@
   list-style: none;
 }
 
-.operatorFieldRuntime__gapList li {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid #e4ebdd;
-  border-radius: 14px;
-  background: #f8faf5;
-}
-
-.operatorFieldRuntime__boundaryPanel {
-  background: #fbfcf8;
-}
-
-.operatorFieldRuntime__evidenceGrid,
-.operatorFieldRuntime__evidenceTrace,
-.operatorFieldRuntime__evidenceTraceList,
-.operatorFieldRuntime__evidenceGapList,
-.operatorFieldRuntime__forecastGrid,
-.operatorFieldRuntime__forecastTimeline,
-.operatorFieldRuntime__forecastTimelineList {
-  display: grid;
-  gap: 16px;
-}
-
+.operatorFieldRuntime__gapList li,
 .operatorFieldRuntime__evidenceTraceItem,
-.operatorFieldRuntime__forecastTimelineItem {
+.operatorFieldRuntime__forecastTimelineItem,
+.operatorFieldRuntime__scenarioOption {
   display: grid;
   gap: 12px;
   padding: 16px;
   border: 1px solid #e4ebdd;
   border-radius: 18px;
   background: #f8faf5;
+}
+
+.operatorFieldRuntime__boundaryPanel,
+.operatorFieldRuntime__qualitySummary,
+.operatorFieldRuntime__evidenceBoundary,
+.operatorFieldRuntime__forecastWindow,
+.operatorFieldRuntime__forecastEvidence,
+.operatorFieldRuntime__forecastBoundary,
+.operatorFieldRuntime__scenarioStatus,
+.operatorFieldRuntime__scenarioEvidence,
+.operatorFieldRuntime__scenarioBoundary {
+  background: #fbfcf8;
+}
+
+.operatorFieldRuntime__qualityBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid #dfe8d8;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #526151;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .operatorFieldRuntime__coverageTable,
@@ -305,69 +313,62 @@
   font-weight: 750;
 }
 
-.operatorFieldRuntime__qualitySummary,
-.operatorFieldRuntime__evidenceBoundary,
-.operatorFieldRuntime__forecastWindow,
-.operatorFieldRuntime__forecastEvidence,
-.operatorFieldRuntime__forecastBoundary {
-  background: #fbfcf8;
-}
-
-.operatorFieldRuntime__qualityBadge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 10px;
-  border: 1px solid #dfe8d8;
-  border-radius: 999px;
-  background: #ffffff;
-  color: #526151;
-  font-size: 12px;
-  font-weight: 900;
-}
-
 .operatorFieldRuntime__evidenceRefs summary,
-.operatorFieldRuntime__forecastRefs summary {
+.operatorFieldRuntime__forecastRefs summary,
+.operatorFieldRuntime__scenarioRefs summary {
   cursor: pointer;
   color: #2a3828;
   font-weight: 850;
 }
 
 .operatorFieldRuntime__evidenceRefs ul,
-.operatorFieldRuntime__forecastRefs ul {
+.operatorFieldRuntime__forecastRefs ul,
+.operatorFieldRuntime__scenarioRefs ul {
   display: grid;
   gap: 6px;
   margin: 8px 0 0;
   padding-left: 18px;
 }
 
-.operatorFieldRuntime__evidenceDetailList {
+.operatorFieldRuntime__evidenceDetailList,
+.operatorFieldRuntime__scenarioDetailList {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin: 0;
 }
 
-.operatorFieldRuntime__evidenceDetailList div {
+.operatorFieldRuntime__evidenceDetailList div,
+.operatorFieldRuntime__scenarioDetailList div {
   display: grid;
   gap: 4px;
 }
 
-.operatorFieldRuntime__evidenceDetailList dt {
+.operatorFieldRuntime__evidenceDetailList dt,
+.operatorFieldRuntime__scenarioDetailList dt {
   color: #526151;
   font-size: 12px;
   font-weight: 900;
 }
 
-.operatorFieldRuntime__evidenceDetailList dd {
+.operatorFieldRuntime__evidenceDetailList dd,
+.operatorFieldRuntime__scenarioDetailList dd {
   margin: 0;
   overflow-wrap: anywhere;
 }
 
-.operatorFieldRuntime__forecastReason {
+.operatorFieldRuntime__legacyActionNotice {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid #d8e4d1;
+  border-radius: 20px;
+  background: #fbfcf8;
+}
+
+.operatorFieldRuntime__legacyActionNotice h3,
+.operatorFieldRuntime__legacyActionNotice p {
   margin: 0;
-  color: #526151;
-  font-weight: 800;
 }
 
 @media (max-width: 900px) {
@@ -376,7 +377,8 @@
   .operatorFieldRuntime__metricGrid,
   .operatorFieldRuntime__stateVector,
   .operatorFieldRuntime__coverageMatrix,
-  .operatorFieldRuntime__evidenceDetailList {
+  .operatorFieldRuntime__evidenceDetailList,
+  .operatorFieldRuntime__scenarioDetailList {
     grid-template-columns: 1fr;
   }
 }

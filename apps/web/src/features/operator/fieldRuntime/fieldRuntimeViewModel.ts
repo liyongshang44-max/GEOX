@@ -1,5 +1,5 @@
 // apps/web/src/features/operator/fieldRuntime/fieldRuntimeViewModel.ts
-// Purpose: provide the Field Runtime ViewModel contract for layout, tabs, route identity, boundary copy, and migrated read-only tab states through H60-F.
+// Purpose: provide the Field Runtime ViewModel contract for layout, tabs, route identity, boundary copy, and migrated read-only tab states through H60-G.
 // Boundary: this file builds local UI state only; read-only data is mapped by Field Runtime adapters.
 
 export type FieldRuntimeTabKey =
@@ -166,13 +166,18 @@ export const FIELD_RUNTIME_TABS: FieldRuntimeTabDefinition[] = [
     key: "scenario",
     label: "Scenario",
     pathSuffix: "scenario",
-    status: "limited",
-    phase: "reserved for H60-G",
+    status: "available",
+    phase: "H60-G scenario read-only review",
     boundaryCopy: [
-      "Scenario route is reserved for H60-G.",
-      "Scenario is a projection, not a task.",
+      "Scenario content is derived from the existing read-only Operator Field Twin scenario compare read model.",
+      "Scenario Review is displayed for comparison only.",
       "Scenario is not a recommendation.",
-      "No approval / dispatch / AO-ACT.",
+      "Scenario does not create recommendation.",
+      "Scenario does not create task.",
+      "Scenario does not imply action.",
+      "No scenario submission exists in canonical Field Runtime.",
+      "No approval / dispatch / AO-ACT task is created.",
+      "Legacy scenario submission, if needed, remains isolated under /operator/twin/fields/:fieldId/scenarios.",
     ],
   },
   {
