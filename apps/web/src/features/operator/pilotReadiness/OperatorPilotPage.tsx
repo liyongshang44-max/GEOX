@@ -25,6 +25,36 @@ function TablePanel({ title, rows, className }: TablePanelProps): React.ReactEle
   );
 }
 
+const siteScopeRows: PilotReadinessRow[] = [
+  { label: "Candidate Site Scope", value: "planning metadata" },
+  { label: "Active site", value: "false" },
+];
+
+const evidenceProtocolRows: PilotReadinessRow[] = [
+  { label: "Evidence Protocol", value: "collection plan" },
+  { label: "Live ingest", value: "false" },
+];
+
+const deviceGatewayRows: PilotReadinessRow[] = [
+  { label: "Device / Gateway Readiness Plan", value: "plan artifact" },
+  { label: "Online claim", value: "false" },
+];
+
+const roleRows: PilotReadinessRow[] = [
+  { label: "Human Role Matrix", value: "responsibility definition" },
+  { label: "Live assignment", value: "false" },
+];
+
+const safetyRows: PilotReadinessRow[] = [
+  { label: "Safety / Stop Rules", value: "reviewed" },
+  { label: "Rollback Plan", value: "reviewed" },
+];
+
+const goNoGoRows: PilotReadinessRow[] = [
+  { label: "Go / No-Go Gate", value: "review gate" },
+  { label: "Launch action", value: "false" },
+];
+
 export default function OperatorPilotPage(): React.ReactElement {
   const vm = React.useMemo(() => buildPilotReadinessViewModel(), []);
   return (
@@ -38,6 +68,12 @@ export default function OperatorPilotPage(): React.ReactElement {
       <section className="operatorPilotReadiness__grid" aria-label="Pilot Readiness panels">
         <TablePanel title="P53 Pilot Planning Gate" rows={vm.p53Rows} className="operatorPilotReadiness__p53" />
         <TablePanel title="P54 Readiness Review Gate" rows={vm.p54Rows} className="operatorPilotReadiness__p54" />
+        <TablePanel title="Candidate Site Scope" rows={siteScopeRows} className="operatorPilotReadiness__siteScope" />
+        <TablePanel title="Evidence Protocol" rows={evidenceProtocolRows} className="operatorPilotReadiness__evidenceProtocol" />
+        <TablePanel title="Device / Gateway Readiness Plan" rows={deviceGatewayRows} className="operatorPilotReadiness__deviceGateway" />
+        <TablePanel title="Human Role Matrix" rows={roleRows} className="operatorPilotReadiness__roles" />
+        <TablePanel title="Safety / Stop Rules and Rollback Plan" rows={safetyRows} className="operatorPilotReadiness__safetyRollback" />
+        <TablePanel title="Go / No-Go Gate" rows={goNoGoRows} className="operatorPilotReadiness__goNoGo" />
         <TablePanel title="Readiness Dimensions" rows={vm.readinessRows} className="operatorPilotReadiness__readiness" />
         <TablePanel title="Capability Matrix" rows={vm.capabilityRows} className="operatorPilotReadiness__capability" />
         <TablePanel title="Traceability" rows={vm.traceabilityRows} className="operatorPilotReadiness__traceability" />
