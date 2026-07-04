@@ -42,6 +42,7 @@ const block = [
   /^pnpm-workspace\.yaml$/,
 ];
 
+const readableNavLabels = ['Dashboard', 'Fields', 'Operations', 'Devices', 'Evidence', 'Runtime Health', 'Config'];
 const assertions = [];
 
 function read(file) { return fs.readFileSync(path.join(root, file), 'utf8'); }
@@ -72,6 +73,12 @@ function matchesAny(file, patterns) { return patterns.some((pattern) => pattern.
 function runtimeChangedFiles(diff) {
   return diff.filter((file) => (file.endsWith('.ts') || file.endsWith('.tsx') || file.endsWith('.css')) && !file.includes('/frontend_acceptance/'));
 }
+function extractAdminNavLabels(layout) {
+  return [...layout.matchAll(/label: "([^"]+)"/g)].map((match) => match[1]);
+}
+function isReadableAsciiLabel(label) {
+  return /^[A-Za-z][A-Za-z ]*$/.test(label);
+}
 
 try {
   Object.entries(files).forEach(([key, file]) => assert(key + '_exists', exists(file), { file }));
@@ -97,6 +104,10 @@ try {
 
   assert('admin_layout_imports_css', layout.includes('adminShell.css'), { file: files.layout });
   assert('admin_nav_productized_routes', hasAll(layout, ['/admin/dashboard', '/admin/fields', '/admin/operations', '/admin/devices', '/admin/evidence', '/admin/healthz', '/admin/skills']), { file: files.layout });
+
+  const navLabels = extractAdminNavLabels(layout);
+  assert('admin_nav_readable_labels', readableNavLabels.every((label) => navLabels.includes(label)) && navLabels.every(isReadableAsciiLabel), { navLabels, readableNavLabels });
+
   assert('admin_nav_no_url_only_or_cross_shell_routes', lacksAll(layout, ['/admin/import', '/admin/operations/:operationId/debug', '/legacy/admin', '/customer', '/operator']), { file: files.layout });
   assert('app_admin_route_topology_preserved', hasAll(app, ['path="/admin/*"', 'RequireSession', 'AdminShell', 'path="dashboard"', 'path="fields"', 'path="operations"', 'path="devices"', 'path="alerts"', 'path="evidence"', 'path="skills"', 'path="acceptance"', 'path="healthz"', 'path="import"', 'path="operations/:operationId/debug"']), { file: files.app });
 
