@@ -6,14 +6,14 @@ import React from "react";
 import { fetchP51GatewayViewerSnapshot } from "../../../api/operatorGatewayDemo";
 import { buildReplayDemoViewModel, type ReplayDemoViewModel } from "./replayDemoViewModel";
 import ReplayDemoBoundaryBanner from "./ReplayDemoBoundaryBanner";
+import ReplayDemoBoundaryClaimsPanel from "./ReplayDemoBoundaryClaimsPanel";
 import ReplayDemoDeviceEvidencePanel from "./ReplayDemoDeviceEvidencePanel";
-import ReplayDemoEvidenceRefsPanel from "./ReplayDemoEvidenceRefsPanel";
 import ReplayDemoGatewayPathPanel from "./ReplayDemoGatewayPathPanel";
 import ReplayDemoHashesPanel from "./ReplayDemoHashesPanel";
 import ReplayDemoHero from "./ReplayDemoHero";
 import ReplayDemoIngestionPanel from "./ReplayDemoIngestionPanel";
 import ReplayDemoNarrativePanel from "./ReplayDemoNarrativePanel";
-import ReplayDemoNonclaimsPanel from "./ReplayDemoNonclaimsPanel";
+import ReplayDemoSnapshotIdsPanel from "./ReplayDemoSnapshotIdsPanel";
 import ReplayDemoSnapshotPanel from "./ReplayDemoSnapshotPanel";
 import ReplayDemoStandardsPanel from "./ReplayDemoStandardsPanel";
 import ReplayDemoTraceabilityPanel from "./ReplayDemoTraceabilityPanel";
@@ -55,7 +55,7 @@ export default function ReplayDemoPage(): React.ReactElement {
       <ReplayDemoHero vm={vm} />
       <ReplayDemoBoundaryBanner />
       <ReplayDemoNarrativePanel vm={vm} />
-      <section className="operatorReplayDemo__grid" aria-label="Replay demo sections">
+      <section className="operatorReplayDemo__grid" aria-label="Replay demo sections with Hashes and Evidence refs">
         <ReplayDemoSnapshotPanel vm={vm} />
         <ReplayDemoGatewayPathPanel vm={vm} />
         <ReplayDemoStandardsPanel vm={vm} />
@@ -63,8 +63,8 @@ export default function ReplayDemoPage(): React.ReactElement {
         <ReplayDemoIngestionPanel vm={vm} />
         <ReplayDemoTraceabilityPanel vm={vm} />
         <ReplayDemoHashesPanel vm={vm} />
-        <ReplayDemoEvidenceRefsPanel vm={vm} />
-        <ReplayDemoNonclaimsPanel vm={vm} />
+        <ReplayDemoSnapshotIdsPanel items={vm.evidenceRefs} />
+        <ReplayDemoBoundaryClaimsPanel vm={vm} />
       </section>
     </main>
   );
