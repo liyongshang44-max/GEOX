@@ -7,10 +7,13 @@ import { fetchP51GatewayViewerSnapshot } from "../../../api/operatorGatewayDemo"
 import { buildReplayDemoViewModel, type ReplayDemoViewModel } from "./replayDemoViewModel";
 import ReplayDemoBoundaryBanner from "./ReplayDemoBoundaryBanner";
 import ReplayDemoDeviceEvidencePanel from "./ReplayDemoDeviceEvidencePanel";
+import ReplayDemoEvidenceRefsPanel from "./ReplayDemoEvidenceRefsPanel";
 import ReplayDemoGatewayPathPanel from "./ReplayDemoGatewayPathPanel";
+import ReplayDemoHashesPanel from "./ReplayDemoHashesPanel";
 import ReplayDemoHero from "./ReplayDemoHero";
 import ReplayDemoIngestionPanel from "./ReplayDemoIngestionPanel";
 import ReplayDemoNarrativePanel from "./ReplayDemoNarrativePanel";
+import ReplayDemoNonclaimsPanel from "./ReplayDemoNonclaimsPanel";
 import ReplayDemoSnapshotPanel from "./ReplayDemoSnapshotPanel";
 import ReplayDemoStandardsPanel from "./ReplayDemoStandardsPanel";
 import ReplayDemoTraceabilityPanel from "./ReplayDemoTraceabilityPanel";
@@ -59,6 +62,9 @@ export default function ReplayDemoPage(): React.ReactElement {
         <ReplayDemoDeviceEvidencePanel vm={vm} />
         <ReplayDemoIngestionPanel vm={vm} />
         <ReplayDemoTraceabilityPanel vm={vm} />
+        <ReplayDemoHashesPanel vm={vm} />
+        <ReplayDemoEvidenceRefsPanel vm={vm} />
+        <ReplayDemoNonclaimsPanel vm={vm} />
       </section>
     </main>
   );
