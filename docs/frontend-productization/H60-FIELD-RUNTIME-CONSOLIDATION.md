@@ -2,7 +2,7 @@
 # H60 Field Runtime Consolidation
 # H60 地块运行视图收口
 
-Status: H60.0 IA CONTRACT  
+Status: H60-A IA CONTRACT / former H60.0 IA CONTRACT  
 Language: zh-CN  
 Scope: Frontend Productization / Field Runtime IA / ViewModel Contract / No-write Boundary  
 Repo basis: main after H59 Operator Runtime Console Shell merge  
@@ -10,11 +10,12 @@ Write impact: NONE
 Backend impact: NONE  
 Seed impact: NONE  
 DB impact: NONE  
+Runtime route impact in H60-A: NONE  
 Runtime route impact in H60.0: NONE  
 
 ---
 
-## 0. 阶段定义
+## 0. 阶段定义与编号 alias
 
 H60 定义为：
 
@@ -25,7 +26,27 @@ H60 地块运行视图收口
 
 H60 的目标不是把现有页面合并得更少，而是把 Operator Runtime Console 中的单地块界面收口为正式产品级 Field Runtime。
 
+后续正式编号统一使用 H60-A / H60-B / H60-C。旧编号只作为 alias 保留，便于理解既有 PR、acceptance 和历史讨论。
+
+```text
+H60-A = former H60.0 Field Runtime IA Contract
+H60-B = former H60.1 Field Runtime Route Ownership
+H60-C = former H60.2 Field Runtime Layout + Tabs
+H60-D = former H60.3 Overview / State / Evidence Summary
+H60-E = former H60.4 Evidence Tab
+H60-F = former H60.5 Forecast Tab
+H60-G = former H60.6 Scenario Tab Read-only Split
+H60-H = former H60.7 Residual / Verification Tab
+H60-I = former H60.8 Calibration Tab
+H60-J = Health Placeholder
+H60-K = Audit Drawer / Audit Tab
+```
+
+H60-A 只冻结信息架构、route family 设计、legacy route 策略、ViewModel contract、scenario submission isolation、write boundary 和 acceptance plan。
+
 H60.0 只冻结信息架构、route family 设计、legacy route 策略、ViewModel contract、scenario submission isolation、write boundary 和 acceptance plan。
+
+H60-A 不改 React 页面，不新增 route，不重写 route table，不改 CSS，不改 backend，不改 DB，不改 facts writer。
 
 H60.0 不改 React 页面，不新增 route，不重写 route table，不改 CSS，不改 backend，不改 DB，不改 facts writer。
 
@@ -141,13 +162,21 @@ Audit         = evidence refs / H31-H45 chain / trace / freeze refs
 
 ---
 
-## 4. H60.0 和后续阶段边界
+## 4. H60-A 和后续阶段边界
+
+H60-A 只冻结 route design，不创建 route。
 
 H60.0 只冻结 route design，不创建 route。
 
+H60-B 才允许修改 `apps/web/src/app/App.tsx` 并新增 canonical route family。
+
 H60.1 才允许修改 `apps/web/src/app/App.tsx` 并新增 canonical route family。
 
+H60-C 才允许新增 Field Runtime layout、tabs、boundary banner、ViewModel helper。
+
 H60.2 才允许新增 Field Runtime layout、tabs、boundary banner、ViewModel helper。
+
+H60-D 之后才迁移具体 tab 内容。
 
 H60.3 之后才迁移具体 tab 内容。
 
@@ -171,6 +200,8 @@ H60 目标 canonical product route family：
 ```
 
 其中 `/operator/fields/:fieldId` 是 Field Runtime 主入口。
+
+H60-A 不新增这些 route。H60-A 只把它们冻结为 route contract。
 
 H60.0 不新增这些 route。H60.0 只把它们冻结为 route contract。
 
@@ -215,7 +246,7 @@ H60 仍然禁止：
 
 H60 不应让组件直接消费多种后端对象。必须建立 Field Runtime ViewModel。
 
-目标文件在 H60.2 之后允许新增：
+目标文件在 H60-C 之后允许新增：
 
 ```text
 apps/web/src/features/operator/fieldRuntime/fieldRuntimeViewModel.ts
@@ -224,6 +255,8 @@ apps/web/src/features/operator/fieldRuntime/FieldRuntimeTabs.tsx
 apps/web/src/features/operator/fieldRuntime/FieldRuntimeBoundaryBanner.tsx
 apps/web/src/features/operator/fieldRuntime/FieldRuntimeAuditDrawer.tsx
 ```
+
+目标文件在 H60.2 之后允许新增。
 
 目标 ViewModel：
 
@@ -425,6 +458,22 @@ This tab does not claim production monitoring.
 H60 拆分为：
 
 ```text
+H60-A Field Runtime IA Contract
+H60-B Field Runtime Route Ownership
+H60-C Field Runtime Layout + Tabs
+H60-D Overview / State / Evidence Summary
+H60-E Evidence Tab
+H60-F Forecast Tab
+H60-G Scenario Tab Read-only Split
+H60-H Residual / Verification Tab
+H60-I Calibration Tab
+H60-J Health Placeholder
+H60-K Audit Drawer / Audit Tab
+```
+
+旧编号 alias：
+
+```text
 H60.0 Field Runtime IA Contract
 H60.1 Field Runtime Route Ownership
 H60.2 Field Runtime Layout + Tabs
@@ -437,7 +486,7 @@ H60.8 Calibration Tab
 H60.9 Audit Drawer / Chain
 ```
 
-H60.0 输出：
+H60-A 输出：
 
 ```text
 docs/frontend-productization/H60-FIELD-RUNTIME-CONSOLIDATION.md
@@ -445,13 +494,17 @@ docs/frontend-productization/H60-FIELD-RUNTIME-ROUTE-MATRIX.md
 scripts/frontend_acceptance/ACCEPTANCE_H60_FIELD_RUNTIME_IA_CONTRACT_V1.cjs
 ```
 
+H60.0 输出同上。
+
+H60-A 不改 React 页面。
+
 H60.0 不改 React 页面。
 
 ---
 
-## 14. H60.0 完成定义
+## 14. H60-A 完成定义
 
-H60.0 完成只表示：
+H60-A 完成只表示：
 
 ```text
 Field Runtime IA 已冻结
@@ -463,7 +516,9 @@ write boundary 已冻结
 H60 acceptance plan 已冻结
 ```
 
-H60.0 不表示：
+H60.0 完成只表示同一范围。
+
+H60-A 不表示：
 
 ```text
 /operator/fields route 已存在
@@ -478,3 +533,5 @@ live device 已接入
 production gateway 已在线
 field pilot 已开始
 ```
+
+H60.0 不表示同一范围。
