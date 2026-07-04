@@ -1,5 +1,5 @@
 /* apps/web/src/styles/operatorFieldRuntime.css */
-/* Purpose: style the H60-C Field Runtime layout, boundary banner, tabs, and tab stubs without inline styles. */
+/* Purpose: style Field Runtime layout, boundary banner, tabs, H60-D panels, and tab stubs without inline styles. */
 
 .operatorFieldRuntime {
   display: grid;
@@ -125,6 +125,11 @@
   box-shadow: inset 0 0 0 1px #c9d8bf;
 }
 
+.operatorFieldRuntime__tab--disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
 .operatorFieldRuntime__tabStatus {
   display: inline-flex;
   align-items: center;
@@ -144,7 +149,8 @@
   gap: 16px;
 }
 
-.operatorFieldRuntime__stub {
+.operatorFieldRuntime__stub,
+.operatorFieldRuntime__panel {
   display: grid;
   gap: 14px;
   padding: 20px;
@@ -153,7 +159,8 @@
   background: #ffffff;
 }
 
-.operatorFieldRuntime__stubHeader {
+.operatorFieldRuntime__stubHeader,
+.operatorFieldRuntime__panelHeader {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -161,7 +168,8 @@
   gap: 10px;
 }
 
-.operatorFieldRuntime__stubHeader h2 {
+.operatorFieldRuntime__stubHeader h2,
+.operatorFieldRuntime__panelTitle {
   flex: 1 1 220px;
   margin: 0;
   color: #172016;
@@ -179,6 +187,75 @@
   margin: 0;
   padding-left: 20px;
   color: #243021;
+}
+
+.operatorFieldRuntime__contentGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.operatorFieldRuntime__summaryGrid,
+.operatorFieldRuntime__metricGrid,
+.operatorFieldRuntime__stateVector,
+.operatorFieldRuntime__coverageMatrix {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.operatorFieldRuntime__metricCard {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid #e4ebdd;
+  border-radius: 16px;
+  background: #f8faf5;
+}
+
+.operatorFieldRuntime__metricCard strong {
+  color: #172016;
+  font-size: 16px;
+}
+
+.operatorFieldRuntime__metricCard span,
+.operatorFieldRuntime__panelMeta {
+  color: #526151;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.operatorFieldRuntime__gapList {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.operatorFieldRuntime__gapList li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e4ebdd;
+  border-radius: 14px;
+  background: #f8faf5;
+}
+
+.operatorFieldRuntime__boundaryPanel {
+  background: #fbfcf8;
+}
+
+@media (max-width: 900px) {
+  .operatorFieldRuntime__contentGrid,
+  .operatorFieldRuntime__summaryGrid,
+  .operatorFieldRuntime__metricGrid,
+  .operatorFieldRuntime__stateVector,
+  .operatorFieldRuntime__coverageMatrix {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 760px) {
