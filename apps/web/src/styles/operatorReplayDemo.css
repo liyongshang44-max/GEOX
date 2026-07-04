@@ -9,16 +9,33 @@
 .operatorReplayDemo__hero,
 .operatorReplayDemo__panel,
 .operatorReplayDemo__boundaryBanner,
-.operatorReplayDemo__narrativeStep {
+.operatorReplayDemo__narrativeStep,
+.operatorReplayDemo__traceability,
+.operatorReplayDemo__nonclaims {
   border: 1px solid #d8e4d1;
   border-radius: 18px;
   background: #ffffff;
   padding: 18px;
 }
 
+.operatorReplayDemo__hero {
+  display: grid;
+  gap: 16px;
+}
+
+.operatorReplayDemo__boundaryBanner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .operatorReplayDemo__grid,
 .operatorReplayDemo__meta,
-.operatorReplayDemo__table {
+.operatorReplayDemo__table,
+.operatorReplayDemo__traceability,
+.operatorReplayDemo__nonclaims {
   display: grid;
   gap: 14px;
 }
@@ -59,8 +76,7 @@
   text-transform: uppercase;
 }
 
-.operatorReplayDemo__panelHeader,
-.operatorReplayDemo__boundaryBanner {
+.operatorReplayDemo__panelHeader {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -93,6 +109,10 @@
   overflow-wrap: anywhere;
 }
 
+.operatorReplayDemo__tableRow {
+  align-items: start;
+}
+
 .operatorReplayDemo__meta div {
   grid-template-columns: 120px minmax(0, 1fr);
 }
@@ -101,7 +121,21 @@
   margin: 0;
 }
 
-.operatorReplayDemo__refList {
+.operatorReplayDemo__refList,
+.operatorReplayDemo__evidenceRefs {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.operatorReplayDemo__traceability code,
+.operatorReplayDemo__nonclaims code {
+  overflow-wrap: anywhere;
+}
+
+.operatorReplayDemo__traceabilityList,
+.operatorReplayDemo__nonclaimList {
   display: grid;
   gap: 8px;
   margin: 0;
