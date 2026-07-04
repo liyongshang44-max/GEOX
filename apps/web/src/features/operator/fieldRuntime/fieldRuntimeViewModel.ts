@@ -1,5 +1,5 @@
 // apps/web/src/features/operator/fieldRuntime/fieldRuntimeViewModel.ts
-// Purpose: provide the Field Runtime ViewModel contract for layout, tabs, route identity, boundary copy, and migrated read-only tab states through H60-K.
+// Purpose: provide the Field Runtime ViewModel contract for layout, tabs, route identity, boundary copy, and migrated read-only tab states through H62.
 // Boundary: this file builds local UI state only; read-only data is mapped by Field Runtime adapters.
 
 export type FieldRuntimeTabKey =
@@ -215,12 +215,17 @@ export const FIELD_RUNTIME_TABS: FieldRuntimeTabDefinition[] = [
     key: "health",
     label: "Health",
     pathSuffix: "health",
-    status: "not_enabled",
-    phase: "planned for H62",
+    status: "available",
+    phase: "H62 runtime health review",
     boundaryCopy: [
-      "Health route is reserved for H62.",
-      "Runtime Health product surface is planned for H62.",
-      "This tab does not claim production monitoring.",
+      "Runtime Health content is derived from local Field Runtime health metadata and replay-backed source availability.",
+      "Runtime Health Review is displayed for review only.",
+      "Runtime Health does not claim live device connection.",
+      "Runtime Health does not claim production gateway online.",
+      "Runtime Health does not claim continuous production monitoring.",
+      "Runtime Health does not dispatch or create AO-ACT tasks.",
+      "Runtime Health does not write facts, ROI, or Field Memory.",
+      "Replay Demo source remains checked-in snapshot only.",
     ],
   },
   {
@@ -236,7 +241,7 @@ export const FIELD_RUNTIME_TABS: FieldRuntimeTabDefinition[] = [
       "Audit does not rank, recommend, approve, dispatch, or update model state.",
       "Audit does not write facts, ROI, or Field Memory.",
       "Trace Readback Bridge links to existing Twin Trace Readback when decision_cycle_id is provided.",
-      "Health remains not_enabled and planned for H62.",
+      "Health is available as H62 runtime health review.",
     ],
   },
 ];
@@ -255,11 +260,7 @@ function findTabCopy(routeKey: FieldRuntimeRouteKey): FieldRuntimeRouteCopy {
   if (routeKey === "fields") return FIELD_LIST_COPY;
   const tab = FIELD_RUNTIME_TABS.find((candidate) => candidate.key === routeKey);
   if (!tab) return FIELD_LIST_COPY;
-  return {
-    title: tab.label,
-    phase: tab.phase,
-    lines: tab.boundaryCopy,
-  };
+  return { title: tab.label, phase: tab.phase, lines: tab.boundaryCopy };
 }
 
 export function buildCanonicalFieldRuntimePath(fieldId: string, tab: FieldRuntimeTabDefinition): string {
@@ -273,16 +274,5 @@ export function buildFieldRuntimeViewModel(routeKey: FieldRuntimeRouteKey, field
   const activeTab = routeKey === "fields" ? null : routeKey;
   const tab = FIELD_RUNTIME_TABS.find((candidate) => candidate.key === routeKey) || FIELD_RUNTIME_TABS[0];
   const currentRoute = routeKey === "fields" ? "/operator/fields" : buildCanonicalFieldRuntimePath(safeFieldId, tab);
-
-  return {
-    fieldId: safeFieldId,
-    activeTab,
-    routeKey,
-    currentRoute,
-    sourceRouteFamily: "canonical_operator_field_runtime",
-    runtimeMode: "Replay-backed Demo",
-    readOnly: true,
-    tabs: FIELD_RUNTIME_TABS,
-    routeCopy: findTabCopy(routeKey),
-  };
+  return { fieldId: safeFieldId, activeTab, routeKey, currentRoute, sourceRouteFamily: "canonical_operator_field_runtime", runtimeMode: "Replay-backed Demo", readOnly: true, tabs: FIELD_RUNTIME_TABS, routeCopy: findTabCopy(routeKey) };
 }
