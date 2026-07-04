@@ -1,0 +1,119 @@
+/* apps/web/src/styles/operatorPilotReadiness.css */
+
+.operatorPilotReadiness {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+}
+
+.operatorPilotReadiness__hero,
+.operatorPilotReadiness__panel {
+  border: 1px solid #d8e4d1;
+  border-radius: 18px;
+  background: #ffffff;
+  padding: 18px;
+}
+
+.operatorPilotReadiness__hero,
+.operatorPilotReadiness__grid,
+.operatorPilotReadiness__table,
+.operatorPilotReadiness__list,
+.operatorPilotReadiness__gateSummary,
+.operatorPilotReadiness__planGate,
+.operatorPilotReadiness__reviewGate,
+.operatorPilotReadiness__capability,
+.operatorPilotReadiness__siteScope,
+.operatorPilotReadiness__evidenceProtocol,
+.operatorPilotReadiness__deviceGateway,
+.operatorPilotReadiness__roles,
+.operatorPilotReadiness__safetyRollback,
+.operatorPilotReadiness__goNoGo,
+.operatorPilotReadiness__traceability,
+.operatorPilotReadiness__nonclaims,
+.operatorPilotReadiness__boundary {
+  display: grid;
+  gap: 14px;
+}
+
+.operatorPilotReadiness__grid,
+.operatorPilotReadiness__meta {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.operatorPilotReadiness__hero h1,
+.operatorPilotReadiness__panel h2 {
+  margin: 0;
+  color: #172016;
+}
+
+.operatorPilotReadiness__hero h1 {
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.05;
+}
+
+.operatorPilotReadiness__lead,
+.operatorPilotReadiness__panel p,
+.operatorPilotReadiness__meta dd,
+.operatorPilotReadiness__list li {
+  color: #526151;
+  font-weight: 750;
+  line-height: 1.55;
+}
+
+.operatorPilotReadiness__eyebrow,
+.operatorPilotReadiness__meta dt,
+.operatorPilotReadiness__tableHeader {
+  color: #526151;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.operatorPilotReadiness__panelHeader {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.operatorPilotReadiness__meta,
+.operatorPilotReadiness__tableHeader,
+.operatorPilotReadiness__tableRow {
+  display: grid;
+  gap: 10px;
+}
+
+.operatorPilotReadiness__meta {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.operatorPilotReadiness__meta div,
+.operatorPilotReadiness__tableHeader,
+.operatorPilotReadiness__tableRow {
+  grid-template-columns: repeat(2, minmax(160px, 1fr));
+  padding: 10px 12px;
+  border: 1px solid #e4ebdd;
+  border-radius: 14px;
+  background: #f8faf5;
+  overflow-wrap: anywhere;
+}
+
+.operatorPilotReadiness__meta dd {
+  margin: 0;
+}
+
+.operatorPilotReadiness__list {
+  margin: 0;
+  padding-left: 20px;
+}
+
+@media (max-width: 900px) {
+  .operatorPilotReadiness__grid,
+  .operatorPilotReadiness__meta,
+  .operatorPilotReadiness__tableHeader,
+  .operatorPilotReadiness__tableRow {
+    grid-template-columns: 1fr;
+  }
+}
