@@ -154,6 +154,7 @@
 .operatorFieldRuntime__forecastTimeline,
 .operatorFieldRuntime__forecastTimelineList,
 .operatorFieldRuntime__scenarioGrid,
+.operatorFieldRuntime__scenarioOptions,
 .operatorFieldRuntime__scenarioOptionList {
   display: grid;
   gap: 16px;
