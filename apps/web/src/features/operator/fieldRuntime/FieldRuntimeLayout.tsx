@@ -1,9 +1,15 @@
 // apps/web/src/features/operator/fieldRuntime/FieldRuntimeLayout.tsx
-// Purpose: render the H60-C Field Runtime product shell, boundary banner, tabs, and static tab body.
-// Boundary: this layout owns presentation only; concrete tab content migrates in H60-D through H60-K.
+// Purpose: render the Field Runtime product shell, boundary banner, tabs, H60-D overview/state content, and static future-tab body.
+// Boundary: this layout owns presentation only; full Evidence, Forecast, Scenario, Residual, Calibration, Health, and Audit migrate later.
 
 import React from "react";
 import FieldRuntimeBoundaryBanner from "./FieldRuntimeBoundaryBanner";
+import FieldRuntimeCoverageSummaryPanel from "./FieldRuntimeCoverageSummaryPanel";
+import FieldRuntimeDataGapPanel from "./FieldRuntimeDataGapPanel";
+import FieldRuntimeEvidenceSummaryPanel from "./FieldRuntimeEvidenceSummaryPanel";
+import FieldRuntimeOverviewPanel from "./FieldRuntimeOverviewPanel";
+import FieldRuntimeReadOnlyBoundaryPanel from "./FieldRuntimeReadOnlyBoundaryPanel";
+import FieldRuntimeStatePanel from "./FieldRuntimeStatePanel";
 import FieldRuntimeTabs from "./FieldRuntimeTabs";
 import FieldRuntimeTabStub from "./FieldRuntimeTabStub";
 import {
@@ -11,18 +17,49 @@ import {
   FIELD_RUNTIME_LEGACY_ROUTE_FAMILY,
 } from "./runtimeNonclaims";
 import { type FieldRuntimeViewModel } from "./fieldRuntimeViewModel";
+import { type FieldRuntimeWorkspaceLoadState } from "./fieldRuntimeWorkspaceAdapter";
 import "../../../styles/operatorFieldRuntime.css";
 
 type FieldRuntimeLayoutProps = {
   viewModel: FieldRuntimeViewModel;
+  workspaceLoadState?: FieldRuntimeWorkspaceLoadState;
 };
 
-export default function FieldRuntimeLayout({ viewModel }: FieldRuntimeLayoutProps): React.ReactElement {
+function FieldRuntimeOverviewContent({ loadState }: { loadState: FieldRuntimeWorkspaceLoadState | undefined }): React.ReactElement {
   return (
-    <main className="operatorFieldRuntime" data-h60c="field-runtime-layout-tabs" data-field-runtime-route={viewModel.routeKey}>
+    <div className="operatorFieldRuntime__contentGrid" data-h60d="overview-state-content">
+      <FieldRuntimeOverviewPanel loadState={loadState} />
+      <FieldRuntimeStatePanel loadState={loadState} mode="summary" />
+      <FieldRuntimeEvidenceSummaryPanel loadState={loadState} />
+      <FieldRuntimeCoverageSummaryPanel loadState={loadState} />
+      <FieldRuntimeDataGapPanel loadState={loadState} />
+      <FieldRuntimeReadOnlyBoundaryPanel loadState={loadState} />
+    </div>
+  );
+}
+
+function FieldRuntimeStateContent({ loadState }: { loadState: FieldRuntimeWorkspaceLoadState | undefined }): React.ReactElement {
+  return (
+    <div className="operatorFieldRuntime__contentGrid" data-h60d="state-content">
+      <FieldRuntimeStatePanel loadState={loadState} mode="full" />
+      <FieldRuntimeEvidenceSummaryPanel loadState={loadState} />
+      <FieldRuntimeReadOnlyBoundaryPanel loadState={loadState} />
+    </div>
+  );
+}
+
+function renderTabContent(viewModel: FieldRuntimeViewModel, loadState: FieldRuntimeWorkspaceLoadState | undefined): React.ReactElement {
+  if (viewModel.routeKey === "overview") return <FieldRuntimeOverviewContent loadState={loadState} />;
+  if (viewModel.routeKey === "state") return <FieldRuntimeStateContent loadState={loadState} />;
+  return <FieldRuntimeTabStub viewModel={viewModel} />;
+}
+
+export default function FieldRuntimeLayout({ viewModel, workspaceLoadState }: FieldRuntimeLayoutProps): React.ReactElement {
+  return (
+    <main className="operatorFieldRuntime" data-h60c="field-runtime-layout-tabs" data-h60d="field-runtime-overview-state" data-field-runtime-route={viewModel.routeKey}>
       <header className="operatorFieldRuntime__header" aria-label="Field Runtime header">
         <div>
-          <p className="operatorFieldRuntime__eyebrow">H60-C Field Runtime Layout + Tabs</p>
+          <p className="operatorFieldRuntime__eyebrow">H60-D Field Runtime Overview / State</p>
           <h1 className="operatorFieldRuntime__title">Field Runtime</h1>
           <p className="operatorFieldRuntime__subtitle">地块运行视图</p>
         </div>
@@ -56,7 +93,7 @@ export default function FieldRuntimeLayout({ viewModel }: FieldRuntimeLayoutProp
       <FieldRuntimeTabs viewModel={viewModel} />
 
       <section className="operatorFieldRuntime__tabPanel" aria-label="Field Runtime tab panel">
-        <FieldRuntimeTabStub viewModel={viewModel} />
+        {renderTabContent(viewModel, workspaceLoadState)}
       </section>
     </main>
   );

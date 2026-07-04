@@ -1,6 +1,6 @@
 // apps/web/src/features/operator/fieldRuntime/fieldRuntimeViewModel.ts
-// Purpose: provide the static H60-C Field Runtime ViewModel contract for layout, tabs, route identity, and boundary copy.
-// Boundary: this file builds static UI state only; it does not load API data or mutate runtime state.
+// Purpose: provide the Field Runtime ViewModel contract for layout, tabs, route identity, boundary copy, and H60-D overview/state slots.
+// Boundary: this file builds local UI state only; workspace-derived content is mapped by the read-only H60-D adapter.
 
 export type FieldRuntimeTabKey =
   | "overview"
@@ -23,6 +23,69 @@ export type FieldRuntimeTabDefinition = {
   pathSuffix: string;
   status: FieldRuntimeTabStatus;
   phase: string;
+  boundaryCopy: string[];
+};
+
+export type FieldRuntimeSummaryCard = {
+  label: string;
+  value: string;
+  detail?: string;
+};
+
+export type FieldRuntimeStateVectorItem = {
+  label: string;
+  value: string;
+  confidenceLabel?: string;
+  evidenceRefCount?: number;
+};
+
+export type FieldRuntimeEvidenceSummaryViewModel = {
+  source: "operator_field_twin_workspace_v1";
+  evidenceRefs: string[];
+  evidenceRefCount: number;
+  summaryText: string;
+};
+
+export type FieldRuntimeCoverageSummaryViewModel = {
+  source: "operator_field_twin_workspace_v1";
+  coverageText: string;
+  sensingAvailable: boolean;
+  weatherAvailable: boolean;
+  forecastWindow: string;
+  unavailableWindows: string[];
+  reason: string;
+  evidenceRefCount: number;
+};
+
+export type FieldRuntimeDataGapViewModel = {
+  gapCode: string;
+  label: string;
+  severityLabel: string;
+};
+
+export type FieldRuntimeOverviewViewModel = {
+  fieldId: string;
+  fieldName: string;
+  cropText: string;
+  source: "operator_field_twin_workspace_v1";
+  loaded: boolean;
+  summaryCards: FieldRuntimeSummaryCard[];
+  evidenceSummaryAvailable: boolean;
+  coverageSummaryAvailable: boolean;
+  dataGapSummaryAvailable: boolean;
+  evidenceSummary: FieldRuntimeEvidenceSummaryViewModel;
+  coverageSummary: FieldRuntimeCoverageSummaryViewModel;
+  dataGaps: FieldRuntimeDataGapViewModel[];
+  boundaryRules: string[];
+};
+
+export type FieldRuntimeStateViewModel = {
+  fieldId: string;
+  fieldName: string;
+  source: "operator_field_twin_workspace_v1";
+  loaded: boolean;
+  stateVectorItems: FieldRuntimeStateVectorItem[];
+  evidenceRefs: string[];
   boundaryCopy: string[];
 };
 
@@ -49,11 +112,13 @@ export const FIELD_RUNTIME_TABS: FieldRuntimeTabDefinition[] = [
     key: "overview",
     label: "Overview",
     pathSuffix: "",
-    status: "limited",
-    phase: "reserved for H60-D",
+    status: "available",
+    phase: "H60-D workspace-derived overview",
     boundaryCopy: [
-      "Overview route is reserved for H60-D.",
-      "This shell does not load workspace data.",
+      "Overview content is derived from the existing read-only Operator Field Twin workspace.",
+      "No facts are written.",
+      "No recommendation is created.",
+      "No dispatch or AO-ACT task is created.",
     ],
   },
   {
@@ -71,10 +136,10 @@ export const FIELD_RUNTIME_TABS: FieldRuntimeTabDefinition[] = [
     key: "state",
     label: "State",
     pathSuffix: "state",
-    status: "limited",
-    phase: "reserved for H60-D",
+    status: "available",
+    phase: "H60-D workspace-derived state",
     boundaryCopy: [
-      "State route is reserved for H60-D.",
+      "State content is derived from the existing read-only Operator Field Twin workspace.",
       "This shell does not generate state estimates.",
     ],
   },
@@ -158,10 +223,11 @@ export const FIELD_RUNTIME_TABS: FieldRuntimeTabDefinition[] = [
 
 const FIELD_LIST_COPY: FieldRuntimeRouteCopy = {
   title: "Field Runtime List",
-  phase: "H60-C route shell",
+  phase: "H60-D list route remains unbound",
   lines: [
-    "Field Runtime list route is reserved for H60.",
-    "No field list data is loaded in H60-C.",
+    "Field Runtime list route is not field-scoped yet.",
+    "Select a field before opening Overview, State, or other Field Runtime tabs.",
+    "No field list data is loaded in H60-D.",
   ],
 };
 
