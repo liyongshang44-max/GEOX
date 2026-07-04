@@ -55,7 +55,8 @@
 .operatorFieldRuntime__tabStatus,
 .operatorFieldRuntime__tableHeader,
 .operatorFieldRuntime__residualTableHeader,
-.operatorFieldRuntime__auditTableHeader {
+.operatorFieldRuntime__auditTableHeader,
+.operatorFieldRuntime__healthTableHeader {
   color: #526151;
   font-size: 12px;
   font-weight: 900;
@@ -91,7 +92,10 @@
 .operatorFieldRuntime__auditLegacyBridge,
 .operatorFieldRuntime__traceBridge,
 .operatorFieldRuntime__auditCompletion,
-.operatorFieldRuntime__auditMetadata {
+.operatorFieldRuntime__auditMetadata,
+.operatorFieldRuntime__healthGrid,
+.operatorFieldRuntime__healthTable,
+.operatorFieldRuntime__healthMetadata {
   display: grid;
   gap: 16px;
 }
@@ -152,7 +156,9 @@
 .operatorFieldRuntime__forecastTimelineItem,
 .operatorFieldRuntime__scenarioOption,
 .operatorFieldRuntime__auditTableRow,
-.operatorFieldRuntime__auditTableHeader {
+.operatorFieldRuntime__auditTableHeader,
+.operatorFieldRuntime__healthTableRow,
+.operatorFieldRuntime__healthTableHeader {
   display: grid;
   gap: 8px;
   padding: 12px;
@@ -188,7 +194,15 @@
 .operatorFieldRuntime__auditRouteMatrix,
 .operatorFieldRuntime__auditLegacyBridge,
 .operatorFieldRuntime__auditBoundaryMatrix,
-.operatorFieldRuntime__traceBridge {
+.operatorFieldRuntime__traceBridge,
+.operatorFieldRuntime__healthMode,
+.operatorFieldRuntime__healthSource,
+.operatorFieldRuntime__healthReadModels,
+.operatorFieldRuntime__healthPipeline,
+.operatorFieldRuntime__healthGatewayBoundary,
+.operatorFieldRuntime__healthTraceability,
+.operatorFieldRuntime__healthNonclaims,
+.operatorFieldRuntime__healthBoundary {
   background: #fbfcf8;
 }
 
@@ -207,7 +221,8 @@
 .operatorFieldRuntime__coverageTable,
 .operatorFieldRuntime__sourceIndexTable,
 .operatorFieldRuntime__residualTable,
-.operatorFieldRuntime__auditTable {
+.operatorFieldRuntime__auditTable,
+.operatorFieldRuntime__healthTable {
   overflow-x: auto;
 }
 
@@ -216,8 +231,10 @@
 .operatorFieldRuntime__residualTableHeader,
 .operatorFieldRuntime__residualTableRow,
 .operatorFieldRuntime__auditTableHeader,
-.operatorFieldRuntime__auditTableRow {
-  grid-template-columns: repeat(5, minmax(120px, 1fr));
+.operatorFieldRuntime__auditTableRow,
+.operatorFieldRuntime__healthTableHeader,
+.operatorFieldRuntime__healthTableRow {
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
   align-items: start;
   min-width: 720px;
 }
@@ -268,7 +285,8 @@
   .operatorFieldRuntime__evidenceDetailList,
   .operatorFieldRuntime__scenarioDetailList,
   .operatorFieldRuntime__residualMetadata,
-  .operatorFieldRuntime__auditMetadata {
+  .operatorFieldRuntime__auditMetadata,
+  .operatorFieldRuntime__healthMetadata {
     grid-template-columns: 1fr;
   }
 }
