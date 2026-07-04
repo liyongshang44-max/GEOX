@@ -3,7 +3,6 @@
 
 import React from "react";
 import { buildPilotReadinessViewModel, type PilotReadinessRow } from "./pilotReadinessViewModel";
-import "../../../styles/operatorPilotReadiness.css";
 
 type TablePanelProps = {
   title: string;
