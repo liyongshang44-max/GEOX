@@ -1,6 +1,6 @@
 // apps/web/src/layouts/OperatorLayout.tsx
-// Purpose: provide the dedicated operator shell used by existing operator pages and the TK17 production workflow UX.
-// Boundary: this shell must not become the Customer Delivery Portal or the Admin Control Plane Console.
+// Purpose: provide the H59 Operator Runtime Console shell for existing operator pages without changing route topology.
+// Boundary: this shell is read-only; it does not create facts, recommendations, approvals, dispatches, AO-ACT tasks, ROI records, or Field Memory records.
 
 import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
@@ -12,84 +12,138 @@ type OperatorLayoutProps = {
   lead?: string;
 };
 
+type OperatorNavStatus = "enabled" | "coming-soon" | "route-preserved";
+
 type OperatorNavItem = {
   key: string;
   label: string;
   to: string;
   hint: string;
-  disabled?: boolean;
+  status: OperatorNavStatus;
 };
 
 const OPERATOR_NAV_ITEMS: OperatorNavItem[] = [
   {
-    key: "twin",
-    label: "Twin 总览",
+    key: "overview",
+    label: "Overview",
     to: "/operator/twin",
-    hint: "查看需要预测分析的田块、低置信判断与数据缺口。",
+    hint: "Runtime Overview uses the preserved operator twin overview route until H59 route acceptance allows a canonical route.",
+    status: "enabled",
   },
   {
-    key: "production-workflow",
-    label: "生产工作流",
-    to: "/operator/twin/production-workflow",
-    hint: "显式接入生产来源引用，并由操作员推进 formalization；不自动派单。",
-  },
-  {
-    key: "gateway-demo",
-    label: "Gateway Demo",
-    to: "/operator/twin/gateway-demo",
-    hint: "展示 P51 gateway-backed snapshot；只读，不接真实设备，不派单。",
-  },
-  {
-    key: "forecast",
-    label: "预测",
+    key: "fields",
+    label: "Fields",
     to: "/operator/twin",
-    hint: "预测面板将在后续 H 阶段开放。",
-    disabled: true,
-  },
-  {
-    key: "scenarios",
-    label: "情景",
-    to: "/operator/twin",
-    hint: "情景比较将在后续 H 阶段开放。",
-    disabled: true,
+    hint: "Field Runtime list is planned for H60; the current field workspace routes remain preserved by URL.",
+    status: "route-preserved",
   },
   {
     key: "evidence",
-    label: "证据质量",
+    label: "Evidence",
     to: "/operator/twin",
-    hint: "证据质量面板将在后续 H 阶段开放。",
-    disabled: true,
+    hint: "Evidence Center enters formal navigation after route behavior acceptance; current evidence capabilities remain preserved by URL or field drawer.",
+    status: "coming-soon",
+  },
+  {
+    key: "forecast",
+    label: "Forecast",
+    to: "/operator/twin",
+    hint: "Forecast becomes a Field Runtime tab in H60/H61; forecast output is not a recommendation.",
+    status: "coming-soon",
   },
   {
     key: "calibration",
-    label: "校准回放",
+    label: "Calibration",
     to: "/operator/twin",
-    hint: "预测回放和模型校准将在后续 H 阶段开放。",
-    disabled: true,
+    hint: "Calibration becomes a Field Runtime tab after H60; this shell does not write model updates.",
+    status: "coming-soon",
+  },
+  {
+    key: "health",
+    label: "Health",
+    to: "/operator/twin",
+    hint: "Runtime Health is planned for H62; no /operator/health route is added in H59.",
+    status: "coming-soon",
+  },
+  {
+    key: "pilot",
+    label: "Pilot",
+    to: "/operator/twin",
+    hint: "Pilot Readiness is planned for H63; readiness is not field pilot execution.",
+    status: "coming-soon",
+  },
+  {
+    key: "settings",
+    label: "Settings",
+    to: "/operator/twin",
+    hint: "Operator settings are planned for a later route acceptance; this H59 shell only freezes the product navigation slot.",
+    status: "coming-soon",
   },
 ];
 
+const RUNTIME_NONCLAIMS = [
+  "Runtime Mode: Replay-backed Demo",
+  "Live Device: Not connected",
+  "Production Gateway: Not online",
+  "Field Pilot: Not started",
+  "AO-ACT Dispatch: Disabled",
+];
+
 function isItemActive(pathname: string, item: OperatorNavItem): boolean {
-  if (item.key === "gateway-demo") return pathname === "/operator/twin/gateway-demo";
-  if (item.key === "production-workflow") return pathname === "/operator/twin/production-workflow";
-  if (item.key === "twin") return pathname === "/operator/twin" || pathname.startsWith("/operator/twin/fields/");
+  if (item.key === "overview") return pathname === "/operator/twin" || pathname === "/operator";
+  if (item.key === "fields") return pathname.startsWith("/operator/twin/fields/");
   return false;
 }
 
 function resolveTitle(pathname: string): string {
-  if (pathname === "/operator/twin") return "操作员数字孪生工作台";
-  if (pathname === "/operator/twin/production-workflow") return "生产工作流";
-  if (pathname === "/operator/twin/gateway-demo") return "Gateway 支撑的 Twin Demo Viewer";
-  if (pathname.startsWith("/operator/twin/fields/")) return "地块 Twin 工作区";
-  return "操作员工作台";
+  if (pathname === "/operator/twin") return "Runtime Overview";
+  if (pathname === "/operator/twin/production-workflow") return "Runtime Workflow Readback";
+  if (pathname === "/operator/twin/gateway-demo") return "Replay-backed Gateway Snapshot";
+  if (pathname.startsWith("/operator/twin/fields/")) return "Field Runtime";
+  if (pathname.startsWith("/operator/twin/traces/")) return "Audit / Trace";
+  return "Operator Runtime Console";
 }
 
 function resolveLead(pathname: string): string {
-  if (pathname === "/operator/twin") return "查看田块状态、预测缺口、低置信判断与人工确认入口。";
-  if (pathname === "/operator/twin/production-workflow") return "接入生产来源引用，并由操作员显式推进 session、review、ROI 与 Field Memory formalization。";
-  if (pathname === "/operator/twin/gateway-demo") return "只读展示 P51 gateway-backed snapshot：device-path simulation、标准映射、去重、clock skew、ingestion window 与 traceability。";
-  if (pathname.startsWith("/operator/twin/fields/")) return "按事实、估计、预测、情景分层查看单地块数字孪生状态。";
-  return "操作员侧用于分析、复核和人工确认，不承担客户报告或后台治理职责。";
+  if (pathname === "/operator/twin") return "Review runtime status, field readiness, evidence coverage, and replay-backed operating boundaries without creating tasks or writes.";
+  if (pathname === "/operator/twin/production-workflow") return "Read-only workflow readback for production-governed materialization boundaries; this shell does not approve, dispatch, or write formal records.";
+  if (pathname === "/operator/twin/gateway-demo") return "Read-only replay-backed gateway snapshot; live devices are not connected and the production gateway is not online.";
+  if (pathname.startsWith("/operator/twin/fields/")) return "Review a field through Evidence, State, Forecast, Residual, Calibration, Health, and Audit views while legacy routes remain preserved.";
+  if (pathname.startsWith("/operator/twin/traces/")) return "Audit trace readback is available as a preserved route and does not mutate runtime state.";
+  return "Read-only runtime surface for operator review; Customer Portal and Admin Console remain separate product surfaces.";
+}
+
+function renderNavItem(item: OperatorNavItem, pathname: string): React.ReactElement {
+  const activeClass = isItemActive(pathname, item) ? " isActive" : "";
+  const statusLabel = item.status === "enabled" ? "Route active" : item.status === "route-preserved" ? "Route preserved" : "Coming soon";
+
+  if (item.status !== "enabled") {
+    return (
+      <span
+        key={item.key}
+        className={"customerShellNavItem customerShellNavItemDisabled" + activeClass}
+        title={item.hint}
+        aria-disabled="true"
+        data-nav-status={item.status}
+      >
+        <span>{item.label}</span>
+        <small>{statusLabel}</small>
+      </span>
+    );
+  }
+
+  return (
+    <NavLink
+      key={item.key}
+      to={item.to}
+      title={item.hint}
+      data-nav-status={item.status}
+      className={() => "customerShellNavItem" + activeClass}
+    >
+      <span>{item.label}</span>
+      <small>{statusLabel}</small>
+    </NavLink>
+  );
 }
 
 export default function OperatorLayout({
@@ -102,62 +156,49 @@ export default function OperatorLayout({
   const resolvedLead = lead ?? resolveLead(location.pathname);
 
   return (
-    <div className="customerShell operatorShell" data-layout="operator-shell">
-      <aside className="customerShellSidebar operatorShellSidebar" aria-label="操作员导航">
-        <div className="customerShellBrand" aria-label="GEOX 操作员 Twin">
+    <div className="customerShell operatorShell" data-layout="operator-runtime-console-shell" data-h59="operator-runtime-console-shell">
+      <aside className="customerShellSidebar operatorShellSidebar" aria-label="Operator Runtime Console navigation">
+        <div className="customerShellBrand" aria-label="GEOX Operator Runtime Console">
           <span className="customerShellLogoMark" aria-hidden="true" />
-          <span>GEOX 操作员 Twin</span>
+          <span>GEOX Operator Runtime Console</span>
         </div>
 
-        <nav className="customerShellNav" aria-label="操作员数字孪生导航">
-          {OPERATOR_NAV_ITEMS.map((item) =>
-            item.disabled ? (
-              <span
-                key={item.key}
-                className="customerShellNavItem customerShellNavItemDisabled"
-                title={item.hint}
-                aria-disabled="true"
-              >
-                <span>{item.label}</span>
-              </span>
-            ) : (
-              <NavLink
-                key={item.key}
-                to={item.to}
-                title={item.hint}
-                className={() => "customerShellNavItem" + (isItemActive(location.pathname, item) ? " isActive" : "")}
-              >
-                <span>{item.label}</span>
-              </NavLink>
-            )
-          )}
+        <nav className="customerShellNav" aria-label="Operator Runtime Console navigation">
+          {OPERATOR_NAV_ITEMS.map((item) => renderNavItem(item, location.pathname))}
         </nav>
 
-        <div className="customerShellMeta">
-          <div>产品面</div>
-          <strong>操作员数字孪生工作台</strong>
-          <div>边界</div>
-          <strong>分析与人工确认，不直接执行</strong>
+        <div className="customerShellMeta" aria-label="Operator Runtime Console product boundary">
+          <div>Product Surface</div>
+          <strong>Operator Runtime Console</strong>
+          <div>Boundary</div>
+          <strong>Read-only runtime review; no direct execution</strong>
         </div>
 
         <div className="customerShellFooterNote">
-          情景只能进入建议、审批和人工确认链路，不能直接变成正式任务。
+          Legacy operator routes are preserved by URL. H59 does not add broad /app/operator/* routing and does not open dispatch.
         </div>
       </aside>
 
       <div className="customerShellMainWrap">
         <header className="customerShellTopbar">
           <div className="customerShellHeading">
+            <div className="customerShellContext">操作员运行控制台</div>
             <h1 className="customerShellTitle">{resolvedTitle}</h1>
             <div className="customerShellContext">{resolvedLead}</div>
           </div>
           <div className="customerShellTopActions">
             <span className="customerShellUserMuted">
-              只读 v1<br />
-              <small>操作员壳层</small>
+              Read-only v1<br />
+              <small>Runtime shell</small>
             </span>
           </div>
         </header>
+
+        <section className="customerShellMeta operatorRuntimeModeBanner" aria-label="Runtime mode and live-device nonclaims">
+          {RUNTIME_NONCLAIMS.map((claim) => (
+            <strong key={claim}>{claim}</strong>
+          ))}
+        </section>
 
         <main className="customerLayoutMain">{children}</main>
       </div>
