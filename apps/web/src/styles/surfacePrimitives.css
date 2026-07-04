@@ -1,0 +1,80 @@
+/* apps/web/src/styles/surfacePrimitives.css */
+/* Shared cross-shell surface primitives for product panels, grids, tables, meta rows, and boundary copy. */
+
+.surfacePanel {
+  border: 1px solid #d8e1ea;
+  border-radius: 18px;
+  background: #ffffff;
+  padding: 18px;
+}
+
+.surfacePanelHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.surfaceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.surfaceTable {
+  display: grid;
+  gap: 10px;
+}
+
+.surfaceTableRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e3e9ef;
+  border-radius: 14px;
+  background: #f8fafc;
+  overflow-wrap: anywhere;
+}
+
+.surfaceMeta {
+  display: grid;
+  gap: 8px;
+  color: #526173;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.surfaceBoundary {
+  border: 1px solid #d8e1ea;
+  border-radius: 16px;
+  background: #ffffff;
+  padding: 14px 16px;
+  color: #47566a;
+  line-height: 1.55;
+}
+
+.surfaceBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid #d8e1ea;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #24364d;
+  font-weight: 750;
+}
+
+.surfaceMuted {
+  color: #667589;
+}
+
+@media (max-width: 900px) {
+  .surfaceGrid,
+  .surfaceTableRow {
+    grid-template-columns: 1fr;
+  }
+}

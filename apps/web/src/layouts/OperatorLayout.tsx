@@ -1,6 +1,6 @@
 // apps/web/src/layouts/OperatorLayout.tsx
-// Purpose: provide the H59 Operator Runtime Console shell for existing operator pages and expose H63 Pilot Readiness through /operator/pilot.
-// Boundary: this shell is read-only; it does not create facts, recommendations, approvals, dispatches, AO-ACT tasks, ROI records, or Field Memory records.
+// Purpose: provide the Operator Runtime Console shell for existing operator pages and Pilot Readiness.
+// Boundary: this shell is read-only; it does not create records or open controlled execution.
 
 import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
@@ -28,56 +28,56 @@ const OPERATOR_NAV_ITEMS: OperatorNavItem[] = [
     key: "overview",
     label: "Overview",
     to: "/operator/twin",
-    hint: "Runtime Overview uses the preserved operator twin overview route until H59 route acceptance allows a canonical route.",
+    hint: "Runtime Overview uses the preserved operator twin overview route until canonical route ownership is finalized.",
     status: "enabled",
   },
   {
     key: "fields",
     label: "Fields",
     to: "/operator/twin",
-    hint: "Field Runtime list is planned for H60; the current field workspace routes remain preserved by URL.",
+    hint: "Field Runtime list is planned; current field workspace routes remain preserved by URL.",
     status: "route-preserved",
   },
   {
     key: "evidence",
     label: "Evidence",
     to: "/operator/twin",
-    hint: "Evidence Center enters formal navigation after route behavior acceptance; current evidence capabilities remain preserved by URL or field drawer.",
+    hint: "Evidence Center enters formal navigation after route behavior review; current evidence capabilities remain preserved by URL or field drawer.",
     status: "coming-soon",
   },
   {
     key: "forecast",
     label: "Forecast",
     to: "/operator/twin",
-    hint: "Forecast becomes a Field Runtime tab in H60/H61; forecast output is not a recommendation.",
+    hint: "Forecast is available through Field Runtime review tabs and is not a recommendation.",
     status: "coming-soon",
   },
   {
     key: "calibration",
     label: "Calibration",
     to: "/operator/twin",
-    hint: "Calibration becomes a Field Runtime tab after H60; this shell does not write model updates.",
+    hint: "Calibration is available through Field Runtime review tabs and does not update model state.",
     status: "coming-soon",
   },
   {
     key: "health",
     label: "Health",
     to: "/operator/twin",
-    hint: "Runtime Health is available through Field Runtime Health Review; no broad /operator/health route is added.",
+    hint: "Runtime Health is available through Field Runtime Health Review; no broad operator health route is added.",
     status: "coming-soon",
   },
   {
     key: "pilot",
     label: "Pilot",
     to: "/operator/pilot",
-    hint: "Pilot Readiness reviews P53/P54 planning and readiness gates. It is not field pilot execution.",
+    hint: "Pilot Readiness reviews planning and readiness gates. It is not field pilot execution.",
     status: "enabled",
   },
   {
     key: "settings",
     label: "Settings",
     to: "/operator/twin",
-    hint: "Operator settings are planned for a later route acceptance; this H59 shell only freezes the product navigation slot.",
+    hint: "Operator settings are planned for a later route review; this shell freezes the product navigation slot.",
     status: "coming-soon",
   },
 ];
@@ -87,7 +87,7 @@ const RUNTIME_NONCLAIMS = [
   "Live Device: Not connected",
   "Production Gateway: Not online",
   "Field Pilot: Not started",
-  "AO-ACT Dispatch: Disabled",
+  "Controlled Execution: Disabled",
 ];
 
 function isItemActive(pathname: string, item: OperatorNavItem): boolean {
@@ -108,9 +108,9 @@ function resolveTitle(pathname: string): string {
 }
 
 function resolveLead(pathname: string): string {
-  if (pathname === "/operator/pilot") return "Review controlled pilot planning and readiness gates without starting field execution, dispatch, AO-ACT, ROI, or Field Memory.";
-  if (pathname === "/operator/twin") return "Review runtime status, field readiness, evidence coverage, and replay-backed operating boundaries without creating tasks or writes.";
-  if (pathname === "/operator/twin/production-workflow") return "Read-only workflow readback for production-governed materialization boundaries; this shell does not approve, dispatch, or write formal records.";
+  if (pathname === "/operator/pilot") return "Review controlled pilot planning and readiness gates without starting field execution or writing product records.";
+  if (pathname === "/operator/twin") return "Review runtime status, field readiness, evidence coverage, and replay-backed operating boundaries without creating tasks or records.";
+  if (pathname === "/operator/twin/production-workflow") return "Read-only workflow readback for governed materialization boundaries; this shell does not open controlled execution or write formal records.";
   if (pathname === "/operator/twin/gateway-demo") return "Read-only replay-backed gateway snapshot; live devices are not connected and the production gateway is not online.";
   if (pathname.startsWith("/operator/twin/fields/")) return "Review a field through Evidence, State, Forecast, Residual, Calibration, Health, and Audit views while legacy routes remain preserved.";
   if (pathname.startsWith("/operator/twin/traces/")) return "Audit trace readback is available as a preserved route and does not mutate runtime state.";
@@ -180,14 +180,14 @@ export default function OperatorLayout({
         </div>
 
         <div className="customerShellFooterNote">
-          Legacy operator routes are preserved by URL. H63 enables Pilot Readiness only and does not open dispatch.
+          Legacy operator routes are preserved by URL. Pilot Readiness is review-only and does not open controlled execution.
         </div>
       </aside>
 
       <div className="customerShellMainWrap">
         <header className="customerShellTopbar">
           <div className="customerShellHeading">
-            <div className="customerShellContext">操作员运行控制台</div>
+            <div className="customerShellContext">Operator Runtime Console</div>
             <h1 className="customerShellTitle">{resolvedTitle}</h1>
             <div className="customerShellContext">{resolvedLead}</div>
           </div>
