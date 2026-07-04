@@ -1,25 +1,25 @@
 // apps/web/src/app/routes/operatorFieldRuntimeRoutes.tsx
-// Purpose: own the H60-B canonical Field Runtime route family under /operator/fields/*.
-// Boundary: this module renders route placeholders only and imports no field twin business pages.
+// Purpose: own the canonical Field Runtime route family under /operator/fields/*.
+// Boundary: H60-C routes render the shared FieldRuntimeRoutePage shell only; concrete tab content migrates later.
 
 import React from "react";
 import { Route, Routes } from "react-router-dom";
-import FieldRuntimeRoutePlaceholder from "../../features/operator/fieldRuntime/FieldRuntimeRoutePlaceholder";
+import FieldRuntimeRoutePage from "../../features/operator/fieldRuntime/FieldRuntimeRoutePage";
 
 export default function OperatorFieldRuntimeRoutes(): React.ReactElement {
   return (
     <Routes>
-      <Route index element={<FieldRuntimeRoutePlaceholder tab="fields" />} />
-      <Route path=":fieldId" element={<FieldRuntimeRoutePlaceholder tab="overview" />} />
-      <Route path=":fieldId/evidence" element={<FieldRuntimeRoutePlaceholder tab="evidence" />} />
-      <Route path=":fieldId/state" element={<FieldRuntimeRoutePlaceholder tab="state" />} />
-      <Route path=":fieldId/forecast" element={<FieldRuntimeRoutePlaceholder tab="forecast" />} />
-      <Route path=":fieldId/scenario" element={<FieldRuntimeRoutePlaceholder tab="scenario" />} />
-      <Route path=":fieldId/residual" element={<FieldRuntimeRoutePlaceholder tab="residual" />} />
-      <Route path=":fieldId/calibration" element={<FieldRuntimeRoutePlaceholder tab="calibration" />} />
-      <Route path=":fieldId/health" element={<FieldRuntimeRoutePlaceholder tab="health" />} />
-      <Route path=":fieldId/audit" element={<FieldRuntimeRoutePlaceholder tab="audit" />} />
-      <Route path="*" element={<FieldRuntimeRoutePlaceholder tab="fields" />} />
+      <Route index element={<FieldRuntimeRoutePage tab="fields" />} />
+      <Route path=":fieldId" element={<FieldRuntimeRoutePage tab="overview" />} />
+      <Route path=":fieldId/evidence" element={<FieldRuntimeRoutePage tab="evidence" />} />
+      <Route path=":fieldId/state" element={<FieldRuntimeRoutePage tab="state" />} />
+      <Route path=":fieldId/forecast" element={<FieldRuntimeRoutePage tab="forecast" />} />
+      <Route path=":fieldId/scenario" element={<FieldRuntimeRoutePage tab="scenario" />} />
+      <Route path=":fieldId/residual" element={<FieldRuntimeRoutePage tab="residual" />} />
+      <Route path=":fieldId/calibration" element={<FieldRuntimeRoutePage tab="calibration" />} />
+      <Route path=":fieldId/health" element={<FieldRuntimeRoutePage tab="health" />} />
+      <Route path=":fieldId/audit" element={<FieldRuntimeRoutePage tab="audit" />} />
+      <Route path="*" element={<FieldRuntimeRoutePage tab="fields" />} />
     </Routes>
   );
 }

@@ -1,0 +1,199 @@
+/* apps/web/src/styles/operatorFieldRuntime.css */
+/* Purpose: style the H60-C Field Runtime layout, boundary banner, tabs, and tab stubs without inline styles. */
+
+.operatorFieldRuntime {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+}
+
+.operatorFieldRuntime__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid #d8e4d1;
+  border-radius: 22px;
+  background: #ffffff;
+  box-shadow: 0 14px 32px rgba(34, 56, 30, 0.08);
+}
+
+.operatorFieldRuntime__eyebrow {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #526151;
+}
+
+.operatorFieldRuntime__title {
+  margin: 0;
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.05;
+  color: #172016;
+}
+
+.operatorFieldRuntime__subtitle {
+  margin: 8px 0 0;
+  color: #526151;
+  font-weight: 800;
+}
+
+.operatorFieldRuntime__meta {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.operatorFieldRuntime__meta div {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid #e4ebdd;
+  border-radius: 14px;
+  background: #f8faf5;
+}
+
+.operatorFieldRuntime__meta dt {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #647263;
+}
+
+.operatorFieldRuntime__meta dd {
+  margin: 0;
+  font-weight: 850;
+  color: #1e2a1d;
+  overflow-wrap: anywhere;
+}
+
+.operatorFieldRuntime__banner,
+.operatorFieldRuntime__routeNotice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #dfe8d8;
+  border-radius: 18px;
+  background: #fbfcf8;
+}
+
+.operatorFieldRuntime__bannerItem,
+.operatorFieldRuntime__routeNotice span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 6px 12px;
+  border: 1px solid #e4ebdd;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #243021;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.operatorFieldRuntime__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #d8e4d1;
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.operatorFieldRuntime__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #e4ebdd;
+  border-radius: 999px;
+  background: #f8faf5;
+  color: #2a3828;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.operatorFieldRuntime__tab--active {
+  border-color: #b8c9ad;
+  background: #eef4e8;
+  box-shadow: inset 0 0 0 1px #c9d8bf;
+}
+
+.operatorFieldRuntime__tabStatus {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 2px 8px;
+  border: 1px solid #dfe8d8;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #526151;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.operatorFieldRuntime__tabPanel {
+  display: grid;
+  gap: 16px;
+}
+
+.operatorFieldRuntime__stub {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid #d8e4d1;
+  border-radius: 22px;
+  background: #ffffff;
+}
+
+.operatorFieldRuntime__stubHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.operatorFieldRuntime__stubHeader h2 {
+  flex: 1 1 220px;
+  margin: 0;
+  color: #172016;
+}
+
+.operatorFieldRuntime__stubLead {
+  margin: 0;
+  color: #526151;
+  font-weight: 750;
+}
+
+.operatorFieldRuntime__boundaryList {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+  color: #243021;
+}
+
+@media (max-width: 760px) {
+  .operatorFieldRuntime {
+    padding: 14px;
+  }
+
+  .operatorFieldRuntime__header {
+    grid-template-columns: 1fr;
+  }
+
+  .operatorFieldRuntime__tab,
+  .operatorFieldRuntime__bannerItem,
+  .operatorFieldRuntime__routeNotice span {
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
+}
