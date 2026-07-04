@@ -179,6 +179,25 @@ AO-ACT Dispatch: Disabled
 
 这些字段必须是产品界面可见信息，不得只放在 audit drawer、注释或测试脚本中。
 
+### 6.1 Banner CSS 要求
+
+H59 必须为 runtime mode banner 提供专用 CSS：
+
+```text
+.operatorRuntimeModeBanner
+.operatorRuntimeModeBanner strong
+```
+
+CSS 要求：
+
+```text
+横向/换行稳定展示五个 nonclaim
+视觉上区别于 sidebar meta
+不使用红黄绿风险语义
+不暗示 live production
+不影响 Customer/Admin shell
+```
+
 ---
 
 ## 7. Legacy route 保留
@@ -205,7 +224,23 @@ H59 不得新增 broad route：
 
 ---
 
-## 8. 验收
+## 8. Changed-file allowlist
+
+H59 PR 只允许改动：
+
+```text
+apps/web/src/layouts/OperatorLayout.tsx
+apps/web/src/styles/operatorShell.css
+docs/frontend-productization/H59-OPERATOR-RUNTIME-CONSOLE-SHELL.md
+scripts/frontend_acceptance/ACCEPTANCE_H59_OPERATOR_RUNTIME_CONSOLE_SHELL_V1.cjs
+apps/web/src/features/operator/runtimeConsole/*
+```
+
+若 PR diff 中出现其他文件，必须先拆 PR 或重新定义任务边界。
+
+---
+
+## 9. 验收
 
 必跑：
 
@@ -219,6 +254,7 @@ H59 acceptance 范围：
 
 ```text
 static repo read only
+git diff metadata read only
 no app startup
 no API call
 no DB call
@@ -230,7 +266,7 @@ no source mutation
 
 ---
 
-## 9. 完成定义
+## 10. 完成定义
 
 H59 完成只表示：
 
@@ -239,6 +275,8 @@ Operator shell 已经从 Operator Twin shell 改为 Operator Runtime Console she
 正式导航已经出现
 未实现导航项使用 disabled / coming-soon / route-preserved
 Runtime nonclaim banner 已经进入 shell
+Runtime nonclaim banner 已有专用 CSS
+H59 changed-file allowlist 已进入 acceptance
 旧 operator twin route 保持可达
 未新增 broad /app/operator/* wildcard
 未打开任何写入口
