@@ -264,6 +264,15 @@ no route deletion
 no source mutation
 ```
 
+H59 acceptance 还必须验证：
+
+```text
+.operatorRuntimeModeBanner 专用 CSS 存在
+.operatorRuntimeModeBanner strong 专用 CSS 存在
+banner CSS 不使用 red/yellow/green 风险语义
+PR changed files 在 H59 allowlist 内
+```
+
 ---
 
 ## 10. 完成定义
