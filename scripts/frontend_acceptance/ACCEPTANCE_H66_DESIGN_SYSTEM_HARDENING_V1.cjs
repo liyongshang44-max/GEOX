@@ -130,7 +130,16 @@ try {
   const runtimeFiles = runtimeChangedFiles(diff);
   const runtimeText = runtimeFiles.map((file) => read(file)).join('\n');
   assert('no_backend_or_write_surface', lacksAll(runtimeText, writeTokens), { runtimeFiles });
-  const formalFiles = [
+  const phaseFiles = [
+    files.operator,
+    files.customer,
+    files.admin,
+    files.runtimeLayout,
+    files.runtimeRoute,
+    files.runtimeVm,
+    files.runtimeStub,
+  ];
+  const mojibakeFiles = [
     files.operator,
     files.customer,
     files.admin,
@@ -142,9 +151,10 @@ try {
     ...replayDemoFiles,
     ...pilotReadinessFiles,
   ];
-  const formalText = formalFiles.map((file) => stripCommentsAndDataAttrs(read(file))).join('\n');
-  assert('no_mojibake', !mojibakeRanges.some((pattern) => pattern.test(formalText)), { formalFiles });
-  assert('no_visible_phase_copy', lacksAll(formalText, phaseTokens), { phaseTokens });
+  const phaseText = phaseFiles.map((file) => stripCommentsAndDataAttrs(read(file))).join('\n');
+  const mojibakeText = mojibakeFiles.map((file) => stripCommentsAndDataAttrs(read(file))).join('\n');
+  assert('no_mojibake', !mojibakeRanges.some((pattern) => pattern.test(mojibakeText)), { mojibakeFiles });
+  assert('no_visible_phase_copy', lacksAll(phaseText, phaseTokens), { phaseFiles, phaseTokens });
   const navText = [files.operator, files.customer, files.admin].map((file) => stripCommentsAndDataAttrs(read(file))).join('\n');
   assert('formal_nav_guard', lacksAll(navText, [...phaseTokens, ...navPollution]), { phaseTokens, navPollution });
   [files.runtimeLayout, files.runtimeRoute, files.runtimeVm].forEach((file) => {
