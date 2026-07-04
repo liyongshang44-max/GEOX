@@ -88,7 +88,8 @@ function main() {
   ]), { file: FILES.plan });
 
   assert('plan_preserves_read_only_and_no_write_boundaries', containsAll(plan, [
-    '不写 facts',
+    'Field Runtime 不得：',
+    '写 facts',
     '创建 AO-ACT task',
     '写 ROI',
     '写 Field Memory',
