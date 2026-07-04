@@ -1,6 +1,6 @@
 // apps/web/src/features/operator/fieldRuntime/fieldRuntimeViewModel.ts
-// Purpose: provide the Field Runtime ViewModel contract for layout, tabs, route identity, boundary copy, and H60-D overview/state slots.
-// Boundary: this file builds local UI state only; workspace-derived content is mapped by the read-only H60-D adapter.
+// Purpose: provide the Field Runtime ViewModel contract for layout, tabs, route identity, boundary copy, H60-D overview/state slots, and H60-E evidence tab state.
+// Boundary: this file builds local UI state only; read-only data is mapped by Field Runtime adapters.
 
 export type FieldRuntimeTabKey =
   | "overview"
@@ -125,11 +125,14 @@ export const FIELD_RUNTIME_TABS: FieldRuntimeTabDefinition[] = [
     key: "evidence",
     label: "Evidence",
     pathSuffix: "evidence",
-    status: "limited",
-    phase: "reserved for H60-E",
+    status: "available",
+    phase: "H60-E evidence quality tab",
     boundaryCopy: [
-      "Evidence route is reserved for H60-E.",
-      "This shell does not write facts.",
+      "Evidence content is derived from the existing read-only Operator Field Twin evidence quality read model.",
+      "Full Evidence trace is displayed for review only.",
+      "No facts are written.",
+      "No recommendation is created.",
+      "No approval / dispatch / AO-ACT task is created.",
     ],
   },
   {
