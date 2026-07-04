@@ -77,6 +77,33 @@
   line-height: 1.55;
 }
 
+.operatorRuntimeModeBanner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: #ffffff;
+  border: 1px solid #d8e4d1;
+  box-shadow: 0 10px 30px rgba(19, 32, 22, 0.06);
+}
+
+.operatorRuntimeModeBanner strong {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #f8faf5;
+  border: 1px solid #e2e8d8;
+  color: #243528;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
 .operatorMain {
   min-width: 0;
   padding: 28px;
@@ -593,6 +620,16 @@
 
   .operatorHeader {
     flex-direction: column;
+  }
+
+  .operatorRuntimeModeBanner {
+    align-items: stretch;
+  }
+
+  .operatorRuntimeModeBanner strong {
+    width: 100%;
+    justify-content: center;
+    white-space: normal;
   }
 
   .operatorWorkbenchSummary,
