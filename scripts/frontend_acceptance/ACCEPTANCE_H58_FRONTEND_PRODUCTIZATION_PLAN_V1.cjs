@@ -208,12 +208,27 @@ function main() {
 
   assert('app_does_not_introduce_broad_app_operator_wildcard', !app.includes('path="/app/operator/*"'), { file: FILES.app });
 
-  assert('current_operator_layout_is_still_pre_h59_shell', containsAll(operatorLayout, [
+  const operatorLayoutIsPreH59Shell = containsAll(operatorLayout, [
     'GEOX 操作员 Twin',
     'Twin 总览',
     'Gateway Demo',
     '操作员数字孪生工作台',
-  ]), { file: FILES.operatorLayout });
+  ]);
+
+  const operatorLayoutIsH59RuntimeConsoleShell = containsAll(operatorLayout, [
+    'GEOX Operator Runtime Console',
+    '操作员运行控制台',
+    'data-h59="operator-runtime-console-shell"',
+    'Runtime Mode: Replay-backed Demo',
+    'Live Device: Not connected',
+    'Production Gateway: Not online',
+    'AO-ACT Dispatch: Disabled',
+  ]);
+
+  assert('operator_layout_phase_state_is_known_pre_h59_or_h59', operatorLayoutIsPreH59Shell || operatorLayoutIsH59RuntimeConsoleShell, {
+    file: FILES.operatorLayout,
+    accepted_states: ['pre_h59_operator_twin_shell', 'h59_operator_runtime_console_shell'],
+  });
 
   assert('customer_layout_override_is_still_known_debt', containsAll(customerLayout, [
     '../views/CustomerFieldsIndexPage',
@@ -246,7 +261,7 @@ function main() {
     scope: 'static frontend productization plan only',
     files_checked: FILES,
     assertions,
-    next_step: 'H59_OPERATOR_RUNTIME_CONSOLE_SHELL',
+    next_step: operatorLayoutIsH59RuntimeConsoleShell ? 'H60_FIELD_RUNTIME_CONSOLIDATION' : 'H59_OPERATOR_RUNTIME_CONSOLE_SHELL',
   }, null, 2));
 }
 
