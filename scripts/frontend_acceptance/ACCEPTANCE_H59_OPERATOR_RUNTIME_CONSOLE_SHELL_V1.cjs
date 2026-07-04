@@ -288,6 +288,7 @@ function main() {
     acceptance: 'ACCEPTANCE_H59_OPERATOR_RUNTIME_CONSOLE_SHELL_V1',
     scope: 'static operator shell productization only',
     changed_files_checked: changedFiles,
+    allowed_changed_file_patterns: H59_ALLOWED_CHANGED_FILE_PATTERNS.map((pattern) => String(pattern)),
     files_checked: FILES,
     assertions,
     next_step: 'H60_FIELD_RUNTIME_CONSOLIDATION',
