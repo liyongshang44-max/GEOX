@@ -43,8 +43,18 @@ function assert(name, condition, details = {}) {
   console.log('[h58-frontend-productization-plan] ok:', name);
 }
 
+function normalizeForTokenScan(value) {
+  return value
+    .replace(/[\uFEFF]/g, '')
+    .replace(/[`'"“”‘’]/g, '')
+    .replace(/[，。；、：:]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function containsAll(content, tokens) {
-  return tokens.every((token) => content.includes(token));
+  const normalizedContent = normalizeForTokenScan(content);
+  return tokens.every((token) => normalizedContent.includes(normalizeForTokenScan(token)));
 }
 
 function main() {
