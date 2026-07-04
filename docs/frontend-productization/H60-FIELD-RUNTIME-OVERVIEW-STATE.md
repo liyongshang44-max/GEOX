@@ -123,6 +123,8 @@ H60-D does not change `operatorFieldRuntimeRoutes.tsx` route topology.
 H60-D does not redirect legacy routes.
 H60-D does not delete legacy routes.
 
+legacy route remains preserved as a compatibility surface.
+
 Legacy route remains preserved:
 
 ```text
