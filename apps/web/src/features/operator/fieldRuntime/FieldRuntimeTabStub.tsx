@@ -1,6 +1,6 @@
 // apps/web/src/features/operator/fieldRuntime/FieldRuntimeTabStub.tsx
-// Purpose: render static H60-C tab stub content and boundary copy before concrete tab migrations.
-// Boundary: this component describes planned surfaces only and does not create product conclusions.
+// Purpose: render static Field Runtime tab stub content and boundary copy before concrete tab migrations.
+// Boundary: this component describes planned review surfaces only.
 
 import React from "react";
 import { type FieldRuntimeViewModel } from "./fieldRuntimeViewModel";
@@ -23,7 +23,11 @@ export default function FieldRuntimeTabStub({ viewModel }: FieldRuntimeTabStubPr
         <h2>{title}</h2>
         <span className="operatorFieldRuntime__tabStatus">{status}</span>
       </div>
-      <p className="operatorFieldRuntime__stubLead">This H60-C shell provides layout, tabs, boundary copy, and static routing. Concrete tab content migrates in H60-D through H60-K.</p>
+
+      <p className="operatorFieldRuntime__stubLead">
+        This Field Runtime shell provides layout, tabs, boundary copy, and static routing. Concrete tab content remains route-scoped and read-only.
+      </p>
+
       <ul className="operatorFieldRuntime__boundaryList">
         {lines.map((line) => (
           <li key={line}>{line}</li>
