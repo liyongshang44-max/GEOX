@@ -5,6 +5,7 @@
 import React from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { SubmitScenarioToRecommendationPanel } from "../components/SubmitScenarioToRecommendationPanel";
+import FieldRuntimeLegacyScenarioActionNotice from "../fieldRuntime/FieldRuntimeLegacyScenarioActionNotice";
 import {
   buildOperatorTwinScopeQuery,
   fetchOperatorFieldTwinScenarioCompare,
@@ -15,9 +16,7 @@ import {
 
 type RuntimeState = "loading" | "ready" | "error";
 
-function scopeFromSearchParams(
-  searchParams: URLSearchParams,
-): OperatorTwinRequestScope {
+function scopeFromSearchParams(searchParams: URLSearchParams): OperatorTwinRequestScope {
   return {
     tenant_id: searchParams.get("tenant_id"),
     project_id: searchParams.get("project_id"),
@@ -75,11 +74,7 @@ function boundaryRuleText(label: string): string {
     .replace(/Forecast/g, "预测");
 }
 
-function ScenarioCompareTable({
-  options,
-}: {
-  options: OperatorScenarioCompareOption[];
-}): React.ReactElement {
+function ScenarioCompareTable({ options }: { options: OperatorScenarioCompareOption[] }): React.ReactElement {
   return (
     <article className="operatorPanel" data-card="ScenarioCompareTable">
       <p className="operatorEyebrow">情景比较表</p>
@@ -110,13 +105,8 @@ function ScenarioCompareTable({
   );
 }
 
-function ScenarioStatusCard({
-  panel,
-}: {
-  panel: OperatorFieldTwinScenarioCompareV1;
-}): React.ReactElement {
+function ScenarioStatusCard({ panel }: { panel: OperatorFieldTwinScenarioCompareV1 }): React.ReactElement {
   const compare = panel.scenario_compare_v1;
-
   return (
     <article className="operatorPanel" data-card="ScenarioCompareStatus">
       <p className="operatorEyebrow">情景比较（scenario_compare_v1）</p>
@@ -131,18 +121,12 @@ function ScenarioStatusCard({
   );
 }
 
-function ScenarioBoundaryCard({
-  panel,
-}: {
-  panel: OperatorFieldTwinScenarioCompareV1;
-}): React.ReactElement {
+function ScenarioBoundaryCard({ panel }: { panel: OperatorFieldTwinScenarioCompareV1 }): React.ReactElement {
   return (
     <article className="operatorPanel" data-card="ScenarioCompareBoundary">
       <h3>情景边界</h3>
       <ul className="operatorList">
-        {panel.boundary_rules.map((rule) => (
-          <li key={rule.rule_code}>{boundaryRuleText(rule.label)}</li>
-        ))}
+        {panel.boundary_rules.map((rule) => <li key={rule.rule_code}>{boundaryRuleText(rule.label)}</li>)}
       </ul>
       <p>情景比较可以提交为建议候选；不会自动审批，不会创建作业计划，不会创建 AO-ACT 任务，不派单。</p>
     </article>
@@ -152,18 +136,12 @@ function ScenarioBoundaryCard({
 export default function OperatorFieldTwinScenarioComparePage(): React.ReactElement {
   const params = useParams();
   const [searchParams] = useSearchParams();
-  const scope = React.useMemo(
-    () => scopeFromSearchParams(searchParams),
-    [searchParams],
-  );
-  const scopeQueryString = React.useMemo(
-    () => buildOperatorTwinScopeQuery(scope),
-    [scope],
-  );
+  const scope = React.useMemo(() => scopeFromSearchParams(searchParams), [searchParams]);
+  const scopeQueryString = React.useMemo(() => buildOperatorTwinScopeQuery(scope), [scope]);
   const fieldId = String(params.fieldId ?? "").trim() || "field_c8_demo";
+  const canonicalScenarioPath = "/operator/fields/" + encodeURIComponent(fieldId) + "/scenario" + scopeQueryString;
   const [state, setState] = React.useState<RuntimeState>("loading");
-  const [panel, setPanel] =
-    React.useState<OperatorFieldTwinScenarioCompareV1 | null>(null);
+  const [panel, setPanel] = React.useState<OperatorFieldTwinScenarioCompareV1 | null>(null);
   const [errorText, setErrorText] = React.useState("");
 
   React.useEffect(() => {
@@ -181,99 +159,39 @@ export default function OperatorFieldTwinScenarioComparePage(): React.ReactEleme
       .catch((error: unknown) => {
         if (!alive) return;
         setPanel(null);
-        setErrorText(
-          error instanceof Error
-            ? error.message
-            : "OPERATOR_FIELD_TWIN_SCENARIO_COMPARE_LOAD_FAILED",
-        );
+        setErrorText(error instanceof Error ? error.message : "OPERATOR_FIELD_TWIN_SCENARIO_COMPARE_LOAD_FAILED");
         setState("error");
       });
 
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, [fieldId, scope]);
 
   return (
-    <section
-      className="operatorWorkbenchPage"
-      data-surface="operator-twin"
-      data-page="operator-field-twin-scenario-compare"
-      data-contract="scenario_compare_v1"
-    >
+    <section className="operatorWorkbenchPage" data-surface="operator-twin" data-page="operator-field-twin-scenario-compare" data-contract="scenario_compare_v1">
       <div className="operatorWorkbenchHero">
         <div>
           <p className="operatorEyebrow">情景比较</p>
           <h2>地块情景比较</h2>
-          <p>
-            当前地块：
-            <strong>{panel?.field_context.field_name ?? fieldId}</strong>。
-            本页只展示情景比较状态、无动作基线、情景选项、风险变化、置信度、失败条件、证据引用与不可用原因。
-          </p>
+          <p>当前地块：<strong>{panel?.field_context.field_name ?? fieldId}</strong>。本页只展示情景比较状态、无动作基线、情景选项、风险变化、置信度、失败条件、证据引用与不可用原因。</p>
         </div>
         <div className="operatorWorkbenchHeroActions">
-          <Link
-            className="operatorActionLink"
-            to={
-              "/operator/twin/fields/" +
-              encodeURIComponent(fieldId) +
-              scopeQueryString
-            }
-          >
-            返回地块 Twin
-          </Link>
-          <Link
-            className="operatorActionLink"
-            to={
-              "/operator/twin/fields/" +
-              encodeURIComponent(fieldId) +
-              "/forecast" +
-              scopeQueryString
-            }
-          >
-            查看预测
-          </Link>
-          <Link
-            className="operatorActionLink"
-            to={
-              "/operator/twin/fields/" +
-              encodeURIComponent(fieldId) +
-              "/evidence" +
-              scopeQueryString
-            }
-          >
-            证据
-          </Link>
-          <Link
-            className="operatorActionLink"
-            to={"/operator/twin" + scopeQueryString}
-          >
-            返回 Twin 总览
-          </Link>
+          <Link className="operatorActionLink" to={"/operator/twin/fields/" + encodeURIComponent(fieldId) + scopeQueryString}>返回地块 Twin</Link>
+          <Link className="operatorActionLink" to={"/operator/twin/fields/" + encodeURIComponent(fieldId) + "/forecast" + scopeQueryString}>查看预测</Link>
+          <Link className="operatorActionLink" to={"/operator/twin/fields/" + encodeURIComponent(fieldId) + "/evidence" + scopeQueryString}>证据</Link>
+          <Link className="operatorActionLink" to={"/operator/twin" + scopeQueryString}>返回 Twin 总览</Link>
         </div>
       </div>
 
-      {state === "loading" ? (
-        <div className="operatorPanel">情景比较数据加载中...</div>
-      ) : null}
-      {state === "error" ? (
-        <div className="operatorPanel">
-          情景比较数据加载失败：{errorText}
-        </div>
-      ) : null}
+      {state === "loading" ? <div className="operatorPanel">情景比较数据加载中...</div> : null}
+      {state === "error" ? <div className="operatorPanel">情景比较数据加载失败：{errorText}</div> : null}
 
       {panel ? (
         <div className="operatorPanelGrid">
           <ScenarioStatusCard panel={panel} />
           <ScenarioCompareTable options={panel.scenario_compare_v1.options} />
           <ScenarioBoundaryCard panel={panel} />
-          <SubmitScenarioToRecommendationPanel
-            fieldId={fieldId}
-            scenarioSetId={panel.scenario_compare_v1.scenario_set_id ?? ""}
-            options={panel.scenario_compare_v1.options}
-            evidenceRefs={panel.scenario_compare_v1.evidence_refs}
-            scope={scope}
-          />
+          <FieldRuntimeLegacyScenarioActionNotice canonicalPath={canonicalScenarioPath} />
+          <SubmitScenarioToRecommendationPanel fieldId={fieldId} scenarioSetId={panel.scenario_compare_v1.scenario_set_id ?? ""} options={panel.scenario_compare_v1.options} evidenceRefs={panel.scenario_compare_v1.evidence_refs} scope={scope} />
         </div>
       ) : null}
     </section>
