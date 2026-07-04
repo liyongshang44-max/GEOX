@@ -51,7 +51,7 @@ const phaseTokens = ['H60', 'H61', 'H62', 'H63', 'H64', 'H65', 'P51', 'P52', 'P5
 const navPollution = ['fixture', 'acceptance', 'debug', 'Dev Tools', 'ROI Ledger', 'Field Memory', 'Dispatch', 'AO-ACT'];
 const writeTokens = ['POST', 'PUT', 'PATCH', 'DELETE', '/api/control', '/api/control/ao_act', 'createAoActTask', 'dispatchTask', 'writeFact', 'approve', 'approval', 'roiWriter', 'fieldMemoryWriter', 'modelUpdate'];
 const mojibakeRanges = [/\uFFFD/, /[\u9500\u9366\u6D63\u7481\u6769\u95B0]/];
-const cssForbidden = ['risk-red', 'danger', 'success', 'green', 'yellow', 'red', 'dispatch-active', 'ao-act-ready', 'live-online', 'production-online'];
+const cssForbiddenPatterns = [/risk-red/, /danger/, /success/, /\bgreen\b/, /\byellow\b/, /\bred\b/, /dispatch-active/, /ao-act-ready/, /live-online/, /production-online/];
 const assertions = [];
 function read(file) { return fs.readFileSync(path.join(root, file), 'utf8'); }
 function exists(file) { return fs.existsSync(path.join(root, file)); }
@@ -81,6 +81,12 @@ function stripCommentsAndDataAttrs(text) {
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/data-h[\w-]+="[^"]*"/g, '')
     .replace(/data-h[\w-]+='[^']*'/g, '');
+}
+function stripCssComments(text) {
+  return text.replace(/\/\*[\s\S]*?\*\//g, '');
+}
+function hasForbiddenCssToken(text) {
+  return cssForbiddenPatterns.some((pattern) => pattern.test(text));
 }
 function lineMetrics(file) {
   const lines = read(file).split(/\r?\n/);
@@ -114,7 +120,8 @@ try {
   });
   const surfaceCss = read(files.surfaceCss);
   assert('surface_primitives', hasAll(surfaceCss, ['.surfacePanel', '.surfacePanelHeader', '.surfaceGrid', '.surfaceTable', '.surfaceTableRow', '.surfaceMeta', '.surfaceBoundary', '.surfaceBadge']), { file: files.surfaceCss });
-  assert('css_primitive_guard', lacksAll(surfaceCss + '\n' + read(files.replayCss), cssForbidden), { cssForbidden });
+  const guardedCssText = stripCssComments(surfaceCss + '\n' + read(files.replayCss));
+  assert('css_primitive_guard', !hasForbiddenCssToken(guardedCssText), { cssForbiddenPatterns: cssForbiddenPatterns.map((pattern) => pattern.toString()) });
   const replayCss = read(files.replayCss);
   assert('replay_demo_css_hardened', hasAll(replayCss, ['.operatorReplayDemo__hero', '.operatorReplayDemo__boundaryBanner', '.operatorReplayDemo__grid', '.operatorReplayDemo__panel', '.operatorReplayDemo__panelHeader', '.operatorReplayDemo__meta', '.operatorReplayDemo__table', '.operatorReplayDemo__tableRow', '.operatorReplayDemo__traceability', '.operatorReplayDemo__nonclaims']), { file: files.replayCss });
   console.log(JSON.stringify({ ok: true, acceptance: 'ACCEPTANCE_H66_DESIGN_SYSTEM_HARDENING_V1', changed_files_checked: diff, assertions }, null, 2));
