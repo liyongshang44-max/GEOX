@@ -106,7 +106,7 @@ try {
   const formalText = formalFiles.map((file) => stripCommentsAndDataAttrs(read(file))).join('\n');
   assert('no_mojibake', !mojibakeRanges.some((pattern) => pattern.test(formalText)), { formalFiles });
   assert('no_visible_phase_copy', lacksAll(formalText, phaseTokens), { phaseTokens });
-  const navText = [files.operator, files.customer, files.admin].map((file) => read(file)).join('\n');
+  const navText = [files.operator, files.customer, files.admin].map((file) => stripCommentsAndDataAttrs(read(file))).join('\n');
   assert('formal_nav_guard', lacksAll(navText, [...phaseTokens, ...navPollution]), { phaseTokens, navPollution });
   [files.runtimeLayout, files.runtimeRoute, files.runtimeVm].forEach((file) => {
     const metrics = lineMetrics(file);
