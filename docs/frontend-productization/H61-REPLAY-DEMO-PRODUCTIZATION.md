@@ -16,7 +16,7 @@ Route remains:
 /operator/twin/gateway-demo
 ```
 
-Source remains checked-in P51 gateway viewer snapshot.
+source remains checked-in P51 gateway viewer snapshot.
 API remains static GET only.
 
 H61 does not create backend contract.
@@ -51,7 +51,7 @@ Replay-backed Demo is not live production.
 Device Evidence Package is not Runtime Health.
 Gateway Path Replay is not production gateway online.
 Traceability Readback is not trace creation.
-Hashes are reproducibility metadata, not production certification.
+Hashes are reproducibility metadata.
 
 Acceptance:
 
