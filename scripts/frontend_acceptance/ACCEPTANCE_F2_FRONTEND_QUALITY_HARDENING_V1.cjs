@@ -71,7 +71,7 @@ function blocked(file) { return blockedExact.has(file) || blockedPrefixes.some((
 function cssText() { return [files.baseCss, files.customerCss, files.operatorCss, files.adminCss, files.surfaceCss].filter(exists).map(read).join('\n'); }
 function shellText() { return [files.customerLayout, files.operatorLayout, files.adminLayout].map(read).join('\n'); }
 function visibleRegistryText() { return [files.customerLayout, files.operatorLayout, files.adminLayout, files.localeToggle, files.labels].filter(exists).map(read).map(stripComments).join('\n'); }
-function acceptanceReadOnlyText() { return read(files.acceptance).replaceAll("'fet' + 'ch('", 'fetch-token').replaceAll("'lis' + 'ten('", 'listen-token'); }
+function hasNetworkCallToken(text) { return text.includes('fet' + 'ch(') || text.includes('lis' + 'ten('); }
 
 try {
   Object.values(files).forEach((file) => ok('exists:' + file, exists(file), { file }));
@@ -134,8 +134,8 @@ try {
   ok('formal_nav_pollution_absent', hits(registry, ['legacy dev tools', 'temporary route']).length === 0);
   ok('internal_phase_labels_absent_from_visual_registry', hits(registry, phaseLabels).length === 0, { hits: hits(registry, phaseLabels) });
 
-  const acceptanceText = acceptanceReadOnlyText();
-  ok('acceptance_is_static_repo_read_only', includesAll(acceptanceText, ['node:fs', 'node:path']) && !acceptanceText.includes('fetch(') && !acceptanceText.includes('listen('));
+  const acceptanceText = read(files.acceptance);
+  ok('acceptance_is_static_repo_read_only', includesAll(acceptanceText, ['node:fs', 'node:path']) && !hasNetworkCallToken(acceptanceText));
   ok('docs_no_runtime_claims', includesAll(docs, ['No full WCAG certification', 'No new package dependency']) && docs.includes('No runtime capability claim'));
 
   console.log(JSON.stringify({
