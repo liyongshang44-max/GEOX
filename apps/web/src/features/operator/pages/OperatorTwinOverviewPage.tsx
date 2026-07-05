@@ -13,8 +13,12 @@ import {
   type OperatorTwinSourceIndexInventoryV1,
   type OperatorTwinScopePolicy,
 } from "../../../api/operatorTwin";
+import { localizedText, useLocale, type LocaleCode } from "../../../lib/locale";
+import { OPERATOR_FORMAL_SURFACE_COPY } from "../../../lib/productSurfaceLabels";
 
 type RuntimeState = "loading" | "ready" | "empty" | "error";
+
+const overviewCopy = OPERATOR_FORMAL_SURFACE_COPY.runtimeOverview;
 
 function scopeFromSearchParams(searchParams: URLSearchParams): OperatorTwinRequestScope {
   return {
@@ -38,19 +42,23 @@ function SourceIndexInventoryCard({
   inventory,
   loadState,
   error,
+  locale,
 }: {
   inventory: OperatorTwinSourceIndexInventoryV1 | null;
   loadState: "idle" | "loading" | "ready" | "error";
   error: string | null;
+  locale: LocaleCode;
 }): React.ReactElement {
+  const title = localizedText(overviewCopy.sections.sourceIndexInventory, locale);
+
   return (
     <article className="operatorPanel" data-card="operator-twin-source-index-inventory">
-      <h3>Source Index Inventory</h3>
-      {loadState === "loading" ? <p>source index inventory 正在加载。</p> : null}
+      <h3>{title}</h3>
+      {loadState === "loading" ? <p>{locale === "en-US" ? "Source index inventory is loading." : "源索引清单正在加载。"}</p> : null}
       {loadState === "error" ? (
-        <p>source index inventory 暂不可用：{error ?? "OPERATOR_TWIN_SOURCE_INDEX_INVENTORY_UNAVAILABLE"}</p>
+        <p>{locale === "en-US" ? "Source index inventory unavailable" : "源索引清单暂不可用"}：{error ?? "OPERATOR_TWIN_SOURCE_INDEX_INVENTORY_UNAVAILABLE"}</p>
       ) : null}
-      {!inventory && loadState !== "loading" && loadState !== "error" ? <p>source index inventory 尚未加载。</p> : null}
+      {!inventory && loadState !== "loading" && loadState !== "error" ? <p>{locale === "en-US" ? "Source index inventory has not been loaded." : "源索引清单尚未加载。"}</p> : null}
       {inventory ? (
         <>
           <p>
@@ -92,10 +100,10 @@ function SourceIndexInventoryCard({
   );
 }
 
-function ScopePolicyCard({ policy }: { policy: OperatorTwinScopePolicy }): React.ReactElement {
+function ScopePolicyCard({ policy, locale }: { policy: OperatorTwinScopePolicy; locale: LocaleCode }): React.ReactElement {
   return (
     <article className="operatorPanel" data-card="operator-twin-scope-policy">
-      <h3>Scope Policy</h3>
+      <h3>{localizedText(overviewCopy.sections.scopePolicy, locale)}</h3>
       <p>scope_applied：{policy.scope_applied ? "true" : "false"}</p>
       <p>missing_reason：{policy.missing_reason ?? "none"}</p>
       <p>accepted_scope_keys：{policy.accepted_scope_keys.join(", ")}</p>
@@ -105,6 +113,7 @@ function ScopePolicyCard({ policy }: { policy: OperatorTwinScopePolicy }): React
 
 export default function OperatorTwinOverviewPage(): React.ReactElement {
   const [searchParams] = useSearchParams();
+  const { locale } = useLocale();
   const scope = React.useMemo(() => scopeFromSearchParams(searchParams), [searchParams]);
   const scopeQueryString = React.useMemo(() => buildOperatorTwinScopeQuery(scope), [scope]);
   const [state, setState] = React.useState<RuntimeState>("loading");
@@ -158,43 +167,41 @@ export default function OperatorTwinOverviewPage(): React.ReactElement {
     <section className="operatorWorkbenchPage" data-surface="operator-twin" data-page="operator-twin-overview">
       <div className="operatorWorkbenchHero">
         <div>
-          <p className="operatorEyebrow">Operator Twin Workbench</p>
-          <h2>田块预测与情景推演入口</h2>
-          <p>
-            该页面读取 operator_twin_overview_v1，并把 tenant_id / project_id / group_id 作为只读查询范围传给后端。
-            当前版本不运行预测、不提交 recommendation、不审批、不执行。
-          </p>
+          <p className="operatorEyebrow">{localizedText(overviewCopy.eyebrow, locale)}</p>
+          <h2>{localizedText(overviewCopy.title, locale)}</h2>
+          <p>{localizedText(overviewCopy.hero, locale)}</p>
+          <p>{localizedText(overviewCopy.boundary, locale)}</p>
         </div>
         <div className="operatorWorkbenchHeroActions">
-          <span className="operatorPill">API-backed</span>
-          <span className="operatorPill">Scoped read</span>
-          <span className="operatorPill">No direct execution</span>
+          <span className="operatorPill">{localizedText(overviewCopy.pills.apiBacked, locale)}</span>
+          <span className="operatorPill">{localizedText(overviewCopy.pills.scopedRead, locale)}</span>
+          <span className="operatorPill">{localizedText(overviewCopy.pills.noExecution, locale)}</span>
         </div>
       </div>
 
-      {state === "loading" ? <div className="operatorPanel">Operator Twin 数据加载中...</div> : null}
-      {state === "error" ? <div className="operatorPanel">Operator Twin 数据加载失败：{errorText}</div> : null}
-      {state === "empty" ? <div className="operatorPanel">暂无可展示田块 Twin 数据。请确认 URL 中的 tenant_id / project_id / group_id。</div> : null}
+      {state === "loading" ? <div className="operatorPanel">{localizedText(overviewCopy.loading, locale)}</div> : null}
+      {state === "error" ? <div className="operatorPanel">{localizedText(overviewCopy.error, locale)}：{errorText}</div> : null}
+      {state === "empty" ? <div className="operatorPanel">{localizedText(overviewCopy.empty, locale)}</div> : null}
 
       {overview ? (
         <div className="operatorPanelGrid">
-          <ScopePolicyCard policy={overview.scope_policy} />
-          <SourceIndexInventoryCard inventory={inventory} loadState={inventoryLoadState} error={inventoryError} />
+          <ScopePolicyCard policy={overview.scope_policy} locale={locale} />
+          <SourceIndexInventoryCard inventory={inventory} loadState={inventoryLoadState} error={inventoryError} locale={locale} />
 
           <article className="operatorPanel">
-            <h3>田块状态矩阵</h3>
+            <h3>{localizedText(overviewCopy.sections.fieldMatrix, locale)}</h3>
             <div className="operatorTableWrap">
               <table className="operatorTable">
                 <thead>
                   <tr>
-                    <th>田块</th>
-                    <th>当前状态</th>
-                    <th>风险</th>
-                    <th>置信度</th>
-                    <th>低置信</th>
-                    <th>数据覆盖</th>
-                    <th>预测窗口</th>
-                    <th>入口</th>
+                    <th>{localizedText(overviewCopy.table.field, locale)}</th>
+                    <th>{localizedText(overviewCopy.table.currentState, locale)}</th>
+                    <th>{localizedText(overviewCopy.table.risk, locale)}</th>
+                    <th>{localizedText(overviewCopy.table.confidence, locale)}</th>
+                    <th>{localizedText(overviewCopy.table.lowConfidence, locale)}</th>
+                    <th>{localizedText(overviewCopy.table.dataCoverage, locale)}</th>
+                    <th>{localizedText(overviewCopy.table.forecastWindow, locale)}</th>
+                    <th>{localizedText(overviewCopy.table.entry, locale)}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -212,12 +219,8 @@ export default function OperatorTwinOverviewPage(): React.ReactElement {
                       <td>{row.data_coverage_text}</td>
                       <td>{row.forecast_window_text}</td>
                       <td>
-                        <Link
-                          data-link="operator-field-twin-workspace"
-                          data-field-id={row.field_id}
-                          to={row.twin_href + scopeQueryString}
-                        >
-                          进入 Field Twin
+                        <Link data-link="operator-field-twin-workspace" data-field-id={row.field_id} to={row.twin_href + scopeQueryString}>
+                          {localizedText(overviewCopy.table.openFieldRuntime, locale)}
                         </Link>
                       </td>
                     </tr>
@@ -228,7 +231,7 @@ export default function OperatorTwinOverviewPage(): React.ReactElement {
           </article>
 
           <article className="operatorPanel">
-            <h3>数据缺口</h3>
+            <h3>{localizedText(overviewCopy.sections.dataGaps, locale)}</h3>
             <ul className="operatorList">
               {overview.data_gaps.map((gap) => (
                 <li key={gap.gap_code}>{gap.label}</li>
@@ -237,7 +240,7 @@ export default function OperatorTwinOverviewPage(): React.ReactElement {
           </article>
 
           <article className="operatorPanel">
-            <h3>人工确认边界</h3>
+            <h3>{localizedText(overviewCopy.sections.humanBoundary, locale)}</h3>
             <ul className="operatorList">
               {overview.boundary_rules.map((rule) => (
                 <li key={rule.rule_code}>{rule.label}</li>
