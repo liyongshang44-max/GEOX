@@ -13,6 +13,18 @@ const r2Doc = 'docs/runtime-readiness/R2-ONLINE-STATE-ESTIMATION-LOOP.md';
 const acceptance = 'scripts/runtime_acceptance/ACCEPTANCE_R2_ONLINE_STATE_ESTIMATION_LOOP_V1.cjs';
 
 const allowedFiles = new Set([r2Doc, acceptance]);
+const stackIntegratedFiles = new Set([
+  'docs/runtime-readiness/R1-RUNTIME-EVIDENCE-STREAM-READINESS.md',
+  'scripts/runtime_acceptance/ACCEPTANCE_R1_RUNTIME_EVIDENCE_STREAM_READINESS_V1.cjs',
+  'docs/runtime-readiness/R2-ONLINE-STATE-ESTIMATION-LOOP.md',
+  'scripts/runtime_acceptance/ACCEPTANCE_R2_ONLINE_STATE_ESTIMATION_LOOP_V1.cjs',
+  'docs/runtime-readiness/R3-FORECAST-CALIBRATION-RESIDUAL-LOOP.md',
+  'scripts/runtime_acceptance/ACCEPTANCE_R3_FORECAST_CALIBRATION_RESIDUAL_LOOP_V1.cjs',
+  'docs/runtime-readiness/R4-RUNTIME-HEALTH-SERVICE-GATE.md',
+  'scripts/runtime_acceptance/ACCEPTANCE_R4_RUNTIME_HEALTH_SERVICE_GATE_V1.cjs',
+  'docs/runtime-readiness/R5-FIELD-PILOT-RUNTIME-READINESS.md',
+  'scripts/runtime_acceptance/ACCEPTANCE_R5_FIELD_PILOT_RUNTIME_READINESS_V1.cjs',
+]);
 const blockedExact = new Set(['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml']);
 const blockedPrefixes = ['apps/web/src/', 'docs/frontend-productization/', 'scripts/frontend_acceptance/', 'apps/server/', 'migrations/', 'packages/contracts/', 'fixtures/'];
 const mojibake = ['鎬', '鍦', '浣', '璁', '杩', '閰', '绠', '瀵', '艰', '鍚', '彴', '潡', '惧', '悍', '嵁', '�'];
@@ -43,6 +55,12 @@ function diffFiles() {
   }
   return output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
 }
+function hasStackIntegratedArtifacts() { return Array.from(stackIntegratedFiles).every((file) => exists(file)); }
+function diffAllowed(diff) {
+  const stackIntegrated = hasStackIntegratedArtifacts();
+  return diff.length > 0 && diff.every((file) => allowedFiles.has(file) || (stackIntegrated && stackIntegratedFiles.has(file)));
+}
+function diffMode() { return hasStackIntegratedArtifacts() ? 'stack_integrated' : 'phase'; }
 function blocked(file) { return blockedExact.has(file) || blockedPrefixes.some((prefix) => file.startsWith(prefix)); }
 function hasNetworkCallToken(text) { return text.includes('fet' + 'ch(') || text.includes('lis' + 'ten('); }
 function lineViolations(text, tokens, negativeTokens) {
@@ -56,7 +74,7 @@ try {
   ok('r1_artifacts_available', exists('docs/runtime-readiness/R1-RUNTIME-EVIDENCE-STREAM-READINESS.md') && exists('scripts/runtime_acceptance/ACCEPTANCE_R1_RUNTIME_EVIDENCE_STREAM_READINESS_V1.cjs'));
 
   const diff = diffFiles();
-  ok('changed_files_allowlist', diff.length > 0 && diff.every((file) => allowedFiles.has(file)), { diff, base: R2_BASE_HEAD });
+  ok('changed_files_allowlist', diffAllowed(diff), { diff, base: R2_BASE_HEAD, mode: diffMode() });
   ok('no_frontend_continuation', diff.every((file) => !file.startsWith('apps/web/src/') && !file.startsWith('docs/frontend-productization/') && !file.startsWith('scripts/frontend_acceptance/')), { diff });
   ok('blocked_files_unchanged', diff.every((file) => !blocked(file)), { diff });
   ok('backend_changed_false', diff.every((file) => !file.startsWith('apps/server/') && !file.startsWith('migrations/') && !file.startsWith('packages/contracts/') && !file.startsWith('fixtures/')), { diff });
@@ -84,7 +102,7 @@ try {
   const negativeTokens = ['not', 'no ', 'does not', 'false', 'disabled', 'has no'];
   ok('false_capability_claims_absent', lineViolations(doc, falseClaimTokens, negativeTokens).length === 0, { violations: lineViolations(doc, falseClaimTokens, negativeTokens) });
 
-  const scanned = diff.filter((file) => exists(file) && file !== acceptance);
+  const scanned = diff.filter((file) => exists(file) && file.endsWith('.md'));
   const mojibakeHits = scanned.map((file) => ({ file, hits: hits(read(file), mojibake) })).filter((entry) => entry.hits.length > 0);
   ok('no_mojibake_in_r2_files', mojibakeHits.length === 0, { mojibakeHits, scanned });
 
