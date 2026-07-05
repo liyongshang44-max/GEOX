@@ -31,7 +31,7 @@ const files = {
 };
 
 const allowedExact = new Set([
-  files.doc, files.acceptance,
+  files.doc, files.acceptance, 'scripts/frontend_acceptance/ACCEPTANCE_F1_C_OPERATOR_BILINGUAL_SURFACES_V1.cjs',
   files.customerDashboard, files.customerFields, files.customerOperations, files.customerReports, files.customerExport, files.customerDashboardExport,
   files.fieldReport, files.fieldReportExport, files.operationReport, files.operationReportExport,
   'apps/web/src/features/customer/pages/CustomerReportExportPage.tsx',
