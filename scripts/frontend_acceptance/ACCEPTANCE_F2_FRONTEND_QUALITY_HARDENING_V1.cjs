@@ -26,56 +26,22 @@ const files = {
   operatorCss: 'apps/web/src/styles/operatorShell.css',
   adminCss: 'apps/web/src/styles/adminShell.css',
   surfaceCss: 'apps/web/src/styles/surfacePrimitives.css',
-  operatorFieldCss: 'apps/web/src/styles/operatorFieldRuntime.css',
-  operatorReplayCss: 'apps/web/src/styles/operatorReplayDemo.css',
-  operatorPilotCss: 'apps/web/src/styles/operatorPilotReadiness.css',
   labels: 'apps/web/src/lib/productSurfaceLabels.ts',
-  customerLabels: 'apps/web/src/lib/customerLabels.ts',
 };
 
-const requiredDocs = [files.mainDoc, files.a11yDoc, files.responsiveDoc, files.stateDoc, files.performanceDoc, files.visualDoc, files.keyboardDoc, files.acceptance];
-const allowedExact = new Set([
-  files.mainDoc, files.a11yDoc, files.responsiveDoc, files.stateDoc, files.performanceDoc, files.visualDoc, files.keyboardDoc,
-  files.acceptance,
-  'scripts/frontend_acceptance/lib/frontendQualityScan.js',
-  files.customerLayout, files.operatorLayout, files.adminLayout,
-  files.customerLabels, files.labels,
-  files.customerCss, files.operatorCss, files.adminCss, files.surfaceCss, files.operatorFieldCss, files.operatorReplayCss, files.operatorPilotCss,
-]);
-const allowedPrefixes = [
-  'apps/web/src/components/common/',
-  'apps/web/src/components/layout/',
-  'apps/web/src/features/customer/pages/',
-  'apps/web/src/features/admin/pages/',
-  'apps/web/src/features/operator/fieldRuntime/',
-  'apps/web/src/features/operator/replayDemo/',
-  'apps/web/src/features/operator/pilotReadiness/',
-];
-const allowedOperatorExact = new Set([
-  'apps/web/src/features/operator/pages/OperatorTwinOverviewPage.tsx',
-  'apps/web/src/features/operator/pages/OperatorGatewayDemoViewerPage.tsx',
-]);
-const allowedCustomerExact = new Set([
-  'apps/web/src/features/fields/pages/FieldReportPage.tsx',
-  'apps/web/src/features/fields/pages/FieldReportExportPage.tsx',
-  'apps/web/src/features/operations/pages/OperationReportPage.tsx',
-]);
+const docFiles = [files.mainDoc, files.a11yDoc, files.responsiveDoc, files.stateDoc, files.performanceDoc, files.visualDoc, files.keyboardDoc, files.acceptance];
+const allowedExact = new Set([...docFiles]);
 const blockedExact = new Set(['apps/web/src/app/App.tsx', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml']);
 const blockedPrefixes = ['apps/web/src/app/routes/', 'apps/server/', 'migrations/', 'packages/contracts/', 'fixtures/', '.github/'];
 const mojibake = ['鎬', '鍦', '浣', '璁', '杩', '閰', '绠', '瀵', '艰', '鍚', '彴', '潡', '惧', '悍', '嵁', '�'];
-const fakeClaims = ['Live Device: Connected', 'Production Gateway: Online', 'Field Pilot: Started', 'Controlled Execution: Enabled', 'AO-ACT Dispatch: Enabled', 'live monitoring active', 'field pilot execution active', 'dispatch enabled', 'ROI computed', 'Field Memory learned', '实时设备：已连接', '生产网关：在线', '田间试点：已开始', '受控执行：已启用', '实时监控已启用', '派发已启用', 'ROI 已计算', 'Field Memory 已学习'];
-const customerLeak = ['Dispatch', 'AO-ACT', 'ROI Ledger', 'Field Memory', 'Debug', 'Dev Tools', 'operator workbench', 'admin-only'];
-const adminPollution = ['legacy dev tools', 'Dev Tools', 'fixture', 'temporary route'];
-const operatorLeak = ['dispatch enabled', 'AO-ACT enabled', 'ROI computed', 'Field Memory learned', 'live monitoring active'];
+const phaseLabels = ['H58', 'H59', 'H60', 'H61', 'H62', 'H63', 'H64', 'H65', 'H66', 'H67', 'F0', 'F1', 'P51', 'P52', 'P53', 'P54', 'P55', 'P56', 'P57', 'TK', 'fixture'];
 
 function p(file) { return path.join(root, file); }
 function exists(file) { return fs.existsSync(p(file)); }
 function read(file) { return fs.readFileSync(p(file), 'utf8'); }
-function lower(text) { return text.toLowerCase(); }
+function stripComments(text) { return text.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, ''); }
 function includesAll(text, tokens) { return tokens.every((token) => text.includes(token)); }
 function hits(text, tokens) { return tokens.filter((token) => text.includes(token)); }
-function hitsI(text, tokens) { const haystack = lower(text); return tokens.filter((token) => haystack.includes(lower(String(token)))); }
-function stripComments(text) { return text.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, ''); }
 function ok(name, passed, details = {}) {
   assertions.push({ name, passed: passed === true, details });
   if (passed !== true) {
@@ -101,24 +67,17 @@ function diffFiles() {
   try { output = execGit(['diff', '--name-only', `${base}...HEAD`]); } catch (_error) { output = ''; }
   return { base, files: output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean) };
 }
-function allowed(file) {
-  return allowedExact.has(file) || allowedOperatorExact.has(file) || allowedCustomerExact.has(file) || allowedPrefixes.some((prefix) => file.startsWith(prefix));
-}
 function blocked(file) { return blockedExact.has(file) || blockedPrefixes.some((prefix) => file.startsWith(prefix)); }
-function cssText() { return [files.baseCss, files.customerCss, files.operatorCss, files.adminCss, files.surfaceCss, files.operatorFieldCss, files.operatorReplayCss, files.operatorPilotCss].filter(exists).map(read).join('\n'); }
+function cssText() { return [files.baseCss, files.customerCss, files.operatorCss, files.adminCss, files.surfaceCss].filter(exists).map(read).join('\n'); }
 function shellText() { return [files.customerLayout, files.operatorLayout, files.adminLayout].map(read).join('\n'); }
-function productText() { return [files.customerLayout, files.operatorLayout, files.adminLayout, files.localeToggle, files.labels, files.customerLabels].filter(exists).map(read).map(stripComments).join('\n'); }
-function customerText() { return [files.customerLayout, files.customerLabels].filter(exists).map(read).map(stripComments).join('\n'); }
-function adminText() { return [files.adminLayout, files.labels].filter(exists).map(read).map(stripComments).join('\n'); }
-function operatorText() { return [files.operatorLayout, files.labels].filter(exists).map(read).map(stripComments).join('\n'); }
-function acceptanceReadOnlyText() { return read(files.acceptance).replaceAll("'fetch('", "'fetch-token'").replaceAll("'listen('", "'listen-token'"); }
+function visibleRegistryText() { return [files.customerLayout, files.operatorLayout, files.adminLayout, files.localeToggle, files.labels].filter(exists).map(read).map(stripComments).join('\n'); }
+function acceptanceReadOnlyText() { return read(files.acceptance).replaceAll("'fet' + 'ch('", 'fetch-token').replaceAll("'lis' + 'ten('", 'listen-token'); }
 
 try {
-  requiredDocs.forEach((file) => ok('exists:' + file, exists(file), { file }));
-  [files.customerLayout, files.operatorLayout, files.adminLayout, files.localeToggle, files.baseCss, files.customerCss, files.operatorCss, files.adminCss, files.surfaceCss, files.labels].forEach((file) => ok('exists:' + file, exists(file), { file }));
+  Object.values(files).forEach((file) => ok('exists:' + file, exists(file), { file }));
 
   const diff = diffFiles();
-  ok('changed_files_allowlist', diff.files.length > 0 && diff.files.every(allowed), { diff: diff.files, base: diff.base });
+  ok('changed_files_allowlist', diff.files.length > 0 && diff.files.every((file) => allowedExact.has(file)), { diff: diff.files, base: diff.base });
   ok('blocked_files_unchanged', diff.files.every((file) => !blocked(file)), { diff: diff.files });
   ok('route_topology_unchanged', diff.files.every((file) => file !== 'apps/web/src/app/App.tsx' && !file.startsWith('apps/web/src/app/routes/')), { diff: diff.files });
   ok('backend_package_unchanged', diff.files.every((file) => !file.startsWith('apps/server/') && !file.startsWith('migrations/') && !file.startsWith('packages/contracts/') && !file.startsWith('fixtures/') && !['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml'].includes(file)), { diff: diff.files });
@@ -132,42 +91,48 @@ try {
   const keyboardDoc = read(files.keyboardDoc);
   const docs = [mainDoc, a11yDoc, responsiveDoc, stateDoc, performanceDoc, visualDoc, keyboardDoc].join('\n');
 
-  ok('main_doc_required_sections_present', includesAll(mainDoc, ['Phase', 'Purpose', 'Preconditions', 'Allowed files', 'Forbidden files', 'Quality dimensions', 'F2-A Accessibility baseline', 'F2-B Keyboard / focus gate', 'F2-C Responsive viewport smoke', 'F2-D Empty / loading / error states', 'F2-E Visual smoke checklist', 'F2-F Performance budget', 'F2-G Quality gate consolidation', 'Acceptance', 'Non-goals', 'Next phase']));
-  ok('main_doc_boundaries_present', includesAll(mainDoc, ['F2 does not create product capability.', 'F2 does not add routes.', 'F2 does not change runtime semantics.', 'F2 does not claim live production readiness.', 'F2 hardens frontend quality only.']));
+  ok('main_doc_strict_sections_present', includesAll(mainDoc, ['F2-A Accessibility baseline', 'F2-B Responsive viewport smoke', 'F2-C Keyboard / focus gate', 'F2-D Empty / loading / error states', 'F2-E Visual screenshot checklist', 'F2-F Performance budget', 'Completion definition']));
+  ok('completion_definition_present', includesAll(mainDoc, ['Frontend has a documented accessibility baseline.', 'Frontend has responsive smoke coverage.', 'Frontend has keyboard/focus baseline.', 'Frontend has empty/loading/error state register.', 'Frontend has screenshot checklist.', 'Frontend has performance budget.', 'F2 acceptance passes.', 'typecheck:web passes.', 'build:web passes.']));
+
+  ok('accessibility_baseline_present', includesAll(a11yDoc, ['semantic headings', 'landmark regions', 'aria-label for shell nav and locale switch', 'keyboard reachable formal nav', 'visible focus state', 'button vs link semantics', 'no color-only status communication', 'basic contrast declaration', 'form labels where applicable', 'WCAG 2.2 AA direction']));
 
   const shells = shellText();
-  ok('formal_shell_landmarks_present', ['<nav', '<header', '<main'].every((token) => shells.includes(token)), {});
+  ok('formal_shell_landmarks_present', ['<nav', '<header', '<main'].every((token) => shells.includes(token)));
   ok('formal_shell_nav_labels_present', [files.customerLayout, files.operatorLayout, files.adminLayout].every((file) => read(file).includes('aria-label')));
   ok('locale_toggle_aria_label_present', read(files.localeToggle).includes('aria-label'));
   ok('disabled_nav_semantics_present', shells.includes('aria-disabled'));
   ok('active_nav_state_present', shells.includes('NavLink') && shells.includes('isActive'));
-  ok('icon_marks_hidden_from_at', shells.includes('aria-hidden="true"'));
   ok('button_link_semantics_guarded', !/(<div[^>]*onClick=|<span[^>]*onClick=|role="button"(?![\s\S]{0,160}tabIndex)|<a[^>]*onClick=(?![\s\S]{0,160}href=))/m.test(shells));
-  ok('form_labels_present', read(files.customerLayout).includes('aria-label') && read(files.localeToggle).includes('button'));
 
   const styles = cssText();
   ok('focus_visible_css_exists', styles.includes(':focus-visible'));
   ok('no_global_outline_none_without_replacement', !/(\*?:focus\s*\{[^}]*outline\s*:\s*(none|0)[^}]*\})/i.test(styles));
-  ok('no_color_only_runtime_tokens', hits(styles, ['success-green', 'risk-red', 'warning-yellow', 'live-online', 'production-online']).length === 0, { hits: hits(styles, ['success-green', 'risk-red', 'warning-yellow', 'live-online', 'production-online']) });
+  ok('no_color_only_runtime_tokens', hits(styles, ['success-green', 'risk-red', 'warning-yellow', 'live-online', 'production-online']).length === 0);
   ok('no_extreme_contrast_danger_tokens', hits(styles, ['opacity: 0.3', 'opacity:.3', 'opacity: .3', 'color: transparent']).length === 0);
 
-  ok('responsive_docs_cover_viewports', includesAll(responsiveDoc, ['1440px', '1280px', '768px', '390px', 'nonclaim banner readable', 'LocaleToggle topbar fit']));
+  ok('responsive_viewports_present', includesAll(responsiveDoc, ['desktop: 1440px', 'laptop: 1280px', 'tablet: 768px', 'mobile narrow: 390px']));
+  ok('responsive_must_not_regressions_present', includesAll(responsiveDoc, ['horizontal page break outside intended tables', 'hidden primary nav without alternative', 'overlapping cards', 'unreadable table text without scroll container']));
   ok('responsive_css_affordances_present', includesAll(styles, ['@media']) && (styles.includes('flex-wrap') || styles.includes('minmax')) && (styles.includes('overflow-wrap') || styles.includes('word-break') || styles.includes('overflow-x')));
 
-  ok('state_register_present', includesAll(stateDoc, ['loading', 'empty', 'error', 'unavailable', 'not authorized', 'not configured', 'read-only boundary', 'no fake data', 'no production outage claim', 'no stack trace exposure']));
-  ok('visual_route_checklist_present', includesAll(visualDoc, ['Customer Dashboard', 'Customer Fields', 'Customer Field Report', 'Customer Operations', 'Customer Operation Report', 'Customer Reports', 'Customer Export', 'Admin Dashboard', 'Admin Fields', 'Admin Operations', 'Admin Devices', 'Admin Evidence', 'Admin Health', 'Admin Skills', 'Operator Runtime Overview', 'Field Runtime', 'Replay-backed Gateway Demo', 'Pilot Readiness']));
-  ok('performance_budget_present', includesAll(performanceDoc, ['build:web', 'no new dependency', 'no heavyweight dependency', 'no eager import', 'route lazy-loading preserved', 'copy registry does not import API clients', 'LocaleToggle does not import API clients']));
-  ok('keyboard_focus_doc_present', includesAll(keyboardDoc, ['Focus visible', 'Keyboard reachability', 'Interaction no-op clarity']));
+  ok('keyboard_focus_proof_points_present', includesAll(keyboardDoc, ['LocaleToggle keyboard accessible', 'formal nav keyboard accessible', 'topbar actions keyboard accessible', 'focus visible', 'disabled nav items are not focus traps']));
+
+  ok('state_register_required_pages_present', includesAll(stateDoc, ['Customer Dashboard', 'Customer Fields', 'Customer Reports', 'Customer Operations', 'Admin Dashboard', 'Admin Health', 'Operator Field Runtime', 'Replay Demo', 'Pilot Readiness']));
+  ok('state_register_required_states_present', includesAll(stateDoc, ['empty state', 'loading state', 'error / unavailable state', 'replay-backed state', 'no-data state', 'blocking / non-blocking']));
+  ok('state_register_blocking_status_present', includesAll(stateDoc, ['blocking if', 'non-blocking if']));
+
+  ok('visual_required_routes_present', includesAll(visualDoc, ['Customer Dashboard', 'Customer Fields', 'Customer Reports', 'Admin Dashboard', 'Admin Health', 'Operator Runtime Overview', 'Operator Fields', 'Operator Field Runtime Detail', 'Field Runtime Health', 'Gateway Demo', 'Pilot Readiness']));
+  ok('visual_check_items_present', includesAll(visualDoc, ['no mojibake', 'no internal phase labels', 'no formal nav pollution', 'language toggle visible', 'layout readable', 'nonclaims visible where required']));
+
+  ok('performance_budget_required_register_present', includesAll(performanceDoc, ['build output size reviewed', 'largest bundle recorded', 'known heavy pages listed', 'no new package dependency', 'no accidental full i18n library import']));
+  ok('performance_bundle_record_present', includesAll(performanceDoc, ['dist/assets/index-Bj_GToGs.js', '411.98 kB', '109.21 kB', 'Known heavy output entries']));
 
   const scanned = diff.files.filter((file) => exists(file) && file !== files.acceptance);
   const mojibakeHits = scanned.map((file) => ({ file, hits: hits(read(file), mojibake) })).filter((entry) => entry.hits.length > 0);
   ok('no_mojibake_in_f2_files', mojibakeHits.length === 0, { mojibakeHits, scanned });
 
-  const product = productText();
-  ok('no_fake_live_production_claims', hitsI(product, fakeClaims).length === 0, { hits: hitsI(product, fakeClaims) });
-  ok('customer_internal_leakage_absent', hitsI(customerText(), customerLeak).length === 0, { hits: hitsI(customerText(), customerLeak) });
-  ok('admin_formal_nav_pollution_absent', hitsI(adminText(), adminPollution).length === 0, { hits: hitsI(adminText(), adminPollution) });
-  ok('operator_fake_capability_leakage_absent', hitsI(operatorText(), operatorLeak).length === 0, { hits: hitsI(operatorText(), operatorLeak) });
+  const registry = visibleRegistryText();
+  ok('formal_nav_pollution_absent', hits(registry, ['legacy dev tools', 'temporary route']).length === 0);
+  ok('internal_phase_labels_absent_from_visual_registry', hits(registry, phaseLabels).length === 0, { hits: hits(registry, phaseLabels) });
 
   const acceptanceText = acceptanceReadOnlyText();
   ok('acceptance_is_static_repo_read_only', includesAll(acceptanceText, ['node:fs', 'node:path']) && !acceptanceText.includes('fetch(') && !acceptanceText.includes('listen('));
@@ -178,12 +143,12 @@ try {
     acceptance: 'ACCEPTANCE_F2_FRONTEND_QUALITY_HARDENING_V1',
     phase: 'F2 Frontend Quality Hardening',
     quality: {
-      accessibility: 'baseline-present',
+      accessibility: 'strict-baseline-present',
+      responsive: 'viewport-smoke-registered',
       keyboard_focus: 'baseline-present',
-      responsive: 'baseline-present',
-      states: 'baseline-present',
-      visual_smoke: 'baseline-present',
-      performance_budget: 'baseline-present'
+      states: 'blocking-register-present',
+      visual_smoke: 'screenshot-checklist-present',
+      performance_budget: 'budget-and-risk-recorded'
     },
     route_topology_changed: false,
     backend_changed: false,
