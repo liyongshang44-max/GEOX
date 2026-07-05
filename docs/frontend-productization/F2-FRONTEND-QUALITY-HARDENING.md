@@ -30,43 +30,49 @@ F2 must not add backend APIs, routes, packages, migrations, contracts, fixtures,
 
 ## Quality dimensions
 
-F2 covers accessibility baseline, keyboard/focus gate, responsive viewport smoke, empty/loading/error state behavior, visual smoke checklist, and performance budget.
+F2 covers accessibility baseline, responsive viewport smoke, keyboard/focus gate, empty/loading/error state register, visual screenshot checklist, and performance budget.
 
 ## F2-A Accessibility baseline
 
 See `docs/frontend-productization/F2-ACCESSIBILITY-BASELINE.md`.
 
-The baseline verifies semantic shell structure, navigation labels, LocaleToggle accessibility, landmark presence, heading intent, button/link semantics, non-color-only status expectations, and contrast-risk declaration.
+The baseline verifies semantic headings, landmark regions, aria-label for shell nav and locale switch, keyboard reachable formal nav, visible focus state, button vs link semantics, no color-only status communication, basic contrast declaration, and form labels where applicable.
 
-## F2-B Keyboard / focus gate
+F2-A establishes a WCAG 2.2 AA direction baseline. It does not claim a full WCAG audit report.
 
-The baseline requires keyboard-reachable formal navigation, LocaleToggle buttons, formal report links, export links, field/operation card links, and disabled placeholders with explicit disabled semantics.
-
-The project must retain visible focus behavior. Static acceptance checks for `:focus-visible` and blocks global `outline: none` / `outline: 0` patterns that lack replacement focus indicators.
-
-## F2-C Responsive viewport smoke
+## F2-B Responsive viewport smoke
 
 See `docs/frontend-productization/F2-RESPONSIVE-VIEWPORT-SMOKE.md`.
 
-The smoke baseline covers 1440px, 1280px, 768px, and 390px viewport classes. It requires wrapping behavior, long identifier handling, readable boundary/nonclaim copy, and LocaleToggle topbar fit.
+The smoke baseline covers desktop 1440px, laptop 1280px, tablet 768px, and mobile narrow 390px. Formal shells must not show horizontal page break outside intended tables, hidden primary nav without alternative, overlapping cards, or unreadable table text without scroll container.
+
+## F2-C Keyboard / focus gate
+
+See `docs/frontend-productization/F2-KEYBOARD-FOCUS-GATE.md`.
+
+The gate proves LocaleToggle keyboard accessible, formal nav keyboard accessible, topbar actions keyboard accessible, focus visible, and disabled nav items are not focus traps.
 
 ## F2-D Empty / loading / error states
 
 See `docs/frontend-productization/F2-EMPTY-LOADING-ERROR-STATE-REGISTER.md`.
 
-Formal surfaces must register loading, empty, error, unavailable, not authorized, not configured, and read-only boundary handling where applicable. State copy must not invent data, expose stack traces, or claim production outage without evidence.
+Formal surfaces must register empty state, loading state, error / unavailable state, replay-backed state, no-data state, and blocking / non-blocking classification.
 
-## F2-E Visual smoke checklist
+## F2-E Visual screenshot checklist
 
 See `docs/frontend-productization/F2-VISUAL-SMOKE-CHECKLIST.md`.
 
-The checklist is manual and screenshot-oriented. F2 does not introduce automated visual regression tooling or a screenshot package dependency.
+The checklist is manual and screenshot-oriented. It covers no mojibake, no internal phase labels, no formal nav pollution, language toggle visible, layout readable, and nonclaims visible where required.
+
+F2 does not introduce automated visual regression tooling or a screenshot package dependency.
 
 ## F2-F Performance budget
 
 See `docs/frontend-productization/F2-PERFORMANCE-BUDGET.md`.
 
-The budget is qualitative for this stage: build:web must pass, no new dependency is allowed, route lazy-loading must be preserved, and copy registries / LocaleToggle must not import API clients.
+The budget records build output size reviewed, largest bundle recorded, known heavy pages listed, no new package dependency, and no accidental full i18n library import.
+
+F2 does not require immediate bundle splitting, but it must record budget and risk.
 
 ## F2-G Quality gate consolidation
 
@@ -82,6 +88,10 @@ pnpm run typecheck:web
 pnpm run build:web
 git status --short
 ```
+
+## Completion definition
+
+Frontend has a documented accessibility baseline. Frontend has responsive smoke coverage. Frontend has keyboard/focus baseline. Frontend has empty/loading/error state register. Frontend has screenshot checklist. Frontend has performance budget. F2 acceptance passes. typecheck:web passes. build:web passes.
 
 ## Non-goals
 
