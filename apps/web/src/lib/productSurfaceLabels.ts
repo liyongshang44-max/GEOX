@@ -220,6 +220,13 @@ export const OPERATOR_FORMAL_SURFACE_COPY = {
       not_enabled: { zh: "未启用", en: "not enabled" },
       selectFieldFirst: { zh: "请先选择地块", en: "select field first" },
     },
+    nonclaims: [
+      { zh: "运行模式：回放支撑演示", en: "Runtime Mode: Replay-backed Demo" },
+      { zh: "实时设备：未连接", en: "Live Device: Not connected" },
+      { zh: "生产网关：未上线", en: "Production Gateway: Not online" },
+      { zh: "田间试点：未开始", en: "Field Pilot: Not started" },
+      { zh: "受控执行：已禁用", en: "Controlled Execution: Disabled" },
+    ],
     boundary: [
       { zh: "只读", en: "Read-only" },
       { zh: "不修改运行状态", en: "No runtime mutation" },
