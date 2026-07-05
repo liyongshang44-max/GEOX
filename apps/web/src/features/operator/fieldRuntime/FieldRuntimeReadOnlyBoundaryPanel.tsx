@@ -1,5 +1,5 @@
 // apps/web/src/features/operator/fieldRuntime/FieldRuntimeReadOnlyBoundaryPanel.tsx
-// Purpose: render the H60-D no-write boundary for canonical Field Runtime Overview and State.
+// Purpose: render the no-write boundary for canonical Field Runtime Overview and State.
 // Boundary: this panel is only boundary copy and performs no action.
 
 import React from "react";
@@ -9,12 +9,12 @@ type FieldRuntimeReadOnlyBoundaryPanelProps = {
   loadState?: FieldRuntimeWorkspaceLoadState;
 };
 
-const H60D_BOUNDARY_LINES = [
+const FIELD_RUNTIME_BOUNDARY_LINES = [
   "No facts write",
   "No recommendation creation",
-  "No approval",
+  "No authorization-state change",
   "No dispatch",
-  "No AO-ACT task",
+  "No work order creation",
   "No ROI write",
   "No Field Memory write",
 ];
@@ -29,10 +29,10 @@ export default function FieldRuntimeReadOnlyBoundaryPanel({ loadState }: FieldRu
           <p className="operatorFieldRuntime__eyebrow">Boundary</p>
           <h2 className="operatorFieldRuntime__panelTitle">Read-only Boundary</h2>
         </div>
-        <span className="operatorFieldRuntime__panelMeta">H60-D no-write boundary</span>
+        <span className="operatorFieldRuntime__panelMeta">No-write product boundary</span>
       </div>
       <ul className="operatorFieldRuntime__boundaryList">
-        {H60D_BOUNDARY_LINES.map((line) => <li key={line}>{line}</li>)}
+        {FIELD_RUNTIME_BOUNDARY_LINES.map((line) => <li key={line}>{line}</li>)}
       </ul>
       {workspaceRules.length > 0 ? (
         <div>

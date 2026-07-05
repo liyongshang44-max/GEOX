@@ -1,5 +1,5 @@
 // apps/web/src/features/operator/fieldRuntime/runtimeNonclaims.ts
-// Purpose: centralize Field Runtime replay/live nonclaim copy for H60-C and later product surfaces.
+// Purpose: centralize Field Runtime replay/live nonclaim copy for product surfaces.
 // Boundary: these strings are product boundary labels only and do not represent live production connectivity.
 
 export const FIELD_RUNTIME_NONCLAIMS = [
@@ -7,7 +7,7 @@ export const FIELD_RUNTIME_NONCLAIMS = [
   "Live Device: Not connected",
   "Production Gateway: Not online",
   "Field Pilot: Not started",
-  "AO-ACT Dispatch: Disabled",
+  "Controlled Execution: Disabled",
 ] as const;
 
 export const FIELD_RUNTIME_READ_ONLY_BOUNDARY = "Read-only Field Runtime";

@@ -34,9 +34,9 @@ const OPERATOR_NAV_ITEMS: OperatorNavItem[] = [
   {
     key: "fields",
     label: "Fields",
-    to: "/operator/twin",
-    hint: "Field Runtime list is planned; current field workspace routes remain preserved by URL.",
-    status: "route-preserved",
+    to: "/operator/fields",
+    hint: "Field Runtime list and field-scoped review tabs use the canonical operator field runtime route family.",
+    status: "enabled",
   },
   {
     key: "evidence",
@@ -92,7 +92,7 @@ const RUNTIME_NONCLAIMS = [
 
 function isItemActive(pathname: string, item: OperatorNavItem): boolean {
   if (item.key === "overview") return pathname === "/operator/twin" || pathname === "/operator";
-  if (item.key === "fields") return pathname.startsWith("/operator/twin/fields/");
+  if (item.key === "fields") return pathname.startsWith("/operator/fields") || pathname.startsWith("/operator/twin/fields/");
   if (item.key === "pilot") return pathname === "/operator/pilot";
   return false;
 }
@@ -102,7 +102,7 @@ function resolveTitle(pathname: string): string {
   if (pathname === "/operator/twin") return "Runtime Overview";
   if (pathname === "/operator/twin/production-workflow") return "Runtime Workflow Readback";
   if (pathname === "/operator/twin/gateway-demo") return "Replay-backed Gateway Snapshot";
-  if (pathname.startsWith("/operator/twin/fields/")) return "Field Runtime";
+  if (pathname.startsWith("/operator/fields") || pathname.startsWith("/operator/twin/fields/")) return "Field Runtime";
   if (pathname.startsWith("/operator/twin/traces/")) return "Audit / Trace";
   return "Operator Runtime Console";
 }
@@ -112,7 +112,7 @@ function resolveLead(pathname: string): string {
   if (pathname === "/operator/twin") return "Review runtime status, field readiness, evidence coverage, and replay-backed operating boundaries without creating tasks or records.";
   if (pathname === "/operator/twin/production-workflow") return "Read-only workflow readback for governed materialization boundaries; this shell does not open controlled execution or write formal records.";
   if (pathname === "/operator/twin/gateway-demo") return "Read-only replay-backed gateway snapshot; live devices are not connected and the production gateway is not online.";
-  if (pathname.startsWith("/operator/twin/fields/")) return "Review a field through Evidence, State, Forecast, Residual, Calibration, Health, and Audit views while legacy routes remain preserved.";
+  if (pathname.startsWith("/operator/fields") || pathname.startsWith("/operator/twin/fields/")) return "Review a field through Evidence, State, Forecast, Residual, Calibration, Health, and Audit views while legacy routes remain preserved.";
   if (pathname.startsWith("/operator/twin/traces/")) return "Audit trace readback is available as a preserved route and does not mutate runtime state.";
   return "Read-only runtime surface for operator review; Customer Portal and Admin Console remain separate product surfaces.";
 }
