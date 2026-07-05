@@ -12,6 +12,10 @@ Formal product surfaces must have semantic structure, screen-reader-readable nav
 
 Covered surfaces: CustomerLayout, OperatorLayout, AdminLayout, Operator Runtime Overview, Field Runtime, Replay Demo, Pilot Readiness, Customer Dashboard, Customer Fields, Customer Reports, Customer Export, Admin Dashboard, Admin Evidence, Admin Health, and Admin Skills / Config.
 
+## Minimum requirements
+
+F2-A minimum requirements are semantic headings, landmark regions, aria-label for shell nav and locale switch, keyboard reachable formal nav, visible focus state, button vs link semantics, no color-only status communication, basic contrast declaration, and form labels where applicable.
+
 ## Semantic headings
 
 Each formal shell exposes one visible h1 or equivalent page title. Major sections should use ordered h2/h3 hierarchy. No heading is used only for styling. No heading jump from h1 to h4 is allowed unless documented.
@@ -34,6 +38,10 @@ Formal shell nav must be labelled or contained by a labelled navigation/sidebar 
 
 Formal shell navigation must expose an accessible label. LocaleToggle must expose aria-label. Active navigation must expose aria-current page state or an equivalent accessible active state provided by the routing component. Disabled nav placeholders must use aria-disabled true. Icon-only visual marks must be hidden from assistive technology.
 
+## Keyboard reachable formal nav
+
+Customer nav, Operator nav, Admin nav, LocaleToggle, topbar actions, report links, export links, field card links, and operation card links must be keyboard reachable or explicitly unavailable.
+
 ## Button and link semantics
 
 Navigation uses links. Actions use buttons. Disabled non-action nav placeholders are not clickable buttons. The baseline blocks obvious fake-button patterns and anchor click handlers without a navigation target.
@@ -51,6 +59,10 @@ Status must not be communicated by color only. Badges and status pills must incl
 Formal text/background pairs are intended to meet readable enterprise-console contrast. This document is not a full contrast audit. Known contrast risks must be registered before F0-B. Low-contrast muted text must not be the only source of critical information.
 
 Static gate blocks extreme contrast-danger patterns in changed F2 files.
+
+## WCAG 2.2 AA direction
+
+This baseline follows WCAG 2.2 AA direction for semantic structure, keyboard access, visible focus, labelled controls, and non-color-only communication. It does not claim complete WCAG 2.2 AA certification.
 
 ## Acceptance hooks
 
