@@ -13,8 +13,6 @@ F1-C does not cover Customer or Admin.
 
 F1-C bilingualizes visible Operator product copy while preserving raw/source traceability values.
 
-F1-C target statement:
-
 ```text
 Operator formal surface copy is bilingual, while traceability/source values remain raw and unchanged.
 ```
@@ -45,8 +43,11 @@ apps/web/src/styles/operatorReplayDemo.css
 apps/web/src/styles/operatorPilotReadiness.css
 apps/web/src/lib/productSurfaceLabels.ts
 scripts/frontend_acceptance/ACCEPTANCE_F1_C_OPERATOR_BILINGUAL_SURFACES_V1.cjs
+scripts/frontend_acceptance/ACCEPTANCE_F1_B_SHELL_BILINGUAL_INTEGRATION_V1.cjs
 docs/frontend-productization/F1-C-OPERATOR-BILINGUAL-SURFACES.md
 ```
+
+The F1-B acceptance file is allowed only as an integration acceptance carry-forward repair. F1-C is stacked on F1-B in the same integration branch, and the required local command sequence still runs the F1-B acceptance after F1-C is added. That script must therefore validate the accepted F1-B slice instead of scanning the whole current HEAD.
 
 ## Forbidden files
 
@@ -71,8 +72,6 @@ F1-C forbids route topology changes, backend calls, package dependencies, and Cu
 
 ## Operator surface scope
 
-F1-C covers:
-
 ```text
 /operator/twin
 /operator/fields/*
@@ -91,16 +90,7 @@ Pilot Readiness
 
 ## Operator Runtime Overview bilingual scope
 
-F1-C covers:
-
-```text
-overview page hero
-overview section titles
-overview boundary copy
-overview nonclaim copy
-overview empty / unavailable copy
-overview helper text
-```
+F1-C covers overview page hero, overview section titles, overview boundary copy, overview nonclaim copy, overview empty / unavailable copy, and overview helper text.
 
 Required bilingual copy includes:
 
@@ -121,19 +111,7 @@ Backend-returned field state text, risk text, confidence text, field IDs, eviden
 
 ## Field Runtime bilingual scope
 
-F1-C covers:
-
-```text
-Field Runtime header
-Field Runtime tab labels
-Field Runtime boundary copy
-Field Runtime nonclaims
-Field Runtime empty state
-Field Runtime unavailable state
-Field Runtime loading state
-Field Runtime read-only copy
-Field Runtime traceability helper copy
-```
+F1-C covers Field Runtime header, Field Runtime tab labels, Field Runtime boundary copy, Field Runtime nonclaims, Field Runtime empty state, Field Runtime unavailable state, Field Runtime loading state, Field Runtime read-only copy, and Field Runtime traceability helper copy.
 
 Required tab labels:
 
@@ -177,21 +155,22 @@ No long-term field record mutation
 不写入长期地块记录
 ```
 
-## Replay Demo bilingual scope
-
-F1-C covers:
+Required nonclaims include live/replay denial:
 
 ```text
-Replay Demo hero
-Replay Demo boundary banner
-Replay Demo nonclaims
-Replay Demo snapshot labels
-Replay Demo gateway path labels
-Replay Demo device evidence labels
-Replay Demo standards mapping labels
-Replay Demo duplicate / clock skew / ingestion window labels
-Replay Demo traceability labels
+Live Device: Not connected
+Production Gateway: Not online
+Field Pilot: Not started
+Controlled Execution: Disabled
+实时设备：未连接
+生产网关：未上线
+田间试点：未开始
+受控执行：已禁用
 ```
+
+## Replay Demo bilingual scope
+
+F1-C covers Replay Demo hero, Replay Demo boundary banner, Replay Demo nonclaims, Replay Demo snapshot labels, Replay Demo gateway path labels, Replay Demo device evidence labels, Replay Demo standards mapping labels, Replay Demo duplicate / clock skew / ingestion window labels, and Replay Demo traceability labels.
 
 Required bilingual copy includes:
 
@@ -226,18 +205,7 @@ Snapshot IDs, device identifiers, source refs, trace refs, hashes, commit SHAs, 
 
 ## Pilot Readiness bilingual scope
 
-F1-C covers:
-
-```text
-Pilot Readiness hero
-Pilot Readiness gate labels
-Pilot Readiness boundary copy
-Pilot Readiness nonclaims
-Pilot Readiness role labels
-Pilot Readiness safety / stop-rule labels
-Pilot Readiness readiness status labels
-Pilot Readiness limitation copy
-```
+F1-C covers Pilot Readiness hero, Pilot Readiness gate labels, Pilot Readiness boundary copy, Pilot Readiness nonclaims, Pilot Readiness role labels, Pilot Readiness safety / stop-rule labels, Pilot Readiness readiness status labels, and Pilot Readiness limitation copy.
 
 Required bilingual copy includes:
 
@@ -355,6 +323,7 @@ raw/source text register
 ## Acceptance
 
 ```text
+node scripts/frontend_acceptance/ACCEPTANCE_F1_B_SHELL_BILINGUAL_INTEGRATION_V1.cjs
 node scripts/frontend_acceptance/ACCEPTANCE_F1_C_OPERATOR_BILINGUAL_SURFACES_V1.cjs
 pnpm run typecheck:web
 pnpm run build:web
@@ -367,6 +336,12 @@ Because F1-C is stacked on accepted F1-B, F1-C changed-file validation uses the 
 
 ```text
 9f929ed34beb95d9603b30bdc84fbfc30f6b97cd
+```
+
+F1-B acceptance validation uses the accepted F1-B slice:
+
+```text
+6e16784fced8f7cae1b7cd37b49c6f7bd9d51495...9f929ed34beb95d9603b30bdc84fbfc30f6b97cd
 ```
 
 ## Non-goals
