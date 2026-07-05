@@ -164,12 +164,13 @@ try {
   assert('locale_toggle_not_wired_to_app', !app.includes('LocaleToggle'), { file: files.app });
   assert('formal_shells_use_locale_helpers', hasAll(customerLayout, ['useLocale', 'localizedText']) && hasAll(operatorLayout, ['useLocale', 'localizedText']) && hasAll(adminLayout, ['useLocale', 'localizedText']));
   assert('direct_text_calls_limited', [customerLayout, operatorLayout, adminLayout].every((text) => countDirectTextCalls(text) <= 8));
+  assert('admin_topbar_title_lead_bilingualized', hasAll(adminLayout, ['ADMIN_SHELL_LABELS.topbar.title', 'ADMIN_SHELL_LABELS.topbar.lead', 'topbarTitle', 'topbarLead']) && !adminLayout.includes('{topBar.title}') && !adminLayout.includes('{topBar.lead}'));
 
   const shellCopy = [customerLayout, operatorLayout, adminLayout, productSurfaceLabels].join('\n');
 
   assert('customer_shell_bilingual_copy_present', hasAll(shellCopy, ['Dashboard', 'Fields', 'Operations', 'Reports', 'Export', 'Authorized scope pending', 'Reading access scope', 'No authorized fields', 'Contact operations', 'Authorized scope confirmed', '经营总览', '地块', '作业', '报告', '导出', '授权范围待确认', '正在读取权限', '暂无授权地块', '授权范围已确认']));
   assert('operator_shell_bilingual_copy_present', hasAll(shellCopy, ['Overview', 'Fields', 'Evidence', 'Forecast', 'Calibration', 'Health', 'Pilot', 'Settings', 'Route active', 'Route preserved', 'Coming soon', 'Runtime Mode: Replay-backed Demo', 'Live Device: Not connected', 'Production Gateway: Not online', 'Field Pilot: Not started', 'Controlled Execution: Disabled', '总览', '地块', '证据', '预测', '校准', '健康', '试点', '设置', '路由可用', '路由保留', '即将开放', '运行模式：回放支撑演示', '实时设备：未连接', '生产网关：未上线', '田间试点：未开始', '受控执行：已禁用']));
-  assert('admin_shell_bilingual_copy_present', hasAll(shellCopy, ['Dashboard', 'Fields', 'Operations', 'Devices', 'Evidence', 'Runtime Health', 'Config', 'Internal governance surface', 'Read-only shell boundary', 'Formal navigation', 'Admin routes only', 'Route family', 'Surface mode', 'Governed readback', '总览', '地块', '作业', '设备', '证据', '运行健康', '配置', '内部治理界面', '只读 Shell 边界', '正式导航', '仅后台管理路由', '路由族', '界面模式', '治理回查']));
+  assert('admin_shell_bilingual_copy_present', hasAll(shellCopy, ['Dashboard', 'Fields', 'Operations', 'Devices', 'Evidence', 'Runtime Health', 'Config', 'Admin Console', 'Internal governance surface', 'Read-only shell boundary', 'Formal navigation', 'Admin routes only', 'Route family', 'Surface mode', 'Governed readback', '后台管理', '总览', '地块', '作业', '设备', '证据', '运行健康', '配置', '内部治理界面', '只读 Shell 边界', '正式导航', '仅后台管理路由', '路由族', '界面模式', '治理回查']));
   assert('negative_nonclaims_present', hasAll(shellCopy, ['Live Device: Not connected', 'Production Gateway: Not online', 'Field Pilot: Not started', 'Controlled Execution: Disabled', '实时设备：未连接', '生产网关：未上线', '田间试点：未开始', '受控执行：已禁用']));
 
   const positiveClaimHits = violations([customerLayout, operatorLayout, adminLayout, productSurfaceLabels, doc].join('\n'), positiveClaimForbidden);
