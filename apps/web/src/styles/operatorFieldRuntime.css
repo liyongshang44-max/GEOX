@@ -239,6 +239,17 @@
   min-width: 720px;
 }
 
+.operatorFieldRuntime__healthReadModels .operatorFieldRuntime__healthTableHeader,
+.operatorFieldRuntime__healthReadModels .operatorFieldRuntime__healthTableRow {
+  grid-template-columns: minmax(160px, 0.9fr) minmax(280px, 1.5fr) minmax(120px, 0.7fr) minmax(180px, 0.9fr);
+  min-width: 900px;
+}
+
+.operatorFieldRuntime__healthTableHeader span,
+.operatorFieldRuntime__healthTableRow span {
+  overflow-wrap: anywhere;
+}
+
 .operatorFieldRuntime__evidenceRefs summary,
 .operatorFieldRuntime__forecastRefs summary,
 .operatorFieldRuntime__scenarioRefs summary,
