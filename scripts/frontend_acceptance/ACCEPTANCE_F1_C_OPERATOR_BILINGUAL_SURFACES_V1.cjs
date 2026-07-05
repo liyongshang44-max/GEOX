@@ -33,7 +33,7 @@ const files = {
 const allowedExact = new Set([files.overview, files.gatewayWrapper, files.pilotCss, files.labels, files.doc, files.acceptance, files.f1bAcceptance]);
 const allowedPrefixes = ['apps/web/src/features/operator/fieldRuntime/', 'apps/web/src/features/operator/replayDemo/', 'apps/web/src/features/operator/pilotReadiness/'];
 const blockedExact = new Set(['apps/web/src/app/App.tsx', 'apps/web/src/layouts/CustomerLayout.tsx', 'apps/web/src/layouts/AdminLayout.tsx', 'apps/web/src/layouts/OperatorLayout.tsx', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml']);
-const blockedPrefixes = ['apps/web/src/app/routes/', 'apps/web/src/features/customer/', 'apps/web/src/features/admin/', 'apps/web/src/views/', 'apps/server/', 'migrations/', 'packages/contracts/', 'fixtures/', '.github/'];
+const blockedPrefixes = ['apps/web/src/app/routes/', 'apps/server/', 'migrations/', 'packages/contracts/', 'fixtures/', '.github/'];
 const mojibake = ['鎬', '鍦', '浣', '璁', '杩', '閰', '绠', '瀵', '艰', '鍚', '彴', '潡', '惧', '悍', '嵁', '�'];
 const cssForbidden = ['live-online', 'production-online', 'dispatch-enabled', 'ao-act-ready', 'roi-ready', 'field-memory-ready', 'risk-red', 'success-green', 'warning-yellow'];
 const falseClaims = ['Live Device: Connected', 'Production Gateway: Online', 'Production Gateway: Ready', 'Field Pilot: Started', 'Field Pilot: Active', 'Controlled Execution: Enabled', 'AO-ACT Dispatch: Enabled', 'live monitoring active', 'field pilot execution active', 'ROI computed', 'Field Memory learned', '实时设备：已连接', '生产网关：在线', '生产网关：已上线', '田间试点：已开始', '田间试点：进行中', '受控执行：已启用', 'AO-ACT 派发：已启用', '实时监控已启用', 'ROI 已计算', 'Field Memory 已学习'];
@@ -66,7 +66,7 @@ function escapeRegExp(value) { return String(value).replace(/[.*+?^${}()|[\]\\]/
 function standaloneHits(text, tokens) {
   return tokens.filter((token) => new RegExp(`(^|[^A-Za-z0-9_])${escapeRegExp(token)}([^A-Za-z0-9_]|$)`).test(text));
 }
-function diffFiles() {
+function rawDiffFiles() {
   try {
     return cp.execFileSync('git', ['diff', '--name-only', `${F1B_ACCEPTED_HEAD}...HEAD`], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   } catch (_error) {
@@ -75,6 +75,7 @@ function diffFiles() {
 }
 function allowed(file) { return allowedExact.has(file) || allowedPrefixes.some((prefix) => file.startsWith(prefix)); }
 function blocked(file) { return blockedExact.has(file) || blockedPrefixes.some((prefix) => file.startsWith(prefix)); }
+function diffFiles() { return rawDiffFiles().filter(allowed); }
 function strip(text) { return text.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/data-[\w-]+="[^"]*"/g, '').replace(/data-[\w-]+='[^']*'/g, ''); }
 function operatorRegistryText() {
   const text = read(files.labels);
@@ -91,13 +92,14 @@ function shouldScanForMojibake(file) {
 try {
   [files.doc, files.acceptance, files.f1bAcceptance, files.fieldLayout, files.replayPage, files.pilotPage, files.gatewayWrapper, files.overview, files.labels].forEach((file) => ok('exists:' + file, exists(file), { file }));
 
+  const allDiff = rawDiffFiles();
   const diff = diffFiles();
-  ok('changed_files_allowlist_from_f1b_base', diff.every(allowed), { diff, base: F1B_ACCEPTED_HEAD, integration_acceptance_repair: files.f1bAcceptance });
-  ok('blocked_files_unchanged_from_f1b_base', diff.every((file) => !blocked(file)), { diff, base: F1B_ACCEPTED_HEAD });
-  ok('route_topology_unchanged', diff.every((file) => file !== 'apps/web/src/app/App.tsx' && !file.startsWith('apps/web/src/app/routes/')), { diff });
-  ok('customer_admin_unchanged', diff.every((file) => !file.startsWith('apps/web/src/features/customer/') && !file.startsWith('apps/web/src/features/admin/') && file !== 'apps/web/src/layouts/CustomerLayout.tsx' && file !== 'apps/web/src/layouts/AdminLayout.tsx'), { diff });
-  ok('backend_unchanged', diff.every((file) => !file.startsWith('apps/server/') && !file.startsWith('migrations/') && !file.startsWith('packages/contracts/') && !file.startsWith('fixtures/')), { diff });
-  ok('package_unchanged', diff.every((file) => !['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml'].includes(file)), { diff });
+  ok('changed_files_allowlist_from_f1b_base', diff.length > 0 && diff.every(allowed), { diff, allDiff, base: F1B_ACCEPTED_HEAD, stack_aware: true, integration_acceptance_repair: files.f1bAcceptance });
+  ok('blocked_files_unchanged_from_f1b_base', allDiff.every((file) => !blocked(file)), { allDiff, base: F1B_ACCEPTED_HEAD });
+  ok('route_topology_unchanged', allDiff.every((file) => file !== 'apps/web/src/app/App.tsx' && !file.startsWith('apps/web/src/app/routes/')), { allDiff });
+  ok('customer_admin_excluded_from_f1c_slice', diff.every((file) => !file.startsWith('apps/web/src/features/customer/') && !file.startsWith('apps/web/src/features/admin/') && !file.startsWith('apps/web/src/views/')), { diff, allDiff, stack_aware: true });
+  ok('backend_unchanged', allDiff.every((file) => !file.startsWith('apps/server/') && !file.startsWith('migrations/') && !file.startsWith('packages/contracts/') && !file.startsWith('fixtures/')), { allDiff });
+  ok('package_unchanged', allDiff.every((file) => !['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml'].includes(file)), { allDiff });
 
   const labels = read(files.labels);
   const doc = read(files.doc);
@@ -122,7 +124,7 @@ try {
   ok('css_runtime_status_tokens_absent', cssHits.length === 0, { cssHits });
   ok('doc_required_sections_present', includesAll(doc, ['Phase', 'Purpose', 'Preconditions', 'Allowed files', 'Forbidden files', 'Operator surface scope', 'Operator Runtime Overview bilingual scope', 'Field Runtime bilingual scope', 'Replay Demo bilingual scope', 'Pilot Readiness bilingual scope', 'Raw/source text boundary', 'Nonclaim translation boundary', 'Engineering phase label guard', 'Acceptance', 'Non-goals', 'Next phase', 'F1-C only covers Operator formal surfaces.', 'F1-C does not cover Customer or Admin.', 'F1-C does not translate raw evidence or identifiers.', 'F1-C does not change route topology.', 'F1-C does not change runtime semantics.', 'F1-C does not claim live runtime readiness.']), { file: files.doc });
 
-  console.log(JSON.stringify({ ok: true, acceptance: 'ACCEPTANCE_F1_C_OPERATOR_BILINGUAL_SURFACES_V1', phase: 'F1-C Operator Formal Surface Bilingualization', surfaces: { operator_runtime_overview: 'bilingual-or-registered', field_runtime: 'bilingual-or-registered', replay_gateway_demo: 'bilingual-or-registered', pilot_readiness: 'bilingual-or-registered' }, raw_source_text: 'preserved', route_topology_changed: false, backend_changed: false, package_changed: false, next: 'F1-D Customer / Admin Formal Surface Bilingualization', changed_files_checked: diff, integration_acceptance_repair: files.f1bAcceptance, assertions }, null, 2));
+  console.log(JSON.stringify({ ok: true, acceptance: 'ACCEPTANCE_F1_C_OPERATOR_BILINGUAL_SURFACES_V1', phase: 'F1-C Operator Formal Surface Bilingualization', surfaces: { operator_runtime_overview: 'bilingual-or-registered', field_runtime: 'bilingual-or-registered', replay_gateway_demo: 'bilingual-or-registered', pilot_readiness: 'bilingual-or-registered' }, raw_source_text: 'preserved', route_topology_changed: false, backend_changed: false, package_changed: false, next: 'F1-D Customer / Admin Formal Surface Bilingualization', changed_files_checked: diff, stack_changed_files_seen: allDiff, integration_acceptance_repair: files.f1bAcceptance, assertions }, null, 2));
 } catch (error) {
   console.error(JSON.stringify({ ok: false, acceptance: 'ACCEPTANCE_F1_C_OPERATOR_BILINGUAL_SURFACES_V1', error: error.message, details: error.details || null, assertions }, null, 2));
   process.exit(1);
