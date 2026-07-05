@@ -6,6 +6,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const root = process.cwd();
+const F1B_BASE_HEAD = '6e16784fced8f7cae1b7cd37b49c6f7bd9d51495';
+const F1B_ACCEPTED_HEAD = '9f929ed34beb95d9603b30bdc84fbfc30f6b97cd';
 
 const files = {
   customerLayout: 'apps/web/src/layouts/CustomerLayout.tsx',
@@ -87,23 +89,14 @@ function assert(name, passed, details = {}) {
 }
 
 function changedFiles() {
-  const candidateArgs = [
-    ['diff', '--name-only', 'origin/main...HEAD'],
-    ['diff', '--name-only', 'main...HEAD'],
-  ];
-
-  for (const args of candidateArgs) {
-    try {
-      return cp.execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter(Boolean);
-    } catch (_error) {
-      // Continue to the next diff base.
-    }
+  try {
+    return cp.execFileSync('git', ['diff', '--name-only', `${F1B_BASE_HEAD}...${F1B_ACCEPTED_HEAD}`], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+  } catch (_error) {
+    return [];
   }
-
-  return [];
 }
 
 function isBlockedFile(file) {
@@ -146,8 +139,8 @@ try {
   const backendChanged = diff.some((file) => file.startsWith('apps/server/') || file.startsWith('migrations/') || file.startsWith('packages/contracts/') || file.startsWith('fixtures/'));
   const packageChanged = diff.some((file) => ['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml'].includes(file));
 
-  assert('changed_files_allowlist', diff.every((file) => allowedChangedFiles.has(file)), { diff });
-  assert('blocked_files_unchanged', diff.every((file) => !isBlockedFile(file)), { diff });
+  assert('changed_files_allowlist', diff.length > 0 && diff.every((file) => allowedChangedFiles.has(file)), { diff, base: F1B_BASE_HEAD, head: F1B_ACCEPTED_HEAD });
+  assert('blocked_files_unchanged', diff.every((file) => !isBlockedFile(file)), { diff, base: F1B_BASE_HEAD, head: F1B_ACCEPTED_HEAD });
   assert('route_topology_unchanged', routeTopologyChanged === false, { diff });
   assert('backend_unchanged', backendChanged === false, { diff });
   assert('package_unchanged', packageChanged === false, { diff });
@@ -205,6 +198,8 @@ try {
     package_changed: false,
     next: 'F1-C Operator Formal Surface Bilingualization',
     changed_files_checked: diff,
+    diff_base: F1B_BASE_HEAD,
+    diff_head: F1B_ACCEPTED_HEAD,
     assertions,
   };
 
