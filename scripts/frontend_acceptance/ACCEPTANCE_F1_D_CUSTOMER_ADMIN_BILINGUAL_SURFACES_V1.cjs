@@ -102,6 +102,9 @@ function positiveClaimHits(text) {
     return true;
   });
 }
+function isUiFile(file) {
+  return (file.endsWith('.tsx') || file.endsWith('.ts')) && !file.includes('/frontend_acceptance/') && !file.startsWith('docs/');
+}
 
 try {
   [files.doc, files.acceptance, files.customerLabels, files.productSurfaceLabels, files.customerFields, files.customerOperations, files.customerDashboardExport, files.fieldReportExport, files.fieldReportRoute, files.fieldReportExportRoute, files.operationReport, files.operationReportExport].forEach((file) => ok('exists:' + file, exists(file), { file }));
@@ -114,6 +117,7 @@ try {
   ok('backend_package_unchanged', diff.every((file) => !file.startsWith('apps/server/') && !file.startsWith('migrations/') && !file.startsWith('packages/contracts/') && !file.startsWith('fixtures/') && !['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml'].includes(file)), { diff });
 
   const changedText = diff.filter(exists).map(read).join('\n');
+  const uiText = diff.filter((file) => exists(file) && isUiFile(file)).map((file) => stripNonVisible(read(file))).join('\n');
   const customerText = diff.filter((file) => file.includes('/views/Customer') || file.includes('/views/FieldReport') || file.includes('/features/customer/')).filter(exists).map((file) => stripNonVisible(read(file))).join('\n');
   const adminText = diff.filter((file) => file.includes('/features/admin/pages/')).filter(exists).map((file) => stripNonVisible(read(file))).join('\n');
   const doc = read(files.doc);
@@ -125,7 +129,7 @@ try {
   ok('fake_capability_claims_absent', positiveClaimHits(changedText).length === 0, { hits: positiveClaimHits(changedText) });
   ok('raw_source_text_boundary_documented', includesAll(doc, ['route paths', 'source identifiers', 'fact IDs', 'trace IDs', 'commit hashes', 'acceptance script names', 'raw evidence payload', 'raw source labels', 'enum values', 'backend-returned domain object values']));
   ok('no_mojibake_in_f1d_files', diff.filter(exists).filter((file) => file !== files.acceptance).map((file) => ({ file, hits: hits(read(file), mojibake) })).filter((entry) => entry.hits.length > 0).length === 0);
-  ok('visible_engineering_phase_labels_absent', standaloneHits(stripNonVisible(changedText), phaseLabels).length === 0, { hits: standaloneHits(stripNonVisible(changedText), phaseLabels) });
+  ok('visible_engineering_phase_labels_absent', standaloneHits(uiText, phaseLabels).length === 0, { hits: standaloneHits(uiText, phaseLabels) });
   ok('css_runtime_status_tokens_absent', hits(diff.filter((file) => file.endsWith('.css') && exists(file)).map(read).join('\n'), cssForbidden).length === 0);
   ok('doc_required_sections_present', includesAll(doc, ['Phase', 'Purpose', 'Preconditions', 'Allowed files', 'Forbidden files', 'Customer surface scope', 'Admin surface scope', 'Customer internal-leakage boundary', 'Admin formal-nav pollution boundary', 'Raw/source text boundary', 'Bilingual copy governance', 'Acceptance', 'Non-goals', 'Next phase']));
 
