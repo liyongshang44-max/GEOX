@@ -23,7 +23,7 @@ The registered viewport classes are:
 
 Formal surfaces should preserve readable shell structure, visible navigation, visible LocaleToggle, readable titles, readable boundary/nonclaim banners, wrapping cards, wrapping tables or meta rows, and long identifier containment.
 
-No horizontal overflow should be caused by the shell. Sidebar/topbar behavior must remain documented. Cards must wrap. Tables or metadata rows must wrap. Nonclaim banner readable behavior must be preserved. LocaleToggle topbar fit must be preserved.
+No horizontal overflow should be caused by the shell. Sidebar/topbar behavior must remain documented. Cards must wrap. Tables or metadata rows must wrap. nonclaim banner readable behavior must be preserved. LocaleToggle topbar fit must be preserved.
 
 ## CSS affordances
 
