@@ -108,7 +108,7 @@ try {
   ok('frontend_runtime_readonly_nonclaim_present', doc.includes('Frontend Runtime Console v1 is replay-backed and read-only for this phase.'));
   ok('forbidden_positive_claims_absent', positiveStatusViolations(doc).length === 0, { violations: positiveStatusViolations(doc) });
 
-  const scanned = diff.filter((file) => exists(file));
+  const scanned = diff.filter((file) => exists(file) && file !== acceptance);
   const mojibakeHits = scanned.map((file) => ({ file, hits: hits(read(file), mojibake) })).filter((entry) => entry.hits.length > 0);
   ok('no_mojibake_in_f0b_files', mojibakeHits.length === 0, { mojibakeHits, scanned });
 
