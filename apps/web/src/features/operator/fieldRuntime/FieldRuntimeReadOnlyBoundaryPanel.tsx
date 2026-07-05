@@ -12,7 +12,7 @@ type FieldRuntimeReadOnlyBoundaryPanelProps = {
 const FIELD_RUNTIME_BOUNDARY_LINES = [
   "No facts write",
   "No recommendation creation",
-  "No approval",
+  "No authorization-state change",
   "No dispatch",
   "No work order creation",
   "No ROI write",
