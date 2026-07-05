@@ -1,9 +1,11 @@
 // apps/web/src/features/operator/replayDemo/ReplayDemoPage.tsx
-// Purpose: load the checked-in P51 gateway snapshot and render the H61 replay-backed demo product surface.
+// Purpose: load the checked-in gateway snapshot and render the replay-backed demo product surface.
 // Boundary: this page uses static GET only and does not create runtime, gateway, trace, task, or action records.
 
 import React from "react";
 import { fetchP51GatewayViewerSnapshot } from "../../../api/operatorGatewayDemo";
+import { localizedText, useLocale } from "../../../lib/locale";
+import { OPERATOR_FORMAL_SURFACE_COPY } from "../../../lib/productSurfaceLabels";
 import { buildReplayDemoViewModel, type ReplayDemoViewModel } from "./replayDemoViewModel";
 import ReplayDemoBoundaryBanner from "./ReplayDemoBoundaryBanner";
 import ReplayDemoBoundaryClaimsPanel from "./ReplayDemoBoundaryClaimsPanel";
@@ -24,7 +26,10 @@ type ReplayDemoLoadState =
   | { status: "ready"; vm: ReplayDemoViewModel }
   | { status: "error"; message: string };
 
+const replayCopy = OPERATOR_FORMAL_SURFACE_COPY.replayDemo;
+
 export default function ReplayDemoPage(): React.ReactElement {
+  const { locale } = useLocale();
   const [state, setState] = React.useState<ReplayDemoLoadState>({ status: "loading" });
 
   React.useEffect(() => {
@@ -42,11 +47,11 @@ export default function ReplayDemoPage(): React.ReactElement {
   }, []);
 
   if (state.status === "loading") {
-    return <main className="operatorReplayDemo"><section className="operatorReplayDemo__panel"><h1 className="operatorReplayDemo__title">Replay-backed Gateway Demo</h1><p>Loading checked-in snapshot...</p></section></main>;
+    return <main className="operatorReplayDemo"><section className="operatorReplayDemo__panel"><h1 className="operatorReplayDemo__title">{localizedText(replayCopy.title, locale)}</h1><p>{localizedText(replayCopy.loading, locale)}</p></section></main>;
   }
 
   if (state.status === "error") {
-    return <main className="operatorReplayDemo"><section className="operatorReplayDemo__panel"><h1 className="operatorReplayDemo__title">Replay-backed Gateway Demo</h1><p>Snapshot unavailable: {state.message}</p><p>Static checked-in snapshot is required for this replay-backed demo.</p></section></main>;
+    return <main className="operatorReplayDemo"><section className="operatorReplayDemo__panel"><h1 className="operatorReplayDemo__title">{localizedText(replayCopy.title, locale)}</h1><p>{localizedText(replayCopy.unavailable, locale)}: {state.message}</p><p>{localizedText(replayCopy.staticRequired, locale)}</p></section></main>;
   }
 
   const vm = state.vm;
@@ -55,7 +60,7 @@ export default function ReplayDemoPage(): React.ReactElement {
       <ReplayDemoHero vm={vm} />
       <ReplayDemoBoundaryBanner />
       <ReplayDemoNarrativePanel vm={vm} />
-      <section className="operatorReplayDemo__grid" aria-label="Replay demo sections with Hashes and Evidence refs">
+      <section className="operatorReplayDemo__grid" aria-label={locale === "en-US" ? "Replay demo sections with hashes and evidence refs" : "回放演示区块，包含哈希与证据引用"}>
         <ReplayDemoSnapshotPanel vm={vm} />
         <ReplayDemoGatewayPathPanel vm={vm} />
         <ReplayDemoStandardsPanel vm={vm} />
