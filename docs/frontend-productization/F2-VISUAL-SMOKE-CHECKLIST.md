@@ -2,7 +2,7 @@
 
 ## Phase
 
-F2-E Visual Smoke Checklist.
+F2-E Visual Screenshot Checklist.
 
 ## Purpose
 
@@ -14,31 +14,41 @@ This checklist does not introduce automated visual regression tooling or screens
 
 Each route should be inspected at 1440px, 1280px, 768px, and 390px where practical.
 
-For each route, check: page renders, no blank screen, shell visible, nav visible, LocaleToggle visible, title visible, main content visible, boundary or nonclaim copy visible when applicable, no mojibake, no obvious overflow, and no live-production capability claim.
+For each screenshot, check no mojibake, no internal phase labels, no formal nav pollution, language toggle visible, layout readable, and nonclaims visible where required.
 
-## Route checklist
+Additional checks: page renders, no blank screen, shell visible, primary nav visible or alternative visible, title visible, main content visible, no obvious overflow, and no overlapping cards.
+
+## Required route checklist
 
 - Customer Dashboard: Customer shell, Customer Dashboard title, authorized scope boundary.
 - Customer Fields: Customer shell, Customer Fields title, field access boundary.
-- Customer Field Report: Customer shell, Customer Field Report title, raw evidence and identifier boundary.
-- Customer Operations: Customer shell, Customer Operations title, Customer-visible operation boundary.
-- Customer Operation Report: Customer shell, Customer Operation Report title, raw evidence and identifier boundary.
 - Customer Reports: Customer shell, Customer Reports title, report access boundary.
-- Customer Export: Customer print/export scaffold, Customer Export title, export boundary.
 - Admin Dashboard: Admin shell, Admin Dashboard title, governance boundary.
-- Admin Fields: Admin shell, Admin Fields title, readback boundary.
-- Admin Operations: Admin shell, Admin Operations title, readback boundary.
-- Admin Devices: Admin shell, Admin Devices title, readback boundary.
-- Admin Evidence: Admin shell, Admin Evidence title, evidence readback boundary.
 - Admin Health: Admin shell, Admin Health title, runtime health readback boundary.
-- Admin Skills / Config: Admin shell, Admin Skills title, config/readback boundary.
 - Operator Runtime Overview: Operator shell, Operator Runtime Overview title, runtime nonclaim banner.
-- Field Runtime Overview: Operator shell, Field Runtime title, read-only runtime review boundary.
-- Field Runtime Evidence: Operator shell, Field Runtime Evidence title, evidence read-only boundary.
-- Field Runtime Forecast: Operator shell, Field Runtime Forecast title, forecast review boundary.
+- Operator Fields: Operator shell, Operator Fields route, field list or empty state visible.
+- Operator Field Runtime Detail: Operator shell, Field Runtime detail title, read-only runtime boundary.
 - Field Runtime Health: Operator shell, Field Runtime Health title, health review boundary.
-- Replay-backed Gateway Demo: Operator shell, Replay-backed Gateway Demo title, replay-backed boundary.
+- Gateway Demo: Operator shell, Replay-backed Gateway Demo title, replay-backed boundary.
 - Pilot Readiness: Operator shell, Pilot Readiness title, planning/readiness gate boundary.
+
+## Extended route checklist
+
+- Customer Field Report: raw evidence and identifier boundary.
+- Customer Operations: Customer-visible operation boundary.
+- Customer Operation Report: raw evidence and identifier boundary.
+- Customer Export: export boundary.
+- Admin Fields: readback boundary.
+- Admin Operations: readback boundary.
+- Admin Devices: readback boundary.
+- Admin Evidence: evidence readback boundary.
+- Admin Skills / Config: config/readback boundary.
+- Field Runtime Evidence: evidence read-only boundary.
+- Field Runtime Forecast: forecast review boundary.
+
+## Screenshot status
+
+Screenshot files are not required for this PR. The checklist registers required manual screenshot coverage before F0-B. Each listed route is pending manual screenshot capture unless a later artifact workflow records evidence.
 
 ## Output rule
 
