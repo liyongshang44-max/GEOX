@@ -27,7 +27,7 @@ No horizontal overflow should be caused by the shell. Sidebar/topbar behavior mu
 
 ## Must not regress
 
-Formal shells must not show horizontal page break outside intended tables. Formal shells must not hide primary nav without alternative. Formal shells must not show overlapping cards. Formal tables must not show unreadable table text without scroll container.
+Formal shells must not show horizontal page break outside intended tables. Formal shells must not have hidden primary nav without alternative. Formal shells must not show overlapping cards. Formal tables must not show unreadable table text without scroll container.
 
 ## CSS affordances
 
