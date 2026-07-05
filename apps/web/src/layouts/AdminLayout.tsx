@@ -1,11 +1,14 @@
 // apps/web/src/layouts/AdminLayout.tsx
-// Purpose: render the H65 Admin Console as an independent shell.
-// Boundary: this layout owns admin chrome only; it does not create records or open execution workflows.
+// Purpose: render the Admin Console as an independent shell.
+// Boundary: this layout owns admin chrome only.
 
 import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import AppBreadcrumb from "../components/layout/AppBreadcrumb";
 import { type TopBarProps } from "../app/TopBar";
+import LocaleToggle from "../components/common/LocaleToggle";
+import AppBreadcrumb from "../components/layout/AppBreadcrumb";
+import { localizedText, useLocale, type LocaleCode } from "../lib/locale";
+import { ADMIN_SHELL_LABELS, type ShellNavCopy } from "../lib/productSurfaceLabels";
 import "../styles/adminShell.css";
 
 type AdminLayoutProps = {
@@ -15,21 +18,28 @@ type AdminLayoutProps = {
 
 type AdminNavItem = {
   key: string;
-  label: string;
+  copy: ShellNavCopy;
   to?: string;
-  hint?: string;
   status: "enabled" | "url-only" | "planned";
 };
 
 const ADMIN_NAV_ITEMS: AdminNavItem[] = [
-  { key: "dashboard", label: "Dashboard", to: "/admin/dashboard", status: "enabled" },
-  { key: "fields", label: "Fields", to: "/admin/fields", status: "enabled" },
-  { key: "operations", label: "Operations", to: "/admin/operations", status: "enabled" },
-  { key: "devices", label: "Devices", to: "/admin/devices", status: "enabled" },
-  { key: "evidence", label: "Evidence", to: "/admin/evidence", status: "enabled" },
-  { key: "health", label: "Runtime Health", to: "/admin/healthz", status: "enabled" },
-  { key: "config", label: "Config", to: "/admin/skills", status: "enabled" },
+  { key: "dashboard", copy: ADMIN_SHELL_LABELS.nav.dashboard, to: "/admin/dashboard", status: "enabled" },
+  { key: "fields", copy: ADMIN_SHELL_LABELS.nav.fields, to: "/admin/fields", status: "enabled" },
+  { key: "operations", copy: ADMIN_SHELL_LABELS.nav.operations, to: "/admin/operations", status: "enabled" },
+  { key: "devices", copy: ADMIN_SHELL_LABELS.nav.devices, to: "/admin/devices", status: "enabled" },
+  { key: "evidence", copy: ADMIN_SHELL_LABELS.nav.evidence, to: "/admin/evidence", status: "enabled" },
+  { key: "health", copy: ADMIN_SHELL_LABELS.nav.health, to: "/admin/healthz", status: "enabled" },
+  { key: "config", copy: ADMIN_SHELL_LABELS.nav.config, to: "/admin/skills", status: "enabled" },
 ];
+
+function navLabel(item: AdminNavItem, locale: LocaleCode): string {
+  return localizedText(item.copy.label, locale);
+}
+
+function navHint(item: AdminNavItem, locale: LocaleCode): string {
+  return item.copy.hint ? localizedText(item.copy.hint, locale) : navLabel(item, locale);
+}
 
 function isNavActive(pathname: string, item: AdminNavItem): boolean {
   if (item.key === "dashboard") return pathname === "/admin" || pathname === "/admin/dashboard";
@@ -44,40 +54,46 @@ function isNavActive(pathname: string, item: AdminNavItem): boolean {
 
 export default function AdminLayout({ topBar, children }: AdminLayoutProps): React.ReactElement {
   const location = useLocation();
+  const { locale } = useLocale();
 
   return (
     <div className="adminShell" data-layout="admin-console-shell">
-      <aside className="adminShellSidebar" aria-label="Admin navigation">
-        <div className="adminShellBrand" aria-label="Admin Console">
+      <aside className="adminShellSidebar" aria-label={localizedText(ADMIN_SHELL_LABELS.navigationAria, locale)}>
+        <div className="adminShellBrand" aria-label={localizedText(ADMIN_SHELL_LABELS.brand, locale)}>
           <span className="adminShellLogoMark" aria-hidden="true" />
-          <span>Admin Console</span>
+          <span>{localizedText(ADMIN_SHELL_LABELS.brand, locale)}</span>
         </div>
 
-        <nav className="adminShellNav" aria-label="Admin Console navigation">
-          {ADMIN_NAV_ITEMS.map((item) => item.status === "enabled" && item.to ? (
-            <NavLink
-              key={item.key}
-              to={item.to}
-              title={item.hint || item.label}
-              className={() => "adminShellNavItem" + (isNavActive(location.pathname, item) ? " isActive" : "")}
-            >
-              <span>{item.label}</span>
-            </NavLink>
-          ) : (
-            <span key={item.key} className="adminShellNavItem adminShellNavItemDisabled" aria-disabled="true" title={item.hint || item.label}>
-              <span>{item.label}</span>
-            </span>
-          ))}
+        <nav className="adminShellNav" aria-label={localizedText(ADMIN_SHELL_LABELS.navigationAria, locale)}>
+          {ADMIN_NAV_ITEMS.map((item) => {
+            const label = navLabel(item, locale);
+            const hint = navHint(item, locale);
+
+            return item.status === "enabled" && item.to ? (
+              <NavLink
+                key={item.key}
+                to={item.to}
+                title={hint}
+                className={() => "adminShellNavItem" + (isNavActive(location.pathname, item) ? " isActive" : "")}
+              >
+                <span>{label}</span>
+              </NavLink>
+            ) : (
+              <span key={item.key} className="adminShellNavItem adminShellNavItemDisabled" aria-disabled="true" title={hint}>
+                <span>{label}</span>
+              </span>
+            );
+          })}
         </nav>
 
         <div className="adminShellMeta">
-          <div>Internal governance surface</div>
-          <strong>Read-only shell boundary</strong>
-          <div>Formal navigation</div>
-          <strong>Admin routes only</strong>
+          <div>{localizedText(ADMIN_SHELL_LABELS.meta.internalGovernanceSurface, locale)}</div>
+          <strong>{localizedText(ADMIN_SHELL_LABELS.meta.readOnlyShellBoundary, locale)}</strong>
+          <div>{localizedText(ADMIN_SHELL_LABELS.meta.formalNavigation, locale)}</div>
+          <strong>{localizedText(ADMIN_SHELL_LABELS.meta.adminRoutesOnly, locale)}</strong>
         </div>
 
-        <div className="adminShellFooterNote">Diagnostic and compatibility URLs stay URL-only until separately productized.</div>
+        <div className="adminShellFooterNote">{localizedText(ADMIN_SHELL_LABELS.meta.footerNote, locale)}</div>
       </aside>
 
       <div className="adminShellMainWrap">
@@ -90,17 +106,22 @@ export default function AdminLayout({ topBar, children }: AdminLayoutProps): Rea
             <div className="adminShellContext">{topBar.lead}</div>
           </div>
 
-          <div className="adminShellMeta adminShellTopMeta" aria-label="Admin route policy">
-            <div>Route family</div>
-            <strong>/admin/*</strong>
-            <div>Surface mode</div>
-            <strong>Governed readback</strong>
+          <div className="adminShellTopActions">
+            <div className="adminShellLocaleToggle shellLocaleToggle">
+              <LocaleToggle />
+            </div>
+            <div className="adminShellMeta adminShellTopMeta" aria-label="Admin route policy">
+              <div>{localizedText(ADMIN_SHELL_LABELS.meta.routeFamily, locale)}</div>
+              <strong>/admin/*</strong>
+              <div>{localizedText(ADMIN_SHELL_LABELS.meta.surfaceMode, locale)}</div>
+              <strong>{localizedText(ADMIN_SHELL_LABELS.meta.governedReadback, locale)}</strong>
+            </div>
           </div>
         </header>
 
-        <section className="adminShellBoundary" aria-label="Admin Console boundary">
-          <strong>Admin Console</strong>
-          <span>Internal governance surface. Read-only shell boundary. This shell does not create facts, open controlled execution, write value records, or write long-term field records.</span>
+        <section className="adminShellBoundary" aria-label={localizedText(ADMIN_SHELL_LABELS.boundaryAria, locale)}>
+          <strong>{localizedText(ADMIN_SHELL_LABELS.brand, locale)}</strong>
+          <span>{localizedText(ADMIN_SHELL_LABELS.meta.boundaryText, locale)}</span>
         </section>
 
         <main className="adminLayoutMain">{children}</main>
