@@ -1,5 +1,5 @@
 /* apps/web/src/styles/operatorPilotReadiness.css */
-/* Purpose: style the H63 Pilot Readiness read-only product surface. */
+/* Purpose: style the Pilot Readiness read-only product surface. */
 
 .operatorPilotReadiness {
   display: grid;
@@ -52,6 +52,26 @@
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 10px;
+}
+
+.operatorPilotReadiness__nonclaims {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.operatorPilotReadiness__nonclaims span {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  border: 1px solid #e4ebdd;
+  border-radius: 999px;
+  background: #f8faf5;
+  padding: 6px 10px;
+  color: #526151;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.25;
 }
 
 .operatorPilotReadiness__meta,

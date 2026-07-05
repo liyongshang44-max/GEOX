@@ -1,11 +1,28 @@
+// apps/web/src/views/CustomerOperationsIndexPage.tsx
 import React from "react";
 import { Link } from "react-router-dom";
 import { fetchCustomerOperations } from "../api/customerOperations";
 import { CustomerEmptyState } from "../components/customer";
+import { localizedText, useLocale } from "../lib/locale";
 import { buildCustomerOperationsIndexVm, filterCustomerOperations, type CustomerOperationStatusFilter, type CustomerOperationsIndexVm } from "../viewmodels/customerOperationsIndexVm";
 import "../styles/customerFields.css";
 
+const COPY = {
+  eyebrow: { zh: "GEOX / 作业", en: "GEOX / Operations" },
+  title: { zh: "作业列表", en: "Operations" },
+  loading: { zh: "作业列表加载中。", en: "Operations are loading." },
+  updatedAt: { zh: "数据更新时间", en: "Data updated at" },
+  noUpdatedAt: { zh: "暂无更新时间", en: "No update time" },
+  back: { zh: "返回总览", en: "Back to Dashboard" },
+  progress: { zh: "作业进展", en: "Operation Progress" },
+  helper: { zh: "点击作业进入作业报告。列表与作业报告使用同一客户状态口径。", en: "Open an operation to review its Operation Report. The list and report use the same customer status basis." },
+  filterAria: { zh: "作业状态筛选", en: "Operation status filter" },
+  completedAt: { zh: "完成时间", en: "Completed at" },
+  viewReport: { zh: "查看作业报告", en: "View Operation Report" },
+};
+
 export default function CustomerOperationsIndexPage(): React.ReactElement {
+  const { locale } = useLocale();
   const [vm, setVm] = React.useState<CustomerOperationsIndexVm | null>(null);
   const [selectedStatus, setSelectedStatus] = React.useState<CustomerOperationStatusFilter>("ALL");
 
@@ -26,26 +43,26 @@ export default function CustomerOperationsIndexPage(): React.ReactElement {
     <div className="customerPageGapMd customerIndexPage">
       <section className="customerCard customerIndexHero">
         <div>
-          <div className="customerEyebrow">GEOX / 作业列表</div>
-          <h2 className="customerTitle">作业列表</h2>
-          <p className="customerSubtitle">{vm?.subtitle ?? "作业列表加载中。"}</p>
-          <p className="customerMetricLabel">数据更新时间：{vm?.generatedAtText ?? "暂无更新时间"}</p>
+          <div className="customerEyebrow">{localizedText(COPY.eyebrow, locale)}</div>
+          <h2 className="customerTitle">{localizedText(COPY.title, locale)}</h2>
+          <p className="customerSubtitle">{vm?.subtitle ?? localizedText(COPY.loading, locale)}</p>
+          <p className="customerMetricLabel">{localizedText(COPY.updatedAt, locale)}：{vm?.generatedAtText ?? localizedText(COPY.noUpdatedAt, locale)}</p>
           {vm?.dataScopeNote ? <p className="customerScopeWarning">{vm.dataScopeNote}</p> : null}
         </div>
-        <Link className="customerButton" to="/customer/dashboard">返回总览</Link>
+        <Link className="customerButton" to="/customer/dashboard">{localizedText(COPY.back, locale)}</Link>
       </section>
 
       <section className="customerCard">
         <div className="customerCardHeaderRow">
           <div>
-            <h3 className="customerCardTitle">作业进展</h3>
-            <p className="customerMetricLabel">点击作业进入作业闭环报告。列表与作业报告使用同一客户状态口径。</p>
+            <h3 className="customerCardTitle">{localizedText(COPY.progress, locale)}</h3>
+            <p className="customerMetricLabel">{localizedText(COPY.helper, locale)}</p>
           </div>
           {vm ? <span className="customerPill">{vm.scopeBadgeText}</span> : null}
         </div>
 
         {vm ? (
-          <div className="customerFilterRow customerSpacingTopMd" role="tablist" aria-label="作业状态筛选">
+          <div className="customerFilterRow customerSpacingTopMd" role="tablist" aria-label={localizedText(COPY.filterAria, locale)}>
             {vm.filters.map((filter) => (
               <button
                 key={filter.key}
@@ -70,10 +87,10 @@ export default function CustomerOperationsIndexPage(): React.ReactElement {
                   {operation.evidenceExplanation ? <small>{operation.evidenceExplanation}</small> : null}
                 </div>
                 <div>
-                  <span>完成时间：{operation.completedAtText}</span>
+                  <span>{localizedText(COPY.completedAt, locale)}：{operation.completedAtText}</span>
                   <small>{operation.operationTypeText}</small>
                 </div>
-                <em>查看报告</em>
+                <em>{localizedText(COPY.viewReport, locale)}</em>
               </Link>
             ))}
           </div>

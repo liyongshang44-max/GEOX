@@ -1,10 +1,21 @@
+// apps/web/src/views/CustomerDashboardExportPage.tsx
 import React from "react";
 import { fetchCustomerDashboardAggregate } from "../api/customerReports";
-import { buildCustomerDashboardVm, type CustomerDashboardPageVm } from "../viewmodels/customerDashboardVm";
 import { DashboardExportBlocks } from "../components/customer/CustomerExportBlocks";
 import PrintReportScaffold from "../components/customer/PrintReportScaffold";
+import { localizedText, useLocale } from "../lib/locale";
+import { buildCustomerDashboardVm, type CustomerDashboardPageVm } from "../viewmodels/customerDashboardVm";
+
+const COPY = {
+  loading: { zh: "客户看板导出加载中...", en: "Dashboard export is loading..." },
+  failed: { zh: "客户看板导出加载失败", en: "Dashboard export failed to load" },
+  noData: { zh: "暂无数据", en: "No data" },
+  title: { zh: "客户看板报告", en: "Dashboard Report" },
+  subtitle: { zh: "客户经营总览打印版", en: "Dashboard print view" },
+};
 
 export default function CustomerDashboardExportPage(): React.ReactElement {
+  const { locale } = useLocale();
   const [vm, setVm] = React.useState<CustomerDashboardPageVm | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
@@ -21,7 +32,7 @@ export default function CustomerDashboardExportPage(): React.ReactElement {
       .catch((e: unknown) => {
         if (!alive) return;
         setVm(null);
-        setError(String(e instanceof Error ? e.message : "加载失败"));
+        setError(String(e instanceof Error ? e.message : localizedText(COPY.failed, locale)));
       })
       .finally(() => {
         if (!alive) return;
@@ -30,15 +41,15 @@ export default function CustomerDashboardExportPage(): React.ReactElement {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [locale]);
 
-  if (loading) return <div className="customerCard" style={{ padding: 16 }}>客户看板导出加载中...</div>;
-  if (error || !vm) return <div className="customerCard" style={{ padding: 16 }}>客户看板导出加载失败：{error || "暂无数据"}</div>;
+  if (loading) return <div className="customerCard" style={{ padding: 16 }}>{localizedText(COPY.loading, locale)}</div>;
+  if (error || !vm) return <div className="customerCard" style={{ padding: 16 }}>{localizedText(COPY.failed, locale)}：{error || localizedText(COPY.noData, locale)}</div>;
 
   return (
     <PrintReportScaffold
-      title="客户看板报告"
-      subtitle="客户经营总览打印版"
+      title={localizedText(COPY.title, locale)}
+      subtitle={localizedText(COPY.subtitle, locale)}
       generatedAt={vm.generatedAtText}
       backTo="/customer/dashboard"
     >

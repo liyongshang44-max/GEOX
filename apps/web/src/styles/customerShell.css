@@ -209,6 +209,39 @@
   min-width: 0;
 }
 
+.shellLocaleToggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.localeToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--customer-border);
+  border-radius: 999px;
+  background: #f8fafc;
+}
+
+.localeToggle__button {
+  min-height: 30px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 10px;
+  background: transparent;
+  color: var(--customer-muted);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.localeToggle__button.isActive {
+  background: #ffffff;
+  color: var(--customer-text);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, .12);
+}
+
 @media (max-width: 1120px) {
   .customerShellTopbar { grid-template-columns: 1fr; }
   .customerShellTitle { white-space: normal; overflow: visible; text-overflow: initial; }

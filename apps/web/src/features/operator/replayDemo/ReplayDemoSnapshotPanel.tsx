@@ -1,15 +1,20 @@
 // apps/web/src/features/operator/replayDemo/ReplayDemoSnapshotPanel.tsx
-// Purpose: render H61 snapshot provenance summary.
+// Purpose: render snapshot provenance summary.
 // Boundary: hashes are provenance metadata, not production certification.
 
 import React from "react";
+import { localizedText, useLocale } from "../../../lib/locale";
+import { OPERATOR_FORMAL_SURFACE_COPY } from "../../../lib/productSurfaceLabels";
 import { type ReplayDemoViewModel } from "./replayDemoViewModel";
 
 type ReplayDemoSnapshotPanelProps = {
   vm: ReplayDemoViewModel;
 };
 
+const replayCopy = OPERATOR_FORMAL_SURFACE_COPY.replayDemo;
+
 export default function ReplayDemoSnapshotPanel({ vm }: ReplayDemoSnapshotPanelProps): React.ReactElement {
+  const { locale } = useLocale();
   const snapshot = vm.snapshot;
   const rows = [
     ["source_snapshot_ref", snapshot.sourceSnapshotRef],
@@ -22,11 +27,11 @@ export default function ReplayDemoSnapshotPanel({ vm }: ReplayDemoSnapshotPanelP
     ["deterministic_hash", snapshot.deterministicHash],
   ];
   return (
-    <section className="operatorReplayDemo__panel operatorReplayDemo__snapshot" aria-label="Snapshot Source">
-      <div className="operatorReplayDemo__panelHeader"><p className="operatorReplayDemo__eyebrow">Snapshot Source</p><h2>Snapshot Source</h2></div>
-      <p>Hashes are provenance metadata, not production certification.</p>
+    <section className="operatorReplayDemo__panel operatorReplayDemo__snapshot" aria-label={localizedText(replayCopy.panels.snapshot, locale)}>
+      <div className="operatorReplayDemo__panelHeader"><p className="operatorReplayDemo__eyebrow">{localizedText(replayCopy.panels.snapshot, locale)}</p><h2>{localizedText(replayCopy.snapshotTitle, locale)}</h2></div>
+      <p>{locale === "en-US" ? "Hashes are provenance metadata, not production certification." : "哈希是来源元数据，不是生产认证。"}</p>
       <div className="operatorReplayDemo__table">
-        <div className="operatorReplayDemo__tableHeader"><span>Label</span><span>Value</span></div>
+        <div className="operatorReplayDemo__tableHeader"><span>{localizedText(replayCopy.table.label, locale)}</span><span>{localizedText(replayCopy.table.value, locale)}</span></div>
         {rows.map(([label, value]) => <div className="operatorReplayDemo__tableRow" key={label}><span>{label}</span><span>{value}</span></div>)}
       </div>
     </section>

@@ -29,6 +29,8 @@ import { type FieldRuntimeResidualLoadState } from "./fieldRuntimeResidualAdapte
 import { type FieldRuntimeScenarioLoadState } from "./fieldRuntimeScenarioAdapter";
 import { type FieldRuntimeViewModel } from "./fieldRuntimeViewModel";
 import { type FieldRuntimeWorkspaceLoadState } from "./fieldRuntimeWorkspaceAdapter";
+import { localizedText, useLocale } from "../../../lib/locale";
+import { OPERATOR_FORMAL_SURFACE_COPY } from "../../../lib/productSurfaceLabels";
 import "../../../styles/operatorFieldRuntime.css";
 
 type FieldRuntimeLayoutProps = {
@@ -55,11 +57,9 @@ type RenderTabContentArgs = {
   healthLoadState?: FieldRuntimeHealthLoadState;
 };
 
-function FieldRuntimeOverviewContent({
-  loadState,
-}: {
-  loadState: FieldRuntimeWorkspaceLoadState | undefined;
-}): React.ReactElement {
+const fieldCopy = OPERATOR_FORMAL_SURFACE_COPY.fieldRuntime;
+
+function FieldRuntimeOverviewContent({ loadState }: { loadState: FieldRuntimeWorkspaceLoadState | undefined }): React.ReactElement {
   return (
     <div className="operatorFieldRuntime__contentGrid" data-h60d="overview-state-content">
       <FieldRuntimeOverviewPanel loadState={loadState} />
@@ -72,11 +72,7 @@ function FieldRuntimeOverviewContent({
   );
 }
 
-function FieldRuntimeStateContent({
-  loadState,
-}: {
-  loadState: FieldRuntimeWorkspaceLoadState | undefined;
-}): React.ReactElement {
+function FieldRuntimeStateContent({ loadState }: { loadState: FieldRuntimeWorkspaceLoadState | undefined }): React.ReactElement {
   return (
     <div className="operatorFieldRuntime__contentGrid" data-h60d="state-content">
       <FieldRuntimeStatePanel loadState={loadState} mode="full" />
@@ -97,42 +93,15 @@ function renderTabContent({
   auditLoadState,
   healthLoadState,
 }: RenderTabContentArgs): React.ReactElement {
-  if (viewModel.routeKey === "overview") {
-    return <FieldRuntimeOverviewContent loadState={workspaceLoadState} />;
-  }
-
-  if (viewModel.routeKey === "state") {
-    return <FieldRuntimeStateContent loadState={workspaceLoadState} />;
-  }
-
-  if (viewModel.routeKey === "evidence") {
-    return <FieldRuntimeEvidenceTabPanel loadState={evidenceLoadState} />;
-  }
-
-  if (viewModel.routeKey === "forecast") {
-    return <FieldRuntimeForecastTabPanel loadState={forecastLoadState} />;
-  }
-
-  if (viewModel.routeKey === "scenario") {
-    return <FieldRuntimeScenarioTabPanel loadState={scenarioLoadState} />;
-  }
-
-  if (viewModel.routeKey === "residual") {
-    return <FieldRuntimeResidualTabPanel loadState={residualLoadState} />;
-  }
-
-  if (viewModel.routeKey === "calibration") {
-    return <FieldRuntimeCalibrationTabPanel loadState={calibrationLoadState} />;
-  }
-
-  if (viewModel.routeKey === "audit") {
-    return <FieldRuntimeAuditTabPanel loadState={auditLoadState} />;
-  }
-
-  if (viewModel.routeKey === "health") {
-    return <FieldRuntimeHealthTabPanel loadState={healthLoadState} />;
-  }
-
+  if (viewModel.routeKey === "overview") return <FieldRuntimeOverviewContent loadState={workspaceLoadState} />;
+  if (viewModel.routeKey === "state") return <FieldRuntimeStateContent loadState={workspaceLoadState} />;
+  if (viewModel.routeKey === "evidence") return <FieldRuntimeEvidenceTabPanel loadState={evidenceLoadState} />;
+  if (viewModel.routeKey === "forecast") return <FieldRuntimeForecastTabPanel loadState={forecastLoadState} />;
+  if (viewModel.routeKey === "scenario") return <FieldRuntimeScenarioTabPanel loadState={scenarioLoadState} />;
+  if (viewModel.routeKey === "residual") return <FieldRuntimeResidualTabPanel loadState={residualLoadState} />;
+  if (viewModel.routeKey === "calibration") return <FieldRuntimeCalibrationTabPanel loadState={calibrationLoadState} />;
+  if (viewModel.routeKey === "audit") return <FieldRuntimeAuditTabPanel loadState={auditLoadState} />;
+  if (viewModel.routeKey === "health") return <FieldRuntimeHealthTabPanel loadState={healthLoadState} />;
   return <FieldRuntimeTabStub viewModel={viewModel} />;
 }
 
@@ -147,6 +116,8 @@ export default function FieldRuntimeLayout({
   auditLoadState,
   healthLoadState,
 }: FieldRuntimeLayoutProps): React.ReactElement {
+  const { locale } = useLocale();
+
   return (
     <main
       className="operatorFieldRuntime"
@@ -161,54 +132,32 @@ export default function FieldRuntimeLayout({
       data-h62="runtime-health-product-surface"
       data-field-runtime-route={viewModel.routeKey}
     >
-      <header className="operatorFieldRuntime__header" aria-label="Field Runtime header">
+      <header className="operatorFieldRuntime__header" aria-label={localizedText(fieldCopy.title, locale)}>
         <div>
-          <p className="operatorFieldRuntime__eyebrow">Field Runtime</p>
-          <h1 className="operatorFieldRuntime__title">Field Runtime</h1>
-          <p className="operatorFieldRuntime__subtitle">Field runtime review surface</p>
+          <p className="operatorFieldRuntime__eyebrow">{localizedText(fieldCopy.eyebrow, locale)}</p>
+          <h1 className="operatorFieldRuntime__title">{localizedText(fieldCopy.title, locale)}</h1>
+          <p className="operatorFieldRuntime__subtitle">{localizedText(fieldCopy.subtitle, locale)}</p>
         </div>
 
-        <dl className="operatorFieldRuntime__meta" aria-label="Field Runtime route identity">
-          <div>
-            <dt>Field ID</dt>
-            <dd>{viewModel.fieldId}</dd>
-          </div>
-          <div>
-            <dt>Current route</dt>
-            <dd>{viewModel.currentRoute}</dd>
-          </div>
-          <div>
-            <dt>Runtime Mode</dt>
-            <dd>{viewModel.runtimeMode}</dd>
-          </div>
-          <div>
-            <dt>Read-only boundary</dt>
-            <dd>{viewModel.readOnly ? "true" : "false"}</dd>
-          </div>
+        <dl className="operatorFieldRuntime__meta" aria-label={locale === "en-US" ? "Field Runtime route identity" : "地块运行路由身份"}>
+          <div><dt>{localizedText(fieldCopy.meta.fieldId, locale)}</dt><dd>{viewModel.fieldId}</dd></div>
+          <div><dt>{localizedText(fieldCopy.meta.currentRoute, locale)}</dt><dd>{viewModel.currentRoute}</dd></div>
+          <div><dt>{localizedText(fieldCopy.meta.runtimeMode, locale)}</dt><dd>{viewModel.runtimeMode}</dd></div>
+          <div><dt>{localizedText(fieldCopy.meta.readOnlyBoundary, locale)}</dt><dd>{viewModel.readOnly ? "true" : "false"}</dd></div>
         </dl>
       </header>
 
       <FieldRuntimeBoundaryBanner />
 
-      <section className="operatorFieldRuntime__routeNotice" aria-label="Field Runtime route ownership">
+      <section className="operatorFieldRuntime__routeNotice" aria-label={localizedText(fieldCopy.routeOwnership, locale)}>
         <span>{FIELD_RUNTIME_CANONICAL_ROUTE_FAMILY}</span>
         <span>{FIELD_RUNTIME_LEGACY_ROUTE_FAMILY}</span>
       </section>
 
       <FieldRuntimeTabs viewModel={viewModel} />
 
-      <section className="operatorFieldRuntime__tabPanel" aria-label="Field Runtime tab panel">
-        {renderTabContent({
-          viewModel,
-          workspaceLoadState,
-          evidenceLoadState,
-          forecastLoadState,
-          scenarioLoadState,
-          residualLoadState,
-          calibrationLoadState,
-          auditLoadState,
-          healthLoadState,
-        })}
+      <section className="operatorFieldRuntime__tabPanel" aria-label={localizedText(fieldCopy.tabPanel, locale)}>
+        {renderTabContent({ viewModel, workspaceLoadState, evidenceLoadState, forecastLoadState, scenarioLoadState, residualLoadState, calibrationLoadState, auditLoadState, healthLoadState })}
       </section>
     </main>
   );

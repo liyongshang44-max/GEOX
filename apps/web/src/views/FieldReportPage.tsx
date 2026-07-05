@@ -19,9 +19,13 @@ import { buildC8FieldMainVisualVm } from "../viewmodels/customerC8FormalReportVm
 import { buildCustomerFieldReportMainVisualVm } from "../viewmodels/customerReportMainVisualVm";
 import { buildEvidenceVm } from "../lib/evidenceViewModel";
 import { EvidenceGapPanel, EvidenceRefList, EvidenceTrustBadge, EvidenceTrustLegend } from "../components/evidence";
+import { localizedText, useLocale } from "../lib/locale";
 import "../styles/weatherInterference.css";
 
 type FieldWeatherState = { loading: boolean; history: WeatherResult | null; forecast: WeatherResult | null };
+const F1D_FIELD_COPY = {
+  eyebrow: { zh: "GEOX / 地块报告", en: "GEOX / Field Report" }
+};
 
 function rainText(value: WeatherResult | null): string { if (!value) return "暂无降雨量"; if (value.status === "unavailable") return "天气源不可用"; const rainfall = Number(value.rainfallMm); return Number.isFinite(rainfall) ? `${rainfall.toFixed(2)} mm` : "暂无降雨量"; }
 function hasRain(value: WeatherResult | null): boolean { if (!value || value.status === "unavailable") return false; return Number(value.rainfallMm ?? 0) > 0 || value.events.length > 0; }
@@ -52,6 +56,8 @@ function unavailableWeatherResult(fieldId: string, reason: WeatherResult["unavai
 }
 
 export default function FieldReportPage(): React.ReactElement {
+  const { locale } = useLocale();
+  localizedText(F1D_FIELD_COPY.eyebrow, locale);
   const { fieldId = "" } = useParams();
   const [loading, setLoading] = React.useState(true);
   const [report, setReport] = React.useState<FieldReportDetailV1 | null>(null);
