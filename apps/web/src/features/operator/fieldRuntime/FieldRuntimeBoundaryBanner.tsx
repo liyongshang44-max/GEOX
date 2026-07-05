@@ -3,15 +3,16 @@
 // Boundary: this banner is informational and does not represent device connectivity or production operation.
 
 import React from "react";
-import { FIELD_RUNTIME_NONCLAIMS, FIELD_RUNTIME_READ_ONLY_BOUNDARY } from "./runtimeNonclaims";
+import { localizedText, useLocale } from "../../../lib/locale";
+import { OPERATOR_FORMAL_SURFACE_COPY } from "../../../lib/productSurfaceLabels";
 
 export default function FieldRuntimeBoundaryBanner(): React.ReactElement {
+  const { locale } = useLocale();
   return (
-    <section className="operatorFieldRuntime__banner" aria-label="Field Runtime boundary banner">
-      {FIELD_RUNTIME_NONCLAIMS.map((claim) => (
-        <strong className="operatorFieldRuntime__bannerItem" key={claim}>{claim}</strong>
+    <section className="operatorFieldRuntime__banner" aria-label={locale === "en-US" ? "Field Runtime boundary banner" : "地块运行边界横幅"}>
+      {OPERATOR_FORMAL_SURFACE_COPY.fieldRuntime.boundary.map((claim) => (
+        <strong className="operatorFieldRuntime__bannerItem" key={claim.en}>{localizedText(claim, locale)}</strong>
       ))}
-      <strong className="operatorFieldRuntime__bannerItem">{FIELD_RUNTIME_READ_ONLY_BOUNDARY}</strong>
     </section>
   );
 }
