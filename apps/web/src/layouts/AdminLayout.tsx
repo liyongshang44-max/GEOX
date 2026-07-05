@@ -55,6 +55,8 @@ function isNavActive(pathname: string, item: AdminNavItem): boolean {
 export default function AdminLayout({ topBar, children }: AdminLayoutProps): React.ReactElement {
   const location = useLocation();
   const { locale } = useLocale();
+  const topbarTitle = localizedText(ADMIN_SHELL_LABELS.topbar.title, locale);
+  const topbarLead = localizedText(ADMIN_SHELL_LABELS.topbar.lead, locale);
 
   return (
     <div className="adminShell" data-layout="admin-console-shell">
@@ -102,8 +104,8 @@ export default function AdminLayout({ topBar, children }: AdminLayoutProps): Rea
             <div className="adminShellBreadcrumbs">
               <AppBreadcrumb items={topBar.breadcrumbs} />
             </div>
-            <h1 className="adminShellTitle">{topBar.title}</h1>
-            <div className="adminShellContext">{topBar.lead}</div>
+            <h1 className="adminShellTitle">{topbarTitle}</h1>
+            <div className="adminShellContext">{topbarLead}</div>
           </div>
 
           <div className="adminShellTopActions">
