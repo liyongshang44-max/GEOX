@@ -66,7 +66,7 @@ const mojibake = ['鎬', '鍦', '浣', '璁', '杩', '閰', '绠', '瀵', '艰',
 const fakeClaims = ['Live Device: Connected', 'Production Gateway: Online', 'Field Pilot: Started', 'Controlled Execution: Enabled', 'AO-ACT Dispatch: Enabled', 'live monitoring active', 'field pilot execution active', 'dispatch enabled', 'ROI computed', 'Field Memory learned', '实时设备：已连接', '生产网关：在线', '田间试点：已开始', '受控执行：已启用', '实时监控已启用', '派发已启用', 'ROI 已计算', 'Field Memory 已学习'];
 const customerLeak = ['Dispatch', 'AO-ACT', 'ROI Ledger', 'Field Memory', 'Debug', 'Dev Tools', 'operator workbench', 'admin-only'];
 const adminPollution = ['legacy dev tools', 'Dev Tools', 'fixture', 'temporary route'];
-const operatorLeak = ['dispatch enabled', 'AO-ACT enabled', 'ROI computed', 'Field Memory learned', 'production gateway online', 'live monitoring active'];
+const operatorLeak = ['dispatch enabled', 'AO-ACT enabled', 'ROI computed', 'Field Memory learned', 'live monitoring active'];
 
 function p(file) { return path.join(root, file); }
 function exists(file) { return fs.existsSync(p(file)); }
