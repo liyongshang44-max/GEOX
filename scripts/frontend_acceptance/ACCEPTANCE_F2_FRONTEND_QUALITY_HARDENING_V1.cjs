@@ -111,6 +111,7 @@ function productText() { return [files.customerLayout, files.operatorLayout, fil
 function customerText() { return [files.customerLayout, files.customerLabels].filter(exists).map(read).map(stripComments).join('\n'); }
 function adminText() { return [files.adminLayout, files.labels].filter(exists).map(read).map(stripComments).join('\n'); }
 function operatorText() { return [files.operatorLayout, files.labels].filter(exists).map(read).map(stripComments).join('\n'); }
+function acceptanceReadOnlyText() { return read(files.acceptance).replaceAll("'fetch('", "'fetch-token'").replaceAll("'listen('", "'listen-token'"); }
 
 try {
   requiredDocs.forEach((file) => ok('exists:' + file, exists(file), { file }));
@@ -168,7 +169,8 @@ try {
   ok('admin_formal_nav_pollution_absent', hitsI(adminText(), adminPollution).length === 0, { hits: hitsI(adminText(), adminPollution) });
   ok('operator_fake_capability_leakage_absent', hitsI(operatorText(), operatorLeak).length === 0, { hits: hitsI(operatorText(), operatorLeak) });
 
-  ok('acceptance_is_static_repo_read_only', includesAll(read(files.acceptance), ['node:fs', 'node:path']) && !read(files.acceptance).includes('fetch(') && !read(files.acceptance).includes('listen('));
+  const acceptanceText = acceptanceReadOnlyText();
+  ok('acceptance_is_static_repo_read_only', includesAll(acceptanceText, ['node:fs', 'node:path']) && !acceptanceText.includes('fetch(') && !acceptanceText.includes('listen('));
   ok('docs_no_runtime_claims', includesAll(docs, ['No full WCAG certification', 'No new package dependency']) && docs.includes('No runtime capability claim'));
 
   console.log(JSON.stringify({
