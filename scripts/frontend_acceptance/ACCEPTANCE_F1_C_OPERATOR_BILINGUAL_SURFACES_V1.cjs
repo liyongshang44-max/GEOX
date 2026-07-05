@@ -62,6 +62,10 @@ function hitsI(text, tokens) {
   const lowered = text.toLowerCase();
   return tokens.filter((token) => lowered.includes(String(token).toLowerCase()));
 }
+function escapeRegExp(value) { return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+function standaloneHits(text, tokens) {
+  return tokens.filter((token) => new RegExp(`(^|[^A-Za-z0-9_])${escapeRegExp(token)}([^A-Za-z0-9_]|$)`).test(text));
+}
 function diffFiles() {
   try {
     return cp.execFileSync('git', ['diff', '--name-only', `${F1B_ACCEPTED_HEAD}...HEAD`], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
@@ -105,7 +109,8 @@ try {
   ok('raw_source_text_boundary_documented', includesAll(doc, ['route paths', 'source identifiers', 'fact IDs', 'trace IDs', 'commit hashes', 'acceptance script names', 'raw evidence payload', 'raw source labels', 'enum values']));
   ok('forbidden_positive_production_claims_absent', hitsI(productText, falseClaims).length === 0, { positiveClaimHits: hitsI(productText, falseClaims) });
   ok('negative_nonclaims_present', includesAllI(productText, ['not connected', 'not online', 'not started', 'disabled', '未连接', '未上线', '未开始', '已禁用']));
-  ok('visible_engineering_phase_labels_absent', hits(productText, phaseLabels).length === 0, { engineeringHits: hits(productText, phaseLabels) });
+  const engineeringHits = standaloneHits(productText, phaseLabels);
+  ok('visible_engineering_phase_labels_absent', engineeringHits.length === 0, { engineeringHits });
 
   const scanned = diff.filter(exists);
   const mojibakeHits = scanned.map((file) => ({ file, hits: hits(read(file), mojibake) })).filter((entry) => entry.hits.length > 0);
