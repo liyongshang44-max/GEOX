@@ -3,13 +3,11 @@
 
 ## Purpose
 
-Locale Readiness Register records the current bilingual infrastructure, the known bilingual copy gaps, the translation boundary, and the F1 scope seed.
+Locale Readiness Register records the current bilingual infrastructure, known bilingual copy gaps, translation boundary, and F1 scope seed.
 
 F0-A does not repair locale support.
 
 ## Existing facts
-
-The current frontend has a locale skeleton:
 
 ```text
 Locale skeleton exists.
@@ -24,8 +22,6 @@ App root is already wrapped by LocaleProvider.
 These facts describe infrastructure presence only. They do not mean bilingual product support is complete.
 
 ## Current gaps
-
-Known locale readiness gaps:
 
 ```text
 Language toggle is not established as a formal shell control.
@@ -42,8 +38,6 @@ Some static Chinese copy remains outside locale helpers.
 ```
 
 ## F1 scope seed
-
-F1 should repair locale readiness in this order:
 
 ```text
 F1-A Locale Infrastructure Hardening
@@ -82,7 +76,6 @@ raw_payload
 contract kind
 route path
 API field name
-backend-returned domain object value
 audit hash
 determinism hash
 decision_cycle_id
@@ -100,6 +93,3 @@ Locale repair does not translate source identifiers.
 Locale repair does not convert replay-backed demo into live production.
 Locale repair does not change backend API.
 Locale repair does not change contracts.
-Locale repair does not change route topology.
-Locale repair does not connect live devices.
-Locale repair does not make production gateway online.
