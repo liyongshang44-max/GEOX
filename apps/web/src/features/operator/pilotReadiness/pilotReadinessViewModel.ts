@@ -1,5 +1,5 @@
 // apps/web/src/features/operator/pilotReadiness/pilotReadinessViewModel.ts
-// Purpose: build H63 Pilot Readiness local metadata from frozen P53/P54 gate results.
+// Purpose: build Pilot Readiness local metadata from frozen planning and readiness gate results.
 // Boundary: no fetch, no backend endpoint, no DB read, and no write surface.
 
 export type PilotReadinessRow = {
@@ -21,34 +21,34 @@ export type PilotReadinessViewModel = {
 };
 
 const p53Rows: PilotReadinessRow[] = [
-  { label: "P53 result", value: "PLAN_READY_WITH_LIMITATIONS" },
-  { label: "field_pilot_plan_allowed", value: "true" },
-  { label: "field_pilot_execution_allowed", value: "false" },
-  { label: "p54_readiness_review_allowed", value: "true" },
-  { label: "P53 meaning", value: "planning gate only" },
+  { label: "Planning result", value: "PLAN_READY_WITH_LIMITATIONS" },
+  { label: "Pilot plan allowed", value: "true" },
+  { label: "Pilot field run allowed", value: "false" },
+  { label: "Readiness review allowed", value: "true" },
+  { label: "Meaning", value: "planning gate only" },
 ];
 
 const p54Rows: PilotReadinessRow[] = [
-  { label: "P54 result", value: "READY_FOR_RUNTIME_HEALTH_SERVICE_GATE_WITH_LIMITATIONS" },
-  { label: "p55_runtime_health_service_gate_allowed", value: "true" },
-  { label: "field_pilot_execution_allowed", value: "false" },
-  { label: "real_device_deployed", value: "false" },
-  { label: "production_gateway_online", value: "false" },
+  { label: "Readiness result", value: "READY_FOR_RUNTIME_HEALTH_SERVICE_GATE_WITH_LIMITATIONS" },
+  { label: "Runtime health service gate allowed", value: "true" },
+  { label: "Pilot field run allowed", value: "false" },
+  { label: "Real device deployed", value: "false" },
+  { label: "Production gateway online", value: "false" },
 ];
 
 const readinessRows: PilotReadinessRow[] = [
-  { label: "R1 baseline_closure_health", value: "reviewed" },
-  { label: "R2 p53_closure_integrity", value: "reviewed" },
-  { label: "R3 p53_acceptance_health", value: "reviewed" },
-  { label: "R4 p53_plan_gate_health", value: "reviewed" },
-  { label: "R5 p53_execution_forbidden_health", value: "reviewed" },
-  { label: "R6 candidate_site_scope_health", value: "reviewed" },
-  { label: "R7 evidence_protocol_health", value: "reviewed" },
-  { label: "R8 device_gateway_readiness_plan_health", value: "reviewed" },
-  { label: "R9 human_role_and_responsibility_health", value: "reviewed" },
-  { label: "R10 safety_stop_and_rollback_health", value: "reviewed" },
-  { label: "R11 control_to_ao_act_boundary_health", value: "reviewed" },
-  { label: "R12 p55_runtime_health_service_gate_readiness", value: "reviewed" },
+  { label: "Baseline closure health", value: "reviewed" },
+  { label: "Plan closure integrity", value: "reviewed" },
+  { label: "Acceptance health", value: "reviewed" },
+  { label: "Plan gate health", value: "reviewed" },
+  { label: "Field run forbidden health", value: "reviewed" },
+  { label: "Candidate site scope health", value: "reviewed" },
+  { label: "Evidence protocol health", value: "reviewed" },
+  { label: "Device gateway readiness plan health", value: "reviewed" },
+  { label: "Human role and responsibility health", value: "reviewed" },
+  { label: "Safety stop and rollback health", value: "reviewed" },
+  { label: "Control boundary health", value: "reviewed" },
+  { label: "Runtime health service gate readiness", value: "reviewed" },
 ];
 
 const capabilityRows: PilotReadinessRow[] = [
@@ -56,11 +56,11 @@ const capabilityRows: PilotReadinessRow[] = [
   { label: "Readiness Review Gate", value: "available" },
   { label: "Runtime Health Service Gate", value: "allowed next" },
   { label: "Field Pilot Execution", value: "not allowed" },
-  { label: "AO-ACT Task Creation", value: "not allowed" },
+  { label: "Field Operation Task Creation", value: "not allowed" },
   { label: "Dispatch", value: "not allowed" },
   { label: "ROI", value: "not allowed" },
   { label: "Field Memory", value: "not allowed" },
-  { label: "Full Runtime v1 Freeze", value: "not allowed" },
+  { label: "Full Runtime Freeze", value: "not allowed" },
 ];
 
 const traceabilityRows: PilotReadinessRow[] = [
@@ -77,17 +77,17 @@ const boundaryRows: PilotReadinessRow[] = [
   { label: "real_device_deployed", value: "false" },
   { label: "production_gateway_online", value: "false" },
   { label: "live_runtime_monitoring_active", value: "false" },
-  { label: "ao_act_task_created", value: "false" },
+  { label: "field_operation_task_created", value: "false" },
   { label: "dispatch_enabled", value: "false" },
   { label: "execution_happened", value: "false" },
   { label: "roi_computed", value: "false" },
   { label: "field_memory_learned", value: "false" },
-  { label: "full_runtime_v1_frozen", value: "false" },
+  { label: "full_runtime_frozen", value: "false" },
   { label: "backend_contract_changed", value: "false" },
 ];
 
 const nextRows: PilotReadinessRow[] = [
-  { label: "Next allowed gate", value: "P55 Runtime Health Service Gate" },
+  { label: "Next allowed gate", value: "Runtime Health Service Gate" },
   { label: "Does not mean", value: "field pilot execution" },
 ];
 
