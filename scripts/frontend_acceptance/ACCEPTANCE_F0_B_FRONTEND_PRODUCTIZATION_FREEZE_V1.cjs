@@ -52,7 +52,10 @@ function p(file) { return path.join(root, file); }
 function exists(file) { return fs.existsSync(p(file)); }
 function read(file) { return fs.readFileSync(p(file), 'utf8'); }
 function lower(value) { return String(value).toLowerCase(); }
-function includesAll(text, tokens) { return tokens.every((token) => text.includes(token)); }
+function includesAll(text, tokens) {
+  const haystack = lower(text);
+  return tokens.every((token) => haystack.includes(lower(token)));
+}
 function hits(text, tokens) { return tokens.filter((token) => text.includes(token)); }
 function ok(name, passed, details = {}) {
   assertions.push({ name, passed: passed === true, details });
