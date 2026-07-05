@@ -1,42 +1,52 @@
 // apps/web/src/layouts/CustomerLayout.tsx
 import React from "react";
 import { Navigate, NavLink, useLocation } from "react-router-dom";
-import { CUSTOMER_SHELL_LABELS } from "../lib/customerLabels";
 import { fetchSessionMe, type SessionMe } from "../api/session";
+import LocaleToggle from "../components/common/LocaleToggle";
 import RuntimeTextGuard from "../components/common/RuntimeTextGuard";
+import { localizedText, useLocale, type LocaleCode } from "../lib/locale";
+import { CUSTOMER_SHELL_LABELS, type ShellNavCopy } from "../lib/productSurfaceLabels";
 
 type CustomerLayoutProps = { children: React.ReactNode };
 
-type CustomerNavItem = { key: string; label: string; to?: string; hint?: string; disabled?: boolean };
+type CustomerNavItem = { key: string; copy: ShellNavCopy; to?: string; disabled?: boolean };
 
 const CUSTOMER_NAV_ITEMS: CustomerNavItem[] = [
-  { key: "dashboard", label: CUSTOMER_SHELL_LABELS.navDashboard, to: "/customer/dashboard" },
-  { key: "fields", label: CUSTOMER_SHELL_LABELS.navFields, to: "/customer/fields", hint: "查看授权地块" },
-  { key: "operations", label: CUSTOMER_SHELL_LABELS.navOperations, to: "/customer/operations", hint: "查看作业进展" },
-  { key: "reports", label: CUSTOMER_SHELL_LABELS.navReports, to: "/customer/reports", hint: "查看客户报告" },
-  { key: "export", label: CUSTOMER_SHELL_LABELS.navExport, to: "/customer/export", hint: "导出客户报告" },
+  { key: "dashboard", copy: CUSTOMER_SHELL_LABELS.nav.dashboard, to: "/customer/dashboard" },
+  { key: "fields", copy: CUSTOMER_SHELL_LABELS.nav.fields, to: "/customer/fields" },
+  { key: "operations", copy: CUSTOMER_SHELL_LABELS.nav.operations, to: "/customer/operations" },
+  { key: "reports", copy: CUSTOMER_SHELL_LABELS.nav.reports, to: "/customer/reports" },
+  { key: "export", copy: CUSTOMER_SHELL_LABELS.nav.export, to: "/customer/export" },
 ];
 
-function resolvePageTitle(pathname: string): string {
-  if (pathname === "/customer/dashboard") return "经营总览";
-  if (pathname === "/customer/export") return "报告导出";
-  if (pathname === "/customer/reports") return "报告";
-  if (pathname === "/customer/fields" || pathname === "/customer/fields/index") return "地块";
-  if (pathname === "/customer/operations" || pathname === "/customer/operations/index") return "作业";
-  if (pathname.indexOf("/customer/fields/") >= 0) return "地块报告";
-  if (pathname.indexOf("/customer/operations/") >= 0) return "作业报告";
-  return "经营总览";
+function labelOf(copy: ShellNavCopy, locale: LocaleCode): string {
+  return localizedText(copy.label, locale);
 }
 
-function resolveSubtitle(pathname: string): string {
-  if (pathname === "/customer/dashboard") return "查看授权范围内的经营概况、近期进展与可交付报告。";
-  if (pathname === "/customer/fields" || pathname === "/customer/fields/index") return "查看授权地块、地块报告与当前可展示的经营状态。";
-  if (pathname === "/customer/operations" || pathname === "/customer/operations/index") return "查看近期作业进展、验收状态与作业报告。";
-  if (pathname === "/customer/reports") return "汇总查看经营总览、地块报告、作业报告与导出入口。";
-  if (pathname === "/customer/export") return "导出客户可见范围内的经营报告。";
-  if (pathname.indexOf("/customer/fields/") >= 0) return "查看地块报告、近期进展与客户可见的经营状态。";
-  if (pathname.indexOf("/customer/operations/") >= 0) return "查看作业进展、验收状态、证据摘要与作业报告。";
-  return "查看客户可见范围内的报告视图。";
+function hintOf(copy: ShellNavCopy, locale: LocaleCode): string {
+  return copy.hint ? localizedText(copy.hint, locale) : localizedText(copy.label, locale);
+}
+
+function resolvePageTitle(pathname: string, locale: LocaleCode): string {
+  if (pathname === "/customer/dashboard") return localizedText(CUSTOMER_SHELL_LABELS.titles.dashboard, locale);
+  if (pathname === "/customer/export") return localizedText(CUSTOMER_SHELL_LABELS.titles.export, locale);
+  if (pathname === "/customer/reports") return localizedText(CUSTOMER_SHELL_LABELS.titles.reports, locale);
+  if (pathname === "/customer/fields" || pathname === "/customer/fields/index") return localizedText(CUSTOMER_SHELL_LABELS.titles.fields, locale);
+  if (pathname === "/customer/operations" || pathname === "/customer/operations/index") return localizedText(CUSTOMER_SHELL_LABELS.titles.operations, locale);
+  if (pathname.indexOf("/customer/fields/") >= 0) return localizedText(CUSTOMER_SHELL_LABELS.titles.fieldReport, locale);
+  if (pathname.indexOf("/customer/operations/") >= 0) return localizedText(CUSTOMER_SHELL_LABELS.titles.operationReport, locale);
+  return localizedText(CUSTOMER_SHELL_LABELS.titles.dashboard, locale);
+}
+
+function resolveSubtitle(pathname: string, locale: LocaleCode): string {
+  if (pathname === "/customer/dashboard") return localizedText(CUSTOMER_SHELL_LABELS.subtitles.dashboard, locale);
+  if (pathname === "/customer/fields" || pathname === "/customer/fields/index") return localizedText(CUSTOMER_SHELL_LABELS.subtitles.fields, locale);
+  if (pathname === "/customer/operations" || pathname === "/customer/operations/index") return localizedText(CUSTOMER_SHELL_LABELS.subtitles.operations, locale);
+  if (pathname === "/customer/reports") return localizedText(CUSTOMER_SHELL_LABELS.subtitles.reports, locale);
+  if (pathname === "/customer/export") return localizedText(CUSTOMER_SHELL_LABELS.subtitles.export, locale);
+  if (pathname.indexOf("/customer/fields/") >= 0) return localizedText(CUSTOMER_SHELL_LABELS.subtitles.fieldReport, locale);
+  if (pathname.indexOf("/customer/operations/") >= 0) return localizedText(CUSTOMER_SHELL_LABELS.subtitles.operationReport, locale);
+  return localizedText(CUSTOMER_SHELL_LABELS.subtitles.fallback, locale);
 }
 
 function isItemActive(pathname: string, key: string): boolean {
@@ -52,18 +62,41 @@ function roleOf(session: SessionMe | null): string {
   return String(session?.role ?? session?.roles?.[0] ?? "").trim().toLowerCase();
 }
 
-function accountScopeCopy(session: SessionMe | null): { scopeLine: string; statusLine: string } {
-  if (!session) return { scopeLine: "授权范围待确认", statusLine: "正在读取权限" };
+function accountScopeCopy(session: SessionMe | null, locale: LocaleCode): { scopeLine: string; statusLine: string } {
+  if (!session) {
+    return {
+      scopeLine: localizedText(CUSTOMER_SHELL_LABELS.account.scopePending, locale),
+      statusLine: localizedText(CUSTOMER_SHELL_LABELS.account.readingAccessScope, locale),
+    };
+  }
+
   const count = session.allowed_field_ids.length;
   const scopeMode = String(session.customer_scope?.scope_mode ?? "").toUpperCase();
-  if (scopeMode === "INTERNAL_PREVIEW" || (roleOf(session) !== "client" && count === 0)) return { scopeLine: "预览范围", statusLine: "全域预览" };
-  if (roleOf(session) === "client" && count === 0) return { scopeLine: "暂无授权地块", statusLine: "请联系运营开通" };
-  return { scopeLine: `授权地块 ${count} 块`, statusLine: "授权范围已确认" };
+
+  if (scopeMode === "INTERNAL_PREVIEW" || (roleOf(session) !== "client" && count === 0)) {
+    return {
+      scopeLine: localizedText(CUSTOMER_SHELL_LABELS.account.previewScope, locale),
+      statusLine: localizedText(CUSTOMER_SHELL_LABELS.account.globalPreview, locale),
+    };
+  }
+
+  if (roleOf(session) === "client" && count === 0) {
+    return {
+      scopeLine: localizedText(CUSTOMER_SHELL_LABELS.account.noAuthorizedFields, locale),
+      statusLine: localizedText(CUSTOMER_SHELL_LABELS.account.contactOperations, locale),
+    };
+  }
+
+  return {
+    scopeLine: locale === "en-US" ? `${count} authorized fields` : `授权地块 ${count} 块`,
+    statusLine: localizedText(CUSTOMER_SHELL_LABELS.account.authorizedScopeConfirmed, locale),
+  };
 }
 
 export default function CustomerLayout({ children }: CustomerLayoutProps): React.ReactElement {
   const location = useLocation();
-  const title = resolvePageTitle(location.pathname);
+  const { locale } = useLocale();
+  const title = resolvePageTitle(location.pathname, locale);
   const [session, setSession] = React.useState<SessionMe | null>(null);
 
   React.useEffect(() => {
@@ -72,8 +105,8 @@ export default function CustomerLayout({ children }: CustomerLayoutProps): React
     return () => { alive = false; };
   }, []);
 
-  const accountName = session?.display_name || session?.user_id || CUSTOMER_SHELL_LABELS.accountFallback;
-  const accountScope = accountScopeCopy(session);
+  const accountName = session?.display_name || session?.user_id || localizedText(CUSTOMER_SHELL_LABELS.account.fallback, locale);
+  const accountScope = accountScopeCopy(session, locale);
   const isExportRoute = location.pathname === "/customer/export" || location.pathname.endsWith("/export");
 
   if (location.pathname === "/customer/fields/index") return <Navigate to="/customer/fields" replace />;
@@ -83,41 +116,49 @@ export default function CustomerLayout({ children }: CustomerLayoutProps): React
   return (
     <div className="customerShell" data-layout="customer-shell">
       <RuntimeTextGuard />
-      <aside className="customerShellSidebar" aria-label="客户导航">
-        <div className="customerShellBrand" aria-label={CUSTOMER_SHELL_LABELS.brand}>
+      <aside className="customerShellSidebar" aria-label={localizedText(CUSTOMER_SHELL_LABELS.navigationAria, locale)}>
+        <div className="customerShellBrand" aria-label={localizedText(CUSTOMER_SHELL_LABELS.brand, locale)}>
           <span className="customerShellLogoMark" aria-hidden="true" />
-          <span>{CUSTOMER_SHELL_LABELS.brand}</span>
+          <span>{localizedText(CUSTOMER_SHELL_LABELS.brand, locale)}</span>
         </div>
         <nav className="customerShellNav">
-          {CUSTOMER_NAV_ITEMS.map((item) => item.disabled || !item.to ? (
-            <span key={item.key} title={item.hint || item.label} className="customerShellNavItem customerShellNavItemDisabled" aria-disabled="true">
-              <span>{item.label}</span>
-            </span>
-          ) : (
-            <NavLink key={item.key} to={item.to} title={item.hint || item.label} className={() => "customerShellNavItem" + (isItemActive(location.pathname, item.key) ? " isActive" : "")}>
-              <span>{item.label}</span>
-            </NavLink>
-          ))}
+          {CUSTOMER_NAV_ITEMS.map((item) => {
+            const label = labelOf(item.copy, locale);
+            const hint = hintOf(item.copy, locale);
+
+            return item.disabled || !item.to ? (
+              <span key={item.key} title={hint} className="customerShellNavItem customerShellNavItemDisabled" aria-disabled="true">
+                <span>{label}</span>
+              </span>
+            ) : (
+              <NavLink key={item.key} to={item.to} title={hint} className={() => "customerShellNavItem" + (isItemActive(location.pathname, item.key) ? " isActive" : "")}>
+                <span>{label}</span>
+              </NavLink>
+            );
+          })}
         </nav>
         <div className="customerShellMeta">
-          <div>客户账户</div>
+          <div>{localizedText(CUSTOMER_SHELL_LABELS.account.label, locale)}</div>
           <strong>{accountName}</strong>
           <div>{accountScope.scopeLine}</div>
           <strong>{accountScope.statusLine}</strong>
         </div>
-        <div className="customerShellFooterNote">{CUSTOMER_SHELL_LABELS.sidebarFooter}</div>
+        <div className="customerShellFooterNote">{localizedText(CUSTOMER_SHELL_LABELS.sidebarFooter, locale)}</div>
       </aside>
       <div className="customerShellMainWrap">
         <header className="customerShellTopbar">
           <div className="customerShellHeading">
             <h1 className="customerShellTitle">{title}</h1>
-            <div className="customerShellContext">{resolveSubtitle(location.pathname)}</div>
+            <div className="customerShellContext">{resolveSubtitle(location.pathname, locale)}</div>
           </div>
           <div className="customerShellTopActions">
+            <div className="customerShellLocaleToggle shellLocaleToggle">
+              <LocaleToggle />
+            </div>
             <input
               className="customerShellSearch"
-              placeholder={CUSTOMER_SHELL_LABELS.searchPlaceholder}
-              aria-label="客户侧搜索暂未开放"
+              placeholder={localizedText(CUSTOMER_SHELL_LABELS.searchPlaceholder, locale)}
+              aria-label={localizedText(CUSTOMER_SHELL_LABELS.searchAria, locale)}
               disabled
             />
             <span className="customerShellAccountBadge" aria-hidden="true" />
