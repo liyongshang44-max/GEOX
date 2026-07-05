@@ -76,9 +76,17 @@ function isBlocked(file) { return blockedExactFiles.has(file) || blockedPrefixes
 function stripCommentsAndDataAttributes(text) {
   return text.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/data-[\w-]+="[^"]*"/g, '').replace(/data-[\w-]+='[^']*'/g, '');
 }
+function operatorLabelText() {
+  const labels = read(files.labels);
+  const marker = 'export const OPERATOR_FORMAL_SURFACE_COPY';
+  const start = labels.indexOf(marker);
+  return start >= 0 ? labels.slice(start) : labels;
+}
 function visibleProductCopyText() {
-  return [files.overview, files.fieldLayout, files.fieldTabs, files.fieldBoundary, files.replayPage, files.replayHero, files.replayBoundary, files.replaySnapshot, files.replayGatewayPath, files.replayDeviceEvidence, files.replayStandards, files.replayTraceability, files.pilotPage, files.labels]
-    .filter(exists).map((file) => stripCommentsAndDataAttributes(read(file))).join('\n');
+  return [files.overview, files.fieldLayout, files.fieldTabs, files.fieldBoundary, files.replayPage, files.replayHero, files.replayBoundary, files.replaySnapshot, files.replayGatewayPath, files.replayDeviceEvidence, files.replayStandards, files.replayTraceability, files.pilotPage]
+    .filter(exists).map((file) => stripCommentsAndDataAttributes(read(file)))
+    .concat(stripCommentsAndDataAttributes(operatorLabelText()))
+    .join('\n');
 }
 
 try {
