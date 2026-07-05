@@ -84,6 +84,9 @@ function operatorRegistryText() {
 function visibleText() {
   return [files.overview, files.fieldLayout, files.fieldTabs, files.fieldBoundary, files.replayPage, files.replayHero, files.replayBoundary, files.replaySnapshot, files.replayGatewayPath, files.replayDeviceEvidence, files.replayStandards, files.replayTraceability, files.pilotPage].filter(exists).map((file) => strip(read(file))).concat(strip(operatorRegistryText())).join('\n');
 }
+function shouldScanForMojibake(file) {
+  return file !== files.acceptance && file !== files.f1bAcceptance;
+}
 
 try {
   [files.doc, files.acceptance, files.f1bAcceptance, files.fieldLayout, files.replayPage, files.pilotPage, files.gatewayWrapper, files.overview, files.labels].forEach((file) => ok('exists:' + file, exists(file), { file }));
@@ -112,9 +115,9 @@ try {
   const engineeringHits = standaloneHits(productText, phaseLabels);
   ok('visible_engineering_phase_labels_absent', engineeringHits.length === 0, { engineeringHits });
 
-  const scanned = diff.filter(exists);
+  const scanned = diff.filter((file) => exists(file) && shouldScanForMojibake(file));
   const mojibakeHits = scanned.map((file) => ({ file, hits: hits(read(file), mojibake) })).filter((entry) => entry.hits.length > 0);
-  ok('no_mojibake_in_f1c_files', mojibakeHits.length === 0, { mojibakeHits });
+  ok('no_mojibake_in_f1c_files', mojibakeHits.length === 0, { mojibakeHits, scanned });
   const cssHits = hits(scanned.filter((file) => file.endsWith('.css')).map(read).join('\n'), cssForbidden);
   ok('css_runtime_status_tokens_absent', cssHits.length === 0, { cssHits });
   ok('doc_required_sections_present', includesAll(doc, ['Phase', 'Purpose', 'Preconditions', 'Allowed files', 'Forbidden files', 'Operator surface scope', 'Operator Runtime Overview bilingual scope', 'Field Runtime bilingual scope', 'Replay Demo bilingual scope', 'Pilot Readiness bilingual scope', 'Raw/source text boundary', 'Nonclaim translation boundary', 'Engineering phase label guard', 'Acceptance', 'Non-goals', 'Next phase', 'F1-C only covers Operator formal surfaces.', 'F1-C does not cover Customer or Admin.', 'F1-C does not translate raw evidence or identifiers.', 'F1-C does not change route topology.', 'F1-C does not change runtime semantics.', 'F1-C does not claim live runtime readiness.']), { file: files.doc });
