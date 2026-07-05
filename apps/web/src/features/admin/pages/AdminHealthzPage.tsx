@@ -1,6 +1,19 @@
 // apps/web/src/features/admin/pages/AdminHealthzPage.tsx
+import React from "react";
 import AdminPanel from "../components/AdminPanel";
+import { localizedText, useLocale } from "../../../lib/locale";
+
+const COPY = {
+  readback: { zh: "回查", en: "Readback" },
+  title: { zh: "运行健康", en: "Runtime Health" },
+  lead: { zh: "只读状态页。", en: "Read-only status page." },
+  panel: { zh: "运行健康标签", en: "Runtime Health labels" },
+  system: { zh: "系统健康", en: "System health" },
+  service: { zh: "服务状态", en: "Service status" },
+  unavailable: { zh: "不可用", en: "Unavailable" },
+};
 
 export default function AdminHealthzPage(): React.ReactElement {
-  return <main className="adminControlPlanePage"><header className="adminControlPlaneHero"><p className="adminPill">Readback / 回查</p><h1>Runtime Health / 运行健康</h1><p>Read-only status page / 只读状态页。</p></header><AdminPanel title="Runtime Health labels / 运行健康标签"><ul className="adminList"><li>system health / 系统健康</li><li>service status / 服务状态</li><li>Unavailable / 不可用</li></ul></AdminPanel></main>;
+  const { locale } = useLocale();
+  return <main className="adminControlPlanePage"><header className="adminControlPlaneHero"><p className="adminPill">{localizedText(COPY.readback, locale)}</p><h1>{localizedText(COPY.title, locale)}</h1><p>{localizedText(COPY.lead, locale)}</p></header><AdminPanel title={localizedText(COPY.panel, locale)}><ul className="adminList"><li>{localizedText(COPY.system, locale)}</li><li>{localizedText(COPY.service, locale)}</li><li>{localizedText(COPY.unavailable, locale)}</li></ul></AdminPanel></main>;
 }
