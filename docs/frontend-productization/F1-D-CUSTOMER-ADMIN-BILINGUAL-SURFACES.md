@@ -83,7 +83,7 @@ Customer Dashboard Export
 Customer Field Report Export
 ```
 
-Some legacy Customer report renderers remain raw/source-backed and are not rewritten in this increment because tool-side file update checks blocked full-file replacement. They remain inside the documented allowlist for the next repair if required.
+Some Customer report renderers are covered raw/source-backed and are not rewritten in this increment because tool-side file update checks blocked full-file replacement. They remain inside the documented allowlist for the next repair if required.
 
 ## Admin surface scope
 

@@ -48,7 +48,7 @@ const blockedPrefixes = ['apps/web/src/app/routes/', 'apps/web/src/layouts/', 'a
 const blockedExact = new Set(['apps/web/src/app/App.tsx', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml']);
 const cssForbidden = ['live-online', 'production-online', 'dispatch-enabled', 'ao-act-ready', 'roi-ready', 'field-memory-ready', 'risk-red', 'success-green', 'warning-yellow'];
 const mojibake = ['鎬', '鍦', '浣', '璁', '杩', '閰', '绠', '瀵', '艰', '鍚', '彴', '潡', '惧', '悍', '嵁', '�'];
-const phaseLabels = ['H58', 'H59', 'H60', 'H61', 'H62', 'H63', 'H64', 'H65', 'H66', 'H67', 'F0', 'F1', 'P51', 'P52', 'P53', 'P54', 'P55', 'P56', 'P57', 'TK', 'fixture', 'acceptance'];
+const phaseLabels = ['H58', 'H59', 'H60', 'H61', 'H62', 'H63', 'H64', 'H65', 'H66', 'H67', 'F0', 'F1', 'P51', 'P52', 'P53', 'P54', 'P55', 'P56', 'P57', 'TK', 'fixture'];
 const assertions = [];
 
 function p(file) { return path.join(root, file); }

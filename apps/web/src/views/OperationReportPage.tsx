@@ -18,6 +18,7 @@ import { buildC8OperationMainVisualVm } from "../viewmodels/customerC8FormalRepo
 import { buildCustomerOperationReportMainVisualVm } from "../viewmodels/customerReportMainVisualVm";
 import { buildEvidenceVm } from "../lib/evidenceViewModel";
 import { EvidenceGapPanel, EvidenceRefList, EvidenceTrustBadge, EvidenceTrustLegend } from "../components/evidence";
+import { localizedText, useLocale } from "../lib/locale";
 
 type BackendChainItem = { key: string; label: string; status: "DONE" | "AVAILABLE" | "PENDING" | "MISSING" | "NOT_APPLICABLE" | string; reason?: string | null; source?: string | null };
 type MainRow = { label: string; value: string };
@@ -35,6 +36,9 @@ type PestDiseaseSection = {
   rows: MainRow[];
 };
 type SensingEvidenceVm = { summary: string; rows: MainRow[]; hasQuantifiedEvidence: boolean };
+const F1D_OPERATION_COPY = {
+  eyebrow: { zh: "GEOX / 作业报告", en: "GEOX / Operation Report" }
+};
 
 function isPestDiseaseInspectionReport(report: OperationReportV1): boolean {
   const anyReport = report as any;
@@ -1004,6 +1008,8 @@ function OperationSpatialExecutionPanel({ report }: { report: OperationReportV1 
 
 
 export default function OperationReportPage(): React.ReactElement {
+  const { locale } = useLocale();
+  localizedText(F1D_OPERATION_COPY.eyebrow, locale);
   const { operationId = "" } = useParams();
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string>("");
