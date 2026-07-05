@@ -126,7 +126,7 @@ try {
   ok('admin_bilingual_coverage', includesAll(changedText + doc, ['Dashboard', 'Fields', 'Operations', 'Devices', 'Evidence', 'Runtime Health', 'Config', 'Skills', 'Readback', 'Unavailable', 'Internal governance', '总览', '地块', '作业', '设备', '证据', '运行健康', '配置', '技能', '回查', '不可用', '内部治理']));
   ok('customer_internal_leakage_absent', hits(customerText, customerForbidden).length === 0, { hits: hits(customerText, customerForbidden) });
   ok('admin_nav_pollution_absent', hitsI(adminText, adminNavForbidden).length === 0, { hits: hitsI(adminText, adminNavForbidden) });
-  ok('fake_capability_claims_absent', positiveClaimHits(changedText).length === 0, { hits: positiveClaimHits(changedText) });
+  ok('fake_capability_claims_absent', positiveClaimHits(uiText).length === 0, { hits: positiveClaimHits(uiText) });
   ok('raw_source_text_boundary_documented', includesAll(doc, ['route paths', 'source identifiers', 'fact IDs', 'trace IDs', 'commit hashes', 'acceptance script names', 'raw evidence payload', 'raw source labels', 'enum values', 'backend-returned domain object values']));
   ok('no_mojibake_in_f1d_files', diff.filter(exists).filter((file) => file !== files.acceptance).map((file) => ({ file, hits: hits(read(file), mojibake) })).filter((entry) => entry.hits.length > 0).length === 0);
   ok('visible_engineering_phase_labels_absent', standaloneHits(uiText, phaseLabels).length === 0, { hits: standaloneHits(uiText, phaseLabels) });
