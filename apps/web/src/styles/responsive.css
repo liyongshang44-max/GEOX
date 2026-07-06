@@ -207,6 +207,25 @@
 }
 
 @media (max-width: 1366px) {
+  .newAppShell:has(.customerDashboardPage) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .newAppShell:has(.customerDashboardPage) .newAppMain,
+  .newAppShell:has(.customerDashboardPage) .newAppContent,
+  .newAppShell:has(.customerDashboardPage) .newTopBar {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .newAppShell:has(.customerDashboardPage) .newSideNav {
+    position: static;
+    width: auto;
+    max-width: 100%;
+    min-width: 0;
+  }
+
   .customerShell .productPageShell[data-surface="customer"]:has(.customerDashboardPage) {
     max-width: 100%;
   }
