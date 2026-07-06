@@ -1,0 +1,63 @@
+{
+  "phase": "PFE-13 Frontend Product v1 Freeze",
+  "version": 1,
+  "customer": [
+    "/customer/dashboard",
+    "/customer/fields",
+    "/customer/fields/:fieldId",
+    "/customer/fields/:fieldId/export",
+    "/customer/operations",
+    "/customer/operations/:operationId",
+    "/customer/operations/:operationId/export",
+    "/customer/reports",
+    "/customer/export"
+  ],
+  "operator": [
+    "/operator/twin",
+    "/operator/fields",
+    "/operator/fields/:fieldId",
+    "/operator/fields/:fieldId/state",
+    "/operator/fields/:fieldId/evidence",
+    "/operator/fields/:fieldId/forecast",
+    "/operator/fields/:fieldId/scenario",
+    "/operator/fields/:fieldId/residual",
+    "/operator/fields/:fieldId/calibration",
+    "/operator/fields/:fieldId/health",
+    "/operator/fields/:fieldId/audit",
+    "/operator/twin/gateway-demo",
+    "/operator/pilot"
+  ],
+  "admin": [
+    "/admin/dashboard",
+    "/admin/fields",
+    "/admin/operations",
+    "/admin/devices",
+    "/admin/evidence",
+    "/admin/skills",
+    "/admin/healthz"
+  ],
+  "supporting": [
+    "/login",
+    "LocaleToggle",
+    "Product design-system primitives",
+    "Product state primitives",
+    "ProductDataTable",
+    "ProductPageShell / ProductPageHeader",
+    "PFE-9 screenshot manifest",
+    "PFE-10 bundle budget",
+    "PFE-11 copy / i18n baseline",
+    "PFE-12 demo / RC baseline"
+  ],
+  "evidenceSchema": [
+    "role owner",
+    "status",
+    "source baseline",
+    "state baseline",
+    "responsive baseline",
+    "copy/i18n baseline",
+    "screenshot baseline",
+    "bundle impact",
+    "demo/RC status",
+    "post-freeze change rule"
+  ]
+}
