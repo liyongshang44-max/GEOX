@@ -75,8 +75,7 @@ try {
 
   const urlOnlyRoutes = ['/admin/alerts', '/admin/acceptance', '/admin/import', '/admin/operations/:operationId/debug'];
   assert('url_only_routes_not_promoted_to_admin_nav', urlOnlyRoutes.every((route) => !layout.includes(route)), { urlOnlyRoutes });
-  const futureRoutes = ['/admin/tenants', '/admin/imports', '/admin/audit'];
-  assert('future_admin_pages_remain_deferred', futureRoutes.every((route) => !source.includes(route)) && source.includes('/admin/config not promoted') && source.includes('/admin/health not promoted'), { futureRoutes });
+  assert('future_admin_pages_remain_deferred', includesAll(source, ['/admin/config not promoted', '/admin/health not promoted', 'future admin contracts remain deferred']) && includesAll(docText, ['/admin/tenants', '/admin/imports', '/admin/audit', '/admin/config', '/admin/health']), {});
 
   const blockedClients = [join(['dispatch', 'Client']), join(['create', 'Ao', 'Act']), join(['write', 'Facts']), join(['write', 'Roi']), join(['write', 'Field', 'Memory']), join(['device', 'ControlClient'])];
   const blockedClaims = [join(['Dispatch ', 'Ready']), join(['AO-ACT ', 'Ready']), join(['Production Gateway ', 'Online']), join(['Live Device ', 'Connected']), join(['Field Pilot ', 'Started']), join(['Autonomous ', 'Operation']), join(['Write ', 'Facts']), join(['Write ', 'ROI']), join(['Write ', 'Field Memory']), join(['Create ', 'AO-ACT'])];
