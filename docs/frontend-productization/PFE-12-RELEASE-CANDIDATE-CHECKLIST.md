@@ -28,6 +28,15 @@
 | Bundle check | budget check green | checker output | `CHECK_PFE_10_WEB_BUNDLE_BUDGET.cjs` | yes |
 | Artifacts | generated artifacts not committed | git status and static gate | `git status --short` | yes |
 
+## Gate phrase compatibility
+
+```text
+PFE-6 baseline present
+PFE-10 baseline present
+PFE-11 baseline present
+Runtime audit green
+```
+
 ## Local review commands
 
 ```powershell
