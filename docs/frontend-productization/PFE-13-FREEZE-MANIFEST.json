@@ -1,0 +1,46 @@
+{
+  "phase": "PFE-13 Frontend Product v1 Freeze",
+  "version": 1,
+  "freezeMode": "governed-frontend-product-v1",
+  "productLine": "PFE",
+  "frozen": true,
+  "productionLaunch": false,
+  "commercialLaunch": false,
+  "liveDeviceConnected": false,
+  "productionGatewayOnline": false,
+  "fieldPilotStarted": false,
+  "aoActDispatchEnabled": false,
+  "surfaces": {
+    "customer": 9,
+    "operator": 13,
+    "admin": 7,
+    "supporting": [
+      "login",
+      "locale toggle",
+      "product primitives",
+      "state primitives",
+      "screenshot manifest",
+      "bundle budget",
+      "copy/i18n baseline",
+      "demo rc baseline"
+    ]
+  },
+  "requiredBaselines": [
+    "PFE-6 Accessibility & Keyboard Compliance",
+    "PFE-7 Responsive / Viewport Completion",
+    "PFE-8 Empty / Loading / Error State Completion",
+    "PFE-9 Visual Regression & Screenshot Baseline",
+    "PFE-10 Performance Budget & Bundle Hygiene",
+    "PFE-11 Product Copy / i18n Completion",
+    "PFE-12 Demo Mode & Release Candidate"
+  ],
+  "postFreezeChangePolicy": {
+    "routeChangeRequiresNewPhase": true,
+    "capabilityChangeRequiresNewPhase": true,
+    "backendChangeOutOfScope": true,
+    "packageChangeOutOfScope": true,
+    "visualChangeRequiresRegressionEvidence": true,
+    "copyChangeRequiresI18nGate": true,
+    "bundleChangeRequiresBudgetCheck": true
+  }
+}
