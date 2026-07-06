@@ -25,6 +25,14 @@ function sectionStatus(status: string): "available" | "partial" | "degraded" | "
   return "partial";
 }
 
+function customerTimelineLabel(status: OperationReportPageVm["timeline"][number]["status"]): string {
+  if (status === "DONE") return "已完成";
+  if (status === "PENDING") return "等待复核";
+  if (status === "MISSING") return "暂不可用";
+  if (status === "NOT_APPLICABLE") return "不适用";
+  return "可查看";
+}
+
 export default function OperationReportPageRoute(): React.ReactElement {
   const { operationId = "" } = useParams();
   const [vm, setVm] = React.useState<OperationReportPageVm | null>(null);
@@ -71,7 +79,7 @@ export default function OperationReportPageRoute(): React.ReactElement {
           metadata={`Updated at: ${vm.generatedAtText}`}
           primaryAction={<Link className="customerButton customerButtonPrimary" to={vm.exportHref}>Export operation report</Link>}
           secondaryActions={<Link className="customerButton" to="/customer/operations">Back to operation reports</Link>}
-          nonclaim="Operation report is read-only customer reporting, not an execution console."
+          nonclaim="Operation report is a read-only customer reporting surface."
         />
       }
     >
@@ -95,7 +103,7 @@ export default function OperationReportPageRoute(): React.ReactElement {
           mobileFallbackNote="On narrow screens, scroll horizontally to review each section."
           columns={[
             { key: "section", header: "Section", render: (row) => row.title },
-            { key: "status", header: "Status", render: (row) => <ProductStatusBadge status={sectionStatus(row.status)} label={row.statusText || row.status} /> },
+            { key: "status", header: "Status", render: (row) => <ProductStatusBadge status={sectionStatus(row.status)} label={row.statusText || "可查看"} /> },
             { key: "summary", header: "Summary", render: (row) => row.summary || row.emptyState?.description || "No summary available." },
           ]}
         />
@@ -104,7 +112,7 @@ export default function OperationReportPageRoute(): React.ReactElement {
       <ProductSectionCard title="Timeline summary" subtitle="Customer-readable milestone sequence.">
         {vm.timeline.length ? (
           <ul className="customerList">
-            {vm.timeline.map((item) => <li key={item.key} className="customerListItem"><strong>{item.label}</strong> — {item.timeText || item.status}</li>)}
+            {vm.timeline.map((item) => <li key={item.key} className="customerListItem"><strong>{item.label}</strong> — {item.timeText || customerTimelineLabel(item.status)}</li>)}
           </ul>
         ) : (
           <ProductEmptyState title="No timeline summary" description="No customer timeline summary is currently available." />
