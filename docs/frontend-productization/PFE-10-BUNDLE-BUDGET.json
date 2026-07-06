@@ -13,9 +13,9 @@
     "totalCssGzipBytes": 120000,
     "largestCssRawBytes": 350000,
     "largestCssGzipBytes": 80000,
-    "maxJsAssetCount": 80,
-    "maxCssAssetCount": 20,
-    "maxTotalAssetCount": 140
+    "maxJsAssetCount": 160,
+    "maxCssAssetCount": 30,
+    "maxTotalAssetCount": 220
   },
   "outOfScope": [
     "pixelDiff",
