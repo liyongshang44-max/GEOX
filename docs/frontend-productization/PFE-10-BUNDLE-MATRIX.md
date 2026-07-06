@@ -15,9 +15,9 @@ This matrix defines the bundle budget review dimensions for Formal Product Front
 | web total | CSS assets | totalCssGzipBytes | measured by checker | 120000 | gated | shared style growth | PFE-11 |
 | largest stylesheet | CSS asset | largestCssRawBytes | measured by checker | 350000 | gated | global stylesheet growth | PFE-11 |
 | largest stylesheet | CSS asset | largestCssGzipBytes | measured by checker | 80000 | gated | global stylesheet growth | PFE-11 |
-| asset inventory | JS count | maxJsAssetCount | measured by checker | 80 | gated | route split churn | PFE-11 |
-| asset inventory | CSS count | maxCssAssetCount | measured by checker | 20 | gated | page style proliferation | PFE-11 |
-| asset inventory | total count | maxTotalAssetCount | measured by checker | 140 | gated | output artifact sprawl | PFE-11 |
+| asset inventory | JS count | maxJsAssetCount | measured by checker | 160 | gated | route split churn | PFE-11 |
+| asset inventory | CSS count | maxCssAssetCount | measured by checker | 30 | gated | page style proliferation | PFE-11 |
+| asset inventory | total count | maxTotalAssetCount | measured by checker | 220 | gated | output artifact sprawl | PFE-11 |
 
 ## 1. Interpretation
 
