@@ -1,7 +1,18 @@
 // apps/web/src/features/operator/pilotReadiness/OperatorPilotPage.tsx
 // Purpose: render Pilot Readiness as a local read-only product surface.
+// Boundary: this page is readiness review only.
 
 import React from "react";
+import {
+  ProductBoundaryBanner,
+  ProductDataTable,
+  ProductMetricTile,
+  ProductPageHeader,
+  ProductPageShell,
+  ProductScopeBar,
+  ProductSectionCard,
+  ProductStatusBadge,
+} from "../../../design-system/product";
 import { localizedText, useLocale, type LocaleCode } from "../../../lib/locale";
 import { OPERATOR_FORMAL_SURFACE_COPY } from "../../../lib/productSurfaceLabels";
 import { buildPilotReadinessViewModel, type PilotReadinessRow } from "./pilotReadinessViewModel";
@@ -16,18 +27,20 @@ type TablePanelProps = {
 
 const pilotCopy = OPERATOR_FORMAL_SURFACE_COPY.pilotReadiness;
 
-function TablePanel({ title, rows, className, locale }: TablePanelProps): React.ReactElement {
+function TablePanel({ title, rows, className }: TablePanelProps): React.ReactElement {
   return (
-    <section className={"operatorPilotReadiness__panel " + className}>
-      <div className="operatorPilotReadiness__panelHeader">
-        <p className="operatorPilotReadiness__eyebrow">{title}</p>
-        <h2>{title}</h2>
-      </div>
-      <div className="operatorPilotReadiness__table" role="table" aria-label={title}>
-        <div className="operatorPilotReadiness__tableHeader" role="row"><span>{localizedText(pilotCopy.table.label, locale)}</span><span>{localizedText(pilotCopy.table.value, locale)}</span></div>
-        {rows.map((row) => <div className="operatorPilotReadiness__tableRow" role="row" key={row.label}><span>{row.label}</span><span>{row.value}</span></div>)}
-      </div>
-    </section>
+    <ProductSectionCard title={title} subtitle="Read-only readiness review packet section." className={className}>
+      <ProductDataTable<PilotReadinessRow>
+        caption={title}
+        rows={rows}
+        getRowKey={(row) => row.label}
+        mobileFallbackNote="Scroll horizontally to review readiness metadata."
+        columns={[
+          { key: "label", header: "Label", render: (row) => row.label },
+          { key: "value", header: "Value", render: (row) => row.value },
+        ]}
+      />
+    </ProductSectionCard>
   );
 }
 
@@ -65,15 +78,47 @@ export default function OperatorPilotPage(): React.ReactElement {
   const { locale } = useLocale();
   const vm = React.useMemo(() => buildPilotReadinessViewModel(), []);
   return (
-    <main className="operatorPilotReadiness" data-h63="pilot-readiness-product-surface" data-source={vm.source} data-mode={vm.mode}>
+    <ProductPageShell
+      surface="operator"
+      width="wide"
+      ariaLabel="Operator Pilot Readiness review"
+      className="operatorPilotReadiness operatorProductSurface"
+      top={
+        <ProductPageHeader
+          eyebrow={localizedText(pilotCopy.eyebrow, locale)}
+          title={localizedText(pilotCopy.title, locale)}
+          lead={localizedText(pilotCopy.lead, locale)}
+          metadata={`Route: ${vm.route} / Source: ${vm.source} / Mode: ${vm.mode}`}
+          nonclaim="Readiness review only. Field Pilot: Not started. Controlled Execution: Disabled."
+        />
+      }
+      aside={
+        <ProductSectionCard title="Pilot readiness nonclaims" subtitle="Planning packet only.">
+          <div className="operatorProductStatusStack">
+            <ProductStatusBadge status="disabled" label="Field Pilot: Not started" />
+            <ProductStatusBadge status="disabled" label="Controlled Execution: Disabled" />
+            <ProductStatusBadge status="disabled" label="AO-ACT: Disabled" />
+            <ProductStatusBadge status="readOnly" label="Readiness review only" />
+          </div>
+        </ProductSectionCard>
+      }
+    >
+      <ProductBoundaryBanner
+        tone="disabled"
+        title="Readiness review is not field execution"
+        description="Pilot Readiness summarizes planning criteria, blocked states, and review packet metadata."
+        items={["Field Pilot: Not started", "Controlled Execution: Disabled", "AO-ACT: Disabled"]}
+      />
+      <ProductScopeBar surface="operator" items={[{ label: "Route", value: vm.route }, { label: "Source", value: vm.source }, { label: "Mode", value: vm.mode }, { label: "Read-only", value: "true" }]} />
+      <div className="operatorProductMetricGrid">
+        <ProductMetricTile label="Readiness sections" value={13} description="Planning, safety, role, traceability, and boundary sections." source="pilotReadinessViewModel" status={<ProductStatusBadge status="readOnly" />} />
+        <ProductMetricTile label="Controlled execution" value="Disabled" description="Displayed as a nonclaim." source="Pilot readiness boundary" status={<ProductStatusBadge status="disabled" />} />
+        <ProductMetricTile label="Field pilot" value="Not started" description="Displayed as a nonclaim." source="Pilot readiness boundary" status={<ProductStatusBadge status="disabled" />} />
+      </div>
       <section className="operatorPilotReadiness__hero" aria-label={localizedText(pilotCopy.title, locale)}>
-        <p className="operatorPilotReadiness__eyebrow">{localizedText(pilotCopy.eyebrow, locale)}</p>
-        <h1>{localizedText(pilotCopy.title, locale)}</h1>
-        <p className="operatorPilotReadiness__lead">{localizedText(pilotCopy.lead, locale)}</p>
         <div className="operatorPilotReadiness__nonclaims" aria-label={locale === "en-US" ? "Pilot Readiness nonclaims" : "试点准备度否定声明"}>
           {pilotCopy.nonclaims.map((item) => <span key={item.en}>{localizedText(item, locale)}</span>)}
         </div>
-        <dl className="operatorPilotReadiness__meta"><div><dt>Route</dt><dd>{vm.route}</dd></div><div><dt>Source</dt><dd>{vm.source}</dd></div><div><dt>Mode</dt><dd>{vm.mode}</dd></div><div><dt>Read-only</dt><dd>true</dd></div></dl>
       </section>
       <section className="operatorPilotReadiness__grid" aria-label={localizedText(pilotCopy.panelsAria, locale)}>
         <TablePanel title={localizedText(pilotCopy.panels.planningGate, locale)} rows={vm.p53Rows} className="operatorPilotReadiness__p53" locale={locale} />
@@ -90,6 +135,6 @@ export default function OperatorPilotPage(): React.ReactElement {
         <TablePanel title={localizedText(pilotCopy.panels.boundaryNonclaims, locale)} rows={vm.boundaryRows} className="operatorPilotReadiness__boundary" locale={locale} />
         <TablePanel title={localizedText(pilotCopy.panels.nextAllowedGate, locale)} rows={vm.nextRows} className="operatorPilotReadiness__nextGate" locale={locale} />
       </section>
-    </main>
+    </ProductPageShell>
   );
 }

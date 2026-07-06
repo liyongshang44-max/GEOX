@@ -1,8 +1,20 @@
 // apps/web/src/features/operator/fieldRuntime/FieldRuntimeLayout.tsx
 // Purpose: render the Field Runtime product shell, boundary banner, tabs, and read-only content.
-// Boundary: this layout owns presentation only.
+// Boundary: this layout owns presentation only and does not create runtime actions or mutate read models.
 
 import React from "react";
+import { Link } from "react-router-dom";
+import {
+  ProductBoundaryBanner,
+  ProductDataTable,
+  ProductEmptyState,
+  ProductMetricTile,
+  ProductPageHeader,
+  ProductPageShell,
+  ProductScopeBar,
+  ProductSectionCard,
+  ProductStatusBadge,
+} from "../../../design-system/product";
 import FieldRuntimeAuditTabPanel from "./FieldRuntimeAuditTabPanel";
 import FieldRuntimeBoundaryBanner from "./FieldRuntimeBoundaryBanner";
 import FieldRuntimeCalibrationTabPanel from "./FieldRuntimeCalibrationTabPanel";
@@ -27,7 +39,7 @@ import { type FieldRuntimeForecastLoadState } from "./fieldRuntimeForecastAdapte
 import { type FieldRuntimeHealthLoadState } from "./fieldRuntimeHealthAdapter";
 import { type FieldRuntimeResidualLoadState } from "./fieldRuntimeResidualAdapter";
 import { type FieldRuntimeScenarioLoadState } from "./fieldRuntimeScenarioAdapter";
-import { type FieldRuntimeViewModel } from "./fieldRuntimeViewModel";
+import { buildCanonicalFieldRuntimePath, type FieldRuntimeTabDefinition, type FieldRuntimeViewModel } from "./fieldRuntimeViewModel";
 import { type FieldRuntimeWorkspaceLoadState } from "./fieldRuntimeWorkspaceAdapter";
 import { localizedText, useLocale } from "../../../lib/locale";
 import { OPERATOR_FORMAL_SURFACE_COPY } from "../../../lib/productSurfaceLabels";
@@ -57,7 +69,17 @@ type RenderTabContentArgs = {
   healthLoadState?: FieldRuntimeHealthLoadState;
 };
 
+type FieldRuntimeEntryRow = {
+  fieldId: string;
+  fieldName: string;
+  summary: string;
+};
+
 const fieldCopy = OPERATOR_FORMAL_SURFACE_COPY.fieldRuntime;
+const FIELD_RUNTIME_ENTRY_ROWS: FieldRuntimeEntryRow[] = [
+  { fieldId: "field_c8_demo", fieldName: "C8 Demo Field", summary: "Replay-backed field runtime entry for CI and product review." },
+  { fieldId: "field_runtime_review_sample", fieldName: "Runtime Review Sample", summary: "No-field-selected safe entry demonstrating tab navigation only." },
+];
 
 function FieldRuntimeOverviewContent({ loadState }: { loadState: FieldRuntimeWorkspaceLoadState | undefined }): React.ReactElement {
   return (
@@ -82,6 +104,33 @@ function FieldRuntimeStateContent({ loadState }: { loadState: FieldRuntimeWorksp
   );
 }
 
+function FieldRuntimeEntrySurface({ viewModel }: { viewModel: FieldRuntimeViewModel }): React.ReactElement {
+  return (
+    <ProductSectionCard title="Field Runtime entry" subtitle="Field selector and canonical runtime review tab entry. This is not field management.">
+      <ProductBoundaryBanner
+        tone="readOnly"
+        title="Field Runtime selector boundary"
+        description="Select a field to review state, evidence, forecast, scenario, residual, calibration, health, and audit surfaces. Create/edit field controls are not available here."
+        items={["No field management controls", "Not live monitoring", "Read-only field runtime navigation"]}
+      />
+      <ProductDataTable<FieldRuntimeEntryRow>
+        caption="Operator field runtime entries"
+        rows={FIELD_RUNTIME_ENTRY_ROWS}
+        getRowKey={(row) => row.fieldId}
+        emptyState={<ProductEmptyState title="No field runtime entries" description="No field runtime review entries are available." />}
+        mobileFallbackNote="Scroll horizontally to review field runtime entry links."
+        columns={[
+          { key: "field", header: "Field", render: (row) => <><strong>{row.fieldName}</strong><br /><small>{row.fieldId}</small></> },
+          { key: "summary", header: "Review context", render: (row) => row.summary },
+          { key: "overview", header: "Overview", render: (row) => <Link to={buildCanonicalFieldRuntimePath(row.fieldId, viewModel.tabs[0])}>Open overview</Link> },
+          { key: "state", header: "State", render: (row) => <Link to={buildCanonicalFieldRuntimePath(row.fieldId, viewModel.tabs[2])}>Review state</Link> },
+          { key: "evidence", header: "Evidence", render: (row) => <Link to={buildCanonicalFieldRuntimePath(row.fieldId, viewModel.tabs[1])}>Review evidence</Link> },
+        ]}
+      />
+    </ProductSectionCard>
+  );
+}
+
 function renderTabContent({
   viewModel,
   workspaceLoadState,
@@ -93,6 +142,7 @@ function renderTabContent({
   auditLoadState,
   healthLoadState,
 }: RenderTabContentArgs): React.ReactElement {
+  if (viewModel.routeKey === "fields") return <FieldRuntimeEntrySurface viewModel={viewModel} />;
   if (viewModel.routeKey === "overview") return <FieldRuntimeOverviewContent loadState={workspaceLoadState} />;
   if (viewModel.routeKey === "state") return <FieldRuntimeStateContent loadState={workspaceLoadState} />;
   if (viewModel.routeKey === "evidence") return <FieldRuntimeEvidenceTabPanel loadState={evidenceLoadState} />;
@@ -103,6 +153,19 @@ function renderTabContent({
   if (viewModel.routeKey === "audit") return <FieldRuntimeAuditTabPanel loadState={auditLoadState} />;
   if (viewModel.routeKey === "health") return <FieldRuntimeHealthTabPanel loadState={healthLoadState} />;
   return <FieldRuntimeTabStub viewModel={viewModel} />;
+}
+
+function routeBoundaryLabel(tab: FieldRuntimeTabDefinition | undefined, routeKey: string): string {
+  if (routeKey === "forecast") return "Forecast review is not a recommendation.";
+  if (routeKey === "scenario") return "Scenario review is not dispatch or task creation.";
+  if (routeKey === "residual") return "Verification review is not ROI proof or causal proof.";
+  if (routeKey === "calibration") return "Calibration review is not model update.";
+  if (routeKey === "health") return "Health review is not live monitoring.";
+  if (routeKey === "audit") return "Audit readback is not a business conclusion.";
+  if (routeKey === "state") return "State review does not mean online estimation is active.";
+  if (routeKey === "evidence") return "Evidence review is not evidence writing.";
+  if (routeKey === "fields") return "Field Runtime entry is not field management.";
+  return tab?.boundaryCopy[0] ?? "Read-only runtime review surface.";
 }
 
 export default function FieldRuntimeLayout({
@@ -117,35 +180,57 @@ export default function FieldRuntimeLayout({
   healthLoadState,
 }: FieldRuntimeLayoutProps): React.ReactElement {
   const { locale } = useLocale();
+  const activeTab = viewModel.tabs.find((tab) => tab.key === viewModel.activeTab) ?? null;
 
   return (
-    <main
-      className="operatorFieldRuntime"
-      data-h60c="field-runtime-layout-tabs"
-      data-h60d="field-runtime-overview-state"
-      data-h60e="field-runtime-evidence-tab"
-      data-h60f="field-runtime-forecast-tab"
-      data-h60g="field-runtime-scenario-readonly-split"
-      data-h60h="field-runtime-residual-verification-tab"
-      data-h60i="field-runtime-calibration-tab"
-      data-h60k="field-runtime-audit-tab"
-      data-h62="runtime-health-product-surface"
-      data-field-runtime-route={viewModel.routeKey}
+    <ProductPageShell
+      surface="operator"
+      width="wide"
+      ariaLabel="Operator Field Runtime review surface"
+      className="operatorFieldRuntime operatorProductSurface"
+      top={
+        <ProductPageHeader
+          eyebrow={localizedText(fieldCopy.eyebrow, locale)}
+          title={localizedText(fieldCopy.title, locale)}
+          lead={localizedText(fieldCopy.subtitle, locale)}
+          metadata={`Route: ${viewModel.currentRoute} / Mode: ${viewModel.runtimeMode}`}
+          nonclaim="Read-only review only. Live Device: Not connected. Production Gateway: Not online. Controlled Execution: Disabled."
+        />
+      }
+      aside={
+        <ProductSectionCard title="Field Runtime nonclaims" subtitle="Tab navigation exposes review surfaces only.">
+          <div className="operatorProductStatusStack">
+            <ProductStatusBadge status="readOnly" label="Read-only" />
+            <ProductStatusBadge status="replayBacked" label="Replay-backed" />
+            <ProductStatusBadge status="notConnected" label="Live Device: Not connected" />
+            <ProductStatusBadge status="notOnline" label="Production Gateway: Not online" />
+            <ProductStatusBadge status="disabled" label="Controlled Execution: Disabled" />
+          </div>
+        </ProductSectionCard>
+      }
     >
-      <header className="operatorFieldRuntime__header" aria-label={localizedText(fieldCopy.title, locale)}>
-        <div>
-          <p className="operatorFieldRuntime__eyebrow">{localizedText(fieldCopy.eyebrow, locale)}</p>
-          <h1 className="operatorFieldRuntime__title">{localizedText(fieldCopy.title, locale)}</h1>
-          <p className="operatorFieldRuntime__subtitle">{localizedText(fieldCopy.subtitle, locale)}</p>
-        </div>
+      <ProductBoundaryBanner
+        tone="readOnly"
+        title={routeBoundaryLabel(activeTab ?? undefined, viewModel.routeKey)}
+        description="Operator Field Runtime surfaces support view, review, inspect, compare, navigate, read trace, and read source identity. They do not mutate facts, models, ledgers, memory, or execution systems."
+        items={["No task creation", "No device control", "No model update"]}
+      />
 
-        <dl className="operatorFieldRuntime__meta" aria-label={locale === "en-US" ? "Field Runtime route identity" : "地块运行路由身份"}>
-          <div><dt>{localizedText(fieldCopy.meta.fieldId, locale)}</dt><dd>{viewModel.fieldId}</dd></div>
-          <div><dt>{localizedText(fieldCopy.meta.currentRoute, locale)}</dt><dd>{viewModel.currentRoute}</dd></div>
-          <div><dt>{localizedText(fieldCopy.meta.runtimeMode, locale)}</dt><dd>{viewModel.runtimeMode}</dd></div>
-          <div><dt>{localizedText(fieldCopy.meta.readOnlyBoundary, locale)}</dt><dd>{viewModel.readOnly ? "true" : "false"}</dd></div>
-        </dl>
-      </header>
+      <ProductScopeBar
+        surface="operator"
+        items={[
+          { label: "Field", value: viewModel.fieldId },
+          { label: "Current route", value: viewModel.currentRoute },
+          { label: "Route family", value: viewModel.sourceRouteFamily },
+          { label: "Read-only", value: viewModel.readOnly ? "true" : "false" },
+        ]}
+      />
+
+      <div className="operatorProductMetricGrid">
+        <ProductMetricTile label="Runtime mode" value={viewModel.runtimeMode} source="Field Runtime route model" status={<ProductStatusBadge status="replayBacked" />} />
+        <ProductMetricTile label="Active tab" value={viewModel.activeTab ?? "Field selector"} description={routeBoundaryLabel(activeTab ?? undefined, viewModel.routeKey)} source="canonical_operator_field_runtime" />
+        <ProductMetricTile label="Tab count" value={viewModel.tabs.length} description="Separate productized field runtime review surfaces." source="Field Runtime route model" />
+      </div>
 
       <FieldRuntimeBoundaryBanner />
 
@@ -156,9 +241,11 @@ export default function FieldRuntimeLayout({
 
       <FieldRuntimeTabs viewModel={viewModel} />
 
-      <section className="operatorFieldRuntime__tabPanel" aria-label={localizedText(fieldCopy.tabPanel, locale)}>
-        {renderTabContent({ viewModel, workspaceLoadState, evidenceLoadState, forecastLoadState, scenarioLoadState, residualLoadState, calibrationLoadState, auditLoadState, healthLoadState })}
-      </section>
-    </main>
+      <ProductSectionCard title={viewModel.routeCopy.title} subtitle={viewModel.routeCopy.phase} status={<ProductStatusBadge status="readOnly" label="Review only" />}>
+        <section className="operatorFieldRuntime__tabPanel" aria-label={localizedText(fieldCopy.tabPanel, locale)}>
+          {renderTabContent({ viewModel, workspaceLoadState, evidenceLoadState, forecastLoadState, scenarioLoadState, residualLoadState, calibrationLoadState, auditLoadState, healthLoadState })}
+        </section>
+      </ProductSectionCard>
+    </ProductPageShell>
   );
 }
