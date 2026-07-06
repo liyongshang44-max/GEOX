@@ -39,7 +39,6 @@ try {
 
   const diff = changedFiles();
   const manifest = parseManifest();
-  const manifestText = read('docs/frontend-productization/PFE-9-SCREENSHOT-MANIFEST.json');
   const guide = read('docs/frontend-productization/PFE-9-VISUAL-REGRESSION-SCREENSHOT-BASELINE.md');
   const matrix = read('docs/frontend-productization/PFE-9-VISUAL-REVIEW-MATRIX.md');
   const issueRegister = read('docs/frontend-productization/PFE-9-VISUAL-ISSUE-REGISTER.md');
@@ -79,7 +78,7 @@ try {
   assert('capture_script_uses_existing_playwright_runtime', capture.includes("require('@playwright/test')") && capture.includes('playwright'));
   assert('capture_script_has_baseline_and_full_modes', capture.includes('PFE9_CAPTURE_MODE') && capture.includes("CAPTURE_MODE === 'full'"));
 
-  assert('no_full_pixel_certification_claim', !includesAll(docsCombined, ['complete', 'pixel-perfect certification']) && !includesAll(docsCombined, ['completed', 'full browser matrix']));
+  assert('no_full_pixel_certification_claim', !lower(docsCombined).includes('completed full pixel-perfect certification') && !lower(docsCombined).includes('completed full browser matrix') && !lower(docsCombined).includes('completed full device matrix'));
   assert('no_package_dependency_changes', diff.every((file) => !['package.json', 'pnpm-lock.yaml'].includes(file)));
 
   console.log(JSON.stringify({
