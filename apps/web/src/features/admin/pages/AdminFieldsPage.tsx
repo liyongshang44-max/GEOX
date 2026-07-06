@@ -53,7 +53,7 @@ export default function AdminFieldsPage(): React.ReactElement {
         items={["No customer report framing", "No dispatch", "No uncontrolled mutation"]}
       />
       <ProductScopeBar surface="admin" items={[{ label: "Route", value: "/admin/fields" }, { label: "Mode", value: "Governance readback" }, { label: "Read-only", value: "true" }]} />
-      <div className="operatorProductMetricGrid">
+      <div className="adminProductMetricGrid">
         <ProductMetricTile label="Governance rows" value={fieldRows.length} source="admin field source" status={<ProductStatusBadge status="readOnly" />} />
         <ProductMetricTile label="Admin status" value="Readback" description="Administrative status is displayed without customer report language." source="field governance" />
         <ProductMetricTile label="Unavailable state" value="Defined" description="Empty or unavailable field governance data must not produce a blank page." source="PFE-1 Admin contract" />
