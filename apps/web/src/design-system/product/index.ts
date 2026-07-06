@@ -1,0 +1,27 @@
+// apps/web/src/design-system/product/index.ts
+export { ProductBoundaryBanner } from "./ProductBoundaryBanner";
+export type { ProductBoundaryBannerProps, ProductBoundaryTone } from "./ProductBoundaryBanner";
+export { ProductDataTable } from "./ProductDataTable";
+export type { ProductDataTableColumn, ProductDataTableProps } from "./ProductDataTable";
+export { ProductEmptyState } from "./ProductEmptyState";
+export type { ProductEmptyStateProps } from "./ProductEmptyState";
+export { ProductErrorState } from "./ProductErrorState";
+export type { ProductErrorStateProps } from "./ProductErrorState";
+export { ProductLoadingState } from "./ProductLoadingState";
+export type { ProductLoadingStateProps } from "./ProductLoadingState";
+export { ProductMetricTile } from "./ProductMetricTile";
+export type { ProductMetricTileProps } from "./ProductMetricTile";
+export { ProductPageHeader } from "./ProductPageHeader";
+export type { ProductPageHeaderProps } from "./ProductPageHeader";
+export { ProductPageShell } from "./ProductPageShell";
+export type { ProductPageShellProps, ProductShellWidth, ProductSurfaceRole } from "./ProductPageShell";
+export { ProductScopeBar } from "./ProductScopeBar";
+export type { ProductScopeBarProps, ProductScopeItem } from "./ProductScopeBar";
+export { ProductSectionCard } from "./ProductSectionCard";
+export type { ProductSectionCardProps } from "./ProductSectionCard";
+export { ProductStateBlock } from "./ProductStateBlock";
+export type { ProductStateBlockProps, ProductStateKind } from "./ProductStateBlock";
+export { ProductStatusBadge } from "./ProductStatusBadge";
+export type { ProductStatus, ProductStatusBadgeProps } from "./ProductStatusBadge";
+export { ProductTraceLink } from "./ProductTraceLink";
+export type { ProductTraceLinkProps } from "./ProductTraceLink";
