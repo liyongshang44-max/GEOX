@@ -65,6 +65,7 @@ try {
   const rubric = read('docs/frontend-acceptance/PFA-0-REVIEW-RUBRIC.md');
   const mainDoc = read('docs/frontend-acceptance/PFA-0-PAGE-QUALITY-AUDIT.md');
   const capture = read(captureFile);
+  const allPfaText = lower(mainDoc + '\n' + issueRegister + '\n' + rubric);
 
   assert('changed_files_allowlist', diff.length === 0 || diff.every((file) => allowedChangedFiles.has(file)), { diff, allowed: Array.from(allowedChangedFiles) });
   assert('no_route_topology_changes', diff.every((file) => file !== 'apps/web/src/app/App.tsx' && file !== 'apps/web/src/app/AppShell.tsx' && !file.startsWith('apps/web/src/app/routes/')), { diff });
@@ -99,7 +100,7 @@ try {
   assert('capture_script_writes_artifacts', capture.includes('screenshotDirectory') && capture.includes('reportPath') && capture.includes('page.screenshot'));
   assert('capture_script_locale_injection', capture.includes('geox.locale') && capture.includes('manifest.locales'));
   assert('capture_script_no_seed_apply_or_fact_write', !capture.includes('--apply') && !capture.includes('seed apply') && !capture.includes('write facts') && !capture.includes('POST /facts'));
-  assert('no_fix_claims', !includesAll(mainDoc + issueRegister + rubric, ['page issues are fixed', 'all pages are product-grade complete', 'Twin Runtime can begin']));
+  assert('no_positive_fix_claims', !allPfaText.includes('pfa-0 fixes page issues') && !allPfaText.includes('all pages are now product-grade complete') && !allPfaText.includes('twin runtime can now begin'));
 
   console.log(JSON.stringify({
     ok: true,
