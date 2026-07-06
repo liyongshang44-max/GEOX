@@ -74,7 +74,6 @@ try {
   const adminCss = read('apps/web/src/styles/adminShell.css') + '\n' + read('apps/web/src/styles/adminControlPlane.css') + '\n' + responsiveCss;
   const reportPrintCss = read('apps/web/src/styles/reportPrint.css');
   const accessibilityCss = read('apps/web/src/styles/accessibility.css');
-  const changedCssText = combined(changedStyleFiles);
 
   const customerRoutes = ['/customer/dashboard', '/customer/fields', '/customer/fields/:fieldId', '/customer/fields/:fieldId/export', '/customer/operations', '/customer/operations/:operationId', '/customer/operations/:operationId/export', '/customer/reports', '/customer/export'];
   const operatorRoutes = ['/operator/twin', '/operator/fields', '/operator/fields/:fieldId', '/operator/fields/:fieldId/state', '/operator/fields/:fieldId/evidence', '/operator/fields/:fieldId/forecast', '/operator/fields/:fieldId/scenario', '/operator/fields/:fieldId/residual', '/operator/fields/:fieldId/calibration', '/operator/fields/:fieldId/health', '/operator/fields/:fieldId/audit', '/operator/twin/gateway-demo', '/operator/pilot'];
@@ -98,6 +97,7 @@ try {
   assert('product_metric_grid_responsive_coverage', includesAll(responsiveCss, ['.customerDashboardKpiRow', '.adminProductMetricGrid', '.operatorProductMetricGrid', 'repeat(auto-fit', '@media (max-width: 768px)']));
   assert('product_scope_bar_responsive_coverage', includesAll(responsiveCss, ['.productScopeBar', '.productScopeBar__item', 'grid-template-columns: 1fr']));
   assert('product_boundary_banner_responsive_coverage', includesAll(responsiveCss, ['.productBoundaryBanner__items', 'flex-wrap: wrap', 'flex-direction: column']));
+  assert('legacy_app_shell_responsive_strategy', includesAll(responsiveCss, ['.newAppShell', '.newAppMain', '.newAppContent', '.newSideNav', ':has(.customerDashboardPage)']));
   assert('customer_dashboard_right_rail_responsive_protection', includesAll(customerCss, ['.customerDashboardRightRail', '.productPageShell__aside .customerDashboardRightRail', 'min-width: 0', 'max-width: 100%']));
   assert('operator_field_runtime_tabs_responsive_strategy', includesAll(operatorCss, ['.operatorFieldRuntime__tabs', '.operatorFieldRuntime__tab', 'flex: 1 1 180px', 'overflow-wrap: anywhere']));
   assert('gateway_demo_grid_responsive_strategy', includesAll(operatorCss, ['.operatorReplayDemo__grid', 'grid-template-columns: 1fr']));
