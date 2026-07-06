@@ -206,6 +206,24 @@
   overflow-wrap: anywhere;
 }
 
+@media (max-width: 1366px) {
+  .customerShell .productPageShell[data-surface="customer"]:has(.customerDashboardPage) {
+    max-width: 100%;
+  }
+
+  .customerShell .productPageShell[data-surface="customer"]:has(.customerDashboardPage) .productPageShell__body {
+    gap: 16px;
+  }
+
+  .customerShell .productPageShell[data-surface="customer"]:has(.customerDashboardPage) .productPageShell__aside {
+    flex-basis: 300px;
+  }
+
+  .customerDashboardMainGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 1280px) {
   .productPageShell[data-width="wide"] {
     max-width: 100%;
