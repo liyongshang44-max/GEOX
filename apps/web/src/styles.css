@@ -1,5 +1,6 @@
 @import "./shared/styles/tokens.css";
 @import "./styles/productDesignSystem.css";
+@import "./styles/accessibility.css";
 @import "./styles/base.css";
 @import "./styles/layout.css";
 @import "./styles/customerShell.css";
