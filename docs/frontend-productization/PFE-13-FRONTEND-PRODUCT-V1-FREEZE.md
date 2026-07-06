@@ -9,7 +9,7 @@ PFE-13 freezes Formal Product Frontend v1 as a governed, reviewable, regression-
 
 ## 1. Goal
 
-PFE-13 closes the PFE productization line by recording the frozen surface inventory, freeze manifest, freeze checklist, frozen issue register, post-freeze change policy, and static freeze acceptance gate.
+PFE-13 closes the PFE productization line by recording the frozen route inventory, freeze manifest, freeze checklist, frozen issue register, post-freeze change policy, and static freeze acceptance gate.
 
 ## 2. Completion statement
 
@@ -58,7 +58,7 @@ PFE-11 copy / i18n baseline
 PFE-12 demo mode / RC manifest
 ```
 
-The detailed route inventory is recorded in `PFE-13-SURFACE-INVENTORY.md`.
+The machine-readable route inventory is recorded in `PFE-13-ROUTE-INVENTORY.json`. `PFE-13-FORMAL-SURFACES.md` is a pointer to that inventory.
 
 ## 5. Freeze meaning
 
@@ -73,7 +73,8 @@ PFE-13 does not add routes, remove routes, change route topology, add product ca
 ```text
 docs/frontend-productization/PFE-13-FRONTEND-PRODUCT-V1-FREEZE.md
 docs/frontend-productization/PFE-13-FREEZE-MANIFEST.json
-docs/frontend-productization/PFE-13-SURFACE-INVENTORY.md
+docs/frontend-productization/PFE-13-ROUTE-INVENTORY.json
+docs/frontend-productization/PFE-13-FORMAL-SURFACES.md
 docs/frontend-productization/PFE-13-FREEZE-CHECKLIST.md
 docs/frontend-productization/PFE-13-FROZEN-ISSUE-REGISTER.md
 scripts/frontend_acceptance/ACCEPTANCE_PFE_13_FRONTEND_PRODUCT_V1_FREEZE.cjs
@@ -119,7 +120,7 @@ bundle changes require budget check evidence
 
 ## 10. Acceptance policy
 
-PFE-13 acceptance is static. It does not start DB, start web, write facts, or require dist. It validates the freeze manifest, inventory, checklist, issue register, baseline chain, and change scope.
+PFE-13 acceptance is static. It does not start DB, start web, write facts, or require dist. It validates the freeze manifest, route inventory, checklist, issue register, baseline chain, and change scope.
 
 ## 11. Nonclaims
 
@@ -127,4 +128,4 @@ PFE-13 can claim a frozen governed frontend product baseline only. It cannot cla
 
 ## 12. Handoff statement
 
-The frozen handoff consists of the PFE-13 freeze manifest, surface inventory, freeze checklist, frozen issue register, post-freeze change policy, static acceptance output, GitHub CI success, PFE-12 RC evidence, PFE-11 copy evidence, and PFE-10 bundle budget evidence.
+The frozen handoff consists of the PFE-13 freeze manifest, route inventory, freeze checklist, frozen issue register, post-freeze change policy, static acceptance output, GitHub CI success, PFE-12 RC evidence, PFE-11 copy evidence, and PFE-10 bundle budget evidence.
