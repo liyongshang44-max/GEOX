@@ -1,0 +1,64 @@
+{
+  "phase": "PFA-0 Page Quality Audit",
+  "version": 1,
+  "sourceInventory": "docs/frontend-productization/PFE-13-ROUTE-INVENTORY.json",
+  "mode": "post-freeze-product-page-review",
+  "locales": ["zh-CN", "en-US"],
+  "viewports": {
+    "desktopReview": { "width": 1440, "height": 1100 },
+    "laptopReview": { "width": 1366, "height": 900 },
+    "mobileSpotCheck": { "width": 390, "height": 900 }
+  },
+  "coverage": {
+    "desktopReview": "all formal routes in zh-CN and en-US",
+    "laptopReview": "all demo-critical routes in zh-CN",
+    "mobileSpotCheck": "demo-critical subset only"
+  },
+  "concreteRouteBindings": {
+    ":fieldId": "field_c8_demo",
+    ":operationId": "op_plan_c8_irrigation_formal_001"
+  },
+  "qualityDimensions": [
+    "routeHealth",
+    "boundarySafety",
+    "roleSeparation",
+    "i18nConsistency",
+    "visualHierarchy",
+    "tableReadability",
+    "denseContentHandling",
+    "demoDataQuality",
+    "responsiveSanity",
+    "demoReadiness"
+  ],
+  "demoCriticalRoutes": [
+    "/login",
+    "/customer/dashboard",
+    "/customer/fields",
+    "/customer/operations",
+    "/customer/reports",
+    "/operator/twin",
+    "/operator/fields",
+    "/operator/fields/field_c8_demo/forecast",
+    "/operator/twin/gateway-demo",
+    "/operator/pilot",
+    "/admin/dashboard",
+    "/admin/fields",
+    "/admin/operations",
+    "/admin/devices",
+    "/admin/evidence",
+    "/admin/skills",
+    "/admin/healthz"
+  ],
+  "artifactPolicy": {
+    "screenshotDirectory": "docs/audit/pfa-0-screenshots",
+    "reportPath": "docs/audit/PFA_0_PAGE_REVIEW_REPORT.md",
+    "doNotCommitScreenshots": true,
+    "doNotExecuteSeedApply": true,
+    "doNotWriteFacts": true
+  },
+  "blockingPolicy": {
+    "p0BlocksAllNextWork": true,
+    "p1BlocksTwinRuntime": true,
+    "p1MustEnterPFA1": true
+  }
+}
