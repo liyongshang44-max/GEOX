@@ -1,0 +1,55 @@
+{
+  "phase": "PFE-9 Visual Regression & Screenshot Baseline",
+  "version": 1,
+  "baselineMode": "review-safe screenshot manifest",
+  "pixelDiff": "deferred",
+  "artifactPolicy": {
+    "commitFullRoutePng": false,
+    "screenshotOutputDir": "docs/audit/pfe-9-screenshots",
+    "reviewReportPath": "docs/audit/PFE_9_VISUAL_REVIEW_REPORT.md"
+  },
+  "viewports": {
+    "desktopWide": { "width": 1440, "height": 1100 },
+    "desktopStandard": { "width": 1280, "height": 1000 },
+    "laptop": { "width": 1024, "height": 900 },
+    "tablet": { "width": 768, "height": 1000 },
+    "mobileNarrow": { "width": 390, "height": 900 }
+  },
+  "baselineViewportSet": ["desktopWide", "tablet", "mobileNarrow"],
+  "fullViewportSet": ["desktopWide", "desktopStandard", "laptop", "tablet", "mobileNarrow"],
+  "routes": [
+    { "route": "/customer/dashboard", "capturePath": "/customer/dashboard", "surface": "customer", "baseline": true, "viewports": ["desktopWide", "tablet", "mobileNarrow"], "assertions": ["noHorizontalOverflow", "mainVisible", "navReachable", "stateSafe"] },
+    { "route": "/customer/fields", "capturePath": "/customer/fields", "surface": "customer", "baseline": true, "viewports": ["desktopWide", "tablet", "mobileNarrow"], "assertions": ["mainVisible", "navReachable", "stateSafe"] },
+    { "route": "/customer/fields/:fieldId", "capturePath": "/customer/fields/field_c8_demo", "surface": "customer", "baseline": true, "viewports": ["desktopWide", "tablet", "mobileNarrow"], "assertions": ["mainVisible", "stateSafe"] },
+    { "route": "/customer/fields/:fieldId/export", "capturePath": "/customer/fields/field_c8_demo/export", "surface": "customer", "baseline": false, "viewports": ["desktopWide", "desktopStandard", "laptop", "tablet", "mobileNarrow"], "assertions": ["printSafe", "returnVisible", "stateSafe"] },
+    { "route": "/customer/operations", "capturePath": "/customer/operations", "surface": "customer", "baseline": false, "viewports": ["desktopWide", "desktopStandard", "laptop", "tablet", "mobileNarrow"], "assertions": ["mainVisible", "navReachable", "stateSafe"] },
+    { "route": "/customer/operations/:operationId", "capturePath": "/customer/operations/op_plan_c8_irrigation_formal_001", "surface": "customer", "baseline": false, "viewports": ["desktopWide", "desktopStandard", "laptop", "tablet", "mobileNarrow"], "assertions": ["mainVisible", "stateSafe"] },
+    { "route": "/customer/operations/:operationId/export", "capturePath": "/customer/operations/op_plan_c8_irrigation_formal_001/export", "surface": "customer", "baseline": false, "viewports": ["desktopWide", "desktopStandard", "laptop", "tablet", "mobileNarrow"], "assertions": ["printSafe", "returnVisible", "stateSafe"] },
+    { "route": "/customer/reports", "capturePath": "/customer/reports", "surface": "customer", "baseline": false, "viewports": ["desktopWide", "desktopStandard", "laptop", "tablet", "mobileNarrow"], "assertions": ["mainVisible", "stateSafe"] },
+    { "route": "/customer/export", "capturePath": "/customer/export", "surface": "customer", "baseline": true, "viewports": ["desktopWide", "tablet", "mobileNarrow"], "assertions": ["printSafe", "returnVisible", "stateSafe"] },
+
+    { "route": "/operator/twin", "capturePath": "/operator/twin", "surface": "operator", "baseline": true, "viewports": ["desktopWide", "tablet", "mobileNarrow"], "assertions": ["mainVisible", "navReachable", "stateSafe"] },
+    { "route": "/operator/fields", "capturePath": "/operator/fields", "surface": "operator", "baseline": true, "viewports": ["desktopWide", "tablet", "mobileNarrow"], "assertions": ["mainVisible", "navReachable", "stateSafe"] },
+    { "route": "/operator/fields/:fieldId", "capturePath": "/operator/fields/field_c8_demo", "surface": "operator", "baseline": false, "viewports": ["desktopWide", "desktopStandard", "laptop", "tablet", "mobileNarrow"], "assertions": ["mainVisible", "stateSafe"] },
+    { "route": "/operator/fields/:fieldId/state", "capturePath": "/operator/fields/field_c8_demo/state", "surface": "operator", "baseline": false, "viewports": ["desktopWide", "desktopStandard", "laptop", "tablet", "mobileNarrow"], "assertions": ["mainVisible", "stateSafe"] },
+    { "route": "/operator/fields/:fieldId/evidence", "capturePath": "/operator/fields/field_c8_demo/evidence", "surface": "operator", "baseline": false, "viewports": ["desktopWide", "desktopStandard", "laptop", "tablet", "mobileNarrow"], "assertions": ["mainVisible", "stateSafe"] },
+    { "route": "/operator/fields/:fieldId/forecast", "capturePath": "/operator/fields/field_c8_demo/forecast", "surface": "operator", "baseline": true, "viewports": ["desktopWide", "tablet", "mobileNarrow"], "assertions": ["mainVisible", "stateSafe"] },
+    { "route": "/operator/fields/:fieldId/scenario", "capturePath": "/operator/fields/field_c8_demo/scenario", "surface": "operator", "baseline": false, "viewports": ["desktopWide", "desktopStandard", "laptop", "tablet", "mobileNarrow"], "assertions": ["mainVisible", "stateSafe"] },
+    { "route": "/operator/fields/:fieldId/residual", "capturePath": "/operator/fields/field_c8_demo/residual", "surface": "operator", "baseline": false, "viewports": ["desktopWide", "desktopStandard", "laptop", "tablet", "mobileNarrow"], "assertions": ["mainVisible", "stateSafe"] },
+    { "route": "/operator/fields/:fieldId/calibration", "capturePath": "/operator/fields/field_c8_demo/calibration", "surface": "operator", "baseline": false, "viewports": ["desktopWide", "desktopStandard", "laptop", "tablet", "mobileNarrow"], "assertions": ["mainVisible", "stateSafe"] },
+    { "route": "/operator/fields/:fieldId/health", "capturePath": "/operator/fields/field_c8_demo/health", "surface": "operator", "baseline": false, "viewports": ["desktopWide", "desktopStandard", "laptop", "tablet", "mobileNarrow"], "assertions": ["mainVisible", "stateSafe"] },
+    { "route": "/operator/fields/:fieldId/audit", "capturePath": "/operator/fields/field_c8_demo/audit", "surface": "operator", "baseline": false, "viewports": ["desktopWide", "desktopStandard", "laptop", "tablet", "mobileNarrow"], "assertions": ["mainVisible", "stateSafe"] },
+    { "route": "/operator/twin/gateway-demo", "capturePath": "/operator/twin/gateway-demo", "surface": "operator", "baseline": true, "viewports": ["desktopWide", "tablet", "mobileNarrow"], "assertions": ["mainVisible", "stateSafe", "demoNonProduction"] },
+    { "route": "/operator/pilot", "capturePath": "/operator/pilot", "surface": "operator", "baseline": true, "viewports": ["desktopWide", "tablet", "mobileNarrow"], "assertions": ["mainVisible", "stateSafe", "readinessVisible"] },
+
+    { "route": "/admin/dashboard", "capturePath": "/admin/dashboard", "surface": "admin", "baseline": true, "viewports": ["desktopWide", "tablet", "mobileNarrow"], "assertions": ["mainVisible", "navReachable", "stateSafe"] },
+    { "route": "/admin/fields", "capturePath": "/admin/fields", "surface": "admin", "baseline": false, "viewports": ["desktopWide", "desktopStandard", "laptop", "tablet", "mobileNarrow"], "assertions": ["mainVisible", "stateSafe"] },
+    { "route": "/admin/operations", "capturePath": "/admin/operations", "surface": "admin", "baseline": false, "viewports": ["desktopWide", "desktopStandard", "laptop", "tablet", "mobileNarrow"], "assertions": ["mainVisible", "stateSafe"] },
+    { "route": "/admin/devices", "capturePath": "/admin/devices", "surface": "admin", "baseline": true, "viewports": ["desktopWide", "tablet", "mobileNarrow"], "assertions": ["mainVisible", "stateSafe"] },
+    { "route": "/admin/evidence", "capturePath": "/admin/evidence", "surface": "admin", "baseline": false, "viewports": ["desktopWide", "desktopStandard", "laptop", "tablet", "mobileNarrow"], "assertions": ["mainVisible", "stateSafe"] },
+    { "route": "/admin/skills", "capturePath": "/admin/skills", "surface": "admin", "baseline": false, "viewports": ["desktopWide", "desktopStandard", "laptop", "tablet", "mobileNarrow"], "assertions": ["mainVisible", "stateSafe"] },
+    { "route": "/admin/healthz", "capturePath": "/admin/healthz", "surface": "admin", "baseline": true, "viewports": ["desktopWide", "tablet", "mobileNarrow"], "assertions": ["mainVisible", "stateSafe", "healthReadbackVisible"] },
+
+    { "route": "/login", "capturePath": "/login", "surface": "supporting", "baseline": true, "viewports": ["desktopWide", "tablet", "mobileNarrow"], "assertions": ["loginVisible", "stateSafe"] }
+  ]
+}
