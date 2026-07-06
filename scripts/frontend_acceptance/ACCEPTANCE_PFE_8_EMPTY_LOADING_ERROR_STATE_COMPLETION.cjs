@@ -24,8 +24,9 @@ const primitiveFiles = [
   'apps/web/src/design-system/product/ProductDataTable.tsx',
 ];
 const loginFile = 'apps/web/src/views/LoginPage.tsx';
+const fieldRuntimeOverviewFile = 'apps/web/src/features/operator/fieldRuntime/FieldRuntimeOverviewPanel.tsx';
 const acceptanceFile = 'scripts/frontend_acceptance/ACCEPTANCE_PFE_8_EMPTY_LOADING_ERROR_STATE_COMPLETION.cjs';
-const allowedChangedFiles = new Set([...docs, ...primitiveFiles, loginFile, acceptanceFile]);
+const allowedChangedFiles = new Set([...docs, ...primitiveFiles, loginFile, fieldRuntimeOverviewFile, acceptanceFile]);
 const assertions = [];
 
 function repoPath(file) { return path.join(root, file); }
@@ -42,7 +43,7 @@ function stripComments(text) { return text.replace(/\/\*[\s\S]*?\*\//g, '').repl
 function visibleText(file) { return stripComments(read(file)); }
 
 try {
-  [...docs, ...baselineDocs, ...primitiveFiles, loginFile, acceptanceFile].forEach((file) => assert('exists:' + file, exists(file), { file }));
+  [...docs, ...baselineDocs, ...primitiveFiles, loginFile, fieldRuntimeOverviewFile, acceptanceFile].forEach((file) => assert('exists:' + file, exists(file), { file }));
 
   const diff = changedFiles();
   const docText = combined(docs);
@@ -55,7 +56,9 @@ try {
   const stateBlock = read('apps/web/src/design-system/product/ProductStateBlock.tsx');
   const dataTable = read('apps/web/src/design-system/product/ProductDataTable.tsx');
   const login = read(loginFile);
+  const fieldRuntimeOverview = read(fieldRuntimeOverviewFile);
   const visibleLogin = visibleText(loginFile);
+  const visibleFieldRuntimeOverview = visibleText(fieldRuntimeOverviewFile);
   const visiblePrimitives = primitiveFiles.map(visibleText).join('\n');
 
   const customerRoutes = ['/customer/dashboard', '/customer/fields', '/customer/fields/:fieldId', '/customer/fields/:fieldId/export', '/customer/operations', '/customer/operations/:operationId', '/customer/operations/:operationId/export', '/customer/reports', '/customer/export'];
@@ -82,8 +85,11 @@ try {
   assert('login_has_explicit_state_primitives', includesAll(login, ['ProductErrorState', 'ProductLoadingState', 'ProductStateBlock', 'AUTH_MISSING', 'AUTH_INVALID', 'SERVICE_UNAVAILABLE', 'SERVICE_UNREACHABLE']));
   assert('login_does_not_show_local_acceptance_hint', !login.includes('security_acceptance_tokens') && !login.includes('admin_token'));
   assert('login_uses_safe_state_message', !visibleLogin.includes('{stateMessage}') && !visibleLogin.includes('String(stateMessage)'));
+  assert('field_runtime_overview_uses_product_state_primitives', includesAll(fieldRuntimeOverview, ['ProductErrorState', 'ProductLoadingState', 'ProductStateBlock', 'surface="operator"']));
+  assert('field_runtime_overview_does_not_render_raw_load_error_message', !visibleFieldRuntimeOverview.includes('loadState.message') && !visibleFieldRuntimeOverview.includes('Overview load failed'));
   assert('modified_primitives_do_not_render_generic_runtime_failure_copy', !visiblePrimitives.includes('Cannot read') && !visiblePrimitives.includes('TypeError') && !visiblePrimitives.includes('Minified React'));
   assert('login_does_not_render_generic_runtime_failure_copy', !visibleLogin.includes('Cannot read') && !visibleLogin.includes('TypeError') && !visibleLogin.includes('Minified React'));
+  assert('field_runtime_overview_does_not_render_generic_runtime_failure_copy', !visibleFieldRuntimeOverview.includes('Cannot read') && !visibleFieldRuntimeOverview.includes('TypeError') && !visibleFieldRuntimeOverview.includes('Minified React'));
 
   console.log(JSON.stringify({
     ok: true,
@@ -91,7 +97,7 @@ try {
     scope: 'empty/loading/error state completion only',
     surfaces: { customer: 9, operator: 13, admin: 7, supporting: ['login', 'route fallback', 'product state primitives', 'export/print'] },
     states: { loading: 'passed', empty: 'passed', unavailable: 'passed', permission_limited: 'passed', degraded: 'passed', safe_error: 'passed' },
-    checks: { no_route_changes: 'passed', no_package_changes: 'passed', no_raw_runtime_copy: 'passed', no_local_acceptance_hint: 'passed' },
+    checks: { no_route_changes: 'passed', no_package_changes: 'passed', no_raw_runtime_copy: 'passed', no_local_acceptance_hint: 'passed', field_runtime_overview: 'passed' },
     changed_files_checked: diff.length ? diff : Array.from(allowedChangedFiles),
     assertions,
   }, null, 2));
