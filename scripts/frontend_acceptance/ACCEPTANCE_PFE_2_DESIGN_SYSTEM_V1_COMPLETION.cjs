@@ -194,6 +194,10 @@ function joinedPrimitiveSource() {
   return primitiveFiles.map(read).join('\n');
 }
 
+function joinParts(parts) {
+  return parts.join('');
+}
+
 try {
   [...docs, ...primitiveFiles, pfe1Register, cssFile, acceptanceFile].forEach((file) => assert('exists:' + file, exists(file), { file }));
 
@@ -237,9 +241,9 @@ try {
   assert('loading_state_has_aria_live', includesAll(loadingSource, ['aria-live="polite"', 'aria-busy="true"']));
   assert('error_state_has_safe_message_and_trace_id', includesAll(errorSource, ['message: ReactNode', 'traceId?: string', 'role="alert"']));
 
-  assertNoText(css, ['risk-red', 'priority-high', 'dispatch-active', 'ao-act-ready', 'live-online', 'production-online'], 'css_has_no_forbidden_semantic_tokens');
+  assertNoText(css, ['red', 'green', 'yellow', 'danger', 'success', 'risk-red', 'priority-high', 'dispatch-active', 'ao-act-ready', 'live-online', 'production-online'], 'css_has_no_forbidden_semantic_tokens');
   assertNoText(primitiveSource, ['createRecommendation', 'createAoAct', 'writeRoi', 'writeFieldMemory', 'dispatchActive', 'liveOnline', 'productionOnline'], 'primitive_source_has_no_forbidden_action_semantics');
-  assertNoText(read(acceptanceFile), ['writeFileSync(', 'appendFileSync(', 'fetch('], 'acceptance_is_static_repo_read_only');
+  assertNoText(read(acceptanceFile), [joinParts(['write', 'FileSync(']), joinParts(['append', 'FileSync(']), joinParts(['fet', 'ch('])], 'acceptance_is_static_repo_read_only');
 
   console.log(JSON.stringify({
     ok: true,
