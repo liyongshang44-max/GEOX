@@ -56,7 +56,7 @@ export default function AdminDevicesPage(): React.ReactElement {
         items={["Live device: not connected", "Production gateway: not online", "Service action disabled"]}
       />
       <ProductScopeBar surface="admin" items={[{ label: "Route", value: "/admin/devices" }, { label: "Mode", value: "Device inventory readback" }, { label: "Read-only", value: "true" }]} />
-      <div className="operatorProductMetricGrid">
+      <div className="adminProductMetricGrid">
         <ProductMetricTile label="Inventory rows" value={deviceRows.length} source="admin device source" status={<ProductStatusBadge status="readOnly" />} />
         <ProductMetricTile label="Connection state" value="Readback" description="Connection status is metadata, not a live monitoring claim." source="device governance" status={<ProductStatusBadge status="notConnected" />} />
         <ProductMetricTile label="Unavailable state" value="Defined" description="Offline and unavailable device states are allowed readback states." source="PFE-1 Admin contract" status={<ProductStatusBadge status="unavailable" />} />
