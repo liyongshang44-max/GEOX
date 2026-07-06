@@ -9,7 +9,9 @@ PFA means Product Frontend Acceptance. PFA-0 is a post-freeze review layer for t
 
 ## 1. Goal
 
-PFA-0 reviews the PFE-13 frozen frontend inventory for product-page quality: route health, boundary safety, role separation, i18n consistency, visual hierarchy, table readability, dense content handling, demo data quality, responsive sanity, and demo readiness.
+PFA-0 records route-level product-page review status for the PFE-13 frozen frontend inventory: route health, boundary safety, role separation, i18n consistency, visual hierarchy, table readability, dense content handling, demo data quality, responsive sanity, and demo readiness.
+
+PFA-0 classifies observed issues and runtime capture gaps. It does not claim that all pages are visually complete.
 
 ## 2. Source of truth
 
@@ -33,12 +35,12 @@ docs/frontend-acceptance/PFA-0-ROUTE-REVIEW-MATRIX.json
 
 ## 3. Completion statement
 
-All PFE-13 frozen frontend surfaces have been audited for product-page quality, and P1/P2 remediation work is classified for PFA-1.
+All PFE-13 frozen frontend surfaces have route-level PFA-0 review records. P1/P2 page-quality issues and runtime capture gaps are classified for PFA-1.
 
 Chinese completion statement:
 
 ```text
-所有 PFE-13 冻结的正式前端页面已经完成产品页面质量审计，并已将 P1/P2 修复项归类到 PFA-1。
+所有 PFE-13 冻结的正式前端页面已经建立 PFA-0 路由级审计记录；P1/P2 页面质量问题和 runtime capture 缺口已经归类到 PFA-1。
 ```
 
 ## 4. Nonclaims
@@ -48,6 +50,7 @@ PFA-0 cannot claim:
 ```text
 page issues are fixed
 all pages are product-grade complete
+all pages have successful runtime screenshots
 Twin Runtime can begin
 field pilot can begin
 production-ready state
@@ -90,9 +93,18 @@ responsiveSanity
 demoReadiness
 ```
 
+Every route record also carries locale and viewport coverage metadata:
+
+```text
+localeCoverage
+zhCnStatus
+enUsStatus
+viewportsReviewed
+```
+
 ## 7. Initial findings
 
-The seeded issue register records the observed screenshot findings:
+The seeded issue register records the observed screenshot findings and local runtime capture findings:
 
 ```text
 Customer zh-CN English residue
@@ -105,6 +117,8 @@ Operator pilot readiness readability
 Operator field runtime layout width
 Admin table field wrapping
 Admin mixed terminology residue
+Parameterized route runtime capture gaps
+Authenticated capture instability on selected admin routes
 ```
 
 These are not PFA-0 blockers. They are PFA-1 inputs.
@@ -124,7 +138,23 @@ docs/audit/PFA_0_PAGE_REVIEW_REPORT.md
 
 Generated PNG artifacts and generated audit reports must not be committed by default.
 
-## 10. PFA-1 handoff
+## 10. Capture policy
+
+The complete capture command uses full mode by default:
+
+```powershell
+node scripts/frontend_acceptance/CAPTURE_PFA_0_PAGE_REVIEW.cjs
+```
+
+A quick local pass may use:
+
+```powershell
+$env:PFA0_CAPTURE_MODE="demo-critical"; node scripts/frontend_acceptance/CAPTURE_PFA_0_PAGE_REVIEW.cjs; Remove-Item Env:PFA0_CAPTURE_MODE
+```
+
+A non-zero capture exit means runtime evidence is incomplete and must be recorded as a PFA-1 input.
+
+## 11. PFA-1 handoff
 
 PFA-1 must use the PFA-0 matrix and issue register as its input. PFA-1 should not freely invent unrelated page work.
 
@@ -136,6 +166,7 @@ Customer reports center density
 zh-CN English residue
 Demo data display labels and summary fallback
 Admin table wrapping polish
+Runtime capture gaps
 ```
 
 P1 issues block Twin Runtime work until they are remediated or reclassified.
