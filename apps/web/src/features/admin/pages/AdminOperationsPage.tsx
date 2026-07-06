@@ -56,7 +56,7 @@ export default function AdminOperationsPage(): React.ReactElement {
         items={["No dispatch button", "No AO-ACT control", "No customer operation report framing"]}
       />
       <ProductScopeBar surface="admin" items={[{ label: "Route", value: "/admin/operations" }, { label: "Mode", value: "Operation governance readback" }, { label: "Read-only", value: "true" }]} />
-      <div className="operatorProductMetricGrid">
+      <div className="adminProductMetricGrid">
         <ProductMetricTile label="Governance labels" value={operationRows.length} source="admin operations readback" status={<ProductStatusBadge status="readOnly" />} />
         <ProductMetricTile label="Blocked/degraded copy" value="Present" description="Blocked and degraded states are shown as governance readback only." source="PFE-1 Admin contract" status={<ProductStatusBadge status="degraded" />} />
         <ProductMetricTile label="Dispatch boundary" value="Not dispatch" description="No dispatch console behavior is exposed." source="Admin Operations boundary" />
