@@ -1,0 +1,99 @@
+{
+  "phase": "PFE-12 Demo Mode & Release Candidate",
+  "version": 1,
+  "mode": "demo-safe-release-candidate",
+  "productionReady": false,
+  "liveDeviceConnected": false,
+  "productionGatewayOnline": false,
+  "fieldPilotStarted": false,
+  "aoActDispatchEnabled": false,
+  "surfaces": {
+    "customer": 9,
+    "operator": 13,
+    "admin": 7,
+    "supporting": [
+      "login",
+      "locale toggle",
+      "product primitives",
+      "demo seed dry-run",
+      "release candidate checklist"
+    ]
+  },
+  "demoPaths": [
+    {
+      "surface": "customer",
+      "route": "/customer/dashboard",
+      "purpose": "customer operating overview demo",
+      "claimBoundary": "customer-visible report only"
+    },
+    {
+      "surface": "customer",
+      "route": "/customer/fields/field_c8_demo",
+      "purpose": "customer field report demo",
+      "claimBoundary": "authorized customer report only"
+    },
+    {
+      "surface": "customer",
+      "route": "/customer/operations/op_plan_c8_irrigation_formal_001",
+      "purpose": "customer operation report demo",
+      "claimBoundary": "customer-visible operation report only"
+    },
+    {
+      "surface": "operator",
+      "route": "/operator/twin",
+      "purpose": "operator runtime review demo",
+      "claimBoundary": "read-only review; no execution"
+    },
+    {
+      "surface": "operator",
+      "route": "/operator/fields/field_c8_demo/forecast",
+      "purpose": "operator field runtime forecast review demo",
+      "claimBoundary": "forecast review only; no recommendation or dispatch"
+    },
+    {
+      "surface": "operator",
+      "route": "/operator/twin/gateway-demo",
+      "purpose": "replay-backed gateway demo",
+      "claimBoundary": "replay-backed only; no live device connection"
+    },
+    {
+      "surface": "operator",
+      "route": "/operator/pilot",
+      "purpose": "pilot readiness review demo",
+      "claimBoundary": "readiness review only; no field pilot start"
+    },
+    {
+      "surface": "admin",
+      "route": "/admin/dashboard",
+      "purpose": "admin governance readback demo",
+      "claimBoundary": "governance readback; no service operation"
+    },
+    {
+      "surface": "admin",
+      "route": "/admin/devices",
+      "purpose": "admin inventory readback demo",
+      "claimBoundary": "inventory readback; no device control"
+    },
+    {
+      "surface": "admin",
+      "route": "/admin/healthz",
+      "purpose": "admin healthz readback demo",
+      "claimBoundary": "health readback; no service restart"
+    }
+  ],
+  "seedPolicy": {
+    "default": "dry-run",
+    "applyRequiresExplicitTenant": true,
+    "allowedTenants": ["demo", "tenantA"],
+    "defaultCommand": "node scripts/demo_seed/SEED_CONTROLLED_PILOT_FRONTEND_DEMO_V1.cjs --dry-run",
+    "manualApplyCommand": "node scripts/demo_seed/SEED_CONTROLLED_PILOT_FRONTEND_DEMO_V1.cjs --apply --tenant tenantA"
+  },
+  "requiredEvidence": [
+    "PFE-6 accessibility baseline",
+    "PFE-7 responsive baseline",
+    "PFE-8 state baseline",
+    "PFE-9 screenshot baseline",
+    "PFE-10 bundle budget baseline",
+    "PFE-11 copy/i18n baseline"
+  ]
+}
