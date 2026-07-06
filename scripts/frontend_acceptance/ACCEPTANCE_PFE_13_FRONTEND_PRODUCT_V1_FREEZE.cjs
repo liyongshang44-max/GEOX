@@ -33,6 +33,20 @@ const evidenceFiles = [
 ];
 const acceptanceFile = 'scripts/frontend_acceptance/ACCEPTANCE_PFE_13_FRONTEND_PRODUCT_V1_FREEZE.cjs';
 const allowedChangedFiles = new Set([...docs, acceptanceFile]);
+const requiredInventoryRecordFields = [
+  'surface',
+  'route',
+  'roleOwner',
+  'status',
+  'sourceBaseline',
+  'stateBaseline',
+  'responsiveBaseline',
+  'copyI18nBaseline',
+  'screenshotBaseline',
+  'bundleImpact',
+  'demoRcStatus',
+  'postFreezeChangeRule',
+];
 const assertions = [];
 
 function repoPath(file) { return path.join(root, file); }
@@ -46,6 +60,13 @@ function statusFiles() { const output = runGit(['status', '--short', '--untracke
 function changedFiles() { const set = new Set(); const output = runGit(['diff', '--name-only', 'origin/main...HEAD']) || runGit(['diff', '--name-only', 'main...HEAD']); if (output) output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).forEach((file) => set.add(file)); statusFiles().forEach((file) => set.add(file)); return Array.from(set).sort(); }
 function parseJson(file) { return JSON.parse(read(file)); }
 function docsText() { return docs.filter((file) => file.endsWith('.md')).map(read).join('\n'); }
+function routesFrom(records) { return Array.isArray(records) ? records.map((record) => record.route) : []; }
+function recordsHaveRequiredFields(records, surface) {
+  return Array.isArray(records)
+    && records.every((record) => requiredInventoryRecordFields.every((field) => typeof record[field] === 'string' && record[field].trim().length > 0)
+      && record.surface === surface
+      && record.status === 'frozen');
+}
 
 try {
   [...docs, ...baselineDocs, ...evidenceFiles, acceptanceFile].forEach((file) => assert('exists:' + file, exists(file), { file }));
@@ -69,6 +90,7 @@ try {
   const customerRoutes = ['/customer/dashboard', '/customer/fields', '/customer/fields/:fieldId', '/customer/fields/:fieldId/export', '/customer/operations', '/customer/operations/:operationId', '/customer/operations/:operationId/export', '/customer/reports', '/customer/export'];
   const operatorRoutes = ['/operator/twin', '/operator/fields', '/operator/fields/:fieldId', '/operator/fields/:fieldId/state', '/operator/fields/:fieldId/evidence', '/operator/fields/:fieldId/forecast', '/operator/fields/:fieldId/scenario', '/operator/fields/:fieldId/residual', '/operator/fields/:fieldId/calibration', '/operator/fields/:fieldId/health', '/operator/fields/:fieldId/audit', '/operator/twin/gateway-demo', '/operator/pilot'];
   const adminRoutes = ['/admin/dashboard', '/admin/fields', '/admin/operations', '/admin/devices', '/admin/evidence', '/admin/skills', '/admin/healthz'];
+  const supportingRoutes = ['/login', 'LocaleToggle', 'Product design-system primitives', 'Product state primitives', 'ProductDataTable', 'ProductPageShell / ProductPageHeader', 'PFE-9 screenshot manifest', 'PFE-10 bundle budget', 'PFE-11 copy / i18n baseline', 'PFE-12 demo / RC baseline'];
 
   assert('changed_files_allowlist', diff.length === 0 || diff.every((file) => allowedChangedFiles.has(file)), { diff, allowed: Array.from(allowedChangedFiles) });
   assert('no_route_topology_changes', diff.every((file) => file !== 'apps/web/src/app/App.tsx' && file !== 'apps/web/src/app/AppShell.tsx' && !file.startsWith('apps/web/src/app/routes/')), { diff });
@@ -84,11 +106,15 @@ try {
   assert('freeze_manifest_required_baselines', Array.isArray(manifest.requiredBaselines) && requiredBaselines.every((label) => manifest.requiredBaselines.join('\n').includes(label)));
   assert('freeze_manifest_change_policy', manifest.postFreezeChangePolicy?.routeChangeRequiresNewPhase === true && manifest.postFreezeChangePolicy?.capabilityChangeRequiresNewPhase === true && manifest.postFreezeChangePolicy?.visualChangeRequiresRegressionEvidence === true && manifest.postFreezeChangePolicy?.copyChangeRequiresI18nGate === true && manifest.postFreezeChangePolicy?.bundleChangeRequiresBudgetCheck === true);
 
-  assert('surface_inventory_customer_complete', Array.isArray(inventory.customer) && inventory.customer.length === 9 && customerRoutes.every((route) => inventory.customer.includes(route)));
-  assert('surface_inventory_operator_complete', Array.isArray(inventory.operator) && inventory.operator.length === 13 && operatorRoutes.every((route) => inventory.operator.includes(route)));
-  assert('surface_inventory_admin_complete', Array.isArray(inventory.admin) && inventory.admin.length === 7 && adminRoutes.every((route) => inventory.admin.includes(route)));
-  assert('surface_inventory_supporting_complete', Array.isArray(inventory.supporting) && inventory.supporting.includes('/login') && inventory.supporting.includes('LocaleToggle') && inventory.supporting.includes('PFE-12 demo / RC baseline'));
-  assert('surface_inventory_schema_present', Array.isArray(inventory.evidenceSchema) && ['role owner', 'status', 'source baseline', 'post-freeze change rule'].every((item) => inventory.evidenceSchema.includes(item)));
+  assert('surface_inventory_required_fields_declared', Array.isArray(inventory.requiredRecordFields) && requiredInventoryRecordFields.every((field) => inventory.requiredRecordFields.includes(field)));
+  assert('surface_inventory_customer_complete', Array.isArray(inventory.customer) && inventory.customer.length === 9 && customerRoutes.every((route) => routesFrom(inventory.customer).includes(route)));
+  assert('surface_inventory_operator_complete', Array.isArray(inventory.operator) && inventory.operator.length === 13 && operatorRoutes.every((route) => routesFrom(inventory.operator).includes(route)));
+  assert('surface_inventory_admin_complete', Array.isArray(inventory.admin) && inventory.admin.length === 7 && adminRoutes.every((route) => routesFrom(inventory.admin).includes(route)));
+  assert('surface_inventory_supporting_complete', Array.isArray(inventory.supporting) && supportingRoutes.every((route) => routesFrom(inventory.supporting).includes(route)));
+  assert('surface_inventory_customer_records_have_required_fields', recordsHaveRequiredFields(inventory.customer, 'customer'));
+  assert('surface_inventory_operator_records_have_required_fields', recordsHaveRequiredFields(inventory.operator, 'operator'));
+  assert('surface_inventory_admin_records_have_required_fields', recordsHaveRequiredFields(inventory.admin, 'admin'));
+  assert('surface_inventory_supporting_records_have_required_fields', recordsHaveRequiredFields(inventory.supporting, 'supporting'));
 
   assert('freeze_checklist_has_required_fields', includesAll(checklist, ['area', 'requirement', 'evidence file', 'acceptance command', 'status', 'blocker if failed']));
   assert('freeze_checklist_has_core_requirements', includesAll(checklist, ['PFE-6', 'PFE-7', 'PFE-8', 'PFE-9', 'PFE-10', 'PFE-11', 'PFE-12', 'Customer 9', 'Operator 13', 'Admin 7', 'post-freeze change policy']));
