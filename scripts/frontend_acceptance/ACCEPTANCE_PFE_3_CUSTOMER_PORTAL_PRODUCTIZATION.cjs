@@ -24,15 +24,20 @@ const customerSources = [
   'apps/web/src/features/customer/pages/CustomerReportsCenterPage.tsx',
 ];
 
-const supportFiles = [
+const customerStyleFiles = [
   'apps/web/src/styles.css',
+  'apps/web/src/styles/customerDashboard.css',
+];
+
+const supportFiles = [
+  ...customerStyleFiles,
   'apps/web/src/design-system/product/index.ts',
   'docs/frontend-productization/PFE-1-PAGE-CONTRACT-REGISTER.md',
   'docs/frontend-productization/PFE-2-DESIGN-SYSTEM-V1-COMPLETION.md',
 ];
 
 const acceptanceFile = 'scripts/frontend_acceptance/ACCEPTANCE_PFE_3_CUSTOMER_PORTAL_PRODUCTIZATION.cjs';
-const allowedChangedFiles = new Set([...docs, ...customerSources, 'apps/web/src/styles.css', acceptanceFile]);
+const allowedChangedFiles = new Set([...docs, ...customerSources, ...customerStyleFiles, acceptanceFile]);
 const assertions = [];
 
 function repoPath(file) { return path.join(root, file); }
@@ -64,6 +69,7 @@ try {
   assert('pfe1_customer_contracts_present', includesAll(pfe1, ['/customer/dashboard', '/customer/fields', '/customer/operations', '/customer/reports', '/customer/export']));
   assert('pfe2_primitives_present', includesAll(pfe2 + designSystemIndex, ['ProductPageShell', 'ProductPageHeader', 'ProductSectionCard', 'ProductStatusBadge', 'ProductDataTable', 'ProductEmptyState', 'ProductLoadingState', 'ProductErrorState']));
   assert('product_css_imported', read('apps/web/src/styles.css').includes('./styles/productDesignSystem.css'));
+  assert('dashboard_rail_width_guard_present', includesAll(read('apps/web/src/styles/customerDashboard.css'), ['.customerDashboardRightRail > *', 'min-width: 260px', 'productPageShell__aside .customerDashboardRightRail', 'min-width: 320px']));
 
   assert('dashboard_productized', includesAll(read(customerSources[0]), ['Reporting-only customer surface', 'Field reports', 'Operation reports', 'ProductMetricTile']));
   assert('dashboard_export_productized', includesAll(read(customerSources[1]), ['PrintReportScaffold', 'Print-safe customer delivery surface', 'ProductLoadingState', 'ProductErrorState']));
