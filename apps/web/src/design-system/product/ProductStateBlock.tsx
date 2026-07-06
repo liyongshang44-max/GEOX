@@ -15,6 +15,7 @@ export type ProductStateKind =
   | "notConnected"
   | "notOnline"
   | "disabled"
+  | "blocked"
   | "future"
   | "urlOnly"
   | "doNotBuild";
