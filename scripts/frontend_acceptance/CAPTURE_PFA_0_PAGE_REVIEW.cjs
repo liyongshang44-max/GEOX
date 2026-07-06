@@ -9,10 +9,11 @@ const path = require('node:path');
 const ROOT = path.resolve(__dirname, '..', '..');
 const MANIFEST_PATH = path.join(ROOT, 'docs/frontend-acceptance/PFA-0-REVIEW-MANIFEST.json');
 const INVENTORY_PATH = path.join(ROOT, 'docs/frontend-productization/PFE-13-ROUTE-INVENTORY.json');
-const WEB_BASE_URL = String(process.env.FRONTEND_AUDIT_WEB_BASE_URL || 'http://127.0.0.1:5173').replace(/\/+$/, '');
+const DEFAULT_WEB_PORT = String(process.env.PFA0_WEB_PORT || '5177');
+const WEB_BASE_URL = String(process.env.FRONTEND_AUDIT_WEB_BASE_URL || `http://127.0.0.1:${DEFAULT_WEB_PORT}`).replace(/\/+$/, '');
 const API_BASE_URL = String(process.env.API_BASE_URL || process.env.GEOX_WEB_PROXY_TARGET || 'http://127.0.0.1:3000').replace(/\/+$/, '');
 const CAPTURE_MODE = String(process.env.PFA0_CAPTURE_MODE || 'demo-critical').toLowerCase();
-const SESSION_VALUE = String(process.env.FRONTEND_AUDIT_TOKEN || process.env.GEOX_ACCEPTANCE_TOKEN || 'tenant_a_admin_token');
+const SESSION_VALUE = String(process.env.FRONTEND_AUDIT_TOKEN || process.env.GEOX_ACCEPTANCE_TOKEN || 'admin_token');
 const SESSION_KEY = ['geox', 'ao', 'act', 'token'].join('_');
 const CONTEXT_KEY = ['geox', 'tenant', 'context'].join('_');
 const META_KEY = ['geox', 'session', 'meta'].join('_');
@@ -21,6 +22,7 @@ function readJson(file) { return JSON.parse(fs.readFileSync(file, 'utf8')); }
 function rel(file) { return path.relative(ROOT, file).replace(/\\/g, '/'); }
 function routeSlug(value) { return value.replace(/^\//, '').replace(/[^a-z0-9_-]+/gi, '_') || 'root'; }
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+function isLoginUrl(value) { try { return new URL(value).pathname === '/login'; } catch { return String(value || '').includes('/login'); } }
 
 function requestOk(url) {
   return new Promise((resolve) => {
@@ -46,9 +48,14 @@ function ensureBrowser() {
   if (ret.status !== 0) throw new Error(`browser install failed with exit=${ret.status}`);
 }
 
-function startWeb() {
+async function startWeb() {
   if (process.env.FRONTEND_AUDIT_SKIP_WEB_SERVER === '1') return null;
-  const child = spawn('pnpm', ['--filter', '@geox/web', 'dev', '--', '--host', '127.0.0.1', '--port', '5173', '--strictPort'], {
+  if (await waitForHttp(WEB_BASE_URL, 1000)) {
+    console.log(`[pfa-0-review] using existing web runtime at ${WEB_BASE_URL}`);
+    return null;
+  }
+  const port = new URL(WEB_BASE_URL).port || DEFAULT_WEB_PORT;
+  const child = spawn('pnpm', ['--filter', '@geox/web', 'exec', 'vite', '--config', 'vite.config.ts', '--host', '127.0.0.1', '--port', port, '--strictPort'], {
     cwd: ROOT,
     env: { ...process.env, GEOX_WEB_PROXY_TARGET: API_BASE_URL, VITE_API_BASE_URL: '', VITE_API_BASE: '', BROWSER: 'none' },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -94,7 +101,7 @@ function selectedViewports(manifest) {
 async function applySession(context, locale) {
   await context.addInitScript(({ localeValue, keys, value }) => {
     const tenantContext = { tenant_id: 'tenantA', project_id: 'projectA', group_id: 'groupA' };
-    const sessionMeta = { role: 'admin', actor_id: 'pfa-0-page-review', token_id: 'pfa-0-page-review', scopes: ['operator.read', 'customer.read', 'admin.read'] };
+    const sessionMeta = { role: 'admin', actor_id: 'tok_admin_actor', token_id: 'tok_admin', scopes: ['security.admin', 'security.audit.read', 'recommendation.read', 'prescription.read', 'action.read', 'field_memory.read', 'roi_ledger.read', 'field.zone.read', 'skill.read', 'evidence_export.read'] };
     window.localStorage.setItem('geox.locale', localeValue);
     window.localStorage.setItem(keys.session, value);
     window.sessionStorage.setItem(keys.session, value);
@@ -116,6 +123,10 @@ async function captureOne(browser, manifest, route, locale, viewportName) {
     await page.goto(`${WEB_BASE_URL}${route.capturePath}`, { waitUntil: 'domcontentloaded', timeout: 20000 });
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => undefined);
     await page.waitForTimeout(500);
+    const finalUrl = page.url();
+    if (route.capturePath !== '/login' && isLoginUrl(finalUrl)) {
+      throw new Error(`unexpected login redirect for ${route.capturePath}; check FRONTEND_AUDIT_TOKEN/API server`);
+    }
     const outputDir = path.join(ROOT, manifest.artifactPolicy.screenshotDirectory, route.surface, locale, viewportName);
     fs.mkdirSync(outputDir, { recursive: true });
     const screenshot = path.join(outputDir, `${routeSlug(route.capturePath)}.png`);
@@ -123,7 +134,7 @@ async function captureOne(browser, manifest, route, locale, viewportName) {
     result.screenshot = rel(screenshot);
   } catch (error) {
     result.status = 'FAIL';
-    result.notes.push(String(error && (error.message || error)).slice(0, 200));
+    result.notes.push(String(error && (error.message || error)).slice(0, 240));
   } finally {
     await context.close().catch(() => undefined);
   }
@@ -146,7 +157,7 @@ async function main() {
   const results = [];
   try {
     ensureBrowser();
-    web = startWeb();
+    web = await startWeb();
     if (!(await waitForHttp(WEB_BASE_URL, 60000))) throw new Error(`web not reachable: ${WEB_BASE_URL}`);
     const { chromium } = require('@playwright/test');
     browser = await chromium.launch({ headless: true });
@@ -157,7 +168,7 @@ async function main() {
     if (web) stopWeb(web);
   }
   if (results.some((result) => result.status !== 'PASS')) process.exit(1);
-  console.log(JSON.stringify({ ok: true, capture: 'PFA_0_PAGE_REVIEW', mode: CAPTURE_MODE, screenshots: results.length, report: manifest.artifactPolicy.reportPath }, null, 2));
+  console.log(JSON.stringify({ ok: true, capture: 'PFA_0_PAGE_REVIEW', mode: CAPTURE_MODE, screenshots: results.length, report: manifest.artifactPolicy.reportPath, webBaseUrl: WEB_BASE_URL }, null, 2));
 }
 
 main().catch((error) => {
