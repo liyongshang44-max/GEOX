@@ -98,28 +98,42 @@ function selectedViewports(manifest) {
   return CAPTURE_MODE === 'full' ? Object.keys(manifest.viewports || {}) : ['desktopReview'];
 }
 
-async function applySession(context, locale) {
-  await context.addInitScript(({ localeValue, keys, value }) => {
-    const tenantContext = { tenant_id: 'tenantA', project_id: 'projectA', group_id: 'groupA' };
-    const sessionMeta = { role: 'admin', actor_id: 'tok_admin_actor', token_id: 'tok_admin', scopes: ['security.admin', 'security.audit.read', 'recommendation.read', 'prescription.read', 'action.read', 'field_memory.read', 'roi_ledger.read', 'field.zone.read', 'skill.read', 'evidence_export.read'] };
+async function applyLocale(context, locale) {
+  await context.addInitScript((localeValue) => {
     window.localStorage.setItem('geox.locale', localeValue);
-    window.localStorage.setItem(keys.session, value);
-    window.sessionStorage.setItem(keys.session, value);
-    window.localStorage.setItem(keys.context, JSON.stringify(tenantContext));
-    window.sessionStorage.setItem(keys.context, JSON.stringify(tenantContext));
-    window.localStorage.setItem(keys.meta, JSON.stringify(sessionMeta));
-    window.sessionStorage.setItem(keys.meta, JSON.stringify(sessionMeta));
-  }, { localeValue: locale, keys: { session: SESSION_KEY, context: CONTEXT_KEY, meta: META_KEY }, value: SESSION_VALUE });
+  }, locale);
+}
+
+async function loginPage(page, locale) {
+  await page.goto(`${WEB_BASE_URL}/login`, { waitUntil: 'domcontentloaded', timeout: 20000 });
+  await page.evaluate((localeValue) => window.localStorage.setItem('geox.locale', localeValue), locale);
+  await page.locator('#token-input').fill(SESSION_VALUE);
+  await Promise.all([
+    page.waitForFunction((expectedToken) => window.localStorage.getItem('geox_ao_act_token') === expectedToken, SESSION_VALUE, { timeout: 15000 }),
+    page.locator('form button[type="submit"]').click(),
+  ]);
+  await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => undefined);
+  const stored = await page.evaluate((keys) => ({
+    token: window.localStorage.getItem(keys.session) || window.sessionStorage.getItem(keys.session),
+    context: window.localStorage.getItem(keys.context) || window.sessionStorage.getItem(keys.context),
+    meta: window.localStorage.getItem(keys.meta) || window.sessionStorage.getItem(keys.meta),
+  }), { session: SESSION_KEY, context: CONTEXT_KEY, meta: META_KEY });
+  if (stored.token !== SESSION_VALUE || !stored.context || !stored.meta) {
+    throw new Error('login did not persist a complete frontend session');
+  }
 }
 
 async function captureOne(browser, manifest, route, locale, viewportName) {
   const viewport = manifest.viewports[viewportName];
   if (!viewport) throw new Error(`Unknown viewport: ${viewportName}`);
   const context = await browser.newContext({ viewport });
-  await applySession(context, locale);
+  await applyLocale(context, locale);
   const page = await context.newPage();
   const result = { route: route.route, capturePath: route.capturePath, surface: route.surface, locale, viewport: viewportName, status: 'PASS', screenshot: '', notes: [] };
   try {
+    if (route.capturePath !== '/login') {
+      await loginPage(page, locale);
+    }
     await page.goto(`${WEB_BASE_URL}${route.capturePath}`, { waitUntil: 'domcontentloaded', timeout: 20000 });
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => undefined);
     await page.waitForTimeout(500);
