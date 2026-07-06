@@ -82,12 +82,22 @@ export default function CustomerDashboardPage(): React.ReactElement {
         />
       }
       aside={
-        <div className="customerDashboardRightRail" aria-label="Customer dashboard summary rail">
-          <ProductSectionCard title="Authorized scope" subtitle={vm.summaryScopeText}>
-            <ProductStatusBadge status="readOnly" label="Report only" />
+        <div className="customerDashboardRightRail" aria-label="Customer dashboard product rail">
+          <ProductSectionCard title="Report entries" subtitle="Open customer-safe report surfaces.">
+            <div className="customerUsageActions">
+              <Link className="customerButton" to="/customer/fields">Field reports</Link>
+              <Link className="customerButton" to="/customer/operations">Operation reports</Link>
+              <Link className="customerButton" to="/customer/reports">Reports center</Link>
+            </div>
           </ProductSectionCard>
-          <ProductSectionCard title="Delivery" subtitle="Export-ready customer report surface.">
+          <ProductSectionCard title="Authorized scope" subtitle={vm.summaryScopeText}>
+            <ProductStatusBadge status="readOnly" label="Authorized scope only" />
+          </ProductSectionCard>
+          <ProductSectionCard title="Export delivery" subtitle="Export-ready customer report surface.">
             <Link className="customerButton customerButtonPrimary" to="/customer/export">Export dashboard report</Link>
+          </ProductSectionCard>
+          <ProductSectionCard title="Reporting-only boundary" subtitle="Read-only customer reporting, with no operational control exposed.">
+            <ProductStatusBadge status="readOnly" label="Report only" />
           </ProductSectionCard>
         </div>
       }
