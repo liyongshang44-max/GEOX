@@ -25,6 +25,15 @@ function sectionStatus(status: string): "available" | "partial" | "degraded" | "
   return "partial";
 }
 
+function sectionStatusLabel(status: string, statusText?: string): string {
+  const text = String(statusText ?? "").trim();
+  if (text && text !== status) return text;
+  if (status === "AVAILABLE") return "Available";
+  if (status === "PENDING") return "Requires review";
+  if (status === "NOT_APPLICABLE") return "Not applicable";
+  return "Status unavailable";
+}
+
 function customerTimelineLabel(status: OperationReportPageVm["timeline"][number]["status"]): string {
   if (status === "DONE") return "已完成";
   if (status === "PENDING") return "等待复核";
@@ -103,7 +112,7 @@ export default function OperationReportPageRoute(): React.ReactElement {
           mobileFallbackNote="On narrow screens, scroll horizontally to review each section."
           columns={[
             { key: "section", header: "Section", render: (row) => row.title },
-            { key: "status", header: "Status", render: (row) => <ProductStatusBadge status={sectionStatus(row.status)} label={row.statusText || "可查看"} /> },
+            { key: "status", header: "Status", render: (row) => <ProductStatusBadge status={sectionStatus(row.status)} label={sectionStatusLabel(row.status, row.statusText)} /> },
             { key: "summary", header: "Summary", render: (row) => row.summary || row.emptyState?.description || "No summary available." },
           ]}
         />
