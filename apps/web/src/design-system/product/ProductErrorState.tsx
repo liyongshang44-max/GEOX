@@ -9,7 +9,7 @@ export interface ProductErrorStateProps {
   className?: string;
 }
 
-// Purpose: render a safe error state without exposing stack traces, SQL details, or internal payloads.
+// Purpose: render a safe error state without exposing internal diagnostics or payload detail.
 export function ProductErrorState({ title, message, retry, traceId, className }: ProductErrorStateProps) {
   const classes = ["productErrorState", className].filter(Boolean).join(" ");
 
