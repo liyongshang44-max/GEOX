@@ -81,6 +81,16 @@ export default function CustomerDashboardPage(): React.ReactElement {
           nonclaim="Reporting-only surface. No operational control, internal review workflow, value ledger, memory workflow, or diagnostic console is available here."
         />
       }
+      aside={
+        <div className="customerDashboardRightRail" aria-label="Customer dashboard summary rail">
+          <ProductSectionCard title="Authorized scope" subtitle={vm.summaryScopeText}>
+            <ProductStatusBadge status="readOnly" label="Report only" />
+          </ProductSectionCard>
+          <ProductSectionCard title="Delivery" subtitle="Export-ready customer report surface.">
+            <Link className="customerButton customerButtonPrimary" to="/customer/export">Export dashboard report</Link>
+          </ProductSectionCard>
+        </div>
+      }
     >
       <ProductBoundaryBanner
         tone="readOnly"
