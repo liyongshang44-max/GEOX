@@ -207,35 +207,43 @@
 }
 
 @media (max-width: 1366px) {
-  .newAppShell:has(.customerDashboardPage) {
+  .newAppShell:has(.productPageShell[aria-label="Customer reporting dashboard"]) {
     grid-template-columns: minmax(0, 1fr);
     gap: 0;
   }
 
-  .newAppShell:has(.customerDashboardPage) .newAppMain,
-  .newAppShell:has(.customerDashboardPage) .newAppContent,
-  .newAppShell:has(.customerDashboardPage) .newTopBar {
+  .newAppShell:has(.productPageShell[aria-label="Customer reporting dashboard"]) .newAppMain,
+  .newAppShell:has(.productPageShell[aria-label="Customer reporting dashboard"]) .newAppContent,
+  .newAppShell:has(.productPageShell[aria-label="Customer reporting dashboard"]) .newTopBar {
     min-width: 0;
     max-width: 100%;
   }
 
-  .newAppShell:has(.customerDashboardPage) .newSideNav {
+  .newAppShell:has(.productPageShell[aria-label="Customer reporting dashboard"]) .newSideNav {
     position: static;
     width: auto;
     max-width: 100%;
     min-width: 0;
   }
 
-  .customerShell .productPageShell[data-surface="customer"]:has(.customerDashboardPage) {
+  .customerShell .productPageShell[aria-label="Customer reporting dashboard"] {
     max-width: 100%;
+    padding-inline: 16px;
   }
 
-  .customerShell .productPageShell[data-surface="customer"]:has(.customerDashboardPage) .productPageShell__body {
+  .customerShell .productPageShell[aria-label="Customer reporting dashboard"] .productPageShell__body {
+    flex-direction: column;
     gap: 16px;
   }
 
-  .customerShell .productPageShell[data-surface="customer"]:has(.customerDashboardPage) .productPageShell__aside {
-    flex-basis: 300px;
+  .customerShell .productPageShell[aria-label="Customer reporting dashboard"] .productPageShell__aside {
+    width: 100%;
+    max-width: 100%;
+    flex: 1 1 auto;
+  }
+
+  .customerShell .productPageShell[aria-label="Customer reporting dashboard"] .customerDashboardRightRail {
+    grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
   }
 
   .customerDashboardMainGrid {
