@@ -14,13 +14,14 @@ export default function LocaleToggle(): React.ReactElement {
   const { locale, setLocale } = useLocale();
 
   return (
-    <div className="localeToggle" aria-label="Language selector">
+    <div className="localeToggle" role="group" aria-label="Language selector">
       {OPTIONS.map((option) => (
         <button
           key={option.code}
           type="button"
           className={"localeToggle__button" + (locale === option.code ? " isActive" : "")}
           aria-pressed={locale === option.code}
+          aria-label={`Set language to ${option.label}`}
           onClick={() => setLocale(option.code)}
         >
           {option.label}

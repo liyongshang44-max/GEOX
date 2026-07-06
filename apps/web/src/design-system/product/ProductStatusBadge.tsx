@@ -1,4 +1,7 @@
 // apps/web/src/design-system/product/ProductStatusBadge.tsx
+// Purpose: render status as visible text, not color-only state.
+// Boundary: this component displays readback state only and does not create business authority.
+
 import type { ReactNode } from "react";
 
 // Purpose: define the allowed product status vocabulary for formal frontend surfaces.
@@ -41,13 +44,13 @@ export interface ProductStatusBadgeProps {
   ariaLabel?: string;
 }
 
-// Purpose: render a small status label using only approved PFE boundary semantics.
 export function ProductStatusBadge({ status, label, className, ariaLabel }: ProductStatusBadgeProps) {
   const classes = ["productStatusBadge", className].filter(Boolean).join(" ");
+  const visibleLabel = label ?? STATUS_LABELS[status];
 
   return (
     <span className={classes} data-status={status} aria-label={ariaLabel ?? STATUS_LABELS[status]}>
-      {label ?? STATUS_LABELS[status]}
+      {visibleLabel}
     </span>
   );
 }

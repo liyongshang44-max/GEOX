@@ -1,8 +1,12 @@
 // apps/web/src/design-system/product/ProductPageHeader.tsx
+// Purpose: provide a consistent page title structure without inventing default calls to action.
+// Boundary: this component owns heading semantics only, not route or page capability.
+
 import type { ReactNode } from "react";
 
 export interface ProductPageHeaderProps {
   title: ReactNode;
+  titleId?: string;
   eyebrow?: ReactNode;
   lead?: ReactNode;
   metadata?: ReactNode;
@@ -12,9 +16,9 @@ export interface ProductPageHeaderProps {
   className?: string;
 }
 
-// Purpose: provide a consistent page title structure without inventing default calls to action.
 export function ProductPageHeader({
   title,
+  titleId,
   eyebrow,
   lead,
   metadata,
@@ -29,7 +33,7 @@ export function ProductPageHeader({
     <header className={classes}>
       <div className="productPageHeader__copy">
         {eyebrow ? <p className="productPageHeader__eyebrow">{eyebrow}</p> : null}
-        <h1 className="productPageHeader__title">{title}</h1>
+        <h1 id={titleId} className="productPageHeader__title">{title}</h1>
         {lead ? <p className="productPageHeader__lead">{lead}</p> : null}
         {metadata ? <div className="productPageHeader__metadata">{metadata}</div> : null}
       </div>

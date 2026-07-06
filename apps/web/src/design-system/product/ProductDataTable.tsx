@@ -1,4 +1,7 @@
 // apps/web/src/design-system/product/ProductDataTable.tsx
+// Purpose: provide a simple semantic product table without adding a table dependency.
+// Boundary: this component owns table semantics and empty-state semantics only.
+
 import type { ReactNode } from "react";
 
 export interface ProductDataTableColumn<Row> {
@@ -18,7 +21,6 @@ export interface ProductDataTableProps<Row> {
   className?: string;
 }
 
-// Purpose: provide a simple semantic product table without adding a table dependency.
 export function ProductDataTable<Row>({
   caption,
   columns,
@@ -29,15 +31,21 @@ export function ProductDataTable<Row>({
   className,
 }: ProductDataTableProps<Row>) {
   const classes = ["productDataTable", className].filter(Boolean).join(" ");
+  const tableRegionLabel = typeof caption === "string" ? `${caption} table` : "Scrollable data table";
+  const emptyRegionLabel = typeof caption === "string" ? `${caption} empty table state` : "Empty data table state";
 
   if (rows.length === 0) {
-    return <div className="productDataTable__empty">{emptyState ?? "No rows available."}</div>;
+    return (
+      <section className="productDataTable__empty" role="status" aria-label={emptyRegionLabel}>
+        {emptyState ?? "No rows available."}
+      </section>
+    );
   }
 
   return (
     <div className={classes}>
       {mobileFallbackNote ? <p className="productDataTable__mobileNote">{mobileFallbackNote}</p> : null}
-      <div className="productDataTable__overflow" role="region" aria-label="Scrollable data table" tabIndex={0}>
+      <div className="productDataTable__overflow" role="region" aria-label={tableRegionLabel} tabIndex={0}>
         <table className="productDataTable__table">
           <caption>{caption}</caption>
           <thead>

@@ -1,0 +1,67 @@
+/* apps/web/src/styles/accessibility.css */
+:root {
+  --accessibility-focus-ring: var(--product-focus-ring, #2563eb);
+}
+
+.productSkipLink {
+  position: absolute;
+  left: 16px;
+  top: 12px;
+  z-index: 1000;
+  transform: translateY(-140%);
+  border: 2px solid var(--accessibility-focus-ring);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: #ffffff;
+  color: #111827;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+}
+
+.productSkipLink:focus,
+.productSkipLink:focus-visible {
+  transform: translateY(0);
+  outline: 3px solid var(--accessibility-focus-ring);
+  outline-offset: 3px;
+}
+
+.productPageShell:focus {
+  outline: none;
+}
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--accessibility-focus-ring);
+  outline-offset: 3px;
+}
+
+:where(button, [role="button"], a, input, select, textarea):disabled,
+:where([aria-disabled="true"]) {
+  cursor: not-allowed;
+}
+
+.breadcrumbList {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.breadcrumbItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.breadcrumbItem + .breadcrumbItem::before {
+  content: "/";
+  color: var(--product-text-muted, #6b7280);
+}
+
+.localeToggle[role="group"] {
+  display: inline-flex;
+  gap: 4px;
+}
