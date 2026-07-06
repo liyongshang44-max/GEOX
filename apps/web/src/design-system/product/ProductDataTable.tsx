@@ -3,6 +3,7 @@
 // Boundary: this component owns table semantics and empty-state semantics only.
 
 import type { ReactNode } from "react";
+import { ProductEmptyState } from "./ProductEmptyState";
 
 export interface ProductDataTableColumn<Row> {
   key: string;
@@ -33,11 +34,12 @@ export function ProductDataTable<Row>({
   const classes = ["productDataTable", className].filter(Boolean).join(" ");
   const tableRegionLabel = typeof caption === "string" ? `${caption} table` : "Scrollable data table";
   const emptyRegionLabel = typeof caption === "string" ? `${caption} empty table state` : "Empty data table state";
+  const emptyTitle = typeof caption === "string" ? `No rows for ${caption}.` : "No rows for this table.";
 
   if (rows.length === 0) {
     return (
       <section className="productDataTable__empty" role="status" aria-label={emptyRegionLabel}>
-        {emptyState ?? "No rows available."}
+        {emptyState ?? <ProductEmptyState title={emptyTitle} description="There are no records to display for this scope." ariaLabel={emptyRegionLabel} />}
       </section>
     );
   }
