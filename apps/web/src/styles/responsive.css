@@ -246,6 +246,22 @@
     grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
   }
 
+  .customerShell .productPageShell[aria-label="Customer reporting dashboard"] .customerIndexRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: start;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .customerShell .productPageShell[aria-label="Customer reporting dashboard"] .customerIndexRow > div,
+  .customerShell .productPageShell[aria-label="Customer reporting dashboard"] .customerIndexRow strong,
+  .customerShell .productPageShell[aria-label="Customer reporting dashboard"] .customerIndexRow small {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
   .customerDashboardMainGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
