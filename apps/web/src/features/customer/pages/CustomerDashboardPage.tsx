@@ -78,7 +78,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
           metadata={`Updated at: ${vm.generatedAtText}`}
           primaryAction={<Link className="customerButton customerButtonPrimary" to="/customer/export">Export report</Link>}
           secondaryActions={<Link className="customerButton" to="/customer/reports">Open reports</Link>}
-          nonclaim="Reporting-only surface. No command, approval, execution, value ledger, memory, or diagnostic control is available here."
+          nonclaim="Reporting-only surface. No operational control, internal review workflow, value ledger, memory workflow, or diagnostic console is available here."
         />
       }
     >
