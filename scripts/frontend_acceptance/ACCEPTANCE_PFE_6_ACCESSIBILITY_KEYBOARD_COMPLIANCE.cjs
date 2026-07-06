@@ -27,16 +27,19 @@ const productPrimitiveFiles = [
   'apps/web/src/design-system/product/ProductStateBlock.tsx',
   'apps/web/src/design-system/product/ProductTraceLink.tsx',
 ];
-const supportFiles = [
+const componentSupportFiles = [
   'apps/web/src/components/common/LocaleToggle.tsx',
   'apps/web/src/components/layout/AppBreadcrumb.tsx',
   'apps/web/src/components/a11y/ProductSkipLink.tsx',
+];
+const styleSupportFiles = [
   'apps/web/src/styles/accessibility.css',
   'apps/web/src/styles.css',
 ];
+const supportFiles = [...componentSupportFiles, ...styleSupportFiles];
 const acceptanceFile = 'scripts/frontend_acceptance/ACCEPTANCE_PFE_6_ACCESSIBILITY_KEYBOARD_COMPLIANCE.cjs';
 const allowedChangedFiles = new Set([...docs, ...productPrimitiveFiles, ...supportFiles, acceptanceFile]);
-const scanFiles = [...productPrimitiveFiles, ...supportFiles];
+const interactiveScanFiles = [...productPrimitiveFiles, ...componentSupportFiles];
 const assertions = [];
 
 function repoPath(file) { return path.join(root, file); }
@@ -56,7 +59,6 @@ try {
 
   const diff = changedFiles();
   const docText = combined(docs);
-  const scanText = combined(scanFiles);
   const pfe1 = read('docs/frontend-productization/PFE-1-PAGE-CONTRACT-REGISTER.md');
   const pfe2AndIndex = read('docs/frontend-productization/PFE-2-DESIGN-SYSTEM-V1-COMPLETION.md') + '\n' + read('apps/web/src/design-system/product/index.ts');
   const shell = read('apps/web/src/design-system/product/ProductPageShell.tsx');
@@ -98,11 +100,11 @@ try {
   assert('focus_and_skip_styles_present', includesAll(accessibilityCss, ['.productSkipLink', ':focus-visible', 'outline', '.breadcrumbList', '.localeToggle[role="group"]']));
   assert('accessibility_css_imported', styles.includes('@import "./styles/accessibility.css";'));
 
-  const positiveTabIndex = regexViolations(scanFiles, /tabIndex=\{\s*[1-9][0-9]*\s*\}|tabindex=["'][1-9][0-9]*["']/g);
-  const clickableDivSpan = regexViolations(scanFiles, /<(div|span)\b(?=[^>]*onClick)(?![^>]*role=)[^>]*>/g);
-  const roleButtonWithoutKey = regexViolations(scanFiles, /role=["']button["'](?![^>]*onKeyDown)/g);
-  const hiddenFocusable = regexViolations(scanFiles, /aria-hidden=["']true["'][^>]*(href=|<button|tabIndex=\{0\})/g);
-  const customDisabledWithoutAria = regexViolations(scanFiles, /<(div|span|a)\b(?=[^>]*disabled)(?![^>]*aria-disabled)[^>]*>/g);
+  const positiveTabIndex = regexViolations(interactiveScanFiles, /tabIndex=\{\s*[1-9][0-9]*\s*\}|tabindex=["'][1-9][0-9]*["']/g);
+  const clickableDivSpan = regexViolations(interactiveScanFiles, /<(div|span)\b(?=[^>]*onClick)(?![^>]*role=)[^>]*>/g);
+  const roleButtonWithoutKey = regexViolations(interactiveScanFiles, /role=["']button["'](?![^>]*onKeyDown)/g);
+  const hiddenFocusable = regexViolations(interactiveScanFiles, /aria-hidden=["']true["'][^>]*(href=|<button|tabIndex=\{0\})/g);
+  const customDisabledWithoutAria = regexViolations(interactiveScanFiles, /<(div|span|a)\b(?=[^>]*disabled)(?![^>]*aria-disabled)[^>]*>/g);
 
   assert('no_positive_tabindex_values', positiveTabIndex.length === 0, { positiveTabIndex });
   assert('no_clickable_div_or_span_without_role', clickableDivSpan.length === 0, { clickableDivSpan });
