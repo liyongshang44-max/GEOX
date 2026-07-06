@@ -53,7 +53,7 @@ field pilot can begin
 production-ready state
 ```
 
-PFA-0 records the gap between engineering freeze and product-page acceptance.
+PFA-0 does not fix pages. It records the gap between engineering freeze and product-page acceptance.
 
 ## 5. Coverage
 
