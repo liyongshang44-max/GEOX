@@ -1,6 +1,6 @@
 // apps/web/src/layouts/AdminLayout.tsx
 // Purpose: render the Admin Console as an independent shell.
-// Boundary: this layout owns admin chrome only.
+// Boundary: this layout owns admin chrome only; page-level landmarks are owned by formal Admin pages.
 
 import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
@@ -59,7 +59,7 @@ export default function AdminLayout({ topBar, children }: AdminLayoutProps): Rea
   const topbarLead = localizedText(ADMIN_SHELL_LABELS.topbar.lead, locale);
 
   return (
-    <div className="adminShell" data-layout="admin-console-shell">
+    <div className="adminShell" data-layout="admin-console-shell" data-pfe5="admin-layout-landmark-corrected">
       <aside className="adminShellSidebar" aria-label={localizedText(ADMIN_SHELL_LABELS.navigationAria, locale)}>
         <div className="adminShellBrand" aria-label={localizedText(ADMIN_SHELL_LABELS.brand, locale)}>
           <span className="adminShellLogoMark" aria-hidden="true" />
@@ -126,7 +126,7 @@ export default function AdminLayout({ topBar, children }: AdminLayoutProps): Rea
           <span>{localizedText(ADMIN_SHELL_LABELS.meta.boundaryText, locale)}</span>
         </section>
 
-        <main className="adminLayoutMain">{children}</main>
+        <div className="adminLayoutMain" data-landmark="page-owned-by-product-page-shell">{children}</div>
       </div>
     </div>
   );
