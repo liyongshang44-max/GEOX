@@ -1,8 +1,10 @@
 {
   "phase": "PFA-0 Page Quality Audit",
-  "version": 1,
+  "version": 2,
   "sourceInventory": "docs/frontend-productization/PFE-13-ROUTE-INVENTORY.json",
   "mode": "post-freeze-product-page-review",
+  "defaultCaptureMode": "full",
+  "quickCaptureMode": "demo-critical",
   "locales": ["zh-CN", "en-US"],
   "viewports": {
     "desktopReview": { "width": 1440, "height": 1100 },
@@ -10,9 +12,9 @@
     "mobileSpotCheck": { "width": 390, "height": 900 }
   },
   "coverage": {
-    "desktopReview": "all formal routes in zh-CN and en-US",
-    "laptopReview": "all demo-critical routes in zh-CN",
-    "mobileSpotCheck": "demo-critical subset only"
+    "desktopReview": "all formal routes in zh-CN and en-US under PFA0_CAPTURE_MODE=full",
+    "laptopReview": "all demo-critical routes in zh-CN and en-US",
+    "mobileSpotCheck": "demo-critical subset only; not a PFA-0 merge blocker"
   },
   "concreteRouteBindings": {
     ":fieldId": "field_c8_demo",
