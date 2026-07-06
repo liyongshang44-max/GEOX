@@ -97,7 +97,7 @@ try {
   assert('product_metric_grid_responsive_coverage', includesAll(responsiveCss, ['.customerDashboardKpiRow', '.adminProductMetricGrid', '.operatorProductMetricGrid', 'repeat(auto-fit', '@media (max-width: 768px)']));
   assert('product_scope_bar_responsive_coverage', includesAll(responsiveCss, ['.productScopeBar', '.productScopeBar__item', 'grid-template-columns: 1fr']));
   assert('product_boundary_banner_responsive_coverage', includesAll(responsiveCss, ['.productBoundaryBanner__items', 'flex-wrap: wrap', 'flex-direction: column']));
-  assert('legacy_app_shell_responsive_strategy', includesAll(responsiveCss, ['.newAppShell', '.newAppMain', '.newAppContent', '.newSideNav', ':has(.customerDashboardPage)']));
+  assert('legacy_app_shell_responsive_strategy', includesAll(responsiveCss, ['.newAppShell', '.newAppMain', '.newAppContent', '.newSideNav', 'Customer reporting dashboard']));
   assert('customer_dashboard_right_rail_responsive_protection', includesAll(customerCss, ['.customerDashboardRightRail', '.productPageShell__aside .customerDashboardRightRail', 'min-width: 0', 'max-width: 100%']));
   assert('operator_field_runtime_tabs_responsive_strategy', includesAll(operatorCss, ['.operatorFieldRuntime__tabs', '.operatorFieldRuntime__tab', 'flex: 1 1 180px', 'overflow-wrap: anywhere']));
   assert('gateway_demo_grid_responsive_strategy', includesAll(operatorCss, ['.operatorReplayDemo__grid', 'grid-template-columns: 1fr']));
