@@ -9,7 +9,7 @@ PFE-12 establishes a demo-safe release-candidate baseline for Formal Product Fro
 
 ## 1. Goal
 
-PFE-12 packages the completed Formal Product Frontend work into a reviewable demo-mode and release-candidate state with explicit nonclaims, seed policy, demo script, RC checklist, and static acceptance gate.
+PFE-12 packages the completed Formal Product Frontend work into a reviewable demo-mode and release-candidate state with explicit nonclaims, seed policy, walkthrough, checklist, and static acceptance gate.
 
 ## 2. Completion statement
 
@@ -97,9 +97,9 @@ The PFE-12 demo manifest is the source of truth for demo flags. The static gate 
 ```text
 docs/frontend-productization/PFE-12-DEMO-MODE-RELEASE-CANDIDATE.md
 docs/frontend-productization/PFE-12-DEMO-MANIFEST.json
-docs/frontend-productization/PFE-12-RC-CHECKLIST.md
-docs/frontend-productization/PFE-12-DEMO-SCRIPT.md
-docs/frontend-productization/PFE-12-RC-ISSUE-REGISTER.md
+docs/frontend-productization/PFE-12-RELEASE-CANDIDATE-CHECKLIST.md
+docs/frontend-productization/PFE-12-WALKTHROUGH.md
+docs/frontend-productization/PFE-12-RELEASE-CANDIDATE-ISSUE-REGISTER.md
 scripts/frontend_acceptance/ACCEPTANCE_PFE_12_DEMO_MODE_RELEASE_CANDIDATE.cjs
 ```
 
@@ -128,7 +128,7 @@ apps/web/src/styles/*
 
 ## 11. Acceptance policy
 
-PFE-12 acceptance is static. It does not start DB, does not start web, does not write facts, and does not require dist. It validates the demo manifest, seed policy, RC checklist, demo script, issue register, PFE-6 through PFE-11 evidence docs, and change scope.
+PFE-12 acceptance is static. It does not start DB, does not start web, does not write facts, and does not require dist. It validates the demo manifest, seed policy, release checklist, walkthrough, issue register, PFE-6 through PFE-11 evidence docs, and change scope.
 
 ## 12. Nonclaims
 
@@ -136,4 +136,4 @@ PFE-12 can claim a demo-safe release-candidate baseline only. It cannot claim pr
 
 ## 13. Handoff
 
-The RC handoff consists of the PFE-12 demo manifest, RC checklist, demo script, issue register, static acceptance output, GitHub CI success, local dry-run seed output, and PFE-10 bundle checker output.
+The RC handoff consists of the PFE-12 demo manifest, release checklist, walkthrough, issue register, static acceptance output, GitHub CI success, local dry-run seed output, and PFE-10 bundle checker output.
