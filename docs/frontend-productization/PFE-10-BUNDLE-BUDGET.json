@@ -1,0 +1,30 @@
+{
+  "phase": "PFE-10 Performance Budget & Bundle Hygiene",
+  "version": 1,
+  "mode": "build-output-budget",
+  "buildOutputDir": "apps/web/dist",
+  "reportPath": "docs/audit/PFE_10_BUNDLE_BUDGET_REPORT.md",
+  "budgets": {
+    "totalJsRawBytes": 2500000,
+    "totalJsGzipBytes": 850000,
+    "largestJsRawBytes": 1200000,
+    "largestJsGzipBytes": 380000,
+    "totalCssRawBytes": 550000,
+    "totalCssGzipBytes": 120000,
+    "largestCssRawBytes": 350000,
+    "largestCssGzipBytes": 80000,
+    "maxJsAssetCount": 80,
+    "maxCssAssetCount": 20,
+    "maxTotalAssetCount": 140
+  },
+  "outOfScope": [
+    "pixelDiff",
+    "lighthouseScore",
+    "rum",
+    "serverPerformance"
+  ],
+  "budgetChangePolicy": {
+    "requiresIssueRegisterEntry": true,
+    "requiresReview": true
+  }
+}
