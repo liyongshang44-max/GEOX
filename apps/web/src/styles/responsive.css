@@ -1,0 +1,437 @@
+/* apps/web/src/styles/responsive.css */
+/* Purpose: establish PFE-7 viewport baseline without changing routes or product capability. */
+
+:root {
+  --pfe7-desktop-wide: 1440px;
+  --pfe7-desktop-standard: 1280px;
+  --pfe7-laptop: 1024px;
+  --pfe7-tablet: 768px;
+  --pfe7-mobile-narrow: 390px;
+}
+
+.productPageShell,
+.productPageShell__body,
+.productPageShell__main,
+.productPageShell__aside,
+.productSectionCard,
+.productMetricTile,
+.productBoundaryBanner,
+.productStateBlock,
+.productDataTable,
+.productScopeBar,
+.customerShell,
+.customerShellMainWrap,
+.operatorShell,
+.adminShell,
+.adminShellMainWrap {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.productPageHeader,
+.productPageHeader__copy,
+.productPageHeader__actions,
+.productBoundaryBanner,
+.productSectionCard,
+.productMetricTile,
+.productScopeBar,
+.productStateBlock,
+.productStatusBadge,
+.productTraceLink,
+.productTraceLink__id,
+.productDataTable__table th,
+.productDataTable__table td,
+.breadcrumbBar,
+.breadcrumbList,
+.localeToggle,
+.customerShellTitle,
+.adminShellTitle,
+.adminShellContext,
+.customerShellContext {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.productPageShell__body {
+  width: 100%;
+}
+
+.productPageShell__aside {
+  width: 100%;
+}
+
+.productDataTable__overflow {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.productDataTable__table {
+  min-width: 640px;
+}
+
+.productDataTable__mobileNote {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.productStatusBadge {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.productBoundaryBanner__items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  padding-left: 18px;
+}
+
+.productScopeBar {
+  align-items: stretch;
+}
+
+.productScopeBar__item {
+  min-width: min(220px, 100%);
+  max-width: 100%;
+}
+
+.productScopeBar__value,
+.productMetricTile__value,
+.productMetricTile__description,
+.productMetricTile__source {
+  overflow-wrap: anywhere;
+}
+
+.customerShellNav,
+.adminShellNav {
+  min-width: 0;
+}
+
+.customerShellNavItem,
+.adminShellNavItem {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.customerDashboardGuidanceGrid,
+.customerDashboardKpiRow,
+.customerDashboardMainGrid,
+.customerDashboardBottomGrid,
+.adminProductMetricGrid,
+.operatorProductMetricGrid {
+  min-width: 0;
+}
+
+.customerDashboardGuidanceGrid,
+.customerDashboardKpiRow,
+.adminProductMetricGrid,
+.operatorProductMetricGrid {
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+}
+
+.customerDashboardMainGrid,
+.customerDashboardBottomGrid,
+.customerUsagePathGrid {
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+}
+
+.productPageShell__aside .customerDashboardRightRail,
+.customerDashboardRightRail,
+.customerDashboardRightRail > *,
+.customerDashboardRightRail .customerMetricCard {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.operatorFieldRuntime__tabs {
+  align-items: stretch;
+}
+
+.operatorFieldRuntime__tab {
+  flex: 1 1 180px;
+  justify-content: center;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.operatorFieldRuntime__coverageTable,
+.operatorFieldRuntime__sourceIndexTable,
+.operatorFieldRuntime__residualTable,
+.operatorFieldRuntime__auditTable,
+.operatorFieldRuntime__healthTable {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.operatorReplayDemo__grid,
+.operatorReplayDemo__meta,
+.operatorPilotReadiness__grid,
+.operatorProductMetricGrid,
+.adminProductMetricGrid {
+  min-width: 0;
+}
+
+.operatorReplayDemo__tableHeader,
+.operatorReplayDemo__tableRow,
+.operatorReplayDemo__meta div,
+.operatorPilotReadiness__grid > *,
+.adminProductSurface .productSectionCard,
+.adminProductSurface .productMetricTile,
+.adminProductSurface .productBoundaryBanner,
+.adminProductSurface .productStateBlock {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.reportPrintPage,
+.printPage,
+.printReportScaffold,
+.customerReportPrint,
+.customerReportPage {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.reportPrintPage *,
+.printPage *,
+.printReportScaffold *,
+.customerReportPrint *,
+.customerReportPage * {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1366px) {
+  .newAppShell:has(.productPageShell[aria-label="Customer reporting dashboard"]) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .newAppShell:has(.productPageShell[aria-label="Customer reporting dashboard"]) .newAppMain,
+  .newAppShell:has(.productPageShell[aria-label="Customer reporting dashboard"]) .newAppContent,
+  .newAppShell:has(.productPageShell[aria-label="Customer reporting dashboard"]) .newTopBar {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .newAppShell:has(.productPageShell[aria-label="Customer reporting dashboard"]) .newSideNav {
+    position: static;
+    width: auto;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .customerShell .productPageShell[aria-label="Customer reporting dashboard"] {
+    max-width: 100%;
+    padding-inline: 16px;
+  }
+
+  .customerShell .productPageShell[aria-label="Customer reporting dashboard"] .productPageShell__body {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .customerShell .productPageShell[aria-label="Customer reporting dashboard"] .productPageShell__aside {
+    width: 100%;
+    max-width: 100%;
+    flex: 1 1 auto;
+  }
+
+  .customerShell .productPageShell[aria-label="Customer reporting dashboard"] .customerDashboardRightRail {
+    grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  }
+
+  .customerShell .productPageShell[aria-label="Customer reporting dashboard"] .customerIndexRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: start;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .customerShell .productPageShell[aria-label="Customer reporting dashboard"] .customerIndexRow > div,
+  .customerShell .productPageShell[aria-label="Customer reporting dashboard"] .customerIndexRow strong,
+  .customerShell .productPageShell[aria-label="Customer reporting dashboard"] .customerIndexRow small {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .customerDashboardMainGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1280px) {
+  .productPageShell[data-width="wide"] {
+    max-width: 100%;
+  }
+
+  .customerDashboardMainGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .productPageShell__body {
+    flex-direction: column;
+  }
+
+  .productPageShell__aside {
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .productPageHeader {
+    flex-direction: column;
+  }
+
+  .productPageHeader__actions {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .customerShell,
+  .adminShell {
+    grid-template-columns: 1fr;
+  }
+
+  .customerShellSidebar,
+  .adminShellSidebar {
+    width: auto;
+    min-width: 0;
+    border-right: 0;
+  }
+
+  .customerShellSidebar {
+    border-bottom: 1px solid var(--customer-border);
+  }
+
+  .adminShellSidebar {
+    border-bottom: 1px solid #dde3ea;
+  }
+
+  .customerShellNav,
+  .adminShellNav {
+    grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  }
+
+  .customerDashboardMainGrid,
+  .customerDashboardBottomGrid,
+  .customerUsagePathGrid,
+  .operatorReplayDemo__grid,
+  .operatorReplayDemo__meta,
+  .operatorPilotReadiness__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .productPageShell,
+  .operatorFieldRuntime,
+  .operatorReplayDemo,
+  .operatorPilotReadiness,
+  .customerShellMainWrap,
+  .adminShellMainWrap {
+    padding: 16px;
+  }
+
+  .productPageShell__body,
+  .productPageHeader,
+  .productSectionCard__header,
+  .customerDashboardTitleRow,
+  .customerShellTopbar,
+  .adminShellTopbar,
+  .adminShellBoundary {
+    flex-direction: column;
+  }
+
+  .customerShellTopbar,
+  .adminShellTopbar {
+    grid-template-columns: 1fr;
+  }
+
+  .customerShellTopActions,
+  .adminShellTopActions {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .customerShellSearch {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .customerShellNav,
+  .adminShellNav {
+    grid-template-columns: 1fr;
+  }
+
+  .customerDashboardGuidanceGrid,
+  .customerDashboardKpiRow,
+  .adminProductMetricGrid,
+  .operatorProductMetricGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .productBoundaryBanner__items,
+  .operatorFieldRuntime__banner,
+  .operatorFieldRuntime__routeNotice,
+  .operatorReplayDemo__boundaryBanner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .productScopeBar {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .productDataTable__table {
+    min-width: 560px;
+  }
+}
+
+@media (max-width: 390px) {
+  .productPageShell,
+  .operatorFieldRuntime,
+  .operatorReplayDemo,
+  .operatorPilotReadiness,
+  .customerShellMainWrap,
+  .adminShellMainWrap {
+    padding: 12px;
+  }
+
+  .productPageHeader__title,
+  .customerShellTitle,
+  .adminShellTitle {
+    font-size: clamp(22px, 8vw, 28px);
+  }
+
+  .productSectionCard,
+  .productMetricTile,
+  .productBoundaryBanner,
+  .productStateBlock,
+  .productEmptyState,
+  .productLoadingState,
+  .productErrorState {
+    padding: 12px;
+  }
+
+  .productDataTable__table {
+    min-width: 520px;
+  }
+
+  .operatorFieldRuntime__tab,
+  .customerShellNavItem,
+  .adminShellNavItem,
+  .localeToggle__button {
+    min-height: 40px;
+  }
+}

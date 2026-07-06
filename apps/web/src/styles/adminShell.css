@@ -4,7 +4,7 @@
   grid-template-columns: 248px minmax(0, 1fr);
   background: #f6f7f9;
   color: #172033;
-  overflow-x: hidden;
+  max-width: 100%;
 }
 
 .adminShell,
@@ -95,11 +95,11 @@
 
 .adminShellMainWrap {
   min-width: 0;
+  max-width: 100%;
   display: grid;
   grid-template-rows: auto auto 1fr;
   gap: 18px;
   padding: 24px;
-  overflow-x: hidden;
 }
 
 .adminShellTopbar {
