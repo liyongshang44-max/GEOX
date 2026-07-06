@@ -36,7 +36,7 @@ const primitiveFiles = [
 const pfe1Register = 'docs/frontend-productization/PFE-1-PAGE-CONTRACT-REGISTER.md';
 const cssFile = 'apps/web/src/styles/productDesignSystem.css';
 const acceptanceFile = 'scripts/frontend_acceptance/ACCEPTANCE_PFE_2_DESIGN_SYSTEM_V1_COMPLETION.cjs';
-const allowedChangedFiles = new Set([...docs, ...primitiveFiles, pfe1Register, cssFile, acceptanceFile]);
+const allowedChangedFiles = new Set([...docs, ...primitiveFiles, cssFile, acceptanceFile]);
 
 const blockedPrefixes = ['apps/server/', 'migrations/', 'packages/contracts/', 'fixtures/', '.github/'];
 const pagePrefixes = ['apps/web/src/app/', 'apps/web/src/routes/', 'apps/web/src/features/', 'apps/web/src/layouts/'];
@@ -218,6 +218,7 @@ try {
   const css = read(cssFile);
 
   assert('changed_files_allowlist', diff.length === 0 || diff.every((file) => allowedChangedFiles.has(file)), { diff, allowed: Array.from(allowedChangedFiles) });
+  assert('pfe1_register_read_only', diff.every((file) => file !== pfe1Register), { diff });
   assert('blocked_files_unchanged', diff.every((file) => !blockedPrefixes.some((prefix) => file.startsWith(prefix)) && !blockedExactFiles.has(file)), { diff });
   assert('no_route_or_page_changes', diff.every((file) => !pagePrefixes.some((prefix) => file.startsWith(prefix))), { diff });
   assert('no_package_changes', diff.every((file) => !blockedExactFiles.has(file)), { diff });
