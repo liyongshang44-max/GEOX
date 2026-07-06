@@ -78,7 +78,7 @@ export default function AdminDashboardPage(): React.ReactElement {
         ]}
       />
 
-      <div className="operatorProductMetricGrid">
+      <div className="adminProductMetricGrid">
         <ProductMetricTile label="Formal Admin entries" value={dashboardRows.length} description="Enabled Admin nav surfaces covered by PFE-5." source="AdminLayout formal nav" status={<ProductStatusBadge status="readOnly" />} />
         <ProductMetricTile label="URL-only routes" value={compatibilityRows.length} description="Compatibility routes not promoted to formal Admin surfaces." source="PFE-1 Admin contracts" status={<ProductStatusBadge status="urlOnly" />} />
         <ProductMetricTile label="Health summary" value="Readback only" description="Healthz is not production readiness proof." source="/admin/healthz" status={<ProductStatusBadge status="partial" />} />
