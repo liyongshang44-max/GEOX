@@ -26,6 +26,7 @@ const COPY = {
   currentStatus: { zh: "当前状态", en: "Current Status" },
   latestObservation: { zh: "最新观测", en: "Latest Observation" },
   recentOperations: { zh: "近期作业报告", en: "Recent Operation Reports" },
+  reportEntries: { zh: "报告条目", en: "Report Entries" },
   evidence: { zh: "证据摘要", en: "Evidence Summary" },
   evidenceLead: { zh: "仅显示客户安全证据说明，不展示原始载荷或存储细节。", en: "Customer-safe evidence explanation only, without raw payloads or storage details." },
   evidenceLine: { zh: "客户证据摘要可用。", en: "Customer evidence summary available." },
@@ -78,7 +79,7 @@ export default function FieldReportPageRoute(): React.ReactElement {
       <ProductSectionCard title={t(COPY.evidence)} subtitle={t(COPY.evidenceLead)}>
         {vm.diagnosis.evidenceLines.length ? <ul className="customerList">{vm.diagnosis.evidenceLines.slice(0, 6).map((line, index) => <li key={`${index}-${line}`} className="customerListItem">{customerProductFallback(line, locale, COPY.evidenceLine)}</li>)}</ul> : <ProductEmptyState surface="customer" title={t(COPY.noEvidence)} description={t(COPY.noEvidenceLead)} />}
       </ProductSectionCard>
-      <ProductSectionCard title={t(COPY.recentOperations)} subtitle={t(COPY.recentLead)}>
+      <ProductSectionCard title={t(COPY.reportEntries)} subtitle={t(COPY.recentLead)}>
         <ProductDataTable<FieldReportPageVm["recentOperations"][number]> caption={t(COPY.caption)} rows={vm.recentOperations} getRowKey={(row) => row.operationId || row.title} emptyState={<ProductEmptyState surface="customer" title={t(COPY.noOperations)} description={t(COPY.noOperationsLead)} />} mobileFallbackNote={t(CUSTOMER_FIELDS_COPY.mobileNote)} columns={[
           { key: "operation", header: t(COPY.operation), render: (row) => <Link to={row.href}>{row.title}</Link> },
           { key: "status", header: t(CUSTOMER_COMMON_COPY.reportStatus), render: (row) => <ProductStatusBadge status="readOnly" label={customerStatusLabel(row.statusText, locale)} /> },
