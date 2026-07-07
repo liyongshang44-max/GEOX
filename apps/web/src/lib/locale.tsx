@@ -96,3 +96,7 @@ export function useLocale(): LocaleContextValue {
   if (!value) throw new Error("useLocale must be used within LocaleProvider");
   return value;
 }
+
+export function useResolvedLocale(): LocaleCode {
+  return React.useContext(LocaleContext)?.locale ?? "zh-CN";
+}
