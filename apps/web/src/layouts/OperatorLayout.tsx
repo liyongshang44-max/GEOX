@@ -105,7 +105,7 @@ export default function OperatorLayout({ children, title, lead }: OperatorLayout
   const isPilotReadiness = location.pathname === "/operator/pilot";
 
   return (
-    <div className="customerShell operatorShell" data-layout="operator-runtime-console-shell" data-h59="operator-runtime-console-shell" data-h63="pilot-readiness-product-surface">
+    <div className="customerShell operatorShell" data-layout="operator-runtime-console-shell" data-h59="operator-runtime-console-shell" data-h63="pilot-readiness-product-surface" data-pfa2-locale={locale}>
       <aside className="customerShellSidebar operatorShellSidebar" aria-label={localizedText(OPERATOR_SHELL_LABELS.navigationAria, locale)}>
         <div className="customerShellBrand" aria-label={localizedText(OPERATOR_SHELL_LABELS.brand, locale)}>
           <span className="customerShellLogoMark" aria-hidden="true" />
@@ -144,7 +144,7 @@ export default function OperatorLayout({ children, title, lead }: OperatorLayout
           </div>
         </header>
 
-        <section className="customerShellMeta operatorRuntimeModeBanner" aria-label="Runtime mode and live-device nonclaims">
+        <section className="customerShellMeta operatorRuntimeModeBanner" aria-label={localizedText(OPERATOR_SHELL_LABELS.productBoundaryAria, locale)}>
           {RUNTIME_NONCLAIMS.map((claim) => {
             const text = localizedText(claim, locale);
             return <strong key={text}>{text}</strong>;
