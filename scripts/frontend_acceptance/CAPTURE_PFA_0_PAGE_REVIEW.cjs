@@ -148,6 +148,12 @@ async function responseBody(response) {
   catch { return ''; }
 }
 
+function observeResponse(page, predicate, timeoutMs, label) {
+  return page.waitForResponse(predicate, { timeout: timeoutMs })
+    .then((response) => ({ response, error: null }))
+    .catch((error) => ({ response: null, error: `${label}: ${String(error && (error.message || error))}` }));
+}
+
 async function createAuthenticatedStorageState(browser, locale, viewport) {
   const context = await browser.newContext({ viewport });
   await context.addInitScript((localeValue) => {
@@ -157,16 +163,20 @@ async function createAuthenticatedStorageState(browser, locale, viewport) {
   const page = await context.newPage();
   try {
     await page.goto(`${WEB_BASE_URL}/login`, { waitUntil: 'domcontentloaded', timeout: 15000 });
-    const loginResponsePromise = page.waitForResponse((response) => isApiPath(response.url(), '/api/v1/auth/login'), { timeout: 12000 });
-    const meResponsePromise = page.waitForResponse((response) => isApiPath(response.url(), '/api/v1/auth/me'), { timeout: SESSION_GUARD_TIMEOUT_MS });
+    const loginResponsePromise = observeResponse(page, (response) => isApiPath(response.url(), '/api/v1/auth/login'), 12000, 'browser auth/login response wait failed');
+    const meResponsePromise = observeResponse(page, (response) => isApiPath(response.url(), '/api/v1/auth/me'), SESSION_GUARD_TIMEOUT_MS, 'browser auth/me response wait failed');
     await page.locator('#token-input').fill(SESSION_VALUE);
     await page.locator('form button[type="submit"]').click();
 
-    const loginResponse = await loginResponsePromise;
+    const [loginObserved, meObserved] = await Promise.all([loginResponsePromise, meResponsePromise]);
+    if (!loginObserved.response) throw new Error(loginObserved.error || 'browser auth/login response not observed');
+    if (!meObserved.response) throw new Error(meObserved.error || 'browser auth/me response not observed');
+
+    const loginResponse = loginObserved.response;
     const loginBody = await responseBody(loginResponse);
     if (!loginResponse.ok()) throw new Error(`browser auth/login failed status=${loginResponse.status()} body=${loginBody}`);
 
-    const meResponse = await meResponsePromise;
+    const meResponse = meObserved.response;
     const meHeaders = meResponse.request().headers();
     const authorizationPresent = Boolean(meHeaders.authorization);
     const meBody = await responseBody(meResponse);
@@ -223,12 +233,13 @@ async function captureOne(browser, authStates, manifest, route, locale, viewport
   try {
     const meResponsePromise = isLogin
       ? null
-      : page.waitForResponse((response) => isApiPath(response.url(), '/api/v1/auth/me'), { timeout: SESSION_GUARD_TIMEOUT_MS }).catch(() => null);
+      : observeResponse(page, (response) => isApiPath(response.url(), '/api/v1/auth/me'), SESSION_GUARD_TIMEOUT_MS, `browser auth/me response wait failed for ${route.capturePath}`);
     await page.goto(`${WEB_BASE_URL}${route.capturePath}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
 
     if (meResponsePromise) {
-      const meResponse = await meResponsePromise;
-      if (!meResponse) throw new Error(`browser auth/me response not observed for ${route.capturePath}`);
+      const meObserved = await meResponsePromise;
+      if (!meObserved.response) throw new Error(meObserved.error || `browser auth/me response not observed for ${route.capturePath}`);
+      const meResponse = meObserved.response;
       const headers = meResponse.request().headers();
       const authorizationPresent = Boolean(headers.authorization);
       const body = await responseBody(meResponse);
