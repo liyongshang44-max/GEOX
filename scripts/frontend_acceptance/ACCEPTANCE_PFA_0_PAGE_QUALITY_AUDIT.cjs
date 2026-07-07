@@ -69,6 +69,8 @@ try {
   ok('matrix_capture_gaps_classified', records.some((r) => r.routeHealth === 'capture-gap-classified') && hasText(issues, ['PFA0-CAP-001','PFA0-CAP-002']));
   ok('docs_no_overclaim', hasText(doc, ['route-level PFA-0 review records','capture gaps','all pages have successful runtime screenshots']));
   ok('capture_full_default', capture.includes("PFA0_CAPTURE_MODE || 'full'"));
+  ok('capture_auth_placeholder_guard', capture.includes('containsAuthPlaceholder') && capture.includes('auth validation placeholder still visible'));
+  ok('capture_page_shell_guard', capture.includes('containsPageShell') && capture.includes('page shell text not detected'));
 
   console.log(JSON.stringify({ ok: true, acceptance: 'ACCEPTANCE_PFA_0_PAGE_QUALITY_AUDIT', matrixRecords: records.length, assertions }, null, 2));
 } catch (error) {
