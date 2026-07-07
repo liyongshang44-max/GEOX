@@ -1,5 +1,5 @@
 // apps/web/src/layouts/AdminLayout.tsx
-// Purpose: render the Admin Console as an independent shell.
+// Purpose: render the Admin Console as an independent bilingual shell.
 // Boundary: this layout owns admin chrome only; page-level landmarks are owned by formal Admin pages.
 
 import React from "react";
@@ -59,7 +59,7 @@ export default function AdminLayout({ topBar, children }: AdminLayoutProps): Rea
   const topbarLead = localizedText(ADMIN_SHELL_LABELS.topbar.lead, locale);
 
   return (
-    <div className="adminShell" data-layout="admin-console-shell" data-pfe5="admin-layout-landmark-corrected">
+    <div className="adminShell" data-layout="admin-console-shell" data-pfe5="admin-layout-landmark-corrected" data-pfa2-locale={locale}>
       <aside className="adminShellSidebar" aria-label={localizedText(ADMIN_SHELL_LABELS.navigationAria, locale)}>
         <div className="adminShellBrand" aria-label={localizedText(ADMIN_SHELL_LABELS.brand, locale)}>
           <span className="adminShellLogoMark" aria-hidden="true" />
@@ -112,7 +112,7 @@ export default function AdminLayout({ topBar, children }: AdminLayoutProps): Rea
             <div className="adminShellLocaleToggle shellLocaleToggle">
               <LocaleToggle />
             </div>
-            <div className="adminShellMeta adminShellTopMeta" aria-label="Admin route policy">
+            <div className="adminShellMeta adminShellTopMeta" aria-label={localizedText(ADMIN_SHELL_LABELS.boundaryAria, locale)}>
               <div>{localizedText(ADMIN_SHELL_LABELS.meta.routeFamily, locale)}</div>
               <strong>/admin/*</strong>
               <div>{localizedText(ADMIN_SHELL_LABELS.meta.surfaceMode, locale)}</div>
