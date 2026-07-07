@@ -70,9 +70,12 @@ try {
   ok('docs_no_overclaim', hasText(doc, ['route-level PFA-0 review records','capture gaps','all pages have successful runtime screenshots']));
   ok('capture_full_default', capture.includes("PFA0_CAPTURE_MODE || 'full'"));
   ok('capture_auth_placeholder_guard', capture.includes('containsAuthPlaceholder') && capture.includes('auth validation placeholder still visible'));
-  ok('capture_page_shell_guard', capture.includes('containsPageShell') && capture.includes('page shell text not detected'));
   ok('capture_auth_wide_fail_fast_guard', capture.includes('AUTH_FAILURE_LIMIT') && capture.includes('auth-wide capture failure'));
-  ok('capture_waits_for_session_guard', capture.includes('waitForSessionGuard') && capture.includes('SESSION_GUARD_TIMEOUT_MS') && capture.includes('session guard did not settle'));
+  ok('capture_waits_for_session_guard', capture.includes('waitForRouteReady') && capture.includes('SESSION_GUARD_TIMEOUT_MS') && capture.includes('session guard did not settle'));
+  ok('capture_uses_real_browser_login', capture.includes('createAuthenticatedStorageState') && capture.includes("locator('#token-input')") && capture.includes('context.storageState()'));
+  ok('capture_checks_browser_auth_me', capture.includes('browser auth/me') && capture.includes('authorization=') && capture.includes("'/api/v1/auth/me'"));
+  ok('capture_uses_explicit_same_origin_api_base', capture.includes('VITE_API_BASE_URL: WEB_BASE_URL') && capture.includes('GEOX_WEB_PROXY_TARGET: API_BASE_URL'));
+  ok('capture_does_not_hand_inject_session', !capture.includes('async function applySession'));
 
   console.log(JSON.stringify({ ok: true, acceptance: 'ACCEPTANCE_PFA_0_PAGE_QUALITY_AUDIT', matrixRecords: records.length, assertions }, null, 2));
 } catch (error) {
