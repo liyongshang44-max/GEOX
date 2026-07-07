@@ -8,39 +8,9 @@ const support = require('./AUDIT_PFA_2_RUNTIME_LOCALE_SUPPORT.cjs');
 
 const NAVIGATION_TIMEOUT = Number(process.env.PFA2_NAVIGATION_TIMEOUT_MS || '60000');
 
-support.snapshot = async function snapshot(page) {
-  return page.evaluate(() => {
-    const governed = [];
-    const add = (value) => {
-      const normalized = String(value || '').replace(/\s+/g, ' ').trim();
-      if (normalized) governed.push(normalized);
-    };
-
-    for (const element of document.querySelectorAll('nav,h1,h2,h3,table th,button,label,[class*="boundary" i],[class*="status" i]')) {
-      if (!element.closest('code,pre,[data-locale-neutral="true"]')) add(element.textContent);
-    }
-    for (const element of document.querySelectorAll('[aria-label]')) {
-      if (!element.closest('code,pre,[data-locale-neutral="true"]')) add(element.getAttribute('aria-label'));
-    }
-    for (const element of document.querySelectorAll('[title]')) {
-      if (!element.closest('code,pre,[data-locale-neutral="true"]')) add(element.getAttribute('title'));
-    }
-    for (const element of document.querySelectorAll('[placeholder]')) {
-      if (!element.closest('code,pre,[data-locale-neutral="true"]')) add(element.getAttribute('placeholder'));
-    }
-
-    const active = document.querySelector('[data-locale-active="true"]')?.getAttribute('data-locale-option') || '';
-    return {
-      pathname: location.pathname,
-      htmlLang: document.documentElement.lang,
-      activeLocale: active || document.documentElement.lang,
-      localeControlPresent: Boolean(document.querySelector('[data-locale-option]')),
-      governedText: [...new Set(governed)].join(' | '),
-      bodyText: document.body?.innerText || '',
-      guard: Boolean(document.querySelector('[data-runtime-text-guard]')),
-    };
-  });
-};
+// Snapshot semantics are owned by AUDIT_PFA_2_RUNTIME_LOCALE_SUPPORT.cjs.
+// Do not override support.snapshot here; the support module removes locale-neutral
+// technical identifiers while preserving governed user-facing copy checks.
 
 support.stopWeb = function stopWeb(child) {
   if (!child) return;
