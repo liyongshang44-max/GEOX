@@ -165,7 +165,8 @@ async function waitForSessionGuard(page, routePath) {
     const text = document.body?.innerText || '';
     const isLogin = window.location.pathname === '/login';
     const isChecking = /正在验证会话|validating session/i.test(text);
-    return isLogin || !isChecking;
+    const hasShell = /GEOX|Customer|Operator|Admin|客户|操作员|后台|报告|地块|作业|运行|治理/i.test(text);
+    return isLogin || (!isChecking && hasShell);
   }, undefined, { timeout: SESSION_GUARD_TIMEOUT_MS }).then(() => true).catch(() => false);
   if (!settled) throw new Error(`session guard did not settle within ${SESSION_GUARD_TIMEOUT_MS}ms for ${routePath}`);
 }
