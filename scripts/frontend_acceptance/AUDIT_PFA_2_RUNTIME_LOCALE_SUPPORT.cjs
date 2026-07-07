@@ -188,7 +188,7 @@ function capability(text) {
   return {
     readOnly: /(只读|read-only)/i.test(value),
     noExecution: /(不直接执行|不是田间执行|no direct execution|not field execution)/i.test(value),
-    noDispatch: /(不下发|派发.*禁用|no dispatch|dispatch.*disabled)/i.test(value),
+    noDispatch: /(不下发|无派发|不是派发|派发.*禁用|no dispatch|dispatch.*disabled)/i.test(value),
     liveDeviceOff: /(实时设备.*未连接|not a live device connection|live device.*not connected)/i.test(value),
     gatewayOff: /(生产网关.*未上线|production gateway.*not online)/i.test(value),
     pilotOff: /(田间试点.*未开始|试点未开始|field pilot.*not started)/i.test(value),
