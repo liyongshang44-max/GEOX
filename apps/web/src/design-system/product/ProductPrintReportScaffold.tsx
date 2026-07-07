@@ -17,11 +17,11 @@ type ProductPrintReportScaffoldProps = {
 
 const COPY = {
   eyebrow: { zh: "GEOX 报告", en: "GEOX Report" },
-  print: { zh: "打印导出", en: "Print Export" },
+  print: { zh: "报告导出", en: "Report Export" },
   back: { zh: "返回页面", en: "Back to Page" },
   generatedAt: { zh: "生成时间", en: "Generated At" },
   reportAria: { zh: "客户报告打印视图", en: "Customer report print view" },
-  actionAria: { zh: "打印与返回操作", en: "Print and return actions" },
+  actionAria: { zh: "报告导出与返回操作", en: "Report export and return actions" },
 } as const satisfies Record<string, LocalizedCopy>;
 
 export function ProductPrintReportScaffold({ title, subtitle, generatedAt, backTo, children, ariaLabel }: ProductPrintReportScaffoldProps): React.ReactElement {
