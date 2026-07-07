@@ -67,7 +67,7 @@ export default function CustomerReportExportPage(): React.ReactElement {
       if (mode === "operation") {
         const vm = buildOperationReportVm(await fetchOperationReport(operationId));
         return {
-          title: vm.operation.title || t(COPY.operationTitle), subtitle: t(COPY.subtitle), generatedAt: vm.generatedAtText, backTo: `/customer/operations/${encodeURIComponent(operationId)}`,
+          title: t(COPY.operationTitle), subtitle: vm.operation.title || t(COPY.subtitle), generatedAt: vm.generatedAtText, backTo: `/customer/operations/${encodeURIComponent(operationId)}`,
           headers: [t(COPY.section), t(COPY.status), t(COPY.summary)],
           rows: vm.sections.map((section) => [customerProductFallback(section.title, locale, COPY.section), <ProductStatusBadge key={section.key} status="readOnly" label={customerStatusLabel(section.status, locale)} />, customerProductFallback(section.summary || section.emptyState?.description, locale, COPY.dataUnavailable)]),
         };
