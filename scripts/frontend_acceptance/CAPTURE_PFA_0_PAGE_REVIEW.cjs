@@ -41,6 +41,41 @@ async function waitForHttp(url, timeoutMs) {
   return false;
 }
 
+async function fetchJson(url, init, timeoutMs = 8000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...init, signal: controller.signal });
+    const text = await res.text();
+    if (!res.ok) throw new Error(`HTTP ${res.status} ${url} ${text.slice(0, 200)}`);
+    return text ? JSON.parse(text) : {};
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function preflightAuth() {
+  console.log(`[pfa-0-review] auth preflight: ${API_BASE_URL}/api/v1/auth/login`);
+  const login = await fetchJson(`${API_BASE_URL}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ token: SESSION_VALUE }),
+  });
+  const tenant = { tenant_id: login.tenant_id, project_id: login.project_id, group_id: login.group_id };
+  if (!tenant.tenant_id || !tenant.project_id || !tenant.group_id) throw new Error('auth preflight did not return tenant context');
+  const me = await fetchJson(`${API_BASE_URL}/api/v1/auth/me`, {
+    method: 'GET',
+    headers: {
+      authorization: `Bearer ${SESSION_VALUE}`,
+      'x-tenant-id': tenant.tenant_id,
+      'x-project-id': tenant.project_id,
+      'x-group-id': tenant.group_id,
+    },
+  });
+  console.log(`[pfa-0-review] auth preflight ok: ${me.tenant_id}/${me.project_id}/${me.group_id} role=${me.role}`);
+  return me;
+}
+
 function ensureBrowser() {
   if (process.env.FRONTEND_AUDIT_SKIP_BROWSER_INSTALL === '1') return;
   const ret = spawnSync('pnpm', ['exec', 'playwright', 'install', 'chromium'], { cwd: ROOT, stdio: 'inherit', env: process.env, timeout: 240000 });
@@ -104,39 +139,34 @@ async function applyLocale(context, locale) {
   }, locale);
 }
 
-async function loginPage(page, locale) {
-  await page.goto(`${WEB_BASE_URL}/login`, { waitUntil: 'domcontentloaded', timeout: 20000 });
-  await page.evaluate((localeValue) => window.localStorage.setItem('geox.locale', localeValue), locale);
-  await page.locator('#token-input').fill(SESSION_VALUE);
-  await Promise.all([
-    page.waitForFunction((expectedToken) => window.localStorage.getItem('geox_ao_act_token') === expectedToken, SESSION_VALUE, { timeout: 15000 }),
-    page.locator('form button[type="submit"]').click(),
-  ]);
-  await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => undefined);
-  const stored = await page.evaluate((keys) => ({
-    token: window.localStorage.getItem(keys.session) || window.sessionStorage.getItem(keys.session),
-    context: window.localStorage.getItem(keys.context) || window.sessionStorage.getItem(keys.context),
-    meta: window.localStorage.getItem(keys.meta) || window.sessionStorage.getItem(keys.meta),
-  }), { session: SESSION_KEY, context: CONTEXT_KEY, meta: META_KEY });
-  if (stored.token !== SESSION_VALUE || !stored.context || !stored.meta) {
-    throw new Error('login did not persist a complete frontend session');
-  }
+async function applySession(context, locale, auth) {
+  await context.addInitScript(({ localeValue, token, keys, authPayload }) => {
+    const tenantContext = { tenant_id: authPayload.tenant_id, project_id: authPayload.project_id, group_id: authPayload.group_id };
+    const sessionMeta = { role: authPayload.role || 'admin', scopes: Array.isArray(authPayload.scopes) ? authPayload.scopes : [], actor_id: authPayload.actor_id || '', token_id: authPayload.token_id || '' };
+    window.localStorage.setItem('geox.locale', localeValue);
+    window.sessionStorage.setItem('geox.locale', localeValue);
+    window.localStorage.setItem(keys.session, token);
+    window.sessionStorage.setItem(keys.session, token);
+    window.localStorage.setItem(keys.context, JSON.stringify(tenantContext));
+    window.sessionStorage.setItem(keys.context, JSON.stringify(tenantContext));
+    window.localStorage.setItem(keys.meta, JSON.stringify(sessionMeta));
+    window.sessionStorage.setItem(keys.meta, JSON.stringify(sessionMeta));
+  }, { localeValue: locale, token: SESSION_VALUE, keys: { session: SESSION_KEY, context: CONTEXT_KEY, meta: META_KEY }, authPayload: auth });
 }
 
-async function captureOne(browser, manifest, route, locale, viewportName) {
+async function captureOne(browser, manifest, route, locale, viewportName, auth, index, total) {
   const viewport = manifest.viewports[viewportName];
   if (!viewport) throw new Error(`Unknown viewport: ${viewportName}`);
+  console.log(`[pfa-0-review] capture ${index}/${total}: ${route.capturePath} locale=${locale} viewport=${viewportName}`);
   const context = await browser.newContext({ viewport });
-  await applyLocale(context, locale);
+  if (route.capturePath === '/login') await applyLocale(context, locale);
+  else await applySession(context, locale, auth);
   const page = await context.newPage();
   const result = { route: route.route, capturePath: route.capturePath, surface: route.surface, locale, viewport: viewportName, status: 'PASS', screenshot: '', notes: [] };
   try {
-    if (route.capturePath !== '/login') {
-      await loginPage(page, locale);
-    }
-    await page.goto(`${WEB_BASE_URL}${route.capturePath}`, { waitUntil: 'domcontentloaded', timeout: 20000 });
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => undefined);
-    await page.waitForTimeout(500);
+    await page.goto(`${WEB_BASE_URL}${route.capturePath}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await page.waitForLoadState('networkidle', { timeout: 2500 }).catch(() => undefined);
+    await page.waitForTimeout(250);
     const finalUrl = page.url();
     if (route.capturePath !== '/login' && isLoginUrl(finalUrl)) {
       throw new Error(`unexpected login redirect for ${route.capturePath}; check FRONTEND_AUDIT_TOKEN/API server`);
@@ -152,6 +182,7 @@ async function captureOne(browser, manifest, route, locale, viewportName) {
   } finally {
     await context.close().catch(() => undefined);
   }
+  console.log(`[pfa-0-review] ${result.status}: ${route.capturePath} locale=${locale} viewport=${viewportName}`);
   return result;
 }
 
@@ -171,11 +202,18 @@ async function main() {
   const results = [];
   try {
     ensureBrowser();
+    const auth = await preflightAuth();
     web = await startWeb();
     if (!(await waitForHttp(WEB_BASE_URL, 60000))) throw new Error(`web not reachable: ${WEB_BASE_URL}`);
     const { chromium } = require('@playwright/test');
     browser = await chromium.launch({ headless: true });
-    for (const route of selectedRoutes(manifest, inventory)) for (const locale of manifest.locales) for (const viewportName of selectedViewports(manifest)) results.push(await captureOne(browser, manifest, route, locale, viewportName));
+    const jobs = [];
+    for (const route of selectedRoutes(manifest, inventory)) for (const locale of manifest.locales) for (const viewportName of selectedViewports(manifest)) jobs.push({ route, locale, viewportName });
+    console.log(`[pfa-0-review] capture plan: mode=${CAPTURE_MODE} jobs=${jobs.length} web=${WEB_BASE_URL}`);
+    for (let i = 0; i < jobs.length; i += 1) {
+      const job = jobs[i];
+      results.push(await captureOne(browser, manifest, job.route, job.locale, job.viewportName, auth, i + 1, jobs.length));
+    }
   } finally {
     if (browser) await browser.close().catch(() => undefined);
     if (results.length) writeReport(manifest, results);
