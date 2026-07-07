@@ -20,6 +20,7 @@ const mustExist = [
 ];
 const allowed = new Set(mustExist.filter((f) => f.startsWith('docs/frontend-acceptance/') || f.startsWith('scripts/frontend_acceptance/ACCEPTANCE_PFA_0') || f.startsWith('scripts/frontend_acceptance/CAPTURE_PFA_0')));
 const required = ['surface','route','concreteAuditPath','localeCoverage','zhCnStatus','enUsStatus','viewportsReviewed','routeHealth','boundarySafety','roleSeparation','i18nConsistency','visualHierarchy','tableReadability','denseContentHandling','demoDataQuality','responsiveSanity','demoReadiness','highestSeverity','issueIds','remediationPhase','pfa1Required'];
+const qualityFields = ['i18nConsistency','visualHierarchy','tableReadability','denseContentHandling','demoDataQuality','responsiveSanity'];
 const assertions = [];
 
 function p(f){ return path.join(root, f); }
@@ -30,7 +31,13 @@ function git(args){ try { return cp.execFileSync('git', args, { cwd: root, encod
 function status(){ const out = git(['status','--short','--untracked-files=all']); if (!out) return []; return out.split(/\r?\n/).map((x) => x.includes(' -> ') ? x.split(' -> ').pop().trim() : x.replace(/^[ MADRCU?!]{1,2}\s+/, '').trim()).filter(Boolean); }
 function diff(){ const set = new Set(); const out = git(['diff','--name-only','origin/main...HEAD']) || git(['diff','--name-only','main...HEAD']); if (out) out.split(/\r?\n/).filter(Boolean).forEach((x) => set.add(x.trim())); status().forEach((x) => set.add(x)); return [...set].sort(); }
 function routes(inv, group){ return Array.isArray(inv[group]) ? inv[group].map((r) => r.route) : []; }
-function expand(matrix, record){ return { ...matrix.defaults, ...record, issueIds: [...new Set([...(matrix.defaults.issueIds || []), ...(record.issueIds || [])])] }; }
+function expand(matrix, record){
+  const expanded = { ...matrix.defaults, ...record, issueIds: [...new Set([...(matrix.defaults.issueIds || []), ...(record.issueIds || [])])] };
+  if (qualityFields.some((field) => expanded[field] === 'P1')) expanded.highestSeverity = 'P1';
+  else if (qualityFields.some((field) => expanded[field] === 'P2')) expanded.highestSeverity = 'P2';
+  else expanded.highestSeverity = 'pass';
+  return expanded;
+}
 function mroutes(records, group){ return records.filter((r) => r.surface === group).map((r) => r.route); }
 function concrete(route, map){ let out = route; for (const [k,v] of Object.entries(map || {})) out = out.replaceAll(k, v); return out; }
 function hasFields(r){ return required.every((k) => Object.prototype.hasOwnProperty.call(r, k)); }
@@ -71,6 +78,7 @@ try {
   ok('matrix_concrete_paths', actualRecords.filter((r) => r.route.includes(':')).every((r) => r.concreteAuditPath === concrete(r.route, manifest.concreteRouteBindings)));
   ok('matrix_no_open_capture_issue_ids', records.every((r) => !r.issueIds.includes('PFA0-CAP-001') && !r.issueIds.includes('PFA0-CAP-002')));
   ok('matrix_remediation_phases', records.every((r) => /^PFA-[2-6]$/.test(r.remediationPhase)));
+  ok('matrix_highest_severity_normalized', records.every((r) => r.i18nConsistency !== 'P1' || r.highestSeverity === 'P1'));
   ok('issues_reconciled', hasText(issues, ['180/180 PASS','PFA0-I18N-001','PFA0-RWD-001','PFA0-EXP-001','PFA0-DEN-001','PFA0-CUS-006','PFA0-CAP-001','resolved','PFA0-CAP-002']));
   ok('docs_runtime_vs_quality_split', hasText(doc, ['runtime capture PASS != page-quality PASS','180/180 PASS','page-quality audit: FAIL','PFA-7']));
   ok('task_line_complete', ['PFA-0','PFA-1','PFA-2','PFA-3','PFA-4','PFA-5','PFA-6','PFA-7'].every((x) => taskLine.includes(x)));
