@@ -5,6 +5,8 @@
 
 const support = require('./AUDIT_PFA_2_RUNTIME_LOCALE_SUPPORT.cjs');
 
+const NAVIGATION_TIMEOUT = Number(process.env.PFA2_NAVIGATION_TIMEOUT_MS || '60000');
+
 support.snapshot = require('./AUDIT_PFA_2_RUNTIME_LOCALE_SNAPSHOT.cjs').snapshot;
 
 support.loginState = async function loginState(browser, locale) {
@@ -13,9 +15,13 @@ support.loginState = async function loginState(browser, locale) {
   const context = await browser.newContext({ viewport: support.VIEWPORT });
   await context.addInitScript((value) => localStorage.setItem('geox.locale', value), locale);
   const page = await context.newPage();
+  page.setDefaultNavigationTimeout(NAVIGATION_TIMEOUT);
 
   try {
-    await page.goto(`${support.WEB}/login`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await page.goto(`${support.WEB}/login`, {
+      waitUntil: 'domcontentloaded',
+      timeout: NAVIGATION_TIMEOUT,
+    });
     const responsePromise = page.waitForResponse(
       (response) => support.sameApi(response.url(), '/api/v1/auth/login'),
       { timeout: support.TIMEOUT },
@@ -31,6 +37,36 @@ support.loginState = async function loginState(browser, locale) {
     await page.evaluate((value) => localStorage.setItem('geox.locale', value), locale);
     const state = await context.storageState();
     return state;
+  } finally {
+    await context.close();
+  }
+};
+
+support.verifyToggle = async function verifyToggle(browser) {
+  const context = await browser.newContext({ viewport: support.VIEWPORT });
+  await context.addInitScript(() => {
+    if (!localStorage.getItem('geox.locale')) localStorage.setItem('geox.locale', 'zh-CN');
+  });
+  const page = await context.newPage();
+  page.setDefaultNavigationTimeout(NAVIGATION_TIMEOUT);
+
+  try {
+    await page.goto(`${support.WEB}/login?probe=1#locale`, {
+      waitUntil: 'domcontentloaded',
+      timeout: NAVIGATION_TIMEOUT,
+    });
+    const before = await page.evaluate(() => `${location.pathname}${location.search}${location.hash}`);
+    await page.locator('[data-locale-option="en-US"]').click();
+    await page.waitForFunction(
+      () => document.documentElement.lang === 'en-US' && localStorage.getItem('geox.locale') === 'en-US',
+      undefined,
+      { timeout: support.TIMEOUT },
+    );
+    const after = await page.evaluate(() => `${location.pathname}${location.search}${location.hash}`);
+    if (before !== after) throw new Error(`LocaleToggle changed route: ${before} -> ${after}`);
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: NAVIGATION_TIMEOUT });
+    const persisted = await page.evaluate(() => `${document.documentElement.lang}/${localStorage.getItem('geox.locale')}`);
+    if (persisted !== 'en-US/en-US') throw new Error(`locale persistence failed: ${persisted}`);
   } finally {
     await context.close();
   }
