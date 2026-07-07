@@ -74,10 +74,16 @@ function resolveLead(pathname: string, locale: LocaleCode): string {
   return localizedText(OPERATOR_SHELL_LABELS.leads.fallback, locale);
 }
 
+function navHint(item: OperatorNavItem, locale: LocaleCode, label: string): string {
+  if (locale === "zh-CN" && item.key === "overview") return "查看保留的运行总览路由及其归属边界";
+  if (locale === "zh-CN" && item.key === "fields") return "查看规范地块运行列表与地块级审查标签";
+  return item.copy.hint ? localizedText(item.copy.hint, locale) : label;
+}
+
 function renderNavItem(item: OperatorNavItem, pathname: string, locale: LocaleCode): React.ReactElement {
   const activeClass = isItemActive(pathname, item) ? " isActive" : "";
   const label = localizedText(item.copy.label, locale);
-  const hint = item.copy.hint ? localizedText(item.copy.hint, locale) : label;
+  const hint = navHint(item, locale, label);
   const status = statusLabel(item.status, locale);
 
   if (item.status !== "enabled") {
