@@ -2,6 +2,7 @@
 'use strict';
 
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const {
   ROOT,
@@ -23,6 +24,11 @@ const {
   capability,
 } = require('./AUDIT_PFA_2_RUNTIME_LOCALE_SUPPORT.cjs');
 
+const NAVIGATION_TIMEOUT = Number(process.env.PFA2_NAVIGATION_TIMEOUT_MS || '60000');
+const EXTERNAL_REPORT = process.env.PFA2_RUNTIME_EVIDENCE_PATH
+  ? path.resolve(process.env.PFA2_RUNTIME_EVIDENCE_PATH)
+  : path.join(os.tmpdir(), 'PFA_2_RUNTIME_LOCALE_AUDIT_REPORT.json');
+
 async function auditOne(browser, states, record, locale, index, total) {
   const loginRoute = record.concreteAuditPath === '/login';
   const context = await browser.newContext({
@@ -31,6 +37,7 @@ async function auditOne(browser, states, record, locale, index, total) {
   });
   await context.addInitScript((value) => localStorage.setItem('geox.locale', value), locale);
   const page = await context.newPage();
+  page.setDefaultNavigationTimeout(NAVIGATION_TIMEOUT);
   const result = {
     route: record.route,
     path: record.concreteAuditPath,
@@ -48,7 +55,7 @@ async function auditOne(browser, states, record, locale, index, total) {
 
     await page.goto(`${WEB}${record.concreteAuditPath}`, {
       waitUntil: 'domcontentloaded',
-      timeout: 15000,
+      timeout: NAVIGATION_TIMEOUT,
     });
 
     if (mePromise) {
@@ -136,6 +143,29 @@ function auditPairs(records, results) {
   });
 }
 
+function writeReport(target, payload) {
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, JSON.stringify(payload, null, 2) + '\n');
+}
+
+function printFailures(payload) {
+  const failedRenders = payload.results
+    .filter((item) => item.status !== 'PASS')
+    .map((item) => ({
+      route: item.route,
+      path: item.path,
+      locale: item.locale,
+      notes: item.notes,
+      pathname: item.snapshot?.pathname || null,
+      htmlLang: item.snapshot?.htmlLang || null,
+    }));
+  const failedPairs = payload.pairs.filter((item) => item.status !== 'PASS');
+  console.log('[pfa-2-locale] FAILED_ROUTE_RENDERS');
+  console.log(JSON.stringify(failedRenders, null, 2));
+  console.log('[pfa-2-locale] FAILED_LOCALE_PAIRS');
+  console.log(JSON.stringify(failedPairs, null, 2));
+}
+
 async function main() {
   if ((MATRIX.records || []).length !== 30) throw new Error('matrix must contain 30 routes');
   ensureBrowser();
@@ -183,8 +213,8 @@ async function main() {
       pairs,
     };
 
-    fs.mkdirSync(path.dirname(REPORT), { recursive: true });
-    fs.writeFileSync(REPORT, JSON.stringify(payload, null, 2) + '\n');
+    writeReport(REPORT, payload);
+    writeReport(EXTERNAL_REPORT, payload);
     console.log(JSON.stringify({
       ok: payload.ok,
       audit: payload.audit,
@@ -199,7 +229,9 @@ async function main() {
       pathnameEquivalence: `${payload.pathnameEquivalencePass}/${payload.actualRoutes}`,
       runtimeTextGuardDependency: payload.runtimeTextGuardDependency,
       report: path.relative(ROOT, REPORT).replace(/\\/g, '/'),
+      externalReport: EXTERNAL_REPORT,
     }, null, 2));
+    printFailures(payload);
 
     if (!payload.ok) process.exitCode = 1;
   } finally {
