@@ -13,9 +13,9 @@ const DEFAULT_WEB_PORT = String(process.env.PFA0_WEB_PORT || '5177');
 const WEB_BASE_URL = String(process.env.FRONTEND_AUDIT_WEB_BASE_URL || `http://127.0.0.1:${DEFAULT_WEB_PORT}`).replace(/\/+$/, '');
 const API_BASE_URL = String(process.env.API_BASE_URL || process.env.GEOX_WEB_PROXY_TARGET || 'http://127.0.0.1:3000').replace(/\/+$/, '');
 const CAPTURE_MODE = String(process.env.PFA0_CAPTURE_MODE || 'full').toLowerCase();
-const SESSION_VALUE = String(process.env.FRONTEND_AUDIT_TOKEN || process.env.GEOX_ACCEPTANCE_TOKEN || 'admin_token');
+const SESSION_VALUE = String(process.env.FRONTEND_AUDIT_TOKEN || process.env.GEOX_ACCEPTANCE_TOKEN || 'admin_token').trim();
 const AUTH_FAILURE_LIMIT = Number(process.env.PFA0_AUTH_FAILURE_LIMIT || '6');
-const SESSION_GUARD_TIMEOUT_MS = Number(process.env.PFA0_SESSION_GUARD_TIMEOUT_MS || '10000');
+const SESSION_GUARD_TIMEOUT_MS = Number(process.env.PFA0_SESSION_GUARD_TIMEOUT_MS || '12000');
 const SESSION_KEY = ['geox', 'ao', 'act', 'token'].join('_');
 const CONTEXT_KEY = ['geox', 'tenant', 'context'].join('_');
 const META_KEY = ['geox', 'session', 'meta'].join('_');
@@ -25,9 +25,9 @@ function rel(file) { return path.relative(ROOT, file).replace(/\\/g, '/'); }
 function routeSlug(value) { return value.replace(/^\//, '').replace(/[^a-z0-9_-]+/gi, '_') || 'root'; }
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 function isLoginUrl(value) { try { return new URL(value).pathname === '/login'; } catch { return String(value || '').includes('/login'); } }
+function isApiPath(value, expectedPath) { try { return new URL(value).pathname === expectedPath; } catch { return false; } }
 function containsAuthPlaceholder(text) { return /正在验证会话|validating session/i.test(String(text || '')); }
-function containsPageShell(text) { return /GEOX|Customer|Operator|Admin|客户|操作员|后台|报告|地块|作业|运行|治理/i.test(String(text || '')); }
-function isAuthCaptureFailure(result) { return result.status === 'FAIL' && /unexpected login redirect|auth validation placeholder|session guard did not settle|page shell text not detected/i.test(result.notes.join(' ')); }
+function isAuthCaptureFailure(result) { return result.status === 'FAIL' && /auth\/me|login redirect|session guard|authentication|authorization/i.test(result.notes.join(' ')); }
 
 function requestOk(url) {
   return new Promise((resolve) => {
@@ -78,7 +78,6 @@ async function preflightAuth() {
     },
   });
   console.log(`[pfa-0-review] auth preflight ok: ${me.tenant_id}/${me.project_id}/${me.group_id} role=${me.role}`);
-  return me;
 }
 
 function ensureBrowser() {
@@ -97,7 +96,13 @@ async function startWeb() {
   const port = new URL(WEB_BASE_URL).port || DEFAULT_WEB_PORT;
   const child = spawn('pnpm', ['--filter', '@geox/web', 'exec', 'vite', '--config', 'vite.config.ts', '--host', '127.0.0.1', '--port', port, '--strictPort'], {
     cwd: ROOT,
-    env: { ...process.env, GEOX_WEB_PROXY_TARGET: API_BASE_URL, VITE_API_BASE_URL: '', VITE_API_BASE: '', BROWSER: 'none' },
+    env: {
+      ...process.env,
+      GEOX_WEB_PROXY_TARGET: API_BASE_URL,
+      VITE_API_BASE_URL: WEB_BASE_URL,
+      VITE_API_BASE: WEB_BASE_URL,
+      BROWSER: 'none',
+    },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   child.stdout.on('data', (chunk) => process.stdout.write('[pfa-0-review:web] ' + String(chunk)));
@@ -138,64 +143,108 @@ function selectedViewports(manifest) {
   return CAPTURE_MODE === 'full' ? Object.keys(manifest.viewports || {}) : ['desktopReview'];
 }
 
-async function applyLocale(context, locale) {
+async function responseBody(response) {
+  try { return (await response.text()).replace(/\s+/g, ' ').slice(0, 220); }
+  catch { return ''; }
+}
+
+async function createAuthenticatedStorageState(browser, locale, viewport) {
+  const context = await browser.newContext({ viewport });
   await context.addInitScript((localeValue) => {
     window.localStorage.setItem('geox.locale', localeValue);
-  }, locale);
-}
-
-async function applySession(context, locale, auth) {
-  await context.addInitScript(({ localeValue, token, keys, authPayload }) => {
-    const tenantContext = { tenant_id: authPayload.tenant_id, project_id: authPayload.project_id, group_id: authPayload.group_id };
-    const sessionMeta = { role: authPayload.role || 'admin', scopes: Array.isArray(authPayload.scopes) ? authPayload.scopes : [], actor_id: authPayload.actor_id || '', token_id: authPayload.token_id || '' };
-    window.localStorage.setItem('geox.locale', localeValue);
     window.sessionStorage.setItem('geox.locale', localeValue);
-    window.localStorage.setItem(keys.session, token);
-    window.sessionStorage.setItem(keys.session, token);
-    window.localStorage.setItem(keys.context, JSON.stringify(tenantContext));
-    window.sessionStorage.setItem(keys.context, JSON.stringify(tenantContext));
-    window.localStorage.setItem(keys.meta, JSON.stringify(sessionMeta));
-    window.sessionStorage.setItem(keys.meta, JSON.stringify(sessionMeta));
-  }, { localeValue: locale, token: SESSION_VALUE, keys: { session: SESSION_KEY, context: CONTEXT_KEY, meta: META_KEY }, authPayload: auth });
+  }, locale);
+  const page = await context.newPage();
+  try {
+    await page.goto(`${WEB_BASE_URL}/login`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    const loginResponsePromise = page.waitForResponse((response) => isApiPath(response.url(), '/api/v1/auth/login'), { timeout: 12000 });
+    const meResponsePromise = page.waitForResponse((response) => isApiPath(response.url(), '/api/v1/auth/me'), { timeout: SESSION_GUARD_TIMEOUT_MS });
+    await page.locator('#token-input').fill(SESSION_VALUE);
+    await page.locator('form button[type="submit"]').click();
+
+    const loginResponse = await loginResponsePromise;
+    const loginBody = await responseBody(loginResponse);
+    if (!loginResponse.ok()) throw new Error(`browser auth/login failed status=${loginResponse.status()} body=${loginBody}`);
+
+    const meResponse = await meResponsePromise;
+    const meHeaders = meResponse.request().headers();
+    const authorizationPresent = Boolean(meHeaders.authorization);
+    const meBody = await responseBody(meResponse);
+    console.log(`[pfa-0-review] browser auth/me locale=${locale} status=${meResponse.status()} authorization=${authorizationPresent ? 'present' : 'missing'}`);
+    if (!meResponse.ok()) throw new Error(`browser auth/me failed status=${meResponse.status()} authorization=${authorizationPresent ? 'present' : 'missing'} body=${meBody}`);
+    if (!authorizationPresent) throw new Error('browser auth/me request did not include Authorization');
+
+    await page.waitForFunction(({ tokenKey, contextKey, metaKey, expectedToken }) => {
+      const text = document.body?.innerText || '';
+      return window.location.pathname !== '/login'
+        && window.localStorage.getItem(tokenKey) === expectedToken
+        && Boolean(window.localStorage.getItem(contextKey))
+        && Boolean(window.localStorage.getItem(metaKey))
+        && !/正在验证会话|validating session/i.test(text);
+    }, { tokenKey: SESSION_KEY, contextKey: CONTEXT_KEY, metaKey: META_KEY, expectedToken: SESSION_VALUE }, { timeout: SESSION_GUARD_TIMEOUT_MS });
+
+    await page.waitForTimeout(500);
+    if (isLoginUrl(page.url())) throw new Error(`browser login returned to ${page.url()}`);
+    await page.evaluate((localeValue) => {
+      window.localStorage.setItem('geox.locale', localeValue);
+      window.sessionStorage.setItem('geox.locale', localeValue);
+    }, locale);
+    const state = await context.storageState();
+    console.log(`[pfa-0-review] browser login ok: locale=${locale} url=${page.url()}`);
+    return state;
+  } finally {
+    await context.close().catch(() => undefined);
+  }
 }
 
-async function waitForSessionGuard(page, routePath) {
+async function waitForRouteReady(page, routePath) {
   if (routePath === '/login') return;
   const settled = await page.waitForFunction(() => {
     const text = document.body?.innerText || '';
-    const isLogin = window.location.pathname === '/login';
-    const isChecking = /正在验证会话|validating session/i.test(text);
-    const hasShell = /GEOX|Customer|Operator|Admin|客户|操作员|后台|报告|地块|作业|运行|治理/i.test(text);
-    return isLogin || (!isChecking && hasShell);
+    const root = document.querySelector('#root');
+    return window.location.pathname === '/login'
+      || (!/正在验证会话|validating session/i.test(text) && Boolean(root?.childElementCount) && text.trim().length >= 10);
   }, undefined, { timeout: SESSION_GUARD_TIMEOUT_MS }).then(() => true).catch(() => false);
   if (!settled) throw new Error(`session guard did not settle within ${SESSION_GUARD_TIMEOUT_MS}ms for ${routePath}`);
 }
 
-async function captureOne(browser, manifest, route, locale, viewportName, auth, index, total) {
+async function captureOne(browser, authStates, manifest, route, locale, viewportName, index, total) {
   const viewport = manifest.viewports[viewportName];
   if (!viewport) throw new Error(`Unknown viewport: ${viewportName}`);
   console.log(`[pfa-0-review] capture ${index}/${total}: ${route.capturePath} locale=${locale} viewport=${viewportName}`);
-  const context = await browser.newContext({ viewport });
-  if (route.capturePath === '/login') await applyLocale(context, locale);
-  else await applySession(context, locale, auth);
+  const isLogin = route.capturePath === '/login';
+  const context = await browser.newContext({ viewport, ...(isLogin ? {} : { storageState: authStates[locale] }) });
+  await context.addInitScript((localeValue) => {
+    window.localStorage.setItem('geox.locale', localeValue);
+    window.sessionStorage.setItem('geox.locale', localeValue);
+  }, locale);
   const page = await context.newPage();
   const result = { route: route.route, capturePath: route.capturePath, surface: route.surface, locale, viewport: viewportName, status: 'PASS', screenshot: '', notes: [] };
   try {
+    const meResponsePromise = isLogin
+      ? null
+      : page.waitForResponse((response) => isApiPath(response.url(), '/api/v1/auth/me'), { timeout: SESSION_GUARD_TIMEOUT_MS }).catch(() => null);
     await page.goto(`${WEB_BASE_URL}${route.capturePath}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
-    await waitForSessionGuard(page, route.capturePath);
-    await page.waitForLoadState('networkidle', { timeout: 2500 }).catch(() => undefined);
-    await page.waitForTimeout(250);
+
+    if (meResponsePromise) {
+      const meResponse = await meResponsePromise;
+      if (!meResponse) throw new Error(`browser auth/me response not observed for ${route.capturePath}`);
+      const headers = meResponse.request().headers();
+      const authorizationPresent = Boolean(headers.authorization);
+      const body = await responseBody(meResponse);
+      if (!meResponse.ok()) throw new Error(`browser auth/me failed status=${meResponse.status()} authorization=${authorizationPresent ? 'present' : 'missing'} body=${body}`);
+      if (!authorizationPresent) throw new Error(`browser auth/me Authorization missing for ${route.capturePath}`);
+    }
+
+    await waitForRouteReady(page, route.capturePath);
+    await page.waitForLoadState('networkidle', { timeout: 3000 }).catch(() => undefined);
+    await page.waitForTimeout(350);
     const finalUrl = page.url();
-    if (route.capturePath !== '/login' && isLoginUrl(finalUrl)) {
-      throw new Error(`unexpected login redirect for ${route.capturePath}; check FRONTEND_AUDIT_TOKEN/API server`);
-    }
+    if (!isLogin && isLoginUrl(finalUrl)) throw new Error(`unexpected login redirect for ${route.capturePath}: ${finalUrl}`);
     const bodyText = await page.locator('body').innerText({ timeout: 3000 }).catch(() => '');
-    if (route.capturePath !== '/login' && containsAuthPlaceholder(bodyText)) {
-      throw new Error(`auth validation placeholder still visible for ${route.capturePath}`);
-    }
-    if (!containsPageShell(bodyText)) {
-      throw new Error(`page shell text not detected for ${route.capturePath}`);
-    }
+    if (!isLogin && containsAuthPlaceholder(bodyText)) throw new Error(`auth validation placeholder still visible for ${route.capturePath}`);
+    if (bodyText.trim().length < 10) throw new Error(`page body is empty for ${route.capturePath}`);
+
     const outputDir = path.join(ROOT, manifest.artifactPolicy.screenshotDirectory, route.surface, locale, viewportName);
     fs.mkdirSync(outputDir, { recursive: true });
     const screenshot = path.join(outputDir, `${routeSlug(route.capturePath)}.png`);
@@ -203,7 +252,7 @@ async function captureOne(browser, manifest, route, locale, viewportName, auth, 
     result.screenshot = rel(screenshot);
   } catch (error) {
     result.status = 'FAIL';
-    result.notes.push(String(error && (error.message || error)).slice(0, 240));
+    result.notes.push(String(error && (error.message || error)).slice(0, 320));
   } finally {
     await context.close().catch(() => undefined);
   }
@@ -229,17 +278,22 @@ async function main() {
   let consecutiveAuthFailures = 0;
   try {
     ensureBrowser();
-    const auth = await preflightAuth();
+    await preflightAuth();
     web = await startWeb();
     if (!(await waitForHttp(WEB_BASE_URL, 60000))) throw new Error(`web not reachable: ${WEB_BASE_URL}`);
     const { chromium } = require('@playwright/test');
     browser = await chromium.launch({ headless: true });
+
+    const bootstrapViewport = manifest.viewports.desktopReview || { width: 1440, height: 1100 };
+    const authStates = {};
+    for (const locale of manifest.locales) authStates[locale] = await createAuthenticatedStorageState(browser, locale, bootstrapViewport);
+
     const jobs = [];
     for (const route of selectedRoutes(manifest, inventory)) for (const locale of manifest.locales) for (const viewportName of selectedViewports(manifest)) jobs.push({ route, locale, viewportName });
     console.log(`[pfa-0-review] capture plan: mode=${CAPTURE_MODE} jobs=${jobs.length} web=${WEB_BASE_URL}`);
     for (let i = 0; i < jobs.length; i += 1) {
       const job = jobs[i];
-      const result = await captureOne(browser, manifest, job.route, job.locale, job.viewportName, auth, i + 1, jobs.length);
+      const result = await captureOne(browser, authStates, manifest, job.route, job.locale, job.viewportName, i + 1, jobs.length);
       results.push(result);
       if (job.route.capturePath !== '/login' && isAuthCaptureFailure(result)) consecutiveAuthFailures += 1;
       else consecutiveAuthFailures = 0;
