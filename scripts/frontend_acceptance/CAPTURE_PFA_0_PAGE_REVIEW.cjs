@@ -23,6 +23,8 @@ function rel(file) { return path.relative(ROOT, file).replace(/\\/g, '/'); }
 function routeSlug(value) { return value.replace(/^\//, '').replace(/[^a-z0-9_-]+/gi, '_') || 'root'; }
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 function isLoginUrl(value) { try { return new URL(value).pathname === '/login'; } catch { return String(value || '').includes('/login'); } }
+function containsAuthPlaceholder(text) { return /正在验证会话|validating session/i.test(String(text || '')); }
+function containsPageShell(text) { return /GEOX|Customer|Operator|Admin|客户|操作员|后台|报告|地块|作业|运行|治理/i.test(String(text || '')); }
 
 function requestOk(url) {
   return new Promise((resolve) => {
@@ -166,10 +168,17 @@ async function captureOne(browser, manifest, route, locale, viewportName, auth, 
   try {
     await page.goto(`${WEB_BASE_URL}${route.capturePath}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
     await page.waitForLoadState('networkidle', { timeout: 2500 }).catch(() => undefined);
-    await page.waitForTimeout(250);
+    await page.waitForTimeout(750);
     const finalUrl = page.url();
     if (route.capturePath !== '/login' && isLoginUrl(finalUrl)) {
       throw new Error(`unexpected login redirect for ${route.capturePath}; check FRONTEND_AUDIT_TOKEN/API server`);
+    }
+    const bodyText = await page.locator('body').innerText({ timeout: 3000 }).catch(() => '');
+    if (route.capturePath !== '/login' && containsAuthPlaceholder(bodyText)) {
+      throw new Error(`auth validation placeholder still visible for ${route.capturePath}`);
+    }
+    if (!containsPageShell(bodyText)) {
+      throw new Error(`page shell text not detected for ${route.capturePath}`);
     }
     const outputDir = path.join(ROOT, manifest.artifactPolicy.screenshotDirectory, route.surface, locale, viewportName);
     fs.mkdirSync(outputDir, { recursive: true });
