@@ -10,10 +10,10 @@ export const ADMIN_DEVICES_LOCALE_CONFIG: AdminGovernanceLocaleConfig = {
   title: c("设备清单", "Device Inventory"),
   lead: c("查看内部设备清单、连接回查和来源身份。", "Review internal device inventory, connectivity readback, and source identity."),
   metadata: c("来源：Admin 设备治理回查", "Source: Admin device-governance readback"),
-  nonclaim: c("只读设备治理；不是实时监控，也不提供交互动作。", "Read-only device governance; not live monitoring and no interactive actions are provided."),
-  boundaryTitle: c("设备清单不是实时监控", "Device Inventory Is Not Live Monitoring"),
-  boundaryDescription: c("显示连接与来源元数据，不声明实时设备已连接。", "Displays connectivity and source metadata without claiming a live device connection."),
-  boundaryItems: [c("实时设备：未连接", "Live Device: Not Connected"), c("生产网关：未上线", "Production Gateway: Not Online"), c("交互动作：已禁用", "Interactive Actions: Disabled")],
+  nonclaim: c("只读设备治理；非生产控制，不是实时监控，也不提供交互动作。", "Read-only device governance; not production control, not live monitoring, and no interactive actions are provided."),
+  boundaryTitle: c("设备清单不是生产控制", "Device Inventory Is Not Production Control"),
+  boundaryDescription: c("显示连接与来源元数据，不声明实时设备已连接，也不提供生产控制。", "Displays connectivity and source metadata without claiming a live device connection or providing production control."),
+  boundaryItems: [c("非生产控制", "Not Production Control"), c("实时设备：未连接", "Live Device: Not Connected"), c("生产网关：未上线", "Production Gateway: Not Online"), c("交互动作：已禁用", "Interactive Actions: Disabled")],
   mode: c("设备清单回查", "Device Inventory Readback"),
   metrics: [
     { label: c("清单字段", "Inventory Fields"), value: 6, description: c("设备治理与来源字段。", "Device-governance and source fields."), source: c("设备治理目录", "Device governance catalog"), status: "readOnly" },
@@ -36,5 +36,5 @@ export const ADMIN_DEVICES_LOCALE_CONFIG: AdminGovernanceLocaleConfig = {
       { key: "source_evidence_refs", cells: [{ neutral: "source_evidence_refs" }, { text: c("可追溯性", "Traceability") }, { text: c("有来源时可用", "Available When Sourced") }, { text: c("仅来源身份", "Source Identity Only") }] },
     ],
   }],
-  finalState: { kind: "notConnected", title: c("非实时设备监控", "Not Live Device Monitoring"), description: c("本页仅建立双语显示能力；设备状态数据契约仍由 PFA-5 负责。", "This page establishes bilingual display capability only; the device-status data contract remains owned by PFA-5.") },
+  finalState: { kind: "notConnected", title: c("非生产控制", "Not Production Control"), description: c("本页仅建立双语显示能力；设备状态数据契约仍由 PFA-5 负责。", "This page establishes bilingual display capability only; the device-status data contract remains owned by PFA-5.") },
 };
