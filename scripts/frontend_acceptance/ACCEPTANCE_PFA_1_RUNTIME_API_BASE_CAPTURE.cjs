@@ -74,6 +74,11 @@ function changedFiles() {
   return [...files].sort();
 }
 
+function diffAgainstMain(file) {
+  return git(['diff', '--unified=0', 'origin/main...HEAD', '--', file])
+    || git(['diff', '--unified=0', 'main...HEAD', '--', file]);
+}
+
 function assert(name, passed, details = {}) {
   const result = { name, passed: passed === true, details };
   assertions.push(result);
@@ -110,6 +115,22 @@ try {
   const client = read(clientPath);
   const evidence = read(evidencePath);
   const capture = read(capturePath);
+  const clientDiff = diffAgainstMain(clientPath);
+  const clientDiffHunks = [...clientDiff.matchAll(/^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/gm)]
+    .map((match) => ({ oldStart: Number(match[1]), newStart: Number(match[2]) }));
+
+  assert('client_diff_available', clientDiff.length > 0, { clientDiff });
+  assert('client_diff_scoped_to_api_base_block', clientDiffHunks.length === 1 && clientDiffHunks.every((hunk) => hunk.oldStart <= 12 && hunk.newStart <= 14), {
+    clientDiffHunks,
+  });
+  assert('client_diff_matches_frozen_intent', includesAll(clientDiff, [
+    '-  (import.meta as any)?.env?.VITE_API_BASE_URL ??',
+    '-  (import.meta as any)?.env?.VITE_API_BASE ??',
+    '+const configuredApiBase =',
+    '+  import.meta.env.VITE_API_BASE_URL ??',
+    '+  import.meta.env.VITE_API_BASE ??',
+    '+export const API_BASE_URL = String(configuredApiBase).replace(/\/+$/, "");',
+  ]));
 
   const primaryIndex = client.indexOf('import.meta.env.VITE_API_BASE_URL');
   const secondaryIndex = client.indexOf('import.meta.env.VITE_API_BASE ??');
