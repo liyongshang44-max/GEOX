@@ -19,6 +19,8 @@ Runtime source commit: f7e280e9db4f35406d120be2a8a3aa707d7f39aa
 Runtime source file: apps/web/src/api/client.ts
 Runtime source blob: 6f51571ecffa5c44d8d70a478a102b58364be768
 Initial proven implementation commit: 24c6f9a8803c9738ce0311c35deda5ddfc056dae
+Validated CI source commit: 3d5bf32712fbfd56f42ef1f3c2fdf43bf1d1fd5a
+Validated CI run: 4076
 ```
 
 The runtime source commit is based directly on the merged PFA-0 baseline. The resulting `client.ts` blob is identical to the implementation that produced the reconciled PFA-0 full-capture evidence.
@@ -48,7 +50,7 @@ route guards
 backend authentication
 ```
 
-## 4. Audit runtime configuration
+## 4. Full-capture runtime configuration
 
 ```text
 Expected API origin: http://127.0.0.1:5183
@@ -62,7 +64,7 @@ Expected screenshot jobs: 180 screenshots
 
 The audit Vite runtime receives both `VITE_API_BASE_URL` and `VITE_API_BASE` as the audit web origin, while `GEOX_WEB_PROXY_TARGET` points to the backend runtime.
 
-## 5. Reconciled browser-runtime evidence
+## 5. Reconciled 180-capture evidence
 
 The reconciled evidence produced with the identical runtime-source blob records:
 
@@ -82,11 +84,28 @@ capture plan: 30 routes x 2 locales x 3 viewports
 screenshot result: 180/180 PASS
 ```
 
-This evidence was generated at the initial proven implementation commit and reconciled into the merged PFA-0 baseline. A final full-mode rerun from the synchronized PFA-1 branch remains a mandatory merge condition and must not be replaced by static inspection alone.
+This evidence was generated at the initial proven implementation commit and reconciled into the merged PFA-0 baseline. A final full-mode rerun from the synchronized PFA-1 branch remains a mandatory merge condition and must not be replaced by static inspection or the smaller standard CI runtime audit.
 
-## 6. Static and build acceptance
+## 6. Current synchronized-branch CI evidence
 
-Required commands:
+GitHub Actions run `4076` completed successfully for source commit `3d5bf32712fbfd56f42ef1f3c2fdf43bf1d1fd5a`.
+
+```text
+build-test job: PASS
+typecheck: PASS
+build: PASS
+server selfcheck: PASS
+acceptance job: PASS
+runtime dependencies: PASS
+controlled-pilot seed and backend preflight: PASS
+standard frontend runtime page audit: 19/19 PASS
+standard runtime audit web origin: http://127.0.0.1:5173
+standard runtime audit API proxy target: http://127.0.0.1:3001
+```
+
+The standard CI runtime audit proves that the synchronized branch builds and renders its existing 19-route runtime audit set. It does not execute the PFA full matrix of 30 routes, 2 locales, and 3 viewports, and therefore does not satisfy the final 180/180 PFA-1 merge condition by itself.
+
+## 7. Dedicated and frozen acceptance commands
 
 ```text
 node scripts/frontend_acceptance/ACCEPTANCE_PFA_1_RUNTIME_API_BASE_CAPTURE.cjs
@@ -97,19 +116,20 @@ node scripts/frontend_acceptance/CHECK_PFE_10_WEB_BUNDLE_BUDGET.cjs
 node scripts/frontend_acceptance/ACCEPTANCE_PFE_13_FRONTEND_PRODUCT_V1_FREEZE.cjs
 ```
 
-Current evidence status at this documentation commit:
+Current status:
 
 ```text
-PFA-1 dedicated static gate: implemented; final execution required
-PFA-0 static acceptance: required
-web typecheck: required
-web build: required
-bundle budget: required
-PFE-13 freeze regression: required
-final synchronized-branch 180 capture: required
+PFA-1 dedicated static gate: implemented and isolated self-test PASS; repository execution required before merge
+PFA-0 static acceptance: required before merge
+web typecheck: PASS in CI run 4076
+web build: PASS in CI run 4076
+bundle budget: required before merge
+PFE-13 freeze regression: required before merge
+standard CI runtime audit: 19/19 PASS
+final synchronized-branch full capture: 180/180 rerun required before merge
 ```
 
-## 7. Artifact policy
+## 8. Artifact policy
 
 The following runtime artifacts are not committed:
 
@@ -123,9 +143,9 @@ session token or other credentials
 
 Only the result summary, immutable commit references, and non-secret acceptance facts belong in this document.
 
-## 8. Completion and nonclaims
+## 9. Completion and nonclaims
 
-PFA-1 may be declared complete only after the synchronized branch passes its dedicated static gate, build checks, browser authentication proof, and final 180/180 full capture.
+PFA-1 may be declared complete only after the synchronized branch passes its dedicated static gate, frozen static checks, bundle gate, browser authentication proof, and final 180/180 full capture.
 
 When complete, PFA-1 proves only that the PFA browser audit runtime uses the intended API origin and can complete authenticated capture for all 30 routes, 2 locales, and 3 viewports.
 
