@@ -2,22 +2,19 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { fetchCustomerOperations } from "../../../api/customerOperations";
-import {
-  ProductBoundaryBanner,
-  ProductDataTable,
-  ProductEmptyState,
-  ProductErrorState,
-  ProductLoadingState,
-  ProductPageHeader,
-  ProductPageShell,
-  ProductScopeBar,
-  ProductSectionCard,
-  ProductStateBlock,
-  ProductStatusBadge,
-} from "../../../design-system/product";
+import { ProductBoundaryBanner, ProductDataTable, ProductEmptyState, ProductErrorState, ProductLoadingState, ProductPageHeader, ProductPageShell, ProductScopeBar, ProductSectionCard, ProductStateBlock, ProductStatusBadge } from "../../../design-system/product";
+import { localizedText, useLocale, type LocalizedCopy } from "../../../lib/locale";
+import { CUSTOMER_COMMON_COPY, CUSTOMER_OPERATIONS_COPY, customerFilterLabel, customerProductFallback, customerStatusLabel } from "../../../lib/productCopy/customerLocale";
 import { buildCustomerOperationsIndexVm, filterCustomerOperations, type CustomerOperationStatusFilter, type CustomerOperationsIndexRowVm, type CustomerOperationsIndexVm } from "../../../viewmodels/customerOperationsIndexVm";
 
-function statusForOperation(row: CustomerOperationsIndexRowVm): "available" | "partial" | "degraded" | "blocked" {
+const COPY = {
+  empty: { zh: "暂无作业报告条目", en: "No Operation Report Entries" },
+  emptyLead: { zh: "当前授权范围内没有可显示的作业报告。", en: "No operation report is available in the authorized scope." },
+  summary: { zh: "暂无摘要。", en: "No summary available." },
+  evidence: { zh: "暂无证据摘要。", en: "No evidence summary available." },
+} as const satisfies Record<string, LocalizedCopy>;
+
+function rowStatus(row: CustomerOperationsIndexRowVm): "available" | "partial" | "degraded" | "blocked" {
   if (row.statusFilter === "ACCEPTANCE_PASS") return "available";
   if (row.statusFilter === "EVIDENCE_INSUFFICIENT" || row.statusFilter === "ACCEPTANCE_FAIL") return "blocked";
   if (row.statusFilter === "WAIT_ACCEPTANCE") return "degraded";
@@ -25,77 +22,45 @@ function statusForOperation(row: CustomerOperationsIndexRowVm): "available" | "p
 }
 
 export default function CustomerOperationsIndexPage(): React.ReactElement {
+  const { locale } = useLocale();
+  const t = React.useCallback((copy: LocalizedCopy) => localizedText(copy, locale), [locale]);
   const [vm, setVm] = React.useState<CustomerOperationsIndexVm | null>(null);
   const [selected, setSelected] = React.useState<CustomerOperationStatusFilter>("ALL");
   const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState("");
+  const [failed, setFailed] = React.useState(false);
 
   React.useEffect(() => {
-    let alive = true;
-    setLoading(true);
+    let active = true;
     void fetchCustomerOperations()
-      .then((response) => {
-        if (!alive) return;
-        setVm(buildCustomerOperationsIndexVm(response));
-        setError("");
-      })
-      .catch(() => {
-        if (!alive) return;
-        setVm(null);
-        setError("Customer operation reports are unavailable.");
-      })
-      .finally(() => {
-        if (!alive) return;
-        setLoading(false);
-      });
-    return () => { alive = false; };
+      .then((data) => { if (active) { setVm(buildCustomerOperationsIndexVm(data)); setFailed(false); } })
+      .catch(() => { if (active) { setVm(null); setFailed(true); } })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, []);
 
-  if (loading) return <ProductPageShell surface="customer"><ProductLoadingState label="Loading operation reports" description="Preparing customer-visible operation report entries." /></ProductPageShell>;
-  if (error || !vm) return <ProductPageShell surface="customer"><ProductErrorState title="Operation reports unavailable" message={error || "No operation report data is available."} /></ProductPageShell>;
+  if (loading) return <ProductPageShell surface="customer" ariaLabel={t(CUSTOMER_OPERATIONS_COPY.title)}><ProductLoadingState surface="customer" label={t(CUSTOMER_OPERATIONS_COPY.loading)} description={t(CUSTOMER_COMMON_COPY.safeLoading)} /></ProductPageShell>;
+  if (failed || !vm) return <ProductPageShell surface="customer" ariaLabel={t(CUSTOMER_OPERATIONS_COPY.unavailable)}><ProductErrorState surface="customer" title={t(CUSTOMER_OPERATIONS_COPY.unavailable)} message={t(CUSTOMER_COMMON_COPY.safeError)} /></ProductPageShell>;
 
   const rows = filterCustomerOperations(vm.rows, selected);
-
   return (
-    <ProductPageShell
-      surface="customer"
-      ariaLabel="Customer operation reports"
-      top={
-        <ProductPageHeader
-          eyebrow="Customer Portal / Operation reports"
-          title="Operation reports"
-          lead={vm.subtitle}
-          metadata={`Updated at: ${vm.generatedAtText}`}
-          primaryAction={<Link className="customerButton" to="/customer/dashboard">Back to overview</Link>}
-          nonclaim="Operation reports are customer read-only reporting surfaces, not execution workboards."
-        />
-      }
-    >
-      <ProductBoundaryBanner tone="readOnly" title="Operation reporting only" description="This page reports operation status and delivery context. It does not provide execution, control, or review mutation workflows." />
-      <ProductScopeBar surface="customer" items={[{ label: "Scope", value: vm.scopeBadgeText }, { label: "Updated", value: vm.generatedAtText }]} />
-      {vm.dataScopeNote ? <ProductStateBlock kind="permissionLimited" title="Scope note" description={vm.dataScopeNote} /> : null}
-
-      <ProductSectionCard title="Operation report entries" subtitle="Open an operation to review the customer-safe report.">
-        <div className="customerFilterRow" role="tablist" aria-label="Operation report status filter">
-          {vm.filters.map((filter) => (
-            <button key={filter.key} type="button" className={`customerFilterButton ${selected === filter.key ? "isActive" : ""}`} onClick={() => setSelected(filter.key)}>
-              {filter.label} <span>{filter.count}</span>
-            </button>
-          ))}
-        </div>
-
+    <ProductPageShell surface="customer" ariaLabel={t(CUSTOMER_OPERATIONS_COPY.title)} top={<ProductPageHeader eyebrow={t(CUSTOMER_OPERATIONS_COPY.eyebrow)} title={t(CUSTOMER_OPERATIONS_COPY.title)} lead={t(CUSTOMER_OPERATIONS_COPY.lead)} metadata={`${t(CUSTOMER_COMMON_COPY.updatedAtPrefix)}: ${vm.generatedAtText}`} primaryAction={<Link className="customerButton" to="/customer/dashboard">{t(CUSTOMER_COMMON_COPY.backOverview)}</Link>} nonclaim={t(CUSTOMER_OPERATIONS_COPY.nonclaim)} />}>
+      <ProductBoundaryBanner tone="readOnly" title={t(CUSTOMER_OPERATIONS_COPY.boundaryTitle)} description={t(CUSTOMER_OPERATIONS_COPY.boundaryLead)} />
+      <ProductScopeBar surface="customer" items={[{ label: t(CUSTOMER_COMMON_COPY.scope), value: customerProductFallback(vm.scopeBadgeText, locale, CUSTOMER_OPERATIONS_COPY.lead) }, { label: t(CUSTOMER_COMMON_COPY.updated), value: vm.generatedAtText }]} />
+      {vm.dataScopeNote ? <ProductStateBlock kind="permissionLimited" surface="customer" title={t(CUSTOMER_OPERATIONS_COPY.scopeNote)} description={customerProductFallback(vm.dataScopeNote, locale, CUSTOMER_OPERATIONS_COPY.lead)} /> : null}
+      <ProductSectionCard title={t(CUSTOMER_OPERATIONS_COPY.entries)} subtitle={t(CUSTOMER_OPERATIONS_COPY.entriesLead)}>
+        <div className="customerFilterRow" role="tablist" aria-label={t(CUSTOMER_OPERATIONS_COPY.filterAria)}>{vm.filters.map((filter) => <button key={filter.key} type="button" className={`customerFilterButton ${selected === filter.key ? "isActive" : ""}`} aria-pressed={selected === filter.key} onClick={() => setSelected(filter.key)}>{customerFilterLabel(filter.key, locale)} <span>{filter.count}</span></button>)}</div>
         <ProductDataTable<CustomerOperationsIndexRowVm>
-          caption="Customer operation report entries"
+          caption={t(CUSTOMER_OPERATIONS_COPY.caption)}
           rows={rows}
           getRowKey={(row) => row.operationId}
-          emptyState={<ProductEmptyState title={vm.emptyState.title} description={vm.emptyState.description} />}
-          mobileFallbackNote="On narrow screens, scroll the table horizontally or open each operation report directly."
+          emptyState={<ProductEmptyState surface="customer" title={t(COPY.empty)} description={t(COPY.emptyLead)} />}
+          mobileFallbackNote={t(CUSTOMER_OPERATIONS_COPY.mobileNote)}
           columns={[
-            { key: "operation", header: "Operation", render: (row) => <Link to={row.href}>{row.primaryLine}</Link> },
-            { key: "status", header: "Report status", render: (row) => <ProductStatusBadge status={statusForOperation(row)} label={row.finalStatusText} /> },
-            { key: "summary", header: "Summary", render: (row) => row.summaryText || "No summary available." },
-            { key: "evidence", header: "Evidence summary", render: (row) => row.evidenceExplanation || row.evidenceText },
-            { key: "completed", header: "Completed", render: (row) => row.completedAtText },
+            { key: "operation", header: t(CUSTOMER_OPERATIONS_COPY.operation), render: (row) => <Link to={row.href}>{row.primaryLine}</Link> },
+            { key: "status", header: t(CUSTOMER_COMMON_COPY.reportStatus), render: (row) => <ProductStatusBadge status={rowStatus(row)} label={customerStatusLabel(row.statusFilter || row.finalStatusText, locale)} /> },
+            { key: "summary", header: t(CUSTOMER_COMMON_COPY.summary), render: (row) => customerProductFallback(row.summaryText, locale, COPY.summary) },
+            { key: "evidence", header: t(CUSTOMER_OPERATIONS_COPY.evidenceSummary), render: (row) => customerProductFallback(row.evidenceExplanation || row.evidenceText, locale, COPY.evidence) },
+            { key: "completed", header: t(CUSTOMER_OPERATIONS_COPY.completed), render: (row) => row.completedAtText },
           ]}
         />
       </ProductSectionCard>
