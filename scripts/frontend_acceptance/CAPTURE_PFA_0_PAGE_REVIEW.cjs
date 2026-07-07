@@ -154,6 +154,13 @@ function observeResponse(page, predicate, timeoutMs, label) {
     .catch((error) => ({ response: null, error: `${label}: ${String(error && (error.message || error))}` }));
 }
 
+function storageStateHasSession(state) {
+  const expectedOrigin = new URL(WEB_BASE_URL).origin;
+  const origin = Array.isArray(state.origins) ? state.origins.find((item) => item.origin === expectedOrigin) : null;
+  const keys = new Set((origin?.localStorage || []).map((item) => item.name));
+  return keys.has(SESSION_KEY) && keys.has(CONTEXT_KEY) && keys.has(META_KEY);
+}
+
 async function createAuthenticatedStorageState(browser, locale, viewport) {
   const context = await browser.newContext({ viewport });
   await context.addInitScript((localeValue) => {
@@ -164,43 +171,29 @@ async function createAuthenticatedStorageState(browser, locale, viewport) {
   try {
     await page.goto(`${WEB_BASE_URL}/login`, { waitUntil: 'domcontentloaded', timeout: 15000 });
     const loginResponsePromise = observeResponse(page, (response) => isApiPath(response.url(), '/api/v1/auth/login'), 12000, 'browser auth/login response wait failed');
-    const meResponsePromise = observeResponse(page, (response) => isApiPath(response.url(), '/api/v1/auth/me'), SESSION_GUARD_TIMEOUT_MS, 'browser auth/me response wait failed');
     await page.locator('#token-input').fill(SESSION_VALUE);
     await page.locator('form button[type="submit"]').click();
 
-    const [loginObserved, meObserved] = await Promise.all([loginResponsePromise, meResponsePromise]);
+    const loginObserved = await loginResponsePromise;
     if (!loginObserved.response) throw new Error(loginObserved.error || 'browser auth/login response not observed');
-    if (!meObserved.response) throw new Error(meObserved.error || 'browser auth/me response not observed');
-
     const loginResponse = loginObserved.response;
     const loginBody = await responseBody(loginResponse);
+    console.log(`[pfa-0-review] browser auth/login locale=${locale} status=${loginResponse.status()}`);
     if (!loginResponse.ok()) throw new Error(`browser auth/login failed status=${loginResponse.status()} body=${loginBody}`);
 
-    const meResponse = meObserved.response;
-    const meHeaders = meResponse.request().headers();
-    const authorizationPresent = Boolean(meHeaders.authorization);
-    const meBody = await responseBody(meResponse);
-    console.log(`[pfa-0-review] browser auth/me locale=${locale} status=${meResponse.status()} authorization=${authorizationPresent ? 'present' : 'missing'}`);
-    if (!meResponse.ok()) throw new Error(`browser auth/me failed status=${meResponse.status()} authorization=${authorizationPresent ? 'present' : 'missing'} body=${meBody}`);
-    if (!authorizationPresent) throw new Error('browser auth/me request did not include Authorization');
+    await page.waitForFunction(({ tokenKey, contextKey, metaKey, expectedToken }) => (
+      window.localStorage.getItem(tokenKey) === expectedToken
+      && Boolean(window.localStorage.getItem(contextKey))
+      && Boolean(window.localStorage.getItem(metaKey))
+    ), { tokenKey: SESSION_KEY, contextKey: CONTEXT_KEY, metaKey: META_KEY, expectedToken: SESSION_VALUE }, { timeout: SESSION_GUARD_TIMEOUT_MS });
 
-    await page.waitForFunction(({ tokenKey, contextKey, metaKey, expectedToken }) => {
-      const text = document.body?.innerText || '';
-      return window.location.pathname !== '/login'
-        && window.localStorage.getItem(tokenKey) === expectedToken
-        && Boolean(window.localStorage.getItem(contextKey))
-        && Boolean(window.localStorage.getItem(metaKey))
-        && !/正在验证会话|validating session/i.test(text);
-    }, { tokenKey: SESSION_KEY, contextKey: CONTEXT_KEY, metaKey: META_KEY, expectedToken: SESSION_VALUE }, { timeout: SESSION_GUARD_TIMEOUT_MS });
-
-    await page.waitForTimeout(500);
-    if (isLoginUrl(page.url())) throw new Error(`browser login returned to ${page.url()}`);
     await page.evaluate((localeValue) => {
       window.localStorage.setItem('geox.locale', localeValue);
       window.sessionStorage.setItem('geox.locale', localeValue);
     }, locale);
     const state = await context.storageState();
-    console.log(`[pfa-0-review] browser login ok: locale=${locale} url=${page.url()}`);
+    if (!storageStateHasSession(state)) throw new Error(`browser login storage state is incomplete for locale=${locale}`);
+    console.log(`[pfa-0-review] browser login state saved: locale=${locale} url=${page.url()}`);
     return state;
   } finally {
     await context.close().catch(() => undefined);
@@ -216,6 +209,37 @@ async function waitForRouteReady(page, routePath) {
       || (!/正在验证会话|validating session/i.test(text) && Boolean(root?.childElementCount) && text.trim().length >= 10);
   }, undefined, { timeout: SESSION_GUARD_TIMEOUT_MS }).then(() => true).catch(() => false);
   if (!settled) throw new Error(`session guard did not settle within ${SESSION_GUARD_TIMEOUT_MS}ms for ${routePath}`);
+}
+
+async function verifyAuthenticatedStorageState(browser, storageState, locale, viewport) {
+  const context = await browser.newContext({ viewport, storageState });
+  await context.addInitScript((localeValue) => {
+    window.localStorage.setItem('geox.locale', localeValue);
+    window.sessionStorage.setItem('geox.locale', localeValue);
+  }, locale);
+  const page = await context.newPage();
+  try {
+    const meResponsePromise = observeResponse(page, (response) => isApiPath(response.url(), '/api/v1/auth/me'), SESSION_GUARD_TIMEOUT_MS, `browser auth/me verification wait failed for locale=${locale}`);
+    await page.goto(`${WEB_BASE_URL}/customer/dashboard`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    const meObserved = await meResponsePromise;
+    if (!meObserved.response) throw new Error(meObserved.error || `browser auth/me verification response not observed for locale=${locale}`);
+
+    const meResponse = meObserved.response;
+    const headers = meResponse.request().headers();
+    const authorizationPresent = Boolean(headers.authorization);
+    const body = await responseBody(meResponse);
+    console.log(`[pfa-0-review] browser auth/me verify locale=${locale} status=${meResponse.status()} authorization=${authorizationPresent ? 'present' : 'missing'}`);
+    if (!meResponse.ok()) throw new Error(`browser auth/me verification failed status=${meResponse.status()} authorization=${authorizationPresent ? 'present' : 'missing'} body=${body}`);
+    if (!authorizationPresent) throw new Error(`browser auth/me verification Authorization missing for locale=${locale}`);
+
+    await waitForRouteReady(page, '/customer/dashboard');
+    if (isLoginUrl(page.url())) throw new Error(`browser auth verification redirected to ${page.url()}`);
+    const bodyText = await page.locator('body').innerText({ timeout: 3000 }).catch(() => '');
+    if (containsAuthPlaceholder(bodyText)) throw new Error(`browser auth verification remained on session placeholder for locale=${locale}`);
+    console.log(`[pfa-0-review] browser session verified: locale=${locale} url=${page.url()}`);
+  } finally {
+    await context.close().catch(() => undefined);
+  }
 }
 
 async function captureOne(browser, authStates, manifest, route, locale, viewportName, index, total) {
@@ -297,7 +321,10 @@ async function main() {
 
     const bootstrapViewport = manifest.viewports.desktopReview || { width: 1440, height: 1100 };
     const authStates = {};
-    for (const locale of manifest.locales) authStates[locale] = await createAuthenticatedStorageState(browser, locale, bootstrapViewport);
+    for (const locale of manifest.locales) {
+      authStates[locale] = await createAuthenticatedStorageState(browser, locale, bootstrapViewport);
+      await verifyAuthenticatedStorageState(browser, authStates[locale], locale, bootstrapViewport);
+    }
 
     const jobs = [];
     for (const route of selectedRoutes(manifest, inventory)) for (const locale of manifest.locales) for (const viewportName of selectedViewports(manifest)) jobs.push({ route, locale, viewportName });
