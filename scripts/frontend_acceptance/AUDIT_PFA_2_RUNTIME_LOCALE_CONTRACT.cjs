@@ -3,11 +3,23 @@
 
 'use strict';
 
+const { spawnSync } = require('node:child_process');
 const support = require('./AUDIT_PFA_2_RUNTIME_LOCALE_SUPPORT.cjs');
 
 const NAVIGATION_TIMEOUT = Number(process.env.PFA2_NAVIGATION_TIMEOUT_MS || '60000');
 
 support.snapshot = require('./AUDIT_PFA_2_RUNTIME_LOCALE_SNAPSHOT.cjs').snapshot;
+
+support.stopWeb = function stopWeb(child) {
+  if (!child) return;
+  try {
+    if (process.platform === 'win32' && child.pid) {
+      spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+      return;
+    }
+    child.kill('SIGTERM');
+  } catch {}
+};
 
 support.loginState = async function loginState(browser, locale) {
   const token = String(process.env.FRONTEND_AUDIT_TOKEN || process.env.GEOX_ACCEPTANCE_TOKEN || '').trim();
