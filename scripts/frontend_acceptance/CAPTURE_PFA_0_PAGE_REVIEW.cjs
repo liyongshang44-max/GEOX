@@ -29,7 +29,7 @@ function isLoginUrl(value) { try { return new URL(value).pathname === '/login'; 
 function isApiPath(value, expectedPath) { try { return new URL(value).pathname === expectedPath; } catch { return false; } }
 function isSameOriginApiUrl(value, expectedPath) { try { const url = new URL(value); return url.origin === WEB_ORIGIN && url.pathname === expectedPath; } catch { return false; } }
 function containsAuthPlaceholder(text) { return /正在验证会话|validating session/i.test(String(text || '')); }
-function isAuthCaptureFailure(result) { return result.status === 'FAIL' && /auth\/me|login redirect|session guard|authentication|authorization|api origin/i.test(result.notes.join(' ')); }
+function isAuthCaptureFailure(result) { return result.status === 'FAIL' && /auth\/me|login redirect|session guard|authentication|authorization|api origin|runtime api base/i.test(result.notes.join(' ')); }
 
 function requestOk(url) {
   return new Promise((resolve) => {
@@ -112,8 +112,7 @@ function ensureBrowser() {
 async function startWeb() {
   if (process.env.FRONTEND_AUDIT_SKIP_WEB_SERVER === '1') return null;
   if (await waitForHttp(WEB_BASE_URL, 1000)) {
-    console.log(`[pfa-0-review] using existing web runtime at ${WEB_BASE_URL}`);
-    return null;
+    throw new Error(`web port already in use: ${WEB_BASE_URL}; choose a clean PFA0_WEB_PORT`);
   }
   const port = new URL(WEB_BASE_URL).port || DEFAULT_WEB_PORT;
   const child = spawn('pnpm', [
@@ -124,8 +123,8 @@ async function startWeb() {
     env: {
       ...process.env,
       GEOX_WEB_PROXY_TARGET: API_BASE_URL,
-      VITE_API_BASE_URL: '',
-      VITE_API_BASE: '',
+      VITE_API_BASE_URL: WEB_BASE_URL,
+      VITE_API_BASE: WEB_BASE_URL,
       BROWSER: 'none',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -177,6 +176,13 @@ function observeResponse(page, predicate, timeoutMs, label) {
     .catch((error) => ({ response: null, error: `${label}: ${String(error && (error.message || error))}` }));
 }
 
+function attachDialogGuard(page, label) {
+  page.on('dialog', (dialog) => {
+    console.log(`[pfa-0-review] dialog dismissed label=${label} type=${dialog.type()}`);
+    void dialog.dismiss().catch(() => undefined);
+  });
+}
+
 async function responseBody(response) {
   try { return (await response.text()).replace(/\s+/g, ' ').slice(0, 260); }
   catch { return ''; }
@@ -195,6 +201,17 @@ function storageStateHasSession(state) {
   const origin = Array.isArray(state.origins) ? state.origins.find((item) => item.origin === WEB_ORIGIN) : null;
   const keys = new Set((origin?.localStorage || []).map((item) => item.name));
   return keys.has(SESSION_KEY) && keys.has(CONTEXT_KEY) && keys.has(META_KEY);
+}
+
+async function assertRuntimeApiBase(page, locale) {
+  const runtimeApiBase = await page.evaluate(async () => {
+    const client = await import('/src/api/client.ts');
+    return String(client.API_BASE_URL || '').replace(/\/+$/, '');
+  });
+  console.log(`[pfa-0-review] runtime api base locale=${locale} value=${runtimeApiBase}`);
+  if (runtimeApiBase !== WEB_BASE_URL) {
+    throw new Error(`runtime api base mismatch value=${runtimeApiBase} expected=${WEB_BASE_URL}`);
+  }
 }
 
 async function browserLoginProbe(page, locale) {
@@ -221,11 +238,13 @@ async function createAuthenticatedStorageState(browser, locale, viewport) {
     window.sessionStorage.setItem('geox.locale', localeValue);
   }, locale);
   const page = await context.newPage();
+  attachDialogGuard(page, `login:${locale}`);
   try {
     page.on('request', (request) => {
       if (isApiPath(request.url(), '/api/v1/auth/login')) console.log(`[pfa-0-review] observed browser auth/login request url=${request.url()}`);
     });
     await page.goto(`${WEB_BASE_URL}/login`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await assertRuntimeApiBase(page, locale);
     await browserLoginProbe(page, locale);
 
     const tokenInput = page.locator('#token-input');
@@ -239,7 +258,7 @@ async function createAuthenticatedStorageState(browser, locale, viewport) {
 
     const loginResponsePromise = observeResponse(
       page,
-      (response) => isApiPath(response.url(), '/api/v1/auth/login'),
+      (response) => isSameOriginApiUrl(response.url(), '/api/v1/auth/login'),
       SESSION_GUARD_TIMEOUT_MS,
       'browser auth/login response wait failed',
     );
@@ -315,10 +334,11 @@ async function verifyAuthenticatedStorageState(browser, storageState, locale, vi
     window.sessionStorage.setItem('geox.locale', localeValue);
   }, locale);
   const page = await context.newPage();
+  attachDialogGuard(page, `verify:${locale}`);
   try {
     const mePromise = observeResponse(
       page,
-      (response) => isApiPath(response.url(), '/api/v1/auth/me'),
+      (response) => isSameOriginApiUrl(response.url(), '/api/v1/auth/me'),
       SESSION_GUARD_TIMEOUT_MS,
       `browser auth/me verification wait failed for locale=${locale}`,
     );
@@ -345,11 +365,12 @@ async function captureOne(browser, authStates, manifest, route, locale, viewport
     window.sessionStorage.setItem('geox.locale', localeValue);
   }, locale);
   const page = await context.newPage();
+  attachDialogGuard(page, `capture:${locale}:${route.capturePath}`);
   const result = { route: route.route, capturePath: route.capturePath, surface: route.surface, locale, viewport: viewportName, status: 'PASS', screenshot: '', notes: [] };
   try {
     const mePromise = loginRoute ? null : observeResponse(
       page,
-      (response) => isApiPath(response.url(), '/api/v1/auth/me'),
+      (response) => isSameOriginApiUrl(response.url(), '/api/v1/auth/me'),
       SESSION_GUARD_TIMEOUT_MS,
       `browser auth/me response wait failed for ${route.capturePath}`,
     );
