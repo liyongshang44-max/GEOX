@@ -41,8 +41,10 @@ export function defineFormalCopy(record: FormalCopyRecord): FormalCopyRecord {
 export const SHARED_PRODUCT_STATE_COPY = {
   available: { zh: "可用", en: "Available" },
   unavailable: { zh: "不可用", en: "Unavailable" },
+  partial: { zh: "部分可用", en: "Partial" },
   blocked: { zh: "已阻断", en: "Blocked" },
   readOnly: { zh: "只读", en: "Read-only" },
+  replayBacked: { zh: "回放支撑", en: "Replay-backed" },
   notConnected: { zh: "未连接", en: "Not connected" },
   notOnline: { zh: "未上线", en: "Not online" },
   notStarted: { zh: "未开始", en: "Not started" },
@@ -55,6 +57,24 @@ export const SHARED_PRODUCT_STATE_COPY = {
   loading: { zh: "正在加载", en: "Loading" },
   temporarilyUnavailable: { zh: "暂不可用", en: "Temporarily unavailable" },
   permissionLimited: { zh: "权限受限", en: "Permission limited" },
+  future: { zh: "后续阶段", en: "Future" },
+  urlOnly: { zh: "仅 URL 可访问", en: "URL-only" },
+  doNotBuild: { zh: "禁止构建", en: "Do not build" },
+} as const satisfies Record<string, LocalizedCopy>;
+
+export const PRODUCT_PRIMITIVE_COPY = {
+  emptyStateAria: { zh: "空状态", en: "Empty state" },
+  loadingStateAria: { zh: "加载状态", en: "Loading state" },
+  safeErrorStateAria: { zh: "安全错误状态", en: "Safe error state" },
+  productStateAria: { zh: "产品状态", en: "Product state" },
+  traceIdLabel: { zh: "追踪 ID", en: "Trace ID" },
+  scrollableDataTable: { zh: "可滚动数据表", en: "Scrollable data table" },
+  emptyDataTableState: { zh: "数据表空状态", en: "Empty data table state" },
+  tableSuffix: { zh: "数据表", en: "table" },
+  emptyTableSuffix: { zh: "空表状态", en: "empty table state" },
+  noRowsPrefix: { zh: "暂无", en: "No rows for" },
+  noRowsFallback: { zh: "此表暂无记录。", en: "No rows for this table." },
+  noRecordsDescription: { zh: "当前范围内没有可显示的记录。", en: "There are no records to display for this scope." },
 } as const satisfies Record<string, LocalizedCopy>;
 
 export const LOGIN_COPY = {
@@ -136,5 +156,12 @@ export const FORMAL_COPY_RECORDS: readonly FormalCopyRecord[] = [
     copy: SHARED_PRODUCT_STATE_COPY.unavailable,
     roleBoundary: "safe display fallback; does not expose backend errors",
     sourceFile: "apps/web/src/lib/productCopy/localeContract.ts",
+  }),
+  defineFormalCopy({
+    surfaceOwner: "Product Primitives",
+    copyKind: "ariaLabel",
+    copy: PRODUCT_PRIMITIVE_COPY.productStateAria,
+    roleBoundary: "accessible label only; does not change product state",
+    sourceFile: "apps/web/src/design-system/product/*",
   }),
 ];
