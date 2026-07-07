@@ -71,6 +71,7 @@ try {
   ok('capture_full_default', capture.includes("PFA0_CAPTURE_MODE || 'full'"));
   ok('capture_auth_placeholder_guard', capture.includes('containsAuthPlaceholder') && capture.includes('auth validation placeholder still visible'));
   ok('capture_page_shell_guard', capture.includes('containsPageShell') && capture.includes('page shell text not detected'));
+  ok('capture_auth_wide_fail_fast_guard', capture.includes('AUTH_FAILURE_LIMIT') && capture.includes('auth-wide capture failure'));
 
   console.log(JSON.stringify({ ok: true, acceptance: 'ACCEPTANCE_PFA_0_PAGE_QUALITY_AUDIT', matrixRecords: records.length, assertions }, null, 2));
 } catch (error) {
