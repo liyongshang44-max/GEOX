@@ -21,10 +21,13 @@ async function snapshot(page) {
         element.getAttribute('placeholder'),
       ].map((value) => governedCopy(value)).filter(Boolean);
     });
+    const htmlLang = document.documentElement.lang;
+    const activeLocale = document.querySelector('[data-locale-active="true"]')?.getAttribute('data-locale-option') || htmlLang;
     return {
       pathname: location.pathname,
-      htmlLang: document.documentElement.lang,
-      activeLocale: document.querySelector('[data-locale-active="true"]')?.getAttribute('data-locale-option') || '',
+      htmlLang,
+      activeLocale,
+      localeControlPresent: Boolean(document.querySelector('[data-locale-option]')),
       governedText: [...new Set(governed)].join(' | '),
       bodyText: document.body?.innerText || '',
       guard: Boolean(document.querySelector('[data-runtime-text-guard]')),
