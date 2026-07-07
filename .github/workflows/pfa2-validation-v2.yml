@@ -1,4 +1,4 @@
-name: pfa2-validation-v2
+name: pfa2-validation-v3
 
 on:
   pull_request:
@@ -8,16 +8,16 @@ permissions:
   contents: read
 
 jobs:
-  validate-latest-pfa2:
+  validate-final-pfa2:
     runs-on: ubuntu-latest
     timeout-minutes: 55
     env:
-      PFA2_HEAD_SHA: 83f5efa595d217ad12a34e09f5e282d6390a214d
+      PFA2_HEAD_SHA: 3a429dcaec84ed0ce265182404ecfedb6a3eac05
     steps:
       - name: Checkout exact PFA-2 head
         uses: actions/checkout@v4
         with:
-          ref: 83f5efa595d217ad12a34e09f5e282d6390a214d
+          ref: 3a429dcaec84ed0ce265182404ecfedb6a3eac05
           fetch-depth: 0
 
       - name: Fetch main baseline
@@ -40,32 +40,56 @@ jobs:
       - name: Initialize evidence
         run: |
           set -euo pipefail
-          OUT="$RUNNER_TEMP/pfa2-validation-v2"
+          OUT="$RUNNER_TEMP/pfa2-validation-v3"
           mkdir -p "$OUT"
           test "$(git rev-parse HEAD)" = "$PFA2_HEAD_SHA"
           git rev-parse HEAD | tee "$OUT/validated-head.txt"
           git diff --name-only origin/main...HEAD | tee "$OUT/changed-files.txt"
 
       - name: Static gate
-        run: node scripts/frontend_acceptance/ACCEPTANCE_PFA_2_LOCALE_CONTRACT.cjs 2>&1 | tee "$RUNNER_TEMP/pfa2-validation-v2/pfa2-static.log"
+        run: node scripts/frontend_acceptance/ACCEPTANCE_PFA_2_LOCALE_CONTRACT.cjs 2>&1 | tee "$RUNNER_TEMP/pfa2-validation-v3/pfa2-static.log"
 
       - name: Typecheck and build
         run: |
           set -euo pipefail
-          pnpm -r typecheck 2>&1 | tee "$RUNNER_TEMP/pfa2-validation-v2/typecheck.log"
-          pnpm -r build 2>&1 | tee "$RUNNER_TEMP/pfa2-validation-v2/build.log"
+          pnpm -r typecheck 2>&1 | tee "$RUNNER_TEMP/pfa2-validation-v3/typecheck.log"
+          pnpm -r build 2>&1 | tee "$RUNNER_TEMP/pfa2-validation-v3/build.log"
 
       - name: Bundle budget
         run: |
           set -euo pipefail
-          node scripts/frontend_acceptance/CHECK_PFE_10_WEB_BUNDLE_BUDGET.cjs 2>&1 | tee "$RUNNER_TEMP/pfa2-validation-v2/bundle-budget.log"
-          cp docs/audit/PFE_10_BUNDLE_BUDGET_REPORT.md "$RUNNER_TEMP/pfa2-validation-v2/"
+          node scripts/frontend_acceptance/CHECK_PFE_10_WEB_BUNDLE_BUDGET.cjs 2>&1 | tee "$RUNNER_TEMP/pfa2-validation-v3/bundle-budget.log"
+          cp docs/audit/PFE_10_BUNDLE_BUDGET_REPORT.md "$RUNNER_TEMP/pfa2-validation-v3/"
           rm -f docs/audit/PFE_10_BUNDLE_BUDGET_REPORT.md
+
+      - name: Record phase-scoped legacy gate outcomes
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/pfa2-validation-v3"
+          set +e
+          node scripts/frontend_acceptance/ACCEPTANCE_PFE_11_PRODUCT_COPY_I18N_COMPLETION.cjs > "$OUT/pfe11-legacy-gate.log" 2>&1
+          PFE11_RC=$?
+          node scripts/frontend_acceptance/ACCEPTANCE_PFA_1_RUNTIME_API_BASE_CAPTURE.cjs > "$OUT/pfa1-legacy-gate.log" 2>&1
+          PFA1_RC=$?
+          node scripts/frontend_acceptance/ACCEPTANCE_PFA_0_PAGE_QUALITY_AUDIT.cjs > "$OUT/pfa0-legacy-gate.log" 2>&1
+          PFA0_RC=$?
+          node scripts/frontend_acceptance/ACCEPTANCE_PFE_13_FRONTEND_PRODUCT_V1_FREEZE.cjs > "$OUT/pfe13-legacy-gate.log" 2>&1
+          PFE13_RC=$?
+          set -e
+          test "$PFE11_RC" -ne 0
+          test "$PFA1_RC" -ne 0
+          test "$PFA0_RC" -ne 0
+          test "$PFE13_RC" -ne 0
+          grep -q 'ASSERTION_FAILED:exists:apps/web/src/components/common/RuntimeTextGuard.tsx' "$OUT/pfe11-legacy-gate.log"
+          grep -q 'ASSERTION_FAILED:changed_files_are_pfa1_only' "$OUT/pfa1-legacy-gate.log"
+          grep -q 'ASSERTION_FAILED:changed_files_allowlist' "$OUT/pfa0-legacy-gate.log"
+          grep -q 'ASSERTION_FAILED:changed_files_allowlist' "$OUT/pfe13-legacy-gate.log"
+          printf 'PFE-11: phase-scoped N/A; successor proof required\nPFA-1: phase-scoped N/A; successor proof required\nPFA-0: phase-scoped N/A; successor proof required\nPFE-13: phase-scoped N/A; successor proof required\n' | tee "$OUT/legacy-gate-classification.txt"
 
       - name: Successor regression proofs
         run: |
           set -euo pipefail
-          OUT="$RUNNER_TEMP/pfa2-validation-v2"
+          OUT="$RUNNER_TEMP/pfa2-validation-v3"
           git diff --quiet origin/main...HEAD -- apps/web/src/api/client.ts docs/frontend-acceptance/PFA-1-RUNTIME-API-BASE-CAPTURE.md scripts/frontend_acceptance/ACCEPTANCE_PFA_1_RUNTIME_API_BASE_CAPTURE.cjs scripts/frontend_acceptance/CAPTURE_PFA_0_PAGE_REVIEW.cjs
           git diff --quiet origin/main...HEAD -- docs/frontend-acceptance/PFA-0-PAGE-QUALITY-AUDIT.md docs/frontend-acceptance/PFA-0-REVIEW-MANIFEST.json docs/frontend-acceptance/PFA-0-ROUTE-REVIEW-MATRIX.json docs/frontend-acceptance/PFA-0-ISSUE-REGISTER.md scripts/frontend_acceptance/ACCEPTANCE_PFA_0_PAGE_QUALITY_AUDIT.cjs scripts/frontend_acceptance/CAPTURE_PFA_0_PAGE_REVIEW.cjs
           git diff --quiet origin/main...HEAD -- docs/frontend-productization/PFE-11-PRODUCT-COPY-I18N-COMPLETION.md docs/frontend-productization/PFE-11-COPY-MATRIX.md docs/frontend-productization/PFE-11-I18N-COVERAGE-MATRIX.md docs/frontend-productization/PFE-11-COPY-ISSUE-REGISTER.md apps/web/src/lib/productSurfaceLabels.ts
@@ -119,7 +143,7 @@ jobs:
           GEOX_PUBLIC_BASE_URL=https://pilot-ci.geox.invalid
           GEOX_EXECUTION_DEFAULT_DISABLED=1
           GEOX_EXECUTION_ENABLE_EXPLICITLY=0
-          GEOX_EXECUTION_ENABLE_REASON=pfa2-validation-v2
+          GEOX_EXECUTION_ENABLE_REASON=pfa2-validation-v3
           GEOX_DEVTOOLS_ENABLED=0
           EOF
           echo "ACCEPTANCE_TOKEN=$ACCEPTANCE_TOKEN" >> "$GITHUB_ENV"
@@ -154,10 +178,10 @@ jobs:
           export FRONTEND_AUDIT_SKIP_BROWSER_INSTALL=1
           export PFA2_WEB_PORT=5184
           set +e
-          node scripts/frontend_acceptance/AUDIT_PFA_2_RUNTIME_LOCALE_CONTRACT.cjs 2>&1 | tee "$RUNNER_TEMP/pfa2-validation-v2/pfa2-runtime.log"
+          node scripts/frontend_acceptance/AUDIT_PFA_2_RUNTIME_LOCALE_CONTRACT.cjs 2>&1 | tee "$RUNNER_TEMP/pfa2-validation-v3/pfa2-runtime.log"
           RC=${PIPESTATUS[0]}
           set -e
-          if [ -f docs/audit/PFA_2_RUNTIME_LOCALE_AUDIT_REPORT.json ]; then cp docs/audit/PFA_2_RUNTIME_LOCALE_AUDIT_REPORT.json "$RUNNER_TEMP/pfa2-validation-v2/"; fi
+          if [ -f docs/audit/PFA_2_RUNTIME_LOCALE_AUDIT_REPORT.json ]; then cp docs/audit/PFA_2_RUNTIME_LOCALE_AUDIT_REPORT.json "$RUNNER_TEMP/pfa2-validation-v3/"; fi
           if [ "$RC" -ne 0 ]; then exit "$RC"; fi
           node - <<'NODE'
           const r = require('./docs/audit/PFA_2_RUNTIME_LOCALE_AUDIT_REPORT.json');
@@ -171,15 +195,15 @@ jobs:
         run: |
           set -euo pipefail
           rm -f .env.ci
-          git status --short --untracked-files=all | tee "$RUNNER_TEMP/pfa2-validation-v2/git-status.txt"
+          git status --short --untracked-files=all | tee "$RUNNER_TEMP/pfa2-validation-v3/git-status.txt"
           test -z "$(git status --short --untracked-files=all)"
 
       - name: Upload evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pfa2-validation-v2-83f5efa
-          path: ${{ runner.temp }}/pfa2-validation-v2
+          name: pfa2-validation-v3-3a429dc
+          path: ${{ runner.temp }}/pfa2-validation-v3
           if-no-files-found: error
           retention-days: 90
 
