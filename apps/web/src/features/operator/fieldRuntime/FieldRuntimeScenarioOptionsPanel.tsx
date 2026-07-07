@@ -1,6 +1,7 @@
 // apps/web/src/features/operator/fieldRuntime/FieldRuntimeScenarioOptionsPanel.tsx
 import React from "react";
 import { localizedText, useLocale, type LocalizedCopy } from "../../../lib/locale";
+import { operatorSafeDisplay, operatorStatusLabel } from "../../../lib/productCopy/operatorLocale";
 import { fieldRuntimeText, type FieldRuntimeCopyKey } from "./fieldRuntimeLocaleCopy";
 import { type FieldRuntimeScenarioViewModel } from "./fieldRuntimeScenarioAdapter";
 
@@ -11,6 +12,8 @@ const COPY = {
   confidence: { zh: "置信度元数据", en: "Confidence Metadata" },
   baseline: { zh: "无行动基线", en: "No-action Baseline" },
   failures: { zh: "失败条件", en: "Failure Conditions" },
+  option: { zh: "情景选项", en: "Scenario Option" },
+  unavailable: { zh: "暂不可用", en: "Unavailable" },
 } as const satisfies Record<string, LocalizedCopy>;
 
 export default function FieldRuntimeScenarioOptionsPanel({ scenario }: { scenario: FieldRuntimeScenarioViewModel }): React.ReactElement {
@@ -21,12 +24,12 @@ export default function FieldRuntimeScenarioOptionsPanel({ scenario }: { scenari
     <div className="operatorFieldRuntime__panelHeader"><div><p className="operatorFieldRuntime__eyebrow">{t("scenarioOptions")}</p><h2 className="operatorFieldRuntime__panelTitle">{t("scenarioOptions")}</h2></div><span className="operatorFieldRuntime__panelMeta">{c(COPY.order)}</span></div>
     <p className="operatorFieldRuntime__stubLead">{c(COPY.lead)}</p>
     <div className="operatorFieldRuntime__scenarioOptionList">{scenario.options.map((option) => <section className="operatorFieldRuntime__scenarioOption" key={option.optionId + option.label}>
-      <div><p className="operatorFieldRuntime__panelMeta">{option.optionId}</p><strong>{option.label}</strong></div>
+      <div><p className="operatorFieldRuntime__panelMeta" data-locale-neutral="true">{option.optionId}</p><strong>{operatorSafeDisplay(option.label, locale, COPY.option)}</strong></div>
       <dl className="operatorFieldRuntime__scenarioDetailList">
-        <div><dt>{c(COPY.delta)}</dt><dd>{option.forecastDeltaText}</dd></div>
-        <div><dt>{c(COPY.confidence)}</dt><dd>{option.confidenceText}</dd></div>
+        <div><dt>{c(COPY.delta)}</dt><dd>{operatorStatusLabel(option.forecastDeltaText, locale)}</dd></div>
+        <div><dt>{c(COPY.confidence)}</dt><dd>{operatorSafeDisplay(option.confidenceText, locale, COPY.unavailable)}</dd></div>
         <div><dt>{c(COPY.baseline)}</dt><dd>{option.isNoActionBaseline ? "true" : "false"}</dd></div>
-        <div><dt>{c(COPY.failures)}</dt><dd>{option.failureConditions.join(", ") || t("none")}</dd></div>
+        <div><dt>{c(COPY.failures)}</dt><dd data-locale-neutral="true">{option.failureConditions.join(", ") || t("none")}</dd></div>
       </dl>
     </section>)}</div>
   </article>;
