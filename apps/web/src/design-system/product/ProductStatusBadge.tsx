@@ -3,7 +3,7 @@
 // Boundary: this component displays readback state only and does not create business authority.
 
 import type { ReactNode } from "react";
-import { localizedText, useLocale, type LocalizedCopy } from "../../lib/locale";
+import { localizedText, useResolvedLocale, type LocalizedCopy } from "../../lib/locale";
 import { SHARED_PRODUCT_STATE_COPY } from "../../lib/productCopy/localeContract";
 
 export type ProductStatus =
@@ -45,7 +45,7 @@ export interface ProductStatusBadgeProps {
 }
 
 export function ProductStatusBadge({ status, label, className, ariaLabel }: ProductStatusBadgeProps) {
-  const { locale } = useLocale();
+  const locale = useResolvedLocale();
   const classes = ["productStatusBadge", className].filter(Boolean).join(" ");
   const defaultLabel = localizedText(STATUS_LABELS[status], locale);
   const visibleLabel = label ?? defaultLabel;
