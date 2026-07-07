@@ -1,8 +1,10 @@
 // apps/web/src/design-system/product/ProductDataTable.tsx
-// Purpose: provide a simple semantic product table without adding a table dependency.
-// Boundary: this component owns table semantics and empty-state semantics only.
+// Purpose: provide a bilingual semantic product table without adding a table dependency.
+// Boundary: this component owns table semantics and safe empty-state semantics only.
 
 import type { ReactNode } from "react";
+import { localizedText, useResolvedLocale } from "../../lib/locale";
+import { PRODUCT_PRIMITIVE_COPY } from "../../lib/productCopy/localeContract";
 import { ProductEmptyState } from "./ProductEmptyState";
 
 export interface ProductDataTableColumn<Row> {
@@ -31,15 +33,28 @@ export function ProductDataTable<Row>({
   mobileFallbackNote,
   className,
 }: ProductDataTableProps<Row>) {
+  const locale = useResolvedLocale();
   const classes = ["productDataTable", className].filter(Boolean).join(" ");
-  const tableRegionLabel = typeof caption === "string" ? `${caption} table` : "Scrollable data table";
-  const emptyRegionLabel = typeof caption === "string" ? `${caption} empty table state` : "Empty data table state";
-  const emptyTitle = typeof caption === "string" ? `No rows for ${caption}.` : "No rows for this table.";
+  const tableRegionLabel = typeof caption === "string"
+    ? locale === "en-US" ? `${caption} table` : `${caption}数据表`
+    : localizedText(PRODUCT_PRIMITIVE_COPY.scrollableDataTable, locale);
+  const emptyRegionLabel = typeof caption === "string"
+    ? locale === "en-US" ? `${caption} empty table state` : `${caption}空表状态`
+    : localizedText(PRODUCT_PRIMITIVE_COPY.emptyDataTableState, locale);
+  const emptyTitle = typeof caption === "string"
+    ? locale === "en-US" ? `No rows for ${caption}.` : `暂无${caption}记录。`
+    : localizedText(PRODUCT_PRIMITIVE_COPY.noRowsFallback, locale);
 
   if (rows.length === 0) {
     return (
       <section className="productDataTable__empty" role="status" aria-label={emptyRegionLabel}>
-        {emptyState ?? <ProductEmptyState title={emptyTitle} description="There are no records to display for this scope." ariaLabel={emptyRegionLabel} />}
+        {emptyState ?? (
+          <ProductEmptyState
+            title={emptyTitle}
+            description={localizedText(PRODUCT_PRIMITIVE_COPY.noRecordsDescription, locale)}
+            ariaLabel={emptyRegionLabel}
+          />
+        )}
       </section>
     );
   }
