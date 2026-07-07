@@ -172,10 +172,15 @@ async function auditOne(browser, states, record, locale, index, total) {
       const me = await mePromise;
       if (!me.ok() || !me.request().headers().authorization) throw new Error('auth/me proof failed');
     }
-    await page.waitForFunction((pathValue) => location.pathname === '/login' || ((document.body?.innerText || '').trim().length >= 10 && !/正在验证会话|validating session/i.test(document.body?.innerText || '')), record.concreteAuditPath, { timeout: TIMEOUT });
+    await page.waitForFunction((expectedPath) => {
+      const bodyText = document.body?.innerText || '';
+      const bodyReady = bodyText.trim().length >= 10 && !/正在验证会话|validating session/i.test(bodyText);
+      return location.pathname === '/login' || (location.pathname === expectedPath && bodyReady);
+    }, record.concreteAuditPath, { timeout: TIMEOUT });
     await page.waitForLoadState('networkidle', { timeout: 3000 }).catch(() => undefined);
     await page.waitForTimeout(250);
-    if (!loginRoute && location.pathname === '/login') throw new Error('unexpected login redirect');
+    const currentPathname = new URL(page.url()).pathname;
+    if (!loginRoute && currentPathname === '/login') throw new Error('unexpected login redirect');
     const view = await snapshot(page);
     result.snapshot = view;
     const searchable = `${view.governedText} | ${view.bodyText}`;
