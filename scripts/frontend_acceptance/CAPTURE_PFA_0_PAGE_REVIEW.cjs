@@ -80,6 +80,17 @@ async function preflightAuth() {
   console.log(`[pfa-0-review] auth preflight ok: ${me.tenant_id}/${me.project_id}/${me.group_id} role=${me.role}`);
 }
 
+async function preflightProxyAuth() {
+  console.log(`[pfa-0-review] proxy auth preflight: ${WEB_BASE_URL}/api/v1/auth/login`);
+  const login = await fetchJson(`${WEB_BASE_URL}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ token: SESSION_VALUE }),
+  });
+  if (!login?.tenant_id || !login?.project_id || !login?.group_id) throw new Error('proxy auth preflight did not return tenant context');
+  console.log(`[pfa-0-review] proxy auth preflight ok: ${login.tenant_id}/${login.project_id}/${login.group_id} role=${login.role}`);
+}
+
 function ensureBrowser() {
   if (process.env.FRONTEND_AUDIT_SKIP_BROWSER_INSTALL === '1') return;
   const ret = spawnSync('pnpm', ['exec', 'playwright', 'install', 'chromium'], { cwd: ROOT, stdio: 'inherit', env: process.env, timeout: 240000 });
@@ -161,6 +172,15 @@ function storageStateHasSession(state) {
   return keys.has(SESSION_KEY) && keys.has(CONTEXT_KEY) && keys.has(META_KEY);
 }
 
+function submittedTokenFromResponse(response) {
+  try {
+    const parsed = JSON.parse(response.request().postData() || '{}');
+    return typeof parsed.token === 'string' ? parsed.token : '';
+  } catch {
+    return '';
+  }
+}
+
 async function createAuthenticatedStorageState(browser, locale, viewport) {
   const context = await browser.newContext({ viewport });
   await context.addInitScript((localeValue) => {
@@ -170,13 +190,26 @@ async function createAuthenticatedStorageState(browser, locale, viewport) {
   const page = await context.newPage();
   try {
     await page.goto(`${WEB_BASE_URL}/login`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    const tokenInput = page.locator('#token-input');
+    await tokenInput.fill(SESSION_VALUE);
+    await page.waitForFunction((expectedToken) => {
+      const element = document.querySelector('#token-input');
+      return element instanceof HTMLTextAreaElement && element.value === expectedToken;
+    }, SESSION_VALUE, { timeout: 5000 });
+    await tokenInput.press('Tab');
+    await page.waitForTimeout(150);
+
     const loginResponsePromise = observeResponse(page, (response) => isApiPath(response.url(), '/api/v1/auth/login'), 12000, 'browser auth/login response wait failed');
-    await page.locator('#token-input').fill(SESSION_VALUE);
     await page.locator('form button[type="submit"]').click();
 
     const loginObserved = await loginResponsePromise;
     if (!loginObserved.response) throw new Error(loginObserved.error || 'browser auth/login response not observed');
     const loginResponse = loginObserved.response;
+    const submittedToken = submittedTokenFromResponse(loginResponse);
+    const tokenMatches = submittedToken === SESSION_VALUE;
+    console.log(`[pfa-0-review] browser auth/login request locale=${locale} expectedLength=${SESSION_VALUE.length} submittedLength=${submittedToken.length} tokenMatch=${tokenMatches}`);
+    if (!tokenMatches) throw new Error(`browser auth/login submitted token mismatch expectedLength=${SESSION_VALUE.length} submittedLength=${submittedToken.length}`);
+
     const loginBody = await responseBody(loginResponse);
     console.log(`[pfa-0-review] browser auth/login locale=${locale} status=${loginResponse.status()}`);
     if (!loginResponse.ok()) throw new Error(`browser auth/login failed status=${loginResponse.status()} body=${loginBody}`);
@@ -316,6 +349,7 @@ async function main() {
     await preflightAuth();
     web = await startWeb();
     if (!(await waitForHttp(WEB_BASE_URL, 60000))) throw new Error(`web not reachable: ${WEB_BASE_URL}`);
+    await preflightProxyAuth();
     const { chromium } = require('@playwright/test');
     browser = await chromium.launch({ headless: true });
 
