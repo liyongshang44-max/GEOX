@@ -76,6 +76,8 @@ try {
   ok('capture_checks_browser_auth_me', capture.includes('browser auth/me') && capture.includes('authorization=') && capture.includes("'/api/v1/auth/me'"));
   ok('capture_verifies_restored_session', capture.includes('verifyAuthenticatedStorageState') && capture.includes('browser session verified') && capture.includes("'/customer/dashboard'"));
   ok('capture_separates_login_from_auth_me', capture.includes('browser auth/login locale=') && capture.includes('browser auth/me verify locale='));
+  ok('capture_checks_proxy_auth_path', capture.includes('preflightProxyAuth') && capture.includes('proxy auth preflight ok'));
+  ok('capture_validates_submitted_token', capture.includes('submittedTokenFromResponse') && capture.includes('tokenMatch=') && capture.includes('submitted token mismatch'));
   ok('capture_uses_explicit_same_origin_api_base', capture.includes('VITE_API_BASE_URL: WEB_BASE_URL') && capture.includes('GEOX_WEB_PROXY_TARGET: API_BASE_URL'));
   ok('capture_does_not_hand_inject_session', !capture.includes('async function applySession'));
 
