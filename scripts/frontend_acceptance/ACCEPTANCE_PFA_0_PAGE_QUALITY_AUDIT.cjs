@@ -14,6 +14,7 @@ const mustExist = [
   'docs/frontend-acceptance/PFA-0-ISSUE-REGISTER.md',
   'docs/frontend-acceptance/PFA-0-REVIEW-RUBRIC.md',
   'docs/frontend-acceptance/PFA-POST-FREEZE-TASK-LINE.md',
+  'docs/frontend-acceptance/PFA-5-ADMIN-DEVICES-READBACK.md',
   'docs/frontend-productization/PFE-13-ROUTE-INVENTORY.json',
   'scripts/frontend_acceptance/CAPTURE_PFA_0_PAGE_REVIEW.cjs',
   'scripts/frontend_acceptance/ACCEPTANCE_PFA_0_PAGE_QUALITY_AUDIT.cjs',
@@ -58,6 +59,7 @@ try {
   const issues = read('docs/frontend-acceptance/PFA-0-ISSUE-REGISTER.md');
   const doc = read('docs/frontend-acceptance/PFA-0-PAGE-QUALITY-AUDIT.md');
   const taskLine = read('docs/frontend-acceptance/PFA-POST-FREEZE-TASK-LINE.md');
+  const deviceContract = read('docs/frontend-acceptance/PFA-5-ADMIN-DEVICES-READBACK.md');
   const capture = read('scripts/frontend_acceptance/CAPTURE_PFA_0_PAGE_REVIEW.cjs');
   const records = matrix.records.map((record) => expand(matrix, record));
   const actualRecords = records.filter(actual);
@@ -80,6 +82,9 @@ try {
   ok('matrix_remediation_phases', records.every((r) => /^PFA-[2-6]$/.test(r.remediationPhase)));
   ok('matrix_highest_severity_normalized', records.every((r) => r.i18nConsistency !== 'P1' || r.highestSeverity === 'P1'));
   ok('issues_reconciled', hasText(issues, ['180/180 PASS','PFA0-I18N-001','PFA0-RWD-001','PFA0-EXP-001','PFA0-DEN-001','PFA0-CUS-006','PFA0-CAP-001','resolved','PFA0-CAP-002']));
+  ok('issue_counts_reconciled', hasText(issues, ['open findings: 19','resolved capture findings: 2','historical findings: 21']));
+  ok('admin_devices_contract_registered', hasText(issues, ['PFA0-ADM-003','P1-contract','PFA-5','/admin/devices','device asset and status readback governance','known','unknown','unavailable','stale','degraded','source missing']));
+  ok('admin_devices_contract_phase_boundary', hasText(deviceContract, ['PFA0-ADM-003','PFA-5','P1-contract','PFA-6 does not own']));
   ok('docs_runtime_vs_quality_split', hasText(doc, ['runtime capture PASS != page-quality PASS','180/180 PASS','page-quality audit: FAIL','PFA-7']));
   ok('task_line_complete', ['PFA-0','PFA-1','PFA-2','PFA-3','PFA-4','PFA-5','PFA-6','PFA-7'].every((x) => taskLine.includes(x)));
   ok('capture_full_default', capture.includes("PFA0_CAPTURE_MODE || 'full'"));
@@ -91,7 +96,7 @@ try {
   ok('capture_pins_runtime_api_base', capture.includes('VITE_API_BASE_URL: WEB_BASE_URL') && capture.includes('VITE_API_BASE: WEB_BASE_URL') && capture.includes('GEOX_WEB_PROXY_TARGET: API_BASE_URL'));
   ok('capture_does_not_hand_inject_session', !capture.includes('async function applySession'));
 
-  console.log(JSON.stringify({ ok: true, acceptance: 'ACCEPTANCE_PFA_0_PAGE_QUALITY_AUDIT', matrixRecords: records.length, actualRoutes: actualRecords.length, assertions }, null, 2));
+  console.log(JSON.stringify({ ok: true, acceptance: 'ACCEPTANCE_PFA_0_PAGE_QUALITY_AUDIT', matrixRecords: records.length, actualRoutes: actualRecords.length, openIssues: 19, resolvedIssues: 2, historicalIssues: 21, assertions }, null, 2));
 } catch (error) {
   console.error(JSON.stringify({ ok: false, acceptance: 'ACCEPTANCE_PFA_0_PAGE_QUALITY_AUDIT', error: error.message, details: error.details || null, assertions }, null, 2));
   process.exit(1);
