@@ -7,6 +7,8 @@ import { localizedText, useLocale, type LocaleCode, type LocalizedCopy } from ".
 import { CUSTOMER_COMMON_COPY, CUSTOMER_REPORTS_COPY, customerProductFallback, customerStatusLabel } from "../../../lib/productCopy/customerLocale";
 import { buildCustomerReportsCenterVm, type CustomerReportGroupKey, type CustomerReportsCenterVm } from "../../../viewmodels/customerReportsCenterVm";
 
+const DELIVERABLE_REPORTS: LocalizedCopy = { zh: "交付报告", en: "Deliverable Reports" };
+
 function groupCopy(key: CustomerReportGroupKey) {
   return CUSTOMER_REPORTS_COPY.groups[key];
 }
@@ -43,6 +45,7 @@ export default function CustomerReportsCenterPage(): React.ReactElement {
       <ProductBoundaryBanner tone="readOnly" title={t(CUSTOMER_REPORTS_COPY.boundaryTitle)} description={t(CUSTOMER_REPORTS_COPY.boundaryLead)} />
       <ProductScopeBar surface="customer" items={[{ label: t(CUSTOMER_COMMON_COPY.scope), value: customerProductFallback(vm.scopeBadgeText, locale, CUSTOMER_REPORTS_COPY.lead) }, { label: t(CUSTOMER_COMMON_COPY.trust), value: customerStatusLabel(vm.trustText, locale) }, { label: t(CUSTOMER_COMMON_COPY.updated), value: vm.generatedAtText }]} />
       <section className="customerReportsCenterGrid" aria-label={t(CUSTOMER_REPORTS_COPY.categoriesAria)}>
+        <h2>{t(DELIVERABLE_REPORTS)}</h2>
         {vm.groups.map((group) => {
           const copy = groupCopy(group.key);
           return (
