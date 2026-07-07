@@ -209,14 +209,28 @@ function auditPairs(records, results) {
   return records.map((record) => {
     const zh = results.find((item) => item.route === record.route && item.locale === 'zh-CN');
     const en = results.find((item) => item.route === record.route && item.locale === 'en-US');
+    const renderPassed = Boolean(zh?.snapshot && en?.snapshot && zh.status === 'PASS' && en.status === 'PASS');
+    const pathnameEquivalent = Boolean(renderPassed && zh.snapshot.pathname === en.snapshot.pathname);
+    const localeDifferentiated = Boolean(renderPassed && clean(zh.snapshot.governedText) !== clean(en.snapshot.governedText));
+    const roleBoundaryEquivalent = Boolean(renderPassed
+      && JSON.stringify(capability(`${zh.snapshot.governedText} ${zh.snapshot.bodyText}`))
+        === JSON.stringify(capability(`${en.snapshot.governedText} ${en.snapshot.bodyText}`)));
     const notes = [];
-    if (!zh?.snapshot || !en?.snapshot || zh.status !== 'PASS' || en.status !== 'PASS') notes.push('route-locale render failed');
+    if (!renderPassed) notes.push('route-locale render failed');
     else {
-      if (zh.snapshot.pathname !== en.snapshot.pathname) notes.push('pathname differs');
-      if (clean(zh.snapshot.governedText) === clean(en.snapshot.governedText)) notes.push('governed copy is identical');
-      if (JSON.stringify(capability(`${zh.snapshot.governedText} ${zh.snapshot.bodyText}`)) !== JSON.stringify(capability(`${en.snapshot.governedText} ${en.snapshot.bodyText}`))) notes.push('role boundary differs');
+      if (!pathnameEquivalent) notes.push('pathname differs');
+      if (!localeDifferentiated) notes.push('governed copy is identical');
+      if (!roleBoundaryEquivalent) notes.push('role boundary differs');
     }
-    return { route: record.route, status: notes.length ? 'FAIL' : 'PASS', notes };
+    return {
+      route: record.route,
+      status: notes.length ? 'FAIL' : 'PASS',
+      renderPassed,
+      pathnameEquivalent,
+      localeDifferentiated,
+      roleBoundaryEquivalent,
+      notes,
+    };
   });
 }
 
@@ -247,6 +261,9 @@ async function main() {
       routeHealthPass: results.filter((item) => item.status === 'PASS').length,
       htmlLangPass: results.filter((item) => item.snapshot?.htmlLang === item.locale).length,
       localePairPass: pairs.filter((item) => item.status === 'PASS').length,
+      localePairDifferentiationPass: pairs.filter((item) => item.localeDifferentiated).length,
+      roleBoundaryEquivalencePass: pairs.filter((item) => item.roleBoundaryEquivalent).length,
+      pathnameEquivalencePass: pairs.filter((item) => item.pathnameEquivalent).length,
       runtimeTextGuardDependency: results.some((item) => item.snapshot?.guard) ? 1 : 0,
       results,
       pairs,
@@ -262,6 +279,9 @@ async function main() {
       routeHealth: `${payload.routeHealthPass}/${payload.routeRenders}`,
       htmlLang: `${payload.htmlLangPass}/${payload.routeRenders}`,
       localePairs: `${payload.localePairPass}/${payload.actualRoutes}`,
+      localePairDifferentiation: `${payload.localePairDifferentiationPass}/${payload.actualRoutes}`,
+      roleBoundaryEquivalence: `${payload.roleBoundaryEquivalencePass}/${payload.actualRoutes}`,
+      pathnameEquivalence: `${payload.pathnameEquivalencePass}/${payload.actualRoutes}`,
       runtimeTextGuardDependency: payload.runtimeTextGuardDependency,
       report: path.relative(ROOT, REPORT).replace(/\\/g, '/'),
     }, null, 2));
