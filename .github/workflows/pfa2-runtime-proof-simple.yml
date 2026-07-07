@@ -1,0 +1,77 @@
+name: pfa2-runtime-proof-simple
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  prove-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      POSTGRES_USER: landos
+      POSTGRES_PASSWORD: ci-pfa2-postgres
+      POSTGRES_DB: landos
+      MINIO_ROOT_USER: geoxminio
+      MINIO_ROOT_PASSWORD: ci-pfa2-minio
+      MQTT_USERNAME: geoxmqtt
+      MQTT_PASSWORD: ci-pfa2-mqtt
+      CORS_ORIGINS: https://pfa2-ci.geox.invalid
+      APP_SECRET: ci-pfa2-app-secret-strong-2026
+      PUBLIC_BASE_URL: https://pfa2-ci.geox.invalid
+      GEOX_RUNTIME_ENV: pilot
+      GEOX_EXECUTION_DEFAULT_DISABLED: 1
+      GEOX_EXECUTION_ENABLE_EXPLICITLY: 0
+      GEOX_DEVTOOLS_ENABLED: 0
+      GEOX_ACCEPTANCE_TOKEN: admin_token
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 75bd445ee17066da29b1ba74a19cdf431a40f5f3
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile
+      - name: Start audit runtime
+        run: |
+          docker compose -f docker-compose.commercial_v1.yml up -d minio minio-init postgres mqtt server
+          timeout 180 bash -lc 'until curl -fsS http://127.0.0.1:3001/api/health >/dev/null; do sleep 2; done'
+      - name: Seed audit data
+        run: |
+          export BASE_URL=http://127.0.0.1:3001
+          export API_BASE_URL=http://127.0.0.1:3001
+          export DATABASE_URL=postgres://landos:ci-pfa2-postgres@127.0.0.1:5433/landos
+          node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --cleanup --apply --tenant tenantA
+          node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --apply --tenant tenantA --base-url http://127.0.0.1:3001
+          node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --verify --tenant tenantA
+          node scripts/demo_seed/SEED_CONTROLLED_PILOT_FULL_REVIEW_V1.cjs --verify-api --tenant tenantA --base-url http://127.0.0.1:3001
+      - name: Run audit
+        run: |
+          mkdir -p "$RUNNER_TEMP/pfa2-runtime-proof"
+          pnpm exec playwright install chromium
+          export API_BASE_URL=http://127.0.0.1:3001
+          export GEOX_WEB_PROXY_TARGET=http://127.0.0.1:3001
+          export FRONTEND_AUDIT_SKIP_BROWSER_INSTALL=1
+          export PFA2_WEB_PORT=5184
+          set +e
+          node scripts/frontend_acceptance/AUDIT_PFA_2_RUNTIME_LOCALE_CONTRACT.cjs 2>&1 | tee "$RUNNER_TEMP/pfa2-runtime-proof/runtime.log"
+          RC=${PIPESTATUS[0]}
+          set -e
+          test ! -f docs/audit/PFA_2_RUNTIME_LOCALE_AUDIT_REPORT.json || cp docs/audit/PFA_2_RUNTIME_LOCALE_AUDIT_REPORT.json "$RUNNER_TEMP/pfa2-runtime-proof/"
+          exit "$RC"
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pfa2-runtime-proof-simple
+          path: ${{ runner.temp }}/pfa2-runtime-proof
+          if-no-files-found: error
+      - if: always()
+        run: docker compose -f docker-compose.commercial_v1.yml down -v --remove-orphans || true
