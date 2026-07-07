@@ -14,6 +14,7 @@ const WEB_BASE_URL = String(process.env.FRONTEND_AUDIT_WEB_BASE_URL || `http://1
 const API_BASE_URL = String(process.env.API_BASE_URL || process.env.GEOX_WEB_PROXY_TARGET || 'http://127.0.0.1:3000').replace(/\/+$/, '');
 const CAPTURE_MODE = String(process.env.PFA0_CAPTURE_MODE || 'full').toLowerCase();
 const SESSION_VALUE = String(process.env.FRONTEND_AUDIT_TOKEN || process.env.GEOX_ACCEPTANCE_TOKEN || 'admin_token');
+const AUTH_FAILURE_LIMIT = Number(process.env.PFA0_AUTH_FAILURE_LIMIT || '6');
 const SESSION_KEY = ['geox', 'ao', 'act', 'token'].join('_');
 const CONTEXT_KEY = ['geox', 'tenant', 'context'].join('_');
 const META_KEY = ['geox', 'session', 'meta'].join('_');
@@ -25,6 +26,7 @@ function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 function isLoginUrl(value) { try { return new URL(value).pathname === '/login'; } catch { return String(value || '').includes('/login'); } }
 function containsAuthPlaceholder(text) { return /正在验证会话|validating session/i.test(String(text || '')); }
 function containsPageShell(text) { return /GEOX|Customer|Operator|Admin|客户|操作员|后台|报告|地块|作业|运行|治理/i.test(String(text || '')); }
+function isAuthCaptureFailure(result) { return result.status === 'FAIL' && /unexpected login redirect|auth validation placeholder|session validation|page shell text not detected/i.test(result.notes.join(' ')); }
 
 function requestOk(url) {
   return new Promise((resolve) => {
@@ -209,6 +211,7 @@ async function main() {
   let web = null;
   let browser = null;
   const results = [];
+  let consecutiveAuthFailures = 0;
   try {
     ensureBrowser();
     const auth = await preflightAuth();
@@ -221,7 +224,14 @@ async function main() {
     console.log(`[pfa-0-review] capture plan: mode=${CAPTURE_MODE} jobs=${jobs.length} web=${WEB_BASE_URL}`);
     for (let i = 0; i < jobs.length; i += 1) {
       const job = jobs[i];
-      results.push(await captureOne(browser, manifest, job.route, job.locale, job.viewportName, auth, i + 1, jobs.length));
+      const result = await captureOne(browser, manifest, job.route, job.locale, job.viewportName, auth, i + 1, jobs.length);
+      results.push(result);
+      if (job.route.capturePath !== '/login' && isAuthCaptureFailure(result)) consecutiveAuthFailures += 1;
+      else consecutiveAuthFailures = 0;
+      if (consecutiveAuthFailures >= AUTH_FAILURE_LIMIT) {
+        console.error(`[pfa-0-review] auth-wide capture failure: ${consecutiveAuthFailures} consecutive authenticated routes failed; stopping early`);
+        break;
+      }
     }
   } finally {
     if (browser) await browser.close().catch(() => undefined);
