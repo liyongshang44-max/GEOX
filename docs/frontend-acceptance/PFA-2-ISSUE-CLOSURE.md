@@ -1,13 +1,32 @@
 <!-- docs/frontend-acceptance/PFA-2-ISSUE-CLOSURE.md -->
 # PFA-2 Issue Closure Register
 
-## Current state
+## Closed issues
 
-| issue | severity | owner | current state | closure evidence required |
+| issue | severity | owner | state | evidence |
 |---|---|---|---|---|
-| PFA0-I18N-001 | P1 | PFA-2 | open | 30 routes, 2 locales, 60/60 runtime renders, pair differentiation, html lang, no RuntimeTextGuard dependency |
-| PFA0-CUS-001 | P1 | PFA-2 | open | Customer 9 routes produce complete and mutually exclusive zh-CN / en-US governed copy |
-| PFA0-ADM-002 | P2 | PFA-2 | open | Admin 7 routes produce consistent bilingual governance/readback terminology |
+| PFA0-I18N-001 | P1 | PFA-2 | closed | 60/60 route health, 60/60 html lang, 30/30 locale pairs, RuntimeTextGuard dependency 0 |
+| PFA0-CUS-001 | P1 | PFA-2 | closed | Customer 9 routes passed zh-CN and en-US runtime checks |
+| PFA0-ADM-002 | P2 | PFA-2 | closed | Admin 7 routes passed bilingual governance checks |
+
+## Closure proof
+
+```text
+validated head: 88b793226a2dc84853d125f2a1f96c7c59282cd8
+validation date: 2026-07-08
+static exit: 0
+runtime exit: 0
+runtime ok: true
+route health: 60/60
+html lang: 60/60
+locale pairs: 30/30
+locale pair differentiation: 30/30
+role-boundary equivalence: 30/30
+pathname equivalence: 30/30
+RuntimeTextGuard dependency: 0
+CI run 4200: success
+worktree after cleanup: clean
+```
 
 ## Deferred issues
 
@@ -22,4 +41,4 @@ PFA0-CUS-004 → PFA-6
 PFA0-ADM-001 → PFA-6
 ```
 
-This register must not mark an issue closed until static acceptance, runtime locale audit, typecheck, build, bundle, frozen regression gates, and synchronized-head CI all pass.
+No later-phase issue is closed by PFA-2.
