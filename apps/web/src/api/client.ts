@@ -3,11 +3,12 @@ import { clearSession, readSessionToken, readTenantContext } from "../auth/authS
 const DEFAULT_API_BASE = "http://127.0.0.1:3001";
 const API_CONTRACT_VERSION = "2026-04-06";
 
-export const API_BASE_URL = String(
-  (import.meta as any)?.env?.VITE_API_BASE_URL ??
-  (import.meta as any)?.env?.VITE_API_BASE ??
-  DEFAULT_API_BASE
-).replace(/\/+$/, "");
+const configuredApiBase =
+  import.meta.env.VITE_API_BASE_URL ??
+  import.meta.env.VITE_API_BASE ??
+  DEFAULT_API_BASE;
+
+export const API_BASE_URL = String(configuredApiBase).replace(/\/+$/, "");
 
 export const OPTIONAL_API_STATUSES = [404, 422] as const;
 
