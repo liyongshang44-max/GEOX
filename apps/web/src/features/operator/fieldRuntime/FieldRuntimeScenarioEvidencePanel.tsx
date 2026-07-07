@@ -16,6 +16,6 @@ export default function FieldRuntimeScenarioEvidencePanel({ scenario }: { scenar
   return <article className="operatorFieldRuntime__panel operatorFieldRuntime__scenarioEvidence" data-h60g-panel="scenario-evidence">
     <div className="operatorFieldRuntime__panelHeader"><div><p className="operatorFieldRuntime__eyebrow">{t("scenarioEvidence")}</p><h2 className="operatorFieldRuntime__panelTitle">{t("scenarioEvidence")}</h2></div><span className="operatorFieldRuntime__panelMeta">{scenario.evidenceRefs.length} {t("refs")}</span></div>
     <p className="operatorFieldRuntime__stubLead">{c(COPY.fullTrace)}</p><p className="operatorFieldRuntime__stubLead">{c(COPY.refsOnly)}</p>
-    <details className="operatorFieldRuntime__scenarioRefs" open><summary>{t("scenarioEvidence")} {t("refs")}</summary><ul>{scenario.evidenceRefs.map((ref) => <li key={ref}>{ref}</li>)}</ul></details>
+    <details className="operatorFieldRuntime__scenarioRefs" open><summary>{t("scenarioEvidence")} {t("refs")}</summary><ul data-locale-neutral="true">{scenario.evidenceRefs.map((ref) => <li key={ref}>{ref}</li>)}</ul></details>
   </article>;
 }
