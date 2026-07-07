@@ -1,21 +1,19 @@
 // apps/web/src/features/operator/fieldRuntime/FieldRuntimeHealthSourcePanel.tsx
-// Purpose: render H62 source freshness metadata.
-// Boundary: source freshness is metadata, not live heartbeat or device uptime.
-
 import React from "react";
+import { useLocale } from "../../../lib/locale";
+import { fieldRuntimeText, type FieldRuntimeCopyKey } from "./fieldRuntimeLocaleCopy";
 import { type FieldRuntimeHealthViewModel } from "./fieldRuntimeHealthAdapter";
 
-type FieldRuntimeHealthSourcePanelProps = {
-  health: FieldRuntimeHealthViewModel;
-};
-
-export default function FieldRuntimeHealthSourcePanel({ health }: FieldRuntimeHealthSourcePanelProps): React.ReactElement {
+export default function FieldRuntimeHealthSourcePanel({ health }: { health: FieldRuntimeHealthViewModel }): React.ReactElement {
+  const { locale } = useLocale();
+  const t = (key: FieldRuntimeCopyKey) => fieldRuntimeText(locale, key);
+  const text = (en: string, zh: string) => locale === "en-US" ? en : zh;
   return (
     <article className="operatorFieldRuntime__panel operatorFieldRuntime__healthSource" data-h62-panel="source-freshness">
-      <div className="operatorFieldRuntime__panelHeader"><div><p className="operatorFieldRuntime__eyebrow">Source Freshness</p><h2 className="operatorFieldRuntime__panelTitle">Source Freshness</h2></div><span className="operatorFieldRuntime__panelMeta">metadata only</span></div>
-      <p className="operatorFieldRuntime__stubLead">Source Freshness is metadata, not live freshness.</p>
-      <div className="operatorFieldRuntime__healthTable" role="table" aria-label="Source freshness matrix">
-        <div className="operatorFieldRuntime__healthTableHeader" role="row"><span>Source</span><span>Availability</span><span>Meaning</span><span>Does not mean</span></div>
+      <div className="operatorFieldRuntime__panelHeader"><div><p className="operatorFieldRuntime__eyebrow">{t("healthSource")}</p><h2 className="operatorFieldRuntime__panelTitle">{text("Source Freshness", "来源新鲜度")}</h2></div><span className="operatorFieldRuntime__panelMeta">{text("Metadata Only", "仅元数据")}</span></div>
+      <p className="operatorFieldRuntime__stubLead">{text("Source freshness is review metadata.", "来源新鲜度是审查元数据。")}</p>
+      <div className="operatorFieldRuntime__healthTable" role="table" aria-label={text("Source Freshness Matrix", "来源新鲜度矩阵")}>
+        <div className="operatorFieldRuntime__healthTableHeader" role="row"><span>{t("source")}</span><span>{text("Availability", "可用性")}</span><span>{text("Meaning", "含义")}</span><span>{text("Boundary", "边界")}</span></div>
         {health.sourceFreshness.map((row) => <div className="operatorFieldRuntime__healthTableRow" role="row" key={row.source}><span>{row.source}</span><span>{row.availability}</span><span>{row.freshnessMeaning}</span><span>{row.doesNotMean}</span></div>)}
       </div>
     </article>
