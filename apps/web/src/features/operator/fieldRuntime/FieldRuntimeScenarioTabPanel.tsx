@@ -17,8 +17,8 @@ export default function FieldRuntimeScenarioTabPanel({ loadState }: { loadState?
   const scenario = loadState.scenario;
   return <div className="operatorFieldRuntime__scenarioGrid" data-h60g="scenario-tab-ready" data-scenario-source={scenario.source} data-compare-source={scenario.scenarioCompare.source}>
     <article className="operatorFieldRuntime__panel" data-h60g-panel="scenario-intro">
-      <div className="operatorFieldRuntime__panelHeader"><div><p className="operatorFieldRuntime__eyebrow">{t("scenario")}</p><h2 className="operatorFieldRuntime__panelTitle">{t("scenarioReview")}</h2></div><span className="operatorFieldRuntime__panelMeta">operator_field_twin_scenario_compare_v1</span></div>
-      <p className="operatorFieldRuntime__stubLead">scenario_compare_v1</p>
+      <div className="operatorFieldRuntime__panelHeader"><div><p className="operatorFieldRuntime__eyebrow">{t("scenario")}</p><h2 className="operatorFieldRuntime__panelTitle">{t("scenarioReview")}</h2></div><span className="operatorFieldRuntime__panelMeta" data-locale-neutral="true">operator_field_twin_scenario_compare_v1</span></div>
+      <p className="operatorFieldRuntime__stubLead" data-locale-neutral="true">scenario_compare_v1</p>
       <p className="operatorFieldRuntime__stubLead">{t("scenarioIntro")}</p>
       <p className="operatorFieldRuntime__stubLead">{t("scenarioOnly")}</p>
       <p className="operatorFieldRuntime__stubLead">{t("scenarioNonclaim")}</p>
