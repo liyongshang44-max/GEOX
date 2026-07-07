@@ -72,6 +72,7 @@ try {
   ok('capture_auth_placeholder_guard', capture.includes('containsAuthPlaceholder') && capture.includes('auth validation placeholder still visible'));
   ok('capture_page_shell_guard', capture.includes('containsPageShell') && capture.includes('page shell text not detected'));
   ok('capture_auth_wide_fail_fast_guard', capture.includes('AUTH_FAILURE_LIMIT') && capture.includes('auth-wide capture failure'));
+  ok('capture_waits_for_session_guard', capture.includes('waitForSessionGuard') && capture.includes('SESSION_GUARD_TIMEOUT_MS') && capture.includes('session guard did not settle'));
 
   console.log(JSON.stringify({ ok: true, acceptance: 'ACCEPTANCE_PFA_0_PAGE_QUALITY_AUDIT', matrixRecords: records.length, assertions }, null, 2));
 } catch (error) {
