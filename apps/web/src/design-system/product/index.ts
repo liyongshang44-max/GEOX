@@ -15,6 +15,7 @@ export { ProductPageHeader } from "./ProductPageHeader";
 export type { ProductPageHeaderProps } from "./ProductPageHeader";
 export { ProductPageShell } from "./ProductPageShell";
 export type { ProductPageShellProps, ProductShellWidth, ProductSurfaceRole } from "./ProductPageShell";
+export { ProductPrintReportScaffold } from "./ProductPrintReportScaffold";
 export { ProductScopeBar } from "./ProductScopeBar";
 export type { ProductScopeBarProps, ProductScopeItem } from "./ProductScopeBar";
 export { ProductSectionCard } from "./ProductSectionCard";
