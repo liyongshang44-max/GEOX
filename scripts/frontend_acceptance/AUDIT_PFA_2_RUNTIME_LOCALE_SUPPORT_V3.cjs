@@ -6,6 +6,9 @@ const base = require('./AUDIT_PFA_2_RUNTIME_LOCALE_SUPPORT_V2.cjs');
 async function snapshot(page) {
   return page.evaluate(() => {
     const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+    const withoutNeutralRoutes = (value) => String(value || '')
+      .replace(/\/(?:[A-Za-z0-9_:.{}-]+\/)+[A-Za-z0-9_:.{}-]+/g, ' ');
+    const governedCopy = (value) => clean(withoutNeutralRoutes(value));
     const selectors = 'nav,h1,h2,h3,table th,button,label,[aria-label],[title],[placeholder],[class*="boundary" i],[data-status]';
     const governed = [...document.querySelectorAll(selectors)].flatMap((element) => {
       if (element.closest('code,pre,[data-locale-neutral="true"]')) return [];
@@ -16,7 +19,7 @@ async function snapshot(page) {
         element.getAttribute('aria-label'),
         element.getAttribute('title'),
         element.getAttribute('placeholder'),
-      ].map((value) => clean(value)).filter(Boolean);
+      ].map((value) => governedCopy(value)).filter(Boolean);
     });
     return {
       pathname: location.pathname,
