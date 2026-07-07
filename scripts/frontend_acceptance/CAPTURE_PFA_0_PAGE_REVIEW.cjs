@@ -15,6 +15,7 @@ const API_BASE_URL = String(process.env.API_BASE_URL || process.env.GEOX_WEB_PRO
 const CAPTURE_MODE = String(process.env.PFA0_CAPTURE_MODE || 'full').toLowerCase();
 const SESSION_VALUE = String(process.env.FRONTEND_AUDIT_TOKEN || process.env.GEOX_ACCEPTANCE_TOKEN || 'admin_token');
 const AUTH_FAILURE_LIMIT = Number(process.env.PFA0_AUTH_FAILURE_LIMIT || '6');
+const SESSION_GUARD_TIMEOUT_MS = Number(process.env.PFA0_SESSION_GUARD_TIMEOUT_MS || '10000');
 const SESSION_KEY = ['geox', 'ao', 'act', 'token'].join('_');
 const CONTEXT_KEY = ['geox', 'tenant', 'context'].join('_');
 const META_KEY = ['geox', 'session', 'meta'].join('_');
@@ -26,7 +27,7 @@ function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 function isLoginUrl(value) { try { return new URL(value).pathname === '/login'; } catch { return String(value || '').includes('/login'); } }
 function containsAuthPlaceholder(text) { return /正在验证会话|validating session/i.test(String(text || '')); }
 function containsPageShell(text) { return /GEOX|Customer|Operator|Admin|客户|操作员|后台|报告|地块|作业|运行|治理/i.test(String(text || '')); }
-function isAuthCaptureFailure(result) { return result.status === 'FAIL' && /unexpected login redirect|auth validation placeholder|session validation|page shell text not detected/i.test(result.notes.join(' ')); }
+function isAuthCaptureFailure(result) { return result.status === 'FAIL' && /unexpected login redirect|auth validation placeholder|session guard did not settle|page shell text not detected/i.test(result.notes.join(' ')); }
 
 function requestOk(url) {
   return new Promise((resolve) => {
@@ -158,6 +159,17 @@ async function applySession(context, locale, auth) {
   }, { localeValue: locale, token: SESSION_VALUE, keys: { session: SESSION_KEY, context: CONTEXT_KEY, meta: META_KEY }, authPayload: auth });
 }
 
+async function waitForSessionGuard(page, routePath) {
+  if (routePath === '/login') return;
+  const settled = await page.waitForFunction(() => {
+    const text = document.body?.innerText || '';
+    const isLogin = window.location.pathname === '/login';
+    const isChecking = /正在验证会话|validating session/i.test(text);
+    return isLogin || !isChecking;
+  }, undefined, { timeout: SESSION_GUARD_TIMEOUT_MS }).then(() => true).catch(() => false);
+  if (!settled) throw new Error(`session guard did not settle within ${SESSION_GUARD_TIMEOUT_MS}ms for ${routePath}`);
+}
+
 async function captureOne(browser, manifest, route, locale, viewportName, auth, index, total) {
   const viewport = manifest.viewports[viewportName];
   if (!viewport) throw new Error(`Unknown viewport: ${viewportName}`);
@@ -169,8 +181,9 @@ async function captureOne(browser, manifest, route, locale, viewportName, auth, 
   const result = { route: route.route, capturePath: route.capturePath, surface: route.surface, locale, viewport: viewportName, status: 'PASS', screenshot: '', notes: [] };
   try {
     await page.goto(`${WEB_BASE_URL}${route.capturePath}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await waitForSessionGuard(page, route.capturePath);
     await page.waitForLoadState('networkidle', { timeout: 2500 }).catch(() => undefined);
-    await page.waitForTimeout(750);
+    await page.waitForTimeout(250);
     const finalUrl = page.url();
     if (route.capturePath !== '/login' && isLoginUrl(finalUrl)) {
       throw new Error(`unexpected login redirect for ${route.capturePath}; check FRONTEND_AUDIT_TOKEN/API server`);
