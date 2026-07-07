@@ -78,8 +78,11 @@ try {
   ok('capture_separates_login_from_auth_me', capture.includes('browser auth/login locale=') && capture.includes('browser auth/me verify locale='));
   ok('capture_checks_proxy_auth_path', capture.includes('preflightProxyAuth') && capture.includes('proxy auth preflight ok'));
   ok('capture_validates_submitted_token', capture.includes('submittedTokenFromResponse') && capture.includes('tokenMatch=') && capture.includes('submitted token mismatch'));
-  ok('capture_forces_relative_same_origin_api_base', capture.includes("VITE_API_BASE_URL: ''") && capture.includes("VITE_API_BASE: ''") && capture.includes('GEOX_WEB_PROXY_TARGET: API_BASE_URL') && capture.includes("'--force'"));
+  ok('capture_pins_runtime_api_base', capture.includes('VITE_API_BASE_URL: WEB_BASE_URL') && capture.includes('VITE_API_BASE: WEB_BASE_URL') && capture.includes('GEOX_WEB_PROXY_TARGET: API_BASE_URL') && capture.includes("'--force'"));
+  ok('capture_verifies_runtime_api_base', capture.includes('assertRuntimeApiBase') && capture.includes("import('/src/api/client.ts')") && capture.includes('runtime api base mismatch'));
   ok('capture_asserts_browser_api_origin', capture.includes('WEB_ORIGIN') && capture.includes('api origin mismatch') && capture.includes('browserLoginProbe'));
+  ok('capture_handles_browser_dialogs', capture.includes('attachDialogGuard') && capture.includes('dialog.dismiss()'));
+  ok('capture_rejects_stale_web_runtime', capture.includes('web port already in use') && !capture.includes('using existing web runtime'));
   ok('capture_does_not_hand_inject_session', !capture.includes('async function applySession'));
 
   console.log(JSON.stringify({ ok: true, acceptance: 'ACCEPTANCE_PFA_0_PAGE_QUALITY_AUDIT', matrixRecords: records.length, assertions }, null, 2));
