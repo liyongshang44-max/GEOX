@@ -3,170 +3,140 @@
 
 ## 0. Phase
 
-PFA-0 Page Quality Audit.
-
-PFA means Product Frontend Acceptance. PFA-0 is a post-freeze review layer for the PFE-13 frozen frontend baseline. It is not a repair PR, not a new productization phase, and not Twin Runtime work.
+PFA-0 is the post-freeze Product Frontend Acceptance review for the PFE-13 route inventory. It is an evidence and classification phase, not a page-repair phase and not Twin Runtime work.
 
 ## 1. Goal
 
-PFA-0 records route-level product-page review status for the PFE-13 frozen frontend inventory: route health, boundary safety, role separation, i18n consistency, visual hierarchy, table readability, dense content handling, demo data quality, responsive sanity, and demo readiness.
+PFA-0 records route health, boundary safety, role separation, i18n consistency, visual hierarchy, table readability, dense-content handling, demo-data quality, responsive sanity, and demo readiness.
 
-PFA-0 classifies observed issues and runtime capture gaps. It does not claim that all pages are visually complete.
+The governing distinction is:
 
-## 2. Source of truth
+```text
+runtime capture PASS != page-quality PASS
+```
 
-The audit object is the PFE-13 inventory:
+## 2. Sources of truth
 
 ```text
 docs/frontend-productization/PFE-13-ROUTE-INVENTORY.json
-```
-
-The PFA-0 review manifest is:
-
-```text
 docs/frontend-acceptance/PFA-0-REVIEW-MANIFEST.json
-```
-
-The route-level records are:
-
-```text
 docs/frontend-acceptance/PFA-0-ROUTE-REVIEW-MATRIX.json
+docs/frontend-acceptance/PFA-0-ISSUE-REGISTER.md
+docs/frontend-acceptance/PFA-POST-FREEZE-TASK-LINE.md
 ```
 
-## 3. Completion statement
+## 3. Full runtime evidence
 
-All PFE-13 frozen frontend surfaces have route-level PFA-0 review records. P1/P2 page-quality issues and runtime capture gaps are classified for PFA-1.
-
-Chinese completion statement:
+The successful full capture used the PFA-1 API-base prerequisite at commit `24c6f9a8803c9738ce0311c35deda5ddfc056dae` and the PFA-0 capture framework from `a7809b92b0673b69a96d61d373a7a5da3a86e503`.
 
 ```text
-所有 PFE-13 冻结的正式前端页面已经建立 PFA-0 路由级审计记录；P1/P2 页面质量问题和 runtime capture 缺口已经归类到 PFA-1。
+30 actual routes
+2 locales: zh-CN, en-US
+3 viewports: desktopReview, laptopReview, mobileSpotCheck
+180 screenshots
+runtime result: 180/180 PASS
 ```
 
-## 4. Nonclaims
+This proves authenticated access, successful `auth/me`, non-placeholder rendering, and screenshot generation. It does not prove locale correctness, responsive correctness, information hierarchy, report readability, or demo readiness.
 
-PFA-0 cannot claim:
+Generated screenshots and reports remain local and must not be committed.
+
+## 4. Page-quality result
 
 ```text
-page issues are fixed
-all pages are product-grade complete
-all pages have successful runtime screenshots
-Twin Runtime can begin
-field pilot can begin
-production-ready state
+Runtime API-base fix: PASS
+Authenticated full capture: PASS
+Page-quality audit: FAIL with open P1/P2 findings
 ```
 
-PFA-0 does not fix pages. It records the gap between engineering freeze and product-page acceptance.
+Observed P1 classes:
+
+```text
+mixed and incomplete zh-CN/en-US output
+mobile and selected desktop document-width overflow
+unreadable mobile export layouts
+extreme page density and scroll depth
+Customer Dashboard duplication and layout imbalance
+Operator table/detail/pilot readability failures
+```
+
+Observed P2 classes:
+
+```text
+desktop navigation repeated in the mobile shell
+weak demo labels and unnamed entities
+long ID and badge wrapping
+admin table wrapping
+underused layout width
+```
 
 ## 5. Coverage
 
-PFA-0 covers:
-
 ```text
-Customer 9
-Operator 13
-Admin 7
-Supporting surfaces
+Customer: 9 routes
+Operator: 13 routes
+Admin: 7 routes
+Supporting: login and shared product components
 ```
 
-Parameterized routes use concrete demo bindings from the manifest:
+Parameterized bindings:
 
 ```text
 :fieldId -> field_c8_demo
 :operationId -> op_plan_c8_irrigation_formal_001
 ```
 
-## 6. Review dimensions
+All 30 actual routes were captured in both locales at all three viewports.
 
-Every route record is reviewed across:
-
-```text
-routeHealth
-boundarySafety
-roleSeparation
-i18nConsistency
-visualHierarchy
-tableReadability
-denseContentHandling
-demoDataQuality
-responsiveSanity
-demoReadiness
-```
-
-Every route record also carries locale and viewport coverage metadata:
+## 6. Capture-gap reconciliation
 
 ```text
-localeCoverage
-zhCnStatus
-enUsStatus
-viewportsReviewed
+PFA0-CAP-001 resolved: all parameterized routes were captured
+PFA0-CAP-002 resolved: all authenticated Admin routes were captured
 ```
 
-## 7. Initial findings
+Resolving capture gaps does not resolve the page-quality findings exposed by the screenshots.
 
-The seeded issue register records the observed screenshot findings and local runtime capture findings:
+## 7. Revised PFA task line
 
 ```text
-Customer zh-CN English residue
-Customer unnamed demo data
-Customer reports center density
-Customer long IDs and wrapped badges
-Operator source inventory readability
-Operator field runtime detail density
-Operator pilot readiness readability
-Operator field runtime layout width
-Admin table field wrapping
-Admin mixed terminology residue
-Parameterized route runtime capture gaps
-Authenticated capture instability on selected admin routes
+PFA-0 Evidence Reconciliation
+PFA-1 Runtime API-Base and Capture Enablement
+PFA-2 Locale Contract Completion
+PFA-3 Responsive Shell and Overflow Containment
+PFA-4 Export and Print Surface Strategy
+PFA-5 Information Architecture and Density Remediation
+PFA-6 Table, Label, and Demo-Data Polish
+PFA-7 Full Recapture and Closure Gate
 ```
 
-These are not PFA-0 blockers. They are PFA-1 inputs.
+Detailed boundaries and acceptance criteria are frozen in `PFA-POST-FREEZE-TASK-LINE.md`.
 
 ## 8. Acceptance policy
 
-PFA-0 acceptance is static. It does not start DB, start web, capture screenshots, write facts, execute seed apply, change routes, or edit runtime source. It validates the review framework, manifest, route matrix, issue register, rubric, capture script, and scope boundaries.
+PFA-0 static acceptance validates the framework, manifest, matrix, issue register, task line, rubric, capture script, and scope boundary. PFA-0 does not change page source, routes, backend behavior, package configuration, or generated artifacts.
 
-## 9. Artifact policy
-
-The screenshot capture script writes generated artifacts only when run manually against a live local frontend:
+## 9. Completion statement
 
 ```text
-docs/audit/pfa-0-screenshots
-docs/audit/PFA_0_PAGE_REVIEW_REPORT.md
+All PFE-13 formal frontend routes have route-level PFA-0 records and complete authenticated runtime screenshot evidence. Runtime capture is complete, but page quality is not accepted. Open P1/P2 findings are assigned to PFA-2 through PFA-6, and PFA-7 is the final recapture and closure gate.
 ```
-
-Generated PNG artifacts and generated audit reports must not be committed by default.
-
-## 10. Capture policy
-
-The complete capture command uses full mode by default:
-
-```powershell
-node scripts/frontend_acceptance/CAPTURE_PFA_0_PAGE_REVIEW.cjs
-```
-
-A quick local pass may use:
-
-```powershell
-$env:PFA0_CAPTURE_MODE="demo-critical"; node scripts/frontend_acceptance/CAPTURE_PFA_0_PAGE_REVIEW.cjs; Remove-Item Env:PFA0_CAPTURE_MODE
-```
-
-A non-zero capture exit means runtime evidence is incomplete and must be recorded as a PFA-1 input.
-
-## 11. PFA-1 handoff
-
-PFA-1 must use the PFA-0 matrix and issue register as its input. PFA-1 should not freely invent unrelated page work.
-
-Priority order:
 
 ```text
-Operator P1 table and runtime readability
-Customer reports center density
-zh-CN English residue
-Demo data display labels and summary fallback
-Admin table wrapping polish
-Runtime capture gaps
+所有 PFE-13 正式前端路由已经建立 PFA-0 路由级审计记录，并完成认证后的全量运行截图；运行捕获已经完成，但页面质量尚未通过。现存 P1/P2 问题已分配到 PFA-2 至 PFA-6，PFA-7 用于最终全量复验与收口。
 ```
 
-P1 issues block Twin Runtime work until they are remediated or reclassified.
+## 10. Forbidden claims
+
+PFA-0 must not claim:
+
+```text
+page issues are fixed
+all pages are product-grade complete
+180/180 runtime PASS means page-quality PASS
+Twin Runtime can begin
+field pilot can begin
+production-ready state
+```
+
+Open P1 findings block subsequent runtime-kernel work until remediated or explicitly reclassified with evidence.
