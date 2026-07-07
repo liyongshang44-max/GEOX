@@ -206,7 +206,8 @@ async function captureOne(browser, manifest, route, locale, viewportName, auth, 
   } finally {
     await context.close().catch(() => undefined);
   }
-  console.log(`[pfa-0-review] ${result.status}: ${route.capturePath} locale=${locale} viewport=${viewportName}`);
+  const note = result.notes.length ? ` note=${result.notes.join('; ')}` : '';
+  console.log(`[pfa-0-review] ${result.status}: ${route.capturePath} locale=${locale} viewport=${viewportName}${note}`);
   return result;
 }
 
