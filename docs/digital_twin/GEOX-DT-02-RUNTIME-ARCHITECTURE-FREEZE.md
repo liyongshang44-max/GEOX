@@ -9,43 +9,34 @@ name: Runtime Architecture Freeze
 type: architecture governance and contract freeze
 predecessor: DT-01 Existing Capability Reconciliation
 successor: MCFT-00 Reality Binding Contract
-baseline branch: main
-baseline commit: 9a31f046d717def94db30e156384b35267b503d4
-baseline meaning: DT-01 and DT-01 artifact-integrity hotfix merged
-status: FROZEN
+original merge: 4c1d854a5190a5d37d7cea0a4ded3f6f3ce8b614
+amendment: DT02-AMENDMENT-01
+status: FROZEN_WITH_AMENDMENT_PENDING_ACCEPTANCE
 ```
 
-DT-02 freezes one Minimum Complete Field Twin runtime architecture. It creates no runtime source, database migration, route, scheduler, projection, domain implementation, frontend adapter, or production capability.
+DT-02 freezes one Minimum Complete Field Twin runtime architecture. It creates no runtime source, migration, route, scheduler, projection, domain implementation, frontend adapter, or production capability.
 
 Allowed claim:
 
 ```text
-GEOX has a frozen runtime architecture for Replay, Shadow-online,
-Controlled Field, and future Production modes.
+RUNTIME_ARCHITECTURE_FROZEN_NO_RUNTIME_IMPLEMENTATION
 ```
 
-Forbidden claims:
+## 1. Review corrections
 
-```text
-hourly runtime implemented
-state estimator implemented
-observation assimilation implemented
-72-hour forecast runtime implemented
-checkpoint/restart implemented
-live production Field Twin implemented
-```
+The original task review contained five corrections, not four. A post-merge review then found four additional blockers. `GEOX-DT-02-ARCHITECTURE-AMENDMENT-01.md` supersedes the affected clauses.
 
-## 1. Review corrections applied before freeze
+The complete corrections are:
 
-The proposed task line contained four contradictions that are resolved by this freeze.
-
-1. `fact_id` is persistence-envelope identity. It is not a semantic object field and is excluded from `object_id` and `determinism_hash`.
-2. `twin_runtime_attempt_v1` is append-only operational audit, not canonical posterior/State history. Mutable lease, attempt-latest, heartbeat, and temporary compute state remain operational coordination.
-3. Active-lineage changes require append-only `twin_lineage_promotion_v1`; a mutable active-lineage index may not move without that authority record.
-4. The transaction model contains eight complete families, not five. It includes blocked/failed attempt and health audit, human decision linkage, and normalized action feedback.
-5. A successful forecast has exactly 72 points. A BLOCKED or FAILED forecast has exactly zero points plus non-empty reason codes and is not counted as a successful forecast.
-
-These corrections tighten auditability and do not add runtime capability.
+1. `fact_id` is persistence-envelope identity, not semantic identity.
+2. `record_class` and `lineage_member` are independent dimensions.
+3. Attempt, Health, Decision, Action Feedback, revision declaration, and promotion may exist outside the posterior lineage.
+4. Active-lineage changes require append-only `twin_lineage_promotion_v1` authority.
+5. Revision declaration, progress, and promotion all have explicit transaction variants.
+6. COMPLETED, BLOCKED, and FAILED Forecast outcomes have different persistence and checkpoint behavior.
+7. Scenario accepts only a COMPLETED 72-point Forecast.
+8. Executed Evidence and formal Validation are orthogonal; Acceptance is not required for every state-input-eligible Action Feedback record.
+9. Eight transaction families remain, but every object-to-family relationship is machine-readable and closed.
 
 ## 2. Frozen architecture
 
@@ -67,23 +58,43 @@ Read-only Operator APIs
 Operator Field Runtime
 ```
 
-Replay, Shadow-online, Controlled Field, and Production share domain semantics, object contracts, transition semantics, forecast/scenario semantics, persistence, idempotency, revision lineage, and trace. They may differ only in clock, evidence ingress, scheduler, execution feedback, availability controls, and deployment operations.
+Replay, Shadow-online, Controlled Field, and future Production share domain semantics, object contracts, transition semantics, forecast/scenario semantics, persistence, idempotency, revision rules, and trace. Only clock, evidence ingress, scheduler, execution feedback, availability, and deployment adapters vary.
 
-## 3. Layer rule
+## 3. Object envelopes and lineage membership
 
-- `domain/`: pure propagation, observation operator, assimilation, uncertainty, forecast, scenario, residual matching, deterministic hash, physical bounds, validation.
-- `runtime/`: claim, config resolution, evidence freeze, domain invocation, canonical object construction, checkpoint/revision orchestration, health.
-- `persistence/`: SQL, transactions, fact append, projection upsert, checkpoint CAS, lease/fencing, history readers, lineage promotion.
-- `adapters/`: clock, ingress, scheduler, execution feedback, availability, deployment.
-- `routes/`: auth, scope, validation, read-service/human-write-service invocation, response mapping.
-- `projections/`: rebuildable indexes and compatibility read shapes.
-- `web/`: read-only runtime presentation and navigation to separately governed human action surfaces.
+Every append-only object declares:
 
-Domain and runtime core may not read Fastify requests, Postgres, environment variables, wall clock, random UUID, filesystem, network, or UI state except through frozen ports.
+```text
+record_class
+history_class                compatibility alias equal to record_class
+lineage_member               true | false
+envelope_profile             LINEAGE | NON_LINEAGE_CONTEXT
+transaction_families         array
+```
+
+Envelope rules:
+
+```text
+base_object_envelope
+  common semantic identity, scope, logical time, evidence/config refs,
+  idempotency, determinism, limitations, audit time
+
+lineage_member = true
+  envelope_profile = LINEAGE
+  lineage_id required
+  revision_id required
+
+lineage_member = false
+  envelope_profile = NON_LINEAGE_CONTEXT
+  lineage_id and revision_id not required
+  context_lineage_ref/context_revision_ref optional
+```
+
+`twin_runtime_attempt_v1` and `twin_runtime_health_v1` may be written before bootstrap, active lineage, config resolution, or checkpoint creation.
 
 ## 4. Canonical persistence
 
-The existing Postgres `facts` append-only store is the only canonical persistence envelope for runtime history and append-only operational audit.
+The Postgres `facts` append-only store is the only canonical persistence envelope.
 
 ```text
 facts.fact_id          persistence-assigned storage identity
@@ -93,15 +104,11 @@ record_json.type       object_type
 record_json.payload    semantic object envelope
 ```
 
-A semantic object has deterministic `object_id`; persistence returns the mapping from `object_id` to `fact_id`. No second canonical business table is permitted.
-
-Mutable projections include latest/history/point indexes for State, Forecast, Scenario, Residual, Checkpoint, Health, active config, and active lineage. They may upsert and must be rebuildable from canonical facts.
-
-Lease, claim, heartbeat, attempt-latest, and temporary compute state are mutable operational coordination, not Twin history.
+`object_id` is deterministic semantic identity. `fact_id` is excluded from `object_id` and `determinism_hash`. Projections may upsert and must be rebuildable. Lease, heartbeat, attempt-latest, and temporary compute state remain mutable operational coordination.
 
 ## 5. State semantics and atomicity
 
-A successful State advance commits separately addressable but atomic facts:
+A successful State advance atomically commits:
 
 ```text
 twin_state_transition_v1
@@ -109,22 +116,11 @@ twin_assimilation_update_v1
 twin_state_estimate_v1
 ```
 
-The propagated prior is embedded in the transition. It is not current canonical State. The posterior estimate is canonical State.
-
-`twin_assimilation_update_v1` is present even with no usable observation:
-
-```text
-status = NO_USABLE_OBSERVATION
-uncertainty increases
-```
-
-A sensor reading remains Evidence and never directly becomes root-zone State. Assimilation is not calibration.
+All three are `lineage_member=true`. The propagated prior is embedded in transition and is not current State. The posterior is canonical State. A sensor reading remains Evidence. Assimilation is not calibration.
 
 ## 6. Tick lifecycle
 
 ### Claim
-
-Short operational transaction:
 
 ```text
 resolve scope
@@ -132,12 +128,12 @@ acquire/refresh lease
 obtain fencing token
 read expected checkpoint
 derive logical tick identity
-record attempt state
+append/update attempt audit state
 ```
 
-### Compute
+Claim and failure audit do not require an existing lineage.
 
-Outside the database transaction:
+### Compute
 
 ```text
 resolve immutable config snapshot
@@ -146,70 +142,68 @@ propagate prior
 run observation operator
 run assimilation
 construct posterior
-generate forecast result
-construct hashes and canonical payloads
+compute Forecast outcome
+construct hashes
 verify physical invariants
 ```
 
-No later-arriving Evidence may enter the frozen window.
+### Commit outcomes
 
-### Atomic commit
-
-One Postgres transaction:
+#### A1 COMPLETED
 
 ```text
-revalidate lease and fencing token
-CAS expected checkpoint
-append evidence window
-append transition
-append assimilation update
-append posterior
-append forecast result
-append terminal tick
-append checkpoint
-append health snapshot
-update projections/indexes
-commit
+Forecast.status = COMPLETED
+Forecast.points = exactly 72
+horizons = 1..72
+terminal tick = COMPLETED
+checkpoint advances
+latest Forecast result advances
+latest successful Forecast advances
+Scenario eligible
 ```
 
-Any failure rolls back the complete record set. No checkpoint may advance on a failed or blocked attempt.
+#### A2 BLOCKED Forecast
 
-## 7. Attempt, tick, and health
-
-Operational attempt states:
+Applies when posterior State is valid but a non-State Forecast prerequisite is unavailable or insufficient.
 
 ```text
-SCHEDULED
-RUNNING
-BLOCKED
-FAILED
-RECOVERING
+Forecast.status = BLOCKED
+Forecast.points = 0
+reason_codes required
+terminal tick = COMPLETED_WITH_LIMITATIONS
+checkpoint advances
+latest Forecast result advances
+latest successful Forecast unchanged
+Scenario not eligible
 ```
 
-`twin_runtime_attempt_v1` records append-only operational audit. It never enters the posterior chain.
+#### F FAILED Forecast
 
-Canonical terminal tick states:
+Applies to numerical error, model exception, physical invariant failure, or program failure.
 
 ```text
-COMPLETED
-COMPLETED_WITH_LIMITATIONS
+append twin_runtime_attempt_v1
+append twin_runtime_health_v1
+append twin_forecast_failure_v1 when Forecast failure diagnostics exist
+no canonical terminal tick
+no checkpoint
+no twin_forecast_run_v1
+no active-lineage Forecast
 ```
 
-No usable observation may still produce `COMPLETED_WITH_LIMITATIONS` if propagation is valid. Missing critical configuration, physical invariant failure, or stale fencing authority creates no canonical tick or posterior.
+Any A transaction failure rolls back its complete record set. Failed attempts and failed Forecasts never advance checkpoint.
 
-`twin_runtime_health_v1` is runtime-operation status only:
+## 7. Attempt, Health, and failure audit
 
 ```text
-healthy
-degraded
-blocked
-failed
-stale
-recovering
-revision_in_progress
+twin_runtime_attempt_v1   record_class=OPERATIONAL_AUDIT, lineage_member=false
+twin_runtime_health_v1    record_class=OPERATIONAL_AUDIT, lineage_member=false
+twin_forecast_failure_v1  record_class=OPERATIONAL_AUDIT, lineage_member=false
 ```
 
-It is not crop health, soil health, device health, or model correctness.
+They may carry optional lineage/checkpoint/config context refs, but those refs are not prerequisites for recording bootstrap or early-resolution failures.
+
+Health means runtime operation only, never crop, soil, device, or model correctness.
 
 ## 8. Recovery
 
@@ -219,38 +213,13 @@ Each scope is:
 tenant/project/group/field/season/zone
 ```
 
-One active writer lease carries owner, monotonically increasing fencing token, acquired/expiry/heartbeat times. A stale worker cannot commit with an old token.
-
-Every successful tick appends `twin_runtime_checkpoint_v1` and CAS-updates the latest checkpoint index.
-
-Restart sequence:
-
-```text
-read active lineage
-read latest checkpoint
-compare scheduler target
-backfill checkpoint+1h ... target in ascending order
-```
-
-Level A forbids parallel advancement of the same scope.
+One active writer lease carries a monotonically increasing fencing token. Successful A1/A2 ticks append `twin_runtime_checkpoint_v1` and CAS-update latest checkpoint. Restart reads active lineage and checkpoint and backfills sequentially from checkpoint+1h to target. Same-scope parallel advancement is forbidden.
 
 ## 9. Identity and idempotency
 
-Semantic identity inputs:
+Semantic identity uses object type, scope, logical time, source identity, config hash, and lineage/revision only when `lineage_member=true`.
 
-```text
-object type
-scope
-logical time
-lineage
-revision
-source object identity
-runtime config hash
-```
-
-`determinism_hash` covers normalized semantic payload only.
-
-Excluded:
+Excluded from deterministic semantic hash:
 
 ```text
 fact_id
@@ -261,48 +230,63 @@ wall-clock insertion time
 random UUID
 ```
 
-Rules:
-
 ```text
 same idempotency key + same determinism hash -> idempotent success
 same idempotency key + different hash -> IDEMPOTENCY_CONFLICT
 ```
 
-No overwrite is permitted.
+## 10. Late Evidence and revision lifecycle
 
-## 10. Late Evidence and lineage
-
-Late Evidence creates a candidate lineage and immutable revised objects. It never updates historical facts.
+Late Evidence never mutates historical facts.
 
 ```text
-detect earliest affected tick
-create revision run and candidate lineage
-retain unchanged parent prefix
-recompute through current checkpoint
-validate complete chain
-append twin_lineage_promotion_v1
-atomically switch active lineage and all latest pointers
+E1_DECLARE_REVISION
+  append twin_revision_run_v1 status=DECLARED
+  append candidate twin_runtime_lineage_v1
+  switch no active pointers
+
+E2_APPEND_REVISION_STATUS
+  append twin_revision_run_v1 status=RUNNING|FAILED|COMPLETED
+  switch no active pointers
+
+candidate ticks recompute through current checkpoint
+chain validation runs
+
+E3_PROMOTE_LINEAGE
+  require revision COMPLETED and valid candidate chain
+  append twin_lineage_promotion_v1
+  atomically switch active lineage, checkpoint, State,
+  Forecast result/success pointers, eligible Scenario, and Health
 ```
 
-Superseded lineages remain queryable. Default reads use active lineage. The promotion fact is the append-only authority for the mutable active-lineage index.
+Superseded history remains queryable. Candidate creation never makes it active.
 
 ## 11. Forecast
 
-`twin_forecast_run_v1` is one canonical aggregate.
+`twin_forecast_run_v1` permits only:
 
 ```text
-COMPLETED -> exactly 72 ordered points, horizons 1..72
-BLOCKED/FAILED -> exactly 0 points and non-empty reason_codes
-t0 posterior -> not a forecast point
+COMPLETED -> 72 points, lineage_member=true
+BLOCKED   -> 0 points + reason_codes, lineage_member=true
 ```
 
-Point tables are projections only. A successful forecast cannot partially commit.
+`FAILED` is forbidden on `twin_forecast_run_v1`. Failure diagnostics use `twin_forecast_failure_v1`, which is non-lineage operational audit and belongs to transaction F.
+
+Point tables remain projections. `t0` posterior is not a Forecast point.
 
 ## 12. Scenario
 
-`twin_scenario_set_v1` is a separate atomic aggregate downstream of a committed forecast.
+`twin_scenario_set_v1` is a separate transaction and requires:
 
-Gate A options:
+```text
+source Forecast.status = COMPLETED
+source Forecast.points.length = 72
+source Forecast.horizons = 1..72
+```
+
+BLOCKED Forecast and `twin_forecast_failure_v1` are invalid sources.
+
+Gate A options remain:
 
 ```text
 NO_ACTION
@@ -312,103 +296,73 @@ IRRIGATE_NOW_30MM
 DELAY_24H_20MM
 ```
 
-Every successful comparable option has 72 points. `CUSTOM_OPERATOR_OPTION` is deferred.
+Scenario is not Recommendation, Approval, Dispatch, Task, or execution instruction.
 
-Scenario commit is separate from State Tick commit. Scenario is not Recommendation, Approval, Dispatch, Task, or execution instruction.
+## 13. Action Feedback
 
-## 13. Residual and model governance
-
-Assimilation residual belongs to the current-tick assimilation update. Forecast residual compares a historical forecast point with later Evidence and never changes the forecast.
-
-Residual may create review or candidate records. It may not:
+`twin_action_feedback_v1` is non-lineage execution Evidence history.
 
 ```text
-change active parameter
-activate model
-rewrite historical State
-prove causal effect
+execution_status:
+  EXECUTED
+  PARTIALLY_EXECUTED
+  EXECUTION_UNCERTAIN
+  NOT_EXECUTED
+
+validation_status:
+  NOT_YET_VALIDATED
+  VALIDATED
+  REJECTED
+  VALIDATED_WITH_LIMITATIONS
+
+eligible_for_state_input: boolean
 ```
 
-Each tick resolves one immutable `twin_runtime_config_v1` before compute. Candidate, shadow evaluation, governance approval, and activation are separate append-only transitions. Activation is effective only at a tick boundary. Rollback appends a new activation record.
-
-## 14. APIs and legacy
-
-Canonical frontend family remains:
+At least one trusted execution source is required:
 
 ```text
-/operator/fields/:fieldId/*
+receipt_ref or as_executed_ref
 ```
 
-Frozen MCFT read family:
+`acceptance_ref` is optional. `task_ref` is required only for `origin_kind=AO_ACT`; historical imports or authenticated manual execution records may not have an AO-ACT task.
+
+Eligibility depends on actual amount, executed time, spatial coverage, source identity, source quality, and limitations. A trustworthy `NOT_YET_VALIDATED` record may be eligible for later State input. Later Acceptance appends a superseding feedback record; it never rewrites history.
+
+Executed is not Validated.
+
+## 14. Residual and model governance
+
+Assimilation residual belongs to the current update. Forecast residual compares a historical COMPLETED Forecast point with later Evidence and does not mutate the Forecast. Candidate, shadow evaluation, approval, and activation remain separate append-only transitions. Candidate is not Active Model.
+
+## 15. APIs and legacy
+
+Canonical frontend family remains `/operator/fields/:fieldId/*`. Canonical server Runtime APIs remain read-only under `/api/v1/operator/fields/:fieldId/runtime/*`. Generated objects have no public write endpoint. Human decision, approval, operation plan, AO-ACT, receipt, and acceptance remain separately governed.
+
+Legacy read paths remain compatibility-only and gain no new canonical write.
+
+## 16. Transaction families
+
+Eight frozen machine-readable families:
 
 ```text
-GET /api/v1/operator/fields/:fieldId/runtime
-GET /api/v1/operator/fields/:fieldId/runtime/states
-GET /api/v1/operator/fields/:fieldId/runtime/forecasts
-GET /api/v1/operator/fields/:fieldId/runtime/scenario-sets
-GET /api/v1/operator/fields/:fieldId/runtime/residuals
-GET /api/v1/operator/fields/:fieldId/runtime/action-lifecycle
-GET /api/v1/operator/fields/:fieldId/runtime/health
-GET /api/v1/operator/fields/:fieldId/runtime/trace
+A_STATE_TICK_COMMIT
+B_SCENARIO_COMMIT
+C_FORECAST_RESIDUAL_COMMIT
+D_MODEL_GOVERNANCE_STEP_COMMIT
+E_REVISION_LINEAGE_STEP_COMMIT
+F_OPERATIONAL_ATTEMPT_HEALTH
+G_HUMAN_DECISION_LINK_COMMIT
+H_ACTION_FEEDBACK_COMMIT
 ```
 
-No `/operator/twin-runtime/fields/*` family is allowed. Generated objects have no public write endpoint. Manual tick starts as application service plus CLI/manual runner and scheduler adapter.
+Every object uses `transaction_families: []`. Every listed family must exist and cover the object in `canonical_appends` or an explicit `operation_variants[].canonical_appends`. Natural-language values such as `A or F` are forbidden.
 
-Human decision, approval, operation plan, AO-ACT, receipt, and acceptance remain separately governed.
+## 17. Downstream authority
 
-Legacy read paths remain available but receive no new capability and no new canonical write. `water_state_estimate_v1` is compatibility read only, not canonical posterior.
+The canonical object-set and transaction-matrix v2 files are authoritative for machine relationships. `GEOX-DT-02-ARCHITECTURE-AMENDMENT-01.md` names every superseded rule. MCFT phases may not silently overturn them.
 
-## 15. Transaction families
+## 18. Completion statement
 
-Eight frozen families:
-
-```text
-A State Tick Commit
-B Scenario Commit
-C Forecast Residual Commit
-D Model Governance Step Commit
-E Revision Promotion Commit
-F Operational Attempt and Health Commit
-G Human Decision Link Commit
-H Action Feedback Commit
-```
-
-The transaction matrix is authoritative for appends, projections, preconditions, failure, and idempotency.
-
-## 16. Frozen object set
-
-The object-set register is authoritative. It includes the required lineage promotion authority object and classifies attempt/health as operational audit rather than physical State.
-
-MCFT-02 freezes complete field schemas. DT-02 freezes responsibility, references, persistence class, aggregate boundary, writer, reader, transaction family, and revision behavior.
-
-## 17. DT-01 input closure
-
-Every DT-01 Input Packet topic is mapped to one or more FROZEN ADRs:
-
-```text
-canonical atomicity -> ADR-004
-layers -> ADR-001/002
-canonical/index persistence -> ADR-003
-tick transaction -> ADR-005/016
-checkpoint/recovery -> ADR-006/016
-idempotency -> ADR-007
-late evidence -> ADR-008
-forecast storage -> ADR-009
-scenario storage -> ADR-010
-model governance -> ADR-011/012
-API naming -> ADR-013
-legacy compatibility -> ADR-014
-write authority -> ADR-015
-```
-
-DT-01 target=DT-02 reuse decisions are resolved in the decision register, matrices, and implementation map.
-
-## 18. Downstream authority
-
-MCFT-00 through MCFT-18 must implement this architecture. A downstream phase may not silently overturn it. Any change requires a separate architecture amendment ADR naming the superseded rule.
-
-## 19. Completion statement
-
-DT-02 Runtime Architecture Freeze is complete when its Acceptance Gate, DT-01 regression, DT-00 regression, and CI pass.
+The amendment is complete only after the amended DT-02 Gate, DT-01 audit, DT-01 acceptance, DT-00 regression, changed-file boundary, clean working tree, and final CI all pass on final bytes.
 
 No runtime capability is claimed by this document.
