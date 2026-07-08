@@ -56,11 +56,11 @@ export default function CustomerOperationsIndexPage(): React.ReactElement {
           emptyState={<ProductEmptyState surface="customer" title={t(COPY.empty)} description={t(COPY.emptyLead)} />}
           mobileFallbackNote={t(CUSTOMER_OPERATIONS_COPY.mobileNote)}
           columns={[
-            { key: "operation", header: t(CUSTOMER_OPERATIONS_COPY.operation), render: (row) => <Link to={row.href}>{row.primaryLine}</Link> },
+            { key: "operation", header: t(CUSTOMER_OPERATIONS_COPY.operation), render: (row) => <Link to={row.href}><span data-locale-neutral="true">{row.primaryLine}</span></Link> },
             { key: "status", header: t(CUSTOMER_COMMON_COPY.reportStatus), render: (row) => <ProductStatusBadge status={rowStatus(row)} label={customerStatusLabel(row.statusFilter || row.finalStatusText, locale)} /> },
             { key: "summary", header: t(CUSTOMER_COMMON_COPY.summary), render: (row) => customerProductFallback(row.summaryText, locale, COPY.summary) },
             { key: "evidence", header: t(CUSTOMER_OPERATIONS_COPY.evidenceSummary), render: (row) => customerProductFallback(row.evidenceExplanation || row.evidenceText, locale, COPY.evidence) },
-            { key: "completed", header: t(CUSTOMER_OPERATIONS_COPY.completed), render: (row) => row.completedAtText },
+            { key: "completed", header: t(CUSTOMER_OPERATIONS_COPY.completed), render: (row) => <span data-locale-neutral="true">{row.completedAtText}</span> },
           ]}
         />
       </ProductSectionCard>
