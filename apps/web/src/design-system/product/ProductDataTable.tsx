@@ -1,11 +1,12 @@
 // apps/web/src/design-system/product/ProductDataTable.tsx
 // Purpose: provide a bilingual semantic product table without adding a table dependency.
-// Boundary: this component owns table semantics and safe empty-state semantics only.
+// Boundary: this component owns table semantics, accessible internal overflow, and safe empty-state semantics only.
 
 import type { ReactNode } from "react";
 import { localizedText, useResolvedLocale } from "../../lib/locale";
 import { PRODUCT_PRIMITIVE_COPY } from "../../lib/productCopy/localeContract";
 import { ProductEmptyState } from "./ProductEmptyState";
+import { ProductHorizontalScrollRegion } from "./ProductHorizontalScrollRegion";
 
 export interface ProductDataTableColumn<Row> {
   key: string;
@@ -22,6 +23,7 @@ export interface ProductDataTableProps<Row> {
   emptyState?: ReactNode;
   mobileFallbackNote?: ReactNode;
   className?: string;
+  overflowOwner?: string;
 }
 
 export function ProductDataTable<Row>({
@@ -32,6 +34,7 @@ export function ProductDataTable<Row>({
   emptyState,
   mobileFallbackNote,
   className,
+  overflowOwner = "product-data-table",
 }: ProductDataTableProps<Row>) {
   const locale = useResolvedLocale();
   const classes = ["productDataTable", className].filter(Boolean).join(" ");
@@ -62,7 +65,11 @@ export function ProductDataTable<Row>({
   return (
     <div className={classes}>
       {mobileFallbackNote ? <p className="productDataTable__mobileNote">{mobileFallbackNote}</p> : null}
-      <div className="productDataTable__overflow" role="region" aria-label={tableRegionLabel} tabIndex={0}>
+      <ProductHorizontalScrollRegion
+        className="productDataTable__overflow"
+        ariaLabel={tableRegionLabel}
+        overflowOwner={overflowOwner}
+      >
         <table className="productDataTable__table">
           <caption>{caption}</caption>
           <thead>
@@ -84,7 +91,7 @@ export function ProductDataTable<Row>({
             ))}
           </tbody>
         </table>
-      </div>
+      </ProductHorizontalScrollRegion>
     </div>
   );
 }
