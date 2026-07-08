@@ -53,6 +53,8 @@ const COPY = {
   fieldPilot: { zh: "田间试点", en: "Field Pilot" },
   notStarted: { zh: "未开始", en: "Not Started" },
   goNoGo: { zh: "放行 / 不放行门禁", en: "Go / No-Go Gate" },
+  viewModelSource: { zh: "试点准备度视图模型", en: "Pilot Readiness View Model" },
+  boundarySource: { zh: "试点准备度边界", en: "Pilot Readiness Boundary" },
 } as const satisfies Record<string, LocalizedCopy>;
 
 const ROW_LABELS: Record<string, LocalizedCopy> = {
@@ -93,6 +95,8 @@ const ROW_VALUES: Record<string, LocalizedCopy> = {
   "allowed next": { zh: "下一步允许", en: "Allowed Next" },
   "not allowed": { zh: "不允许", en: "Not Allowed" },
   "field pilot execution": { zh: "田间试点执行", en: "Field Pilot Execution" },
+  true: { zh: "是", en: "Yes" },
+  false: { zh: "否", en: "No" },
 };
 
 function rowText(value: string, locale: LocaleCode, catalog: Record<string, LocalizedCopy>): string {
@@ -162,7 +166,7 @@ export default function OperatorPilotPage(): React.ReactElement {
           eyebrow={localizedText(pilotCopy.eyebrow, locale)}
           title={localizedText(pilotCopy.title, locale)}
           lead={localizedText(pilotCopy.lead, locale)}
-          metadata={`${t(COPY.route)}: ${vm.route} / ${t(COPY.source)}: ${vm.source} / ${t(COPY.mode)}: ${vm.mode}`}
+          metadata={<>{t(COPY.route)}: <span data-locale-neutral="true">{vm.route}</span> / {t(COPY.source)}: <span data-locale-neutral="true">{vm.source}</span> / {t(COPY.mode)}: <span data-locale-neutral="true">{vm.mode}</span></>}
           nonclaim={t(COPY.readinessOnly)}
         />
       }
@@ -183,11 +187,11 @@ export default function OperatorPilotPage(): React.ReactElement {
         description={t(COPY.boundaryDescription)}
         items={[t(COPY.fieldPilotNotStarted), t(COPY.controlledExecutionDisabled), t(COPY.aoActDisabled)]}
       />
-      <ProductScopeBar surface="operator" items={[{ label: t(COPY.route), value: vm.route }, { label: t(COPY.source), value: vm.source }, { label: t(COPY.mode), value: vm.mode }, { label: t(COPY.readOnly), value: "true" }]} />
+      <ProductScopeBar surface="operator" items={[{ label: t(COPY.route), value: <span data-locale-neutral="true">{vm.route}</span> }, { label: t(COPY.source), value: <span data-locale-neutral="true">{vm.source}</span> }, { label: t(COPY.mode), value: <span data-locale-neutral="true">{vm.mode}</span> }, { label: t(COPY.readOnly), value: t(ROW_VALUES.true) }]} />
       <div className="operatorProductMetricGrid">
-        <ProductMetricTile label={t(COPY.readinessSections)} value={13} description={t(COPY.readinessSectionsLead)} source="pilotReadinessViewModel" status={<ProductStatusBadge status="readOnly" />} />
-        <ProductMetricTile label={t(COPY.controlledExecution)} value={t(COPY.disabled)} description={t(COPY.displayedNonclaim)} source="Pilot readiness boundary" status={<ProductStatusBadge status="disabled" />} />
-        <ProductMetricTile label={t(COPY.fieldPilot)} value={t(COPY.notStarted)} description={t(COPY.displayedNonclaim)} source="Pilot readiness boundary" status={<ProductStatusBadge status="disabled" />} />
+        <ProductMetricTile label={t(COPY.readinessSections)} value={13} description={t(COPY.readinessSectionsLead)} source={t(COPY.viewModelSource)} status={<ProductStatusBadge status="readOnly" />} />
+        <ProductMetricTile label={t(COPY.controlledExecution)} value={t(COPY.disabled)} description={t(COPY.displayedNonclaim)} source={t(COPY.boundarySource)} status={<ProductStatusBadge status="disabled" />} />
+        <ProductMetricTile label={t(COPY.fieldPilot)} value={t(COPY.notStarted)} description={t(COPY.displayedNonclaim)} source={t(COPY.boundarySource)} status={<ProductStatusBadge status="disabled" />} />
       </div>
       <section className="operatorPilotReadiness__hero" aria-label={localizedText(pilotCopy.title, locale)}>
         <div className="operatorPilotReadiness__nonclaims" aria-label={t(COPY.nonclaimsTitle)}>
