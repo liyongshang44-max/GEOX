@@ -1,34 +1,23 @@
 <!-- docs/frontend-acceptance/PFA-2-RUNTIME-EVIDENCE.md -->
 # PFA-2 Runtime Evidence
 
-## Current status
+## Final runtime status
 
 ```text
 phase: PFA-2 Locale Contract Completion
-status: REVALIDATION REQUIRED
-previous validated head: 88b793226a2dc84853d125f2a1f96c7c59282cd8
-current matrix state: ready-for-runtime
+status: PASS
+validated runtime-source head: a59b1c9ea66206d86c34855fb9e0e2a411c46d7c
+matrix promotion head: f4d8427668e871cad61f10b3ece76d1174819f2e
+current matrix state: runtime-pass
 actual routes: 30
 locales: 2
-expected route renders: 60
+route renders: 60
 viewport: 1440 x 1100
 ```
 
-The previous 60-render result proved the earlier audit rules. It does not close the strengthened PFA-2 contract because the audit now covers complete visible product text and requires mandatory role-boundary capabilities to be present in both locales.
+The strengthened runtime audit passed on the exact runtime-source head above. The matrix promotion commit changed only `docs/frontend-acceptance/PFA-2-ROUTE-LOCALE-MATRIX.json`; it did not modify runtime source, route behavior, localization copy, audit logic, backend code, fixtures, or package dependencies.
 
-## Revalidation scope
-
-```text
-Gateway Demo complete child-component localization
-Admin static metric-value localization
-complete visible-text runtime scan
-forbidden-marker scan across governed visible text
-mandatory Operator role-boundary presence
-matrix lifecycle promotion from ready-for-runtime to runtime-pass
-PFA-3 dashboard layout CSS removal
-```
-
-## Required final proof
+## Strengthened proof
 
 ```text
 static acceptance exit: 0
@@ -37,12 +26,40 @@ route health: 60/60
 html lang: 60/60
 locale pairs: 30/30
 locale pair differentiation: 30/30
-role-boundary equivalence and presence: 30/30
+role-boundary equivalence and mandatory presence: 30/30
 pathname equivalence: 30/30
 RuntimeTextGuard dependency: 0
 matrix records at runtime-pass: 30/30
-CI: success
 worktree after generated-report cleanup: clean
 ```
 
-No final PFA-2 runtime claim is made until the strengthened audit passes on the synchronized implementation head.
+The runtime audit covered complete visible product text, forbidden locale markers, localized attributes, route-path equivalence, locale differentiation, and mandatory Operator safety capabilities. Locale-neutral treatment is limited to technical identifiers, canonical paths, hashes, source references, and source-owned business values explicitly marked at their render boundary.
+
+## CI evidence
+
+```text
+runtime-source CI run: #4247
+runtime-source CI conclusion: success
+build-test: success
+frontend runtime page audit: success
+full acceptance: success
+matrix-promotion CI run: #4248
+matrix-promotion build-test: success
+matrix-promotion acceptance: pending at evidence-write time
+```
+
+The PR remains Draft until the final closure-only documentation head receives synchronized CI success. That readiness gate does not invalidate the completed runtime proof.
+
+## Scope boundaries preserved
+
+```text
+no backend change
+no route or API-base change
+no authentication-contract change
+no migration, fixture, package, or workflow change
+no RuntimeTextGuard replacement dependency
+no production device, gateway, dispatch, or execution claim
+PFA-3 responsive/layout work remains deferred
+```
+
+The only responsive-file change replaces a locale-dependent English ARIA selector with a stable class while preserving the existing breakpoint and layout declarations.
