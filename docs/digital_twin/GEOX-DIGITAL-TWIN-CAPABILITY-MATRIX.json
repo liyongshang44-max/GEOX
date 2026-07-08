@@ -1,6 +1,10 @@
 {
   "schema_version": "geox_digital_twin_capability_matrix_v2",
   "phase": "DT-01",
+  "governance_lineage": [
+    "DT-00",
+    "DT-01"
+  ],
   "baseline": {
     "branch": "main",
     "commit": "bce918d1eea423397bdd329148b7a2e7eb181b6c"
@@ -30,6 +34,7 @@
     {"capability_id":"DT-MATRIX-CHECKPOINT","name":"Canonical checkpoint","capability_domain":"RUNTIME","current_status":"MISSING","reuse_decisions":[],"evidence_refs":[],"next_owner":"MCFT-03","forbidden_claims":["existing"]},
     {"capability_id":"DT-MATRIX-RESTART","name":"Restart and backfill recovery","capability_domain":"RUNTIME","current_status":"MISSING","reuse_decisions":[],"evidence_refs":[],"next_owner":"MCFT-04","forbidden_claims":["existing"]},
     {"capability_id":"DT-MATRIX-LATE-REVISION","name":"Late-evidence immutable revision","capability_domain":"RUNTIME","current_status":"MISSING","reuse_decisions":[],"evidence_refs":[],"next_owner":"MCFT-03","forbidden_claims":["existing"]},
-    {"capability_id":"DT-MATRIX-72H-REGEN","name":"Continuous 72-hour regeneration","capability_domain":"FORECAST","current_status":"MISSING","reuse_decisions":[],"evidence_refs":[],"next_owner":"MCFT-09","forbidden_claims":["existing"]}
+    {"capability_id":"DT-MATRIX-72H-REGEN","name":"Continuous 72-hour regeneration","capability_domain":"FORECAST","current_status":"MISSING","reuse_decisions":[],"evidence_refs":[],"next_owner":"MCFT-09","forbidden_claims":["existing"]},
+    {"capability_id":"DT-MATRIX-LIVE-PRODUCTION-FIELD-TWIN","name":"Live production Field Twin","capability_domain":"PRODUCTION_RUNTIME","current_status":"NOT_CLAIMED","reuse_decisions":[],"evidence_refs":["docs/twin_demo_runtime/GEOX-P50-REPLAY-BACKED-PRODUCTION-TWIN-DEMO-RUNTIME.md","docs/full_runtime_freeze/GEOX-P57-FULL-RUNTIME-V1-FREEZE-REPLAY-BACKED-AUDIT-V1.md"],"next_owner":"MCFT-GATE-B","forbidden_claims":["live production field twin"]}
   ]
 }
