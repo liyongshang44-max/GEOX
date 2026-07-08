@@ -1,0 +1,316 @@
+{
+  "schema_version": "geox_mcft_reality_binding_v1",
+  "phase": "MCFT-00",
+  "status": "FROZEN_PENDING_ACCEPTANCE",
+  "artifact_type": "mcft_reality_binding_contract_v1",
+  "artifact_class": "GOVERNANCE_INPUT",
+  "binding_id": "mcft_rb_83d0e3cf728d257277225fee",
+  "binding_version": 1,
+  "canonical_runtime_object": false,
+  "canonical_persistence": false,
+  "lineage_member": false,
+  "runtime_transaction_family": "NONE",
+  "semantic_payload": {
+    "schema_version": "geox_mcft_reality_binding_v1",
+    "artifact_type": "mcft_reality_binding_contract_v1",
+    "artifact_class": "GOVERNANCE_INPUT",
+    "binding_version": 1,
+    "scope": {
+      "tenant_id": "tenantA",
+      "project_id": "projectA",
+      "group_id": "groupA",
+      "field_id": "field_c8_demo",
+      "season_id": "season_2026_c8_corn",
+      "zone_id": "zone_mcft_c8_water_001"
+    },
+    "active_scope_count": 1,
+    "runtime_mode": "REPLAY",
+    "runtime_time_domain": "UTC_HOURLY",
+    "reality_scope_class": "CONTROLLED_SYNTHETIC_REPLAY_PROXY",
+    "reality_classification": {
+      "field_truth_mode": "CONTROLLED_REPLAY_FIELD_PROXY",
+      "geometry_truth_status": "CONTROLLED_SYNTHETIC",
+      "source_truth_status": "MIXED_FIXTURE_AND_GOVERNED_REPLAY",
+      "live_device_status": "NOT_CLAIMED",
+      "real_field_pilot_status": "NOT_CLAIMED",
+      "production_status": "NOT_CLAIMED"
+    },
+    "crop_binding": {
+      "crop_code": "corn",
+      "season_id": "season_2026_c8_corn",
+      "identity_fields": [
+        "crop_code",
+        "season_id"
+      ],
+      "forbidden_identity_fields": [
+        "crop_stage",
+        "root_depth_dynamic_state",
+        "canopy_state",
+        "crop_stress_state",
+        "biomass",
+        "phenology_estimate"
+      ]
+    },
+    "geometry_binding": {
+      "zone_id": "zone_mcft_c8_water_001",
+      "fixture_ref": "fixtures/mcft/reality_binding/MCFT_C8_GOVERNED_ZONE_V1.geojson",
+      "geometry_type": "Polygon",
+      "crs": "EPSG:4326",
+      "geometry_truth_status": "CONTROLLED_SYNTHETIC",
+      "geometry_source": "MCFT_00_PINNED_FIXTURE",
+      "canonicalization_id": "GEOX_MCFT_GEOJSON_CANONICALIZATION_V1",
+      "file_sha256": "sha256:249fee97640a8291d18becb399b7ed7757de90222ad55ed1a203ebe277147ab4",
+      "geometry_semantic_hash": "sha256:d3dbc5495485e7af68acdc4b32e6061c2ea99772835be2805ae706b74d75ca51",
+      "derived_area_m2": 20488.479982,
+      "area_derivation": {
+        "algorithm_id": "GEOX_WGS84_AUTHALIC_SPHERE_POLYGON_AREA_V1",
+        "algorithm_version": "1",
+        "authalic_radius_m": 6371007.1809,
+        "crs": "EPSG:4326",
+        "geometry_semantic_hash": "sha256:d3dbc5495485e7af68acdc4b32e6061c2ea99772835be2805ae706b74d75ca51",
+        "rounding_decimals": 6
+      },
+      "legacy_declared_area_m2": 20000,
+      "legacy_area_status": "NON_AUTHORITATIVE_COMPARISON_ONLY",
+      "legacy_area_difference_m2": 488.479982
+    },
+    "root_zone_binding": {
+      "root_zone_definition_id": "rz_c8_0_300mm_v1",
+      "top_depth_mm": 0,
+      "bottom_depth_mm": 300,
+      "total_depth_mm": 300,
+      "depth_reference": "BELOW_GROUND_SURFACE",
+      "layers": [
+        {
+          "layer_id": "rz_layer_0_300mm",
+          "top_depth_mm": 0,
+          "bottom_depth_mm": 300,
+          "weight": 1.0
+        }
+      ],
+      "sensor_support": {
+        "origin_source_id": "dev_soil_c8_001",
+        "nominal_depth_mm": 200,
+        "spatial_support": "POINT",
+        "vertical_support": "LOCAL_AROUND_200MM",
+        "root_zone_representativeness": "PARTIAL",
+        "direct_state_equivalence": false
+      }
+    },
+    "source_binding_matrix": {
+      "ref": "docs/digital_twin/mcft/GEOX-MCFT-00-SOURCE-BINDING-MATRIX.json",
+      "determinism_hash": "sha256:0ab8fe4e4be23a88b3e1b1d3f0ccfb30fe73316b02365a7eede48a57f77b066d",
+      "binding_count": 7,
+      "semantic_domain_count": 6
+    },
+    "configuration_binding_matrix": {
+      "ref": "docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json",
+      "determinism_hash": "sha256:5b8ca5dd5adfabf0dbc9df55d3c8284af98ce774cd76516f67d29517e9b66dca",
+      "binding_count": 2,
+      "semantic_domain_count": 2
+    },
+    "time_domain": {
+      "timezone": "UTC",
+      "tick_interval": "PT1H",
+      "tick_alignment": "UTC_CLOCK_HOUR",
+      "logical_tick_time": "INTERVAL_END",
+      "required_evidence_times": [
+        "observed_at",
+        "ingested_at",
+        "available_to_runtime_at"
+      ]
+    },
+    "replay_release_policy": {
+      "release_policy_id": "mcft_replay_release_policy_v1",
+      "release_policy_version": 1,
+      "rule": "available_to_runtime_at is a fixed dataset field or a deterministic derivation from observed_at, ingested_at, source role, and versioned delay rules",
+      "role_delay_rules": {
+        "SOIL_MOISTURE_OBSERVATION": "MAX(ingested_at, observed_at)",
+        "RAINFALL_OBSERVATION": "MAX(ingested_at, interval_end)",
+        "FUTURE_WEATHER_ASSUMPTION": "MAX(retrieved_at, issued_at)",
+        "HISTORICAL_ET0_INPUT": "MAX(ingested_at, interval_end)",
+        "FUTURE_ET0_ASSUMPTION": "MAX(retrieved_at, issued_at)",
+        "APPROVED_IRRIGATION_PLAN": "MAX(available_to_runtime_at, approved_at)",
+        "IRRIGATION_EXECUTION_EVIDENCE": "MAX(ingested_at, executed_at)"
+      },
+      "release_policy_hash": "sha256:bc82f882b3e4a68470a65776624c66da94b495477f463ebe84f2e210df4863d6",
+      "forbidden_inputs": [
+        "current_wall_clock",
+        "file_mtime",
+        "script_start_time",
+        "temporary_checkout_path"
+      ],
+      "no_future_leakage_rules": [
+        "observed_at after logical_tick_time is excluded",
+        "available_to_runtime_at after compute logical time is excluded",
+        "future Observation is excluded from earlier ticks",
+        "late Evidence is classified separately from on-time Evidence"
+      ],
+      "validation_examples": {
+        "on_time_observation": {
+          "observed_at": "2026-06-01T09:30:00.000Z",
+          "ingested_at": "2026-06-01T09:35:00.000Z",
+          "available_to_runtime_at": "2026-06-01T09:35:00.000Z",
+          "logical_tick_time": "2026-06-01T10:00:00.000Z",
+          "classification": "ON_TIME",
+          "eligible_for_tick": true
+        },
+        "late_observation": {
+          "observed_at": "2026-06-01T09:30:00.000Z",
+          "ingested_at": "2026-06-01T11:05:00.000Z",
+          "available_to_runtime_at": "2026-06-01T11:05:00.000Z",
+          "logical_tick_time": "2026-06-01T10:00:00.000Z",
+          "classification": "LATE",
+          "eligible_for_tick": false
+        },
+        "future_observation": {
+          "observed_at": "2026-06-01T11:00:00.000Z",
+          "ingested_at": "2026-06-01T10:05:00.000Z",
+          "available_to_runtime_at": "2026-06-01T10:05:00.000Z",
+          "logical_tick_time": "2026-06-01T10:00:00.000Z",
+          "classification": "FUTURE",
+          "eligible_for_tick": false
+        }
+      }
+    },
+    "action_feedback_eligibility_contract": {
+      "object_owner_phase": "MCFT-15",
+      "binding_owner_phase": "MCFT-00",
+      "execution_status": [
+        "EXECUTED",
+        "PARTIALLY_EXECUTED",
+        "EXECUTION_UNCERTAIN",
+        "NOT_EXECUTED"
+      ],
+      "validation_status": [
+        "NOT_YET_VALIDATED",
+        "VALIDATED",
+        "REJECTED",
+        "VALIDATED_WITH_LIMITATIONS"
+      ],
+      "orthogonal_statuses": true,
+      "acceptance_ref_required": false,
+      "task_ref_rule": "required only when origin_kind = AO_ACT",
+      "trusted_execution_reference_rule": "receipt_ref or as_executed_ref required",
+      "eligibility_required_fields": [
+        "actual_amount",
+        "unit",
+        "executed_at",
+        "spatial_coverage",
+        "source_identity",
+        "source_quality",
+        "limitations"
+      ],
+      "binding_may_set_eligible_true": false,
+      "example_candidate": {
+        "origin_kind": "IMPORTED_HISTORICAL",
+        "execution_status": "EXECUTED",
+        "validation_status": "NOT_YET_VALIDATED",
+        "eligible_for_state_input": true,
+        "actual_amount": 10.0,
+        "unit": "mm",
+        "executed_at": "2026-06-01T11:00:00.000Z",
+        "spatial_coverage": {
+          "zone_id": "zone_mcft_c8_water_001",
+          "coverage_class": "FULL_ZONE_FIXTURE"
+        },
+        "source_identity": {
+          "source_id": "dev_valve_pump_c8_001",
+          "source_kind": "DEVICE"
+        },
+        "source_quality": {
+          "status": "CONTROLLED_FIXTURE",
+          "score": 0.8
+        },
+        "limitations": [
+          "not field-verified"
+        ],
+        "receipt_ref": null,
+        "as_executed_ref": "asexec_mcft_fixture_001",
+        "acceptance_ref": null,
+        "task_ref": null
+      }
+    },
+    "compile_target": {
+      "owner_phase": "MCFT-02",
+      "object_type": "twin_runtime_config_v1",
+      "record_class": "CANONICAL_MODEL_GOVERNANCE_HISTORY",
+      "lineage_member": false,
+      "envelope_profile": "NON_LINEAGE_CONTEXT"
+    },
+    "persistence_target": {
+      "owner_phase": "MCFT-03",
+      "transaction_family": "D_MODEL_GOVERNANCE_STEP_COMMIT",
+      "canonical_store": "Postgres facts append-only store"
+    },
+    "versioning_contract": {
+      "supersedes_binding_ref": null,
+      "change_reason": "INITIAL_FREEZE",
+      "semantic_change_requires_new_version": true,
+      "runtime_lineage_revision": false,
+      "forbidden_runtime_operations": [
+        "E1_DECLARE_REVISION",
+        "E2_APPEND_REVISION_STATUS",
+        "E3_PROMOTE_LINEAGE",
+        "ACTIVE_LINEAGE_SWITCH"
+      ]
+    },
+    "legacy_contamination_guard": {
+      "forbidden_canonical_inputs": [
+        "water_state_estimate_v1",
+        "irrigation_scenario_set_v1",
+        "C8_RECOMMENDATION_FACTS",
+        "C8_APPROVAL_FACTS",
+        "C8_AO_ACT_FACTS",
+        "C8_ROI_FACTS",
+        "C8_FIELD_MEMORY",
+        "replay_demo_state_estimate_v1",
+        "replay_demo_forecast_run_v1",
+        "P50_DEMO_MODEL_ACTIVATION",
+        "P42_CONTROLLED_LEDGER",
+        "P43_CONTROLLED_RESIDUAL_LEDGER"
+      ],
+      "allowed_reference_patterns": [
+        "tenant_project_group_field_season_identity",
+        "candidate_device_identity_after_evidence_validation",
+        "append_only_fact_store_pattern",
+        "typed_evidence_references",
+        "explicit_replay_clock_pattern",
+        "evidence_partition_pattern",
+        "no_future_leakage_invariant",
+        "stable_hashing_utilities_after_semantic_review"
+      ]
+    },
+    "limitations": [
+      "controlled synthetic Replay proxy only",
+      "device identities are fixture evidence",
+      "no time-series dataset is produced",
+      "no runtime object is produced",
+      "geometry is not surveyed or field-verified",
+      "configuration values are controlled synthetic"
+    ],
+    "nonclaims": [
+      "CANONICAL_REPLAY_DATASET_COMPLETE",
+      "EVIDENCE_INGESTION_COMPLETE",
+      "HOURLY_RUNTIME_EXISTS",
+      "STATE_ESTIMATOR_EXISTS",
+      "PHYSICAL_PROPAGATION_EXISTS",
+      "ASSIMILATION_EXISTS",
+      "POSTERIOR_STATE_EXISTS",
+      "FORECAST_EXISTS",
+      "SCENARIO_EXISTS",
+      "DECISION_EXISTS",
+      "ACTION_FEEDBACK_EXISTS",
+      "RESIDUAL_EXISTS",
+      "CALIBRATION_EXISTS",
+      "CHECKPOINT_EXISTS",
+      "RESTART_RECOVERY_EXISTS",
+      "LATE_EVIDENCE_RUNTIME_REVISION_EXISTS",
+      "LIVE_DEVICE_CONNECTED",
+      "REAL_FIELD_PILOT_STARTED",
+      "MINIMUM_COMPLETE_FIELD_TWIN_COMPLETE",
+      "PRODUCTION_FIELD_TWIN_COMPLETE"
+    ]
+  },
+  "determinism_hash": "sha256:83d0e3cf728d257277225fee220dfec1029abb52e3a18b40f3801cd1bba187bf"
+}
