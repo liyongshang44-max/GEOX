@@ -32,7 +32,7 @@ export default function ReplayDemoSnapshotPanel({ vm }: ReplayDemoSnapshotPanelP
       <p>{locale === "en-US" ? "Hashes are provenance metadata, not production certification." : "哈希是来源元数据，不是生产认证。"}</p>
       <div className="operatorReplayDemo__table">
         <div className="operatorReplayDemo__tableHeader"><span>{localizedText(replayCopy.table.label, locale)}</span><span>{localizedText(replayCopy.table.value, locale)}</span></div>
-        {rows.map(([label, value]) => <div className="operatorReplayDemo__tableRow" key={label}><span>{label}</span><span>{value}</span></div>)}
+        {rows.map(([label, value]) => <div className="operatorReplayDemo__tableRow" key={label}><span data-locale-neutral="true">{label}</span><span data-locale-neutral="true">{value}</span></div>)}
       </div>
     </section>
   );
