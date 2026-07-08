@@ -39,7 +39,11 @@ const COMMON = {
 } as const satisfies Record<string, LocalizedCopy>;
 
 function cellContent(cell: AdminCell, locale: "zh-CN" | "en-US"): React.ReactNode {
-  const value = cell.neutral ?? (cell.text ? localizedText(cell.text, locale) : "--");
+  const value = cell.neutral
+    ? <span data-locale-neutral="true">{cell.neutral}</span>
+    : cell.text
+      ? localizedText(cell.text, locale)
+      : "--";
   return cell.href ? <Link to={cell.href}>{value}</Link> : value;
 }
 
