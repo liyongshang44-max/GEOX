@@ -1,5 +1,6 @@
 // apps/web/src/features/operator/fieldRuntime/FieldRuntimeHealthReadModelPanel.tsx
 import React from "react";
+import { ProductHorizontalScrollRegion } from "../../../design-system/product";
 import { useLocale, type LocaleCode } from "../../../lib/locale";
 import { fieldRuntimeText, type FieldRuntimeCopyKey } from "./fieldRuntimeLocaleCopy";
 import { type FieldRuntimeHealthViewModel } from "./fieldRuntimeHealthAdapter";
@@ -30,9 +31,12 @@ export default function FieldRuntimeHealthReadModelPanel({ health }: { health: F
   const { locale } = useLocale();
   const t = (key: FieldRuntimeCopyKey) => fieldRuntimeText(locale, key);
   const text = (en: string, zh: string) => locale === "en-US" ? en : zh;
+  const regionLabel = text("Read Model Availability Matrix", "读模型可用性矩阵");
   return <article className="operatorFieldRuntime__panel operatorFieldRuntime__healthReadModels" data-h62-panel="read-model-availability">
     <div className="operatorFieldRuntime__panelHeader"><div><p className="operatorFieldRuntime__eyebrow">{t("healthReadModel")}</p><h2 className="operatorFieldRuntime__panelTitle">{text("Read Model Availability", "读模型可用性")}</h2></div><span className="operatorFieldRuntime__panelMeta">{text("UI / Read-model Availability", "界面 / 读模型可用性")}</span></div>
     <p className="operatorFieldRuntime__stubLead">{text("Read-model availability is not production health.", "读模型可用性不代表生产健康状态。")}</p>
-    <div className="operatorFieldRuntime__healthTable" role="table" aria-label={text("Read Model Availability Matrix", "读模型可用性矩阵")}><div className="operatorFieldRuntime__healthTableHeader" role="row"><span>{text("Tab", "标签页")}</span><span>{text("Read Model", "读模型")}</span><span>{t("status")}</span><span>{text("Backend Changed", "后端是否变更")}</span></div>{health.readModelAvailability.map((row) => <div className="operatorFieldRuntime__healthTableRow" role="row" key={row.tab}><span>{tabLabel(row.tab, locale)}</span><span data-locale-neutral="true">{row.readModel}</span><span>{statusLabel(row.status, locale)}</span><span>{row.backendChangedByH62 ? text("Yes", "是") : text("No", "否")}</span></div>)}</div>
+    <ProductHorizontalScrollRegion ariaLabel={regionLabel} overflowOwner="operator-health-read-model">
+      <div className="operatorFieldRuntime__healthTable" role="table" aria-label={regionLabel}><div className="operatorFieldRuntime__healthTableHeader" role="row"><span>{text("Tab", "标签页")}</span><span>{text("Read Model", "读模型")}</span><span>{t("status")}</span><span>{text("Backend Changed", "后端是否变更")}</span></div>{health.readModelAvailability.map((row) => <div className="operatorFieldRuntime__healthTableRow" role="row" key={row.tab}><span>{tabLabel(row.tab, locale)}</span><span data-locale-neutral="true" data-long-token="true">{row.readModel}</span><span>{statusLabel(row.status, locale)}</span><span>{row.backendChangedByH62 ? text("Yes", "是") : text("No", "否")}</span></div>)}</div>
+    </ProductHorizontalScrollRegion>
   </article>;
 }
