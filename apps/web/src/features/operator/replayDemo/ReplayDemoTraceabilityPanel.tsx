@@ -3,27 +3,28 @@
 // Boundary: this panel displays checked-in snapshot metadata and does not create trace records.
 
 import React from "react";
+import { ProductHorizontalScrollRegion } from "../../../design-system/product";
 import { localizedText, useLocale } from "../../../lib/locale";
 import { OPERATOR_FORMAL_SURFACE_COPY } from "../../../lib/productSurfaceLabels";
 import { REPLAY_DEMO_COPY, replayMetadataStatus, replayText } from "./replayDemoLocaleCopy";
 import { type ReplayDemoViewModel } from "./replayDemoViewModel";
 
-type ReplayDemoTraceabilityPanelProps = {
-  vm: ReplayDemoViewModel;
-};
-
+type ReplayDemoTraceabilityPanelProps = { vm: ReplayDemoViewModel };
 const replayCopy = OPERATOR_FORMAL_SURFACE_COPY.replayDemo;
 
 export default function ReplayDemoTraceabilityPanel({ vm }: ReplayDemoTraceabilityPanelProps): React.ReactElement {
   const { locale } = useLocale();
+  const regionLabel = localizedText(replayCopy.panels.traceability, locale);
   return (
-    <section className="operatorReplayDemo__panel operatorReplayDemo__traceability" aria-label={localizedText(replayCopy.panels.traceability, locale)}>
-      <div className="operatorReplayDemo__panelHeader"><p className="operatorReplayDemo__eyebrow">{localizedText(replayCopy.panels.traceability, locale)}</p><h2>{localizedText(replayCopy.panels.traceability, locale)}</h2></div>
+    <section className="operatorReplayDemo__panel operatorReplayDemo__traceability" aria-label={regionLabel}>
+      <div className="operatorReplayDemo__panelHeader"><p className="operatorReplayDemo__eyebrow">{regionLabel}</p><h2>{regionLabel}</h2></div>
       <p>{replayText(locale, REPLAY_DEMO_COPY.panels.traceabilityLead)}</p>
-      <div className="operatorReplayDemo__table">
-        <div className="operatorReplayDemo__tableHeader"><span>{localizedText(replayCopy.table.label, locale)}</span><span>{localizedText(replayCopy.table.metadata, locale)}</span><span>{localizedText(replayCopy.table.status, locale)}</span></div>
-        {vm.traceability.rows.map((row) => <div className="operatorReplayDemo__tableRow" key={row.label}><span data-locale-neutral="true">{row.label}</span><span data-locale-neutral="true">{row.value}</span><span>{replayMetadataStatus(locale, row.metadataStatus)}</span></div>)}
-      </div>
+      <ProductHorizontalScrollRegion ariaLabel={regionLabel} overflowOwner="operator-replay-traceability">
+        <div className="operatorReplayDemo__table">
+          <div className="operatorReplayDemo__tableHeader"><span>{localizedText(replayCopy.table.label, locale)}</span><span>{localizedText(replayCopy.table.metadata, locale)}</span><span>{localizedText(replayCopy.table.status, locale)}</span></div>
+          {vm.traceability.rows.map((row) => <div className="operatorReplayDemo__tableRow" key={row.label}><span data-locale-neutral="true" data-long-token="true">{row.label}</span><span data-locale-neutral="true" data-long-token="true">{row.value}</span><span>{replayMetadataStatus(locale, row.metadataStatus)}</span></div>)}
+        </div>
+      </ProductHorizontalScrollRegion>
     </section>
   );
 }
