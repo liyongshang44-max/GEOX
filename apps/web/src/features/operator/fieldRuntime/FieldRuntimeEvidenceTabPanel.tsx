@@ -19,12 +19,12 @@ export default function FieldRuntimeEvidenceTabPanel({ loadState }: Props): Reac
 
   if (!loadState || loadState.status === "idle") return <article className="operatorFieldRuntime__panel"><h2 className="operatorFieldRuntime__panelTitle">{t("evidence")}</h2><p>{loadState?.message || t("evidenceWaiting")}</p></article>;
   if (loadState.status === "loading") return <article className="operatorFieldRuntime__panel"><h2 className="operatorFieldRuntime__panelTitle">{t("evidence")}</h2><p>{t("evidenceLoading")}</p></article>;
-  if (loadState.status === "error") return <article className="operatorFieldRuntime__panel"><h2 className="operatorFieldRuntime__panelTitle">{t("evidence")}</h2><p>{t("evidenceFailed")}: {loadState.message}</p></article>;
+  if (loadState.status === "error") return <article className="operatorFieldRuntime__panel"><h2 className="operatorFieldRuntime__panelTitle">{t("evidence")}</h2><p>{t("evidenceFailed")}: <span data-locale-neutral="true">{loadState.message}</span></p></article>;
 
   const evidence = loadState.evidence;
   return <div className="operatorFieldRuntime__evidenceGrid" data-h60e="evidence-tab-ready" data-evidence-source={evidence.source}>
     <article className="operatorFieldRuntime__panel" data-h60e-panel="evidence-intro">
-      <div className="operatorFieldRuntime__panelHeader"><div><p className="operatorFieldRuntime__eyebrow">{t("evidence")}</p><h2 className="operatorFieldRuntime__panelTitle">{t("evidence")}</h2></div><span className="operatorFieldRuntime__panelMeta">{SOURCE_LABEL}</span></div>
+      <div className="operatorFieldRuntime__panelHeader"><div><p className="operatorFieldRuntime__eyebrow">{t("evidence")}</p><h2 className="operatorFieldRuntime__panelTitle">{t("evidence")}</h2></div><span className="operatorFieldRuntime__panelMeta" data-locale-neutral="true">{SOURCE_LABEL}</span></div>
       <p className="operatorFieldRuntime__stubLead">{t("evidenceIntro")}</p>
       <p className="operatorFieldRuntime__stubLead">{t("evidenceTraceReview")}</p>
       <p className="operatorFieldRuntime__stubLead">{t("noEvidenceActions")}</p>
