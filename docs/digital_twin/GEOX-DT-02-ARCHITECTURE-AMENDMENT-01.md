@@ -12,7 +12,7 @@ baseline main commit: 4c1d854a5190a5d37d7cea0a4ded3f6f3ce8b614
 status: PENDING_ACCEPTANCE
 ```
 
-PR #2302 was merged before four architecture contradictions were detected. This amendment does not erase that history. It explicitly replaces the affected rules and preserves all unaffected DT-02 decisions.
+PR #2302 was merged before four architecture contradictions were detected. This amendment does not erase that history. It explicitly replaces the affected rules and preserves all unaffected DT-02 decisions and their audit metadata.
 
 ## 1. Record class is not lineage membership
 
@@ -203,7 +203,25 @@ are forbidden.
 
 For every object, every listed family must exist, and the object must appear in that transaction's `canonical_appends` or an explicit `operation_variants[].canonical_appends` list.
 
-## 7. Acceptance requirements
+## 7. ADR audit preservation
+
+The amendment may replace decision semantics only for the named superseded ADRs. It may not discard governance evidence.
+
+Every ADR must retain non-empty:
+
+```text
+title
+decision
+rationale
+rejected_alternatives[]
+downstream_owners[]
+input_packet_topics[]
+invariants[]
+```
+
+Every top-level DT-01 input packet topic must remain covered by at least one ADR. Amended ADRs must carry `status=FROZEN_WITH_AMENDMENT` and `amendment_ref=DT02-AMENDMENT-01`; unaffected ADRs remain `FROZEN` with no amendment reference.
+
+## 8. Acceptance requirements
 
 The amended Gate must prove:
 
@@ -218,8 +236,9 @@ The amended Gate must prove:
 9. Scenario requires a COMPLETED 72-point Forecast;
 10. Action Feedback does not require Acceptance;
 11. execution and validation statuses are orthogonal;
-12. the final closure evidence identifies architecture-validation head, closure head, and final CI separately.
+12. all ADR audit metadata and input-topic coverage are preserved;
+13. the final closure evidence identifies architecture-validation head and CI separately from final PR attestation.
 
-## 8. Unaffected decisions
+## 9. Unaffected decisions
 
 All DT-02 decisions not explicitly superseded by this amendment remain frozen, including pure-domain dependency direction, one canonical fact store, State transition/update/posterior atomicity, fencing and CAS, deterministic identity, read-only Runtime APIs, legacy compatibility, shared runtime core, and production nonclaims.
