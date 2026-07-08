@@ -1,0 +1,69 @@
+{
+  "phase": "PFA-3 Responsive Shell and Overflow Containment",
+  "version": 1,
+  "sourceInventory": "docs/frontend-productization/PFE-13-ROUTE-INVENTORY.json",
+  "recordModel": "route-viewport-contract-v1",
+  "supportedLocales": ["zh-CN", "en-US"],
+  "formalViewports": {
+    "mobileNarrow": {"width": 390, "height": 900},
+    "laptopReview": {"width": 1366, "height": 900},
+    "desktopReview": {"width": 1440, "height": 1100}
+  },
+  "shellProbes": {
+    "compactTablet": {"width": 768, "height": 1024, "expectation": "compact"},
+    "laptopBoundary": {"width": 1024, "height": 900, "expectation": "desktop"}
+  },
+  "hardRouteCount": 27,
+  "exportRouteCount": 3,
+  "hardRouteRenderCount": 162,
+  "exportSmokeRenderCount": 6,
+  "shellProbeCount": 12,
+  "totalBrowserCaseCount": 180,
+  "statusLifecycle": ["ready-for-runtime", "runtime-pass", "export-deferred"],
+  "resolvedRecordDefaults": {
+    "locales": ["zh-CN", "en-US"],
+    "viewports": ["mobileNarrow", "laptopReview", "desktopReview"],
+    "shellExpectation": "compact-at-390-desktop-at-1024",
+    "documentOverflowAllowed": false,
+    "stableLayoutHooks": ["data-page-key", "data-layout-key", "data-surface", "data-horizontal-scroll-region", "data-overflow-owner"],
+    "h1Required": true,
+    "boundaryRequired": true,
+    "primaryActionRequired": false,
+    "requiredSelectors": ["h1"]
+  },
+  "records": [
+    {"surface":"customer","route":"/customer/dashboard","concreteAuditPath":"/customer/dashboard","routeClass":"normal","priority":"high","issueIds":["PFA0-RWD-001","PFA0-NAV-001"],"internalOverflowSelectors":[".customerDashboardMainGrid"],"mobileNavigationRequired":true,"primaryActionRequired":true,"requiredSelectors":["h1",".productBoundaryBanner"],"status":"ready-for-runtime"},
+    {"surface":"customer","route":"/customer/fields","concreteAuditPath":"/customer/fields","routeClass":"normal","priority":"standard","issueIds":["PFA0-NAV-001"],"internalOverflowSelectors":[".productDataTable__overflow"],"mobileNavigationRequired":true,"status":"ready-for-runtime"},
+    {"surface":"customer","route":"/customer/fields/:fieldId","concreteAuditPath":"/customer/fields/field_c8_demo","routeClass":"normal","priority":"standard","issueIds":["PFA0-NAV-001"],"internalOverflowSelectors":[".productDataTable__overflow"],"mobileNavigationRequired":true,"status":"ready-for-runtime"},
+    {"surface":"customer","route":"/customer/fields/:fieldId/export","concreteAuditPath":"/customer/fields/field_c8_demo/export","routeClass":"export-deferred","priority":"deferred","issueIds":["PFA0-EXP-001"],"internalOverflowSelectors":[],"mobileNavigationRequired":false,"viewports":["desktopReview"],"shellExpectation":"none","boundaryRequired":false,"status":"export-deferred"},
+    {"surface":"customer","route":"/customer/operations","concreteAuditPath":"/customer/operations","routeClass":"normal","priority":"standard","issueIds":["PFA0-NAV-001"],"internalOverflowSelectors":[".productDataTable__overflow"],"mobileNavigationRequired":true,"status":"ready-for-runtime"},
+    {"surface":"customer","route":"/customer/operations/:operationId","concreteAuditPath":"/customer/operations/op_plan_c8_irrigation_formal_001","routeClass":"normal","priority":"standard","issueIds":["PFA0-NAV-001"],"internalOverflowSelectors":[".productDataTable__overflow"],"mobileNavigationRequired":true,"status":"ready-for-runtime"},
+    {"surface":"customer","route":"/customer/operations/:operationId/export","concreteAuditPath":"/customer/operations/op_plan_c8_irrigation_formal_001/export","routeClass":"export-deferred","priority":"deferred","issueIds":["PFA0-EXP-001"],"internalOverflowSelectors":[],"mobileNavigationRequired":false,"viewports":["desktopReview"],"shellExpectation":"none","boundaryRequired":false,"status":"export-deferred"},
+    {"surface":"customer","route":"/customer/reports","concreteAuditPath":"/customer/reports","routeClass":"normal","priority":"standard","issueIds":["PFA0-NAV-001"],"internalOverflowSelectors":[".productDataTable__overflow"],"mobileNavigationRequired":true,"status":"ready-for-runtime"},
+    {"surface":"customer","route":"/customer/export","concreteAuditPath":"/customer/export","routeClass":"export-deferred","priority":"deferred","issueIds":["PFA0-EXP-001"],"internalOverflowSelectors":[],"mobileNavigationRequired":false,"viewports":["desktopReview"],"shellExpectation":"none","boundaryRequired":false,"status":"export-deferred"},
+
+    {"surface":"operator","route":"/operator/twin","concreteAuditPath":"/operator/twin","routeClass":"normal","priority":"standard","issueIds":["PFA0-NAV-001","PFA0-OPR-005"],"internalOverflowSelectors":[".productDataTable__overflow"],"mobileNavigationRequired":true,"status":"ready-for-runtime"},
+    {"surface":"operator","route":"/operator/fields","concreteAuditPath":"/operator/fields","routeClass":"normal","priority":"standard","issueIds":["PFA0-NAV-001","PFA0-OPR-005"],"internalOverflowSelectors":[".productDataTable__overflow"],"mobileNavigationRequired":true,"status":"ready-for-runtime"},
+    {"surface":"operator","route":"/operator/fields/:fieldId","concreteAuditPath":"/operator/fields/field_c8_demo","routeClass":"normal","priority":"standard","issueIds":["PFA0-NAV-001","PFA0-OPR-002","PFA0-OPR-005"],"internalOverflowSelectors":[],"mobileNavigationRequired":true,"requiredSelectors":["h1",".operatorFieldRuntime__tabs"],"status":"ready-for-runtime"},
+    {"surface":"operator","route":"/operator/fields/:fieldId/state","concreteAuditPath":"/operator/fields/field_c8_demo/state","routeClass":"normal","priority":"standard","issueIds":["PFA0-OPR-002","PFA0-OPR-005"],"internalOverflowSelectors":[],"mobileNavigationRequired":true,"requiredSelectors":["h1",".operatorFieldRuntime__tabs"],"status":"ready-for-runtime"},
+    {"surface":"operator","route":"/operator/fields/:fieldId/evidence","concreteAuditPath":"/operator/fields/field_c8_demo/evidence","routeClass":"normal","priority":"high","issueIds":["PFA0-RWD-001","PFA0-OPR-002","PFA0-OPR-005"],"internalOverflowSelectors":[".operatorFieldRuntime__coverageTable",".operatorFieldRuntime__sourceIndexTable"],"mobileNavigationRequired":true,"requiredSelectors":["h1",".operatorFieldRuntime__tabs"],"status":"ready-for-runtime"},
+    {"surface":"operator","route":"/operator/fields/:fieldId/forecast","concreteAuditPath":"/operator/fields/field_c8_demo/forecast","routeClass":"normal","priority":"high","issueIds":["PFA0-RWD-001","PFA0-OPR-002","PFA0-OPR-005"],"internalOverflowSelectors":[],"mobileNavigationRequired":true,"requiredSelectors":["h1",".operatorFieldRuntime__tabs"],"status":"ready-for-runtime"},
+    {"surface":"operator","route":"/operator/fields/:fieldId/scenario","concreteAuditPath":"/operator/fields/field_c8_demo/scenario","routeClass":"normal","priority":"standard","issueIds":["PFA0-OPR-002","PFA0-OPR-005"],"internalOverflowSelectors":[],"mobileNavigationRequired":true,"requiredSelectors":["h1",".operatorFieldRuntime__tabs"],"status":"ready-for-runtime"},
+    {"surface":"operator","route":"/operator/fields/:fieldId/residual","concreteAuditPath":"/operator/fields/field_c8_demo/residual","routeClass":"normal","priority":"high","issueIds":["PFA0-RWD-001","PFA0-OPR-002","PFA0-OPR-005"],"internalOverflowSelectors":[".operatorFieldRuntime__residualTable"],"mobileNavigationRequired":true,"requiredSelectors":["h1",".operatorFieldRuntime__tabs"],"status":"ready-for-runtime"},
+    {"surface":"operator","route":"/operator/fields/:fieldId/calibration","concreteAuditPath":"/operator/fields/field_c8_demo/calibration","routeClass":"normal","priority":"standard","issueIds":["PFA0-OPR-002","PFA0-OPR-005"],"internalOverflowSelectors":[],"mobileNavigationRequired":true,"requiredSelectors":["h1",".operatorFieldRuntime__tabs"],"status":"ready-for-runtime"},
+    {"surface":"operator","route":"/operator/fields/:fieldId/health","concreteAuditPath":"/operator/fields/field_c8_demo/health","routeClass":"normal","priority":"high","issueIds":["PFA0-RWD-001","PFA0-OPR-002","PFA0-OPR-005"],"internalOverflowSelectors":[".operatorFieldRuntime__healthTable"],"mobileNavigationRequired":true,"requiredSelectors":["h1",".operatorFieldRuntime__tabs"],"status":"ready-for-runtime"},
+    {"surface":"operator","route":"/operator/fields/:fieldId/audit","concreteAuditPath":"/operator/fields/field_c8_demo/audit","routeClass":"normal","priority":"standard","issueIds":["PFA0-OPR-002","PFA0-OPR-005"],"internalOverflowSelectors":[".operatorFieldRuntime__auditTable"],"mobileNavigationRequired":true,"requiredSelectors":["h1",".operatorFieldRuntime__tabs"],"status":"ready-for-runtime"},
+    {"surface":"operator","route":"/operator/twin/gateway-demo","concreteAuditPath":"/operator/twin/gateway-demo","routeClass":"normal","priority":"high","issueIds":["PFA0-RWD-001","PFA0-NAV-001","PFA0-OPR-005"],"internalOverflowSelectors":[".operatorReplayDemo__table"],"mobileNavigationRequired":true,"status":"ready-for-runtime"},
+    {"surface":"operator","route":"/operator/pilot","concreteAuditPath":"/operator/pilot","routeClass":"normal","priority":"high","issueIds":["PFA0-RWD-001","PFA0-NAV-001","PFA0-OPR-005"],"internalOverflowSelectors":[".productDataTable__overflow"],"mobileNavigationRequired":true,"status":"ready-for-runtime"},
+
+    {"surface":"admin","route":"/admin/dashboard","concreteAuditPath":"/admin/dashboard","routeClass":"normal","priority":"standard","issueIds":["PFA0-NAV-001"],"internalOverflowSelectors":[".productDataTable__overflow"],"mobileNavigationRequired":true,"status":"ready-for-runtime"},
+    {"surface":"admin","route":"/admin/fields","concreteAuditPath":"/admin/fields","routeClass":"normal","priority":"standard","issueIds":["PFA0-NAV-001"],"internalOverflowSelectors":[".productDataTable__overflow"],"mobileNavigationRequired":true,"status":"ready-for-runtime"},
+    {"surface":"admin","route":"/admin/operations","concreteAuditPath":"/admin/operations","routeClass":"normal","priority":"standard","issueIds":["PFA0-NAV-001"],"internalOverflowSelectors":[".productDataTable__overflow"],"mobileNavigationRequired":true,"status":"ready-for-runtime"},
+    {"surface":"admin","route":"/admin/devices","concreteAuditPath":"/admin/devices","routeClass":"normal","priority":"standard","issueIds":["PFA0-NAV-001"],"internalOverflowSelectors":[".productDataTable__overflow"],"mobileNavigationRequired":true,"status":"ready-for-runtime"},
+    {"surface":"admin","route":"/admin/evidence","concreteAuditPath":"/admin/evidence","routeClass":"normal","priority":"standard","issueIds":["PFA0-NAV-001"],"internalOverflowSelectors":[".productDataTable__overflow"],"mobileNavigationRequired":true,"status":"ready-for-runtime"},
+    {"surface":"admin","route":"/admin/skills","concreteAuditPath":"/admin/skills","routeClass":"normal","priority":"standard","issueIds":["PFA0-NAV-001"],"internalOverflowSelectors":[".productDataTable__overflow"],"mobileNavigationRequired":true,"status":"ready-for-runtime"},
+    {"surface":"admin","route":"/admin/healthz","concreteAuditPath":"/admin/healthz","routeClass":"normal","priority":"standard","issueIds":["PFA0-NAV-001"],"internalOverflowSelectors":[".productDataTable__overflow"],"mobileNavigationRequired":true,"status":"ready-for-runtime"},
+
+    {"surface":"supporting","route":"/login","concreteAuditPath":"/login","routeClass":"supporting","priority":"standard","issueIds":[],"internalOverflowSelectors":[],"mobileNavigationRequired":false,"shellExpectation":"none","boundaryRequired":false,"primaryActionRequired":true,"requiredSelectors":["h1","form"],"status":"ready-for-runtime"}
+  ]
+}
