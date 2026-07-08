@@ -1,0 +1,263 @@
+{
+  "schema_version": "geox_mcft00_configuration_binding_matrix_v1",
+  "phase": "MCFT-00",
+  "status": "FROZEN_PENDING_ACCEPTANCE",
+  "artifact_class": "GOVERNANCE_INPUT",
+  "canonical_persistence": false,
+  "common_contract": {
+    "binding_type": "MODEL_CONFIGURATION_BINDING",
+    "required_fields": [
+      "binding_id",
+      "binding_type",
+      "source_role",
+      "semantic_domain",
+      "configuration_source_kind",
+      "configuration_source_id",
+      "configuration_version",
+      "epistemic_class",
+      "quantity_kind",
+      "source_unit",
+      "canonical_unit",
+      "conversion_rule",
+      "spatial_support",
+      "vertical_support",
+      "time_semantics",
+      "quality_semantics",
+      "availability_semantics",
+      "eligible_downstream_uses",
+      "forbidden_downstream_uses",
+      "limitations",
+      "binding_version",
+      "determinism_hash"
+    ],
+    "forbidden_fields": [
+      "origin_source_kind",
+      "origin_source_id",
+      "ingress_adapter_kind",
+      "ingress_adapter_id"
+    ],
+    "rules": [
+      "configuration authority is not an evidence origin",
+      "configured values require explicit provenance and version",
+      "unknown values must be UNKNOWN, UNAVAILABLE, or SOURCE_MISSING and may not receive silent defaults"
+    ]
+  },
+  "configuration_source_definitions": [
+    {
+      "configuration_source_id": "mcft_soil_hydraulic_config_c8_v1",
+      "configuration_source_kind": "VERSIONED_CONFIG_ARTIFACT",
+      "configuration_version": 1,
+      "definition_authority": "GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json",
+      "provenance_class": "CONTROLLED_SYNTHETIC_GOVERNED_CONFIG",
+      "parameters": {
+        "field_capacity_fraction": {
+          "value": 0.3,
+          "unit": "fraction",
+          "status": "CONFIGURED"
+        },
+        "wilting_point_fraction": {
+          "value": 0.12,
+          "unit": "fraction",
+          "status": "CONFIGURED"
+        },
+        "saturation_fraction": {
+          "value": 0.45,
+          "unit": "fraction",
+          "status": "CONFIGURED"
+        },
+        "root_zone_storage_capacity_mm": {
+          "value": 90.0,
+          "unit": "mm",
+          "status": "CONFIGURED"
+        },
+        "drainage_coefficient_per_hour": {
+          "value": 0.03,
+          "unit": "fraction_per_hour",
+          "status": "CONFIGURED"
+        },
+        "runoff_fraction": {
+          "value": 0.05,
+          "unit": "fraction",
+          "status": "CONFIGURED"
+        }
+      },
+      "limitations": [
+        "controlled synthetic values",
+        "not field-calibrated",
+        "not production-authoritative",
+        "formula execution belongs to later MCFT phases"
+      ]
+    },
+    {
+      "configuration_source_id": "mcft_crop_water_use_corn_v1",
+      "configuration_source_kind": "VERSIONED_CONFIG_ARTIFACT",
+      "configuration_version": 1,
+      "definition_authority": "GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json",
+      "provenance_class": "CONTROLLED_SYNTHETIC_GOVERNED_CONFIG",
+      "parameters": {
+        "kc_schedule": {
+          "value": [
+            {
+              "stage_code": "INITIAL",
+              "kc": 0.3
+            },
+            {
+              "stage_code": "DEVELOPMENT",
+              "kc": 0.7
+            },
+            {
+              "stage_code": "MID",
+              "kc": 1.15
+            },
+            {
+              "stage_code": "LATE",
+              "kc": 0.6
+            }
+          ],
+          "unit": "dimensionless",
+          "status": "CONFIGURED"
+        },
+        "crop_stage_mapping_source": {
+          "value": "mcft_corn_stage_mapping_v1",
+          "unit": "identifier",
+          "status": "CONFIGURED"
+        },
+        "root_depth_mapping": {
+          "value": [
+            {
+              "stage_code": "INITIAL",
+              "root_depth_mm": 150
+            },
+            {
+              "stage_code": "DEVELOPMENT",
+              "root_depth_mm": 300
+            },
+            {
+              "stage_code": "MID",
+              "root_depth_mm": 600
+            },
+            {
+              "stage_code": "LATE",
+              "root_depth_mm": 600
+            }
+          ],
+          "unit": "mm",
+          "status": "CONFIGURED"
+        }
+      },
+      "limitations": [
+        "controlled synthetic schedule",
+        "crop stage remains dynamic and is not Reality identity",
+        "not field-validated"
+      ]
+    }
+  ],
+  "required_semantic_domains": [
+    "SOIL_HYDRAULIC_CONFIGURATION",
+    "CROP_WATER_USE_CONFIGURATION"
+  ],
+  "bindings": [
+    {
+      "binding_type": "MODEL_CONFIGURATION_BINDING",
+      "binding_version": 1,
+      "epistemic_class": "CONFIGURED",
+      "spatial_support": "ZONE",
+      "vertical_support": "ROOT_ZONE_OR_CROP_PROFILE",
+      "source_unit": "mixed_explicit_per_parameter",
+      "canonical_unit": "mixed_explicit_per_parameter",
+      "conversion_rule": {
+        "id": "PER_PARAMETER_EXPLICIT_UNITS_V1"
+      },
+      "time_semantics": {
+        "effective_from": "MCFT_RUNTIME_CONFIG_ACTIVATION_BOUNDARY",
+        "mutable_during_tick": false
+      },
+      "quality_semantics": {
+        "provenance_required": true,
+        "source_version_required": true,
+        "unknown_values_must_be_explicit": true
+      },
+      "availability_semantics": {
+        "resolved_before_tick_compute": true
+      },
+      "eligible_downstream_uses": [
+        "MCFT_RUNTIME_CONFIG_COMPILE_INPUT"
+      ],
+      "forbidden_downstream_uses": [
+        "REALITY_OBSERVATION",
+        "DIRECT_STATE_EVIDENCE"
+      ],
+      "limitations": [
+        "configured authority only",
+        "no physical model formula is implemented"
+      ],
+      "binding_id": "soil_hydraulic_config_c8_v1",
+      "source_role": "SOIL_HYDRAULIC_CONFIGURATION",
+      "configuration_source_kind": "VERSIONED_CONFIG_ARTIFACT",
+      "configuration_source_id": "mcft_soil_hydraulic_config_c8_v1",
+      "configuration_version": 1,
+      "quantity_kind": "SOIL_HYDRAULIC_PARAMETER_SET",
+      "applicability": {
+        "zone_id": "zone_mcft_c8_water_001",
+        "root_zone_definition_id": "rz_c8_0_300mm_v1"
+      },
+      "parameter_provenance": "CONTROLLED_SYNTHETIC_GOVERNED_CONFIG",
+      "determinism_hash": "sha256:d7bf9ea59ac572cc781215b6af681d81876d10a1497d11030c9f2d7438c64c9a",
+      "semantic_domain": "SOIL_HYDRAULIC_CONFIGURATION"
+    },
+    {
+      "binding_type": "MODEL_CONFIGURATION_BINDING",
+      "binding_version": 1,
+      "epistemic_class": "CONFIGURED",
+      "spatial_support": "ZONE",
+      "vertical_support": "ROOT_ZONE_OR_CROP_PROFILE",
+      "source_unit": "mixed_explicit_per_parameter",
+      "canonical_unit": "mixed_explicit_per_parameter",
+      "conversion_rule": {
+        "id": "PER_PARAMETER_EXPLICIT_UNITS_V1"
+      },
+      "time_semantics": {
+        "effective_from": "MCFT_RUNTIME_CONFIG_ACTIVATION_BOUNDARY",
+        "mutable_during_tick": false
+      },
+      "quality_semantics": {
+        "provenance_required": true,
+        "source_version_required": true,
+        "unknown_values_must_be_explicit": true
+      },
+      "availability_semantics": {
+        "resolved_before_tick_compute": true
+      },
+      "eligible_downstream_uses": [
+        "MCFT_RUNTIME_CONFIG_COMPILE_INPUT"
+      ],
+      "forbidden_downstream_uses": [
+        "REALITY_OBSERVATION",
+        "DIRECT_STATE_EVIDENCE"
+      ],
+      "limitations": [
+        "configured authority only",
+        "dynamic crop stage is not frozen as identity"
+      ],
+      "binding_id": "crop_water_use_config_c8_v1",
+      "source_role": "CROP_WATER_USE_CONFIGURATION",
+      "configuration_source_kind": "VERSIONED_CONFIG_ARTIFACT",
+      "configuration_source_id": "mcft_crop_water_use_corn_v1",
+      "configuration_version": 1,
+      "quantity_kind": "CROP_WATER_USE_PARAMETER_SET",
+      "applicability": {
+        "crop_code": "corn",
+        "season_id": "season_2026_c8_corn",
+        "zone_id": "zone_mcft_c8_water_001"
+      },
+      "parameter_provenance": "CONTROLLED_SYNTHETIC_GOVERNED_CONFIG",
+      "determinism_hash": "sha256:d537b85de5c08e48e4ced50070b6682fee5860e12543a1ba1124341e6a0e4ad1",
+      "semantic_domain": "CROP_WATER_USE_CONFIGURATION"
+    }
+  ],
+  "determinism_hash": "sha256:5b8ca5dd5adfabf0dbc9df55d3c8284af98ce774cd76516f67d29517e9b66dca",
+  "required_concrete_binding_roles": [
+    "SOIL_HYDRAULIC_CONFIGURATION",
+    "CROP_WATER_USE_CONFIGURATION"
+  ]
+}
