@@ -1,6 +1,4 @@
 // apps/web/src/design-system/product/index.ts
-import "./CustomerDashboardLocaleLayout.css";
-
 export { ProductBoundaryBanner } from "./ProductBoundaryBanner";
 export type { ProductBoundaryBannerProps, ProductBoundaryTone } from "./ProductBoundaryBanner";
 export { ProductDataTable } from "./ProductDataTable";
