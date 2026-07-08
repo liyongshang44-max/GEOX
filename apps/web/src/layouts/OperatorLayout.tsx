@@ -1,7 +1,11 @@
 // apps/web/src/layouts/OperatorLayout.tsx
+// Purpose: render the Operator Runtime Console with persistent desktop navigation and compact responsive navigation.
+// Boundary: route ownership, runtime capability, permissions, APIs, and read-only product claims remain unchanged.
+
 import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import LocaleToggle from "../components/common/LocaleToggle";
+import ProductMobileNavigation from "../components/layout/ProductMobileNavigation";
 import OperatorPilotPage from "../features/operator/pilotReadiness/OperatorPilotPage";
 import { localizedText, useLocale, type LocaleCode } from "../lib/locale";
 import { OPERATOR_SHELL_LABELS, type ShellNavCopy } from "../lib/productSurfaceLabels";
@@ -103,23 +107,30 @@ function renderNavItem(item: OperatorNavItem, pathname: string, locale: LocaleCo
   );
 }
 
+function operatorNavigation(pathname: string, locale: LocaleCode): React.ReactNode {
+  return OPERATOR_NAV_ITEMS.map((item) => renderNavItem(item, pathname, locale));
+}
+
 export default function OperatorLayout({ children, title, lead }: OperatorLayoutProps): React.ReactElement {
   const location = useLocation();
   const { locale } = useLocale();
   const resolvedTitle = title ?? resolveTitle(location.pathname, locale);
   const resolvedLead = lead ?? resolveLead(location.pathname, locale);
   const isPilotReadiness = location.pathname === "/operator/pilot";
+  const mobileNavigationCopy = locale === "en-US"
+    ? { open: "Open navigation", close: "Close navigation", panel: "Operator navigation menu" }
+    : { open: "打开导航", close: "关闭导航", panel: "操作员导航菜单" };
 
   return (
-    <div className="customerShell operatorShell" data-layout="operator-runtime-console-shell" data-h59="operator-runtime-console-shell" data-h63="pilot-readiness-product-surface" data-pfa2-locale={locale}>
-      <aside className="customerShellSidebar operatorShellSidebar" aria-label={localizedText(OPERATOR_SHELL_LABELS.navigationAria, locale)}>
+    <div className="customerShell operatorShell" data-layout="operator-runtime-console-shell" data-layout-key="operator-shell" data-shell-surface="operator" data-h59="operator-runtime-console-shell" data-h63="pilot-readiness-product-surface" data-pfa2-locale={locale}>
+      <aside className="customerShellSidebar operatorShellSidebar productShellDesktopSidebar" data-desktop-sidebar="true" aria-label={localizedText(OPERATOR_SHELL_LABELS.navigationAria, locale)}>
         <div className="customerShellBrand" aria-label={localizedText(OPERATOR_SHELL_LABELS.brand, locale)}>
           <span className="customerShellLogoMark" aria-hidden="true" />
           <span>{localizedText(OPERATOR_SHELL_LABELS.brand, locale)}</span>
         </div>
 
         <nav className="customerShellNav" aria-label={localizedText(OPERATOR_SHELL_LABELS.navigationAria, locale)}>
-          {OPERATOR_NAV_ITEMS.map((item) => renderNavItem(item, location.pathname, locale))}
+          {operatorNavigation(location.pathname, locale)}
         </nav>
 
         <div className="customerShellMeta" aria-label={localizedText(OPERATOR_SHELL_LABELS.productBoundaryAria, locale)}>
@@ -140,6 +151,18 @@ export default function OperatorLayout({ children, title, lead }: OperatorLayout
             <div className="customerShellContext">{resolvedLead}</div>
           </div>
           <div className="customerShellTopActions">
+            <ProductMobileNavigation
+              pathname={location.pathname}
+              surface="operator"
+              navigationLabel={localizedText(OPERATOR_SHELL_LABELS.navigationAria, locale)}
+              openLabel={mobileNavigationCopy.open}
+              closeLabel={mobileNavigationCopy.close}
+              panelLabel={mobileNavigationCopy.panel}
+            >
+              <nav className="customerShellNav productMobileNavigation__links" aria-label={mobileNavigationCopy.panel}>
+                {operatorNavigation(location.pathname, locale)}
+              </nav>
+            </ProductMobileNavigation>
             <div className="operatorShellLocaleToggle shellLocaleToggle">
               <LocaleToggle />
             </div>
