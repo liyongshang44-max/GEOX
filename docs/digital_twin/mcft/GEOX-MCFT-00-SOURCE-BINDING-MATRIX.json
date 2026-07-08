@@ -1,0 +1,630 @@
+{
+  "schema_version": "geox_mcft00_source_binding_matrix_v1",
+  "phase": "MCFT-00",
+  "status": "FROZEN_PENDING_ACCEPTANCE",
+  "artifact_class": "GOVERNANCE_INPUT",
+  "semantic_domain_count": 6,
+  "binding_count": 7,
+  "required_semantic_domains": [
+    "SOIL_MOISTURE",
+    "RAINFALL",
+    "FUTURE_WEATHER",
+    "ET0",
+    "APPROVED_IRRIGATION_PLAN",
+    "IRRIGATION_EXECUTION"
+  ],
+  "common_contract": {
+    "required_fields": [
+      "binding_id",
+      "binding_type",
+      "semantic_domain",
+      "source_role",
+      "origin_source_kind",
+      "origin_source_id",
+      "ingress_adapter_kind",
+      "ingress_adapter_id",
+      "epistemic_class",
+      "quantity_kind",
+      "source_unit",
+      "canonical_unit",
+      "conversion_rule",
+      "spatial_support",
+      "vertical_support",
+      "time_semantics",
+      "quality_semantics",
+      "availability_semantics",
+      "eligible_downstream_uses",
+      "forbidden_downstream_uses",
+      "limitations",
+      "source_version",
+      "binding_version",
+      "determinism_hash"
+    ],
+    "origin_adapter_separation": true,
+    "forbidden_origin_source_kinds": [
+      "DEVICE_OR_REPLAY_ADAPTER",
+      "DEVICE_OR_AUTHENTICATED_MANUAL_ADAPTER",
+      "HUMAN_OR_EXTERNAL_PLAN"
+    ],
+    "ingress_adapter_kind": "REPLAY_ADAPTER"
+  },
+  "source_definitions": [
+    {
+      "source_id": "dev_soil_c8_001",
+      "source_kind": "DEVICE",
+      "evidence_level": "FIXTURE_ONLY",
+      "definition_version": 1,
+      "definition_provenance": [
+        "scripts/demo_seed/datasets/C8_FORMAL_IRRIGATION_FULL_CHAIN_V1.cjs",
+        "scripts/demo_seed/SEED_C8_SENSING_ONLY_V1.cjs"
+      ],
+      "successor_owner": "MCFT-01",
+      "limitations": [
+        "device identity exists in controlled fixture only",
+        "not online",
+        "not field-calibrated",
+        "not production-connected"
+      ],
+      "dataset_status": "NOT_CREATED_BY_MCFT_00"
+    },
+    {
+      "source_id": "dev_weather_station_c8_001",
+      "source_kind": "DEVICE",
+      "evidence_level": "FIXTURE_ONLY",
+      "definition_version": 1,
+      "definition_provenance": [
+        "scripts/demo_seed/datasets/C8_FORMAL_IRRIGATION_FULL_CHAIN_V1.cjs",
+        "scripts/demo_seed/SEED_C8_SENSING_ONLY_V1.cjs"
+      ],
+      "successor_owner": "MCFT-01",
+      "limitations": [
+        "device identity exists in controlled fixture only",
+        "existing fixture expresses forecast-like values and is not an observed-rainfall dataset",
+        "not online",
+        "not production-connected"
+      ],
+      "dataset_status": "NOT_CREATED_BY_MCFT_00"
+    },
+    {
+      "source_id": "dev_valve_pump_c8_001",
+      "source_kind": "DEVICE",
+      "evidence_level": "FIXTURE_ONLY",
+      "definition_version": 1,
+      "definition_provenance": [
+        "scripts/demo_seed/datasets/C8_FORMAL_IRRIGATION_FULL_CHAIN_V1.cjs"
+      ],
+      "successor_owner": "MCFT-01/MCFT-15",
+      "limitations": [
+        "device identity exists in controlled fixture only",
+        "not online",
+        "does not prove execution or receipt",
+        "not production-connected"
+      ],
+      "dataset_status": "NOT_CREATED_BY_MCFT_00"
+    },
+    {
+      "source_id": "mcft_weather_replay_provider_c8_v1",
+      "source_kind": "VERSIONED_PROVIDER_SNAPSHOT",
+      "evidence_level": "PROVEN",
+      "definition_version": 1,
+      "definition_provenance": [
+        "docs/digital_twin/mcft/GEOX-MCFT-00-SOURCE-BINDING-MATRIX.json"
+      ],
+      "definition_contract": {
+        "required_metadata": [
+          "issued_at",
+          "valid_from",
+          "valid_to",
+          "provider_run_id",
+          "provider_version",
+          "retrieved_at",
+          "snapshot_hash"
+        ],
+        "truth_class": "CONTROLLED_GOVERNED_REPLAY_PROVIDER_IDENTITY"
+      },
+      "successor_owner": "MCFT-01",
+      "limitations": [
+        "governance identity only",
+        "no provider snapshot dataset is created in MCFT-00",
+        "not a live weather API"
+      ],
+      "dataset_status": "NOT_CREATED_BY_MCFT_00"
+    },
+    {
+      "source_id": "mcft_et0_replay_source_v1",
+      "source_kind": "DERIVED_WEATHER_INPUT",
+      "evidence_level": "PROVEN",
+      "definition_version": 1,
+      "definition_provenance": [
+        "docs/digital_twin/mcft/GEOX-MCFT-00-SOURCE-BINDING-MATRIX.json"
+      ],
+      "definition_contract": {
+        "required_metadata": [
+          "input_weather_refs",
+          "calculation_method",
+          "method_version",
+          "interval_start",
+          "interval_end",
+          "quality",
+          "limitations"
+        ],
+        "method_status": "TO_BE_SELECTED_AND_VALIDATED_BY_MCFT_01"
+      },
+      "successor_owner": "MCFT-01",
+      "limitations": [
+        "source identity and required provenance only",
+        "no ET0 values or formula are frozen in MCFT-00"
+      ],
+      "dataset_status": "NOT_CREATED_BY_MCFT_00"
+    },
+    {
+      "source_id": "mcft_et0_forecast_source_v1",
+      "source_kind": "DERIVED_FORECAST_INPUT",
+      "evidence_level": "PROVEN",
+      "definition_version": 1,
+      "definition_provenance": [
+        "docs/digital_twin/mcft/GEOX-MCFT-00-SOURCE-BINDING-MATRIX.json"
+      ],
+      "definition_contract": {
+        "required_metadata": [
+          "forecast_weather_refs",
+          "calculation_method",
+          "method_version",
+          "issued_at",
+          "valid_from",
+          "valid_to",
+          "quality",
+          "limitations"
+        ],
+        "method_status": "TO_BE_SELECTED_AND_VALIDATED_BY_MCFT_01"
+      },
+      "successor_owner": "MCFT-01",
+      "limitations": [
+        "source identity and required provenance only",
+        "no ET0 assumptions or formula are frozen in MCFT-00"
+      ],
+      "dataset_status": "NOT_CREATED_BY_MCFT_00"
+    },
+    {
+      "source_id": "c8_irrigation_plan_snapshot_source_v1",
+      "source_kind": "VERSIONED_PLAN_SNAPSHOT",
+      "evidence_level": "PROVEN",
+      "definition_version": 1,
+      "definition_provenance": [
+        "docs/digital_twin/mcft/GEOX-MCFT-00-SOURCE-BINDING-MATRIX.json"
+      ],
+      "definition_contract": {
+        "required_metadata": [
+          "plan_id",
+          "plan_version",
+          "approved_at",
+          "approved_by",
+          "scope",
+          "planned_amount",
+          "unit",
+          "snapshot_hash"
+        ],
+        "authority_class": "AUTHENTICATED_VERSIONED_REPLAY_PLAN_SNAPSHOT"
+      },
+      "successor_owner": "MCFT-01/MCFT-14",
+      "limitations": [
+        "governance source identity only",
+        "does not imply dispatch or execution",
+        "no plan dataset is created in MCFT-00"
+      ],
+      "dataset_status": "NOT_CREATED_BY_MCFT_00"
+    }
+  ],
+  "bindings": [
+    {
+      "binding_id": "soil_obs_c8_20cm_v1",
+      "binding_type": "EVIDENCE_SOURCE_BINDING",
+      "semantic_domain": "SOIL_MOISTURE",
+      "source_role": "SOIL_MOISTURE_OBSERVATION",
+      "origin_source_kind": "DEVICE",
+      "origin_source_id": "dev_soil_c8_001",
+      "origin_evidence_level": "FIXTURE_ONLY",
+      "ingress_adapter_kind": "REPLAY_ADAPTER",
+      "ingress_adapter_id": "mcft_soil_replay_adapter_c8_v1",
+      "epistemic_class": "OBSERVED",
+      "metric": "soil_moisture_percent",
+      "quantity_kind": "VOLUMETRIC_WATER_CONTENT",
+      "source_unit": "percent_vwc",
+      "canonical_unit": "fraction",
+      "conversion_rule": "canonical_value = source_value / 100",
+      "nominal_depth_mm": 200,
+      "spatial_support": "POINT",
+      "vertical_support": "LOCAL_AROUND_200MM",
+      "state_role": "OBSERVATION_ONLY",
+      "root_zone_representativeness": "PARTIAL",
+      "direct_state_equivalence": false,
+      "time_semantics": {
+        "required_fields": [
+          "observed_at",
+          "ingested_at",
+          "available_to_runtime_at"
+        ],
+        "interval_role": "INSTANTANEOUS_SAMPLE"
+      },
+      "quality_semantics": {
+        "required_fields": [
+          "quality_status",
+          "quality_flags",
+          "calibration_status"
+        ],
+        "calibration_status_default": "NOT_FIELD_VERIFIED"
+      },
+      "availability_semantics": {
+        "release_policy_id": "mcft_replay_release_policy_v1",
+        "rule": "MAX(ingested_at, observed_at)"
+      },
+      "eligible_downstream_uses": [
+        "MCFT_01_REPLAY_EVIDENCE",
+        "MCFT_07_OBSERVATION_OPERATOR_INPUT"
+      ],
+      "forbidden_downstream_uses": [
+        "DIRECT_ROOT_ZONE_STATE",
+        "ZONE_AVERAGE_CLAIM",
+        "FIELD_CALIBRATION_CLAIM"
+      ],
+      "limitations": [
+        "sensor calibration not field-verified",
+        "point observation has limited zone representativeness",
+        "must not overwrite root-zone State"
+      ],
+      "source_version": "C8_FIXTURE_IDENTITY_V1",
+      "binding_version": 1,
+      "determinism_hash": "sha256:b43e21a8af153e783dc2ac5fc78f3e11b004782fa30a877d3552786d9f67a71f"
+    },
+    {
+      "binding_id": "rainfall_obs_c8_v1",
+      "binding_type": "EVIDENCE_SOURCE_BINDING",
+      "semantic_domain": "RAINFALL",
+      "source_role": "RAINFALL_OBSERVATION",
+      "origin_source_kind": "DEVICE",
+      "origin_source_id": "dev_weather_station_c8_001",
+      "origin_evidence_level": "FIXTURE_ONLY",
+      "ingress_adapter_kind": "REPLAY_ADAPTER",
+      "ingress_adapter_id": "mcft_rainfall_replay_adapter_c8_v1",
+      "epistemic_class": "OBSERVED",
+      "metric": "rainfall",
+      "quantity_kind": "PRECIPITATION_DEPTH",
+      "source_unit": "mm",
+      "canonical_unit": "mm",
+      "conversion_rule": "identity",
+      "spatial_support": "POINT_STATION",
+      "vertical_support": "ATMOSPHERIC_SURFACE_INPUT",
+      "time_semantics": {
+        "required_fields": [
+          "interval_start",
+          "interval_end",
+          "observed_at",
+          "ingested_at",
+          "available_to_runtime_at"
+        ],
+        "interval_role": "OBSERVED_PAST_INTERVAL_ONLY"
+      },
+      "quality_semantics": {
+        "required_fields": [
+          "quality_status",
+          "quality_flags",
+          "gauge_status"
+        ],
+        "gauge_status_default": "NOT_FIELD_VERIFIED"
+      },
+      "availability_semantics": {
+        "release_policy_id": "mcft_replay_release_policy_v1",
+        "rule": "MAX(ingested_at, interval_end)"
+      },
+      "eligible_downstream_uses": [
+        "MCFT_01_REPLAY_EVIDENCE",
+        "MCFT_06_PROPAGATION_INPUT"
+      ],
+      "forbidden_downstream_uses": [
+        "FUTURE_PRECIPITATION_ASSUMPTION",
+        "LIVE_STATION_CLAIM"
+      ],
+      "limitations": [
+        "device identity is fixture-only",
+        "point station support does not prove zone-uniform rainfall"
+      ],
+      "source_version": "C8_FIXTURE_IDENTITY_V1",
+      "binding_version": 1,
+      "determinism_hash": "sha256:972875b6e080c2a04e2d41b83ccb6d2c1686867164511114023b4d9e0f48d13a"
+    },
+    {
+      "binding_id": "weather_assumption_c8_replay_v1",
+      "binding_type": "EVIDENCE_SOURCE_BINDING",
+      "semantic_domain": "FUTURE_WEATHER",
+      "source_role": "FUTURE_WEATHER_ASSUMPTION",
+      "origin_source_kind": "VERSIONED_PROVIDER_SNAPSHOT",
+      "origin_source_id": "mcft_weather_replay_provider_c8_v1",
+      "origin_evidence_level": "PROVEN",
+      "ingress_adapter_kind": "REPLAY_ADAPTER",
+      "ingress_adapter_id": "mcft_weather_assumption_replay_adapter_c8_v1",
+      "epistemic_class": "ASSUMED",
+      "metric": "future_weather",
+      "quantity_kind": "WEATHER_ASSUMPTION_BUNDLE",
+      "source_unit": "typed_bundle",
+      "canonical_unit": "typed_bundle",
+      "conversion_rule": "schema_validated_identity",
+      "spatial_support": "ZONE_PROXY",
+      "vertical_support": "ATMOSPHERIC_ASSUMPTION",
+      "time_semantics": {
+        "required_fields": [
+          "issued_at",
+          "valid_from",
+          "valid_to",
+          "retrieved_at",
+          "available_to_runtime_at"
+        ],
+        "interval_role": "FUTURE_VALIDITY_WINDOW"
+      },
+      "quality_semantics": {
+        "required_fields": [
+          "provider_run_id",
+          "provider_version",
+          "snapshot_hash",
+          "quality_status",
+          "limitations"
+        ]
+      },
+      "availability_semantics": {
+        "release_policy_id": "mcft_replay_release_policy_v1",
+        "rule": "MAX(retrieved_at, issued_at)"
+      },
+      "eligible_downstream_uses": [
+        "MCFT_01_REPLAY_ASSUMPTION",
+        "MCFT_09_FORECAST_INPUT"
+      ],
+      "forbidden_downstream_uses": [
+        "OBSERVED_WEATHER",
+        "PAST_RAINFALL_OBSERVATION",
+        "LIVE_PROVIDER_CLAIM"
+      ],
+      "limitations": [
+        "assumption only",
+        "governed Replay provider identity has no dataset until MCFT-01"
+      ],
+      "source_version": "1",
+      "binding_version": 1,
+      "determinism_hash": "sha256:24c88dfd9350e99b636288b812bbde93499785818369f8e12a9f376fb485ee7e"
+    },
+    {
+      "binding_id": "et0_historical_estimate_c8_v1",
+      "binding_type": "EVIDENCE_SOURCE_BINDING",
+      "semantic_domain": "ET0",
+      "source_role": "HISTORICAL_ET0_INPUT",
+      "origin_source_kind": "DERIVED_WEATHER_INPUT",
+      "origin_source_id": "mcft_et0_replay_source_v1",
+      "origin_evidence_level": "PROVEN",
+      "ingress_adapter_kind": "REPLAY_ADAPTER",
+      "ingress_adapter_id": "mcft_et0_historical_replay_adapter_v1",
+      "epistemic_class": "ESTIMATED",
+      "metric": "et0_historical",
+      "quantity_kind": "REFERENCE_EVAPOTRANSPIRATION",
+      "source_unit": "mm_per_hour",
+      "canonical_unit": "mm_per_hour",
+      "conversion_rule": "identity",
+      "spatial_support": "ZONE_PROXY",
+      "vertical_support": "ATMOSPHERIC_SURFACE_INPUT",
+      "time_semantics": {
+        "required_fields": [
+          "interval_start",
+          "interval_end",
+          "observed_at",
+          "ingested_at",
+          "available_to_runtime_at"
+        ],
+        "interval_role": "HISTORICAL_DERIVED_INTERVAL"
+      },
+      "quality_semantics": {
+        "required_fields": [
+          "input_weather_refs",
+          "calculation_method",
+          "method_version",
+          "quality",
+          "limitations"
+        ]
+      },
+      "availability_semantics": {
+        "release_policy_id": "mcft_replay_release_policy_v1",
+        "rule": "MAX(ingested_at, interval_end)"
+      },
+      "eligible_downstream_uses": [
+        "MCFT_01_REPLAY_EVIDENCE",
+        "MCFT_06_PROPAGATION_INPUT"
+      ],
+      "forbidden_downstream_uses": [
+        "FUTURE_ET0_ASSUMPTION",
+        "OBSERVED_SENSOR_CLAIM"
+      ],
+      "limitations": [
+        "derived estimate",
+        "method and values must be supplied by MCFT-01"
+      ],
+      "source_version": "1",
+      "binding_version": 1,
+      "determinism_hash": "sha256:7d5588af4961745145aef8a5b740e99a9e9d0d7b9a6cf22b0c09bd6eddbcd244"
+    },
+    {
+      "binding_id": "et0_future_assumption_c8_v1",
+      "binding_type": "EVIDENCE_SOURCE_BINDING",
+      "semantic_domain": "ET0",
+      "source_role": "FUTURE_ET0_ASSUMPTION",
+      "origin_source_kind": "DERIVED_FORECAST_INPUT",
+      "origin_source_id": "mcft_et0_forecast_source_v1",
+      "origin_evidence_level": "PROVEN",
+      "ingress_adapter_kind": "REPLAY_ADAPTER",
+      "ingress_adapter_id": "mcft_et0_future_replay_adapter_v1",
+      "epistemic_class": "ASSUMED",
+      "metric": "et0_future",
+      "quantity_kind": "REFERENCE_EVAPOTRANSPIRATION",
+      "source_unit": "mm_per_hour",
+      "canonical_unit": "mm_per_hour",
+      "conversion_rule": "identity",
+      "spatial_support": "ZONE_PROXY",
+      "vertical_support": "ATMOSPHERIC_ASSUMPTION",
+      "time_semantics": {
+        "required_fields": [
+          "issued_at",
+          "valid_from",
+          "valid_to",
+          "retrieved_at",
+          "available_to_runtime_at"
+        ],
+        "interval_role": "FUTURE_DERIVED_VALIDITY_WINDOW"
+      },
+      "quality_semantics": {
+        "required_fields": [
+          "forecast_weather_refs",
+          "calculation_method",
+          "method_version",
+          "quality",
+          "limitations"
+        ]
+      },
+      "availability_semantics": {
+        "release_policy_id": "mcft_replay_release_policy_v1",
+        "rule": "MAX(retrieved_at, issued_at)"
+      },
+      "eligible_downstream_uses": [
+        "MCFT_01_REPLAY_ASSUMPTION",
+        "MCFT_09_FORECAST_INPUT"
+      ],
+      "forbidden_downstream_uses": [
+        "HISTORICAL_ET0_ESTIMATE",
+        "OBSERVED_SENSOR_CLAIM"
+      ],
+      "limitations": [
+        "future assumption",
+        "method and values must be supplied by MCFT-01"
+      ],
+      "source_version": "1",
+      "binding_version": 1,
+      "determinism_hash": "sha256:dce34a52df68e2224b58893c5e27ab1210995615e3c137c3922339869ba62801"
+    },
+    {
+      "binding_id": "irrigation_plan_c8_v1",
+      "binding_type": "EVIDENCE_SOURCE_BINDING",
+      "semantic_domain": "APPROVED_IRRIGATION_PLAN",
+      "source_role": "APPROVED_IRRIGATION_PLAN",
+      "origin_source_kind": "VERSIONED_PLAN_SNAPSHOT",
+      "origin_source_id": "c8_irrigation_plan_snapshot_source_v1",
+      "origin_evidence_level": "PROVEN",
+      "ingress_adapter_kind": "REPLAY_ADAPTER",
+      "ingress_adapter_id": "mcft_irrigation_plan_replay_adapter_v1",
+      "epistemic_class": "ASSERTED",
+      "action_lifecycle_class": "APPROVED_PLAN",
+      "metric": "planned_irrigation_depth",
+      "quantity_kind": "IRRIGATION_DEPTH",
+      "source_unit": "mm",
+      "canonical_unit": "mm",
+      "conversion_rule": "identity",
+      "spatial_support": "PLAN_SCOPE",
+      "vertical_support": "NOT_APPLICABLE",
+      "time_semantics": {
+        "required_fields": [
+          "planned_start",
+          "planned_end",
+          "approved_at",
+          "available_to_runtime_at"
+        ],
+        "interval_role": "PLANNED_INTERVAL"
+      },
+      "quality_semantics": {
+        "required_fields": [
+          "plan_id",
+          "plan_version",
+          "approved_by",
+          "snapshot_hash",
+          "limitations"
+        ]
+      },
+      "availability_semantics": {
+        "release_policy_id": "mcft_replay_release_policy_v1",
+        "rule": "MAX(available_to_runtime_at, approved_at)"
+      },
+      "state_input_policy": "NEVER",
+      "eligible_downstream_uses": [
+        "DECISION_TRACE",
+        "ACTION_LIFECYCLE_TRACE"
+      ],
+      "forbidden_downstream_uses": [
+        "WATER_BALANCE_INPUT",
+        "EXECUTION_EVIDENCE",
+        "STATE_INPUT_ELIGIBLE_TRUE"
+      ],
+      "limitations": [
+        "approved plan is not dispatched or executed",
+        "no plan dataset is created by MCFT-00"
+      ],
+      "source_version": "1",
+      "binding_version": 1,
+      "determinism_hash": "sha256:de54b5f17d481d4400918a34980fa2a1cf4d4f8d6024b39a84489a420ed198fa"
+    },
+    {
+      "binding_id": "irrigation_execution_c8_v1",
+      "binding_type": "EVIDENCE_SOURCE_BINDING",
+      "semantic_domain": "IRRIGATION_EXECUTION",
+      "source_role": "IRRIGATION_EXECUTION_EVIDENCE",
+      "origin_source_kind": "DEVICE",
+      "origin_source_id": "dev_valve_pump_c8_001",
+      "origin_evidence_level": "FIXTURE_ONLY",
+      "ingress_adapter_kind": "REPLAY_ADAPTER",
+      "ingress_adapter_id": "mcft_irrigation_execution_replay_adapter_v1",
+      "epistemic_class": "OBSERVED",
+      "action_lifecycle_class": "EXECUTION_EVIDENCE",
+      "metric": "executed_irrigation_depth",
+      "quantity_kind": "IRRIGATION_DEPTH",
+      "source_unit": "mm",
+      "canonical_unit": "mm",
+      "conversion_rule": "identity",
+      "spatial_support": "ZONE_COVERAGE_REQUIRED_PER_RECORD",
+      "vertical_support": "SURFACE_APPLICATION",
+      "time_semantics": {
+        "required_fields": [
+          "executed_at",
+          "ingested_at",
+          "available_to_runtime_at"
+        ],
+        "interval_role": "EXECUTED_EVENT_OR_INTERVAL"
+      },
+      "quality_semantics": {
+        "required_fields": [
+          "actual_amount",
+          "unit",
+          "spatial_coverage",
+          "source_identity",
+          "source_quality",
+          "limitations",
+          "receipt_ref_or_as_executed_ref"
+        ]
+      },
+      "availability_semantics": {
+        "release_policy_id": "mcft_replay_release_policy_v1",
+        "rule": "MAX(ingested_at, executed_at)"
+      },
+      "state_input_policy": "CONDITIONAL",
+      "binding_may_set_eligible_for_state_input_true": false,
+      "eligible_downstream_uses": [
+        "MCFT_15_ACTION_FEEDBACK_CANDIDATE",
+        "MCFT_01_REPLAY_EXECUTION_EVIDENCE"
+      ],
+      "forbidden_downstream_uses": [
+        "AUTOMATIC_STATE_INPUT",
+        "PRODUCTION_EXECUTION_CLAIM",
+        "VALIDATED_EFFECT_CLAIM"
+      ],
+      "limitations": [
+        "device identity is fixture-only",
+        "each execution record must independently prove eligibility",
+        "formal Acceptance is optional but validation remains separate"
+      ],
+      "source_version": "C8_FIXTURE_IDENTITY_V1",
+      "binding_version": 1,
+      "determinism_hash": "sha256:9d82c75d1f42ea4417c1e09fa89b746508b228ccce2f5ce5ce87670a3fa70206"
+    }
+  ],
+  "determinism_hash": "sha256:0ab8fe4e4be23a88b3e1b1d3f0ccfb30fe73316b02365a7eede48a57f77b066d"
+}
