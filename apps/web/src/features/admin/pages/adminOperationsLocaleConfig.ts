@@ -17,7 +17,7 @@ export const ADMIN_OPERATIONS_LOCALE_CONFIG: AdminGovernanceLocaleConfig = {
   mode: c("作业治理回查", "Operation Governance Readback"),
   metrics: [
     { label: c("治理字段", "Governance Fields"), value: 6, description: c("允许的作业治理状态字段。", "Allowed operation-governance state fields."), source: c("作业治理目录", "Operation governance catalog"), status: "readOnly" },
-    { label: c("阻断状态", "Blocked State"), value: "Readback", description: c("阻断或降级仅作为回查状态。", "Blocked or degraded state is readback only."), source: c("作业治理目录", "Operation governance catalog"), status: "degraded" },
+    { label: c("阻断状态", "Blocked State"), value: c("回查", "Readback"), description: c("阻断或降级仅作为回查状态。", "Blocked or degraded state is readback only."), source: c("作业治理目录", "Operation governance catalog"), status: "degraded" },
   ],
   sections: [{
     title: c("作业治理字段", "Operation Governance Fields"),
