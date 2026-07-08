@@ -1,5 +1,6 @@
 // apps/web/src/features/operator/fieldRuntime/FieldRuntimeHealthSourcePanel.tsx
 import React from "react";
+import { ProductHorizontalScrollRegion } from "../../../design-system/product";
 import { useLocale, type LocaleCode } from "../../../lib/locale";
 import { fieldRuntimeText, type FieldRuntimeCopyKey } from "./fieldRuntimeLocaleCopy";
 import { type FieldRuntimeHealthViewModel } from "./fieldRuntimeHealthAdapter";
@@ -30,14 +31,17 @@ export default function FieldRuntimeHealthSourcePanel({ health }: { health: Fiel
   const { locale } = useLocale();
   const t = (key: FieldRuntimeCopyKey) => fieldRuntimeText(locale, key);
   const text = (en: string, zh: string) => locale === "en-US" ? en : zh;
+  const regionLabel = text("Source Freshness Matrix", "来源新鲜度矩阵");
   return (
     <article className="operatorFieldRuntime__panel operatorFieldRuntime__healthSource" data-h62-panel="source-freshness">
       <div className="operatorFieldRuntime__panelHeader"><div><p className="operatorFieldRuntime__eyebrow">{t("healthSource")}</p><h2 className="operatorFieldRuntime__panelTitle">{text("Source Freshness", "来源新鲜度")}</h2></div><span className="operatorFieldRuntime__panelMeta">{text("Metadata Only", "仅元数据")}</span></div>
       <p className="operatorFieldRuntime__stubLead">{text("Source freshness is review metadata.", "来源新鲜度是审查元数据。")}</p>
-      <div className="operatorFieldRuntime__healthTable" role="table" aria-label={text("Source Freshness Matrix", "来源新鲜度矩阵")}>
-        <div className="operatorFieldRuntime__healthTableHeader" role="row"><span>{t("source")}</span><span>{text("Availability", "可用性")}</span><span>{text("Meaning", "含义")}</span><span>{text("Boundary", "边界")}</span></div>
-        {health.sourceFreshness.map((row) => <div className="operatorFieldRuntime__healthTableRow" role="row" key={row.source}><span>{localizeValue(row.source, locale)}</span><span>{localizeValue(row.availability, locale)}</span><span>{localizeValue(row.freshnessMeaning, locale)}</span><span>{localizeValue(row.doesNotMean, locale)}</span></div>)}
-      </div>
+      <ProductHorizontalScrollRegion ariaLabel={regionLabel} overflowOwner="operator-health-source">
+        <div className="operatorFieldRuntime__healthTable" role="table" aria-label={regionLabel}>
+          <div className="operatorFieldRuntime__healthTableHeader" role="row"><span>{t("source")}</span><span>{text("Availability", "可用性")}</span><span>{text("Meaning", "含义")}</span><span>{text("Boundary", "边界")}</span></div>
+          {health.sourceFreshness.map((row) => <div className="operatorFieldRuntime__healthTableRow" role="row" key={row.source}><span>{localizeValue(row.source, locale)}</span><span>{localizeValue(row.availability, locale)}</span><span>{localizeValue(row.freshnessMeaning, locale)}</span><span>{localizeValue(row.doesNotMean, locale)}</span></div>)}
+        </div>
+      </ProductHorizontalScrollRegion>
     </article>
   );
 }
