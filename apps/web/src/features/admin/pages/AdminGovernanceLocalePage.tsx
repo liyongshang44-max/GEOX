@@ -10,7 +10,8 @@ import { localizedText, useLocale, type LocalizedCopy } from "../../../lib/local
 type AdminCell = { text?: LocalizedCopy; neutral?: string; href?: string };
 type AdminRow = { key: string; cells: AdminCell[] };
 type AdminSection = { title: LocalizedCopy; subtitle: LocalizedCopy; caption: LocalizedCopy; headers: LocalizedCopy[]; rows: AdminRow[]; emptyTitle: LocalizedCopy; emptyDescription: LocalizedCopy };
-type AdminMetric = { label: LocalizedCopy; value: React.ReactNode; description: LocalizedCopy; source: LocalizedCopy; status?: ProductStatus };
+type AdminMetricValue = React.ReactNode | LocalizedCopy;
+type AdminMetric = { label: LocalizedCopy; value: AdminMetricValue; description: LocalizedCopy; source: LocalizedCopy; status?: ProductStatus };
 type AdminFinalState = { kind: ProductStateKind; title: LocalizedCopy; description: LocalizedCopy };
 
 export type AdminGovernanceLocaleConfig = {
@@ -42,6 +43,14 @@ function cellContent(cell: AdminCell, locale: "zh-CN" | "en-US"): React.ReactNod
   return cell.href ? <Link to={cell.href}>{value}</Link> : value;
 }
 
+function isLocalizedCopy(value: AdminMetricValue): value is LocalizedCopy {
+  return Boolean(value && typeof value === "object" && !React.isValidElement(value) && "zh" in value && "en" in value);
+}
+
+function metricValue(value: AdminMetricValue, locale: "zh-CN" | "en-US"): React.ReactNode {
+  return isLocalizedCopy(value) ? localizedText(value, locale) : value;
+}
+
 export default function AdminGovernanceLocalePage({ config }: { config: AdminGovernanceLocaleConfig }): React.ReactElement {
   const { locale } = useLocale();
   const t = (copy: LocalizedCopy) => localizedText(copy, locale);
@@ -50,7 +59,7 @@ export default function AdminGovernanceLocalePage({ config }: { config: AdminGov
     <ProductPageShell surface="admin" width="wide" ariaLabel={t(config.title)} className="adminProductSurface" top={<ProductPageHeader eyebrow={t(config.eyebrow)} title={t(config.title)} lead={t(config.lead)} metadata={t(config.metadata)} nonclaim={t(config.nonclaim)} />}>
       <ProductBoundaryBanner tone="readOnly" title={t(config.boundaryTitle)} description={t(config.boundaryDescription)} items={config.boundaryItems.map(t)} />
       <ProductScopeBar surface="admin" items={[{ label: t(COMMON.route), value: config.route }, { label: t(COMMON.mode), value: t(config.mode) }, { label: t(COMMON.readOnly), value: t(COMMON.trueValue) }]} />
-      <div className="adminProductMetricGrid">{config.metrics.map((metric) => <ProductMetricTile key={t(metric.label)} label={t(metric.label)} value={metric.value} description={t(metric.description)} source={t(metric.source)} status={metric.status ? <ProductStatusBadge status={metric.status} /> : undefined} />)}</div>
+      <div className="adminProductMetricGrid">{config.metrics.map((metric) => <ProductMetricTile key={t(metric.label)} label={t(metric.label)} value={metricValue(metric.value, locale)} description={t(metric.description)} source={t(metric.source)} status={metric.status ? <ProductStatusBadge status={metric.status} /> : undefined} />)}</div>
       {config.sections.map((section) => (
         <ProductSectionCard key={t(section.title)} title={t(section.title)} subtitle={t(section.subtitle)}>
           <ProductDataTable<AdminRow>
