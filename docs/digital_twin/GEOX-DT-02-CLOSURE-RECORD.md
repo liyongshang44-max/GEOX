@@ -8,10 +8,10 @@ phase: DT-02
 baseline: 9a31f046d717def94db30e156384b35267b503d4
 predecessor: DT-01 Existing Capability Reconciliation
 successor: MCFT-00 Reality Binding Contract
-status: PENDING_ACCEPTANCE
+status: COMPLETE
 ```
 
-This record becomes authoritative only after the DT-02 Acceptance Gate, DT-01 regression, DT-00 regression, changed-file boundary, and standard CI all pass on final branch bytes.
+DT-02 is closed as an architecture and contract freeze. It does not claim implementation of the frozen runtime.
 
 ## 1. Frozen decisions
 
@@ -56,7 +56,7 @@ Every JSON deliverable is directly reviewable UTF-8 plain JSON. No compressed or
 
 ## 4. Capability claim
 
-After acceptance, the allowed claim is:
+The allowed claim is:
 
 ```text
 RUNTIME_ARCHITECTURE_FROZEN_NO_RUNTIME_IMPLEMENTATION
@@ -101,18 +101,25 @@ Operator read APIs do not write generated objects.
 
 ## 6. Validation record
 
-The implementation PR must replace `PENDING_ACCEPTANCE` with `COMPLETE` only after recording:
+Validation input head:
 
 ```text
-DT-02 acceptance: PASS
-DT-01 audit: PASS
-DT-01 acceptance: PASS
-DT-00 semantic regression: PASS
-changed-file boundary: PASS
-standard CI: PASS
+46be4d025503e3d35c336dc6be18b27c8bcb4ba0
 ```
 
-Until then this file records the intended closure contract, not a completed claim.
+Recorded results:
+
+```text
+DT-02 acceptance: PASS — 51 PASS / 0 FAIL
+DT-01 audit: PASS — 55 capabilities / 69 components / 0 critical failures
+DT-01 acceptance: PASS — 40 PASS / 0 FAIL
+DT-00 semantic regression: PASS — 75 PASS / 1 expected scope-skip WARN / 0 FAIL
+changed-file boundary: PASS — 14 files
+working tree: CLEAN
+standard CI: PASS — workflow ci #4301
+```
+
+The final closure commit must be revalidated by the same DT-02 Gate before merge. That verification confirms that the closure-only byte changes did not alter architecture, predecessor semantics, or change scope.
 
 ## 7. Next task
 
