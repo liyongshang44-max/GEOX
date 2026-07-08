@@ -18,9 +18,9 @@ export default function FieldRuntimeForecastTimelinePanel({ forecast }: { foreca
     <div className="operatorFieldRuntime__panelHeader"><div><p className="operatorFieldRuntime__eyebrow">{t("forecastTimeline")}</p><h2 className="operatorFieldRuntime__panelTitle">{t("forecastTimeline")}</h2></div><span className="operatorFieldRuntime__panelMeta">{forecast.timelineItems.length} {c(COPY.items)}</span></div>
     <p className="operatorFieldRuntime__stubLead">{c(COPY.lead)}</p>
     <div className="operatorFieldRuntime__forecastTimelineList">{forecast.timelineItems.map((item) => <section className="operatorFieldRuntime__forecastTimelineItem" key={item.horizon}>
-      <div><p className="operatorFieldRuntime__panelMeta">{item.horizon}</p><strong>{item.forecastText}</strong></div>
-      <p className="operatorFieldRuntime__forecastReason">{c(COPY.confidence)}: {item.confidenceText}</p>
-      <details className="operatorFieldRuntime__forecastRefs"><summary>{item.evidenceRefs.length} {t("evidenceRefs")}</summary><ul>{item.evidenceRefs.map((ref) => <li key={ref}>{ref}</li>)}</ul></details>
+      <div data-locale-neutral="true"><p className="operatorFieldRuntime__panelMeta">{item.horizon}</p><strong>{item.forecastText}</strong></div>
+      <p className="operatorFieldRuntime__forecastReason">{c(COPY.confidence)}: <span data-locale-neutral="true">{item.confidenceText}</span></p>
+      <details className="operatorFieldRuntime__forecastRefs"><summary>{item.evidenceRefs.length} {t("evidenceRefs")}</summary><ul data-locale-neutral="true">{item.evidenceRefs.map((ref) => <li key={ref}>{ref}</li>)}</ul></details>
     </section>)}</div>
   </article>;
 }
