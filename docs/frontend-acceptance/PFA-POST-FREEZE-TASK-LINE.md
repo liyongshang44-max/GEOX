@@ -141,81 +141,29 @@ committed generated screenshot binaries
 
 A future MCFT task may repair a retained PFA issue only when the task explicitly binds the issue to a required MCFT route, object, acceptance, authorization, or safety boundary.
 
+## 6. Completed historical phases
+
+```text
+PFA-0 Evidence Reconciliation: COMPLETE
+PFA-1 Runtime API-Base and Capture Enablement: COMPLETE
+PFA-2 Locale Contract Completion: COMPLETE
+```
+
+PFA-0 and PFA-1 historical implementation details remain available in their phase documents and Git history. PFA-2 closure evidence remains in `PFA-2-RUNTIME-EVIDENCE.md`, `PFA-2-ISSUE-CLOSURE.md`, and `PFA-2-ROUTE-LOCALE-MATRIX.json`.
+
 ---
 
-# Historical phase definitions retained by DT-00
+# Historical baseline definitions — PFA-3 through PFA-7
 
-The definitions below preserve the PFA-0 through PFA-7 product-quality work. They are paused planning records, not the current implementation sequence.
+Everything from this heading through `Historical baseline end` is retained verbatim in substance from the pre-DT-00 roadmap for future product-quality resumption. Any statement in this historical section that globally blocks Twin Runtime, calls PFA-2 not started, or identifies PFA-3 as the next active phase is superseded by the DT-00 current ruling above and the authoritative closure below.
 
-## PFA-0 — Evidence Reconciliation
+# PFA-3 — Responsive Shell and Overflow Containment
 
-Goal:
+## 27. Goal
 
-```text
-Reconcile the frozen route inventory, review matrix, issue register,
-and complete 180-screenshot evidence without changing page runtime source.
-```
+Eliminate unintended document-level horizontal overflow, contain wide data inside semantic containers, and replace the desktop-first mobile shell with a usable compact navigation pattern.
 
-Historical required outcomes:
-
-```text
-30 actual routes
-zh-CN and en-US
-1440, 1366, and 390
-180 authenticated screenshot records
-runtime capture separated from page-quality result
-all findings assigned to a remediation phase
-no page runtime-source changes
-```
-
-Completion state: `COMPLETE`.
-
-## PFA-1 — Runtime API-Base and Capture Enablement
-
-Goal:
-
-```text
-Make the Vite-provided API base effective so browser authentication,
-auth/me, and full screenshot capture use the intended runtime origin.
-```
-
-Historical acceptance:
-
-```text
-web typecheck PASS
-web build PASS
-browser login PASS
-browser auth/me PASS
-30 routes x 2 locales x 3 viewports = 180
-180/180 capture PASS
-```
-
-Completion state: `COMPLETE`.
-
-## PFA-2 — Locale Contract Completion
-
-Owned historical findings:
-
-```text
-PFA0-I18N-001
-PFA0-CUS-001
-PFA0-ADM-002
-```
-
-Goal:
-
-```text
-Make zh-CN and en-US complete, intentional, role-safe,
-and mutually consistent product outputs.
-```
-
-Historical acceptance included route-level locale differentiation, no unintended major foreign-language residue, localized login/export/shared states, and preserved role/safety semantics.
-
-Completion state: `COMPLETE`; three findings are recorded as resolved by PFA-2.
-
-## PFA-3 — Responsive Shell and Overflow Containment
-
-Owned retained findings:
+## 28. Owned findings
 
 ```text
 PFA0-RWD-001
@@ -224,45 +172,145 @@ PFA0-OPR-002
 PFA0-OPR-005
 ```
 
-Goal:
+## 29. Priority routes
 
 ```text
-Eliminate unintended document-level horizontal overflow,
-contain wide data inside semantic containers,
-and provide a usable compact mobile navigation pattern.
+/operator/fields/:fieldId/health
+/operator/fields/:fieldId/evidence
+/operator/fields/:fieldId/residual
+/operator/fields/:fieldId/forecast
+/operator/twin/gateway-demo
+/operator/pilot
+/customer/dashboard
 ```
 
-Historical hard rule for non-export pages:
+All formal routes remain subject to regression checks even if they are not priority repair routes.
+
+## 30. Responsive rules
+
+```text
+The document viewport must not scroll horizontally on normal product pages.
+Wide semantic tables may scroll inside their own labelled table container.
+Long tokens must wrap, truncate, or use trace-link presentation intentionally.
+Primary content must use available desktop width without becoming unreadably wide.
+Mobile pages must not render the complete desktop navigation tree before page content.
+Focus order and keyboard access must remain valid after navigation changes.
+```
+
+## 31. Hard acceptance
+
+For non-export product surfaces:
 
 ```text
 document.documentElement.scrollWidth <= window.innerWidth + 1
 ```
 
-The original implementation PR #2298 was closed without merge under DT-00. Applicable work may return only through a new task with concrete MCFT-blocking evidence.
+Additional requirements:
 
-Current state: `PAUSED`.
+```text
+390px PASS
+1366px PASS
+1440px PASS
+wide-table overflow contained inside ProductDataTable or equivalent semantic wrapper
+mobile page context visible before secondary navigation
+no clipped headings, boundaries, or primary actions
+PFE-6 keyboard baseline remains green
+PFE-7 responsive baseline remains green
+```
 
-## PFA-4 — Export and Print Surface Strategy
+## 32. Non-goals
 
-Owned retained finding:
+```text
+no export/print strategy work owned by PFA-4
+no density redesign owned by PFA-5
+no demo-data relabelling owned by PFA-6
+```
+
+## 33. Exit meaning
+
+All normal product pages are viewport-contained, and mobile navigation is intentionally usable rather than a compressed desktop shell.
+
+---
+
+# PFA-4 — Export and Print Surface Strategy
+
+## 34. Goal
+
+Define and implement an explicit mobile, desktop, and print contract for Customer export surfaces.
+
+## 35. Owned finding
 
 ```text
 PFA0-EXP-001
 ```
 
-Goal:
+## 36. Required product decision
+
+PFA-4 must choose and document one of these strategies:
+
+### Strategy A — Responsive report
 
 ```text
-Define an explicit desktop, mobile, and print contract for Customer exports.
+Provide a genuinely readable mobile report layout.
+Reflow report sections rather than compressing desktop tables.
+Preserve print output separately.
 ```
 
-The historical phase required a governed choice between a genuinely responsive report and an explicitly desktop/print-oriented report with safe narrow-width behavior. Export content must remain traceable and must not invent operational semantics.
+### Strategy B — Desktop/print-only report with mobile handoff
 
-Current state: `PAUSED`.
+```text
+Explicitly classify the detailed export as desktop/print-only.
+On mobile, provide a readable summary and a usable handoff path.
+The handoff may include print guidance, download, share, or open-on-desktop instructions.
+Do not render an unreadable compressed desktop table.
+```
 
-## PFA-5 — Information Architecture, Density, and Admin Device Status Readback
+The choice must be recorded in a PFA-4 contract document before implementation is accepted.
 
-Owned retained findings:
+## 37. Acceptance
+
+```text
+No character-level heading fragmentation.
+No vertical one-character table cells.
+No unreadable compressed report tables.
+Mobile behavior is deliberate and documented.
+Desktop export remains readable.
+Print output remains stable.
+Export locale output passes PFA-2.
+Customer reporting-only boundary remains intact.
+```
+
+## 38. Blockers
+
+```text
+A mobile screenshot that is technically rendered but functionally unreadable
+A print regression
+A mobile path with no usable handoff
+An export surface that implies execution, approval, or control
+```
+
+## 39. Exit meaning
+
+Customer export behavior is a product decision rather than accidental responsive compression.
+
+---
+
+# PFA-5 — Information Architecture, Density, and Admin Device Status Readback
+
+## 40. Goal
+
+PFA-5 has two parallel work domains:
+
+```text
+A. Information architecture and density remediation
+B. Admin Device asset and status readback contract
+```
+
+Both domains contain P1 work. Neither may be deferred to PFA-6.
+
+## 41. Domain A — Information architecture and density
+
+### Owned findings
 
 ```text
 PFA0-CUS-003
@@ -270,37 +318,151 @@ PFA0-CUS-005
 PFA0-CUS-006
 PFA0-OPR-001
 PFA0-OPR-003
-PFA0-ADM-003
 PFA0-DEN-001
 ```
 
-Goal:
+### Scope
 
 ```text
-Improve hierarchy and density on core Customer and Operator pages,
-and establish a safe read-only Admin Device asset/status contract.
+Customer Dashboard duplicate report entries and column imbalance
+Customer Reports Center
+Operator Gateway Demo
+Operator Audit
+Operator Calibration
+Operator Pilot readiness
+source inventory readability
+long pages and excessive scroll depth
 ```
 
-Admin Device historical contract:
+### Required design outcomes
+
+```text
+Summary, navigation, and detail are separated.
+Duplicate primary content blocks are removed.
+Long pages use section navigation, tabs, accordion, progressive disclosure, or drill-down.
+Large lists use pagination, virtualization, bounded sections, or explicit detail routes where appropriate.
+Core demo paths are scannable without traversing 10–17 viewport heights.
+Tables are not used as the default container for every type of information.
+```
+
+### Acceptance
+
+```text
+No duplicate Customer Dashboard report-entry block.
+Customer Reports Center has a clear summary and bounded detail strategy.
+Operator Pilot readiness can be scanned without nested-table overload.
+Source inventory references remain traceable but readable.
+Gateway, Audit, and Calibration pages expose section-level navigation or progressive disclosure.
+No P1 density finding remains open.
+```
+
+## 42. Domain B — Admin Device asset and status readback
+
+### Owned finding
+
+```text
+PFA0-ADM-003
+severity: P1-contract
+owner: PFA-5
+PFA-6 does not own this issue
+```
+
+### Current gap
+
+`/admin/devices` is currently limited to inventory-field documentation. Product acceptance requires an Admin Device Governance Readback surface that combines device asset identity with evidence-backed status readback.
+
+### Required readback domains
 
 ```text
 device identity
-asset record
+device asset record
 field binding
 connectivity readback
 telemetry recency
-known / unknown / unavailable / stale / degraded
+health state
+degraded and unavailable state
 declared capability
 source evidence
+explicit source-missing state
 ```
 
-Safety rules remain: no fabricated connectivity, no live-monitoring claim, no control/restart/gateway actions, and no AO-ACT dispatch affordance.
+### Required status vocabulary
 
-Current state: `PAUSED`.
+```text
+known
+unknown
+unavailable
+stale
+degraded
+```
 
-## PFA-6 — Table, Label, and Demo-Data Polish
+These values are readback semantics. They must not be presented as live control or real-time operational guarantees.
 
-Owned retained findings:
+### Evidence rules
+
+```text
+Every known status must identify its source evidence or source timestamp.
+Unknown means the device is known but the requested status is not established.
+Unavailable means the source or required value cannot currently be read.
+Stale requires a documented freshness rule and the last available timestamp.
+Degraded requires explicit source evidence or a documented read-model rule.
+Source absence must render unavailable or source missing.
+Declared capability means metadata or readback only; it does not mean currently executable.
+```
+
+### Safety boundaries
+
+```text
+Do not fabricate live connectivity.
+Do not claim live monitoring.
+Do not expose device control.
+Do not expose restart actions.
+Do not expose production gateway actions.
+Do not expose AO-ACT dispatch.
+Do not infer device health without a documented source or rule.
+```
+
+### Backend dependency rule
+
+PFA-5 must first use existing readback sources. If required source data does not exist, the frontend must show `unavailable` or `source missing` and register a separate backend dependency. PFA-5 must not invent fixture-backed production status or silently broaden backend contracts.
+
+### Acceptance
+
+```text
+/admin/devices is no longer only a static inventory-field explanation.
+The page presents asset identity and status readback as separate but related concepts.
+known, unknown, unavailable, stale, and degraded are represented intentionally.
+Every state has evidence, a timestamp, a documented rule, or an explicit missing-source state.
+Declared capability is labelled as declaration/readback, not execution readiness.
+No control, restart, gateway action, or AO-ACT dispatch affordance exists.
+The page explicitly states not live monitoring.
+PFA0-ADM-003 is closed with route-level evidence.
+```
+
+## 43. PFA-5 non-goals
+
+```text
+no real-time telemetry system
+no production device control
+no gateway command surface
+no device restart implementation
+no autonomous health inference
+no field pilot enablement
+```
+
+## 44. Exit meaning
+
+Core Customer and Operator pages have deliberate information architecture, and Admin Devices has a safe, evidence-backed asset plus status readback contract.
+
+---
+
+# PFA-6 — Table, Label, and Demo-Data Polish
+
+## 45. Goal
+
+Close remaining P2 presentation defects after PFA-2 through PFA-5 have stabilized localization, responsive layout, export behavior, information architecture, and device status semantics.
+
+## 46. Owned findings
 
 ```text
 PFA0-CUS-002
@@ -309,60 +471,240 @@ PFA0-OPR-004
 PFA0-ADM-001
 ```
 
-Goal:
+PFA0-ADM-003 is not owned by PFA-6.
+
+## 47. Scope
 
 ```text
-Close remaining presentation defects after localization,
-responsive containment, export behavior, information architecture,
-and device-status semantics are stable.
+unnamed field and operation labels
+long ID presentation
+badge wrapping
+Admin table header and value wrapping
+Operator unused-width balance
+compact trace and evidence references
 ```
 
-Historical scope included meaningful labels, long-ID presentation, badge wrapping, table header/value wrapping, Operator width use, and trace/evidence reference presentation. Missing data may not be hidden behind invented labels.
-
-Current state: `PAUSED`.
-
-## PFA-7 — Full Recapture and Closure Gate
-
-Goal:
+## 48. Implementation policy
 
 ```text
-Repeat the complete route review after remediation and decide whether
-Formal Product Frontend v1 can exit PFA remediation.
+Prefer meaningful source names over cosmetic fallback names.
+Use display labels while preserving full IDs for traceability.
+Long IDs may be truncated visually only when full access remains available.
+Badges must not break into character-level or awkward multi-line fragments.
+Admin technical field names should use product-facing display labels.
+Do not hide missing data behind invented labels.
 ```
 
-Historical evidence model:
+Demo-only seed metadata may be improved only when the PR explicitly declares demo-seed scope and proves that production contracts and runtime behavior are unchanged.
+
+## 49. Acceptance
 
 ```text
-30 routes
+No dominant unnamed-field or unnamed-operation output on demo-critical routes.
+Long IDs no longer dominate primary table columns.
+Full IDs remain copyable or traceable.
+Badges remain readable at 390, 1366, and 1440.
+Admin table labels do not fragment at character level.
+Operator list layouts use available width intentionally.
+No P2 issue remains unowned.
+```
+
+## 50. Exit meaning
+
+The remaining product-polish defects are closed without changing the role or execution semantics established by earlier phases.
+
+---
+
+# PFA-7 — Full Recapture and Closure Gate
+
+## 51. Goal
+
+Repeat the complete route review after all remediation phases and determine whether Formal Product Frontend v1 can exit PFA remediation.
+
+## 52. Required runtime evidence
+
+```text
+30 actual routes
 2 locales
 3 viewports
 180 authenticated screenshots
-route health and role-boundary assertions
+browser login PASS
+browser auth/me PASS
+no placeholder-only captures
+no unexpected login redirects
+```
+
+## 53. Required quality assertions
+
+PFA-7 must execute route-level checks, not only screenshot generation.
+
+Required assertion classes:
+
+```text
+route health
+boundary safety
+role separation
 locale consistency
-overflow containment
-mobile navigation
+document overflow containment
+mobile navigation usability
+visual hierarchy
 table readability
-density handling
+dense-content handling
+demo-data quality
 export/print contract
 Admin Device status-readback contract
 demo readiness
 ```
 
-Current DT-00 ruling for a future PFA-7 FAIL is:
+Minimum hard checks:
 
 ```text
-PFA remediation remains open.
-DT / MCFT is blocked only for an individually promoted MCFT_BLOCKER
-that meets the DT-00 evidence and ownership criteria.
+No open P0.
+No open P1.
+No open P1-contract.
+P2 findings are closed or explicitly accepted with evidence.
+No unintended document-level horizontal overflow on normal product pages.
+No major unintended language residue.
+No unreadable export surface.
+No core demo route with uncontrolled 10–17 viewport-height density.
+/admin/devices satisfies the PFA-5 readback contract.
 ```
 
-Current state: `PAUSED`.
+## 54. Required artifacts
 
-## 6. Branch and restart rule
+```text
+PFA-7 closure manifest
+PFA-7 route-level result matrix
+PFA-7 issue closure register
+PFA-7 generated screenshot report
+PFA-7 static acceptance gate
+PFE-10 bundle-budget result
+PFE-11/PFA-2 locale result
+PFE-13 freeze regression result
+```
 
-If PFA resumes, each phase must use a new branch from the then-current `main`. The closed PFA-3 branch must not be merged or rebased into the DT/MCFT line. Historical work may be selectively reimplemented only after a new task identifies its current route, acceptance, and semantic owner.
+Generated screenshot binaries remain audit artifacts and are not committed by default.
 
-## 7. Current authoritative next step
+## 55. Closure decision
+
+PFA-7 may produce only one of these outcomes:
+
+### PASS
+
+```text
+Runtime capture PASS
+Page-quality acceptance PASS
+No open P1 or P1-contract
+P2 closed or explicitly accepted
+PFA remediation may close
+```
+
+### FAIL
+
+```text
+Runtime capture may still PASS
+One or more page-quality blockers remain
+PFA remediation remains open
+Twin Runtime or production-readiness work remains blocked
+```
+
+## 56. Completion claim
+
+After PFA-7 PASS, the repository may claim:
+
+```text
+The PFE-13 frozen frontend inventory has passed full route-level product-page acceptance across Customer, Operator, Admin, and supporting surfaces in zh-CN and en-US at desktop, laptop, and mobile review widths.
+```
+
+Chinese completion claim:
+
+```text
+PFE-13 冻结的前端页面清单已经完成全量 route-level 产品页面验收，
+覆盖 Customer、Operator、Admin 和 supporting 页面，覆盖 zh-CN、en-US，
+并覆盖桌面、笔记本和移动审查宽度。
+```
+
+This claim still does not mean live runtime, production gateway, field pilot, or AO-ACT dispatch readiness.
+
+---
+
+# 57. Blocking policy
+
+The blocking policy is final:
+
+```text
+PFA-0 reconciles evidence.
+PFA-1 enables reliable runtime capture.
+PFA-2, PFA-3, PFA-4, and PFA-5 contain open P1 or P1-contract work.
+PFA-6 closes P2 polish after structural work is stable.
+PFA-7 is the only closure gate.
+```
+
+Subsequent Twin Runtime or production-readiness work remains blocked until:
+
+```text
+PFA-2 PASS
+PFA-3 PASS
+PFA-4 PASS
+PFA-5 PASS
+PFA-6 PASS or explicitly accepted P2 register
+PFA-7 PASS
+```
+
+No `180/180 PASS` runtime-capture result may be used as a substitute for PFA-7 page-quality acceptance.
+
+## 58. Current execution state
+
+```text
+PFA-0: PR #2294, evidence reconciliation in progress
+PFA-1: PR #2295, runtime API-base and capture prerequisite implemented
+PFA-2: not started
+PFA-3: not started
+PFA-4: not started
+PFA-5: contract ownership established; implementation not started
+PFA-6: not started
+PFA-7: not started
+```
+
+Immediate sequence:
+
+```text
+1. Merge PFA-0 after CI and evidence review.
+2. Bring latest main/PFA-0 into PFA-1.
+3. Re-run PFA-1 build, typecheck, auth, and 180-capture evidence.
+4. Merge PFA-1.
+5. Start PFA-2 from latest main.
+6. Continue strictly through PFA-7.
+```
+
+# Historical baseline end
+
+---
+
+# DT-00 Current authoritative closure
+
+The historical baseline above is retained for future product-quality resumption but is not current execution policy.
+
+```text
+PFA-0: COMPLETE
+PFA-1: COMPLETE
+PFA-2: COMPLETE
+PFA-3: PAUSED; PR #2298 CLOSED_WITHOUT_MERGE
+PFA-4: PAUSED
+PFA-5: PAUSED
+PFA-6: PAUSED
+PFA-7: PAUSED
+```
+
+Current blocking policy:
+
+```text
+PFA-3 through PFA-7 do not globally block DT or MCFT.
+PFA remediation remains open for the 16 retained findings.
+An individual finding blocks MCFT only after evidence-based promotion to MCFT_BLOCKER.
+```
+
+Current authoritative next step:
 
 ```text
 DT-01 Existing Capability Reconciliation
