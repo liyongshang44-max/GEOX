@@ -1,13 +1,14 @@
 {
-  "schema_version": "geox_dt02_architecture_decision_register_v1",
+  "schema_version": "geox_dt02_architecture_decision_register_v2",
   "phase": "DT-02",
   "baseline": {
     "branch": "main",
     "commit": "9a31f046d717def94db30e156384b35267b503d4",
     "meaning": "DT-01 and artifact-integrity hotfix merged"
   },
-  "status": "FROZEN",
-  "architecture_amendment_rule": "Any downstream change requires a separately reviewed architecture amendment ADR naming the superseded decision and preserving historical auditability.",
+  "original_merge_commit": "4c1d854a5190a5d37d7cea0a4ded3f6f3ce8b614",
+  "status": "FROZEN_WITH_AMENDMENT",
+  "architecture_amendment_rule": "A downstream change requires a reviewed amendment naming superseded rules and preserving audit history.",
   "input_packet_topics": [
     "canonical_atomicity",
     "layers",
@@ -24,12 +25,29 @@
     "runtime_modes",
     "write_authority"
   ],
+  "amendments": [
+    {
+      "id": "DT02-AMENDMENT-01",
+      "path": "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-01.md",
+      "status": "COMPLETE",
+      "supersedes": [
+        "DT02-ADR-003",
+        "DT02-ADR-005",
+        "DT02-ADR-008",
+        "DT02-ADR-009",
+        "DT02-ADR-010",
+        "DT02-ADR-015",
+        "DT02-ADR-016"
+      ]
+    }
+  ],
   "decisions": [
     {
       "id": "DT02-ADR-001",
       "title": "Layer and dependency direction",
       "status": "FROZEN",
-      "decision": "Freeze domain, runtime, persistence, adapters, routes, projections, and web as separate layers. Domain is pure; runtime orchestrates ports; persistence owns SQL and transactions; routes own auth/scope/validation; web remains read-only runtime presentation.",
+      "amendment_ref": null,
+      "decision": "Freeze domain, runtime, persistence, adapters, routes, projections, and web as separate layers. Domain remains pure; runtime orchestrates ports; persistence owns SQL and transactions; routes own auth/scope/validation; web remains read-only runtime presentation.",
       "rationale": "This prevents database, wall-clock, HTTP, and UI concerns from becoming physical-State semantics while retaining useful pure builders.",
       "rejected_alternatives": [
         "Fastify routes compute or advance State",
@@ -47,7 +65,8 @@
       "id": "DT02-ADR-002",
       "title": "Shared runtime core and mode adapters",
       "status": "FROZEN",
-      "decision": "Replay, Shadow-online, Controlled Field, and future Production share one domain model, canonical contracts, transition semantics, forecast/scenario semantics, persistence, idempotency, revision lineage, and trace. Only clock, ingress, scheduler, execution feedback, availability, and deployment vary through ports.",
+      "amendment_ref": null,
+      "decision": "Replay, Shadow-online, Controlled Field, and future Production share one semantic core. Only clock, ingress, scheduler, execution feedback, availability, and deployment vary through adapters.",
       "rationale": "Separate semantic implementations would make replay unable to validate online behavior and would recreate demo/runtime divergence.",
       "rejected_alternatives": [
         "One semantic runtime per mode",
@@ -63,28 +82,30 @@
     },
     {
       "id": "DT02-ADR-003",
-      "title": "Canonical persistence source",
-      "status": "FROZEN",
-      "decision": "The existing Postgres facts append-only store is the only canonical persistence envelope for runtime history and append-only operational audit. Mutable indexes and point projections are rebuildable reads. Leases, claims, heartbeats, and temporary attempt state are mutable operational coordination. No object has a second canonical business table.",
-      "rationale": "DT-01 retained the fact store and classified latest-index patterns as read patterns only; one canonical source avoids divergent histories.",
+      "title": "Canonical persistence and envelope profiles",
+      "status": "FROZEN_WITH_AMENDMENT",
+      "amendment_ref": "DT02-AMENDMENT-01",
+      "decision": "Postgres facts remain the only canonical append-only store. Every object declares record_class, history_class compatibility alias, lineage_member, envelope_profile, and transaction_families. LINEAGE requires lineage_id and revision_id; NON_LINEAGE_CONTEXT does not.",
+      "rationale": "Append-only authority class and State-lineage membership answer different questions. Keeping them independent permits bootstrap and failure audit before a lineage exists without weakening deterministic lineage identity for State history.",
       "rejected_alternatives": [
-        "Facts plus a second canonical runtime-object table",
-        "Latest indexes or leases as historical Twin truth"
+        "One shared envelope requiring lineage_id and revision_id for every append-only record",
+        "Infer lineage membership from record_class or history_class"
       ],
-      "downstream_owners": ["MCFT-02", "MCFT-03"],
+      "downstream_owners": ["MCFT-02", "MCFT-03", "MCFT-04", "MCFT-17"],
       "input_packet_topics": ["canonical_index_persistence"],
       "invariants": [
         "canonical facts never update",
         "indexes may upsert and must be rebuildable",
-        "operational coordination is not canonical Twin history",
-        "facts may hold different semantic layers without collapsing them into Evidence"
+        "record class does not imply lineage membership",
+        "non-lineage audit may exist before bootstrap, config, lineage, or checkpoint"
       ]
     },
     {
       "id": "DT02-ADR-004",
       "title": "State object granularity and atomicity",
       "status": "FROZEN",
-      "decision": "A successful State advance is an atomic record set of separately addressable twin_state_transition_v1, twin_assimilation_update_v1, and twin_state_estimate_v1 facts. The propagated prior is embedded in transition and is not current State. The posterior is canonical State. An update object always exists, including NO_USABLE_OBSERVATION.",
+      "amendment_ref": null,
+      "decision": "A valid State advance atomically appends transition, assimilation update, and posterior State. The propagated prior is not current State; the posterior is canonical State.",
       "rationale": "Separate trace objects improve auditability while one transaction prevents partial prior/update/posterior histories.",
       "rejected_alternatives": [
         "Independent canonical prior State",
@@ -102,28 +123,30 @@
     },
     {
       "id": "DT02-ADR-005",
-      "title": "Tick claim, computation, and commit transaction",
-      "status": "FROZEN",
-      "decision": "A tick has Claim, Compute, and Atomic Commit phases. Claim acquires lease, fencing token, expected checkpoint, logical identity, and attempt state. Compute runs outside the transaction on frozen evidence/config. Commit revalidates authority, appends the complete State/Forecast/Tick/Checkpoint/Health record set, updates projections, and advances checkpoint by CAS.",
-      "rationale": "Short claim/commit transactions avoid long locks while commit-time validation prevents stale-worker and split-brain writes.",
+      "title": "Tick claim, compute, and outcome transactions",
+      "status": "FROZEN_WITH_AMENDMENT",
+      "amendment_ref": "DT02-AMENDMENT-01",
+      "decision": "A tick has Claim, Compute, and Commit. A1 COMPLETED and A2 BLOCKED Forecast outcomes may commit State and checkpoint. Forecast FAILED is operational transaction F and creates no terminal tick or checkpoint.",
+      "rationale": "A valid posterior can progress even when downstream Forecast prerequisites are unavailable, while numerical or invariant failure must not fabricate a completed tick or move recovery state.",
       "rejected_alternatives": [
-        "Hold a database transaction during model computation",
-        "Advance checkpoint or expose posterior before the complete record set commits"
+        "Persist FAILED Forecast inside State Tick Commit and advance checkpoint",
+        "Drop Forecast failure diagnostics because the State Tick transaction rolled back"
       ],
       "downstream_owners": ["MCFT-03", "MCFT-04", "MCFT-05", "MCFT-08", "MCFT-09"],
       "input_packet_topics": ["tick_transaction"],
       "invariants": [
-        "failed commit rolls back every append and projection change",
-        "frozen evidence excludes later arrivals",
-        "checkpoint never points to absent canonical objects",
-        "successful forecast has 72 points; blocked or failed forecast has zero points and reason codes"
+        "A1 COMPLETED has a 72-point Forecast",
+        "A2 BLOCKED has a zero-point Forecast and COMPLETED_WITH_LIMITATIONS tick",
+        "FAILED creates no canonical tick or checkpoint",
+        "frozen evidence excludes later arrivals"
       ]
     },
     {
       "id": "DT02-ADR-006",
       "title": "Checkpoint, lease, fencing, restart, and backfill",
       "status": "FROZEN",
-      "decision": "Each scope has one active writer lease with monotonically increasing fencing_token. Successful ticks append twin_runtime_checkpoint_v1 and CAS-update the latest checkpoint. Restart reads active lineage and latest checkpoint and backfills missing hourly ticks sequentially from checkpoint+1h to target. Failed or blocked attempts never advance checkpoint.",
+      "amendment_ref": null,
+      "decision": "Each scope has one fenced writer. Successful A1 or A2 ticks append checkpoint and CAS latest. Failed attempt or failed Forecast leaves checkpoint unchanged. Restart backfills sequentially.",
       "rationale": "Lease expiry alone cannot stop a resumed stale worker; fencing and CAS establish commit authority, and sequential backfill preserves the chain.",
       "rejected_alternatives": [
         "Lease or advisory lock without fencing",
@@ -135,14 +158,15 @@
         "one writer per tenant/project/group/field/season/zone",
         "old fencing token cannot commit",
         "backfill is strictly ascending",
-        "retry leaves checkpoint unchanged until canonical commit succeeds"
+        "failure never advances checkpoint"
       ]
     },
     {
       "id": "DT02-ADR-007",
       "title": "Idempotency and deterministic identity",
       "status": "FROZEN",
-      "decision": "Every canonical semantic object has object_id, idempotency_key, and determinism_hash. object_id derives from type, scope, logical time, lineage, revision, source identity, and config hash. determinism_hash covers normalized semantic payload. facts.fact_id is persistence-assigned storage identity and is excluded from semantic identity and hashing. Same key/hash is idempotent success; same key/different hash is IDEMPOTENCY_CONFLICT.",
+      "amendment_ref": null,
+      "decision": "Every semantic object has object_id, idempotency_key, and determinism_hash. Lineage and revision participate only when lineage_member is true. fact_id and audit timestamps are excluded.",
       "rationale": "Separating fact identity from semantic identity avoids circular hashing and permits exactly-once-equivalent results under at-least-once scheduling.",
       "rejected_alternatives": [
         "Random UUID or fact_id as semantic object identity",
@@ -158,66 +182,70 @@
     },
     {
       "id": "DT02-ADR-008",
-      "title": "Late evidence and lineage revision",
-      "status": "FROZEN",
-      "decision": "Late Evidence never mutates facts. A revision creates twin_revision_run_v1 and a candidate twin_runtime_lineage_v1, retains the unchanged parent prefix, recomputes from the earliest affected tick through current checkpoint, validates the chain, then atomically appends twin_lineage_promotion_v1 and switches active-lineage and all latest indexes. Superseded history remains queryable.",
-      "rationale": "A promotion record gives append-only authority to the mutable active pointer, and atomic promotion prevents mixed old/new reads.",
+      "title": "Late Evidence and revision lifecycle",
+      "status": "FROZEN_WITH_AMENDMENT",
+      "amendment_ref": "DT02-AMENDMENT-01",
+      "decision": "Late Evidence creates a revision run and candidate lineage through E1, appends progress or terminal status through E2, and promotes only through E3 after complete chain validation. Promotion appends authority and atomically switches active pointers.",
+      "rationale": "Declaration, progress, and promotion are distinct append-only transitions. Explicit variants make the complete candidate lifecycle auditable while preventing declaration or failed recomputation from changing active reads.",
       "rejected_alternatives": [
-        "Update old State rows or delete superseded history",
-        "Switch active-lineage index without an append-only promotion record"
+        "A promotion-only transaction family with no declaration or progress path",
+        "Mutable in-place revision progress or active-lineage switching without promotion authority"
       ],
-      "downstream_owners": ["MCFT-02", "MCFT-03", "MCFT-04", "MCFT-08", "MCFT-09"],
+      "downstream_owners": ["MCFT-02", "MCFT-03", "MCFT-04", "MCFT-08", "MCFT-09", "MCFT-16"],
       "input_packet_topics": ["late_evidence"],
       "invariants": [
-        "candidate lineage is not active until complete validation",
-        "promotion is one transaction",
-        "old lineage remains queryable",
-        "default reads use active lineage"
+        "candidate declaration is not activation",
+        "revision progress is append-only",
+        "promotion is atomic",
+        "superseded history remains queryable"
       ]
     },
     {
       "id": "DT02-ADR-009",
-      "title": "Forecast aggregate and point storage",
-      "status": "FROZEN",
-      "decision": "twin_forecast_run_v1 is one canonical aggregate. COMPLETED requires exactly 72 ordered points with horizons 1 through 72 and excludes t0. BLOCKED or FAILED requires zero points and non-empty reason_codes and is not a successful forecast. Point rows are rebuildable projections. Forecast aggregate and projections commit atomically in State Tick Commit.",
-      "rationale": "One aggregate prevents partial canonical forecasts while point projections support efficient reads; explicit failure shape avoids fabricated points.",
+      "title": "Forecast result and failure separation",
+      "status": "FROZEN_WITH_AMENDMENT",
+      "amendment_ref": "DT02-AMENDMENT-01",
+      "decision": "twin_forecast_run_v1 permits COMPLETED with exactly 72 points or BLOCKED with zero points and reason_codes. FAILED is forbidden on the lineage Forecast object and uses non-lineage twin_forecast_failure_v1 in transaction F.",
+      "rationale": "BLOCKED describes a valid posterior with an unavailable downstream Forecast prerequisite and may accompany State progress. FAILED describes failed computation and must remain operational audit so it cannot advance checkpoint or enter the active Forecast lineage.",
       "rejected_alternatives": [
-        "72 independently committed canonical point facts",
-        "Partial successful forecast or t0 as point zero"
+        "Treat BLOCKED and FAILED as the same canonical Forecast status",
+        "Persist FAILED twin_forecast_run_v1 inside State Tick Commit"
       ],
-      "downstream_owners": ["MCFT-02", "MCFT-03", "MCFT-09", "MCFT-17"],
-      "input_packet_topics": ["forecast_storage"],
+      "downstream_owners": ["MCFT-02", "MCFT-03", "MCFT-04", "MCFT-09", "MCFT-17"],
+      "input_packet_topics": ["forecast_storage", "tick_transaction"],
       "invariants": [
-        "COMPLETED means exactly 72 points",
-        "+1h through +72h only",
-        "BLOCKED or FAILED means zero points plus reason_codes",
-        "Forecast is not Scenario or Recommendation"
+        "COMPLETED advances checkpoint and successful Forecast index",
+        "BLOCKED advances checkpoint but not successful Forecast index",
+        "FAILED advances neither tick nor checkpoint",
+        "t0 is not a Forecast point"
       ]
     },
     {
       "id": "DT02-ADR-010",
-      "title": "Scenario aggregate and option storage",
-      "status": "FROZEN",
-      "decision": "twin_scenario_set_v1 is a separate atomic aggregate downstream of a committed forecast. Gate A fixes NO_ACTION, IRRIGATE_NOW_10MM, IRRIGATE_NOW_20MM, IRRIGATE_NOW_30MM, and DELAY_24H_20MM; each successful comparable option has 72 points. Scenario commit is separate from State Tick Commit and CUSTOM_OPERATOR_OPTION is deferred.",
-      "rationale": "Scenario failure must not roll back State progression and Scenario must remain distinct from recommendation and action.",
+      "title": "Scenario source eligibility",
+      "status": "FROZEN_WITH_AMENDMENT",
+      "amendment_ref": "DT02-AMENDMENT-01",
+      "decision": "Scenario is a separate atomic aggregate and may use only a committed COMPLETED Forecast with exactly 72 points and horizons 1 through 72. BLOCKED and FAILED outcomes are ineligible.",
+      "rationale": "Comparable Scenario trajectories require a complete forecast horizon. Allowing blocked or failed results would create fabricated or non-comparable futures and blur Scenario with runtime failure handling.",
       "rejected_alternatives": [
-        "Scenario inside State Tick Commit",
-        "Scenario directly creates recommendation, approval, or AO-ACT"
+        "Generate Scenario from a zero-point BLOCKED Forecast",
+        "Generate Scenario directly from Forecast failure diagnostics"
       ],
       "downstream_owners": ["MCFT-02", "MCFT-03", "MCFT-10", "MCFT-13", "MCFT-17"],
       "input_packet_topics": ["scenario_storage"],
       "invariants": [
         "fixed five Gate-A options",
         "Scenario is not Recommendation",
-        "Scenario commit is downstream and separate",
-        "CUSTOM_OPERATOR_OPTION is deferred"
+        "Scenario commit is separate",
+        "BLOCKED or FAILED Forecast cannot source Scenario"
       ]
     },
     {
       "id": "DT02-ADR-011",
       "title": "Residual and calibration separation",
       "status": "FROZEN",
-      "decision": "Assimilation residual belongs to the current-tick assimilation update and may update posterior uncertainty. Forecast residual belongs to twin_forecast_residual_v1 after later Evidence is matched to a historical point and never mutates that forecast. Residuals may create reviews or candidates but cannot activate models, change historical State, or prove causal effect.",
+      "amendment_ref": null,
+      "decision": "Assimilation residual belongs to the current update. Forecast residual compares later Evidence with a historical COMPLETED Forecast point and never mutates the Forecast.",
       "rationale": "The two residuals have different temporal and governance roles; conflation would corrupt history and silently change models.",
       "rejected_alternatives": [
         "One residual object for assimilation and forecast verification",
@@ -227,7 +255,7 @@
       "input_packet_topics": ["model_governance"],
       "invariants": [
         "assimilation residual is not calibration",
-        "forecast residual does not mutate forecast",
+        "forecast residual does not mutate Forecast",
         "candidate is not active model"
       ]
     },
@@ -235,7 +263,8 @@
       "id": "DT02-ADR-012",
       "title": "Model/config binding and activation",
       "status": "FROZEN",
-      "decision": "Each tick resolves one immutable twin_runtime_config_v1 before evidence freeze and references its id/hash in outputs. Candidate, shadow evaluation, governance approval, and twin_model_activation_v1 are separate append-only transitions. Activation is effective only at a tick boundary. Rollback appends a new activation record; the mutable active index is backed by activation facts.",
+      "amendment_ref": null,
+      "decision": "Each tick resolves one immutable config before compute. Candidate, shadow evaluation, approval, and activation are separate append-only transitions. Activation changes only at a tick boundary.",
       "rationale": "A tick must not mix versions, and mutable active pointers need append-only authority and later consumption proof.",
       "rejected_alternatives": [
         "Read active parameters repeatedly during a tick",
@@ -254,7 +283,8 @@
       "id": "DT02-ADR-013",
       "title": "Read API and human write API separation",
       "status": "FROZEN",
-      "decision": "The frontend remains /operator/fields/:fieldId/* and the server read family is /api/v1/operator/fields/:fieldId/runtime with read-only subresources. Default lineage is active and include_superseded is false. Generated State, Forecast, Scenario, Residual, Checkpoint, and Activation objects have no public write endpoints. Human decision, approval, plan, AO-ACT, receipt, and acceptance remain separate governed writes.",
+      "amendment_ref": null,
+      "decision": "Runtime Operator APIs remain read-only under the field-scoped family. Generated objects have no public write endpoint. Human decision and action writes remain separately governed.",
       "rationale": "Extending the existing field-scoped family avoids a parallel namespace and prevents browser submission of generated objects.",
       "rejected_alternatives": [
         "New /operator/twin-runtime/fields frontend family",
@@ -263,7 +293,7 @@
       "downstream_owners": ["MCFT-13", "MCFT-14", "MCFT-17", "MCFT-18"],
       "input_packet_topics": ["api_naming"],
       "invariants": [
-        "Operator runtime APIs are read-only",
+        "Operator Runtime APIs are read-only",
         "manual tick begins as application service, CLI/manual runner, and scheduler adapter",
         "human writes remain separately governed"
       ]
@@ -272,7 +302,8 @@
       "id": "DT02-ADR-014",
       "title": "Legacy compatibility and migration",
       "status": "FROZEN",
-      "decision": "Existing evidence-twin, /api/v1/operator/twin/*, /operator/twin/*, /app/operator/*/evidence-twin, water_state_estimate_v1, and legacy scenario indexes remain compatibility reads only. No new MCFT capability or write enters them. Compatibility projections must be explicitly derived. Deletion requires caller inventory, replacement, frontend switch, runtime acceptance, completed window, and approved deletion task.",
+      "amendment_ref": null,
+      "decision": "Legacy paths remain read-only compatibility surfaces with no new MCFT capability or dual canonical write. Deletion requires caller migration and explicit approval.",
       "rationale": "Active callers and read contracts make immediate deletion unsafe, while continued feature growth would create dual mainlines.",
       "rejected_alternatives": [
         "Delete legacy routes in DT-02",
@@ -290,38 +321,40 @@
     {
       "id": "DT02-ADR-015",
       "title": "Runtime security and write authority",
-      "status": "FROZEN",
-      "decision": "Write authority is object-specific and server-side. Evidence ingress writes Evidence; Runtime Orchestrator writes windows, transitions, posterior, forecast, tick, checkpoint, and health; Scenario Runtime writes scenario sets; Residual Matcher writes forecast residuals; Calibration writes candidates; approved Activation Service writes activation; authenticated human and governed action/executor services retain decision/action writes. Checkpoint additionally requires fencing and expected-checkpoint CAS.",
-      "rationale": "Semantic boundaries are enforceable only when every object has one authorized writer class.",
+      "status": "FROZEN_WITH_AMENDMENT",
+      "amendment_ref": "DT02-AMENDMENT-01",
+      "decision": "Write authority is object-specific. Runtime Orchestrator writes State, Tick, and Forecast outcomes; Forecast failure uses operational audit; Revision Service owns E1 and E2; Promotion Service owns E3; Action Feedback Service may normalize trustworthy executed Evidence before formal Acceptance.",
+      "rationale": "Object-specific authority and orthogonal execution/validation states prevent browser-generated runtime facts, action-stage collapse, and loss of timely executed Evidence.",
       "rejected_alternatives": [
-        "Browser or sensor writes generated runtime objects",
-        "Scenario, Forecast, Receipt, or Candidate crosses its authority boundary"
+        "Require formal Acceptance before any executed Evidence can enter a later Evidence Window",
+        "Require every Action Feedback record to originate from AO-ACT"
       ],
       "downstream_owners": ["MCFT-03", "MCFT-04", "MCFT-10", "MCFT-11", "MCFT-12", "MCFT-13", "MCFT-14", "MCFT-15", "MCFT-17"],
       "input_packet_topics": ["write_authority"],
       "invariants": [
         "single writer class per object",
-        "read routes have no write authority",
         "checkpoint writes are fenced",
-        "decision, approval, dispatch, execution, and validation remain separate"
+        "decision, approval, execution, and validation remain separate",
+        "Acceptance is not prerequisite for all trustworthy executed Evidence"
       ]
     },
     {
       "id": "DT02-ADR-016",
       "title": "Runtime health and claim boundaries",
-      "status": "FROZEN",
-      "decision": "twin_runtime_health_v1 is append-only runtime-operation audit with a rebuildable latest index and is not physical, crop, soil, device, or model-correctness State. twin_runtime_attempt_v1 is append-only OPERATIONAL_AUDIT and never joins the posterior chain. Mutable lease, attempt-latest, and heartbeat remain coordination. Blocked, failed, and recovering attempts append attempt/health audit without advancing checkpoint.",
-      "rationale": "Failures and recovery must be auditable without inventing failed State ticks or confusing runtime availability with agronomic condition.",
+      "status": "FROZEN_WITH_AMENDMENT",
+      "amendment_ref": "DT02-AMENDMENT-01",
+      "decision": "Attempt, Health, and Forecast failure are non-lineage operational audit. They may exist before active lineage or checkpoint. Blocked or failed attempts do not become State history.",
+      "rationale": "Failures, bootstrap problems, and recovery must be auditable without inventing lineage identity, failed State ticks, or agronomic meaning for runtime availability.",
       "rejected_alternatives": [
-        "Failed attempt becomes canonical State tick",
-        "Health exists only as mutable state or is presented as crop/soil health"
+        "Require active lineage and checkpoint before recording any Attempt or Health event",
+        "Represent Forecast failure as a canonical State-lineage Forecast"
       ],
-      "downstream_owners": ["MCFT-03", "MCFT-04", "MCFT-17"],
+      "downstream_owners": ["MCFT-03", "MCFT-04", "MCFT-09", "MCFT-17"],
       "input_packet_topics": ["tick_transaction", "checkpoint_recovery"],
       "invariants": [
-        "attempt is operational audit, not State history",
-        "health is runtime operation, not physical State",
-        "failed or blocked attempt creates no posterior and advances no checkpoint",
+        "attempt is not State history",
+        "health is not physical State",
+        "failure audit needs no lineage",
         "stale writer cannot report committed success"
       ]
     }
