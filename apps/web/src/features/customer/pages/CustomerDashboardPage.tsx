@@ -45,14 +45,14 @@ export default function CustomerDashboardPage(): React.ReactElement {
     return () => { active = false; };
   }, []);
 
-  if (loading) return <ProductPageShell surface="customer" ariaLabel={t(CUSTOMER_DASHBOARD_COPY.title)} className="customerDashboardProductPage"><ProductLoadingState surface="customer" label={t(CUSTOMER_DASHBOARD_COPY.title)} description={t(CUSTOMER_COMMON_COPY.safeLoading)} /></ProductPageShell>;
-  if (failed || !vm) return <ProductPageShell surface="customer" ariaLabel={t(CUSTOMER_DASHBOARD_COPY.unavailableTitle)} className="customerDashboardProductPage"><ProductErrorState surface="customer" title={t(CUSTOMER_DASHBOARD_COPY.unavailableTitle)} message={t(CUSTOMER_COMMON_COPY.safeError)} /></ProductPageShell>;
+  if (loading) return <ProductPageShell surface="customer" pageKey="customer-dashboard" ariaLabel={t(CUSTOMER_DASHBOARD_COPY.title)} className="customerDashboardProductPage"><ProductLoadingState surface="customer" label={t(CUSTOMER_DASHBOARD_COPY.title)} description={t(CUSTOMER_COMMON_COPY.safeLoading)} /></ProductPageShell>;
+  if (failed || !vm) return <ProductPageShell surface="customer" pageKey="customer-dashboard" ariaLabel={t(CUSTOMER_DASHBOARD_COPY.unavailableTitle)} className="customerDashboardProductPage"><ProductErrorState surface="customer" title={t(CUSTOMER_DASHBOARD_COPY.unavailableTitle)} message={t(CUSTOMER_COMMON_COPY.safeError)} /></ProductPageShell>;
 
   const scope = customerProductFallback(vm.summaryScopeText, locale, CUSTOMER_DASHBOARD_COPY.lead);
   const statusCopy = (tone?: string) => tone === "good" ? t(CUSTOMER_STATUS_COPY.available) : tone === "warning" ? t(CUSTOMER_STATUS_COPY.review) : tone === "danger" ? t(CUSTOMER_STATUS_COPY.blocked) : t(CUSTOMER_STATUS_COPY.reportOnly);
 
   return (
-    <ProductPageShell surface="customer" ariaLabel={t(CUSTOMER_DASHBOARD_COPY.title)} className="customerDashboardProductPage" top={(
+    <ProductPageShell surface="customer" pageKey="customer-dashboard" ariaLabel={t(CUSTOMER_DASHBOARD_COPY.title)} className="customerDashboardProductPage" top={(
       <ProductPageHeader
         eyebrow={t(CUSTOMER_DASHBOARD_COPY.eyebrow)}
         title={t(CUSTOMER_DASHBOARD_COPY.title)}
