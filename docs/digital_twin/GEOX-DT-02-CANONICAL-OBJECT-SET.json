@@ -1,0 +1,355 @@
+{
+  "schema_version": "geox_dt02_canonical_object_set_v1",
+  "phase": "DT-02",
+  "status": "FROZEN",
+  "storage_binding": {
+    "canonical_store": "Postgres facts append-only store",
+    "fact_envelope": {
+      "fact_id": "persistence-assigned storage identity",
+      "occurred_at": "logical event time selected by object contract",
+      "source": "authorized writer class",
+      "record_json.type": "object_type",
+      "record_json.payload": "semantic object envelope"
+    },
+    "identity_separation": [
+      "object_id is semantic and deterministic",
+      "fact_id is storage-envelope identity",
+      "fact_id is excluded from object_id and determinism_hash",
+      "persistence returns object_id-to-fact_id mapping"
+    ]
+  },
+  "shared_semantic_envelope": {
+    "required_fields": [
+      "object_id",
+      "object_type",
+      "schema_version",
+      "tenant_id",
+      "project_id",
+      "group_id",
+      "field_id",
+      "season_id",
+      "zone_id",
+      "logical_time",
+      "as_of",
+      "lineage_id",
+      "revision_id",
+      "supersedes_ref",
+      "original_tick_ref",
+      "source_refs",
+      "evidence_refs",
+      "runtime_config_ref",
+      "runtime_config_hash",
+      "idempotency_key",
+      "determinism_hash",
+      "limitations",
+      "created_at"
+    ],
+    "nullable_by_contract": [
+      "supersedes_ref",
+      "original_tick_ref",
+      "runtime_config_ref",
+      "runtime_config_hash"
+    ],
+    "rules": [
+      "all timestamps are UTC ISO-8601",
+      "all units are explicit",
+      "unknown and missing values are explicit",
+      "created_at is audit time and excluded from determinism_hash",
+      "fact_id is not a semantic-envelope field"
+    ]
+  },
+  "object_classes": {
+    "CANONICAL_TWIN_HISTORY": "Physical, estimated, predicted, simulated runtime history and checkpoints.",
+    "CANONICAL_GOVERNED_DECISION_HISTORY": "Authenticated human decision linkage, separate from approval and action.",
+    "CANONICAL_EXECUTION_EVIDENCE_HISTORY": "Normalized execution feedback derived only from governed executed evidence.",
+    "CANONICAL_MODEL_GOVERNANCE_HISTORY": "Config, candidate, evaluation, and activation history.",
+    "CANONICAL_LINEAGE_HISTORY": "Revision, lineage, and promotion authority history.",
+    "OPERATIONAL_AUDIT": "Append-only attempt and health audit, not part of the physical posterior chain."
+  },
+  "objects": [
+    {
+      "object_type": "twin_runtime_attempt_v1",
+      "history_class": "OPERATIONAL_AUDIT",
+      "canonical_persistence": "FACT_APPEND_ONLY",
+      "atomic_aggregate": "single attempt event",
+      "writer": "Runtime Orchestrator",
+      "transaction_family": "F_OPERATIONAL_ATTEMPT_HEALTH",
+      "readers": ["runtime diagnostics", "runtime health service"],
+      "revision_behavior": "append a new attempt event; never join posterior chain",
+      "required_refs": [],
+      "forbidden_claims": ["failed attempt is a canonical State tick", "failed attempt advances checkpoint"]
+    },
+    {
+      "object_type": "twin_runtime_tick_v1",
+      "history_class": "CANONICAL_TWIN_HISTORY",
+      "canonical_persistence": "FACT_APPEND_ONLY",
+      "atomic_aggregate": "terminal tick object inside State Tick record set",
+      "writer": "Runtime Orchestrator",
+      "transaction_family": "A_STATE_TICK_COMMIT",
+      "readers": ["runtime history", "trace API"],
+      "revision_behavior": "new lineage/revision object; old tick immutable",
+      "required_refs": ["evidence_window_ref", "state_transition_ref", "assimilation_update_ref", "posterior_state_ref", "forecast_run_ref", "checkpoint_ref"],
+      "forbidden_claims": ["SCHEDULED, RUNNING, BLOCKED, or FAILED attempt is a completed tick"]
+    },
+    {
+      "object_type": "twin_evidence_window_v1",
+      "history_class": "CANONICAL_TWIN_HISTORY",
+      "canonical_persistence": "FACT_APPEND_ONLY",
+      "atomic_aggregate": "single frozen evidence window",
+      "writer": "Runtime Orchestrator",
+      "transaction_family": "A_STATE_TICK_COMMIT",
+      "readers": ["State trace", "audit API"],
+      "revision_behavior": "new window in revised lineage; old window immutable",
+      "required_refs": ["evidence_refs", "runtime_config_ref"],
+      "forbidden_claims": ["later Evidence may enter a frozen window"]
+    },
+    {
+      "object_type": "twin_state_transition_v1",
+      "history_class": "CANONICAL_TWIN_HISTORY",
+      "canonical_persistence": "FACT_APPEND_ONLY",
+      "atomic_aggregate": "addressable member of atomic State Tick record set",
+      "writer": "Runtime Orchestrator",
+      "transaction_family": "A_STATE_TICK_COMMIT",
+      "readers": ["State history", "trace API"],
+      "revision_behavior": "new transition in candidate lineage",
+      "required_refs": ["previous_posterior_ref", "assimilation_update_ref", "posterior_state_ref", "runtime_config_ref"],
+      "forbidden_claims": ["propagated prior is canonical current State"]
+    },
+    {
+      "object_type": "twin_assimilation_update_v1",
+      "history_class": "CANONICAL_TWIN_HISTORY",
+      "canonical_persistence": "FACT_APPEND_ONLY",
+      "atomic_aggregate": "addressable member of atomic State Tick record set",
+      "writer": "Runtime Orchestrator",
+      "transaction_family": "A_STATE_TICK_COMMIT",
+      "readers": ["State trace", "residual and calibration review"],
+      "revision_behavior": "new update in candidate lineage",
+      "required_refs": ["state_transition_ref", "evidence_refs", "posterior_state_ref", "runtime_config_ref"],
+      "forbidden_claims": ["assimilation update is calibration", "sensor reading directly becomes posterior"]
+    },
+    {
+      "object_type": "twin_state_estimate_v1",
+      "history_class": "CANONICAL_TWIN_HISTORY",
+      "canonical_persistence": "FACT_APPEND_ONLY",
+      "atomic_aggregate": "posterior member of atomic State Tick record set",
+      "writer": "Runtime Orchestrator",
+      "transaction_family": "A_STATE_TICK_COMMIT",
+      "readers": ["State API", "Forecast engine", "Scenario engine"],
+      "revision_behavior": "new posterior in candidate lineage; supersedes_ref preserves old posterior",
+      "required_refs": ["prior_transition_ref", "assimilation_update_ref", "evidence_refs", "runtime_config_ref"],
+      "forbidden_claims": ["State equals latest sensor value", "water_state_estimate_v1 is canonical MCFT posterior"]
+    },
+    {
+      "object_type": "twin_forecast_run_v1",
+      "history_class": "CANONICAL_TWIN_HISTORY",
+      "canonical_persistence": "FACT_APPEND_ONLY",
+      "atomic_aggregate": "one run containing status and all points",
+      "writer": "Runtime Orchestrator",
+      "transaction_family": "A_STATE_TICK_COMMIT",
+      "readers": ["Forecast API", "Scenario Runtime", "Residual Matcher"],
+      "revision_behavior": "new run in revised lineage; old run immutable",
+      "required_refs": ["source_posterior_ref", "weather_refs", "runtime_config_ref"],
+      "forbidden_claims": ["partial successful forecast", "t0 is a forecast point"]
+    },
+    {
+      "object_type": "twin_scenario_set_v1",
+      "history_class": "CANONICAL_TWIN_HISTORY",
+      "canonical_persistence": "FACT_APPEND_ONLY",
+      "atomic_aggregate": "one set containing all fixed options and trajectories",
+      "writer": "Scenario Runtime",
+      "transaction_family": "B_SCENARIO_COMMIT",
+      "readers": ["Scenario API", "Human Decision Service"],
+      "revision_behavior": "new set in revised lineage; old set immutable",
+      "required_refs": ["source_forecast_ref", "runtime_config_ref"],
+      "forbidden_claims": ["Scenario is Recommendation", "Scenario creates AO-ACT"]
+    },
+    {
+      "object_type": "twin_forecast_residual_v1",
+      "history_class": "CANONICAL_TWIN_HISTORY",
+      "canonical_persistence": "FACT_APPEND_ONLY",
+      "atomic_aggregate": "single matched or unmatched residual record",
+      "writer": "Residual Matcher",
+      "transaction_family": "C_FORECAST_RESIDUAL_COMMIT",
+      "readers": ["Residual API", "Calibration Service"],
+      "revision_behavior": "append a new residual when matching Evidence or lineage changes; never mutate Forecast",
+      "required_refs": ["forecast_run_ref", "forecast_point_ref", "observation_ref", "runtime_config_ref"],
+      "forbidden_claims": ["Residual mutates historical Forecast", "Residual proves causal effect"]
+    },
+    {
+      "object_type": "twin_decision_record_v1",
+      "history_class": "CANONICAL_GOVERNED_DECISION_HISTORY",
+      "canonical_persistence": "FACT_APPEND_ONLY",
+      "atomic_aggregate": "authenticated human decision linkage",
+      "writer": "Authenticated Human Decision Service",
+      "transaction_family": "G_HUMAN_DECISION_LINK_COMMIT",
+      "readers": ["Action lifecycle API", "Approval Service", "audit"],
+      "revision_behavior": "append correction or superseding decision; never overwrite",
+      "required_refs": ["scenario_set_ref", "selected_option_ref", "evidence_refs"],
+      "forbidden_claims": ["Decision is Approval", "Decision is Task"]
+    },
+    {
+      "object_type": "twin_action_feedback_v1",
+      "history_class": "CANONICAL_EXECUTION_EVIDENCE_HISTORY",
+      "canonical_persistence": "FACT_APPEND_ONLY",
+      "atomic_aggregate": "normalized executed-feedback linkage",
+      "writer": "Action Feedback Service",
+      "transaction_family": "H_ACTION_FEEDBACK_COMMIT",
+      "readers": ["Evidence Window Builder", "Action lifecycle API", "audit"],
+      "revision_behavior": "append superseding feedback when governed source Evidence changes",
+      "required_refs": ["task_ref", "receipt_ref", "as_executed_ref", "acceptance_ref"],
+      "forbidden_claims": ["planned value is executed value", "receipt alone proves validated effect"]
+    },
+    {
+      "object_type": "twin_calibration_candidate_v1",
+      "history_class": "CANONICAL_MODEL_GOVERNANCE_HISTORY",
+      "canonical_persistence": "FACT_APPEND_ONLY",
+      "atomic_aggregate": "single candidate transition",
+      "writer": "Calibration Service",
+      "transaction_family": "D_MODEL_GOVERNANCE_STEP_COMMIT",
+      "readers": ["Calibration API", "Shadow Evaluation Service"],
+      "revision_behavior": "new candidate object; old candidate immutable",
+      "required_refs": ["residual_refs", "base_config_ref"],
+      "forbidden_claims": ["Candidate is Active Model"]
+    },
+    {
+      "object_type": "twin_shadow_evaluation_v1",
+      "history_class": "CANONICAL_MODEL_GOVERNANCE_HISTORY",
+      "canonical_persistence": "FACT_APPEND_ONLY",
+      "atomic_aggregate": "single evaluation transition",
+      "writer": "Shadow Evaluation Service",
+      "transaction_family": "D_MODEL_GOVERNANCE_STEP_COMMIT",
+      "readers": ["Calibration API", "Activation Service"],
+      "revision_behavior": "append new evaluation",
+      "required_refs": ["candidate_ref", "evaluation_dataset_refs"],
+      "forbidden_claims": ["shadow pass automatically activates candidate"]
+    },
+    {
+      "object_type": "twin_model_activation_v1",
+      "history_class": "CANONICAL_MODEL_GOVERNANCE_HISTORY",
+      "canonical_persistence": "FACT_APPEND_ONLY",
+      "atomic_aggregate": "activation or rollback transition plus active-binding CAS",
+      "writer": "Governance-approved Activation Service",
+      "transaction_family": "D_MODEL_GOVERNANCE_STEP_COMMIT",
+      "readers": ["ActiveConfigPort", "Calibration API", "audit"],
+      "revision_behavior": "append activation or rollback; never edit old activation",
+      "required_refs": ["config_ref", "approval_ref"],
+      "forbidden_claims": ["active config changes during tick", "rollback deletes history"]
+    },
+    {
+      "object_type": "twin_runtime_config_v1",
+      "history_class": "CANONICAL_MODEL_GOVERNANCE_HISTORY",
+      "canonical_persistence": "FACT_APPEND_ONLY",
+      "atomic_aggregate": "immutable config snapshot",
+      "writer": "Runtime Config Service",
+      "transaction_family": "D_MODEL_GOVERNANCE_STEP_COMMIT",
+      "readers": ["ActiveConfigPort", "Runtime Orchestrator", "audit"],
+      "revision_behavior": "append a new config snapshot",
+      "required_refs": ["soil_root_zone_config_refs", "model_component_refs"],
+      "forbidden_claims": ["mutable in-place active parameters"]
+    },
+    {
+      "object_type": "twin_runtime_checkpoint_v1",
+      "history_class": "CANONICAL_TWIN_HISTORY",
+      "canonical_persistence": "FACT_APPEND_ONLY",
+      "atomic_aggregate": "checkpoint member of State Tick record set",
+      "writer": "Runtime Orchestrator with valid fencing token",
+      "transaction_family": "A_STATE_TICK_COMMIT",
+      "readers": ["Restart and Backfill Service", "Health API"],
+      "revision_behavior": "append next checkpoint; promotion switches latest pointer atomically",
+      "required_refs": ["last_completed_tick_ref", "last_posterior_state_ref", "last_forecast_ref", "runtime_config_ref", "previous_checkpoint_ref"],
+      "forbidden_claims": ["checkpoint advances on failed attempt"]
+    },
+    {
+      "object_type": "twin_runtime_health_v1",
+      "history_class": "OPERATIONAL_AUDIT",
+      "canonical_persistence": "FACT_APPEND_ONLY",
+      "atomic_aggregate": "runtime-operation snapshot",
+      "writer": "Runtime Orchestrator",
+      "transaction_family": "A_STATE_TICK_COMMIT or F_OPERATIONAL_ATTEMPT_HEALTH",
+      "readers": ["Health API", "operations"],
+      "revision_behavior": "append snapshot; latest index may upsert",
+      "required_refs": ["active_lineage_ref", "checkpoint_ref"],
+      "forbidden_claims": ["runtime health is crop health", "runtime health proves model correctness"]
+    },
+    {
+      "object_type": "twin_runtime_lineage_v1",
+      "history_class": "CANONICAL_LINEAGE_HISTORY",
+      "canonical_persistence": "FACT_APPEND_ONLY",
+      "atomic_aggregate": "lineage declaration",
+      "writer": "Revision Service",
+      "transaction_family": "E_REVISION_PROMOTION_COMMIT",
+      "readers": ["Runtime Orchestrator", "history and trace API"],
+      "revision_behavior": "lineage object immutable; activation occurs through promotion object",
+      "required_refs": ["parent_lineage_ref", "revision_run_ref"],
+      "forbidden_claims": ["candidate lineage is active by creation"]
+    },
+    {
+      "object_type": "twin_revision_run_v1",
+      "history_class": "CANONICAL_LINEAGE_HISTORY",
+      "canonical_persistence": "FACT_APPEND_ONLY",
+      "atomic_aggregate": "revision-run declaration or terminal result",
+      "writer": "Revision Service",
+      "transaction_family": "E_REVISION_PROMOTION_COMMIT",
+      "readers": ["Runtime Orchestrator", "history and trace API"],
+      "revision_behavior": "append run transitions or terminal result according to MCFT-02 schema",
+      "required_refs": ["parent_lineage_ref", "candidate_lineage_ref", "late_evidence_refs"],
+      "forbidden_claims": ["late Evidence updates old rows"]
+    },
+    {
+      "object_type": "twin_lineage_promotion_v1",
+      "history_class": "CANONICAL_LINEAGE_HISTORY",
+      "canonical_persistence": "FACT_APPEND_ONLY",
+      "atomic_aggregate": "promotion authority record committed with every active-index switch",
+      "writer": "Revision Promotion Service",
+      "transaction_family": "E_REVISION_PROMOTION_COMMIT",
+      "readers": ["Runtime Orchestrator", "history and trace API", "audit"],
+      "revision_behavior": "append-only; later promotion changes active pointer, not prior record",
+      "required_refs": ["candidate_lineage_ref", "previous_active_lineage_ref", "validated_chain_refs"],
+      "forbidden_claims": ["active lineage index changes without append-only authority"]
+    }
+  ],
+  "noncanonical_operational_tables": [
+    {
+      "logical_name": "twin_runtime_lease_v1",
+      "purpose": "writer lease with owner, fencing token, expiry, and heartbeat",
+      "mutable": true
+    },
+    {
+      "logical_name": "twin_runtime_attempt_latest_v1",
+      "purpose": "current SCHEDULED, RUNNING, BLOCKED, or FAILED attempt state",
+      "mutable": true
+    },
+    {
+      "logical_name": "twin_runtime_worker_heartbeat_v1",
+      "purpose": "worker liveness and diagnostics",
+      "mutable": true
+    },
+    {
+      "logical_name": "temporary_compute_attempt_state",
+      "purpose": "ephemeral retry diagnostics",
+      "mutable": true
+    }
+  ],
+  "mutable_rebuildable_projections": [
+    "twin_state_latest_index_v1",
+    "twin_state_history_projection_v1",
+    "twin_forecast_run_index_v1",
+    "twin_forecast_point_index_v1",
+    "twin_forecast_latest_index_v1",
+    "twin_scenario_set_index_v1",
+    "twin_scenario_point_index_v1",
+    "twin_scenario_latest_index_v1",
+    "twin_forecast_residual_index_v1",
+    "twin_runtime_checkpoint_latest_index_v1",
+    "twin_runtime_health_latest_index_v1",
+    "twin_active_lineage_index_v1",
+    "twin_active_config_index_v1"
+  ],
+  "forbidden": [
+    "dual canonical storage",
+    "canonical UPDATE",
+    "projection as historical truth",
+    "operational lease as Twin State",
+    "client-supplied posterior, Forecast, or Scenario result"
+  ]
+}
