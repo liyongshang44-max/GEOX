@@ -31,6 +31,7 @@ const FILES = {
   acceptanceScript: 'scripts/governance_acceptance/ACCEPTANCE_DT_01_EXISTING_CAPABILITY_RECONCILIATION.cjs',
   helperScript: 'scripts/governance_acceptance/DT01_JSON_ARTIFACT_LOADER.cjs',
   dt00RegressionScript: 'scripts/governance_acceptance/ACCEPTANCE_DT_00_MAINLINE_GOVERNANCE_RESET.cjs',
+  dt02SuccessorScript: 'scripts/governance_acceptance/ACCEPTANCE_DT_02_RUNTIME_ARCHITECTURE_FREEZE.cjs',
 };
 
 const allowedStatus = new Set(['ESTABLISHED','ESTABLISHED_WITH_LIMITATIONS','MISSING','NOT_CLAIMED']);
@@ -263,7 +264,7 @@ try {
 
 try {
   const changed = cp.execFileSync('git', ['diff','--name-only',`${BASELINE}...HEAD`], { cwd: ROOT, encoding: 'utf8' }).trim().split(/\r?\n/).filter(Boolean);
-  const allowedGovernanceScripts = new Set([FILES.auditScript, FILES.acceptanceScript, FILES.helperScript, FILES.dt00RegressionScript]);
+  const allowedGovernanceScripts = new Set([FILES.auditScript, FILES.acceptanceScript, FILES.helperScript, FILES.dt00RegressionScript, FILES.dt02SuccessorScript]);
   const forbidden = changed.filter((file) => !(file.startsWith('docs/digital_twin/') || allowedGovernanceScripts.has(file)));
   if (forbidden.length) fail(`forbidden changed files: ${forbidden.join(', ')}`);
   else pass(`changed-file scope valid: ${changed.length} files`);
