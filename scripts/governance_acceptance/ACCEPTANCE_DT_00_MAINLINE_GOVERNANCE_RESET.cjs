@@ -29,6 +29,7 @@ const ALLOWED_STATUSES = new Set([
 const ALLOWED_MATRIX_SCHEMAS = new Set([
   "geox_digital_twin_capability_matrix_v1",
   "geox_digital_twin_capability_matrix_v2",
+  "geox_digital_twin_capability_matrix_v3",
 ]);
 
 const failures = [];

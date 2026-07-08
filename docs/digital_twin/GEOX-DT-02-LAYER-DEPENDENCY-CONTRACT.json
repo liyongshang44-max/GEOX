@@ -1,0 +1,231 @@
+{
+  "schema_version": "geox_dt02_layer_dependency_contract_v1",
+  "phase": "DT-02",
+  "status": "FROZEN",
+  "proposed_code_roots": [
+    "apps/server/src/domain/twin_runtime/",
+    "apps/server/src/domain/soil_water/",
+    "apps/server/src/runtime/twin_runtime/",
+    "apps/server/src/persistence/twin_runtime/",
+    "apps/server/src/adapters/twin_runtime/",
+    "apps/server/src/projections/twin_runtime/",
+    "apps/server/src/routes/v1/"
+  ],
+  "note": "DT-02 freezes dependency contracts only and creates no runtime source directories.",
+  "layers": [
+    {
+      "name": "domain",
+      "responsibilities": [
+        "state propagation",
+        "observation operator",
+        "assimilation",
+        "uncertainty calculation",
+        "forecast math",
+        "scenario math",
+        "residual matching rules",
+        "deterministic hashes",
+        "physical bounds",
+        "validation"
+      ],
+      "may_depend_on": [
+        "pure types",
+        "pure deterministic utilities",
+        "explicit input parameters"
+      ],
+      "must_not_depend_on": [
+        "Postgres",
+        "Fastify",
+        "environment variables",
+        "wall clock",
+        "random UUID",
+        "filesystem",
+        "network",
+        "scheduler",
+        "global mutable state"
+      ]
+    },
+    {
+      "name": "runtime",
+      "responsibilities": [
+        "claim tick",
+        "resolve immutable config",
+        "freeze evidence window",
+        "invoke domain functions",
+        "construct canonical object set",
+        "commit through repository port",
+        "advance checkpoint",
+        "schedule revision/backfill",
+        "emit runtime health"
+      ],
+      "may_depend_on": [
+        "domain",
+        "ports",
+        "pure contracts"
+      ],
+      "must_not_depend_on": [
+        "SQL strings",
+        "Fastify request parsing",
+        "React view models",
+        "physical equations embedded in orchestration"
+      ]
+    },
+    {
+      "name": "persistence",
+      "responsibilities": [
+        "fact append",
+        "transaction ownership",
+        "projection upsert",
+        "checkpoint compare-and-swap",
+        "lease/fencing persistence",
+        "lineage promotion",
+        "history readers"
+      ],
+      "may_depend_on": [
+        "Postgres client",
+        "canonical contracts",
+        "repository ports"
+      ],
+      "must_not_depend_on": [
+        "Fastify request parsing",
+        "React view models",
+        "domain equations"
+      ]
+    },
+    {
+      "name": "adapters",
+      "responsibilities": [
+        "clock",
+        "evidence ingress",
+        "scheduler",
+        "execution feedback",
+        "availability controls",
+        "mode-specific deployment integration"
+      ],
+      "may_depend_on": [
+        "runtime ports",
+        "external systems"
+      ],
+      "must_not_depend_on": [
+        "alternate State semantics",
+        "alternate Forecast semantics",
+        "direct projection mutation outside repository contract"
+      ]
+    },
+    {
+      "name": "routes",
+      "responsibilities": [
+        "authentication",
+        "authorization",
+        "scope resolution",
+        "request validation",
+        "read-service invocation",
+        "human-write-service invocation",
+        "response mapping"
+      ],
+      "may_depend_on": [
+        "read application services",
+        "separately governed human-write application services"
+      ],
+      "must_not_depend_on": [
+        "domain calculation internals",
+        "tick advancement",
+        "direct generated-object persistence",
+        "client-supplied posterior/forecast/scenario result"
+      ]
+    },
+    {
+      "name": "projections",
+      "responsibilities": [
+        "rebuildable latest/history/point/read indexes",
+        "compatibility read shapes"
+      ],
+      "may_depend_on": [
+        "canonical facts",
+        "projection schemas"
+      ],
+      "must_not_depend_on": [
+        "becoming canonical history",
+        "changing semantic payload",
+        "creating actions"
+      ]
+    },
+    {
+      "name": "web",
+      "responsibilities": [
+        "read-only runtime presentation",
+        "navigation to separately governed human decision/action surfaces"
+      ],
+      "may_depend_on": [
+        "read APIs",
+        "human action APIs only through existing governed clients"
+      ],
+      "must_not_depend_on": [
+        "State write",
+        "Forecast write",
+        "Scenario-result write",
+        "Checkpoint write",
+        "Model activation write"
+      ]
+    }
+  ],
+  "allowed_dependency_edges": [
+    ["runtime", "domain"],
+    ["runtime", "ports"],
+    ["persistence", "canonical_contracts"],
+    ["adapters", "runtime_ports"],
+    ["routes", "application_services"],
+    ["projections", "canonical_facts"],
+    ["web", "read_apis"]
+  ],
+  "forbidden_dependency_edges": [
+    ["domain", "persistence"],
+    ["domain", "routes"],
+    ["domain", "adapters"],
+    ["runtime", "Fastify"],
+    ["runtime", "SQL"],
+    ["routes", "generated_object_writes"],
+    ["web", "canonical_persistence"]
+  ],
+  "ports": [
+    {
+      "name": "ClockPort",
+      "owner": "runtime",
+      "implementations": ["ReplayClockAdapter", "SchedulerClockAdapter"]
+    },
+    {
+      "name": "EvidenceIngressPort",
+      "owner": "runtime",
+      "implementations": ["ReplayEvidenceAdapter", "DatabaseEvidenceAdapter"]
+    },
+    {
+      "name": "SchedulerPort",
+      "owner": "runtime",
+      "implementations": ["ManualSequentialReplayAdapter", "PersistentSchedulerAdapter", "FutureHASchedulerAdapter"]
+    },
+    {
+      "name": "ExecutionFeedbackPort",
+      "owner": "runtime",
+      "implementations": ["HistoricalExecutionEvidenceAdapter", "ReadOnlyExecutionAdapter", "GovernedControlledActionAdapter"]
+    },
+    {
+      "name": "AvailabilityPort",
+      "owner": "runtime",
+      "implementations": ["SingleProcessAvailabilityAdapter", "FutureProductionAvailabilityAdapter"]
+    },
+    {
+      "name": "RuntimeRepositoryPort",
+      "owner": "runtime",
+      "implementations": ["PostgresRuntimeRepository"]
+    },
+    {
+      "name": "RuntimeReadRepositoryPort",
+      "owner": "read_services",
+      "implementations": ["PostgresRuntimeReadRepository"]
+    },
+    {
+      "name": "ActiveConfigPort",
+      "owner": "runtime",
+      "implementations": ["PostgresActiveConfigRepository"]
+    }
+  ]
+}

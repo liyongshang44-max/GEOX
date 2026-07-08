@@ -1,0 +1,125 @@
+{
+  "schema_version": "geox_dt02_runtime_mode_adapter_matrix_v1",
+  "phase": "DT-02",
+  "status": "FROZEN",
+  "shared_core": [
+    "domain model",
+    "canonical contracts",
+    "state-transition semantics",
+    "forecast and scenario semantics",
+    "persistence semantics",
+    "idempotency",
+    "revision chain",
+    "trace chain",
+    "physical bounds",
+    "config binding"
+  ],
+  "mode_specific_only": [
+    "clock",
+    "evidence ingress",
+    "scheduler",
+    "execution feedback",
+    "availability controls",
+    "operational deployment"
+  ],
+  "modes": [
+    {
+      "mode": "REPLAY",
+      "clock": "explicit replay clock",
+      "evidence_ingress": "historical Evidence released by observed_at and ingested_at no-future-leakage rules",
+      "scheduler": "manual sequential replay",
+      "execution_feedback": "historical executed Evidence only",
+      "availability": "single-process acceptable for Gate A",
+      "writes": ["canonical database facts", "rebuildable projections"],
+      "forbidden": [
+        "acceptance-output files as runtime persistence",
+        "future Evidence leakage",
+        "separate replay-only State semantics"
+      ]
+    },
+    {
+      "mode": "SHADOW_ONLINE",
+      "clock": "scheduler-provided UTC wall-clock tick",
+      "evidence_ingress": "actual database ingress frozen at tick boundary",
+      "scheduler": "persistent single-scope sequential scheduler",
+      "execution_feedback": "read-only observation of existing action Evidence",
+      "availability": "restart, backfill, and stale detection",
+      "writes": ["State", "Forecast", "Scenario", "Residual", "Checkpoint", "Health"],
+      "forbidden": [
+        "AO-ACT creation",
+        "automatic real-world action",
+        "different model semantics from Replay"
+      ]
+    },
+    {
+      "mode": "CONTROLLED_FIELD",
+      "clock": "persistent scheduler",
+      "evidence_ingress": "actual field ingress",
+      "scheduler": "persistent sequential scheduler with fencing",
+      "execution_feedback": "existing governed decision, approval, AO-ACT, receipt, and acceptance adapters",
+      "availability": "restart, backfill, and controlled operational alerts",
+      "writes": ["runtime history", "controlled action feedback linkage"],
+      "forbidden": [
+        "bypass human decision or approval",
+        "planned action treated as executed"
+      ]
+    },
+    {
+      "mode": "PRODUCTION",
+      "clock": "production scheduler clock adapter",
+      "evidence_ingress": "production gateway and governed database ingress",
+      "scheduler": "future HA scheduler with distributed lease",
+      "execution_feedback": "production controlled-action gateway",
+      "availability": "HA, capacity controls, deployment recovery, and operational alerts",
+      "writes": ["the same canonical contracts through production repository adapter"],
+      "forbidden": [
+        "production claim before later closure",
+        "production-only object contracts",
+        "silent semantic changes"
+      ]
+    }
+  ],
+  "ports": [
+    {
+      "port": "ClockPort",
+      "replay": "ExplicitReplayClock",
+      "shadow_online": "SchedulerClock",
+      "controlled_field": "SchedulerClock",
+      "production": "HASchedulerClock"
+    },
+    {
+      "port": "EvidenceIngressPort",
+      "replay": "HistoricalEvidenceReleaseAdapter",
+      "shadow_online": "DatabaseEvidenceAdapter",
+      "controlled_field": "FieldEvidenceAdapter",
+      "production": "ProductionGatewayEvidenceAdapter"
+    },
+    {
+      "port": "SchedulerPort",
+      "replay": "ManualSequentialReplayAdapter",
+      "shadow_online": "PersistentSequentialSchedulerAdapter",
+      "controlled_field": "PersistentSequentialSchedulerAdapter",
+      "production": "FutureHASchedulerAdapter"
+    },
+    {
+      "port": "ExecutionFeedbackPort",
+      "replay": "HistoricalExecutionEvidenceAdapter",
+      "shadow_online": "ReadOnlyExecutionEvidenceAdapter",
+      "controlled_field": "GovernedControlledActionAdapter",
+      "production": "ProductionControlledActionAdapter"
+    },
+    {
+      "port": "AvailabilityPort",
+      "replay": "SingleProcessAvailabilityAdapter",
+      "shadow_online": "RestartBackfillAvailabilityAdapter",
+      "controlled_field": "ControlledFieldAvailabilityAdapter",
+      "production": "FutureProductionAvailabilityAdapter"
+    }
+  ],
+  "claim_boundaries": [
+    "Replay validation is not production runtime",
+    "Shadow-online has no real-world action authority",
+    "Controlled Field remains governed and human-gated",
+    "Production adapter is architecture-only in DT-02"
+  ]
+}

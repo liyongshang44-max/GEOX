@@ -1,0 +1,99 @@
+{
+  "schema_version": "geox_dt02_api_route_compatibility_matrix_v1",
+  "phase": "DT-02",
+  "status": "FROZEN",
+  "route_inventory_evidence": [
+    "apps/web/src/app/routes/operatorFieldRuntimeRoutes.tsx",
+    "apps/server/src/routes/v1/operator_evidence_twin.ts",
+    "apps/server/src/routes/v1/operator_twin.ts",
+    "apps/web/src/api/operatorTwin.ts",
+    "apps/web/src/api/operatorTwinClosure.ts"
+  ],
+  "frontend_canonical_family": {
+    "prefix": "/operator/fields/:fieldId",
+    "status": "KEEP_AND_EXTEND_READ_ONLY",
+    "routes": [
+      "/operator/fields/:fieldId",
+      "/operator/fields/:fieldId/evidence",
+      "/operator/fields/:fieldId/state",
+      "/operator/fields/:fieldId/forecast",
+      "/operator/fields/:fieldId/scenario",
+      "/operator/fields/:fieldId/residual",
+      "/operator/fields/:fieldId/calibration",
+      "/operator/fields/:fieldId/health",
+      "/operator/fields/:fieldId/audit"
+    ],
+    "forbidden_parallel_family": "/operator/twin-runtime/fields/*"
+  },
+  "server_canonical_read_family": {
+    "prefix": "/api/v1/operator/fields/:fieldId/runtime",
+    "status": "FROZEN_FOR_MCFT_17_IMPLEMENTATION",
+    "routes": [
+      {"method": "GET", "path": "/api/v1/operator/fields/:fieldId/runtime", "purpose": "current runtime summary"},
+      {"method": "GET", "path": "/api/v1/operator/fields/:fieldId/runtime/states", "purpose": "posterior State history"},
+      {"method": "GET", "path": "/api/v1/operator/fields/:fieldId/runtime/forecasts", "purpose": "Forecast runs and points"},
+      {"method": "GET", "path": "/api/v1/operator/fields/:fieldId/runtime/scenario-sets", "purpose": "Scenario sets and options"},
+      {"method": "GET", "path": "/api/v1/operator/fields/:fieldId/runtime/residuals", "purpose": "Forecast residual history"},
+      {"method": "GET", "path": "/api/v1/operator/fields/:fieldId/runtime/action-lifecycle", "purpose": "Decision through Acceptance trace"},
+      {"method": "GET", "path": "/api/v1/operator/fields/:fieldId/runtime/health", "purpose": "runtime operational Health"},
+      {"method": "GET", "path": "/api/v1/operator/fields/:fieldId/runtime/trace", "purpose": "complete object and lineage trace"}
+    ],
+    "default_query": {
+      "lineage": "active",
+      "include_superseded": false
+    },
+    "history_query_parameters": ["from", "to", "as_of", "cursor", "limit", "lineage", "include_superseded"]
+  },
+  "existing_compatibility_reads": [
+    {
+      "surface": "/api/v1/operator/fields/:fieldId/evidence-twin",
+      "classification": "LEGACY_READ_COMPATIBILITY",
+      "evidence": "apps/server/src/routes/v1/operator_evidence_twin.ts",
+      "policy": "retain read-only; no new MCFT capability and no writes"
+    },
+    {
+      "surface": "/api/v1/operator/twin/*",
+      "classification": "LEGACY_READ_COMPATIBILITY",
+      "evidence": "apps/server/src/routes/v1/operator_twin.ts",
+      "policy": "retain; deprecate registration only; no new MCFT capability"
+    },
+    {
+      "surface": "/operator/twin/*",
+      "classification": "LEGACY_FRONTEND_COMPATIBILITY",
+      "evidence": "apps/web/src/api/operatorTwin.ts and retained route contracts",
+      "policy": "retain until callers switch"
+    },
+    {
+      "surface": "/app/operator/*/evidence-twin",
+      "classification": "LEGACY_FRONTEND_COMPATIBILITY",
+      "evidence": "frontend reset and productization route contracts",
+      "policy": "retain until replacement is shipped and callers switch"
+    }
+  ],
+  "forbidden_generated_object_writes": [
+    "POST /api/v1/operator/fields/:fieldId/runtime/state",
+    "POST /api/v1/operator/fields/:fieldId/runtime/forecast",
+    "POST /api/v1/operator/fields/:fieldId/runtime/scenario",
+    "POST /api/v1/operator/fields/:fieldId/runtime/residual",
+    "POST /api/v1/operator/fields/:fieldId/runtime/checkpoint",
+    "POST /api/v1/operator/fields/:fieldId/runtime/model-activation",
+    "public HTTP tick-write endpoint"
+  ],
+  "separately_governed_human_writes": [
+    "human decision",
+    "approval request and decision",
+    "operation plan",
+    "AO-ACT task",
+    "receipt",
+    "acceptance"
+  ],
+  "manual_tick_boundary": "MCFT-04 begins with application service plus CLI/manual runner and scheduler adapter; no public HTTP tick endpoint is frozen by DT-02.",
+  "deletion_prerequisites": [
+    "all current callers identified",
+    "replacement API shipped",
+    "frontend switched",
+    "runtime acceptance passed",
+    "compatibility window completed",
+    "explicit deletion task approved"
+  ]
+}
