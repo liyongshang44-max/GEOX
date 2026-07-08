@@ -1,5 +1,6 @@
 // apps/web/src/features/operator/fieldRuntime/FieldRuntimeAuditCompletionPanel.tsx
 import React from "react";
+import { ProductHorizontalScrollRegion } from "../../../design-system/product";
 import { useLocale } from "../../../lib/locale";
 import { fieldRuntimeText, type FieldRuntimeCopyKey } from "./fieldRuntimeLocaleCopy";
 import { type FieldRuntimeAuditViewModel } from "./fieldRuntimeAuditAdapter";
@@ -18,8 +19,11 @@ export default function FieldRuntimeAuditCompletionPanel({ audit }: { audit: Fie
     [text("Health", "健康"), "H62"],
     [text("Audit", "审计"), "H60-K"],
   ];
+  const regionLabel = t("auditCompletion");
   return <article className="operatorFieldRuntime__panel operatorFieldRuntime__auditCompletion" data-h60k-panel="audit-completion">
     <div className="operatorFieldRuntime__panelHeader"><div><p className="operatorFieldRuntime__eyebrow">{t("audit")}</p><h2 className="operatorFieldRuntime__panelTitle">{t("auditCompletion")}</h2></div><span className="operatorFieldRuntime__panelMeta">H60</span></div>
-    <div className="operatorFieldRuntime__auditTable" role="table" aria-label={t("auditCompletion")}><div className="operatorFieldRuntime__auditTableHeader" role="row"><span>{text("Phase", "阶段")}</span><span>{t("status")}</span></div>{rows.map(([phase, status]) => <div className="operatorFieldRuntime__auditTableRow" role="row" key={phase}><span>{phase}</span><span>{status}</span></div>)}</div>
+    <ProductHorizontalScrollRegion ariaLabel={regionLabel} overflowOwner="operator-audit-completion">
+      <div className="operatorFieldRuntime__auditTable" role="table" aria-label={regionLabel}><div className="operatorFieldRuntime__auditTableHeader" role="row"><span>{text("Phase", "阶段")}</span><span>{t("status")}</span></div>{rows.map(([phase, status]) => <div className="operatorFieldRuntime__auditTableRow" role="row" key={phase}><span>{phase}</span><span>{status}</span></div>)}</div>
+    </ProductHorizontalScrollRegion>
   </article>;
 }
