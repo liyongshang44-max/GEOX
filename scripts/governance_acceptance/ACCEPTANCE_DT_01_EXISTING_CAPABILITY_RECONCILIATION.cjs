@@ -6,9 +6,12 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const zlib = require('node:zlib');
-const crypto = require('node:crypto');
 const cp = require('node:child_process');
+const {
+  loadArtifactFile,
+  loadInventoryManifest,
+  runCorruptTrailerSelfTest,
+} = require('./DT01_JSON_ARTIFACT_LOADER.cjs');
 
 const ROOT = path.resolve(__dirname, '../..');
 const BASELINE = 'bce918d1eea423397bdd329148b7a2e7eb181b6c';
@@ -26,6 +29,8 @@ const FILES = {
   master: 'docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE.md',
   auditScript: 'scripts/governance_acceptance/AUDIT_DT_01_REPOSITORY_CAPABILITIES.cjs',
   acceptanceScript: 'scripts/governance_acceptance/ACCEPTANCE_DT_01_EXISTING_CAPABILITY_RECONCILIATION.cjs',
+  helperScript: 'scripts/governance_acceptance/DT01_JSON_ARTIFACT_LOADER.cjs',
+  dt00RegressionScript: 'scripts/governance_acceptance/ACCEPTANCE_DT_00_MAINLINE_GOVERNANCE_RESET.cjs',
 };
 
 const allowedStatus = new Set(['ESTABLISHED','ESTABLISHED_WITH_LIMITATIONS','MISSING','NOT_CLAIMED']);
@@ -39,35 +44,7 @@ function pass(message) { passes.push(message); console.log(`PASS: ${message}`); 
 function fail(message) { failures.push(message); console.error(`FAIL: ${message}`); }
 function abs(relativePath) { return path.join(ROOT, relativePath); }
 function read(relativePath) { return fs.readFileSync(abs(relativePath), 'utf8'); }
-function parse(relativePath) {
-  const outer = JSON.parse(read(relativePath));
-  if (outer?.encoding !== 'GZIP_BASE64_JSON') return outer;
-  const raw = zlib.gunzipSync(Buffer.from(outer.payload, 'base64'));
-  const digest = crypto.createHash('sha256').update(raw).digest('hex');
-  if (digest !== outer.decoded_sha256) throw new Error(`ENCODED_JSON_SHA256_MISMATCH:${relativePath}`);
-  return JSON.parse(raw.toString('utf8'));
-}
-
-function loadInventoryManifest(relativePath) {
-  const manifest = JSON.parse(read(relativePath));
-  const capabilities = [];
-  for (const part of manifest.part_files || []) {
-    const stored = fs.readFileSync(abs(part.path));
-    const outer = JSON.parse(stored.toString('utf8'));
-    const raw = outer?.encoding === 'GZIP_BASE64_JSON'
-      ? zlib.gunzipSync(Buffer.from(outer.payload, 'base64'))
-      : stored;
-    const digest = crypto.createHash('sha256').update(raw).digest('hex');
-    if (digest !== part.sha256) throw new Error(`INVENTORY_PART_SHA256_MISMATCH:${part.path}`);
-    if (outer?.encoding === 'GZIP_BASE64_JSON' && outer.decoded_sha256 !== digest) {
-      throw new Error(`INVENTORY_ENVELOPE_SHA256_MISMATCH:${part.path}`);
-    }
-    const decoded = JSON.parse(raw.toString('utf8'));
-    capabilities.push(...(decoded.capabilities || []));
-  }
-  return { ...manifest, capabilities };
-}
-
+function parse(relativePath) { return loadArtifactFile(ROOT, relativePath).value; }
 function nonEmpty(value) { return typeof value === 'string' && value.trim().length > 0; }
 
 for (const relativePath of Object.values(FILES)) {
@@ -77,17 +54,46 @@ for (const relativePath of Object.values(FILES)) {
 
 if (failures.length) process.exit(1);
 
-const inventory = loadInventoryManifest(FILES.inventory);
-for (const part of inventory.part_files || []) {
-  if (!fs.existsSync(abs(part.path))) fail(`missing inventory part ${part.path}`);
-  else pass(`inventory part exists ${part.path}`);
+let loaderSelfTest;
+let inventoryLoaded;
+let inventory;
+let calls;
+let persistence;
+let runtime;
+let matrix;
+let master;
+let reconciliation;
+
+try {
+  loaderSelfTest = runCorruptTrailerSelfTest();
+  pass(`artifact loader corrupt-trailer self-test: ${loaderSelfTest.mode}`);
+
+  inventoryLoaded = loadInventoryManifest(ROOT, FILES.inventory);
+  inventory = {
+    ...inventoryLoaded.manifest,
+    capabilities: inventoryLoaded.capabilities,
+  };
+
+  for (const part of inventory.part_files || []) {
+    if (!fs.existsSync(abs(part.path))) fail(`missing inventory part ${part.path}`);
+    else pass(`inventory part exists ${part.path}`);
+  }
+
+  calls = parse(FILES.calls);
+  persistence = parse(FILES.persistence);
+  runtime = parse(FILES.runtime);
+  matrix = parse(FILES.matrix);
+  master = read(FILES.master);
+  reconciliation = read(FILES.reconciliation);
+
+  const recovered = inventoryLoaded.artifact_transports.filter((item) => item.recovery !== null);
+  pass(`inventory artifacts decoded and SHA-256 verified: ${inventoryLoaded.artifact_transports.length}`);
+  if (recovered.length > 0) pass(`legacy gzip trailer recovery exercised: ${recovered.length}`);
+} catch (error) {
+  fail(`DT-01 artifact loading failed: ${error.message}`);
+  console.log(`\nDT-01 acceptance summary: ${passes.length} PASS, ${failures.length} FAIL`);
+  process.exit(1);
 }
-const calls = parse(FILES.calls);
-const persistence = parse(FILES.persistence);
-const runtime = parse(FILES.runtime);
-const matrix = parse(FILES.matrix);
-const master = read(FILES.master);
-const reconciliation = read(FILES.reconciliation);
 
 const requiredIds = [
   ...Array.from({ length: 5 }, (_, i) => `DT01-CAP-${String(i + 1).padStart(3, '0')}`),
@@ -210,6 +216,13 @@ if (capabilities.find((item) => item.capability_id === 'DT01-CAP-070')?.capabili
 if (capabilities.find((item) => item.capability_id === 'DT01-CAP-072')?.capability_status !== 'MISSING') fail('assimilation must be MISSING');
 if (capabilities.find((item) => item.capability_id === 'DT01-CAP-076')?.capability_status !== 'MISSING') fail('checkpoint must be MISSING');
 
+const matrixLineage = Array.isArray(matrix.governance_lineage) ? matrix.governance_lineage : [];
+if (!matrixLineage.includes('DT-00') || !matrixLineage.includes('DT-01')) fail('capability matrix governance lineage must include DT-00 and DT-01');
+else pass('capability matrix preserves DT-00 and DT-01 governance lineage');
+const liveProduction = (matrix.capabilities || []).find((item) => item.capability_id === 'DT-MATRIX-LIVE-PRODUCTION-FIELD-TWIN');
+if (liveProduction?.current_status !== 'NOT_CLAIMED') fail('live production Field Twin must remain NOT_CLAIMED');
+else pass('live production Field Twin remains NOT_CLAIMED');
+
 const forbiddenClaims = [
   'P50 = production runtime',
   'P57 = live-device runtime',
@@ -238,7 +251,7 @@ try {
 }
 
 try {
-  cp.execFileSync(process.execPath, ['scripts/governance_acceptance/ACCEPTANCE_DT_00_MAINLINE_GOVERNANCE_RESET.cjs'], {
+  cp.execFileSync(process.execPath, [FILES.dt00RegressionScript], {
     cwd: ROOT,
     stdio: 'inherit',
     env: { ...process.env, DT00_ACCEPTANCE_SKIP_GIT_SCOPE: '1' },
@@ -250,7 +263,8 @@ try {
 
 try {
   const changed = cp.execFileSync('git', ['diff','--name-only',`${BASELINE}...HEAD`], { cwd: ROOT, encoding: 'utf8' }).trim().split(/\r?\n/).filter(Boolean);
-  const forbidden = changed.filter((file) => !(file.startsWith('docs/digital_twin/') || file === FILES.auditScript || file === FILES.acceptanceScript));
+  const allowedGovernanceScripts = new Set([FILES.auditScript, FILES.acceptanceScript, FILES.helperScript, FILES.dt00RegressionScript]);
+  const forbidden = changed.filter((file) => !(file.startsWith('docs/digital_twin/') || allowedGovernanceScripts.has(file)));
   if (forbidden.length) fail(`forbidden changed files: ${forbidden.join(', ')}`);
   else pass(`changed-file scope valid: ${changed.length} files`);
 } catch (error) {

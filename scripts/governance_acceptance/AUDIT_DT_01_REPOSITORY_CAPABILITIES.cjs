@@ -6,8 +6,10 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const zlib = require('node:zlib');
-const crypto = require('node:crypto');
+const {
+  loadInventoryManifest,
+  runCorruptTrailerSelfTest,
+} = require('./DT01_JSON_ARTIFACT_LOADER.cjs');
 
 const ROOT = path.resolve(__dirname, '../..');
 const INVENTORY_PATH = path.join(ROOT, 'docs/digital_twin/GEOX-DT-01-CAPABILITY-INVENTORY.json');
@@ -29,26 +31,6 @@ function walk(dir, out = []) {
   return out;
 }
 function read(relativePath) { return fs.readFileSync(path.join(ROOT, relativePath), 'utf8'); }
-
-function loadInventoryManifest(relativePath) {
-  const manifest = JSON.parse(read(relativePath));
-  const capabilities = [];
-  for (const part of manifest.part_files || []) {
-    const stored = fs.readFileSync(path.join(ROOT, part.path));
-    const outer = JSON.parse(stored.toString('utf8'));
-    const raw = outer?.encoding === 'GZIP_BASE64_JSON'
-      ? zlib.gunzipSync(Buffer.from(outer.payload, 'base64'))
-      : stored;
-    const digest = crypto.createHash('sha256').update(raw).digest('hex');
-    if (digest !== part.sha256) throw new Error(`INVENTORY_PART_SHA256_MISMATCH:${part.path}`);
-    if (outer?.encoding === 'GZIP_BASE64_JSON' && outer.decoded_sha256 !== digest) {
-      throw new Error(`INVENTORY_ENVELOPE_SHA256_MISMATCH:${part.path}`);
-    }
-    const decoded = JSON.parse(raw.toString('utf8'));
-    capabilities.push(...(decoded.capabilities || []));
-  }
-  return { ...manifest, capabilities };
-}
 
 function occurrenceCount(text, token) { return token ? text.split(token).length - 1 : 0; }
 function externalReferences(files, definitionPaths, tokens) {
@@ -106,7 +88,12 @@ if (!fs.existsSync(INVENTORY_PATH)) {
   process.exit(1);
 }
 
-const inventory = loadInventoryManifest('docs/digital_twin/GEOX-DT-01-CAPABILITY-INVENTORY.json');
+const loaderSelfTest = runCorruptTrailerSelfTest();
+const inventoryLoaded = loadInventoryManifest(ROOT, 'docs/digital_twin/GEOX-DT-01-CAPABILITY-INVENTORY.json');
+const inventory = {
+  ...inventoryLoaded.manifest,
+  capabilities: inventoryLoaded.capabilities,
+};
 const repositoryFiles = walk(ROOT);
 const missingDefinitionPaths = [];
 const componentReports = [];
@@ -157,6 +144,8 @@ const report = {
   capability_count: inventory.capabilities.length,
   component_count: componentReports.length,
   missing_definition_paths: [...new Set(missingDefinitionPaths)].sort(),
+  artifact_loader_self_test: loaderSelfTest,
+  artifact_transports: inventoryLoaded.artifact_transports,
   components: componentReports,
   critical_checks: [],
   limitations: ['This is static text and path analysis.','It does not construct a complete TypeScript semantic call graph.','A reference in a test or document is not a server runtime caller.'],
@@ -176,6 +165,8 @@ console.log(JSON.stringify({
   capability_count: report.capability_count,
   component_count: report.component_count,
   missing_definition_path_count: report.missing_definition_paths.length,
+  recovered_artifact_count: report.artifact_transports.filter((item) => item.recovery !== null).length,
+  corrected_metadata_count: report.artifact_transports.filter((item) => item.metadata_correction !== null).length,
   failed_critical_check_count: report.critical_checks.filter((item) => !item.passed).length,
   report_path: CHECK_ONLY ? null : path.relative(ROOT, OUTPUT_PATH).replaceAll(path.sep, '/'),
 }, null, 2));

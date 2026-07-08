@@ -1,1 +1,832 @@
-{"schema_version":"geox_dt01_encoded_json_artifact_v1","artifact_name":"GEOX-DT-01-CAPABILITY-INVENTORY-PART-06-ACTION.json","encoding":"GZIP_BASE64_JSON","decoded_sha256":"51ec64c6518d701e6e58d212cba2efe3f8e480d959ad4527311f89c0c3ca0412","decoded_bytes":17489,"payload":"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"}
+{
+  "schema_version": "geox_dt01_capability_inventory_part_v2",
+  "phase": "DT-01",
+  "part": 6,
+  "label": "ACTION",
+  "reconstruction": {
+    "status": "RECONSTRUCTED_FROM_REPOSITORY_EVIDENCE",
+    "supersedes_transport": "GZIP_BASE64_JSON",
+    "reason": "The original compressed payload had invalid trailer metadata, mismatched decoded hash/length metadata, and structurally invalid JSON from DT01-CAP-053 onward.",
+    "authoritative_sources": [
+      "docs/digital_twin/GEOX-DT-01-REUSE-DECISION-REGISTER.md",
+      "apps/server/src/domain/approval/approval_request_service_v1.ts",
+      "apps/server/src/routes/control_approval_request_v1.ts",
+      "apps/server/src/routes/v1/operator_approval_actions.ts",
+      "apps/server/src/routes/control_operation_plan_v1.ts",
+      "apps/server/src/routes/control_ao_act.ts",
+      "apps/server/src/contracts/action_receipt_v1.ts",
+      "apps/server/src/routes/acceptance_v1.ts",
+      "apps/server/src/routes/evidence_artifact_from_as_executed_v1.ts",
+      "apps/server/src/routes/water_response_verification_v1.ts"
+    ]
+  },
+  "capabilities": [
+    {
+      "capability_id": "DT01-CAP-050",
+      "name": "Scenario-to-recommendation bridge",
+      "domain": "DECISION",
+      "capability_status": "ESTABLISHED_WITH_LIMITATIONS",
+      "component_ids": [
+        "controlled_twin_recommendation_bridge"
+      ],
+      "missing_gap": null,
+      "dt02_owner": "MCFT-13",
+      "forbidden_claims": [],
+      "evidence_refs": [
+        "apps/server/src/routes/v1/operator_twin.ts",
+        "docs/twin_kernel/P46_TWIN_RECOMMENDATION_CONTEXT_SCHEMA_V0.json"
+      ],
+      "components": [
+        {
+          "component_id": "controlled_twin_recommendation_bridge",
+          "definition_paths": [
+            "scripts/twin_kernel/P46_21_CONTROLLED_RECOMMENDATION_FROM_TWIN_RUNNER_V0.cjs",
+            "docs/twin_kernel/P46_TWIN_RECOMMENDATION_CONTEXT_SCHEMA_V0.json"
+          ],
+          "symbols": [
+            "P46",
+            "recommendation"
+          ],
+          "call_sites": [],
+          "call_status": "CONTROLLED_AND_LEGACY_PATH_FOUND",
+          "runtime_entries": [
+            "P46 controlled runner"
+          ],
+          "input_sources": [
+            "scenario/residual/model refs"
+          ],
+          "output_objects": [
+            "recommendation candidate/context"
+          ],
+          "clock_source": "INPUT_AS_OF_TS",
+          "data_mode": "CONTROLLED_FIXTURE",
+          "persistence_modes": [
+            "IN_MEMORY",
+            "ACCEPTANCE_OUTPUT_FILE",
+            "APPEND_ONLY_FACT"
+          ],
+          "read_models": [],
+          "routes": [],
+          "verification_commands": [],
+          "verification_status": "NOT_APPLICABLE_TO_STATIC_RECONCILIATION",
+          "evidence_levels": [
+            "SCRIPT_RUNNER",
+            "SERVER_WRITE_PATH"
+          ],
+          "highest_evidence_level": "SERVER_WRITE_PATH",
+          "reuse_decision": "REFERENCE_ONLY",
+          "decision_contract": {
+            "kind": "REFERENCE_ONLY",
+            "reference_scope": [
+              "scenario != recommendation",
+              "no direct AO-ACT"
+            ]
+          },
+          "unknown_resolution": null,
+          "limitations": [
+            "not bound to canonical MCFT scenario"
+          ],
+          "forbidden_claims": [],
+          "dt02_implications": [],
+          "evidence_refs": [
+            "scripts/twin_kernel/P46_21_CONTROLLED_RECOMMENDATION_FROM_TWIN_RUNNER_V0.cjs",
+            "docs/twin_kernel/P46_TWIN_RECOMMENDATION_CONTEXT_SCHEMA_V0.json"
+          ]
+        }
+      ]
+    },
+    {
+      "capability_id": "DT01-CAP-051",
+      "name": "Recommendation candidate",
+      "domain": "DECISION",
+      "capability_status": "ESTABLISHED_WITH_LIMITATIONS",
+      "component_ids": [
+        "recommendation_candidate_path"
+      ],
+      "missing_gap": null,
+      "dt02_owner": "MCFT-13",
+      "forbidden_claims": [],
+      "evidence_refs": [
+        "apps/server/src/routes/decision_engine_v1.ts",
+        "scripts/twin_kernel/P46_21_CONTROLLED_RECOMMENDATION_FROM_TWIN_RUNNER_V0.cjs"
+      ],
+      "components": [
+        {
+          "component_id": "recommendation_candidate_path",
+          "definition_paths": [
+            "apps/server/src/routes/decision_engine_v1.ts",
+            "scripts/twin_kernel/P46_21_CONTROLLED_RECOMMENDATION_FROM_TWIN_RUNNER_V0.cjs"
+          ],
+          "symbols": [
+            "recommendation_candidate",
+            "decision_engine"
+          ],
+          "call_sites": [],
+          "call_status": "SERVER_AND_SCRIPT_PATH_FOUND",
+          "runtime_entries": [
+            "decision engine route"
+          ],
+          "input_sources": [
+            "evidence/state/scenario context"
+          ],
+          "output_objects": [
+            "recommendation candidate"
+          ],
+          "clock_source": "REQUEST_TIME",
+          "data_mode": "MIXED",
+          "persistence_modes": [
+            "APPEND_ONLY_FACT",
+            "ACCEPTANCE_OUTPUT_FILE"
+          ],
+          "read_models": [],
+          "routes": [],
+          "verification_commands": [],
+          "verification_status": "NOT_APPLICABLE_TO_STATIC_RECONCILIATION",
+          "evidence_levels": [
+            "SERVER_ROUTE",
+            "SERVER_WRITE_PATH",
+            "SCRIPT_RUNNER"
+          ],
+          "highest_evidence_level": "SERVER_WRITE_PATH",
+          "reuse_decision": "REUSE_WITH_ADAPTER",
+          "decision_contract": {
+            "kind": "REUSE_WITH_ADAPTER",
+            "responsibility": "bind candidate inputs to canonical MCFT scenario/forecast references",
+            "existing_side": "existing decision engine candidate",
+            "new_mcft_side": "MCFT recommendation candidate",
+            "must_not_do": [
+              "skip human review",
+              "create AO-ACT directly"
+            ]
+          },
+          "unknown_resolution": null,
+          "limitations": [],
+          "forbidden_claims": [],
+          "dt02_implications": [],
+          "evidence_refs": [
+            "apps/server/src/routes/decision_engine_v1.ts",
+            "scripts/twin_kernel/P46_21_CONTROLLED_RECOMMENDATION_FROM_TWIN_RUNNER_V0.cjs"
+          ]
+        }
+      ]
+    },
+    {
+      "capability_id": "DT01-CAP-052",
+      "name": "Policy evaluation",
+      "domain": "POLICY",
+      "capability_status": "ESTABLISHED_WITH_LIMITATIONS",
+      "component_ids": [
+        "decision_policy_evaluation"
+      ],
+      "missing_gap": null,
+      "dt02_owner": "MCFT-13/14",
+      "forbidden_claims": [],
+      "evidence_refs": [
+        "apps/server/src/domain/agronomy/ao_act_hard_rule_strategy_v1.ts",
+        "apps/server/src/routes/decision_engine_v1.ts"
+      ],
+      "components": [
+        {
+          "component_id": "decision_policy_evaluation",
+          "definition_paths": [
+            "apps/server/src/routes/decision_engine_v1.ts",
+            "apps/server/src/domain/agronomy/ao_act_hard_rule_strategy_v1.ts"
+          ],
+          "symbols": [
+            "policy",
+            "evaluateAoActHardRulePrecheckV1"
+          ],
+          "call_sites": [],
+          "call_status": "SERVER_ROUTE_FOUND",
+          "runtime_entries": [
+            "decision engine route"
+          ],
+          "input_sources": [
+            "candidate",
+            "scope"
+          ],
+          "output_objects": [
+            "policy result"
+          ],
+          "clock_source": "REQUEST_TIME",
+          "data_mode": "DATABASE_READBACK",
+          "persistence_modes": [
+            "APPEND_ONLY_FACT"
+          ],
+          "read_models": [],
+          "routes": [],
+          "verification_commands": [],
+          "verification_status": "NOT_APPLICABLE_TO_STATIC_RECONCILIATION",
+          "evidence_levels": [
+            "SERVER_ROUTE",
+            "SERVER_WRITE_PATH"
+          ],
+          "highest_evidence_level": "SERVER_WRITE_PATH",
+          "reuse_decision": "REUSE_WITH_ADAPTER",
+          "decision_contract": {
+            "kind": "REUSE_WITH_ADAPTER",
+            "responsibility": "map canonical MCFT decision/action references into existing policy evaluation",
+            "existing_side": "existing candidate/action policies",
+            "new_mcft_side": "MCFT Gate C policy inputs",
+            "must_not_do": [
+              "rank scenarios without policy",
+              "convert policy pass into execution"
+            ]
+          },
+          "unknown_resolution": null,
+          "limitations": [],
+          "forbidden_claims": [],
+          "dt02_implications": [],
+          "evidence_refs": [
+            "apps/server/src/routes/decision_engine_v1.ts",
+            "apps/server/src/domain/agronomy/ao_act_hard_rule_strategy_v1.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "capability_id": "DT01-CAP-053",
+      "name": "Approval request / decision",
+      "domain": "APPROVAL",
+      "capability_status": "ESTABLISHED_WITH_LIMITATIONS",
+      "component_ids": [
+        "approval_request_service"
+      ],
+      "missing_gap": null,
+      "dt02_owner": "MCFT-13/14",
+      "forbidden_claims": [
+        "approval request created = approval granted"
+      ],
+      "evidence_refs": [
+        "apps/server/src/domain/approval/approval_request_service_v1.ts",
+        "apps/server/src/routes/control_approval_request_v1.ts",
+        "apps/server/src/routes/v1/operator_approval_actions.ts"
+      ],
+      "components": [
+        {
+          "component_id": "approval_request_service",
+          "definition_paths": [
+            "apps/server/src/domain/approval/approval_request_service_v1.ts",
+            "apps/server/src/routes/control_approval_request_v1.ts",
+            "apps/server/src/routes/v1/operator_approval_actions.ts"
+          ],
+          "symbols": [
+            "createApprovalRequestV1",
+            "approval_request_v1",
+            "approval_decision_v1"
+          ],
+          "call_sites": [],
+          "call_status": "SERVER_WRITE_PATH_FOUND",
+          "runtime_entries": [
+            "approval request route",
+            "operator approval action route"
+          ],
+          "input_sources": [
+            "recommendation/operation references",
+            "human decision"
+          ],
+          "output_objects": [
+            "approval request",
+            "approval decision"
+          ],
+          "clock_source": "REQUEST_TIME",
+          "data_mode": "DATABASE_READBACK",
+          "persistence_modes": [
+            "APPEND_ONLY_FACT",
+            "DATABASE_INDEX_INSERT"
+          ],
+          "read_models": [],
+          "routes": [
+            "/api/v1/operator/approvals/*"
+          ],
+          "verification_commands": [],
+          "verification_status": "NOT_APPLICABLE_TO_STATIC_RECONCILIATION",
+          "evidence_levels": [
+            "SERVER_ROUTE",
+            "SERVER_WRITE_PATH"
+          ],
+          "highest_evidence_level": "SERVER_WRITE_PATH",
+          "reuse_decision": "REUSE_WITH_ADAPTER",
+          "decision_contract": {
+            "kind": "REUSE_WITH_ADAPTER",
+            "responsibility": "bind MCFT decision records and approved-plan references into the existing approval chain",
+            "existing_side": "existing approval request/decision service",
+            "new_mcft_side": "MCFT decision-to-approval bridge",
+            "must_not_do": [
+              "record a decision without human approval",
+              "auto-approve"
+            ]
+          },
+          "unknown_resolution": null,
+          "limitations": [
+            "not yet bound to canonical MCFT decision objects"
+          ],
+          "forbidden_claims": [],
+          "dt02_implications": [],
+          "evidence_refs": [
+            "apps/server/src/domain/approval/approval_request_service_v1.ts",
+            "apps/server/src/routes/control_approval_request_v1.ts",
+            "apps/server/src/routes/v1/operator_approval_actions.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "capability_id": "DT01-CAP-054",
+      "name": "Operation plan",
+      "domain": "ACTION_PLANNING",
+      "capability_status": "ESTABLISHED_WITH_LIMITATIONS",
+      "component_ids": [
+        "operation_plan_route"
+      ],
+      "missing_gap": null,
+      "dt02_owner": "MCFT-14",
+      "forbidden_claims": [
+        "operation plan created = task dispatched"
+      ],
+      "evidence_refs": [
+        "apps/server/src/routes/control_operation_plan_v1.ts",
+        "apps/server/src/domain/controlplane/ao_act_task_from_operation_plan_builder_v1.ts"
+      ],
+      "components": [
+        {
+          "component_id": "operation_plan_route",
+          "definition_paths": [
+            "apps/server/src/routes/control_operation_plan_v1.ts",
+            "apps/server/src/domain/controlplane/ao_act_task_from_operation_plan_builder_v1.ts"
+          ],
+          "symbols": [
+            "registerOperationPlanV1Routes",
+            "buildAoActTaskFromReadyOperationPlanV1",
+            "operation_plan_v1"
+          ],
+          "call_sites": [],
+          "call_status": "SERVER_WRITE_PATH_FOUND",
+          "runtime_entries": [
+            "operation plan transition route"
+          ],
+          "input_sources": [
+            "approved decision",
+            "parameters"
+          ],
+          "output_objects": [
+            "operation plan",
+            "ready-plan task payload"
+          ],
+          "clock_source": "REQUEST_TIME",
+          "data_mode": "DATABASE_READBACK",
+          "persistence_modes": [
+            "APPEND_ONLY_FACT",
+            "DATABASE_INDEX_INSERT"
+          ],
+          "read_models": [],
+          "routes": [
+            "/api/v1/operator/operation-plans/:operation_plan_id/transition"
+          ],
+          "verification_commands": [],
+          "verification_status": "NOT_APPLICABLE_TO_STATIC_RECONCILIATION",
+          "evidence_levels": [
+            "SERVER_ROUTE",
+            "SERVER_WRITE_PATH"
+          ],
+          "highest_evidence_level": "SERVER_WRITE_PATH",
+          "reuse_decision": "REUSE_WITH_ADAPTER",
+          "decision_contract": {
+            "kind": "REUSE_WITH_ADAPTER",
+            "responsibility": "bind the selected irrigation scenario approval into a governed operation plan",
+            "existing_side": "existing operation plan route and builder",
+            "new_mcft_side": "MCFT Gate C plan",
+            "must_not_do": [
+              "treat a scenario alone as an approved plan",
+              "collapse planned and executed state"
+            ]
+          },
+          "unknown_resolution": null,
+          "limitations": [
+            "not yet bound to canonical MCFT scenario and decision identities"
+          ],
+          "forbidden_claims": [],
+          "dt02_implications": [],
+          "evidence_refs": [
+            "apps/server/src/routes/control_operation_plan_v1.ts",
+            "apps/server/src/domain/controlplane/ao_act_task_from_operation_plan_builder_v1.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "capability_id": "DT01-CAP-055",
+      "name": "AO-ACT preflight",
+      "domain": "ACTION",
+      "capability_status": "ESTABLISHED_WITH_LIMITATIONS",
+      "component_ids": [
+        "ao_act_preflight"
+      ],
+      "missing_gap": null,
+      "dt02_owner": "MCFT-14",
+      "forbidden_claims": [
+        "preflight pass = action executed"
+      ],
+      "evidence_refs": [
+        "apps/server/src/routes/control_ao_act.ts",
+        "scripts/governance_acceptance/ACCEPTANCE_H54_CONTROL_CONNECTOR_PREFLIGHT_V1.cjs"
+      ],
+      "components": [
+        {
+          "component_id": "ao_act_preflight",
+          "definition_paths": [
+            "apps/server/src/routes/control_ao_act.ts",
+            "apps/server/src/domain/agronomy/ao_act_hard_rule_strategy_v1.ts",
+            "apps/server/src/services/skills/skill_binding_service.ts",
+            "scripts/governance_acceptance/ACCEPTANCE_H54_CONTROL_CONNECTOR_PREFLIGHT_V1.cjs"
+          ],
+          "symbols": [
+            "evaluateAoActHardRulePrecheckV1",
+            "resolveDeviceSkillBindingForTask",
+            "ACCEPTANCE_H54_CONTROL_CONNECTOR_PREFLIGHT_V1"
+          ],
+          "call_sites": [],
+          "call_status": "SERVER_ROUTE_FOUND",
+          "runtime_entries": [
+            "/api/v1/actions/* preflight within task creation"
+          ],
+          "input_sources": [
+            "ready operation plan",
+            "device skill binding"
+          ],
+          "output_objects": [
+            "preflight decision"
+          ],
+          "clock_source": "REQUEST_TIME",
+          "data_mode": "DATABASE_READBACK",
+          "persistence_modes": [
+            "APPEND_ONLY_FACT"
+          ],
+          "read_models": [],
+          "routes": [],
+          "verification_commands": [],
+          "verification_status": "NOT_APPLICABLE_TO_STATIC_RECONCILIATION",
+          "evidence_levels": [
+            "SERVER_ROUTE",
+            "SERVER_WRITE_PATH",
+            "TEST_OR_ACCEPTANCE_ONLY"
+          ],
+          "highest_evidence_level": "SERVER_WRITE_PATH",
+          "reuse_decision": "REUSE_WITH_ADAPTER",
+          "decision_contract": {
+            "kind": "REUSE_WITH_ADAPTER",
+            "responsibility": "provide MCFT plan and execution-evidence references to the existing preflight gates",
+            "existing_side": "existing action/device preflight",
+            "new_mcft_side": "MCFT Gate C execution adapter",
+            "must_not_do": [
+              "treat preflight as dispatch",
+              "bypass device capability checks"
+            ]
+          },
+          "unknown_resolution": null,
+          "limitations": [
+            "request-driven preflight, not a scheduler"
+          ],
+          "forbidden_claims": [],
+          "dt02_implications": [],
+          "evidence_refs": [
+            "apps/server/src/routes/control_ao_act.ts",
+            "apps/server/src/domain/agronomy/ao_act_hard_rule_strategy_v1.ts",
+            "apps/server/src/services/skills/skill_binding_service.ts",
+            "scripts/governance_acceptance/ACCEPTANCE_H54_CONTROL_CONNECTOR_PREFLIGHT_V1.cjs"
+          ]
+        }
+      ]
+    },
+    {
+      "capability_id": "DT01-CAP-056",
+      "name": "AO-ACT task persistence",
+      "domain": "ACTION",
+      "capability_status": "ESTABLISHED_WITH_LIMITATIONS",
+      "component_ids": [
+        "ao_act_task_server_write"
+      ],
+      "missing_gap": null,
+      "dt02_owner": "MCFT-14",
+      "forbidden_claims": [
+        "AO-ACT task created = action executed"
+      ],
+      "evidence_refs": [
+        "apps/server/src/routes/control_ao_act.ts"
+      ],
+      "components": [
+        {
+          "component_id": "ao_act_task_server_write",
+          "definition_paths": [
+            "apps/server/src/routes/control_ao_act.ts"
+          ],
+          "symbols": [
+            "ao_act_task_v0",
+            "/api/v1/actions"
+          ],
+          "call_sites": [],
+          "call_status": "SERVER_WRITE_PATH_FOUND",
+          "runtime_entries": [
+            "/api/v1/actions/* canonical action route family"
+          ],
+          "input_sources": [
+            "authorized task payload"
+          ],
+          "output_objects": [
+            "AO-ACT task fact/index"
+          ],
+          "clock_source": "REQUEST_TIME",
+          "data_mode": "DATABASE_READBACK",
+          "persistence_modes": [
+            "APPEND_ONLY_FACT",
+            "DATABASE_INDEX_INSERT"
+          ],
+          "read_models": [],
+          "routes": [
+            "/api/v1/actions/*"
+          ],
+          "verification_commands": [],
+          "verification_status": "NOT_APPLICABLE_TO_STATIC_RECONCILIATION",
+          "evidence_levels": [
+            "SERVER_ROUTE",
+            "SERVER_WRITE_PATH"
+          ],
+          "highest_evidence_level": "SERVER_WRITE_PATH",
+          "reuse_decision": "REUSE_WITH_ADAPTER",
+          "decision_contract": {
+            "kind": "REUSE_WITH_ADAPTER",
+            "responsibility": "map an approved MCFT operation plan into the current action task body",
+            "existing_side": "existing canonical action route",
+            "new_mcft_side": "MCFT Gate C task creation",
+            "must_not_do": [
+              "claim task creation means dispatch or execution",
+              "use legacy /api/control/ao_act as a new mainline"
+            ]
+          },
+          "unknown_resolution": null,
+          "limitations": [
+            "task persistence is request-driven and does not prove executor delivery"
+          ],
+          "forbidden_claims": [],
+          "dt02_implications": [],
+          "evidence_refs": [
+            "apps/server/src/routes/control_ao_act.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "capability_id": "DT01-CAP-057",
+      "name": "AO-ACT receipt",
+      "domain": "ACTION_FEEDBACK",
+      "capability_status": "ESTABLISHED_WITH_LIMITATIONS",
+      "component_ids": [
+        "action_receipt_server_write"
+      ],
+      "missing_gap": null,
+      "dt02_owner": "MCFT-14/15",
+      "forbidden_claims": [
+        "receipt exists = outcome effect"
+      ],
+      "evidence_refs": [
+        "apps/server/src/routes/control_ao_act.ts",
+        "apps/server/src/contracts/action_receipt_v1.ts"
+      ],
+      "components": [
+        {
+          "component_id": "action_receipt_server_write",
+          "definition_paths": [
+            "apps/server/src/routes/control_ao_act.ts",
+            "apps/server/src/contracts/action_receipt_v1.ts"
+          ],
+          "symbols": [
+            "actionReceiptRequestSchemaV1",
+            "ao_act_receipt_v0",
+            "ao_act_receipt_v1"
+          ],
+          "call_sites": [],
+          "call_status": "SERVER_WRITE_PATH_FOUND",
+          "runtime_entries": [
+            "/api/v1/actions/receipt"
+          ],
+          "input_sources": [
+            "executor receipt",
+            "observed parameters"
+          ],
+          "output_objects": [
+            "receipt/as-executed records"
+          ],
+          "clock_source": "REQUEST_TIME",
+          "data_mode": "MIXED",
+          "persistence_modes": [
+            "APPEND_ONLY_FACT",
+            "DATABASE_INDEX_INSERT"
+          ],
+          "read_models": [],
+          "routes": [
+            "/api/v1/actions/receipt"
+          ],
+          "verification_commands": [],
+          "verification_status": "NOT_APPLICABLE_TO_STATIC_RECONCILIATION",
+          "evidence_levels": [
+            "SERVER_ROUTE",
+            "SERVER_WRITE_PATH",
+            "LIVE_INGRESS"
+          ],
+          "highest_evidence_level": "SERVER_WRITE_PATH",
+          "reuse_decision": "REUSE_WITH_ADAPTER",
+          "decision_contract": {
+            "kind": "REUSE_WITH_ADAPTER",
+            "responsibility": "extract measured execution amount, timing, coverage, and evidence references for MCFT feedback",
+            "existing_side": "existing receipt contract and write path",
+            "new_mcft_side": "MCFT action_feedback_v1",
+            "must_not_do": [
+              "treat receipt as validated effect",
+              "use planned values as executed values"
+            ]
+          },
+          "unknown_resolution": null,
+          "limitations": [
+            "receipt is technical execution evidence, not acceptance or effect attribution"
+          ],
+          "forbidden_claims": [],
+          "dt02_implications": [],
+          "evidence_refs": [
+            "apps/server/src/routes/control_ao_act.ts",
+            "apps/server/src/contracts/action_receipt_v1.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "capability_id": "DT01-CAP-058",
+      "name": "Formal acceptance / validation",
+      "domain": "ACCEPTANCE",
+      "capability_status": "ESTABLISHED_WITH_LIMITATIONS",
+      "component_ids": [
+        "acceptance_server_path"
+      ],
+      "missing_gap": null,
+      "dt02_owner": "MCFT-14/15",
+      "forbidden_claims": [
+        "acceptance result = outcome effect"
+      ],
+      "evidence_refs": [
+        "apps/server/src/routes/acceptance_v1.ts",
+        "apps/server/src/routes/v1/operator_acceptance_actions.ts"
+      ],
+      "components": [
+        {
+          "component_id": "acceptance_server_path",
+          "definition_paths": [
+            "apps/server/src/routes/acceptance_v1.ts",
+            "apps/server/src/routes/v1/operator_acceptance_actions.ts"
+          ],
+          "symbols": [
+            "evaluateAcceptanceV1",
+            "acceptance_result_v1",
+            "operator acceptance action"
+          ],
+          "call_sites": [],
+          "call_status": "SERVER_WRITE_PATH_FOUND",
+          "runtime_entries": [
+            "acceptance routes",
+            "operator acceptance action route"
+          ],
+          "input_sources": [
+            "receipt/evidence artifact references",
+            "human validation"
+          ],
+          "output_objects": [
+            "acceptance result"
+          ],
+          "clock_source": "REQUEST_TIME",
+          "data_mode": "DATABASE_READBACK",
+          "persistence_modes": [
+            "APPEND_ONLY_FACT",
+            "DATABASE_INDEX_INSERT"
+          ],
+          "read_models": [],
+          "routes": [
+            "/api/v1/acceptance/*",
+            "/api/v1/operator/acceptance/*"
+          ],
+          "verification_commands": [],
+          "verification_status": "NOT_APPLICABLE_TO_STATIC_RECONCILIATION",
+          "evidence_levels": [
+            "SERVER_ROUTE",
+            "SERVER_WRITE_PATH"
+          ],
+          "highest_evidence_level": "SERVER_WRITE_PATH",
+          "reuse_decision": "REUSE_WITH_ADAPTER",
+          "decision_contract": {
+            "kind": "REUSE_WITH_ADAPTER",
+            "responsibility": "bind MCFT action feedback and validation status without inferring causal effect",
+            "existing_side": "existing acceptance service",
+            "new_mcft_side": "MCFT Gate C validation readback",
+            "must_not_do": [
+              "equate acceptance with outcome effect",
+              "modify prior State"
+            ]
+          },
+          "unknown_resolution": null,
+          "limitations": [
+            "acceptance validates evidence and execution boundaries; it is not effect attribution"
+          ],
+          "forbidden_claims": [],
+          "dt02_implications": [],
+          "evidence_refs": [
+            "apps/server/src/routes/acceptance_v1.ts",
+            "apps/server/src/routes/v1/operator_acceptance_actions.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "capability_id": "DT01-CAP-059",
+      "name": "Outcome evidence",
+      "domain": "OUTCOME",
+      "capability_status": "ESTABLISHED_WITH_LIMITATIONS",
+      "component_ids": [
+        "as_executed_evidence_artifact"
+      ],
+      "missing_gap": null,
+      "dt02_owner": "MCFT-15/CAT-10",
+      "forbidden_claims": [
+        "outcome evidence = causal effect",
+        "outcome evidence = ROI"
+      ],
+      "evidence_refs": [
+        "apps/server/src/routes/evidence_artifact_from_as_executed_v1.ts",
+        "apps/server/src/routes/water_response_verification_v1.ts"
+      ],
+      "components": [
+        {
+          "component_id": "as_executed_evidence_artifact",
+          "definition_paths": [
+            "apps/server/src/routes/evidence_artifact_from_as_executed_v1.ts",
+            "apps/server/src/routes/water_response_verification_v1.ts"
+          ],
+          "symbols": [
+            "buildEvidenceArtifactsFromAsExecutedV1",
+            "water_response_verification_v1",
+            "as_executed_record_v1"
+          ],
+          "call_sites": [],
+          "call_status": "SERVER_WRITE_AND_READBACK_FOUND",
+          "runtime_entries": [
+            "/api/v1/evidence-artifacts/from-as-executed",
+            "water response verification route"
+          ],
+          "input_sources": [
+            "executed/accepted action",
+            "later observations"
+          ],
+          "output_objects": [
+            "outcome evidence",
+            "verification record"
+          ],
+          "clock_source": "REQUEST_TIME",
+          "data_mode": "DATABASE_READBACK",
+          "persistence_modes": [
+            "APPEND_ONLY_FACT",
+            "DATABASE_INDEX_UPSERT"
+          ],
+          "read_models": [],
+          "routes": [
+            "/api/v1/evidence-artifacts/from-as-executed"
+          ],
+          "verification_commands": [],
+          "verification_status": "NOT_APPLICABLE_TO_STATIC_RECONCILIATION",
+          "evidence_levels": [
+            "SERVER_ROUTE",
+            "SERVER_WRITE_PATH",
+            "DATABASE_READBACK"
+          ],
+          "highest_evidence_level": "SERVER_WRITE_PATH",
+          "reuse_decision": "REUSE_WITH_ADAPTER",
+          "decision_contract": {
+            "kind": "REUSE_WITH_ADAPTER",
+            "responsibility": "bind later observations to action and time references as evidence only",
+            "existing_side": "current outcome/verification routes",
+            "new_mcft_side": "MCFT outcome evidence and residual input",
+            "must_not_do": [
+              "claim causal effect",
+              "auto-generate ROI"
+            ]
+          },
+          "unknown_resolution": null,
+          "limitations": [
+            "later evidence remains attribution-neutral"
+          ],
+          "forbidden_claims": [],
+          "dt02_implications": [],
+          "evidence_refs": [
+            "apps/server/src/routes/evidence_artifact_from_as_executed_v1.ts",
+            "apps/server/src/routes/water_response_verification_v1.ts"
+          ]
+        }
+      ]
+    }
+  ]
+}

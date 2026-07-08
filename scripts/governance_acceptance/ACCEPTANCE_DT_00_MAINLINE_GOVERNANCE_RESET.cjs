@@ -26,6 +26,10 @@ const ALLOWED_STATUSES = new Set([
   "MISSING",
   "NOT_CLAIMED",
 ]);
+const ALLOWED_MATRIX_SCHEMAS = new Set([
+  "geox_digital_twin_capability_matrix_v1",
+  "geox_digital_twin_capability_matrix_v2",
+]);
 
 const failures = [];
 const passes = [];
@@ -185,16 +189,19 @@ if (failures.length === 0) {
 }
 
 if (matrix) {
-  if (matrix.schema_version !== "geox_digital_twin_capability_matrix_v1") {
-    fail("capability matrix schema_version is invalid");
+  if (!ALLOWED_MATRIX_SCHEMAS.has(matrix.schema_version)) {
+    fail(`capability matrix schema_version is unsupported: ${matrix.schema_version}`);
   } else {
-    pass("capability matrix schema_version is valid");
+    pass(`capability matrix schema_version is supported: ${matrix.schema_version}`);
   }
 
-  if (matrix.phase !== "DT-00") {
-    fail("capability matrix phase must be DT-00");
+  const lineage = Array.isArray(matrix.governance_lineage) ? matrix.governance_lineage : [];
+  if (matrix.phase === "DT-00") {
+    pass("capability matrix is the original DT-00 phase");
+  } else if (lineage.includes("DT-00")) {
+    pass(`successor capability matrix preserves DT-00 governance lineage: ${matrix.phase}`);
   } else {
-    pass("capability matrix phase is DT-00");
+    fail(`successor capability matrix does not preserve DT-00 governance lineage: phase=${matrix.phase}`);
   }
 
   if (matrix.primary_mainline !== "MINIMUM_COMPLETE_FIELD_TWIN") {
@@ -247,33 +254,79 @@ if (matrix) {
       }
     }
 
-    if (capability.current_status === "MISSING" && capability.runtime_entry !== "none") {
-      fail(`${id} is MISSING but claims runtime_entry=${capability.runtime_entry}`);
+    if (capability.current_status === "MISSING") {
+      if (Object.prototype.hasOwnProperty.call(capability, "runtime_entry") && capability.runtime_entry !== "none") {
+        fail(`${id} is MISSING but claims runtime_entry=${capability.runtime_entry}`);
+      }
+      if (!Array.isArray(capability.evidence_refs) || capability.evidence_refs.length !== 0) {
+        fail(`${id} is MISSING but has evidence_refs`);
+      }
+      if (Array.isArray(capability.reuse_decisions) && capability.reuse_decisions.length !== 0) {
+        fail(`${id} is MISSING but has reuse_decisions`);
+      }
     }
   }
 
   const byId = new Map(capabilities.map((capability) => [capability.capability_id, capability]));
-  const expectedStatuses = new Map([
-    ["DT-CAP-HOURLY-STATE-TRANSITION", "MISSING"],
-    ["DT-CAP-OBSERVATION-ASSIMILATION", "MISSING"],
-    ["DT-CAP-CHECKPOINT-RECOVERY", "MISSING"],
-    ["DT-CAP-P50-REPLAY-LOOP", "ESTABLISHED_WITH_LIMITATIONS"],
-    ["DT-CAP-P57-REPLAY-FREEZE", "ESTABLISHED_WITH_LIMITATIONS"],
-    ["DT-CAP-LIVE-PRODUCTION-FIELD-TWIN", "NOT_CLAIMED"],
-  ]);
 
-  for (const [id, expectedStatus] of expectedStatuses) {
-    const capability = byId.get(id);
-    if (!capability) {
-      fail(`required capability row missing: ${id}`);
-      continue;
+  function requireStatusInvariant(label, aliases, expectedStatus) {
+    const found = aliases.map((id) => byId.get(id)).find(Boolean);
+    if (!found) {
+      fail(`required DT-00 invariant missing: ${label}; aliases=${aliases.join(",")}`);
+      return;
     }
-    if (capability.current_status !== expectedStatus) {
-      fail(`${id} must be ${expectedStatus}, got ${capability.current_status}`);
-      continue;
+    if (found.current_status !== expectedStatus) {
+      fail(`${label} must be ${expectedStatus}, got ${found.current_status} at ${found.capability_id}`);
+      return;
     }
-    pass(`${id} is correctly classified as ${expectedStatus}`);
+    pass(`${label} remains ${expectedStatus} via ${found.capability_id}`);
   }
+
+  requireStatusInvariant(
+    "hourly state transition",
+    ["DT-CAP-HOURLY-STATE-TRANSITION", "DT-MATRIX-HOURLY-TICK"],
+    "MISSING",
+  );
+  requireStatusInvariant(
+    "observation assimilation",
+    ["DT-CAP-OBSERVATION-ASSIMILATION", "DT-CAP-STATE-ASSIMILATION", "DT-MATRIX-ASSIMILATION"],
+    "MISSING",
+  );
+
+  const legacyCheckpointRecovery = byId.get("DT-CAP-CHECKPOINT-RECOVERY");
+  if (legacyCheckpointRecovery) {
+    if (legacyCheckpointRecovery.current_status !== "MISSING") {
+      fail(`checkpoint/recovery must be MISSING, got ${legacyCheckpointRecovery.current_status}`);
+    } else {
+      pass("checkpoint/recovery remains MISSING via DT-CAP-CHECKPOINT-RECOVERY");
+    }
+  } else {
+    const checkpoint = byId.get("DT-MATRIX-CHECKPOINT");
+    const restart = byId.get("DT-MATRIX-RESTART");
+    if (!checkpoint || !restart) {
+      fail("required DT-00 checkpoint/recovery invariant missing from successor split rows");
+    } else if (checkpoint.current_status !== "MISSING" || restart.current_status !== "MISSING") {
+      fail(`checkpoint/recovery split rows must both be MISSING, got checkpoint=${checkpoint.current_status}, restart=${restart.current_status}`);
+    } else {
+      pass("checkpoint/recovery remains MISSING via DT-MATRIX-CHECKPOINT + DT-MATRIX-RESTART");
+    }
+  }
+
+  requireStatusInvariant(
+    "P50 replay loop",
+    ["DT-CAP-P50-REPLAY-LOOP", "DT-MATRIX-P50"],
+    "ESTABLISHED_WITH_LIMITATIONS",
+  );
+  requireStatusInvariant(
+    "P57 replay freeze",
+    ["DT-CAP-P57-REPLAY-FREEZE", "DT-MATRIX-P57"],
+    "ESTABLISHED_WITH_LIMITATIONS",
+  );
+  requireStatusInvariant(
+    "live production Field Twin",
+    ["DT-CAP-LIVE-PRODUCTION-FIELD-TWIN", "DT-MATRIX-LIVE-PRODUCTION-FIELD-TWIN"],
+    "NOT_CLAIMED",
+  );
 }
 
 function gitOutput(args) {
