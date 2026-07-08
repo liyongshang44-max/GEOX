@@ -152,12 +152,19 @@ if (failures.length === 0) {
   requireIncludes("PFA task line", pfaTaskLine, "open findings: 16");
   requireIncludes("PFA task line", pfaTaskLine, "resolved PFA-2 findings: 3");
   requireIncludes("PFA task line", pfaTaskLine, "historical pre-PFA-2 baseline");
-  requireIncludes("PFA task line", pfaTaskLine, "# Historical phase definitions retained by DT-00");
+  requireIncludes("PFA task line", pfaTaskLine, "# Historical baseline definitions — PFA-3 through PFA-7");
+  requireIncludes("PFA task line", pfaTaskLine, "# DT-00 Current authoritative closure");
 
-  requireExcludes("PFA task line", pfaTaskLine, "PFA-2: not started");
-  requireExcludes("PFA task line", pfaTaskLine, "PFA-3: in progress");
-  requireExcludes("PFA task line", pfaTaskLine, "Twin Runtime or production-readiness work remains blocked");
-  requireExcludes("PFA task line", pfaTaskLine, "Subsequent Twin Runtime or production-readiness work remains blocked until");
+  const historicalMarker = "# Historical baseline definitions — PFA-3 through PFA-7";
+  const closureMarker = "# DT-00 Current authoritative closure";
+  const currentBeforeHistory = pfaTaskLine.split(historicalMarker)[0] ?? "";
+  const currentAfterHistory = pfaTaskLine.split(closureMarker)[1] ?? "";
+  const currentPfaAuthority = `${currentBeforeHistory}\n${currentAfterHistory}`;
+
+  requireExcludes("current PFA authority", currentPfaAuthority, "PFA-2: not started");
+  requireExcludes("current PFA authority", currentPfaAuthority, "PFA-3: in progress");
+  requireExcludes("current PFA authority", currentPfaAuthority, "Twin Runtime or production-readiness work remains blocked");
+  requireExcludes("current PFA authority", currentPfaAuthority, "Subsequent Twin Runtime or production-readiness work remains blocked until");
 
   requireIncludes("PFA issue register", pfaIssueRegister, "open findings: 16");
   requireIncludes("PFA issue register", pfaIssueRegister, "resolved PFA-2 findings: 3");
