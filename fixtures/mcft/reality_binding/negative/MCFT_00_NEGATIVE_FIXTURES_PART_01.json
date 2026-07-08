@@ -1,0 +1,99 @@
+{
+  "schema_version": "geox_mcft00_negative_fixture_part_v1",
+  "phase": "MCFT-00",
+  "status": "FROZEN_PENDING_ACCEPTANCE",
+  "part_number": 1,
+  "fixture_count": 10,
+  "fixtures": [
+    {
+      "fixture_id": "NEG_SCOPE_MISSING_TENANT_ID",
+      "test_kind": "MUTATION",
+      "target": "package",
+      "mutations": [{"op": "delete", "path": "reality.semantic_payload.scope.tenant_id"}],
+      "expected_reason_code": "MISSING_TENANT_ID",
+      "expected_stage": "SCOPE_VALIDATION",
+      "expected_no_write": true
+    },
+    {
+      "fixture_id": "NEG_SCOPE_MISSING_PROJECT_ID",
+      "test_kind": "MUTATION",
+      "target": "package",
+      "mutations": [{"op": "delete", "path": "reality.semantic_payload.scope.project_id"}],
+      "expected_reason_code": "MISSING_PROJECT_ID",
+      "expected_stage": "SCOPE_VALIDATION",
+      "expected_no_write": true
+    },
+    {
+      "fixture_id": "NEG_SCOPE_MISSING_GROUP_ID",
+      "test_kind": "MUTATION",
+      "target": "package",
+      "mutations": [{"op": "delete", "path": "reality.semantic_payload.scope.group_id"}],
+      "expected_reason_code": "MISSING_GROUP_ID",
+      "expected_stage": "SCOPE_VALIDATION",
+      "expected_no_write": true
+    },
+    {
+      "fixture_id": "NEG_SCOPE_MISSING_FIELD_ID",
+      "test_kind": "MUTATION",
+      "target": "package",
+      "mutations": [{"op": "delete", "path": "reality.semantic_payload.scope.field_id"}],
+      "expected_reason_code": "MISSING_FIELD_ID",
+      "expected_stage": "SCOPE_VALIDATION",
+      "expected_no_write": true
+    },
+    {
+      "fixture_id": "NEG_SCOPE_MISSING_SEASON_ID",
+      "test_kind": "MUTATION",
+      "target": "package",
+      "mutations": [{"op": "delete", "path": "reality.semantic_payload.scope.season_id"}],
+      "expected_reason_code": "MISSING_SEASON_ID",
+      "expected_stage": "SCOPE_VALIDATION",
+      "expected_no_write": true
+    },
+    {
+      "fixture_id": "NEG_SCOPE_MISSING_ZONE_ID",
+      "test_kind": "MUTATION",
+      "target": "package",
+      "mutations": [{"op": "delete", "path": "reality.semantic_payload.scope.zone_id"}],
+      "expected_reason_code": "MISSING_ZONE_ID",
+      "expected_stage": "SCOPE_VALIDATION",
+      "expected_no_write": true
+    },
+    {
+      "fixture_id": "NEG_SECOND_ACTIVE_SCOPE",
+      "test_kind": "MUTATION",
+      "target": "package",
+      "mutations": [{"op": "set", "path": "reality.semantic_payload.active_scope_count", "value": 2}],
+      "expected_reason_code": "SECOND_ACTIVE_REALITY_SCOPE",
+      "expected_stage": "SCOPE_VALIDATION",
+      "expected_no_write": true
+    },
+    {
+      "fixture_id": "NEG_RUNTIME_MODE_CONTROLLED_REPLAY",
+      "test_kind": "MUTATION",
+      "target": "package",
+      "mutations": [{"op": "set", "path": "reality.semantic_payload.runtime_mode", "value": "CONTROLLED_REPLAY"}],
+      "expected_reason_code": "INVALID_RUNTIME_MODE_ENUM",
+      "expected_stage": "RUNTIME_MODE_VALIDATION",
+      "expected_no_write": true
+    },
+    {
+      "fixture_id": "NEG_RUNTIME_MODE_CONTROLLED_FIELD",
+      "test_kind": "MUTATION",
+      "target": "package",
+      "mutations": [{"op": "set", "path": "reality.semantic_payload.runtime_mode", "value": "CONTROLLED_FIELD"}],
+      "expected_reason_code": "MCFT00_RUNTIME_MODE_NOT_REPLAY",
+      "expected_stage": "RUNTIME_MODE_VALIDATION",
+      "expected_no_write": true
+    },
+    {
+      "fixture_id": "NEG_CROP_STAGE_AS_IDENTITY",
+      "test_kind": "MUTATION",
+      "target": "package",
+      "mutations": [{"op": "set", "path": "reality.semantic_payload.crop_binding.crop_stage", "value": "MID"}],
+      "expected_reason_code": "CROP_STAGE_FORBIDDEN_AS_IDENTITY",
+      "expected_stage": "SCOPE_VALIDATION",
+      "expected_no_write": true
+    }
+  ]
+}
