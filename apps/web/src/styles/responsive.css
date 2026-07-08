@@ -1,5 +1,5 @@
 /* apps/web/src/styles/responsive.css */
-/* Purpose: establish PFE-7 viewport baseline without changing routes or product capability. */
+/* Purpose: establish the PFA-3 responsive shell and overflow-containment contract. */
 
 :root {
   --pfe7-desktop-wide: 1440px;
@@ -7,6 +7,7 @@
   --pfe7-laptop: 1024px;
   --pfe7-tablet: 768px;
   --pfe7-mobile-narrow: 390px;
+  --pfa3-compact-shell: 960px;
 }
 
 .productPageShell,
@@ -23,7 +24,9 @@
 .customerShellMainWrap,
 .operatorShell,
 .adminShell,
-.adminShellMainWrap {
+.adminShellMainWrap,
+.adminLayoutMain,
+.customerLayoutMain {
   min-width: 0;
   max-width: 100%;
 }
@@ -37,10 +40,6 @@
 .productScopeBar,
 .productStateBlock,
 .productStatusBadge,
-.productTraceLink,
-.productTraceLink__id,
-.productDataTable__table th,
-.productDataTable__table td,
 .breadcrumbBar,
 .breadcrumbList,
 .localeToggle,
@@ -48,6 +47,15 @@
 .adminShellTitle,
 .adminShellContext,
 .customerShellContext {
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+[data-long-token="true"],
+.productTraceLink__id,
+.productDataTable__table code,
+.operatorFieldRuntime code,
+.operatorReplayDemo code {
   overflow-wrap: anywhere;
   word-break: normal;
 }
@@ -60,9 +68,11 @@
   width: 100%;
 }
 
+.productHorizontalScrollRegion,
 .productDataTable__overflow {
   width: 100%;
   max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -73,13 +83,15 @@
 
 .productDataTable__mobileNote {
   max-width: 100%;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .productStatusBadge {
   max-width: 100%;
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .productBoundaryBanner__items {
@@ -102,7 +114,8 @@
 .productMetricTile__value,
 .productMetricTile__description,
 .productMetricTile__source {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .customerShellNav,
@@ -114,7 +127,51 @@
 .adminShellNavItem {
   min-width: 0;
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.productMobileNavigation {
+  display: none;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.productMobileNavigation__trigger {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--product-surface-border);
+  border-radius: 12px;
+  padding: 8px 12px;
+  background: #ffffff;
+  color: inherit;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.productMobileNavigation__panel {
+  width: 100%;
+  min-width: 0;
+  margin-top: 10px;
+  border: 1px solid var(--product-surface-border);
+  border-radius: 14px;
+  padding: 10px;
+  background: #ffffff;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+.productMobileNavigation__panel[hidden] {
+  display: none;
+}
+
+.productMobileNavigation__links {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
 }
 
 .customerDashboardGuidanceGrid,
@@ -149,6 +206,8 @@
 
 .operatorFieldRuntime__tabs {
   align-items: stretch;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .operatorFieldRuntime__tab {
@@ -156,17 +215,19 @@
   justify-content: center;
   min-width: 0;
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .operatorFieldRuntime__coverageTable,
 .operatorFieldRuntime__sourceIndexTable,
 .operatorFieldRuntime__residualTable,
 .operatorFieldRuntime__auditTable,
-.operatorFieldRuntime__healthTable {
+.operatorFieldRuntime__healthTable,
+.operatorReplayDemo__table {
+  width: 100%;
   max-width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  min-width: 0;
 }
 
 .operatorReplayDemo__grid,
@@ -203,50 +264,51 @@
 .printReportScaffold *,
 .customerReportPrint *,
 .customerReportPage * {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 @media (max-width: 1366px) {
-  .newAppShell:has(.productPageShell.customerDashboardProductPage) {
+  .newAppShell:has(.productPageShell[data-page-key="customer-dashboard"]) {
     grid-template-columns: minmax(0, 1fr);
     gap: 0;
   }
 
-  .newAppShell:has(.productPageShell.customerDashboardProductPage) .newAppMain,
-  .newAppShell:has(.productPageShell.customerDashboardProductPage) .newAppContent,
-  .newAppShell:has(.productPageShell.customerDashboardProductPage) .newTopBar {
+  .newAppShell:has(.productPageShell[data-page-key="customer-dashboard"]) .newAppMain,
+  .newAppShell:has(.productPageShell[data-page-key="customer-dashboard"]) .newAppContent,
+  .newAppShell:has(.productPageShell[data-page-key="customer-dashboard"]) .newTopBar {
     min-width: 0;
     max-width: 100%;
   }
 
-  .newAppShell:has(.productPageShell.customerDashboardProductPage) .newSideNav {
+  .newAppShell:has(.productPageShell[data-page-key="customer-dashboard"]) .newSideNav {
     position: static;
     width: auto;
     max-width: 100%;
     min-width: 0;
   }
 
-  .customerShell .productPageShell.customerDashboardProductPage {
+  .customerShell .productPageShell[data-page-key="customer-dashboard"] {
     max-width: 100%;
     padding-inline: 16px;
   }
 
-  .customerShell .productPageShell.customerDashboardProductPage .productPageShell__body {
+  .customerShell .productPageShell[data-page-key="customer-dashboard"] .productPageShell__body {
     flex-direction: column;
     gap: 16px;
   }
 
-  .customerShell .productPageShell.customerDashboardProductPage .productPageShell__aside {
+  .customerShell .productPageShell[data-page-key="customer-dashboard"] .productPageShell__aside {
     width: 100%;
     max-width: 100%;
     flex: 1 1 auto;
   }
 
-  .customerShell .productPageShell.customerDashboardProductPage .customerDashboardRightRail {
+  .customerShell .productPageShell[data-page-key="customer-dashboard"] .customerDashboardRightRail {
     grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
   }
 
-  .customerShell .productPageShell.customerDashboardProductPage .customerIndexRow {
+  .customerShell .productPageShell[data-page-key="customer-dashboard"] .customerIndexRow {
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 10px;
     align-items: start;
@@ -254,12 +316,13 @@
     max-width: 100%;
   }
 
-  .customerShell .productPageShell.customerDashboardProductPage .customerIndexRow > div,
-  .customerShell .productPageShell.customerDashboardProductPage .customerIndexRow strong,
-  .customerShell .productPageShell.customerDashboardProductPage .customerIndexRow small {
+  .customerShell .productPageShell[data-page-key="customer-dashboard"] .customerIndexRow > div,
+  .customerShell .productPageShell[data-page-key="customer-dashboard"] .customerIndexRow strong,
+  .customerShell .productPageShell[data-page-key="customer-dashboard"] .customerIndexRow small {
     min-width: 0;
     max-width: 100%;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    word-break: normal;
   }
 
   .customerDashboardMainGrid {
@@ -297,31 +360,6 @@
     width: 100%;
   }
 
-  .customerShell,
-  .adminShell {
-    grid-template-columns: 1fr;
-  }
-
-  .customerShellSidebar,
-  .adminShellSidebar {
-    width: auto;
-    min-width: 0;
-    border-right: 0;
-  }
-
-  .customerShellSidebar {
-    border-bottom: 1px solid var(--customer-border);
-  }
-
-  .adminShellSidebar {
-    border-bottom: 1px solid #dde3ea;
-  }
-
-  .customerShellNav,
-  .adminShellNav {
-    grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
-  }
-
   .customerDashboardMainGrid,
   .customerDashboardBottomGrid,
   .customerUsagePathGrid,
@@ -329,6 +367,55 @@
   .operatorReplayDemo__meta,
   .operatorPilotReadiness__grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 960px) {
+  .customerShell,
+  .adminShell,
+  .operatorShell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .productShellDesktopSidebar {
+    display: none;
+  }
+
+  .productMobileNavigation {
+    display: block;
+    width: 100%;
+  }
+
+  .productMobileNavigation__trigger {
+    width: 100%;
+  }
+
+  .customerShellMainWrap,
+  .adminShellMainWrap {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .customerShellTopbar,
+  .adminShellTopbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .customerShellTopActions,
+  .adminShellTopActions {
+    width: 100%;
+    min-width: 0;
+    justify-content: flex-start;
+    align-items: stretch;
+  }
+
+  .adminShellLocaleToggle {
+    justify-content: flex-start;
+  }
+
+  .customerShellSearch {
+    width: 100%;
+    min-width: 0;
   }
 }
 
@@ -352,25 +439,10 @@
     flex-direction: column;
   }
 
-  .customerShellTopbar,
-  .adminShellTopbar {
-    grid-template-columns: 1fr;
-  }
-
   .customerShellTopActions,
   .adminShellTopActions {
     justify-content: flex-start;
     width: 100%;
-  }
-
-  .customerShellSearch {
-    width: 100%;
-    min-width: 0;
-  }
-
-  .customerShellNav,
-  .adminShellNav {
-    grid-template-columns: 1fr;
   }
 
   .customerDashboardGuidanceGrid,
@@ -431,7 +503,8 @@
   .operatorFieldRuntime__tab,
   .customerShellNavItem,
   .adminShellNavItem,
-  .localeToggle__button {
+  .localeToggle__button,
+  .productMobileNavigation__trigger {
     min-height: 40px;
   }
 }
