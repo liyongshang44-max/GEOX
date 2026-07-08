@@ -166,6 +166,7 @@ console.log(JSON.stringify({
   component_count: report.component_count,
   missing_definition_path_count: report.missing_definition_paths.length,
   recovered_artifact_count: report.artifact_transports.filter((item) => item.recovery !== null).length,
+  corrected_metadata_count: report.artifact_transports.filter((item) => item.metadata_correction !== null).length,
   failed_critical_check_count: report.critical_checks.filter((item) => !item.passed).length,
   report_path: CHECK_ONLY ? null : path.relative(ROOT, OUTPUT_PATH).replaceAll(path.sep, '/'),
 }, null, 2));
