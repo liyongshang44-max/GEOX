@@ -28,8 +28,8 @@ export default function FieldRuntimeAuditLocalizedSourceMatrixPanel({ audit }: {
     <div className="operatorFieldRuntime__panelHeader"><div><p className="operatorFieldRuntime__eyebrow">{t("audit")}</p><h2 className="operatorFieldRuntime__panelTitle">{t("auditSourceMatrix")}</h2></div><span className="operatorFieldRuntime__panelMeta">{text("Read Model Matrix", "读模型矩阵")}</span></div>
     <p className="operatorFieldRuntime__stubLead">{text("Source contract values are audit-detail metadata.", "来源契约值是审计细节元数据。")}</p>
     <div className="operatorFieldRuntime__auditTable" role="table" aria-label={t("auditSourceMatrix")}>
-      <div className="operatorFieldRuntime__auditTableHeader" role="row"><span>{text("Tab", "标签页")}</span><span>{text("Read Model", "读模型")}</span><span>Fetcher</span><span>{text("Source Contract", "来源契约")}</span><span>{text("Changed in H60", "H60 是否变更")}</span></div>
-      {audit.sourceContracts.map((row) => <div className="operatorFieldRuntime__auditTableRow" role="row" key={row.tab}><span>{tabLabel(row.tab, locale)}</span><span>{row.readModel}</span><span>{row.fetcher}</span><span>{row.sourceContract}</span><span>{row.backendChangedByH60 ? "true" : "false"}</span></div>)}
+      <div className="operatorFieldRuntime__auditTableHeader" role="row"><span>{text("Tab", "标签页")}</span><span>{text("Read Model", "读模型")}</span><span>{text("Fetcher", "读取器")}</span><span>{text("Source Contract", "来源契约")}</span><span>{text("Changed in H60", "H60 是否变更")}</span></div>
+      {audit.sourceContracts.map((row) => <div className="operatorFieldRuntime__auditTableRow" role="row" key={row.tab}><span>{tabLabel(row.tab, locale)}</span><span data-locale-neutral="true">{row.readModel}</span><span data-locale-neutral="true">{row.fetcher}</span><span data-locale-neutral="true">{row.sourceContract}</span><span>{row.backendChangedByH60 ? text("Yes", "是") : text("No", "否")}</span></div>)}
     </div>
   </article>;
 }
