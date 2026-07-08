@@ -1,6 +1,6 @@
 // scripts/governance_acceptance/DT01_JSON_ARTIFACT_LOADER.cjs
 // Purpose: load DT-01 plain JSON and legacy GZIP_BASE64_JSON artifacts without weakening content verification.
-// Boundary: legacy transport corrections are path-, metadata-, length-, and actual-SHA-specific; all other mismatches fail.
+// Boundary: gzip trailer recovery is allowed only when decoded length, envelope SHA-256, and manifest SHA-256 remain exact.
 
 'use strict';
 
@@ -8,19 +8,6 @@ const fs = require('node:fs');
 const path = require('node:path');
 const zlib = require('node:zlib');
 const crypto = require('node:crypto');
-
-const LEGACY_ENVELOPE_METADATA_CORRECTIONS = new Map([
-  [
-    'docs/digital_twin/GEOX-DT-01-CAPABILITY-INVENTORY-PART-06-ACTION.json',
-    {
-      declared_sha256: '51ec64c6518d701e6e58d212cba2efe3f8e480d959ad4527311f89c0c3ca0412',
-      actual_sha256: 'd7a68cb7c97435b1074299c64d53f4d069d5fcc358a0853b8bb2b07f61667509',
-      declared_bytes: 17489,
-      actual_bytes: 17488,
-      reason: 'The originally committed gzip envelope metadata does not match its own recoverable DEFLATE payload. The manifest now anchors the actual decoded bytes.',
-    },
-  ],
-]);
 
 function sha256(buffer) {
   return crypto.createHash('sha256').update(buffer).digest('hex');
@@ -66,37 +53,6 @@ function extractGzipDeflatePayload(gzipBuffer, relativePath) {
 
   if (cursor >= trailerStart) failArtifact(relativePath, 'GZIP_HEADER_INVALID', 'EMPTY_DEFLATE_PAYLOAD');
   return gzipBuffer.subarray(cursor, trailerStart);
-}
-
-function resolveEnvelopeMetadataCorrection(relativePath, outer, actualBytes, actualSha256, expectedSha256) {
-  const shaMatchesEnvelope = typeof outer.decoded_sha256 === 'string' && outer.decoded_sha256 === actualSha256;
-  const lengthMatchesEnvelope = !Number.isInteger(outer.decoded_bytes) || outer.decoded_bytes === actualBytes;
-
-  if (shaMatchesEnvelope && lengthMatchesEnvelope) return null;
-
-  const frozen = LEGACY_ENVELOPE_METADATA_CORRECTIONS.get(relativePath);
-  if (
-    frozen
-    && outer.decoded_sha256 === frozen.declared_sha256
-    && outer.decoded_bytes === frozen.declared_bytes
-    && actualSha256 === frozen.actual_sha256
-    && actualBytes === frozen.actual_bytes
-    && expectedSha256 === frozen.actual_sha256
-  ) {
-    return {
-      mode: 'FROZEN_LEGACY_ENVELOPE_METADATA_CORRECTION',
-      declared_sha256: frozen.declared_sha256,
-      actual_sha256: frozen.actual_sha256,
-      declared_bytes: frozen.declared_bytes,
-      actual_bytes: frozen.actual_bytes,
-      reason: frozen.reason,
-    };
-  }
-
-  if (!shaMatchesEnvelope) {
-    failArtifact(relativePath, 'ENCODED_JSON_SHA256_MISMATCH', `expected=${outer.decoded_sha256},actual=${actualSha256}`);
-  }
-  failArtifact(relativePath, 'ENCODED_JSON_LENGTH_MISMATCH', `expected=${outer.decoded_bytes},actual=${actualBytes},sha256=${actualSha256}`);
 }
 
 function decodeArtifactBuffer(storedBuffer, relativePath, expectedSha256 = null) {
@@ -152,17 +108,15 @@ function decodeArtifactBuffer(storedBuffer, relativePath, expectedSha256 = null)
 
   const digest = sha256(raw);
 
+  if (Number.isInteger(outer.decoded_bytes) && raw.length !== outer.decoded_bytes) {
+    failArtifact(relativePath, 'ENCODED_JSON_LENGTH_MISMATCH', `expected=${outer.decoded_bytes},actual=${raw.length},sha256=${digest}`);
+  }
+  if (typeof outer.decoded_sha256 !== 'string' || digest !== outer.decoded_sha256) {
+    failArtifact(relativePath, 'ENCODED_JSON_SHA256_MISMATCH', `expected=${outer.decoded_sha256},actual=${digest}`);
+  }
   if (expectedSha256 && digest !== expectedSha256) {
     failArtifact(relativePath, 'ARTIFACT_SHA256_MISMATCH', `expected=${expectedSha256},actual=${digest}`);
   }
-
-  const metadataCorrection = resolveEnvelopeMetadataCorrection(
-    relativePath,
-    outer,
-    raw.length,
-    digest,
-    expectedSha256,
-  );
 
   let value;
   try {
@@ -177,7 +131,7 @@ function decodeArtifactBuffer(storedBuffer, relativePath, expectedSha256 = null)
     digest,
     transport: 'GZIP_BASE64_JSON',
     recovery,
-    metadata_correction: metadataCorrection,
+    metadata_correction: null,
   };
 }
 
