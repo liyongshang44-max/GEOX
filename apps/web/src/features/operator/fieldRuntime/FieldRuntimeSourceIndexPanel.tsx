@@ -1,33 +1,25 @@
 // apps/web/src/features/operator/fieldRuntime/FieldRuntimeSourceIndexPanel.tsx
-// Purpose: render Field Runtime Source Index Inventory from the read-only evidence quality ViewModel.
-// Boundary: table names are detail metadata and are not primary product titles.
-
 import React from "react";
+import { useLocale } from "../../../lib/locale";
+import { fieldRuntimeText, type FieldRuntimeCopyKey } from "./fieldRuntimeLocaleCopy";
 import { type FieldRuntimeEvidenceViewModel } from "./fieldRuntimeEvidenceAdapter";
 
-type FieldRuntimeSourceIndexPanelProps = {
-  evidence: FieldRuntimeEvidenceViewModel;
-};
-
-export default function FieldRuntimeSourceIndexPanel({ evidence }: FieldRuntimeSourceIndexPanelProps): React.ReactElement {
+export default function FieldRuntimeSourceIndexPanel({ evidence }: { evidence: FieldRuntimeEvidenceViewModel }): React.ReactElement {
+  const { locale } = useLocale();
+  const t = (key: FieldRuntimeCopyKey) => fieldRuntimeText(locale, key);
   return (
     <article className="operatorFieldRuntime__panel" data-h60e-panel="source-index">
       <div className="operatorFieldRuntime__panelHeader">
-        <div>
-          <p className="operatorFieldRuntime__eyebrow">Source Index</p>
-          <h2 className="operatorFieldRuntime__panelTitle">Source Index</h2>
-        </div>
-        <span className="operatorFieldRuntime__panelMeta">{evidence.sourceIndexes.length} sources</span>
+        <div><p className="operatorFieldRuntime__eyebrow">{t("sourceIndex")}</p><h2 className="operatorFieldRuntime__panelTitle">{t("sourceIndex")}</h2></div>
+        <span className="operatorFieldRuntime__panelMeta">{evidence.sourceIndexes.length} {t("sources")}</span>
       </div>
-      <div className="operatorFieldRuntime__sourceIndexTable" role="table" aria-label="Field Runtime source index inventory">
-        <div className="operatorFieldRuntime__tableHeader" role="row"><span>Source label</span><span>Available</span><span>Rows</span><span>Missing reason</span><span>Refs</span></div>
+      <div className="operatorFieldRuntime__sourceIndexTable" role="table" aria-label={t("sourceIndexAria")}>
+        <div className="operatorFieldRuntime__tableHeader" role="row"><span>{t("sourceLabel")}</span><span>{t("available")}</span><span>{t("rows")}</span><span>{t("missingReason")}</span><span>{t("refs")}</span></div>
         {evidence.sourceIndexes.map((row) => (
           <div className="operatorFieldRuntime__tableRow" role="row" key={row.tableName}>
             <span><strong>{row.sourceLabel}</strong><small>{row.tableName}</small></span>
-            <span>{row.available ? "available" : "not available"}</span>
-            <span>{row.rowCount}</span>
-            <span>{row.missingReason}</span>
-            <span>{row.latestEvidenceRefs.length}</span>
+            <span>{row.available ? t("available") : t("unavailable")}</span>
+            <span>{row.rowCount}</span><span>{row.missingReason}</span><span>{row.latestEvidenceRefs.length}</span>
           </div>
         ))}
       </div>

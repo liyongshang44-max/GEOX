@@ -5,6 +5,7 @@
 import React from "react";
 import { localizedText, useLocale } from "../../../lib/locale";
 import { OPERATOR_FORMAL_SURFACE_COPY } from "../../../lib/productSurfaceLabels";
+import { REPLAY_DEMO_COPY, replayBoolean, replayText } from "./replayDemoLocaleCopy";
 import { type ReplayDemoViewModel } from "./replayDemoViewModel";
 
 type ReplayDemoHeroProps = {
@@ -15,6 +16,7 @@ const replayCopy = OPERATOR_FORMAL_SURFACE_COPY.replayDemo;
 
 export default function ReplayDemoHero({ vm }: ReplayDemoHeroProps): React.ReactElement {
   const { locale } = useLocale();
+  const t = (copy: { zh: string; en: string }) => replayText(locale, copy);
 
   return (
     <section className="operatorReplayDemo__hero" aria-label={localizedText(replayCopy.title, locale)}>
@@ -22,11 +24,11 @@ export default function ReplayDemoHero({ vm }: ReplayDemoHeroProps): React.React
       <h1 className="operatorReplayDemo__title">{localizedText(replayCopy.title, locale)}</h1>
       <p className="operatorReplayDemo__lead">{localizedText(replayCopy.heroLead, locale)}</p>
       <p className="operatorReplayDemo__lead">{localizedText(replayCopy.nonclaimLead, locale)}</p>
-      <dl className="operatorReplayDemo__meta" aria-label={locale === "en-US" ? "Replay demo identity" : "回放演示身份"}>
-        <div><dt>Mode</dt><dd>{vm.mode}</dd></div>
-        <div><dt>Source</dt><dd>checked-in gateway viewer snapshot</dd></div>
-        <div><dt>Route</dt><dd>{vm.route}</dd></div>
-        <div><dt>Read-only</dt><dd>{vm.boundary.readOnly ? "true" : "false"}</dd></div>
+      <dl className="operatorReplayDemo__meta" aria-label={t(REPLAY_DEMO_COPY.hero.identity)}>
+        <div><dt>{t(REPLAY_DEMO_COPY.hero.mode)}</dt><dd>{t(REPLAY_DEMO_COPY.hero.replayMode)}</dd></div>
+        <div><dt>{t(REPLAY_DEMO_COPY.hero.source)}</dt><dd>{t(REPLAY_DEMO_COPY.hero.snapshotSource)}</dd></div>
+        <div><dt>{t(REPLAY_DEMO_COPY.hero.route)}</dt><dd data-locale-neutral="true">{vm.route}</dd></div>
+        <div><dt>{t(REPLAY_DEMO_COPY.hero.readOnly)}</dt><dd>{replayBoolean(locale, vm.boundary.readOnly)}</dd></div>
       </dl>
     </section>
   );

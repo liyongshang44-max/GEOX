@@ -1,4 +1,7 @@
 // apps/web/src/lib/locale.tsx
+// Purpose: own the formal zh-CN / en-US product locale as persisted browser state.
+// Boundary: locale state changes product copy and document language only; it never changes routes, authentication, API context, or business data.
+
 import React from "react";
 
 export type LocaleCode = "zh-CN" | "en-US";
@@ -10,7 +13,7 @@ export type LocalizedCopy = {
 
 export const LOCALE_STORAGE_KEY = "geox.locale";
 
-export const SUPPORTED_LOCALES: LocaleCode[] = ["zh-CN", "en-US"];
+export const SUPPORTED_LOCALES = ["zh-CN", "en-US"] as const satisfies readonly LocaleCode[];
 
 type LocaleContextValue = {
   locale: LocaleCode;
@@ -36,6 +39,17 @@ function readStoredLocale(): LocaleCode {
   return normalizeLocale(window.localStorage.getItem(LOCALE_STORAGE_KEY));
 }
 
+function persistLocale(locale: LocaleCode): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+}
+
+function synchronizeDocumentLanguage(locale: LocaleCode): void {
+  if (typeof document === "undefined") return;
+  document.documentElement.lang = locale;
+  document.documentElement.dataset.locale = locale;
+}
+
 const LocaleContext = React.createContext<LocaleContextValue | null>(null);
 
 export function LocaleProvider({ children }: { children: React.ReactNode }): React.ReactElement {
@@ -43,10 +57,25 @@ export function LocaleProvider({ children }: { children: React.ReactNode }): Rea
 
   const setLocale = React.useCallback((next: LocaleCode) => {
     const safeLocale = normalizeLocale(next);
+    persistLocale(safeLocale);
     setLocaleState(safeLocale);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(LOCALE_STORAGE_KEY, safeLocale);
-    }
+  }, []);
+
+  React.useLayoutEffect(() => {
+    synchronizeDocumentLanguage(locale);
+  }, [locale]);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const handleStorage = (event: StorageEvent): void => {
+      if (event.key !== LOCALE_STORAGE_KEY) return;
+      const nextLocale = normalizeLocale(event.newValue);
+      setLocaleState(nextLocale);
+    };
+
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
   const value = React.useMemo<LocaleContextValue>(
@@ -66,4 +95,8 @@ export function useLocale(): LocaleContextValue {
   const value = React.useContext(LocaleContext);
   if (!value) throw new Error("useLocale must be used within LocaleProvider");
   return value;
+}
+
+export function useResolvedLocale(): LocaleCode {
+  return React.useContext(LocaleContext)?.locale ?? "zh-CN";
 }

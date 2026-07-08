@@ -1,8 +1,10 @@
 // apps/web/src/design-system/product/ProductLoadingState.tsx
-// Purpose: render accessible loading copy with polite announcement semantics.
+// Purpose: render accessible bilingual loading copy with polite announcement semantics.
 // Boundary: loading state must be readable copy and must not act as a fake progress guarantee.
 
 import type { ReactNode } from "react";
+import { localizedText, useResolvedLocale } from "../../lib/locale";
+import { PRODUCT_PRIMITIVE_COPY } from "../../lib/productCopy/localeContract";
 import type { ProductStateSurface } from "./ProductEmptyState";
 
 export interface ProductLoadingStateProps {
@@ -17,13 +19,15 @@ export function ProductLoadingState({
   label,
   description,
   surface,
-  ariaLabel = "Loading state",
+  ariaLabel,
   className,
 }: ProductLoadingStateProps) {
+  const locale = useResolvedLocale();
   const classes = ["productLoadingState", className].filter(Boolean).join(" ");
+  const resolvedAriaLabel = ariaLabel ?? localizedText(PRODUCT_PRIMITIVE_COPY.loadingStateAria, locale);
 
   return (
-    <section className={classes} data-kind="loading" data-surface={surface} aria-label={ariaLabel} aria-live="polite" aria-busy="true">
+    <section className={classes} data-kind="loading" data-surface={surface} aria-label={resolvedAriaLabel} aria-live="polite" aria-busy="true">
       <span className="productLoadingState__indicator" aria-hidden="true" />
       <div className="productLoadingState__copy">
         <strong className="productLoadingState__label">{label}</strong>

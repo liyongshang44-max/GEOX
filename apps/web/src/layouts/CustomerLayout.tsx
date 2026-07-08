@@ -3,12 +3,10 @@ import React from "react";
 import { Navigate, NavLink, useLocation } from "react-router-dom";
 import { fetchSessionMe, type SessionMe } from "../api/session";
 import LocaleToggle from "../components/common/LocaleToggle";
-import RuntimeTextGuard from "../components/common/RuntimeTextGuard";
 import { localizedText, useLocale, type LocaleCode } from "../lib/locale";
 import { CUSTOMER_SHELL_LABELS, type ShellNavCopy } from "../lib/productSurfaceLabels";
 
 type CustomerLayoutProps = { children: React.ReactNode };
-
 type CustomerNavItem = { key: string; copy: ShellNavCopy; to?: string; disabled?: boolean };
 
 const CUSTOMER_NAV_ITEMS: CustomerNavItem[] = [
@@ -33,8 +31,8 @@ function resolvePageTitle(pathname: string, locale: LocaleCode): string {
   if (pathname === "/customer/reports") return localizedText(CUSTOMER_SHELL_LABELS.titles.reports, locale);
   if (pathname === "/customer/fields" || pathname === "/customer/fields/index") return localizedText(CUSTOMER_SHELL_LABELS.titles.fields, locale);
   if (pathname === "/customer/operations" || pathname === "/customer/operations/index") return localizedText(CUSTOMER_SHELL_LABELS.titles.operations, locale);
-  if (pathname.indexOf("/customer/fields/") >= 0) return localizedText(CUSTOMER_SHELL_LABELS.titles.fieldReport, locale);
-  if (pathname.indexOf("/customer/operations/") >= 0) return localizedText(CUSTOMER_SHELL_LABELS.titles.operationReport, locale);
+  if (pathname.includes("/customer/fields/")) return localizedText(CUSTOMER_SHELL_LABELS.titles.fieldReport, locale);
+  if (pathname.includes("/customer/operations/")) return localizedText(CUSTOMER_SHELL_LABELS.titles.operationReport, locale);
   return localizedText(CUSTOMER_SHELL_LABELS.titles.dashboard, locale);
 }
 
@@ -44,15 +42,15 @@ function resolveSubtitle(pathname: string, locale: LocaleCode): string {
   if (pathname === "/customer/operations" || pathname === "/customer/operations/index") return localizedText(CUSTOMER_SHELL_LABELS.subtitles.operations, locale);
   if (pathname === "/customer/reports") return localizedText(CUSTOMER_SHELL_LABELS.subtitles.reports, locale);
   if (pathname === "/customer/export") return localizedText(CUSTOMER_SHELL_LABELS.subtitles.export, locale);
-  if (pathname.indexOf("/customer/fields/") >= 0) return localizedText(CUSTOMER_SHELL_LABELS.subtitles.fieldReport, locale);
-  if (pathname.indexOf("/customer/operations/") >= 0) return localizedText(CUSTOMER_SHELL_LABELS.subtitles.operationReport, locale);
+  if (pathname.includes("/customer/fields/")) return localizedText(CUSTOMER_SHELL_LABELS.subtitles.fieldReport, locale);
+  if (pathname.includes("/customer/operations/")) return localizedText(CUSTOMER_SHELL_LABELS.subtitles.operationReport, locale);
   return localizedText(CUSTOMER_SHELL_LABELS.subtitles.fallback, locale);
 }
 
 function isItemActive(pathname: string, key: string): boolean {
   if (key === "dashboard") return pathname === "/customer/dashboard";
-  if (key === "fields") return pathname === "/customer/fields" || pathname.indexOf("/customer/fields/") >= 0;
-  if (key === "operations") return pathname === "/customer/operations" || pathname.indexOf("/customer/operations/") >= 0;
+  if (key === "fields") return pathname === "/customer/fields" || pathname.includes("/customer/fields/");
+  if (key === "operations") return pathname === "/customer/operations" || pathname.includes("/customer/operations/");
   if (key === "reports") return pathname === "/customer/reports";
   if (key === "export") return pathname === "/customer/export" || pathname.endsWith("/export");
   return false;
@@ -63,34 +61,12 @@ function roleOf(session: SessionMe | null): string {
 }
 
 function accountScopeCopy(session: SessionMe | null, locale: LocaleCode): { scopeLine: string; statusLine: string } {
-  if (!session) {
-    return {
-      scopeLine: localizedText(CUSTOMER_SHELL_LABELS.account.scopePending, locale),
-      statusLine: localizedText(CUSTOMER_SHELL_LABELS.account.readingAccessScope, locale),
-    };
-  }
-
+  if (!session) return { scopeLine: localizedText(CUSTOMER_SHELL_LABELS.account.scopePending, locale), statusLine: localizedText(CUSTOMER_SHELL_LABELS.account.readingAccessScope, locale) };
   const count = session.allowed_field_ids.length;
   const scopeMode = String(session.customer_scope?.scope_mode ?? "").toUpperCase();
-
-  if (scopeMode === "INTERNAL_PREVIEW" || (roleOf(session) !== "client" && count === 0)) {
-    return {
-      scopeLine: localizedText(CUSTOMER_SHELL_LABELS.account.previewScope, locale),
-      statusLine: localizedText(CUSTOMER_SHELL_LABELS.account.globalPreview, locale),
-    };
-  }
-
-  if (roleOf(session) === "client" && count === 0) {
-    return {
-      scopeLine: localizedText(CUSTOMER_SHELL_LABELS.account.noAuthorizedFields, locale),
-      statusLine: localizedText(CUSTOMER_SHELL_LABELS.account.contactOperations, locale),
-    };
-  }
-
-  return {
-    scopeLine: locale === "en-US" ? `${count} authorized fields` : `授权地块 ${count} 块`,
-    statusLine: localizedText(CUSTOMER_SHELL_LABELS.account.authorizedScopeConfirmed, locale),
-  };
+  if (scopeMode === "INTERNAL_PREVIEW" || (roleOf(session) !== "client" && count === 0)) return { scopeLine: localizedText(CUSTOMER_SHELL_LABELS.account.previewScope, locale), statusLine: localizedText(CUSTOMER_SHELL_LABELS.account.globalPreview, locale) };
+  if (roleOf(session) === "client" && count === 0) return { scopeLine: localizedText(CUSTOMER_SHELL_LABELS.account.noAuthorizedFields, locale), statusLine: localizedText(CUSTOMER_SHELL_LABELS.account.contactOperations, locale) };
+  return { scopeLine: locale === "en-US" ? `${count} authorized fields` : `授权地块 ${count} 块`, statusLine: localizedText(CUSTOMER_SHELL_LABELS.account.authorizedScopeConfirmed, locale) };
 }
 
 export default function CustomerLayout({ children }: CustomerLayoutProps): React.ReactElement {
@@ -100,9 +76,9 @@ export default function CustomerLayout({ children }: CustomerLayoutProps): React
   const [session, setSession] = React.useState<SessionMe | null>(null);
 
   React.useEffect(() => {
-    let alive = true;
-    fetchSessionMe().then((x) => { if (alive) setSession(x); }).catch(() => { if (alive) setSession(null); });
-    return () => { alive = false; };
+    let active = true;
+    fetchSessionMe().then((value) => { if (active) setSession(value); }).catch(() => { if (active) setSession(null); });
+    return () => { active = false; };
   }, []);
 
   const accountName = session?.display_name || session?.user_id || localizedText(CUSTOMER_SHELL_LABELS.account.fallback, locale);
@@ -111,61 +87,30 @@ export default function CustomerLayout({ children }: CustomerLayoutProps): React
 
   if (location.pathname === "/customer/fields/index") return <Navigate to="/customer/fields" replace />;
   if (location.pathname === "/customer/operations/index") return <Navigate to="/customer/operations" replace />;
-  if (isExportRoute) return <main className="customerLayoutMain customerLayoutPrintOnly"><RuntimeTextGuard />{children}</main>;
+  if (isExportRoute) return <main className="customerLayoutMain customerLayoutPrintOnly" data-pfa2-locale={locale}>{children}</main>;
 
   return (
-    <div className="customerShell" data-layout="customer-shell">
-      <RuntimeTextGuard />
+    <div className="customerShell" data-layout="customer-shell" data-pfa2-locale={locale}>
       <aside className="customerShellSidebar" aria-label={localizedText(CUSTOMER_SHELL_LABELS.navigationAria, locale)}>
-        <div className="customerShellBrand" aria-label={localizedText(CUSTOMER_SHELL_LABELS.brand, locale)}>
-          <span className="customerShellLogoMark" aria-hidden="true" />
-          <span>{localizedText(CUSTOMER_SHELL_LABELS.brand, locale)}</span>
-        </div>
-        <nav className="customerShellNav">
+        <div className="customerShellBrand" aria-label={localizedText(CUSTOMER_SHELL_LABELS.brand, locale)}><span className="customerShellLogoMark" aria-hidden="true" /><span>{localizedText(CUSTOMER_SHELL_LABELS.brand, locale)}</span></div>
+        <nav className="customerShellNav" aria-label={localizedText(CUSTOMER_SHELL_LABELS.navigationAria, locale)}>
           {CUSTOMER_NAV_ITEMS.map((item) => {
             const label = labelOf(item.copy, locale);
             const hint = hintOf(item.copy, locale);
-
-            return item.disabled || !item.to ? (
-              <span key={item.key} title={hint} className="customerShellNavItem customerShellNavItemDisabled" aria-disabled="true">
-                <span>{label}</span>
-              </span>
-            ) : (
-              <NavLink key={item.key} to={item.to} title={hint} className={() => "customerShellNavItem" + (isItemActive(location.pathname, item.key) ? " isActive" : "")}>
-                <span>{label}</span>
-              </NavLink>
-            );
+            return item.disabled || !item.to ? <span key={item.key} title={hint} className="customerShellNavItem customerShellNavItemDisabled" aria-disabled="true"><span>{label}</span></span> : <NavLink key={item.key} to={item.to} title={hint} className={() => "customerShellNavItem" + (isItemActive(location.pathname, item.key) ? " isActive" : "")}><span>{label}</span></NavLink>;
           })}
         </nav>
-        <div className="customerShellMeta">
-          <div>{localizedText(CUSTOMER_SHELL_LABELS.account.label, locale)}</div>
-          <strong>{accountName}</strong>
-          <div>{accountScope.scopeLine}</div>
-          <strong>{accountScope.statusLine}</strong>
-        </div>
+        <div className="customerShellMeta"><div>{localizedText(CUSTOMER_SHELL_LABELS.account.label, locale)}</div><strong>{accountName}</strong><div>{accountScope.scopeLine}</div><strong>{accountScope.statusLine}</strong></div>
         <div className="customerShellFooterNote">{localizedText(CUSTOMER_SHELL_LABELS.sidebarFooter, locale)}</div>
       </aside>
       <div className="customerShellMainWrap">
         <header className="customerShellTopbar">
-          <div className="customerShellHeading">
-            <h1 className="customerShellTitle">{title}</h1>
-            <div className="customerShellContext">{resolveSubtitle(location.pathname, locale)}</div>
-          </div>
+          <div className="customerShellHeading"><h1 className="customerShellTitle">{title}</h1><div className="customerShellContext">{resolveSubtitle(location.pathname, locale)}</div></div>
           <div className="customerShellTopActions">
-            <div className="customerShellLocaleToggle shellLocaleToggle">
-              <LocaleToggle />
-            </div>
-            <input
-              className="customerShellSearch"
-              placeholder={localizedText(CUSTOMER_SHELL_LABELS.searchPlaceholder, locale)}
-              aria-label={localizedText(CUSTOMER_SHELL_LABELS.searchAria, locale)}
-              disabled
-            />
+            <div className="customerShellLocaleToggle shellLocaleToggle"><LocaleToggle /></div>
+            <input className="customerShellSearch" placeholder={localizedText(CUSTOMER_SHELL_LABELS.searchPlaceholder, locale)} aria-label={localizedText(CUSTOMER_SHELL_LABELS.searchAria, locale)} disabled />
             <span className="customerShellAccountBadge" aria-hidden="true" />
-            <span className="customerShellUserMuted">
-              {accountName}<br />
-              <small>{accountScope.statusLine}</small>
-            </span>
+            <span className="customerShellUserMuted">{accountName}<br /><small>{accountScope.statusLine}</small></span>
           </div>
         </header>
         <main className="customerLayoutMain">{children}</main>

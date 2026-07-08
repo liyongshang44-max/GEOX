@@ -1,8 +1,10 @@
 // apps/web/src/design-system/product/ProductEmptyState.tsx
-// Purpose: render product-safe empty copy without automatically creating an operational action.
+// Purpose: render product-safe bilingual empty copy without automatically creating an operational action.
 // Boundary: empty state copy explains absence only and must not imply a mutation, dispatch, approval, or write action.
 
 import type { ReactNode } from "react";
+import { localizedText, useResolvedLocale } from "../../lib/locale";
+import { PRODUCT_PRIMITIVE_COPY } from "../../lib/productCopy/localeContract";
 
 export type ProductStateSurface = "customer" | "operator" | "admin" | "supporting";
 
@@ -24,10 +26,12 @@ export function ProductEmptyState({
   nextSafeAction,
   surface,
   stateKind = "empty",
-  ariaLabel = "Empty state",
+  ariaLabel,
   className,
 }: ProductEmptyStateProps) {
+  const locale = useResolvedLocale();
   const classes = ["productEmptyState", className].filter(Boolean).join(" ");
+  const resolvedAriaLabel = ariaLabel ?? localizedText(PRODUCT_PRIMITIVE_COPY.emptyStateAria, locale);
 
   return (
     <section
@@ -36,7 +40,7 @@ export function ProductEmptyState({
       data-surface={surface}
       role="status"
       aria-live="polite"
-      aria-label={ariaLabel}
+      aria-label={resolvedAriaLabel}
     >
       <h2 className="productEmptyState__title">{title}</h2>
       {description ? <p className="productEmptyState__description">{description}</p> : null}

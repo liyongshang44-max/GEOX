@@ -74,10 +74,16 @@ function resolveLead(pathname: string, locale: LocaleCode): string {
   return localizedText(OPERATOR_SHELL_LABELS.leads.fallback, locale);
 }
 
+function navHint(item: OperatorNavItem, locale: LocaleCode, label: string): string {
+  if (locale === "zh-CN" && item.key === "overview") return "查看保留的运行总览路由及其归属边界";
+  if (locale === "zh-CN" && item.key === "fields") return "查看规范地块运行列表与地块级审查标签";
+  return item.copy.hint ? localizedText(item.copy.hint, locale) : label;
+}
+
 function renderNavItem(item: OperatorNavItem, pathname: string, locale: LocaleCode): React.ReactElement {
   const activeClass = isItemActive(pathname, item) ? " isActive" : "";
   const label = localizedText(item.copy.label, locale);
-  const hint = item.copy.hint ? localizedText(item.copy.hint, locale) : label;
+  const hint = navHint(item, locale, label);
   const status = statusLabel(item.status, locale);
 
   if (item.status !== "enabled") {
@@ -105,7 +111,7 @@ export default function OperatorLayout({ children, title, lead }: OperatorLayout
   const isPilotReadiness = location.pathname === "/operator/pilot";
 
   return (
-    <div className="customerShell operatorShell" data-layout="operator-runtime-console-shell" data-h59="operator-runtime-console-shell" data-h63="pilot-readiness-product-surface">
+    <div className="customerShell operatorShell" data-layout="operator-runtime-console-shell" data-h59="operator-runtime-console-shell" data-h63="pilot-readiness-product-surface" data-pfa2-locale={locale}>
       <aside className="customerShellSidebar operatorShellSidebar" aria-label={localizedText(OPERATOR_SHELL_LABELS.navigationAria, locale)}>
         <div className="customerShellBrand" aria-label={localizedText(OPERATOR_SHELL_LABELS.brand, locale)}>
           <span className="customerShellLogoMark" aria-hidden="true" />
@@ -144,7 +150,7 @@ export default function OperatorLayout({ children, title, lead }: OperatorLayout
           </div>
         </header>
 
-        <section className="customerShellMeta operatorRuntimeModeBanner" aria-label="Runtime mode and live-device nonclaims">
+        <section className="customerShellMeta operatorRuntimeModeBanner" aria-label={localizedText(OPERATOR_SHELL_LABELS.productBoundaryAria, locale)}>
           {RUNTIME_NONCLAIMS.map((claim) => {
             const text = localizedText(claim, locale);
             return <strong key={text}>{text}</strong>;

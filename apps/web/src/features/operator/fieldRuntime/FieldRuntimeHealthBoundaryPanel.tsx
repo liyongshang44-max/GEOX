@@ -1,36 +1,17 @@
 // apps/web/src/features/operator/fieldRuntime/FieldRuntimeHealthBoundaryPanel.tsx
-// Purpose: render H62 Health Boundary as explicit read-only product copy.
-// Boundary: this component lists unavailable write and runtime operation surfaces only.
-
 import React from "react";
-
-const no = "No ";
-const BOUNDARY_LINES = [
-  no + "backend contract change",
-  no + "live polling",
-  no + "production " + "monitoring",
-  no + "alert" + "ing",
-  no + "incident " + "creation",
-  no + "AO-ACT " + "dispatch",
-  no + "facts write",
-  no + "ROI write",
-  no + "Field Memory write",
-  no + "model update",
-];
+import { useLocale } from "../../../lib/locale";
+import { fieldRuntimeText, type FieldRuntimeCopyKey } from "./fieldRuntimeLocaleCopy";
 
 export default function FieldRuntimeHealthBoundaryPanel(): React.ReactElement {
-  return (
-    <article className="operatorFieldRuntime__panel operatorFieldRuntime__healthBoundary" data-h62-panel="health-boundary">
-      <div className="operatorFieldRuntime__panelHeader">
-        <div>
-          <p className="operatorFieldRuntime__eyebrow">Health Boundary</p>
-          <h2 className="operatorFieldRuntime__panelTitle">Health Boundary</h2>
-        </div>
-        <span className="operatorFieldRuntime__panelMeta">readOnly=true</span>
-      </div>
-      <ul className="operatorFieldRuntime__boundaryList">
-        {BOUNDARY_LINES.map((line) => <li key={line}>{line}</li>)}
-      </ul>
-    </article>
-  );
+  const { locale } = useLocale();
+  const t = (key: FieldRuntimeCopyKey) => fieldRuntimeText(locale, key);
+  const text = (en: string, zh: string) => locale === "en-US" ? en : zh;
+  const lines = [
+    t("noBackendChange"), text("No Live Polling", "不进行实时轮询"), text("No Production Monitoring", "不进行生产监控"), text("No Alerting", "不发送告警"), text("No Incident Creation", "不创建事件"), t("noDispatch"), t("noFactsWrite"), t("noRoi"), t("noFieldMemory"), t("noModelUpdate"),
+  ];
+  return <article className="operatorFieldRuntime__panel operatorFieldRuntime__healthBoundary" data-h62-panel="health-boundary">
+    <div className="operatorFieldRuntime__panelHeader"><div><p className="operatorFieldRuntime__eyebrow">{t("healthBoundary")}</p><h2 className="operatorFieldRuntime__panelTitle">{t("healthBoundary")}</h2></div><span className="operatorFieldRuntime__panelMeta">readOnly=true</span></div>
+    <ul className="operatorFieldRuntime__boundaryList">{lines.map((line) => <li key={line}>{line}</li>)}</ul>
+  </article>;
 }

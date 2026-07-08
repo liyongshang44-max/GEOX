@@ -2,89 +2,63 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { fetchCustomerReportsCenter } from "../../../api/customerReportsCenter";
-import {
-  ProductBoundaryBanner,
-  ProductEmptyState,
-  ProductErrorState,
-  ProductLoadingState,
-  ProductPageHeader,
-  ProductPageShell,
-  ProductScopeBar,
-  ProductSectionCard,
-  ProductStatusBadge,
-} from "../../../design-system/product";
-import { buildCustomerReportsCenterVm, type CustomerReportsCenterVm } from "../../../viewmodels/customerReportsCenterVm";
+import { ProductBoundaryBanner, ProductEmptyState, ProductErrorState, ProductLoadingState, ProductPageHeader, ProductPageShell, ProductScopeBar, ProductSectionCard, ProductStatusBadge } from "../../../design-system/product";
+import { localizedText, useLocale, type LocaleCode, type LocalizedCopy } from "../../../lib/locale";
+import { CUSTOMER_COMMON_COPY, CUSTOMER_REPORTS_COPY, customerProductFallback, customerStatusLabel } from "../../../lib/productCopy/customerLocale";
+import { buildCustomerReportsCenterVm, type CustomerReportGroupKey, type CustomerReportsCenterVm } from "../../../viewmodels/customerReportsCenterVm";
+
+const DELIVERABLE_REPORTS: LocalizedCopy = { zh: "交付报告", en: "Deliverable Reports" };
+
+function groupCopy(key: CustomerReportGroupKey) {
+  return CUSTOMER_REPORTS_COPY.groups[key];
+}
+
+function itemTitle(value: string, key: CustomerReportGroupKey, locale: LocaleCode): string {
+  if (key === "FIELD" || key === "OPERATION") {
+    const name = value.split(" · ")[0]?.trim();
+    return name ? `${name} · ${localizedText(groupCopy(key).title, locale)}` : localizedText(groupCopy(key).title, locale);
+  }
+  return localizedText(groupCopy(key).title, locale);
+}
 
 export default function CustomerReportsCenterPage(): React.ReactElement {
+  const { locale } = useLocale();
+  const t = React.useCallback((copy: LocalizedCopy) => localizedText(copy, locale), [locale]);
   const [vm, setVm] = React.useState<CustomerReportsCenterVm | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState("");
+  const [failed, setFailed] = React.useState(false);
 
   React.useEffect(() => {
-    let alive = true;
-    setLoading(true);
+    let active = true;
     void fetchCustomerReportsCenter()
-      .then((response) => {
-        if (!alive) return;
-        setVm(buildCustomerReportsCenterVm(response));
-        setError("");
-      })
-      .catch(() => {
-        if (!alive) return;
-        setVm(null);
-        setError("Reports center is unavailable.");
-      })
-      .finally(() => {
-        if (!alive) return;
-        setLoading(false);
-      });
-    return () => { alive = false; };
+      .then((data) => { if (active) { setVm(buildCustomerReportsCenterVm(data)); setFailed(false); } })
+      .catch(() => { if (active) { setVm(null); setFailed(true); } })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, []);
 
-  if (loading) return <ProductPageShell surface="customer"><ProductLoadingState label="Loading reports center" description="Preparing customer report entries." /></ProductPageShell>;
-  if (error || !vm) return <ProductPageShell surface="customer"><ProductErrorState title="Reports center unavailable" message={error || "No report center data is available."} /></ProductPageShell>;
+  if (loading) return <ProductPageShell surface="customer" ariaLabel={t(CUSTOMER_REPORTS_COPY.title)}><ProductLoadingState surface="customer" label={t(CUSTOMER_REPORTS_COPY.loading)} description={t(CUSTOMER_COMMON_COPY.safeLoading)} /></ProductPageShell>;
+  if (failed || !vm) return <ProductPageShell surface="customer" ariaLabel={t(CUSTOMER_REPORTS_COPY.unavailable)}><ProductErrorState surface="customer" title={t(CUSTOMER_REPORTS_COPY.unavailable)} message={t(CUSTOMER_COMMON_COPY.safeError)} /></ProductPageShell>;
 
   return (
-    <ProductPageShell
-      surface="customer"
-      ariaLabel="Customer reports center"
-      top={
-        <ProductPageHeader
-          eyebrow="Customer Portal / Reports"
-          title="Reports center"
-          lead={vm.subtitle}
-          metadata={`Updated at: ${vm.generatedAtText}`}
-          primaryAction={<Link className="customerButton customerButtonPrimary" to="/customer/export">Export dashboard report</Link>}
-          secondaryActions={<Link className="customerButton" to="/customer/dashboard">Back to overview</Link>}
-          nonclaim="Reports center links only to customer reporting and delivery surfaces."
-        />
-      }
-    >
-      <ProductBoundaryBanner tone="readOnly" title="Customer-safe report center" description="This page organizes available field, operation, and export reports without exposing internal tools." />
-      <ProductScopeBar surface="customer" items={[{ label: "Scope", value: vm.scopeBadgeText }, { label: "Trust", value: vm.trustText }, { label: "Updated", value: vm.generatedAtText }]} />
-
-      <section className="customerReportsCenterGrid" aria-label="Customer report categories">
-        {vm.groups.map((group) => (
-          <ProductSectionCard key={group.key} title={group.title} subtitle={group.description}>
-            {group.items.length ? (
-              <div className="customerReportEntryList">
-                {group.items.map((item, index) => (
-                  <Link key={`${group.key}-${item.href || item.title}-${index}`} className="customerReportEntry" to={item.href || "/customer/reports"}>
-                    <div>
-                      <strong>{item.title}</strong>
-                      <p>{item.subtitle}</p>
-                      <small>{item.coverageText}</small>
-                      <small>Updated: {item.updatedAtText}</small>
-                    </div>
-                    <ProductStatusBadge status="readOnly" label={item.statusText} />
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <ProductEmptyState title="No report entry" description="No customer report entry is currently available in this category." />
-            )}
-          </ProductSectionCard>
-        ))}
+    <ProductPageShell surface="customer" ariaLabel={t(CUSTOMER_REPORTS_COPY.title)} top={<ProductPageHeader eyebrow={t(CUSTOMER_REPORTS_COPY.eyebrow)} title={t(CUSTOMER_REPORTS_COPY.title)} lead={t(CUSTOMER_REPORTS_COPY.lead)} metadata={`${t(CUSTOMER_COMMON_COPY.updatedAtPrefix)}: ${vm.generatedAtText}`} primaryAction={<Link className="customerButton customerButtonPrimary" to="/customer/export">{t(CUSTOMER_REPORTS_COPY.export)}</Link>} secondaryActions={<Link className="customerButton" to="/customer/dashboard">{t(CUSTOMER_COMMON_COPY.backOverview)}</Link>} nonclaim={t(CUSTOMER_REPORTS_COPY.nonclaim)} />}>
+      <ProductBoundaryBanner tone="readOnly" title={t(CUSTOMER_REPORTS_COPY.boundaryTitle)} description={t(CUSTOMER_REPORTS_COPY.boundaryLead)} />
+      <ProductScopeBar surface="customer" items={[{ label: t(CUSTOMER_COMMON_COPY.scope), value: customerProductFallback(vm.scopeBadgeText, locale, CUSTOMER_REPORTS_COPY.lead) }, { label: t(CUSTOMER_COMMON_COPY.trust), value: customerStatusLabel(vm.trustText, locale) }, { label: t(CUSTOMER_COMMON_COPY.updated), value: vm.generatedAtText }]} />
+      <section className="customerReportsCenterGrid" aria-label={t(CUSTOMER_REPORTS_COPY.categoriesAria)}>
+        <h2>{t(DELIVERABLE_REPORTS)}</h2>
+        {vm.groups.map((group) => {
+          const copy = groupCopy(group.key);
+          return (
+            <ProductSectionCard key={group.key} title={t(copy.title)} subtitle={t(copy.description)}>
+              {group.items.length ? <div className="customerReportEntryList">{group.items.map((item, index) => (
+                <Link key={`${group.key}-${item.href || index}`} className="customerReportEntry" to={item.href || "/customer/reports"} aria-disabled={item.disabled}>
+                  <div><strong>{itemTitle(item.title, group.key, locale)}</strong><p>{t(copy.description)}</p><small>{t(copy.description)}</small><small>{t(CUSTOMER_COMMON_COPY.updated)}: {item.updatedAtText}</small></div>
+                  <ProductStatusBadge status={item.disabled ? "unavailable" : "readOnly"} label={customerStatusLabel(item.statusText, locale)} />
+                </Link>
+              ))}</div> : <ProductEmptyState surface="customer" title={t(CUSTOMER_REPORTS_COPY.noEntry)} description={t(CUSTOMER_REPORTS_COPY.noEntryLead)} />}
+            </ProductSectionCard>
+          );
+        })}
       </section>
     </ProductPageShell>
   );

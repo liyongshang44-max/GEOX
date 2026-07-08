@@ -19,19 +19,18 @@ page quality result: FAIL with P1/P2 findings
 ## Issue counts
 
 ```text
-open findings: 19
+open findings: 16
+resolved PFA-2 findings: 3
 resolved capture findings: 2
 historical findings: 21
 ```
 
 Generated screenshots and reports remain local artifacts and must not be committed.
 
-## Open findings from full screenshot review
+## Open findings
 
 | issue id | severity | remediation phase | surface | route area | issue |
 |---|---|---|---|---|---|
-| PFA0-I18N-001 | P1 | PFA-2 | Customer / Operator / Admin / Supporting | all localized surfaces | `zh-CN` and `en-US` do not produce complete, mutually consistent locale output. English remains in Chinese pages, Chinese remains in English pages, and some locale pairs are effectively identical. |
-| PFA0-CUS-001 | P1 | PFA-2 | Customer | customer shell and reports | Customer pages contain mixed-language product labels, status terms, section titles, and report terminology. |
 | PFA0-CUS-002 | P2 | PFA-6 | Customer | field and operation lists | Demo data shows unnamed or weakly labelled fields and operations, reducing demonstration credibility. |
 | PFA0-CUS-003 | P1 | PFA-5 | Customer | `/customer/reports` | Reports center is too dense for formal demonstration and becomes an excessive scroll surface. |
 | PFA0-CUS-004 | P2 | PFA-6 | Customer | fields and operations tables | Long IDs and wrapped badges reduce table readability. |
@@ -43,12 +42,21 @@ Generated screenshots and reports remain local artifacts and must not be committ
 | PFA0-OPR-004 | P2 | PFA-6 | Operator | field runtime list | Main content is narrow while available horizontal space is underused. |
 | PFA0-OPR-005 | P1 | PFA-3 | Operator | laptop and mobile viewports | Operator table, detail, and pilot routes remain viewport-sensitive. |
 | PFA0-ADM-001 | P2 | PFA-6 | Admin | admin tables | Some admin field names and values wrap awkwardly. |
-| PFA0-ADM-002 | P2 | PFA-2 | Admin | admin shell | Localized admin pages retain mixed governance terminology. |
 | PFA0-ADM-003 | P1-contract | PFA-5 | Admin | `/admin/devices` | Admin Devices is currently limited to inventory readback. Product acceptance requires device asset and status readback governance, including identity, field binding, connectivity, telemetry recency, health state, declared capability, and source evidence, without claiming live monitoring, device control, or production gateway operation. |
 | PFA0-RWD-001 | P1 | PFA-3 | Operator / Customer | mobile and selected desktop routes | Real document-width overflow was observed, including Operator Health, Evidence, Residual, Gateway Demo, and a smaller Customer Dashboard desktop overflow. |
 | PFA0-NAV-001 | P2 | PFA-3 | Customer / Operator / Admin | mobile shell | Mobile pages render the full desktop navigation before page content instead of a compact drawer or collapsible shell. |
 | PFA0-EXP-001 | P1 | PFA-4 | Customer | export and print routes | Export tables and report layouts are unreadable at mobile width; headings and cells collapse into narrow vertical fragments. |
 | PFA0-DEN-001 | P1 | PFA-5 | Customer / Operator | reports, gateway, audit, calibration, pilot | Several pages exceed roughly 10–17 viewport heights without sectional navigation, progressive disclosure, pagination, or summary/detail separation. |
+
+## Resolved PFA-2 findings
+
+| issue id | former severity | status | evidence |
+|---|---|---|---|
+| PFA0-I18N-001 | P1 | closed by PFA-2 | Strengthened complete-visible-text audit passed on 30 routes × 2 locales: 60/60 route health, 30/30 differentiated locale pairs, 30/30 role-boundary equivalence and mandatory presence, and 30/30 pathname equivalence. |
+| PFA0-CUS-001 | P1 | closed by PFA-2 | All 9 Customer routes passed the strengthened bilingual runtime contract; product copy is localized and source-owned business names are explicitly separated from governed locale copy. |
+| PFA0-ADM-002 | P2 | closed by PFA-2 | All 7 Admin routes passed the strengthened bilingual runtime contract, including localized static metric values and explicit neutral treatment for technical field identifiers. |
+
+PFA-2 closure evidence is recorded in `PFA-2-RUNTIME-EVIDENCE.md`, `PFA-2-ISSUE-CLOSURE.md`, and the 30-record `PFA-2-ROUTE-LOCALE-MATRIX.json` with every record at `runtime-pass`.
 
 ## Admin Device Status Readback Contract
 
@@ -95,19 +103,20 @@ show unavailable or source missing when evidence is absent
 | PFA0-CAP-001 | P1 | resolved by full capture | All parameterized formal routes were captured in `zh-CN` and `en-US` at desktop, laptop, and mobile viewports. |
 | PFA0-CAP-002 | P1 | resolved by authenticated full capture | Authenticated Admin routes completed successfully in all six locale/viewport combinations per route. |
 
-Resolution of capture gaps does not close the page-quality or product-contract findings exposed by those screenshots.
+Resolution of capture gaps does not close the remaining page-quality or product-contract findings exposed by those screenshots.
 
 ## Blocking policy
 
 ```text
-PFA-1 closes runtime API-base and capture enablement only.
-PFA-2 through PFA-5 contain open P1 or P1-contract remediation work.
+PFA-1 closes runtime API-base and capture enablement.
+PFA-2 closes the three locale-contract findings listed above.
+PFA-3 through PFA-5 retain open P1 or P1-contract remediation work.
 PFA-6 contains P2 polish and demo-data work.
 PFA-7 is the final full recapture and closure gate.
 ```
 
-Open P1 and P1-contract issues block subsequent runtime-kernel work until they are remediated or explicitly reclassified with evidence.
+Open P1 and P1-contract issues continue to block subsequent runtime-kernel work until they are remediated or explicitly reclassified with evidence.
 
 ## Forbidden completion claim
 
-PFA-0 must not claim that page quality has been fixed, that all pages are product-grade complete, that Admin Devices has a complete status-readback contract, or that `180/180 PASS` is page-quality acceptance.
+PFA-0 must not claim that all page quality has been fixed, that all pages are product-grade complete, that Admin Devices has a complete status-readback contract, or that `180/180 PASS` is page-quality acceptance.

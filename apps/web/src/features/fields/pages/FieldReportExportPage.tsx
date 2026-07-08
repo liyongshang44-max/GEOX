@@ -1,54 +1,64 @@
 // apps/web/src/features/fields/pages/FieldReportExportPage.tsx
 import React from "react";
 import { useParams } from "react-router-dom";
-import { fetchFieldReport, type FieldReportDetailV1 } from "../../../api/customerReports";
-import { FieldExportBlocks } from "../../../components/customer/CustomerExportBlocks";
-import PrintReportScaffold from "../../../components/customer/PrintReportScaffold";
-import { ProductErrorState, ProductLoadingState } from "../../../design-system/product";
+import { fetchFieldReport } from "../../../api/customerReports";
+import { ProductErrorState, ProductLoadingState, ProductPrintReportScaffold, ProductStatusBadge } from "../../../design-system/product";
+import { localizedText, useLocale, type LocalizedCopy } from "../../../lib/locale";
+import { CUSTOMER_COMMON_COPY, customerProductFallback, customerStatusLabel } from "../../../lib/productCopy/customerLocale";
 import { buildFieldReportVm, type FieldReportPageVm } from "../../../viewmodels/fieldReportVm";
+
+const COPY = {
+  title: { zh: "地块报告", en: "Field Report" },
+  subtitle: { zh: "客户打印交付视图", en: "Customer print delivery view" },
+  loading: { zh: "正在加载地块报告导出", en: "Loading Field Report Export" },
+  unavailable: { zh: "地块报告导出暂不可用", en: "Field Report Export Unavailable" },
+  summary: { zh: "地块摘要", en: "Field Summary" },
+  item: { zh: "项目", en: "Item" },
+  value: { zh: "内容", en: "Value" },
+  fieldName: { zh: "地块名称", en: "Field Name" },
+  crop: { zh: "作物", en: "Crop" },
+  stage: { zh: "阶段", en: "Stage" },
+  status: { zh: "报告状态", en: "Report Status" },
+  operations: { zh: "近期作业报告", en: "Recent Operation Reports" },
+  evidence: { zh: "证据摘要", en: "Evidence Summary" },
+  noEvidence: { zh: "暂无客户安全证据摘要。", en: "No customer-safe evidence summary is available." },
+  unavailableValue: { zh: "暂不可用", en: "Unavailable" },
+  footer: { zh: "仅用于客户打印交付；交互控制不属于本导出。", en: "Customer print delivery only; interactive controls are not part of this export." },
+} as const satisfies Record<string, LocalizedCopy>;
 
 export default function FieldReportExportPage(): React.ReactElement {
   const { fieldId = "" } = useParams();
+  const { locale } = useLocale();
+  const t = React.useCallback((copy: LocalizedCopy) => localizedText(copy, locale), [locale]);
   const [vm, setVm] = React.useState<FieldReportPageVm | null>(null);
-  const [report, setReport] = React.useState<FieldReportDetailV1 | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState("");
+  const [failed, setFailed] = React.useState(false);
 
   React.useEffect(() => {
-    let alive = true;
-    setLoading(true);
+    let active = true;
     void fetchFieldReport(fieldId)
-      .then((nextReport) => {
-        if (!alive) return;
-        setReport(nextReport);
-        setVm(buildFieldReportVm(nextReport));
-        setError("");
-      })
-      .catch(() => {
-        if (!alive) return;
-        setReport(null);
-        setVm(null);
-        setError("Field report export is unavailable.");
-      })
-      .finally(() => {
-        if (!alive) return;
-        setLoading(false);
-      });
-    return () => { alive = false; };
+      .then((data) => { if (active) { setVm(buildFieldReportVm(data)); setFailed(false); } })
+      .catch(() => { if (active) { setVm(null); setFailed(true); } })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, [fieldId]);
 
-  if (loading) return <div className="customerReportCanvas"><div className="customerReportSheet"><ProductLoadingState label="Loading field report export" description="Preparing the print-safe delivery surface." /></div></div>;
-  if (error || !vm) return <div className="customerReportCanvas"><div className="customerReportSheet"><ProductErrorState title="Field export unavailable" message={error || "No field report data is available."} /></div></div>;
+  if (loading) return <div className="customerReportCanvas"><div className="customerReportSheet"><ProductLoadingState surface="customer" label={t(COPY.loading)} description={t(CUSTOMER_COMMON_COPY.safeLoading)} /></div></div>;
+  if (failed || !vm) return <div className="customerReportCanvas"><div className="customerReportSheet"><ProductErrorState surface="customer" title={t(COPY.unavailable)} message={t(CUSTOMER_COMMON_COPY.safeError)} /></div></div>;
+
+  const rows: Array<[string, React.ReactNode]> = [
+    [t(COPY.fieldName), vm.field.fieldName],
+    [t(COPY.crop), customerProductFallback(vm.field.cropText, locale, COPY.unavailableValue)],
+    [t(COPY.stage), customerProductFallback(vm.field.stageText, locale, COPY.unavailableValue)],
+    [t(COPY.status), <ProductStatusBadge key="status" status="readOnly" label={customerStatusLabel(vm.risk.levelLabel, locale)} />],
+    [t(COPY.operations), String(vm.recentOperations.length)],
+  ];
 
   return (
-    <PrintReportScaffold
-      title="Field report"
-      subtitle={vm.field.fieldName || "Field name pending"}
-      generatedAt={vm.generatedAtText}
-      backTo={`/customer/fields/${encodeURIComponent(fieldId)}`}
-    >
-      <FieldExportBlocks vm={vm} report={report} />
-      <footer className="customerMetricLabel customerSpacingTopMd">Print-safe customer delivery surface. Interactive controls are not part of this export.</footer>
-    </PrintReportScaffold>
+    <ProductPrintReportScaffold title={t(COPY.title)} subtitle={vm.field.fieldName || t(COPY.subtitle)} generatedAt={vm.generatedAtText} backTo={`/customer/fields/${encodeURIComponent(fieldId)}`} ariaLabel={t(COPY.title)}>
+      <section className="customerCard"><h2 className="customerCardTitle">{t(COPY.summary)}</h2><table className="printTable customerSpacingTopSm"><thead><tr><th>{t(COPY.item)}</th><th>{t(COPY.value)}</th></tr></thead><tbody>{rows.map(([label, value]) => <tr key={label}><td>{label}</td><td>{value}</td></tr>)}</tbody></table></section>
+      <section className="customerCard"><h2 className="customerCardTitle">{t(COPY.evidence)}</h2>{vm.diagnosis.evidenceLines.length ? <ul className="customerList customerSpacingTopSm">{vm.diagnosis.evidenceLines.slice(0, 6).map((line, index) => <li key={`${index}-${line}`} className="customerListItem">{customerProductFallback(line, locale, COPY.noEvidence)}</li>)}</ul> : <p className="customerMetricLabel customerSpacingTopSm">{t(COPY.noEvidence)}</p>}</section>
+      <footer className="customerMetricLabel customerSpacingTopMd">{t(COPY.footer)}</footer>
+    </ProductPrintReportScaffold>
   );
 }
