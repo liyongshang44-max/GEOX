@@ -5,6 +5,7 @@
 import React from "react";
 import { localizedText, useLocale } from "../../../lib/locale";
 import { OPERATOR_FORMAL_SURFACE_COPY } from "../../../lib/productSurfaceLabels";
+import { REPLAY_DEMO_COPY, replayText } from "./replayDemoLocaleCopy";
 import { type ReplayDemoViewModel } from "./replayDemoViewModel";
 
 type ReplayDemoStandardsPanelProps = {
@@ -18,10 +19,10 @@ export default function ReplayDemoStandardsPanel({ vm }: ReplayDemoStandardsPane
   return (
     <section className="operatorReplayDemo__panel" aria-label={localizedText(replayCopy.panels.standardsMapping, locale)}>
       <div className="operatorReplayDemo__panelHeader"><p className="operatorReplayDemo__eyebrow">{localizedText(replayCopy.panels.standardsMapping, locale)}</p><h2>{localizedText(replayCopy.panels.standardsMapping, locale)}</h2></div>
-      <p>{locale === "en-US" ? "Standards mapping is replay evidence mapping, not external certification." : "标准映射是回放证据映射，不是外部认证。"}</p>
+      <p>{replayText(locale, REPLAY_DEMO_COPY.panels.standardsLead)}</p>
       <div className="operatorReplayDemo__table">
         <div className="operatorReplayDemo__tableHeader"><span>{locale === "en-US" ? "Layer" : "层级"}</span><span>{localizedText(replayCopy.table.value, locale)}</span></div>
-        {vm.standardsMapping.rows.map((row) => <div className="operatorReplayDemo__tableRow" key={row.label}><span>{row.label}</span><span>{row.value}</span></div>)}
+        {vm.standardsMapping.rows.map((row) => <div className="operatorReplayDemo__tableRow" key={row.label}><span data-locale-neutral="true">{row.label}</span><span data-locale-neutral="true">{row.value}</span></div>)}
       </div>
     </section>
   );
