@@ -17,6 +17,6 @@ export default function FieldRuntimeForecastEvidencePanel({ forecast }: { foreca
     <div className="operatorFieldRuntime__panelHeader"><div><p className="operatorFieldRuntime__eyebrow">{t("forecastEvidence")}</p><h2 className="operatorFieldRuntime__panelTitle">{t("forecastEvidence")}</h2></div><span className="operatorFieldRuntime__panelMeta">{forecast.evidenceRefs.length} {t("refs")}</span></div>
     <p className="operatorFieldRuntime__stubLead">{c(COPY.fullTrace)}</p>
     <p className="operatorFieldRuntime__stubLead">{c(COPY.refsOnly)}</p>
-    <details className="operatorFieldRuntime__forecastRefs" open><summary>{t("forecastEvidence")} {t("refs")}</summary><ul>{forecast.evidenceRefs.map((ref) => <li key={ref}>{ref}</li>)}</ul></details>
+    <details className="operatorFieldRuntime__forecastRefs" open><summary>{t("forecastEvidence")} {t("refs")}</summary><ul data-locale-neutral="true">{forecast.evidenceRefs.map((ref) => <li key={ref}>{ref}</li>)}</ul></details>
   </article>;
 }
