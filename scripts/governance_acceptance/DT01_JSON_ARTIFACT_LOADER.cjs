@@ -1,6 +1,6 @@
 // scripts/governance_acceptance/DT01_JSON_ARTIFACT_LOADER.cjs
 // Purpose: load DT-01 plain JSON and legacy GZIP_BASE64_JSON artifacts without weakening content verification.
-// Boundary: gzip trailer recovery is allowed only when the decoded bytes still match the committed length and SHA-256.
+// Boundary: gzip trailer recovery and the one frozen Part-06 length correction are accepted only after exact SHA-256 verification.
 
 'use strict';
 
@@ -8,6 +8,18 @@ const fs = require('node:fs');
 const path = require('node:path');
 const zlib = require('node:zlib');
 const crypto = require('node:crypto');
+
+const LEGACY_LENGTH_EXCEPTIONS = new Map([
+  [
+    'docs/digital_twin/GEOX-DT-01-CAPABILITY-INVENTORY-PART-06-ACTION.json',
+    {
+      declared_bytes: 17489,
+      actual_bytes: 17488,
+      sha256: '51ec64c6518d701e6e58d212cba2efe3f8e480d959ad4527311f89c0c3ca0412',
+      reason: 'historical envelope counted one trailing newline that is not present in the committed decoded JSON bytes',
+    },
+  ],
+]);
 
 function sha256(buffer) {
   return crypto.createHash('sha256').update(buffer).digest('hex');
@@ -55,6 +67,28 @@ function extractGzipDeflatePayload(gzipBuffer, relativePath) {
   return gzipBuffer.subarray(cursor, trailerStart);
 }
 
+function resolveLengthMetadata(relativePath, declaredBytes, actualBytes, digest) {
+  if (!Number.isInteger(declaredBytes) || declaredBytes === actualBytes) return null;
+
+  const frozen = LEGACY_LENGTH_EXCEPTIONS.get(relativePath);
+  if (
+    frozen
+    && frozen.declared_bytes === declaredBytes
+    && frozen.actual_bytes === actualBytes
+    && frozen.sha256 === digest
+  ) {
+    return {
+      mode: 'FROZEN_LEGACY_LENGTH_METADATA_CORRECTION',
+      declared_bytes: declaredBytes,
+      actual_bytes: actualBytes,
+      sha256: digest,
+      reason: frozen.reason,
+    };
+  }
+
+  failArtifact(relativePath, 'ENCODED_JSON_LENGTH_MISMATCH', `expected=${declaredBytes},actual=${actualBytes},sha256=${digest}`);
+}
+
 function decodeArtifactBuffer(storedBuffer, relativePath, expectedSha256 = null) {
   let outer;
   try {
@@ -74,6 +108,7 @@ function decodeArtifactBuffer(storedBuffer, relativePath, expectedSha256 = null)
       digest,
       transport: 'PLAIN_JSON',
       recovery: null,
+      metadata_correction: null,
     };
   }
 
@@ -107,15 +142,14 @@ function decodeArtifactBuffer(storedBuffer, relativePath, expectedSha256 = null)
 
   const digest = sha256(raw);
 
-  if (Number.isInteger(outer.decoded_bytes) && raw.length !== outer.decoded_bytes) {
-    failArtifact(relativePath, 'ENCODED_JSON_LENGTH_MISMATCH', `expected=${outer.decoded_bytes},actual=${raw.length}`);
-  }
   if (typeof outer.decoded_sha256 !== 'string' || digest !== outer.decoded_sha256) {
     failArtifact(relativePath, 'ENCODED_JSON_SHA256_MISMATCH', `expected=${outer.decoded_sha256},actual=${digest}`);
   }
   if (expectedSha256 && digest !== expectedSha256) {
     failArtifact(relativePath, 'ARTIFACT_SHA256_MISMATCH', `expected=${expectedSha256},actual=${digest}`);
   }
+
+  const metadataCorrection = resolveLengthMetadata(relativePath, outer.decoded_bytes, raw.length, digest);
 
   let value;
   try {
@@ -130,6 +164,7 @@ function decodeArtifactBuffer(storedBuffer, relativePath, expectedSha256 = null)
     digest,
     transport: 'GZIP_BASE64_JSON',
     recovery,
+    metadata_correction: metadataCorrection,
   };
 }
 
@@ -150,6 +185,7 @@ function loadInventoryManifest(root, relativePath) {
       path: part.path,
       transport: loaded.transport,
       recovery: loaded.recovery,
+      metadata_correction: loaded.metadata_correction,
       sha256: loaded.digest,
     });
   }
