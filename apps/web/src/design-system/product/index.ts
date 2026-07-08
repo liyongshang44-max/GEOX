@@ -7,6 +7,8 @@ export { ProductEmptyState } from "./ProductEmptyState";
 export type { ProductEmptyStateProps } from "./ProductEmptyState";
 export { ProductErrorState } from "./ProductErrorState";
 export type { ProductErrorStateProps } from "./ProductErrorState";
+export { ProductHorizontalScrollRegion } from "./ProductHorizontalScrollRegion";
+export type { ProductHorizontalScrollRegionProps } from "./ProductHorizontalScrollRegion";
 export { ProductLoadingState } from "./ProductLoadingState";
 export type { ProductLoadingStateProps } from "./ProductLoadingState";
 export { ProductMetricTile } from "./ProductMetricTile";
