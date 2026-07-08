@@ -22,6 +22,7 @@ revision declaration/progress/promotion transaction closure
 Forecast COMPLETED/BLOCKED/FAILED persistence paths
 Action Feedback execution/validation separation
 machine-readable Acceptance coverage
+ADR audit-metadata preservation
 ```
 
 Authoritative amendment:
@@ -74,36 +75,59 @@ continuous 72-hour regeneration
 live production Field Twin
 ```
 
-## 4. Validation evidence fields
+## 4. Validation evidence model
 
-The final closure must record four distinct identities:
+Tracked repository content cannot contain the SHA of the same commit that contains it without creating an impossible self-reference. Therefore evidence is split into repository-recorded architecture validation and external final-PR attestation.
+
+Repository-recorded fields:
 
 ```text
 architecture_validated_head: PENDING
 architecture_validated_ci: PENDING
-closure_head: PENDING
-final_pr_ci: PENDING
+closure_input_head: PENDING
+```
+
+External PR/merge attestation fields:
+
+```text
+final_pr_head: attested in PR #2303 final description and locked merge request
+final_pr_ci: attested in PR #2303 final description and GitHub Actions
 ```
 
 Definitions:
 
 ```text
 architecture_validated_head
-  final branch head on which amended DT-02, DT-01, and DT-00 Gates pass
+  final semantic architecture head on which amended DT-02, DT-01, and DT-00 Gates pass
 
 architecture_validated_ci
   CI run for architecture_validated_head
 
-closure_head
-  final head after this record is changed to COMPLETE
+closure_input_head
+  architecture_validated_head used to produce the closure-only status/evidence commit
+
+final_pr_head
+  final PR head after closure-only bytes; recorded externally to avoid self-reference
 
 final_pr_ci
-  CI run for closure_head
+  CI run for final_pr_head; verified immediately before expected-head-SHA merge
 ```
 
-No Gate may permanently hard-code a historical CI number as a substitute for current final-head validation.
+No Gate may use an old hard-coded CI number as proof of the current final PR head.
 
-## 5. Required final results
+## 5. Intermediate evidence
+
+The following head passed the first amended relationship Gate before ADR audit-metadata restoration:
+
+```text
+intermediate_head: 88d8794b8b97ff8ac9228040349f5ce7c6651f0d
+intermediate_local_gate: PASS — 160 PASS / 0 FAIL
+intermediate_ci: PASS — workflow ci #4306
+```
+
+This is retained as historical evidence only. It is not the final `architecture_validated_head` because later commits restored complete ADR rationale, alternatives, ownership, and input-topic metadata and expanded the Gate accordingly.
+
+## 6. Required final results
 
 ```text
 DT-02 amended acceptance: PASS
@@ -116,7 +140,7 @@ architecture_validated_ci: PASS
 final_pr_ci: PASS
 ```
 
-## 6. Next task
+## 7. Next task
 
 ```text
 MCFT-00 — Reality Binding Contract
