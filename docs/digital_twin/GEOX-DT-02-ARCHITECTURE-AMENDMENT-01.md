@@ -9,7 +9,7 @@ amendment: DT02-AMENDMENT-01
 reason: post-merge blocker correction
 supersedes: selected rules in DT02-ADR-003, 005, 008, 009, 010, 015, 016
 baseline main commit: 4c1d854a5190a5d37d7cea0a4ded3f6f3ce8b614
-status: PENDING_ACCEPTANCE
+status: COMPLETE
 ```
 
 PR #2302 was merged before four architecture contradictions were detected. This amendment does not erase that history. It explicitly replaces the affected rules and preserves all unaffected DT-02 decisions and their audit metadata.
