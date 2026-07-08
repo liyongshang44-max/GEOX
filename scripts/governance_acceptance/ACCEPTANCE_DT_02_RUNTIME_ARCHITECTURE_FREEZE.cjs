@@ -1,193 +1,83 @@
 // scripts/governance_acceptance/ACCEPTANCE_DT_02_RUNTIME_ARCHITECTURE_FREEZE.cjs
-// Purpose: validate DT-02 Amendment 01 object, lineage, transaction, Forecast, Scenario, Action Feedback, ADR audit, regression, and scope contracts.
+// Purpose: validate DT-02 Amendment 01 object, lineage, transaction, Forecast, Scenario, Action Feedback, ADR audit, closure, regression, and scope contracts.
 'use strict';
 const fs=require('node:fs');
 const path=require('node:path');
 const cp=require('node:child_process');
 const ROOT=path.resolve(__dirname,'../..');
 const BASE='4c1d854a5190a5d37d7cea0a4ded3f6f3ce8b614';
-const F={
-  amendment:'docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-01.md',
-  freeze:'docs/digital_twin/GEOX-DT-02-RUNTIME-ARCHITECTURE-FREEZE.md',
-  adrs:'docs/digital_twin/GEOX-DT-02-ARCHITECTURE-DECISION-REGISTER.json',
-  layers:'docs/digital_twin/GEOX-DT-02-LAYER-DEPENDENCY-CONTRACT.json',
-  objects:'docs/digital_twin/GEOX-DT-02-CANONICAL-OBJECT-SET.json',
-  tx:'docs/digital_twin/GEOX-DT-02-ATOMIC-TRANSACTION-MATRIX.json',
-  modes:'docs/digital_twin/GEOX-DT-02-RUNTIME-MODE-ADAPTER-MATRIX.json',
-  api:'docs/digital_twin/GEOX-DT-02-API-ROUTE-COMPATIBILITY-MATRIX.json',
-  legacy:'docs/digital_twin/GEOX-DT-02-LEGACY-MIGRATION-REGISTER.md',
-  map:'docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md',
-  closure:'docs/digital_twin/GEOX-DT-02-CLOSURE-RECORD.md',
-  matrix:'docs/digital_twin/GEOX-DIGITAL-TWIN-CAPABILITY-MATRIX.json',
-  reuse:'docs/digital_twin/GEOX-DT-01-REUSE-DECISION-REGISTER.md',
-  audit:'scripts/governance_acceptance/AUDIT_DT_01_REPOSITORY_CAPABILITIES.cjs',
-  dt01:'scripts/governance_acceptance/ACCEPTANCE_DT_01_EXISTING_CAPABILITY_RECONCILIATION.cjs',
-  dt00:'scripts/governance_acceptance/ACCEPTANCE_DT_00_MAINLINE_GOVERNANCE_RESET.cjs',
-  self:'scripts/governance_acceptance/ACCEPTANCE_DT_02_RUNTIME_ARCHITECTURE_FREEZE.cjs'
-};
-const pass=[]; const fail=[];
+const F={amendment:'docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-01.md',freeze:'docs/digital_twin/GEOX-DT-02-RUNTIME-ARCHITECTURE-FREEZE.md',adrs:'docs/digital_twin/GEOX-DT-02-ARCHITECTURE-DECISION-REGISTER.json',layers:'docs/digital_twin/GEOX-DT-02-LAYER-DEPENDENCY-CONTRACT.json',objects:'docs/digital_twin/GEOX-DT-02-CANONICAL-OBJECT-SET.json',tx:'docs/digital_twin/GEOX-DT-02-ATOMIC-TRANSACTION-MATRIX.json',modes:'docs/digital_twin/GEOX-DT-02-RUNTIME-MODE-ADAPTER-MATRIX.json',api:'docs/digital_twin/GEOX-DT-02-API-ROUTE-COMPATIBILITY-MATRIX.json',legacy:'docs/digital_twin/GEOX-DT-02-LEGACY-MIGRATION-REGISTER.md',map:'docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md',closure:'docs/digital_twin/GEOX-DT-02-CLOSURE-RECORD.md',matrix:'docs/digital_twin/GEOX-DIGITAL-TWIN-CAPABILITY-MATRIX.json',reuse:'docs/digital_twin/GEOX-DT-01-REUSE-DECISION-REGISTER.md',audit:'scripts/governance_acceptance/AUDIT_DT_01_REPOSITORY_CAPABILITIES.cjs',dt01:'scripts/governance_acceptance/ACCEPTANCE_DT_01_EXISTING_CAPABILITY_RECONCILIATION.cjs',dt00:'scripts/governance_acceptance/ACCEPTANCE_DT_00_MAINLINE_GOVERNANCE_RESET.cjs',self:'scripts/governance_acceptance/ACCEPTANCE_DT_02_RUNTIME_ARCHITECTURE_FREEZE.cjs'};
+const pass=[];const fail=[];
 function ok(m){pass.push(m);console.log('PASS: '+m)}
 function bad(m){fail.push(m);console.error('FAIL: '+m)}
 function abs(p){return path.join(ROOT,p)}
 function text(p){return fs.readFileSync(abs(p),'utf8')}
 function has(t,s,m){t.includes(s)?ok(m):bad(m+' missing '+s)}
 function eq(a,b,m){a===b?ok(m):bad(`${m}: expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`)}
-function seteq(a,b,m){const x=[...(a||[])].sort(),y=[...b].sort();eq(JSON.stringify(x),JSON.stringify(y),m)}
+function seteq(a,b,m){eq(JSON.stringify([...(a||[])].sort()),JSON.stringify([...b].sort()),m)}
 function includesAll(a,b,m){const miss=b.filter(x=>!(a||[]).includes(x));miss.length?bad(m+' missing '+miss.join(', ')):ok(m)}
 function nonempty(v){return typeof v==='string'&&v.trim().length>0}
 function nonemptyArray(v){return Array.isArray(v)&&v.length>0}
+function field(t,key){return (t.match(new RegExp('^'+key+':\\s*(.+)$','m'))||[])[1]?.trim()}
 function finish(){console.log(`\nDT-02 amended acceptance summary: ${pass.length} PASS, ${fail.length} FAIL`);if(fail.length)process.exit(1);console.log('DT-02 ARCHITECTURE AMENDMENT 01: PASS')}
 for(const p of Object.values(F)){if(!fs.existsSync(abs(p)))bad('required file missing '+p);else ok('file exists '+p)}
 if(fail.length)finish();
 let A,O,T,L,M,API,C;
-for(const p of [F.adrs,F.objects,F.tx,F.layers,F.modes,F.api,F.matrix]){
-  try{const raw=text(p);if(!raw.trimStart().startsWith('{'))bad('not plain object JSON '+p);const v=JSON.parse(raw);if(p===F.adrs)A=v;if(p===F.objects)O=v;if(p===F.tx)T=v;if(p===F.layers)L=v;if(p===F.modes)M=v;if(p===F.api)API=v;if(p===F.matrix)C=v;ok('plain JSON parses '+p)}catch(e){bad('JSON parse failed '+p+': '+e.message)}
-}
+for(const p of [F.adrs,F.objects,F.tx,F.layers,F.modes,F.api,F.matrix]){try{const raw=text(p);if(!raw.trimStart().startsWith('{'))bad('not plain object JSON '+p);const v=JSON.parse(raw);if(p===F.adrs)A=v;if(p===F.objects)O=v;if(p===F.tx)T=v;if(p===F.layers)L=v;if(p===F.modes)M=v;if(p===F.api)API=v;if(p===F.matrix)C=v;ok('plain JSON parses '+p)}catch(e){bad('JSON parse failed '+p+': '+e.message)}}
 if(fail.length)finish();
-const allAuth=[F.amendment,F.freeze,F.adrs,F.objects,F.tx,F.map,F.closure].map(text).join('\n');
+const amendmentText=text(F.amendment),freezeText=text(F.freeze),closure=text(F.closure);
+const closureStatus=field(closure,'status');
+const complete=closureStatus==='COMPLETE';
+if(!complete&&closureStatus!=='AMENDMENT_PENDING_ACCEPTANCE')bad('invalid closure status '+closureStatus);else ok('closure status '+closureStatus);
+const expectedAmendmentStatus=complete?'COMPLETE':'PENDING_ACCEPTANCE';
+const expectedFreezeStatus=complete?'FROZEN_WITH_AMENDMENT':'FROZEN_WITH_AMENDMENT_PENDING_ACCEPTANCE';
+const allAuth=[amendmentText,freezeText,F.adrs,F.objects,F.tx,F.map,F.closure].map(x=>x.includes('/')?text(x):x).join('\n');
 for(const marker of ['GZIP_BASE64_JSON','encoded_json_artifact','payload_base64','base64_payload','content-encoding: gzip'])if(allAuth.includes(marker))bad('encoded artifact marker present '+marker);else ok('plain artifact policy '+marker);
-has(text(F.amendment),'status: PENDING_ACCEPTANCE','amendment status pending acceptance');
-has(text(F.freeze),'five corrections','four/five typo corrected');
-if(text(F.freeze).includes('contained four contradictions'))bad('old four-contradictions typo remains');else ok('old four-contradictions typo absent');
+has(amendmentText,'status: '+expectedAmendmentStatus,'amendment document status');
+has(freezeText,'status: '+expectedFreezeStatus,'freeze document status');
+has(freezeText,'five corrections','four/five typo corrected');
+if(freezeText.includes('contained four contradictions'))bad('old four-contradictions typo remains');else ok('old four-contradictions typo absent');
 eq(A.schema_version,'geox_dt02_architecture_decision_register_v2','ADR schema v2');
-eq(A.status,'FROZEN_WITH_AMENDMENT','ADR register amendment status');
-const decisions=A.decisions||[];
-eq(decisions.length,16,'ADR count');
-seteq(decisions.map(x=>x.id),Array.from({length:16},(_,i)=>'DT02-ADR-'+String(i+1).padStart(3,'0')),'ADR IDs');
-const amendment=A.amendments?.find(x=>x.id==='DT02-AMENDMENT-01');
+eq(A.status,'FROZEN_WITH_AMENDMENT','ADR register status');
+const decisions=A.decisions||[];eq(decisions.length,16,'ADR count');seteq(decisions.map(x=>x.id),Array.from({length:16},(_,i)=>'DT02-ADR-'+String(i+1).padStart(3,'0')),'ADR IDs');
 const superseded=['DT02-ADR-003','DT02-ADR-005','DT02-ADR-008','DT02-ADR-009','DT02-ADR-010','DT02-ADR-015','DT02-ADR-016'];
-if(!amendment)bad('amendment register entry missing');else{
-  seteq(amendment.supersedes,superseded,'superseded ADR set');
-  eq(amendment.status,'PENDING_ACCEPTANCE','amendment register pending status');
-}
-for(const d of decisions){
-  if(!nonempty(d.title)||!nonempty(d.decision)||!nonempty(d.rationale))bad(d.id+' textual audit metadata incomplete');
-  if(!nonemptyArray(d.rejected_alternatives)||!nonemptyArray(d.downstream_owners)||!nonemptyArray(d.input_packet_topics)||!nonemptyArray(d.invariants))bad(d.id+' array audit metadata incomplete');
-  const amended=superseded.includes(d.id);
-  eq(d.status,amended?'FROZEN_WITH_AMENDMENT':'FROZEN',d.id+' status');
-  eq(d.amendment_ref,amended?'DT02-AMENDMENT-01':null,d.id+' amendment reference');
-}
+const amendment=A.amendments?.find(x=>x.id==='DT02-AMENDMENT-01');
+if(!amendment)bad('amendment register entry missing');else{seteq(amendment.supersedes,superseded,'superseded ADR set');eq(amendment.status,expectedAmendmentStatus,'amendment register status')}
+for(const d of decisions){if(!nonempty(d.title)||!nonempty(d.decision)||!nonempty(d.rationale))bad(d.id+' textual audit metadata incomplete');if(!nonemptyArray(d.rejected_alternatives)||!nonemptyArray(d.downstream_owners)||!nonemptyArray(d.input_packet_topics)||!nonemptyArray(d.invariants))bad(d.id+' array audit metadata incomplete');const amended=superseded.includes(d.id);eq(d.status,amended?'FROZEN_WITH_AMENDMENT':'FROZEN',d.id+' status');eq(d.amendment_ref,amended?'DT02-AMENDMENT-01':null,d.id+' amendment reference')}
 if(!fail.some(x=>x.includes('audit metadata incomplete')))ok('all ADR audit metadata complete');
-const coveredTopics=new Set(decisions.flatMap(x=>x.input_packet_topics||[]));
-for(const topic of A.input_packet_topics||[])if(!coveredTopics.has(topic))bad('uncovered input packet topic '+topic);
-if(!fail.some(x=>x.startsWith('uncovered input packet topic')))ok('all input packet topics covered by ADRs');
-eq(O.schema_version,'geox_dt02_canonical_object_set_v2','object schema v2');
-eq(O.status,'FROZEN_WITH_AMENDMENT','object set amendment status');
-const baseReq=O.envelope_contracts?.base_object_envelope?.required_fields||[];
-if(baseReq.includes('lineage_id')||baseReq.includes('revision_id'))bad('base envelope wrongly requires lineage identity');else ok('base envelope excludes lineage identity');
-seteq(O.envelope_contracts?.lineage_envelope?.required_fields,['lineage_id','revision_id'],'lineage envelope required identity');
-eq(O.envelope_contracts?.lineage_envelope?.applies_when?.lineage_member,true,'lineage envelope applicability');
-eq(O.envelope_contracts?.non_lineage_context_envelope?.applies_when?.lineage_member,false,'non-lineage envelope applicability');
-eq((O.envelope_contracts?.non_lineage_context_envelope?.required_fields||[]).length,0,'non-lineage envelope has no lineage prerequisites');
-includesAll(O.envelope_contracts?.non_lineage_context_envelope?.optional_fields,['context_lineage_ref','context_revision_ref'],'non-lineage context refs');
-const rows=O.objects||[]; const byO=new Map(rows.map(x=>[x.object_type,x]));
-eq(rows.length,21,'object count including Forecast failure audit');
-const requiredObjects=['twin_runtime_attempt_v1','twin_runtime_tick_v1','twin_evidence_window_v1','twin_state_transition_v1','twin_assimilation_update_v1','twin_state_estimate_v1','twin_forecast_run_v1','twin_forecast_failure_v1','twin_scenario_set_v1','twin_forecast_residual_v1','twin_decision_record_v1','twin_action_feedback_v1','twin_calibration_candidate_v1','twin_shadow_evaluation_v1','twin_model_activation_v1','twin_runtime_config_v1','twin_runtime_checkpoint_v1','twin_runtime_health_v1','twin_runtime_lineage_v1','twin_revision_run_v1','twin_lineage_promotion_v1'];
-for(const id of requiredObjects)if(!byO.has(id))bad('object missing '+id);
-for(const o of rows){
-  if(typeof o.record_class!=='string'||!o.record_class)bad(o.object_type+' record_class missing');
-  if(o.history_class!==o.record_class)bad(o.object_type+' history_class compatibility mismatch');
-  if(typeof o.lineage_member!=='boolean')bad(o.object_type+' lineage_member missing');
-  if(o.envelope_profile!==(o.lineage_member?'LINEAGE':'NON_LINEAGE_CONTEXT'))bad(o.object_type+' envelope profile mismatch');
-  if(!Array.isArray(o.transaction_families)||o.transaction_families.length===0)bad(o.object_type+' transaction_families invalid');
-  if(Object.hasOwn(o,'transaction_family'))bad(o.object_type+' singular transaction_family forbidden');
-  if((o.transaction_families||[]).some(x=>/\sor\s/i.test(x)))bad(o.object_type+' natural-language transaction family forbidden');
-}
+const coveredTopics=new Set(decisions.flatMap(x=>x.input_packet_topics||[]));for(const topic of A.input_packet_topics||[])if(!coveredTopics.has(topic))bad('uncovered input packet topic '+topic);if(!fail.some(x=>x.startsWith('uncovered input packet topic')))ok('all input packet topics covered by ADRs');
+eq(O.schema_version,'geox_dt02_canonical_object_set_v2','object schema v2');eq(O.status,'FROZEN_WITH_AMENDMENT','object set status');
+const baseReq=O.envelope_contracts?.base_object_envelope?.required_fields||[];if(baseReq.includes('lineage_id')||baseReq.includes('revision_id'))bad('base envelope wrongly requires lineage identity');else ok('base envelope excludes lineage identity');
+seteq(O.envelope_contracts?.lineage_envelope?.required_fields,['lineage_id','revision_id'],'lineage envelope required identity');eq(O.envelope_contracts?.lineage_envelope?.applies_when?.lineage_member,true,'lineage envelope applicability');eq(O.envelope_contracts?.non_lineage_context_envelope?.applies_when?.lineage_member,false,'non-lineage envelope applicability');eq((O.envelope_contracts?.non_lineage_context_envelope?.required_fields||[]).length,0,'non-lineage envelope has no lineage prerequisites');includesAll(O.envelope_contracts?.non_lineage_context_envelope?.optional_fields,['context_lineage_ref','context_revision_ref'],'non-lineage context refs');
+const rows=O.objects||[],byO=new Map(rows.map(x=>[x.object_type,x]));eq(rows.length,21,'object count including Forecast failure audit');
+const requiredObjects=['twin_runtime_attempt_v1','twin_runtime_tick_v1','twin_evidence_window_v1','twin_state_transition_v1','twin_assimilation_update_v1','twin_state_estimate_v1','twin_forecast_run_v1','twin_forecast_failure_v1','twin_scenario_set_v1','twin_forecast_residual_v1','twin_decision_record_v1','twin_action_feedback_v1','twin_calibration_candidate_v1','twin_shadow_evaluation_v1','twin_model_activation_v1','twin_runtime_config_v1','twin_runtime_checkpoint_v1','twin_runtime_health_v1','twin_runtime_lineage_v1','twin_revision_run_v1','twin_lineage_promotion_v1'];for(const id of requiredObjects)if(!byO.has(id))bad('object missing '+id);
+for(const o of rows){if(!nonempty(o.record_class))bad(o.object_type+' record_class missing');if(o.history_class!==o.record_class)bad(o.object_type+' history_class mismatch');if(typeof o.lineage_member!=='boolean')bad(o.object_type+' lineage_member missing');if(o.envelope_profile!==(o.lineage_member?'LINEAGE':'NON_LINEAGE_CONTEXT'))bad(o.object_type+' envelope profile mismatch');if(!nonemptyArray(o.transaction_families))bad(o.object_type+' transaction_families invalid');if(Object.hasOwn(o,'transaction_family'))bad(o.object_type+' singular transaction_family forbidden');if((o.transaction_families||[]).some(x=>/\sor\s/i.test(x)))bad(o.object_type+' natural-language transaction family forbidden')}
 if(!fail.some(x=>x.includes('record_class')||x.includes('history_class')||x.includes('lineage_member')||x.includes('envelope profile')||x.includes('transaction_families')))ok('all objects have machine-readable class, lineage, envelope, and transaction arrays');
-const trueLineage=['twin_runtime_tick_v1','twin_evidence_window_v1','twin_state_transition_v1','twin_assimilation_update_v1','twin_state_estimate_v1','twin_forecast_run_v1','twin_scenario_set_v1','twin_runtime_checkpoint_v1'];
-const falseLineage=requiredObjects.filter(x=>!trueLineage.includes(x));
-for(const id of trueLineage)eq(byO.get(id)?.lineage_member,true,id+' lineage member');
-for(const id of falseLineage)eq(byO.get(id)?.lineage_member,false,id+' non-lineage record');
-for(const id of ['twin_runtime_attempt_v1','twin_runtime_health_v1','twin_forecast_failure_v1']){
-  const o=byO.get(id);if((o?.required_refs||[]).some(x=>['lineage_id','revision_id','context_lineage_ref','checkpoint_ref'].includes(x)))bad(id+' requires bootstrap context');else ok(id+' can exist before lineage/checkpoint');
-}
-eq(T.schema_version,'geox_dt02_atomic_transaction_matrix_v2','transaction schema v2');
-eq(T.transaction_count,8,'transaction family count');
-const txRows=T.transactions||[]; const byT=new Map(txRows.map(x=>[x.id,x]));
-const txIds=['A_STATE_TICK_COMMIT','B_SCENARIO_COMMIT','C_FORECAST_RESIDUAL_COMMIT','D_MODEL_GOVERNANCE_STEP_COMMIT','E_REVISION_LINEAGE_STEP_COMMIT','F_OPERATIONAL_ATTEMPT_HEALTH','G_HUMAN_DECISION_LINK_COMMIT','H_ACTION_FEEDBACK_COMMIT'];
-seteq([...byT.keys()],txIds,'transaction family IDs');
+const trueLineage=['twin_runtime_tick_v1','twin_evidence_window_v1','twin_state_transition_v1','twin_assimilation_update_v1','twin_state_estimate_v1','twin_forecast_run_v1','twin_scenario_set_v1','twin_runtime_checkpoint_v1'];const falseLineage=requiredObjects.filter(x=>!trueLineage.includes(x));for(const id of trueLineage)eq(byO.get(id)?.lineage_member,true,id+' lineage member');for(const id of falseLineage)eq(byO.get(id)?.lineage_member,false,id+' non-lineage record');
+for(const id of ['twin_runtime_attempt_v1','twin_runtime_health_v1','twin_forecast_failure_v1']){const o=byO.get(id);if((o?.required_refs||[]).some(x=>['lineage_id','revision_id','context_lineage_ref','checkpoint_ref'].includes(x)))bad(id+' requires bootstrap context');else ok(id+' can exist before lineage/checkpoint')}
+eq(T.schema_version,'geox_dt02_atomic_transaction_matrix_v2','transaction schema v2');eq(T.transaction_count,8,'transaction family count');const txRows=T.transactions||[],byT=new Map(txRows.map(x=>[x.id,x]));const txIds=['A_STATE_TICK_COMMIT','B_SCENARIO_COMMIT','C_FORECAST_RESIDUAL_COMMIT','D_MODEL_GOVERNANCE_STEP_COMMIT','E_REVISION_LINEAGE_STEP_COMMIT','F_OPERATIONAL_ATTEMPT_HEALTH','G_HUMAN_DECISION_LINK_COMMIT','H_ACTION_FEEDBACK_COMMIT'];seteq([...byT.keys()],txIds,'transaction family IDs');
 function covers(tx,o){return (tx.canonical_appends||[]).includes(o)||(tx.operation_variants||[]).some(v=>(v.canonical_appends||[]).includes(o))}
 for(const o of rows)for(const family of o.transaction_families||[]){const tx=byT.get(family);if(!tx)bad(`${o.object_type} references missing ${family}`);else if(!covers(tx,o.object_type))bad(`${o.object_type} not covered by ${family}`);else ok(`${o.object_type} covered by ${family}`)}
-const E=byT.get('E_REVISION_LINEAGE_STEP_COMMIT'); const variants=new Map((E?.operation_variants||[]).map(x=>[x.id,x]));
-seteq([...variants.keys()],['E1_DECLARE_REVISION','E2_APPEND_REVISION_STATUS','E3_PROMOTE_LINEAGE'],'revision variants');
-includesAll(variants.get('E1_DECLARE_REVISION')?.canonical_appends,['twin_revision_run_v1','twin_runtime_lineage_v1'],'E1 declaration appends');
-eq((variants.get('E1_DECLARE_REVISION')?.pointer_switches||[]).length,0,'E1 switches no pointers');
-includesAll(variants.get('E2_APPEND_REVISION_STATUS')?.allowed_revision_status,['RUNNING','FAILED','COMPLETED'],'E2 status coverage');
-eq((variants.get('E2_APPEND_REVISION_STATUS')?.pointer_switches||[]).length,0,'E2 switches no pointers');
-includesAll(variants.get('E3_PROMOTE_LINEAGE')?.canonical_appends,['twin_lineage_promotion_v1'],'E3 promotion append');
-includesAll(variants.get('E3_PROMOTE_LINEAGE')?.pointer_switches,['active lineage index CAS','checkpoint latest switch','current State switch','latest Forecast result switch'],'E3 atomic pointer coverage');
-const fr=byO.get('twin_forecast_run_v1')?.status_contract||{};
-eq(fr.COMPLETED?.points_count,72,'Forecast COMPLETED point count');
-eq(fr.COMPLETED?.checkpoint_advances,true,'Forecast COMPLETED checkpoint');
-eq(fr.COMPLETED?.latest_successful_forecast_advances,true,'Forecast COMPLETED success index');
-eq(fr.BLOCKED?.points_count,0,'Forecast BLOCKED point count');
-eq(fr.BLOCKED?.reason_codes_required,true,'Forecast BLOCKED reason codes');
-eq(fr.BLOCKED?.tick_status,'COMPLETED_WITH_LIMITATIONS','Forecast BLOCKED tick status');
-eq(fr.BLOCKED?.checkpoint_advances,true,'Forecast BLOCKED checkpoint');
-eq(fr.BLOCKED?.latest_successful_forecast_advances,false,'Forecast BLOCKED success index unchanged');
-eq(fr.FAILED?.permitted,false,'FAILED forbidden on lineage Forecast');
-eq(fr.FAILED?.replacement_object,'twin_forecast_failure_v1','FAILED replacement audit object');
-const ff=byO.get('twin_forecast_failure_v1');
-eq(ff?.record_class,'OPERATIONAL_AUDIT','Forecast failure record class');
-eq(ff?.lineage_member,false,'Forecast failure non-lineage');
-includesAll(ff?.transaction_families,['F_OPERATIONAL_ATTEMPT_HEALTH'],'Forecast failure transaction');
-includesAll(ff?.required_refs,['attempt_ref','reason_codes'],'Forecast failure required refs');
-const A1=(byT.get('A_STATE_TICK_COMMIT')?.operation_variants||[]).find(x=>x.id==='A1_COMPLETED');
-const A2=(byT.get('A_STATE_TICK_COMMIT')?.operation_variants||[]).find(x=>x.id==='A2_BLOCKED_FORECAST');
-eq(A1?.checkpoint_advances,true,'A1 advances checkpoint');
-eq(A1?.tick_status,'COMPLETED','A1 tick status');
-eq(A2?.checkpoint_advances,true,'A2 advances checkpoint');
-eq(A2?.tick_status,'COMPLETED_WITH_LIMITATIONS','A2 tick status');
-includesAll(byT.get('F_OPERATIONAL_ATTEMPT_HEALTH')?.forbidden_appends,['twin_runtime_tick_v1','twin_runtime_checkpoint_v1','twin_forecast_run_v1'],'F forbids terminal lineage appends');
-const scen=byO.get('twin_scenario_set_v1')?.field_contract||{};
-eq(scen.source_forecast_status,'COMPLETED','Scenario source status');
-eq(scen.source_forecast_points_count,72,'Scenario source points');
-includesAll(byT.get('B_SCENARIO_COMMIT')?.forbidden_sources,['BLOCKED Forecast','FAILED Forecast','twin_forecast_failure_v1'],'Scenario forbidden sources');
-const af=byO.get('twin_action_feedback_v1'); const fc=af?.field_contract||{};
-seteq(fc.execution_status,['EXECUTED','PARTIALLY_EXECUTED','EXECUTION_UNCERTAIN','NOT_EXECUTED'],'execution statuses');
-seteq(fc.validation_status,['NOT_YET_VALIDATED','VALIDATED','REJECTED','VALIDATED_WITH_LIMITATIONS'],'validation statuses');
-eq(fc.execution_validation_orthogonal,true,'execution and validation orthogonal');
-eq(fc.acceptance_ref_required,false,'acceptance_ref optional');
-eq(fc.eligible_for_state_input,'boolean','state-input eligibility field');
-if((af?.required_refs||[]).includes('acceptance_ref'))bad('Action Feedback requires acceptance_ref');else ok('Action Feedback does not require acceptance_ref');
-includesAll(af?.optional_refs,['task_ref','receipt_ref','as_executed_ref','acceptance_ref'],'Action Feedback optional refs');
-has(fc.trusted_execution_source_rule||'','receipt_ref or as_executed_ref','trusted execution source alternative');
-has(fc.task_ref_rule||'','origin_kind = AO_ACT','conditional task ref');
-has(JSON.stringify(byT.get('H_ACTION_FEEDBACK_COMMIT')),'NOT_YET_VALIDATED may still be eligible','pre-Acceptance state-input eligibility');
-const layers=new Set((L.layers||[]).map(x=>x.name));for(const x of ['domain','runtime','persistence','adapters','routes','projections','web'])if(!layers.has(x))bad('layer missing '+x);
-const domain=(L.layers||[]).find(x=>x.name==='domain');includesAll(domain?.must_not_depend_on,['Postgres','Fastify','wall clock','random UUID','filesystem','network'],'domain purity');
-const modes=new Set((M.modes||[]).map(x=>x.mode));for(const x of ['REPLAY','SHADOW_ONLINE','CONTROLLED_FIELD','PRODUCTION'])if(!modes.has(x))bad('mode missing '+x);
-eq(API.frontend_canonical_family?.prefix,'/operator/fields/:fieldId','frontend canonical prefix');
-eq(API.server_canonical_read_family?.prefix,'/api/v1/operator/fields/:fieldId/runtime','server canonical prefix');
-if((API.server_canonical_read_family?.routes||[]).some(x=>x.method!=='GET'))bad('Runtime route family contains write method');else ok('Runtime route family read-only');
-eq(C.schema_version,'geox_digital_twin_capability_matrix_v3','capability matrix v3');
-eq(C.current_claim,'RUNTIME_ARCHITECTURE_FROZEN_NO_RUNTIME_IMPLEMENTATION','capability claim boundary');
-const byC=new Map((C.capabilities||[]).map(x=>[x.capability_id,x]));
-for(const id of ['DT-MATRIX-HOURLY-TICK','DT-MATRIX-PROPAGATION','DT-MATRIX-ASSIMILATION','DT-MATRIX-POSTERIOR','DT-MATRIX-CHECKPOINT','DT-MATRIX-RESTART','DT-MATRIX-LATE-REVISION','DT-MATRIX-72H-REGEN'])eq(byC.get(id)?.current_status,'MISSING',id+' remains MISSING');
-eq(byC.get('DT-MATRIX-LIVE-PRODUCTION-FIELD-TWIN')?.current_status,'NOT_CLAIMED','production remains NOT_CLAIMED');
-const authoritative=[text(F.freeze),text(F.adrs),text(F.objects),text(F.tx),text(F.map)].join('\n');
-if(authoritative.includes('E_REVISION_PROMOTION_COMMIT'))bad('old E transaction name remains in authoritative files');else ok('old E transaction name removed');
-if(authoritative.includes('"transaction_family"'))bad('singular transaction_family remains');else ok('singular transaction_family absent');
-const closure=text(F.closure);const status=(closure.match(/status:\s*([A-Z_]+)/)||[])[1];
-if(status==='AMENDMENT_PENDING_ACCEPTANCE'){
-  for(const x of ['architecture_validated_head: PENDING','architecture_validated_ci: PENDING','closure_head: PENDING','final_pr_ci: PENDING'])has(closure,x,'pending closure field');
-  ok('closure correctly pending amendment acceptance');
-}else if(status==='COMPLETE'){
-  for(const key of ['architecture_validated_head','architecture_validated_ci','closure_head','final_pr_ci'])if(new RegExp(`${key}:\\s*PENDING`).test(closure))bad('complete closure retains pending '+key);
-  for(const x of ['DT-02 amended acceptance: PASS','DT-01 repository audit: PASS','DT-01 acceptance: PASS','DT-00 semantic regression: PASS','changed-file boundary: PASS','working tree: CLEAN'])has(closure,x,'complete closure evidence');
-  ok('closure COMPLETE evidence shape');
-}else bad('invalid closure status '+status);
+const E=byT.get('E_REVISION_LINEAGE_STEP_COMMIT'),variants=new Map((E?.operation_variants||[]).map(x=>[x.id,x]));seteq([...variants.keys()],['E1_DECLARE_REVISION','E2_APPEND_REVISION_STATUS','E3_PROMOTE_LINEAGE'],'revision variants');includesAll(variants.get('E1_DECLARE_REVISION')?.canonical_appends,['twin_revision_run_v1','twin_runtime_lineage_v1'],'E1 declaration appends');eq((variants.get('E1_DECLARE_REVISION')?.pointer_switches||[]).length,0,'E1 switches no pointers');includesAll(variants.get('E2_APPEND_REVISION_STATUS')?.allowed_revision_status,['RUNNING','FAILED','COMPLETED'],'E2 status coverage');eq((variants.get('E2_APPEND_REVISION_STATUS')?.pointer_switches||[]).length,0,'E2 switches no pointers');includesAll(variants.get('E3_PROMOTE_LINEAGE')?.canonical_appends,['twin_lineage_promotion_v1'],'E3 promotion append');includesAll(variants.get('E3_PROMOTE_LINEAGE')?.pointer_switches,['active lineage index CAS','checkpoint latest switch','current State switch','latest Forecast result switch'],'E3 atomic pointer coverage');
+const fr=byO.get('twin_forecast_run_v1')?.status_contract||{};eq(fr.COMPLETED?.points_count,72,'Forecast COMPLETED point count');eq(fr.COMPLETED?.checkpoint_advances,true,'Forecast COMPLETED checkpoint');eq(fr.COMPLETED?.latest_successful_forecast_advances,true,'Forecast COMPLETED success index');eq(fr.BLOCKED?.points_count,0,'Forecast BLOCKED point count');eq(fr.BLOCKED?.reason_codes_required,true,'Forecast BLOCKED reason codes');eq(fr.BLOCKED?.tick_status,'COMPLETED_WITH_LIMITATIONS','Forecast BLOCKED tick status');eq(fr.BLOCKED?.checkpoint_advances,true,'Forecast BLOCKED checkpoint');eq(fr.BLOCKED?.latest_successful_forecast_advances,false,'Forecast BLOCKED success index unchanged');eq(fr.FAILED?.permitted,false,'FAILED forbidden on lineage Forecast');eq(fr.FAILED?.replacement_object,'twin_forecast_failure_v1','FAILED replacement audit object');
+const ff=byO.get('twin_forecast_failure_v1');eq(ff?.record_class,'OPERATIONAL_AUDIT','Forecast failure record class');eq(ff?.lineage_member,false,'Forecast failure non-lineage');includesAll(ff?.transaction_families,['F_OPERATIONAL_ATTEMPT_HEALTH'],'Forecast failure transaction');includesAll(ff?.required_refs,['attempt_ref','reason_codes'],'Forecast failure required refs');
+const A1=(byT.get('A_STATE_TICK_COMMIT')?.operation_variants||[]).find(x=>x.id==='A1_COMPLETED'),A2=(byT.get('A_STATE_TICK_COMMIT')?.operation_variants||[]).find(x=>x.id==='A2_BLOCKED_FORECAST');eq(A1?.checkpoint_advances,true,'A1 advances checkpoint');eq(A1?.tick_status,'COMPLETED','A1 tick status');eq(A2?.checkpoint_advances,true,'A2 advances checkpoint');eq(A2?.tick_status,'COMPLETED_WITH_LIMITATIONS','A2 tick status');includesAll(byT.get('F_OPERATIONAL_ATTEMPT_HEALTH')?.forbidden_appends,['twin_runtime_tick_v1','twin_runtime_checkpoint_v1','twin_forecast_run_v1'],'F forbids terminal lineage appends');
+const scen=byO.get('twin_scenario_set_v1')?.field_contract||{};eq(scen.source_forecast_status,'COMPLETED','Scenario source status');eq(scen.source_forecast_points_count,72,'Scenario source points');includesAll(byT.get('B_SCENARIO_COMMIT')?.forbidden_sources,['BLOCKED Forecast','FAILED Forecast','twin_forecast_failure_v1'],'Scenario forbidden sources');
+const af=byO.get('twin_action_feedback_v1'),fc=af?.field_contract||{};seteq(fc.execution_status,['EXECUTED','PARTIALLY_EXECUTED','EXECUTION_UNCERTAIN','NOT_EXECUTED'],'execution statuses');seteq(fc.validation_status,['NOT_YET_VALIDATED','VALIDATED','REJECTED','VALIDATED_WITH_LIMITATIONS'],'validation statuses');eq(fc.execution_validation_orthogonal,true,'execution and validation orthogonal');eq(fc.acceptance_ref_required,false,'acceptance_ref optional');eq(fc.eligible_for_state_input,'boolean','state-input eligibility field');if((af?.required_refs||[]).includes('acceptance_ref'))bad('Action Feedback requires acceptance_ref');else ok('Action Feedback does not require acceptance_ref');includesAll(af?.optional_refs,['task_ref','receipt_ref','as_executed_ref','acceptance_ref'],'Action Feedback optional refs');has(fc.trusted_execution_source_rule||'','receipt_ref or as_executed_ref','trusted execution source alternative');has(fc.task_ref_rule||'','origin_kind = AO_ACT','conditional task ref');has(JSON.stringify(byT.get('H_ACTION_FEEDBACK_COMMIT')),'NOT_YET_VALIDATED may still be eligible','pre-Acceptance state-input eligibility');
+const layers=new Set((L.layers||[]).map(x=>x.name));for(const x of ['domain','runtime','persistence','adapters','routes','projections','web'])if(!layers.has(x))bad('layer missing '+x);const domain=(L.layers||[]).find(x=>x.name==='domain');includesAll(domain?.must_not_depend_on,['Postgres','Fastify','wall clock','random UUID','filesystem','network'],'domain purity');const modes=new Set((M.modes||[]).map(x=>x.mode));for(const x of ['REPLAY','SHADOW_ONLINE','CONTROLLED_FIELD','PRODUCTION'])if(!modes.has(x))bad('mode missing '+x);
+eq(API.frontend_canonical_family?.prefix,'/operator/fields/:fieldId','frontend canonical prefix');eq(API.server_canonical_read_family?.prefix,'/api/v1/operator/fields/:fieldId/runtime','server canonical prefix');if((API.server_canonical_read_family?.routes||[]).some(x=>x.method!=='GET'))bad('Runtime route family contains write method');else ok('Runtime route family read-only');
+eq(C.schema_version,'geox_digital_twin_capability_matrix_v3','capability matrix v3');eq(C.current_claim,'RUNTIME_ARCHITECTURE_FROZEN_NO_RUNTIME_IMPLEMENTATION','capability claim boundary');const byC=new Map((C.capabilities||[]).map(x=>[x.capability_id,x]));for(const id of ['DT-MATRIX-HOURLY-TICK','DT-MATRIX-PROPAGATION','DT-MATRIX-ASSIMILATION','DT-MATRIX-POSTERIOR','DT-MATRIX-CHECKPOINT','DT-MATRIX-RESTART','DT-MATRIX-LATE-REVISION','DT-MATRIX-72H-REGEN'])eq(byC.get(id)?.current_status,'MISSING',id+' remains MISSING');eq(byC.get('DT-MATRIX-LIVE-PRODUCTION-FIELD-TWIN')?.current_status,'NOT_CLAIMED','production remains NOT_CLAIMED');
+const authoritative=[freezeText,text(F.adrs),text(F.objects),text(F.tx),text(F.map)].join('\n');if(authoritative.includes('E_REVISION_PROMOTION_COMMIT'))bad('old E transaction name remains');else ok('old E transaction name removed');if(authoritative.includes('"transaction_family"'))bad('singular transaction_family remains');else ok('singular transaction_family absent');
+if(!complete){for(const x of ['architecture_validated_head: PENDING','architecture_validated_ci: PENDING','closure_input_head: PENDING'])has(closure,x,'pending closure field');has(closure,'final_pr_head: attested in PR #2303','external final head attestation rule');has(closure,'final_pr_ci: attested in PR #2303','external final CI attestation rule');ok('closure correctly pending amendment acceptance')}else{
+  const architectureHead=field(closure,'architecture_validated_head'),architectureCi=field(closure,'architecture_validated_ci'),closureInput=field(closure,'closure_input_head');
+  if(!/^[0-9a-f]{40}$/.test(architectureHead||''))bad('architecture_validated_head invalid');else ok('architecture_validated_head recorded');
+  if(!/^PASS — workflow ci #[0-9]+$/.test(architectureCi||''))bad('architecture_validated_ci invalid');else ok('architecture_validated_ci recorded');
+  eq(closureInput,architectureHead,'closure input equals architecture validated head');
+  has(closure,'final_pr_head: attested in PR #2303','external final head attestation rule');has(closure,'final_pr_ci: attested in PR #2303','external final CI attestation rule');
+  for(const x of ['DT-02 amended acceptance: PASS','DT-01 repository audit: PASS','DT-01 acceptance: PASS','DT-00 semantic regression: PASS','changed-file boundary: PASS','working tree: CLEAN'])has(closure,x,'complete closure evidence');ok('closure COMPLETE evidence shape')
+}
 try{cp.execFileSync(process.execPath,[F.audit,'--check'],{cwd:ROOT,stdio:'inherit'});ok('DT-01 audit regression')}catch(e){bad('DT-01 audit regression failed: '+e.message)}
 function run(label,script,env=process.env){try{cp.execFileSync(process.execPath,[script],{cwd:ROOT,env,stdio:'inherit'});ok(label)}catch(e){bad(label+' failed: '+e.message)}}
-run('DT-01 acceptance regression',F.dt01);
-run('DT-00 semantic regression',F.dt00,{...process.env,DT00_ACCEPTANCE_SKIP_GIT_SCOPE:'1'});
-try{
-  cp.execFileSync('git',['cat-file','-e',BASE+'^{commit}'],{cwd:ROOT,stdio:'ignore'});
-  const out=cp.execFileSync('git',['diff','--name-only',BASE+'...HEAD'],{cwd:ROOT,encoding:'utf8'}).trim();
-  const changed=out?out.split(/\r?\n/).filter(Boolean):[];
-  const allowed=new Set([F.self]);
-  const forbidden=changed.filter(x=>!(x.startsWith('docs/digital_twin/')||allowed.has(x)));
-  if(!changed.length)bad('no amendment changes');
-  if(forbidden.length)bad('forbidden changed files '+forbidden.join(', '));else ok('changed-file boundary '+changed.length+' files');
-}catch(e){bad('changed-file boundary failed: '+e.message)}
+run('DT-01 acceptance regression',F.dt01);run('DT-00 semantic regression',F.dt00,{...process.env,DT00_ACCEPTANCE_SKIP_GIT_SCOPE:'1'});
+try{cp.execFileSync('git',['cat-file','-e',BASE+'^{commit}'],{cwd:ROOT,stdio:'ignore'});const out=cp.execFileSync('git',['diff','--name-only',BASE+'...HEAD'],{cwd:ROOT,encoding:'utf8'}).trim();const changed=out?out.split(/\r?\n/).filter(Boolean):[];const forbidden=changed.filter(x=>!(x.startsWith('docs/digital_twin/')||x===F.self));if(!changed.length)bad('no amendment changes');if(forbidden.length)bad('forbidden changed files '+forbidden.join(', '));else ok('changed-file boundary '+changed.length+' files')}catch(e){bad('changed-file boundary failed: '+e.message)}
 finish();
