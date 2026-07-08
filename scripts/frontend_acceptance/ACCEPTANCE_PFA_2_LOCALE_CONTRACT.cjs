@@ -40,6 +40,7 @@ const allowedExact = new Set([
   'apps/web/src/features/fields/pages/FieldReportPage.tsx',
   'apps/web/src/features/fields/pages/FieldReportExportPage.tsx',
   'apps/web/src/features/operations/pages/OperationReportPage.tsx',
+  'apps/web/src/styles/responsive.css',
 ]);
 const allowedPrefixes = [
   'docs/frontend-acceptance/PFA-2-',
@@ -133,7 +134,7 @@ function addedDiffLines(file) {
 function nakedGovernedCopyViolations(files) {
   const violations = [];
   const pattern = new RegExp(`(?:${governedProps.join('|')})\\s*=\\s*["']([^"']+)["']`);
-  const neutral = /^(?:GEOX|API|URL|JSON|SHA-256|AO-ACT|ID|Trace ID|\/[^^\s]+|[A-Z0-9_.:-]+)$/;
+  const neutral = /^(?:GEOX|API|URL|JSON|SHA-256|AO-ACT|ID|Trace ID|\/[^\s]+|[A-Z0-9_.:-]+)$/;
   for (const file of files.filter((item) => item.endsWith('.tsx'))) {
     for (const line of addedDiffLines(file)) {
       const match = line.match(pattern);
@@ -193,11 +194,13 @@ try {
   const customerLayout = read('apps/web/src/layouts/CustomerLayout.tsx');
   const operatorLayout = read('apps/web/src/layouts/OperatorLayout.tsx');
   const adminLayout = read('apps/web/src/layouts/AdminLayout.tsx');
+  const responsiveSource = read('apps/web/src/styles/responsive.css');
   assert('locale_provider_supports_exact_locales', localeSource.includes('"zh-CN" | "en-US"') && localeSource.includes('["zh-CN", "en-US"]'));
   assert('locale_storage_persistence_preserved', localeSource.includes('LOCALE_STORAGE_KEY') && localeSource.includes('localStorage.setItem') && localeSource.includes('localStorage.getItem'));
   assert('html_lang_synchronization', localeSource.includes('document.documentElement.lang = locale'));
   assert('locale_toggle_contract', toggleSource.includes('useLocale') && toggleSource.includes('setLocale') && toggleSource.includes('aria-pressed') && toggleSource.includes('data-locale-option') && !/(useNavigate|NavLink|<Link|window\.location|history\.pushState|history\.replaceState)/.test(toggleSource));
   assert('login_uses_locale_boundary', loginSource.includes('useLocale') && loginSource.includes('LocaleToggle') && loginSource.includes('LOGIN_COPY'));
+  assert('dashboard_responsive_selector_is_locale_stable', responsiveSource.includes('.productPageShell.customerDashboardProductPage') && !responsiveSource.includes('[aria-label="Customer reporting dashboard"]'));
 
   const copyFiles = [
     repoPath('apps/web/src/lib/productSurfaceLabels.ts'),
