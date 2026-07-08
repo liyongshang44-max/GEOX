@@ -1,31 +1,42 @@
 <!-- docs/frontend-acceptance/PFA-2-ISSUE-CLOSURE.md -->
 # PFA-2 Issue Closure Register
 
-## Closed issues
+## Pending strengthened revalidation
 
-| issue | severity | owner | state | evidence |
+| issue | severity | owner | state | remaining proof |
 |---|---|---|---|---|
-| PFA0-I18N-001 | P1 | PFA-2 | closed | 60/60 route health, 60/60 html lang, 30/30 locale pairs, RuntimeTextGuard dependency 0 |
-| PFA0-CUS-001 | P1 | PFA-2 | closed | Customer 9 routes passed zh-CN and en-US runtime checks |
-| PFA0-ADM-002 | P2 | PFA-2 | closed | Admin 7 routes passed bilingual governance checks |
+| PFA0-I18N-001 | P1 | PFA-2 | pending revalidation | Complete governed visible-text scan, 60/60 route health, 30/30 differentiated locale pairs, mandatory role-boundary presence |
+| PFA0-CUS-001 | P1 | PFA-2 | pending revalidation | Customer 9 routes must pass the strengthened runtime scan |
+| PFA0-ADM-002 | P2 | PFA-2 | pending revalidation | Admin 7 routes, including localized metric values, must pass the strengthened runtime scan |
 
-## Closure proof
+## Current engineering state
 
 ```text
-validated head: 88b793226a2dc84853d125f2a1f96c7c59282cd8
-validation date: 2026-07-08
-static exit: 0
-runtime exit: 0
-runtime ok: true
+matrix records: 30
+matrix status: ready-for-runtime
+Gateway Demo child components: localized at source
+Admin Devices Readback / Defined values: localized at source
+complete visible-text runtime audit: implemented
+mandatory role-boundary presence check: implemented
+PFA-3 dashboard layout CSS: removed from PFA-2
+```
+
+## Closure condition
+
+The three issues above return to `closed` only after:
+
+```text
+static acceptance exit: 0
+strengthened runtime audit exit: 0
 route health: 60/60
 html lang: 60/60
 locale pairs: 30/30
 locale pair differentiation: 30/30
-role-boundary equivalence: 30/30
+role-boundary equivalence and presence: 30/30
 pathname equivalence: 30/30
 RuntimeTextGuard dependency: 0
-CI run 4200: success
-worktree after cleanup: clean
+matrix records promoted to runtime-pass: 30/30
+synchronized-head CI: success
 ```
 
 ## Deferred issues
