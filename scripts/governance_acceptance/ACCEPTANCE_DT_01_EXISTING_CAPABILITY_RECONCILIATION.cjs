@@ -153,7 +153,7 @@ for (const capability of capabilities) {
       if (component.persistence_modes.includes('ACCEPTANCE_OUTPUT_FILE') && component.evidence_levels.length === 1) fail(`${key} REUSE_AS_IS cannot be acceptance-output only`);
     }
     if (component.reuse_decision === 'REUSE_WITH_ADAPTER') {
-      const contract = component.decision_contract?.adapters?.[0];
+      const contract = component.decision_contract?.adapters?.[0] || component.decision_contract;
       if (!contract || !nonEmpty(contract.responsibility) || !nonEmpty(contract.existing_side) || !nonEmpty(contract.new_mcft_side) || !Array.isArray(contract.must_not_do)) fail(`${key} incomplete adapter contract`);
     }
     if (component.reuse_decision === 'EXTRACT_ALGORITHM') {
