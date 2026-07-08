@@ -20,7 +20,7 @@ export default function FieldRuntimeHealthLocalizedTabPanel({ loadState }: { loa
   const health = loadState.health;
   return <div className="operatorFieldRuntime__healthGrid" data-h62="health-ready" data-health-source={health.source}>
     <article className="operatorFieldRuntime__panel" data-h62-panel="health-intro">
-      <div className="operatorFieldRuntime__panelHeader"><div><p className="operatorFieldRuntime__eyebrow">{t("health")}</p><h2 className="operatorFieldRuntime__panelTitle">{t("healthReview")}</h2></div><span className="operatorFieldRuntime__panelMeta">field_runtime_health_review_v1</span></div>
+      <div className="operatorFieldRuntime__panelHeader"><div><p className="operatorFieldRuntime__eyebrow">{t("health")}</p><h2 className="operatorFieldRuntime__panelTitle">{t("healthReview")}</h2></div><span className="operatorFieldRuntime__panelMeta" data-locale-neutral="true">field_runtime_health_review_v1</span></div>
       <p className="operatorFieldRuntime__stubLead">{text("Replay-backed health review.", "回放支撑的健康审查。")}</p>
       <p className="operatorFieldRuntime__stubLead">{text("Displayed for review only.", "仅用于审查。")}</p>
       <p className="operatorFieldRuntime__stubLead">{text("No live device, production gateway, or continuous production monitoring claim.", "不声明实时设备连接、生产网关在线或连续生产监控。")}</p>
