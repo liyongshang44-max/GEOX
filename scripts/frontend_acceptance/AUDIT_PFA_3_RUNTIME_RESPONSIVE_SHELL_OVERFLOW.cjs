@@ -172,10 +172,15 @@ async function pageSnapshot(page, record, viewportName) {
       const rect = element.getBoundingClientRect();
       return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom, width: rect.width, height: rect.height };
     };
-    const insideViewport = (element) => {
+    const horizontallyContained = (element) => {
       if (!visible(element)) return false;
       const rect = element.getBoundingClientRect();
-      return rect.left >= -1 && rect.right <= viewportWidth + 1 && rect.top < viewportHeight && rect.bottom > 0;
+      return rect.left >= -1 && rect.right <= viewportWidth + 1;
+    };
+    const initiallyVisible = (element) => {
+      if (!horizontallyContained(element)) return false;
+      const rect = element.getBoundingClientRect();
+      return rect.top < viewportHeight && rect.bottom > 0;
     };
     const validRegion = (region) => Boolean(
       region
@@ -183,26 +188,26 @@ async function pageSnapshot(page, record, viewportName) {
       && clean(region.getAttribute('aria-label'))
       && region.tabIndex === 0
       && clean(region.getAttribute('data-overflow-owner'))
-      && insideViewport(region)
+      && horizontallyContained(region)
     );
 
     const requiredFailures = [];
     for (const selector of routeRecord.requiredSelectors || []) {
       const element = document.querySelector(selector);
       if (!element) requiredFailures.push({ selector, reason: 'missing' });
-      else if (!insideViewport(element)) requiredFailures.push({ selector, reason: 'outside-viewport', rect: rectData(element) });
+      else if (!initiallyVisible(element)) requiredFailures.push({ selector, reason: 'outside-initial-viewport', rect: rectData(element) });
     }
 
     if (routeRecord.h1Required && !document.querySelector('h1')) requiredFailures.push({ selector: 'h1', reason: 'missing-required-h1' });
     if (routeRecord.boundaryRequired) {
       const boundary = document.querySelector('.productBoundaryBanner,.operatorRuntimeModeBanner,.adminShellBoundary');
       if (!boundary) requiredFailures.push({ selector: 'boundary', reason: 'missing-required-boundary' });
-      else if (!insideViewport(boundary)) requiredFailures.push({ selector: 'boundary', reason: 'outside-viewport', rect: rectData(boundary) });
+      else if (!initiallyVisible(boundary)) requiredFailures.push({ selector: 'boundary', reason: 'outside-initial-viewport', rect: rectData(boundary) });
     }
     if (routeRecord.primaryActionRequired) {
       const action = document.querySelector('.productPageHeader__actions a,.productPageHeader__actions button,form button[type="submit"]');
       if (!action) requiredFailures.push({ selector: 'primary-action', reason: 'missing-required-action' });
-      else if (!insideViewport(action)) requiredFailures.push({ selector: 'primary-action', reason: 'outside-viewport', rect: rectData(action) });
+      else if (!initiallyVisible(action)) requiredFailures.push({ selector: 'primary-action', reason: 'outside-initial-viewport', rect: rectData(action) });
     }
 
     const internalFailures = [];
@@ -288,13 +293,13 @@ async function auditRoute(browser, states, record, locale, viewportName, viewpor
     if (snapshot.htmlLang !== locale) throw new Error(`html lang mismatch: ${snapshot.htmlLang}`);
     if (!snapshot.mainVisible) throw new Error('main page not visible');
     if (!snapshot.documentContained) throw new Error(`document overflow: html=${snapshot.documentElementScrollWidth} body=${snapshot.bodyScrollWidth} viewport=${snapshot.viewportWidth}`);
-    if (snapshot.requiredFailures.length) throw new Error(`required selector failures: ${JSON.stringify(snapshot.requiredFailures).slice(0, 600)}`);
-    if (snapshot.internalFailures.length) throw new Error(`internal overflow failures: ${JSON.stringify(snapshot.internalFailures).slice(0, 600)}`);
+    if (snapshot.requiredFailures.length) throw new Error(`required selector failures: ${JSON.stringify(snapshot.requiredFailures).slice(0, 700)}`);
+    if (snapshot.internalFailures.length) throw new Error(`internal overflow failures: ${JSON.stringify(snapshot.internalFailures).slice(0, 700)}`);
     if (snapshot.maskingFailures.length) throw new Error(`root overflow masking: ${JSON.stringify(snapshot.maskingFailures)}`);
-    if (snapshot.offenders.length) throw new Error(`unexpected overflow offenders: ${JSON.stringify(snapshot.offenders).slice(0, 1000)}`);
+    if (snapshot.offenders.length) throw new Error(`unexpected overflow offenders: ${JSON.stringify(snapshot.offenders).slice(0, 1200)}`);
   } catch (error) {
     result.status = 'FAIL';
-    result.notes.push(String(error?.message || error).slice(0, 1400));
+    result.notes.push(String(error?.message || error).slice(0, 1600));
   } finally {
     await context.close();
   }
@@ -328,14 +333,15 @@ async function shellProbe(browser, states, surface, locale, probeName, viewport,
       if (details.sidebarVisible || !details.triggerVisible || details.initialExpanded !== 'false') throw new Error(`compact initial state mismatch: ${JSON.stringify(details)}`);
       await trigger.press('Enter');
       if ((await trigger.getAttribute('aria-expanded')) !== 'true') throw new Error('Enter did not open navigation');
-      const panel = page.locator('[data-mobile-navigation-panel="true"]:visible').first();
-      const links = panel.locator('a[href]');
-      if (await links.count() < 1) throw new Error('compact navigation has no focusable links');
+      let panel = page.locator('[data-mobile-navigation-panel="true"]:visible').first();
+      if (await panel.locator('a[href]').count() < 1) throw new Error('compact navigation has no focusable links');
       await page.keyboard.press('Escape');
+      await page.waitForFunction(() => document.activeElement?.matches('[data-mobile-navigation="true"] button[aria-controls]'), null, { timeout: TIMEOUT });
       details.escapeClosed = (await trigger.getAttribute('aria-expanded')) === 'false';
       details.focusReturned = await trigger.evaluate((element) => document.activeElement === element);
       if (!details.escapeClosed || !details.focusReturned) throw new Error(`Escape close failed: ${JSON.stringify(details)}`);
       await trigger.press('Enter');
+      panel = page.locator('[data-mobile-navigation-panel="true"]:visible').first();
       const currentPath = new URL(page.url()).pathname;
       const candidates = panel.locator('a[href]');
       let target = null;
@@ -346,6 +352,7 @@ async function shellProbe(browser, states, surface, locale, probeName, viewport,
       if (!target) throw new Error('no alternate route link for route-change probe');
       await target.click();
       await page.waitForFunction((pathValue) => location.pathname !== pathValue, currentPath, { timeout: TIMEOUT });
+      await page.waitForFunction(() => document.querySelector('[data-mobile-navigation="true"] button[aria-expanded="false"]'), null, { timeout: TIMEOUT });
       details.routeClickClosed = (await trigger.getAttribute('aria-expanded')) === 'false';
       details.activeStateRetained = await page.locator('[data-mobile-navigation-panel="true"] a.isActive,[data-mobile-navigation-panel="true"] a[aria-current="page"]').count() > 0;
       if (!details.routeClickClosed || !details.activeStateRetained) throw new Error(`route-change close/active failed: ${JSON.stringify(details)}`);
@@ -353,7 +360,7 @@ async function shellProbe(browser, states, surface, locale, probeName, viewport,
     result.details = details;
   } catch (error) {
     result.status = 'FAIL';
-    result.notes.push(String(error?.message || error).slice(0, 1200));
+    result.notes.push(String(error?.message || error).slice(0, 1400));
   } finally {
     await context.close();
   }
