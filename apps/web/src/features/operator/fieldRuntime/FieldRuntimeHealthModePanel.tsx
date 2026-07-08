@@ -1,5 +1,6 @@
 // apps/web/src/features/operator/fieldRuntime/FieldRuntimeHealthModePanel.tsx
 import React from "react";
+import { ProductHorizontalScrollRegion } from "../../../design-system/product";
 import { useLocale } from "../../../lib/locale";
 import { fieldRuntimeText, type FieldRuntimeCopyKey } from "./fieldRuntimeLocaleCopy";
 import { type FieldRuntimeHealthViewModel } from "./fieldRuntimeHealthAdapter";
@@ -19,6 +20,8 @@ export default function FieldRuntimeHealthModePanel({ health }: { health: FieldR
   ];
   return <article className="operatorFieldRuntime__panel operatorFieldRuntime__healthMode" data-h62-panel="runtime-mode">
     <div className="operatorFieldRuntime__panelHeader"><div><p className="operatorFieldRuntime__eyebrow">{t("health")}</p><h2 className="operatorFieldRuntime__panelTitle">{t("healthMode")}</h2></div><span className="operatorFieldRuntime__panelMeta" data-locale-neutral="true">mode: {health.mode}</span></div>
-    <div className="operatorFieldRuntime__healthTable" role="table" aria-label={t("healthMode")}><div className="operatorFieldRuntime__healthTableHeader" role="row"><span>{text("Label", "标签")}</span><span>{text("Value", "值")}</span></div>{rows.map(([rowLabel, value]) => <div className="operatorFieldRuntime__healthTableRow" role="row" key={rowLabel}><span>{rowLabel}</span><span>{value}</span></div>)}</div>
+    <ProductHorizontalScrollRegion ariaLabel={t("healthMode")} overflowOwner="operator-health-mode">
+      <div className="operatorFieldRuntime__healthTable" role="table" aria-label={t("healthMode")}><div className="operatorFieldRuntime__healthTableHeader" role="row"><span>{text("Label", "标签")}</span><span>{text("Value", "值")}</span></div>{rows.map(([rowLabel, value]) => <div className="operatorFieldRuntime__healthTableRow" role="row" key={rowLabel}><span>{rowLabel}</span><span>{value}</span></div>)}</div>
+    </ProductHorizontalScrollRegion>
   </article>;
 }
