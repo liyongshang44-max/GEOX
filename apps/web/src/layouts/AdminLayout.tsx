@@ -1,5 +1,5 @@
 // apps/web/src/layouts/AdminLayout.tsx
-// Purpose: render the Admin Console as an independent bilingual shell.
+// Purpose: render the Admin Console as an independent bilingual shell with compact responsive navigation.
 // Boundary: formal Admin paths render typed locale surfaces; route topology, permissions, APIs, and data contracts remain unchanged.
 
 import React from "react";
@@ -7,6 +7,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { type TopBarProps } from "../app/TopBar";
 import LocaleToggle from "../components/common/LocaleToggle";
 import AppBreadcrumb, { type AppBreadcrumbItem } from "../components/layout/AppBreadcrumb";
+import ProductMobileNavigation from "../components/layout/ProductMobileNavigation";
 import AdminLocalePage from "../features/admin/pages/AdminGovernanceLocalePage";
 import { ADMIN_DASHBOARD_LOCALE_CONFIG } from "../features/admin/pages/adminDashboardLocaleConfig";
 import { ADMIN_DEVICES_LOCALE_CONFIG } from "../features/admin/pages/adminDevicesLocaleConfig";
@@ -64,6 +65,21 @@ function localizedAdminBreadcrumbs(items: AppBreadcrumbItem[], locale: LocaleCod
   });
 }
 
+function adminNavigation(pathname: string, locale: LocaleCode): React.ReactNode {
+  return ADMIN_NAV_ITEMS.map((item) => {
+    const label = navLabel(item, locale);
+    const hint = navHint(item, locale);
+    if (item.status === "enabled" && item.to) {
+      return (
+        <NavLink key={item.key} to={item.to} title={hint} className={() => "adminShellNavItem" + (isNavActive(pathname, item) ? " isActive" : "")}>
+          <span>{label}</span>
+        </NavLink>
+      );
+    }
+    return <span key={item.key} className="adminShellNavItem adminShellNavItemDisabled" aria-disabled="true" title={hint}><span>{label}</span></span>;
+  });
+}
+
 export default function AdminLayout({ topBar, children }: AdminLayoutProps): React.ReactElement {
   const location = useLocation();
   const { locale } = useLocale();
@@ -71,21 +87,43 @@ export default function AdminLayout({ topBar, children }: AdminLayoutProps): Rea
   const topbarLead = localizedText(ADMIN_SHELL_LABELS.topbar.lead, locale);
   const pageContent = formalAdminContent(location.pathname, children);
   const breadcrumbs = localizedAdminBreadcrumbs(topBar.breadcrumbs, locale);
+  const mobileNavigationCopy = locale === "en-US"
+    ? { open: "Open navigation", close: "Close navigation", panel: "Admin navigation menu" }
+    : { open: "打开导航", close: "关闭导航", panel: "后台管理导航菜单" };
 
-  return <div className="adminShell" data-layout="admin-console-shell" data-pfe5="admin-layout-landmark-corrected" data-pfa2-locale={locale}>
-    <aside className="adminShellSidebar" aria-label={localizedText(ADMIN_SHELL_LABELS.navigationAria, locale)}>
-      <div className="adminShellBrand" aria-label={localizedText(ADMIN_SHELL_LABELS.brand, locale)}><span className="adminShellLogoMark" aria-hidden="true" /><span>{localizedText(ADMIN_SHELL_LABELS.brand, locale)}</span></div>
-      <nav className="adminShellNav" aria-label={localizedText(ADMIN_SHELL_LABELS.navigationAria, locale)}>{ADMIN_NAV_ITEMS.map((item) => {
-        const label = navLabel(item, locale); const hint = navHint(item, locale);
-        return item.status === "enabled" && item.to ? <NavLink key={item.key} to={item.to} title={hint} className={() => "adminShellNavItem" + (isNavActive(location.pathname, item) ? " isActive" : "")}><span>{label}</span></NavLink> : <span key={item.key} className="adminShellNavItem adminShellNavItemDisabled" aria-disabled="true" title={hint}><span>{label}</span></span>;
-      })}</nav>
-      <div className="adminShellMeta"><div>{localizedText(ADMIN_SHELL_LABELS.meta.internalGovernanceSurface, locale)}</div><strong>{localizedText(ADMIN_SHELL_LABELS.meta.readOnlyShellBoundary, locale)}</strong><div>{localizedText(ADMIN_SHELL_LABELS.meta.formalNavigation, locale)}</div><strong>{localizedText(ADMIN_SHELL_LABELS.meta.adminRoutesOnly, locale)}</strong></div>
-      <div className="adminShellFooterNote">{localizedText(ADMIN_SHELL_LABELS.meta.footerNote, locale)}</div>
-    </aside>
-    <div className="adminShellMainWrap">
-      <header className="adminShellTopbar"><div className="adminShellHeading"><div className="adminShellBreadcrumbs"><AppBreadcrumb items={breadcrumbs} /></div><h1 className="adminShellTitle">{topbarTitle}</h1><div className="adminShellContext">{topbarLead}</div></div><div className="adminShellTopActions"><div className="adminShellLocaleToggle shellLocaleToggle"><LocaleToggle /></div><div className="adminShellMeta adminShellTopMeta" aria-label={localizedText(ADMIN_SHELL_LABELS.boundaryAria, locale)}><div>{localizedText(ADMIN_SHELL_LABELS.meta.routeFamily, locale)}</div><strong>/admin/*</strong><div>{localizedText(ADMIN_SHELL_LABELS.meta.surfaceMode, locale)}</div><strong>{localizedText(ADMIN_SHELL_LABELS.meta.governedReadback, locale)}</strong></div></div></header>
-      <section className="adminShellBoundary" aria-label={localizedText(ADMIN_SHELL_LABELS.boundaryAria, locale)}><strong>{localizedText(ADMIN_SHELL_LABELS.brand, locale)}</strong><span>{localizedText(ADMIN_SHELL_LABELS.meta.boundaryText, locale)}</span></section>
-      <div className="adminLayoutMain" data-landmark="page-owned-by-product-page-shell">{pageContent}</div>
+  return (
+    <div className="adminShell" data-layout="admin-console-shell" data-layout-key="admin-shell" data-shell-surface="admin" data-pfe5="admin-layout-landmark-corrected" data-pfa2-locale={locale}>
+      <aside className="adminShellSidebar productShellDesktopSidebar" data-desktop-sidebar="true" aria-label={localizedText(ADMIN_SHELL_LABELS.navigationAria, locale)}>
+        <div className="adminShellBrand" aria-label={localizedText(ADMIN_SHELL_LABELS.brand, locale)}><span className="adminShellLogoMark" aria-hidden="true" /><span>{localizedText(ADMIN_SHELL_LABELS.brand, locale)}</span></div>
+        <nav className="adminShellNav" aria-label={localizedText(ADMIN_SHELL_LABELS.navigationAria, locale)}>{adminNavigation(location.pathname, locale)}</nav>
+        <div className="adminShellMeta"><div>{localizedText(ADMIN_SHELL_LABELS.meta.internalGovernanceSurface, locale)}</div><strong>{localizedText(ADMIN_SHELL_LABELS.meta.readOnlyShellBoundary, locale)}</strong><div>{localizedText(ADMIN_SHELL_LABELS.meta.formalNavigation, locale)}</div><strong>{localizedText(ADMIN_SHELL_LABELS.meta.adminRoutesOnly, locale)}</strong></div>
+        <div className="adminShellFooterNote">{localizedText(ADMIN_SHELL_LABELS.meta.footerNote, locale)}</div>
+      </aside>
+      <div className="adminShellMainWrap">
+        <header className="adminShellTopbar">
+          <div className="adminShellHeading">
+            <div className="adminShellBreadcrumbs"><AppBreadcrumb items={breadcrumbs} /></div>
+            <h1 className="adminShellTitle">{topbarTitle}</h1>
+            <div className="adminShellContext">{topbarLead}</div>
+          </div>
+          <div className="adminShellTopActions">
+            <ProductMobileNavigation
+              pathname={location.pathname}
+              surface="admin"
+              navigationLabel={localizedText(ADMIN_SHELL_LABELS.navigationAria, locale)}
+              openLabel={mobileNavigationCopy.open}
+              closeLabel={mobileNavigationCopy.close}
+              panelLabel={mobileNavigationCopy.panel}
+            >
+              <nav className="adminShellNav productMobileNavigation__links" aria-label={mobileNavigationCopy.panel}>{adminNavigation(location.pathname, locale)}</nav>
+            </ProductMobileNavigation>
+            <div className="adminShellLocaleToggle shellLocaleToggle"><LocaleToggle /></div>
+            <div className="adminShellMeta adminShellTopMeta" aria-label={localizedText(ADMIN_SHELL_LABELS.boundaryAria, locale)}><div>{localizedText(ADMIN_SHELL_LABELS.meta.routeFamily, locale)}</div><strong>/admin/*</strong><div>{localizedText(ADMIN_SHELL_LABELS.meta.surfaceMode, locale)}</div><strong>{localizedText(ADMIN_SHELL_LABELS.meta.governedReadback, locale)}</strong></div>
+          </div>
+        </header>
+        <section className="adminShellBoundary" aria-label={localizedText(ADMIN_SHELL_LABELS.boundaryAria, locale)}><strong>{localizedText(ADMIN_SHELL_LABELS.brand, locale)}</strong><span>{localizedText(ADMIN_SHELL_LABELS.meta.boundaryText, locale)}</span></section>
+        <div className="adminLayoutMain" data-landmark="page-owned-by-product-page-shell">{pageContent}</div>
+      </div>
     </div>
-  </div>;
+  );
 }
