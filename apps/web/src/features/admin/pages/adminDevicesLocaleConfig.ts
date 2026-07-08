@@ -17,8 +17,8 @@ export const ADMIN_DEVICES_LOCALE_CONFIG: AdminGovernanceLocaleConfig = {
   mode: c("设备清单回查", "Device Inventory Readback"),
   metrics: [
     { label: c("清单字段", "Inventory Fields"), value: 6, description: c("设备治理与来源字段。", "Device-governance and source fields."), source: c("设备治理目录", "Device governance catalog"), status: "readOnly" },
-    { label: c("连接状态", "Connection State"), value: "Readback", description: c("连接状态是元数据，不是实时监控声明。", "Connectivity is metadata, not a live-monitoring claim."), source: c("设备治理目录", "Device governance catalog"), status: "notConnected" },
-    { label: c("不可用状态", "Unavailable State"), value: "Defined", description: c("未知、不可用、过期和降级均可显示。", "Unknown, unavailable, stale, and degraded display states are supported."), source: c("PFA-2 状态词目录", "PFA-2 state-label catalog"), status: "unavailable" },
+    { label: c("连接状态", "Connection State"), value: c("回查", "Readback"), description: c("连接状态是元数据，不是实时监控声明。", "Connectivity is metadata, not a live-monitoring claim."), source: c("设备治理目录", "Device governance catalog"), status: "notConnected" },
+    { label: c("不可用状态", "Unavailable State"), value: c("已定义", "Defined"), description: c("未知、不可用、过期和降级均可显示。", "Unknown, unavailable, stale, and degraded display states are supported."), source: c("PFA-2 状态词目录", "PFA-2 state-label catalog"), status: "unavailable" },
   ],
   sections: [{
     title: c("设备治理字段", "Device Governance Fields"),
