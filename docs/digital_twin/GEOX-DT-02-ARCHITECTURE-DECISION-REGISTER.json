@@ -29,7 +29,7 @@
     {
       "id": "DT02-AMENDMENT-01",
       "path": "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-01.md",
-      "status": "PENDING_ACCEPTANCE",
+      "status": "COMPLETE",
       "supersedes": [
         "DT02-ADR-003",
         "DT02-ADR-005",
