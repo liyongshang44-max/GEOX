@@ -30,6 +30,7 @@ const FILES = {
   auditScript: 'scripts/governance_acceptance/AUDIT_DT_01_REPOSITORY_CAPABILITIES.cjs',
   acceptanceScript: 'scripts/governance_acceptance/ACCEPTANCE_DT_01_EXISTING_CAPABILITY_RECONCILIATION.cjs',
   helperScript: 'scripts/governance_acceptance/DT01_JSON_ARTIFACT_LOADER.cjs',
+  dt00RegressionScript: 'scripts/governance_acceptance/ACCEPTANCE_DT_00_MAINLINE_GOVERNANCE_RESET.cjs',
 };
 
 const allowedStatus = new Set(['ESTABLISHED','ESTABLISHED_WITH_LIMITATIONS','MISSING','NOT_CLAIMED']);
@@ -215,6 +216,13 @@ if (capabilities.find((item) => item.capability_id === 'DT01-CAP-070')?.capabili
 if (capabilities.find((item) => item.capability_id === 'DT01-CAP-072')?.capability_status !== 'MISSING') fail('assimilation must be MISSING');
 if (capabilities.find((item) => item.capability_id === 'DT01-CAP-076')?.capability_status !== 'MISSING') fail('checkpoint must be MISSING');
 
+const matrixLineage = Array.isArray(matrix.governance_lineage) ? matrix.governance_lineage : [];
+if (!matrixLineage.includes('DT-00') || !matrixLineage.includes('DT-01')) fail('capability matrix governance lineage must include DT-00 and DT-01');
+else pass('capability matrix preserves DT-00 and DT-01 governance lineage');
+const liveProduction = (matrix.capabilities || []).find((item) => item.capability_id === 'DT-MATRIX-LIVE-PRODUCTION-FIELD-TWIN');
+if (liveProduction?.current_status !== 'NOT_CLAIMED') fail('live production Field Twin must remain NOT_CLAIMED');
+else pass('live production Field Twin remains NOT_CLAIMED');
+
 const forbiddenClaims = [
   'P50 = production runtime',
   'P57 = live-device runtime',
@@ -243,7 +251,7 @@ try {
 }
 
 try {
-  cp.execFileSync(process.execPath, ['scripts/governance_acceptance/ACCEPTANCE_DT_00_MAINLINE_GOVERNANCE_RESET.cjs'], {
+  cp.execFileSync(process.execPath, [FILES.dt00RegressionScript], {
     cwd: ROOT,
     stdio: 'inherit',
     env: { ...process.env, DT00_ACCEPTANCE_SKIP_GIT_SCOPE: '1' },
@@ -255,7 +263,7 @@ try {
 
 try {
   const changed = cp.execFileSync('git', ['diff','--name-only',`${BASELINE}...HEAD`], { cwd: ROOT, encoding: 'utf8' }).trim().split(/\r?\n/).filter(Boolean);
-  const allowedGovernanceScripts = new Set([FILES.auditScript, FILES.acceptanceScript, FILES.helperScript]);
+  const allowedGovernanceScripts = new Set([FILES.auditScript, FILES.acceptanceScript, FILES.helperScript, FILES.dt00RegressionScript]);
   const forbidden = changed.filter((file) => !(file.startsWith('docs/digital_twin/') || allowedGovernanceScripts.has(file)));
   if (forbidden.length) fail(`forbidden changed files: ${forbidden.join(', ')}`);
   else pass(`changed-file scope valid: ${changed.length} files`);
