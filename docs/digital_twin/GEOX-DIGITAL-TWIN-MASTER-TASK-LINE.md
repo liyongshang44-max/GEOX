@@ -1,24 +1,39 @@
 <!-- docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE.md -->
 # GEOX Complete Agricultural Digital Twin Master Task Line
 
-## 0. Authority and baseline
+## 0. Authority and current baseline
 
 ```text
 repository: liyongshang44-max/GEOX
-baseline branch: main
-baseline commit: 97f5f5c108fb14404f75512b4ab775bd3dcefdeb
-baseline meaning: PFA-2 Locale Contract Completion merged
+current main baseline for DT-01: bce918d1eea423397bdd329148b7a2e7eb181b6c
+baseline meaning: DT-00 Mainline Governance Reset merged
 primary mainline: Minimum Complete Field Twin
 ultimate goal: Complete Agricultural Digital Twin
 ```
 
-This document is the authoritative post-PFA-2 implementation order. PFA remains a retained product-quality line, but PFA-3 through PFA-7 do not globally block DT or MCFT.
+This file is the authoritative post-PFA implementation order.
+
+Current phase state:
+
+```text
+DT-00: COMPLETE
+DT-01: IMPLEMENTED_PENDING_DEDICATED_ACCEPTANCE
+DT-02: NOT_STARTED
+MCFT: NOT_STARTED
+CAT: NOT_STARTED
+```
+
+DT-01 detail is authoritative in:
+
+```text
+docs/digital_twin/GEOX-DT-01-EXISTING-CAPABILITY-RECONCILIATION.md
+docs/digital_twin/GEOX-DT-01-CAPABILITY-INVENTORY.json
+docs/digital_twin/GEOX-DT-01-DT-02-INPUT-PACKET.md
+```
 
 ## 1. Completion levels
 
-### Level A — Minimum Complete Field Twin
-
-Level A is limited to:
+### Minimum Complete Field Twin
 
 ```text
 one tenant
@@ -28,39 +43,41 @@ one field
 one season
 one governed zone
 one root-zone definition
-soil-water as the primary physical state
-hourly runtime tick
+soil-water primary State
+hourly tick
 +1h through +72h, exactly 72 forecast points
 fixed irrigation scenarios
 human decision
 controlled action feedback
-state update, residual, and governed calibration candidate
+next-State update
+forecast residual
+governed calibration candidate
 ```
 
-Only `MCFT-GATE-C` permits the claim `Minimum Complete Field Twin complete`.
+Only `MCFT-GATE-C` permits `Minimum Complete Field Twin complete`.
 
-### Level B — Complete Agricultural Digital Twin v1
+### Complete Agricultural Digital Twin v1
 
-Level B adds multi-field and multi-zone operation, crop, nutrient, disease, remote sensing, governed recommendation and approval, AO-ACT integration, outcome evidence, effect attribution, ROI, Field Memory, and model governance.
+Adds multi-field/multi-zone, crop, nutrient, disease, remote sensing, multi-domain scenarios, recommendation/approval, AO-ACT integration, outcome/effect/ROI/Field Memory, and model governance.
 
-### Level C — Production Agricultural Digital Twin
+### Production Agricultural Digital Twin
 
-Level C adds real devices, production gateway, persistent scheduling, high availability, restart and backfill controls, controlled field pilot evidence, production safety, and operational support.
+Adds real gateways/devices, persistent scheduling, high availability, restart/backfill, operational monitoring, and governed field-pilot evidence.
 
 ## 2. Runtime family rule
 
-Replay, Shadow-online, Controlled Field, and Production runtimes must share:
+Replay, Shadow-online, Controlled Field, and Production share:
 
 ```text
 domain model
 canonical object contracts
 state-transition semantics
-forecast and scenario engine
+forecast/scenario engine
 persistence semantics
-trace and audit chain
+trace/audit chain
 ```
 
-They may use different:
+They may differ through:
 
 ```text
 clock adapter
@@ -70,37 +87,34 @@ execution adapter
 availability and operational controls
 ```
 
-The project must not create four semantically independent demo systems.
-
-## 3. Non-negotiable semantic boundaries
+## 3. Semantic boundaries
 
 ```text
-Reality is not Evidence.
-Evidence is not State.
-Sensor Reading is not Root-zone State.
-Forecast is not Scenario.
-Scenario is not Recommendation.
-Decision is not Approval.
-Approval is not Dispatch.
-Dispatch is not Execution.
-Executed is not Validated.
-Outcome Evidence is not Effect Attribution.
-Assimilation is not Calibration.
-Candidate is not Active Model.
-Replay Twin is not Production Twin.
+Reality != Evidence
+Evidence != State
+Sensor Reading != Root-zone State
+Forecast != Scenario
+Scenario != Recommendation
+Decision != Approval
+Approval != Dispatch
+Dispatch != Execution
+Executed != Validated
+Outcome Evidence != Effect Attribution
+Assimilation != Calibration
+Candidate != Active Model
+Replay Twin != Production Twin
 ```
 
-## 4. Canonical history and revision rule
-
-Canonical runtime history is append-only.
+## 4. Canonical history rule
 
 ```text
 same idempotency key -> same payload
-historical State, Forecast, Scenario, Residual, Decision, and Action records are immutable
-latest/read indexes may move to a later revision
+canonical history is immutable
+latest indexes may point to a later revision
+late evidence creates a new revision
 ```
 
-Late evidence must not mutate an old record. Reprocessing the same logical tick creates a new revision with:
+Required late-evidence fields:
 
 ```text
 revision_id
@@ -110,37 +124,7 @@ late_evidence_refs
 original_tick_ref
 ```
 
-DT-02 must decide transaction and atomic record-set boundaries before final State object granularity is frozen. The logical concepts are:
-
-```text
-state transition
-propagated prior
-observation update
-canonical posterior estimate
-assimilation residual and uncertainty update
-```
-
-Candidate records may include:
-
-```text
-twin_state_transition_v1
-  previous_posterior_ref
-  propagated_prior
-  observation_update
-  posterior
-
-twin_state_estimate_v1
-  canonical posterior state
-
-twin_assimilation_update_v1
-  observation residual
-  observation weight
-  uncertainty update
-```
-
-The names and split are proposed, not frozen before DT-02.
-
-## 5. Execution order
+## 5. Phase order
 
 ```text
 DT-00 Mainline Governance Reset
@@ -151,22 +135,22 @@ MCFT-GATE-A Replay-backed Closure
 MCFT-GATE-B Shadow-online Closure
 MCFT-GATE-C Controlled-action Feedback Closure
 CAT-00 through CAT-11
-Production hardening and governed field pilot
+Production hardening and field pilot
 ```
-
----
-
-# DT phases
 
 ## DT-00 — Mainline Governance Reset
 
-Purpose: close PFA-3 without merge, commit the handoff and this task line, establish the capability matrix, supersede the old global PFA block, retain the 16 unresolved PFA findings, and identify DT-01 as the next task.
+Status: `COMPLETE`.
 
-DT-00 is governance-only and claims no new Twin runtime capability.
+DT-00 closed PFA-3 PR #2298 without merge, committed the complete-digital-twin handoff, superseded the global PFA block, retained 16 product-quality findings, and made MCFT the primary implementation line.
+
+DT-00 claimed no runtime capability.
 
 ## DT-01 — Existing Capability Reconciliation
 
-Perform code-level classification using:
+DT-01 inventories definitions, callers, runtime entries, inputs, clocks, persistence, read models, routes, write boundaries, verification, capability status, reuse decisions, limitations, and DT-02 implications.
+
+Formal component decisions:
 
 ```text
 REUSE_AS_IS
@@ -177,101 +161,95 @@ REPLACE
 DEPRECATE
 ```
 
-Minimum inventory:
+Evidence levels:
 
 ```text
-P31
-P42
-P43
-P49
-P50
-P57
-water_state_estimate_v1
-root_zone_soil_water_state_v1
-root_zone_soil_water_forecast_v1
-root_zone_irrigation_scenario_set_v1
-Operator Field Runtime
-AO-ACT
-Field Memory
+DEFINITION_ONLY
+TEST_OR_ACCEPTANCE_ONLY
+SCRIPT_RUNNER
+DATABASE_READBACK
+SERVER_ROUTE
+SERVER_WRITE_PATH
+SCHEDULED_RUNTIME
+LIVE_INGRESS
+UNKNOWN
 ```
 
-A capability is not established merely because a document, fixture, dry-run, or acceptance script exists. DT-01 must identify the actual caller, persistence path, runtime entry, state continuation, and failure behavior.
+DT-01 findings:
+
+```text
+facts/provenance/scope: established
+root-zone builders: established with limitations
+P31/P42/P43/P50/P57: controlled/replay/freeze, not continuous production runtime
+Operator canonical route shell: reusable with adapters
+AO-ACT/approval/receipt: real request-driven server paths, not yet MCFT-bound
+ROI/Field Memory: real governed server/database capabilities, deferred to CAT
+hourly tick/assimilation/posterior/checkpoint/recovery/revision/72h regeneration: MISSING
+```
+
+DT-01 does not implement adapters, extraction, replacement, deprecation, or missing runtime capability.
+
+After DT-01 acceptance and merge, the next task is:
+
+```text
+DT-02 Runtime Architecture Freeze
+```
 
 ## DT-02 — Runtime Architecture Freeze
 
-Freeze these layers:
+Freeze:
 
 ```text
-domain/       pure deterministic calculations
-runtime/      tick orchestration, recovery, late evidence, checkpoints
-persistence/  append-only canonical records plus mutable read indexes
-routes/       read APIs and separately governed human write entries
-web/          read-only runtime presentation
-adapters/     clock, ingress, scheduler, execution, availability controls
+domain/
+runtime/
+persistence/
+routes/
+web/
+adapters/
 ```
 
-Hard rules:
+Decide:
 
 ```text
-domain builders do not access databases
-domain builders do not read wall clock
-canonical objects are immutable
-read indexes may upsert
-runtime resumes from persisted checkpoint
-late evidence creates a revision rather than rewriting history
-route inventory is completed before a final API prefix is frozen
+canonical record atomicity
+state-transition granularity
+canonical versus latest-index persistence
+tick transaction
+checkpoint/recovery ownership
+late-evidence revisions
+forecast run/point storage
+scenario set/projection storage
+model registry/activation consumption
+API prefix and legacy compatibility
 ```
 
-Any API family listed later in this document is proposed until DT-02 passes.
-
----
-
-# Minimum Complete Field Twin
+No final State object split or API prefix is frozen before DT-02.
 
 ## MCFT-00 — Reality Binding Contract
 
-Freeze exactly one tenant, project, group, field, season, governed zone, and root-zone definition. Bind field geometry, soil layers, crop identity, sensor depth and location, weather source, irrigation source, and execution source.
+Bind exactly one tenant, project, group, field, season, governed zone, root-zone definition, geometry, soil layers, crop, sensors, weather, irrigation, and execution source.
 
 ## MCFT-01 — Canonical Replay Dataset
 
-Provide at least 30 days of hourly data with soil moisture, precipitation, ET0 or source weather sufficient to calculate ET0, crop coefficient or crop-stage mapping, irrigation execution evidence, sensor depth, quality, `observed_at`, `ingested_at`, and source references.
-
-Missing, interpolated, and transformed values must remain distinguishable. Future observations may not enter an earlier tick.
+At least 30 days hourly data with observed/ingested timestamps, soil moisture, precipitation, ET0, crop stage/Kc, irrigation execution, sensor depth, quality, explicit missingness, and no future leakage.
 
 ## MCFT-02 — Canonical Runtime Object Contracts
 
-Freeze scope, time, provenance, model/config references, deterministic hash, idempotency, revision, previous-chain references, limitations, and atomic record-set rules.
-
-Required logical objects include runtime tick, evidence window, state transition, canonical posterior estimate, assimilation update, forecast run and points, scenario set and projections, decision, action feedback, forecast residual, calibration candidate, model activation, runtime checkpoint, and runtime health.
+Freeze tick, evidence window, state transition, posterior, assimilation update, forecast run/points, scenario set/projections, decision, action feedback, residual, calibration candidate, activation, checkpoint, health, revision, and trace contracts.
 
 ## MCFT-03 — Persistence Foundation
 
-Create append-only canonical persistence and mutable latest/read indexes for ticks, states, forecasts, scenarios, decisions, feedback, residuals, calibration, checkpoints, and runtime health.
-
-Historical records must never be updated. Duplicate logical work must be idempotent. Revisions must preserve superseded history.
+Implement immutable canonical history plus mutable latest/read indexes, idempotency, revision, and restart-safe persistence.
 
 ## MCFT-04 — Hourly Runtime Tick
 
-Implement explicit replay clock, manual tick, shadow-online tick, checkpoint, restart recovery, missed-tick backfill, and the states:
+Implement replay/manual/shadow clocks, tick claim, status, checkpoint, recovery, missed-tick backfill, and idempotent retry.
 
-```text
-SCHEDULED
-RUNNING
-COMPLETED
-COMPLETED_WITH_LIMITATIONS
-BLOCKED
-FAILED
-```
+## MCFT-05 — Evidence Window
 
-No new evidence, insufficient evidence, policy block, and execution failure must be distinguishable.
+Collect previous posterior, observations, weather, forecast, execution, crop/soil context, coverage, freshness, gaps, late/out-of-order evidence, exclusions, and refs.
 
-## MCFT-05 — Evidence Window Builder
-
-For each tick collect previous posterior, soil observations, weather observations and forecast, irrigation execution, crop-stage context, and soil/root-zone configuration. Calculate coverage, freshness, maximum gap, late and out-of-order evidence, exclusions, and usable evidence references.
-
-## MCFT-06 — Soil-Water Dynamics Model
-
-Implement an explainable hourly root-zone water-balance model:
+## MCFT-06 — Soil-Water Dynamics
 
 ```text
 storage(t+1)
@@ -283,38 +261,32 @@ storage(t+1)
 - runoff
 ```
 
-Support physical bounds, root-zone capacity, soil-layer weighting, process uncertainty, parameter version, and mass-balance trace.
+Include bounds, capacity, layers, process uncertainty, parameter version, and mass-balance trace.
 
-## MCFT-07 — Observation Operator and Assimilation
+## MCFT-07 — Observation and Assimilation
 
-Map sensor observations to root-zone state using depth, layer, root-zone weights, sensor bias, observation uncertainty, and quality penalties.
+Map sensor evidence by depth/layer/root-zone weights/bias/uncertainty/quality into:
 
 ```text
-posterior(t-1)
+previous posterior
 -> propagation
--> prior(t)
--> observation residual
--> assimilation
--> posterior(t)
+-> prior
+-> residual
+-> observation update
+-> posterior
 ```
-
-An anomalous reading must not directly replace root-zone state. Uncertainty must increase when observations are absent or unusable.
 
 ## MCFT-08 — First-class State Runtime
 
-Persist each tick's transition and canonical posterior with storage, available-water fraction, uncertainty, observation residual, evidence refs, previous-state ref, and model/config refs.
+Persist continuous immutable posterior history, uncertainty, residual, evidence, previous/revision refs, model/config refs, deterministic rerun, restart continuity, and late-evidence revisions.
 
-Hard acceptance includes 720 continuous hourly ticks, deterministic rerun, immutable history, restart continuity, and governed late-evidence revision.
+## MCFT-09 — 72-hour Forecast
 
-## MCFT-09 — 72-hour Forecast Runtime
+Exactly 72 points from `+1h` through `+72h`; t0 remains the source posterior.
 
-Generate exactly 72 hourly points, from `+1h` through `+72h`. The source posterior at `t0` is not a forecast point.
+## MCFT-10 — Irrigation Scenarios
 
-Each point records target time, predicted storage, predicted available-water fraction, uncertainty, precipitation, ET, assumed irrigation, and any physical bound applied.
-
-## MCFT-10 — Irrigation Scenario Runtime
-
-Gate A requires these fixed scenarios:
+Gate A fixed options:
 
 ```text
 NO_ACTION
@@ -324,217 +296,93 @@ IRRIGATE_NOW_30MM
 DELAY_24H_20MM
 ```
 
-`CUSTOM_OPERATOR_OPTION` is an enhancement and is not a Gate A requirement.
+`CUSTOM_OPERATOR_OPTION` is an enhancement, not Gate A.
 
-Scenario output includes trajectories, stress duration, minimum available-water fraction, drainage/overflow, total irrigation, failure conditions, and difference from baseline. Scenario does not create a recommendation, approval, or task.
+## MCFT-11 — Forecast Residual
 
-## MCFT-11 — Forecast Residual Runtime
-
-Match later observations to historical forecast points by target time and persist signed error, absolute error, coverage, evidence refs, unmatched reason, and model/config refs.
-
-Residual is not effect attribution, operator success, or automatic proof of model failure.
+Match later evidence by target time and persist signed/absolute error, coverage, refs, unmatched reason, model/config, and revision.
 
 ## MCFT-12 — Calibration Candidate
 
-Residuals may create a review record, parameter-delta candidate, or shadow-model candidate. They may not mutate or activate the current model automatically.
+Residual may create review/candidate/shadow records. It may not mutate or activate the active model automatically.
 
-Activation requires candidate, shadow evaluation, governance approval, activation record, rollback information, and proof that a later forecast consumed the activated model.
+## MCFT-13 — Human Decision
 
-## MCFT-13 — Human Decision Record
+Record human scenario selection, rationale, parameters, and refs. Decision is not approval or task.
 
-Record selected scenario, decision maker, decision time, rationale, parameters, evidence refs, forecast refs, and scenario refs. Decision is not approval or task creation.
+## MCFT-14 — Action Lifecycle
 
-## MCFT-14 — Action Lifecycle Binding
-
-Bind:
-
-```text
-decision
-approved plan
-AO-ACT task
-dispatch
-receipt
-as-executed
-acceptance
-```
-
-Planned, approved, dispatched, executed, and accepted values must remain separate.
+Bind decision -> approved plan -> AO-ACT -> dispatch -> receipt -> as-executed -> acceptance without collapsing states.
 
 ## MCFT-15 — Action Feedback Assimilation
 
-Only trustworthy execution evidence may enter the next state. Persist executed amount, timing, spatial coverage, application efficiency, equipment evidence, and receipt refs.
-
-Planned-only, approved-only, or dispatched-only irrigation must not be treated as executed input.
+Only trustworthy executed evidence may enter the next State. Planned, approved, and dispatched values may not.
 
 ## MCFT-16 — Closed-loop Runtime Orchestrator
 
-Operate the full longitudinal chain:
-
-```text
-tick N posterior
--> forecast
--> scenario
--> human decision
--> approved action
--> execution feedback
--> tick N+1 prior
--> observation assimilation
--> posterior
--> residual
-```
-
-A one-shot script is not sufficient.
+Operate the longitudinal tick/forecast/scenario/decision/action/feedback/next-State/residual chain. A one-shot script is insufficient.
 
 ## MCFT-17 — Runtime Read APIs
 
-The API prefix is proposed until DT-02 route inventory freezes it. Required read capabilities are current field runtime, state history, forecasts, scenarios, residuals, action lifecycle, health, and complete trace.
+Freeze API naming only after DT-02 route inventory. Extend existing Operator families where safe; avoid parallel namespaces without justification.
 
-No parallel Operator API namespace may be introduced without showing why existing route families cannot be extended safely.
+## MCFT-18 — Operator Integration
 
-## MCFT-18 — Operator Field Runtime Integration
-
-Retain the existing read-only field runtime page family and its Overview, Evidence, State, Forecast, Scenario, Residual, Calibration, Health, and Audit surfaces. Replace demo/read-model placeholders only after real runtime read models exist.
-
-The UI must show prior/posterior semantics, uncertainty, 72-hour trajectory, scenario differences, prediction-versus-observation residual, planned-versus-executed action, health, and the full trace chain.
-
----
-
-# MCFT closure gates
+Retain the canonical field route/tab shell and replace placeholders only after real runtime read models exist.
 
 ## MCFT-GATE-A — Replay-backed Closure
 
-Requires at least 30 days of hourly replay, continuous State progression, exactly 72 forecast points per run, fixed scenario branching, later-evidence residual, deterministic rerun, restart recovery, late-evidence revision, and no future leakage.
-
-Allowed claim:
-
-```text
-Replay-backed Minimum Field Twin validated
-```
+Requires 30-day hourly replay, continuous State, 72-point forecast, fixed scenarios, residual, determinism, restart, revision, and no future leakage.
 
 ## MCFT-GATE-B — Shadow-online Closure
 
-Requires continuous online ticks, late and out-of-order handling, restart recovery, missing-data degradation, online State/Forecast readback, and no automatic real-world action.
-
-Allowed claim:
-
-```text
-Shadow-online Minimum Field Twin validated
-```
+Requires continuous online ticks, late/out-of-order handling, restart, degradation, readback, and no automatic action.
 
 ## MCFT-GATE-C — Controlled-action Feedback Closure
 
-Requires at least one governed sequence from scenario to human decision, approval, AO-ACT, dispatch, receipt, as-executed evidence, next State, and residual.
+Requires scenario -> human decision -> approval -> AO-ACT -> dispatch -> receipt -> executed evidence -> next State -> residual.
 
-Only this gate permits:
+Only Gate C permits the MCFT completion claim.
+
+## CAT-00 through CAT-11
 
 ```text
-Minimum Complete Field Twin complete
+CAT-00 Multi-field and Multi-zone Runtime
+CAT-01 Skill Pack Architecture
+CAT-02 Crop Phenology and Biomass Twin
+CAT-03 Nitrogen and Nutrient Twin
+CAT-04 Disease and Pest Risk Twin
+CAT-05 Spatial and Remote-sensing Twin
+CAT-06 Unified Agricultural State
+CAT-07 Multi-domain Forecast and Scenario
+CAT-08 Recommendation and Approval Bridge
+CAT-09 AO-ACT and Device Runtime Integration
+CAT-10 Outcome, Effect, ROI, and Field Memory
+CAT-11 Learning and Model Governance
 ```
 
----
+Crop, Soil, Weather, Device, Operation, State Estimator, Forecast, and Scenario capabilities are governed Skill Packs.
 
-# Complete Agricultural Digital Twin expansion
+## Production hardening
 
-## CAT-00 — Multi-field and Multi-zone Runtime
-
-Add multiple fields and zones, independent state chains, shared weather, device bindings, concurrent ticks, and per-field/per-zone checkpoints.
-
-## CAT-01 — Skill Pack Architecture
-
-Treat Crop, Soil, Weather, Device, Operation, State Estimator, Forecast Model, and Scenario capabilities as governed Skill Packs with version, scope, input/output contracts, parameter schemas, compatibility, validation, and evidence refs.
-
-## CAT-02 — Crop Phenology and Biomass Twin
-
-Add growth stage, thermal time, canopy, root depth, biomass proxy, crop coefficient, and yield-formation stage.
-
-## CAT-03 — Nitrogen and Nutrient Twin
-
-Add soil nitrogen state, crop demand, fertilizer execution, leaching, uptake estimate, forecast, and governed fertilization scenarios.
-
-## CAT-04 — Disease and Pest Risk Twin
-
-Add host stage, weather suitability, infection windows, observation evidence, risk forecasts, and spray scenarios. Risk is a belief, not a disease fact.
-
-## CAT-05 — Spatial and Remote-sensing Twin
-
-Add geometry, management zones, satellite/drone evidence, vegetation/thermal indicators, and spatial uncertainty. Remote sensing remains Evidence and must not silently overwrite State.
-
-## CAT-06 — Unified Agricultural State
-
-Provide a container for soil-water, crop, nutrient, disease-risk, weather, operation, device, and economic context while preserving independent provenance and uncertainty per domain.
-
-## CAT-07 — Multi-domain Forecast and Scenario Engine
-
-Support irrigation, fertilization, spraying, planting, harvesting, and combined scenarios. Ranking requires an explicit policy and may not be inferred silently.
-
-## CAT-08 — Recommendation and Approval Bridge
-
-Implement Scenario -> Recommendation Candidate -> Human Review -> Approval Request -> Approved Plan. Scenario never directly creates AO-ACT.
-
-## CAT-09 — AO-ACT and Device Runtime Integration
-
-Add device capability readback, gateway status, compatibility, dispatch, receipt, execution telemetry, failure, cancellation, and rollback. Device Skill Packs define capabilities.
-
-## CAT-10 — Outcome, Effect, ROI, and Field Memory
-
-Keep Outcome Evidence, Effect Attribution, ROI, and Field Memory separate. Effect attribution requires baseline/counterfactual reasoning, weather, other operations, coverage, and time-window controls.
-
-## CAT-11 — Learning and Model Governance
-
-Add model and parameter registries, training snapshots, calibration candidates, shadow evaluation, canary activation, active model, rollback, and next-forecast consumption proof. No unreviewed Field Memory learning and no silent model activation.
-
----
-
-# Production hardening and final freeze
-
-Production readiness requires persistent scheduling, distributed locks, idempotent jobs, checkpoint recovery, late-data reconciliation, backfill, health, metrics, logs, alerts, retention, archive, security, and tenant isolation.
-
-Field pilot progression is:
+Requires scheduling, locks, idempotency, checkpoint recovery, late-data reconciliation, backfill, health, metrics, logs, alerts, retention, security, tenant isolation, and staged field pilot:
 
 ```text
-Replay
--> Shadow
--> Advisory
--> Controlled Action
--> Expanded Controlled Action
+Replay -> Shadow -> Advisory -> Controlled Action -> Expanded Controlled Action
 ```
 
-The final complete-digital-twin claim requires proof of reality binding, traceable evidence, continuous state estimation, forecast consumption of active State, scenario branching, human decision, separate approval and execution, feedback-driven State update, residual, governed calibration and model activation, separated outcome/effect semantics, shared replay/live architecture, restart survival, missing-data behavior, and complete Operator trace inspection.
+## Uniform delivery rules
 
-## Uniform task delivery requirements
+Every implementation task must deliver applicable contract, domain, persistence, runtime, read model, positive/negative acceptance, determinism, idempotency, revision, nonclaim, evidence, and closure records.
 
-Every implementation task must deliver as applicable:
+Fixture-only, dry-run-only, documentation-only, hard-coded PASS, or acceptance-output-only work may not be described as runtime completion.
 
-```text
-contract document
-domain implementation
-persistence/migration
-runtime integration
-read model
-positive acceptance
-negative fixtures
-determinism proof
-idempotency proof
-revision proof
-boundary/nonclaim proof
-evidence packet
-closure record
-```
-
-Fixture-only, dry-run-only, documentation-only, hard-coded PASS, or acceptance-output-only work must not be described as runtime completion.
-
-## Branch and merge discipline
+## Branch discipline
 
 ```text
-one task, one branch, one PR
+one task / one branch / one PR
 start from latest main
-merge prerequisites before dependent implementation
-keep early algorithm, persistence, runtime, and UI changes in separate reviewable tasks
-run all applicable regression after each merge
-```
-
-## Immediate next task
-
-```text
-DT-01 Existing Capability Reconciliation
+merge predecessor before successor
+do not mix unrelated implementation layers
+run applicable regression before merge
 ```
