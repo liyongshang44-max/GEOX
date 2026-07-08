@@ -1,0 +1,189 @@
+{
+  "schema_version": "geox_dt02_atomic_transaction_matrix_v1",
+  "phase": "DT-02",
+  "status": "FROZEN",
+  "transaction_count": 8,
+  "global_rules": [
+    "canonical appends and their projection changes share one database transaction per family",
+    "canonical facts never update",
+    "index switches use expected-current compare-and-swap when concurrency matters",
+    "no failed attempt advances checkpoint",
+    "no public HTTP endpoint directly invokes a generated-object write transaction"
+  ],
+  "transactions": [
+    {
+      "id": "A_STATE_TICK_COMMIT",
+      "name": "State Tick Commit",
+      "status": "FROZEN",
+      "owner": "Runtime Orchestrator through RuntimeRepositoryPort",
+      "preconditions": [
+        "valid unexpired lease",
+        "current fencing token",
+        "expected checkpoint matches latest index",
+        "immutable config snapshot resolved",
+        "frozen evidence window",
+        "semantic hashes and physical invariants verified"
+      ],
+      "canonical_appends": [
+        "twin_evidence_window_v1",
+        "twin_state_transition_v1",
+        "twin_assimilation_update_v1",
+        "twin_state_estimate_v1",
+        "twin_forecast_run_v1",
+        "twin_runtime_tick_v1",
+        "twin_runtime_checkpoint_v1",
+        "twin_runtime_health_v1"
+      ],
+      "projection_writes": [
+        "state history and latest",
+        "forecast run, point, and latest",
+        "checkpoint latest CAS",
+        "runtime health latest"
+      ],
+      "atomicity": "One Postgres transaction; any failure rolls back every append and projection or index update.",
+      "failure_semantics": [
+        "no posterior without transition and assimilation update",
+        "no partial successful Forecast",
+        "no checkpoint advance without terminal tick",
+        "no index points to missing fact"
+      ],
+      "idempotency": "same tick key and determinism hashes returns the existing record set; conflicting hash fails"
+    },
+    {
+      "id": "B_SCENARIO_COMMIT",
+      "name": "Scenario Commit",
+      "status": "FROZEN",
+      "owner": "Scenario Runtime",
+      "preconditions": [
+        "committed source Forecast",
+        "authorized fixed option definitions",
+        "complete semantic validation"
+      ],
+      "canonical_appends": ["twin_scenario_set_v1"],
+      "projection_writes": ["scenario set index", "scenario point index", "latest scenario index"],
+      "atomicity": "One Postgres transaction; Scenario failure does not roll back the source State Tick.",
+      "failure_semantics": [
+        "failed Scenario is not promoted to latest successful Scenario",
+        "no partial option trajectories"
+      ],
+      "idempotency": "same Scenario-set key and hash returns existing set; conflict fails"
+    },
+    {
+      "id": "C_FORECAST_RESIDUAL_COMMIT",
+      "name": "Forecast Residual Commit",
+      "status": "FROZEN",
+      "owner": "Residual Matcher",
+      "preconditions": [
+        "historical Forecast point exists",
+        "later observation matching rule evaluated",
+        "active or superseded lineage selection is explicit"
+      ],
+      "canonical_appends": ["twin_forecast_residual_v1"],
+      "projection_writes": ["forecast residual index", "matching trace projection"],
+      "atomicity": "Residual fact and projection or trace update commit together.",
+      "failure_semantics": ["historical Forecast never changes", "unmatched reason is explicit"],
+      "idempotency": "Forecast-point plus observation plus matching-rule-version identity"
+    },
+    {
+      "id": "D_MODEL_GOVERNANCE_STEP_COMMIT",
+      "name": "Model Governance Step Commit",
+      "status": "FROZEN",
+      "owner": "Config, Calibration, Shadow, or Activation service according to object writer matrix",
+      "preconditions": [
+        "authenticated governance context",
+        "required predecessor refs exist",
+        "activation has approval and an effective tick boundary"
+      ],
+      "canonical_appends": [
+        "one of twin_runtime_config_v1, twin_calibration_candidate_v1, twin_shadow_evaluation_v1, twin_model_activation_v1"
+      ],
+      "projection_writes": [
+        "candidate and evaluation read indexes",
+        "active config index CAS only for activation"
+      ],
+      "atomicity": "Each governance transition is independently append-only; Candidate, Shadow, Approval, and Activation are not collapsed into one transaction.",
+      "failure_semantics": [
+        "Candidate remains non-active",
+        "failed Activation leaves active binding unchanged"
+      ],
+      "idempotency": "transition-specific key and hash; Activation conflict fails"
+    },
+    {
+      "id": "E_REVISION_PROMOTION_COMMIT",
+      "name": "Revision Promotion Commit",
+      "status": "FROZEN",
+      "owner": "Revision Promotion Service",
+      "preconditions": [
+        "candidate lineage complete through current checkpoint",
+        "chain validation passes",
+        "candidate checkpoint and latest object refs exist",
+        "expected active lineage matches"
+      ],
+      "canonical_appends": ["twin_lineage_promotion_v1"],
+      "projection_writes": [
+        "active lineage index CAS",
+        "checkpoint latest switch",
+        "current State switch",
+        "latest Forecast switch",
+        "latest Scenario switch",
+        "runtime health latest"
+      ],
+      "atomicity": "Promotion fact and every active or latest pointer switch commit in one Postgres transaction.",
+      "failure_semantics": [
+        "candidate lineage remains queryable but inactive",
+        "readers never see mixed parent and candidate latest pointers"
+      ],
+      "idempotency": "candidate-lineage promotion key and hash; conflicting active parent fails"
+    },
+    {
+      "id": "F_OPERATIONAL_ATTEMPT_HEALTH",
+      "name": "Operational Attempt and Health Commit",
+      "status": "FROZEN",
+      "owner": "Runtime Orchestrator",
+      "preconditions": ["attempt identity exists", "attempt terminal or material health transition"],
+      "canonical_appends": ["twin_runtime_attempt_v1", "twin_runtime_health_v1"],
+      "projection_writes": ["attempt latest operational row", "runtime health latest index"],
+      "atomicity": "Attempt audit and health snapshot or latest update commit together; lease heartbeat may remain a separate short operational update.",
+      "failure_semantics": [
+        "no posterior, terminal tick, or checkpoint appends",
+        "BLOCKED, FAILED, and RECOVERING remain operational",
+        "checkpoint unchanged"
+      ],
+      "idempotency": "attempt event identity plus semantic hash"
+    },
+    {
+      "id": "G_HUMAN_DECISION_LINK_COMMIT",
+      "name": "Human Decision Link Commit",
+      "status": "FROZEN",
+      "owner": "Authenticated Human Decision Service",
+      "preconditions": [
+        "selected Scenario option exists",
+        "human identity and rationale validated",
+        "decision write authority present"
+      ],
+      "canonical_appends": ["twin_decision_record_v1"],
+      "projection_writes": ["decision and action-lifecycle read projection"],
+      "atomicity": "Decision link and its read projection commit together; Approval remains separate.",
+      "failure_semantics": ["no Approval, Plan, or Task is inferred", "no runtime-generated human decision"],
+      "idempotency": "human decision request id plus semantic hash"
+    },
+    {
+      "id": "H_ACTION_FEEDBACK_COMMIT",
+      "name": "Action Feedback Commit",
+      "status": "FROZEN",
+      "owner": "Action Feedback Service",
+      "preconditions": [
+        "governed task, receipt, as-executed, and acceptance refs resolved",
+        "executed amount, timing, and coverage distinguished from planned values"
+      ],
+      "canonical_appends": ["twin_action_feedback_v1"],
+      "projection_writes": ["action lifecycle projection", "feedback Evidence index"],
+      "atomicity": "Normalized feedback fact and read or Evidence indexes commit together.",
+      "failure_semantics": [
+        "untrusted or incomplete execution Evidence is rejected or explicitly limited",
+        "active model and past State remain unchanged"
+      ],
+      "idempotency": "source executed-Evidence identity plus normalization version and hash"
+    }
+  ]
+}
