@@ -15,12 +15,22 @@ async function snapshot(page) {
       if (normalized) governed.push(normalized);
     };
 
-    const textSelectors = 'nav,h1,h2,h3,table th,button,label,[class*="boundary" i],[data-status]';
-    for (const element of document.querySelectorAll(textSelectors)) {
-      if (element.closest('code,pre,[data-locale-neutral="true"]')) continue;
-      const clone = element.cloneNode(true);
-      clone.querySelectorAll('code,pre,[data-locale-neutral="true"]').forEach((node) => node.remove());
-      add(clone.textContent);
+    const candidates = [...document.querySelectorAll('[data-pfa2-locale],[data-layout],.productPageShell,.customerReportCanvas')];
+    const roots = candidates.length
+      ? candidates.filter((candidate) => !candidates.some((other) => other !== candidate && other.contains(candidate)))
+      : [document.body];
+
+    for (const root of roots) {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        const parent = node.parentElement;
+        if (!parent) continue;
+        if (parent.closest('script,style,noscript,template,code,pre,[data-locale-neutral="true"],[aria-hidden="true"]')) continue;
+        const style = window.getComputedStyle(parent);
+        if (style.display === 'none' || style.visibility === 'hidden') continue;
+        add(node.nodeValue);
+      }
     }
 
     for (const element of document.querySelectorAll('[aria-label]')) {
