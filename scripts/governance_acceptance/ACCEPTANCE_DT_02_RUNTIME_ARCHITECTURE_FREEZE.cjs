@@ -1,5 +1,5 @@
 // scripts/governance_acceptance/ACCEPTANCE_DT_02_RUNTIME_ARCHITECTURE_FREEZE.cjs
-// Purpose: validate DT-02 Amendment 01 object, lineage, transaction, Forecast, Scenario, Action Feedback, regression, and scope contracts.
+// Purpose: validate DT-02 Amendment 01 object, lineage, transaction, Forecast, Scenario, Action Feedback, ADR audit, regression, and scope contracts.
 'use strict';
 const fs=require('node:fs');
 const path=require('node:path');
@@ -34,6 +34,8 @@ function has(t,s,m){t.includes(s)?ok(m):bad(m+' missing '+s)}
 function eq(a,b,m){a===b?ok(m):bad(`${m}: expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`)}
 function seteq(a,b,m){const x=[...(a||[])].sort(),y=[...b].sort();eq(JSON.stringify(x),JSON.stringify(y),m)}
 function includesAll(a,b,m){const miss=b.filter(x=>!(a||[]).includes(x));miss.length?bad(m+' missing '+miss.join(', ')):ok(m)}
+function nonempty(v){return typeof v==='string'&&v.trim().length>0}
+function nonemptyArray(v){return Array.isArray(v)&&v.length>0}
 function finish(){console.log(`\nDT-02 amended acceptance summary: ${pass.length} PASS, ${fail.length} FAIL`);if(fail.length)process.exit(1);console.log('DT-02 ARCHITECTURE AMENDMENT 01: PASS')}
 for(const p of Object.values(F)){if(!fs.existsSync(abs(p)))bad('required file missing '+p);else ok('file exists '+p)}
 if(fail.length)finish();
@@ -49,9 +51,26 @@ has(text(F.freeze),'five corrections','four/five typo corrected');
 if(text(F.freeze).includes('contained four contradictions'))bad('old four-contradictions typo remains');else ok('old four-contradictions typo absent');
 eq(A.schema_version,'geox_dt02_architecture_decision_register_v2','ADR schema v2');
 eq(A.status,'FROZEN_WITH_AMENDMENT','ADR register amendment status');
-eq((A.decisions||[]).length,16,'ADR count');
+const decisions=A.decisions||[];
+eq(decisions.length,16,'ADR count');
+seteq(decisions.map(x=>x.id),Array.from({length:16},(_,i)=>'DT02-ADR-'+String(i+1).padStart(3,'0')),'ADR IDs');
 const amendment=A.amendments?.find(x=>x.id==='DT02-AMENDMENT-01');
-if(!amendment)bad('amendment register entry missing');else seteq(amendment.supersedes,['DT02-ADR-003','DT02-ADR-005','DT02-ADR-008','DT02-ADR-009','DT02-ADR-010','DT02-ADR-015','DT02-ADR-016'],'superseded ADR set');
+const superseded=['DT02-ADR-003','DT02-ADR-005','DT02-ADR-008','DT02-ADR-009','DT02-ADR-010','DT02-ADR-015','DT02-ADR-016'];
+if(!amendment)bad('amendment register entry missing');else{
+  seteq(amendment.supersedes,superseded,'superseded ADR set');
+  eq(amendment.status,'PENDING_ACCEPTANCE','amendment register pending status');
+}
+for(const d of decisions){
+  if(!nonempty(d.title)||!nonempty(d.decision)||!nonempty(d.rationale))bad(d.id+' textual audit metadata incomplete');
+  if(!nonemptyArray(d.rejected_alternatives)||!nonemptyArray(d.downstream_owners)||!nonemptyArray(d.input_packet_topics)||!nonemptyArray(d.invariants))bad(d.id+' array audit metadata incomplete');
+  const amended=superseded.includes(d.id);
+  eq(d.status,amended?'FROZEN_WITH_AMENDMENT':'FROZEN',d.id+' status');
+  eq(d.amendment_ref,amended?'DT02-AMENDMENT-01':null,d.id+' amendment reference');
+}
+if(!fail.some(x=>x.includes('audit metadata incomplete')))ok('all ADR audit metadata complete');
+const coveredTopics=new Set(decisions.flatMap(x=>x.input_packet_topics||[]));
+for(const topic of A.input_packet_topics||[])if(!coveredTopics.has(topic))bad('uncovered input packet topic '+topic);
+if(!fail.some(x=>x.startsWith('uncovered input packet topic')))ok('all input packet topics covered by ADRs');
 eq(O.schema_version,'geox_dt02_canonical_object_set_v2','object schema v2');
 eq(O.status,'FROZEN_WITH_AMENDMENT','object set amendment status');
 const baseReq=O.envelope_contracts?.base_object_envelope?.required_fields||[];
