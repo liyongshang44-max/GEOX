@@ -45,14 +45,14 @@ export default function CustomerDashboardPage(): React.ReactElement {
     return () => { active = false; };
   }, []);
 
-  if (loading) return <ProductPageShell surface="customer" ariaLabel={t(CUSTOMER_DASHBOARD_COPY.title)}><ProductLoadingState surface="customer" label={t(CUSTOMER_DASHBOARD_COPY.title)} description={t(CUSTOMER_COMMON_COPY.safeLoading)} /></ProductPageShell>;
-  if (failed || !vm) return <ProductPageShell surface="customer" ariaLabel={t(CUSTOMER_DASHBOARD_COPY.unavailableTitle)}><ProductErrorState surface="customer" title={t(CUSTOMER_DASHBOARD_COPY.unavailableTitle)} message={t(CUSTOMER_COMMON_COPY.safeError)} /></ProductPageShell>;
+  if (loading) return <ProductPageShell surface="customer" ariaLabel={t(CUSTOMER_DASHBOARD_COPY.title)} className="customerDashboardProductPage"><ProductLoadingState surface="customer" label={t(CUSTOMER_DASHBOARD_COPY.title)} description={t(CUSTOMER_COMMON_COPY.safeLoading)} /></ProductPageShell>;
+  if (failed || !vm) return <ProductPageShell surface="customer" ariaLabel={t(CUSTOMER_DASHBOARD_COPY.unavailableTitle)} className="customerDashboardProductPage"><ProductErrorState surface="customer" title={t(CUSTOMER_DASHBOARD_COPY.unavailableTitle)} message={t(CUSTOMER_COMMON_COPY.safeError)} /></ProductPageShell>;
 
   const scope = customerProductFallback(vm.summaryScopeText, locale, CUSTOMER_DASHBOARD_COPY.lead);
   const statusCopy = (tone?: string) => tone === "good" ? t(CUSTOMER_STATUS_COPY.available) : tone === "warning" ? t(CUSTOMER_STATUS_COPY.review) : tone === "danger" ? t(CUSTOMER_STATUS_COPY.blocked) : t(CUSTOMER_STATUS_COPY.reportOnly);
 
   return (
-    <ProductPageShell surface="customer" ariaLabel={t(CUSTOMER_DASHBOARD_COPY.title)} top={(
+    <ProductPageShell surface="customer" ariaLabel={t(CUSTOMER_DASHBOARD_COPY.title)} className="customerDashboardProductPage" top={(
       <ProductPageHeader
         eyebrow={t(CUSTOMER_DASHBOARD_COPY.eyebrow)}
         title={t(CUSTOMER_DASHBOARD_COPY.title)}
@@ -88,7 +88,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
         <ProductSectionCard title={t(CUSTOMER_DASHBOARD_COPY.fieldEntries)} subtitle={t(CUSTOMER_DASHBOARD_COPY.fieldEntriesLead)}>
           {vm.topRiskFields.length ? <div className="customerIndexList">{vm.topRiskFields.map((field) => (
             <Link key={field.fieldId} className="customerIndexRow" to={field.href}>
-              <div><strong>{field.fieldName}</strong><small>{customerProductFallback(field.secondaryText, locale, CUSTOMER_DASHBOARD_COPY.fieldEntriesLead)}</small><small>{customerProductFallback(field.boundaryText, locale, CUSTOMER_COMMON_COPY.authorizedOnly)}</small></div>
+              <div><strong data-locale-neutral="true">{field.fieldName}</strong><small>{customerProductFallback(field.secondaryText, locale, CUSTOMER_DASHBOARD_COPY.fieldEntriesLead)}</small><small>{customerProductFallback(field.boundaryText, locale, CUSTOMER_COMMON_COPY.authorizedOnly)}</small></div>
               <ProductStatusBadge status={status(field.riskTone)} label={statusCopy(field.riskTone)} />
             </Link>
           ))}</div> : <ProductEmptyState surface="customer" title={t(CUSTOMER_DASHBOARD_COPY.noFieldEntries)} description={t(CUSTOMER_DASHBOARD_COPY.noFieldEntriesLead)} />}
@@ -97,7 +97,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
         <ProductSectionCard title={t(CUSTOMER_DASHBOARD_COPY.operationEntries)} subtitle={t(CUSTOMER_DASHBOARD_COPY.operationEntriesLead)}>
           {vm.recentOperations.length ? <div className="customerIndexList">{vm.recentOperations.slice(0, 5).map((operation) => (
             <Link key={operation.operationId} className="customerIndexRow" to={operation.href}>
-              <div><strong>{operation.operationName}</strong><small>{operation.fieldName}</small><small>{customerProductFallback(operation.evidenceText, locale, CUSTOMER_DASHBOARD_COPY.operationEntriesLead)}</small></div>
+              <div><strong data-locale-neutral="true">{operation.operationName}</strong><small data-locale-neutral="true">{operation.fieldName}</small><small>{customerProductFallback(operation.evidenceText, locale, CUSTOMER_DASHBOARD_COPY.operationEntriesLead)}</small></div>
               <ProductStatusBadge status="readOnly" label={customerStatusLabel(operation.stateText, locale)} />
             </Link>
           ))}</div> : <ProductEmptyState surface="customer" title={t(CUSTOMER_DASHBOARD_COPY.noOperationEntries)} description={t(CUSTOMER_DASHBOARD_COPY.noOperationEntriesLead)} />}
