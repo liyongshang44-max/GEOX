@@ -103,6 +103,17 @@ async function auditOne(browser, states, record, locale, index, total) {
   return result;
 }
 
+function requiredCapabilityKeys(record) {
+  if (record.surface === 'operator') {
+    return ['readOnly', 'noExecution', 'noDispatch', 'liveDeviceOff', 'gatewayOff', 'pilotOff'];
+  }
+  if (record.surface === 'admin' && record.route === '/admin/devices') {
+    return ['readOnly', 'liveDeviceOff', 'gatewayOff'];
+  }
+  if (record.surface === 'admin') return ['readOnly'];
+  return [];
+}
+
 function auditPairs(records, results) {
   return records.map((record) => {
     const zh = results.find((item) => item.route === record.route && item.locale === 'zh-CN');
@@ -117,10 +128,20 @@ function auditPairs(records, results) {
     const localeDifferentiated = Boolean(
       renderPassed && clean(zh.snapshot.governedText) !== clean(en.snapshot.governedText),
     );
+    const zhCapabilities = renderPassed
+      ? capability(`${zh.snapshot.governedText} ${zh.snapshot.bodyText}`)
+      : {};
+    const enCapabilities = renderPassed
+      ? capability(`${en.snapshot.governedText} ${en.snapshot.bodyText}`)
+      : {};
+    const requiredCapabilities = requiredCapabilityKeys(record);
+    const missingRequiredCapabilities = requiredCapabilities.filter(
+      (key) => !zhCapabilities[key] || !enCapabilities[key],
+    );
     const roleBoundaryEquivalent = Boolean(
       renderPassed
-      && JSON.stringify(capability(`${zh.snapshot.governedText} ${zh.snapshot.bodyText}`))
-        === JSON.stringify(capability(`${en.snapshot.governedText} ${en.snapshot.bodyText}`)),
+      && JSON.stringify(zhCapabilities) === JSON.stringify(enCapabilities)
+      && missingRequiredCapabilities.length === 0,
     );
     const notes = [];
 
@@ -128,7 +149,8 @@ function auditPairs(records, results) {
     else {
       if (!pathnameEquivalent) notes.push('pathname differs');
       if (!localeDifferentiated) notes.push('governed copy is identical');
-      if (!roleBoundaryEquivalent) notes.push('role boundary differs');
+      if (JSON.stringify(zhCapabilities) !== JSON.stringify(enCapabilities)) notes.push('role boundary differs');
+      if (missingRequiredCapabilities.length) notes.push(`required role boundary missing: ${missingRequiredCapabilities.join(', ')}`);
     }
 
     return {
@@ -138,6 +160,10 @@ function auditPairs(records, results) {
       pathnameEquivalent,
       localeDifferentiated,
       roleBoundaryEquivalent,
+      requiredCapabilities,
+      missingRequiredCapabilities,
+      zhCapabilities,
+      enCapabilities,
       notes,
     };
   });
