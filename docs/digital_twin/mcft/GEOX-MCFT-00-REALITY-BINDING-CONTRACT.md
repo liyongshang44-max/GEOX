@@ -39,6 +39,7 @@ Repository review found five internal task-line defects and corrected them befor
 3. `HUMAN_OR_EXTERNAL_PLAN` is an ambiguous union source kind. The approved-plan Replay source is frozen as `VERSIONED_PLAN_SNAPSHOT`.
 4. Action lifecycle terms are not epistemic classes. Approved plan and execution evidence use `action_lifecycle_class` separately from `epistemic_class`.
 5. A newly named Replay provider or configuration source cannot prove its own authority. Each governed MCFT source/config identity is therefore defined by a versioned, hashed matrix entry with provenance, limitations, successor ownership, and an explicit statement that no Replay time-series dataset exists yet.
+6. The acceptance entrypoint remains one exact Gate, but deterministic geometry/hash and semantic-package validation are factored into two private helpers under `scripts/governance_acceptance/mcft00/**`. This avoids a monolithic 40 kB Gate while preserving one invocation surface and a precise successor allowlist.
 
 These corrections do not change DT-02. They make MCFT-00 comply with DT-02 separation of Reality, Evidence, configuration, execution, and validation.
 
@@ -325,6 +326,7 @@ MCFT-00 changes only:
 docs/digital_twin/mcft/**
 fixtures/mcft/reality_binding/**
 scripts/governance_acceptance/ACCEPTANCE_MCFT_00_REALITY_BINDING_CONTRACT.cjs
+scripts/governance_acceptance/mcft00/**
 docs/digital_twin/GEOX-DIGITAL-TWIN-CAPABILITY-MATRIX.json
 precise predecessor successor-compatibility allowlists
 ```
