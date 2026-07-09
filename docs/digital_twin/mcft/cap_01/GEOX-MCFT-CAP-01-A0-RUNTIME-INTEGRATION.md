@@ -3,71 +3,39 @@
 
 ```text
 delivery_slice_id: MCFT-CAP-01.MCFT-04-05-08-09.A0-RUNTIME-INTEGRATION-V1
-implementation_baseline: 5d17e6ad9944376bbb5a71c9d801aa4472afe592
-implementation_candidate_head: 62a3906812ef048ca1e35ced192556b4f843c5b7
-status: COMPLETE
-transition_effective_condition: PR_2314_MERGED_AND_VERIFIED_ON_MAIN
-primary_owner_work_package_id: MCFT-04
-contributing_work_package_ids: MCFT-05, MCFT-08, MCFT-09
+historical_implementation_candidate_head: 62a3906812ef048ca1e35ced192556b4f843c5b7
+historical_merge_commit: 4a0fd03beb05298028101a4999c67a5e053dadb8
+current_status: REMEDIATION_REQUIRED
+remediation_slice_id: MCFT-CAP-01.CLOSURE-REMEDIATION-V1
 ```
 
-## Established result
+## Established result retained
 
-S4 connects the closed Replay Dataset, Runtime Config, S3A persistence, and S3B posterior mathematics into one controlled `A0_BOOTSTRAP_STATE_COMMIT` transaction.
-
-The first governed tick is:
+S4 connects the Replay Dataset, Runtime Config, A0 persistence and bootstrap posterior mathematics into one controlled `A0_BOOTSTRAP_STATE_COMMIT` transaction.
 
 ```text
 logical_time: 2026-06-01T01:00:00.000Z
 window: (2026-06-01T00:00:00.000Z, 2026-06-01T01:00:00.000Z]
 runtime_mode: REPLAY
-```
-
-At this tick the frozen Evidence Window includes exactly the on-time soil-moisture observation, rainfall observation, and historical ET0 input. Future weather and future ET0 snapshots issued before the tick but unavailable until `01:05Z` remain excluded as late for this tick. The selected assimilation observation is:
-
-```text
-source_record_id: mcft_src_0f8bae003933b54d7d1141e0
-observed_at: 2026-06-01T00:50:00.000Z
-available_to_runtime_at: 2026-06-01T00:55:00.000Z
+selected soil observation: mcft_src_0f8bae003933b54d7d1141e0
 canonical VWC fraction: 0.184000
-quality: PASS
 ```
 
-## Canonical A0 append set
-
-The Runtime constructs and atomically commits exactly nine deterministic canonical members:
+The Runtime atomically commits exactly nine deterministic canonical members:
 
 ```text
-1. twin_runtime_lineage_v1       INITIAL
-2. twin_evidence_window_v1       frozen Replay window
-3. twin_state_transition_v1      BOOTSTRAP with embedded weak prior
-4. twin_assimilation_update_v1   S3B Gaussian update
-5. twin_state_estimate_v1        posterior root-zone State
-6. twin_forecast_run_v1          BLOCKED, zero points
-7. twin_runtime_tick_v1          COMPLETED_WITH_LIMITATIONS
-8. twin_runtime_checkpoint_v1    INITIAL
-9. twin_runtime_health_v1        A0_COMMITTED_WITH_BLOCKED_FORECAST
+1. twin_runtime_lineage_v1
+2. twin_evidence_window_v1
+3. twin_state_transition_v1
+4. twin_assimilation_update_v1
+5. twin_state_estimate_v1
+6. twin_forecast_run_v1
+7. twin_runtime_tick_v1
+8. twin_runtime_checkpoint_v1
+9. twin_runtime_health_v1
 ```
 
-The same deterministic `lineage_id` and `revision_id` bind all lineage members. No revision-run or lineage-promotion object is created. `NULL_TO_INITIAL` activation authority is the INITIAL lineage declaration itself.
-
-## Evidence rules
-
-```text
-window_rule_id: OPEN_START_CLOSED_END_PT1H_V1
-selection_policy_id: LATEST_USABLE_SOIL_OBSERVATION_BEFORE_TICK_V1
-future event time: excluded
-available_to_runtime_at after tick: excluded as late
-quality FAIL: excluded
-scope mismatch: excluded
-no usable soil observation: hard failure with zero writes
-```
-
-The Evidence Window records selected and excluded references, coverage counts, exclusion reasons, and one semantic digest. Later Evidence cannot enter the frozen compute input.
-
-## Posterior and Forecast result
-
-The canonical State embeds the S3B result:
+Retained State result:
 
 ```text
 posterior_mean: 0.192595
@@ -77,57 +45,68 @@ storage_mean_mm: 57.778512
 available_water_fraction: 0.403306
 depletion_from_field_capacity_mm: 32.221488
 confidence.status: NOT_ESTABLISHED
-recommendation_input_eligible: false
-action_input_eligible: false
 ```
 
-The Forecast is intentionally limited:
+The Forecast remains:
 
 ```text
 status: BLOCKED
 points: []
 scenario_eligible: false
-reason_codes:
-  - MCFT_06_PROPAGATION_NOT_ESTABLISHED
-  - SUCCESSFUL_FORECAST_NOT_AUTHORIZED_FOR_MCFT_CAP_01
-  - FUTURE_WEATHER_ASSUMPTION_NOT_AVAILABLE_AT_TICK
-  - FUTURE_ET0_ASSUMPTION_NOT_AVAILABLE_AT_TICK
 ```
 
-A BLOCKED Forecast advances `latest Forecast result` but never advances `latest successful Forecast`.
+## Corrected checkpoint claim
 
-## Checkpoint and handoff
-
-The terminal tick is `COMPLETED_WITH_LIMITATIONS`. The INITIAL checkpoint advances and records:
+The INITIAL checkpoint records:
 
 ```text
 previous_checkpoint_ref: null
-successful_forecast_ref: null
+last_posterior_state_ref: <A0 State object_id>
 next_tick_logical_time: 2026-06-01T02:00:00.000Z
-handoff_status: READY_FOR_NEXT_TICK_WITHOUT_PROPAGATION_IMPLEMENTATION
 ```
 
-This is a deterministic handoff marker only. It is not a continuous scheduler, A1/A2 continuation implementation, restart/backfill proof, or propagation capability.
+The historical service returned that time by reading the checkpoint inside the current A0 record set. It did not reconstruct the next tick from persisted active lineage, latest checkpoint, latest State, Runtime Config and Reality Binding.
 
-## Persistence order
-
-The service performs:
+Therefore the accurate retained claim is:
 
 ```text
-commit/read immutable Runtime Config
-load and hash-verify governed Replay records
-freeze Evidence Window
-compute posterior and all nine canonical members
-compute A0 aggregate key and hashes
-lookup complete A0 idempotency record
-same key/hash -> existing success without new lease
-new key -> acquire fenced lease
-commit nine facts, six projections, pointers and idempotency guard atomically
+NEXT_TICK_CHECKPOINT_POINTER_ESTABLISHED
 ```
 
-The PostgreSQL repository remains the only write authority. Failure at any append, projection, idempotency, or pre-commit stage yields zero A0 facts, projections, and pointer changes.
+The following claim is withdrawn until remediation passes:
 
-## Closure evidence
+```text
+NEXT_TICK_HANDOFF_ESTABLISHED
+```
+
+## Confirmed S4 remediation requirements
+
+```text
+persisted prepareNextTickInput service
+PostgreSQL consistent read of active lineage/checkpoint/State/Runtime Config/Reality Binding
+conflicting duplicate soil observation rejection
+observed_at desc / ingested_at desc / source_record_id asc selection
+complete Evidence Window ingestion/freshness/unit/conversion/limitations trace
+separate window inclusion and estimator-consumption semantics
+manual operator-invokable A0 runner
+```
+
+The remediated Evidence Window must identify:
+
+```text
+soil:
+CONSUMED_BY_BOOTSTRAP_ESTIMATOR
+
+rainfall:
+CONTEXT_ONLY_NOT_CONSUMED_BY_BOOTSTRAP_ESTIMATOR
+
+historical ET0:
+CONTEXT_ONLY_NOT_CONSUMED_BY_BOOTSTRAP_ESTIMATOR
+```
+
+Conflicting records must produce zero Runtime Config canonical fact delta, zero A0 fact delta and zero projection delta.
+
+## Historical evidence retained
 
 ```text
 S4 A0 Runtime static Gate: 20 PASS, 0 FAIL
@@ -138,11 +117,12 @@ projections committed: 6
 latest successful Forecast rows: 0
 same-input replay: existing success before lease
 projection rebuild: 6 equivalent projections
-CI #4456 build-test: SUCCESS
-CI #4456 acceptance: SUCCESS
+CI #4456: SUCCESS
 ```
 
-## Completion claims
+These results remain valid for the behavior tested. They did not test persisted next-tick reconstruction, conflicting duplicates, complete consumption trace or the manual runner.
+
+## Claims retained
 
 ```text
 A0_RUNTIME_EXECUTION_ESTABLISHED
@@ -150,12 +130,13 @@ BOOTSTRAP_STATE_COMMITTED
 ACTIVE_INITIAL_LINEAGE_ESTABLISHED
 INITIAL_CHECKPOINT_ESTABLISHED
 BLOCKED_FORECAST_RESULT_ESTABLISHED
-NEXT_TICK_HANDOFF_ESTABLISHED
+NEXT_TICK_CHECKPOINT_POINTER_ESTABLISHED
 ```
 
-## Nonclaims
+## Nonclaims during remediation
 
 ```text
+NO_PERSISTED_NEXT_TICK_HANDOFF
 NO_PROPAGATION
 NO_SUCCESSFUL_FORECAST
 NO_SCENARIO
