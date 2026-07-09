@@ -1,5 +1,5 @@
 // apps/server/src/runtime/twin_runtime/ports.ts
-// Purpose: define MCFT-CAP-01 Runtime Config and A0 persistence ports without binding Runtime orchestration to SQL.
+// Purpose: define MCFT-CAP-01 Runtime Config, A0 persistence, and projection rebuild ports without binding Runtime orchestration to SQL.
 // Boundary: interfaces only; no implementation, equations, Fastify, filesystem, environment, or wall-clock reads.
 
 import type { A0RecordSetV1, CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
@@ -18,5 +18,8 @@ export interface BootstrapPersistencePortV1 {
   lookupA0RecordSet(idempotencyKey: string): Promise<A0RecordSetV1 | null>;
   commitBootstrapState(input: { scope: TwinScopeKeyV1; lease: RuntimeLeaseClaimV1; expected: { active_lineage_ref: null; checkpoint_ref: null; state_ref: null; forecast_result_ref: null; successful_forecast_ref: null }; record_set: A0RecordSetV1; fault_injection?: (stage: FaultInjectionStageV1) => void }): Promise<{ status: "INSERTED" | "EXISTING_IDEMPOTENT_SUCCESS"; record_set: A0RecordSetV1; fact_ids_by_object_id: Record<string, string> }>;
   readBootstrapRecordSet(recordSetId: string): Promise<A0RecordSetV1 | null>;
+}
+
+export interface A0ProjectionRebuildPortV1 {
   rebuildA0Projections(recordSetId: string): Promise<{ rebuilt_projection_count: 6 }>;
 }
