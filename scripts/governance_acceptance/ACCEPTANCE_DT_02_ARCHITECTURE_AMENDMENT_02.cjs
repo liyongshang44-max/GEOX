@@ -8,7 +8,7 @@ const path = require('node:path');
 const cp = require('node:child_process');
 
 const ROOT = path.resolve(__dirname, '../..');
-const BASE = '09f03488713cde4dbd8c48914fdcb30637d19a3d';
+const BASE = '5e0e7df50512168166bdee6cea9c0a0cec2916b2';
 const F = Object.freeze({
   amendment: 'docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-02.md',
   boundaryAddendum: 'docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-02-CHANGED-FILE-BOUNDARY-ADDENDUM.md',
@@ -85,8 +85,10 @@ if (!amendment.includes(`status: ${closureStatus}`)) fail('amendment and closure
 else pass('amendment and closure status aligned');
 if (!boundaryAddendum.includes(`status: ${closureStatus}`)) fail('boundary addendum status mismatch');
 else pass('boundary addendum status aligned');
-if (!boundaryAddendum.includes(F.dt01Acceptance) || !boundaryAddendum.includes(F.verticalGate)) fail('boundary addendum lacks exact predecessor Gate paths');
-else pass('boundary addendum freezes exact predecessor Gate compatibility paths');
+if (!boundaryAddendum.includes(F.dt01Acceptance)) fail('boundary addendum lacks exact DT-01 compatibility path');
+else pass('boundary addendum freezes exact DT-01 compatibility path');
+if (!boundaryAddendum.includes(F.verticalGate) || !boundaryAddendum.includes(F.capabilityMatrix) || !boundaryAddendum.includes('consumed unchanged')) fail('boundary addendum lacks unchanged predecessor artifact declaration');
+else pass('boundary addendum records merged predecessor artifacts as consumed unchanged');
 if (bootstrap.status !== closureStatus) fail('bootstrap machine status mismatch');
 else pass('bootstrap machine status aligned');
 const a02 = (adrs.amendments || []).find((row) => row.id === 'DT02-AMENDMENT-02');
@@ -122,6 +124,8 @@ if (vertical.schema_version !== 'geox_mcft_vertical_capability_line_matrix_v1') 
 else pass('MCFT vertical matrix schema preserved');
 if (vertical.amendment_id !== 'MCFT-VERTICAL-AMENDMENT-01') fail('MCFT vertical amendment identity changed');
 else pass('MCFT vertical amendment identity preserved');
+if (vertical.status !== 'COMPLETE') fail('merged MCFT vertical amendment is not COMPLETE');
+else pass('merged MCFT vertical amendment COMPLETE');
 if (verticalLine.capability_line_id !== 'MCFT-CAP-01' || verticalLine.display_alias !== 'MCFT-1') fail('MCFT capability-line identity or alias changed');
 else pass('MCFT capability-line identity and alias preserved');
 if (verticalLine.status !== 'BLOCKED_BY_DT02_AMENDMENT_02') fail('MCFT capability line no longer blocked by DT02-AMENDMENT-02');
@@ -130,6 +134,9 @@ seteq(verticalLine.authorized_owner_work_package_ids, ['MCFT-01','MCFT-02','MCFT
 seteq(verticalLine.excluded_owner_work_package_ids, ['MCFT-06'], 'MCFT excluded owner work package preserved');
 if ((verticalLine.delivery_slices || []).length !== 6) fail('MCFT delivery-slice graph changed');
 else pass('MCFT six-slice graph preserved');
+const capabilityAmendmentRow = (capability.governance_amendments || []).find((row) => row.amendment_id === 'MCFT-VERTICAL-AMENDMENT-01');
+if (capabilityAmendmentRow?.status !== 'COMPLETE') fail('capability matrix predecessor amendment row is not COMPLETE');
+else pass('capability matrix predecessor amendment row COMPLETE');
 const capabilityLineRow = (capability.capability_lines || []).find((row) => row.capability_line_id === 'MCFT-CAP-01');
 if (!capabilityLineRow || capabilityLineRow.status !== 'BLOCKED_BY_DT02_AMENDMENT_02') fail('capability matrix MCFT-CAP-01 row changed');
 else pass('capability matrix MCFT-CAP-01 row preserved');
@@ -162,36 +169,35 @@ try {
   fail(`DT-00 semantic regression failed: ${error.message}`);
 }
 
+let changed = [];
 try {
   cp.execFileSync('git', ['cat-file', '-e', `${BASE}^{commit}`], {cwd: ROOT, stdio: 'ignore'});
-  const changed = cp.execFileSync('git', ['diff', '--name-only', `${BASE}...HEAD`], {cwd: ROOT, encoding: 'utf8'}).trim().split(/\r?\n/).filter(Boolean);
-  const allowed = new Set([
-    F.amendment,
+  changed = cp.execFileSync('git', ['diff', '--name-only', `${BASE}...HEAD`], {cwd: ROOT, encoding: 'utf8'}).trim().split(/\r?\n/).filter(Boolean);
+  const expected = [
     F.boundaryAddendum,
+    F.closure,
+    F.amendment,
+    F.adrRegister,
+    F.transactionMatrix,
     F.bootstrap,
     F.objectSet,
-    F.transactionMatrix,
-    F.adrRegister,
-    F.freeze,
     F.implementationMap,
-    F.capabilityMatrix,
-    F.closure,
-    F.dt02Gate,
-    F.self,
-    F.verticalGate,
+    F.freeze,
     F.dt01Acceptance,
-  ]);
-  const forbidden = changed.filter((relativePath) => !allowed.has(relativePath));
+    F.self,
+    F.dt02Gate,
+  ];
+  const left = JSON.stringify([...changed].sort());
+  const right = JSON.stringify([...expected].sort());
   if (!changed.length) fail('no Amendment 02 changes found');
-  else if (forbidden.length) fail(`forbidden changed files: ${forbidden.join(', ')}`);
+  else if (left !== right) fail(`Amendment 02 exact changed-file boundary mismatch: expected ${right}, got ${left}`);
   else pass(`Amendment 02 exact changed-file boundary: ${changed.length} files`);
 } catch (error) {
   fail(`changed-file boundary failed: ${error.message}`);
 }
 
 for (const forbiddenPrefix of ['apps/server/', 'apps/web/', 'fixtures/', '.github/workflows/']) {
-  const all = cp.execFileSync('git', ['diff', '--name-only', `${BASE}...HEAD`], {cwd: ROOT, encoding: 'utf8'});
-  all.split(/\r?\n/).some((relativePath) => relativePath.startsWith(forbiddenPrefix))
+  changed.some((relativePath) => relativePath.startsWith(forbiddenPrefix))
     ? fail(`forbidden scope present ${forbiddenPrefix}`)
     : pass(`forbidden scope absent ${forbiddenPrefix}`);
 }
