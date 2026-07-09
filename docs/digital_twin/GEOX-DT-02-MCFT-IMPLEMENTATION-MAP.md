@@ -67,65 +67,134 @@ PARTIALLY_ESTABLISHED
 COMPLETE
 ```
 
-A capability-line closure does not automatically mark its contributing work packages COMPLETE.
+A capability-line closure does not automatically mark its contributing work packages COMPLETE. A later code-level audit may reopen a closure if a completion claim exceeds the implementation evidence. Hash correctness does not substitute for semantic graph correctness.
 
-## 3. MCFT-CAP-01 slice map
+## 3. MCFT-CAP-01 current slice map
 
-`MCFT-CAP-01` (`MCFT-1`) delivers only:
+`MCFT-CAP-01` is currently reopened for closure remediation.
 
-| delivery slice | primary owner | contributors | bounded result | status |
-|---|---|---|---|---|
-| `MCFT-CAP-01.MCFT-01.CANONICAL-REPLAY-DATASET-V1` | MCFT-01 | none | 30-day controlled Canonical Replay Dataset | COMPLETE |
-| `MCFT-CAP-01.MCFT-02.A0-CONTRACTS-AND-CONFIG-V1` | MCFT-02 | none | A0 object/config subset only | COMPLETE |
-| `MCFT-CAP-01.MCFT-03.A0-PERSISTENCE-V1` | MCFT-03 | none | A0 persistence, lease, fencing, idempotency and projection subset only | COMPLETE |
-| `MCFT-CAP-01.MCFT-07-08.BOOTSTRAP-STATE-MATH-V1` | MCFT-08 | MCFT-07 | static bootstrap observation/assimilation and posterior math only | COMPLETE |
-| `MCFT-CAP-01.MCFT-04-05-08-09.A0-RUNTIME-INTEGRATION-V1` | MCFT-04 | MCFT-05, MCFT-08, MCFT-09 | one A0 bootstrap transaction with BLOCKED Forecast only | COMPLETE |
-| `MCFT-CAP-01.CLOSURE-V1` | MCFT-08 | MCFT-01/02/03/04/05/07/09 | bounded capability-line closure | COMPLETE |
-
-The executable delivery through S4 is on `main@4a0fd03beb05298028101a4999c67a5e053dadb8`. Closure readiness is proven at `273843b09a7fe2e71f2cb9ea5c4ca14dcee8e3e5` by `104 PASS, 0 FAIL`, server Typecheck/Build, clean-tree evidence, and CI #4462 success.
-
-`MCFT-CAP-01` is `COMPLETE`, effective only after PR #2315 merges into `main` and the merged main commit is verified.
-
-## 4. Initial and revision lineage ownership
+| delivery slice | bounded result | current status |
+|---|---|---|
+| `MCFT-CAP-01.MCFT-01.CANONICAL-REPLAY-DATASET-V1` | 30-day controlled Replay Evidence dataset | REMEDIATION_REQUIRED — crop-stage configuration context |
+| `MCFT-CAP-01.MCFT-02.A0-CONTRACTS-AND-CONFIG-V1` | A0 object/config subset | REMEDIATION_REQUIRED — complete cross-reference graph validation |
+| `MCFT-CAP-01.MCFT-03.A0-PERSISTENCE-V1` | A0 persistence subset | REMEDIATION_REQUIRED — persisted Reality Binding and next-tick reads |
+| `MCFT-CAP-01.MCFT-07-08.BOOTSTRAP-STATE-MATH-V1` | static bootstrap posterior math | COMPLETE |
+| `MCFT-CAP-01.MCFT-04-05-08-09.A0-RUNTIME-INTEGRATION-V1` | one A0 transaction and checkpoint pointer | REMEDIATION_REQUIRED — conflict rejection, consumption trace, persisted handoff, runner |
+| `MCFT-CAP-01.CLOSURE-V1` | historical bounded closure | SUPERSEDED_PENDING_REMEDIATION |
+| `MCFT-CAP-01.CLOSURE-REMEDIATION-V1` | repair and reclose capability line | IN_IMPLEMENTATION |
 
 ```text
-A0_BOOTSTRAP_STATE_COMMIT MCFT-02/03/04/05/07/08/09
-E1_DECLARE_REVISION      MCFT-03/04/16
+historical closure main commit:
+250053aba801075c17098f8d505d527eb54390e9
+
+active branch:
+mcft-cap-01-closure-remediation-v1
+
+active PR:
+#2316
+
+successor:
+NOT_YET_AUTHORIZED
+```
+
+## 4. Retained implementation facts
+
+The following remain established:
+
+```text
+controlled Canonical Replay Evidence
+explicit Replay logical time
+no-future-leakage fixture behavior
+immutable Runtime Config
+bootstrap prior and scalar assimilation
+first bootstrap posterior
+A0 aggregate idempotency
+nine-fact atomic append
+six rebuildable projections
+INITIAL lineage
+INITIAL checkpoint
+BLOCKED zero-point Forecast result
+checkpoint next_tick_logical_time pointer
+```
+
+The accurate checkpoint claim is:
+
+```text
+NEXT_TICK_CHECKPOINT_POINTER_ESTABLISHED
+```
+
+The following historical claims are suspended pending remediation:
+
+```text
+NEXT_TICK_HANDOFF_ESTABLISHED
+MCFT_CAP_01_COMPLETE
+CONTROLLED_REPLAY_BOOTSTRAP_CLOSURE_ESTABLISHED
+```
+
+## 5. Remediation architecture proof
+
+The active remediation must prove:
+
+```text
+PERSISTED_NEXT_TICK_HANDOFF_ESTABLISHED
+  PostgreSQL reads active lineage, latest checkpoint, previous posterior,
+  Runtime Config and Reality Binding Runtime snapshot in one consistent view
+
+CONFLICTING_DUPLICATE_OBSERVATION_REJECTION_ESTABLISHED
+  same origin and observed_at with different canonical value fails closed
+
+EVIDENCE_MODEL_CONSUMPTION_TRACE_ESTABLISHED
+  window inclusion is distinct from estimator consumption
+
+A0_CROSS_REFERENCE_GRAPH_VALIDATION_ESTABLISHED
+  rehashed invalid refs remain invalid
+
+OPERATOR_INVOKABLE_MANUAL_RUNTIME_ENTRY_ESTABLISHED
+  explicit one-shot runner exists
+
+CROP_STAGE_CONFIGURATION_CONTEXT_ESTABLISHED
+  time-resolved context is configuration-derived and is not Evidence
+```
+
+The persisted next-tick DTO must contain:
+
+```text
+previous_posterior_ref
+previous_checkpoint_ref
+lineage_id
+prior_mean
+prior_variance
+next_logical_tick_time
+runtime_config_ref/hash
+reality_binding_ref/hash
+```
+
+## 6. Initial and revision lineage ownership
+
+```text
+A0_BOOTSTRAP_STATE_COMMIT  MCFT-02/03/04/05/07/08/09
+E1_DECLARE_REVISION       MCFT-03/04/16
 E2_APPEND_REVISION_STATUS MCFT-03/04/16
-E3_PROMOTE_LINEAGE       MCFT-03/04/08/09/10/16
+E3_PROMOTE_LINEAGE        MCFT-03/04/08/09/10/16
 ```
 
-A0 plus an `INITIAL` `twin_runtime_lineage_v1` is the sole `NULL_TO_INITIAL` activation authority. It appends no promotion record.
+A0 plus an `INITIAL` `twin_runtime_lineage_v1` is the sole `NULL_TO_INITIAL` activation authority. It appends no promotion record. E1/E2 switch no active pointers. E3 is the sole authority for replacing an existing active lineage.
 
-E1/E2 switch no active pointers. E3 appends `twin_lineage_promotion_v1` and is the sole authority for replacing an existing active lineage.
-
-A0 implementation preserves:
-
-```text
-nine-object atomic append set
-embedded bootstrap prior
-INITIAL revision_id without revision-run object
-aggregate idempotency before null-CAS
-canonical INITIAL uniqueness
-zero A0 partial write on failure
-optional separately transacted F audit
-```
-
-## 5. Closure ownership
+## 7. Closure hierarchy
 
 | closure | architecture proof required |
 |---|---|
-| MCFT-CAP-01 closure | one controlled bootstrap posterior, A0 atomicity, idempotency, projection rebuild and next-tick handoff; no dynamics or successful Forecast claim |
-| MCFT-GATE-A Replay-backed Closure | shared semantics, explicit replay clock, no future leakage, deterministic replay, fenced restart/backfill, E1/E2/E3 revision, COMPLETED/BLOCKED/FAILED Forecast behavior, fixed Scenario sources |
-| MCFT-GATE-B Shadow-online Closure | same core with online adapters, persistent scheduling, late/out-of-order handling, restart recovery, readback, no automatic action |
-| MCFT-GATE-C Controlled-action Feedback Closure | same core with governed decision/approval/AO-ACT/receipt/acceptance and Action Feedback that separates execution from validation |
+| MCFT-CAP-01 reclosure | one controlled bootstrap posterior, atomicity, idempotency, complete Evidence trace, graph validation, persisted handoff and manual entry; no dynamics or successful Forecast |
+| MCFT-GATE-A Replay-backed Closure | continuous progression, propagation, restart/backfill, E1/E2/E3, COMPLETED/BLOCKED/FAILED Forecast behavior, 72-point Forecast and fixed Scenario sources |
+| MCFT-GATE-B Shadow-online Closure | online adapters, persistent scheduling, late/out-of-order handling and restart recovery |
+| MCFT-GATE-C Controlled-action Feedback Closure | decision/approval/AO-ACT/receipt/acceptance and governed Action Feedback |
 
-MCFT-CAP-01 closure is not MCFT-GATE-A, MCFT-GATE-B, or MCFT-GATE-C closure. It also does not establish the Minimum Complete Field Twin.
+MCFT-CAP-01 reclosure is not Gate A, Gate B, Gate C or Minimum Complete Field Twin closure.
 
-The owner work-package statuses remain:
+## 8. Owner work-package status during remediation
 
 ```text
-MCFT-01 COMPLETE
+MCFT-01 PARTIALLY_ESTABLISHED
 MCFT-02 PARTIALLY_ESTABLISHED
 MCFT-03 PARTIALLY_ESTABLISHED
 MCFT-04 PARTIALLY_ESTABLISHED
@@ -136,19 +205,11 @@ MCFT-08 PARTIALLY_ESTABLISHED
 MCFT-09 PARTIALLY_ESTABLISHED
 ```
 
-## 6. MCFT-CAP-01 completion claims
+## 9. Preserved nonclaims
 
 ```text
-MCFT_CAP_01_COMPLETE
-FIRST_CLASS_WATER_STATE_ESTIMATE_LEVEL_A_ESTABLISHED
-CONTROLLED_REPLAY_BOOTSTRAP_CLOSURE_ESTABLISHED
-```
-
-These claims establish one deterministic controlled-Replay bootstrap posterior, atomic A0 commit, INITIAL lineage/checkpoint, BLOCKED Forecast result, rebuildable projections, aggregate idempotency, and next-tick handoff.
-
-They preserve:
-
-```text
+NO_MCFT_CAP_01_CLOSURE
+NO_PERSISTED_NEXT_TICK_HANDOFF
 NO_PROPAGATION
 NO_SUCCESSFUL_FORECAST
 NO_SCENARIO
@@ -156,6 +217,7 @@ NO_RECOMMENDATION
 NO_DECISION
 NO_AO_ACT
 NO_CONTINUOUS_RUNTIME
+NO_CONTINUOUS_SCHEDULER
 NO_RESTART_BACKFILL_PROOF
 NO_LATE_EVIDENCE_REVISION_RUNTIME
 NO_LIVE_FIELD_CLAIM
@@ -165,29 +227,7 @@ NO_MCFT_GATE_C_CLOSURE
 NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM
 ```
 
-## 7. DT-01 target=DT-02 resolution
-
-| DT-01 component/ruling | DT-02 disposition |
-|---|---|
-| `append_only_fact_store` | ADR-003; canonical facts retained |
-| `evidence_reference_rules` | ADR-003/004/005; typed refs and semantic layers retained |
-| `stable_hash_patterns` | ADR-007; normalized semantic hash retained |
-| `idempotency_patterns` | ADR-007; object and A0 aggregate conflicts |
-| `p50_trace_replay_pattern` | ADR-002/005/007; shared core plus Replay adapter |
-| `p31_contract_and_negative_boundaries` | ADR-004/016; reference only; synthetic belief not physical State |
-| `p31_fact_write_pattern` | ADR-003/005; adapter pattern only |
-| `p49_freeze_packet` | ADR-016 and closure nonclaims; governance reference |
-| `explicit_replay_clock` | ADR-002 and Runtime Mode Matrix |
-| `evidence_partition` | ADR-002/005; frozen Evidence Window |
-| `no_future_leakage` | ADR-002/005; retained invariant |
-| `trace_packet_structure` | ADR-002/007/013; canonical trace/read APIs |
-| `demo_namespace` | ADR-014; reference only |
-| `p57_freeze_runner` | ADR-016; reference-only claim boundary |
-| `scenario_latest_index` | ADR-003/010; rebuildable projection only |
-| `canonical_field_routes` | ADR-013; `/operator/fields/:fieldId/*` retained |
-| `legacy_operator_twin_routes` | ADR-014; compatibility and deletion prerequisites |
-
-## 8. Owner work-package dependency sequence
+## 10. Dependency sequence
 
 ```text
 MCFT-00 -> MCFT-01 -> MCFT-02 -> MCFT-03 -> MCFT-04
@@ -196,6 +236,4 @@ MCFT-00 -> MCFT-01 -> MCFT-02 -> MCFT-03 -> MCFT-04
 -> MCFT-15 -> MCFT-16 -> MCFT-17 -> MCFT-18
 ```
 
-This is the semantic dependency order. It is not a requirement to close every owner work package in full before an accepted bounded capability slice may use a later owner.
-
-Parallel work is allowed only when dependency order, explicit delivery-slice dependencies, changed-file boundaries, partial-establishment claims, and one-semantic-core rules remain intact.
+No MCFT-2 / hourly dynamics work is authorized until `MCFT-CAP-01.CLOSURE-REMEDIATION-V1` merges and the reclosure is verified on main.
