@@ -1,0 +1,247 @@
+{
+  "schema_version": "geox_dt02_bootstrap_state_semantics_v1",
+  "phase": "DT-02",
+  "amendment_id": "DT02-AMENDMENT-02",
+  "status": "COMPLETE",
+  "capability_line_id": "MCFT-CAP-01",
+  "display_alias": "MCFT-1",
+  "transaction_family": "A_STATE_TICK_COMMIT",
+  "operation_variant": "A0_BOOTSTRAP_STATE_COMMIT",
+  "transaction_family_count_unchanged": 8,
+  "initial_lineage_activation": {
+    "transition": "NULL_TO_INITIAL",
+    "authority_kind": "INITIAL_LINEAGE_DECLARATION",
+    "authority_object_type": "twin_runtime_lineage_v1",
+    "promotion_object_forbidden": true,
+    "expected_previous_active_lineage": null
+  },
+  "revision_lineage_activation": {
+    "transition": "ACTIVE_TO_REVISION_CANDIDATE",
+    "authority_kind": "LINEAGE_PROMOTION",
+    "authority_object_type": "twin_lineage_promotion_v1",
+    "operation_variant": "E3_PROMOTE_LINEAGE"
+  },
+  "lineage_contract": {
+    "lineage_kinds": ["INITIAL", "REVISION_CANDIDATE"],
+    "INITIAL": {
+      "writer": "Runtime Orchestrator",
+      "transaction_family": "A_STATE_TICK_COMMIT",
+      "operation_variant": "A0_BOOTSTRAP_STATE_COMMIT",
+      "parent_lineage_ref": null,
+      "revision_run_ref": null,
+      "required_refs": [
+        "bootstrap_runtime_config_ref",
+        "bootstrap_reality_binding_ref",
+        "initial_revision_id"
+      ],
+      "forbidden_refs": ["twin_lineage_promotion_v1", "revision_run_ref"]
+    },
+    "REVISION_CANDIDATE": {
+      "writer": "Revision Service",
+      "transaction_family": "E_REVISION_LINEAGE_STEP_COMMIT",
+      "required_refs": ["revision_run_ref", "parent_lineage_ref"],
+      "forbidden_refs": ["bootstrap_runtime_config_ref", "bootstrap_reality_binding_ref"]
+    }
+  },
+  "initial_identity": {
+    "shared_by_all_a0_lineage_members": ["lineage_id", "revision_id"],
+    "lineage_identity_inputs": [
+      "lineage_kind",
+      "tenant_id",
+      "project_id",
+      "group_id",
+      "field_id",
+      "season_id",
+      "zone_id",
+      "reality_binding_ref",
+      "reality_binding_hash",
+      "runtime_config_ref",
+      "runtime_config_hash",
+      "bootstrap_logical_time"
+    ],
+    "revision_identity_inputs": [
+      "revision_kind",
+      "lineage_id",
+      "bootstrap_logical_time",
+      "runtime_config_hash",
+      "reality_binding_hash"
+    ],
+    "revision_kind": "INITIAL",
+    "revision_run_ref": null,
+    "revision_run_object_created": false,
+    "forbidden_identity_inputs": [
+      "random_uuid",
+      "fact_id",
+      "created_at",
+      "persisted_at",
+      "wall_clock",
+      "process_id",
+      "worker_id",
+      "branch_name",
+      "checkout_path"
+    ]
+  },
+  "canonical_appends": [
+    "twin_runtime_lineage_v1",
+    "twin_evidence_window_v1",
+    "twin_state_transition_v1",
+    "twin_assimilation_update_v1",
+    "twin_state_estimate_v1",
+    "twin_forecast_run_v1",
+    "twin_runtime_tick_v1",
+    "twin_runtime_checkpoint_v1",
+    "twin_runtime_health_v1"
+  ],
+  "forbidden_appends": [
+    "twin_lineage_promotion_v1",
+    "twin_revision_run_v1",
+    "twin_forecast_failure_v1",
+    "twin_scenario_set_v1",
+    "twin_decision_record_v1",
+    "twin_action_feedback_v1"
+  ],
+  "transition_contract": {
+    "transition_kinds": ["BOOTSTRAP", "CONTINUATION", "REVISION_REPLAY"],
+    "BOOTSTRAP": {
+      "previous_posterior_ref": null,
+      "bootstrap_prior_required": true,
+      "bootstrap_prior_ref_forbidden": true,
+      "process_model_status": "NOT_APPLIED_BOOTSTRAP"
+    },
+    "CONTINUATION": {
+      "previous_posterior_ref_required": true,
+      "bootstrap_prior_forbidden": true,
+      "bootstrap_prior_ref_forbidden": true
+    },
+    "REVISION_REPLAY": {
+      "previous_posterior_ref_required": true,
+      "bootstrap_prior_forbidden": true,
+      "bootstrap_prior_ref_forbidden": true
+    },
+    "embedded_bootstrap_prior": {
+      "prior_kind": "CONFIGURED_WEAK_BOOTSTRAP_PRIOR",
+      "required_fields": [
+        "mean",
+        "variance",
+        "stddev",
+        "derivation_rule_id",
+        "source_runtime_config_ref",
+        "source_soil_hydraulic_config_ref"
+      ],
+      "canonical_object": false
+    }
+  },
+  "checkpoint_contract": {
+    "checkpoint_kinds": ["INITIAL", "CONTINUATION", "REVISION"],
+    "INITIAL": {"previous_checkpoint_ref": null},
+    "CONTINUATION": {"previous_checkpoint_ref_required": true},
+    "REVISION": {"previous_checkpoint_ref_required": true}
+  },
+  "forecast_contract": {
+    "status": "BLOCKED",
+    "points_count": 0,
+    "reason_codes_required": true,
+    "scenario_eligible": false,
+    "terminal_tick_status": "COMPLETED_WITH_LIMITATIONS",
+    "checkpoint_advances": true,
+    "latest_forecast_result_advances": true,
+    "latest_successful_forecast_advances": false,
+    "prerequisite_reason_codes_belong_to": "twin_forecast_run_v1"
+  },
+  "state_contract": {
+    "confidence": {
+      "status": "NOT_ESTABLISHED",
+      "reason_code": "NO_CALIBRATED_CONFIDENCE_MODEL",
+      "numeric_score_forbidden": true
+    },
+    "use_eligibility": {
+      "state_valid": true,
+      "posterior_chain_eligible": true,
+      "forecast_source_eligible": true,
+      "recommendation_input_eligible": false,
+      "action_input_eligible": false
+    },
+    "forecast_prerequisite_reason_codes_forbidden": true
+  },
+  "aggregate_idempotency": {
+    "scope": "complete nine-object A0 record set",
+    "required_fields": [
+      "a0_record_set_id",
+      "a0_idempotency_key",
+      "a0_record_set_determinism_hash",
+      "member_object_ids",
+      "member_determinism_hashes"
+    ],
+    "member_count": 9,
+    "execution_order": [
+      "independently_compute_aggregate_key_and_hashes",
+      "lookup_idempotency_index",
+      "same_key_same_hash_verify_complete_record_set_and_return_existing",
+      "same_key_different_hash_return_IDEMPOTENCY_CONFLICT",
+      "declared_hash_mismatch_return_SEMANTIC_HASH_MISMATCH",
+      "new_key_only_run_lease_fencing_uniqueness_and_null_CAS",
+      "atomically_commit_facts_projections_pointers_and_idempotency_index"
+    ],
+    "same_input_after_success_requires_null_CAS": false
+  },
+  "canonical_initial_uniqueness": {
+    "identity_scope": [
+      "tenant_id",
+      "project_id",
+      "group_id",
+      "field_id",
+      "season_id",
+      "zone_id",
+      "reality_binding_hash",
+      "runtime_config_hash",
+      "bootstrap_logical_time"
+    ],
+    "identical_existing_result": "IDEMPOTENT_READBACK",
+    "different_existing_result": "INITIAL_LINEAGE_CONFLICT",
+    "projection_absence_allows_second_initial": false
+  },
+  "new_key_preconditions": [
+    "valid_unexpired_lease",
+    "current_fencing_token",
+    "expected_active_lineage_null",
+    "expected_checkpoint_null",
+    "expected_current_state_null",
+    "expected_latest_forecast_result_null",
+    "expected_latest_successful_forecast_null",
+    "immutable_runtime_config_exists",
+    "one_frozen_evidence_window_exists",
+    "bootstrap_posterior_valid",
+    "forecast_blocked_zero_points_nonempty_reasons"
+  ],
+  "projection_writes": [
+    "active_lineage_index_insert_CAS",
+    "state_history_projection_insert",
+    "state_latest_projection_CAS",
+    "forecast_result_latest_insert",
+    "checkpoint_latest_insert_CAS",
+    "runtime_health_latest_update",
+    "twin_object_idempotency_index_v1_insert"
+  ],
+  "projection_non_writes": [
+    "latest_successful_forecast",
+    "scenario_latest",
+    "decision_projection",
+    "action_projection"
+  ],
+  "failure_semantics": {
+    "a0_fact_count": 0,
+    "a0_projection_write_count": 0,
+    "pointer_change_count": 0,
+    "separate_F_OPERATIONAL_ATTEMPT_HEALTH_audit_permitted": true,
+    "operational_audit_may_claim_committed_state_success": false
+  },
+  "nonclaims": [
+    "no Runtime implementation",
+    "no canonical write",
+    "no propagation",
+    "no successful Forecast",
+    "no Scenario",
+    "no restart or backfill proof",
+    "no late-Evidence revision runtime proof"
+  ]
+}

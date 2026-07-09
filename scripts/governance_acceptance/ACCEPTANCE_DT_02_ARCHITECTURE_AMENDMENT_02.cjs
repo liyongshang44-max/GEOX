@@ -1,0 +1,270 @@
+// scripts/governance_acceptance/ACCEPTANCE_DT_02_ARCHITECTURE_AMENDMENT_02.cjs
+// Purpose: close DT02-AMENDMENT-02 through the amended DT-02 semantic Gate, predecessor semantic regressions, and an exact governance-only changed-file boundary.
+// Boundary: this Gate performs no Runtime, migration, canonical persistence, State, Forecast, checkpoint, or database write.
+'use strict';
+
+const fs = require('node:fs');
+const path = require('node:path');
+const cp = require('node:child_process');
+
+const ROOT = path.resolve(__dirname, '../..');
+const BASE = '5e0e7df50512168166bdee6cea9c0a0cec2916b2';
+const F = Object.freeze({
+  amendment: 'docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-02.md',
+  boundaryAddendum: 'docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-02-CHANGED-FILE-BOUNDARY-ADDENDUM.md',
+  bootstrap: 'docs/digital_twin/GEOX-DT-02-BOOTSTRAP-STATE-SEMANTICS.json',
+  objectSet: 'docs/digital_twin/GEOX-DT-02-CANONICAL-OBJECT-SET.json',
+  transactionMatrix: 'docs/digital_twin/GEOX-DT-02-ATOMIC-TRANSACTION-MATRIX.json',
+  adrRegister: 'docs/digital_twin/GEOX-DT-02-ARCHITECTURE-DECISION-REGISTER.json',
+  freeze: 'docs/digital_twin/GEOX-DT-02-RUNTIME-ARCHITECTURE-FREEZE.md',
+  implementationMap: 'docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md',
+  capabilityMatrix: 'docs/digital_twin/GEOX-DIGITAL-TWIN-CAPABILITY-MATRIX.json',
+  verticalMatrix: 'docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json',
+  closure: 'docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-02-CLOSURE-RECORD.md',
+  dt02Gate: 'scripts/governance_acceptance/ACCEPTANCE_DT_02_RUNTIME_ARCHITECTURE_FREEZE.cjs',
+  self: 'scripts/governance_acceptance/ACCEPTANCE_DT_02_ARCHITECTURE_AMENDMENT_02.cjs',
+  verticalGate: 'scripts/governance_acceptance/ACCEPTANCE_MCFT_VERTICAL_CAPABILITY_LINE_AMENDMENT_01.cjs',
+  dt01Audit: 'scripts/governance_acceptance/AUDIT_DT_01_REPOSITORY_CAPABILITIES.cjs',
+  dt01Acceptance: 'scripts/governance_acceptance/ACCEPTANCE_DT_01_EXISTING_CAPABILITY_RECONCILIATION.cjs',
+  dt00Regression: 'scripts/governance_acceptance/ACCEPTANCE_DT_00_MAINLINE_GOVERNANCE_RESET.cjs',
+});
+
+const passes = [];
+const failures = [];
+function pass(message) { passes.push(message); console.log(`PASS: ${message}`); }
+function fail(message) { failures.push(message); console.error(`FAIL: ${message}`); }
+function abs(relativePath) { return path.join(ROOT, relativePath); }
+function read(relativePath) { return fs.readFileSync(abs(relativePath), 'utf8'); }
+function parse(relativePath) { return JSON.parse(read(relativePath)); }
+function field(text, key) { return (text.match(new RegExp(`^${key}:\\s*(.+)$`, 'm')) || [])[1]?.trim(); }
+function seteq(actual, expected, message) {
+  const left = JSON.stringify([...(actual || [])].sort());
+  const right = JSON.stringify([...expected].sort());
+  left === right ? pass(message) : fail(`${message}: expected ${right}, got ${left}`);
+}
+function runNode(relativePath, args = [], env = {}) {
+  cp.execFileSync(process.execPath, [relativePath, ...args], {
+    cwd: ROOT,
+    stdio: 'inherit',
+    env: {...process.env, ...env},
+  });
+}
+
+for (const relativePath of Object.values(F)) {
+  if (!fs.existsSync(abs(relativePath))) fail(`required file missing ${relativePath}`);
+  else pass(`file exists ${relativePath}`);
+}
+if (failures.length) finish();
+
+let bootstrap;
+let objects;
+let transactions;
+let adrs;
+let vertical;
+let capability;
+try {
+  bootstrap = parse(F.bootstrap);
+  objects = parse(F.objectSet);
+  transactions = parse(F.transactionMatrix);
+  adrs = parse(F.adrRegister);
+  vertical = parse(F.verticalMatrix);
+  capability = parse(F.capabilityMatrix);
+  pass('all Amendment 02 and predecessor machine-readable contracts parse');
+} catch (error) {
+  fail(`machine-readable contract parse failed: ${error.message}`);
+  finish();
+}
+
+const amendment = read(F.amendment);
+const boundaryAddendum = read(F.boundaryAddendum);
+const closure = read(F.closure);
+const freeze = read(F.freeze);
+const closureStatus = field(closure, 'status');
+if (!['PENDING_ACCEPTANCE', 'COMPLETE'].includes(closureStatus)) fail(`invalid closure status ${closureStatus}`);
+else pass(`closure status ${closureStatus}`);
+if (!amendment.includes(`status: ${closureStatus}`)) fail('amendment and closure status mismatch');
+else pass('amendment and closure status aligned');
+if (field(amendment, 'baseline') !== BASE) fail('Amendment 02 baseline mismatch');
+else pass('Amendment 02 baseline aligned to merged predecessor');
+if (field(closure, 'baseline_head') !== BASE) fail('Closure baseline mismatch');
+else pass('Closure baseline aligned to merged predecessor');
+if (!boundaryAddendum.includes(`status: ${closureStatus}`)) fail('boundary addendum status mismatch');
+else pass('boundary addendum status aligned');
+if (closureStatus === 'COMPLETE' && closure.includes('PENDING_ACCEPTANCE')) fail('COMPLETE closure retains PENDING_ACCEPTANCE marker');
+else pass('closure claim markers aligned with status');
+if (closureStatus === 'COMPLETE' && /^.+:\s*PENDING$/m.test(closure)) fail('COMPLETE closure retains pending validation evidence');
+else pass('closure validation evidence aligned with status');
+if (closureStatus === 'COMPLETE' && JSON.stringify(adrs).includes('PENDING_ACCEPTANCE')) fail('COMPLETE ADR register retains pending-acceptance status');
+else pass('ADR register status markers aligned with COMPLETE');
+
+const expectedGovernedStatus = closureStatus === 'COMPLETE'
+  ? 'FROZEN_WITH_ACCEPTED_AMENDMENTS'
+  : 'FROZEN_WITH_AMENDMENTS_PENDING_ACCEPTANCE';
+
+if (objects.status !== expectedGovernedStatus) fail(`canonical object set governance status mismatch: ${objects.status}`);
+else pass('canonical object set governance status aligned');
+
+if (transactions.status !== expectedGovernedStatus) fail(`atomic transaction matrix governance status mismatch: ${transactions.status}`);
+else pass('atomic transaction matrix governance status aligned');
+
+if (!freeze.includes(`status: ${expectedGovernedStatus}`)) fail('Runtime Architecture Freeze governance status mismatch');
+else pass('Runtime Architecture Freeze governance status aligned');
+
+if (closureStatus === 'COMPLETE') {
+  if (!freeze.includes('accepted amendments: DT02-AMENDMENT-01, DT02-AMENDMENT-02')) fail('Runtime Architecture Freeze accepted amendment marker missing');
+  else pass('Runtime Architecture Freeze accepted amendment marker');
+
+  if (freeze.includes('pending amendment: DT02-AMENDMENT-02')) fail('Runtime Architecture Freeze retains pending Amendment 02 marker');
+  else pass('Runtime Architecture Freeze pending marker absent');
+} else {
+  if (!freeze.includes('pending amendment: DT02-AMENDMENT-02')) fail('Runtime Architecture Freeze pending Amendment 02 marker missing');
+  else pass('Runtime Architecture Freeze pending amendment marker aligned');
+}
+if (!boundaryAddendum.includes(F.dt01Acceptance)) fail('boundary addendum lacks exact DT-01 compatibility path');
+else pass('boundary addendum freezes exact DT-01 compatibility path');
+if (![F.capabilityMatrix, F.verticalMatrix, F.verticalGate].every((relativePath) => boundaryAddendum.includes(relativePath))) fail('boundary addendum lacks successor readiness changed files');
+else pass('boundary addendum records successor readiness changed files');
+if (!boundaryAddendum.includes('docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-AMENDMENT-01.md') || !boundaryAddendum.includes('consumed unchanged')) fail('boundary addendum lacks unchanged predecessor authority declaration');
+else pass('boundary addendum preserves predecessor authority document unchanged');
+if (bootstrap.status !== closureStatus) fail('bootstrap machine status mismatch');
+else pass('bootstrap machine status aligned');
+const a02 = (adrs.amendments || []).find((row) => row.id === 'DT02-AMENDMENT-02');
+if (a02?.status !== closureStatus) fail('ADR amendment status mismatch');
+else pass('ADR amendment status aligned');
+
+if (objects.objects?.length !== 21) fail('canonical object count changed');
+else pass('canonical object count remains 21');
+if (transactions.transaction_count !== 8) fail('transaction family count changed');
+else pass('transaction family count remains 8');
+if ((bootstrap.canonical_appends || []).length !== 9) fail('A0 canonical append count must be 9');
+else pass('A0 canonical append count 9');
+if (bootstrap.transition_contract?.BOOTSTRAP?.bootstrap_prior_ref_forbidden !== true) fail('bootstrap_prior_ref must be forbidden');
+else pass('bootstrap_prior_ref forbidden');
+if (bootstrap.initial_identity?.revision_run_object_created !== false) fail('INITIAL must not create revision-run object');
+else pass('INITIAL creates no revision-run object');
+if (bootstrap.aggregate_idempotency?.same_input_after_success_requires_null_CAS !== false) fail('idempotent replay must precede null-CAS');
+else pass('idempotent replay precedes null-CAS');
+if (bootstrap.canonical_initial_uniqueness?.different_existing_result !== 'INITIAL_LINEAGE_CONFLICT') fail('INITIAL conflict code missing');
+else pass('INITIAL lineage conflict code');
+if (bootstrap.failure_semantics?.separate_F_OPERATIONAL_ATTEMPT_HEALTH_audit_permitted !== true) fail('separate F audit permission missing');
+else pass('separate F audit permitted without A0 partial success');
+
+try {
+  runNode(F.dt02Gate);
+  pass('amended DT-02 semantic Gate PASS');
+} catch (error) {
+  fail(`amended DT-02 semantic Gate failed: ${error.message}`);
+}
+
+const verticalLine = (vertical.capability_lines || [])[0] || {};
+if (vertical.schema_version !== 'geox_mcft_vertical_capability_line_matrix_v1') fail('MCFT vertical matrix schema changed');
+else pass('MCFT vertical matrix schema preserved');
+if (vertical.amendment_id !== 'MCFT-VERTICAL-AMENDMENT-01') fail('MCFT vertical amendment identity changed');
+else pass('MCFT vertical amendment identity preserved');
+if (vertical.status !== 'COMPLETE') fail('merged MCFT vertical amendment is not COMPLETE');
+else pass('merged MCFT vertical amendment COMPLETE');
+if (verticalLine.capability_line_id !== 'MCFT-CAP-01' || verticalLine.display_alias !== 'MCFT-1') fail('MCFT capability-line identity or alias changed');
+else pass('MCFT capability-line identity and alias preserved');
+const expectedCapabilityLineStatus =
+  closureStatus === 'COMPLETE'
+    ? 'READY_FOR_IMPLEMENTATION'
+    : 'BLOCKED_BY_DT02_AMENDMENT_02';
+if (verticalLine.status !== expectedCapabilityLineStatus) fail(`MCFT capability-line status expected ${expectedCapabilityLineStatus}, got ${verticalLine.status}`);
+else pass(`MCFT capability-line status ${expectedCapabilityLineStatus}`);
+seteq(verticalLine.authorized_owner_work_package_ids, ['MCFT-01','MCFT-02','MCFT-03','MCFT-04','MCFT-05','MCFT-07','MCFT-08','MCFT-09'], 'MCFT authorized owner work packages preserved');
+seteq(verticalLine.excluded_owner_work_package_ids, ['MCFT-06'], 'MCFT excluded owner work package preserved');
+if ((verticalLine.delivery_slices || []).length !== 6) fail('MCFT delivery-slice graph changed');
+else pass('MCFT six-slice graph preserved');
+const capabilityAmendmentRow = (capability.governance_amendments || []).find((row) => row.amendment_id === 'MCFT-VERTICAL-AMENDMENT-01');
+if (capabilityAmendmentRow?.status !== 'COMPLETE') fail('capability matrix predecessor amendment row is not COMPLETE');
+else pass('capability matrix predecessor amendment row COMPLETE');
+
+const dt02CapabilityAmendmentRow = (capability.governance_amendments || []).find((row) => row.amendment_id === 'DT02-AMENDMENT-02');
+if (closureStatus === 'COMPLETE') {
+  if (dt02CapabilityAmendmentRow?.status !== 'COMPLETE' || dt02CapabilityAmendmentRow?.claim !== 'NO_RUNTIME_IMPLEMENTATION') fail('capability matrix DT02-AMENDMENT-02 row invalid');
+  else pass('capability matrix DT02-AMENDMENT-02 COMPLETE row');
+}
+
+const capabilityLineRow = (capability.capability_lines || []).find((row) => row.capability_line_id === 'MCFT-CAP-01');
+if (!capabilityLineRow || capabilityLineRow.status !== expectedCapabilityLineStatus) fail('capability matrix MCFT-CAP-01 readiness mismatch');
+else pass(`capability matrix MCFT-CAP-01 status ${expectedCapabilityLineStatus}`);
+const capabilityById = new Map((capability.capabilities || []).map((row) => [row.capability_id, row]));
+for (const id of ['DT-MATRIX-HOURLY-TICK','DT-MATRIX-PROPAGATION','DT-MATRIX-ASSIMILATION','DT-MATRIX-POSTERIOR','DT-MATRIX-CHECKPOINT','DT-MATRIX-RESTART','DT-MATRIX-LATE-REVISION','DT-MATRIX-72H-REGEN']) {
+  if (capabilityById.get(id)?.current_status !== 'MISSING') fail(`${id} capability inflation during predecessor regression`);
+}
+if (!failures.some((message) => message.includes('capability inflation during predecessor regression'))) pass('MCFT vertical capability nonclaims preserved');
+if (capabilityById.get('DT-MATRIX-LIVE-PRODUCTION-FIELD-TWIN')?.current_status !== 'NOT_CLAIMED') fail('production capability inflation during predecessor regression');
+else pass('production nonclaim preserved during predecessor regression');
+
+try {
+  runNode(F.verticalGate, [], {MCFT_VERTICAL_ACCEPTANCE_SKIP_GIT_SCOPE: '1'});
+  pass('MCFT vertical capability-line successor-aware Gate PASS');
+} catch (error) {
+  fail(`MCFT vertical capability-line successor-aware Gate failed: ${error.message}`);
+}
+
+try {
+  runNode(F.dt01Audit, ['--check']);
+  pass('DT-01 repository audit PASS');
+} catch (error) {
+  fail(`DT-01 repository audit failed: ${error.message}`);
+}
+
+try {
+  runNode(F.dt01Acceptance);
+  pass('DT-01 acceptance PASS');
+} catch (error) {
+  fail(`DT-01 acceptance failed: ${error.message}`);
+}
+
+try {
+  runNode(F.dt00Regression, [], {DT00_ACCEPTANCE_SKIP_GIT_SCOPE: '1'});
+  pass('DT-00 semantic regression PASS');
+} catch (error) {
+  fail(`DT-00 semantic regression failed: ${error.message}`);
+}
+
+let changed = [];
+try {
+  cp.execFileSync('git', ['cat-file', '-e', `${BASE}^{commit}`], {cwd: ROOT, stdio: 'ignore'});
+  changed = cp.execFileSync('git', ['diff', '--name-only', `${BASE}...HEAD`], {cwd: ROOT, encoding: 'utf8'}).trim().split(/\r?\n/).filter(Boolean);
+  const expected = [
+    F.boundaryAddendum,
+    F.closure,
+    F.amendment,
+    F.adrRegister,
+    F.transactionMatrix,
+    F.bootstrap,
+    F.objectSet,
+    F.implementationMap,
+    F.freeze,
+    F.capabilityMatrix,
+    F.verticalMatrix,
+    F.dt01Acceptance,
+    F.self,
+    F.dt02Gate,
+    F.verticalGate,
+  ];
+  const left = JSON.stringify([...changed].sort());
+  const right = JSON.stringify([...expected].sort());
+  if (!changed.length) fail('no Amendment 02 changes found');
+  else if (left !== right) fail(`Amendment 02 exact changed-file boundary mismatch: expected ${right}, got ${left}`);
+  else pass(`Amendment 02 exact changed-file boundary: ${changed.length} files`);
+} catch (error) {
+  fail(`changed-file boundary failed: ${error.message}`);
+}
+
+for (const forbiddenPrefix of ['apps/server/', 'apps/web/', 'fixtures/', '.github/workflows/']) {
+  changed.some((relativePath) => relativePath.startsWith(forbiddenPrefix))
+    ? fail(`forbidden scope present ${forbiddenPrefix}`)
+    : pass(`forbidden scope absent ${forbiddenPrefix}`);
+}
+
+finish();
+
+function finish() {
+  console.log(`\nDT02-AMENDMENT-02 acceptance summary: ${passes.length} PASS, ${failures.length} FAIL`);
+  if (failures.length) process.exit(1);
+  if (closureStatus === 'COMPLETE') console.log('DT02-AMENDMENT-02: COMPLETE PASS');
+  else console.log('DT02-AMENDMENT-02: PENDING-ACCEPTANCE PASS');
+}

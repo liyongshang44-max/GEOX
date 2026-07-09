@@ -1,1 +1,557 @@
-{"schema_version":"geox_dt02_canonical_object_set_v2","phase":"DT-02","status":"FROZEN_WITH_AMENDMENT","amendment_ref":"docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-01.md","storage_binding":{"canonical_store":"Postgres facts append-only store","fact_envelope":{"fact_id":"persistence-assigned storage identity","occurred_at":"logical event time selected by object contract","source":"authorized writer class","record_json.type":"object_type","record_json.payload":"semantic object envelope"},"identity_separation":["object_id is semantic and deterministic","fact_id is storage-envelope identity","fact_id is excluded from object_id and determinism_hash","persistence returns object_id-to-fact_id mapping"]},"envelope_contracts":{"base_object_envelope":{"required_fields":["object_id","object_type","schema_version","tenant_id","project_id","group_id","field_id","season_id","zone_id","logical_time","as_of","source_refs","evidence_refs","runtime_config_ref","runtime_config_hash","idempotency_key","determinism_hash","limitations","created_at"],"nullable_by_contract":["group_id","season_id","zone_id","runtime_config_ref","runtime_config_hash"],"rules":["all timestamps are UTC ISO-8601","all units are explicit","unknown and missing values are explicit","created_at is excluded from determinism_hash","fact_id is not a semantic-envelope field"]},"lineage_envelope":{"applies_when":{"lineage_member":true},"required_fields":["lineage_id","revision_id"],"optional_fields":["supersedes_ref","original_tick_ref"],"forbidden_rules":["lineage_id or revision_id missing"]},"non_lineage_context_envelope":{"applies_when":{"lineage_member":false},"required_fields":[],"optional_fields":["context_lineage_ref","context_revision_ref","supersedes_ref","original_tick_ref"],"rules":["lineage_id and revision_id are not required","record may exist before bootstrap, active lineage, config, or checkpoint"]}},"objects":[{"object_type":"twin_runtime_attempt_v1","record_class":"OPERATIONAL_AUDIT","history_class":"OPERATIONAL_AUDIT","lineage_member":false,"envelope_profile":"NON_LINEAGE_CONTEXT","atomic_aggregate":"single attempt event","writer":"Runtime Orchestrator","transaction_families":["F_OPERATIONAL_ATTEMPT_HEALTH"],"required_refs":["attempt_id"],"optional_refs":["context_lineage_ref","context_revision_ref","checkpoint_ref","runtime_config_ref"]},{"object_type":"twin_runtime_tick_v1","record_class":"CANONICAL_TWIN_HISTORY","history_class":"CANONICAL_TWIN_HISTORY","lineage_member":true,"envelope_profile":"LINEAGE","atomic_aggregate":"terminal tick inside State Tick record set","writer":"Runtime Orchestrator","transaction_families":["A_STATE_TICK_COMMIT"],"required_refs":["evidence_window_ref","state_transition_ref","assimilation_update_ref","posterior_state_ref","forecast_result_ref","checkpoint_ref"],"optional_refs":[],"status_contract":{"COMPLETED":{"checkpoint_advances":true,"forecast_status":"COMPLETED"},"COMPLETED_WITH_LIMITATIONS":{"checkpoint_advances":true,"forecast_status":"BLOCKED"}}},{"object_type":"twin_evidence_window_v1","record_class":"CANONICAL_TWIN_HISTORY","history_class":"CANONICAL_TWIN_HISTORY","lineage_member":true,"envelope_profile":"LINEAGE","atomic_aggregate":"single frozen evidence window","writer":"Runtime Orchestrator","transaction_families":["A_STATE_TICK_COMMIT"],"required_refs":["runtime_config_ref"],"optional_refs":["action_feedback_refs"]},{"object_type":"twin_state_transition_v1","record_class":"CANONICAL_TWIN_HISTORY","history_class":"CANONICAL_TWIN_HISTORY","lineage_member":true,"envelope_profile":"LINEAGE","atomic_aggregate":"member of atomic State Tick record set","writer":"Runtime Orchestrator","transaction_families":["A_STATE_TICK_COMMIT"],"required_refs":["previous_posterior_ref","assimilation_update_ref","posterior_state_ref","runtime_config_ref"],"optional_refs":[]},{"object_type":"twin_assimilation_update_v1","record_class":"CANONICAL_TWIN_HISTORY","history_class":"CANONICAL_TWIN_HISTORY","lineage_member":true,"envelope_profile":"LINEAGE","atomic_aggregate":"member of atomic State Tick record set","writer":"Runtime Orchestrator","transaction_families":["A_STATE_TICK_COMMIT"],"required_refs":["state_transition_ref","posterior_state_ref","runtime_config_ref"],"optional_refs":[]},{"object_type":"twin_state_estimate_v1","record_class":"CANONICAL_TWIN_HISTORY","history_class":"CANONICAL_TWIN_HISTORY","lineage_member":true,"envelope_profile":"LINEAGE","atomic_aggregate":"posterior member of State Tick record set","writer":"Runtime Orchestrator","transaction_families":["A_STATE_TICK_COMMIT"],"required_refs":["prior_transition_ref","assimilation_update_ref","runtime_config_ref"],"optional_refs":[]},{"object_type":"twin_forecast_run_v1","record_class":"CANONICAL_TWIN_HISTORY","history_class":"CANONICAL_TWIN_HISTORY","lineage_member":true,"envelope_profile":"LINEAGE","atomic_aggregate":"one aggregate containing status and all points","writer":"Runtime Orchestrator","transaction_families":["A_STATE_TICK_COMMIT"],"required_refs":["source_posterior_ref","runtime_config_ref"],"optional_refs":["weather_refs"],"status_contract":{"COMPLETED":{"points_count":72,"horizons":"1..72","reason_codes_required":false,"tick_status":"COMPLETED","checkpoint_advances":true,"latest_forecast_result_advances":true,"latest_successful_forecast_advances":true,"scenario_eligible":true},"BLOCKED":{"points_count":0,"reason_codes_required":true,"tick_status":"COMPLETED_WITH_LIMITATIONS","checkpoint_advances":true,"latest_forecast_result_advances":true,"latest_successful_forecast_advances":false,"scenario_eligible":false},"FAILED":{"permitted":false,"replacement_object":"twin_forecast_failure_v1"}}},{"object_type":"twin_forecast_failure_v1","record_class":"OPERATIONAL_AUDIT","history_class":"OPERATIONAL_AUDIT","lineage_member":false,"envelope_profile":"NON_LINEAGE_CONTEXT","atomic_aggregate":"single failed forecast diagnostic","writer":"Runtime Orchestrator","transaction_families":["F_OPERATIONAL_ATTEMPT_HEALTH"],"required_refs":["attempt_ref","reason_codes"],"optional_refs":["source_posterior_ref","context_lineage_ref","context_revision_ref","runtime_config_ref"],"status_contract":{"FAILED":{"points_field":"forbidden","checkpoint_advances":false,"terminal_tick_created":false,"active_lineage_member":false}}},{"object_type":"twin_scenario_set_v1","record_class":"CANONICAL_TWIN_HISTORY","history_class":"CANONICAL_TWIN_HISTORY","lineage_member":true,"envelope_profile":"LINEAGE","atomic_aggregate":"one set containing fixed options and trajectories","writer":"Scenario Runtime","transaction_families":["B_SCENARIO_COMMIT"],"required_refs":["source_forecast_ref","runtime_config_ref"],"optional_refs":[],"field_contract":{"source_forecast_status":"COMPLETED","source_forecast_points_count":72,"source_forecast_horizons":"1..72"}},{"object_type":"twin_forecast_residual_v1","record_class":"CANONICAL_TWIN_HISTORY","history_class":"CANONICAL_TWIN_HISTORY","lineage_member":false,"envelope_profile":"NON_LINEAGE_CONTEXT","atomic_aggregate":"single matched or unmatched residual record","writer":"Residual Matcher","transaction_families":["C_FORECAST_RESIDUAL_COMMIT"],"required_refs":["forecast_run_ref","forecast_point_ref","observation_ref","runtime_config_ref"],"optional_refs":["context_lineage_ref","context_revision_ref"]},{"object_type":"twin_decision_record_v1","record_class":"CANONICAL_GOVERNED_DECISION_HISTORY","history_class":"CANONICAL_GOVERNED_DECISION_HISTORY","lineage_member":false,"envelope_profile":"NON_LINEAGE_CONTEXT","atomic_aggregate":"authenticated human decision linkage","writer":"Authenticated Human Decision Service","transaction_families":["G_HUMAN_DECISION_LINK_COMMIT"],"required_refs":["scenario_set_ref","selected_option_ref"],"optional_refs":["context_lineage_ref","context_revision_ref"]},{"object_type":"twin_action_feedback_v1","record_class":"CANONICAL_EXECUTION_EVIDENCE_HISTORY","history_class":"CANONICAL_EXECUTION_EVIDENCE_HISTORY","lineage_member":false,"envelope_profile":"NON_LINEAGE_CONTEXT","atomic_aggregate":"normalized executed-feedback record","writer":"Action Feedback Service","transaction_families":["H_ACTION_FEEDBACK_COMMIT"],"required_refs":[],"optional_refs":["task_ref","receipt_ref","as_executed_ref","acceptance_ref","context_lineage_ref","context_revision_ref"],"field_contract":{"execution_status":["EXECUTED","PARTIALLY_EXECUTED","EXECUTION_UNCERTAIN","NOT_EXECUTED"],"validation_status":["NOT_YET_VALIDATED","VALIDATED","REJECTED","VALIDATED_WITH_LIMITATIONS"],"eligible_for_state_input":"boolean","execution_validation_orthogonal":true,"trusted_execution_source_rule":"at least one of receipt_ref or as_executed_ref","acceptance_ref_required":false,"task_ref_rule":"required only when origin_kind = AO_ACT","eligibility_basis":["actual_amount","executed_at","spatial_coverage","source_identity","source_quality","limitations"]}},{"object_type":"twin_calibration_candidate_v1","record_class":"CANONICAL_MODEL_GOVERNANCE_HISTORY","history_class":"CANONICAL_MODEL_GOVERNANCE_HISTORY","lineage_member":false,"envelope_profile":"NON_LINEAGE_CONTEXT","atomic_aggregate":"single candidate transition","writer":"Calibration Service","transaction_families":["D_MODEL_GOVERNANCE_STEP_COMMIT"],"required_refs":["residual_refs","base_config_ref"],"optional_refs":["context_lineage_ref","context_revision_ref"]},{"object_type":"twin_shadow_evaluation_v1","record_class":"CANONICAL_MODEL_GOVERNANCE_HISTORY","history_class":"CANONICAL_MODEL_GOVERNANCE_HISTORY","lineage_member":false,"envelope_profile":"NON_LINEAGE_CONTEXT","atomic_aggregate":"single evaluation transition","writer":"Shadow Evaluation Service","transaction_families":["D_MODEL_GOVERNANCE_STEP_COMMIT"],"required_refs":["candidate_ref","evaluation_dataset_refs"],"optional_refs":[]},{"object_type":"twin_model_activation_v1","record_class":"CANONICAL_MODEL_GOVERNANCE_HISTORY","history_class":"CANONICAL_MODEL_GOVERNANCE_HISTORY","lineage_member":false,"envelope_profile":"NON_LINEAGE_CONTEXT","atomic_aggregate":"activation or rollback transition plus active-binding CAS","writer":"Governance-approved Activation Service","transaction_families":["D_MODEL_GOVERNANCE_STEP_COMMIT"],"required_refs":["config_ref","approval_ref"],"optional_refs":[]},{"object_type":"twin_runtime_config_v1","record_class":"CANONICAL_MODEL_GOVERNANCE_HISTORY","history_class":"CANONICAL_MODEL_GOVERNANCE_HISTORY","lineage_member":false,"envelope_profile":"NON_LINEAGE_CONTEXT","atomic_aggregate":"immutable config snapshot","writer":"Runtime Config Service","transaction_families":["D_MODEL_GOVERNANCE_STEP_COMMIT"],"required_refs":["soil_root_zone_config_refs","model_component_refs"],"optional_refs":[]},{"object_type":"twin_runtime_checkpoint_v1","record_class":"CANONICAL_TWIN_HISTORY","history_class":"CANONICAL_TWIN_HISTORY","lineage_member":true,"envelope_profile":"LINEAGE","atomic_aggregate":"checkpoint member of State Tick record set","writer":"Runtime Orchestrator with valid fencing token","transaction_families":["A_STATE_TICK_COMMIT"],"required_refs":["last_completed_tick_ref","last_posterior_state_ref","forecast_result_ref","runtime_config_ref","previous_checkpoint_ref"],"optional_refs":[]},{"object_type":"twin_runtime_health_v1","record_class":"OPERATIONAL_AUDIT","history_class":"OPERATIONAL_AUDIT","lineage_member":false,"envelope_profile":"NON_LINEAGE_CONTEXT","atomic_aggregate":"runtime-operation snapshot","writer":"Runtime Orchestrator","transaction_families":["A_STATE_TICK_COMMIT","F_OPERATIONAL_ATTEMPT_HEALTH"],"required_refs":[],"optional_refs":["attempt_ref","context_lineage_ref","context_revision_ref","checkpoint_ref","runtime_config_ref"]},{"object_type":"twin_runtime_lineage_v1","record_class":"CANONICAL_LINEAGE_HISTORY","history_class":"CANONICAL_LINEAGE_HISTORY","lineage_member":false,"envelope_profile":"NON_LINEAGE_CONTEXT","atomic_aggregate":"candidate lineage declaration","writer":"Revision Service","transaction_families":["E_REVISION_LINEAGE_STEP_COMMIT"],"required_refs":["revision_run_ref"],"optional_refs":["parent_lineage_ref"]},{"object_type":"twin_revision_run_v1","record_class":"CANONICAL_LINEAGE_HISTORY","history_class":"CANONICAL_LINEAGE_HISTORY","lineage_member":false,"envelope_profile":"NON_LINEAGE_CONTEXT","atomic_aggregate":"revision declaration, progress, or terminal event","writer":"Revision Service","transaction_families":["E_REVISION_LINEAGE_STEP_COMMIT"],"required_refs":["revision_run_id","candidate_lineage_ref"],"optional_refs":["parent_lineage_ref","late_evidence_refs","context_lineage_ref"],"status_contract":{"DECLARED":{},"RUNNING":{},"FAILED":{"promotion_eligible":false},"COMPLETED":{"promotion_eligible":"requires separate chain validation"}}},{"object_type":"twin_lineage_promotion_v1","record_class":"CANONICAL_LINEAGE_HISTORY","history_class":"CANONICAL_LINEAGE_HISTORY","lineage_member":false,"envelope_profile":"NON_LINEAGE_CONTEXT","atomic_aggregate":"promotion authority committed with active-index switch","writer":"Revision Promotion Service","transaction_families":["E_REVISION_LINEAGE_STEP_COMMIT"],"required_refs":["candidate_lineage_ref","previous_active_lineage_ref","validated_chain_refs"],"optional_refs":[]}],"noncanonical_operational_tables":[{"logical_name":"twin_runtime_lease_v1","purpose":"writer lease with owner, fencing token, expiry, heartbeat","mutable":true},{"logical_name":"twin_runtime_attempt_latest_v1","purpose":"current attempt state","mutable":true},{"logical_name":"twin_runtime_worker_heartbeat_v1","purpose":"worker liveness and diagnostics","mutable":true},{"logical_name":"temporary_compute_attempt_state","purpose":"ephemeral retry diagnostics","mutable":true}],"mutable_rebuildable_projections":["twin_state_latest_index_v1","twin_state_history_projection_v1","twin_forecast_run_index_v1","twin_forecast_point_index_v1","twin_forecast_result_latest_index_v1","twin_forecast_success_latest_index_v1","twin_scenario_set_index_v1","twin_scenario_point_index_v1","twin_scenario_latest_index_v1","twin_forecast_residual_index_v1","twin_runtime_checkpoint_latest_index_v1","twin_runtime_health_latest_index_v1","twin_active_lineage_index_v1","twin_active_config_index_v1"],"forbidden":["dual canonical storage","canonical UPDATE","projection as historical truth","operational lease as Twin State","client-supplied posterior, Forecast, or Scenario result","natural-language transaction family expression"],"object_contract_rules":["record_class is authoritative; history_class is compatibility alias and must equal record_class","every object declares lineage_member and transaction_families","lineage_member=true uses LINEAGE envelope","lineage_member=false uses NON_LINEAGE_CONTEXT envelope","every listed transaction family must cover the object in canonical_appends or operation_variants"]}
+{
+  "schema_version": "geox_dt02_canonical_object_set_v3",
+  "phase": "DT-02",
+  "status": "FROZEN_WITH_ACCEPTED_AMENDMENTS",
+  "amendment_refs": [
+    "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-01.md",
+    "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-02.md"
+  ],
+  "storage_binding": {
+    "canonical_store": "Postgres facts append-only store",
+    "fact_envelope": {
+      "fact_id": "persistence-assigned storage identity",
+      "occurred_at": "logical event time selected by object contract",
+      "source": "authorized writer class",
+      "record_json.type": "object_type",
+      "record_json.payload": "semantic object envelope"
+    },
+    "identity_separation": [
+      "object_id is semantic and deterministic",
+      "fact_id is storage-envelope identity",
+      "fact_id is excluded from object_id and determinism_hash",
+      "persistence returns object_id-to-fact_id mapping"
+    ]
+  },
+  "envelope_contracts": {
+    "base_object_envelope": {
+      "required_fields": [
+        "object_id",
+        "object_type",
+        "schema_version",
+        "tenant_id",
+        "project_id",
+        "group_id",
+        "field_id",
+        "season_id",
+        "zone_id",
+        "logical_time",
+        "as_of",
+        "source_refs",
+        "evidence_refs",
+        "runtime_config_ref",
+        "runtime_config_hash",
+        "idempotency_key",
+        "determinism_hash",
+        "limitations",
+        "created_at"
+      ],
+      "nullable_by_contract": [
+        "group_id",
+        "season_id",
+        "zone_id",
+        "runtime_config_ref",
+        "runtime_config_hash"
+      ],
+      "rules": [
+        "all timestamps are UTC ISO-8601",
+        "all units are explicit",
+        "unknown and missing values are explicit",
+        "created_at is excluded from determinism_hash",
+        "fact_id is not a semantic-envelope field"
+      ]
+    },
+    "lineage_envelope": {
+      "applies_when": {"lineage_member": true},
+      "required_fields": ["lineage_id", "revision_id"],
+      "optional_fields": ["supersedes_ref", "original_tick_ref", "revision_run_ref"],
+      "conditional_rules": {
+        "INITIAL": {
+          "revision_id_required": true,
+          "revision_run_ref": null,
+          "revision_run_object_required": false
+        },
+        "REVISION_REPLAY": {
+          "revision_id_required": true,
+          "revision_run_ref_required": true
+        }
+      },
+      "forbidden_rules": ["lineage_id or revision_id missing"]
+    },
+    "non_lineage_context_envelope": {
+      "applies_when": {"lineage_member": false},
+      "required_fields": [],
+      "optional_fields": [
+        "context_lineage_ref",
+        "context_revision_ref",
+        "supersedes_ref",
+        "original_tick_ref"
+      ],
+      "rules": [
+        "lineage_id and revision_id are not required",
+        "record may exist before bootstrap, active lineage, config, or checkpoint"
+      ]
+    }
+  },
+  "objects": [
+    {
+      "object_type": "twin_runtime_attempt_v1",
+      "record_class": "OPERATIONAL_AUDIT",
+      "history_class": "OPERATIONAL_AUDIT",
+      "lineage_member": false,
+      "envelope_profile": "NON_LINEAGE_CONTEXT",
+      "atomic_aggregate": "single attempt event",
+      "writer": "Runtime Orchestrator",
+      "transaction_families": ["F_OPERATIONAL_ATTEMPT_HEALTH"],
+      "required_refs": ["attempt_id"],
+      "optional_refs": ["context_lineage_ref", "context_revision_ref", "checkpoint_ref", "runtime_config_ref"]
+    },
+    {
+      "object_type": "twin_runtime_tick_v1",
+      "record_class": "CANONICAL_TWIN_HISTORY",
+      "history_class": "CANONICAL_TWIN_HISTORY",
+      "lineage_member": true,
+      "envelope_profile": "LINEAGE",
+      "atomic_aggregate": "terminal tick inside State Tick record set",
+      "writer": "Runtime Orchestrator",
+      "transaction_families": ["A_STATE_TICK_COMMIT"],
+      "required_refs": [
+        "evidence_window_ref",
+        "state_transition_ref",
+        "assimilation_update_ref",
+        "posterior_state_ref",
+        "forecast_result_ref",
+        "checkpoint_ref"
+      ],
+      "optional_refs": [],
+      "status_contract": {
+        "COMPLETED": {"checkpoint_advances": true, "forecast_status": "COMPLETED"},
+        "COMPLETED_WITH_LIMITATIONS": {"checkpoint_advances": true, "forecast_status": "BLOCKED"}
+      }
+    },
+    {
+      "object_type": "twin_evidence_window_v1",
+      "record_class": "CANONICAL_TWIN_HISTORY",
+      "history_class": "CANONICAL_TWIN_HISTORY",
+      "lineage_member": true,
+      "envelope_profile": "LINEAGE",
+      "atomic_aggregate": "single frozen evidence window",
+      "writer": "Runtime Orchestrator",
+      "transaction_families": ["A_STATE_TICK_COMMIT"],
+      "required_refs": ["runtime_config_ref"],
+      "optional_refs": ["action_feedback_refs"]
+    },
+    {
+      "object_type": "twin_state_transition_v1",
+      "record_class": "CANONICAL_TWIN_HISTORY",
+      "history_class": "CANONICAL_TWIN_HISTORY",
+      "lineage_member": true,
+      "envelope_profile": "LINEAGE",
+      "atomic_aggregate": "member of atomic State Tick record set",
+      "writer": "Runtime Orchestrator",
+      "transaction_families": ["A_STATE_TICK_COMMIT"],
+      "required_refs": ["assimilation_update_ref", "posterior_state_ref", "runtime_config_ref"],
+      "optional_refs": ["previous_posterior_ref"],
+      "field_contract": {
+        "transition_kind": ["BOOTSTRAP", "CONTINUATION", "REVISION_REPLAY"],
+        "BOOTSTRAP": {
+          "previous_posterior_ref": null,
+          "bootstrap_prior_required": true,
+          "bootstrap_prior_ref_forbidden": true,
+          "process_model_status": "NOT_APPLIED_BOOTSTRAP"
+        },
+        "CONTINUATION": {
+          "previous_posterior_ref_required": true,
+          "bootstrap_prior_forbidden": true,
+          "bootstrap_prior_ref_forbidden": true
+        },
+        "REVISION_REPLAY": {
+          "previous_posterior_ref_required": true,
+          "bootstrap_prior_forbidden": true,
+          "bootstrap_prior_ref_forbidden": true
+        },
+        "embedded_bootstrap_prior_required_fields": [
+          "prior_kind",
+          "mean",
+          "variance",
+          "stddev",
+          "derivation_rule_id",
+          "source_runtime_config_ref",
+          "source_soil_hydraulic_config_ref"
+        ],
+        "embedded_bootstrap_prior_canonical_object": false
+      }
+    },
+    {
+      "object_type": "twin_assimilation_update_v1",
+      "record_class": "CANONICAL_TWIN_HISTORY",
+      "history_class": "CANONICAL_TWIN_HISTORY",
+      "lineage_member": true,
+      "envelope_profile": "LINEAGE",
+      "atomic_aggregate": "member of atomic State Tick record set",
+      "writer": "Runtime Orchestrator",
+      "transaction_families": ["A_STATE_TICK_COMMIT"],
+      "required_refs": ["state_transition_ref", "posterior_state_ref", "runtime_config_ref"],
+      "optional_refs": []
+    },
+    {
+      "object_type": "twin_state_estimate_v1",
+      "record_class": "CANONICAL_TWIN_HISTORY",
+      "history_class": "CANONICAL_TWIN_HISTORY",
+      "lineage_member": true,
+      "envelope_profile": "LINEAGE",
+      "atomic_aggregate": "posterior member of State Tick record set",
+      "writer": "Runtime Orchestrator",
+      "transaction_families": ["A_STATE_TICK_COMMIT"],
+      "required_refs": ["prior_transition_ref", "assimilation_update_ref", "runtime_config_ref"],
+      "optional_refs": [],
+      "field_contract": {
+        "confidence": {
+          "status": "NOT_ESTABLISHED",
+          "reason_code": "NO_CALIBRATED_CONFIDENCE_MODEL",
+          "numeric_score_forbidden": true
+        },
+        "use_eligibility_fields": [
+          "state_valid",
+          "posterior_chain_eligible",
+          "forecast_source_eligible",
+          "recommendation_input_eligible",
+          "action_input_eligible"
+        ],
+        "forecast_prerequisite_reason_codes_forbidden": true
+      }
+    },
+    {
+      "object_type": "twin_forecast_run_v1",
+      "record_class": "CANONICAL_TWIN_HISTORY",
+      "history_class": "CANONICAL_TWIN_HISTORY",
+      "lineage_member": true,
+      "envelope_profile": "LINEAGE",
+      "atomic_aggregate": "one aggregate containing status and all points",
+      "writer": "Runtime Orchestrator",
+      "transaction_families": ["A_STATE_TICK_COMMIT"],
+      "required_refs": ["source_posterior_ref", "runtime_config_ref"],
+      "optional_refs": ["weather_refs"],
+      "status_contract": {
+        "COMPLETED": {
+          "points_count": 72,
+          "horizons": "1..72",
+          "reason_codes_required": false,
+          "tick_status": "COMPLETED",
+          "checkpoint_advances": true,
+          "latest_forecast_result_advances": true,
+          "latest_successful_forecast_advances": true,
+          "scenario_eligible": true
+        },
+        "BLOCKED": {
+          "points_count": 0,
+          "reason_codes_required": true,
+          "reason_codes_owner": "twin_forecast_run_v1",
+          "tick_status": "COMPLETED_WITH_LIMITATIONS",
+          "checkpoint_advances": true,
+          "latest_forecast_result_advances": true,
+          "latest_successful_forecast_advances": false,
+          "scenario_eligible": false
+        },
+        "FAILED": {"permitted": false, "replacement_object": "twin_forecast_failure_v1"}
+      }
+    },
+    {
+      "object_type": "twin_forecast_failure_v1",
+      "record_class": "OPERATIONAL_AUDIT",
+      "history_class": "OPERATIONAL_AUDIT",
+      "lineage_member": false,
+      "envelope_profile": "NON_LINEAGE_CONTEXT",
+      "atomic_aggregate": "single failed forecast diagnostic",
+      "writer": "Runtime Orchestrator",
+      "transaction_families": ["F_OPERATIONAL_ATTEMPT_HEALTH"],
+      "required_refs": ["attempt_ref", "reason_codes"],
+      "optional_refs": ["source_posterior_ref", "context_lineage_ref", "context_revision_ref", "runtime_config_ref"],
+      "status_contract": {
+        "FAILED": {
+          "points_field": "forbidden",
+          "checkpoint_advances": false,
+          "terminal_tick_created": false,
+          "active_lineage_member": false
+        }
+      }
+    },
+    {
+      "object_type": "twin_scenario_set_v1",
+      "record_class": "CANONICAL_TWIN_HISTORY",
+      "history_class": "CANONICAL_TWIN_HISTORY",
+      "lineage_member": true,
+      "envelope_profile": "LINEAGE",
+      "atomic_aggregate": "one set containing fixed options and trajectories",
+      "writer": "Scenario Runtime",
+      "transaction_families": ["B_SCENARIO_COMMIT"],
+      "required_refs": ["source_forecast_ref", "runtime_config_ref"],
+      "optional_refs": [],
+      "field_contract": {
+        "source_forecast_status": "COMPLETED",
+        "source_forecast_points_count": 72,
+        "source_forecast_horizons": "1..72"
+      }
+    },
+    {
+      "object_type": "twin_forecast_residual_v1",
+      "record_class": "CANONICAL_TWIN_HISTORY",
+      "history_class": "CANONICAL_TWIN_HISTORY",
+      "lineage_member": false,
+      "envelope_profile": "NON_LINEAGE_CONTEXT",
+      "atomic_aggregate": "single matched or unmatched residual record",
+      "writer": "Residual Matcher",
+      "transaction_families": ["C_FORECAST_RESIDUAL_COMMIT"],
+      "required_refs": ["forecast_run_ref", "forecast_point_ref", "observation_ref", "runtime_config_ref"],
+      "optional_refs": ["context_lineage_ref", "context_revision_ref"]
+    },
+    {
+      "object_type": "twin_decision_record_v1",
+      "record_class": "CANONICAL_GOVERNED_DECISION_HISTORY",
+      "history_class": "CANONICAL_GOVERNED_DECISION_HISTORY",
+      "lineage_member": false,
+      "envelope_profile": "NON_LINEAGE_CONTEXT",
+      "atomic_aggregate": "authenticated human decision linkage",
+      "writer": "Authenticated Human Decision Service",
+      "transaction_families": ["G_HUMAN_DECISION_LINK_COMMIT"],
+      "required_refs": ["scenario_set_ref", "selected_option_ref"],
+      "optional_refs": ["context_lineage_ref", "context_revision_ref"]
+    },
+    {
+      "object_type": "twin_action_feedback_v1",
+      "record_class": "CANONICAL_EXECUTION_EVIDENCE_HISTORY",
+      "history_class": "CANONICAL_EXECUTION_EVIDENCE_HISTORY",
+      "lineage_member": false,
+      "envelope_profile": "NON_LINEAGE_CONTEXT",
+      "atomic_aggregate": "normalized executed-feedback record",
+      "writer": "Action Feedback Service",
+      "transaction_families": ["H_ACTION_FEEDBACK_COMMIT"],
+      "required_refs": [],
+      "optional_refs": [
+        "task_ref",
+        "receipt_ref",
+        "as_executed_ref",
+        "acceptance_ref",
+        "context_lineage_ref",
+        "context_revision_ref"
+      ],
+      "field_contract": {
+        "execution_status": ["EXECUTED", "PARTIALLY_EXECUTED", "EXECUTION_UNCERTAIN", "NOT_EXECUTED"],
+        "validation_status": ["NOT_YET_VALIDATED", "VALIDATED", "REJECTED", "VALIDATED_WITH_LIMITATIONS"],
+        "eligible_for_state_input": "boolean",
+        "execution_validation_orthogonal": true,
+        "trusted_execution_source_rule": "at least one of receipt_ref or as_executed_ref",
+        "acceptance_ref_required": false,
+        "task_ref_rule": "required only when origin_kind = AO_ACT",
+        "eligibility_basis": [
+          "actual_amount",
+          "executed_at",
+          "spatial_coverage",
+          "source_identity",
+          "source_quality",
+          "limitations"
+        ]
+      }
+    },
+    {
+      "object_type": "twin_calibration_candidate_v1",
+      "record_class": "CANONICAL_MODEL_GOVERNANCE_HISTORY",
+      "history_class": "CANONICAL_MODEL_GOVERNANCE_HISTORY",
+      "lineage_member": false,
+      "envelope_profile": "NON_LINEAGE_CONTEXT",
+      "atomic_aggregate": "single candidate transition",
+      "writer": "Calibration Service",
+      "transaction_families": ["D_MODEL_GOVERNANCE_STEP_COMMIT"],
+      "required_refs": ["residual_refs", "base_config_ref"],
+      "optional_refs": ["context_lineage_ref", "context_revision_ref"]
+    },
+    {
+      "object_type": "twin_shadow_evaluation_v1",
+      "record_class": "CANONICAL_MODEL_GOVERNANCE_HISTORY",
+      "history_class": "CANONICAL_MODEL_GOVERNANCE_HISTORY",
+      "lineage_member": false,
+      "envelope_profile": "NON_LINEAGE_CONTEXT",
+      "atomic_aggregate": "single evaluation transition",
+      "writer": "Shadow Evaluation Service",
+      "transaction_families": ["D_MODEL_GOVERNANCE_STEP_COMMIT"],
+      "required_refs": ["candidate_ref", "evaluation_dataset_refs"],
+      "optional_refs": []
+    },
+    {
+      "object_type": "twin_model_activation_v1",
+      "record_class": "CANONICAL_MODEL_GOVERNANCE_HISTORY",
+      "history_class": "CANONICAL_MODEL_GOVERNANCE_HISTORY",
+      "lineage_member": false,
+      "envelope_profile": "NON_LINEAGE_CONTEXT",
+      "atomic_aggregate": "activation or rollback transition plus active-binding CAS",
+      "writer": "Governance-approved Activation Service",
+      "transaction_families": ["D_MODEL_GOVERNANCE_STEP_COMMIT"],
+      "required_refs": ["config_ref", "approval_ref"],
+      "optional_refs": []
+    },
+    {
+      "object_type": "twin_runtime_config_v1",
+      "record_class": "CANONICAL_MODEL_GOVERNANCE_HISTORY",
+      "history_class": "CANONICAL_MODEL_GOVERNANCE_HISTORY",
+      "lineage_member": false,
+      "envelope_profile": "NON_LINEAGE_CONTEXT",
+      "atomic_aggregate": "immutable config snapshot",
+      "writer": "Runtime Config Service",
+      "transaction_families": ["D_MODEL_GOVERNANCE_STEP_COMMIT"],
+      "required_refs": ["soil_root_zone_config_refs", "model_component_refs"],
+      "optional_refs": []
+    },
+    {
+      "object_type": "twin_runtime_checkpoint_v1",
+      "record_class": "CANONICAL_TWIN_HISTORY",
+      "history_class": "CANONICAL_TWIN_HISTORY",
+      "lineage_member": true,
+      "envelope_profile": "LINEAGE",
+      "atomic_aggregate": "checkpoint member of State Tick record set",
+      "writer": "Runtime Orchestrator with valid fencing token",
+      "transaction_families": ["A_STATE_TICK_COMMIT"],
+      "required_refs": ["last_completed_tick_ref", "last_posterior_state_ref", "forecast_result_ref", "runtime_config_ref"],
+      "optional_refs": ["previous_checkpoint_ref"],
+      "field_contract": {
+        "checkpoint_kind": ["INITIAL", "CONTINUATION", "REVISION"],
+        "INITIAL": {"previous_checkpoint_ref": null},
+        "CONTINUATION": {"previous_checkpoint_ref_required": true},
+        "REVISION": {"previous_checkpoint_ref_required": true}
+      }
+    },
+    {
+      "object_type": "twin_runtime_health_v1",
+      "record_class": "OPERATIONAL_AUDIT",
+      "history_class": "OPERATIONAL_AUDIT",
+      "lineage_member": false,
+      "envelope_profile": "NON_LINEAGE_CONTEXT",
+      "atomic_aggregate": "runtime-operation snapshot",
+      "writer": "Runtime Orchestrator",
+      "transaction_families": ["A_STATE_TICK_COMMIT", "F_OPERATIONAL_ATTEMPT_HEALTH"],
+      "required_refs": [],
+      "optional_refs": ["attempt_ref", "context_lineage_ref", "context_revision_ref", "checkpoint_ref", "runtime_config_ref"]
+    },
+    {
+      "object_type": "twin_runtime_lineage_v1",
+      "record_class": "CANONICAL_LINEAGE_HISTORY",
+      "history_class": "CANONICAL_LINEAGE_HISTORY",
+      "lineage_member": false,
+      "envelope_profile": "NON_LINEAGE_CONTEXT",
+      "atomic_aggregate": "initial lineage declaration or revision candidate lineage declaration",
+      "writer": "conditional by lineage_kind",
+      "transaction_families": ["A_STATE_TICK_COMMIT", "E_REVISION_LINEAGE_STEP_COMMIT"],
+      "required_refs": [],
+      "optional_refs": [
+        "revision_run_ref",
+        "parent_lineage_ref",
+        "bootstrap_runtime_config_ref",
+        "bootstrap_reality_binding_ref",
+        "initial_revision_id"
+      ],
+      "field_contract": {
+        "lineage_kind": ["INITIAL", "REVISION_CANDIDATE"],
+        "INITIAL": {
+          "writer": "Runtime Orchestrator",
+          "transaction_family": "A_STATE_TICK_COMMIT",
+          "operation_variant": "A0_BOOTSTRAP_STATE_COMMIT",
+          "parent_lineage_ref": null,
+          "revision_run_ref": null,
+          "required_refs": ["bootstrap_runtime_config_ref", "bootstrap_reality_binding_ref", "initial_revision_id"],
+          "activation_authority_kind": "INITIAL_LINEAGE_DECLARATION"
+        },
+        "REVISION_CANDIDATE": {
+          "writer": "Revision Service",
+          "transaction_family": "E_REVISION_LINEAGE_STEP_COMMIT",
+          "required_refs": ["revision_run_ref", "parent_lineage_ref"],
+          "forbidden_refs": ["bootstrap_runtime_config_ref", "bootstrap_reality_binding_ref"]
+        }
+      }
+    },
+    {
+      "object_type": "twin_revision_run_v1",
+      "record_class": "CANONICAL_LINEAGE_HISTORY",
+      "history_class": "CANONICAL_LINEAGE_HISTORY",
+      "lineage_member": false,
+      "envelope_profile": "NON_LINEAGE_CONTEXT",
+      "atomic_aggregate": "revision declaration, progress, or terminal event",
+      "writer": "Revision Service",
+      "transaction_families": ["E_REVISION_LINEAGE_STEP_COMMIT"],
+      "required_refs": ["revision_run_id", "candidate_lineage_ref"],
+      "optional_refs": ["parent_lineage_ref", "late_evidence_refs", "context_lineage_ref"],
+      "status_contract": {
+        "DECLARED": {},
+        "RUNNING": {},
+        "FAILED": {"promotion_eligible": false},
+        "COMPLETED": {"promotion_eligible": "requires separate chain validation"}
+      },
+      "field_contract": {"INITIAL_revision_creates_object": false}
+    },
+    {
+      "object_type": "twin_lineage_promotion_v1",
+      "record_class": "CANONICAL_LINEAGE_HISTORY",
+      "history_class": "CANONICAL_LINEAGE_HISTORY",
+      "lineage_member": false,
+      "envelope_profile": "NON_LINEAGE_CONTEXT",
+      "atomic_aggregate": "promotion authority committed with active-index switch",
+      "writer": "Revision Promotion Service",
+      "transaction_families": ["E_REVISION_LINEAGE_STEP_COMMIT"],
+      "required_refs": ["candidate_lineage_ref", "previous_active_lineage_ref", "validated_chain_refs"],
+      "optional_refs": [],
+      "field_contract": {"initial_activation_forbidden": true}
+    }
+  ],
+  "noncanonical_operational_tables": [
+    {"logical_name": "twin_runtime_lease_v1", "purpose": "writer lease with owner, fencing token, expiry, heartbeat", "mutable": true},
+    {"logical_name": "twin_runtime_attempt_latest_v1", "purpose": "current attempt state", "mutable": true},
+    {"logical_name": "twin_runtime_worker_heartbeat_v1", "purpose": "worker liveness and diagnostics", "mutable": true},
+    {"logical_name": "temporary_compute_attempt_state", "purpose": "ephemeral retry diagnostics", "mutable": true},
+    {"logical_name": "twin_object_idempotency_index_v1", "purpose": "aggregate and object idempotency guard with independently computed semantic hashes", "mutable": true}
+  ],
+  "mutable_rebuildable_projections": [
+    "twin_state_latest_index_v1",
+    "twin_state_history_projection_v1",
+    "twin_forecast_run_index_v1",
+    "twin_forecast_point_index_v1",
+    "twin_forecast_result_latest_index_v1",
+    "twin_forecast_success_latest_index_v1",
+    "twin_scenario_set_index_v1",
+    "twin_scenario_point_index_v1",
+    "twin_scenario_latest_index_v1",
+    "twin_forecast_residual_index_v1",
+    "twin_runtime_checkpoint_latest_index_v1",
+    "twin_runtime_health_latest_index_v1",
+    "twin_active_lineage_index_v1",
+    "twin_active_config_index_v1"
+  ],
+  "active_lineage_index_contract": {
+    "required_audit_fields": ["activation_authority_kind", "activation_authority_ref", "expected_previous_active_lineage"],
+    "INITIAL": {
+      "activation_authority_kind": "INITIAL_LINEAGE_DECLARATION",
+      "authority_object_type": "twin_runtime_lineage_v1",
+      "expected_previous_active_lineage": null
+    },
+    "REVISION": {
+      "activation_authority_kind": "LINEAGE_PROMOTION",
+      "authority_object_type": "twin_lineage_promotion_v1"
+    }
+  },
+  "forbidden": [
+    "dual canonical storage",
+    "canonical UPDATE",
+    "projection as historical truth",
+    "operational lease as Twin State",
+    "client-supplied posterior, Forecast, or Scenario result",
+    "natural-language transaction family expression",
+    "bootstrap_prior_ref",
+    "initial lineage promotion record",
+    "INITIAL revision requiring twin_revision_run_v1"
+  ],
+  "object_contract_rules": [
+    "record_class is authoritative; history_class is compatibility alias and must equal record_class",
+    "every object declares lineage_member and transaction_families",
+    "lineage_member=true uses LINEAGE envelope",
+    "lineage_member=false uses NON_LINEAGE_CONTEXT envelope",
+    "every listed transaction family must cover the object in canonical_appends or operation_variants",
+    "A0 lineage members share one deterministic initial lineage_id and revision_id",
+    "INITIAL revision_id does not imply a revision-run object"
+  ]
+}
