@@ -1,5 +1,5 @@
 // apps/server/src/runtime/twin_runtime/a0_bootstrap_runtime_service_v1.ts
-// Purpose: orchestrate one controlled Replay A0 bootstrap by persisting immutable Runtime Config, freezing Evidence, building the nine-object record set, checking idempotency before lease, and committing atomically.
+// Purpose: orchestrate one controlled Replay A0 bootstrap by loading and validating Evidence before any canonical write, then persisting immutable Runtime Config, checking A0 idempotency before lease, and committing the nine-object record set atomically.
 // Boundary: A0 integration only; no propagation, successful Forecast, Scenario, Recommendation, AO-ACT, routes, scheduler, restart/backfill, or wall-clock reads.
 
 import type { SoilHydraulicBoundsV1 } from "../../domain/twin_runtime/physical_bounds_v1.js";
@@ -36,7 +36,7 @@ export type ExecuteA0BootstrapResultV1 = {
 function nextTickFromRecordSetV1(recordSet: A0RecordSetV1): string {
   const checkpoint = recordSet.members.find((member) => member.object_type === "twin_runtime_checkpoint_v1");
   const nextTick = checkpoint?.payload.next_tick_logical_time;
-  if (typeof nextTick !== "string" || !nextTick) throw new Error("NEXT_TICK_HANDOFF_REQUIRED");
+  if (typeof nextTick !== "string" || !nextTick) throw new Error("NEXT_TICK_CHECKPOINT_POINTER_REQUIRED");
   return nextTick;
 }
 
@@ -52,7 +52,6 @@ export class A0BootstrapRuntimeServiceV1 {
     if (!input.lease_owner) throw new Error("LEASE_OWNER_REQUIRED");
     if (!Number.isInteger(input.lease_duration_seconds) || input.lease_duration_seconds <= 0) throw new Error("LEASE_DURATION_INVALID");
 
-    const runtimeConfigCommit = await this.runtimeConfigRepository.commitRuntimeConfig(input.runtime_config);
     const candidateRecords = await this.evidenceSource.loadCandidateRecords({ scope: input.scope, logical_time: input.logical_time });
     const evidenceWindow = buildFrozenEvidenceWindowV1({
       scope: input.scope,
@@ -69,6 +68,7 @@ export class A0BootstrapRuntimeServiceV1 {
       soil_hydraulic_config_ref: input.soil_hydraulic_config_ref,
     });
 
+    const runtimeConfigCommit = await this.runtimeConfigRepository.commitRuntimeConfig(input.runtime_config);
     const existing = await this.persistence.lookupA0RecordSet(recordSet.a0_idempotency_key);
     if (existing) {
       if (existing.a0_record_set_id !== recordSet.a0_record_set_id || existing.a0_record_set_determinism_hash !== recordSet.a0_record_set_determinism_hash) {
