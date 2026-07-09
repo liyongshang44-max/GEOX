@@ -111,7 +111,21 @@ async function leaseToken(): Promise<bigint | null> {
 
 async function main(): Promise<void> {
   try {
+    await pool.query(fs.readFileSync(path.join(ROOT, "docker/postgres/init/001_schema.sql"), "utf8"));
     await pool.query(fs.readFileSync(path.join(ROOT, "apps/server/db/migrations/2026_07_09_mcft_cap_01_a0_persistence.sql"), "utf8"));
+    const schemaCheck = await pool.query(`
+      SELECT
+        to_regclass('public.facts') AS facts,
+        to_regclass('public.twin_runtime_lease_v1') AS runtime_lease,
+        to_regclass('public.twin_object_idempotency_index_v1') AS idempotency_index,
+        to_regclass('public.twin_state_latest_index_v1') AS state_latest
+    `);
+    assert.equal(schemaCheck.rows[0].facts, "facts");
+    assert.equal(schemaCheck.rows[0].runtime_lease, "twin_runtime_lease_v1");
+    assert.equal(schemaCheck.rows[0].idempotency_index, "twin_object_idempotency_index_v1");
+    assert.equal(schemaCheck.rows[0].state_latest, "twin_state_latest_index_v1");
+    ok("base facts schema and A0 persistence schema initialized in repository order");
+
     const candidates = await evidenceSource.loadCandidateRecords({ scope, logical_time: LOGICAL_TIME });
     const evidenceWindow = buildFrozenEvidenceWindowV1({ scope, logical_time: LOGICAL_TIME, candidate_records: candidates });
     const recordSet = buildA0RecordSetV1({
