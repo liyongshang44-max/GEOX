@@ -1,5 +1,5 @@
 <!-- docs/digital_twin/mcft/cap_01/GEOX-MCFT-CAP-01-CLOSURE.md -->
-# MCFT-CAP-01 Historical Closure and Active Remediation
+# MCFT-CAP-01 Remediated Closure
 
 ```text
 capability_line_id: MCFT-CAP-01
@@ -8,87 +8,48 @@ name: First-Class Water State Estimate
 runtime_mode: REPLAY
 target_completion_level: Level A
 historical_closure_main_commit: 250053aba801075c17098f8d505d527eb54390e9
-historical_closure_status: SUPERSEDED_PENDING_REMEDIATION
-active_delivery_slice_id: MCFT-CAP-01.CLOSURE-REMEDIATION-V1
+historical_closure_status: SUPERSEDED_BY_REMEDIATION
+remediation_implementation_candidate_head: 193f9785e42eb146e300e2a64abeed455f10e54e
 remediation_pr: 2316
-current_capability_status: IN_IMPLEMENTATION
+current_capability_status: COMPLETE
+active_delivery_slice_id: null
 successor: NOT_YET_AUTHORIZED
+effectiveness_condition: PR_2316_MERGED_AND_VERIFIED_ON_MAIN
 ```
 
-## 1. Why the historical closure was reopened
+## 1. Closure result
 
-The historical closure proved that the implemented A0 path could produce one deterministic bootstrap posterior, append nine canonical facts atomically, rebuild six projections, create an INITIAL lineage and checkpoint, produce a BLOCKED Forecast result, and expose a checkpoint `next_tick_logical_time`.
+The historical closure established one deterministic A0 bootstrap posterior but overstated the persisted handoff boundary. The remediation closes the identified gaps without adding propagation, successful Forecast, Scenario, Recommendation, Decision or AO-ACT.
 
-A later code-level audit established that three closure claims exceeded the actual implementation:
+The bounded capability now establishes:
 
 ```text
 MCFT_CAP_01_COMPLETE
+FIRST_CLASS_WATER_STATE_ESTIMATE_LEVEL_A_ESTABLISHED
 CONTROLLED_REPLAY_BOOTSTRAP_CLOSURE_ESTABLISHED
-NEXT_TICK_HANDOFF_ESTABLISHED
+PERSISTED_NEXT_TICK_HANDOFF_ESTABLISHED
+CONFLICTING_DUPLICATE_OBSERVATION_REJECTION_ESTABLISHED
+EVIDENCE_MODEL_CONSUMPTION_TRACE_ESTABLISHED
+A0_CROSS_REFERENCE_GRAPH_VALIDATION_ESTABLISHED
+OPERATOR_INVOKABLE_MANUAL_RUNTIME_ENTRY_ESTABLISHED
+CROP_STAGE_CONFIGURATION_CONTEXT_ESTABLISHED
+GOVERNANCE_STATUS_ALIGNMENT_ESTABLISHED
 ```
 
-The historical evidence is retained, but these claims are suspended until remediation passes.
+## 2. Persisted handoff proof
 
-## 2. Proven implementation retained
-
-```text
-S1 Canonical Replay Evidence Dataset
-  720 hourly intervals
-  3604 governed Evidence records
-  seven Evidence roles
-  deterministic regeneration
-
-S2 A0 Contracts and Runtime Config subset
-  deterministic object identity
-  immutable Runtime Config
-
-S3A Persistence subset
-  fenced lease
-  aggregate idempotency
-  nine-fact atomic append
-  six rebuildable projections
-
-S3B Bootstrap State Math
-  posterior_mean: 0.192595
-  posterior_variance: 0.002678
-  posterior_stddev: 0.051746
-
-S4 A0 Runtime Integration
-  controlled Replay A0 transaction
-  INITIAL lineage
-  INITIAL checkpoint
-  BLOCKED zero-point Forecast result
-  checkpoint next_tick_logical_time: 2026-06-01T02:00:00.000Z
-```
-
-The following claims remain valid:
+`PrepareNextTickInputServiceV1` reconstructs the next tick from a PostgreSQL `REPEATABLE READ READ ONLY` snapshot containing:
 
 ```text
-BOOTSTRAP_STATE_MATH_ESTABLISHED
-STATIC_BOOTSTRAP_ASSIMILATION_ESTABLISHED
-FIRST_BOOTSTRAP_POSTERIOR_ESTABLISHED
-A0_ATOMIC_COMMIT_ESTABLISHED
-ACTIVE_INITIAL_LINEAGE_ESTABLISHED
-INITIAL_CHECKPOINT_ESTABLISHED
-BLOCKED_FORECAST_RESULT_ESTABLISHED
-NEXT_TICK_CHECKPOINT_POINTER_ESTABLISHED
-```
-
-## 3. Confirmed remediation requirements
-
-### Persisted next-tick handoff
-
-A checkpoint time pointer is not a complete handoff. The remediated path must reconstruct, from PostgreSQL:
-
-```text
-active lineage
+active lineage object ref
+active lineage semantic id
 latest checkpoint
 previous posterior State
 Runtime Config
 Reality Binding Runtime snapshot
 ```
 
-and return:
+It returns:
 
 ```text
 previous_posterior_ref
@@ -101,9 +62,16 @@ runtime_config_ref/hash
 reality_binding_ref/hash
 ```
 
-### Conflicting duplicate observation rejection
+The identity distinction is explicit:
 
-The soil selector must use:
+```text
+active_lineage_ref = twin_runtime_lineage_v1.object_id
+lineage_id = semantic lineage identity
+```
+
+## 3. Evidence integrity proof
+
+The soil selector uses:
 
 ```text
 observed_at descending
@@ -111,92 +79,56 @@ ingested_at descending
 source_record_id ascending
 ```
 
-Same origin source and observation time with different canonical payload must produce:
+Same origin source and observation time with different canonical payload fails with `CONFLICTING_DUPLICATE_OBSERVATION` before Runtime Config, A0 facts, lease, idempotency guard or projection writes.
 
-```text
-CONFLICTING_DUPLICATE_OBSERVATION
-zero Runtime Config fact delta
-zero A0 fact delta
-zero projection delta
-```
+Evidence Window entries preserve ingestion, freshness, quality, units, conversion, limitations, disposition and model-consumption semantics. Soil is consumed by the bootstrap estimator; rainfall and historical ET0 are context-only.
 
-### Complete Evidence consumption trace
+## 4. Object graph proof
 
-Evidence Window inclusion and estimator consumption are separate semantics. Every entry must preserve ingestion time, freshness, quality, unit conversion, limitations, disposition and model-consumption status.
+The A0 validator checks Lineage, Evidence Window, Transition, Assimilation, State, Forecast, Tick, Checkpoint, Health, Runtime Config refs/hashes and next-tick time independently of the aggregate hash. Fourteen rehashed cross-reference corruptions were rejected.
 
-```text
-soil observation:
-CONSUMED_BY_BOOTSTRAP_ESTIMATOR
-
-rainfall and historical ET0:
-CONTEXT_ONLY_NOT_CONSUMED_BY_BOOTSTRAP_ESTIMATOR
-```
-
-### Complete A0 reference-graph validation
-
-All internal object references must be validated independently of member and aggregate hashes. A modified reference remains invalid even after every affected hash is recomputed.
-
-### Manual Runtime entry
-
-The capability requires the explicit one-shot entry:
+## 5. Manual runner proof
 
 ```text
 apps/server/scripts/mcft/MCFT_1_FIRST_CLASS_WATER_STATE_RUNNER.ts
 ```
 
-The runner is not a scheduler and does not establish continuous Runtime.
-
-### Crop-stage configuration context
-
-The Dataset package must include time-resolved crop-stage context derived from the frozen Configuration Binding Matrix. It remains:
+Observed results:
 
 ```text
-CONFIGURATION_DERIVED_CONTEXT
-not Evidence
+first execution: INSERTED
+second execution: EXISTING_IDEMPOTENT_SUCCESS
+a0_record_set_id: a0rs_b24d89a612198b8f234aab45
+posterior_mean: 0.192595
+posterior_variance: 0.002678
+next_logical_tick_time: 2026-06-01T02:00:00.000Z
 ```
 
-## 4. Current remediation implementation
+The runner is one-shot and operator-invokable. It is not a scheduler and does not establish continuous Runtime.
 
-The remediation branch establishes candidate implementations for:
+## 6. Dataset context proof
+
+`configuration_context.json` and `manifest_v2.json` add a deterministic, time-resolved crop-stage schedule as `CONFIGURATION_DERIVED_CONTEXT`, not Evidence. The frozen MCFT-00 authority and original 3604 Evidence records remain byte-unchanged.
+
+## 7. Acceptance evidence
 
 ```text
-PrepareNextTickInputServiceV1
-PostgresNextTickRepositoryV1
-immutable Reality Binding Runtime snapshot
-conflicting-observation rejection
-observed/ingested/id deterministic selection
-complete Evidence Window consumption trace
-complete A0 cross-reference graph validator
-manual MCFT-1 runner
-configuration_context.json
-manifest_v2.json
+S1 Replay Dataset: 12 PASS, 0 FAIL
+S4 A0 Runtime static: 21 PASS, 0 FAIL
+S4 A0 Runtime PostgreSQL: 12 PASS, 0 FAIL
+Remediation static: 18 PASS, 0 FAIL
+Remediation PostgreSQL: 7 PASS, 0 FAIL
+Governance readiness: 106 PASS, 0 FAIL
+Server Typecheck: PASS
+Server Build: PASS
+git diff --check: PASS
+working tree: CLEAN
+CI #4491 / run 29038423099: SUCCESS
 ```
 
-These are candidate facts until specialized static and PostgreSQL Gates, legacy regressions, runner execution, exact-head CI and final closure governance pass.
-
-## 5. Historical evidence retained
+## 8. Preserved nonclaims
 
 ```text
-S1 Replay Dataset Gate: 12 PASS, 0 FAIL
-S2 Contracts/Config Gate: 10 PASS, 0 FAIL
-S3A Static Persistence Gate: 16 PASS, 0 FAIL
-S3A PostgreSQL Gate: 8 PASS, 0 FAIL
-S3B State Math Gate: 108 PASS, 0 FAIL
-S3B Closure Gate: 36 PASS, 0 FAIL
-S4 Static Runtime Gate: 20 PASS, 0 FAIL
-S4 PostgreSQL Runtime Gate: 12 PASS, 0 FAIL
-S4 Closure Gate: 57 PASS, 0 FAIL
-Historical Closure Readiness Gate: 104 PASS, 0 FAIL
-Historical Final Closure Gate: 169 PASS, 0 FAIL
-```
-
-These Gates prove the behavior they tested. They do not prove the newly identified missing requirements.
-
-## 6. Preserved nonclaims
-
-```text
-NO_MCFT_CAP_01_CLOSURE
-NO_PERSISTED_NEXT_TICK_HANDOFF
 NO_PROPAGATION
 NO_SUCCESSFUL_FORECAST
 NO_SCENARIO
@@ -214,20 +146,4 @@ NO_MCFT_GATE_C_CLOSURE
 NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM
 ```
 
-## 7. Reclosure condition
-
-Only after PR #2316 passes all remediation Gates, merges into `main`, and the merged main commit is verified may the capability line re-establish:
-
-```text
-MCFT_CAP_01_COMPLETE
-FIRST_CLASS_WATER_STATE_ESTIMATE_LEVEL_A_ESTABLISHED
-CONTROLLED_REPLAY_BOOTSTRAP_CLOSURE_ESTABLISHED
-PERSISTED_NEXT_TICK_HANDOFF_ESTABLISHED
-CONFLICTING_DUPLICATE_OBSERVATION_REJECTION_ESTABLISHED
-EVIDENCE_MODEL_CONSUMPTION_TRACE_ESTABLISHED
-A0_CROSS_REFERENCE_GRAPH_VALIDATION_ESTABLISHED
-OPERATOR_INVOKABLE_MANUAL_RUNTIME_ENTRY_ESTABLISHED
-CROP_STAGE_CONFIGURATION_CONTEXT_ESTABLISHED
-```
-
-No MCFT-2 work is authorized before this transition.
+MCFT-CAP-01 completion does not authorize MCFT-2. MCFT-2 requires a separate post-merge task authorization.
