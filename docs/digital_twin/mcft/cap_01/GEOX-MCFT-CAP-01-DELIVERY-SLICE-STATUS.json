@@ -43,6 +43,26 @@
     },
     "transition_effective_condition": "PR_2312_MERGED_AND_VERIFIED_ON_MAIN"
   },
+  "s4_closure": {
+    "implementation_candidate_head": "62a3906812ef048ca1e35ced192556b4f843c5b7",
+    "implementation_candidate_ci": {
+      "workflow": "ci",
+      "run_number": 4456,
+      "run_id": 29031549371,
+      "conclusion": "success",
+      "build_test": "PASS",
+      "acceptance": "PASS"
+    },
+    "local_acceptance": {
+      "s4_a0_runtime_static": "20_PASS_0_FAIL",
+      "s4_a0_runtime_postgres": "12_PASS_0_FAIL",
+      "postgres_fault_stages": "17_ROLLBACK_0_PARTIAL_WRITE",
+      "canonical_fact_count": 9,
+      "projection_count": 6,
+      "successful_forecast_latest_count": 0
+    },
+    "transition_effective_condition": "PR_2314_MERGED_AND_VERIFIED_ON_MAIN"
+  },
   "slices": [
     {
       "delivery_slice_id": "MCFT-CAP-01.MCFT-01.CANONICAL-REPLAY-DATASET-V1",
@@ -70,7 +90,7 @@
       "depends_on_delivery_slice_ids": [
         "MCFT-CAP-01.MCFT-02.A0-CONTRACTS-AND-CONFIG-V1"
       ],
-      "claim": "NO_A0_RUNTIME_EXECUTION"
+      "claim": "PERSISTENCE_FOUNDATION_ESTABLISHED"
     },
     {
       "delivery_slice_id": "MCFT-CAP-01.MCFT-07-08.BOOTSTRAP-STATE-MATH-V1",
@@ -92,23 +112,47 @@
       "parallel_dependency_slice_ids": [
         "MCFT-CAP-01.MCFT-03.A0-PERSISTENCE-V1"
       ]
+    },
+    {
+      "delivery_slice_id": "MCFT-CAP-01.MCFT-04-05-08-09.A0-RUNTIME-INTEGRATION-V1",
+      "status": "COMPLETE",
+      "primary_owner_work_package_id": "MCFT-04",
+      "contributing_work_package_ids": [
+        "MCFT-05",
+        "MCFT-08",
+        "MCFT-09"
+      ],
+      "depends_on_delivery_slice_ids": [
+        "MCFT-CAP-01.MCFT-01.CANONICAL-REPLAY-DATASET-V1",
+        "MCFT-CAP-01.MCFT-02.A0-CONTRACTS-AND-CONFIG-V1",
+        "MCFT-CAP-01.MCFT-03.A0-PERSISTENCE-V1",
+        "MCFT-CAP-01.MCFT-07-08.BOOTSTRAP-STATE-MATH-V1"
+      ],
+      "claims": [
+        "A0_RUNTIME_EXECUTION_ESTABLISHED",
+        "BOOTSTRAP_STATE_COMMITTED",
+        "ACTIVE_INITIAL_LINEAGE_ESTABLISHED",
+        "INITIAL_CHECKPOINT_ESTABLISHED",
+        "BLOCKED_FORECAST_RESULT_ESTABLISHED",
+        "NEXT_TICK_HANDOFF_ESTABLISHED"
+      ]
     }
   ],
   "next_authorized_slice_ids": [
-    "MCFT-CAP-01.MCFT-04-05-08-09.A0-RUNTIME-INTEGRATION-V1"
+    "MCFT-CAP-01.CLOSURE-V1"
   ],
   "nonclaims": [
-    "NO_A0_RUNTIME_EXECUTION",
-    "NO_BOOTSTRAP_STATE_COMMITTED",
-    "NO_ACTIVE_INITIAL_LINEAGE",
-    "NO_INITIAL_CHECKPOINT",
+    "NO_PROPAGATION",
     "NO_SUCCESSFUL_FORECAST",
     "NO_SCENARIO",
-    "NO_PROPAGATION",
-    "NO_CONTINUOUS_RUNTIME",
     "NO_RECOMMENDATION",
-    "NO_ACTION_LOOP",
+    "NO_AO_ACT",
+    "NO_CONTINUOUS_RUNTIME",
+    "NO_CONTINUOUS_SCHEDULER",
+    "NO_RESTART_BACKFILL_PROOF",
+    "NO_LATE_EVIDENCE_REVISION_RUNTIME",
     "NO_LIVE_FIELD_CLAIM",
+    "NO_MCFT_GATE_A_CLOSURE",
     "NO_MCFT_CAP_01_CLOSURE"
   ]
 }

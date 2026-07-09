@@ -1,0 +1,25 @@
+{
+  "schema_version": "mcft_cap_01_a0_runtime_negative_fixtures_v1",
+  "fixtures": [
+    {"fixture_id":"future_observation_available_early","failure_stage":"EVIDENCE_WINDOW","expected_reason_code":"FUTURE_EVIDENCE_FORBIDDEN","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"late_soil_observation_only","failure_stage":"EVIDENCE_WINDOW","expected_reason_code":"NO_USABLE_SOIL_OBSERVATION_IN_A0_WINDOW","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"quality_fail_soil_observation_only","failure_stage":"EVIDENCE_WINDOW","expected_reason_code":"NO_USABLE_SOIL_OBSERVATION_IN_A0_WINDOW","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"source_record_hash_mismatch","failure_stage":"REPLAY_ADAPTER","expected_reason_code":"SOURCE_RECORD_HASH_MISMATCH","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"runtime_config_from_future","failure_stage":"A0_RECORD_SET_BUILD","expected_reason_code":"RUNTIME_CONFIG_FROM_FUTURE_FORBIDDEN","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"evidence_window_not_frozen","failure_stage":"A0_RECORD_SET_BUILD","expected_reason_code":"FROZEN_EVIDENCE_WINDOW_REQUIRED","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"evidence_window_logical_time_mismatch","failure_stage":"A0_RECORD_SET_BUILD","expected_reason_code":"EVIDENCE_WINDOW_LOGICAL_TIME_MISMATCH","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"blocked_forecast_has_points","failure_stage":"CANONICAL_VALIDATION","expected_reason_code":"BLOCKED_FORECAST_ZERO_POINTS_REQUIRED","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"blocked_forecast_missing_reasons","failure_stage":"CANONICAL_VALIDATION","expected_reason_code":"BLOCKED_FORECAST_REASONS_REQUIRED","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"blocked_forecast_scenario_eligible","failure_stage":"CANONICAL_VALIDATION","expected_reason_code":"BLOCKED_FORECAST_SCENARIO_INELIGIBLE","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"initial_lineage_conflict","failure_stage":"PERSISTENCE_PRECONDITION","expected_reason_code":"INITIAL_LINEAGE_CONFLICT","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"stale_fencing_token","failure_stage":"PERSISTENCE_PRECONDITION","expected_reason_code":"STALE_FENCING_TOKEN","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"same_key_different_hash","failure_stage":"IDEMPOTENCY","expected_reason_code":"IDEMPOTENCY_CONFLICT","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"partial_fact_fault","failure_stage":"ATOMIC_TRANSACTION","expected_reason_code":"FAULT_BEFORE_FACT","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"partial_projection_fault","failure_stage":"ATOMIC_TRANSACTION","expected_reason_code":"FAULT_BEFORE_PROJECTION","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"precommit_fault","failure_stage":"ATOMIC_TRANSACTION","expected_reason_code":"FAULT_BEFORE_COMMIT","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"successful_forecast_projection_written","failure_stage":"PROJECTION_ASSERTION","expected_reason_code":"SUCCESSFUL_FORECAST_POINTER_FORBIDDEN","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"scenario_file_introduced","failure_stage":"CHANGED_FILE_BOUNDARY","expected_reason_code":"SCENARIO_IMPLEMENTATION_FORBIDDEN","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"propagation_file_introduced","failure_stage":"CHANGED_FILE_BOUNDARY","expected_reason_code":"PROPAGATION_IMPLEMENTATION_FORBIDDEN","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"public_write_route_introduced","failure_stage":"CHANGED_FILE_BOUNDARY","expected_reason_code":"PUBLIC_RUNTIME_WRITE_ROUTE_FORBIDDEN","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0}
+  ]
+}
