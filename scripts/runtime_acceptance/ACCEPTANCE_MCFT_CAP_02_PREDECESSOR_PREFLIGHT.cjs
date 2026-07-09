@@ -12,7 +12,7 @@ const path = require('node:path');
 const { URL } = require('node:url');
 const { Pool } = require('pg');
 
-const ROOT = path.resolve(__dirname, '../..');
+const ROOT = path.resolve(__dirname, '../..').replaceAll('\\', '/');
 const BASELINE_MAIN = '7da8fee4daf1f022edff29078a1bbac207d1a32f';
 const IMPLEMENTATION_CANDIDATE = '193f9785e42eb146e300e2a64abeed455f10e54e';
 const FINAL_CLOSURE_HEAD = '7fedd85815cd65f0e3d2aedc74e4d0d9ed1b0558';
