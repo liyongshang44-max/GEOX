@@ -6,11 +6,26 @@ export const MCFT_CAP_02_CONTINUATION_CONFIG_PURPOSE_V1 = "HOURLY_DYNAMICS_CONTI
 export const MCFT_CAP_02_CONTINUATION_CONFIG_SELECTION_MODE_V1 = "EXPLICIT_REPLAY_PIN" as const;
 export const MCFT_CAP_02_CONTINUATION_ROOT_ZONE_POLICY_ID_V1 = "GOVERNED_FIXED_ROOT_ZONE_300MM_V1" as const;
 export const MCFT_CAP_02_CONTINUATION_MODEL_ID_V1 = "ROOT_ZONE_HOURLY_WATER_BALANCE_V1" as const;
+export const MCFT_CAP_02_CONTINUATION_DYNAMICS_MODEL_COMPONENT_REF_V1 = "root_zone_hourly_water_balance_model_component_v1" as const;
 export const MCFT_CAP_02_CONTINUATION_PROCESS_UNCERTAINTY_POLICY_ID_V1 = "CONTROLLED_ADDITIVE_PROCESS_UNCERTAINTY_BUDGET_V1" as const;
+export const MCFT_CAP_02_CONTINUATION_UNCERTAINTY_POLICY_COMPONENT_REF_V1 = MCFT_CAP_02_CONTINUATION_PROCESS_UNCERTAINTY_POLICY_ID_V1;
 export const MCFT_CAP_02_CONTINUATION_NO_OBSERVATION_POLICY_ID_V1 = "DEFER_OBSERVATION_ASSIMILATION_TO_MCFT_CAP_03_V1" as const;
+export const MCFT_CAP_02_CONTINUATION_NO_OBSERVATION_POLICY_COMPONENT_REF_V1 = MCFT_CAP_02_CONTINUATION_NO_OBSERVATION_POLICY_ID_V1;
 export const MCFT_CAP_02_CONTINUATION_FORECAST_BLOCK_POLICY_ID_V1 = "MCFT_CAP_02_PINNED_CONFIG_NO_FORECAST_COMPONENT_V1" as const;
+export const MCFT_CAP_02_CONTINUATION_FORECAST_BLOCK_POLICY_COMPONENT_REF_V1 = MCFT_CAP_02_CONTINUATION_FORECAST_BLOCK_POLICY_ID_V1;
 export const MCFT_CAP_02_CONTINUATION_ROUNDING_RULE_V1 = "DECIMAL_HALF_AWAY_FROM_ZERO_V1" as const;
 export const MCFT_CAP_02_CONTINUATION_CROP_STAGE_CONTEXT_KIND_V1 = "CONFIGURATION_DERIVED_CONTEXT" as const;
+export const MCFT_CAP_02_CONTINUATION_CROP_STAGE_CONTEXT_REF_V1 = "fixtures/mcft/water_state/replay_v1/configuration_context.json" as const;
+export const MCFT_CAP_02_CONTINUATION_CROP_STAGE_CONTEXT_HASH_V1 = "sha256:2287c71e983b1ba529e49939f025d9b035e09e195a5effc994fe54b4ef7863ce" as const;
+export const MCFT_CAP_02_CONTINUATION_SOIL_HYDRAULIC_SOURCE_CONFIG_REF_V1 = "mcft_soil_hydraulic_config_c8_v1" as const;
+export const MCFT_CAP_02_CONTINUATION_SOIL_HYDRAULIC_SOURCE_CONFIG_HASH_V1 = "sha256:3d6e3d8b52a9736ff6898487cacbbffdf71578cca693754ab34cb484e5bc3082" as const;
+export const MCFT_CAP_02_CONTINUATION_SOIL_ROOT_ZONE_CONFIG_REF_V1 = "soil_hydraulic_config_c8_v1" as const;
+export const MCFT_CAP_02_CONTINUATION_MODEL_COMPONENT_REFS_V1 = [
+  MCFT_CAP_02_CONTINUATION_DYNAMICS_MODEL_COMPONENT_REF_V1,
+  MCFT_CAP_02_CONTINUATION_UNCERTAINTY_POLICY_COMPONENT_REF_V1,
+  MCFT_CAP_02_CONTINUATION_NO_OBSERVATION_POLICY_COMPONENT_REF_V1,
+  MCFT_CAP_02_CONTINUATION_FORECAST_BLOCK_POLICY_COMPONENT_REF_V1,
+] as const;
 export const MCFT_CAP_02_CONTINUATION_CROP_ROOT_ZONE_DEPTH_MM_V1 = 300 as const;
 export const MCFT_CAP_02_CONTINUATION_WILTING_POINT_FRACTION_V1 = 0.120000 as const;
 export const MCFT_CAP_02_CONTINUATION_WILTING_POINT_STORAGE_MM_V1 = 36.000000 as const;
@@ -51,19 +66,19 @@ export type ContinuationRuntimeConfigSemanticPayloadV1 = {
   geometry_semantic_hash: string;
   crop_stage_context: {
     context_kind: typeof MCFT_CAP_02_CONTINUATION_CROP_STAGE_CONTEXT_KIND_V1;
-    context_ref: string;
-    context_hash: string;
+    context_ref: typeof MCFT_CAP_02_CONTINUATION_CROP_STAGE_CONTEXT_REF_V1;
+    context_hash: typeof MCFT_CAP_02_CONTINUATION_CROP_STAGE_CONTEXT_HASH_V1;
     resolution_policy_id: typeof MCFT_CAP_02_CONTINUATION_ROOT_ZONE_POLICY_ID_V1;
   };
   dynamics_model: {
-    model_component_ref: string;
+    model_component_ref: typeof MCFT_CAP_02_CONTINUATION_DYNAMICS_MODEL_COMPONENT_REF_V1;
     model_id: typeof MCFT_CAP_02_CONTINUATION_MODEL_ID_V1;
     model_version: 1;
     step_duration: "PT1H";
   };
   soil_hydraulic_snapshot: {
-    source_config_ref: string;
-    source_config_hash: string;
+    source_config_ref: typeof MCFT_CAP_02_CONTINUATION_SOIL_HYDRAULIC_SOURCE_CONFIG_REF_V1;
+    source_config_hash: typeof MCFT_CAP_02_CONTINUATION_SOIL_HYDRAULIC_SOURCE_CONFIG_HASH_V1;
     root_zone_depth_mm: typeof MCFT_CAP_02_CONTINUATION_CROP_ROOT_ZONE_DEPTH_MM_V1;
     wilting_point_fraction: typeof MCFT_CAP_02_CONTINUATION_WILTING_POINT_FRACTION_V1;
     wilting_point_storage_mm: typeof MCFT_CAP_02_CONTINUATION_WILTING_POINT_STORAGE_MM_V1;
@@ -94,10 +109,10 @@ export type ContinuationRuntimeConfigSemanticPayloadV1 = {
     spatial_overlap_deduplication: typeof MCFT_CAP_02_CONTINUATION_SPATIAL_OVERLAP_POLICY_V1;
   };
   no_observation_update_policy: {
-    policy_id: typeof MCFT_CAP_02_CONTINUATION_NO_OBSERVATION_POLICY_ID_V1;
+    policy_id: typeof MCFT_CAP_02_CONTINUATION_NO_OBSERVATION_POLICY_V1;
   };
   forecast_block_policy: {
-    policy_id: typeof MCFT_CAP_02_CONTINUATION_FORECAST_BLOCK_POLICY_ID_V1;
+    policy_id: typeof MCFT_CAP_02_CONTINUATION_FORECAST_BLOCK_POLICY_V1;
   };
   rounding: {
     output_decimals: typeof MCFT_CAP_02_CONTINUATION_OUTPUT_DECIMALS_V1;
@@ -105,8 +120,8 @@ export type ContinuationRuntimeConfigSemanticPayloadV1 = {
     computation_storage_variance_scale: typeof MCFT_CAP_02_CONTINUATION_COMPUTATION_STORAGE_VARIANCE_SCALE_V1;
     rule: typeof MCFT_CAP_02_CONTINUATION_ROUNDING_RULE_V1;
   };
-  soil_root_zone_config_refs: string[];
-  model_component_refs: string[];
+  soil_root_zone_config_refs: typeof MCFT_CAP_02_CONTINUATION_MODEL_COMPONENT_REFS_V1 | string[];
+  model_component_refs: typeof MCFT_CAP_02_CONTINUATION_MODEL_COMPONENT_REFS_V1 | string[];
 };
 
 function requireRecordV1(value: unknown, code: string): Record<string, unknown> {
@@ -124,13 +139,17 @@ function requireNumberV1(value: unknown, code: string): number {
   return value;
 }
 
-function requireArrayV1(value: unknown, code: string): unknown[] {
+function requireArrayV1(value: unknown, code: string): string[] {
   if (!Array.isArray(value)) throw new Error(code);
-  return value;
+  return value.map((item) => requireStringV1(item, code));
 }
 
 function exactV1<T>(actual: T, expected: T, code: string): void {
   if (actual !== expected) throw new Error(code);
+}
+
+function exactArrayV1(actual: unknown, expected: readonly string[], code: string): void {
+  if (!Array.isArray(actual) || JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error(code);
 }
 
 export function validateContinuationRuntimeConfigSemanticPayloadV1(value: unknown): asserts value is ContinuationRuntimeConfigSemanticPayloadV1 {
@@ -147,19 +166,19 @@ export function validateContinuationRuntimeConfigSemanticPayloadV1(value: unknow
 
   const cropStageContext = requireRecordV1(payload.crop_stage_context, "CROP_STAGE_CONTEXT_REQUIRED");
   exactV1(cropStageContext.context_kind, MCFT_CAP_02_CONTINUATION_CROP_STAGE_CONTEXT_KIND_V1, "CROP_STAGE_CONTEXT_KIND_MISMATCH");
-  requireStringV1(cropStageContext.context_ref, "CROP_STAGE_CONTEXT_REF_REQUIRED");
-  requireStringV1(cropStageContext.context_hash, "CROP_STAGE_CONTEXT_HASH_REQUIRED");
+  exactV1(cropStageContext.context_ref, MCFT_CAP_02_CONTINUATION_CROP_STAGE_CONTEXT_REF_V1, "CROP_STAGE_CONTEXT_REF_MISMATCH");
+  exactV1(cropStageContext.context_hash, MCFT_CAP_02_CONTINUATION_CROP_STAGE_CONTEXT_HASH_V1, "CROP_STAGE_CONTEXT_HASH_MISMATCH");
   exactV1(cropStageContext.resolution_policy_id, MCFT_CAP_02_CONTINUATION_ROOT_ZONE_POLICY_ID_V1, "CROP_STAGE_CONTEXT_POLICY_MISMATCH");
 
   const dynamicsModel = requireRecordV1(payload.dynamics_model, "DYNAMICS_MODEL_REQUIRED");
-  requireStringV1(dynamicsModel.model_component_ref, "DYNAMICS_MODEL_COMPONENT_REF_REQUIRED");
+  exactV1(dynamicsModel.model_component_ref, MCFT_CAP_02_CONTINUATION_DYNAMICS_MODEL_COMPONENT_REF_V1, "DYNAMICS_MODEL_COMPONENT_REF_MISMATCH");
   exactV1(dynamicsModel.model_id, MCFT_CAP_02_CONTINUATION_MODEL_ID_V1, "DYNAMICS_MODEL_ID_MISMATCH");
   exactV1(dynamicsModel.model_version, 1, "DYNAMICS_MODEL_VERSION_MISMATCH");
   exactV1(dynamicsModel.step_duration, "PT1H", "DYNAMICS_MODEL_STEP_DURATION_MISMATCH");
 
   const hydraulic = requireRecordV1(payload.soil_hydraulic_snapshot, "SOIL_HYDRAULIC_SNAPSHOT_REQUIRED");
-  requireStringV1(hydraulic.source_config_ref, "SOIL_HYDRAULIC_SOURCE_CONFIG_REF_REQUIRED");
-  requireStringV1(hydraulic.source_config_hash, "SOIL_HYDRAULIC_SOURCE_CONFIG_HASH_REQUIRED");
+  exactV1(hydraulic.source_config_ref, MCFT_CAP_02_CONTINUATION_SOIL_HYDRAULIC_SOURCE_CONFIG_REF_V1, "SOIL_HYDRAULIC_SOURCE_CONFIG_REF_MISMATCH");
+  exactV1(hydraulic.source_config_hash, MCFT_CAP_02_CONTINUATION_SOIL_HYDRAULIC_SOURCE_CONFIG_HASH_V1, "SOIL_HYDRAULIC_SOURCE_CONFIG_HASH_MISMATCH");
   exactV1(hydraulic.root_zone_depth_mm, MCFT_CAP_02_CONTINUATION_CROP_ROOT_ZONE_DEPTH_MM_V1, "ROOT_ZONE_DEPTH_MM_MISMATCH");
   exactV1(hydraulic.wilting_point_fraction, MCFT_CAP_02_CONTINUATION_WILTING_POINT_FRACTION_V1, "WILTING_POINT_FRACTION_MISMATCH");
   exactV1(hydraulic.wilting_point_storage_mm, MCFT_CAP_02_CONTINUATION_WILTING_POINT_STORAGE_MM_V1, "WILTING_POINT_STORAGE_MISMATCH");
@@ -190,10 +209,10 @@ export function validateContinuationRuntimeConfigSemanticPayloadV1(value: unknow
   exactV1(irrigationInputPolicy.spatial_overlap_deduplication, MCFT_CAP_02_CONTINUATION_SPATIAL_OVERLAP_POLICY_V1, "IRRIGATION_SPATIAL_OVERLAP_POLICY_MISMATCH");
 
   const noObservation = requireRecordV1(payload.no_observation_update_policy, "NO_OBSERVATION_UPDATE_POLICY_REQUIRED");
-  exactV1(noObservation.policy_id, MCFT_CAP_02_CONTINUATION_NO_OBSERVATION_POLICY_ID_V1, "NO_OBSERVATION_POLICY_MISMATCH");
+  exactV1(noObservation.policy_id, MCFT_CAP_02_CONTINUATION_NO_OBSERVATION_POLICY_V1, "NO_OBSERVATION_POLICY_MISMATCH");
 
   const forecastBlock = requireRecordV1(payload.forecast_block_policy, "FORECAST_BLOCK_POLICY_REQUIRED");
-  exactV1(forecastBlock.policy_id, MCFT_CAP_02_CONTINUATION_FORECAST_BLOCK_POLICY_ID_V1, "FORECAST_BLOCK_POLICY_MISMATCH");
+  exactV1(forecastBlock.policy_id, MCFT_CAP_02_CONTINUATION_FORECAST_BLOCK_POLICY_V1, "FORECAST_BLOCK_POLICY_MISMATCH");
 
   const rounding = requireRecordV1(payload.rounding, "ROUNDING_REQUIRED");
   exactV1(rounding.output_decimals, MCFT_CAP_02_CONTINUATION_OUTPUT_DECIMALS_V1, "ROUNDING_OUTPUT_DECIMALS_MISMATCH");
@@ -202,11 +221,7 @@ export function validateContinuationRuntimeConfigSemanticPayloadV1(value: unknow
   exactV1(rounding.rule, MCFT_CAP_02_CONTINUATION_ROUNDING_RULE_V1, "ROUNDING_RULE_MISMATCH");
 
   const soilRootZoneConfigRefs = requireArrayV1(payload.soil_root_zone_config_refs, "SOIL_ROOT_ZONE_CONFIG_REFS_REQUIRED");
-  if (soilRootZoneConfigRefs.length !== 1) throw new Error("SOIL_ROOT_ZONE_CONFIG_REFS_CARDINALITY");
-  soilRootZoneConfigRefs.forEach((value) => requireStringV1(value, "SOIL_ROOT_ZONE_CONFIG_REF_REQUIRED"));
-
+  exactArrayV1(soilRootZoneConfigRefs, [MCFT_CAP_02_CONTINUATION_SOIL_ROOT_ZONE_CONFIG_REF_V1], "SOIL_ROOT_ZONE_CONFIG_REFS_MISMATCH");
   const modelComponentRefs = requireArrayV1(payload.model_component_refs, "MODEL_COMPONENT_REFS_REQUIRED");
-  if (modelComponentRefs.length !== 4) throw new Error("MODEL_COMPONENT_REFS_CARDINALITY");
-  modelComponentRefs.forEach((value) => requireStringV1(value, "MODEL_COMPONENT_REF_REQUIRED"));
-  if (!modelComponentRefs.includes(dynamicsModel.model_component_ref as string)) throw new Error("DYNAMICS_MODEL_COMPONENT_REF_NOT_LISTED");
+  exactArrayV1(modelComponentRefs, [...MCFT_CAP_02_CONTINUATION_MODEL_COMPONENT_REFS_V1], "MODEL_COMPONENT_REFS_MISMATCH");
 }
