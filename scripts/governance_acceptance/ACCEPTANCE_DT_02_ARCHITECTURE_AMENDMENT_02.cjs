@@ -11,6 +11,7 @@ const ROOT = path.resolve(__dirname, '../..');
 const BASE = '09f03488713cde4dbd8c48914fdcb30637d19a3d';
 const F = Object.freeze({
   amendment: 'docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-02.md',
+  boundaryAddendum: 'docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-02-CHANGED-FILE-BOUNDARY-ADDENDUM.md',
   bootstrap: 'docs/digital_twin/GEOX-DT-02-BOOTSTRAP-STATE-SEMANTICS.json',
   objectSet: 'docs/digital_twin/GEOX-DT-02-CANONICAL-OBJECT-SET.json',
   transactionMatrix: 'docs/digital_twin/GEOX-DT-02-ATOMIC-TRANSACTION-MATRIX.json',
@@ -65,12 +66,17 @@ try {
 }
 
 const amendment = read(F.amendment);
+const boundaryAddendum = read(F.boundaryAddendum);
 const closure = read(F.closure);
 const closureStatus = field(closure, 'status');
 if (!['PENDING_ACCEPTANCE', 'COMPLETE'].includes(closureStatus)) fail(`invalid closure status ${closureStatus}`);
 else pass(`closure status ${closureStatus}`);
 if (!amendment.includes(`status: ${closureStatus}`)) fail('amendment and closure status mismatch');
 else pass('amendment and closure status aligned');
+if (!boundaryAddendum.includes(`status: ${closureStatus}`)) fail('boundary addendum status mismatch');
+else pass('boundary addendum status aligned');
+if (!boundaryAddendum.includes(F.dt01Acceptance) || !boundaryAddendum.includes(F.verticalGate)) fail('boundary addendum lacks exact predecessor Gate paths');
+else pass('boundary addendum freezes exact predecessor Gate compatibility paths');
 if (bootstrap.status !== closureStatus) fail('bootstrap machine status mismatch');
 else pass('bootstrap machine status aligned');
 const a02 = (adrs.amendments || []).find((row) => row.id === 'DT02-AMENDMENT-02');
@@ -134,6 +140,7 @@ try {
   const changed = cp.execFileSync('git', ['diff', '--name-only', `${BASE}...HEAD`], {cwd: ROOT, encoding: 'utf8'}).trim().split(/\r?\n/).filter(Boolean);
   const allowed = new Set([
     F.amendment,
+    F.boundaryAddendum,
     F.bootstrap,
     F.objectSet,
     F.transactionMatrix,
