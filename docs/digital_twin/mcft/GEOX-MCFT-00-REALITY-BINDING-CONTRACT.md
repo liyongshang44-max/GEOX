@@ -13,7 +13,7 @@ successor: MCFT-01 Canonical Replay Dataset
 runtime_mode: REPLAY
 implementation_capability: GOVERNANCE_ONLY
 status: FROZEN
-acceptance_status: PENDING
+acceptance_status: COMPLETE
 duplicate_implementation_pr: #2305 CLOSED_SUPERSEDED
 ```
 
@@ -273,7 +273,7 @@ same ID + different computed semantic hash
   => IDEMPOTENCY_CONFLICT
 ```
 
-The candidate identity after adapter-version binding is:
+The frozen identity after adapter-version binding is:
 
 ```text
 binding_id: mcft_rb_bf1da664164a4fedda249bcb
@@ -320,7 +320,7 @@ The Gate validates:
 
 - 57 evidence-bearing hard checks;
 - exact reason code and exact validation stage for every negative fixture;
-- 80 exact negative fixtures in the current candidate;
+- 80 exact negative fixtures;
 - stale or forged declared-hash rejection;
 - positive and negative half-tie geometry rounding;
 - adapter-version binding equality;
