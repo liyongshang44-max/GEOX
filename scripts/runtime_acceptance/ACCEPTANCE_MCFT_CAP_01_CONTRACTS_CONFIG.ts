@@ -1,5 +1,5 @@
 // scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_01_CONTRACTS_CONFIG.ts
-// Purpose: compile twin_runtime_config_v1 from the final MCFT-00 artifacts and verify deterministic identity, hash, purity-facing inputs, and mismatch rejection.
+// Purpose: compile twin_runtime_config_v1 from the final MCFT-00 artifacts and verify deterministic identity, hash, authority separation, and mismatch rejection.
 // Boundary: acceptance-only filesystem reads; no database, network, Runtime orchestration, or canonical write.
 
 import assert from "node:assert/strict";
@@ -33,6 +33,8 @@ check(first.runtime_config_ref === null && first.runtime_config_hash === null, "
 check(first.payload.reality_binding_hash === "sha256:bf1da664164a4fedda249bcb0e330c1af2083173a52bd704f01eac3ad277ba4f", "final Reality binding hash consumed");
 check(first.payload.source_matrix_hash === "sha256:c5187c23be0d058ffa23d464ae1139f924f5af064a270248746fbabde4c3e51b", "final source matrix hash consumed");
 check(first.payload.configuration_matrix_hash === "sha256:381ef166454c7b698c6641fadc5d08019fecff127e9529a4c58a1f09d9e1fef5", "final configuration matrix hash consumed");
+check(JSON.stringify(first.payload.soil_hydraulic_configuration_refs) === JSON.stringify(["soil_hydraulic_config_c8_v1"]), "soil-hydraulic binding resolved uniquely");
+check(JSON.stringify(first.payload.crop_water_use_configuration_refs) === JSON.stringify(["crop_water_use_config_c8_v1"]), "crop-water-use binding resolved uniquely");
 const forged = readJson<Mcft00RealityArtifactV1>("docs/digital_twin/mcft/GEOX-MCFT-00-REALITY-BINDING.json");
 forged.determinism_hash = "sha256:forged";
 assert.throws(() => compile("2026-06-01T00:00:00.000Z", forged), /REALITY_BINDING_HASH_MISMATCH/);
