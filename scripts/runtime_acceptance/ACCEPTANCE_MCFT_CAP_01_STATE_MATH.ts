@@ -1,6 +1,6 @@
 // scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_01_STATE_MATH.ts
-// Purpose: prove S3B exact bootstrap mathematics, physical bounds, uncertainty, negative cases, determinism, immutability, config identity, purity, and changed-file boundary.
-// Boundary: acceptance-only fixture and source reads; no database, canonical write, Runtime orchestration, Evidence selection, network, or wall clock.
+// Purpose: prove S3B exact bootstrap mathematics, physical bounds, uncertainty, negative cases, determinism, immutability, compiled config identity, purity, and changed-file boundary.
+// Boundary: acceptance-only fixture, authority-artifact, and source reads; no database, canonical write, Runtime orchestration, Evidence selection, network, or wall clock.
 
 import assert from "node:assert/strict";
 import cp from "node:child_process";
@@ -14,6 +14,12 @@ import {
   validateRootZoneWaterPosteriorV1,
   type RootZoneWaterPosteriorInputV1,
 } from "../../apps/server/src/domain/soil_water/root_zone_water_posterior_v1.js";
+import {
+  compileRuntimeConfigFromAuthorityArtifactsV1,
+  type Mcft00ConfigurationMatrixArtifactV1,
+  type Mcft00RealityArtifactV1,
+  type Mcft00SourceMatrixArtifactV1,
+} from "../../apps/server/src/runtime/twin_runtime/runtime_config_authority_adapter_v1.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const BASELINE = "4ddd2bbf4d5d421f875e3ab5b1bfd76749f2ca3a";
@@ -164,6 +170,20 @@ check(MCFT_CAP_01_BOOTSTRAP_MODEL_CONFIG_V1.physical_bound_version === "ROOT_ZON
 check(MCFT_CAP_01_BOOTSTRAP_MODEL_CONFIG_V1.gaussian_interval_rule === "NORMAL_95_Z_1_96_V1", "Runtime Config Gaussian interval identity present");
 check(MCFT_CAP_01_BOOTSTRAP_MODEL_CONFIG_V1.uncertainty_interval_clip_rule === "CLIP_TO_ZERO_AND_SATURATION_WITH_UNCLIPPED_METADATA_V1", "Runtime Config clipping identity present");
 check(JSON.stringify(MCFT_CAP_01_BOOTSTRAP_MODEL_CONFIG_V1.interval_clip_bounds) === JSON.stringify([0, "saturation_fraction"]), "Runtime Config clipping bounds present");
+
+const compiledRuntimeConfig = compileRuntimeConfigFromAuthorityArtifactsV1({
+  realityArtifact: readJson<Mcft00RealityArtifactV1>("docs/digital_twin/mcft/GEOX-MCFT-00-REALITY-BINDING.json"),
+  sourceMatrixArtifact: readJson<Mcft00SourceMatrixArtifactV1>("docs/digital_twin/mcft/GEOX-MCFT-00-SOURCE-BINDING-MATRIX.json"),
+  configurationMatrixArtifact: readJson<Mcft00ConfigurationMatrixArtifactV1>("docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json"),
+  logical_time: "2026-06-01T00:00:00.000Z",
+  created_at: "2026-06-01T00:00:00.000Z",
+});
+const compiledBootstrapConfig = compiledRuntimeConfig.payload.bootstrap_model_config as Record<string, unknown>;
+check(compiledRuntimeConfig.object_type === "twin_runtime_config_v1", "compiled Runtime Config object type");
+check(compiledBootstrapConfig.physical_bound_version === "ROOT_ZONE_WATER_PHYSICAL_BOUNDS_V1", "compiled Runtime Config carries physical-bound identity");
+check(compiledBootstrapConfig.gaussian_interval_rule === "NORMAL_95_Z_1_96_V1", "compiled Runtime Config carries Gaussian interval identity");
+check(compiledBootstrapConfig.uncertainty_interval_clip_rule === "CLIP_TO_ZERO_AND_SATURATION_WITH_UNCLIPPED_METADATA_V1", "compiled Runtime Config carries clipping identity");
+check(JSON.stringify(compiledBootstrapConfig.interval_clip_bounds) === JSON.stringify([0, "saturation_fraction"]), "compiled Runtime Config carries symbolic clipping bounds");
 
 const negativeFixture = readJson<{ fixtures: Array<Record<string, unknown>> }>(NEGATIVE_PATH);
 check(negativeFixture.fixtures.length >= 18, "negative fixture catalog is complete");
