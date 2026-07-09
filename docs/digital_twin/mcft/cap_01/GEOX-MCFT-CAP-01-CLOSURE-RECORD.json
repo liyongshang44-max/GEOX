@@ -1,0 +1,185 @@
+{
+  "schema_version": "geox_mcft_cap_01_closure_record_v1",
+  "capability_line_id": "MCFT-CAP-01",
+  "display_alias": "MCFT-1",
+  "name": "First-Class Water State Estimate",
+  "runtime_mode": "REPLAY",
+  "target_completion_level": "Level A",
+  "delivery_slice_id": "MCFT-CAP-01.CLOSURE-V1",
+  "status": "CANDIDATE",
+  "authority": {
+    "historical_baseline_main_commit": "94fe516ccbf8831be05c36ede5e2732bf7e19d55",
+    "runtime_delivery_main_commit": "4a0fd03beb05298028101a4999c67a5e053dadb8",
+    "reality_binding_id": "mcft_rb_bf1da664164a4fedda249bcb",
+    "reality_binding_hash": "sha256:bf1da664164a4fedda249bcb0e330c1af2083173a52bd704f01eac3ad277ba4f",
+    "source_matrix_hash": "sha256:c5187c23be0d058ffa23d464ae1139f924f5af064a270248746fbabde4c3e51b",
+    "configuration_matrix_hash": "sha256:381ef166454c7b698c6641fadc5d08019fecff127e9529a4c58a1f09d9e1fef5",
+    "geometry_semantic_hash": "sha256:d3dbc5495485e7af68acdc4b32e6061c2ea99772835be2805ae706b74d75ca51"
+  },
+  "completed_delivery_slices": [
+    {
+      "delivery_slice_id": "MCFT-CAP-01.MCFT-01.CANONICAL-REPLAY-DATASET-V1",
+      "status": "COMPLETE",
+      "merged_main_commit": "b0b364933956a65345b927c6c5618e9d4ebe22af",
+      "evidence": {
+        "replay_dataset_gate": "12_PASS_0_FAIL",
+        "dataset_interval_count": 720,
+        "dataset_record_count": 3604,
+        "runtime_mode": "REPLAY"
+      }
+    },
+    {
+      "delivery_slice_id": "MCFT-CAP-01.MCFT-02.A0-CONTRACTS-AND-CONFIG-V1",
+      "status": "COMPLETE",
+      "merged_main_commit": "b0b364933956a65345b927c6c5618e9d4ebe22af",
+      "evidence": {
+        "contracts_config_gate": "10_PASS_0_FAIL",
+        "immutable_runtime_config": true,
+        "deterministic_identity": true
+      }
+    },
+    {
+      "delivery_slice_id": "MCFT-CAP-01.MCFT-03.A0-PERSISTENCE-V1",
+      "status": "COMPLETE",
+      "merged_main_commit": "b0b364933956a65345b927c6c5618e9d4ebe22af",
+      "evidence": {
+        "static_persistence_gate": "16_PASS_0_FAIL",
+        "postgres_gate": "8_PASS_0_FAIL",
+        "fenced_lease": true,
+        "aggregate_idempotency": true,
+        "rebuildable_projections": true
+      }
+    },
+    {
+      "delivery_slice_id": "MCFT-CAP-01.MCFT-07-08.BOOTSTRAP-STATE-MATH-V1",
+      "status": "COMPLETE",
+      "merged_main_commit": "5d17e6ad9944376bbb5a71c9d801aa4472afe592",
+      "evidence": {
+        "state_math_gate": "108_PASS_0_FAIL",
+        "closure_gate": "36_PASS_0_FAIL",
+        "posterior_mean": 0.192595,
+        "posterior_variance": 0.002678,
+        "posterior_stddev": 0.051746,
+        "storage_mean_mm": 57.778512,
+        "available_water_fraction": 0.403306,
+        "depletion_from_field_capacity_mm": 32.221488,
+        "confidence_status": "NOT_ESTABLISHED"
+      }
+    },
+    {
+      "delivery_slice_id": "MCFT-CAP-01.MCFT-04-05-08-09.A0-RUNTIME-INTEGRATION-V1",
+      "status": "COMPLETE",
+      "merged_main_commit": "4a0fd03beb05298028101a4999c67a5e053dadb8",
+      "evidence": {
+        "static_runtime_gate": "20_PASS_0_FAIL",
+        "postgres_runtime_gate": "12_PASS_0_FAIL",
+        "slice_closure_gate": "57_PASS_0_FAIL",
+        "fault_stages": 17,
+        "partial_write_count": 0,
+        "canonical_fact_count": 9,
+        "projection_count": 6,
+        "active_lineage_kind": "INITIAL",
+        "checkpoint_kind": "INITIAL",
+        "forecast_status": "BLOCKED",
+        "forecast_point_count": 0,
+        "successful_forecast_latest_count": 0,
+        "next_tick_logical_time": "2026-06-01T02:00:00.000Z",
+        "same_input_replay_before_lease": true,
+        "projection_rebuild_equivalent": true
+      }
+    }
+  ],
+  "closure_proof": {
+    "controlled_bootstrap_posterior": true,
+    "a0_atomicity": true,
+    "a0_idempotency": true,
+    "projection_rebuild": true,
+    "next_tick_handoff": true,
+    "explicit_replay_clock": true,
+    "no_future_leakage": true,
+    "blocked_forecast_without_success_claim": true,
+    "one_semantic_core_preserved": true
+  },
+  "candidate_completion_claims": [
+    "MCFT_CAP_01_COMPLETE",
+    "FIRST_CLASS_WATER_STATE_ESTIMATE_LEVEL_A_ESTABLISHED",
+    "CONTROLLED_REPLAY_BOOTSTRAP_CLOSURE_ESTABLISHED"
+  ],
+  "owner_work_package_statuses": {
+    "MCFT-01": {
+      "status": "COMPLETE",
+      "established_scope": "30-day controlled Canonical Replay Dataset"
+    },
+    "MCFT-02": {
+      "status": "PARTIALLY_ESTABLISHED",
+      "established_scope": "A0 canonical object and immutable Runtime Config subset only"
+    },
+    "MCFT-03": {
+      "status": "PARTIALLY_ESTABLISHED",
+      "established_scope": "A0 persistence, fenced lease, aggregate idempotency and six-projection subset only"
+    },
+    "MCFT-04": {
+      "status": "PARTIALLY_ESTABLISHED",
+      "established_scope": "one controlled A0 bootstrap transaction and next-tick handoff only"
+    },
+    "MCFT-05": {
+      "status": "PARTIALLY_ESTABLISHED",
+      "established_scope": "one frozen bootstrap Evidence Window only"
+    },
+    "MCFT-06": {
+      "status": "NOT_STARTED",
+      "established_scope": "none"
+    },
+    "MCFT-07": {
+      "status": "PARTIALLY_ESTABLISHED",
+      "established_scope": "static bootstrap observation operator and scalar Gaussian assimilation only"
+    },
+    "MCFT-08": {
+      "status": "PARTIALLY_ESTABLISHED",
+      "established_scope": "one first-class posterior State, INITIAL lineage and checkpoint handoff only"
+    },
+    "MCFT-09": {
+      "status": "PARTIALLY_ESTABLISHED",
+      "established_scope": "BLOCKED zero-point Forecast result only"
+    }
+  },
+  "preserved_nonclaims": [
+    "NO_PROPAGATION",
+    "NO_SUCCESSFUL_FORECAST",
+    "NO_SCENARIO",
+    "NO_RECOMMENDATION",
+    "NO_DECISION",
+    "NO_AO_ACT",
+    "NO_CONTINUOUS_RUNTIME",
+    "NO_CONTINUOUS_SCHEDULER",
+    "NO_RESTART_BACKFILL_PROOF",
+    "NO_LATE_EVIDENCE_REVISION_RUNTIME",
+    "NO_LIVE_FIELD_CLAIM",
+    "NO_MCFT_GATE_A_CLOSURE",
+    "NO_MCFT_GATE_B_CLOSURE",
+    "NO_MCFT_GATE_C_CLOSURE",
+    "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
+  ],
+  "closure_does_not_change": {
+    "mcft_00_artifacts": true,
+    "frozen_authority_hashes": true,
+    "runtime_source": true,
+    "database_schema": true,
+    "canonical_facts": true,
+    "projections": true,
+    "public_routes": true,
+    "operator_ui": true
+  },
+  "completion_conditions": [
+    "all five predecessor delivery slices remain COMPLETE",
+    "closure readiness Gate passes",
+    "server typecheck and build pass",
+    "exact-head CI passes",
+    "changed-file boundary is governance-only",
+    "working tree is clean",
+    "closure PR merges into main",
+    "merged main commit is verified"
+  ],
+  "transition_effective_condition": "CLOSURE_PR_MERGED_AND_VERIFIED_ON_MAIN",
+  "next_authorized_slice_ids": []
+}
