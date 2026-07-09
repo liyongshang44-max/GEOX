@@ -2,7 +2,7 @@
   "schema_version": "geox_mcft00_negative_fixture_manifest_v2",
   "phase": "MCFT-00",
   "status": "FROZEN",
-  "acceptance_status": "PENDING",
+  "acceptance_status": "COMPLETE",
   "minimum_fixture_count": 61,
   "fixture_count": 78,
   "rules": [
