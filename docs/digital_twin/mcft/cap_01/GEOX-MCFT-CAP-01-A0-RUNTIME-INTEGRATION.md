@@ -3,15 +3,14 @@
 
 ```text
 delivery_slice_id: MCFT-CAP-01.MCFT-04-05-08-09.A0-RUNTIME-INTEGRATION-V1
-historical_implementation_candidate_head: 62a3906812ef048ca1e35ced192556b4f843c5b7
 historical_merge_commit: 4a0fd03beb05298028101a4999c67a5e053dadb8
-current_status: REMEDIATION_REQUIRED
+remediation_implementation_candidate_head: 193f9785e42eb146e300e2a64abeed455f10e54e
+current_status: COMPLETE
 remediation_slice_id: MCFT-CAP-01.CLOSURE-REMEDIATION-V1
+effectiveness_condition: PR_2316_MERGED_AND_VERIFIED_ON_MAIN
 ```
 
-## Established result retained
-
-S4 connects the Replay Dataset, Runtime Config, A0 persistence and bootstrap posterior mathematics into one controlled `A0_BOOTSTRAP_STATE_COMMIT` transaction.
+## Runtime result
 
 ```text
 logical_time: 2026-06-01T01:00:00.000Z
@@ -19,110 +18,74 @@ window: (2026-06-01T00:00:00.000Z, 2026-06-01T01:00:00.000Z]
 runtime_mode: REPLAY
 selected soil observation: mcft_src_0f8bae003933b54d7d1141e0
 canonical VWC fraction: 0.184000
-```
-
-The Runtime atomically commits exactly nine deterministic canonical members:
-
-```text
-1. twin_runtime_lineage_v1
-2. twin_evidence_window_v1
-3. twin_state_transition_v1
-4. twin_assimilation_update_v1
-5. twin_state_estimate_v1
-6. twin_forecast_run_v1
-7. twin_runtime_tick_v1
-8. twin_runtime_checkpoint_v1
-9. twin_runtime_health_v1
-```
-
-Retained State result:
-
-```text
 posterior_mean: 0.192595
 posterior_variance: 0.002678
 posterior_stddev: 0.051746
-storage_mean_mm: 57.778512
-available_water_fraction: 0.403306
-depletion_from_field_capacity_mm: 32.221488
-confidence.status: NOT_ESTABLISHED
-```
-
-The Forecast remains:
-
-```text
-status: BLOCKED
-points: []
-scenario_eligible: false
-```
-
-## Corrected checkpoint claim
-
-The INITIAL checkpoint records:
-
-```text
-previous_checkpoint_ref: null
-last_posterior_state_ref: <A0 State object_id>
 next_tick_logical_time: 2026-06-01T02:00:00.000Z
 ```
 
-The historical service returned that time by reading the checkpoint inside the current A0 record set. It did not reconstruct the next tick from persisted active lineage, latest checkpoint, latest State, Runtime Config and Reality Binding.
+The Runtime atomically commits exactly nine canonical members and six rebuildable projections. Forecast remains `BLOCKED`, has zero points and is not Scenario-eligible.
 
-Therefore the accurate retained claim is:
+## Persisted next-tick handoff
+
+The checkpoint pointer remains established, and remediation additionally establishes persisted handoff reconstruction.
 
 ```text
-NEXT_TICK_CHECKPOINT_POINTER_ESTABLISHED
+active_lineage_ref
+  = twin_runtime_lineage_v1.object_id
+
+lineage_id
+  = semantic lineage identity
 ```
 
-The following claim is withdrawn until remediation passes:
+`PostgresNextTickRepositoryV1` resolves the active lineage canonical object in a `REPEATABLE READ READ ONLY` transaction, then reads latest checkpoint, previous posterior State, Runtime Config and Reality Binding snapshot. `PrepareNextTickInputServiceV1` validates the lineage/revision/config/binding chain and returns the next-tick DTO.
+
+## Evidence semantics
 
 ```text
-NEXT_TICK_HANDOFF_ESTABLISHED
-```
+selector order:
+observed_at descending
+ingested_at descending
+source_record_id ascending
 
-## Confirmed S4 remediation requirements
-
-```text
-persisted prepareNextTickInput service
-PostgreSQL consistent read of active lineage/checkpoint/State/Runtime Config/Reality Binding
-conflicting duplicate soil observation rejection
-observed_at desc / ingested_at desc / source_record_id asc selection
-complete Evidence Window ingestion/freshness/unit/conversion/limitations trace
-separate window inclusion and estimator-consumption semantics
-manual operator-invokable A0 runner
-```
-
-The remediated Evidence Window must identify:
-
-```text
 soil:
 CONSUMED_BY_BOOTSTRAP_ESTIMATOR
 
-rainfall:
-CONTEXT_ONLY_NOT_CONSUMED_BY_BOOTSTRAP_ESTIMATOR
-
-historical ET0:
+rainfall and historical ET0:
 CONTEXT_ONLY_NOT_CONSUMED_BY_BOOTSTRAP_ESTIMATOR
 ```
 
-Conflicting records must produce zero Runtime Config canonical fact delta, zero A0 fact delta and zero projection delta.
+Same origin and observation time with different canonical payload fails with `CONFLICTING_DUPLICATE_OBSERVATION` before Runtime Config, A0 facts, lease, idempotency guard or projection writes.
 
-## Historical evidence retained
+## Graph validity
+
+The A0 validator checks all Lineage/Evidence/Transition/Assimilation/State/Forecast/Tick/Checkpoint/Health cross-references independently of member and aggregate hashes. Fourteen rehashed corruptions are rejected.
+
+## Manual entry
 
 ```text
-S4 A0 Runtime static Gate: 20 PASS, 0 FAIL
-S4 A0 Runtime PostgreSQL Gate: 12 PASS, 0 FAIL
-PostgreSQL fault stages: 17 rollback, 0 partial writes
-canonical facts committed: 9
-projections committed: 6
-latest successful Forecast rows: 0
-same-input replay: existing success before lease
-projection rebuild: 6 equivalent projections
-CI #4456: SUCCESS
+apps/server/scripts/mcft/MCFT_1_FIRST_CLASS_WATER_STATE_RUNNER.ts
 ```
 
-These results remain valid for the behavior tested. They did not test persisted next-tick reconstruction, conflicting duplicates, complete consumption trace or the manual runner.
+Observed execution:
 
-## Claims retained
+```text
+first: INSERTED
+second: EXISTING_IDEMPOTENT_SUCCESS
+a0_record_set_id: a0rs_b24d89a612198b8f234aab45
+```
+
+## Acceptance
+
+```text
+S4 static: 21 PASS, 0 FAIL
+S4 PostgreSQL: 12 PASS, 0 FAIL
+Remediation static: 18 PASS, 0 FAIL
+Remediation PostgreSQL: 7 PASS, 0 FAIL
+CI #4491: SUCCESS
+```
+
+## Claims
 
 ```text
 A0_RUNTIME_EXECUTION_ESTABLISHED
@@ -131,16 +94,20 @@ ACTIVE_INITIAL_LINEAGE_ESTABLISHED
 INITIAL_CHECKPOINT_ESTABLISHED
 BLOCKED_FORECAST_RESULT_ESTABLISHED
 NEXT_TICK_CHECKPOINT_POINTER_ESTABLISHED
+PERSISTED_NEXT_TICK_HANDOFF_ESTABLISHED
+CONFLICTING_DUPLICATE_OBSERVATION_REJECTION_ESTABLISHED
+EVIDENCE_MODEL_CONSUMPTION_TRACE_ESTABLISHED
+OPERATOR_INVOKABLE_MANUAL_RUNTIME_ENTRY_ESTABLISHED
 ```
 
-## Nonclaims during remediation
+## Preserved nonclaims
 
 ```text
-NO_PERSISTED_NEXT_TICK_HANDOFF
 NO_PROPAGATION
 NO_SUCCESSFUL_FORECAST
 NO_SCENARIO
 NO_RECOMMENDATION
+NO_DECISION
 NO_AO_ACT
 NO_CONTINUOUS_RUNTIME
 NO_CONTINUOUS_SCHEDULER
@@ -148,5 +115,4 @@ NO_RESTART_BACKFILL_PROOF
 NO_LATE_EVIDENCE_REVISION_RUNTIME
 NO_LIVE_FIELD_CLAIM
 NO_MCFT_GATE_A_CLOSURE
-NO_MCFT_CAP_01_CLOSURE
 ```
