@@ -1,0 +1,18 @@
+{
+  "schema_version": "geox_mcft_cap_01_main_verification_v1",
+  "capability_line_id": "MCFT-CAP-01",
+  "pr": 2316,
+  "implementation_candidate_head": "193f9785e42eb146e300e2a64abeed455f10e54e",
+  "final_closure_head": "7fedd85815cd65f0e3d2aedc74e4d0d9ed1b0558",
+  "merge_commit": "7da8fee4daf1f022edff29078a1bbac207d1a32f",
+  "main_head_verified": "7da8fee4daf1f022edff29078a1bbac207d1a32f",
+  "verification_execution_mode": "DETACHED_EXACT_COMMIT_WORKTREE",
+  "final_closure_gate": "173_PASS_0_FAIL",
+  "server_typecheck": "PASS",
+  "server_build": "PASS",
+  "git_diff_check": "PASS",
+  "working_tree": "CLEAN",
+  "canonical_identity_extraction": "PASS",
+  "canonical_identity_evidence_ref": "acceptance-output/MCFT_CAP_02_PREDECESSOR_IDENTITY.json",
+  "verification_status": "COMPLETE"
+}
