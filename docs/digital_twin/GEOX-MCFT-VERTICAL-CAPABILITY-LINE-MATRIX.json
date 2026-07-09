@@ -8,7 +8,7 @@
   },
   "identifier_model": {
     "capability_line_id": "vertical executable capability closure unit",
-    "owner_work_package_id": "horizontal DT-02 architecture ownership catalogue entry",
+    "owner_work_package_id": "horizontal architecture ownership catalogue entry",
     "delivery_slice_id": "bounded implementation slice delivered by a capability line",
     "primary_owner_work_package_id_singular": true,
     "contributing_work_package_ids_array": true,
@@ -21,10 +21,18 @@
       "name": "First-Class Water State Estimate",
       "runtime_mode": "REPLAY",
       "target_completion_level": "Level A",
-      "status": "CLOSURE_IN_REVIEW",
+      "status": "COMPLETE",
       "runtime_delivery_main_commit": "4a0fd03beb05298028101a4999c67a5e053dadb8",
-      "active_delivery_slice_id": "MCFT-CAP-01.CLOSURE-V1",
+      "active_delivery_slice_id": null,
+      "closure_readiness_head": "273843b09a7fe2e71f2cb9ea5c4ca14dcee8e3e5",
+      "closure_readiness_ci": {
+        "workflow": "ci",
+        "run_number": 4462,
+        "run_id": 29033066650,
+        "conclusion": "success"
+      },
       "closure_record_ref": "docs/digital_twin/mcft/cap_01/GEOX-MCFT-CAP-01-CLOSURE-RECORD.json",
+      "transition_effective_condition": "PR_2315_MERGED_AND_VERIFIED_ON_MAIN",
       "predecessors": [
         "MCFT-00",
         "MCFT-VERTICAL-AMENDMENT-01",
@@ -114,7 +122,7 @@
         },
         {
           "delivery_slice_id": "MCFT-CAP-01.CLOSURE-V1",
-          "status": "IN_IMPLEMENTATION",
+          "status": "COMPLETE",
           "primary_owner_work_package_id": "MCFT-08",
           "contributing_work_package_ids": [
             "MCFT-01",
@@ -130,7 +138,7 @@
           ]
         }
       ],
-      "target_completion_claims": [
+      "completion_claims": [
         "MCFT_CAP_01_COMPLETE",
         "FIRST_CLASS_WATER_STATE_ESTIMATE_LEVEL_A_ESTABLISHED",
         "CONTROLLED_REPLAY_BOOTSTRAP_CLOSURE_ESTABLISHED"
@@ -149,8 +157,7 @@
         "NO_MCFT_GATE_A_CLOSURE",
         "NO_MCFT_GATE_B_CLOSURE",
         "NO_MCFT_GATE_C_CLOSURE",
-        "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM",
-        "NO_MCFT_CAP_01_CLOSURE"
+        "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
       ]
     }
   ],
@@ -171,7 +178,7 @@
     "MCFT-08": "PARTIALLY_ESTABLISHED",
     "MCFT-09": "PARTIALLY_ESTABLISHED"
   },
-  "actual_status_at_mcft_cap_01_closure_candidate": {
+  "actual_status_at_mcft_cap_01_closure": {
     "MCFT-01": {
       "status": "COMPLETE",
       "established_scope": "30-day controlled Canonical Replay Dataset"
@@ -215,6 +222,6 @@
     "capability-line closure does not imply complete owner work-package closure",
     "MCFT-00 artifacts and frozen hashes remain unchanged",
     "MCFT-CAP-01 closure is not MCFT Gate A, Gate B, Gate C or Minimum Complete Field Twin closure",
-    "CLOSURE_IN_REVIEW becomes COMPLETE only after the closure candidate passes its Gate and exact-head CI, merges into main, and is verified on main"
+    "MCFT-CAP-01 COMPLETE becomes effective only after PR 2315 merges into main and the merged main commit is verified"
   ]
 }
