@@ -3,146 +3,89 @@
 
 ```text
 delivery_slice_id: MCFT-CAP-01.MCFT-04-05-08-09.A0-RUNTIME-INTEGRATION-V1
-implementation_baseline: 5d17e6ad9944376bbb5a71c9d801aa4472afe592
-implementation_candidate_head: 62a3906812ef048ca1e35ced192556b4f843c5b7
-status: COMPLETE
-transition_effective_condition: PR_2314_MERGED_AND_VERIFIED_ON_MAIN
-primary_owner_work_package_id: MCFT-04
-contributing_work_package_ids: MCFT-05, MCFT-08, MCFT-09
+historical_merge_commit: 4a0fd03beb05298028101a4999c67a5e053dadb8
+remediation_implementation_candidate_head: 193f9785e42eb146e300e2a64abeed455f10e54e
+current_status: COMPLETE
+remediation_slice_id: MCFT-CAP-01.CLOSURE-REMEDIATION-V1
+effectiveness_condition: PR_2316_MERGED_AND_VERIFIED_ON_MAIN
 ```
 
-## Established result
-
-S4 connects the closed Replay Dataset, Runtime Config, S3A persistence, and S3B posterior mathematics into one controlled `A0_BOOTSTRAP_STATE_COMMIT` transaction.
-
-The first governed tick is:
+## Runtime result
 
 ```text
 logical_time: 2026-06-01T01:00:00.000Z
 window: (2026-06-01T00:00:00.000Z, 2026-06-01T01:00:00.000Z]
 runtime_mode: REPLAY
-```
-
-At this tick the frozen Evidence Window includes exactly the on-time soil-moisture observation, rainfall observation, and historical ET0 input. Future weather and future ET0 snapshots issued before the tick but unavailable until `01:05Z` remain excluded as late for this tick. The selected assimilation observation is:
-
-```text
-source_record_id: mcft_src_0f8bae003933b54d7d1141e0
-observed_at: 2026-06-01T00:50:00.000Z
-available_to_runtime_at: 2026-06-01T00:55:00.000Z
+selected soil observation: mcft_src_0f8bae003933b54d7d1141e0
 canonical VWC fraction: 0.184000
-quality: PASS
-```
-
-## Canonical A0 append set
-
-The Runtime constructs and atomically commits exactly nine deterministic canonical members:
-
-```text
-1. twin_runtime_lineage_v1       INITIAL
-2. twin_evidence_window_v1       frozen Replay window
-3. twin_state_transition_v1      BOOTSTRAP with embedded weak prior
-4. twin_assimilation_update_v1   S3B Gaussian update
-5. twin_state_estimate_v1        posterior root-zone State
-6. twin_forecast_run_v1          BLOCKED, zero points
-7. twin_runtime_tick_v1          COMPLETED_WITH_LIMITATIONS
-8. twin_runtime_checkpoint_v1    INITIAL
-9. twin_runtime_health_v1        A0_COMMITTED_WITH_BLOCKED_FORECAST
-```
-
-The same deterministic `lineage_id` and `revision_id` bind all lineage members. No revision-run or lineage-promotion object is created. `NULL_TO_INITIAL` activation authority is the INITIAL lineage declaration itself.
-
-## Evidence rules
-
-```text
-window_rule_id: OPEN_START_CLOSED_END_PT1H_V1
-selection_policy_id: LATEST_USABLE_SOIL_OBSERVATION_BEFORE_TICK_V1
-future event time: excluded
-available_to_runtime_at after tick: excluded as late
-quality FAIL: excluded
-scope mismatch: excluded
-no usable soil observation: hard failure with zero writes
-```
-
-The Evidence Window records selected and excluded references, coverage counts, exclusion reasons, and one semantic digest. Later Evidence cannot enter the frozen compute input.
-
-## Posterior and Forecast result
-
-The canonical State embeds the S3B result:
-
-```text
 posterior_mean: 0.192595
 posterior_variance: 0.002678
 posterior_stddev: 0.051746
-storage_mean_mm: 57.778512
-available_water_fraction: 0.403306
-depletion_from_field_capacity_mm: 32.221488
-confidence.status: NOT_ESTABLISHED
-recommendation_input_eligible: false
-action_input_eligible: false
-```
-
-The Forecast is intentionally limited:
-
-```text
-status: BLOCKED
-points: []
-scenario_eligible: false
-reason_codes:
-  - MCFT_06_PROPAGATION_NOT_ESTABLISHED
-  - SUCCESSFUL_FORECAST_NOT_AUTHORIZED_FOR_MCFT_CAP_01
-  - FUTURE_WEATHER_ASSUMPTION_NOT_AVAILABLE_AT_TICK
-  - FUTURE_ET0_ASSUMPTION_NOT_AVAILABLE_AT_TICK
-```
-
-A BLOCKED Forecast advances `latest Forecast result` but never advances `latest successful Forecast`.
-
-## Checkpoint and handoff
-
-The terminal tick is `COMPLETED_WITH_LIMITATIONS`. The INITIAL checkpoint advances and records:
-
-```text
-previous_checkpoint_ref: null
-successful_forecast_ref: null
 next_tick_logical_time: 2026-06-01T02:00:00.000Z
-handoff_status: READY_FOR_NEXT_TICK_WITHOUT_PROPAGATION_IMPLEMENTATION
 ```
 
-This is a deterministic handoff marker only. It is not a continuous scheduler, A1/A2 continuation implementation, restart/backfill proof, or propagation capability.
+The Runtime atomically commits exactly nine canonical members and six rebuildable projections. Forecast remains `BLOCKED`, has zero points and is not Scenario-eligible.
 
-## Persistence order
+## Persisted next-tick handoff
 
-The service performs:
+The checkpoint pointer remains established, and remediation additionally establishes persisted handoff reconstruction.
 
 ```text
-commit/read immutable Runtime Config
-load and hash-verify governed Replay records
-freeze Evidence Window
-compute posterior and all nine canonical members
-compute A0 aggregate key and hashes
-lookup complete A0 idempotency record
-same key/hash -> existing success without new lease
-new key -> acquire fenced lease
-commit nine facts, six projections, pointers and idempotency guard atomically
+active_lineage_ref
+  = twin_runtime_lineage_v1.object_id
+
+lineage_id
+  = semantic lineage identity
 ```
 
-The PostgreSQL repository remains the only write authority. Failure at any append, projection, idempotency, or pre-commit stage yields zero A0 facts, projections, and pointer changes.
+`PostgresNextTickRepositoryV1` resolves the active lineage canonical object in a `REPEATABLE READ READ ONLY` transaction, then reads latest checkpoint, previous posterior State, Runtime Config and Reality Binding snapshot. `PrepareNextTickInputServiceV1` validates the lineage/revision/config/binding chain and returns the next-tick DTO.
 
-## Closure evidence
+## Evidence semantics
 
 ```text
-S4 A0 Runtime static Gate: 20 PASS, 0 FAIL
-S4 A0 Runtime PostgreSQL Gate: 12 PASS, 0 FAIL
-PostgreSQL fault stages: 17 rollback, 0 partial writes
-canonical facts committed: 9
-projections committed: 6
-latest successful Forecast rows: 0
-same-input replay: existing success before lease
-projection rebuild: 6 equivalent projections
-CI #4456 build-test: SUCCESS
-CI #4456 acceptance: SUCCESS
+selector order:
+observed_at descending
+ingested_at descending
+source_record_id ascending
+
+soil:
+CONSUMED_BY_BOOTSTRAP_ESTIMATOR
+
+rainfall and historical ET0:
+CONTEXT_ONLY_NOT_CONSUMED_BY_BOOTSTRAP_ESTIMATOR
 ```
 
-## Completion claims
+Same origin and observation time with different canonical payload fails with `CONFLICTING_DUPLICATE_OBSERVATION` before Runtime Config, A0 facts, lease, idempotency guard or projection writes.
+
+## Graph validity
+
+The A0 validator checks all Lineage/Evidence/Transition/Assimilation/State/Forecast/Tick/Checkpoint/Health cross-references independently of member and aggregate hashes. Fourteen rehashed corruptions are rejected.
+
+## Manual entry
+
+```text
+apps/server/scripts/mcft/MCFT_1_FIRST_CLASS_WATER_STATE_RUNNER.ts
+```
+
+Observed execution:
+
+```text
+first: INSERTED
+second: EXISTING_IDEMPOTENT_SUCCESS
+a0_record_set_id: a0rs_b24d89a612198b8f234aab45
+```
+
+## Acceptance
+
+```text
+S4 static: 21 PASS, 0 FAIL
+S4 PostgreSQL: 12 PASS, 0 FAIL
+Remediation static: 18 PASS, 0 FAIL
+Remediation PostgreSQL: 7 PASS, 0 FAIL
+CI #4491: SUCCESS
+```
+
+## Claims
 
 ```text
 A0_RUNTIME_EXECUTION_ESTABLISHED
@@ -150,16 +93,21 @@ BOOTSTRAP_STATE_COMMITTED
 ACTIVE_INITIAL_LINEAGE_ESTABLISHED
 INITIAL_CHECKPOINT_ESTABLISHED
 BLOCKED_FORECAST_RESULT_ESTABLISHED
-NEXT_TICK_HANDOFF_ESTABLISHED
+NEXT_TICK_CHECKPOINT_POINTER_ESTABLISHED
+PERSISTED_NEXT_TICK_HANDOFF_ESTABLISHED
+CONFLICTING_DUPLICATE_OBSERVATION_REJECTION_ESTABLISHED
+EVIDENCE_MODEL_CONSUMPTION_TRACE_ESTABLISHED
+OPERATOR_INVOKABLE_MANUAL_RUNTIME_ENTRY_ESTABLISHED
 ```
 
-## Nonclaims
+## Preserved nonclaims
 
 ```text
 NO_PROPAGATION
 NO_SUCCESSFUL_FORECAST
 NO_SCENARIO
 NO_RECOMMENDATION
+NO_DECISION
 NO_AO_ACT
 NO_CONTINUOUS_RUNTIME
 NO_CONTINUOUS_SCHEDULER
@@ -167,5 +115,4 @@ NO_RESTART_BACKFILL_PROOF
 NO_LATE_EVIDENCE_REVISION_RUNTIME
 NO_LIVE_FIELD_CLAIM
 NO_MCFT_GATE_A_CLOSURE
-NO_MCFT_CAP_01_CLOSURE
 ```

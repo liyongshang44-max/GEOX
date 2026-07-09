@@ -1,65 +1,65 @@
 {
-  "schema_version": "geox_mcft_cap_01_s4_status_v1",
+  "schema_version": "geox_mcft_cap_01_s4_status_v3",
   "capability_line_id": "MCFT-CAP-01",
   "delivery_slice_id": "MCFT-CAP-01.MCFT-04-05-08-09.A0-RUNTIME-INTEGRATION-V1",
   "implementation_baseline_commit": "5d17e6ad9944376bbb5a71c9d801aa4472afe592",
-  "implementation_candidate_head": "62a3906812ef048ca1e35ced192556b4f843c5b7",
+  "historical_merge_commit": "4a0fd03beb05298028101a4999c67a5e053dadb8",
+  "remediation_implementation_candidate_head": "193f9785e42eb146e300e2a64abeed455f10e54e",
   "status": "COMPLETE",
-  "transition_effective_condition": "PR_2314_MERGED_AND_VERIFIED_ON_MAIN",
+  "remediation_slice_id": "MCFT-CAP-01.CLOSURE-REMEDIATION-V1",
   "primary_owner_work_package_id": "MCFT-04",
   "contributing_work_package_ids": [
     "MCFT-05",
     "MCFT-08",
     "MCFT-09"
   ],
-  "depends_on_delivery_slice_ids": [
-    "MCFT-CAP-01.MCFT-01.CANONICAL-REPLAY-DATASET-V1",
-    "MCFT-CAP-01.MCFT-02.A0-CONTRACTS-AND-CONFIG-V1",
-    "MCFT-CAP-01.MCFT-03.A0-PERSISTENCE-V1",
-    "MCFT-CAP-01.MCFT-07-08.BOOTSTRAP-STATE-MATH-V1"
-  ],
-  "implemented_components": [
+  "established_components": [
     "CONTROLLED_REPLAY_FILE_SOURCE_ADAPTER",
     "FROZEN_A0_EVIDENCE_WINDOW",
     "NO_FUTURE_LEAKAGE_CLASSIFICATION",
-    "LATEST_USABLE_SOIL_OBSERVATION_SELECTION",
     "DETERMINISTIC_NINE_OBJECT_A0_RECORD_SET",
     "INITIAL_LINEAGE_AND_REVISION_IDENTITY",
     "BLOCKED_ZERO_POINT_FORECAST",
     "COMPLETED_WITH_LIMITATIONS_TICK",
-    "INITIAL_CHECKPOINT_NEXT_TICK_HANDOFF",
+    "INITIAL_CHECKPOINT_NEXT_TICK_POINTER",
+    "PERSISTED_NEXT_TICK_INPUT_RECONSTRUCTION",
+    "ACTIVE_LINEAGE_OBJECT_REF_TO_SEMANTIC_ID_RESOLUTION",
+    "CONFLICTING_DUPLICATE_OBSERVATION_REJECTION",
+    "EVIDENCE_MODEL_CONSUMPTION_TRACE",
+    "OPERATOR_INVOKABLE_MANUAL_RUNTIME_ENTRY",
     "IDEMPOTENCY_BEFORE_LEASE_RUNTIME_SERVICE",
     "POSTGRES_ATOMIC_COMMIT_INTEGRATION"
   ],
-  "completion_claims": [
+  "claims": [
     "A0_RUNTIME_EXECUTION_ESTABLISHED",
     "BOOTSTRAP_STATE_COMMITTED",
     "ACTIVE_INITIAL_LINEAGE_ESTABLISHED",
     "INITIAL_CHECKPOINT_ESTABLISHED",
     "BLOCKED_FORECAST_RESULT_ESTABLISHED",
-    "NEXT_TICK_HANDOFF_ESTABLISHED"
+    "NEXT_TICK_CHECKPOINT_POINTER_ESTABLISHED",
+    "PERSISTED_NEXT_TICK_HANDOFF_ESTABLISHED",
+    "CONFLICTING_DUPLICATE_OBSERVATION_REJECTION_ESTABLISHED",
+    "EVIDENCE_MODEL_CONSUMPTION_TRACE_ESTABLISHED",
+    "OPERATOR_INVOKABLE_MANUAL_RUNTIME_ENTRY_ESTABLISHED"
   ],
   "evidence": {
-    "local": {
-      "s4_a0_runtime_static": "20_PASS_0_FAIL",
-      "s4_a0_runtime_postgres": "12_PASS_0_FAIL",
-      "postgres_fault_stages": "17_ROLLBACK_0_PARTIAL_WRITE",
-      "canonical_fact_count": 9,
-      "projection_count": 6,
-      "successful_forecast_latest_count": 0
-    },
-    "ci": {
-      "workflow": "ci",
-      "run_number": 4456,
-      "run_id": 29031549371,
-      "conclusion": "success",
-      "typecheck": "PASS",
-      "build": "PASS",
-      "server_selfcheck": "PASS",
-      "acceptance": "PASS"
+    "static_gate": "21_PASS_0_FAIL",
+    "postgres_gate": "12_PASS_0_FAIL",
+    "remediation_static_gate": "18_PASS_0_FAIL",
+    "remediation_postgres_gate": "7_PASS_0_FAIL",
+    "manual_runner_first": "INSERTED",
+    "manual_runner_second": "EXISTING_IDEMPOTENT_SUCCESS",
+    "posterior_mean": 0.192595,
+    "posterior_variance": 0.002678,
+    "next_logical_tick_time": "2026-06-01T02:00:00.000Z",
+    "exact_head_ci": {
+      "candidate_head": "193f9785e42eb146e300e2a64abeed455f10e54e",
+      "run_number": 4491,
+      "run_id": 29038423099,
+      "conclusion": "success"
     }
   },
-  "next_authorized_slice_id": "MCFT-CAP-01.CLOSURE-V1",
+  "next_authorized_slice_id": null,
   "nonclaims": [
     "NO_PROPAGATION",
     "NO_SUCCESSFUL_FORECAST",
@@ -71,7 +71,7 @@
     "NO_RESTART_BACKFILL_PROOF",
     "NO_LATE_EVIDENCE_REVISION_RUNTIME",
     "NO_LIVE_FIELD_CLAIM",
-    "NO_MCFT_GATE_A_CLOSURE",
-    "NO_MCFT_CAP_01_CLOSURE"
-  ]
+    "NO_MCFT_GATE_A_CLOSURE"
+  ],
+  "effectiveness_condition": "PR_2316_MERGED_AND_VERIFIED_ON_MAIN"
 }

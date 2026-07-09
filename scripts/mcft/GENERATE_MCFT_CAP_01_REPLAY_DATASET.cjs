@@ -1,6 +1,6 @@
 // scripts/mcft/GENERATE_MCFT_CAP_01_REPLAY_DATASET.cjs
-// Purpose: deterministically materialize the MCFT-CAP-01 controlled Canonical Replay Dataset.
-// Boundary: generator only; no network, database, wall-clock, random, environment-derived semantics, or Runtime object writes.
+// Purpose: deterministically materialize the MCFT-CAP-01 controlled Canonical Replay Evidence Dataset plus its separate configuration-derived crop-stage context package.
+// Boundary: generator only; crop-stage context is configuration, not Evidence; no network, database, wall-clock, random, environment-derived semantics, or Runtime object writes.
 
 'use strict';
 
@@ -10,10 +10,11 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '../..');
 const DEFAULT_CONFIG = path.join(ROOT, 'fixtures/mcft/water_state/replay_v1/generator_config.json');
+const DEFAULT_CONFIGURATION_CONTEXT_SOURCE = path.join(ROOT, 'fixtures/mcft/water_state/configuration_context_source_v1.json');
 const DEFAULT_SOURCE_MATRIX = path.join(ROOT, 'docs/digital_twin/mcft/GEOX-MCFT-00-SOURCE-BINDING-MATRIX.json');
 const DEFAULT_REALITY = path.join(ROOT, 'docs/digital_twin/mcft/GEOX-MCFT-00-REALITY-BINDING.json');
 const DEFAULT_OUTPUT = path.join(ROOT, 'fixtures/mcft/water_state/replay_v1');
-const GENERATED_ENTRIES = ['manifest.json','soil_moisture','rainfall','historical_et0','future_weather','future_et0','irrigation_plan','irrigation_execution'];
+const GENERATED_ENTRIES = ['manifest.json','manifest_v2.json','configuration_context.json','soil_moisture','rainfall','historical_et0','future_weather','future_et0','irrigation_plan','irrigation_execution'];
 
 function canonical(value) {
   if (value === undefined) throw new Error('UNDEFINED_FORBIDDEN');
@@ -132,12 +133,30 @@ function writeJsonl(file, records) {
   return { bytes: Buffer.byteLength(text), sha256: sha256(text), record_count: records.length };
 }
 
+function buildConfigurationContext(config, source) {
+  if (source.dataset_id !== config.dataset_id) throw new Error('CONFIGURATION_CONTEXT_DATASET_ID_MISMATCH');
+  if (source.coverage_start !== config.coverage_start || source.coverage_end_exclusive !== config.coverage_end_exclusive || source.timezone !== config.timezone) throw new Error('CONFIGURATION_CONTEXT_COVERAGE_MISMATCH');
+  if (source.context_class !== 'CONFIGURATION_DERIVED_CONTEXT' || source.evidence_record !== false) throw new Error('CONFIGURATION_CONTEXT_CLASS_INVALID');
+  if (!Array.isArray(source.crop_stage_schedule) || source.crop_stage_schedule.length === 0) throw new Error('CROP_STAGE_SCHEDULE_REQUIRED');
+  const schedule = [...source.crop_stage_schedule].sort((a, b) => a.effective_from.localeCompare(b.effective_from));
+  let cursor = source.coverage_start;
+  for (const entry of schedule) {
+    if (entry.effective_from !== cursor || Date.parse(entry.effective_to) <= Date.parse(entry.effective_from)) throw new Error('CROP_STAGE_SCHEDULE_GAP_OR_OVERLAP');
+    cursor = entry.effective_to;
+  }
+  if (cursor !== source.coverage_end_exclusive) throw new Error('CROP_STAGE_SCHEDULE_INCOMPLETE');
+  const semantic = { ...source, crop_stage_schedule: schedule };
+  return { ...semantic, determinism_hash: sha256(canonical(semantic)) };
+}
+
 function generate(options = {}) {
   const configPath = options.configPath || DEFAULT_CONFIG;
+  const configurationContextPath = options.configurationContextPath || DEFAULT_CONFIGURATION_CONTEXT_SOURCE;
   const sourceMatrixPath = options.sourceMatrixPath || DEFAULT_SOURCE_MATRIX;
   const realityPath = options.realityPath || DEFAULT_REALITY;
   const outputDirectory = options.outputDirectory || DEFAULT_OUTPUT;
   const config = readJson(configPath);
+  const configurationContextSource = readJson(configurationContextPath);
   const sourceMatrix = readJson(sourceMatrixPath);
   const reality = readJson(realityPath);
   const bindings = roleBindingMap(sourceMatrix);
@@ -232,7 +251,30 @@ function generate(options = {}) {
     generator_contract: { encoding: config.encoding, line_ending: config.line_ending, trailing_newline: config.trailing_newline, record_order: 'source_record_id ascending within deterministic shard order' },
   };
   fs.writeFileSync(path.join(outputDirectory, 'manifest.json'), `${canonical(manifest)}\n`, 'utf8');
-  return manifest;
+
+  const configurationContext = buildConfigurationContext(config, configurationContextSource);
+  fs.writeFileSync(path.join(outputDirectory, 'configuration_context.json'), `${canonical(configurationContext)}\n`, 'utf8');
+  const manifestV2Semantic = {
+    schema_version: 'geox_mcft_cap_01_replay_dataset_manifest_v2',
+    dataset_id: config.dataset_id,
+    dataset_truth_class: config.dataset_truth_class,
+    coverage_start: config.coverage_start,
+    coverage_end_exclusive: config.coverage_end_exclusive,
+    timezone: config.timezone,
+    hourly_interval_count: config.hourly_interval_count,
+    top_level_evidence_record_count: manifest.top_level_record_count,
+    evidence_role_count: requiredRoles.length,
+    evidence_manifest_ref: 'fixtures/mcft/water_state/replay_v1/manifest.json',
+    configuration_context_ref: 'fixtures/mcft/water_state/replay_v1/configuration_context.json',
+    configuration_context_hash: configurationContext.determinism_hash,
+    configuration_context_class: 'CONFIGURATION_DERIVED_CONTEXT',
+    configuration_context_is_evidence: false,
+    required_runtime_inputs: ['CANONICAL_REPLAY_EVIDENCE', 'CROP_STAGE_CONFIGURATION_CONTEXT'],
+    limitations: ['configuration context is controlled synthetic', 'crop stage is not observed Evidence', 'manifest v1 remains evidence-file inventory authority'],
+  };
+  const manifestV2 = { ...manifestV2Semantic, determinism_hash: sha256(canonical(manifestV2Semantic)) };
+  fs.writeFileSync(path.join(outputDirectory, 'manifest_v2.json'), `${canonical(manifestV2)}\n`, 'utf8');
+  return { ...manifest, configuration_context_hash: configurationContext.determinism_hash, package_manifest_hash: manifestV2.determinism_hash };
 }
 
 function parseArgs(argv) {
@@ -240,6 +282,7 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === '--output') options.outputDirectory = path.resolve(argv[++i]);
     else if (argv[i] === '--config') options.configPath = path.resolve(argv[++i]);
+    else if (argv[i] === '--configuration-context') options.configurationContextPath = path.resolve(argv[++i]);
     else if (argv[i] === '--source-matrix') options.sourceMatrixPath = path.resolve(argv[++i]);
     else if (argv[i] === '--reality') options.realityPath = path.resolve(argv[++i]);
     else throw new Error(`UNKNOWN_ARGUMENT:${argv[i]}`);
@@ -249,7 +292,7 @@ function parseArgs(argv) {
 
 if (require.main === module) {
   const manifest = generate(parseArgs(process.argv.slice(2)));
-  process.stdout.write(`${JSON.stringify({ ok: true, dataset_id: manifest.dataset_id, records: manifest.top_level_record_count, files: manifest.file_count, hash: manifest.whole_dataset_semantic_hash })}\n`);
+  process.stdout.write(`${JSON.stringify({ ok: true, dataset_id: manifest.dataset_id, records: manifest.top_level_record_count, files: manifest.file_count, hash: manifest.whole_dataset_semantic_hash, configuration_context_hash: manifest.configuration_context_hash, package_manifest_hash: manifest.package_manifest_hash })}\n`);
 }
 
-module.exports = { canonical, deriveAvailableToRuntimeAt, generate, recordHash, round6, sha256 };
+module.exports = { buildConfigurationContext, canonical, deriveAvailableToRuntimeAt, generate, recordHash, round6, sha256 };

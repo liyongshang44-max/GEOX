@@ -1,5 +1,5 @@
 {
-  "schema_version": "geox_mcft_vertical_capability_line_matrix_v1",
+  "schema_version": "geox_mcft_vertical_capability_line_matrix_v3",
   "amendment_id": "MCFT-VERTICAL-AMENDMENT-01",
   "status": "COMPLETE",
   "baseline": {
@@ -9,10 +9,7 @@
   "identifier_model": {
     "capability_line_id": "vertical executable capability closure unit",
     "owner_work_package_id": "horizontal architecture ownership catalogue entry",
-    "delivery_slice_id": "bounded implementation slice delivered by a capability line",
-    "primary_owner_work_package_id_singular": true,
-    "contributing_work_package_ids_array": true,
-    "depends_on_delivery_slice_ids_array": true
+    "delivery_slice_id": "bounded implementation slice delivered by a capability line"
   },
   "capability_lines": [
     {
@@ -23,75 +20,29 @@
       "target_completion_level": "Level A",
       "status": "COMPLETE",
       "runtime_delivery_main_commit": "4a0fd03beb05298028101a4999c67a5e053dadb8",
+      "historical_closure_main_commit": "250053aba801075c17098f8d505d527eb54390e9",
+      "remediation_implementation_candidate_head": "193f9785e42eb146e300e2a64abeed455f10e54e",
       "active_delivery_slice_id": null,
-      "closure_readiness_head": "273843b09a7fe2e71f2cb9ea5c4ca14dcee8e3e5",
-      "closure_readiness_ci": {
-        "workflow": "ci",
-        "run_number": 4462,
-        "run_id": 29033066650,
-        "conclusion": "success"
-      },
-      "closure_record_ref": "docs/digital_twin/mcft/cap_01/GEOX-MCFT-CAP-01-CLOSURE-RECORD.json",
-      "transition_effective_condition": "PR_2315_MERGED_AND_VERIFIED_ON_MAIN",
-      "predecessors": [
-        "MCFT-00",
-        "MCFT-VERTICAL-AMENDMENT-01",
-        "DT02-AMENDMENT-02"
-      ],
-      "authorized_owner_work_package_ids": [
-        "MCFT-01",
-        "MCFT-02",
-        "MCFT-03",
-        "MCFT-04",
-        "MCFT-05",
-        "MCFT-07",
-        "MCFT-08",
-        "MCFT-09"
-      ],
+      "historical_closure_status": "SUPERSEDED_BY_REMEDIATION",
+      "remediation_pr": 2316,
       "excluded_owner_work_package_ids": [
         "MCFT-06"
-      ],
-      "forbidden_claims": [
-        "hourly dynamics implemented",
-        "continuous hourly runtime implemented",
-        "restart or backfill recovery proven",
-        "late-Evidence revision runtime proven",
-        "successful 72-point Forecast established",
-        "Scenario established",
-        "Recommendation established",
-        "Decision established",
-        "Action loop established",
-        "Minimum Complete Field Twin complete",
-        "MCFT Gate A complete",
-        "MCFT Gate B complete",
-        "MCFT Gate C complete",
-        "live field or production runtime"
       ],
       "delivery_slices": [
         {
           "delivery_slice_id": "MCFT-CAP-01.MCFT-01.CANONICAL-REPLAY-DATASET-V1",
           "status": "COMPLETE",
-          "primary_owner_work_package_id": "MCFT-01",
-          "contributing_work_package_ids": [],
-          "depends_on_delivery_slice_ids": []
+          "primary_owner_work_package_id": "MCFT-01"
         },
         {
           "delivery_slice_id": "MCFT-CAP-01.MCFT-02.A0-CONTRACTS-AND-CONFIG-V1",
           "status": "COMPLETE",
-          "primary_owner_work_package_id": "MCFT-02",
-          "contributing_work_package_ids": [],
-          "depends_on_delivery_slice_ids": [
-            "MCFT-CAP-01.MCFT-01.CANONICAL-REPLAY-DATASET-V1"
-          ]
+          "primary_owner_work_package_id": "MCFT-02"
         },
         {
           "delivery_slice_id": "MCFT-CAP-01.MCFT-03.A0-PERSISTENCE-V1",
           "status": "COMPLETE",
-          "primary_owner_work_package_id": "MCFT-03",
-          "contributing_work_package_ids": [],
-          "depends_on_delivery_slice_ids": [
-            "MCFT-CAP-01.MCFT-02.A0-CONTRACTS-AND-CONFIG-V1"
-          ]
+          "primary_owner_work_package_id": "MCFT-03"
         },
         {
           "delivery_slice_id": "MCFT-CAP-01.MCFT-07-08.BOOTSTRAP-STATE-MATH-V1",
@@ -99,9 +50,6 @@
           "primary_owner_work_package_id": "MCFT-08",
           "contributing_work_package_ids": [
             "MCFT-07"
-          ],
-          "depends_on_delivery_slice_ids": [
-            "MCFT-CAP-01.MCFT-02.A0-CONTRACTS-AND-CONFIG-V1"
           ]
         },
         {
@@ -112,16 +60,15 @@
             "MCFT-05",
             "MCFT-08",
             "MCFT-09"
-          ],
-          "depends_on_delivery_slice_ids": [
-            "MCFT-CAP-01.MCFT-01.CANONICAL-REPLAY-DATASET-V1",
-            "MCFT-CAP-01.MCFT-02.A0-CONTRACTS-AND-CONFIG-V1",
-            "MCFT-CAP-01.MCFT-03.A0-PERSISTENCE-V1",
-            "MCFT-CAP-01.MCFT-07-08.BOOTSTRAP-STATE-MATH-V1"
           ]
         },
         {
           "delivery_slice_id": "MCFT-CAP-01.CLOSURE-V1",
+          "status": "SUPERSEDED_BY_REMEDIATION",
+          "primary_owner_work_package_id": "MCFT-08"
+        },
+        {
+          "delivery_slice_id": "MCFT-CAP-01.CLOSURE-REMEDIATION-V1",
           "status": "COMPLETE",
           "primary_owner_work_package_id": "MCFT-08",
           "contributing_work_package_ids": [
@@ -132,17 +79,34 @@
             "MCFT-05",
             "MCFT-07",
             "MCFT-09"
-          ],
-          "depends_on_delivery_slice_ids": [
-            "MCFT-CAP-01.MCFT-04-05-08-09.A0-RUNTIME-INTEGRATION-V1"
           ]
         }
       ],
       "completion_claims": [
         "MCFT_CAP_01_COMPLETE",
         "FIRST_CLASS_WATER_STATE_ESTIMATE_LEVEL_A_ESTABLISHED",
-        "CONTROLLED_REPLAY_BOOTSTRAP_CLOSURE_ESTABLISHED"
+        "CONTROLLED_REPLAY_BOOTSTRAP_CLOSURE_ESTABLISHED",
+        "PERSISTED_NEXT_TICK_HANDOFF_ESTABLISHED",
+        "CONFLICTING_DUPLICATE_OBSERVATION_REJECTION_ESTABLISHED",
+        "EVIDENCE_MODEL_CONSUMPTION_TRACE_ESTABLISHED",
+        "A0_CROSS_REFERENCE_GRAPH_VALIDATION_ESTABLISHED",
+        "OPERATOR_INVOKABLE_MANUAL_RUNTIME_ENTRY_ESTABLISHED",
+        "CROP_STAGE_CONFIGURATION_CONTEXT_ESTABLISHED"
       ],
+      "acceptance": {
+        "implementation_candidate_head": "193f9785e42eb146e300e2a64abeed455f10e54e",
+        "s1_replay_dataset": "12_PASS_0_FAIL",
+        "s4_static": "21_PASS_0_FAIL",
+        "s4_postgres": "12_PASS_0_FAIL",
+        "remediation_static": "18_PASS_0_FAIL",
+        "remediation_postgres": "7_PASS_0_FAIL",
+        "governance_readiness": "106_PASS_0_FAIL",
+        "ci_run_number": 4491,
+        "ci_run_id": 29038423099,
+        "ci_conclusion": "success",
+        "manual_runner_first": "INSERTED",
+        "manual_runner_second": "EXISTING_IDEMPOTENT_SUCCESS"
+      },
       "preserved_nonclaims": [
         "NO_PROPAGATION",
         "NO_SUCCESSFUL_FORECAST",
@@ -159,17 +123,13 @@
         "NO_MCFT_GATE_B_CLOSURE",
         "NO_MCFT_GATE_C_CLOSURE",
         "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
-      ]
+      ],
+      "next_authorized_slice_ids": [],
+      "effectiveness_condition": "PR_2316_MERGED_AND_VERIFIED_ON_MAIN"
     }
   ],
-  "work_package_status_catalogue": [
-    "NOT_STARTED",
-    "SLICE_PLANNED",
-    "PARTIALLY_ESTABLISHED",
-    "COMPLETE"
-  ],
-  "planned_status_at_mcft_cap_01_closure": {
-    "MCFT-01": "COMPLETE",
+  "actual_owner_work_package_statuses": {
+    "MCFT-01": "PARTIALLY_ESTABLISHED",
     "MCFT-02": "PARTIALLY_ESTABLISHED",
     "MCFT-03": "PARTIALLY_ESTABLISHED",
     "MCFT-04": "PARTIALLY_ESTABLISHED",
@@ -179,50 +139,12 @@
     "MCFT-08": "PARTIALLY_ESTABLISHED",
     "MCFT-09": "PARTIALLY_ESTABLISHED"
   },
-  "actual_status_at_mcft_cap_01_closure": {
-    "MCFT-01": {
-      "status": "COMPLETE",
-      "established_scope": "30-day controlled Canonical Replay Dataset"
-    },
-    "MCFT-02": {
-      "status": "PARTIALLY_ESTABLISHED",
-      "established_scope": "A0 canonical object and immutable Runtime Config subset only"
-    },
-    "MCFT-03": {
-      "status": "PARTIALLY_ESTABLISHED",
-      "established_scope": "A0 persistence, fenced lease, aggregate idempotency and six-projection subset only"
-    },
-    "MCFT-04": {
-      "status": "PARTIALLY_ESTABLISHED",
-      "established_scope": "one controlled A0 bootstrap transaction and next-tick handoff only"
-    },
-    "MCFT-05": {
-      "status": "PARTIALLY_ESTABLISHED",
-      "established_scope": "one frozen bootstrap Evidence Window only"
-    },
-    "MCFT-06": {
-      "status": "NOT_STARTED",
-      "established_scope": "none"
-    },
-    "MCFT-07": {
-      "status": "PARTIALLY_ESTABLISHED",
-      "established_scope": "static bootstrap observation operator and scalar Gaussian assimilation only"
-    },
-    "MCFT-08": {
-      "status": "PARTIALLY_ESTABLISHED",
-      "established_scope": "one first-class posterior State, INITIAL lineage and checkpoint handoff only"
-    },
-    "MCFT-09": {
-      "status": "PARTIALLY_ESTABLISHED",
-      "established_scope": "BLOCKED zero-point Forecast result only"
-    }
-  },
   "global_rules": [
-    "existing MCFT work-package sequence remains semantic dependency order",
-    "later bounded slices may proceed before full owner work-package closure only through explicit dependency refs",
     "capability-line closure does not imply complete owner work-package closure",
-    "MCFT-00 artifacts and frozen hashes remain unchanged",
-    "MCFT-CAP-01 closure is not MCFT Gate A, Gate B, Gate C or Minimum Complete Field Twin closure",
-    "MCFT-CAP-01 COMPLETE becomes effective only after PR 2315 merges into main and the merged main commit is verified"
+    "hash validity does not replace cross-reference graph validity",
+    "Evidence Window inclusion and estimator consumption are separate semantics",
+    "checkpoint next-tick time is not persisted next-tick input reconstruction",
+    "MCFT-CAP-01 completion is not MCFT-2 authorization",
+    "MCFT-00 frozen authority hashes remain unchanged"
   ]
 }

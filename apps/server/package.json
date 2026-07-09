@@ -27,6 +27,7 @@
     "dev": "pnpm -w exec tsx watch apps/server/src/server.ts",
     "build": "pnpm -w exec tsc -p apps/server/tsconfig.json && node scripts/write_dist_entries.cjs",
     "typecheck": "pnpm -w exec tsc --noEmit -p apps/server/tsconfig.json",
+    "mcft:water-state:a0": "pnpm -w exec tsx apps/server/scripts/mcft/MCFT_1_FIRST_CLASS_WATER_STATE_RUNNER.ts",
     "seed:p6.1-real-chain": "pnpm -w exec tsx scripts/generate_p6_1_real_chain_sample.ts",
     "test:agronomy:stage5": "node --import tsx --test src/domain/agronomy/stage5.acceptance.test.ts",
     "test:stage5:frontend": "pnpm -w exec tsx scripts/stage5_frontend_acceptance.ts",

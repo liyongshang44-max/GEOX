@@ -1,5 +1,5 @@
 <!-- docs/digital_twin/mcft/cap_01/GEOX-MCFT-CAP-01-CLOSURE.md -->
-# MCFT-CAP-01 Closure
+# MCFT-CAP-01 Remediated Closure
 
 ```text
 capability_line_id: MCFT-CAP-01
@@ -7,171 +7,126 @@ display_alias: MCFT-1
 name: First-Class Water State Estimate
 runtime_mode: REPLAY
 target_completion_level: Level A
-delivery_slice_id: MCFT-CAP-01.CLOSURE-V1
-runtime_delivery_main_commit: 4a0fd03beb05298028101a4999c67a5e053dadb8
-closure_readiness_head: 273843b09a7fe2e71f2cb9ea5c4ca14dcee8e3e5
-status: COMPLETE
-transition_effective_condition: PR_2315_MERGED_AND_VERIFIED_ON_MAIN
+historical_closure_main_commit: 250053aba801075c17098f8d505d527eb54390e9
+historical_closure_status: SUPERSEDED_BY_REMEDIATION
+remediation_implementation_candidate_head: 193f9785e42eb146e300e2a64abeed455f10e54e
+remediation_pr: 2316
+current_capability_status: COMPLETE
+active_delivery_slice_id: null
+successor: NOT_YET_AUTHORIZED
+effectiveness_condition: PR_2316_MERGED_AND_VERIFIED_ON_MAIN
 ```
 
-## 1. Closure meaning
+## 1. Closure result
 
-MCFT-CAP-01 closes one bounded vertical capability line: a first-class root-zone water State estimate in controlled Replay mode.
+The historical closure established one deterministic A0 bootstrap posterior but overstated the persisted handoff boundary. The remediation closes the identified gaps without adding propagation, successful Forecast, Scenario, Recommendation, Decision or AO-ACT.
 
-The established proof is limited to:
-
-```text
-one controlled bootstrap posterior
-one atomic A0 bootstrap transaction
-aggregate idempotency
-rebuildable A0 projections
-one INITIAL lineage
-one INITIAL checkpoint
-one BLOCKED Forecast result
-one explicit next-tick handoff
-```
-
-This is not the Minimum Complete Field Twin and is not MCFT Gate A, Gate B, or Gate C.
-
-## 2. Completed delivery chain
-
-```text
-S1 Canonical Replay Dataset       COMPLETE
-S2 A0 Contracts and Config        COMPLETE
-S3A A0 Persistence                COMPLETE
-S3B Bootstrap State Math          COMPLETE
-S4 A0 Runtime Integration         COMPLETE
-S5 Capability Closure             COMPLETE
-```
-
-The executable chain is:
-
-```text
-frozen MCFT-00 authority
-→ controlled Canonical Replay records
-→ immutable Runtime Config
-→ frozen Evidence Window
-→ static bootstrap prior
-→ governed H=1 observation operator
-→ scalar Gaussian assimilation
-→ first-class posterior root-zone water State
-→ deterministic nine-object A0 record set
-→ fenced atomic PostgreSQL commit
-→ six rebuildable projections
-→ INITIAL lineage
-→ BLOCKED zero-point Forecast result
-→ INITIAL checkpoint
-→ explicit next-tick handoff
-```
-
-## 3. Executable evidence
-
-### Foundation
-
-```text
-S1 Replay Dataset Gate: 12 PASS, 0 FAIL
-S2 Contracts/Config Gate: 10 PASS, 0 FAIL
-S3A Static Persistence Gate: 16 PASS, 0 FAIL
-S3A PostgreSQL Gate: 8 PASS, 0 FAIL
-Foundation Governance Gate: 11 PASS, 0 FAIL
-Foundation merge commit: b0b364933956a65345b927c6c5618e9d4ebe22af
-```
-
-### Bootstrap State mathematics
-
-```text
-S3B State Math Gate: 108 PASS, 0 FAIL
-S3B Closure Gate: 36 PASS, 0 FAIL
-S3B merge commit: 5d17e6ad9944376bbb5a71c9d801aa4472afe592
-
-posterior_mean: 0.192595
-posterior_variance: 0.002678
-posterior_stddev: 0.051746
-storage_mean_mm: 57.778512
-available_water_fraction: 0.403306
-depletion_from_field_capacity_mm: 32.221488
-confidence.status: NOT_ESTABLISHED
-```
-
-### A0 Runtime integration
-
-```text
-S4 Static Runtime Gate: 20 PASS, 0 FAIL
-S4 PostgreSQL Runtime Gate: 12 PASS, 0 FAIL
-S4 Closure Gate: 57 PASS, 0 FAIL
-S4 merge commit: 4a0fd03beb05298028101a4999c67a5e053dadb8
-
-fault stages: 17
-partial writes: 0
-canonical facts: 9
-projections: 6
-lineage kind: INITIAL
-checkpoint kind: INITIAL
-Forecast status: BLOCKED
-Forecast points: 0
-latest successful Forecast rows: 0
-next tick: 2026-06-01T02:00:00.000Z
-```
-
-### Capability closure
-
-```text
-Closure Readiness Gate: 104 PASS, 0 FAIL
-server Typecheck: PASS
-server Build: PASS
-git diff --check: CLEAN
-working tree: CLEAN
-CI #4462 build-test: SUCCESS
-CI #4462 acceptance: SUCCESS
-changed files: 6 governance-only files
-```
-
-## 4. Completion claims
+The bounded capability now establishes:
 
 ```text
 MCFT_CAP_01_COMPLETE
 FIRST_CLASS_WATER_STATE_ESTIMATE_LEVEL_A_ESTABLISHED
 CONTROLLED_REPLAY_BOOTSTRAP_CLOSURE_ESTABLISHED
+PERSISTED_NEXT_TICK_HANDOFF_ESTABLISHED
+CONFLICTING_DUPLICATE_OBSERVATION_REJECTION_ESTABLISHED
+EVIDENCE_MODEL_CONSUMPTION_TRACE_ESTABLISHED
+A0_CROSS_REFERENCE_GRAPH_VALIDATION_ESTABLISHED
+OPERATOR_INVOKABLE_MANUAL_RUNTIME_ENTRY_ESTABLISHED
+CROP_STAGE_CONFIGURATION_CONTEXT_ESTABLISHED
+GOVERNANCE_STATUS_ALIGNMENT_ESTABLISHED
 ```
 
-These claims mean that GEOX can deterministically create and atomically commit one first-class root-zone water posterior State from controlled Replay Evidence under a frozen Runtime Config, preserve uncertainty and INITIAL lineage, produce a governed BLOCKED Forecast result, rebuild the six A0 projections, and hand off the next logical tick.
+## 2. Persisted handoff proof
 
-They do not mean that the system can propagate water dynamics or run continuously.
-
-## 5. Owner work-package status
-
-Capability-line closure does not complete all contributing owner work packages.
+`PrepareNextTickInputServiceV1` reconstructs the next tick from a PostgreSQL `REPEATABLE READ READ ONLY` snapshot containing:
 
 ```text
-MCFT-01 COMPLETE
-  30-day controlled Canonical Replay Dataset
-
-MCFT-02 PARTIALLY_ESTABLISHED
-  A0 canonical object and immutable Runtime Config subset only
-
-MCFT-03 PARTIALLY_ESTABLISHED
-  A0 persistence, fenced lease, aggregate idempotency and six-projection subset only
-
-MCFT-04 PARTIALLY_ESTABLISHED
-  one controlled A0 bootstrap transaction and next-tick handoff only
-
-MCFT-05 PARTIALLY_ESTABLISHED
-  one frozen bootstrap Evidence Window only
-
-MCFT-06 NOT_STARTED
-  no propagation model
-
-MCFT-07 PARTIALLY_ESTABLISHED
-  static bootstrap observation operator and scalar Gaussian assimilation only
-
-MCFT-08 PARTIALLY_ESTABLISHED
-  one first-class posterior State, INITIAL lineage and checkpoint handoff only
-
-MCFT-09 PARTIALLY_ESTABLISHED
-  BLOCKED zero-point Forecast result only
+active lineage object ref
+active lineage semantic id
+latest checkpoint
+previous posterior State
+Runtime Config
+Reality Binding Runtime snapshot
 ```
 
-## 6. Preserved nonclaims
+It returns:
+
+```text
+previous_posterior_ref
+previous_checkpoint_ref
+lineage_id
+prior_mean
+prior_variance
+next_logical_tick_time
+runtime_config_ref/hash
+reality_binding_ref/hash
+```
+
+The identity distinction is explicit:
+
+```text
+active_lineage_ref = twin_runtime_lineage_v1.object_id
+lineage_id = semantic lineage identity
+```
+
+## 3. Evidence integrity proof
+
+The soil selector uses:
+
+```text
+observed_at descending
+ingested_at descending
+source_record_id ascending
+```
+
+Same origin source and observation time with different canonical payload fails with `CONFLICTING_DUPLICATE_OBSERVATION` before Runtime Config, A0 facts, lease, idempotency guard or projection writes.
+
+Evidence Window entries preserve ingestion, freshness, quality, units, conversion, limitations, disposition and model-consumption semantics. Soil is consumed by the bootstrap estimator; rainfall and historical ET0 are context-only.
+
+## 4. Object graph proof
+
+The A0 validator checks Lineage, Evidence Window, Transition, Assimilation, State, Forecast, Tick, Checkpoint, Health, Runtime Config refs/hashes and next-tick time independently of the aggregate hash. Fourteen rehashed cross-reference corruptions were rejected.
+
+## 5. Manual runner proof
+
+```text
+apps/server/scripts/mcft/MCFT_1_FIRST_CLASS_WATER_STATE_RUNNER.ts
+```
+
+Observed results:
+
+```text
+first execution: INSERTED
+second execution: EXISTING_IDEMPOTENT_SUCCESS
+a0_record_set_id: a0rs_b24d89a612198b8f234aab45
+posterior_mean: 0.192595
+posterior_variance: 0.002678
+next_logical_tick_time: 2026-06-01T02:00:00.000Z
+```
+
+The runner is one-shot and operator-invokable. It is not a scheduler and does not establish continuous Runtime.
+
+## 6. Dataset context proof
+
+`configuration_context.json` and `manifest_v2.json` add a deterministic, time-resolved crop-stage schedule as `CONFIGURATION_DERIVED_CONTEXT`, not Evidence. The frozen MCFT-00 authority and original 3604 Evidence records remain byte-unchanged.
+
+## 7. Acceptance evidence
+
+```text
+S1 Replay Dataset: 12 PASS, 0 FAIL
+S4 A0 Runtime static: 21 PASS, 0 FAIL
+S4 A0 Runtime PostgreSQL: 12 PASS, 0 FAIL
+Remediation static: 18 PASS, 0 FAIL
+Remediation PostgreSQL: 7 PASS, 0 FAIL
+Governance readiness: 106 PASS, 0 FAIL
+Server Typecheck: PASS
+Server Build: PASS
+git diff --check: PASS
+working tree: CLEAN
+CI #4491 / run 29038423099: SUCCESS
+```
+
+## 8. Preserved nonclaims
 
 ```text
 NO_PROPAGATION
@@ -191,26 +146,4 @@ NO_MCFT_GATE_C_CLOSURE
 NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM
 ```
 
-`MCFT-CAP-01 COMPLETE` is a strictly smaller claim than `MCFT-GATE-A COMPLETE`.
-
-## 7. Governance-only boundary
-
-The closure slice changes only closure status, capability matrix, implementation map, closure records, and governance acceptance.
-
-It does not change:
-
-```text
-apps/server Runtime source
-persistence implementation
-migration files
-canonical object contracts
-fixtures
-public routes
-web or Operator UI
-workflow configuration
-MCFT-00 artifacts or authority hashes
-```
-
-## 8. Effectiveness
-
-The closure record and status are marked `COMPLETE`, but the transition becomes effective only after PR #2315 merges into `main` and the merged main commit is verified.
+MCFT-CAP-01 completion does not authorize MCFT-2. MCFT-2 requires a separate post-merge task authorization.

@@ -1,5 +1,5 @@
 // apps/server/src/runtime/twin_runtime/ports.ts
-// Purpose: define MCFT-CAP-01 Runtime Config, controlled Replay evidence, A0 persistence, and projection rebuild ports without binding orchestration to SQL or files.
+// Purpose: define MCFT-CAP-01 Runtime Config, controlled Replay Evidence, A0 persistence, persisted next-tick handoff, authority snapshot, and projection rebuild ports without binding orchestration to SQL or files.
 // Boundary: interfaces only; no implementation, equations, Fastify, filesystem, environment, or wall-clock reads.
 
 import type { A0RecordSetV1, CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
@@ -23,12 +23,48 @@ export type CanonicalReplayEvidenceRecordV1 = TwinScopeKeyV1 & {
   source_record_hash: string;
   record_type: string;
   binding_id: string;
+  origin_source_kind: string;
+  origin_source_id: string;
   epistemic_class: string;
   available_to_runtime_at: string;
   role_time: Record<string, unknown>;
-  quality: { status: string };
+  quality: { status: string; [key: string]: unknown };
+  source_payload: Record<string, unknown>;
   canonical_payload: Record<string, unknown>;
+  source_unit: string;
+  canonical_unit: string;
+  conversion_rule: Record<string, unknown>;
   limitations: string[];
+};
+
+export type RealityBindingRuntimeSnapshotV1 = {
+  binding_id: string;
+  determinism_hash: string;
+  geometry_semantic_hash: string;
+  scope: TwinScopeKeyV1;
+  root_zone_definition: Record<string, unknown>;
+};
+
+export type PersistedNextTickSnapshotV1 = {
+  active_lineage_ref: string;
+  active_lineage_id?: string;
+  checkpoint: CanonicalObjectEnvelopeV1;
+  previous_posterior: CanonicalObjectEnvelopeV1;
+  runtime_config: CanonicalObjectEnvelopeV1;
+  reality_binding: RealityBindingRuntimeSnapshotV1;
+};
+
+export type PreparedNextTickInputV1 = TwinScopeKeyV1 & {
+  previous_posterior_ref: string;
+  previous_checkpoint_ref: string;
+  lineage_id: string;
+  prior_mean: number;
+  prior_variance: number;
+  next_logical_tick_time: string;
+  runtime_config_ref: string;
+  runtime_config_hash: string;
+  reality_binding_ref: string;
+  reality_binding_hash: string;
 };
 
 export interface ReplayEvidenceSourcePortV1 {
@@ -38,6 +74,15 @@ export interface ReplayEvidenceSourcePortV1 {
 export interface RuntimeConfigRepositoryPortV1 {
   commitRuntimeConfig(config: CanonicalObjectEnvelopeV1): Promise<{ status: "INSERTED" | "EXISTING_IDEMPOTENT_SUCCESS"; object_id: string; fact_id: string }>;
   readRuntimeConfig(objectId: string): Promise<CanonicalObjectEnvelopeV1 | null>;
+}
+
+export interface RuntimeAuthoritySnapshotRepositoryPortV1 {
+  commitRealityBindingSnapshot(snapshot: RealityBindingRuntimeSnapshotV1): Promise<{ status: "INSERTED" | "EXISTING_IDEMPOTENT_SUCCESS"; binding_id: string }>;
+  readRealityBindingSnapshot(bindingId: string): Promise<RealityBindingRuntimeSnapshotV1 | null>;
+}
+
+export interface NextTickReadPortV1 {
+  readPersistedNextTickSnapshot(scope: TwinScopeKeyV1): Promise<PersistedNextTickSnapshotV1 | null>;
 }
 
 export interface BootstrapPersistencePortV1 {
