@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_mcft_vertical_capability_line_matrix_v1",
   "amendment_id": "MCFT-VERTICAL-AMENDMENT-01",
-  "status": "PENDING_ACCEPTANCE",
+  "status": "COMPLETE",
   "baseline": {
     "branch": "main",
     "commit": "7dbdce40a55740fbf48dbffe18f8343d17d07953"
