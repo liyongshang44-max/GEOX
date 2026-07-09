@@ -18,4 +18,5 @@ export interface BootstrapPersistencePortV1 {
   lookupA0RecordSet(idempotencyKey: string): Promise<A0RecordSetV1 | null>;
   commitBootstrapState(input: { scope: TwinScopeKeyV1; lease: RuntimeLeaseClaimV1; expected: { active_lineage_ref: null; checkpoint_ref: null; state_ref: null; forecast_result_ref: null; successful_forecast_ref: null }; record_set: A0RecordSetV1; fault_injection?: (stage: FaultInjectionStageV1) => void }): Promise<{ status: "INSERTED" | "EXISTING_IDEMPOTENT_SUCCESS"; record_set: A0RecordSetV1; fact_ids_by_object_id: Record<string, string> }>;
   readBootstrapRecordSet(recordSetId: string): Promise<A0RecordSetV1 | null>;
+  rebuildA0Projections(recordSetId: string): Promise<{ rebuilt_projection_count: 6 }>;
 }
