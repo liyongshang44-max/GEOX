@@ -99,8 +99,14 @@ const lockPath = 'docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-PREDECESSOR-LOC
 const matrixPath = 'docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json';
 const implementationMapPath = 'docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md';
 
-for (const requiredPath of [taskPath, authorizationPath, authorizationStatusPath, deliveryPath]) {
+for (const requiredPath of [authorizationPath, authorizationStatusPath, deliveryPath]) {
   check(exists(requiredPath), `draft authorization file exists: ${requiredPath}`);
+}
+
+if (PHASE === 'final') {
+  check(exists(taskPath), `final authorization file exists: ${taskPath}`);
+} else {
+  check(!exists(taskPath) || readText(taskPath).includes('GEOX-MCFT-CAP-02-TASK-V2.2'), 'draft task artifact is either pending or exact v2.2');
 }
 
 if (exists(taskPath)) {
