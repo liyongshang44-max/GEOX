@@ -15,14 +15,16 @@ Each source record contains a common provenance/scope/time envelope and a role-s
 Role classification instants are:
 
 ```text
-SOIL_MOISTURE_OBSERVATION  observed_at
-RAINFALL_OBSERVATION       interval_end
-HISTORICAL_ET0_INPUT       interval_end
-FUTURE_WEATHER_ASSUMPTION  issued_at
-FUTURE_ET0_ASSUMPTION      issued_at
-APPROVED_IRRIGATION_PLAN   plan_effective_from
-IRRIGATION_EXECUTION_EVIDENCE executed_at
+SOIL_MOISTURE_OBSERVATION      observed_at
+RAINFALL_OBSERVATION           interval_end
+HISTORICAL_ET0_INPUT           interval_end
+FUTURE_WEATHER_ASSUMPTION      issued_at
+FUTURE_ET0_ASSUMPTION          issued_at
+APPROVED_IRRIGATION_PLAN       approved_at
+IRRIGATION_EXECUTION_EVIDENCE  executed_at
 ```
+
+Role availability derivation remains the exact MCFT-00 rule. In particular, an approved plan uses `MAX(approved_at, ingested_at)`; its effective window is domain payload and not availability authority. Future assumptions use `MAX(issued_at, retrieved_at, ingested_at)`.
 
 A future assumption point's `valid_from` is a forecast horizon and does not make the containing snapshot FUTURE Evidence. Snapshot availability is independently derived from issued/retrieved/ingested times.
 
