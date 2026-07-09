@@ -41,8 +41,8 @@ These fields are replaced only after the exact final bytes pass locally and in C
 ## 3. Frozen outputs
 
 ```text
-binding_id: mrb_29f13fbcefdf488249fb1a4eef678372
-determinism_hash: sha256:29f13fbcefdf488249fb1a4eef67837241e8f46d90531d0b18d07acdcbd64530
+binding_id: mrb_475968aa09c18674c10c34ecc708d79d
+determinism_hash: sha256:475968aa09c18674c10c34ecc708d79d6bb257db278f72659715752658497485
 geometry_semantic_hash: sha256:df3da5368a539b61d257603b4e5758589cb1f4cbf2863d3f5e03640c3b0bb30d
 file_sha256: sha256:b0b9039b0a70361f0725e3f342ebd622d34ddb57e5809646a54bdbb420a47c1e
 derived_area_m2: 54370.977
