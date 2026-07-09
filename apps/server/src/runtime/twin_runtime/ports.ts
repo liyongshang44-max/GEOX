@@ -47,6 +47,7 @@ export type RealityBindingRuntimeSnapshotV1 = {
 
 export type PersistedNextTickSnapshotV1 = {
   active_lineage_ref: string;
+  active_lineage_id?: string;
   checkpoint: CanonicalObjectEnvelopeV1;
   previous_posterior: CanonicalObjectEnvelopeV1;
   runtime_config: CanonicalObjectEnvelopeV1;
