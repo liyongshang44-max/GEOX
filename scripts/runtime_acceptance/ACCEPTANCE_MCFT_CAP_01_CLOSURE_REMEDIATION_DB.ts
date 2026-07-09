@@ -1,5 +1,5 @@
 // scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_01_CLOSURE_REMEDIATION_DB.ts
-// Purpose: prove PostgreSQL-backed Reality Binding snapshot persistence, next-tick input reconstruction, persisted-pointer consistency checks, and zero-write conflicting-observation rejection.
+// Purpose: prove PostgreSQL-backed Reality Binding snapshot persistence, next-tick input reconstruction, persisted-pointer consistency checks, and zero-canonical-write conflicting-observation rejection.
 // Boundary: destructive isolated acceptance database only; no propagation, successful Forecast, Scenario, Recommendation, Decision, AO-ACT, scheduler, restart/backfill, late-Evidence revision, or production claim.
 
 import assert from "node:assert/strict";
@@ -76,6 +76,11 @@ async function cleanupV1(): Promise<void> {
   await pool.query("DELETE FROM facts WHERE source='system'");
 }
 
+async function systemFactCountV1(): Promise<number> {
+  const result = await pool.query("SELECT count(*)::int AS count FROM facts WHERE source='system'");
+  return result.rows[0].count;
+}
+
 async function a0FactCountV1(): Promise<number> {
   const result = await pool.query(`SELECT count(*)::int AS count FROM facts WHERE record_json->>'type'=ANY($1::text[])`, [[
     "twin_runtime_lineage_v1",
@@ -89,6 +94,20 @@ async function a0FactCountV1(): Promise<number> {
     "twin_runtime_health_v1",
   ]]);
   return result.rows[0].count;
+}
+
+async function projectionCountV1(): Promise<number> {
+  const result = await pool.query(`
+    SELECT
+      (SELECT count(*) FROM twin_active_lineage_index_v1)
+      +(SELECT count(*) FROM twin_state_history_projection_v1)
+      +(SELECT count(*) FROM twin_state_latest_index_v1)
+      +(SELECT count(*) FROM twin_forecast_result_latest_index_v1)
+      +(SELECT count(*) FROM twin_forecast_success_latest_index_v1)
+      +(SELECT count(*) FROM twin_runtime_checkpoint_latest_index_v1)
+      +(SELECT count(*) FROM twin_runtime_health_latest_index_v1) AS count
+  `);
+  return Number(result.rows[0].count);
 }
 
 async function main(): Promise<void> {
@@ -135,7 +154,9 @@ async function main(): Promise<void> {
     });
     assert.equal(execution.status, "INSERTED");
     assert.equal(await a0FactCountV1(), 9);
-    ok("A0 commit remains nine canonical facts after remediation");
+    assert.equal(await systemFactCountV1(), 10);
+    assert.equal(await projectionCountV1(), 6);
+    ok("A0 commit remains one Runtime Config fact, nine canonical A0 facts and six projections");
 
     const prepared = await nextTickService.prepareNextTickInput(scope);
     assert.equal(prepared.previous_posterior_ref, execution.record_set.members.find((member) => member.object_type === "twin_state_estimate_v1")?.object_id);
@@ -144,7 +165,9 @@ async function main(): Promise<void> {
     assert.equal(prepared.prior_variance, 0.002678);
     assert.equal(prepared.next_logical_tick_time, "2026-06-01T02:00:00.000Z");
     assert.equal(prepared.runtime_config_ref, runtimeConfig.object_id);
+    assert.equal(prepared.runtime_config_hash, runtimeConfig.determinism_hash);
     assert.equal(prepared.reality_binding_ref, reality.binding_id);
+    assert.equal(prepared.reality_binding_hash, reality.determinism_hash);
     ok("prepareNextTickInput reconstructs all required fields from PostgreSQL");
 
     await pool.query("DELETE FROM twin_runtime_authority_snapshot_v1 WHERE authority_kind='REALITY_BINDING' AND authority_ref=$1", [reality.binding_id]);
@@ -180,10 +203,14 @@ async function main(): Promise<void> {
       lease_owner: "mcft-cap-01-remediation-conflict",
       lease_duration_seconds: 300,
     }), /CONFLICTING_DUPLICATE_OBSERVATION/);
+    assert.equal(await systemFactCountV1(), 0);
     assert.equal(await a0FactCountV1(), 0);
-    const projectionCount = await pool.query("SELECT (SELECT count(*) FROM twin_active_lineage_index_v1)+(SELECT count(*) FROM twin_state_latest_index_v1)+(SELECT count(*) FROM twin_runtime_checkpoint_latest_index_v1) AS count");
-    assert.equal(Number(projectionCount.rows[0].count), 0);
-    ok("conflicting duplicate observation produces zero canonical A0 facts and zero projections");
+    assert.equal(await projectionCountV1(), 0);
+    const leaseCount = await pool.query("SELECT count(*)::int AS count FROM twin_runtime_lease_v1");
+    const idempotencyCount = await pool.query("SELECT count(*)::int AS count FROM twin_object_idempotency_index_v1");
+    assert.equal(leaseCount.rows[0].count, 0);
+    assert.equal(idempotencyCount.rows[0].count, 0);
+    ok("conflicting duplicate observation produces zero Runtime Config/A0 canonical facts, leases, guards and projections");
 
     console.log(`MCFT-CAP-01 closure remediation DB: ${pass} PASS, 0 FAIL`);
   } finally {
