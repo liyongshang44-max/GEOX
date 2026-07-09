@@ -28,6 +28,11 @@ function canonicalJsonV1(value: unknown): string {
   throw new Error(`UNSUPPORTED_AUTHORITY_VALUE:${typeof value}`);
 }
 
+function requiredStringV1(value: unknown, code: string): string {
+  if (typeof value !== "string" || !value) throw new Error(code);
+  return value;
+}
+
 export class PostgresNextTickRepositoryV1 implements RuntimeAuthoritySnapshotRepositoryPortV1, NextTickReadPortV1 {
   constructor(private readonly pool: Pool) {}
 
@@ -87,6 +92,9 @@ export class PostgresNextTickRepositoryV1 implements RuntimeAuthoritySnapshotRep
       }
       if (active.rows.length !== 1 || checkpointPointer.rows.length !== 1 || statePointer.rows.length !== 1) throw new Error("PERSISTED_NEXT_TICK_POINTER_SET_INCOMPLETE");
 
+      const activeLineageRef = requiredStringV1(active.rows[0].active_lineage_ref, "ACTIVE_LINEAGE_REF_REQUIRED");
+      const activeLineage = await this.readCanonicalObjectV1(client, activeLineageRef, "twin_runtime_lineage_v1");
+      const activeLineageId = requiredStringV1(activeLineage.lineage_id, "ACTIVE_LINEAGE_ID_REQUIRED");
       const checkpoint = await this.readCanonicalObjectV1(client, checkpointPointer.rows[0].checkpoint_object_id, "twin_runtime_checkpoint_v1");
       const previousPosterior = await this.readCanonicalObjectV1(client, statePointer.rows[0].state_object_id, "twin_state_estimate_v1");
       if (!previousPosterior.runtime_config_ref || checkpoint.runtime_config_ref !== previousPosterior.runtime_config_ref) throw new Error("PERSISTED_RUNTIME_CONFIG_POINTER_MISMATCH");
@@ -97,7 +105,8 @@ export class PostgresNextTickRepositoryV1 implements RuntimeAuthoritySnapshotRep
       if (!realityBinding) throw new Error("PERSISTED_REALITY_BINDING_NOT_FOUND");
       await client.query("COMMIT");
       return {
-        active_lineage_ref: active.rows[0].active_lineage_ref,
+        active_lineage_ref: activeLineageRef,
+        active_lineage_id: activeLineageId,
         checkpoint,
         previous_posterior: previousPosterior,
         runtime_config: runtimeConfig,
