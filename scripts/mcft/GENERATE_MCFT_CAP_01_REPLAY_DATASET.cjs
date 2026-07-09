@@ -12,7 +12,8 @@ const ROOT = path.resolve(__dirname, '../..');
 const DEFAULT_CONFIG = path.join(ROOT, 'fixtures/mcft/water_state/replay_v1/generator_config.json');
 const DEFAULT_SOURCE_MATRIX = path.join(ROOT, 'docs/digital_twin/mcft/GEOX-MCFT-00-SOURCE-BINDING-MATRIX.json');
 const DEFAULT_REALITY = path.join(ROOT, 'docs/digital_twin/mcft/GEOX-MCFT-00-REALITY-BINDING.json');
-const DEFAULT_OUTPUT = path.join(ROOT, 'fixtures/mcft/water_state/replay_v1/materialized');
+const DEFAULT_OUTPUT = path.join(ROOT, 'fixtures/mcft/water_state/replay_v1');
+const GENERATED_ENTRIES = ['manifest.json','soil_moisture','rainfall','historical_et0','future_weather','future_et0','irrigation_plan','irrigation_execution'];
 
 function canonical(value) {
   if (value === undefined) throw new Error('UNDEFINED_FORBIDDEN');
@@ -46,9 +47,9 @@ function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
 }
 
-function ensureEmptyDirectory(directory) {
-  fs.rmSync(directory, { recursive: true, force: true });
+function prepareOutputDirectory(directory) {
   fs.mkdirSync(directory, { recursive: true });
+  for (const entry of GENERATED_ENTRIES) fs.rmSync(path.join(directory, entry), { recursive: true, force: true });
 }
 
 function roleBindingMap(sourceMatrix) {
@@ -143,7 +144,7 @@ function generate(options = {}) {
   const scope = scopeFromReality(reality);
   const requiredRoles = ['SOIL_MOISTURE_OBSERVATION','RAINFALL_OBSERVATION','HISTORICAL_ET0_INPUT','FUTURE_WEATHER_ASSUMPTION','FUTURE_ET0_ASSUMPTION','APPROVED_IRRIGATION_PLAN','IRRIGATION_EXECUTION_EVIDENCE'];
   for (const role of requiredRoles) if (!bindings.has(role)) throw new Error(`UNRESOLVED_BINDING:${role}`);
-  ensureEmptyDirectory(outputDirectory);
+  prepareOutputDirectory(outputDirectory);
   const startMs = Date.parse(config.coverage_start);
   const endMs = Date.parse(config.coverage_end_exclusive);
   const intervalMs = config.tick_interval_ms;
