@@ -2,7 +2,7 @@
   "schema_version": "geox_mcft_reality_binding_v2",
   "phase": "MCFT-00",
   "status": "FROZEN",
-  "acceptance_status": "COMPLETE",
+  "acceptance_status": "PENDING",
   "artifact_type": "mcft_reality_binding_contract_v1",
   "artifact_class": "GOVERNANCE_INPUT",
   "binding_version": 1,
@@ -83,7 +83,7 @@
     },
     "source_binding_matrix": {
       "ref": "docs/digital_twin/mcft/GEOX-MCFT-00-SOURCE-BINDING-MATRIX.json",
-      "determinism_hash": "sha256:41d270f182f233be542e8f8cf59c8d0b85f9d760a164bad54433015385c440d8",
+      "determinism_hash": "sha256:c5187c23be0d058ffa23d464ae1139f924f5af064a270248746fbabde4c3e51b",
       "binding_count": 7,
       "semantic_domain_count": 6,
       "source_definition_count": 7,
@@ -195,6 +195,6 @@
     "limitations": ["controlled synthetic Replay proxy only", "device identities are fixture evidence", "no time-series dataset", "no runtime object", "geometry not surveyed", "configuration controlled synthetic"],
     "nonclaims": ["CANONICAL_REPLAY_DATASET_COMPLETE", "EVIDENCE_INGESTION_COMPLETE", "HOURLY_RUNTIME_EXISTS", "STATE_ESTIMATOR_EXISTS", "PHYSICAL_PROPAGATION_EXISTS", "ASSIMILATION_EXISTS", "POSTERIOR_STATE_EXISTS", "FORECAST_EXISTS", "SCENARIO_EXISTS", "DECISION_EXISTS", "ACTION_FEEDBACK_EXISTS", "RESIDUAL_EXISTS", "CALIBRATION_EXISTS", "CHECKPOINT_EXISTS", "RESTART_RECOVERY_EXISTS", "LATE_EVIDENCE_RUNTIME_REVISION_EXISTS", "LIVE_DEVICE_CONNECTED", "REAL_FIELD_PILOT_STARTED", "MINIMUM_COMPLETE_FIELD_TWIN_COMPLETE", "PRODUCTION_FIELD_TWIN_COMPLETE"]
   },
-  "determinism_hash": "sha256:d6ec3d1072b440e71fb3eccf483b6147f36b5997afbdd4c4e13f4ba7379b479d",
-  "binding_id": "mcft_rb_d6ec3d1072b440e71fb3eccf"
+  "determinism_hash": "sha256:bf1da664164a4fedda249bcb0e330c1af2083173a52bd704f01eac3ad277ba4f",
+  "binding_id": "mcft_rb_bf1da664164a4fedda249bcb"
 }
