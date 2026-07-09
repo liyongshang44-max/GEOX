@@ -1,0 +1,45 @@
+{
+  "schema_version": "geox_mcft_cap_01_delivery_slice_status_v1",
+  "capability_line_id": "MCFT-CAP-01",
+  "display_alias": "MCFT-1",
+  "baseline_main_commit": "94fe516ccbf8831be05c36ede5e2732bf7e19d55",
+  "status": "IN_IMPLEMENTATION",
+  "slices": [
+    {
+      "delivery_slice_id": "MCFT-CAP-01.MCFT-01.CANONICAL-REPLAY-DATASET-V1",
+      "status": "IN_IMPLEMENTATION",
+      "primary_owner_work_package_id": "MCFT-01",
+      "contributing_work_package_ids": [],
+      "depends_on_delivery_slice_ids": [],
+      "claim": "NO_RUNTIME_IMPLEMENTATION"
+    },
+    {
+      "delivery_slice_id": "MCFT-CAP-01.MCFT-02.A0-CONTRACTS-AND-CONFIG-V1",
+      "status": "IN_IMPLEMENTATION",
+      "primary_owner_work_package_id": "MCFT-02",
+      "contributing_work_package_ids": [],
+      "depends_on_delivery_slice_ids": [
+        "MCFT-CAP-01.MCFT-01.CANONICAL-REPLAY-DATASET-V1"
+      ],
+      "claim": "NO_CANONICAL_WRITE"
+    },
+    {
+      "delivery_slice_id": "MCFT-CAP-01.MCFT-03.A0-PERSISTENCE-V1",
+      "status": "IN_IMPLEMENTATION",
+      "primary_owner_work_package_id": "MCFT-03",
+      "contributing_work_package_ids": [],
+      "depends_on_delivery_slice_ids": [
+        "MCFT-CAP-01.MCFT-02.A0-CONTRACTS-AND-CONFIG-V1"
+      ],
+      "claim": "NO_A0_RUNTIME_EXECUTION"
+    }
+  ],
+  "next_authorized_slice_ids": [],
+  "nonclaims": [
+    "NO_BOOTSTRAP_STATE_COMMITTED",
+    "NO_SUCCESSFUL_FORECAST",
+    "NO_SCENARIO",
+    "NO_PROPAGATION",
+    "NO_CONTINUOUS_RUNTIME"
+  ]
+}
