@@ -1,0 +1,21 @@
+{
+  "case_id": "mcft_cap_01_bootstrap_water_state_001",
+  "logical_tick_time": "2026-06-01T01:00:00.000Z",
+  "window_start_exclusive": "2026-06-01T00:00:00.000Z",
+  "window_end_inclusive": "2026-06-01T01:00:00.000Z",
+  "soil_observation": {
+    "binding_id": "soil_obs_c8_20cm_v1",
+    "observed_at": "2026-06-01T00:50:00.000Z",
+    "ingested_at": "2026-06-01T00:55:00.000Z",
+    "available_to_runtime_at": "2026-06-01T00:55:00.000Z",
+    "source_value": 18.4,
+    "source_unit": "percent_vwc",
+    "canonical_value": 0.184,
+    "canonical_unit": "fraction",
+    "quality_status": "PASS"
+  },
+  "unavailable_forecast_prerequisites": [
+    "FUTURE_WEATHER_ASSUMPTION_NOT_AVAILABLE",
+    "FUTURE_ET0_ASSUMPTION_NOT_AVAILABLE"
+  ]
+}
