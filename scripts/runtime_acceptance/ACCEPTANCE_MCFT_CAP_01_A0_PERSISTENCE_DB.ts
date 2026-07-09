@@ -98,59 +98,66 @@ async function projectionCount(): Promise<number> {
   return count;
 }
 
-try {
-  await pool.query(fs.readFileSync(path.join(ROOT, "apps/server/db/migrations/2026_07_09_mcft_cap_01_a0_persistence.sql"), "utf8"));
-  await cleanupA0();
-  await pool.query("DELETE FROM twin_object_idempotency_index_v1 WHERE identity_kind='RUNTIME_CONFIG' AND idempotency_key=$1", [runtimeConfig.idempotency_key]);
-  await pool.query("DELETE FROM facts WHERE record_json->'payload'->>'object_id'=$1", [runtimeConfig.object_id]);
-  const configFirst = await repository.commitRuntimeConfig(runtimeConfig);
-  assert.equal(configFirst.status, "INSERTED"); ok("Runtime Config inserted");
-  const configSecond = await repository.commitRuntimeConfig(runtimeConfig);
-  assert.equal(configSecond.status, "EXISTING_IDEMPOTENT_SUCCESS"); ok("Runtime Config idempotent readback");
+async function main(): Promise<void> {
+  try {
+    await pool.query(fs.readFileSync(path.join(ROOT, "apps/server/db/migrations/2026_07_09_mcft_cap_01_a0_persistence.sql"), "utf8"));
+    await cleanupA0();
+    await pool.query("DELETE FROM twin_object_idempotency_index_v1 WHERE identity_kind='RUNTIME_CONFIG' AND idempotency_key=$1", [runtimeConfig.idempotency_key]);
+    await pool.query("DELETE FROM facts WHERE record_json->'payload'->>'object_id'=$1", [runtimeConfig.object_id]);
+    const configFirst = await repository.commitRuntimeConfig(runtimeConfig);
+    assert.equal(configFirst.status, "INSERTED"); ok("Runtime Config inserted");
+    const configSecond = await repository.commitRuntimeConfig(runtimeConfig);
+    assert.equal(configSecond.status, "EXISTING_IDEMPOTENT_SUCCESS"); ok("Runtime Config idempotent readback");
 
-  const faultStages = recordSet.members.map((member, index) => `before_fact_${index + 1}_${member.object_type}`).concat(["before_active_lineage_projection","before_state_history_projection","before_state_latest_projection","before_forecast_result_projection","before_checkpoint_projection","before_health_projection","before_idempotency_index","before_commit"]);
-  for (const stage of faultStages) {
+    const faultStages = recordSet.members.map((member, index) => `before_fact_${index + 1}_${member.object_type}`).concat(["before_active_lineage_projection","before_state_history_projection","before_state_latest_projection","before_forecast_result_projection","before_checkpoint_projection","before_health_projection","before_idempotency_index","before_commit"]);
+    for (const stage of faultStages) {
+      await cleanupA0();
+      const lease = await repository.acquireLease({ ...scope, lease_owner: "mcft-cap-01-s3a-acceptance", lease_duration_seconds: 300 });
+      await assert.rejects(repository.commitBootstrapState({ scope, lease, expected: { active_lineage_ref: null, checkpoint_ref: null, state_ref: null, forecast_result_ref: null, successful_forecast_ref: null }, record_set: recordSet, fault_injection: (current) => { if (current === stage) throw new Error(`FAULT:${stage}`); } }), new RegExp(`FAULT:${stage}`));
+      assert.equal(await a0FactCount(), 0); assert.equal(await projectionCount(), 0);
+    }
+    ok(`${faultStages.length} fault stages rolled back fully`);
+
+    await cleanupA0();
+    const staleLease = await repository.acquireLease({ ...scope, lease_owner: "mcft-cap-01-s3a-acceptance", lease_duration_seconds: 300 });
+    await repository.acquireLease({ ...scope, lease_owner: "mcft-cap-01-s3a-acceptance", lease_duration_seconds: 300 });
+    await assert.rejects(repository.commitBootstrapState({ scope, lease: staleLease, expected: { active_lineage_ref: null, checkpoint_ref: null, state_ref: null, forecast_result_ref: null, successful_forecast_ref: null }, record_set: recordSet }), /STALE_FENCING_TOKEN/);
+    assert.equal(await a0FactCount(), 0); ok("stale fencing token produces zero A0 writes");
+
     await cleanupA0();
     const lease = await repository.acquireLease({ ...scope, lease_owner: "mcft-cap-01-s3a-acceptance", lease_duration_seconds: 300 });
-    await assert.rejects(repository.commitBootstrapState({ scope, lease, expected: { active_lineage_ref: null, checkpoint_ref: null, state_ref: null, forecast_result_ref: null, successful_forecast_ref: null }, record_set: recordSet, fault_injection: (current) => { if (current === stage) throw new Error(`FAULT:${stage}`); } }), new RegExp(`FAULT:${stage}`));
-    assert.equal(await a0FactCount(), 0); assert.equal(await projectionCount(), 0);
+    const first = await repository.commitBootstrapState({ scope, lease, expected: { active_lineage_ref: null, checkpoint_ref: null, state_ref: null, forecast_result_ref: null, successful_forecast_ref: null }, record_set: recordSet });
+    assert.equal(first.status, "INSERTED"); assert.equal(await a0FactCount(), 9); assert.equal(await projectionCount(), 6); ok("nine facts and six projections committed atomically");
+    const second = await repository.commitBootstrapState({ scope, lease, expected: { active_lineage_ref: null, checkpoint_ref: null, state_ref: null, forecast_result_ref: null, successful_forecast_ref: null }, record_set: recordSet });
+    assert.equal(second.status, "EXISTING_IDEMPOTENT_SUCCESS"); assert.equal(await a0FactCount(), 9); ok("same-input replay adds no facts after pointers exist");
+
+    const conflict = structuredClone(recordSet);
+    const health = conflict.members.find((member) => member.object_type === "twin_runtime_health_v1")!;
+    health.payload.operation_status = "CONFLICTING_PERSISTENCE_FIXTURE";
+    health.determinism_hash = computeMemberDeterminismHashV1(health as unknown as Record<string, unknown>);
+    conflict.a0_record_set_determinism_hash = computeA0RecordSetDeterminismHashV1({ a0_record_set_id: conflict.a0_record_set_id, members: conflict.members as unknown as Record<string, unknown>[] });
+    validateA0RecordSetV1(conflict);
+    await assert.rejects(repository.commitBootstrapState({ scope, lease, expected: { active_lineage_ref: null, checkpoint_ref: null, state_ref: null, forecast_result_ref: null, successful_forecast_ref: null }, record_set: conflict }), /IDEMPOTENCY_CONFLICT/);
+    assert.equal(await a0FactCount(), 9); ok("same key with different aggregate hash rejected");
+
+    const beforeState = await pool.query("SELECT state_object_id,determinism_hash FROM twin_state_latest_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6", scopeParams);
+    const rebuild = await rebuilder.rebuildA0Projections(recordSet.a0_record_set_id);
+    assert.equal(rebuild.rebuilt_projection_count, 6);
+    const afterState = await pool.query("SELECT state_object_id,determinism_hash FROM twin_state_latest_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6", scopeParams);
+    assert.deepEqual(afterState.rows, beforeState.rows);
+    const successful = await pool.query("SELECT count(*)::int AS count FROM twin_forecast_success_latest_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6", scopeParams);
+    assert.equal(successful.rows[0].count, 0); ok("projection rebuild equivalent and successful Forecast latest remains empty");
+
+    console.log(`MCFT-CAP-01 S3A DB: ${pass} PASS, 0 FAIL`);
+  } finally {
+    await cleanupA0().catch(() => undefined);
+    await pool.query("DELETE FROM twin_object_idempotency_index_v1 WHERE identity_kind='RUNTIME_CONFIG' AND idempotency_key=$1", [runtimeConfig.idempotency_key]).catch(() => undefined);
+    await pool.query("DELETE FROM facts WHERE record_json->'payload'->>'object_id'=$1", [runtimeConfig.object_id]).catch(() => undefined);
+    await pool.end();
   }
-  ok(`${faultStages.length} fault stages rolled back fully`);
-
-  await cleanupA0();
-  const staleLease = await repository.acquireLease({ ...scope, lease_owner: "mcft-cap-01-s3a-acceptance", lease_duration_seconds: 300 });
-  await repository.acquireLease({ ...scope, lease_owner: "mcft-cap-01-s3a-acceptance", lease_duration_seconds: 300 });
-  await assert.rejects(repository.commitBootstrapState({ scope, lease: staleLease, expected: { active_lineage_ref: null, checkpoint_ref: null, state_ref: null, forecast_result_ref: null, successful_forecast_ref: null }, record_set: recordSet }), /STALE_FENCING_TOKEN/);
-  assert.equal(await a0FactCount(), 0); ok("stale fencing token produces zero A0 writes");
-
-  await cleanupA0();
-  const lease = await repository.acquireLease({ ...scope, lease_owner: "mcft-cap-01-s3a-acceptance", lease_duration_seconds: 300 });
-  const first = await repository.commitBootstrapState({ scope, lease, expected: { active_lineage_ref: null, checkpoint_ref: null, state_ref: null, forecast_result_ref: null, successful_forecast_ref: null }, record_set: recordSet });
-  assert.equal(first.status, "INSERTED"); assert.equal(await a0FactCount(), 9); assert.equal(await projectionCount(), 6); ok("nine facts and six projections committed atomically");
-  const second = await repository.commitBootstrapState({ scope, lease, expected: { active_lineage_ref: null, checkpoint_ref: null, state_ref: null, forecast_result_ref: null, successful_forecast_ref: null }, record_set: recordSet });
-  assert.equal(second.status, "EXISTING_IDEMPOTENT_SUCCESS"); assert.equal(await a0FactCount(), 9); ok("same-input replay adds no facts after pointers exist");
-
-  const conflict = structuredClone(recordSet);
-  const health = conflict.members.find((member) => member.object_type === "twin_runtime_health_v1")!;
-  health.payload.operation_status = "CONFLICTING_PERSISTENCE_FIXTURE";
-  health.determinism_hash = computeMemberDeterminismHashV1(health as unknown as Record<string, unknown>);
-  conflict.a0_record_set_determinism_hash = computeA0RecordSetDeterminismHashV1({ a0_record_set_id: conflict.a0_record_set_id, members: conflict.members as unknown as Record<string, unknown>[] });
-  validateA0RecordSetV1(conflict);
-  await assert.rejects(repository.commitBootstrapState({ scope, lease, expected: { active_lineage_ref: null, checkpoint_ref: null, state_ref: null, forecast_result_ref: null, successful_forecast_ref: null }, record_set: conflict }), /IDEMPOTENCY_CONFLICT/);
-  assert.equal(await a0FactCount(), 9); ok("same key with different aggregate hash rejected");
-
-  const beforeState = await pool.query("SELECT state_object_id,determinism_hash FROM twin_state_latest_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6", scopeParams);
-  const rebuild = await rebuilder.rebuildA0Projections(recordSet.a0_record_set_id);
-  assert.equal(rebuild.rebuilt_projection_count, 6);
-  const afterState = await pool.query("SELECT state_object_id,determinism_hash FROM twin_state_latest_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6", scopeParams);
-  assert.deepEqual(afterState.rows, beforeState.rows);
-  const successful = await pool.query("SELECT count(*)::int AS count FROM twin_forecast_success_latest_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6", scopeParams);
-  assert.equal(successful.rows[0].count, 0); ok("projection rebuild equivalent and successful Forecast latest remains empty");
-
-  console.log(`MCFT-CAP-01 S3A DB: ${pass} PASS, 0 FAIL`);
-} finally {
-  await cleanupA0().catch(() => undefined);
-  await pool.query("DELETE FROM twin_object_idempotency_index_v1 WHERE identity_kind='RUNTIME_CONFIG' AND idempotency_key=$1", [runtimeConfig.idempotency_key]).catch(() => undefined);
-  await pool.query("DELETE FROM facts WHERE record_json->'payload'->>'object_id'=$1", [runtimeConfig.object_id]).catch(() => undefined);
-  await pool.end();
 }
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
