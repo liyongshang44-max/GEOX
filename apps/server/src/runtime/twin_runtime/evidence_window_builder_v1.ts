@@ -49,11 +49,11 @@ export type FrozenEvidenceWindowV1 = {
 
 const RECORD_TYPE_TO_ROLE_V1: Readonly<Record<string, ReplayEvidenceRoleV1>> = {
   soil_moisture_observation_v1: "SOIL_MOISTURE_OBSERVATION",
-  rainfall_observation_v1: "RAINFALL_OBSERVATION",
-  historical_et0_input_v1: "HISTORICAL_ET0_INPUT",
+  observed_rainfall_v1: "RAINFALL_OBSERVATION",
+  historical_et0_estimate_v1: "HISTORICAL_ET0_INPUT",
   future_weather_assumption_v1: "FUTURE_WEATHER_ASSUMPTION",
   future_et0_assumption_v1: "FUTURE_ET0_ASSUMPTION",
-  approved_irrigation_plan_v1: "APPROVED_IRRIGATION_PLAN",
+  approved_irrigation_plan_snapshot_v1: "APPROVED_IRRIGATION_PLAN",
   irrigation_execution_evidence_v1: "IRRIGATION_EXECUTION_EVIDENCE",
 };
 
