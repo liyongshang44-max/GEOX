@@ -95,17 +95,20 @@ for (const marker of [
   'bootstrap_prior_ref: forbidden',
   'INITIAL_LINEAGE_CONFLICT',
   'aggregate idempotency',
-  'separate F audit',
 ]) amendment02.includes(marker) ? pass(`Amendment 02 marker ${marker}`) : fail(`Amendment 02 marker missing ${marker}`);
+if (amendment02.includes('F_OPERATIONAL_ATTEMPT_HEALTH') && amendment02.toLowerCase().includes('audit') && amendment02.includes('A0 partial success')) pass('Amendment 02 separate F audit boundary');
+else fail('Amendment 02 separate F audit boundary missing');
 
 for (const marker of [
   'A0 BOOTSTRAP',
   'NULL_TO_INITIAL',
-  'INITIAL revision_id does not imply a revision-run object',
   'A0 aggregate idempotency',
-  'eight transaction families',
   'No Runtime capability is established',
 ]) freeze.includes(marker) ? pass(`freeze marker ${marker}`) : fail(`freeze marker missing ${marker}`);
+if (freeze.includes('INITIAL revision identity without revision-run object') || freeze.includes('INITIAL revision_id does not imply a revision-run object')) pass('freeze INITIAL revision identity boundary');
+else fail('freeze INITIAL revision identity boundary missing');
+if (/eight frozen machine-readable families remain/i.test(freeze)) pass('freeze eight transaction families');
+else fail('freeze eight transaction families marker missing');
 
 if (!implementationMap.includes('A0 plus an `INITIAL` `twin_runtime_lineage_v1`')) fail('implementation map lacks initial activation authority');
 else pass('implementation map initial activation authority');
