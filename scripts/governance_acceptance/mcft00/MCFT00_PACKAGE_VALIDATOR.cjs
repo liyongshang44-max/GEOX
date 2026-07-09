@@ -67,6 +67,10 @@ function parseInstant(value) {
   return Number.isFinite(milliseconds) ? milliseconds : null;
 }
 
+function deriveBindingId(semanticHash) {
+  return `mcft_rb_${semanticHash.slice('sha256:'.length, 'sha256:'.length + 24)}`;
+}
+
 function deriveAvailableToRuntimeAt(role, record, releasePolicy) {
   const rule = releasePolicy?.role_rules?.[role];
   if (!rule) return { finding: finding('REPLAY_RELEASE_ROLE_RULE_MISSING', STAGE.TIME, role) };
@@ -104,13 +108,37 @@ function validateIdempotency(existingBinding, candidateBinding) {
   if (!existingBinding || !candidateBinding || existingBinding.binding_id !== candidateBinding.binding_id) {
     return { status: 'NOT_SAME_ID', findings: [] };
   }
-  if (existingBinding.determinism_hash === candidateBinding.determinism_hash) {
-    return { status: 'IDEMPOTENT_REPLAY', findings: [] };
+
+  const existingSemanticHash = hash(existingBinding.semantic_payload);
+  const candidateSemanticHash = hash(candidateBinding.semantic_payload);
+  const semanticHashFindings = [];
+
+  if (existingBinding.determinism_hash !== existingSemanticHash) {
+    semanticHashFindings.push(finding('SEMANTIC_HASH_MISMATCH', STAGE.DETERMINISM, 'existing'));
   }
-  return {
-    status: 'IDEMPOTENCY_CONFLICT',
-    findings: [finding('IDEMPOTENCY_CONFLICT', STAGE.DETERMINISM)],
-  };
+  if (candidateBinding.determinism_hash !== candidateSemanticHash) {
+    semanticHashFindings.push(finding('SEMANTIC_HASH_MISMATCH', STAGE.DETERMINISM, 'candidate'));
+  }
+  if (semanticHashFindings.length) {
+    return { status: 'SEMANTIC_HASH_MISMATCH', findings: semanticHashFindings };
+  }
+
+  if (existingSemanticHash !== candidateSemanticHash) {
+    return {
+      status: 'IDEMPOTENCY_CONFLICT',
+      findings: [finding('IDEMPOTENCY_CONFLICT', STAGE.DETERMINISM)],
+    };
+  }
+
+  const expectedBindingId = deriveBindingId(existingSemanticHash);
+  if (existingBinding.binding_id !== expectedBindingId || candidateBinding.binding_id !== expectedBindingId) {
+    return {
+      status: 'BINDING_ID_MISMATCH',
+      findings: [finding('BINDING_ID_MISMATCH', STAGE.DETERMINISM)],
+    };
+  }
+
+  return { status: 'IDEMPOTENT_REPLAY', findings: [] };
 }
 
 function validatePackage(pkg, geometryBytes) {
@@ -217,6 +245,7 @@ function validatePackage(pkg, geometryBytes) {
     if (!adapterDefinition) findings.push(finding('INGRESS_ADAPTER_DEFINITION_MISSING', STAGE.AUTHORITY, binding.binding_id));
     else {
       if (adapterDefinition.ingress_adapter_kind !== binding.ingress_adapter_kind) findings.push(finding('INGRESS_ADAPTER_KIND_MISMATCH', STAGE.AUTHORITY, binding.binding_id));
+      if (adapterDefinition.ingress_adapter_version !== binding.ingress_adapter_version) findings.push(finding('INGRESS_ADAPTER_VERSION_MISMATCH', STAGE.AUTHORITY, binding.binding_id));
       if (adapterDefinition.output_record_type !== binding.evidence_record_type) findings.push(finding('INGRESS_ADAPTER_OUTPUT_TYPE_MISMATCH', STAGE.AUTHORITY, binding.binding_id));
       if (adapterDefinition.release_policy_id !== binding.availability_semantics?.release_policy_id) findings.push(finding('INGRESS_ADAPTER_RELEASE_POLICY_MISMATCH', STAGE.AUTHORITY, binding.binding_id));
     }
@@ -358,7 +387,7 @@ function validatePackage(pkg, geometryBytes) {
   for (const code of scanForbiddenHashInputs(semantic)) findings.push(finding(code, STAGE.DETERMINISM));
   if (Object.hasOwn(semantic, 'acceptance_status') || Object.hasOwn(semantic, 'status')) findings.push(finding('ACCEPTANCE_STATUS_IN_SEMANTIC_PAYLOAD', STAGE.DETERMINISM));
   if (reality.determinism_hash !== hash(semantic)) findings.push(finding('REALITY_BINDING_SEMANTIC_HASH_MISMATCH', STAGE.DETERMINISM));
-  const expectedBindingId = `mcft_rb_${hash(semantic).slice('sha256:'.length, 'sha256:'.length + 24)}`;
+  const expectedBindingId = deriveBindingId(hash(semantic));
   if (reality.binding_id !== expectedBindingId) findings.push(finding('REALITY_BINDING_ID_MISMATCH', STAGE.DETERMINISM));
   if (Object.hasOwn(reality, 'lineage_id')) findings.push(finding('REALITY_BINDING_LINEAGE_ID_FORBIDDEN', STAGE.VERSIONING));
   if (Object.hasOwn(reality, 'revision_id')) findings.push(finding('REALITY_BINDING_REVISION_ID_FORBIDDEN', STAGE.VERSIONING));
