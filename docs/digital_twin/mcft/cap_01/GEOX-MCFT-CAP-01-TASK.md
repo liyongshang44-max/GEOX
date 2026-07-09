@@ -1,9 +1,9 @@
 <!-- docs/digital_twin/mcft/cap_01/GEOX-MCFT-CAP-01-TASK.md -->
 # GEOX MCFT-CAP-01 / MCFT-1
 
-# First-Class Water State Estimate 实施任务书 v2.1
+# First-Class Water State Estimate 当前实施任务书 v3.0
 
-## 0. 当前任务身份
+## 0. 当前身份
 
 ```text
 capability_line_id:
@@ -19,806 +19,414 @@ runtime_mode:
 REPLAY
 
 target_completion_level:
-Level A — Deterministic Replay Twin
+Level A — Deterministic Replay Bootstrap State
 
 authority_baseline_commit:
 94fe516ccbf8831be05c36ede5e2732bf7e19d55
 
-authority_baseline_meaning:
-DT02-AMENDMENT-02 Initial Lineage and Bootstrap State Semantics merged
+runtime_delivery_main_commit:
+4a0fd03beb05298028101a4999c67a5e053dadb8
 
-implementation_baseline_branch:
-main
-
-implementation_baseline_commit:
-b0b364933956a65345b927c6c5618e9d4ebe22af
-
-implementation_baseline_meaning:
-PR #2310 merged; S1 Canonical Replay Dataset, S2 A0 Contracts/Config, and S3A A0 Persistence closed on main
+historical_closure_main_commit:
+250053aba801075c17098f8d505d527eb54390e9
 
 status:
 IN_IMPLEMENTATION
 
 active_delivery_slice:
-MCFT-CAP-01.MCFT-07-08.BOOTSTRAP-STATE-MATH-V1
+MCFT-CAP-01.CLOSURE-REMEDIATION-V1
+
+successor:
+NOT_YET_AUTHORIZED
 ```
 
-当前机器状态：
+`250053aba801075c17098f8d505d527eb54390e9` 保留为历史 closure commit，但其无条件 `MCFT_CAP_01_COMPLETE` 声明已因后续代码级审计发现实质缺口而暂停生效。
+
+本任务书取代旧 v2.1 中已经过期的：
 
 ```text
-S1  MCFT-CAP-01.MCFT-01.CANONICAL-REPLAY-DATASET-V1
-    COMPLETE
-
-S2  MCFT-CAP-01.MCFT-02.A0-CONTRACTS-AND-CONFIG-V1
-    COMPLETE
-
-S3A MCFT-CAP-01.MCFT-03.A0-PERSISTENCE-V1
-    COMPLETE
-
-S3B MCFT-CAP-01.MCFT-07-08.BOOTSTRAP-STATE-MATH-V1
-    READY_FOR_IMPLEMENTATION
-
-S4  MCFT-CAP-01.MCFT-04-05-08-09.A0-RUNTIME-INTEGRATION-V1
-    NOT_YET_AUTHORIZED
-
-S5  MCFT-CAP-01.CLOSURE-V1
-    NOT_YET_AUTHORIZED
+status: IN_IMPLEMENTATION
+active_delivery_slice: MCFT-CAP-01.MCFT-07-08.BOOTSTRAP-STATE-MATH-V1
+S4 NOT_YET_AUTHORIZED
+S5 NOT_YET_AUTHORIZED
 ```
 
-本版本不重新授权 S1、S2 或 S3A。当前只能实施 S3B。S4 必须等待 S3B 合并后另行开始。
+旧状态不再具有实施指导效力。
 
 ---
 
-# 1. 权威来源与优先级
+## 1. 已成立且继续保留的事实
 
 ```text
-1. DT-02 Runtime Architecture Freeze
-2. DT02-AMENDMENT-01
-3. DT02-AMENDMENT-02
-4. MCFT-00 Reality Binding Contract
-5. MCFT-VERTICAL-AMENDMENT-01
-6. MCFT Vertical Capability Line Matrix
-7. GEOX-MCFT-CAP-01-DELIVERY-SLICE-STATUS.json
-8. 本任务书
-9. 各 delivery slice 实现文档
+S1 Canonical Replay Evidence Dataset
+  720 hourly intervals
+  3604 governed Evidence records
+  seven Evidence roles
+  deterministic regeneration
+
+S2 A0 Contracts and Runtime Config subset
+  deterministic identity
+  immutable Runtime Config
+
+S3A A0 Persistence subset
+  fenced lease
+  aggregate idempotency
+  nine-fact atomic append
+  six rebuildable projections
+
+S3B Bootstrap State Math
+  prior_mean 0.210000
+  prior_variance 0.008100
+  observation 0.184000
+  posterior_mean 0.192595
+  posterior_variance 0.002678
+  posterior_stddev 0.051746
+
+S4 A0 Runtime Integration
+  one controlled Replay bootstrap transaction
+  INITIAL lineage
+  INITIAL checkpoint
+  BLOCKED zero-point Forecast result
+  checkpoint next_tick_logical_time pointer
 ```
 
-若本任务书与更高层权威冲突：
-
-```text
-禁止在 Runtime 代码中静默修正
-禁止通过宽松 validator 绕过
-禁止修改 canonical 语义适配实现
-必须停止冲突部分并单独形成 architecture amendment
-```
-
-本任务不得重新设计：
-
-```text
-A0_BOOTSTRAP_STATE_COMMIT
-NULL_TO_INITIAL activation
-INITIAL lineage
-embedded bootstrap prior
-INITIAL revision_id
-INITIAL checkpoint
-nine-object atomic append set
-aggregate idempotency
-BLOCKED Forecast
-zero partial-write failure semantics
-```
-
----
-
-# 2. 已成立基础
-
-当前 main 已经具备：
-
-```text
-30-day Canonical Replay Dataset
-3604 governed source records
-byte-identical Replay regeneration
-A0 canonical object contracts
-production canonical JSON and deterministic identity
-Runtime Config compiler
-Postgres A0 persistence foundation
-lease / fencing / idempotency
-nine-fact atomic transaction implementation
-rebuildable A0 projections
-```
-
-S1 记录结构已经冻结为：
-
-```text
-common envelope
-+
-role-specific source_payload
-+
-role-specific canonical_payload
-```
-
-标量字段只适用于标量 role：
-
-```text
-source_payload.value
-source_payload.unit
-canonical_payload.value
-canonical_payload.unit
-```
-
-Future snapshot、approved plan 与 execution Evidence 必须保留结构化 payload，不得被强制压平成公共 `source_value` / `canonical_value`。
-
-这些基础不得在 S3B 中重写。
-
----
-
-# 3. S3B 唯一目标
-
-```text
-delivery_slice_id:
-MCFT-CAP-01.MCFT-07-08.BOOTSTRAP-STATE-MATH-V1
-
-primary_owner_work_package_ids:
-MCFT-07
-MCFT-08
-
-status:
-READY_FOR_IMPLEMENTATION
-
-depends_on:
-MCFT-CAP-01.MCFT-02.A0-CONTRACTS-AND-CONFIG-V1  COMPLETE
-
-parallel_dependency_status:
-MCFT-CAP-01.MCFT-03.A0-PERSISTENCE-V1  COMPLETE
-```
-
-S3B 只实现纯 Domain 计算：
-
-```text
-configured weak bootstrap prior
-+
-one quality-controlled 200 mm point observation
-→
-posterior root-zone Water State
-```
-
-不得访问：
-
-```text
-Postgres
-filesystem
-environment variables
-wall clock
-network
-Fastify
-scheduler
-global mutable state
-```
-
-S3B 不得：
-
-```text
-构建 Evidence Window
-选择 Replay Evidence
-运行 A0 orchestrator
-写 canonical facts
-更新 projections
-建立 active lineage
-建立 Initial Checkpoint
-创建 Forecast
-执行 next-tick handoff
-```
-
-这些属于 S4。
-
----
-
-# 4. 输入与冻结配置
-
-标准输入：
-
-```text
-observation:
-0.184000 fraction VWC
-
-quality_status:
-PASS
-
-wilting_point_fraction:
-0.12
-
-field_capacity_fraction:
-0.30
-
-saturation_fraction:
-0.45
-
-root_zone_depth_mm:
-300
-```
-
-Bootstrap model config：
-
-```text
-model_component_id:
-mcft_static_gaussian_bootstrap_water_state_v1
-
-prior_rule_id:
-MIDPOINT_WILTING_FIELD_CAPACITY_WEAK_PRIOR_V1
-
-observation_operator_id:
-POINT_200MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1
-
-assimilation_method_id:
-SCALAR_GAUSSIAN_ASSIMILATION_V1
-
-uncertainty_method_id:
-GAUSSIAN_APPROXIMATION_95_INTERVAL_V1
-
-numeric_output_decimals:
-6
-
-rounding_rule:
-DECIMAL_HALF_AWAY_FROM_ZERO_V1
-
-physical_bound_version:
-ROOT_ZONE_WATER_PHYSICAL_BOUNDS_V1
-
-gaussian_interval_rule:
-NORMAL_95_Z_1_96_V1
-
-uncertainty_interval_clip_rule:
-CLIP_TO_ZERO_AND_SATURATION_WITH_UNCLIPPED_METADATA_V1
-
-interval_clip_bounds:
-[0, saturation_fraction]
-```
-
-Synthetic uncertainty parameters：
-
-```text
-sensor_measurement_stddev_fraction:
-0.02
-
-point_to_zone_representativeness_stddev_fraction:
-0.06
-
-quality_weights.PASS:
-1.0
-
-quality_weights.LIMITED:
-0.5
-
-quality_weights.FAIL:
-0.0
-```
-
-这些参数必须标记：
-
-```text
-CONTROLLED_SYNTHETIC
-NOT_FIELD_CALIBRATED
-```
-
-上述 physical-bound、Gaussian interval 和 clipping rule 身份必须进入 Runtime Config semantic payload，并由 S3B domain output 引用。
-
----
-
-# 5. Latent State 与显式 unavailable 状态
-
-唯一被估计的 latent variable：
-
-```text
-ROOT_ZONE_VOLUMETRIC_WATER_CONTENT_FRACTION
-```
-
-派生变量：
-
-```text
-ROOT_ZONE_WATER_STORAGE_MM
-AVAILABLE_WATER_FRACTION
-ROOT_ZONE_DEPLETION_FROM_FIELD_CAPACITY_MM
-```
-
-以下必须显式 unavailable/not-established：
-
-```text
-surface_soil_moisture_state:
-UNAVAILABLE_NO_BOUND_SURFACE_OBSERVATION
-
-water_stress_state:
-NOT_ESTABLISHED_NO_STRESS_MODEL
-
-drainage_state:
-NOT_ESTABLISHED_MCFT_06_NOT_STARTED
-```
-
-不得从 200 mm 点位传感器虚构 surface State。`direct_state_equivalence=false` 必须保留。
-
----
-
-# 6. 数学定义
-
-## 6.1 Weak prior
-
-```text
-prior_mean
-=
-(wilting_point_fraction + field_capacity_fraction) / 2
-
-prior_stddev
-=
-(field_capacity_fraction - wilting_point_fraction) / 2
-
-prior_variance
-=
-prior_stddev²
-```
-
-标准值：
-
-```text
-prior_mean:     0.210000
-prior_stddev:   0.090000
-prior_variance: 0.008100
-```
-
-Prior 必须作为可嵌入 `twin_state_transition_v1` 的纯 Domain DTO 输出，不创建独立 canonical prior object，也不产生 `bootstrap_prior_ref`。
-
-## 6.2 Observation operator
-
-```text
-H = 1
-```
-
-含义：首版局部均质假设下，root-zone mean 到 200 mm 观测期望的线性映射系数为 1；point-to-zone 差异由 representativeness uncertainty 表达。该定义不改变 `direct_state_equivalence=false`。
-
-## 6.3 Observation variance
-
-```text
-sensor_variance
-=
-0.02²
-=
-0.000400
-
-representativeness_variance
-=
-0.06²
-=
-0.003600
-
-base_observation_variance
-=
-0.004000
-
-effective_observation_variance
-=
-base_observation_variance / quality_weight
-```
-
-`FAIL` observation 必须被拒绝，不得进入 assimilation。
-
-## 6.4 Scalar Gaussian assimilation
-
-```text
-predicted_observation
-=
-H × prior_mean
-
-innovation
-=
-observation - predicted_observation
-
-assimilation_gain
-=
-prior_variance / (H² × prior_variance + observation_variance)
-
-posterior_mean
-=
-prior_mean + assimilation_gain × innovation
-
-posterior_variance
-=
-(1 - assimilation_gain × H) × prior_variance
-```
-
-禁止把 `assimilation_gain` 命名为 confidence、accuracy 或 truth probability。
-
-中间计算不得逐步取整。只有 emitted semantic fields 执行最终 6 位小数半离零取整。
-
----
-
-# 7. 标准精确结果
-
-```text
-predicted_observation: 0.210000
-innovation:            -0.026000
-assimilation_gain:      0.669421
-posterior_mean:         0.192595
-posterior_variance:     0.002678
-posterior_stddev:       0.051746
-
-interval_low:           0.091172
-interval_high:          0.294018
-
-storage_mean_mm:        57.778512
-storage_stddev_mm:      15.523909
-storage_interval_low:   27.351652
-storage_interval_high:  88.205373
-
-available_water_fraction:
-0.403306
-
-depletion_from_field_capacity_mm:
-32.221488
-```
-
-标准 posterior 必须同时满足：
-
-```text
-posterior_mean != prior_mean
-posterior_mean != raw_observation
-posterior_variance < prior_variance
-```
-
----
-
-# 8. Physical bounds 与 uncertainty
-
-必须验证：
-
-```text
-0 <= observation <= 1
-0 <= posterior_mean <= saturation_fraction
-posterior_variance >= 0
-stddev² approximately equals variance
-storage_mean = posterior_mean × root_zone_depth_mm
-available_water_fraction = (posterior_mean - wilting_point) / (field_capacity - wilting_point)
-depletion_mm = max(0, field_capacity_storage_mm - storage_mean_mm)
-```
-
-规则：
-
-```text
-observation 超界:
-hard rejection
-
-posterior mean 超界:
-hard failure
-
-uncertainty interval 超界:
-clip to [0, saturation_fraction]
-retain unclipped interval
-retain interval_clipped metadata
-
-available_water_fraction:
-clamp to [0,1]
-
-depletion:
-不得为负
-```
-
-Uncertainty output：
-
-```text
-distribution_family:
-GAUSSIAN_APPROXIMATION
-
-primary_measure:
-STANDARD_DEVIATION
-
-interval_level:
-0.95
-
-mean
-variance
-stddev
-interval_low
-interval_high
-unclipped_interval
-interval_clipped
-uncertainty_sources
-```
-
-`uncertainty_sources` 至少包括：
-
-```text
-weak configured prior
-sensor measurement uncertainty
-point-to-zone representativeness uncertainty
-controlled synthetic hydraulic configuration
-single-observation bootstrap limitation
-```
-
----
-
-# 9. Confidence 与 eligibility
-
-```text
-confidence.status:
-NOT_ESTABLISHED
-
-confidence.reason_code:
-NO_CALIBRATED_CONFIDENCE_MODEL
-```
-
-禁止 numeric confidence score，也禁止用 HIGH/MEDIUM/LOW 代替 uncertainty。
-
-标准 eligibility：
-
-```text
-state_valid:
-true
-
-posterior_chain_eligible:
-true
-
-forecast_source_eligible:
-true
-
-recommendation_input_eligible:
-false
-
-action_input_eligible:
-false
-```
-
----
-
-# 10. S3B Changed-File Boundary
-
-允许：
-
-```text
-apps/server/src/domain/soil_water/**
-apps/server/src/domain/twin_runtime/physical_bounds_v1.ts
-apps/server/src/domain/twin_runtime/runtime_config_v1.ts
-apps/server/src/runtime/twin_runtime/runtime_config_compile_service_v1.ts
-fixtures/mcft/water_state/expected/**
-fixtures/mcft/water_state/negative/**
-scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_01_STATE_MATH.*
-docs/digital_twin/mcft/cap_01/**
-S3B capability/status evidence files
-```
-
-对 Runtime Config 文件的修改仅允许：
-
-```text
-增加并验证 physical_bound_version
-增加并验证 gaussian_interval_rule
-增加并验证 uncertainty_interval_clip_rule
-增加并验证 interval_clip_bounds
-```
-
-禁止借此修改：
-
-```text
-Reality/source/configuration frozen hashes
-canonical identity rules
-A0 object set
-persistence transaction ordering
-lease/fencing/idempotency semantics
-```
-
-明确禁止：
-
-```text
-Postgres
-migration
-Runtime orchestration
-Evidence selection
-Replay clock
-route
-web
-Forecast construction
-A0 commit
-projection writes
-MCFT-06 propagation
-Scenario
-Recommendation
-AO-ACT
-```
-
----
-
-# 11. S3B 必需实现文件
-
-建议：
-
-```text
-apps/server/src/domain/twin_runtime/physical_bounds_v1.ts
-
-apps/server/src/domain/soil_water/bootstrap_water_prior_v1.ts
-apps/server/src/domain/soil_water/root_zone_observation_operator_v1.ts
-apps/server/src/domain/soil_water/scalar_gaussian_assimilation_v1.ts
-apps/server/src/domain/soil_water/root_zone_water_posterior_v1.ts
-
-fixtures/mcft/water_state/expected/MCFT_CAP_01_STATE_MATH_EXPECTED.json
-fixtures/mcft/water_state/negative/**
-
-scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_01_STATE_MATH.ts
-```
-
-所有新增代码文件首行必须标注路径，并写明职责与边界。
-
----
-
-# 12. S3B 硬验收
-
-必须包括：
-
-```text
-standard exact-value case
-LIMITED quality case
-FAIL quality rejection
-observation below zero
-observation above one
-missing observation
-NaN
-Infinity
-invalid prior
-invalid variance
-invalid hydraulic ordering
-posterior physical-bound violation
-interval clipping
-available-water clamp
-depletion non-negative
-deterministic rerun
-input immutability
-domain purity scan
-Runtime Config physical-bound identities present
-```
-
-必须证明：
-
-```text
-prior_mean = 0.210000
-prior_variance = 0.008100
-observation = 0.184000
-observation_variance = 0.004000
-innovation = -0.026000
-assimilation_gain = 0.669421
-posterior_mean = 0.192595
-posterior_variance = 0.002678
-posterior_stddev = 0.051746
-storage_mean_mm = 57.778512
-available_water_fraction = 0.403306
-depletion_mm = 32.221488
-```
-
-Purity scan 必须拒绝：
-
-```text
-Date.now
-new Date
-process.env
-filesystem imports
-pg imports
-Fastify imports
-network imports
-random UUID / nanoid
-global mutable state
-```
-
----
-
-# 13. S3B 必需负测
-
-```text
-VWC below zero
-VWC above one
-NaN
-Infinity
-quality FAIL consumed
-invalid wilting/field-capacity/saturation ordering
-negative prior variance
-negative posterior variance
-posterior above saturation
-numeric confidence score present
-recommendation eligibility true
-action eligibility true
-direct_state_equivalence=true
-input object mutated
-nondeterministic rerun
-Postgres import introduced
-filesystem import introduced
-wall-clock read introduced
-S4 Runtime file introduced
-```
-
-每个 negative fixture 必须声明：
-
-```text
-fixture_id
-failure_stage
-expected_reason_code
-expected_output_delta
-```
-
-S3B 失败不得产生 canonical write；本 slice 不应拥有 write capability。
-
----
-
-# 14. S3B 完成条件
-
-只有以下全部成立，才允许将 S3B 标记为 COMPLETE：
-
-```text
-pure Domain prior implementation exists
-pure observation operator exists
-pure scalar Gaussian assimilation exists
-posterior derivation exists
-physical bounds implementation exists
-uncertainty and clipping metadata are explicit
-confidence remains NOT_ESTABLISHED
-eligibility fields are correct
-standard exact values pass
-all negative cases pass
-deterministic rerun passes
-input immutability passes
-domain purity passes
-server typecheck passes
-server build passes
-exact-head CI passes
-working tree is clean
-```
-
-S3B 完成后只允许声明：
+以下声明继续成立：
 
 ```text
 BOOTSTRAP_STATE_MATH_ESTABLISHED
 STATIC_BOOTSTRAP_ASSIMILATION_ESTABLISHED
-POSTERIOR_WATER_STATE_DTO_ESTABLISHED
-STATE_UNCERTAINTY_MATH_EXPLICIT
-PHYSICAL_BOUNDS_RULE_ESTABLISHED
-```
-
-不得声明：
-
-```text
-A0_RUNTIME_EXECUTION
-BOOTSTRAP_STATE_COMMITTED
-ACTIVE_INITIAL_LINEAGE
+FIRST_BOOTSTRAP_POSTERIOR_ESTABLISHED
+A0_ATOMIC_COMMIT_ESTABLISHED
+ACTIVE_INITIAL_LINEAGE_ESTABLISHED
 INITIAL_CHECKPOINT_ESTABLISHED
-SUCCESSFUL_FORECAST
-CONTINUOUS_RUNTIME
-PROPAGATION
-SCENARIO
-ACTION_LOOP
+BLOCKED_FORECAST_RESULT_ESTABLISHED
+NEXT_TICK_CHECKPOINT_POINTER_ESTABLISHED
+```
+
+以下声明在 remediation 完成前暂停：
+
+```text
 MCFT_CAP_01_COMPLETE
+NEXT_TICK_HANDOFF_ESTABLISHED
 ```
 
 ---
 
-# 15. 后续拓扑
+## 2. 已确认的 closure 缺口
+
+### R1 Persisted next-tick handoff
+
+必须实现：
 
 ```text
-main@b0b364933956a65345b927c6c5618e9d4ebe22af
-↓
-PR-D S3B Bootstrap State Math
-↓
-PR-E S4 A0 Runtime Integration
-↓
-PR-F S5 Closure
+prepareNextTickInput()
 ```
 
-S4 只有在 S3B 合并 main 后才获得实施条件。不得在 S3B PR 中顺手实现 Evidence Window、A0 runner、Forecast、Checkpoint 或 next-tick handoff。
+并从 PostgreSQL 一致性快照读取：
+
+```text
+active lineage
+latest checkpoint
+previous posterior State
+Runtime Config
+Reality Binding Runtime snapshot
+```
+
+必须返回：
+
+```text
+previous_posterior_ref
+previous_checkpoint_ref
+lineage_id
+prior_mean
+prior_variance
+next_logical_tick_time
+runtime_config_ref
+runtime_config_hash
+reality_binding_ref
+reality_binding_hash
+```
+
+禁止从当前内存 record set 直接伪装成 persisted handoff。
+
+### R2 Conflicting duplicate observation rejection
+
+soil observation selector 必须使用：
+
+```text
+observed_at descending
+ingested_at descending
+source_record_id ascending
+```
+
+并执行：
+
+```text
+same origin_source_id
++ same observed_at
++ different canonical payload
+→ CONFLICTING_DUPLICATE_OBSERVATION
+→ zero Runtime Config fact delta
+→ zero A0 canonical fact delta
+→ zero projection delta
+```
+
+### R3 Complete Evidence Window consumption semantics
+
+每个 entry 必须记录：
+
+```text
+event time
+ingested_at
+available_to_runtime_at
+freshness
+quality
+source unit
+canonical unit
+conversion rule
+limitations
+window disposition
+model consumption status
+model consumption reason
+```
+
+必须区分：
+
+```text
+CONSUMED_BY_BOOTSTRAP_ESTIMATOR
+CONTEXT_ONLY_NOT_CONSUMED_BY_BOOTSTRAP_ESTIMATOR
+NOT_CONSUMED_EXCLUDED
+```
+
+A0 中：
+
+```text
+soil moisture observation
+  CONSUMED_BY_BOOTSTRAP_ESTIMATOR
+
+rainfall observation
+  CONTEXT_ONLY_NOT_CONSUMED_BY_BOOTSTRAP_ESTIMATOR
+
+historical ET0 input
+  CONTEXT_ONLY_NOT_CONSUMED_BY_BOOTSTRAP_ESTIMATOR
+```
+
+### R4 Complete A0 cross-reference graph validation
+
+validator 必须独立于 member hash 和 aggregate hash 验证完整对象图，包括：
+
+```text
+lineage activation authority
+transition → Evidence Window
+transition → Assimilation
+transition → posterior State
+Assimilation → transition
+Assimilation → posterior State
+State → transition
+State → Assimilation
+State → Evidence Window
+Forecast → source posterior
+Tick → Evidence/transition/Assimilation/State/Forecast/checkpoint
+Checkpoint → Tick/State/Forecast
+Health → Tick/checkpoint/lineage/State/Forecast
+next logical tick time consistency
+Runtime Config ref/hash consistency
+```
+
+必须证明：篡改 ref、重算 member hash、重算 aggregate hash后仍被拒绝。
+
+### R5 Operator-invokable manual Runtime entry
+
+必须提供：
+
+```text
+apps/server/scripts/mcft/MCFT_1_FIRST_CLASS_WATER_STATE_RUNNER.ts
+```
+
+runner 必须：
+
+```text
+require explicit logical time
+load frozen authority artifacts
+persist Reality Binding Runtime snapshot
+execute A0BootstrapRuntimeServiceV1
+invoke prepareNextTickInput()
+print machine-readable result
+```
+
+runner 不是 scheduler，也不建立 continuous Runtime。
+
+### R6 Crop-stage configuration-derived Dataset context
+
+crop-stage context 必须保持：
+
+```text
+CONFIGURATION_DERIVED_CONTEXT
+not Evidence
+```
+
+Dataset package 必须显式引用：
+
+```text
+Configuration Binding Matrix
+crop water-use binding
+crop-stage mapping source
+time-resolved crop-stage schedule
+Kc
+crop root depth
+effective model root depth
+```
+
+不得把 crop stage 伪造为 observed Evidence record。
+
+### R7 Governance consistency
+
+必须同步：
+
+```text
+Vertical Capability Line Matrix
+Delivery Slice Status
+Closure Record
+Closure narrative
+本任务书
+remediation status
+```
+
+所有文件必须表达相同状态。
 
 ---
 
-# 16. Nonclaims
+## 3. Remediation changed-file boundary
+
+允许：
 
 ```text
-NO_A0_RUNTIME_EXECUTION
-NO_BOOTSTRAP_STATE_COMMITTED
-NO_ACTIVE_INITIAL_LINEAGE
-NO_INITIAL_CHECKPOINT
+apps/server/src/domain/twin_runtime/**
+apps/server/src/runtime/twin_runtime/**
+apps/server/src/persistence/twin_runtime/**
+apps/server/src/adapters/twin_runtime/**
+apps/server/scripts/mcft/**
+apps/server/db/migrations/*mcft_cap_01_closure_remediation*
+apps/server/package.json
+scripts/mcft/GENERATE_MCFT_CAP_01_REPLAY_DATASET.cjs
+scripts/runtime_acceptance/*MCFT_CAP_01_CLOSURE_REMEDIATION*
+fixtures/mcft/water_state/configuration_context_source_v1.json
+fixtures/mcft/water_state/replay_v1/configuration_context.json
+fixtures/mcft/water_state/replay_v1/manifest_v2.json
+docs/digital_twin/mcft/cap_01/**
+docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json
+docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md
+```
+
+禁止：
+
+```text
+MCFT-06 propagation
+successful Forecast
+Scenario
+Recommendation
+Decision
+AO-ACT
+continuous scheduler
+restart/backfill
+late-Evidence revision Runtime
+public routes
+web UI
+MCFT Gate A/B/C closure
+Minimum Complete Field Twin claim
+```
+
+---
+
+## 4. Remediation 硬验收
+
+必须全部通过：
+
+```text
+legacy S1 Replay Dataset Gate
+legacy S2 Contracts/Config Gate
+legacy S3A persistence Gates
+legacy S3B State Math Gate
+legacy S4 A0 Runtime static Gate
+legacy S4 PostgreSQL Gate
+closure remediation static Gate
+closure remediation PostgreSQL Gate
+manual runner execution against isolated PostgreSQL
+server typecheck
+server build
+exact-head CI
+git diff --check
+clean working tree
+```
+
+专项负测至少包括：
+
+```text
+conflicting duplicate observation
+same-value duplicate deterministic tie-break
+missing Reality Binding snapshot
+active-lineage/checkpoint mismatch
+checkpoint/State revision mismatch
+Runtime Config mismatch
+rehashed transition ref corruption
+rehashed Assimilation ref corruption
+rehashed State ref corruption
+rehashed Tick ref corruption
+rehashed Checkpoint ref corruption
+rehashed Health ref corruption
+crop-stage context gap
+crop-stage context overlap
+crop-stage context mislabeled as Evidence
+```
+
+---
+
+## 5. 完成条件
+
+只有以下全部成立，才允许重新声明：
+
+```text
+MCFT_CAP_01_COMPLETE
+FIRST_CLASS_WATER_STATE_ESTIMATE_LEVEL_A_ESTABLISHED
+CONTROLLED_REPLAY_BOOTSTRAP_CLOSURE_ESTABLISHED
+PERSISTED_NEXT_TICK_HANDOFF_ESTABLISHED
+CONFLICTING_DUPLICATE_OBSERVATION_REJECTION_ESTABLISHED
+EVIDENCE_MODEL_CONSUMPTION_TRACE_ESTABLISHED
+A0_CROSS_REFERENCE_GRAPH_VALIDATION_ESTABLISHED
+OPERATOR_INVOKABLE_MANUAL_RUNTIME_ENTRY_ESTABLISHED
+CROP_STAGE_CONFIGURATION_CONTEXT_ESTABLISHED
+```
+
+重新闭合后仍必须保留：
+
+```text
+NO_PROPAGATION
 NO_SUCCESSFUL_FORECAST
 NO_SCENARIO
-NO_PROPAGATION
-NO_CONTINUOUS_RUNTIME
 NO_RECOMMENDATION
-NO_ACTION_LOOP
+NO_DECISION
+NO_AO_ACT
+NO_CONTINUOUS_RUNTIME
+NO_CONTINUOUS_SCHEDULER
+NO_RESTART_BACKFILL_PROOF
+NO_LATE_EVIDENCE_REVISION_RUNTIME
 NO_LIVE_FIELD_CLAIM
-NO_MCFT_CAP_01_CLOSURE
+NO_MCFT_GATE_A_CLOSURE
+NO_MCFT_GATE_B_CLOSURE
+NO_MCFT_GATE_C_CLOSURE
+NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM
 ```
+
+---
+
+## 6. 后续顺序
+
+```text
+MCFT-CAP-01.CLOSURE-REMEDIATION-V1
+↓
+重新闭合 MCFT-0 / MCFT-1
+↓
+单独授权 MCFT-2 Hourly Dynamics and Persistence
+```
+
+在 remediation 合并并重新闭合前，禁止开始 MCFT-2。
