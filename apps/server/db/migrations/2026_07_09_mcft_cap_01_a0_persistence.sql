@@ -24,10 +24,15 @@ CREATE TABLE IF NOT EXISTS public.twin_object_idempotency_index_v1 (
   semantic_object_id text,
   record_set_id text,
   determinism_hash text NOT NULL,
+  identity_basis jsonb,
   member_object_ids jsonb NOT NULL DEFAULT '[]'::jsonb,
   member_determinism_hashes jsonb NOT NULL DEFAULT '{}'::jsonb,
   created_at timestamptz NOT NULL DEFAULT transaction_timestamp()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_twin_object_idempotency_index_v1_record_set
+  ON public.twin_object_idempotency_index_v1 (record_set_id)
+  WHERE record_set_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS public.twin_active_lineage_index_v1 (
   tenant_id text NOT NULL,
