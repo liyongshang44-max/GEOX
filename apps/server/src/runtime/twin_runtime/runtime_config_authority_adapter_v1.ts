@@ -22,7 +22,7 @@ export type Mcft00SourceMatrixArtifactV1 = {
 
 export type Mcft00ConfigurationMatrixArtifactV1 = {
   determinism_hash: string;
-  bindings: Array<{ binding_id: string }>;
+  bindings: Array<{ binding_id: string; source_role: string; configuration_source_id: string }>;
 };
 
 export function compileRuntimeConfigFromAuthorityArtifactsV1(input: {
