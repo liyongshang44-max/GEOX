@@ -92,10 +92,9 @@ function buildMemberV1(input: MemberBuildInputV1): CanonicalObjectEnvelopeV1 {
 export function buildA0RecordSetV1(input: BuildA0RecordSetInputV1): A0RecordSetV1 {
   if (input.runtime_config.object_type !== "twin_runtime_config_v1") throw new Error("RUNTIME_CONFIG_OBJECT_TYPE_REQUIRED");
   if (input.runtime_config.logical_time > input.logical_time) throw new Error("RUNTIME_CONFIG_FROM_FUTURE_FORBIDDEN");
-  if (input.evidence_window.logical_time !== input.logical_time || input.evidence_window.window_end_inclusive !== input.logical_time) {
-    throw new Error("EVIDENCE_WINDOW_LOGICAL_TIME_MISMATCH");
-  }
+  if (input.evidence_window.logical_time !== input.logical_time || input.evidence_window.window_end_inclusive !== input.logical_time) throw new Error("EVIDENCE_WINDOW_LOGICAL_TIME_MISMATCH");
   if (input.evidence_window.frozen !== true) throw new Error("FROZEN_EVIDENCE_WINDOW_REQUIRED");
+  if (input.evidence_window.consumed_evidence_refs.length !== 1 || input.evidence_window.consumed_evidence_refs[0] !== input.evidence_window.assimilation_observation.source_record_id) throw new Error("A0_EXACTLY_ONE_CONSUMED_SOIL_OBSERVATION_REQUIRED");
 
   const runtimePayload = input.runtime_config.payload;
   const realityBindingRef = requireStringV1(runtimePayload.reality_binding_ref, "REALITY_BINDING_REF_REQUIRED");
@@ -143,30 +142,17 @@ export function buildA0RecordSetV1(input: BuildA0RecordSetInputV1): A0RecordSetV
     runtime_config_hash: input.runtime_config.determinism_hash,
     reality_binding_hash: realityBindingHash,
   });
-  const memberKey = (objectType: string): string => deriveSemanticObjectIdV1("a0_member_key", {
-    a0_idempotency_key: identity.a0_idempotency_key,
-    object_type: objectType,
-  });
+  const memberKey = (objectType: string): string => deriveSemanticObjectIdV1("a0_member_key", { a0_idempotency_key: identity.a0_idempotency_key, object_type: objectType });
   const sourceRefs = [...new Set<string>([realityBindingRef, ...input.evidence_window.selected_source_refs])].sort();
   const evidenceRefs = [...input.evidence_window.selected_evidence_refs].sort();
-  const limitations: string[] = [
-    "CONTROLLED_SYNTHETIC_REPLAY_PROXY",
-    "NOT_FIELD_CALIBRATED",
-    "A0_BOOTSTRAP_ONLY",
-    "NO_PROPAGATION_MODEL",
-    "NO_SUCCESSFUL_FORECAST",
-  ];
+  const limitations: string[] = ["CONTROLLED_SYNTHETIC_REPLAY_PROXY", "NOT_FIELD_CALIBRATED", "A0_BOOTSTRAP_ONLY", "NO_PROPAGATION_MODEL", "NO_SUCCESSFUL_FORECAST"];
   const nextTickLogicalTime = addOneHourIsoV1(input.logical_time);
   const forecastReasons: string[] = [...A0_BLOCKED_FORECAST_REASON_CODES_V1];
   if (input.evidence_window.coverage.future_weather_assumption_count === 0) forecastReasons.push("FUTURE_WEATHER_ASSUMPTION_NOT_AVAILABLE_AT_TICK");
   if (input.evidence_window.coverage.future_et0_assumption_count === 0) forecastReasons.push("FUTURE_ET0_ASSUMPTION_NOT_AVAILABLE_AT_TICK");
 
   const lineageContext = { lineage_id: lineageId, revision_id: revisionId };
-  const member = (
-    type: CanonicalObjectEnvelopeV1["object_type"],
-    payload: Record<string, unknown>,
-    options: { source_refs?: readonly string[]; evidence_refs?: readonly string[]; lineage?: boolean; extra_limitations?: readonly string[] } = {},
-  ): CanonicalObjectEnvelopeV1 => buildMemberV1({
+  const member = (type: CanonicalObjectEnvelopeV1["object_type"], payload: Record<string, unknown>, options: { source_refs?: readonly string[]; evidence_refs?: readonly string[]; lineage?: boolean; extra_limitations?: readonly string[] } = {}): CanonicalObjectEnvelopeV1 => buildMemberV1({
     type,
     object_id: ids[type as keyof typeof ids],
     idempotency_key: memberKey(type),
@@ -183,9 +169,7 @@ export function buildA0RecordSetV1(input: BuildA0RecordSetInputV1): A0RecordSetV
 
   const members: CanonicalObjectEnvelopeV1[] = [
     member("twin_runtime_lineage_v1", {
-      lineage_kind: "INITIAL",
-      parent_lineage_ref: null,
-      revision_run_ref: null,
+      lineage_kind: "INITIAL", parent_lineage_ref: null, revision_run_ref: null,
       bootstrap_runtime_config_ref: input.runtime_config.object_id,
       bootstrap_reality_binding_ref: realityBindingRef,
       initial_revision_id: revisionId,
@@ -201,19 +185,17 @@ export function buildA0RecordSetV1(input: BuildA0RecordSetInputV1): A0RecordSetV
       selected_records: input.evidence_window.selected_records,
       excluded_records: input.evidence_window.excluded_records,
       selected_evidence_refs: evidenceRefs,
+      consumed_evidence_refs: [...input.evidence_window.consumed_evidence_refs],
+      context_only_evidence_refs: [...input.evidence_window.context_only_evidence_refs],
       assimilation_observation_ref: input.evidence_window.assimilation_observation.source_record_id,
       coverage: input.evidence_window.coverage,
       exclusion_counts: input.evidence_window.exclusion_counts,
       semantic_digest: input.evidence_window.semantic_digest,
     }),
     member("twin_state_transition_v1", {
-      transition_kind: "BOOTSTRAP",
-      previous_posterior_ref: null,
+      transition_kind: "BOOTSTRAP", previous_posterior_ref: null,
       bootstrap_prior: {
-        prior_kind: posterior.prior.prior_kind,
-        mean: posterior.prior.mean,
-        variance: posterior.prior.variance,
-        stddev: posterior.prior.stddev,
+        prior_kind: posterior.prior.prior_kind, mean: posterior.prior.mean, variance: posterior.prior.variance, stddev: posterior.prior.stddev,
         derivation_rule_id: posterior.model_versions.prior_rule_id,
         source_runtime_config_ref: input.runtime_config.object_id,
         source_soil_hydraulic_config_ref: input.soil_hydraulic_config_ref,
@@ -224,8 +206,7 @@ export function buildA0RecordSetV1(input: BuildA0RecordSetInputV1): A0RecordSetV
       posterior_state_ref: ids.twin_state_estimate_v1,
     }),
     member("twin_assimilation_update_v1", {
-      state_transition_ref: ids.twin_state_transition_v1,
-      posterior_state_ref: ids.twin_state_estimate_v1,
+      state_transition_ref: ids.twin_state_transition_v1, posterior_state_ref: ids.twin_state_estimate_v1,
       observation_ref: input.evidence_window.assimilation_observation.source_record_id,
       observation_operator_id: posterior.model_versions.observation_operator_id,
       assimilation_method_id: posterior.model_versions.assimilation_method_id,
@@ -242,63 +223,34 @@ export function buildA0RecordSetV1(input: BuildA0RecordSetInputV1): A0RecordSetV
       posterior_variance: posterior.posterior.variance,
     }, { evidence_refs: [input.evidence_window.assimilation_observation.source_record_id] }),
     member("twin_state_estimate_v1", {
-      state_kind: "POSTERIOR",
-      transition_ref: ids.twin_state_transition_v1,
-      assimilation_update_ref: ids.twin_assimilation_update_v1,
-      evidence_window_ref: ids.twin_evidence_window_v1,
-      latent_variable: posterior.latent_variable,
-      prior: posterior.prior,
-      observation_update: posterior.observation_update,
-      posterior: posterior.posterior,
-      derived_state: posterior.derived_state,
-      unavailable_state: posterior.unavailable_state,
-      physical_bounds: posterior.physical_bounds,
-      confidence: posterior.confidence,
-      use_eligibility: posterior.use_eligibility,
-      direct_state_equivalence: posterior.direct_state_equivalence,
-      model_versions: posterior.model_versions,
+      state_kind: "POSTERIOR", transition_ref: ids.twin_state_transition_v1, assimilation_update_ref: ids.twin_assimilation_update_v1,
+      evidence_window_ref: ids.twin_evidence_window_v1, latent_variable: posterior.latent_variable, prior: posterior.prior,
+      observation_update: posterior.observation_update, posterior: posterior.posterior, derived_state: posterior.derived_state,
+      unavailable_state: posterior.unavailable_state, physical_bounds: posterior.physical_bounds, confidence: posterior.confidence,
+      use_eligibility: posterior.use_eligibility, direct_state_equivalence: posterior.direct_state_equivalence, model_versions: posterior.model_versions,
     }, { extra_limitations: posterior.limitations }),
     member("twin_forecast_run_v1", {
-      status: "BLOCKED",
-      points: [],
-      reason_codes: forecastReasons,
-      scenario_eligible: false,
-      source_posterior_ref: ids.twin_state_estimate_v1,
-      requested_horizon_hours: 72,
-      successful_forecast_ref: null,
+      status: "BLOCKED", points: [], reason_codes: forecastReasons, scenario_eligible: false,
+      source_posterior_ref: ids.twin_state_estimate_v1, requested_horizon_hours: 72, successful_forecast_ref: null,
     }),
     member("twin_runtime_tick_v1", {
-      transaction_family: "A_STATE_TICK_COMMIT",
-      operation_variant: A0_OPERATION_VARIANT_V1,
-      status: "COMPLETED_WITH_LIMITATIONS",
-      evidence_window_ref: ids.twin_evidence_window_v1,
-      state_transition_ref: ids.twin_state_transition_v1,
-      assimilation_update_ref: ids.twin_assimilation_update_v1,
-      posterior_state_ref: ids.twin_state_estimate_v1,
-      forecast_result_ref: ids.twin_forecast_run_v1,
-      checkpoint_ref: ids.twin_runtime_checkpoint_v1,
+      transaction_family: "A_STATE_TICK_COMMIT", operation_variant: A0_OPERATION_VARIANT_V1, status: "COMPLETED_WITH_LIMITATIONS",
+      evidence_window_ref: ids.twin_evidence_window_v1, state_transition_ref: ids.twin_state_transition_v1,
+      assimilation_update_ref: ids.twin_assimilation_update_v1, posterior_state_ref: ids.twin_state_estimate_v1,
+      forecast_result_ref: ids.twin_forecast_run_v1, checkpoint_ref: ids.twin_runtime_checkpoint_v1,
       next_tick_logical_time: nextTickLogicalTime,
     }),
     member("twin_runtime_checkpoint_v1", {
-      checkpoint_kind: "INITIAL",
-      previous_checkpoint_ref: null,
-      last_completed_tick_ref: ids.twin_runtime_tick_v1,
-      last_posterior_state_ref: ids.twin_state_estimate_v1,
-      forecast_result_ref: ids.twin_forecast_run_v1,
-      successful_forecast_ref: null,
-      next_tick_logical_time: nextTickLogicalTime,
-      handoff_status: "READY_FOR_NEXT_TICK_WITHOUT_PROPAGATION_IMPLEMENTATION",
+      checkpoint_kind: "INITIAL", previous_checkpoint_ref: null, last_completed_tick_ref: ids.twin_runtime_tick_v1,
+      last_posterior_state_ref: ids.twin_state_estimate_v1, forecast_result_ref: ids.twin_forecast_run_v1,
+      successful_forecast_ref: null, next_tick_logical_time: nextTickLogicalTime,
+      handoff_status: "CHECKPOINT_POINTER_READY_PERSISTED_INPUT_RECONSTRUCTION_REQUIRED",
     }),
     member("twin_runtime_health_v1", {
-      operation_status: "A0_COMMITTED_WITH_BLOCKED_FORECAST",
-      runtime_mode: "REPLAY",
-      tick_ref: ids.twin_runtime_tick_v1,
-      checkpoint_ref: ids.twin_runtime_checkpoint_v1,
-      active_lineage_ref: ids.twin_runtime_lineage_v1,
-      state_ref: ids.twin_state_estimate_v1,
-      forecast_result_ref: ids.twin_forecast_run_v1,
-      successful_forecast_ref: null,
-      limitation_reason_codes: forecastReasons,
+      operation_status: "A0_COMMITTED_WITH_BLOCKED_FORECAST", runtime_mode: "REPLAY", tick_ref: ids.twin_runtime_tick_v1,
+      checkpoint_ref: ids.twin_runtime_checkpoint_v1, active_lineage_ref: ids.twin_runtime_lineage_v1,
+      state_ref: ids.twin_state_estimate_v1, forecast_result_ref: ids.twin_forecast_run_v1,
+      successful_forecast_ref: null, limitation_reason_codes: forecastReasons,
     }, { lineage: false }),
   ];
 
@@ -310,10 +262,7 @@ export function buildA0RecordSetV1(input: BuildA0RecordSetInputV1): A0RecordSetV
     a0_record_set_determinism_hash: "",
     members,
   };
-  recordSet.a0_record_set_determinism_hash = computeA0RecordSetDeterminismHashV1({
-    a0_record_set_id: recordSet.a0_record_set_id,
-    members: members as unknown as Record<string, unknown>[],
-  });
+  recordSet.a0_record_set_determinism_hash = computeA0RecordSetDeterminismHashV1({ a0_record_set_id: recordSet.a0_record_set_id, members: members as unknown as Record<string, unknown>[] });
   validateA0RecordSetV1(recordSet);
   return recordSet;
 }
