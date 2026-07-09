@@ -6,7 +6,7 @@
 ```text
 parent_amendment: DT02-AMENDMENT-02
 scope: exact main-based changed-file boundary after MCFT-VERTICAL-AMENDMENT-01 merge
-status: PENDING_ACCEPTANCE
+status: COMPLETE
 ```
 
 This addendum supersedes Section 16 changed-file enumeration of `GEOX-DT-02-ARCHITECTURE-AMENDMENT-02.md` after PR #2306 merged into `main` at `5e0e7df50512168166bdee6cea9c0a0cec2916b2`.

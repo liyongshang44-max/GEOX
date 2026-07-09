@@ -12,7 +12,7 @@ supersedes: selected rules in DT02-ADR-003, 004, 005, 006, 007, 008, 015, 016
 baseline: MCFT-GOV-01 PR head 09f03488713cde4dbd8c48914fdcb30637d19a3d
 predecessor: MCFT-VERTICAL-AMENDMENT-01
 successor: MCFT-CAP-01 Canonical Replay Dataset slice
-status: PENDING_ACCEPTANCE
+status: COMPLETE
 ```
 
 This amendment is governance-only. It creates no Runtime source, migration, repository implementation, canonical fact, State, Forecast, checkpoint, public write route, or production capability.

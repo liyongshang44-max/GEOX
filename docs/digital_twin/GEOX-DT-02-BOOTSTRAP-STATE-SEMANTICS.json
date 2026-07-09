@@ -2,7 +2,7 @@
   "schema_version": "geox_dt02_bootstrap_state_semantics_v1",
   "phase": "DT-02",
   "amendment_id": "DT02-AMENDMENT-02",
-  "status": "PENDING_ACCEPTANCE",
+  "status": "COMPLETE",
   "capability_line_id": "MCFT-CAP-01",
   "display_alias": "MCFT-1",
   "transaction_family": "A_STATE_TICK_COMMIT",

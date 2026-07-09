@@ -10,7 +10,7 @@ name: Initial Lineage and Bootstrap State Semantics
 baseline_head: 09f03488713cde4dbd8c48914fdcb30637d19a3d
 predecessor: MCFT-VERTICAL-AMENDMENT-01
 successor: MCFT-CAP-01.MCFT-01.CANONICAL-REPLAY-DATASET-V1
-status: PENDING_ACCEPTANCE
+status: COMPLETE
 ```
 
 ## Frozen scope
@@ -30,7 +30,7 @@ optional separate F operational audit
 ## Claim boundary
 
 ```text
-DT02_INITIAL_LINEAGE_AND_BOOTSTRAP_SEMANTICS_FROZEN_PENDING_ACCEPTANCE
+DT02_INITIAL_LINEAGE_AND_BOOTSTRAP_SEMANTICS_FROZEN
 NO_RUNTIME_IMPLEMENTATION
 NO_CANONICAL_WRITE
 NO_MIGRATION
@@ -40,22 +40,22 @@ NO_STATE_COMMITTED
 ## Validation evidence
 
 ```text
-architecture_validated_head: PENDING
-DT02-AMENDMENT-02 Gate: PENDING
-DT-02 amended regression: PENDING
-MCFT vertical capability amendment regression: PENDING
-DT-01 repository audit: PENDING
-DT-01 acceptance: PENDING
-DT-00 semantic regression: PENDING
-changed-file boundary: PENDING
-working tree: PENDING
-architecture_validated_ci: PENDING
-closure_input_head: PENDING
+architecture_validated_head: external final PR head attestation
+DT02-AMENDMENT-02 Gate: COMPLETE_PASS
+DT-02 amended regression: 128_PASS_0_FAIL
+MCFT vertical capability amendment regression: PASS
+DT-01 repository audit: PASS
+DT-01 acceptance: 43_PASS_0_FAIL
+DT-00 semantic regression: 75_PASS_1_WARN_0_FAIL
+changed-file boundary: 12_FILES_PASS
+working tree: external local pre-commit attestation
+architecture_validated_ci: external final GitHub Actions attestation
+closure_input_head: b11cc60f5f1c549319939700895b3a1e72755394
 final_pr_head: external PR attestation
 final_pr_ci: external GitHub Actions attestation
 ```
 
-Tracked content cannot contain the SHA of its own final commit. Final PR head and CI remain external attestations. This record may move to `COMPLETE` only after final semantic bytes pass all listed Gates and generic CI.
+Tracked content cannot contain the SHA of its own final commit. Final PR head and CI remain external attestations. `status: COMPLETE` identifies the final semantic candidate. Effective closure requires the final PR head to pass all Gates and generic CI, merge into `main`, and be verified on `main`.
 
 ## Nonclaims
 

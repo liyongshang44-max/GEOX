@@ -7,7 +7,7 @@
     "meaning": "DT-01 and artifact-integrity hotfix merged"
   },
   "original_merge_commit": "4c1d854a5190a5d37d7cea0a4ded3f6f3ce8b614",
-  "status": "FROZEN_WITH_AMENDMENTS_PENDING_ACCEPTANCE",
+  "status": "FROZEN_WITH_ACCEPTED_AMENDMENTS",
   "architecture_amendment_rule": "A downstream change requires a reviewed amendment naming superseded rules and preserving audit history.",
   "input_packet_topics": [
     "canonical_atomicity",
@@ -43,7 +43,7 @@
     {
       "id": "DT02-AMENDMENT-02",
       "path": "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-02.md",
-      "status": "PENDING_ACCEPTANCE",
+      "status": "COMPLETE",
       "supersedes": [
         "DT02-ADR-003",
         "DT02-ADR-004",
@@ -95,7 +95,7 @@
     {
       "id": "DT02-ADR-003",
       "title": "Canonical persistence and envelope profiles",
-      "status": "FROZEN_WITH_AMENDMENTS_PENDING_ACCEPTANCE",
+      "status": "FROZEN_WITH_ACCEPTED_AMENDMENTS",
       "amendment_refs": ["DT02-AMENDMENT-01", "DT02-AMENDMENT-02"],
       "decision": "Postgres facts remain the only canonical append-only store. Every object declares record class, lineage membership, envelope profile and transaction families. LINEAGE requires lineage_id and revision_id; INITIAL revision identity does not require a revision-run object.",
       "rationale": "Record authority, lineage membership and revision-run lifecycle are separate dimensions. This permits deterministic initial lineage identity while retaining non-lineage bootstrap and failure audit.",
@@ -117,7 +117,7 @@
     {
       "id": "DT02-ADR-004",
       "title": "State object granularity and atomicity",
-      "status": "FROZEN_WITH_AMENDMENT_PENDING_ACCEPTANCE",
+      "status": "FROZEN_WITH_ACCEPTED_AMENDMENT",
       "amendment_refs": ["DT02-AMENDMENT-02"],
       "decision": "A valid State advance atomically appends transition, assimilation update and posterior State. BOOTSTRAP embeds its configured prior in the transition, has no previous posterior, and does not create an independent prior object.",
       "rationale": "The embedded prior keeps bootstrap computation explicit without creating a dangling reference or falsely treating the prior as current State.",
@@ -140,7 +140,7 @@
     {
       "id": "DT02-ADR-005",
       "title": "Tick claim, compute, and outcome transactions",
-      "status": "FROZEN_WITH_AMENDMENTS_PENDING_ACCEPTANCE",
+      "status": "FROZEN_WITH_ACCEPTED_AMENDMENTS",
       "amendment_refs": ["DT02-AMENDMENT-01", "DT02-AMENDMENT-02"],
       "decision": "A tick has Claim, Compute and Commit. A0 creates the first lineage, posterior, BLOCKED Forecast and checkpoint atomically; A1 and A2 continue an existing lineage. Forecast FAILED remains operational transaction F.",
       "rationale": "A0 closes the first-tick gap while preserving the existing distinction between valid State progress, blocked Forecast prerequisites and failed computation.",
@@ -163,7 +163,7 @@
     {
       "id": "DT02-ADR-006",
       "title": "Checkpoint, lease, fencing, restart, and backfill",
-      "status": "FROZEN_WITH_AMENDMENT_PENDING_ACCEPTANCE",
+      "status": "FROZEN_WITH_ACCEPTED_AMENDMENT",
       "amendment_refs": ["DT02-AMENDMENT-02"],
       "decision": "Each scope has one fenced writer. A0 inserts the INITIAL checkpoint with null previous_checkpoint_ref after new-key null-CAS checks. A1/A2 append continuation checkpoints. Failed A transactions leave all A pointers unchanged.",
       "rationale": "The first checkpoint cannot reference a predecessor, while fencing, canonical INITIAL uniqueness and expected-null CAS prevent competing bootstrap histories.",
@@ -185,7 +185,7 @@
     {
       "id": "DT02-ADR-007",
       "title": "Idempotency and deterministic identity",
-      "status": "FROZEN_WITH_AMENDMENT_PENDING_ACCEPTANCE",
+      "status": "FROZEN_WITH_ACCEPTED_AMENDMENT",
       "amendment_refs": ["DT02-AMENDMENT-02"],
       "decision": "Every semantic object has deterministic identity. A0 additionally has a deterministic nine-object aggregate identity and independently computed aggregate hash. Existing-key idempotency is resolved before new-key null-CAS checks.",
       "rationale": "A successful A0 necessarily makes pointers non-null; checking idempotency first permits correct same-input replay without weakening new-key bootstrap preconditions.",
@@ -207,7 +207,7 @@
     {
       "id": "DT02-ADR-008",
       "title": "Initial activation and late-Evidence revision lifecycle",
-      "status": "FROZEN_WITH_AMENDMENTS_PENDING_ACCEPTANCE",
+      "status": "FROZEN_WITH_ACCEPTED_AMENDMENTS",
       "amendment_refs": ["DT02-AMENDMENT-01", "DT02-AMENDMENT-02"],
       "decision": "NULL_TO_INITIAL activation is authorized by successful A0 plus an INITIAL lineage declaration. Replacing an existing active lineage remains authorized only by E3 promotion after revision completion and validation.",
       "rationale": "Initial creation is not promotion. Keeping the authorities distinct avoids a fictitious promotion while preserving strict append-only authority for all later active-lineage replacement.",
@@ -306,7 +306,7 @@
     {
       "id": "DT02-ADR-015",
       "title": "Runtime security and write authority",
-      "status": "FROZEN_WITH_AMENDMENTS_PENDING_ACCEPTANCE",
+      "status": "FROZEN_WITH_ACCEPTED_AMENDMENTS",
       "amendment_refs": ["DT02-AMENDMENT-01", "DT02-AMENDMENT-02"],
       "decision": "Write authority is object and variant specific. Runtime Orchestrator owns A0 INITIAL lineage declaration and State Tick outcomes; Revision Service owns E1/E2; Promotion Service owns E3; failure audit and Action Feedback remain separately governed.",
       "rationale": "Variant-specific authority permits the initial lineage to be created without granting the Runtime Orchestrator general revision-promotion authority.",
@@ -328,7 +328,7 @@
     {
       "id": "DT02-ADR-016",
       "title": "Runtime health, failure audit, and claim boundaries",
-      "status": "FROZEN_WITH_AMENDMENTS_PENDING_ACCEPTANCE",
+      "status": "FROZEN_WITH_ACCEPTED_AMENDMENTS",
       "amendment_refs": ["DT02-AMENDMENT-01", "DT02-AMENDMENT-02"],
       "decision": "Attempt, Health and Forecast failure are non-lineage operational audit. A failed A0 has zero A0 facts, projections and pointer changes, but may append a separately transacted F audit that never claims committed State success.",
       "rationale": "Operational failure remains auditable without being miscounted as partial bootstrap success or physical-State history.",

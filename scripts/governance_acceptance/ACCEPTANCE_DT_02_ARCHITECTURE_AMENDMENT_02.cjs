@@ -85,6 +85,12 @@ if (!amendment.includes(`status: ${closureStatus}`)) fail('amendment and closure
 else pass('amendment and closure status aligned');
 if (!boundaryAddendum.includes(`status: ${closureStatus}`)) fail('boundary addendum status mismatch');
 else pass('boundary addendum status aligned');
+if (closureStatus === 'COMPLETE' && closure.includes('PENDING_ACCEPTANCE')) fail('COMPLETE closure retains PENDING_ACCEPTANCE marker');
+else pass('closure claim markers aligned with status');
+if (closureStatus === 'COMPLETE' && /^.+:\s*PENDING$/m.test(closure)) fail('COMPLETE closure retains pending validation evidence');
+else pass('closure validation evidence aligned with status');
+if (closureStatus === 'COMPLETE' && JSON.stringify(adrs).includes('PENDING_ACCEPTANCE')) fail('COMPLETE ADR register retains pending-acceptance status');
+else pass('ADR register status markers aligned with COMPLETE');
 if (!boundaryAddendum.includes(F.dt01Acceptance)) fail('boundary addendum lacks exact DT-01 compatibility path');
 else pass('boundary addendum freezes exact DT-01 compatibility path');
 if (!boundaryAddendum.includes(F.verticalGate) || !boundaryAddendum.includes(F.capabilityMatrix) || !boundaryAddendum.includes('consumed unchanged')) fail('boundary addendum lacks unchanged predecessor artifact declaration');
