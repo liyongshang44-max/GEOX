@@ -1,42 +1,23 @@
 {
-  "schema_version": "geox_mcft00_negative_fixture_manifest_v1",
+  "schema_version": "geox_mcft00_negative_fixture_manifest_v2",
   "phase": "MCFT-00",
-  "status": "FROZEN_PENDING_ACCEPTANCE",
-  "fixture_count": 61,
+  "status": "FROZEN",
+  "acceptance_status": "PENDING",
+  "minimum_fixture_count": 61,
+  "fixture_count": 78,
   "rules": [
-    "each fixture must produce expected_reason_code",
-    "each fixture must be rejected at expected_stage",
-    "expected_no_write must be true",
-    "negative validation performs no repository, database, or facts write"
+    "each fixture must produce the expected reason code",
+    "each fixture must be rejected at the expected validation stage",
+    "validator execution must report write_attempt_count = 0",
+    "fixture count is exact and may grow above the original minimum"
   ],
   "part_files": [
-    {
-      "path": "fixtures/mcft/reality_binding/negative/MCFT_00_NEGATIVE_FIXTURES_PART_01.json",
-      "fixture_count": 10
-    },
-    {
-      "path": "fixtures/mcft/reality_binding/negative/MCFT_00_NEGATIVE_FIXTURES_PART_02.json",
-      "fixture_count": 10
-    },
-    {
-      "path": "fixtures/mcft/reality_binding/negative/MCFT_00_NEGATIVE_FIXTURES_PART_03.json",
-      "fixture_count": 10
-    },
-    {
-      "path": "fixtures/mcft/reality_binding/negative/MCFT_00_NEGATIVE_FIXTURES_PART_04.json",
-      "fixture_count": 10
-    },
-    {
-      "path": "fixtures/mcft/reality_binding/negative/MCFT_00_NEGATIVE_FIXTURES_PART_05.json",
-      "fixture_count": 10
-    },
-    {
-      "path": "fixtures/mcft/reality_binding/negative/MCFT_00_NEGATIVE_FIXTURES_PART_06.json",
-      "fixture_count": 10
-    },
-    {
-      "path": "fixtures/mcft/reality_binding/negative/MCFT_00_NEGATIVE_FIXTURES_PART_07.json",
-      "fixture_count": 1
-    }
+    {"path":"fixtures/mcft/reality_binding/negative/MCFT_00_NEGATIVE_FIXTURES_PART_01.json","fixture_count":10},
+    {"path":"fixtures/mcft/reality_binding/negative/MCFT_00_NEGATIVE_FIXTURES_PART_02.json","fixture_count":10},
+    {"path":"fixtures/mcft/reality_binding/negative/MCFT_00_NEGATIVE_FIXTURES_PART_03.json","fixture_count":10},
+    {"path":"fixtures/mcft/reality_binding/negative/MCFT_00_NEGATIVE_FIXTURES_PART_04.json","fixture_count":10},
+    {"path":"fixtures/mcft/reality_binding/negative/MCFT_00_NEGATIVE_FIXTURES_PART_05.json","fixture_count":10},
+    {"path":"fixtures/mcft/reality_binding/negative/MCFT_00_NEGATIVE_FIXTURES_PART_06.json","fixture_count":10},
+    {"path":"fixtures/mcft/reality_binding/negative/MCFT_00_NEGATIVE_FIXTURES_PART_07.json","fixture_count":18}
   ]
 }
