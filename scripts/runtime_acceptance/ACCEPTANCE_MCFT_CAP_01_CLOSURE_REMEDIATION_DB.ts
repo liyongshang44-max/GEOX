@@ -158,9 +158,13 @@ async function main(): Promise<void> {
     assert.equal(await projectionCountV1(), 6);
     ok("A0 commit remains one Runtime Config fact, nine canonical A0 facts and six projections");
 
+    const activeLineageObject = execution.record_set.members.find((member) => member.object_type === "twin_runtime_lineage_v1");
+    assert.ok(activeLineageObject);
     const prepared = await nextTickService.prepareNextTickInput(scope);
     assert.equal(prepared.previous_posterior_ref, execution.record_set.members.find((member) => member.object_type === "twin_state_estimate_v1")?.object_id);
     assert.equal(prepared.previous_checkpoint_ref, execution.record_set.members.find((member) => member.object_type === "twin_runtime_checkpoint_v1")?.object_id);
+    assert.equal(prepared.lineage_id, activeLineageObject.lineage_id);
+    assert.notEqual(activeLineageObject.object_id, activeLineageObject.lineage_id);
     assert.equal(prepared.prior_mean, 0.192595);
     assert.equal(prepared.prior_variance, 0.002678);
     assert.equal(prepared.next_logical_tick_time, "2026-06-01T02:00:00.000Z");
@@ -168,18 +172,18 @@ async function main(): Promise<void> {
     assert.equal(prepared.runtime_config_hash, runtimeConfig.determinism_hash);
     assert.equal(prepared.reality_binding_ref, reality.binding_id);
     assert.equal(prepared.reality_binding_hash, reality.determinism_hash);
-    ok("prepareNextTickInput reconstructs all required fields from PostgreSQL");
+    ok("prepareNextTickInput resolves active lineage object ref and returns semantic lineage ID from PostgreSQL");
 
     await pool.query("DELETE FROM twin_runtime_authority_snapshot_v1 WHERE authority_kind='REALITY_BINDING' AND authority_ref=$1", [reality.binding_id]);
     await assert.rejects(nextTickService.prepareNextTickInput(scope), /PERSISTED_REALITY_BINDING_NOT_FOUND/);
     await nextTickRepository.commitRealityBindingSnapshot(realitySnapshot);
     ok("persisted handoff fails closed when Reality Binding snapshot is missing");
 
-    const originalLineage = prepared.lineage_id;
+    const originalActiveLineageRef = activeLineageObject.object_id;
     await pool.query("UPDATE twin_active_lineage_index_v1 SET active_lineage_ref='foreign_lineage' WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6", [scope.tenant_id, scope.project_id, scope.group_id, scope.field_id, scope.season_id, scope.zone_id]);
-    await assert.rejects(nextTickService.prepareNextTickInput(scope), /ACTIVE_LINEAGE_CHECKPOINT_MISMATCH/);
-    await pool.query("UPDATE twin_active_lineage_index_v1 SET active_lineage_ref=$7 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6", [scope.tenant_id, scope.project_id, scope.group_id, scope.field_id, scope.season_id, scope.zone_id, originalLineage]);
-    ok("persisted handoff rejects active-lineage projection corruption");
+    await assert.rejects(nextTickService.prepareNextTickInput(scope), /PERSISTED_OBJECT_NOT_FOUND:twin_runtime_lineage_v1:foreign_lineage/);
+    await pool.query("UPDATE twin_active_lineage_index_v1 SET active_lineage_ref=$7 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6", [scope.tenant_id, scope.project_id, scope.group_id, scope.field_id, scope.season_id, scope.zone_id, originalActiveLineageRef]);
+    ok("persisted handoff rejects an active-lineage pointer that does not resolve to a lineage object");
 
     await cleanupV1();
     await nextTickRepository.commitRealityBindingSnapshot(realitySnapshot);
