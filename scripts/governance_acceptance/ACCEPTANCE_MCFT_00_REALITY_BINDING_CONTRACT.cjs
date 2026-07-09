@@ -20,6 +20,7 @@ const F = Object.freeze({
   closure: 'docs/digital_twin/mcft/GEOX-MCFT-00-CLOSURE-RECORD.md',
   remediation: 'docs/digital_twin/mcft/GEOX-MCFT-00-REVIEW-REMEDIATION.md',
   geometry: 'fixtures/mcft/reality_binding/MCFT_C8_GOVERNED_ZONE_V1.geojson',
+  rounding: 'fixtures/mcft/reality_binding/MCFT_00_GEOMETRY_ROUNDING_FIXTURES_V1.json',
   negatives: 'fixtures/mcft/reality_binding/negative/MCFT_00_NEGATIVE_FIXTURES_V1.json',
   matrix: 'docs/digital_twin/GEOX-DIGITAL-TWIN-CAPABILITY-MATRIX.json',
   dt02: 'scripts/governance_acceptance/ACCEPTANCE_DT_02_RUNTIME_ARCHITECTURE_FREEZE.cjs',
@@ -90,6 +91,7 @@ const {
   applyMutations,
   scanForbiddenHashInputs,
   semanticTopProjection,
+  round7,
 } = require('./mcft00/MCFT00_GEOMETRY_AND_HASH.cjs');
 
 const {
@@ -114,6 +116,7 @@ const reality = parse(F.reality);
 const source = parse(F.source);
 const config = parse(F.config);
 const geometry = parse(F.geometry);
+const roundingManifest = parse(F.rounding);
 const negativeManifest = parse(F.negatives);
 const matrix = parse(F.matrix);
 const geometryBytes = fs.readFileSync(abs(F.geometry));
@@ -126,7 +129,10 @@ if (baselineResult.findings.length) {
 if (baselineResult.write_attempt_count !== 0) fail(`positive validation attempted ${baselineResult.write_attempt_count} writes`);
 else pass('positive validation write_attempt_count is zero');
 
-const validatorSource = read(F.validatorHelper);
+const privateHelperSources = [
+  { path: F.validatorHelper, source: read(F.validatorHelper) },
+  { path: F.geometryHelper, source: read(F.geometryHelper) },
+];
 const forbiddenPurityPatterns = [
   /node:fs/,
   /node:child_process/,
@@ -140,9 +146,12 @@ const forbiddenPurityPatterns = [
   /INSERT\s+INTO\s+facts/i,
   /active[_ -]pointer/i,
 ];
-const validatorPurity = forbiddenPurityPatterns.every((pattern) => !pattern.test(validatorSource));
-if (validatorPurity) pass('private validator purity scan passed');
-else fail('private validator purity scan found write or external-I/O capability');
+const impureHelpers = privateHelperSources.filter(({ source: helperSource }) => (
+  forbiddenPurityPatterns.some((pattern) => pattern.test(helperSource))
+));
+const privateHelpersPure = impureHelpers.length === 0;
+if (privateHelpersPure) pass('both private helpers pass purity scan');
+else fail(`private helper purity scan found write or external-I/O capability: ${impureHelpers.map((item) => item.path).join(', ')}`);
 
 const closureStatus = field(closure, 'status');
 const closureMode = closureStatus === 'COMPLETE' ? 'COMPLETE' : closureStatus === 'PENDING_ACCEPTANCE' ? 'PENDING_ACCEPTANCE' : 'INVALID';
@@ -216,12 +225,20 @@ const allDomains = new Set([...(source.required_semantic_domains || []), ...(con
 const sourceByRole = new Map((source.bindings || []).map((binding) => [binding.source_role, binding]));
 const soilDefinition = (config.configuration_source_definitions || []).find((definition) => definition.configuration_source_id === 'mcft_soil_hydraulic_config_c8_v1');
 const cropDefinition = (config.configuration_source_definitions || []).find((definition) => definition.configuration_source_id === 'mcft_crop_water_use_corn_v1');
+
 const idempotentReplay = validateIdempotency(reality, clone(reality));
+
 const conflictingCandidate = clone(reality);
 conflictingCandidate.semantic_payload.crop_binding.crop_code = 'different_semantic_payload';
 conflictingCandidate.determinism_hash = hash(conflictingCandidate.semantic_payload);
 conflictingCandidate.binding_id = reality.binding_id;
 const idempotencyConflict = validateIdempotency(reality, conflictingCandidate);
+
+const staleHashCandidate = clone(reality);
+staleHashCandidate.semantic_payload.crop_binding.crop_code = 'different_semantic_payload_with_stale_hash';
+staleHashCandidate.binding_id = reality.binding_id;
+const staleHashConflict = validateIdempotency(reality, staleHashCandidate);
+
 const statusVariantSource = clone(source);
 statusVariantSource.acceptance_status = source.acceptance_status === 'PENDING' ? 'COMPLETE' : 'PENDING';
 const statusVariantConfig = clone(config);
@@ -275,14 +292,14 @@ const hardChecks = [
   ['Bindings 02 nine concrete bindings', source.bindings.length + config.bindings.length === 9],
   ['Bindings 03 seven source and two config bindings', source.bindings.length === 7 && config.bindings.length === 2],
   ['Bindings 04 source authority graph resolves', !baselineResult.findings.some((item) => item.stage === 'AUTHORITY_REFERENCE_VALIDATION' && item.reason_code.includes('SOURCE'))],
-  ['Bindings 05 seven governed Replay adapters resolve', source.ingress_adapter_definitions.length === 7 && source.bindings.every((binding) => source.ingress_adapter_definitions.some((definition) => definition.ingress_adapter_id === binding.ingress_adapter_id))],
+  ['Bindings 05 seven governed Replay adapters resolve', source.ingress_adapter_definitions.length === 7 && source.bindings.every((binding) => source.ingress_adapter_definitions.some((definition) => definition.ingress_adapter_id === binding.ingress_adapter_id && definition.ingress_adapter_version === binding.ingress_adapter_version))],
   ['Bindings 06 soil OBSERVED and conversion machine-readable', sourceByRole.get('SOIL_MOISTURE_OBSERVATION')?.epistemic_class === 'OBSERVED' && sourceByRole.get('SOIL_MOISTURE_OBSERVATION')?.conversion_rule?.id === 'PERCENT_TO_FRACTION_V1'],
   ['Bindings 07 rainfall and future assumption separated', sourceByRole.get('RAINFALL_OBSERVATION')?.evidence_record_type !== sourceByRole.get('FUTURE_WEATHER_ASSUMPTION')?.evidence_record_type],
   ['Bindings 08 historical ET0 ESTIMATED and future ET0 ASSUMED', sourceByRole.get('HISTORICAL_ET0_INPUT')?.epistemic_class === 'ESTIMATED' && sourceByRole.get('FUTURE_ET0_ASSUMPTION')?.epistemic_class === 'ASSUMED'],
   ['Bindings 09 soil configuration physical invariants valid', soilDefinition && !baselineResult.findings.some((item) => item.stage === 'SOIL_CONFIGURATION_VALIDATION')],
   ['Bindings 10 crop effective root policy valid', cropDefinition && !baselineResult.findings.some((item) => item.stage === 'CROP_CONFIGURATION_VALIDATION')],
   ['Bindings 11 Approved plan NEVER and execution CONDITIONAL', sourceByRole.get('APPROVED_IRRIGATION_PLAN')?.state_input_policy === 'NEVER' && sourceByRole.get('IRRIGATION_EXECUTION_EVIDENCE')?.state_input_policy === 'CONDITIONAL'],
-  ['Bindings 12 metadata complete and validator pure', source.bindings.every((binding) => binding.time_semantics && binding.quality_semantics && binding.availability_semantics && arrayNonEmpty(binding.eligible_downstream_uses) && arrayNonEmpty(binding.forbidden_downstream_uses) && arrayNonEmpty(binding.limitations)) && validatorPurity],
+  ['Bindings 12 metadata complete and validator pure', source.bindings.every((binding) => binding.time_semantics && binding.quality_semantics && binding.availability_semantics && arrayNonEmpty(binding.eligible_downstream_uses) && arrayNonEmpty(binding.forbidden_downstream_uses) && arrayNonEmpty(binding.limitations)) && privateHelpersPure],
 
   ['Time 01 UTC hourly domain', reality.semantic_payload.time_domain.timezone === 'UTC' && reality.semantic_payload.time_domain.tick_interval === 'PT1H'],
   ['Time 02 role event, ingestion, and availability separated', reality.semantic_payload.time_domain.required_evidence_times.length === 3],
@@ -307,6 +324,22 @@ const hardChecks = [
 if (hardChecks.length !== 57) fail(`hard acceptance definition count must be 57, got ${hardChecks.length}`);
 else pass('hard acceptance definition count is 57');
 for (const [name, condition] of hardChecks) condition ? pass(name) : fail(name);
+
+if (
+  staleHashConflict.status === 'SEMANTIC_HASH_MISMATCH'
+  && staleHashConflict.findings.some((item) => item.reason_code === 'SEMANTIC_HASH_MISMATCH' && item.stage === 'DETERMINISM_VALIDATION')
+) pass('stale or forged declared hash is rejected by computed semantic identity');
+else fail('stale or forged declared hash was not rejected');
+
+if (!Array.isArray(roundingManifest.fixtures) || roundingManifest.fixture_count !== roundingManifest.fixtures.length) {
+  fail('geometry rounding fixture manifest invalid');
+} else {
+  for (const fixture of roundingManifest.fixtures) {
+    const actual = round7(fixture.input);
+    if (actual === fixture.expected) pass(`${fixture.fixture_id} decimal half-away-from-zero`);
+    else fail(`${fixture.fixture_id} expected ${fixture.expected}, got ${actual}`);
+  }
+}
 
 const c8 = read(F.c8);
 const c8Sensing = read(F.c8Sensing);
@@ -358,6 +391,11 @@ for (const fixture of negativeFixtures) {
     const candidate = clone(mutated.reality);
     candidate.semantic_payload.crop_binding.crop_code = 'different_semantic_payload';
     candidate.determinism_hash = hash(candidate.semantic_payload);
+    candidate.binding_id = mutated.reality.binding_id;
+    result = { findings: validateIdempotency(mutated.reality, candidate).findings, write_attempt_count: 0 };
+  } else if (fixture.test_kind === 'ID_CONFLICT_STALE_HASH') {
+    const candidate = clone(mutated.reality);
+    candidate.semantic_payload.crop_binding.crop_code = 'different_semantic_payload_with_stale_hash';
     candidate.binding_id = mutated.reality.binding_id;
     result = { findings: validateIdempotency(mutated.reality, candidate).findings, write_attempt_count: 0 };
   } else {
