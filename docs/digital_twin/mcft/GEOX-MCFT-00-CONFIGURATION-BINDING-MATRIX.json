@@ -1,0 +1,212 @@
+{
+  "schema_version": "geox_mcft00_configuration_binding_matrix_v1",
+  "phase": "MCFT-00",
+  "status": "FROZEN",
+  "scope": {
+    "tenant_id": "tenantA",
+    "project_id": "projectA",
+    "group_id": "groupA",
+    "field_id": "field_c8_demo",
+    "season_id": "season_2026_c8_corn",
+    "zone_id": "zone_mcft_c8_water_001"
+  },
+  "binding_count": 2,
+  "bindings": [
+    {
+      "binding_id": "soil_hydraulic_config_c8_v1",
+      "binding_type": "MODEL_CONFIGURATION_BINDING",
+      "source_role": "SOIL_HYDRAULIC_CONFIGURATION",
+      "epistemic_class": "CONFIGURED",
+      "configuration_source_kind": "VERSIONED_CONFIG_ARTIFACT",
+      "configuration_source_id": "mcft_soil_hydraulic_config_c8_v1",
+      "configuration_version": 1,
+      "configuration_evidence_grade": "PROVEN",
+      "configuration_definition": {
+        "artifact_class": "CONTROLLED_SYNTHETIC_CONFIG_NOT_FIELD_CALIBRATED",
+        "scope_ref": {
+          "field_id": "field_c8_demo",
+          "zone_id": "zone_mcft_c8_water_001",
+          "root_zone_definition_id": "rz_c8_0_300mm_v1"
+        },
+        "parameters": [
+          {
+            "parameter": "field_capacity",
+            "value": 0.3,
+            "unit": "fraction_vwc",
+            "status": "CONFIGURED",
+            "provenance": "MCFT_00_CONTROLLED_SYNTHETIC_BASELINE"
+          },
+          {
+            "parameter": "wilting_point",
+            "value": 0.14,
+            "unit": "fraction_vwc",
+            "status": "CONFIGURED",
+            "provenance": "MCFT_00_CONTROLLED_SYNTHETIC_BASELINE"
+          },
+          {
+            "parameter": "saturation",
+            "value": 0.45,
+            "unit": "fraction_vwc",
+            "status": "CONFIGURED",
+            "provenance": "MCFT_00_CONTROLLED_SYNTHETIC_BASELINE"
+          },
+          {
+            "parameter": "root_zone_storage_capacity",
+            "value": 90,
+            "unit": "mm",
+            "status": "CONFIGURED",
+            "provenance": "field_capacity * 300 mm controlled baseline; formula use owned by MCFT-06"
+          },
+          {
+            "parameter": "drainage_parameter",
+            "value": 0.05,
+            "unit": "fraction_per_hour",
+            "status": "CONFIGURED",
+            "provenance": "MCFT_00_CONTROLLED_SYNTHETIC_BASELINE"
+          },
+          {
+            "parameter": "runoff_parameter",
+            "value": 0.1,
+            "unit": "fraction",
+            "status": "CONFIGURED",
+            "provenance": "MCFT_00_CONTROLLED_SYNTHETIC_BASELINE"
+          }
+        ],
+        "unknown_value_policy": "UNKNOWN|UNAVAILABLE|SOURCE_MISSING; never silently default"
+      },
+      "quantity_kind": "SOIL_HYDRAULIC_PARAMETER_SET",
+      "source_unit": "DECLARED_PER_PARAMETER",
+      "canonical_unit": "DECLARED_PER_PARAMETER",
+      "conversion_rule": "NO_IMPLICIT_CONVERSION",
+      "spatial_support": "ZONE_AND_ROOT_ZONE",
+      "vertical_support": "0_TO_300_MM_CONFIGURATION_SCOPE",
+      "time_semantics": {
+        "effective_from": "MCFT_BINDING_VERSION_ACTIVATION_NOT_PERFORMED",
+        "dynamic_state": false
+      },
+      "quality_semantics": {
+        "field_calibrated": false,
+        "quality_status": "CONTROLLED_SYNTHETIC",
+        "limitations_required": true
+      },
+      "availability_semantics": {
+        "available_by_binding_version": 1,
+        "runtime_activation_not_performed": true
+      },
+      "eligible_downstream_uses": [
+        "MCFT-02_RUNTIME_CONFIG_COMPILE_INPUT",
+        "MCFT-06_MODEL_CONFIGURATION"
+      ],
+      "forbidden_downstream_uses": [
+        "FIELD_VERIFIED_PARAMETER_CLAIM",
+        "ACTIVE_RUNTIME_CONFIG_CLAIM",
+        "AUTOMATIC_MODEL_ACTIVATION"
+      ],
+      "limitations": [
+        "controlled synthetic configuration",
+        "not field-calibrated",
+        "formula execution belongs to later phases"
+      ],
+      "source_version": "1.0.0",
+      "binding_version": 1,
+      "determinism_hash": "sha256:8cb89c420a9c46d03e93c698a9a03b83f5be7077b5d44dc01bdf527a15b440c3"
+    },
+    {
+      "binding_id": "crop_water_use_config_c8_v1",
+      "binding_type": "MODEL_CONFIGURATION_BINDING",
+      "source_role": "CROP_WATER_USE_CONFIGURATION",
+      "epistemic_class": "CONFIGURED",
+      "crop_code": "corn",
+      "configuration_source_kind": "VERSIONED_CONFIG_ARTIFACT",
+      "configuration_source_id": "mcft_crop_water_use_corn_v1",
+      "configuration_version": 1,
+      "configuration_evidence_grade": "PROVEN",
+      "configuration_definition": {
+        "artifact_class": "CONTROLLED_SYNTHETIC_CONFIG_NOT_FIELD_CALIBRATED",
+        "kc_schedule_reference": {
+          "schedule_id": "mcft_corn_kc_schedule_v1",
+          "schedule_version": "1.0.0",
+          "entries": [
+            {
+              "stage_code": "INITIAL",
+              "kc": 0.35
+            },
+            {
+              "stage_code": "DEVELOPMENT",
+              "kc": 0.75
+            },
+            {
+              "stage_code": "MID_SEASON",
+              "kc": 1.2
+            },
+            {
+              "stage_code": "LATE_SEASON",
+              "kc": 0.6
+            }
+          ],
+          "unit": "dimensionless",
+          "stage_selection_owner": "future CAT/MCFT runtime; not Reality identity"
+        },
+        "crop_stage_mapping_source": {
+          "mapping_id": "mcft_corn_stage_mapping_v1",
+          "mapping_version": "1.0.0",
+          "status": "CONFIGURED_REFERENCE_ONLY"
+        },
+        "root_depth_mapping_source": {
+          "mapping_id": "mcft_corn_root_depth_mapping_v1",
+          "mapping_version": "1.0.0",
+          "status": "CONFIGURED_REFERENCE_ONLY",
+          "maximum_depth_mm": 300
+        },
+        "applicability_conditions": [
+          "crop_code=corn",
+          "controlled synthetic replay scope",
+          "not field calibrated"
+        ]
+      },
+      "quantity_kind": "CROP_WATER_USE_PARAMETER_SET",
+      "source_unit": "DECLARED_PER_PARAMETER",
+      "canonical_unit": "DECLARED_PER_PARAMETER",
+      "conversion_rule": "NO_IMPLICIT_CONVERSION",
+      "spatial_support": "ZONE_CROP_CONFIGURATION",
+      "vertical_support": "ROOT_ZONE_MAPPING_REFERENCE_ONLY",
+      "time_semantics": {
+        "dynamic_stage_not_frozen_as_identity": true,
+        "stage_effective_time_owned_by_future_runtime": true
+      },
+      "quality_semantics": {
+        "field_calibrated": false,
+        "quality_status": "CONTROLLED_SYNTHETIC",
+        "limitations_required": true
+      },
+      "availability_semantics": {
+        "available_by_binding_version": 1,
+        "runtime_activation_not_performed": true
+      },
+      "eligible_downstream_uses": [
+        "MCFT-02_RUNTIME_CONFIG_COMPILE_INPUT",
+        "MCFT-06_CROP_WATER_USE_CONFIGURATION"
+      ],
+      "forbidden_downstream_uses": [
+        "CROP_STAGE_IDENTITY",
+        "FIELD_VERIFIED_KC_CLAIM",
+        "ACTIVE_RUNTIME_CONFIG_CLAIM"
+      ],
+      "limitations": [
+        "crop identity is not Kc configuration",
+        "dynamic crop stage is not frozen",
+        "not field-calibrated"
+      ],
+      "source_version": "1.0.0",
+      "binding_version": 1,
+      "determinism_hash": "sha256:857eeeea5023cb28d6297eea3a405af41f16d2cfae8175948103952fda2131f5"
+    }
+  ],
+  "configuration_source_rule": "MODEL_CONFIGURATION_BINDING uses configuration_source_* and never origin_source_* or ingress_adapter_*",
+  "nonclaims": [
+    "NO_ACTIVE_RUNTIME_CONFIG",
+    "NO_MODEL_EXECUTION",
+    "NO_FIELD_CALIBRATION"
+  ],
+  "matrix_hash": "sha256:05e9607d4e80b0aca964d1492b990a0e68eb6a8fed6c622a1d894c263019729c"
+}
