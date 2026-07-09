@@ -8,97 +8,68 @@ phase: MCFT-00
 review_target: PR #2304
 authoritative_branch: mcft-00-reality-binding-contract
 baseline_main_commit: 7fd848ae00680480fc864990b9d03b37bc61fdff
-review_status: COMPLETE
+review_status: REMEDIATION_IMPLEMENTED_PENDING_FINAL_ACCEPTANCE
 repository boundary remains governance-only
 ```
 
 ## 1. Authority correction
 
-PR #2305 was a duplicate, conflicting MCFT-00 implementation. It was closed without merge and marked superseded. PR #2304 is the only authoritative implementation line.
+PR #2305 was closed without merge and marked superseded. PR #2304 remains the only authoritative implementation line.
 
-The source vocabulary correction is formalized as `MCFT00-AMENDMENT-01` in the contract. Epistemic class and action lifecycle class are separate axes. The amendment does not expand runtime capability.
+The source vocabulary correction remains governed by `MCFT00-AMENDMENT-01`. The post-acceptance findings below do not expand MCFT-00 runtime capability.
 
-## 2. Implemented remediations
+## 2. Post-acceptance findings
 
-The implementation includes:
-
-```text
-closure state machine: PENDING_ACCEPTANCE | COMPLETE
-semantic status separated from acceptance_status
-acceptance_status excluded from deterministic identity
-structured validator findings with reason_code and stage
-write_attempt_count = 0
-validator purity scan
-pure idempotency guard
-no literal hard-check placeholders
-governed source definitions
-governed Replay adapter definitions
-governed configuration definitions
-unique authority-reference graph validation
-non-circular role-specific availability rules
-computed no-future, late, and on-time classification
-field-capacity, wilting, and saturation storage semantics
-soil physical cross-parameter validation
-effective model root-depth cap policy
-stronger geometry and root-layer structural validation
-exact negative fixture manifest count above the original minimum
-pending and complete claim alignment
-```
-
-## 3. Closed findings
+The previous `COMPLETE` closure was reopened after direct review of the implementation bytes established four additional findings:
 
 ```text
-MCFT00-REVIEW-000 duplicate implementation authority conflict
-MCFT00-REVIEW-001 closure transition impossible
-MCFT00-REVIEW-003 negative stage metadata-only
-MCFT00-REVIEW-004 expected_no_write metadata-only
-MCFT00-REVIEW-005 tautological ID conflict
-MCFT00-REVIEW-006 literal hard checks
-MCFT00-REVIEW-007 circular approved-plan availability
-MCFT00-REVIEW-008 adapter identities not governed
-MCFT00-REVIEW-009 ambiguous soil storage semantics
-MCFT00-REVIEW-010 crop depth exceeds model domain without policy
-MCFT00-REVIEW-011 pending and complete claims misaligned
-MCFT00-REVIEW-012 proof scope unclear
-MCFT00-REVIEW-013 task-line semantic correction lacked authority
-MCFT00-REVIEW-014 acceptance status contaminated semantic hash
-MCFT00-REVIEW-015 negative fixture count contradiction
-MCFT00-REVIEW-016 authority-reference graph incomplete
-MCFT00-REVIEW-017 release and no-future rules self-asserted
-MCFT00-REVIEW-018 per-role time contract incomplete
-MCFT00-REVIEW-019 structural validation gaps
+MCFT00-REVIEW-020 idempotency guard trusted declared determinism hashes
+MCFT00-REVIEW-021 geometry rounding implementation diverged from half-away-from-zero policy
+MCFT00-REVIEW-022 ingress adapter version was defined but not bound by Evidence bindings
+MCFT00-REVIEW-023 purity scan omitted the geometry/hash helper
 ```
 
-## 4. Closure evidence
+These findings invalidate the prior closure evidence for head `1e7d62a68d731a36ddc229c4cf7fff717ec75df6`.
+
+## 3. Implemented remediations
 
 ```text
-implementation_validated_head: cd9296e29ef98f93fe869e072ec6c08129c2889f
-implementation_local_gate: PASS — 185 PASS / 0 WARN / 0 FAIL
-DT-02 amended regression: PASS
-DT-01 repository audit: PASS
-DT-01 acceptance: PASS
-DT-00 semantic regression: PASS
-changed-file boundary: PASS
-changed_file_count: 23
-negative_fixture_count: 78
-working_tree: CLEAN
-implementation_ci: PASS — workflow ci #4332
+idempotency guard recomputes both semantic payload hashes
+idempotency guard verifies each declared hash against its computed hash
+idempotency guard verifies binding ID against the computed semantic identity
+same ID plus changed payload plus stale hash returns SEMANTIC_HASH_MISMATCH
+same ID plus changed payload plus correct changed hash returns IDEMPOTENCY_CONFLICT
+geometry uses decimal half-away-from-zero at seven decimal places
+positive and negative half-tie fixtures are executable acceptance evidence
+every Evidence binding carries ingress_adapter_version
+adapter definition and binding versions are compared by the authority validator
+adapter version mismatch has an exact negative fixture
+both private helpers are included in the purity scan
+negative fixture count increased from 78 to 80
+source matrix and Reality identities were deterministically rederived
 ```
 
-Generic CI is not represented as MCFT-00-specific Gate wiring. Workflow and package changes remain forbidden by the MCFT-00 task boundary.
-
-## 5. Completion criteria
-
-PR #2304 satisfies:
+## 4. Candidate identity after remediation
 
 ```text
-closure status = COMPLETE
-acceptance_status = COMPLETE
-no closure field remains PENDING
-57 hard checks are evidence-bearing
-78 negative fixtures match exact reason code and exact stage
-all validator runs report write_attempt_count = 0
-full local Gate has 0 WARN and 0 FAIL
-working tree is clean
-generic CI is green on the implementation-validated head
+binding_id: mcft_rb_bf1da664164a4fedda249bcb
+determinism_hash: sha256:bf1da664164a4fedda249bcb0e330c1af2083173a52bd704f01eac3ad277ba4f
+source_matrix_hash: sha256:c5187c23be0d058ffa23d464ae1139f924f5af064a270248746fbabde4c3e51b
+geometry_semantic_hash: sha256:d3dbc5495485e7af68acdc4b32e6061c2ea99772835be2805ae706b74d75ca51
+configuration_matrix_hash: sha256:381ef166454c7b698c6641fadc5d08019fecff127e9529a4c58a1f09d9e1fef5
 ```
+
+The geometry identity is unchanged because the governed polygon contains no half-tie coordinates. The Reality identity changed because adapter version is now part of the governed Evidence-binding semantics.
+
+## 5. Acceptance state
+
+```text
+closure status: PENDING_ACCEPTANCE
+acceptance_status: PENDING
+implementation_validated_head: PENDING
+full local Gate: PENDING
+negative_fixture_count: 80
+final CI: PENDING
+```
+
+PR #2304 must remain Draft until the revised package passes the complete no-skip Gate, the working tree is clean, and final CI succeeds.
