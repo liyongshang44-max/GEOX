@@ -199,7 +199,7 @@ async function main(): Promise<void> {
   assert.equal(changed.some((file) => file.includes("propagation") || file.includes("scenario") || file.includes("recommendation") || file.includes("ao_act") || file.startsWith("apps/web/") || file.startsWith("apps/server/src/routes/")), false);
   ok("S4 and remediation changes contain no propagation Scenario Recommendation AO-ACT route or web implementation");
 
-  assert.equal(pass, 20);
+  assert.equal(pass, 21);
   console.log(`MCFT-CAP-01 S4 A0 Runtime: ${pass} PASS, 0 FAIL`);
 }
 
