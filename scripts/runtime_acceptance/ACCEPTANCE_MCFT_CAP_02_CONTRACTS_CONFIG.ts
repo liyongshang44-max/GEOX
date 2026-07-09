@@ -14,11 +14,21 @@ import {
   MCFT_CAP_02_CONTINUATION_CONFIG_PURPOSE_V1,
   MCFT_CAP_02_CONTINUATION_CONFIG_SELECTION_MODE_V1,
   MCFT_CAP_02_CONTINUATION_CROP_STAGE_CONTEXT_KIND_V1,
+  MCFT_CAP_02_CONTINUATION_CROP_STAGE_CONTEXT_REF_V1,
+  MCFT_CAP_02_CONTINUATION_CROP_STAGE_CONTEXT_HASH_V1,
   MCFT_CAP_02_CONTINUATION_ROOT_ZONE_POLICY_ID_V1,
   MCFT_CAP_02_CONTINUATION_MODEL_ID_V1,
+  MCFT_CAP_02_CONTINUATION_DYNAMICS_MODEL_COMPONENT_REF_V1,
+  MCFT_CAP_02_CONTINUATION_SOIL_HYDRAULIC_SOURCE_CONFIG_REF_V1,
+  MCFT_CAP_02_CONTINUATION_SOIL_HYDRAULIC_SOURCE_CONFIG_HASH_V1,
+  MCFT_CAP_02_CONTINUATION_SOIL_ROOT_ZONE_CONFIG_REF_V1,
+  MCFT_CAP_02_CONTINUATION_MODEL_COMPONENT_REFS_V1,
   MCFT_CAP_02_CONTINUATION_PROCESS_UNCERTAINTY_POLICY_V1,
   MCFT_CAP_02_CONTINUATION_NO_OBSERVATION_POLICY_V1,
   MCFT_CAP_02_CONTINUATION_FORECAST_BLOCK_POLICY_V1,
+  MCFT_CAP_02_CONTINUATION_UNCERTAINTY_POLICY_COMPONENT_REF_V1,
+  MCFT_CAP_02_CONTINUATION_NO_OBSERVATION_POLICY_COMPONENT_REF_V1,
+  MCFT_CAP_02_CONTINUATION_FORECAST_BLOCK_POLICY_COMPONENT_REF_V1,
   type ContinuationRuntimeConfigSemanticPayloadV1,
 } from "../../apps/server/src/domain/twin_runtime/continuation_runtime_config_v1.js";
 
@@ -40,18 +50,18 @@ function buildInput(createdAt: string) {
   const lock = readJson<Record<string, unknown>>(PREDECESSOR_LOCK_PATH);
   const reality = readJson<{ binding_id: string; determinism_hash: string; semantic_payload: { scope: Record<string, string>; geometry_binding: { geometry_semantic_hash: string } } }>(REALITY_PATH);
   const configurationMatrix = readJson<{
-    configuration_source_definitions: Array<{ configuration_source_id: string; parameters: Record<string, { value: unknown }> }>;
+    configuration_source_definitions: Array<{ configuration_source_id: string; parameters: Record<string, { value: unknown }>; configuration_semantic_hash: string }>;
     bindings: Array<{ binding_id: string; configuration_source_id: string; determinism_hash: string; source_role: string }>;
     determinism_hash: string;
   }>(CONFIG_MATRIX_PATH);
 
-  const soilSourceDefinition = configurationMatrix.configuration_source_definitions.find((item) => item.configuration_source_id === "mcft_soil_hydraulic_config_c8_v1");
+  const soilSourceDefinition = configurationMatrix.configuration_source_definitions.find((item) => item.configuration_source_id === MCFT_CAP_02_CONTINUATION_SOIL_HYDRAULIC_SOURCE_CONFIG_REF_V1);
   if (!soilSourceDefinition) throw new Error("SOIL_HYDRAULIC_DEFINITION_NOT_FOUND");
-  const soilBinding = configurationMatrix.bindings.find((binding) => binding.configuration_source_id === "mcft_soil_hydraulic_config_c8_v1");
+  const soilBinding = configurationMatrix.bindings.find((binding) => binding.configuration_source_id === MCFT_CAP_02_CONTINUATION_SOIL_HYDRAULIC_SOURCE_CONFIG_REF_V1);
   if (!soilBinding) throw new Error("SOIL_HYDRAULIC_BINDING_NOT_FOUND");
 
   const scope = lock.scope as Record<string, string>;
-  const modelComponentRef = "root_zone_hourly_water_balance_model_component_v1";
+  const modelComponentRef = MCFT_CAP_02_CONTINUATION_DYNAMICS_MODEL_COMPONENT_REF_V1;
   const soilRootZoneConfigRef = soilBinding.binding_id;
   const soilRootZoneConfigHash = soilBinding.determinism_hash;
   const cropStageContextRef = requireString(lock.crop_stage_context_ref, "CROP_STAGE_CONTEXT_REF_REQUIRED");
@@ -83,7 +93,7 @@ function buildInput(createdAt: string) {
     soil_root_zone_config_ref: soilRootZoneConfigRef,
     model_component_refs: [
       modelComponentRef,
-      MCFT_CAP_02_CONTINUATION_PROCESS_UNCERTAINTY_POLICY_V1,
+      MCFT_CAP_02_CONTINUATION_UNCERTAINTY_POLICY_V1,
       MCFT_CAP_02_CONTINUATION_NO_OBSERVATION_POLICY_V1,
       MCFT_CAP_02_CONTINUATION_FORECAST_BLOCK_POLICY_V1,
     ],
@@ -94,8 +104,11 @@ function assertContinuationRuntimeConfigShape(payload: ContinuationRuntimeConfig
   assert.equal(payload.config_purpose, MCFT_CAP_02_CONTINUATION_CONFIG_PURPOSE_V1);
   assert.equal(payload.config_selection_mode, MCFT_CAP_02_CONTINUATION_CONFIG_SELECTION_MODE_V1);
   assert.equal(payload.crop_stage_context.context_kind, MCFT_CAP_02_CONTINUATION_CROP_STAGE_CONTEXT_KIND_V1);
+  assert.equal(payload.crop_stage_context.context_ref, MCFT_CAP_02_CONTINUATION_CROP_STAGE_CONTEXT_REF_V1);
+  assert.equal(payload.crop_stage_context.context_hash, MCFT_CAP_02_CONTINUATION_CROP_STAGE_CONTEXT_HASH_V1);
   assert.equal(payload.crop_stage_context.resolution_policy_id, MCFT_CAP_02_CONTINUATION_ROOT_ZONE_POLICY_ID_V1);
   assert.equal(payload.dynamics_model.model_id, MCFT_CAP_02_CONTINUATION_MODEL_ID_V1);
+  assert.equal(payload.dynamics_model.model_component_ref, MCFT_CAP_02_CONTINUATION_DYNAMICS_MODEL_COMPONENT_REF_V1);
   assert.equal(payload.process_uncertainty.policy_id, MCFT_CAP_02_CONTINUATION_PROCESS_UNCERTAINTY_POLICY_V1);
   assert.equal(payload.no_observation_update_policy.policy_id, MCFT_CAP_02_CONTINUATION_NO_OBSERVATION_POLICY_V1);
   assert.equal(payload.forecast_block_policy.policy_id, MCFT_CAP_02_CONTINUATION_FORECAST_BLOCK_POLICY_V1);
@@ -103,6 +116,8 @@ function assertContinuationRuntimeConfigShape(payload: ContinuationRuntimeConfig
   assert.equal(payload.soil_hydraulic_snapshot.wilting_point_storage_mm, 36);
   assert.equal(payload.soil_hydraulic_snapshot.field_capacity_storage_mm, 90);
   assert.equal(payload.soil_hydraulic_snapshot.saturation_storage_mm, 135);
+  assert.equal(payload.soil_hydraulic_snapshot.source_config_ref, MCFT_CAP_02_CONTINUATION_SOIL_HYDRAULIC_SOURCE_CONFIG_REF_V1);
+  assert.equal(payload.soil_hydraulic_snapshot.source_config_hash, MCFT_CAP_02_CONTINUATION_SOIL_HYDRAULIC_SOURCE_CONFIG_HASH_V1);
   assert.equal(payload.rounding.output_decimals, 6);
   assert.equal(payload.rounding.rule, "DECIMAL_HALF_AWAY_FROM_ZERO_V1");
   assert.equal(payload.soil_root_zone_config_refs.length, 1);
@@ -138,11 +153,11 @@ check(first.payload.reality_binding_hash === "sha256:bf1da664164a4fedda249bcb0e3
 check(first.payload.source_matrix_hash === "sha256:c5187c23be0d058ffa23d464ae1139f924f5af064a270248746fbabde4c3e51b", "source matrix hash frozen");
 check(first.payload.configuration_matrix_hash === "sha256:381ef166454c7b698c6641fadc5d08019fecff127e9529a4c58a1f09d9e1fef5", "configuration matrix hash frozen");
 check(first.payload.geometry_semantic_hash === "sha256:d3dbc5495485e7af68acdc4b32e6061c2ea99772835be2805ae706b74d75ca51", "geometry semantic hash frozen");
-check(first.payload.crop_stage_context.context_ref === "fixtures/mcft/water_state/replay_v1/configuration_context.json", "crop-stage context ref frozen");
-check(first.payload.crop_stage_context.context_hash === "sha256:2287c71e983b1ba529e49939f025d9b035e09e195a5effc994fe54b4ef7863ce", "crop-stage context hash frozen");
-check(first.payload.soil_hydraulic_snapshot.source_config_ref === "soil_hydraulic_config_c8_v1", "soil hydraulic config ref frozen");
-check(first.payload.soil_hydraulic_snapshot.source_config_hash === "sha256:3d6e3d8b52a9736ff6898487cacbbffdf71578cca693754ab34cb484e5bc3082", "soil hydraulic config hash frozen");
-check(first.payload.dynamics_model.model_component_ref === "root_zone_hourly_water_balance_model_component_v1", "model component ref frozen");
+check(first.payload.crop_stage_context.context_ref === MCFT_CAP_02_CONTINUATION_CROP_STAGE_CONTEXT_REF_V1, "crop-stage context ref frozen");
+check(first.payload.crop_stage_context.context_hash === MCFT_CAP_02_CONTINUATION_CROP_STAGE_CONTEXT_HASH_V1, "crop-stage context hash frozen");
+check(first.payload.soil_hydraulic_snapshot.source_config_ref === MCFT_CAP_02_CONTINUATION_SOIL_HYDRAULIC_SOURCE_CONFIG_REF_V1, "soil hydraulic config ref frozen");
+check(first.payload.soil_hydraulic_snapshot.source_config_hash === MCFT_CAP_02_CONTINUATION_SOIL_HYDRAULIC_SOURCE_CONFIG_HASH_V1, "soil hydraulic config hash frozen");
+check(first.payload.dynamics_model.model_component_ref === MCFT_CAP_02_CONTINUATION_DYNAMICS_MODEL_COMPONENT_REF_V1, "model component ref frozen");
 check(first.payload.dynamics_parameters.runoff_fraction === 0.05, "runoff fraction frozen");
 check(first.payload.dynamics_parameters.drainage_coefficient_per_hour === 0.03, "drainage coefficient frozen");
 check(first.payload.process_uncertainty.structural_process_stddev_mm_per_hour === 0.5, "structural process stddev frozen");
@@ -151,12 +166,12 @@ check(first.payload.process_uncertainty.crop_et_relative_stddev === 0.15, "crop 
 check(first.payload.process_uncertainty.executed_irrigation_relative_stddev === 0.1, "irrigation relative stddev frozen");
 check(first.payload.no_observation_update_policy.policy_id === MCFT_CAP_02_CONTINUATION_NO_OBSERVATION_POLICY_V1, "no-observation policy frozen");
 check(first.payload.forecast_block_policy.policy_id === MCFT_CAP_02_CONTINUATION_FORECAST_BLOCK_POLICY_V1, "forecast block policy frozen");
-check(JSON.stringify(first.payload.soil_root_zone_config_refs) === JSON.stringify(["soil_hydraulic_config_c8_v1"]), "soil-root-zone ref list frozen");
+check(JSON.stringify(first.payload.soil_root_zone_config_refs) === JSON.stringify([MCFT_CAP_02_CONTINUATION_SOIL_ROOT_ZONE_CONFIG_REF_V1]), "soil-root-zone ref list frozen");
 check(JSON.stringify(first.payload.model_component_refs) === JSON.stringify([
-  "root_zone_hourly_water_balance_model_component_v1",
-  MCFT_CAP_02_CONTINUATION_PROCESS_UNCERTAINTY_POLICY_V1,
-  MCFT_CAP_02_CONTINUATION_NO_OBSERVATION_POLICY_V1,
-  MCFT_CAP_02_CONTINUATION_FORECAST_BLOCK_POLICY_V1,
+  MCFT_CAP_02_CONTINUATION_DYNAMICS_MODEL_COMPONENT_REF_V1,
+  MCFT_CAP_02_CONTINUATION_UNCERTAINTY_POLICY_COMPONENT_REF_V1,
+  MCFT_CAP_02_CONTINUATION_NO_OBSERVATION_POLICY_COMPONENT_REF_V1,
+  MCFT_CAP_02_CONTINUATION_FORECAST_BLOCK_POLICY_COMPONENT_REF_V1,
 ]), "model component refs frozen");
 
 const forged = buildInput("2026-07-10T00:00:00.000Z");
