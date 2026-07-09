@@ -71,20 +71,20 @@ A capability-line closure does not automatically mark its contributing work pack
 
 ## 3. MCFT-CAP-01 slice map
 
-`MCFT-CAP-01` (`MCFT-1`) is authorized to deliver only:
+`MCFT-CAP-01` (`MCFT-1`) delivers only:
 
-| delivery slice | primary owner | contributors | bounded result |
-|---|---|---|---|
-| `MCFT-CAP-01.MCFT-01.CANONICAL-REPLAY-DATASET-V1` | MCFT-01 | none | 30-day controlled Canonical Replay Dataset |
-| `MCFT-CAP-01.MCFT-02.A0-CONTRACTS-AND-CONFIG-V1` | MCFT-02 | none | A0 object/config subset only |
-| `MCFT-CAP-01.MCFT-03.A0-PERSISTENCE-V1` | MCFT-03 | none | A0 persistence, lease, fencing, idempotency and projection subset only |
-| `MCFT-CAP-01.MCFT-07-08.BOOTSTRAP-STATE-MATH-V1` | MCFT-08 | MCFT-07 | static bootstrap observation/assimilation and posterior math only |
-| `MCFT-CAP-01.MCFT-04-05-08-09.A0-RUNTIME-INTEGRATION-V1` | MCFT-04 | MCFT-05, MCFT-08, MCFT-09 | one A0 bootstrap transaction with BLOCKED Forecast only |
-| `MCFT-CAP-01.CLOSURE-V1` | MCFT-08 | MCFT-01/02/03/04/05/07/09 | bounded capability-line closure |
+| delivery slice | primary owner | contributors | bounded result | status |
+|---|---|---|---|---|
+| `MCFT-CAP-01.MCFT-01.CANONICAL-REPLAY-DATASET-V1` | MCFT-01 | none | 30-day controlled Canonical Replay Dataset | COMPLETE |
+| `MCFT-CAP-01.MCFT-02.A0-CONTRACTS-AND-CONFIG-V1` | MCFT-02 | none | A0 object/config subset only | COMPLETE |
+| `MCFT-CAP-01.MCFT-03.A0-PERSISTENCE-V1` | MCFT-03 | none | A0 persistence, lease, fencing, idempotency and projection subset only | COMPLETE |
+| `MCFT-CAP-01.MCFT-07-08.BOOTSTRAP-STATE-MATH-V1` | MCFT-08 | MCFT-07 | static bootstrap observation/assimilation and posterior math only | COMPLETE |
+| `MCFT-CAP-01.MCFT-04-05-08-09.A0-RUNTIME-INTEGRATION-V1` | MCFT-04 | MCFT-05, MCFT-08, MCFT-09 | one A0 bootstrap transaction with BLOCKED Forecast only | COMPLETE |
+| `MCFT-CAP-01.CLOSURE-V1` | MCFT-08 | MCFT-01/02/03/04/05/07/09 | bounded capability-line closure | COMPLETE |
 
-MCFT-06 remains `NOT_STARTED` for MCFT-CAP-01. No propagation, water balance, rainfall application, ET application, irrigation application, continuous tick, restart/backfill, late revision, successful 72-point Forecast, or Scenario may be claimed.
+The executable delivery through S4 is on `main@4a0fd03beb05298028101a4999c67a5e053dadb8`. Closure readiness is proven at `273843b09a7fe2e71f2cb9ea5c4ca14dcee8e3e5` by `104 PASS, 0 FAIL`, server Typecheck/Build, clean-tree evidence, and CI #4462 success.
 
-MCFT-CAP-01 is `READY_FOR_IMPLEMENTATION` as the successor state of the COMPLETE Amendment 02 candidate. This readiness becomes effective only after the final candidate passes Gate and CI, merges into `main`, and is verified on `main`.
+`MCFT-CAP-01` is `COMPLETE`, effective only after PR #2315 merges into `main` and the merged main commit is verified.
 
 ## 4. Initial and revision lineage ownership
 
@@ -99,7 +99,7 @@ A0 plus an `INITIAL` `twin_runtime_lineage_v1` is the sole `NULL_TO_INITIAL` act
 
 E1/E2 switch no active pointers. E3 appends `twin_lineage_promotion_v1` and is the sole authority for replacing an existing active lineage.
 
-A0 implementation must preserve:
+A0 implementation preserves:
 
 ```text
 nine-object atomic append set
@@ -120,9 +120,52 @@ optional separately transacted F audit
 | MCFT-GATE-B Shadow-online Closure | same core with online adapters, persistent scheduling, late/out-of-order handling, restart recovery, readback, no automatic action |
 | MCFT-GATE-C Controlled-action Feedback Closure | same core with governed decision/approval/AO-ACT/receipt/acceptance and Action Feedback that separates execution from validation |
 
-MCFT-CAP-01 closure is not MCFT-GATE-A, MCFT-GATE-B, or MCFT-GATE-C closure.
+MCFT-CAP-01 closure is not MCFT-GATE-A, MCFT-GATE-B, or MCFT-GATE-C closure. It also does not establish the Minimum Complete Field Twin.
 
-## 6. DT-01 target=DT-02 resolution
+The owner work-package statuses remain:
+
+```text
+MCFT-01 COMPLETE
+MCFT-02 PARTIALLY_ESTABLISHED
+MCFT-03 PARTIALLY_ESTABLISHED
+MCFT-04 PARTIALLY_ESTABLISHED
+MCFT-05 PARTIALLY_ESTABLISHED
+MCFT-06 NOT_STARTED
+MCFT-07 PARTIALLY_ESTABLISHED
+MCFT-08 PARTIALLY_ESTABLISHED
+MCFT-09 PARTIALLY_ESTABLISHED
+```
+
+## 6. MCFT-CAP-01 completion claims
+
+```text
+MCFT_CAP_01_COMPLETE
+FIRST_CLASS_WATER_STATE_ESTIMATE_LEVEL_A_ESTABLISHED
+CONTROLLED_REPLAY_BOOTSTRAP_CLOSURE_ESTABLISHED
+```
+
+These claims establish one deterministic controlled-Replay bootstrap posterior, atomic A0 commit, INITIAL lineage/checkpoint, BLOCKED Forecast result, rebuildable projections, aggregate idempotency, and next-tick handoff.
+
+They preserve:
+
+```text
+NO_PROPAGATION
+NO_SUCCESSFUL_FORECAST
+NO_SCENARIO
+NO_RECOMMENDATION
+NO_DECISION
+NO_AO_ACT
+NO_CONTINUOUS_RUNTIME
+NO_RESTART_BACKFILL_PROOF
+NO_LATE_EVIDENCE_REVISION_RUNTIME
+NO_LIVE_FIELD_CLAIM
+NO_MCFT_GATE_A_CLOSURE
+NO_MCFT_GATE_B_CLOSURE
+NO_MCFT_GATE_C_CLOSURE
+NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM
+```
+
+## 7. DT-01 target=DT-02 resolution
 
 | DT-01 component/ruling | DT-02 disposition |
 |---|---|
@@ -144,7 +187,7 @@ MCFT-CAP-01 closure is not MCFT-GATE-A, MCFT-GATE-B, or MCFT-GATE-C closure.
 | `canonical_field_routes` | ADR-013; `/operator/fields/:fieldId/*` retained |
 | `legacy_operator_twin_routes` | ADR-014; compatibility and deletion prerequisites |
 
-## 7. Owner work-package dependency sequence
+## 8. Owner work-package dependency sequence
 
 ```text
 MCFT-00 -> MCFT-01 -> MCFT-02 -> MCFT-03 -> MCFT-04
