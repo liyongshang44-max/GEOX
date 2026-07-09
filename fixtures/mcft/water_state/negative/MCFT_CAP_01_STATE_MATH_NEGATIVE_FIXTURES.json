@@ -1,0 +1,21 @@
+[
+  {"fixture_id":"mcft_s3b_vwc_below_zero","failure_stage":"INPUT_VALIDATION","expected_reason_code":"OBSERVATION_BELOW_ZERO","expected_output_delta":0},
+  {"fixture_id":"mcft_s3b_vwc_above_one","failure_stage":"INPUT_VALIDATION","expected_reason_code":"OBSERVATION_ABOVE_ONE","expected_output_delta":0},
+  {"fixture_id":"mcft_s3b_vwc_nan","failure_stage":"INPUT_VALIDATION","expected_reason_code":"NON_FINITE_OBSERVATION","expected_output_delta":0},
+  {"fixture_id":"mcft_s3b_vwc_infinity","failure_stage":"INPUT_VALIDATION","expected_reason_code":"NON_FINITE_OBSERVATION","expected_output_delta":0},
+  {"fixture_id":"mcft_s3b_quality_fail_consumed","failure_stage":"ASSIMILATION","expected_reason_code":"QUALITY_FAIL_OBSERVATION_REJECTED","expected_output_delta":0},
+  {"fixture_id":"mcft_s3b_invalid_hydraulic_ordering","failure_stage":"PRIOR_VALIDATION","expected_reason_code":"INVALID_HYDRAULIC_ORDERING","expected_output_delta":0},
+  {"fixture_id":"mcft_s3b_negative_prior_variance","failure_stage":"ASSIMILATION","expected_reason_code":"INVALID_PRIOR_VARIANCE","expected_output_delta":0},
+  {"fixture_id":"mcft_s3b_negative_posterior_variance","failure_stage":"POSTERIOR_VALIDATION","expected_reason_code":"INVALID_POSTERIOR_VARIANCE","expected_output_delta":0},
+  {"fixture_id":"mcft_s3b_posterior_above_saturation","failure_stage":"POSTERIOR_VALIDATION","expected_reason_code":"POSTERIOR_PHYSICAL_BOUND_VIOLATION","expected_output_delta":0},
+  {"fixture_id":"mcft_s3b_numeric_confidence","failure_stage":"OUTPUT_CONTRACT","expected_reason_code":"STATE_CONFIDENCE_CONTRACT_VIOLATION","expected_output_delta":0},
+  {"fixture_id":"mcft_s3b_recommendation_eligible","failure_stage":"OUTPUT_CONTRACT","expected_reason_code":"STATE_ELIGIBILITY_CONTRACT_VIOLATION","expected_output_delta":0},
+  {"fixture_id":"mcft_s3b_action_eligible","failure_stage":"OUTPUT_CONTRACT","expected_reason_code":"STATE_ELIGIBILITY_CONTRACT_VIOLATION","expected_output_delta":0},
+  {"fixture_id":"mcft_s3b_direct_state_equivalence","failure_stage":"INPUT_VALIDATION","expected_reason_code":"DIRECT_STATE_EQUIVALENCE_FORBIDDEN","expected_output_delta":0},
+  {"fixture_id":"mcft_s3b_input_mutation","failure_stage":"IMMUTABILITY_CHECK","expected_reason_code":"INPUT_MUTATION_DETECTED","expected_output_delta":0},
+  {"fixture_id":"mcft_s3b_nondeterministic_rerun","failure_stage":"DETERMINISM_CHECK","expected_reason_code":"NONDETERMINISTIC_RERUN","expected_output_delta":0},
+  {"fixture_id":"mcft_s3b_postgres_import","failure_stage":"DOMAIN_PURITY_SCAN","expected_reason_code":"POSTGRES_IMPORT_FORBIDDEN","expected_output_delta":0},
+  {"fixture_id":"mcft_s3b_filesystem_import","failure_stage":"DOMAIN_PURITY_SCAN","expected_reason_code":"FILESYSTEM_IMPORT_FORBIDDEN","expected_output_delta":0},
+  {"fixture_id":"mcft_s3b_wall_clock_read","failure_stage":"DOMAIN_PURITY_SCAN","expected_reason_code":"WALL_CLOCK_READ_FORBIDDEN","expected_output_delta":0},
+  {"fixture_id":"mcft_s3b_s4_runtime_file","failure_stage":"CHANGED_FILE_BOUNDARY","expected_reason_code":"S3B_CHANGED_FILE_BOUNDARY_VIOLATION","expected_output_delta":0}
+]
