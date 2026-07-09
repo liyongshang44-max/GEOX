@@ -13,7 +13,7 @@ successor: MCFT-01 Canonical Replay Dataset
 runtime_mode: REPLAY
 implementation_capability: GOVERNANCE_ONLY
 status: FROZEN
-acceptance_status: COMPLETE
+acceptance_status: PENDING
 duplicate_implementation_pr: #2305 CLOSED_SUPERSEDED
 ```
 
@@ -29,9 +29,7 @@ amendment_status: ACCEPTED
 amendment_scope: source-kind and epistemic/lifecycle vocabulary clarification only
 ```
 
-The original task line used `APPROVED` and `EXECUTED` as epistemic classes and used `HUMAN_OR_EXTERNAL_PLAN` as a combined source kind. This amendment separates independent semantic axes.
-
-The frozen rule is:
+The frozen semantic axes are:
 
 ```text
 epistemic_class
@@ -47,19 +45,14 @@ Therefore:
 Approved irrigation plan:
   epistemic_class: ASSERTED
   action_lifecycle_class: APPROVED_PLAN
+  origin_source_kind: VERSIONED_PLAN_SNAPSHOT
 
 Irrigation execution evidence:
   epistemic_class: OBSERVED
   action_lifecycle_class: EXECUTION_EVIDENCE
 ```
 
-The plan source is frozen as:
-
-```text
-origin_source_kind: VERSIONED_PLAN_SNAPSHOT
-```
-
-This does not claim that a human decision service, dispatch service, execution service, or production source exists. It only creates a versioned governance identity for MCFT-01 Replay records.
+This amendment creates governance identities only. It does not claim a human decision service, dispatch service, execution service, live source, or production capability.
 
 ## 2. Frozen Reality scope
 
@@ -74,13 +67,10 @@ crop_code: corn
 runtime_mode: REPLAY
 runtime_time_domain: UTC_HOURLY
 reality_scope_class: CONTROLLED_SYNTHETIC_REPLAY_PROXY
+active_scope_count: 1
 ```
 
-Exactly one active MCFT Reality scope is permitted.
-
-C8 is selected only as the identity parent. Legacy C8 State, Forecast, Scenario, Recommendation, Approval, AO-ACT, ROI, Field Memory, geometry, and execution closure are excluded from MCFT canonical truth.
-
-P50 / CAF009 remains `REFERENCE_ONLY`. `field_demo_001` remains rejected as the first MCFT scope.
+C8 is reused only as the identity parent. Legacy C8 State, Forecast, Scenario, Recommendation, Approval, AO-ACT, ROI, Field Memory, geometry, and execution closure are excluded from MCFT canonical truth. P50 / CAF009 remains `REFERENCE_ONLY`. `field_demo_001` remains rejected.
 
 ## 3. Reality classification
 
@@ -93,13 +83,11 @@ real_field_pilot_status: NOT_CLAIMED
 production_status: NOT_CLAIMED
 ```
 
-Device identities are repository fixture evidence only. Governance-defined provider, ET0, plan, configuration, and adapter identities have:
+Fixture device identities prove repository identity only. Governance-defined provider, ET0, plan, configuration, and adapter identities use:
 
 ```text
 proof_scope: GOVERNANCE_IDENTITY_ONLY
 ```
-
-Their existence does not prove a Replay dataset, operational provider, live device, or production source.
 
 ## 4. Governed geometry
 
@@ -108,27 +96,17 @@ zone_id: zone_mcft_c8_water_001
 geometry_type: Polygon
 crs: EPSG:4326
 geometry_truth_status: CONTROLLED_SYNTHETIC
-geometry_source: MCFT_00_PINNED_FIXTURE
 canonicalization_id: GEOX_MCFT_GEOJSON_CANONICALIZATION_V1
 file_sha256: sha256:249fee97640a8291d18becb399b7ed7757de90222ad55ed1a203ebe277147ab4
 geometry_semantic_hash: sha256:d3dbc5495485e7af68acdc4b32e6061c2ea99772835be2805ae706b74d75ca51
 derived_area_m2: 20488.479982
 ```
 
-Geometry validation requires:
+Canonical coordinates use exactly seven decimal degrees and decimal half-away-from-zero rounding. This rule is executable for positive and negative half ties. ECMAScript `Math.round` tie behavior is not the canonical rule.
 
-- Polygon type;
-- at least one non-empty ring;
-- legal WGS84 coordinates;
-- finite numbers;
-- closed rings;
-- at least three distinct vertices;
-- non-zero ring area;
-- deterministic orientation, start point, precision, negative-zero normalization, and key ordering.
+Geometry validation requires Polygon type, non-empty rings, finite legal WGS84 coordinates, ring closure, at least three distinct vertices, non-zero area, deterministic orientation, deterministic start point, negative-zero normalization, and stable key ordering.
 
-The authoritative area is derived from the canonical semantic geometry. `legacy_declared_area_m2` is comparison-only.
-
-Any semantic geometry change requires a new binding version, new semantic hash, supersedes reference, and change reason.
+Any semantic geometry change requires a new binding version, semantic hash, supersedes reference, and change reason.
 
 ## 5. Root zone and sensor support
 
@@ -139,11 +117,9 @@ bottom_depth_mm: 300
 total_depth_mm: 300
 ```
 
-The first version contains one governed layer covering 0–300 mm with weight 1.0.
+Layers must have finite bounds, `top < bottom`, containment within the governed root zone, unique non-empty IDs, no gap, no overlap, and weights summing to 1.0.
 
-Layer validation requires finite bounds, `top < bottom`, containment inside the governed root zone, unique non-empty layer IDs, no gap, no overlap, and weights summing to 1.0.
-
-The candidate soil sensor is frozen as:
+The candidate sensor is frozen as:
 
 ```text
 origin_source_id: dev_soil_c8_001
@@ -158,7 +134,7 @@ A 200 mm point observation is not a 0–300 mm zone-average State.
 
 ## 6. Binding authority graph
 
-MCFT-00 freezes three independent object classes:
+MCFT-00 freezes three independent classes:
 
 ```text
 REALITY_IDENTITY_BINDING
@@ -166,20 +142,24 @@ EVIDENCE_SOURCE_BINDING
 MODEL_CONFIGURATION_BINDING
 ```
 
-Every Evidence binding must resolve uniquely to:
+Every Evidence binding must resolve uniquely to one source definition, one Replay adapter definition, one source role, and one binding ID.
+
+The binding must explicitly carry and match:
 
 ```text
-one source_definition
-one ingress_adapter_definition
-one source role
-one binding ID
+origin_source_kind
+origin_source_id
+source_version
+ingress_adapter_kind
+ingress_adapter_id
+ingress_adapter_version
+evidence_record_type
+availability_semantics.release_policy_id
 ```
 
-The source kind and version on the binding must equal the referenced source definition. The adapter kind, output record type, release policy, and version must equal the referenced adapter definition.
+These fields must equal the referenced source and adapter definitions. Missing, duplicate, unresolved, kind-mismatched, version-mismatched, output-type-mismatched, or release-policy-mismatched references are invalid.
 
-Every model configuration binding must resolve uniquely to one configuration source definition with matching kind and version.
-
-Duplicate or unresolved source, adapter, configuration, role, or binding identities are invalid.
+Every model configuration binding must resolve uniquely to one configuration definition with matching kind and version.
 
 ## 7. Required semantic domains
 
@@ -197,13 +177,10 @@ Eight semantic domains and nine concrete bindings are frozen:
 
 The seven Evidence bindings use seven independently governed Replay adapter definitions.
 
-## 8. Soil-hydraulic configuration semantics
-
-The governed root-zone depth is 300 mm.
-
-The configuration freezes:
+## 8. Soil-hydraulic configuration
 
 ```text
+root_zone_depth_mm: 300
 wilting_point_fraction: 0.12
 field_capacity_fraction: 0.30
 saturation_fraction: 0.45
@@ -214,31 +191,18 @@ drainage_coefficient_per_hour: 0.03
 runoff_fraction: 0.05
 ```
 
-Required invariants are:
+Required invariants:
 
 ```text
 0 <= wilting_point_fraction
 wilting_point_fraction < field_capacity_fraction
 field_capacity_fraction < saturation_fraction <= 1
-
-wilting_point_storage_mm
-  = wilting_point_fraction * root_zone_depth_mm
-
-field_capacity_storage_mm
-  = field_capacity_fraction * root_zone_depth_mm
-
-saturation_storage_mm
-  = saturation_fraction * root_zone_depth_mm
-
+storage_mm = fraction * root_zone_depth_mm
 0 <= runoff_fraction <= 1
 drainage_coefficient_per_hour >= 0
 ```
 
-`field_capacity_storage_mm` replaces the ambiguous `root_zone_storage_capacity_mm` name.
-
 ## 9. Crop root-depth policy
-
-Crop biological root depth may exceed the Level-A governed model domain. The frozen policy is:
 
 ```text
 effective_model_root_depth_policy:
@@ -248,14 +212,7 @@ effective_model_root_depth_mm
   = min(crop_root_depth_mm, governed_root_zone_bottom_mm)
 ```
 
-For MID and LATE corn stages:
-
-```text
-crop_root_depth_mm: 600
-effective_model_root_depth_mm: 300
-```
-
-MCFT-06 must not infer a different policy.
+For MID and LATE corn stages, biological root depth is 600 mm while effective Level-A model depth is 300 mm.
 
 ## 10. Replay time and availability
 
@@ -266,26 +223,9 @@ tick_alignment: UTC_CLOCK_HOUR
 logical_tick_time: INTERVAL_END
 ```
 
-Every Evidence role freezes:
+Every Evidence role freezes its event or observation time, `ingested_at`, `available_to_runtime_at`, exact derivation inputs, and release policy ID.
 
-- its event or observation time fields;
-- `ingested_at`;
-- `available_to_runtime_at`;
-- the exact deterministic derivation inputs;
-- the Replay release policy ID.
-
-Availability is computed by `MAX_VALID_INSTANT` over the role-specific fixed source timestamps. The output field cannot appear among its own derivation inputs.
-
-The following inputs are forbidden:
-
-```text
-current_wall_clock
-file_mtime
-script_start_time
-temporary_checkout_path
-```
-
-No-future-leakage classification is calculated, not self-declared:
+Availability is computed with `MAX_VALID_INSTANT` over fixed role-specific source timestamps. The output field cannot appear among its own inputs. Wall clock, file mtime, script start time, and checkout path are forbidden inputs.
 
 ```text
 FUTURE:
@@ -302,7 +242,7 @@ ON_TIME:
 
 Only `ON_TIME` Evidence is eligible for the current tick.
 
-## 11. Deterministic identity and acceptance metadata
+## 11. Deterministic identity and idempotency
 
 The Reality artifact, source matrix, and configuration matrix use:
 
@@ -311,34 +251,38 @@ status: FROZEN
 acceptance_status: PENDING | COMPLETE
 ```
 
-`acceptance_status` is audit metadata. It is excluded from semantic hashes and binding identity.
+`acceptance_status` is excluded from semantic hashes and binding identity.
 
-Changing only acceptance state must not change:
-
-```text
-source matrix determinism hash
-configuration matrix determinism hash
-Reality determinism hash
-Reality binding ID
-```
-
-Same ID plus same semantic hash is:
+The idempotency guard must independently compute:
 
 ```text
-IDEMPOTENT_REPLAY
+existing_semantic_hash = hash(existing.semantic_payload)
+candidate_semantic_hash = hash(candidate.semantic_payload)
 ```
 
-Same ID plus different semantic hash is:
+It must then verify each declared determinism hash and each derived binding ID. It may not trust caller-supplied hashes.
 
 ```text
-IDEMPOTENCY_CONFLICT
+declared hash != computed hash
+  => SEMANTIC_HASH_MISMATCH
+
+same ID + same computed semantic hash + valid derived ID
+  => IDEMPOTENT_REPLAY
+
+same ID + different computed semantic hash
+  => IDEMPOTENCY_CONFLICT
 ```
 
-The frozen identity is recorded in `GEOX-MCFT-00-REALITY-BINDING.json`.
+The candidate identity after adapter-version binding is:
+
+```text
+binding_id: mcft_rb_bf1da664164a4fedda249bcb
+determinism_hash: sha256:bf1da664164a4fedda249bcb0e330c1af2083173a52bd704f01eac3ad277ba4f
+source_matrix_hash: sha256:c5187c23be0d058ffa23d464ae1139f924f5af064a270248746fbabde4c3e51b
+configuration_matrix_hash: sha256:381ef166454c7b698c6641fadc5d08019fecff127e9529a4c58a1f09d9e1fef5
+```
 
 ## 12. Canonical boundary
-
-The Reality Binding is:
 
 ```text
 artifact_class: GOVERNANCE_INPUT
@@ -350,54 +294,38 @@ runtime_transaction_family: NONE
 
 Compile ownership remains MCFT-02. Persistence ownership remains MCFT-03.
 
-MCFT-00 does not:
+MCFT-00 does not write facts, create `twin_runtime_config_v1`, create State, Forecast, Scenario, Checkpoint, or Action Feedback, create lineage identity, execute E1/E2/E3, or switch active pointers.
 
-- write facts;
-- create `twin_runtime_config_v1`;
-- create State, Forecast, Scenario, Checkpoint, or Action Feedback;
-- create lineage or revision identity;
-- execute E1, E2, or E3;
-- switch active Runtime, lineage, State, Forecast, or configuration pointers.
-
-## 13. Action feedback eligibility boundary
+## 13. Action feedback eligibility
 
 Approved, dispatched, executed, and validated are distinct states.
 
-The approved plan binding has:
-
 ```text
-state_input_policy: NEVER
+approved plan state_input_policy: NEVER
+execution Evidence state_input_policy: CONDITIONAL
 ```
 
-The execution Evidence binding has:
-
-```text
-state_input_policy: CONDITIONAL
-```
-
-A future concrete Action Feedback record must contain actual amount, unit, execution time, spatial coverage, source identity, source quality, limitations, and a receipt or as-executed reference. Acceptance is optional. An AO-ACT origin requires a task reference.
-
-MCFT-15 owns the canonical Action Feedback object and persistence behavior.
+A future Action Feedback record requires actual amount, unit, execution time, spatial coverage, source identity, source quality, limitations, and a receipt or as-executed reference. Acceptance is optional. AO-ACT origin requires a task reference. MCFT-15 owns the canonical object and persistence behavior.
 
 ## 14. Acceptance model
 
-The Gate has two valid closure modes:
+The Gate has two modes:
 
 ```text
 PENDING_ACCEPTANCE
 COMPLETE
 ```
 
-Pending mode requires pending evidence fields and the pending claim.
-
-Complete mode requires concrete implementation head, zero-warning local Gate result, predecessor regressions, exact changed-file count, exact negative fixture count, clean working tree, generic CI evidence, and no pending closure field.
-
 The Gate validates:
 
 - 57 evidence-bearing hard checks;
 - exact reason code and exact validation stage for every negative fixture;
+- 80 exact negative fixtures in the current candidate;
+- stale or forged declared-hash rejection;
+- positive and negative half-tie geometry rounding;
+- adapter-version binding equality;
 - `write_attempt_count = 0`;
-- validator purity;
+- purity of both private helpers;
 - deterministic idempotency behavior;
 - authority-reference closure;
 - structural geometry and root-zone validity;
@@ -405,34 +333,11 @@ The Gate validates:
 - repository changed-file boundary;
 - predecessor regressions.
 
-The original minimum was 61 negative fixtures. The exact fixture count may increase and must match the manifest.
+Complete mode additionally requires a concrete validated head, zero-warning full Gate, clean working tree, final CI evidence, and no pending closure field.
 
 ## 15. Nonclaims
 
-Completion does not claim:
-
-```text
-Canonical Replay Dataset complete
-Evidence ingestion complete
-hourly Runtime exists
-State estimator exists
-physical propagation exists
-assimilation exists
-posterior State exists
-Forecast exists
-Scenario exists
-Decision exists
-Action Feedback exists
-Residual exists
-Calibration exists
-Checkpoint exists
-restart recovery exists
-late-Evidence Runtime revision exists
-live device connected
-real field pilot started
-Minimum Complete Field Twin complete
-Production Field Twin complete
-```
+Completion does not claim a canonical Replay dataset, Evidence ingestion, hourly Runtime, State estimator, propagation, assimilation, posterior State, Forecast, Scenario, Decision, Action Feedback, Residual, Calibration, Checkpoint, restart recovery, late-Evidence Runtime revision, live device, real-field pilot, Minimum Complete Field Twin, or Production Field Twin.
 
 The only permitted completed claim is:
 
