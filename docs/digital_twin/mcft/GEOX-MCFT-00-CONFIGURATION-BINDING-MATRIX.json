@@ -2,7 +2,7 @@
   "schema_version": "geox_mcft00_configuration_binding_matrix_v2",
   "phase": "MCFT-00",
   "status": "FROZEN",
-  "acceptance_status": "PENDING",
+  "acceptance_status": "COMPLETE",
   "artifact_class": "GOVERNANCE_INPUT",
   "canonical_persistence": false,
   "common_contract": {
