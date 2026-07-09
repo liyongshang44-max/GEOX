@@ -4,14 +4,16 @@
 ```text
 delivery_slice_id: MCFT-CAP-01.MCFT-04-05-08-09.A0-RUNTIME-INTEGRATION-V1
 implementation_baseline: 5d17e6ad9944376bbb5a71c9d801aa4472afe592
-status: IN_IMPLEMENTATION
+implementation_candidate_head: 62a3906812ef048ca1e35ced192556b4f843c5b7
+status: COMPLETE
+transition_effective_condition: PR_2314_MERGED_AND_VERIFIED_ON_MAIN
 primary_owner_work_package_id: MCFT-04
 contributing_work_package_ids: MCFT-05, MCFT-08, MCFT-09
 ```
 
-## Authorized result
+## Established result
 
-S4 connects the already-closed Replay Dataset, Runtime Config, S3A persistence, and S3B posterior mathematics into one controlled `A0_BOOTSTRAP_STATE_COMMIT` transaction.
+S4 connects the closed Replay Dataset, Runtime Config, S3A persistence, and S3B posterior mathematics into one controlled `A0_BOOTSTRAP_STATE_COMMIT` transaction.
 
 The first governed tick is:
 
@@ -33,7 +35,7 @@ quality: PASS
 
 ## Canonical A0 append set
 
-The Runtime constructs exactly nine deterministic canonical members:
+The Runtime constructs and atomically commits exactly nine deterministic canonical members:
 
 ```text
 1. twin_runtime_lineage_v1       INITIAL
@@ -125,6 +127,32 @@ commit nine facts, six projections, pointers and idempotency guard atomically
 
 The PostgreSQL repository remains the only write authority. Failure at any append, projection, idempotency, or pre-commit stage yields zero A0 facts, projections, and pointer changes.
 
+## Closure evidence
+
+```text
+S4 A0 Runtime static Gate: 20 PASS, 0 FAIL
+S4 A0 Runtime PostgreSQL Gate: 12 PASS, 0 FAIL
+PostgreSQL fault stages: 17 rollback, 0 partial writes
+canonical facts committed: 9
+projections committed: 6
+latest successful Forecast rows: 0
+same-input replay: existing success before lease
+projection rebuild: 6 equivalent projections
+CI #4456 build-test: SUCCESS
+CI #4456 acceptance: SUCCESS
+```
+
+## Completion claims
+
+```text
+A0_RUNTIME_EXECUTION_ESTABLISHED
+BOOTSTRAP_STATE_COMMITTED
+ACTIVE_INITIAL_LINEAGE_ESTABLISHED
+INITIAL_CHECKPOINT_ESTABLISHED
+BLOCKED_FORECAST_RESULT_ESTABLISHED
+NEXT_TICK_HANDOFF_ESTABLISHED
+```
+
 ## Nonclaims
 
 ```text
@@ -133,9 +161,11 @@ NO_SUCCESSFUL_FORECAST
 NO_SCENARIO
 NO_RECOMMENDATION
 NO_AO_ACT
+NO_CONTINUOUS_RUNTIME
 NO_CONTINUOUS_SCHEDULER
 NO_RESTART_BACKFILL_PROOF
 NO_LATE_EVIDENCE_REVISION_RUNTIME
+NO_LIVE_FIELD_CLAIM
 NO_MCFT_GATE_A_CLOSURE
 NO_MCFT_CAP_01_CLOSURE
 ```
