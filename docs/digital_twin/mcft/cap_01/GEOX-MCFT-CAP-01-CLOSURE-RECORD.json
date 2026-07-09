@@ -6,15 +6,31 @@
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A",
   "delivery_slice_id": "MCFT-CAP-01.CLOSURE-V1",
-  "status": "CANDIDATE",
+  "status": "COMPLETE",
   "authority": {
     "historical_baseline_main_commit": "94fe516ccbf8831be05c36ede5e2732bf7e19d55",
     "runtime_delivery_main_commit": "4a0fd03beb05298028101a4999c67a5e053dadb8",
+    "closure_readiness_head": "273843b09a7fe2e71f2cb9ea5c4ca14dcee8e3e5",
     "reality_binding_id": "mcft_rb_bf1da664164a4fedda249bcb",
     "reality_binding_hash": "sha256:bf1da664164a4fedda249bcb0e330c1af2083173a52bd704f01eac3ad277ba4f",
     "source_matrix_hash": "sha256:c5187c23be0d058ffa23d464ae1139f924f5af064a270248746fbabde4c3e51b",
     "configuration_matrix_hash": "sha256:381ef166454c7b698c6641fadc5d08019fecff127e9529a4c58a1f09d9e1fef5",
     "geometry_semantic_hash": "sha256:d3dbc5495485e7af68acdc4b32e6061c2ea99772835be2805ae706b74d75ca51"
+  },
+  "closure_evidence": {
+    "readiness_gate": "104_PASS_0_FAIL",
+    "server_typecheck": "PASS",
+    "server_build": "PASS",
+    "git_diff_check": "CLEAN",
+    "working_tree": "CLEAN",
+    "exact_head_ci": {
+      "workflow": "ci",
+      "run_number": 4462,
+      "run_id": 29033066650,
+      "conclusion": "success",
+      "build_test": "PASS",
+      "acceptance": "PASS"
+    }
   },
   "completed_delivery_slices": [
     {
@@ -87,6 +103,15 @@
         "same_input_replay_before_lease": true,
         "projection_rebuild_equivalent": true
       }
+    },
+    {
+      "delivery_slice_id": "MCFT-CAP-01.CLOSURE-V1",
+      "status": "COMPLETE",
+      "evidence": {
+        "readiness_gate": "104_PASS_0_FAIL",
+        "exact_head_ci_run_number": 4462,
+        "governance_only_changed_file_count": 6
+      }
     }
   ],
   "closure_proof": {
@@ -100,7 +125,7 @@
     "blocked_forecast_without_success_claim": true,
     "one_semantic_core_preserved": true
   },
-  "candidate_completion_claims": [
+  "completion_claims": [
     "MCFT_CAP_01_COMPLETE",
     "FIRST_CLASS_WATER_STATE_ESTIMATE_LEVEL_A_ESTABLISHED",
     "CONTROLLED_REPLAY_BOOTSTRAP_CLOSURE_ESTABLISHED"
@@ -170,16 +195,6 @@
     "public_routes": true,
     "operator_ui": true
   },
-  "completion_conditions": [
-    "all five predecessor delivery slices remain COMPLETE",
-    "closure readiness Gate passes",
-    "server typecheck and build pass",
-    "exact-head CI passes",
-    "changed-file boundary is governance-only",
-    "working tree is clean",
-    "closure PR merges into main",
-    "merged main commit is verified"
-  ],
-  "transition_effective_condition": "CLOSURE_PR_MERGED_AND_VERIFIED_ON_MAIN",
+  "transition_effective_condition": "PR_2315_MERGED_AND_VERIFIED_ON_MAIN",
   "next_authorized_slice_ids": []
 }
