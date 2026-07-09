@@ -1,0 +1,54 @@
+{
+  "schema_version": "geox_mcft_cap_01_configuration_context_source_v1",
+  "dataset_id": "mcft_c8_water_replay_2026_06_v1",
+  "context_class": "CONFIGURATION_DERIVED_CONTEXT",
+  "evidence_record": false,
+  "configuration_matrix_ref": "docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json",
+  "configuration_matrix_hash": "sha256:381ef166454c7b698c6641fadc5d08019fecff127e9529a4c58a1f09d9e1fef5",
+  "crop_water_use_binding_ref": "crop_water_use_config_c8_v1",
+  "crop_water_use_configuration_source_id": "mcft_crop_water_use_corn_v1",
+  "crop_stage_mapping_source": "mcft_corn_stage_mapping_v1",
+  "timezone": "UTC",
+  "coverage_start": "2026-06-01T00:00:00.000Z",
+  "coverage_end_exclusive": "2026-07-01T00:00:00.000Z",
+  "crop_stage_schedule": [
+    {
+      "stage_code": "INITIAL",
+      "effective_from": "2026-06-01T00:00:00.000Z",
+      "effective_to": "2026-06-08T00:00:00.000Z",
+      "kc": 0.3,
+      "crop_root_depth_mm": 150,
+      "effective_model_root_depth_mm": 150
+    },
+    {
+      "stage_code": "DEVELOPMENT",
+      "effective_from": "2026-06-08T00:00:00.000Z",
+      "effective_to": "2026-06-16T00:00:00.000Z",
+      "kc": 0.7,
+      "crop_root_depth_mm": 300,
+      "effective_model_root_depth_mm": 300
+    },
+    {
+      "stage_code": "MID",
+      "effective_from": "2026-06-16T00:00:00.000Z",
+      "effective_to": "2026-06-26T00:00:00.000Z",
+      "kc": 1.15,
+      "crop_root_depth_mm": 600,
+      "effective_model_root_depth_mm": 300
+    },
+    {
+      "stage_code": "LATE",
+      "effective_from": "2026-06-26T00:00:00.000Z",
+      "effective_to": "2026-07-01T00:00:00.000Z",
+      "kc": 0.6,
+      "crop_root_depth_mm": 600,
+      "effective_model_root_depth_mm": 300
+    }
+  ],
+  "limitations": [
+    "controlled synthetic configuration schedule",
+    "not observed Evidence",
+    "not field-verified phenology",
+    "effective model root depth capped by governed 300 mm root zone"
+  ]
+}
