@@ -1,20 +1,20 @@
 {
-  "schema_version": "geox_mcft_cap_01_delivery_slice_status_v2",
+  "schema_version": "geox_mcft_cap_01_delivery_slice_status_v3",
   "capability_line_id": "MCFT-CAP-01",
   "display_alias": "MCFT-1",
   "baseline_main_commit": "94fe516ccbf8831be05c36ede5e2732bf7e19d55",
   "runtime_delivery_main_commit": "4a0fd03beb05298028101a4999c67a5e053dadb8",
   "historical_closure_main_commit": "250053aba801075c17098f8d505d527eb54390e9",
-  "status": "IN_IMPLEMENTATION",
-  "active_delivery_slice_id": "MCFT-CAP-01.CLOSURE-REMEDIATION-V1",
+  "remediation_implementation_candidate_head": "193f9785e42eb146e300e2a64abeed455f10e54e",
+  "status": "COMPLETE",
+  "active_delivery_slice_id": null,
   "historical_closure": {
-    "status": "SUPERSEDED_PENDING_REMEDIATION",
-    "readiness_candidate_head": "273843b09a7fe2e71f2cb9ea5c4ca14dcee8e3e5",
-    "final_closure_head": "0cf747df26ba6e10c48e3a6c3ed50035ab392343",
+    "delivery_slice_id": "MCFT-CAP-01.CLOSURE-V1",
+    "status": "SUPERSEDED_BY_REMEDIATION",
     "merged_main_commit": "250053aba801075c17098f8d505d527eb54390e9",
     "readiness_gate": "104_PASS_0_FAIL",
     "final_closure_gate": "169_PASS_0_FAIL",
-    "reason_superseded": [
+    "superseded_reasons": [
       "NEXT_TICK_HANDOFF_CLAIM_EXCEEDED_PERSISTED_READ_IMPLEMENTATION",
       "CONFLICTING_DUPLICATE_OBSERVATION_REJECTION_MISSING",
       "EVIDENCE_MODEL_CONSUMPTION_TRACE_INCOMPLETE",
@@ -26,11 +26,31 @@
   },
   "remediation": {
     "delivery_slice_id": "MCFT-CAP-01.CLOSURE-REMEDIATION-V1",
-    "status": "IN_IMPLEMENTATION",
+    "status": "COMPLETE",
     "baseline_main_commit": "250053aba801075c17098f8d505d527eb54390e9",
+    "implementation_candidate_head": "193f9785e42eb146e300e2a64abeed455f10e54e",
     "branch": "mcft-cap-01-closure-remediation-v1",
-    "draft_pr": 2316,
-    "required_claims": [
+    "pr": 2316,
+    "acceptance": {
+      "s1_replay_dataset": "12_PASS_0_FAIL",
+      "s4_a0_runtime_static": "21_PASS_0_FAIL",
+      "s4_a0_runtime_postgres": "12_PASS_0_FAIL",
+      "remediation_static": "18_PASS_0_FAIL",
+      "remediation_postgres": "7_PASS_0_FAIL",
+      "governance_readiness": "106_PASS_0_FAIL",
+      "server_typecheck": "PASS",
+      "server_build": "PASS",
+      "git_diff_check": "PASS",
+      "working_tree": "CLEAN",
+      "exact_head_ci": {
+        "run_number": 4491,
+        "run_id": 29038423099,
+        "conclusion": "success"
+      },
+      "manual_runner_first": "INSERTED",
+      "manual_runner_second": "EXISTING_IDEMPOTENT_SUCCESS"
+    },
+    "completion_claims": [
       "PERSISTED_NEXT_TICK_HANDOFF_ESTABLISHED",
       "CONFLICTING_DUPLICATE_OBSERVATION_REJECTION_ESTABLISHED",
       "EVIDENCE_MODEL_CONSUMPTION_TRACE_ESTABLISHED",
@@ -39,71 +59,53 @@
       "CROP_STAGE_CONFIGURATION_CONTEXT_ESTABLISHED",
       "GOVERNANCE_STATUS_ALIGNMENT_ESTABLISHED"
     ],
-    "completion_condition": "PR_2316_MERGED_AND_VERIFIED_ON_MAIN"
+    "effectiveness_condition": "PR_2316_MERGED_AND_VERIFIED_ON_MAIN"
   },
   "established_foundation": {
     "foundation_main_commit": "b0b364933956a65345b927c6c5618e9d4ebe22af",
     "s3b_main_commit": "5d17e6ad9944376bbb5a71c9d801aa4472afe592",
     "s4_main_commit": "4a0fd03beb05298028101a4999c67a5e053dadb8",
-    "acceptance": {
+    "historical_acceptance": {
       "s1_replay_dataset": "12_PASS_0_FAIL",
       "s2_contracts_config": "10_PASS_0_FAIL",
       "s3a_static_persistence": "16_PASS_0_FAIL",
       "s3a_postgres": "8_PASS_0_FAIL",
       "s3b_state_math": "108_PASS_0_FAIL",
       "s3b_closure": "36_PASS_0_FAIL",
-      "s4_a0_runtime_static": "20_PASS_0_FAIL",
-      "s4_a0_runtime_postgres": "12_PASS_0_FAIL",
       "s4_closure": "57_PASS_0_FAIL"
     }
   },
   "slices": [
     {
       "delivery_slice_id": "MCFT-CAP-01.MCFT-01.CANONICAL-REPLAY-DATASET-V1",
-      "status": "REMEDIATION_REQUIRED",
+      "status": "COMPLETE",
       "primary_owner_work_package_id": "MCFT-01",
-      "contributing_work_package_ids": [],
-      "depends_on_delivery_slice_ids": [],
-      "established_claims": [
+      "claims": [
         "CONTROLLED_CANONICAL_REPLAY_EVIDENCE_DATASET_ESTABLISHED",
-        "NO_FUTURE_LEAKAGE_FIXTURES_ESTABLISHED"
-      ],
-      "missing_claims": [
+        "NO_FUTURE_LEAKAGE_FIXTURES_ESTABLISHED",
         "CROP_STAGE_CONFIGURATION_CONTEXT_ESTABLISHED"
       ]
     },
     {
       "delivery_slice_id": "MCFT-CAP-01.MCFT-02.A0-CONTRACTS-AND-CONFIG-V1",
-      "status": "REMEDIATION_REQUIRED",
+      "status": "COMPLETE",
       "primary_owner_work_package_id": "MCFT-02",
-      "contributing_work_package_ids": [],
-      "depends_on_delivery_slice_ids": [
-        "MCFT-CAP-01.MCFT-01.CANONICAL-REPLAY-DATASET-V1"
-      ],
-      "established_claims": [
+      "claims": [
         "A0_CANONICAL_CONTRACT_SUBSET_ESTABLISHED",
-        "IMMUTABLE_RUNTIME_CONFIG_ESTABLISHED"
-      ],
-      "missing_claims": [
+        "IMMUTABLE_RUNTIME_CONFIG_ESTABLISHED",
         "A0_CROSS_REFERENCE_GRAPH_VALIDATION_ESTABLISHED"
       ]
     },
     {
       "delivery_slice_id": "MCFT-CAP-01.MCFT-03.A0-PERSISTENCE-V1",
-      "status": "REMEDIATION_REQUIRED",
+      "status": "COMPLETE",
       "primary_owner_work_package_id": "MCFT-03",
-      "contributing_work_package_ids": [],
-      "depends_on_delivery_slice_ids": [
-        "MCFT-CAP-01.MCFT-02.A0-CONTRACTS-AND-CONFIG-V1"
-      ],
-      "established_claims": [
+      "claims": [
         "A0_PERSISTENCE_SUBSET_ESTABLISHED",
         "FENCED_ATOMIC_COMMIT_ESTABLISHED",
-        "REBUILDABLE_A0_PROJECTIONS_ESTABLISHED"
-      ],
-      "missing_claims": [
-        "PERSISTED_NEXT_TICK_HANDOFF_ESTABLISHED",
-        "REALITY_BINDING_RUNTIME_SNAPSHOT_ESTABLISHED"
+        "REBUILDABLE_A0_PROJECTIONS_ESTABLISHED",
+        "REALITY_BINDING_RUNTIME_SNAPSHOT_ESTABLISHED",
+        "PERSISTED_NEXT_TICK_HANDOFF_ESTABLISHED"
       ]
     },
     {
@@ -112,9 +114,6 @@
       "primary_owner_work_package_id": "MCFT-08",
       "contributing_work_package_ids": [
         "MCFT-07"
-      ],
-      "depends_on_delivery_slice_ids": [
-        "MCFT-CAP-01.MCFT-02.A0-CONTRACTS-AND-CONFIG-V1"
       ],
       "claims": [
         "BOOTSTRAP_STATE_MATH_ESTABLISHED",
@@ -126,58 +125,34 @@
     },
     {
       "delivery_slice_id": "MCFT-CAP-01.MCFT-04-05-08-09.A0-RUNTIME-INTEGRATION-V1",
-      "status": "REMEDIATION_REQUIRED",
+      "status": "COMPLETE",
       "primary_owner_work_package_id": "MCFT-04",
       "contributing_work_package_ids": [
         "MCFT-05",
         "MCFT-08",
         "MCFT-09"
       ],
-      "depends_on_delivery_slice_ids": [
-        "MCFT-CAP-01.MCFT-01.CANONICAL-REPLAY-DATASET-V1",
-        "MCFT-CAP-01.MCFT-02.A0-CONTRACTS-AND-CONFIG-V1",
-        "MCFT-CAP-01.MCFT-03.A0-PERSISTENCE-V1",
-        "MCFT-CAP-01.MCFT-07-08.BOOTSTRAP-STATE-MATH-V1"
-      ],
-      "established_claims": [
+      "claims": [
         "A0_RUNTIME_EXECUTION_ESTABLISHED",
         "BOOTSTRAP_STATE_COMMITTED",
         "ACTIVE_INITIAL_LINEAGE_ESTABLISHED",
         "INITIAL_CHECKPOINT_ESTABLISHED",
         "BLOCKED_FORECAST_RESULT_ESTABLISHED",
-        "NEXT_TICK_CHECKPOINT_POINTER_ESTABLISHED"
-      ],
-      "withdrawn_claims": [
-        "NEXT_TICK_HANDOFF_ESTABLISHED"
-      ],
-      "missing_claims": [
+        "NEXT_TICK_CHECKPOINT_POINTER_ESTABLISHED",
+        "PERSISTED_NEXT_TICK_HANDOFF_ESTABLISHED",
         "CONFLICTING_DUPLICATE_OBSERVATION_REJECTION_ESTABLISHED",
         "EVIDENCE_MODEL_CONSUMPTION_TRACE_ESTABLISHED",
-        "PERSISTED_NEXT_TICK_HANDOFF_ESTABLISHED",
         "OPERATOR_INVOKABLE_MANUAL_RUNTIME_ENTRY_ESTABLISHED"
       ]
     },
     {
       "delivery_slice_id": "MCFT-CAP-01.CLOSURE-V1",
-      "status": "SUPERSEDED_PENDING_REMEDIATION",
-      "primary_owner_work_package_id": "MCFT-08",
-      "contributing_work_package_ids": [
-        "MCFT-01",
-        "MCFT-02",
-        "MCFT-03",
-        "MCFT-04",
-        "MCFT-05",
-        "MCFT-07",
-        "MCFT-09"
-      ],
-      "withdrawn_claims": [
-        "MCFT_CAP_01_COMPLETE",
-        "CONTROLLED_REPLAY_BOOTSTRAP_CLOSURE_ESTABLISHED"
-      ]
+      "status": "SUPERSEDED_BY_REMEDIATION",
+      "primary_owner_work_package_id": "MCFT-08"
     },
     {
       "delivery_slice_id": "MCFT-CAP-01.CLOSURE-REMEDIATION-V1",
-      "status": "IN_IMPLEMENTATION",
+      "status": "COMPLETE",
       "primary_owner_work_package_id": "MCFT-08",
       "contributing_work_package_ids": [
         "MCFT-01",
@@ -188,15 +163,27 @@
         "MCFT-07",
         "MCFT-09"
       ],
-      "depends_on_delivery_slice_ids": [
-        "MCFT-CAP-01.CLOSURE-V1"
+      "claims": [
+        "MCFT_CAP_01_COMPLETE",
+        "FIRST_CLASS_WATER_STATE_ESTIMATE_LEVEL_A_ESTABLISHED",
+        "CONTROLLED_REPLAY_BOOTSTRAP_CLOSURE_ESTABLISHED",
+        "GOVERNANCE_STATUS_ALIGNMENT_ESTABLISHED"
       ]
     }
   ],
+  "completion_claims": [
+    "MCFT_CAP_01_COMPLETE",
+    "FIRST_CLASS_WATER_STATE_ESTIMATE_LEVEL_A_ESTABLISHED",
+    "CONTROLLED_REPLAY_BOOTSTRAP_CLOSURE_ESTABLISHED",
+    "PERSISTED_NEXT_TICK_HANDOFF_ESTABLISHED",
+    "CONFLICTING_DUPLICATE_OBSERVATION_REJECTION_ESTABLISHED",
+    "EVIDENCE_MODEL_CONSUMPTION_TRACE_ESTABLISHED",
+    "A0_CROSS_REFERENCE_GRAPH_VALIDATION_ESTABLISHED",
+    "OPERATOR_INVOKABLE_MANUAL_RUNTIME_ENTRY_ESTABLISHED",
+    "CROP_STAGE_CONFIGURATION_CONTEXT_ESTABLISHED"
+  ],
   "next_authorized_slice_ids": [],
   "nonclaims": [
-    "NO_MCFT_CAP_01_CLOSURE",
-    "NO_PERSISTED_NEXT_TICK_HANDOFF",
     "NO_PROPAGATION",
     "NO_SUCCESSFUL_FORECAST",
     "NO_SCENARIO",
