@@ -1,10 +1,11 @@
 // scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_01_CLOSURE_REMEDIATION.ts
-// Purpose: prove conflicting-observation rejection, deterministic Evidence selection, complete consumption trace, full A0 cross-reference validation, persisted-handoff DTO semantics, runner presence, and remediation boundaries.
+// Purpose: prove conflicting-observation rejection, deterministic Evidence selection, complete consumption trace, full A0 cross-reference validation, persisted-handoff DTO semantics, runner presence, and deterministic crop-stage configuration context.
 // Boundary: static/in-memory acceptance only; no PostgreSQL, canonical production write, propagation, successful Forecast, Scenario, Recommendation, Decision, AO-ACT, scheduler, or wall-clock reads.
 
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { CanonicalReplayFileSourceV1 } from "../../apps/server/src/adapters/twin_runtime/canonical_replay_file_source_v1.js";
 import { computeA0RecordSetDeterminismHashV1, computeMemberDeterminismHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";
@@ -24,6 +25,10 @@ import type { CanonicalReplayEvidenceRecordV1, NextTickReadPortV1, PersistedNext
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const LOGICAL_TIME = "2026-06-01T01:00:00.000Z";
+const require = createRequire(import.meta.url);
+const { buildConfigurationContext } = require("../mcft/GENERATE_MCFT_CAP_01_REPLAY_DATASET.cjs") as {
+  buildConfigurationContext: (config: Record<string, unknown>, source: Record<string, unknown>) => Record<string, unknown>;
+};
 
 type ConfigurationMatrixExtendedV1 = Mcft00ConfigurationMatrixArtifactV1 & {
   configuration_source_definitions: Array<{ configuration_source_id: string; parameters: Record<string, { value: unknown }> }>;
@@ -67,6 +72,10 @@ function mutateAndRehashV1(recordSet: A0RecordSetV1, type: CanonicalObjectEnvelo
   return mutated;
 }
 
+function readerV1(snapshot: PersistedNextTickSnapshotV1): NextTickReadPortV1 {
+  return { async readPersistedNextTickSnapshot() { return structuredClone(snapshot); } };
+}
+
 let pass = 0;
 function ok(message: string): void {
   pass += 1;
@@ -107,8 +116,9 @@ async function main(): Promise<void> {
     assert.ok(summary.unit_conversion.canonical_unit);
     assert.ok(summary.unit_conversion.conversion_rule.id);
     assert.ok(summary.limitations.length > 0);
+    assert.ok(summary.quality_status);
   }
-  ok("Evidence Window entries preserve ingestion, freshness, units, conversion, quality and limitations");
+  ok("Evidence Window entries preserve ingestion, freshness, quality, units, conversion and limitations");
 
   const conflicting = structuredClone(window.assimilation_observation) as CanonicalReplayEvidenceRecordV1;
   conflicting.source_record_id = "mcft_src_conflicting_duplicate";
@@ -124,6 +134,12 @@ async function main(): Promise<void> {
   assert.equal(newerWindow.assimilation_observation.source_record_id, sameValueNewerIngest.source_record_id);
   ok("soil selector orders observed_at descending, ingested_at descending, id ascending");
 
+  const sameValueSameTimeLowId = structuredClone(window.assimilation_observation) as CanonicalReplayEvidenceRecordV1;
+  sameValueSameTimeLowId.source_record_id = "aaa_same_value_low_id";
+  const tiedWindow = buildFrozenEvidenceWindowV1({ scope, logical_time: LOGICAL_TIME, candidate_records: [...candidates, sameValueSameTimeLowId] });
+  assert.equal(tiedWindow.assimilation_observation.source_record_id, sameValueSameTimeLowId.source_record_id);
+  ok("source_record_id ascending resolves a fully tied same-value duplicate deterministically");
+
   const recordSet = buildA0RecordSetV1({
     scope,
     logical_time: LOGICAL_TIME,
@@ -134,13 +150,19 @@ async function main(): Promise<void> {
     soil_hydraulic_config_ref: "soil_hydraulic_config_c8_v1",
   });
   validateA0RecordSetV1(recordSet);
-  ok("valid A0 object graph passes complete cross-reference validation");
+  const evidenceObject = memberV1(recordSet, "twin_evidence_window_v1");
+  assert.deepEqual(evidenceObject.payload.consumed_evidence_refs, window.consumed_evidence_refs);
+  assert.deepEqual(evidenceObject.payload.context_only_evidence_refs, window.context_only_evidence_refs);
+  ok("canonical Evidence Window persists complete consumption reference classes");
 
   const graphMutations: Array<[CanonicalObjectEnvelopeV1["object_type"], string]> = [
+    ["twin_state_transition_v1", "evidence_window_ref"],
     ["twin_state_transition_v1", "assimilation_update_ref"],
     ["twin_state_transition_v1", "posterior_state_ref"],
     ["twin_assimilation_update_v1", "state_transition_ref"],
+    ["twin_assimilation_update_v1", "posterior_state_ref"],
     ["twin_state_estimate_v1", "transition_ref"],
+    ["twin_state_estimate_v1", "assimilation_update_ref"],
     ["twin_forecast_run_v1", "source_posterior_ref"],
     ["twin_runtime_tick_v1", "posterior_state_ref"],
     ["twin_runtime_tick_v1", "checkpoint_ref"],
@@ -163,32 +185,81 @@ async function main(): Promise<void> {
     runtime_config: runtimeConfig,
     reality_binding: realityBindingRuntimeSnapshotFromAuthorityArtifactV1(reality),
   };
-  const reader: NextTickReadPortV1 = { async readPersistedNextTickSnapshot() { return structuredClone(snapshot); } };
-  const prepared = await new PrepareNextTickInputServiceV1(reader).prepareNextTickInput(scope);
+  const prepared = await new PrepareNextTickInputServiceV1(readerV1(snapshot)).prepareNextTickInput(scope);
   assert.equal(prepared.previous_posterior_ref, previousPosterior.object_id);
   assert.equal(prepared.previous_checkpoint_ref, checkpoint.object_id);
   assert.equal(prepared.lineage_id, checkpoint.lineage_id);
   assert.equal(prepared.prior_mean, 0.192595);
   assert.equal(prepared.prior_variance, 0.002678);
   assert.equal(prepared.next_logical_tick_time, "2026-06-01T02:00:00.000Z");
-  ok("prepareNextTickInput returns the required persisted-handoff DTO fields");
+  assert.equal(prepared.runtime_config_ref, runtimeConfig.object_id);
+  assert.equal(prepared.reality_binding_ref, reality.binding_id);
+  ok("prepareNextTickInput returns all required persisted-handoff fields");
 
-  const mismatched = structuredClone(snapshot);
-  mismatched.active_lineage_ref = "foreign_lineage";
-  await assert.rejects(async () => new PrepareNextTickInputServiceV1({ async readPersistedNextTickSnapshot() { return mismatched; } }).prepareNextTickInput(scope), /ACTIVE_LINEAGE_CHECKPOINT_MISMATCH/);
+  const lineageMismatch = structuredClone(snapshot);
+  lineageMismatch.active_lineage_ref = "foreign_lineage";
+  await assert.rejects(new PrepareNextTickInputServiceV1(readerV1(lineageMismatch)).prepareNextTickInput(scope), /ACTIVE_LINEAGE_CHECKPOINT_MISMATCH/);
   ok("persisted handoff rejects active-lineage inconsistency");
+
+  const revisionMismatch = structuredClone(snapshot);
+  revisionMismatch.previous_posterior.revision_id = "foreign_revision";
+  await assert.rejects(new PrepareNextTickInputServiceV1(readerV1(revisionMismatch)).prepareNextTickInput(scope), /CHECKPOINT_STATE_REVISION_MISMATCH/);
+  ok("persisted handoff rejects checkpoint and State revision inconsistency");
+
+  const configMismatch = structuredClone(snapshot);
+  configMismatch.runtime_config.determinism_hash = "sha256:foreign_runtime_config";
+  await assert.rejects(new PrepareNextTickInputServiceV1(readerV1(configMismatch)).prepareNextTickInput(scope), /PERSISTED_RUNTIME_CONFIG_MISMATCH/);
+  ok("persisted handoff rejects Runtime Config hash inconsistency");
+
+  const realityMismatch = structuredClone(snapshot);
+  realityMismatch.reality_binding.determinism_hash = "sha256:foreign_reality_binding";
+  await assert.rejects(new PrepareNextTickInputServiceV1(readerV1(realityMismatch)).prepareNextTickInput(scope), /PERSISTED_REALITY_BINDING_MISMATCH/);
+  ok("persisted handoff rejects Reality Binding hash inconsistency");
 
   const runnerPath = path.join(ROOT, "apps/server/scripts/mcft/MCFT_1_FIRST_CLASS_WATER_STATE_RUNNER.ts");
   assert.ok(fs.existsSync(runnerPath));
   const runnerText = fs.readFileSync(runnerPath, "utf8");
   assert.ok(runnerText.includes("A0BootstrapRuntimeServiceV1"));
   assert.ok(runnerText.includes("PrepareNextTickInputServiceV1"));
-  ok("operator-invokable MCFT-1 manual Runtime runner exists and prepares persisted handoff");
+  assert.ok(runnerText.includes("commitRealityBindingSnapshot"));
+  ok("operator-invokable MCFT-1 runner commits authority, executes A0 and prepares persisted handoff");
 
-  const context = readJsonV1<Record<string, unknown>>("fixtures/mcft/water_state/replay_v1/configuration_context.json");
-  assert.equal(context.context_class, "CONFIGURATION_DERIVED_CONTEXT");
-  assert.ok(Array.isArray(context.crop_stage_schedule));
-  ok("Replay Dataset exposes time-resolved configuration-derived crop-stage context");
+  const generatorConfig = readJsonV1<Record<string, unknown>>("fixtures/mcft/water_state/replay_v1/generator_config.json");
+  const contextSource = readJsonV1<Record<string, unknown>>("fixtures/mcft/water_state/configuration_context_source_v1.json");
+  const committedContext = readJsonV1<Record<string, unknown>>("fixtures/mcft/water_state/replay_v1/configuration_context.json");
+  const generatedContext = buildConfigurationContext(generatorConfig, contextSource);
+  assert.deepEqual(generatedContext, committedContext);
+  assert.equal(committedContext.context_class, "CONFIGURATION_DERIVED_CONTEXT");
+  assert.equal(committedContext.evidence_record, false);
+  assert.equal(committedContext.determinism_hash, "sha256:2287c71e983b1ba529e49939f025d9b035e09e195a5effc994fe54b4ef7863ce");
+  ok("crop-stage configuration context regenerates deterministically and is not Evidence");
+
+  const manifestV2 = readJsonV1<Record<string, unknown>>("fixtures/mcft/water_state/replay_v1/manifest_v2.json");
+  assert.equal(manifestV2.configuration_context_ref, "fixtures/mcft/water_state/replay_v1/configuration_context.json");
+  assert.equal(manifestV2.configuration_context_hash, committedContext.determinism_hash);
+  assert.equal(manifestV2.configuration_context_is_evidence, false);
+  assert.equal(manifestV2.top_level_evidence_record_count, 3604);
+  assert.equal(manifestV2.determinism_hash, "sha256:5d4b6528739a44eabba753d2c5aec30d0bd72b87f804f525fb3925ac0f26d49d");
+  ok("Replay package manifest references crop-stage context without changing Evidence record count");
+
+  const gap = structuredClone(contextSource) as Record<string, unknown>;
+  const gapSchedule = structuredClone(gap.crop_stage_schedule) as Array<Record<string, unknown>>;
+  gapSchedule[1].effective_from = "2026-06-08T01:00:00.000Z";
+  gap.crop_stage_schedule = gapSchedule;
+  assert.throws(() => buildConfigurationContext(generatorConfig, gap), /CROP_STAGE_SCHEDULE_GAP_OR_OVERLAP/);
+  ok("crop-stage context gap is rejected");
+
+  const overlap = structuredClone(contextSource) as Record<string, unknown>;
+  const overlapSchedule = structuredClone(overlap.crop_stage_schedule) as Array<Record<string, unknown>>;
+  overlapSchedule[1].effective_from = "2026-06-07T23:00:00.000Z";
+  overlap.crop_stage_schedule = overlapSchedule;
+  assert.throws(() => buildConfigurationContext(generatorConfig, overlap), /CROP_STAGE_SCHEDULE_GAP_OR_OVERLAP/);
+  ok("crop-stage context overlap is rejected");
+
+  const mislabeled = structuredClone(contextSource) as Record<string, unknown>;
+  mislabeled.evidence_record = true;
+  assert.throws(() => buildConfigurationContext(generatorConfig, mislabeled), /CONFIGURATION_CONTEXT_CLASS_INVALID/);
+  ok("crop-stage configuration context mislabeled as Evidence is rejected");
 
   console.log(`MCFT-CAP-01 closure remediation static: ${pass} PASS, 0 FAIL`);
 }
