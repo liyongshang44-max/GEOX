@@ -1,9 +1,10 @@
 // apps/server/src/runtime/twin_runtime/runtime_config_authority_adapter_v1.ts
-// Purpose: adapt the final MCFT-00 Reality, Source Binding, and Configuration Binding artifacts into the pure Runtime Config compiler input.
-// Boundary: pure parsed-object adapter; callers own filesystem I/O, and this module performs no database, network, wall-clock, environment, or random access.
+// Purpose: adapt the final MCFT-00 Reality, Source Binding, and Configuration Binding artifacts into the pure Runtime Config compiler input and immutable Runtime authority snapshot.
+// Boundary: pure parsed-object adapter; callers own filesystem I/O and persistence, and this module performs no database, network, wall-clock, environment, or random access.
 
 import type { CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
 import { compileRuntimeConfigV1 } from "./runtime_config_compile_service_v1.js";
+import type { RealityBindingRuntimeSnapshotV1 } from "./ports.js";
 
 export type Mcft00RealityArtifactV1 = {
   binding_id: string;
@@ -24,6 +25,16 @@ export type Mcft00ConfigurationMatrixArtifactV1 = {
   determinism_hash: string;
   bindings: Array<{ binding_id: string; source_role: string; configuration_source_id: string }>;
 };
+
+export function realityBindingRuntimeSnapshotFromAuthorityArtifactV1(artifact: Mcft00RealityArtifactV1): RealityBindingRuntimeSnapshotV1 {
+  return {
+    binding_id: artifact.binding_id,
+    determinism_hash: artifact.determinism_hash,
+    geometry_semantic_hash: artifact.semantic_payload.geometry_binding.geometry_semantic_hash,
+    scope: structuredClone(artifact.semantic_payload.scope),
+    root_zone_definition: structuredClone(artifact.semantic_payload.root_zone_binding),
+  };
+}
 
 export function compileRuntimeConfigFromAuthorityArtifactsV1(input: {
   realityArtifact: Mcft00RealityArtifactV1;
