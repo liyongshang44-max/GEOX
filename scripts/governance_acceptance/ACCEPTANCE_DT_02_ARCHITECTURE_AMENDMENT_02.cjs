@@ -78,11 +78,16 @@ try {
 const amendment = read(F.amendment);
 const boundaryAddendum = read(F.boundaryAddendum);
 const closure = read(F.closure);
+const freeze = read(F.freeze);
 const closureStatus = field(closure, 'status');
 if (!['PENDING_ACCEPTANCE', 'COMPLETE'].includes(closureStatus)) fail(`invalid closure status ${closureStatus}`);
 else pass(`closure status ${closureStatus}`);
 if (!amendment.includes(`status: ${closureStatus}`)) fail('amendment and closure status mismatch');
 else pass('amendment and closure status aligned');
+if (field(amendment, 'baseline') !== BASE) fail('Amendment 02 baseline mismatch');
+else pass('Amendment 02 baseline aligned to merged predecessor');
+if (field(closure, 'baseline_head') !== BASE) fail('Closure baseline mismatch');
+else pass('Closure baseline aligned to merged predecessor');
 if (!boundaryAddendum.includes(`status: ${closureStatus}`)) fail('boundary addendum status mismatch');
 else pass('boundary addendum status aligned');
 if (closureStatus === 'COMPLETE' && closure.includes('PENDING_ACCEPTANCE')) fail('COMPLETE closure retains PENDING_ACCEPTANCE marker');
@@ -91,10 +96,36 @@ if (closureStatus === 'COMPLETE' && /^.+:\s*PENDING$/m.test(closure)) fail('COMP
 else pass('closure validation evidence aligned with status');
 if (closureStatus === 'COMPLETE' && JSON.stringify(adrs).includes('PENDING_ACCEPTANCE')) fail('COMPLETE ADR register retains pending-acceptance status');
 else pass('ADR register status markers aligned with COMPLETE');
+
+const expectedGovernedStatus = closureStatus === 'COMPLETE'
+  ? 'FROZEN_WITH_ACCEPTED_AMENDMENTS'
+  : 'FROZEN_WITH_AMENDMENTS_PENDING_ACCEPTANCE';
+
+if (objects.status !== expectedGovernedStatus) fail(`canonical object set governance status mismatch: ${objects.status}`);
+else pass('canonical object set governance status aligned');
+
+if (transactions.status !== expectedGovernedStatus) fail(`atomic transaction matrix governance status mismatch: ${transactions.status}`);
+else pass('atomic transaction matrix governance status aligned');
+
+if (!freeze.includes(`status: ${expectedGovernedStatus}`)) fail('Runtime Architecture Freeze governance status mismatch');
+else pass('Runtime Architecture Freeze governance status aligned');
+
+if (closureStatus === 'COMPLETE') {
+  if (!freeze.includes('accepted amendments: DT02-AMENDMENT-01, DT02-AMENDMENT-02')) fail('Runtime Architecture Freeze accepted amendment marker missing');
+  else pass('Runtime Architecture Freeze accepted amendment marker');
+
+  if (freeze.includes('pending amendment: DT02-AMENDMENT-02')) fail('Runtime Architecture Freeze retains pending Amendment 02 marker');
+  else pass('Runtime Architecture Freeze pending marker absent');
+} else {
+  if (!freeze.includes('pending amendment: DT02-AMENDMENT-02')) fail('Runtime Architecture Freeze pending Amendment 02 marker missing');
+  else pass('Runtime Architecture Freeze pending amendment marker aligned');
+}
 if (!boundaryAddendum.includes(F.dt01Acceptance)) fail('boundary addendum lacks exact DT-01 compatibility path');
 else pass('boundary addendum freezes exact DT-01 compatibility path');
-if (!boundaryAddendum.includes(F.verticalGate) || !boundaryAddendum.includes(F.capabilityMatrix) || !boundaryAddendum.includes('consumed unchanged')) fail('boundary addendum lacks unchanged predecessor artifact declaration');
-else pass('boundary addendum records merged predecessor artifacts as consumed unchanged');
+if (![F.capabilityMatrix, F.verticalMatrix, F.verticalGate].every((relativePath) => boundaryAddendum.includes(relativePath))) fail('boundary addendum lacks successor readiness changed files');
+else pass('boundary addendum records successor readiness changed files');
+if (!boundaryAddendum.includes('docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-AMENDMENT-01.md') || !boundaryAddendum.includes('consumed unchanged')) fail('boundary addendum lacks unchanged predecessor authority declaration');
+else pass('boundary addendum preserves predecessor authority document unchanged');
 if (bootstrap.status !== closureStatus) fail('bootstrap machine status mismatch');
 else pass('bootstrap machine status aligned');
 const a02 = (adrs.amendments || []).find((row) => row.id === 'DT02-AMENDMENT-02');
@@ -134,8 +165,12 @@ if (vertical.status !== 'COMPLETE') fail('merged MCFT vertical amendment is not 
 else pass('merged MCFT vertical amendment COMPLETE');
 if (verticalLine.capability_line_id !== 'MCFT-CAP-01' || verticalLine.display_alias !== 'MCFT-1') fail('MCFT capability-line identity or alias changed');
 else pass('MCFT capability-line identity and alias preserved');
-if (verticalLine.status !== 'BLOCKED_BY_DT02_AMENDMENT_02') fail('MCFT capability line no longer blocked by DT02-AMENDMENT-02');
-else pass('MCFT capability line remains blocked by DT02-AMENDMENT-02');
+const expectedCapabilityLineStatus =
+  closureStatus === 'COMPLETE'
+    ? 'READY_FOR_IMPLEMENTATION'
+    : 'BLOCKED_BY_DT02_AMENDMENT_02';
+if (verticalLine.status !== expectedCapabilityLineStatus) fail(`MCFT capability-line status expected ${expectedCapabilityLineStatus}, got ${verticalLine.status}`);
+else pass(`MCFT capability-line status ${expectedCapabilityLineStatus}`);
 seteq(verticalLine.authorized_owner_work_package_ids, ['MCFT-01','MCFT-02','MCFT-03','MCFT-04','MCFT-05','MCFT-07','MCFT-08','MCFT-09'], 'MCFT authorized owner work packages preserved');
 seteq(verticalLine.excluded_owner_work_package_ids, ['MCFT-06'], 'MCFT excluded owner work package preserved');
 if ((verticalLine.delivery_slices || []).length !== 6) fail('MCFT delivery-slice graph changed');
@@ -143,9 +178,16 @@ else pass('MCFT six-slice graph preserved');
 const capabilityAmendmentRow = (capability.governance_amendments || []).find((row) => row.amendment_id === 'MCFT-VERTICAL-AMENDMENT-01');
 if (capabilityAmendmentRow?.status !== 'COMPLETE') fail('capability matrix predecessor amendment row is not COMPLETE');
 else pass('capability matrix predecessor amendment row COMPLETE');
+
+const dt02CapabilityAmendmentRow = (capability.governance_amendments || []).find((row) => row.amendment_id === 'DT02-AMENDMENT-02');
+if (closureStatus === 'COMPLETE') {
+  if (dt02CapabilityAmendmentRow?.status !== 'COMPLETE' || dt02CapabilityAmendmentRow?.claim !== 'NO_RUNTIME_IMPLEMENTATION') fail('capability matrix DT02-AMENDMENT-02 row invalid');
+  else pass('capability matrix DT02-AMENDMENT-02 COMPLETE row');
+}
+
 const capabilityLineRow = (capability.capability_lines || []).find((row) => row.capability_line_id === 'MCFT-CAP-01');
-if (!capabilityLineRow || capabilityLineRow.status !== 'BLOCKED_BY_DT02_AMENDMENT_02') fail('capability matrix MCFT-CAP-01 row changed');
-else pass('capability matrix MCFT-CAP-01 row preserved');
+if (!capabilityLineRow || capabilityLineRow.status !== expectedCapabilityLineStatus) fail('capability matrix MCFT-CAP-01 readiness mismatch');
+else pass(`capability matrix MCFT-CAP-01 status ${expectedCapabilityLineStatus}`);
 const capabilityById = new Map((capability.capabilities || []).map((row) => [row.capability_id, row]));
 for (const id of ['DT-MATRIX-HOURLY-TICK','DT-MATRIX-PROPAGATION','DT-MATRIX-ASSIMILATION','DT-MATRIX-POSTERIOR','DT-MATRIX-CHECKPOINT','DT-MATRIX-RESTART','DT-MATRIX-LATE-REVISION','DT-MATRIX-72H-REGEN']) {
   if (capabilityById.get(id)?.current_status !== 'MISSING') fail(`${id} capability inflation during predecessor regression`);
@@ -153,6 +195,13 @@ for (const id of ['DT-MATRIX-HOURLY-TICK','DT-MATRIX-PROPAGATION','DT-MATRIX-ASS
 if (!failures.some((message) => message.includes('capability inflation during predecessor regression'))) pass('MCFT vertical capability nonclaims preserved');
 if (capabilityById.get('DT-MATRIX-LIVE-PRODUCTION-FIELD-TWIN')?.current_status !== 'NOT_CLAIMED') fail('production capability inflation during predecessor regression');
 else pass('production nonclaim preserved during predecessor regression');
+
+try {
+  runNode(F.verticalGate, [], {MCFT_VERTICAL_ACCEPTANCE_SKIP_GIT_SCOPE: '1'});
+  pass('MCFT vertical capability-line successor-aware Gate PASS');
+} catch (error) {
+  fail(`MCFT vertical capability-line successor-aware Gate failed: ${error.message}`);
+}
 
 try {
   runNode(F.dt01Audit, ['--check']);
@@ -189,9 +238,12 @@ try {
     F.objectSet,
     F.implementationMap,
     F.freeze,
+    F.capabilityMatrix,
+    F.verticalMatrix,
     F.dt01Acceptance,
     F.self,
     F.dt02Gate,
+    F.verticalGate,
   ];
   const left = JSON.stringify([...changed].sort());
   const right = JSON.stringify([...expected].sort());

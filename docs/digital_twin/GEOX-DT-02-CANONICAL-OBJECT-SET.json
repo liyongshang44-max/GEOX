@@ -1,7 +1,7 @@
 {
   "schema_version": "geox_dt02_canonical_object_set_v3",
   "phase": "DT-02",
-  "status": "FROZEN_WITH_AMENDMENTS_PENDING_ACCEPTANCE",
+  "status": "FROZEN_WITH_ACCEPTED_AMENDMENTS",
   "amendment_refs": [
     "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-01.md",
     "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-02.md"

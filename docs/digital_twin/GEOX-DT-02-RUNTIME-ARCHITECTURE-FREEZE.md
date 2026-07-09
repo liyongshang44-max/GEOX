@@ -10,9 +10,8 @@ type: architecture governance and contract freeze
 predecessor: DT-01 Existing Capability Reconciliation
 original successor: MCFT-00 Reality Binding Contract
 original merge: 4c1d854a5190a5d37d7cea0a4ded3f6f3ce8b614
-accepted amendment: DT02-AMENDMENT-01
-pending amendment: DT02-AMENDMENT-02
-status: FROZEN_WITH_AMENDMENTS_PENDING_ACCEPTANCE
+accepted amendments: DT02-AMENDMENT-01, DT02-AMENDMENT-02
+status: FROZEN_WITH_ACCEPTED_AMENDMENTS
 ```
 
 DT-02 freezes one Minimum Complete Field Twin runtime architecture. It creates no Runtime source, migration, route, scheduler, projection implementation, domain implementation, frontend adapter, canonical fact, or production capability.

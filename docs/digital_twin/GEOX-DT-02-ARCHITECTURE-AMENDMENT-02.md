@@ -9,7 +9,7 @@ amendment: DT02-AMENDMENT-02
 name: Initial Lineage and Bootstrap State Semantics
 reason: close the first-lineage and first-checkpoint architecture gap
 supersedes: selected rules in DT02-ADR-003, 004, 005, 006, 007, 008, 015, 016
-baseline: MCFT-GOV-01 PR head 09f03488713cde4dbd8c48914fdcb30637d19a3d
+baseline: 5e0e7df50512168166bdee6cea9c0a0cec2916b2
 predecessor: MCFT-VERTICAL-AMENDMENT-01
 successor: MCFT-CAP-01 Canonical Replay Dataset slice
 status: COMPLETE

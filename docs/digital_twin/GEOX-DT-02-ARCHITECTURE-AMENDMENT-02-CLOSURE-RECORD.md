@@ -7,7 +7,7 @@
 phase: DT-02
 amendment: DT02-AMENDMENT-02
 name: Initial Lineage and Bootstrap State Semantics
-baseline_head: 09f03488713cde4dbd8c48914fdcb30637d19a3d
+baseline_head: 5e0e7df50512168166bdee6cea9c0a0cec2916b2
 predecessor: MCFT-VERTICAL-AMENDMENT-01
 successor: MCFT-CAP-01.MCFT-01.CANONICAL-REPLAY-DATASET-V1
 status: COMPLETE
@@ -42,15 +42,15 @@ NO_STATE_COMMITTED
 ```text
 architecture_validated_head: external final PR head attestation
 DT02-AMENDMENT-02 Gate: COMPLETE_PASS
-DT-02 amended regression: 128_PASS_0_FAIL
+DT-02 amended regression: 133_PASS_0_FAIL
 MCFT vertical capability amendment regression: PASS
 DT-01 repository audit: PASS
 DT-01 acceptance: 43_PASS_0_FAIL
 DT-00 semantic regression: 75_PASS_1_WARN_0_FAIL
-changed-file boundary: 12_FILES_PASS
+changed-file boundary: 15_FILES_PASS
 working tree: external local pre-commit attestation
 architecture_validated_ci: external final GitHub Actions attestation
-closure_input_head: b11cc60f5f1c549319939700895b3a1e72755394
+closure_input_head: ba5d1d2ee9768e881d2e04a325b8f07b066137ac
 final_pr_head: external PR attestation
 final_pr_ci: external GitHub Actions attestation
 ```

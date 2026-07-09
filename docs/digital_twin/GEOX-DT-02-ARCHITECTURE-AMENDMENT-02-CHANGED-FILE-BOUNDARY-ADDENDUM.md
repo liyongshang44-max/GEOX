@@ -23,19 +23,21 @@ docs/digital_twin/GEOX-DT-02-BOOTSTRAP-STATE-SEMANTICS.json
 docs/digital_twin/GEOX-DT-02-CANONICAL-OBJECT-SET.json
 docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md
 docs/digital_twin/GEOX-DT-02-RUNTIME-ARCHITECTURE-FREEZE.md
+docs/digital_twin/GEOX-DIGITAL-TWIN-CAPABILITY-MATRIX.json
+docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json
 scripts/governance_acceptance/ACCEPTANCE_DT_01_EXISTING_CAPABILITY_RECONCILIATION.cjs
 scripts/governance_acceptance/ACCEPTANCE_DT_02_ARCHITECTURE_AMENDMENT_02.cjs
 scripts/governance_acceptance/ACCEPTANCE_DT_02_RUNTIME_ARCHITECTURE_FREEZE.cjs
-```
-
-The predecessor artifacts below are consumed unchanged from `main` and are not Amendment 02 changed files:
-
-```text
-docs/digital_twin/GEOX-DIGITAL-TWIN-CAPABILITY-MATRIX.json
-docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-AMENDMENT-01.md
-docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json
 scripts/governance_acceptance/ACCEPTANCE_MCFT_VERTICAL_CAPABILITY_LINE_AMENDMENT_01.cjs
 ```
+
+The predecessor authority document below is consumed unchanged from `main` and is not an Amendment 02 changed file:
+
+```text
+docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-AMENDMENT-01.md
+```
+
+The Capability Matrix, Vertical Capability Line Matrix, and Vertical Capability Line Gate are changed only to perform the frozen successor transition from `BLOCKED_BY_DT02_AMENDMENT_02` to `READY_FOR_IMPLEMENTATION`. This transition establishes governance readiness only and creates no Runtime capability.
 
 The permitted DT-01 compatibility edit is strictly limited to adding exact successor Gate paths to the existing allowlist. Amendment 02 validates the merged MCFT vertical contracts directly without modifying the predecessor Gate.
 

@@ -84,7 +84,7 @@ A capability-line closure does not automatically mark its contributing work pack
 
 MCFT-06 remains `NOT_STARTED` for MCFT-CAP-01. No propagation, water balance, rainfall application, ET application, irrigation application, continuous tick, restart/backfill, late revision, successful 72-point Forecast, or Scenario may be claimed.
 
-MCFT-CAP-01 remains Runtime-implementation blocked until DT02-AMENDMENT-02 reaches `COMPLETE` and its final Gate and CI pass.
+MCFT-CAP-01 is `READY_FOR_IMPLEMENTATION` as the successor state of the COMPLETE Amendment 02 candidate. This readiness becomes effective only after the final candidate passes Gate and CI, merges into `main`, and is verified on `main`.
 
 ## 4. Initial and revision lineage ownership
 

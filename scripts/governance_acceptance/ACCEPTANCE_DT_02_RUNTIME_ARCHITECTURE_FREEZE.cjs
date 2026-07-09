@@ -80,6 +80,26 @@ const a02Status = field(closure02, 'status');
 if (!['PENDING_ACCEPTANCE', 'COMPLETE'].includes(a02Status)) fail(`invalid Amendment 02 closure status ${a02Status}`);
 else pass(`Amendment 02 closure status ${a02Status}`);
 const expectedA02Status = a02Status;
+const expectedGovernedStatus = a02Status === 'COMPLETE'
+  ? 'FROZEN_WITH_ACCEPTED_AMENDMENTS'
+  : 'FROZEN_WITH_AMENDMENTS_PENDING_ACCEPTANCE';
+
+eq(O.status, expectedGovernedStatus, 'canonical object set governance status');
+eq(T.status, expectedGovernedStatus, 'atomic transaction matrix governance status');
+
+if (!freeze.includes(`status: ${expectedGovernedStatus}`)) fail('Runtime Architecture Freeze governance status mismatch');
+else pass('Runtime Architecture Freeze governance status aligned');
+
+if (a02Status === 'COMPLETE') {
+  if (!freeze.includes('accepted amendments: DT02-AMENDMENT-01, DT02-AMENDMENT-02')) fail('Runtime Architecture Freeze accepted amendment marker missing');
+  else pass('Runtime Architecture Freeze accepted amendment marker');
+
+  if (freeze.includes('pending amendment: DT02-AMENDMENT-02')) fail('Runtime Architecture Freeze retains pending Amendment 02 marker');
+  else pass('Runtime Architecture Freeze pending marker absent');
+} else {
+  if (!freeze.includes('pending amendment: DT02-AMENDMENT-02')) fail('Runtime Architecture Freeze pending Amendment 02 marker missing');
+  else pass('Runtime Architecture Freeze pending amendment marker aligned');
+}
 
 for (const marker of [
   'status: COMPLETE',

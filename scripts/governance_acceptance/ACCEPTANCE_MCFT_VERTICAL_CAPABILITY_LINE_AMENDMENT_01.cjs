@@ -17,6 +17,7 @@ const F = Object.freeze({
   capabilityMatrix: 'docs/digital_twin/GEOX-DIGITAL-TWIN-CAPABILITY-MATRIX.json',
   master: 'docs/digital_twin/GEOX-DIGITAL-TWIN-MASTER-TASK-LINE.md',
   reality: 'docs/digital_twin/mcft/GEOX-MCFT-00-REALITY-BINDING.json',
+  dt02Closure: 'docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-02-CLOSURE-RECORD.md',
   self: 'scripts/governance_acceptance/ACCEPTANCE_MCFT_VERTICAL_CAPABILITY_LINE_AMENDMENT_01.cjs',
 });
 
@@ -28,6 +29,9 @@ function abs(relativePath) { return path.join(ROOT, relativePath); }
 function read(relativePath) { return fs.readFileSync(abs(relativePath), 'utf8'); }
 function parse(relativePath) { return JSON.parse(read(relativePath)); }
 function nonEmpty(value) { return typeof value === 'string' && value.trim().length > 0; }
+function field(text, key) {
+  return (text.match(new RegExp(`^${key}:\\s*(.+)$`, 'm')) || [])[1]?.trim();
+}
 function seteq(actual, expected, message) {
   const left = JSON.stringify([...(actual || [])].sort());
   const right = JSON.stringify([...expected].sort());
@@ -60,6 +64,19 @@ try {
 const amendment = read(F.amendment);
 const map = read(F.implementationMap);
 const master = read(F.master);
+const dt02Closure = read(F.dt02Closure);
+const dt02Status = field(dt02Closure, 'status');
+
+if (!['PENDING_ACCEPTANCE', 'COMPLETE'].includes(dt02Status)) {
+  bad(`invalid DT02-AMENDMENT-02 status ${dt02Status}`);
+} else {
+  ok(`DT02-AMENDMENT-02 status ${dt02Status}`);
+}
+
+const expectedCapabilityLineStatus =
+  dt02Status === 'COMPLETE'
+    ? 'READY_FOR_IMPLEMENTATION'
+    : 'BLOCKED_BY_DT02_AMENDMENT_02';
 
 const status = vertical.status;
 if (!['PENDING_ACCEPTANCE', 'COMPLETE'].includes(status)) bad(`invalid amendment status ${status}`);
@@ -81,8 +98,11 @@ else ok('one capability line frozen');
 const line = lines[0] || {};
 if (line.capability_line_id !== 'MCFT-CAP-01' || line.display_alias !== 'MCFT-1') bad('capability-line identity mismatch');
 else ok('MCFT-CAP-01 and MCFT-1 alias frozen');
-if (line.status !== 'BLOCKED_BY_DT02_AMENDMENT_02') bad('capability line must remain blocked by DT02-AMENDMENT-02');
-else ok('capability line blocked by DT02-AMENDMENT-02');
+if (line.status !== expectedCapabilityLineStatus) {
+  bad(`capability line status expected ${expectedCapabilityLineStatus}, got ${line.status}`);
+} else {
+  ok(`capability line status ${expectedCapabilityLineStatus}`);
+}
 seteq(line.authorized_owner_work_package_ids, ['MCFT-01','MCFT-02','MCFT-03','MCFT-04','MCFT-05','MCFT-07','MCFT-08','MCFT-09'], 'authorized owner work packages');
 seteq(line.excluded_owner_work_package_ids, ['MCFT-06'], 'excluded owner work package');
 includesAll(line.forbidden_claims, ['hourly dynamics implemented','continuous hourly runtime implemented','successful 72-point Forecast established','Minimum Complete Field Twin complete','live field or production runtime'], 'capability-line nonclaims');
@@ -139,7 +159,7 @@ for (const marker of [
 for (const marker of [
   'MCFT-VERTICAL-AMENDMENT-01 introduces vertical capability lines',
   'MCFT-06 remains `NOT_STARTED`',
-  'Initial lineage activation is not defined by this map',
+  'A0 plus an `INITIAL` `twin_runtime_lineage_v1`',
   'semantic dependency order',
 ]) map.includes(marker) ? ok(`implementation-map marker ${marker}`) : bad(`implementation-map marker missing ${marker}`);
 if (map.includes('MCFT-CAP-01') && map.includes('MCFT-1')) ok('implementation-map capability-line identity and alias');
@@ -154,12 +174,52 @@ if (capability.schema_version !== 'geox_digital_twin_capability_matrix_v3') bad(
 else ok('capability matrix schema v3 preserved');
 if (capability.phase !== 'MCFT-00' || capability.current_claim !== 'MCFT_00_REALITY_BINDING_FROZEN') bad('MCFT-00 top-level claim changed');
 else ok('MCFT-00 top-level claim preserved');
-const amendmentRow = (capability.governance_amendments || []).find((row) => row.amendment_id === 'MCFT-VERTICAL-AMENDMENT-01');
-if (!amendmentRow || amendmentRow.status !== status || amendmentRow.claim !== 'NO_RUNTIME_IMPLEMENTATION') bad('capability matrix amendment row invalid');
-else ok('capability matrix amendment row');
-const capabilityLineRow = (capability.capability_lines || []).find((row) => row.capability_line_id === 'MCFT-CAP-01');
-if (!capabilityLineRow || capabilityLineRow.status !== 'BLOCKED_BY_DT02_AMENDMENT_02') bad('capability matrix capability-line row invalid');
-else ok('capability matrix capability-line row');
+const amendmentRow = (capability.governance_amendments || []).find(
+  (row) => row.amendment_id === 'MCFT-VERTICAL-AMENDMENT-01'
+);
+
+if (
+  !amendmentRow ||
+  amendmentRow.status !== status ||
+  amendmentRow.claim !== 'NO_RUNTIME_IMPLEMENTATION'
+) {
+  bad('capability matrix amendment row invalid');
+} else {
+  ok('capability matrix amendment row');
+}
+
+const dt02AmendmentRow = (capability.governance_amendments || []).find(
+  (row) => row.amendment_id === 'DT02-AMENDMENT-02'
+);
+
+if (dt02Status === 'COMPLETE') {
+  if (
+    !dt02AmendmentRow ||
+    dt02AmendmentRow.status !== 'COMPLETE' ||
+    dt02AmendmentRow.claim !== 'NO_RUNTIME_IMPLEMENTATION'
+  ) {
+    bad('capability matrix DT02-AMENDMENT-02 row invalid');
+  } else {
+    ok('capability matrix DT02-AMENDMENT-02 COMPLETE row');
+  }
+} else if (dt02AmendmentRow?.status === 'COMPLETE') {
+  bad('capability matrix prematurely marks DT02-AMENDMENT-02 COMPLETE');
+} else {
+  ok('capability matrix does not prematurely complete DT02-AMENDMENT-02');
+}
+
+const capabilityLineRow = (capability.capability_lines || []).find(
+  (row) => row.capability_line_id === 'MCFT-CAP-01'
+);
+
+if (
+  !capabilityLineRow ||
+  capabilityLineRow.status !== expectedCapabilityLineStatus
+) {
+  bad('capability matrix capability-line row invalid');
+} else {
+  ok(`capability matrix capability-line status ${expectedCapabilityLineStatus}`);
+}
 
 const byCapability = new Map((capability.capabilities || []).map((row) => [row.capability_id, row]));
 for (const id of ['DT-MATRIX-HOURLY-TICK','DT-MATRIX-PROPAGATION','DT-MATRIX-ASSIMILATION','DT-MATRIX-POSTERIOR','DT-MATRIX-CHECKPOINT','DT-MATRIX-RESTART','DT-MATRIX-LATE-REVISION','DT-MATRIX-72H-REGEN']) {
@@ -183,23 +243,46 @@ for (const forbidden of [
   'automatic AO-ACT creation',
 ]) authoritative.includes(forbidden) ? bad(`forbidden positive claim ${forbidden}`) : ok(`forbidden positive claim absent ${forbidden}`);
 
-try {
-  cp.execFileSync('git', ['cat-file', '-e', `${BASE}^{commit}`], { cwd: ROOT, stdio: 'ignore' });
-  const output = cp.execFileSync('git', ['diff', '--name-only', `${BASE}...HEAD`], { cwd: ROOT, encoding: 'utf8' }).trim();
-  const changed = output ? output.split(/\r?\n/).filter(Boolean) : [];
-  const allowedExact = new Set([
-    F.amendment,
-    F.verticalMatrix,
-    F.implementationMap,
-    F.capabilityMatrix,
-    F.self,
-  ]);
-  const forbidden = changed.filter((file) => !allowedExact.has(file));
-  if (!changed.length) bad('no governance changes found');
-  else if (forbidden.length) bad(`forbidden changed files ${forbidden.join(', ')}`);
-  else ok(`governance-only changed-file boundary ${changed.length} files`);
-} catch (error) {
-  bad(`changed-file boundary failed: ${error.message}`);
+if (process.env.MCFT_VERTICAL_ACCEPTANCE_SKIP_GIT_SCOPE === '1') {
+  ok('successor regression changed-file scope delegated to DT02-AMENDMENT-02 Gate');
+} else {
+  try {
+    cp.execFileSync(
+      'git',
+      ['cat-file', '-e', `${BASE}^{commit}`],
+      { cwd: ROOT, stdio: 'ignore' }
+    );
+
+    const output = cp.execFileSync(
+      'git',
+      ['diff', '--name-only', `${BASE}...HEAD`],
+      { cwd: ROOT, encoding: 'utf8' }
+    ).trim();
+
+    const changed = output
+      ? output.split(/\r?\n/).filter(Boolean)
+      : [];
+
+    const allowedExact = new Set([
+      F.amendment,
+      F.verticalMatrix,
+      F.implementationMap,
+      F.capabilityMatrix,
+      F.self,
+    ]);
+
+    const forbidden = changed.filter((changedFile) => !allowedExact.has(changedFile));
+
+    if (!changed.length) {
+      bad('no governance changes found');
+    } else if (forbidden.length) {
+      bad(`forbidden changed files ${forbidden.join(', ')}`);
+    } else {
+      ok(`governance-only changed-file boundary ${changed.length} files`);
+    }
+  } catch (error) {
+    bad(`changed-file boundary failed: ${error.message}`);
+  }
 }
 
 finish();
