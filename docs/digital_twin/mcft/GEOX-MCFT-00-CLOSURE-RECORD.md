@@ -8,15 +8,15 @@ phase: MCFT-00
 baseline_main_commit: 7fd848ae00680480fc864990b9d03b37bc61fdff
 predecessor: DT-02 with DT02-AMENDMENT-01
 successor: MCFT-01 Canonical Replay Dataset
-status: PENDING_ACCEPTANCE
-acceptance_status: PENDING
+status: COMPLETE
+acceptance_status: COMPLETE
 duplicate_implementation_pr: #2305 CLOSED_SUPERSEDED
 ```
 
 ## Claim boundary
 
 ```text
-MCFT_00_REALITY_BINDING_FROZEN_PENDING_ACCEPTANCE
+MCFT_00_REALITY_BINDING_FROZEN
 GOVERNANCE_INPUT_ONLY
 TARGET_RUNTIME_MODE_REPLAY
 NO_RUNTIME_IMPLEMENTATION
@@ -41,21 +41,23 @@ configuration_matrix_hash: sha256:381ef166454c7b698c6641fadc5d08019fecff127e9529
 
 ```text
 architecture_input_head: 7fd848ae00680480fc864990b9d03b37bc61fdff
-implementation_validated_head: PENDING
-implementation_local_gate: PENDING
-DT-02 amended regression: PENDING
-DT-01 repository audit: PENDING
-DT-01 acceptance: PENDING
-DT-00 semantic regression: PENDING
-changed-file boundary: PENDING
-negative_fixture_count: PENDING
-working_tree: PENDING
-implementation_ci: PENDING
-closure_input_head: PENDING
+implementation_validated_head: cd9296e29ef98f93fe869e072ec6c08129c2889f
+implementation_local_gate: PASS — 185 PASS / 0 WARN / 0 FAIL
+DT-02 amended regression: PASS
+DT-01 repository audit: PASS
+DT-01 acceptance: PASS
+DT-00 semantic regression: PASS
+changed-file boundary: PASS
+changed_file_count: 23
+negative_fixture_count: 78
+working_tree: CLEAN
+implementation_ci: PASS — workflow ci #4332
+generic_ci_validated_head: cd9296e29ef98f93fe869e072ec6c08129c2889f
+closure_input_head: cd9296e29ef98f93fe869e072ec6c08129c2889f
 final_pr_head: external PR #2304 attestation
 final_pr_ci: external GitHub Actions attestation
 ```
 
-Tracked content cannot contain the SHA of its own final commit. The final PR head and final generic CI are external attestations in PR #2304.
+Tracked content cannot contain the SHA of its own final commit. The final PR head and final generic CI remain external attestations in PR #2304.
 
-This record may change to `COMPLETE` only after the full Gate runs with no skip variables, zero warnings, zero failures, a clean working tree, and final generic CI success.
+MCFT-00 is complete as a governed Reality Binding freeze. It does not claim a canonical Replay dataset, Runtime implementation, State estimator, Forecast, Scenario, Action Feedback, live device connection, real-field pilot, or production Field Twin.
