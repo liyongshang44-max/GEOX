@@ -4,7 +4,7 @@
 ```text
 delivery_slice_id: MCFT-CAP-01.MCFT-01.CANONICAL-REPLAY-DATASET-V1
 primary_owner_work_package_id: MCFT-01
-status: IN_IMPLEMENTATION
+status: COMPLETE
 claim: NO_RUNTIME_IMPLEMENTATION
 ```
 
@@ -29,3 +29,5 @@ Role availability derivation remains the exact MCFT-00 rule. In particular, an a
 A future assumption point's `valid_from` is a forecast horizon and does not make the containing snapshot FUTURE Evidence. Snapshot availability is independently derived from issued/retrieved/ingested times.
 
 The deterministic generator fixes all role formulas, event schedules, ordering, quality values, and limitations. No wall clock, randomness, network, database, file mtime, checkout path, process ID, or branch name may affect bytes.
+
+Completion evidence is recorded in `GEOX-MCFT-CAP-01-DELIVERY-SLICE-STATUS.json`. Completion establishes the governed Replay Dataset only; it does not establish Runtime execution.

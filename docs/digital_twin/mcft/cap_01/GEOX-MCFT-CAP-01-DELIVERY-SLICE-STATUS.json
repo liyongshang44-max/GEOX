@@ -4,10 +4,30 @@
   "display_alias": "MCFT-1",
   "baseline_main_commit": "94fe516ccbf8831be05c36ede5e2732bf7e19d55",
   "status": "IN_IMPLEMENTATION",
+  "foundation_closure": {
+    "implementation_candidate_head": "5975f8e1f1dfa6fc4a79b26c8a300ed6bdd869d3",
+    "implementation_candidate_ci": {
+      "workflow": "ci",
+      "run_number": 4425,
+      "run_id": 29024182167,
+      "conclusion": "success"
+    },
+    "local_acceptance": {
+      "s1_replay_dataset": "12_PASS_0_FAIL",
+      "s2_contracts_config": "10_PASS_0_FAIL",
+      "s3a_static_persistence": "16_PASS_0_FAIL",
+      "s3a_postgres": "8_PASS_0_FAIL",
+      "foundation_governance": "11_PASS_0_FAIL",
+      "server_typecheck": "PASS",
+      "server_build": "PASS",
+      "working_tree": "CLEAN"
+    },
+    "transition_effective_condition": "PR_2310_MERGED_AND_VERIFIED_ON_MAIN"
+  },
   "slices": [
     {
       "delivery_slice_id": "MCFT-CAP-01.MCFT-01.CANONICAL-REPLAY-DATASET-V1",
-      "status": "IN_IMPLEMENTATION",
+      "status": "COMPLETE",
       "primary_owner_work_package_id": "MCFT-01",
       "contributing_work_package_ids": [],
       "depends_on_delivery_slice_ids": [],
@@ -15,7 +35,7 @@
     },
     {
       "delivery_slice_id": "MCFT-CAP-01.MCFT-02.A0-CONTRACTS-AND-CONFIG-V1",
-      "status": "IN_IMPLEMENTATION",
+      "status": "COMPLETE",
       "primary_owner_work_package_id": "MCFT-02",
       "contributing_work_package_ids": [],
       "depends_on_delivery_slice_ids": [
@@ -25,7 +45,7 @@
     },
     {
       "delivery_slice_id": "MCFT-CAP-01.MCFT-03.A0-PERSISTENCE-V1",
-      "status": "IN_IMPLEMENTATION",
+      "status": "COMPLETE",
       "primary_owner_work_package_id": "MCFT-03",
       "contributing_work_package_ids": [],
       "depends_on_delivery_slice_ids": [
@@ -34,12 +54,18 @@
       "claim": "NO_A0_RUNTIME_EXECUTION"
     }
   ],
-  "next_authorized_slice_ids": [],
+  "next_authorized_slice_ids": [
+    "MCFT-CAP-01.MCFT-07-08.BOOTSTRAP-STATE-MATH-V1"
+  ],
   "nonclaims": [
+    "NO_A0_RUNTIME_EXECUTION",
     "NO_BOOTSTRAP_STATE_COMMITTED",
+    "NO_ACTIVE_INITIAL_LINEAGE",
+    "NO_INITIAL_CHECKPOINT",
     "NO_SUCCESSFUL_FORECAST",
     "NO_SCENARIO",
     "NO_PROPAGATION",
-    "NO_CONTINUOUS_RUNTIME"
+    "NO_CONTINUOUS_RUNTIME",
+    "NO_MCFT_CAP_01_CLOSURE"
   ]
 }

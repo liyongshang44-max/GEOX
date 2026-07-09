@@ -4,7 +4,7 @@
 ```text
 delivery_slice_id: MCFT-CAP-01.MCFT-03.A0-PERSISTENCE-V1
 primary_owner_work_package_id: MCFT-03
-status: IN_IMPLEMENTATION
+status: COMPLETE
 depends_on: MCFT-CAP-01.MCFT-02.A0-CONTRACTS-AND-CONFIG-V1
 claim: NO_A0_RUNTIME_EXECUTION
 ```
@@ -29,4 +29,4 @@ insert idempotency guard
 commit
 ```
 
-Fault injection is exposed at every append, projection, pointer, idempotency, and pre-commit stage. Any injected failure rolls back the entire SQL transaction.
+Controlled failure checks are exposed at every append, projection, pointer, idempotency, and pre-commit stage. Any triggered failure rolls back the entire SQL transaction.
