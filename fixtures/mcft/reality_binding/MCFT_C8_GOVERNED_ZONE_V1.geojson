@@ -1,0 +1,35 @@
+{
+  "type": "Feature",
+  "properties": {
+    "zone_id": "zone_mcft_c8_water_001",
+    "geometry_truth_status": "CONTROLLED_SYNTHETIC",
+    "geometry_source": "MCFT_00_PINNED_FIXTURE"
+  },
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          116.38,
+          39.9
+        ],
+        [
+          116.3818,
+          39.9
+        ],
+        [
+          116.3818,
+          39.9012
+        ],
+        [
+          116.38,
+          39.9012
+        ],
+        [
+          116.38,
+          39.9
+        ]
+      ]
+    ]
+  }
+}
