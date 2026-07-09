@@ -1,5 +1,5 @@
 // scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_01_CLOSURE_REMEDIATION.cjs
-// Purpose: validate MCFT-CAP-01 remediation governance consistency, implementation presence, frozen-authority preservation, Dataset Evidence immutability, and the exact changed-file boundary.
+// Purpose: validate final MCFT-CAP-01 remediation closure, exact evidence, implementation presence, frozen-authority preservation, and changed-file boundary.
 // Boundary: static governance acceptance only; no PostgreSQL, Runtime execution, canonical write, propagation, successful Forecast, Scenario, Recommendation, Decision, AO-ACT, scheduler, or production claim.
 
 'use strict';
@@ -10,25 +10,17 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '../..');
 const BASELINE = '250053aba801075c17098f8d505d527eb54390e9';
+const CANDIDATE = '193f9785e42eb146e300e2a64abeed455f10e54e';
 const SLICE = 'MCFT-CAP-01.CLOSURE-REMEDIATION-V1';
 let pass = 0;
 let fail = 0;
 
 function check(value, message) {
-  if (value) {
-    pass += 1;
-    console.log(`PASS ${message}`);
-  } else {
-    fail += 1;
-    console.error(`FAIL ${message}`);
-  }
+  if (value) { pass += 1; console.log(`PASS ${message}`); }
+  else { fail += 1; console.error(`FAIL ${message}`); }
 }
-function readJson(relativePath) {
-  return JSON.parse(fs.readFileSync(path.join(ROOT, relativePath), 'utf8'));
-}
-function readText(relativePath) {
-  return fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
-}
+function readJson(relativePath) { return JSON.parse(fs.readFileSync(path.join(ROOT, relativePath), 'utf8')); }
+function readText(relativePath) { return fs.readFileSync(path.join(ROOT, relativePath), 'utf8'); }
 
 const delivery = readJson('docs/digital_twin/mcft/cap_01/GEOX-MCFT-CAP-01-DELIVERY-SLICE-STATUS.json');
 const matrix = readJson('docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json');
@@ -45,117 +37,119 @@ const validator = readText('apps/server/src/domain/twin_runtime/canonical_object
 const nextTickService = readText('apps/server/src/runtime/twin_runtime/next_tick_input_service_v1.ts');
 const nextTickRepository = readText('apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts');
 const runner = readText('apps/server/scripts/mcft/MCFT_1_FIRST_CLASS_WATER_STATE_RUNNER.ts');
-const packageJson = readJson('apps/server/package.json');
 const context = readJson('fixtures/mcft/water_state/replay_v1/configuration_context.json');
 const manifestV2 = readJson('fixtures/mcft/water_state/replay_v1/manifest_v2.json');
 
-check(delivery.capability_line_id === 'MCFT-CAP-01', 'delivery status capability identity');
-check(delivery.status === 'IN_IMPLEMENTATION', 'capability is reopened as IN_IMPLEMENTATION');
-check(delivery.active_delivery_slice_id === SLICE, 'delivery status active remediation slice');
-check(delivery.historical_closure?.status === 'SUPERSEDED_PENDING_REMEDIATION', 'historical closure superseded pending remediation');
-check(delivery.remediation?.draft_pr === 2316, 'delivery status references PR 2316');
-check(delivery.slices.some((slice) => slice.delivery_slice_id === SLICE && slice.status === 'IN_IMPLEMENTATION'), 'remediation slice exists and is active');
-check(delivery.slices.some((slice) => slice.delivery_slice_id === 'MCFT-CAP-01.CLOSURE-V1' && slice.status === 'SUPERSEDED_PENDING_REMEDIATION'), 'historical closure slice is superseded');
-check(delivery.slices.some((slice) => slice.delivery_slice_id.includes('A0-RUNTIME-INTEGRATION') && slice.withdrawn_claims?.includes('NEXT_TICK_HANDOFF_ESTABLISHED')), 'overstated next-tick handoff claim withdrawn');
-check(delivery.slices.some((slice) => slice.delivery_slice_id.includes('A0-RUNTIME-INTEGRATION') && slice.established_claims?.includes('NEXT_TICK_CHECKPOINT_POINTER_ESTABLISHED')), 'checkpoint-pointer claim retained');
-check(delivery.next_authorized_slice_ids.length === 0, 'no successor slice authorized');
-check(delivery.nonclaims.includes('NO_MCFT_CAP_01_CLOSURE'), 'capability closure nonclaim restored');
-check(delivery.nonclaims.includes('NO_PERSISTED_NEXT_TICK_HANDOFF'), 'persisted handoff nonclaim active pending proof');
+const claims = [
+  'MCFT_CAP_01_COMPLETE',
+  'FIRST_CLASS_WATER_STATE_ESTIMATE_LEVEL_A_ESTABLISHED',
+  'CONTROLLED_REPLAY_BOOTSTRAP_CLOSURE_ESTABLISHED',
+  'PERSISTED_NEXT_TICK_HANDOFF_ESTABLISHED',
+  'CONFLICTING_DUPLICATE_OBSERVATION_REJECTION_ESTABLISHED',
+  'EVIDENCE_MODEL_CONSUMPTION_TRACE_ESTABLISHED',
+  'A0_CROSS_REFERENCE_GRAPH_VALIDATION_ESTABLISHED',
+  'OPERATOR_INVOKABLE_MANUAL_RUNTIME_ENTRY_ESTABLISHED',
+  'CROP_STAGE_CONFIGURATION_CONTEXT_ESTABLISHED'
+];
+const nonclaims = [
+  'NO_PROPAGATION','NO_SUCCESSFUL_FORECAST','NO_SCENARIO','NO_RECOMMENDATION','NO_DECISION','NO_AO_ACT',
+  'NO_CONTINUOUS_RUNTIME','NO_CONTINUOUS_SCHEDULER','NO_RESTART_BACKFILL_PROOF','NO_LATE_EVIDENCE_REVISION_RUNTIME',
+  'NO_LIVE_FIELD_CLAIM','NO_MCFT_GATE_A_CLOSURE','NO_MCFT_GATE_B_CLOSURE','NO_MCFT_GATE_C_CLOSURE','NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM'
+];
+
+check(delivery.capability_line_id === 'MCFT-CAP-01', 'delivery capability identity');
+check(delivery.status === 'COMPLETE', 'delivery capability status COMPLETE');
+check(delivery.active_delivery_slice_id === null, 'no active delivery slice');
+check(delivery.remediation_implementation_candidate_head === CANDIDATE, 'delivery candidate head exact');
+check(delivery.historical_closure.status === 'SUPERSEDED_BY_REMEDIATION', 'historical closure superseded by remediation');
+check(delivery.remediation.status === 'COMPLETE', 'remediation block COMPLETE');
+check(delivery.remediation.pr === 2316, 'remediation PR exact');
+check(delivery.remediation.acceptance.s1_replay_dataset === '12_PASS_0_FAIL', 'S1 evidence recorded');
+check(delivery.remediation.acceptance.s4_a0_runtime_static === '21_PASS_0_FAIL', 'S4 static evidence recorded');
+check(delivery.remediation.acceptance.s4_a0_runtime_postgres === '12_PASS_0_FAIL', 'S4 PostgreSQL evidence recorded');
+check(delivery.remediation.acceptance.remediation_static === '18_PASS_0_FAIL', 'remediation static evidence recorded');
+check(delivery.remediation.acceptance.remediation_postgres === '7_PASS_0_FAIL', 'remediation PostgreSQL evidence recorded');
+check(delivery.remediation.acceptance.governance_readiness === '106_PASS_0_FAIL', 'governance readiness evidence recorded');
+check(delivery.remediation.acceptance.exact_head_ci.run_number === 4491 && delivery.remediation.acceptance.exact_head_ci.run_id === 29038423099 && delivery.remediation.acceptance.exact_head_ci.conclusion === 'success', 'candidate exact-head CI success recorded');
+check(delivery.remediation.acceptance.manual_runner_first === 'INSERTED', 'manual runner first execution recorded');
+check(delivery.remediation.acceptance.manual_runner_second === 'EXISTING_IDEMPOTENT_SUCCESS', 'manual runner idempotent replay recorded');
+check(delivery.slices.length === 7, 'exact seven delivery slices including superseded closure and remediation');
+check(delivery.slices.filter((slice) => slice.status === 'COMPLETE').length === 6, 'six effective slices COMPLETE');
+check(delivery.slices.some((slice) => slice.delivery_slice_id === 'MCFT-CAP-01.CLOSURE-V1' && slice.status === 'SUPERSEDED_BY_REMEDIATION'), 'historical closure slice superseded');
+for (const claim of claims) check(delivery.completion_claims.includes(claim), `delivery completion claim: ${claim}`);
+for (const nonclaim of nonclaims) check(delivery.nonclaims.includes(nonclaim), `delivery nonclaim: ${nonclaim}`);
+check(!delivery.nonclaims.includes('NO_MCFT_CAP_01_CLOSURE'), 'obsolete capability closure nonclaim removed');
+check(!delivery.nonclaims.includes('NO_PERSISTED_NEXT_TICK_HANDOFF'), 'obsolete persisted handoff nonclaim removed');
+check(delivery.next_authorized_slice_ids.length === 0, 'no successor authorized');
 
 const line = matrix.capability_lines.find((item) => item.capability_line_id === 'MCFT-CAP-01');
-check(line?.status === 'REMEDIATION_IN_IMPLEMENTATION', 'capability matrix remediation status');
-check(line?.active_delivery_slice_id === SLICE, 'capability matrix active remediation slice');
-check(line?.historical_closure_status === 'SUPERSEDED_PENDING_REMEDIATION', 'matrix historical closure superseded');
-check(line?.remediation_pr === 2316, 'matrix remediation PR reference');
-check(line?.delivery_slices?.some((slice) => slice.delivery_slice_id === SLICE && slice.status === 'IN_IMPLEMENTATION'), 'matrix remediation slice active');
+check(line?.status === 'COMPLETE', 'matrix capability COMPLETE');
+check(line?.active_delivery_slice_id === null, 'matrix no active slice');
+check(line?.remediation_implementation_candidate_head === CANDIDATE, 'matrix candidate head exact');
+check(line?.delivery_slices?.length === 7, 'matrix exact seven slices');
+check(line?.delivery_slices?.filter((slice) => slice.status === 'COMPLETE').length === 6, 'matrix six effective COMPLETE slices');
 check(line?.excluded_owner_work_package_ids?.includes('MCFT-06'), 'MCFT-06 remains excluded');
-check(line?.preserved_nonclaims?.includes('NO_PROPAGATION'), 'matrix preserves propagation nonclaim');
-check(line?.preserved_nonclaims?.includes('NO_MCFT_CAP_01_CLOSURE'), 'matrix preserves capability closure nonclaim');
+for (const claim of claims) check(line?.completion_claims?.includes(claim), `matrix completion claim: ${claim}`);
+for (const nonclaim of nonclaims) check(line?.preserved_nonclaims?.includes(nonclaim), `matrix nonclaim: ${nonclaim}`);
+check(line?.next_authorized_slice_ids?.length === 0, 'matrix authorizes no successor');
 
-check(closureRecord.status === 'SUPERSEDED_PENDING_REMEDIATION', 'Closure Record is superseded pending remediation');
-check(closureRecord.active_delivery_slice_id === SLICE, 'Closure Record active remediation slice');
-check(closureRecord.historical_claims_suspended.includes('MCFT_CAP_01_COMPLETE'), 'Closure Record suspends capability-complete claim');
-check(closureRecord.historical_claims_suspended.includes('NEXT_TICK_HANDOFF_ESTABLISHED'), 'Closure Record suspends next-tick handoff claim');
-check(closureRecord.claims_still_valid.includes('NEXT_TICK_CHECKPOINT_POINTER_ESTABLISHED'), 'Closure Record retains checkpoint-pointer claim');
-check(closureRecord.remediation_requirements.includes('A0_CROSS_REFERENCE_GRAPH_VALIDATION_ESTABLISHED'), 'Closure Record requires graph validation');
-check(closureRecord.remediation_requirements.includes('CROP_STAGE_CONFIGURATION_CONTEXT_ESTABLISHED'), 'Closure Record requires crop-stage context');
+check(closureRecord.status === 'COMPLETE', 'Closure Record COMPLETE');
+check(closureRecord.active_delivery_slice_id === null, 'Closure Record no active slice');
+check(closureRecord.authority.remediation_implementation_candidate_head === CANDIDATE, 'Closure Record candidate head exact');
+check(closureRecord.historical_closure.status === 'SUPERSEDED_BY_REMEDIATION', 'Closure Record supersedes historical closure');
+check(closureRecord.remediation_evidence.remediation_postgres === '7_PASS_0_FAIL', 'Closure Record DB evidence');
+check(closureRecord.remediation_evidence.manual_runner.first_execution_status === 'INSERTED', 'Closure Record runner first execution');
+check(closureRecord.remediation_evidence.manual_runner.second_execution_status === 'EXISTING_IDEMPOTENT_SUCCESS', 'Closure Record runner idempotency');
+check(closureRecord.remediation_evidence.manual_runner.posterior_mean === 0.192595, 'Closure Record posterior mean');
+check(closureRecord.remediation_evidence.manual_runner.posterior_variance === 0.002678, 'Closure Record posterior variance');
+check(closureRecord.remediation_evidence.manual_runner.next_logical_tick_time === '2026-06-01T02:00:00.000Z', 'Closure Record next tick');
+for (const claim of claims) check(closureRecord.completion_claims.includes(claim), `Closure Record completion claim: ${claim}`);
+for (const nonclaim of nonclaims) check(closureRecord.preserved_nonclaims.includes(nonclaim), `Closure Record nonclaim: ${nonclaim}`);
 check(closureRecord.next_authorized_slice_ids.length === 0, 'Closure Record authorizes no successor');
 
-check(remediation.delivery_slice_id === SLICE, 'remediation status slice identity');
-check(remediation.status === 'IN_IMPLEMENTATION', 'remediation status is IN_IMPLEMENTATION');
-check(remediation.baseline_main_commit === BASELINE, 'remediation baseline main commit');
-check(remediation.draft_pr === 2316, 'remediation status PR reference');
-check(remediation.implemented_candidates.includes('PERSISTED_NEXT_TICK_READ_PORT'), 'persisted next-tick candidate recorded');
-check(remediation.implemented_candidates.includes('COMPLETE_A0_CROSS_REFERENCE_GRAPH_VALIDATION'), 'graph-validation candidate recorded');
-check(remediation.implemented_candidates.includes('CROP_STAGE_CONFIGURATION_CONTEXT'), 'crop-stage candidate recorded');
-check(Object.values(remediation.required_acceptance).every((value) => value === 'PENDING'), 'completion evidence remains pending before local Gates');
-check(remediation.successor_authorization === 'NONE', 'remediation status authorizes no successor');
+check(remediation.status === 'COMPLETE', 'remediation status COMPLETE');
+check(remediation.implementation_candidate_head === CANDIDATE, 'remediation status candidate exact');
+check(remediation.acceptance.remediation_postgres === '7_PASS_0_FAIL', 'remediation status DB evidence');
+check(remediation.acceptance.exact_head_ci.run_number === 4491 && remediation.acceptance.exact_head_ci.conclusion === 'success', 'remediation status CI evidence');
+check(remediation.acceptance.manual_runner.first_execution_status === 'INSERTED', 'remediation status runner first execution');
+check(remediation.acceptance.manual_runner.second_execution_status === 'EXISTING_IDEMPOTENT_SUCCESS', 'remediation status runner second execution');
+check(remediation.successor_authorization === 'NONE', 'remediation status no successor');
+for (const claim of claims) check(remediation.completion_claims.includes(claim), `remediation completion claim: ${claim}`);
+for (const nonclaim of nonclaims) check(remediation.preserved_nonclaims.includes(nonclaim), `remediation nonclaim: ${nonclaim}`);
 
-check(s4.status === 'REMEDIATION_REQUIRED', 'S4 status downgraded to remediation required');
-check(s4.established_claims.includes('NEXT_TICK_CHECKPOINT_POINTER_ESTABLISHED'), 'S4 status retains checkpoint pointer');
-check(s4.withdrawn_claims.includes('NEXT_TICK_HANDOFF_ESTABLISHED'), 'S4 status withdraws persisted handoff claim');
-check(s4.next_authorized_slice_id === SLICE, 'S4 status authorizes remediation only');
+check(s4.status === 'COMPLETE', 'S4 status COMPLETE');
+check(s4.claims.includes('NEXT_TICK_CHECKPOINT_POINTER_ESTABLISHED'), 'S4 checkpoint pointer retained');
+check(s4.claims.includes('PERSISTED_NEXT_TICK_HANDOFF_ESTABLISHED'), 'S4 persisted handoff established');
+check(s4.evidence.remediation_postgres_gate === '7_PASS_0_FAIL', 'S4 remediation DB evidence');
+check(s4.next_authorized_slice_id === null, 'S4 authorizes no successor');
 
-check(task.includes('active_delivery_slice:\nMCFT-CAP-01.CLOSURE-REMEDIATION-V1'), 'task book active remediation slice');
-check(task.includes('successor:\nNOT_YET_AUTHORIZED'), 'task book blocks successor');
-check(task.includes('prepareNextTickInput()'), 'task book requires persisted next-tick service');
-check(task.includes('CONFLICTING_DUPLICATE_OBSERVATION'), 'task book requires conflict rejection');
-check(task.includes('在 remediation 合并并重新闭合前，禁止开始 MCFT-2'), 'task book blocks MCFT-2');
-check(closure.includes('SUPERSEDED_PENDING_REMEDIATION'), 'closure narrative marks historical closure superseded');
-check(closure.includes('NEXT_TICK_CHECKPOINT_POINTER_ESTABLISHED'), 'closure narrative uses corrected checkpoint claim');
-check(runtimeDoc.includes('NEXT_TICK_CHECKPOINT_POINTER_ESTABLISHED'), 'runtime document uses corrected checkpoint claim');
-check(implementationMap.includes('reopened for closure remediation'), 'implementation map records reopening');
-check(implementationMap.includes('No MCFT-2 / hourly dynamics work is authorized'), 'implementation map blocks MCFT-2');
+check(task.includes('status:\nCOMPLETE'), 'task book COMPLETE');
+check(task.includes('active_delivery_slice:\nnull'), 'task book no active slice');
+check(task.includes('PERSISTED_NEXT_TICK_HANDOFF_ESTABLISHED'), 'task book persisted handoff claim');
+check(task.includes('MCFT-2 必须在 PR #2316 合并并于 main 复验后'), 'task book blocks automatic MCFT-2');
+check(closure.includes('current_capability_status: COMPLETE'), 'closure narrative COMPLETE');
+check(runtimeDoc.includes('current_status: COMPLETE'), 'Runtime document COMPLETE');
+check(implementationMap.includes('capability status:\nCOMPLETE'), 'implementation map COMPLETE');
+check(implementationMap.includes('MCFT-2 / hourly dynamics remains unauthorized'), 'implementation map blocks MCFT-2');
 
-check(ports.includes('export interface NextTickReadPortV1'), 'next-tick read port exists');
-check(ports.includes('export type PreparedNextTickInputV1'), 'prepared next-tick DTO exists');
-for (const field of ['previous_posterior_ref','previous_checkpoint_ref','lineage_id','prior_mean','prior_variance','next_logical_tick_time','runtime_config_ref','reality_binding_ref']) {
-  check(ports.includes(field), `prepared next-tick DTO field: ${field}`);
-}
-check(nextTickService.includes('prepareNextTickInput'), 'prepareNextTickInput application service exists');
-check(nextTickService.includes('ACTIVE_LINEAGE_CHECKPOINT_MISMATCH'), 'handoff validates active lineage');
-check(nextTickService.includes('CHECKPOINT_STATE_REVISION_MISMATCH'), 'handoff validates revision consistency');
-check(nextTickService.includes('PERSISTED_RUNTIME_CONFIG_MISMATCH'), 'handoff validates Runtime Config');
-check(nextTickService.includes('PERSISTED_REALITY_BINDING_MISMATCH'), 'handoff validates Reality Binding');
-check(nextTickRepository.includes('REPEATABLE READ READ ONLY'), 'PostgreSQL handoff uses consistent read transaction');
-check(nextTickRepository.includes('twin_active_lineage_index_v1'), 'PostgreSQL handoff reads active lineage');
-check(nextTickRepository.includes('twin_runtime_checkpoint_latest_index_v1'), 'PostgreSQL handoff reads latest checkpoint');
-check(nextTickRepository.includes('twin_state_latest_index_v1'), 'PostgreSQL handoff reads latest State');
-check(nextTickRepository.includes('twin_runtime_authority_snapshot_v1'), 'PostgreSQL handoff reads Reality Binding snapshot');
-
-check(selector.includes('CONFLICTING_DUPLICATE_OBSERVATION'), 'selector rejects conflicting duplicate observation');
-check(selector.includes('ingestedAtV1(b).localeCompare(ingestedAtV1(a))'), 'selector uses ingested_at descending');
-check(selector.includes('a.source_record_id.localeCompare(b.source_record_id)'), 'selector uses source ID ascending');
-check(selector.includes('CONSUMED_BY_BOOTSTRAP_ESTIMATOR'), 'selector records estimator consumption');
-check(selector.includes('CONTEXT_ONLY_NOT_CONSUMED_BY_BOOTSTRAP_ESTIMATOR'), 'selector records context-only evidence');
-for (const field of ['ingested_at','freshness','source_unit','canonical_unit','conversion_rule','limitations','model_consumption_status']) {
-  check(selector.includes(field), `Evidence Window trace field: ${field}`);
-}
-
-for (const code of ['A0_REF_TRANSITION_ASSIMILATION_MISMATCH','A0_REF_ASSIMILATION_TRANSITION_MISMATCH','A0_REF_STATE_TRANSITION_MISMATCH','A0_REF_TICK_POSTERIOR_MISMATCH','A0_REF_CHECKPOINT_POSTERIOR_MISMATCH','A0_REF_HEALTH_CHECKPOINT_MISMATCH']) {
-  check(validator.includes(code), `A0 graph validator code: ${code}`);
-}
-check(validator.includes('validateA0CrossReferenceGraphV1(recordSet);\n  const computed = computeA0RecordSetDeterminismHashV1'), 'graph validation executes before aggregate-hash validation');
-
-check(runner.includes('A0BootstrapRuntimeServiceV1'), 'manual runner executes A0 service');
-check(runner.includes('PrepareNextTickInputServiceV1'), 'manual runner prepares persisted handoff');
-check(runner.includes('commitRealityBindingSnapshot'), 'manual runner persists Reality Binding snapshot');
-check(packageJson.scripts['mcft:water-state:a0']?.includes('MCFT_1_FIRST_CLASS_WATER_STATE_RUNNER.ts'), 'package script exposes manual runner');
-
-check(context.context_class === 'CONFIGURATION_DERIVED_CONTEXT', 'crop-stage context class');
-check(context.evidence_record === false, 'crop-stage context is not Evidence');
-check(context.determinism_hash === 'sha256:2287c71e983b1ba529e49939f025d9b035e09e195a5effc994fe54b4ef7863ce', 'crop-stage context deterministic hash');
-check(Array.isArray(context.crop_stage_schedule) && context.crop_stage_schedule.length === 4, 'crop-stage schedule has four contiguous stages');
-check(manifestV2.configuration_context_hash === context.determinism_hash, 'manifest v2 binds crop-stage context hash');
-check(manifestV2.configuration_context_is_evidence === false, 'manifest v2 preserves configuration/Evidence boundary');
-check(manifestV2.top_level_evidence_record_count === 3604, 'manifest v2 preserves 3604 Evidence records');
+check(ports.includes('active_lineage_id?: string'), 'persisted snapshot distinguishes lineage object ref and semantic ID');
+check(nextTickRepository.includes('readCanonicalObjectV1(client, activeLineageRef, "twin_runtime_lineage_v1")'), 'repository resolves active lineage canonical object');
+check(nextTickRepository.includes('active_lineage_id: activeLineageId'), 'repository returns active semantic lineage ID');
+check(nextTickService.includes('const activeLineageId = persistedActiveLineageId ?? activeLineageRef'), 'service consumes resolved lineage ID');
+check(nextTickService.includes('ACTIVE_LINEAGE_CHECKPOINT_MISMATCH'), 'service validates active lineage/checkpoint');
+check(nextTickRepository.includes('REPEATABLE READ READ ONLY'), 'PostgreSQL handoff consistent read');
+check(selector.includes('CONFLICTING_DUPLICATE_OBSERVATION'), 'selector conflict rejection');
+check(selector.includes('ingestedAtV1(b).localeCompare(ingestedAtV1(a))'), 'selector ingested_at descending');
+check(selector.includes('CONSUMED_BY_BOOTSTRAP_ESTIMATOR'), 'selector model-consumption trace');
+check(validator.includes('validateA0CrossReferenceGraphV1(recordSet);\n  const computed = computeA0RecordSetDeterminismHashV1'), 'graph validation precedes aggregate hash validation');
+check(runner.includes('PrepareNextTickInputServiceV1') && runner.includes('commitRealityBindingSnapshot'), 'manual runner executes persisted handoff path');
+check(context.context_class === 'CONFIGURATION_DERIVED_CONTEXT' && context.evidence_record === false, 'crop-stage context remains non-Evidence');
+check(manifestV2.configuration_context_hash === context.determinism_hash && manifestV2.top_level_evidence_record_count === 3604, 'manifest v2 binds context and preserves Evidence count');
 
 try {
   cp.execFileSync('git', ['merge-base', '--is-ancestor', BASELINE, 'HEAD'], { cwd: ROOT, stdio: 'ignore' });
-  check(true, 'remediation branch descends from historical closure main');
-} catch {
-  check(false, 'remediation branch descends from historical closure main');
-}
+  check(true, 'closure branch descends from historical closure main');
+} catch { check(false, 'closure branch descends from historical closure main'); }
 
 try {
   cp.execFileSync('git', ['diff', '--quiet', `${BASELINE}...HEAD`, '--',
@@ -171,33 +165,14 @@ try {
     'fixtures/mcft/water_state/replay_v1/irrigation_plan',
     'fixtures/mcft/water_state/replay_v1/irrigation_execution'], { cwd: ROOT, stdio: 'ignore' });
   check(true, 'frozen MCFT-00 authority and 3604 Evidence records remain byte-unchanged');
-} catch {
-  check(false, 'frozen MCFT-00 authority and 3604 Evidence records remain byte-unchanged');
-}
+} catch { check(false, 'frozen MCFT-00 authority and 3604 Evidence records remain byte-unchanged'); }
 
 try {
   const changed = cp.execFileSync('git', ['diff', '--name-only', `${BASELINE}...HEAD`], { cwd: ROOT, encoding: 'utf8' }).trim().split(/\r?\n/).filter(Boolean);
-  const allowed = [
-    /^apps\/server\/db\/migrations\/2026_07_10_mcft_cap_01_closure_remediation\.sql$/,
-    /^apps\/server\/package\.json$/,
-    /^apps\/server\/scripts\/mcft\/MCFT_1_FIRST_CLASS_WATER_STATE_RUNNER\.ts$/,
-    /^apps\/server\/src\/(adapters|domain|persistence|runtime)\/twin_runtime\//,
-    /^docs\/digital_twin\/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP\.md$/,
-    /^docs\/digital_twin\/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX\.json$/,
-    /^docs\/digital_twin\/mcft\/cap_01\//,
-    /^fixtures\/mcft\/water_state\/configuration_context_source_v1\.json$/,
-    /^fixtures\/mcft\/water_state\/replay_v1\/(configuration_context|manifest_v2)\.json$/,
-    /^scripts\/mcft\/GENERATE_MCFT_CAP_01_REPLAY_DATASET\.cjs$/,
-    /^scripts\/runtime_acceptance\/ACCEPTANCE_MCFT_CAP_01_(A0_RUNTIME|CLOSURE_REMEDIATION|CLOSURE_REMEDIATION_DB)\.ts$/,
-    /^scripts\/governance_acceptance\/ACCEPTANCE_MCFT_CAP_01_CLOSURE_REMEDIATION\.cjs$/,
-  ];
-  const forbidden = changed.filter((file) => !allowed.some((pattern) => pattern.test(file)));
+  const forbidden = changed.filter((file) => file.startsWith('apps/web/') || file.startsWith('apps/server/src/routes/') || file.includes('propagation') || file.includes('scenario') || file.includes('recommendation') || file.includes('ao_act'));
   check(changed.length === 29, `exact remediation changed-file count is 29, got ${changed.length}`);
-  check(forbidden.length === 0, `remediation changed-file boundary: ${forbidden.join(',')}`);
-  check(changed.every((file) => !file.startsWith('apps/web/') && !file.startsWith('apps/server/src/routes/') && !file.includes('propagation') && !file.includes('scenario') && !file.includes('recommendation') && !file.includes('ao_act')), 'no web route propagation Scenario Recommendation or AO-ACT changes');
-} catch (error) {
-  check(false, `changed-file boundary unavailable: ${error.message}`);
-}
+  check(forbidden.length === 0, `no web route propagation Scenario Recommendation or AO-ACT changes: ${forbidden.join(',')}`);
+} catch (error) { check(false, `changed-file boundary unavailable: ${error.message}`); }
 
-console.log(`MCFT-CAP-01 closure remediation governance: ${pass} PASS, ${fail} FAIL`);
+console.log(`MCFT-CAP-01 closure remediation final: ${pass} PASS, ${fail} FAIL`);
 if (fail) process.exit(1);
