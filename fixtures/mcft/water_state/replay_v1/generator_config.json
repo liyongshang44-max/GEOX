@@ -1,0 +1,68 @@
+{
+  "schema_version": "geox_mcft_cap_01_replay_generator_config_v1",
+  "dataset_id": "mcft_c8_water_replay_2026_06_v1",
+  "dataset_truth_class": "CONTROLLED_SYNTHETIC_CANONICAL_REPLAY_FIXTURE",
+  "coverage_start": "2026-06-01T00:00:00.000Z",
+  "coverage_end_exclusive": "2026-07-01T00:00:00.000Z",
+  "timezone": "UTC",
+  "tick_interval_ms": 3600000,
+  "hourly_interval_count": 720,
+  "encoding": "UTF-8_NO_BOM",
+  "line_ending": "LF",
+  "trailing_newline": true,
+  "role_generation_rules": {
+    "SOIL_MOISTURE_OBSERVATION": {
+      "observed_offset_minutes": -10,
+      "ingested_offset_minutes": -5,
+      "base_percent_vwc": 18.4,
+      "cycle_step_hundredth": 7,
+      "cycle_modulus": 17
+    },
+    "RAINFALL_OBSERVATION": {
+      "rain_every_137_hours_mm": 3.2,
+      "rain_every_211_hours_mm": 1.1
+    },
+    "HISTORICAL_ET0_INPUT": {
+      "base_mm_per_hour": 0.08,
+      "hourly_step_mm": 0.005
+    },
+    "FUTURE_WEATHER_ASSUMPTION": {
+      "issued_offset_minutes": -15,
+      "retrieved_offset_minutes": 5,
+      "point_count": 72
+    },
+    "FUTURE_ET0_ASSUMPTION": {
+      "issued_offset_minutes": -15,
+      "retrieved_offset_minutes": 5,
+      "point_count": 72
+    }
+  },
+  "irrigation_events": [
+    {
+      "event_id": "A",
+      "plan_created_at": "2026-06-09T00:00:00.000Z",
+      "plan_effective_from": "2026-06-10T06:00:00.000Z",
+      "plan_effective_to": "2026-06-10T08:00:00.000Z",
+      "plan_available_at": "2026-06-09T00:05:00.000Z",
+      "approved_amount_mm": 15.0,
+      "executed_at": "2026-06-10T06:30:00.000Z",
+      "execution_ingested_at": "2026-06-10T06:35:00.000Z",
+      "execution_available_at": "2026-06-10T06:35:00.000Z",
+      "executed_amount_mm": 13.6,
+      "coverage_fraction": 0.91
+    },
+    {
+      "event_id": "B",
+      "plan_created_at": "2026-06-19T00:00:00.000Z",
+      "plan_effective_from": "2026-06-20T05:00:00.000Z",
+      "plan_effective_to": "2026-06-20T08:00:00.000Z",
+      "plan_available_at": "2026-06-19T00:05:00.000Z",
+      "approved_amount_mm": 25.0,
+      "executed_at": "2026-06-20T05:45:00.000Z",
+      "execution_ingested_at": "2026-06-20T05:50:00.000Z",
+      "execution_available_at": "2026-06-20T05:50:00.000Z",
+      "executed_amount_mm": 24.2,
+      "coverage_fraction": 0.97
+    }
+  ]
+}
