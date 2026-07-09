@@ -3,7 +3,22 @@
 
 ## 0. Rule
 
-DT-02 freezes architecture. MCFT phases implement it. DT02-AMENDMENT-01 supersedes the affected original rules. No MCFT phase may silently replace a frozen or amended decision.
+DT-02 freezes architecture. MCFT owner work packages implement it. DT02-AMENDMENT-01 supersedes the affected original rules. MCFT-VERTICAL-AMENDMENT-01 introduces vertical capability lines and bounded delivery slices without changing DT-02 architecture ownership. No MCFT phase or capability line may silently replace a frozen or amended decision.
+
+The identifiers are orthogonal:
+
+```text
+capability_line_id
+  vertical executable capability closure unit
+
+owner_work_package_id
+  horizontal architecture ownership catalogue entry
+
+delivery_slice_id
+  bounded implementation slice delivered by a capability line
+```
+
+`MCFT-01` through `MCFT-18` remain owner work-package identifiers. The first vertical capability line is `MCFT-CAP-01`, with display alias `MCFT-1`.
 
 ## 1. Phase map
 
@@ -29,7 +44,49 @@ DT-02 freezes architecture. MCFT phases implement it. DT02-AMENDMENT-01 supersed
 | runtime read APIs | ADR-003/008/013/014/016; API Matrix | MCFT-17 | field-scoped read family, active/superseded lineage and non-lineage audit queries, trace | no generated-object writes; no parallel namespace |
 | Operator integration | ADR-013/014; API/Legacy matrices | MCFT-18 | existing field runtime tabs consume real read models | route/tab existence is not runtime proof |
 
-## 2. Revision lifecycle implementation ownership
+## 2. Vertical capability delivery rule
+
+The phase map above remains the architecture ownership catalogue. Its sequence remains the semantic dependency order, but bounded slices may be delivered across several owner work packages when an accepted capability-line amendment defines:
+
+```text
+capability_line_id
+delivery_slice_id
+primary_owner_work_package_id
+contributing_work_package_ids
+depends_on_delivery_slice_ids
+partial-establishment status
+explicit nonclaims
+```
+
+A work package may be:
+
+```text
+NOT_STARTED
+SLICE_PLANNED
+PARTIALLY_ESTABLISHED
+COMPLETE
+```
+
+A capability-line closure does not automatically mark its contributing work packages COMPLETE.
+
+## 3. MCFT-CAP-01 slice map
+
+`MCFT-CAP-01` (`MCFT-1`) is authorized to deliver only:
+
+| delivery slice | primary owner | contributors | bounded result |
+|---|---|---|---|
+| `MCFT-CAP-01.MCFT-01.CANONICAL-REPLAY-DATASET-V1` | MCFT-01 | none | 30-day controlled Canonical Replay Dataset |
+| `MCFT-CAP-01.MCFT-02.A0-CONTRACTS-AND-CONFIG-V1` | MCFT-02 | none | A0 object/config subset only |
+| `MCFT-CAP-01.MCFT-03.A0-PERSISTENCE-V1` | MCFT-03 | none | A0 persistence, lease, fencing, idempotency and projection subset only |
+| `MCFT-CAP-01.MCFT-07-08.BOOTSTRAP-STATE-MATH-V1` | MCFT-08 | MCFT-07 | static bootstrap observation/assimilation and posterior math only |
+| `MCFT-CAP-01.MCFT-04-05-08-09.A0-RUNTIME-INTEGRATION-V1` | MCFT-04 | MCFT-05, MCFT-08, MCFT-09 | one A0 bootstrap transaction with BLOCKED Forecast only |
+| `MCFT-CAP-01.CLOSURE-V1` | MCFT-08 | MCFT-01/02/03/04/05/07/09 | bounded capability-line closure |
+
+MCFT-06 remains `NOT_STARTED` for MCFT-CAP-01. No propagation, water balance, rainfall application, ET application, irrigation application, continuous tick, restart/backfill, late revision, successful 72-point Forecast, or Scenario may be claimed.
+
+MCFT-CAP-01 remains blocked until DT02-AMENDMENT-02 is accepted.
+
+## 4. Revision lifecycle implementation ownership
 
 ```text
 E1_DECLARE_REVISION       MCFT-03/04/16
@@ -39,7 +96,9 @@ E3_PROMOTE_LINEAGE        MCFT-03/04/08/09/10/16
 
 E1/E2 switch no active pointers. E3 appends promotion authority and switches all eligible active/latest pointers atomically.
 
-## 3. Closure ownership
+Initial lineage activation is not defined by this map. It must be frozen separately by DT02-AMENDMENT-02 before any A0 Runtime implementation.
+
+## 5. Closure ownership
 
 | closure | architecture proof required |
 |---|---|
@@ -47,7 +106,9 @@ E1/E2 switch no active pointers. E3 appends promotion authority and switches all
 | MCFT-GATE-B Shadow-online Closure | same core with online adapters, persistent scheduling, late/out-of-order handling, restart recovery, readback, no automatic action |
 | MCFT-GATE-C Controlled-action Feedback Closure | same core with governed decision/approval/AO-ACT/receipt/acceptance and Action Feedback that separates execution from validation |
 
-## 4. DT-01 target=DT-02 resolution
+MCFT-CAP-01 closure is not MCFT-GATE-A, MCFT-GATE-B, or MCFT-GATE-C closure.
+
+## 6. DT-01 target=DT-02 resolution
 
 | DT-01 component/ruling | DT-02 disposition |
 |---|---|
@@ -69,7 +130,7 @@ E1/E2 switch no active pointers. E3 appends promotion authority and switches all
 | `canonical_field_routes` | ADR-013; `/operator/fields/:fieldId/*` retained |
 | `legacy_operator_twin_routes` | ADR-014; compatibility and deletion prerequisites |
 
-## 5. Implementation sequence
+## 7. Owner work-package dependency sequence
 
 ```text
 MCFT-00 -> MCFT-01 -> MCFT-02 -> MCFT-03 -> MCFT-04
@@ -78,4 +139,6 @@ MCFT-00 -> MCFT-01 -> MCFT-02 -> MCFT-03 -> MCFT-04
 -> MCFT-15 -> MCFT-16 -> MCFT-17 -> MCFT-18
 ```
 
-Parallel work is allowed only when dependency order and one-semantic-core rules remain intact.
+This is the semantic dependency order. It is not a requirement to close every owner work package in full before an accepted bounded capability slice may use a later owner.
+
+Parallel work is allowed only when dependency order, explicit delivery-slice dependencies, changed-file boundaries, partial-establishment claims, and one-semantic-core rules remain intact.
