@@ -24,6 +24,9 @@ const EXPECTED_SOURCE_MATRIX_HASH = 'sha256:c5187c23be0d058ffa23d464ae1139f924f5
 const EXPECTED_CONFIGURATION_MATRIX_HASH = 'sha256:381ef166454c7b698c6641fadc5d08019fecff127e9529a4c58a1f09d9e1fef5';
 const EXPECTED_GEOMETRY_HASH = 'sha256:d3dbc5495485e7af68acdc4b32e6061c2ea99772835be2805ae706b74d75ca51';
 const EXPECTED_CONTEXT_HASH = 'sha256:2287c71e983b1ba529e49939f025d9b035e09e195a5effc994fe54b4ef7863ce';
+const VERIFICATION_RELATIVE_PATH = 'docs/digital_twin/mcft/cap_01/GEOX-MCFT-CAP-01-MAIN-VERIFICATION.json';
+const IDENTITY_EVIDENCE_RELATIVE_PATH = 'acceptance-output/MCFT_CAP_02_PREDECESSOR_IDENTITY.json';
+const PREDECESSOR_LOCK_RELATIVE_PATH = 'docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-PREDECESSOR-LOCK.json';
 const PNPM = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 const GIT = process.platform === 'win32' ? 'git.exe' : 'git';
 
@@ -88,7 +91,7 @@ function resolveDatabaseName(databaseUrl) {
 function assertAuthorizationBranchBoundary() {
   const changed = git(['diff', '--name-only', `${BASELINE_MAIN}...HEAD`]).split(/\r?\n/).filter(Boolean);
   const allowedExact = new Set([
-    'docs/digital_twin/mcft/cap_01/GEOX-MCFT-CAP-01-MAIN-VERIFICATION.json',
+    VERIFICATION_RELATIVE_PATH,
     'docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json',
     'docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md',
     'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_PREDECESSOR_PREFLIGHT.cjs',
@@ -115,6 +118,124 @@ function assertLocalMainRef() {
       throw error;
     }
   }
+}
+
+function writePredecessorLockFromEvidence() {
+  const verificationPath = path.join(ROOT, VERIFICATION_RELATIVE_PATH);
+  const identityEvidencePath = path.join(ROOT, IDENTITY_EVIDENCE_RELATIVE_PATH);
+  const predecessorLockPath = path.join(ROOT, PREDECESSOR_LOCK_RELATIVE_PATH);
+
+  if (!fs.existsSync(verificationPath)) fail('MAIN_VERIFICATION_ARTIFACT_REQUIRED');
+  if (!fs.existsSync(identityEvidencePath)) fail('PREDECESSOR_IDENTITY_EVIDENCE_REQUIRED');
+
+  const verificationStatus = git(['status', '--short', '--', VERIFICATION_RELATIVE_PATH]);
+  assert.equal(verificationStatus, '', 'MAIN_VERIFICATION_ARTIFACT_MUST_BE_COMMITTED');
+  const verificationCommit = git(['log', '-1', '--format=%H', '--', VERIFICATION_RELATIVE_PATH]);
+  assert.match(verificationCommit, /^[0-9a-f]{40}$/, 'MAIN_VERIFICATION_COMMIT_REQUIRED');
+  const committedVerification = git(['show', `${verificationCommit}:${VERIFICATION_RELATIVE_PATH}`]);
+  const workingVerification = fs.readFileSync(verificationPath, 'utf8').trim();
+  assert.equal(committedVerification.trim(), workingVerification, 'MAIN_VERIFICATION_COMMIT_CONTENT_MISMATCH');
+
+  const verification = readJson(verificationPath);
+  assert.equal(verification.verification_status, 'COMPLETE', 'MAIN_VERIFICATION_COMPLETE_REQUIRED');
+  assert.equal(verification.merge_commit, BASELINE_MAIN, 'MAIN_VERIFICATION_MERGE_COMMIT_MISMATCH');
+  assert.equal(verification.main_head_verified, BASELINE_MAIN, 'MAIN_VERIFICATION_HEAD_MISMATCH');
+  assert.equal(verification.final_closure_gate, '173_PASS_0_FAIL', 'MAIN_VERIFICATION_GATE_MISMATCH');
+  assert.equal(verification.server_typecheck, 'PASS', 'MAIN_VERIFICATION_TYPECHECK_REQUIRED');
+  assert.equal(verification.server_build, 'PASS', 'MAIN_VERIFICATION_BUILD_REQUIRED');
+  assert.equal(verification.git_diff_check, 'PASS', 'MAIN_VERIFICATION_DIFF_CHECK_REQUIRED');
+  assert.equal(verification.working_tree, 'CLEAN', 'MAIN_VERIFICATION_CLEAN_TREE_REQUIRED');
+  assert.equal(verification.canonical_identity_extraction, 'PASS', 'MAIN_VERIFICATION_IDENTITY_EXTRACTION_REQUIRED');
+
+  const identity = readJson(identityEvidencePath);
+  assert.equal(identity.schema_version, 'geox_mcft_cap_02_predecessor_identity_evidence_v1');
+  assert.equal(identity.extraction_source, 'ISOLATED_POSTGRESQL_CANONICAL_READ_PATH');
+  assert.equal(identity.predecessor_merge_commit, BASELINE_MAIN);
+  assert.equal(identity.reality_binding_ref, EXPECTED_REALITY_REF);
+  assert.equal(identity.reality_binding_hash, EXPECTED_REALITY_HASH);
+  assert.equal(identity.source_matrix_hash, EXPECTED_SOURCE_MATRIX_HASH);
+  assert.equal(identity.configuration_matrix_hash, EXPECTED_CONFIGURATION_MATRIX_HASH);
+  assert.equal(identity.geometry_semantic_hash, EXPECTED_GEOMETRY_HASH);
+  assert.equal(identity.crop_stage_context_hash, EXPECTED_CONTEXT_HASH);
+  assert.equal(identity.next_logical_tick_time, NEXT_LOGICAL_TIME);
+  for (const field of [
+    'active_lineage_object_ref',
+    'lineage_id',
+    'revision_id',
+    'bootstrap_state_ref',
+    'bootstrap_state_hash',
+    'bootstrap_checkpoint_ref',
+    'bootstrap_checkpoint_hash',
+    'bootstrap_runtime_config_ref',
+    'bootstrap_runtime_config_hash',
+  ]) {
+    assert.equal(typeof identity[field], 'string', `IDENTITY_FIELD_REQUIRED:${field}`);
+    assert.ok(identity[field].length > 0, `IDENTITY_FIELD_EMPTY:${field}`);
+  }
+
+  const lock = {
+    schema_version: 'geox_mcft_cap_02_predecessor_lock_v1',
+    capability_line_id: 'MCFT-CAP-02',
+    predecessor_capability_line_id: 'MCFT-CAP-01',
+    status: 'COMPLETE',
+    predecessor_implementation_candidate_head: IMPLEMENTATION_CANDIDATE,
+    predecessor_final_closure_head: FINAL_CLOSURE_HEAD,
+    predecessor_merge_commit: BASELINE_MAIN,
+    predecessor_main_verification_commit: verificationCommit,
+    predecessor_main_verification_ref: VERIFICATION_RELATIVE_PATH,
+    identity_extraction_source: identity.extraction_source,
+    identity_evidence_ref: IDENTITY_EVIDENCE_RELATIVE_PATH,
+    scope: identity.scope,
+    reality_binding_ref: identity.reality_binding_ref,
+    reality_binding_hash: identity.reality_binding_hash,
+    source_matrix_hash: identity.source_matrix_hash,
+    configuration_matrix_hash: identity.configuration_matrix_hash,
+    geometry_semantic_hash: identity.geometry_semantic_hash,
+    active_lineage_object_ref: identity.active_lineage_object_ref,
+    lineage_id: identity.lineage_id,
+    revision_id: identity.revision_id,
+    bootstrap_state_ref: identity.bootstrap_state_ref,
+    bootstrap_state_hash: identity.bootstrap_state_hash,
+    bootstrap_checkpoint_ref: identity.bootstrap_checkpoint_ref,
+    bootstrap_checkpoint_hash: identity.bootstrap_checkpoint_hash,
+    bootstrap_runtime_config_ref: identity.bootstrap_runtime_config_ref,
+    bootstrap_runtime_config_hash: identity.bootstrap_runtime_config_hash,
+    next_logical_tick_time: identity.next_logical_tick_time,
+    crop_stage_context_ref: identity.crop_stage_context_ref,
+    crop_stage_context_hash: identity.crop_stage_context_hash,
+    validated_relations: identity.validated_relations,
+    lock_claims: [
+      'PREDECESSOR_MERGED_MAIN_VERIFIED',
+      'PREDECESSOR_CANONICAL_IDENTITY_EXTRACTED_FROM_POSTGRESQL',
+      'PREDECESSOR_LINEAGE_REVISION_STATE_CHECKPOINT_CONFIG_LOCKED',
+      'PREDECESSOR_NEXT_LOGICAL_TICK_LOCKED'
+    ],
+    preserved_nonclaims: [
+      'NO_HOURLY_DYNAMICS_IMPLEMENTED',
+      'NO_CONTINUATION_STATE_PERSISTED',
+      'NO_OBSERVATION_UPDATE_APPLIED',
+      'NO_SUCCESSFUL_FORECAST',
+      'NO_SCENARIO',
+      'NO_RECOMMENDATION',
+      'NO_DECISION',
+      'NO_AO_ACT'
+    ]
+  };
+
+  writeJson(predecessorLockPath, lock);
+  ok(`predecessor lock written from committed verification and PostgreSQL evidence: ${PREDECESSOR_LOCK_RELATIVE_PATH}`);
+  process.stdout.write(`${JSON.stringify({
+    ok: true,
+    predecessor_main_verification_commit: verificationCommit,
+    predecessor_lock: PREDECESSOR_LOCK_RELATIVE_PATH,
+    active_lineage_object_ref: lock.active_lineage_object_ref,
+    lineage_id: lock.lineage_id,
+    revision_id: lock.revision_id,
+    bootstrap_state_ref: lock.bootstrap_state_ref,
+    bootstrap_checkpoint_ref: lock.bootstrap_checkpoint_ref,
+    bootstrap_runtime_config_ref: lock.bootstrap_runtime_config_ref,
+    next_logical_tick_time: lock.next_logical_tick_time
+  })}\n`);
 }
 
 async function initializeIsolatedDatabase(pool, worktree) {
@@ -253,13 +374,18 @@ async function extractCanonicalIdentity(pool, worktree) {
 }
 
 async function main() {
+  if (process.argv.includes('--write-predecessor-lock')) {
+    writePredecessorLockFromEvidence();
+    return;
+  }
+
   if (process.env.MCFT_CAP_02_PREFLIGHT_DESTRUCTIVE_ACCEPTANCE !== '1') fail('SET_MCFT_CAP_02_PREFLIGHT_DESTRUCTIVE_ACCEPTANCE_1');
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) fail('DATABASE_URL_REQUIRED');
   const databaseName = resolveDatabaseName(databaseUrl);
   ok(`database name is explicitly isolated for acceptance: ${databaseName}`);
 
-  assert.equal(git(['rev-parse', '--show-toplevel']), ROOT, 'REPOSITORY_ROOT_MISMATCH');
+  assert.equal(git(['rev-parse', '--show-toplevel']).replaceAll('\\', '/'), ROOT, 'REPOSITORY_ROOT_MISMATCH');
   assertLocalMainRef();
   git(['cat-file', '-e', `${BASELINE_MAIN}^{commit}`]);
   ok('predecessor merge commit exists locally');
@@ -267,8 +393,8 @@ async function main() {
 
   const worktree = path.join(os.tmpdir(), `geox-mcft-cap02-predecessor-${process.pid}`);
   const outputDir = path.join(ROOT, 'acceptance-output');
-  const verificationPath = path.join(ROOT, 'docs/digital_twin/mcft/cap_01/GEOX-MCFT-CAP-01-MAIN-VERIFICATION.json');
-  const identityEvidencePath = path.join(outputDir, 'MCFT_CAP_02_PREDECESSOR_IDENTITY.json');
+  const verificationPath = path.join(ROOT, VERIFICATION_RELATIVE_PATH);
+  const identityEvidencePath = path.join(ROOT, IDENTITY_EVIDENCE_RELATIVE_PATH);
   let worktreeCreated = false;
   const pool = new Pool({ connectionString: databaseUrl });
 
@@ -333,7 +459,7 @@ async function main() {
       git_diff_check: 'PASS',
       working_tree: 'CLEAN',
       canonical_identity_extraction: 'PASS',
-      canonical_identity_evidence_ref: 'acceptance-output/MCFT_CAP_02_PREDECESSOR_IDENTITY.json',
+      canonical_identity_evidence_ref: IDENTITY_EVIDENCE_RELATIVE_PATH,
       verification_status: 'COMPLETE'
     };
     writeJson(verificationPath, verification);
@@ -344,8 +470,8 @@ async function main() {
       pass_count: pass,
       predecessor_merge_commit: BASELINE_MAIN,
       final_closure_gate: '173_PASS_0_FAIL',
-      verification_artifact: path.relative(ROOT, verificationPath).replaceAll('\\', '/'),
-      identity_evidence: path.relative(ROOT, identityEvidencePath).replaceAll('\\', '/'),
+      verification_artifact: VERIFICATION_RELATIVE_PATH,
+      identity_evidence: IDENTITY_EVIDENCE_RELATIVE_PATH,
       active_lineage_object_ref: identity.active_lineage_object_ref,
       lineage_id: identity.lineage_id,
       revision_id: identity.revision_id,
@@ -360,7 +486,13 @@ async function main() {
       try {
         run(GIT, ['worktree', 'remove', '--force', worktree], { cwd: ROOT });
       } catch (error) {
-        process.stderr.write(`WARN verification worktree cleanup failed: ${error.message}\n`);
+        try {
+          fs.rmSync(worktree, { recursive: true, force: true, maxRetries: 5, retryDelay: 250 });
+          run(GIT, ['worktree', 'prune'], { cwd: ROOT });
+          process.stdout.write(`INFO verification worktree filesystem residue removed after Git cleanup warning: ${worktree}\n`);
+        } catch (cleanupError) {
+          process.stderr.write(`WARN verification worktree cleanup failed: ${error.message}; fallback cleanup failed: ${cleanupError.message}\n`);
+        }
       }
     } else if (worktreeCreated) {
       process.stdout.write(`INFO verification worktree retained at ${worktree}\n`);
