@@ -158,6 +158,17 @@ const closureMode = closureStatus === 'COMPLETE' ? 'COMPLETE' : closureStatus ==
 const expectedAcceptance = closureMode === 'COMPLETE' ? 'COMPLETE' : 'PENDING';
 const expectedClaim = closureMode === 'COMPLETE' ? 'MCFT_00_REALITY_BINDING_FROZEN' : 'MCFT_00_REALITY_BINDING_FROZEN_PENDING_ACCEPTANCE';
 
+for (const [label, artifact] of [
+  ['negative fixture manifest', negativeManifest],
+  ['geometry rounding fixture manifest', roundingManifest],
+]) {
+  if (artifact.status !== 'FROZEN' || artifact.acceptance_status !== expectedAcceptance) {
+    fail(`${label} acceptance state misaligned: status=${artifact.status}, acceptance_status=${artifact.acceptance_status}, expected=${expectedAcceptance}`);
+  } else {
+    pass(`${label} acceptance state aligned: ${expectedAcceptance}`);
+  }
+}
+
 function closureEvidenceValid() {
   if (closureMode === 'PENDING_ACCEPTANCE') {
     return [
@@ -365,6 +376,11 @@ for (const part of negativeManifest.part_files || []) {
     continue;
   }
   const parsedPart = parse(part.path);
+  if (parsedPart.status !== 'FROZEN' || parsedPart.acceptance_status !== expectedAcceptance) {
+    fail(`negative fixture part acceptance state misaligned ${part.path}: status=${parsedPart.status}, acceptance_status=${parsedPart.acceptance_status}, expected=${expectedAcceptance}`);
+  } else {
+    pass(`negative fixture part acceptance state aligned ${part.path}: ${expectedAcceptance}`);
+  }
   if (parsedPart.fixture_count !== (parsedPart.fixtures || []).length) fail(`negative fixture part count mismatch ${part.path}`);
   if (part.fixture_count !== parsedPart.fixture_count) fail(`negative fixture manifest count mismatch ${part.path}`);
   negativeFixtures.push(...(parsedPart.fixtures || []));
