@@ -40,18 +40,27 @@ export class PrepareNextTickInputServiceV1 {
     const snapshot = await this.reader.readPersistedNextTickSnapshot(scope);
     if (!snapshot) throw new Error("PERSISTED_NEXT_TICK_STATE_NOT_FOUND");
 
-    const { active_lineage_ref: activeLineageRef, checkpoint, previous_posterior: previousPosterior, runtime_config: runtimeConfig, reality_binding: realityBinding } = snapshot;
+    const {
+      active_lineage_ref: activeLineageRef,
+      active_lineage_id: persistedActiveLineageId,
+      checkpoint,
+      previous_posterior: previousPosterior,
+      runtime_config: runtimeConfig,
+      reality_binding: realityBinding,
+    } = snapshot;
     exactScopeV1(checkpoint, scope, "CHECKPOINT_SCOPE_MISMATCH");
     exactScopeV1(previousPosterior, scope, "PREVIOUS_POSTERIOR_SCOPE_MISMATCH");
     exactScopeV1(runtimeConfig, scope, "RUNTIME_CONFIG_SCOPE_MISMATCH");
     exactSnapshotScopeV1(realityBinding.scope, scope);
 
+    requiredStringV1(activeLineageRef, "ACTIVE_LINEAGE_REF_REQUIRED");
     if (checkpoint.object_type !== "twin_runtime_checkpoint_v1") throw new Error("LATEST_CHECKPOINT_OBJECT_TYPE_MISMATCH");
     if (previousPosterior.object_type !== "twin_state_estimate_v1") throw new Error("LATEST_STATE_OBJECT_TYPE_MISMATCH");
     if (runtimeConfig.object_type !== "twin_runtime_config_v1") throw new Error("RUNTIME_CONFIG_OBJECT_TYPE_REQUIRED");
 
     const lineageId = requiredStringV1(checkpoint.lineage_id, "CHECKPOINT_LINEAGE_REQUIRED");
-    if (activeLineageRef !== lineageId) throw new Error("ACTIVE_LINEAGE_CHECKPOINT_MISMATCH");
+    const activeLineageId = persistedActiveLineageId ?? activeLineageRef;
+    if (activeLineageId !== lineageId) throw new Error("ACTIVE_LINEAGE_CHECKPOINT_MISMATCH");
     if (previousPosterior.lineage_id !== lineageId) throw new Error("ACTIVE_LINEAGE_STATE_MISMATCH");
     if (checkpoint.revision_id !== previousPosterior.revision_id) throw new Error("CHECKPOINT_STATE_REVISION_MISMATCH");
     if (checkpoint.payload.last_posterior_state_ref !== previousPosterior.object_id) throw new Error("CHECKPOINT_PREVIOUS_POSTERIOR_REF_MISMATCH");
