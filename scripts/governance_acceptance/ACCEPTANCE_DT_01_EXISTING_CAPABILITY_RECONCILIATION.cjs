@@ -32,6 +32,8 @@ const FILES = {
   helperScript: 'scripts/governance_acceptance/DT01_JSON_ARTIFACT_LOADER.cjs',
   dt00RegressionScript: 'scripts/governance_acceptance/ACCEPTANCE_DT_00_MAINLINE_GOVERNANCE_RESET.cjs',
   dt02SuccessorScript: 'scripts/governance_acceptance/ACCEPTANCE_DT_02_RUNTIME_ARCHITECTURE_FREEZE.cjs',
+  dt02Amendment02Script: 'scripts/governance_acceptance/ACCEPTANCE_DT_02_ARCHITECTURE_AMENDMENT_02.cjs',
+  mcftVerticalSuccessorScript: 'scripts/governance_acceptance/ACCEPTANCE_MCFT_VERTICAL_CAPABILITY_LINE_AMENDMENT_01.cjs',
   mcft00SuccessorScript: 'scripts/governance_acceptance/ACCEPTANCE_MCFT_00_REALITY_BINDING_CONTRACT.cjs',
 };
 
@@ -265,7 +267,16 @@ try {
 
 try {
   const changed = cp.execFileSync('git', ['diff','--name-only',`${BASELINE}...HEAD`], { cwd: ROOT, encoding: 'utf8' }).trim().split(/\r?\n/).filter(Boolean);
-  const allowedGovernanceScripts = new Set([FILES.auditScript, FILES.acceptanceScript, FILES.helperScript, FILES.dt00RegressionScript, FILES.dt02SuccessorScript, FILES.mcft00SuccessorScript]);
+  const allowedGovernanceScripts = new Set([
+    FILES.auditScript,
+    FILES.acceptanceScript,
+    FILES.helperScript,
+    FILES.dt00RegressionScript,
+    FILES.dt02SuccessorScript,
+    FILES.dt02Amendment02Script,
+    FILES.mcftVerticalSuccessorScript,
+    FILES.mcft00SuccessorScript,
+  ]);
   const forbidden = changed.filter((file) => !(
     file.startsWith('docs/digital_twin/') ||
     file.startsWith('fixtures/mcft/reality_binding/') ||
