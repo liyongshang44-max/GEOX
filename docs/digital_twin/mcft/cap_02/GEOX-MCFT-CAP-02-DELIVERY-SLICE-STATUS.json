@@ -5,19 +5,21 @@
   "name": "Hourly Dynamics and Persistence",
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A",
-  "status": "AUTHORIZATION_IN_PROGRESS",
+  "status": "AUTHORIZATION_READY_FOR_MERGE",
   "baseline_main_commit": "7da8fee4daf1f022edff29078a1bbac207d1a32f",
   "active_delivery_slice_id": "MCFT-CAP-02.GOV-AUTHORIZATION-V1",
   "slices": [
     {
       "delivery_slice_id": "MCFT-CAP-02.GOV-AUTHORIZATION-V1",
-      "status": "IN_PROGRESS",
+      "status": "READY_FOR_MERGE",
       "primary_owner_work_package_id": "MCFT-06",
       "contributing_work_package_ids": ["MCFT-02", "MCFT-03", "MCFT-04", "MCFT-05", "MCFT-07", "MCFT-08", "MCFT-09"],
       "depends_on_delivery_slice_ids": ["MCFT-CAP-01.CLOSURE-REMEDIATION-V1"],
       "branch": "mcft-cap-02-gov-authorization-v1",
+      "predecessor_main_verification_status": "COMPLETE",
+      "predecessor_identity_lock_status": "COMPLETE",
       "runtime_source_authorized": false,
-      "effectiveness_condition": "MERGED_MAIN_VERIFICATION_AND_PREDECESSOR_LOCK_COMPLETE_AND_AUTHORIZATION_PR_MERGED"
+      "effectiveness_condition": "AUTHORIZATION_PR_MERGED_TO_MAIN_AND_POSTMERGE_GATE_PASS"
     },
     {
       "delivery_slice_id": "MCFT-CAP-02.MCFT-02.CONTINUATION-CONTRACTS-CONFIG-V1",
@@ -47,48 +49,71 @@
       "delivery_slice_id": "MCFT-CAP-02.MCFT-04-06-08-09.SINGLE-TICK-INTEGRATION-V1",
       "status": "BLOCKED",
       "primary_owner_work_package_id": "MCFT-04",
+      "contributing_work_package_ids": ["MCFT-06", "MCFT-08", "MCFT-09"],
       "depends_on_delivery_slice_ids": ["MCFT-CAP-02.MCFT-03.CONTINUATION-PERSISTENCE-V1"]
     },
     {
       "delivery_slice_id": "MCFT-CAP-02.MCFT-04-08.TWENTY-FOUR-TICK-RANGE-V1",
       "status": "BLOCKED",
       "primary_owner_work_package_id": "MCFT-04",
+      "contributing_work_package_ids": ["MCFT-08"],
       "depends_on_delivery_slice_ids": ["MCFT-CAP-02.MCFT-04-06-08-09.SINGLE-TICK-INTEGRATION-V1"]
     },
     {
       "delivery_slice_id": "MCFT-CAP-02.MCFT-04.RESTART-BACKFILL-V1",
       "status": "BLOCKED",
       "primary_owner_work_package_id": "MCFT-04",
+      "contributing_work_package_ids": ["MCFT-03", "MCFT-08"],
       "depends_on_delivery_slice_ids": ["MCFT-CAP-02.MCFT-04-08.TWENTY-FOUR-TICK-RANGE-V1"]
     },
     {
       "delivery_slice_id": "MCFT-CAP-02.FAILURE-RECOVERY-V1",
       "status": "BLOCKED",
       "primary_owner_work_package_id": "MCFT-03",
+      "contributing_work_package_ids": ["MCFT-04", "MCFT-05", "MCFT-06", "MCFT-08", "MCFT-09"],
       "depends_on_delivery_slice_ids": ["MCFT-CAP-02.MCFT-04.RESTART-BACKFILL-V1"]
     },
     {
       "delivery_slice_id": "MCFT-CAP-02.CLOSURE-V1",
       "status": "BLOCKED",
       "primary_owner_work_package_id": "MCFT-06",
+      "contributing_work_package_ids": ["MCFT-02", "MCFT-03", "MCFT-04", "MCFT-05", "MCFT-07", "MCFT-08", "MCFT-09"],
       "depends_on_delivery_slice_ids": ["MCFT-CAP-02.FAILURE-RECOVERY-V1"]
     }
   ],
   "completion_claims": [],
+  "premerge_readiness_claims": [
+    "MCFT_CAP_02_PREDECESSOR_MAIN_VERIFIED",
+    "MCFT_CAP_02_PREDECESSOR_IDENTITY_LOCKED",
+    "MCFT_CAP_02_DELIVERY_GRAPH_FROZEN",
+    "MCFT_CAP_02_OWNER_BOUNDARY_FROZEN"
+  ],
   "preserved_nonclaims": [
     "NO_RUNTIME_SOURCE_AUTHORIZED_BEFORE_AUTHORIZATION_MERGE",
     "NO_HOURLY_DYNAMICS_IMPLEMENTED",
     "NO_CONTINUATION_STATE_PERSISTED",
     "NO_OBSERVATION_UPDATE_APPLIED",
+    "NO_OBSERVATION_INNOVATION_COMPUTED",
+    "NO_FORECAST_RESIDUAL",
     "NO_SUCCESSFUL_FORECAST",
     "NO_SCENARIO",
     "NO_RECOMMENDATION",
     "NO_DECISION",
     "NO_AO_ACT",
+    "NO_CALIBRATED_CONFIDENCE_MODEL",
+    "NO_MODEL_ACTIVATION",
+    "NO_LATE_EVIDENCE_REVISION",
+    "NO_DYNAMIC_ROOT_ZONE_GEOMETRY",
+    "NO_SPATIAL_EXECUTION_OVERLAP_DEDUPLICATION",
     "NO_CONTINUOUS_RUNTIME",
     "NO_CONTINUOUS_SCHEDULER",
+    "NO_720_TICK_REPLAY_CLOSURE",
     "NO_LIVE_FIELD_CLAIM",
+    "NO_MCFT_GATE_A_CLOSURE",
+    "NO_MCFT_GATE_B_CLOSURE",
+    "NO_MCFT_GATE_C_CLOSURE",
     "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
   ],
-  "next_authorized_slice_ids": []
+  "next_authorized_slice_ids": [],
+  "next_authorized_slice_id_after_merge_and_postmerge_gate": "MCFT-CAP-02.MCFT-02.CONTINUATION-CONTRACTS-CONFIG-V1"
 }
