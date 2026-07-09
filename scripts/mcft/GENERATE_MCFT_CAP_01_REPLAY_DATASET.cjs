@@ -22,9 +22,7 @@ function canonical(value) {
   }
   if (value === null || typeof value === 'boolean' || typeof value === 'string') return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
-  if (typeof value === 'object') {
-    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}`;
-  }
+  if (typeof value === 'object') return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}`;
   throw new Error(`UNSUPPORTED_TYPE:${typeof value}`);
 }
 
@@ -69,6 +67,22 @@ function scopeFromReality(reality) {
   };
 }
 
+function deriveAvailableToRuntimeAt(binding, roleTimeWithoutAvailability) {
+  const rule = binding.availability_semantics;
+  if (!rule || rule.rule_id !== 'MAX_SOURCE_TIMES_V1' || !Array.isArray(rule.derivation_inputs)) throw new Error(`UNSUPPORTED_AVAILABILITY_RULE:${binding.source_role}`);
+  if (rule.derivation_inputs.includes('available_to_runtime_at')) throw new Error(`SELF_REFERENTIAL_AVAILABILITY:${binding.source_role}`);
+  const values = rule.derivation_inputs.map((field) => {
+    const value = roleTimeWithoutAvailability[field];
+    if (typeof value !== 'string' || !Number.isFinite(Date.parse(value))) throw new Error(`INVALID_AVAILABILITY_INPUT:${binding.source_role}:${field}`);
+    return value;
+  });
+  return values.sort()[values.length - 1];
+}
+
+function withAvailability(binding, roleTimeWithoutAvailability) {
+  return { ...roleTimeWithoutAvailability, available_to_runtime_at: deriveAvailableToRuntimeAt(binding, roleTimeWithoutAvailability) };
+}
+
 function recordHash(record) {
   const semantic = { ...record };
   delete semantic.source_record_hash;
@@ -77,6 +91,8 @@ function recordHash(record) {
 }
 
 function buildCommon({ config, binding, scope, sourceRecordId, roleTime, quality, sourcePayload, canonicalPayload }) {
+  const expectedAvailability = deriveAvailableToRuntimeAt(binding, roleTime);
+  if (expectedAvailability !== roleTime.available_to_runtime_at) throw new Error(`AVAILABLE_TO_RUNTIME_MISMATCH:${binding.source_role}`);
   const record = {
     dataset_id: config.dataset_id,
     source_record_id: sourceRecordId,
@@ -104,13 +120,7 @@ function buildCommon({ config, binding, scope, sourceRecordId, roleTime, quality
 }
 
 function deterministicId(config, binding, roleTime, sequence, payload) {
-  const hash = sha256(canonical({
-    dataset_id: config.dataset_id,
-    binding_id: binding.binding_id,
-    role_time: roleTime,
-    record_sequence: sequence,
-    source_semantic_payload: payload,
-  })).slice(7, 31);
+  const hash = sha256(canonical({ dataset_id: config.dataset_id, binding_id: binding.binding_id, role_time: roleTime, record_sequence: sequence, source_semantic_payload: payload })).slice(7, 31);
   return `mcft_src_${hash}`;
 }
 
@@ -131,15 +141,7 @@ function generate(options = {}) {
   const reality = readJson(realityPath);
   const bindings = roleBindingMap(sourceMatrix);
   const scope = scopeFromReality(reality);
-  const requiredRoles = [
-    'SOIL_MOISTURE_OBSERVATION',
-    'RAINFALL_OBSERVATION',
-    'HISTORICAL_ET0_INPUT',
-    'FUTURE_WEATHER_ASSUMPTION',
-    'FUTURE_ET0_ASSUMPTION',
-    'APPROVED_IRRIGATION_PLAN',
-    'IRRIGATION_EXECUTION_EVIDENCE',
-  ];
+  const requiredRoles = ['SOIL_MOISTURE_OBSERVATION','RAINFALL_OBSERVATION','HISTORICAL_ET0_INPUT','FUTURE_WEATHER_ASSUMPTION','FUTURE_ET0_ASSUMPTION','APPROVED_IRRIGATION_PLAN','IRRIGATION_EXECUTION_EVIDENCE'];
   for (const role of requiredRoles) if (!bindings.has(role)) throw new Error(`UNRESOLVED_BINDING:${role}`);
   ensureEmptyDirectory(outputDirectory);
   const startMs = Date.parse(config.coverage_start);
@@ -158,32 +160,30 @@ function generate(options = {}) {
     const intervalStart = startMs + i * intervalMs;
     const intervalEnd = intervalStart + intervalMs;
     const date = iso(intervalStart).slice(0, 10);
+
     const soil = bindings.get('SOIL_MOISTURE_OBSERVATION');
-    const observedAt = intervalEnd - 10 * 60_000;
-    const ingestedAt = intervalEnd - 5 * 60_000;
+    const soilRoleTime = withAvailability(soil, { observed_at: iso(intervalEnd - 10 * 60_000), ingested_at: iso(intervalEnd - 5 * 60_000) });
     const soilPercent = round6(18.4 + ((i * 7) % 17) / 100);
-    const soilRoleTime = { observed_at: iso(observedAt), ingested_at: iso(ingestedAt), available_to_runtime_at: iso(ingestedAt) };
     const soilSource = { value: soilPercent, unit: soil.source_unit };
     const soilCanonical = { value: round6(soilPercent / 100), unit: soil.canonical_unit };
     add('SOIL_MOISTURE_OBSERVATION', date, buildCommon({ config, binding: soil, scope, sourceRecordId: deterministicId(config, soil, soilRoleTime, i, soilSource), roleTime: soilRoleTime, quality: { status: 'PASS' }, sourcePayload: soilSource, canonicalPayload: soilCanonical }));
 
     const rain = bindings.get('RAINFALL_OBSERVATION');
+    const rainRoleTime = withAvailability(rain, { interval_start: iso(intervalStart), interval_end: iso(intervalEnd), ingested_at: iso(intervalEnd) });
     const rainMm = i % 137 === 0 ? 3.2 : i % 211 === 0 ? 1.1 : 0;
-    const rainRoleTime = { interval_start: iso(intervalStart), interval_end: iso(intervalEnd), ingested_at: iso(intervalEnd), available_to_runtime_at: iso(intervalEnd) };
     const rainPayload = { value: rainMm, unit: rain.canonical_unit };
     add('RAINFALL_OBSERVATION', date, buildCommon({ config, binding: rain, scope, sourceRecordId: deterministicId(config, rain, rainRoleTime, i, rainPayload), roleTime: rainRoleTime, quality: { status: 'PASS' }, sourcePayload: rainPayload, canonicalPayload: rainPayload }));
 
     const et0 = bindings.get('HISTORICAL_ET0_INPUT');
+    const et0RoleTime = withAvailability(et0, { interval_start: iso(intervalStart), interval_end: iso(intervalEnd), ingested_at: iso(intervalEnd), input_weather_refs: [], calculation_method: 'CONTROLLED_SYNTHETIC_ET0_PATTERN_V1', method_version: '1' });
     const et0Value = round6(0.08 + (i % 24) * 0.005);
-    const et0RoleTime = { interval_start: iso(intervalStart), interval_end: iso(intervalEnd), ingested_at: iso(intervalEnd), available_to_runtime_at: iso(intervalEnd) };
     const et0Payload = { value: et0Value, unit: et0.canonical_unit, calculation_method: 'CONTROLLED_SYNTHETIC_ET0_PATTERN_V1', method_version: 1, input_weather_refs: [] };
     add('HISTORICAL_ET0_INPUT', date, buildCommon({ config, binding: et0, scope, sourceRecordId: deterministicId(config, et0, et0RoleTime, i, et0Payload), roleTime: et0RoleTime, quality: { status: 'PASS' }, sourcePayload: et0Payload, canonicalPayload: et0Payload }));
 
     for (const [role, kind] of [['FUTURE_WEATHER_ASSUMPTION', 'weather'], ['FUTURE_ET0_ASSUMPTION', 'et0']]) {
       const binding = bindings.get(role);
-      const issuedAt = intervalEnd - 15 * 60_000;
-      const availableAt = intervalEnd + 5 * 60_000;
-      const roleTime = { issued_at: iso(issuedAt), retrieved_at: iso(availableAt), ingested_at: iso(availableAt), available_to_runtime_at: iso(availableAt), valid_from: iso(intervalEnd + intervalMs), valid_to: iso(intervalEnd + 73 * intervalMs) };
+      const availableAt = iso(intervalEnd + 5 * 60_000);
+      const roleTime = withAvailability(binding, { issued_at: iso(intervalEnd - 15 * 60_000), retrieved_at: availableAt, ingested_at: availableAt, valid_from: iso(intervalEnd + intervalMs), valid_to: iso(intervalEnd + 73 * intervalMs) });
       const points = [];
       for (let horizon = 1; horizon <= 72; horizon += 1) {
         const pointStart = intervalEnd + horizon * intervalMs;
@@ -199,24 +199,17 @@ function generate(options = {}) {
 
   for (const event of config.irrigation_events) {
     const plan = bindings.get('APPROVED_IRRIGATION_PLAN');
-    const planRoleTime = { created_at: event.plan_created_at, plan_effective_from: event.plan_effective_from, plan_effective_to: event.plan_effective_to, ingested_at: event.plan_available_at, available_to_runtime_at: event.plan_available_at };
+    const planRoleTime = withAvailability(plan, { created_at: event.plan_created_at, approved_at: event.plan_approved_at, ingested_at: event.plan_ingested_at, plan_effective_from: event.plan_effective_from, plan_effective_to: event.plan_effective_to });
     const planPayload = { event_id: event.event_id, approved_amount_mm: event.approved_amount_mm, spatial_scope: scope.zone_id, status: 'APPROVED' };
     add('APPROVED_IRRIGATION_PLAN', 'plans', buildCommon({ config, binding: plan, scope, sourceRecordId: deterministicId(config, plan, planRoleTime, event.event_id, planPayload), roleTime: planRoleTime, quality: { status: 'PASS' }, sourcePayload: planPayload, canonicalPayload: planPayload }));
+
     const execution = bindings.get('IRRIGATION_EXECUTION_EVIDENCE');
-    const executionRoleTime = { executed_at: event.executed_at, ingested_at: event.execution_ingested_at, available_to_runtime_at: event.execution_available_at };
+    const executionRoleTime = withAvailability(execution, { executed_at: event.executed_at, ingested_at: event.execution_ingested_at });
     const executionPayload = { event_id: event.event_id, executed_amount_mm: event.executed_amount_mm, coverage_fraction: event.coverage_fraction, spatial_scope: scope.zone_id };
     add('IRRIGATION_EXECUTION_EVIDENCE', 'executions', buildCommon({ config, binding: execution, scope, sourceRecordId: deterministicId(config, execution, executionRoleTime, event.event_id, executionPayload), roleTime: executionRoleTime, quality: { status: 'PASS' }, sourcePayload: executionPayload, canonicalPayload: executionPayload }));
   }
 
-  const folderByRole = {
-    SOIL_MOISTURE_OBSERVATION: 'soil_moisture',
-    RAINFALL_OBSERVATION: 'rainfall',
-    HISTORICAL_ET0_INPUT: 'historical_et0',
-    FUTURE_WEATHER_ASSUMPTION: 'future_weather',
-    FUTURE_ET0_ASSUMPTION: 'future_et0',
-    APPROVED_IRRIGATION_PLAN: 'irrigation_plan',
-    IRRIGATION_EXECUTION_EVIDENCE: 'irrigation_execution',
-  };
+  const folderByRole = { SOIL_MOISTURE_OBSERVATION: 'soil_moisture', RAINFALL_OBSERVATION: 'rainfall', HISTORICAL_ET0_INPUT: 'historical_et0', FUTURE_WEATHER_ASSUMPTION: 'future_weather', FUTURE_ET0_ASSUMPTION: 'future_et0', APPROVED_IRRIGATION_PLAN: 'irrigation_plan', IRRIGATION_EXECUTION_EVIDENCE: 'irrigation_execution' };
   const files = [];
   const recordsByRole = new Map(requiredRoles.map((role) => [role, []]));
   for (const [key, records] of [...daily.entries()].sort(([a], [b]) => a.localeCompare(b))) {
@@ -230,18 +223,10 @@ function generate(options = {}) {
   const perRoleSemanticHash = {};
   for (const role of requiredRoles) perRoleSemanticHash[role] = sha256(canonical(recordsByRole.get(role).map((record) => record.source_record_hash).sort()));
   const manifest = {
-    schema_version: 'geox_mcft_cap_01_replay_dataset_manifest_v1',
-    dataset_id: config.dataset_id,
-    dataset_truth_class: config.dataset_truth_class,
-    coverage_start: config.coverage_start,
-    coverage_end_exclusive: config.coverage_end_exclusive,
-    timezone: config.timezone,
-    hourly_interval_count: config.hourly_interval_count,
-    top_level_record_count: Object.values(roleCounts).reduce((sum, value) => sum + value, 0),
-    role_counts: roleCounts,
-    file_count: files.length,
-    files,
-    per_role_semantic_hash: perRoleSemanticHash,
+    schema_version: 'geox_mcft_cap_01_replay_dataset_manifest_v1', dataset_id: config.dataset_id, dataset_truth_class: config.dataset_truth_class,
+    coverage_start: config.coverage_start, coverage_end_exclusive: config.coverage_end_exclusive, timezone: config.timezone,
+    hourly_interval_count: config.hourly_interval_count, top_level_record_count: Object.values(roleCounts).reduce((sum, value) => sum + value, 0),
+    role_counts: roleCounts, file_count: files.length, files, per_role_semantic_hash: perRoleSemanticHash,
     whole_dataset_semantic_hash: sha256(canonical({ config, roleCounts, file_hashes: files.map((file) => [file.path, file.sha256]) })),
     generator_contract: { encoding: config.encoding, line_ending: config.line_ending, trailing_newline: config.trailing_newline, record_order: 'source_record_id ascending within deterministic shard order' },
   };
@@ -266,4 +251,4 @@ if (require.main === module) {
   process.stdout.write(`${JSON.stringify({ ok: true, dataset_id: manifest.dataset_id, records: manifest.top_level_record_count, files: manifest.file_count, hash: manifest.whole_dataset_semantic_hash })}\n`);
 }
 
-module.exports = { canonical, generate, recordHash, round6, sha256 };
+module.exports = { canonical, deriveAvailableToRuntimeAt, generate, recordHash, round6, sha256 };
