@@ -1,47 +1,65 @@
 <!-- docs/digital_twin/mcft/GEOX-MCFT-00-REALITY-BINDING-CONTRACT.md -->
 # GEOX MCFT-00 Reality Binding Contract
 
-## 0. Authority
+## 0. Phase identity
 
 ```text
 phase: MCFT-00
 name: Reality Binding Contract
 type: governed scope, configuration, and source-binding freeze
-predecessor: DT-02 Runtime Architecture Freeze with DT02-AMENDMENT-01
-successor: MCFT-01 Canonical Replay Dataset
 baseline_main_commit: 7fd848ae00680480fc864990b9d03b37bc61fdff
-target_completion_level: Level A — Minimum Complete Field Twin
-target_runtime_mode: REPLAY
+predecessor: DT-02 with DT02-AMENDMENT-01 COMPLETE
+successor: MCFT-01 Canonical Replay Dataset
+runtime_mode: REPLAY
 implementation_capability: GOVERNANCE_ONLY
-status: FROZEN_PENDING_ACCEPTANCE
+status: FROZEN
+acceptance_status: PENDING
+duplicate_implementation_pr: #2305 CLOSED_SUPERSEDED
 ```
 
-MCFT-00 creates no canonical Runtime fact, State, Forecast, Scenario, Checkpoint, lineage, revision, projection, route, migration, scheduler, or database write.
+MCFT-00 freezes the single Reality scope, governed geometry, root-zone definition, source authorities, configuration authorities, Replay ingress adapters, epistemic classification, lifecycle classification, deterministic availability semantics, and deterministic binding identity for the first Minimum Complete Field Twin.
 
-Allowed completion claim:
+MCFT-00 does not ingest Evidence, run ticks, calculate State, propagate a model, assimilate observations, produce Forecast or Scenario objects, create Action Feedback, write canonical facts, or switch active pointers.
+
+## 1. Accepted task-line amendment
 
 ```text
-MCFT_00_REALITY_BINDING_FROZEN
-GOVERNANCE_INPUT_ONLY
-TARGET_RUNTIME_MODE_REPLAY
-NO_RUNTIME_IMPLEMENTATION
-NO_CANONICAL_PERSISTENCE
-NO_CANONICAL_REPLAY_DATASET
-CONTROLLED_SYNTHETIC_REPLAY_SCOPE_ONLY
+amendment_id: MCFT00-AMENDMENT-01
+amendment_status: ACCEPTED
+amendment_scope: source-kind and epistemic/lifecycle vocabulary clarification only
 ```
 
-## 1. Task-line corrections applied
+The original task line used `APPROVED` and `EXECUTED` as epistemic classes and used `HUMAN_OR_EXTERNAL_PLAN` as a combined source kind. This amendment separates independent semantic axes.
 
-Repository review found five internal task-line defects and corrected them before implementation:
+The frozen rule is:
 
-1. The predecessor is already complete. MCFT-00 starts from merge commit `7fd848ae00680480fc864990b9d03b37bc61fdff`; `DRAFT_BLOCKED_BY_DT02_AMENDMENT_01` and amendment status `ACCEPTED` are stale. The authoritative amendment status is `COMPLETE`.
-2. `MODEL_CONFIGURATION_BINDING` must not carry `origin_source_*` or Replay adapter fields. It uses `configuration_source_kind`, `configuration_source_id`, and `configuration_version`.
-3. `HUMAN_OR_EXTERNAL_PLAN` is an ambiguous union source kind. The approved-plan Replay source is frozen as `VERSIONED_PLAN_SNAPSHOT`.
-4. Action lifecycle terms are not epistemic classes. Approved plan and execution evidence use `action_lifecycle_class` separately from `epistemic_class`.
-5. A newly named Replay provider or configuration source cannot prove its own authority. Each governed MCFT source/config identity is therefore defined by a versioned, hashed matrix entry with provenance, limitations, successor ownership, and an explicit statement that no Replay time-series dataset exists yet.
-6. The acceptance entrypoint remains one exact Gate, but deterministic geometry/hash and semantic-package validation are factored into two private helpers under `scripts/governance_acceptance/mcft00/**`. This avoids a monolithic 40 kB Gate while preserving one invocation surface and a precise successor allowlist.
+```text
+epistemic_class
+  = OBSERVED | ESTIMATED | ASSUMED | ASSERTED | CONFIGURED
 
-These corrections do not change DT-02. They make MCFT-00 comply with DT-02 separation of Reality, Evidence, configuration, execution, and validation.
+action_lifecycle_class
+  = NOT_APPLICABLE | APPROVED_PLAN | EXECUTION_EVIDENCE
+```
+
+Therefore:
+
+```text
+Approved irrigation plan:
+  epistemic_class: ASSERTED
+  action_lifecycle_class: APPROVED_PLAN
+
+Irrigation execution evidence:
+  epistemic_class: OBSERVED
+  action_lifecycle_class: EXECUTION_EVIDENCE
+```
+
+The plan source is frozen as:
+
+```text
+origin_source_kind: VERSIONED_PLAN_SNAPSHOT
+```
+
+This does not claim that a human decision service, dispatch service, execution service, or production source exists. It only creates a versioned governance identity for MCFT-01 Replay records.
 
 ## 2. Frozen Reality scope
 
@@ -53,7 +71,6 @@ field_id: field_c8_demo
 season_id: season_2026_c8_corn
 zone_id: zone_mcft_c8_water_001
 crop_code: corn
-
 runtime_mode: REPLAY
 runtime_time_domain: UTC_HOURLY
 reality_scope_class: CONTROLLED_SYNTHETIC_REPLAY_PROXY
@@ -61,7 +78,11 @@ reality_scope_class: CONTROLLED_SYNTHETIC_REPLAY_PROXY
 
 Exactly one active MCFT Reality scope is permitted.
 
-Classification:
+C8 is selected only as the identity parent. Legacy C8 State, Forecast, Scenario, Recommendation, Approval, AO-ACT, ROI, Field Memory, geometry, and execution closure are excluded from MCFT canonical truth.
+
+P50 / CAF009 remains `REFERENCE_ONLY`. `field_demo_001` remains rejected as the first MCFT scope.
+
+## 3. Reality classification
 
 ```text
 field_truth_mode: CONTROLLED_REPLAY_FIELD_PROXY
@@ -72,59 +93,57 @@ real_field_pilot_status: NOT_CLAIMED
 production_status: NOT_CLAIMED
 ```
 
-Crop stage, dynamic root depth, canopy, stress, biomass, and phenology are not identity.
-
-## 3. Candidate adjudication
-
-The selected identity parent is C8 under strict isolation. Only tenant/project/group/field/season/crop and candidate device identities are reused. Legacy State, Forecast, Scenario, Recommendation, Approval, AO-ACT, ROI, Field Memory, geometry, area, and execution closure are excluded.
-
-The evidence decision register is:
+Device identities are repository fixture evidence only. Governance-defined provider, ET0, plan, configuration, and adapter identities have:
 
 ```text
-docs/digital_twin/mcft/GEOX-MCFT-00-CANDIDATE-ADJUDICATION.md
+proof_scope: GOVERNANCE_IDENTITY_ONLY
 ```
 
-P50/CAF009 is `REFERENCE_ONLY`; `field_demo_001` is `REJECTED`; C8 device identities are `FIXTURE_ONLY`, not online or production evidence.
+Their existence does not prove a Replay dataset, operational provider, live device, or production source.
 
-## 4. Geometry authority
-
-The only MCFT-00 geometry authority is:
+## 4. Governed geometry
 
 ```text
-fixtures/mcft/reality_binding/MCFT_C8_GOVERNED_ZONE_V1.geojson
-```
-
-Frozen values:
-
-```text
+zone_id: zone_mcft_c8_water_001
+geometry_type: Polygon
+crs: EPSG:4326
+geometry_truth_status: CONTROLLED_SYNTHETIC
+geometry_source: MCFT_00_PINNED_FIXTURE
 canonicalization_id: GEOX_MCFT_GEOJSON_CANONICALIZATION_V1
-geometry_semantic_hash: sha256:d3dbc5495485e7af68acdc4b32e6061c2ea99772835be2805ae706b74d75ca51
 file_sha256: sha256:249fee97640a8291d18becb399b7ed7757de90222ad55ed1a203ebe277147ab4
+geometry_semantic_hash: sha256:d3dbc5495485e7af68acdc4b32e6061c2ea99772835be2805ae706b74d75ca51
 derived_area_m2: 20488.479982
-area_algorithm: GEOX_WGS84_AUTHALIC_SPHERE_POLYGON_AREA_V1
-legacy_declared_area_m2: 20000
-legacy_area_status: NON_AUTHORITATIVE_COMPARISON_ONLY
 ```
 
-The geometry is controlled synthetic. It is not surveyed, field-verified, real-verified, or production-authoritative. Any semantic change requires a new binding version and supersedes reference.
+Geometry validation requires:
 
-## 5. Root-zone definition
+- Polygon type;
+- at least one non-empty ring;
+- legal WGS84 coordinates;
+- finite numbers;
+- closed rings;
+- at least three distinct vertices;
+- non-zero ring area;
+- deterministic orientation, start point, precision, negative-zero normalization, and key ordering.
+
+The authoritative area is derived from the canonical semantic geometry. `legacy_declared_area_m2` is comparison-only.
+
+Any semantic geometry change requires a new binding version, new semantic hash, supersedes reference, and change reason.
+
+## 5. Root zone and sensor support
 
 ```text
 root_zone_definition_id: rz_c8_0_300mm_v1
 top_depth_mm: 0
 bottom_depth_mm: 300
 total_depth_mm: 300
-depth_reference: BELOW_GROUND_SURFACE
-
-layer:
-  layer_id: rz_layer_0_300mm
-  top_depth_mm: 0
-  bottom_depth_mm: 300
-  weight: 1.0
 ```
 
-Sensor support:
+The first version contains one governed layer covering 0–300 mm with weight 1.0.
+
+Layer validation requires finite bounds, `top < bottom`, containment inside the governed root zone, unique non-empty layer IDs, no gap, no overlap, and weights summing to 1.0.
+
+The candidate soil sensor is frozen as:
 
 ```text
 origin_source_id: dev_soil_c8_001
@@ -135,66 +154,110 @@ root_zone_representativeness: PARTIAL
 direct_state_equivalence: false
 ```
 
-A point observation at 200 mm is not a 0–300 mm zone State.
+A 200 mm point observation is not a 0–300 mm zone-average State.
 
-## 6. Binding classes
+## 6. Binding authority graph
 
-### 6.1 Reality identity binding
-
-Defines scope, crop identity, governed zone, geometry authority, and root-zone authority.
-
-### 6.2 Evidence source binding
-
-Requires distinct origin and Replay ingress identities:
+MCFT-00 freezes three independent object classes:
 
 ```text
-origin_source_kind
-origin_source_id
-ingress_adapter_kind: REPLAY_ADAPTER
-ingress_adapter_id
+REALITY_IDENTITY_BINDING
+EVIDENCE_SOURCE_BINDING
+MODEL_CONFIGURATION_BINDING
 ```
 
-### 6.3 Model configuration binding
-
-Uses only:
+Every Evidence binding must resolve uniquely to:
 
 ```text
-configuration_source_kind
-configuration_source_id
-configuration_version
+one source_definition
+one ingress_adapter_definition
+one source role
+one binding ID
 ```
 
-It must not masquerade as an Evidence source and must not contain Replay adapter fields.
+The source kind and version on the binding must equal the referenced source definition. The adapter kind, output record type, release policy, and version must equal the referenced adapter definition.
 
-The source matrix contains seven Evidence bindings; the configuration matrix contains two configuration bindings, for nine concrete bindings across eight required semantic domains.
+Every model configuration binding must resolve uniquely to one configuration source definition with matching kind and version.
 
-## 7. Epistemic and lifecycle separation
+Duplicate or unresolved source, adapter, configuration, role, or binding identities are invalid.
 
-Allowed Evidence epistemic classes in this contract:
+## 7. Required semantic domains
+
+Eight semantic domains and nine concrete bindings are frozen:
+
+1. soil-moisture observation;
+2. observed rainfall;
+3. future-weather assumption;
+4. historical ET0 estimate;
+5. future ET0 assumption;
+6. soil-hydraulic configuration;
+7. crop-water-use configuration;
+8. approved irrigation plan;
+9. irrigation execution evidence.
+
+The seven Evidence bindings use seven independently governed Replay adapter definitions.
+
+## 8. Soil-hydraulic configuration semantics
+
+The governed root-zone depth is 300 mm.
+
+The configuration freezes:
 
 ```text
-OBSERVED
-ASSUMED
-ESTIMATED
-ASSERTED
+wilting_point_fraction: 0.12
+field_capacity_fraction: 0.30
+saturation_fraction: 0.45
+wilting_point_storage_mm: 36.0
+field_capacity_storage_mm: 90.0
+saturation_storage_mm: 135.0
+drainage_coefficient_per_hour: 0.03
+runoff_fraction: 0.05
 ```
 
-Configuration uses:
+Required invariants are:
 
 ```text
-CONFIGURED
+0 <= wilting_point_fraction
+wilting_point_fraction < field_capacity_fraction
+field_capacity_fraction < saturation_fraction <= 1
+
+wilting_point_storage_mm
+  = wilting_point_fraction * root_zone_depth_mm
+
+field_capacity_storage_mm
+  = field_capacity_fraction * root_zone_depth_mm
+
+saturation_storage_mm
+  = saturation_fraction * root_zone_depth_mm
+
+0 <= runoff_fraction <= 1
+drainage_coefficient_per_hour >= 0
 ```
 
-Action lifecycle meaning is separate:
+`field_capacity_storage_mm` replaces the ambiguous `root_zone_storage_capacity_mm` name.
+
+## 9. Crop root-depth policy
+
+Crop biological root depth may exceed the Level-A governed model domain. The frozen policy is:
 
 ```text
-APPROVED_PLAN
-EXECUTION_EVIDENCE
+effective_model_root_depth_policy:
+MIN_CROP_ROOT_DEPTH_AND_GOVERNED_ROOT_ZONE_V1
+
+effective_model_root_depth_mm
+  = min(crop_root_depth_mm, governed_root_zone_bottom_mm)
 ```
 
-Approved is not Dispatched. Approved is not Executed. Executed is not Validated.
+For MID and LATE corn stages:
 
-## 8. Time and Replay release
+```text
+crop_root_depth_mm: 600
+effective_model_root_depth_mm: 300
+```
+
+MCFT-06 must not infer a different policy.
+
+## 10. Replay time and availability
 
 ```text
 timezone: UTC
@@ -203,142 +266,182 @@ tick_alignment: UTC_CLOCK_HOUR
 logical_tick_time: INTERVAL_END
 ```
 
-Each time-series Evidence record must distinguish:
+Every Evidence role freezes:
+
+- its event or observation time fields;
+- `ingested_at`;
+- `available_to_runtime_at`;
+- the exact deterministic derivation inputs;
+- the Replay release policy ID.
+
+Availability is computed by `MAX_VALID_INSTANT` over the role-specific fixed source timestamps. The output field cannot appear among its own derivation inputs.
+
+The following inputs are forbidden:
 
 ```text
-observed_at
-ingested_at
-available_to_runtime_at
+current_wall_clock
+file_mtime
+script_start_time
+temporary_checkout_path
 ```
 
-Availability is fixed in the dataset or derived by `mcft_replay_release_policy_v1`. Wall clock, file mtime, process start time, and temporary path are forbidden inputs.
-
-No-future-leakage:
-
-- Evidence observed after logical tick time is excluded.
-- Evidence unavailable at compute logical time is excluded.
-- Future Observation is excluded from earlier ticks.
-- Late Evidence is classified separately and is not on-time Evidence.
-
-Aggregation belongs to MCFT-01/MCFT-05.
-
-## 9. Action Feedback eligibility boundary
-
-MCFT-00 binds execution-source authority but does not create `twin_action_feedback_v1`.
-
-Future records must separate:
+No-future-leakage classification is calculated, not self-declared:
 
 ```text
-execution_status
-validation_status
-eligible_for_state_input
+FUTURE:
+  observed_at > logical_tick_time
+
+LATE:
+  observed_at <= logical_tick_time
+  and available_to_runtime_at > logical_tick_time
+
+ON_TIME:
+  observed_at <= logical_tick_time
+  and available_to_runtime_at <= logical_tick_time
 ```
 
-`acceptance_ref` is optional. `receipt_ref` or `as_executed_ref` is required. `task_ref` is required only for `origin_kind=AO_ACT`.
+Only `ON_TIME` Evidence is eligible for the current tick.
 
-Eligibility requires actual amount, unit, executed time, spatial coverage, source identity, source quality, and limitations. A binding never sets all concrete records eligible automatically.
+## 11. Deterministic identity and acceptance metadata
 
-## 10. Governance artifact and compile target
-
-Artifact:
+The Reality artifact, source matrix, and configuration matrix use:
 
 ```text
-artifact_type: mcft_reality_binding_contract_v1
+status: FROZEN
+acceptance_status: PENDING | COMPLETE
+```
+
+`acceptance_status` is audit metadata. It is excluded from semantic hashes and binding identity.
+
+Changing only acceptance state must not change:
+
+```text
+source matrix determinism hash
+configuration matrix determinism hash
+Reality determinism hash
+Reality binding ID
+```
+
+Same ID plus same semantic hash is:
+
+```text
+IDEMPOTENT_REPLAY
+```
+
+Same ID plus different semantic hash is:
+
+```text
+IDEMPOTENCY_CONFLICT
+```
+
+The frozen identity is recorded in `GEOX-MCFT-00-REALITY-BINDING.json`.
+
+## 12. Canonical boundary
+
+The Reality Binding is:
+
+```text
 artifact_class: GOVERNANCE_INPUT
 canonical_runtime_object: false
 canonical_persistence: false
 lineage_member: false
 runtime_transaction_family: NONE
-binding_id: mcft_rb_83d0e3cf728d257277225fee
-determinism_hash: sha256:83d0e3cf728d257277225fee220dfec1029abb52e3a18b40f3801cd1bba187bf
 ```
 
-Compile target:
+Compile ownership remains MCFT-02. Persistence ownership remains MCFT-03.
+
+MCFT-00 does not:
+
+- write facts;
+- create `twin_runtime_config_v1`;
+- create State, Forecast, Scenario, Checkpoint, or Action Feedback;
+- create lineage or revision identity;
+- execute E1, E2, or E3;
+- switch active Runtime, lineage, State, Forecast, or configuration pointers.
+
+## 13. Action feedback eligibility boundary
+
+Approved, dispatched, executed, and validated are distinct states.
+
+The approved plan binding has:
 
 ```text
-owner_phase: MCFT-02
-object_type: twin_runtime_config_v1
-record_class: CANONICAL_MODEL_GOVERNANCE_HISTORY
-lineage_member: false
-envelope_profile: NON_LINEAGE_CONTEXT
+state_input_policy: NEVER
 ```
 
-Persistence target:
+The execution Evidence binding has:
 
 ```text
-owner_phase: MCFT-03
-transaction_family: D_MODEL_GOVERNANCE_STEP_COMMIT
-canonical_store: Postgres facts append-only store
+state_input_policy: CONDITIONAL
 ```
 
-MCFT-00 performs neither compile nor persistence.
+A future concrete Action Feedback record must contain actual amount, unit, execution time, spatial coverage, source identity, source quality, limitations, and a receipt or as-executed reference. Acceptance is optional. An AO-ACT origin requires a task reference.
 
-## 11. Versioning
+MCFT-15 owns the canonical Action Feedback object and persistence behavior.
 
-The semantic hash includes schema, scope, runtime mode, reality classification, geometry semantic hash, crop identity, root-zone definition, source/config binding semantic payloads, time domain, Replay release policy, limitations, and nonclaims.
+## 14. Acceptance model
 
-It excludes `created_at`, `persisted_at`, `fact_id`, worker/process identifiers, wall clock, random UUID, absolute path, checkout path, and branch name.
-
-A semantic change requires:
+The Gate has two valid closure modes:
 
 ```text
-binding_version + 1
-supersedes_binding_ref
-change_reason
-previous_determinism_hash
-new_determinism_hash
+PENDING_ACCEPTANCE
+COMPLETE
 ```
 
-Reality Binding versioning is not Runtime lineage revision and cannot execute E1/E2/E3 or switch active pointers.
+Pending mode requires pending evidence fields and the pending claim.
 
-## 12. Legacy contamination guard
+Complete mode requires concrete implementation head, zero-warning local Gate result, predecessor regressions, exact changed-file count, exact negative fixture count, clean working tree, generic CI evidence, and no pending closure field.
 
-Forbidden as canonical MCFT inputs:
+The Gate validates:
+
+- 57 evidence-bearing hard checks;
+- exact reason code and exact validation stage for every negative fixture;
+- `write_attempt_count = 0`;
+- validator purity;
+- deterministic idempotency behavior;
+- authority-reference closure;
+- structural geometry and root-zone validity;
+- executable release and no-future rules;
+- repository changed-file boundary;
+- predecessor regressions.
+
+The original minimum was 61 negative fixtures. The exact fixture count may increase and must match the manifest.
+
+## 15. Nonclaims
+
+Completion does not claim:
 
 ```text
-water_state_estimate_v1
-irrigation_scenario_set_v1
-C8 recommendation/approval/AO-ACT/ROI/Field Memory
-P50 replay_demo_state_estimate_v1
-P50 replay_demo_forecast_run_v1
-P50 demo model activation
-P42/P43 controlled ledgers
+Canonical Replay Dataset complete
+Evidence ingestion complete
+hourly Runtime exists
+State estimator exists
+physical propagation exists
+assimilation exists
+posterior State exists
+Forecast exists
+Scenario exists
+Decision exists
+Action Feedback exists
+Residual exists
+Calibration exists
+Checkpoint exists
+restart recovery exists
+late-Evidence Runtime revision exists
+live device connected
+real field pilot started
+Minimum Complete Field Twin complete
+Production Field Twin complete
 ```
 
-Reusable only as patterns or identity evidence:
+The only permitted completed claim is:
 
 ```text
-scope identifiers
-candidate device identifiers after adjudication
-append-only fact-store pattern
-typed evidence references
-explicit replay clock
-evidence partition
-no-future-leakage
-stable hashing after semantic review
+MCFT_00_REALITY_BINDING_FROZEN
+GOVERNANCE_INPUT_ONLY
+TARGET_RUNTIME_MODE_REPLAY
+NO_RUNTIME_IMPLEMENTATION
+NO_CANONICAL_PERSISTENCE
+NO_CANONICAL_REPLAY_DATASET
+CONTROLLED_SYNTHETIC_REPLAY_SCOPE_ONLY
 ```
-
-## 13. Deliverables and boundary
-
-MCFT-00 changes only:
-
-```text
-docs/digital_twin/mcft/**
-fixtures/mcft/reality_binding/**
-scripts/governance_acceptance/ACCEPTANCE_MCFT_00_REALITY_BINDING_CONTRACT.cjs
-scripts/governance_acceptance/mcft00/**
-docs/digital_twin/GEOX-DIGITAL-TWIN-CAPABILITY-MATRIX.json
-precise predecessor successor-compatibility allowlists
-```
-
-No server, web, judge, executor, migration, route, runtime source, estimator, projection, seed application script, package, lockfile, or workflow is changed.
-
-## 14. Successor
-
-After final Gate, clean worktree, and CI:
-
-```text
-MCFT-01 — Canonical Replay Dataset
-```
-
-MCFT-01 must use this binding ID/hash and may not reselect scope, geometry, root zone, source semantics, configuration authority, or Runtime mode without a new Reality Binding version.
