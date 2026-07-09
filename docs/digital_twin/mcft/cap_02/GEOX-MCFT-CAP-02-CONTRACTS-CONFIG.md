@@ -59,7 +59,7 @@ The slice is accepted when the continuation Runtime Config compiler and acceptan
 Expected command:
 
 ```bash
-node scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG.ts
+pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG.ts
 ```
 
 ## Next slice
