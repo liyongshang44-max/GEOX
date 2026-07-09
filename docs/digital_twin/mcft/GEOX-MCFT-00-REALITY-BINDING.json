@@ -1,0 +1,530 @@
+{
+  "schema_version": "geox_mcft_reality_binding_v1",
+  "artifact_type": "mcft_reality_binding_contract_v1",
+  "artifact_class": "GOVERNANCE_INPUT",
+  "phase": "MCFT-00",
+  "status": "FROZEN",
+  "binding_version": 1,
+  "supersedes_binding_ref": null,
+  "change_reason": "INITIAL_MCFT_REALITY_BINDING_FREEZE",
+  "canonical_runtime_object": false,
+  "canonical_persistence": false,
+  "lineage_member": false,
+  "runtime_transaction_family": "NONE",
+  "write_target": "NONE",
+  "active_runtime_config": false,
+  "active_scopes": [
+    {
+      "scope": {
+        "tenant_id": "tenantA",
+        "project_id": "projectA",
+        "group_id": "groupA",
+        "field_id": "field_c8_demo",
+        "season_id": "season_2026_c8_corn",
+        "zone_id": "zone_mcft_c8_water_001"
+      },
+      "status": "ACTIVE"
+    }
+  ],
+  "scope": {
+    "tenant_id": "tenantA",
+    "project_id": "projectA",
+    "group_id": "groupA",
+    "field_id": "field_c8_demo",
+    "season_id": "season_2026_c8_corn",
+    "zone_id": "zone_mcft_c8_water_001"
+  },
+  "runtime_mode": "REPLAY",
+  "runtime_time_domain": "UTC_HOURLY",
+  "reality_scope_class": "CONTROLLED_SYNTHETIC_REPLAY_PROXY",
+  "reality_classification": {
+    "field_truth_mode": "CONTROLLED_REPLAY_FIELD_PROXY",
+    "geometry_truth_status": "CONTROLLED_SYNTHETIC",
+    "source_truth_status": "MIXED_FIXTURE_AND_GOVERNED_REPLAY",
+    "live_device_status": "NOT_CLAIMED",
+    "real_field_pilot_status": "NOT_CLAIMED",
+    "production_status": "NOT_CLAIMED"
+  },
+  "identity_bindings": [
+    {
+      "binding_id": "mcft_scope_identity_c8_v1",
+      "binding_type": "REALITY_IDENTITY_BINDING",
+      "source_role": "REALITY_SCOPE_IDENTITY",
+      "epistemic_class": "CONFIGURED",
+      "identity_payload": {
+        "tenant_id": "tenantA",
+        "project_id": "projectA",
+        "group_id": "groupA",
+        "field_id": "field_c8_demo",
+        "season_id": "season_2026_c8_corn",
+        "zone_id": "zone_mcft_c8_water_001"
+      },
+      "evidence_grade": "FIXTURE_ONLY",
+      "evidence_refs": [
+        "scripts/demo_seed/datasets/C8_FORMAL_IRRIGATION_FULL_CHAIN_V1.cjs",
+        "docker/postgres/init/002_demo_seed.sql"
+      ],
+      "eligible_downstream_uses": [
+        "MCFT-01_DATASET_SCOPE",
+        "MCFT-02_RUNTIME_CONFIG_COMPILE_INPUT"
+      ],
+      "forbidden_downstream_uses": [
+        "REAL_FIELD_CLAIM",
+        "LIVE_DEVICE_CLAIM"
+      ],
+      "limitations": [
+        "stable fixture identifiers selected under controlled synthetic replay isolation"
+      ],
+      "binding_version": 1,
+      "determinism_hash": "sha256:8e0a11bb5aa7ee4c90ce37e68cd3529f1752c0af30b9628eab8c93468842bb70"
+    },
+    {
+      "binding_id": "mcft_crop_identity_corn_v1",
+      "binding_type": "REALITY_IDENTITY_BINDING",
+      "source_role": "CROP_IDENTITY",
+      "epistemic_class": "CONFIGURED",
+      "crop_code": "corn",
+      "season_id": "season_2026_c8_corn",
+      "dynamic_state_fields_forbidden": [
+        "crop_stage",
+        "root_depth_dynamic_state",
+        "canopy_state",
+        "crop_stress_state",
+        "biomass",
+        "phenology_estimate"
+      ],
+      "evidence_grade": "FIXTURE_ONLY",
+      "evidence_refs": [
+        "scripts/demo_seed/datasets/C8_FORMAL_IRRIGATION_FULL_CHAIN_V1.cjs"
+      ],
+      "eligible_downstream_uses": [
+        "MCFT-01_DATASET_SCOPE",
+        "MCFT-02_RUNTIME_CONFIG_COMPILE_INPUT"
+      ],
+      "forbidden_downstream_uses": [
+        "CROP_STAGE_IDENTITY",
+        "PHENOLOGY_TRUTH"
+      ],
+      "limitations": [
+        "crop identity does not validate crop stage or field truth"
+      ],
+      "binding_version": 1,
+      "determinism_hash": "sha256:627ba62b798a4fbba180d03c904ed1d762853784073755e10b840f36d8064f79"
+    },
+    {
+      "binding_id": "mcft_geometry_identity_c8_v1",
+      "binding_type": "REALITY_IDENTITY_BINDING",
+      "source_role": "GOVERNED_ZONE_GEOMETRY",
+      "epistemic_class": "CONFIGURED",
+      "geometry_binding": {
+        "zone_id": "zone_mcft_c8_water_001",
+        "geometry_type": "Polygon",
+        "crs": "EPSG:4326",
+        "geometry_truth_status": "CONTROLLED_SYNTHETIC",
+        "geometry_source": "MCFT_00_PINNED_FIXTURE",
+        "geometry_fixture_ref": "fixtures/mcft/reality_binding/MCFT_C8_GOVERNED_ZONE_V1.geojson",
+        "canonicalization_policy_id": "GEOX_MCFT_GEOJSON_CANONICALIZATION_V1",
+        "file_sha256": "sha256:b0b9039b0a70361f0725e3f342ebd622d34ddb57e5809646a54bdbb420a47c1e",
+        "geometry_semantic_hash": "sha256:df3da5368a539b61d257603b4e5758589cb1f4cbf2863d3f5e03640c3b0bb30d",
+        "derived_area_m2": 54370.977,
+        "area_derivation": {
+          "algorithm_id": "GEOX_LOCAL_EQUIRECTANGULAR_SHOELACE_AREA_V1",
+          "algorithm_version": "1.0.0",
+          "crs": "EPSG:4326",
+          "earth_radius_m": 6378137,
+          "reference_latitude_policy": "ARITHMETIC_MEAN_OF_EXTERIOR_RING_UNIQUE_VERTICES",
+          "geometry_semantic_hash": "sha256:df3da5368a539b61d257603b4e5758589cb1f4cbf2863d3f5e03640c3b0bb30d"
+        },
+        "legacy_declared_area_m2": 20000,
+        "legacy_area_status": "NON_AUTHORITATIVE_COMPARISON_ONLY",
+        "legacy_area_difference_m2": 34370.977,
+        "binding_version": 1,
+        "supersedes_binding_ref": null,
+        "change_reason": "INITIAL_MCFT_CONTROLLED_SYNTHETIC_ZONE_FREEZE"
+      },
+      "evidence_grade": "PROVEN",
+      "evidence_refs": [
+        "fixtures/mcft/reality_binding/MCFT_C8_GOVERNED_ZONE_V1.geojson"
+      ],
+      "eligible_downstream_uses": [
+        "MCFT-01_SPATIAL_SCOPE",
+        "MCFT-02_RUNTIME_CONFIG_COMPILE_INPUT"
+      ],
+      "forbidden_downstream_uses": [
+        "SURVEYED_BOUNDARY_CLAIM",
+        "REAL_FIELD_CONTAINMENT_CLAIM"
+      ],
+      "limitations": [
+        "controlled synthetic geometry only"
+      ],
+      "binding_version": 1,
+      "determinism_hash": "sha256:d7b45791c19d059b0bf2d622ea81821260c9947be400c633a45202e007afae7a"
+    },
+    {
+      "binding_id": "mcft_root_zone_identity_c8_v1",
+      "binding_type": "REALITY_IDENTITY_BINDING",
+      "source_role": "ROOT_ZONE_DEFINITION",
+      "epistemic_class": "CONFIGURED",
+      "root_zone_binding": {
+        "root_zone_definition_id": "rz_c8_0_300mm_v1",
+        "top_depth_mm": 0,
+        "bottom_depth_mm": 300,
+        "total_depth_mm": 300,
+        "depth_reference": "BELOW_GROUND_SURFACE",
+        "layers": [
+          {
+            "layer_id": "rz_layer_0_300mm",
+            "top_depth_mm": 0,
+            "bottom_depth_mm": 300,
+            "weight": 1
+          }
+        ],
+        "sensor_support": [
+          {
+            "origin_source_id": "dev_soil_c8_001",
+            "nominal_depth_mm": 200,
+            "spatial_support": "POINT",
+            "vertical_support": "LOCAL_AROUND_200MM",
+            "root_zone_representativeness": "PARTIAL",
+            "direct_state_equivalence": false,
+            "limitations": [
+              "20 cm point observation is not a 0-300 mm zone-average State"
+            ]
+          }
+        ]
+      },
+      "evidence_grade": "PROVEN",
+      "evidence_refs": [
+        "docs/digital_twin/mcft/GEOX-MCFT-00-REALITY-BINDING-CONTRACT.md"
+      ],
+      "eligible_downstream_uses": [
+        "MCFT-01_VERTICAL_SCOPE",
+        "MCFT-02_RUNTIME_CONFIG_COMPILE_INPUT"
+      ],
+      "forbidden_downstream_uses": [
+        "POINT_OBSERVATION_AS_ZONE_STATE",
+        "DYNAMIC_ROOT_DEPTH_IDENTITY"
+      ],
+      "limitations": [
+        "0-300 mm governed definition; not a measured crop root depth"
+      ],
+      "binding_version": 1,
+      "determinism_hash": "sha256:046077eea0f8fb6e9a69caf001abd902d108282608e5dadba3bd6836f7a3e55d"
+    }
+  ],
+  "geometry_binding": {
+    "zone_id": "zone_mcft_c8_water_001",
+    "geometry_type": "Polygon",
+    "crs": "EPSG:4326",
+    "geometry_truth_status": "CONTROLLED_SYNTHETIC",
+    "geometry_source": "MCFT_00_PINNED_FIXTURE",
+    "geometry_fixture_ref": "fixtures/mcft/reality_binding/MCFT_C8_GOVERNED_ZONE_V1.geojson",
+    "canonicalization_policy_id": "GEOX_MCFT_GEOJSON_CANONICALIZATION_V1",
+    "file_sha256": "sha256:b0b9039b0a70361f0725e3f342ebd622d34ddb57e5809646a54bdbb420a47c1e",
+    "geometry_semantic_hash": "sha256:df3da5368a539b61d257603b4e5758589cb1f4cbf2863d3f5e03640c3b0bb30d",
+    "derived_area_m2": 54370.977,
+    "area_derivation": {
+      "algorithm_id": "GEOX_LOCAL_EQUIRECTANGULAR_SHOELACE_AREA_V1",
+      "algorithm_version": "1.0.0",
+      "crs": "EPSG:4326",
+      "earth_radius_m": 6378137,
+      "reference_latitude_policy": "ARITHMETIC_MEAN_OF_EXTERIOR_RING_UNIQUE_VERTICES",
+      "geometry_semantic_hash": "sha256:df3da5368a539b61d257603b4e5758589cb1f4cbf2863d3f5e03640c3b0bb30d"
+    },
+    "legacy_declared_area_m2": 20000,
+    "legacy_area_status": "NON_AUTHORITATIVE_COMPARISON_ONLY",
+    "legacy_area_difference_m2": 34370.977,
+    "binding_version": 1,
+    "supersedes_binding_ref": null,
+    "change_reason": "INITIAL_MCFT_CONTROLLED_SYNTHETIC_ZONE_FREEZE"
+  },
+  "crop_binding": {
+    "crop_code": "corn",
+    "season_id": "season_2026_c8_corn",
+    "identity_fields": [
+      "crop_code",
+      "season_id"
+    ],
+    "dynamic_state_fields_excluded": [
+      "crop_stage",
+      "root_depth_dynamic_state",
+      "canopy_state",
+      "crop_stress_state",
+      "biomass",
+      "phenology_estimate"
+    ]
+  },
+  "root_zone_binding": {
+    "root_zone_definition_id": "rz_c8_0_300mm_v1",
+    "top_depth_mm": 0,
+    "bottom_depth_mm": 300,
+    "total_depth_mm": 300,
+    "depth_reference": "BELOW_GROUND_SURFACE",
+    "layers": [
+      {
+        "layer_id": "rz_layer_0_300mm",
+        "top_depth_mm": 0,
+        "bottom_depth_mm": 300,
+        "weight": 1
+      }
+    ],
+    "sensor_support": [
+      {
+        "origin_source_id": "dev_soil_c8_001",
+        "nominal_depth_mm": 200,
+        "spatial_support": "POINT",
+        "vertical_support": "LOCAL_AROUND_200MM",
+        "root_zone_representativeness": "PARTIAL",
+        "direct_state_equivalence": false,
+        "limitations": [
+          "20 cm point observation is not a 0-300 mm zone-average State"
+        ]
+      }
+    ]
+  },
+  "source_bindings": [
+    {
+      "binding_id": "soil_obs_c8_20cm_v1",
+      "source_role": "SOIL_MOISTURE_OBSERVATION",
+      "determinism_hash": "sha256:0be66c7ad39674af59131a9fd88c70d574df570693302a342cbf21eaff60ef68"
+    },
+    {
+      "binding_id": "rainfall_obs_c8_v1",
+      "source_role": "RAINFALL_OBSERVATION",
+      "determinism_hash": "sha256:3a637a3deac01863bfc4b319de3fd4712703066aba7383e529538d55d15547ea"
+    },
+    {
+      "binding_id": "weather_assumption_c8_replay_v1",
+      "source_role": "FUTURE_WEATHER_ASSUMPTION",
+      "determinism_hash": "sha256:09ecf00f4161d54b5129668e13741a35c027a0a2cbfb0bdd9bb0e3fb9760e982"
+    },
+    {
+      "binding_id": "et0_historical_estimate_c8_v1",
+      "source_role": "HISTORICAL_ET0_INPUT",
+      "determinism_hash": "sha256:66a2d13607c974995c31fec91b47ef16634b59663a982e82c4389ca5a3285789"
+    },
+    {
+      "binding_id": "et0_future_assumption_c8_v1",
+      "source_role": "FUTURE_ET0_ASSUMPTION",
+      "determinism_hash": "sha256:5a5d1c0cc96549e6639a89e4d49ffd8484672e6bc1aeb0871a1403fe6875d5c7"
+    },
+    {
+      "binding_id": "irrigation_plan_c8_v1",
+      "source_role": "APPROVED_IRRIGATION_PLAN",
+      "determinism_hash": "sha256:7a71c433db6606d687658d2c40a0004792976207722e3a674614b9a79689a474"
+    },
+    {
+      "binding_id": "irrigation_execution_c8_v1",
+      "source_role": "IRRIGATION_EXECUTION_EVIDENCE",
+      "determinism_hash": "sha256:f99878304e2cb85635f3fa495d3909551ebe0b16f15eb8ec50e970ae6ca877c2"
+    }
+  ],
+  "configuration_bindings": [
+    {
+      "binding_id": "soil_hydraulic_config_c8_v1",
+      "source_role": "SOIL_HYDRAULIC_CONFIGURATION",
+      "determinism_hash": "sha256:8cb89c420a9c46d03e93c698a9a03b83f5be7077b5d44dc01bdf527a15b440c3"
+    },
+    {
+      "binding_id": "crop_water_use_config_c8_v1",
+      "source_role": "CROP_WATER_USE_CONFIGURATION",
+      "determinism_hash": "sha256:857eeeea5023cb28d6297eea3a405af41f16d2cfae8175948103952fda2131f5"
+    }
+  ],
+  "source_binding_matrix_ref": "docs/digital_twin/mcft/GEOX-MCFT-00-SOURCE-BINDING-MATRIX.json",
+  "source_binding_matrix_hash": "sha256:8a83b3f6f8d3a429049c0456e89608f6fac7ad2be8aeb4a28a50ba39e19e26c0",
+  "configuration_binding_matrix_ref": "docs/digital_twin/mcft/GEOX-MCFT-00-CONFIGURATION-BINDING-MATRIX.json",
+  "configuration_binding_matrix_hash": "sha256:05e9607d4e80b0aca964d1492b990a0e68eb6a8fed6c622a1d894c263019729c",
+  "time_domain": {
+    "timezone": "UTC",
+    "tick_interval": "PT1H",
+    "tick_alignment": "UTC_CLOCK_HOUR",
+    "logical_tick_time": "INTERVAL_END",
+    "runtime_mode": "REPLAY"
+  },
+  "replay_release_policy": {
+    "release_policy_id": "MCFT_REPLAY_RELEASE_POLICY_V1",
+    "release_policy_version": "1.0.0",
+    "rules": [
+      {
+        "applies_to_epistemic_classes": [
+          "OBSERVED",
+          "ESTIMATED",
+          "APPROVED",
+          "EXECUTED"
+        ],
+        "formula": "available_to_runtime_at = latest_non_null(observed_at, source_release_at, ingested_at)",
+        "requirements": [
+          "all contributing timestamps are fixed dataset fields",
+          "available_to_runtime_at >= observed_at when observed_at exists"
+        ]
+      },
+      {
+        "applies_to_epistemic_classes": [
+          "ASSUMED"
+        ],
+        "formula": "available_to_runtime_at = latest_non_null(issued_at, retrieved_at, source_release_at, ingested_at)",
+        "requirements": [
+          "issued_at and retrieved_at are fixed provider-snapshot fields",
+          "valid_from may be later than available_to_runtime_at"
+        ]
+      }
+    ],
+    "forbidden_inputs": [
+      "current_wall_clock",
+      "file_mtime",
+      "script_execution_time",
+      "checkout_path"
+    ],
+    "release_policy_hash": "sha256:17766a101e39a0ce4515f66abc66baea4df839ba8abd0f036c0b3fb437727b91"
+  },
+  "action_feedback_eligibility_policy": {
+    "execution_status": [
+      "EXECUTED",
+      "PARTIALLY_EXECUTED",
+      "EXECUTION_UNCERTAIN",
+      "NOT_EXECUTED"
+    ],
+    "validation_status": [
+      "NOT_YET_VALIDATED",
+      "VALIDATED",
+      "REJECTED",
+      "VALIDATED_WITH_LIMITATIONS"
+    ],
+    "execution_validation_orthogonal": true,
+    "acceptance_ref_required": false,
+    "trusted_execution_reference": "receipt_ref or as_executed_ref",
+    "task_ref_rule": "required only when origin_kind = AO_ACT",
+    "pre_acceptance_candidate_allowed": true,
+    "eligibility_inputs": [
+      "actual_amount",
+      "unit",
+      "executed_at",
+      "spatial_coverage",
+      "source_identity",
+      "source_quality",
+      "limitations"
+    ],
+    "later_validation_policy": "append superseding Action Feedback; never mutate"
+  },
+  "compile_target": {
+    "owner_phase": "MCFT-02",
+    "object_type": "twin_runtime_config_v1",
+    "record_class": "CANONICAL_MODEL_GOVERNANCE_HISTORY",
+    "lineage_member": false,
+    "envelope_profile": "NON_LINEAGE_CONTEXT"
+  },
+  "persistence_target": {
+    "owner_phase": "MCFT-03",
+    "transaction_family": "D_MODEL_GOVERNANCE_STEP_COMMIT",
+    "canonical_store": "Postgres facts append-only store",
+    "performed_by_mcft00": false
+  },
+  "versioning_policy": {
+    "semantic_change_requires_new_binding_version": true,
+    "required_fields": [
+      "supersedes_binding_ref",
+      "change_reason",
+      "previous_determinism_hash",
+      "new_determinism_hash"
+    ],
+    "in_place_mutation_forbidden": true,
+    "runtime_lineage_revision": false
+  },
+  "generated_runtime_objects": [],
+  "forbidden_runtime_actions": [],
+  "legacy_contamination_guard": {
+    "forbidden_initial_objects": [
+      "water_state_estimate_v1",
+      "irrigation_scenario_set_v1",
+      "C8 recommendation facts",
+      "C8 approval facts",
+      "C8 AO-ACT facts",
+      "C8 ROI facts",
+      "C8 Field Memory",
+      "P50 replay_demo_state_estimate_v1",
+      "P50 replay_demo_forecast_run_v1",
+      "P50 demo model activation artifacts",
+      "P42 controlled ledger records",
+      "P43 controlled residual ledger records"
+    ],
+    "allowed_patterns": [
+      "tenant/project/group/field/season identity",
+      "candidate device identity after evidence validation",
+      "append-only fact-store pattern",
+      "typed evidence references",
+      "explicit replay clock pattern",
+      "evidence partition pattern",
+      "no-future-leakage invariant",
+      "stable hashing utilities after semantic review"
+    ]
+  },
+  "limitations": [
+    "field_c8_demo is a controlled synthetic replay proxy, not a real production field",
+    "C8 device identifiers are fixture-only evidence and do not prove online connectivity",
+    "MCFT-01 must package the actual 30-day replay dataset and source snapshots",
+    "configuration values are controlled synthetic baselines and are not field-calibrated",
+    "no State, Forecast, Scenario, Checkpoint, lineage, active pointer, or facts write is produced by MCFT-00"
+  ],
+  "nonclaims": [
+    "NO_CANONICAL_REPLAY_DATASET",
+    "NO_EVIDENCE_INGESTION",
+    "NO_HOURLY_RUNTIME",
+    "NO_STATE_ESTIMATOR",
+    "NO_PROPAGATION",
+    "NO_ASSIMILATION",
+    "NO_POSTERIOR_STATE",
+    "NO_FORECAST",
+    "NO_SCENARIO",
+    "NO_DECISION",
+    "NO_ACTION_FEEDBACK",
+    "NO_RESIDUAL",
+    "NO_CALIBRATION",
+    "NO_CHECKPOINT",
+    "NO_RESTART_RECOVERY",
+    "NO_LATE_EVIDENCE_RUNTIME_REVISION",
+    "NO_LIVE_DEVICE_CONNECTION",
+    "NO_REAL_FIELD_PILOT",
+    "NO_MINIMUM_COMPLETE_FIELD_TWIN",
+    "NO_PRODUCTION_FIELD_TWIN"
+  ],
+  "semantic_identity_algorithm": {
+    "algorithm_id": "GEOX_MCFT_REALITY_BINDING_ID_V1",
+    "hash": "SHA-256",
+    "canonicalization": "UTF-8 JSON with recursively sorted object keys, array order preserved, compact separators; full source/config semantics anchored by matrix hashes and per-binding hashes",
+    "binding_id_format": "mrb_<first32hex>",
+    "excluded_fields": [
+      "binding_id",
+      "determinism_hash",
+      "created_at",
+      "persisted_at",
+      "fact_id",
+      "worker_id",
+      "process_id",
+      "wall_clock_generation_time",
+      "absolute_path",
+      "checkout_path",
+      "git_branch",
+      "new_determinism_hash"
+    ]
+  },
+  "binding_id": "mrb_475968aa09c18674c10c34ecc708d79d",
+  "determinism_hash": "sha256:475968aa09c18674c10c34ecc708d79d6bb257db278f72659715752658497485",
+  "previous_determinism_hash": null,
+  "new_determinism_hash": "sha256:475968aa09c18674c10c34ecc708d79d6bb257db278f72659715752658497485",
+  "candidate_adjudication_ref": "docs/digital_twin/mcft/GEOX-MCFT-00-CANDIDATE-ADJUDICATION.md",
+  "geometry_canonicalization_ref": "docs/digital_twin/mcft/GEOX-MCFT-00-GEOMETRY-CANONICALIZATION.md",
+  "baseline_commit": "7fd848ae00680480fc864990b9d03b37bc61fdff",
+  "predecessor_merge_pr": 2303,
+  "predecessor_merge_commit": "7fd848ae00680480fc864990b9d03b37bc61fdff",
+  "successor": "MCFT-01 Canonical Replay Dataset",
+  "completion_claims": [
+    "MCFT_00_REALITY_BINDING_FROZEN",
+    "GOVERNANCE_INPUT_ONLY",
+    "TARGET_RUNTIME_MODE_REPLAY",
+    "NO_RUNTIME_IMPLEMENTATION",
+    "NO_CANONICAL_PERSISTENCE",
+    "NO_CANONICAL_REPLAY_DATASET",
+    "CONTROLLED_SYNTHETIC_REPLAY_SCOPE_ONLY"
+  ]
+}
