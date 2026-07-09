@@ -1,0 +1,37 @@
+{
+  "case_id": "mcft_cap_01_bootstrap_water_state_001",
+  "hydraulic_configuration": {
+    "wilting_point_fraction": 0.12,
+    "field_capacity_fraction": 0.3,
+    "saturation_fraction": 0.45,
+    "root_zone_depth_mm": 300
+  },
+  "observation": {
+    "observation_ref": "soil_obs_c8_20cm_v1@2026-06-01T00:50:00.000Z",
+    "value_fraction": 0.184,
+    "quality_status": "PASS",
+    "direct_state_equivalence": false
+  },
+  "expected": {
+    "prior_mean": 0.21,
+    "prior_stddev": 0.09,
+    "prior_variance": 0.0081,
+    "predicted_observation": 0.21,
+    "innovation": -0.026,
+    "sensor_variance": 0.0004,
+    "representativeness_variance": 0.0036,
+    "effective_observation_variance": 0.004,
+    "assimilation_gain": 0.669421,
+    "posterior_mean": 0.192595,
+    "posterior_variance": 0.002678,
+    "posterior_stddev": 0.051746,
+    "interval_low": 0.091172,
+    "interval_high": 0.294018,
+    "storage_mean_mm": 57.778512,
+    "storage_stddev_mm": 15.523909,
+    "storage_interval_low_mm": 27.351652,
+    "storage_interval_high_mm": 88.205373,
+    "available_water_fraction": 0.403306,
+    "depletion_from_field_capacity_mm": 32.221488
+  }
+}
