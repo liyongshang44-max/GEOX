@@ -1,5 +1,5 @@
 // scripts/governance_acceptance/ACCEPTANCE_DT_02_ARCHITECTURE_AMENDMENT_02.cjs
-// Purpose: close DT02-AMENDMENT-02 through the amended DT-02 semantic Gate, predecessor regressions, and an exact governance-only changed-file boundary.
+// Purpose: close DT02-AMENDMENT-02 through the amended DT-02 semantic Gate, predecessor semantic regressions, and an exact governance-only changed-file boundary.
 // Boundary: this Gate performs no Runtime, migration, canonical persistence, State, Forecast, checkpoint, or database write.
 'use strict';
 
@@ -19,6 +19,7 @@ const F = Object.freeze({
   freeze: 'docs/digital_twin/GEOX-DT-02-RUNTIME-ARCHITECTURE-FREEZE.md',
   implementationMap: 'docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md',
   capabilityMatrix: 'docs/digital_twin/GEOX-DIGITAL-TWIN-CAPABILITY-MATRIX.json',
+  verticalMatrix: 'docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json',
   closure: 'docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-02-CLOSURE-RECORD.md',
   dt02Gate: 'scripts/governance_acceptance/ACCEPTANCE_DT_02_RUNTIME_ARCHITECTURE_FREEZE.cjs',
   self: 'scripts/governance_acceptance/ACCEPTANCE_DT_02_ARCHITECTURE_AMENDMENT_02.cjs',
@@ -36,6 +37,11 @@ function abs(relativePath) { return path.join(ROOT, relativePath); }
 function read(relativePath) { return fs.readFileSync(abs(relativePath), 'utf8'); }
 function parse(relativePath) { return JSON.parse(read(relativePath)); }
 function field(text, key) { return (text.match(new RegExp(`^${key}:\\s*(.+)$`, 'm')) || [])[1]?.trim(); }
+function seteq(actual, expected, message) {
+  const left = JSON.stringify([...(actual || [])].sort());
+  const right = JSON.stringify([...expected].sort());
+  left === right ? pass(message) : fail(`${message}: expected ${right}, got ${left}`);
+}
 function runNode(relativePath, args = [], env = {}) {
   cp.execFileSync(process.execPath, [relativePath, ...args], {
     cwd: ROOT,
@@ -54,12 +60,16 @@ let bootstrap;
 let objects;
 let transactions;
 let adrs;
+let vertical;
+let capability;
 try {
   bootstrap = parse(F.bootstrap);
   objects = parse(F.objectSet);
   transactions = parse(F.transactionMatrix);
   adrs = parse(F.adrRegister);
-  pass('all Amendment 02 machine-readable contracts parse');
+  vertical = parse(F.verticalMatrix);
+  capability = parse(F.capabilityMatrix);
+  pass('all Amendment 02 and predecessor machine-readable contracts parse');
 } catch (error) {
   fail(`machine-readable contract parse failed: ${error.message}`);
   finish();
@@ -107,12 +117,29 @@ try {
   fail(`amended DT-02 semantic Gate failed: ${error.message}`);
 }
 
-try {
-  runNode(F.verticalGate, [], {MCFT_VERTICAL_ACCEPTANCE_SKIP_GIT_SCOPE: '1'});
-  pass('MCFT vertical capability-line semantic regression PASS');
-} catch (error) {
-  fail(`MCFT vertical capability-line regression failed: ${error.message}`);
+const verticalLine = (vertical.capability_lines || [])[0] || {};
+if (vertical.schema_version !== 'geox_mcft_vertical_capability_line_matrix_v1') fail('MCFT vertical matrix schema changed');
+else pass('MCFT vertical matrix schema preserved');
+if (vertical.amendment_id !== 'MCFT-VERTICAL-AMENDMENT-01') fail('MCFT vertical amendment identity changed');
+else pass('MCFT vertical amendment identity preserved');
+if (verticalLine.capability_line_id !== 'MCFT-CAP-01' || verticalLine.display_alias !== 'MCFT-1') fail('MCFT capability-line identity or alias changed');
+else pass('MCFT capability-line identity and alias preserved');
+if (verticalLine.status !== 'BLOCKED_BY_DT02_AMENDMENT_02') fail('MCFT capability line no longer blocked by DT02-AMENDMENT-02');
+else pass('MCFT capability line remains blocked by DT02-AMENDMENT-02');
+seteq(verticalLine.authorized_owner_work_package_ids, ['MCFT-01','MCFT-02','MCFT-03','MCFT-04','MCFT-05','MCFT-07','MCFT-08','MCFT-09'], 'MCFT authorized owner work packages preserved');
+seteq(verticalLine.excluded_owner_work_package_ids, ['MCFT-06'], 'MCFT excluded owner work package preserved');
+if ((verticalLine.delivery_slices || []).length !== 6) fail('MCFT delivery-slice graph changed');
+else pass('MCFT six-slice graph preserved');
+const capabilityLineRow = (capability.capability_lines || []).find((row) => row.capability_line_id === 'MCFT-CAP-01');
+if (!capabilityLineRow || capabilityLineRow.status !== 'BLOCKED_BY_DT02_AMENDMENT_02') fail('capability matrix MCFT-CAP-01 row changed');
+else pass('capability matrix MCFT-CAP-01 row preserved');
+const capabilityById = new Map((capability.capabilities || []).map((row) => [row.capability_id, row]));
+for (const id of ['DT-MATRIX-HOURLY-TICK','DT-MATRIX-PROPAGATION','DT-MATRIX-ASSIMILATION','DT-MATRIX-POSTERIOR','DT-MATRIX-CHECKPOINT','DT-MATRIX-RESTART','DT-MATRIX-LATE-REVISION','DT-MATRIX-72H-REGEN']) {
+  if (capabilityById.get(id)?.current_status !== 'MISSING') fail(`${id} capability inflation during predecessor regression`);
 }
+if (!failures.some((message) => message.includes('capability inflation during predecessor regression'))) pass('MCFT vertical capability nonclaims preserved');
+if (capabilityById.get('DT-MATRIX-LIVE-PRODUCTION-FIELD-TWIN')?.current_status !== 'NOT_CLAIMED') fail('production capability inflation during predecessor regression');
+else pass('production nonclaim preserved during predecessor regression');
 
 try {
   runNode(F.dt01Audit, ['--check']);
