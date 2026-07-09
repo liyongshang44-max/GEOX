@@ -8,6 +8,8 @@ export const MCFT_CAP_01_EXPECTED_AUTHORITY_V1 = {
   source_matrix_hash: "sha256:c5187c23be0d058ffa23d464ae1139f924f5af064a270248746fbabde4c3e51b",
   configuration_matrix_hash: "sha256:381ef166454c7b698c6641fadc5d08019fecff127e9529a4c58a1f09d9e1fef5",
   geometry_semantic_hash: "sha256:d3dbc5495485e7af68acdc4b32e6061c2ea99772835be2805ae706b74d75ca51",
+  soil_hydraulic_binding_id: "soil_hydraulic_config_c8_v1",
+  crop_water_use_binding_id: "crop_water_use_config_c8_v1",
 } as const;
 
 export const MCFT_CAP_01_BOOTSTRAP_MODEL_CONFIG_V1 = {
@@ -34,7 +36,9 @@ export type RuntimeConfigSemanticPayloadV1 = {
   configuration_matrix_ref: string; configuration_matrix_hash: string;
   geometry_semantic_hash: string;
   root_zone_definition: Record<string, unknown>;
+  configuration_binding_refs: string[];
   soil_hydraulic_configuration_refs: string[];
+  crop_water_use_configuration_refs: string[];
   source_binding_refs: string[];
   replay_release_policy_id: string;
   tick_duration: "PT1H";
