@@ -3,7 +3,10 @@
 // Boundary: pure application service; callers perform artifact I/O and persistence through separate adapters/ports.
 
 import { computeMemberDeterminismHashV1, deriveSemanticObjectIdV1 } from "../../domain/twin_runtime/canonical_identity_v1.js";
-import { validateCanonicalObjectV1, type CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
+import {
+  validateContinuationRuntimeConfigSemanticPayloadV1,
+  type CanonicalObjectEnvelopeV1,
+} from "../../domain/twin_runtime/continuation_runtime_config_v1.js";
 import {
   MCFT_CAP_02_CONTINUATION_CONFIG_PURPOSE_V1,
   MCFT_CAP_02_CONTINUATION_CONFIG_SELECTION_MODE_V1,
@@ -29,7 +32,6 @@ import {
   MCFT_CAP_02_CONTINUATION_CROP_ROOT_ZONE_DEPTH_MM_V1,
   MCFT_CAP_02_CONTINUATION_WILTING_POINT_FRACTION_V1,
   MCFT_CAP_02_CONTINUATION_WILTING_POINT_STORAGE_MM_V1,
-  MCFT_CAP_02_CONTINUATION_OUTPUT_DECIMALS_V1,
   MCFT_CAP_02_CONTINUATION_COMPUTATION_STORAGE_VARIANCE_SCALE_V1,
   type ContinuationRuntimeConfigSemanticPayloadV1,
   type ContinuationScopeV1,
@@ -57,11 +59,6 @@ export type CompileContinuationRuntimeConfigInputV1 = {
 
 function requireStringV1(value: unknown, code: string): string {
   if (typeof value !== "string" || !value.trim()) throw new Error(code);
-  return value;
-}
-
-function requireNumberV1(value: unknown, code: string): number {
-  if (typeof value !== "number" || !Number.isFinite(value)) throw new Error(code);
   return value;
 }
 
@@ -146,6 +143,7 @@ export function compileContinuationRuntimeConfigV1(input: CompileContinuationRun
   requireStringV1(input.created_at, "CREATED_AT_REQUIRED");
   requireStringV1(input.logical_time, "LOGICAL_TIME_REQUIRED");
   const payload = freezePayloadV1(input);
+  validateContinuationRuntimeConfigSemanticPayloadV1(payload);
 
   const identityPayload = {
     object_type: "twin_runtime_config_v1",
@@ -172,6 +170,5 @@ export function compileContinuationRuntimeConfigV1(input: CompileContinuationRun
     payload: payload as unknown as Record<string, unknown>,
   };
   draft.determinism_hash = computeMemberDeterminismHashV1(draft as unknown as Record<string, unknown>);
-  validateCanonicalObjectV1(draft);
   return draft;
 }
