@@ -4,7 +4,9 @@
 ```text
 delivery_slice_id: MCFT-CAP-01.MCFT-07-08.BOOTSTRAP-STATE-MATH-V1
 implementation_baseline: 4ddd2bbf4d5d421f875e3ab5b1bfd76749f2ca3a
-status: IN_IMPLEMENTATION
+implementation_candidate_head: dca5541949f2aff39f3c49feb0ecc95cc3564b2a
+status: COMPLETE
+transition_effective_condition: PR_2312_MERGED_AND_VERIFIED_ON_MAIN
 primary_owner_work_package_ids: MCFT-07, MCFT-08
 claim: NO_A0_RUNTIME_EXECUTION
 ```
@@ -61,6 +63,20 @@ action_input_eligible: false
 
 The legacy `root_zone_soil_water_state_builder_v1` is not reused because it represents a different historical projection model and emits numeric confidence. S3B has an independent contract, validator, fixture, and purity Gate.
 
+## Closure evidence
+
+```text
+S3B State Math Gate: 108 PASS, 0 FAIL
+S2 Contracts/Config regression: 10 PASS, 0 FAIL
+Foundation closure regression: 28 PASS, 0 FAIL
+git diff --check: CLEAN
+working tree: CLEAN
+CI #4441 build-test: SUCCESS
+CI #4441 acceptance: SUCCESS
+```
+
+Completion establishes only the pure bootstrap State mathematics and posterior DTO. It does not establish Evidence selection, A0 execution, a committed canonical State, an active Initial lineage, an Initial Checkpoint, or Forecast execution.
+
 ## Nonclaims
 
 ```text
@@ -68,7 +84,8 @@ NO_EVIDENCE_WINDOW
 NO_REPLAY_SELECTION
 NO_A0_RUNTIME_EXECUTION
 NO_CANONICAL_WRITE
-NO_POSTGRES
+NO_POSTGRES_WRITE
+NO_BOOTSTRAP_STATE_COMMITTED
 NO_ACTIVE_INITIAL_LINEAGE
 NO_INITIAL_CHECKPOINT
 NO_FORECAST_CONSTRUCTION
