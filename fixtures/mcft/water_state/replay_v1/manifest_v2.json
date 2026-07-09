@@ -1,0 +1,26 @@
+{
+  "schema_version": "geox_mcft_cap_01_replay_dataset_manifest_v2",
+  "dataset_id": "mcft_c8_water_replay_2026_06_v1",
+  "dataset_truth_class": "CONTROLLED_SYNTHETIC_CANONICAL_REPLAY_FIXTURE",
+  "coverage_start": "2026-06-01T00:00:00.000Z",
+  "coverage_end_exclusive": "2026-07-01T00:00:00.000Z",
+  "timezone": "UTC",
+  "hourly_interval_count": 720,
+  "top_level_evidence_record_count": 3604,
+  "evidence_role_count": 7,
+  "evidence_manifest_ref": "fixtures/mcft/water_state/replay_v1/manifest.json",
+  "configuration_context_ref": "fixtures/mcft/water_state/replay_v1/configuration_context.json",
+  "configuration_context_hash": "sha256:2287c71e983b1ba529e49939f025d9b035e09e195a5effc994fe54b4ef7863ce",
+  "configuration_context_class": "CONFIGURATION_DERIVED_CONTEXT",
+  "configuration_context_is_evidence": false,
+  "required_runtime_inputs": [
+    "CANONICAL_REPLAY_EVIDENCE",
+    "CROP_STAGE_CONFIGURATION_CONTEXT"
+  ],
+  "limitations": [
+    "configuration context is controlled synthetic",
+    "crop stage is not observed Evidence",
+    "manifest v1 remains evidence-file inventory authority"
+  ],
+  "determinism_hash": "sha256:5d4b6528739a44eabba753d2c5aec30d0bd72b87f804f525fb3925ac0f26d49d"
+}
