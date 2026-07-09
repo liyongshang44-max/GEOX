@@ -140,10 +140,11 @@ for (const marker of [
 
 for (const marker of [
   'MCFT-VERTICAL-AMENDMENT-01 introduces vertical capability lines',
-  'MCFT-CAP-01 (`MCFT-1`)',
   'MCFT-06 remains `NOT_STARTED`',
   'semantic dependency order',
 ]) map.includes(marker) ? ok(`implementation-map marker ${marker}`) : bad(`implementation-map marker missing ${marker}`);
+if (map.includes('MCFT-CAP-01') && map.includes('MCFT-1')) ok('implementation-map capability-line identity and alias');
+else bad('implementation-map capability-line identity or alias missing');
 if (map.includes('Initial lineage activation is not defined by this map') || map.includes('A0 plus an `INITIAL` `twin_runtime_lineage_v1`')) ok('implementation map preserves governed initial-lineage boundary');
 else bad('implementation map initial-lineage boundary missing');
 
