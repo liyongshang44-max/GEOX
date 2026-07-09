@@ -1,35 +1,60 @@
 {
-  "schema_version": "geox_mcft_cap_01_closure_record_v2",
+  "schema_version": "geox_mcft_cap_01_closure_record_v3",
   "capability_line_id": "MCFT-CAP-01",
   "display_alias": "MCFT-1",
   "name": "First-Class Water State Estimate",
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A",
   "historical_delivery_slice_id": "MCFT-CAP-01.CLOSURE-V1",
-  "active_delivery_slice_id": "MCFT-CAP-01.CLOSURE-REMEDIATION-V1",
-  "status": "SUPERSEDED_PENDING_REMEDIATION",
+  "remediation_delivery_slice_id": "MCFT-CAP-01.CLOSURE-REMEDIATION-V1",
+  "active_delivery_slice_id": null,
+  "status": "COMPLETE",
   "authority": {
     "historical_baseline_main_commit": "94fe516ccbf8831be05c36ede5e2732bf7e19d55",
     "runtime_delivery_main_commit": "4a0fd03beb05298028101a4999c67a5e053dadb8",
     "historical_closure_main_commit": "250053aba801075c17098f8d505d527eb54390e9",
+    "remediation_implementation_candidate_head": "193f9785e42eb146e300e2a64abeed455f10e54e",
     "reality_binding_id": "mcft_rb_bf1da664164a4fedda249bcb",
     "reality_binding_hash": "sha256:bf1da664164a4fedda249bcb0e330c1af2083173a52bd704f01eac3ad277ba4f",
     "source_matrix_hash": "sha256:c5187c23be0d058ffa23d464ae1139f924f5af064a270248746fbabde4c3e51b",
     "configuration_matrix_hash": "sha256:381ef166454c7b698c6641fadc5d08019fecff127e9529a4c58a1f09d9e1fef5",
     "geometry_semantic_hash": "sha256:d3dbc5495485e7af68acdc4b32e6061c2ea99772835be2805ae706b74d75ca51"
   },
-  "historical_closure_evidence": {
+  "historical_closure": {
+    "status": "SUPERSEDED_BY_REMEDIATION",
     "readiness_gate": "104_PASS_0_FAIL",
-    "final_closure_gate": "169_PASS_0_FAIL",
+    "final_closure_gate": "169_PASS_0_FAIL"
+  },
+  "remediation_evidence": {
+    "s1_replay_dataset": "12_PASS_0_FAIL",
+    "s4_a0_runtime_static": "21_PASS_0_FAIL",
+    "s4_a0_runtime_postgres": "12_PASS_0_FAIL",
+    "remediation_static": "18_PASS_0_FAIL",
+    "remediation_postgres": "7_PASS_0_FAIL",
+    "governance_readiness": "106_PASS_0_FAIL",
     "server_typecheck": "PASS",
     "server_build": "PASS",
-    "historical_exact_head_ci": {
-      "readiness_run_number": 4462,
-      "final_run_number": 4469,
+    "git_diff_check": "PASS",
+    "working_tree": "CLEAN",
+    "exact_head_ci": {
+      "candidate_head": "193f9785e42eb146e300e2a64abeed455f10e54e",
+      "run_number": 4491,
+      "run_id": 29038423099,
       "conclusion": "success"
+    },
+    "manual_runner": {
+      "first_execution_status": "INSERTED",
+      "second_execution_status": "EXISTING_IDEMPOTENT_SUCCESS",
+      "a0_record_set_id": "a0rs_b24d89a612198b8f234aab45",
+      "posterior_state_ref": "twin_state_estimate_a411d678b1d79b7a58b31fd7",
+      "checkpoint_ref": "twin_runtime_checkpoint_16dfbf70c99cd900d463406c",
+      "lineage_id": "lineage_da76d015085f0d37bf2ed478",
+      "posterior_mean": 0.192595,
+      "posterior_variance": 0.002678,
+      "next_logical_tick_time": "2026-06-01T02:00:00.000Z"
     }
   },
-  "established_proof_retained": {
+  "established_proof": {
     "controlled_bootstrap_posterior": true,
     "a0_atomicity": true,
     "a0_idempotency": true,
@@ -39,32 +64,19 @@
     "blocked_forecast_without_success_claim": true,
     "initial_lineage": true,
     "initial_checkpoint": true,
-    "next_tick_checkpoint_pointer": true
+    "next_tick_checkpoint_pointer": true,
+    "persisted_next_tick_handoff": true,
+    "active_lineage_object_ref_resolution": true,
+    "conflicting_duplicate_observation_rejection": true,
+    "complete_evidence_model_consumption_trace": true,
+    "complete_a0_cross_reference_graph_validation": true,
+    "operator_invokable_manual_runtime_entry": true,
+    "crop_stage_configuration_context_in_dataset_package": true
   },
-  "withdrawn_or_suspended_proof": {
-    "persisted_next_tick_handoff": false,
-    "conflicting_duplicate_observation_rejection": false,
-    "complete_evidence_model_consumption_trace": false,
-    "complete_a0_cross_reference_graph_validation": false,
-    "operator_invokable_manual_runtime_entry": false,
-    "crop_stage_configuration_context_in_dataset_package": false
-  },
-  "historical_claims_suspended": [
+  "completion_claims": [
     "MCFT_CAP_01_COMPLETE",
+    "FIRST_CLASS_WATER_STATE_ESTIMATE_LEVEL_A_ESTABLISHED",
     "CONTROLLED_REPLAY_BOOTSTRAP_CLOSURE_ESTABLISHED",
-    "NEXT_TICK_HANDOFF_ESTABLISHED"
-  ],
-  "claims_still_valid": [
-    "BOOTSTRAP_STATE_MATH_ESTABLISHED",
-    "STATIC_BOOTSTRAP_ASSIMILATION_ESTABLISHED",
-    "FIRST_BOOTSTRAP_POSTERIOR_ESTABLISHED",
-    "A0_ATOMIC_COMMIT_ESTABLISHED",
-    "ACTIVE_INITIAL_LINEAGE_ESTABLISHED",
-    "INITIAL_CHECKPOINT_ESTABLISHED",
-    "BLOCKED_FORECAST_RESULT_ESTABLISHED",
-    "NEXT_TICK_CHECKPOINT_POINTER_ESTABLISHED"
-  ],
-  "remediation_requirements": [
     "PERSISTED_NEXT_TICK_HANDOFF_ESTABLISHED",
     "CONFLICTING_DUPLICATE_OBSERVATION_REJECTION_ESTABLISHED",
     "EVIDENCE_MODEL_CONSUMPTION_TRACE_ESTABLISHED",
@@ -85,8 +97,6 @@
     "MCFT-09": "PARTIALLY_ESTABLISHED"
   },
   "preserved_nonclaims": [
-    "NO_MCFT_CAP_01_CLOSURE",
-    "NO_PERSISTED_NEXT_TICK_HANDOFF",
     "NO_PROPAGATION",
     "NO_SUCCESSFUL_FORECAST",
     "NO_SCENARIO",
@@ -103,8 +113,7 @@
     "NO_MCFT_GATE_C_CLOSURE",
     "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
   ],
-  "remediation_branch": "mcft-cap-01-closure-remediation-v1",
   "remediation_pr": 2316,
-  "transition_effective_condition": "PR_2316_MERGED_AND_REMEDIATION_CLOSURE_VERIFIED_ON_MAIN",
+  "transition_effective_condition": "PR_2316_MERGED_AND_VERIFIED_ON_MAIN",
   "next_authorized_slice_ids": []
 }
