@@ -4,8 +4,32 @@
   "display_alias": "MCFT-1",
   "baseline_main_commit": "94fe516ccbf8831be05c36ede5e2732bf7e19d55",
   "runtime_delivery_main_commit": "4a0fd03beb05298028101a4999c67a5e053dadb8",
-  "status": "IN_IMPLEMENTATION",
-  "active_delivery_slice_id": "MCFT-CAP-01.CLOSURE-V1",
+  "status": "COMPLETE",
+  "active_delivery_slice_id": null,
+  "capability_closure": {
+    "readiness_candidate_head": "273843b09a7fe2e71f2cb9ea5c4ca14dcee8e3e5",
+    "readiness_ci": {
+      "workflow": "ci",
+      "run_number": 4462,
+      "run_id": 29033066650,
+      "conclusion": "success",
+      "build_test": "PASS",
+      "acceptance": "PASS"
+    },
+    "local_acceptance": {
+      "closure_readiness": "104_PASS_0_FAIL",
+      "server_typecheck": "PASS",
+      "server_build": "PASS",
+      "git_diff_check": "CLEAN",
+      "working_tree": "CLEAN"
+    },
+    "completion_claims": [
+      "MCFT_CAP_01_COMPLETE",
+      "FIRST_CLASS_WATER_STATE_ESTIMATE_LEVEL_A_ESTABLISHED",
+      "CONTROLLED_REPLAY_BOOTSTRAP_CLOSURE_ESTABLISHED"
+    ],
+    "transition_effective_condition": "PR_2315_MERGED_AND_VERIFIED_ON_MAIN"
+  },
   "foundation_closure": {
     "implementation_candidate_head": "5975f8e1f1dfa6fc4a79b26c8a300ed6bdd869d3",
     "implementation_candidate_ci": {
@@ -173,7 +197,7 @@
     },
     {
       "delivery_slice_id": "MCFT-CAP-01.CLOSURE-V1",
-      "status": "IN_IMPLEMENTATION",
+      "status": "COMPLETE",
       "primary_owner_work_package_id": "MCFT-08",
       "contributing_work_package_ids": [
         "MCFT-01",
@@ -187,7 +211,7 @@
       "depends_on_delivery_slice_ids": [
         "MCFT-CAP-01.MCFT-04-05-08-09.A0-RUNTIME-INTEGRATION-V1"
       ],
-      "target_claims": [
+      "claims": [
         "MCFT_CAP_01_COMPLETE",
         "FIRST_CLASS_WATER_STATE_ESTIMATE_LEVEL_A_ESTABLISHED",
         "CONTROLLED_REPLAY_BOOTSTRAP_CLOSURE_ESTABLISHED"
@@ -210,7 +234,6 @@
     "NO_MCFT_GATE_A_CLOSURE",
     "NO_MCFT_GATE_B_CLOSURE",
     "NO_MCFT_GATE_C_CLOSURE",
-    "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM",
-    "NO_MCFT_CAP_01_CLOSURE"
+    "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
   ]
 }
