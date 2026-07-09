@@ -20,13 +20,14 @@ The source vocabulary correction remains governed by `MCFT00-AMENDMENT-01`. The 
 
 ## 2. Post-acceptance findings
 
-The previous `COMPLETE` closure was reopened after direct review of the implementation bytes established four additional findings:
+The previous `COMPLETE` closure was reopened after direct review of the implementation bytes established five additional findings:
 
 ```text
 MCFT00-REVIEW-020 idempotency guard trusted declared determinism hashes
 MCFT00-REVIEW-021 geometry rounding implementation diverged from half-away-from-zero policy
 MCFT00-REVIEW-022 ingress adapter version was defined but not bound by Evidence bindings
 MCFT00-REVIEW-023 purity scan omitted the geometry/hash helper
+MCFT00-REVIEW-024 fixture acceptance metadata became split after closure was reopened
 ```
 
 These findings invalidate the prior closure evidence for head `1e7d62a68d731a36ddc229c4cf7fff717ec75df6`.
@@ -39,13 +40,14 @@ idempotency guard verifies each declared hash against its computed hash
 idempotency guard verifies binding ID against the computed semantic identity
 same ID plus changed payload plus stale hash returns SEMANTIC_HASH_MISMATCH
 same ID plus changed payload plus correct changed hash returns IDEMPOTENCY_CONFLICT
-geometry uses decimal half-away-from-zero at seven decimal places
-positive and negative half-tie fixtures are executable acceptance evidence
+geometry uses binary-safe decimal half-away-from-zero at seven decimal places
+positive, negative, near-zero, and binary-sensitive half-tie fixtures are executable acceptance evidence
 every Evidence binding carries ingress_adapter_version
 adapter definition and binding versions are compared by the authority validator
 adapter version mismatch has an exact negative fixture
 both private helpers are included in the purity scan
 negative fixture count increased from 78 to 80
+fixture manifest, all seven fixture parts, and rounding manifest must match closure acceptance state
 source matrix and Reality identities were deterministically rederived
 ```
 
@@ -69,6 +71,7 @@ acceptance_status: PENDING
 implementation_validated_head: PENDING
 full local Gate: PENDING
 negative_fixture_count: 80
+rounding_fixture_count: 6
 final CI: PENDING
 ```
 
