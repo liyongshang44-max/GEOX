@@ -62,6 +62,15 @@ historical closure main commit:
 remediation implementation candidate head:
 193f9785e42eb146e300e2a64abeed455f10e54e
 
+remediation final closure head:
+7fedd85815cd65f0e3d2aedc74e4d0d9ed1b0558
+
+remediation merge commit:
+7da8fee4daf1f022edff29078a1bbac207d1a32f
+
+merged-main verification commit:
+53aa944da595c515619229d37be86930d7a2e7e7
+
 PR:
 #2316
 
@@ -70,9 +79,6 @@ COMPLETE
 
 active delivery slice:
 null
-
-successor:
-NOT_YET_AUTHORIZED
 ```
 
 ## 3. Established MCFT-CAP-01 proof
@@ -108,7 +114,7 @@ lineage_id = semantic lineage identity
 
 and reads active lineage, latest checkpoint, previous posterior, Runtime Config and Reality Binding in one PostgreSQL consistent view.
 
-## 4. Acceptance
+## 4. MCFT-CAP-01 merged-main acceptance
 
 ```text
 S1 Replay Dataset: 12 PASS, 0 FAIL
@@ -117,13 +123,92 @@ S4 PostgreSQL: 12 PASS, 0 FAIL
 Remediation static: 18 PASS, 0 FAIL
 Remediation PostgreSQL: 7 PASS, 0 FAIL
 Governance readiness: 106 PASS, 0 FAIL
-Typecheck: PASS
-Build: PASS
-CI #4491: SUCCESS
-Manual runner: INSERTED then EXISTING_IDEMPOTENT_SUCCESS
+Merged-main final closure Gate: 173 PASS, 0 FAIL
+Merged-main Typecheck: PASS
+Merged-main Build: PASS
+Merged-main git diff check: PASS
+Merged-main worktree: CLEAN
+Isolated PostgreSQL A0 execution: INSERTED
+Canonical predecessor identity extraction: PASS
 ```
 
-## 5. Owner work-package status
+## 5. MCFT-CAP-02 authorization map
+
+```text
+MCFT-CAP-02 authorization status:
+READY_FOR_MERGE
+
+capability matrix status:
+READY_FOR_IMPLEMENTATION
+
+authorization effective:
+false
+
+runtime source authorized:
+false
+
+predecessor main verification:
+COMPLETE
+
+predecessor canonical identity lock:
+COMPLETE
+
+active delivery slice:
+MCFT-CAP-02.GOV-AUTHORIZATION-V1
+
+next implementation slice after merge and postmerge Gate:
+MCFT-CAP-02.MCFT-02.CONTINUATION-CONTRACTS-CONFIG-V1
+```
+
+Runtime source implementation begins only after this authorization is merged into `main` and the postmerge authorization Gate passes from the merged authorization main commit. Matrix readiness on the authorization branch is a bounded merge target, not premerge Runtime authority.
+
+| delivery slice | bounded result | premerge status |
+|---|---|---|
+| `MCFT-CAP-02.GOV-AUTHORIZATION-V1` | exact predecessor proof, owner boundary, delivery graph, claims/nonclaims and changed-file boundary | READY_FOR_MERGE |
+| `MCFT-CAP-02.MCFT-02.CONTINUATION-CONTRACTS-CONFIG-V1` | continuation contracts, fixed coordinate policy, Runtime Config and graph validation | BLOCKED |
+| `MCFT-CAP-02.MCFT-06.PURE-HOURLY-DYNAMICS-V1` | deterministic fixed-point hourly water Dynamics and mass-balance trace | BLOCKED |
+| `MCFT-CAP-02.MCFT-05.CONTINUATION-EVIDENCE-WINDOW-V1` | exact-hour Evidence selection and consumption trace | BLOCKED |
+| `MCFT-CAP-02.MCFT-03.CONTINUATION-PERSISTENCE-V1` | eight-fact continuation transaction, CAS, idempotency and rebuild | BLOCKED |
+| `MCFT-CAP-02.MCFT-04-06-08-09.SINGLE-TICK-INTEGRATION-V1` | first continuation tick from persisted predecessor handoff | BLOCKED |
+| `MCFT-CAP-02.MCFT-04-08.TWENTY-FOUR-TICK-RANGE-V1` | 24 contiguous ticks and exact chain verification | BLOCKED |
+| `MCFT-CAP-02.MCFT-04.RESTART-BACKFILL-V1` | persisted restart/resume and bounded forward backfill | BLOCKED |
+| `MCFT-CAP-02.FAILURE-RECOVERY-V1` | failure fixtures, retry, fencing, CAS and divergence handling | BLOCKED |
+| `MCFT-CAP-02.CLOSURE-V1` | capability closure only after all prior slices merge and pass | BLOCKED |
+
+## 6. MCFT-CAP-02 predecessor identity lock
+
+```text
+predecessor merge commit:
+7da8fee4daf1f022edff29078a1bbac207d1a32f
+
+predecessor main verification commit:
+53aa944da595c515619229d37be86930d7a2e7e7
+
+active lineage object ref:
+twin_runtime_lineage_31d5cdda3c87fdf1536f0233
+
+semantic lineage id:
+lineage_da76d015085f0d37bf2ed478
+
+revision id:
+revision_e0c62f99ac3db66f60a87e2b
+
+bootstrap State ref:
+twin_state_estimate_a411d678b1d79b7a58b31fd7
+
+bootstrap checkpoint ref:
+twin_runtime_checkpoint_16dfbf70c99cd900d463406c
+
+bootstrap Runtime Config ref:
+twin_runtime_config_851ac30201221a7aa2ce16f7
+
+next logical tick:
+2026-06-01T02:00:00.000Z
+```
+
+These values were extracted through the isolated PostgreSQL canonical read path. They are predecessor identities, not new Runtime output.
+
+## 7. Owner work-package status
 
 ```text
 MCFT-01 PARTIALLY_ESTABLISHED
@@ -137,21 +222,30 @@ MCFT-08 PARTIALLY_ESTABLISHED
 MCFT-09 PARTIALLY_ESTABLISHED
 ```
 
-MCFT-CAP-01 closure does not imply complete horizontal work-package closure.
+Neither MCFT-CAP-01 completion nor MCFT-CAP-02 authorization readiness marks a horizontal owner work package COMPLETE.
 
-## 6. Preserved nonclaims
+## 8. Preserved MCFT-CAP-02 nonclaims
 
 ```text
-NO_PROPAGATION
+NO_RUNTIME_SOURCE_AUTHORIZED_BEFORE_AUTHORIZATION_MERGE
+NO_HOURLY_DYNAMICS_IMPLEMENTED
+NO_CONTINUATION_STATE_PERSISTED
+NO_OBSERVATION_UPDATE_APPLIED
+NO_OBSERVATION_INNOVATION_COMPUTED
+NO_FORECAST_RESIDUAL
 NO_SUCCESSFUL_FORECAST
 NO_SCENARIO
 NO_RECOMMENDATION
 NO_DECISION
 NO_AO_ACT
+NO_CALIBRATED_CONFIDENCE_MODEL
+NO_MODEL_ACTIVATION
+NO_LATE_EVIDENCE_REVISION
+NO_DYNAMIC_ROOT_ZONE_GEOMETRY
+NO_SPATIAL_EXECUTION_OVERLAP_DEDUPLICATION
 NO_CONTINUOUS_RUNTIME
 NO_CONTINUOUS_SCHEDULER
-NO_RESTART_BACKFILL_PROOF
-NO_LATE_EVIDENCE_REVISION_RUNTIME
+NO_720_TICK_REPLAY_CLOSURE
 NO_LIVE_FIELD_CLAIM
 NO_MCFT_GATE_A_CLOSURE
 NO_MCFT_GATE_B_CLOSURE
@@ -159,8 +253,8 @@ NO_MCFT_GATE_C_CLOSURE
 NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM
 ```
 
-## 7. Closure hierarchy
+## 9. Closure hierarchy and successor boundary
 
-MCFT-CAP-01 establishes a deterministic Replay bootstrap State capability only. It is not Gate A, Gate B, Gate C or Minimum Complete Field Twin closure.
+MCFT-CAP-01 establishes a deterministic Replay bootstrap State capability only. MCFT-CAP-02 authorization readiness establishes no Dynamics, continuation State, restart/backfill, Forecast success, Gate A, Gate B, Gate C or Minimum Complete Field Twin closure.
 
-MCFT-2 / hourly dynamics remains unauthorized until PR #2316 is merged, main is verified, and a separate task line explicitly authorizes it.
+MCFT-CAP-03 remains unauthorized. It requires independent authorization after MCFT-CAP-02 is fully implemented, closed, merged and verified on `main`.

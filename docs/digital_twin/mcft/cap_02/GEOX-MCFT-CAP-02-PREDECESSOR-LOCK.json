@@ -1,0 +1,62 @@
+{
+  "schema_version": "geox_mcft_cap_02_predecessor_lock_v1",
+  "capability_line_id": "MCFT-CAP-02",
+  "predecessor_capability_line_id": "MCFT-CAP-01",
+  "status": "COMPLETE",
+  "predecessor_implementation_candidate_head": "193f9785e42eb146e300e2a64abeed455f10e54e",
+  "predecessor_final_closure_head": "7fedd85815cd65f0e3d2aedc74e4d0d9ed1b0558",
+  "predecessor_merge_commit": "7da8fee4daf1f022edff29078a1bbac207d1a32f",
+  "predecessor_main_verification_commit": "53aa944da595c515619229d37be86930d7a2e7e7",
+  "predecessor_main_verification_ref": "docs/digital_twin/mcft/cap_01/GEOX-MCFT-CAP-01-MAIN-VERIFICATION.json",
+  "identity_extraction_source": "ISOLATED_POSTGRESQL_CANONICAL_READ_PATH",
+  "identity_evidence_ref": "acceptance-output/MCFT_CAP_02_PREDECESSOR_IDENTITY.json",
+  "scope": {
+    "tenant_id": "tenantA",
+    "project_id": "projectA",
+    "group_id": "groupA",
+    "field_id": "field_c8_demo",
+    "season_id": "season_2026_c8_corn",
+    "zone_id": "zone_mcft_c8_water_001"
+  },
+  "reality_binding_ref": "mcft_rb_bf1da664164a4fedda249bcb",
+  "reality_binding_hash": "sha256:bf1da664164a4fedda249bcb0e330c1af2083173a52bd704f01eac3ad277ba4f",
+  "source_matrix_hash": "sha256:c5187c23be0d058ffa23d464ae1139f924f5af064a270248746fbabde4c3e51b",
+  "configuration_matrix_hash": "sha256:381ef166454c7b698c6641fadc5d08019fecff127e9529a4c58a1f09d9e1fef5",
+  "geometry_semantic_hash": "sha256:d3dbc5495485e7af68acdc4b32e6061c2ea99772835be2805ae706b74d75ca51",
+  "active_lineage_object_ref": "twin_runtime_lineage_31d5cdda3c87fdf1536f0233",
+  "lineage_id": "lineage_da76d015085f0d37bf2ed478",
+  "revision_id": "revision_e0c62f99ac3db66f60a87e2b",
+  "bootstrap_state_ref": "twin_state_estimate_a411d678b1d79b7a58b31fd7",
+  "bootstrap_state_hash": "sha256:00763edb263ec2a4f27396ce063a792b029bde48fb61a62abd13f62477922ca6",
+  "bootstrap_checkpoint_ref": "twin_runtime_checkpoint_16dfbf70c99cd900d463406c",
+  "bootstrap_checkpoint_hash": "sha256:43dfff3d7cf144a5e8bd45003c404267c3a0ea2440a4fd31e88532f12eee8889",
+  "bootstrap_runtime_config_ref": "twin_runtime_config_851ac30201221a7aa2ce16f7",
+  "bootstrap_runtime_config_hash": "sha256:44b8171ff2d6adb8e0f383ef0e813bebcb3f486b8848844eef2b7ff9d6db993c",
+  "next_logical_tick_time": "2026-06-01T02:00:00.000Z",
+  "crop_stage_context_ref": "fixtures/mcft/water_state/replay_v1/configuration_context.json",
+  "crop_stage_context_hash": "sha256:2287c71e983b1ba529e49939f025d9b035e09e195a5effc994fe54b4ef7863ce",
+  "validated_relations": [
+    "active_lineage_ref_equals_lineage_object_id",
+    "lineage_id_equals_checkpoint_lineage_id_equals_state_lineage_id",
+    "revision_id_equals_checkpoint_revision_id_equals_state_revision_id",
+    "checkpoint_last_posterior_state_ref_equals_state_object_id",
+    "state_runtime_config_ref_equals_runtime_config_object_id",
+    "state_runtime_config_hash_equals_runtime_config_determinism_hash"
+  ],
+  "lock_claims": [
+    "PREDECESSOR_MERGED_MAIN_VERIFIED",
+    "PREDECESSOR_CANONICAL_IDENTITY_EXTRACTED_FROM_POSTGRESQL",
+    "PREDECESSOR_LINEAGE_REVISION_STATE_CHECKPOINT_CONFIG_LOCKED",
+    "PREDECESSOR_NEXT_LOGICAL_TICK_LOCKED"
+  ],
+  "preserved_nonclaims": [
+    "NO_HOURLY_DYNAMICS_IMPLEMENTED",
+    "NO_CONTINUATION_STATE_PERSISTED",
+    "NO_OBSERVATION_UPDATE_APPLIED",
+    "NO_SUCCESSFUL_FORECAST",
+    "NO_SCENARIO",
+    "NO_RECOMMENDATION",
+    "NO_DECISION",
+    "NO_AO_ACT"
+  ]
+}
