@@ -2,7 +2,7 @@
   "schema_version": "geox_mcft00_geometry_rounding_fixture_v1",
   "phase": "MCFT-00",
   "status": "FROZEN",
-  "acceptance_status": "PENDING",
+  "acceptance_status": "COMPLETE",
   "canonicalization_id": "GEOX_MCFT_GEOJSON_CANONICALIZATION_V1",
   "rounding_rule": "DECIMAL_HALF_AWAY_FROM_ZERO",
   "decimal_places": 7,
