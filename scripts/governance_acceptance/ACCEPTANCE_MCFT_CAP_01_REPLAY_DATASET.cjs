@@ -11,11 +11,13 @@ const path = require('node:path');
 const { generate, sha256 } = require('../mcft/GENERATE_MCFT_CAP_01_REPLAY_DATASET.cjs');
 
 const ROOT = path.resolve(__dirname, '../..');
-const MATERIALIZED = path.join(ROOT, 'fixtures/mcft/water_state/replay_v1/materialized');
+const MATERIALIZED = path.join(ROOT, 'fixtures/mcft/water_state/replay_v1');
+const GENERATED_PREFIXES = ['manifest.json','soil_moisture/','rainfall/','historical_et0/','future_weather/','future_et0/','irrigation_plan/','irrigation_execution/'];
 let pass = 0;
 let fail = 0;
 function check(condition, message) { if (condition) { pass += 1; console.log(`PASS ${message}`); } else { fail += 1; console.error(`FAIL ${message}`); } }
-function files(directory) { return fs.readdirSync(directory, { recursive: true }).filter((entry) => fs.statSync(path.join(directory, entry)).isFile()).map(String).sort(); }
+function isGeneratedFile(entry) { return GENERATED_PREFIXES.some((prefix) => entry === prefix || entry.startsWith(prefix)); }
+function files(directory) { return fs.readdirSync(directory, { recursive: true }).map(String).filter((entry) => isGeneratedFile(entry) && fs.statSync(path.join(directory, entry)).isFile()).sort(); }
 function compareDirectories(a, b) {
   const af = files(a); const bf = files(b); assert.deepEqual(af, bf);
   for (const file of af) assert.equal(sha256(fs.readFileSync(path.join(a, file), 'utf8')), sha256(fs.readFileSync(path.join(b, file), 'utf8')), file);
@@ -38,6 +40,8 @@ check(standard?.canonical_payload?.value === 0.184, 'standard observation canoni
 const firstWeather = fs.readFileSync(path.join(a, 'future_weather/2026-06-01.jsonl'), 'utf8').trim().split('\n').map(JSON.parse).find((record) => record.role_time.issued_at === '2026-06-01T00:45:00.000Z');
 check(firstWeather?.available_to_runtime_at === '2026-06-01T01:05:00.000Z', 'first future-weather snapshot unavailable at bootstrap tick');
 check(firstWeather?.canonical_payload?.points?.length === 72, 'future-weather snapshot has 72 points');
+const plans = fs.readFileSync(path.join(a, 'irrigation_plan/plans.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
+check(plans.every((record) => record.available_to_runtime_at === record.role_time.ingested_at && record.role_time.approved_at <= record.role_time.ingested_at), 'approved-plan availability derives from approved_at and ingested_at');
 if (process.argv.includes('--require-materialized')) {
   try { compareDirectories(a, MATERIALIZED); check(true, 'committed materialized bytes match generator'); } catch (error) { console.error(error); check(false, 'committed materialized bytes match generator'); }
 } else {
