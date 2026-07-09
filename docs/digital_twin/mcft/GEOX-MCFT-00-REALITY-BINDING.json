@@ -2,7 +2,7 @@
   "schema_version": "geox_mcft_reality_binding_v2",
   "phase": "MCFT-00",
   "status": "FROZEN",
-  "acceptance_status": "PENDING",
+  "acceptance_status": "COMPLETE",
   "artifact_type": "mcft_reality_binding_contract_v1",
   "artifact_class": "GOVERNANCE_INPUT",
   "binding_version": 1,
