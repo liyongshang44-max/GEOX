@@ -1,5 +1,5 @@
 <!-- docs/digital_twin/mcft/cap_01/GEOX-MCFT-CAP-01-CLOSURE.md -->
-# MCFT-CAP-01 Closure Candidate
+# MCFT-CAP-01 Closure
 
 ```text
 capability_line_id: MCFT-CAP-01
@@ -9,14 +9,16 @@ runtime_mode: REPLAY
 target_completion_level: Level A
 delivery_slice_id: MCFT-CAP-01.CLOSURE-V1
 runtime_delivery_main_commit: 4a0fd03beb05298028101a4999c67a5e053dadb8
-status: CANDIDATE
+closure_readiness_head: 273843b09a7fe2e71f2cb9ea5c4ca14dcee8e3e5
+status: COMPLETE
+transition_effective_condition: PR_2315_MERGED_AND_VERIFIED_ON_MAIN
 ```
 
 ## 1. Closure meaning
 
-This closure candidate establishes a bounded first-class water State estimate in controlled Replay mode. It closes one vertical capability line, not the entire Minimum Complete Field Twin and not any MCFT Gate.
+MCFT-CAP-01 closes one bounded vertical capability line: a first-class root-zone water State estimate in controlled Replay mode.
 
-The architecture proof required for this capability line is limited to:
+The established proof is limited to:
 
 ```text
 one controlled bootstrap posterior
@@ -29,7 +31,7 @@ one BLOCKED Forecast result
 one explicit next-tick handoff
 ```
 
-The proof does not require or authorize dynamics, a successful Forecast, Scenario, Recommendation, Decision, AO-ACT, continuous scheduling, restart/backfill, late-Evidence revision, or live-field operation.
+This is not the Minimum Complete Field Twin and is not MCFT Gate A, Gate B, or Gate C.
 
 ## 2. Completed delivery chain
 
@@ -39,10 +41,10 @@ S2 A0 Contracts and Config        COMPLETE
 S3A A0 Persistence                COMPLETE
 S3B Bootstrap State Math          COMPLETE
 S4 A0 Runtime Integration         COMPLETE
-S5 Capability Closure             CANDIDATE
+S5 Capability Closure             COMPLETE
 ```
 
-The executable chain on `main@4a0fd03beb05298028101a4999c67a5e053dadb8` is:
+The executable chain is:
 
 ```text
 frozen MCFT-00 authority
@@ -111,9 +113,20 @@ latest successful Forecast rows: 0
 next tick: 2026-06-01T02:00:00.000Z
 ```
 
-## 4. Capability established by successful closure
+### Capability closure
 
-Only after this candidate passes the closure Gate and exact-head CI, merges into `main`, and is verified on `main`, the following claims become valid:
+```text
+Closure Readiness Gate: 104 PASS, 0 FAIL
+server Typecheck: PASS
+server Build: PASS
+git diff --check: CLEAN
+working tree: CLEAN
+CI #4462 build-test: SUCCESS
+CI #4462 acceptance: SUCCESS
+changed files: 6 governance-only files
+```
+
+## 4. Completion claims
 
 ```text
 MCFT_CAP_01_COMPLETE
@@ -121,7 +134,7 @@ FIRST_CLASS_WATER_STATE_ESTIMATE_LEVEL_A_ESTABLISHED
 CONTROLLED_REPLAY_BOOTSTRAP_CLOSURE_ESTABLISHED
 ```
 
-These claims mean that GEOX can deterministically create and commit one first-class root-zone water posterior State from controlled Replay Evidence under a frozen Runtime Config, preserve uncertainty and lineage, produce a governed BLOCKED Forecast result, and hand off the next logical tick.
+These claims mean that GEOX can deterministically create and atomically commit one first-class root-zone water posterior State from controlled Replay Evidence under a frozen Runtime Config, preserve uncertainty and INITIAL lineage, produce a governed BLOCKED Forecast result, rebuild the six A0 projections, and hand off the next logical tick.
 
 They do not mean that the system can propagate water dynamics or run continuously.
 
@@ -182,9 +195,9 @@ NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM
 
 ## 7. Governance-only boundary
 
-The closure slice may change only closure status, capability matrix, implementation map, closure records, and governance acceptance.
+The closure slice changes only closure status, capability matrix, implementation map, closure records, and governance acceptance.
 
-It must not change:
+It does not change:
 
 ```text
 apps/server Runtime source
@@ -198,20 +211,6 @@ workflow configuration
 MCFT-00 artifacts or authority hashes
 ```
 
-## 8. Completion transition
+## 8. Effectiveness
 
-The candidate remains non-effective until all conditions are met:
-
-```text
-all five predecessor slices remain COMPLETE
-closure readiness Gate passes
-server typecheck passes
-server build passes
-exact-head CI passes
-changed-file boundary is governance-only
-working tree is clean
-closure PR merges into main
-merged main commit is verified
-```
-
-Before that transition, `MCFT-CAP-01` remains `IN_IMPLEMENTATION` and `NO_MCFT_CAP_01_CLOSURE` remains true.
+The closure record and status are marked `COMPLETE`, but the transition becomes effective only after PR #2315 merges into `main` and the merged main commit is verified.
