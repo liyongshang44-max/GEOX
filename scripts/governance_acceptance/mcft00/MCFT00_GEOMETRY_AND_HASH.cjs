@@ -59,9 +59,17 @@ function withoutHash(value, key = 'determinism_hash') {
   return Object.fromEntries(Object.entries(value || {}).filter(([candidate]) => candidate !== key));
 }
 
-function round7(value) {
-  const rounded = Math.round(Number(value) * 1e7) / 1e7;
+function roundHalfAwayFromZero(value, decimalPlaces) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) throw new Error('NON_FINITE_NUMBER');
+  const factor = 10 ** decimalPlaces;
+  const magnitude = Math.floor((Math.abs(numeric) * factor) + 0.5);
+  const rounded = Math.sign(numeric) * magnitude / factor;
   return Object.is(rounded, -0) ? 0 : rounded;
+}
+
+function round7(value) {
+  return roundHalfAwayFromZero(value, 7);
 }
 
 function coordinateKey(point) {
@@ -214,6 +222,7 @@ module.exports = {
   semanticTopProjection,
   withoutHash,
   stableStringify,
+  roundHalfAwayFromZero,
   round7,
   coordinateKey,
   signedPlanarArea,
