@@ -1,1 +1,361 @@
-{"schema_version":"geox_dt02_atomic_transaction_matrix_v2","phase":"DT-02","status":"FROZEN_WITH_AMENDMENT","amendment_ref":"docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-01.md","transaction_count":8,"global_rules":["canonical appends and projection changes share one database transaction per operation variant","canonical facts never update","index switches use expected-current compare-and-swap","failed attempt or failed Forecast never advances checkpoint","every object transaction family must cover the object in canonical_appends or operation_variants","natural-language transaction-family expressions are forbidden","no public HTTP endpoint invokes generated-object write transactions"],"transactions":[{"id":"A_STATE_TICK_COMMIT","name":"State Tick Commit","status":"FROZEN","owner":"Runtime Orchestrator through RuntimeRepositoryPort","preconditions":["valid unexpired lease","current fencing token","expected checkpoint matches latest index","immutable config snapshot resolved","frozen evidence window","posterior semantic hashes and physical invariants verified"],"operation_variants":[{"id":"A1_COMPLETED","preconditions":["Forecast.status = COMPLETED","Forecast.points.length = 72","Forecast.horizons = 1..72"],"canonical_appends":["twin_evidence_window_v1","twin_state_transition_v1","twin_assimilation_update_v1","twin_state_estimate_v1","twin_forecast_run_v1","twin_runtime_tick_v1","twin_runtime_checkpoint_v1","twin_runtime_health_v1"],"projection_writes":["state history and latest","forecast result latest","forecast successful latest","forecast run and points","checkpoint latest CAS","runtime health latest"],"checkpoint_advances":true,"tick_status":"COMPLETED"},{"id":"A2_BLOCKED_FORECAST","preconditions":["posterior is valid","Forecast.status = BLOCKED","Forecast.points.length = 0","Forecast.reason_codes non-empty"],"canonical_appends":["twin_evidence_window_v1","twin_state_transition_v1","twin_assimilation_update_v1","twin_state_estimate_v1","twin_forecast_run_v1","twin_runtime_tick_v1","twin_runtime_checkpoint_v1","twin_runtime_health_v1"],"projection_writes":["state history and latest","forecast result latest","checkpoint latest CAS","runtime health latest"],"projection_non_writes":["forecast successful latest","scenario latest"],"checkpoint_advances":true,"tick_status":"COMPLETED_WITH_LIMITATIONS"}],"canonical_appends":["twin_evidence_window_v1","twin_state_transition_v1","twin_assimilation_update_v1","twin_state_estimate_v1","twin_forecast_run_v1","twin_runtime_tick_v1","twin_runtime_checkpoint_v1","twin_runtime_health_v1"],"forbidden_appends":["twin_forecast_failure_v1"],"failure_semantics":["transaction rollback leaves no posterior, terminal tick, or checkpoint","Forecast FAILED is handled by F_OPERATIONAL_ATTEMPT_HEALTH"],"idempotency":"same tick key and hashes returns existing record set; conflict fails"},{"id":"B_SCENARIO_COMMIT","name":"Scenario Commit","status":"FROZEN","owner":"Scenario Runtime","preconditions":["source Forecast.status = COMPLETED","source Forecast.points.length = 72","source Forecast.horizons = 1..72","authorized fixed options","complete semantic validation"],"canonical_appends":["twin_scenario_set_v1"],"projection_writes":["scenario set index","scenario point index","latest scenario index"],"forbidden_sources":["BLOCKED Forecast","FAILED Forecast","twin_forecast_failure_v1"],"failure_semantics":["Scenario failure does not roll back source State Tick","no partial option trajectories"],"idempotency":"same Scenario-set key and hash returns existing set; conflict fails"},{"id":"C_FORECAST_RESIDUAL_COMMIT","name":"Forecast Residual Commit","status":"FROZEN","owner":"Residual Matcher","preconditions":["historical COMPLETED Forecast point exists","later observation matching rule evaluated","lineage context explicit"],"canonical_appends":["twin_forecast_residual_v1"],"projection_writes":["forecast residual index","matching trace projection"],"failure_semantics":["historical Forecast never changes","unmatched reason explicit"],"idempotency":"Forecast point plus observation plus matching-rule version"},{"id":"D_MODEL_GOVERNANCE_STEP_COMMIT","name":"Model Governance Step Commit","status":"FROZEN","owner":"Config, Calibration, Shadow, or Activation service","preconditions":["authenticated governance context","required predecessor refs exist","activation has approval and effective tick boundary"],"canonical_appends":["twin_runtime_config_v1","twin_calibration_candidate_v1","twin_shadow_evaluation_v1","twin_model_activation_v1"],"operation_rule":"exactly one listed object type per governance transition","projection_writes":["candidate and evaluation indexes","active config index CAS only for activation"],"failure_semantics":["Candidate remains non-active","failed Activation leaves active binding unchanged"],"idempotency":"transition-specific key and hash"},{"id":"E_REVISION_LINEAGE_STEP_COMMIT","name":"Revision Lineage Step Commit","status":"FROZEN","owner":"Revision Service or Revision Promotion Service","canonical_appends":["twin_revision_run_v1","twin_runtime_lineage_v1","twin_lineage_promotion_v1"],"operation_variants":[{"id":"E1_DECLARE_REVISION","preconditions":["late Evidence impact boundary identified","revision_run_id allocated deterministically","candidate_lineage_id allocated deterministically"],"canonical_appends":["twin_revision_run_v1","twin_runtime_lineage_v1"],"required_revision_status":"DECLARED","pointer_switches":[]},{"id":"E2_APPEND_REVISION_STATUS","preconditions":["revision run exists","status transition valid"],"canonical_appends":["twin_revision_run_v1"],"allowed_revision_status":["RUNNING","FAILED","COMPLETED"],"pointer_switches":[]},{"id":"E3_PROMOTE_LINEAGE","preconditions":["revision status COMPLETED","candidate lineage complete through current checkpoint","chain validation passes","candidate checkpoint and latest refs exist","expected active lineage matches"],"canonical_appends":["twin_lineage_promotion_v1"],"pointer_switches":["active lineage index CAS","checkpoint latest switch","current State switch","latest Forecast result switch","latest successful Forecast switch when candidate has COMPLETED Forecast","latest Scenario switch when eligible","runtime health latest"],"atomicity":"promotion fact and all pointer switches commit together"}],"failure_semantics":["declaration or status failure never changes active pointers","candidate remains inactive unless E3 commits","superseded history remains queryable"],"idempotency":"variant-specific deterministic identity and expected-current CAS"},{"id":"F_OPERATIONAL_ATTEMPT_HEALTH","name":"Operational Attempt, Health, and Forecast Failure Commit","status":"FROZEN","owner":"Runtime Orchestrator","preconditions":["attempt identity exists","material attempt, health, or Forecast failure event"],"canonical_appends":["twin_runtime_attempt_v1","twin_runtime_health_v1","twin_forecast_failure_v1"],"operation_rule":"append one or more related operational audit records; no lineage object is required","projection_writes":["attempt latest operational row","runtime health latest index","forecast failure diagnostic index"],"forbidden_appends":["twin_state_estimate_v1","twin_runtime_tick_v1","twin_runtime_checkpoint_v1","twin_forecast_run_v1"],"failure_semantics":["no posterior, terminal tick, or checkpoint","checkpoint unchanged","no active lineage Forecast"],"idempotency":"attempt event identity plus semantic hash"},{"id":"G_HUMAN_DECISION_LINK_COMMIT","name":"Human Decision Link Commit","status":"FROZEN","owner":"Authenticated Human Decision Service","preconditions":["selected Scenario option exists","human identity and rationale validated","decision write authority present"],"canonical_appends":["twin_decision_record_v1"],"projection_writes":["decision and action-lifecycle read projection"],"failure_semantics":["no Approval, Plan, or Task inferred","no runtime-generated human decision"],"idempotency":"human decision request id plus semantic hash"},{"id":"H_ACTION_FEEDBACK_COMMIT","name":"Action Feedback Commit","status":"FROZEN","owner":"Action Feedback Service","preconditions":["at least one trusted execution source exists: receipt_ref or as_executed_ref","execution_status present","validation_status present","eligible_for_state_input explicitly evaluated","actual amount, event time, coverage, source quality, and limitations evaluated","task_ref required only when origin_kind = AO_ACT","acceptance_ref optional"],"canonical_appends":["twin_action_feedback_v1"],"projection_writes":["action lifecycle projection","feedback Evidence index"],"supersession_rule":"later Acceptance or corrected execution Evidence appends a superseding feedback record","failure_semantics":["untrusted execution Evidence rejected or explicitly ineligible","active model and past State unchanged","NOT_YET_VALIDATED may still be eligible for state input when execution Evidence is trustworthy"],"idempotency":"source executed-Evidence identity plus normalization version and hash"}]}
+{
+  "schema_version": "geox_dt02_atomic_transaction_matrix_v3",
+  "phase": "DT-02",
+  "status": "FROZEN_WITH_AMENDMENTS_PENDING_ACCEPTANCE",
+  "amendment_refs": [
+    "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-01.md",
+    "docs/digital_twin/GEOX-DT-02-ARCHITECTURE-AMENDMENT-02.md"
+  ],
+  "transaction_count": 8,
+  "global_rules": [
+    "canonical appends and projection changes share one database transaction per operation variant",
+    "canonical facts never update",
+    "index switches use expected-current compare-and-swap",
+    "failed attempt or failed Forecast never advances checkpoint",
+    "every object transaction family must cover the object in canonical_appends or operation_variants",
+    "natural-language transaction-family expressions are forbidden",
+    "no public HTTP endpoint invokes generated-object write transactions",
+    "A0 aggregate idempotency lookup precedes new-key null-CAS preconditions",
+    "separate F operational audit is not A0 partial success"
+  ],
+  "transactions": [
+    {
+      "id": "A_STATE_TICK_COMMIT",
+      "name": "State Tick Commit",
+      "status": "FROZEN_WITH_A0_AMENDMENT",
+      "owner": "Runtime Orchestrator through RuntimeRepositoryPort",
+      "preconditions": [
+        "valid unexpired lease",
+        "current fencing token",
+        "expected checkpoint matches latest index for continuation variants",
+        "immutable config snapshot resolved",
+        "frozen evidence window",
+        "posterior semantic hashes and physical invariants verified"
+      ],
+      "operation_variants": [
+        {
+          "id": "A0_BOOTSTRAP_STATE_COMMIT",
+          "preconditions_order": [
+            "independently compute A0 aggregate key and hashes",
+            "lookup twin_object_idempotency_index_v1",
+            "existing same key and same aggregate hash returns complete existing record set",
+            "existing same key and different aggregate hash fails IDEMPOTENCY_CONFLICT",
+            "declared hash mismatch fails SEMANTIC_HASH_MISMATCH",
+            "new key verifies no conflicting canonical INITIAL lineage",
+            "new key verifies valid unexpired lease and current fencing token",
+            "new key verifies expected active lineage null",
+            "new key verifies expected checkpoint null",
+            "new key verifies expected current State null",
+            "new key verifies expected latest Forecast result null",
+            "new key verifies expected latest successful Forecast null",
+            "new key verifies immutable Runtime config and frozen Evidence Window",
+            "new key verifies valid bootstrap posterior",
+            "new key verifies Forecast BLOCKED with zero points and non-empty reason_codes"
+          ],
+          "canonical_appends": [
+            "twin_runtime_lineage_v1",
+            "twin_evidence_window_v1",
+            "twin_state_transition_v1",
+            "twin_assimilation_update_v1",
+            "twin_state_estimate_v1",
+            "twin_forecast_run_v1",
+            "twin_runtime_tick_v1",
+            "twin_runtime_checkpoint_v1",
+            "twin_runtime_health_v1"
+          ],
+          "forbidden_appends": [
+            "twin_lineage_promotion_v1",
+            "twin_revision_run_v1",
+            "twin_forecast_failure_v1",
+            "twin_scenario_set_v1",
+            "twin_decision_record_v1",
+            "twin_action_feedback_v1"
+          ],
+          "projection_writes": [
+            "active lineage index insert CAS with INITIAL_LINEAGE_DECLARATION authority",
+            "state history insert",
+            "state latest CAS",
+            "forecast result latest insert",
+            "checkpoint latest insert CAS",
+            "runtime health latest update",
+            "twin_object_idempotency_index_v1 insert"
+          ],
+          "projection_non_writes": [
+            "forecast successful latest",
+            "scenario latest",
+            "decision projection",
+            "action projection"
+          ],
+          "lineage_kind": "INITIAL",
+          "transition_kind": "BOOTSTRAP",
+          "checkpoint_kind": "INITIAL",
+          "forecast_status": "BLOCKED",
+          "forecast_points_count": 0,
+          "forecast_reason_codes_required": true,
+          "checkpoint_advances": true,
+          "tick_status": "COMPLETED_WITH_LIMITATIONS",
+          "record_set_member_count": 9,
+          "idempotency": {
+            "scope": "complete nine-object A0 record set",
+            "same_key_same_hash": "verify complete record set and return EXISTING_IDEMPOTENT_SUCCESS without null-CAS",
+            "same_key_different_hash": "IDEMPOTENCY_CONFLICT",
+            "declared_hash_mismatch": "SEMANTIC_HASH_MISMATCH"
+          },
+          "canonical_initial_uniqueness": {
+            "identical_existing": "IDEMPOTENT_READBACK",
+            "different_existing": "INITIAL_LINEAGE_CONFLICT",
+            "projection_absence_allows_second_initial": false
+          },
+          "failure_semantics": [
+            "zero A0 canonical append",
+            "zero A0 projection write",
+            "zero pointer change",
+            "separate F_OPERATIONAL_ATTEMPT_HEALTH audit permitted"
+          ]
+        },
+        {
+          "id": "A1_COMPLETED",
+          "preconditions": [
+            "Forecast.status = COMPLETED",
+            "Forecast.points.length = 72",
+            "Forecast.horizons = 1..72"
+          ],
+          "canonical_appends": [
+            "twin_evidence_window_v1",
+            "twin_state_transition_v1",
+            "twin_assimilation_update_v1",
+            "twin_state_estimate_v1",
+            "twin_forecast_run_v1",
+            "twin_runtime_tick_v1",
+            "twin_runtime_checkpoint_v1",
+            "twin_runtime_health_v1"
+          ],
+          "projection_writes": [
+            "state history and latest",
+            "forecast result latest",
+            "forecast successful latest",
+            "forecast run and points",
+            "checkpoint latest CAS",
+            "runtime health latest"
+          ],
+          "checkpoint_advances": true,
+          "tick_status": "COMPLETED"
+        },
+        {
+          "id": "A2_BLOCKED_FORECAST",
+          "preconditions": [
+            "posterior is valid",
+            "Forecast.status = BLOCKED",
+            "Forecast.points.length = 0",
+            "Forecast.reason_codes non-empty"
+          ],
+          "canonical_appends": [
+            "twin_evidence_window_v1",
+            "twin_state_transition_v1",
+            "twin_assimilation_update_v1",
+            "twin_state_estimate_v1",
+            "twin_forecast_run_v1",
+            "twin_runtime_tick_v1",
+            "twin_runtime_checkpoint_v1",
+            "twin_runtime_health_v1"
+          ],
+          "projection_writes": [
+            "state history and latest",
+            "forecast result latest",
+            "checkpoint latest CAS",
+            "runtime health latest"
+          ],
+          "projection_non_writes": ["forecast successful latest", "scenario latest"],
+          "checkpoint_advances": true,
+          "tick_status": "COMPLETED_WITH_LIMITATIONS"
+        }
+      ],
+      "canonical_appends": [
+        "twin_runtime_lineage_v1",
+        "twin_evidence_window_v1",
+        "twin_state_transition_v1",
+        "twin_assimilation_update_v1",
+        "twin_state_estimate_v1",
+        "twin_forecast_run_v1",
+        "twin_runtime_tick_v1",
+        "twin_runtime_checkpoint_v1",
+        "twin_runtime_health_v1"
+      ],
+      "forbidden_appends": ["twin_forecast_failure_v1"],
+      "failure_semantics": [
+        "transaction rollback leaves no posterior, terminal tick, or checkpoint",
+        "Forecast FAILED is handled by F_OPERATIONAL_ATTEMPT_HEALTH"
+      ],
+      "idempotency": "variant-specific deterministic aggregate key and independently computed record-set hash"
+    },
+    {
+      "id": "B_SCENARIO_COMMIT",
+      "name": "Scenario Commit",
+      "status": "FROZEN",
+      "owner": "Scenario Runtime",
+      "preconditions": [
+        "source Forecast.status = COMPLETED",
+        "source Forecast.points.length = 72",
+        "source Forecast.horizons = 1..72",
+        "authorized fixed options",
+        "complete semantic validation"
+      ],
+      "canonical_appends": ["twin_scenario_set_v1"],
+      "projection_writes": ["scenario set index", "scenario point index", "latest scenario index"],
+      "forbidden_sources": ["BLOCKED Forecast", "FAILED Forecast", "twin_forecast_failure_v1"],
+      "failure_semantics": ["Scenario failure does not roll back source State Tick", "no partial option trajectories"],
+      "idempotency": "same Scenario-set key and hash returns existing set; conflict fails"
+    },
+    {
+      "id": "C_FORECAST_RESIDUAL_COMMIT",
+      "name": "Forecast Residual Commit",
+      "status": "FROZEN",
+      "owner": "Residual Matcher",
+      "preconditions": [
+        "historical COMPLETED Forecast point exists",
+        "later observation matching rule evaluated",
+        "lineage context explicit"
+      ],
+      "canonical_appends": ["twin_forecast_residual_v1"],
+      "projection_writes": ["forecast residual index", "matching trace projection"],
+      "failure_semantics": ["historical Forecast never changes", "unmatched reason explicit"],
+      "idempotency": "Forecast point plus observation plus matching-rule version"
+    },
+    {
+      "id": "D_MODEL_GOVERNANCE_STEP_COMMIT",
+      "name": "Model Governance Step Commit",
+      "status": "FROZEN",
+      "owner": "Config, Calibration, Shadow, or Activation service",
+      "preconditions": [
+        "authenticated governance context",
+        "required predecessor refs exist",
+        "activation has approval and effective tick boundary"
+      ],
+      "canonical_appends": [
+        "twin_runtime_config_v1",
+        "twin_calibration_candidate_v1",
+        "twin_shadow_evaluation_v1",
+        "twin_model_activation_v1"
+      ],
+      "operation_rule": "exactly one listed object type per governance transition",
+      "projection_writes": ["candidate and evaluation indexes", "active config index CAS only for activation"],
+      "failure_semantics": ["Candidate remains non-active", "failed Activation leaves active binding unchanged"],
+      "idempotency": "transition-specific key and hash"
+    },
+    {
+      "id": "E_REVISION_LINEAGE_STEP_COMMIT",
+      "name": "Revision Lineage Step Commit",
+      "status": "FROZEN",
+      "owner": "Revision Service or Revision Promotion Service",
+      "canonical_appends": ["twin_revision_run_v1", "twin_runtime_lineage_v1", "twin_lineage_promotion_v1"],
+      "operation_variants": [
+        {
+          "id": "E1_DECLARE_REVISION",
+          "preconditions": [
+            "late Evidence impact boundary identified",
+            "revision_run_id allocated deterministically",
+            "candidate_lineage_id allocated deterministically"
+          ],
+          "canonical_appends": ["twin_revision_run_v1", "twin_runtime_lineage_v1"],
+          "required_lineage_kind": "REVISION_CANDIDATE",
+          "required_revision_status": "DECLARED",
+          "pointer_switches": []
+        },
+        {
+          "id": "E2_APPEND_REVISION_STATUS",
+          "preconditions": ["revision run exists", "status transition valid"],
+          "canonical_appends": ["twin_revision_run_v1"],
+          "allowed_revision_status": ["RUNNING", "FAILED", "COMPLETED"],
+          "pointer_switches": []
+        },
+        {
+          "id": "E3_PROMOTE_LINEAGE",
+          "preconditions": [
+            "revision status COMPLETED",
+            "candidate lineage complete through current checkpoint",
+            "chain validation passes",
+            "candidate checkpoint and latest refs exist",
+            "expected active lineage matches and is non-null"
+          ],
+          "canonical_appends": ["twin_lineage_promotion_v1"],
+          "activation_authority_kind": "LINEAGE_PROMOTION",
+          "pointer_switches": [
+            "active lineage index CAS",
+            "checkpoint latest switch",
+            "current State switch",
+            "latest Forecast result switch",
+            "latest successful Forecast switch when candidate has COMPLETED Forecast",
+            "latest Scenario switch when eligible",
+            "runtime health latest"
+          ],
+          "atomicity": "promotion fact and all pointer switches commit together"
+        }
+      ],
+      "failure_semantics": [
+        "declaration or status failure never changes active pointers",
+        "candidate remains inactive unless E3 commits",
+        "superseded history remains queryable"
+      ],
+      "idempotency": "variant-specific deterministic identity and expected-current CAS"
+    },
+    {
+      "id": "F_OPERATIONAL_ATTEMPT_HEALTH",
+      "name": "Operational Attempt, Health, and Forecast Failure Commit",
+      "status": "FROZEN",
+      "owner": "Runtime Orchestrator",
+      "preconditions": ["attempt identity exists", "material attempt, health, or Forecast failure event"],
+      "canonical_appends": ["twin_runtime_attempt_v1", "twin_runtime_health_v1", "twin_forecast_failure_v1"],
+      "operation_rule": "append one or more related operational audit records; no lineage object is required",
+      "projection_writes": ["attempt latest operational row", "runtime health latest index", "forecast failure diagnostic index"],
+      "forbidden_appends": [
+        "twin_state_estimate_v1",
+        "twin_runtime_tick_v1",
+        "twin_runtime_checkpoint_v1",
+        "twin_forecast_run_v1",
+        "twin_runtime_lineage_v1"
+      ],
+      "failure_semantics": [
+        "no posterior, terminal tick, or checkpoint",
+        "checkpoint unchanged",
+        "no active lineage Forecast",
+        "operational audit is not A0 partial success"
+      ],
+      "idempotency": "attempt event identity plus semantic hash"
+    },
+    {
+      "id": "G_HUMAN_DECISION_LINK_COMMIT",
+      "name": "Human Decision Link Commit",
+      "status": "FROZEN",
+      "owner": "Authenticated Human Decision Service",
+      "preconditions": ["selected Scenario option exists", "human identity and rationale validated", "decision write authority present"],
+      "canonical_appends": ["twin_decision_record_v1"],
+      "projection_writes": ["decision and action-lifecycle read projection"],
+      "failure_semantics": ["no Approval, Plan, or Task inferred", "no runtime-generated human decision"],
+      "idempotency": "human decision request id plus semantic hash"
+    },
+    {
+      "id": "H_ACTION_FEEDBACK_COMMIT",
+      "name": "Action Feedback Commit",
+      "status": "FROZEN",
+      "owner": "Action Feedback Service",
+      "preconditions": [
+        "at least one trusted execution source exists: receipt_ref or as_executed_ref",
+        "execution_status present",
+        "validation_status present",
+        "eligible_for_state_input explicitly evaluated",
+        "actual amount, event time, coverage, source quality, and limitations evaluated",
+        "task_ref required only when origin_kind = AO_ACT",
+        "acceptance_ref optional"
+      ],
+      "canonical_appends": ["twin_action_feedback_v1"],
+      "projection_writes": ["action lifecycle projection", "feedback Evidence index"],
+      "supersession_rule": "later Acceptance or corrected execution Evidence appends a superseding feedback record",
+      "failure_semantics": [
+        "untrusted execution Evidence rejected or explicitly ineligible",
+        "active model and past State unchanged",
+        "NOT_YET_VALIDATED may still be eligible for state input when execution Evidence is trustworthy"
+      ],
+      "idempotency": "source executed-Evidence identity plus normalization version and hash"
+    }
+  ]
+}
