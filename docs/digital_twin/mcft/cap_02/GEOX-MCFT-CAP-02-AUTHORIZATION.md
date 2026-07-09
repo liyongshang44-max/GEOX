@@ -23,13 +23,16 @@ target_completion_level:
 Level A
 
 current_status:
-PROPOSED_NOT_EFFECTIVE
+READY_FOR_MERGE
 
 authorization_effective:
 false
+
+authorization_effective_condition:
+AUTHORIZATION_PR_MERGED_TO_MAIN_AND_POSTMERGE_GATE_PASS
 ```
 
-This document freezes the bounded authorization contract for MCFT-CAP-02. It does not authorize Runtime source while merged-main verification, canonical predecessor identity extraction, predecessor lock, authorization acceptance, and merge are incomplete.
+This document freezes the bounded authorization contract for MCFT-CAP-02. Merged-main verification and canonical predecessor identity extraction are complete. Runtime source remains unauthorized until this authorization PR is merged into `main` and the postmerge authorization Gate passes from the merged authorization main commit.
 
 ## 1. Predecessor authority
 
@@ -46,6 +49,9 @@ predecessor_final_closure_head:
 predecessor_merge_commit:
 7da8fee4daf1f022edff29078a1bbac207d1a32f
 
+predecessor_main_verification_commit:
+53aa944da595c515619229d37be86930d7a2e7e7
+
 predecessor_main_verification_artifact:
 docs/digital_twin/mcft/cap_01/GEOX-MCFT-CAP-01-MAIN-VERIFICATION.json
 
@@ -53,7 +59,34 @@ predecessor_lock_artifact:
 docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-PREDECESSOR-LOCK.json
 ```
 
-The verification artifact must prove the exact merge commit, 173-pass closure Gate, server typecheck, server build, `git diff --check`, and clean worktree. The predecessor lock must be populated only from isolated PostgreSQL canonical readback.
+The verification artifact proves the exact merge commit, 173-pass closure Gate, server typecheck, server build, `git diff --check`, clean worktree and canonical identity extraction. The predecessor lock was populated only from isolated PostgreSQL canonical readback.
+
+The locked predecessor handoff is:
+
+```text
+active_lineage_object_ref:
+twin_runtime_lineage_31d5cdda3c87fdf1536f0233
+
+lineage_id:
+lineage_da76d015085f0d37bf2ed478
+
+revision_id:
+revision_e0c62f99ac3db66f60a87e2b
+
+bootstrap_state_ref:
+twin_state_estimate_a411d678b1d79b7a58b31fd7
+
+bootstrap_checkpoint_ref:
+twin_runtime_checkpoint_16dfbf70c99cd900d463406c
+
+bootstrap_runtime_config_ref:
+twin_runtime_config_851ac30201221a7aa2ce16f7
+
+next_logical_tick_time:
+2026-06-01T02:00:00.000Z
+```
+
+These are predecessor identities. This authorization does not assert that any continuation tick has run.
 
 ## 2. Authorized owner work packages
 
@@ -126,16 +159,23 @@ Every edge is merge-before-next. No downstream branch may be treated as effectiv
 | `MCFT-CAP-02.FAILURE-RECOVERY-V1` | `MCFT-03` | `MCFT-04`, `MCFT-05`, `MCFT-06`, `MCFT-08`, `MCFT-09` | restart/backfill |
 | `MCFT-CAP-02.CLOSURE-V1` | `MCFT-06` | `MCFT-02`, `MCFT-03`, `MCFT-04`, `MCFT-05`, `MCFT-07`, `MCFT-08`, `MCFT-09` | failure recovery |
 
-## 5. Authorization claims
+## 5. Premerge readiness claims
 
-After this authorization PR is merged and its effectiveness conditions are satisfied, it may claim only:
+Before merge, this authorization slice may claim only:
+
+```text
+MCFT_CAP_02_PREDECESSOR_MAIN_VERIFIED
+MCFT_CAP_02_PREDECESSOR_IDENTITY_LOCKED
+MCFT_CAP_02_DELIVERY_GRAPH_FROZEN
+MCFT_CAP_02_OWNER_BOUNDARY_FROZEN
+MCFT_CAP_02_AUTHORIZATION_READY_FOR_MERGE
+```
+
+After this authorization PR is merged and its postmerge Gate passes, it may additionally claim only:
 
 ```text
 MCFT_CAP_02_AUTHORIZATION_V1_ESTABLISHED
 MCFT_CAP_02_READY_FOR_IMPLEMENTATION
-MCFT_CAP_02_DELIVERY_GRAPH_FROZEN
-MCFT_CAP_02_OWNER_BOUNDARY_FROZEN
-MCFT_CAP_02_PREDECESSOR_IDENTITY_LOCKED
 ```
 
 It may not claim hourly Dynamics, continuation persistence, any continuation State, restart/resume, backfill, or capability completion.
@@ -188,9 +228,9 @@ scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_AUTHORIZATION.cjs
 
 No Runtime, domain, persistence, adapter, projection, migration, route, web, fixture Evidence, MCFT-00 authority, or CAP-01 file other than the exact verification artifact is authorized in this slice.
 
-## 8. Effectiveness condition
+## 8. Premerge Gate
 
-Authorization becomes effective only when all conditions are true:
+The premerge authorization Gate must establish all of the following:
 
 ```text
 predecessor main ref == 7da8fee4daf1f022edff29078a1bbac207d1a32f
@@ -202,14 +242,28 @@ git diff check == PASS
 verification worktree == CLEAN
 predecessor canonical identity snapshot read from isolated PostgreSQL
 predecessor lock status == COMPLETE
-authorization static Gate == PASS
+authorization status == READY_FOR_MERGE
+authorization_effective == false
 capability matrix MCFT-CAP-02 status == READY_FOR_IMPLEMENTATION
-this authorization PR merged into main
+Runtime source changed-file count == 0
+exact authorization changed-file set == 10
 ```
 
-Before merge, `authorization_effective` must remain `false`. The next slice is not automatically implemented; it is only allowed to start from the merged authorization main commit.
+## 9. Postmerge effectiveness condition
 
-## 9. Successor boundary
+Authorization becomes effective only when all conditions are true:
+
+```text
+all premerge Gate checks == PASS
+this authorization PR merged into main
+postmerge Gate executes from the merged authorization main commit
+postmerge Gate confirms authorization commit ancestry
+postmerge Gate confirms the same ten-file boundary and no Runtime source
+```
+
+Before merge, `authorization_effective` remains `false`. Matrix readiness is a bounded merge target and does not independently grant Runtime authority. The next slice is not automatically implemented; it is only allowed to start from the merged authorization main commit after the postmerge Gate passes.
+
+## 10. Successor boundary
 
 ```text
 successor:
@@ -219,4 +273,4 @@ successor_authorization:
 NONE
 ```
 
-No successor design or implementation is authorized by this document.
+MCFT-CAP-03 remains unauthorized. No successor design or implementation is authorized by this document.
