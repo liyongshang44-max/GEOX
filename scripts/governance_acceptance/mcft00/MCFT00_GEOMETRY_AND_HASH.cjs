@@ -62,10 +62,31 @@ function withoutHash(value, key = 'determinism_hash') {
 function roundHalfAwayFromZero(value, decimalPlaces) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) throw new Error('NON_FINITE_NUMBER');
+  if (!Number.isInteger(decimalPlaces) || decimalPlaces < 0 || decimalPlaces > 15) {
+    throw new Error('INVALID_DECIMAL_PLACES');
+  }
+
+  const negative = numeric < 0 || Object.is(numeric, -0);
+  const text = Math.abs(numeric).toString().toLowerCase();
+  const [coefficientText, exponentText = '0'] = text.split('e');
+  const [integerText, fractionText = ''] = coefficientText.split('.');
+  const digitsText = `${integerText}${fractionText}`.replace(/^0+(?=\d)/, '') || '0';
+  const decimalExponent = Number(exponentText) - fractionText.length + decimalPlaces;
+  let scaledMagnitude = BigInt(digitsText);
+
+  if (decimalExponent >= 0) {
+    scaledMagnitude *= 10n ** BigInt(decimalExponent);
+  } else {
+    const divisor = 10n ** BigInt(-decimalExponent);
+    const quotient = scaledMagnitude / divisor;
+    const remainder = scaledMagnitude % divisor;
+    scaledMagnitude = quotient + (remainder * 2n >= divisor ? 1n : 0n);
+  }
+
   const factor = 10 ** decimalPlaces;
-  const magnitude = Math.floor((Math.abs(numeric) * factor) + 0.5);
-  const rounded = Math.sign(numeric) * magnitude / factor;
-  return Object.is(rounded, -0) ? 0 : rounded;
+  const rounded = Number(scaledMagnitude) / factor;
+  const signed = negative ? -rounded : rounded;
+  return Object.is(signed, -0) ? 0 : signed;
 }
 
 function round7(value) {
