@@ -84,7 +84,7 @@ A capability-line closure does not automatically mark its contributing work pack
 
 MCFT-06 remains `NOT_STARTED` for MCFT-CAP-01. No propagation, water balance, rainfall application, ET application, irrigation application, continuous tick, restart/backfill, late revision, successful 72-point Forecast, or Scenario may be claimed.
 
-MCFT-CAP-01 is `READY_FOR_IMPLEMENTATION` as the successor state of the COMPLETE Amendment 02 candidate. This readiness becomes effective only after the final candidate passes Gate and CI, merges into `main`, and is verified on `main`.
+The five executable delivery slices through S4 are `COMPLETE` on `main@4a0fd03beb05298028101a4999c67a5e053dadb8`. `MCFT-CAP-01.CLOSURE-V1` is the only active slice and is governance-only. The capability line remains `IN_IMPLEMENTATION` until the closure candidate passes its Gate and exact-head CI, merges into `main`, and is verified on `main`.
 
 ## 4. Initial and revision lineage ownership
 
@@ -120,7 +120,21 @@ optional separately transacted F audit
 | MCFT-GATE-B Shadow-online Closure | same core with online adapters, persistent scheduling, late/out-of-order handling, restart recovery, readback, no automatic action |
 | MCFT-GATE-C Controlled-action Feedback Closure | same core with governed decision/approval/AO-ACT/receipt/acceptance and Action Feedback that separates execution from validation |
 
-MCFT-CAP-01 closure is not MCFT-GATE-A, MCFT-GATE-B, or MCFT-GATE-C closure.
+MCFT-CAP-01 closure is not MCFT-GATE-A, MCFT-GATE-B, or MCFT-GATE-C closure. It also does not establish the Minimum Complete Field Twin.
+
+The closure candidate must preserve the actual owner work-package statuses frozen by MCFT-VERTICAL-AMENDMENT-01:
+
+```text
+MCFT-01 COMPLETE
+MCFT-02 PARTIALLY_ESTABLISHED
+MCFT-03 PARTIALLY_ESTABLISHED
+MCFT-04 PARTIALLY_ESTABLISHED
+MCFT-05 PARTIALLY_ESTABLISHED
+MCFT-06 NOT_STARTED
+MCFT-07 PARTIALLY_ESTABLISHED
+MCFT-08 PARTIALLY_ESTABLISHED
+MCFT-09 PARTIALLY_ESTABLISHED
+```
 
 ## 6. DT-01 target=DT-02 resolution
 
