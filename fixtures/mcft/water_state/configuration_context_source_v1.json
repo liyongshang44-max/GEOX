@@ -1,5 +1,5 @@
 {
-  "schema_version": "geox_mcft_cap_01_configuration_context_source_v1",
+  "schema_version": "geox_mcft_cap_01_configuration_context_v1",
   "dataset_id": "mcft_c8_water_replay_2026_06_v1",
   "context_class": "CONFIGURATION_DERIVED_CONTEXT",
   "evidence_record": false,
