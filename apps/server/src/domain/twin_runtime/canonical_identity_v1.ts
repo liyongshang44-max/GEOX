@@ -3,6 +3,7 @@
 // Boundary: pure identity logic; no persistence, wall clock, random UUID, filesystem, environment, or network.
 
 import { canonicalJsonV1, omitSemanticFieldsV1, semanticHashV1 } from "./canonical_json_v1.js";
+export { semanticHashV1 } from "./canonical_json_v1.js";
 
 export const A0_MEMBER_OBJECT_TYPES_V1 = [
   "twin_runtime_lineage_v1",
