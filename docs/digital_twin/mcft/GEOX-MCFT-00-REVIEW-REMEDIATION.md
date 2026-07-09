@@ -8,7 +8,7 @@ phase: MCFT-00
 review_target: PR #2304
 authoritative_branch: mcft-00-reality-binding-contract
 baseline_main_commit: 7fd848ae00680480fc864990b9d03b37bc61fdff
-review_status: REMEDIATION_IMPLEMENTED_PENDING_FINAL_ACCEPTANCE
+review_status: COMPLETE
 repository boundary remains governance-only
 ```
 
@@ -20,7 +20,7 @@ The source vocabulary correction is formalized as `MCFT00-AMENDMENT-01` in the c
 
 ## 2. Implemented remediations
 
-The implementation now includes:
+The implementation includes:
 
 ```text
 closure state machine: PENDING_ACCEPTANCE | COMPLETE
@@ -69,44 +69,36 @@ MCFT00-REVIEW-018 per-role time contract incomplete
 MCFT00-REVIEW-019 structural validation gaps
 ```
 
-## 4. Remaining external evidence
-
-The implementation remains pending closure until all of the following are recorded:
+## 4. Closure evidence
 
 ```text
-full local MCFT-00 Gate with no skip variables
-zero Gate warnings
-zero Gate failures
-predecessor regressions PASS
-changed-file boundary PASS
-working tree CLEAN
-final generic repository CI PASS
-final PR head attestation
+implementation_validated_head: cd9296e29ef98f93fe869e072ec6c08129c2889f
+implementation_local_gate: PASS — 185 PASS / 0 WARN / 0 FAIL
+DT-02 amended regression: PASS
+DT-01 repository audit: PASS
+DT-01 acceptance: PASS
+DT-00 semantic regression: PASS
+changed-file boundary: PASS
+changed_file_count: 23
+negative_fixture_count: 78
+working_tree: CLEAN
+implementation_ci: PASS — workflow ci #4332
 ```
 
 Generic CI is not represented as MCFT-00-specific Gate wiring. Workflow and package changes remain forbidden by the MCFT-00 task boundary.
 
-## 5. Final commands
+## 5. Completion criteria
 
-```powershell
-Remove-Item Env:MCFT00_ACCEPTANCE_SKIP_PREDECESSOR -ErrorAction SilentlyContinue
-Remove-Item Env:MCFT00_ACCEPTANCE_SKIP_GIT_SCOPE -ErrorAction SilentlyContinue
-node scripts/governance_acceptance/ACCEPTANCE_MCFT_00_REALITY_BINDING_CONTRACT.cjs
-git status --short
-```
-
-## 6. Completion criteria
-
-PR #2304 may be marked ready only when:
+PR #2304 satisfies:
 
 ```text
 closure status = COMPLETE
 acceptance_status = COMPLETE
 no closure field remains PENDING
 57 hard checks are evidence-bearing
-all negative fixtures match exact reason code and exact stage
+78 negative fixtures match exact reason code and exact stage
 all validator runs report write_attempt_count = 0
 full local Gate has 0 WARN and 0 FAIL
 working tree is clean
-generic CI is green on the final head
+generic CI is green on the implementation-validated head
 ```
