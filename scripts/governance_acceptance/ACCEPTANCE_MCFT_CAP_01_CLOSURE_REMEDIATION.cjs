@@ -135,7 +135,7 @@ for (const field of ['ingested_at','freshness','source_unit','canonical_unit','c
 for (const code of ['A0_REF_TRANSITION_ASSIMILATION_MISMATCH','A0_REF_ASSIMILATION_TRANSITION_MISMATCH','A0_REF_STATE_TRANSITION_MISMATCH','A0_REF_TICK_POSTERIOR_MISMATCH','A0_REF_CHECKPOINT_POSTERIOR_MISMATCH','A0_REF_HEALTH_CHECKPOINT_MISMATCH']) {
   check(validator.includes(code), `A0 graph validator code: ${code}`);
 }
-check(validator.indexOf('validateA0CrossReferenceGraphV1(recordSet)') < validator.indexOf('computeA0RecordSetDeterminismHashV1'), 'graph validation is independent of aggregate hash validation');
+check(validator.includes('validateA0CrossReferenceGraphV1(recordSet);\n  const computed = computeA0RecordSetDeterminismHashV1'), 'graph validation executes before aggregate-hash validation');
 
 check(runner.includes('A0BootstrapRuntimeServiceV1'), 'manual runner executes A0 service');
 check(runner.includes('PrepareNextTickInputServiceV1'), 'manual runner prepares persisted handoff');
