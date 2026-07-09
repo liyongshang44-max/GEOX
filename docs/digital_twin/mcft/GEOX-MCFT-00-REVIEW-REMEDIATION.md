@@ -8,7 +8,7 @@ phase: MCFT-00
 review_target: PR #2304
 authoritative_branch: mcft-00-reality-binding-contract
 baseline_main_commit: 7fd848ae00680480fc864990b9d03b37bc61fdff
-review_status: REMEDIATION_IMPLEMENTED_PENDING_FINAL_ACCEPTANCE
+review_status: COMPLETE
 repository boundary remains governance-only
 ```
 
@@ -30,7 +30,7 @@ MCFT00-REVIEW-023 purity scan omitted the geometry/hash helper
 MCFT00-REVIEW-024 fixture acceptance metadata became split after closure was reopened
 ```
 
-These findings invalidate the prior closure evidence for head `1e7d62a68d731a36ddc229c4cf7fff717ec75df6`.
+The prior closure evidence for head `1e7d62a68d731a36ddc229c4cf7fff717ec75df6` is superseded and must not be used.
 
 ## 3. Implemented remediations
 
@@ -47,11 +47,11 @@ adapter definition and binding versions are compared by the authority validator
 adapter version mismatch has an exact negative fixture
 both private helpers are included in the purity scan
 negative fixture count increased from 78 to 80
-fixture manifest, all seven fixture parts, and rounding manifest must match closure acceptance state
+fixture manifest, all seven fixture parts, and rounding manifest match closure acceptance state
 source matrix and Reality identities were deterministically rederived
 ```
 
-## 4. Candidate identity after remediation
+## 4. Frozen identity after remediation
 
 ```text
 binding_id: mcft_rb_bf1da664164a4fedda249bcb
@@ -63,16 +63,22 @@ configuration_matrix_hash: sha256:381ef166454c7b698c6641fadc5d08019fecff127e9529
 
 The geometry identity is unchanged because the governed polygon contains no half-tie coordinates. The Reality identity changed because adapter version is now part of the governed Evidence-binding semantics.
 
-## 5. Acceptance state
+## 5. Final acceptance evidence
 
 ```text
-closure status: PENDING_ACCEPTANCE
-acceptance_status: PENDING
-implementation_validated_head: PENDING
-full local Gate: PENDING
+closure status: COMPLETE
+acceptance_status: COMPLETE
+implementation_validated_head: 90c73461d88c9f3631fafeb14a88227647e632e3
+full local Gate: PASS — 204 PASS / 0 WARN / 0 FAIL
+DT-02 amended regression: PASS
+DT-01 repository audit: PASS
+DT-01 acceptance: PASS
+DT-00 semantic regression: PASS
+changed_file_count: 24
 negative_fixture_count: 80
 rounding_fixture_count: 6
-final CI: PENDING
+working_tree: CLEAN
+implementation_ci: PASS — workflow ci #4370
 ```
 
-PR #2304 must remain Draft until the revised package passes the complete no-skip Gate, the working tree is clean, and final CI succeeds.
+PR #2304 may return to Ready for review after the closure-head Gate and final CI pass.
