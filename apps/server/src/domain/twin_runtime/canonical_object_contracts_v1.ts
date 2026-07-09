@@ -2,7 +2,7 @@
 // Purpose: define and validate the MCFT-CAP-01 Runtime Config and nine-member A0 canonical object subset.
 // Boundary: contract validation only; no database, routes, wall clock, random values, filesystem, or network.
 
-import { A0_MEMBER_OBJECT_TYPES_V1, computeA0RecordSetDeterminismHashV1, computeMemberDeterminismHashV1, type A0MemberObjectTypeV1 } from "./canonical_identity_v1.js";
+import { A0_MEMBER_OBJECT_TYPES_V1, computeA0RecordSetDeterminismHashV1, computeMemberDeterminismHashV1, deriveA0IdentityV1, type A0MemberObjectTypeV1, type A0SemanticSeedInputV1 } from "./canonical_identity_v1.js";
 
 export type TwinCanonicalObjectTypeV1 = "twin_runtime_config_v1" | A0MemberObjectTypeV1;
 export type CanonicalObjectEnvelopeV1 = {
@@ -14,7 +14,14 @@ export type CanonicalObjectEnvelopeV1 = {
   lineage_id?: string; revision_id?: string; payload: Record<string, unknown>;
 };
 
-export type A0RecordSetV1 = { a0_record_set_id: string; a0_idempotency_key: string; a0_record_set_determinism_hash: string; members: CanonicalObjectEnvelopeV1[] };
+export type A0RecordSetV1 = {
+  a0_identity_input: A0SemanticSeedInputV1;
+  a0_semantic_seed: string;
+  a0_record_set_id: string;
+  a0_idempotency_key: string;
+  a0_record_set_determinism_hash: string;
+  members: CanonicalObjectEnvelopeV1[];
+};
 
 function requiredString(value: unknown, code: string): asserts value is string { if (typeof value !== "string" || !value.trim()) throw new Error(code); }
 function requiredArray(value: unknown, code: string): asserts value is unknown[] { if (!Array.isArray(value)) throw new Error(code); }
@@ -60,10 +67,18 @@ export function validateCanonicalObjectV1(object: CanonicalObjectEnvelopeV1): vo
 }
 
 export function validateA0RecordSetV1(recordSet: A0RecordSetV1): void {
+  const derived = deriveA0IdentityV1(recordSet.a0_identity_input);
+  if (derived.a0_semantic_seed !== recordSet.a0_semantic_seed) throw new Error("A0_SEMANTIC_SEED_MISMATCH");
+  if (derived.a0_record_set_id !== recordSet.a0_record_set_id) throw new Error("A0_RECORD_SET_ID_MISMATCH");
+  if (derived.a0_idempotency_key !== recordSet.a0_idempotency_key) throw new Error("A0_IDEMPOTENCY_KEY_MISMATCH");
   if (recordSet.members.length !== 9) throw new Error("A0_MEMBER_COUNT_MISMATCH");
   const types = recordSet.members.map((member) => member.object_type).sort();
   if (JSON.stringify(types) !== JSON.stringify([...A0_MEMBER_OBJECT_TYPES_V1].sort())) throw new Error("A0_MEMBER_TYPE_SET_MISMATCH");
-  for (const member of recordSet.members) validateCanonicalObjectV1(member);
+  for (const member of recordSet.members) {
+    validateCanonicalObjectV1(member);
+    const expectedId = derived.member_object_ids[member.object_type as A0MemberObjectTypeV1];
+    if (member.object_id !== expectedId) throw new Error("A0_MEMBER_OBJECT_ID_MISMATCH");
+  }
   const lineageIds = new Set(recordSet.members.filter((member) => member.lineage_id).map((member) => member.lineage_id));
   const revisionIds = new Set(recordSet.members.filter((member) => member.revision_id).map((member) => member.revision_id));
   if (lineageIds.size !== 1 || revisionIds.size !== 1) throw new Error("A0_LINEAGE_REVISION_MISMATCH");
