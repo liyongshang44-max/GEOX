@@ -13,7 +13,7 @@ successor: MCFT-01 Canonical Replay Dataset
 runtime_mode: REPLAY
 implementation_capability: GOVERNANCE_ONLY
 status: FROZEN
-acceptance_status: PENDING
+acceptance_status: COMPLETE
 duplicate_implementation_pr: #2305 CLOSED_SUPERSEDED
 ```
 
