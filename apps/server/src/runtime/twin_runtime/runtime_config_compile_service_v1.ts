@@ -11,7 +11,7 @@ export type CompileRuntimeConfigInputV1 = {
   scope: { tenant_id: string; project_id: string; group_id: string; field_id: string; season_id: string; zone_id: string };
   reality: { binding_id: string; determinism_hash: string; geometry_semantic_hash: string; root_zone_definition: Record<string, unknown> };
   source_matrix: { determinism_hash?: string; source_matrix_hash?: string; bindings: Array<{ binding_id: string; availability_semantics?: { release_policy_id?: string } }> };
-  configuration_matrix: { determinism_hash?: string; configuration_matrix_hash?: string; bindings?: Array<{ binding_id?: string; configuration_id?: string }> };
+  configuration_matrix: { determinism_hash?: string; configuration_matrix_hash?: string; bindings: Array<{ binding_id: string; source_role: string; configuration_source_id: string }> };
 };
 
 function exact(actual: string | undefined, expected: string, code: string): void { if (actual !== expected) throw new Error(code); }
@@ -24,6 +24,11 @@ export function compileRuntimeConfigV1(input: CompileRuntimeConfigInputV1): Cano
   exact(input.configuration_matrix.configuration_matrix_hash ?? input.configuration_matrix.determinism_hash, MCFT_CAP_01_EXPECTED_AUTHORITY_V1.configuration_matrix_hash, "CONFIGURATION_MATRIX_HASH_MISMATCH");
   const releasePolicies = new Set(input.source_matrix.bindings.map((binding) => binding.availability_semantics?.release_policy_id).filter(Boolean));
   if (releasePolicies.size !== 1) throw new Error("REPLAY_RELEASE_POLICY_NOT_UNIQUE");
+  const configurationRefs = input.configuration_matrix.bindings.map((binding) => binding.binding_id).sort();
+  const soilRefs = input.configuration_matrix.bindings.filter((binding) => binding.source_role === "SOIL_HYDRAULIC_CONFIGURATION").map((binding) => binding.binding_id);
+  const cropRefs = input.configuration_matrix.bindings.filter((binding) => binding.source_role === "CROP_WATER_USE_CONFIGURATION").map((binding) => binding.binding_id);
+  if (soilRefs.length !== 1 || soilRefs[0] !== MCFT_CAP_01_EXPECTED_AUTHORITY_V1.soil_hydraulic_binding_id) throw new Error("SOIL_HYDRAULIC_CONFIGURATION_BINDING_MISMATCH");
+  if (cropRefs.length !== 1 || cropRefs[0] !== MCFT_CAP_01_EXPECTED_AUTHORITY_V1.crop_water_use_binding_id) throw new Error("CROP_WATER_USE_CONFIGURATION_BINDING_MISMATCH");
   const payload: RuntimeConfigSemanticPayloadV1 = {
     reality_binding_ref: input.reality.binding_id,
     reality_binding_hash: input.reality.determinism_hash,
@@ -33,7 +38,9 @@ export function compileRuntimeConfigV1(input: CompileRuntimeConfigInputV1): Cano
     configuration_matrix_hash: MCFT_CAP_01_EXPECTED_AUTHORITY_V1.configuration_matrix_hash,
     geometry_semantic_hash: input.reality.geometry_semantic_hash,
     root_zone_definition: input.reality.root_zone_definition,
-    soil_hydraulic_configuration_refs: (input.configuration_matrix.bindings ?? []).map((binding) => binding.binding_id ?? binding.configuration_id ?? "").filter(Boolean),
+    configuration_binding_refs: configurationRefs,
+    soil_hydraulic_configuration_refs: soilRefs,
+    crop_water_use_configuration_refs: cropRefs,
     source_binding_refs: input.source_matrix.bindings.map((binding) => binding.binding_id).sort(),
     replay_release_policy_id: [...releasePolicies][0] as string,
     tick_duration: "PT1H",
