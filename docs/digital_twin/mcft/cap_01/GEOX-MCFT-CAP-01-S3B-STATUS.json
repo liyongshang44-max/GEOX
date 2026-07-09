@@ -1,0 +1,71 @@
+{
+  "schema_version": "geox_mcft_cap_01_s3b_status_v1",
+  "capability_line_id": "MCFT-CAP-01",
+  "delivery_slice_id": "MCFT-CAP-01.MCFT-07-08.BOOTSTRAP-STATE-MATH-V1",
+  "implementation_baseline_commit": "4ddd2bbf4d5d421f875e3ab5b1bfd76749f2ca3a",
+  "implementation_candidate_head": "dca5541949f2aff39f3c49feb0ecc95cc3564b2a",
+  "status": "COMPLETE",
+  "transition_effective_condition": "PR_2312_MERGED_AND_VERIFIED_ON_MAIN",
+  "primary_owner_work_package_ids": [
+    "MCFT-07",
+    "MCFT-08"
+  ],
+  "depends_on_delivery_slice_ids": [
+    "MCFT-CAP-01.MCFT-02.A0-CONTRACTS-AND-CONFIG-V1"
+  ],
+  "parallel_dependency_status": {
+    "delivery_slice_id": "MCFT-CAP-01.MCFT-03.A0-PERSISTENCE-V1",
+    "status": "COMPLETE"
+  },
+  "implemented_components": [
+    "WEAK_BOOTSTRAP_PRIOR",
+    "POINT_TO_ROOT_ZONE_OBSERVATION_OPERATOR_H1",
+    "QUALITY_WEIGHTED_OBSERVATION_VARIANCE",
+    "SCALAR_GAUSSIAN_ASSIMILATION",
+    "ROOT_ZONE_WATER_POSTERIOR_DTO",
+    "PHYSICAL_BOUNDS_AND_INTERVAL_CLIPPING",
+    "NON_NUMERIC_CONFIDENCE_AND_ELIGIBILITY_VALIDATION"
+  ],
+  "completion_claims": [
+    "BOOTSTRAP_STATE_MATH_ESTABLISHED",
+    "STATIC_BOOTSTRAP_ASSIMILATION_ESTABLISHED",
+    "POSTERIOR_WATER_STATE_DTO_ESTABLISHED",
+    "STATE_UNCERTAINTY_MATH_EXPLICIT",
+    "PHYSICAL_BOUNDS_RULE_ESTABLISHED"
+  ],
+  "evidence": {
+    "local": {
+      "s3b_state_math": "108_PASS_0_FAIL",
+      "s2_contracts_config": "10_PASS_0_FAIL",
+      "foundation_closure": "28_PASS_0_FAIL",
+      "git_diff_check": "CLEAN",
+      "working_tree": "CLEAN"
+    },
+    "ci": {
+      "workflow": "ci",
+      "run_number": 4441,
+      "run_id": 29027960646,
+      "conclusion": "success",
+      "typecheck": "PASS",
+      "build": "PASS",
+      "server_selfcheck": "PASS",
+      "acceptance": "PASS"
+    }
+  },
+  "next_authorized_slice_id": "MCFT-CAP-01.MCFT-04-05-08-09.A0-RUNTIME-INTEGRATION-V1",
+  "nonclaims": [
+    "NO_EVIDENCE_WINDOW",
+    "NO_REPLAY_SELECTION",
+    "NO_A0_RUNTIME_EXECUTION",
+    "NO_CANONICAL_WRITE",
+    "NO_POSTGRES_WRITE",
+    "NO_BOOTSTRAP_STATE_COMMITTED",
+    "NO_ACTIVE_INITIAL_LINEAGE",
+    "NO_INITIAL_CHECKPOINT",
+    "NO_FORECAST_CONSTRUCTION",
+    "NO_PROPAGATION",
+    "NO_CONTINUOUS_RUNTIME",
+    "NO_S4_RUNTIME_INTEGRATION",
+    "NO_MCFT_CAP_01_CLOSURE"
+  ]
+}

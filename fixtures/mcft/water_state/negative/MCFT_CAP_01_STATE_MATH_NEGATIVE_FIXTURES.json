@@ -1,0 +1,27 @@
+{
+  "schema_version": "mcft_cap_01_state_math_negative_fixtures_v1",
+  "fixtures": [
+    {"fixture_id":"observation_below_zero","failure_stage":"INPUT_VALIDATION","expected_reason_code":"OBSERVATION_BELOW_ZERO","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"observation_above_one","failure_stage":"INPUT_VALIDATION","expected_reason_code":"OBSERVATION_ABOVE_ONE","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"observation_missing","failure_stage":"INPUT_VALIDATION","expected_reason_code":"OBSERVATION_REQUIRED","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"observation_nan","failure_stage":"INPUT_VALIDATION","expected_reason_code":"OBSERVATION_NON_FINITE","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"observation_infinity","failure_stage":"INPUT_VALIDATION","expected_reason_code":"OBSERVATION_NON_FINITE","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"quality_fail_consumed","failure_stage":"OBSERVATION_OPERATOR","expected_reason_code":"QUALITY_FAIL_OBSERVATION_REJECTED","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"invalid_hydraulic_ordering","failure_stage":"PHYSICAL_BOUNDS","expected_reason_code":"INVALID_HYDRAULIC_ORDERING","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"negative_prior_variance","failure_stage":"ASSIMILATION","expected_reason_code":"NEGATIVE_PRIOR_VARIANCE","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"negative_observation_variance","failure_stage":"ASSIMILATION","expected_reason_code":"NEGATIVE_OBSERVATION_VARIANCE","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"posterior_above_saturation","failure_stage":"PHYSICAL_BOUNDS","expected_reason_code":"POSTERIOR_PHYSICAL_BOUND_VIOLATION","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"numeric_confidence_score","failure_stage":"OUTPUT_VALIDATION","expected_reason_code":"NUMERIC_CONFIDENCE_FORBIDDEN","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"recommendation_eligibility_true","failure_stage":"OUTPUT_VALIDATION","expected_reason_code":"RECOMMENDATION_ELIGIBILITY_FORBIDDEN","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"action_eligibility_true","failure_stage":"OUTPUT_VALIDATION","expected_reason_code":"ACTION_ELIGIBILITY_FORBIDDEN","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"direct_state_equivalence_true","failure_stage":"OUTPUT_VALIDATION","expected_reason_code":"DIRECT_STATE_EQUIVALENCE_FORBIDDEN","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"negative_posterior_variance","failure_stage":"OUTPUT_VALIDATION","expected_reason_code":"NEGATIVE_POSTERIOR_VARIANCE","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"surface_state_inferred","failure_stage":"OUTPUT_VALIDATION","expected_reason_code":"SURFACE_STATE_INFERENCE_FORBIDDEN","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"input_object_mutated","failure_stage":"DETERMINISM","expected_reason_code":"INPUT_MUTATION_FORBIDDEN","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"nondeterministic_rerun","failure_stage":"DETERMINISM","expected_reason_code":"NONDETERMINISTIC_RERUN","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"postgres_import_introduced","failure_stage":"DOMAIN_PURITY","expected_reason_code":"POSTGRES_IMPORT_FORBIDDEN","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"filesystem_import_introduced","failure_stage":"DOMAIN_PURITY","expected_reason_code":"FILESYSTEM_IMPORT_FORBIDDEN","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"wall_clock_read_introduced","failure_stage":"DOMAIN_PURITY","expected_reason_code":"WALL_CLOCK_FORBIDDEN","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0},
+    {"fixture_id":"s4_runtime_file_introduced","failure_stage":"CHANGED_FILE_BOUNDARY","expected_reason_code":"S4_FILE_FORBIDDEN","expected_fact_delta":0,"expected_projection_delta":0,"expected_pointer_delta":0}
+  ]
+}

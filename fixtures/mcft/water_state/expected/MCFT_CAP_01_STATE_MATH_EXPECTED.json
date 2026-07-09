@@ -1,0 +1,115 @@
+{
+  "case_id": "mcft_cap_01_bootstrap_water_state_001",
+  "input": {
+    "observation_fraction": 0.184,
+    "quality_status": "PASS",
+    "hydraulic": {
+      "wilting_point_fraction": 0.12,
+      "field_capacity_fraction": 0.3,
+      "saturation_fraction": 0.45,
+      "root_zone_depth_mm": 300
+    }
+  },
+  "expected": {
+    "schema_version": "mcft_bootstrap_water_posterior_v1",
+    "model_component_id": "mcft_static_gaussian_bootstrap_water_state_v1",
+    "latent_variable": "ROOT_ZONE_VOLUMETRIC_WATER_CONTENT_FRACTION",
+    "model_versions": {
+      "prior_rule_id": "MIDPOINT_WILTING_FIELD_CAPACITY_WEAK_PRIOR_V1",
+      "observation_operator_id": "POINT_200MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1",
+      "assimilation_method_id": "SCALAR_GAUSSIAN_ASSIMILATION_V1",
+      "uncertainty_method_id": "GAUSSIAN_APPROXIMATION_95_INTERVAL_V1",
+      "physical_bound_version": "ROOT_ZONE_WATER_PHYSICAL_BOUNDS_V1",
+      "gaussian_interval_rule": "NORMAL_95_Z_1_96_V1",
+      "uncertainty_interval_clip_rule": "CLIP_TO_ZERO_AND_SATURATION_WITH_UNCLIPPED_METADATA_V1",
+      "rounding_rule": "DECIMAL_HALF_AWAY_FROM_ZERO_V1"
+    },
+    "direct_state_equivalence": false,
+    "prior": {
+      "prior_kind": "CONFIGURED_WEAK_BOOTSTRAP_PRIOR",
+      "mean": 0.21,
+      "stddev": 0.09,
+      "variance": 0.0081
+    },
+    "observation_update": {
+      "observation_fraction": 0.184,
+      "quality_status": "PASS",
+      "quality_weight": 1,
+      "observation_operator_h": 1,
+      "predicted_observation": 0.21,
+      "innovation": -0.026,
+      "sensor_variance": 0.0004,
+      "representativeness_variance": 0.0036,
+      "base_observation_variance": 0.004,
+      "effective_observation_variance": 0.004,
+      "assimilation_gain": 0.669421
+    },
+    "posterior": {
+      "mean": 0.192595,
+      "variance": 0.002678,
+      "stddev": 0.051746,
+      "uncertainty": {
+        "distribution_family": "GAUSSIAN_APPROXIMATION",
+        "primary_measure": "STANDARD_DEVIATION",
+        "interval_level": 0.95,
+        "mean": 0.192595,
+        "variance": 0.002678,
+        "stddev": 0.051746,
+        "interval_low": 0.091172,
+        "interval_high": 0.294018,
+        "unclipped_interval": {
+          "low": 0.091172,
+          "high": 0.294018
+        },
+        "interval_clipped": false,
+        "uncertainty_sources": [
+          "weak configured prior",
+          "sensor measurement uncertainty",
+          "point-to-zone representativeness uncertainty",
+          "controlled synthetic hydraulic configuration",
+          "single-observation bootstrap limitation"
+        ]
+      }
+    },
+    "derived_state": {
+      "root_zone_water_storage_mm": {
+        "mean": 57.778512,
+        "stddev": 15.523909,
+        "interval_low": 27.351652,
+        "interval_high": 88.205373
+      },
+      "available_water_fraction": 0.403306,
+      "depletion_from_field_capacity_mm": 32.221488
+    },
+    "unavailable_state": {
+      "surface_soil_moisture_state": "UNAVAILABLE_NO_BOUND_SURFACE_OBSERVATION",
+      "water_stress_state": "NOT_ESTABLISHED_NO_STRESS_MODEL",
+      "drainage_state": "NOT_ESTABLISHED_MCFT_06_NOT_STARTED"
+    },
+    "confidence": {
+      "status": "NOT_ESTABLISHED",
+      "reason_code": "NO_CALIBRATED_CONFIDENCE_MODEL"
+    },
+    "use_eligibility": {
+      "state_valid": true,
+      "posterior_chain_eligible": true,
+      "forecast_source_eligible": true,
+      "recommendation_input_eligible": false,
+      "action_input_eligible": false
+    },
+    "physical_bounds": {
+      "version": "ROOT_ZONE_WATER_PHYSICAL_BOUNDS_V1",
+      "wilting_point_fraction": 0.12,
+      "field_capacity_fraction": 0.3,
+      "saturation_fraction": 0.45,
+      "root_zone_depth_mm": 300
+    },
+    "limitations": [
+      "CONTROLLED_SYNTHETIC",
+      "NOT_FIELD_CALIBRATED",
+      "SINGLE_OBSERVATION_BOOTSTRAP",
+      "POINT_TO_ZONE_REPRESENTATIVENESS_UNCERTAINTY",
+      "NO_SURFACE_STATE_INFERENCE"
+    ]
+  }
+}
