@@ -155,7 +155,7 @@ async function main(): Promise<void> {
       lease_duration_seconds: 3600,
     };
 
-    const inserted = await rangeService.runContiguousContinuationRange(request);
+    const inserted = await rangeService.runContiguousContinuationRangeV1(request);
     assert.equal(inserted.status, "COMPLETED");
     assert.equal(inserted.executed_tick_count, expected.continuation_tick_count);
     assert.equal(inserted.tick_results.length, expected.continuation_tick_count);
@@ -253,7 +253,7 @@ async function main(): Promise<void> {
 
     const tokenBeforeReplay = await leaseTokenV1(fixture.scope);
     const factCountBeforeReplay = await scopedContinuationFactCountV1(lineageId, revisionId);
-    const replay = await rangeService.runContiguousContinuationRange(request);
+    const replay = await rangeService.runContiguousContinuationRangeV1(request);
     assert.equal(replay.status, "ALREADY_COMPLETE");
     assert.equal(replay.executed_tick_count, 0);
     assert.equal(await leaseTokenV1(fixture.scope), tokenBeforeReplay);

@@ -177,11 +177,20 @@ export class ContinuationTickServiceV1 {
     exactScopeV1(runtimeConfig, input.scope, "CONTINUATION_RUNTIME_CONFIG_SCOPE_MISMATCH");
     validateContinuationRuntimeConfigPayloadV1(runtimeConfig.payload);
     if (runtimeConfig.logical_time > logicalTime) throw new Error("CONTINUATION_RUNTIME_CONFIG_FROM_FUTURE_FORBIDDEN");
-    if (runtimeConfig.payload.parent_runtime_config_ref !== handoff.previous_state_runtime_config_ref) {
-      throw new Error("CONTINUATION_PARENT_RUNTIME_CONFIG_REF_MISMATCH");
-    }
-    if (runtimeConfig.payload.parent_runtime_config_hash !== handoff.previous_state_runtime_config_hash) {
-      throw new Error("CONTINUATION_PARENT_RUNTIME_CONFIG_HASH_MISMATCH");
+    if (handoff.previous_variance_basis.basis_origin === "DERIVED_FROM_MCFT_CAP_01_POSTERIOR_V1") {
+      if (runtimeConfig.payload.parent_runtime_config_ref !== handoff.previous_state_runtime_config_ref) {
+        throw new Error("CONTINUATION_PARENT_RUNTIME_CONFIG_REF_MISMATCH");
+      }
+      if (runtimeConfig.payload.parent_runtime_config_hash !== handoff.previous_state_runtime_config_hash) {
+        throw new Error("CONTINUATION_PARENT_RUNTIME_CONFIG_HASH_MISMATCH");
+      }
+    } else {
+      if (runtimeConfig.object_id !== handoff.previous_state_runtime_config_ref) {
+        throw new Error("CONTINUATION_RUNTIME_CONFIG_REF_MISMATCH");
+      }
+      if (runtimeConfig.determinism_hash !== handoff.previous_state_runtime_config_hash) {
+        throw new Error("CONTINUATION_RUNTIME_CONFIG_HASH_MISMATCH");
+      }
     }
     if (
       runtimeConfig.payload.reality_binding_ref !== handoff.reality_binding_ref

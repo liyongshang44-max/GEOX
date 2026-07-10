@@ -31,7 +31,7 @@ function decimalDigitsV1(value: unknown): bigint {
 
 async function executeStandardRangeV1() {
   const fixture = await buildMcftCap02TwentyFourTickFixtureV1();
-  const result = await fixture.rangeService.runContiguousContinuationRange({
+  const result = await fixture.rangeService.runContiguousContinuationRangeV1({
     scope: fixture.scope,
     to_logical_time: fixture.expectedFixture.last_logical_time,
     created_at: fixture.expectedFixture.created_at,
@@ -111,8 +111,8 @@ async function main(): Promise<void> {
   assert.equal(finalVwc.mean, Number(expected.final_vwc_mean));
   assert.equal(finalVwc.variance, Number(expected.final_vwc_variance));
   assert.equal(finalVwc.stddev, Number(expected.final_vwc_stddev));
-  assert.equal(finalInterval.published_lower, Number(expected.final_interval_lower));
-  assert.equal(finalInterval.published_upper, Number(expected.final_interval_upper));
+  assert.equal(finalInterval.published_lower, expected.final_interval_lower);
+  assert.equal(finalInterval.published_upper, expected.final_interval_upper);
   assert.equal(finalState.payload.available_water_fraction, Number(expected.final_available_water_fraction));
   assert.equal(finalState.payload.depletion_from_field_capacity_mm, Number(expected.final_depletion_from_field_capacity_mm));
   assert.equal(finalCheckpoint.payload.tick_sequence, expected.checkpoint_tick_sequence);
@@ -134,7 +134,7 @@ async function main(): Promise<void> {
 
   const commitsBeforeReplay = fixture.runtime.commitCount;
   const leasesBeforeReplay = fixture.runtime.leaseAcquireCount;
-  const replay = await fixture.rangeService.runContiguousContinuationRange({
+  const replay = await fixture.rangeService.runContiguousContinuationRangeV1({
     scope: fixture.scope,
     to_logical_time: fixture.expectedFixture.last_logical_time,
     created_at: fixture.expectedFixture.created_at,

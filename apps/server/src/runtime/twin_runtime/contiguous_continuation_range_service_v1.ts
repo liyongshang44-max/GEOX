@@ -65,7 +65,7 @@ export class ContiguousContinuationRangeServiceV1 {
     private readonly tickService: ExecuteOneContinuationTickPortV1,
   ) {}
 
-  async runContiguousContinuationRange(
+  async runContiguousContinuationRangeV1(
     input: RunContiguousContinuationRangeInputV1,
   ): Promise<RunContiguousContinuationRangeResultV1> {
     const targetLogicalTime = requiredHourAlignedIsoV1(

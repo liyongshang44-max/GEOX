@@ -72,32 +72,32 @@ async function main(): Promise<void> {
 
   await expectErrorV1("CONTINUATION_RANGE_TARGET_NOT_CANONICAL_HOUR", async () => {
     await new ContiguousContinuationRangeServiceV1(readerV1(baseHandoff), neverTick)
-      .runContiguousContinuationRange({ ...baseInput, to_logical_time: "not-a-time" });
+      .runContiguousContinuationRangeV1({ ...baseInput, to_logical_time: "not-a-time" });
   });
   await expectErrorV1("CONTINUATION_RANGE_TARGET_NOT_CANONICAL_HOUR", async () => {
     await new ContiguousContinuationRangeServiceV1(readerV1(baseHandoff), neverTick)
-      .runContiguousContinuationRange({ ...baseInput, to_logical_time: "2026-06-01T02:30:00.000Z" });
+      .runContiguousContinuationRangeV1({ ...baseInput, to_logical_time: "2026-06-01T02:30:00.000Z" });
   });
   await expectErrorV1("CONTINUATION_RANGE_CREATED_AT_INVALID", async () => {
     await new ContiguousContinuationRangeServiceV1(readerV1(baseHandoff), neverTick)
-      .runContiguousContinuationRange({ ...baseInput, created_at: "invalid" });
+      .runContiguousContinuationRangeV1({ ...baseInput, created_at: "invalid" });
   });
   await expectErrorV1("CONTINUATION_RANGE_LEASE_OWNER_REQUIRED", async () => {
     await new ContiguousContinuationRangeServiceV1(readerV1(baseHandoff), neverTick)
-      .runContiguousContinuationRange({ ...baseInput, lease_owner: " " });
+      .runContiguousContinuationRangeV1({ ...baseInput, lease_owner: " " });
   });
   await expectErrorV1("CONTINUATION_RANGE_LEASE_DURATION_INVALID", async () => {
     await new ContiguousContinuationRangeServiceV1(readerV1(baseHandoff), neverTick)
-      .runContiguousContinuationRange({ ...baseInput, lease_duration_seconds: 0 });
+      .runContiguousContinuationRangeV1({ ...baseInput, lease_duration_seconds: 0 });
   });
   await expectErrorV1("PERSISTED_NEXT_TICK_NOT_CANONICAL_HOUR", async () => {
     const invalidHandoff = { ...baseHandoff, next_logical_tick_time: "2026-06-01T02:30:00.000Z" };
     await new ContiguousContinuationRangeServiceV1(readerV1(invalidHandoff), neverTick)
-      .runContiguousContinuationRange(baseInput);
+      .runContiguousContinuationRangeV1(baseInput);
   });
   await expectErrorV1("CONTINUATION_RANGE_MAX_TICKS_EXCEEDED", async () => {
     await new ContiguousContinuationRangeServiceV1(readerV1(baseHandoff), neverTick)
-      .runContiguousContinuationRange({ ...baseInput, to_logical_time: addHoursV1(baseHandoff.next_logical_tick_time, 24) });
+      .runContiguousContinuationRangeV1({ ...baseInput, to_logical_time: addHoursV1(baseHandoff.next_logical_tick_time, 24) });
   });
 
   let noncontiguousCalls = 0;
@@ -109,7 +109,7 @@ async function main(): Promise<void> {
   };
   await expectErrorV1("CONTINUATION_RANGE_NONCONTIGUOUS_COMMITTED_HANDOFF", async () => {
     await new ContiguousContinuationRangeServiceV1(readerV1(baseHandoff), noncontiguousTick)
-      .runContiguousContinuationRange({ ...baseInput, to_logical_time: baseHandoff.next_logical_tick_time });
+      .runContiguousContinuationRangeV1({ ...baseInput, to_logical_time: baseHandoff.next_logical_tick_time });
   });
   assert.equal(noncontiguousCalls, 1);
 
@@ -123,7 +123,7 @@ async function main(): Promise<void> {
   };
   await expectErrorV1("SYNTHETIC_TICK_13_FAILURE", async () => {
     await new ContiguousContinuationRangeServiceV1(readerV1(baseHandoff), failingTick)
-      .runContiguousContinuationRange(baseInput);
+      .runContiguousContinuationRangeV1(baseInput);
   });
   assert.equal(failureCalls, 13);
   ok("range stops on the first failed tick and does not invoke ticks 14 through 24");
@@ -134,7 +134,7 @@ async function main(): Promise<void> {
     };
     await expectErrorV1(propagatedCode, async () => {
       await new ContiguousContinuationRangeServiceV1(readerV1(baseHandoff), propagatingTick)
-        .runContiguousContinuationRange({ ...baseInput, to_logical_time: baseHandoff.next_logical_tick_time });
+        .runContiguousContinuationRangeV1({ ...baseInput, to_logical_time: baseHandoff.next_logical_tick_time });
     });
   }
 
@@ -152,7 +152,7 @@ async function main(): Promise<void> {
   const alreadyComplete = await new ContiguousContinuationRangeServiceV1(
     readerV1(alreadyCompleteHandoff),
     alreadyCompleteTick,
-  ).runContiguousContinuationRange(baseInput);
+  ).runContiguousContinuationRangeV1(baseInput);
   assert.equal(alreadyComplete.status, "ALREADY_COMPLETE");
   assert.equal(alreadyComplete.executed_tick_count, 0);
   assert.equal(alreadyCompleteCalls, 0);
