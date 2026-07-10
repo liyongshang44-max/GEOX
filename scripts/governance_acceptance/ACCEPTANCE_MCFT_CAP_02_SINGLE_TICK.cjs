@@ -17,6 +17,7 @@ const NEXT_SLICE = 'MCFT-CAP-02.MCFT-04-08.TWENTY-FOUR-TICK-RANGE-V1';
 const MODE = process.argv.includes('--draft') ? 'draft' : 'final';
 
 const EXACT_CHANGED_FILES = [
+  'apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts',
   'apps/server/src/runtime/twin_runtime/ports.ts',
   'apps/server/src/runtime/twin_runtime/next_tick_input_service_v1.ts',
   'apps/server/src/runtime/twin_runtime/continuation_record_set_builder_v1.ts',
@@ -171,6 +172,7 @@ const ports = readText('apps/server/src/runtime/twin_runtime/ports.ts');
 const handoff = readText('apps/server/src/runtime/twin_runtime/next_tick_input_service_v1.ts');
 const builder = readText('apps/server/src/runtime/twin_runtime/continuation_record_set_builder_v1.ts');
 const service = readText('apps/server/src/runtime/twin_runtime/continuation_tick_service_v1.ts');
+const nextTickReader = readText('apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts');
 const predecessorGate = readText('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_PERSISTENCE.cjs');
 check(ports.includes('previous_forecast_result_ref') && ports.includes('previous_variance_basis'), 'persisted handoff exposes Forecast pointer and exact variance basis');
 check(handoff.includes('DERIVED_FROM_MCFT_CAP_01_POSTERIOR_V1') && handoff.includes('CARRIED_FROM_PREVIOUS_CONTINUATION_STATE'), 'handoff distinguishes first and subsequent continuation basis');
@@ -180,6 +182,7 @@ check(builder.includes('validateContinuationRecordSetV1(recordSet)'), 'candidate
 check(builder.includes('twin_assimilation_update_v1') && builder.includes('status: "NOT_APPLIED"'), 'explicit NOT_APPLIED assimilation is built');
 check(builder.includes('status: "BLOCKED"') && builder.includes('successful_forecast_ref: null'), 'BLOCKED Forecast candidate is built');
 check(service.includes('lookupContinuationRecordSet') && service.includes('acquireLease'), 'single-tick service implements idempotency and lease path');
+check(nextTickReader.includes('validateContinuationMemberV1') && nextTickReader.includes('isContinuationReadObjectV1'), 'PostgreSQL next-tick reader validates persisted continuation checkpoint and State with continuation contracts');
 const lookup = service.indexOf('this.persistence.lookupContinuationRecordSet(');
 const evidence = service.indexOf('this.evidenceSource.loadCandidateRecords(');
 const lease = service.indexOf('this.persistence.acquireLease(');
