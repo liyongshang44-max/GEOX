@@ -170,6 +170,15 @@ The complete trace is hashed only after construction. Recursive self-hash fields
 
 ## Additive process uncertainty
 
+The frozen uncertainty policy identity is:
+
+```text
+policy_id: CONTROLLED_ADDITIVE_PROCESS_UNCERTAINTY_BUDGET_V1
+policy_version: 1
+covariance_policy: ZERO_COVARIANCE_CONTROLLED_ASSUMPTION_V1
+physical_clipping_reduces_latent_variance: false
+```
+
 ```text
 rainfall_variance_mm2
 = (gross_rainfall_mm × 0.100000)²
