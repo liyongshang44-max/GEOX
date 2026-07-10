@@ -37,6 +37,10 @@ function readJsonV1<T>(relativePath: string): T {
   return JSON.parse(fs.readFileSync(path.join(ROOT, relativePath), "utf8")) as T;
 }
 
+function readSqlV1(relativePath: string): string {
+  return fs.readFileSync(path.join(ROOT, relativePath), "utf8");
+}
+
 const lock = readJsonV1<McftCap02PredecessorLockV1>(
   "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-PREDECESSOR-LOCK.json",
 );
@@ -76,6 +80,17 @@ function ok(message: string): void {
   console.log(`PASS ${message}`);
 }
 
+async function initializeIsolatedSchemaV1(): Promise<void> {
+  await pool.query(readSqlV1("docker/postgres/init/001_schema.sql"));
+  await pool.query(readSqlV1("apps/server/db/migrations/2026_07_09_mcft_cap_01_a0_persistence.sql"));
+  const tables = await pool.query(
+    "SELECT to_regclass('public.facts') AS facts, to_regclass('public.twin_object_idempotency_index_v1') AS idempotency",
+  );
+  assert.equal(tables.rows[0].facts, "facts");
+  assert.equal(tables.rows[0].idempotency, "twin_object_idempotency_index_v1");
+  ok("isolated PostgreSQL schema initialized from repository-owned SQL");
+}
+
 async function deleteRuntimeConfigV1(objectId: string, idempotencyKey: string): Promise<void> {
   await pool.query(
     "DELETE FROM twin_object_idempotency_index_v1 WHERE identity_kind='RUNTIME_CONFIG' AND idempotency_key=$1",
@@ -105,10 +120,7 @@ async function countConfigGuardsV1(idempotencyKey: string): Promise<number> {
 
 async function main(): Promise<void> {
   try {
-    await pool.query(fs.readFileSync(
-      path.join(ROOT, "apps/server/db/migrations/2026_07_09_mcft_cap_01_a0_persistence.sql"),
-      "utf8",
-    ));
+    await initializeIsolatedSchemaV1();
     await deleteRuntimeConfigV1(continuationRuntimeConfig.object_id, continuationRuntimeConfig.idempotency_key);
     await deleteRuntimeConfigV1(parentRuntimeConfig.object_id, parentRuntimeConfig.idempotency_key);
 
