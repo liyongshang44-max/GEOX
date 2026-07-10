@@ -10,6 +10,8 @@
   "execution_order": [
     "READ_PERSISTED_ACTIVE_LINEAGE_CHECKPOINT_STATE",
     "PREPARE_PERSISTED_NEXT_TICK_HANDOFF",
+    "COMPUTE_OPERATION_KEY_FROM_PERSISTED_HANDOFF_AND_REQUESTED_LOGICAL_TIME",
+    "LOOKUP_IDEMPOTENCY_BEFORE_CONFIG_EVIDENCE_AND_LEASE",
     "RESOLVE_EXPLICITLY_PINNED_CONTINUATION_RUNTIME_CONFIG",
     "LOAD_REPLAY_EVIDENCE_CANDIDATES",
     "BUILD_FROZEN_EXACT_HOUR_EVIDENCE_WINDOW",
@@ -18,8 +20,8 @@
     "BUILD_EXPLICIT_NOT_APPLIED_ASSIMILATION",
     "BUILD_COMPLETE_EIGHT_OBJECT_CANDIDATE",
     "VALIDATE_PHYSICAL_AND_CROSS_REFERENCE_INVARIANTS",
-    "COMPUTE_OPERATION_KEY_AND_AGGREGATE_HASH",
-    "LOOKUP_IDEMPOTENCY_BEFORE_LEASE",
+    "COMPUTE_AGGREGATE_HASH",
+    "RECHECK_IDEMPOTENCY_AFTER_CANDIDATE_BUILD",
     "ACQUIRE_LEASE_FOR_NEW_KEY_ONLY",
     "COMMIT_A2_TRANSACTION",
     "READ_CANONICAL_RECORD_SET_BACK",
@@ -50,7 +52,7 @@
     "twin_runtime_health_v1"
   ],
   "first_continuation_bridge": {
-    "previous_storage_mean": "MCFT-CAP-01 posterior mean multiplied by governed 300 mm root-zone depth using fixed-point arithmetic",
+    "previous_storage_mean": "persisted MCFT-CAP-01 derived_state.root_zone_water_storage_mm.mean normalized to the governed six-decimal storage basis without re-deriving from rounded posterior VWC",
     "previous_storage_variance": "MCFT-CAP-01 posterior VWC variance multiplied by governed root-zone depth squared",
     "previous_checkpoint_tick_sequence": 0,
     "continuation_checkpoint_tick_sequence": 1
