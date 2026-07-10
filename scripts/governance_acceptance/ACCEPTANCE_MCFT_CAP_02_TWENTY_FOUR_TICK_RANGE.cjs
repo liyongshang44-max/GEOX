@@ -37,7 +37,6 @@ const SINGLE_TICK_CHANGED_FILES = [
   'apps/server/src/runtime/twin_runtime/ports.ts',
   'apps/server/src/runtime/twin_runtime/next_tick_input_service_v1.ts',
   'apps/server/src/runtime/twin_runtime/continuation_record_set_builder_v1.ts',
-  'apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts',
   'apps/server/src/runtime/twin_runtime/continuation_tick_service_v1.ts',
   'docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json',
   'docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-SINGLE-TICK-CONTRACT.json',
