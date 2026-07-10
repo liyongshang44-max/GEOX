@@ -3,6 +3,7 @@
 // Boundary: pure canonical construction and validation only; no database, lease, filesystem, environment, wall clock, range, restart, Forecast success, Scenario, Recommendation, or action.
 
 import type { HourlyWaterBalanceResultV1 } from "../../domain/soil_water/hourly_water_balance_v1.js";
+import { normalizeFixedDecimalV1, WATER_AMOUNT_SCALE_V1 } from "../../domain/soil_water/fixed_point_water_decimal_v1.js";
 import {
   computeMemberDeterminismHashV1,
   deriveSemanticObjectIdV1,
@@ -45,13 +46,22 @@ export type BuildContinuationRecordSetInputV1 = {
   dynamics: HourlyWaterBalanceResultV1;
 };
 
+type ScopeLikeV1 = {
+  tenant_id: string;
+  project_id: string;
+  group_id: string | null;
+  field_id: string;
+  season_id: string | null;
+  zone_id: string | null;
+};
+
 function requiredCanonicalIsoV1(value: string, code: string): string {
   const parsed = Date.parse(value);
   if (!Number.isFinite(parsed) || new Date(parsed).toISOString() !== value) throw new Error(code);
   return value;
 }
 
-function exactScopeV1(actual: TwinScopeKeyV1, expected: TwinScopeKeyV1, code: string): void {
+function exactScopeV1(actual: ScopeLikeV1, expected: TwinScopeKeyV1, code: string): void {
   for (const key of ["tenant_id", "project_id", "group_id", "field_id", "season_id", "zone_id"] as const) {
     if (actual[key] !== expected[key]) throw new Error(`${code}:${key}`);
   }
@@ -129,7 +139,15 @@ export function buildContinuationRecordSetV1(input: BuildContinuationRecordSetIn
   };
 
   const published = input.dynamics.published_state;
-  const basis = input.dynamics.computation_basis;
+  const rawBasis = input.dynamics.computation_basis;
+  const canonicalBasis: Record<string, unknown> = structuredClone(rawBasis) as unknown as Record<string, unknown>;
+  if (rawBasis.basis_origin === "DERIVED_FROM_MCFT_CAP_01_POSTERIOR_V1") {
+    canonicalBasis.source_vwc_variance = normalizeFixedDecimalV1(
+      rawBasis.source_vwc_variance,
+      WATER_AMOUNT_SCALE_V1,
+      "CONTINUATION_FIRST_BRIDGE_SOURCE_VARIANCE_REQUIRED",
+    );
+  }
   const candidateObservationRefs = input.evidence_window.soil_moisture_records
     .map((record) => record.source_record_id)
     .sort();
@@ -201,7 +219,7 @@ export function buildContinuationRecordSetV1(input: BuildContinuationRecordSetIn
       reality_binding_hash: input.handoff.reality_binding_hash,
       root_zone_storage_mm: {
         mean: decimalNumberV1(published.root_zone_storage_mm.mean, "CONTINUATION_STORAGE_MEAN_INVALID"),
-        variance: decimalNumberV1(basis.storage_variance_mm2_decimal.value, "CONTINUATION_STORAGE_VARIANCE_INVALID"),
+        variance: decimalNumberV1(rawBasis.storage_variance_mm2_decimal.value, "CONTINUATION_STORAGE_VARIANCE_INVALID"),
         stddev: decimalNumberV1(published.root_zone_storage_mm.stddev, "CONTINUATION_STORAGE_STDDEV_INVALID"),
       },
       root_zone_vwc_fraction: {
@@ -215,7 +233,7 @@ export function buildContinuationRecordSetV1(input: BuildContinuationRecordSetIn
         budget: input.dynamics.uncertainty_budget,
         interval: input.dynamics.uncertainty_budget.interval,
       },
-      computation_basis: basis,
+      computation_basis: canonicalBasis,
       available_water_fraction: decimalNumberV1(published.available_water_fraction, "CONTINUATION_AWF_INVALID"),
       available_water_fraction_trace: published.available_water_fraction_trace,
       depletion_from_field_capacity_mm: decimalNumberV1(published.depletion_from_field_capacity_mm, "CONTINUATION_DEPLETION_INVALID"),
