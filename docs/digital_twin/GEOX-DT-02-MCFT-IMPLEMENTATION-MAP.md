@@ -390,3 +390,49 @@ false
 ```
 
 MCFT-CAP-02 is canonically complete at Level A for deterministic replay hourly Dynamics and persistence. This does not establish observation assimilation, successful Forecast, continuous Runtime, live-field operation, or Minimum Complete Field Twin. MCFT-CAP-03 requires independent authorization.
+
+
+## 14. MCFT-CAP-03 S0 authorization readiness
+
+```text
+capability:
+MCFT-CAP-03 — Observation Assimilation and State Innovation
+
+authorization:
+READY_FOR_MERGE
+
+authorization effective:
+false
+
+design status:
+FINAL_FROZEN_CANDIDATE_V1_2
+
+implementation status:
+NOT_AUTHORIZED
+
+baseline main:
+d1a3948d06e4c7896d513168d31ef52409c3e0f0
+
+predecessor checkpoint sequence:
+24
+
+predecessor final logical time:
+2026-06-02T01:00:00.000Z
+
+canonical next logical tick:
+2026-06-02T02:00:00.000Z
+
+predecessor lock:
+docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-PREDECESSOR-LOCK.json
+
+active delivery slice:
+MCFT-CAP-03.GOV-AUTHORIZATION-AND-PREDECESSOR-LOCK-V1
+
+next eligible slice after merge and merged-main Gate:
+MCFT-CAP-03.MCFT-02-07-08.ASSIMILATION-CONTRACTS-CONFIG-V1
+
+MCFT-CAP-04 authorized:
+false
+```
+
+The S0 branch contains governance and PostgreSQL predecessor proof only. Runtime implementation remains forbidden until S0 merges and its merged-main Authorization Gate passes. Horizontal owner work packages remain partially established.
