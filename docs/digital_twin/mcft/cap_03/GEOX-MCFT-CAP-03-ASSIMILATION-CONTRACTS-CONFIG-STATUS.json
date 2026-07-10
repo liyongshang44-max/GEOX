@@ -6,7 +6,7 @@
   "target_completion_level": "Level A",
   "baseline_main_commit": "6389d4e566a6eb64ce96209be0e70cd8703be574",
   "branch": "mcft-cap-03-assimilation-contracts-config-v1",
-  "status": "IN_PROGRESS",
+  "status": "READY_FOR_MERGE",
   "primary_owner_work_package_id": "MCFT-02",
   "contributing_owner_work_package_ids": [
     "MCFT-07",
@@ -77,14 +77,14 @@
     "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
   ],
   "acceptance": {
-    "positive_in_memory": "PENDING",
-    "negative_in_memory": "PENDING",
-    "postgresql_d_transaction": "PENDING",
-    "cap_02_historical_compatibility": "PENDING",
-    "server_typecheck": "PENDING",
-    "server_build": "PENDING",
-    "git_diff_check": "PENDING",
-    "exact_head_ci": "PENDING"
+    "positive_in_memory": "PASS_6_OF_6",
+    "negative_in_memory": "PASS_8_OF_8",
+    "postgresql_d_transaction": "PASS_6_OF_6",
+    "cap_02_historical_compatibility": "PASS",
+    "server_typecheck": "PASS",
+    "server_build": "PASS",
+    "git_diff_check": "PASS",
+    "exact_head_ci": "PENDING_READY_STATUS_HEAD"
   },
   "effectiveness_condition": "S1_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_CONTRACTS_CONFIG_GATE_PASS",
   "successor_delivery_slice_id": "MCFT-CAP-03.MCFT-05-07.OBSERVATION-SELECTION-AND-ASSIMILATION-MATH-V1",
