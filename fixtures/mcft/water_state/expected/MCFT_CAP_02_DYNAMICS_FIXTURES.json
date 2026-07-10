@@ -1,0 +1,240 @@
+{
+  "schema_version": "mcft_cap_02_dynamics_fixtures_v1",
+  "model_id": "ROOT_ZONE_HOURLY_WATER_BALANCE_V1",
+  "config": {
+    "root_zone_depth_mm": "300.000000",
+    "wilting_point_storage_mm": "36.000000",
+    "field_capacity_storage_mm": "90.000000",
+    "saturation_storage_mm": "135.000000",
+    "saturation_fraction": "0.450000",
+    "runoff_fraction": "0.050000",
+    "drainage_coefficient_per_hour": "0.030000",
+    "structural_process_stddev_mm_per_hour": "0.500000",
+    "rainfall_relative_stddev": "0.100000",
+    "crop_et_relative_stddev": "0.150000",
+    "executed_irrigation_relative_stddev": "0.100000"
+  },
+  "scope": {
+    "tenant_id": "tenantA",
+    "project_id": "projectA",
+    "group_id": "groupA",
+    "field_id": "field_c8_demo",
+    "season_id": "season_2026_c8_corn",
+    "zone_id": "zone_mcft_c8_water_001"
+  },
+  "scenarios": [
+    {
+      "scenario_id": "DRY_ET_ONLY_FIRST_CONTINUATION",
+      "input": {
+        "interval_start_exclusive": "2026-06-01T01:00:00.000Z",
+        "interval_end_inclusive": "2026-06-01T02:00:00.000Z",
+        "previous_storage_mm_decimal": "57.778512",
+        "previous_variance_basis": {
+          "basis_origin": "DERIVED_FROM_MCFT_CAP_01_POSTERIOR_V1",
+          "source_posterior_ref": "twin_state_estimate_a411d678b1d79b7a58b31fd7",
+          "source_vwc_variance": "0.002678"
+        },
+        "gross_rainfall_mm_decimal": "0.000000",
+        "historical_et0_mm_decimal": "0.085000",
+        "crop_stage_code": "INITIAL",
+        "kc_decimal": "0.300000",
+        "executed_irrigation_candidates": []
+      },
+      "expected": {
+        "surface_runoff_mm": "0.000000",
+        "effective_rainfall_mm": "0.000000",
+        "effective_irrigation_mm": "0.000000",
+        "requested_crop_et_mm": "0.025500",
+        "actual_crop_et_mm": "0.025500",
+        "drainage_mm": "0.000000",
+        "saturation_overflow_mm": "0.000000",
+        "next_storage_mm": "57.753012",
+        "mass_balance_error_mm": "0.000000",
+        "previous_storage_variance_mm2": "241.020000000000",
+        "crop_et_variance_mm2": "0.000014630625",
+        "structural_variance_mm2": "0.250000000000",
+        "next_storage_variance_mm2": "241.270014630625",
+        "next_vwc_variance": "0.002680777940",
+        "next_storage_stddev_mm": "15.532869",
+        "next_vwc_stddev": "0.051776",
+        "root_zone_vwc_mean": "0.192510",
+        "available_water_fraction": "0.402834",
+        "depletion_from_field_capacity_mm": "32.246988",
+        "interval_lower": "0.091029",
+        "interval_upper": "0.293991"
+      }
+    },
+    {
+      "scenario_id": "RAINFALL_AND_DRAINAGE",
+      "input": {
+        "interval_start_exclusive": "2026-06-01T02:00:00.000Z",
+        "interval_end_inclusive": "2026-06-01T03:00:00.000Z",
+        "previous_storage_mm_decimal": "89.000000",
+        "previous_variance_basis": {
+          "basis_origin": "CARRIED_FROM_PREVIOUS_CONTINUATION_STATE",
+          "previous_state_ref": "state_rainfall_previous",
+          "previous_storage_variance_mm2_decimal": "100.000000000000"
+        },
+        "gross_rainfall_mm_decimal": "3.200000",
+        "historical_et0_mm_decimal": "0.100000",
+        "crop_stage_code": "INITIAL",
+        "kc_decimal": "0.300000",
+        "executed_irrigation_candidates": []
+      },
+      "expected": {
+        "surface_runoff_mm": "0.160000",
+        "effective_rainfall_mm": "3.040000",
+        "requested_crop_et_mm": "0.030000",
+        "storage_before_drainage_mm": "92.010000",
+        "drainage_mm": "0.060300",
+        "next_storage_mm": "91.949700",
+        "rainfall_variance_mm2": "0.102400000000",
+        "crop_et_variance_mm2": "0.000020250000",
+        "next_storage_variance_mm2": "100.352420250000",
+        "available_water_fraction": "1.000000",
+        "available_water_clipping_applied": true,
+        "depletion_from_field_capacity_mm": "0.000000"
+      }
+    },
+    {
+      "scenario_id": "EXECUTED_IRRIGATION_COVERAGE_WEIGHTED",
+      "input": {
+        "interval_start_exclusive": "2026-06-01T03:00:00.000Z",
+        "interval_end_inclusive": "2026-06-01T04:00:00.000Z",
+        "previous_storage_mm_decimal": "50.000000",
+        "previous_variance_basis": {
+          "basis_origin": "CARRIED_FROM_PREVIOUS_CONTINUATION_STATE",
+          "previous_state_ref": "state_irrigation_previous",
+          "previous_storage_variance_mm2_decimal": "100.000000000000"
+        },
+        "gross_rainfall_mm_decimal": "0.000000",
+        "historical_et0_mm_decimal": "0.000000",
+        "crop_stage_code": "INITIAL",
+        "kc_decimal": "0.300000",
+        "executed_irrigation_candidates": [
+          {
+            "binding_id": "irrigation_execution_binding_v1",
+            "origin_source_id": "executor_demo",
+            "scope_ref": "fixture_scope",
+            "event_id": "execution_001",
+            "source_record_id": "execution_record_001",
+            "executed_at": "2026-06-01T03:30:00.000Z",
+            "ingested_at": "2026-06-01T03:31:00.000Z",
+            "executed_amount_mm": "13.600000",
+            "coverage_fraction": "0.910000",
+            "eligible_for_state_input": true,
+            "source_quality": "USABLE",
+            "execution_status": "EXECUTED"
+          }
+        ]
+      },
+      "expected": {
+        "effective_irrigation_mm": "12.376000",
+        "next_storage_mm": "62.376000",
+        "irrigation_variance_mm2": "1.531653760000",
+        "next_storage_variance_mm2": "101.781653760000",
+        "available_water_fraction": "0.488444",
+        "depletion_from_field_capacity_mm": "27.624000"
+      }
+    },
+    {
+      "scenario_id": "SATURATION_OVERFLOW",
+      "input": {
+        "interval_start_exclusive": "2026-06-01T04:00:00.000Z",
+        "interval_end_inclusive": "2026-06-01T05:00:00.000Z",
+        "previous_storage_mm_decimal": "134.000000",
+        "previous_variance_basis": {
+          "basis_origin": "CARRIED_FROM_PREVIOUS_CONTINUATION_STATE",
+          "previous_state_ref": "state_saturation_previous",
+          "previous_storage_variance_mm2_decimal": "100.000000000000"
+        },
+        "gross_rainfall_mm_decimal": "10.000000",
+        "historical_et0_mm_decimal": "0.000000",
+        "crop_stage_code": "INITIAL",
+        "kc_decimal": "0.300000",
+        "executed_irrigation_candidates": []
+      },
+      "expected": {
+        "surface_runoff_mm": "0.500000",
+        "effective_rainfall_mm": "9.500000",
+        "storage_before_drainage_mm": "143.500000",
+        "drainage_mm": "1.605000",
+        "storage_after_drainage_mm": "141.895000",
+        "saturation_overflow_mm": "6.895000",
+        "next_storage_mm": "135.000000",
+        "mass_balance_error_mm": "0.000000",
+        "interval_upper": "0.450000",
+        "interval_clipping_applied": true
+      }
+    },
+    {
+      "scenario_id": "MULTIPLE_EXECUTION_EVENTS_WITH_IDENTICAL_DUPLICATE",
+      "input": {
+        "interval_start_exclusive": "2026-06-01T05:00:00.000Z",
+        "interval_end_inclusive": "2026-06-01T06:00:00.000Z",
+        "previous_storage_mm_decimal": "50.000000",
+        "previous_variance_basis": {
+          "basis_origin": "CARRIED_FROM_PREVIOUS_CONTINUATION_STATE",
+          "previous_state_ref": "state_multiple_previous",
+          "previous_storage_variance_mm2_decimal": "100.000000000000"
+        },
+        "gross_rainfall_mm_decimal": "0.000000",
+        "historical_et0_mm_decimal": "0.000000",
+        "crop_stage_code": "INITIAL",
+        "kc_decimal": "0.300000",
+        "executed_irrigation_candidates": [
+          {
+            "binding_id": "irrigation_execution_binding_v1",
+            "origin_source_id": "executor_demo",
+            "scope_ref": "fixture_scope",
+            "event_id": "execution_a",
+            "source_record_id": "execution_a_original",
+            "executed_at": "2026-06-01T05:15:00.000Z",
+            "ingested_at": "2026-06-01T05:16:00.000Z",
+            "executed_amount_mm": "10.000000",
+            "coverage_fraction": "0.500000",
+            "eligible_for_state_input": true,
+            "source_quality": "USABLE",
+            "execution_status": "EXECUTED"
+          },
+          {
+            "binding_id": "irrigation_execution_binding_v1",
+            "origin_source_id": "executor_demo",
+            "scope_ref": "fixture_scope",
+            "event_id": "execution_a",
+            "source_record_id": "execution_a_duplicate",
+            "executed_at": "2026-06-01T05:15:00.000Z",
+            "ingested_at": "2026-06-01T05:17:00.000Z",
+            "executed_amount_mm": "10.000000",
+            "coverage_fraction": "0.500000",
+            "eligible_for_state_input": true,
+            "source_quality": "USABLE",
+            "execution_status": "EXECUTED"
+          },
+          {
+            "binding_id": "irrigation_execution_binding_v1",
+            "origin_source_id": "executor_demo",
+            "scope_ref": "fixture_scope",
+            "event_id": "execution_b",
+            "source_record_id": "execution_b_record",
+            "executed_at": "2026-06-01T05:30:00.000Z",
+            "ingested_at": "2026-06-01T05:31:00.000Z",
+            "executed_amount_mm": "4.000000",
+            "coverage_fraction": "0.250000",
+            "eligible_for_state_input": true,
+            "source_quality": "USABLE",
+            "execution_status": "EXECUTED"
+          }
+        ]
+      },
+      "expected": {
+        "selected_source_record_ids": ["execution_a_duplicate", "execution_b_record"],
+        "identical_duplicate_record_ids": ["execution_a_original"],
+        "effective_irrigation_mm": "6.000000",
+        "next_storage_mm": "56.000000",
+        "irrigation_variance_mm2": "0.360000000000",
+        "next_storage_variance_mm2": "100.610000000000"
+      }
+    }
+  ]
+}
