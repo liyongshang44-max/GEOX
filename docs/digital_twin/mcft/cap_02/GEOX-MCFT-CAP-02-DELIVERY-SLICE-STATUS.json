@@ -645,7 +645,9 @@
                        "branch":  "mcft-cap-02-closure-v1",
                        "allowed_claims":  [
                                               "FAILURE_RECOVERY_MERGED_MAIN_VERIFIED",
-                                              "MCFT_CAP_02_CLOSURE_EVIDENCE_AGGREGATION_ACTIVE"
+                                              "MCFT_CAP_02_CLOSURE_EVIDENCE_AGGREGATION_ACTIVE",
+                                              "MCFT_CAP_02_CLOSURE_RECORD_ESTABLISHED",
+                                              "MCFT_CAP_02_CLOSURE_GATE_ESTABLISHED"
                                           ],
                        "preserved_nonclaims":  [
                                                    "NO_OBSERVATION_UPDATE_APPLIED",
@@ -679,7 +681,25 @@
                                                            "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json",
                                                            "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_CLOSURE.cjs"
                                                        ],
-                       "effectiveness_condition":  "PR_MERGED_TO_MAIN_AND_MERGED_MAIN_MCFT_CAP_02_CLOSURE_GATE_PASS"
+                       "effectiveness_condition":  "PR_MERGED_TO_MAIN_AND_MERGED_MAIN_MCFT_CAP_02_CLOSURE_GATE_PASS",
+                       "closure_record_ref":  "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-CLOSURE-RECORD.json",
+                       "closure_document_ref":  "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-CLOSURE.md",
+                       "pending_completion_claims":  [
+                                                         "MCFT_CAP_02_COMPLETE",
+                                                         "HOURLY_WATER_DYNAMICS_V1_ESTABLISHED",
+                                                         "TWENTY_FOUR_CONTINUATION_TICKS_PERSISTED",
+                                                         "CONTINUATION_STATE_CHAIN_ESTABLISHED",
+                                                         "CONTROLLED_ADDITIVE_PROCESS_UNCERTAINTY_BUDGET_ESTABLISHED",
+                                                         "CONTINUATION_CHECKPOINT_CHAIN_ESTABLISHED",
+                                                         "CONTINUATION_OPERATION_IDEMPOTENCY_ESTABLISHED",
+                                                         "CONTINUATION_CANONICAL_UNIQUENESS_ESTABLISHED",
+                                                         "RESTART_RESUME_PROVEN",
+                                                         "BOUNDED_FORWARD_BACKFILL_PROVEN",
+                                                         "EXACT_HOURLY_EVIDENCE_SELECTION_ESTABLISHED",
+                                                         "EXECUTED_IRRIGATION_INPUT_POLICY_ESTABLISHED"
+                                                     ],
+                       "closure_effective":  false,
+                       "successor_authorized":  false
                    }
                ],
     "completion_claims":  [

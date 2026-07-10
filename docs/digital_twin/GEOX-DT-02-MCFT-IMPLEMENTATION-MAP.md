@@ -258,3 +258,42 @@ NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM
 MCFT-CAP-01 establishes a deterministic Replay bootstrap State capability only. MCFT-CAP-02 authorization readiness establishes no Dynamics, continuation State, restart/backfill, Forecast success, Gate A, Gate B, Gate C or Minimum Complete Field Twin closure.
 
 MCFT-CAP-03 remains unauthorized. It requires independent authorization after MCFT-CAP-02 is fully implemented, closed, merged and verified on `main`.
+## 10. MCFT-CAP-02 Closure activation
+
+```text
+closure identity:
+GEOX-MCFT-CAP-02-CLOSURE-V1
+
+status:
+IN_PROGRESS
+
+closure effective:
+false
+
+baseline and latest verified main:
+9a61e05f683adf3815ee1cc4af182efd23508588
+
+activation head:
+8f63fc84c298a20d12094d100865af89e812ea31
+
+active delivery slice:
+MCFT-CAP-02.CLOSURE-V1
+
+completed predecessor delivery slices:
+9
+
+failure recovery merged-main Gate:
+86 PASS, 0 FAIL
+
+successor:
+MCFT-CAP-03
+
+successor authorized:
+false
+```
+
+The Closure slice aggregates already merged and main-verified evidence. It changes no Runtime source, migration, route, web path, workflow, canonical fact semantics, Dynamics math, or persistence transaction semantics.
+
+The exact post-effectiveness completion claims are recorded as pending. `MCFT_CAP_02_COMPLETE` does not become effective until the Closure PR is merged and the merged-main Closure Gate passes.
+
+Horizontal owner work packages remain partially established. Capability-line completion does not mark any horizontal owner work package COMPLETE.
