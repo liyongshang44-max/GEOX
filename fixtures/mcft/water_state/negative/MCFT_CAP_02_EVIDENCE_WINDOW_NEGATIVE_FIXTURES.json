@@ -1,0 +1,17 @@
+{
+  "schema_version": "mcft_cap_02_evidence_window_negative_fixtures_v1",
+  "cases": [
+    { "case_id": "MISSING_EXACT_HOURLY_RAINFALL_INTERVAL", "expected_error": "MISSING_EXACT_HOURLY_RAINFALL_INTERVAL" },
+    { "case_id": "MISSING_EXACT_HOURLY_ET0_INTERVAL", "expected_error": "MISSING_EXACT_HOURLY_ET0_INTERVAL" },
+    { "case_id": "CONFLICTING_RAINFALL_DUPLICATE", "expected_error": "CONFLICTING_DUPLICATE_EVIDENCE" },
+    { "case_id": "MULTIPLE_EXACT_HOURLY_RAINFALL_INTERVALS", "expected_error": "MULTIPLE_EXACT_HOURLY_RAINFALL_INTERVALS" },
+    { "case_id": "EXECUTION_COVERAGE_OUT_OF_RANGE", "expected_error": "EXECUTION_COVERAGE_OUT_OF_RANGE" },
+    { "case_id": "NON_EXECUTED_IRRIGATION_AMOUNT_FORBIDDEN", "expected_error": "NON_EXECUTED_IRRIGATION_AMOUNT_FORBIDDEN" },
+    { "case_id": "EXECUTION_STABLE_IDENTITY_REQUIRED", "expected_error": "EXECUTION_STABLE_IDENTITY_REQUIRED" },
+    { "case_id": "CROP_STAGE_CONTEXT_HASH_MISMATCH", "expected_error": "CROP_STAGE_CONTEXT_HASH_MISMATCH" },
+    { "case_id": "CROP_STAGE_CONTEXT_OUTSIDE_COVERAGE", "expected_error": "CROP_STAGE_CONTEXT_OUTSIDE_COVERAGE" },
+    { "case_id": "CROP_STAGE_CONTEXT_OVERLAP", "expected_error": "CROP_STAGE_CONTEXT_OVERLAP" },
+    { "case_id": "CROP_STAGE_CONTEXT_CLASS_INVALID", "expected_error": "CROP_STAGE_CONTEXT_CLASS_INVALID" },
+    { "case_id": "UNSUPPORTED_REPLAY_RECORD_TYPE", "expected_error": "UNSUPPORTED_REPLAY_RECORD_TYPE" }
+  ]
+}
