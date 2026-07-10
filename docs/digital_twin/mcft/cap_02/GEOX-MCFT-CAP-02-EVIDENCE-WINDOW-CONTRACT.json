@@ -1,0 +1,170 @@
+{
+  "schema_version": "geox_mcft_cap_02_evidence_window_contract_v1",
+  "capability_line_id": "MCFT-CAP-02",
+  "delivery_slice_id": "MCFT-CAP-02.MCFT-05.CONTINUATION-EVIDENCE-WINDOW-V1",
+  "primary_owner_work_package_id": "MCFT-05",
+  "runtime_mode": "REPLAY",
+  "baseline_main_commit": "bc97acbd589c454b7417d6ed4567c103b655ee78",
+  "window": {
+    "policy_id": "OPEN_START_CLOSED_END_PT1H_V1",
+    "expression": "(T - PT1H, T]",
+    "logical_time_authority": "EXPLICIT_REPLAY_LOGICAL_TIME",
+    "wall_clock_forbidden": true
+  },
+  "exact_hour_interval_policy": {
+    "policy_id": "EXACT_INTERVAL_START_END_MATCH_V1",
+    "required_for_roles": [
+      "RAINFALL_OBSERVATION",
+      "HISTORICAL_ET0_INPUT"
+    ],
+    "required_interval_start": "T - PT1H",
+    "required_interval_end": "T",
+    "missing_reason_codes": [
+      "MISSING_EXACT_HOURLY_RAINFALL_INTERVAL",
+      "MISSING_EXACT_HOURLY_ET0_INTERVAL"
+    ],
+    "zero_substitution_forbidden": true
+  },
+  "availability_policy": {
+    "included_only_when": [
+      "scope matches",
+      "event or interval time is not future",
+      "ingested_at <= logical_time",
+      "available_to_runtime_at <= logical_time",
+      "quality is PASS or LIMITED"
+    ],
+    "late_evidence_revision_established": false
+  },
+  "consumption_statuses": [
+    "CONSUMED_BY_DYNAMICS",
+    "AVAILABLE_NOT_CONSUMED_MCFT_CAP_02",
+    "CONTEXT_ONLY_NOT_EXECUTED",
+    "AVAILABLE_NOT_CONSUMED_FORECAST_BLOCKED",
+    "EXCLUDED_LATE",
+    "EXCLUDED_FUTURE",
+    "EXCLUDED_QUALITY",
+    "EXCLUDED_SCOPE",
+    "EXCLUDED_CONFLICT",
+    "EXCLUDED_INTERVAL_MISMATCH"
+  ],
+  "role_contracts": {
+    "RAINFALL_OBSERVATION": {
+      "cardinality": "EXACTLY_ONE_USABLE_SEMANTIC_RECORD",
+      "consumption": "CONSUMED_BY_DYNAMICS",
+      "semantic_identity_fields": [
+        "binding_id",
+        "origin_source_id",
+        "scope",
+        "interval_start",
+        "interval_end"
+      ]
+    },
+    "HISTORICAL_ET0_INPUT": {
+      "cardinality": "EXACTLY_ONE_USABLE_SEMANTIC_RECORD",
+      "consumption": "CONSUMED_BY_DYNAMICS",
+      "semantic_identity_fields": [
+        "binding_id",
+        "origin_source_id",
+        "scope",
+        "interval_start",
+        "interval_end",
+        "calculation_method",
+        "method_version"
+      ]
+    },
+    "IRRIGATION_EXECUTION_EVIDENCE": {
+      "cardinality": "ZERO_OR_MORE_ELIGIBLE_EVENT_RECORDS",
+      "consumption": "CONSUMED_BY_DYNAMICS",
+      "semantic_identity_fields": [
+        "binding_id",
+        "origin_source_id",
+        "scope",
+        "executed_at",
+        "event_id"
+      ],
+      "required_canonical_payload_fields": [
+        "executed_amount_mm",
+        "coverage_fraction",
+        "event_id"
+      ],
+      "forbidden_amount_fields": [
+        "approved_amount_mm",
+        "planned_amount_mm",
+        "dispatched_amount_mm"
+      ],
+      "coverage_range": "[0,1]",
+      "no_record_effective_irrigation_mm": "0.000000"
+    },
+    "SOIL_MOISTURE_OBSERVATION": {
+      "cardinality": "ZERO_OR_MORE",
+      "consumption": "AVAILABLE_NOT_CONSUMED_MCFT_CAP_02",
+      "innovation_computation_forbidden": true,
+      "assimilation_gain_forbidden": true
+    },
+    "APPROVED_IRRIGATION_PLAN": {
+      "cardinality": "ZERO_OR_MORE",
+      "consumption": "CONTEXT_ONLY_NOT_EXECUTED",
+      "physical_input_forbidden": true
+    },
+    "FUTURE_WEATHER_ASSUMPTION": {
+      "cardinality": "ZERO_OR_MORE",
+      "consumption": "AVAILABLE_NOT_CONSUMED_FORECAST_BLOCKED",
+      "physical_input_forbidden": true
+    },
+    "FUTURE_ET0_ASSUMPTION": {
+      "cardinality": "ZERO_OR_MORE",
+      "consumption": "AVAILABLE_NOT_CONSUMED_FORECAST_BLOCKED",
+      "physical_input_forbidden": true
+    }
+  },
+  "duplicate_policy": {
+    "identical_duplicate_behavior": "DETERMINISTIC_DEDUPLICATION",
+    "identical_duplicate_winner_policy_id": "INGESTED_DESC_SOURCE_RECORD_ID_ASC_V1",
+    "conflicting_duplicate_behavior": "FAIL_OPERATION",
+    "conflicting_duplicate_reason_code": "CONFLICTING_DUPLICATE_EVIDENCE",
+    "record_id_winner_for_conflicts_forbidden": true
+  },
+  "crop_stage_context": {
+    "context_kind": "CONFIGURATION_DERIVED_CONTEXT",
+    "context_ref": "fixtures/mcft/water_state/replay_v1/configuration_context.json",
+    "context_hash": "sha256:2287c71e983b1ba529e49939f025d9b035e09e195a5effc994fe54b4ef7863ce",
+    "resolution_policy_id": "CONFIGURATION_EFFECTIVE_INTERVAL_AT_LOGICAL_TIME_V1",
+    "consumed_fields": [
+      "stage_code",
+      "kc"
+    ],
+    "non_consumed_fields": [
+      "crop_root_depth_mm",
+      "effective_model_root_depth_mm"
+    ],
+    "evidence_record": false
+  },
+  "semantic_digest": {
+    "includes": [
+      "window policies",
+      "logical_time",
+      "window bounds",
+      "selected record summaries",
+      "excluded record summaries",
+      "deduplicated record summaries",
+      "resolved crop-stage context"
+    ],
+    "excludes": [
+      "persistence audit timestamps",
+      "database fact ids",
+      "Runtime lease",
+      "checkpoint mutation"
+    ]
+  },
+  "preserved_nonclaims": [
+    "NO_CONTINUATION_EVIDENCE_WINDOW_PERSISTED",
+    "NO_CONTINUATION_STATE_PERSISTED",
+    "NO_A2_CONTINUATION_TICK_COMMITTED",
+    "NO_OBSERVATION_UPDATE_APPLIED",
+    "NO_FORECAST_RESIDUAL",
+    "NO_SUCCESSFUL_FORECAST",
+    "NO_LATE_EVIDENCE_REVISION",
+    "NO_SPATIAL_EXECUTION_OVERLAP_DEDUPLICATION",
+    "NO_MCFT_CAP_02_COMPLETE_CLAIM"
+  ]
+}
