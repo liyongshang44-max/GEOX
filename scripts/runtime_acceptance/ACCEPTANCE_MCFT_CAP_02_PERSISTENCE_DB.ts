@@ -342,7 +342,7 @@ async function main(): Promise<void> {
 
     const expiredLease = await acquireAcceptanceLeaseV1(scope);
     await pool.query(
-      "UPDATE twin_runtime_lease_v1 SET expires_at=transaction_timestamp()-interval '1 second' WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6",
+      "UPDATE twin_runtime_lease_v1 SET acquired_at=transaction_timestamp()-interval '10 minutes', heartbeat_at=transaction_timestamp()-interval '5 minutes', expires_at=transaction_timestamp()-interval '1 second' WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6",
       scopeParamsV1(scope),
     );
     await assert.rejects(
