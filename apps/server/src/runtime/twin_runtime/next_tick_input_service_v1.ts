@@ -9,7 +9,13 @@ import {
 import type { PreviousStorageVarianceBasisV1 } from "../../domain/soil_water/additive_process_uncertainty_budget_v1.js";
 import type { CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
 import { resolvePreviousCheckpointTickSequenceV1 } from "../../domain/twin_runtime/continuation_contracts_v1.js";
-import type { NextTickReadPortV1, PreparedNextTickInputV1, TwinScopeKeyV1 } from "./ports.js";
+import type {
+  NextTickReadPortV1,
+  PersistedNextTickSnapshotV1,
+  PreparedNextTickInputV1,
+  PreparedRestartInputV1,
+  TwinScopeKeyV1,
+} from "./ports.js";
 
 function requiredStringV1(value: unknown, code: string): string {
   if (typeof value !== "string" || !value) throw new Error(code);
@@ -142,13 +148,17 @@ function prepareComputationBasisV1(input: {
   };
 }
 
+function checkpointProjectionDivergenceV1(): never {
+  throw new Error("CHECKPOINT_PROJECTION_DIVERGENCE");
+}
+
 export class PrepareNextTickInputServiceV1 {
   constructor(private readonly reader: NextTickReadPortV1) {}
 
-  async prepareNextTickInput(scope: TwinScopeKeyV1): Promise<PreparedNextTickInputV1> {
-    const snapshot = await this.reader.readPersistedNextTickSnapshot(scope);
-    if (!snapshot) throw new Error("PERSISTED_NEXT_TICK_STATE_NOT_FOUND");
-
+  private prepareFromSnapshotV1(
+    scope: TwinScopeKeyV1,
+    snapshot: PersistedNextTickSnapshotV1,
+  ): PreparedNextTickInputV1 {
     const {
       active_lineage_ref: activeLineageRef,
       active_lineage_id: persistedActiveLineageId,
@@ -261,6 +271,52 @@ export class PrepareNextTickInputServiceV1 {
       previous_state_runtime_config_hash: previousRuntimeConfigHash,
       reality_binding_ref: realityBindingRef,
       reality_binding_hash: realityBindingHash,
+    };
+  }
+
+  async prepareNextTickInput(scope: TwinScopeKeyV1): Promise<PreparedNextTickInputV1> {
+    const snapshot = await this.reader.readPersistedNextTickSnapshot(scope);
+    if (!snapshot) throw new Error("PERSISTED_NEXT_TICK_STATE_NOT_FOUND");
+    return this.prepareFromSnapshotV1(scope, snapshot);
+  }
+
+  async prepareNextTickInputV1(scope: TwinScopeKeyV1): Promise<PreparedNextTickInputV1> {
+    return this.prepareNextTickInput(scope);
+  }
+
+  async resumeFromCheckpointV1(scope: TwinScopeKeyV1): Promise<PreparedRestartInputV1> {
+    const snapshot = await this.reader.readPersistedNextTickSnapshot(scope);
+    if (!snapshot) throw new Error("PERSISTED_NEXT_TICK_STATE_NOT_FOUND");
+    const prepared = this.prepareFromSnapshotV1(scope, snapshot);
+    const terminalTick = snapshot.last_terminal_tick;
+    if (!terminalTick) checkpointProjectionDivergenceV1();
+
+    try {
+      exactScopeV1(terminalTick, scope, "CHECKPOINT_PROJECTION_DIVERGENCE");
+      if (terminalTick.object_type !== "twin_runtime_tick_v1") checkpointProjectionDivergenceV1();
+      if (snapshot.checkpoint.payload.last_completed_tick_ref !== terminalTick.object_id) {
+        checkpointProjectionDivergenceV1();
+      }
+      if (
+        terminalTick.lineage_id !== prepared.lineage_id
+        || terminalTick.revision_id !== prepared.revision_id
+        || terminalTick.logical_time !== snapshot.checkpoint.logical_time
+      ) checkpointProjectionDivergenceV1();
+      const terminalTime = Date.parse(terminalTick.logical_time);
+      const nextTime = Date.parse(prepared.next_logical_tick_time);
+      if (!Number.isFinite(terminalTime) || !Number.isFinite(nextTime) || nextTime - terminalTime !== 60 * 60 * 1000) {
+        checkpointProjectionDivergenceV1();
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message === "CHECKPOINT_PROJECTION_DIVERGENCE") throw error;
+      checkpointProjectionDivergenceV1();
+    }
+
+    return {
+      ...prepared,
+      previous_terminal_tick_ref: terminalTick.object_id,
+      previous_terminal_tick_hash: terminalTick.determinism_hash,
+      previous_terminal_tick_logical_time: terminalTick.logical_time,
     };
   }
 }
