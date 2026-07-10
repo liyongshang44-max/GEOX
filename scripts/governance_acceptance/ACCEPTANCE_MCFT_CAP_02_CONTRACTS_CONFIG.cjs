@@ -1,5 +1,5 @@
 // scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG.cjs
-// Purpose: gate the exact MCFT-CAP-02 continuation contracts/config slice boundary, static acceptance, typecheck/build, and isolated PostgreSQL D-transaction proof.
+// Purpose: gate the exact MCFT-CAP-02 continuation contracts/config slice in draft, final-premerge, and explicit historical postmerge contexts.
 // Boundary: governance orchestration only; no A2 continuation State write, hourly Dynamics, Evidence selection, Forecast success, route, scheduler, or production claim.
 
 'use strict';
@@ -10,9 +10,11 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '../..');
 const BASELINE = '65e59aaf5fcfccacdb986258874a5df3c057711d';
+const CONTRACTS_CONFIG_MERGE_COMMIT = '2be7c985210d1f34fa5249e1fae68932e801facc';
 const BRANCH = 'mcft-cap-02-contracts-config-v2';
 const SLICE = 'MCFT-CAP-02.MCFT-02.CONTINUATION-CONTRACTS-CONFIG-V1';
-const MODE = process.argv.includes('--draft') ? 'draft' : 'final';
+const DYNAMICS_SLICE = 'MCFT-CAP-02.MCFT-06.PURE-HOURLY-DYNAMICS-V1';
+const MODE = process.argv.includes('--postmerge') ? 'postmerge' : process.argv.includes('--draft') ? 'draft' : 'final';
 
 const EXACT_CHANGED_FILES = [
   'apps/server/src/domain/twin_runtime/continuation_contracts_v1.ts',
@@ -32,7 +34,7 @@ const EXACT_CHANGED_FILES = [
   'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG_NEGATIVE.ts',
 ].sort();
 
-const PRESERVED_NONCLAIMS = [
+const PREMERGE_NONCLAIMS = [
   'NO_HOURLY_DYNAMICS_IMPLEMENTED',
   'NO_CONTINUATION_STATE_PERSISTED',
   'NO_OBSERVATION_UPDATE_APPLIED',
@@ -43,19 +45,9 @@ const PRESERVED_NONCLAIMS = [
   'NO_RECOMMENDATION',
   'NO_DECISION',
   'NO_AO_ACT',
-  'NO_CALIBRATED_CONFIDENCE_MODEL',
-  'NO_MODEL_ACTIVATION',
-  'NO_LATE_EVIDENCE_REVISION',
-  'NO_DYNAMIC_ROOT_ZONE_GEOMETRY',
-  'NO_SPATIAL_EXECUTION_OVERLAP_DEDUPLICATION',
-  'NO_CONTINUOUS_RUNTIME',
-  'NO_CONTINUOUS_SCHEDULER',
-  'NO_720_TICK_REPLAY_CLOSURE',
-  'NO_LIVE_FIELD_CLAIM',
-  'NO_MCFT_GATE_A_CLOSURE',
-  'NO_MCFT_GATE_B_CLOSURE',
-  'NO_MCFT_GATE_C_CLOSURE',
-  'NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM',
+  'NO_RESTART_RESUME_PROOF',
+  'NO_BOUNDED_BACKFILL_PROOF',
+  'NO_MCFT_CAP_02_COMPLETE_CLAIM',
 ];
 
 let pass = 0;
@@ -99,19 +91,32 @@ function pnpmCommand() {
 }
 
 function checkExactBoundary() {
+  const target = MODE === 'postmerge' ? CONTRACTS_CONFIG_MERGE_COMMIT : 'HEAD';
   try {
-    cp.execFileSync(process.platform === 'win32' ? 'git.exe' : 'git', ['merge-base', '--is-ancestor', BASELINE, 'HEAD'], {
+    cp.execFileSync(process.platform === 'win32' ? 'git.exe' : 'git', ['merge-base', '--is-ancestor', BASELINE, target], {
       cwd: ROOT,
       stdio: 'ignore',
     });
-    check(true, 'slice history descends from authorization merge commit');
+    check(true, `${MODE} target descends from authorization merge commit`);
   } catch {
-    check(false, 'slice history descends from authorization merge commit');
+    check(false, `${MODE} target descends from authorization merge commit`);
+  }
+
+  if (MODE === 'postmerge') {
+    try {
+      cp.execFileSync(process.platform === 'win32' ? 'git.exe' : 'git', ['merge-base', '--is-ancestor', CONTRACTS_CONFIG_MERGE_COMMIT, 'HEAD'], {
+        cwd: ROOT,
+        stdio: 'ignore',
+      });
+      check(true, 'contracts/config merge commit is an ancestor of current HEAD');
+    } catch {
+      check(false, 'contracts/config merge commit is an ancestor of current HEAD');
+    }
   }
 
   try {
-    const changed = git(['diff', '--name-only', `${BASELINE}...HEAD`]).split(/\r?\n/).filter(Boolean).sort();
-    check(JSON.stringify(changed) === JSON.stringify(EXACT_CHANGED_FILES), `exact changed-file set has ${EXACT_CHANGED_FILES.length} files`);
+    const changed = git(['diff', '--name-only', `${BASELINE}...${target}`]).split(/\r?\n/).filter(Boolean).sort();
+    check(JSON.stringify(changed) === JSON.stringify(EXACT_CHANGED_FILES), `historical contracts/config changed-file set has ${EXACT_CHANGED_FILES.length} files`);
     const forbidden = changed.filter((file) =>
       file.startsWith('apps/web/')
       || file.startsWith('apps/server/src/routes/')
@@ -122,27 +127,42 @@ function checkExactBoundary() {
       || file.startsWith('.github/workflows/'),
     );
     check(forbidden.length === 0, `no forbidden or future-slice file changed: ${forbidden.join(',')}`);
-    git(['diff', '--check', `${BASELINE}...HEAD`]);
-    check(true, 'git diff --check PASS');
+    git(['diff', '--check', `${BASELINE}...${target}`]);
+    check(true, 'historical contracts/config git diff --check PASS');
   } catch (error) {
-    check(false, `changed-file boundary and diff check available: ${error.message}`);
+    check(false, `historical changed-file boundary and diff check available: ${error.message}`);
   }
 }
 
 function checkStatus() {
   const delivery = readJson('docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json');
-  check(delivery.capability_line_id === 'MCFT-CAP-02', 'delivery status capability exact');
-  check(delivery.baseline_main_commit === BASELINE, 'delivery status baseline exact');
-  check(delivery.active_delivery_slice_id === SLICE, 'contracts/config is active delivery slice');
   const current = delivery.slices.find((slice) => slice.delivery_slice_id === SLICE);
+  check(delivery.capability_line_id === 'MCFT-CAP-02', 'delivery status capability exact');
   check(Boolean(current), 'contracts/config slice declaration exists');
   check(current?.branch === BRANCH, 'contracts/config branch exact');
   check(current?.primary_owner_work_package_id === 'MCFT-02', 'contracts/config primary owner exact');
   check(JSON.stringify((current?.depends_on_delivery_slice_ids || [])) === JSON.stringify(['MCFT-CAP-02.GOV-AUTHORIZATION-V1']), 'contracts/config dependency exact');
-  check(JSON.stringify([...(current?.exact_changed_file_boundary || [])].sort()) === JSON.stringify(EXACT_CHANGED_FILES), 'slice artifact exact changed-file boundary matches Gate');
-  check(MODE === 'draft' ? current?.status === 'IN_PROGRESS' : current?.status === 'READY_FOR_MERGE', `${MODE} slice status exact`);
-  check(Array.isArray(delivery.next_authorized_slice_ids) && delivery.next_authorized_slice_ids.length === 0, 'next slice remains unauthorized before merge');
-  for (const nonclaim of PRESERVED_NONCLAIMS) check(delivery.preserved_nonclaims?.includes(nonclaim), `preserved nonclaim: ${nonclaim}`);
+  check(JSON.stringify([...(current?.exact_changed_file_boundary || [])].sort()) === JSON.stringify(EXACT_CHANGED_FILES), 'slice artifact exact historical changed-file boundary matches Gate');
+
+  if (MODE === 'postmerge') {
+    const dynamics = delivery.slices.find((slice) => slice.delivery_slice_id === DYNAMICS_SLICE);
+    const debtRegister = readJson('docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-GOVERNANCE-DEBT-REGISTER.json');
+    const debt = debtRegister.debts?.find((candidate) => candidate.debt_id === 'MCFT-CAP-02.GOV-DEBT-001');
+    check(current?.status === 'MERGED', 'postmerge contracts/config status exact');
+    check(current?.merge_commit === CONTRACTS_CONFIG_MERGE_COMMIT, 'postmerge merge commit exact');
+    check(current?.merged_main_acceptance?.final_gate === '63_PASS_0_FAIL', 'merged-main Gate evidence recorded');
+    check(delivery.latest_verified_main_commit === CONTRACTS_CONFIG_MERGE_COMMIT, 'latest verified main commit exact');
+    check(delivery.active_delivery_slice_id === DYNAMICS_SLICE, 'active slice advanced to pure hourly Dynamics');
+    check(dynamics?.status === 'IN_PROGRESS', 'pure hourly Dynamics is the only active in-progress slice');
+    check(debt?.status === 'REMEDIATED_IN_DYNAMICS_PREFLIGHT', 'governance debt remediation recorded');
+    check(Array.isArray(delivery.next_authorized_slice_ids) && delivery.next_authorized_slice_ids.length === 0, 'no additional downstream slice authorized while Dynamics is active');
+  } else {
+    check(delivery.active_delivery_slice_id === SLICE, 'contracts/config is active delivery slice');
+    check(MODE === 'draft' ? current?.status === 'IN_PROGRESS' : current?.status === 'READY_FOR_MERGE', `${MODE} slice status exact`);
+    check(Array.isArray(delivery.next_authorized_slice_ids) && delivery.next_authorized_slice_ids.length === 0, 'next slice remains unauthorized before merge');
+  }
+
+  for (const nonclaim of PREMERGE_NONCLAIMS) check(current?.preserved_nonclaims?.includes(nonclaim), `contracts/config preserved nonclaim: ${nonclaim}`);
 }
 
 function checkContractArtifacts() {
@@ -205,8 +225,8 @@ function runStaticAcceptance() {
   );
 }
 
-function runFinalToolchain() {
-  if (MODE !== 'final') return;
+function runToolchainAndDatabase() {
+  if (MODE === 'draft') return;
   for (const [label, args] of [
     ['server typecheck', ['--filter', '@geox/server', 'typecheck']],
     ['server build', ['--filter', '@geox/server', 'build']],
@@ -222,7 +242,7 @@ function runFinalToolchain() {
   }
 
   if (process.env.MCFT_CAP_02_CONTRACTS_CONFIG_DESTRUCTIVE_ACCEPTANCE !== '1' || !process.env.DATABASE_URL) {
-    check(false, 'final Gate requires isolated PostgreSQL D-transaction acceptance environment');
+    check(false, `${MODE} Gate requires isolated PostgreSQL D-transaction acceptance environment`);
     return;
   }
   try {
@@ -244,7 +264,7 @@ checkStatus();
 checkContractArtifacts();
 checkSourceAnchors();
 runStaticAcceptance();
-runFinalToolchain();
+runToolchainAndDatabase();
 
 console.log(`MCFT-CAP-02 contracts-config ${MODE}: ${pass} PASS, ${fail} FAIL`);
 if (fail) process.exit(1);
