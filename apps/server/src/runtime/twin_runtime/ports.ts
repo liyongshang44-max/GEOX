@@ -1,8 +1,9 @@
 // apps/server/src/runtime/twin_runtime/ports.ts
-// Purpose: define MCFT-CAP-01 Runtime Config, controlled Replay Evidence, A0 persistence, persisted next-tick handoff, authority snapshot, and projection rebuild ports without binding orchestration to SQL or files.
+// Purpose: define Runtime Config, Replay Evidence, A0 bootstrap persistence, MCFT-CAP-02 continuation persistence, next-tick handoff, authority snapshot, and projection rebuild ports without binding orchestration to SQL or files.
 // Boundary: interfaces only; no implementation, equations, Fastify, filesystem, environment, or wall-clock reads.
 
 import type { A0RecordSetV1, CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
+import type { ContinuationRecordSetV1 } from "../../domain/twin_runtime/continuation_record_set_identity_v1.js";
 
 export type TwinScopeKeyV1 = { tenant_id: string; project_id: string; group_id: string; field_id: string; season_id: string; zone_id: string };
 export type RuntimeLeaseClaimV1 = TwinScopeKeyV1 & { lease_owner: string; fencing_token: bigint; lease_duration_seconds: number };
@@ -67,6 +68,16 @@ export type PreparedNextTickInputV1 = TwinScopeKeyV1 & {
   reality_binding_hash: string;
 };
 
+export type ContinuationExpectedPointersV1 = {
+  active_lineage_ref: string;
+  lineage_id: string;
+  revision_id: string;
+  previous_checkpoint_ref: string;
+  previous_state_ref: string;
+  previous_forecast_result_ref: string;
+  latest_successful_forecast_ref: null;
+};
+
 export interface ReplayEvidenceSourcePortV1 {
   loadCandidateRecords(input: { scope: TwinScopeKeyV1; logical_time: string }): Promise<readonly CanonicalReplayEvidenceRecordV1[]>;
 }
@@ -90,6 +101,23 @@ export interface BootstrapPersistencePortV1 {
   lookupA0RecordSet(idempotencyKey: string): Promise<A0RecordSetV1 | null>;
   commitBootstrapState(input: { scope: TwinScopeKeyV1; lease: RuntimeLeaseClaimV1; expected: { active_lineage_ref: null; checkpoint_ref: null; state_ref: null; forecast_result_ref: null; successful_forecast_ref: null }; record_set: A0RecordSetV1; fault_injection?: (stage: FaultInjectionStageV1) => void }): Promise<{ status: "INSERTED" | "EXISTING_IDEMPOTENT_SUCCESS"; record_set: A0RecordSetV1; fact_ids_by_object_id: Record<string, string> }>;
   readBootstrapRecordSet(recordSetId: string): Promise<A0RecordSetV1 | null>;
+}
+
+export interface ContinuationPersistencePortV1 {
+  lookupContinuationRecordSet(idempotencyKey: string): Promise<ContinuationRecordSetV1 | null>;
+  commitContinuationState(input: {
+    scope: TwinScopeKeyV1;
+    lease: RuntimeLeaseClaimV1;
+    expected: ContinuationExpectedPointersV1;
+    record_set: ContinuationRecordSetV1;
+    fault_injection?: (stage: FaultInjectionStageV1) => void;
+  }): Promise<{
+    status: "INSERTED" | "EXISTING_IDEMPOTENT_SUCCESS";
+    record_set: ContinuationRecordSetV1;
+    fact_ids_by_object_id: Record<string, string>;
+  }>;
+  readContinuationRecordSet(recordSetId: string): Promise<ContinuationRecordSetV1 | null>;
+  rebuildContinuationProjections(recordSetId: string): Promise<{ rebuilt_projection_count: 5 }>;
 }
 
 export interface A0ProjectionRebuildPortV1 {

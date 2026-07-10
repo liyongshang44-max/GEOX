@@ -1,0 +1,20 @@
+{
+  "schema_version": "mcft_cap_02_continuation_persistence_negative_fixtures_v1",
+  "cases": [
+    {"case_id":"STALE_FENCING_TOKEN","expected_error":"STALE_FENCING_TOKEN"},
+    {"case_id":"LEASE_EXPIRED","expected_error":"LEASE_EXPIRED"},
+    {"case_id":"ACTIVE_LINEAGE_OBJECT_REF_MISMATCH","expected_error":"ACTIVE_LINEAGE_OBJECT_REF_MISMATCH"},
+    {"case_id":"ACTIVE_LINEAGE_ID_MISMATCH","expected_error":"ACTIVE_LINEAGE_ID_MISMATCH"},
+    {"case_id":"LINEAGE_REVISION_MISMATCH","expected_error":"LINEAGE_REVISION_MISMATCH"},
+    {"case_id":"CHECKPOINT_CAS_CONFLICT","expected_error":"CHECKPOINT_CAS_CONFLICT"},
+    {"case_id":"STATE_LATEST_CAS_CONFLICT","expected_error":"STATE_LATEST_CAS_CONFLICT"},
+    {"case_id":"FORECAST_RESULT_CAS_CONFLICT","expected_error":"FORECAST_RESULT_CAS_CONFLICT"},
+    {"case_id":"SUCCESSFUL_FORECAST_POINTER_UNEXPECTED","expected_error":"SUCCESSFUL_FORECAST_POINTER_UNEXPECTED"},
+    {"case_id":"SAME_KEY_DIFFERENT_HASH","expected_error":"IDEMPOTENCY_CONFLICT"},
+    {"case_id":"CANONICAL_UNIQUENESS_AFTER_GUARD_LOSS","expected_error":"CANONICAL_CONTINUATION_UNIQUENESS_CONFLICT"},
+    {"case_id":"IDEMPOTENT_RECORD_SET_INCOMPLETE","expected_error":"IDEMPOTENT_CONTINUATION_RECORD_SET_INCOMPLETE"},
+    {"case_id":"CONTINUATION_INPUT_SCOPE_MISMATCH","expected_error":"CONTINUATION_INPUT_SCOPE_MISMATCH"},
+    {"case_id":"PROJECTION_REBUILD_NEWER_POINTER_PRESENT","expected_error":"PROJECTION_REBUILD_NEWER_STATE_POINTER_PRESENT"},
+    {"case_id":"FAULT_INJECTION_ATOMIC_ROLLBACK","expected_error":"FAULT"}
+  ]
+}

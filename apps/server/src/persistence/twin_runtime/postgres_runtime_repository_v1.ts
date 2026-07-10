@@ -1,21 +1,61 @@
 // apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts
-// Purpose: implement MCFT-CAP-01 Runtime Config persistence and the fenced, idempotent, atomic A0 repository transaction.
-// Boundary: persistence only; no State equations, Evidence selection, uncertainty math, Forecast prerequisite policy, routes, or web concerns.
+// Purpose: implement Runtime Config persistence, the fenced idempotent A0 transaction, and the fenced idempotent MCFT-CAP-02 A2 continuation transaction in the same persistence family.
+// Boundary: persistence only; no State equations, Evidence selection, uncertainty math, candidate record-set construction, tick orchestration, routes, or web concerns.
 
 import type { Pool, PoolClient } from "pg";
-import { validateA0RecordSetV1, validateCanonicalObjectV1, type A0RecordSetV1, type CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
-import { buildA0ProjectionRowsV1, type CanonicalFactReadV1 } from "../../projections/twin_runtime/projection_rebuilder_v1.js";
-import type { BootstrapPersistencePortV1, RuntimeConfigRepositoryPortV1, RuntimeLeaseClaimV1, TwinScopeKeyV1 } from "../../runtime/twin_runtime/ports.js";
+import {
+  validateA0RecordSetV1,
+  validateCanonicalObjectV1,
+  type A0RecordSetV1,
+  type CanonicalObjectEnvelopeV1,
+} from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
+import { validateContinuationRecordSetV1 } from "../../domain/twin_runtime/continuation_cross_ref_validator_v1.js";
+import type { ContinuationRecordSetV1 } from "../../domain/twin_runtime/continuation_record_set_identity_v1.js";
+import {
+  buildA0ProjectionRowsV1,
+  buildContinuationProjectionRowsV1,
+  type CanonicalFactReadV1,
+} from "../../projections/twin_runtime/projection_rebuilder_v1.js";
+import type {
+  BootstrapPersistencePortV1,
+  ContinuationExpectedPointersV1,
+  ContinuationPersistencePortV1,
+  RuntimeConfigRepositoryPortV1,
+  RuntimeLeaseClaimV1,
+  TwinScopeKeyV1,
+} from "../../runtime/twin_runtime/ports.js";
 
-function factId(objectId: string): string { return `fact_${objectId}`; }
-function recordJson(object: CanonicalObjectEnvelopeV1): string { return JSON.stringify({ type: object.object_type, payload: object }); }
+function factId(objectId: string): string {
+  return `fact_${objectId}`;
+}
+
+function recordJson(object: CanonicalObjectEnvelopeV1): string {
+  return JSON.stringify({ type: object.object_type, payload: object });
+}
+
 function parseFactObject(recordJsonValue: unknown): CanonicalObjectEnvelopeV1 {
   const parsed = typeof recordJsonValue === "string" ? JSON.parse(recordJsonValue) : recordJsonValue;
   return (parsed as { payload: CanonicalObjectEnvelopeV1 }).payload;
 }
-function scopeValues(scope: TwinScopeKeyV1): unknown[] { return [scope.tenant_id, scope.project_id, scope.group_id, scope.field_id, scope.season_id, scope.zone_id]; }
 
-export class PostgresRuntimeRepositoryV1 implements RuntimeConfigRepositoryPortV1, BootstrapPersistencePortV1 {
+function scopeValues(scope: TwinScopeKeyV1): unknown[] {
+  return [scope.tenant_id, scope.project_id, scope.group_id, scope.field_id, scope.season_id, scope.zone_id];
+}
+
+function requireMemberV1(recordSet: ContinuationRecordSetV1, objectType: CanonicalObjectEnvelopeV1["object_type"]): CanonicalObjectEnvelopeV1 {
+  const matches = recordSet.members.filter((member) => member.object_type === objectType);
+  if (matches.length !== 1) throw new Error(`CONTINUATION_MEMBER_TYPE_CARDINALITY:${objectType}`);
+  return matches[0];
+}
+
+function assertScopeMatchesV1(scope: TwinScopeKeyV1, recordSet: ContinuationRecordSetV1): void {
+  const operationScope = recordSet.continuation_operation_key.scope;
+  for (const key of ["tenant_id", "project_id", "group_id", "field_id", "season_id", "zone_id"] as const) {
+    if (scope[key] !== operationScope[key]) throw new Error(`CONTINUATION_INPUT_SCOPE_MISMATCH:${key}`);
+  }
+}
+
+export class PostgresRuntimeRepositoryV1 implements RuntimeConfigRepositoryPortV1, BootstrapPersistencePortV1, ContinuationPersistencePortV1 {
   constructor(private readonly pool: Pool) {}
 
   async commitRuntimeConfig(config: CanonicalObjectEnvelopeV1) {
@@ -24,10 +64,16 @@ export class PostgresRuntimeRepositoryV1 implements RuntimeConfigRepositoryPortV
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN");
-      const existing = await client.query("SELECT determinism_hash,semantic_object_id FROM twin_object_idempotency_index_v1 WHERE idempotency_key=$1 FOR UPDATE", [config.idempotency_key]);
+      const existing = await client.query(
+        "SELECT determinism_hash,semantic_object_id FROM twin_object_idempotency_index_v1 WHERE idempotency_key=$1 FOR UPDATE",
+        [config.idempotency_key],
+      );
       if (existing.rows.length) {
         if (existing.rows[0].determinism_hash !== config.determinism_hash || existing.rows[0].semantic_object_id !== config.object_id) throw new Error("IDEMPOTENCY_CONFLICT");
-        const fact = await client.query("SELECT record_json FROM facts WHERE record_json->>'type'='twin_runtime_config_v1' AND record_json->'payload'->>'object_id'=$1 LIMIT 1", [config.object_id]);
+        const fact = await client.query(
+          "SELECT record_json FROM facts WHERE record_json->>'type'='twin_runtime_config_v1' AND record_json->'payload'->>'object_id'=$1 LIMIT 1",
+          [config.object_id],
+        );
         if (fact.rows.length !== 1) throw new Error("IDEMPOTENT_RUNTIME_CONFIG_INCOMPLETE");
         const existingConfig = parseFactObject(fact.rows[0].record_json);
         validateCanonicalObjectV1(existingConfig);
@@ -35,8 +81,14 @@ export class PostgresRuntimeRepositoryV1 implements RuntimeConfigRepositoryPortV
         await client.query("COMMIT");
         return { status: "EXISTING_IDEMPOTENT_SUCCESS" as const, object_id: config.object_id, fact_id: factId(config.object_id) };
       }
-      await client.query("INSERT INTO facts (fact_id,occurred_at,source,record_json) VALUES ($1,$2::timestamptz,'system',$3::jsonb)", [factId(config.object_id), config.logical_time, recordJson(config)]);
-      await client.query("INSERT INTO twin_object_idempotency_index_v1 (identity_kind,idempotency_key,semantic_object_id,determinism_hash) VALUES ('RUNTIME_CONFIG',$1,$2,$3)", [config.idempotency_key, config.object_id, config.determinism_hash]);
+      await client.query(
+        "INSERT INTO facts (fact_id,occurred_at,source,record_json) VALUES ($1,$2::timestamptz,'system',$3::jsonb)",
+        [factId(config.object_id), config.logical_time, recordJson(config)],
+      );
+      await client.query(
+        "INSERT INTO twin_object_idempotency_index_v1 (identity_kind,idempotency_key,semantic_object_id,determinism_hash) VALUES ('RUNTIME_CONFIG',$1,$2,$3)",
+        [config.idempotency_key, config.object_id, config.determinism_hash],
+      );
       await client.query("COMMIT");
       return { status: "INSERTED" as const, object_id: config.object_id, fact_id: factId(config.object_id) };
     } catch (error) {
@@ -48,7 +100,10 @@ export class PostgresRuntimeRepositoryV1 implements RuntimeConfigRepositoryPortV
   }
 
   async readRuntimeConfig(objectId: string): Promise<CanonicalObjectEnvelopeV1 | null> {
-    const result = await this.pool.query("SELECT record_json FROM facts WHERE record_json->>'type'='twin_runtime_config_v1' AND record_json->'payload'->>'object_id'=$1 LIMIT 1", [objectId]);
+    const result = await this.pool.query(
+      "SELECT record_json FROM facts WHERE record_json->>'type'='twin_runtime_config_v1' AND record_json->'payload'->>'object_id'=$1 LIMIT 1",
+      [objectId],
+    );
     if (!result.rows.length) return null;
     const config = parseFactObject(result.rows[0].record_json);
     validateCanonicalObjectV1(config);
@@ -56,25 +111,57 @@ export class PostgresRuntimeRepositoryV1 implements RuntimeConfigRepositoryPortV
   }
 
   async acquireLease(claim: Omit<RuntimeLeaseClaimV1, "fencing_token">): Promise<RuntimeLeaseClaimV1> {
-    const result = await this.pool.query(`INSERT INTO twin_runtime_lease_v1 (tenant_id,project_id,group_id,field_id,season_id,zone_id,lease_owner,fencing_token,acquired_at,expires_at,heartbeat_at)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,1,transaction_timestamp(),transaction_timestamp()+make_interval(secs=>$8),transaction_timestamp())
-      ON CONFLICT (tenant_id,project_id,group_id,field_id,season_id,zone_id) DO UPDATE SET lease_owner=EXCLUDED.lease_owner,fencing_token=twin_runtime_lease_v1.fencing_token+1,acquired_at=transaction_timestamp(),expires_at=transaction_timestamp()+make_interval(secs=>$8),heartbeat_at=transaction_timestamp()
-      WHERE twin_runtime_lease_v1.expires_at<=transaction_timestamp() OR twin_runtime_lease_v1.lease_owner=EXCLUDED.lease_owner
-      RETURNING fencing_token`, [...scopeValues(claim), claim.lease_owner, claim.lease_duration_seconds]);
+    const result = await this.pool.query(
+      `INSERT INTO twin_runtime_lease_v1 (tenant_id,project_id,group_id,field_id,season_id,zone_id,lease_owner,fencing_token,acquired_at,expires_at,heartbeat_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,1,transaction_timestamp(),transaction_timestamp()+make_interval(secs=>$8),transaction_timestamp())
+       ON CONFLICT (tenant_id,project_id,group_id,field_id,season_id,zone_id) DO UPDATE SET
+         lease_owner=EXCLUDED.lease_owner,
+         fencing_token=twin_runtime_lease_v1.fencing_token+1,
+         acquired_at=transaction_timestamp(),
+         expires_at=transaction_timestamp()+make_interval(secs=>$8),
+         heartbeat_at=transaction_timestamp()
+       WHERE twin_runtime_lease_v1.expires_at<=transaction_timestamp() OR twin_runtime_lease_v1.lease_owner=EXCLUDED.lease_owner
+       RETURNING fencing_token`,
+      [...scopeValues(claim), claim.lease_owner, claim.lease_duration_seconds],
+    );
     if (!result.rows.length) throw new Error("LEASE_HELD_BY_OTHER_OWNER");
     return { ...claim, fencing_token: BigInt(result.rows[0].fencing_token) };
   }
 
   async lookupA0RecordSet(idempotencyKey: string): Promise<A0RecordSetV1 | null> {
-    const guard = await this.pool.query("SELECT record_set_id FROM twin_object_idempotency_index_v1 WHERE identity_kind='A0_RECORD_SET' AND idempotency_key=$1", [idempotencyKey]);
+    const guard = await this.pool.query(
+      "SELECT record_set_id FROM twin_object_idempotency_index_v1 WHERE identity_kind='A0_RECORD_SET' AND idempotency_key=$1",
+      [idempotencyKey],
+    );
     return guard.rows.length ? this.readBootstrapRecordSet(guard.rows[0].record_set_id) : null;
   }
 
   private async verifyLease(client: PoolClient, scope: TwinScopeKeyV1, lease: RuntimeLeaseClaimV1): Promise<void> {
-    const result = await client.query("SELECT lease_owner,fencing_token,expires_at>transaction_timestamp() AS valid FROM twin_runtime_lease_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 FOR UPDATE", scopeValues(scope));
+    const result = await client.query(
+      "SELECT lease_owner,fencing_token,expires_at>transaction_timestamp() AS valid FROM twin_runtime_lease_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 FOR UPDATE",
+      scopeValues(scope),
+    );
     if (!result.rows.length || result.rows[0].lease_owner !== lease.lease_owner) throw new Error("LEASE_OWNER_MISMATCH");
     if (BigInt(result.rows[0].fencing_token) !== lease.fencing_token) throw new Error("STALE_FENCING_TOKEN");
     if (!result.rows[0].valid) throw new Error("LEASE_EXPIRED");
+  }
+
+  private async readCanonicalObjectWithClient(client: PoolClient, objectId: string): Promise<CanonicalObjectEnvelopeV1 | null> {
+    const result = await client.query(
+      "SELECT record_json FROM facts WHERE record_json->'payload'->>'object_id'=$1 LIMIT 2",
+      [objectId],
+    );
+    if (!result.rows.length) return null;
+    if (result.rows.length !== 1) throw new Error("CANONICAL_OBJECT_ID_NOT_UNIQUE");
+    const object = parseFactObject(result.rows[0].record_json);
+    validateCanonicalObjectV1(object);
+    return object;
+  }
+
+  private async verifyRuntimeConfigReference(client: PoolClient, objectId: string, determinismHash: string): Promise<void> {
+    const config = await this.readCanonicalObjectWithClient(client, objectId);
+    if (!config || config.object_type !== "twin_runtime_config_v1") throw new Error("RUNTIME_CONFIG_NOT_FOUND");
+    if (config.determinism_hash !== determinismHash) throw new Error("RUNTIME_CONFIG_HASH_MISMATCH");
   }
 
   private async verifyRuntimeConfig(client: PoolClient, recordSet: A0RecordSetV1): Promise<void> {
@@ -84,11 +171,7 @@ export class PostgresRuntimeRepositoryV1 implements RuntimeConfigRepositoryPortV
     const [runtimeConfigRef] = [...refs];
     const [runtimeConfigHash] = [...hashes];
     if (runtimeConfigHash !== recordSet.a0_identity_input.runtime_config_hash) throw new Error("A0_RUNTIME_CONFIG_HASH_MISMATCH");
-    const fact = await client.query("SELECT record_json FROM facts WHERE record_json->>'type'='twin_runtime_config_v1' AND record_json->'payload'->>'object_id'=$1 LIMIT 1", [runtimeConfigRef]);
-    if (fact.rows.length !== 1) throw new Error("RUNTIME_CONFIG_NOT_FOUND");
-    const config = parseFactObject(fact.rows[0].record_json);
-    validateCanonicalObjectV1(config);
-    if (config.determinism_hash !== runtimeConfigHash) throw new Error("RUNTIME_CONFIG_HASH_MISMATCH");
+    await this.verifyRuntimeConfigReference(client, runtimeConfigRef, runtimeConfigHash);
   }
 
   async commitBootstrapState(input: Parameters<BootstrapPersistencePortV1["commitBootstrapState"]>[0]) {
@@ -97,7 +180,10 @@ export class PostgresRuntimeRepositoryV1 implements RuntimeConfigRepositoryPortV
     const inject = (stage: string) => input.fault_injection?.(stage);
     try {
       await client.query("BEGIN");
-      const existing = await client.query("SELECT record_set_id,determinism_hash FROM twin_object_idempotency_index_v1 WHERE identity_kind='A0_RECORD_SET' AND idempotency_key=$1 FOR UPDATE", [input.record_set.a0_idempotency_key]);
+      const existing = await client.query(
+        "SELECT record_set_id,determinism_hash FROM twin_object_idempotency_index_v1 WHERE identity_kind='A0_RECORD_SET' AND idempotency_key=$1 FOR UPDATE",
+        [input.record_set.a0_idempotency_key],
+      );
       if (existing.rows.length) {
         if (existing.rows[0].record_set_id !== input.record_set.a0_record_set_id || existing.rows[0].determinism_hash !== input.record_set.a0_record_set_determinism_hash) throw new Error("IDEMPOTENCY_CONFLICT");
         const recordSet = await this.readBootstrapRecordSetWithClient(client, input.record_set.a0_record_set_id);
@@ -105,15 +191,25 @@ export class PostgresRuntimeRepositoryV1 implements RuntimeConfigRepositoryPortV
         validateA0RecordSetV1(recordSet);
         if (recordSet.a0_record_set_determinism_hash !== input.record_set.a0_record_set_determinism_hash) throw new Error("IDEMPOTENCY_CONFLICT");
         await client.query("COMMIT");
-        return { status: "EXISTING_IDEMPOTENT_SUCCESS" as const, record_set: recordSet, fact_ids_by_object_id: Object.fromEntries(recordSet.members.map((member) => [member.object_id, factId(member.object_id)])) };
+        return {
+          status: "EXISTING_IDEMPOTENT_SUCCESS" as const,
+          record_set: recordSet,
+          fact_ids_by_object_id: Object.fromEntries(recordSet.members.map((member) => [member.object_id, factId(member.object_id)])),
+        };
       }
 
       await this.verifyLease(client, input.scope, input.lease);
       await this.verifyRuntimeConfig(client, input.record_set);
-      const initial = await client.query("SELECT 1 FROM facts WHERE record_json->>'type'='twin_runtime_lineage_v1' AND record_json->'payload'->'payload'->>'lineage_kind'='INITIAL' AND record_json->'payload'->>'tenant_id'=$1 AND record_json->'payload'->>'project_id'=$2 AND record_json->'payload'->>'group_id'=$3 AND record_json->'payload'->>'field_id'=$4 AND record_json->'payload'->>'season_id'=$5 AND record_json->'payload'->>'zone_id'=$6 LIMIT 1", scopeValues(input.scope));
+      const initial = await client.query(
+        "SELECT 1 FROM facts WHERE record_json->>'type'='twin_runtime_lineage_v1' AND record_json->'payload'->'payload'->>'lineage_kind'='INITIAL' AND record_json->'payload'->>'tenant_id'=$1 AND record_json->'payload'->>'project_id'=$2 AND record_json->'payload'->>'group_id'=$3 AND record_json->'payload'->>'field_id'=$4 AND record_json->'payload'->>'season_id'=$5 AND record_json->'payload'->>'zone_id'=$6 LIMIT 1",
+        scopeValues(input.scope),
+      );
       if (initial.rows.length) throw new Error("INITIAL_LINEAGE_CONFLICT");
-      for (const table of ["twin_active_lineage_index_v1","twin_state_latest_index_v1","twin_forecast_result_latest_index_v1","twin_forecast_success_latest_index_v1","twin_runtime_checkpoint_latest_index_v1"]) {
-        const pointer = await client.query(`SELECT 1 FROM ${table} WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 LIMIT 1`, scopeValues(input.scope));
+      for (const table of ["twin_active_lineage_index_v1", "twin_state_latest_index_v1", "twin_forecast_result_latest_index_v1", "twin_forecast_success_latest_index_v1", "twin_runtime_checkpoint_latest_index_v1"]) {
+        const pointer = await client.query(
+          `SELECT 1 FROM ${table} WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 LIMIT 1`,
+          scopeValues(input.scope),
+        );
         if (pointer.rows.length) throw new Error(`${table.toUpperCase()}_NULL_CAS_CONFLICT`);
       }
 
@@ -124,25 +220,49 @@ export class PostgresRuntimeRepositoryV1 implements RuntimeConfigRepositoryPortV
         inject(`before_fact_${index + 1}_${object.object_type}`);
         const id = factId(object.object_id);
         factIds[object.object_id] = id;
-        await client.query("INSERT INTO facts (fact_id,occurred_at,source,record_json) VALUES ($1,$2::timestamptz,'system',$3::jsonb)", [id, object.logical_time, recordJson(object)]);
+        await client.query(
+          "INSERT INTO facts (fact_id,occurred_at,source,record_json) VALUES ($1,$2::timestamptz,'system',$3::jsonb)",
+          [id, object.logical_time, recordJson(object)],
+        );
         factReads.push({ fact_id: id, object });
       }
 
       const rows = buildA0ProjectionRowsV1(factReads);
       inject("before_active_lineage_projection");
-      await client.query("INSERT INTO twin_active_lineage_index_v1 (tenant_id,project_id,group_id,field_id,season_id,zone_id,active_lineage_ref,activation_authority_kind,activation_authority_ref,expected_previous_active_lineage) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NULL)", [...scopeValues(input.scope), rows.active_lineage.active_lineage_ref, rows.active_lineage.activation_authority_kind, rows.active_lineage.activation_authority_ref]);
+      await client.query(
+        "INSERT INTO twin_active_lineage_index_v1 (tenant_id,project_id,group_id,field_id,season_id,zone_id,active_lineage_ref,activation_authority_kind,activation_authority_ref,expected_previous_active_lineage) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NULL)",
+        [...scopeValues(input.scope), rows.active_lineage.active_lineage_ref, rows.active_lineage.activation_authority_kind, rows.active_lineage.activation_authority_ref],
+      );
       inject("before_state_history_projection");
-      await client.query("INSERT INTO twin_state_history_projection_v1 (state_object_id,tenant_id,project_id,group_id,field_id,season_id,zone_id,lineage_id,revision_id,logical_time,determinism_hash,canonical_payload,source_fact_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::timestamptz,$11,$12::jsonb,$13)", [rows.state_history.state_object_id,...scopeValues(input.scope),rows.state_history.lineage_id,rows.state_history.revision_id,rows.state_history.logical_time,rows.state_history.determinism_hash,JSON.stringify(rows.state_history.canonical_payload),rows.state_history.source_fact_id]);
+      await client.query(
+        "INSERT INTO twin_state_history_projection_v1 (state_object_id,tenant_id,project_id,group_id,field_id,season_id,zone_id,lineage_id,revision_id,logical_time,determinism_hash,canonical_payload,source_fact_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::timestamptz,$11,$12::jsonb,$13)",
+        [rows.state_history.state_object_id, ...scopeValues(input.scope), rows.state_history.lineage_id, rows.state_history.revision_id, rows.state_history.logical_time, rows.state_history.determinism_hash, JSON.stringify(rows.state_history.canonical_payload), rows.state_history.source_fact_id],
+      );
       inject("before_state_latest_projection");
-      await client.query("INSERT INTO twin_state_latest_index_v1 (tenant_id,project_id,group_id,field_id,season_id,zone_id,state_object_id,lineage_id,revision_id,logical_time,determinism_hash,source_fact_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::timestamptz,$11,$12)", [...scopeValues(input.scope),rows.state_latest.state_object_id,rows.state_latest.lineage_id,rows.state_latest.revision_id,rows.state_latest.logical_time,rows.state_latest.determinism_hash,rows.state_latest.source_fact_id]);
+      await client.query(
+        "INSERT INTO twin_state_latest_index_v1 (tenant_id,project_id,group_id,field_id,season_id,zone_id,state_object_id,lineage_id,revision_id,logical_time,determinism_hash,source_fact_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::timestamptz,$11,$12)",
+        [...scopeValues(input.scope), rows.state_latest.state_object_id, rows.state_latest.lineage_id, rows.state_latest.revision_id, rows.state_latest.logical_time, rows.state_latest.determinism_hash, rows.state_latest.source_fact_id],
+      );
       inject("before_forecast_result_projection");
-      await client.query("INSERT INTO twin_forecast_result_latest_index_v1 (tenant_id,project_id,group_id,field_id,season_id,zone_id,forecast_object_id,forecast_status,logical_time,determinism_hash,source_fact_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::timestamptz,$10,$11)", [...scopeValues(input.scope),rows.forecast_result_latest.forecast_object_id,rows.forecast_result_latest.forecast_status,rows.forecast_result_latest.logical_time,rows.forecast_result_latest.determinism_hash,rows.forecast_result_latest.source_fact_id]);
+      await client.query(
+        "INSERT INTO twin_forecast_result_latest_index_v1 (tenant_id,project_id,group_id,field_id,season_id,zone_id,forecast_object_id,forecast_status,logical_time,determinism_hash,source_fact_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::timestamptz,$10,$11)",
+        [...scopeValues(input.scope), rows.forecast_result_latest.forecast_object_id, rows.forecast_result_latest.forecast_status, rows.forecast_result_latest.logical_time, rows.forecast_result_latest.determinism_hash, rows.forecast_result_latest.source_fact_id],
+      );
       inject("before_checkpoint_projection");
-      await client.query("INSERT INTO twin_runtime_checkpoint_latest_index_v1 (tenant_id,project_id,group_id,field_id,season_id,zone_id,checkpoint_object_id,lineage_id,revision_id,logical_time,determinism_hash,source_fact_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::timestamptz,$11,$12)", [...scopeValues(input.scope),rows.checkpoint_latest.checkpoint_object_id,rows.checkpoint_latest.lineage_id,rows.checkpoint_latest.revision_id,rows.checkpoint_latest.logical_time,rows.checkpoint_latest.determinism_hash,rows.checkpoint_latest.source_fact_id]);
+      await client.query(
+        "INSERT INTO twin_runtime_checkpoint_latest_index_v1 (tenant_id,project_id,group_id,field_id,season_id,zone_id,checkpoint_object_id,lineage_id,revision_id,logical_time,determinism_hash,source_fact_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::timestamptz,$11,$12)",
+        [...scopeValues(input.scope), rows.checkpoint_latest.checkpoint_object_id, rows.checkpoint_latest.lineage_id, rows.checkpoint_latest.revision_id, rows.checkpoint_latest.logical_time, rows.checkpoint_latest.determinism_hash, rows.checkpoint_latest.source_fact_id],
+      );
       inject("before_health_projection");
-      await client.query("INSERT INTO twin_runtime_health_latest_index_v1 (tenant_id,project_id,group_id,field_id,season_id,zone_id,health_object_id,operation_status,logical_time,determinism_hash,source_fact_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::timestamptz,$10,$11)", [...scopeValues(input.scope),rows.runtime_health_latest.health_object_id,rows.runtime_health_latest.operation_status,rows.runtime_health_latest.logical_time,rows.runtime_health_latest.determinism_hash,rows.runtime_health_latest.source_fact_id]);
+      await client.query(
+        "INSERT INTO twin_runtime_health_latest_index_v1 (tenant_id,project_id,group_id,field_id,season_id,zone_id,health_object_id,operation_status,logical_time,determinism_hash,source_fact_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::timestamptz,$10,$11)",
+        [...scopeValues(input.scope), rows.runtime_health_latest.health_object_id, rows.runtime_health_latest.operation_status, rows.runtime_health_latest.logical_time, rows.runtime_health_latest.determinism_hash, rows.runtime_health_latest.source_fact_id],
+      );
       inject("before_idempotency_index");
-      await client.query("INSERT INTO twin_object_idempotency_index_v1 (identity_kind,idempotency_key,record_set_id,determinism_hash,identity_basis,member_object_ids,member_determinism_hashes) VALUES ('A0_RECORD_SET',$1,$2,$3,$4::jsonb,$5::jsonb,$6::jsonb)", [input.record_set.a0_idempotency_key,input.record_set.a0_record_set_id,input.record_set.a0_record_set_determinism_hash,JSON.stringify({ a0_identity_input: input.record_set.a0_identity_input, a0_semantic_seed: input.record_set.a0_semantic_seed }),JSON.stringify(input.record_set.members.map((member) => member.object_id)),JSON.stringify(Object.fromEntries(input.record_set.members.map((member) => [member.object_id,member.determinism_hash])))]);
+      await client.query(
+        "INSERT INTO twin_object_idempotency_index_v1 (identity_kind,idempotency_key,record_set_id,determinism_hash,identity_basis,member_object_ids,member_determinism_hashes) VALUES ('A0_RECORD_SET',$1,$2,$3,$4::jsonb,$5::jsonb,$6::jsonb)",
+        [input.record_set.a0_idempotency_key, input.record_set.a0_record_set_id, input.record_set.a0_record_set_determinism_hash, JSON.stringify({ a0_identity_input: input.record_set.a0_identity_input, a0_semantic_seed: input.record_set.a0_semantic_seed }), JSON.stringify(input.record_set.members.map((member) => member.object_id)), JSON.stringify(Object.fromEntries(input.record_set.members.map((member) => [member.object_id, member.determinism_hash])))],
+      );
       inject("before_commit");
       await client.query("COMMIT");
       return { status: "INSERTED" as const, record_set: input.record_set, fact_ids_by_object_id: factIds };
@@ -155,10 +275,16 @@ export class PostgresRuntimeRepositoryV1 implements RuntimeConfigRepositoryPortV
   }
 
   private async readBootstrapRecordSetWithClient(client: PoolClient, recordSetId: string): Promise<A0RecordSetV1 | null> {
-    const guard = await client.query("SELECT idempotency_key,determinism_hash,identity_basis,member_object_ids FROM twin_object_idempotency_index_v1 WHERE identity_kind='A0_RECORD_SET' AND record_set_id=$1", [recordSetId]);
+    const guard = await client.query(
+      "SELECT idempotency_key,determinism_hash,identity_basis,member_object_ids FROM twin_object_idempotency_index_v1 WHERE identity_kind='A0_RECORD_SET' AND record_set_id=$1",
+      [recordSetId],
+    );
     if (!guard.rows.length || !guard.rows[0].identity_basis) return null;
     const ids: string[] = guard.rows[0].member_object_ids;
-    const facts = await client.query("SELECT record_json FROM facts WHERE record_json->'payload'->>'object_id'=ANY($1::text[])", [ids]);
+    const facts = await client.query(
+      "SELECT record_json FROM facts WHERE record_json->'payload'->>'object_id'=ANY($1::text[])",
+      [ids],
+    );
     if (facts.rows.length !== 9) return null;
     const members = facts.rows.map((row) => parseFactObject(row.record_json));
     const recordSet: A0RecordSetV1 = {
@@ -177,6 +303,351 @@ export class PostgresRuntimeRepositoryV1 implements RuntimeConfigRepositoryPortV
     const client = await this.pool.connect();
     try {
       return await this.readBootstrapRecordSetWithClient(client, recordSetId);
+    } finally {
+      client.release();
+    }
+  }
+
+  async lookupContinuationRecordSet(idempotencyKey: string): Promise<ContinuationRecordSetV1 | null> {
+    const guard = await this.pool.query(
+      "SELECT record_set_id FROM twin_object_idempotency_index_v1 WHERE identity_kind='A2_RECORD_SET' AND idempotency_key=$1",
+      [idempotencyKey],
+    );
+    return guard.rows.length ? this.readContinuationRecordSet(guard.rows[0].record_set_id) : null;
+  }
+
+  private async readContinuationRecordSetWithClient(client: PoolClient, recordSetId: string): Promise<ContinuationRecordSetV1 | null> {
+    const guard = await client.query(
+      "SELECT idempotency_key,determinism_hash,identity_basis,member_object_ids FROM twin_object_idempotency_index_v1 WHERE identity_kind='A2_RECORD_SET' AND record_set_id=$1",
+      [recordSetId],
+    );
+    if (!guard.rows.length || !guard.rows[0].identity_basis) return null;
+    const ids: string[] = guard.rows[0].member_object_ids;
+    const facts = await client.query(
+      "SELECT record_json FROM facts WHERE record_json->'payload'->>'object_id'=ANY($1::text[])",
+      [ids],
+    );
+    if (facts.rows.length !== 8) return null;
+    const members = facts.rows.map((row) => parseFactObject(row.record_json));
+    const identityBasis = guard.rows[0].identity_basis as Record<string, unknown>;
+    const recordSet: ContinuationRecordSetV1 = {
+      continuation_operation_key: identityBasis.continuation_operation_key as ContinuationRecordSetV1["continuation_operation_key"],
+      continuation_operation_key_hash: String(identityBasis.continuation_operation_key_hash),
+      continuation_record_set_id: recordSetId,
+      continuation_idempotency_key: guard.rows[0].idempotency_key,
+      member_object_ids: Object.fromEntries(members.map((member) => [member.object_type, member.object_id])) as ContinuationRecordSetV1["member_object_ids"],
+      aggregate_identity_input: identityBasis.aggregate_identity_input as ContinuationRecordSetV1["aggregate_identity_input"],
+      continuation_record_set_determinism_hash: guard.rows[0].determinism_hash,
+      members,
+    };
+    validateContinuationRecordSetV1(recordSet);
+    return recordSet;
+  }
+
+  async readContinuationRecordSet(recordSetId: string): Promise<ContinuationRecordSetV1 | null> {
+    const client = await this.pool.connect();
+    try {
+      return await this.readContinuationRecordSetWithClient(client, recordSetId);
+    } finally {
+      client.release();
+    }
+  }
+
+  private async verifyContinuationAuthorityV1(
+    client: PoolClient,
+    scope: TwinScopeKeyV1,
+    expected: ContinuationExpectedPointersV1,
+    recordSet: ContinuationRecordSetV1,
+  ): Promise<void> {
+    const values = scopeValues(scope);
+    const active = await client.query(
+      "SELECT active_lineage_ref FROM twin_active_lineage_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 FOR UPDATE",
+      values,
+    );
+    if (active.rows.length !== 1 || active.rows[0].active_lineage_ref !== expected.active_lineage_ref) throw new Error("ACTIVE_LINEAGE_OBJECT_REF_MISMATCH");
+
+    const lineage = await this.readCanonicalObjectWithClient(client, expected.active_lineage_ref);
+    if (!lineage || lineage.object_type !== "twin_runtime_lineage_v1") throw new Error("ACTIVE_LINEAGE_OBJECT_REF_MISMATCH");
+    if (lineage.lineage_id !== expected.lineage_id) throw new Error("ACTIVE_LINEAGE_ID_MISMATCH");
+    if (lineage.revision_id !== expected.revision_id) throw new Error("LINEAGE_REVISION_MISMATCH");
+
+    const previousState = await this.readCanonicalObjectWithClient(client, expected.previous_state_ref);
+    const previousCheckpoint = await this.readCanonicalObjectWithClient(client, expected.previous_checkpoint_ref);
+    const previousForecast = await this.readCanonicalObjectWithClient(client, expected.previous_forecast_result_ref);
+    if (!previousState || previousState.object_type !== "twin_state_estimate_v1") throw new Error("STATE_LATEST_CAS_CONFLICT");
+    if (!previousCheckpoint || previousCheckpoint.object_type !== "twin_runtime_checkpoint_v1") throw new Error("CHECKPOINT_CAS_CONFLICT");
+    if (!previousForecast || previousForecast.object_type !== "twin_forecast_run_v1") throw new Error("FORECAST_RESULT_CAS_CONFLICT");
+    if (previousState.lineage_id !== expected.lineage_id || previousCheckpoint.lineage_id !== expected.lineage_id) throw new Error("ACTIVE_LINEAGE_ID_MISMATCH");
+    if (previousState.revision_id !== expected.revision_id || previousCheckpoint.revision_id !== expected.revision_id) throw new Error("LINEAGE_REVISION_MISMATCH");
+    if (previousCheckpoint.payload.last_posterior_state_ref !== expected.previous_state_ref) throw new Error("CHECKPOINT_CAS_CONFLICT");
+    if (previousCheckpoint.payload.forecast_result_ref !== expected.previous_forecast_result_ref) throw new Error("FORECAST_RESULT_CAS_CONFLICT");
+
+    const aggregate = recordSet.aggregate_identity_input;
+    if (aggregate.previous_posterior_ref !== expected.previous_state_ref || aggregate.previous_posterior_hash !== previousState.determinism_hash) throw new Error("STATE_LATEST_CAS_CONFLICT");
+    if (aggregate.previous_checkpoint_ref !== expected.previous_checkpoint_ref || aggregate.previous_checkpoint_hash !== previousCheckpoint.determinism_hash) throw new Error("CHECKPOINT_CAS_CONFLICT");
+    if (recordSet.continuation_operation_key.lineage_id !== expected.lineage_id) throw new Error("ACTIVE_LINEAGE_ID_MISMATCH");
+    if (recordSet.continuation_operation_key.revision_id !== expected.revision_id) throw new Error("LINEAGE_REVISION_MISMATCH");
+
+    const statePointer = await client.query(
+      "SELECT state_object_id,lineage_id,revision_id,determinism_hash FROM twin_state_latest_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 FOR UPDATE",
+      values,
+    );
+    if (statePointer.rows.length !== 1 || statePointer.rows[0].state_object_id !== expected.previous_state_ref || statePointer.rows[0].determinism_hash !== previousState.determinism_hash) throw new Error("STATE_LATEST_CAS_CONFLICT");
+    if (statePointer.rows[0].lineage_id !== expected.lineage_id) throw new Error("ACTIVE_LINEAGE_ID_MISMATCH");
+    if (statePointer.rows[0].revision_id !== expected.revision_id) throw new Error("LINEAGE_REVISION_MISMATCH");
+
+    const checkpointPointer = await client.query(
+      "SELECT checkpoint_object_id,lineage_id,revision_id,determinism_hash FROM twin_runtime_checkpoint_latest_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 FOR UPDATE",
+      values,
+    );
+    if (checkpointPointer.rows.length !== 1 || checkpointPointer.rows[0].checkpoint_object_id !== expected.previous_checkpoint_ref || checkpointPointer.rows[0].determinism_hash !== previousCheckpoint.determinism_hash) throw new Error("CHECKPOINT_CAS_CONFLICT");
+    if (checkpointPointer.rows[0].lineage_id !== expected.lineage_id) throw new Error("ACTIVE_LINEAGE_ID_MISMATCH");
+    if (checkpointPointer.rows[0].revision_id !== expected.revision_id) throw new Error("LINEAGE_REVISION_MISMATCH");
+
+    const forecastPointer = await client.query(
+      "SELECT forecast_object_id,determinism_hash FROM twin_forecast_result_latest_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 FOR UPDATE",
+      values,
+    );
+    if (forecastPointer.rows.length !== 1 || forecastPointer.rows[0].forecast_object_id !== expected.previous_forecast_result_ref || forecastPointer.rows[0].determinism_hash !== previousForecast.determinism_hash) throw new Error("FORECAST_RESULT_CAS_CONFLICT");
+
+    const successfulForecast = await client.query(
+      "SELECT forecast_object_id FROM twin_forecast_success_latest_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 FOR UPDATE",
+      values,
+    );
+    if (expected.latest_successful_forecast_ref !== null || successfulForecast.rows.length !== 0) throw new Error("SUCCESSFUL_FORECAST_POINTER_UNEXPECTED");
+
+    await this.verifyRuntimeConfigReference(client, aggregate.runtime_config_ref, aggregate.runtime_config_hash);
+    const health = requireMemberV1(recordSet, "twin_runtime_health_v1");
+    if (health.payload.active_lineage_ref !== expected.active_lineage_ref) throw new Error("ACTIVE_LINEAGE_OBJECT_REF_MISMATCH");
+  }
+
+  private async verifyContinuationCanonicalUniquenessV1(client: PoolClient, recordSet: ContinuationRecordSetV1): Promise<void> {
+    const key = recordSet.continuation_operation_key;
+    const existing = await client.query(
+      `SELECT 1 FROM facts
+       WHERE record_json->>'type'='twin_runtime_tick_v1'
+         AND record_json->'payload'->>'tenant_id'=$1
+         AND record_json->'payload'->>'project_id'=$2
+         AND record_json->'payload'->>'group_id'=$3
+         AND record_json->'payload'->>'field_id'=$4
+         AND record_json->'payload'->>'season_id'=$5
+         AND record_json->'payload'->>'zone_id'=$6
+         AND record_json->'payload'->>'lineage_id'=$7
+         AND record_json->'payload'->>'revision_id'=$8
+         AND record_json->'payload'->>'logical_time'=$9
+         AND record_json->'payload'->'payload'->>'operation_variant'=$10
+       LIMIT 1`,
+      [...scopeValues(key.scope), key.lineage_id, key.revision_id, key.logical_time, key.operation_variant],
+    );
+    if (existing.rows.length) throw new Error("CANONICAL_CONTINUATION_UNIQUENESS_CONFLICT");
+  }
+
+  async commitContinuationState(input: Parameters<ContinuationPersistencePortV1["commitContinuationState"]>[0]) {
+    validateContinuationRecordSetV1(input.record_set);
+    assertScopeMatchesV1(input.scope, input.record_set);
+    const client = await this.pool.connect();
+    const inject = (stage: string) => input.fault_injection?.(stage);
+    try {
+      await client.query("BEGIN");
+      const existing = await client.query(
+        "SELECT record_set_id,determinism_hash FROM twin_object_idempotency_index_v1 WHERE identity_kind='A2_RECORD_SET' AND idempotency_key=$1 FOR UPDATE",
+        [input.record_set.continuation_idempotency_key],
+      );
+      if (existing.rows.length) {
+        if (existing.rows[0].record_set_id !== input.record_set.continuation_record_set_id || existing.rows[0].determinism_hash !== input.record_set.continuation_record_set_determinism_hash) throw new Error("IDEMPOTENCY_CONFLICT");
+        const recordSet = await this.readContinuationRecordSetWithClient(client, input.record_set.continuation_record_set_id);
+        if (!recordSet) throw new Error("IDEMPOTENT_CONTINUATION_RECORD_SET_INCOMPLETE");
+        if (recordSet.continuation_record_set_determinism_hash !== input.record_set.continuation_record_set_determinism_hash) throw new Error("IDEMPOTENCY_CONFLICT");
+        await client.query("COMMIT");
+        return {
+          status: "EXISTING_IDEMPOTENT_SUCCESS" as const,
+          record_set: recordSet,
+          fact_ids_by_object_id: Object.fromEntries(recordSet.members.map((member) => [member.object_id, factId(member.object_id)])),
+        };
+      }
+
+      await this.verifyLease(client, input.scope, input.lease);
+      await this.verifyContinuationAuthorityV1(client, input.scope, input.expected, input.record_set);
+      await this.verifyContinuationCanonicalUniquenessV1(client, input.record_set);
+
+      const factIds: Record<string, string> = {};
+      const factReads: CanonicalFactReadV1[] = [];
+      for (let index = 0; index < input.record_set.members.length; index += 1) {
+        const object = input.record_set.members[index];
+        inject(`before_fact_${index + 1}_${object.object_type}`);
+        const id = factId(object.object_id);
+        factIds[object.object_id] = id;
+        await client.query(
+          "INSERT INTO facts (fact_id,occurred_at,source,record_json) VALUES ($1,$2::timestamptz,'system',$3::jsonb)",
+          [id, object.logical_time, recordJson(object)],
+        );
+        factReads.push({ fact_id: id, object });
+      }
+
+      const rows = buildContinuationProjectionRowsV1(factReads);
+      inject("before_state_history_projection");
+      await client.query(
+        "INSERT INTO twin_state_history_projection_v1 (state_object_id,tenant_id,project_id,group_id,field_id,season_id,zone_id,lineage_id,revision_id,logical_time,determinism_hash,canonical_payload,source_fact_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::timestamptz,$11,$12::jsonb,$13)",
+        [rows.state_history.state_object_id, ...scopeValues(input.scope), rows.state_history.lineage_id, rows.state_history.revision_id, rows.state_history.logical_time, rows.state_history.determinism_hash, JSON.stringify(rows.state_history.canonical_payload), rows.state_history.source_fact_id],
+      );
+
+      inject("before_state_latest_projection");
+      const stateCas = await client.query(
+        `UPDATE twin_state_latest_index_v1 SET
+           state_object_id=$7,lineage_id=$8,revision_id=$9,logical_time=$10::timestamptz,determinism_hash=$11,source_fact_id=$12
+         WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 AND state_object_id=$13
+         RETURNING state_object_id`,
+        [...scopeValues(input.scope), rows.state_latest.state_object_id, rows.state_latest.lineage_id, rows.state_latest.revision_id, rows.state_latest.logical_time, rows.state_latest.determinism_hash, rows.state_latest.source_fact_id, input.expected.previous_state_ref],
+      );
+      if (stateCas.rows.length !== 1) throw new Error("STATE_LATEST_CAS_CONFLICT");
+
+      inject("before_forecast_result_projection");
+      const forecastCas = await client.query(
+        `UPDATE twin_forecast_result_latest_index_v1 SET
+           forecast_object_id=$7,forecast_status=$8,logical_time=$9::timestamptz,determinism_hash=$10,source_fact_id=$11
+         WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 AND forecast_object_id=$12
+         RETURNING forecast_object_id`,
+        [...scopeValues(input.scope), rows.forecast_result_latest.forecast_object_id, rows.forecast_result_latest.forecast_status, rows.forecast_result_latest.logical_time, rows.forecast_result_latest.determinism_hash, rows.forecast_result_latest.source_fact_id, input.expected.previous_forecast_result_ref],
+      );
+      if (forecastCas.rows.length !== 1) throw new Error("FORECAST_RESULT_CAS_CONFLICT");
+
+      inject("before_checkpoint_projection");
+      const checkpointCas = await client.query(
+        `UPDATE twin_runtime_checkpoint_latest_index_v1 SET
+           checkpoint_object_id=$7,lineage_id=$8,revision_id=$9,logical_time=$10::timestamptz,determinism_hash=$11,source_fact_id=$12
+         WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 AND checkpoint_object_id=$13
+         RETURNING checkpoint_object_id`,
+        [...scopeValues(input.scope), rows.checkpoint_latest.checkpoint_object_id, rows.checkpoint_latest.lineage_id, rows.checkpoint_latest.revision_id, rows.checkpoint_latest.logical_time, rows.checkpoint_latest.determinism_hash, rows.checkpoint_latest.source_fact_id, input.expected.previous_checkpoint_ref],
+      );
+      if (checkpointCas.rows.length !== 1) throw new Error("CHECKPOINT_CAS_CONFLICT");
+
+      inject("before_health_projection");
+      await client.query(
+        `INSERT INTO twin_runtime_health_latest_index_v1
+           (tenant_id,project_id,group_id,field_id,season_id,zone_id,health_object_id,operation_status,logical_time,determinism_hash,source_fact_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::timestamptz,$10,$11)
+         ON CONFLICT (tenant_id,project_id,group_id,field_id,season_id,zone_id) DO UPDATE SET
+           health_object_id=EXCLUDED.health_object_id,
+           operation_status=EXCLUDED.operation_status,
+           logical_time=EXCLUDED.logical_time,
+           determinism_hash=EXCLUDED.determinism_hash,
+           source_fact_id=EXCLUDED.source_fact_id`,
+        [...scopeValues(input.scope), rows.runtime_health_latest.health_object_id, rows.runtime_health_latest.operation_status, rows.runtime_health_latest.logical_time, rows.runtime_health_latest.determinism_hash, rows.runtime_health_latest.source_fact_id],
+      );
+
+      inject("before_idempotency_index");
+      await client.query(
+        `INSERT INTO twin_object_idempotency_index_v1
+           (identity_kind,idempotency_key,record_set_id,determinism_hash,identity_basis,member_object_ids,member_determinism_hashes)
+         VALUES ('A2_RECORD_SET',$1,$2,$3,$4::jsonb,$5::jsonb,$6::jsonb)`,
+        [
+          input.record_set.continuation_idempotency_key,
+          input.record_set.continuation_record_set_id,
+          input.record_set.continuation_record_set_determinism_hash,
+          JSON.stringify({
+            continuation_operation_key: input.record_set.continuation_operation_key,
+            continuation_operation_key_hash: input.record_set.continuation_operation_key_hash,
+            aggregate_identity_input: input.record_set.aggregate_identity_input,
+          }),
+          JSON.stringify(input.record_set.members.map((member) => member.object_id)),
+          JSON.stringify(Object.fromEntries(input.record_set.members.map((member) => [member.object_id, member.determinism_hash]))),
+        ],
+      );
+      inject("before_commit");
+      await client.query("COMMIT");
+
+      const readback = await this.readContinuationRecordSet(input.record_set.continuation_record_set_id);
+      if (!readback) throw new Error("CONTINUATION_CANONICAL_READBACK_INCOMPLETE");
+      if (readback.continuation_record_set_determinism_hash !== input.record_set.continuation_record_set_determinism_hash) throw new Error("CONTINUATION_CANONICAL_READBACK_HASH_MISMATCH");
+      return { status: "INSERTED" as const, record_set: readback, fact_ids_by_object_id: factIds };
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async rebuildContinuationProjections(recordSetId: string): Promise<{ rebuilt_projection_count: 5 }> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      const recordSet = await this.readContinuationRecordSetWithClient(client, recordSetId);
+      if (!recordSet) throw new Error("CONTINUATION_RECORD_SET_NOT_FOUND");
+      const scope = recordSet.continuation_operation_key.scope;
+      const rows = buildContinuationProjectionRowsV1(recordSet.members.map((object) => ({ fact_id: factId(object.object_id), object })));
+      const values = scopeValues(scope);
+
+      const history = await client.query(
+        `INSERT INTO twin_state_history_projection_v1
+           (state_object_id,tenant_id,project_id,group_id,field_id,season_id,zone_id,lineage_id,revision_id,logical_time,determinism_hash,canonical_payload,source_fact_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::timestamptz,$11,$12::jsonb,$13)
+         ON CONFLICT (state_object_id) DO UPDATE SET
+           canonical_payload=EXCLUDED.canonical_payload,
+           source_fact_id=EXCLUDED.source_fact_id
+         WHERE twin_state_history_projection_v1.determinism_hash=EXCLUDED.determinism_hash
+         RETURNING state_object_id`,
+        [rows.state_history.state_object_id, ...values, rows.state_history.lineage_id, rows.state_history.revision_id, rows.state_history.logical_time, rows.state_history.determinism_hash, JSON.stringify(rows.state_history.canonical_payload), rows.state_history.source_fact_id],
+      );
+      if (history.rows.length !== 1) throw new Error("PROJECTION_REBUILD_STATE_HISTORY_CONFLICT");
+
+      const state = await client.query(
+        `INSERT INTO twin_state_latest_index_v1
+           (tenant_id,project_id,group_id,field_id,season_id,zone_id,state_object_id,lineage_id,revision_id,logical_time,determinism_hash,source_fact_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::timestamptz,$11,$12)
+         ON CONFLICT (tenant_id,project_id,group_id,field_id,season_id,zone_id) DO UPDATE SET
+           state_object_id=EXCLUDED.state_object_id,lineage_id=EXCLUDED.lineage_id,revision_id=EXCLUDED.revision_id,
+           logical_time=EXCLUDED.logical_time,determinism_hash=EXCLUDED.determinism_hash,source_fact_id=EXCLUDED.source_fact_id
+         WHERE twin_state_latest_index_v1.logical_time<=EXCLUDED.logical_time
+         RETURNING state_object_id`,
+        [...values, rows.state_latest.state_object_id, rows.state_latest.lineage_id, rows.state_latest.revision_id, rows.state_latest.logical_time, rows.state_latest.determinism_hash, rows.state_latest.source_fact_id],
+      );
+      if (state.rows.length !== 1) throw new Error("PROJECTION_REBUILD_NEWER_STATE_POINTER_PRESENT");
+
+      const forecast = await client.query(
+        `INSERT INTO twin_forecast_result_latest_index_v1
+           (tenant_id,project_id,group_id,field_id,season_id,zone_id,forecast_object_id,forecast_status,logical_time,determinism_hash,source_fact_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::timestamptz,$10,$11)
+         ON CONFLICT (tenant_id,project_id,group_id,field_id,season_id,zone_id) DO UPDATE SET
+           forecast_object_id=EXCLUDED.forecast_object_id,forecast_status=EXCLUDED.forecast_status,
+           logical_time=EXCLUDED.logical_time,determinism_hash=EXCLUDED.determinism_hash,source_fact_id=EXCLUDED.source_fact_id
+         WHERE twin_forecast_result_latest_index_v1.logical_time<=EXCLUDED.logical_time
+         RETURNING forecast_object_id`,
+        [...values, rows.forecast_result_latest.forecast_object_id, rows.forecast_result_latest.forecast_status, rows.forecast_result_latest.logical_time, rows.forecast_result_latest.determinism_hash, rows.forecast_result_latest.source_fact_id],
+      );
+      if (forecast.rows.length !== 1) throw new Error("PROJECTION_REBUILD_NEWER_FORECAST_POINTER_PRESENT");
+
+      const checkpoint = await client.query(
+        `INSERT INTO twin_runtime_checkpoint_latest_index_v1
+           (tenant_id,project_id,group_id,field_id,season_id,zone_id,checkpoint_object_id,lineage_id,revision_id,logical_time,determinism_hash,source_fact_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::timestamptz,$11,$12)
+         ON CONFLICT (tenant_id,project_id,group_id,field_id,season_id,zone_id) DO UPDATE SET
+           checkpoint_object_id=EXCLUDED.checkpoint_object_id,lineage_id=EXCLUDED.lineage_id,revision_id=EXCLUDED.revision_id,
+           logical_time=EXCLUDED.logical_time,determinism_hash=EXCLUDED.determinism_hash,source_fact_id=EXCLUDED.source_fact_id
+         WHERE twin_runtime_checkpoint_latest_index_v1.logical_time<=EXCLUDED.logical_time
+         RETURNING checkpoint_object_id`,
+        [...values, rows.checkpoint_latest.checkpoint_object_id, rows.checkpoint_latest.lineage_id, rows.checkpoint_latest.revision_id, rows.checkpoint_latest.logical_time, rows.checkpoint_latest.determinism_hash, rows.checkpoint_latest.source_fact_id],
+      );
+      if (checkpoint.rows.length !== 1) throw new Error("PROJECTION_REBUILD_NEWER_CHECKPOINT_POINTER_PRESENT");
+
+      const health = await client.query(
+        `INSERT INTO twin_runtime_health_latest_index_v1
+           (tenant_id,project_id,group_id,field_id,season_id,zone_id,health_object_id,operation_status,logical_time,determinism_hash,source_fact_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::timestamptz,$10,$11)
+         ON CONFLICT (tenant_id,project_id,group_id,field_id,season_id,zone_id) DO UPDATE SET
+           health_object_id=EXCLUDED.health_object_id,operation_status=EXCLUDED.operation_status,
+           logical_time=EXCLUDED.logical_time,determinism_hash=EXCLUDED.determinism_hash,source_fact_id=EXCLUDED.source_fact_id
+         WHERE twin_runtime_health_latest_index_v1.logical_time<=EXCLUDED.logical_time
+         RETURNING health_object_id`,
+        [...values, rows.runtime_health_latest.health_object_id, rows.runtime_health_latest.operation_status, rows.runtime_health_latest.logical_time, rows.runtime_health_latest.determinism_hash, rows.runtime_health_latest.source_fact_id],
+      );
+      if (health.rows.length !== 1) throw new Error("PROJECTION_REBUILD_NEWER_HEALTH_POINTER_PRESENT");
+
+      await client.query("COMMIT");
+      return { rebuilt_projection_count: 5 };
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
     } finally {
       client.release();
     }

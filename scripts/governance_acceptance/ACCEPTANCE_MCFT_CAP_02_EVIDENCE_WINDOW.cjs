@@ -1,5 +1,5 @@
 // scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_EVIDENCE_WINDOW.cjs
-// Purpose: gate the exact continuation Evidence Window slice, including merged-main Dynamics evidence, exact-hour contracts, fixtures, positive and negative acceptance, typecheck, and build.
+// Purpose: gate the exact continuation Evidence Window slice and provide an explicit merged-main predecessor mode for the authorized continuation Persistence slice.
 // Boundary: governance orchestration only; no database continuation write, A2 commit, checkpoint advancement, Runtime tick orchestration, observation assimilation, successful Forecast, route, or scheduler.
 
 'use strict';
@@ -10,11 +10,14 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '../..');
 const BASELINE = 'bc97acbd589c454b7417d6ed4567c103b655ee78';
+const MERGE_COMMIT = '869593d269b5175b216ce494b55b4b121db45190';
 const BRANCH = 'mcft-cap-02-continuation-evidence-window-v1';
+const PERSISTENCE_BRANCH = 'mcft-cap-02-continuation-persistence-v1';
 const SLICE = 'MCFT-CAP-02.MCFT-05.CONTINUATION-EVIDENCE-WINDOW-V1';
 const PREDECESSOR_SLICE = 'MCFT-CAP-02.MCFT-06.PURE-HOURLY-DYNAMICS-V1';
 const PERSISTENCE_SLICE = 'MCFT-CAP-02.MCFT-03.CONTINUATION-PERSISTENCE-V1';
-const MODE = process.argv.includes('--draft') ? 'draft' : 'final';
+const SINGLE_TICK_SLICE = 'MCFT-CAP-02.MCFT-04-06-08-09.SINGLE-TICK-INTEGRATION-V1';
+const MODE = process.argv.includes('--postmerge') ? 'postmerge' : process.argv.includes('--draft') ? 'draft' : 'final';
 
 const EXACT_CHANGED_FILES = [
   'apps/server/src/runtime/twin_runtime/continuation_evidence_window_service_v1.ts',
@@ -28,7 +31,7 @@ const EXACT_CHANGED_FILES = [
   'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_EVIDENCE_WINDOW_NEGATIVE.ts',
 ].sort();
 
-const PRESERVED_NONCLAIMS = [
+const PREMERGE_NONCLAIMS = [
   'NO_CONTINUATION_EVIDENCE_WINDOW_PERSISTED',
   'NO_CONTINUATION_STATE_PERSISTED',
   'NO_OBSERVATION_UPDATE_APPLIED',
@@ -51,6 +54,22 @@ const PRESERVED_NONCLAIMS = [
   'NO_MCFT_GATE_A_CLOSURE',
   'NO_MCFT_GATE_B_CLOSURE',
   'NO_MCFT_GATE_C_CLOSURE',
+  'NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM',
+];
+
+const POSTMERGE_NONCLAIMS = [
+  'NO_RUNTIME_TICK_ORCHESTRATION',
+  'NO_A2_END_TO_END_TICK_EXECUTED',
+  'NO_RESTART_RESUME_PROOF',
+  'NO_BOUNDED_BACKFILL_PROOF',
+  'NO_OBSERVATION_UPDATE_APPLIED',
+  'NO_OBSERVATION_INNOVATION_COMPUTED',
+  'NO_FORECAST_RESIDUAL',
+  'NO_SUCCESSFUL_FORECAST',
+  'NO_SCENARIO',
+  'NO_RECOMMENDATION',
+  'NO_DECISION',
+  'NO_AO_ACT',
   'NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM',
 ];
 
@@ -95,19 +114,20 @@ function pnpmCommand() {
 }
 
 function checkBoundary() {
+  const target = MODE === 'postmerge' ? MERGE_COMMIT : 'HEAD';
   try {
-    cp.execFileSync(process.platform === 'win32' ? 'git.exe' : 'git', ['merge-base', '--is-ancestor', BASELINE, 'HEAD'], {
+    cp.execFileSync(process.platform === 'win32' ? 'git.exe' : 'git', ['merge-base', '--is-ancestor', MODE === 'postmerge' ? MERGE_COMMIT : BASELINE, 'HEAD'], {
       cwd: ROOT,
       stdio: 'ignore',
     });
-    check(true, 'Evidence Window slice descends from verified Dynamics merge commit');
+    check(true, MODE === 'postmerge' ? 'Evidence Window merge commit is an ancestor of current HEAD' : 'Evidence Window slice descends from verified Dynamics merge commit');
   } catch {
-    check(false, 'Evidence Window slice descends from verified Dynamics merge commit');
+    check(false, MODE === 'postmerge' ? 'Evidence Window merge commit is an ancestor of current HEAD' : 'Evidence Window slice descends from verified Dynamics merge commit');
   }
 
   try {
-    const changed = git(['diff', '--name-only', `${BASELINE}...HEAD`]).split(/\r?\n/).filter(Boolean).sort();
-    check(JSON.stringify(changed) === JSON.stringify(EXACT_CHANGED_FILES), `exact changed-file set has ${EXACT_CHANGED_FILES.length} files`);
+    const changed = git(['diff', '--name-only', `${BASELINE}...${target}`]).split(/\r?\n/).filter(Boolean).sort();
+    check(JSON.stringify(changed) === JSON.stringify(EXACT_CHANGED_FILES), `${MODE === 'postmerge' ? 'historical ' : ''}Evidence Window changed-file set has ${EXACT_CHANGED_FILES.length} files`);
     const forbidden = changed.filter((file) =>
       file.startsWith('apps/web/')
       || file.startsWith('apps/server/src/routes/')
@@ -118,8 +138,8 @@ function checkBoundary() {
       || file.startsWith('.github/workflows/'),
     );
     check(forbidden.length === 0, `no forbidden persistence, integration, route, runner, or workflow file changed: ${forbidden.join(',')}`);
-    git(['diff', '--check', `${BASELINE}...HEAD`]);
-    check(true, 'git diff --check PASS');
+    git(['diff', '--check', `${BASELINE}...${target}`]);
+    check(true, `${MODE === 'postmerge' ? 'historical ' : ''}Evidence Window git diff --check PASS`);
   } catch (error) {
     check(false, `changed-file boundary and diff check available: ${error.message}`);
   }
@@ -130,24 +150,45 @@ function checkStatus() {
   const predecessor = delivery.slices.find((slice) => slice.delivery_slice_id === PREDECESSOR_SLICE);
   const current = delivery.slices.find((slice) => slice.delivery_slice_id === SLICE);
   const persistence = delivery.slices.find((slice) => slice.delivery_slice_id === PERSISTENCE_SLICE);
+  const singleTick = delivery.slices.find((slice) => slice.delivery_slice_id === SINGLE_TICK_SLICE);
 
-  check(delivery.status === (MODE === 'draft' ? 'CONTINUATION_EVIDENCE_WINDOW_IN_PROGRESS' : 'CONTINUATION_EVIDENCE_WINDOW_READY_FOR_MERGE'), `${MODE} capability status exact`);
-  check(delivery.latest_verified_main_commit === BASELINE, 'latest verified main commit exact');
-  check(delivery.active_delivery_slice_id === SLICE, 'continuation Evidence Window is active delivery slice');
   check(predecessor?.status === 'MERGED', 'Dynamics predecessor status MERGED');
   check(predecessor?.merge_commit === BASELINE, 'Dynamics predecessor merge commit exact');
   check(predecessor?.merged_main_acceptance?.final_gate === '66_PASS_0_FAIL', 'Dynamics merged-main Gate evidence exact');
   check(predecessor?.merged_main_acceptance?.positive_dynamics === '13_PASS_0_FAIL', 'Dynamics positive evidence exact');
   check(predecessor?.merged_main_acceptance?.negative_dynamics === '10_PASS_0_FAIL', 'Dynamics negative evidence exact');
-  check(current?.status === (MODE === 'draft' ? 'IN_PROGRESS' : 'READY_FOR_MERGE'), `${MODE} Evidence Window slice status exact`);
   check(current?.branch === BRANCH, 'Evidence Window branch exact');
   check(current?.primary_owner_work_package_id === 'MCFT-05', 'Evidence Window primary owner exact');
   check(JSON.stringify(current?.depends_on_delivery_slice_ids) === JSON.stringify([PREDECESSOR_SLICE]), 'Evidence Window dependency exact');
   check(JSON.stringify([...(current?.exact_changed_file_boundary || [])].sort()) === JSON.stringify(EXACT_CHANGED_FILES), 'Evidence Window exact changed-file boundary matches Gate');
+
+  if (MODE === 'postmerge') {
+    check(delivery.status === 'CONTINUATION_PERSISTENCE_IN_PROGRESS' || delivery.status === 'CONTINUATION_PERSISTENCE_READY_FOR_MERGE', 'postmerge capability advanced to continuation Persistence');
+    check(delivery.latest_verified_main_commit === MERGE_COMMIT, 'latest verified main commit is the Evidence Window merge commit');
+    check(delivery.active_delivery_slice_id === PERSISTENCE_SLICE, 'active slice advanced to continuation Persistence');
+    check(current?.status === 'MERGED', 'postmerge Evidence Window status exact');
+    check(current?.merge_commit === MERGE_COMMIT, 'postmerge Evidence Window merge commit exact');
+    check(current?.merged_main_acceptance?.final_gate === '71_PASS_0_FAIL', 'Evidence Window merged-main final Gate evidence exact');
+    check(current?.merged_main_acceptance?.positive_evidence_window === '11_PASS_0_FAIL', 'Evidence Window merged-main positive evidence exact');
+    check(current?.merged_main_acceptance?.negative_evidence_window === '12_PASS_0_FAIL', 'Evidence Window merged-main negative evidence exact');
+    check(persistence?.status === 'IN_PROGRESS' || persistence?.status === 'READY_FOR_MERGE', 'continuation Persistence is the only active delivery slice in an allowed premerge state');
+    check(persistence?.branch === PERSISTENCE_BRANCH, 'continuation Persistence branch exact');
+    check(JSON.stringify(persistence?.depends_on_delivery_slice_ids) === JSON.stringify([SLICE]), 'continuation Persistence dependency exact');
+    check(singleTick?.status === 'BLOCKED', 'single-tick integration remains blocked');
+    check(Array.isArray(delivery.next_authorized_slice_ids) && delivery.next_authorized_slice_ids.length === 0, 'no additional downstream slice authorized while Persistence is active');
+    check(delivery.completion_claims?.includes('CONTINUATION_EVIDENCE_WINDOW_MERGED_MAIN_VERIFIED'), 'Evidence Window merged-main completion claim recorded');
+    for (const nonclaim of POSTMERGE_NONCLAIMS) check(delivery.preserved_nonclaims?.includes(nonclaim), `postmerge preserved nonclaim: ${nonclaim}`);
+    return;
+  }
+
+  check(delivery.status === (MODE === 'draft' ? 'CONTINUATION_EVIDENCE_WINDOW_IN_PROGRESS' : 'CONTINUATION_EVIDENCE_WINDOW_READY_FOR_MERGE'), `${MODE} capability status exact`);
+  check(delivery.latest_verified_main_commit === BASELINE, 'latest verified main commit exact');
+  check(delivery.active_delivery_slice_id === SLICE, 'continuation Evidence Window is active delivery slice');
+  check(current?.status === (MODE === 'draft' ? 'IN_PROGRESS' : 'READY_FOR_MERGE'), `${MODE} Evidence Window slice status exact`);
   check(persistence?.status === 'BLOCKED', 'continuation persistence remains blocked');
   check(Array.isArray(delivery.next_authorized_slice_ids) && delivery.next_authorized_slice_ids.length === 0, 'no downstream slice is authorized while Evidence Window is active');
   check(delivery.completion_claims?.includes('PURE_HOURLY_DYNAMICS_MERGED_MAIN_VERIFIED'), 'Dynamics merged-main completion claim recorded');
-  for (const nonclaim of PRESERVED_NONCLAIMS) check(delivery.preserved_nonclaims?.includes(nonclaim), `preserved nonclaim: ${nonclaim}`);
+  for (const nonclaim of PREMERGE_NONCLAIMS) check(delivery.preserved_nonclaims?.includes(nonclaim), `preserved nonclaim: ${nonclaim}`);
 }
 
 function checkContractAndFixtures() {
