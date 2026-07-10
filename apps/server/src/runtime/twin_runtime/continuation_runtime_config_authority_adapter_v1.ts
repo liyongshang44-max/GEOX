@@ -1,8 +1,11 @@
 // apps/server/src/runtime/twin_runtime/continuation_runtime_config_authority_adapter_v1.ts
-// Purpose: adapt the frozen predecessor lock and MCFT-00 authority artifacts into the pure MCFT-CAP-02 continuation Runtime Config compiler input.
+// Purpose: adapt the frozen predecessor lock, canonical parent Runtime Config, and MCFT-00 authority artifacts into the pure MCFT-CAP-02 continuation Runtime Config compiler input.
 // Boundary: pure parsed-object validation and adaptation only; callers own filesystem I/O and persistence.
 
-import type { CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
+import {
+  validateCanonicalObjectV1,
+  type CanonicalObjectEnvelopeV1,
+} from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
 import {
   compileContinuationRuntimeConfigV1,
   CONTINUATION_CROP_STAGE_CONTEXT_HASH_V1,
@@ -88,8 +91,25 @@ function parameterNumberV1(
   return value;
 }
 
+function validateParentRuntimeConfigV1(input: {
+  lock: McftCap02PredecessorLockV1;
+  parent: CanonicalObjectEnvelopeV1;
+}): void {
+  validateCanonicalObjectV1(input.parent);
+  if (input.parent.object_type !== "twin_runtime_config_v1") throw new Error("CONTINUATION_PARENT_CONFIG_OBJECT_TYPE_MISMATCH");
+  exactV1(input.parent.object_id, input.lock.bootstrap_runtime_config_ref, "CONTINUATION_PARENT_CONFIG_REF_MISMATCH");
+  exactV1(input.parent.determinism_hash, input.lock.bootstrap_runtime_config_hash, "CONTINUATION_PARENT_CONFIG_HASH_MISMATCH");
+  exactScopeV1(input.parent as ContinuationScopeV1, input.lock.scope);
+  exactV1(input.parent.payload.reality_binding_ref, input.lock.reality_binding_ref, "CONTINUATION_PARENT_CONFIG_REALITY_REF_MISMATCH");
+  exactV1(input.parent.payload.reality_binding_hash, input.lock.reality_binding_hash, "CONTINUATION_PARENT_CONFIG_REALITY_HASH_MISMATCH");
+  exactV1(input.parent.payload.source_matrix_hash, input.lock.source_matrix_hash, "CONTINUATION_PARENT_CONFIG_SOURCE_MATRIX_HASH_MISMATCH");
+  exactV1(input.parent.payload.configuration_matrix_hash, input.lock.configuration_matrix_hash, "CONTINUATION_PARENT_CONFIG_CONFIGURATION_MATRIX_HASH_MISMATCH");
+  exactV1(input.parent.payload.geometry_semantic_hash, input.lock.geometry_semantic_hash, "CONTINUATION_PARENT_CONFIG_GEOMETRY_HASH_MISMATCH");
+}
+
 export function compileContinuationRuntimeConfigFromAuthorityV1(input: {
   predecessor_lock: McftCap02PredecessorLockV1;
+  parent_runtime_config: CanonicalObjectEnvelopeV1;
   reality_artifact: Mcft00RealityArtifactForContinuationV1;
   source_matrix_artifact: Mcft00SourceMatrixForContinuationV1;
   configuration_matrix_artifact: Mcft00ConfigurationMatrixForContinuationV1;
@@ -99,6 +119,7 @@ export function compileContinuationRuntimeConfigFromAuthorityV1(input: {
   const lock = input.predecessor_lock;
   exactV1(lock.status, "COMPLETE", "CONTINUATION_PREDECESSOR_LOCK_INCOMPLETE");
   exactScopeV1(lock.scope, input.reality_artifact.semantic_payload.scope);
+  validateParentRuntimeConfigV1({ lock, parent: input.parent_runtime_config });
   exactV1(lock.reality_binding_ref, input.reality_artifact.binding_id, "CONTINUATION_REALITY_BINDING_REF_MISMATCH");
   exactV1(lock.reality_binding_hash, input.reality_artifact.determinism_hash, "CONTINUATION_REALITY_BINDING_HASH_MISMATCH");
   exactV1(lock.source_matrix_hash, input.source_matrix_artifact.determinism_hash, "CONTINUATION_SOURCE_MATRIX_HASH_MISMATCH");
