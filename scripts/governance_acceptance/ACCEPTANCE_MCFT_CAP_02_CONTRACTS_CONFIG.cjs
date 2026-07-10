@@ -232,7 +232,10 @@ function runStaticAcceptance() {
 }
 
 function runToolchainAndDatabase() {
-  if (MODE === 'draft') return;
+  // The destructive D-transaction proof belongs to this slice's own final-premerge Gate.
+  // Historical postmerge verification consumes the frozen 63/0 and 6/0 evidence instead
+  // of coupling every downstream slice to a repeated destructive predecessor database run.
+  if (MODE !== 'final') return;
   for (const [label, args] of [
     ['server typecheck', ['--filter', '@geox/server', 'typecheck']],
     ['server build', ['--filter', '@geox/server', 'build']],
