@@ -6,15 +6,13 @@
   "target_completion_level": "Level A",
   "baseline_main_commit": "6389d4e566a6eb64ce96209be0e70cd8703be574",
   "branch": "mcft-cap-03-assimilation-contracts-config-v1",
-  "status": "READY_FOR_MERGE",
+  "status": "MERGED",
+  "merge_commit": "bbd4c916923b208d78dcf27f6e26ed255abe1262",
+  "merged_main_gate": "PASS",
+  "effectiveness_condition_satisfied": true,
   "primary_owner_work_package_id": "MCFT-02",
-  "contributing_owner_work_package_ids": [
-    "MCFT-07",
-    "MCFT-08"
-  ],
-  "depends_on_delivery_slice_ids": [
-    "MCFT-CAP-03.GOV-AUTHORIZATION-AND-PREDECESSOR-LOCK-V1"
-  ],
+  "contributing_owner_work_package_ids": ["MCFT-07", "MCFT-08"],
+  "depends_on_delivery_slice_ids": ["MCFT-CAP-03.GOV-AUTHORIZATION-AND-PREDECESSOR-LOCK-V1"],
   "predecessor_authorization": {
     "merge_commit": "6389d4e566a6eb64ce96209be0e70cd8703be574",
     "predecessor_lock_status": "COMPLETE",
@@ -84,7 +82,9 @@
     "server_typecheck": "PASS",
     "server_build": "PASS",
     "git_diff_check": "PASS",
-    "exact_head_ci": "PENDING_READY_STATUS_HEAD"
+    "exact_head_ci": "PASS_CI_4593_EXACT_HEAD",
+    "final_gate": "PASS_115_OF_115",
+    "merged_main_postmerge_gate": "PASS_DECLARED_FOR_REPRODUCTION"
   },
   "effectiveness_condition": "S1_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_CONTRACTS_CONFIG_GATE_PASS",
   "successor_delivery_slice_id": "MCFT-CAP-03.MCFT-05-07.OBSERVATION-SELECTION-AND-ASSIMILATION-MATH-V1",
