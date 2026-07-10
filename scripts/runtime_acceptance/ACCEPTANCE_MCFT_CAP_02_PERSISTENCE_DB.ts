@@ -9,18 +9,26 @@ import { fileURLToPath } from "node:url";
 import { Pool } from "pg";
 import { PostgresProjectionRebuilderV1 } from "../../apps/server/src/persistence/twin_runtime/postgres_projection_rebuilder_v1.js";
 import { PostgresRuntimeRepositoryV1 } from "../../apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.js";
-import type { ContinuationExpectedPointersV1, RuntimeLeaseClaimV1, TwinScopeKeyV1 } from "../../apps/server/src/runtime/twin_runtime/ports.js";
+import type {
+  ContinuationExpectedPointersV1,
+  RuntimeLeaseClaimV1,
+  TwinScopeKeyV1,
+} from "../../apps/server/src/runtime/twin_runtime/ports.js";
 import { buildMcftCap02PersistenceFixtureV1 } from "./mcft_cap_02_persistence_fixture_v1.js";
 
 if (process.env.MCFT_CAP_02_PERSISTENCE_DESTRUCTIVE_ACCEPTANCE !== "1") {
   throw new Error("SET_MCFT_CAP_02_PERSISTENCE_DESTRUCTIVE_ACCEPTANCE_1");
 }
+
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL_REQUIRED");
 const databaseName = new URL(databaseUrl).pathname.replace(/^\//, "").toLowerCase();
-if (!/(mcft|cap02|acceptance|test)/.test(databaseName)) throw new Error("ISOLATED_ACCEPTANCE_DATABASE_REQUIRED");
+if (!/(mcft|cap02|acceptance|test)/.test(databaseName)) {
+  throw new Error("ISOLATED_ACCEPTANCE_DATABASE_REQUIRED");
+}
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const ACCEPTANCE_LEASE_OWNER = "mcft-cap-02-persistence-db-acceptance";
 const pool = new Pool({ connectionString: databaseUrl });
 const repository = new PostgresRuntimeRepositoryV1(pool);
 const a0Rebuilder = new PostgresProjectionRebuilderV1(pool);
@@ -44,10 +52,29 @@ function readSqlV1(relativePath: string): string {
 }
 
 function scopeParamsV1(scope: TwinScopeKeyV1): unknown[] {
-  return [scope.tenant_id, scope.project_id, scope.group_id, scope.field_id, scope.season_id, scope.zone_id];
+  return [
+    scope.tenant_id,
+    scope.project_id,
+    scope.group_id,
+    scope.field_id,
+    scope.season_id,
+    scope.zone_id,
+  ];
 }
 
-function memberV1(recordSet: { members: Array<{ object_type: string; object_id: string; determinism_hash: string; lineage_id?: string; revision_id?: string; payload: Record<string, unknown> }> }, objectType: string) {
+function memberV1(
+  recordSet: {
+    members: Array<{
+      object_type: string;
+      object_id: string;
+      determinism_hash: string;
+      lineage_id?: string;
+      revision_id?: string;
+      payload: Record<string, unknown>;
+    }>;
+  },
+  objectType: string,
+) {
   const matches = recordSet.members.filter((member) => member.object_type === objectType);
   assert.equal(matches.length, 1);
   return matches[0];
@@ -57,6 +84,7 @@ async function initializeSchemaV1(): Promise<void> {
   await pool.query(readSqlV1("docker/postgres/init/001_schema.sql"));
   await pool.query(readSqlV1("apps/server/db/migrations/2026_07_09_mcft_cap_01_a0_persistence.sql"));
   await pool.query(readSqlV1("apps/server/db/migrations/2026_07_10_mcft_cap_02_continuation_persistence.sql"));
+
   const constraint = await pool.query(
     "SELECT pg_get_constraintdef(oid) AS definition FROM pg_constraint WHERE conrelid='public.twin_object_idempotency_index_v1'::regclass AND conname='twin_object_idempotency_index_v1_identity_kind_check'",
   );
@@ -83,9 +111,18 @@ async function cleanupScopeV1(input: {
     "DELETE FROM twin_forecast_success_latest_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6",
     params,
   );
-  await pool.query("DELETE FROM twin_object_idempotency_index_v1 WHERE record_set_id=ANY($1::text[])", [input.recordSetIds]);
-  await pool.query("DELETE FROM twin_object_idempotency_index_v1 WHERE idempotency_key=ANY($1::text[])", [input.runtimeConfigKeys]);
-  await pool.query("DELETE FROM facts WHERE record_json->'payload'->>'object_id'=ANY($1::text[])", [[...input.memberObjectIds, ...input.runtimeConfigObjectIds]]);
+  await pool.query(
+    "DELETE FROM twin_object_idempotency_index_v1 WHERE record_set_id=ANY($1::text[])",
+    [input.recordSetIds],
+  );
+  await pool.query(
+    "DELETE FROM twin_object_idempotency_index_v1 WHERE idempotency_key=ANY($1::text[])",
+    [input.runtimeConfigKeys],
+  );
+  await pool.query(
+    "DELETE FROM facts WHERE record_json->'payload'->>'object_id'=ANY($1::text[])",
+    [[...input.memberObjectIds, ...input.runtimeConfigObjectIds]],
+  );
   await pool.query(
     "DELETE FROM twin_runtime_lease_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6",
     params,
@@ -132,11 +169,19 @@ async function leaseTokenV1(scope: TwinScopeKeyV1): Promise<bigint | null> {
   return result.rows.length ? BigInt(result.rows[0].fencing_token) : null;
 }
 
-async function acquireLeaseV1(scope: TwinScopeKeyV1, owner: string): Promise<RuntimeLeaseClaimV1> {
-  return repository.acquireLease({ ...scope, lease_owner: owner, lease_duration_seconds: 300 });
+async function acquireAcceptanceLeaseV1(scope: TwinScopeKeyV1): Promise<RuntimeLeaseClaimV1> {
+  return repository.acquireLease({
+    ...scope,
+    lease_owner: ACCEPTANCE_LEASE_OWNER,
+    lease_duration_seconds: 300,
+  });
 }
 
-async function assertZeroA2WritesV1(scope: TwinScopeKeyV1, a2Ids: string[], a2RecordSetId: string): Promise<void> {
+async function assertZeroA2WritesV1(
+  scope: TwinScopeKeyV1,
+  a2Ids: string[],
+  a2RecordSetId: string,
+): Promise<void> {
   assert.equal(await countFactsV1(a2Ids), 0);
   assert.equal(await countA2GuardsV1(a2RecordSetId), 0);
   assert.equal(await stateHistoryCountV1(scope), 1);
@@ -171,18 +216,33 @@ async function main(): Promise<void> {
     await cleanupScopeV1({
       scope,
       memberObjectIds: allIds,
-      runtimeConfigObjectIds: [fixture.parentRuntimeConfig.object_id, fixture.continuationRuntimeConfig.object_id],
-      runtimeConfigKeys: [fixture.parentRuntimeConfig.idempotency_key, fixture.continuationRuntimeConfig.idempotency_key],
-      recordSetIds: [fixture.a0RecordSet.a0_record_set_id, fixture.continuationRecordSet.continuation_record_set_id],
+      runtimeConfigObjectIds: [
+        fixture.parentRuntimeConfig.object_id,
+        fixture.continuationRuntimeConfig.object_id,
+      ],
+      runtimeConfigKeys: [
+        fixture.parentRuntimeConfig.idempotency_key,
+        fixture.continuationRuntimeConfig.idempotency_key,
+      ],
+      recordSetIds: [
+        fixture.a0RecordSet.a0_record_set_id,
+        fixture.continuationRecordSet.continuation_record_set_id,
+      ],
     });
 
     const parentConfigCommit = await repository.commitRuntimeConfig(fixture.parentRuntimeConfig);
     assert.equal(parentConfigCommit.status, "INSERTED");
-    const a0Lease = await acquireLeaseV1(scope, "mcft-cap-02-persistence-a0-seed");
+    const a0Lease = await acquireAcceptanceLeaseV1(scope);
     const a0Commit = await repository.commitBootstrapState({
       scope,
       lease: a0Lease,
-      expected: { active_lineage_ref: null, checkpoint_ref: null, state_ref: null, forecast_result_ref: null, successful_forecast_ref: null },
+      expected: {
+        active_lineage_ref: null,
+        checkpoint_ref: null,
+        state_ref: null,
+        forecast_result_ref: null,
+        successful_forecast_ref: null,
+      },
       record_set: fixture.a0RecordSet,
     });
     assert.equal(a0Commit.status, "INSERTED");
@@ -193,11 +253,18 @@ async function main(): Promise<void> {
     assert.equal(a0Checkpoint.object_id, fixture.lock.bootstrap_checkpoint_ref);
     ok("real A0 predecessor is committed through the existing fenced A0 transaction and matches the predecessor lock");
 
-    const continuationConfigCommit = await repository.commitRuntimeConfig(fixture.continuationRuntimeConfig);
+    const continuationConfigCommit = await repository.commitRuntimeConfig(
+      fixture.continuationRuntimeConfig,
+    );
     assert.equal(continuationConfigCommit.status, "INSERTED");
-    const continuationConfigReadback = await repository.readRuntimeConfig(fixture.continuationRuntimeConfig.object_id);
+    const continuationConfigReadback = await repository.readRuntimeConfig(
+      fixture.continuationRuntimeConfig.object_id,
+    );
     assert.ok(continuationConfigReadback);
-    assert.equal(continuationConfigReadback.determinism_hash, fixture.continuationRuntimeConfig.determinism_hash);
+    assert.equal(
+      continuationConfigReadback.determinism_hash,
+      fixture.continuationRuntimeConfig.determinism_hash,
+    );
     ok("continuation Runtime Config is canonically persisted before A2 acceptance");
 
     const faultStages = fixture.continuationRecordSet.members
@@ -213,7 +280,7 @@ async function main(): Promise<void> {
       ]);
     assert.equal(faultStages.length, 15);
     for (const stage of faultStages) {
-      const lease = await acquireLeaseV1(scope, "mcft-cap-02-persistence-faults");
+      const lease = await acquireAcceptanceLeaseV1(scope);
       await assert.rejects(
         repository.commitContinuationState({
           scope,
@@ -226,51 +293,139 @@ async function main(): Promise<void> {
         }),
         new RegExp(`FAULT:${stage}`),
       );
-      await assertZeroA2WritesV1(scope, a2Ids, fixture.continuationRecordSet.continuation_record_set_id);
+      await assertZeroA2WritesV1(
+        scope,
+        a2Ids,
+        fixture.continuationRecordSet.continuation_record_set_id,
+      );
     }
     ok("all fifteen A2 fault-injection stages roll back facts, projections, and idempotency guard");
 
-    const staleLease = await acquireLeaseV1(scope, "mcft-cap-02-persistence-stale");
-    await acquireLeaseV1(scope, "mcft-cap-02-persistence-stale");
+    const staleLease = await acquireAcceptanceLeaseV1(scope);
+    await acquireAcceptanceLeaseV1(scope);
     await assert.rejects(
-      repository.commitContinuationState({ scope, lease: staleLease, expected, record_set: fixture.continuationRecordSet }),
+      repository.commitContinuationState({
+        scope,
+        lease: staleLease,
+        expected,
+        record_set: fixture.continuationRecordSet,
+      }),
       /STALE_FENCING_TOKEN/,
     );
-    await assertZeroA2WritesV1(scope, a2Ids, fixture.continuationRecordSet.continuation_record_set_id);
+    await assertZeroA2WritesV1(
+      scope,
+      a2Ids,
+      fixture.continuationRecordSet.continuation_record_set_id,
+    );
     ok("stale fencing token rejects A2 before any continuation write");
 
-    const expiredLease = await acquireLeaseV1(scope, "mcft-cap-02-persistence-expired");
+    const ownerLease = await acquireAcceptanceLeaseV1(scope);
+    const foreignOwnerLease: RuntimeLeaseClaimV1 = {
+      ...ownerLease,
+      lease_owner: "mcft-cap-02-persistence-foreign-owner",
+    };
+    await assert.rejects(
+      repository.commitContinuationState({
+        scope,
+        lease: foreignOwnerLease,
+        expected,
+        record_set: fixture.continuationRecordSet,
+      }),
+      /LEASE_OWNER_MISMATCH/,
+    );
+    await assertZeroA2WritesV1(
+      scope,
+      a2Ids,
+      fixture.continuationRecordSet.continuation_record_set_id,
+    );
+    ok("foreign lease-owner claim rejects A2 without attempting lease takeover");
+
+    const expiredLease = await acquireAcceptanceLeaseV1(scope);
     await pool.query(
       "UPDATE twin_runtime_lease_v1 SET expires_at=transaction_timestamp()-interval '1 second' WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6",
       scopeParamsV1(scope),
     );
     await assert.rejects(
-      repository.commitContinuationState({ scope, lease: expiredLease, expected, record_set: fixture.continuationRecordSet }),
+      repository.commitContinuationState({
+        scope,
+        lease: expiredLease,
+        expected,
+        record_set: fixture.continuationRecordSet,
+      }),
       /LEASE_EXPIRED/,
     );
-    await assertZeroA2WritesV1(scope, a2Ids, fixture.continuationRecordSet.continuation_record_set_id);
+    await assertZeroA2WritesV1(
+      scope,
+      a2Ids,
+      fixture.continuationRecordSet.continuation_record_set_id,
+    );
     ok("expired lease rejects A2 before any continuation write");
 
-    const authorityCases: Array<{ name: string; expectedPointers: ContinuationExpectedPointersV1; error: RegExp }> = [
-      { name: "active lineage object ref", expectedPointers: { ...expected, active_lineage_ref: "lineage_wrong" }, error: /ACTIVE_LINEAGE_OBJECT_REF_MISMATCH/ },
-      { name: "lineage id", expectedPointers: { ...expected, lineage_id: "lineage_id_wrong" }, error: /ACTIVE_LINEAGE_ID_MISMATCH/ },
-      { name: "revision id", expectedPointers: { ...expected, revision_id: "revision_wrong" }, error: /LINEAGE_REVISION_MISMATCH/ },
-      { name: "checkpoint pointer", expectedPointers: { ...expected, previous_checkpoint_ref: "checkpoint_wrong" }, error: /CHECKPOINT_CAS_CONFLICT/ },
-      { name: "state pointer", expectedPointers: { ...expected, previous_state_ref: "state_wrong" }, error: /STATE_LATEST_CAS_CONFLICT/ },
-      { name: "forecast pointer", expectedPointers: { ...expected, previous_forecast_result_ref: "forecast_wrong" }, error: /FORECAST_RESULT_CAS_CONFLICT/ },
-      { name: "successful Forecast pointer", expectedPointers: { ...expected, latest_successful_forecast_ref: "forecast_success_wrong" } as unknown as ContinuationExpectedPointersV1, error: /SUCCESSFUL_FORECAST_POINTER_UNEXPECTED/ },
+    const authorityCases: Array<{
+      name: string;
+      expectedPointers: ContinuationExpectedPointersV1;
+      error: RegExp;
+    }> = [
+      {
+        name: "active lineage object ref",
+        expectedPointers: { ...expected, active_lineage_ref: "lineage_wrong" },
+        error: /ACTIVE_LINEAGE_OBJECT_REF_MISMATCH/,
+      },
+      {
+        name: "lineage id",
+        expectedPointers: { ...expected, lineage_id: "lineage_id_wrong" },
+        error: /ACTIVE_LINEAGE_ID_MISMATCH/,
+      },
+      {
+        name: "revision id",
+        expectedPointers: { ...expected, revision_id: "revision_wrong" },
+        error: /LINEAGE_REVISION_MISMATCH/,
+      },
+      {
+        name: "checkpoint pointer",
+        expectedPointers: { ...expected, previous_checkpoint_ref: "checkpoint_wrong" },
+        error: /CHECKPOINT_CAS_CONFLICT/,
+      },
+      {
+        name: "state pointer",
+        expectedPointers: { ...expected, previous_state_ref: "state_wrong" },
+        error: /STATE_LATEST_CAS_CONFLICT/,
+      },
+      {
+        name: "forecast pointer",
+        expectedPointers: { ...expected, previous_forecast_result_ref: "forecast_wrong" },
+        error: /FORECAST_RESULT_CAS_CONFLICT/,
+      },
+      {
+        name: "successful Forecast pointer",
+        expectedPointers: {
+          ...expected,
+          latest_successful_forecast_ref: "forecast_success_wrong",
+        } as unknown as ContinuationExpectedPointersV1,
+        error: /SUCCESSFUL_FORECAST_POINTER_UNEXPECTED/,
+      },
     ];
+
     for (const authorityCase of authorityCases) {
-      const lease = await acquireLeaseV1(scope, "mcft-cap-02-persistence-authority");
+      const lease = await acquireAcceptanceLeaseV1(scope);
       await assert.rejects(
-        repository.commitContinuationState({ scope, lease, expected: authorityCase.expectedPointers, record_set: fixture.continuationRecordSet }),
+        repository.commitContinuationState({
+          scope,
+          lease,
+          expected: authorityCase.expectedPointers,
+          record_set: fixture.continuationRecordSet,
+        }),
         authorityCase.error,
       );
-      await assertZeroA2WritesV1(scope, a2Ids, fixture.continuationRecordSet.continuation_record_set_id);
+      await assertZeroA2WritesV1(
+        scope,
+        a2Ids,
+        fixture.continuationRecordSet.continuation_record_set_id,
+      );
     }
     ok("lineage, revision, checkpoint, State, Forecast, and successful-Forecast authority mismatches all fail with zero A2 writes");
 
-    const commitLease = await acquireLeaseV1(scope, "mcft-cap-02-persistence-commit");
+    const commitLease = await acquireAcceptanceLeaseV1(scope);
     const inserted = await repository.commitContinuationState({
       scope,
       lease: commitLease,
@@ -278,9 +433,15 @@ async function main(): Promise<void> {
       record_set: fixture.continuationRecordSet,
     });
     assert.equal(inserted.status, "INSERTED");
-    assert.equal(inserted.record_set.continuation_record_set_determinism_hash, fixture.continuationRecordSet.continuation_record_set_determinism_hash);
+    assert.equal(
+      inserted.record_set.continuation_record_set_determinism_hash,
+      fixture.continuationRecordSet.continuation_record_set_determinism_hash,
+    );
     assert.equal(await countFactsV1(a2Ids), 8);
-    assert.equal(await countA2GuardsV1(fixture.continuationRecordSet.continuation_record_set_id), 1);
+    assert.equal(
+      await countA2GuardsV1(fixture.continuationRecordSet.continuation_record_set_id),
+      1,
+    );
     assert.equal(await stateHistoryCountV1(scope), 2);
     assert.equal(await successfulForecastCountV1(scope), 0);
     ok("A2 atomically appends eight canonical facts, five projections, and one idempotency guard");
@@ -331,20 +492,30 @@ async function main(): Promise<void> {
       /IDEMPOTENCY_CONFLICT/,
     );
     assert.equal(await countFactsV1(a2Ids), 8);
-    assert.equal(await countA2GuardsV1(fixture.continuationRecordSet.continuation_record_set_id), 1);
+    assert.equal(
+      await countA2GuardsV1(fixture.continuationRecordSet.continuation_record_set_id),
+      1,
+    );
     ok("same A2 key with different aggregate hash fails idempotency before lease validation");
 
     await pool.query(
       "DELETE FROM twin_state_history_projection_v1 WHERE state_object_id=$1",
       [a2State.object_id],
     );
-    for (const table of ["twin_state_latest_index_v1", "twin_forecast_result_latest_index_v1", "twin_runtime_checkpoint_latest_index_v1", "twin_runtime_health_latest_index_v1"]) {
+    for (const table of [
+      "twin_state_latest_index_v1",
+      "twin_forecast_result_latest_index_v1",
+      "twin_runtime_checkpoint_latest_index_v1",
+      "twin_runtime_health_latest_index_v1",
+    ]) {
       await pool.query(
         `DELETE FROM ${table} WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6`,
         scopeParamsV1(scope),
       );
     }
-    const rebuilt = await repository.rebuildContinuationProjections(fixture.continuationRecordSet.continuation_record_set_id);
+    const rebuilt = await repository.rebuildContinuationProjections(
+      fixture.continuationRecordSet.continuation_record_set_id,
+    );
     assert.equal(rebuilt.rebuilt_projection_count, 5);
     assert.equal(await stateHistoryCountV1(scope), 2);
     assert.equal(await successfulForecastCountV1(scope), 0);
@@ -359,9 +530,11 @@ async function main(): Promise<void> {
       "DELETE FROM twin_object_idempotency_index_v1 WHERE identity_kind='A2_RECORD_SET' AND record_set_id=$1",
       [fixture.continuationRecordSet.continuation_record_set_id],
     );
-    const a0Rebuild = await a0Rebuilder.rebuildA0Projections(fixture.a0RecordSet.a0_record_set_id);
+    const a0Rebuild = await a0Rebuilder.rebuildA0Projections(
+      fixture.a0RecordSet.a0_record_set_id,
+    );
     assert.equal(a0Rebuild.rebuilt_projection_count, 6);
-    const uniquenessLease = await acquireLeaseV1(scope, "mcft-cap-02-persistence-uniqueness");
+    const uniquenessLease = await acquireAcceptanceLeaseV1(scope);
     await assert.rejects(
       repository.commitContinuationState({
         scope,
@@ -372,7 +545,10 @@ async function main(): Promise<void> {
       /CANONICAL_CONTINUATION_UNIQUENESS_CONFLICT/,
     );
     assert.equal(await countFactsV1(a2Ids), 8);
-    assert.equal(await countA2GuardsV1(fixture.continuationRecordSet.continuation_record_set_id), 0);
+    assert.equal(
+      await countA2GuardsV1(fixture.continuationRecordSet.continuation_record_set_id),
+      0,
+    );
     ok("canonical uniqueness rejects a duplicate terminal tick after A2 idempotency guard loss");
 
     const readbackAfterGuardLoss = await pool.query(
