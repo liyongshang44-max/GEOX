@@ -94,7 +94,8 @@
         "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-RUNTIME-CONFIG-CONTRACT.json",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG.cjs",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG.ts",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG_DB.ts"
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG_DB.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG_NEGATIVE.ts"
       ],
       "effectiveness_condition": "PR_MERGED_TO_MAIN_AND_MERGED_MAIN_CONTRACTS_CONFIG_GATE_PASS"
     },
