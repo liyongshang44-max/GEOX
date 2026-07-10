@@ -141,4 +141,36 @@ CAP-04 authorization
 
 ## Current implementation state
 
-This branch has started S0 as a governance-only draft. The additive erratum is present. Final predecessor lock values and authorization effectiveness remain pending the isolated PostgreSQL canonical-read preflight. No Runtime capability claim is active.
+```text
+three_way_alignment:
+PASS
+
+postgresql_predecessor_lock:
+COMPLETE
+
+checkpoint_tick_sequence:
+24
+
+checkpoint_next_tick_logical_time:
+2026-06-02T02:00:00.000Z
+
+S0_status:
+READY_FOR_MERGE
+
+design_status:
+FINAL_FROZEN_CANDIDATE_V1_2
+
+implementation_status:
+NOT_AUTHORIZED
+
+authorization_effective:
+false
+
+runtime_source_authorized:
+false
+
+MCFT-CAP-04:
+NOT_AUTHORIZED
+```
+
+The only remaining S0 blockers are PR merge and the merged-main Authorization Gate. No Runtime capability claim is active.

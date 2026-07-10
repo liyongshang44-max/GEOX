@@ -1,7 +1,7 @@
 {
-  "schema_version": "geox_mcft_cap_02_handoff_erratum_v1",
+  "schema_version": "geox_mcft_cap_02_handoff_erratum_v2",
   "erratum_id": "GEOX-MCFT-CAP-02-HANDOFF-ERRATUM-01",
-  "status": "DRAFT_PENDING_POSTGRESQL_CANONICAL_READ",
+  "status": "READY_FOR_MERGE_CANONICAL_CHECKPOINT_VERIFIED",
   "predecessor_capability_line_id": "MCFT-CAP-02",
   "successor_capability_line_id": "MCFT-CAP-03",
   "baseline_main_commit": "d1a3948d06e4c7896d513168d31ef52409c3e0f0",
@@ -17,8 +17,11 @@
     "source": "PERSISTED_POSTGRESQL_CHECKPOINT_CANONICAL_READ_PATH",
     "field": "checkpoint.payload.next_tick_logical_time",
     "expected_value": "2026-06-02T02:00:00.000Z",
+    "observed_value": "2026-06-02T02:00:00.000Z",
+    "checkpoint_tick_sequence": 24,
     "design_cross_check_ref": "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-TWENTY-FOUR-TICK-RANGE-CONTRACT.json",
-    "postgresql_read_status": "PENDING"
+    "postgresql_read_status": "PASS",
+    "predecessor_lock_ref": "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-PREDECESSOR-LOCK.json"
   },
   "mutation_policy": {
     "predecessor_historical_artifact_rewrite": "FORBIDDEN",
