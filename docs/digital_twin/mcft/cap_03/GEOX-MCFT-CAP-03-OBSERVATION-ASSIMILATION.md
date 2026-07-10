@@ -210,6 +210,7 @@ residual_kind = STATE_OBSERVATION_INNOVATION
 Threshold authority:
 
 ```text
+INNOVATION_SQUARED_LE_16_TIMES_VARIANCE
 innovation^2 <= 16 * S
 ```
 
