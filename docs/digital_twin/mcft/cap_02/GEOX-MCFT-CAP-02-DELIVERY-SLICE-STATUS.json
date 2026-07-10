@@ -1,204 +1,530 @@
 {
-  "schema_version": "geox_mcft_cap_02_delivery_slice_status_v6",
-  "capability_line_id": "MCFT-CAP-02",
-  "display_alias": "MCFT-2",
-  "name": "Hourly Dynamics and Persistence",
-  "runtime_mode": "REPLAY",
-  "target_completion_level": "Level A",
-  "status": "SINGLE_TICK_INTEGRATION_READY_FOR_MERGE",
-  "authorization_merge_commit": "65e59aaf5fcfccacdb986258874a5df3c057711d",
-  "baseline_main_commit": "65e59aaf5fcfccacdb986258874a5df3c057711d",
-  "latest_verified_main_commit": "1b7ea8058b097b5f5fcc4bf1566462c381bc6d47",
-  "active_delivery_slice_id": "MCFT-CAP-02.MCFT-04-06-08-09.SINGLE-TICK-INTEGRATION-V1",
-  "governance_debt_register_ref": "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-GOVERNANCE-DEBT-REGISTER.json",
-  "slices": [
-    {
-      "capability_line_id": "MCFT-CAP-02",
-      "display_alias": "MCFT-2",
-      "delivery_slice_id": "MCFT-CAP-02.GOV-AUTHORIZATION-V1",
-      "status": "MERGED",
-      "primary_owner_work_package_id": "MCFT-06",
-      "contributing_work_package_ids": ["MCFT-02", "MCFT-03", "MCFT-04", "MCFT-05", "MCFT-07", "MCFT-08", "MCFT-09"],
-      "depends_on_delivery_slice_ids": ["MCFT-CAP-01.CLOSURE-REMEDIATION-V1"],
-      "baseline_main_commit": "7da8fee4daf1f022edff29078a1bbac207d1a32f",
-      "branch": "mcft-cap-02-gov-authorization-v1",
-      "merge_commit": "65e59aaf5fcfccacdb986258874a5df3c057711d",
-      "allowed_claims": ["MCFT_CAP_02_PREDECESSOR_MAIN_VERIFIED", "MCFT_CAP_02_PREDECESSOR_IDENTITY_LOCKED", "MCFT_CAP_02_DELIVERY_GRAPH_FROZEN", "MCFT_CAP_02_OWNER_BOUNDARY_FROZEN"],
-      "preserved_nonclaims": ["NO_HOURLY_DYNAMICS_IMPLEMENTED", "NO_CONTINUATION_STATE_PERSISTED", "NO_SUCCESSFUL_FORECAST", "NO_MCFT_CAP_02_COMPLETE_CLAIM"],
-      "exact_changed_file_boundary": [
-        "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
-        "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
-        "docs/digital_twin/mcft/cap_01/GEOX-MCFT-CAP-01-MAIN-VERIFICATION.json",
-        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-AUTHORIZATION-STATUS.json",
-        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-AUTHORIZATION.md",
-        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json",
-        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-PREDECESSOR-LOCK.json",
-        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-TASK.md",
-        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_AUTHORIZATION.cjs",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_PREDECESSOR_PREFLIGHT.cjs"
-      ],
-      "effectiveness_condition": "MERGED_TO_MAIN_AND_POSTMERGE_AUTHORIZATION_GATE_PASS"
-    },
-    {
-      "capability_line_id": "MCFT-CAP-02",
-      "display_alias": "MCFT-2",
-      "delivery_slice_id": "MCFT-CAP-02.MCFT-02.CONTINUATION-CONTRACTS-CONFIG-V1",
-      "status": "MERGED",
-      "primary_owner_work_package_id": "MCFT-02",
-      "contributing_work_package_ids": ["MCFT-03", "MCFT-04", "MCFT-06", "MCFT-07", "MCFT-08", "MCFT-09"],
-      "depends_on_delivery_slice_ids": ["MCFT-CAP-02.GOV-AUTHORIZATION-V1"],
-      "baseline_main_commit": "65e59aaf5fcfccacdb986258874a5df3c057711d",
-      "branch": "mcft-cap-02-contracts-config-v2",
-      "merge_commit": "2be7c985210d1f34fa5249e1fae68932e801facc",
-      "merged_main_acceptance": {"final_gate": "63_PASS_0_FAIL", "server_typecheck": "PASS", "server_build": "PASS", "postgres_d_transaction": "6_PASS_0_FAIL", "verified_main_commit": "2be7c985210d1f34fa5249e1fae68932e801facc"},
-      "allowed_claims": ["CONTINUATION_OBJECT_CONTRACT_ESTABLISHED", "CONTINUATION_OPERATION_IDENTITY_ESTABLISHED", "CONTINUATION_RUNTIME_CONFIG_ESTABLISHED", "CONTINUATION_GRAPH_VALIDATOR_ESTABLISHED", "D_TRANSACTION_CONFIG_PERSISTENCE_ESTABLISHED"],
-      "preserved_nonclaims": ["NO_CONTINUATION_STATE_PERSISTED", "NO_A2_CONTINUATION_TICK_COMMITTED", "NO_OBSERVATION_UPDATE_APPLIED", "NO_SUCCESSFUL_FORECAST", "NO_MCFT_CAP_02_COMPLETE_CLAIM"],
-      "exact_changed_file_boundary": [
-        "apps/server/src/domain/twin_runtime/continuation_contracts_v1.ts",
-        "apps/server/src/domain/twin_runtime/continuation_cross_ref_validator_v1.ts",
-        "apps/server/src/domain/twin_runtime/continuation_operation_identity_v1.ts",
-        "apps/server/src/domain/twin_runtime/continuation_record_set_identity_v1.ts",
-        "apps/server/src/domain/twin_runtime/continuation_runtime_config_v1.ts",
-        "apps/server/src/runtime/twin_runtime/continuation_runtime_config_authority_adapter_v1.ts",
-        "apps/server/src/runtime/twin_runtime/continuation_runtime_config_service_v1.ts",
-        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-CONTINUATION-OBJECT-CONTRACT.json",
-        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json",
-        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-IDENTITY-CONTRACT.json",
-        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-RUNTIME-CONFIG-CONTRACT.json",
-        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG.cjs",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG.ts",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG_DB.ts",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG_NEGATIVE.ts"
-      ],
-      "effectiveness_condition": "PR_2319_MERGED_AND_MERGED_MAIN_CONTRACTS_CONFIG_GATE_63_PASS_0_FAIL"
-    },
-    {
-      "capability_line_id": "MCFT-CAP-02",
-      "display_alias": "MCFT-2",
-      "delivery_slice_id": "MCFT-CAP-02.MCFT-06.PURE-HOURLY-DYNAMICS-V1",
-      "status": "MERGED",
-      "primary_owner_work_package_id": "MCFT-06",
-      "contributing_work_package_ids": [],
-      "depends_on_delivery_slice_ids": ["MCFT-CAP-02.MCFT-02.CONTINUATION-CONTRACTS-CONFIG-V1"],
-      "baseline_main_commit": "2be7c985210d1f34fa5249e1fae68932e801facc",
-      "branch": "mcft-cap-02-pure-hourly-dynamics-v1",
-      "merge_commit": "bc97acbd589c454b7417d6ed4567c103b655ee78",
-      "merged_main_acceptance": {"draft_gate": "63_PASS_0_FAIL", "positive_dynamics": "13_PASS_0_FAIL", "negative_dynamics": "10_PASS_0_FAIL", "contracts_config_postmerge": "55_PASS_0_FAIL", "final_gate": "66_PASS_0_FAIL", "server_typecheck": "PASS", "server_build": "PASS", "verified_main_commit": "bc97acbd589c454b7417d6ed4567c103b655ee78"},
-      "allowed_claims": ["FIXED_POINT_WATER_ARITHMETIC_ESTABLISHED", "PURE_HOURLY_WATER_BALANCE_ESTABLISHED", "EXECUTED_IRRIGATION_AGGREGATION_ESTABLISHED", "MASS_BALANCE_TRACE_ESTABLISHED", "ADDITIVE_PROCESS_UNCERTAINTY_ESTABLISHED"],
-      "preserved_nonclaims": ["NO_CONTINUATION_EVIDENCE_WINDOW_SELECTION_IMPLEMENTED", "NO_CONTINUATION_STATE_PERSISTED", "NO_A2_CONTINUATION_TICK_COMMITTED", "NO_RESTART_RESUME_PROOF", "NO_BOUNDED_BACKFILL_PROOF", "NO_OBSERVATION_UPDATE_APPLIED", "NO_FORECAST_RESIDUAL", "NO_SUCCESSFUL_FORECAST", "NO_SCENARIO", "NO_RECOMMENDATION", "NO_DECISION", "NO_AO_ACT", "NO_MCFT_CAP_02_COMPLETE_CLAIM"],
-      "exact_changed_file_boundary": [
-        "apps/server/src/domain/soil_water/additive_process_uncertainty_budget_v1.ts",
-        "apps/server/src/domain/soil_water/executed_irrigation_input_v1.ts",
-        "apps/server/src/domain/soil_water/fixed_point_water_decimal_v1.ts",
-        "apps/server/src/domain/soil_water/hourly_water_balance_v1.ts",
-        "apps/server/src/domain/soil_water/water_mass_balance_trace_v1.ts",
-        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json",
-        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DYNAMICS-MATH-CONTRACT.md",
-        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-GOVERNANCE-DEBT-REGISTER.json",
-        "fixtures/mcft/water_state/expected/MCFT_CAP_02_DYNAMICS_FIXTURES.json",
-        "fixtures/mcft/water_state/negative/MCFT_CAP_02_NEGATIVE_FIXTURES.json",
-        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG.cjs",
-        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_DYNAMICS.cjs",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_DYNAMICS.ts",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_DYNAMICS_NEGATIVE.ts"
-      ],
-      "effectiveness_condition": "PR_2320_MERGED_AND_MERGED_MAIN_DYNAMICS_GATE_66_PASS_0_FAIL"
-    },
-    {
-      "capability_line_id": "MCFT-CAP-02",
-      "display_alias": "MCFT-2",
-      "delivery_slice_id": "MCFT-CAP-02.MCFT-05.CONTINUATION-EVIDENCE-WINDOW-V1",
-      "status": "MERGED",
-      "primary_owner_work_package_id": "MCFT-05",
-      "contributing_work_package_ids": [],
-      "depends_on_delivery_slice_ids": ["MCFT-CAP-02.MCFT-06.PURE-HOURLY-DYNAMICS-V1"],
-      "baseline_main_commit": "bc97acbd589c454b7417d6ed4567c103b655ee78",
-      "branch": "mcft-cap-02-continuation-evidence-window-v1",
-      "merge_commit": "869593d269b5175b216ce494b55b4b121db45190",
-      "merged_main_acceptance": {"draft_gate": "68_PASS_0_FAIL", "positive_evidence_window": "11_PASS_0_FAIL", "negative_evidence_window": "12_PASS_0_FAIL", "dynamics_postmerge": "46_PASS_0_FAIL", "final_gate": "71_PASS_0_FAIL", "server_typecheck": "PASS", "server_build": "PASS", "verified_main_commit": "869593d269b5175b216ce494b55b4b121db45190"},
-      "allowed_claims": ["EXACT_HOUR_RAINFALL_SELECTION_ESTABLISHED", "EXACT_HOUR_ET0_SELECTION_ESTABLISHED", "EXECUTION_EVIDENCE_SELECTION_ESTABLISHED", "EVIDENCE_CONSUMPTION_TRACE_ESTABLISHED", "CROP_STAGE_CONTEXT_RESOLUTION_ESTABLISHED"],
-      "preserved_nonclaims": ["NO_CONTINUATION_EVIDENCE_WINDOW_PERSISTED", "NO_CONTINUATION_STATE_PERSISTED", "NO_A2_CONTINUATION_TICK_COMMITTED", "NO_RESTART_RESUME_PROOF", "NO_BOUNDED_BACKFILL_PROOF", "NO_OBSERVATION_UPDATE_APPLIED", "NO_FORECAST_RESIDUAL", "NO_SUCCESSFUL_FORECAST", "NO_SCENARIO", "NO_RECOMMENDATION", "NO_DECISION", "NO_AO_ACT", "NO_MCFT_CAP_02_COMPLETE_CLAIM"],
-      "exact_changed_file_boundary": [
-        "apps/server/src/runtime/twin_runtime/continuation_evidence_window_service_v1.ts",
-        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json",
-        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-EVIDENCE-WINDOW-CONTRACT.json",
-        "fixtures/mcft/water_state/expected/MCFT_CAP_02_EVIDENCE-WINDOW_FIXTURES.json",
-        "fixtures/mcft/water_state/negative/MCFT_CAP_02_EVIDENCE_WINDOW_NEGATIVE_FIXTURES.json",
-        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_DYNAMICS.cjs",
-        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_EVIDENCE_WINDOW.cjs",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_EVIDENCE_WINDOW.ts",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_EVIDENCE_WINDOW_NEGATIVE.ts"
-      ],
-      "effectiveness_condition": "PR_2321_MERGED_AND_MERGED_MAIN_EVIDENCE_WINDOW_GATE_71_PASS_0_FAIL"
-    },
-    {
-      "capability_line_id": "MCFT-CAP-02",
-      "display_alias": "MCFT-2",
-      "delivery_slice_id": "MCFT-CAP-02.MCFT-03.CONTINUATION-PERSISTENCE-V1",
-      "status": "MERGED",
-      "primary_owner_work_package_id": "MCFT-03",
-      "contributing_work_package_ids": [],
-      "depends_on_delivery_slice_ids": ["MCFT-CAP-02.MCFT-05.CONTINUATION-EVIDENCE-WINDOW-V1"],
-      "baseline_main_commit": "869593d269b5175b216ce494b55b4b121db45190",
-      "branch": "mcft-cap-02-continuation-persistence-v1",
-      "merge_commit": "1b7ea8058b097b5f5fcc4bf1566462c381bc6d47",
-      "merged_main_acceptance": {"draft_gate": "81_PASS_0_FAIL", "pure_persistence": "9_PASS_0_FAIL", "negative_persistence": "20_PASS_0_FAIL", "evidence_window_postmerge": "65_PASS_0_FAIL", "postgres_persistence": "15_PASS_0_FAIL", "final_gate": "86_PASS_0_FAIL", "server_typecheck": "PASS", "server_build": "PASS", "verified_main_commit": "1b7ea8058b097b5f5fcc4bf1566462c381bc6d47"},
-      "allowed_claims": ["A2_ATOMIC_PERSISTENCE_ESTABLISHED", "CONTINUATION_IDEMPOTENCY_ESTABLISHED", "CONTINUATION_PROJECTION_CAS_ESTABLISHED", "CONTINUATION_CANONICAL_READBACK_ESTABLISHED", "CONTINUATION_PROJECTION_REBUILD_ESTABLISHED"],
-      "preserved_nonclaims": ["NO_RUNTIME_TICK_ORCHESTRATION", "NO_A2_END_TO_END_TICK_EXECUTED", "NO_RESTART_RESUME_PROOF", "NO_BOUNDED_BACKFILL_PROOF", "NO_OBSERVATION_UPDATE_APPLIED", "NO_FORECAST_RESIDUAL", "NO_SUCCESSFUL_FORECAST", "NO_SCENARIO", "NO_RECOMMENDATION", "NO_DECISION", "NO_AO_ACT", "NO_MCFT_CAP_02_COMPLETE_CLAIM"],
-      "exact_changed_file_boundary": [
-        "apps/server/db/migrations/2026_07_10_mcft_cap_02_continuation_persistence.sql",
-        "apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts",
-        "apps/server/src/projections/twin_runtime/projection_rebuilder_v1.ts",
-        "apps/server/src/runtime/twin_runtime/ports.ts",
-        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json",
-        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-PERSISTENCE-CONTRACT.json",
-        "fixtures/mcft/water_state/expected/MCFT_CAP_02_PERSISTENCE_FIXTURES.json",
-        "fixtures/mcft/water_state/negative/MCFT_CAP_02_PERSISTENCE_NEGATIVE_FIXTURES.json",
-        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_EVIDENCE_WINDOW.cjs",
-        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_PERSISTENCE.cjs",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_PERSISTENCE.ts",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_PERSISTENCE_DB.ts",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_PERSISTENCE_NEGATIVE.ts",
-        "scripts/runtime_acceptance/mcft_cap_02_persistence_fixture_v1.ts"
-      ],
-      "effectiveness_condition": "PR_2322_MERGED_AND_MERGED_MAIN_PERSISTENCE_GATE_86_PASS_0_FAIL"
-    },
-    {
-      "capability_line_id": "MCFT-CAP-02",
-      "display_alias": "MCFT-2",
-      "delivery_slice_id": "MCFT-CAP-02.MCFT-04-06-08-09.SINGLE-TICK-INTEGRATION-V1",
-      "status": "READY_FOR_MERGE",
-      "primary_owner_work_package_id": "MCFT-04",
-      "contributing_work_package_ids": ["MCFT-06", "MCFT-08", "MCFT-09"],
-      "depends_on_delivery_slice_ids": ["MCFT-CAP-02.MCFT-03.CONTINUATION-PERSISTENCE-V1"],
-      "baseline_main_commit": "1b7ea8058b097b5f5fcc4bf1566462c381bc6d47",
-      "branch": "mcft-cap-02-single-tick-integration-v1",
-      "allowed_claims": ["SINGLE_TICK_ORCHESTRATION_CANDIDATE_IMPLEMENTED", "A2_EIGHT_OBJECT_CANDIDATE_BUILDER_IMPLEMENTED", "PERSISTED_NEXT_HANDOFF_CANDIDATE_IMPLEMENTED"],
-      "preserved_nonclaims": ["NO_TWENTY_FOUR_TICK_RANGE_EXECUTED", "NO_RESTART_RESUME_PROOF", "NO_BOUNDED_BACKFILL_PROOF", "NO_OBSERVATION_UPDATE_APPLIED", "NO_OBSERVATION_INNOVATION_COMPUTED", "NO_FORECAST_RESIDUAL", "NO_SUCCESSFUL_FORECAST", "NO_SCENARIO", "NO_RECOMMENDATION", "NO_DECISION", "NO_AO_ACT", "NO_CALIBRATED_CONFIDENCE_MODEL", "NO_MODEL_ACTIVATION", "NO_LATE_EVIDENCE_REVISION", "NO_DYNAMIC_ROOT_ZONE_GEOMETRY", "NO_SPATIAL_EXECUTION_OVERLAP_DEDUPLICATION", "NO_CONTINUOUS_RUNTIME", "NO_CONTINUOUS_SCHEDULER", "NO_720_TICK_REPLAY_CLOSURE", "NO_LIVE_FIELD_CLAIM", "NO_MCFT_GATE_A_CLOSURE", "NO_MCFT_GATE_B_CLOSURE", "NO_MCFT_GATE_C_CLOSURE", "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM", "NO_MCFT_CAP_02_COMPLETE_CLAIM"],
-      "exact_changed_file_boundary": [
-        "apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts",
-        "apps/server/src/runtime/twin_runtime/ports.ts",
-        "apps/server/src/runtime/twin_runtime/next_tick_input_service_v1.ts",
-        "apps/server/src/runtime/twin_runtime/continuation_record_set_builder_v1.ts",
-        "apps/server/src/runtime/twin_runtime/continuation_tick_service_v1.ts",
-        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json",
-        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-SINGLE-TICK-CONTRACT.json",
-        "fixtures/mcft/water_state/expected/MCFT_CAP_02_SINGLE_TICK_FIXTURES.json",
-        "fixtures/mcft/water_state/negative/MCFT_CAP_02_SINGLE_TICK_NEGATIVE_FIXTURES.json",
-        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_PERSISTENCE.cjs",
-        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_SINGLE_TICK.cjs",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_SINGLE_TICK.ts",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_SINGLE_TICK_DB.ts",
-        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_SINGLE_TICK_NEGATIVE.ts",
-        "scripts/runtime_acceptance/mcft_cap_02_single_tick_fixture_v1.ts"
-      ],
-      "effectiveness_condition": "PR_MERGED_TO_MAIN_AND_MERGED_MAIN_SINGLE_TICK_GATE_PASS"
-    },
-    {"delivery_slice_id": "MCFT-CAP-02.MCFT-04-08.TWENTY-FOUR-TICK-RANGE-V1", "status": "BLOCKED", "primary_owner_work_package_id": "MCFT-04", "contributing_work_package_ids": ["MCFT-08"], "depends_on_delivery_slice_ids": ["MCFT-CAP-02.MCFT-04-06-08-09.SINGLE-TICK-INTEGRATION-V1"]},
-    {"delivery_slice_id": "MCFT-CAP-02.MCFT-04.RESTART-BACKFILL-V1", "status": "BLOCKED", "primary_owner_work_package_id": "MCFT-04", "contributing_work_package_ids": ["MCFT-03", "MCFT-08"], "depends_on_delivery_slice_ids": ["MCFT-CAP-02.MCFT-04-08.TWENTY-FOUR-TICK-RANGE-V1"]},
-    {"delivery_slice_id": "MCFT-CAP-02.FAILURE-RECOVERY-V1", "status": "BLOCKED", "primary_owner_work_package_id": "MCFT-03", "contributing_work_package_ids": ["MCFT-04", "MCFT-05", "MCFT-06", "MCFT-08", "MCFT-09"], "depends_on_delivery_slice_ids": ["MCFT-CAP-02.MCFT-04.RESTART-BACKFILL-V1"]},
-    {"delivery_slice_id": "MCFT-CAP-02.CLOSURE-V1", "status": "BLOCKED", "primary_owner_work_package_id": "MCFT-06", "contributing_work_package_ids": ["MCFT-02", "MCFT-03", "MCFT-04", "MCFT-05", "MCFT-07", "MCFT-08", "MCFT-09"], "depends_on_delivery_slice_ids": ["MCFT-CAP-02.FAILURE-RECOVERY-V1"]}
-  ],
-  "completion_claims": ["CONTINUATION_CONTRACTS_CONFIG_MERGED_MAIN_VERIFIED", "PURE_HOURLY_DYNAMICS_MERGED_MAIN_VERIFIED", "CONTINUATION_EVIDENCE_WINDOW_MERGED_MAIN_VERIFIED", "CONTINUATION_PERSISTENCE_MERGED_MAIN_VERIFIED"],
-  "global_preserved_nonclaims": ["NO_TWENTY_FOUR_TICK_RANGE_EXECUTED", "NO_RESTART_RESUME_PROOF", "NO_BOUNDED_BACKFILL_PROOF", "NO_OBSERVATION_UPDATE_APPLIED", "NO_OBSERVATION_INNOVATION_COMPUTED", "NO_FORECAST_RESIDUAL", "NO_SUCCESSFUL_FORECAST", "NO_SCENARIO", "NO_RECOMMENDATION", "NO_DECISION", "NO_AO_ACT", "NO_CALIBRATED_CONFIDENCE_MODEL", "NO_MODEL_ACTIVATION", "NO_LATE_EVIDENCE_REVISION", "NO_DYNAMIC_ROOT_ZONE_GEOMETRY", "NO_SPATIAL_EXECUTION_OVERLAP_DEDUPLICATION", "NO_CONTINUOUS_RUNTIME", "NO_CONTINUOUS_SCHEDULER", "NO_720_TICK_REPLAY_CLOSURE", "NO_LIVE_FIELD_CLAIM", "NO_MCFT_GATE_A_CLOSURE", "NO_MCFT_GATE_B_CLOSURE", "NO_MCFT_GATE_C_CLOSURE", "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM", "NO_MCFT_CAP_02_COMPLETE_CLAIM"]
+    "schema_version":  "geox_mcft_cap_02_delivery_slice_status_v7",
+    "capability_line_id":  "MCFT-CAP-02",
+    "display_alias":  "MCFT-2",
+    "name":  "Hourly Dynamics and Persistence",
+    "runtime_mode":  "REPLAY",
+    "target_completion_level":  "Level A",
+    "status":  "TWENTY_FOUR_TICK_RANGE_READY_FOR_MERGE",
+    "authorization_merge_commit":  "65e59aaf5fcfccacdb986258874a5df3c057711d",
+    "baseline_main_commit":  "65e59aaf5fcfccacdb986258874a5df3c057711d",
+    "latest_verified_main_commit":  "18c921c64463d6d9de5af2b4727c185970d771ef",
+    "active_delivery_slice_id":  "MCFT-CAP-02.MCFT-04-08.TWENTY-FOUR-TICK-RANGE-V1",
+    "governance_debt_register_ref":  "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-GOVERNANCE-DEBT-REGISTER.json",
+    "slices":  [
+                   {
+                       "capability_line_id":  "MCFT-CAP-02",
+                       "display_alias":  "MCFT-2",
+                       "delivery_slice_id":  "MCFT-CAP-02.GOV-AUTHORIZATION-V1",
+                       "status":  "MERGED",
+                       "primary_owner_work_package_id":  "MCFT-06",
+                       "contributing_work_package_ids":  [
+                                                             "MCFT-02",
+                                                             "MCFT-03",
+                                                             "MCFT-04",
+                                                             "MCFT-05",
+                                                             "MCFT-07",
+                                                             "MCFT-08",
+                                                             "MCFT-09"
+                                                         ],
+                       "depends_on_delivery_slice_ids":  [
+                                                             "MCFT-CAP-01.CLOSURE-REMEDIATION-V1"
+                                                         ],
+                       "baseline_main_commit":  "7da8fee4daf1f022edff29078a1bbac207d1a32f",
+                       "branch":  "mcft-cap-02-gov-authorization-v1",
+                       "merge_commit":  "65e59aaf5fcfccacdb986258874a5df3c057711d",
+                       "allowed_claims":  [
+                                              "MCFT_CAP_02_PREDECESSOR_MAIN_VERIFIED",
+                                              "MCFT_CAP_02_PREDECESSOR_IDENTITY_LOCKED",
+                                              "MCFT_CAP_02_DELIVERY_GRAPH_FROZEN",
+                                              "MCFT_CAP_02_OWNER_BOUNDARY_FROZEN"
+                                          ],
+                       "preserved_nonclaims":  [
+                                                   "NO_HOURLY_DYNAMICS_IMPLEMENTED",
+                                                   "NO_CONTINUATION_STATE_PERSISTED",
+                                                   "NO_SUCCESSFUL_FORECAST",
+                                                   "NO_MCFT_CAP_02_COMPLETE_CLAIM"
+                                               ],
+                       "exact_changed_file_boundary":  [
+                                                           "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+                                                           "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+                                                           "docs/digital_twin/mcft/cap_01/GEOX-MCFT-CAP-01-MAIN-VERIFICATION.json",
+                                                           "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-AUTHORIZATION-STATUS.json",
+                                                           "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-AUTHORIZATION.md",
+                                                           "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json",
+                                                           "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-PREDECESSOR-LOCK.json",
+                                                           "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-TASK.md",
+                                                           "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_AUTHORIZATION.cjs",
+                                                           "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_PREDECESSOR_PREFLIGHT.cjs"
+                                                       ],
+                       "effectiveness_condition":  "MERGED_TO_MAIN_AND_POSTMERGE_AUTHORIZATION_GATE_PASS"
+                   },
+                   {
+                       "capability_line_id":  "MCFT-CAP-02",
+                       "display_alias":  "MCFT-2",
+                       "delivery_slice_id":  "MCFT-CAP-02.MCFT-02.CONTINUATION-CONTRACTS-CONFIG-V1",
+                       "status":  "MERGED",
+                       "primary_owner_work_package_id":  "MCFT-02",
+                       "contributing_work_package_ids":  [
+                                                             "MCFT-03",
+                                                             "MCFT-04",
+                                                             "MCFT-06",
+                                                             "MCFT-07",
+                                                             "MCFT-08",
+                                                             "MCFT-09"
+                                                         ],
+                       "depends_on_delivery_slice_ids":  [
+                                                             "MCFT-CAP-02.GOV-AUTHORIZATION-V1"
+                                                         ],
+                       "baseline_main_commit":  "65e59aaf5fcfccacdb986258874a5df3c057711d",
+                       "branch":  "mcft-cap-02-contracts-config-v2",
+                       "merge_commit":  "2be7c985210d1f34fa5249e1fae68932e801facc",
+                       "merged_main_acceptance":  {
+                                                      "final_gate":  "63_PASS_0_FAIL",
+                                                      "server_typecheck":  "PASS",
+                                                      "server_build":  "PASS",
+                                                      "postgres_d_transaction":  "6_PASS_0_FAIL",
+                                                      "verified_main_commit":  "2be7c985210d1f34fa5249e1fae68932e801facc"
+                                                  },
+                       "allowed_claims":  [
+                                              "CONTINUATION_OBJECT_CONTRACT_ESTABLISHED",
+                                              "CONTINUATION_OPERATION_IDENTITY_ESTABLISHED",
+                                              "CONTINUATION_RUNTIME_CONFIG_ESTABLISHED",
+                                              "CONTINUATION_GRAPH_VALIDATOR_ESTABLISHED",
+                                              "D_TRANSACTION_CONFIG_PERSISTENCE_ESTABLISHED"
+                                          ],
+                       "preserved_nonclaims":  [
+                                                   "NO_CONTINUATION_STATE_PERSISTED",
+                                                   "NO_A2_CONTINUATION_TICK_COMMITTED",
+                                                   "NO_OBSERVATION_UPDATE_APPLIED",
+                                                   "NO_SUCCESSFUL_FORECAST",
+                                                   "NO_MCFT_CAP_02_COMPLETE_CLAIM"
+                                               ],
+                       "exact_changed_file_boundary":  [
+                                                           "apps/server/src/domain/twin_runtime/continuation_contracts_v1.ts",
+                                                           "apps/server/src/domain/twin_runtime/continuation_cross_ref_validator_v1.ts",
+                                                           "apps/server/src/domain/twin_runtime/continuation_operation_identity_v1.ts",
+                                                           "apps/server/src/domain/twin_runtime/continuation_record_set_identity_v1.ts",
+                                                           "apps/server/src/domain/twin_runtime/continuation_runtime_config_v1.ts",
+                                                           "apps/server/src/runtime/twin_runtime/continuation_runtime_config_authority_adapter_v1.ts",
+                                                           "apps/server/src/runtime/twin_runtime/continuation_runtime_config_service_v1.ts",
+                                                           "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-CONTINUATION-OBJECT-CONTRACT.json",
+                                                           "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json",
+                                                           "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-IDENTITY-CONTRACT.json",
+                                                           "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-RUNTIME-CONFIG-CONTRACT.json",
+                                                           "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG.cjs",
+                                                           "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG.ts",
+                                                           "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG_DB.ts",
+                                                           "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG_NEGATIVE.ts"
+                                                       ],
+                       "effectiveness_condition":  "PR_2319_MERGED_AND_MERGED_MAIN_CONTRACTS_CONFIG_GATE_63_PASS_0_FAIL"
+                   },
+                   {
+                       "capability_line_id":  "MCFT-CAP-02",
+                       "display_alias":  "MCFT-2",
+                       "delivery_slice_id":  "MCFT-CAP-02.MCFT-06.PURE-HOURLY-DYNAMICS-V1",
+                       "status":  "MERGED",
+                       "primary_owner_work_package_id":  "MCFT-06",
+                       "contributing_work_package_ids":  [
+
+                                                         ],
+                       "depends_on_delivery_slice_ids":  [
+                                                             "MCFT-CAP-02.MCFT-02.CONTINUATION-CONTRACTS-CONFIG-V1"
+                                                         ],
+                       "baseline_main_commit":  "2be7c985210d1f34fa5249e1fae68932e801facc",
+                       "branch":  "mcft-cap-02-pure-hourly-dynamics-v1",
+                       "merge_commit":  "bc97acbd589c454b7417d6ed4567c103b655ee78",
+                       "merged_main_acceptance":  {
+                                                      "draft_gate":  "63_PASS_0_FAIL",
+                                                      "positive_dynamics":  "13_PASS_0_FAIL",
+                                                      "negative_dynamics":  "10_PASS_0_FAIL",
+                                                      "contracts_config_postmerge":  "55_PASS_0_FAIL",
+                                                      "final_gate":  "66_PASS_0_FAIL",
+                                                      "server_typecheck":  "PASS",
+                                                      "server_build":  "PASS",
+                                                      "verified_main_commit":  "bc97acbd589c454b7417d6ed4567c103b655ee78"
+                                                  },
+                       "allowed_claims":  [
+                                              "FIXED_POINT_WATER_ARITHMETIC_ESTABLISHED",
+                                              "PURE_HOURLY_WATER_BALANCE_ESTABLISHED",
+                                              "EXECUTED_IRRIGATION_AGGREGATION_ESTABLISHED",
+                                              "MASS_BALANCE_TRACE_ESTABLISHED",
+                                              "ADDITIVE_PROCESS_UNCERTAINTY_ESTABLISHED"
+                                          ],
+                       "preserved_nonclaims":  [
+                                                   "NO_CONTINUATION_EVIDENCE_WINDOW_SELECTION_IMPLEMENTED",
+                                                   "NO_CONTINUATION_STATE_PERSISTED",
+                                                   "NO_A2_CONTINUATION_TICK_COMMITTED",
+                                                   "NO_RESTART_RESUME_PROOF",
+                                                   "NO_BOUNDED_BACKFILL_PROOF",
+                                                   "NO_OBSERVATION_UPDATE_APPLIED",
+                                                   "NO_FORECAST_RESIDUAL",
+                                                   "NO_SUCCESSFUL_FORECAST",
+                                                   "NO_SCENARIO",
+                                                   "NO_RECOMMENDATION",
+                                                   "NO_DECISION",
+                                                   "NO_AO_ACT",
+                                                   "NO_MCFT_CAP_02_COMPLETE_CLAIM"
+                                               ],
+                       "exact_changed_file_boundary":  [
+                                                           "apps/server/src/domain/soil_water/additive_process_uncertainty_budget_v1.ts",
+                                                           "apps/server/src/domain/soil_water/executed_irrigation_input_v1.ts",
+                                                           "apps/server/src/domain/soil_water/fixed_point_water_decimal_v1.ts",
+                                                           "apps/server/src/domain/soil_water/hourly_water_balance_v1.ts",
+                                                           "apps/server/src/domain/soil_water/water_mass_balance_trace_v1.ts",
+                                                           "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json",
+                                                           "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DYNAMICS-MATH-CONTRACT.md",
+                                                           "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-GOVERNANCE-DEBT-REGISTER.json",
+                                                           "fixtures/mcft/water_state/expected/MCFT_CAP_02_DYNAMICS_FIXTURES.json",
+                                                           "fixtures/mcft/water_state/negative/MCFT_CAP_02_NEGATIVE_FIXTURES.json",
+                                                           "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG.cjs",
+                                                           "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_DYNAMICS.cjs",
+                                                           "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_DYNAMICS.ts",
+                                                           "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_DYNAMICS_NEGATIVE.ts"
+                                                       ],
+                       "effectiveness_condition":  "PR_2320_MERGED_AND_MERGED_MAIN_DYNAMICS_GATE_66_PASS_0_FAIL"
+                   },
+                   {
+                       "capability_line_id":  "MCFT-CAP-02",
+                       "display_alias":  "MCFT-2",
+                       "delivery_slice_id":  "MCFT-CAP-02.MCFT-05.CONTINUATION-EVIDENCE-WINDOW-V1",
+                       "status":  "MERGED",
+                       "primary_owner_work_package_id":  "MCFT-05",
+                       "contributing_work_package_ids":  [
+
+                                                         ],
+                       "depends_on_delivery_slice_ids":  [
+                                                             "MCFT-CAP-02.MCFT-06.PURE-HOURLY-DYNAMICS-V1"
+                                                         ],
+                       "baseline_main_commit":  "bc97acbd589c454b7417d6ed4567c103b655ee78",
+                       "branch":  "mcft-cap-02-continuation-evidence-window-v1",
+                       "merge_commit":  "869593d269b5175b216ce494b55b4b121db45190",
+                       "merged_main_acceptance":  {
+                                                      "draft_gate":  "68_PASS_0_FAIL",
+                                                      "positive_evidence_window":  "11_PASS_0_FAIL",
+                                                      "negative_evidence_window":  "12_PASS_0_FAIL",
+                                                      "dynamics_postmerge":  "46_PASS_0_FAIL",
+                                                      "final_gate":  "71_PASS_0_FAIL",
+                                                      "server_typecheck":  "PASS",
+                                                      "server_build":  "PASS",
+                                                      "verified_main_commit":  "869593d269b5175b216ce494b55b4b121db45190"
+                                                  },
+                       "allowed_claims":  [
+                                              "EXACT_HOUR_RAINFALL_SELECTION_ESTABLISHED",
+                                              "EXACT_HOUR_ET0_SELECTION_ESTABLISHED",
+                                              "EXECUTION_EVIDENCE_SELECTION_ESTABLISHED",
+                                              "EVIDENCE_CONSUMPTION_TRACE_ESTABLISHED",
+                                              "CROP_STAGE_CONTEXT_RESOLUTION_ESTABLISHED"
+                                          ],
+                       "preserved_nonclaims":  [
+                                                   "NO_CONTINUATION_EVIDENCE_WINDOW_PERSISTED",
+                                                   "NO_CONTINUATION_STATE_PERSISTED",
+                                                   "NO_A2_CONTINUATION_TICK_COMMITTED",
+                                                   "NO_RESTART_RESUME_PROOF",
+                                                   "NO_BOUNDED_BACKFILL_PROOF",
+                                                   "NO_OBSERVATION_UPDATE_APPLIED",
+                                                   "NO_FORECAST_RESIDUAL",
+                                                   "NO_SUCCESSFUL_FORECAST",
+                                                   "NO_SCENARIO",
+                                                   "NO_RECOMMENDATION",
+                                                   "NO_DECISION",
+                                                   "NO_AO_ACT",
+                                                   "NO_MCFT_CAP_02_COMPLETE_CLAIM"
+                                               ],
+                       "exact_changed_file_boundary":  [
+                                                           "apps/server/src/runtime/twin_runtime/continuation_evidence_window_service_v1.ts",
+                                                           "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json",
+                                                           "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-EVIDENCE-WINDOW-CONTRACT.json",
+                                                           "fixtures/mcft/water_state/expected/MCFT_CAP_02_EVIDENCE-WINDOW_FIXTURES.json",
+                                                           "fixtures/mcft/water_state/negative/MCFT_CAP_02_EVIDENCE_WINDOW_NEGATIVE_FIXTURES.json",
+                                                           "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_DYNAMICS.cjs",
+                                                           "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_EVIDENCE_WINDOW.cjs",
+                                                           "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_EVIDENCE_WINDOW.ts",
+                                                           "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_EVIDENCE_WINDOW_NEGATIVE.ts"
+                                                       ],
+                       "effectiveness_condition":  "PR_2321_MERGED_AND_MERGED_MAIN_EVIDENCE_WINDOW_GATE_71_PASS_0_FAIL"
+                   },
+                   {
+                       "capability_line_id":  "MCFT-CAP-02",
+                       "display_alias":  "MCFT-2",
+                       "delivery_slice_id":  "MCFT-CAP-02.MCFT-03.CONTINUATION-PERSISTENCE-V1",
+                       "status":  "MERGED",
+                       "primary_owner_work_package_id":  "MCFT-03",
+                       "contributing_work_package_ids":  [
+
+                                                         ],
+                       "depends_on_delivery_slice_ids":  [
+                                                             "MCFT-CAP-02.MCFT-05.CONTINUATION-EVIDENCE-WINDOW-V1"
+                                                         ],
+                       "baseline_main_commit":  "869593d269b5175b216ce494b55b4b121db45190",
+                       "branch":  "mcft-cap-02-continuation-persistence-v1",
+                       "merge_commit":  "1b7ea8058b097b5f5fcc4bf1566462c381bc6d47",
+                       "merged_main_acceptance":  {
+                                                      "draft_gate":  "81_PASS_0_FAIL",
+                                                      "pure_persistence":  "9_PASS_0_FAIL",
+                                                      "negative_persistence":  "20_PASS_0_FAIL",
+                                                      "evidence_window_postmerge":  "65_PASS_0_FAIL",
+                                                      "postgres_persistence":  "15_PASS_0_FAIL",
+                                                      "final_gate":  "86_PASS_0_FAIL",
+                                                      "server_typecheck":  "PASS",
+                                                      "server_build":  "PASS",
+                                                      "verified_main_commit":  "1b7ea8058b097b5f5fcc4bf1566462c381bc6d47"
+                                                  },
+                       "allowed_claims":  [
+                                              "A2_ATOMIC_PERSISTENCE_ESTABLISHED",
+                                              "CONTINUATION_IDEMPOTENCY_ESTABLISHED",
+                                              "CONTINUATION_PROJECTION_CAS_ESTABLISHED",
+                                              "CONTINUATION_CANONICAL_READBACK_ESTABLISHED",
+                                              "CONTINUATION_PROJECTION_REBUILD_ESTABLISHED"
+                                          ],
+                       "preserved_nonclaims":  [
+                                                   "NO_RUNTIME_TICK_ORCHESTRATION",
+                                                   "NO_A2_END_TO_END_TICK_EXECUTED",
+                                                   "NO_RESTART_RESUME_PROOF",
+                                                   "NO_BOUNDED_BACKFILL_PROOF",
+                                                   "NO_OBSERVATION_UPDATE_APPLIED",
+                                                   "NO_FORECAST_RESIDUAL",
+                                                   "NO_SUCCESSFUL_FORECAST",
+                                                   "NO_SCENARIO",
+                                                   "NO_RECOMMENDATION",
+                                                   "NO_DECISION",
+                                                   "NO_AO_ACT",
+                                                   "NO_MCFT_CAP_02_COMPLETE_CLAIM"
+                                               ],
+                       "exact_changed_file_boundary":  [
+                                                           "apps/server/db/migrations/2026_07_10_mcft_cap_02_continuation_persistence.sql",
+                                                           "apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts",
+                                                           "apps/server/src/projections/twin_runtime/projection_rebuilder_v1.ts",
+                                                           "apps/server/src/runtime/twin_runtime/ports.ts",
+                                                           "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json",
+                                                           "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-PERSISTENCE-CONTRACT.json",
+                                                           "fixtures/mcft/water_state/expected/MCFT_CAP_02_PERSISTENCE_FIXTURES.json",
+                                                           "fixtures/mcft/water_state/negative/MCFT_CAP_02_PERSISTENCE_NEGATIVE_FIXTURES.json",
+                                                           "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_EVIDENCE_WINDOW.cjs",
+                                                           "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_PERSISTENCE.cjs",
+                                                           "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_PERSISTENCE.ts",
+                                                           "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_PERSISTENCE_DB.ts",
+                                                           "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_PERSISTENCE_NEGATIVE.ts",
+                                                           "scripts/runtime_acceptance/mcft_cap_02_persistence_fixture_v1.ts"
+                                                       ],
+                       "effectiveness_condition":  "PR_2322_MERGED_AND_MERGED_MAIN_PERSISTENCE_GATE_86_PASS_0_FAIL"
+                   },
+                   {
+                       "capability_line_id":  "MCFT-CAP-02",
+                       "display_alias":  "MCFT-2",
+                       "delivery_slice_id":  "MCFT-CAP-02.MCFT-04-06-08-09.SINGLE-TICK-INTEGRATION-V1",
+                       "status":  "MERGED",
+                       "primary_owner_work_package_id":  "MCFT-04",
+                       "contributing_work_package_ids":  [
+                                                             "MCFT-06",
+                                                             "MCFT-08",
+                                                             "MCFT-09"
+                                                         ],
+                       "depends_on_delivery_slice_ids":  [
+                                                             "MCFT-CAP-02.MCFT-03.CONTINUATION-PERSISTENCE-V1"
+                                                         ],
+                       "baseline_main_commit":  "1b7ea8058b097b5f5fcc4bf1566462c381bc6d47",
+                       "branch":  "mcft-cap-02-single-tick-integration-v1",
+                       "allowed_claims":  [
+                                              "SINGLE_TICK_ORCHESTRATION_CANDIDATE_IMPLEMENTED",
+                                              "A2_EIGHT_OBJECT_CANDIDATE_BUILDER_IMPLEMENTED",
+                                              "PERSISTED_NEXT_HANDOFF_CANDIDATE_IMPLEMENTED"
+                                          ],
+                       "preserved_nonclaims":  [
+                                                   "NO_TWENTY_FOUR_TICK_RANGE_EXECUTED",
+                                                   "NO_RESTART_RESUME_PROOF",
+                                                   "NO_BOUNDED_BACKFILL_PROOF",
+                                                   "NO_OBSERVATION_UPDATE_APPLIED",
+                                                   "NO_OBSERVATION_INNOVATION_COMPUTED",
+                                                   "NO_FORECAST_RESIDUAL",
+                                                   "NO_SUCCESSFUL_FORECAST",
+                                                   "NO_SCENARIO",
+                                                   "NO_RECOMMENDATION",
+                                                   "NO_DECISION",
+                                                   "NO_AO_ACT",
+                                                   "NO_CALIBRATED_CONFIDENCE_MODEL",
+                                                   "NO_MODEL_ACTIVATION",
+                                                   "NO_LATE_EVIDENCE_REVISION",
+                                                   "NO_DYNAMIC_ROOT_ZONE_GEOMETRY",
+                                                   "NO_SPATIAL_EXECUTION_OVERLAP_DEDUPLICATION",
+                                                   "NO_CONTINUOUS_RUNTIME",
+                                                   "NO_CONTINUOUS_SCHEDULER",
+                                                   "NO_720_TICK_REPLAY_CLOSURE",
+                                                   "NO_LIVE_FIELD_CLAIM",
+                                                   "NO_MCFT_GATE_A_CLOSURE",
+                                                   "NO_MCFT_GATE_B_CLOSURE",
+                                                   "NO_MCFT_GATE_C_CLOSURE",
+                                                   "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM",
+                                                   "NO_MCFT_CAP_02_COMPLETE_CLAIM"
+                                               ],
+                       "exact_changed_file_boundary":  [
+                                                           "apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts",
+                                                           "apps/server/src/runtime/twin_runtime/ports.ts",
+                                                           "apps/server/src/runtime/twin_runtime/next_tick_input_service_v1.ts",
+                                                           "apps/server/src/runtime/twin_runtime/continuation_record_set_builder_v1.ts",
+                                                           "apps/server/src/runtime/twin_runtime/continuation_tick_service_v1.ts",
+                                                           "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json",
+                                                           "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-SINGLE-TICK-CONTRACT.json",
+                                                           "fixtures/mcft/water_state/expected/MCFT_CAP_02_SINGLE_TICK_FIXTURES.json",
+                                                           "fixtures/mcft/water_state/negative/MCFT_CAP_02_SINGLE_TICK_NEGATIVE_FIXTURES.json",
+                                                           "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_PERSISTENCE.cjs",
+                                                           "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_SINGLE_TICK.cjs",
+                                                           "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_SINGLE_TICK.ts",
+                                                           "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_SINGLE_TICK_DB.ts",
+                                                           "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_SINGLE_TICK_NEGATIVE.ts",
+                                                           "scripts/runtime_acceptance/mcft_cap_02_single_tick_fixture_v1.ts"
+                                                       ],
+                       "effectiveness_condition":  "PR_MERGED_TO_MAIN_AND_MERGED_MAIN_SINGLE_TICK_GATE_PASS",
+                       "merge_commit":  "18c921c64463d6d9de5af2b4727c185970d771ef",
+                       "merged_main_acceptance":  {
+                                                      "draft_gate":  "75_PASS_0_FAIL",
+                                                      "positive_single_tick":  "7_PASS_0_FAIL",
+                                                      "negative_single_tick":  "15_PASS_0_FAIL",
+                                                      "persistence_postmerge":  "24_PASS_0_FAIL",
+                                                      "postgres_single_tick":  "6_PASS_0_FAIL",
+                                                      "final_gate":  "79_PASS_0_FAIL",
+                                                      "server_typecheck":  "PASS",
+                                                      "server_build":  "PASS",
+                                                      "verified_main_commit":  "18c921c64463d6d9de5af2b4727c185970d771ef"
+                                                  }
+                   },
+                   {
+                       "delivery_slice_id":  "MCFT-CAP-02.MCFT-04-08.TWENTY-FOUR-TICK-RANGE-V1",
+                       "status":  "READY_FOR_MERGE",
+                       "primary_owner_work_package_id":  "MCFT-04",
+                       "contributing_work_package_ids":  [
+                                                             "MCFT-08"
+                                                         ],
+                       "depends_on_delivery_slice_ids":  [
+                                                             "MCFT-CAP-02.MCFT-04-06-08-09.SINGLE-TICK-INTEGRATION-V1"
+                                                         ],
+                       "capability_line_id":  "MCFT-CAP-02",
+                       "display_alias":  "MCFT-2",
+                       "baseline_main_commit":  "18c921c64463d6d9de5af2b4727c185970d771ef",
+                       "branch":  "mcft-cap-02-twenty-four-tick-range-v1",
+                       "allowed_claims":  [
+                                              "CONTIGUOUS_24_TICK_RANGE_CANDIDATE_IMPLEMENTED",
+                                              "TWENTY_FIVE_STATE_CHAIN_CANDIDATE_IMPLEMENTED",
+                                              "MONOTONIC_UNCERTAINTY_CHAIN_CANDIDATE_IMPLEMENTED"
+                                          ],
+                       "preserved_nonclaims":  [
+                                                   "NO_RESTART_RESUME_PROOF",
+                                                   "NO_BOUNDED_BACKFILL_PROOF",
+                                                   "NO_OBSERVATION_UPDATE_APPLIED",
+                                                   "NO_OBSERVATION_INNOVATION_COMPUTED",
+                                                   "NO_FORECAST_RESIDUAL",
+                                                   "NO_SUCCESSFUL_FORECAST",
+                                                   "NO_SCENARIO",
+                                                   "NO_RECOMMENDATION",
+                                                   "NO_DECISION",
+                                                   "NO_AO_ACT",
+                                                   "NO_CALIBRATED_CONFIDENCE_MODEL",
+                                                   "NO_MODEL_ACTIVATION",
+                                                   "NO_LATE_EVIDENCE_REVISION",
+                                                   "NO_DYNAMIC_ROOT_ZONE_GEOMETRY",
+                                                   "NO_SPATIAL_EXECUTION_OVERLAP_DEDUPLICATION",
+                                                   "NO_CONTINUOUS_RUNTIME",
+                                                   "NO_CONTINUOUS_SCHEDULER",
+                                                   "NO_720_TICK_REPLAY_CLOSURE",
+                                                   "NO_LIVE_FIELD_CLAIM",
+                                                   "NO_MCFT_GATE_A_CLOSURE",
+                                                   "NO_MCFT_GATE_B_CLOSURE",
+                                                   "NO_MCFT_GATE_C_CLOSURE",
+                                                   "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM",
+                                                   "NO_MCFT_CAP_02_COMPLETE_CLAIM"
+                                               ],
+                       "exact_changed_file_boundary":  [
+                                                           "apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts",
+                                                           "apps/server/src/runtime/twin_runtime/continuation_tick_service_v1.ts",
+                                                           "apps/server/src/runtime/twin_runtime/contiguous_continuation_range_service_v1.ts",
+                                                           "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json",
+                                                           "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-TWENTY-FOUR-TICK-RANGE-CONTRACT.json",
+                                                           "fixtures/mcft/water_state/expected/MCFT_CAP_02_24_TICK_EXPECTED.json",
+                                                           "fixtures/mcft/water_state/negative/MCFT_CAP_02_24_TICK_NEGATIVE_FIXTURES.json",
+                                                           "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_TWENTY_FOUR_TICK_RANGE.cjs",
+                                                           "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_TWENTY_FOUR_TICK_RANGE.ts",
+                                                           "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_TWENTY_FOUR_TICK_RANGE_DB.ts",
+                                                           "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_TWENTY_FOUR_TICK_RANGE_NEGATIVE.ts",
+                                                           "scripts/runtime_acceptance/mcft_cap_02_twenty_four_tick_fixture_v1.ts"
+                                                       ],
+                       "effectiveness_condition":  "PR_MERGED_TO_MAIN_AND_MERGED_MAIN_TWENTY_FOUR_TICK_RANGE_GATE_PASS"
+                   },
+                   {
+                       "delivery_slice_id":  "MCFT-CAP-02.MCFT-04.RESTART-BACKFILL-V1",
+                       "status":  "BLOCKED",
+                       "primary_owner_work_package_id":  "MCFT-04",
+                       "contributing_work_package_ids":  [
+                                                             "MCFT-03",
+                                                             "MCFT-08"
+                                                         ],
+                       "depends_on_delivery_slice_ids":  [
+                                                             "MCFT-CAP-02.MCFT-04-08.TWENTY-FOUR-TICK-RANGE-V1"
+                                                         ]
+                   },
+                   {
+                       "delivery_slice_id":  "MCFT-CAP-02.FAILURE-RECOVERY-V1",
+                       "status":  "BLOCKED",
+                       "primary_owner_work_package_id":  "MCFT-03",
+                       "contributing_work_package_ids":  [
+                                                             "MCFT-04",
+                                                             "MCFT-05",
+                                                             "MCFT-06",
+                                                             "MCFT-08",
+                                                             "MCFT-09"
+                                                         ],
+                       "depends_on_delivery_slice_ids":  [
+                                                             "MCFT-CAP-02.MCFT-04.RESTART-BACKFILL-V1"
+                                                         ]
+                   },
+                   {
+                       "delivery_slice_id":  "MCFT-CAP-02.CLOSURE-V1",
+                       "status":  "BLOCKED",
+                       "primary_owner_work_package_id":  "MCFT-06",
+                       "contributing_work_package_ids":  [
+                                                             "MCFT-02",
+                                                             "MCFT-03",
+                                                             "MCFT-04",
+                                                             "MCFT-05",
+                                                             "MCFT-07",
+                                                             "MCFT-08",
+                                                             "MCFT-09"
+                                                         ],
+                       "depends_on_delivery_slice_ids":  [
+                                                             "MCFT-CAP-02.FAILURE-RECOVERY-V1"
+                                                         ]
+                   }
+               ],
+    "completion_claims":  [
+                              "CONTINUATION_CONTRACTS_CONFIG_MERGED_MAIN_VERIFIED",
+                              "PURE_HOURLY_DYNAMICS_MERGED_MAIN_VERIFIED",
+                              "CONTINUATION_EVIDENCE_WINDOW_MERGED_MAIN_VERIFIED",
+                              "CONTINUATION_PERSISTENCE_MERGED_MAIN_VERIFIED",
+                              "SINGLE_TICK_INTEGRATION_MERGED_MAIN_VERIFIED"
+                          ],
+    "global_preserved_nonclaims":  [
+                                       "NO_RESTART_RESUME_PROOF",
+                                       "NO_BOUNDED_BACKFILL_PROOF",
+                                       "NO_OBSERVATION_UPDATE_APPLIED",
+                                       "NO_OBSERVATION_INNOVATION_COMPUTED",
+                                       "NO_FORECAST_RESIDUAL",
+                                       "NO_SUCCESSFUL_FORECAST",
+                                       "NO_SCENARIO",
+                                       "NO_RECOMMENDATION",
+                                       "NO_DECISION",
+                                       "NO_AO_ACT",
+                                       "NO_CALIBRATED_CONFIDENCE_MODEL",
+                                       "NO_MODEL_ACTIVATION",
+                                       "NO_LATE_EVIDENCE_REVISION",
+                                       "NO_DYNAMIC_ROOT_ZONE_GEOMETRY",
+                                       "NO_SPATIAL_EXECUTION_OVERLAP_DEDUPLICATION",
+                                       "NO_CONTINUOUS_RUNTIME",
+                                       "NO_CONTINUOUS_SCHEDULER",
+                                       "NO_720_TICK_REPLAY_CLOSURE",
+                                       "NO_LIVE_FIELD_CLAIM",
+                                       "NO_MCFT_GATE_A_CLOSURE",
+                                       "NO_MCFT_GATE_B_CLOSURE",
+                                       "NO_MCFT_GATE_C_CLOSURE",
+                                       "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM",
+                                       "NO_MCFT_CAP_02_COMPLETE_CLAIM"
+                                   ]
 }

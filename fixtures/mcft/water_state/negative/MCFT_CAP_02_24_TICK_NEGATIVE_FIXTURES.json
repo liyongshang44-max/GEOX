@@ -1,0 +1,17 @@
+{
+  "schema_version": "mcft_cap_02_24_tick_negative_fixtures_v1",
+  "cases": [
+    { "case_id": "TARGET_INVALID_ISO", "expected_error": "CONTINUATION_RANGE_TARGET_NOT_CANONICAL_HOUR" },
+    { "case_id": "TARGET_NOT_HOUR_ALIGNED", "expected_error": "CONTINUATION_RANGE_TARGET_NOT_CANONICAL_HOUR" },
+    { "case_id": "CREATED_AT_INVALID", "expected_error": "CONTINUATION_RANGE_CREATED_AT_INVALID" },
+    { "case_id": "LEASE_OWNER_REQUIRED", "expected_error": "CONTINUATION_RANGE_LEASE_OWNER_REQUIRED" },
+    { "case_id": "LEASE_DURATION_INVALID", "expected_error": "CONTINUATION_RANGE_LEASE_DURATION_INVALID" },
+    { "case_id": "PERSISTED_NEXT_TICK_NOT_HOUR_ALIGNED", "expected_error": "PERSISTED_NEXT_TICK_NOT_CANONICAL_HOUR" },
+    { "case_id": "MAX_TICKS_EXCEEDED", "expected_error": "CONTINUATION_RANGE_MAX_TICKS_EXCEEDED" },
+    { "case_id": "NONCONTIGUOUS_COMMITTED_HANDOFF", "expected_error": "CONTINUATION_RANGE_NONCONTIGUOUS_COMMITTED_HANDOFF" },
+    { "case_id": "STOP_ON_FIRST_FAILURE", "expected_error": "SYNTHETIC_TICK_13_FAILURE" },
+    { "case_id": "SUBSEQUENT_CONTINUATION_CONFIG_REF_MISMATCH", "expected_error": "CONTINUATION_RUNTIME_CONFIG_REF_MISMATCH" },
+    { "case_id": "SUBSEQUENT_CONTINUATION_CONFIG_HASH_MISMATCH", "expected_error": "CONTINUATION_RUNTIME_CONFIG_HASH_MISMATCH" },
+    { "case_id": "TARGET_ALREADY_COMMITTED", "expected_status": "ALREADY_COMPLETE", "expected_tick_count": 0 }
+  ]
+}
