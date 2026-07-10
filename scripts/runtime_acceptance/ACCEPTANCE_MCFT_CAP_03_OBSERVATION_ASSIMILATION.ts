@@ -24,6 +24,10 @@ function check(value: unknown, message: string): void {
   }
 }
 
+function nearlyEqualV1(left: number | null, right: number, tolerance = 1e-12): boolean {
+  return left !== null && Math.abs(left - right) <= tolerance;
+}
+
 const fixture = await buildMcftCap03ObservationAssimilationFixtureV1();
 const logicalTime = fixture.cap02.evidenceFixture.logical_time;
 const commonMath = {
@@ -80,6 +84,8 @@ check(passResult.status === "APPLIED" && passResult.disposition === "ACCEPTED", 
 check(passResult.innovation === passResult.residual && passResult.residual_kind === "STATE_OBSERVATION_INNOVATION", "innovation and residual remain numerically identical with the frozen residual kind");
 check(passResult.published_posterior_mean > 0.2 && passResult.published_posterior_mean < 0.23, "Gaussian posterior moves toward but does not equal the observation");
 check(passResult.published_posterior_variance < 0.01, "accepted observation reduces posterior variance");
+check(passResult.clipping.physical_clipping_reduces_latent_variance === false, "physical clipping policy never silently reduces latent posterior variance");
+check(!/[eE]/.test(passResult.canonical_decimal_basis.posterior_vwc_decimal.value), "canonical posterior decimals never use scientific notation");
 
 const limitedSelection = selectAssimilatedContinuationObservationV1({
   scope: fixture.cap02.scope,
@@ -92,22 +98,23 @@ const limitedResult = composeAssimilatedContinuationPosteriorV1({
   selected_observation: limitedSelection.selected_observation,
 });
 check(limitedResult.status === "APPLIED" && limitedResult.disposition === "DOWNWEIGHTED", "LIMITED observation produces APPLIED / DOWNWEIGHTED");
-check(limitedResult.observation_variance === 0.008, "LIMITED quality doubles effective observation variance from 0.004 to 0.008");
+check(nearlyEqualV1(limitedResult.observation_variance, 0.008), "LIMITED quality doubles effective observation variance from 0.004 to 0.008");
 check((limitedResult.applied_assimilation_gain ?? 0) < (passResult.applied_assimilation_gain ?? 0), "LIMITED quality has a smaller applied gain than the same PASS case");
 
-const boundaryValue = 0.2 + 4 * Math.sqrt(0.004);
 const boundarySelection = selectAssimilatedContinuationObservationV1({
   scope: fixture.cap02.scope,
   logical_time: logicalTime,
   saturation_fraction: 0.5,
-  observation_records: [fixture.makeObservation({ source_record_id: "obs_threshold_boundary", value: boundaryValue })],
+  observation_records: [fixture.makeObservation({ source_record_id: "obs_threshold_boundary", value: 0.4 })],
 });
 const boundaryResult = composeAssimilatedContinuationPosteriorV1({
   ...commonMath,
-  prior_variance: 0,
+  prior_mean: 0.1,
+  prior_variance: 0.001625,
   selected_observation: boundarySelection.selected_observation,
 });
-check(boundaryResult.status === "APPLIED" && (boundaryResult.squared_normalized_innovation ?? Infinity) <= 16, "exact squared threshold ratio 16 is accepted inclusively");
+check(boundaryResult.status === "APPLIED" && boundaryResult.disposition === "ACCEPTED", "direct innovation squared equal to 16 times innovation variance is accepted inclusively");
+check(nearlyEqualV1(boundaryResult.squared_normalized_innovation, 16, 1e-10), "reported squared normalized innovation remains an audit trace at the exact threshold");
 
 const outlierSelection = selectAssimilatedContinuationObservationV1({
   scope: fixture.cap02.scope,
@@ -123,6 +130,7 @@ const outlierResult = composeAssimilatedContinuationPosteriorV1({
 });
 check(outlierResult.status === "NOT_APPLIED" && outlierResult.disposition === "REJECTED_OUTLIER", "squared innovation above 16 is rejected without applying a posterior candidate");
 check(outlierResult.candidate_assimilation_gain !== null && outlierResult.applied_assimilation_gain === null, "outlier retains candidate gain for audit but no applied gain");
+check(outlierResult.candidate_unclipped_posterior_mean === null && outlierResult.candidate_posterior_variance === null, "outlier gate runs before Gaussian posterior candidate publication");
 check(outlierResult.published_posterior_mean === 0.1 && outlierResult.state_correction_vwc === 0, "outlier publishes the unchanged propagated prior");
 
 const noObservation = composeAssimilatedContinuationPosteriorV1({
