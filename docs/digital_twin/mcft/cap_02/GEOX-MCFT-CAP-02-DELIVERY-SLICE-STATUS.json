@@ -5,7 +5,7 @@
     "name":  "Hourly Dynamics and Persistence",
     "runtime_mode":  "REPLAY",
     "target_completion_level":  "Level A",
-    "status":  "FAILURE_RECOVERY_IN_PROGRESS",
+    "status":  "FAILURE_RECOVERY_READY_FOR_MERGE",
     "authorization_merge_commit":  "65e59aaf5fcfccacdb986258874a5df3c057711d",
     "baseline_main_commit":  "65e59aaf5fcfccacdb986258874a5df3c057711d",
     "latest_verified_main_commit":  "3166e9fb301f86499c82dce3590cfb6f5db15173",
@@ -541,7 +541,7 @@
                    },
                    {
                        "delivery_slice_id":  "MCFT-CAP-02.FAILURE-RECOVERY-V1",
-                       "status":  "IN_PROGRESS",
+                       "status":  "READY_FOR_MERGE",
                        "primary_owner_work_package_id":  "MCFT-03",
                        "contributing_work_package_ids":  [
                                                              "MCFT-04",
@@ -563,7 +563,6 @@
                                               "EXISTING_RUNTIME_RECOVERY_SURFACE_AUDITED"
                                           ],
                        "preserved_nonclaims":  [
-                                                   "NO_FAILURE_RECOVERY_SLICE_COMPLETION_CLAIM",
                                                    "NO_OBSERVATION_UPDATE_APPLIED",
                                                    "NO_OBSERVATION_INNOVATION_COMPUTED",
                                                    "NO_FORECAST_RESIDUAL",
@@ -596,14 +595,15 @@
                                                            "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_FAILURE_RECOVERY.cjs"
                                                        ],
                        "effectiveness_condition":  "PR_MERGED_TO_MAIN_AND_MERGED_MAIN_FAILURE_RECOVERY_GATE_PASS",
-                       "implementation_candidate_head":  "dc101d6a5964e43f28a92810f5b9c805d58837f8",
+                       "implementation_candidate_head":  "ec6b7e7adbfc8a4c2ed761984121daf7c98599f9",
                        "draft_acceptance":  {
                                                 "changed_file_boundary":  "6_FILES_EXACT",
                                                 "application_failure_recovery":  "6_PASS_0_FAIL",
                                                 "draft_gate":  "83_PASS_0_FAIL",
                                                 "server_typecheck":  "PASS",
-                                                "exact_head_ci":  "4568_SUCCESS",
-                                                "verified_candidate_head":  "dc101d6a5964e43f28a92810f5b9c805d58837f8"
+                                                "exact_head_ci":  "4571_SUCCESS",
+                                                "verified_candidate_head":  "ec6b7e7adbfc8a4c2ed761984121daf7c98599f9",
+                                                "postgres_failure_recovery":  "8_PASS_0_FAIL"
                                             }
                    },
                    {
@@ -634,7 +634,6 @@
                               "RESTART_BACKFILL_MERGED_MAIN_VERIFIED"
                           ],
     "global_preserved_nonclaims":  [
-                                       "NO_FAILURE_RECOVERY_SLICE_COMPLETION_CLAIM",
                                        "NO_OBSERVATION_UPDATE_APPLIED",
                                        "NO_OBSERVATION_INNOVATION_COMPUTED",
                                        "NO_FORECAST_RESIDUAL",
