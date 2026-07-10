@@ -111,7 +111,6 @@ function baseResultV1(input: {
   prior_mean: number;
   prior_variance: number;
   saturation_fraction: number;
-  root_zone_depth_mm: number;
 }): Pick<AssimilatedContinuationPosteriorV1,
   "schema_version" | "observation_operator" | "assimilation_method_id" | "outlier_policy_id" |
   "threshold_decision_basis" | "prior_mean" | "prior_variance" | "clipping"> {
@@ -155,6 +154,15 @@ function decimalBasisV1(input: {
   };
 }
 
+function validateQualityWeightsV1(weights: Readonly<{ PASS: number; LIMITED: number; FAIL: 0 }>): void {
+  if (weights.FAIL !== 0) throw new Error("ASSIMILATION_FAIL_QUALITY_WEIGHT_MUST_BE_ZERO");
+  for (const [quality, value] of [["PASS", weights.PASS], ["LIMITED", weights.LIMITED]] as const) {
+    if (!Number.isFinite(value) || value <= 0 || value > 1) {
+      throw new Error(`ASSIMILATION_${quality}_QUALITY_WEIGHT_INVALID`);
+    }
+  }
+}
+
 export function composeAssimilatedContinuationPosteriorV1(input: {
   prior_mean: unknown;
   prior_variance: unknown;
@@ -170,13 +178,12 @@ export function composeAssimilatedContinuationPosteriorV1(input: {
   const saturation = positiveV1(input.saturation_fraction, "ASSIMILATION_SATURATION_INVALID");
   const depth = positiveV1(input.root_zone_depth_mm, "ASSIMILATION_ROOT_ZONE_DEPTH_INVALID");
   if (priorMean < 0 || priorMean > saturation) throw new Error("ASSIMILATION_PRIOR_MEAN_OUT_OF_PHYSICAL_BOUNDS");
-  if (input.quality_weights.FAIL !== 0) throw new Error("ASSIMILATION_FAIL_QUALITY_WEIGHT_MUST_BE_ZERO");
+  validateQualityWeightsV1(input.quality_weights);
 
   const base = baseResultV1({
     prior_mean: priorMean,
     prior_variance: priorVariance,
     saturation_fraction: saturation,
-    root_zone_depth_mm: depth,
   });
 
   if (input.selected_observation === null) {
@@ -232,12 +239,15 @@ export function composeAssimilatedContinuationPosteriorV1(input: {
   const innovation = operator.observation_fraction - priorMean;
   const innovationVariance = priorVariance + operator.effective_observation_variance;
   if (!(innovationVariance > 0)) throw new Error("ASSIMILATION_INNOVATION_VARIANCE_NON_POSITIVE");
-  const squaredNormalizedInnovation = innovation ** 2 / innovationVariance;
+  const innovationSquared = innovation ** 2;
+  const acceptedBySquaredGate = innovationSquared
+    <= ASSIMILATED_CONTINUATION_MAX_SQUARED_NORMALIZED_INNOVATION_V1 * innovationVariance;
+  const squaredNormalizedInnovation = innovationSquared / innovationVariance;
   const normalizedInnovation = innovation / Math.sqrt(innovationVariance);
   const candidateGain = priorVariance / innovationVariance;
   const selectedRef = selected.observation_ref;
 
-  if (squaredNormalizedInnovation > ASSIMILATED_CONTINUATION_MAX_SQUARED_NORMALIZED_INNOVATION_V1) {
+  if (!acceptedBySquaredGate) {
     return {
       ...base,
       status: "NOT_APPLIED",
@@ -288,15 +298,15 @@ export function composeAssimilatedContinuationPosteriorV1(input: {
   const unclippedMean = assimilation.posterior_mean;
   const clippedMean = Math.min(saturation, Math.max(0, unclippedMean));
   const clippingDelta = clippedMean - unclippedMean;
-  const applied = {
+  const applied: AssimilatedContinuationPosteriorV1 = {
     ...base,
     clipping: {
       ...base.clipping,
       applied: clippingDelta !== 0,
       delta: clippingDelta,
     },
-    status: "APPLIED" as const,
-    disposition: selected.quality_status === "PASS" ? "ACCEPTED" as const : "DOWNWEIGHTED" as const,
+    status: "APPLIED",
+    disposition: selected.quality_status === "PASS" ? "ACCEPTED" : "DOWNWEIGHTED",
     selected_observation_ref: selectedRef,
     evaluated_observation_refs: [selectedRef],
     applied_observation_refs: [selectedRef],
@@ -310,7 +320,7 @@ export function composeAssimilatedContinuationPosteriorV1(input: {
     actual_observation: operator.observation_fraction,
     innovation: assimilation.innovation,
     residual: assimilation.innovation,
-    residual_kind: "STATE_OBSERVATION_INNOVATION" as const,
+    residual_kind: "STATE_OBSERVATION_INNOVATION",
     innovation_variance: innovationVariance,
     normalized_innovation: normalizedInnovation,
     squared_normalized_innovation: squaredNormalizedInnovation,
@@ -329,7 +339,9 @@ export function composeAssimilatedContinuationPosteriorV1(input: {
       posterior_variance: assimilation.posterior_variance,
       root_zone_depth_mm: depth,
     }),
-    reason_codes: selected.quality_status === "PASS" ? ["PASS_OBSERVATION_ACCEPTED"] : ["LIMITED_OBSERVATION_DOWNWEIGHTED"],
+    reason_codes: selected.quality_status === "PASS"
+      ? ["PASS_OBSERVATION_ACCEPTED"]
+      : ["LIMITED_OBSERVATION_DOWNWEIGHTED"],
   };
   return applied;
 }
