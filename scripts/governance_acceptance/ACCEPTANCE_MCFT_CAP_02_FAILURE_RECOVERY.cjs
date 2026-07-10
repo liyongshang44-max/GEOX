@@ -163,9 +163,9 @@ for (const nonclaim of [
 
 const contract = read('docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-FAILURE-RECOVERY-CONTRACT.md');
 check(contract.includes('GEOX-MCFT-CAP-02-FAILURE-RECOVERY-CONTRACT-V1'), 'Failure Recovery contract identity frozen');
-const normalizedContract = contract.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+const normalizedContract = '_' + contract.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') + '_';
 for (const failureClass of REQUIRED_CLASSES) {
-  check(normalizedContract.includes(failureClass), `contract covers ${failureClass}`);
+  check(normalizedContract.includes('_' + failureClass + '_'), `contract covers ${failureClass}`);
 }
 check(contract.includes('pre-commit crash'), 'contract freezes pre-commit crash proof');
 check(contract.includes('post-commit response loss'), 'contract freezes post-commit response-loss proof');
