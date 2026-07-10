@@ -5,7 +5,7 @@
     "name":  "Hourly Dynamics and Persistence",
     "runtime_mode":  "REPLAY",
     "target_completion_level":  "Level A",
-    "status":  "RESTART_BACKFILL_IN_PROGRESS",
+    "status":  "RESTART_BACKFILL_READY_FOR_MERGE",
     "authorization_merge_commit":  "65e59aaf5fcfccacdb986258874a5df3c057711d",
     "baseline_main_commit":  "65e59aaf5fcfccacdb986258874a5df3c057711d",
     "latest_verified_main_commit":  "af798ecdffd1d85e9caa9472d465433c20da9957",
@@ -465,7 +465,7 @@
                    },
                    {
                        "delivery_slice_id":  "MCFT-CAP-02.MCFT-04.RESTART-BACKFILL-V1",
-                       "status":  "IN_PROGRESS",
+                       "status":  "READY_FOR_MERGE",
                        "primary_owner_work_package_id":  "MCFT-04",
                        "contributing_work_package_ids":  [
                                                              "MCFT-03",
@@ -484,8 +484,6 @@
                                               "SPLIT_PROCESS_HASH_EQUIVALENCE_CANDIDATE_IMPLEMENTED"
                                           ],
                        "preserved_nonclaims":  [
-                                                   "NO_RESTART_RESUME_PROOF",
-                                                   "NO_BOUNDED_BACKFILL_PROOF",
                                                    "NO_OBSERVATION_UPDATE_APPLIED",
                                                    "NO_OBSERVATION_INNOVATION_COMPUTED",
                                                    "NO_FORECAST_RESIDUAL",
@@ -569,8 +567,6 @@
                               "TWENTY_FOUR_TICK_RANGE_MERGED_MAIN_VERIFIED"
                           ],
     "global_preserved_nonclaims":  [
-                                       "NO_RESTART_RESUME_PROOF",
-                                       "NO_BOUNDED_BACKFILL_PROOF",
                                        "NO_OBSERVATION_UPDATE_APPLIED",
                                        "NO_OBSERVATION_INNOVATION_COMPUTED",
                                        "NO_FORECAST_RESIDUAL",
