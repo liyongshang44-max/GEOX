@@ -5,7 +5,7 @@
     "name":  "Hourly Dynamics and Persistence",
     "runtime_mode":  "REPLAY",
     "target_completion_level":  "Level A",
-    "status":  "TWENTY_FOUR_TICK_RANGE_IN_PROGRESS",
+    "status":  "TWENTY_FOUR_TICK_RANGE_READY_FOR_MERGE",
     "authorization_merge_commit":  "65e59aaf5fcfccacdb986258874a5df3c057711d",
     "baseline_main_commit":  "65e59aaf5fcfccacdb986258874a5df3c057711d",
     "latest_verified_main_commit":  "18c921c64463d6d9de5af2b4727c185970d771ef",
@@ -390,7 +390,7 @@
                    },
                    {
                        "delivery_slice_id":  "MCFT-CAP-02.MCFT-04-08.TWENTY-FOUR-TICK-RANGE-V1",
-                       "status":  "IN_PROGRESS",
+                       "status":  "READY_FOR_MERGE",
                        "primary_owner_work_package_id":  "MCFT-04",
                        "contributing_work_package_ids":  [
                                                              "MCFT-08"
@@ -408,7 +408,6 @@
                                               "MONOTONIC_UNCERTAINTY_CHAIN_CANDIDATE_IMPLEMENTED"
                                           ],
                        "preserved_nonclaims":  [
-                                                   "NO_TWENTY_FOUR_TICK_RANGE_EXECUTED",
                                                    "NO_RESTART_RESUME_PROOF",
                                                    "NO_BOUNDED_BACKFILL_PROOF",
                                                    "NO_OBSERVATION_UPDATE_APPLIED",
@@ -503,7 +502,6 @@
                               "SINGLE_TICK_INTEGRATION_MERGED_MAIN_VERIFIED"
                           ],
     "global_preserved_nonclaims":  [
-                                       "NO_TWENTY_FOUR_TICK_RANGE_EXECUTED",
                                        "NO_RESTART_RESUME_PROOF",
                                        "NO_BOUNDED_BACKFILL_PROOF",
                                        "NO_OBSERVATION_UPDATE_APPLIED",
