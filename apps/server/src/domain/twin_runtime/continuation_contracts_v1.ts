@@ -13,6 +13,9 @@ import {
   CONTINUATION_DYNAMICS_MODEL_ID_V1,
   CONTINUATION_FORECAST_BLOCK_POLICY_ID_V1,
   CONTINUATION_NO_OBSERVATION_POLICY_ID_V1,
+  CONTINUATION_ROOT_ZONE_DEPTH_MM_V1,
+  CONTINUATION_SATURATION_FRACTION_V1,
+  CONTINUATION_SATURATION_STORAGE_MM_V1,
 } from "./continuation_runtime_config_v1.js";
 
 export const CONTINUATION_FORECAST_REASON_CODES_V1 = [
@@ -35,6 +38,12 @@ export const CONTINUATION_HEALTH_LIMITATION_REASON_CODES_V1 = [
   "FORECAST_MODEL_COMPONENT_NOT_CONFIGURED_IN_PINNED_RUNTIME_CONFIG",
   "NO_CALIBRATED_CONFIDENCE_MODEL",
 ] as const;
+
+const MASS_BALANCE_SELF_HASH_FIELDS_V1 = new Set([
+  "trace_determinism_hash",
+  "mass_balance_trace_hash",
+  "self_hash",
+]);
 
 function requiredStringV1(value: unknown, code: string): string {
   if (typeof value !== "string" || !value.trim()) throw new Error(code);
@@ -73,6 +82,29 @@ function requireCanonicalIsoV1(value: unknown, code: string): string {
   const parsed = Date.parse(text);
   if (!Number.isFinite(parsed) || new Date(parsed).toISOString() !== text) throw new Error(code);
   return text;
+}
+
+function validateFixedDecimalStringV1(value: unknown, scale: number, code: string): string {
+  const text = requiredStringV1(value, `${code}_VALUE_REQUIRED`);
+  const pattern = new RegExp(`^-?\\d+\\.\\d{${scale}}$`);
+  if (!pattern.test(text)) throw new Error(`${code}_FORMAT_INVALID`);
+  const parsed = Number(text);
+  if (!Number.isFinite(parsed)) throw new Error(`${code}_NON_FINITE`);
+  return text;
+}
+
+function rejectRecursiveTraceSelfHashV1(value: unknown, path: string): void {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => rejectRecursiveTraceSelfHashV1(item, `${path}[${index}]`));
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+  for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+    if (MASS_BALANCE_SELF_HASH_FIELDS_V1.has(key)) {
+      throw new Error(`CONTINUATION_MASS_BALANCE_TRACE_SELF_HASH_FORBIDDEN:${path}.${key}`);
+    }
+    rejectRecursiveTraceSelfHashV1(item, `${path}.${key}`);
+  }
 }
 
 function validateBaseEnvelopeV1(object: CanonicalObjectEnvelopeV1): void {
@@ -121,15 +153,13 @@ function validateTransitionV1(object: CanonicalObjectEnvelopeV1): void {
   exactV1(payload.process_model_status, "APPLIED", "CONTINUATION_PROCESS_MODEL_STATUS_MISMATCH");
   exactV1(payload.process_model_id, CONTINUATION_DYNAMICS_MODEL_ID_V1, "CONTINUATION_PROCESS_MODEL_ID_MISMATCH");
   exactV1(payload.process_model_version, 1, "CONTINUATION_PROCESS_MODEL_VERSION_MISMATCH");
-  requireCanonicalIsoV1(payload.propagation_start, "CONTINUATION_PROPAGATION_START_INVALID");
+  const propagationStart = requireCanonicalIsoV1(payload.propagation_start, "CONTINUATION_PROPAGATION_START_INVALID");
   exactV1(payload.propagation_end, object.logical_time, "CONTINUATION_PROPAGATION_END_MISMATCH");
-  if (Date.parse(object.logical_time) - Date.parse(payload.propagation_start as string) !== 60 * 60 * 1000) throw new Error("CONTINUATION_PROPAGATION_INTERVAL_MISMATCH");
+  if (Date.parse(object.logical_time) - Date.parse(propagationStart) !== 60 * 60 * 1000) throw new Error("CONTINUATION_PROPAGATION_INTERVAL_MISMATCH");
   requiredStringV1(payload.previous_state_runtime_config_ref, "CONTINUATION_PREVIOUS_STATE_CONFIG_REF_REQUIRED");
   exactV1(payload.current_runtime_config_ref, object.runtime_config_ref, "CONTINUATION_CURRENT_CONFIG_REF_MISMATCH");
   const trace = requiredRecordV1(payload.mass_balance_trace, "CONTINUATION_MASS_BALANCE_TRACE_REQUIRED");
-  for (const forbidden of ["trace_determinism_hash", "mass_balance_trace_hash", "self_hash"]) {
-    if (forbidden in trace) throw new Error(`CONTINUATION_MASS_BALANCE_TRACE_SELF_HASH_FORBIDDEN:${forbidden}`);
-  }
+  rejectRecursiveTraceSelfHashV1(trace, "mass_balance_trace");
   const traceHash = requiredStringV1(payload.mass_balance_trace_hash, "CONTINUATION_MASS_BALANCE_TRACE_HASH_REQUIRED");
   if (semanticHashV1(trace) !== traceHash) throw new Error("CONTINUATION_MASS_BALANCE_TRACE_HASH_MISMATCH");
   requiredStringV1(payload.evidence_window_ref, "CONTINUATION_TRANSITION_EVIDENCE_REF_REQUIRED");
@@ -157,11 +187,10 @@ function validateAssimilationV1(object: CanonicalObjectEnvelopeV1): void {
   requiredStringV1(payload.posterior_state_ref, "CONTINUATION_ASSIMILATION_STATE_REF_REQUIRED");
 }
 
-function validateDecimalBasisV1(value: unknown, code: string): Record<string, unknown> {
+function validateDecimalBasisV1(value: unknown, code: string, expectedScale: number): Record<string, unknown> {
   const decimal = requiredRecordV1(value, code);
-  requiredStringV1(decimal.value, `${code}_VALUE_REQUIRED`);
-  const scale = requiredFiniteNumberV1(decimal.scale, `${code}_SCALE_REQUIRED`);
-  if (!Number.isInteger(scale) || scale < 0) throw new Error(`${code}_SCALE_INVALID`);
+  validateFixedDecimalStringV1(decimal.value, expectedScale, code);
+  exactV1(decimal.scale, expectedScale, `${code}_SCALE_MISMATCH`);
   return decimal;
 }
 
@@ -172,27 +201,43 @@ function validateStateV1(object: CanonicalObjectEnvelopeV1): void {
   requiredStringV1(payload.transition_ref, "CONTINUATION_STATE_TRANSITION_REF_REQUIRED");
   requiredStringV1(payload.assimilation_update_ref, "CONTINUATION_STATE_ASSIMILATION_REF_REQUIRED");
   requiredStringV1(payload.evidence_window_ref, "CONTINUATION_STATE_EVIDENCE_REF_REQUIRED");
-  exactV1(payload.reality_binding_ref, requiredStringV1(payload.reality_binding_ref, "CONTINUATION_STATE_REALITY_REF_REQUIRED"), "CONTINUATION_STATE_REALITY_REF_INVALID");
+  requiredStringV1(payload.reality_binding_ref, "CONTINUATION_STATE_REALITY_REF_REQUIRED");
   requiredStringV1(payload.reality_binding_hash, "CONTINUATION_STATE_REALITY_HASH_REQUIRED");
+
   const basis = requiredRecordV1(payload.computation_basis, "CONTINUATION_COMPUTATION_BASIS_REQUIRED");
   if (basis.basis_origin !== "DERIVED_FROM_MCFT_CAP_01_POSTERIOR_V1" && basis.basis_origin !== "CARRIED_FROM_PREVIOUS_CONTINUATION_STATE") throw new Error("CONTINUATION_COMPUTATION_BASIS_ORIGIN_MISMATCH");
-  validateDecimalBasisV1(basis.storage_mean_mm_decimal, "CONTINUATION_STORAGE_MEAN_DECIMAL");
-  validateDecimalBasisV1(basis.storage_variance_mm2_decimal, "CONTINUATION_STORAGE_VARIANCE_DECIMAL");
+  validateDecimalBasisV1(basis.storage_mean_mm_decimal, "CONTINUATION_STORAGE_MEAN_DECIMAL", 6);
+  validateDecimalBasisV1(basis.storage_variance_mm2_decimal, "CONTINUATION_STORAGE_VARIANCE_DECIMAL", 12);
   if (basis.basis_origin === "DERIVED_FROM_MCFT_CAP_01_POSTERIOR_V1") {
     requiredStringV1(basis.source_posterior_ref, "CONTINUATION_FIRST_BRIDGE_SOURCE_POSTERIOR_REQUIRED");
-    requiredStringV1(basis.source_vwc_variance, "CONTINUATION_FIRST_BRIDGE_SOURCE_VARIANCE_REQUIRED");
-    requiredStringV1(basis.root_zone_depth_mm, "CONTINUATION_FIRST_BRIDGE_DEPTH_REQUIRED");
+    validateFixedDecimalStringV1(basis.source_vwc_variance, 6, "CONTINUATION_FIRST_BRIDGE_SOURCE_VARIANCE");
+    exactV1(basis.root_zone_depth_mm, CONTINUATION_ROOT_ZONE_DEPTH_MM_V1.toFixed(6), "CONTINUATION_FIRST_BRIDGE_DEPTH_MISMATCH");
   } else {
     requiredStringV1(basis.previous_state_ref, "CONTINUATION_CARRIED_BASIS_PREVIOUS_STATE_REQUIRED");
-    validateDecimalBasisV1(basis.previous_storage_mean_mm_decimal, "CONTINUATION_PREVIOUS_STORAGE_MEAN_DECIMAL");
-    validateDecimalBasisV1(basis.previous_storage_variance_mm2_decimal, "CONTINUATION_PREVIOUS_STORAGE_VARIANCE_DECIMAL");
+    validateDecimalBasisV1(basis.previous_storage_mean_mm_decimal, "CONTINUATION_PREVIOUS_STORAGE_MEAN_DECIMAL", 6);
+    validateDecimalBasisV1(basis.previous_storage_variance_mm2_decimal, "CONTINUATION_PREVIOUS_STORAGE_VARIANCE_DECIMAL", 12);
   }
-  requiredRecordV1(payload.root_zone_storage_mm, "CONTINUATION_STATE_STORAGE_REQUIRED");
-  requiredRecordV1(payload.root_zone_vwc_fraction, "CONTINUATION_STATE_VWC_REQUIRED");
+
+  const storage = requiredRecordV1(payload.root_zone_storage_mm, "CONTINUATION_STATE_STORAGE_REQUIRED");
+  const storageMean = requiredFiniteNumberV1(storage.mean, "CONTINUATION_STATE_STORAGE_MEAN_REQUIRED");
+  const storageVariance = requiredFiniteNumberV1(storage.variance, "CONTINUATION_STATE_STORAGE_VARIANCE_REQUIRED");
+  if (storageMean < 0 || storageMean > CONTINUATION_SATURATION_STORAGE_MM_V1) throw new Error("CONTINUATION_STATE_STORAGE_OUT_OF_BOUNDS");
+  if (storageVariance < 0) throw new Error("CONTINUATION_STATE_STORAGE_VARIANCE_NEGATIVE");
+
+  const vwc = requiredRecordV1(payload.root_zone_vwc_fraction, "CONTINUATION_STATE_VWC_REQUIRED");
+  const vwcMean = requiredFiniteNumberV1(vwc.mean, "CONTINUATION_STATE_VWC_MEAN_REQUIRED");
+  const vwcVariance = requiredFiniteNumberV1(vwc.variance, "CONTINUATION_STATE_VWC_VARIANCE_REQUIRED");
+  const vwcStddev = requiredFiniteNumberV1(vwc.stddev, "CONTINUATION_STATE_VWC_STDDEV_REQUIRED");
+  if (vwcMean < 0 || vwcMean > CONTINUATION_SATURATION_FRACTION_V1) throw new Error("CONTINUATION_STATE_VWC_OUT_OF_BOUNDS");
+  if (vwcVariance < 0 || vwcStddev < 0) throw new Error("CONTINUATION_STATE_VWC_UNCERTAINTY_NEGATIVE");
   requiredRecordV1(payload.uncertainty, "CONTINUATION_STATE_UNCERTAINTY_REQUIRED");
-  requiredFiniteNumberV1(payload.available_water_fraction, "CONTINUATION_STATE_AWF_REQUIRED");
-  requiredFiniteNumberV1(payload.depletion_from_field_capacity_mm, "CONTINUATION_STATE_DEPLETION_REQUIRED");
+
+  const availableWaterFraction = requiredFiniteNumberV1(payload.available_water_fraction, "CONTINUATION_STATE_AWF_REQUIRED");
+  if (availableWaterFraction < 0 || availableWaterFraction > 1) throw new Error("CONTINUATION_STATE_AWF_OUT_OF_BOUNDS");
+  const depletion = requiredFiniteNumberV1(payload.depletion_from_field_capacity_mm, "CONTINUATION_STATE_DEPLETION_REQUIRED");
+  if (depletion < 0) throw new Error("CONTINUATION_STATE_DEPLETION_NEGATIVE");
   requiredStringV1(payload.mass_balance_trace_hash, "CONTINUATION_STATE_TRACE_HASH_REQUIRED");
+
   const confidence = requiredRecordV1(payload.confidence, "CONTINUATION_STATE_CONFIDENCE_REQUIRED");
   exactV1(confidence.status, "NOT_ESTABLISHED", "CONTINUATION_STATE_CONFIDENCE_STATUS_MISMATCH");
   exactV1(confidence.reason_code, "NO_CALIBRATED_CONFIDENCE_MODEL", "CONTINUATION_STATE_CONFIDENCE_REASON_MISMATCH");
