@@ -167,10 +167,10 @@ const normalizedContract = '_' + contract.toLowerCase().replace(/[^a-z0-9]+/g, '
 for (const failureClass of REQUIRED_CLASSES) {
   check(normalizedContract.includes('_' + failureClass + '_'), `contract covers ${failureClass}`);
 }
-check(contract.includes('pre-commit crash'), 'contract freezes pre-commit crash proof');
-check(contract.includes('post-commit response loss'), 'contract freezes post-commit response-loss proof');
-check(contract.includes('stop-on-first-failure') || contract.includes('Stop-on-first-failure'), 'contract freezes stop-on-first-failure');
-check(contract.includes('explicit projection rebuild procedure'), 'contract freezes explicit projection repair');
+check(normalizedContract.includes('_pre_commit_crash_'), 'contract freezes pre-commit crash proof');
+check(normalizedContract.includes('_post_commit_response_loss_'), 'contract freezes post-commit response-loss proof');
+check(normalizedContract.includes('_stop_on_first_failure_'), 'contract freezes stop-on-first-failure');
+check(normalizedContract.includes('_explicit_projection_rebuild_procedure_'), 'contract freezes explicit projection repair');
 
 const fixture = readJson('fixtures/mcft/water_state/negative/MCFT_CAP_02_FAILURE_RECOVERY_FIXTURES.json');
 check(fixture.schema_version === 'geox_mcft_cap_02_failure_recovery_fixtures_v1', 'Failure Recovery fixture schema exact');
