@@ -49,12 +49,12 @@ class InMemoryRuntimeConfigRepositoryV1 implements RuntimeConfigRepositoryPortV1
   }
 }
 
-function selectedCandidateV1(): AssimilatedObservationCandidateV1 {
+function selectedCandidateV1(qualityStatus: "PASS" | "LIMITED" = "PASS"): AssimilatedObservationCandidateV1 {
   return {
     observation_ref: "obs_cap03_selected_v1",
     source_record_id: "soil_obs_001",
     source_record_hash: "sha256:soil_obs_001",
-    observation_semantic_content_hash: "sha256:semantic_soil_obs_001",
+    observation_semantic_content_hash: `sha256:semantic_soil_obs_001_${qualityStatus.toLowerCase()}`,
     record_type: "soil_moisture_observation_v1",
     epistemic_class: "OBSERVED",
     observed_at: "2026-06-02T01:50:00.000Z",
@@ -67,7 +67,7 @@ function selectedCandidateV1(): AssimilatedObservationCandidateV1 {
     conversion_rule: { id: "PERCENT_VWC_TO_FRACTION_V1", version: "1" },
     canonical_payload: { unit: "fraction", value: 0.1845 },
     canonical_value: 0.1845,
-    quality_status: "PASS",
+    quality_status: qualityStatus,
     temporal_offset_seconds: 600,
     candidate_assessment: "SELECTED",
     reason_codes: [],
@@ -78,7 +78,7 @@ function appliedPayloadV1(
   base: AssimilatedContinuationUpdatePayloadV1,
   disposition: "ACCEPTED" | "DOWNWEIGHTED",
 ): AssimilatedContinuationUpdatePayloadV1 {
-  const selected = selectedCandidateV1();
+  const selected = selectedCandidateV1(disposition === "ACCEPTED" ? "PASS" : "LIMITED");
   return {
     ...structuredClone(base),
     status: "APPLIED",
@@ -120,12 +120,12 @@ function outlierPayloadV1(base: AssimilatedContinuationUpdatePayloadV1): Assimil
     applied_observation_refs: [],
     consumed_observation_refs: [],
     predicted_observation: base.prior_mean,
-    actual_observation: 0.45,
-    innovation: 0.26078996,
-    residual: 0.26078996,
+    actual_observation: 0.56,
+    innovation: 0.37078996,
+    residual: 0.37078996,
     innovation_variance: 0.006747455463,
-    normalized_innovation: 3.174,
-    squared_normalized_innovation: 10.074,
+    normalized_innovation: 4.514,
+    squared_normalized_innovation: 20.376,
     observation_variance: 0.004,
     candidate_assimilation_gain: 0.40718393448,
     applied_assimilation_gain: null,
@@ -182,22 +182,25 @@ async function main(): Promise<void> {
     runtime_config: fixture.assimilatedRuntimeConfig,
   });
   validateAssimilatedContinuationUpdatePayloadV1(baseUpdate);
-  validateAssimilatedContinuationUpdatePayloadV1(appliedPayloadV1(baseUpdate, "ACCEPTED"));
+  const accepted = appliedPayloadV1(baseUpdate, "ACCEPTED");
+  validateAssimilatedContinuationUpdatePayloadV1(accepted);
   const downweighted = appliedPayloadV1(baseUpdate, "DOWNWEIGHTED");
   validateAssimilatedContinuationUpdatePayloadV1(downweighted);
-  validateAssimilatedContinuationUpdatePayloadV1(outlierPayloadV1(baseUpdate));
-  assert.ok(Number(downweighted.candidate_assimilation_gain) < Number(appliedPayloadV1(baseUpdate, "ACCEPTED").candidate_assimilation_gain));
-  ok("all four legal update status/disposition combinations are independently expressible with candidate and applied gains separated");
+  const outlier = outlierPayloadV1(baseUpdate);
+  validateAssimilatedContinuationUpdatePayloadV1(outlier);
+  assert.equal(accepted.candidate_observations[0].quality_status, "PASS");
+  assert.equal(downweighted.candidate_observations[0].quality_status, "LIMITED");
+  assert.ok(Number(downweighted.candidate_assimilation_gain) < Number(accepted.candidate_assimilation_gain));
+  assert.ok(Number(outlier.squared_normalized_innovation) > 16);
+  ok("all four legal update combinations preserve PASS/LIMITED semantics, separated gains, and an actual outlier trace");
 
+  const originalOperationKeyHash = fixture.assimilatedRecordSet.continuation_operation_key_hash;
   const changedAggregate = structuredClone(fixture.assimilatedRecordSet.aggregate_identity_input);
   changedAggregate.evidence_window_semantic_digest = "sha256:different_evidence_digest";
   const changedHash = computeAssimilatedContinuationRecordSetDeterminismHashV1(changedAggregate);
   assert.notEqual(changedHash, fixture.assimilatedRecordSet.continuation_record_set_determinism_hash);
-  assert.equal(
-    fixture.assimilatedRecordSet.continuation_operation_key_hash,
-    fixture.continuationRecordSet.continuation_operation_key_hash,
-  );
-  ok("Evidence/config/contract content changes the aggregate hash while the A2 operation key remains scope-lineage-revision-time-variant only");
+  assert.equal(fixture.assimilatedRecordSet.continuation_operation_key_hash, originalOperationKeyHash);
+  ok("Evidence/config/contract content changes the aggregate hash without changing the A2 operation key");
 
   console.log(`MCFT-CAP-03 contracts-config: ${pass} PASS, 0 FAIL`);
 }
