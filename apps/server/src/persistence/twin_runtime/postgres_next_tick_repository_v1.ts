@@ -4,16 +4,29 @@
 
 import type { Pool, PoolClient } from "pg";
 import { validateCanonicalObjectV1, type CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
+import { validateContinuationMemberV1 } from "../../domain/twin_runtime/continuation_contracts_v1.js";
 import type { NextTickReadPortV1, PersistedNextTickSnapshotV1, RealityBindingRuntimeSnapshotV1, RuntimeAuthoritySnapshotRepositoryPortV1, TwinScopeKeyV1 } from "../../runtime/twin_runtime/ports.js";
 
 function scopeValuesV1(scope: TwinScopeKeyV1): unknown[] {
   return [scope.tenant_id, scope.project_id, scope.group_id, scope.field_id, scope.season_id, scope.zone_id];
 }
 
+function isContinuationReadObjectV1(object: CanonicalObjectEnvelopeV1): boolean {
+  if (object.object_type === "twin_runtime_checkpoint_v1") {
+    return object.payload.checkpoint_kind === "CONTINUATION";
+  }
+  if (object.object_type === "twin_state_estimate_v1") {
+    return Object.prototype.hasOwnProperty.call(object.payload, "computation_basis")
+      || typeof object.payload.previous_posterior_ref === "string";
+  }
+  return false;
+}
+
 function parseFactObjectV1(recordJsonValue: unknown): CanonicalObjectEnvelopeV1 {
   const parsed = typeof recordJsonValue === "string" ? JSON.parse(recordJsonValue) : recordJsonValue;
   const object = (parsed as { payload: CanonicalObjectEnvelopeV1 }).payload;
-  validateCanonicalObjectV1(object);
+  if (isContinuationReadObjectV1(object)) validateContinuationMemberV1(object);
+  else validateCanonicalObjectV1(object);
   return object;
 }
 
