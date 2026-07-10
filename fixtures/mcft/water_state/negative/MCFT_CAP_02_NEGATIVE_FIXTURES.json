@@ -1,0 +1,45 @@
+{
+  "schema_version": "mcft_cap_02_dynamics_negative_fixtures_v1",
+  "cases": [
+    {
+      "case_id": "CONFLICTING_EXECUTION_DUPLICATE",
+      "expected_error": "CONFLICTING_DUPLICATE_EVIDENCE"
+    },
+    {
+      "case_id": "PLANNED_AMOUNT_FORBIDDEN",
+      "expected_error": "EXECUTION_FORBIDDEN_AMOUNT_KEY:planned_amount_mm"
+    },
+    {
+      "case_id": "EXECUTION_COVERAGE_OUT_OF_RANGE",
+      "expected_error": "EXECUTION_COVERAGE_OUT_OF_RANGE"
+    },
+    {
+      "case_id": "DYNAMIC_ROOT_DEPTH_FORBIDDEN",
+      "expected_error": "DYNAMICS_GOVERNED_ROOT_DEPTH_MUST_BE_300MM"
+    },
+    {
+      "case_id": "ZERO_STRUCTURAL_UNCERTAINTY_FORBIDDEN",
+      "expected_error": "UNCERTAINTY_STRUCTURAL_STDDEV_ZERO_FORBIDDEN"
+    },
+    {
+      "case_id": "SUBSEQUENT_VARIANCE_REDERIVATION_FORBIDDEN",
+      "expected_error": "CONTINUATION_SUBSEQUENT_TICK_VARIANCE_REDERIVATION_FORBIDDEN"
+    },
+    {
+      "case_id": "NEGATIVE_RAINFALL_FORBIDDEN",
+      "expected_error": "DYNAMICS_RAINFALL_NEGATIVE"
+    },
+    {
+      "case_id": "PREVIOUS_STORAGE_ABOVE_SATURATION",
+      "expected_error": "DYNAMICS_PREVIOUS_STORAGE_ABOVE_SATURATION"
+    },
+    {
+      "case_id": "TRACE_SELF_HASH_FORBIDDEN",
+      "expected_error": "WATER_MASS_BALANCE_TRACE_SELF_HASH_FORBIDDEN:mass_balance_trace_hash"
+    },
+    {
+      "case_id": "MASS_BALANCE_TAMPER_REJECTED",
+      "expected_error": "WATER_MASS_BALANCE_NOT_CLOSED"
+    }
+  ]
+}
