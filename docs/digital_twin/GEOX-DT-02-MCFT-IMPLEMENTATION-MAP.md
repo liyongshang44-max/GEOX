@@ -258,3 +258,94 @@ NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM
 MCFT-CAP-01 establishes a deterministic Replay bootstrap State capability only. MCFT-CAP-02 authorization readiness establishes no Dynamics, continuation State, restart/backfill, Forecast success, Gate A, Gate B, Gate C or Minimum Complete Field Twin closure.
 
 MCFT-CAP-03 remains unauthorized. It requires independent authorization after MCFT-CAP-02 is fully implemented, closed, merged and verified on `main`.
+## 10. MCFT-CAP-02 Closure activation
+
+```text
+closure identity:
+GEOX-MCFT-CAP-02-CLOSURE-V1
+
+status:
+READY_FOR_MERGE
+
+closure effective:
+false
+
+baseline and latest verified main:
+9a61e05f683adf3815ee1cc4af182efd23508588
+
+activation head:
+8f63fc84c298a20d12094d100865af89e812ea31
+
+active delivery slice:
+MCFT-CAP-02.CLOSURE-V1
+
+completed predecessor delivery slices:
+9
+
+failure recovery merged-main Gate:
+86 PASS, 0 FAIL
+
+successor:
+MCFT-CAP-03
+
+successor authorized:
+false
+```
+
+The Closure slice aggregates already merged and main-verified evidence. It changes no Runtime source, migration, route, web path, workflow, canonical fact semantics, Dynamics math, or persistence transaction semantics.
+
+The exact post-effectiveness completion claims are recorded as pending. `MCFT_CAP_02_COMPLETE` does not become effective until the Closure PR is merged and the merged-main Closure Gate passes.
+
+Horizontal owner work packages remain partially established. Capability-line completion does not mark any horizontal owner work package COMPLETE.
+## 11. MCFT-CAP-02 Closure readiness
+
+```text
+implementation candidate head:
+2c4c07ef56209d19f0fccea9da734ffcc31d02bb
+
+candidate exact-head CI:
+#4574 SUCCESS
+
+Closure Draft Gate:
+126 PASS, 0 FAIL
+
+Closure effective:
+false
+
+MCFT-CAP-03 authorized:
+false
+```
+
+The Closure candidate is ready for destructive Final Gate and a new READY exact-head CI. No capability completion claim is effective before merge and merged-main verification.
+## 12. MCFT-CAP-02 Closure Final Gate
+
+```text
+READY head:
+c88f555685ad8d79618f6ceb21d702264f37bfe7
+
+READY exact-head CI:
+#4575 SUCCESS
+
+Closure Final Gate:
+141 PASS, 0 FAIL
+
+PostgreSQL:
+24-tick 8/0
+restart/backfill 8/0
+persistence 15/0
+Failure Recovery 8/0
+
+server typecheck:
+PASS
+
+server build:
+PASS
+
+Closure effective:
+false
+
+MCFT-CAP-03 authorized:
+false
+```
+
+The Final Gate evidence is recorded for the READY head. Capability completion remains non-effective until the Closure PR is merged and the merged-main Closure Gate passes.
