@@ -1,0 +1,83 @@
+{
+  "schema_version": "geox_mcft_cap_02_continuation_persistence_contract_v1",
+  "capability_line_id": "MCFT-CAP-02",
+  "delivery_slice_id": "MCFT-CAP-02.MCFT-03.CONTINUATION-PERSISTENCE-V1",
+  "baseline_main_commit": "869593d269b5175b216ce494b55b4b121db45190",
+  "transaction": {
+    "family": "A_STATE_TICK_COMMIT",
+    "operation_variant": "A2_BLOCKED_FORECAST",
+    "database_transaction_per_tick": true,
+    "canonical_fact_append_count": 8,
+    "projection_write_count": 5,
+    "active_lineage_write_count": 0,
+    "successful_forecast_latest_write_count": 0
+  },
+  "idempotency": {
+    "identity_kind": "A2_RECORD_SET",
+    "lookup_precedes_lease_verification": true,
+    "same_key_same_hash": "EXISTING_IDEMPOTENT_SUCCESS",
+    "same_key_different_hash": "IDEMPOTENCY_CONFLICT",
+    "canonical_uniqueness_recovery": "CANONICAL_CONTINUATION_UNIQUENESS_CONFLICT"
+  },
+  "authority_revalidation_order": [
+    "LEASE_OWNER",
+    "LEASE_EXPIRY",
+    "FENCING_TOKEN",
+    "ACTIVE_LINEAGE_OBJECT_REF",
+    "LINEAGE_ID",
+    "REVISION_ID",
+    "PREVIOUS_CHECKPOINT_REF",
+    "PREVIOUS_STATE_REF",
+    "PREVIOUS_FORECAST_RESULT_REF",
+    "LATEST_SUCCESSFUL_FORECAST_NULL",
+    "RUNTIME_CONFIG_REF_HASH",
+    "CANONICAL_CONTINUATION_UNIQUENESS"
+  ],
+  "projection_policy": {
+    "state_history": "APPEND",
+    "state_latest": "EXPECTED_CURRENT_CAS",
+    "forecast_result_latest": "EXPECTED_CURRENT_CAS",
+    "checkpoint_latest": "EXPECTED_CURRENT_CAS",
+    "runtime_health_latest": "CURRENT_TICK_UPSERT",
+    "active_lineage": "VERIFY_ONLY",
+    "successful_forecast_latest": "VERIFY_NULL_AND_DO_NOT_WRITE"
+  },
+  "readback": {
+    "member_count": 8,
+    "validate_complete_cross_reference_graph": true,
+    "validate_aggregate_determinism_hash": true
+  },
+  "rebuild": {
+    "canonical_source_only": true,
+    "rebuilt_projection_count": 5,
+    "active_lineage_unchanged": true,
+    "successful_forecast_latest_unchanged": true,
+    "newer_pointer_regression_forbidden": true
+  },
+  "database_schema": {
+    "new_table_count": 0,
+    "new_projection_family_count": 0,
+    "existing_identity_kind_constraint_extended_with": "A2_RECORD_SET"
+  },
+  "required_error_codes": [
+    "STALE_FENCING_TOKEN",
+    "LEASE_EXPIRED",
+    "ACTIVE_LINEAGE_OBJECT_REF_MISMATCH",
+    "ACTIVE_LINEAGE_ID_MISMATCH",
+    "LINEAGE_REVISION_MISMATCH",
+    "CHECKPOINT_CAS_CONFLICT",
+    "STATE_LATEST_CAS_CONFLICT",
+    "FORECAST_RESULT_CAS_CONFLICT",
+    "SUCCESSFUL_FORECAST_POINTER_UNEXPECTED",
+    "CANONICAL_CONTINUATION_UNIQUENESS_CONFLICT",
+    "IDEMPOTENCY_CONFLICT"
+  ],
+  "preserved_nonclaims": [
+    "NO_RUNTIME_TICK_ORCHESTRATION",
+    "NO_A2_END_TO_END_TICK_EXECUTED",
+    "NO_RESTART_RESUME_PROOF",
+    "NO_BOUNDED_BACKFILL_PROOF",
+    "NO_SUCCESSFUL_FORECAST",
+    "NO_MCFT_CAP_02_COMPLETE_CLAIM"
+  ]
+}
