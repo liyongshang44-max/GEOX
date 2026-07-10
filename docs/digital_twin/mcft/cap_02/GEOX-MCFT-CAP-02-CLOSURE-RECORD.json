@@ -1,5 +1,5 @@
 {
-    "schema_version":  "geox_mcft_cap_02_closure_record_v1",
+    "schema_version":  "geox_mcft_cap_02_closure_record_v2",
     "closure_identity":  "GEOX-MCFT-CAP-02-CLOSURE-V1",
     "capability_line_id":  "MCFT-CAP-02",
     "display_alias":  "MCFT-2",
@@ -7,8 +7,8 @@
     "runtime_mode":  "REPLAY",
     "target_completion_level":  "Level A",
     "delivery_slice_id":  "MCFT-CAP-02.CLOSURE-V1",
-    "status":  "READY_FOR_MERGE",
-    "closure_effective":  false,
+    "status":  "COMPLETE",
+    "closure_effective":  true,
     "baseline_main_commit":  "9a61e05f683adf3815ee1cc4af182efd23508588",
     "activation_head":  "8f63fc84c298a20d12094d100865af89e812ea31",
     "branch":  "mcft-cap-02-closure-v1",
@@ -18,12 +18,15 @@
                       "predecessor_capability_line_id":  "MCFT-CAP-01",
                       "predecessor_main_verified":  true,
                       "authorization_merge_commit":  "65e59aaf5fcfccacdb986258874a5df3c057711d",
-                      "latest_verified_main_commit":  "9a61e05f683adf3815ee1cc4af182efd23508588",
+                      "latest_verified_main_commit":  "08f0b5c146959b2a3988cd3ea07647628b0e84ad",
                       "failure_recovery_merge_commit":  "9a61e05f683adf3815ee1cc4af182efd23508588",
                       "failure_recovery_candidate_head":  "ec6b7e7adbfc8a4c2ed761984121daf7c98599f9",
                       "failure_recovery_ready_head":  "5f70b61bb5c836c9c6a21426a30902c527d56f42",
                       "failure_recovery_candidate_ci":  "4571_SUCCESS",
-                      "failure_recovery_ready_ci":  "4572_SUCCESS"
+                      "failure_recovery_ready_ci":  "4572_SUCCESS",
+                      "closure_merge_commit":  "08f0b5c146959b2a3988cd3ea07647628b0e84ad",
+                      "closure_final_evidence_head":  "800e1d255414b847587350d0f19b92288b32c1db",
+                      "closure_final_exact_head_ci":  "4576_SUCCESS"
                   },
     "completed_predecessor_slices":  [
                                          {
@@ -188,21 +191,11 @@
                                           "SINGLE_TICK_INTEGRATION_MERGED_MAIN_VERIFIED",
                                           "TWENTY_FOUR_TICK_RANGE_MERGED_MAIN_VERIFIED",
                                           "RESTART_BACKFILL_MERGED_MAIN_VERIFIED",
-                                          "FAILURE_RECOVERY_MERGED_MAIN_VERIFIED"
+                                          "FAILURE_RECOVERY_MERGED_MAIN_VERIFIED",
+                                          "MCFT_CAP_02_CLOSURE_MERGED_MAIN_VERIFIED"
                                       ],
     "pending_completion_claims":  [
-                                      "MCFT_CAP_02_COMPLETE",
-                                      "HOURLY_WATER_DYNAMICS_V1_ESTABLISHED",
-                                      "TWENTY_FOUR_CONTINUATION_TICKS_PERSISTED",
-                                      "CONTINUATION_STATE_CHAIN_ESTABLISHED",
-                                      "CONTROLLED_ADDITIVE_PROCESS_UNCERTAINTY_BUDGET_ESTABLISHED",
-                                      "CONTINUATION_CHECKPOINT_CHAIN_ESTABLISHED",
-                                      "CONTINUATION_OPERATION_IDEMPOTENCY_ESTABLISHED",
-                                      "CONTINUATION_CANONICAL_UNIQUENESS_ESTABLISHED",
-                                      "RESTART_RESUME_PROVEN",
-                                      "BOUNDED_FORWARD_BACKFILL_PROVEN",
-                                      "EXACT_HOURLY_EVIDENCE_SELECTION_ESTABLISHED",
-                                      "EXECUTED_IRRIGATION_INPUT_POLICY_ESTABLISHED"
+
                                   ],
     "preserved_nonclaims":  [
                                 "NO_OBSERVATION_UPDATE_APPLIED",
@@ -225,8 +218,7 @@
                                 "NO_MCFT_GATE_A_CLOSURE",
                                 "NO_MCFT_GATE_B_CLOSURE",
                                 "NO_MCFT_GATE_C_CLOSURE",
-                                "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM",
-                                "NO_MCFT_CAP_02_COMPLETE_CLAIM"
+                                "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
                             ],
     "closure_proof":  {
                           "predecessor_main_verified":  true,
@@ -265,7 +257,7 @@
                                 "closure_draft_gate":  "126_PASS_0_FAIL",
                                 "closure_exact_head_ci":  "4574_SUCCESS",
                                 "closure_final_gate":  "141_PASS_0_FAIL",
-                                "closure_merged_main_gate":  "PENDING",
+                                "closure_merged_main_gate":  "161_PASS_0_FAIL",
                                 "closure_candidate_head":  "2c4c07ef56209d19f0fccea9da734ffcc31d02bb",
                                 "closure_final_gate_head":  "c88f555685ad8d79618f6ceb21d702264f37bfe7",
                                 "closure_ready_exact_head_ci":  "4575_SUCCESS",
@@ -279,7 +271,14 @@
                                 "expected_fault_injection_output":  [
                                                                         "SIMULATED_PRECOMMIT_PROCESS_CRASH",
                                                                         "SIMULATED_RESPONSE_LOSS_AFTER_COMMIT"
-                                                                    ]
+                                                                    ],
+                                "closure_merged_main_head":  "08f0b5c146959b2a3988cd3ea07647628b0e84ad",
+                                "closure_final_evidence_head_gate":  "161_PASS_0_FAIL",
+                                "closure_final_exact_head_ci":  "4576_SUCCESS",
+                                "merged_main_working_tree":  "CLEAN",
+                                "merged_main_git_diff_check":  "PASS",
+                                "merged_main_server_typecheck":  "PASS",
+                                "merged_main_server_build":  "PASS"
                             },
     "closure_does_not_change":  {
                                     "runtime_source":  true,
@@ -306,8 +305,37 @@
                                         "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json",
                                         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_CLOSURE.cjs"
                                     ],
-    "effectiveness_condition":  "CLOSURE_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_MCFT_CAP_02_CLOSURE_GATE_PASS",
+    "effectiveness_condition":  "PR_2327_MERGED_AND_MERGED_MAIN_CLOSURE_GATE_161_PASS_0_FAIL",
     "implementation_candidate_head":  "2c4c07ef56209d19f0fccea9da734ffcc31d02bb",
     "ready_head":  "c88f555685ad8d79618f6ceb21d702264f37bfe7",
-    "ready_exact_head_ci":  "4575_SUCCESS"
+    "ready_exact_head_ci":  "4575_SUCCESS",
+    "completion_claims":  [
+                              "MCFT_CAP_02_COMPLETE",
+                              "HOURLY_WATER_DYNAMICS_V1_ESTABLISHED",
+                              "TWENTY_FOUR_CONTINUATION_TICKS_PERSISTED",
+                              "CONTINUATION_STATE_CHAIN_ESTABLISHED",
+                              "CONTROLLED_ADDITIVE_PROCESS_UNCERTAINTY_BUDGET_ESTABLISHED",
+                              "CONTINUATION_CHECKPOINT_CHAIN_ESTABLISHED",
+                              "CONTINUATION_OPERATION_IDEMPOTENCY_ESTABLISHED",
+                              "CONTINUATION_CANONICAL_UNIQUENESS_ESTABLISHED",
+                              "RESTART_RESUME_PROVEN",
+                              "BOUNDED_FORWARD_BACKFILL_PROVEN",
+                              "EXACT_HOURLY_EVIDENCE_SELECTION_ESTABLISHED",
+                              "EXECUTED_IRRIGATION_INPUT_POLICY_ESTABLISHED"
+                          ],
+    "main_verification_ref":  "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-MAIN-VERIFICATION.json",
+    "closure_merge_commit":  "08f0b5c146959b2a3988cd3ea07647628b0e84ad",
+    "verified_main_commit":  "08f0b5c146959b2a3988cd3ea07647628b0e84ad",
+    "final_evidence_head":  "800e1d255414b847587350d0f19b92288b32c1db",
+    "final_exact_head_ci":  "4576_SUCCESS",
+    "finalization_branch":  "mcft-cap-02-closure-finalization-v1",
+    "finalization_exact_changed_file_boundary":  [
+                                                     "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+                                                     "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+                                                     "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-CLOSURE.md",
+                                                     "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-CLOSURE-RECORD.json",
+                                                     "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json",
+                                                     "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-MAIN-VERIFICATION.json",
+                                                     "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_CLOSURE.cjs"
+                                                 ]
 }

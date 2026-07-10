@@ -349,3 +349,44 @@ false
 ```
 
 The Final Gate evidence is recorded for the READY head. Capability completion remains non-effective until the Closure PR is merged and the merged-main Closure Gate passes.
+## 13. MCFT-CAP-02 canonical completion
+
+```text
+capability:
+MCFT-CAP-02 鈥?Hourly Dynamics and Persistence
+
+status:
+COMPLETE
+
+Closure PR:
+#2327
+
+final evidence head:
+800e1d255414b847587350d0f19b92288b32c1db
+
+final exact-head CI:
+#4576 SUCCESS
+
+merge commit and verified main:
+08f0b5c146959b2a3988cd3ea07647628b0e84ad
+
+merged-main Closure Gate:
+161 PASS, 0 FAIL
+
+completion claims:
+12 effective
+
+preserved nonclaims:
+21 effective
+
+horizontal owner work packages:
+not completed by capability closure
+
+successor:
+MCFT-CAP-03
+
+successor authorized:
+false
+```
+
+MCFT-CAP-02 is canonically complete at Level A for deterministic replay hourly Dynamics and persistence. This does not establish observation assimilation, successful Forecast, continuous Runtime, live-field operation, or Minimum Complete Field Twin. MCFT-CAP-03 requires independent authorization.
