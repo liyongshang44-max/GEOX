@@ -2,6 +2,7 @@
 // Purpose: execute exactly one explicit MCFT-CAP-02 Replay continuation tick through persisted handoff, pinned config, exact-hour Evidence, pure Dynamics, canonical candidate construction, A2 persistence, readback, and next handoff.
 // Boundary: one requested tick only; no range loop, restart mode, backfill, public route, wall-clock logical time, scheduler, successful Forecast, Scenario, Recommendation, or action.
 
+import type { ExecutedIrrigationCandidateV1 } from "../../domain/soil_water/executed_irrigation_input_v1.js";
 import {
   buildHourlyWaterBalanceConfigFromContinuationRuntimeConfigV1,
   executeHourlyWaterBalanceV1,
@@ -56,6 +57,15 @@ export type ExecuteContinuationTickResultV1 = {
   next_handoff: PreparedNextTickInputV1;
 };
 
+type ScopeLikeV1 = {
+  tenant_id: string;
+  project_id: string;
+  group_id: string | null;
+  field_id: string;
+  season_id: string | null;
+  zone_id: string | null;
+};
+
 function requiredCanonicalIsoV1(value: string, code: string): string {
   const parsed = Date.parse(value);
   if (!Number.isFinite(parsed) || new Date(parsed).toISOString() !== value) throw new Error(code);
@@ -72,13 +82,13 @@ function requiredFiniteNumberV1(value: unknown, code: string): number {
   return value;
 }
 
-function exactScopeV1(actual: TwinScopeKeyV1, expected: TwinScopeKeyV1, code: string): void {
+function exactScopeV1(actual: ScopeLikeV1, expected: TwinScopeKeyV1, code: string): void {
   for (const key of ["tenant_id", "project_id", "group_id", "field_id", "season_id", "zone_id"] as const) {
     if (actual[key] !== expected[key]) throw new Error(`${code}:${key}`);
   }
 }
 
-function executionCandidatesV1(window: ContinuationEvidenceWindowV1): unknown[] {
+function executionCandidatesV1(window: ContinuationEvidenceWindowV1): ExecutedIrrigationCandidateV1[] {
   return window.irrigation_execution_records.map((record) => ({
     binding_id: record.binding_id,
     origin_source_id: record.origin_source_id,
