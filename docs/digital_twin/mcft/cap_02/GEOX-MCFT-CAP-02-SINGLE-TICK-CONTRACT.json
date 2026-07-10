@@ -1,0 +1,110 @@
+{
+  "schema_version": "geox_mcft_cap_02_single_tick_contract_v1",
+  "capability_line_id": "MCFT-CAP-02",
+  "delivery_slice_id": "MCFT-CAP-02.MCFT-04-06-08-09.SINGLE-TICK-INTEGRATION-V1",
+  "runtime_mode": "REPLAY",
+  "standard_logical_time": "2026-06-01T02:00:00.000Z",
+  "transaction_family": "A_STATE_TICK_COMMIT",
+  "operation_variant": "A2_BLOCKED_FORECAST",
+  "execution_cardinality": "EXACTLY_ONE_REQUESTED_NEXT_TICK",
+  "execution_order": [
+    "READ_PERSISTED_ACTIVE_LINEAGE_CHECKPOINT_STATE",
+    "PREPARE_PERSISTED_NEXT_TICK_HANDOFF",
+    "RESOLVE_EXPLICITLY_PINNED_CONTINUATION_RUNTIME_CONFIG",
+    "LOAD_REPLAY_EVIDENCE_CANDIDATES",
+    "BUILD_FROZEN_EXACT_HOUR_EVIDENCE_WINDOW",
+    "RESOLVE_CONFIGURATION_DERIVED_CROP_STAGE",
+    "EXECUTE_PURE_HOURLY_DYNAMICS_AND_UNCERTAINTY",
+    "BUILD_EXPLICIT_NOT_APPLIED_ASSIMILATION",
+    "BUILD_COMPLETE_EIGHT_OBJECT_CANDIDATE",
+    "VALIDATE_PHYSICAL_AND_CROSS_REFERENCE_INVARIANTS",
+    "COMPUTE_OPERATION_KEY_AND_AGGREGATE_HASH",
+    "LOOKUP_IDEMPOTENCY_BEFORE_LEASE",
+    "ACQUIRE_LEASE_FOR_NEW_KEY_ONLY",
+    "COMMIT_A2_TRANSACTION",
+    "READ_CANONICAL_RECORD_SET_BACK",
+    "PREPARE_NEXT_PERSISTED_HANDOFF"
+  ],
+  "required_inputs": [
+    "persisted active lineage canonical object",
+    "persisted previous checkpoint",
+    "persisted previous posterior State",
+    "persisted previous Forecast result pointer",
+    "explicit continuation Runtime Config ref",
+    "exact-hour rainfall Evidence",
+    "exact-hour historical ET0 Evidence",
+    "configuration-derived crop-stage context",
+    "eligible execution Evidence if present",
+    "explicit Replay logical time",
+    "explicit created_at",
+    "explicit lease owner and duration"
+  ],
+  "candidate_member_types": [
+    "twin_evidence_window_v1",
+    "twin_state_transition_v1",
+    "twin_assimilation_update_v1",
+    "twin_state_estimate_v1",
+    "twin_forecast_run_v1",
+    "twin_runtime_tick_v1",
+    "twin_runtime_checkpoint_v1",
+    "twin_runtime_health_v1"
+  ],
+  "first_continuation_bridge": {
+    "previous_storage_mean": "MCFT-CAP-01 posterior mean multiplied by governed 300 mm root-zone depth using fixed-point arithmetic",
+    "previous_storage_variance": "MCFT-CAP-01 posterior VWC variance multiplied by governed root-zone depth squared",
+    "previous_checkpoint_tick_sequence": 0,
+    "continuation_checkpoint_tick_sequence": 1
+  },
+  "subsequent_handoff_rule": "CARRY_PERSISTED_CONTINUATION_COMPUTATION_BASIS_ONLY",
+  "idempotency": {
+    "lookup_before_evidence_and_lease": true,
+    "same_key_existing_complete_record_set": "EXISTING_IDEMPOTENT_SUCCESS",
+    "same_key_different_aggregate_hash": "IDEMPOTENCY_CONFLICT",
+    "existing_success_acquires_new_lease": false,
+    "existing_success_writes_new_facts": false,
+    "existing_success_writes_new_projections": false
+  },
+  "standard_expected_state": {
+    "storage_mean_mm": "57.753012",
+    "storage_variance_mm2": "241.270014630625",
+    "vwc_mean": "0.192510",
+    "vwc_variance": "0.002680777940",
+    "available_water_fraction": "0.402834",
+    "depletion_from_field_capacity_mm": "32.246988"
+  },
+  "standard_expected_checkpoint": {
+    "checkpoint_kind": "CONTINUATION",
+    "tick_sequence": 1,
+    "next_tick_logical_time": "2026-06-01T03:00:00.000Z",
+    "successful_forecast_ref": null
+  },
+  "standard_expected_forecast": {
+    "status": "BLOCKED",
+    "points": [],
+    "scenario_eligible": false,
+    "successful_forecast_ref": null
+  },
+  "next_handoff": {
+    "previous_state_ref": "committed continuation State",
+    "previous_checkpoint_ref": "committed continuation checkpoint",
+    "previous_forecast_result_ref": "committed BLOCKED Forecast result",
+    "next_logical_tick_time": "2026-06-01T03:00:00.000Z",
+    "computation_basis_origin": "CARRIED_FROM_PREVIOUS_CONTINUATION_STATE"
+  },
+  "explicit_exclusions": [
+    "range loop",
+    "24-tick execution",
+    "restart or resume",
+    "backfill",
+    "public HTTP write endpoint",
+    "background daemon",
+    "scheduler",
+    "implicit wall-clock logical time",
+    "observation assimilation",
+    "successful Forecast",
+    "Scenario",
+    "Recommendation",
+    "Decision",
+    "AO-ACT"
+  ]
+}
