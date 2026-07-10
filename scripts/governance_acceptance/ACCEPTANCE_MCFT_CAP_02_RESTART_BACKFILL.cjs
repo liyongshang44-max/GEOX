@@ -203,6 +203,7 @@ for (const mode of ['single-tick', 'range', 'resume', 'backfill']) check(adapter
 check(runnerSource.includes('RestartResumeServiceV1') && runnerSource.includes('ContiguousContinuationRangeServiceV1') && runnerSource.includes('ContinuationTickServiceV1'), 'manual runner wires restart, range, and single-tick services together');
 check(!runnerSource.includes('Fastify') && !runnerSource.includes('setInterval') && !runnerSource.includes('Date.now'), 'manual runner excludes route, scheduler, and implicit wall clock');
 check(dbAcceptanceSource.includes('spawnSync') && dbAcceptanceSource.includes('MCFT_CAP_02_RESTART_BACKFILL_CHILD_STAGE'), 'PostgreSQL acceptance launches a distinct operating-system process for resume');
+check(dbAcceptanceSource.includes('jsonb_array_elements_text(member_object_ids)') && dbAcceptanceSource.includes("identity_kind='A2_RECORD_SET'"), 'PostgreSQL A2 fact count is derived from A2 idempotency membership rather than shared object types');
 
 runTsx('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_RESTART_BACKFILL.ts', /MCFT-CAP-02 restart backfill: \d+ PASS, 0 FAIL/, 'restart/backfill positive acceptance PASS');
 runTsx('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_RESTART_BACKFILL_NEGATIVE.ts', /MCFT-CAP-02 restart backfill negative: \d+ PASS, 0 FAIL/, 'restart/backfill negative acceptance PASS');

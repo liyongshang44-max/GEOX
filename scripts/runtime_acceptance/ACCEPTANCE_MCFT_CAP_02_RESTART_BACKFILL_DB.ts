@@ -231,7 +231,20 @@ async function parentMainV1(): Promise<void> {
   pool = new Pool({ connectionString: databaseUrl });
   const splitSignatures = await readSignaturesV1(pool);
   assert.equal(splitSignatures.length, 24);
-  assert.equal(await scalarCountV1(pool, "SELECT count(*)::int AS count FROM facts WHERE record_json->>'type'=ANY(ARRAY['twin_evidence_window_v1','twin_state_transition_v1','twin_assimilation_update_v1','twin_state_estimate_v1','twin_forecast_run_v1','twin_runtime_tick_v1','twin_runtime_checkpoint_v1','twin_runtime_health_v1'])"), 192);
+  assert.equal(
+    await scalarCountV1(
+      pool,
+      `SELECT count(*)::int AS count
+       FROM facts AS canonical_fact
+       JOIN (
+         SELECT jsonb_array_elements_text(member_object_ids) AS object_id
+         FROM twin_object_idempotency_index_v1
+         WHERE identity_kind='A2_RECORD_SET'
+       ) AS a2_member
+         ON canonical_fact.record_json->'payload'->>'object_id' = a2_member.object_id`,
+    ),
+    192,
+  );
   assert.equal(await scalarCountV1(pool, "SELECT count(*)::int AS count FROM twin_state_history_projection_v1"), 25);
   assert.equal(await scalarCountV1(pool, "SELECT count(*)::int AS count FROM twin_active_lineage_index_v1"), 1);
   services = createProductionServicesV1(pool, fixture);
