@@ -543,4 +543,3 @@ if (childStage === "precommit-crash") {
     process.exitCode = 1;
   });
 }
-
