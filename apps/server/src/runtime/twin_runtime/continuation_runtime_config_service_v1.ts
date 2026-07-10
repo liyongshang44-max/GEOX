@@ -2,6 +2,7 @@
 // Purpose: persist the immutable MCFT-CAP-02 continuation Runtime Config through the existing D transaction repository and verify canonical readback before any A2 tick.
 // Boundary: application orchestration over an existing Runtime Config port only; no SQL, filesystem, routes, Dynamics, Evidence selection, Forecast success, or scheduler.
 
+import { canonicalJsonV1 } from "../../domain/twin_runtime/canonical_json_v1.js";
 import {
   validateCanonicalObjectV1,
   type CanonicalObjectEnvelopeV1,
@@ -33,7 +34,13 @@ export class ContinuationRuntimeConfigServiceV1 {
     if (readback.object_id !== config.object_id) throw new Error("CONTINUATION_RUNTIME_CONFIG_READBACK_OBJECT_ID_MISMATCH");
     if (readback.determinism_hash !== config.determinism_hash) throw new Error("CONTINUATION_RUNTIME_CONFIG_READBACK_HASH_MISMATCH");
     if (readback.idempotency_key !== config.idempotency_key) throw new Error("CONTINUATION_RUNTIME_CONFIG_READBACK_IDEMPOTENCY_MISMATCH");
-    if (JSON.stringify(readback.payload) !== JSON.stringify(config.payload)) throw new Error("CONTINUATION_RUNTIME_CONFIG_READBACK_PAYLOAD_MISMATCH");
+
+    // PostgreSQL jsonb preserves JSON semantics but not object-key insertion order.
+    // Canonical JSON therefore compares the complete payload without introducing
+    // a false mismatch when jsonb returns the same object with reordered keys.
+    if (canonicalJsonV1(readback.payload) !== canonicalJsonV1(config.payload)) {
+      throw new Error("CONTINUATION_RUNTIME_CONFIG_READBACK_PAYLOAD_MISMATCH");
+    }
 
     return {
       ...committed,
