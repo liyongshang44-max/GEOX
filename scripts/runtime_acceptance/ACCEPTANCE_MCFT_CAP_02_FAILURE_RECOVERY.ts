@@ -125,8 +125,17 @@ const persistenceSource = fs.readFileSync(
   path.join(ROOT, "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_PERSISTENCE_DB.ts"),
   "utf8",
 );
+assert.match(
+  persistenceSource,
+  /const faultStages =[\s\S]*"before_commit"[\s\S]*assert\.equal\(faultStages\.length, 15\)/,
+  "existing persistence proof must enumerate fifteen fault stages including before_commit",
+);
+assert.match(
+  persistenceSource,
+  /throw new Error\(`FAULT:\$\{stage\}`\)/,
+  "existing persistence proof must dynamically raise the selected fault stage",
+);
 for (const token of [
-  "FAULT:before_commit",
   "STALE_FENCING_TOKEN",
   "CHECKPOINT_CAS_CONFLICT",
   "EXISTING_IDEMPOTENT_SUCCESS",
