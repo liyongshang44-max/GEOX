@@ -1,0 +1,89 @@
+{
+    "schema_version":  "geox_mcft_cap_02_main_verification_v1",
+    "capability_line_id":  "MCFT-CAP-02",
+    "display_alias":  "MCFT-2",
+    "name":  "Hourly Dynamics and Persistence",
+    "runtime_mode":  "REPLAY",
+    "target_completion_level":  "Level A",
+    "closure_pr":  2327,
+    "closure_baseline_main_commit":  "9a61e05f683adf3815ee1cc4af182efd23508588",
+    "closure_implementation_candidate_head":  "2c4c07ef56209d19f0fccea9da734ffcc31d02bb",
+    "closure_ready_head":  "c88f555685ad8d79618f6ceb21d702264f37bfe7",
+    "closure_final_evidence_head":  "800e1d255414b847587350d0f19b92288b32c1db",
+    "closure_merge_commit":  "08f0b5c146959b2a3988cd3ea07647628b0e84ad",
+    "main_head_verified":  "08f0b5c146959b2a3988cd3ea07647628b0e84ad",
+    "final_exact_head_ci":  {
+                                "run_number":  4576,
+                                "conclusion":  "success",
+                                "head":  "800e1d255414b847587350d0f19b92288b32c1db"
+                            },
+    "merged_main_acceptance":  {
+                                   "closure_gate":  "161_PASS_0_FAIL",
+                                   "twenty_four_tick_positive":  "9_PASS_0_FAIL",
+                                   "restart_backfill_positive":  "9_PASS_0_FAIL",
+                                   "failure_recovery_application":  "6_PASS_0_FAIL",
+                                   "twenty_four_tick_postgresql":  "8_PASS_0_FAIL",
+                                   "restart_backfill_postgresql":  "8_PASS_0_FAIL",
+                                   "persistence_postgresql":  "15_PASS_0_FAIL",
+                                   "failure_recovery_postgresql":  "8_PASS_0_FAIL",
+                                   "server_typecheck":  "PASS",
+                                   "server_build":  "PASS",
+                                   "git_diff_check":  "PASS",
+                                   "working_tree":  "CLEAN",
+                                   "expected_fault_injection_output":  [
+                                                                           "SIMULATED_PRECOMMIT_PROCESS_CRASH",
+                                                                           "SIMULATED_RESPONSE_LOSS_AFTER_COMMIT"
+                                                                       ]
+                               },
+    "completion_standard":  {
+                                "all_required_facts_established":  true,
+                                "final_exact_head_ci_green":  true,
+                                "final_closure_gate_green":  true,
+                                "merged_main_verification_green":  true
+                            },
+    "completion_claims":  [
+                              "MCFT_CAP_02_COMPLETE",
+                              "HOURLY_WATER_DYNAMICS_V1_ESTABLISHED",
+                              "TWENTY_FOUR_CONTINUATION_TICKS_PERSISTED",
+                              "CONTINUATION_STATE_CHAIN_ESTABLISHED",
+                              "CONTROLLED_ADDITIVE_PROCESS_UNCERTAINTY_BUDGET_ESTABLISHED",
+                              "CONTINUATION_CHECKPOINT_CHAIN_ESTABLISHED",
+                              "CONTINUATION_OPERATION_IDEMPOTENCY_ESTABLISHED",
+                              "CONTINUATION_CANONICAL_UNIQUENESS_ESTABLISHED",
+                              "RESTART_RESUME_PROVEN",
+                              "BOUNDED_FORWARD_BACKFILL_PROVEN",
+                              "EXACT_HOURLY_EVIDENCE_SELECTION_ESTABLISHED",
+                              "EXECUTED_IRRIGATION_INPUT_POLICY_ESTABLISHED"
+                          ],
+    "preserved_nonclaims":  [
+                                "NO_OBSERVATION_UPDATE_APPLIED",
+                                "NO_OBSERVATION_INNOVATION_COMPUTED",
+                                "NO_FORECAST_RESIDUAL",
+                                "NO_SUCCESSFUL_FORECAST",
+                                "NO_SCENARIO",
+                                "NO_RECOMMENDATION",
+                                "NO_DECISION",
+                                "NO_AO_ACT",
+                                "NO_CALIBRATED_CONFIDENCE_MODEL",
+                                "NO_MODEL_ACTIVATION",
+                                "NO_LATE_EVIDENCE_REVISION",
+                                "NO_DYNAMIC_ROOT_ZONE_GEOMETRY",
+                                "NO_SPATIAL_EXECUTION_OVERLAP_DEDUPLICATION",
+                                "NO_CONTINUOUS_RUNTIME",
+                                "NO_CONTINUOUS_SCHEDULER",
+                                "NO_720_TICK_REPLAY_CLOSURE",
+                                "NO_LIVE_FIELD_CLAIM",
+                                "NO_MCFT_GATE_A_CLOSURE",
+                                "NO_MCFT_GATE_B_CLOSURE",
+                                "NO_MCFT_GATE_C_CLOSURE",
+                                "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
+                            ],
+    "successor":  {
+                      "capability_line_id":  "MCFT-CAP-03",
+                      "name":  "Observation Assimilation and State Innovation",
+                      "authorized":  false,
+                      "authorization_id":  null,
+                      "required_start_logical_time":  "2026-06-02T01:00:00.000Z"
+                  },
+    "verification_status":  "COMPLETE"
+}

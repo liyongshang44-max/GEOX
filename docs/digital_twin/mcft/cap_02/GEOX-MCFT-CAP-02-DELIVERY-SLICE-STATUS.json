@@ -1,15 +1,15 @@
 {
-    "schema_version":  "geox_mcft_cap_02_delivery_slice_status_v10",
+    "schema_version":  "geox_mcft_cap_02_delivery_slice_status_v11",
     "capability_line_id":  "MCFT-CAP-02",
     "display_alias":  "MCFT-2",
     "name":  "Hourly Dynamics and Persistence",
     "runtime_mode":  "REPLAY",
     "target_completion_level":  "Level A",
-    "status":  "CLOSURE_READY_FOR_MERGE",
+    "status":  "COMPLETE",
     "authorization_merge_commit":  "65e59aaf5fcfccacdb986258874a5df3c057711d",
     "baseline_main_commit":  "65e59aaf5fcfccacdb986258874a5df3c057711d",
-    "latest_verified_main_commit":  "9a61e05f683adf3815ee1cc4af182efd23508588",
-    "active_delivery_slice_id":  "MCFT-CAP-02.CLOSURE-V1",
+    "latest_verified_main_commit":  "08f0b5c146959b2a3988cd3ea07647628b0e84ad",
+    "active_delivery_slice_id":  null,
     "governance_debt_register_ref":  "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-GOVERNANCE-DEBT-REGISTER.json",
     "slices":  [
                    {
@@ -625,7 +625,7 @@
                    },
                    {
                        "delivery_slice_id":  "MCFT-CAP-02.CLOSURE-V1",
-                       "status":  "READY_FOR_MERGE",
+                       "status":  "COMPLETE",
                        "primary_owner_work_package_id":  "MCFT-06",
                        "contributing_work_package_ids":  [
                                                              "MCFT-02",
@@ -681,24 +681,13 @@
                                                            "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json",
                                                            "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_CLOSURE.cjs"
                                                        ],
-                       "effectiveness_condition":  "PR_MERGED_TO_MAIN_AND_MERGED_MAIN_MCFT_CAP_02_CLOSURE_GATE_PASS",
+                       "effectiveness_condition":  "PR_2327_MERGED_AND_MERGED_MAIN_CLOSURE_GATE_161_PASS_0_FAIL",
                        "closure_record_ref":  "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-CLOSURE-RECORD.json",
                        "closure_document_ref":  "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-CLOSURE.md",
                        "pending_completion_claims":  [
-                                                         "MCFT_CAP_02_COMPLETE",
-                                                         "HOURLY_WATER_DYNAMICS_V1_ESTABLISHED",
-                                                         "TWENTY_FOUR_CONTINUATION_TICKS_PERSISTED",
-                                                         "CONTINUATION_STATE_CHAIN_ESTABLISHED",
-                                                         "CONTROLLED_ADDITIVE_PROCESS_UNCERTAINTY_BUDGET_ESTABLISHED",
-                                                         "CONTINUATION_CHECKPOINT_CHAIN_ESTABLISHED",
-                                                         "CONTINUATION_OPERATION_IDEMPOTENCY_ESTABLISHED",
-                                                         "CONTINUATION_CANONICAL_UNIQUENESS_ESTABLISHED",
-                                                         "RESTART_RESUME_PROVEN",
-                                                         "BOUNDED_FORWARD_BACKFILL_PROVEN",
-                                                         "EXACT_HOURLY_EVIDENCE_SELECTION_ESTABLISHED",
-                                                         "EXECUTED_IRRIGATION_INPUT_POLICY_ESTABLISHED"
+
                                                      ],
-                       "closure_effective":  false,
+                       "closure_effective":  true,
                        "successor_authorized":  false,
                        "implementation_candidate_head":  "2c4c07ef56209d19f0fccea9da734ffcc31d02bb",
                        "draft_acceptance":  {
@@ -730,18 +719,52 @@
                                                 "git_diff_check":  "PASS",
                                                 "simulated_precommit_process_crash":  "EXPECTED_AND_VERIFIED",
                                                 "simulated_response_loss_after_commit":  "EXPECTED_AND_VERIFIED"
-                                            }
+                                            },
+                       "completion_claims":  [
+                                                 "MCFT_CAP_02_COMPLETE",
+                                                 "HOURLY_WATER_DYNAMICS_V1_ESTABLISHED",
+                                                 "TWENTY_FOUR_CONTINUATION_TICKS_PERSISTED",
+                                                 "CONTINUATION_STATE_CHAIN_ESTABLISHED",
+                                                 "CONTROLLED_ADDITIVE_PROCESS_UNCERTAINTY_BUDGET_ESTABLISHED",
+                                                 "CONTINUATION_CHECKPOINT_CHAIN_ESTABLISHED",
+                                                 "CONTINUATION_OPERATION_IDEMPOTENCY_ESTABLISHED",
+                                                 "CONTINUATION_CANONICAL_UNIQUENESS_ESTABLISHED",
+                                                 "RESTART_RESUME_PROVEN",
+                                                 "BOUNDED_FORWARD_BACKFILL_PROVEN",
+                                                 "EXACT_HOURLY_EVIDENCE_SELECTION_ESTABLISHED",
+                                                 "EXECUTED_IRRIGATION_INPUT_POLICY_ESTABLISHED"
+                                             ],
+                       "merge_commit":  "08f0b5c146959b2a3988cd3ea07647628b0e84ad",
+                       "verified_main_commit":  "08f0b5c146959b2a3988cd3ea07647628b0e84ad",
+                       "final_evidence_head":  "800e1d255414b847587350d0f19b92288b32c1db",
+                       "final_exact_head_ci":  "4576_SUCCESS",
+                       "merged_main_gate":  "161_PASS_0_FAIL",
+                       "main_verification_ref":  "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-MAIN-VERIFICATION.json",
+                       "finalization_branch":  "mcft-cap-02-closure-finalization-v1",
+                       "finalization_exact_changed_file_boundary":  [
+                                                                        "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+                                                                        "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+                                                                        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-CLOSURE.md",
+                                                                        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-CLOSURE-RECORD.json",
+                                                                        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json",
+                                                                        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-MAIN-VERIFICATION.json",
+                                                                        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_CLOSURE.cjs"
+                                                                    ]
                    }
                ],
     "completion_claims":  [
-                              "CONTINUATION_CONTRACTS_CONFIG_MERGED_MAIN_VERIFIED",
-                              "PURE_HOURLY_DYNAMICS_MERGED_MAIN_VERIFIED",
-                              "CONTINUATION_EVIDENCE_WINDOW_MERGED_MAIN_VERIFIED",
-                              "CONTINUATION_PERSISTENCE_MERGED_MAIN_VERIFIED",
-                              "SINGLE_TICK_INTEGRATION_MERGED_MAIN_VERIFIED",
-                              "TWENTY_FOUR_TICK_RANGE_MERGED_MAIN_VERIFIED",
-                              "RESTART_BACKFILL_MERGED_MAIN_VERIFIED",
-                              "FAILURE_RECOVERY_MERGED_MAIN_VERIFIED"
+                              "MCFT_CAP_02_COMPLETE",
+                              "HOURLY_WATER_DYNAMICS_V1_ESTABLISHED",
+                              "TWENTY_FOUR_CONTINUATION_TICKS_PERSISTED",
+                              "CONTINUATION_STATE_CHAIN_ESTABLISHED",
+                              "CONTROLLED_ADDITIVE_PROCESS_UNCERTAINTY_BUDGET_ESTABLISHED",
+                              "CONTINUATION_CHECKPOINT_CHAIN_ESTABLISHED",
+                              "CONTINUATION_OPERATION_IDEMPOTENCY_ESTABLISHED",
+                              "CONTINUATION_CANONICAL_UNIQUENESS_ESTABLISHED",
+                              "RESTART_RESUME_PROVEN",
+                              "BOUNDED_FORWARD_BACKFILL_PROVEN",
+                              "EXACT_HOURLY_EVIDENCE_SELECTION_ESTABLISHED",
+                              "EXECUTED_IRRIGATION_INPUT_POLICY_ESTABLISHED"
                           ],
     "global_preserved_nonclaims":  [
                                        "NO_OBSERVATION_UPDATE_APPLIED",
@@ -764,7 +787,31 @@
                                        "NO_MCFT_GATE_A_CLOSURE",
                                        "NO_MCFT_GATE_B_CLOSURE",
                                        "NO_MCFT_GATE_C_CLOSURE",
-                                       "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM",
-                                       "NO_MCFT_CAP_02_COMPLETE_CLAIM"
-                                   ]
+                                       "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
+                                   ],
+    "verified_delivery_claims":  [
+                                     "CONTINUATION_CONTRACTS_CONFIG_MERGED_MAIN_VERIFIED",
+                                     "PURE_HOURLY_DYNAMICS_MERGED_MAIN_VERIFIED",
+                                     "CONTINUATION_EVIDENCE_WINDOW_MERGED_MAIN_VERIFIED",
+                                     "CONTINUATION_PERSISTENCE_MERGED_MAIN_VERIFIED",
+                                     "SINGLE_TICK_INTEGRATION_MERGED_MAIN_VERIFIED",
+                                     "TWENTY_FOUR_TICK_RANGE_MERGED_MAIN_VERIFIED",
+                                     "RESTART_BACKFILL_MERGED_MAIN_VERIFIED",
+                                     "FAILURE_RECOVERY_MERGED_MAIN_VERIFIED",
+                                     "MCFT_CAP_02_CLOSURE_MERGED_MAIN_VERIFIED"
+                                 ],
+    "main_verification_ref":  "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-MAIN-VERIFICATION.json",
+    "closure_merge_commit":  "08f0b5c146959b2a3988cd3ea07647628b0e84ad",
+    "closure_final_evidence_head":  "800e1d255414b847587350d0f19b92288b32c1db",
+    "closure_final_exact_head_ci":  "4576_SUCCESS",
+    "finalization_branch":  "mcft-cap-02-closure-finalization-v1",
+    "finalization_exact_changed_file_boundary":  [
+                                                     "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+                                                     "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+                                                     "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-CLOSURE.md",
+                                                     "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-CLOSURE-RECORD.json",
+                                                     "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json",
+                                                     "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-MAIN-VERIFICATION.json",
+                                                     "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_CLOSURE.cjs"
+                                                 ]
 }

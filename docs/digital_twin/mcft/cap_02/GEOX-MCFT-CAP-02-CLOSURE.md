@@ -26,10 +26,10 @@ delivery_slice_id:
 MCFT-CAP-02.CLOSURE-V1
 
 status:
-READY_FOR_MERGE
+COMPLETE
 
 closure_effective:
-false
+true
 
 baseline_main_commit:
 9a61e05f683adf3815ee1cc4af182efd23508588
@@ -104,9 +104,9 @@ frozen final numerical State
 consolidated negative and failure recovery surface
 ```
 
-## 3. Pending completion claims
+## 3. Completion claims
 
-The following claims are the exact post-effectiveness completion set. They are pending while this document reports `closure_effective = false`.
+The following claims are effective because PR #2327 is merged and the merged-main Closure Gate passed.
 
 ```text
 MCFT_CAP_02_COMPLETE
@@ -123,7 +123,7 @@ EXACT_HOURLY_EVIDENCE_SELECTION_ESTABLISHED
 EXECUTED_IRRIGATION_INPUT_POLICY_ESTABLISHED
 ```
 
-No completion claim becomes effective before the Closure PR is merged and the merged-main Closure Gate passes.
+PR #2327 is merged and the merged-main Closure Gate passed with 161 PASS, 0 FAIL.
 
 ## 4. Preserved nonclaims
 
@@ -149,10 +149,8 @@ NO_MCFT_GATE_A_CLOSURE
 NO_MCFT_GATE_B_CLOSURE
 NO_MCFT_GATE_C_CLOSURE
 NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM
-NO_MCFT_CAP_02_COMPLETE_CLAIM
 ```
 
-`NO_MCFT_CAP_02_COMPLETE_CLAIM` is a temporary pre-effectiveness nonclaim. The remaining nonclaims survive capability closure.
 
 ## 5. Exact changed-file boundary
 
@@ -205,7 +203,7 @@ AND
 MERGED_MAIN_MCFT_CAP_02_CLOSURE_GATE_PASS
 ```
 
-Before both conditions are true, this artifact is a Closure candidate and not an effective capability completion claim.
+Both conditions are satisfied by merge commit 08f0b5c146959b2a3988cd3ea07647628b0e84ad and the merged-main Gate result 161 PASS, 0 FAIL.
 ## 8. Readiness evidence
 
 ```text
@@ -228,7 +226,7 @@ git diff --check:
 PASS
 ```
 
-This readiness transition does not make Closure effective. The twelve completion claims remain pending, `NO_MCFT_CAP_02_COMPLETE_CLAIM` remains present, and MCFT-CAP-03 remains unauthorized.
+At the READY transition, Closure remained non-effective. The later merge and merged-main verification activated the twelve completion claims; MCFT-CAP-03 remains unauthorized.
 ## 9. Final Gate evidence
 
 ```text
@@ -265,4 +263,36 @@ PASS
 
 The `SIMULATED_PRECOMMIT_PROCESS_CRASH` and `SIMULATED_RESPONSE_LOSS_AFTER_COMMIT` stack traces are expected fault-injection child-process output. Their parent acceptance completed with `8 PASS, 0 FAIL`.
 
-This evidence does not make Closure effective. The twelve completion claims remain pending, `NO_MCFT_CAP_02_COMPLETE_CLAIM` remains present, and MCFT-CAP-03 remains unauthorized.
+This evidence was recorded before merge. PR #2327 and the merged-main Gate later made Closure effective; MCFT-CAP-03 remains unauthorized.
+## 10. Canonical merged-main finalization
+
+```text
+Closure PR:
+#2327
+
+final evidence head:
+800e1d255414b847587350d0f19b92288b32c1db
+
+final exact-head CI:
+#4576 SUCCESS
+
+merge commit:
+08f0b5c146959b2a3988cd3ea07647628b0e84ad
+
+merged-main Closure Gate:
+161 PASS, 0 FAIL
+
+main verification:
+docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-MAIN-VERIFICATION.json
+
+capability status:
+COMPLETE
+
+closure effective:
+true
+
+MCFT-CAP-03 authorized:
+false
+```
+
+The twelve taskbook completion claims are effective. The twenty-one taskbook nonclaims remain in force. No horizontal owner work package is marked COMPLETE by this capability-line closure.
