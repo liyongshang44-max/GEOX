@@ -32,6 +32,13 @@ export type McftCap02PredecessorLockV1 = {
   source_matrix_hash: string;
   configuration_matrix_hash: string;
   geometry_semantic_hash: string;
+  active_lineage_object_ref: string;
+  lineage_id: string;
+  revision_id: string;
+  bootstrap_state_ref: string;
+  bootstrap_state_hash: string;
+  bootstrap_checkpoint_ref: string;
+  bootstrap_checkpoint_hash: string;
   bootstrap_runtime_config_ref: string;
   bootstrap_runtime_config_hash: string;
   next_logical_tick_time: string;
@@ -82,6 +89,17 @@ function exactScopeV1(actual: ContinuationScopeV1, expected: ContinuationScopeV1
   }
 }
 
+function scopeFromCanonicalObjectV1(object: CanonicalObjectEnvelopeV1): ContinuationScopeV1 {
+  return {
+    tenant_id: object.tenant_id,
+    project_id: object.project_id,
+    group_id: requireStringV1(object.group_id, "CONTINUATION_PARENT_CONFIG_GROUP_ID_REQUIRED"),
+    field_id: object.field_id,
+    season_id: requireStringV1(object.season_id, "CONTINUATION_PARENT_CONFIG_SEASON_ID_REQUIRED"),
+    zone_id: requireStringV1(object.zone_id, "CONTINUATION_PARENT_CONFIG_ZONE_ID_REQUIRED"),
+  };
+}
+
 function parameterNumberV1(
   definition: Mcft00ConfigurationMatrixForContinuationV1["configuration_source_definitions"][number],
   name: string,
@@ -99,7 +117,7 @@ function validateParentRuntimeConfigV1(input: {
   if (input.parent.object_type !== "twin_runtime_config_v1") throw new Error("CONTINUATION_PARENT_CONFIG_OBJECT_TYPE_MISMATCH");
   exactV1(input.parent.object_id, input.lock.bootstrap_runtime_config_ref, "CONTINUATION_PARENT_CONFIG_REF_MISMATCH");
   exactV1(input.parent.determinism_hash, input.lock.bootstrap_runtime_config_hash, "CONTINUATION_PARENT_CONFIG_HASH_MISMATCH");
-  exactScopeV1(input.parent as ContinuationScopeV1, input.lock.scope);
+  exactScopeV1(scopeFromCanonicalObjectV1(input.parent), input.lock.scope);
   exactV1(input.parent.payload.reality_binding_ref, input.lock.reality_binding_ref, "CONTINUATION_PARENT_CONFIG_REALITY_REF_MISMATCH");
   exactV1(input.parent.payload.reality_binding_hash, input.lock.reality_binding_hash, "CONTINUATION_PARENT_CONFIG_REALITY_HASH_MISMATCH");
   exactV1(input.parent.payload.source_matrix_hash, input.lock.source_matrix_hash, "CONTINUATION_PARENT_CONFIG_SOURCE_MATRIX_HASH_MISMATCH");
@@ -129,8 +147,17 @@ export function compileContinuationRuntimeConfigFromAuthorityV1(input: {
   exactV1(lock.crop_stage_context_hash, CONTINUATION_CROP_STAGE_CONTEXT_HASH_V1, "CONTINUATION_CROP_STAGE_CONTEXT_HASH_MISMATCH");
   exactV1(input.logical_time, lock.next_logical_tick_time, "CONTINUATION_CONFIG_LOGICAL_TIME_NOT_FIRST_TICK");
 
-  requireStringV1(lock.bootstrap_runtime_config_ref, "CONTINUATION_PARENT_CONFIG_REF_REQUIRED");
-  requireStringV1(lock.bootstrap_runtime_config_hash, "CONTINUATION_PARENT_CONFIG_HASH_REQUIRED");
+  for (const [field, value] of Object.entries({
+    active_lineage_object_ref: lock.active_lineage_object_ref,
+    lineage_id: lock.lineage_id,
+    revision_id: lock.revision_id,
+    bootstrap_state_ref: lock.bootstrap_state_ref,
+    bootstrap_state_hash: lock.bootstrap_state_hash,
+    bootstrap_checkpoint_ref: lock.bootstrap_checkpoint_ref,
+    bootstrap_checkpoint_hash: lock.bootstrap_checkpoint_hash,
+    bootstrap_runtime_config_ref: lock.bootstrap_runtime_config_ref,
+    bootstrap_runtime_config_hash: lock.bootstrap_runtime_config_hash,
+  })) requireStringV1(value, `CONTINUATION_PREDECESSOR_LOCK_FIELD_REQUIRED:${field}`);
 
   const hydraulicBindings = input.configuration_matrix_artifact.bindings.filter(
     (binding) => binding.source_role === "SOIL_HYDRAULIC_CONFIGURATION",
