@@ -35,6 +35,8 @@
     "current_runtime_config_ref": "required",
     "mass_balance_trace": "embedded_required",
     "mass_balance_trace_hash": "semantic_hash_of_trace_without_self_hash_fields",
+    "mass_balance_trace_self_hash_field_rejection": "recursive",
+    "forbidden_trace_field_names": ["trace_determinism_hash", "mass_balance_trace_hash", "self_hash"],
     "forbidden_fields": ["bootstrap_prior", "bootstrap_prior_ref"]
   },
   "assimilation_contract": {
@@ -63,6 +65,10 @@
         "DERIVED_FROM_MCFT_CAP_01_POSTERIOR_V1",
         "CARRIED_FROM_PREVIOUS_CONTINUATION_STATE"
       ],
+      "storage_mean_mm_decimal_scale": 6,
+      "storage_variance_mm2_decimal_scale": 12,
+      "first_bridge_source_vwc_variance_scale": 6,
+      "first_bridge_root_zone_depth_mm": "300.000000",
       "first_bridge_required_fields": [
         "source_posterior_ref",
         "source_vwc_variance",
@@ -76,7 +82,17 @@
         "previous_storage_variance_mm2_decimal",
         "storage_mean_mm_decimal",
         "storage_variance_mm2_decimal"
-      ]
+      ],
+      "first_continuation_tick_basis_origin": "DERIVED_FROM_MCFT_CAP_01_POSTERIOR_V1",
+      "subsequent_tick_basis_origin": "CARRIED_FROM_PREVIOUS_CONTINUATION_STATE",
+      "subsequent_tick_source_vwc_variance_forbidden": true
+    },
+    "physical_bounds": {
+      "storage_mm": [0, 135],
+      "vwc_fraction": [0, 0.45],
+      "available_water_fraction": [0, 1],
+      "depletion_non_negative": true,
+      "variance_non_negative": true
     },
     "mass_balance_trace_hash_must_equal_transition": true,
     "confidence": {
@@ -154,6 +170,8 @@
     "checkpoint.last_completed_tick_ref == tick.object_id",
     "checkpoint.last_posterior_state_ref == state.object_id",
     "checkpoint.forecast_result_ref == forecast.object_id",
+    "checkpoint.tick_sequence == 1 implies first bridge basis",
+    "checkpoint.tick_sequence > 1 implies carried continuation basis",
     "health references tick checkpoint state and forecast",
     "all members share scope logical_time lineage revision and runtime_config"
   ],
