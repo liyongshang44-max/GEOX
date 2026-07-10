@@ -1,0 +1,40 @@
+{
+  "schema_version": "geox_mcft_cap_02_governance_debt_register_v1",
+  "capability_line_id": "MCFT-CAP-02",
+  "debts": [
+    {
+      "debt_id": "MCFT-CAP-02.GOV-DEBT-001",
+      "title": "CONTRACTS_CONFIG_GATE_PREMERGE_MESSAGE_LEAKED_INTO_MERGED_MAIN",
+      "status": "REMEDIATED_IN_DYNAMICS_PREFLIGHT",
+      "discovered_on_main_commit": "2be7c985210d1f34fa5249e1fae68932e801facc",
+      "symptom": "The merged-main contracts/config Gate still emitted the premerge assertion 'next slice remains unauthorized before merge'.",
+      "risk": "Ambiguous delivery authorization state after a successful merged-main Gate.",
+      "technical_impact": "NONE_ON_CONTRACTS_CONFIG_RUNTIME_BEHAVIOR",
+      "governance_impact": "POSTMERGE_STATUS_TRANSITION_NOT_MACHINE_EXPLICIT",
+      "remediation_stage": "MCFT-CAP-02.MCFT-06.PURE-HOURLY-DYNAMICS-V1_PREFLIGHT",
+      "remediation_deadline": "BEFORE_FIRST_DYNAMICS_SOURCE_COMMIT",
+      "remediation_branch": "mcft-cap-02-pure-hourly-dynamics-v1",
+      "remediation_actions": [
+        "ADD_EXPLICIT_POSTMERGE_MODE_TO_CONTRACTS_CONFIG_GATE",
+        "MARK_CONTRACTS_CONFIG_SLICE_MERGED",
+        "RECORD_MERGED_MAIN_GATE_63_PASS_0_FAIL",
+        "SWITCH_ACTIVE_SLICE_TO_PURE_HOURLY_DYNAMICS",
+        "KEEP_ALL_LATER_SLICES_BLOCKED"
+      ],
+      "evidence": {
+        "contracts_config_pr": 2319,
+        "contracts_config_merge_commit": "2be7c985210d1f34fa5249e1fae68932e801facc",
+        "merged_main_gate": "63_PASS_0_FAIL",
+        "server_typecheck": "PASS",
+        "server_build": "PASS",
+        "postgres_d_transaction": "6_PASS_0_FAIL"
+      },
+      "resolution_files": [
+        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_DYNAMICS.cjs"
+      ],
+      "closure_condition": "DYNAMICS_PREFLIGHT_GATE_PROVES_POSTMERGE_STATUS_AND_EXACT_2BE7C985_ANCESTRY"
+    }
+  ]
+}
