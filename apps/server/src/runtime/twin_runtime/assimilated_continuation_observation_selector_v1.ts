@@ -253,7 +253,8 @@ export function selectAssimilatedContinuationObservationV1(input: {
     const contentHashes = new Set(group.map((item) => item.candidate.observation_semantic_content_hash));
     if (contentHashes.size > 1) throw new Error(`CONFLICTING_DUPLICATE_EVIDENCE:${identity}`);
     group.sort(winnerSortV1);
-    usableWinners.push(group[0]);
+    const winner = group[0];
+    if (winner.candidate.candidate_assessment === "ELIGIBLE") usableWinners.push(winner);
     for (const duplicate of group.slice(1)) {
       duplicate.candidate.candidate_assessment = "IDENTICAL_DUPLICATE_SUPPRESSED";
       duplicate.candidate.reason_codes = ["IDENTICAL_DUPLICATE_SUPPRESSED"];
@@ -274,7 +275,7 @@ export function selectAssimilatedContinuationObservationV1(input: {
   const candidates = classified.map((item) => item.candidate).sort(finalSortV1);
   const selectedRef = selected?.candidate.observation_ref ?? null;
   const rejectedRefs = candidates
-    .filter((candidate) => candidate.candidate_assessment !== "SELECTED")
+    .filter((candidate) => candidate.candidate_assessment.startsWith("REJECTED_"))
     .map((candidate) => candidate.observation_ref)
     .sort();
   const semanticDigest = semanticHashV1({
