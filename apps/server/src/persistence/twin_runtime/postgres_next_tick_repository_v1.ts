@@ -19,6 +19,9 @@ function isContinuationReadObjectV1(object: CanonicalObjectEnvelopeV1): boolean 
     return Object.prototype.hasOwnProperty.call(object.payload, "computation_basis")
       || typeof object.payload.previous_posterior_ref === "string";
   }
+  if (object.object_type === "twin_runtime_tick_v1") {
+    return object.payload.transition_kind === "CONTINUATION";
+  }
   return false;
 }
 
@@ -110,6 +113,8 @@ export class PostgresNextTickRepositoryV1 implements RuntimeAuthoritySnapshotRep
       const activeLineageId = requiredStringV1(activeLineage.lineage_id, "ACTIVE_LINEAGE_ID_REQUIRED");
       const checkpoint = await this.readCanonicalObjectV1(client, checkpointPointer.rows[0].checkpoint_object_id, "twin_runtime_checkpoint_v1");
       const previousPosterior = await this.readCanonicalObjectV1(client, statePointer.rows[0].state_object_id, "twin_state_estimate_v1");
+      const lastCompletedTickRef = requiredStringV1(checkpoint.payload.last_completed_tick_ref, "LAST_COMPLETED_TICK_REF_REQUIRED");
+      const lastTerminalTick = await this.readCanonicalObjectV1(client, lastCompletedTickRef, "twin_runtime_tick_v1");
       if (!previousPosterior.runtime_config_ref || checkpoint.runtime_config_ref !== previousPosterior.runtime_config_ref) throw new Error("PERSISTED_RUNTIME_CONFIG_POINTER_MISMATCH");
       const runtimeConfig = await this.readCanonicalObjectV1(client, previousPosterior.runtime_config_ref, "twin_runtime_config_v1");
       const realityBindingRef = runtimeConfig.payload.reality_binding_ref;
@@ -122,6 +127,7 @@ export class PostgresNextTickRepositoryV1 implements RuntimeAuthoritySnapshotRep
         active_lineage_id: activeLineageId,
         checkpoint,
         previous_posterior: previousPosterior,
+        last_terminal_tick: lastTerminalTick,
         runtime_config: runtimeConfig,
         reality_binding: realityBinding,
       };
