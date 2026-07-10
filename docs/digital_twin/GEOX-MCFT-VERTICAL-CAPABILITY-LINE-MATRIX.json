@@ -310,7 +310,19 @@
                                                                                  ],
                                                  "implementation_candidate_head":  "2c4c07ef56209d19f0fccea9da734ffcc31d02bb",
                                                  "candidate_exact_head_ci":  "4574_SUCCESS",
-                                                 "draft_gate":  "126_PASS_0_FAIL"
+                                                 "draft_gate":  "126_PASS_0_FAIL",
+                                                 "ready_head":  "c88f555685ad8d79618f6ceb21d702264f37bfe7",
+                                                 "ready_exact_head_ci":  "4575_SUCCESS",
+                                                 "final_gate_on_ready_head":  "141_PASS_0_FAIL",
+                                                 "postgresql_acceptance":  {
+                                                                               "twenty_four_tick":  "8_PASS_0_FAIL",
+                                                                               "restart_backfill":  "8_PASS_0_FAIL",
+                                                                               "persistence":  "15_PASS_0_FAIL",
+                                                                               "failure_recovery":  "8_PASS_0_FAIL"
+                                                                           },
+                                                 "server_typecheck":  "PASS",
+                                                 "server_build":  "PASS",
+                                                 "git_diff_check":  "PASS"
                                              }
                              }
                          ],

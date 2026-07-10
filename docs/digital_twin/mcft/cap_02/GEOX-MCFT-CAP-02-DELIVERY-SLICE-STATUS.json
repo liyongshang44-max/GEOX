@@ -711,6 +711,25 @@
                                                 "git_diff_check":  "PASS",
                                                 "exact_head_ci":  "4574_SUCCESS",
                                                 "verified_candidate_head":  "2c4c07ef56209d19f0fccea9da734ffcc31d02bb"
+                                            },
+                       "ready_head":  "c88f555685ad8d79618f6ceb21d702264f37bfe7",
+                       "ready_exact_head_ci":  "4575_SUCCESS",
+                       "final_acceptance":  {
+                                                "ready_head":  "c88f555685ad8d79618f6ceb21d702264f37bfe7",
+                                                "ready_exact_head_ci":  "4575_SUCCESS",
+                                                "closure_final_gate_on_ready_head":  "141_PASS_0_FAIL",
+                                                "twenty_four_tick_positive":  "9_PASS_0_FAIL",
+                                                "restart_backfill_positive":  "9_PASS_0_FAIL",
+                                                "failure_recovery_application":  "6_PASS_0_FAIL",
+                                                "twenty_four_tick_postgresql":  "8_PASS_0_FAIL",
+                                                "restart_backfill_postgresql":  "8_PASS_0_FAIL",
+                                                "persistence_postgresql":  "15_PASS_0_FAIL",
+                                                "failure_recovery_postgresql":  "8_PASS_0_FAIL",
+                                                "server_typecheck":  "PASS",
+                                                "server_build":  "PASS",
+                                                "git_diff_check":  "PASS",
+                                                "simulated_precommit_process_crash":  "EXPECTED_AND_VERIFIED",
+                                                "simulated_response_loss_after_commit":  "EXPECTED_AND_VERIFIED"
                                             }
                    }
                ],

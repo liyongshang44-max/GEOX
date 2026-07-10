@@ -264,9 +264,22 @@
                                 "branch_git_diff_check":  "PASS",
                                 "closure_draft_gate":  "126_PASS_0_FAIL",
                                 "closure_exact_head_ci":  "4574_SUCCESS",
-                                "closure_final_gate":  "PENDING",
+                                "closure_final_gate":  "141_PASS_0_FAIL",
                                 "closure_merged_main_gate":  "PENDING",
-                                "closure_candidate_head":  "2c4c07ef56209d19f0fccea9da734ffcc31d02bb"
+                                "closure_candidate_head":  "2c4c07ef56209d19f0fccea9da734ffcc31d02bb",
+                                "closure_final_gate_head":  "c88f555685ad8d79618f6ceb21d702264f37bfe7",
+                                "closure_ready_exact_head_ci":  "4575_SUCCESS",
+                                "twenty_four_tick_postgresql":  "8_PASS_0_FAIL",
+                                "restart_backfill_postgresql":  "8_PASS_0_FAIL",
+                                "persistence_postgresql_final":  "15_PASS_0_FAIL",
+                                "failure_recovery_postgresql_final":  "8_PASS_0_FAIL",
+                                "closure_server_typecheck":  "PASS",
+                                "closure_server_build":  "PASS",
+                                "closure_git_diff_check":  "PASS",
+                                "expected_fault_injection_output":  [
+                                                                        "SIMULATED_PRECOMMIT_PROCESS_CRASH",
+                                                                        "SIMULATED_RESPONSE_LOSS_AFTER_COMMIT"
+                                                                    ]
                             },
     "closure_does_not_change":  {
                                     "runtime_source":  true,
@@ -294,5 +307,7 @@
                                         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_CLOSURE.cjs"
                                     ],
     "effectiveness_condition":  "CLOSURE_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_MCFT_CAP_02_CLOSURE_GATE_PASS",
-    "implementation_candidate_head":  "2c4c07ef56209d19f0fccea9da734ffcc31d02bb"
+    "implementation_candidate_head":  "2c4c07ef56209d19f0fccea9da734ffcc31d02bb",
+    "ready_head":  "c88f555685ad8d79618f6ceb21d702264f37bfe7",
+    "ready_exact_head_ci":  "4575_SUCCESS"
 }

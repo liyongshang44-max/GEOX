@@ -229,3 +229,40 @@ PASS
 ```
 
 This readiness transition does not make Closure effective. The twelve completion claims remain pending, `NO_MCFT_CAP_02_COMPLETE_CLAIM` remains present, and MCFT-CAP-03 remains unauthorized.
+## 9. Final Gate evidence
+
+```text
+READY head:
+c88f555685ad8d79618f6ceb21d702264f37bfe7
+
+READY exact-head CI:
+#4575 SUCCESS
+
+Closure Final Gate on READY head:
+141 PASS, 0 FAIL
+
+24-tick PostgreSQL:
+8 PASS, 0 FAIL
+
+restart/backfill PostgreSQL:
+8 PASS, 0 FAIL
+
+persistence PostgreSQL:
+15 PASS, 0 FAIL
+
+Failure Recovery PostgreSQL:
+8 PASS, 0 FAIL
+
+server typecheck:
+PASS
+
+server build:
+PASS
+
+git diff --check:
+PASS
+```
+
+The `SIMULATED_PRECOMMIT_PROCESS_CRASH` and `SIMULATED_RESPONSE_LOSS_AFTER_COMMIT` stack traces are expected fault-injection child-process output. Their parent acceptance completed with `8 PASS, 0 FAIL`.
+
+This evidence does not make Closure effective. The twelve completion claims remain pending, `NO_MCFT_CAP_02_COMPLETE_CLAIM` remains present, and MCFT-CAP-03 remains unauthorized.

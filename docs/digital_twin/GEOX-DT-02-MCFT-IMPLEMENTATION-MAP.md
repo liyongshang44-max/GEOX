@@ -317,3 +317,35 @@ false
 ```
 
 The Closure candidate is ready for destructive Final Gate and a new READY exact-head CI. No capability completion claim is effective before merge and merged-main verification.
+## 12. MCFT-CAP-02 Closure Final Gate
+
+```text
+READY head:
+c88f555685ad8d79618f6ceb21d702264f37bfe7
+
+READY exact-head CI:
+#4575 SUCCESS
+
+Closure Final Gate:
+141 PASS, 0 FAIL
+
+PostgreSQL:
+24-tick 8/0
+restart/backfill 8/0
+persistence 15/0
+Failure Recovery 8/0
+
+server typecheck:
+PASS
+
+server build:
+PASS
+
+Closure effective:
+false
+
+MCFT-CAP-03 authorized:
+false
+```
+
+The Final Gate evidence is recorded for the READY head. Capability completion remains non-effective until the Closure PR is merged and the merged-main Closure Gate passes.
