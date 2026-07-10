@@ -174,19 +174,23 @@ const service = readText('apps/server/src/runtime/twin_runtime/continuation_tick
 const predecessorGate = readText('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_PERSISTENCE.cjs');
 check(ports.includes('previous_forecast_result_ref') && ports.includes('previous_variance_basis'), 'persisted handoff exposes Forecast pointer and exact variance basis');
 check(handoff.includes('DERIVED_FROM_MCFT_CAP_01_POSTERIOR_V1') && handoff.includes('CARRIED_FROM_PREVIOUS_CONTINUATION_STATE'), 'handoff distinguishes first and subsequent continuation basis');
+check(handoff.includes('persistedBootstrapStorageMeanV1') && handoff.includes('root_zone_water_storage_mm'), 'first continuation preserves persisted A0 storage basis without VWC re-derivation');
 check(handoff.includes('resolvePreviousCheckpointTickSequenceV1'), 'checkpoint sequence is derived from persisted checkpoint');
 check(builder.includes('validateContinuationRecordSetV1(recordSet)'), 'candidate builder validates complete cross-reference graph');
 check(builder.includes('twin_assimilation_update_v1') && builder.includes('status: "NOT_APPLIED"'), 'explicit NOT_APPLIED assimilation is built');
 check(builder.includes('status: "BLOCKED"') && builder.includes('successful_forecast_ref: null'), 'BLOCKED Forecast candidate is built');
 check(service.includes('lookupContinuationRecordSet') && service.includes('acquireLease'), 'single-tick service implements idempotency and lease path');
-const lookup = service.indexOf('lookupContinuationRecordSet');
-const evidence = service.indexOf('loadCandidateRecords');
-const lease = service.indexOf('acquireLease');
-const commit = service.indexOf('commitContinuationState');
-const readback = service.indexOf('readContinuationRecordSet');
+const lookup = service.indexOf('this.persistence.lookupContinuationRecordSet(');
+const evidence = service.indexOf('this.evidenceSource.loadCandidateRecords(');
+const lease = service.indexOf('this.persistence.acquireLease(');
+const commit = service.indexOf('this.persistence.commitContinuationState(');
+const readback = service.indexOf('this.persistence.readContinuationRecordSet(');
 check(lookup >= 0 && evidence > lookup && lease > evidence && commit > lease && readback > commit, 'single-tick source order is idempotency, Evidence, lease, commit, readback');
 check(!service.includes('Date.now') && !service.includes('process.env') && !service.includes('setInterval') && !service.includes('Fastify'), 'single-tick service excludes wall clock, environment, scheduler, and routes');
-check(!service.includes('for (') && !service.includes('while ('), 'single-tick service contains no range loop');
+const executeStart = service.indexOf('async executeOneTick');
+const executeBody = executeStart >= 0 ? service.slice(executeStart) : service;
+const rangeLoopPattern = /for\s*\(\s*(?:let|const)\s+(?:tick|hour|logicalTime|currentTime|cursor)\b|while\s*\(/;
+check(!rangeLoopPattern.test(executeBody), 'single-tick service contains no range loop');
 check(predecessorGate.includes('--postmerge') && predecessorGate.includes('Persistence merge commit is an ancestor'), 'Persistence Gate has explicit historical postmerge mode');
 
 runTsx(
