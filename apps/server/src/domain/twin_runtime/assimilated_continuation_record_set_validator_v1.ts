@@ -8,6 +8,8 @@ import {
   ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V1,
   validateAssimilatedContinuationTickDiscriminatorV1,
   validateAssimilatedContinuationUpdatePayloadV1,
+  type AssimilatedContinuationUpdatePayloadV1,
+  type AssimilatedObservationCandidateV1,
 } from "./assimilated_continuation_contracts_v1.js";
 import {
   computeAssimilatedContinuationRecordSetDeterminismHashV1,
@@ -31,6 +33,38 @@ function memberByTypeV1(
 function requiredStringV1(value: unknown, code: string): string {
   if (typeof value !== "string" || !value.trim()) throw new Error(code);
   return value;
+}
+
+function validateDispositionCandidateContractV1(
+  payload: AssimilatedContinuationUpdatePayloadV1,
+): void {
+  const selectedRef = payload.selected_observation_ref;
+  if (selectedRef === null) return;
+
+  const selectedCandidates = payload.candidate_observations.filter(
+    (candidate) => candidate.observation_ref === selectedRef && candidate.candidate_assessment === "SELECTED",
+  );
+  if (selectedCandidates.length !== 1) throw new Error("ASSIMILATED_SELECTED_CANDIDATE_CARDINALITY");
+  const selected = selectedCandidates[0] as AssimilatedObservationCandidateV1;
+
+  if (payload.disposition === "ACCEPTED" && selected.quality_status !== "PASS") {
+    throw new Error("ASSIMILATED_ACCEPTED_QUALITY_MUST_BE_PASS");
+  }
+  if (payload.disposition === "DOWNWEIGHTED" && selected.quality_status !== "LIMITED") {
+    throw new Error("ASSIMILATED_DOWNWEIGHTED_QUALITY_MUST_BE_LIMITED");
+  }
+  if (payload.disposition === "REJECTED_OUTLIER" && selected.quality_status === "FAIL") {
+    throw new Error("ASSIMILATED_OUTLIER_SELECTED_QUALITY_FAIL_FORBIDDEN");
+  }
+
+  const squared = payload.squared_normalized_innovation;
+  if ((payload.disposition === "ACCEPTED" || payload.disposition === "DOWNWEIGHTED")
+    && (squared === null || squared > 16)) {
+    throw new Error("ASSIMILATED_APPLIED_THRESHOLD_CONTRACT_MISMATCH");
+  }
+  if (payload.disposition === "REJECTED_OUTLIER" && (squared === null || squared <= 16)) {
+    throw new Error("ASSIMILATED_OUTLIER_THRESHOLD_CONTRACT_MISMATCH");
+  }
 }
 
 export function validateAssimilatedContinuationRecordSetV1(
@@ -75,8 +109,10 @@ export function validateAssimilatedContinuationRecordSetV1(
   validateAssimilatedContinuationTickDiscriminatorV1(tick.payload);
   const assimilation = memberByTypeV1(recordSet, "twin_assimilation_update_v1");
   validateAssimilatedContinuationUpdatePayloadV1(assimilation.payload);
-  if (assimilation.payload.runtime_config_ref !== aggregate.runtime_config_ref) throw new Error("ASSIMILATED_UPDATE_CONFIG_REF_MISMATCH");
-  if (assimilation.payload.runtime_config_hash !== aggregate.runtime_config_hash) throw new Error("ASSIMILATED_UPDATE_CONFIG_HASH_MISMATCH");
+  const assimilationPayload = assimilation.payload as unknown as AssimilatedContinuationUpdatePayloadV1;
+  validateDispositionCandidateContractV1(assimilationPayload);
+  if (assimilationPayload.runtime_config_ref !== aggregate.runtime_config_ref) throw new Error("ASSIMILATED_UPDATE_CONFIG_REF_MISMATCH");
+  if (assimilationPayload.runtime_config_hash !== aggregate.runtime_config_hash) throw new Error("ASSIMILATED_UPDATE_CONFIG_HASH_MISMATCH");
 
   const forecast = memberByTypeV1(recordSet, "twin_forecast_run_v1");
   if (forecast.payload.status !== "BLOCKED") throw new Error("ASSIMILATED_FORECAST_STATUS_MISMATCH");
