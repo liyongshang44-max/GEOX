@@ -29,6 +29,7 @@ const EXACT_CHANGED_FILES = [
   'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG.cjs',
   'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG.ts',
   'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG_DB.ts',
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG_NEGATIVE.ts',
 ].sort();
 
 const PRESERVED_NONCLAIMS = [
@@ -169,23 +170,39 @@ function checkSourceAnchors() {
   const service = readText('apps/server/src/runtime/twin_runtime/continuation_runtime_config_service_v1.ts');
   check(operation.includes('EVIDENCE_DIGEST_FORBIDDEN_IN_CONTINUATION_OPERATION_KEY'), 'operation identity rejects Evidence digest');
   check(aggregate.includes('evidence_window_semantic_digest'), 'aggregate identity consumes Evidence digest');
-  check(contracts.includes('CONTINUATION_MASS_BALANCE_TRACE_SELF_HASH_FORBIDDEN'), 'mass-balance trace self-hash rejection implemented');
+  check(contracts.includes('rejectRecursiveTraceSelfHashV1'), 'mass-balance trace self-hash rejection is recursive');
+  check(contracts.includes('CONTINUATION_STORAGE_MEAN_DECIMAL", 6'), 'storage mean computation basis scale is six');
+  check(contracts.includes('CONTINUATION_STORAGE_VARIANCE_DECIMAL", 12'), 'storage variance computation basis scale is twelve');
   check(contracts.includes('CONTINUATION_ASSIMILATION_STATUS_MISMATCH'), 'NOT_APPLIED assimilation validation implemented');
   check(contracts.includes('resolvePreviousCheckpointTickSequenceV1'), 'checkpoint sequence bridge implemented');
+  check(graph.includes('CONTINUATION_SUBSEQUENT_TICK_VARIANCE_REDERIVATION_FORBIDDEN'), 'subsequent tick variance re-derivation is forbidden');
   check(graph.includes('CONTINUATION_STATE_TRANSITION_TRACE_HASH_MISMATCH'), 'State/Transition trace hash graph validation implemented');
   check(config.includes('D_MODEL_GOVERNANCE_STEP_COMMIT') === false, 'domain config remains independent of transaction I/O');
   check(service.includes('commitAndVerify'), 'D transaction application service performs canonical readback');
 }
 
-function runStaticAcceptance() {
+function runTsxAcceptance(relativePath, summaryPattern, message) {
   try {
-    const output = run(pnpmCommand(), ['exec', 'tsx', 'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG.ts']);
+    const output = run(pnpmCommand(), ['exec', 'tsx', relativePath]);
     process.stdout.write(output);
-    check(/MCFT-CAP-02 contracts-config: \d+ PASS, 0 FAIL/.test(output), 'contracts/config static acceptance PASS');
+    check(summaryPattern.test(output), message);
   } catch (error) {
     process.stderr.write(error.stderr || error.message);
-    check(false, 'contracts/config static acceptance PASS');
+    check(false, message);
   }
+}
+
+function runStaticAcceptance() {
+  runTsxAcceptance(
+    'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG.ts',
+    /MCFT-CAP-02 contracts-config: \d+ PASS, 0 FAIL/,
+    'contracts/config static acceptance PASS',
+  );
+  runTsxAcceptance(
+    'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG_NEGATIVE.ts',
+    /MCFT-CAP-02 contracts-config negative: \d+ PASS, 0 FAIL/,
+    'contracts/config negative acceptance PASS',
+  );
 }
 
 function runFinalToolchain() {
