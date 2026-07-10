@@ -1,0 +1,105 @@
+{
+  "schema_version": "geox_mcft_cap_02_identity_contract_v1",
+  "capability_line_id": "MCFT-CAP-02",
+  "display_alias": "MCFT-2",
+  "delivery_slice_id": "MCFT-CAP-02.MCFT-02.CONTINUATION-CONTRACTS-CONFIG-V1",
+  "operation_variant": "A2_BLOCKED_FORECAST",
+  "operation_key": {
+    "semantic_purpose": "one_terminal_continuation_operation_per_active_lineage_revision_and_logical_time",
+    "required_fields": [
+      "scope",
+      "lineage_id",
+      "revision_id",
+      "logical_time",
+      "operation_variant"
+    ],
+    "scope_fields": [
+      "tenant_id",
+      "project_id",
+      "group_id",
+      "field_id",
+      "season_id",
+      "zone_id"
+    ],
+    "forbidden_fields": [
+      "evidence_window_semantic_digest",
+      "previous_posterior_hash",
+      "runtime_config_hash",
+      "member_determinism_hashes"
+    ],
+    "logical_time_policy": "canonical_hour_aligned_iso_instant",
+    "operation_variant_value": "A2_BLOCKED_FORECAST"
+  },
+  "operation_identity_outputs": [
+    "continuation_operation_key_hash",
+    "continuation_record_set_id",
+    "continuation_idempotency_key",
+    "eight_deterministic_member_object_ids"
+  ],
+  "aggregate_hash": {
+    "semantic_purpose": "detect_input_or_member_drift_under_the_same_terminal_operation_key",
+    "required_fields": [
+      "continuation_operation_key",
+      "previous_posterior_ref",
+      "previous_posterior_hash",
+      "previous_checkpoint_ref",
+      "previous_checkpoint_hash",
+      "runtime_config_ref",
+      "runtime_config_hash",
+      "reality_binding_ref",
+      "reality_binding_hash",
+      "evidence_window_semantic_digest",
+      "crop_stage_context_ref",
+      "crop_stage_context_hash",
+      "dynamics_model_version",
+      "uncertainty_policy_version",
+      "no_observation_update_policy_version",
+      "forecast_block_policy_version",
+      "all_eight_member_determinism_hashes"
+    ],
+    "member_hash_tuple_order": "canonical_json_lexicographic",
+    "fact_id_excluded_from_member_semantic_hash": true,
+    "created_at_excluded_from_member_semantic_hash": true
+  },
+  "idempotency_behavior": {
+    "same_operation_key_same_aggregate_hash": {
+      "result": "EXISTING_IDEMPOTENT_SUCCESS",
+      "verify_complete_eight_object_set": true,
+      "acquire_new_lease": false,
+      "increment_fence_token": false,
+      "append_facts": false,
+      "write_projections": false
+    },
+    "same_operation_key_different_aggregate_hash": {
+      "result": "IDEMPOTENCY_CONFLICT"
+    },
+    "different_operation_key": {
+      "result": "NEW_TICK_PATH"
+    }
+  },
+  "canonical_uniqueness_basis": [
+    "scope",
+    "lineage_id",
+    "revision_id",
+    "logical_time",
+    "operation_variant"
+  ],
+  "canonical_uniqueness_required_when_idempotency_projection_missing": true,
+  "member_object_types": [
+    "twin_evidence_window_v1",
+    "twin_state_transition_v1",
+    "twin_assimilation_update_v1",
+    "twin_state_estimate_v1",
+    "twin_forecast_run_v1",
+    "twin_runtime_tick_v1",
+    "twin_runtime_checkpoint_v1",
+    "twin_runtime_health_v1"
+  ],
+  "active_lineage_identity_partition": {
+    "active_lineage_ref": "twin_runtime_lineage_v1.object_id",
+    "lineage_id": "semantic_lineage_identity",
+    "revision_id": "semantic_revision_identity",
+    "must_not_be_conflated": true
+  },
+  "predecessor_identity_source": "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-PREDECESSOR-LOCK.json"
+}
