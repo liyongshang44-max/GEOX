@@ -1,14 +1,16 @@
 {
-  "schema_version": "geox_mcft_cap_02_delivery_slice_status_v2",
+  "schema_version": "geox_mcft_cap_02_delivery_slice_status_v3",
   "capability_line_id": "MCFT-CAP-02",
   "display_alias": "MCFT-2",
   "name": "Hourly Dynamics and Persistence",
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A",
-  "status": "CONTINUATION_CONTRACTS_CONFIG_READY_FOR_MERGE",
+  "status": "PURE_HOURLY_DYNAMICS_IN_PROGRESS",
   "authorization_merge_commit": "65e59aaf5fcfccacdb986258874a5df3c057711d",
   "baseline_main_commit": "65e59aaf5fcfccacdb986258874a5df3c057711d",
-  "active_delivery_slice_id": "MCFT-CAP-02.MCFT-02.CONTINUATION-CONTRACTS-CONFIG-V1",
+  "latest_verified_main_commit": "2be7c985210d1f34fa5249e1fae68932e801facc",
+  "active_delivery_slice_id": "MCFT-CAP-02.MCFT-06.PURE-HOURLY-DYNAMICS-V1",
+  "governance_debt_register_ref": "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-GOVERNANCE-DEBT-REGISTER.json",
   "slices": [
     {
       "capability_line_id": "MCFT-CAP-02",
@@ -51,18 +53,26 @@
       "capability_line_id": "MCFT-CAP-02",
       "display_alias": "MCFT-2",
       "delivery_slice_id": "MCFT-CAP-02.MCFT-02.CONTINUATION-CONTRACTS-CONFIG-V1",
-      "status": "READY_FOR_MERGE",
+      "status": "MERGED",
       "primary_owner_work_package_id": "MCFT-02",
       "contributing_work_package_ids": ["MCFT-03", "MCFT-04", "MCFT-06", "MCFT-07", "MCFT-08", "MCFT-09"],
       "depends_on_delivery_slice_ids": ["MCFT-CAP-02.GOV-AUTHORIZATION-V1"],
       "baseline_main_commit": "65e59aaf5fcfccacdb986258874a5df3c057711d",
       "branch": "mcft-cap-02-contracts-config-v2",
+      "merge_commit": "2be7c985210d1f34fa5249e1fae68932e801facc",
+      "merged_main_acceptance": {
+        "final_gate": "63_PASS_0_FAIL",
+        "server_typecheck": "PASS",
+        "server_build": "PASS",
+        "postgres_d_transaction": "6_PASS_0_FAIL",
+        "verified_main_commit": "2be7c985210d1f34fa5249e1fae68932e801facc"
+      },
       "allowed_claims": [
-        "CONTINUATION_OBJECT_CONTRACT_CANDIDATE_IMPLEMENTED",
-        "CONTINUATION_OPERATION_IDENTITY_CANDIDATE_IMPLEMENTED",
-        "CONTINUATION_RUNTIME_CONFIG_CANDIDATE_IMPLEMENTED",
-        "CONTINUATION_GRAPH_VALIDATOR_CANDIDATE_IMPLEMENTED",
-        "D_TRANSACTION_CONFIG_PERSISTENCE_REUSED"
+        "CONTINUATION_OBJECT_CONTRACT_ESTABLISHED",
+        "CONTINUATION_OPERATION_IDENTITY_ESTABLISHED",
+        "CONTINUATION_RUNTIME_CONFIG_ESTABLISHED",
+        "CONTINUATION_GRAPH_VALIDATOR_ESTABLISHED",
+        "D_TRANSACTION_CONFIG_PERSISTENCE_ESTABLISHED"
       ],
       "preserved_nonclaims": [
         "NO_HOURLY_DYNAMICS_IMPLEMENTED",
@@ -97,13 +107,57 @@
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG_DB.ts",
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG_NEGATIVE.ts"
       ],
-      "effectiveness_condition": "PR_MERGED_TO_MAIN_AND_MERGED_MAIN_CONTRACTS_CONFIG_GATE_PASS"
+      "effectiveness_condition": "PR_2319_MERGED_AND_MERGED_MAIN_CONTRACTS_CONFIG_GATE_63_PASS_0_FAIL"
     },
     {
+      "capability_line_id": "MCFT-CAP-02",
+      "display_alias": "MCFT-2",
       "delivery_slice_id": "MCFT-CAP-02.MCFT-06.PURE-HOURLY-DYNAMICS-V1",
-      "status": "BLOCKED",
+      "status": "IN_PROGRESS",
       "primary_owner_work_package_id": "MCFT-06",
-      "depends_on_delivery_slice_ids": ["MCFT-CAP-02.MCFT-02.CONTINUATION-CONTRACTS-CONFIG-V1"]
+      "contributing_work_package_ids": [],
+      "depends_on_delivery_slice_ids": ["MCFT-CAP-02.MCFT-02.CONTINUATION-CONTRACTS-CONFIG-V1"],
+      "baseline_main_commit": "2be7c985210d1f34fa5249e1fae68932e801facc",
+      "branch": "mcft-cap-02-pure-hourly-dynamics-v1",
+      "allowed_claims": [
+        "FIXED_POINT_WATER_ARITHMETIC_CANDIDATE_IMPLEMENTED",
+        "PURE_HOURLY_WATER_BALANCE_CANDIDATE_IMPLEMENTED",
+        "EXECUTED_IRRIGATION_AGGREGATION_CANDIDATE_IMPLEMENTED",
+        "MASS_BALANCE_TRACE_CANDIDATE_IMPLEMENTED",
+        "ADDITIVE_PROCESS_UNCERTAINTY_CANDIDATE_IMPLEMENTED"
+      ],
+      "preserved_nonclaims": [
+        "NO_CONTINUATION_EVIDENCE_WINDOW_SELECTION_IMPLEMENTED",
+        "NO_CONTINUATION_STATE_PERSISTED",
+        "NO_A2_CONTINUATION_TICK_COMMITTED",
+        "NO_RESTART_RESUME_PROOF",
+        "NO_BOUNDED_BACKFILL_PROOF",
+        "NO_OBSERVATION_UPDATE_APPLIED",
+        "NO_FORECAST_RESIDUAL",
+        "NO_SUCCESSFUL_FORECAST",
+        "NO_SCENARIO",
+        "NO_RECOMMENDATION",
+        "NO_DECISION",
+        "NO_AO_ACT",
+        "NO_MCFT_CAP_02_COMPLETE_CLAIM"
+      ],
+      "exact_changed_file_boundary": [
+        "apps/server/src/domain/soil_water/additive_process_uncertainty_budget_v1.ts",
+        "apps/server/src/domain/soil_water/executed_irrigation_input_v1.ts",
+        "apps/server/src/domain/soil_water/fixed_point_water_decimal_v1.ts",
+        "apps/server/src/domain/soil_water/hourly_water_balance_v1.ts",
+        "apps/server/src/domain/soil_water/water_mass_balance_trace_v1.ts",
+        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json",
+        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DYNAMICS-MATH-CONTRACT.md",
+        "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-GOVERNANCE-DEBT-REGISTER.json",
+        "fixtures/mcft/water_state/expected/MCFT_CAP_02_DYNAMICS_FIXTURES.json",
+        "fixtures/mcft/water_state/negative/MCFT_CAP_02_NEGATIVE_FIXTURES.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG.cjs",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_DYNAMICS.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_DYNAMICS.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_DYNAMICS_NEGATIVE.ts"
+      ],
+      "effectiveness_condition": "PR_MERGED_TO_MAIN_AND_MERGED_MAIN_PURE_DYNAMICS_GATE_PASS"
     },
     {
       "delivery_slice_id": "MCFT-CAP-02.MCFT-05.CONTINUATION-EVIDENCE-WINDOW-V1",
@@ -153,9 +207,11 @@
       "depends_on_delivery_slice_ids": ["MCFT-CAP-02.FAILURE-RECOVERY-V1"]
     }
   ],
-  "completion_claims": [],
+  "completion_claims": [
+    "CONTINUATION_CONTRACTS_CONFIG_MERGED_MAIN_VERIFIED"
+  ],
   "preserved_nonclaims": [
-    "NO_HOURLY_DYNAMICS_IMPLEMENTED",
+    "NO_CONTINUATION_EVIDENCE_WINDOW_SELECTION_IMPLEMENTED",
     "NO_CONTINUATION_STATE_PERSISTED",
     "NO_OBSERVATION_UPDATE_APPLIED",
     "NO_OBSERVATION_INNOVATION_COMPUTED",
