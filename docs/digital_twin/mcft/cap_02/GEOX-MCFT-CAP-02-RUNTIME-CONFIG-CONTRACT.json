@@ -1,0 +1,109 @@
+{
+  "schema_version": "geox_mcft_cap_02_runtime_config_contract_v1",
+  "capability_line_id": "MCFT-CAP-02",
+  "display_alias": "MCFT-2",
+  "delivery_slice_id": "MCFT-CAP-02.MCFT-02.CONTINUATION-CONTRACTS-CONFIG-V1",
+  "object_type": "twin_runtime_config_v1",
+  "transaction_family": "D_MODEL_GOVERNANCE_STEP_COMMIT",
+  "canonical_persistence_required_before_a2": true,
+  "config_purpose": "HOURLY_DYNAMICS_CONTINUATION",
+  "config_selection_mode": "EXPLICIT_REPLAY_PIN",
+  "parent_contract": {
+    "parent_runtime_config_ref": "required_canonical_mcft_cap_01_runtime_config_object_id",
+    "parent_runtime_config_hash": "required_exact_determinism_hash",
+    "must_match_predecessor_lock": true,
+    "must_resolve_canonical_object": true
+  },
+  "authority_bindings": {
+    "reality_binding_ref": "mcft_rb_bf1da664164a4fedda249bcb",
+    "reality_binding_hash": "sha256:bf1da664164a4fedda249bcb0e330c1af2083173a52bd704f01eac3ad277ba4f",
+    "source_matrix_hash": "sha256:c5187c23be0d058ffa23d464ae1139f924f5af064a270248746fbabde4c3e51b",
+    "configuration_matrix_hash": "sha256:381ef166454c7b698c6641fadc5d08019fecff127e9529a4c58a1f09d9e1fef5",
+    "geometry_semantic_hash": "sha256:d3dbc5495485e7af68acdc4b32e6061c2ea99772835be2805ae706b74d75ca51"
+  },
+  "crop_stage_context": {
+    "context_kind": "CONFIGURATION_DERIVED_CONTEXT",
+    "context_ref": "fixtures/mcft/water_state/replay_v1/configuration_context.json",
+    "context_hash": "sha256:2287c71e983b1ba529e49939f025d9b035e09e195a5effc994fe54b4ef7863ce",
+    "resolution_policy_id": "GOVERNED_FIXED_ROOT_ZONE_300MM_V1",
+    "consumed_fields": ["stage_code", "kc"],
+    "non_consumed_geometry_fields": ["crop_root_depth_mm", "effective_model_root_depth_mm"]
+  },
+  "dynamics_model": {
+    "model_component_ref": "mcft_component_root_zone_hourly_water_balance_v1",
+    "model_id": "ROOT_ZONE_HOURLY_WATER_BALANCE_V1",
+    "model_version": 1,
+    "step_duration": "PT1H"
+  },
+  "soil_hydraulic_snapshot": {
+    "source_config_ref": "soil_hydraulic_config_c8_v1",
+    "source_config_hash": "sha256:3d6e3d8b52a9736ff6898487cacbbffdf71578cca693754ab34cb484e5bc3082",
+    "root_zone_depth_mm": 300,
+    "wilting_point_fraction": 0.12,
+    "wilting_point_storage_mm": 36,
+    "field_capacity_fraction": 0.3,
+    "field_capacity_storage_mm": 90,
+    "saturation_fraction": 0.45,
+    "saturation_storage_mm": 135
+  },
+  "dynamics_parameters": {
+    "parameter_class": "CONTROLLED_SYNTHETIC",
+    "field_calibration_status": "NOT_FIELD_CALIBRATED",
+    "runoff_fraction": 0.05,
+    "drainage_coefficient_per_hour": 0.03
+  },
+  "process_uncertainty": {
+    "component_ref": "mcft_component_controlled_additive_process_uncertainty_budget_v1",
+    "policy_id": "CONTROLLED_ADDITIVE_PROCESS_UNCERTAINTY_BUDGET_V1",
+    "policy_version": 1,
+    "structural_process_stddev_mm_per_hour": 0.5,
+    "rainfall_relative_stddev": 0.1,
+    "crop_et_relative_stddev": 0.15,
+    "executed_irrigation_relative_stddev": 0.1,
+    "covariance_policy": "ZERO_COVARIANCE_CONTROLLED_ASSUMPTION_V1",
+    "physical_clipping_reduces_latent_variance": false
+  },
+  "irrigation_input_policy": {
+    "policy_id": "COVERAGE_WEIGHTED_EXECUTED_AMOUNT_SUM_V1",
+    "event_order": "executed_at_asc_ingested_at_asc_source_record_id_asc",
+    "spatial_overlap_deduplication": "NOT_ESTABLISHED"
+  },
+  "no_observation_update_policy": {
+    "component_ref": "mcft_component_deferred_observation_assimilation_v1",
+    "policy_id": "DEFER_OBSERVATION_ASSIMILATION_TO_MCFT_CAP_03_V1",
+    "policy_version": 1
+  },
+  "forecast_block_policy": {
+    "component_ref": "mcft_component_pinned_config_forecast_block_v1",
+    "policy_id": "MCFT_CAP_02_PINNED_CONFIG_NO_FORECAST_COMPONENT_V1",
+    "policy_version": 1
+  },
+  "rounding": {
+    "output_decimals": 6,
+    "computation_storage_mean_scale": 6,
+    "computation_storage_variance_scale": 12,
+    "rule": "DECIMAL_HALF_AWAY_FROM_ZERO_V1"
+  },
+  "soil_root_zone_config_refs": ["soil_hydraulic_config_c8_v1"],
+  "model_component_refs": [
+    "mcft_component_root_zone_hourly_water_balance_v1",
+    "mcft_component_controlled_additive_process_uncertainty_budget_v1",
+    "mcft_component_deferred_observation_assimilation_v1",
+    "mcft_component_pinned_config_forecast_block_v1"
+  ],
+  "required_limitations": [
+    "CONTROLLED_SYNTHETIC",
+    "NOT_FIELD_CALIBRATED",
+    "NO_MODEL_ACTIVATION",
+    "NO_DYNAMIC_ROOT_ZONE_GEOMETRY",
+    "NO_SPATIAL_EXECUTION_OVERLAP_DEDUPLICATION"
+  ],
+  "forbidden": [
+    "runtime_config_self_reference",
+    "active_model_switch",
+    "twin_model_activation_v1",
+    "calibration_candidate",
+    "shadow_evaluation",
+    "dynamic_root_zone_geometry"
+  ]
+}

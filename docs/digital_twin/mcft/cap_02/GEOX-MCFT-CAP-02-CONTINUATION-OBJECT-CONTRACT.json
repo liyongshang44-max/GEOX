@@ -1,0 +1,188 @@
+{
+  "schema_version": "geox_mcft_cap_02_continuation_object_contract_v1",
+  "capability_line_id": "MCFT-CAP-02",
+  "display_alias": "MCFT-2",
+  "delivery_slice_id": "MCFT-CAP-02.MCFT-02.CONTINUATION-CONTRACTS-CONFIG-V1",
+  "transaction_family": "A_STATE_TICK_COMMIT",
+  "operation_variant": "A2_BLOCKED_FORECAST",
+  "member_count": 8,
+  "member_object_types": [
+    "twin_evidence_window_v1",
+    "twin_state_transition_v1",
+    "twin_assimilation_update_v1",
+    "twin_state_estimate_v1",
+    "twin_forecast_run_v1",
+    "twin_runtime_tick_v1",
+    "twin_runtime_checkpoint_v1",
+    "twin_runtime_health_v1"
+  ],
+  "lineage_contract": {
+    "new_lineage_object_per_tick": false,
+    "active_lineage_object_ref_source": "persisted_predecessor_lock_and_active_lineage_read_path",
+    "semantic_lineage_id_required": true,
+    "semantic_revision_id_required": true,
+    "all_members_same_lineage_revision": true
+  },
+  "transition_contract": {
+    "transition_kind": "CONTINUATION",
+    "previous_posterior_ref": "required",
+    "previous_posterior_hash": "required",
+    "process_model_status": "APPLIED",
+    "process_model_id": "ROOT_ZONE_HOURLY_WATER_BALANCE_V1",
+    "process_model_version": 1,
+    "propagation_interval": "exact_PT1H",
+    "previous_state_runtime_config_ref": "required",
+    "current_runtime_config_ref": "required",
+    "mass_balance_trace": "embedded_required",
+    "mass_balance_trace_hash": "semantic_hash_of_trace_without_self_hash_fields",
+    "mass_balance_trace_self_hash_field_rejection": "recursive",
+    "forbidden_trace_field_names": ["trace_determinism_hash", "mass_balance_trace_hash", "self_hash"],
+    "forbidden_fields": ["bootstrap_prior", "bootstrap_prior_ref"]
+  },
+  "assimilation_contract": {
+    "status": "NOT_APPLIED",
+    "disposition": "DEFERRED_TO_MCFT_CAP_03",
+    "candidate_observation_refs": "array_required",
+    "consumed_observation_refs": [],
+    "predicted_observation": null,
+    "innovation": null,
+    "residual": null,
+    "assimilation_gain": null,
+    "prior_equals_posterior": true,
+    "reason_codes": ["OBSERVATION_UPDATE_OUT_OF_SCOPE_MCFT_CAP_02"],
+    "policy_id": "DEFER_OBSERVATION_ASSIMILATION_TO_MCFT_CAP_03_V1"
+  },
+  "state_contract": {
+    "state_kind": "POSTERIOR",
+    "previous_posterior_ref": "required",
+    "transition_ref": "required",
+    "assimilation_update_ref": "required",
+    "evidence_window_ref": "required",
+    "runtime_config_ref_hash": "required",
+    "reality_binding_ref_hash": "required",
+    "computation_basis": {
+      "allowed_basis_origins": [
+        "DERIVED_FROM_MCFT_CAP_01_POSTERIOR_V1",
+        "CARRIED_FROM_PREVIOUS_CONTINUATION_STATE"
+      ],
+      "storage_mean_mm_decimal_scale": 6,
+      "storage_variance_mm2_decimal_scale": 12,
+      "first_bridge_source_vwc_variance_scale": 6,
+      "first_bridge_root_zone_depth_mm": "300.000000",
+      "first_bridge_required_fields": [
+        "source_posterior_ref",
+        "source_vwc_variance",
+        "root_zone_depth_mm",
+        "storage_mean_mm_decimal",
+        "storage_variance_mm2_decimal"
+      ],
+      "carried_basis_required_fields": [
+        "previous_state_ref",
+        "previous_storage_mean_mm_decimal",
+        "previous_storage_variance_mm2_decimal",
+        "storage_mean_mm_decimal",
+        "storage_variance_mm2_decimal"
+      ],
+      "first_continuation_tick_basis_origin": "DERIVED_FROM_MCFT_CAP_01_POSTERIOR_V1",
+      "subsequent_tick_basis_origin": "CARRIED_FROM_PREVIOUS_CONTINUATION_STATE",
+      "subsequent_tick_source_vwc_variance_forbidden": true
+    },
+    "physical_bounds": {
+      "storage_mm": [0, 135],
+      "vwc_fraction": [0, 0.45],
+      "available_water_fraction": [0, 1],
+      "depletion_non_negative": true,
+      "variance_non_negative": true
+    },
+    "mass_balance_trace_hash_must_equal_transition": true,
+    "confidence": {
+      "status": "NOT_ESTABLISHED",
+      "reason_code": "NO_CALIBRATED_CONFIDENCE_MODEL",
+      "numeric_score_forbidden": true
+    },
+    "use_eligibility": {
+      "state_valid": true,
+      "posterior_chain_eligible": true,
+      "forecast_source_eligible": true,
+      "recommendation_input_eligible": false,
+      "action_input_eligible": false,
+      "scenario_input_eligible_forbidden": true
+    }
+  },
+  "forecast_contract": {
+    "status": "BLOCKED",
+    "points": [],
+    "scenario_eligible": false,
+    "source_posterior_ref": "required",
+    "successful_forecast_ref": null,
+    "reason_codes": [
+      "FORECAST_MODEL_COMPONENT_NOT_CONFIGURED_IN_PINNED_RUNTIME_CONFIG",
+      "SUCCESSFUL_FORECAST_NOT_AUTHORIZED_FOR_MCFT_CAP_02"
+    ],
+    "policy_id": "MCFT_CAP_02_PINNED_CONFIG_NO_FORECAST_COMPONENT_V1"
+  },
+  "tick_contract": {
+    "transaction_family": "A_STATE_TICK_COMMIT",
+    "operation_variant": "A2_BLOCKED_FORECAST",
+    "status": "COMPLETED_WITH_LIMITATIONS",
+    "transition_kind": "CONTINUATION",
+    "limitations": [
+      "STATE_PROPAGATION_SUCCEEDED",
+      "OBSERVATION_UPDATE_NOT_APPLIED",
+      "FORECAST_BLOCKED_BY_PINNED_CONFIG_AND_CAPABILITY_BOUNDARY"
+    ]
+  },
+  "checkpoint_contract": {
+    "checkpoint_kind": "CONTINUATION",
+    "previous_checkpoint_ref": "required",
+    "last_completed_tick_ref": "required",
+    "last_posterior_state_ref": "required",
+    "forecast_result_ref": "required",
+    "successful_forecast_ref": null,
+    "next_tick_logical_time": "current_tick_plus_PT1H",
+    "tick_sequence": "previous_plus_one",
+    "initial_checkpoint_implicit_tick_sequence": 0,
+    "first_continuation_checkpoint_tick_sequence": 1
+  },
+  "health_contract": {
+    "operation_status": "CONTINUATION_STATE_COMMITTED_WITH_BLOCKED_FORECAST",
+    "runtime_mode": "REPLAY",
+    "successful_forecast_ref": null,
+    "limitation_reason_codes": [
+      "OBSERVATION_UPDATE_OUT_OF_SCOPE_MCFT_CAP_02",
+      "FORECAST_MODEL_COMPONENT_NOT_CONFIGURED_IN_PINNED_RUNTIME_CONFIG",
+      "NO_CALIBRATED_CONFIDENCE_MODEL"
+    ],
+    "forbidden_fields": ["recommendation_ref", "action_ref", "water_stress_state"]
+  },
+  "cross_reference_requirements": [
+    "transition.evidence_window_ref == evidence_window.object_id",
+    "transition.assimilation_update_ref == assimilation_update.object_id",
+    "transition.posterior_state_ref == state.object_id",
+    "assimilation_update.state_transition_ref == transition.object_id",
+    "assimilation_update.posterior_state_ref == state.object_id",
+    "state.transition_ref == transition.object_id",
+    "state.assimilation_update_ref == assimilation_update.object_id",
+    "state.evidence_window_ref == evidence_window.object_id",
+    "state.mass_balance_trace_hash == transition.mass_balance_trace_hash",
+    "forecast.source_posterior_ref == state.object_id",
+    "tick references all six subordinate terminal objects",
+    "checkpoint.last_completed_tick_ref == tick.object_id",
+    "checkpoint.last_posterior_state_ref == state.object_id",
+    "checkpoint.forecast_result_ref == forecast.object_id",
+    "checkpoint.tick_sequence == 1 implies first bridge basis",
+    "checkpoint.tick_sequence > 1 implies carried continuation basis",
+    "health references tick checkpoint state and forecast",
+    "all members share scope logical_time lineage revision and runtime_config"
+  ],
+  "preserved_nonclaims": [
+    "NO_OBSERVATION_UPDATE_APPLIED",
+    "NO_OBSERVATION_INNOVATION_COMPUTED",
+    "NO_FORECAST_RESIDUAL",
+    "NO_SUCCESSFUL_FORECAST",
+    "NO_SCENARIO",
+    "NO_RECOMMENDATION",
+    "NO_DECISION",
+    "NO_AO_ACT"
+  ]
+}
