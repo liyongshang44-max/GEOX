@@ -4,13 +4,13 @@
   "debts": [
     {
       "debt_id": "MCFT-CAP-02.GOV-DEBT-001",
-      "title": "CONTRACTS_CONFIG_GATE_PREMERGE_MESSAGE_LEAKED_INTO_MERGED_MAIN",
+      "title": "CONTRACTS_CONFIG_GATE_PREMERGE_SEMANTICS_LEAKED_INTO_POSTMERGE_USE",
       "status": "REMEDIATED_IN_DYNAMICS_PREFLIGHT",
       "discovered_on_main_commit": "2be7c985210d1f34fa5249e1fae68932e801facc",
-      "symptom": "The merged-main contracts/config Gate still emitted the premerge assertion 'next slice remains unauthorized before merge'.",
-      "risk": "Ambiguous delivery authorization state after a successful merged-main Gate.",
+      "symptom": "The historical contracts/config Gate retained premerge-only authorization, lifecycle-state, and destructive-database assumptions when invoked by the downstream Dynamics slice.",
+      "risk": "Ambiguous downstream authorization state and unnecessary coupling of downstream final Gates to repeated destructive predecessor database acceptance.",
       "technical_impact": "NONE_ON_CONTRACTS_CONFIG_RUNTIME_BEHAVIOR",
-      "governance_impact": "POSTMERGE_STATUS_TRANSITION_NOT_MACHINE_EXPLICIT",
+      "governance_impact": "POSTMERGE_STATUS_TRANSITION_AND_PREDECESSOR_EVIDENCE_CONSUMPTION_NOT_MACHINE_EXPLICIT",
       "remediation_stage": "MCFT-CAP-02.MCFT-06.PURE-HOURLY-DYNAMICS-V1_PREFLIGHT",
       "remediation_deadline": "BEFORE_FIRST_DYNAMICS_SOURCE_COMMIT",
       "remediation_branch": "mcft-cap-02-pure-hourly-dynamics-v1",
@@ -19,6 +19,9 @@
         "MARK_CONTRACTS_CONFIG_SLICE_MERGED",
         "RECORD_MERGED_MAIN_GATE_63_PASS_0_FAIL",
         "SWITCH_ACTIVE_SLICE_TO_PURE_HOURLY_DYNAMICS",
+        "ALLOW_DYNAMICS_IN_PROGRESS_OR_READY_FOR_MERGE_AS_THE_SINGLE_ACTIVE_PREMERGE_SLICE",
+        "MAKE_HISTORICAL_POSTMERGE_PREDECESSOR_GATE_NON_DESTRUCTIVE",
+        "CONSUME_FROZEN_PREDECESSOR_63_PASS_AND_6_PASS_EVIDENCE_INSTEAD_OF_REPEATING_DB_ACCEPTANCE",
         "KEEP_ALL_LATER_SLICES_BLOCKED"
       ],
       "evidence": {
@@ -34,7 +37,7 @@
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_CONTRACTS_CONFIG.cjs",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_DYNAMICS.cjs"
       ],
-      "closure_condition": "DYNAMICS_PREFLIGHT_GATE_PROVES_POSTMERGE_STATUS_AND_EXACT_2BE7C985_ANCESTRY"
+      "closure_condition": "DYNAMICS_FINAL_GATE_PROVES_POSTMERGE_STATUS_LIFECYCLE_AND_NON_DESTRUCTIVE_PREDECESSOR_EVIDENCE_CONSUMPTION"
     }
   ]
 }
