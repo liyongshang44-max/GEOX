@@ -1,0 +1,80 @@
+{
+  "schema_version": "geox_mcft_cap_02_twenty_four_tick_range_contract_v1",
+  "capability_line_id": "MCFT-CAP-02",
+  "delivery_slice_id": "MCFT-CAP-02.MCFT-04-08.TWENTY-FOUR-TICK-RANGE-V1",
+  "runtime_mode": "REPLAY",
+  "baseline_main_commit": "18c921c64463d6d9de5af2b4727c185970d771ef",
+  "application_service": "runContiguousContinuationRangeV1",
+  "single_tick_path": "ContinuationTickServiceV1.executeOneTick",
+  "range_semantics": {
+    "direction": "FORWARD_ONLY",
+    "contiguity": "EXACT_PT1H",
+    "alignment": "UTC_HOUR_ALIGNED",
+    "start_source": "PERSISTED_CHECKPOINT_NEXT_TICK_LOGICAL_TIME",
+    "maximum_ticks_per_invocation": 24,
+    "transaction_boundary": "ONE_A2_DATABASE_TRANSACTION_PER_TICK",
+    "failure_policy": "STOP_ON_FIRST_FAILURE",
+    "already_complete_policy": "RETURN_ALREADY_COMPLETE_WITH_ZERO_NEW_TICKS",
+    "wall_clock_logical_time": "FORBIDDEN"
+  },
+  "standard_range": {
+    "bootstrap_state_logical_time": "2026-06-01T01:00:00.000Z",
+    "first_continuation_logical_time": "2026-06-01T02:00:00.000Z",
+    "last_continuation_logical_time": "2026-06-02T01:00:00.000Z",
+    "next_logical_time_after_range": "2026-06-02T02:00:00.000Z",
+    "continuation_tick_count": 24,
+    "bootstrap_state_count": 1,
+    "continuation_state_count": 24,
+    "total_state_count": 25,
+    "a2_fact_count": 192,
+    "checkpoint_tick_sequence": 24
+  },
+  "standard_inputs": {
+    "total_rainfall_mm": "0.000000",
+    "total_executed_irrigation_mm": "0.000000",
+    "total_et0_mm": "3.300000",
+    "kc": "0.300000",
+    "total_crop_et_mm": "0.990000",
+    "et0_series_mm": [
+      "0.085000", "0.065000", "0.080000", "0.090000", "0.110000", "0.125000",
+      "0.135000", "0.140000", "0.145000", "0.155000", "0.170000", "0.190000",
+      "0.200000", "0.215000", "0.145000", "0.145000", "0.140000", "0.140000",
+      "0.140000", "0.140000", "0.140000", "0.135000", "0.135000", "0.135000"
+    ],
+    "et0_squared_sum": "0.482500000000"
+  },
+  "standard_final_state": {
+    "logical_time": "2026-06-02T01:00:00.000Z",
+    "storage_mean_mm": "56.788512",
+    "vwc_mean": "0.189295",
+    "storage_variance_mm2": "247.020977062500",
+    "vwc_variance": "0.002744677523",
+    "vwc_stddev": "0.052390",
+    "confidence_interval_95": ["0.086611", "0.291979"],
+    "available_water_fraction": "0.384972",
+    "depletion_from_field_capacity_mm": "33.211488"
+  },
+  "required_proofs": [
+    "24_CONTIGUOUS_TICKS_EXECUTED",
+    "25_STATE_CHAIN_BY_SCOPE_LINEAGE_REVISION_AND_TIME_RANGE",
+    "MONOTONIC_LOGICAL_TIME",
+    "STRICTLY_MONOTONIC_STORAGE_VARIANCE_BASIS",
+    "EXACT_FINAL_STATE",
+    "EXACT_CHECKPOINT_SEQUENCE_24",
+    "BLOCKED_FORECAST_FOR_ALL_TICKS",
+    "NOT_APPLIED_ASSIMILATION_FOR_ALL_TICKS",
+    "EXACT_OBJECT_COUNTS_BY_LINEAGE",
+    "IDEMPOTENT_RANGE_REPLAY_WITH_ZERO_NEW_WRITES"
+  ],
+  "preserved_nonclaims": [
+    "NO_RESTART_RESUME_PROOF",
+    "NO_BOUNDED_BACKFILL_PROOF",
+    "NO_OBSERVATION_UPDATE_APPLIED",
+    "NO_OBSERVATION_INNOVATION_COMPUTED",
+    "NO_FORECAST_RESIDUAL",
+    "NO_SUCCESSFUL_FORECAST",
+    "NO_CONTINUOUS_RUNTIME",
+    "NO_CONTINUOUS_SCHEDULER",
+    "NO_MCFT_CAP_02_COMPLETE_CLAIM"
+  ]
+}
