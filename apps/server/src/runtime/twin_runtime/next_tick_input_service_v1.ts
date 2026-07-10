@@ -4,17 +4,12 @@
 
 import {
   WATER_AMOUNT_SCALE_V1,
-  formatFixedDecimalV1,
-  multiplyFixedUnitsV1,
   normalizeFixedDecimalV1,
-  parseFixedDecimalV1,
 } from "../../domain/soil_water/fixed_point_water_decimal_v1.js";
 import type { PreviousStorageVarianceBasisV1 } from "../../domain/soil_water/additive_process_uncertainty_budget_v1.js";
 import type { CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
 import { resolvePreviousCheckpointTickSequenceV1 } from "../../domain/twin_runtime/continuation_contracts_v1.js";
 import type { NextTickReadPortV1, PreparedNextTickInputV1, TwinScopeKeyV1 } from "./ports.js";
-
-const INTERNAL_FRACTION_SCALE_V1 = 12;
 
 function requiredStringV1(value: unknown, code: string): string {
   if (typeof value !== "string" || !value) throw new Error(code);
@@ -76,26 +71,29 @@ function previousPosteriorMomentsV1(previousPosterior: CanonicalObjectEnvelopeV1
   };
 }
 
-function deriveBootstrapStorageMeanV1(priorMean: number): string {
-  const meanUnits = parseFixedDecimalV1(
-    String(priorMean),
-    INTERNAL_FRACTION_SCALE_V1,
-    "PREVIOUS_POSTERIOR_MEAN_INVALID",
+function persistedBootstrapStorageMeanV1(previousPosterior: CanonicalObjectEnvelopeV1): string {
+  const derivedState = requiredRecordV1(
+    previousPosterior.payload.derived_state,
+    "PREVIOUS_BOOTSTRAP_DERIVED_STATE_REQUIRED",
   );
-  const depthUnits = parseFixedDecimalV1("300.000000", WATER_AMOUNT_SCALE_V1);
-  const storageUnits = multiplyFixedUnitsV1(
-    meanUnits,
-    INTERNAL_FRACTION_SCALE_V1,
-    depthUnits,
-    WATER_AMOUNT_SCALE_V1,
-    WATER_AMOUNT_SCALE_V1,
+  const rootZoneStorage = requiredRecordV1(
+    derivedState.root_zone_water_storage_mm,
+    "PREVIOUS_BOOTSTRAP_STORAGE_REQUIRED",
   );
-  return formatFixedDecimalV1(storageUnits, WATER_AMOUNT_SCALE_V1);
+  const storageMean = requiredFiniteNumberV1(
+    rootZoneStorage.mean,
+    "PREVIOUS_BOOTSTRAP_STORAGE_MEAN_REQUIRED",
+  );
+  if (storageMean < 0) throw new Error("PREVIOUS_BOOTSTRAP_STORAGE_MEAN_NEGATIVE");
+  return normalizeFixedDecimalV1(
+    String(storageMean),
+    WATER_AMOUNT_SCALE_V1,
+    "PREVIOUS_BOOTSTRAP_STORAGE_MEAN_INVALID",
+  );
 }
 
 function prepareComputationBasisV1(input: {
   previousPosterior: CanonicalObjectEnvelopeV1;
-  priorMean: number;
   priorVariance: number;
 }): {
   previous_storage_mm_decimal: string;
@@ -131,7 +129,7 @@ function prepareComputationBasisV1(input: {
   }
 
   return {
-    previous_storage_mm_decimal: deriveBootstrapStorageMeanV1(input.priorMean),
+    previous_storage_mm_decimal: persistedBootstrapStorageMeanV1(input.previousPosterior),
     previous_variance_basis: {
       basis_origin: "DERIVED_FROM_MCFT_CAP_01_POSTERIOR_V1",
       source_posterior_ref: input.previousPosterior.object_id,
@@ -219,7 +217,6 @@ export class PrepareNextTickInputServiceV1 {
     if (moments.variance < 0) throw new Error("PREVIOUS_POSTERIOR_VARIANCE_INVALID");
     const computation = prepareComputationBasisV1({
       previousPosterior,
-      priorMean: moments.mean,
       priorVariance: moments.variance,
     });
 
