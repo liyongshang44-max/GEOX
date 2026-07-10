@@ -18,6 +18,7 @@ const NEXT_SLICE = 'MCFT-CAP-02.MCFT-04.RESTART-BACKFILL-V1';
 const MODE = process.argv.includes('--draft') ? 'draft' : 'final';
 
 const EXACT_CHANGED_FILES = [
+  'apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts',
   'apps/server/src/runtime/twin_runtime/continuation_tick_service_v1.ts',
   'apps/server/src/runtime/twin_runtime/contiguous_continuation_range_service_v1.ts',
   'docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json',
@@ -36,6 +37,7 @@ const SINGLE_TICK_CHANGED_FILES = [
   'apps/server/src/runtime/twin_runtime/ports.ts',
   'apps/server/src/runtime/twin_runtime/next_tick_input_service_v1.ts',
   'apps/server/src/runtime/twin_runtime/continuation_record_set_builder_v1.ts',
+  'apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts',
   'apps/server/src/runtime/twin_runtime/continuation_tick_service_v1.ts',
   'docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json',
   'docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-SINGLE-TICK-CONTRACT.json',
@@ -166,6 +168,7 @@ check(expected.et0_series_mm?.length === 24, 'expected fixture has 24 exact-hour
 check(expected.expected?.checkpoint_tick_sequence === 24, 'expected checkpoint sequence 24 frozen');
 check(negative.cases?.length >= 10, 'negative fixture has at least ten cases');
 
+const persistenceSource = readText('apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts');
 const rangeSource = readText('apps/server/src/runtime/twin_runtime/contiguous_continuation_range_service_v1.ts');
 const tickSource = readText('apps/server/src/runtime/twin_runtime/continuation_tick_service_v1.ts');
 check(rangeSource.includes('MAX_CONTIGUOUS_CONTINUATION_TICKS_V1 = 24'), 'production range service freezes maximum 24 ticks');
@@ -175,6 +178,7 @@ check(rangeSource.includes('CONTINUATION_RANGE_NONCONTIGUOUS_COMMITTED_HANDOFF')
 check(rangeSource.includes('status: "ALREADY_COMPLETE"'), 'range service has explicit already-complete idempotency result');
 check(!rangeSource.includes('Date.now') && !rangeSource.includes('process.env') && !rangeSource.includes('Fastify') && !rangeSource.includes('setInterval'), 'range service excludes wall clock, environment, routes, and scheduler');
 check(tickSource.includes('CONTINUATION_RUNTIME_CONFIG_REF_MISMATCH') && tickSource.includes('CONTINUATION_RUNTIME_CONFIG_HASH_MISMATCH'), 'single-tick path validates carried continuation Runtime Config identity for ticks 2 through 24');
+check(persistenceSource.includes('validateContinuationMemberV1') && persistenceSource.includes('currentCheckpointSequence === 1') && persistenceSource.includes('previousObjectValidator'), 'PostgreSQL A2 transaction validates A0 predecessors for tick 1 and continuation predecessors for ticks 2 through 24');
 
 runTsx('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_TWENTY_FOUR_TICK_RANGE.ts', /MCFT-CAP-02 twenty-four-tick range: \d+ PASS, 0 FAIL/, '24-tick positive acceptance PASS');
 runTsx('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_TWENTY_FOUR_TICK_RANGE_NEGATIVE.ts', /MCFT-CAP-02 twenty-four-tick range negative: \d+ PASS, 0 FAIL/, '24-tick negative acceptance PASS');

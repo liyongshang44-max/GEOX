@@ -9,6 +9,7 @@ import {
   type A0RecordSetV1,
   type CanonicalObjectEnvelopeV1,
 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
+import { validateContinuationMemberV1 } from "../../domain/twin_runtime/continuation_contracts_v1.js";
 import { validateContinuationRecordSetV1 } from "../../domain/twin_runtime/continuation_cross_ref_validator_v1.js";
 import type { ContinuationRecordSetV1 } from "../../domain/twin_runtime/continuation_record_set_identity_v1.js";
 import {
@@ -146,7 +147,11 @@ export class PostgresRuntimeRepositoryV1 implements RuntimeConfigRepositoryPortV
     if (!result.rows[0].valid) throw new Error("LEASE_EXPIRED");
   }
 
-  private async readCanonicalObjectWithClient(client: PoolClient, objectId: string): Promise<CanonicalObjectEnvelopeV1 | null> {
+  private async readCanonicalObjectWithClient(
+    client: PoolClient,
+    objectId: string,
+    validator: (object: CanonicalObjectEnvelopeV1) => void = validateCanonicalObjectV1,
+  ): Promise<CanonicalObjectEnvelopeV1 | null> {
     const result = await client.query(
       "SELECT record_json FROM facts WHERE record_json->'payload'->>'object_id'=$1 LIMIT 2",
       [objectId],
@@ -154,7 +159,7 @@ export class PostgresRuntimeRepositoryV1 implements RuntimeConfigRepositoryPortV
     if (!result.rows.length) return null;
     if (result.rows.length !== 1) throw new Error("CANONICAL_OBJECT_ID_NOT_UNIQUE");
     const object = parseFactObject(result.rows[0].record_json);
-    validateCanonicalObjectV1(object);
+    validator(object);
     return object;
   }
 
@@ -371,9 +376,32 @@ export class PostgresRuntimeRepositoryV1 implements RuntimeConfigRepositoryPortV
     if (lineage.lineage_id !== expected.lineage_id) throw new Error("ACTIVE_LINEAGE_ID_MISMATCH");
     if (lineage.revision_id !== expected.revision_id) throw new Error("LINEAGE_REVISION_MISMATCH");
 
-    const previousState = await this.readCanonicalObjectWithClient(client, expected.previous_state_ref);
-    const previousCheckpoint = await this.readCanonicalObjectWithClient(client, expected.previous_checkpoint_ref);
-    const previousForecast = await this.readCanonicalObjectWithClient(client, expected.previous_forecast_result_ref);
+    const currentCheckpoint = requireMemberV1(recordSet, "twin_runtime_checkpoint_v1");
+    const currentCheckpointSequence = currentCheckpoint.payload.tick_sequence;
+    if (
+      typeof currentCheckpointSequence !== "number"
+      || !Number.isInteger(currentCheckpointSequence)
+      || currentCheckpointSequence < 1
+    ) throw new Error("CONTINUATION_CHECKPOINT_TICK_SEQUENCE_INVALID");
+    const previousObjectValidator = currentCheckpointSequence === 1
+      ? validateCanonicalObjectV1
+      : validateContinuationMemberV1;
+
+    const previousState = await this.readCanonicalObjectWithClient(
+      client,
+      expected.previous_state_ref,
+      previousObjectValidator,
+    );
+    const previousCheckpoint = await this.readCanonicalObjectWithClient(
+      client,
+      expected.previous_checkpoint_ref,
+      previousObjectValidator,
+    );
+    const previousForecast = await this.readCanonicalObjectWithClient(
+      client,
+      expected.previous_forecast_result_ref,
+      previousObjectValidator,
+    );
     if (!previousState || previousState.object_type !== "twin_state_estimate_v1") throw new Error("STATE_LATEST_CAS_CONFLICT");
     if (!previousCheckpoint || previousCheckpoint.object_type !== "twin_runtime_checkpoint_v1") throw new Error("CHECKPOINT_CAS_CONFLICT");
     if (!previousForecast || previousForecast.object_type !== "twin_forecast_run_v1") throw new Error("FORECAST_RESULT_CAS_CONFLICT");
