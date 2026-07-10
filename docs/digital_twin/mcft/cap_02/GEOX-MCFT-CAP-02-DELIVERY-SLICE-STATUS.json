@@ -1,15 +1,15 @@
 {
-    "schema_version":  "geox_mcft_cap_02_delivery_slice_status_v7",
+    "schema_version":  "geox_mcft_cap_02_delivery_slice_status_v8",
     "capability_line_id":  "MCFT-CAP-02",
     "display_alias":  "MCFT-2",
     "name":  "Hourly Dynamics and Persistence",
     "runtime_mode":  "REPLAY",
     "target_completion_level":  "Level A",
-    "status":  "TWENTY_FOUR_TICK_RANGE_READY_FOR_MERGE",
+    "status":  "RESTART_BACKFILL_IN_PROGRESS",
     "authorization_merge_commit":  "65e59aaf5fcfccacdb986258874a5df3c057711d",
     "baseline_main_commit":  "65e59aaf5fcfccacdb986258874a5df3c057711d",
-    "latest_verified_main_commit":  "18c921c64463d6d9de5af2b4727c185970d771ef",
-    "active_delivery_slice_id":  "MCFT-CAP-02.MCFT-04-08.TWENTY-FOUR-TICK-RANGE-V1",
+    "latest_verified_main_commit":  "af798ecdffd1d85e9caa9472d465433c20da9957",
+    "active_delivery_slice_id":  "MCFT-CAP-02.MCFT-04.RESTART-BACKFILL-V1",
     "governance_debt_register_ref":  "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-GOVERNANCE-DEBT-REGISTER.json",
     "slices":  [
                    {
@@ -390,7 +390,7 @@
                    },
                    {
                        "delivery_slice_id":  "MCFT-CAP-02.MCFT-04-08.TWENTY-FOUR-TICK-RANGE-V1",
-                       "status":  "READY_FOR_MERGE",
+                       "status":  "MERGED",
                        "primary_owner_work_package_id":  "MCFT-04",
                        "contributing_work_package_ids":  [
                                                              "MCFT-08"
@@ -447,11 +447,25 @@
                                                            "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_TWENTY_FOUR_TICK_RANGE_NEGATIVE.ts",
                                                            "scripts/runtime_acceptance/mcft_cap_02_twenty_four_tick_fixture_v1.ts"
                                                        ],
-                       "effectiveness_condition":  "PR_MERGED_TO_MAIN_AND_MERGED_MAIN_TWENTY_FOUR_TICK_RANGE_GATE_PASS"
+                       "effectiveness_condition":  "PR_MERGED_TO_MAIN_AND_MERGED_MAIN_TWENTY_FOUR_TICK_RANGE_GATE_PASS",
+                       "merge_commit":  "ebf637fcafaee58dc1e72bc366e8591881257863",
+                       "implementation_candidate_head":  "ce655f8f7297c6822af9b84a5fe8a2097d93bb8e",
+                       "merged_main_acceptance":  {
+                                                      "draft_gate":  "65_PASS_0_FAIL",
+                                                      "positive_range":  "9_PASS_0_FAIL",
+                                                      "negative_range":  "13_PASS_0_FAIL",
+                                                      "postgres_range":  "8_PASS_0_FAIL",
+                                                      "final_gate":  "68_PASS_0_FAIL",
+                                                      "server_typecheck":  "PASS",
+                                                      "server_build":  "PASS",
+                                                      "exact_head_ci":  "4559_SUCCESS",
+                                                      "merge_commit":  "ebf637fcafaee58dc1e72bc366e8591881257863",
+                                                      "verified_main_commit":  "af798ecdffd1d85e9caa9472d465433c20da9957"
+                                                  }
                    },
                    {
                        "delivery_slice_id":  "MCFT-CAP-02.MCFT-04.RESTART-BACKFILL-V1",
-                       "status":  "BLOCKED",
+                       "status":  "IN_PROGRESS",
                        "primary_owner_work_package_id":  "MCFT-04",
                        "contributing_work_package_ids":  [
                                                              "MCFT-03",
@@ -459,7 +473,59 @@
                                                          ],
                        "depends_on_delivery_slice_ids":  [
                                                              "MCFT-CAP-02.MCFT-04-08.TWENTY-FOUR-TICK-RANGE-V1"
-                                                         ]
+                                                         ],
+                       "capability_line_id":  "MCFT-CAP-02",
+                       "display_alias":  "MCFT-2",
+                       "baseline_main_commit":  "af798ecdffd1d85e9caa9472d465433c20da9957",
+                       "branch":  "mcft-cap-02-restart-backfill-v1",
+                       "allowed_claims":  [
+                                              "RESTART_RESUME_CANDIDATE_IMPLEMENTED",
+                                              "BOUNDED_FORWARD_BACKFILL_CANDIDATE_IMPLEMENTED",
+                                              "SPLIT_PROCESS_HASH_EQUIVALENCE_CANDIDATE_IMPLEMENTED"
+                                          ],
+                       "preserved_nonclaims":  [
+                                                   "NO_RESTART_RESUME_PROOF",
+                                                   "NO_BOUNDED_BACKFILL_PROOF",
+                                                   "NO_OBSERVATION_UPDATE_APPLIED",
+                                                   "NO_OBSERVATION_INNOVATION_COMPUTED",
+                                                   "NO_FORECAST_RESIDUAL",
+                                                   "NO_SUCCESSFUL_FORECAST",
+                                                   "NO_SCENARIO",
+                                                   "NO_RECOMMENDATION",
+                                                   "NO_DECISION",
+                                                   "NO_AO_ACT",
+                                                   "NO_CALIBRATED_CONFIDENCE_MODEL",
+                                                   "NO_MODEL_ACTIVATION",
+                                                   "NO_LATE_EVIDENCE_REVISION",
+                                                   "NO_DYNAMIC_ROOT_ZONE_GEOMETRY",
+                                                   "NO_SPATIAL_EXECUTION_OVERLAP_DEDUPLICATION",
+                                                   "NO_CONTINUOUS_RUNTIME",
+                                                   "NO_CONTINUOUS_SCHEDULER",
+                                                   "NO_720_TICK_REPLAY_CLOSURE",
+                                                   "NO_LIVE_FIELD_CLAIM",
+                                                   "NO_MCFT_GATE_A_CLOSURE",
+                                                   "NO_MCFT_GATE_B_CLOSURE",
+                                                   "NO_MCFT_GATE_C_CLOSURE",
+                                                   "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM",
+                                                   "NO_MCFT_CAP_02_COMPLETE_CLAIM"
+                                               ],
+                       "exact_changed_file_boundary":  [
+                                                           "apps/server/src/runtime/twin_runtime/ports.ts",
+                                                           "apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts",
+                                                           "apps/server/src/runtime/twin_runtime/next_tick_input_service_v1.ts",
+                                                           "apps/server/src/runtime/twin_runtime/restart_resume_service_v1.ts",
+                                                           "apps/server/src/adapters/twin_runtime/replay_range_intent_adapter_v1.ts",
+                                                           "apps/server/scripts/mcft/MCFT_CAP_02_HOURLY_DYNAMICS_RUNNER.ts",
+                                                           "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json",
+                                                           "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-RESTART-BACKFILL-CONTRACT.md",
+                                                           "fixtures/mcft/water_state/negative/MCFT_CAP_02_RESTART_BACKFILL_NEGATIVE_FIXTURES.json",
+                                                           "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_RESTART_BACKFILL.cjs",
+                                                           "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_RESTART_BACKFILL.ts",
+                                                           "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_RESTART_BACKFILL_DB.ts",
+                                                           "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_RESTART_BACKFILL_NEGATIVE.ts",
+                                                           "scripts/runtime_acceptance/mcft_cap_02_restart_backfill_fixture_v1.ts"
+                                                       ],
+                       "effectiveness_condition":  "PR_MERGED_TO_MAIN_AND_MERGED_MAIN_RESTART_BACKFILL_GATE_PASS"
                    },
                    {
                        "delivery_slice_id":  "MCFT-CAP-02.FAILURE-RECOVERY-V1",
@@ -499,7 +565,8 @@
                               "PURE_HOURLY_DYNAMICS_MERGED_MAIN_VERIFIED",
                               "CONTINUATION_EVIDENCE_WINDOW_MERGED_MAIN_VERIFIED",
                               "CONTINUATION_PERSISTENCE_MERGED_MAIN_VERIFIED",
-                              "SINGLE_TICK_INTEGRATION_MERGED_MAIN_VERIFIED"
+                              "SINGLE_TICK_INTEGRATION_MERGED_MAIN_VERIFIED",
+                              "TWENTY_FOUR_TICK_RANGE_MERGED_MAIN_VERIFIED"
                           ],
     "global_preserved_nonclaims":  [
                                        "NO_RESTART_RESUME_PROOF",
