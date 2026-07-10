@@ -6,12 +6,12 @@
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A",
   "baseline_main_commit": "6389d4e566a6eb64ce96209be0e70cd8703be574",
-  "status": "CONTRACTS_CONFIG_MERGED",
+  "status": "OBSERVATION_ASSIMILATION_IN_PROGRESS",
   "design_status": "DESIGN_FROZEN",
   "implementation_status": "READY_FOR_IMPLEMENTATION",
   "authorization_effective": true,
   "runtime_source_authorized": true,
-  "active_delivery_slice_id": "MCFT-CAP-03.MCFT-02-07-08.ASSIMILATION-CONTRACTS-CONFIG-V1",
+  "active_delivery_slice_id": "MCFT-CAP-03.MCFT-05-07.OBSERVATION-SELECTION-AND-ASSIMILATION-MATH-V1",
   "merge_before_next": true,
   "postmerge_verify_before_next": true,
   "parallel_downstream_pr_forbidden": true,
@@ -204,20 +204,55 @@
       "depends_on_delivery_slice_ids": [
         "MCFT-CAP-03.MCFT-02-07-08.ASSIMILATION-CONTRACTS-CONFIG-V1"
       ],
-      "baseline_main_commit": null,
-      "branch": null,
-      "status": "BLOCKED",
-      "activation_fields_status": "TO_BE_FROZEN_AT_SLICE_ACTIVATION",
-      "allowed_claims": [],
-      "preserved_nonclaims": [
-        "NO_ASSIMILATION_MATH_IMPLEMENTED",
-        "NO_OBSERVATION_UPDATE_APPLIED",
-        "NO_CAP_03_A2_TICK_COMMITTED",
-        "NO_SUCCESSFUL_FORECAST",
-        "NO_MCFT_CAP_03_COMPLETE_CLAIM"
+      "baseline_main_commit": "ed816b9f2f2061183918e0dfb484b949859ff3aa",
+      "branch": "mcft-cap-03-observation-selection-assimilation-math-v1",
+      "status": "IN_PROGRESS",
+      "activation_fields_status": "FROZEN",
+      "allowed_claims": [
+        "ASSIMILATED_EVIDENCE_WINDOW_V1_ESTABLISHED",
+        "DETERMINISTIC_OBSERVATION_SELECTION_ESTABLISHED",
+        "OBSERVATION_SEMANTIC_DUPLICATE_RESOLUTION_ESTABLISHED",
+        "OBSERVATION_SEMANTIC_CONTENT_HASH_ESTABLISHED",
+        "STATE_OBSERVATION_INNOVATION_MATH_ESTABLISHED",
+        "PASS_ACCEPTANCE_AND_LIMITED_DOWNWEIGHTING_ESTABLISHED",
+        "INNOVATION_OUTLIER_REJECTION_ESTABLISHED",
+        "CANONICAL_ASSIMILATION_DECIMAL_BASIS_ESTABLISHED",
+        "CAP_02_EVIDENCE_WINDOW_COMPATIBILITY_PRESERVED"
       ],
-      "exact_changed_file_boundary": [],
-      "effectiveness_condition": "S1_MERGED_AND_MERGED_MAIN_GATE_PASS_AND_EXPLICIT_S2_ACTIVATION"
+      "preserved_nonclaims": [
+        "NO_CAP_03_A2_TICK_COMMITTED",
+        "NO_PERSISTENCE_CHANGE",
+        "NO_OBSERVATION_UPDATE_PERSISTED",
+        "NO_SUCCESSFUL_FORECAST",
+        "NO_72_HOUR_FORECAST",
+        "NO_SCENARIO",
+        "NO_RECOMMENDATION",
+        "NO_POLICY_EVALUATION",
+        "NO_DECISION",
+        "NO_AO_ACT",
+        "NO_CALIBRATION_CANDIDATE",
+        "NO_SHADOW_EVALUATION",
+        "NO_MODEL_ACTIVATION",
+        "NO_ACTIVE_MODEL_PARAMETER_CHANGE",
+        "NO_LATE_EVIDENCE_REVISION",
+        "NO_CONTINUOUS_RUNTIME",
+        "NO_LIVE_FIELD_CLAIM",
+        "NO_MCFT_CAP_03_COMPLETE_CLAIM",
+        "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
+      ],
+      "exact_changed_file_boundary": [
+        "apps/server/src/domain/soil_water/assimilated_continuation_posterior_v1.ts",
+        "apps/server/src/runtime/twin_runtime/assimilated_continuation_evidence_window_v1.ts",
+        "apps/server/src/runtime/twin_runtime/assimilated_continuation_observation_selector_v1.ts",
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-OBSERVATION-ASSIMILATION-STATUS.json",
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-OBSERVATION-ASSIMILATION.md",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_OBSERVATION_ASSIMILATION.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_OBSERVATION_ASSIMILATION.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_OBSERVATION_ASSIMILATION_NEGATIVE.ts",
+        "scripts/runtime_acceptance/mcft_cap_03_observation_assimilation_fixture_v1.ts"
+      ],
+      "effectiveness_condition": "S2_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_OBSERVATION_ASSIMILATION_GATE_PASS"
     },
     {
       "delivery_slice_id": "MCFT-CAP-03.MCFT-02-07-08.ASSIMILATED-A2-RECORD-SET-BUILDER-V1",
@@ -395,7 +430,7 @@
     }
   ],
   "next_authorized_slice_ids": [],
-  "next_authorized_slice_id_after_effectiveness": "MCFT-CAP-03.MCFT-05-07.OBSERVATION-SELECTION-AND-ASSIMILATION-MATH-V1",
+  "next_authorized_slice_id_after_effectiveness": "MCFT-CAP-03.MCFT-02-07-08.ASSIMILATED-A2-RECORD-SET-BUILDER-V1",
   "successor_capability_line_id": "MCFT-CAP-04",
   "successor_authorized": false
 }
