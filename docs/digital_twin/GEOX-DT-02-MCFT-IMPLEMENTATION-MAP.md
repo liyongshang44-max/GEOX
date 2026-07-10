@@ -265,7 +265,7 @@ closure identity:
 GEOX-MCFT-CAP-02-CLOSURE-V1
 
 status:
-IN_PROGRESS
+READY_FOR_MERGE
 
 closure effective:
 false
@@ -297,3 +297,23 @@ The Closure slice aggregates already merged and main-verified evidence. It chang
 The exact post-effectiveness completion claims are recorded as pending. `MCFT_CAP_02_COMPLETE` does not become effective until the Closure PR is merged and the merged-main Closure Gate passes.
 
 Horizontal owner work packages remain partially established. Capability-line completion does not mark any horizontal owner work package COMPLETE.
+## 11. MCFT-CAP-02 Closure readiness
+
+```text
+implementation candidate head:
+2c4c07ef56209d19f0fccea9da734ffcc31d02bb
+
+candidate exact-head CI:
+#4574 SUCCESS
+
+Closure Draft Gate:
+126 PASS, 0 FAIL
+
+Closure effective:
+false
+
+MCFT-CAP-03 authorized:
+false
+```
+
+The Closure candidate is ready for destructive Final Gate and a new READY exact-head CI. No capability completion claim is effective before merge and merged-main verification.

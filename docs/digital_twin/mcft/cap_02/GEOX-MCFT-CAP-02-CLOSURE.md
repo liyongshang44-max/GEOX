@@ -26,7 +26,7 @@ delivery_slice_id:
 MCFT-CAP-02.CLOSURE-V1
 
 status:
-IN_PROGRESS
+READY_FOR_MERGE
 
 closure_effective:
 false
@@ -206,3 +206,26 @@ MERGED_MAIN_MCFT_CAP_02_CLOSURE_GATE_PASS
 ```
 
 Before both conditions are true, this artifact is a Closure candidate and not an effective capability completion claim.
+## 8. Readiness evidence
+
+```text
+implementation candidate head:
+2c4c07ef56209d19f0fccea9da734ffcc31d02bb
+
+Closure Draft Gate:
+126 PASS, 0 FAIL
+
+candidate exact-head CI:
+#4574 SUCCESS
+
+changed-file boundary:
+6 files exact
+
+server typecheck:
+PASS
+
+git diff --check:
+PASS
+```
+
+This readiness transition does not make Closure effective. The twelve completion claims remain pending, `NO_MCFT_CAP_02_COMPLETE_CLAIM` remains present, and MCFT-CAP-03 remains unauthorized.

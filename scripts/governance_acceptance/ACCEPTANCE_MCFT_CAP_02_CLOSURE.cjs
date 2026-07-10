@@ -12,6 +12,8 @@ const path = require('node:path');
 const ROOT = path.resolve(__dirname, '../..');
 const BASELINE = '9a61e05f683adf3815ee1cc4af182efd23508588';
 const ACTIVATION_HEAD = '8f63fc84c298a20d12094d100865af89e812ea31';
+const IMPLEMENTATION_CANDIDATE_HEAD = '2c4c07ef56209d19f0fccea9da734ffcc31d02bb';
+const IMPLEMENTATION_CANDIDATE_CI = '4574_SUCCESS';
 const BRANCH = 'mcft-cap-02-closure-v1';
 const CAPABILITY = 'MCFT-CAP-02';
 const CLOSURE_ID = 'MCFT-CAP-02.CLOSURE-V1';
@@ -182,6 +184,9 @@ exactArray(
 exactArray(closure.depends_on_delivery_slice_ids, ['MCFT-CAP-02.FAILURE-RECOVERY-V1'], 'Closure dependency exact');
 check(closure.baseline_main_commit === BASELINE, 'Closure baseline exact');
 check(closure.branch === BRANCH, 'Closure branch exact');
+check(closure.implementation_candidate_head === IMPLEMENTATION_CANDIDATE_HEAD, 'Closure implementation candidate head exact');
+check(closure.draft_acceptance?.closure_draft_gate === '126_PASS_0_FAIL', 'Closure draft Gate evidence exact');
+check(closure.draft_acceptance?.exact_head_ci === IMPLEMENTATION_CANDIDATE_CI, 'Closure candidate exact-head CI evidence exact');
 exactArray([...closure.exact_changed_file_boundary].sort(), EXACT_FILES, 'Closure file boundary matches Gate');
 exactArray(closure.pending_completion_claims, PENDING_COMPLETION_CLAIMS, 'Closure pending completion claims exact');
 exactArray(closure.preserved_nonclaims, PRESERVED_NONCLAIMS, 'Closure preserved nonclaims exact');
@@ -206,6 +211,9 @@ check(record.delivery_slice_id === CLOSURE_ID, 'Closure Record slice identity ex
 check(record.baseline_main_commit === BASELINE, 'Closure Record baseline exact');
 check(record.activation_head === ACTIVATION_HEAD, 'Closure Record activation head exact');
 check(record.branch === BRANCH, 'Closure Record branch exact');
+check(record.implementation_candidate_head === IMPLEMENTATION_CANDIDATE_HEAD, 'Closure Record candidate head exact');
+check(record.acceptance_evidence.closure_draft_gate === '126_PASS_0_FAIL', 'Closure Record draft Gate evidence exact');
+check(record.acceptance_evidence.closure_exact_head_ci === IMPLEMENTATION_CANDIDATE_CI, 'Closure Record candidate exact-head CI evidence exact');
 check(record.closure_effective === false, 'Closure Record is non-effective before merged-main verification');
 if (MODE === 'draft') {
   check(record.status === 'IN_PROGRESS', 'draft Closure Record status exact');
@@ -245,6 +253,9 @@ if (MODE === 'draft') {
   check(cap02.closure.status === 'READY_FOR_MERGE', 'final matrix Closure evidence status exact');
 }
 check(cap02.closure.effective === false, 'matrix Closure remains non-effective premerge');
+check(cap02.closure.implementation_candidate_head === IMPLEMENTATION_CANDIDATE_HEAD, 'matrix Closure candidate head exact');
+check(cap02.closure.candidate_exact_head_ci === IMPLEMENTATION_CANDIDATE_CI, 'matrix Closure candidate exact-head CI exact');
+check(cap02.next_authorized_slice_id_after_merge_and_postmerge_gate === undefined, 'obsolete authorization next-slice pointer removed');
 exactArray(cap02.pending_completion_claims, PENDING_COMPLETION_CLAIMS, 'matrix pending claims exact');
 check(Array.isArray(cap02.completion_claims) && cap02.completion_claims.length === 0, 'matrix has no effective completion claim premerge');
 exactArray(cap02.preserved_nonclaims, PRESERVED_NONCLAIMS, 'matrix nonclaims exact');

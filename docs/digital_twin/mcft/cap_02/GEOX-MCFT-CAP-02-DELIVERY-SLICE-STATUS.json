@@ -5,7 +5,7 @@
     "name":  "Hourly Dynamics and Persistence",
     "runtime_mode":  "REPLAY",
     "target_completion_level":  "Level A",
-    "status":  "CLOSURE_IN_PROGRESS",
+    "status":  "CLOSURE_READY_FOR_MERGE",
     "authorization_merge_commit":  "65e59aaf5fcfccacdb986258874a5df3c057711d",
     "baseline_main_commit":  "65e59aaf5fcfccacdb986258874a5df3c057711d",
     "latest_verified_main_commit":  "9a61e05f683adf3815ee1cc4af182efd23508588",
@@ -625,7 +625,7 @@
                    },
                    {
                        "delivery_slice_id":  "MCFT-CAP-02.CLOSURE-V1",
-                       "status":  "IN_PROGRESS",
+                       "status":  "READY_FOR_MERGE",
                        "primary_owner_work_package_id":  "MCFT-06",
                        "contributing_work_package_ids":  [
                                                              "MCFT-02",
@@ -699,7 +699,19 @@
                                                          "EXECUTED_IRRIGATION_INPUT_POLICY_ESTABLISHED"
                                                      ],
                        "closure_effective":  false,
-                       "successor_authorized":  false
+                       "successor_authorized":  false,
+                       "implementation_candidate_head":  "2c4c07ef56209d19f0fccea9da734ffcc31d02bb",
+                       "draft_acceptance":  {
+                                                "changed_file_boundary":  "6_FILES_EXACT",
+                                                "closure_draft_gate":  "126_PASS_0_FAIL",
+                                                "twenty_four_tick_positive":  "9_PASS_0_FAIL",
+                                                "restart_backfill_positive":  "9_PASS_0_FAIL",
+                                                "failure_recovery_application":  "6_PASS_0_FAIL",
+                                                "server_typecheck":  "PASS",
+                                                "git_diff_check":  "PASS",
+                                                "exact_head_ci":  "4574_SUCCESS",
+                                                "verified_candidate_head":  "2c4c07ef56209d19f0fccea9da734ffcc31d02bb"
+                                            }
                    }
                ],
     "completion_claims":  [

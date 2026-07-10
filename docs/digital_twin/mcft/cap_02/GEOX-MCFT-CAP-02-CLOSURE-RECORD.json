@@ -7,7 +7,7 @@
     "runtime_mode":  "REPLAY",
     "target_completion_level":  "Level A",
     "delivery_slice_id":  "MCFT-CAP-02.CLOSURE-V1",
-    "status":  "IN_PROGRESS",
+    "status":  "READY_FOR_MERGE",
     "closure_effective":  false,
     "baseline_main_commit":  "9a61e05f683adf3815ee1cc4af182efd23508588",
     "activation_head":  "8f63fc84c298a20d12094d100865af89e812ea31",
@@ -262,10 +262,11 @@
                                 "failure_recovery_server_typecheck":  "PASS",
                                 "failure_recovery_server_build":  "PASS",
                                 "branch_git_diff_check":  "PASS",
-                                "closure_draft_gate":  "PENDING",
-                                "closure_exact_head_ci":  "PENDING",
+                                "closure_draft_gate":  "126_PASS_0_FAIL",
+                                "closure_exact_head_ci":  "4574_SUCCESS",
                                 "closure_final_gate":  "PENDING",
-                                "closure_merged_main_gate":  "PENDING"
+                                "closure_merged_main_gate":  "PENDING",
+                                "closure_candidate_head":  "2c4c07ef56209d19f0fccea9da734ffcc31d02bb"
                             },
     "closure_does_not_change":  {
                                     "runtime_source":  true,
@@ -292,5 +293,6 @@
                                         "docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-DELIVERY-SLICE-STATUS.json",
                                         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_02_CLOSURE.cjs"
                                     ],
-    "effectiveness_condition":  "CLOSURE_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_MCFT_CAP_02_CLOSURE_GATE_PASS"
+    "effectiveness_condition":  "CLOSURE_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_MCFT_CAP_02_CLOSURE_GATE_PASS",
+    "implementation_candidate_head":  "2c4c07ef56209d19f0fccea9da734ffcc31d02bb"
 }
