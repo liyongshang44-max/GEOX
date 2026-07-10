@@ -146,6 +146,7 @@ function checkStatus() {
 
   if (MODE === 'postmerge') {
     const dynamics = delivery.slices.find((slice) => slice.delivery_slice_id === DYNAMICS_SLICE);
+    const activeDeliverySlices = delivery.slices.filter((slice) => ['IN_PROGRESS', 'READY_FOR_MERGE'].includes(slice.status));
     const debtRegister = readJson('docs/digital_twin/mcft/cap_02/GEOX-MCFT-CAP-02-GOVERNANCE-DEBT-REGISTER.json');
     const debt = debtRegister.debts?.find((candidate) => candidate.debt_id === 'MCFT-CAP-02.GOV-DEBT-001');
     check(current?.status === 'MERGED', 'postmerge contracts/config status exact');
@@ -153,7 +154,12 @@ function checkStatus() {
     check(current?.merged_main_acceptance?.final_gate === '63_PASS_0_FAIL', 'merged-main Gate evidence recorded');
     check(delivery.latest_verified_main_commit === CONTRACTS_CONFIG_MERGE_COMMIT, 'latest verified main commit exact');
     check(delivery.active_delivery_slice_id === DYNAMICS_SLICE, 'active slice advanced to pure hourly Dynamics');
-    check(dynamics?.status === 'IN_PROGRESS', 'pure hourly Dynamics is the only active in-progress slice');
+    check(
+      ['IN_PROGRESS', 'READY_FOR_MERGE'].includes(dynamics?.status)
+        && activeDeliverySlices.length === 1
+        && activeDeliverySlices[0]?.delivery_slice_id === DYNAMICS_SLICE,
+      'pure hourly Dynamics is the only active delivery slice in an allowed premerge state',
+    );
     check(debt?.status === 'REMEDIATED_IN_DYNAMICS_PREFLIGHT', 'governance debt remediation recorded');
     check(Array.isArray(delivery.next_authorized_slice_ids) && delivery.next_authorized_slice_ids.length === 0, 'no additional downstream slice authorized while Dynamics is active');
   } else {
