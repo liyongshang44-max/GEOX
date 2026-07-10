@@ -26,6 +26,11 @@ export type CanonicalDecimalV1 = {
   scale: number;
 };
 
+type DecimalRationalV1 = {
+  numerator: bigint;
+  denominator: bigint;
+};
+
 export type AssimilatedContinuationPosteriorV1 = {
   schema_version: typeof ASSIMILATED_CONTINUATION_POSTERIOR_SCHEMA_V1;
   status: "APPLIED" | "NOT_APPLIED";
@@ -99,6 +104,110 @@ function positiveV1(value: unknown, code: string): number {
   const number = finiteV1(value, code);
   if (!(number > 0)) throw new Error(code);
   return number;
+}
+
+function greatestCommonDivisorV1(left: bigint, right: bigint): bigint {
+  let a = left < 0n ? -left : left;
+  let b = right < 0n ? -right : right;
+  while (b !== 0n) {
+    const remainder = a % b;
+    a = b;
+    b = remainder;
+  }
+  return a === 0n ? 1n : a;
+}
+
+function normalizeRationalV1(numerator: bigint, denominator: bigint): DecimalRationalV1 {
+  if (denominator === 0n) throw new Error("ASSIMILATION_EXACT_RATIONAL_ZERO_DENOMINATOR");
+  const sign = denominator < 0n ? -1n : 1n;
+  const signedNumerator = numerator * sign;
+  const positiveDenominator = denominator * sign;
+  const divisor = greatestCommonDivisorV1(signedNumerator, positiveDenominator);
+  return {
+    numerator: signedNumerator / divisor,
+    denominator: positiveDenominator / divisor,
+  };
+}
+
+function decimalRationalFromNumberV1(value: number, code: string): DecimalRationalV1 {
+  if (!Number.isFinite(value)) throw new Error(code);
+  const text = value.toString();
+  const match = /^([+-]?)(\d+)(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/.exec(text);
+  if (!match) throw new Error(code);
+  const sign = match[1] === "-" ? -1n : 1n;
+  const integerPart = match[2];
+  const fractionalPart = match[3] ?? "";
+  const exponent = Number(match[4] ?? "0");
+  if (!Number.isInteger(exponent)) throw new Error(code);
+  const digits = BigInt(`${integerPart}${fractionalPart}`);
+  const decimalScale = fractionalPart.length - exponent;
+  if (decimalScale >= 0) {
+    return normalizeRationalV1(sign * digits, 10n ** BigInt(decimalScale));
+  }
+  return normalizeRationalV1(sign * digits * (10n ** BigInt(-decimalScale)), 1n);
+}
+
+function addRationalV1(left: DecimalRationalV1, right: DecimalRationalV1): DecimalRationalV1 {
+  return normalizeRationalV1(
+    left.numerator * right.denominator + right.numerator * left.denominator,
+    left.denominator * right.denominator,
+  );
+}
+
+function subtractRationalV1(left: DecimalRationalV1, right: DecimalRationalV1): DecimalRationalV1 {
+  return normalizeRationalV1(
+    left.numerator * right.denominator - right.numerator * left.denominator,
+    left.denominator * right.denominator,
+  );
+}
+
+function multiplyRationalV1(left: DecimalRationalV1, right: DecimalRationalV1): DecimalRationalV1 {
+  return normalizeRationalV1(left.numerator * right.numerator, left.denominator * right.denominator);
+}
+
+function divideRationalV1(left: DecimalRationalV1, right: DecimalRationalV1): DecimalRationalV1 {
+  if (right.numerator === 0n) throw new Error("ASSIMILATION_EXACT_RATIONAL_DIVIDE_BY_ZERO");
+  return normalizeRationalV1(left.numerator * right.denominator, left.denominator * right.numerator);
+}
+
+function compareRationalV1(left: DecimalRationalV1, right: DecimalRationalV1): number {
+  const leftScaled = left.numerator * right.denominator;
+  const rightScaled = right.numerator * left.denominator;
+  return leftScaled < rightScaled ? -1 : leftScaled > rightScaled ? 1 : 0;
+}
+
+function acceptedByExactSquaredGateV1(input: {
+  prior_mean: number;
+  prior_variance: number;
+  observation: number;
+  sensor_stddev: number;
+  representativeness_stddev: number;
+  quality_weight: number;
+}): boolean {
+  const priorMean = decimalRationalFromNumberV1(input.prior_mean, "ASSIMILATION_EXACT_PRIOR_MEAN_INVALID");
+  const priorVariance = decimalRationalFromNumberV1(input.prior_variance, "ASSIMILATION_EXACT_PRIOR_VARIANCE_INVALID");
+  const observation = decimalRationalFromNumberV1(input.observation, "ASSIMILATION_EXACT_OBSERVATION_INVALID");
+  const sensorStddev = decimalRationalFromNumberV1(input.sensor_stddev, "ASSIMILATION_EXACT_SENSOR_STDDEV_INVALID");
+  const representativenessStddev = decimalRationalFromNumberV1(
+    input.representativeness_stddev,
+    "ASSIMILATION_EXACT_REPRESENTATIVENESS_STDDEV_INVALID",
+  );
+  const qualityWeight = decimalRationalFromNumberV1(input.quality_weight, "ASSIMILATION_EXACT_QUALITY_WEIGHT_INVALID");
+  const innovation = subtractRationalV1(observation, priorMean);
+  const innovationSquared = multiplyRationalV1(innovation, innovation);
+  const sensorVariance = multiplyRationalV1(sensorStddev, sensorStddev);
+  const representativenessVariance = multiplyRationalV1(representativenessStddev, representativenessStddev);
+  const baseObservationVariance = addRationalV1(sensorVariance, representativenessVariance);
+  const effectiveObservationVariance = divideRationalV1(baseObservationVariance, qualityWeight);
+  const innovationVariance = addRationalV1(priorVariance, effectiveObservationVariance);
+  const thresholdAuthority = multiplyRationalV1(
+    decimalRationalFromNumberV1(
+      ASSIMILATED_CONTINUATION_MAX_SQUARED_NORMALIZED_INNOVATION_V1,
+      "ASSIMILATION_EXACT_THRESHOLD_INVALID",
+    ),
+    innovationVariance,
+  );
+  return compareRationalV1(innovationSquared, thresholdAuthority) <= 0;
 }
 
 function canonicalDecimalV1(value: number, scale: number): CanonicalDecimalV1 {
@@ -229,19 +338,33 @@ export function composeAssimilatedContinuationPosteriorV1(input: {
 
   const selected = input.selected_observation;
   if (selected.candidate_assessment !== "SELECTED") throw new Error("ASSIMILATION_SELECTED_CANDIDATE_REQUIRED");
+  const sensorStddev = nonNegativeV1(
+    input.sensor_measurement_stddev_fraction,
+    "ASSIMILATION_SENSOR_STDDEV_INVALID",
+  );
+  const representativenessStddev = nonNegativeV1(
+    input.point_to_zone_representativeness_stddev_fraction,
+    "ASSIMILATION_REPRESENTATIVENESS_STDDEV_INVALID",
+  );
   const operator = buildRootZoneObservationOperatorV1({
     observation_fraction: selected.canonical_value,
     quality_status: selected.quality_status,
-    sensor_measurement_stddev_fraction: input.sensor_measurement_stddev_fraction,
-    point_to_zone_representativeness_stddev_fraction: input.point_to_zone_representativeness_stddev_fraction,
+    sensor_measurement_stddev_fraction: sensorStddev,
+    point_to_zone_representativeness_stddev_fraction: representativenessStddev,
     quality_weights: input.quality_weights,
   });
   const innovation = operator.observation_fraction - priorMean;
   const innovationVariance = priorVariance + operator.effective_observation_variance;
   if (!(innovationVariance > 0)) throw new Error("ASSIMILATION_INNOVATION_VARIANCE_NON_POSITIVE");
+  const acceptedBySquaredGate = acceptedByExactSquaredGateV1({
+    prior_mean: priorMean,
+    prior_variance: priorVariance,
+    observation: operator.observation_fraction,
+    sensor_stddev: sensorStddev,
+    representativeness_stddev: representativenessStddev,
+    quality_weight: operator.quality_weight,
+  });
   const innovationSquared = innovation ** 2;
-  const acceptedBySquaredGate = innovationSquared
-    <= ASSIMILATED_CONTINUATION_MAX_SQUARED_NORMALIZED_INNOVATION_V1 * innovationVariance;
   const squaredNormalizedInnovation = innovationSquared / innovationVariance;
   const normalizedInnovation = innovation / Math.sqrt(innovationVariance);
   const candidateGain = priorVariance / innovationVariance;
