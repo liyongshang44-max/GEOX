@@ -21,7 +21,6 @@ import type {
 } from "../../apps/server/src/runtime/twin_runtime/ports.js";
 import {
   buildMcftCap02RestartBackfillFixtureV1,
-  memberV1,
   type RestartBackfillFixtureV1,
 } from "./mcft_cap_02_restart_backfill_fixture_v1.js";
 
@@ -469,16 +468,27 @@ async function parentMainV1(): Promise<void> {
 
   pool = new Pool({ connectionString: databaseUrl });
   const servicesForRepair = createProductionServicesV1(pool, fixture);
-  const a0State = memberV1(fixture.a0RecordSet, "twin_state_estimate_v1");
+  const previousState = await pool.query(
+    "SELECT state_object_id FROM twin_state_history_projection_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6 AND logical_time=$7::timestamptz",
+    [...scopeValuesV1(fixture.scope), fixture.splitTargetLogicalTime],
+  );
+  assert.equal(previousState.rows.length, 1);
+  const previousStateObjectId = previousState.rows[0].state_object_id as string;
   await pool.query(
     "UPDATE twin_state_latest_index_v1 SET state_object_id=$7 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6",
-    [...scopeValuesV1(fixture.scope), a0State.object_id],
+    [...scopeValuesV1(fixture.scope), previousStateObjectId],
   );
   const divergenceFacts = await a2FactCountV1(pool);
   const divergenceGuards = await a2GuardCountV1(pool);
   const divergenceLease = await leaseTokenV1(pool, fixture.scope);
   await assert.rejects(
-    servicesForRepair.handoffService.resumeFromCheckpointV1(fixture.scope),
+    servicesForRepair.restartService.resumeFromCheckpointV1({
+      ...fixture.request,
+      to_logical_time: new Date(
+        Date.parse(fixture.persistedResumeStartLogicalTime) + 3600000,
+      ).toISOString(),
+      lease_owner: SHARED_LEASE_OWNER,
+    }),
     /CHECKPOINT_PROJECTION_DIVERGENCE/,
   );
   assert.equal(await a2FactCountV1(pool), divergenceFacts);
@@ -533,3 +543,4 @@ if (childStage === "precommit-crash") {
     process.exitCode = 1;
   });
 }
+
