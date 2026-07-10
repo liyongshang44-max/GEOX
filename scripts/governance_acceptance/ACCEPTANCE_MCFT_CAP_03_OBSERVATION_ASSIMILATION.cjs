@@ -97,11 +97,8 @@ function pnpmCommand() {
   return process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 }
 
-function checkRequiredFiles() {
+function checkRequiredFilesAndBoundary() {
   for (const file of EXACT_CHANGED_FILES) check(fs.existsSync(path.join(ROOT, file)), `${MODE} file exists: ${file}`);
-}
-
-function checkExactBoundary() {
   const status = readJson(STATUS_PATH);
   const mergeCommit = status.merge_commit || null;
   const target = MODE === 'postmerge' ? mergeCommit : 'HEAD';
@@ -109,10 +106,7 @@ function checkExactBoundary() {
   if (!target) return;
 
   try {
-    cp.execFileSync(process.platform === 'win32' ? 'git.exe' : 'git', ['merge-base', '--is-ancestor', BASELINE, target], {
-      cwd: ROOT,
-      stdio: 'ignore',
-    });
+    cp.execFileSync(process.platform === 'win32' ? 'git.exe' : 'git', ['merge-base', '--is-ancestor', BASELINE, target], { cwd: ROOT, stdio: 'ignore' });
     check(true, `${MODE} target descends from exact S1 postmerge baseline`);
   } catch {
     check(false, `${MODE} target descends from exact S1 postmerge baseline`);
@@ -120,10 +114,7 @@ function checkExactBoundary() {
 
   if (MODE === 'postmerge') {
     try {
-      cp.execFileSync(process.platform === 'win32' ? 'git.exe' : 'git', ['merge-base', '--is-ancestor', target, 'HEAD'], {
-        cwd: ROOT,
-        stdio: 'ignore',
-      });
+      cp.execFileSync(process.platform === 'win32' ? 'git.exe' : 'git', ['merge-base', '--is-ancestor', target, 'HEAD'], { cwd: ROOT, stdio: 'ignore' });
       check(true, 'S2 merge commit is an ancestor of current main HEAD');
     } catch {
       check(false, 'S2 merge commit is an ancestor of current main HEAD');
@@ -167,7 +158,6 @@ function checkStatus() {
   check(predecessor?.merged_main_gate === 'PASS', 'S1 merged-main Gate PASS');
   check(predecessor?.effectiveness_condition_satisfied === true, 'S1 effectiveness condition satisfied');
   check(delivery.active_delivery_slice_id === SLICE, 'S2 is the only active delivery slice');
-  check(Boolean(current), 'S2 delivery declaration exists');
   check(current?.branch === BRANCH, 'S2 branch exact');
   check(current?.baseline_main_commit === BASELINE, 'S2 baseline exact');
   check(current?.primary_owner_work_package_id === 'MCFT-07', 'S2 primary owner exact');
@@ -201,7 +191,7 @@ function checkStatus() {
   }
 }
 
-function checkContractDocument() {
+function checkContractAndSources() {
   const document = readText(CONTRACT_PATH);
   for (const marker of [
     'MCFT_CAP_03_ASSIMILATED_CONTINUATION_EVIDENCE_WINDOW_V1',
@@ -214,13 +204,10 @@ function checkContractDocument() {
     'DECIMAL_HALF_AWAY_FROM_ZERO_V1',
     'NO_CAP_03_A2_TICK_COMMITTED',
   ]) check(document.includes(marker), `contract document marker: ${marker}`);
-}
 
-function checkSourceAnchors() {
   const selector = readText('apps/server/src/runtime/twin_runtime/assimilated_continuation_observation_selector_v1.ts');
   const window = readText('apps/server/src/runtime/twin_runtime/assimilated_continuation_evidence_window_v1.ts');
   const math = readText('apps/server/src/domain/soil_water/assimilated_continuation_posterior_v1.ts');
-
   check(selector.includes('semanticHashV1'), 'selector uses canonical semantic hash');
   check(selector.includes('source_version'), 'semantic identity includes source version');
   check(selector.includes('CONFLICTING_DUPLICATE_EVIDENCE'), 'conflicting duplicate Evidence fails closed');
@@ -231,8 +218,8 @@ function checkSourceAnchors() {
   check(window.includes('dynamics_consumed_evidence_refs'), 'dynamics Evidence trace separated');
   check(window.includes('assimilation_applied_evidence_refs'), 'applied observation Evidence trace separated');
   check(window.includes('uniqueSortedV1([...dynamicsConsumed, ...applied])'), 'compatibility consumed refs are deterministic union');
-  check(math.includes('innovationSquared'), 'direct squared innovation authority implemented');
-  check(math.includes('<= ASSIMILATED_CONTINUATION_MAX_SQUARED_NORMALIZED_INNOVATION_V1 * innovationVariance'), 'inclusive direct squared threshold implemented');
+  check(math.includes('acceptedByExactSquaredGateV1'), 'exact decimal-rational squared Gate implemented');
+  check(math.includes('compareRationalV1(innovationSquared, thresholdAuthority) <= 0'), 'inclusive exact rational threshold authority implemented');
   check(math.includes('candidate_unclipped_posterior_mean: null'), 'outlier publishes no candidate posterior mean');
   check(math.includes('DECIMAL_HALF_AWAY_FROM_ZERO_V1'), 'canonical decimal rounding rule declared');
   check(math.includes('physical_clipping_reduces_latent_variance: false'), 'clipping retains latent variance');
@@ -249,7 +236,7 @@ function runTsxAcceptance(relativePath, summaryPattern, message) {
   }
 }
 
-function runStaticAcceptance() {
+function runAcceptanceAndToolchain() {
   runTsxAcceptance(
     'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_OBSERVATION_ASSIMILATION.ts',
     /MCFT-CAP-03 observation-assimilation: \d+ PASS, 0 FAIL/,
@@ -260,9 +247,6 @@ function runStaticAcceptance() {
     /MCFT-CAP-03 observation-assimilation negative: \d+ PASS, 0 FAIL/,
     'S2 negative in-memory acceptance PASS',
   );
-}
-
-function runToolchain() {
   if (MODE !== 'final') return;
   for (const [label, args] of [
     ['server typecheck', ['--filter', '@geox/server', 'typecheck']],
@@ -293,13 +277,10 @@ function checkContext() {
   }
 }
 
-checkRequiredFiles();
-checkExactBoundary();
+checkRequiredFilesAndBoundary();
 checkStatus();
-checkContractDocument();
-checkSourceAnchors();
-runStaticAcceptance();
-runToolchain();
+checkContractAndSources();
+runAcceptanceAndToolchain();
 checkContext();
 
 console.log(`MCFT-CAP-03 observation-assimilation ${MODE}: ${pass} PASS, ${fail} FAIL`);
