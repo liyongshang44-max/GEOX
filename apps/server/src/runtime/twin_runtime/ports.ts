@@ -65,6 +65,7 @@ export type PersistedNextTickSnapshotV1 = {
   active_lineage_id?: string;
   checkpoint: CanonicalObjectEnvelopeV1;
   previous_posterior: CanonicalObjectEnvelopeV1;
+  last_terminal_tick?: CanonicalObjectEnvelopeV1;
   runtime_config: CanonicalObjectEnvelopeV1;
   reality_binding: RealityBindingRuntimeSnapshotV1;
 };
@@ -89,6 +90,12 @@ export type PreparedNextTickInputV1 = TwinScopeKeyV1 & {
   previous_state_runtime_config_hash: string;
   reality_binding_ref: string;
   reality_binding_hash: string;
+};
+
+export type PreparedRestartInputV1 = PreparedNextTickInputV1 & {
+  previous_terminal_tick_ref: string;
+  previous_terminal_tick_hash: string;
+  previous_terminal_tick_logical_time: string;
 };
 
 export type ContinuationExpectedPointersV1 = {
