@@ -33,8 +33,40 @@ export type RestartResumeResultV1 = {
   range_result: RunContiguousContinuationRangeResultV1;
 };
 
+const CHECKPOINT_PROJECTION_DIVERGENCE_SOURCE_CODES_V1 = new Set([
+  "PERSISTED_NEXT_TICK_POINTER_SET_INCOMPLETE",
+  "ACTIVE_LINEAGE_REF_REQUIRED",
+  "ACTIVE_LINEAGE_ID_REQUIRED",
+  "CHECKPOINT_SCOPE_MISMATCH",
+  "PREVIOUS_POSTERIOR_SCOPE_MISMATCH",
+  "LATEST_CHECKPOINT_OBJECT_TYPE_MISMATCH",
+  "LATEST_STATE_OBJECT_TYPE_MISMATCH",
+  "CHECKPOINT_LINEAGE_REQUIRED",
+  "CHECKPOINT_REVISION_REQUIRED",
+  "ACTIVE_LINEAGE_CHECKPOINT_MISMATCH",
+  "ACTIVE_LINEAGE_STATE_MISMATCH",
+  "CHECKPOINT_STATE_REVISION_MISMATCH",
+  "CHECKPOINT_PREVIOUS_POSTERIOR_REF_MISMATCH",
+  "LAST_COMPLETED_TICK_REF_REQUIRED",
+  "NEXT_LOGICAL_TICK_TIME_REQUIRED",
+  "NEXT_LOGICAL_TICK_TIME_INVALID",
+  "CHECKPOINT_PROJECTION_DIVERGENCE",
+]);
+
 function errorCodeV1(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function rethrowRestartReadErrorV1(error: unknown): never {
+  const code = errorCodeV1(error);
+  if (
+    CHECKPOINT_PROJECTION_DIVERGENCE_SOURCE_CODES_V1.has(code)
+    || code.startsWith("PERSISTED_OBJECT_NOT_FOUND:")
+    || code.startsWith("PERSISTED_OBJECT_TYPE_MISMATCH:")
+  ) {
+    throw new Error("CHECKPOINT_PROJECTION_DIVERGENCE");
+  }
+  throw error;
 }
 
 function validateRequestedStartV1(
@@ -62,7 +94,12 @@ export class RestartResumeServiceV1 {
   ) {}
 
   async resumeFromCheckpointV1(input: RunRestartResumeInputV1): Promise<RestartResumeResultV1> {
-    const persisted = await this.checkpointService.resumeFromCheckpointV1(input.scope);
+    let persisted: PreparedRestartInputV1;
+    try {
+      persisted = await this.checkpointService.resumeFromCheckpointV1(input.scope);
+    } catch (error) {
+      rethrowRestartReadErrorV1(error);
+    }
     const rangeResult = await this.rangeService.runContiguousContinuationRangeV1(input);
     if (rangeResult.persisted_start_logical_time !== persisted.next_logical_tick_time) {
       throw new Error("CHECKPOINT_PROJECTION_DIVERGENCE");
@@ -88,7 +125,7 @@ export class RestartResumeServiceV1 {
       if (errorCodeV1(error) === "PERSISTED_NEXT_TICK_STATE_NOT_FOUND") {
         throw new Error("BACKFILL_BEFORE_BOOTSTRAP");
       }
-      throw error;
+      rethrowRestartReadErrorV1(error);
     }
 
     validateRequestedStartV1(input.requested_start_logical_time, persisted.next_logical_tick_time);
