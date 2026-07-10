@@ -14,10 +14,19 @@ import {
   computeContinuationRecordSetDeterminismHashV1,
   type ContinuationRecordSetV1,
 } from "./continuation_record_set_identity_v1.js";
+import {
+  CONTINUATION_CROP_STAGE_CONTEXT_HASH_V1,
+  CONTINUATION_CROP_STAGE_CONTEXT_REF_V1,
+} from "./continuation_runtime_config_v1.js";
 
 function requiredStringV1(value: unknown, code: string): string {
   if (typeof value !== "string" || !value.trim()) throw new Error(code);
   return value;
+}
+
+function requiredRecordV1(value: unknown, code: string): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(code);
+  return value as Record<string, unknown>;
 }
 
 function memberByTypeV1(recordSet: ContinuationRecordSetV1, objectType: ContinuationMemberObjectTypeV1): CanonicalObjectEnvelopeV1 {
@@ -34,6 +43,25 @@ function exactScopeV1(member: CanonicalObjectEnvelopeV1, scope: ContinuationScop
   for (const key of ["tenant_id", "project_id", "group_id", "field_id", "season_id", "zone_id"] as const) {
     if (member[key] !== scope[key]) throw new Error(`CONTINUATION_MEMBER_SCOPE_MISMATCH:${member.object_type}:${key}`);
   }
+}
+
+function validateComputationBasisSequenceV1(input: {
+  state: CanonicalObjectEnvelopeV1;
+  checkpoint: CanonicalObjectEnvelopeV1;
+  previousPosteriorRef: string;
+}): void {
+  const basis = requiredRecordV1(input.state.payload.computation_basis, "CONTINUATION_COMPUTATION_BASIS_REQUIRED");
+  const tickSequence = input.checkpoint.payload.tick_sequence;
+  if (typeof tickSequence !== "number" || !Number.isInteger(tickSequence) || tickSequence < 1) throw new Error("CONTINUATION_CHECKPOINT_TICK_SEQUENCE_INVALID");
+  if (tickSequence === 1) {
+    if (basis.basis_origin !== "DERIVED_FROM_MCFT_CAP_01_POSTERIOR_V1") throw new Error("CONTINUATION_FIRST_TICK_BASIS_ORIGIN_MISMATCH");
+    if (basis.source_posterior_ref !== input.previousPosteriorRef) throw new Error("CONTINUATION_FIRST_TICK_BASIS_SOURCE_REF_MISMATCH");
+    if ("previous_state_ref" in basis) throw new Error("CONTINUATION_FIRST_TICK_CARRIED_BASIS_FORBIDDEN");
+    return;
+  }
+  if (basis.basis_origin !== "CARRIED_FROM_PREVIOUS_CONTINUATION_STATE") throw new Error("CONTINUATION_SUBSEQUENT_TICK_BASIS_ORIGIN_MISMATCH");
+  if (basis.previous_state_ref !== input.previousPosteriorRef) throw new Error("CONTINUATION_SUBSEQUENT_TICK_BASIS_PREVIOUS_STATE_MISMATCH");
+  if ("source_vwc_variance" in basis) throw new Error("CONTINUATION_SUBSEQUENT_TICK_VARIANCE_REDERIVATION_FORBIDDEN");
 }
 
 export function validateContinuationRecordSetV1(recordSet: ContinuationRecordSetV1): void {
@@ -105,6 +133,11 @@ export function validateContinuationRecordSetV1(recordSet: ContinuationRecordSet
   exactRefV1(checkpoint, "last_posterior_state_ref", state.object_id, "CONTINUATION_CHECKPOINT_STATE_REF_MISMATCH");
   exactRefV1(checkpoint, "forecast_result_ref", forecast.object_id, "CONTINUATION_CHECKPOINT_FORECAST_REF_MISMATCH");
   if (checkpoint.payload.next_tick_logical_time !== tick.payload.next_tick_logical_time) throw new Error("CONTINUATION_NEXT_TICK_TIME_MISMATCH");
+  validateComputationBasisSequenceV1({
+    state,
+    checkpoint,
+    previousPosteriorRef: aggregate.previous_posterior_ref,
+  });
 
   exactRefV1(health, "tick_ref", tick.object_id, "CONTINUATION_HEALTH_TICK_REF_MISMATCH");
   exactRefV1(health, "checkpoint_ref", checkpoint.object_id, "CONTINUATION_HEALTH_CHECKPOINT_REF_MISMATCH");
@@ -114,8 +147,8 @@ export function validateContinuationRecordSetV1(recordSet: ContinuationRecordSet
   if (health.payload.revision_id !== recordSet.continuation_operation_key.revision_id) throw new Error("CONTINUATION_HEALTH_REVISION_ID_MISMATCH");
   requiredStringV1(health.payload.active_lineage_ref, "CONTINUATION_HEALTH_ACTIVE_LINEAGE_REF_REQUIRED");
 
-  if (aggregate.crop_stage_context_ref !== "fixtures/mcft/water_state/replay_v1/configuration_context.json") throw new Error("CONTINUATION_AGGREGATE_CROP_STAGE_CONTEXT_REF_MISMATCH");
-  requiredStringV1(aggregate.crop_stage_context_hash, "CONTINUATION_AGGREGATE_CROP_STAGE_CONTEXT_HASH_REQUIRED");
+  if (aggregate.crop_stage_context_ref !== CONTINUATION_CROP_STAGE_CONTEXT_REF_V1) throw new Error("CONTINUATION_AGGREGATE_CROP_STAGE_CONTEXT_REF_MISMATCH");
+  if (aggregate.crop_stage_context_hash !== CONTINUATION_CROP_STAGE_CONTEXT_HASH_V1) throw new Error("CONTINUATION_AGGREGATE_CROP_STAGE_CONTEXT_HASH_MISMATCH");
 
   const computedAggregateHash = computeContinuationRecordSetDeterminismHashV1(aggregate);
   if (computedAggregateHash !== recordSet.continuation_record_set_determinism_hash) throw new Error("CONTINUATION_AGGREGATE_HASH_MISMATCH");
