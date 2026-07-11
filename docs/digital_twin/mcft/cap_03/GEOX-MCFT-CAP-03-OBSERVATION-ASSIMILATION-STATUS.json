@@ -6,7 +6,7 @@
   "target_completion_level": "Level A",
   "baseline_main_commit": "ed816b9f2f2061183918e0dfb484b949859ff3aa",
   "branch": "mcft-cap-03-observation-selection-assimilation-math-v1",
-  "status": "IN_PROGRESS",
+  "status": "READY_FOR_MERGE",
   "primary_owner_work_package_id": "MCFT-07",
   "contributing_owner_work_package_ids": [
     "MCFT-05"
@@ -91,13 +91,13 @@
     "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
   ],
   "acceptance": {
-    "positive_in_memory": "PENDING",
-    "negative_in_memory": "PENDING",
-    "cap_02_evidence_window_compatibility": "PENDING",
-    "server_typecheck": "PENDING",
-    "server_build": "PENDING",
-    "git_diff_check": "PENDING",
-    "exact_head_ci": "PENDING"
+    "positive_in_memory": "PASS_24_OF_24",
+    "negative_in_memory": "PASS_12_OF_12",
+    "cap_02_evidence_window_compatibility": "PASS",
+    "server_typecheck": "PASS_CI_4606",
+    "server_build": "PASS_CI_4606",
+    "git_diff_check": "PASS",
+    "exact_head_ci": "PASS_CI_4606"
   },
   "effectiveness_condition": "S2_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_OBSERVATION_ASSIMILATION_GATE_PASS",
   "successor_delivery_slice_id": "MCFT-CAP-03.MCFT-02-07-08.ASSIMILATED-A2-RECORD-SET-BUILDER-V1",
