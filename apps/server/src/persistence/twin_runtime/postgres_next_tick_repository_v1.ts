@@ -4,11 +4,18 @@
 
 import type { Pool, PoolClient } from "pg";
 import { validateCanonicalObjectV1, type CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
+import { ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V1 } from "../../domain/twin_runtime/assimilated_continuation_contracts_v1.js";
 import { validateContinuationMemberV1 } from "../../domain/twin_runtime/continuation_contracts_v1.js";
 import type { NextTickReadPortV1, PersistedNextTickSnapshotV1, RealityBindingRuntimeSnapshotV1, RuntimeAuthoritySnapshotRepositoryPortV1, TwinScopeKeyV1 } from "../../runtime/twin_runtime/ports.js";
 
 function scopeValuesV1(scope: TwinScopeKeyV1): unknown[] {
   return [scope.tenant_id, scope.project_id, scope.group_id, scope.field_id, scope.season_id, scope.zone_id];
+}
+
+function isAssimilatedContinuationTickV1(object: CanonicalObjectEnvelopeV1): boolean {
+  return object.object_type === "twin_runtime_tick_v1"
+    && object.payload.record_set_contract_id
+      === ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V1;
 }
 
 function isContinuationReadObjectV1(object: CanonicalObjectEnvelopeV1): boolean {
@@ -28,7 +35,8 @@ function isContinuationReadObjectV1(object: CanonicalObjectEnvelopeV1): boolean 
 function parseFactObjectV1(recordJsonValue: unknown): CanonicalObjectEnvelopeV1 {
   const parsed = typeof recordJsonValue === "string" ? JSON.parse(recordJsonValue) : recordJsonValue;
   const object = (parsed as { payload: CanonicalObjectEnvelopeV1 }).payload;
-  if (isContinuationReadObjectV1(object)) validateContinuationMemberV1(object);
+  if (isAssimilatedContinuationTickV1(object)) validateCanonicalObjectV1(object);
+  else if (isContinuationReadObjectV1(object)) validateContinuationMemberV1(object);
   else validateCanonicalObjectV1(object);
   return object;
 }
