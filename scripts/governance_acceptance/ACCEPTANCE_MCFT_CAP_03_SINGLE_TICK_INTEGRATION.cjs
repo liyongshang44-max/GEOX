@@ -375,6 +375,10 @@ check(
   'service fails closed without predecessor Forecast hash',
 );
 check(
+  service.includes('ASSIMILATED_TICK_NEXT_HANDOFF_FORECAST_HASH_MISMATCH'),
+  'service verifies exact canonical Forecast hash in the T+1 handoff',
+);
+check(
   !/while\s*\(|for\s*\(\s*;|setInterval|setTimeout|fastify|router\./.test(service),
   'service contains no range loop, scheduler, or route wiring',
 );
