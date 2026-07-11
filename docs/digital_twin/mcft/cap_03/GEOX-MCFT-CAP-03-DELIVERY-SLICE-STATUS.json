@@ -6,9 +6,9 @@
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A",
   "baseline_main_commit": "6389d4e566a6eb64ce96209be0e70cd8703be574",
-  "status": "S2_SEMANTIC_CONFORMANCE_REMEDIATION_IMPLEMENTATION_READY_FOR_MERGE",
+  "status": "S2_SEMANTIC_CONFORMANCE_REMEDIATION_R1_EFFECTIVE",
   "design_status": "DESIGN_FROZEN",
-  "implementation_status": "IMPLEMENTED_CANDIDATE",
+  "implementation_status": "R1_MERGED_EFFECTIVE",
   "authorization_effective": true,
   "runtime_source_authorized": true,
   "active_delivery_slice_id": "MCFT-CAP-03.S2-SEMANTIC-CONFORMANCE-REMEDIATION-V1",
@@ -206,7 +206,7 @@
       ],
       "baseline_main_commit": "ed816b9f2f2061183918e0dfb484b949859ff3aa",
       "branch": "mcft-cap-03-observation-selection-assimilation-math-v1",
-      "status": "MERGED_REMEDIATION_IMPLEMENTED_CANDIDATE",
+      "status": "MERGED_REMEDIATION_EFFECTIVE",
       "merge_commit": "d3cf896cfa02e146a1729bf5b22337aafb9fa0d5",
       "merged_main_gate": "PASS",
       "effectiveness_condition_satisfied": true,
@@ -256,7 +256,7 @@
         "scripts/runtime_acceptance/mcft_cap_03_observation_assimilation_fixture_v1.ts"
       ],
       "effectiveness_condition": "S2_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_OBSERVATION_ASSIMILATION_GATE_PASS",
-      "semantic_conformance": "REMEDIATION_IMPLEMENTED_NOT_EFFECTIVE",
+      "semantic_conformance": "V2_REMEDIATION_EFFECTIVE",
       "remediation_id": "MCFT-CAP-03.S2-SEMANTIC-CONFORMANCE-REMEDIATION-V1",
       "confirmed_hard_acceptance_failures": [
         32,
@@ -655,7 +655,7 @@
       "dependency_mode": "S6_IMPLEMENTATION_MERGED_EFFECTIVENESS_PAUSED",
       "baseline_main_commit": "55f2d56b05d2a1f0ada0e9b46eea5a3baa7187c2",
       "branch": "mcft-cap-03-s2-semantic-conformance-remediation-activation-v1",
-      "status": "R1_IMPLEMENTATION_READY_FOR_MERGE",
+      "status": "R1_EFFECTIVE_R2_BOUNDARY_FREEZE_READY",
       "activation_fields_status": "EFFECTIVE",
       "allowed_claims": [],
       "preserved_nonclaims": [
@@ -695,9 +695,21 @@
         "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
         "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION-STATUS.json"
       ],
-      "r1_effective": false,
+      "r1_effective": true,
       "implementation_baseline_main_commit": "9d9d218fa030bf38278be7e8877c4b98463ebfe5",
-      "implementation_branch": "mcft-cap-03-s2-semantic-conformance-v2-v1"
+      "implementation_branch": "mcft-cap-03-s2-semantic-conformance-v2-v1",
+      "r1_effectiveness_branch": "mcft-cap-03-s2-semantic-conformance-v2-effectiveness-v1",
+      "r1_implementation_pr_number": 2349,
+      "r1_implementation_head_commit": "6f6e3e30775a062949b10b04ca318934a5449f45",
+      "r1_implementation_ci_run": "CI_4731",
+      "r1_implementation_final_gate": "PASS_69_OF_69",
+      "r1_implementation_merge_commit": "464ac18d4e4b526035283f4d3ba54e8da4a18dac",
+      "r1_implementation_merged_main_gate": "PASS_68_OF_68",
+      "r1_effectiveness_changed_file_boundary": [
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-OBSERVATION-ASSIMILATION-STATUS.json",
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION-STATUS.json"
+      ]
     },
     {
       "delivery_slice_id": "MCFT-CAP-03.CLOSURE-V1",
@@ -769,12 +781,12 @@
     "NO_OBSERVATION_INNOVATION_COMPUTED",
     "NO_CAP_03_A2_TICK_COMMITTED"
   ],
-  "ssot_conflict_cleanup_status": "DEFERRED_TO_R2_AFTER_R1_EFFECTIVE",
+  "ssot_conflict_cleanup_status": "READY_FOR_R2_BOUNDARY_FREEZE",
   "remediation_hold": {
     "remediation_id": "MCFT-CAP-03.S2-SEMANTIC-CONFORMANCE-REMEDIATION-V1",
     "baseline_main_commit": "55f2d56b05d2a1f0ada0e9b46eea5a3baa7187c2",
     "activation_branch": "mcft-cap-03-s2-semantic-conformance-remediation-activation-v1",
-    "status": "R1_IMPLEMENTATION_READY_FOR_MERGE",
+    "status": "R1_EFFECTIVE_R2_BOUNDARY_FREEZE_READY",
     "activation_effective": true,
     "r1_authorized": true,
     "s6_effectiveness_status": "PAUSED_PENDING_REMEDIATION",
@@ -812,11 +824,11 @@
       },
       {
         "step_id": "R1",
-        "status": "IMPLEMENTATION_READY_FOR_MERGE"
+        "status": "EFFECTIVE"
       },
       {
         "step_id": "R2",
-        "status": "BLOCKED_UNTIL_R1_EFFECTIVE"
+        "status": "READY_FOR_BOUNDARY_FREEZE"
       },
       {
         "step_id": "R3",
@@ -835,8 +847,23 @@
     "activation_merge_commit": "d9e40cb231ac9fae634ea1b453957e809c4653bc",
     "activation_merged_main_gate": "PASS_92_OF_92",
     "activation_effectiveness_condition_satisfied": true,
-    "r1_effective": false,
+    "r1_effective": true,
     "r1_implementation_baseline_main_commit": "9d9d218fa030bf38278be7e8877c4b98463ebfe5",
-    "r1_implementation_branch": "mcft-cap-03-s2-semantic-conformance-v2-v1"
+    "r1_implementation_branch": "mcft-cap-03-s2-semantic-conformance-v2-v1",
+    "r1_implementation_pr_number": 2349,
+    "r1_implementation_head_commit": "6f6e3e30775a062949b10b04ca318934a5449f45",
+    "r1_implementation_ci_run": "CI_4731",
+    "r1_implementation_final_gate": "PASS_69_OF_69",
+    "r1_implementation_merge_commit": "464ac18d4e4b526035283f4d3ba54e8da4a18dac",
+    "r1_implementation_merged_main_gate": "PASS_68_OF_68",
+    "r1_effectiveness_baseline_main_commit": "464ac18d4e4b526035283f4d3ba54e8da4a18dac",
+    "r1_effectiveness_changed_file_boundary": [
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-OBSERVATION-ASSIMILATION-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION-STATUS.json"
+    ],
+    "r2_boundary_status": "READY_TO_FREEZE",
+    "r2_boundary_freeze_authorized": true,
+    "r2_implementation_authorized": false
   }
 }
