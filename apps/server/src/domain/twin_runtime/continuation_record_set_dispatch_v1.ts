@@ -10,7 +10,7 @@ import {
   ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V1,
 } from "./assimilated_continuation_contracts_v1.js";
 import type { AssimilatedContinuationRecordSetV1 } from "./assimilated_continuation_record_set_identity_v1.js";
-import { validateAssimilatedContinuationRecordSetV1 } from "./assimilated_continuation_record_set_validator_v1.js";
+import { validateAssimilatedContinuationCrossReferencesV1 } from "./assimilated_continuation_cross_ref_validator_v1.js";
 import {
   ASSIMILATED_CONTINUATION_CONFIG_PURPOSE_V1,
   validateAssimilatedContinuationRuntimeConfigPayloadV1,
@@ -46,9 +46,15 @@ export function validateVersionedContinuationRecordSetV1(input: {
   runtime_config: CanonicalObjectEnvelopeV1;
 }): ContinuationRecordSetDispatchResultV1 {
   validateCanonicalObjectV1(input.runtime_config);
-  if (input.runtime_config.object_type !== "twin_runtime_config_v1") throw new Error("VALIDATOR_DISPATCH_RUNTIME_CONFIG_TYPE_MISMATCH");
-  if (input.runtime_config.object_id !== input.record_set.aggregate_identity_input.runtime_config_ref) throw new Error("VALIDATOR_DISPATCH_RUNTIME_CONFIG_REF_MISMATCH");
-  if (input.runtime_config.determinism_hash !== input.record_set.aggregate_identity_input.runtime_config_hash) throw new Error("VALIDATOR_DISPATCH_RUNTIME_CONFIG_HASH_MISMATCH");
+  if (input.runtime_config.object_type !== "twin_runtime_config_v1") {
+    throw new Error("VALIDATOR_DISPATCH_RUNTIME_CONFIG_TYPE_MISMATCH");
+  }
+  if (input.runtime_config.object_id !== input.record_set.aggregate_identity_input.runtime_config_ref) {
+    throw new Error("VALIDATOR_DISPATCH_RUNTIME_CONFIG_REF_MISMATCH");
+  }
+  if (input.runtime_config.determinism_hash !== input.record_set.aggregate_identity_input.runtime_config_hash) {
+    throw new Error("VALIDATOR_DISPATCH_RUNTIME_CONFIG_HASH_MISMATCH");
+  }
 
   const purpose = input.runtime_config.payload.config_purpose;
   const tick = runtimeTickV1(input.record_set);
@@ -58,7 +64,9 @@ export function validateVersionedContinuationRecordSetV1(input: {
     : undefined;
 
   if (purpose === CONTINUATION_CONFIG_PURPOSE_V1) {
-    if (discriminator !== undefined || topLevelDiscriminator !== undefined) throw new Error("VALIDATOR_DISPATCH_MISMATCH");
+    if (discriminator !== undefined || topLevelDiscriminator !== undefined) {
+      throw new Error("VALIDATOR_DISPATCH_MISMATCH");
+    }
     validateContinuationRuntimeConfigPayloadV1(input.runtime_config.payload);
     validateContinuationRecordSetV1(input.record_set as ContinuationRecordSetV1);
     return {
@@ -68,10 +76,16 @@ export function validateVersionedContinuationRecordSetV1(input: {
   }
 
   if (purpose === ASSIMILATED_CONTINUATION_CONFIG_PURPOSE_V1) {
-    if (discriminator !== ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V1) throw new Error("UNKNOWN_RECORD_SET_CONTRACT");
-    if (topLevelDiscriminator !== ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V1) throw new Error("VALIDATOR_DISPATCH_MISMATCH");
+    if (discriminator !== ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V1) {
+      throw new Error("UNKNOWN_RECORD_SET_CONTRACT");
+    }
+    if (topLevelDiscriminator !== ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V1) {
+      throw new Error("VALIDATOR_DISPATCH_MISMATCH");
+    }
     validateAssimilatedContinuationRuntimeConfigPayloadV1(input.runtime_config.payload);
-    validateAssimilatedContinuationRecordSetV1(input.record_set as AssimilatedContinuationRecordSetV1);
+    validateAssimilatedContinuationCrossReferencesV1(
+      input.record_set as AssimilatedContinuationRecordSetV1,
+    );
     return {
       contract_id: ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V1,
       config_purpose: ASSIMILATED_CONTINUATION_CONFIG_PURPOSE_V1,
