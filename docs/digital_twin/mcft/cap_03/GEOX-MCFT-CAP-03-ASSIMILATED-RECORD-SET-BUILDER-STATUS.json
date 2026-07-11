@@ -6,7 +6,7 @@
   "target_completion_level": "Level A",
   "baseline_main_commit": "be5a0c00ae7d29d1bd2ccffe5a4235f20d23352a",
   "branch": "mcft-cap-03-assimilated-a2-record-set-builder-v1",
-  "status": "IN_PROGRESS",
+  "status": "READY_FOR_MERGE",
   "primary_owner_work_package_id": "MCFT-02",
   "contributing_owner_work_package_ids": [
     "MCFT-07",
@@ -89,13 +89,14 @@
     "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
   ],
   "acceptance": {
-    "positive_in_memory": "PENDING",
-    "negative_in_memory": "PENDING",
-    "cap_02_historical_dispatch_compatibility": "PENDING",
-    "server_typecheck": "PENDING",
-    "server_build": "PENDING",
-    "git_diff_check": "PENDING",
-    "exact_head_ci": "PENDING"
+    "positive_in_memory": "PASS_20_OF_20",
+    "negative_in_memory": "PASS_12_OF_12",
+    "cap_02_historical_dispatch_compatibility": "PASS",
+    "server_typecheck": "PASS_CI_4628",
+    "server_build": "PASS_CI_4628",
+    "git_diff_check": "PASS",
+    "exact_head_ci": "PASS_CI_4628",
+    "draft_gate": "PASS_100_OF_100"
   },
   "effectiveness_condition": "S3A_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_ASSIMILATED_RECORD_SET_BUILDER_GATE_PASS",
   "successor_delivery_slice_id": "MCFT-CAP-03.MCFT-03-08.ASSIMILATED-A2-PERSISTENCE-RECOVERY-V1",

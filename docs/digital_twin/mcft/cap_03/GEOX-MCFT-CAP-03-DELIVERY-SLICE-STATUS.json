@@ -6,7 +6,7 @@
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A",
   "baseline_main_commit": "6389d4e566a6eb64ce96209be0e70cd8703be574",
-  "status": "ASSIMILATED_RECORD_SET_BUILDER_IN_PROGRESS",
+  "status": "ASSIMILATED_RECORD_SET_BUILDER_READY_FOR_MERGE",
   "design_status": "DESIGN_FROZEN",
   "implementation_status": "READY_FOR_IMPLEMENTATION",
   "authorization_effective": true,
@@ -269,7 +269,7 @@
       ],
       "baseline_main_commit": "be5a0c00ae7d29d1bd2ccffe5a4235f20d23352a",
       "branch": "mcft-cap-03-assimilated-a2-record-set-builder-v1",
-      "status": "IN_PROGRESS",
+      "status": "READY_FOR_MERGE",
       "activation_fields_status": "FROZEN",
       "allowed_claims": [
         "ASSIMILATED_A2_EIGHT_OBJECT_BUILDER_ESTABLISHED",
