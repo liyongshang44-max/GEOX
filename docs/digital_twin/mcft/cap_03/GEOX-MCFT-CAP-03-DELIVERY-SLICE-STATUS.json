@@ -6,12 +6,12 @@
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A",
   "baseline_main_commit": "6389d4e566a6eb64ce96209be0e70cd8703be574",
-  "status": "OBSERVATION_ASSIMILATION_MERGED",
+  "status": "ASSIMILATED_RECORD_SET_BUILDER_READY_FOR_MERGE",
   "design_status": "DESIGN_FROZEN",
   "implementation_status": "READY_FOR_IMPLEMENTATION",
   "authorization_effective": true,
   "runtime_source_authorized": true,
-  "active_delivery_slice_id": "MCFT-CAP-03.MCFT-05-07.OBSERVATION-SELECTION-AND-ASSIMILATION-MATH-V1",
+  "active_delivery_slice_id": "MCFT-CAP-03.MCFT-02-07-08.ASSIMILATED-A2-RECORD-SET-BUILDER-V1",
   "merge_before_next": true,
   "postmerge_verify_before_next": true,
   "parallel_downstream_pr_forbidden": true,
@@ -267,18 +267,54 @@
       "depends_on_delivery_slice_ids": [
         "MCFT-CAP-03.MCFT-05-07.OBSERVATION-SELECTION-AND-ASSIMILATION-MATH-V1"
       ],
-      "baseline_main_commit": null,
-      "branch": null,
-      "status": "BLOCKED",
-      "activation_fields_status": "TO_BE_FROZEN_AT_SLICE_ACTIVATION",
-      "allowed_claims": [],
+      "baseline_main_commit": "be5a0c00ae7d29d1bd2ccffe5a4235f20d23352a",
+      "branch": "mcft-cap-03-assimilated-a2-record-set-builder-v1",
+      "status": "READY_FOR_MERGE",
+      "activation_fields_status": "FROZEN",
+      "allowed_claims": [
+        "ASSIMILATED_A2_EIGHT_OBJECT_BUILDER_ESTABLISHED",
+        "ASSIMILATED_A2_CROSS_REFERENCE_VALIDATOR_ESTABLISHED",
+        "ASSIMILATED_RECORD_SET_CONTRACT_DISCRIMINATOR_ESTABLISHED",
+        "POSTERIOR_STATE_COMPUTATION_BASIS_ESTABLISHED",
+        "ASSIMILATED_TICK_CHECKPOINT_HEALTH_FORECAST_PAYLOADS_ESTABLISHED",
+        "VERSIONED_ASSIMILATED_READBACK_DISPATCH_ESTABLISHED",
+        "CAP_02_HISTORICAL_RECORD_SET_COMPATIBILITY_PRESERVED"
+      ],
       "preserved_nonclaims": [
         "NO_CAP_03_A2_TICK_COMMITTED",
+        "NO_PERSISTENCE_CHANGE",
+        "NO_DATABASE_ACCESS",
+        "NO_SINGLE_TICK_INTEGRATION",
         "NO_SUCCESSFUL_FORECAST",
-        "NO_MCFT_CAP_03_COMPLETE_CLAIM"
+        "NO_72_HOUR_FORECAST",
+        "NO_SCENARIO",
+        "NO_RECOMMENDATION",
+        "NO_POLICY_EVALUATION",
+        "NO_DECISION",
+        "NO_AO_ACT",
+        "NO_CALIBRATION_CANDIDATE",
+        "NO_SHADOW_EVALUATION",
+        "NO_MODEL_ACTIVATION",
+        "NO_ACTIVE_MODEL_PARAMETER_CHANGE",
+        "NO_LATE_EVIDENCE_REVISION",
+        "NO_CONTINUOUS_RUNTIME",
+        "NO_LIVE_FIELD_CLAIM",
+        "NO_MCFT_CAP_03_COMPLETE_CLAIM",
+        "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
       ],
-      "exact_changed_file_boundary": [],
-      "effectiveness_condition": "S2_MERGED_AND_MERGED_MAIN_GATE_PASS_AND_EXPLICIT_S3A_ACTIVATION"
+      "exact_changed_file_boundary": [
+        "apps/server/src/domain/twin_runtime/assimilated_continuation_cross_ref_validator_v1.ts",
+        "apps/server/src/domain/twin_runtime/continuation_record_set_dispatch_v1.ts",
+        "apps/server/src/runtime/twin_runtime/assimilated_continuation_record_set_builder_v1.ts",
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-ASSIMILATED-RECORD-SET-BUILDER-STATUS.json",
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-ASSIMILATED-RECORD-SET-BUILDER.md",
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_ASSIMILATED_RECORD_SET_BUILDER.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_ASSIMILATED_RECORD_SET_BUILDER.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_ASSIMILATED_RECORD_SET_BUILDER_NEGATIVE.ts",
+        "scripts/runtime_acceptance/mcft_cap_03_assimilated_record_set_builder_fixture_v1.ts"
+      ],
+      "effectiveness_condition": "S3A_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_ASSIMILATED_RECORD_SET_BUILDER_GATE_PASS"
     },
     {
       "delivery_slice_id": "MCFT-CAP-03.MCFT-03-08.ASSIMILATED-A2-PERSISTENCE-RECOVERY-V1",
@@ -433,7 +469,7 @@
     }
   ],
   "next_authorized_slice_ids": [],
-  "next_authorized_slice_id_after_effectiveness": "MCFT-CAP-03.MCFT-02-07-08.ASSIMILATED-A2-RECORD-SET-BUILDER-V1",
+  "next_authorized_slice_id_after_effectiveness": "MCFT-CAP-03.MCFT-03-08.ASSIMILATED-A2-PERSISTENCE-RECOVERY-V1",
   "successor_capability_line_id": "MCFT-CAP-04",
   "successor_authorized": false
 }
