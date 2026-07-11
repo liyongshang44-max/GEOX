@@ -107,12 +107,12 @@
   "effectiveness_condition": "S2_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_OBSERVATION_ASSIMILATION_GATE_PASS",
   "successor_delivery_slice_id": "MCFT-CAP-03.MCFT-02-07-08.ASSIMILATED-A2-RECORD-SET-BUILDER-V1",
   "successor_authorized": false,
-  "semantic_conformance_status": "REMEDIATION_IMPLEMENTED_NOT_EFFECTIVE",
+  "semantic_conformance_status": "V2_REMEDIATION_EFFECTIVE",
   "v2_remediation": {
     "remediation_id": "MCFT-CAP-03.S2-SEMANTIC-CONFORMANCE-REMEDIATION-V1",
     "implementation_baseline_main_commit": "9d9d218fa030bf38278be7e8877c4b98463ebfe5",
     "implementation_branch": "mcft-cap-03-s2-semantic-conformance-v2-v1",
-    "implementation_status": "IMPLEMENTED_CANDIDATE",
+    "implementation_status": "MERGED_EFFECTIVE",
     "contract_id": "MCFT_CAP_03_ASSIMILATED_CONTINUATION_V2",
     "evidence_window_contract_id": "MCFT_CAP_03_ASSIMILATED_CONTINUATION_EVIDENCE_WINDOW_V2",
     "selector_id": "LATEST_USABLE_AUTHORIZED_OBSERVATION_WITHIN_15M_BEFORE_TICK_V2",
@@ -127,6 +127,21 @@
     "unsupported_record_type_policy": "MALFORMED_CANONICAL_OBSERVATION_FAIL_CLOSED",
     "committed_hash_basis": "COMPLETE_AND_INDEPENDENTLY_RECOMPUTABLE",
     "historical_v1_readback": "PRESERVED",
-    "effectiveness_condition_satisfied": false
+    "effectiveness_condition_satisfied": true,
+    "effectiveness_branch": "mcft-cap-03-s2-semantic-conformance-v2-effectiveness-v1",
+    "implementation_pr_number": 2349,
+    "implementation_head_commit": "6f6e3e30775a062949b10b04ca318934a5449f45",
+    "implementation_ci_run": "CI_4731",
+    "implementation_final_gate": "PASS_69_OF_69",
+    "implementation_merge_commit": "464ac18d4e4b526035283f4d3ba54e8da4a18dac",
+    "merged_main_postmerge_gate": "PASS_68_OF_68",
+    "effectiveness_baseline_main_commit": "464ac18d4e4b526035283f4d3ba54e8da4a18dac",
+    "effectiveness_changed_file_boundary": [
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-OBSERVATION-ASSIMILATION-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION-STATUS.json"
+    ],
+    "r2_boundary_freeze_authorized": true,
+    "r2_implementation_authorized": false
   }
 }
