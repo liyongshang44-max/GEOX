@@ -6,7 +6,7 @@
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A",
   "baseline_main_commit": "6389d4e566a6eb64ce96209be0e70cd8703be574",
-  "status": "ASSIMILATED_RECORD_SET_BUILDER_READY_FOR_MERGE",
+  "status": "ASSIMILATED_RECORD_SET_BUILDER_MERGED",
   "design_status": "DESIGN_FROZEN",
   "implementation_status": "READY_FOR_IMPLEMENTATION",
   "authorization_effective": true,
@@ -269,7 +269,7 @@
       ],
       "baseline_main_commit": "be5a0c00ae7d29d1bd2ccffe5a4235f20d23352a",
       "branch": "mcft-cap-03-assimilated-a2-record-set-builder-v1",
-      "status": "READY_FOR_MERGE",
+      "status": "MERGED",
       "activation_fields_status": "FROZEN",
       "allowed_claims": [
         "ASSIMILATED_A2_EIGHT_OBJECT_BUILDER_ESTABLISHED",
@@ -314,7 +314,10 @@
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_ASSIMILATED_RECORD_SET_BUILDER_NEGATIVE.ts",
         "scripts/runtime_acceptance/mcft_cap_03_assimilated_record_set_builder_fixture_v1.ts"
       ],
-      "effectiveness_condition": "S3A_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_ASSIMILATED_RECORD_SET_BUILDER_GATE_PASS"
+      "effectiveness_condition": "S3A_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_ASSIMILATED_RECORD_SET_BUILDER_GATE_PASS",
+      "merge_commit": "66636e6e3259d6ada2e10566d984d095341040aa",
+      "merged_main_gate": "PASS",
+      "effectiveness_condition_satisfied": true
     },
     {
       "delivery_slice_id": "MCFT-CAP-03.MCFT-03-08.ASSIMILATED-A2-PERSISTENCE-RECOVERY-V1",
