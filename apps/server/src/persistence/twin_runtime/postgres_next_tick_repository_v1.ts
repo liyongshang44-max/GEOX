@@ -113,6 +113,8 @@ export class PostgresNextTickRepositoryV1 implements RuntimeAuthoritySnapshotRep
       const activeLineageId = requiredStringV1(activeLineage.lineage_id, "ACTIVE_LINEAGE_ID_REQUIRED");
       const checkpoint = await this.readCanonicalObjectV1(client, checkpointPointer.rows[0].checkpoint_object_id, "twin_runtime_checkpoint_v1");
       const previousPosterior = await this.readCanonicalObjectV1(client, statePointer.rows[0].state_object_id, "twin_state_estimate_v1");
+      const previousForecastResultRef = requiredStringV1(checkpoint.payload.forecast_result_ref, "PREVIOUS_FORECAST_RESULT_REF_REQUIRED");
+      const previousForecastResult = await this.readCanonicalObjectV1(client, previousForecastResultRef, "twin_forecast_run_v1");
       const lastCompletedTickRef = requiredStringV1(checkpoint.payload.last_completed_tick_ref, "LAST_COMPLETED_TICK_REF_REQUIRED");
       const lastTerminalTick = await this.readCanonicalObjectV1(client, lastCompletedTickRef, "twin_runtime_tick_v1");
       if (!previousPosterior.runtime_config_ref || checkpoint.runtime_config_ref !== previousPosterior.runtime_config_ref) throw new Error("PERSISTED_RUNTIME_CONFIG_POINTER_MISMATCH");
@@ -127,6 +129,7 @@ export class PostgresNextTickRepositoryV1 implements RuntimeAuthoritySnapshotRep
         active_lineage_id: activeLineageId,
         checkpoint,
         previous_posterior: previousPosterior,
+        previous_forecast_result: previousForecastResult,
         last_terminal_tick: lastTerminalTick,
         runtime_config: runtimeConfig,
         reality_binding: realityBinding,
