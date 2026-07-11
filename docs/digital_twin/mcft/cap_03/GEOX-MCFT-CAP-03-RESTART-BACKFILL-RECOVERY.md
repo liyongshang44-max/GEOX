@@ -1,9 +1,9 @@
 <!-- docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-RESTART-BACKFILL-RECOVERY.md -->
 # GEOX MCFT-CAP-03 S6 — Restart, Backfill and Recovery
 
-## 1. Activation scope
+## 1. Effective implementation scope
 
-This artifact freezes the implementation boundary for:
+This artifact governs the implementation boundary for:
 
 `MCFT-CAP-03.MCFT-03-04-07-08.RESTART-BACKFILL-RECOVERY-V1`
 
@@ -11,63 +11,76 @@ Activation baseline:
 
 `8190e93f3b520ce15dcbe40b2a92e759176ef9a1`
 
-S5 implementation merge:
+Activation PR:
 
-`aa781f94d752337e3d06ff8b7dceb7b2e2b7c56c`
+`#2344`
 
-S5 postmerge effectiveness merge:
+Activation locked head:
 
-`8190e93f3b520ce15dcbe40b2a92e759176ef9a1`
+`23c84a2a6338ea40295bbade2a18c428f434f672`
 
-S5 merged-main Gate:
+Activation exact-head CI:
 
-`PASS_110_OF_110`
+`CI_4715_SUCCESS`
 
-S5 isolated PostgreSQL acceptance:
+Activation merge:
 
-`PASS_9_OF_9`
+`41316ace4d332273150b3cd7ce7548304862b33d`
 
-This activation PR contains no Runtime implementation.
+Activation effectiveness merge and implementation baseline:
+
+`5070d350238fa3af8fcc5bab43cc14bba8e7a3c8`
+
+Merged-main activation Gate:
+
+`PASS_81_OF_81`
+
+The implementation branch may change only the nine frozen files in section 5.
 
 ## 2. Frozen restart and resume proof
 
-The standard Replay proof must execute the same 24 observation-aware hourly ticks already frozen by S5:
+The standard Replay proof executes the same 24 observation-aware hourly ticks frozen by S5:
 
 - process 1 commits ticks 1–12: `2026-06-02T02:00:00.000Z` through `2026-06-02T13:00:00.000Z`
-- a fresh process resumes ticks 13–24: `2026-06-02T14:00:00.000Z` through `2026-06-03T01:00:00.000Z`
+- a fresh service composition resumes ticks 13–24: `2026-06-02T14:00:00.000Z` through `2026-06-03T01:00:00.000Z`
 - checkpoint sequence remains `25..48`
 - next handoff remains `2026-06-03T02:00:00.000Z`
-- restarted and uninterrupted canonical hashes must be identical for all 24 A2 record sets
-- a bounded forward backfill from persisted next-tick authority must produce the same canonical hashes
+- restarted and uninterrupted canonical hashes are identical for all 24 A2 record sets
+- bounded forward catch-up from persisted next-tick authority produces the same canonical hashes
 
-Restart authority must come only from persisted checkpoint and canonical readback. Wall-clock-derived logical time is forbidden.
+Restart authority comes only from persisted checkpoint and canonical readback. Wall-clock-derived logical time is forbidden.
 
 ## 3. Runtime composition
 
-S6 may add one thin assimilated restart/resume and bounded-forward-backfill orchestrator.
+S6 adds one thin orchestrator:
 
-The orchestrator must reuse:
+`apps/server/src/runtime/twin_runtime/assimilated_restart_resume_service_v1.ts`
+
+The orchestrator reuses:
 
 - `PreparedRestartInputV1`
 - `PostgresNextTickRepositoryV1`
-- `NextTickInputServiceV1`
+- `PrepareNextTickInputServiceV1.resumeFromCheckpointV1`
 - `AssimilatedContiguousRangeServiceV1.runAssimilatedContiguousRangeV1`
 - `PostgresAssimilatedRuntimeRepositoryV1`
 - existing A2 lease, fencing, CAS, idempotency, canonical readback, fault injection, and five-projection rebuild behavior
 
-The orchestrator must not add a second tick loop, write directly to persistence, repair projections automatically, revise late Evidence, derive logical time from the wall clock, expose a route, or create a scheduler.
+The orchestrator contains no tick loop and no persistence call. It validates operator intent, reads persisted restart authority, delegates one bounded range, and verifies that the delegated range began at the same persisted next logical tick.
+
+It does not repair projections automatically, revise late Evidence, derive logical time from the wall clock, expose a route, or create a scheduler.
 
 ## 4. Frozen recovery proof
 
-Acceptance must prove:
+Acceptance proves:
 
-- precommit process crash rolls back with no partial facts and no projection advance
-- postcommit response loss resolves as idempotent canonical success without duplicate facts
-- stale fencing fails closed
-- State/checkpoint/Forecast CAS conflict fails closed
-- projection divergence fails closed
-- explicit canonical five-projection rebuild restores canonical readback
-- late Evidence does not trigger recomputation or revision
+- precommit process crash rolls back with no canonical commit and no projection advance
+- postcommit response loss resolves as idempotent canonical success without duplicate facts or lease acquisition
+- stale fencing fails closed through the reused PostgreSQL persistence contract
+- State/checkpoint/Forecast CAS conflict fails closed through the reused PostgreSQL persistence contract
+- projection divergence prevents restart
+- explicit canonical five-projection rebuild remains the only repair path
+- late Evidence is rejected before checkpoint read, Evidence evaluation, or range execution
+- completed-target resume and backfill perform zero mutation
 
 ## 5. Frozen implementation file boundary
 
@@ -91,7 +104,7 @@ S6 does not establish:
 - 72-hour Forecast
 - Scenario
 - Recommendation
-- Policy
+- Policy Evaluation
 - Decision
 - AO-ACT
 - calibration
@@ -104,16 +117,36 @@ S6 does not establish:
 - MCFT-CAP-03 completion
 - Minimum Complete Field Twin
 
-S7 remains blocked.
+S7 remains blocked until the S6 implementation PR merges and the merged-main S6 implementation Gate passes.
 
 MCFT-CAP-04 remains unauthorized.
 
 ## 7. Activation effectiveness
 
-Before the activation PR merges and the merged-main activation Gate passes:
+Activation effectiveness is established by:
 
-- activation effective = false
-- implementation authorized = false
-- Runtime source changes are forbidden
+- activation PR `#2344` merged
+- activation CI `#4715` passed on locked head
+- activation merge `41316ace4d332273150b3cd7ce7548304862b33d`
+- effectiveness PR `#2345` merged
+- effectiveness merge `5070d350238fa3af8fcc5bab43cc14bba8e7a3c8`
+- synchronized-main activation Gate `81 PASS, 0 FAIL`
 
-Only after activation effectiveness is established may the implementation branch be created from the activation closure baseline.
+Therefore:
+
+- activation effective = true
+- implementation authorized = true
+- implementation branch baseline = `5070d350238fa3af8fcc5bab43cc14bba8e7a3c8`
+
+## 8. Implementation effectiveness condition
+
+Implementation claims remain pending until all of the following are true:
+
+1. Draft and Final S6 implementation Gates pass on one locked implementation head.
+2. Positive, negative, source-shape, server typecheck, and isolated PostgreSQL acceptance pass.
+3. Exact-head CI succeeds.
+4. The implementation PR merges to `main`.
+5. A governance-only effectiveness closure records the implementation evidence.
+6. The synchronized-main S6 implementation Gate passes in `--postmerge` mode.
+
+Before that condition is satisfied, S7 remains blocked and no S6 completion claim is effective.
