@@ -6,7 +6,7 @@
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A",
   "baseline_main_commit": "6389d4e566a6eb64ce96209be0e70cd8703be574",
-  "status": "RESTART_BACKFILL_RECOVERY_ACTIVATION_READY_FOR_MERGE",
+  "status": "RESTART_BACKFILL_RECOVERY_ACTIVATED",
   "design_status": "DESIGN_FROZEN",
   "implementation_status": "READY_FOR_IMPLEMENTATION",
   "authorization_effective": true,
@@ -552,7 +552,7 @@
       ],
       "baseline_main_commit": "8190e93f3b520ce15dcbe40b2a92e759176ef9a1",
       "branch": "mcft-cap-03-s6-restart-backfill-recovery-v1",
-      "status": "ACTIVATION_READY_FOR_MERGE",
+      "status": "ACTIVATED",
       "activation_fields_status": "FROZEN",
       "allowed_claims": [
         "CAP_03_RESTART_RESUME_PROVEN",
@@ -599,9 +599,15 @@
       "activation": {
         "baseline_main_commit": "8190e93f3b520ce15dcbe40b2a92e759176ef9a1",
         "branch": "mcft-cap-03-s6-activation-freeze-v1",
-        "status": "READY_FOR_MERGE",
-        "effective": false,
-        "effectiveness_condition": "S6_ACTIVATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S6_ACTIVATION_GATE_PASS"
+        "status": "MERGED",
+        "effective": true,
+        "effectiveness_condition": "S6_ACTIVATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S6_ACTIVATION_GATE_PASS",
+        "pr_number": 2344,
+        "head_commit": "23c84a2a6338ea40295bbade2a18c428f434f672",
+        "ci_run": "CI_4715",
+        "merge_commit": "41316ace4d332273150b3cd7ce7548304862b33d",
+        "merged_main_gate": "PASS",
+        "effectiveness_condition_satisfied": true
       }
     },
     {
