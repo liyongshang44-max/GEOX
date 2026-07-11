@@ -54,7 +54,17 @@ async function main(): Promise<void> {
   ok("CAP-03 record set cannot be read under historical CAP-02 Runtime Config");
 
   const wrongConfigHash = structuredClone(fixture.assimilatedRuntimeConfig);
-  wrongConfigHash.determinism_hash = "sha256:wrong_runtime_config_hash";
+  wrongConfigHash.limitations = [
+    ...wrongConfigHash.limitations,
+    "S3B_NEGATIVE_RUNTIME_CONFIG_HASH_DRIFT",
+  ];
+  wrongConfigHash.determinism_hash = computeMemberDeterminismHashV1(
+    wrongConfigHash as unknown as Record<string, unknown>,
+  );
+  assert.notEqual(
+    wrongConfigHash.determinism_hash,
+    fixture.assimilatedRuntimeConfig.determinism_hash,
+  );
   assert.throws(
     () => validateVersionedContinuationRecordSetV1({
       record_set: fixture.recordSet,
