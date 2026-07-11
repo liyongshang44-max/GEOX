@@ -6,7 +6,7 @@
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A",
   "baseline_main_commit": "6389d4e566a6eb64ce96209be0e70cd8703be574",
-  "status": "ASSIMILATED_PERSISTENCE_RECOVERY_READY_FOR_MERGE",
+  "status": "ASSIMILATED_PERSISTENCE_RECOVERY_MERGED",
   "design_status": "DESIGN_FROZEN",
   "implementation_status": "READY_FOR_IMPLEMENTATION",
   "authorization_effective": true,
@@ -330,7 +330,7 @@
       ],
       "baseline_main_commit": "293fbeff04441f12aee13945c2db24b4b9bb23b5",
       "branch": "mcft-cap-03-assimilated-a2-persistence-recovery-v1",
-      "status": "READY_FOR_MERGE",
+      "status": "MERGED",
       "activation_fields_status": "FROZEN",
       "allowed_claims": [
         "ASSIMILATED_A2_EXISTING_TRANSACTION_REUSE_ESTABLISHED",
@@ -377,7 +377,10 @@
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_ASSIMILATED_PERSISTENCE_RECOVERY_NEGATIVE.ts",
         "scripts/runtime_acceptance/mcft_cap_03_assimilated_persistence_recovery_fixture_v1.ts"
       ],
-      "effectiveness_condition": "S3B_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_ASSIMILATED_PERSISTENCE_RECOVERY_GATE_PASS"
+      "effectiveness_condition": "S3B_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_ASSIMILATED_PERSISTENCE_RECOVERY_GATE_PASS",
+      "merge_commit": "71c086b3c57d9884b0fef2820be62b41800ec77e",
+      "merged_main_gate": "PASS",
+      "effectiveness_condition_satisfied": true
     },
     {
       "delivery_slice_id": "MCFT-CAP-03.MCFT-04-05-06-07-08-09.SINGLE-TICK-INTEGRATION-V1",
