@@ -6,7 +6,7 @@
   "target_completion_level": "Level A",
   "baseline_main_commit": "17c837c961e53a958bc94b2d6c216fa4fc23e10b",
   "branch": "mcft-cap-03-single-tick-integration-v1",
-  "status": "IN_PROGRESS",
+  "status": "READY_FOR_MERGE",
   "primary_owner_work_package_id": "MCFT-04",
   "contributing_owner_work_package_ids": [
     "MCFT-05",
