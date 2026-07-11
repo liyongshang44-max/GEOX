@@ -113,6 +113,7 @@ accepting unknown contract versions
 Required:
 
 ```text
+ADDITIVE_VERSIONED_V2
 additive MCFT-CAP-03 assimilated continuation V2 contract
 additive V2 selector and Evidence Window
 V1 validator remains capable of reading historical V1 records
