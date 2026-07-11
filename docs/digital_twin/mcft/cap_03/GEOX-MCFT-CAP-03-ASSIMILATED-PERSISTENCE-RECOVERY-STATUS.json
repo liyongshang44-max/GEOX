@@ -48,7 +48,7 @@
     "zero_migration": true
   },
   "exact_changed_file_boundary": [
-    "apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts",
+    "apps/server/src/persistence/twin_runtime/postgres_assimilated_runtime_repository_v1.ts",
     "apps/server/src/runtime/twin_runtime/ports.ts",
     "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-ASSIMILATED-PERSISTENCE-RECOVERY-STATUS.json",
     "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-ASSIMILATED-PERSISTENCE-RECOVERY.md",
@@ -72,7 +72,7 @@
     "CAP_03_PERSISTENCE_ZERO_MIGRATION_PROVEN"
   ],
   "preserved_nonclaims": [
-    "NO_MAINLINE_CAP_03_A2_TICK_COMMITTED",
+    "NO_CAP_03_A2_TICK_COMMITTED",
     "NO_SINGLE_TICK_INTEGRATION",
     "NO_RANGE_EXECUTION",
     "NO_SUCCESSFUL_FORECAST",
