@@ -339,14 +339,13 @@ if (POSTMERGE) {
 
 for (const marker of [
   '24 contiguous',
-  'checkpoint sequence 25..48',
-  '192',
-  'LIMITED',
-  'NO_USABLE_OBSERVATION',
-  'REJECTED_OUTLIER',
+  'checkpoint sequence: `25..48`',
+  '192 new A2 canonical facts',
+  'LIMITED observation downweighting',
+  'no usable observation',
+  'innovation outlier rejection',
   'candidate exclusion',
   'Forecast',
-  'BLOCKED',
   'S6 remains blocked',
 ]) {
   check(
