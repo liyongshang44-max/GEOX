@@ -6,7 +6,7 @@
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A",
   "baseline_main_commit": "6389d4e566a6eb64ce96209be0e70cd8703be574",
-  "status": "TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE_ACTIVATION_READY_FOR_MERGE",
+  "status": "TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE_ACTIVATED",
   "design_status": "DESIGN_FROZEN",
   "implementation_status": "READY_FOR_IMPLEMENTATION",
   "authorization_effective": true,
@@ -462,7 +462,7 @@
       ],
       "baseline_main_commit": "01f705bec9e79b528480b63fe56c6e6c4489845f",
       "branch": "mcft-cap-03-s5-twenty-four-observation-aware-tick-range-v1",
-      "status": "ACTIVATION_READY_FOR_MERGE",
+      "status": "ACTIVATED",
       "activation_fields_status": "FROZEN",
       "allowed_claims": [
         "TWENTY_FOUR_OBSERVATION_AWARE_TICKS_ESTABLISHED",
@@ -512,8 +512,14 @@
       "activation": {
         "baseline_main_commit": "01f705bec9e79b528480b63fe56c6e6c4489845f",
         "branch": "mcft-cap-03-s5-activation-freeze-v1",
-        "status": "READY_FOR_MERGE",
-        "effective": false,
+        "status": "MERGED",
+        "effective": true,
+        "pr_number": 2340,
+        "head_commit": "04e7465930c99b54a1fd5ceb480430e67d946998",
+        "ci_run": "CI_4704",
+        "merge_commit": "53178b33cc87dfab6b83f5305f222c1366b024e1",
+        "merged_main_gate": "PASS",
+        "effectiveness_condition_satisfied": true,
         "effectiveness_condition": "S5_ACTIVATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S5_ACTIVATION_GATE_PASS"
       }
     },
