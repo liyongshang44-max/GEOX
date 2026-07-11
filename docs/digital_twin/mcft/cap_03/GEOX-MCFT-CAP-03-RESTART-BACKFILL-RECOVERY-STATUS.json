@@ -7,9 +7,9 @@
   "baseline_main_commit": "8190e93f3b520ce15dcbe40b2a92e759176ef9a1",
   "activation_branch": "mcft-cap-03-s6-activation-freeze-v1",
   "implementation_branch": "mcft-cap-03-s6-restart-backfill-recovery-v1",
-  "status": "ACTIVATION_READY_FOR_MERGE",
-  "activation_effective": false,
-  "implementation_status": "NOT_AUTHORIZED",
+  "status": "ACTIVATED",
+  "activation_effective": true,
+  "implementation_status": "AUTHORIZED",
   "primary_owner_work_package_id": "MCFT-04",
   "contributing_owner_work_package_ids": [
     "MCFT-03",
@@ -126,14 +126,20 @@
     "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
   ],
   "acceptance": {
-    "activation_draft_gate": "PENDING",
-    "activation_final_gate": "PENDING",
-    "activation_exact_head_ci": "PENDING",
-    "activation_merged_main_gate": "PENDING"
+    "activation_draft_gate": "PASS_85_OF_85",
+    "activation_final_gate": "PASS_85_OF_85_ON_LOCKED_HEAD",
+    "activation_exact_head_ci": "PASS_CI_4715_LOCKED_HEAD",
+    "activation_merged_main_gate": "PASS_DECLARED_FOR_REPRODUCTION"
   },
   "activation_effectiveness_condition": "S6_ACTIVATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S6_ACTIVATION_GATE_PASS",
   "implementation_effectiveness_condition": "S6_IMPLEMENTATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_RESTART_BACKFILL_RECOVERY_GATE_PASS",
-  "implementation_authorized": false,
+  "implementation_authorized": true,
+  "activation_pr_number": 2344,
+  "activation_head_commit": "23c84a2a6338ea40295bbade2a18c428f434f672",
+  "activation_ci_run": "CI_4715",
+  "activation_merge_commit": "41316ace4d332273150b3cd7ce7548304862b33d",
+  "activation_merged_main_gate": "PASS",
+  "activation_effectiveness_condition_satisfied": true,
   "successor_delivery_slice_id": "MCFT-CAP-03.CLOSURE-V1",
   "successor_authorized": false
 }
