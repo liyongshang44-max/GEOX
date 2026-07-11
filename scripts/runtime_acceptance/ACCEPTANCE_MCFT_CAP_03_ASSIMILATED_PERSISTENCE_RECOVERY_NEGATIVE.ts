@@ -1,5 +1,5 @@
 // scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_ASSIMILATED_PERSISTENCE_RECOVERY_NEGATIVE.ts
-// Purpose: prove S3B fails closed on discriminator, config, member integrity, scope, predecessor authority, and zero-migration boundary violations before any PostgreSQL write.
+// Purpose: prove S3B fails closed on discriminator, config, member integrity, scope, predecessor authority, idempotency order, and zero-migration boundary violations before any PostgreSQL write.
 // Boundary: pure negative acceptance only; no database, lease, canonical write, Runtime tick orchestration, range execution, route, scheduler, or production claim.
 
 import assert from "node:assert/strict";
@@ -117,14 +117,14 @@ async function main(): Promise<void> {
   ok("same-key different-hash conflict fixture is valid and deterministic");
 
   const repository = fs.readFileSync(
-    path.join(ROOT, "apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts"),
+    path.join(ROOT, "apps/server/src/persistence/twin_runtime/postgres_assimilated_runtime_repository_v1.ts"),
     "utf8",
   );
   const idempotencyPosition = repository.indexOf("identity_kind='A2_RECORD_SET'");
-  const leasePosition = repository.indexOf("verifyLease(client");
+  const leasePosition = repository.indexOf("verifyLeaseV1(client");
   assert.ok(idempotencyPosition >= 0);
   assert.ok(leasePosition > idempotencyPosition);
-  ok("shared A2 implementation retains idempotency lookup before lease verification");
+  ok("CAP-03 A2 path retains idempotency lookup before lease verification");
 
   assert.doesNotMatch(repository, /INSERT INTO\s+twin_forecast_success_latest_index_v1/i);
   assert.doesNotMatch(repository, /UPDATE\s+twin_active_lineage_index_v1/i);
