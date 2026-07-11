@@ -1,230 +1,447 @@
 // scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE.cjs
-// Purpose: enforce the exact S5 implementation boundary, including the controlled PostgreSQL versioned-predecessor validation remediation.
-// Boundary: governance and source-shape acceptance only; no database mutation or Runtime execution.
+// Purpose: enforce the S5 implementation boundary and its Draft, Final, and merged-main Postmerge effectiveness lifecycle.
+// Boundary: governance and isolated acceptance orchestration only; no production Runtime mutation, restart/backfill behavior, route, scheduler, successful Forecast, Scenario, Recommendation, Decision, action, calibration, model activation, or successor authorization.
 
-const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
-const { execFileSync } = require("node:child_process");
+'use strict';
 
-const ROOT = path.resolve(__dirname, "../..");
+const cp = require('node:child_process');
+const fs = require('node:fs');
+const path = require('node:path');
 
-const STATUS_PATH = path.join(
-  ROOT,
-  "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE-STATUS.json",
-);
-
-const CONTRACT_PATH = path.join(
-  ROOT,
-  "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE.md",
-);
-
-const DELIVERY_PATH = path.join(
-  ROOT,
-  "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
-);
-
-const REPOSITORY_PATH = path.join(
-  ROOT,
-  "apps/server/src/persistence/twin_runtime/postgres_assimilated_runtime_repository_v1.ts",
-);
-
-const SLICE_ID =
-  "MCFT-CAP-03.MCFT-04-07-08.TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE-V1";
-
+const ROOT = path.resolve(__dirname, '../..');
+const BASELINE = '01f705bec9e79b528480b63fe56c6e6c4489845f';
+const ACTIVATION_MERGE =
+  '53178b33cc87dfab6b83f5305f222c1366b024e1';
+const IMPLEMENTATION_BRANCH =
+  'mcft-cap-03-s5-twenty-four-observation-aware-tick-range-v1';
+const EFFECTIVENESS_BRANCH =
+  'mcft-cap-03-s5-postmerge-effectiveness-v1';
+const IMPLEMENTATION_MERGE =
+  'aa781f94d752337e3d06ff8b7dceb7b2e2b7c56c';
+const S4 =
+  'MCFT-CAP-03.MCFT-04-05-06-07-08-09.SINGLE-TICK-INTEGRATION-V1';
+const S5 =
+  'MCFT-CAP-03.MCFT-04-07-08.TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE-V1';
+const S6 =
+  'MCFT-CAP-03.MCFT-03-04-07-08.RESTART-BACKFILL-RECOVERY-V1';
 const REVISION_ID =
-  "V2_POSTGRES_VERSIONED_PREDECESSOR_VALIDATION_REMEDIATION";
-
+  'V2_POSTGRES_VERSIONED_PREDECESSOR_VALIDATION_REMEDIATION';
 const REMEDIATION_ID =
-  "S5_POSTGRES_VERSIONED_PREDECESSOR_VALIDATION_V1";
+  'S5_POSTGRES_VERSIONED_PREDECESSOR_VALIDATION_V1';
 
-const EXPECTED_FILES = [
-  "apps/server/src/runtime/twin_runtime/assimilated_contiguous_range_service_v1.ts",
-  "apps/server/src/persistence/twin_runtime/postgres_assimilated_runtime_repository_v1.ts",
-  "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE-STATUS.json",
-  "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE.md",
-  "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
-  "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE.cjs",
-  "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE.ts",
-  "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE_NEGATIVE.ts",
-  "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE_DB.ts",
-  "scripts/runtime_acceptance/mcft_cap_03_twenty_four_observation_aware_tick_range_fixture_v1.ts",
+const POSTMERGE = process.argv.includes('--postmerge');
+const DRAFT = process.argv.includes('--draft');
+const RUN_DB = process.argv.includes('--db');
+const MODE = POSTMERGE ? 'postmerge' : DRAFT ? 'draft' : 'final';
+
+const STATUS_PATH =
+  'docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE-STATUS.json';
+const CONTRACT_PATH =
+  'docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE.md';
+const DELIVERY_PATH =
+  'docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json';
+const REPOSITORY_PATH =
+  'apps/server/src/persistence/twin_runtime/postgres_assimilated_runtime_repository_v1.ts';
+const RANGE_SERVICE_PATH =
+  'apps/server/src/runtime/twin_runtime/assimilated_contiguous_range_service_v1.ts';
+
+const IMPLEMENTATION_FILES = [
+  RANGE_SERVICE_PATH,
+  REPOSITORY_PATH,
+  STATUS_PATH,
+  CONTRACT_PATH,
+  DELIVERY_PATH,
+  'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE.cjs',
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE.ts',
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE_NEGATIVE.ts',
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE_DB.ts',
+  'scripts/runtime_acceptance/mcft_cap_03_twenty_four_observation_aware_tick_range_fixture_v1.ts',
+].sort();
+
+const EFFECTIVENESS_FILES = [
+  STATUS_PATH,
+  DELIVERY_PATH,
+  'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE.cjs',
+].sort();
+
+const FORBIDDEN_PATH_PATTERNS = [
+  /^apps\/server\/db\/migrations\//,
+  /(?:^|\/)routes?(?:\/|\.|$)/i,
+  /^apps\/web\//,
+  /^\.github\/workflows\//,
 ];
 
 let pass = 0;
+let fail = 0;
 
-function ok(condition, message) {
-  assert.equal(Boolean(condition), true, message);
-  pass += 1;
-  console.log(`PASS ${message}`);
+function check(value, message) {
+  if (value) {
+    pass += 1;
+    console.log(`PASS ${message}`);
+  } else {
+    fail += 1;
+    console.error(`FAIL ${message}`);
+  }
 }
 
-function readJson(filePath) {
-  return JSON.parse(
-    fs.readFileSync(filePath, "utf8"),
+function git(args) {
+  return cp.execFileSync(
+    process.platform === 'win32' ? 'git.exe' : 'git',
+    args,
+    {
+      cwd: ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    },
+  ).trim();
+}
+
+function readText(relativePath) {
+  return fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
+}
+
+function readJson(relativePath) {
+  return JSON.parse(readText(relativePath));
+}
+
+function sortedLines(value) {
+  return value
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map((item) => item.replaceAll('\\', '/'))
+    .sort();
+}
+
+function sameArray(actual, expected) {
+  return JSON.stringify([...actual].sort()) === JSON.stringify([...expected].sort());
+}
+
+function run(command, args, pattern, message, env = process.env) {
+  try {
+    const output = cp.execFileSync(command, args, {
+      cwd: ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env,
+    });
+    process.stdout.write(output);
+    check(pattern.test(output), message);
+  } catch (error) {
+    process.stderr.write(
+      error.stderr || error.stdout || String(error.message || error),
+    );
+    check(false, message);
+  }
+}
+
+function runTsx(relativePath, pattern, message, env = process.env) {
+  run(
+    process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm',
+    ['exec', 'tsx', relativePath],
+    pattern,
+    message,
+    env,
   );
 }
 
-function sorted(values) {
-  return [...values].sort();
+for (const relativePath of new Set([
+  ...IMPLEMENTATION_FILES,
+  ...EFFECTIVENESS_FILES,
+])) {
+  check(
+    fs.existsSync(path.join(ROOT, relativePath)),
+    `${MODE} file exists: ${relativePath}`,
+  );
 }
 
 const status = readJson(STATUS_PATH);
 const delivery = readJson(DELIVERY_PATH);
-const contract = fs.readFileSync(CONTRACT_PATH, "utf8");
-const repository = fs.readFileSync(REPOSITORY_PATH, "utf8");
+const contract = readText(CONTRACT_PATH);
+const repository = readText(REPOSITORY_PATH);
+const rangeService = readText(RANGE_SERVICE_PATH);
+const s4 = delivery.slices.find((slice) => slice.delivery_slice_id === S4);
+const s5 = delivery.slices.find((slice) => slice.delivery_slice_id === S5);
+const s6 = delivery.slices.find((slice) => slice.delivery_slice_id === S6);
 
-ok(
+check(
   status.schema_version
-    === "geox_mcft_cap_03_twenty_four_observation_aware_tick_range_status_v2",
-  "status schema is remediation revision v2",
+    === 'geox_mcft_cap_03_twenty_four_observation_aware_tick_range_status_v3',
+  'status schema carries the S5 postmerge lifecycle revision',
 );
-
-ok(
+check(status.capability_line_id === 'MCFT-CAP-03', 'status capability exact');
+check(status.delivery_slice_id === S5, 'status delivery slice exact');
+check(status.baseline_main_commit === BASELINE, 'status baseline exact');
+check(
+  status.activation_merge_commit === ACTIVATION_MERGE,
+  'status records exact S5 activation merge commit',
+);
+check(
+  status.implementation_branch === IMPLEMENTATION_BRANCH,
+  'status implementation branch exact',
+);
+check(status.status === 'MERGED', 'status records S5 implementation MERGED');
+check(
+  status.implementation_status === 'MERGED',
+  'status implementation state MERGED',
+);
+check(
   status.implementation_boundary_revision === REVISION_ID,
-  "status records the exact remediation boundary revision",
+  'status records exact remediation boundary revision',
 );
-
-ok(
-  status.authorized_remediation.remediation_id
-    === REMEDIATION_ID,
-  "status records the exact remediation identifier",
+check(
+  status.authorized_remediation?.remediation_id === REMEDIATION_ID,
+  'status records exact remediation identifier',
 );
-
-ok(
-  status.authorized_remediation.authorized_file
-    === EXPECTED_FILES[1],
-  "status authorizes only the assimilated PostgreSQL repository",
+check(
+  status.authorized_remediation?.authorized_file === REPOSITORY_PATH,
+  'status authorizes only the assimilated PostgreSQL repository remediation',
 );
-
-assert.deepEqual(
-  status.frozen_implementation_changed_file_boundary,
-  EXPECTED_FILES,
+check(
+  sameArray(status.frozen_implementation_changed_file_boundary, IMPLEMENTATION_FILES),
+  'status frozen implementation boundary is exact',
 );
-
-ok(
-  true,
-  "status frozen implementation boundary is exact",
+check(
+  sameArray(status.postmerge_effectiveness_changed_file_boundary, EFFECTIVENESS_FILES),
+  'status postmerge effectiveness boundary is exact',
 );
-
-const slices = delivery.slices.filter(
-  (item) => item.delivery_slice_id === SLICE_ID,
+check(status.implementation_pr_number === 2342, 'status records implementation PR 2342');
+check(
+  status.implementation_head_commit
+    === 'fb2c83d0ec04d9614aae65678e882f674d6fcfd2',
+  'status records locked implementation head',
 );
-
-ok(
-  slices.length === 1,
-  "delivery status contains exactly one S5 slice",
+check(
+  status.implementation_ci_run === 'CI_4708',
+  'status records successful exact-head CI 4708',
 );
-
-const s5 = slices[0];
-
-ok(
-  s5.implementation_boundary_revision === REVISION_ID,
-  "delivery slice records the exact remediation revision",
+check(
+  status.implementation_merge_commit === IMPLEMENTATION_MERGE,
+  'status records exact S5 implementation merge commit',
 );
-
-ok(
-  s5.authorized_remediation.remediation_id
-    === REMEDIATION_ID,
-  "delivery slice records the exact remediation identifier",
+check(
+  status.implementation_merged_main_gate === 'PASS',
+  'status declares S5 merged-main Gate PASS for reproduction',
 );
-
-assert.deepEqual(
-  s5.exact_changed_file_boundary,
-  EXPECTED_FILES,
+check(
+  status.implementation_effectiveness_condition_satisfied === true,
+  'status declares S5 effectiveness condition satisfied after postmerge reproduction',
 );
+check(status.successor_authorized === false, 'status does not authorize S6');
 
-ok(
-  true,
-  "delivery slice changed-file boundary is exact",
+check(delivery.capability_line_id === 'MCFT-CAP-03', 'delivery capability exact');
+check(delivery.design_status === 'DESIGN_FROZEN', 'CAP-03 design remains frozen');
+check(delivery.authorization_effective === true, 'CAP-03 authorization remains effective');
+check(
+  delivery.status === 'TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE_MERGED',
+  'delivery top-level status records S5 merged',
 );
-
-ok(
-  contract.includes(EXPECTED_FILES[1]),
-  "contract includes the authorized repository path",
+check(
+  delivery.active_delivery_slice_id === S5,
+  'S5 remains the active slice until explicit S6 activation',
 );
-
-ok(
-  contract.includes(
-    "first CAP-03 tick committed successfully",
-  ),
-  "contract records the observed PostgreSQL trigger",
+check(s4?.status === 'MERGED', 'S4 remains MERGED');
+check(s5?.status === 'MERGED', 'delivery S5 records MERGED');
+check(s5?.merge_commit === IMPLEMENTATION_MERGE, 'delivery S5 merge commit exact');
+check(s5?.merged_main_gate === 'PASS', 'delivery S5 merged-main Gate PASS');
+check(
+  s5?.effectiveness_condition_satisfied === true,
+  'delivery S5 effectiveness condition satisfied',
 );
-
-ok(
-  repository.includes(
-    "validateVersionedPredecessorMembersV1",
-  ),
-  "repository contains versioned predecessor validation",
+check(
+  sameArray(s5?.exact_changed_file_boundary || [], IMPLEMENTATION_FILES),
+  'delivery S5 implementation boundary is exact',
 );
-
-ok(
-  repository.includes(
-    "member_object_ids ? $1",
-  ),
-  "repository resolves predecessor membership through the A2 guard",
+check(s6?.status === 'BLOCKED', 'S6 remains blocked before explicit activation');
+check(
+  s6?.baseline_main_commit === null
+    && s6?.branch === null
+    && s6?.activation_fields_status === 'TO_BE_FROZEN_AT_SLICE_ACTIVATION',
+  'S6 activation fields remain unset',
 );
-
-ok(
-  !repository.includes(
-    "expected.previous_forecast_result_ref,\n      validateContinuationMemberV1,",
-  ),
-  "repository no longer hard-wires the CAP-02 validator for every predecessor Forecast",
+check(
+  Array.isArray(delivery.next_authorized_slice_ids)
+    && delivery.next_authorized_slice_ids.length === 0,
+  'no downstream slice is implicitly authorized',
 );
-
-ok(
-  repository.includes(
-    "expected.previous_checkpoint_ref,\n      null,",
-  ),
-  "predecessor members are read without the A0-only canonical validator",
+check(
+  delivery.next_authorized_slice_id_after_effectiveness === S6,
+  'S6 is only the next slice eligible for explicit activation',
 );
+check(delivery.successor_authorized === false, 'MCFT-CAP-04 remains unauthorized');
 
-ok(
-  !repository.includes(
-    "for (const member of members) {\n      validateCanonicalObjectV1(member);",
-  ),
-  "CAP-03 predecessor members are not prematurely validated as A0 members",
-);
+try {
+  cp.execFileSync(
+    process.platform === 'win32' ? 'git.exe' : 'git',
+    ['merge-base', '--is-ancestor', BASELINE, ACTIVATION_MERGE],
+    { cwd: ROOT, stdio: 'ignore' },
+  );
+  check(true, 'S5 activation merge descends from exact S4 effectiveness baseline');
+} catch {
+  check(false, 'S5 activation merge descends from exact S4 effectiveness baseline');
+}
 
-const staged = execFileSync(
-  "git",
-  [
-    "diff",
-    "--cached",
-    "--name-only",
-    "--diff-filter=ACMR",
-  ],
-  {
-    cwd: ROOT,
-    encoding: "utf8",
-  },
-)
-  .split(/\r?\n/)
-  .filter(Boolean)
-  .map((value) => value.replaceAll("\\", "/"));
+try {
+  cp.execFileSync(
+    process.platform === 'win32' ? 'git.exe' : 'git',
+    ['merge-base', '--is-ancestor', ACTIVATION_MERGE, IMPLEMENTATION_MERGE],
+    { cwd: ROOT, stdio: 'ignore' },
+  );
+  check(true, 'S5 implementation merge descends from exact activation merge');
+} catch {
+  check(false, 'S5 implementation merge descends from exact activation merge');
+}
 
-assert.deepEqual(
-  sorted(staged),
-  sorted(EXPECTED_FILES),
-);
+try {
+  const implementationChanged = sortedLines(
+    git(['diff', '--name-only', `${ACTIVATION_MERGE}...${IMPLEMENTATION_MERGE}`]),
+  );
+  check(
+    sameArray(implementationChanged, IMPLEMENTATION_FILES),
+    'exact S5 implementation changed-file set has 10 files',
+  );
+  const forbidden = implementationChanged.filter((file) =>
+    FORBIDDEN_PATH_PATTERNS.some((pattern) => pattern.test(file))
+  );
+  check(
+    forbidden.length === 0,
+    `S5 implementation contains no migration, route, web, or workflow file: ${forbidden.join(',')}`,
+  );
+  git(['diff', '--check', `${ACTIVATION_MERGE}...${IMPLEMENTATION_MERGE}`]);
+  check(true, 'S5 implementation git diff --check PASS');
+} catch (error) {
+  check(false, `S5 implementation boundary available: ${error.message}`);
+}
 
-ok(
-  true,
-  "actual staged implementation changed-file set is exact",
-);
+try {
+  const effectivenessChanged = sortedLines(
+    git(['diff', '--name-only', `${IMPLEMENTATION_MERGE}...HEAD`]),
+  );
+  check(
+    sameArray(effectivenessChanged, EFFECTIVENESS_FILES),
+    'exact S5 postmerge-effectiveness changed-file set has 3 files',
+  );
+  git(['diff', '--check', `${IMPLEMENTATION_MERGE}...HEAD`]);
+  check(true, 'S5 postmerge-effectiveness git diff --check PASS');
+} catch (error) {
+  check(false, `S5 postmerge-effectiveness boundary available: ${error.message}`);
+}
 
-ok(
-  status.implementation_boundary.schema_migration
-    === "FORBIDDEN"
-    && status.implementation_boundary.route
-      === "FORBIDDEN"
-    && status.implementation_boundary.scheduler
-      === "FORBIDDEN"
-    && status.implementation_boundary.successful_forecast
-      === "FORBIDDEN",
-  "migration, route, scheduler, and successful Forecast remain forbidden",
-);
+if (POSTMERGE) {
+  try {
+    cp.execFileSync(
+      process.platform === 'win32' ? 'git.exe' : 'git',
+      ['merge-base', '--is-ancestor', IMPLEMENTATION_MERGE, 'HEAD'],
+      { cwd: ROOT, stdio: 'ignore' },
+    );
+    check(true, 'S5 implementation merge is an ancestor of merged main HEAD');
+  } catch {
+    check(false, 'S5 implementation merge is an ancestor of merged main HEAD');
+  }
+
+  try {
+    check(git(['branch', '--show-current']) === 'main', 'postmerge Gate runs on main');
+  } catch (error) {
+    check(false, `postmerge branch available: ${error.message}`);
+  }
+
+  try {
+    check(
+      git(['rev-parse', 'HEAD']) === git(['rev-parse', 'origin/main']),
+      'postmerge local HEAD equals origin/main',
+    );
+  } catch (error) {
+    check(false, `postmerge origin/main alignment available: ${error.message}`);
+  }
+}
+
+for (const marker of [
+  '24 contiguous',
+  'checkpoint sequence: `25..48`',
+  '192 new A2 canonical facts',
+  'LIMITED observation downweighting',
+  'no usable observation',
+  'innovation outlier rejection',
+  'candidate exclusion',
+  'Forecast',
+  'S6 remains blocked',
+]) {
+  check(
+    contract.toLowerCase().includes(marker.toLowerCase()),
+    `contract marker: ${marker}`,
+  );
+}
+
+for (const marker of [
+  'validateVersionedPredecessorMembersV1',
+  'member_object_ids ? $1',
+  'ASSIMILATED_PREDECESSOR_RECORD_SET_CONTRACT_UNKNOWN',
+]) {
+  check(repository.includes(marker), `repository marker: ${marker}`);
+}
+
+for (const marker of [
+  'MAX_ASSIMILATED_CONTIGUOUS_TICKS_V1 = 24',
+  'ALREADY_COMPLETE',
+  'ASSIMILATED_RANGE_MAX_TICKS_EXCEEDED',
+  'executeOneTick',
+]) {
+  check(rangeService.includes(marker), `range service marker: ${marker}`);
+}
+
+for (const nonclaim of [
+  'NO_RESTART_BACKFILL_PROOF',
+  'NO_SUCCESSFUL_FORECAST',
+  'NO_72_HOUR_FORECAST',
+  'NO_SCENARIO',
+  'NO_RECOMMENDATION',
+  'NO_POLICY_EVALUATION',
+  'NO_DECISION',
+  'NO_AO_ACT',
+  'NO_CALIBRATION_CANDIDATE',
+  'NO_SHADOW_EVALUATION',
+  'NO_MODEL_ACTIVATION',
+  'NO_ACTIVE_MODEL_PARAMETER_CHANGE',
+  'NO_LATE_EVIDENCE_REVISION',
+  'NO_CONTINUOUS_RUNTIME',
+  'NO_LIVE_FIELD_CLAIM',
+  'NO_MCFT_CAP_03_COMPLETE_CLAIM',
+  'NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM',
+]) {
+  check(status.preserved_nonclaims.includes(nonclaim), `status preserved nonclaim: ${nonclaim}`);
+  check(s5?.preserved_nonclaims?.includes(nonclaim), `delivery preserved nonclaim: ${nonclaim}`);
+}
+
+if (!DRAFT) {
+  runTsx(
+    'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE.ts',
+    /12 PASS, 0 FAIL/,
+    `${MODE} S5 positive in-memory acceptance`,
+  );
+  runTsx(
+    'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE_NEGATIVE.ts',
+    /12 PASS, 0 FAIL/,
+    `${MODE} S5 negative and semantic acceptance`,
+  );
+  run(
+    process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm',
+    ['--filter', '@geox/server', 'typecheck'],
+    /(?:Done|success|tsc|typecheck)/i,
+    `${MODE} server typecheck`,
+  );
+}
+
+if (RUN_DB) {
+  runTsx(
+    'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE_DB.ts',
+    /9 PASS, 0 FAIL/,
+    `${MODE} S5 isolated PostgreSQL acceptance`,
+  );
+}
 
 console.log(
-  `MCFT-CAP-03 twenty-four observation-aware tick range governance: ${pass} PASS, 0 FAIL`,
+  `MCFT-CAP-03 S5 ${MODE} Gate: ${pass} PASS, ${fail} FAIL`,
 );
+
+if (fail > 0) {
+  process.exitCode = 1;
+}

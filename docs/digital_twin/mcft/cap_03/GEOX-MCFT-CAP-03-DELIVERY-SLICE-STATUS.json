@@ -6,7 +6,7 @@
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A",
   "baseline_main_commit": "6389d4e566a6eb64ce96209be0e70cd8703be574",
-  "status": "TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE_ACTIVATED",
+  "status": "TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE_MERGED",
   "design_status": "DESIGN_FROZEN",
   "implementation_status": "READY_FOR_IMPLEMENTATION",
   "authorization_effective": true,
@@ -462,7 +462,7 @@
       ],
       "baseline_main_commit": "01f705bec9e79b528480b63fe56c6e6c4489845f",
       "branch": "mcft-cap-03-s5-twenty-four-observation-aware-tick-range-v1",
-      "status": "ACTIVATED",
+      "status": "MERGED",
       "activation_fields_status": "FROZEN",
       "allowed_claims": [
         "TWENTY_FOUR_OBSERVATION_AWARE_TICKS_ESTABLISHED",
@@ -534,7 +534,10 @@
         "new_projection": false,
         "new_transaction_family": false,
         "runtime_behavior_expansion": false
-      }
+      },
+      "merge_commit": "aa781f94d752337e3d06ff8b7dceb7b2e2b7c56c",
+      "merged_main_gate": "PASS",
+      "effectiveness_condition_satisfied": true
     },
     {
       "delivery_slice_id": "MCFT-CAP-03.MCFT-03-04-07-08.RESTART-BACKFILL-RECOVERY-V1",

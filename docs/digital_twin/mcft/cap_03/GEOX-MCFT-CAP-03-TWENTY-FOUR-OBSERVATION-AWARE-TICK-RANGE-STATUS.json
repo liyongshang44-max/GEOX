@@ -1,5 +1,5 @@
 {
-  "schema_version": "geox_mcft_cap_03_twenty_four_observation_aware_tick_range_status_v2",
+  "schema_version": "geox_mcft_cap_03_twenty_four_observation_aware_tick_range_status_v3",
   "capability_line_id": "MCFT-CAP-03",
   "delivery_slice_id": "MCFT-CAP-03.MCFT-04-07-08.TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE-V1",
   "runtime_mode": "REPLAY",
@@ -7,9 +7,9 @@
   "baseline_main_commit": "01f705bec9e79b528480b63fe56c6e6c4489845f",
   "activation_branch": "mcft-cap-03-s5-activation-freeze-v1",
   "implementation_branch": "mcft-cap-03-s5-twenty-four-observation-aware-tick-range-v1",
-  "status": "ACTIVATED",
+  "status": "MERGED",
   "activation_effective": true,
-  "implementation_status": "AUTHORIZED",
+  "implementation_status": "MERGED",
   "primary_owner_work_package_id": "MCFT-04",
   "contributing_owner_work_package_ids": [
     "MCFT-07",
@@ -87,6 +87,11 @@
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE_DB.ts",
     "scripts/runtime_acceptance/mcft_cap_03_twenty_four_observation_aware_tick_range_fixture_v1.ts"
   ],
+  "postmerge_effectiveness_changed_file_boundary": [
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE.cjs"
+  ],
   "allowed_claims_after_implementation_merge_and_postmerge_gate": [
     "TWENTY_FOUR_OBSERVATION_AWARE_TICKS_ESTABLISHED",
     "CAP_03_CHECKPOINT_SEQUENCE_25_TO_48_ESTABLISHED",
@@ -124,7 +129,15 @@
     "activation_draft_gate": "PASS_67_OF_67",
     "activation_final_gate": "PASS_67_OF_67_ON_LOCKED_HEAD",
     "activation_exact_head_ci": "PASS_CI_4704_LOCKED_HEAD",
-    "activation_merged_main_gate": "PASS_DECLARED_FOR_REPRODUCTION"
+    "activation_merged_main_gate": "PASS_63_OF_63",
+    "positive_in_memory": "PASS_12_OF_12",
+    "negative_semantic": "PASS_12_OF_12",
+    "isolated_postgresql": "PASS_9_OF_9",
+    "governance_source_shape": "PASS_18_OF_18",
+    "server_typecheck": "PASS",
+    "git_diff_check": "PASS",
+    "implementation_exact_head_ci": "PASS_CI_4708_LOCKED_HEAD",
+    "merged_main_postmerge_gate": "PASS_DECLARED_FOR_REPRODUCTION"
   },
   "activation_effectiveness_condition": "S5_ACTIVATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S5_ACTIVATION_GATE_PASS",
   "implementation_effectiveness_condition": "S5_IMPLEMENTATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE_GATE_PASS",
@@ -135,6 +148,12 @@
   "activation_merge_commit": "53178b33cc87dfab6b83f5305f222c1366b024e1",
   "activation_merged_main_gate": "PASS",
   "activation_effectiveness_condition_satisfied": true,
+  "implementation_pr_number": 2342,
+  "implementation_head_commit": "fb2c83d0ec04d9614aae65678e882f674d6fcfd2",
+  "implementation_ci_run": "CI_4708",
+  "implementation_merge_commit": "aa781f94d752337e3d06ff8b7dceb7b2e2b7c56c",
+  "implementation_merged_main_gate": "PASS",
+  "implementation_effectiveness_condition_satisfied": true,
   "successor_delivery_slice_id": "MCFT-CAP-03.MCFT-03-04-07-08.RESTART-BACKFILL-RECOVERY-V1",
   "successor_authorized": false,
   "implementation_boundary_revision": "V2_POSTGRES_VERSIONED_PREDECESSOR_VALIDATION_REMEDIATION",
