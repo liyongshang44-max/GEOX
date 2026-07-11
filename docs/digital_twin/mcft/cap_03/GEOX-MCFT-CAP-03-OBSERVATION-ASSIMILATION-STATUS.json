@@ -1,0 +1,105 @@
+{
+  "schema_version": "geox_mcft_cap_03_observation_assimilation_status_v1",
+  "capability_line_id": "MCFT-CAP-03",
+  "delivery_slice_id": "MCFT-CAP-03.MCFT-05-07.OBSERVATION-SELECTION-AND-ASSIMILATION-MATH-V1",
+  "runtime_mode": "REPLAY",
+  "target_completion_level": "Level A",
+  "baseline_main_commit": "ed816b9f2f2061183918e0dfb484b949859ff3aa",
+  "branch": "mcft-cap-03-observation-selection-assimilation-math-v1",
+  "status": "READY_FOR_MERGE",
+  "primary_owner_work_package_id": "MCFT-07",
+  "contributing_owner_work_package_ids": [
+    "MCFT-05"
+  ],
+  "depends_on_delivery_slice_ids": [
+    "MCFT-CAP-03.MCFT-02-07-08.ASSIMILATION-CONTRACTS-CONFIG-V1"
+  ],
+  "predecessor_effectiveness": {
+    "s1_merge_commit": "bbd4c916923b208d78dcf27f6e26ed255abe1262",
+    "s1_postmerge_status_commit": "ed816b9f2f2061183918e0dfb484b949859ff3aa",
+    "s1_merged_main_gate": "PASS_116_OF_116",
+    "s1_effectiveness_condition_satisfied": true
+  },
+  "implementation_boundary": {
+    "observation_aware_evidence_window": "AUTHORIZED_PURE_APPLICATION_CONTRACT",
+    "observation_selector": "AUTHORIZED_PURE_APPLICATION_LOGIC",
+    "semantic_duplicate_resolution": "AUTHORIZED_PURE_APPLICATION_LOGIC",
+    "observation_semantic_content_hash": "AUTHORIZED_CANONICAL_SEMANTIC_HASH",
+    "assimilation_math": "AUTHORIZED_PURE_DOMAIN_MATH",
+    "persistence": "FORBIDDEN",
+    "a2_record_set_builder": "FORBIDDEN",
+    "a2_tick_execution": "FORBIDDEN",
+    "migration": "FORBIDDEN",
+    "route": "FORBIDDEN",
+    "scheduler": "FORBIDDEN",
+    "web": "FORBIDDEN"
+  },
+  "frozen_semantics": {
+    "evidence_window_contract_id": "MCFT_CAP_03_ASSIMILATED_CONTINUATION_EVIDENCE_WINDOW_V1",
+    "observation_selector_id": "LATEST_USABLE_AUTHORIZED_OBSERVATION_WITHIN_15M_BEFORE_TICK_V1",
+    "authorized_binding_id": "soil_obs_c8_20cm_v1",
+    "quantity_kind": "VOLUMETRIC_WATER_CONTENT",
+    "canonical_unit": "fraction",
+    "observation_operator_id": "POINT_200MM_TO_ROOT_ZONE_MEAN_H1_WITH_REPRESENTATIVENESS_V1",
+    "assimilation_method_id": "SCALAR_GAUSSIAN_ASSIMILATION_V1",
+    "outlier_policy_id": "SQUARED_NORMALIZED_INNOVATION_MAX_16_INCLUSIVE_V1",
+    "threshold_decision_basis": "INNOVATION_SQUARED_LE_16_TIMES_VARIANCE",
+    "rounding_rule": "DECIMAL_HALF_AWAY_FROM_ZERO_V1"
+  },
+  "exact_changed_file_boundary": [
+    "apps/server/src/domain/soil_water/assimilated_continuation_posterior_v1.ts",
+    "apps/server/src/runtime/twin_runtime/assimilated_continuation_evidence_window_v1.ts",
+    "apps/server/src/runtime/twin_runtime/assimilated_continuation_observation_selector_v1.ts",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-OBSERVATION-ASSIMILATION-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-OBSERVATION-ASSIMILATION.md",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_OBSERVATION_ASSIMILATION.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_OBSERVATION_ASSIMILATION.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_OBSERVATION_ASSIMILATION_NEGATIVE.ts",
+    "scripts/runtime_acceptance/mcft_cap_03_observation_assimilation_fixture_v1.ts"
+  ],
+  "allowed_claims_after_merge_and_postmerge_gate": [
+    "ASSIMILATED_EVIDENCE_WINDOW_V1_ESTABLISHED",
+    "DETERMINISTIC_OBSERVATION_SELECTION_ESTABLISHED",
+    "OBSERVATION_SEMANTIC_DUPLICATE_RESOLUTION_ESTABLISHED",
+    "OBSERVATION_SEMANTIC_CONTENT_HASH_ESTABLISHED",
+    "STATE_OBSERVATION_INNOVATION_MATH_ESTABLISHED",
+    "PASS_ACCEPTANCE_AND_LIMITED_DOWNWEIGHTING_ESTABLISHED",
+    "INNOVATION_OUTLIER_REJECTION_ESTABLISHED",
+    "CANONICAL_ASSIMILATION_DECIMAL_BASIS_ESTABLISHED",
+    "CAP_02_EVIDENCE_WINDOW_COMPATIBILITY_PRESERVED"
+  ],
+  "preserved_nonclaims": [
+    "NO_CAP_03_A2_TICK_COMMITTED",
+    "NO_PERSISTENCE_CHANGE",
+    "NO_OBSERVATION_UPDATE_PERSISTED",
+    "NO_SUCCESSFUL_FORECAST",
+    "NO_72_HOUR_FORECAST",
+    "NO_SCENARIO",
+    "NO_RECOMMENDATION",
+    "NO_POLICY_EVALUATION",
+    "NO_DECISION",
+    "NO_AO_ACT",
+    "NO_CALIBRATION_CANDIDATE",
+    "NO_SHADOW_EVALUATION",
+    "NO_MODEL_ACTIVATION",
+    "NO_ACTIVE_MODEL_PARAMETER_CHANGE",
+    "NO_LATE_EVIDENCE_REVISION",
+    "NO_CONTINUOUS_RUNTIME",
+    "NO_LIVE_FIELD_CLAIM",
+    "NO_MCFT_CAP_03_COMPLETE_CLAIM",
+    "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
+  ],
+  "acceptance": {
+    "positive_in_memory": "PASS_24_OF_24",
+    "negative_in_memory": "PASS_12_OF_12",
+    "cap_02_evidence_window_compatibility": "PASS",
+    "server_typecheck": "PASS_CI_4606",
+    "server_build": "PASS_CI_4606",
+    "git_diff_check": "PASS",
+    "exact_head_ci": "PASS_CI_4606"
+  },
+  "effectiveness_condition": "S2_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_OBSERVATION_ASSIMILATION_GATE_PASS",
+  "successor_delivery_slice_id": "MCFT-CAP-03.MCFT-02-07-08.ASSIMILATED-A2-RECORD-SET-BUILDER-V1",
+  "successor_authorized": false
+}
