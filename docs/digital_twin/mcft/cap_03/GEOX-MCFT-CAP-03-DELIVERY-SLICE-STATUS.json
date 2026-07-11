@@ -6,12 +6,12 @@
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A",
   "baseline_main_commit": "6389d4e566a6eb64ce96209be0e70cd8703be574",
-  "status": "ASSIMILATED_RECORD_SET_BUILDER_MERGED",
+  "status": "ASSIMILATED_PERSISTENCE_RECOVERY_IN_PROGRESS",
   "design_status": "DESIGN_FROZEN",
   "implementation_status": "READY_FOR_IMPLEMENTATION",
   "authorization_effective": true,
   "runtime_source_authorized": true,
-  "active_delivery_slice_id": "MCFT-CAP-03.MCFT-02-07-08.ASSIMILATED-A2-RECORD-SET-BUILDER-V1",
+  "active_delivery_slice_id": "MCFT-CAP-03.MCFT-03-08.ASSIMILATED-A2-PERSISTENCE-RECOVERY-V1",
   "merge_before_next": true,
   "postmerge_verify_before_next": true,
   "parallel_downstream_pr_forbidden": true,
@@ -328,18 +328,56 @@
       "depends_on_delivery_slice_ids": [
         "MCFT-CAP-03.MCFT-02-07-08.ASSIMILATED-A2-RECORD-SET-BUILDER-V1"
       ],
-      "baseline_main_commit": null,
-      "branch": null,
-      "status": "BLOCKED",
-      "activation_fields_status": "TO_BE_FROZEN_AT_SLICE_ACTIVATION",
-      "allowed_claims": [],
-      "preserved_nonclaims": [
-        "NO_SINGLE_TICK_INTEGRATION",
-        "NO_SUCCESSFUL_FORECAST",
-        "NO_MCFT_CAP_03_COMPLETE_CLAIM"
+      "baseline_main_commit": "293fbeff04441f12aee13945c2db24b4b9bb23b5",
+      "branch": "mcft-cap-03-assimilated-a2-persistence-recovery-v1",
+      "status": "IN_PROGRESS",
+      "activation_fields_status": "FROZEN",
+      "allowed_claims": [
+        "ASSIMILATED_A2_EXISTING_TRANSACTION_REUSE_ESTABLISHED",
+        "ASSIMILATED_A2_ATOMIC_PERSISTENCE_ESTABLISHED",
+        "ASSIMILATED_A2_CANONICAL_READBACK_ESTABLISHED",
+        "ASSIMILATED_A2_FIVE_PROJECTION_REBUILD_ESTABLISHED",
+        "ASSIMILATED_A2_IDEMPOTENCY_BEFORE_LEASE_ESTABLISHED",
+        "ASSIMILATED_A2_FAULT_ROLLBACK_ESTABLISHED",
+        "ASSIMILATED_A2_RESPONSE_LOSS_RECOVERY_ESTABLISHED",
+        "ASSIMILATED_A2_PROJECTION_DIVERGENCE_FAIL_CLOSED_ESTABLISHED",
+        "CAP_02_HISTORICAL_PERSISTENCE_READBACK_PRESERVED",
+        "CAP_03_PERSISTENCE_ZERO_MIGRATION_PROVEN"
       ],
-      "exact_changed_file_boundary": [],
-      "effectiveness_condition": "S3A_MERGED_AND_MERGED_MAIN_GATE_PASS_AND_EXPLICIT_S3B_ACTIVATION"
+      "preserved_nonclaims": [
+        "NO_CAP_03_A2_TICK_COMMITTED",
+        "NO_SINGLE_TICK_INTEGRATION",
+        "NO_RANGE_EXECUTION",
+        "NO_SUCCESSFUL_FORECAST",
+        "NO_72_HOUR_FORECAST",
+        "NO_SCENARIO",
+        "NO_RECOMMENDATION",
+        "NO_POLICY_EVALUATION",
+        "NO_DECISION",
+        "NO_AO_ACT",
+        "NO_CALIBRATION_CANDIDATE",
+        "NO_SHADOW_EVALUATION",
+        "NO_MODEL_ACTIVATION",
+        "NO_ACTIVE_MODEL_PARAMETER_CHANGE",
+        "NO_LATE_EVIDENCE_REVISION",
+        "NO_CONTINUOUS_RUNTIME",
+        "NO_LIVE_FIELD_CLAIM",
+        "NO_MCFT_CAP_03_COMPLETE_CLAIM",
+        "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
+      ],
+      "exact_changed_file_boundary": [
+        "apps/server/src/persistence/twin_runtime/postgres_assimilated_runtime_repository_v1.ts",
+        "apps/server/src/runtime/twin_runtime/ports.ts",
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-ASSIMILATED-PERSISTENCE-RECOVERY-STATUS.json",
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-ASSIMILATED-PERSISTENCE-RECOVERY.md",
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_ASSIMILATED_PERSISTENCE_RECOVERY.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_ASSIMILATED_PERSISTENCE_RECOVERY.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_ASSIMILATED_PERSISTENCE_RECOVERY_DB.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_ASSIMILATED_PERSISTENCE_RECOVERY_NEGATIVE.ts",
+        "scripts/runtime_acceptance/mcft_cap_03_assimilated_persistence_recovery_fixture_v1.ts"
+      ],
+      "effectiveness_condition": "S3B_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_ASSIMILATED_PERSISTENCE_RECOVERY_GATE_PASS"
     },
     {
       "delivery_slice_id": "MCFT-CAP-03.MCFT-04-05-06-07-08-09.SINGLE-TICK-INTEGRATION-V1",
@@ -472,7 +510,7 @@
     }
   ],
   "next_authorized_slice_ids": [],
-  "next_authorized_slice_id_after_effectiveness": "MCFT-CAP-03.MCFT-03-08.ASSIMILATED-A2-PERSISTENCE-RECOVERY-V1",
+  "next_authorized_slice_id_after_effectiveness": "MCFT-CAP-03.MCFT-04-05-06-07-08-09.SINGLE-TICK-INTEGRATION-V1",
   "successor_capability_line_id": "MCFT-CAP-04",
   "successor_authorized": false
 }
