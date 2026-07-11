@@ -20,7 +20,7 @@ const RUN_DB = process.argv.includes('--db');
 const MODE = POSTMERGE ? 'postmerge' : DRAFT ? 'draft' : 'final';
 
 const EXACT_CHANGED_FILES = [
-  'apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts',
+  'apps/server/src/persistence/twin_runtime/postgres_assimilated_runtime_repository_v1.ts',
   'apps/server/src/runtime/twin_runtime/ports.ts',
   'docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-ASSIMILATED-PERSISTENCE-RECOVERY-STATUS.json',
   'docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-ASSIMILATED-PERSISTENCE-RECOVERY.md',
@@ -210,23 +210,28 @@ for (const marker of [
   'five continuation projections',
   'projection divergence',
   'historical CAP-02',
+  'PostgresAssimilatedRuntimeRepositoryV1',
 ]) {
   check(contract.toLowerCase().includes(marker.toLowerCase()), `contract document marker: ${marker}`);
 }
 
 const ports = readText('apps/server/src/runtime/twin_runtime/ports.ts');
-const repository = readText('apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts');
+const historicalRepository = readText('apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts');
+const repository = readText('apps/server/src/persistence/twin_runtime/postgres_assimilated_runtime_repository_v1.ts');
 check(ports.includes('interface AssimilatedContinuationPersistencePortV1'), 'independent CAP-03 persistence port declared');
-check(repository.includes('commitVersionedContinuationStateV1'), 'shared internal A2 transaction implemented');
-check(repository.includes('readVersionedContinuationRecordSetWithClient'), 'versioned canonical readback implemented');
+check(repository.includes('extends PostgresRuntimeRepositoryV1'), 'CAP-03 repository inherits immutable CAP-02 repository behavior');
+check(repository.includes('commitAssimilatedContinuationState'), 'CAP-03 atomic A2 commit implemented');
+check(repository.includes('readAssimilatedContinuationRecordSet'), 'CAP-03 canonical readback implemented');
 check(repository.includes('validateVersionedContinuationRecordSetV1'), 'readback uses versioned validator dispatch');
 check(repository.includes('record_set_contract_id'), 'CAP-03 discriminator persisted in identity basis');
 check(repository.includes("identity_kind='A2_RECORD_SET'"), 'existing A2 idempotency family reused');
-check(repository.indexOf("identity_kind='A2_RECORD_SET'") < repository.indexOf('verifyLease(client'), 'idempotency lookup precedes lease verification');
+check(repository.indexOf("identity_kind='A2_RECORD_SET'") < repository.indexOf('verifyLeaseV1(client'), 'idempotency lookup precedes lease verification');
 check(repository.includes('CANONICAL_CONTINUATION_UNIQUENESS_CONFLICT'), 'canonical uniqueness recovery retained');
 check(repository.includes('STATE_LATEST_CAS_CONFLICT') && repository.includes('CHECKPOINT_CAS_CONFLICT') && repository.includes('FORECAST_RESULT_CAS_CONFLICT'), 'State, checkpoint, and Forecast CAS guards retained');
+check(repository.includes('rebuildAssimilatedContinuationProjections'), 'five-projection rebuild implemented');
 check(!/INSERT INTO\s+twin_forecast_success_latest_index_v1/i.test(repository), 'no successful Forecast projection write');
 check(!/UPDATE\s+twin_active_lineage_index_v1/i.test(repository), 'no active lineage mutation');
+check(historicalRepository.includes('commitContinuationState') && historicalRepository.includes('readContinuationRecordSet'), 'historical CAP-02 repository source remains present');
 
 runTsx(
   'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_ASSIMILATED_PERSISTENCE_RECOVERY.ts',
@@ -242,7 +247,7 @@ runTsx(
 if (RUN_DB) {
   runTsx(
     'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_ASSIMILATED_PERSISTENCE_RECOVERY_DB.ts',
-    /MCFT-CAP-03 assimilated persistence recovery DB: 13 PASS, 0 FAIL/,
+    /MCFT-CAP-03 assimilated persistence recovery DB: 15 PASS, 0 FAIL/,
     'S3B isolated PostgreSQL acceptance PASS',
     { ...process.env, MCFT_CAP_03_S3B_DESTRUCTIVE_ACCEPTANCE: '1' },
   );
