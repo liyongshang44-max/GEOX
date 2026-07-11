@@ -149,26 +149,41 @@ async function scopedFactCountV1(
   return result.rows[0].count as number;
 }
 
-async function scopedA2GuardCountV1(
-  scope: TwinScopeKeyV1,
+async function a2GuardCountV1(
+  recordSetIds: string[],
 ): Promise<number> {
   const result = await pool.query(
     `SELECT count(*)::int AS count
      FROM twin_object_idempotency_index_v1
      WHERE identity_kind='A2_RECORD_SET'
-       AND tenant_id=$1
-       AND project_id=$2
-       AND group_id=$3
-       AND field_id=$4
-       AND season_id=$5
-       AND zone_id=$6`,
-    scopeParamsV1(scope),
+       AND record_set_id=ANY($1::text[])`,
+    [recordSetIds],
   );
 
   return result.rows[0].count as number;
 }
 
 async function main(): Promise<void> {
+  const planningFixture =
+    await buildMcftCap03TwentyFourObservationAwareTickRangeFixtureV1();
+
+  const planned =
+    await planningFixture.rangeService
+      .runAssimilatedContiguousRangeV1(
+        planningFixture.rangeInput,
+      );
+
+  assert.equal(planned.status, "COMPLETED");
+
+  const expectedRecordSetIds =
+    planned.tick_results.map(
+      (tickResult) =>
+        tickResult.record_set
+          .continuation_record_set_id,
+    );
+
+  assert.equal(expectedRecordSetIds.length, 24);
+
   runExistingDbAcceptanceV1({
     script:
       "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_ASSIMILATED_PERSISTENCE_RECOVERY_DB.ts",
@@ -244,7 +259,9 @@ async function main(): Promise<void> {
     await scopedFactCountV1(fixture.scope);
 
   const guardsBefore =
-    await scopedA2GuardCountV1(fixture.scope);
+    await a2GuardCountV1(expectedRecordSetIds);
+
+  assert.equal(guardsBefore, 24);
 
   const tokenBefore =
     await fencingTokenV1(fixture.scope);
@@ -284,7 +301,7 @@ async function main(): Promise<void> {
     factsBefore,
   );
   assert.equal(
-    await scopedA2GuardCountV1(fixture.scope),
+    await a2GuardCountV1(expectedRecordSetIds),
     guardsBefore,
   );
   assert.equal(
@@ -322,7 +339,7 @@ async function main(): Promise<void> {
     factsBefore,
   );
   assert.equal(
-    await scopedA2GuardCountV1(fixture.scope),
+    await a2GuardCountV1(expectedRecordSetIds),
     guardsBefore,
   );
   assert.equal(
