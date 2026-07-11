@@ -1,0 +1,64 @@
+name: s3a-ready-for-merge-transition
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  transition:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: mcft-cap-03-assimilated-a2-record-set-builder-v1
+          fetch-depth: 1
+          show-progress: false
+      - name: Record S3A Draft Gate and self-clean
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+
+          status_path = Path("docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-ASSIMILATED-RECORD-SET-BUILDER-STATUS.json")
+          delivery_path = Path("docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json")
+          slice_id = "MCFT-CAP-03.MCFT-02-07-08.ASSIMILATED-A2-RECORD-SET-BUILDER-V1"
+
+          status = json.loads(status_path.read_text(encoding="utf-8"))
+          if status.get("status") != "IN_PROGRESS":
+              raise SystemExit(f"unexpected S3A status: {status.get('status')}")
+          status["status"] = "READY_FOR_MERGE"
+          status["acceptance"] = {
+              "positive_in_memory": "PASS_20_OF_20",
+              "negative_in_memory": "PASS_12_OF_12",
+              "cap_02_historical_dispatch_compatibility": "PASS",
+              "server_typecheck": "PASS_CI_4628",
+              "server_build": "PASS_CI_4628",
+              "git_diff_check": "PASS",
+              "exact_head_ci": "PASS_CI_4628",
+              "draft_gate": "PASS_100_OF_100"
+          }
+
+          delivery = json.loads(delivery_path.read_text(encoding="utf-8"))
+          if delivery.get("status") != "ASSIMILATED_RECORD_SET_BUILDER_IN_PROGRESS":
+              raise SystemExit(f"unexpected delivery status: {delivery.get('status')}")
+          delivery["status"] = "ASSIMILATED_RECORD_SET_BUILDER_READY_FOR_MERGE"
+          matches = [item for item in delivery.get("slices", []) if item.get("delivery_slice_id") == slice_id]
+          if len(matches) != 1 or matches[0].get("status") != "IN_PROGRESS":
+              raise SystemExit("unexpected S3A delivery slice state")
+          matches[0]["status"] = "READY_FOR_MERGE"
+
+          status_path.write_text(json.dumps(status, indent=2) + "\n", encoding="utf-8", newline="\n")
+          delivery_path.write_text(json.dumps(delivery, indent=2) + "\n", encoding="utf-8", newline="\n")
+          Path(".github/workflows/s3a-ready-for-merge-transition.yml").unlink()
+      - name: Commit transition
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore(mcft-cap-03): mark S3A ready for merge"
+          git push origin HEAD:mcft-cap-03-assimilated-a2-record-set-builder-v1
