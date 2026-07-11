@@ -1,18 +1,5 @@
 #!/usr/bin/env node
-const fs = require("fs");
 const { spawnSync } = require("child_process");
-
-const transitionRunner = "scripts/s3b_transition.py";
-if (process.env.GITHUB_ACTIONS === "true" && fs.existsSync(transitionRunner)) {
-  const transition = spawnSync("python3", [transitionRunner], {
-    encoding: "utf8",
-    stdio: "inherit",
-  });
-  if (transition.status !== 0) {
-    console.error("[route-dependency-guard] S3B transition runner failed.");
-    process.exit(transition.status || 2);
-  }
-}
 
 const SCAN_PATHS = ["apps/web/src", "apps/server/src", "apps/server/scripts"];
 
@@ -48,9 +35,9 @@ const FORBIDDEN_ROUTES = [
 ];
 
 const ALLOWLIST_PATH_PATTERNS = [
-  /^apps\/server\/src\/routes\/legacy\//,
-  /^apps\/server\/src\/routes\/v1\/.*compat/i,
-  /^apps\/server\/src\/routes\/.*(?:legacy|compat|compatibility|migration).*\.ts$/i,
+  /^apps\/server\/src\/routes\/legacy\//, // legacy 路由自身实现
+  /^apps\/server\/src\/routes\/v1\/.*compat/i, // 显式兼容入口
+  /^apps\/server\/src\/routes\/.*(?:legacy|compat|compatibility|migration).*\.ts$/i, // 迁移/兼容适配文件
 ];
 
 function runGit(args) {
