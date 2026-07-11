@@ -66,6 +66,7 @@ export type PersistedNextTickSnapshotV1 = {
   active_lineage_id?: string;
   checkpoint: CanonicalObjectEnvelopeV1;
   previous_posterior: CanonicalObjectEnvelopeV1;
+  previous_forecast_result?: CanonicalObjectEnvelopeV1;
   last_terminal_tick?: CanonicalObjectEnvelopeV1;
   runtime_config: CanonicalObjectEnvelopeV1;
   reality_binding: RealityBindingRuntimeSnapshotV1;
@@ -78,6 +79,7 @@ export type PreparedNextTickInputV1 = TwinScopeKeyV1 & {
   previous_checkpoint_ref: string;
   previous_checkpoint_hash: string;
   previous_forecast_result_ref: string;
+  previous_forecast_result_hash?: string;
   latest_successful_forecast_ref: null;
   lineage_id: string;
   revision_id: string;
