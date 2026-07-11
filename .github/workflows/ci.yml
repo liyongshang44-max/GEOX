@@ -7,25 +7,23 @@ jobs:
   build-test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-          show-progress: false
+      - name: Checkout merge ref quietly
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          rm -rf ./* ./.??* 2>/dev/null || true
+          git init -q
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch -q --depth=1 origin "${{ github.event.pull_request.merge_commit_sha }}"
+          git checkout -q FETCH_HEAD
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
-      - name: Install
-        run: pnpm install --no-frozen-lockfile --reporter=silent
+      - name: Install quietly
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.4 --activate >/dev/null
+          pnpm install --no-frozen-lockfile --reporter=silent
 
       - name: Typecheck
         shell: bash
