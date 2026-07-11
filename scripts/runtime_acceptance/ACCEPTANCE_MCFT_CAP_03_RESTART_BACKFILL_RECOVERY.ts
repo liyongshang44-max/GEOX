@@ -227,18 +227,9 @@ async function main(): Promise<void> {
   );
   ok("completed-target retry performs zero Evidence evaluation, lease acquisition, commit, or canonical readback");
 
-  const finalRecordSet =
-    fixture.restartedResumeResult.range_result
-      .tick_results[
-        fixture.restartedResumeResult.range_result
-          .tick_results.length - 1
-      ].record_set;
-
   const rebuild =
     await fixture.restartedFixture.runtime
-      .rebuildAssimilatedContinuationProjections(
-        finalRecordSet.continuation_record_set_id,
-      );
+      .rebuildAssimilatedContinuationProjections();
 
   assert.deepEqual(
     rebuild,
