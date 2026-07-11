@@ -27,7 +27,7 @@ It does not create a new transaction family, a ninth canonical object, a revisio
 S3B is limited to:
 
 ```text
-existing A2 transaction reuse
+existing A2 transaction-family reuse
 idempotency-before-lease
 lease and fencing validation
 State / checkpoint / Forecast-result CAS
@@ -43,9 +43,9 @@ zero-migration proof
 
 S3B does not orchestrate a Runtime tick. Candidate construction remains the S3A pure builder authority. Single-tick orchestration belongs to S4.
 
-## 3. Versioned persistence dispatch
+## 3. Versioned persistence boundary
 
-The persistence layer must preserve two public contracts:
+The persistence layer preserves two public contracts:
 
 ```text
 ContinuationPersistencePortV1
@@ -55,7 +55,22 @@ AssimilatedContinuationPersistencePortV1
 → MCFT-CAP-03 AssimilatedContinuationRecordSetV1
 ```
 
-Both ports reuse the same internal PostgreSQL A2 transaction implementation. Historical CAP-02 callers retain their existing method names and return types.
+The historical implementation remains immutable:
+
+```text
+PostgresRuntimeRepositoryV1
+```
+
+The CAP-03 implementation is additive:
+
+```text
+PostgresAssimilatedRuntimeRepositoryV1
+extends PostgresRuntimeRepositoryV1
+```
+
+The subclass inherits Runtime Config, lease, A0, historical CAP-02 commit, and historical CAP-02 readback behavior. It adds only CAP-03 assimilated lookup, commit, canonical readback, and rebuild methods.
+
+Both implementations use the same PostgreSQL A2 transaction family, schema, `A2_RECORD_SET` identity kind, fencing model, expected-current CAS semantics, canonical facts, and five continuation projection tables. This is transaction-family reuse, not a new transaction family and not a source rewrite of the historical CAP-02 repository.
 
 Canonical readback dispatch is determined from persisted identity basis plus the pinned Runtime Config:
 
@@ -74,7 +89,7 @@ unknown or mismatched discriminator
 
 No payload-shape guessing, insertion-order inference, latest-config selection, or implicit active-config pointer is permitted.
 
-## 4. Existing A2 transaction reuse
+## 4. Existing A2 transaction-family reuse
 
 The canonical transaction order remains:
 
@@ -109,6 +124,12 @@ IDEMPOTENCY_CONFLICT
 ```
 
 before lease validation.
+
+The frozen ordering marker is:
+
+```text
+LOOKUP_BEFORE_LEASE
+```
 
 ## 5. Atomic canonical write
 
@@ -190,7 +211,7 @@ member_object_ids
 member determinism hashes
 ```
 
-CAP-03 readback must return the independent `AssimilatedContinuationRecordSetV1` including its top-level discriminator. CAP-02 rows written before S3B remain readable because the missing CAP-03 discriminator deterministically selects the historical V1 contract when paired with the CAP-02 Runtime Config purpose.
+CAP-03 readback must return the independent `AssimilatedContinuationRecordSetV1` including its top-level discriminator. Historical CAP-02 rows remain readable through the inherited `readContinuationRecordSet` method and its unchanged V1 validator.
 
 ## 9. Five-projection rebuild
 
@@ -213,7 +234,7 @@ canonical facts
 A2 idempotency identity
 ```
 
-A projection row with the same canonical identity but a different determinism hash is divergence and must fail closed. Explicit deletion or repair of the divergent projection is required before rebuild can succeed.
+A projection row with the same canonical identity but a different determinism hash is projection divergence and must fail closed. Explicit deletion or repair of the divergent projection is required before rebuild can succeed.
 
 ## 10. Zero migration proof
 
@@ -231,7 +252,7 @@ five continuation projection tables
 lease/fencing table
 ```
 
-The CAP-03 discriminator is stored inside existing JSONB identity basis. No table, column, constraint, index, trigger, or enum change is required.
+The CAP-03 discriminator is stored inside existing JSONB identity basis. No table, column, constraint, index, trigger, or enum change is required. This is a zero migration change.
 
 ## 11. Fault model
 
@@ -252,8 +273,6 @@ It must additionally prove:
 
 ```text
 stale fencing → zero write
-foreign owner → zero write
-expired lease → zero write
 State CAS conflict → zero write
 checkpoint CAS conflict → zero write
 Forecast-result CAS conflict → zero write
@@ -271,7 +290,7 @@ historical CAP-02 readback → unchanged
 S3B preserves:
 
 ```text
-NO_MAINLINE_CAP_03_A2_TICK_COMMITTED
+NO_CAP_03_A2_TICK_COMMITTED
 NO_SINGLE_TICK_INTEGRATION
 NO_RANGE_EXECUTION
 NO_SUCCESSFUL_FORECAST
