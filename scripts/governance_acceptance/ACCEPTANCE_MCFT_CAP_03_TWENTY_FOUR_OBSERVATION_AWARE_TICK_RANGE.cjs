@@ -10,6 +10,8 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '../..');
 const BASELINE = '01f705bec9e79b528480b63fe56c6e6c4489845f';
+const ACTIVATION_MERGE =
+  '53178b33cc87dfab6b83f5305f222c1366b024e1';
 const IMPLEMENTATION_BRANCH =
   'mcft-cap-03-s5-twenty-four-observation-aware-tick-range-v1';
 const EFFECTIVENESS_BRANCH =
@@ -170,6 +172,10 @@ check(status.capability_line_id === 'MCFT-CAP-03', 'status capability exact');
 check(status.delivery_slice_id === S5, 'status delivery slice exact');
 check(status.baseline_main_commit === BASELINE, 'status baseline exact');
 check(
+  status.activation_merge_commit === ACTIVATION_MERGE,
+  'status records exact S5 activation merge commit',
+);
+check(
   status.implementation_branch === IMPLEMENTATION_BRANCH,
   'status implementation branch exact',
 );
@@ -266,17 +272,28 @@ check(delivery.successor_authorized === false, 'MCFT-CAP-04 remains unauthorized
 try {
   cp.execFileSync(
     process.platform === 'win32' ? 'git.exe' : 'git',
-    ['merge-base', '--is-ancestor', BASELINE, IMPLEMENTATION_MERGE],
+    ['merge-base', '--is-ancestor', BASELINE, ACTIVATION_MERGE],
     { cwd: ROOT, stdio: 'ignore' },
   );
-  check(true, 'S5 implementation merge descends from exact S4 effectiveness baseline');
+  check(true, 'S5 activation merge descends from exact S4 effectiveness baseline');
 } catch {
-  check(false, 'S5 implementation merge descends from exact S4 effectiveness baseline');
+  check(false, 'S5 activation merge descends from exact S4 effectiveness baseline');
+}
+
+try {
+  cp.execFileSync(
+    process.platform === 'win32' ? 'git.exe' : 'git',
+    ['merge-base', '--is-ancestor', ACTIVATION_MERGE, IMPLEMENTATION_MERGE],
+    { cwd: ROOT, stdio: 'ignore' },
+  );
+  check(true, 'S5 implementation merge descends from exact activation merge');
+} catch {
+  check(false, 'S5 implementation merge descends from exact activation merge');
 }
 
 try {
   const implementationChanged = sortedLines(
-    git(['diff', '--name-only', `${BASELINE}...${IMPLEMENTATION_MERGE}`]),
+    git(['diff', '--name-only', `${ACTIVATION_MERGE}...${IMPLEMENTATION_MERGE}`]),
   );
   check(
     sameArray(implementationChanged, IMPLEMENTATION_FILES),
@@ -289,7 +306,7 @@ try {
     forbidden.length === 0,
     `S5 implementation contains no migration, route, web, or workflow file: ${forbidden.join(',')}`,
   );
-  git(['diff', '--check', `${BASELINE}...${IMPLEMENTATION_MERGE}`]);
+  git(['diff', '--check', `${ACTIVATION_MERGE}...${IMPLEMENTATION_MERGE}`]);
   check(true, 'S5 implementation git diff --check PASS');
 } catch (error) {
   check(false, `S5 implementation boundary available: ${error.message}`);
