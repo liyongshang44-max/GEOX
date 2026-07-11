@@ -9,7 +9,7 @@
   "activation_branch": "mcft-cap-03-s2-semantic-conformance-remediation-activation-v1",
   "r1_implementation_branch": "mcft-cap-03-s2-semantic-conformance-v2-v1",
   "r1_effectiveness_branch": "mcft-cap-03-s2-semantic-conformance-v2-effectiveness-v1",
-  "status": "R1_EFFECTIVE_R2_BOUNDARY_FREEZE_READY",
+  "status": "R2_BOUNDARY_FREEZE_CANDIDATE",
   "activation_effective": true,
   "implementation_status": "MERGED_EFFECTIVE",
   "remediation_hold_status": "EFFECTIVE",
@@ -84,7 +84,7 @@
     {
       "step_id": "R2",
       "name": "S3A_TO_S6_V2_REVALIDATION_AND_SSOT_RECONCILIATION",
-      "status": "READY_FOR_BOUNDARY_FREEZE"
+      "status": "BOUNDARY_FREEZE_CANDIDATE"
     },
     {
       "step_id": "R3",
@@ -111,7 +111,7 @@
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_S2_SEMANTIC_CONFORMANCE_REMEDIATION_NEGATIVE.ts",
     "scripts/runtime_acceptance/mcft_cap_03_s2_semantic_conformance_remediation_fixture_v1.ts"
   ],
-  "r2_boundary_status": "READY_TO_FREEZE",
+  "r2_boundary_status": "FREEZE_CANDIDATE",
   "r0_forbidden_changes": [
     "RUNTIME_SOURCE",
     "DOMAIN_CONTRACT_SOURCE",
@@ -172,5 +172,71 @@
     "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION-STATUS.json"
   ],
   "r2_boundary_freeze_authorized": true,
-  "r2_implementation_authorized": false
+  "r2_implementation_authorized": false,
+  "r2_boundary_frozen": false,
+  "r2_boundary_freeze_branch": "mcft-cap-03-s2-semantic-conformance-r2-boundary-freeze-v1",
+  "r2_boundary_freeze_baseline_main_commit": "6ef413b7afe6c8bb9997c035aa18cf8bca0f394d",
+  "r2_boundary_freeze_changed_file_boundary": [
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R2-V2-REVALIDATION-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R2-V2-REVALIDATION.md",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION-STATUS.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_R2_V2_REVALIDATION_ACTIVATION.cjs"
+  ],
+  "r2_boundary_effectiveness_branch": "mcft-cap-03-s2-semantic-conformance-r2-boundary-effectiveness-v1",
+  "r2_boundary_effectiveness_changed_file_boundary": [
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R2-V2-REVALIDATION-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION-STATUS.json"
+  ],
+  "r2_implementation_branch": "mcft-cap-03-s2-semantic-conformance-r2-v2-revalidation-v1",
+  "r2_implementation_effectiveness_branch": "mcft-cap-03-s2-semantic-conformance-r2-v2-revalidation-effectiveness-v1",
+  "r2_frozen_implementation_changed_file_boundary": [
+    "apps/server/src/domain/twin_runtime/assimilated_continuation_contracts_v2.ts",
+    "apps/server/src/domain/twin_runtime/assimilated_continuation_cross_ref_validator_v2.ts",
+    "apps/server/src/domain/twin_runtime/assimilated_continuation_record_set_identity_v2.ts",
+    "apps/server/src/domain/twin_runtime/assimilated_continuation_record_set_validator_v2.ts",
+    "apps/server/src/domain/twin_runtime/assimilated_continuation_runtime_config_v2.ts",
+    "apps/server/src/domain/twin_runtime/continuation_record_set_dispatch_v1.ts",
+    "apps/server/src/persistence/twin_runtime/postgres_assimilated_runtime_repository_v1.ts",
+    "apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts",
+    "apps/server/src/runtime/twin_runtime/assimilated_contiguous_range_service_v2.ts",
+    "apps/server/src/runtime/twin_runtime/assimilated_continuation_record_set_builder_v2.ts",
+    "apps/server/src/runtime/twin_runtime/assimilated_continuation_runtime_config_authority_adapter_v2.ts",
+    "apps/server/src/runtime/twin_runtime/assimilated_continuation_runtime_config_service_v2.ts",
+    "apps/server/src/runtime/twin_runtime/assimilated_continuation_tick_service_v2.ts",
+    "apps/server/src/runtime/twin_runtime/assimilated_restart_resume_service_v2.ts",
+    "apps/server/src/runtime/twin_runtime/ports.ts",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-ASSIMILATED-PERSISTENCE-RECOVERY-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-ASSIMILATED-RECORD-SET-BUILDER-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-OBSERVATION-ASSIMILATION-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R2-V2-REVALIDATION-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R2-V2-REVALIDATION.md",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-RESTART-BACKFILL-RECOVERY-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-SINGLE-TICK-INTEGRATION-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE-STATUS.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_R2_V2_REVALIDATION.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_R2_V2_REVALIDATION.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_R2_V2_REVALIDATION_DB.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_R2_V2_REVALIDATION_NEGATIVE.ts",
+    "scripts/runtime_acceptance/mcft_cap_03_r2_v2_revalidation_fixture_v1.ts"
+  ],
+  "r2_implementation_effective": false,
+  "r2_acceptance": {
+    "boundary_freeze_draft_gate": "PENDING",
+    "boundary_freeze_final_gate": "PENDING",
+    "boundary_freeze_exact_head_ci": "PENDING",
+    "boundary_freeze_merged_main_gate": "PENDING",
+    "implementation_positive": "PENDING",
+    "implementation_negative": "PENDING",
+    "implementation_isolated_postgresql": "PENDING",
+    "historical_v1_regression": "PENDING",
+    "s3a_to_s6_revalidation": "PENDING",
+    "server_typecheck": "PENDING",
+    "server_build": "PENDING",
+    "exact_head_ci": "PENDING",
+    "merged_main_postmerge_gate": "PENDING"
+  }
 }
