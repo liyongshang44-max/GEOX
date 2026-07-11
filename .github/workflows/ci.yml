@@ -7,7 +7,7 @@ jobs:
   build-test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout merge ref quietly
+      - name: Checkout exact branch head quietly
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -15,7 +15,7 @@ jobs:
           rm -rf ./* ./.??* 2>/dev/null || true
           git init -q
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git fetch -q --depth=1 origin "${{ github.event.pull_request.merge_commit_sha }}"
+          git fetch -q --depth=1 origin "${{ github.event.pull_request.head.sha }}"
           git checkout -q FETCH_HEAD
 
       - name: Install quietly
