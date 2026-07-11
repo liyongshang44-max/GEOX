@@ -6,7 +6,7 @@
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A",
   "baseline_main_commit": "6389d4e566a6eb64ce96209be0e70cd8703be574",
-  "status": "SINGLE_TICK_INTEGRATION_READY_FOR_MERGE",
+  "status": "SINGLE_TICK_INTEGRATION_MERGED",
   "design_status": "DESIGN_FROZEN",
   "implementation_status": "READY_FOR_IMPLEMENTATION",
   "authorization_effective": true,
@@ -397,7 +397,7 @@
       ],
       "baseline_main_commit": "17c837c961e53a958bc94b2d6c216fa4fc23e10b",
       "branch": "mcft-cap-03-single-tick-integration-v1",
-      "status": "READY_FOR_MERGE",
+      "status": "MERGED",
       "activation_fields_status": "FROZEN",
       "allowed_claims": [
         "CAP_03_SINGLE_TICK_INTEGRATION_ESTABLISHED",
@@ -445,7 +445,10 @@
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_SINGLE_TICK_INTEGRATION_NEGATIVE.ts",
         "scripts/runtime_acceptance/mcft_cap_03_single_tick_integration_fixture_v1.ts"
       ],
-      "effectiveness_condition": "S4_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_SINGLE_TICK_INTEGRATION_GATE_PASS"
+      "effectiveness_condition": "S4_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_SINGLE_TICK_INTEGRATION_GATE_PASS",
+      "merge_commit": "f245b46013174e03ad3a6ed4aff0963973fe0c1a",
+      "merged_main_gate": "PASS",
+      "effectiveness_condition_satisfied": true
     },
     {
       "delivery_slice_id": "MCFT-CAP-03.MCFT-04-07-08.TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE-V1",
