@@ -1,12 +1,15 @@
 {
-  "schema_version": "geox_mcft_cap_03_restart_backfill_recovery_status_v1",
+  "schema_version": "geox_mcft_cap_03_restart_backfill_recovery_status_v2",
   "capability_line_id": "MCFT-CAP-03",
   "delivery_slice_id": "MCFT-CAP-03.MCFT-03-04-07-08.RESTART-BACKFILL-RECOVERY-V1",
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A",
   "baseline_main_commit": "8190e93f3b520ce15dcbe40b2a92e759176ef9a1",
+  "implementation_baseline_main_commit": "5070d350238fa3af8fcc5bab43cc14bba8e7a3c8",
   "activation_branch": "mcft-cap-03-s6-activation-freeze-v1",
+  "activation_effectiveness_branch": "mcft-cap-03-s6-activation-effectiveness-v1",
   "implementation_branch": "mcft-cap-03-s6-restart-backfill-recovery-v1",
+  "implementation_effectiveness_branch": "mcft-cap-03-s6-postmerge-effectiveness-v1",
   "status": "ACTIVATED",
   "activation_effective": true,
   "implementation_status": "AUTHORIZED",
@@ -28,6 +31,18 @@
     "s5_isolated_postgresql": "PASS_9_OF_9",
     "s5_effectiveness_condition_satisfied": true
   },
+  "activation_effectiveness": {
+    "activation_pr_number": 2344,
+    "activation_head_commit": "23c84a2a6338ea40295bbade2a18c428f434f672",
+    "activation_ci_run": "CI_4715",
+    "activation_merge_commit": "41316ace4d332273150b3cd7ce7548304862b33d",
+    "effectiveness_pr_number": 2345,
+    "effectiveness_head_commit": "0e98c388dbab5ee34de86a14d900b8b475b83e57",
+    "effectiveness_ci_run": "CI_4718",
+    "effectiveness_merge_commit": "5070d350238fa3af8fcc5bab43cc14bba8e7a3c8",
+    "merged_main_gate": "PASS_81_OF_81",
+    "effectiveness_condition_satisfied": true
+  },
   "frozen_runtime_objective": {
     "execution_direction": "FORWARD_ONLY",
     "contiguity": "EXACT_PT1H",
@@ -45,6 +60,7 @@
     "fresh_process_checkpoint_sequence_range": "37..48",
     "uninterrupted_and_restarted_hashes": "MUST_BE_IDENTICAL_FOR_ALL_24_A2_RECORD_SETS",
     "bounded_forward_backfill": "MUST_MATCH_UNINTERRUPTED_CANONICAL_HASHES",
+    "completed_target_retry": "ZERO_MUTATION_ALREADY_COMPLETE",
     "late_evidence_policy": "NO_RECOMPUTE_NO_REVISION",
     "wall_clock_logical_time": "FORBIDDEN"
   },
@@ -57,7 +73,7 @@
     "canonical_rebuild": "EXPLICIT_FIVE_PROJECTION_REBUILD_FROM_CANONICAL_A2_RECORD_SET"
   },
   "implementation_boundary": {
-    "thin_assimilated_restart_resume_orchestrator": "AUTHORIZED_AFTER_ACTIVATION_EFFECTIVE",
+    "thin_assimilated_restart_resume_orchestrator": "AUTHORIZED",
     "prepared_restart_input_v1_reuse": "REQUIRED",
     "postgres_next_tick_repository_v1_reuse": "REQUIRED",
     "next_tick_input_service_v1_reuse": "REQUIRED",
@@ -95,6 +111,10 @@
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_RESTART_BACKFILL_RECOVERY_NEGATIVE.ts",
     "scripts/runtime_acceptance/mcft_cap_03_restart_backfill_recovery_fixture_v1.ts"
   ],
+  "postmerge_effectiveness_changed_file_boundary": [
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-RESTART-BACKFILL-RECOVERY-STATUS.json"
+  ],
   "allowed_claims_after_implementation_merge_and_postmerge_gate": [
     "CAP_03_RESTART_RESUME_PROVEN",
     "CAP_03_BOUNDED_FORWARD_BACKFILL_PROVEN",
@@ -129,17 +149,25 @@
     "activation_draft_gate": "PASS_85_OF_85",
     "activation_final_gate": "PASS_85_OF_85_ON_LOCKED_HEAD",
     "activation_exact_head_ci": "PASS_CI_4715_LOCKED_HEAD",
-    "activation_merged_main_gate": "PASS_DECLARED_FOR_REPRODUCTION"
+    "activation_merged_main_gate": "PASS_81_OF_81",
+    "implementation_positive_in_memory": "PENDING",
+    "implementation_negative_semantic": "PENDING",
+    "implementation_isolated_postgresql": "PENDING",
+    "implementation_governance_source_shape": "PENDING",
+    "implementation_server_typecheck": "PENDING",
+    "implementation_git_diff_check": "PENDING",
+    "implementation_exact_head_ci": "PENDING",
+    "implementation_merged_main_postmerge_gate": "PENDING"
   },
+  "implementation_gate_modes": [
+    "--draft",
+    "--final",
+    "--postmerge",
+    "--db"
+  ],
   "activation_effectiveness_condition": "S6_ACTIVATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S6_ACTIVATION_GATE_PASS",
   "implementation_effectiveness_condition": "S6_IMPLEMENTATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_RESTART_BACKFILL_RECOVERY_GATE_PASS",
   "implementation_authorized": true,
-  "activation_pr_number": 2344,
-  "activation_head_commit": "23c84a2a6338ea40295bbade2a18c428f434f672",
-  "activation_ci_run": "CI_4715",
-  "activation_merge_commit": "41316ace4d332273150b3cd7ce7548304862b33d",
-  "activation_merged_main_gate": "PASS",
-  "activation_effectiveness_condition_satisfied": true,
   "successor_delivery_slice_id": "MCFT-CAP-03.CLOSURE-V1",
   "successor_authorized": false
 }
