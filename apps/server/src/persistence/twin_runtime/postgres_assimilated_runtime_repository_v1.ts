@@ -120,7 +120,8 @@ export class PostgresAssimilatedRuntimeRepositoryV1
   private async readCanonicalObjectWithClientV1(
     client: PoolClient,
     objectId: string,
-    validator: (object: CanonicalObjectEnvelopeV1) => void = validateCanonicalObjectV1,
+    validator: ((object: CanonicalObjectEnvelopeV1) => void) | null =
+      validateCanonicalObjectV1,
   ): Promise<CanonicalObjectEnvelopeV1 | null> {
     const result = await client.query(
       "SELECT record_json FROM facts WHERE record_json->'payload'->>'object_id'=$1 LIMIT 2",
@@ -129,7 +130,7 @@ export class PostgresAssimilatedRuntimeRepositoryV1
     if (!result.rows.length) return null;
     if (result.rows.length !== 1) throw new Error("CANONICAL_OBJECT_ID_NOT_UNIQUE");
     const object = parseFactObjectV1(result.rows[0].record_json);
-    validator(object);
+    if (validator) validator(object);
     return object;
   }
 
@@ -213,6 +214,111 @@ export class PostgresAssimilatedRuntimeRepositoryV1
     }
   }
 
+
+  private async validateVersionedPredecessorMembersV1(
+    client: PoolClient,
+    members: readonly CanonicalObjectEnvelopeV1[],
+  ): Promise<void> {
+    if (members.length !== 3) {
+      throw new Error(
+        "ASSIMILATED_PREDECESSOR_MEMBER_CARDINALITY",
+      );
+    }
+
+    const checkpoints = members.filter(
+      (member) =>
+        member.object_type
+        === "twin_runtime_checkpoint_v1",
+    );
+
+    if (checkpoints.length !== 1) {
+      throw new Error(
+        "ASSIMILATED_PREDECESSOR_CHECKPOINT_CARDINALITY",
+      );
+    }
+
+    const guard = await client.query(
+      `SELECT record_set_id,identity_basis
+       FROM twin_object_idempotency_index_v1
+       WHERE identity_kind='A2_RECORD_SET'
+         AND member_object_ids ? $1
+       LIMIT 2`,
+      [checkpoints[0].object_id],
+    );
+
+    if (guard.rows.length > 1) {
+      throw new Error(
+        "ASSIMILATED_PREDECESSOR_RECORD_SET_GUARD_NOT_UNIQUE",
+      );
+    }
+
+    if (!guard.rows.length) {
+      for (const member of members) {
+        validateContinuationMemberV1(member);
+      }
+
+      return;
+    }
+
+    const identityBasis =
+      guard.rows[0].identity_basis as Record<string, unknown> | null;
+
+    const contractId =
+      identityBasis?.record_set_contract_id;
+
+    if (contractId === undefined) {
+      for (const member of members) {
+        validateContinuationMemberV1(member);
+      }
+
+      return;
+    }
+
+    if (
+      contractId
+      !== ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V1
+    ) {
+      throw new Error(
+        "ASSIMILATED_PREDECESSOR_RECORD_SET_CONTRACT_UNKNOWN",
+      );
+    }
+
+    const recordSet =
+      await this
+        .readAssimilatedContinuationRecordSetWithClientV1(
+          client,
+          String(guard.rows[0].record_set_id),
+        );
+
+    if (!recordSet) {
+      throw new Error(
+        "ASSIMILATED_PREDECESSOR_RECORD_SET_INCOMPLETE",
+      );
+    }
+
+    for (const member of members) {
+      const matches = recordSet.members.filter(
+        (candidate) =>
+          candidate.object_id === member.object_id,
+      );
+
+      if (matches.length !== 1) {
+        throw new Error(
+          "ASSIMILATED_PREDECESSOR_MEMBER_NOT_IN_RECORD_SET",
+        );
+      }
+
+      if (
+        matches[0].determinism_hash
+        !== member.determinism_hash
+      ) {
+        throw new Error(
+          "ASSIMILATED_PREDECESSOR_MEMBER_HASH_MISMATCH",
+        );
+      }
+    }
+  }
+
   private async verifyAssimilatedContinuationAuthorityV1(
     client: PoolClient,
     scope: TwinScopeKeyV1,
@@ -261,17 +367,17 @@ export class PostgresAssimilatedRuntimeRepositoryV1
     const previousState = await this.readCanonicalObjectWithClientV1(
       client,
       expected.previous_state_ref,
-      validateContinuationMemberV1,
+      null,
     );
     const previousCheckpoint = await this.readCanonicalObjectWithClientV1(
       client,
       expected.previous_checkpoint_ref,
-      validateContinuationMemberV1,
+      null,
     );
     const previousForecast = await this.readCanonicalObjectWithClientV1(
       client,
       expected.previous_forecast_result_ref,
-      validateContinuationMemberV1,
+      null,
     );
     if (!previousState || previousState.object_type !== "twin_state_estimate_v1") {
       throw new Error("STATE_LATEST_CAS_CONFLICT");
@@ -285,6 +391,16 @@ export class PostgresAssimilatedRuntimeRepositoryV1
     if (!previousForecast || previousForecast.object_type !== "twin_forecast_run_v1") {
       throw new Error("FORECAST_RESULT_CAS_CONFLICT");
     }
+
+    await this.validateVersionedPredecessorMembersV1(
+      client,
+      [
+        previousState,
+        previousCheckpoint,
+        previousForecast,
+      ],
+    );
+
     if (
       previousState.lineage_id !== expected.lineage_id
       || previousCheckpoint.lineage_id !== expected.lineage_id

@@ -1,5 +1,5 @@
 {
-  "schema_version": "geox_mcft_cap_03_twenty_four_observation_aware_tick_range_status_v1",
+  "schema_version": "geox_mcft_cap_03_twenty_four_observation_aware_tick_range_status_v2",
   "capability_line_id": "MCFT-CAP-03",
   "delivery_slice_id": "MCFT-CAP-03.MCFT-04-07-08.TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE-V1",
   "runtime_mode": "REPLAY",
@@ -66,7 +66,8 @@
     "route": "FORBIDDEN",
     "scheduler": "FORBIDDEN",
     "web": "FORBIDDEN",
-    "successful_forecast": "FORBIDDEN"
+    "successful_forecast": "FORBIDDEN",
+    "versioned_predecessor_validation_remediation": "AUTHORIZED_FOR_CAP_03_TO_CAP_03_CHAIN_ONLY"
   },
   "exact_activation_changed_file_boundary": [
     "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE-STATUS.json",
@@ -76,6 +77,7 @@
   ],
   "frozen_implementation_changed_file_boundary": [
     "apps/server/src/runtime/twin_runtime/assimilated_contiguous_range_service_v1.ts",
+    "apps/server/src/persistence/twin_runtime/postgres_assimilated_runtime_repository_v1.ts",
     "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE-STATUS.json",
     "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE.md",
     "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
@@ -134,5 +136,17 @@
   "activation_merged_main_gate": "PASS",
   "activation_effectiveness_condition_satisfied": true,
   "successor_delivery_slice_id": "MCFT-CAP-03.MCFT-03-04-07-08.RESTART-BACKFILL-RECOVERY-V1",
-  "successor_authorized": false
+  "successor_authorized": false,
+  "implementation_boundary_revision": "V2_POSTGRES_VERSIONED_PREDECESSOR_VALIDATION_REMEDIATION",
+  "authorized_remediation": {
+    "remediation_id": "S5_POSTGRES_VERSIONED_PREDECESSOR_VALIDATION_V1",
+    "trigger": "S5_DB_ACCEPTANCE_FIRST_CAP_03_TICK_COMMITTED_SECOND_TICK_REJECTED_BY_CAP_02_PREDECESSOR_VALIDATOR",
+    "authorized_file": "apps/server/src/persistence/twin_runtime/postgres_assimilated_runtime_repository_v1.ts",
+    "authorized_scope": "FAIL_CLOSED_CAP_02_OR_CAP_03_PREDECESSOR_RECORD_SET_VALIDATION_ONLY",
+    "cap_02_historical_contract_mutation": false,
+    "schema_migration": false,
+    "new_projection": false,
+    "new_transaction_family": false,
+    "runtime_behavior_expansion": false
+  }
 }

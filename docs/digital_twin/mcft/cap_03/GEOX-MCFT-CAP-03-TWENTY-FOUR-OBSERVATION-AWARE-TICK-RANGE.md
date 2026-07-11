@@ -82,18 +82,43 @@ Independent fixtures do not alter the standard 24-PASS chain.
 ## 5. Frozen implementation file boundary
 
 1. `apps/server/src/runtime/twin_runtime/assimilated_contiguous_range_service_v1.ts`
-2. `docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE-STATUS.json`
-3. `docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE.md`
-4. `docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json`
-5. `scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE.cjs`
-6. `scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE.ts`
-7. `scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE_NEGATIVE.ts`
-8. `scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE_DB.ts`
-9. `scripts/runtime_acceptance/mcft_cap_03_twenty_four_observation_aware_tick_range_fixture_v1.ts`
+2. `apps/server/src/persistence/twin_runtime/postgres_assimilated_runtime_repository_v1.ts`
+3. `docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE-STATUS.json`
+4. `docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE.md`
+5. `docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json`
+6. `scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE.cjs`
+7. `scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE.ts`
+8. `scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE_NEGATIVE.ts`
+9. `scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE_DB.ts`
+10. `scripts/runtime_acceptance/mcft_cap_03_twenty_four_observation_aware_tick_range_fixture_v1.ts`
 
 No migration, route, scheduler, web, workflow, new canonical object type, new transaction family, or new projection is authorized.
 
-## 6. Preserved boundaries
+## 6. Authorized persistence remediation
+
+The S5 isolated PostgreSQL acceptance established that the first CAP-03 tick committed successfully, while the second tick was rejected because the persisted CAP-03 predecessor Forecast was passed to the immutable CAP-02 member validator.
+
+The following remediation is authorized:
+
+- file: `apps/server/src/persistence/twin_runtime/postgres_assimilated_runtime_repository_v1.ts`
+- scope: versioned predecessor validation for CAP-02 and CAP-03 persisted A2 members
+- CAP-02 predecessor members continue to use the immutable CAP-02 member validator
+- CAP-03 predecessor members must be resolved through their A2 idempotency guard
+- the complete CAP-03 record set must pass the existing versioned record-set validator
+- every requested predecessor member must belong to that validated record set with the same determinism hash
+- unknown record-set contracts, duplicate guards, missing guards for CAP-03-shaped members, incomplete record sets, and hash mismatches fail closed
+
+This remediation does not authorize:
+
+- mutation of CAP-02 contracts or Forecast reason codes
+- migration or schema change
+- new persistence transaction family
+- new projection
+- successful Forecast
+- restart or backfill behavior
+- S6 implementation
+
+## 7. Preserved boundaries
 
 S5 does not establish:
 
@@ -118,7 +143,7 @@ S6 remains blocked.
 
 MCFT-CAP-04 remains unauthorized.
 
-## 7. Activation effectiveness
+## 8. Activation effectiveness
 
 Before the activation PR merges and the merged-main activation Gate passes:
 

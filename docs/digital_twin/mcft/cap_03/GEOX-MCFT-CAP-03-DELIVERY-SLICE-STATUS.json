@@ -499,6 +499,7 @@
       ],
       "exact_changed_file_boundary": [
         "apps/server/src/runtime/twin_runtime/assimilated_contiguous_range_service_v1.ts",
+        "apps/server/src/persistence/twin_runtime/postgres_assimilated_runtime_repository_v1.ts",
         "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE-STATUS.json",
         "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE.md",
         "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
@@ -521,6 +522,18 @@
         "merged_main_gate": "PASS",
         "effectiveness_condition_satisfied": true,
         "effectiveness_condition": "S5_ACTIVATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S5_ACTIVATION_GATE_PASS"
+      },
+      "implementation_boundary_revision": "V2_POSTGRES_VERSIONED_PREDECESSOR_VALIDATION_REMEDIATION",
+      "authorized_remediation": {
+        "remediation_id": "S5_POSTGRES_VERSIONED_PREDECESSOR_VALIDATION_V1",
+        "trigger": "S5_DB_ACCEPTANCE_FIRST_CAP_03_TICK_COMMITTED_SECOND_TICK_REJECTED_BY_CAP_02_PREDECESSOR_VALIDATOR",
+        "authorized_file": "apps/server/src/persistence/twin_runtime/postgres_assimilated_runtime_repository_v1.ts",
+        "authorized_scope": "FAIL_CLOSED_CAP_02_OR_CAP_03_PREDECESSOR_RECORD_SET_VALIDATION_ONLY",
+        "cap_02_historical_contract_mutation": false,
+        "schema_migration": false,
+        "new_projection": false,
+        "new_transaction_family": false,
+        "runtime_behavior_expansion": false
       }
     },
     {
