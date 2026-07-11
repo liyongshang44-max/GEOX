@@ -1,5 +1,5 @@
 // scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_ASSIMILATED_PERSISTENCE_RECOVERY_DB.ts
-// Purpose: prove the shared PostgreSQL A2 transaction atomically persists, reads back, idempotently replays, rebuilds, and uniqueness-guards one CAP-03 assimilated record set while preserving historical CAP-02 readback.
+// Purpose: prove the CAP-03 PostgreSQL A2 path atomically persists, reads back, idempotently replays, rebuilds, and uniqueness-guards one assimilated record set while preserving inherited historical CAP-02 behavior.
 // Boundary: destructive isolated-database acceptance only; no production database, Runtime tick orchestration, range execution, route, scheduler, successful Forecast, Scenario, Recommendation, or action.
 
 import assert from "node:assert/strict";
@@ -8,7 +8,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Pool } from "pg";
 import type { CanonicalObjectEnvelopeV1 } from "../../apps/server/src/domain/twin_runtime/canonical_object_contracts_v1.js";
-import { PostgresRuntimeRepositoryV1 } from "../../apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.js";
+import { PostgresAssimilatedRuntimeRepositoryV1 } from "../../apps/server/src/persistence/twin_runtime/postgres_assimilated_runtime_repository_v1.js";
 import type {
   ContinuationExpectedPointersV1,
   RuntimeLeaseClaimV1,
@@ -30,7 +30,7 @@ if (!/(mcft|cap03|s3b|acceptance|test)/.test(databaseName)) {
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const LEASE_OWNER = "mcft-cap-03-s3b-db-acceptance";
 const pool = new Pool({ connectionString: databaseUrl });
-const repository = new PostgresRuntimeRepositoryV1(pool);
+const repository = new PostgresAssimilatedRuntimeRepositoryV1(pool);
 const projectionTables = [
   "twin_active_lineage_index_v1",
   "twin_state_history_projection_v1",
@@ -463,7 +463,7 @@ async function main(): Promise<void> {
       inserted.record_set.continuation_record_set_determinism_hash,
       fixture.recordSet.continuation_record_set_determinism_hash,
     );
-    ok("shared A2 transaction atomically appends eight CAP-03 facts, five projections, and one guard");
+    ok("existing A2 transaction family atomically appends eight CAP-03 facts, five projections, and one guard");
 
     const readback = await repository.readAssimilatedContinuationRecordSet(
       fixture.recordSet.continuation_record_set_id,
