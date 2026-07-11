@@ -1,0 +1,103 @@
+{
+  "schema_version": "geox_mcft_cap_03_assimilated_record_set_builder_status_v1",
+  "capability_line_id": "MCFT-CAP-03",
+  "delivery_slice_id": "MCFT-CAP-03.MCFT-02-07-08.ASSIMILATED-A2-RECORD-SET-BUILDER-V1",
+  "runtime_mode": "REPLAY",
+  "target_completion_level": "Level A",
+  "baseline_main_commit": "be5a0c00ae7d29d1bd2ccffe5a4235f20d23352a",
+  "branch": "mcft-cap-03-assimilated-a2-record-set-builder-v1",
+  "status": "IN_PROGRESS",
+  "primary_owner_work_package_id": "MCFT-02",
+  "contributing_owner_work_package_ids": [
+    "MCFT-07",
+    "MCFT-08"
+  ],
+  "depends_on_delivery_slice_ids": [
+    "MCFT-CAP-03.MCFT-05-07.OBSERVATION-SELECTION-AND-ASSIMILATION-MATH-V1"
+  ],
+  "predecessor_effectiveness": {
+    "s2_merge_commit": "d3cf896cfa02e146a1729bf5b22337aafb9fa0d5",
+    "s2_postmerge_status_commit": "be5a0c00ae7d29d1bd2ccffe5a4235f20d23352a",
+    "s2_merged_main_gate": "PASS_107_OF_107",
+    "s2_effectiveness_condition_satisfied": true
+  },
+  "implementation_boundary": {
+    "eight_object_record_set_builder": "AUTHORIZED_PURE_APPLICATION_LOGIC",
+    "cap_03_cross_reference_validator": "AUTHORIZED_PURE_DOMAIN_VALIDATION",
+    "versioned_readback_dispatch": "AUTHORIZED_PURE_VALIDATOR_DISPATCH",
+    "posterior_state_computation_basis": "AUTHORIZED_CANONICAL_PAYLOAD_CONSTRUCTION",
+    "persistence": "FORBIDDEN",
+    "database_access": "FORBIDDEN",
+    "a2_tick_execution": "FORBIDDEN",
+    "migration": "FORBIDDEN",
+    "route": "FORBIDDEN",
+    "scheduler": "FORBIDDEN",
+    "web": "FORBIDDEN"
+  },
+  "frozen_semantics": {
+    "record_set_contract_id": "MCFT_CAP_03_ASSIMILATED_CONTINUATION_V1",
+    "evidence_window_contract_id": "MCFT_CAP_03_ASSIMILATED_CONTINUATION_EVIDENCE_WINDOW_V1",
+    "transaction_family": "A_STATE_TICK_COMMIT",
+    "operation_variant": "A2_BLOCKED_FORECAST",
+    "member_count": 8,
+    "forecast_status": "BLOCKED",
+    "successful_forecast_ref": null,
+    "checkpoint_first_sequence": 25,
+    "historical_cap_02_contract_immutable": true
+  },
+  "exact_changed_file_boundary": [
+    "apps/server/src/domain/twin_runtime/assimilated_continuation_cross_ref_validator_v1.ts",
+    "apps/server/src/domain/twin_runtime/continuation_record_set_dispatch_v1.ts",
+    "apps/server/src/runtime/twin_runtime/assimilated_continuation_record_set_builder_v1.ts",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-ASSIMILATED-RECORD-SET-BUILDER-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-ASSIMILATED-RECORD-SET-BUILDER.md",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_ASSIMILATED_RECORD_SET_BUILDER.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_ASSIMILATED_RECORD_SET_BUILDER.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_ASSIMILATED_RECORD_SET_BUILDER_NEGATIVE.ts",
+    "scripts/runtime_acceptance/mcft_cap_03_assimilated_record_set_builder_fixture_v1.ts"
+  ],
+  "allowed_claims_after_merge_and_postmerge_gate": [
+    "ASSIMILATED_A2_EIGHT_OBJECT_BUILDER_ESTABLISHED",
+    "ASSIMILATED_A2_CROSS_REFERENCE_VALIDATOR_ESTABLISHED",
+    "ASSIMILATED_RECORD_SET_CONTRACT_DISCRIMINATOR_ESTABLISHED",
+    "POSTERIOR_STATE_COMPUTATION_BASIS_ESTABLISHED",
+    "ASSIMILATED_TICK_CHECKPOINT_HEALTH_FORECAST_PAYLOADS_ESTABLISHED",
+    "VERSIONED_ASSIMILATED_READBACK_DISPATCH_ESTABLISHED",
+    "CAP_02_HISTORICAL_RECORD_SET_COMPATIBILITY_PRESERVED"
+  ],
+  "preserved_nonclaims": [
+    "NO_CAP_03_A2_TICK_COMMITTED",
+    "NO_PERSISTENCE_CHANGE",
+    "NO_DATABASE_ACCESS",
+    "NO_SINGLE_TICK_INTEGRATION",
+    "NO_SUCCESSFUL_FORECAST",
+    "NO_72_HOUR_FORECAST",
+    "NO_SCENARIO",
+    "NO_RECOMMENDATION",
+    "NO_POLICY_EVALUATION",
+    "NO_DECISION",
+    "NO_AO_ACT",
+    "NO_CALIBRATION_CANDIDATE",
+    "NO_SHADOW_EVALUATION",
+    "NO_MODEL_ACTIVATION",
+    "NO_ACTIVE_MODEL_PARAMETER_CHANGE",
+    "NO_LATE_EVIDENCE_REVISION",
+    "NO_CONTINUOUS_RUNTIME",
+    "NO_LIVE_FIELD_CLAIM",
+    "NO_MCFT_CAP_03_COMPLETE_CLAIM",
+    "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
+  ],
+  "acceptance": {
+    "positive_in_memory": "PENDING",
+    "negative_in_memory": "PENDING",
+    "cap_02_historical_dispatch_compatibility": "PENDING",
+    "server_typecheck": "PENDING",
+    "server_build": "PENDING",
+    "git_diff_check": "PENDING",
+    "exact_head_ci": "PENDING"
+  },
+  "effectiveness_condition": "S3A_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_ASSIMILATED_RECORD_SET_BUILDER_GATE_PASS",
+  "successor_delivery_slice_id": "MCFT-CAP-03.MCFT-03-08.ASSIMILATED-A2-PERSISTENCE-RECOVERY-V1",
+  "successor_authorized": false
+}
