@@ -11,10 +11,10 @@
   "activation_effectiveness_branch": "mcft-cap-03-s2-semantic-conformance-r2-boundary-effectiveness-v1",
   "implementation_branch": "mcft-cap-03-s2-semantic-conformance-r2-v2-revalidation-v1",
   "implementation_effectiveness_branch": "mcft-cap-03-s2-semantic-conformance-r2-v2-revalidation-effectiveness-v1",
-  "status": "BOUNDARY_FREEZE_CANDIDATE",
+  "status": "BOUNDARY_FROZEN_IMPLEMENTATION_AUTHORIZED",
   "boundary_freeze_authorized": true,
-  "boundary_frozen": false,
-  "implementation_authorized": false,
+  "boundary_frozen": true,
+  "implementation_authorized": true,
   "implementation_effective": false,
   "r1_predecessor": {
     "implementation_pr_number": 2349,
@@ -160,5 +160,22 @@
   "activation_effectiveness_condition": "R2_BOUNDARY_FREEZE_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_R2_ACTIVATION_GATE_PASS",
   "implementation_effectiveness_condition": "R2_IMPLEMENTATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_R2_V2_REVALIDATION_GATE_PASS",
   "successor_step_id": "R3",
-  "successor_authorized": false
+  "successor_authorized": false,
+  "implementation_started": false,
+  "implementation_status": "AUTHORIZED_NOT_STARTED",
+  "activation_pr_number": 2352,
+  "activation_head_commit": "0e7af80c0f9c1f9c5d3d073acbc2d90c59162bc9",
+  "activation_ci_run": "CI_4735",
+  "activation_draft_gate": "PASS_52_OF_52",
+  "activation_final_gate": "PASS_52_OF_52",
+  "activation_merge_commit": "50cf3fb76b40940702ebb2a046ceff3b3018408e",
+  "activation_merged_main_gate": "PASS_52_OF_52",
+  "boundary_effectiveness_branch": "mcft-cap-03-s2-semantic-conformance-r2-boundary-effectiveness-v1",
+  "boundary_effectiveness_baseline_main_commit": "50cf3fb76b40940702ebb2a046ceff3b3018408e",
+  "boundary_effectiveness_changed_file_boundary": [
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R2-V2-REVALIDATION-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION-STATUS.json"
+  ],
+  "boundary_effectiveness_condition_satisfied": true
 }

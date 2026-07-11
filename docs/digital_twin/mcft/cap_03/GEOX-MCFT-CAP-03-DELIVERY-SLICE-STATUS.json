@@ -6,9 +6,9 @@
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A",
   "baseline_main_commit": "6389d4e566a6eb64ce96209be0e70cd8703be574",
-  "status": "S2_SEMANTIC_CONFORMANCE_REMEDIATION_R2_BOUNDARY_FREEZE_CANDIDATE",
+  "status": "S2_SEMANTIC_CONFORMANCE_REMEDIATION_R2_BOUNDARY_EFFECTIVE_IMPLEMENTATION_AUTHORIZED",
   "design_status": "DESIGN_FROZEN",
-  "implementation_status": "R2_BOUNDARY_FREEZE_CANDIDATE",
+  "implementation_status": "R2_IMPLEMENTATION_AUTHORIZED_NOT_STARTED",
   "authorization_effective": true,
   "runtime_source_authorized": true,
   "active_delivery_slice_id": "MCFT-CAP-03.S2-SEMANTIC-CONFORMANCE-R2-V2-REVALIDATION-V1",
@@ -789,11 +789,11 @@
       "dependency_mode": "R1_EFFECTIVE_S6_IMPLEMENTATION_MERGED_EFFECTIVENESS_PAUSED",
       "baseline_main_commit": "6ef413b7afe6c8bb9997c035aa18cf8bca0f394d",
       "branch": "mcft-cap-03-s2-semantic-conformance-r2-boundary-freeze-v1",
-      "status": "BOUNDARY_FREEZE_CANDIDATE",
-      "activation_fields_status": "CANDIDATE",
+      "status": "BOUNDARY_EFFECTIVE_IMPLEMENTATION_AUTHORIZED",
+      "activation_fields_status": "FROZEN",
       "boundary_freeze_authorized": true,
-      "boundary_frozen": false,
-      "implementation_authorized": false,
+      "boundary_frozen": true,
+      "implementation_authorized": true,
       "implementation_branch": "mcft-cap-03-s2-semantic-conformance-r2-v2-revalidation-v1",
       "implementation_effectiveness_branch": "mcft-cap-03-s2-semantic-conformance-r2-v2-revalidation-effectiveness-v1",
       "allowed_claims": [],
@@ -873,7 +873,24 @@
       "activation_effectiveness_condition": "R2_BOUNDARY_FREEZE_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_R2_ACTIVATION_GATE_PASS",
       "implementation_effectiveness_condition": "R2_IMPLEMENTATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_R2_V2_REVALIDATION_GATE_PASS",
       "successor_step_id": "R3",
-      "successor_authorized": false
+      "successor_authorized": false,
+      "implementation_started": false,
+      "implementation_effective": false,
+      "activation_pr_number": 2352,
+      "activation_head_commit": "0e7af80c0f9c1f9c5d3d073acbc2d90c59162bc9",
+      "activation_ci_run": "CI_4735",
+      "activation_draft_gate": "PASS_52_OF_52",
+      "activation_final_gate": "PASS_52_OF_52",
+      "activation_merge_commit": "50cf3fb76b40940702ebb2a046ceff3b3018408e",
+      "activation_merged_main_gate": "PASS_52_OF_52",
+      "boundary_effectiveness_branch": "mcft-cap-03-s2-semantic-conformance-r2-boundary-effectiveness-v1",
+      "boundary_effectiveness_baseline_main_commit": "50cf3fb76b40940702ebb2a046ceff3b3018408e",
+      "boundary_effectiveness_changed_file_boundary": [
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R2-V2-REVALIDATION-STATUS.json",
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION-STATUS.json"
+      ],
+      "boundary_effectiveness_condition_satisfied": true
     }
   ],
   "next_authorized_slice_ids": [],
@@ -889,12 +906,12 @@
     "NO_OBSERVATION_INNOVATION_COMPUTED",
     "NO_CAP_03_A2_TICK_COMMITTED"
   ],
-  "ssot_conflict_cleanup_status": "R2_BOUNDARY_FREEZE_CANDIDATE",
+  "ssot_conflict_cleanup_status": "R2_IMPLEMENTATION_AUTHORIZED_PENDING_V2_EVIDENCE",
   "remediation_hold": {
     "remediation_id": "MCFT-CAP-03.S2-SEMANTIC-CONFORMANCE-REMEDIATION-V1",
     "baseline_main_commit": "55f2d56b05d2a1f0ada0e9b46eea5a3baa7187c2",
     "activation_branch": "mcft-cap-03-s2-semantic-conformance-remediation-activation-v1",
-    "status": "R2_BOUNDARY_FREEZE_CANDIDATE",
+    "status": "R2_BOUNDARY_EFFECTIVE_IMPLEMENTATION_AUTHORIZED",
     "activation_effective": true,
     "r1_authorized": true,
     "s6_effectiveness_status": "PAUSED_PENDING_REMEDIATION",
@@ -936,11 +953,11 @@
       },
       {
         "step_id": "R2",
-        "status": "BOUNDARY_FREEZE_CANDIDATE"
+        "status": "BOUNDARY_EFFECTIVE_IMPLEMENTATION_AUTHORIZED"
       },
       {
         "step_id": "R3",
-        "status": "BLOCKED_UNTIL_R2_EFFECTIVE"
+        "status": "BLOCKED_UNTIL_R2_IMPLEMENTATION_EFFECTIVE"
       }
     ],
     "r0_effectiveness_branch": "mcft-cap-03-s2-semantic-conformance-remediation-effectiveness-v1",
@@ -949,11 +966,11 @@
       "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
       "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION-STATUS.json"
     ],
-    "activation_pr_number": 2347,
-    "activation_head_commit": "cfe4e40b7cf3f1d1c94fb9474c9b921cd58edb1f",
-    "activation_ci_run": "CI_4725",
-    "activation_merge_commit": "d9e40cb231ac9fae634ea1b453957e809c4653bc",
-    "activation_merged_main_gate": "PASS_92_OF_92",
+    "activation_pr_number": 2352,
+    "activation_head_commit": "0e7af80c0f9c1f9c5d3d073acbc2d90c59162bc9",
+    "activation_ci_run": "CI_4735",
+    "activation_merge_commit": "50cf3fb76b40940702ebb2a046ceff3b3018408e",
+    "activation_merged_main_gate": "PASS_52_OF_52",
     "activation_effectiveness_condition_satisfied": true,
     "r1_effective": true,
     "r1_implementation_baseline_main_commit": "9d9d218fa030bf38278be7e8877c4b98463ebfe5",
@@ -970,10 +987,10 @@
       "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-OBSERVATION-ASSIMILATION-STATUS.json",
       "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION-STATUS.json"
     ],
-    "r2_boundary_status": "FREEZE_CANDIDATE",
+    "r2_boundary_status": "EFFECTIVE",
     "r2_boundary_freeze_authorized": true,
-    "r2_implementation_authorized": false,
-    "r2_boundary_frozen": false,
+    "r2_implementation_authorized": true,
+    "r2_boundary_frozen": true,
     "r2_boundary_freeze_branch": "mcft-cap-03-s2-semantic-conformance-r2-boundary-freeze-v1",
     "r2_boundary_freeze_baseline_main_commit": "6ef413b7afe6c8bb9997c035aa18cf8bca0f394d",
     "r2_boundary_freeze_changed_file_boundary": [
@@ -1023,18 +1040,29 @@
       "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_R2_V2_REVALIDATION_NEGATIVE.ts",
       "scripts/runtime_acceptance/mcft_cap_03_r2_v2_revalidation_fixture_v1.ts"
     ],
-    "r2_implementation_effective": false
+    "r2_implementation_effective": false,
+    "r2_implementation_status": "AUTHORIZED_NOT_STARTED",
+    "activation_draft_gate": "PASS_52_OF_52",
+    "activation_final_gate": "PASS_52_OF_52",
+    "boundary_effectiveness_branch": "mcft-cap-03-s2-semantic-conformance-r2-boundary-effectiveness-v1",
+    "boundary_effectiveness_baseline_main_commit": "50cf3fb76b40940702ebb2a046ceff3b3018408e",
+    "boundary_effectiveness_changed_file_boundary": [
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R2-V2-REVALIDATION-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION-STATUS.json"
+    ],
+    "boundary_effectiveness_condition_satisfied": true
   },
   "r2_v2_revalidation": {
-    "status": "BOUNDARY_FREEZE_CANDIDATE",
+    "status": "BOUNDARY_EFFECTIVE_IMPLEMENTATION_AUTHORIZED",
     "baseline_main_commit": "6ef413b7afe6c8bb9997c035aa18cf8bca0f394d",
     "activation_branch": "mcft-cap-03-s2-semantic-conformance-r2-boundary-freeze-v1",
     "activation_effectiveness_branch": "mcft-cap-03-s2-semantic-conformance-r2-boundary-effectiveness-v1",
     "implementation_branch": "mcft-cap-03-s2-semantic-conformance-r2-v2-revalidation-v1",
     "implementation_effectiveness_branch": "mcft-cap-03-s2-semantic-conformance-r2-v2-revalidation-effectiveness-v1",
     "boundary_freeze_authorized": true,
-    "boundary_frozen": false,
-    "implementation_authorized": false,
+    "boundary_frozen": true,
+    "implementation_authorized": true,
     "frozen_activation_changed_file_boundary": [
       "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
       "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R2-V2-REVALIDATION-STATUS.json",
@@ -1079,6 +1107,23 @@
       "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_R2_V2_REVALIDATION_NEGATIVE.ts",
       "scripts/runtime_acceptance/mcft_cap_03_r2_v2_revalidation_fixture_v1.ts"
     ],
-    "excluded_governance_debt_issue": 2351
+    "excluded_governance_debt_issue": 2351,
+    "implementation_started": false,
+    "implementation_effective": false,
+    "activation_pr_number": 2352,
+    "activation_head_commit": "0e7af80c0f9c1f9c5d3d073acbc2d90c59162bc9",
+    "activation_ci_run": "CI_4735",
+    "activation_draft_gate": "PASS_52_OF_52",
+    "activation_final_gate": "PASS_52_OF_52",
+    "activation_merge_commit": "50cf3fb76b40940702ebb2a046ceff3b3018408e",
+    "activation_merged_main_gate": "PASS_52_OF_52",
+    "boundary_effectiveness_branch": "mcft-cap-03-s2-semantic-conformance-r2-boundary-effectiveness-v1",
+    "boundary_effectiveness_baseline_main_commit": "50cf3fb76b40940702ebb2a046ceff3b3018408e",
+    "boundary_effectiveness_changed_file_boundary": [
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R2-V2-REVALIDATION-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION-STATUS.json"
+    ],
+    "boundary_effectiveness_condition_satisfied": true
   }
 }
