@@ -164,6 +164,7 @@ export class PrepareNextTickInputServiceV1 {
       active_lineage_id: persistedActiveLineageId,
       checkpoint,
       previous_posterior: previousPosterior,
+      previous_forecast_result: previousForecastResult,
       runtime_config: previousRuntimeConfig,
       reality_binding: realityBinding,
     } = snapshot;
@@ -246,6 +247,28 @@ export class PrepareNextTickInputServiceV1 {
       checkpoint.payload.forecast_result_ref,
       "PREVIOUS_FORECAST_RESULT_REF_REQUIRED",
     );
+    let previousForecastResultHash: string | undefined;
+    if (previousForecastResult) {
+      exactScopeV1(previousForecastResult, scope, "PREVIOUS_FORECAST_RESULT_SCOPE_MISMATCH");
+      if (previousForecastResult.object_type !== "twin_forecast_run_v1") {
+        throw new Error("PREVIOUS_FORECAST_RESULT_OBJECT_TYPE_MISMATCH");
+      }
+      if (previousForecastResult.object_id !== previousForecastResultRef) {
+        throw new Error("CHECKPOINT_FORECAST_RESULT_REF_MISMATCH");
+      }
+      if (
+        previousForecastResult.lineage_id !== lineageId
+        || previousForecastResult.revision_id !== revisionId
+      ) throw new Error("CHECKPOINT_FORECAST_RESULT_LINEAGE_MISMATCH");
+      if (
+        previousForecastResult.runtime_config_ref !== previousRuntimeConfigRef
+        || previousForecastResult.runtime_config_hash !== previousRuntimeConfigHash
+      ) throw new Error("FORECAST_STATE_RUNTIME_CONFIG_MISMATCH");
+      previousForecastResultHash = requiredStringV1(
+        previousForecastResult.determinism_hash,
+        "PREVIOUS_FORECAST_RESULT_HASH_REQUIRED",
+      );
+    }
     if (checkpoint.payload.successful_forecast_ref !== null) {
       throw new Error("SUCCESSFUL_FORECAST_POINTER_UNEXPECTED");
     }
@@ -258,6 +281,7 @@ export class PrepareNextTickInputServiceV1 {
       previous_checkpoint_ref: checkpoint.object_id,
       previous_checkpoint_hash: checkpoint.determinism_hash,
       previous_forecast_result_ref: previousForecastResultRef,
+      previous_forecast_result_hash: previousForecastResultHash,
       latest_successful_forecast_ref: null,
       lineage_id: lineageId,
       revision_id: revisionId,

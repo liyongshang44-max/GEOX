@@ -4,11 +4,18 @@
 
 import type { Pool, PoolClient } from "pg";
 import { validateCanonicalObjectV1, type CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
+import { ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V1 } from "../../domain/twin_runtime/assimilated_continuation_contracts_v1.js";
 import { validateContinuationMemberV1 } from "../../domain/twin_runtime/continuation_contracts_v1.js";
 import type { NextTickReadPortV1, PersistedNextTickSnapshotV1, RealityBindingRuntimeSnapshotV1, RuntimeAuthoritySnapshotRepositoryPortV1, TwinScopeKeyV1 } from "../../runtime/twin_runtime/ports.js";
 
 function scopeValuesV1(scope: TwinScopeKeyV1): unknown[] {
   return [scope.tenant_id, scope.project_id, scope.group_id, scope.field_id, scope.season_id, scope.zone_id];
+}
+
+function isAssimilatedContinuationTickV1(object: CanonicalObjectEnvelopeV1): boolean {
+  return object.object_type === "twin_runtime_tick_v1"
+    && object.payload.record_set_contract_id
+      === ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V1;
 }
 
 function isContinuationReadObjectV1(object: CanonicalObjectEnvelopeV1): boolean {
@@ -28,7 +35,8 @@ function isContinuationReadObjectV1(object: CanonicalObjectEnvelopeV1): boolean 
 function parseFactObjectV1(recordJsonValue: unknown): CanonicalObjectEnvelopeV1 {
   const parsed = typeof recordJsonValue === "string" ? JSON.parse(recordJsonValue) : recordJsonValue;
   const object = (parsed as { payload: CanonicalObjectEnvelopeV1 }).payload;
-  if (isContinuationReadObjectV1(object)) validateContinuationMemberV1(object);
+  if (isAssimilatedContinuationTickV1(object)) validateCanonicalObjectV1(object);
+  else if (isContinuationReadObjectV1(object)) validateContinuationMemberV1(object);
   else validateCanonicalObjectV1(object);
   return object;
 }
@@ -113,6 +121,8 @@ export class PostgresNextTickRepositoryV1 implements RuntimeAuthoritySnapshotRep
       const activeLineageId = requiredStringV1(activeLineage.lineage_id, "ACTIVE_LINEAGE_ID_REQUIRED");
       const checkpoint = await this.readCanonicalObjectV1(client, checkpointPointer.rows[0].checkpoint_object_id, "twin_runtime_checkpoint_v1");
       const previousPosterior = await this.readCanonicalObjectV1(client, statePointer.rows[0].state_object_id, "twin_state_estimate_v1");
+      const previousForecastResultRef = requiredStringV1(checkpoint.payload.forecast_result_ref, "PREVIOUS_FORECAST_RESULT_REF_REQUIRED");
+      const previousForecastResult = await this.readCanonicalObjectV1(client, previousForecastResultRef, "twin_forecast_run_v1");
       const lastCompletedTickRef = requiredStringV1(checkpoint.payload.last_completed_tick_ref, "LAST_COMPLETED_TICK_REF_REQUIRED");
       const lastTerminalTick = await this.readCanonicalObjectV1(client, lastCompletedTickRef, "twin_runtime_tick_v1");
       if (!previousPosterior.runtime_config_ref || checkpoint.runtime_config_ref !== previousPosterior.runtime_config_ref) throw new Error("PERSISTED_RUNTIME_CONFIG_POINTER_MISMATCH");
@@ -127,6 +137,7 @@ export class PostgresNextTickRepositoryV1 implements RuntimeAuthoritySnapshotRep
         active_lineage_id: activeLineageId,
         checkpoint,
         previous_posterior: previousPosterior,
+        previous_forecast_result: previousForecastResult,
         last_terminal_tick: lastTerminalTick,
         runtime_config: runtimeConfig,
         reality_binding: realityBinding,
