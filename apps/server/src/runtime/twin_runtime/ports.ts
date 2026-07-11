@@ -1,8 +1,9 @@
 // apps/server/src/runtime/twin_runtime/ports.ts
-// Purpose: define Runtime Config, Replay Evidence, A0 bootstrap persistence, MCFT-CAP-02 continuation persistence, next-tick handoff, authority snapshot, and projection rebuild ports without binding orchestration to SQL or files.
+// Purpose: define Runtime Config, Replay Evidence, A0 bootstrap persistence, versioned continuation persistence, next-tick handoff, authority snapshot, and projection rebuild ports without binding orchestration to SQL or files.
 // Boundary: interfaces only; no implementation, equations, Fastify, filesystem, environment, or wall-clock reads.
 
 import type { PreviousStorageVarianceBasisV1 } from "../../domain/soil_water/additive_process_uncertainty_budget_v1.js";
+import type { AssimilatedContinuationRecordSetV1 } from "../../domain/twin_runtime/assimilated_continuation_record_set_identity_v1.js";
 import type { A0RecordSetV1, CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
 import type { ContinuationRecordSetV1 } from "../../domain/twin_runtime/continuation_record_set_identity_v1.js";
 
@@ -174,6 +175,29 @@ export interface ContinuationPersistencePortV1 {
   }>;
   readContinuationRecordSet(recordSetId: string): Promise<ContinuationRecordSetV1 | null>;
   rebuildContinuationProjections(recordSetId: string): Promise<{ rebuilt_projection_count: 5 }>;
+}
+
+export interface AssimilatedContinuationPersistencePortV1 {
+  lookupAssimilatedContinuationRecordSet(
+    idempotencyKey: string,
+  ): Promise<AssimilatedContinuationRecordSetV1 | null>;
+  commitAssimilatedContinuationState(input: {
+    scope: TwinScopeKeyV1;
+    lease: RuntimeLeaseClaimV1;
+    expected: ContinuationExpectedPointersV1;
+    record_set: AssimilatedContinuationRecordSetV1;
+    fault_injection?: (stage: FaultInjectionStageV1) => void;
+  }): Promise<{
+    status: "INSERTED" | "EXISTING_IDEMPOTENT_SUCCESS";
+    record_set: AssimilatedContinuationRecordSetV1;
+    fact_ids_by_object_id: Record<string, string>;
+  }>;
+  readAssimilatedContinuationRecordSet(
+    recordSetId: string,
+  ): Promise<AssimilatedContinuationRecordSetV1 | null>;
+  rebuildAssimilatedContinuationProjections(
+    recordSetId: string,
+  ): Promise<{ rebuilt_projection_count: 5 }>;
 }
 
 export interface A0ProjectionRebuildPortV1 {
