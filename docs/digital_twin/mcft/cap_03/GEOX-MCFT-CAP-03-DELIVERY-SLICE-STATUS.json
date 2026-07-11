@@ -6,12 +6,12 @@
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A",
   "baseline_main_commit": "6389d4e566a6eb64ce96209be0e70cd8703be574",
-  "status": "SINGLE_TICK_INTEGRATION_MERGED",
+  "status": "TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE_ACTIVATION_READY_FOR_MERGE",
   "design_status": "DESIGN_FROZEN",
   "implementation_status": "READY_FOR_IMPLEMENTATION",
   "authorization_effective": true,
   "runtime_source_authorized": true,
-  "active_delivery_slice_id": "MCFT-CAP-03.MCFT-04-05-06-07-08-09.SINGLE-TICK-INTEGRATION-V1",
+  "active_delivery_slice_id": "MCFT-CAP-03.MCFT-04-07-08.TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE-V1",
   "merge_before_next": true,
   "postmerge_verify_before_next": true,
   "parallel_downstream_pr_forbidden": true,
@@ -460,18 +460,62 @@
       "depends_on_delivery_slice_ids": [
         "MCFT-CAP-03.MCFT-04-05-06-07-08-09.SINGLE-TICK-INTEGRATION-V1"
       ],
-      "baseline_main_commit": null,
-      "branch": null,
-      "status": "BLOCKED",
-      "activation_fields_status": "TO_BE_FROZEN_AT_SLICE_ACTIVATION",
-      "allowed_claims": [],
+      "baseline_main_commit": "01f705bec9e79b528480b63fe56c6e6c4489845f",
+      "branch": "mcft-cap-03-s5-twenty-four-observation-aware-tick-range-v1",
+      "status": "ACTIVATION_READY_FOR_MERGE",
+      "activation_fields_status": "FROZEN",
+      "allowed_claims": [
+        "TWENTY_FOUR_OBSERVATION_AWARE_TICKS_ESTABLISHED",
+        "CAP_03_CHECKPOINT_SEQUENCE_25_TO_48_ESTABLISHED",
+        "CAP_03_LOCAL_25_STATE_RANGE_ESTABLISHED",
+        "CAP_03_GLOBAL_49_STATE_ACTIVE_LINEAGE_ESTABLISHED",
+        "CAP_03_192_A2_FACT_RANGE_ESTABLISHED",
+        "CAP_03_24_PASS_ACCEPTED_CHAIN_ESTABLISHED",
+        "CAP_03_RANGE_DETERMINISTIC_REPLAY_ESTABLISHED",
+        "LIMITED_OBSERVATION_FIXTURE_ESTABLISHED",
+        "NO_OBSERVATION_FIXTURE_ESTABLISHED",
+        "OUTLIER_REJECTION_FIXTURE_ESTABLISHED",
+        "CANDIDATE_EXCLUSION_FIXTURE_ESTABLISHED",
+        "BLOCKED_FORECAST_BOUNDARY_PRESERVED"
+      ],
       "preserved_nonclaims": [
         "NO_RESTART_BACKFILL_PROOF",
         "NO_SUCCESSFUL_FORECAST",
-        "NO_MCFT_CAP_03_COMPLETE_CLAIM"
+        "NO_72_HOUR_FORECAST",
+        "NO_SCENARIO",
+        "NO_RECOMMENDATION",
+        "NO_POLICY_EVALUATION",
+        "NO_DECISION",
+        "NO_AO_ACT",
+        "NO_CALIBRATION_CANDIDATE",
+        "NO_SHADOW_EVALUATION",
+        "NO_MODEL_ACTIVATION",
+        "NO_ACTIVE_MODEL_PARAMETER_CHANGE",
+        "NO_LATE_EVIDENCE_REVISION",
+        "NO_CONTINUOUS_RUNTIME",
+        "NO_LIVE_FIELD_CLAIM",
+        "NO_MCFT_CAP_03_COMPLETE_CLAIM",
+        "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
       ],
-      "exact_changed_file_boundary": [],
-      "effectiveness_condition": "S4_MERGED_AND_MERGED_MAIN_GATE_PASS_AND_EXPLICIT_S5_ACTIVATION"
+      "exact_changed_file_boundary": [
+        "apps/server/src/runtime/twin_runtime/assimilated_contiguous_range_service_v1.ts",
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE-STATUS.json",
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE.md",
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE_NEGATIVE.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE_DB.ts",
+        "scripts/runtime_acceptance/mcft_cap_03_twenty_four_observation_aware_tick_range_fixture_v1.ts"
+      ],
+      "effectiveness_condition": "S5_IMPLEMENTATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE_GATE_PASS",
+      "activation": {
+        "baseline_main_commit": "01f705bec9e79b528480b63fe56c6e6c4489845f",
+        "branch": "mcft-cap-03-s5-activation-freeze-v1",
+        "status": "READY_FOR_MERGE",
+        "effective": false,
+        "effectiveness_condition": "S5_ACTIVATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S5_ACTIVATION_GATE_PASS"
+      }
     },
     {
       "delivery_slice_id": "MCFT-CAP-03.MCFT-03-04-07-08.RESTART-BACKFILL-RECOVERY-V1",
@@ -555,7 +599,7 @@
     }
   ],
   "next_authorized_slice_ids": [],
-  "next_authorized_slice_id_after_effectiveness": "MCFT-CAP-03.MCFT-04-07-08.TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE-V1",
+  "next_authorized_slice_id_after_effectiveness": "MCFT-CAP-03.MCFT-03-04-07-08.RESTART-BACKFILL-RECOVERY-V1",
   "successor_capability_line_id": "MCFT-CAP-04",
   "successor_authorized": false
 }
