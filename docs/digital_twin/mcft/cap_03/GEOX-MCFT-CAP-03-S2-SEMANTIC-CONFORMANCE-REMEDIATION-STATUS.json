@@ -9,10 +9,10 @@
   "activation_branch": "mcft-cap-03-s2-semantic-conformance-remediation-activation-v1",
   "r1_implementation_branch": "mcft-cap-03-s2-semantic-conformance-v2-v1",
   "r1_effectiveness_branch": "mcft-cap-03-s2-semantic-conformance-v2-effectiveness-v1",
-  "status": "ACTIVATION_READY_FOR_MERGE",
-  "activation_effective": false,
-  "implementation_status": "NOT_AUTHORIZED",
-  "remediation_hold_status": "CANDIDATE",
+  "status": "ACTIVATED",
+  "activation_effective": true,
+  "implementation_status": "AUTHORIZED",
+  "remediation_hold_status": "EFFECTIVE",
   "s6_effectiveness_status": "PAUSED_PENDING_REMEDIATION",
   "s7_status": "BLOCKED",
   "s8_status": "BLOCKED",
@@ -74,12 +74,12 @@
     {
       "step_id": "R0",
       "name": "REMEDIATION_AUTHORITY_FREEZE",
-      "status": "READY_FOR_MERGE"
+      "status": "EFFECTIVE"
     },
     {
       "step_id": "R1",
       "name": "S2_VERSIONED_V2_SEMANTIC_CONFORMANCE",
-      "status": "BLOCKED_UNTIL_R0_EFFECTIVE"
+      "status": "AUTHORIZED"
     },
     {
       "step_id": "R2",
@@ -129,6 +129,18 @@
     "MCFT_CAP_04_AUTHORIZATION"
   ],
   "activation_effectiveness_condition": "R0_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S2_REMEDIATION_ACTIVATION_GATE_PASS",
-  "r1_authorized": false,
-  "successor_authorized": false
+  "r1_authorized": true,
+  "successor_authorized": false,
+  "r0_effectiveness_branch": "mcft-cap-03-s2-semantic-conformance-remediation-effectiveness-v1",
+  "r0_effectiveness_baseline_main_commit": "d9e40cb231ac9fae634ea1b453957e809c4653bc",
+  "r0_effectiveness_changed_file_boundary": [
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION-STATUS.json"
+  ],
+  "activation_pr_number": 2347,
+  "activation_head_commit": "cfe4e40b7cf3f1d1c94fb9474c9b921cd58edb1f",
+  "activation_ci_run": "CI_4725",
+  "activation_merge_commit": "d9e40cb231ac9fae634ea1b453957e809c4653bc",
+  "activation_merged_main_gate": "PASS_92_OF_92",
+  "activation_effectiveness_condition_satisfied": true
 }
