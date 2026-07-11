@@ -1,9 +1,9 @@
 name: s3a-typecheck-diagnostic
 
 on:
-  push:
+  pull_request:
     branches:
-      - mcft-cap-03-assimilated-a2-record-set-builder-v1
+      - main
 
 permissions:
   contents: write
