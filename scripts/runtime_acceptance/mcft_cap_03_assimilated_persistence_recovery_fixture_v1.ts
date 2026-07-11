@@ -69,7 +69,10 @@ function buildConflictingRecordSetV1(
 ): AssimilatedContinuationRecordSetV1 {
   const conflicting = structuredClone(source);
   const health = memberByTypeV1(conflicting.members, "twin_runtime_health_v1");
-  health.created_at = "2026-07-11T04:10:01.000Z";
+  health.limitations = [
+    ...health.limitations,
+    "S3B_ACCEPTANCE_CONFLICTING_RECORD_SET_CONTENT",
+  ];
   health.determinism_hash = computeMemberDeterminismHashV1(
     health as unknown as Record<string, unknown>,
   );
