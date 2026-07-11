@@ -171,22 +171,22 @@ binding = soil_obs_c8_20cm_v1
 Standard propagated prior authority:
 
 ```text
-storage mean = 56.763012 mm
-storage variance = 247.270991693125 mm²
-VWC mean = 0.189210040000
-VWC variance = 0.002747455463256944...
+storage mean = 57.727512 mm
+storage variance = 241.520029261250 mm²
+VWC mean = 0.192425000000
+VWC variance = 0.002683555881
 ```
 
 Standard assimilation authority:
 
 ```text
-innovation == residual = -0.004710040000
+innovation == residual = -0.007925000000
 observation variance = 0.004000000000
-assimilation gain = 0.407183934480...
-posterior VWC = 0.187292187381
-posterior VWC variance = 0.001628735738
-posterior storage = 56.187656 mm
-posterior storage variance = 146.586216412769 mm²
+assimilation gain = 0.401516188206...
+posterior VWC = 0.189242984208
+posterior VWC variance = 0.001606064753
+posterior storage = 56.772895 mm
+posterior storage variance = 144.545827754111 mm²
 ```
 
 Canonical fixture values are produced by repository-owned decimal functions and validated in acceptance. Design-stage approximate values do not override canonical scale and rounding rules.

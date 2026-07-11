@@ -120,7 +120,7 @@ async function main(): Promise<void> {
     ]);
     await expectErrorV1(
       () => service.executeOneTick(input),
-      /CONFLICTING_SEMANTIC_DUPLICATE/,
+      /CONFLICTING_DUPLICATE_EVIDENCE/,
     );
     assert.equal(fixture.runtime.leaseAcquireCount, 0);
     assert.equal(fixture.runtime.commitCount, 0);

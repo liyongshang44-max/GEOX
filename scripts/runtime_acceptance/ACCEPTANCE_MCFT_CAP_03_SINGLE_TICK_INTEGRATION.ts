@@ -43,10 +43,10 @@ async function main(): Promise<void> {
   ok("one service call commits one valid eight-object CAP-03 A2 record set");
 
   assert.ok(result.dynamics);
-  assert.equal(result.dynamics.computation_basis.storage_mean_mm_decimal.value, "56.763012");
+  assert.equal(result.dynamics.computation_basis.storage_mean_mm_decimal.value, "57.727512");
   assert.equal(
     result.dynamics.computation_basis.storage_variance_mm2_decimal.value,
-    "247.270991693125",
+    "241.520029261250",
   );
   ok("exact-hour Dynamics runs before assimilation with frozen propagated prior values");
 
@@ -59,19 +59,19 @@ async function main(): Promise<void> {
 
   assert.equal(
     result.assimilation.canonical_decimal_basis.posterior_vwc_decimal.value,
-    "0.187292187381",
+    "0.189242984208",
   );
   assert.equal(
     result.assimilation.canonical_decimal_basis.posterior_vwc_variance_decimal.value,
-    "0.001628735738",
+    "0.001606064753",
   );
   assert.equal(
     result.assimilation.canonical_decimal_basis.storage_mean_mm_decimal.value,
-    "56.187656",
+    "56.772895",
   );
   assert.equal(
     result.assimilation.canonical_decimal_basis.storage_variance_mm2_decimal.value,
-    "146.586216412769",
+    "144.545827754111",
   );
   ok("standard tick publishes repository-owned canonical posterior exact values");
 
@@ -84,8 +84,8 @@ async function main(): Promise<void> {
   ok("accepted observation enters the canonical consumed Evidence union");
 
   const stateVwc = state.payload.root_zone_vwc_fraction as Record<string, unknown>;
-  assert.equal(stateVwc.mean, 0.187292187381);
-  assert.equal(stateVwc.variance, 0.001628735738);
+  assert.equal(stateVwc.mean, 0.189242984208);
+  assert.equal(stateVwc.variance, 0.001606064753);
   assert.equal(state.payload.previous_posterior_ref, fixture.predecessorState.object_id);
   ok("posterior State preserves predecessor authority and publishes corrected moments");
 

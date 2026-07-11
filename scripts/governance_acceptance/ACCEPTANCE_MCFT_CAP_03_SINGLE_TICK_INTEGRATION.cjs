@@ -345,7 +345,7 @@ check(
 const firstLookup = service.indexOf('lookupAssimilatedContinuationRecordSet');
 const configRead = service.indexOf('readRuntimeConfig');
 const evidenceRead = service.indexOf('loadCandidateRecords');
-const leaseAcquire = service.indexOf('acquireLease');
+const leaseAcquire = service.indexOf('await this.persistence.acquireLease(');
 check(
   firstLookup >= 0
     && firstLookup < configRead
