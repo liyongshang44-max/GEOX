@@ -6,12 +6,12 @@
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A",
   "baseline_main_commit": "6389d4e566a6eb64ce96209be0e70cd8703be574",
-  "status": "RESTART_BACKFILL_RECOVERY_ACTIVATED",
+  "status": "S2_SEMANTIC_CONFORMANCE_REMEDIATION_ACTIVATION_READY_FOR_MERGE",
   "design_status": "DESIGN_FROZEN",
-  "implementation_status": "READY_FOR_IMPLEMENTATION",
+  "implementation_status": "REMEDIATION_NOT_AUTHORIZED",
   "authorization_effective": true,
   "runtime_source_authorized": true,
-  "active_delivery_slice_id": "MCFT-CAP-03.MCFT-03-04-07-08.RESTART-BACKFILL-RECOVERY-V1",
+  "active_delivery_slice_id": "MCFT-CAP-03.S2-SEMANTIC-CONFORMANCE-REMEDIATION-V1",
   "merge_before_next": true,
   "postmerge_verify_before_next": true,
   "parallel_downstream_pr_forbidden": true,
@@ -206,7 +206,7 @@
       ],
       "baseline_main_commit": "ed816b9f2f2061183918e0dfb484b949859ff3aa",
       "branch": "mcft-cap-03-observation-selection-assimilation-math-v1",
-      "status": "MERGED",
+      "status": "MERGED_REMEDIATION_REQUIRED",
       "merge_commit": "d3cf896cfa02e146a1729bf5b22337aafb9fa0d5",
       "merged_main_gate": "PASS",
       "effectiveness_condition_satisfied": true,
@@ -255,7 +255,15 @@
         "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_OBSERVATION_ASSIMILATION_NEGATIVE.ts",
         "scripts/runtime_acceptance/mcft_cap_03_observation_assimilation_fixture_v1.ts"
       ],
-      "effectiveness_condition": "S2_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_OBSERVATION_ASSIMILATION_GATE_PASS"
+      "effectiveness_condition": "S2_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_OBSERVATION_ASSIMILATION_GATE_PASS",
+      "semantic_conformance": "DEFECTIVE_CONFIRMED",
+      "remediation_id": "MCFT-CAP-03.S2-SEMANTIC-CONFORMANCE-REMEDIATION-V1",
+      "confirmed_hard_acceptance_failures": [
+        32,
+        39,
+        46,
+        58
+      ]
     },
     {
       "delivery_slice_id": "MCFT-CAP-03.MCFT-02-07-08.ASSIMILATED-A2-RECORD-SET-BUILDER-V1",
@@ -552,7 +560,7 @@
       ],
       "baseline_main_commit": "8190e93f3b520ce15dcbe40b2a92e759176ef9a1",
       "branch": "mcft-cap-03-s6-restart-backfill-recovery-v1",
-      "status": "ACTIVATED",
+      "status": "IMPLEMENTATION_MERGED_EFFECTIVENESS_PAUSED",
       "activation_fields_status": "FROZEN",
       "allowed_claims": [
         "CAP_03_RESTART_RESUME_PROVEN",
@@ -619,7 +627,63 @@
       "postmerge_effectiveness_changed_file_boundary": [
         "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
         "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-RESTART-BACKFILL-RECOVERY-STATUS.json"
-      ]
+      ],
+      "implementation_status": "MERGED",
+      "implementation_head_commit": "9cf16dbaab3b281458ac460dfaecc3ed25772d1f",
+      "implementation_merge_commit": "55f2d56b05d2a1f0ada0e9b46eea5a3baa7187c2",
+      "implementation_ci_run": "CI_4721",
+      "implementation_draft_gate": "PASS_124_OF_124",
+      "implementation_final_gate": "PASS_127_OF_127",
+      "implementation_isolated_postgresql_gate": "PASS_128_OF_128",
+      "effectiveness_condition_satisfied": false,
+      "effectiveness_pause_reason": "S2_SEMANTIC_CONFORMANCE_REMEDIATION_REQUIRED"
+    },
+    {
+      "delivery_slice_id": "MCFT-CAP-03.S2-SEMANTIC-CONFORMANCE-REMEDIATION-V1",
+      "primary_owner_work_package_id": "MCFT-07",
+      "contributing_owner_work_package_ids": [
+        "MCFT-02",
+        "MCFT-03",
+        "MCFT-04",
+        "MCFT-05",
+        "MCFT-08"
+      ],
+      "depends_on_delivery_slice_ids": [
+        "MCFT-CAP-03.MCFT-05-07.OBSERVATION-SELECTION-AND-ASSIMILATION-MATH-V1",
+        "MCFT-CAP-03.MCFT-03-04-07-08.RESTART-BACKFILL-RECOVERY-V1"
+      ],
+      "dependency_mode": "S6_IMPLEMENTATION_MERGED_EFFECTIVENESS_PAUSED",
+      "baseline_main_commit": "55f2d56b05d2a1f0ada0e9b46eea5a3baa7187c2",
+      "branch": "mcft-cap-03-s2-semantic-conformance-remediation-activation-v1",
+      "status": "ACTIVATION_READY_FOR_MERGE",
+      "activation_fields_status": "FROZEN",
+      "allowed_claims": [],
+      "preserved_nonclaims": [
+        "NO_SUCCESSFUL_FORECAST",
+        "NO_FORECAST_RESIDUAL",
+        "NO_72_HOUR_FORECAST",
+        "NO_SCENARIO",
+        "NO_RECOMMENDATION",
+        "NO_POLICY_EVALUATION",
+        "NO_DECISION",
+        "NO_AO_ACT",
+        "NO_CALIBRATION_CANDIDATE",
+        "NO_SHADOW_EVALUATION",
+        "NO_MODEL_ACTIVATION",
+        "NO_ACTIVE_MODEL_PARAMETER_CHANGE",
+        "NO_LATE_EVIDENCE_REVISION",
+        "NO_CONTINUOUS_RUNTIME",
+        "NO_LIVE_FIELD_CLAIM",
+        "NO_MCFT_CAP_03_COMPLETE_CLAIM",
+        "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
+      ],
+      "exact_changed_file_boundary": [
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION-STATUS.json",
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION.md",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_S2_SEMANTIC_CONFORMANCE_REMEDIATION_ACTIVATION.cjs"
+      ],
+      "effectiveness_condition": "R0_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S2_REMEDIATION_ACTIVATION_GATE_PASS"
     },
     {
       "delivery_slice_id": "MCFT-CAP-03.CLOSURE-V1",
@@ -681,5 +745,69 @@
   "next_authorized_slice_ids": [],
   "next_authorized_slice_id_after_effectiveness": "MCFT-CAP-03.CLOSURE-V1",
   "successor_capability_line_id": "MCFT-CAP-04",
-  "successor_authorized": false
+  "successor_authorized": false,
+  "known_ssot_conflicts": [
+    "NO_OBSERVATION_SELECTOR_IMPLEMENTED",
+    "NO_OBSERVATION_SEMANTIC_DUPLICATE_RESOLUTION_IMPLEMENTED",
+    "NO_OBSERVATION_SEMANTIC_CONTENT_HASH_IMPLEMENTED",
+    "NO_ASSIMILATION_MATH_IMPLEMENTED",
+    "NO_OBSERVATION_UPDATE_APPLIED",
+    "NO_OBSERVATION_INNOVATION_COMPUTED",
+    "NO_CAP_03_A2_TICK_COMMITTED"
+  ],
+  "ssot_conflict_cleanup_status": "DEFERRED_TO_R2_AFTER_R1_EFFECTIVE",
+  "remediation_hold": {
+    "remediation_id": "MCFT-CAP-03.S2-SEMANTIC-CONFORMANCE-REMEDIATION-V1",
+    "baseline_main_commit": "55f2d56b05d2a1f0ada0e9b46eea5a3baa7187c2",
+    "activation_branch": "mcft-cap-03-s2-semantic-conformance-remediation-activation-v1",
+    "status": "ACTIVATION_READY_FOR_MERGE",
+    "activation_effective": false,
+    "r1_authorized": false,
+    "s6_effectiveness_status": "PAUSED_PENDING_REMEDIATION",
+    "hard_acceptance_ids": [
+      32,
+      39,
+      46,
+      58
+    ],
+    "corrected_contract_strategy": "ADDITIVE_VERSIONED_V2",
+    "historical_v1_readback": "IMMUTABLE_AND_MUST_REMAIN_VALID",
+    "r0_exact_changed_file_boundary": [
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION.md",
+      "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_S2_SEMANTIC_CONFORMANCE_REMEDIATION_ACTIVATION.cjs"
+    ],
+    "r1_frozen_implementation_changed_file_boundary": [
+      "apps/server/src/domain/twin_runtime/assimilated_continuation_contracts_v2.ts",
+      "apps/server/src/runtime/twin_runtime/assimilated_continuation_evidence_window_v2.ts",
+      "apps/server/src/runtime/twin_runtime/assimilated_continuation_observation_selector_v2.ts",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-OBSERVATION-ASSIMILATION-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION.md",
+      "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_S2_SEMANTIC_CONFORMANCE_REMEDIATION.cjs",
+      "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_S2_SEMANTIC_CONFORMANCE_REMEDIATION.ts",
+      "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_S2_SEMANTIC_CONFORMANCE_REMEDIATION_NEGATIVE.ts",
+      "scripts/runtime_acceptance/mcft_cap_03_s2_semantic_conformance_remediation_fixture_v1.ts"
+    ],
+    "remediation_graph": [
+      {
+        "step_id": "R0",
+        "status": "ACTIVATION_READY_FOR_MERGE"
+      },
+      {
+        "step_id": "R1",
+        "status": "BLOCKED_UNTIL_R0_EFFECTIVE"
+      },
+      {
+        "step_id": "R2",
+        "status": "BLOCKED_UNTIL_R1_EFFECTIVE"
+      },
+      {
+        "step_id": "R3",
+        "status": "BLOCKED_UNTIL_R2_EFFECTIVE"
+      }
+    ]
+  }
 }
