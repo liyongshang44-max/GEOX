@@ -86,7 +86,15 @@
     {
       "delivery_slice_id": "MCFT-CAP-03.GOV-AUTHORIZATION-AND-PREDECESSOR-LOCK-V1",
       "primary_owner_work_package_id": "MCFT-07",
-      "contributing_owner_work_package_ids": ["MCFT-02", "MCFT-03", "MCFT-04", "MCFT-05", "MCFT-06", "MCFT-08", "MCFT-09"],
+      "contributing_owner_work_package_ids": [
+        "MCFT-02",
+        "MCFT-03",
+        "MCFT-04",
+        "MCFT-05",
+        "MCFT-06",
+        "MCFT-08",
+        "MCFT-09"
+      ],
       "depends_on_delivery_slice_ids": [],
       "baseline_main_commit": "d1a3948d06e4c7896d513168d31ef52409c3e0f0",
       "branch": "mcft-cap-03-gov-authorization-and-predecessor-lock-v1",
@@ -120,8 +128,13 @@
     {
       "delivery_slice_id": "MCFT-CAP-03.MCFT-02-07-08.ASSIMILATION-CONTRACTS-CONFIG-V1",
       "primary_owner_work_package_id": "MCFT-02",
-      "contributing_owner_work_package_ids": ["MCFT-07", "MCFT-08"],
-      "depends_on_delivery_slice_ids": ["MCFT-CAP-03.GOV-AUTHORIZATION-AND-PREDECESSOR-LOCK-V1"],
+      "contributing_owner_work_package_ids": [
+        "MCFT-07",
+        "MCFT-08"
+      ],
+      "depends_on_delivery_slice_ids": [
+        "MCFT-CAP-03.GOV-AUTHORIZATION-AND-PREDECESSOR-LOCK-V1"
+      ],
       "baseline_main_commit": "6389d4e566a6eb64ce96209be0e70cd8703be574",
       "branch": "mcft-cap-03-assimilation-contracts-config-v1",
       "status": "MERGED",
@@ -185,8 +198,12 @@
     {
       "delivery_slice_id": "MCFT-CAP-03.MCFT-05-07.OBSERVATION-SELECTION-AND-ASSIMILATION-MATH-V1",
       "primary_owner_work_package_id": "MCFT-07",
-      "contributing_owner_work_package_ids": ["MCFT-05"],
-      "depends_on_delivery_slice_ids": ["MCFT-CAP-03.MCFT-02-07-08.ASSIMILATION-CONTRACTS-CONFIG-V1"],
+      "contributing_owner_work_package_ids": [
+        "MCFT-05"
+      ],
+      "depends_on_delivery_slice_ids": [
+        "MCFT-CAP-03.MCFT-02-07-08.ASSIMILATION-CONTRACTS-CONFIG-V1"
+      ],
       "baseline_main_commit": "ed816b9f2f2061183918e0dfb484b949859ff3aa",
       "branch": "mcft-cap-03-observation-selection-assimilation-math-v1",
       "status": "MERGED",
@@ -243,8 +260,13 @@
     {
       "delivery_slice_id": "MCFT-CAP-03.MCFT-02-07-08.ASSIMILATED-A2-RECORD-SET-BUILDER-V1",
       "primary_owner_work_package_id": "MCFT-02",
-      "contributing_owner_work_package_ids": ["MCFT-07", "MCFT-08"],
-      "depends_on_delivery_slice_ids": ["MCFT-CAP-03.MCFT-05-07.OBSERVATION-SELECTION-AND-ASSIMILATION-MATH-V1"],
+      "contributing_owner_work_package_ids": [
+        "MCFT-07",
+        "MCFT-08"
+      ],
+      "depends_on_delivery_slice_ids": [
+        "MCFT-CAP-03.MCFT-05-07.OBSERVATION-SELECTION-AND-ASSIMILATION-MATH-V1"
+      ],
       "baseline_main_commit": "be5a0c00ae7d29d1bd2ccffe5a4235f20d23352a",
       "branch": "mcft-cap-03-assimilated-a2-record-set-builder-v1",
       "status": "MERGED",
@@ -300,8 +322,12 @@
     {
       "delivery_slice_id": "MCFT-CAP-03.MCFT-03-08.ASSIMILATED-A2-PERSISTENCE-RECOVERY-V1",
       "primary_owner_work_package_id": "MCFT-03",
-      "contributing_owner_work_package_ids": ["MCFT-08"],
-      "depends_on_delivery_slice_ids": ["MCFT-CAP-03.MCFT-02-07-08.ASSIMILATED-A2-RECORD-SET-BUILDER-V1"],
+      "contributing_owner_work_package_ids": [
+        "MCFT-08"
+      ],
+      "depends_on_delivery_slice_ids": [
+        "MCFT-CAP-03.MCFT-02-07-08.ASSIMILATED-A2-RECORD-SET-BUILDER-V1"
+      ],
       "baseline_main_commit": "293fbeff04441f12aee13945c2db24b4b9bb23b5",
       "branch": "mcft-cap-03-assimilated-a2-persistence-recovery-v1",
       "status": "MERGED",
@@ -359,8 +385,16 @@
     {
       "delivery_slice_id": "MCFT-CAP-03.MCFT-04-05-06-07-08-09.SINGLE-TICK-INTEGRATION-V1",
       "primary_owner_work_package_id": "MCFT-04",
-      "contributing_owner_work_package_ids": ["MCFT-05", "MCFT-06", "MCFT-07", "MCFT-08", "MCFT-09"],
-      "depends_on_delivery_slice_ids": ["MCFT-CAP-03.MCFT-03-08.ASSIMILATED-A2-PERSISTENCE-RECOVERY-V1"],
+      "contributing_owner_work_package_ids": [
+        "MCFT-05",
+        "MCFT-06",
+        "MCFT-07",
+        "MCFT-08",
+        "MCFT-09"
+      ],
+      "depends_on_delivery_slice_ids": [
+        "MCFT-CAP-03.MCFT-03-08.ASSIMILATED-A2-PERSISTENCE-RECOVERY-V1"
+      ],
       "baseline_main_commit": "17c837c961e53a958bc94b2d6c216fa4fc23e10b",
       "branch": "mcft-cap-03-single-tick-integration-v1",
       "status": "MERGED",
@@ -419,8 +453,13 @@
     {
       "delivery_slice_id": "MCFT-CAP-03.MCFT-04-07-08.TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE-V1",
       "primary_owner_work_package_id": "MCFT-04",
-      "contributing_owner_work_package_ids": ["MCFT-07", "MCFT-08"],
-      "depends_on_delivery_slice_ids": ["MCFT-CAP-03.MCFT-04-05-06-07-08-09.SINGLE-TICK-INTEGRATION-V1"],
+      "contributing_owner_work_package_ids": [
+        "MCFT-07",
+        "MCFT-08"
+      ],
+      "depends_on_delivery_slice_ids": [
+        "MCFT-CAP-03.MCFT-04-05-06-07-08-09.SINGLE-TICK-INTEGRATION-V1"
+      ],
       "baseline_main_commit": "01f705bec9e79b528480b63fe56c6e6c4489845f",
       "branch": "mcft-cap-03-s5-twenty-four-observation-aware-tick-range-v1",
       "status": "MERGED",
@@ -503,8 +542,14 @@
     {
       "delivery_slice_id": "MCFT-CAP-03.MCFT-03-04-07-08.RESTART-BACKFILL-RECOVERY-V1",
       "primary_owner_work_package_id": "MCFT-04",
-      "contributing_owner_work_package_ids": ["MCFT-03", "MCFT-07", "MCFT-08"],
-      "depends_on_delivery_slice_ids": ["MCFT-CAP-03.MCFT-04-07-08.TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE-V1"],
+      "contributing_owner_work_package_ids": [
+        "MCFT-03",
+        "MCFT-07",
+        "MCFT-08"
+      ],
+      "depends_on_delivery_slice_ids": [
+        "MCFT-CAP-03.MCFT-04-07-08.TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE-V1"
+      ],
       "baseline_main_commit": null,
       "branch": null,
       "status": "BLOCKED",
@@ -521,8 +566,18 @@
     {
       "delivery_slice_id": "MCFT-CAP-03.CLOSURE-V1",
       "primary_owner_work_package_id": "MCFT-07",
-      "contributing_owner_work_package_ids": ["MCFT-02", "MCFT-03", "MCFT-04", "MCFT-05", "MCFT-06", "MCFT-08", "MCFT-09"],
-      "depends_on_delivery_slice_ids": ["MCFT-CAP-03.MCFT-03-04-07-08.RESTART-BACKFILL-RECOVERY-V1"],
+      "contributing_owner_work_package_ids": [
+        "MCFT-02",
+        "MCFT-03",
+        "MCFT-04",
+        "MCFT-05",
+        "MCFT-06",
+        "MCFT-08",
+        "MCFT-09"
+      ],
+      "depends_on_delivery_slice_ids": [
+        "MCFT-CAP-03.MCFT-03-04-07-08.RESTART-BACKFILL-RECOVERY-V1"
+      ],
       "baseline_main_commit": null,
       "branch": null,
       "status": "BLOCKED",
@@ -539,8 +594,18 @@
     {
       "delivery_slice_id": "MCFT-CAP-03.CLOSURE-FINALIZATION-V1",
       "primary_owner_work_package_id": "MCFT-07",
-      "contributing_owner_work_package_ids": ["MCFT-02", "MCFT-03", "MCFT-04", "MCFT-05", "MCFT-06", "MCFT-08", "MCFT-09"],
-      "depends_on_delivery_slice_ids": ["MCFT-CAP-03.CLOSURE-V1"],
+      "contributing_owner_work_package_ids": [
+        "MCFT-02",
+        "MCFT-03",
+        "MCFT-04",
+        "MCFT-05",
+        "MCFT-06",
+        "MCFT-08",
+        "MCFT-09"
+      ],
+      "depends_on_delivery_slice_ids": [
+        "MCFT-CAP-03.CLOSURE-V1"
+      ],
       "baseline_main_commit": null,
       "branch": null,
       "status": "BLOCKED",
