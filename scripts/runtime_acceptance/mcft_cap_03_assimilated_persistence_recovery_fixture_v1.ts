@@ -85,6 +85,10 @@ function buildConflictingRecordSetV1(
 
 export async function buildMcftCap03AssimilatedPersistenceRecoveryFixtureV1() {
   const source = await buildMcftCap03AssimilatedRecordSetBuilderFixtureV1();
+  const cap02StateTemplate = memberByTypeV1(
+    source.continuationRecordSet.members,
+    "twin_state_estimate_v1",
+  );
   const cap02ForecastTemplate = memberByTypeV1(
     source.continuationRecordSet.members,
     "twin_forecast_run_v1",
@@ -94,7 +98,15 @@ export async function buildMcftCap03AssimilatedPersistenceRecoveryFixtureV1() {
     "twin_runtime_checkpoint_v1",
   );
 
-  const predecessorState = structuredClone(source.predecessorState);
+  const predecessorState = clonePredecessorMemberV1({
+    template: cap02StateTemplate,
+    object_id: deriveSemanticObjectIdV1("s3b_cap02_final_state", {
+      scope: source.scope,
+      logical_time: S3B_PREDECESSOR_LOGICAL_TIME_V1,
+    }),
+    logical_time: S3B_PREDECESSOR_LOGICAL_TIME_V1,
+    payload_patch: {},
+  });
   const predecessorForecast = clonePredecessorMemberV1({
     template: cap02ForecastTemplate,
     object_id: deriveSemanticObjectIdV1("s3b_cap02_final_forecast", {
