@@ -608,7 +608,18 @@
         "merge_commit": "41316ace4d332273150b3cd7ce7548304862b33d",
         "merged_main_gate": "PASS",
         "effectiveness_condition_satisfied": true
-      }
+      },
+      "implementation_baseline_main_commit": "5070d350238fa3af8fcc5bab43cc14bba8e7a3c8",
+      "implementation_gate_modes": [
+        "--draft",
+        "--final",
+        "--postmerge",
+        "--db"
+      ],
+      "postmerge_effectiveness_changed_file_boundary": [
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-RESTART-BACKFILL-RECOVERY-STATUS.json"
+      ]
     },
     {
       "delivery_slice_id": "MCFT-CAP-03.CLOSURE-V1",
