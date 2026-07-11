@@ -64,6 +64,7 @@ function recordJsonV1(object: CanonicalObjectEnvelopeV1): string {
 async function initializeSchemaV1(): Promise<void> {
   await pool.query(readSqlV1("docker/postgres/init/001_schema.sql"));
   await pool.query(readSqlV1("apps/server/db/migrations/2026_07_09_mcft_cap_01_a0_persistence.sql"));
+  await pool.query(readSqlV1("apps/server/db/migrations/2026_07_10_mcft_cap_01_closure_remediation.sql"));
   await pool.query(readSqlV1("apps/server/db/migrations/2026_07_10_mcft_cap_02_continuation_persistence.sql"));
   const migrations = fs.readdirSync(path.join(ROOT, "apps/server/db/migrations"));
   assert.equal(migrations.some((name) => /cap_03.*single|single.*tick.*migration/i.test(name)), false);
@@ -232,7 +233,7 @@ async function main(): Promise<void> {
     });
 
     await repository.commitRuntimeConfig(fixture.parentRuntimeConfig);
-    const a0Lease = await acquireLeaseV1(scope, "mcft-cap-03-s4-a0");
+    const a0Lease = await acquireLeaseV1(scope, "mcft-cap-03-s4-service");
     await repository.commitBootstrapState({
       scope,
       lease: a0Lease,
@@ -246,7 +247,7 @@ async function main(): Promise<void> {
       record_set: fixture.a0RecordSet,
     });
     await repository.commitRuntimeConfig(fixture.continuationRuntimeConfig);
-    const cap02Lease = await acquireLeaseV1(scope, "mcft-cap-03-s4-cap02");
+    const cap02Lease = await acquireLeaseV1(scope, "mcft-cap-03-s4-service");
     await repository.commitContinuationState({
       scope,
       lease: cap02Lease,
