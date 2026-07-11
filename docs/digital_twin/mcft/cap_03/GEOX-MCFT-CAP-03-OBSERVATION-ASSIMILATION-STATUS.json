@@ -106,5 +106,27 @@
   },
   "effectiveness_condition": "S2_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_OBSERVATION_ASSIMILATION_GATE_PASS",
   "successor_delivery_slice_id": "MCFT-CAP-03.MCFT-02-07-08.ASSIMILATED-A2-RECORD-SET-BUILDER-V1",
-  "successor_authorized": false
+  "successor_authorized": false,
+  "semantic_conformance_status": "REMEDIATION_IMPLEMENTED_NOT_EFFECTIVE",
+  "v2_remediation": {
+    "remediation_id": "MCFT-CAP-03.S2-SEMANTIC-CONFORMANCE-REMEDIATION-V1",
+    "implementation_baseline_main_commit": "9d9d218fa030bf38278be7e8877c4b98463ebfe5",
+    "implementation_branch": "mcft-cap-03-s2-semantic-conformance-v2-v1",
+    "implementation_status": "IMPLEMENTED_CANDIDATE",
+    "contract_id": "MCFT_CAP_03_ASSIMILATED_CONTINUATION_V2",
+    "evidence_window_contract_id": "MCFT_CAP_03_ASSIMILATED_CONTINUATION_EVIDENCE_WINDOW_V2",
+    "selector_id": "LATEST_USABLE_AUTHORIZED_OBSERVATION_WITHIN_15M_BEFORE_TICK_V2",
+    "hard_acceptance_ids": [
+      32,
+      39,
+      46,
+      58
+    ],
+    "staleness_authority": "LOGICAL_MS_MINUS_OBSERVED_MS_LE_900000",
+    "duplicate_order": "SEMANTIC_DUPLICATE_RESOLUTION_BEFORE_PHYSICAL_AND_QUALITY_ELIGIBILITY",
+    "unsupported_record_type_policy": "MALFORMED_CANONICAL_OBSERVATION_FAIL_CLOSED",
+    "committed_hash_basis": "COMPLETE_AND_INDEPENDENTLY_RECOMPUTABLE",
+    "historical_v1_readback": "PRESERVED",
+    "effectiveness_condition_satisfied": false
+  }
 }

@@ -252,3 +252,28 @@ merged-main S2 remediation activation Gate PASS
 ```
 
 R1 becomes authorized only after that condition. No remediation implementation claim is effective on the activation branch.
+
+
+## 9. R1 implementation candidate
+
+```text
+R1 implementation baseline = 9d9d218fa030bf38278be7e8877c4b98463ebfe5
+R1 implementation branch = mcft-cap-03-s2-semantic-conformance-v2-v1
+R1 implementation candidate = NOT_EFFECTIVE_UNTIL_MERGED_MAIN_GATE
+V1 historical contract and readback = IMMUTABLE
+V2 contract = MCFT_CAP_03_ASSIMILATED_CONTINUATION_V2
+V2 Evidence Window = MCFT_CAP_03_ASSIMILATED_CONTINUATION_EVIDENCE_WINDOW_V2
+V2 selector = LATEST_USABLE_AUTHORIZED_OBSERVATION_WITHIN_15M_BEFORE_TICK_V2
+Hard Acceptance #32 remediation = IMPLEMENTED_CANDIDATE
+Hard Acceptance #39 remediation = IMPLEMENTED_CANDIDATE
+Hard Acceptance #46 remediation = IMPLEMENTED_CANDIDATE
+Hard Acceptance #58 remediation = IMPLEMENTED_CANDIDATE
+S6 effectiveness = PAUSED
+S7 = BLOCKED
+S8 = BLOCKED
+MCFT-CAP-04 = UNAUTHORIZED
+```
+
+This R1 branch establishes only additive pure contract and application logic.
+It does not activate V2 builder dispatch, persistence, canonical writes, Runtime
+ticks, Forecast success, revision lineage, R2, R3, S7, S8, or MCFT-CAP-04.
