@@ -150,8 +150,7 @@ function validatePosteriorStateV1(input: {
   evidence: CanonicalObjectEnvelopeV1;
   aggregate: AssimilatedContinuationRecordSetV1["aggregate_identity_input"];
 }): void {
-  const assimilation = input.assimilation_member.payload
-    as unknown as AssimilatedContinuationUpdatePayloadV1;
+  const assimilation = input.assimilation_member.payload as unknown as AssimilatedContinuationUpdatePayloadV1;
   exactRefV1(
     input.state,
     "previous_posterior_ref",
@@ -284,8 +283,7 @@ export function validateAssimilatedContinuationCrossReferencesV1(
   const checkpoint = memberByTypeV1(recordSet, "twin_runtime_checkpoint_v1");
   const health = memberByTypeV1(recordSet, "twin_runtime_health_v1");
   const aggregate = recordSet.aggregate_identity_input;
-  const assimilation = assimilationMember.payload
-    as unknown as AssimilatedContinuationUpdatePayloadV1;
+  const assimilation = assimilationMember.payload as unknown as AssimilatedContinuationUpdatePayloadV1;
 
   validateEvidenceClassificationsV1({
     evidence,

@@ -270,8 +270,7 @@ export function buildAssimilatedContinuationRecordSetV1(
     "ASSIMILATED_BUILDER_RUNTIME_CONFIG_SCOPE_MISMATCH",
   );
   validateAssimilatedContinuationRuntimeConfigPayloadV1(input.runtime_config.payload);
-  const config = input.runtime_config.payload
-    as unknown as AssimilatedContinuationRuntimeConfigPayloadV1;
+  const config = input.runtime_config.payload as unknown as AssimilatedContinuationRuntimeConfigPayloadV1;
   if (config.record_set_contract_id !== ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V1) {
     throw new Error("ASSIMILATED_BUILDER_RUNTIME_CONFIG_CONTRACT_MISMATCH");
   }
