@@ -1,0 +1,134 @@
+{
+  "schema_version": "geox_mcft_cap_03_s2_semantic_conformance_remediation_status_v1",
+  "capability_line_id": "MCFT-CAP-03",
+  "remediation_id": "MCFT-CAP-03.S2-SEMANTIC-CONFORMANCE-REMEDIATION-V1",
+  "runtime_mode": "REPLAY",
+  "target_completion_level": "Level A",
+  "baseline_main_commit": "55f2d56b05d2a1f0ada0e9b46eea5a3baa7187c2",
+  "s6_implementation_merge_commit": "55f2d56b05d2a1f0ada0e9b46eea5a3baa7187c2",
+  "activation_branch": "mcft-cap-03-s2-semantic-conformance-remediation-activation-v1",
+  "r1_implementation_branch": "mcft-cap-03-s2-semantic-conformance-v2-v1",
+  "r1_effectiveness_branch": "mcft-cap-03-s2-semantic-conformance-v2-effectiveness-v1",
+  "status": "ACTIVATION_READY_FOR_MERGE",
+  "activation_effective": false,
+  "implementation_status": "NOT_AUTHORIZED",
+  "remediation_hold_status": "CANDIDATE",
+  "s6_effectiveness_status": "PAUSED_PENDING_REMEDIATION",
+  "s7_status": "BLOCKED",
+  "s8_status": "BLOCKED",
+  "mcft_cap_04_authorized": false,
+  "affected_delivery_slice_ids": [
+    "MCFT-CAP-03.MCFT-05-07.OBSERVATION-SELECTION-AND-ASSIMILATION-MATH-V1",
+    "MCFT-CAP-03.MCFT-02-07-08.ASSIMILATED-A2-RECORD-SET-BUILDER-V1",
+    "MCFT-CAP-03.MCFT-03-08.ASSIMILATED-A2-PERSISTENCE-RECOVERY-V1",
+    "MCFT-CAP-03.MCFT-04-05-06-07-08-09.SINGLE-TICK-INTEGRATION-V1",
+    "MCFT-CAP-03.MCFT-04-07-08.TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE-V1",
+    "MCFT-CAP-03.MCFT-03-04-07-08.RESTART-BACKFILL-RECOVERY-V1"
+  ],
+  "confirmed_nonconformities": [
+    {
+      "hard_acceptance_id": 32,
+      "code": "PT15M_SUBSECOND_STALENESS_BOUNDARY",
+      "current_behavior": "AGE_SECONDS_TRUNCATION",
+      "required_behavior": "DIRECT_MILLISECOND_COMPARISON_LE_900000"
+    },
+    {
+      "hard_acceptance_id": 39,
+      "code": "CONFLICTING_DUPLICATE_MASKED_BY_ELIGIBILITY",
+      "current_behavior": "PHYSICAL_AND_QUALITY_FILTER_BEFORE_DUPLICATE_GROUPING",
+      "required_behavior": "SEMANTIC_DUPLICATE_RESOLUTION_BEFORE_PHYSICAL_AND_QUALITY_ELIGIBILITY"
+    },
+    {
+      "hard_acceptance_id": 46,
+      "code": "COMMITTED_CANDIDATE_HASH_BASIS_INCOMPLETE",
+      "current_behavior": "HASH_USES_FULL_CANONICAL_PAYLOAD_BUT_COMMIT_STORES_UNIT_AND_VALUE_ONLY",
+      "required_behavior": "COMMITTED_V2_CANDIDATE_CONTAINS_COMPLETE_RECOMPUTABLE_SEMANTIC_HASH_BASIS"
+    },
+    {
+      "hard_acceptance_id": 58,
+      "code": "UNSUPPORTED_RECORD_TYPE_DOWNGRADED_TO_EXCLUSION",
+      "current_behavior": "REJECTED_RECORD_TYPE",
+      "required_behavior": "MALFORMED_CANONICAL_OBSERVATION_FAIL_CLOSED"
+    }
+  ],
+  "frozen_remediation_strategy": {
+    "historical_v1_contract_and_readback": "IMMUTABLE_AND_MUST_REMAIN_VALID",
+    "corrected_contract_strategy": "ADDITIVE_VERSIONED_V2",
+    "v1_canonical_fact_rewrite": "FORBIDDEN",
+    "v1_validator_semantic_reinterpretation": "FORBIDDEN",
+    "v2_candidate_hash_basis": [
+      "canonical_payload",
+      "quality.status",
+      "source_unit",
+      "canonical_unit",
+      "conversion_rule",
+      "epistemic_class"
+    ],
+    "unsupported_record_type_policy": "MALFORMED_CANONICAL_OBSERVATION_FAIL_CLOSED",
+    "staleness_authority": "LOGICAL_MS_MINUS_OBSERVED_MS_LE_900000",
+    "duplicate_order": "STRUCTURE_SCOPE_TIME_BINDING_TYPE_THEN_SEMANTIC_IDENTITY_AND_CONTENT_HASH_THEN_PHYSICAL_AND_QUALITY_ELIGIBILITY",
+    "completion_evidence_policy": "V2_REPLAY_EVIDENCE_REQUIRED",
+    "s6_effectiveness_resume_policy": "ONLY_AFTER_R1_AND_R2_MERGED_MAIN_GATES_PASS"
+  },
+  "remediation_graph": [
+    {
+      "step_id": "R0",
+      "name": "REMEDIATION_AUTHORITY_FREEZE",
+      "status": "READY_FOR_MERGE"
+    },
+    {
+      "step_id": "R1",
+      "name": "S2_VERSIONED_V2_SEMANTIC_CONFORMANCE",
+      "status": "BLOCKED_UNTIL_R0_EFFECTIVE"
+    },
+    {
+      "step_id": "R2",
+      "name": "S3A_TO_S6_V2_REVALIDATION_AND_SSOT_RECONCILIATION",
+      "status": "BLOCKED_UNTIL_R1_EFFECTIVE"
+    },
+    {
+      "step_id": "R3",
+      "name": "S6_POSTMERGE_EFFECTIVENESS_RESUME",
+      "status": "BLOCKED_UNTIL_R2_EFFECTIVE"
+    }
+  ],
+  "r0_exact_changed_file_boundary": [
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION.md",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_S2_SEMANTIC_CONFORMANCE_REMEDIATION_ACTIVATION.cjs"
+  ],
+  "r1_frozen_implementation_changed_file_boundary": [
+    "apps/server/src/domain/twin_runtime/assimilated_continuation_contracts_v2.ts",
+    "apps/server/src/runtime/twin_runtime/assimilated_continuation_observation_selector_v2.ts",
+    "apps/server/src/runtime/twin_runtime/assimilated_continuation_evidence_window_v2.ts",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-OBSERVATION-ASSIMILATION-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION.md",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_S2_SEMANTIC_CONFORMANCE_REMEDIATION.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_S2_SEMANTIC_CONFORMANCE_REMEDIATION.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_S2_SEMANTIC_CONFORMANCE_REMEDIATION_NEGATIVE.ts",
+    "scripts/runtime_acceptance/mcft_cap_03_s2_semantic_conformance_remediation_fixture_v1.ts"
+  ],
+  "r2_boundary_status": "TO_BE_FROZEN_AFTER_R1_EFFECTIVE",
+  "r0_forbidden_changes": [
+    "RUNTIME_SOURCE",
+    "DOMAIN_CONTRACT_SOURCE",
+    "PERSISTENCE",
+    "MIGRATION",
+    "ROUTE",
+    "SCHEDULER",
+    "WEB",
+    "WORKFLOW",
+    "CANONICAL_FACT_REWRITE",
+    "SUCCESSFUL_FORECAST",
+    "REVISION_LINEAGE",
+    "S7_ACTIVATION",
+    "S8_ACTIVATION",
+    "MCFT_CAP_04_AUTHORIZATION"
+  ],
+  "activation_effectiveness_condition": "R0_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S2_REMEDIATION_ACTIVATION_GATE_PASS",
+  "r1_authorized": false,
+  "successor_authorized": false
+}
