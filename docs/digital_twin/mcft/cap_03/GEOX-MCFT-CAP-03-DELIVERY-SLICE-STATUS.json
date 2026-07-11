@@ -6,12 +6,12 @@
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A",
   "baseline_main_commit": "6389d4e566a6eb64ce96209be0e70cd8703be574",
-  "status": "TWENTY_FOUR_OBSERVATION_AWARE_TICK_RANGE_MERGED",
+  "status": "RESTART_BACKFILL_RECOVERY_ACTIVATION_READY_FOR_MERGE",
   "design_status": "DESIGN_FROZEN",
   "implementation_status": "READY_FOR_IMPLEMENTATION",
   "authorization_effective": true,
   "runtime_source_authorized": true,
-  "active_delivery_slice_id": "MCFT-CAP-03.MCFT-04-07-08.TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE-V1",
+  "active_delivery_slice_id": "MCFT-CAP-03.MCFT-03-04-07-08.RESTART-BACKFILL-RECOVERY-V1",
   "merge_before_next": true,
   "postmerge_verify_before_next": true,
   "parallel_downstream_pr_forbidden": true,
@@ -550,18 +550,59 @@
       "depends_on_delivery_slice_ids": [
         "MCFT-CAP-03.MCFT-04-07-08.TWENTY-FOUR-OBSERVATION-AWARE-TICK-RANGE-V1"
       ],
-      "baseline_main_commit": null,
-      "branch": null,
-      "status": "BLOCKED",
-      "activation_fields_status": "TO_BE_FROZEN_AT_SLICE_ACTIVATION",
-      "allowed_claims": [],
-      "preserved_nonclaims": [
-        "NO_MCFT_CAP_03_COMPLETE_CLAIM",
-        "NO_SUCCESSFUL_FORECAST",
-        "NO_LATE_EVIDENCE_REVISION"
+      "baseline_main_commit": "8190e93f3b520ce15dcbe40b2a92e759176ef9a1",
+      "branch": "mcft-cap-03-s6-restart-backfill-recovery-v1",
+      "status": "ACTIVATION_READY_FOR_MERGE",
+      "activation_fields_status": "FROZEN",
+      "allowed_claims": [
+        "CAP_03_RESTART_RESUME_PROVEN",
+        "CAP_03_BOUNDED_FORWARD_BACKFILL_PROVEN",
+        "CAP_03_RESTART_CHAIN_HASH_EQUIVALENCE_ESTABLISHED",
+        "CAP_03_PRECOMMIT_CRASH_ROLLBACK_PROVEN",
+        "CAP_03_POSTCOMMIT_RESPONSE_LOSS_IDEMPOTENCY_PROVEN",
+        "CAP_03_STALE_FENCING_FAIL_CLOSED_PROVEN",
+        "CAP_03_CAS_CONFLICT_FAIL_CLOSED_PROVEN",
+        "CAP_03_PROJECTION_DIVERGENCE_FAIL_CLOSED_PROVEN",
+        "CAP_03_CANONICAL_PROJECTION_REBUILD_ESTABLISHED",
+        "CAP_03_LATE_EVIDENCE_NO_RECOMPUTE_BOUNDARY_PROVEN"
       ],
-      "exact_changed_file_boundary": [],
-      "effectiveness_condition": "S5_MERGED_AND_MERGED_MAIN_GATE_PASS_AND_EXPLICIT_S6_ACTIVATION"
+      "preserved_nonclaims": [
+        "NO_SUCCESSFUL_FORECAST",
+        "NO_72_HOUR_FORECAST",
+        "NO_SCENARIO",
+        "NO_RECOMMENDATION",
+        "NO_POLICY_EVALUATION",
+        "NO_DECISION",
+        "NO_AO_ACT",
+        "NO_CALIBRATION_CANDIDATE",
+        "NO_SHADOW_EVALUATION",
+        "NO_MODEL_ACTIVATION",
+        "NO_ACTIVE_MODEL_PARAMETER_CHANGE",
+        "NO_LATE_EVIDENCE_REVISION",
+        "NO_CONTINUOUS_RUNTIME",
+        "NO_LIVE_FIELD_CLAIM",
+        "NO_MCFT_CAP_03_COMPLETE_CLAIM",
+        "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
+      ],
+      "exact_changed_file_boundary": [
+        "apps/server/src/runtime/twin_runtime/assimilated_restart_resume_service_v1.ts",
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-RESTART-BACKFILL-RECOVERY-STATUS.json",
+        "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-RESTART-BACKFILL-RECOVERY.md",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_RESTART_BACKFILL_RECOVERY.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_RESTART_BACKFILL_RECOVERY.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_RESTART_BACKFILL_RECOVERY_DB.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_RESTART_BACKFILL_RECOVERY_NEGATIVE.ts",
+        "scripts/runtime_acceptance/mcft_cap_03_restart_backfill_recovery_fixture_v1.ts"
+      ],
+      "effectiveness_condition": "S6_IMPLEMENTATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_RESTART_BACKFILL_RECOVERY_GATE_PASS",
+      "activation": {
+        "baseline_main_commit": "8190e93f3b520ce15dcbe40b2a92e759176ef9a1",
+        "branch": "mcft-cap-03-s6-activation-freeze-v1",
+        "status": "READY_FOR_MERGE",
+        "effective": false,
+        "effectiveness_condition": "S6_ACTIVATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S6_ACTIVATION_GATE_PASS"
+      }
     },
     {
       "delivery_slice_id": "MCFT-CAP-03.CLOSURE-V1",
@@ -621,7 +662,7 @@
     }
   ],
   "next_authorized_slice_ids": [],
-  "next_authorized_slice_id_after_effectiveness": "MCFT-CAP-03.MCFT-03-04-07-08.RESTART-BACKFILL-RECOVERY-V1",
+  "next_authorized_slice_id_after_effectiveness": "MCFT-CAP-03.CLOSURE-V1",
   "successor_capability_line_id": "MCFT-CAP-04",
   "successor_authorized": false
 }
