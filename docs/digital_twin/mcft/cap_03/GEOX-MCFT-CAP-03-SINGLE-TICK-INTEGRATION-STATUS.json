@@ -34,6 +34,8 @@
     "assimilated_record_set_builder_reuse": "AUTHORIZED",
     "assimilated_a2_atomic_persistence_reuse": "AUTHORIZED",
     "canonical_readback_and_next_handoff": "AUTHORIZED",
+    "canonical_predecessor_forecast_result_read": "AUTHORIZED_ADDITIVE",
+    "prepared_handoff_forecast_hash": "AUTHORIZED_ADDITIVE",
     "standard_exact_value_fixture": "AUTHORIZED_ACCEPTANCE_ONLY",
     "schema_migration": "FORBIDDEN",
     "range_execution": "FORBIDDEN",
@@ -62,6 +64,9 @@
     "model_parameter_change_applied": false
   },
   "exact_changed_file_boundary": [
+    "apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts",
+    "apps/server/src/runtime/twin_runtime/next_tick_input_service_v1.ts",
+    "apps/server/src/runtime/twin_runtime/ports.ts",
     "apps/server/src/runtime/twin_runtime/assimilated_continuation_tick_service_v1.ts",
     "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-SINGLE-TICK-INTEGRATION-STATUS.json",
     "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-SINGLE-TICK-INTEGRATION.md",

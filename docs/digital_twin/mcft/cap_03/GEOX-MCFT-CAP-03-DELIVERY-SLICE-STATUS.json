@@ -432,6 +432,9 @@
         "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
       ],
       "exact_changed_file_boundary": [
+        "apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts",
+        "apps/server/src/runtime/twin_runtime/next_tick_input_service_v1.ts",
+        "apps/server/src/runtime/twin_runtime/ports.ts",
         "apps/server/src/runtime/twin_runtime/assimilated_continuation_tick_service_v1.ts",
         "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-SINGLE-TICK-INTEGRATION-STATUS.json",
         "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-SINGLE-TICK-INTEGRATION.md",
