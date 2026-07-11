@@ -153,6 +153,10 @@ function memberRefV1(recordSet: AssimilatedContinuationRecordSetV1, objectType: 
   return memberV1(recordSet, objectType).object_id;
 }
 
+function memberHashV1(recordSet: AssimilatedContinuationRecordSetV1, objectType: string): string {
+  return memberV1(recordSet, objectType).determinism_hash;
+}
+
 function committedSequenceV1(recordSet: AssimilatedContinuationRecordSetV1): number {
   const value = memberV1(recordSet, "twin_runtime_checkpoint_v1").payload.tick_sequence;
   if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
@@ -175,8 +179,11 @@ function assertNextHandoffV1(input: {
   if (input.handoff.previous_forecast_result_ref !== memberRefV1(input.record_set, "twin_forecast_run_v1")) {
     throw new Error("ASSIMILATED_TICK_NEXT_HANDOFF_FORECAST_REF_MISMATCH");
   }
-  if (!input.handoff.previous_forecast_result_hash) {
-    throw new Error("ASSIMILATED_TICK_NEXT_HANDOFF_FORECAST_HASH_REQUIRED");
+  if (
+    input.handoff.previous_forecast_result_hash
+    !== memberHashV1(input.record_set, "twin_forecast_run_v1")
+  ) {
+    throw new Error("ASSIMILATED_TICK_NEXT_HANDOFF_FORECAST_HASH_MISMATCH");
   }
   if (input.handoff.next_logical_tick_time !== input.expected_next_time) {
     throw new Error("ASSIMILATED_TICK_NEXT_HANDOFF_LOGICAL_TIME_MISMATCH");
