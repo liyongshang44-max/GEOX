@@ -110,7 +110,6 @@ async function main(): Promise<void> {
     fixture.predecessorState.runtime_config_ref,
     fixture.continuationRuntimeConfig.object_id,
   );
-  ok("CAP-03 aggregate pins its config while predecessor State remains pinned to CAP-02 config");
 
   assert.equal(fixture.expected.previous_state_ref, fixture.predecessorState.object_id);
   assert.equal(
@@ -122,7 +121,7 @@ async function main(): Promise<void> {
     fixture.predecessorForecast.object_id,
   );
   assert.equal(fixture.expected.latest_successful_forecast_ref, null);
-  ok("expected-current State, checkpoint, Forecast-result, and successful-Forecast authorities are frozen");
+  ok("pinned Runtime Config and expected-current predecessor authorities are frozen");
 
   const migrationNames = fs
     .readdirSync(path.join(ROOT, "apps/server/db/migrations"))
