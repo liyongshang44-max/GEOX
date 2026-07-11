@@ -24,5 +24,22 @@ jobs:
           node-version: 20
       - name: Install
         run: pnpm install --no-frozen-lockfile --reporter=silent
-      - name: Server Typecheck
-        run: pnpm --filter @geox/server typecheck
+      - name: Capture Server Typecheck
+        run: |
+          set +e
+          pnpm --filter @geox/server typecheck > s3a-typecheck.log 2>&1
+          rc=$?
+          printf '%s\n' "$rc" > s3a-typecheck.exit
+          cat s3a-typecheck.log
+          exit 0
+      - name: Upload Typecheck Diagnostic
+        uses: actions/upload-artifact@v4
+        with:
+          name: s3a-typecheck-diagnostic
+          path: |
+            s3a-typecheck.log
+            s3a-typecheck.exit
+          if-no-files-found: error
+          retention-days: 1
+      - name: Enforce Typecheck Result
+        run: test "$(cat s3a-typecheck.exit)" = "0"
