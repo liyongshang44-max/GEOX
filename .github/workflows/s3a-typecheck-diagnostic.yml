@@ -53,11 +53,30 @@ jobs:
 
           if changed != 3:
               raise SystemExit(f"expected 3 replacements, applied {changed}")
-      - name: Commit syntax repair
+      - name: Capture commit and push
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add apps/server/src/domain/twin_runtime/assimilated_continuation_cross_ref_validator_v1.ts
-          git add apps/server/src/runtime/twin_runtime/assimilated_continuation_record_set_builder_v1.ts
-          git commit -m "fix(mcft-cap-03): normalize S3A type assertions"
-          git push origin HEAD:mcft-cap-03-assimilated-a2-record-set-builder-v1
+          set +e
+          {
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add apps/server/src/domain/twin_runtime/assimilated_continuation_cross_ref_validator_v1.ts
+            git add apps/server/src/runtime/twin_runtime/assimilated_continuation_record_set_builder_v1.ts
+            git diff --cached --stat
+            git commit -m "fix(mcft-cap-03): normalize S3A type assertions"
+            git push origin HEAD:mcft-cap-03-assimilated-a2-record-set-builder-v1
+          } > s3a-patch.log 2>&1
+          rc=$?
+          printf '%s\n' "$rc" > s3a-patch.exit
+          cat s3a-patch.log
+          exit 0
+      - name: Upload patch diagnostic
+        uses: actions/upload-artifact@v4
+        with:
+          name: s3a-patch-diagnostic
+          path: |
+            s3a-patch.log
+            s3a-patch.exit
+          if-no-files-found: error
+          retention-days: 1
+      - name: Enforce patch result
+        run: test "$(cat s3a-patch.exit)" = "0"
