@@ -1,0 +1,42 @@
+name: s3a-fixture-syntax-repair
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: mcft-cap-03-assimilated-a2-record-set-builder-v1
+          fetch-depth: 1
+          show-progress: false
+      - name: Repair fixture and self-clean
+        shell: python
+        run: |
+          from pathlib import Path
+
+          fixture = Path("scripts/runtime_acceptance/mcft_cap_03_assimilated_record_set_builder_fixture_v1.ts")
+          text = fixture.read_text(encoding="utf-8")
+          old = "const config = source.assimilatedRuntimeConfig.payload\n    as unknown as AssimilatedContinuationRuntimeConfigPayloadV1;"
+          new = "const config = source.assimilatedRuntimeConfig.payload as unknown as AssimilatedContinuationRuntimeConfigPayloadV1;"
+          if text.count(old) != 1:
+              raise SystemExit(f"expected exactly one fixture assertion, found {text.count(old)}")
+          fixture.write_text(text.replace(old, new, 1), encoding="utf-8", newline="\n")
+
+          Path("scripts/runtime_acceptance/mcft_cap_03_assimilated_record_set_builder_fixture_v1.ts.tmp").unlink(missing_ok=True)
+          Path(".github/workflows/s3a-fixture-syntax-repair.yml").unlink()
+      - name: Commit repair
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix(mcft-cap-03): normalize S3A fixture type assertion"
+          git push origin HEAD:mcft-cap-03-assimilated-a2-record-set-builder-v1
