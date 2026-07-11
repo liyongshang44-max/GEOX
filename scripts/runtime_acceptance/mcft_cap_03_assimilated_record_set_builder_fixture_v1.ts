@@ -112,8 +112,7 @@ function finalizedEvidenceWindowV1(input: {
 
 export async function buildMcftCap03AssimilatedRecordSetBuilderFixtureV1() {
   const source = await buildMcftCap03ContractsConfigFixtureV1();
-  const config = source.assimilatedRuntimeConfig.payload
-    as unknown as AssimilatedContinuationRuntimeConfigPayloadV1;
+  const config = source.assimilatedRuntimeConfig.payload as unknown as AssimilatedContinuationRuntimeConfigPayloadV1;
   const observation = makeObservationV1(source.scope);
   const selection = selectAssimilatedContinuationObservationV1({
     scope: source.scope,
