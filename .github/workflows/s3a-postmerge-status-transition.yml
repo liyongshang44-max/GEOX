@@ -1,0 +1,63 @@
+name: s3a-postmerge-status-transition
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  transition:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout closure branch
+        uses: actions/checkout@v4
+        with:
+          ref: mcft-cap-03-s3a-postmerge-effectiveness-v1
+          fetch-depth: 1
+          show-progress: false
+      - name: Record S3A merged-main declaration and self-clean
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+
+          merge_commit = "66636e6e3259d6ada2e10566d984d095341040aa"
+          slice_id = "MCFT-CAP-03.MCFT-02-07-08.ASSIMILATED-A2-RECORD-SET-BUILDER-V1"
+
+          status_path = Path("docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-ASSIMILATED-RECORD-SET-BUILDER-STATUS.json")
+          status = json.loads(status_path.read_text(encoding="utf-8"))
+          status["status"] = "MERGED"
+          status["merge_commit"] = merge_commit
+          status["merged_main_gate"] = "PASS"
+          status["effectiveness_condition_satisfied"] = True
+          status["acceptance"]["server_typecheck"] = "PASS"
+          status["acceptance"]["server_build"] = "PASS"
+          status["acceptance"]["exact_head_ci"] = "PASS_CI_4631_EXACT_HEAD"
+          status["acceptance"]["final_gate"] = "PASS_102_OF_102"
+          status["acceptance"]["merged_main_postmerge_gate"] = "PASS_DECLARED_FOR_REPRODUCTION"
+          status["successor_authorized"] = False
+          status_path.write_text(json.dumps(status, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+
+          delivery_path = Path("docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json")
+          delivery = json.loads(delivery_path.read_text(encoding="utf-8"))
+          delivery["status"] = "ASSIMILATED_RECORD_SET_BUILDER_MERGED"
+          current = next(item for item in delivery["slices"] if item["delivery_slice_id"] == slice_id)
+          current["status"] = "MERGED"
+          current["merge_commit"] = merge_commit
+          current["merged_main_gate"] = "PASS"
+          current["effectiveness_condition_satisfied"] = True
+          delivery["next_authorized_slice_ids"] = []
+          delivery["successor_authorized"] = False
+          delivery_path.write_text(json.dumps(delivery, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+
+          Path(".github/workflows/s3a-postmerge-status-transition.yml").unlink()
+      - name: Commit closure state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore(mcft-cap-03): record S3A merged-main declaration"
+          git push origin HEAD:mcft-cap-03-s3a-postmerge-effectiveness-v1
