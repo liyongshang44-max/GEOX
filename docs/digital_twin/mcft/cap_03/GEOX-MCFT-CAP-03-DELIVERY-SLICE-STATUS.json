@@ -6,7 +6,7 @@
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A",
   "baseline_main_commit": "6389d4e566a6eb64ce96209be0e70cd8703be574",
-  "status": "ASSIMILATED_PERSISTENCE_RECOVERY_IN_PROGRESS",
+  "status": "ASSIMILATED_PERSISTENCE_RECOVERY_READY_FOR_MERGE",
   "design_status": "DESIGN_FROZEN",
   "implementation_status": "READY_FOR_IMPLEMENTATION",
   "authorization_effective": true,
@@ -330,7 +330,7 @@
       ],
       "baseline_main_commit": "293fbeff04441f12aee13945c2db24b4b9bb23b5",
       "branch": "mcft-cap-03-assimilated-a2-persistence-recovery-v1",
-      "status": "IN_PROGRESS",
+      "status": "READY_FOR_MERGE",
       "activation_fields_status": "FROZEN",
       "allowed_claims": [
         "ASSIMILATED_A2_EXISTING_TRANSACTION_REUSE_ESTABLISHED",
