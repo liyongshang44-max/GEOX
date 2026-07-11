@@ -1,5 +1,5 @@
 // scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_ASSIMILATED_PERSISTENCE_RECOVERY.ts
-// Purpose: prove the CAP-03 assimilated record set is compatible with the shared A2 persistence contract, versioned readback dispatch, five projection rows, idempotency identity, and zero-migration boundary before PostgreSQL execution.
+// Purpose: prove the CAP-03 assimilated record set is compatible with the existing A2 transaction family, independent assimilated repository, versioned readback dispatch, five projection rows, idempotency identity, and zero-migration boundary before PostgreSQL execution.
 // Boundary: pure in-memory acceptance only; no database, lease, canonical write, Runtime tick orchestration, range execution, route, scheduler, or production claim.
 
 import assert from "node:assert/strict";
@@ -134,16 +134,22 @@ async function main(): Promise<void> {
     path.join(ROOT, "apps/server/src/runtime/twin_runtime/ports.ts"),
     "utf8",
   );
-  const repository = fs.readFileSync(
+  const historicalRepository = fs.readFileSync(
     path.join(ROOT, "apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.ts"),
     "utf8",
   );
+  const assimilatedRepository = fs.readFileSync(
+    path.join(ROOT, "apps/server/src/persistence/twin_runtime/postgres_assimilated_runtime_repository_v1.ts"),
+    "utf8",
+  );
   assert.match(ports, /interface AssimilatedContinuationPersistencePortV1/);
-  assert.match(repository, /commitAssimilatedContinuationState/);
-  assert.match(repository, /readAssimilatedContinuationRecordSet/);
-  assert.match(repository, /rebuildAssimilatedContinuationProjections/);
-  assert.match(repository, /commitVersionedContinuationStateV1/);
-  ok("independent CAP-03 port reuses one shared internal A2 transaction implementation");
+  assert.match(assimilatedRepository, /extends PostgresRuntimeRepositoryV1/);
+  assert.match(assimilatedRepository, /commitAssimilatedContinuationState/);
+  assert.match(assimilatedRepository, /readAssimilatedContinuationRecordSet/);
+  assert.match(assimilatedRepository, /rebuildAssimilatedContinuationProjections/);
+  assert.match(assimilatedRepository, /identity_kind='A2_RECORD_SET'/);
+  assert.match(historicalRepository, /commitContinuationState/);
+  ok("CAP-03 repository inherits immutable CAP-02 behavior and reuses the existing A2 transaction family");
 
   console.log(`MCFT-CAP-03 assimilated persistence recovery: ${pass} PASS, 0 FAIL`);
 }
