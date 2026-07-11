@@ -143,17 +143,28 @@ function dynamicsConfigV1(config: AssimilatedContinuationRuntimeConfigPayloadV1)
   };
 }
 
-function memberRefV1(recordSet: AssimilatedContinuationRecordSetV1, objectType: string): string {
+function memberV1(recordSet: AssimilatedContinuationRecordSetV1, objectType: string) {
   const matches = recordSet.members.filter((member) => member.object_type === objectType);
   if (matches.length !== 1) throw new Error(`ASSIMILATED_TICK_MEMBER_TYPE_CARDINALITY:${objectType}`);
-  return matches[0].object_id;
+  return matches[0];
+}
+
+function memberRefV1(recordSet: AssimilatedContinuationRecordSetV1, objectType: string): string {
+  return memberV1(recordSet, objectType).object_id;
+}
+
+function committedSequenceV1(recordSet: AssimilatedContinuationRecordSetV1): number {
+  const value = memberV1(recordSet, "twin_runtime_checkpoint_v1").payload.tick_sequence;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+    throw new Error("ASSIMILATED_TICK_COMMITTED_SEQUENCE_INVALID");
+  }
+  return value;
 }
 
 function assertNextHandoffV1(input: {
   record_set: AssimilatedContinuationRecordSetV1;
   handoff: PreparedNextTickInputV1;
   expected_next_time: string;
-  expected_sequence: number;
 }): void {
   if (input.handoff.previous_posterior_ref !== memberRefV1(input.record_set, "twin_state_estimate_v1")) {
     throw new Error("ASSIMILATED_TICK_NEXT_HANDOFF_STATE_REF_MISMATCH");
@@ -170,7 +181,7 @@ function assertNextHandoffV1(input: {
   if (input.handoff.next_logical_tick_time !== input.expected_next_time) {
     throw new Error("ASSIMILATED_TICK_NEXT_HANDOFF_LOGICAL_TIME_MISMATCH");
   }
-  if (input.handoff.previous_tick_sequence !== input.expected_sequence) {
+  if (input.handoff.previous_tick_sequence !== committedSequenceV1(input.record_set)) {
     throw new Error("ASSIMILATED_TICK_NEXT_HANDOFF_SEQUENCE_MISMATCH");
   }
 }
@@ -214,7 +225,6 @@ export class AssimilatedContinuationTickServiceV1 {
         record_set: previouslyCommitted,
         handoff: nextHandoff,
         expected_next_time: new Date(Date.parse(logicalTime) + 60 * 60 * 1000).toISOString(),
-        expected_sequence: handoff.previous_tick_sequence + 1,
       });
       return {
         status: "EXISTING_IDEMPOTENT_SUCCESS",
@@ -252,10 +262,7 @@ export class AssimilatedContinuationTickServiceV1 {
       config.reality_binding_ref !== handoff.reality_binding_ref
       || config.reality_binding_hash !== handoff.reality_binding_hash
     ) throw new Error("ASSIMILATED_REALITY_BINDING_MISMATCH");
-    if (
-      input.crop_stage_context.configuration_matrix_ref !== config.configuration_matrix_hash
-      && input.crop_stage_context.configuration_matrix_hash !== config.configuration_matrix_hash
-    ) {
+    if (input.crop_stage_context.configuration_matrix_hash !== config.configuration_matrix_hash) {
       throw new Error("ASSIMILATED_CROP_STAGE_CONFIGURATION_MATRIX_MISMATCH");
     }
 
@@ -335,7 +342,6 @@ export class AssimilatedContinuationTickServiceV1 {
         record_set: existingAfterBuild,
         handoff: nextHandoff,
         expected_next_time: new Date(Date.parse(logicalTime) + 60 * 60 * 1000).toISOString(),
-        expected_sequence: handoff.previous_tick_sequence + 1,
       });
       return {
         status: "EXISTING_IDEMPOTENT_SUCCESS",
@@ -382,7 +388,6 @@ export class AssimilatedContinuationTickServiceV1 {
       record_set: readback,
       handoff: nextHandoff,
       expected_next_time: new Date(Date.parse(logicalTime) + 60 * 60 * 1000).toISOString(),
-      expected_sequence: handoff.previous_tick_sequence + 1,
     });
     return {
       status: committed.status,
