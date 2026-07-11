@@ -171,8 +171,7 @@ export class PostgresAssimilatedRuntimeRepositoryV1
     );
     if (facts.rows.length !== 8) return null;
     const members = facts.rows.map((row) => parseFactObjectV1(row.record_json));
-    const aggregate = identityBasis.aggregate_identity_input
-      as AssimilatedContinuationRecordSetV1["aggregate_identity_input"];
+    const aggregate = identityBasis.aggregate_identity_input as AssimilatedContinuationRecordSetV1["aggregate_identity_input"];
     const runtimeConfig = await this.verifyRuntimeConfigReferenceV1(
       client,
       aggregate.runtime_config_ref,
@@ -180,9 +179,7 @@ export class PostgresAssimilatedRuntimeRepositoryV1
     );
     const recordSet: AssimilatedContinuationRecordSetV1 = {
       record_set_contract_id: ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V1,
-      continuation_operation_key:
-        identityBasis.continuation_operation_key
-        as AssimilatedContinuationRecordSetV1["continuation_operation_key"],
+      continuation_operation_key: identityBasis.continuation_operation_key as AssimilatedContinuationRecordSetV1["continuation_operation_key"],
       continuation_operation_key_hash: String(
         identityBasis.continuation_operation_key_hash,
       ),
