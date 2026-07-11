@@ -158,7 +158,7 @@ check(s3b?.activation_fields_status === 'FROZEN', 'S3B activation fields frozen'
 check(JSON.stringify([...(s3b?.exact_changed_file_boundary || [])].sort()) === JSON.stringify(EXACT_CHANGED_FILES), 'S3B delivery boundary exact');
 check(s4?.status === 'BLOCKED', 'S4 remains blocked before S3B effectiveness');
 check(s4?.branch === null && s4?.baseline_main_commit === null, 'S4 activation fields remain unset');
-check(delivery.successor_capability_authorization?.authorized === false, 'MCFT-CAP-04 remains unauthorized');
+check(delivery.successor_authorized === false, 'MCFT-CAP-04 remains unauthorized');
 
 if (DRAFT) {
   check(status.status === 'IN_PROGRESS', 'draft S3B status IN_PROGRESS');
