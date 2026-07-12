@@ -10,6 +10,7 @@
   "predecessor_r4_a_status": "MERGED_EFFECTIVE",
   "predecessor_r4_b_status": "MERGED_EFFECTIVE",
   "branch": "mcft-cap-03-r4-c-task-amendment-ssot-v1",
+  "materialized_candidate_head_commit": "2582c947a14deef12d265c106a6783aa6ce055fe",
   "status": "CANDIDATE_VALIDATED_NOT_EFFECTIVE",
   "reconciliation_scope": {
     "task_amendment_reference": "ESTABLISHED",
@@ -27,9 +28,11 @@
     "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_R4_C_SSOT_RECONCILIATION.cjs"
   ],
   "candidate_validation": {
-    "governance_acceptance": "REQUIRED",
-    "historical_r4_a_acceptance": "REQUIRED",
-    "historical_r4_b_acceptance": "REQUIRED"
+    "materializer_workflow_run_id": 29198425932,
+    "materializer_workflow_conclusion": "SUCCESS",
+    "governance_acceptance": "PASS_5_OF_5",
+    "historical_r4_a_acceptance": "PASS_8_OF_8",
+    "historical_r4_b_acceptance": "PASS_5_OF_5"
   },
   "effectiveness_condition": "R4_C_PR_MERGED_TO_MAIN_AND_EXACT_HEAD_CI_PASS_AND_MERGE_TREE_EQUIVALENCE_PASS",
   "effectiveness_condition_satisfied": false,
