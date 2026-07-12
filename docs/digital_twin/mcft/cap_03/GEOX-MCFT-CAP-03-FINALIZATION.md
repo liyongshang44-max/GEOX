@@ -70,3 +70,16 @@ MCFT-CAP-04: UNAUTHORIZED
 ## 7. Forbidden scope
 
 No Runtime source, persistence source, migration, route, scheduler, web behavior, workflow, canonical fact, model parameter, or MCFT-CAP-04 authorization is permitted.
+
+## 8. Finalization implementation candidate
+
+```text
+baseline_main_commit: 68f0bc2198c0fd09bb4dcedf5b13d8507fb35902
+branch: mcft-cap-03-s8-finalization-v1
+status: FINALIZATION_READY_FOR_MERGE
+activation_postmerge_gate: MCFT-CAP-03 S8 Finalization activation postmerge: 52 PASS, 0 FAIL
+closure_effective: false
+capability_status: NOT_COMPLETE
+completion_claims: PENDING_FINALIZATION_EFFECTIVENESS
+MCFT-CAP-04: UNAUTHORIZED
+```

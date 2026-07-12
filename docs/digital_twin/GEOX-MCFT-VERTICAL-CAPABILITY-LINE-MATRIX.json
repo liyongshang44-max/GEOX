@@ -392,18 +392,18 @@
       "name": "Observation Assimilation and State Innovation",
       "runtime_mode": "REPLAY",
       "target_completion_level": "Level A",
-      "status": "AUTHORIZATION_READY_FOR_MERGE",
+      "status": "FINALIZATION_READY_FOR_MERGE",
       "authorization_id": "MCFT-CAP-03-AUTHORIZATION-V1",
-      "authorization_status": "READY_FOR_MERGE",
-      "authorization_effective": false,
-      "runtime_source_authorized": false,
-      "design_status": "FINAL_FROZEN_CANDIDATE_V1_2",
-      "implementation_status": "NOT_AUTHORIZED",
+      "authorization_status": "MERGED",
+      "authorization_effective": true,
+      "runtime_source_authorized": true,
+      "design_status": "DESIGN_FROZEN",
+      "implementation_status": "S8_FINALIZATION_READY_FOR_MERGE",
       "predecessor_capability_line_id": "MCFT-CAP-02",
       "predecessor_main_commit": "d1a3948d06e4c7896d513168d31ef52409c3e0f0",
       "predecessor_lock_ref": "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-PREDECESSOR-LOCK.json",
       "predecessor_handoff_erratum_ref": "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-02-HANDOFF-ERRATUM-01.json",
-      "active_delivery_slice_id": "MCFT-CAP-03.GOV-AUTHORIZATION-AND-PREDECESSOR-LOCK-V1",
+      "active_delivery_slice_id": "MCFT-CAP-03.CLOSURE-FINALIZATION-V1",
       "authorized_owner_work_package_ids": [
         "MCFT-02",
         "MCFT-03",
@@ -883,7 +883,7 @@
           ],
           "baseline_main_commit": null,
           "branch": null,
-          "status": "BLOCKED",
+          "status": "MERGED_POSTMERGE_GATE_PASS",
           "activation_fields_status": "TO_BE_FROZEN_AT_SLICE_ACTIVATION",
           "allowed_claims": [],
           "preserved_nonclaims": [
@@ -938,9 +938,9 @@
           "depends_on_delivery_slice_ids": [
             "MCFT-CAP-03.CLOSURE-V1"
           ],
-          "baseline_main_commit": null,
-          "branch": null,
-          "status": "BLOCKED",
+          "baseline_main_commit": "68f0bc2198c0fd09bb4dcedf5b13d8507fb35902",
+          "branch": "mcft-cap-03-s8-finalization-v1",
+          "status": "FINALIZATION_READY_FOR_MERGE",
           "activation_fields_status": "TO_BE_FROZEN_AT_SLICE_ACTIVATION",
           "allowed_claims": [],
           "preserved_nonclaims": [
@@ -999,10 +999,7 @@
         "VERSIONED_ASSIMILATION_RECORD_SET_COMPATIBILITY_ESTABLISHED"
       ],
       "preserved_nonclaims": [
-        "NO_MCFT_CAP_03_RUNTIME_AUTHORIZATION",
         "NO_MCFT_CAP_03_COMPLETE_CLAIM",
-        "NO_OBSERVATION_UPDATE_APPLIED",
-        "NO_OBSERVATION_INNOVATION_COMPUTED",
         "NO_FORECAST_RESIDUAL",
         "NO_SUCCESSFUL_FORECAST",
         "NO_72_HOUR_FORECAST",
@@ -1018,9 +1015,9 @@
         "NO_CALIBRATED_CONFIDENCE_MODEL",
         "NO_MULTI_SENSOR_FUSION",
         "NO_DYNAMIC_ROOT_ZONE_GEOMETRY",
+        "NO_SPATIAL_EXECUTION_OVERLAP_DEDUPLICATION",
         "NO_LATE_EVIDENCE_REVISION",
         "NO_AUTOMATIC_RECOMPUTE_ON_LATE_EVIDENCE",
-        "NO_SPATIAL_EXECUTION_OVERLAP_DEDUPLICATION",
         "NO_CONTINUOUS_RUNTIME",
         "NO_CONTINUOUS_SCHEDULER",
         "NO_720_TICK_REPLAY_CLOSURE",
@@ -1036,7 +1033,47 @@
       "next_authorized_slice_id_after_merge_and_postmerge_gate": "MCFT-CAP-03.MCFT-02-07-08.ASSIMILATION-CONTRACTS-CONFIG-V1",
       "successor_capability_line_id": "MCFT-CAP-04",
       "successor_authorized": false,
-      "effectiveness_condition": "S0_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_AUTHORIZATION_GATE_PASS"
+      "effectiveness_condition": "S0_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_AUTHORIZATION_GATE_PASS",
+      "completion_claims": [],
+      "finalization": {
+        "baseline_main_commit": "68f0bc2198c0fd09bb4dcedf5b13d8507fb35902",
+        "branch": "mcft-cap-03-s8-finalization-v1",
+        "status": "FINALIZATION_READY_FOR_MERGE",
+        "closure_effective": false,
+        "capability_complete": false,
+        "completion_claims_status": "PENDING_FINALIZATION_EFFECTIVENESS",
+        "exact_changed_file_boundary": [
+          "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+          "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+          "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-CLOSURE-RECORD.json",
+          "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-CLOSURE-STATUS.json",
+          "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-CLOSURE.md",
+          "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+          "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-FINALIZATION-STATUS.json",
+          "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-FINALIZATION.md",
+          "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-MAIN-VERIFICATION.json",
+          "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_FINALIZATION.cjs"
+        ],
+        "activation_evidence": {
+          "activation_pr_number": 2362,
+          "activation_head_commit": "a6f955bec13bd7f4178a3a52cc474ff984db5611",
+          "activation_ci_run": "CI_4755",
+          "activation_merge_commit": "544223afa730a925fbc9c1191b3fda3b85f0d05c",
+          "activation_draft_gate": "PASS_53_OF_53",
+          "activation_final_gate": "PASS_53_OF_53",
+          "activation_effectiveness_pr_number": 2363,
+          "activation_effectiveness_head_commit": "a8385cc8ac1a05611496af9beb3e0a8eb05455f5",
+          "activation_effectiveness_ci_run": "CI_4757",
+          "activation_effectiveness_merge_commit": "68f0bc2198c0fd09bb4dcedf5b13d8507fb35902",
+          "activation_postmerge_gate": "PASS",
+          "activation_postmerge_gate_summary": "MCFT-CAP-03 S8 Finalization activation postmerge: 52 PASS, 0 FAIL",
+          "activation_effectiveness_condition_satisfied": true
+        },
+        "draft_gate": "PASS_57_OF_57",
+        "final_gate": "PASS_57_OF_57",
+        "exact_head_ci": "PENDING_EXTERNAL_PR_GATE",
+        "effectiveness_condition": "S8_FINALIZATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_FINALIZATION_GATE_PASS"
+      }
     }
   ],
   "actual_owner_work_package_statuses": {

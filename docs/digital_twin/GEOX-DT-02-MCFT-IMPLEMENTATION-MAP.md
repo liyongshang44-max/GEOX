@@ -436,3 +436,18 @@ false
 ```
 
 The S0 branch contains governance and PostgreSQL predecessor proof only. Runtime implementation remains forbidden until S0 merges and its merged-main Authorization Gate passes. Horizontal owner work packages remain partially established.
+
+## MCFT-CAP-03 Finalization candidate
+
+```text
+status: FINALIZATION_READY_FOR_MERGE
+baseline_main_commit: 68f0bc2198c0fd09bb4dcedf5b13d8507fb35902
+branch: mcft-cap-03-s8-finalization-v1
+active_delivery_slice_id: MCFT-CAP-03.CLOSURE-FINALIZATION-V1
+closure_effective: false
+completion_claims: PENDING_FINALIZATION_EFFECTIVENESS
+main_verification: PENDING_FINALIZATION_EFFECTIVENESS
+MCFT-CAP-04: UNAUTHORIZED
+```
+
+This candidate records governance evidence only. It does not change Runtime behavior, canonical facts, model parameters, or successor authorization.
