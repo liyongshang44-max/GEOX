@@ -2,7 +2,7 @@ name: MCFT-CAP-03 R4-A materialize
 
 on:
   pull_request:
-    types: [opened, reopened]
+    types: [opened, reopened, synchronize]
     branches: [main]
 
 permissions:
