@@ -1,0 +1,34 @@
+name: MCFT-CAP-04 S0 postmerge probe
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-04-s0-postmerge-probe-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout merged main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Verify exact merged-main identity
+        run: |
+          test "$(git branch --show-current)" = "main"
+          test "$(git rev-parse HEAD)" = "870bcc621e8d0495ae5acbedd534068a18d402b9"
+          test "$(git rev-parse origin/main)" = "870bcc621e8d0495ae5acbedd534068a18d402b9"
+
+      - name: Run merged-main Authorization Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_AUTHORIZATION.cjs --postmerge
+
+      - name: Verify complete task integrity
+        run: |
+          echo 'ea63e92a64b760b84c49428b1d3a245ce5cd94bb08daa9c6b971a53861b90a63  docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md' | sha256sum -c -
+          test "$(wc -c < docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md)" -eq 77603
