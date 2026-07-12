@@ -10,7 +10,9 @@
   "predecessor_r4_a_status": "MERGED_EFFECTIVE",
   "branch": "mcft-cap-03-r4-b-runtime-config-pin-v1",
   "materialized_implementation_head_commit": "943080ab7fc0cc7681152ff8283e8107a43c6f7d",
-  "status": "CANDIDATE_VALIDATED_NOT_EFFECTIVE",
+  "exact_pr_head_commit": "0d6a64a348706b6d83b9d133ddcff3b6e4c4bf8f",
+  "implementation_merge_commit": "518a4beb600a90a01be5f06ec848b8d31bb2950e",
+  "status": "MERGED_EFFECTIVE",
   "implementation_scope": {
     "single_tick_ref_hash_pin": "IMPLEMENTED",
     "idempotent_replay_ref_hash_pin": "IMPLEMENTED",
@@ -27,17 +29,28 @@
     "historical_r4_a_acceptance": "PASS_8_OF_8",
     "r4_b_runtime_config_pin_acceptance": "PASS_5_OF_5"
   },
-  "exact_changed_file_boundary": [
+  "effectiveness_evidence": {
+    "exact_head_ci_run": "CI_4785",
+    "exact_head_build_test": "PASS",
+    "exact_head_acceptance": "PASS",
+    "implementation_merge_commit": "518a4beb600a90a01be5f06ec848b8d31bb2950e",
+    "exact_head_to_merge_file_delta_count": 0,
+    "exact_head_to_merge_tree_equivalence": "PASS"
+  },
+  "exact_implementation_changed_file_boundary": [
     "apps/server/src/runtime/twin_runtime/assimilated_continuation_tick_service_v2.ts",
     "apps/server/src/runtime/twin_runtime/assimilated_contiguous_range_service_v2.ts",
     "scripts/runtime_acceptance/mcft_cap_03_r2_v2_revalidation_fixture_v1.ts",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_R4_B_RUNTIME_CONFIG_PIN.ts",
     "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R4-B-RUNTIME-CONFIG-PIN-STATUS.json"
   ],
+  "effectiveness_changed_file_boundary": [
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R4-B-RUNTIME-CONFIG-PIN-STATUS.json"
+  ],
   "effectiveness_condition": "R4_B_PR_MERGED_TO_MAIN_AND_EXACT_HEAD_CI_PASS_AND_MERGE_TREE_EQUIVALENCE_PASS",
-  "effectiveness_condition_satisfied": false,
+  "effectiveness_condition_satisfied": true,
   "successor_step_id": "R4-C",
-  "successor_authorized": false,
+  "successor_authorized": true,
   "preserved_nonclaims": [
     "NO_SUCCESSFUL_FORECAST",
     "NO_FORECAST_RESIDUAL",
