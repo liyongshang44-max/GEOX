@@ -243,11 +243,11 @@
       "name": "72-Hour Forecast and Three Scenarios",
       "runtime_mode": "REPLAY",
       "target_completion_level": "Level A — Deterministic Replay Twin",
-      "status": "P0_RECONCILIATION_CANDIDATE",
+      "status": "NOT_AUTHORIZED",
       "design_status": "FINAL_FROZEN_CANDIDATE_V0_5",
       "implementation_status": "NOT_AUTHORIZED",
       "authorization_id": "MCFT-CAP-04-AUTHORIZATION-V1",
-      "authorization_status": "NOT_STARTED",
+      "authorization_status": "NOT_AUTHORIZED",
       "authorization_effective": false,
       "runtime_source_authorized": false,
       "predecessor_capability_line_id": "MCFT-CAP-03",
@@ -272,7 +272,7 @@
         "MCFT-17",
         "MCFT-18"
       ],
-      "active_delivery_slice_id": "MCFT-CAP-04.P0.CAP-03-GLOBAL-SSOT-RECONCILIATION-V1",
+      "active_delivery_slice_id": null,
       "next_delivery_slice_id": "MCFT-CAP-04.GOV-AUTHORIZATION-AND-PREDECESSOR-LOCK-V1",
       "next_delivery_slice_authorized": false,
       "task_ref": "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md",
@@ -310,6 +310,7 @@
         }
       ],
       "pending_completion_claims": [],
+      "effective_completion_claims": [],
       "completion_claims": [],
       "preserved_nonclaims": [
         "NO_MCFT_CAP_04_AUTHORIZATION",

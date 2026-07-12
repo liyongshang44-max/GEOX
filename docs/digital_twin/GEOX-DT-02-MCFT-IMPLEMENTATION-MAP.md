@@ -189,24 +189,26 @@ docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R4-FINAL-VERIFICATION.json
 docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json
 ```
 
-## 5. MCFT-CAP-04 P0 governance reconciliation
+## 5. MCFT-CAP-04 provisional state after P0
 
 ```text
 capability: MCFT-CAP-04 — 72-Hour Forecast and Three Scenarios
 runtime mode: REPLAY
 target level: Level A — Deterministic Replay Twin
+status: NOT_AUTHORIZED
 design_status: FINAL_FROZEN_CANDIDATE_V0_5
 implementation_status: NOT_AUTHORIZED
 runtime_source_authorized: false
 authorization_effective: false
-active delivery slice: MCFT-CAP-04.P0.CAP-03-GLOBAL-SSOT-RECONCILIATION-V1
+active_delivery_slice_id: null
+P0 delivery candidate: MCFT-CAP-04.P0.CAP-03-GLOBAL-SSOT-RECONCILIATION-V1
 next delivery slice: MCFT-CAP-04.GOV-AUTHORIZATION-AND-PREDECESSOR-LOCK-V1
 next delivery slice authorized: false
 successor: MCFT-CAP-05
 successor authorized: false
 ```
 
-P0 is governance-only. It reconciles the global CAP-03 terminal state with the effective Main Verification and R4 Final Verification. It does not authorize S0 and does not authorize Runtime source changes.
+P0 is governance-only. It reconciles the global CAP-03 terminal state and records the complete v0.5 task authority. It does not authorize S0 and does not authorize Runtime source changes.
 
 P0 exact boundary:
 
@@ -231,6 +233,12 @@ Only after S0 effectiveness may the first CAP-04 Runtime delivery slice set:
 design_status: DESIGN_FROZEN
 implementation_status: READY_FOR_IMPLEMENTATION
 runtime_source_authorized: true
+```
+
+Complete task authority:
+
+```text
+docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md
 ```
 
 ## 6. CAP-04 frozen architecture boundaries
