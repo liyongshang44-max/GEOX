@@ -10,10 +10,10 @@
   "activation_branch": "mcft-cap-03-s7-closure-activation-v1",
   "activation_effectiveness_branch": "mcft-cap-03-s7-closure-activation-effectiveness-v1",
   "implementation_branch": "mcft-cap-03-s7-closure-v1",
-  "status": "ACTIVATION_READY_FOR_MERGE",
-  "activation_effective": false,
-  "implementation_status": "NOT_AUTHORIZED",
-  "implementation_authorized": false,
+  "status": "ACTIVATED",
+  "activation_effective": true,
+  "implementation_status": "AUTHORIZED",
+  "implementation_authorized": true,
   "closure_effective": false,
   "capability_status": "NOT_COMPLETE",
   "predecessor_effectiveness": {
@@ -129,5 +129,12 @@
   "finalization_delivery_slice_id": "MCFT-CAP-03.CLOSURE-FINALIZATION-V1",
   "finalization_authorized": false,
   "successor_capability_line_id": "MCFT-CAP-04",
-  "successor_authorized": false
+  "successor_authorized": false,
+  "activation_pr_number": 2359,
+  "activation_head_commit": "93d50d28014bb4bb8f3b711c84aea2f6c2f8f17c",
+  "activation_ci_run": "CI_4749",
+  "activation_merge_commit": "a16f635363ef8b492c600e7e2bc55c0dc5821217",
+  "activation_draft_gate": "PASS_71_OF_71",
+  "activation_final_gate": "PASS_71_OF_71",
+  "activation_effectiveness_candidate_status": "READY_FOR_MERGE_AND_POSTMERGE_GATE"
 }
