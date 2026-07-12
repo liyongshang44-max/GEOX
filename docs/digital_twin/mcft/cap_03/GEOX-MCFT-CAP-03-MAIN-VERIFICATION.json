@@ -115,8 +115,8 @@
   "finalization_gate": {
     "draft": "PASS_57_OF_57",
     "final": "PASS_57_OF_57",
-    "exact_head_ci": "PENDING_EXTERNAL_PR_GATE",
-    "merged_main": "PENDING"
+    "exact_head_ci": "CI_4770",
+    "merged_main": "PASS_58_OF_58"
   },
   "successor_capability_line_id": "MCFT-CAP-04",
   "successor_authorized": false,
