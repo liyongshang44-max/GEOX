@@ -200,3 +200,15 @@ UNAUTHORIZED
 ```
 
 The S7 candidate aggregates already-established merged-main evidence only. It creates no Runtime behavior, canonical fact, migration, route, scheduler, web behavior, model parameter change, or successor authorization.
+
+## 12. S8 Finalization candidate
+
+```text
+baseline_main_commit: 68f0bc2198c0fd09bb4dcedf5b13d8507fb35902
+branch: mcft-cap-03-s8-finalization-v1
+status: FINALIZATION_READY_FOR_MERGE
+S8 activation postmerge Gate: MCFT-CAP-03 S8 Finalization activation postmerge: 52 PASS, 0 FAIL
+closure_effective: false
+completion_claims: PENDING_FINALIZATION_EFFECTIVENESS
+MCFT-CAP-04: UNAUTHORIZED
+```

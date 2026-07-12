@@ -7,7 +7,7 @@
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A",
   "delivery_slice_id": "MCFT-CAP-03.CLOSURE-V1",
-  "status": "CLOSURE_READY_FOR_MERGE",
+  "status": "FINALIZATION_READY_FOR_MERGE",
   "closure_effective": false,
   "capability_complete": false,
   "baseline_main_commit": "cc719e5f2c4de4a284d3d350f5fdf73e6e0a2b82",
@@ -131,20 +131,64 @@
     "predecessor_artifacts": true
   },
   "exact_changed_file_boundary": [
-    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+    "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+    "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-CLOSURE-RECORD.json",
     "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-CLOSURE-STATUS.json",
     "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-CLOSURE.md",
-    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-CLOSURE-RECORD.json",
-    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_CLOSURE.cjs"
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-FINALIZATION-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-FINALIZATION.md",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-MAIN-VERIFICATION.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_FINALIZATION.cjs"
   ],
   "gate_evidence": {
     "draft_gate": "PASS_89_OF_89",
     "final_gate": "PASS_89_OF_89",
-    "exact_head_ci": "PENDING",
+    "exact_head_ci": "PENDING_EXTERNAL_PR_GATE",
     "git_diff_check": "PASS"
   },
   "finalization_delivery_slice_id": "MCFT-CAP-03.CLOSURE-FINALIZATION-V1",
   "finalization_authorized": false,
   "successor_capability_line_id": "MCFT-CAP-04",
-  "successor_authorized": false
+  "successor_authorized": false,
+  "finalization_candidate": {
+    "baseline_main_commit": "68f0bc2198c0fd09bb4dcedf5b13d8507fb35902",
+    "branch": "mcft-cap-03-s8-finalization-v1",
+    "status": "FINALIZATION_READY_FOR_MERGE",
+    "closure_effective": false,
+    "capability_complete": false,
+    "completion_claims_status": "PENDING_FINALIZATION_EFFECTIVENESS",
+    "exact_changed_file_boundary": [
+      "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+      "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-CLOSURE-RECORD.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-CLOSURE-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-CLOSURE.md",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-FINALIZATION-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-FINALIZATION.md",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-MAIN-VERIFICATION.json",
+      "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_FINALIZATION.cjs"
+    ],
+    "activation_evidence": {
+      "activation_pr_number": 2362,
+      "activation_head_commit": "a6f955bec13bd7f4178a3a52cc474ff984db5611",
+      "activation_ci_run": "CI_4755",
+      "activation_merge_commit": "544223afa730a925fbc9c1191b3fda3b85f0d05c",
+      "activation_draft_gate": "PASS_53_OF_53",
+      "activation_final_gate": "PASS_53_OF_53",
+      "activation_effectiveness_pr_number": 2363,
+      "activation_effectiveness_head_commit": "a8385cc8ac1a05611496af9beb3e0a8eb05455f5",
+      "activation_effectiveness_ci_run": "CI_4757",
+      "activation_effectiveness_merge_commit": "68f0bc2198c0fd09bb4dcedf5b13d8507fb35902",
+      "activation_postmerge_gate": "PASS",
+      "activation_postmerge_gate_summary": "MCFT-CAP-03 S8 Finalization activation postmerge: 52 PASS, 0 FAIL",
+      "activation_effectiveness_condition_satisfied": true
+    },
+    "draft_gate": "PASS_57_OF_57",
+    "final_gate": "PASS_57_OF_57",
+    "exact_head_ci": "PENDING_EXTERNAL_PR_GATE",
+    "effectiveness_condition": "S8_FINALIZATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_FINALIZATION_GATE_PASS"
+  }
 }
