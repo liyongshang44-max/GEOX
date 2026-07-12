@@ -30,6 +30,16 @@ jobs:
         run: |
           sed -i 's/FINAL_FROZENCANDIDATE_V0_5/FINAL_FROZEN_CANDIDATE_V0_5/g' .cap04-p0-history/materialize_minimal_p0_history.cjs
           node .cap04-p0-history/materialize_minimal_p0_history.cjs
+          python - <<'PY'
+          from pathlib import Path
+
+          target = Path('docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md')
+          normalized = '\n'.join(
+              line.rstrip(' \t')
+              for line in target.read_text(encoding='utf-8').splitlines()
+          ) + '\n'
+          target.write_text(normalized, encoding='utf-8')
+          PY
 
       - name: Remove temporary reconciliation inputs
         run: |
