@@ -83,3 +83,18 @@ capability_status: NOT_COMPLETE
 completion_claims: PENDING_FINALIZATION_EFFECTIVENESS
 MCFT-CAP-04: UNAUTHORIZED
 ```
+
+## Finalization effectiveness
+
+```text
+status: MERGED_EFFECTIVE
+capability_status: COMPLETE
+closure_effective: true
+effective_completion_claims: 15
+finalization_pr: #2365
+finalization_head: 9827846038083092bedeabdbf8f9713f587c083b
+finalization_ci: CI_4768
+finalization_merge: e42a9a799b8f27110e3955d645f3ea70c50c0588
+finalization_postmerge_gate: MCFT-CAP-03 S8 Finalization postmerge: 58 PASS, 0 FAIL
+MCFT-CAP-04: UNAUTHORIZED
+```

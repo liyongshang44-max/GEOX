@@ -10,12 +10,12 @@
   "activation_branch": "mcft-cap-03-s7-closure-activation-v1",
   "activation_effectiveness_branch": "mcft-cap-03-s7-closure-activation-effectiveness-v1",
   "implementation_branch": "mcft-cap-03-s7-closure-v1",
-  "status": "FINALIZATION_READY_FOR_MERGE",
+  "status": "COMPLETE",
   "activation_effective": true,
-  "implementation_status": "FINALIZATION_READY_FOR_MERGE",
+  "implementation_status": "MERGED_EFFECTIVE",
   "implementation_authorized": true,
-  "closure_effective": false,
-  "capability_status": "NOT_COMPLETE",
+  "closure_effective": true,
+  "capability_status": "COMPLETE",
   "predecessor_effectiveness": {
     "s6_delivery_slice_id": "MCFT-CAP-03.MCFT-03-04-07-08.RESTART-BACKFILL-RECOVERY-V1",
     "s6_status": "MERGED_EFFECTIVE",
@@ -59,25 +59,8 @@
     "web_change": false,
     "workflow_change": false
   },
-  "pending_completion_claims": [
-    "MCFT_CAP_03_COMPLETE",
-    "OBSERVATION_ASSIMILATION_V1_ESTABLISHED",
-    "STATE_OBSERVATION_INNOVATION_RESIDUAL_ESTABLISHED",
-    "DETERMINISTIC_OBSERVATION_SELECTION_ESTABLISHED",
-    "PASS_OBSERVATION_ACCEPTANCE_ESTABLISHED",
-    "LIMITED_OBSERVATION_DOWNWEIGHTING_ESTABLISHED",
-    "OBSERVATION_CANDIDATE_EXCLUSION_ESTABLISHED",
-    "INNOVATION_OUTLIER_REJECTION_ESTABLISHED",
-    "POSTERIOR_STATE_CORRECTION_ESTABLISHED",
-    "ASSIMILATION_UNCERTAINTY_UPDATE_ESTABLISHED",
-    "OBSERVATION_DISPOSITION_TRACE_ESTABLISHED",
-    "TWENTY_FOUR_OBSERVATION_AWARE_TICKS_PERSISTED",
-    "ASSIMILATION_RESTART_BACKFILL_PROVEN",
-    "ASSIMILATED_STATE_CANONICAL_UNIQUENESS_ESTABLISHED",
-    "VERSIONED_ASSIMILATION_RECORD_SET_COMPATIBILITY_ESTABLISHED"
-  ],
+  "pending_completion_claims": [],
   "preserved_nonclaims": [
-    "NO_MCFT_CAP_03_COMPLETE_CLAIM",
     "NO_FORECAST_RESIDUAL",
     "NO_SUCCESSFUL_FORECAST",
     "NO_72_HOUR_FORECAST",
@@ -260,5 +243,44 @@
     "final_gate": "PASS_57_OF_57",
     "exact_head_ci": "PENDING_EXTERNAL_PR_GATE",
     "effectiveness_condition": "S8_FINALIZATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_FINALIZATION_GATE_PASS"
+  },
+  "effective_completion_claims": [
+    "MCFT_CAP_03_COMPLETE",
+    "OBSERVATION_ASSIMILATION_V1_ESTABLISHED",
+    "STATE_OBSERVATION_INNOVATION_RESIDUAL_ESTABLISHED",
+    "DETERMINISTIC_OBSERVATION_SELECTION_ESTABLISHED",
+    "PASS_OBSERVATION_ACCEPTANCE_ESTABLISHED",
+    "LIMITED_OBSERVATION_DOWNWEIGHTING_ESTABLISHED",
+    "OBSERVATION_CANDIDATE_EXCLUSION_ESTABLISHED",
+    "INNOVATION_OUTLIER_REJECTION_ESTABLISHED",
+    "POSTERIOR_STATE_CORRECTION_ESTABLISHED",
+    "ASSIMILATION_UNCERTAINTY_UPDATE_ESTABLISHED",
+    "OBSERVATION_DISPOSITION_TRACE_ESTABLISHED",
+    "TWENTY_FOUR_OBSERVATION_AWARE_TICKS_PERSISTED",
+    "ASSIMILATION_RESTART_BACKFILL_PROVEN",
+    "ASSIMILATED_STATE_CANONICAL_UNIQUENESS_ESTABLISHED",
+    "VERSIONED_ASSIMILATION_RECORD_SET_COMPATIBILITY_ESTABLISHED"
+  ],
+  "finalization_effectiveness": {
+    "branch": "mcft-cap-03-s8-finalization-effectiveness-v1",
+    "finalization_pr_number": 2365,
+    "finalization_head_commit": "9827846038083092bedeabdbf8f9713f587c083b",
+    "finalization_ci_run": "CI_4768",
+    "finalization_merge_commit": "e42a9a799b8f27110e3955d645f3ea70c50c0588",
+    "finalization_postmerge_gate": "PASS",
+    "finalization_postmerge_gate_summary": "MCFT-CAP-03 S8 Finalization postmerge: 58 PASS, 0 FAIL",
+    "exact_changed_file_boundary": [
+      "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+      "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-CLOSURE-RECORD.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-CLOSURE-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-CLOSURE.md",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-FINALIZATION-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-FINALIZATION.md",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-MAIN-VERIFICATION.json"
+    ],
+    "effectiveness_condition_satisfied": true,
+    "successor_authorized": false
   }
 }

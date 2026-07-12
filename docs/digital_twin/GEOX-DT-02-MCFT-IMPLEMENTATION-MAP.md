@@ -451,3 +451,19 @@ MCFT-CAP-04: UNAUTHORIZED
 ```
 
 This candidate records governance evidence only. It does not change Runtime behavior, canonical facts, model parameters, or successor authorization.
+
+## MCFT-CAP-03 canonical completion
+
+```text
+status: COMPLETE
+closure_effective: true
+completion_claims: 15 EFFECTIVE
+finalization_pr: #2365
+finalization_head: 9827846038083092bedeabdbf8f9713f587c083b
+finalization_ci: CI_4768
+finalization_merge: e42a9a799b8f27110e3955d645f3ea70c50c0588
+finalization_postmerge_gate: MCFT-CAP-03 S8 Finalization postmerge: 58 PASS, 0 FAIL
+MCFT-CAP-04: UNAUTHORIZED
+```
+
+MCFT-CAP-03 is complete at Level A for replay-mode observation assimilation and state innovation. This does not establish Forecast success, Scenario, Recommendation, Policy Evaluation, AO-ACT, continuous Runtime, live-field operation, Gate A/B/C closure, or Minimum Complete Field Twin.
