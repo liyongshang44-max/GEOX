@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  issues: write
+  pull-requests: write
 
 jobs:
   materialize:
@@ -51,11 +53,42 @@ jobs:
       - name: Validate authorization Gate syntax
         run: node -c scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_AUTHORIZATION.cjs
 
-      - name: Reproduce CAP-03 and materialize S0 from PostgreSQL
+      - name: Capture PostgreSQL predecessor preflight
         env:
           DATABASE_URL: postgres://landos:mcft-cap04-s0-acceptance@127.0.0.1:5432/mcft_cap_04_s0_acceptance
           MCFT_CAP_04_PREFLIGHT_DESTRUCTIVE_ACCEPTANCE: "1"
-        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PREDECESSOR_PREFLIGHT.ts
+        run: |
+          set +e
+          pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PREDECESSOR_PREFLIGHT.ts > /tmp/mcft-cap-04-s0-preflight.log 2>&1
+          echo "$?" > /tmp/mcft-cap-04-s0-preflight.exit
+          cat /tmp/mcft-cap-04-s0-preflight.log
+          exit 0
+
+      - name: Publish preflight diagnostic
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = [
+              '<!-- mcft-cap-04-s0-preflight-diagnostic -->',
+              '### MCFT-CAP-04 S0 PostgreSQL preflight',
+              '',
+              `Exit: ${fs.readFileSync('/tmp/mcft-cap-04-s0-preflight.exit', 'utf8').trim()}`,
+              '',
+              '```text',
+              fs.readFileSync('/tmp/mcft-cap-04-s0-preflight.log', 'utf8').slice(-16000),
+              '```',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+
+      - name: Enforce preflight success
+        run: test "$(cat /tmp/mcft-cap-04-s0-preflight.exit)" -eq 0
 
       - name: Remove temporary workflow
         run: rm .github/workflows/mcft-cap-04-s0-materialize.yml
