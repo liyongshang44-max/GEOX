@@ -8,7 +8,7 @@
   "baseline_main_commit": "6389d4e566a6eb64ce96209be0e70cd8703be574",
   "status": "CAPABILITY_COMPLETE",
   "design_status": "DESIGN_FROZEN",
-  "implementation_status": "R4_C_SSOT_RECONCILIATION_CANDIDATE",
+  "implementation_status": "R4_REMEDIATION_MERGED_EFFECTIVE",
   "authorization_effective": true,
   "runtime_source_authorized": true,
   "active_delivery_slice_id": null,
@@ -1781,7 +1781,7 @@
   ],
   "versioned_contract_authority": {
     "amendment_ref": "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-VERSIONED-CONTRACT-AMENDMENT-01.md",
-    "amendment_status": "CANDIDATE_NOT_EFFECTIVE",
+    "amendment_status": "EFFECTIVE",
     "historical_record_set_contract_id": "MCFT_CAP_03_ASSIMILATED_CONTINUATION_V1",
     "active_record_set_contract_id": "MCFT_CAP_03_ASSIMILATED_CONTINUATION_V2",
     "active_evidence_window_contract_id": "MCFT_CAP_03_ASSIMILATED_CONTINUATION_EVIDENCE_WINDOW_V2",
@@ -1794,6 +1794,12 @@
     "issue_number": 2368,
     "r4_a_evidence_classification_status": "MERGED_EFFECTIVE",
     "r4_b_runtime_config_pin_status": "MERGED_EFFECTIVE",
-    "r4_c_ssot_reconciliation_status": "CANDIDATE_NOT_EFFECTIVE"
+    "r4_c_ssot_reconciliation_status": "MERGED_EFFECTIVE",
+    "r4_c_pr_number": 2373,
+    "r4_c_exact_head_commit": "89958abf488e7997a220d5e799804377a8166ace",
+    "r4_c_exact_head_ci_run": "CI_4791",
+    "r4_c_merge_commit": "8317ee3380a27a27d1eb9038a6470866d694e691",
+    "r4_c_head_merge_file_delta_count": 0,
+    "r4_c_effectiveness_condition_satisfied": true
   }
 }

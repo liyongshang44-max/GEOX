@@ -3,7 +3,7 @@
 
 ## Status
 
-`CANDIDATE_NOT_EFFECTIVE`
+`EFFECTIVE`
 
 This amendment becomes effective only after its pull request merges to `main`, exact-head CI passes, and merged-main tree equivalence is recorded.
 
