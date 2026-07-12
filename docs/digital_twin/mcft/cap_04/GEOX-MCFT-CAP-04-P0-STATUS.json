@@ -42,8 +42,9 @@
     "latest_successful_forecast_ref": null
   },
   "candidate_validation": {
-    "materializer_workflow_run_id": 29205191859,
-    "materializer_workflow_conclusion": "SUCCESS",
+    "history_preserving_materializer_workflow_run_id": 29205631582,
+    "history_preserving_materializer_workflow_conclusion": "SUCCESS",
+    "materialized_candidate_commit": "85247b5ed2b85a8faf984f9c4b0cab6ca18ba907",
     "complete_task_hash": "PASS",
     "complete_task_byte_length": "PASS",
     "complete_task_line_count": "PASS",
@@ -52,8 +53,9 @@
     "governance_json_parse": "PASS",
     "patch_integrity": "PASS",
     "temporary_materializer_removed": true,
+    "historical_capability_sections_preserved": true,
     "final_changed_file_count": 5,
-    "repository_ci": "PENDING"
+    "repository_ci": "PENDING_ON_CURRENT_EXACT_HEAD"
   },
   "allowed_claims": [
     "MCFT_CAP_03_GLOBAL_SSOT_RECONCILED_FOR_CAP_04_PREPARATION",
