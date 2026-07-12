@@ -107,11 +107,39 @@ jobs:
       - name: Remove temporary workflow
         run: rm .github/workflows/mcft-cap-04-s0-materialize.yml
 
-      - name: Run exact-head S0 final Gate
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_AUTHORIZATION.cjs --final
+      - name: Capture exact-head S0 final Gate
+        run: |
+          set +e
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_AUTHORIZATION.cjs --final > /tmp/mcft-cap-04-s0-gate.log 2>&1
+          echo "$?" > /tmp/mcft-cap-04-s0-gate.exit
+          cat /tmp/mcft-cap-04-s0-gate.log
+          exit 0
 
-      - name: Re-run P0 postmerge semantic Gate
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_P0_PREDECESSOR_SSOT.cjs --postmerge
+      - name: Publish S0 Gate diagnostic
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = [
+              '<!-- mcft-cap-04-s0-gate-diagnostic -->',
+              '### MCFT-CAP-04 S0 final Gate',
+              '',
+              `Exit: ${fs.readFileSync('/tmp/mcft-cap-04-s0-gate.exit', 'utf8').trim()}`,
+              '',
+              '```text',
+              fs.readFileSync('/tmp/mcft-cap-04-s0-gate.log', 'utf8').slice(-20000),
+              '```',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+
+      - name: Enforce S0 Gate success
+        run: test "$(cat /tmp/mcft-cap-04-s0-gate.exit)" -eq 0
 
       - name: Verify complete task integrity
         run: |
