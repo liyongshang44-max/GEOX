@@ -3,6 +3,11 @@
 
 ## 完整任务线 v1.2 最终冻结候选
 
+> **Versioned contract amendment:**
+> [GEOX-MCFT-CAP-03-VERSIONED-CONTRACT-AMENDMENT-01.md](./GEOX-MCFT-CAP-03-VERSIONED-CONTRACT-AMENDMENT-01.md)
+> records the additive V2 semantic-conformance path established by R4 remediation.
+> The v1.2 text remains historical authority and is not rewritten or reinterpreted.
+
 ```text
 capability_line_id:
 MCFT-CAP-03
