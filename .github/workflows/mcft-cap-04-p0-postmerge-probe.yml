@@ -1,0 +1,45 @@
+name: MCFT-CAP-04 P0 postmerge probe
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  postmerge:
+    if: github.head_ref == 'agent/mcft-cap-04-p0-postmerge-probe-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout merged main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Verify exact merged-main identity
+        run: |
+          test "$(git branch --show-current)" = "main"
+          test "$(git rev-parse HEAD)" = "30fdd839aa675656dd3dc9d1def57b06f63f86ec"
+          test "$(git rev-parse origin/main)" = "30fdd839aa675656dd3dc9d1def57b06f63f86ec"
+
+      - name: Run P0 merged-main effectiveness Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_P0_PREDECESSOR_SSOT.cjs --postmerge
+
+      - name: Re-run CAP-03 R4 final verification Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_R4_FINAL_VERIFICATION.cjs
+
+      - name: Verify complete task integrity
+        run: |
+          echo 'ea63e92a64b760b84c49428b1d3a245ce5cd94bb08daa9c6b971a53861b90a63  docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md' | sha256sum -c -
+          test "$(wc -c < docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md)" -eq 77603
+
+      - name: Verify merged patch integrity
+        run: git diff --check eca0d053045db59982ad20a6e0421f72ae16f804...HEAD
