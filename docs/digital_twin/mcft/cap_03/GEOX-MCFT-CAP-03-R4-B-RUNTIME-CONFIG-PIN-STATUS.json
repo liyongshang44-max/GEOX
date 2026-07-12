@@ -1,0 +1,56 @@
+{
+  "schema_version": "geox_mcft_cap_03_r4_b_runtime_config_pin_status_v1",
+  "capability_line_id": "MCFT-CAP-03",
+  "remediation_issue_number": 2368,
+  "remediation_step_id": "R4-B",
+  "delivery_slice_id": "MCFT-CAP-03.R4-B.RUNTIME-CONFIG-REF-HASH-PIN-V1",
+  "runtime_mode": "REPLAY",
+  "target_completion_level": "Level A",
+  "baseline_main_commit": "5d19ea4d70bd1143b77c102847278853e4f75b36",
+  "predecessor_r4_a_status": "MERGED_EFFECTIVE",
+  "branch": "mcft-cap-03-r4-b-runtime-config-pin-v1",
+  "materialized_implementation_head_commit": "943080ab7fc0cc7681152ff8283e8107a43c6f7d",
+  "status": "CANDIDATE_VALIDATED_NOT_EFFECTIVE",
+  "implementation_scope": {
+    "single_tick_ref_hash_pin": "IMPLEMENTED",
+    "idempotent_replay_ref_hash_pin": "IMPLEMENTED",
+    "range_per_tick_ref_hash_pin": "IMPLEMENTED",
+    "restart_backfill_inherits_range_pin": "IMPLEMENTED"
+  },
+  "candidate_validation": {
+    "materializer_workflow_run_id": 29197937280,
+    "materializer_workflow_conclusion": "SUCCESS",
+    "server_typecheck": "PASS",
+    "server_build": "PASS",
+    "historical_r2_positive_acceptance": "PASS",
+    "historical_r2_negative_acceptance": "PASS",
+    "historical_r4_a_acceptance": "PASS_8_OF_8",
+    "r4_b_runtime_config_pin_acceptance": "PASS_5_OF_5"
+  },
+  "exact_changed_file_boundary": [
+    "apps/server/src/runtime/twin_runtime/assimilated_continuation_tick_service_v2.ts",
+    "apps/server/src/runtime/twin_runtime/assimilated_contiguous_range_service_v2.ts",
+    "scripts/runtime_acceptance/mcft_cap_03_r2_v2_revalidation_fixture_v1.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_R4_B_RUNTIME_CONFIG_PIN.ts",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R4-B-RUNTIME-CONFIG-PIN-STATUS.json"
+  ],
+  "effectiveness_condition": "R4_B_PR_MERGED_TO_MAIN_AND_EXACT_HEAD_CI_PASS_AND_MERGE_TREE_EQUIVALENCE_PASS",
+  "effectiveness_condition_satisfied": false,
+  "successor_step_id": "R4-C",
+  "successor_authorized": false,
+  "preserved_nonclaims": [
+    "NO_SUCCESSFUL_FORECAST",
+    "NO_FORECAST_RESIDUAL",
+    "NO_SCENARIO",
+    "NO_RECOMMENDATION",
+    "NO_DECISION",
+    "NO_AO_ACT",
+    "NO_CALIBRATION_CANDIDATE",
+    "NO_SHADOW_EVALUATION",
+    "NO_MODEL_ACTIVATION",
+    "NO_LATE_EVIDENCE_REVISION",
+    "NO_CONTINUOUS_RUNTIME",
+    "NO_LIVE_FIELD_CLAIM",
+    "NO_MCFT_CAP_04_AUTHORIZATION"
+  ]
+}

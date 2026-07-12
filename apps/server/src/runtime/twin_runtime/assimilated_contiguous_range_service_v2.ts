@@ -34,6 +34,8 @@ export type RunAssimilatedContiguousRangeInputV2 = {
   created_at: string;
   assimilated_runtime_config_refs_by_logical_time:
     Readonly<Record<string, string>>;
+  assimilated_runtime_config_hashes_by_logical_time:
+    Readonly<Record<string, string>>;
   crop_stage_context:
     ExecuteAssimilatedContinuationTickInputV2["crop_stage_context"];
   lease_owner: string;
@@ -202,6 +204,7 @@ export class AssimilatedContiguousRangeServiceV2 {
     }
 
     const runtimeConfigRefs: string[] = [];
+    const runtimeConfigHashes: string[] = [];
 
     for (
       let index = 0;
@@ -218,6 +221,11 @@ export class AssimilatedContiguousRangeServiceV2 {
           .assimilated_runtime_config_refs_by_logical_time[
             logicalTime
           ];
+      const runtimeConfigHash =
+        input
+          .assimilated_runtime_config_hashes_by_logical_time[
+            logicalTime
+          ];
 
       if (
         typeof runtimeConfigRef !== "string"
@@ -228,7 +236,17 @@ export class AssimilatedContiguousRangeServiceV2 {
         );
       }
 
+      if (
+        typeof runtimeConfigHash !== "string"
+        || !runtimeConfigHash.trim()
+      ) {
+        throw new Error(
+          `ASSIMILATED_RANGE_RUNTIME_CONFIG_HASH_REQUIRED:${logicalTime}`,
+        );
+      }
+
       runtimeConfigRefs.push(runtimeConfigRef);
+      runtimeConfigHashes.push(runtimeConfigHash);
     }
 
     const tickResults:
@@ -249,6 +267,8 @@ export class AssimilatedContiguousRangeServiceV2 {
           created_at: input.created_at,
           assimilated_runtime_config_ref:
             runtimeConfigRefs[index],
+          assimilated_runtime_config_hash:
+            runtimeConfigHashes[index],
           crop_stage_context:
             input.crop_stage_context,
           lease_owner: input.lease_owner,

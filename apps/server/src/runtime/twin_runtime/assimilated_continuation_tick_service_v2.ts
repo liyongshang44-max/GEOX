@@ -49,6 +49,7 @@ export type ExecuteAssimilatedContinuationTickInputV2 = {
   logical_time: string;
   created_at: string;
   assimilated_runtime_config_ref: string;
+  assimilated_runtime_config_hash: string;
   crop_stage_context: ContinuationCropStageConfigurationContextV1;
   lease_owner: string;
   lease_duration_seconds: number;
@@ -209,6 +210,14 @@ export class AssimilatedContinuationTickServiceV2 {
       "ASSIMILATED_SINGLE_TICK_LOGICAL_TIME_INVALID",
     );
     requiredCanonicalIsoV1(input.created_at, "ASSIMILATED_SINGLE_TICK_CREATED_AT_INVALID");
+    const requestedRuntimeConfigRef = requiredStringV1(
+      input.assimilated_runtime_config_ref,
+      "ASSIMILATED_RUNTIME_CONFIG_REF_PIN_REQUIRED",
+    );
+    const requestedRuntimeConfigHash = requiredStringV1(
+      input.assimilated_runtime_config_hash,
+      "ASSIMILATED_RUNTIME_CONFIG_HASH_PIN_REQUIRED",
+    );
     if (!input.lease_owner.trim()) throw new Error("ASSIMILATED_SINGLE_TICK_LEASE_OWNER_REQUIRED");
     if (!Number.isInteger(input.lease_duration_seconds) || input.lease_duration_seconds <= 0) {
       throw new Error("ASSIMILATED_SINGLE_TICK_LEASE_DURATION_INVALID");
@@ -226,6 +235,18 @@ export class AssimilatedContinuationTickServiceV2 {
       requestedIdentity.continuation_idempotency_key,
     );
     if (previouslyCommitted) {
+      if (
+        previouslyCommitted.aggregate_identity_input.runtime_config_ref
+        !== requestedRuntimeConfigRef
+      ) {
+        throw new Error("ASSIMILATED_RUNTIME_CONFIG_REF_PIN_MISMATCH");
+      }
+      if (
+        previouslyCommitted.aggregate_identity_input.runtime_config_hash
+        !== requestedRuntimeConfigHash
+      ) {
+        throw new Error("ASSIMILATED_RUNTIME_CONFIG_HASH_PIN_MISMATCH");
+      }
       validateAssimilatedContinuationCrossReferencesV2(previouslyCommitted);
       const nextHandoff = await this.handoffService.prepareNextTickInput(input.scope);
       assertNextHandoffV1({
@@ -252,9 +273,15 @@ export class AssimilatedContinuationTickServiceV2 {
     );
 
     const runtimeConfig = await this.runtimeConfigRepository.readRuntimeConfig(
-      input.assimilated_runtime_config_ref,
+      requestedRuntimeConfigRef,
     );
     if (!runtimeConfig) throw new Error("ASSIMILATED_RUNTIME_CONFIG_NOT_FOUND");
+    if (runtimeConfig.object_id !== requestedRuntimeConfigRef) {
+      throw new Error("ASSIMILATED_RUNTIME_CONFIG_REF_PIN_MISMATCH");
+    }
+    if (runtimeConfig.determinism_hash !== requestedRuntimeConfigHash) {
+      throw new Error("ASSIMILATED_RUNTIME_CONFIG_HASH_PIN_MISMATCH");
+    }
     if (runtimeConfig.object_type !== "twin_runtime_config_v1") {
       throw new Error("ASSIMILATED_RUNTIME_CONFIG_OBJECT_TYPE_REQUIRED");
     }

@@ -596,6 +596,13 @@ export async function buildMcftCap03R2V2FixtureV1(
         config.object_id,
       ]),
     );
+  const runtimeConfigHashesByLogicalTime =
+    Object.fromEntries(
+      runtimeConfigChain.map((config) => [
+        config.logical_time,
+        config.determinism_hash,
+      ]),
+    );
 
   const tickInput = (
     logicalTime = R2_V2_FIRST_LOGICAL_TIME,
@@ -605,6 +612,8 @@ export async function buildMcftCap03R2V2FixtureV1(
     created_at: R2_V2_CREATED_AT,
     assimilated_runtime_config_ref:
       runtimeConfigRefsByLogicalTime[logicalTime],
+    assimilated_runtime_config_hash:
+      runtimeConfigHashesByLogicalTime[logicalTime],
     crop_stage_context: source.cropStageContext,
     lease_owner: "mcft-cap-03-r2-v2",
     lease_duration_seconds: 300,
@@ -618,6 +627,8 @@ export async function buildMcftCap03R2V2FixtureV1(
     created_at: R2_V2_CREATED_AT,
     assimilated_runtime_config_refs_by_logical_time:
       runtimeConfigRefsByLogicalTime,
+    assimilated_runtime_config_hashes_by_logical_time:
+      runtimeConfigHashesByLogicalTime,
     crop_stage_context: source.cropStageContext,
     lease_owner: "mcft-cap-03-r2-v2-range",
     lease_duration_seconds: 300,
@@ -628,6 +639,7 @@ export async function buildMcftCap03R2V2FixtureV1(
     firstV2Config,
     runtimeConfigChain,
     runtimeConfigRefsByLogicalTime,
+    runtimeConfigHashesByLogicalTime,
     runtime,
     handoffService,
     tickService,
