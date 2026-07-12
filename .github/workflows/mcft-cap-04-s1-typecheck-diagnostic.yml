@@ -27,7 +27,7 @@ jobs:
       - name: Capture typecheck
         run: |
           set +e
-          pnpm typecheck > /tmp/typecheck.log 2>&1
+          pnpm -r typecheck > /tmp/typecheck.log 2>&1
           echo "$?" > /tmp/typecheck.exit
           cat /tmp/typecheck.log
           exit 0
