@@ -1,0 +1,124 @@
+{
+  "schema_version": "geox_mcft_cap_03_r4_final_verification_v1",
+  "verification_identity": "GEOX-MCFT-CAP-03-R4-FINAL-VERIFICATION-V1",
+  "capability_line_id": "MCFT-CAP-03",
+  "display_alias": "MCFT-3",
+  "name": "Observation Assimilation and State Innovation",
+  "runtime_mode": "REPLAY",
+  "target_completion_level": "Level A",
+  "baseline_main_commit": "852ec425ed97007b82de05dd57bd32d3de0a039f",
+  "branch": "mcft-cap-03-r4-final-verification-v1",
+  "status": "CANDIDATE_VALIDATED_NOT_EFFECTIVE",
+  "audit_issue_number": 2368,
+  "corrected_findings": {
+    "selected_only_evaluated_observation_refs": true,
+    "multiple_usable_observation_full_tick": true,
+    "rejected_only_candidate_sets_commit_no_usable_tick": true,
+    "actual_quantity_and_unit_rejection_trace": true,
+    "explicit_runtime_config_ref_hash_pin": true,
+    "delivery_ssot_terminal_state": true,
+    "additive_v2_contract_authority_formalized": true
+  },
+  "remediation_evidence": {
+    "r4_a": {
+      "implementation_pr_number": 2369,
+      "implementation_exact_head_ci": "CI_4779",
+      "implementation_merge_commit": "733ad3362338a3b6aac170a5a102f4c4ae1758cc",
+      "effectiveness_pr_number": 2370,
+      "effectiveness_merge_commit": "5d19ea4d70bd1143b77c102847278853e4f75b36",
+      "runtime_acceptance": "PASS_8_OF_8",
+      "status": "MERGED_EFFECTIVE"
+    },
+    "r4_b": {
+      "implementation_pr_number": 2371,
+      "implementation_exact_head_ci": "CI_4785",
+      "implementation_merge_commit": "518a4beb600a90a01be5f06ec848b8d31bb2950e",
+      "effectiveness_pr_number": 2372,
+      "effectiveness_merge_commit": "f4b3c0d297d213660ed492029db49f9c5688fa91",
+      "runtime_acceptance": "PASS_5_OF_5",
+      "status": "MERGED_EFFECTIVE"
+    },
+    "r4_c": {
+      "implementation_pr_number": 2373,
+      "implementation_exact_head_ci": "CI_4791",
+      "implementation_merge_commit": "8317ee3380a27a27d1eb9038a6470866d694e691",
+      "effectiveness_pr_number": 2374,
+      "effectiveness_exact_head_ci": "CI_4797",
+      "effectiveness_merge_commit": "852ec425ed97007b82de05dd57bd32d3de0a039f",
+      "governance_acceptance": "PASS_4_OF_4",
+      "status": "MERGED_EFFECTIVE"
+    }
+  },
+  "active_contract_authority": {
+    "historical_record_set_contract_id": "MCFT_CAP_03_ASSIMILATED_CONTINUATION_V1",
+    "active_record_set_contract_id": "MCFT_CAP_03_ASSIMILATED_CONTINUATION_V2",
+    "active_evidence_window_contract_id": "MCFT_CAP_03_ASSIMILATED_CONTINUATION_EVIDENCE_WINDOW_V2",
+    "active_observation_selector_id": "LATEST_USABLE_AUTHORIZED_OBSERVATION_WITHIN_15M_BEFORE_TICK_V2",
+    "assimilation_method_id": "SCALAR_GAUSSIAN_ASSIMILATION_V1",
+    "amendment_ref": "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-VERSIONED-CONTRACT-AMENDMENT-01.md",
+    "amendment_status": "EFFECTIVE",
+    "historical_v1_immutable": true,
+    "explicit_version_dispatch": true
+  },
+  "task_conformance": {
+    "status": "VERIFIED_AFTER_R4_REMEDIATION",
+    "original_audit_hard_acceptance_count": 123,
+    "originally_fully_conformant_count": 114,
+    "originally_nonconformant_count": 6,
+    "originally_contract_deviation_count": 3,
+    "remaining_nonconformant_count": 0,
+    "remaining_unadjudicated_contract_deviation_count": 0
+  },
+  "delivery_ssot": {
+    "active_delivery_slice_id": null,
+    "pending_completion_claim_count": 0,
+    "effective_completion_claim_count": 15,
+    "capability_status": "COMPLETE",
+    "successor_capability_line_id": "MCFT-CAP-04",
+    "successor_authorized": false
+  },
+  "preserved_nonclaims": [
+    "NO_FORECAST_RESIDUAL",
+    "NO_SUCCESSFUL_FORECAST",
+    "NO_72_HOUR_FORECAST",
+    "NO_SCENARIO",
+    "NO_RECOMMENDATION",
+    "NO_POLICY_EVALUATION",
+    "NO_DECISION",
+    "NO_AO_ACT",
+    "NO_CALIBRATION_CANDIDATE",
+    "NO_SHADOW_EVALUATION",
+    "NO_MODEL_ACTIVATION",
+    "NO_ACTIVE_MODEL_PARAMETER_CHANGE",
+    "NO_CALIBRATED_CONFIDENCE_MODEL",
+    "NO_MULTI_SENSOR_FUSION",
+    "NO_DYNAMIC_ROOT_ZONE_GEOMETRY",
+    "NO_SPATIAL_EXECUTION_OVERLAP_DEDUPLICATION",
+    "NO_LATE_EVIDENCE_REVISION",
+    "NO_AUTOMATIC_RECOMPUTE_ON_LATE_EVIDENCE",
+    "NO_CONTINUOUS_RUNTIME",
+    "NO_CONTINUOUS_SCHEDULER",
+    "NO_720_TICK_REPLAY_CLOSURE",
+    "NO_LIVE_FIELD_CLAIM",
+    "NO_FIELD_VALIDATED_OBSERVATION_OPERATOR",
+    "NO_FIELD_CALIBRATED_ASSIMILATION_NOISE_MODEL",
+    "NO_MCFT_GATE_A_CLOSURE",
+    "NO_MCFT_GATE_B_CLOSURE",
+    "NO_MCFT_GATE_C_CLOSURE",
+    "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
+  ],
+  "exact_changed_file_boundary": [
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-MAIN-VERIFICATION.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R4-FINAL-VERIFICATION.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_R4_FINAL_VERIFICATION.cjs"
+  ],
+  "candidate_validation": {
+    "governance_acceptance": "REQUIRED",
+    "historical_r4_a_acceptance": "REQUIRED",
+    "historical_r4_b_acceptance": "REQUIRED"
+  },
+  "effectiveness_condition": "R4_FINAL_VERIFICATION_PR_MERGED_TO_MAIN_AND_EXACT_HEAD_CI_PASS_AND_MERGE_TREE_EQUIVALENCE_PASS",
+  "effectiveness_condition_satisfied": false,
+  "successor_capability_line_id": "MCFT-CAP-04",
+  "successor_authorized": false
+}

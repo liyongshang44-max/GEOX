@@ -142,5 +142,18 @@
     ],
     "effectiveness_condition_satisfied": true,
     "successor_authorized": false
+  },
+  "post_completion_remediation_verification": {
+    "audit_issue_number": 2368,
+    "verification_ref": "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R4-FINAL-VERIFICATION.json",
+    "verification_status": "CANDIDATE_VALIDATED_NOT_EFFECTIVE",
+    "baseline_main_commit": "852ec425ed97007b82de05dd57bd32d3de0a039f",
+    "r4_a_status": "MERGED_EFFECTIVE",
+    "r4_b_status": "MERGED_EFFECTIVE",
+    "r4_c_status": "MERGED_EFFECTIVE",
+    "task_conformance_status": "VERIFIED_AFTER_R4_REMEDIATION",
+    "remaining_nonconformant_hard_acceptance_count": 0,
+    "active_record_set_contract_id": "MCFT_CAP_03_ASSIMILATED_CONTINUATION_V2",
+    "successor_authorized": false
   }
 }
