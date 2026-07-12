@@ -2,7 +2,7 @@ name: MCFT-CAP-04 S1 repair fixture and verify
 
 on:
   pull_request:
-    types: [reopened]
+    types: [synchronize, reopened]
     branches: [main]
 
 permissions:
