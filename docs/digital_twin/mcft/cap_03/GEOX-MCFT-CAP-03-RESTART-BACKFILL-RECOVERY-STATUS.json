@@ -157,7 +157,7 @@
     "implementation_server_typecheck": "PASS",
     "implementation_git_diff_check": "PASS",
     "implementation_exact_head_ci": "PASS_CI_4743",
-    "implementation_merged_main_postmerge_gate": "PENDING_GATE_BASELINE_REMEDIATION_MERGE"
+    "implementation_merged_main_postmerge_gate": "PASS_141_OF_141"
   },
   "implementation_gate_modes": [
     "--draft",
@@ -248,12 +248,22 @@
       "governance_acceptance": "PASS_7_OF_7"
     },
     "target_effectiveness_condition": "R3_S6_POSTMERGE_EFFECTIVENESS_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_RESTART_BACKFILL_RECOVERY_POSTMERGE_GATE_PASS",
-    "candidate_status": "MERGED_PENDING_POSTMERGE_GATE_BASELINE_REMEDIATION",
+    "candidate_status": "MERGED_EFFECTIVE",
     "effectiveness_pr_number": 2356,
     "effectiveness_head_commit": "4d607c95071e985cbd63869a9a4f9f72f72b9f62",
     "effectiveness_ci_run": "CI_4743",
     "effectiveness_merge_commit": "a085fbca1226d75217c90a45eec179a2e66c3640",
-    "head_merge_tree_equivalence": "PASS_ZERO_FILE_DELTA"
+    "head_merge_tree_equivalence": "PASS_ZERO_FILE_DELTA",
+    "final_postmerge_gate": "PASS_141_OF_141",
+    "final_postmerge_gate_main_commit": "c7b916b08d9779c4c6c93de97b577cc3215de6fd",
+    "final_postmerge_positive_in_memory": "PASS_8_OF_8",
+    "final_postmerge_negative_semantic": "PASS_9_OF_9",
+    "final_postmerge_server_typecheck": "PASS",
+    "gate_remediation_pr_number": 2357,
+    "gate_remediation_head_commit": "5217f353ff4ecb32ae38ef3743317dfc3361c500",
+    "gate_remediation_ci_run": "CI_4745",
+    "gate_remediation_merge_commit": "c7b916b08d9779c4c6c93de97b577cc3215de6fd",
+    "effectiveness_condition_satisfied": true
   },
   "r3_postmerge_gate_baseline_remediation": {
     "remediation_id": "MCFT-CAP-03.R3-S6-POSTMERGE-GATE-BASELINE-REMEDIATION-V1",
@@ -287,6 +297,13 @@
     ],
     "r3_head_merge_tree_equivalence": "PASS_ZERO_FILE_DELTA",
     "target": "GATE_VALIDATES_R3_BASELINE_TO_R3_MERGE_AND_REQUIRES_R3_MERGE_ANCESTOR_OF_CURRENT_MAIN",
-    "status": "CANDIDATE_PENDING_PR_CI_AND_MERGE"
+    "status": "MERGED_EFFECTIVE",
+    "remediation_pr_number": 2357,
+    "remediation_head_commit": "5217f353ff4ecb32ae38ef3743317dfc3361c500",
+    "remediation_ci_run": "CI_4745",
+    "remediation_merge_commit": "c7b916b08d9779c4c6c93de97b577cc3215de6fd",
+    "final_postmerge_gate": "PASS_141_OF_141",
+    "final_postmerge_gate_main_commit": "c7b916b08d9779c4c6c93de97b577cc3215de6fd",
+    "effectiveness_condition_satisfied": true
   }
 }
