@@ -55,7 +55,7 @@
     "temporary_materializer_removed": true,
     "historical_capability_sections_preserved": true,
     "final_changed_file_count": 5,
-    "repository_ci": "PENDING_ON_CURRENT_EXACT_HEAD"
+    "repository_exact_head_ci_requirement": "PASS_REQUIRED_BEFORE_MERGE"
   },
   "allowed_claims": [
     "MCFT_CAP_03_GLOBAL_SSOT_RECONCILED_FOR_CAP_04_PREPARATION",
