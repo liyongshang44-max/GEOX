@@ -34,6 +34,13 @@
     "historical_r4_a_acceptance": "PASS_8_OF_8",
     "historical_r4_b_acceptance": "PASS_5_OF_5"
   },
+  "effectiveness_candidate_validation": {
+    "materializer_workflow_run_id": 29198777279,
+    "materializer_workflow_conclusion": "SUCCESS",
+    "effectiveness_acceptance": "PASS_4_OF_4",
+    "historical_r4_a_acceptance": "PASS_8_OF_8",
+    "historical_r4_b_acceptance": "PASS_5_OF_5"
+  },
   "effectiveness_condition": "R4_C_PR_MERGED_TO_MAIN_AND_EXACT_HEAD_CI_PASS_AND_MERGE_TREE_EQUIVALENCE_PASS",
   "effectiveness_condition_satisfied": true,
   "successor_step_id": "R4-FINAL-VERIFICATION",
