@@ -8,7 +8,9 @@
   "target_completion_level": "Level A",
   "baseline_main_commit": "852ec425ed97007b82de05dd57bd32d3de0a039f",
   "branch": "mcft-cap-03-r4-final-verification-v1",
-  "status": "CANDIDATE_VALIDATED_NOT_EFFECTIVE",
+  "status": "VERIFIED_ON_MAIN",
+  "verified_on_main": true,
+  "verified_main_commit": "cda1016542300bbc477a1c72023401aaaad954bc",
   "audit_issue_number": 2368,
   "corrected_findings": {
     "selected_only_evaluated_observation_refs": true,
@@ -120,8 +122,18 @@
     "historical_r4_b_acceptance": "PASS_5_OF_5",
     "historical_r4_c_effectiveness_acceptance": "PASS_4_OF_4"
   },
+  "verification_effectiveness": {
+    "verification_pr_number": 2375,
+    "verification_exact_head_commit": "71b4f7d2c0d6235939a0ae2969af17f08e264115",
+    "verification_exact_head_ci_run": "CI_4801",
+    "verification_build_test": "PASS",
+    "verification_acceptance": "PASS",
+    "verification_merge_commit": "cda1016542300bbc477a1c72023401aaaad954bc",
+    "head_merge_file_delta_count": 0,
+    "head_merge_tree_equivalence": "PASS"
+  },
   "effectiveness_condition": "R4_FINAL_VERIFICATION_PR_MERGED_TO_MAIN_AND_EXACT_HEAD_CI_PASS_AND_MERGE_TREE_EQUIVALENCE_PASS",
-  "effectiveness_condition_satisfied": false,
+  "effectiveness_condition_satisfied": true,
   "successor_capability_line_id": "MCFT-CAP-04",
   "successor_authorized": false
 }

@@ -146,14 +146,23 @@
   "post_completion_remediation_verification": {
     "audit_issue_number": 2368,
     "verification_ref": "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R4-FINAL-VERIFICATION.json",
-    "verification_status": "CANDIDATE_VALIDATED_NOT_EFFECTIVE",
+    "verification_status": "VERIFIED_ON_MAIN",
     "baseline_main_commit": "852ec425ed97007b82de05dd57bd32d3de0a039f",
     "r4_a_status": "MERGED_EFFECTIVE",
     "r4_b_status": "MERGED_EFFECTIVE",
     "r4_c_status": "MERGED_EFFECTIVE",
     "task_conformance_status": "VERIFIED_AFTER_R4_REMEDIATION",
     "remaining_nonconformant_hard_acceptance_count": 0,
+    "remaining_unadjudicated_contract_deviation_count": 0,
     "active_record_set_contract_id": "MCFT_CAP_03_ASSIMILATED_CONTINUATION_V2",
+    "verification_pr_number": 2375,
+    "verification_exact_head_commit": "71b4f7d2c0d6235939a0ae2969af17f08e264115",
+    "verification_exact_head_ci_run": "CI_4801",
+    "verification_build_test": "PASS",
+    "verification_acceptance": "PASS",
+    "verification_merge_commit": "cda1016542300bbc477a1c72023401aaaad954bc",
+    "head_merge_file_delta_count": 0,
+    "head_merge_tree_equivalence": "PASS",
     "successor_authorized": false
   }
 }
