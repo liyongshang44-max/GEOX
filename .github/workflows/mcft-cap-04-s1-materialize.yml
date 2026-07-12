@@ -1,0 +1,74 @@
+name: MCFT-CAP-04 S1 materialize and verify
+
+on:
+  pull_request:
+    types: [reopened]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: github.head_ref == 'agent/mcft-cap-04-s1-contracts-config-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: landos
+          POSTGRES_PASSWORD: landos
+          POSTGRES_DB: mcft_cap04_s1_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://landos:landos@127.0.0.1:5432/mcft_cap04_s1_acceptance
+      MCFT_CAP_04_CONTRACTS_CONFIG_DESTRUCTIVE_ACCEPTANCE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Materialize S1 governance
+        run: node .cap04-s1/materialize_s1.cjs
+      - name: Recursive typecheck
+        run: pnpm -r typecheck
+      - name: Positive contracts acceptance
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_CONTRACTS_CONFIG.ts
+      - name: Fail-closed negative acceptance
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_CONTRACTS_CONFIG_NEGATIVE.ts
+      - name: Isolated PostgreSQL D-transaction acceptance
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_CONTRACTS_CONFIG_DB.ts
+      - name: Remove temporary materializer
+        run: |
+          rm -rf .cap04-s1
+          rm .github/workflows/mcft-cap-04-s1-materialize.yml
+      - name: S1 final governance Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S1_CONTRACTS_CONFIG.cjs --final
+      - name: Parse governance JSON and task integrity
+        run: |
+          node -e "JSON.parse(require('fs').readFileSync('docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json','utf8'))"
+          node -e "JSON.parse(require('fs').readFileSync('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-AUTHORIZATION-STATUS.json','utf8'))"
+          node -e "JSON.parse(require('fs').readFileSync('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-DELIVERY-SLICE-STATUS.json','utf8'))"
+          node -e "JSON.parse(require('fs').readFileSync('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S1-CONTRACTS-CONFIG-STATUS.json','utf8'))"
+          echo 'ea63e92a64b760b84c49428b1d3a245ce5cd94bb08daa9c6b971a53861b90a63  docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md' | sha256sum -c -
+      - name: Commit exact S1 candidate
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "feat(mcft-cap-04): materialize S1 contracts config candidate"
+          git push origin HEAD:${{ github.head_ref }}
