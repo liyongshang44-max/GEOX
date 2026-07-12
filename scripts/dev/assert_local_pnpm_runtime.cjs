@@ -2,8 +2,8 @@
 'use strict';
 
 // Operational-only CI artifact generator.
-// This branch and PR are never merged. The script materializes the already-frozen
-// MCFT-CAP-03 S8 Finalization candidate into acceptance-output for retrieval.
+// This branch and PR are never merged. It materializes the already-frozen
+// MCFT-CAP-03 S8 Finalization candidate and exports it through CI artifacts.
 
 const cp = require('node:child_process');
 const fs = require('node:fs');
@@ -16,16 +16,12 @@ const TARGET_BRANCH = 'mcft-cap-03-s8-finalization-v1';
 const MATERIALIZER_BRANCH = 'mcft-cap-03-s8-finalization-materializer-v1';
 const MATERIALIZER_PATH = '.github/workflows/mcft-cap-03-s8-finalization-materializer-v1.yml';
 const ACCEPTANCE_OUTPUT_ROOT = path.join(ROOT, 'acceptance-output');
-const OUTPUT_ROOT = path.join(ACCEPTANCE_OUTPUT_ROOT, 'mcft-cap-03-s8-finalization');
 const DIAGNOSTIC_PATH = path.join(ACCEPTANCE_OUTPUT_ROOT, 'S8_FINALIZATION_DIAGNOSTIC.log');
 const BUNDLE_PATH = path.join(ACCEPTANCE_OUTPUT_ROOT, 'S8_FINALIZATION_ARTIFACT.log');
 const MAIN_WORKTREE = path.join(os.tmpdir(), 'geox-s8-finalization-main');
 const TARGET_WORKTREE = path.join(os.tmpdir(), 'geox-s8-finalization-target');
 const DIAGNOSTICS = [];
-const SCRIPT_ENV = Object.freeze({
-  BASELINE,
-  TARGET_BRANCH,
-});
+const SCRIPT_ENV = Object.freeze({ BASELINE, TARGET_BRANCH });
 const EXACT_FILES = [
   'docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md',
   'docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json',
@@ -41,40 +37,14 @@ const EXACT_FILES = [
 
 function persistDiagnostics(error = null) {
   fs.mkdirSync(ACCEPTANCE_OUTPUT_ROOT, { recursive: true });
-  fs.writeFileSync(
-    DIAGNOSTIC_PATH,
-    `${JSON.stringify({
-      ok: error === null,
-      baseline: BASELINE,
-      target_branch: TARGET_BRANCH,
-      error: error ? String(error.stack || error) : null,
-      commands: DIAGNOSTICS,
-      generated_at: new Date().toISOString(),
-    }, null, 2)}\n`,
-    'utf8',
-  );
-}
-
-function persistBundle() {
-  fs.mkdirSync(ACCEPTANCE_OUTPUT_ROOT, { recursive: true });
-  const files = EXACT_FILES.map((relativePath) => ({
-    path: relativePath,
-    content_base64: fs.readFileSync(
-      path.join(TARGET_WORKTREE, relativePath),
-    ).toString('base64'),
-  }));
-  fs.writeFileSync(
-    BUNDLE_PATH,
-    `${JSON.stringify({
-      ok: true,
-      baseline: BASELINE,
-      target_branch: TARGET_BRANCH,
-      exact_files: EXACT_FILES,
-      files,
-      generated_at: new Date().toISOString(),
-    })}\n`,
-    'utf8',
-  );
+  fs.writeFileSync(DIAGNOSTIC_PATH, `${JSON.stringify({
+    ok: error === null,
+    baseline: BASELINE,
+    target_branch: TARGET_BRANCH,
+    error: error ? String(error.stack || error) : null,
+    commands: DIAGNOSTICS,
+    generated_at: new Date().toISOString(),
+  }, null, 2)}\n`, 'utf8');
 }
 
 function run(command, args, cwd = ROOT, options = {}) {
@@ -97,16 +67,12 @@ function run(command, args, cwd = ROOT, options = {}) {
   };
   DIAGNOSTICS.push(entry);
   persistDiagnostics();
-  if (result.stdout) process.stdout.write(result.stdout);
-  if (result.stderr) process.stderr.write(result.stderr);
+  if (entry.stdout) process.stdout.write(entry.stdout);
+  if (entry.stderr) process.stderr.write(entry.stderr);
   if (result.status !== 0) {
     throw new Error(`COMMAND_FAILED:${command} ${args.join(' ')}:${result.status}`);
   }
   return entry.stdout;
-}
-
-function writeExecutable(filePath, content) {
-  fs.writeFileSync(filePath, content, { encoding: 'utf8', mode: 0o755 });
 }
 
 function extractRunBlocks(source) {
@@ -126,13 +92,11 @@ function extractRunBlocks(source) {
     if (runIndex >= lines.length) throw new Error(`RUN_BLOCK_MISSING:${match[1]}`);
     const indent = lines[runIndex].length - lines[runIndex].trimStart().length;
     const block = [];
-    let cursor = runIndex + 1;
-    while (cursor < lines.length) {
+    for (let cursor = runIndex + 1; cursor < lines.length; cursor += 1) {
       const line = lines[cursor];
       const currentIndent = line.trim() ? line.length - line.trimStart().length : indent + 2;
       if (line.trim() && currentIndent <= indent) break;
       block.push(line.slice(Math.min(indent + 2, line.length)));
-      cursor += 1;
     }
     output.set(names.get(match[1]), `${block.join('\n').replace(/\s+$/, '')}\n`);
   }
@@ -148,16 +112,36 @@ function removeWorktree(worktree) {
 }
 
 function runMaterializerScript(scriptRoot, scriptName, worktree) {
-  run(
-    'bash',
-    [path.join(scriptRoot, scriptName)],
-    worktree,
-    { env: SCRIPT_ENV },
+  run('bash', [path.join(scriptRoot, scriptName)], worktree, { env: SCRIPT_ENV });
+}
+
+function alignClosureRecordBoundary() {
+  const recordPath = path.join(
+    TARGET_WORKTREE,
+    'docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-CLOSURE-RECORD.json',
   );
+  const record = JSON.parse(fs.readFileSync(recordPath, 'utf8'));
+  record.exact_changed_file_boundary = [...EXACT_FILES];
+  fs.writeFileSync(recordPath, `${JSON.stringify(record, null, 2)}\n`, 'utf8');
+}
+
+function persistBundle() {
+  const files = EXACT_FILES.map((relativePath) => ({
+    path: relativePath,
+    content_base64: fs.readFileSync(path.join(TARGET_WORKTREE, relativePath)).toString('base64'),
+  }));
+  fs.writeFileSync(BUNDLE_PATH, `${JSON.stringify({
+    ok: true,
+    baseline: BASELINE,
+    target_branch: TARGET_BRANCH,
+    exact_files: EXACT_FILES,
+    files,
+    generated_at: new Date().toISOString(),
+  })}\n`, 'utf8');
 }
 
 function materialize() {
-  fs.mkdirSync(OUTPUT_ROOT, { recursive: true });
+  fs.mkdirSync(ACCEPTANCE_OUTPUT_ROOT, { recursive: true });
   removeWorktree(MAIN_WORKTREE);
   removeWorktree(TARGET_WORKTREE);
   run('git', [
@@ -170,7 +154,9 @@ function materialize() {
   const source = run('git', ['show', `origin/${MATERIALIZER_BRANCH}:${MATERIALIZER_PATH}`]);
   const blocks = extractRunBlocks(source);
   const scriptRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'geox-s8-finalization-scripts-'));
-  for (const [name, content] of blocks) writeExecutable(path.join(scriptRoot, name), content);
+  for (const [name, content] of blocks) {
+    fs.writeFileSync(path.join(scriptRoot, name), content, { encoding: 'utf8', mode: 0o755 });
+  }
 
   try { run('git', ['branch', '-D', 'main']); } catch {}
   try { run('git', ['branch', '-D', TARGET_BRANCH]); } catch {}
@@ -185,6 +171,7 @@ function materialize() {
     throw new Error('S8_FINALIZATION_TARGET_BASELINE_MISMATCH');
   }
   runMaterializerScript(scriptRoot, 'generate.sh', TARGET_WORKTREE);
+  alignClosureRecordBoundary();
   runMaterializerScript(scriptRoot, 'create-gate.sh', TARGET_WORKTREE);
   run('git', ['add', '-N', '--',
     'docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-MAIN-VERIFICATION.json',
@@ -199,20 +186,6 @@ function materialize() {
   if (JSON.stringify(changed) !== JSON.stringify(expected)) {
     throw new Error(`S8_FINALIZATION_ARTIFACT_BOUNDARY_MISMATCH:${JSON.stringify(changed)}`);
   }
-
-  for (const relativePath of EXACT_FILES) {
-    const sourcePath = path.join(TARGET_WORKTREE, relativePath);
-    const destinationPath = path.join(OUTPUT_ROOT, relativePath);
-    fs.mkdirSync(path.dirname(destinationPath), { recursive: true });
-    fs.copyFileSync(sourcePath, destinationPath);
-  }
-  fs.writeFileSync(path.join(OUTPUT_ROOT, 'manifest.json'), `${JSON.stringify({
-    ok: true,
-    baseline: BASELINE,
-    target_branch: TARGET_BRANCH,
-    exact_files: EXACT_FILES,
-    generated_at: new Date().toISOString(),
-  }, null, 2)}\n`, 'utf8');
   persistBundle();
 }
 
