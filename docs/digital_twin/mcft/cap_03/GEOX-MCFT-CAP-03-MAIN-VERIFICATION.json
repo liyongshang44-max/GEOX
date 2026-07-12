@@ -6,10 +6,10 @@
   "name": "Observation Assimilation and State Innovation",
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A",
-  "status": "PENDING_FINALIZATION_EFFECTIVENESS",
-  "verified_on_main": false,
-  "closure_effective": false,
-  "capability_complete": false,
+  "status": "VERIFIED_ON_MAIN",
+  "verified_on_main": true,
+  "closure_effective": true,
+  "capability_complete": true,
   "finalization_baseline_main_commit": "68f0bc2198c0fd09bb4dcedf5b13d8507fb35902",
   "finalization_branch": "mcft-cap-03-s8-finalization-v1",
   "finalization_activation_evidence": {
@@ -52,7 +52,8 @@
     "next_tick_logical_time": "2026-06-03T02:00:00.000Z",
     "latest_successful_forecast_ref": null
   },
-  "pending_completion_claims": [
+  "pending_completion_claims": [],
+  "effective_completion_claims": [
     "MCFT_CAP_03_COMPLETE",
     "OBSERVATION_ASSIMILATION_V1_ESTABLISHED",
     "STATE_OBSERVATION_INNOVATION_RESIDUAL_ESTABLISHED",
@@ -69,9 +70,7 @@
     "ASSIMILATED_STATE_CANONICAL_UNIQUENESS_ESTABLISHED",
     "VERSIONED_ASSIMILATION_RECORD_SET_COMPATIBILITY_ESTABLISHED"
   ],
-  "effective_completion_claims": [],
   "preserved_nonclaims": [
-    "NO_MCFT_CAP_03_COMPLETE_CLAIM",
     "NO_FORECAST_RESIDUAL",
     "NO_SUCCESSFUL_FORECAST",
     "NO_72_HOUR_FORECAST",
@@ -120,5 +119,28 @@
     "merged_main": "PENDING"
   },
   "successor_capability_line_id": "MCFT-CAP-04",
-  "successor_authorized": false
+  "successor_authorized": false,
+  "verified_main_commit": "e42a9a799b8f27110e3955d645f3ea70c50c0588",
+  "finalization_effectiveness": {
+    "branch": "mcft-cap-03-s8-finalization-effectiveness-v1",
+    "finalization_pr_number": 2365,
+    "finalization_head_commit": "9827846038083092bedeabdbf8f9713f587c083b",
+    "finalization_ci_run": "CI_4768",
+    "finalization_merge_commit": "e42a9a799b8f27110e3955d645f3ea70c50c0588",
+    "finalization_postmerge_gate": "PASS",
+    "finalization_postmerge_gate_summary": "MCFT-CAP-03 S8 Finalization postmerge: 58 PASS, 0 FAIL",
+    "exact_changed_file_boundary": [
+      "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+      "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-CLOSURE-RECORD.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-CLOSURE-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-CLOSURE.md",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-FINALIZATION-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-FINALIZATION.md",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-MAIN-VERIFICATION.json"
+    ],
+    "effectiveness_condition_satisfied": true,
+    "successor_authorized": false
+  }
 }
