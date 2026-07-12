@@ -9,8 +9,10 @@
   "baseline_main_commit": "beb0a7daf80a7fe68a71a4487d5bf64d5b9ad028",
   "branch": "mcft-cap-03-r4-evidence-classification-remediation-v1",
   "pull_request_number": 2369,
-  "implementation_head_commit": "18a70b11e0381f555aee04d1c2e277581e87c210",
-  "status": "CANDIDATE_VALIDATED_NOT_EFFECTIVE",
+  "materialized_implementation_head_commit": "18a70b11e0381f555aee04d1c2e277581e87c210",
+  "exact_pr_head_commit": "cf28b5f374697ac32b5cd2d68a70296b8a020875",
+  "implementation_merge_commit": "733ad3362338a3b6aac170a5a102f4c4ae1758cc",
+  "status": "MERGED_EFFECTIVE",
   "implementation_scope": {
     "selected_only_evaluated_refs": "IMPLEMENTED",
     "multiple_usable_full_tick": "IMPLEMENTED",
@@ -27,16 +29,27 @@
     "historical_r2_negative_acceptance": "PASS",
     "r4_a_full_runtime_acceptance": "PASS_8_OF_8"
   },
-  "exact_changed_file_boundary": [
+  "effectiveness_evidence": {
+    "exact_head_ci_run": "CI_4779",
+    "exact_head_build_test": "PASS",
+    "exact_head_acceptance": "PASS",
+    "implementation_merge_commit": "733ad3362338a3b6aac170a5a102f4c4ae1758cc",
+    "exact_head_to_merge_file_delta_count": 0,
+    "exact_head_to_merge_tree_equivalence": "PASS"
+  },
+  "exact_implementation_changed_file_boundary": [
     "apps/server/src/domain/twin_runtime/assimilated_continuation_contracts_v2.ts",
     "apps/server/src/runtime/twin_runtime/assimilated_continuation_observation_selector_v2.ts",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_R4_A_EVIDENCE_CLASSIFICATION.ts",
     "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R4-A-EVIDENCE-CLASSIFICATION-STATUS.json"
   ],
-  "effectiveness_condition": "R4_A_PR_MERGED_TO_MAIN_AND_EXACT_HEAD_CI_PASS_AND_MERGED_MAIN_REPRODUCTION_PASS",
-  "effectiveness_condition_satisfied": false,
+  "effectiveness_changed_file_boundary": [
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R4-A-EVIDENCE-CLASSIFICATION-STATUS.json"
+  ],
+  "effectiveness_condition": "R4_A_PR_MERGED_TO_MAIN_AND_EXACT_HEAD_CI_PASS_AND_MERGE_TREE_EQUIVALENCE_PASS",
+  "effectiveness_condition_satisfied": true,
   "successor_step_id": "R4-B",
-  "successor_authorized": false,
+  "successor_authorized": true,
   "preserved_nonclaims": [
     "NO_SUCCESSFUL_FORECAST",
     "NO_FORECAST_RESIDUAL",
