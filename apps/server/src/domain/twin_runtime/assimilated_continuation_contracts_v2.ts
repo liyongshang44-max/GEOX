@@ -48,7 +48,7 @@ export type AssimilatedObservationSemanticHashBasisV2 = {
   canonical_payload: Record<string, unknown>;
   quality: AssimilatedObservationQualityV2;
   source_unit: string;
-  canonical_unit: "fraction";
+  canonical_unit: string;
   conversion_rule: AssimilatedObservationConversionRuleV2;
   epistemic_class: "OBSERVED";
 };
@@ -64,7 +64,7 @@ export type AssimilatedObservationCandidateV2 =
     available_to_runtime_at: string;
     ingested_at: string;
     binding_id: string;
-    quantity_kind: "VOLUMETRIC_WATER_CONTENT";
+    quantity_kind: string;
     canonical_value: number;
     quality_status: AssimilatedObservationQualityV2["status"];
     temporal_offset_milliseconds: number;
@@ -153,12 +153,14 @@ export function validateAssimilatedObservationCandidateV2(
   if (candidate.epistemic_class !== "OBSERVED") {
     throw new Error("ASSIMILATION_V2_CANDIDATE_EPISTEMIC_CLASS_MISMATCH");
   }
-  if (candidate.quantity_kind !== "VOLUMETRIC_WATER_CONTENT") {
-    throw new Error("ASSIMILATION_V2_CANDIDATE_QUANTITY_MISMATCH");
-  }
-  if (candidate.canonical_unit !== "fraction") {
-    throw new Error("ASSIMILATION_V2_CANDIDATE_CANONICAL_UNIT_MISMATCH");
-  }
+  const quantityKind = requiredStringV2(
+    candidate.quantity_kind,
+    "ASSIMILATION_V2_CANDIDATE_QUANTITY_REQUIRED",
+  );
+  const canonicalUnit = requiredStringV2(
+    candidate.canonical_unit,
+    "ASSIMILATION_V2_CANDIDATE_CANONICAL_UNIT_REQUIRED",
+  );
 
   requiredCanonicalIsoV2(
     candidate.observed_at,
@@ -192,10 +194,10 @@ export function validateAssimilatedObservationCandidateV2(
     candidate.canonical_payload,
     "ASSIMILATION_V2_CANDIDATE_CANONICAL_PAYLOAD_REQUIRED",
   );
-  if (canonicalPayload.unit !== "fraction") {
+  if (canonicalPayload.unit !== canonicalUnit) {
     throw new Error("ASSIMILATION_V2_CANDIDATE_PAYLOAD_UNIT_MISMATCH");
   }
-  if (canonicalPayload.quantity_kind !== "VOLUMETRIC_WATER_CONTENT") {
+  if (canonicalPayload.quantity_kind !== quantityKind) {
     throw new Error("ASSIMILATION_V2_CANDIDATE_PAYLOAD_QUANTITY_MISMATCH");
   }
   const payloadValue = requiredFiniteNumberV2(
@@ -240,10 +242,33 @@ export function validateAssimilatedObservationCandidateV2(
   )) {
     throw new Error("ASSIMILATION_V2_CANDIDATE_ASSESSMENT_UNKNOWN");
   }
-  validateStringArrayV2(
+  const reasonCodes = validateStringArrayV2(
     candidate.reason_codes,
     "ASSIMILATION_V2_CANDIDATE_REASON_CODES_REQUIRED",
   );
+  const assessment =
+    candidate.candidate_assessment as AssimilatedContinuationCandidateAssessmentV2;
+  if (
+    quantityKind !== "VOLUMETRIC_WATER_CONTENT"
+    && !reasonCodes.includes("REJECTED_QUANTITY")
+  ) {
+    throw new Error("ASSIMILATION_V2_CANDIDATE_QUANTITY_REJECTION_TRACE_REQUIRED");
+  }
+  if (
+    canonicalUnit !== "fraction"
+    && !reasonCodes.includes("REJECTED_CANONICAL_UNIT")
+  ) {
+    throw new Error("ASSIMILATION_V2_CANDIDATE_UNIT_REJECTION_TRACE_REQUIRED");
+  }
+  if (
+    !assessment.startsWith("REJECTED_")
+    && (
+      quantityKind !== "VOLUMETRIC_WATER_CONTENT"
+      || canonicalUnit !== "fraction"
+    )
+  ) {
+    throw new Error("ASSIMILATION_V2_NON_REJECTED_CANDIDATE_NOT_AUTHORIZED");
+  }
 
   const expectedHash = computeAssimilatedObservationSemanticContentHashV2({
     canonical_payload: canonicalPayload,
@@ -254,7 +279,7 @@ export function validateAssimilatedObservationCandidateV2(
       candidate.source_unit,
       "ASSIMILATION_V2_CANDIDATE_SOURCE_UNIT_REQUIRED",
     ),
-    canonical_unit: "fraction",
+    canonical_unit: canonicalUnit,
     conversion_rule: conversionRule,
     epistemic_class: "OBSERVED",
   });
@@ -391,6 +416,8 @@ export function validateAssimilatedContinuationUpdatePayloadV2(
   for (const candidate of candidates) {
     validateAssimilatedObservationCandidateV2(candidate);
   }
+  const candidateValues =
+    candidates as AssimilatedObservationCandidateV2[];
 
   const evaluated = validateStringArrayV2(
     payload.evaluated_observation_refs,
@@ -414,11 +441,18 @@ export function validateAssimilatedContinuationUpdatePayloadV2(
   );
 
   const selected = payload.selected_observation_ref;
+  let selectedCandidate: AssimilatedObservationCandidateV2 | null = null;
   if (selected !== null) {
-    requiredStringV2(
+    const selectedRef = requiredStringV2(
       selected,
       "ASSIMILATION_V2_SELECTED_REF_INVALID",
     );
+    selectedCandidate = candidateValues.find(
+      (candidate) => candidate.observation_ref === selectedRef,
+    ) ?? null;
+    if (!selectedCandidate) {
+      throw new Error("ASSIMILATION_V2_SELECTED_CANDIDATE_NOT_FOUND");
+    }
   }
 
   for (const field of [
@@ -507,20 +541,30 @@ export function validateAssimilatedContinuationUpdatePayloadV2(
     );
   }
 
-  if (status === "APPLIED") {
+  if (status === "APPLIED" || disposition === "REJECTED_OUTLIER") {
     const selectedRef = requiredStringV2(
       selected,
       "ASSIMILATION_V2_SELECTED_OBSERVATION_REQUIRED",
     );
+    if (
+      !selectedCandidate
+      || selectedCandidate.candidate_assessment !== "SELECTED"
+      || selectedCandidate.binding_id !== "soil_obs_c8_20cm_v1"
+      || selectedCandidate.quantity_kind !== "VOLUMETRIC_WATER_CONTENT"
+      || selectedCandidate.canonical_unit !== "fraction"
+      || selectedCandidate.quality_status === "FAIL"
+    ) {
+      throw new Error("ASSIMILATION_V2_SELECTED_CANDIDATE_NOT_AUTHORIZED");
+    }
     exactArrayV2(
       evaluated,
       [selectedRef],
-      "ASSIMILATION_V2_APPLIED_EVALUATED_REFS_MISMATCH",
+      "ASSIMILATION_V2_EVALUATED_REFS_MUST_EQUAL_SELECTED",
     );
     exactArrayV2(
       applied,
-      [selectedRef],
-      "ASSIMILATION_V2_APPLIED_REFS_MISMATCH",
+      status === "APPLIED" ? [selectedRef] : [],
+      "ASSIMILATION_V2_APPLIED_REFS_STATUS_MISMATCH",
     );
   }
 

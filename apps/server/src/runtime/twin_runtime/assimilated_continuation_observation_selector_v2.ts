@@ -264,7 +264,7 @@ function classifyCandidateV2(input: {
     canonical_payload: committedCanonicalPayload,
     quality,
     source_unit: sourceUnit,
-    canonical_unit: "fraction",
+    canonical_unit: canonicalUnit,
     conversion_rule: conversionRule,
     epistemic_class: "OBSERVED",
   });
@@ -281,9 +281,9 @@ function classifyCandidateV2(input: {
     available_to_runtime_at: availableAt,
     ingested_at: ingestedAt,
     binding_id: record.binding_id,
-    quantity_kind: "VOLUMETRIC_WATER_CONTENT",
+    quantity_kind: quantityKind,
     source_unit: sourceUnit,
-    canonical_unit: "fraction",
+    canonical_unit: canonicalUnit,
     conversion_rule: conversionRule,
     canonical_payload: committedCanonicalPayload,
     canonical_value: canonicalValue,
@@ -444,9 +444,7 @@ export function selectAssimilatedContinuationObservationV2(input: {
     .map((item) => item.candidate)
     .sort(finalSortV2);
   const selectedRef = selected?.candidate.observation_ref ?? null;
-  const evaluatedRefs = candidates
-    .map((candidate) => candidate.observation_ref)
-    .sort();
+  const evaluatedRefs = selectedRef === null ? [] : [selectedRef];
   const rejectedRefs = candidates
     .filter((candidate) =>
       candidate.candidate_assessment.startsWith("REJECTED_")
