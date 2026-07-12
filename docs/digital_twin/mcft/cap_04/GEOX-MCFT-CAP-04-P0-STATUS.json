@@ -1,0 +1,62 @@
+{
+  "schema_version": "geox_mcft_cap_04_p0_status_v1",
+  "status_identity": "GEOX-MCFT-CAP-04-P0-STATUS-V1",
+  "capability_line_id": "MCFT-CAP-04",
+  "display_alias": "MCFT-4",
+  "name": "Successful Forecast and Scenario Runtime",
+  "task_revision": "v0.5",
+  "baseline_main_commit": "eca0d053045db59982ad20a6e0421f72ae16f804",
+  "branch": "mcft-cap-04-p0-predecessor-ssot-v1",
+  "delivery_slice_id": "MCFT-CAP-04.P0.PREDECESSOR-SSOT-AND-TASK-FREEZE-V1",
+  "status": "P0_READY_FOR_MERGE",
+  "design_status": "FINAL_FROZEN_CANDIDATE_V0_5",
+  "implementation_status": "NOT_AUTHORIZED",
+  "authorization_effective": false,
+  "runtime_source_authorized": false,
+  "predecessor": {
+    "capability_line_id": "MCFT-CAP-03",
+    "status": "VERIFIED_ON_MAIN",
+    "verified_main_commit": "cda1016542300bbc477a1c72023401aaaad954bc",
+    "r4_a_status": "MERGED_EFFECTIVE",
+    "r4_b_status": "MERGED_EFFECTIVE",
+    "r4_c_status": "MERGED_EFFECTIVE",
+    "remaining_nonconformant_hard_acceptance_count": 0,
+    "remaining_unadjudicated_contract_deviation_count": 0,
+    "latest_successful_forecast_ref": null
+  },
+  "frozen_corrections": {
+    "predecessor_runtime_config_authority": "PREVIOUS_POSTERIOR_STATE_REF_AND_HASH",
+    "latest_successful_forecast_ref_type": "string | null",
+    "tick_root_direct_ref_count": 6,
+    "health_recovery_link": "health.payload.tick_ref",
+    "forecast_future_forcing_provenance": [
+      "WEATHER_EVIDENCE_REFS",
+      "ET0_EVIDENCE_REFS"
+    ],
+    "scenario_assumption_ref_forbidden": true,
+    "canonical_projection_separation": true,
+    "completion_lifecycle": [
+      "S10A",
+      "S10B",
+      "S10C"
+    ]
+  },
+  "exact_changed_file_boundary": [
+    "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+    "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+    "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md",
+    "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-P0-STATUS.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_P0_PREDECESSOR_SSOT.cjs"
+  ],
+  "validation": {
+    "p0_acceptance": "REQUIRED",
+    "cap_03_r4_final_verification_acceptance": "REQUIRED",
+    "cap_03_r4_c_effectiveness_acceptance": "REQUIRED",
+    "json_parse": "REQUIRED",
+    "git_diff_check": "REQUIRED"
+  },
+  "effectiveness_condition": "P0_PR_MERGED_TO_MAIN_AND_EXACT_HEAD_CI_PASS_AND_MERGE_TREE_EQUIVALENCE_PASS_AND_POSTMERGE_P0_ACCEPTANCE_PASS_AND_EFFECTIVENESS_RECONCILED",
+  "effectiveness_condition_satisfied": false,
+  "next_eligible_slice_id": "MCFT-CAP-04.S0.GOV-AUTHORIZATION-AND-PREDECESSOR-LOCK-V1",
+  "next_slice_authorized": false
+}
