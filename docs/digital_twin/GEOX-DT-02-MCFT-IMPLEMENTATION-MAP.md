@@ -467,3 +467,56 @@ MCFT-CAP-04: UNAUTHORIZED
 ```
 
 MCFT-CAP-03 is complete at Level A for replay-mode observation assimilation and state innovation. This does not establish Forecast success, Scenario, Recommendation, Policy Evaluation, AO-ACT, continuous Runtime, live-field operation, Gate A/B/C closure, or Minimum Complete Field Twin.
+
+<!-- MCFT-CAP-04-P0-AUTHORITY-START -->
+## 15. MCFT-CAP-03 authoritative reconciliation and MCFT-CAP-04 P0
+
+```text
+repository baseline:
+eca0d053045db59982ad20a6e0421f72ae16f804
+
+MCFT-CAP-03:
+status: COMPLETE
+implementation_status: VERIFIED_ON_MAIN
+closure_effective: true
+capability_complete: true
+active_delivery_slice_id: null
+R4-A: MERGED_EFFECTIVE
+R4-B: MERGED_EFFECTIVE
+R4-C: MERGED_EFFECTIVE
+remaining audited hard-acceptance failures: 0
+remaining unadjudicated contract deviations: 0
+successor: MCFT-CAP-04
+successor_authorized: false
+```
+
+The global capability matrix is reconciled to the effective CAP-03 delivery and verification records. Historical candidate sections above remain historical evidence and are not current authority.
+
+MCFT-CAP-04 P0 freezes the task and delivery graph only:
+
+```text
+design_status: FINAL_FROZEN_CANDIDATE_V0_5
+implementation_status: NOT_AUTHORIZED
+runtime_source_authorized: false
+active_delivery_slice_id: MCFT-CAP-04.P0.PREDECESSOR-SSOT-AND-TASK-FREEZE-V1
+```
+
+| phase | bounded result | P0 state |
+|---|---|---|
+| P0 | predecessor SSOT reconciliation and task freeze | READY_FOR_MERGE |
+| S0 | authorization and predecessor identity lock | BLOCKED |
+| S1 | contracts, Runtime Config pins, provenance | BLOCKED |
+| S2 | Future Forcing Evidence Window | BLOCKED |
+| S3 | successful 72-hour Forecast math and record set | BLOCKED |
+| S4 | Forecast persistence and canonical projections | BLOCKED |
+| S5 | Tick integration and reverse Health recovery | BLOCKED |
+| S6 | Scenario contracts and deterministic trajectories | BLOCKED |
+| S7 | Scenario persistence and canonical projections | BLOCKED |
+| S8 | restart, bounded backfill, and failure recovery | BLOCKED |
+| S9 | capability closure candidate | BLOCKED |
+| S10A | finalization candidate | BLOCKED |
+| S10B | exact-head final verification | BLOCKED |
+| S10C | postmerge effectiveness reconciliation | BLOCKED |
+
+No Runtime, migration, route, API, scheduler, frontend, Forecast, Scenario, Recommendation, Decision, or AO_ACT capability is authorized by P0.
+<!-- MCFT-CAP-04-P0-AUTHORITY-END -->
