@@ -9,7 +9,7 @@
   "activation_branch": "mcft-cap-03-s2-semantic-conformance-remediation-activation-v1",
   "r1_implementation_branch": "mcft-cap-03-s2-semantic-conformance-v2-v1",
   "r1_effectiveness_branch": "mcft-cap-03-s2-semantic-conformance-v2-effectiveness-v1",
-  "status": "R2_BOUNDARY_EFFECTIVE_IMPLEMENTATION_AUTHORIZED",
+  "status": "R2_IMPLEMENTATION_CANDIDATE_VALIDATED_NOT_EFFECTIVE",
   "activation_effective": true,
   "implementation_status": "MERGED_EFFECTIVE",
   "remediation_hold_status": "EFFECTIVE",
@@ -84,7 +84,7 @@
     {
       "step_id": "R2",
       "name": "S3A_TO_S6_V2_REVALIDATION_AND_SSOT_RECONCILIATION",
-      "status": "BOUNDARY_EFFECTIVE_IMPLEMENTATION_AUTHORIZED"
+      "status": "CANDIDATE_VALIDATED_NOT_EFFECTIVE"
     },
     {
       "step_id": "R3",
@@ -229,17 +229,18 @@
     "boundary_freeze_final_gate": "PASS_52_OF_52",
     "boundary_freeze_exact_head_ci": "PASS_CI_4735",
     "boundary_freeze_merged_main_gate": "PASS_52_OF_52",
-    "implementation_positive": "PENDING",
-    "implementation_negative": "PENDING",
-    "implementation_isolated_postgresql": "PENDING",
-    "historical_v1_regression": "PENDING",
-    "s3a_to_s6_revalidation": "PENDING",
-    "server_typecheck": "PENDING",
-    "server_build": "PENDING",
+    "implementation_positive": "PASS_9_OF_9",
+    "implementation_negative": "PASS_6_OF_6",
+    "implementation_isolated_postgresql": "PASS_15_OF_15",
+    "historical_v1_regression": "PASS",
+    "s3a_to_s6_revalidation": "PASS_LOCAL_SOURCE_CANDIDATE",
+    "server_typecheck": "PASS",
+    "server_build": "PASS",
+    "git_diff_check": "PASS",
     "exact_head_ci": "PENDING",
     "merged_main_postmerge_gate": "PENDING"
   },
-  "r2_implementation_status": "AUTHORIZED_NOT_STARTED",
+  "r2_implementation_status": "CANDIDATE_VALIDATED_NOT_EFFECTIVE",
   "activation_draft_gate": "PASS_52_OF_52",
   "activation_final_gate": "PASS_52_OF_52",
   "boundary_effectiveness_branch": "mcft-cap-03-s2-semantic-conformance-r2-boundary-effectiveness-v1",
@@ -249,5 +250,27 @@
     "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R2-V2-REVALIDATION-STATUS.json",
     "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION-STATUS.json"
   ],
-  "boundary_effectiveness_condition_satisfied": true
+  "boundary_effectiveness_condition_satisfied": true,
+  "r2_candidate_validation_evidence": {
+    "evidence_scope": "LOCAL_SOURCE_CANDIDATE_ONLY",
+    "implementation_baseline_main_commit": "0a70d74849942d2f50e39578767212d91caa0a42",
+    "implementation_branch": "mcft-cap-03-s2-semantic-conformance-r2-v2-revalidation-v1",
+    "contract_id": "MCFT_CAP_03_ASSIMILATED_CONTINUATION_V2",
+    "runtime_config_purpose": "ASSIMILATED_CONTINUATION_RUNTIME_V2",
+    "positive_in_memory": "PASS_9_OF_9",
+    "negative_semantic": "PASS_6_OF_6",
+    "isolated_postgresql": "PASS_15_OF_15",
+    "versioned_dispatch": "PASS_CAP_02_V1_CAP_03_V1_CAP_03_V2",
+    "historical_cap_03_v1_dispatch": "PASS",
+    "same_operation_key_v1_v2_dual_write": "PASS_FAIL_CLOSED",
+    "single_tick_v2": "PASS",
+    "twenty_four_contiguous_v2_ticks": "PASS",
+    "restart_terminal_hash_equivalence": "PASS",
+    "bounded_forward_backfill_terminal_hash_equivalence": "PASS",
+    "late_evidence_revision": "PASS_FAIL_CLOSED",
+    "zero_schema_migration": "PASS",
+    "server_typecheck": "PASS",
+    "server_build": "PASS",
+    "git_diff_check": "PASS"
+  }
 }

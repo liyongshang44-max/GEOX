@@ -5,6 +5,7 @@
 import type { Pool, PoolClient } from "pg";
 import { validateCanonicalObjectV1, type CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
 import { ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V1 } from "../../domain/twin_runtime/assimilated_continuation_contracts_v1.js";
+import { ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V2 } from "../../domain/twin_runtime/assimilated_continuation_contracts_v2.js";
 import { validateContinuationMemberV1 } from "../../domain/twin_runtime/continuation_contracts_v1.js";
 import type { NextTickReadPortV1, PersistedNextTickSnapshotV1, RealityBindingRuntimeSnapshotV1, RuntimeAuthoritySnapshotRepositoryPortV1, TwinScopeKeyV1 } from "../../runtime/twin_runtime/ports.js";
 
@@ -13,9 +14,16 @@ function scopeValuesV1(scope: TwinScopeKeyV1): unknown[] {
 }
 
 function isAssimilatedContinuationTickV1(object: CanonicalObjectEnvelopeV1): boolean {
+  const contractId =
+    object.payload.record_set_contract_id;
+
   return object.object_type === "twin_runtime_tick_v1"
-    && object.payload.record_set_contract_id
-      === ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V1;
+    && (
+      contractId
+        === ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V1
+      || contractId
+        === ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V2
+    );
 }
 
 function isContinuationReadObjectV1(object: CanonicalObjectEnvelopeV1): boolean {
