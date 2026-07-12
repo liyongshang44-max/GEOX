@@ -27,7 +27,9 @@ jobs:
           node-version: 20
 
       - name: Preserve history and reconcile P0
-        run: node .cap04-p0-history/materialize_minimal_p0_history.cjs
+        run: |
+          sed -i 's/FINAL_FROZENCANDIDATE_V0_5/FINAL_FROZEN_CANDIDATE_V0_5/g' .cap04-p0-history/materialize_minimal_p0_history.cjs
+          node .cap04-p0-history/materialize_minimal_p0_history.cjs
 
       - name: Remove temporary reconciliation inputs
         run: |
@@ -42,11 +44,15 @@ jobs:
           cat /tmp/mcft-cap-04-p0-gate.log
           exit 0
 
-      - name: Capture candidate diff
+      - name: Capture candidate diff and integrity
         run: |
           git diff --name-only eca0d053045db59982ad20a6e0421f72ae16f804 > /tmp/mcft-cap-04-p0-diff.log
+          set +e
+          git diff --check eca0d053045db59982ad20a6e0421f72ae16f804 > /tmp/mcft-cap-04-p0-diff-check.log 2>&1
+          echo "$?" > /tmp/mcft-cap-04-p0-diff-check.exit
+          set -e
           cat /tmp/mcft-cap-04-p0-diff.log
-          wc -l /tmp/mcft-cap-04-p0-diff.log
+          cat /tmp/mcft-cap-04-p0-diff-check.log
 
       - name: Publish P0 diagnostic
         if: always()
@@ -55,13 +61,16 @@ jobs:
           script: |
             const fs = require('fs');
             const gate = fs.readFileSync('/tmp/mcft-cap-04-p0-gate.log', 'utf8');
-            const exitCode = fs.readFileSync('/tmp/mcft-cap-04-p0-gate.exit', 'utf8').trim();
+            const gateExit = fs.readFileSync('/tmp/mcft-cap-04-p0-gate.exit', 'utf8').trim();
             const diff = fs.readFileSync('/tmp/mcft-cap-04-p0-diff.log', 'utf8');
+            const diffCheck = fs.readFileSync('/tmp/mcft-cap-04-p0-diff-check.log', 'utf8');
+            const diffCheckExit = fs.readFileSync('/tmp/mcft-cap-04-p0-diff-check.exit', 'utf8').trim();
             const body = [
               '<!-- mcft-cap-04-p0-diagnostic -->',
               '### MCFT-CAP-04 P0 diagnostic',
               '',
-              `Gate exit: ${exitCode}`,
+              `Gate exit: ${gateExit}`,
+              `Diff-check exit: ${diffCheckExit}`,
               '',
               '```text',
               gate.slice(-12000),
@@ -71,6 +80,12 @@ jobs:
               '',
               '```text',
               diff,
+              '```',
+              '',
+              'Diff-check:',
+              '',
+              '```text',
+              diffCheck,
               '```',
             ].join('\n');
             await github.rest.issues.createComment({
@@ -83,6 +98,7 @@ jobs:
       - name: Enforce diagnostic result
         run: |
           test "$(cat /tmp/mcft-cap-04-p0-gate.exit)" -eq 0
+          test "$(cat /tmp/mcft-cap-04-p0-diff-check.exit)" -eq 0
           test "$(wc -l < /tmp/mcft-cap-04-p0-diff.log)" -eq 5
 
       - name: Re-run CAP-03 R4 final verification Gate
@@ -95,9 +111,6 @@ jobs:
         run: |
           node -e "JSON.parse(require('fs').readFileSync('docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json','utf8'))"
           node -e "JSON.parse(require('fs').readFileSync('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-P0-STATUS.json','utf8'))"
-
-      - name: Check patch integrity
-        run: git diff --check eca0d053045db59982ad20a6e0421f72ae16f804
 
       - name: Commit minimal P0 reconciliation
         run: |
