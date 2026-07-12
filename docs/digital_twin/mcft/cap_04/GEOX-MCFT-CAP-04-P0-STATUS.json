@@ -48,12 +48,15 @@
     "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-P0-STATUS.json",
     "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_P0_PREDECESSOR_SSOT.cjs"
   ],
-  "validation": {
-    "p0_acceptance": "REQUIRED",
-    "cap_03_r4_final_verification_acceptance": "REQUIRED",
-    "cap_03_r4_c_effectiveness_acceptance": "REQUIRED",
-    "json_parse": "REQUIRED",
-    "git_diff_check": "REQUIRED"
+  "candidate_validation": {
+    "materializer_workflow_run_id": 29204718391,
+    "materializer_workflow_conclusion": "SUCCESS",
+    "p0_acceptance": "PASS_7_OF_7",
+    "cap_03_r4_final_verification_acceptance": "PASS_5_OF_5",
+    "cap_03_r4_c_effectiveness_acceptance": "PASS_4_OF_4",
+    "json_parse": "PASS",
+    "git_diff_check": "PASS",
+    "exact_head_ci": "PENDING"
   },
   "effectiveness_condition": "P0_PR_MERGED_TO_MAIN_AND_EXACT_HEAD_CI_PASS_AND_MERGE_TREE_EQUIVALENCE_PASS_AND_POSTMERGE_P0_ACCEPTANCE_PASS_AND_EFFECTIVENESS_RECONCILED",
   "effectiveness_condition_satisfied": false,
