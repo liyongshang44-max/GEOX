@@ -6,12 +6,12 @@
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A",
   "baseline_main_commit": "6389d4e566a6eb64ce96209be0e70cd8703be574",
-  "status": "S2_SEMANTIC_CONFORMANCE_REMEDIATION_R2_EFFECTIVE_R3_READY",
+  "status": "RESTART_BACKFILL_RECOVERY_MERGED",
   "design_status": "DESIGN_FROZEN",
-  "implementation_status": "R2_MERGED_EFFECTIVE",
+  "implementation_status": "S6_MERGED_EFFECTIVE_AFTER_R2",
   "authorization_effective": true,
   "runtime_source_authorized": true,
-  "active_delivery_slice_id": "MCFT-CAP-03.S2-SEMANTIC-CONFORMANCE-R2-V2-REVALIDATION-V1",
+  "active_delivery_slice_id": "MCFT-CAP-03.MCFT-03-04-07-08.RESTART-BACKFILL-RECOVERY-V1",
   "merge_before_next": true,
   "postmerge_verify_before_next": true,
   "parallel_downstream_pr_forbidden": true,
@@ -560,7 +560,7 @@
       ],
       "baseline_main_commit": "8190e93f3b520ce15dcbe40b2a92e759176ef9a1",
       "branch": "mcft-cap-03-s6-restart-backfill-recovery-v1",
-      "status": "IMPLEMENTATION_MERGED_EFFECTIVENESS_PAUSED",
+      "status": "MERGED",
       "activation_fields_status": "FROZEN",
       "allowed_claims": [
         "CAP_03_RESTART_RESUME_PROVEN",
@@ -635,8 +635,60 @@
       "implementation_draft_gate": "PASS_124_OF_124",
       "implementation_final_gate": "PASS_127_OF_127",
       "implementation_isolated_postgresql_gate": "PASS_128_OF_128",
-      "effectiveness_condition_satisfied": false,
-      "effectiveness_pause_reason": "S2_SEMANTIC_CONFORMANCE_REMEDIATION_REQUIRED"
+      "effectiveness_condition_satisfied": true,
+      "implementation_merged_main_gate": "PASS",
+      "postmerge_effectiveness_branch": "mcft-cap-03-s6-postmerge-effectiveness-v1",
+      "postmerge_effectiveness_baseline_main_commit": "b4ec182e654365ce2879cea0cfd5370cbabbcd96",
+      "r2_semantic_conformance_prerequisite": {
+        "implementation_pr_number": 2354,
+        "implementation_head_commit": "ad003764a9118c00fc7ae50e47e96e9ed7f58f03",
+        "implementation_ci_run": "CI_4739",
+        "implementation_merge_commit": "1f1d6b9dc7724fd1b0e6bf69612d8ac012290bd5",
+        "effectiveness_pr_number": 2355,
+        "effectiveness_head_commit": "8da36cbc77c5cdf2794151ba2ded0a2c25ce3a13",
+        "effectiveness_ci_run": "CI_4741",
+        "effectiveness_merge_commit": "b4ec182e654365ce2879cea0cfd5370cbabbcd96",
+        "effectiveness_condition_satisfied": true,
+        "exact_implementation_boundary": "PASS_30_FILES",
+        "positive_in_memory": "PASS_9_OF_9",
+        "negative_semantic": "PASS_6_OF_6",
+        "isolated_postgresql": "PASS_15_OF_15",
+        "governance_acceptance": "PASS_7_OF_7"
+      },
+      "r3_effectiveness_resume": {
+        "remediation_step_id": "R3",
+        "objective": "S6_POSTMERGE_EFFECTIVENESS_RESUME",
+        "baseline_main_commit": "b4ec182e654365ce2879cea0cfd5370cbabbcd96",
+        "branch": "mcft-cap-03-s6-postmerge-effectiveness-v1",
+        "changed_file_boundary": [
+          "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+          "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-RESTART-BACKFILL-RECOVERY-STATUS.json"
+        ],
+        "s6_implementation_head_commit": "9cf16dbaab3b281458ac460dfaecc3ed25772d1f",
+        "s6_implementation_merge_commit": "55f2d56b05d2a1f0ada0e9b46eea5a3baa7187c2",
+        "s6_implementation_ci_run": "CI_4721",
+        "s6_implementation_draft_gate": "PASS_124_OF_124",
+        "s6_implementation_final_gate": "PASS_127_OF_127",
+        "s6_implementation_isolated_postgresql_gate": "PASS_128_OF_128",
+        "r2_prerequisite": {
+          "implementation_pr_number": 2354,
+          "implementation_head_commit": "ad003764a9118c00fc7ae50e47e96e9ed7f58f03",
+          "implementation_ci_run": "CI_4739",
+          "implementation_merge_commit": "1f1d6b9dc7724fd1b0e6bf69612d8ac012290bd5",
+          "effectiveness_pr_number": 2355,
+          "effectiveness_head_commit": "8da36cbc77c5cdf2794151ba2ded0a2c25ce3a13",
+          "effectiveness_ci_run": "CI_4741",
+          "effectiveness_merge_commit": "b4ec182e654365ce2879cea0cfd5370cbabbcd96",
+          "effectiveness_condition_satisfied": true,
+          "exact_implementation_boundary": "PASS_30_FILES",
+          "positive_in_memory": "PASS_9_OF_9",
+          "negative_semantic": "PASS_6_OF_6",
+          "isolated_postgresql": "PASS_15_OF_15",
+          "governance_acceptance": "PASS_7_OF_7"
+        },
+        "target_effectiveness_condition": "R3_S6_POSTMERGE_EFFECTIVENESS_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_RESTART_BACKFILL_RECOVERY_POSTMERGE_GATE_PASS",
+        "candidate_status": "READY_FOR_PR_VALIDATION"
+      }
     },
     {
       "delivery_slice_id": "MCFT-CAP-03.S2-SEMANTIC-CONFORMANCE-REMEDIATION-V1",
@@ -956,7 +1008,7 @@
     "NO_OBSERVATION_INNOVATION_COMPUTED",
     "NO_CAP_03_A2_TICK_COMMITTED"
   ],
-  "ssot_conflict_cleanup_status": "R2_V2_REVALIDATION_EFFECTIVE_R3_READY",
+  "ssot_conflict_cleanup_status": "R2_EFFECTIVE_S6_POSTMERGE_EFFECTIVENESS_RESUMED",
   "remediation_hold": {
     "remediation_id": "MCFT-CAP-03.S2-SEMANTIC-CONFORMANCE-REMEDIATION-V1",
     "baseline_main_commit": "55f2d56b05d2a1f0ada0e9b46eea5a3baa7187c2",
@@ -1274,5 +1326,39 @@
         "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION-STATUS.json"
       ]
     }
+  },
+  "r3_s6_effectiveness_resume": {
+    "remediation_step_id": "R3",
+    "objective": "S6_POSTMERGE_EFFECTIVENESS_RESUME",
+    "baseline_main_commit": "b4ec182e654365ce2879cea0cfd5370cbabbcd96",
+    "branch": "mcft-cap-03-s6-postmerge-effectiveness-v1",
+    "changed_file_boundary": [
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-RESTART-BACKFILL-RECOVERY-STATUS.json"
+    ],
+    "s6_implementation_head_commit": "9cf16dbaab3b281458ac460dfaecc3ed25772d1f",
+    "s6_implementation_merge_commit": "55f2d56b05d2a1f0ada0e9b46eea5a3baa7187c2",
+    "s6_implementation_ci_run": "CI_4721",
+    "s6_implementation_draft_gate": "PASS_124_OF_124",
+    "s6_implementation_final_gate": "PASS_127_OF_127",
+    "s6_implementation_isolated_postgresql_gate": "PASS_128_OF_128",
+    "r2_prerequisite": {
+      "implementation_pr_number": 2354,
+      "implementation_head_commit": "ad003764a9118c00fc7ae50e47e96e9ed7f58f03",
+      "implementation_ci_run": "CI_4739",
+      "implementation_merge_commit": "1f1d6b9dc7724fd1b0e6bf69612d8ac012290bd5",
+      "effectiveness_pr_number": 2355,
+      "effectiveness_head_commit": "8da36cbc77c5cdf2794151ba2ded0a2c25ce3a13",
+      "effectiveness_ci_run": "CI_4741",
+      "effectiveness_merge_commit": "b4ec182e654365ce2879cea0cfd5370cbabbcd96",
+      "effectiveness_condition_satisfied": true,
+      "exact_implementation_boundary": "PASS_30_FILES",
+      "positive_in_memory": "PASS_9_OF_9",
+      "negative_semantic": "PASS_6_OF_6",
+      "isolated_postgresql": "PASS_15_OF_15",
+      "governance_acceptance": "PASS_7_OF_7"
+    },
+    "target_effectiveness_condition": "R3_S6_POSTMERGE_EFFECTIVENESS_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_RESTART_BACKFILL_RECOVERY_POSTMERGE_GATE_PASS",
+    "candidate_status": "READY_FOR_PR_VALIDATION"
   }
 }
