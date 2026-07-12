@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+// scripts/dev/assert_local_pnpm_runtime.cjs
 'use strict';
 
 // Operational-only CI artifact generator.
@@ -18,6 +18,10 @@ const MATERIALIZER_PATH = '.github/workflows/mcft-cap-03-s8-finalization-materia
 const OUTPUT_ROOT = path.join(ROOT, 'acceptance-output', 'mcft-cap-03-s8-finalization');
 const MAIN_WORKTREE = path.join(os.tmpdir(), 'geox-s8-finalization-main');
 const TARGET_WORKTREE = path.join(os.tmpdir(), 'geox-s8-finalization-target');
+const SCRIPT_ENV = Object.freeze({
+  BASELINE,
+  TARGET_BRANCH,
+});
 const EXACT_FILES = [
   'docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md',
   'docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json',
@@ -89,6 +93,15 @@ function removeWorktree(worktree) {
   fs.rmSync(worktree, { recursive: true, force: true });
 }
 
+function runMaterializerScript(scriptRoot, scriptName, worktree) {
+  run(
+    'bash',
+    [path.join(scriptRoot, scriptName)],
+    worktree,
+    { env: SCRIPT_ENV },
+  );
+}
+
 function materialize() {
   fs.mkdirSync(OUTPUT_ROOT, { recursive: true });
   removeWorktree(MAIN_WORKTREE);
@@ -111,19 +124,19 @@ function materialize() {
   if (run('git', ['rev-parse', 'HEAD'], MAIN_WORKTREE).trim() !== BASELINE) {
     throw new Error('S8_FINALIZATION_MAIN_BASELINE_MISMATCH');
   }
-  run('bash', [path.join(scriptRoot, 'prove.sh')], MAIN_WORKTREE);
+  runMaterializerScript(scriptRoot, 'prove.sh', MAIN_WORKTREE);
 
   run('git', ['worktree', 'add', '-B', TARGET_BRANCH, TARGET_WORKTREE, `origin/${TARGET_BRANCH}`]);
   if (run('git', ['rev-parse', 'HEAD'], TARGET_WORKTREE).trim() !== BASELINE) {
     throw new Error('S8_FINALIZATION_TARGET_BASELINE_MISMATCH');
   }
-  run('bash', [path.join(scriptRoot, 'generate.sh')], TARGET_WORKTREE);
-  run('bash', [path.join(scriptRoot, 'create-gate.sh')], TARGET_WORKTREE);
+  runMaterializerScript(scriptRoot, 'generate.sh', TARGET_WORKTREE);
+  runMaterializerScript(scriptRoot, 'create-gate.sh', TARGET_WORKTREE);
   run('git', ['add', '-N', '--',
     'docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-MAIN-VERIFICATION.json',
     'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_FINALIZATION.cjs',
   ], TARGET_WORKTREE);
-  run('bash', [path.join(scriptRoot, 'run-gates.sh')], TARGET_WORKTREE);
+  runMaterializerScript(scriptRoot, 'run-gates.sh', TARGET_WORKTREE);
   run('git', ['diff', '--check'], TARGET_WORKTREE);
 
   const changed = run('git', ['status', '--short'], TARGET_WORKTREE)
