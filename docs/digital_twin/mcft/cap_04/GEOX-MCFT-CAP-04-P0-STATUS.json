@@ -1,0 +1,81 @@
+{
+  "schema_version": "geox_mcft_cap_04_p0_status_v1",
+  "status_identity": "GEOX-MCFT-CAP-04-P0-STATUS-V1",
+  "capability_line_id": "MCFT-CAP-04",
+  "display_alias": "MCFT-4",
+  "canonical_name": "72-Hour Forecast and Three Scenarios",
+  "runtime_mode": "REPLAY",
+  "target_completion_level": "Level A — Deterministic Replay Twin",
+  "delivery_slice_id": "MCFT-CAP-04.P0.CAP-03-GLOBAL-SSOT-RECONCILIATION-V1",
+  "slice_kind": "GOVERNANCE_ONLY",
+  "baseline_main_commit": "eca0d053045db59982ad20a6e0421f72ae16f804",
+  "branch": "agent/mcft-cap-04-p0-ssot-v1",
+  "status": "P0_RECONCILIATION_CANDIDATE",
+  "design_status": "FINAL_FROZEN_CANDIDATE_V0_5",
+  "implementation_status": "NOT_AUTHORIZED",
+  "runtime_source_authorized": false,
+  "cap_04_authorized": false,
+  "active_delivery_slice_id": "MCFT-CAP-04.P0.CAP-03-GLOBAL-SSOT-RECONCILIATION-V1",
+  "predecessor_capability_line_id": "MCFT-CAP-03",
+  "predecessor_authority": {
+    "main_verification_ref": "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-MAIN-VERIFICATION.json",
+    "r4_final_verification_ref": "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R4-FINAL-VERIFICATION.json",
+    "capability_status": "COMPLETE",
+    "verified_on_main": true,
+    "closure_effective": true,
+    "effective_completion_claim_count": 15,
+    "active_record_set_contract_id": "MCFT_CAP_03_ASSIMILATED_CONTINUATION_V2",
+    "r4_verification_status": "VERIFIED_ON_MAIN",
+    "r4_verified_main_commit": "cda1016542300bbc477a1c72023401aaaad954bc",
+    "latest_repository_main_commit": "eca0d053045db59982ad20a6e0421f72ae16f804"
+  },
+  "persisted_runtime_handoff_expectation": {
+    "global_state_count": 49,
+    "global_continuation_state_count": 48,
+    "checkpoint_sequence": 48,
+    "latest_logical_time": "2026-06-03T01:00:00.000Z",
+    "next_tick_logical_time": "2026-06-03T02:00:00.000Z",
+    "latest_successful_forecast_ref": null
+  },
+  "reconciliation_scope": {
+    "vertical_matrix_cap_03_terminal_state": true,
+    "implementation_map_cap_03_terminal_state": true,
+    "cap_04_p0_only": true,
+    "cap_04_runtime_not_authorized": true,
+    "cap_04_s0_not_authorized": true
+  },
+  "allowed_claims": [
+    "MCFT_CAP_03_GLOBAL_SSOT_RECONCILED_FOR_CAP_04_PREPARATION",
+    "MCFT_CAP_03_R4_FINAL_VERIFICATION_EFFECTIVE",
+    "MCFT_CAP_04_P0_GOVERNANCE_CANDIDATE_RECORDED"
+  ],
+  "preserved_nonclaims": [
+    "NO_MCFT_CAP_04_AUTHORIZATION",
+    "NO_MCFT_CAP_04_RUNTIME_SOURCE_AUTHORIZATION",
+    "NO_SUCCESSFUL_FORECAST_CREATED_BY_CAP_04",
+    "NO_72_HOUR_FORECAST_CREATED_BY_CAP_04",
+    "NO_SCENARIO_CREATED_BY_CAP_04",
+    "NO_FORECAST_RESIDUAL",
+    "NO_RECOMMENDATION",
+    "NO_POLICY_EVALUATION",
+    "NO_DECISION",
+    "NO_AO_ACT",
+    "NO_CONTINUOUS_RUNTIME",
+    "NO_CONTINUOUS_SCHEDULER",
+    "NO_LIVE_FIELD_CLAIM",
+    "NO_MCFT_GATE_A_CLOSURE",
+    "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
+  ],
+  "exact_changed_file_boundary": [
+    "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+    "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+    "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-P0-STATUS.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_P0_PREDECESSOR_SSOT.cjs"
+  ],
+  "effectiveness_condition": "P0_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_P0_GATE_PASS",
+  "effectiveness_condition_satisfied": false,
+  "next_delivery_slice_id": "MCFT-CAP-04.GOV-AUTHORIZATION-AND-PREDECESSOR-LOCK-V1",
+  "next_delivery_slice_authorized": false,
+  "successor_capability_line_id": "MCFT-CAP-05",
+  "successor_authorized": false
+}
