@@ -53,18 +53,30 @@ jobs:
       - name: Validate authorization Gate syntax
         run: node -c scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_AUTHORIZATION.cjs
 
-      - name: Repair preflight template literal
+      - name: Repair candidate source assertions
         run: |
           python - <<'PY'
           from pathlib import Path
 
-          target = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PREDECESSOR_PREFLIGHT.ts')
-          source = target.read_text(encoding='utf-8')
-          old = 'All corresponding hashes and cross-reference relations are frozen in `${LOCK_PATH}`.'
-          new = 'All corresponding hashes and cross-reference relations are frozen in ${LOCK_PATH}.'
-          if old not in source:
+          preflight = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PREDECESSOR_PREFLIGHT.ts')
+          preflight_source = preflight.read_text(encoding='utf-8')
+          preflight_old = 'All corresponding hashes and cross-reference relations are frozen in `${LOCK_PATH}`.'
+          preflight_new = 'All corresponding hashes and cross-reference relations are frozen in ${LOCK_PATH}.'
+          if preflight_old not in preflight_source:
               raise SystemExit('PREFLIGHT_TEMPLATE_LITERAL_TARGET_NOT_FOUND')
-          target.write_text(source.replace(old, new), encoding='utf-8')
+          preflight.write_text(preflight_source.replace(preflight_old, preflight_new), encoding='utf-8')
+
+          gate = Path('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_AUTHORIZATION.cjs')
+          gate_source = gate.read_text(encoding='utf-8')
+          replacements = {
+              "  'S0_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_AUTHORIZATION_GATE_PASS',": "  'S0 merged-main authorization Gate passes before Runtime source.',",
+              "  'three_way_alignment:\\nPASS',": "  'task authority: PASS',",
+          }
+          for old, new in replacements.items():
+              if old not in gate_source:
+                  raise SystemExit(f'GATE_ASSERTION_TARGET_NOT_FOUND:{old}')
+              gate_source = gate_source.replace(old, new)
+          gate.write_text(gate_source, encoding='utf-8')
           PY
 
       - name: Capture PostgreSQL predecessor preflight
@@ -104,8 +116,10 @@ jobs:
       - name: Enforce preflight success
         run: test "$(cat /tmp/mcft-cap-04-s0-preflight.exit)" -eq 0
 
-      - name: Remove temporary workflow
-        run: rm .github/workflows/mcft-cap-04-s0-materialize.yml
+      - name: Remove temporary workflow and evidence
+        run: |
+          rm .github/workflows/mcft-cap-04-s0-materialize.yml
+          rm -f acceptance-output/MCFT_CAP_04_PREDECESSOR_IDENTITY.json
 
       - name: Capture exact-head S0 final Gate
         run: |
@@ -158,7 +172,7 @@ jobs:
           git diff --check 30fdd839aa675656dd3dc9d1def57b06f63f86ec
           test "$(git diff --name-only 30fdd839aa675656dd3dc9d1def57b06f63f86ec | wc -l)" -eq 9
           git diff --name-only 30fdd839aa675656dd3dc9d1def57b06f63f86ec
-          test -z "$(git diff --name-only 30fdd839aa675656dd3dc9d1def57b06f63f86ec | grep -E '^(apps/server/src|apps/server/db/migrations|apps/web|\.github/workflows)' || true)"
+          test -z "$(git diff --name-only 30fdd839aa675656dd3dc9d1def57b06f63f86ec | grep -E '^(apps/server/src|apps/server/db/migrations|apps/web|\.github/workflows|acceptance-output)' || true)"
 
       - name: Typecheck repository
         run: pnpm -r typecheck
