@@ -6,9 +6,9 @@
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A",
   "baseline_main_commit": "6389d4e566a6eb64ce96209be0e70cd8703be574",
-  "status": "FINALIZATION_ACTIVATION_READY_FOR_MERGE",
+  "status": "FINALIZATION_ACTIVATED",
   "design_status": "DESIGN_FROZEN",
-  "implementation_status": "S8_FINALIZATION_ACTIVATION_READY",
+  "implementation_status": "S8_FINALIZATION_IMPLEMENTATION_AUTHORIZED",
   "authorization_effective": true,
   "runtime_source_authorized": true,
   "active_delivery_slice_id": "MCFT-CAP-03.CLOSURE-FINALIZATION-V1",
@@ -950,7 +950,7 @@
       ],
       "baseline_main_commit": "67def7620015788fde8a126f9ac28c648b860634",
       "branch": "mcft-cap-03-s8-finalization-v1",
-      "status": "ACTIVATION_READY_FOR_MERGE",
+      "status": "ACTIVATED",
       "activation_fields_status": "FROZEN",
       "allowed_claims": [],
       "preserved_nonclaims": [
@@ -1012,8 +1012,8 @@
       "activation": {
         "baseline_main_commit": "67def7620015788fde8a126f9ac28c648b860634",
         "branch": "mcft-cap-03-s8-finalization-activation-v1",
-        "status": "ACTIVATION_READY_FOR_MERGE",
-        "effective": false,
+        "status": "MERGED",
+        "effective": true,
         "effectiveness_condition": "S8_ACTIVATION_PR_MERGED_TO_MAIN_AND_ACTIVATION_EFFECTIVENESS_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S8_FINALIZATION_ACTIVATION_GATE_PASS",
         "effectiveness_branch": "mcft-cap-03-s8-finalization-activation-effectiveness-v1",
         "implementation_branch": "mcft-cap-03-s8-finalization-v1",
@@ -1030,7 +1030,14 @@
           "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-FINALIZATION-STATUS.json"
         ],
         "draft_gate": "PASS_53_OF_53",
-        "final_gate": "PASS_53_OF_53"
+        "final_gate": "PASS_53_OF_53",
+        "activation_pr_number": 2362,
+        "activation_head_commit": "a6f955bec13bd7f4178a3a52cc474ff984db5611",
+        "activation_ci_run": "CI_4755",
+        "activation_merge_commit": "544223afa730a925fbc9c1191b3fda3b85f0d05c",
+        "activation_draft_gate": "PASS_53_OF_53",
+        "activation_final_gate": "PASS_53_OF_53",
+        "activation_effectiveness_candidate_status": "READY_FOR_MERGE_AND_POSTMERGE_GATE"
       },
       "closure_effective": false,
       "completion_claims_status": "PENDING_FINALIZATION_EFFECTIVENESS",
