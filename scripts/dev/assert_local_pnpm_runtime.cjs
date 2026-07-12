@@ -16,8 +16,10 @@ const TARGET_BRANCH = 'mcft-cap-03-s8-finalization-v1';
 const MATERIALIZER_BRANCH = 'mcft-cap-03-s8-finalization-materializer-v1';
 const MATERIALIZER_PATH = '.github/workflows/mcft-cap-03-s8-finalization-materializer-v1.yml';
 const OUTPUT_ROOT = path.join(ROOT, 'acceptance-output', 'mcft-cap-03-s8-finalization');
+const DIAGNOSTIC_PATH = path.join(OUTPUT_ROOT, 'diagnostic.json');
 const MAIN_WORKTREE = path.join(os.tmpdir(), 'geox-s8-finalization-main');
 const TARGET_WORKTREE = path.join(os.tmpdir(), 'geox-s8-finalization-target');
+const DIAGNOSTICS = [];
 const SCRIPT_ENV = Object.freeze({
   BASELINE,
   TARGET_BRANCH,
@@ -35,6 +37,22 @@ const EXACT_FILES = [
   'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_FINALIZATION.cjs',
 ];
 
+function persistDiagnostics(error = null) {
+  fs.mkdirSync(OUTPUT_ROOT, { recursive: true });
+  fs.writeFileSync(
+    DIAGNOSTIC_PATH,
+    `${JSON.stringify({
+      ok: error === null,
+      baseline: BASELINE,
+      target_branch: TARGET_BRANCH,
+      error: error ? String(error.stack || error) : null,
+      commands: DIAGNOSTICS,
+      generated_at: new Date().toISOString(),
+    }, null, 2)}\n`,
+    'utf8',
+  );
+}
+
 function run(command, args, cwd = ROOT, options = {}) {
   const result = cp.spawnSync(command, args, {
     cwd,
@@ -43,12 +61,24 @@ function run(command, args, cwd = ROOT, options = {}) {
     shell: false,
     maxBuffer: 64 * 1024 * 1024,
   });
+  const entry = {
+    command,
+    args,
+    cwd,
+    status: result.status,
+    signal: result.signal || null,
+    error: result.error ? String(result.error.stack || result.error) : null,
+    stdout: String(result.stdout || ''),
+    stderr: String(result.stderr || ''),
+  };
+  DIAGNOSTICS.push(entry);
+  persistDiagnostics();
   if (result.stdout) process.stdout.write(result.stdout);
   if (result.stderr) process.stderr.write(result.stderr);
   if (result.status !== 0) {
     throw new Error(`COMMAND_FAILED:${command} ${args.join(' ')}:${result.status}`);
   }
-  return String(result.stdout || '');
+  return entry.stdout;
 }
 
 function writeExecutable(filePath, content) {
@@ -161,7 +191,15 @@ function materialize() {
   }, null, 2)}\n`, 'utf8');
 }
 
-if (process.env.GITHUB_ACTIONS === 'true') materialize();
+if (process.env.GITHUB_ACTIONS === 'true') {
+  try {
+    materialize();
+    persistDiagnostics();
+  } catch (error) {
+    persistDiagnostics(error);
+    throw error;
+  }
+}
 
 console.log(JSON.stringify({
   ok: true,
