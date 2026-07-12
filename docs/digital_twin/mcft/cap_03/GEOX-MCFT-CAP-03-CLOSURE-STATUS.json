@@ -10,9 +10,9 @@
   "activation_branch": "mcft-cap-03-s7-closure-activation-v1",
   "activation_effectiveness_branch": "mcft-cap-03-s7-closure-activation-effectiveness-v1",
   "implementation_branch": "mcft-cap-03-s7-closure-v1",
-  "status": "ACTIVATED",
+  "status": "CLOSURE_READY_FOR_MERGE",
   "activation_effective": true,
-  "implementation_status": "AUTHORIZED",
+  "implementation_status": "CLOSURE_READY_FOR_MERGE",
   "implementation_authorized": true,
   "closure_effective": false,
   "capability_status": "NOT_COMPLETE",
@@ -136,5 +136,38 @@
   "activation_merge_commit": "a16f635363ef8b492c600e7e2bc55c0dc5821217",
   "activation_draft_gate": "PASS_71_OF_71",
   "activation_final_gate": "PASS_71_OF_71",
-  "activation_effectiveness_candidate_status": "READY_FOR_MERGE_AND_POSTMERGE_GATE"
+  "activation_effectiveness_candidate_status": "READY_FOR_MERGE_AND_POSTMERGE_GATE",
+  "closure_candidate": {
+    "baseline_main_commit": "cc719e5f2c4de4a284d3d350f5fdf73e6e0a2b82",
+    "branch": "mcft-cap-03-s7-closure-v1",
+    "status": "CLOSURE_READY_FOR_MERGE",
+    "closure_effective": false,
+    "capability_complete": false,
+    "exact_changed_file_boundary": [
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-CLOSURE-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-CLOSURE.md",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-CLOSURE-RECORD.json",
+      "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_CLOSURE.cjs"
+    ],
+    "activation_evidence": {
+      "activation_pr_number": 2359,
+      "activation_head_commit": "93d50d28014bb4bb8f3b711c84aea2f6c2f8f17c",
+      "activation_ci_run": "CI_4749",
+      "activation_merge_commit": "a16f635363ef8b492c600e7e2bc55c0dc5821217",
+      "activation_draft_gate": "PASS_71_OF_71",
+      "activation_final_gate": "PASS_71_OF_71",
+      "activation_effectiveness_pr_number": 2360,
+      "activation_effectiveness_head_commit": "b9c00a52894bfde93c235fbd253d5a739eaa5093",
+      "activation_effectiveness_ci_run": "CI_4751",
+      "activation_effectiveness_merge_commit": "cc719e5f2c4de4a284d3d350f5fdf73e6e0a2b82",
+      "activation_postmerge_gate": "PASS",
+      "activation_postmerge_gate_summary": "MCFT-CAP-03 S7 Closure activation postmerge: 70 PASS, 0 FAIL",
+      "activation_effectiveness_condition_satisfied": true
+    },
+    "draft_gate": "PASS_89_OF_89",
+    "final_gate": "PASS_89_OF_89",
+    "exact_head_ci": "PENDING",
+    "effectiveness_condition": "S7_CLOSURE_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_CLOSURE_GATE_PASS"
+  }
 }

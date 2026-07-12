@@ -170,3 +170,33 @@ This activation does not establish:
 - continuous Runtime
 - live-field operation
 - Minimum Complete Field Twin
+
+## 11. S7 Closure implementation candidate
+
+```text
+baseline_main_commit:
+cc719e5f2c4de4a284d3d350f5fdf73e6e0a2b82
+
+branch:
+mcft-cap-03-s7-closure-v1
+
+status:
+CLOSURE_READY_FOR_MERGE
+
+activation_postmerge_gate:
+MCFT-CAP-03 S7 Closure activation postmerge: 70 PASS, 0 FAIL
+
+closure_effective:
+false
+
+completion_claims:
+PENDING_S8_FINALIZATION
+
+S8:
+BLOCKED
+
+MCFT-CAP-04:
+UNAUTHORIZED
+```
+
+The S7 candidate aggregates already-established merged-main evidence only. It creates no Runtime behavior, canonical fact, migration, route, scheduler, web behavior, model parameter change, or successor authorization.
