@@ -1,4 +1,4 @@
-name: MCFT-CAP-04 S1 materialize and verify
+name: MCFT-CAP-04 S1 positive acceptance diagnostic
 
 on:
   pull_request:
@@ -6,29 +6,14 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
+  issues: write
+  pull-requests: write
 
 jobs:
-  materialize:
+  diagnose:
     if: github.head_ref == 'agent/mcft-cap-04-s1-contracts-config-v1'
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: landos
-          POSTGRES_PASSWORD: landos
-          POSTGRES_DB: mcft_cap04_s1_acceptance
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
-    env:
-      DATABASE_URL: postgresql://landos:landos@127.0.0.1:5432/mcft_cap04_s1_acceptance
-      MCFT_CAP_04_CONTRACTS_CONFIG_DESTRUCTIVE_ACCEPTANCE: '1'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -42,33 +27,26 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Materialize S1 governance
-        run: node .cap04-s1/materialize_s1.cjs
-      - name: Recursive typecheck
-        run: pnpm -r typecheck
-      - name: Positive contracts acceptance
-        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_CONTRACTS_CONFIG.ts
-      - name: Fail-closed negative acceptance
-        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_CONTRACTS_CONFIG_NEGATIVE.ts
-      - name: Isolated PostgreSQL D-transaction acceptance
-        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_CONTRACTS_CONFIG_DB.ts
-      - name: Remove temporary materializer
+      - name: Capture positive acceptance
         run: |
-          rm -rf .cap04-s1
-          rm .github/workflows/mcft-cap-04-s1-materialize.yml
-      - name: S1 final governance Gate
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S1_CONTRACTS_CONFIG.cjs --final
-      - name: Parse governance JSON and task integrity
-        run: |
-          node -e "JSON.parse(require('fs').readFileSync('docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json','utf8'))"
-          node -e "JSON.parse(require('fs').readFileSync('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-AUTHORIZATION-STATUS.json','utf8'))"
-          node -e "JSON.parse(require('fs').readFileSync('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-DELIVERY-SLICE-STATUS.json','utf8'))"
-          node -e "JSON.parse(require('fs').readFileSync('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S1-CONTRACTS-CONFIG-STATUS.json','utf8'))"
-          echo 'ea63e92a64b760b84c49428b1d3a245ce5cd94bb08daa9c6b971a53861b90a63  docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md' | sha256sum -c -
-      - name: Commit exact S1 candidate
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add -A
-          git commit -m "feat(mcft-cap-04): materialize S1 contracts config candidate"
-          git push origin HEAD:${{ github.head_ref }}
+          set +e
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_CONTRACTS_CONFIG.ts > /tmp/cap04-s1-positive.log 2>&1
+          echo "$?" > /tmp/cap04-s1-positive.exit
+          cat /tmp/cap04-s1-positive.log
+          exit 0
+      - name: Publish exact failure
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const output = fs.readFileSync('/tmp/cap04-s1-positive.log', 'utf8');
+            const exit = fs.readFileSync('/tmp/cap04-s1-positive.exit', 'utf8').trim();
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `<!-- cap04-s1-positive-diagnostic -->\n### S1 positive acceptance diagnostic\n\nExit: ${exit}\n\n\`\`\`text\n${output.slice(-20000)}\n\`\`\``
+            });
+      - name: Enforce result
+        run: test "$(cat /tmp/cap04-s1-positive.exit)" -eq 0
