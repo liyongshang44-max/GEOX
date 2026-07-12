@@ -8,10 +8,10 @@
   "baseline_main_commit": "6389d4e566a6eb64ce96209be0e70cd8703be574",
   "status": "CAPABILITY_COMPLETE",
   "design_status": "DESIGN_FROZEN",
-  "implementation_status": "S8_FINALIZATION_MERGED_EFFECTIVE",
+  "implementation_status": "R4_C_SSOT_RECONCILIATION_CANDIDATE",
   "authorization_effective": true,
   "runtime_source_authorized": true,
-  "active_delivery_slice_id": "MCFT-CAP-03.CLOSURE-FINALIZATION-V1",
+  "active_delivery_slice_id": null,
   "merge_before_next": true,
   "postmerge_verify_before_next": true,
   "parallel_downstream_pr_forbidden": true,
@@ -57,23 +57,7 @@
     "NO_MCFT_GATE_C_CLOSURE",
     "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
   ],
-  "pending_completion_claims": [
-    "MCFT_CAP_03_COMPLETE",
-    "OBSERVATION_ASSIMILATION_V1_ESTABLISHED",
-    "STATE_OBSERVATION_INNOVATION_RESIDUAL_ESTABLISHED",
-    "DETERMINISTIC_OBSERVATION_SELECTION_ESTABLISHED",
-    "PASS_OBSERVATION_ACCEPTANCE_ESTABLISHED",
-    "LIMITED_OBSERVATION_DOWNWEIGHTING_ESTABLISHED",
-    "OBSERVATION_CANDIDATE_EXCLUSION_ESTABLISHED",
-    "INNOVATION_OUTLIER_REJECTION_ESTABLISHED",
-    "POSTERIOR_STATE_CORRECTION_ESTABLISHED",
-    "ASSIMILATION_UNCERTAINTY_UPDATE_ESTABLISHED",
-    "OBSERVATION_DISPOSITION_TRACE_ESTABLISHED",
-    "TWENTY_FOUR_OBSERVATION_AWARE_TICKS_PERSISTED",
-    "ASSIMILATION_RESTART_BACKFILL_PROVEN",
-    "ASSIMILATED_STATE_CANONICAL_UNIQUENESS_ESTABLISHED",
-    "VERSIONED_ASSIMILATION_RECORD_SET_COMPATIBILITY_ESTABLISHED"
-  ],
+  "pending_completion_claims": [],
   "slices": [
     {
       "delivery_slice_id": "MCFT-CAP-03.GOV-AUTHORIZATION-AND-PREDECESSOR-LOCK-V1",
@@ -1777,5 +1761,39 @@
     ],
     "effectiveness_condition_satisfied": true,
     "successor_authorized": false
+  },
+  "effective_completion_claims": [
+    "MCFT_CAP_03_COMPLETE",
+    "OBSERVATION_ASSIMILATION_V1_ESTABLISHED",
+    "STATE_OBSERVATION_INNOVATION_RESIDUAL_ESTABLISHED",
+    "DETERMINISTIC_OBSERVATION_SELECTION_ESTABLISHED",
+    "PASS_OBSERVATION_ACCEPTANCE_ESTABLISHED",
+    "LIMITED_OBSERVATION_DOWNWEIGHTING_ESTABLISHED",
+    "OBSERVATION_CANDIDATE_EXCLUSION_ESTABLISHED",
+    "INNOVATION_OUTLIER_REJECTION_ESTABLISHED",
+    "POSTERIOR_STATE_CORRECTION_ESTABLISHED",
+    "ASSIMILATION_UNCERTAINTY_UPDATE_ESTABLISHED",
+    "OBSERVATION_DISPOSITION_TRACE_ESTABLISHED",
+    "TWENTY_FOUR_OBSERVATION_AWARE_TICKS_PERSISTED",
+    "ASSIMILATION_RESTART_BACKFILL_PROVEN",
+    "ASSIMILATED_STATE_CANONICAL_UNIQUENESS_ESTABLISHED",
+    "VERSIONED_ASSIMILATION_RECORD_SET_COMPATIBILITY_ESTABLISHED"
+  ],
+  "versioned_contract_authority": {
+    "amendment_ref": "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-VERSIONED-CONTRACT-AMENDMENT-01.md",
+    "amendment_status": "CANDIDATE_NOT_EFFECTIVE",
+    "historical_record_set_contract_id": "MCFT_CAP_03_ASSIMILATED_CONTINUATION_V1",
+    "active_record_set_contract_id": "MCFT_CAP_03_ASSIMILATED_CONTINUATION_V2",
+    "active_evidence_window_contract_id": "MCFT_CAP_03_ASSIMILATED_CONTINUATION_EVIDENCE_WINDOW_V2",
+    "active_observation_selector_id": "LATEST_USABLE_AUTHORIZED_OBSERVATION_WITHIN_15M_BEFORE_TICK_V2",
+    "assimilation_method_id": "SCALAR_GAUSSIAN_ASSIMILATION_V1",
+    "historical_v1_immutable": true,
+    "v1_v2_explicit_dispatch": true
+  },
+  "post_completion_remediation": {
+    "issue_number": 2368,
+    "r4_a_evidence_classification_status": "MERGED_EFFECTIVE",
+    "r4_b_runtime_config_pin_status": "MERGED_EFFECTIVE",
+    "r4_c_ssot_reconciliation_status": "CANDIDATE_NOT_EFFECTIVE"
   }
 }

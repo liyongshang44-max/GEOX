@@ -1,0 +1,56 @@
+{
+  "schema_version": "geox_mcft_cap_03_r4_c_ssot_reconciliation_status_v1",
+  "capability_line_id": "MCFT-CAP-03",
+  "remediation_issue_number": 2368,
+  "remediation_step_id": "R4-C",
+  "delivery_slice_id": "MCFT-CAP-03.R4-C.TASK-AMENDMENT-AND-SSOT-RECONCILIATION-V1",
+  "runtime_mode": "REPLAY",
+  "target_completion_level": "Level A",
+  "baseline_main_commit": "f4b3c0d297d213660ed492029db49f9c5688fa91",
+  "predecessor_r4_a_status": "MERGED_EFFECTIVE",
+  "predecessor_r4_b_status": "MERGED_EFFECTIVE",
+  "branch": "mcft-cap-03-r4-c-task-amendment-ssot-v1",
+  "materialized_candidate_head_commit": "2582c947a14deef12d265c106a6783aa6ce055fe",
+  "status": "CANDIDATE_VALIDATED_NOT_EFFECTIVE",
+  "reconciliation_scope": {
+    "task_amendment_reference": "ESTABLISHED",
+    "versioned_v1_v2_authority": "ESTABLISHED",
+    "active_delivery_slice_cleared": true,
+    "pending_completion_claims_cleared": true,
+    "effective_completion_claim_count": 15,
+    "successor_authorization_preserved_false": true
+  },
+  "exact_changed_file_boundary": [
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-TASK.md",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-VERSIONED-CONTRACT-AMENDMENT-01.md",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+    "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R4-C-SSOT-RECONCILIATION-STATUS.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_R4_C_SSOT_RECONCILIATION.cjs"
+  ],
+  "candidate_validation": {
+    "materializer_workflow_run_id": 29198425932,
+    "materializer_workflow_conclusion": "SUCCESS",
+    "governance_acceptance": "PASS_5_OF_5",
+    "historical_r4_a_acceptance": "PASS_8_OF_8",
+    "historical_r4_b_acceptance": "PASS_5_OF_5"
+  },
+  "effectiveness_condition": "R4_C_PR_MERGED_TO_MAIN_AND_EXACT_HEAD_CI_PASS_AND_MERGE_TREE_EQUIVALENCE_PASS",
+  "effectiveness_condition_satisfied": false,
+  "successor_step_id": "R4-FINAL-VERIFICATION",
+  "successor_authorized": false,
+  "preserved_nonclaims": [
+    "NO_SUCCESSFUL_FORECAST",
+    "NO_FORECAST_RESIDUAL",
+    "NO_SCENARIO",
+    "NO_RECOMMENDATION",
+    "NO_DECISION",
+    "NO_AO_ACT",
+    "NO_CALIBRATION_CANDIDATE",
+    "NO_SHADOW_EVALUATION",
+    "NO_MODEL_ACTIVATION",
+    "NO_LATE_EVIDENCE_REVISION",
+    "NO_CONTINUOUS_RUNTIME",
+    "NO_LIVE_FIELD_CLAIM",
+    "NO_MCFT_CAP_04_AUTHORIZATION"
+  ]
+}
