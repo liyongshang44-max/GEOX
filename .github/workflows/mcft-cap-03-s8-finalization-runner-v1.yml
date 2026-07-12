@@ -1,0 +1,95 @@
+name: mcft-cap-03-s8-finalization-runner-v1
+
+on:
+  push:
+    branches:
+      - mcft-cap-03-s8-finalization-runner-v1
+
+permissions:
+  contents: write
+
+jobs:
+  run-materializer:
+    runs-on: ubuntu-latest
+    env:
+      BASELINE: 68f0bc2198c0fd09bb4dcedf5b13d8507fb35902
+      TARGET_BRANCH: mcft-cap-03-s8-finalization-v1
+    steps:
+      - name: Checkout materializer source
+        uses: actions/checkout@v4
+        with:
+          ref: mcft-cap-03-s8-finalization-materializer-v1
+          fetch-depth: 0
+
+      - name: Extract frozen materializer run blocks
+        shell: bash
+        run: |
+          set -euo pipefail
+          python <<'PY'
+          from pathlib import Path
+          import re
+          import textwrap
+
+          source = Path('.github/workflows/mcft-cap-03-s8-finalization-materializer-v1.yml').read_text(encoding='utf-8').splitlines()
+          wanted = {
+              'Prove S8 activation on synchronized main': 'prove.sh',
+              'Checkout frozen Finalization branch': 'checkout-target.sh',
+              'Generate exact Finalization candidate': 'generate.sh',
+              'Create Finalization Gate': 'create-gate.sh',
+              'Run Finalization Draft and Final Gates and record evidence': 'run-gates.sh',
+              'Verify exact ten-file candidate and push': 'verify-push.sh',
+          }
+          found = {}
+          i = 0
+          while i < len(source):
+              match = re.match(r'^\s*- name: (.+)$', source[i])
+              if not match or match.group(1) not in wanted:
+                  i += 1
+                  continue
+              name = match.group(1)
+              j = i + 1
+              while j < len(source) and not re.match(r'^\s*run:\s*\|\s*$', source[j]):
+                  if re.match(r'^\s*- name: ', source[j]):
+                      break
+                  j += 1
+              if j >= len(source) or not re.match(r'^\s*run:\s*\|\s*$', source[j]):
+                  raise SystemExit(f'RUN_BLOCK_MISSING:{name}')
+              indent = len(source[j]) - len(source[j].lstrip())
+              block = []
+              k = j + 1
+              while k < len(source):
+                  line = source[k]
+                  current = len(line) - len(line.lstrip()) if line.strip() else indent + 2
+                  if line.strip() and current <= indent:
+                      break
+                  block.append(line)
+                  k += 1
+              Path('/tmp', wanted[name]).write_text(textwrap.dedent('\n'.join(block)).rstrip() + '\n', encoding='utf-8')
+              found[name] = True
+              i = k
+          missing = sorted(set(wanted) - set(found))
+          if missing:
+              raise SystemExit(f'RUN_BLOCKS_MISSING:{missing}')
+          PY
+          chmod +x /tmp/*.sh
+
+      - name: Run synchronized-main activation Gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git switch -C main origin/main
+          bash /tmp/prove.sh
+
+      - name: Generate and validate Finalization candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash /tmp/checkout-target.sh
+          bash /tmp/generate.sh
+          bash /tmp/create-gate.sh
+          git add -N -- \
+            docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-MAIN-VERIFICATION.json \
+            scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_FINALIZATION.cjs
+          bash /tmp/run-gates.sh
+          bash /tmp/verify-push.sh
