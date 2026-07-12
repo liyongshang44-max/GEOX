@@ -15,8 +15,10 @@ const BASELINE = '68f0bc2198c0fd09bb4dcedf5b13d8507fb35902';
 const TARGET_BRANCH = 'mcft-cap-03-s8-finalization-v1';
 const MATERIALIZER_BRANCH = 'mcft-cap-03-s8-finalization-materializer-v1';
 const MATERIALIZER_PATH = '.github/workflows/mcft-cap-03-s8-finalization-materializer-v1.yml';
-const OUTPUT_ROOT = path.join(ROOT, 'acceptance-output', 'mcft-cap-03-s8-finalization');
-const DIAGNOSTIC_PATH = path.join(OUTPUT_ROOT, 'diagnostic.json');
+const ACCEPTANCE_OUTPUT_ROOT = path.join(ROOT, 'acceptance-output');
+const OUTPUT_ROOT = path.join(ACCEPTANCE_OUTPUT_ROOT, 'mcft-cap-03-s8-finalization');
+const DIAGNOSTIC_PATH = path.join(ACCEPTANCE_OUTPUT_ROOT, 'S8_FINALIZATION_DIAGNOSTIC.log');
+const BUNDLE_PATH = path.join(ACCEPTANCE_OUTPUT_ROOT, 'S8_FINALIZATION_ARTIFACT.log');
 const MAIN_WORKTREE = path.join(os.tmpdir(), 'geox-s8-finalization-main');
 const TARGET_WORKTREE = path.join(os.tmpdir(), 'geox-s8-finalization-target');
 const DIAGNOSTICS = [];
@@ -38,7 +40,7 @@ const EXACT_FILES = [
 ];
 
 function persistDiagnostics(error = null) {
-  fs.mkdirSync(OUTPUT_ROOT, { recursive: true });
+  fs.mkdirSync(ACCEPTANCE_OUTPUT_ROOT, { recursive: true });
   fs.writeFileSync(
     DIAGNOSTIC_PATH,
     `${JSON.stringify({
@@ -49,6 +51,28 @@ function persistDiagnostics(error = null) {
       commands: DIAGNOSTICS,
       generated_at: new Date().toISOString(),
     }, null, 2)}\n`,
+    'utf8',
+  );
+}
+
+function persistBundle() {
+  fs.mkdirSync(ACCEPTANCE_OUTPUT_ROOT, { recursive: true });
+  const files = EXACT_FILES.map((relativePath) => ({
+    path: relativePath,
+    content_base64: fs.readFileSync(
+      path.join(TARGET_WORKTREE, relativePath),
+    ).toString('base64'),
+  }));
+  fs.writeFileSync(
+    BUNDLE_PATH,
+    `${JSON.stringify({
+      ok: true,
+      baseline: BASELINE,
+      target_branch: TARGET_BRANCH,
+      exact_files: EXACT_FILES,
+      files,
+      generated_at: new Date().toISOString(),
+    })}\n`,
     'utf8',
   );
 }
@@ -189,6 +213,7 @@ function materialize() {
     exact_files: EXACT_FILES,
     generated_at: new Date().toISOString(),
   }, null, 2)}\n`, 'utf8');
+  persistBundle();
 }
 
 if (process.env.GITHUB_ACTIONS === 'true') {
