@@ -1,10 +1,11 @@
 // scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_P0_PREDECESSOR_SSOT.cjs
-// Purpose: verify the governance-only MCFT-CAP-04 P0 reconciliation against effective MCFT-CAP-03 main and R4 authority.
+// Purpose: verify the governance-only MCFT-CAP-04 P0 reconciliation against effective MCFT-CAP-03 authority and the complete v0.5 task.
 // Boundary: no Runtime source, persistence, migration, route, scheduler, web, canonical fact, Forecast, Scenario, or CAP-04 authorization.
 
 'use strict';
 
 const cp = require('node:child_process');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -13,6 +14,7 @@ const BASELINE = 'eca0d053045db59982ad20a6e0421f72ae16f804';
 const BRANCH = 'agent/mcft-cap-04-p0-ssot-v1';
 const P0 = 'MCFT-CAP-04.P0.CAP-03-GLOBAL-SSOT-RECONCILIATION-V1';
 const S0 = 'MCFT-CAP-04.GOV-AUTHORIZATION-AND-PREDECESSOR-LOCK-V1';
+const TASK_SHA256 = 'ea63e92a64b760b84c49428b1d3a245ce5cd94bb08daa9c6b971a53861b90a63';
 const MODE = process.argv.includes('--postmerge')
   ? 'postmerge'
   : process.argv.includes('--final')
@@ -118,43 +120,61 @@ check(Array.isArray(cap03?.completion_claims) && cap03.completion_claims.length 
 check(cap03?.successor_authorized === false, 'Vertical Matrix CAP-04 remains unauthorized from CAP-03');
 check(cap03?.post_completion_remediation_verification?.status === 'VERIFIED_ON_MAIN', 'Vertical Matrix records effective CAP-03 R4 verification');
 
-check(cap04?.status === 'P0_RECONCILIATION_CANDIDATE', 'Vertical Matrix CAP-04 P0 candidate status');
+check(cap04?.status === 'NOT_AUTHORIZED', 'Vertical Matrix CAP-04 status NOT_AUTHORIZED');
 check(cap04?.design_status === 'FINAL_FROZEN_CANDIDATE_V0_5', 'Vertical Matrix CAP-04 design candidate v0.5');
 check(cap04?.implementation_status === 'NOT_AUTHORIZED', 'Vertical Matrix CAP-04 implementation not authorized');
 check(cap04?.runtime_source_authorized === false, 'Vertical Matrix CAP-04 Runtime source not authorized');
 check(cap04?.authorization_effective === false, 'Vertical Matrix CAP-04 authorization ineffective');
-check(cap04?.active_delivery_slice_id === P0, 'Vertical Matrix CAP-04 active P0 exact');
+check(cap04?.active_delivery_slice_id === null, 'Vertical Matrix CAP-04 active slice null');
+check(cap04?.predecessor_capability_line_id === 'MCFT-CAP-03', 'Vertical Matrix CAP-04 predecessor exact');
+check(cap04?.successor_capability_line_id === 'MCFT-CAP-05', 'Vertical Matrix CAP-04 successor exact');
+check(cap04?.successor_authorized === false, 'Vertical Matrix CAP-05 remains unauthorized');
+check(Array.isArray(cap04?.pending_completion_claims) && cap04.pending_completion_claims.length === 0, 'Vertical Matrix CAP-04 pending claims empty');
+check(Array.isArray(cap04?.effective_completion_claims) && cap04.effective_completion_claims.length === 0, 'Vertical Matrix CAP-04 effective claims empty');
 check(cap04?.task_ref === TASK_PATH, 'Vertical Matrix CAP-04 task ref exact');
 check(cap04?.next_delivery_slice_id === S0, 'Vertical Matrix CAP-04 next S0 exact');
 check(cap04?.next_delivery_slice_authorized === false, 'Vertical Matrix CAP-04 S0 not authorized');
 exactSet(cap04P0?.exact_changed_file_boundary, FILES, 'Vertical Matrix P0 changed-file boundary');
+check(matrix.latest_governance_update === P0, 'Vertical Matrix latest governance update is P0');
 
 for (const marker of [
   'MCFT-CAP-03 canonical completion after R4',
   'implementation_status: COMPLETE',
   'next tick: 2026-06-03T02:00:00.000Z',
-  'MCFT-CAP-04 P0 governance reconciliation',
+  'MCFT-CAP-04 provisional state after P0',
+  'status: NOT_AUTHORIZED',
+  'active_delivery_slice_id: null',
   'runtime_source_authorized: false',
-  'MCFT-CAP-04.GOV-AUTHORIZATION-AND-PREDECESSOR-LOCK-V1',
+  S0,
   TASK_PATH,
 ]) check(implementationMap.includes(marker), `Implementation Map marker: ${marker}`);
 
+check(Buffer.byteLength(task, 'utf8') === 77603, 'complete v0.5 task byte length exact');
+check(task.split(/\r?\n/).length === 3724, 'complete v0.5 task line count exact');
+check(crypto.createHash('sha256').update(task).digest('hex') === TASK_SHA256, 'complete v0.5 task SHA-256 exact');
 for (const marker of [
-  'task_version: v0.5',
-  'design_status: FINAL_FROZEN_CANDIDATE_V0_5',
+  '完整任务线 v0.5 最终冻结候选',
+  'FINAL_FROZEN_CANDIDATE_V0_5',
   P0,
   S0,
-  'Replay Runtime Config authority is not an `active_runtime_config_ref` pointer.',
-  '`latest_successful_forecast_ref` must be typed as `string | null`',
-  'one coherent forcing-cycle pair',
+  'Replay Runtime Config authority is not an active-config pointer.',
+  'latest_successful_forecast_ref',
+  'weather_snapshot.source_record_id',
+  'et0_snapshot.source_record_id',
+  'envelope evidence_refs contains both selected source_record_id values',
   'S10C — Finalization Effectiveness Reconciliation',
-]) check(task.includes(marker), `CAP-04 task marker: ${marker}`);
+  'MCFT-CAP-04.MCFT-02-07-09-10.FORECAST-SCENARIO-CONTRACTS-CONFIG-V1',
+  'MCFT-CAP-04.MCFT-02-07-08-09.A1-A2-RECORD-SET-BUILDERS-V1',
+  'MCFT-CAP-04.MCFT-03-09-10.A1-A2-B-PERSISTENCE-UNIQUENESS-RECOVERY-V1',
+]) check(task.includes(marker), `complete CAP-04 task marker: ${marker}`);
 
 check(status.status === 'P0_RECONCILIATION_CANDIDATE', 'P0 status candidate exact');
 check(status.delivery_slice_id === P0, 'P0 status slice exact');
 check(status.task_ref === TASK_PATH, 'P0 status task ref exact');
+check(status.task_sha256 === TASK_SHA256, 'P0 status task SHA exact');
 check(status.runtime_source_authorized === false, 'P0 status Runtime source unauthorized');
 check(status.cap_04_authorized === false, 'P0 status CAP-04 unauthorized');
+check(status.cap_04_active_delivery_slice_id === null, 'P0 status CAP-04 active slice null');
 check(status.predecessor_authority.capability_status === 'COMPLETE', 'P0 predecessor capability COMPLETE');
 check(status.predecessor_authority.r4_verification_status === 'VERIFIED_ON_MAIN', 'P0 predecessor R4 verified');
 check(status.persisted_runtime_handoff_expectation.checkpoint_sequence === 48, 'P0 checkpoint sequence exact');
@@ -170,6 +190,7 @@ exactSet(changed, FILES, `${MODE} changed-file boundary`);
 check(changed.every((file) => !file.startsWith('apps/server/src/')), 'no Runtime source changed');
 check(changed.every((file) => !file.startsWith('apps/server/db/migrations/')), 'no migration changed');
 check(changed.every((file) => !file.startsWith('.github/workflows/')), 'no workflow changed');
+check(changed.every((file) => !file.startsWith('.cap04-p0-materialize/')), 'no materializer residue changed');
 
 if (MODE === 'postmerge') {
   check(git(['branch', '--show-current']) === 'main', 'postmerge Gate runs on main');
