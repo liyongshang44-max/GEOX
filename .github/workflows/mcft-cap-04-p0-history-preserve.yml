@@ -34,9 +34,10 @@ jobs:
           from pathlib import Path
 
           target = Path('docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md')
+          source = target.read_text(encoding='utf-8').rstrip('\r\n')
           normalized = '\n'.join(
               line.rstrip(' \t')
-              for line in target.read_text(encoding='utf-8').splitlines()
+              for line in source.splitlines()
           ) + '\n'
           target.write_text(normalized, encoding='utf-8')
           PY
@@ -70,10 +71,9 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const gate = fs.readFileSync('/tmp/mcft-cap-04-p0-gate.log', 'utf8');
             const gateExit = fs.readFileSync('/tmp/mcft-cap-04-p0-gate.exit', 'utf8').trim();
-            const diff = fs.readFileSync('/tmp/mcft-cap-04-p0-diff.log', 'utf8');
-            const diffCheck = fs.readFileSync('/tmp/mcft-cap-04-p0-diff-check.log', 'utf8');
+            const diff = fs.readFileSync('/tmp/mcft-cap-04-p0-diff.log', 'utf8').trim();
+            const diffCheck = fs.readFileSync('/tmp/mcft-cap-04-p0-diff-check.log', 'utf8').trim();
             const diffCheckExit = fs.readFileSync('/tmp/mcft-cap-04-p0-diff-check.exit', 'utf8').trim();
             const body = [
               '<!-- mcft-cap-04-p0-diagnostic -->',
@@ -81,10 +81,6 @@ jobs:
               '',
               `Gate exit: ${gateExit}`,
               `Diff-check exit: ${diffCheckExit}`,
-              '',
-              '```text',
-              gate.slice(-12000),
-              '```',
               '',
               'Candidate diff:',
               '',
@@ -95,7 +91,7 @@ jobs:
               'Diff-check:',
               '',
               '```text',
-              diffCheck,
+              diffCheck || '(clean)',
               '```',
             ].join('\n');
             await github.rest.issues.createComment({
