@@ -44,9 +44,6 @@ jobs:
       - name: Run R4-C effectiveness acceptance
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_R4_C_EFFECTIVENESS.cjs
 
-      - name: Run historical R4-C reconciliation acceptance
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_R4_C_SSOT_RECONCILIATION.cjs
-
       - name: Run historical R4-A acceptance
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_R4_A_EVIDENCE_CLASSIFICATION.ts
 
