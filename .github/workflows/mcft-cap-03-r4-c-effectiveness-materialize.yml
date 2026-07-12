@@ -1,0 +1,62 @@
+name: MCFT-CAP-03 R4-C effectiveness materialize
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'mcft-cap-03-r4-c-effectiveness-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout effectiveness branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Materialize R4-C effectiveness
+        run: node scripts/ops/materialize_mcft_cap_03_r4_c_effectiveness.cjs
+
+      - name: Remove operational materializer files
+        run: |
+          rm scripts/ops/materialize_mcft_cap_03_r4_c_effectiveness.cjs
+          rm .github/workflows/mcft-cap-03-r4-c-effectiveness-materialize.yml
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Run R4-C effectiveness acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_R4_C_EFFECTIVENESS.cjs
+
+      - name: Run historical R4-C reconciliation acceptance
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_R4_C_SSOT_RECONCILIATION.cjs
+
+      - name: Run historical R4-A acceptance
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_R4_A_EVIDENCE_CLASSIFICATION.ts
+
+      - name: Run historical R4-B acceptance
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_03_R4_B_RUNTIME_CONFIG_PIN.ts
+
+      - name: Commit materialized effectiveness
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "docs(mcft-cap-03): record R4-C merged-main effectiveness"
+          git push origin HEAD:${{ github.head_ref }}
