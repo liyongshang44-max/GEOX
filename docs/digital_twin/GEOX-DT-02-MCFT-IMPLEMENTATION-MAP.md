@@ -214,6 +214,7 @@ P0 exact boundary:
 docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md
 docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json
 docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-P0-STATUS.json
+docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md
 scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_P0_PREDECESSOR_SSOT.cjs
 ```
 
