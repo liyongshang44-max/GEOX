@@ -1,0 +1,46 @@
+name: MCFT-CAP-04 S0 exact-head probe
+
+on:
+  pull_request:
+    types: [opened, reopened]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.head_ref == 'agent/mcft-cap-04-s0-exact-head-probe-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact S0 candidate
+        uses: actions/checkout@v4
+        with:
+          repository: liyongshang44-max/GEOX
+          ref: agent/mcft-cap-04-s0-authorization-predecessor-lock-v1
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Verify exact head and baseline
+        run: |
+          test "$(git branch --show-current)" = "agent/mcft-cap-04-s0-authorization-predecessor-lock-v1"
+          test "$(git rev-parse HEAD)" = "32fa69d0a36f1c66883d9058c7a203c39718ca05"
+          test "$(git rev-parse origin/main)" = "30fdd839aa675656dd3dc9d1def57b06f63f86ec"
+
+      - name: Run S0 exact-head final Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_AUTHORIZATION.cjs --final
+
+      - name: Verify complete task integrity
+        run: |
+          echo 'ea63e92a64b760b84c49428b1d3a245ce5cd94bb08daa9c6b971a53861b90a63  docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md' | sha256sum -c -
+          test "$(wc -c < docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md)" -eq 77603
+
+      - name: Verify exact nine-file patch
+        run: |
+          git diff --check 30fdd839aa675656dd3dc9d1def57b06f63f86ec
+          test "$(git diff --name-only 30fdd839aa675656dd3dc9d1def57b06f63f86ec...HEAD | wc -l)" -eq 9
+          git diff --name-only 30fdd839aa675656dd3dc9d1def57b06f63f86ec...HEAD
