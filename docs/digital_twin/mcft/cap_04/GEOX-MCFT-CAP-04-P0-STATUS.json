@@ -16,6 +16,7 @@
   "runtime_source_authorized": false,
   "cap_04_authorized": false,
   "active_delivery_slice_id": "MCFT-CAP-04.P0.CAP-03-GLOBAL-SSOT-RECONCILIATION-V1",
+  "task_ref": "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md",
   "predecessor_capability_line_id": "MCFT-CAP-03",
   "predecessor_authority": {
     "main_verification_ref": "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-MAIN-VERIFICATION.json",
@@ -40,6 +41,7 @@
   "reconciliation_scope": {
     "vertical_matrix_cap_03_terminal_state": true,
     "implementation_map_cap_03_terminal_state": true,
+    "cap_04_task_v0_5_recorded": true,
     "cap_04_p0_only": true,
     "cap_04_runtime_not_authorized": true,
     "cap_04_s0_not_authorized": true
@@ -47,6 +49,7 @@
   "allowed_claims": [
     "MCFT_CAP_03_GLOBAL_SSOT_RECONCILED_FOR_CAP_04_PREPARATION",
     "MCFT_CAP_03_R4_FINAL_VERIFICATION_EFFECTIVE",
+    "MCFT_CAP_04_TASK_V0_5_FINAL_FROZEN_CANDIDATE_RECORDED",
     "MCFT_CAP_04_P0_GOVERNANCE_CANDIDATE_RECORDED"
   ],
   "preserved_nonclaims": [
@@ -70,6 +73,7 @@
     "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
     "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
     "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-P0-STATUS.json",
+    "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md",
     "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_P0_PREDECESSOR_SSOT.cjs"
   ],
   "effectiveness_condition": "P0_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_P0_GATE_PASS",
