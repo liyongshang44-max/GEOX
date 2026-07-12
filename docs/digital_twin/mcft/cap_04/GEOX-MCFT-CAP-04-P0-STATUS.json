@@ -41,6 +41,20 @@
     "next_tick_logical_time": "2026-06-03T02:00:00.000Z",
     "latest_successful_forecast_ref": null
   },
+  "candidate_validation": {
+    "materializer_workflow_run_id": 29205191859,
+    "materializer_workflow_conclusion": "SUCCESS",
+    "complete_task_hash": "PASS",
+    "complete_task_byte_length": "PASS",
+    "complete_task_line_count": "PASS",
+    "p0_exact_head_final_gate": "PASS",
+    "cap_03_r4_final_verification_gate": "PASS",
+    "governance_json_parse": "PASS",
+    "patch_integrity": "PASS",
+    "temporary_materializer_removed": true,
+    "final_changed_file_count": 5,
+    "repository_ci": "PENDING"
+  },
   "allowed_claims": [
     "MCFT_CAP_03_GLOBAL_SSOT_RECONCILED_FOR_CAP_04_PREPARATION",
     "MCFT_CAP_03_R4_FINAL_VERIFICATION_EFFECTIVE",
