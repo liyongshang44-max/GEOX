@@ -93,8 +93,14 @@ function materialize() {
   fs.mkdirSync(OUTPUT_ROOT, { recursive: true });
   removeWorktree(MAIN_WORKTREE);
   removeWorktree(TARGET_WORKTREE);
-  run('git', ['fetch', 'origin', 'main', TARGET_BRANCH, MATERIALIZER_BRANCH]);
-  const source = run('git', ['show', `origin/${MATERIALIZER_BRANCH}:${MATERIALIZER_PATH}`);
+  run('git', [
+    'fetch',
+    'origin',
+    '+refs/heads/main:refs/remotes/origin/main',
+    `+refs/heads/${TARGET_BRANCH}:refs/remotes/origin/${TARGET_BRANCH}`,
+    `+refs/heads/${MATERIALIZER_BRANCH}:refs/remotes/origin/${MATERIALIZER_BRANCH}`,
+  ]);
+  const source = run('git', ['show', `origin/${MATERIALIZER_BRANCH}:${MATERIALIZER_PATH}`]);
   const blocks = extractRunBlocks(source);
   const scriptRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'geox-s8-finalization-scripts-'));
   for (const [name, content] of blocks) writeExecutable(path.join(scriptRoot, name), content);
