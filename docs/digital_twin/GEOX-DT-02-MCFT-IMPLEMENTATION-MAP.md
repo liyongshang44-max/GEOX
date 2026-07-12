@@ -437,33 +437,82 @@ false
 
 The S0 branch contains governance and PostgreSQL predecessor proof only. Runtime implementation remains forbidden until S0 merges and its merged-main Authorization Gate passes. Horizontal owner work packages remain partially established.
 
-## MCFT-CAP-03 Finalization candidate
+## MCFT-CAP-03 canonical completion after R4
 
 ```text
-status: FINALIZATION_READY_FOR_MERGE
-baseline_main_commit: 68f0bc2198c0fd09bb4dcedf5b13d8507fb35902
-branch: mcft-cap-03-s8-finalization-v1
-active_delivery_slice_id: MCFT-CAP-03.CLOSURE-FINALIZATION-V1
-closure_effective: false
-completion_claims: PENDING_FINALIZATION_EFFECTIVENESS
-main_verification: PENDING_FINALIZATION_EFFECTIVENESS
-MCFT-CAP-04: UNAUTHORIZED
-```
-
-This candidate records governance evidence only. It does not change Runtime behavior, canonical facts, model parameters, or successor authorization.
-
-## MCFT-CAP-03 canonical completion
-
-```text
+capability: MCFT-CAP-03 — Observation Assimilation and State Innovation
 status: COMPLETE
+design_status: DESIGN_FROZEN
+implementation_status: COMPLETE
+authorization_effective: true
+runtime_source_authorized: true
 closure_effective: true
-completion_claims: 15 EFFECTIVE
-finalization_pr: #2365
-finalization_head: 9827846038083092bedeabdbf8f9713f587c083b
-finalization_ci: CI_4768
-finalization_merge: e42a9a799b8f27110e3955d645f3ea70c50c0588
-finalization_postmerge_gate: MCFT-CAP-03 S8 Finalization postmerge: 58 PASS, 0 FAIL
-MCFT-CAP-04: UNAUTHORIZED
+capability_complete: true
+active_delivery_slice_id: null
+pending_completion_claims: []
+effective_completion_claims: 15
+R4-A: MERGED_EFFECTIVE
+R4-B: MERGED_EFFECTIVE
+R4-C: MERGED_EFFECTIVE
+R4 final verification merge: cda1016542300bbc477a1c72023401aaaad954bc
+remaining hard nonconformance: 0
+remaining unadjudicated contract deviation: 0
+active record-set contract: MCFT_CAP_03_ASSIMILATED_CONTINUATION_V2
+global State count: 49
+global continuation State count: 48
+latest checkpoint sequence: 48
+latest logical time: 2026-06-03T01:00:00.000Z
+next tick: 2026-06-03T02:00:00.000Z
+latest successful Forecast: null
+successor: MCFT-CAP-04
+successor authorized: false
 ```
 
-MCFT-CAP-03 is complete at Level A for replay-mode observation assimilation and state innovation. This does not establish Forecast success, Scenario, Recommendation, Policy Evaluation, AO-ACT, continuous Runtime, live-field operation, Gate A/B/C closure, or Minimum Complete Field Twin.
+Detailed authority:
+
+```text
+docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-MAIN-VERIFICATION.json
+docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R4-FINAL-VERIFICATION.json
+docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json
+```
+
+MCFT-CAP-03 is complete at Level A for Replay-mode observation assimilation and state innovation. This does not establish successful Forecast, Scenario, Recommendation, Policy Evaluation, Decision, AO-ACT, continuous Runtime, live-field operation, Gate A/B/C closure, or Minimum Complete Field Twin.
+
+## MCFT-CAP-04 provisional state after P0
+
+```text
+capability: MCFT-CAP-04 — 72-Hour Forecast and Three Scenarios
+runtime mode: REPLAY
+target level: Level A — Deterministic Replay Twin
+status: NOT_AUTHORIZED
+design_status: FINAL_FROZEN_CANDIDATE_V0_5
+implementation_status: NOT_AUTHORIZED
+runtime_source_authorized: false
+authorization_effective: false
+active_delivery_slice_id: null
+P0 delivery candidate: MCFT-CAP-04.P0.CAP-03-GLOBAL-SSOT-RECONCILIATION-V1
+next delivery slice: MCFT-CAP-04.GOV-AUTHORIZATION-AND-PREDECESSOR-LOCK-V1
+next delivery slice authorized: false
+successor: MCFT-CAP-05
+successor authorized: false
+```
+
+P0 records the complete v0.5 task authority and reconciles predecessor SSOT only. It does not authorize S0 or any Runtime source change.
+
+P0 exact boundary:
+
+```text
+docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md
+docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json
+docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-P0-STATUS.json
+docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md
+scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_P0_PREDECESSOR_SSOT.cjs
+```
+
+Complete task authority:
+
+```text
+docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md
+```
+
+Runtime source remains forbidden until P0 is merged and passes its merged-main Gate, then S0 is separately merged and passes its merged-main Authorization Gate.
