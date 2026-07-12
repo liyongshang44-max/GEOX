@@ -71,7 +71,21 @@ Object.assign(cap03, {
   },
   successor_capability_line_id: 'MCFT-CAP-04',
   successor_authorized: false,
+  next_authorized_slice_ids: [],
+  effectiveness_condition: 'CAP_03_R4_FINAL_VERIFICATION_EFFECTIVE_ON_MAIN',
+  finalization: {
+    status: 'VERIFIED_ON_MAIN',
+    closure_effective: true,
+    capability_complete: true,
+    completion_claims_status: 'EFFECTIVE',
+    verified_main_commit: finalVerification.verified_main_commit,
+    effectiveness_condition_satisfied: true,
+    finalization_effectiveness: {
+      ...mainVerification.finalization_effectiveness,
+    },
+  },
 });
+delete cap03.next_authorized_slice_id_after_merge_and_postmerge_gate;
 
 const authoritativeSlices = new Map(delivery.slices.map((slice) => [slice.delivery_slice_id, slice]));
 for (const slice of cap03.delivery_slices) {
