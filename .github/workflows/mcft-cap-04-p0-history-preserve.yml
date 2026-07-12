@@ -33,7 +33,15 @@ jobs:
           rm .github/workflows/mcft-cap-04-p0-history-preserve.yml
 
       - name: Run exact-head P0 final Gate
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_P0_PREDECESSOR_SSOT.cjs --final
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_P0_PREDECESSOR_SSOT.cjs --final 2>&1 | tee /tmp/mcft-cap-04-p0-gate.log
+
+      - name: Upload P0 Gate diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-04-p0-gate-diagnostic
+          path: /tmp/mcft-cap-04-p0-gate.log
+          if-no-files-found: error
 
       - name: Re-run CAP-03 R4 final verification Gate
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_R4_FINAL_VERIFICATION.cjs
