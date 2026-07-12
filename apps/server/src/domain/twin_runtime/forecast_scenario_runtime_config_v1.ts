@@ -43,7 +43,7 @@ export const CAP04_STRESS_THRESHOLD_POLICY_ID_V1 = "CONTROLLED_AWF_STRESS_THRESH
 
 export type Cap04RuntimeConfigPayloadV1 = Omit<
   AssimilatedContinuationRuntimeConfigPayloadV2,
-  "config_purpose" | "record_set_contract_id" | "model_component_refs"
+  "config_purpose" | "config_selection_mode" | "record_set_contract_id" | "model_component_refs"
 > & {
   config_purpose: typeof CAP04_RUNTIME_CONFIG_PURPOSE_V1;
   config_selection_mode: typeof CAP04_CONFIG_SELECTION_MODE_V1;
