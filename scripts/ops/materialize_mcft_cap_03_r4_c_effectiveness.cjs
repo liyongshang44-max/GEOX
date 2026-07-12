@@ -67,8 +67,8 @@ let pass = 0;
 const ok = (message) => { pass += 1; console.log('PASS ' + message); };
 
 const amendment = read('${amendmentPath}');
-assert.ok(amendment.includes('`EFFECTIVE`'));
-assert.ok(!amendment.includes('`CANDIDATE_NOT_EFFECTIVE`'));
+assert.ok(amendment.includes('EFFECTIVE'));
+assert.ok(!amendment.includes('CANDIDATE_NOT_EFFECTIVE'));
 ok('versioned contract amendment is effective');
 
 const delivery = json('${deliveryPath}');
