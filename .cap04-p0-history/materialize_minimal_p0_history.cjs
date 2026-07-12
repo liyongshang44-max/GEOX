@@ -235,7 +235,7 @@ capability: MCFT-CAP-04 — 72-Hour Forecast and Three Scenarios
 runtime mode: REPLAY
 target level: Level A — Deterministic Replay Twin
 status: NOT_AUTHORIZED
-design_status: FINAL_FROZEN_CANDIDATE_V0_5
+design_status: FINAL_FROZENCANDIDATE_V0_5
 implementation_status: NOT_AUTHORIZED
 runtime_source_authorized: false
 authorization_effective: false
@@ -263,6 +263,10 @@ ${TASK_PATH}
 
 Runtime source remains forbidden until P0 is merged and passes its merged-main Gate, then S0 is separately merged and passes its merged-main Authorization Gate.
 `;
-fs.writeFileSync(abs(MAP_PATH), `${implementationMap}${terminal}\n`, 'utf8');
+const normalizedMap = `${implementationMap}${terminal}\n`
+  .split(/\r?\n/)
+  .map((line) => line.replace(/[ \t]+$/, ''))
+  .join('\n');
+fs.writeFileSync(abs(MAP_PATH), normalizedMap, 'utf8');
 
 console.log('preserved baseline capability history and reconciled only CAP-03 terminal SSOT plus CAP-04 P0');
