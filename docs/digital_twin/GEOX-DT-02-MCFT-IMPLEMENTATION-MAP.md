@@ -516,3 +516,27 @@ docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md
 ```
 
 Runtime source remains forbidden until P0 is merged and passes its merged-main Gate, then S0 is separately merged and passes its merged-main Authorization Gate.
+
+
+## MCFT-CAP-04 S0 authorization readiness
+
+```text
+capability: MCFT-CAP-04 — 72-Hour Forecast and Three Scenarios
+P0 merge commit: 30fdd839aa675656dd3dc9d1def57b06f63f86ec
+P0 postmerge Gate: PASS
+S0 authorization: READY_FOR_MERGE
+authorization effective: false
+design status: FINAL_FROZEN_CANDIDATE_V0_5
+implementation status: NOT_AUTHORIZED
+runtime source authorized: false
+active delivery slice: MCFT-CAP-04.GOV-AUTHORIZATION-AND-PREDECESSOR-LOCK-V1
+predecessor checkpoint sequence: 48
+predecessor latest logical time: 2026-06-03T01:00:00.000Z
+canonical next logical tick: 2026-06-03T02:00:00.000Z
+latest successful Forecast: null
+predecessor lock: docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-PREDECESSOR-LOCK.json
+next eligible slice after merge and merged-main Gate: MCFT-CAP-04.MCFT-02-07-09-10.FORECAST-SCENARIO-CONTRACTS-CONFIG-V1
+successor MCFT-CAP-05 authorized: false
+```
+
+The S0 branch contains governance artifacts and isolated PostgreSQL predecessor proof only. Runtime implementation remains forbidden until S0 merges and its merged-main Authorization Gate passes.

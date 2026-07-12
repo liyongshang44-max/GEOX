@@ -1,0 +1,100 @@
+{
+  "schema_version": "geox_mcft_cap_04_predecessor_lock_v1",
+  "capability_line_id": "MCFT-CAP-04",
+  "predecessor_capability_line_id": "MCFT-CAP-03",
+  "status": "COMPLETE",
+  "baseline_main_commit": "30fdd839aa675656dd3dc9d1def57b06f63f86ec",
+  "p0_effectiveness": {
+    "pr_number": 2379,
+    "exact_head_commit": "ead23d9ebc37ad9dda83e8b6b9c8af651e177fd6",
+    "exact_head_ci_run": 29205852229,
+    "merge_commit": "30fdd839aa675656dd3dc9d1def57b06f63f86ec",
+    "postmerge_probe_pr_number": 2380,
+    "postmerge_workflow_run": 29206218494,
+    "postmerge_gate": "PASS",
+    "effectiveness_condition_satisfied": true
+  },
+  "predecessor_main_verification_ref": "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-MAIN-VERIFICATION.json",
+  "predecessor_r4_final_verification_ref": "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R4-FINAL-VERIFICATION.json",
+  "identity_extraction_source": "ISOLATED_POSTGRESQL_CANONICAL_READ_PATH",
+  "identity_evidence_ref": "acceptance-output/MCFT_CAP_04_PREDECESSOR_IDENTITY.json",
+  "expected_scope": {
+    "tenant_id": "tenantA",
+    "project_id": "projectA",
+    "group_id": "groupA",
+    "field_id": "field_c8_demo",
+    "season_id": "season_2026_c8_corn",
+    "zone_id": "zone_mcft_c8_water_001"
+  },
+  "expected_checkpoint": {
+    "checkpoint_sequence": 48,
+    "last_logical_time": "2026-06-03T01:00:00.000Z",
+    "next_tick_logical_time": "2026-06-03T02:00:00.000Z"
+  },
+  "canonical_identity": {
+    "active_lineage_ref": "twin_runtime_lineage_31d5cdda3c87fdf1536f0233",
+    "lineage_id": "lineage_da76d015085f0d37bf2ed478",
+    "revision_id": "revision_e0c62f99ac3db66f60a87e2b",
+    "latest_posterior_state_ref": "twin_state_estimate_0adec65ed4a2a6f8146b1b2b",
+    "latest_posterior_state_hash": "sha256:0b8686342bec363cd8e38f8adb0295d076846f716f980bcdf50b1355dba10fc1",
+    "latest_checkpoint_ref": "twin_runtime_checkpoint_b88792b2c77677855575a858",
+    "latest_checkpoint_hash": "sha256:c2c5b6fff239c54afd97e89fea31526946fa20162970972900a498b7cc08d350",
+    "latest_forecast_result_ref": "twin_forecast_run_68997d774c7febc701bbbccf",
+    "latest_forecast_result_hash": "sha256:7d52bc06560eb5a28fa9ca16c779a7b1fb4ad9d51b1d0f7f8dc0b7c5acb6e041",
+    "latest_successful_forecast_ref": null,
+    "predecessor_state_runtime_config_ref": "twin_runtime_config_e505fef3b2b99e88342d007f",
+    "predecessor_state_runtime_config_hash": "sha256:a06bf268391b8caf39a8592d34455b60db6a0015c1f8dbde7b10c58844c30929",
+    "reality_binding_ref": "mcft_rb_bf1da664164a4fedda249bcb",
+    "reality_binding_hash": "sha256:bf1da664164a4fedda249bcb0e330c1af2083173a52bd704f01eac3ad277ba4f"
+  },
+  "validated_relations": [
+    "active_lineage_ref_resolves_exactly_one_canonical_lineage",
+    "lineage_id_consistent_across_lineage_state_checkpoint_forecast",
+    "revision_id_consistent_across_lineage_state_checkpoint_forecast",
+    "checkpoint_last_posterior_state_ref_equals_latest_posterior_state_ref",
+    "checkpoint_forecast_result_ref_equals_latest_forecast_result_ref",
+    "state_runtime_config_ref_hash_matches_exact_canonical_runtime_config",
+    "runtime_config_reality_binding_ref_hash_matches_persisted_authority_snapshot",
+    "latest_successful_forecast_ref_is_null",
+    "checkpoint_sequence_equals_48",
+    "next_tick_logical_time_equals_2026_06_03T02_00_00Z"
+  ],
+  "lock_claims": [
+    "MCFT_CAP_03_MERGED_MAIN_COMPLETE_VERIFIED",
+    "MCFT_CAP_04_P0_MERGED_MAIN_EFFECTIVE",
+    "MCFT_CAP_04_PREDECESSOR_CANONICAL_IDENTITY_EXTRACTED_FROM_POSTGRESQL",
+    "MCFT_CAP_04_PREDECESSOR_LINEAGE_REVISION_STATE_CHECKPOINT_FORECAST_CONFIG_BINDING_LOCKED",
+    "MCFT_CAP_04_PREDECESSOR_NEXT_LOGICAL_TICK_LOCKED"
+  ],
+  "failure_policy": {
+    "canonical_value_mismatch": "FAIL_CLOSED",
+    "missing_projection_or_canonical_object": "FAIL_CLOSED",
+    "missing_reality_binding_snapshot": "FAIL_CLOSED",
+    "active_config_pointer_substitution": "FORBIDDEN",
+    "fixture_object_id_substitution": "FORBIDDEN",
+    "predecessor_fact_mutation": "FORBIDDEN",
+    "manual_alternate_start": "FORBIDDEN"
+  },
+  "preserved_nonclaims": [
+    "NO_MCFT_CAP_04_RUNTIME_SOURCE_AUTHORIZATION",
+    "NO_SUCCESSFUL_FORECAST_CREATED_BY_CAP_04",
+    "NO_72_HOUR_FORECAST_CREATED_BY_CAP_04",
+    "NO_SCENARIO_CREATED_BY_CAP_04",
+    "NO_FORECAST_RESIDUAL",
+    "NO_RECOMMENDATION",
+    "NO_POLICY_EVALUATION",
+    "NO_DECISION",
+    "NO_AO_ACT",
+    "NO_CALIBRATION_CANDIDATE",
+    "NO_SHADOW_EVALUATION",
+    "NO_MODEL_ACTIVATION",
+    "NO_ACTIVE_MODEL_PARAMETER_CHANGE",
+    "NO_LATE_EVIDENCE_REVISION",
+    "NO_CONTINUOUS_RUNTIME",
+    "NO_CONTINUOUS_SCHEDULER",
+    "NO_LIVE_FIELD_CLAIM",
+    "NO_MCFT_GATE_A_CLOSURE",
+    "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
+  ],
+  "effectiveness_condition": "POSTGRESQL_IDENTITY_EXTRACTED_AND_S0_PR_MERGED_AND_MERGED_MAIN_AUTHORIZATION_GATE_PASS"
+}
