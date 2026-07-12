@@ -115,5 +115,36 @@
   "successor_authorized": false,
   "merge_commit": "71c086b3c57d9884b0fef2820be62b41800ec77e",
   "merged_main_gate": "PASS",
-  "effectiveness_condition_satisfied": true
+  "effectiveness_condition_satisfied": true,
+  "semantic_conformance_status": "R2_V2_CANDIDATE_VALIDATED_NOT_EFFECTIVE",
+  "r2_v2_revalidation": {
+    "remediation_step_id": "R2",
+    "delivery_slice_id": "MCFT-CAP-03.S2-SEMANTIC-CONFORMANCE-R2-V2-REVALIDATION-V1",
+    "implementation_started": true,
+    "implementation_status": "CANDIDATE_VALIDATED_NOT_EFFECTIVE",
+    "implementation_effective": false,
+    "successor_authorized": false,
+    "evidence": {
+      "evidence_scope": "LOCAL_SOURCE_CANDIDATE_ONLY",
+      "implementation_baseline_main_commit": "0a70d74849942d2f50e39578767212d91caa0a42",
+      "implementation_branch": "mcft-cap-03-s2-semantic-conformance-r2-v2-revalidation-v1",
+      "contract_id": "MCFT_CAP_03_ASSIMILATED_CONTINUATION_V2",
+      "runtime_config_purpose": "ASSIMILATED_CONTINUATION_RUNTIME_V2",
+      "positive_in_memory": "PASS_9_OF_9",
+      "negative_semantic": "PASS_6_OF_6",
+      "isolated_postgresql": "PASS_15_OF_15",
+      "versioned_dispatch": "PASS_CAP_02_V1_CAP_03_V1_CAP_03_V2",
+      "historical_cap_03_v1_dispatch": "PASS",
+      "same_operation_key_v1_v2_dual_write": "PASS_FAIL_CLOSED",
+      "single_tick_v2": "PASS",
+      "twenty_four_contiguous_v2_ticks": "PASS",
+      "restart_terminal_hash_equivalence": "PASS",
+      "bounded_forward_backfill_terminal_hash_equivalence": "PASS",
+      "late_evidence_revision": "PASS_FAIL_CLOSED",
+      "zero_schema_migration": "PASS",
+      "server_typecheck": "PASS",
+      "server_build": "PASS",
+      "git_diff_check": "PASS"
+    }
+  }
 }

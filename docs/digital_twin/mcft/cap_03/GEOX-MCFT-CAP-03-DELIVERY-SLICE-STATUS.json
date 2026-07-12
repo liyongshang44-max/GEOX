@@ -6,9 +6,9 @@
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A",
   "baseline_main_commit": "6389d4e566a6eb64ce96209be0e70cd8703be574",
-  "status": "S2_SEMANTIC_CONFORMANCE_REMEDIATION_R2_BOUNDARY_EFFECTIVE_IMPLEMENTATION_AUTHORIZED",
+  "status": "S2_SEMANTIC_CONFORMANCE_REMEDIATION_R2_IMPLEMENTATION_CANDIDATE_VALIDATED_NOT_EFFECTIVE",
   "design_status": "DESIGN_FROZEN",
-  "implementation_status": "R2_IMPLEMENTATION_AUTHORIZED_NOT_STARTED",
+  "implementation_status": "R2_IMPLEMENTATION_CANDIDATE_VALIDATED_NOT_EFFECTIVE",
   "authorization_effective": true,
   "runtime_source_authorized": true,
   "active_delivery_slice_id": "MCFT-CAP-03.S2-SEMANTIC-CONFORMANCE-R2-V2-REVALIDATION-V1",
@@ -789,7 +789,7 @@
       "dependency_mode": "R1_EFFECTIVE_S6_IMPLEMENTATION_MERGED_EFFECTIVENESS_PAUSED",
       "baseline_main_commit": "6ef413b7afe6c8bb9997c035aa18cf8bca0f394d",
       "branch": "mcft-cap-03-s2-semantic-conformance-r2-boundary-freeze-v1",
-      "status": "BOUNDARY_EFFECTIVE_IMPLEMENTATION_AUTHORIZED",
+      "status": "CANDIDATE_VALIDATED_NOT_EFFECTIVE",
       "activation_fields_status": "FROZEN",
       "boundary_freeze_authorized": true,
       "boundary_frozen": true,
@@ -874,7 +874,7 @@
       "implementation_effectiveness_condition": "R2_IMPLEMENTATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_R2_V2_REVALIDATION_GATE_PASS",
       "successor_step_id": "R3",
       "successor_authorized": false,
-      "implementation_started": false,
+      "implementation_started": true,
       "implementation_effective": false,
       "activation_pr_number": 2352,
       "activation_head_commit": "0e7af80c0f9c1f9c5d3d073acbc2d90c59162bc9",
@@ -890,7 +890,30 @@
         "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R2-V2-REVALIDATION-STATUS.json",
         "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION-STATUS.json"
       ],
-      "boundary_effectiveness_condition_satisfied": true
+      "boundary_effectiveness_condition_satisfied": true,
+      "implementation_status": "CANDIDATE_VALIDATED_NOT_EFFECTIVE",
+      "candidate_validation_evidence": {
+        "evidence_scope": "LOCAL_SOURCE_CANDIDATE_ONLY",
+        "implementation_baseline_main_commit": "0a70d74849942d2f50e39578767212d91caa0a42",
+        "implementation_branch": "mcft-cap-03-s2-semantic-conformance-r2-v2-revalidation-v1",
+        "contract_id": "MCFT_CAP_03_ASSIMILATED_CONTINUATION_V2",
+        "runtime_config_purpose": "ASSIMILATED_CONTINUATION_RUNTIME_V2",
+        "positive_in_memory": "PASS_9_OF_9",
+        "negative_semantic": "PASS_6_OF_6",
+        "isolated_postgresql": "PASS_15_OF_15",
+        "versioned_dispatch": "PASS_CAP_02_V1_CAP_03_V1_CAP_03_V2",
+        "historical_cap_03_v1_dispatch": "PASS",
+        "same_operation_key_v1_v2_dual_write": "PASS_FAIL_CLOSED",
+        "single_tick_v2": "PASS",
+        "twenty_four_contiguous_v2_ticks": "PASS",
+        "restart_terminal_hash_equivalence": "PASS",
+        "bounded_forward_backfill_terminal_hash_equivalence": "PASS",
+        "late_evidence_revision": "PASS_FAIL_CLOSED",
+        "zero_schema_migration": "PASS",
+        "server_typecheck": "PASS",
+        "server_build": "PASS",
+        "git_diff_check": "PASS"
+      }
     }
   ],
   "next_authorized_slice_ids": [],
@@ -906,12 +929,12 @@
     "NO_OBSERVATION_INNOVATION_COMPUTED",
     "NO_CAP_03_A2_TICK_COMMITTED"
   ],
-  "ssot_conflict_cleanup_status": "R2_IMPLEMENTATION_AUTHORIZED_PENDING_V2_EVIDENCE",
+  "ssot_conflict_cleanup_status": "R2_V2_CANDIDATE_EVIDENCE_RECONCILED_NOT_EFFECTIVE",
   "remediation_hold": {
     "remediation_id": "MCFT-CAP-03.S2-SEMANTIC-CONFORMANCE-REMEDIATION-V1",
     "baseline_main_commit": "55f2d56b05d2a1f0ada0e9b46eea5a3baa7187c2",
     "activation_branch": "mcft-cap-03-s2-semantic-conformance-remediation-activation-v1",
-    "status": "R2_BOUNDARY_EFFECTIVE_IMPLEMENTATION_AUTHORIZED",
+    "status": "R2_IMPLEMENTATION_CANDIDATE_VALIDATED_NOT_EFFECTIVE",
     "activation_effective": true,
     "r1_authorized": true,
     "s6_effectiveness_status": "PAUSED_PENDING_REMEDIATION",
@@ -953,7 +976,7 @@
       },
       {
         "step_id": "R2",
-        "status": "BOUNDARY_EFFECTIVE_IMPLEMENTATION_AUTHORIZED"
+        "status": "CANDIDATE_VALIDATED_NOT_EFFECTIVE"
       },
       {
         "step_id": "R3",
@@ -1041,7 +1064,7 @@
       "scripts/runtime_acceptance/mcft_cap_03_r2_v2_revalidation_fixture_v1.ts"
     ],
     "r2_implementation_effective": false,
-    "r2_implementation_status": "AUTHORIZED_NOT_STARTED",
+    "r2_implementation_status": "CANDIDATE_VALIDATED_NOT_EFFECTIVE",
     "activation_draft_gate": "PASS_52_OF_52",
     "activation_final_gate": "PASS_52_OF_52",
     "boundary_effectiveness_branch": "mcft-cap-03-s2-semantic-conformance-r2-boundary-effectiveness-v1",
@@ -1051,10 +1074,32 @@
       "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R2-V2-REVALIDATION-STATUS.json",
       "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION-STATUS.json"
     ],
-    "boundary_effectiveness_condition_satisfied": true
+    "boundary_effectiveness_condition_satisfied": true,
+    "r2_candidate_validation_evidence": {
+      "evidence_scope": "LOCAL_SOURCE_CANDIDATE_ONLY",
+      "implementation_baseline_main_commit": "0a70d74849942d2f50e39578767212d91caa0a42",
+      "implementation_branch": "mcft-cap-03-s2-semantic-conformance-r2-v2-revalidation-v1",
+      "contract_id": "MCFT_CAP_03_ASSIMILATED_CONTINUATION_V2",
+      "runtime_config_purpose": "ASSIMILATED_CONTINUATION_RUNTIME_V2",
+      "positive_in_memory": "PASS_9_OF_9",
+      "negative_semantic": "PASS_6_OF_6",
+      "isolated_postgresql": "PASS_15_OF_15",
+      "versioned_dispatch": "PASS_CAP_02_V1_CAP_03_V1_CAP_03_V2",
+      "historical_cap_03_v1_dispatch": "PASS",
+      "same_operation_key_v1_v2_dual_write": "PASS_FAIL_CLOSED",
+      "single_tick_v2": "PASS",
+      "twenty_four_contiguous_v2_ticks": "PASS",
+      "restart_terminal_hash_equivalence": "PASS",
+      "bounded_forward_backfill_terminal_hash_equivalence": "PASS",
+      "late_evidence_revision": "PASS_FAIL_CLOSED",
+      "zero_schema_migration": "PASS",
+      "server_typecheck": "PASS",
+      "server_build": "PASS",
+      "git_diff_check": "PASS"
+    }
   },
   "r2_v2_revalidation": {
-    "status": "BOUNDARY_EFFECTIVE_IMPLEMENTATION_AUTHORIZED",
+    "status": "CANDIDATE_VALIDATED_NOT_EFFECTIVE",
     "baseline_main_commit": "6ef413b7afe6c8bb9997c035aa18cf8bca0f394d",
     "activation_branch": "mcft-cap-03-s2-semantic-conformance-r2-boundary-freeze-v1",
     "activation_effectiveness_branch": "mcft-cap-03-s2-semantic-conformance-r2-boundary-effectiveness-v1",
@@ -1108,7 +1153,7 @@
       "scripts/runtime_acceptance/mcft_cap_03_r2_v2_revalidation_fixture_v1.ts"
     ],
     "excluded_governance_debt_issue": 2351,
-    "implementation_started": false,
+    "implementation_started": true,
     "implementation_effective": false,
     "activation_pr_number": 2352,
     "activation_head_commit": "0e7af80c0f9c1f9c5d3d073acbc2d90c59162bc9",
@@ -1124,6 +1169,30 @@
       "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R2-V2-REVALIDATION-STATUS.json",
       "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-S2-SEMANTIC-CONFORMANCE-REMEDIATION-STATUS.json"
     ],
-    "boundary_effectiveness_condition_satisfied": true
+    "boundary_effectiveness_condition_satisfied": true,
+    "implementation_status": "CANDIDATE_VALIDATED_NOT_EFFECTIVE",
+    "successor_authorized": false,
+    "candidate_validation_evidence": {
+      "evidence_scope": "LOCAL_SOURCE_CANDIDATE_ONLY",
+      "implementation_baseline_main_commit": "0a70d74849942d2f50e39578767212d91caa0a42",
+      "implementation_branch": "mcft-cap-03-s2-semantic-conformance-r2-v2-revalidation-v1",
+      "contract_id": "MCFT_CAP_03_ASSIMILATED_CONTINUATION_V2",
+      "runtime_config_purpose": "ASSIMILATED_CONTINUATION_RUNTIME_V2",
+      "positive_in_memory": "PASS_9_OF_9",
+      "negative_semantic": "PASS_6_OF_6",
+      "isolated_postgresql": "PASS_15_OF_15",
+      "versioned_dispatch": "PASS_CAP_02_V1_CAP_03_V1_CAP_03_V2",
+      "historical_cap_03_v1_dispatch": "PASS",
+      "same_operation_key_v1_v2_dual_write": "PASS_FAIL_CLOSED",
+      "single_tick_v2": "PASS",
+      "twenty_four_contiguous_v2_ticks": "PASS",
+      "restart_terminal_hash_equivalence": "PASS",
+      "bounded_forward_backfill_terminal_hash_equivalence": "PASS",
+      "late_evidence_revision": "PASS_FAIL_CLOSED",
+      "zero_schema_migration": "PASS",
+      "server_typecheck": "PASS",
+      "server_build": "PASS",
+      "git_diff_check": "PASS"
+    }
   }
 }

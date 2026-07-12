@@ -4,6 +4,7 @@
 
 import type { PreviousStorageVarianceBasisV1 } from "../../domain/soil_water/additive_process_uncertainty_budget_v1.js";
 import type { AssimilatedContinuationRecordSetV1 } from "../../domain/twin_runtime/assimilated_continuation_record_set_identity_v1.js";
+import type { AssimilatedContinuationRecordSetV2 } from "../../domain/twin_runtime/assimilated_continuation_record_set_identity_v2.js";
 import type { A0RecordSetV1, CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
 import type { ContinuationRecordSetV1 } from "../../domain/twin_runtime/continuation_record_set_identity_v1.js";
 
@@ -197,6 +198,32 @@ export interface AssimilatedContinuationPersistencePortV1 {
   readAssimilatedContinuationRecordSet(
     recordSetId: string,
   ): Promise<AssimilatedContinuationRecordSetV1 | null>;
+  rebuildAssimilatedContinuationProjections(
+    recordSetId: string,
+  ): Promise<{ rebuilt_projection_count: 5 }>;
+}
+
+export interface AssimilatedContinuationPersistencePortV2 {
+  lookupAssimilatedContinuationRecordSet(
+    idempotencyKey: string,
+  ): Promise<AssimilatedContinuationRecordSetV2 | null>;
+
+  commitAssimilatedContinuationState(input: {
+    scope: TwinScopeKeyV1;
+    lease: RuntimeLeaseClaimV1;
+    expected: ContinuationExpectedPointersV1;
+    record_set: AssimilatedContinuationRecordSetV2;
+    fault_injection?: (stage: FaultInjectionStageV1) => void;
+  }): Promise<{
+    status: "INSERTED" | "EXISTING_IDEMPOTENT_SUCCESS";
+    record_set: AssimilatedContinuationRecordSetV2;
+    fact_ids_by_object_id: Record<string, string>;
+  }>;
+
+  readAssimilatedContinuationRecordSet(
+    recordSetId: string,
+  ): Promise<AssimilatedContinuationRecordSetV2 | null>;
+
   rebuildAssimilatedContinuationProjections(
     recordSetId: string,
   ): Promise<{ rebuilt_projection_count: 5 }>;

@@ -122,3 +122,33 @@ R2 does not reinterpret or rewrite historical V1 facts.
 - `NO_MCFT_CAP_04_AUTHORIZATION`
 - `NO_MCFT_CAP_03_COMPLETE_CLAIM`
 - `NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM`
+
+<!-- R2_V2_CANDIDATE_VALIDATION_EVIDENCE_V1 -->
+## R2 implementation candidate validation evidence
+
+This section records local source-candidate evidence only. It does not make R2 effective, resume S6 effectiveness, authorize R3, activate S7 or S8, authorize MCFT-CAP-04, or claim MCFT-CAP-03 completion.
+
+```text
+implementation baseline: 0a70d74849942d2f50e39578767212d91caa0a42
+implementation branch: mcft-cap-03-s2-semantic-conformance-r2-v2-revalidation-v1
+implementation state: CANDIDATE_VALIDATED_NOT_EFFECTIVE
+positive in-memory: PASS_9_OF_9
+negative semantic: PASS_6_OF_6
+isolated PostgreSQL: PASS_15_OF_15
+versioned dispatch: PASS_CAP_02_V1_CAP_03_V1_CAP_03_V2
+historical CAP-03 V1 dispatch: PASS
+same-operation-key V1/V2 dual-write guard: PASS_FAIL_CLOSED
+single V2 tick: PASS
+24 contiguous V2 ticks: PASS
+restart terminal hash equivalence: PASS
+bounded forward backfill terminal hash equivalence: PASS
+late-evidence revision: PASS_FAIL_CLOSED
+zero schema migration: PASS
+server typecheck: PASS
+server build: PASS
+git diff check: PASS
+exact-head CI: PENDING
+merged-main postmerge gate: PENDING
+```
+
+Historical V1 canonical facts, contracts, validators, readback, merge records, and prior evidence remain immutable. R2 introduces additive V2 evidence only.
