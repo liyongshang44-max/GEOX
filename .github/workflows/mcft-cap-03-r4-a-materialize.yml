@@ -31,10 +31,11 @@ jobs:
           cache: pnpm
 
       - name: Materialize R4-A implementation
-        run: node scripts/ops/materialize_mcft_cap_03_r4_a.cjs
+        run: node scripts/ops/run_mcft_cap_03_r4_a_materializer.cjs
 
       - name: Remove operational materializer files
         run: |
+          rm scripts/ops/run_mcft_cap_03_r4_a_materializer.cjs
           rm scripts/ops/materialize_mcft_cap_03_r4_a.cjs
           rm .github/workflows/mcft-cap-03-r4-a-materialize.yml
 
