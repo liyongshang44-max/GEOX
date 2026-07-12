@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  issues: write
+  pull-requests: write
 
 jobs:
   reconcile:
@@ -32,16 +34,56 @@ jobs:
           rm -rf .cap04-p0-history
           rm .github/workflows/mcft-cap-04-p0-history-preserve.yml
 
-      - name: Run exact-head P0 final Gate
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_P0_PREDECESSOR_SSOT.cjs --final 2>&1 | tee /tmp/mcft-cap-04-p0-gate.log
+      - name: Capture P0 final Gate
+        run: |
+          set +e
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_P0_PREDECESSOR_SSOT.cjs --final > /tmp/mcft-cap-04-p0-gate.log 2>&1
+          echo "$?" > /tmp/mcft-cap-04-p0-gate.exit
+          cat /tmp/mcft-cap-04-p0-gate.log
+          exit 0
 
-      - name: Upload P0 Gate diagnostic
+      - name: Capture candidate diff
+        run: |
+          git diff --name-only eca0d053045db59982ad20a6e0421f72ae16f804 > /tmp/mcft-cap-04-p0-diff.log
+          cat /tmp/mcft-cap-04-p0-diff.log
+          wc -l /tmp/mcft-cap-04-p0-diff.log
+
+      - name: Publish P0 diagnostic
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/github-script@v7
         with:
-          name: mcft-cap-04-p0-gate-diagnostic
-          path: /tmp/mcft-cap-04-p0-gate.log
-          if-no-files-found: error
+          script: |
+            const fs = require('fs');
+            const gate = fs.readFileSync('/tmp/mcft-cap-04-p0-gate.log', 'utf8');
+            const exitCode = fs.readFileSync('/tmp/mcft-cap-04-p0-gate.exit', 'utf8').trim();
+            const diff = fs.readFileSync('/tmp/mcft-cap-04-p0-diff.log', 'utf8');
+            const body = [
+              '<!-- mcft-cap-04-p0-diagnostic -->',
+              '### MCFT-CAP-04 P0 diagnostic',
+              '',
+              `Gate exit: ${exitCode}`,
+              '',
+              '```text',
+              gate.slice(-12000),
+              '```',
+              '',
+              'Candidate diff:',
+              '',
+              '```text',
+              diff,
+              '```',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+
+      - name: Enforce diagnostic result
+        run: |
+          test "$(cat /tmp/mcft-cap-04-p0-gate.exit)" -eq 0
+          test "$(wc -l < /tmp/mcft-cap-04-p0-diff.log)" -eq 5
 
       - name: Re-run CAP-03 R4 final verification Gate
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_R4_FINAL_VERIFICATION.cjs
@@ -54,11 +96,8 @@ jobs:
           node -e "JSON.parse(require('fs').readFileSync('docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json','utf8'))"
           node -e "JSON.parse(require('fs').readFileSync('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-P0-STATUS.json','utf8'))"
 
-      - name: Enforce exact five-file boundary
-        run: |
-          test "$(git diff --name-only eca0d053045db59982ad20a6e0421f72ae16f804 | wc -l)" -eq 5
-          git diff --name-only eca0d053045db59982ad20a6e0421f72ae16f804
-          git diff --check eca0d053045db59982ad20a6e0421f72ae16f804
+      - name: Check patch integrity
+        run: git diff --check eca0d053045db59982ad20a6e0421f72ae16f804
 
       - name: Commit minimal P0 reconciliation
         run: |
