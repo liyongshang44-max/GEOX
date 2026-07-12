@@ -591,7 +591,7 @@ next_tick_logical_time:
 ${identity.next_tick_logical_time}
 \`\`\`
 
-All corresponding hashes and cross-reference relations are frozen in `${LOCK_PATH}`. Replay Runtime Config authority is the exact State-bound Runtime Config ref/hash, not an active-config pointer.
+All corresponding hashes and cross-reference relations are frozen in ${LOCK_PATH}. Replay Runtime Config authority is the exact State-bound Runtime Config ref/hash, not an active-config pointer.
 
 ## Delivery authority
 

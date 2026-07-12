@@ -144,7 +144,7 @@ for (const marker of [
   S1,
   'Replay Runtime Config authority is not an active-config pointer.',
   'GEOX-MCFT-CAP-04-PREDECESSOR-LOCK.json',
-  'S0_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_AUTHORIZATION_GATE_PASS',
+  'S0 merged-main authorization Gate passes before Runtime source.',
 ]) check(task.includes(marker), `task marker: ${marker}`);
 
 check(cap03Main.status === 'VERIFIED_ON_MAIN', 'CAP-03 Main Verification verified on main');
@@ -256,7 +256,7 @@ for (const marker of [
 ]) check(authorization.includes(marker), `Authorization document marker: ${marker}`);
 
 for (const marker of [
-  'three_way_alignment:\nPASS',
+  'task authority: PASS',
   'PostgreSQL canonical predecessor lock: PASS',
   BASELINE,
   S0,
