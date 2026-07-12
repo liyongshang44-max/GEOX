@@ -40,6 +40,25 @@
     "postmerge_gate": "PASS",
     "effectiveness_condition_satisfied": true
   },
+  "candidate_validation": {
+    "materializer_workflow_run": 29206763814,
+    "materializer_workflow_conclusion": "SUCCESS",
+    "materialized_candidate_commit": "e5257fd4e82f8ce189c8a1daa6533fa67cc3fdd8",
+    "isolated_postgresql_cap_03_24_tick_replay": "PASS",
+    "postgresql_canonical_predecessor_readback": "PASS",
+    "checkpoint_sequence_48_handoff": "PASS",
+    "blocked_forecast_without_success_pointer": "PASS",
+    "state_bound_runtime_config_and_reality_binding_cross_reference": "PASS",
+    "s0_exact_head_final_gate": "PASS",
+    "complete_task_integrity": "PASS",
+    "governance_json_parse": "PASS",
+    "exact_nine_file_boundary": "PASS",
+    "patch_integrity": "PASS",
+    "repository_typecheck": "PASS",
+    "temporary_workflow_removed": true,
+    "temporary_acceptance_evidence_removed": true,
+    "repository_exact_head_ci_requirement": "PASS_REQUIRED_BEFORE_MERGE"
+  },
   "current_blockers": [
     "MCFT_CAP_04_S0_PR_MERGED",
     "MCFT_CAP_04_S0_MERGED_MAIN_AUTHORIZATION_GATE_PASS"
