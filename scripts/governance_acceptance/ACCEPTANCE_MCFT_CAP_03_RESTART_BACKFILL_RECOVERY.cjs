@@ -442,11 +442,69 @@ try {
 
 if (POSTMERGE) {
   try {
+    // R3 resumed S6 effectiveness only after R2 became effective.
+    // Therefore the historical S6 implementation merge is not the
+    // correct boundary baseline for the resumed effectiveness PR.
+    const r3Resume = status.r3_effectiveness_resume;
+    const effectivenessBaseline =
+      r3Resume?.baseline_main_commit;
+    const effectivenessHead =
+      r3Resume?.effectiveness_head_commit;
+    const effectivenessTerminal =
+      r3Resume?.effectiveness_merge_commit;
+
+    check(
+      typeof effectivenessBaseline === 'string'
+        && /^[0-9a-f]{40}$/.test(effectivenessBaseline),
+      'R3 effectiveness baseline commit recorded',
+    );
+    check(
+      typeof effectivenessHead === 'string'
+        && /^[0-9a-f]{40}$/.test(effectivenessHead),
+      'R3 effectiveness head commit recorded',
+    );
+    check(
+      typeof effectivenessTerminal === 'string'
+        && /^[0-9a-f]{40}$/.test(effectivenessTerminal),
+      'R3 effectiveness merge commit recorded',
+    );
+    check(
+      r3Resume?.branch === EFFECTIVENESS_BRANCH,
+      'R3 effectiveness branch exact',
+    );
+    check(
+      sameArray(
+        r3Resume?.changed_file_boundary || [],
+        EFFECTIVENESS_FILES,
+      ),
+      'R3 recorded effectiveness boundary exact',
+    );
+
+    check(
+      git([
+        'merge-base',
+        '--is-ancestor',
+        effectivenessTerminal,
+        'HEAD',
+      ]) === '',
+      'R3 effectiveness merge is an ancestor of current main',
+    );
+
+    check(
+      git([
+        'diff',
+        '--quiet',
+        effectivenessHead,
+        effectivenessTerminal,
+      ]) === '',
+      'R3 effectiveness head and merge trees are identical',
+    );
+
     const effectivenessChanged = sortedLines(
       git([
         'diff',
         '--name-only',
-        `${status.implementation_merge_commit}...HEAD`,
+        `${effectivenessBaseline}...${effectivenessTerminal}`,
       ]),
     );
 
@@ -458,7 +516,7 @@ if (POSTMERGE) {
     git([
       'diff',
       '--check',
-      `${status.implementation_merge_commit}...HEAD`,
+      `${effectivenessBaseline}...${effectivenessTerminal}`,
     ]);
     check(true, 'postmerge-effectiveness git diff --check PASS');
   } catch (error) {

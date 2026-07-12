@@ -156,8 +156,8 @@
     "implementation_governance_source_shape": "PASS_R3_FROZEN_2_FILE_BOUNDARY",
     "implementation_server_typecheck": "PASS",
     "implementation_git_diff_check": "PASS",
-    "implementation_exact_head_ci": "PENDING_R3_EFFECTIVENESS_PR",
-    "implementation_merged_main_postmerge_gate": "PENDING_R3_EFFECTIVENESS_PR_MERGE"
+    "implementation_exact_head_ci": "PASS_CI_4743",
+    "implementation_merged_main_postmerge_gate": "PENDING_GATE_BASELINE_REMEDIATION_MERGE"
   },
   "implementation_gate_modes": [
     "--draft",
@@ -248,6 +248,45 @@
       "governance_acceptance": "PASS_7_OF_7"
     },
     "target_effectiveness_condition": "R3_S6_POSTMERGE_EFFECTIVENESS_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_RESTART_BACKFILL_RECOVERY_POSTMERGE_GATE_PASS",
-    "candidate_status": "READY_FOR_PR_VALIDATION"
+    "candidate_status": "MERGED_PENDING_POSTMERGE_GATE_BASELINE_REMEDIATION",
+    "effectiveness_pr_number": 2356,
+    "effectiveness_head_commit": "4d607c95071e985cbd63869a9a4f9f72f72b9f62",
+    "effectiveness_ci_run": "CI_4743",
+    "effectiveness_merge_commit": "a085fbca1226d75217c90a45eec179a2e66c3640",
+    "head_merge_tree_equivalence": "PASS_ZERO_FILE_DELTA"
+  },
+  "r3_postmerge_gate_baseline_remediation": {
+    "remediation_id": "MCFT-CAP-03.R3-S6-POSTMERGE-GATE-BASELINE-REMEDIATION-V1",
+    "trigger": "POSTMERGE_GATE_USED_HISTORICAL_S6_IMPLEMENTATION_MERGE_AS_EFFECTIVENESS_DIFF_BASELINE_AFTER_R2_INTERVENING_COMMITS",
+    "failure_observed": "MCFT_CAP_03_S6_POSTMERGE_GATE_133_PASS_1_FAIL",
+    "failed_check": "POSTMERGE_EFFECTIVENESS_CHANGED_FILE_SET_IS_EXACT",
+    "root_cause": "GATE_COMPARED_HISTORICAL_S6_IMPLEMENTATION_MERGE_TO_CURRENT_HEAD_INSTEAD_OF_R3_BASELINE_TO_R3_MERGE",
+    "remediation_branch": "mcft-cap-03-s6-postmerge-gate-baseline-remediation-v1",
+    "remediation_changed_file_boundary": [
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-RESTART-BACKFILL-RECOVERY-STATUS.json",
+      "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_03_RESTART_BACKFILL_RECOVERY.cjs"
+    ],
+    "runtime_source_change": false,
+    "persistence_change": false,
+    "schema_migration": false,
+    "route_change": false,
+    "scheduler_change": false,
+    "web_change": false,
+    "workflow_change": false,
+    "s7_activation": false,
+    "mcft_cap_04_authorization": false,
+    "r3_effectiveness_pr_number": 2356,
+    "r3_effectiveness_head_commit": "4d607c95071e985cbd63869a9a4f9f72f72b9f62",
+    "r3_effectiveness_ci_run": "CI_4743",
+    "r3_effectiveness_merge_commit": "a085fbca1226d75217c90a45eec179a2e66c3640",
+    "r3_effectiveness_baseline_main_commit": "b4ec182e654365ce2879cea0cfd5370cbabbcd96",
+    "r3_effectiveness_changed_file_boundary": [
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-DELIVERY-SLICE-STATUS.json",
+      "docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-RESTART-BACKFILL-RECOVERY-STATUS.json"
+    ],
+    "r3_head_merge_tree_equivalence": "PASS_ZERO_FILE_DELTA",
+    "target": "GATE_VALIDATES_R3_BASELINE_TO_R3_MERGE_AND_REQUIRES_R3_MERGE_ANCESTOR_OF_CURRENT_MAIN",
+    "status": "CANDIDATE_PENDING_PR_CI_AND_MERGE"
   }
 }
