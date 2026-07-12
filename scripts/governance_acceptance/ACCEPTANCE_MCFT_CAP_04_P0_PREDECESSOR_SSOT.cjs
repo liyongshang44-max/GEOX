@@ -4,7 +4,6 @@
 
 'use strict';
 
-const assert = require('node:assert/strict');
 const cp = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -24,9 +23,10 @@ const MAP_PATH = 'docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md';
 const MATRIX_PATH = 'docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json';
 const MAIN_VERIFICATION_PATH = 'docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-MAIN-VERIFICATION.json';
 const R4_VERIFICATION_PATH = 'docs/digital_twin/mcft/cap_03/GEOX-MCFT-CAP-03-R4-FINAL-VERIFICATION.json';
+const TASK_PATH = 'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md';
 const STATUS_PATH = 'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-P0-STATUS.json';
 const GATE_PATH = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_P0_PREDECESSOR_SSOT.cjs';
-const FILES = [MAP_PATH, MATRIX_PATH, STATUS_PATH, GATE_PATH].sort();
+const FILES = [MAP_PATH, MATRIX_PATH, TASK_PATH, STATUS_PATH, GATE_PATH].sort();
 
 let pass = 0;
 let fail = 0;
@@ -83,9 +83,11 @@ const matrix = readJson(MATRIX_PATH);
 const implementationMap = readText(MAP_PATH);
 const mainVerification = readJson(MAIN_VERIFICATION_PATH);
 const r4Verification = readJson(R4_VERIFICATION_PATH);
+const task = readText(TASK_PATH);
 const status = readJson(STATUS_PATH);
 const cap03 = matrix.capability_lines.find((line) => line.capability_line_id === 'MCFT-CAP-03');
 const cap04 = matrix.capability_lines.find((line) => line.capability_line_id === 'MCFT-CAP-04');
+const cap04P0 = cap04?.delivery_slices?.find((slice) => slice.delivery_slice_id === P0);
 
 check(mainVerification.status === 'VERIFIED_ON_MAIN', 'CAP-03 Main Verification is verified on main');
 check(mainVerification.verified_on_main === true, 'CAP-03 verified_on_main true');
@@ -122,8 +124,10 @@ check(cap04?.implementation_status === 'NOT_AUTHORIZED', 'Vertical Matrix CAP-04
 check(cap04?.runtime_source_authorized === false, 'Vertical Matrix CAP-04 Runtime source not authorized');
 check(cap04?.authorization_effective === false, 'Vertical Matrix CAP-04 authorization ineffective');
 check(cap04?.active_delivery_slice_id === P0, 'Vertical Matrix CAP-04 active P0 exact');
+check(cap04?.task_ref === TASK_PATH, 'Vertical Matrix CAP-04 task ref exact');
 check(cap04?.next_delivery_slice_id === S0, 'Vertical Matrix CAP-04 next S0 exact');
 check(cap04?.next_delivery_slice_authorized === false, 'Vertical Matrix CAP-04 S0 not authorized');
+exactSet(cap04P0?.exact_changed_file_boundary, FILES, 'Vertical Matrix P0 changed-file boundary');
 
 for (const marker of [
   'MCFT-CAP-03 canonical completion after R4',
@@ -132,10 +136,23 @@ for (const marker of [
   'MCFT-CAP-04 P0 governance reconciliation',
   'runtime_source_authorized: false',
   'MCFT-CAP-04.GOV-AUTHORIZATION-AND-PREDECESSOR-LOCK-V1',
+  TASK_PATH,
 ]) check(implementationMap.includes(marker), `Implementation Map marker: ${marker}`);
+
+for (const marker of [
+  'task_version: v0.5',
+  'design_status: FINAL_FROZEN_CANDIDATE_V0_5',
+  P0,
+  S0,
+  'Replay Runtime Config authority is not an `active_runtime_config_ref` pointer.',
+  '`latest_successful_forecast_ref` must be typed as `string | null`',
+  'one coherent forcing-cycle pair',
+  'S10C — Finalization Effectiveness Reconciliation',
+]) check(task.includes(marker), `CAP-04 task marker: ${marker}`);
 
 check(status.status === 'P0_RECONCILIATION_CANDIDATE', 'P0 status candidate exact');
 check(status.delivery_slice_id === P0, 'P0 status slice exact');
+check(status.task_ref === TASK_PATH, 'P0 status task ref exact');
 check(status.runtime_source_authorized === false, 'P0 status Runtime source unauthorized');
 check(status.cap_04_authorized === false, 'P0 status CAP-04 unauthorized');
 check(status.predecessor_authority.capability_status === 'COMPLETE', 'P0 predecessor capability COMPLETE');
