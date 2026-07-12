@@ -53,6 +53,20 @@ jobs:
       - name: Validate authorization Gate syntax
         run: node -c scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_AUTHORIZATION.cjs
 
+      - name: Repair preflight template literal
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          target = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PREDECESSOR_PREFLIGHT.ts')
+          source = target.read_text(encoding='utf-8')
+          old = 'All corresponding hashes and cross-reference relations are frozen in `${LOCK_PATH}`.'
+          new = 'All corresponding hashes and cross-reference relations are frozen in ${LOCK_PATH}.'
+          if old not in source:
+              raise SystemExit('PREFLIGHT_TEMPLATE_LITERAL_TARGET_NOT_FOUND')
+          target.write_text(source.replace(old, new), encoding='utf-8')
+          PY
+
       - name: Capture PostgreSQL predecessor preflight
         env:
           DATABASE_URL: postgres://landos:mcft-cap04-s0-acceptance@127.0.0.1:5432/mcft_cap_04_s0_acceptance
