@@ -3,7 +3,6 @@
 // Boundary: pure validation only; no persistence, projection, forcing selection, Forecast math, Scenario math, clock, filesystem or network.
 
 import { canonicalJsonV1 } from "./canonical_json_v1.js";
-import { computeMemberDeterminismHashV1 } from "./canonical_identity_v1.js";
 import type { CanonicalObjectEnvelopeV1 } from "./canonical_object_contracts_v1.js";
 import {
   CAP04_A1_OPERATION_VARIANT_V1,
@@ -17,6 +16,7 @@ import {
   type Cap04AMemberObjectTypeV1,
   type Cap04ForecastRunPayloadV1,
 } from "./forecast_scenario_contracts_v1.js";
+import { computeCap04AMemberDeterminismHashV1 } from "./forecast_scenario_member_hash_v1.js";
 import {
   computeCap04AAggregateDeterminismHashV1,
   deriveCap04ARecordSetIdentityV1,
@@ -36,7 +36,7 @@ function validateBaseEnvelopeV1(member: CanonicalObjectEnvelopeV1): void {
   }
   if (!Array.isArray(member.source_refs) || !Array.isArray(member.evidence_refs) || !Array.isArray(member.limitations)) throw new Error("CAP04_MEMBER_ARRAYS_REQUIRED");
   if (!member.payload || typeof member.payload !== "object" || Array.isArray(member.payload)) throw new Error("CAP04_MEMBER_PAYLOAD_REQUIRED");
-  const computed = computeMemberDeterminismHashV1(member as unknown as Record<string, unknown>);
+  const computed = computeCap04AMemberDeterminismHashV1(member);
   if (computed !== member.determinism_hash) throw new Error("CAP04_MEMBER_SEMANTIC_HASH_MISMATCH");
 }
 
