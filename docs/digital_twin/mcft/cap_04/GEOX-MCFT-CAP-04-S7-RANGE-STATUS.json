@@ -116,7 +116,8 @@
     "postgresql_config_plus_operation_fact_count": 240,
     "postgresql_forecast_point_projection_count": 1728,
     "postgresql_scenario_point_projection_count": 5184,
-    "governance_final_gate": "PASS_REQUIRED_ON_FINAL_HEAD",
+    "governance_final_gate": "PASS",
+    "governance_final_gate_workflow_run": 29247982465,
     "repository_exact_head_ci": "PASS_REQUIRED_BEFORE_MERGE",
     "temporary_workflow_removed": true,
     "temporary_diagnostic_evidence_removed": true
