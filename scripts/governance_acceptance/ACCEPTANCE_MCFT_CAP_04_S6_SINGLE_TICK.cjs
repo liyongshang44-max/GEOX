@@ -1,5 +1,5 @@
 // scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S6_SINGLE_TICK.cjs
-// Purpose: verify the exact MCFT-CAP-04 S6 single-tick integration boundary, S5B merged-main effectiveness, S6 activation, and preserved nonclaims.
+// Purpose: verify the exact remediated MCFT-CAP-04 S6 boundary, S5B merged-main effectiveness, R1-A through R1-I authority closure, S7 blocking, and preserved nonclaims.
 // Boundary: repository governance verification only; no database mutation, range loop, restart/backfill, route, scheduler, recommendation, decision, or field claim.
 
 'use strict';
@@ -19,14 +19,22 @@ const TASK_SHA = 'ea63e92a64b760b84c49428b1d3a245ce5cd94bb08daa9c6b971a53861b90a
 const MODE = process.argv.includes('--postmerge') ? 'postmerge' : process.argv.includes('--final') ? 'final' : 'draft';
 
 const FILES = [
+  'apps/server/src/domain/twin_runtime/forecast_canonical_authority_v1.ts',
+  'apps/server/src/domain/twin_runtime/forecast_math_contracts_v1.ts',
+  'apps/server/src/domain/twin_runtime/forecast_record_set_recovery_authority_v1.ts',
   'apps/server/src/domain/twin_runtime/forecast_scenario_record_set_validator_v1.ts',
+  'apps/server/src/domain/twin_runtime/pure_72h_forecast_math_v1.ts',
+  'apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_recovery_repository_v1.ts',
   'apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_repository_v1.ts',
   'apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts',
+  'apps/server/src/runtime/twin_runtime/blocked_forecast_payload_builder_v1.ts',
   'apps/server/src/runtime/twin_runtime/forecast_continuation_record_set_builder_v1.ts',
   'apps/server/src/runtime/twin_runtime/forecast_scenario_persistence_ports_v1.ts',
   'apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts',
   'apps/server/src/runtime/twin_runtime/forecast_scenario_state_source_builder_v1.ts',
+  'apps/server/src/runtime/twin_runtime/future_forcing_outcome_classifier_v1.ts',
   'apps/server/src/runtime/twin_runtime/next_tick_input_service_v1.ts',
+  'apps/server/src/runtime/twin_runtime/pending_scenario_barrier_service_v1.ts',
   'apps/server/src/runtime/twin_runtime/ports.ts',
   'apps/server/src/runtime/twin_runtime/scenario_set_record_builder_v1.ts',
   'docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md',
@@ -38,6 +46,9 @@ const FILES = [
   'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S6-SINGLE-TICK-INTEGRATION-V1.md',
   'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S6-SINGLE-TICK-STATUS.json',
   'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S6_SINGLE_TICK.cjs',
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PENDING_SCENARIO_BARRIER.ts',
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH.ts',
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH_NEGATIVE.ts',
   'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION.ts',
   'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_DB.ts',
   'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_NEGATIVE.ts',
@@ -90,7 +101,9 @@ check(s5bStatus.merge_evidence.postmerge_probe_pr_number === 2395, 'S5B postmerg
 check(s5bStatus.merge_evidence.postmerge_workflow_run === 29232760223, 'S5B postmerge workflow exact');
 check(s5bStatus.merge_evidence.postmerge_gate === 'PASS', 'S5B postmerge Gate PASS');
 
+check(s6Status.schema_version === 'geox_mcft_cap_04_s6_single_tick_status_v2', 'S6 remediation status schema exact');
 check(s6Status.status === 'IMPLEMENTATION_CANDIDATE', 'S6 status candidate exact');
+check(s6Status.implementation_status === 'REMEDIATED_AND_VALIDATED_PENDING_MERGE', 'S6 remediation implementation status exact');
 check(s6Status.baseline_main_commit === BASELINE, 'S6 baseline exact');
 check(s6Status.branch === BRANCH, 'S6 branch exact');
 check(s6Status.runtime_source_authorized === true, 'S6 Runtime source authorized');
@@ -98,13 +111,35 @@ check(s6Status.activation_fields_status === 'FROZEN', 'S6 activation fields froz
 check(s6Status.contracts.logical_tick_count === 1, 'S6 logical tick count exact');
 check(s6Status.contracts.a_member_count === 8 && s6Status.contracts.scenario_option_count === 3, 'S6 A/B cardinalities exact');
 check(s6Status.contracts.forecast_point_count === 72 && s6Status.contracts.scenario_point_count === 216, 'S6 Forecast and Scenario point counts exact');
-exactSet(s6Status.exact_changed_file_boundary, FILES, 'S6 status changed-file boundary');
+check(s6Status.contracts.pending_scenario_recovery_policy === 'CHECKPOINT_FORECAST_CANONICAL_AUTHORITY_COMMIT_B_ONLY_ZERO_EVIDENCE_RESELECTION', 'S6 pending B policy exact');
+check(s6Status.contracts.forcing_outcome_policy === 'SELECTED_A1_OR_UNAVAILABLE_A2_OR_MALFORMED_FAILED', 'S6 forcing outcome policy exact');
+check(s6Status.contracts.facts_recovery_policy === 'TICK_AND_SCENARIO_FACT_ROOT_WITH_GUARD_SELF_REPAIR', 'S6 facts recovery policy exact');
+check(s6Status.contracts.validator_dispatch_policy === 'EXACT_CONTRACT_ID_AND_OPERATION_VARIANT', 'S6 dispatch policy exact');
+check(s6Status.remediation_line.length === 9, 'R1-A through R1-I remediation count exact');
+check(s6Status.candidate_validation.strict_pipefail_remediation_workflow_run === 29243149582, 'strict remediation workflow exact');
+check(s6Status.candidate_validation.strict_pipefail_remediation_workflow_result === 'PASS', 'strict remediation workflow PASS');
+check(s6Status.candidate_validation.bounded_postgresql_diagnostic_workflow_run === 29243149618, 'bounded PostgreSQL workflow exact');
+check(s6Status.candidate_validation.bounded_postgresql_diagnostic_exit_code === 0, 'bounded PostgreSQL exit zero');
+check(s6Status.candidate_validation.bounded_postgresql_diagnostic_result === '6_PASS_0_FAIL', 'bounded PostgreSQL 6 PASS exact');
+check(s6Status.candidate_validation.temporary_workflow_removed === true, 'temporary workflows removed');
+exactSet(s6Status.exact_changed_file_boundary, FILES, 'S6 authoritative changed-file boundary');
 
+check(contract.schema_version === 'geox_mcft_cap_04_s6_single_tick_contract_v2', 'single-tick contract schema v2 exact');
 check(contract.contract_id === 'MCFT_CAP_04_SINGLE_TICK_FORECAST_SCENARIO_INTEGRATION_V1', 'single-tick contract ID exact');
 check(contract.logical_tick_count === 1, 'contract one logical tick exact');
-check(contract.success_path.join('>') === 'PERSISTED_HANDOFF>CURRENT_EVIDENCE>DYNAMICS>ASSIMILATION>POSTERIOR_STATE>FUTURE_FORCING>FORECAST_72H>A1_COMMIT>THREE_SCENARIOS>B_COMMIT>CANONICAL_READBACK>T_PLUS_ONE_HANDOFF', 'success path exact');
+check(contract.pre_tick_barrier.authority === 'PREVIOUS_CHECKPOINT_FORECAST_RESULT_REF', 'pre-tick barrier authority exact');
+check(contract.pre_tick_barrier.forcing_reselection === 'FORBIDDEN', 'barrier forcing reselection forbidden');
+check(contract.successful_path.includes('CANONICAL_FORECAST_AUTHORITY') && contract.successful_path.includes('A1_COMMIT') && contract.successful_path.includes('B_COMMIT'), 'successful A1+B path exact');
+check(contract.blocked_path.includes('A2_BLOCKED_FORECAST_COMMIT') && contract.blocked_path.includes('NO_SCENARIO_SET'), 'legal A2 blocked path exact');
+check(contract.failed_path.canonical_terminal_write === false, 'malformed/conflicting forcing has no terminal write');
+check(contract.canonical_forecast_authority.uncertainty_point_trace_count === 72, 'canonical uncertainty trace count exact');
+check(contract.canonical_forecast_authority.physical_bound_trace_count === 72, 'canonical physical-bound trace count exact');
+check(contract.canonical_forecast_authority.forecast_forcing_full_field_equality_required === true, 'Forecast and Forcing full equality required');
 check(contract.completed_idempotent_replay === 'ZERO_RECOMPUTE_ZERO_WRITE', 'completed idempotent policy exact');
-check(contract.pending_scenario_recovery === 'PRESERVE_A1_RECOMPUTE_AND_COMMIT_B_ONLY', 'pending Scenario recovery exact');
+check(contract.pending_scenario_recovery === 'CHECKPOINT_FORECAST_CANONICAL_AUTHORITY_COMMIT_B_ONLY_ZERO_EVIDENCE_RESELECTION', 'pending Scenario recovery exact');
+check(contract.facts_based_recovery.second_terminal_rejected_after_guard_loss === true, 'second terminal rejected after guard loss');
+check(contract.facts_based_recovery.second_scenario_set_rejected_after_guard_loss === true, 'second Scenario rejected after guard loss');
+check(contract.validator_dispatch === 'EXACT_CONTRACT_ID_AND_OPERATION_VARIANT', 'exact validator dispatch contract');
 check(contract.no_new_migration === true, 'S6 adds no migration');
 
 check(delivery.status === 'S6_IMPLEMENTATION_CANDIDATE', 'delivery status S6 candidate');
@@ -112,25 +147,33 @@ check(delivery.baseline_main_commit === BASELINE && delivery.branch === BRANCH, 
 check(delivery.active_delivery_slice_id === S6, 'delivery active slice S6');
 check(s5b.status === 'MERGED_EFFECTIVE' && s5b.effectiveness_condition_satisfied === true, 'delivery S5B merged effective');
 check(s6.status === 'IMPLEMENTATION_CANDIDATE' && s6.runtime_source_authorized === true && s6.activation_fields_status === 'FROZEN', 'delivery S6 activated and frozen');
-exactSet(s6.exact_changed_file_boundary, FILES, 'delivery S6 changed-file boundary');
 check(s7.status === 'BLOCKED' && s7.runtime_source_authorized === false, 'S7 remains blocked');
 
 check(authorization.status === 'AUTHORIZATION_EFFECTIVE', 'authorization remains effective');
 check(authorization.active_delivery_slice_id === S6, 'authorization active S6');
 check(authorization.repository_write_scope === 'S6_SINGLE_TICK_INTEGRATION_ONLY', 'authorization write scope S6 exact');
 check(cap04.status === 'IN_PROGRESS' && cap04.design_status === 'DESIGN_FROZEN', 'matrix CAP-04 remains in progress and frozen');
-check(cap04.active_delivery_slice_id === S6 && cap04.next_delivery_slice_id === S7 && cap04.next_delivery_slice_authorized === false, 'matrix delivery pointers exact');
+check(cap04.active_delivery_slice_id === S6 && cap04.next_delivery_slice_id === S7 && cap04.next_delivery_slice_authorized === false, 'matrix delivery pointers exact and S7 unauthorized');
 
 for (const [file, markers] of Object.entries({
-  'apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts': ['EXISTING_IDEMPOTENT_SUCCESS','RECOVERED_PENDING_SCENARIO','CAP04_SINGLE_TICK_REQUESTED_TICK_NOT_NEXT_PERSISTED_TICK','CAP04_SINGLE_TICK_NEXT_HANDOFF_SUCCESS_FORECAST_MISMATCH'],
-  'apps/server/src/runtime/twin_runtime/forecast_scenario_state_source_builder_v1.ts': ['CAP04_CURRENT_TICK_ASSIMILATED_POSTERIOR','CAP04_SOURCE_REFERENCE_GRAPH_MISMATCH'],
-  'apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts': ['validateCap04CanonicalEnvelopeV1','MCFT_CAP_04_COMPLETED_FORECAST_CONTINUATION_V1'],
-  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION.ts': ['RECOVERED_PENDING_SCENARIO','zero-recompute'],
-  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_DB.ts': ['real PostgreSQL','pending Scenario recovery'],
+  'apps/server/src/domain/twin_runtime/forecast_canonical_authority_v1.ts': ['CAP04_CANONICAL_FORECAST_AUTHORITY_CONTRACT_ID_V1','CAP04_CANONICAL_FORECAST_PRECIPITATION_AUTHORITY_MISMATCH','CAP04_CANONICAL_FORECAST_POINT_TRACE_HASH_MISMATCH'],
+  'apps/server/src/domain/twin_runtime/forecast_record_set_recovery_authority_v1.ts': ['CAP04_TICK_RECOVERY_AUTHORITY_CONTRACT_ID_V1','materializeCap04TickRecoveryAuthorityV1'],
+  'apps/server/src/runtime/twin_runtime/future_forcing_outcome_classifier_v1.ts': ['status: "FAILED"','MALFORMED_FORCING_RECORD'],
+  'apps/server/src/runtime/twin_runtime/blocked_forecast_payload_builder_v1.ts': ['buildCap04BlockedForecastPayloadV1','status: "BLOCKED"'],
+  'apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts': ['BLOCKED_INSERTED','CAP04_SINGLE_TICK_FORCING_FAILED','canonicalForecastMathV1','RECOVERED_PENDING_SCENARIO'],
+  'apps/server/src/runtime/twin_runtime/pending_scenario_barrier_service_v1.ts': ['recoverPreviousPendingScenarioV1','CAP04_PENDING_B_CHECKPOINT_FORECAST_AUTHORITY_MISMATCH'],
+  'apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_recovery_repository_v1.ts': ['recoverAByTickWithTransactionV1','PENDING_SCENARIO_CHECKPOINT_FORECAST_REF_REQUIRED','SCENARIO_SET_CANONICAL_UNIQUENESS_CONFLICT'],
+  'apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts': ['exactCap04TerminalTickV1','CAP04_EXACT_FORECAST_AUTHORITY_CONTRACT_REQUIRED'],
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_DB.ts': ['deleted A/B guards are reconstructed','canonical Tick facts reject a second terminal variant','pending B recovery consumes canonical Forecast authority with zero forcing reselection'],
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PENDING_SCENARIO_BARRIER.ts': ['inner tick executor starts only after the barrier completes','zero current-tick Evidence or forcing selection reads'],
 })) {
   const content = read(file);
   for (const marker of markers) check(content.includes(marker), `${file} marker ${marker}`);
 }
+
+const nextTickRepository = read('apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts');
+check(!nextTickRepository.includes('startsWith("MCFT_CAP_04_")'), 'payload-prefix dispatch removed');
+check(!nextTickRepository.includes('A1_COMPLETED_FORECAST'), 'invalid A1_COMPLETED_FORECAST marker removed');
 
 const changedRange = MODE === 'postmerge' ? `${BASELINE}...HEAD` : BASELINE;
 const tracked = git(['diff', '--name-only', changedRange]).split(/\r?\n/).filter(Boolean);
@@ -154,5 +197,5 @@ if (MODE === 'postmerge') {
 try { git(['diff', '--check', changedRange]); check(true, 'git diff --check PASS'); }
 catch { check(false, 'git diff --check PASS'); }
 
-console.log(`MCFT-CAP-04 S6 governance ${MODE}: ${pass} PASS, ${fail} FAIL`);
+console.log(`MCFT-CAP-04 S6 remediation governance ${MODE}: ${pass} PASS, ${fail} FAIL`);
 if (fail > 0) process.exit(1);
