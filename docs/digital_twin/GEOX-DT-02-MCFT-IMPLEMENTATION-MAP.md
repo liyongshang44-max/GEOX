@@ -793,3 +793,15 @@ S8 baseline: 413908eadf1016d879760da3afc968abdee82342
 S8 implementation branch: agent/mcft-cap-04-s8-restart-backfill-recovery-v1
 S9: BLOCKED
 ```
+
+## MCFT-CAP-04 S8 Candidate — Restart, Backfill and Failure Recovery
+
+```text
+activation merge: bdc3e93ce755e237655f7bfc98b117a6e842d030
+activation postmerge Gate: 29250261737 PASS
+implementation: VALIDATED_PENDING_MERGE
+in-memory restart/backfill + failure recovery: 29251031846 PASS
+PostgreSQL uniqueness/rebuild + fencing/CAS: 29251564080 PASS
+PostgreSQL fresh-process restart: 29252000320 PASS
+S9: BLOCKED
+```

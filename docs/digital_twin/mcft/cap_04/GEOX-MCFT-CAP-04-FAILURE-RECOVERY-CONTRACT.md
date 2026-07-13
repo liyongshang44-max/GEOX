@@ -1,27 +1,51 @@
-<!-- docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FAILURE-RECOVERY-CONTRACT.md -->
+# GEOX MCFT-CAP-04 S8 Restart, Backfill and Failure-Recovery Contract
 
-# GEOX MCFT-CAP-04 Failure and Recovery Contract
+## Identity
 
-## Transaction boundary
+```text
+contract_id: MCFT_CAP_04_RESTART_BACKFILL_FAILURE_RECOVERY_V1
+delivery_slice: MCFT-CAP-04.MCFT-03-04-07-09-10.RESTART-BACKFILL-FAILURE-RECOVERY-V1
+baseline: bdc3e93ce755e237655f7bfc98b117a6e842d030
+runtime_mode: REPLAY
+```
 
-A1 and A2 each append exactly eight canonical facts in one fenced PostgreSQL transaction. B appends exactly one canonical Scenario Set fact in a separate fenced transaction. Any injected failure before commit rolls back canonical facts, uniqueness guards, pointer updates, idempotency rows and projections together.
+## Restart authority
 
-## Uniqueness
+Restart starts exclusively from `PrepareNextTickInputServiceV1.resumeFromCheckpointV1`. The persisted checkpoint, terminal Tick, posterior State, latest Forecast result, latest successful Forecast, Runtime Config and Reality Binding are authority. Wall-clock time, caller-provided prior State and reconstruction from projections are forbidden.
 
-A1 and A2 share one terminal tick uniqueness authority over scope, lineage, revision and logical time. A second variant for the same terminal tick fails closed. B uniqueness is bound to source Forecast ref/hash plus lineage and revision. A second non-idempotent Scenario Set for that source Forecast fails closed.
+The standard proof is `12 ticks -> fresh service composition -> 12 ticks`. Process 1 ends at checkpoint sequence 60. The fresh composition starts at `2026-06-03T14:00:00.000Z`, ends at sequence 72 and hands off `2026-06-04T02:00:00.000Z`. All 24 A1 aggregate hashes and all 24 Scenario Set aggregate hashes must equal uninterrupted execution.
 
-## Response-loss recovery
+## Bounded forward backfill
 
-A repeated A1/A2/B request with the same idempotency key, record identity and aggregate hash returns the canonical readback without duplicate writes. A conflicting semantic payload under the same idempotency key fails with IDENTITY/IDEMPOTENCY conflict.
+Backfill is forward-only missed-schedule catch-up. Its requested start, when supplied, must equal the persisted `next_tick_logical_time`. Backfill before bootstrap, backward execution, skipped hours and late-Evidence revision are rejected. Completed-target retry returns `ALREADY_COMPLETE` with zero Evidence loads and zero canonical writes.
 
-## Pending Scenario barrier
+## Lease and fencing
 
-A successful Forecast becomes pending when it is the latest successful Forecast and no Scenario uniqueness row exists. B commit clears this condition. A blocked Forecast never becomes Scenario-eligible.
+A fresh process may take authority only after the previous lease has expired or otherwise been lawfully released. The new process acquires a new fencing token. Stale token, foreign owner, expired claim and checkpoint/state/Forecast CAS mismatch fail closed before canonical writes.
 
-## Projection recovery
+## Failure matrix
 
-Forecast and Scenario projections are rebuildable from append-only facts and guard identity metadata. Projection rows are not canonical truth. Divergence or deletion requires explicit rebuild; silent repair is forbidden.
+- A1 committed and response lost: recover canonical A1, create only missing B, no duplicate A facts.
+- B committed and response lost: return existing canonical A1+B, no duplicate B fact.
+- A1 committed and B failed before commit: pending-Scenario barrier creates B before any new tick reads Evidence.
+- Legal A2: return explicit `BLOCKED`, stop the range, write no B and preserve the prior successful-Forecast pointer.
+- A1/A2 cross-variant conflict: reject the second terminal variant.
+- Scenario Set conflict: reject a second canonical Scenario Set for the same Forecast authority.
+- Projection divergence: restart fails closed. Repair is an explicit operator-invoked rebuild from append-only canonical facts; automatic repair in the restart orchestrator is forbidden.
 
-## Preserved boundary
+## Implementation boundary
 
-This contract does not implement tick orchestration, range execution, restart/backfill closure, routes, web, scheduler, recommendation, decision, AO-ACT, model activation or continuous/live Runtime claims.
+The S8 service is a thin intent and persisted-authority validator. It delegates execution to `Cap04ForecastScenarioRangeServiceV1`. A second tick loop, direct persistence, new canonical object types, new transaction families, migrations, routes, scheduler, web behavior and late-Evidence revision are forbidden.
+
+## Validation evidence
+
+```text
+in-memory restart/backfill and failure recovery: 29251031846 PASS
+PostgreSQL uniqueness/rebuild and fencing/CAS: 29251564080 PASS
+PostgreSQL fresh-process restart: 29252000320 PASS
+final S8 Governance Gate: 29252432954 PASS
+```
+
+## Preserved nonclaims
+
+S8 does not establish continuous Runtime, live-field operation, recommendation, decision, AO-ACT, calibration, model activation, MCFT Gate A closure or Minimum Complete Field Twin completion.

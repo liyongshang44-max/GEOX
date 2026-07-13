@@ -5,8 +5,8 @@
   "name": "72-Hour Forecast and Three Scenarios",
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A — Deterministic Replay Twin",
-  "status": "S8_IMPLEMENTATION_AUTHORIZED",
-  "baseline_main_commit": "413908eadf1016d879760da3afc968abdee82342",
+  "status": "S8_IMPLEMENTATION_CANDIDATE",
+  "baseline_main_commit": "bdc3e93ce755e237655f7bfc98b117a6e842d030",
   "branch": "agent/mcft-cap-04-s8-restart-backfill-recovery-v1",
   "active_delivery_slice_id": "MCFT-CAP-04.MCFT-03-04-07-09-10.RESTART-BACKFILL-FAILURE-RECOVERY-V1",
   "runtime_source_authorized": true,
@@ -709,15 +709,24 @@
       "depends_on_delivery_slice_ids": [
         "MCFT-CAP-04.MCFT-04-07-09-10.TWENTY-FOUR-TICK-FORECAST-SCENARIO-RANGE-V1"
       ],
-      "baseline_main_commit": "413908eadf1016d879760da3afc968abdee82342",
+      "baseline_main_commit": "bdc3e93ce755e237655f7bfc98b117a6e842d030",
       "branch": "agent/mcft-cap-04-s8-restart-backfill-recovery-v1",
-      "status": "IMPLEMENTATION_AUTHORIZED",
+      "status": "IMPLEMENTATION_CANDIDATE",
       "activation_fields_status": "FROZEN",
       "runtime_source_authorized": true,
       "allowed_claims": [
-        "CAP04_S7_MERGED_MAIN_EFFECTIVE_VERIFIED",
-        "CAP04_S8_IMPLEMENTATION_AUTHORIZED",
-        "CAP04_S8_RUNTIME_SOURCE_AUTHORIZED"
+        "CAP04_S8_RESTART_RESUME_PROVEN",
+        "CAP04_S8_BOUNDED_FORWARD_BACKFILL_PROVEN",
+        "CAP04_S8_RESTART_CHAIN_HASH_EQUIVALENCE_ESTABLISHED",
+        "CAP04_S8_A1_RESPONSE_LOSS_IDEMPOTENCY_PROVEN",
+        "CAP04_S8_B_RESPONSE_LOSS_IDEMPOTENCY_PROVEN",
+        "CAP04_S8_PENDING_SCENARIO_RECOVERY_BARRIER_PROVEN",
+        "CAP04_S8_A2_BLOCKED_STOP_PROVEN",
+        "CAP04_S8_CROSS_VARIANT_UNIQUENESS_PROVEN",
+        "CAP04_S8_STALE_FENCING_FAIL_CLOSED_PROVEN",
+        "CAP04_S8_CAS_CONFLICT_FAIL_CLOSED_PROVEN",
+        "CAP04_S8_PROJECTION_DIVERGENCE_FAIL_CLOSED_PROVEN",
+        "CAP04_S8_EXPLICIT_CANONICAL_REBUILD_PROVEN"
       ],
       "preserved_nonclaims": [
         "NO_ROUTE",
@@ -736,8 +745,7 @@
         "NO_CONTINUOUS_RUNTIME",
         "NO_LIVE_FIELD_CLAIM",
         "NO_MCFT_GATE_A_CLOSURE",
-        "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM",
-        "NO_RESTART_BACKFILL_EXECUTION_YET"
+        "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
       ],
       "exact_changed_file_boundary": [
         "apps/server/src/runtime/twin_runtime/forecast_scenario_restart_resume_service_v1.ts",
@@ -756,7 +764,7 @@
       "effectiveness_condition": "S8_IMPLEMENTATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S8_GATE_PASS",
       "effectiveness_condition_satisfied": false,
       "explicit_activation_authority": "OWNER_EXPLICIT_AUTHORIZATION_2026_07_13",
-      "implementation_status": "NOT_STARTED"
+      "implementation_status": "VALIDATED_PENDING_MERGE"
     },
     {
       "delivery_slice_id": "MCFT-CAP-04.CLOSURE-CANDIDATE-V1",
