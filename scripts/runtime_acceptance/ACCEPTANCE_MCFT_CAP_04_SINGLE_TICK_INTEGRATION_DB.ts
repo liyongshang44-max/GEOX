@@ -18,6 +18,7 @@ import {
   type Cap04SingleTickPersistencePortV1,
   type ExecuteCap04SingleTickInputV1,
 } from "../../apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.js";
+import { Cap04PendingScenarioBarrierSingleTickServiceV1 } from "../../apps/server/src/runtime/twin_runtime/pending_scenario_barrier_service_v1.js";
 import { PrepareNextTickInputServiceV1 } from "../../apps/server/src/runtime/twin_runtime/next_tick_input_service_v1.js";
 import type {
   CanonicalReplayEvidenceRecordV1,
@@ -178,7 +179,7 @@ async function seedControlledAuthorityV1(
   runtimeRepository: PostgresRuntimeRepositoryV1;
   nextTickRepository: PostgresNextTickRepositoryV1;
   repository: PostgresForecastScenarioRecoveryRepositoryV1;
-  service: Cap04ForecastScenarioSingleTickServiceV1;
+  service: Cap04PendingScenarioBarrierSingleTickServiceV1;
   input: ExecuteCap04SingleTickInputV1;
   replaceCandidates: (records: CanonicalReplayEvidenceRecordV1[]) => void;
   evidenceLoadCount: () => number;
@@ -239,11 +240,19 @@ async function seedControlledAuthorityV1(
       return structuredClone(candidates);
     },
   };
-  const service = new Cap04ForecastScenarioSingleTickServiceV1(
-    new PrepareNextTickInputServiceV1(nextTickRepository),
+  const handoffService = new PrepareNextTickInputServiceV1(nextTickRepository);
+  const persistence = persistenceAdapterV1(runtimeRepository, repository);
+  const innerService = new Cap04ForecastScenarioSingleTickServiceV1(
+    handoffService,
     source,
     runtimeRepository,
-    persistenceAdapterV1(runtimeRepository, repository),
+    persistence,
+  );
+  const service = new Cap04PendingScenarioBarrierSingleTickServiceV1(
+    handoffService,
+    runtimeRepository,
+    persistence,
+    innerService,
   );
   const input: ExecuteCap04SingleTickInputV1 = {
     scope: structuredClone(authority.scope),
