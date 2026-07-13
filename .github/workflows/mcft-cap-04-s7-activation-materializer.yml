@@ -1,0 +1,339 @@
+name: MCFT-CAP-04 S7 activation materializer
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap-04-s7-activation-v1
+
+concurrency:
+  group: mcft-cap-04-s7-activation-materializer
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-04-s7-activation-v1
+          fetch-depth: 0
+
+      - name: Materialize S6 effectiveness and S7 activation
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+
+          MERGE = "ea9ddfeeda88a3bb0a3b8abd3b821b8a3965dac3"
+          S6_HEAD = "05339ba5d327a73928c075f7c5980e63b5c13933"
+          S6_CI = 29244781825
+          S6_PR = 2396
+          S6_PROBE_PR = 2397
+          S6_PROBE_RUN = 29245469293
+          S7 = "MCFT-CAP-04.MCFT-04-07-09-10.TWENTY-FOUR-TICK-FORECAST-SCENARIO-RANGE-V1"
+          S8 = "MCFT-CAP-04.MCFT-03-04-07-09-10.RESTART-BACKFILL-FAILURE-RECOVERY-V1"
+          S7_BRANCH = "agent/mcft-cap-04-s7-twenty-four-tick-range-v1"
+          S6 = "MCFT-CAP-04.MCFT-04-05-06-07-08-09-10.SINGLE-TICK-FORECAST-SCENARIO-INTEGRATION-V1"
+          IMPLEMENTATION_BOUNDARY = [
+            "apps/server/src/runtime/twin_runtime/forecast_scenario_range_service_v1.ts",
+            "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+            "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+            "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-AUTHORIZATION-STATUS.json",
+            "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-DELIVERY-SLICE-STATUS.json",
+            "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S6-SINGLE-TICK-STATUS.json",
+            "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S7-RANGE-CONTRACT.json",
+            "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S7-RANGE-STATUS.json",
+            "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S7_RANGE.cjs",
+            "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_TWENTY_FOUR_TICK_RANGE.ts",
+            "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_TWENTY_FOUR_TICK_RANGE_DB.ts",
+            "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_TWENTY_FOUR_TICK_RANGE_NEGATIVE.ts",
+            "scripts/runtime_acceptance/mcft_cap_04_twenty_four_tick_range_fixture_v1.ts",
+          ]
+          ACTIVATION_BOUNDARY = [
+            "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+            "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+            "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-AUTHORIZATION-STATUS.json",
+            "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-DELIVERY-SLICE-STATUS.json",
+            "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S6-SINGLE-TICK-STATUS.json",
+            "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S7-RANGE-STATUS.json",
+            "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S7_ACTIVATION.cjs",
+          ]
+
+          def load(path):
+            return json.loads(Path(path).read_text(encoding="utf-8"))
+
+          def dump(path, value):
+            Path(path).write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+          evidence = {
+            "pr_number": S6_PR,
+            "exact_head_commit": S6_HEAD,
+            "exact_head_ci_run": S6_CI,
+            "merge_commit": MERGE,
+            "postmerge_probe_pr_number": S6_PROBE_PR,
+            "postmerge_workflow_run": S6_PROBE_RUN,
+            "postmerge_gate": "PASS",
+            "effectiveness_condition_satisfied": True,
+          }
+
+          s6_path = "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S6-SINGLE-TICK-STATUS.json"
+          s6 = load(s6_path)
+          s6["status"] = "MERGED_EFFECTIVE"
+          s6["implementation_status"] = "MERGED_EFFECTIVE"
+          s6["merge_evidence"] = evidence
+          s6["effectiveness_condition_satisfied"] = True
+          s6["next_delivery_slice_authorized"] = True
+          s6["candidate_validation"]["repository_exact_head_ci"] = "PASS"
+          s6["candidate_validation"]["repository_exact_head_ci_run"] = S6_CI
+          s6["candidate_validation"]["merged_main_postmerge_gate"] = "PASS"
+          s6["candidate_validation"]["merged_main_postmerge_workflow_run"] = S6_PROBE_RUN
+          dump(s6_path, s6)
+
+          delivery_path = "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-DELIVERY-SLICE-STATUS.json"
+          delivery = load(delivery_path)
+          delivery["status"] = "S7_IMPLEMENTATION_AUTHORIZED"
+          delivery["baseline_main_commit"] = MERGE
+          delivery["branch"] = S7_BRANCH
+          delivery["active_delivery_slice_id"] = S7
+          delivery["runtime_source_authorized"] = True
+          delivery["authorization_effective"] = True
+          for item in delivery["slices"]:
+            if item["delivery_slice_id"] == S6:
+              item["status"] = "MERGED_EFFECTIVE"
+              item["effectiveness_condition_satisfied"] = True
+              item.update(evidence)
+            elif item["delivery_slice_id"] == S7:
+              item["baseline_main_commit"] = MERGE
+              item["branch"] = S7_BRANCH
+              item["status"] = "IMPLEMENTATION_AUTHORIZED"
+              item["activation_fields_status"] = "FROZEN"
+              item["runtime_source_authorized"] = True
+              item["allowed_claims"] = [
+                "CAP04_S6_MERGED_MAIN_EFFECTIVE_VERIFIED",
+                "CAP04_S7_TWENTY_FOUR_TICK_RANGE_IMPLEMENTATION_AUTHORIZED",
+                "CAP04_S7_RUNTIME_SOURCE_AUTHORIZED",
+              ]
+              item["preserved_nonclaims"] = [
+                "NO_TWENTY_FOUR_TICK_RANGE_EXECUTION_YET",
+                "NO_RESTART_BACKFILL_MODE",
+                "NO_ROUTE",
+                "NO_WEB",
+                "NO_SCHEDULER",
+                "NO_NEW_MIGRATION",
+                "NO_RECOMMENDATION",
+                "NO_POLICY_EVALUATION",
+                "NO_DECISION",
+                "NO_AO_ACT",
+                "NO_MODEL_ACTIVATION",
+                "NO_CONTINUOUS_RUNTIME",
+                "NO_LIVE_FIELD_CLAIM",
+                "NO_MCFT_GATE_A_CLOSURE",
+                "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM",
+              ]
+              item["exact_changed_file_boundary"] = IMPLEMENTATION_BOUNDARY
+              item["effectiveness_condition"] = "S7_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S7_GATE_PASS"
+              item["effectiveness_condition_satisfied"] = False
+              item["explicit_activation_authority"] = "OWNER_EXPLICIT_AUTHORIZATION_2026_07_13"
+          delivery["next_authorized_slice_ids"] = [S7]
+          delivery["next_authorized_slice_id_after_merge_and_postmerge_gate"] = S8
+          delivery["s6_effectiveness"] = evidence
+          dump(delivery_path, delivery)
+
+          auth_path = "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-AUTHORIZATION-STATUS.json"
+          auth = load(auth_path)
+          auth["baseline_main_commit"] = MERGE
+          auth["branch"] = S7_BRANCH
+          auth["active_delivery_slice_id"] = S7
+          auth["current_blockers"] = [
+            "MCFT_CAP_04_S7_IMPLEMENTATION_NOT_YET_MERGED",
+            "MCFT_CAP_04_S7_MERGED_MAIN_GATE_NOT_YET_PASS",
+          ]
+          auth["repository_write_scope"] = "S7_TWENTY_FOUR_TICK_RANGE_ONLY"
+          auth["exact_changed_file_boundary"] = IMPLEMENTATION_BOUNDARY
+          auth["next_authorized_slice_id_after_effectiveness"] = S8
+          auth["s6_effectiveness"] = evidence
+          for marker in [
+            "MCFT_CAP_04_S6_MERGED_MAIN_EFFECTIVE",
+            "MCFT_CAP_04_RUNTIME_SOURCE_AUTHORIZED_FOR_S7",
+            "MCFT_CAP_04_S7_EXPLICIT_OWNER_ACTIVATION",
+          ]:
+            if marker not in auth["satisfied_conditions"]:
+              auth["satisfied_conditions"].append(marker)
+          dump(auth_path, auth)
+
+          matrix_path = "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json"
+          matrix = load(matrix_path)
+          cap04 = next(line for line in matrix["capability_lines"] if line["capability_line_id"] == "MCFT-CAP-04")
+          cap04["status"] = "IN_PROGRESS"
+          cap04["design_status"] = "DESIGN_FROZEN"
+          cap04["implementation_status"] = "S7_IMPLEMENTATION_AUTHORIZED"
+          cap04["baseline_main_commit"] = MERGE
+          cap04["branch"] = S7_BRANCH
+          cap04["active_delivery_slice_id"] = S7
+          cap04["next_delivery_slice_id"] = S8
+          cap04["next_delivery_slice_authorized"] = False
+          cap04["runtime_source_authorized"] = True
+          cap04["s6_effectiveness"] = evidence
+          dump(matrix_path, matrix)
+
+          s7_status = {
+            "schema_version": "geox_mcft_cap_04_s7_range_status_v1",
+            "status_identity": "GEOX-MCFT-CAP-04-S7-RANGE-STATUS-V1",
+            "capability_line_id": "MCFT-CAP-04",
+            "delivery_slice_id": S7,
+            "baseline_main_commit": MERGE,
+            "branch": S7_BRANCH,
+            "status": "IMPLEMENTATION_AUTHORIZED",
+            "design_status": "DESIGN_FROZEN",
+            "implementation_status": "NOT_STARTED",
+            "activation_fields_status": "FROZEN",
+            "explicit_activation_authority": "OWNER_EXPLICIT_AUTHORIZATION_2026_07_13",
+            "authorization_effective": True,
+            "runtime_source_authorized": True,
+            "predecessor_effectiveness": evidence,
+            "target_contract": {
+              "logical_tick_count": 24,
+              "all_ticks_operation_variant": "A1_COMPLETED",
+              "new_posterior_state_count": 24,
+              "successful_forecast_run_count": 24,
+              "scenario_set_count": 24,
+              "forecast_point_count": 1728,
+              "scenario_point_count": 5184,
+              "a1_canonical_fact_count": 192,
+              "b_canonical_fact_count": 24,
+              "range_operation_canonical_fact_count": 216,
+              "standard_config_plus_range_fact_count": 240,
+              "checkpoint_sequence_start": 49,
+              "checkpoint_sequence_end": 72,
+              "global_state_count": 73,
+              "next_tick_logical_time": "2026-06-04T02:00:00.000Z",
+              "closure_fixture_allows_a2": False,
+            },
+            "allowed_claims": [
+              "CAP04_S6_MERGED_MAIN_EFFECTIVE_VERIFIED",
+              "CAP04_S7_IMPLEMENTATION_AUTHORIZED",
+              "CAP04_S7_RUNTIME_SOURCE_AUTHORIZED",
+            ],
+            "preserved_nonclaims": [
+              "NO_TWENTY_FOUR_TICK_RANGE_EXECUTION_YET",
+              "NO_RESTART_BACKFILL_MODE",
+              "NO_ROUTE",
+              "NO_WEB",
+              "NO_SCHEDULER",
+              "NO_NEW_MIGRATION",
+              "NO_RECOMMENDATION",
+              "NO_POLICY_EVALUATION",
+              "NO_DECISION",
+              "NO_AO_ACT",
+              "NO_MODEL_ACTIVATION",
+              "NO_CONTINUOUS_RUNTIME",
+              "NO_LIVE_FIELD_CLAIM",
+              "NO_MCFT_GATE_A_CLOSURE",
+              "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM",
+            ],
+            "exact_changed_file_boundary": IMPLEMENTATION_BOUNDARY,
+            "activation_pr_changed_file_boundary": ACTIVATION_BOUNDARY,
+            "effectiveness_condition": "S7_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S7_GATE_PASS",
+            "effectiveness_condition_satisfied": False,
+            "next_delivery_slice_id": S8,
+            "next_delivery_slice_authorized": False,
+          }
+          dump("docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S7-RANGE-STATUS.json", s7_status)
+
+          map_path = Path("docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md")
+          map_text = map_path.read_text(encoding="utf-8")
+          marker = "## MCFT-CAP-04 S7 activation — 24-tick Forecast / Scenario range"
+          section = f"""
+
+          {marker}
+
+          ```text
+          predecessor S6 merge commit: {MERGE}
+          predecessor postmerge Gate: PASS ({S6_PROBE_RUN})
+          active slice: {S7}
+          implementation branch: {S7_BRANCH}
+          status: IMPLEMENTATION_AUTHORIZED
+          Runtime source authorized: true
+          S8 authorized: false
+          ```
+
+          S7 is authorized only for the deterministic 24-tick Replay range. It does not authorize restart/backfill, routes, web, scheduler, recommendation, decision, AO-ACT, continuous Runtime or live-field claims.
+          """.replace("          ", "")
+          if marker not in map_text:
+            map_text = map_text.rstrip() + section + "\n"
+          map_path.write_text(map_text, encoding="utf-8")
+
+          gate = r'''// scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S7_ACTIVATION.cjs
+// Purpose: verify S6 merged-main effectiveness and the exact governance-only activation of the S7 24-tick range implementation boundary.
+// Boundary: governance verification only; no Runtime source, database mutation, route, scheduler, recommendation, decision, or field claim.
+
+'use strict';
+const cp = require('node:child_process');
+const fs = require('node:fs');
+const path = require('node:path');
+const ROOT = path.resolve(__dirname, '../..');
+const BASELINE = 'ea9ddfeeda88a3bb0a3b8abd3b821b8a3965dac3';
+const BRANCH = 'agent/mcft-cap-04-s7-activation-v1';
+const S7 = 'MCFT-CAP-04.MCFT-04-07-09-10.TWENTY-FOUR-TICK-FORECAST-SCENARIO-RANGE-V1';
+const FILES = __ACTIVATION_BOUNDARY__;
+const read = (file) => fs.readFileSync(path.join(ROOT, file), 'utf8');
+const json = (file) => JSON.parse(read(file));
+const run = (exe, args) => {
+  const r = cp.spawnSync(exe, args, { cwd: ROOT, encoding: 'utf8' });
+  if (r.error) throw r.error;
+  if (r.status !== 0) throw new Error(`${exe} ${args.join(' ')}\n${r.stdout || ''}\n${r.stderr || ''}`);
+  return String(r.stdout || '').trim();
+};
+const git = (args) => run(process.platform === 'win32' ? 'git.exe' : 'git', args);
+let pass = 0; let fail = 0;
+const check = (value, message) => value ? (pass++, console.log(`PASS ${message}`)) : (fail++, console.error(`FAIL ${message}`));
+const same = (a, b) => JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
+const s6 = json('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S6-SINGLE-TICK-STATUS.json');
+const s7 = json('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S7-RANGE-STATUS.json');
+const delivery = json('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-DELIVERY-SLICE-STATUS.json');
+const auth = json('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-AUTHORIZATION-STATUS.json');
+const matrix = json('docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json');
+const cap04 = matrix.capability_lines.find((x) => x.capability_line_id === 'MCFT-CAP-04');
+check(s6.status === 'MERGED_EFFECTIVE' && s6.effectiveness_condition_satisfied === true, 'S6 merged effective');
+check(s6.merge_evidence.merge_commit === BASELINE, 'S6 merge commit exact');
+check(s6.merge_evidence.postmerge_workflow_run === 29245469293 && s6.merge_evidence.postmerge_gate === 'PASS', 'S6 postmerge evidence exact');
+check(s7.status === 'IMPLEMENTATION_AUTHORIZED' && s7.runtime_source_authorized === true, 'S7 implementation authorized');
+check(s7.baseline_main_commit === BASELINE && s7.branch === 'agent/mcft-cap-04-s7-twenty-four-tick-range-v1', 'S7 activation identity exact');
+check(s7.target_contract.logical_tick_count === 24 && s7.target_contract.forecast_point_count === 1728 && s7.target_contract.scenario_point_count === 5184, 'S7 cardinalities exact');
+check(s7.target_contract.checkpoint_sequence_start === 49 && s7.target_contract.checkpoint_sequence_end === 72, 'S7 checkpoint range exact');
+check(s7.target_contract.closure_fixture_allows_a2 === false, 'S7 closure fixture forbids A2');
+check(delivery.status === 'S7_IMPLEMENTATION_AUTHORIZED' && delivery.active_delivery_slice_id === S7, 'delivery active S7');
+check(auth.active_delivery_slice_id === S7 && auth.repository_write_scope === 'S7_TWENTY_FOUR_TICK_RANGE_ONLY', 'authorization scope S7 exact');
+check(cap04.active_delivery_slice_id === S7 && cap04.implementation_status === 'S7_IMPLEMENTATION_AUTHORIZED', 'matrix active S7');
+check(same(s7.activation_pr_changed_file_boundary, FILES), 'activation boundary frozen');
+const changed = [...new Set([
+  ...git(['diff', '--name-only', BASELINE]),
+  ...git(['ls-files', '--others', '--exclude-standard']),
+].filter(Boolean).flatMap((x) => x.split(/\r?\n/).filter(Boolean)))].sort();
+check(same(changed, FILES), 'activation changed-file boundary exact');
+check(changed.every((f) => f.startsWith('docs/') || f.startsWith('scripts/governance_acceptance/')), 'activation is governance only');
+check(git(['branch', '--show-current']) === BRANCH, 'activation Gate branch exact');
+check(git(['rev-parse', 'origin/main']) === BASELINE, 'origin/main baseline exact');
+try { git(['diff', '--check', BASELINE]); check(true, 'git diff --check PASS'); } catch { check(false, 'git diff --check PASS'); }
+console.log(`MCFT-CAP-04 S7 activation: ${pass} PASS, ${fail} FAIL`);
+if (fail > 0) process.exit(1);
+'''.replace('__ACTIVATION_BOUNDARY__', json.dumps(ACTIVATION_BOUNDARY, ensure_ascii=False))
+          gate_path = Path("scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S7_ACTIVATION.cjs")
+          gate_path.write_text(gate, encoding="utf-8")
+
+      - name: Remove materializer inputs
+        run: |
+          rm -f .github/workflows/mcft-cap-04-s7-activation-materializer.yml
+          rm -rf .cap04-s7-activation
+
+      - name: Commit materialized activation
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "docs(mcft-cap-04): activate S7 24-tick range"
+          git push origin HEAD:agent/mcft-cap-04-s7-activation-v1
