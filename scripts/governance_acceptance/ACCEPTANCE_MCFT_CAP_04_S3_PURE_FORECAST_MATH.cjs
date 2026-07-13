@@ -116,7 +116,7 @@ check(cap04.active_delivery_slice_id === S3 && cap04.next_delivery_slice_id === 
 for (const [file, markers] of Object.entries({
   'apps/server/src/domain/twin_runtime/forecast_math_contracts_v1.ts': ['MCFT_CAP_04_PURE_72H_FORECAST_MATH_V1','CONTROLLED_UNCALIBRATED_NORMAL_APPROXIMATION','latent_variance_reduced_by_clipping'],
   'apps/server/src/domain/twin_runtime/pure_72h_forecast_math_v1.ts': ['NO_NEW_IRRIGATION_ASSUMPTION','CAP04_FORECAST_MASS_BALANCE_NOT_CLOSED','ADDITIVE_STORAGE_VARIANCE_ZERO_COVARIANCE_V1','NORMAL_95_PERCENT_Z_1_96_V1'],
-  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH.ts': ['95-hour Forecast target union','mass balance closes exactly'],
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH.ts': ['95-hour Forecast target union','fixed-point water balance closes exactly'],
   'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH_NEGATIVE.ts': ['missing posterior computation-basis variance','physical clipping cannot reduce latent variance'],
 })) {
   const content = read(file);
