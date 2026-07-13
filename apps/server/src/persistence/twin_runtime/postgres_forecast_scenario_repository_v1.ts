@@ -11,6 +11,7 @@ import {
   validateCap04ForecastRunPayloadV1,
   validateCap04ScenarioSetPayloadV1,
   type Cap04ForecastRunPayloadV1,
+  type Cap04ScenarioSetEnvelopeV1,
 } from "../../domain/twin_runtime/forecast_scenario_contracts_v1.js";
 import {
   deriveCap04ARecordSetIdentityV1,
@@ -36,11 +37,11 @@ function factIdV1(objectId: string): string {
   return `fact_${objectId}`;
 }
 
-function recordJsonV1(object: CanonicalObjectEnvelopeV1): string {
+function recordJsonV1(object: CanonicalObjectEnvelopeV1 | Cap04ScenarioSetEnvelopeV1): string {
   return JSON.stringify({ type: object.object_type, payload: object });
 }
 
-function parseFactObjectV1(recordJsonValue: unknown): CanonicalObjectEnvelopeV1 {
+function parseFactObjectV1(recordJsonValue: unknown): CanonicalObjectEnvelopeV1 | Cap04ScenarioSetEnvelopeV1 {
   const parsed = typeof recordJsonValue === "string" ? JSON.parse(recordJsonValue) : recordJsonValue;
   const object = (parsed as { payload?: CanonicalObjectEnvelopeV1 })?.payload;
   if (!object || typeof object !== "object") throw new Error("CAP04_CANONICAL_FACT_PAYLOAD_MISSING");
@@ -111,7 +112,9 @@ export class PostgresForecastScenarioRepositoryV1 implements Cap04ForecastScenar
     );
     if (result.rows.length === 0) return null;
     if (result.rows.length !== 1) throw new Error("CANONICAL_OBJECT_ID_NOT_UNIQUE");
-    return parseFactObjectV1(result.rows[0].record_json);
+    const object = parseFactObjectV1(result.rows[0].record_json);
+    if (object.object_type === "twin_scenario_set_v1") throw new Error("CANONICAL_OBJECT_TYPE_UNEXPECTED_SCENARIO_SET");
+    return object;
   }
 
   private async verifyRuntimeConfigV1(
@@ -211,7 +214,11 @@ export class PostgresForecastScenarioRepositoryV1 implements Cap04ForecastScenar
       [ids],
     );
     if (facts.rows.length !== 8) throw new Error("IDEMPOTENT_RECORD_SET_INCOMPLETE");
-    const membersUnordered = facts.rows.map((row) => parseFactObjectV1(row.record_json));
+    const membersUnordered = facts.rows.map((row) => {
+      const object = parseFactObjectV1(row.record_json);
+      if (object.object_type === "twin_scenario_set_v1") throw new Error("CAP04_A_MEMBER_SCENARIO_SET_FORBIDDEN");
+      return object;
+    });
     const members = CAP04_A_MEMBER_OBJECT_TYPES_V1.map((type) => {
       const member = membersUnordered.find((candidate) => candidate.object_type === type);
       if (!member) throw new Error(`CAP04_A_MEMBER_MISSING:${type}`);
@@ -500,7 +507,7 @@ export class PostgresForecastScenarioRepositoryV1 implements Cap04ForecastScenar
       scenario_set_id: scenarioSetId,
       idempotency_key: guard.rows[0].idempotency_key,
       aggregate_determinism_hash: guard.rows[0].determinism_hash,
-      scenario_set: scenarioSet as Cap04ScenarioSetRecordV1["scenario_set"],
+      scenario_set: scenarioSet,
     };
     const derived = deriveCap04ScenarioSetIdentityV1({
       uniqueness_key: record.scenario_set_uniqueness_key,

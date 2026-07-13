@@ -98,7 +98,7 @@ export type Cap04ScenarioProjectionRowsV1 = {
   };
 };
 
-function scopeStringV1(value: string | null, code: string): string {
+function scopeStringV1(value: string | null | undefined, code: string): string {
   if (typeof value !== "string" || !value.trim()) throw new Error(code);
   return value;
 }
