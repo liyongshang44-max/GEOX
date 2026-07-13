@@ -24,7 +24,7 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --no-frozen-lockfile
-      - name: Capture recursive typecheck
+      - name: Capture recursive typecheck after recovery type alignment
         shell: bash
         run: |
           set +e
