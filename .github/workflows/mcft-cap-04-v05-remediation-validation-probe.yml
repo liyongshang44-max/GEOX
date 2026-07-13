@@ -1,0 +1,44 @@
+name: MCFT-CAP-04 v0.5 remediation validation
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-04-v05-remediation-validation-probe-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-04-v05-closure-package-remediation-v1
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Verify exact remediation head
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "aee173730f14635abf4b7932e9916ca6ff3b260e"
+          test "$(git rev-parse origin/agent/mcft-cap-04-v05-closure-package-remediation-v1)" = "aee173730f14635abf4b7932e9916ca6ff3b260e"
+      - name: Server typecheck
+        run: pnpm --filter @geox/server run typecheck
+      - name: Forecast math exact entrypoint
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_FORECAST_MATH.ts
+      - name: Scenario math exact entrypoint
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SCENARIO_MATH.ts
+      - name: Single tick exact entrypoint
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK.ts
+      - name: Twenty-four tick exact entrypoint
+        run: pnpm -w exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_24_TICK.ts
+      - name: Final v0.5 remediation Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_FINALIZATION_EFFECTIVENESS.cjs
