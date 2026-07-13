@@ -1,0 +1,46 @@
+name: P1 smoke device-ready merged-main verification
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/p1-smoke-device-ready-postmerge-probe-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Verify exact merged main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git branch --show-current)" = "main"
+          test "$(git rev-parse HEAD)" = "3eba797307388bd652dc5c65e91d634375e1b8c2"
+          test "$(git rev-parse origin/main)" = "3eba797307388bd652dc5c65e91d634375e1b8c2"
+      - name: Verify canonical P1 smoke orchestration
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const pkg = require('./apps/server/package.json');
+          const actual = pkg.scripts['test:p1:smoke'];
+          const expected = 'node scripts/p1_smoke_device_ready.mjs && node scripts/p1_skill_loop_minimal.mjs';
+          if (actual !== expected) {
+            console.error({ actual, expected });
+            process.exit(1);
+          }
+          const acceptance = pkg.scripts['test:p1:acceptance-smoke'];
+          if (acceptance !== 'node scripts/p1_skill_loop_acceptance_smoke.mjs') {
+            console.error({ acceptance });
+            process.exit(1);
+          }
+          console.log('P1 smoke orchestration contract PASS');
+          NODE
