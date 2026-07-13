@@ -1,24 +1,6 @@
-error: relation "twin_runtime_authority_snapshot_v1" does not exist
-    at /home/runner/work/GEOX/GEOX/node_modules/.pnpm/pg@8.18.0/node_modules/pg/lib/client.js:624:17
+Error: CAP04_B_SCENARIO_MATH_FORECAST_PAYLOAD_MISMATCH
+    at exactEnvelopeIdentityV1 (/home/runner/work/GEOX/GEOX/apps/server/src/runtime/twin_runtime/scenario_set_record_builder_v1.ts:59:11)
+    at buildCap04ScenarioSetRecordV1 (/home/runner/work/GEOX/GEOX/apps/server/src/runtime/twin_runtime/scenario_set_record_builder_v1.ts:80:3)
+    at Cap04ForecastScenarioSingleTickServiceV1.executeOneTick (/home/runner/work/GEOX/GEOX/apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts:546:31)
     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
-    at async PostgresNextTickRepositoryV1.commitRealityBindingSnapshot (/home/runner/work/GEOX/GEOX/apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts:96:24)
-    at async seedControlledAuthorityV1 (/home/runner/work/GEOX/GEOX/scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_DB.ts:178:3)
-    at async main (/home/runner/work/GEOX/GEOX/scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_DB.ts:253:18) {
-  length: 133,
-  severity: 'ERROR',
-  code: '42P01',
-  detail: undefined,
-  hint: undefined,
-  position: '47',
-  internalPosition: undefined,
-  internalQuery: undefined,
-  where: undefined,
-  schema: undefined,
-  table: undefined,
-  column: undefined,
-  dataType: undefined,
-  constraint: undefined,
-  file: 'parse_relation.c',
-  line: '1449',
-  routine: 'parserOpenTable'
-}
+    at async main (/home/runner/work/GEOX/GEOX/scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_DB.ts:255:22)

@@ -60,6 +60,7 @@ function recordJsonV1(object: CanonicalObjectEnvelopeV1): string {
 async function initializeSchemaV1(): Promise<void> {
   await pool.query(readSqlV1("docker/postgres/init/001_schema.sql"));
   await pool.query(readSqlV1("apps/server/db/migrations/2026_07_09_mcft_cap_01_a0_persistence.sql"));
+  await pool.query(readSqlV1("apps/server/db/migrations/2026_07_10_mcft_cap_01_closure_remediation.sql"));
   await pool.query(readSqlV1("apps/server/db/migrations/2026_07_10_mcft_cap_02_continuation_persistence.sql"));
   await pool.query(readSqlV1("apps/server/db/migrations/2026_07_13_mcft_cap_04_forecast_scenario_persistence.sql"));
 }
