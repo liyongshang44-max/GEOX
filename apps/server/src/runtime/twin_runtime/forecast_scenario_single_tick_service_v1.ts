@@ -1,5 +1,5 @@
 // apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts
-// Purpose: execute exactly one explicit CAP-04 Replay tick from persisted handoff through observation-aware State estimation, matching Future Forcing, successful 72h Forecast, A1 persistence, three Scenario options, B persistence, canonical readback, and T+1 handoff.
+// Purpose: execute exactly one explicit CAP-04 Replay tick through State estimation and a legal A1 successful-Forecast or A2 blocked-Forecast terminal commit, then create or recover B only from canonical Forecast authority.
 // Boundary: one requested next tick only; no range loop, restart/backfill mode, route, scheduler, wall-clock logical time, recommendation, decision, action, calibration, model activation, or live-field claim.
 
 import type { ExecutedIrrigationCandidateV1 } from "../../domain/soil_water/executed_irrigation_input_v1.js";
@@ -17,10 +17,14 @@ import {
   WATER_AMOUNT_SCALE_V1,
 } from "../../domain/soil_water/fixed_point_water_decimal_v1.js";
 import type { CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
-import { canonicalJsonV1 } from "../../domain/twin_runtime/canonical_json_v1.js";
+import {
+  validateCap04CanonicalForecastRunPayloadV1,
+  type Cap04CanonicalCompletedForecastRunPayloadV1,
+  type Cap04CanonicalForecastRunPayloadV1,
+} from "../../domain/twin_runtime/forecast_canonical_authority_v1.js";
 import {
   CAP04_A1_OPERATION_VARIANT_V1,
-  type Cap04ForecastRunPayloadV1,
+  CAP04_A2_OPERATION_VARIANT_V1,
 } from "../../domain/twin_runtime/forecast_scenario_contracts_v1.js";
 import {
   deriveCap04ARecordSetIdentityV1,
@@ -40,7 +44,12 @@ import {
   type Cap04Pure72hForecastMathInputV1,
 } from "../../domain/twin_runtime/pure_72h_forecast_math_v1.js";
 import { executeCap04PureThreeScenarioMathV1 } from "../../domain/twin_runtime/pure_three_scenario_math_v1.js";
-import type { Cap04Pure72hForecastMathResultV1 } from "../../domain/twin_runtime/forecast_math_contracts_v1.js";
+import {
+  CAP04_PURE_FORECAST_MATH_CONTRACT_ID_V1,
+  computeCap04ForecastMathHashV1,
+  validateCap04Pure72hForecastMathResultV1,
+  type Cap04Pure72hForecastMathResultV1,
+} from "../../domain/twin_runtime/forecast_math_contracts_v1.js";
 import type { Cap04PureThreeScenarioMathResultV1 } from "../../domain/twin_runtime/scenario_math_contracts_v1.js";
 import type { Cap04ForecastForcingWindowV1 } from "../../domain/twin_runtime/future_forcing_contracts_v1.js";
 import {
@@ -48,15 +57,18 @@ import {
   finalizeAssimilatedContinuationEvidenceWindowV2,
   type AssimilatedContinuationEvidenceWindowV2,
 } from "./assimilated_continuation_evidence_window_v2.js";
+import { buildCap04BlockedForecastPayloadV1 } from "./blocked_forecast_payload_builder_v1.js";
 import { buildCap04StateSourceMembersV1 } from "./forecast_scenario_state_source_builder_v1.js";
 import type { ContinuationCropStageConfigurationContextV1 } from "./continuation_evidence_window_service_v1.js";
-import { buildCap04CompletedForecastRecordSetV1 } from "./forecast_continuation_record_set_builder_v1.js";
+import {
+  buildCap04BlockedForecastRecordSetV1,
+  buildCap04CompletedForecastRecordSetV1,
+} from "./forecast_continuation_record_set_builder_v1.js";
 import type { Cap04ForecastScenarioPersistencePortV1 } from "./forecast_scenario_persistence_ports_v1.js";
-import { selectCap04FutureForcingWindowV1 } from "./future_forcing_selector_v1.js";
+import { selectCap04FutureForcingOutcomeV1 } from "./future_forcing_outcome_classifier_v1.js";
 import { PrepareNextTickInputServiceV1 } from "./next_tick_input_service_v1.js";
 import type {
   BootstrapPersistencePortV1,
-  CanonicalReplayEvidenceRecordV1,
   FaultInjectionStageV1,
   PreparedNextTickInputV1,
   ReplayEvidenceSourcePortV1,
@@ -84,9 +96,14 @@ export type ExecuteCap04SingleTickInputV1 = {
 };
 
 export type ExecuteCap04SingleTickResultV1 = {
-  status: "INSERTED" | "EXISTING_IDEMPOTENT_SUCCESS" | "RECOVERED_PENDING_SCENARIO";
+  status:
+    | "INSERTED"
+    | "BLOCKED_INSERTED"
+    | "EXISTING_IDEMPOTENT_SUCCESS"
+    | "EXISTING_BLOCKED_IDEMPOTENT_SUCCESS"
+    | "RECOVERED_PENDING_SCENARIO";
   a_record_set: Cap04ARecordSetV1;
-  b_record: Cap04ScenarioSetRecordV1;
+  b_record: Cap04ScenarioSetRecordV1 | null;
   evidence_window: AssimilatedContinuationEvidenceWindowV2 | null;
   dynamics: HourlyWaterBalanceResultV1 | null;
   assimilation: AssimilatedContinuationPosteriorV1 | null;
@@ -234,17 +251,6 @@ function assertConfigV1(input: {
   return payload;
 }
 
-function resolveCropStageV1(
-  context: ContinuationCropStageConfigurationContextV1,
-  logicalTime: string,
-): { stage_code: string; kc: number } {
-  const match = context.crop_stage_schedule.filter((entry) =>
-    entry.effective_from <= logicalTime && logicalTime < entry.effective_to
-  );
-  if (match.length !== 1) throw new Error("CAP04_SINGLE_TICK_CROP_STAGE_CARDINALITY");
-  return { stage_code: match[0].stage_code, kc: match[0].kc };
-}
-
 function assertNextHandoffV1(input: {
   record_set: Cap04ARecordSetV1;
   handoff: PreparedNextTickInputV1;
@@ -262,7 +268,10 @@ function assertNextHandoffV1(input: {
   if (input.handoff.previous_forecast_result_ref !== forecast.object_id || input.handoff.previous_forecast_result_hash !== forecast.determinism_hash) {
     throw new Error("CAP04_SINGLE_TICK_NEXT_HANDOFF_FORECAST_MISMATCH");
   }
-  if (input.handoff.latest_successful_forecast_ref !== forecast.object_id) {
+  const expectedSuccessfulForecastRef = typeof checkpoint.payload.successful_forecast_ref === "string"
+    ? checkpoint.payload.successful_forecast_ref
+    : null;
+  if (input.handoff.latest_successful_forecast_ref !== expectedSuccessfulForecastRef) {
     throw new Error("CAP04_SINGLE_TICK_NEXT_HANDOFF_SUCCESS_FORECAST_MISMATCH");
   }
   if (input.handoff.next_logical_tick_time !== input.expected_next_time) throw new Error("CAP04_SINGLE_TICK_NEXT_HANDOFF_TIME_MISMATCH");
@@ -272,6 +281,35 @@ function assertNextHandoffV1(input: {
   }
 }
 
+function canonicalForecastMathV1(forecast: CanonicalObjectEnvelopeV1): {
+  forcing_window: Cap04ForecastForcingWindowV1;
+  forecast_math: Cap04Pure72hForecastMathResultV1;
+} {
+  const payload = forecast.payload as unknown as Cap04CanonicalForecastRunPayloadV1;
+  validateCap04CanonicalForecastRunPayloadV1(payload);
+  if (payload.status !== "COMPLETED") throw new Error("CAP04_SINGLE_TICK_PENDING_SCENARIO_REQUIRES_COMPLETED_FORECAST");
+  const completed = payload as Cap04CanonicalCompletedForecastRunPayloadV1;
+  const resultWithoutHash: Omit<Cap04Pure72hForecastMathResultV1, "forecast_math_hash"> = {
+    schema_version: "geox_mcft_cap_04_pure_72h_forecast_math_result_v1",
+    contract_id: CAP04_PURE_FORECAST_MATH_CONTRACT_ID_V1,
+    forecast_payload: structuredClone(completed),
+    point_traces: structuredClone(completed.point_traces),
+    trajectory_hash: completed.trajectory_hash,
+    aggregates: structuredClone(completed.aggregates),
+    uncertainty_basis: structuredClone(completed.uncertainty_basis),
+    limitations: structuredClone(completed.limitations),
+  };
+  const forecastMath: Cap04Pure72hForecastMathResultV1 = {
+    ...resultWithoutHash,
+    forecast_math_hash: computeCap04ForecastMathHashV1(resultWithoutHash),
+  };
+  validateCap04Pure72hForecastMathResultV1(forecastMath);
+  return {
+    forcing_window: structuredClone(completed.forcing_window_authority),
+    forecast_math: forecastMath,
+  };
+}
+
 export class Cap04ForecastScenarioSingleTickServiceV1 {
   constructor(
     private readonly handoffService: PrepareNextTickInputServiceV1,
@@ -279,6 +317,47 @@ export class Cap04ForecastScenarioSingleTickServiceV1 {
     private readonly runtimeConfigRepository: RuntimeConfigRepositoryPortV1,
     private readonly persistence: Cap04SingleTickPersistencePortV1,
   ) {}
+
+  private async persistAndReadARecordSetV1(
+    input: ExecuteCap04SingleTickInputV1,
+    handoff: PreparedNextTickInputV1,
+    candidate: Cap04ARecordSetV1,
+    existingLease: RuntimeLeaseClaimV1 | null,
+  ): Promise<{ record_set: Cap04ARecordSetV1; lease: RuntimeLeaseClaimV1 | null }> {
+    const existingAfterBuild = await this.persistence.lookupARecordSet(candidate.idempotency_key);
+    let recordSet = candidate;
+    let lease = existingLease;
+    if (existingAfterBuild) {
+      if (existingAfterBuild.aggregate_determinism_hash !== candidate.aggregate_determinism_hash) throw new Error("IDEMPOTENCY_CONFLICT");
+      recordSet = existingAfterBuild;
+    } else {
+      lease = await this.persistence.acquireLease({
+        ...input.scope,
+        lease_owner: input.lease_owner,
+        lease_duration_seconds: input.lease_duration_seconds,
+      });
+      const committedA = await this.persistence.commitARecordSet({
+        scope: input.scope,
+        lease,
+        expected: {
+          active_lineage_ref: handoff.active_lineage_ref,
+          lineage_id: handoff.lineage_id,
+          revision_id: handoff.revision_id,
+          previous_checkpoint_ref: handoff.previous_checkpoint_ref,
+          previous_state_ref: handoff.previous_posterior_ref,
+          previous_forecast_result_ref: handoff.previous_forecast_result_ref,
+          previous_successful_forecast_ref: handoff.latest_successful_forecast_ref,
+        },
+        record_set: recordSet,
+        fault_injection: input.fault_injection_a,
+      });
+      recordSet = committedA.record_set;
+    }
+    const readA = await this.persistence.readARecordSet(recordSet.record_set_id);
+    if (!readA) throw new Error("CAP04_SINGLE_TICK_A_READBACK_NOT_FOUND");
+    if (readA.aggregate_determinism_hash !== recordSet.aggregate_determinism_hash) throw new Error("CAP04_SINGLE_TICK_A_READBACK_HASH_MISMATCH");
+    return { record_set: readA, lease };
+  }
 
   async executeOneTick(input: ExecuteCap04SingleTickInputV1): Promise<ExecuteCap04SingleTickResultV1> {
     const logicalTime = canonicalHourV1(input.logical_time, "CAP04_SINGLE_TICK_LOGICAL_TIME_INVALID");
@@ -292,24 +371,46 @@ export class Cap04ForecastScenarioSingleTickServiceV1 {
     }
 
     const initialHandoff = await this.handoffService.prepareNextTickInput(input.scope);
-    const requestedIdentity = deriveCap04ARecordSetIdentityV1({
+    const a1Identity = deriveCap04ARecordSetIdentityV1({
       scope: structuredClone(input.scope),
       lineage_id: initialHandoff.lineage_id,
       revision_id: initialHandoff.revision_id,
       logical_time: logicalTime,
       operation_variant: CAP04_A1_OPERATION_VARIANT_V1,
     });
-    let aRecordSet = await this.persistence.lookupARecordSet(requestedIdentity.idempotency_key);
+    const a2Identity = deriveCap04ARecordSetIdentityV1({
+      scope: structuredClone(input.scope),
+      lineage_id: initialHandoff.lineage_id,
+      revision_id: initialHandoff.revision_id,
+      logical_time: logicalTime,
+      operation_variant: CAP04_A2_OPERATION_VARIANT_V1,
+    });
+    let aRecordSet = await this.persistence.lookupARecordSet(a1Identity.idempotency_key);
+    aRecordSet ??= await this.persistence.lookupARecordSet(a2Identity.idempotency_key);
     const aExistedInitially = aRecordSet !== null;
     if (aRecordSet) {
       validateCap04ARecordSetV1(aRecordSet);
-      if (aRecordSet.aggregate_identity_input.runtime_config_ref !== runtimeConfigRef) {
-        throw new Error("CAP04_SINGLE_TICK_RUNTIME_CONFIG_REF_PIN_MISMATCH");
-      }
-      if (aRecordSet.aggregate_identity_input.runtime_config_hash !== runtimeConfigHash) {
-        throw new Error("CAP04_SINGLE_TICK_RUNTIME_CONFIG_HASH_PIN_MISMATCH");
-      }
+      if (aRecordSet.aggregate_identity_input.runtime_config_ref !== runtimeConfigRef) throw new Error("CAP04_SINGLE_TICK_RUNTIME_CONFIG_REF_PIN_MISMATCH");
+      if (aRecordSet.aggregate_identity_input.runtime_config_hash !== runtimeConfigHash) throw new Error("CAP04_SINGLE_TICK_RUNTIME_CONFIG_HASH_PIN_MISMATCH");
       const existingForecast = memberV1(aRecordSet, "twin_forecast_run_v1");
+      const existingPayload = existingForecast.payload as unknown as Cap04CanonicalForecastRunPayloadV1;
+      if (existingPayload.status === "BLOCKED") {
+        validateCap04CanonicalForecastRunPayloadV1(existingPayload);
+        const nextHandoff = await this.handoffService.prepareNextTickInput(input.scope);
+        assertNextHandoffV1({ record_set: aRecordSet, handoff: nextHandoff, expected_next_time: addOneHourV1(logicalTime) });
+        return {
+          status: "EXISTING_BLOCKED_IDEMPOTENT_SUCCESS",
+          a_record_set: aRecordSet,
+          b_record: null,
+          evidence_window: null,
+          dynamics: null,
+          assimilation: null,
+          forcing_window: null,
+          forecast_math: null,
+          scenario_math: null,
+          next_handoff: nextHandoff,
+        };
+      }
       const existingB = await this.persistence.readScenarioSetBySourceForecast(existingForecast.object_id, existingForecast.determinism_hash);
       if (existingB) {
         validateCap04ScenarioSetRecordV1(existingB, existingForecast);
@@ -345,7 +446,6 @@ export class Cap04ForecastScenarioSingleTickServiceV1 {
       require_parent_match: !aRecordSet,
     });
 
-    const candidateRecords = await this.evidenceSource.loadCandidateRecords({ scope: input.scope, logical_time: logicalTime });
     let evidenceWindow: AssimilatedContinuationEvidenceWindowV2 | null = null;
     let dynamics: HourlyWaterBalanceResultV1 | null = null;
     let assimilation: AssimilatedContinuationPosteriorV1 | null = null;
@@ -354,6 +454,7 @@ export class Cap04ForecastScenarioSingleTickServiceV1 {
     let lease: RuntimeLeaseClaimV1 | null = null;
 
     if (!aRecordSet) {
+      const candidateRecords = await this.evidenceSource.loadCandidateRecords({ scope: input.scope, logical_time: logicalTime });
       const preliminary = buildAssimilatedContinuationEvidenceWindowV2({
         scope: input.scope,
         logical_time: logicalTime,
@@ -398,7 +499,7 @@ export class Cap04ForecastScenarioSingleTickServiceV1 {
         assimilation,
       });
       const sourceState = sources.twin_state_estimate_v1;
-      const forcing = selectCap04FutureForcingWindowV1({
+      const forcing = selectCap04FutureForcingOutcomeV1({
         scope: input.scope,
         logical_time: logicalTime,
         candidate_records: candidateRecords,
@@ -411,7 +512,84 @@ export class Cap04ForecastScenarioSingleTickServiceV1 {
         },
         runtime_config: { ref: runtimeConfig.object_id, hash: runtimeConfig.determinism_hash },
       });
-      if (forcing.status !== "SELECTED") throw new Error(`CAP04_SINGLE_TICK_FORCING_WINDOW_BLOCKED:${forcing.reason_codes.join(",")}`);
+      if (forcing.status === "FAILED") throw new Error(`CAP04_SINGLE_TICK_FORCING_FAILED:${forcing.reason_codes.join(",")}`);
+      if (forcing.status === "BLOCKED") {
+        const provisionalPayload = buildCap04BlockedForecastPayloadV1({
+          issued_at: logicalTime,
+          source_posterior_ref: sourceState.object_id,
+          source_posterior_hash: sourceState.determinism_hash,
+          runtime_config_ref: runtimeConfig.object_id,
+          runtime_config_hash: runtimeConfig.determinism_hash,
+          runtime_config_payload: config,
+          reason_codes: forcing.reason_codes,
+        });
+        const provisionalA2 = buildCap04BlockedForecastRecordSetV1({
+          scope: input.scope,
+          lineage_id: initialHandoff.lineage_id,
+          revision_id: initialHandoff.revision_id,
+          logical_time: logicalTime,
+          created_at: input.created_at,
+          active_lineage_ref: initialHandoff.active_lineage_ref,
+          previous_posterior_ref: initialHandoff.previous_posterior_ref,
+          previous_posterior_hash: initialHandoff.previous_posterior_hash,
+          previous_checkpoint_ref: initialHandoff.previous_checkpoint_ref,
+          previous_checkpoint_hash: initialHandoff.previous_checkpoint_hash,
+          previous_forecast_result_ref: initialHandoff.previous_forecast_result_ref,
+          previous_forecast_result_hash: requiredStringV1(initialHandoff.previous_forecast_result_hash, "CAP04_SINGLE_TICK_PREDECESSOR_FORECAST_HASH_REQUIRED"),
+          previous_successful_forecast_ref: initialHandoff.latest_successful_forecast_ref,
+          previous_tick_sequence: initialHandoff.previous_tick_sequence,
+          runtime_config: runtimeConfig,
+          source_members: sources,
+          forecast_payload: provisionalPayload,
+        });
+        const canonicalState = memberV1(provisionalA2, "twin_state_estimate_v1");
+        const blockedPayload = buildCap04BlockedForecastPayloadV1({
+          issued_at: logicalTime,
+          source_posterior_ref: canonicalState.object_id,
+          source_posterior_hash: canonicalState.determinism_hash,
+          runtime_config_ref: runtimeConfig.object_id,
+          runtime_config_hash: runtimeConfig.determinism_hash,
+          runtime_config_payload: config,
+          reason_codes: forcing.reason_codes,
+        });
+        const a2Candidate = buildCap04BlockedForecastRecordSetV1({
+          scope: input.scope,
+          lineage_id: initialHandoff.lineage_id,
+          revision_id: initialHandoff.revision_id,
+          logical_time: logicalTime,
+          created_at: input.created_at,
+          active_lineage_ref: initialHandoff.active_lineage_ref,
+          previous_posterior_ref: initialHandoff.previous_posterior_ref,
+          previous_posterior_hash: initialHandoff.previous_posterior_hash,
+          previous_checkpoint_ref: initialHandoff.previous_checkpoint_ref,
+          previous_checkpoint_hash: initialHandoff.previous_checkpoint_hash,
+          previous_forecast_result_ref: initialHandoff.previous_forecast_result_ref,
+          previous_forecast_result_hash: requiredStringV1(initialHandoff.previous_forecast_result_hash, "CAP04_SINGLE_TICK_PREDECESSOR_FORECAST_HASH_REQUIRED"),
+          previous_successful_forecast_ref: initialHandoff.latest_successful_forecast_ref,
+          previous_tick_sequence: initialHandoff.previous_tick_sequence,
+          runtime_config: runtimeConfig,
+          source_members: sources,
+          forecast_payload: blockedPayload,
+        });
+        const persisted = await this.persistAndReadARecordSetV1(input, initialHandoff, a2Candidate, lease);
+        aRecordSet = persisted.record_set;
+        lease = persisted.lease;
+        const nextHandoff = await this.handoffService.prepareNextTickInput(input.scope);
+        assertNextHandoffV1({ record_set: aRecordSet, handoff: nextHandoff, expected_next_time: addOneHourV1(logicalTime) });
+        return {
+          status: "BLOCKED_INSERTED",
+          a_record_set: aRecordSet,
+          b_record: null,
+          evidence_window: evidenceWindow,
+          dynamics,
+          assimilation,
+          forcing_window: null,
+          forecast_math: null,
+          scenario_math: null,
+          next_handoff: nextHandoff,
+        };
+      }
+
       forcingWindow = forcing.window;
       const provisionalMathInput: Cap04Pure72hForecastMathInputV1 = {
         source_posterior: {
@@ -453,7 +631,7 @@ export class Cap04ForecastScenarioSingleTickServiceV1 {
           computation_basis: computationBasisV1(canonicalState),
         },
       });
-      aRecordSet = buildCap04CompletedForecastRecordSetV1({
+      const a1Candidate = buildCap04CompletedForecastRecordSetV1({
         scope: input.scope,
         lineage_id: initialHandoff.lineage_id,
         revision_id: initialHandoff.revision_id,
@@ -472,69 +650,14 @@ export class Cap04ForecastScenarioSingleTickServiceV1 {
         source_members: sources,
         forecast_payload: forecastMath.forecast_payload,
       });
-      const existingAfterBuild = await this.persistence.lookupARecordSet(aRecordSet.idempotency_key);
-      if (existingAfterBuild) {
-        if (existingAfterBuild.aggregate_determinism_hash !== aRecordSet.aggregate_determinism_hash) throw new Error("IDEMPOTENCY_CONFLICT");
-        aRecordSet = existingAfterBuild;
-      } else {
-        lease = await this.persistence.acquireLease({
-          ...input.scope,
-          lease_owner: input.lease_owner,
-          lease_duration_seconds: input.lease_duration_seconds,
-        });
-        const committedA = await this.persistence.commitARecordSet({
-          scope: input.scope,
-          lease,
-          expected: {
-            active_lineage_ref: initialHandoff.active_lineage_ref,
-            lineage_id: initialHandoff.lineage_id,
-            revision_id: initialHandoff.revision_id,
-            previous_checkpoint_ref: initialHandoff.previous_checkpoint_ref,
-            previous_state_ref: initialHandoff.previous_posterior_ref,
-            previous_forecast_result_ref: initialHandoff.previous_forecast_result_ref,
-            previous_successful_forecast_ref: initialHandoff.latest_successful_forecast_ref,
-          },
-          record_set: aRecordSet,
-          fault_injection: input.fault_injection_a,
-        });
-        aRecordSet = committedA.record_set;
-      }
-      const readA = await this.persistence.readARecordSet(aRecordSet.record_set_id);
-      if (!readA) throw new Error("CAP04_SINGLE_TICK_A_READBACK_NOT_FOUND");
-      if (readA.aggregate_determinism_hash !== aRecordSet.aggregate_determinism_hash) throw new Error("CAP04_SINGLE_TICK_A_READBACK_HASH_MISMATCH");
-      aRecordSet = readA;
+      const persisted = await this.persistAndReadARecordSetV1(input, initialHandoff, a1Candidate, lease);
+      aRecordSet = persisted.record_set;
+      lease = persisted.lease;
     } else {
-      const canonicalState = memberV1(aRecordSet, "twin_state_estimate_v1");
-      const existingForecast = memberV1(aRecordSet, "twin_forecast_run_v1");
-      const recoveredCropStage = resolveCropStageV1(input.crop_stage_context, logicalTime);
-      const forcing = selectCap04FutureForcingWindowV1({
-        scope: input.scope,
-        logical_time: logicalTime,
-        candidate_records: candidateRecords,
-        authorized_binding_ids: input.authorized_future_forcing_binding_ids,
-        crop_stage_context: {
-          ref: config.crop_stage_context.context_ref,
-          hash: config.crop_stage_context.context_hash,
-          crop_stage_code: recoveredCropStage.stage_code,
-          kc: recoveredCropStage.kc,
-        },
-        runtime_config: { ref: runtimeConfig.object_id, hash: runtimeConfig.determinism_hash },
-      });
-      if (forcing.status !== "SELECTED") throw new Error(`CAP04_SINGLE_TICK_FORCING_WINDOW_BLOCKED:${forcing.reason_codes.join(",")}`);
-      forcingWindow = forcing.window;
-      forecastMath = executeCap04Pure72hForecastMathV1({
-        source_posterior: {
-          ref: canonicalState.object_id,
-          hash: canonicalState.determinism_hash,
-          logical_time: logicalTime,
-          computation_basis: computationBasisV1(canonicalState),
-        },
-        runtime_config: { ref: runtimeConfig.object_id, hash: runtimeConfig.determinism_hash, payload: config },
-        forcing_window: forcingWindow,
-      });
-      if (canonicalJsonV1(forecastMath.forecast_payload) !== canonicalJsonV1(existingForecast.payload)) {
-        throw new Error("CAP04_SINGLE_TICK_RECOVERY_FORECAST_RECOMPUTE_MISMATCH");
-      }
+      const forecast = memberV1(aRecordSet, "twin_forecast_run_v1");
+      const canonical = canonicalForecastMathV1(forecast);
+      forcingWindow = canonical.forcing_window;
+      forecastMath = canonical.forecast_math;
     }
 
     const forecast = memberV1(aRecordSet, "twin_forecast_run_v1");
