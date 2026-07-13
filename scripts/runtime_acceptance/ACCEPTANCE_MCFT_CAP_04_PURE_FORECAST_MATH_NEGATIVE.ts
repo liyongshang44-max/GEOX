@@ -58,7 +58,7 @@ const forcingConfigDrift = structuredClone(base);
 forcingConfigDrift.forcing_window.runtime_config_hash = "sha256:forged";
 expectThrow(
   () => executeCap04Pure72hForecastMathV1(forcingConfigDrift),
-  "CAP04_FORECAST_FORCING_CONFIG_IDENTITY_MISMATCH",
+  "CAP04_FORCING_POINT_CONFIG_MISMATCH",
   "forcing and pinned Runtime Config identity drift is rejected",
 );
 
@@ -66,7 +66,7 @@ const cropStageDrift = structuredClone(base);
 cropStageDrift.forcing_window.crop_stage_context_ref = "crop_stage_context_forged";
 expectThrow(
   () => executeCap04Pure72hForecastMathV1(cropStageDrift),
-  "CAP04_FORECAST_CROP_STAGE_CONTEXT_MISMATCH",
+  "CAP04_FORCING_POINT_CROP_STAGE_MISMATCH",
   "forcing and Runtime Config crop-stage authority drift is rejected",
 );
 
@@ -90,7 +90,7 @@ const zeroStructuralUncertainty = structuredClone(base);
 zeroStructuralUncertainty.runtime_config.payload.process_uncertainty.structural_process_stddev_mm_per_hour = 0;
 expectThrow(
   () => executeCap04Pure72hForecastMathV1(zeroStructuralUncertainty),
-  "CAP04_FORECAST_STRUCTURAL_STDDEV_ZERO_FORBIDDEN",
+  "ASSIMILATED_STRUCTURAL_STDDEV_MISMATCH",
   "zero structural process uncertainty is rejected",
 );
 

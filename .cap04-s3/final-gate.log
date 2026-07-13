@@ -1,0 +1,78 @@
+PASS file exists: apps/server/src/domain/twin_runtime/forecast_math_contracts_v1.ts
+PASS file exists: apps/server/src/domain/twin_runtime/pure_72h_forecast_math_v1.ts
+PASS file exists: docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md
+PASS file exists: docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json
+PASS file exists: docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-AUTHORIZATION-STATUS.json
+PASS file exists: docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-DELIVERY-SLICE-STATUS.json
+PASS file exists: docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FORECAST-MATH-CONTRACT.json
+PASS file exists: docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-PURE-72H-FORECAST-MATH-V1.md
+PASS file exists: docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S2-FUTURE-FORCING-STATUS.json
+PASS file exists: docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S3-PURE-FORECAST-MATH-STATUS.json
+PASS file exists: scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S3_PURE_FORECAST_MATH.cjs
+PASS file exists: scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH.ts
+PASS file exists: scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH_NEGATIVE.ts
+PASS file exists: scripts/runtime_acceptance/mcft_cap_04_forecast_math_fixture_v1.ts
+PASS complete task byte length exact
+PASS complete task SHA exact
+PASS S2 status merged effective
+PASS S2 effectiveness satisfied
+PASS S2 PR exact
+PASS S2 exact head exact
+PASS S2 exact-head CI exact
+PASS S2 merge commit exact
+PASS S2 postmerge probe PR exact
+PASS S2 postmerge workflow exact
+PASS S2 postmerge Gate PASS
+PASS S3 status candidate exact
+PASS S3 baseline exact
+PASS S3 branch exact
+PASS S3 Runtime source authorized
+PASS S3 activation fields frozen
+PASS S3 point count 72
+PASS S3 standard range counts exact
+PASS S3 status changed-file boundary is array
+PASS S3 status changed-file boundary exact
+PASS Forecast math contract ID exact
+PASS Forecast baseline exact
+PASS Forecast method exact
+PASS uncertainty method exact
+PASS interval method exact
+PASS contract 72 hourly points exact
+PASS fixed-point scales exact
+PASS mass balance error exact
+PASS delivery status S3 candidate
+PASS delivery activation identity exact
+PASS delivery active slice S3
+PASS delivery S2 merged effective
+PASS delivery S3 activated and frozen
+PASS delivery S3 changed-file boundary is array
+PASS delivery S3 changed-file boundary exact
+PASS S4 remains blocked
+PASS authorization remains effective
+PASS authorization active S3
+PASS authorization write scope S3 exact
+PASS matrix CAP-04 remains in progress and frozen
+PASS matrix delivery pointers exact
+PASS apps/server/src/domain/twin_runtime/forecast_math_contracts_v1.ts marker MCFT_CAP_04_PURE_72H_FORECAST_MATH_V1
+PASS apps/server/src/domain/twin_runtime/forecast_math_contracts_v1.ts marker CONTROLLED_UNCALIBRATED_NORMAL_APPROXIMATION
+PASS apps/server/src/domain/twin_runtime/forecast_math_contracts_v1.ts marker latent_variance_reduced_by_clipping
+PASS apps/server/src/domain/twin_runtime/pure_72h_forecast_math_v1.ts marker NO_NEW_IRRIGATION_ASSUMPTION
+PASS apps/server/src/domain/twin_runtime/pure_72h_forecast_math_v1.ts marker CAP04_FORECAST_MASS_BALANCE_NOT_CLOSED
+PASS apps/server/src/domain/twin_runtime/pure_72h_forecast_math_v1.ts marker ADDITIVE_STORAGE_VARIANCE_ZERO_COVARIANCE_V1
+PASS apps/server/src/domain/twin_runtime/pure_72h_forecast_math_v1.ts marker NORMAL_95_PERCENT_Z_1_96_V1
+PASS scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH.ts marker 95-hour Forecast target union
+FAIL scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH.ts marker mass balance closes exactly
+PASS scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH_NEGATIVE.ts marker missing posterior computation-basis variance
+PASS scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH_NEGATIVE.ts marker physical clipping cannot reduce latent variance
+PASS final changed-file boundary is array
+PASS final changed-file boundary exact
+PASS no migration changed
+PASS no route changed
+PASS no web changed
+PASS no projection changed
+PASS no workflow changed
+PASS no generated acceptance evidence committed
+PASS final Gate runs on S3 branch
+PASS final origin/main equals S2 merge baseline
+PASS git diff --check PASS
+MCFT-CAP-04 S3 governance final: 76 PASS, 1 FAIL
