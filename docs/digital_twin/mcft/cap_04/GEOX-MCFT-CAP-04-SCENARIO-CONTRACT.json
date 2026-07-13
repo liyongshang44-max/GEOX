@@ -1,0 +1,52 @@
+{
+  "schema_version": "geox_mcft_cap_04_scenario_contract_v1",
+  "contract_id": "MCFT_CAP_04_THREE_SCENARIO_SET_V1",
+  "capability_line_id": "MCFT-CAP-04",
+  "canonical_object_type": "twin_scenario_set_v1",
+  "transaction_variant": "B_SCENARIO_COMMIT",
+  "runtime_mode": "REPLAY",
+  "source_authority": {
+    "completed_forecast_only": true,
+    "source_forecast_ref_hash_required": true,
+    "source_posterior_ref_hash_required": true,
+    "runtime_config_ref_hash_must_equal_source_forecast": true,
+    "forcing_reselection_forbidden": true
+  },
+  "option_order": ["NO_ACTION", "IRRIGATE_NOW_15MM", "IRRIGATE_NOW_25MM"],
+  "option_count": 3,
+  "trajectory_point_count_per_option": 72,
+  "assumption_authority": {
+    "representation": "assumption_basis",
+    "required_fields": [
+      "source_forecast_ref",
+      "source_forecast_hash",
+      "runtime_config_ref",
+      "runtime_config_hash",
+      "scenario_policy_id",
+      "option_id"
+    ],
+    "epistemic_status": "ASSUMED",
+    "execution_status": "NOT_EXECUTED",
+    "bare_unresolvable_assumption_ref_forbidden": true
+  },
+  "standard_options": {
+    "NO_ACTION": {"requested_irrigation_mm": "0.000000", "application_horizon": null},
+    "IRRIGATE_NOW_15MM": {"requested_irrigation_mm": "15.000000", "application_horizon": 1},
+    "IRRIGATE_NOW_25MM": {"requested_irrigation_mm": "25.000000", "application_horizon": 1}
+  },
+  "controlled_policies": {
+    "application_efficiency_fraction": "1.000000",
+    "application_efficiency_status": "CONTROLLED_SYNTHETIC_NOT_FIELD_CALIBRATED",
+    "stress_threshold_available_water_fraction": "0.350000",
+    "stress_comparator": "STRICT_LESS_THAN",
+    "scenario_action_variance_mm2": "0.000000"
+  },
+  "authority": {
+    "contract_ref": "apps/server/src/domain/twin_runtime/forecast_scenario_contracts_v1.ts",
+    "math_contract_ref": "apps/server/src/domain/twin_runtime/scenario_math_contracts_v1.ts",
+    "implementation_ref": "apps/server/src/domain/twin_runtime/pure_three_scenario_math_v1.ts",
+    "acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SCENARIO_MATH.ts",
+    "expected_fixture_ref": "fixtures/mcft/water_state/expected/MCFT_CAP_04_SINGLE_TICK_SCENARIOS_EXPECTED.json"
+  },
+  "nonclaims": ["NO_RECOMMENDATION", "NO_DECISION", "NO_APPROVAL", "NO_AO_ACT", "NO_EXECUTION_EVIDENCE"]
+}
