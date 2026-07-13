@@ -22,8 +22,8 @@ export function buildCap04PureForecastMathInputV1(index = 0): Cap04Pure72hForeca
     hash: configEnvelope.determinism_hash,
   };
   selectorInput.crop_stage_context = {
-    ref: config.crop_stage_context_ref,
-    hash: config.crop_stage_context_hash,
+    ref: config.crop_stage_context.context_ref,
+    hash: config.crop_stage_context.context_hash,
     crop_stage_code: "CONTROLLED_STAGE_V1",
     kc: 1.05,
   };
@@ -56,8 +56,8 @@ export function buildCap04PureForecastMath24TickInputsV1(): Cap04Pure72hForecast
     const selectorInput = selectorInputs[index];
     selectorInput.runtime_config = { ref: configEnvelope.object_id, hash: configEnvelope.determinism_hash };
     selectorInput.crop_stage_context = {
-      ref: config.crop_stage_context_ref,
-      hash: config.crop_stage_context_hash,
+      ref: config.crop_stage_context.context_ref,
+      hash: config.crop_stage_context.context_hash,
       crop_stage_code: "CONTROLLED_STAGE_V1",
       kc: 1.05,
     };

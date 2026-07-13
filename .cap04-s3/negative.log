@@ -1,0 +1,17 @@
+PASS missing posterior computation-basis variance fails closed
+PASS posterior and forcing logical-time drift is rejected
+PASS Runtime Config effective-time drift is rejected
+FAIL forcing and pinned Runtime Config identity drift is rejected
+FAIL forcing and Runtime Config crop-stage authority drift is rejected
+PASS source posterior storage above saturation is rejected
+PASS Runtime Config Forecast method drift is rejected
+FAIL zero structural process uncertainty is rejected
+PASS forged Future Forcing window hash is rejected
+PASS 71-point forcing window is rejected before Forecast math
+PASS forged Forecast math hash is rejected
+PASS broken internal 10^-12 variance chain is rejected
+PASS physical clipping cannot reduce latent variance
+PASS post hoc baseline irrigation mutation invalidates Forecast determinism
+PASS point hash and computation trace cannot diverge
+PASS Forecast baseline aggregate irrigation must remain zero
+MCFT-CAP-04 pure Forecast math negative: 13 PASS, 3 FAIL

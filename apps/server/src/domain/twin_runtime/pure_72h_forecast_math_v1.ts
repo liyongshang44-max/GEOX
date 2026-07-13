@@ -113,7 +113,7 @@ export function executeCap04Pure72hForecastMathV1(
   const runtimeConfigRef = requiredStringV1(input.runtime_config.ref, "CAP04_FORECAST_RUNTIME_CONFIG_REF_REQUIRED");
   const runtimeConfigHash = requiredStringV1(input.runtime_config.hash, "CAP04_FORECAST_RUNTIME_CONFIG_HASH_REQUIRED");
   if (input.forcing_window.runtime_config_ref !== runtimeConfigRef || input.forcing_window.runtime_config_hash !== runtimeConfigHash) throw new Error("CAP04_FORECAST_FORCING_CONFIG_IDENTITY_MISMATCH");
-  if (input.forcing_window.crop_stage_context_ref !== config.crop_stage_context_ref || input.forcing_window.crop_stage_context_hash !== config.crop_stage_context_hash) throw new Error("CAP04_FORECAST_CROP_STAGE_CONTEXT_MISMATCH");
+  if (input.forcing_window.crop_stage_context_ref !== config.crop_stage_context.context_ref || input.forcing_window.crop_stage_context_hash !== config.crop_stage_context.context_hash) throw new Error("CAP04_FORECAST_CROP_STAGE_CONTEXT_MISMATCH");
 
   const sourcePosteriorRef = requiredStringV1(input.source_posterior.ref, "CAP04_FORECAST_SOURCE_POSTERIOR_REF_REQUIRED");
   const sourcePosteriorHash = requiredStringV1(input.source_posterior.hash, "CAP04_FORECAST_SOURCE_POSTERIOR_HASH_REQUIRED");
