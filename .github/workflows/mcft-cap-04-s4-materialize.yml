@@ -1,4 +1,4 @@
-name: MCFT-CAP-04 S4 materialize
+name: MCFT-CAP-04 S4 diagnose negative acceptance
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  materialize:
+  diagnose:
     if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-04-s4-pure-three-scenario-math-v1'
     runs-on: ubuntu-latest
     steps:
@@ -43,25 +43,27 @@ jobs:
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_SCENARIO_MATH.ts
 
       - name: Run negative Scenario math acceptance
-        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_SCENARIO_MATH_NEGATIVE.ts
-
-      - name: Remove temporary materialization files
+        id: negative
+        continue-on-error: true
+        shell: bash
         run: |
-          rm -rf .cap04-s4
-          rm -f .github/workflows/mcft-cap-04-s4-materialize.yml
+          set -o pipefail
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_SCENARIO_MATH_NEGATIVE.ts 2>&1 | tee /tmp/cap04-s4-negative.log
 
-      - name: Run final S4 governance Gate
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S4_PURE_SCENARIO_MATH.cjs --final
-
-      - name: Verify patch integrity
-        run: git diff --check 4a1c9fde05594c97fb949e062df77375a1a27365
-
-      - name: Commit exact final candidate
+      - name: Persist negative acceptance diagnostics
+        if: steps.negative.outcome == 'failure'
         env:
           HEAD_BRANCH: ${{ github.head_ref }}
         run: |
+          if test -f .cap04-s4/negative-acceptance.log; then exit 0; fi
+          mkdir -p .cap04-s4
+          cp /tmp/cap04-s4-negative.log .cap04-s4/negative-acceptance.log
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "feat(mcft-cap-04): materialize S4 pure scenario math candidate"
+          git add .cap04-s4/negative-acceptance.log
+          git commit -m "chore(mcft-cap-04): persist S4 negative diagnostics"
           git push origin "HEAD:${HEAD_BRANCH}"
+
+      - name: Stop after negative acceptance failure
+        if: steps.negative.outcome == 'failure'
+        run: exit 1
