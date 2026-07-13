@@ -1548,7 +1548,7 @@
       "target_completion_level": "Level A — Deterministic Replay Twin",
       "status": "IN_PROGRESS",
       "design_status": "DESIGN_FROZEN",
-      "implementation_status": "S8_IMPLEMENTATION_AUTHORIZED",
+      "implementation_status": "S8_IMPLEMENTATION_CANDIDATE",
       "authorization_id": "MCFT-CAP-04-AUTHORIZATION-V1",
       "authorization_status": "MERGED_EFFECTIVE",
       "authorization_effective": true,
@@ -2115,9 +2115,9 @@
           "depends_on_delivery_slice_ids": [
             "MCFT-CAP-04.MCFT-04-07-09-10.TWENTY-FOUR-TICK-FORECAST-SCENARIO-RANGE-V1"
           ],
-          "baseline_main_commit": "413908eadf1016d879760da3afc968abdee82342",
+          "baseline_main_commit": "bdc3e93ce755e237655f7bfc98b117a6e842d030",
           "branch": "agent/mcft-cap-04-s8-restart-backfill-recovery-v1",
-          "status": "IMPLEMENTATION_AUTHORIZED",
+          "status": "IMPLEMENTATION_CANDIDATE",
           "activation_fields_status": "TO_BE_FROZEN_AT_SLICE_ACTIVATION",
           "runtime_source_authorized": false,
           "allowed_claims": [],
@@ -2274,7 +2274,7 @@
       "persistence_matrix_ref": "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-PERSISTENCE-MATRIX.json",
       "failure_recovery_contract_ref": "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FAILURE-RECOVERY-CONTRACT.md",
       "s6_status_ref": "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S6-SINGLE-TICK-STATUS.json",
-      "baseline_main_commit": "413908eadf1016d879760da3afc968abdee82342",
+      "baseline_main_commit": "bdc3e93ce755e237655f7bfc98b117a6e842d030",
       "branch": "agent/mcft-cap-04-s8-restart-backfill-recovery-v1",
       "s6_effectiveness": {
         "pr_number": 2396,
