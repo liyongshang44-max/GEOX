@@ -1,0 +1,38 @@
+{
+  "schema_version": "geox_mcft_cap_04_s6_single_tick_contract_v1",
+  "contract_id": "MCFT_CAP_04_SINGLE_TICK_FORECAST_SCENARIO_INTEGRATION_V1",
+  "delivery_slice_id": "MCFT-CAP-04.MCFT-04-05-06-07-08-09-10.SINGLE-TICK-FORECAST-SCENARIO-INTEGRATION-V1",
+  "logical_tick_count": 1,
+  "success_path": [
+    "PERSISTED_HANDOFF",
+    "CURRENT_EVIDENCE",
+    "DYNAMICS",
+    "ASSIMILATION",
+    "POSTERIOR_STATE",
+    "FUTURE_FORCING",
+    "FORECAST_72H",
+    "A1_COMMIT",
+    "THREE_SCENARIOS",
+    "B_COMMIT",
+    "CANONICAL_READBACK",
+    "T_PLUS_ONE_HANDOFF"
+  ],
+  "a_member_count": 8,
+  "forecast_point_count": 72,
+  "scenario_option_count": 3,
+  "scenario_point_count": 216,
+  "completed_idempotent_replay": "ZERO_RECOMPUTE_ZERO_WRITE",
+  "pending_scenario_recovery": "PRESERVE_A1_RECOMPUTE_AND_COMMIT_B_ONLY",
+  "runtime_config_pin_required_on_all_paths": true,
+  "future_forcing_binding_authority_required": true,
+  "canonical_readback_required": true,
+  "successful_forecast_pointer_required_in_t_plus_one_handoff": true,
+  "no_new_migration": true,
+  "excluded_modes": [
+    "TWENTY_FOUR_TICK_RANGE",
+    "RESTART_BACKFILL",
+    "ROUTE",
+    "WEB",
+    "SCHEDULER"
+  ]
+}

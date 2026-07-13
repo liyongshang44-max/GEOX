@@ -1,7 +1,0 @@
-Scope: 15 of 16 workspace projects
-apps/judge typecheck$ pnpm -w exec tsc --noEmit -p apps/judge/tsconfig.json
-apps/web typecheck$ pnpm -w exec tsc --noEmit -p apps/web/tsconfig.json
-apps/judge typecheck: Done
-apps/web typecheck: Done
-apps/server typecheck$ pnpm -w exec tsc --noEmit -p apps/server/tsconfig.json
-apps/server typecheck: Done

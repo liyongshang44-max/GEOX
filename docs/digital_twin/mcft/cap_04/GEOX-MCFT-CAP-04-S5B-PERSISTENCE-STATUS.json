@@ -5,9 +5,9 @@
   "delivery_slice_id": "MCFT-CAP-04.MCFT-03-09-10.A1-A2-B-PERSISTENCE-UNIQUENESS-RECOVERY-V1",
   "baseline_main_commit": "2c6a0834488f367eb927430a15c9590c1bf348a3",
   "branch": "agent/mcft-cap-04-s5b-persistence-uniqueness-recovery-v1",
-  "status": "IMPLEMENTATION_CANDIDATE",
+  "status": "MERGED_EFFECTIVE",
   "design_status": "DESIGN_FROZEN",
-  "implementation_status": "IMPLEMENTED_PENDING_MERGE",
+  "implementation_status": "MERGED_EFFECTIVE",
   "activation_fields_status": "FROZEN",
   "explicit_activation_authority": "OWNER_EXPLICIT_AUTHORIZATION",
   "authorization_effective": true,
@@ -91,16 +91,29 @@
   "candidate_validation": {
     "diagnostic_workflow_run": 29230993059,
     "recursive_typecheck": "PASS",
-    "positive_scenario_set_builder_acceptance": "PASS_REQUIRED",
-    "negative_scenario_set_builder_acceptance": "PASS_REQUIRED",
+    "positive_scenario_set_builder_acceptance": "PASS",
+    "negative_scenario_set_builder_acceptance": "PASS",
     "isolated_postgresql_persistence_acceptance": "PASS",
-    "governance_final_gate": "PASS_REQUIRED",
-    "repository_exact_head_ci": "PASS_REQUIRED_BEFORE_MERGE",
+    "governance_final_gate": "PASS",
+    "repository_exact_head_ci": "PASS",
     "temporary_workflow_removed": true,
-    "temporary_diagnostic_evidence_removed": true
+    "temporary_diagnostic_evidence_removed": true,
+    "repository_exact_head_ci_run": 29231823745,
+    "postmerge_governance_gate": "PASS",
+    "postmerge_workflow_run": 29232760223
   },
   "effectiveness_condition": "S5B_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S5B_GATE_PASS",
-  "effectiveness_condition_satisfied": false,
+  "effectiveness_condition_satisfied": true,
   "next_delivery_slice_id": "MCFT-CAP-04.MCFT-04-05-06-07-08-09-10.SINGLE-TICK-FORECAST-SCENARIO-INTEGRATION-V1",
-  "next_delivery_slice_authorized": false
+  "next_delivery_slice_authorized": false,
+  "merge_evidence": {
+    "pr_number": 2394,
+    "exact_head_commit": "f6e30f3e865ac92bc23158c1ac2c55907ce5200a",
+    "exact_head_ci_run": 29231823745,
+    "merge_commit": "63c8ba7b8dd314c1224ca8de2914b663b3551092",
+    "postmerge_probe_pr_number": 2395,
+    "postmerge_workflow_run": 29232760223,
+    "postmerge_gate": "PASS",
+    "effectiveness_condition_satisfied": true
+  }
 }

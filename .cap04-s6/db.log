@@ -1,5 +1,0 @@
-PASS real PostgreSQL handoff executes one complete A1 plus B tick and returns exact T+1 authority
-PASS completed PostgreSQL replay returns existing A1/B with zero duplicate facts
-PASS real PostgreSQL B failure preserves canonical A1 and exposes pending Scenario recovery
-PASS real PostgreSQL rerun recovers only B and preserves the original A1 terminal tick
-MCFT-CAP-04 single-tick integration DB: 4 PASS, 0 FAIL
