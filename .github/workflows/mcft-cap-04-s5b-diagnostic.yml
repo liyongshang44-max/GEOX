@@ -33,21 +33,6 @@ jobs:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
 
-      - name: Apply diagnosed type-boundary fixes
-        env:
-          HEAD_BRANCH: ${{ github.head_ref }}
-        run: |
-          if [ -f .cap04-s5b/fix_type_boundaries.cjs ]; then
-            node .cap04-s5b/fix_type_boundaries.cjs
-            rm -f .cap04-s5b/typecheck.log
-            rmdir .cap04-s5b 2>/dev/null || true
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add -A
-            git commit -m "fix(mcft-cap-04): align Scenario envelope type boundaries"
-            git push origin "HEAD:${HEAD_BRANCH}"
-          fi
-
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -62,36 +47,35 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Capture recursive typecheck
-        id: typecheck
+      - name: Recursive typecheck
+        run: pnpm -r typecheck
+
+      - name: Capture S5B PostgreSQL acceptance
+        id: database
         continue-on-error: true
+        env:
+          DATABASE_URL: postgresql://landos:landos@127.0.0.1:5432/mcft_cap04_s5b_acceptance
+          MCFT_CAP_04_PERSISTENCE_DESTRUCTIVE_ACCEPTANCE: '1'
         run: |
           mkdir -p .cap04-s5b
           set +e
-          pnpm -r typecheck > .cap04-s5b/typecheck.log 2>&1
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PERSISTENCE_DB.ts > .cap04-s5b/db.log 2>&1
           code=$?
-          cat .cap04-s5b/typecheck.log
+          cat .cap04-s5b/db.log
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           exit 0
 
-      - name: Persist typecheck diagnostics
-        if: steps.typecheck.outputs.exit_code != '0'
+      - name: Persist database diagnostics
+        if: steps.database.outputs.exit_code != '0'
         env:
           HEAD_BRANCH: ${{ github.head_ref }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .cap04-s5b/typecheck.log
-          git commit -m "chore(mcft-cap-04): capture S5B typecheck diagnostics"
+          git add .cap04-s5b/db.log
+          git commit -m "chore(mcft-cap-04): capture S5B database diagnostics"
           git push origin "HEAD:${HEAD_BRANCH}"
 
-      - name: Require recursive typecheck
-        if: steps.typecheck.outputs.exit_code != '0'
+      - name: Require S5B PostgreSQL acceptance
+        if: steps.database.outputs.exit_code != '0'
         run: exit 1
-
-      - name: Run S5B PostgreSQL acceptance
-        if: steps.typecheck.outputs.exit_code == '0'
-        env:
-          DATABASE_URL: postgresql://landos:landos@127.0.0.1:5432/mcft_cap04_s5b_acceptance
-          MCFT_CAP_04_PERSISTENCE_DESTRUCTIVE_ACCEPTANCE: '1'
-        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PERSISTENCE_DB.ts
