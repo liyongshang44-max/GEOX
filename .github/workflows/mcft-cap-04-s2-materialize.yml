@@ -1,0 +1,67 @@
+name: MCFT-CAP-04 S2 materialize
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-04-s2-future-forcing-window-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout S2 branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Materialize S2 governance
+        run: node .cap04-s2/materialize_s2.cjs
+
+      - name: Recursive typecheck
+        run: pnpm -r typecheck
+
+      - name: Run positive Future Forcing acceptance
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_FUTURE_FORCING.ts
+
+      - name: Run negative Future Forcing acceptance
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_FUTURE_FORCING_NEGATIVE.ts
+
+      - name: Remove temporary materialization files
+        run: |
+          rm -rf .cap04-s2
+          rm -f .github/workflows/mcft-cap-04-s2-materialize.yml
+
+      - name: Run final S2 governance Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S2_FUTURE_FORCING.cjs --final
+
+      - name: Verify patch integrity
+        run: git diff --check 13f8bf3231cb41c809d235096ca7cfda9e201944
+
+      - name: Commit exact final candidate
+        env:
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat(mcft-cap-04): materialize S2 future forcing candidate"
+          git push origin "HEAD:${HEAD_BRANCH}"
