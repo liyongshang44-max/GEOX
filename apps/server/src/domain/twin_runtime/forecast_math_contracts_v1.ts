@@ -1,64 +1,37 @@
 // apps/server/src/domain/twin_runtime/forecast_math_contracts_v1.ts
-// Purpose: freeze the MCFT-CAP-04 S3 pure 72-hour Forecast math result, fixed-point computation trace, aggregate metrics, and deterministic validation.
+// Purpose: freeze the MCFT-CAP-04 S3 pure 72-hour Forecast math result while requiring the same complete uncertainty, physical-bound, aggregate, and Future Forcing authority to be embedded in the canonical Forecast payload.
 // Boundary: pure contracts only; no forcing selection, Scenario math, persistence, migration, projection, route, scheduler, filesystem, network, environment, or wall clock.
 
 import { semanticHashV1 } from "./canonical_identity_v1.js";
+import { canonicalJsonV1 } from "./canonical_json_v1.js";
+import {
+  CAP04_FORECAST_INTERVAL_SEMANTICS_V1,
+  validateCap04CanonicalForecastRunPayloadV1,
+  type Cap04CanonicalCompletedForecastRunPayloadV1,
+  type Cap04ForecastCanonicalAggregatesV1,
+  type Cap04ForecastCanonicalPointTraceV1,
+  type Cap04ForecastCanonicalUncertaintyBasisV1,
+} from "./forecast_canonical_authority_v1.js";
 import {
   CAP04_FORECAST_POINT_COUNT_V1,
-  validateCap04ForecastRunPayloadV1,
   type Cap04ForecastPointV1,
-  type Cap04ForecastRunPayloadV1,
 } from "./forecast_scenario_contracts_v1.js";
 
-export const CAP04_PURE_FORECAST_MATH_CONTRACT_ID_V1 = "MCFT_CAP_04_PURE_72H_FORECAST_MATH_V1" as const;
-export const CAP04_FORECAST_INTERVAL_SEMANTICS_V1 = "CONTROLLED_UNCALIBRATED_NORMAL_APPROXIMATION" as const;
+export { CAP04_FORECAST_INTERVAL_SEMANTICS_V1 } from "./forecast_canonical_authority_v1.js";
 
-export type Cap04ForecastMathPointTraceV1 = {
-  horizon_hour: number;
-  previous_storage_variance_mm2_decimal: string;
-  rainfall_variance_mm2_decimal: string;
-  crop_et_variance_mm2_decimal: string;
-  baseline_irrigation_variance_mm2_decimal: "0.000000000000";
-  structural_variance_mm2_decimal: string;
-  storage_variance_mm2_decimal: string;
-  storage_stddev_mm: string;
-  pre_bound_storage_mm: string;
-  post_bound_storage_mm: string;
-  lower_bound_applied: boolean;
-  upper_bound_applied: boolean;
-  overflow_mm: string;
-  physical_bound_applied: boolean;
-  lower_interval_bound_applied: boolean;
-  upper_interval_bound_applied: boolean;
-  latent_variance_reduced_by_clipping: false;
-  interval_semantics: typeof CAP04_FORECAST_INTERVAL_SEMANTICS_V1;
-  point_semantic_hash: string;
-};
+export const CAP04_PURE_FORECAST_MATH_CONTRACT_ID_V1 = "MCFT_CAP_04_PURE_72H_FORECAST_MATH_V1" as const;
+
+export type Cap04ForecastMathPointTraceV1 = Cap04ForecastCanonicalPointTraceV1;
 
 export type Cap04Pure72hForecastMathResultV1 = {
   schema_version: "geox_mcft_cap_04_pure_72h_forecast_math_result_v1";
   contract_id: typeof CAP04_PURE_FORECAST_MATH_CONTRACT_ID_V1;
-  forecast_payload: Cap04ForecastRunPayloadV1;
+  forecast_payload: Cap04CanonicalCompletedForecastRunPayloadV1;
   point_traces: Cap04ForecastMathPointTraceV1[];
   trajectory_hash: string;
   forecast_math_hash: string;
-  aggregates: {
-    final_storage_mm: string;
-    minimum_available_water_fraction: string;
-    total_precipitation_mm: string;
-    total_crop_et_mm: string;
-    total_irrigation_mm: "0.000000";
-    total_runoff_mm: string;
-    total_drainage_mm: string;
-    total_overflow_mm: string;
-  };
-  uncertainty_basis: {
-    method_id: "ADDITIVE_STORAGE_VARIANCE_ZERO_COVARIANCE_V1";
-    interval_method_id: "NORMAL_95_PERCENT_Z_1_96_V1";
-    interval_semantics: typeof CAP04_FORECAST_INTERVAL_SEMANTICS_V1;
-    source_posterior_storage_variance_authority: "COMPUTATION_BASIS_STORAGE_VARIANCE_MM2_DECIMAL";
-    physical_clipping_reduces_latent_variance: false;
-  };
+  aggregates: Cap04ForecastCanonicalAggregatesV1;
+  uncertainty_basis: Cap04ForecastCanonicalUncertaintyBasisV1;
   limitations: string[];
 };
 
@@ -84,8 +57,7 @@ export function validateCap04Pure72hForecastMathResultV1(value: Cap04Pure72hFore
   if (!value || typeof value !== "object") throw new Error("CAP04_FORECAST_MATH_RESULT_REQUIRED");
   if (value.schema_version !== "geox_mcft_cap_04_pure_72h_forecast_math_result_v1") throw new Error("CAP04_FORECAST_MATH_SCHEMA_MISMATCH");
   if (value.contract_id !== CAP04_PURE_FORECAST_MATH_CONTRACT_ID_V1) throw new Error("CAP04_FORECAST_MATH_CONTRACT_MISMATCH");
-  validateCap04ForecastRunPayloadV1(value.forecast_payload);
-  if (value.forecast_payload.status !== "COMPLETED") throw new Error("CAP04_FORECAST_MATH_COMPLETED_REQUIRED");
+  validateCap04CanonicalForecastRunPayloadV1(value.forecast_payload);
   if (!Array.isArray(value.point_traces) || value.point_traces.length !== CAP04_FORECAST_POINT_COUNT_V1) throw new Error("CAP04_FORECAST_MATH_TRACE_COUNT_MISMATCH");
   for (let index = 0; index < value.point_traces.length; index += 1) {
     const trace = value.point_traces[index];
@@ -117,7 +89,12 @@ export function validateCap04Pure72hForecastMathResultV1(value: Cap04Pure72hFore
     || value.uncertainty_basis.interval_semantics !== CAP04_FORECAST_INTERVAL_SEMANTICS_V1
     || value.uncertainty_basis.source_posterior_storage_variance_authority !== "COMPUTATION_BASIS_STORAGE_VARIANCE_MM2_DECIMAL"
     || value.uncertainty_basis.physical_clipping_reduces_latent_variance !== false) throw new Error("CAP04_FORECAST_UNCERTAINTY_BASIS_MISMATCH");
+  if (canonicalJsonV1(value.point_traces) !== canonicalJsonV1(value.forecast_payload.point_traces)) throw new Error("CAP04_FORECAST_CANONICAL_TRACE_AUTHORITY_MISMATCH");
+  if (value.trajectory_hash !== value.forecast_payload.trajectory_hash) throw new Error("CAP04_FORECAST_CANONICAL_TRAJECTORY_AUTHORITY_MISMATCH");
+  if (canonicalJsonV1(value.aggregates) !== canonicalJsonV1(value.forecast_payload.aggregates)) throw new Error("CAP04_FORECAST_CANONICAL_AGGREGATE_AUTHORITY_MISMATCH");
+  if (canonicalJsonV1(value.uncertainty_basis) !== canonicalJsonV1(value.forecast_payload.uncertainty_basis)) throw new Error("CAP04_FORECAST_CANONICAL_UNCERTAINTY_AUTHORITY_MISMATCH");
   sortedUniqueV1(value.limitations, "CAP04_FORECAST_MATH_LIMITATIONS_INVALID");
+  if (canonicalJsonV1(value.limitations) !== canonicalJsonV1(value.forecast_payload.limitations)) throw new Error("CAP04_FORECAST_CANONICAL_LIMITATIONS_AUTHORITY_MISMATCH");
   const hashBasis = structuredClone(value) as Partial<Cap04Pure72hForecastMathResultV1>;
   delete hashBasis.forecast_math_hash;
   if (value.forecast_math_hash !== computeCap04ForecastMathHashV1(hashBasis as Omit<Cap04Pure72hForecastMathResultV1, "forecast_math_hash">)) throw new Error("CAP04_FORECAST_MATH_HASH_MISMATCH");
