@@ -5,9 +5,9 @@
   "delivery_slice_id": "MCFT-CAP-04.MCFT-05-09.FUTURE-FORCING-WINDOW-V1",
   "baseline_main_commit": "13f8bf3231cb41c809d235096ca7cfda9e201944",
   "branch": "agent/mcft-cap-04-s2-future-forcing-window-v1",
-  "status": "IMPLEMENTATION_CANDIDATE",
+  "status": "MERGED_EFFECTIVE",
   "design_status": "DESIGN_FROZEN",
-  "implementation_status": "IMPLEMENTED_PENDING_MERGE",
+  "implementation_status": "MERGED_EFFECTIVE",
   "activation_fields_status": "FROZEN",
   "explicit_activation_authority": "OWNER_EXPLICIT_AUTHORIZATION",
   "authorization_effective": true,
@@ -84,15 +84,28 @@
   ],
   "candidate_validation": {
     "materializer_workflow_run": 29223393132,
-    "recursive_typecheck": "PASS_REQUIRED",
-    "positive_future_forcing_acceptance": "PASS_REQUIRED",
-    "negative_future_forcing_acceptance": "PASS_REQUIRED",
-    "governance_final_gate": "PASS_REQUIRED",
-    "repository_exact_head_ci": "PASS_REQUIRED_BEFORE_MERGE",
-    "temporary_workflow_removed": true
+    "recursive_typecheck": "PASS",
+    "positive_future_forcing_acceptance": "PASS",
+    "negative_future_forcing_acceptance": "PASS",
+    "governance_final_gate": "PASS",
+    "repository_exact_head_ci": "PASS",
+    "temporary_workflow_removed": true,
+    "repository_exact_head_ci_run": 29223459646,
+    "postmerge_governance_gate": "PASS",
+    "postmerge_workflow_run": 29223899742
   },
   "effectiveness_condition": "S2_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S2_GATE_PASS",
-  "effectiveness_condition_satisfied": false,
+  "effectiveness_condition_satisfied": true,
   "next_delivery_slice_id": "MCFT-CAP-04.MCFT-06-09.PURE-72H-FORECAST-MATH-V1",
-  "next_delivery_slice_authorized": false
+  "next_delivery_slice_authorized": false,
+  "merge_evidence": {
+    "pr_number": 2386,
+    "exact_head_commit": "4dae60d9412ec191cec3be0b730fab216474731f",
+    "exact_head_ci_run": 29223459646,
+    "merge_commit": "4a8dab632246b05266f1d869f6c9a0a5bcf37e76",
+    "postmerge_probe_pr_number": 2387,
+    "postmerge_workflow_run": 29223899742,
+    "postmerge_gate": "PASS",
+    "effectiveness_condition_satisfied": true
+  }
 }
