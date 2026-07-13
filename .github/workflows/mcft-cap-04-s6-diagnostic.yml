@@ -37,6 +37,7 @@ jobs:
         run: |
           node .cap04-s6/patch_interfaces.cjs
           node .cap04-s6/patch_idempotent_pin.cjs
+          node .cap04-s6/patch_source_builder.cjs
 
       - name: Capture recursive Typecheck
         shell: bash
