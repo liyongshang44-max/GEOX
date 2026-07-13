@@ -1,0 +1,27 @@
+name: MCFT-CAP-04 v0.5 remediation exact-head Gate
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-04-v05-remediation-gate-probe-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-04-v05-closure-package-remediation-v1
+          fetch-depth: 0
+      - name: Verify exact remediation head
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "aee173730f14635abf4b7932e9916ca6ff3b260e"
+          test "$(git rev-parse origin/agent/mcft-cap-04-v05-closure-package-remediation-v1)" = "aee173730f14635abf4b7932e9916ca6ff3b260e"
+      - name: Run v0.5 remediation Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_FINALIZATION_EFFECTIVENESS.cjs
