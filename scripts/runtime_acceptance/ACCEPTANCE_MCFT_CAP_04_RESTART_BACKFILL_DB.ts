@@ -374,6 +374,15 @@ async function main(): Promise<void> {
     assert.equal(process1.final_handoff.previous_tick_sequence, 60);
     assert.equal(process1.final_handoff.next_logical_tick_time, "2026-06-03T14:00:00.000Z");
     ok("real PostgreSQL process 1 executes ticks 1 through 12 and persists sequence 60");
+    await pool.query(
+      `UPDATE twin_runtime_lease_v1
+       SET acquired_at=transaction_timestamp()-interval '10 minutes',
+           heartbeat_at=transaction_timestamp()-interval '5 minutes',
+           expires_at=transaction_timestamp()-interval '1 second'
+       WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6`,
+      values,
+    );
+    ok("process 1 crash fixture explicitly expires its lease before fresh-process takeover");
 
     const handoff = new PrepareNextTickInputServiceV1(nextTickRepository);
     const inner2 = new Cap04ForecastScenarioSingleTickServiceV1(handoff, source, runtimeRepository, persistence);
