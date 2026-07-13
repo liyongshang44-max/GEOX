@@ -4,8 +4,8 @@
   "status": "COMPLETE",
   "baseline": {
     "branch": "main",
-    "commit": "8a4e1b5a92b8b3fcc21ec77a6542743fd3a7b4c3",
-    "meaning": "MCFT-CAP-04 S9 closure candidate; completion claims remain pending"
+    "commit": "a6a07840efe080198233b39ec9a31d26c2e3f4f9",
+    "meaning": "MCFT-CAP-04 S10A finalization candidate"
   },
   "identifier_model": {
     "capability_line_id": "vertical executable capability closure unit",
@@ -1546,7 +1546,7 @@
       "name": "72-Hour Forecast and Three Scenarios",
       "runtime_mode": "REPLAY",
       "target_completion_level": "Level A — Deterministic Replay Twin",
-      "status": "CLOSURE_CANDIDATE",
+      "status": "S10A_FINALIZATION_CANDIDATE",
       "design_status": "DESIGN_FROZEN",
       "implementation_status": "S8_IMPLEMENTATION_CANDIDATE",
       "authorization_id": "MCFT-CAP-04-AUTHORIZATION-V1",
@@ -1575,7 +1575,7 @@
         "MCFT-17",
         "MCFT-18"
       ],
-      "active_delivery_slice_id": "MCFT-CAP-04.CLOSURE-CANDIDATE-V1",
+      "active_delivery_slice_id": "MCFT-CAP-04.FINALIZATION-MAIN-VERIFICATION-V1",
       "next_delivery_slice_id": "MCFT-CAP-04.CLOSURE-CANDIDATE-V1",
       "next_delivery_slice_authorized": false,
       "task_ref": "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md",
@@ -2156,7 +2156,7 @@
           ],
           "baseline_main_commit": "8a4e1b5a92b8b3fcc21ec77a6542743fd3a7b4c3",
           "branch": "agent/mcft-cap-04-s9-closure-candidate-v1",
-          "status": "CLOSURE_CANDIDATE",
+          "status": "MERGED_EFFECTIVE",
           "activation_fields_status": "TO_BE_FROZEN_AT_SLICE_ACTIVATION",
           "runtime_source_authorized": false,
           "allowed_claims": [],
@@ -2184,7 +2184,9 @@
           "exact_changed_file_boundary": [],
           "effectiveness_condition": "PREDECESSOR_SLICE_MERGED_AND_MERGED_MAIN_GATE_PASS_AND_EXPLICIT_SLICE_ACTIVATION",
           "effectiveness_condition_satisfied": false,
-          "closure_effective": false
+          "closure_effective": false,
+          "merge_commit": "a6a07840efe080198233b39ec9a31d26c2e3f4f9",
+          "postmerge_workflow_run": 29258021682
         },
         {
           "delivery_slice_id": "MCFT-CAP-04.FINALIZATION-MAIN-VERIFICATION-V1",
@@ -2192,9 +2194,9 @@
           "depends_on_delivery_slice_ids": [
             "MCFT-CAP-04.CLOSURE-CANDIDATE-V1"
           ],
-          "baseline_main_commit": null,
-          "branch": null,
-          "status": "BLOCKED",
+          "baseline_main_commit": "a6a07840efe080198233b39ec9a31d26c2e3f4f9",
+          "branch": "agent/mcft-cap-04-s10a-finalization-candidate-v1",
+          "status": "S10A_CANDIDATE",
           "activation_fields_status": "TO_BE_FROZEN_AT_SLICE_ACTIVATION",
           "runtime_source_authorized": false,
           "allowed_claims": [],
@@ -2364,6 +2366,16 @@
         "activation_postmerge_workflow_run": 29257014497,
         "activation_postmerge_gate": "PASS",
         "activation_effectiveness_condition_satisfied": true
+      },
+      "s9_closure_effectiveness": {
+        "closure_pr_number": 2407,
+        "closure_exact_head_commit": "9bffb51b975208b19228e3d305288924a84b698f",
+        "closure_exact_head_ci_run": 29257493490,
+        "closure_merge_commit": "a6a07840efe080198233b39ec9a31d26c2e3f4f9",
+        "closure_postmerge_probe_pr_number": 2409,
+        "closure_postmerge_workflow_run": 29258021682,
+        "closure_postmerge_gate": "PASS",
+        "closure_effectiveness_condition_satisfied": true
       }
     }
   ],
