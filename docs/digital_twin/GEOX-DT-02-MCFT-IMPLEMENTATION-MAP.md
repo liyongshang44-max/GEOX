@@ -762,3 +762,22 @@ S8 authorized: false
 ```
 
 S7 is authorized only for the deterministic 24-tick Replay range. It does not authorize restart/backfill, routes, web, scheduler, recommendation, decision, AO-ACT, continuous Runtime or live-field claims.
+
+## MCFT-CAP-04 S7 candidate — 24-tick Forecast / Scenario range
+
+```text
+baseline main: 01be1e85dc409eee30bc3464dad30f7005b135c4
+branch: agent/mcft-cap-04-s7-twenty-four-tick-range-v1
+status: IMPLEMENTATION_CANDIDATE
+standard range: 24 contiguous A1+B ticks
+checkpoint sequence: 49..72
+Forecast points: 1728
+Scenario points: 5184
+PostgreSQL operation facts: 216
+PostgreSQL Config + operation facts: 240
+positive/negative recheck: 29247534180 PASS
+PostgreSQL range acceptance: 29247696055 PASS
+S8 authorized: false
+```
+
+S7 reuses the verified S6 pending-B single-tick entry and does not duplicate State, Forecast, or Scenario mathematics. A legal A2 advances the latest Forecast result while preserving the prior successful-Forecast pointer, returns `BLOCKED`, and stops the range. Malformed forcing writes no terminal tick for the failing hour.

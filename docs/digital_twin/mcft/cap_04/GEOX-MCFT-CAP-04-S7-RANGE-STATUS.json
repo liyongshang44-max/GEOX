@@ -118,7 +118,7 @@
     "postgresql_scenario_point_projection_count": 5184,
     "governance_final_gate": "PASS_REQUIRED_ON_FINAL_HEAD",
     "repository_exact_head_ci": "PASS_REQUIRED_BEFORE_MERGE",
-    "temporary_workflow_removed": false,
+    "temporary_workflow_removed": true,
     "temporary_diagnostic_evidence_removed": true
   },
   "effectiveness_condition": "S7_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S7_GATE_PASS",
