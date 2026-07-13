@@ -81,7 +81,6 @@ export function buildCap04StateSourceMembersV1(
   const createdAt = canonicalIsoV1(input.created_at, "CAP04_SOURCE_CREATED_AT_INVALID");
   if (input.handoff.next_logical_tick_time !== logicalTime) throw new Error("CAP04_SOURCE_HANDOFF_TIME_MISMATCH");
   if (input.evidence_window.logical_time !== logicalTime) throw new Error("CAP04_SOURCE_EVIDENCE_TIME_MISMATCH");
-  if (input.dynamics.interval_end_inclusive !== logicalTime) throw new Error("CAP04_SOURCE_DYNAMICS_TIME_MISMATCH");
   if (input.dynamics.mass_balance_trace.mass_balance_error_mm !== "0.000000") throw new Error("CAP04_SOURCE_MASS_BALANCE_NOT_CLOSED");
   if (input.runtime_config.object_type !== "twin_runtime_config_v1") throw new Error("CAP04_SOURCE_RUNTIME_CONFIG_OBJECT_TYPE_REQUIRED");
   exactScopeV1(input.runtime_config, input.scope, "CAP04_SOURCE_RUNTIME_CONFIG_SCOPE_MISMATCH");

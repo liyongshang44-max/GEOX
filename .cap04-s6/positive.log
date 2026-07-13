@@ -1,4 +1,5 @@
-Error: CAP04_SOURCE_DYNAMICS_TIME_MISMATCH
-    at buildCap04StateSourceMembersV1 (/home/runner/work/GEOX/GEOX/apps/server/src/runtime/twin_runtime/forecast_scenario_state_source_builder_v1.ts:84:68)
-    at Cap04ForecastScenarioSingleTickServiceV1.executeOneTick (/home/runner/work/GEOX/GEOX/apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts:404:23)
+Error: CAP04_BUILDER_FORECAST_SOURCE_STATE_MISMATCH
+    at buildCap04ARecordSetInternalV1 (/home/runner/work/GEOX/GEOX/apps/server/src/runtime/twin_runtime/forecast_continuation_record_set_builder_v1.ts:238:11)
+    at buildCap04CompletedForecastRecordSetV1 (/home/runner/work/GEOX/GEOX/apps/server/src/runtime/twin_runtime/forecast_continuation_record_set_builder_v1.ts:448:10)
+    at Cap04ForecastScenarioSingleTickServiceV1.executeOneTick (/home/runner/work/GEOX/GEOX/apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts:470:20)
     at async main (/home/runner/work/GEOX/GEOX/scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION.ts:33:20)
