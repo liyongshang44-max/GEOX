@@ -1,0 +1,27 @@
+name: MCFT-CAP-04 S10C evidence exact-head Gate
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-04-s10c-evidence-final-gate-probe-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-04-s10c-evidence-reconciliation-v1
+          fetch-depth: 0
+      - name: Verify exact evidence head
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "125cc38e7d64b4bb1c4799bc20076fb29412ac91"
+          test "$(git rev-parse origin/agent/mcft-cap-04-s10c-evidence-reconciliation-v1)" = "125cc38e7d64b4bb1c4799bc20076fb29412ac91"
+      - name: Run S10C evidence Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_FINALIZATION_EFFECTIVENESS.cjs
