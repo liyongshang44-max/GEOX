@@ -1,0 +1,32 @@
+name: cap04-s6-final-gate
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap-04-s6-single-tick-integration-v1
+
+permissions:
+  contents: read
+
+jobs:
+  final-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-04-s6-single-tick-integration-v1
+          fetch-depth: 0
+      - name: Materialize final content boundary
+        run: rm .github/workflows/cap04-s6-final-gate.yml
+      - name: Run S6 remediation governance final gate
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S6_SINGLE_TICK.cjs --final | tee cap04-s6-final-gate.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cap04-s6-final-gate
+          path: cap04-s6-final-gate.log
+          if-no-files-found: ignore
+          retention-days: 1
