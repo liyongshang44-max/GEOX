@@ -1,15 +1,23 @@
 {
-  "schema_version": "geox_mcft_cap_04_s6_single_tick_contract_v1",
+  "schema_version": "geox_mcft_cap_04_s6_single_tick_contract_v2",
   "contract_id": "MCFT_CAP_04_SINGLE_TICK_FORECAST_SCENARIO_INTEGRATION_V1",
   "delivery_slice_id": "MCFT-CAP-04.MCFT-04-05-06-07-08-09-10.SINGLE-TICK-FORECAST-SCENARIO-INTEGRATION-V1",
   "logical_tick_count": 1,
-  "success_path": [
+  "pre_tick_barrier": {
+    "authority": "PREVIOUS_CHECKPOINT_FORECAST_RESULT_REF",
+    "completed_forecast_missing_b": "RECOVER_B_BEFORE_CURRENT_TICK_EVIDENCE",
+    "blocked_or_non_cap04_forecast": "NO_PENDING_B",
+    "forcing_reselection": "FORBIDDEN"
+  },
+  "successful_path": [
     "PERSISTED_HANDOFF",
+    "PENDING_B_BARRIER_CLEAR",
     "CURRENT_EVIDENCE",
     "DYNAMICS",
     "ASSIMILATION",
     "POSTERIOR_STATE",
-    "FUTURE_FORCING",
+    "FUTURE_FORCING_SELECTED",
+    "CANONICAL_FORECAST_AUTHORITY",
     "FORECAST_72H",
     "A1_COMMIT",
     "THREE_SCENARIOS",
@@ -17,16 +25,55 @@
     "CANONICAL_READBACK",
     "T_PLUS_ONE_HANDOFF"
   ],
+  "blocked_path": [
+    "PERSISTED_HANDOFF",
+    "PENDING_B_BARRIER_CLEAR",
+    "CURRENT_EVIDENCE",
+    "DYNAMICS",
+    "ASSIMILATION",
+    "POSTERIOR_STATE",
+    "NO_COMPLETE_MATCHING_FORCING_CYCLE",
+    "A2_BLOCKED_FORECAST_COMMIT",
+    "NO_SCENARIO_SET",
+    "CANONICAL_READBACK",
+    "T_PLUS_ONE_HANDOFF"
+  ],
+  "failed_path": {
+    "examples": [
+      "MALFORMED_FORCING_RECORD",
+      "CONFLICTING_FORCING_SNAPSHOT",
+      "CONFLICTING_FORCING_CYCLE",
+      "FORCING_PAIR_POINT_ALIGNMENT_MISMATCH"
+    ],
+    "canonical_terminal_write": false
+  },
+  "canonical_forecast_authority": {
+    "forcing_window_full_authority": true,
+    "uncertainty_point_trace_count": 72,
+    "physical_bound_trace_count": 72,
+    "trajectory_hash_required": true,
+    "aggregate_authority_required": true,
+    "forecast_forcing_full_field_equality_required": true
+  },
   "a_member_count": 8,
   "forecast_point_count": 72,
   "scenario_option_count": 3,
   "scenario_point_count": 216,
   "completed_idempotent_replay": "ZERO_RECOMPUTE_ZERO_WRITE",
-  "pending_scenario_recovery": "PRESERVE_A1_RECOMPUTE_AND_COMMIT_B_ONLY",
+  "pending_scenario_recovery": "CHECKPOINT_FORECAST_CANONICAL_AUTHORITY_COMMIT_B_ONLY_ZERO_EVIDENCE_RESELECTION",
+  "facts_based_recovery": {
+    "terminal_tick_root": true,
+    "scenario_set_fact_root": true,
+    "guard_self_repair": true,
+    "second_terminal_rejected_after_guard_loss": true,
+    "second_scenario_set_rejected_after_guard_loss": true
+  },
   "runtime_config_pin_required_on_all_paths": true,
   "future_forcing_binding_authority_required": true,
   "canonical_readback_required": true,
-  "successful_forecast_pointer_required_in_t_plus_one_handoff": true,
+  "successful_forecast_pointer_required_for_a1": true,
+  "successful_forecast_pointer_preserved_for_a2": true,
+  "validator_dispatch": "EXACT_CONTRACT_ID_AND_OPERATION_VARIANT",
   "no_new_migration": true,
   "excluded_modes": [
     "TWENTY_FOUR_TICK_RANGE",
