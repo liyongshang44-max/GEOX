@@ -1,0 +1,336 @@
+name: MCFT-CAP-04 v0.5 closure package remediation materializer
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-04-v05-closure-package-remediation-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-04-v05-closure-package-remediation-v1
+          fetch-depth: 0
+      - name: Reconcile Closure Record and final Gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const closurePath = 'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-CLOSURE-RECORD.json';
+          const record = JSON.parse(fs.readFileSync(closurePath, 'utf8'));
+          const requiredLegacyKeys = [
+            'pending_claim_support',
+            'finalization_candidate',
+            'main_verification_candidate',
+            'finalization_effectiveness_candidate',
+          ];
+          for (const key of requiredLegacyKeys) {
+            if (!(key in record)) throw new Error(`CLOSURE_RECORD_LEGACY_SNAPSHOT_REQUIRED:${key}`);
+          }
+          const finalAuthorityRef = 'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FINALIZATION-EFFECTIVENESS.json';
+          const metadata = (snapshotStage) => ({
+            historical_snapshot: true,
+            authoritative: false,
+            superseded: true,
+            superseded_by_ref: finalAuthorityRef,
+            snapshot_stage: snapshotStage,
+          });
+          const effectiveClaims = new Set(record.effective_completion_claims || []);
+          const pendingClaimSnapshot = record.pending_claim_support.map((item) => ({
+            claim: item.claim,
+            evidence_status_at_snapshot: item.evidence_status,
+            effective_at_snapshot: item.effective === true,
+            current_effective: effectiveClaims.has(item.claim),
+          }));
+          record.historical_snapshots = {
+            schema_version: 'geox_mcft_cap_04_historical_snapshots_v1',
+            authoritative: false,
+            current_authority_ref: finalAuthorityRef,
+            snapshots: {
+              s9_pending_claim_support: {
+                ...metadata('S9_CLOSURE_CANDIDATE'),
+                claims: pendingClaimSnapshot,
+              },
+              s10a_finalization_candidate: {
+                ...metadata('S10A_CANDIDATE'),
+                snapshot: record.finalization_candidate,
+              },
+              s10b_main_verification_candidate: {
+                ...metadata('S10B_MAIN_VERIFICATION'),
+                snapshot: record.main_verification_candidate,
+              },
+              s10c_finalization_effectiveness_candidate: {
+                ...metadata('S10C_EVIDENCE_CANDIDATE'),
+                snapshot: record.finalization_effectiveness_candidate,
+              },
+            },
+          };
+          for (const key of requiredLegacyKeys) delete record[key];
+          record.record_revision = 'v0.5-deliverable-and-ssot-remediation-v1';
+          record.branch = null;
+          record.active_delivery_slice_id = null;
+          record.current_authority = {
+            authority_kind: 'FINALIZATION_EFFECTIVENESS',
+            authority_ref: finalAuthorityRef,
+            completion_activation_pr_number: 2419,
+            completion_activation_exact_head: '51586079fe625ae28d23769cce9b74932823f344',
+            completion_activation_merge_commit: '4aa3877f80b3864e6bb6a248199c21dafaac115b',
+            final_merged_main_effectiveness_gate_run: 29262040369,
+            final_merged_main_effectiveness_gate: 'PASS',
+          };
+          fs.writeFileSync(closurePath, JSON.stringify(record, null, 2) + '\n');
+
+          const gatePath = 'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_FINALIZATION_EFFECTIVENESS.cjs';
+          const gate = `// scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_FINALIZATION_EFFECTIVENESS.cjs
+// Purpose: validate reconciled MCFT-CAP-04 COMPLETE state, the full v0.5 exact deliverable package, and machine-readable historical-snapshot isolation.
+// Boundary: governance/package acceptance only; no Runtime execution, persistence write, route, scheduler, recommendation, decision, action, calibration, or successor authorization.
+'use strict';
+
+const cp = require('node:child_process');
+const fs = require('node:fs');
+const path = require('node:path');
+
+const ROOT = path.resolve(__dirname, '../..');
+const BASE = '4aa3877f80b3864e6bb6a248199c21dafaac115b';
+const S10 = 'MCFT-CAP-04.FINALIZATION-MAIN-VERIFICATION-V1';
+const MODE = process.argv.includes('--postmerge') ? 'postmerge' : 'final';
+const COMPLETE_CLAIMS = ${JSON.stringify(record.effective_completion_claims)};
+const CHANGED_FILES = ${JSON.stringify([
+  'apps/server/package.json',
+  'apps/server/scripts/mcft/MCFT_CAP_04_FORECAST_SCENARIO_RUNNER.ts',
+  'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-CLOSURE-RECORD.json',
+  'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FORECAST-CONTRACT.json',
+  'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-RUNTIME-CONFIG-CHAIN.json',
+  'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-RUNTIME-CONFIG-CONTRACT.json',
+  'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-SCENARIO-CONTRACT.json',
+  'fixtures/mcft/water_state/expected/MCFT_CAP_04_24_TICK_EXPECTED.json',
+  'fixtures/mcft/water_state/expected/MCFT_CAP_04_CONFIG_CHAIN_EXPECTED.json',
+  'fixtures/mcft/water_state/expected/MCFT_CAP_04_SINGLE_TICK_FORECAST_EXPECTED.json',
+  'fixtures/mcft/water_state/expected/MCFT_CAP_04_SINGLE_TICK_SCENARIOS_EXPECTED.json',
+  'fixtures/mcft/water_state/negative/MCFT_CAP_04_NEGATIVE_FIXTURES.json',
+  'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_FINALIZATION_EFFECTIVENESS.cjs',
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_24_TICK.ts',
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_FORECAST_MATH.ts',
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SCENARIO_MATH.ts',
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK.ts',
+])};
+const REQUIRED_DELIVERABLES = ${JSON.stringify([
+  'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md',
+  'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-P0-STATUS.json',
+  'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-AUTHORIZATION.md',
+  'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-AUTHORIZATION-STATUS.json',
+  'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-PREDECESSOR-LOCK.json',
+  'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-DELIVERY-SLICE-STATUS.json',
+  'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-RUNTIME-CONFIG-CONTRACT.json',
+  'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-RUNTIME-CONFIG-CHAIN.json',
+  'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FUTURE-FORCING-CONTRACT.json',
+  'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FORECAST-CONTRACT.json',
+  'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-SCENARIO-CONTRACT.json',
+  'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-PERSISTENCE-MATRIX.json',
+  'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FAILURE-RECOVERY-CONTRACT.md',
+  'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-CLOSURE-RECORD.json',
+  'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-MAIN-VERIFICATION.json',
+  'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FINALIZATION-EFFECTIVENESS.json',
+  'fixtures/mcft/water_state/expected/MCFT_CAP_04_SINGLE_TICK_FORECAST_EXPECTED.json',
+  'fixtures/mcft/water_state/expected/MCFT_CAP_04_SINGLE_TICK_SCENARIOS_EXPECTED.json',
+  'fixtures/mcft/water_state/expected/MCFT_CAP_04_24_TICK_EXPECTED.json',
+  'fixtures/mcft/water_state/expected/MCFT_CAP_04_CONFIG_CHAIN_EXPECTED.json',
+  'fixtures/mcft/water_state/negative/MCFT_CAP_04_NEGATIVE_FIXTURES.json',
+  'apps/server/scripts/mcft/MCFT_CAP_04_FORECAST_SCENARIO_RUNNER.ts',
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PREDECESSOR_PREFLIGHT.ts',
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_CONTRACTS_CONFIG.ts',
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_FUTURE_FORCING.ts',
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_FORECAST_MATH.ts',
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SCENARIO_MATH.ts',
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PERSISTENCE_DB.ts',
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK.ts',
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_24_TICK.ts',
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_RESTART_BACKFILL.ts',
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_FAILURE_RECOVERY.ts',
+  'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_P0_PREDECESSOR_SSOT.cjs',
+  'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_AUTHORIZATION.cjs',
+  'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_CLOSURE.cjs',
+  'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_FINALIZATION_EFFECTIVENESS.cjs',
+])};
+const NEGATIVE_REQUIRED_FIELDS = [
+  'fixture_id',
+  'expected_reason_code',
+  'expected_failure_stage',
+  'expected_no_current_operation_partial_canonical_write',
+  'expected_no_current_operation_partial_projection_write',
+  'expected_checkpoint_behavior',
+  'expected_state_latest_behavior',
+  'expected_forecast_latest_behavior',
+  'expected_successful_forecast_behavior',
+  'expected_scenario_latest_behavior',
+  'expected_active_lineage_behavior',
+  'optional_operational_audit_allowed',
+];
+
+let pass = 0;
+let fail = 0;
+const check = (value, message) => {
+  if (value) {
+    pass += 1;
+    console.log('PASS ' + message);
+  } else {
+    fail += 1;
+    console.error('FAIL ' + message);
+  }
+};
+const git = (args) => cp.execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
+const readText = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
+const readJson = (relativePath) => JSON.parse(readText(relativePath));
+const exactSet = (actual, expected, message) => check(
+  JSON.stringify([...(actual || [])].sort()) === JSON.stringify([...expected].sort()),
+  message,
+);
+
+for (const file of REQUIRED_DELIVERABLES) check(fs.existsSync(path.join(ROOT, file)), 'required deliverable exists ' + file);
+
+const auth = readJson('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-AUTHORIZATION-STATUS.json');
+const delivery = readJson('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-DELIVERY-SLICE-STATUS.json');
+const closure = readJson('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-CLOSURE-STATUS.json');
+const record = readJson('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-CLOSURE-RECORD.json');
+const finalization = readJson('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FINALIZATION-STATUS.json');
+const mainVerification = readJson('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-MAIN-VERIFICATION.json');
+const effectiveness = readJson('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FINALIZATION-EFFECTIVENESS.json');
+const slice = delivery.slices.find((item) => item.delivery_slice_id === S10);
+
+check(auth.implementation_status === 'COMPLETE' && auth.active_delivery_slice_id === null, 'authorization COMPLETE inactive');
+check(delivery.status === 'COMPLETE' && delivery.active_delivery_slice_id === null, 'delivery COMPLETE inactive');
+for (const object of [slice, closure, record, finalization, mainVerification, effectiveness]) {
+  check(object.closure_effective === true, 'closure effective');
+  check(object.capability_status === 'COMPLETE' || object.capability_complete === true, 'capability complete');
+  exactSet(object.pending_completion_claims, [], 'pending completion claims empty');
+  exactSet(object.effective_completion_claims, COMPLETE_CLAIMS, 'effective completion claims exact');
+}
+check(record.status === 'COMPLETE' && record.record_revision === 'v0.5-deliverable-and-ssot-remediation-v1', 'Closure Record current revision COMPLETE');
+check(record.branch === null && record.active_delivery_slice_id === null, 'Closure Record inactive current identity');
+check(record.current_authority?.authority_kind === 'FINALIZATION_EFFECTIVENESS', 'Closure Record current authority explicit');
+for (const key of ['pending_claim_support', 'finalization_candidate', 'main_verification_candidate', 'finalization_effectiveness_candidate']) {
+  check(!(key in record), 'legacy conflicting top-level snapshot removed ' + key);
+}
+
+const snapshots = record.historical_snapshots?.snapshots;
+check(record.historical_snapshots?.authoritative === false && snapshots && typeof snapshots === 'object', 'historical snapshot namespace non-authoritative');
+for (const [name, snapshot] of Object.entries(snapshots || {})) {
+  check(snapshot.historical_snapshot === true, name + ' marked historical');
+  check(snapshot.authoritative === false, name + ' marked non-authoritative');
+  check(snapshot.superseded === true, name + ' marked superseded');
+  check(snapshot.superseded_by_ref === 'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FINALIZATION-EFFECTIVENESS.json', name + ' superseded-by authority exact');
+}
+const s9Claims = snapshots?.s9_pending_claim_support?.claims;
+check(Array.isArray(s9Claims) && s9Claims.length === COMPLETE_CLAIMS.length, 'historical S9 claim support count exact');
+check(s9Claims?.every((item) => item.effective_at_snapshot === false && item.current_effective === true), 'historical claim support distinguishes snapshot from current state');
+
+function scanForUnmarkedConflict(value, objectPath, inheritedHistorical) {
+  if (!value || typeof value !== 'object') return;
+  const localHistorical = inheritedHistorical || (
+    value.historical_snapshot === true
+    && value.authoritative === false
+    && value.superseded === true
+  );
+  if (!localHistorical) {
+    if (typeof value.status === 'string' && /(PENDING|CANDIDATE)/.test(value.status)) {
+      check(false, 'unmarked conflicting status rejected at ' + objectPath + '.status');
+    }
+    if (value.completion_claims_status === 'PENDING') {
+      check(false, 'unmarked pending claims status rejected at ' + objectPath + '.completion_claims_status');
+    }
+    if (value.effectiveness_condition_satisfied === false) {
+      check(false, 'unmarked false effectiveness rejected at ' + objectPath + '.effectiveness_condition_satisfied');
+    }
+    if (value.effective === false) {
+      check(false, 'unmarked ineffective claim rejected at ' + objectPath + '.effective');
+    }
+  }
+  for (const [key, child] of Object.entries(value)) {
+    scanForUnmarkedConflict(child, objectPath + '.' + key, localHistorical || key === 'historical_snapshots');
+  }
+}
+scanForUnmarkedConflict(record, 'closure_record', false);
+check(fail === 0, 'no unmarked nested conflicting state');
+
+const runtimeConfigContract = readJson('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-RUNTIME-CONFIG-CONTRACT.json');
+const runtimeConfigChain = readJson('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-RUNTIME-CONFIG-CHAIN.json');
+const forecastContract = readJson('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FORECAST-CONTRACT.json');
+const scenarioContract = readJson('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-SCENARIO-CONTRACT.json');
+check(runtimeConfigContract.contract_id === 'MCFT_CAP_04_RUNTIME_CONFIG_V1', 'Runtime Config contract identity');
+check(runtimeConfigChain.config_count === 24 && runtimeConfigChain.first_effective_logical_time === '2026-06-03T02:00:00.000Z', 'Runtime Config chain boundary');
+check(forecastContract.variants.A1_COMPLETED.point_count === 72 && forecastContract.time_contract.first_target === 'T+1H', 'Forecast contract boundary');
+check(scenarioContract.option_count === 3 && scenarioContract.assumption_authority.representation === 'assumption_basis', 'Scenario contract boundary');
+
+const forecastExpected = readJson('fixtures/mcft/water_state/expected/MCFT_CAP_04_SINGLE_TICK_FORECAST_EXPECTED.json');
+const scenariosExpected = readJson('fixtures/mcft/water_state/expected/MCFT_CAP_04_SINGLE_TICK_SCENARIOS_EXPECTED.json');
+const rangeExpected = readJson('fixtures/mcft/water_state/expected/MCFT_CAP_04_24_TICK_EXPECTED.json');
+const configExpected = readJson('fixtures/mcft/water_state/expected/MCFT_CAP_04_CONFIG_CHAIN_EXPECTED.json');
+check(forecastExpected.point_count === 72 && forecastExpected.first_point.horizon_hour === 1 && forecastExpected.last_point.horizon_hour === 72, 'single-tick Forecast expected fixture');
+check(scenariosExpected.option_count === 3 && scenariosExpected.scenario_point_count === 216, 'single-tick Scenario expected fixture');
+check(rangeExpected.tick_count === 24 && rangeExpected.forecast_point_count === 1728 && rangeExpected.scenario_point_count === 5184, '24-tick expected fixture');
+check(configExpected.config_count === 24 && configExpected.step_hours === 1, 'config-chain expected fixture');
+
+const negative = readJson('fixtures/mcft/water_state/negative/MCFT_CAP_04_NEGATIVE_FIXTURES.json');
+check(Array.isArray(negative.fixtures) && negative.fixtures.length >= 16, 'unified negative fixture suites present');
+const fixtureIds = new Set();
+for (const fixture of negative.fixtures || []) {
+  for (const field of NEGATIVE_REQUIRED_FIELDS) check(Object.prototype.hasOwnProperty.call(fixture, field), fixture.fixture_id + ' has ' + field);
+  check(typeof fixture.fixture_id === 'string' && !fixtureIds.has(fixture.fixture_id), 'negative fixture id unique ' + fixture.fixture_id);
+  fixtureIds.add(fixture.fixture_id);
+  check(Array.isArray(fixture.covered_cases) && fixture.covered_cases.length > 0, fixture.fixture_id + ' covers task cases');
+}
+check(fixtureIds.has('cap04_complete_ssot_rejects_unmarked_historical_pending_state'), 'SSOT conflict negative fixture present');
+
+const runner = readText('apps/server/scripts/mcft/MCFT_CAP_04_FORECAST_SCENARIO_RUNNER.ts');
+const packageJson = readJson('apps/server/package.json');
+check(packageJson.scripts['mcft:cap04:forecast-scenario'] === 'pnpm -w exec tsx apps/server/scripts/mcft/MCFT_CAP_04_FORECAST_SCENARIO_RUNNER.ts', 'runner package command exact');
+check(runner.includes('Cap04PendingScenarioBarrierSingleTickServiceV1') && runner.includes('Cap04ForecastScenarioRangeServiceV1') && runner.includes('Cap04ForecastScenarioRestartResumeServiceV1'), 'runner reuses verified services');
+check(!/Fastify|setInterval|setTimeout|Date\.now|Math\.random/.test(runner), 'runner has no route scheduler wall-clock or random authority');
+
+const wrapperExpectations = {
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_FORECAST_MATH.ts': ['ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH.ts', 'ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH_NEGATIVE.ts'],
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SCENARIO_MATH.ts': ['ACCEPTANCE_MCFT_CAP_04_PURE_SCENARIO_MATH.ts', 'ACCEPTANCE_MCFT_CAP_04_PURE_SCENARIO_MATH_NEGATIVE.ts'],
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK.ts': ['ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION.ts', 'ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_NEGATIVE.ts'],
+  'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_24_TICK.ts': ['ACCEPTANCE_MCFT_CAP_04_TWENTY_FOUR_TICK_RANGE.ts', 'ACCEPTANCE_MCFT_CAP_04_TWENTY_FOUR_TICK_RANGE_NEGATIVE.ts'],
+};
+for (const [wrapper, imports] of Object.entries(wrapperExpectations)) {
+  const text = readText(wrapper);
+  check(imports.every((name) => text.includes(name)), 'thin wrapper reuses existing suites ' + wrapper);
+}
+
+const tracked = git(['diff', '--name-only', BASE]).split(/\r?\n/).filter(Boolean);
+const untracked = git(['ls-files', '--others', '--exclude-standard']).split(/\r?\n/).filter(Boolean);
+const changed = [...new Set([...tracked, ...untracked])].sort();
+exactSet(changed, CHANGED_FILES, 'exact remediation changed-file boundary');
+for (const file of changed) {
+  check(!file.startsWith('apps/server/src/'), 'no Runtime source change ' + file);
+  check(!file.startsWith('apps/server/db/migrations/'), 'no migration change ' + file);
+  check(!file.startsWith('apps/web/'), 'no web change ' + file);
+  check(!file.startsWith('.github/workflows/'), 'no workflow retained ' + file);
+}
+check(delivery.successor_authorized === false && effectiveness.successor_authorized === false, 'MCFT-CAP-05 remains unauthorized');
+
+if (MODE === 'postmerge') {
+  check(git(['branch', '--show-current']) === 'main', 'postmerge runs on main');
+  check(git(['rev-parse', 'HEAD']) === git(['rev-parse', 'origin/main']), 'postmerge main equals origin/main');
+}
+console.log('MCFT-CAP-04 v0.5 closure package remediation ' + MODE + ': ' + pass + ' PASS, ' + fail + ' FAIL');
+if (fail > 0) process.exit(1);
+`;
+          fs.writeFileSync(gatePath, gate);
+          NODE
+          rm -f .github/workflows/mcft-cap-04-v05-remediation-materializer.yml
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_FINALIZATION_EFFECTIVENESS.cjs
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "governance(mcft-cap-04): reconcile v0.5 package and Closure SSOT"
+          git push origin HEAD:agent/mcft-cap-04-v05-closure-package-remediation-v1
