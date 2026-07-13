@@ -1,0 +1,29 @@
+name: MCFT-CAP-04 S9 closure merged-main verification
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-04-s9-closure-postmerge-probe-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Verify exact merged main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git branch --show-current)" = "main"
+          test "$(git rev-parse HEAD)" = "a6a07840efe080198233b39ec9a31d26c2e3f4f9"
+          test "$(git rev-parse origin/main)" = "a6a07840efe080198233b39ec9a31d26c2e3f4f9"
+      - name: Run S9 merged-main Closure Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_CLOSURE.cjs --postmerge
