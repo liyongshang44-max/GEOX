@@ -14,17 +14,13 @@ import type {
   BuildCap04CompletedForecastRecordSetInputV1,
   Cap04ARecordSetBuilderSourceMembersV1,
 } from "../../apps/server/src/runtime/twin_runtime/forecast_continuation_record_set_builder_v1.js";
-import { buildCap04ConfigChainFixtureV1 } from "./mcft_cap_04_contracts_config_fixture_v1.js";
+import {
+  CAP04_FIXTURE_SCOPE_V1,
+  buildCap04ConfigChainFixtureV1,
+} from "./mcft_cap_04_contracts_config_fixture_v1.js";
 import { buildCap04PureForecastMathInputV1 } from "./mcft_cap_04_forecast_math_fixture_v1.js";
 
-export const CAP04_S5A_SCOPE_V1 = {
-  tenant_id: "tenant_mcft",
-  project_id: "project_mcft",
-  group_id: "group_mcft",
-  field_id: "field_mcft",
-  season_id: "season_2026",
-  zone_id: "zone_root",
-} as const;
+export const CAP04_S5A_SCOPE_V1 = CAP04_FIXTURE_SCOPE_V1;
 
 function addMinutesV1(value: string, minutes: number): string {
   return new Date(Date.parse(value) + minutes * 60_000).toISOString();
