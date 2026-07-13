@@ -1,18 +1,11 @@
-/home/runner/work/GEOX/GEOX/apps/server/src/runtime/twin_runtime/forecast_continuation_record_set_builder_v1.ts:105
-    if (actual[field] !== expected[field]) throw new Error(`${code}:${field}`);
-                                                 ^
-
-
-Error: CAP04_BUILDER_RUNTIME_CONFIG_SCOPE_MISMATCH:tenant_id
-    at exactScopeV1 (/home/runner/work/GEOX/GEOX/apps/server/src/runtime/twin_runtime/forecast_continuation_record_set_builder_v1.ts:105:50)
-    at validateRuntimeConfigV1 (/home/runner/work/GEOX/GEOX/apps/server/src/runtime/twin_runtime/forecast_continuation_record_set_builder_v1.ts:159:3)
-    at buildCap04ARecordSetInternalV1 (/home/runner/work/GEOX/GEOX/apps/server/src/runtime/twin_runtime/forecast_continuation_record_set_builder_v1.ts:215:18)
-    at buildCap04CompletedForecastRecordSetV1 (/home/runner/work/GEOX/GEOX/apps/server/src/runtime/twin_runtime/forecast_continuation_record_set_builder_v1.ts:448:10)
-    at <anonymous> (/home/runner/work/GEOX/GEOX/scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_A1_A2_RECORD_SET_BUILDERS.ts:41:12)
-    at Object.<anonymous> (/home/runner/work/GEOX/GEOX/scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_A1_A2_RECORD_SET_BUILDERS.ts:136:29)
-    at Module._compile (node:internal/modules/cjs/loader:1521:14)
-    at Object.transformer (/home/runner/work/GEOX/GEOX/node_modules/.pnpm/tsx@4.21.0/node_modules/tsx/dist/register-D46fvsV_.cjs:3:1104)
-    at Module.load (node:internal/modules/cjs/loader:1266:32)
-    at Module._load (node:internal/modules/cjs/loader:1091:12)
-
-Node.js v20.20.2
+PASS A1 and A2 candidates pass the complete CAP-04 record-set validator
+PASS both variants contain exactly the frozen eight canonical object types
+PASS A1 and A2 retain strict operation-variant and contract separation
+PASS A1 and A2 share the exact cross-variant terminal tick uniqueness identity
+PASS operation variant produces distinct operation, record-set and idempotency identities
+PASS A1 publishes a successful 72-point Forecast and advances successful Forecast authority
+PASS A2 advances State/checkpoint with blocked Forecast while preserving previous successful Forecast
+PASS Tick is the complete six-direct-reference recovery root with no health_ref
+PASS same semantic input deterministically reproduces every member and aggregate hash
+PASS 24 standard ticks produce 24 distinct valid A1 record-set candidates
+MCFT-CAP-04 A1/A2 record-set builders: 10 PASS, 0 FAIL
