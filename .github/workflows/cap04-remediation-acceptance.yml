@@ -43,22 +43,32 @@ jobs:
       - name: Recursive typecheck
         run: pnpm -r typecheck
       - name: R1-A and R1-G pure Forecast authority
+        shell: bash
         run: |
+          set -o pipefail
           pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH.ts | tee acceptance-forecast-positive.log
           pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH_NEGATIVE.ts | tee acceptance-forecast-negative.log
       - name: R1-E R1-F R1-H single-tick paths
+        shell: bash
         run: |
+          set -o pipefail
           pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION.ts | tee acceptance-single-tick-positive.log
           pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_NEGATIVE.ts | tee acceptance-single-tick-negative.log
           pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PENDING_SCENARIO_BARRIER.ts | tee acceptance-pending-barrier.log
       - name: S5B PostgreSQL regression
+        shell: bash
         env:
           MCFT_CAP_04_PERSISTENCE_DESTRUCTIVE_ACCEPTANCE: "1"
-        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PERSISTENCE_DB.ts | tee acceptance-s5b-db.log
+        run: |
+          set -o pipefail
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PERSISTENCE_DB.ts | tee acceptance-s5b-db.log
       - name: R1-B R1-C R1-D PostgreSQL remediation
+        shell: bash
         env:
           MCFT_CAP_04_SINGLE_TICK_DESTRUCTIVE_ACCEPTANCE: "1"
-        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_DB.ts | tee acceptance-s6-db.log
+        run: |
+          set -o pipefail
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_DB.ts | tee acceptance-s6-db.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
