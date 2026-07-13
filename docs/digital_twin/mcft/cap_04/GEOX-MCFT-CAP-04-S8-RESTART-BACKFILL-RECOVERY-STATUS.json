@@ -8,9 +8,9 @@
   "baseline_main_commit": "bdc3e93ce755e237655f7bfc98b117a6e842d030",
   "activation_branch": "agent/mcft-cap-04-s8-activation-v1",
   "implementation_branch": "agent/mcft-cap-04-s8-restart-backfill-recovery-v1",
-  "status": "IMPLEMENTATION_CANDIDATE",
+  "status": "MERGED_EFFECTIVE",
   "design_status": "DESIGN_FROZEN",
-  "implementation_status": "VALIDATED_PENDING_MERGE",
+  "implementation_status": "MERGED_EFFECTIVE",
   "activation_fields_status": "FROZEN",
   "explicit_activation_authority": "OWNER_EXPLICIT_AUTHORIZATION_2026_07_13",
   "authorization_effective": true,
@@ -143,7 +143,7 @@
   "activation_effectiveness_condition": "S8_ACTIVATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S8_ACTIVATION_GATE_PASS",
   "activation_effectiveness_condition_satisfied": true,
   "implementation_effectiveness_condition": "S8_IMPLEMENTATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S8_GATE_PASS",
-  "implementation_effectiveness_condition_satisfied": false,
+  "implementation_effectiveness_condition_satisfied": true,
   "successor_delivery_slice_id": "MCFT-CAP-04.CLOSURE-CANDIDATE-V1",
   "successor_authorized": false,
   "activation_effectiveness": {
@@ -236,5 +236,15 @@
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_RESTART_BACKFILL.ts",
     "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_RESTART_BACKFILL_DB.ts",
     "scripts/runtime_acceptance/mcft_cap_04_restart_backfill_recovery_fixture_v1.ts"
-  ]
+  ],
+  "implementation_effectiveness": {
+    "pr_number": 2403,
+    "exact_head_commit": "2671e3fe2296f9adfd129688798fe2347e37c757",
+    "exact_head_ci_run": 29252831679,
+    "merge_commit": "235c832d302a1917dbd557ba0adfe15587a44f50",
+    "postmerge_probe_pr_number": 2404,
+    "postmerge_workflow_run": 29255291485,
+    "postmerge_gate": "PASS",
+    "effectiveness_condition_satisfied": true
+  }
 }

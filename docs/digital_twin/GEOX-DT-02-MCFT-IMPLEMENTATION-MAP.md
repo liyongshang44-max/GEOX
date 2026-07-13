@@ -805,3 +805,21 @@ PostgreSQL uniqueness/rebuild + fencing/CAS: 29251564080 PASS
 PostgreSQL fresh-process restart: 29252000320 PASS
 S9: BLOCKED
 ```
+
+
+## MCFT-CAP-04 S9 Closure activation
+
+```text
+baseline main: 235c832d302a1917dbd557ba0adfe15587a44f50
+S8 status: MERGED_EFFECTIVE
+S8 exact-head CI: 29252831679 SUCCESS
+S8 merged-main Gate: 29255291485 SUCCESS
+active delivery slice: MCFT-CAP-04.CLOSURE-CANDIDATE-V1
+S9 status: ACTIVATION_CANDIDATE
+S9 Runtime source authorized: false
+S9 completion claims: PENDING_ONLY
+S10 status: BLOCKED
+MCFT-CAP-05 authorized: false
+```
+
+S9 is governance-only evidence aggregation. It does not activate CAP-04 completion claims.
