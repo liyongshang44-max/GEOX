@@ -33,21 +33,39 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Apply bounded S6 interface patch
-        run: node .cap04-s6/patch_interfaces.cjs
+      - name: Apply bounded S6 patches
+        run: |
+          node .cap04-s6/patch_interfaces.cjs
+          node .cap04-s6/patch_idempotent_pin.cjs
 
       - name: Capture recursive Typecheck
-        id: typecheck
         shell: bash
         run: |
           set +e
           set -o pipefail
           pnpm -r typecheck 2>&1 | tee .cap04-s6/typecheck.log
-          code=${PIPESTATUS[0]}
-          echo "$code" > .cap04-s6/typecheck.exit
+          echo "${PIPESTATUS[0]}" > .cap04-s6/typecheck.exit
           exit 0
 
-      - name: Persist patch and diagnostics
+      - name: Capture positive S6 acceptance
+        shell: bash
+        run: |
+          set +e
+          set -o pipefail
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION.ts 2>&1 | tee .cap04-s6/positive.log
+          echo "${PIPESTATUS[0]}" > .cap04-s6/positive.exit
+          exit 0
+
+      - name: Capture negative S6 acceptance
+        shell: bash
+        run: |
+          set +e
+          set -o pipefail
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_NEGATIVE.ts 2>&1 | tee .cap04-s6/negative.log
+          echo "${PIPESTATUS[0]}" > .cap04-s6/negative.exit
+          exit 0
+
+      - name: Persist patches and diagnostics
         env:
           HEAD_BRANCH: ${{ github.head_ref }}
         run: |
@@ -57,9 +75,12 @@ jobs:
           if git diff --cached --quiet; then
             echo "no diagnostic changes"
           else
-            git commit -m "chore(mcft-cap-04): apply S6 interface patch and capture typecheck"
+            git commit -m "chore(mcft-cap-04): capture S6 integration diagnostics"
             git push origin "HEAD:${HEAD_BRANCH}"
           fi
 
-      - name: Require recursive Typecheck
-        run: test "$(cat .cap04-s6/typecheck.exit)" -eq 0
+      - name: Require recursive Typecheck and S6 acceptances
+        run: |
+          test "$(cat .cap04-s6/typecheck.exit)" -eq 0
+          test "$(cat .cap04-s6/positive.exit)" -eq 0
+          test "$(cat .cap04-s6/negative.exit)" -eq 0
