@@ -1,4 +1,4 @@
-name: MCFT-CAP-04 S3 repair crop-stage authority
+name: MCFT-CAP-04 S3 finalize negative authority
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  repair:
+  finalize:
     if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-04-s3-pure-72h-forecast-math-v1'
     runs-on: ubuntu-latest
     steps:
@@ -33,28 +33,30 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Repair nested crop-stage authority
+      - name: Align negative acceptance with earlier contract authority
         run: |
           python - <<'PY'
           from pathlib import Path
 
-          targets = [
-              Path('apps/server/src/domain/twin_runtime/pure_72h_forecast_math_v1.ts'),
-              Path('scripts/runtime_acceptance/mcft_cap_04_forecast_math_fixture_v1.ts'),
-          ]
-          combined = ''.join(path.read_text(encoding='utf-8') for path in targets)
-          old_ref = combined.count('config.crop_stage_context_ref')
-          old_hash = combined.count('config.crop_stage_context_hash')
-          new_ref = combined.count('config.crop_stage_context.context_ref')
-          new_hash = combined.count('config.crop_stage_context.context_hash')
-          if (old_ref, old_hash, new_ref, new_hash) not in {(3, 3, 0, 0), (0, 0, 3, 3)}:
-              raise SystemExit(f'unexpected crop-stage markers: {(old_ref, old_hash, new_ref, new_hash)}')
-          for path in targets:
-              text = path.read_text(encoding='utf-8')
-              text = text.replace('config.crop_stage_context_ref', 'config.crop_stage_context.context_ref')
-              text = text.replace('config.crop_stage_context_hash', 'config.crop_stage_context.context_hash')
-              path.write_text(text, encoding='utf-8', newline='')
+          path = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH_NEGATIVE.ts')
+          text = path.read_text(encoding='utf-8')
+          replacements = {
+              '"CAP04_FORECAST_FORCING_CONFIG_IDENTITY_MISMATCH"': '"CAP04_FORCING_POINT_CONFIG_MISMATCH"',
+              '"CAP04_FORECAST_CROP_STAGE_CONTEXT_MISMATCH"': '"CAP04_FORCING_POINT_CROP_STAGE_MISMATCH"',
+              '"CAP04_FORECAST_STRUCTURAL_STDDEV_ZERO_FORBIDDEN"': '"ASSIMILATED_STRUCTURAL_STDDEV_MISMATCH"',
+          }
+          for old, new in replacements.items():
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{old}: expected once, found {count}')
+              text = text.replace(old, new)
+          path.write_text(text, encoding='utf-8', newline='')
           PY
+
+      - name: Remove temporary diagnostic files
+        run: |
+          rm -rf .cap04-s3
+          rm -f .github/workflows/mcft-cap-04-s3-merge-typecheck-diagnostics.yml
 
       - name: Recursive typecheck
         run: pnpm -r typecheck
@@ -63,38 +65,7 @@ jobs:
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH.ts
 
       - name: Run negative pure Forecast math acceptance
-        id: negative_acceptance
-        continue-on-error: true
-        shell: bash
-        run: |
-          set -o pipefail
-          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH_NEGATIVE.ts 2>&1 | tee /tmp/cap04-s3-negative.log
-
-      - name: Persist negative acceptance diagnostics
-        if: steps.negative_acceptance.outcome == 'failure'
-        env:
-          HEAD_BRANCH: ${{ github.head_ref }}
-        run: |
-          mkdir -p .cap04-s3
-          cp /tmp/cap04-s3-negative.log .cap04-s3/negative.log
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add apps/server/src/domain/twin_runtime/pure_72h_forecast_math_v1.ts
-          git add scripts/runtime_acceptance/mcft_cap_04_forecast_math_fixture_v1.ts
-          git add .cap04-s3/negative.log
-          if ! git diff --cached --quiet; then
-            git commit -m "chore(mcft-cap-04): persist S3 negative acceptance diagnostics"
-            git push origin "HEAD:${HEAD_BRANCH}"
-          fi
-
-      - name: Stop after negative acceptance failure
-        if: steps.negative_acceptance.outcome == 'failure'
-        run: exit 1
-
-      - name: Remove temporary diagnostic files
-        run: |
-          rm -rf .cap04-s3
-          rm -f .github/workflows/mcft-cap-04-s3-merge-typecheck-diagnostics.yml
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH_NEGATIVE.ts
 
       - name: Run final S3 governance Gate
         run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S3_PURE_FORECAST_MATH.cjs --final
@@ -102,12 +73,12 @@ jobs:
       - name: Verify patch integrity
         run: git diff --check 4a8dab632246b05266f1d869f6c9a0a5bcf37e76
 
-      - name: Commit repaired final candidate
+      - name: Commit exact repaired candidate
         env:
           HEAD_BRANCH: ${{ github.head_ref }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "fix(mcft-cap-04): use nested crop-stage config authority"
+          git commit -m "fix(mcft-cap-04): align S3 negative contract authority"
           git push origin "HEAD:${HEAD_BRANCH}"
