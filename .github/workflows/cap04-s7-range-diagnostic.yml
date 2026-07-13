@@ -24,7 +24,25 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --no-frozen-lockfile
-      - name: Run S7 positive range acceptance
-        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_TWENTY_FOUR_TICK_RANGE.ts
-      - name: Run S7 negative range acceptance
-        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_TWENTY_FOUR_TICK_RANGE_NEGATIVE.ts
+      - name: Capture S7 range acceptance
+        shell: bash
+        run: |
+          set +e
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_TWENTY_FOUR_TICK_RANGE.ts > /tmp/cap04-s7-positive.log 2>&1
+          positive=$?
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_TWENTY_FOUR_TICK_RANGE_NEGATIVE.ts > /tmp/cap04-s7-negative.log 2>&1
+          negative=$?
+          echo "$positive" > /tmp/cap04-s7-positive-exit.txt
+          echo "$negative" > /tmp/cap04-s7-negative-exit.txt
+          cat /tmp/cap04-s7-positive.log
+          cat /tmp/cap04-s7-negative.log
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cap04-s7-range-diagnostics
+          path: |
+            /tmp/cap04-s7-positive.log
+            /tmp/cap04-s7-positive-exit.txt
+            /tmp/cap04-s7-negative.log
+            /tmp/cap04-s7-negative-exit.txt
+          retention-days: 1
