@@ -12,9 +12,9 @@
   "authorization_effective": true,
   "runtime_source_authorized": true,
   "authorization_effectiveness_condition": "SATISFIED_ON_MAIN",
-  "baseline_main_commit": "4a1c9fde05594c97fb949e062df77375a1a27365",
-  "branch": "agent/mcft-cap-04-s4-pure-three-scenario-math-v1",
-  "active_delivery_slice_id": "MCFT-CAP-04.MCFT-06-10.PURE-THREE-SCENARIO-MATH-V1",
+  "baseline_main_commit": "f0fc64d487ba6ed34d0c77178fed45e707092a07",
+  "branch": "agent/mcft-cap-04-s5a-a1-a2-record-set-builders-v1",
+  "active_delivery_slice_id": "MCFT-CAP-04.MCFT-02-07-08-09.A1-A2-RECORD-SET-BUILDERS-V1",
   "task_ref": "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md",
   "authorization_document_ref": "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-AUTHORIZATION.md",
   "delivery_status_ref": "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-DELIVERY-SLICE-STATUS.json",
@@ -60,8 +60,8 @@
     "repository_exact_head_ci_requirement": "PASS_REQUIRED_BEFORE_MERGE"
   },
   "current_blockers": [
-    "MCFT_CAP_04_S4_PR_MERGED",
-    "MCFT_CAP_04_S4_MERGED_MAIN_GATE_PASS"
+    "MCFT_CAP_04_S5A_PR_MERGED",
+    "MCFT_CAP_04_S5A_MERGED_MAIN_GATE_PASS"
   ],
   "premerge_satisfied_conditions": [
     "MCFT_CAP_04_P0_MERGED_MAIN_EFFECTIVE",
@@ -83,17 +83,17 @@
     "MCFT_CAP_04_PREDECESSOR_IDENTITY_LOCKED"
   ],
   "preserved_nonclaims": [
-    "NO_CANONICAL_SCENARIO_OBJECT_APPEND",
+    "NO_DATABASE_ACCESS",
     "NO_A1_A2_B_PERSISTENCE",
-    "NO_RECORD_SET_BUILDERS",
+    "NO_B_SCENARIO_SET_BUILDER",
+    "NO_CANONICAL_OBJECT_APPEND",
+    "NO_TERMINAL_UNIQUENESS_QUERY",
+    "NO_RECOVERY_TRANSACTION",
     "NO_MIGRATION",
     "NO_PROJECTION",
     "NO_ROUTE",
+    "NO_WEB",
     "NO_SCHEDULER",
-    "NO_CALIBRATED_STRESS_PROBABILITY",
-    "NO_EXECUTION_COMPLIANCE_PROBABILITY",
-    "NO_EXECUTION_EVIDENCE",
-    "NO_FORECAST_RESIDUAL",
     "NO_RECOMMENDATION",
     "NO_POLICY_EVALUATION",
     "NO_DECISION",
@@ -104,32 +104,33 @@
     "NO_MCFT_GATE_A_CLOSURE",
     "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
   ],
-  "repository_write_scope": "S4_PURE_SCENARIO_MATH_ONLY",
+  "repository_write_scope": "S5A_A1_A2_BUILDERS_ONLY",
   "exact_changed_file_boundary": [
-    "apps/server/src/domain/twin_runtime/pure_three_scenario_math_v1.ts",
-    "apps/server/src/domain/twin_runtime/scenario_math_contracts_v1.ts",
+    "apps/server/src/runtime/twin_runtime/forecast_continuation_record_set_builder_v1.ts",
     "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
     "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+    "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-A1-A2-RECORD-SET-BUILDERS-CONTRACT.json",
+    "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-A1-A2-RECORD-SET-BUILDERS-V1.md",
     "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-AUTHORIZATION-STATUS.json",
     "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-DELIVERY-SLICE-STATUS.json",
-    "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-PURE-THREE-SCENARIO-MATH-V1.md",
-    "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S3-PURE-FORECAST-MATH-STATUS.json",
     "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S4-PURE-SCENARIO-MATH-STATUS.json",
-    "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-SCENARIO-MATH-CONTRACT.json",
-    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S4_PURE_SCENARIO_MATH.cjs",
-    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_SCENARIO_MATH.ts",
-    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_SCENARIO_MATH_NEGATIVE.ts",
-    "scripts/runtime_acceptance/mcft_cap_04_scenario_math_fixture_v1.ts"
+    "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S5A-A1-A2-BUILDERS-STATUS.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S5A_A1_A2_BUILDERS.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_A1_A2_RECORD_SET_BUILDERS.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_A1_A2_RECORD_SET_BUILDERS_NEGATIVE.ts",
+    "scripts/runtime_acceptance/mcft_cap_04_a1_a2_record_set_fixture_v1.ts"
   ],
-  "next_authorized_slice_id_after_effectiveness": "MCFT-CAP-04.MCFT-02-07-08-09.A1-A2-RECORD-SET-BUILDERS-V1",
+  "next_authorized_slice_id_after_effectiveness": "MCFT-CAP-04.MCFT-03-09-10.A1-A2-B-PERSISTENCE-UNIQUENESS-RECOVERY-V1",
   "successor_capability_line_id": "MCFT-CAP-05",
   "successor_authorized": false,
   "satisfied_conditions": [
     "MCFT_CAP_04_S0_MERGED_MAIN_EFFECTIVE",
     "MCFT_CAP_04_S1_MERGED_MAIN_EFFECTIVE",
     "MCFT_CAP_04_S2_MERGED_MAIN_EFFECTIVE",
-    "MCFT_CAP_04_RUNTIME_SOURCE_AUTHORIZED_FOR_S3",
-    "MCFT_CAP_04_S3_EXPLICIT_OWNER_ACTIVATION"
+    "MCFT_CAP_04_S3_MERGED_MAIN_EFFECTIVE",
+    "MCFT_CAP_04_S4_MERGED_MAIN_EFFECTIVE",
+    "MCFT_CAP_04_RUNTIME_SOURCE_AUTHORIZED_FOR_S5A",
+    "MCFT_CAP_04_S5A_EXPLICIT_OWNER_ACTIVATION"
   ],
   "s0_effectiveness": {
     "pr_number": 2381,
@@ -168,6 +169,16 @@
     "merge_commit": "4a1c9fde05594c97fb949e062df77375a1a27365",
     "postmerge_probe_pr_number": 2389,
     "postmerge_workflow_run": 29225560206,
+    "postmerge_gate": "PASS",
+    "effectiveness_condition_satisfied": true
+  },
+  "s4_effectiveness": {
+    "pr_number": 2390,
+    "exact_head_commit": "02faa691cfa83624e28664fee7b3fbf0ed7dfd36",
+    "exact_head_ci_run": 29226139264,
+    "merge_commit": "f0fc64d487ba6ed34d0c77178fed45e707092a07",
+    "postmerge_probe_pr_number": 2391,
+    "postmerge_workflow_run": 29226613070,
     "postmerge_gate": "PASS",
     "effectiveness_condition_satisfied": true
   }
