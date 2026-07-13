@@ -1,4 +1,4 @@
-name: MCFT-CAP-04 S3 merge-ref diagnostics
+name: MCFT-CAP-04 S3 repair crop-stage authority
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  diagnose:
+  repair:
     if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-04-s3-pure-72h-forecast-math-v1'
     runs-on: ubuntu-latest
     steps:
@@ -33,29 +33,57 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Fetch and typecheck PR merge ref
-        id: merge_typecheck
-        continue-on-error: true
-        env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+      - name: Repair nested crop-stage authority
         run: |
-          git fetch origin "pull/${PR_NUMBER}/merge:refs/remotes/pull/${PR_NUMBER}/merge"
-          git checkout "refs/remotes/pull/${PR_NUMBER}/merge"
-          pnpm -r typecheck 2>&1 | tee /tmp/cap04-s3-merge-typecheck.log
+          python - <<'PY'
+          from pathlib import Path
 
-      - name: Persist merge-ref diagnostics
+          targets = [
+              Path('apps/server/src/domain/twin_runtime/pure_72h_forecast_math_v1.ts'),
+              Path('scripts/runtime_acceptance/mcft_cap_04_forecast_math_fixture_v1.ts'),
+          ]
+          expected = {
+              'config.crop_stage_context_ref': 3,
+              'config.crop_stage_context_hash': 3,
+          }
+          combined = ''.join(path.read_text(encoding='utf-8') for path in targets)
+          for marker, count in expected.items():
+              actual = combined.count(marker)
+              if actual != count:
+                  raise SystemExit(f'{marker}: expected {count}, found {actual}')
+          for path in targets:
+              text = path.read_text(encoding='utf-8')
+              text = text.replace('config.crop_stage_context_ref', 'config.crop_stage_context.context_ref')
+              text = text.replace('config.crop_stage_context_hash', 'config.crop_stage_context.context_hash')
+              path.write_text(text, encoding='utf-8', newline='')
+          PY
+
+      - name: Remove temporary diagnostic files
+        run: |
+          rm -rf .cap04-s3
+          rm -f .github/workflows/mcft-cap-04-s3-merge-typecheck-diagnostics.yml
+
+      - name: Recursive typecheck
+        run: pnpm -r typecheck
+
+      - name: Run positive pure Forecast math acceptance
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH.ts
+
+      - name: Run negative pure Forecast math acceptance
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH_NEGATIVE.ts
+
+      - name: Run final S3 governance Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S3_PURE_FORECAST_MATH.cjs --final
+
+      - name: Verify patch integrity
+        run: git diff --check 4a8dab632246b05266f1d869f6c9a0a5bcf37e76
+
+      - name: Commit repaired final candidate
         env:
           HEAD_BRANCH: ${{ github.head_ref }}
         run: |
-          git checkout "${HEAD_BRANCH}"
-          mkdir -p .cap04-s3
-          cp /tmp/cap04-s3-merge-typecheck.log .cap04-s3/merge-typecheck.log
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .cap04-s3/merge-typecheck.log
-          git commit -m "chore(mcft-cap-04): persist S3 merge-ref typecheck diagnostics"
+          git add -A
+          git commit -m "fix(mcft-cap-04): use nested crop-stage config authority"
           git push origin "HEAD:${HEAD_BRANCH}"
-
-      - name: Preserve diagnostic failure status
-        if: steps.merge_typecheck.outcome == 'failure'
-        run: exit 1
