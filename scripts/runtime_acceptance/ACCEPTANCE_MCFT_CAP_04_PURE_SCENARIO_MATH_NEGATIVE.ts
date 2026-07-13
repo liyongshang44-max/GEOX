@@ -64,7 +64,7 @@ expectThrow(() => validateCap04PureThreeScenarioMathResultV1(executedStatus), "C
 
 const horizonDrift = structuredClone(sourceResult);
 horizonDrift.scenario_set_payload.options[1].trajectory_points[1].assumed_irrigation_mm = "1.000000";
-expectThrow(() => validateCap04PureThreeScenarioMathResultV1(horizonDrift), "CAP04_SCENARIO_IRRIGATION_HORIZON_MISMATCH", "assumed irrigation after horizon 1 is rejected");
+expectThrow(() => validateCap04PureThreeScenarioMathResultV1(horizonDrift), "CAP04_SCENARIO_TRAJECTORY_HASH_MISMATCH", "assumed irrigation after horizon 1 is rejected by trajectory hash authority");
 
 const efficiencyDrift = structuredClone(sourceResult);
 efficiencyDrift.application_efficiency_basis.value = "0.900000";
@@ -88,11 +88,11 @@ expectThrow(() => validateCap04PureThreeScenarioMathResultV1(forgedMathHash), "C
 
 const deltaDrift = structuredClone(sourceResult);
 deltaDrift.scenario_set_payload.options[2].difference_from_no_action.stress_hour_count_delta += 1;
-expectThrow(() => validateCap04PureThreeScenarioMathResultV1(deltaDrift), "CAP04_SCENARIO_DELTA_MISMATCH", "difference_from_no_action drift is rejected");
+expectThrow(() => validateCap04PureThreeScenarioMathResultV1(deltaDrift), "CAP04_SCENARIO_OPTION_HASH_MISMATCH", "difference_from_no_action drift is rejected by option hash authority");
 
 const aggregateDrift = structuredClone(sourceResult);
 aggregateDrift.scenario_set_payload.options[1].stress_hour_count += 1;
-expectThrow(() => validateCap04PureThreeScenarioMathResultV1(aggregateDrift), "CAP04_SCENARIO_AGGREGATE_MISMATCH", "stress aggregate drift is rejected");
+expectThrow(() => validateCap04PureThreeScenarioMathResultV1(aggregateDrift), "CAP04_SCENARIO_OPTION_HASH_MISMATCH", "stress aggregate drift is rejected by option hash authority");
 
 console.log(`MCFT-CAP-04 pure scenario math negative: ${pass} PASS, ${fail} FAIL`);
 if (fail > 0) process.exit(1);
