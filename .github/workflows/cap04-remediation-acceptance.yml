@@ -1,0 +1,68 @@
+name: cap04-remediation-acceptance
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - agent/mcft-cap-04-s6-single-tick-integration-v1
+
+permissions:
+  contents: read
+
+jobs:
+  remediation-acceptance:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mcft_cap04_remediation_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mcft_cap04_remediation_acceptance"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mcft_cap04_remediation_acceptance
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile
+      - name: Recursive typecheck
+        run: pnpm -r typecheck
+      - name: R1-A and R1-G pure Forecast authority
+        run: |
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH.ts | tee acceptance-forecast-positive.log
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH_NEGATIVE.ts | tee acceptance-forecast-negative.log
+      - name: R1-E R1-F R1-H single-tick paths
+        run: |
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION.ts | tee acceptance-single-tick-positive.log
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_NEGATIVE.ts | tee acceptance-single-tick-negative.log
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PENDING_SCENARIO_BARRIER.ts | tee acceptance-pending-barrier.log
+      - name: S5B PostgreSQL regression
+        env:
+          MCFT_CAP_04_PERSISTENCE_DESTRUCTIVE_ACCEPTANCE: "1"
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PERSISTENCE_DB.ts | tee acceptance-s5b-db.log
+      - name: R1-B R1-C R1-D PostgreSQL remediation
+        env:
+          MCFT_CAP_04_SINGLE_TICK_DESTRUCTIVE_ACCEPTANCE: "1"
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_DB.ts | tee acceptance-s6-db.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cap04-remediation-acceptance-logs
+          path: acceptance-*.log
+          if-no-files-found: ignore
+          retention-days: 1
