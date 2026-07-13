@@ -87,7 +87,8 @@
     "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S7_ACTIVATION.cjs"
   ],
   "candidate_validation": {
-    "activation_governance_gate": "PASS_REQUIRED_ON_EXACT_HEAD",
+    "activation_governance_gate": "PASS",
+    "activation_governance_gate_workflow_run": 29246089561,
     "repository_exact_head_ci": "PASS_REQUIRED_BEFORE_MERGE",
     "activation_pr_governance_only": true,
     "temporary_workflow_removed": true,
