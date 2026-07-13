@@ -18,6 +18,19 @@ jobs:
           ref: agent/mcft-cap-04-s8-activation-v1
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Correct activation Gate changed-file accounting
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('.cap04-s8/activate.py')
+          text = path.read_text(encoding='utf-8')
+          old = "const changed = git(['diff', '--name-only', range]).split(/\\r?\\n/).filter(Boolean).sort();"
+          new = "const tracked = git(['diff', '--name-only', range]).split(/\\r?\\n/).filter(Boolean);\nconst untracked = MODE === 'postmerge' ? [] : git(['ls-files', '--others', '--exclude-standard']).split(/\\r?\\n/).filter(Boolean);\nconst changed = [...new Set([...tracked, ...untracked])].sort();"
+          if old not in text:
+              raise SystemExit('S8_ACTIVATION_CHANGED_FILE_PATCH_TARGET_MISSING')
+          path.write_text(text.replace(old, new), encoding='utf-8')
+          PY
       - name: Capture frozen S8 activation
         shell: bash
         run: |
@@ -28,6 +41,7 @@ jobs:
             echo
             echo 'ACTUAL_CHANGED_FILES'
             git diff --name-only 413908eadf1016d879760da3afc968abdee82342
+            git ls-files --others --exclude-standard
             echo 'END_ACTUAL_CHANGED_FILES'
           } >> /tmp/cap04-s8-activation.log
           cat /tmp/cap04-s8-activation.log
