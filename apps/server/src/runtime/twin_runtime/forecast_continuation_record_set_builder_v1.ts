@@ -233,10 +233,6 @@ function buildCap04ARecordSetInternalV1(
     throw new Error("CAP04_BUILDER_FORECAST_CONFIG_AUTHORITY_MISMATCH");
   }
   const sourceState = input.source_members.twin_state_estimate_v1;
-  if (input.forecast_payload.source_posterior_ref !== sourceState.object_id
-    || input.forecast_payload.source_posterior_hash !== sourceState.determinism_hash) {
-    throw new Error("CAP04_BUILDER_FORECAST_SOURCE_STATE_MISMATCH");
-  }
 
   const operationKey: Cap04AOperationKeyV1 = {
     scope: structuredClone(input.scope),
@@ -299,6 +295,13 @@ function buildCap04ARecordSetInternalV1(
   });
   const state = firstFour.find((member) => member.object_type === "twin_state_estimate_v1");
   if (!state) throw new Error("CAP04_BUILDER_POSTERIOR_STATE_MEMBER_MISSING");
+  const boundToSourceTemplate = input.forecast_payload.source_posterior_ref === sourceState.object_id
+    && input.forecast_payload.source_posterior_hash === sourceState.determinism_hash;
+  const boundToCanonicalState = input.forecast_payload.source_posterior_ref === state.object_id
+    && input.forecast_payload.source_posterior_hash === state.determinism_hash;
+  if (!boundToSourceTemplate && !boundToCanonicalState) {
+    throw new Error("CAP04_BUILDER_FORECAST_SOURCE_STATE_MISMATCH");
+  }
 
   const forecastPayload: Cap04ForecastRunPayloadV1 = {
     ...structuredClone(input.forecast_payload),

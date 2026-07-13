@@ -1,5 +1,16 @@
-Error: CAP04_BUILDER_FORECAST_SOURCE_STATE_MISMATCH
-    at buildCap04ARecordSetInternalV1 (/home/runner/work/GEOX/GEOX/apps/server/src/runtime/twin_runtime/forecast_continuation_record_set_builder_v1.ts:238:11)
-    at buildCap04CompletedForecastRecordSetV1 (/home/runner/work/GEOX/GEOX/apps/server/src/runtime/twin_runtime/forecast_continuation_record_set_builder_v1.ts:448:10)
-    at Cap04ForecastScenarioSingleTickServiceV1.executeOneTick (/home/runner/work/GEOX/GEOX/apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts:470:20)
-    at async main (/home/runner/work/GEOX/GEOX/scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION.ts:33:20)
+PASS one explicit S6 tick inserts A1 and B
+PASS A1 contains exactly eight canonical members
+PASS A1 contains one successful 72-hour Forecast
+PASS B contains exactly three ordered 72-point Scenario trajectories
+PASS B is canonically bound to the exact successful Forecast
+PASS T+1 handoff carries State, checkpoint, Forecast hash and successful-Forecast authority
+PASS new tick performs one Evidence load, one Config read, one lease and one A/B commit each
+PASS completed A1+B replay returns existing idempotent success
+PASS completed replay performs no Evidence, Config, lease, commit or canonical readback work
+PASS completed replay returns the same canonical A1 and B hashes
+PASS injected B failure is surfaced after successful A1 commit
+PASS B failure leaves one canonical A1 and an explicit pending Scenario condition
+PASS rerun recovers B without recommitting A1
+PASS pending recovery preserves A1 and uses a new fenced lease only for B
+PASS recovered B remains bound to the persisted A1 Forecast
+MCFT-CAP-04 single-tick integration: 15 PASS, 0 FAIL

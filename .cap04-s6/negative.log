@@ -6,8 +6,8 @@ PASS Future Forcing binding authority is mandatory
 PASS missing forcing authority fails before handoff and Config reads
 PASS crop-stage configuration matrix drift is rejected
 PASS crop-stage matrix drift fails before Evidence and lease
-Error: CAP04_BUILDER_FORECAST_SOURCE_STATE_MISMATCH
-    at buildCap04ARecordSetInternalV1 (/home/runner/work/GEOX/GEOX/apps/server/src/runtime/twin_runtime/forecast_continuation_record_set_builder_v1.ts:238:11)
-    at buildCap04CompletedForecastRecordSetV1 (/home/runner/work/GEOX/GEOX/apps/server/src/runtime/twin_runtime/forecast_continuation_record_set_builder_v1.ts:448:10)
-    at Cap04ForecastScenarioSingleTickServiceV1.executeOneTick (/home/runner/work/GEOX/GEOX/apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts:470:20)
-    at async main (/home/runner/work/GEOX/GEOX/scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_NEGATIVE.ts:86:3)
+PASS completed-idempotent replay still enforces the requested Runtime Config hash
+PASS wrong Config pin on completed replay fails without recomputation or writes
+PASS injected A1 failure is surfaced
+PASS A1 failure leaves predecessor handoff unchanged and never starts B
+MCFT-CAP-04 single-tick integration negative: 12 PASS, 0 FAIL
