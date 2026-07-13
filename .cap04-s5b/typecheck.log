@@ -1,0 +1,27 @@
+Scope: 15 of 16 workspace projects
+apps/judge typecheck$ pnpm -w exec tsc --noEmit -p apps/judge/tsconfig.json
+apps/web typecheck$ pnpm -w exec tsc --noEmit -p apps/web/tsconfig.json
+apps/judge typecheck: Done
+apps/web typecheck: Done
+apps/server typecheck$ pnpm -w exec tsc --noEmit -p apps/server/tsconfig.json
+apps/server typecheck: apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_repository_v1.ts(491,9): error TS2367: This comparison appears to be unintentional because the types 'TwinCanonicalObjectTypeV1' and '"twin_scenario_set_v1"' have no overlap.
+apps/server typecheck: apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_repository_v1.ts(503,21): error TS2352: Conversion of type 'CanonicalObjectEnvelopeV1' to type 'Cap04ScenarioSetEnvelopeV1' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+apps/server typecheck:   Type 'CanonicalObjectEnvelopeV1' is not comparable to type '{ object_type: "twin_scenario_set_v1"; payload: { record_set_contract_id: "MCFT_CAP_04_THREE_SCENARIO_SET_V1"; transaction_variant: "B_SCENARIO_COMMIT"; source_forecast_ref: string; ... 7 more ...; limitations: string[]; }; }'.
+apps/server typecheck:     Types of property 'object_type' are incompatible.
+apps/server typecheck:       Type 'TwinCanonicalObjectTypeV1' is not comparable to type '"twin_scenario_set_v1"'.
+apps/server typecheck:         Type '"twin_runtime_config_v1"' is not comparable to type '"twin_scenario_set_v1"'.
+apps/server typecheck: apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_repository_v1.ts(608,50): error TS2345: Argument of type 'Cap04ScenarioSetEnvelopeV1' is not assignable to parameter of type 'CanonicalObjectEnvelopeV1'.
+apps/server typecheck:   Types of property 'object_type' are incompatible.
+apps/server typecheck:     Type '"twin_scenario_set_v1"' is not assignable to type 'TwinCanonicalObjectTypeV1'.
+apps/server typecheck: apps/server/src/projections/twin_runtime/forecast_scenario_projection_rebuilder_v1.ts(121,31): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string | null'.
+apps/server typecheck:   Type 'undefined' is not assignable to type 'string | null'.
+apps/server typecheck: apps/server/src/projections/twin_runtime/forecast_scenario_projection_rebuilder_v1.ts(122,32): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string | null'.
+apps/server typecheck:   Type 'undefined' is not assignable to type 'string | null'.
+apps/server typecheck: apps/server/src/projections/twin_runtime/forecast_scenario_projection_rebuilder_v1.ts(166,31): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string | null'.
+apps/server typecheck:   Type 'undefined' is not assignable to type 'string | null'.
+apps/server typecheck: apps/server/src/projections/twin_runtime/forecast_scenario_projection_rebuilder_v1.ts(167,32): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string | null'.
+apps/server typecheck:   Type 'undefined' is not assignable to type 'string | null'.
+apps/server typecheck: Failed
+/home/runner/work/GEOX/GEOX/apps/server:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @geox/server@0.1.0 typecheck: `pnpm -w exec tsc --noEmit -p apps/server/tsconfig.json`
+Exit status 2
