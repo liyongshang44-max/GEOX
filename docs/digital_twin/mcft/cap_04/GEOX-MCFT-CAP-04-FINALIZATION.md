@@ -11,6 +11,7 @@ S10C evidence merge commit: 89f2d1ccd14cd5ad8f853c1d6da5dd8759bb8fa4
 S10C head-to-merge file delta: 0
 S10C tree equivalence: PASS
 S10C merged-main reconciliation Gate: 29261294502 SUCCESS
+COMPLETE materialization Gate: 29261476179 SUCCESS
 ```
 
 The mandatory S10A, S10B and S10C lifecycle is satisfied. Exactly 24 completion claims are effective, pending claims are empty, closure is effective, and MCFT-CAP-04 is COMPLETE at Level A — Deterministic Replay Twin. MCFT-CAP-05 remains unauthorized.
