@@ -31,18 +31,20 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Recursive typecheck
         run: pnpm -r typecheck
-      - name: Capture positive acceptance
+      - name: Positive A1 A2 builder acceptance
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_A1_A2_RECORD_SET_BUILDERS.ts
+      - name: Capture negative acceptance
         env:
           HEAD_BRANCH: ${{ github.head_ref }}
         run: |
           mkdir -p .cap04-s5a
           set +e
           set -o pipefail
-          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_A1_A2_RECORD_SET_BUILDERS.ts 2>&1 | tee .cap04-s5a/positive.log
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_A1_A2_RECORD_SET_BUILDERS_NEGATIVE.ts 2>&1 | tee .cap04-s5a/negative.log
           status=${PIPESTATUS[0]}
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .cap04-s5a/positive.log
-          git commit -m "chore(mcft-cap-04): capture S5A positive diagnostic" || true
+          git add .cap04-s5a/negative.log
+          git commit -m "chore(mcft-cap-04): capture S5A negative diagnostic" || true
           git push origin "HEAD:${HEAD_BRANCH}"
           exit $status
