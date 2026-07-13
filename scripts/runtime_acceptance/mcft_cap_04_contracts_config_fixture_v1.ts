@@ -60,7 +60,9 @@ export function buildCap04ForecastPointsFixtureV1(): Cap04ForecastPointV1[] {
       mass_balance_error_mm: "0.000000",
       determinism_hash: "",
     };
-    point.determinism_hash = semanticHashV1({ ...point, determinism_hash: undefined });
+    const pointHashBasis = { ...point } as Partial<Cap04ForecastPointV1>;
+    delete pointHashBasis.determinism_hash;
+    point.determinism_hash = semanticHashV1(pointHashBasis);
     return point;
   });
 }
@@ -202,7 +204,10 @@ export function buildCap04ScenarioSetEnvelopeFixtureV1(forecastRef: string, fore
       limitations: ["ASSUMED_NOT_EXECUTED", "NOT_RECOMMENDATION", "NOT_DECISION"],
     },
   };
-  envelope.determinism_hash = semanticHashV1({ ...envelope, determinism_hash: undefined, created_at: undefined });
+  const envelopeHashBasis = { ...envelope } as Partial<Cap04ScenarioSetEnvelopeV1>;
+  delete envelopeHashBasis.determinism_hash;
+  delete envelopeHashBasis.created_at;
+  envelope.determinism_hash = semanticHashV1(envelopeHashBasis);
   return envelope;
 }
 

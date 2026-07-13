@@ -123,7 +123,7 @@ function canonicalHourV1(value: unknown): string {
 function validateInheritedPayloadV1(payload: Record<string, unknown>): void {
   const inherited = structuredClone(payload);
   inherited.config_purpose = ASSIMILATED_CONTINUATION_CONFIG_PURPOSE_V2;
-  inherited.config_selection_mode = "EXPLICIT_REQUEST_PIN_ONLY";
+  inherited.config_selection_mode = "EXPLICIT_REPLAY_PIN";
   inherited.record_set_contract_id = ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V2;
   delete inherited.effective_logical_time;
   delete inherited.record_set_contract_ids;

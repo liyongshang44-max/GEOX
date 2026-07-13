@@ -22,7 +22,8 @@ const rejected = async (fn: () => unknown, pattern: RegExp, message: string): Pr
   console.log(`PASS ${message}`);
 };
 
-const fixture = buildCap04ConfigChainFixtureV1();
+async function main(): Promise<void> {
+  const fixture = buildCap04ConfigChainFixtureV1();
 const config = fixture.configs[0];
 const completed = buildCap04CompletedForecastFixtureV1(config.object_id, config.determinism_hash);
 
@@ -96,4 +97,10 @@ const wrongOptions = structuredClone(config.payload) as Record<string, unknown>;
 wrongOptions.scenario_option_ids = ["NO_ACTION", "IRRIGATE_NOW_25MM", "IRRIGATE_NOW_15MM"];
 await rejected(() => validateCap04RuntimeConfigPayloadV1(wrongOptions), /SCENARIO_OPTIONS_MISMATCH/, "Scenario option order drift is rejected");
 
-console.log(`MCFT-CAP-04 contracts-config negative: ${pass} PASS, 0 FAIL`);
+  console.log(`MCFT-CAP-04 contracts-config negative: ${pass} PASS, 0 FAIL`);
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
