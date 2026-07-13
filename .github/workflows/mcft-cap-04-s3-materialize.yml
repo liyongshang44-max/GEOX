@@ -111,7 +111,28 @@ jobs:
           rm -f .github/workflows/mcft-cap-04-s3-materialize.yml
 
       - name: Run final S3 governance Gate
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S3_PURE_FORECAST_MATH.cjs --final
+        id: governance_gate
+        continue-on-error: true
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S3_PURE_FORECAST_MATH.cjs --final 2>&1 | tee /tmp/cap04-s3-governance.log
+
+      - name: Persist governance diagnostics
+        if: steps.governance_gate.outcome == 'failure'
+        env:
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          mkdir -p .cap04-s3
+          cp /tmp/cap04-s3-governance.log .cap04-s3/governance.log
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .cap04-s3/governance.log
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(mcft-cap-04): persist S3 governance diagnostics"
+            git push origin "HEAD:${HEAD_BRANCH}"
+          fi
+
+      - name: Stop after governance failure
+        if: steps.governance_gate.outcome == 'failure'
+        run: exit 1
 
       - name: Verify patch integrity
         run: git diff --check 4a8dab632246b05266f1d869f6c9a0a5bcf37e76
