@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: agent/mcft-cap-04-s6-single-tick-integration-v1
-      - name: Fix predecessor dispatch and client lifecycle
+      - name: Apply exact predecessor dispatch and client lifecycle fix
         shell: python
         run: |
           from pathlib import Path
