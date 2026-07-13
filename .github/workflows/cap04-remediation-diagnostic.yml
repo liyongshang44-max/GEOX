@@ -1,0 +1,38 @@
+name: cap04-remediation-diagnostic
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap-04-s6-single-tick-integration-v1
+
+permissions:
+  contents: read
+
+jobs:
+  typecheck-diagnostic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Capture recursive typecheck
+        shell: bash
+        run: |
+          set +e
+          pnpm -r typecheck > cap04-remediation-typecheck.txt 2>&1
+          status=$?
+          echo "$status" > cap04-remediation-typecheck-exit.txt
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cap04-remediation-typecheck
+          path: |
+            cap04-remediation-typecheck.txt
+            cap04-remediation-typecheck-exit.txt
+          retention-days: 1
