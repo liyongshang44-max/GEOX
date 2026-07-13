@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   verify:
@@ -47,10 +47,35 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Recursive typecheck
-        run: pnpm -r typecheck
+      - name: Capture recursive typecheck
+        id: typecheck
+        continue-on-error: true
+        run: |
+          mkdir -p .cap04-s5b
+          set +e
+          pnpm -r typecheck > .cap04-s5b/typecheck.log 2>&1
+          code=$?
+          cat .cap04-s5b/typecheck.log
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Persist typecheck diagnostics
+        if: steps.typecheck.outputs.exit_code != '0'
+        env:
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .cap04-s5b/typecheck.log
+          git commit -m "chore(mcft-cap-04): capture S5B typecheck diagnostics"
+          git push origin "HEAD:${HEAD_BRANCH}"
+
+      - name: Require recursive typecheck
+        if: steps.typecheck.outputs.exit_code != '0'
+        run: exit 1
 
       - name: Run S5B PostgreSQL acceptance
+        if: steps.typecheck.outputs.exit_code == '0'
         env:
           DATABASE_URL: postgresql://landos:landos@127.0.0.1:5432/mcft_cap04_s5b_acceptance
           MCFT_CAP_04_PERSISTENCE_DESTRUCTIVE_ACCEPTANCE: '1'
