@@ -1,9 +1,5 @@
-Error: BLOCKED_FORECAST_ZERO_POINTS_REQUIRED
-    at validateCanonicalObjectV1 (/home/runner/work/GEOX/GEOX/apps/server/src/domain/twin_runtime/canonical_object_contracts_v1.ts:58:131)
-    at parseFactObjectV1 (/home/runner/work/GEOX/GEOX/apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts:70:8)
-    at PostgresNextTickRepositoryV1.readCanonicalObjectV1 (/home/runner/work/GEOX/GEOX/apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts:131:20)
-    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
-    at async PostgresNextTickRepositoryV1.readPersistedNextTickSnapshot (/home/runner/work/GEOX/GEOX/apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts:155:38)
-    at async PrepareNextTickInputServiceV1.prepareNextTickInput (/home/runner/work/GEOX/GEOX/apps/server/src/runtime/twin_runtime/next_tick_input_service_v1.ts:309:22)
-    at async Cap04ForecastScenarioSingleTickServiceV1.executeOneTick (/home/runner/work/GEOX/GEOX/apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts:575:25)
-    at async main (/home/runner/work/GEOX/GEOX/scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_DB.ts:255:22)
+PASS real PostgreSQL handoff executes one complete A1 plus B tick and returns exact T+1 authority
+PASS completed PostgreSQL replay returns existing A1/B with zero duplicate facts
+PASS real PostgreSQL B failure preserves canonical A1 and exposes pending Scenario recovery
+PASS real PostgreSQL rerun recovers only B and preserves the original A1 terminal tick
+MCFT-CAP-04 single-tick integration DB: 4 PASS, 0 FAIL
