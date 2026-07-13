@@ -640,3 +640,22 @@ point semantic hash, trajectory hash and forecast math hash
 Scenario equations, canonical append, persistence, migration, projection, route and scheduler remain outside S3.
 
 <!-- MCFT-CAP-04-S3-PURE-FORECAST-MATH-END -->
+
+<!-- MCFT-CAP-04-S4-PURE-SCENARIO-MATH-START -->
+
+## MCFT-CAP-04 S4 pure three-Scenario math candidate
+
+```text
+baseline merged main: 4a1c9fde05594c97fb949e062df77375a1a27365
+S3 status: MERGED_EFFECTIVE
+S3 postmerge workflow: 29225560206
+active delivery slice: MCFT-CAP-04.MCFT-06-10.PURE-THREE-SCENARIO-MATH-V1
+status: IMPLEMENTATION_CANDIDATE
+runtime_source_authorized: true
+next delivery slice: MCFT-CAP-04.MCFT-02-07-08-09.A1-A2-RECORD-SET-BUILDERS-V1
+next delivery slice authorized: false
+```
+
+Established: exact NO_ACTION Forecast copy; immediate 15/25 mm assumed irrigation; deterministic efficiency, stress, deltas and hashes; 24-tick/95-hour pure Scenario fixture. Canonical append, record-set builders and persistence remain outside S4.
+
+<!-- MCFT-CAP-04-S4-PURE-SCENARIO-MATH-END -->
