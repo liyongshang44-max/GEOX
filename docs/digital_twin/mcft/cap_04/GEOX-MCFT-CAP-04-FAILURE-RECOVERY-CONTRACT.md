@@ -37,6 +37,15 @@ A fresh process may take authority only after the previous lease has expired or 
 
 The S8 service is a thin intent and persisted-authority validator. It delegates execution to `Cap04ForecastScenarioRangeServiceV1`. A second tick loop, direct persistence, new canonical object types, new transaction families, migrations, routes, scheduler, web behavior and late-Evidence revision are forbidden.
 
+## Validation evidence
+
+```text
+in-memory restart/backfill and failure recovery: 29251031846 PASS
+PostgreSQL uniqueness/rebuild and fencing/CAS: 29251564080 PASS
+PostgreSQL fresh-process restart: 29252000320 PASS
+final S8 Governance Gate: 29252432954 PASS
+```
+
 ## Preserved nonclaims
 
 S8 does not establish continuous Runtime, live-field operation, recommendation, decision, AO-ACT, calibration, model activation, MCFT Gate A closure or Minimum Complete Field Twin completion.
