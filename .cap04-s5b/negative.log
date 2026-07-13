@@ -1,0 +1,7 @@
+FAIL B validation rejects source Forecast hash drift
+PASS B validation rejects Scenario option order drift
+PASS B validation rejects Scenario Set identity forgery
+PASS B validation rejects aggregate determinism hash forgery
+PASS B validation rejects lineage authority drift
+FAIL B validation rejects a blocked source Forecast
+MCFT-CAP-04 Scenario Set builder negative: 4 PASS, 2 FAIL
