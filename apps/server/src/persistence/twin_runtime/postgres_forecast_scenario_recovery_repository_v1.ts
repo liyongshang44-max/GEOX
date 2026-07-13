@@ -10,6 +10,7 @@ import {
   CAP04_A_MEMBER_OBJECT_TYPES_V1,
   validateCap04ForecastRunPayloadV1,
   type Cap04AMemberObjectTypeV1,
+  type Cap04AOperationVariantV1,
   type Cap04ForecastRunPayloadV1,
   type Cap04ScenarioSetEnvelopeV1,
 } from "../../domain/twin_runtime/forecast_scenario_contracts_v1.js";
@@ -18,7 +19,6 @@ import {
   deriveCap04ARecordSetIdentityV1,
   deriveCap04ScenarioSetIdentityV1,
   type Cap04AAggregateIdentityInputV1,
-  type Cap04AOperationVariantV1,
   type Cap04ARecordSetV1,
   type Cap04ScenarioSetRecordV1,
 } from "../../domain/twin_runtime/forecast_scenario_record_set_identity_v1.js";
@@ -73,7 +73,7 @@ export class PostgresForecastScenarioRecoveryRepositoryV1 extends PostgresForeca
     super(recoveryPool);
   }
 
-  private async readCanonicalObjectWithClientV1(
+  private async readCanonicalObjectForRecoveryWithClientV1(
     client: PoolClient,
     objectId: string,
   ): Promise<CanonicalObjectEnvelopeV1 | null> {
@@ -163,12 +163,12 @@ export class PostgresForecastScenarioRecoveryRepositoryV1 extends PostgresForeca
     }
     const operationKey = {
       scope: {
-        tenant_id: tick.tenant_id,
-        project_id: tick.project_id,
-        group_id: tick.group_id,
-        field_id: tick.field_id,
-        season_id: tick.season_id,
-        zone_id: tick.zone_id,
+        tenant_id: stringFieldV1(tick.tenant_id, "CAP04_RECOVERY_TENANT_REQUIRED"),
+        project_id: stringFieldV1(tick.project_id, "CAP04_RECOVERY_PROJECT_REQUIRED"),
+        group_id: stringFieldV1(tick.group_id, "CAP04_RECOVERY_GROUP_REQUIRED"),
+        field_id: stringFieldV1(tick.field_id, "CAP04_RECOVERY_FIELD_REQUIRED"),
+        season_id: stringFieldV1(tick.season_id, "CAP04_RECOVERY_SEASON_REQUIRED"),
+        zone_id: stringFieldV1(tick.zone_id, "CAP04_RECOVERY_ZONE_REQUIRED"),
       },
       lineage_id: stringFieldV1(tick.lineage_id, "CAP04_RECOVERY_LINEAGE_REQUIRED"),
       revision_id: stringFieldV1(tick.revision_id, "CAP04_RECOVERY_REVISION_REQUIRED"),
@@ -412,7 +412,7 @@ export class PostgresForecastScenarioRecoveryRepositoryV1 extends PostgresForeca
     const record: Cap04ScenarioSetRecordV1 = { ...identity, scenario_set: scenarioSet };
     const client = await this.recoveryPool.connect();
     try {
-      const sourceForecast = await this.readCanonicalObjectWithClientV1(client, payload.source_forecast_ref);
+      const sourceForecast = await this.readCanonicalObjectForRecoveryWithClientV1(client, payload.source_forecast_ref);
       if (!sourceForecast || sourceForecast.object_type !== "twin_forecast_run_v1") throw new Error("CAP04_RECOVERY_SCENARIO_SOURCE_FORECAST_NOT_FOUND");
       if (sourceForecast.determinism_hash !== payload.source_forecast_hash) throw new Error("CAP04_RECOVERY_SCENARIO_SOURCE_FORECAST_HASH_MISMATCH");
       validateCap04ScenarioSetRecordV1(record, sourceForecast);
@@ -589,7 +589,7 @@ export class PostgresForecastScenarioRecoveryRepositoryV1 extends PostgresForeca
       throw new Error("PENDING_SCENARIO_CHECKPOINT_TYPE_MISMATCH");
     }
     const forecastRef = stringFieldV1(checkpoint.payload.forecast_result_ref, "PENDING_SCENARIO_CHECKPOINT_FORECAST_REF_REQUIRED");
-    const forecast = await this.readCanonicalObjectWithClientV1(await this.recoveryPool.connect(), forecastRef).catch((error) => { throw error; });
+    const forecast = await this.readCanonicalObjectForRecoveryWithClientV1(await this.recoveryPool.connect(), forecastRef).catch((error) => { throw error; });
     if (!forecast || forecast.object_type !== "twin_forecast_run_v1") throw new Error("PENDING_SCENARIO_FORECAST_NOT_FOUND");
     const payload = forecast.payload as unknown as Cap04ForecastRunPayloadV1;
     validateCap04ForecastRunPayloadV1(payload);
