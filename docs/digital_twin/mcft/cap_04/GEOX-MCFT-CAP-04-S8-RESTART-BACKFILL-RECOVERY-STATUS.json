@@ -133,7 +133,8 @@
     "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
   ],
   "activation_validation": {
-    "activation_governance_gate": "PASS_REQUIRED_ON_FINAL_HEAD",
+    "activation_governance_gate": "PASS",
+    "activation_governance_gate_workflow_run": 29249742124,
     "repository_exact_head_ci": "PASS_REQUIRED_BEFORE_MERGE",
     "activation_pr_governance_only": true,
     "temporary_workflow_removed": true,
