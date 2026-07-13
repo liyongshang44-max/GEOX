@@ -7,6 +7,7 @@ import { validateCanonicalObjectV1, type CanonicalObjectEnvelopeV1 } from "../..
 import { ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V1 } from "../../domain/twin_runtime/assimilated_continuation_contracts_v1.js";
 import { ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V2 } from "../../domain/twin_runtime/assimilated_continuation_contracts_v2.js";
 import { validateContinuationMemberV1 } from "../../domain/twin_runtime/continuation_contracts_v1.js";
+import { validateCap04CanonicalEnvelopeV1 } from "../../domain/twin_runtime/forecast_scenario_record_set_validator_v1.js";
 import type { NextTickReadPortV1, PersistedNextTickSnapshotV1, RealityBindingRuntimeSnapshotV1, RuntimeAuthoritySnapshotRepositoryPortV1, TwinScopeKeyV1 } from "../../runtime/twin_runtime/ports.js";
 
 function scopeValuesV1(scope: TwinScopeKeyV1): unknown[] {
@@ -63,7 +64,7 @@ function isContinuationReadObjectV1(object: CanonicalObjectEnvelopeV1): boolean 
 function parseFactObjectV1(recordJsonValue: unknown): CanonicalObjectEnvelopeV1 {
   const parsed = typeof recordJsonValue === "string" ? JSON.parse(recordJsonValue) : recordJsonValue;
   const object = (parsed as { payload: CanonicalObjectEnvelopeV1 }).payload;
-  if (isCap04ContinuationReadObjectV1(object)) validateCanonicalObjectV1(object);
+  if (isCap04ContinuationReadObjectV1(object)) validateCap04CanonicalEnvelopeV1(object);
   else if (isAssimilatedContinuationTickV1(object)) validateCanonicalObjectV1(object);
   else if (isContinuationReadObjectV1(object)) validateContinuationMemberV1(object);
   else validateCanonicalObjectV1(object);

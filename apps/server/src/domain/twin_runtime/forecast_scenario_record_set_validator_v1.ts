@@ -30,7 +30,7 @@ function requiredStringV1(value: unknown, code: string): string {
   return value;
 }
 
-function validateBaseEnvelopeV1(member: CanonicalObjectEnvelopeV1): void {
+export function validateCap04CanonicalEnvelopeV1(member: CanonicalObjectEnvelopeV1): void {
   for (const field of ["object_id", "object_type", "schema_version", "tenant_id", "project_id", "field_id", "logical_time", "as_of", "idempotency_key", "determinism_hash", "created_at"] as const) {
     requiredStringV1(member[field], `CAP04_MEMBER_${field.toUpperCase()}_REQUIRED`);
   }
@@ -60,7 +60,7 @@ export function validateCap04ARecordSetV1(recordSet: Cap04ARecordSetV1): void {
   const actualTypes = recordSet.members.map((member) => member.object_type).sort();
   if (canonicalJsonV1(actualTypes) !== canonicalJsonV1([...CAP04_A_MEMBER_OBJECT_TYPES_V1].sort())) throw new Error("CAP04_A_MEMBER_TYPE_SET_MISMATCH");
   for (const member of recordSet.members) {
-    validateBaseEnvelopeV1(member);
+    validateCap04CanonicalEnvelopeV1(member);
     const expectedId = identity.member_object_ids[member.object_type as Cap04AMemberObjectTypeV1];
     if (member.object_id !== expectedId) throw new Error("CAP04_A_MEMBER_OBJECT_ID_MISMATCH");
     if (member.lineage_id !== recordSet.operation_key.lineage_id || member.revision_id !== recordSet.operation_key.revision_id || member.logical_time !== recordSet.operation_key.logical_time) throw new Error("CAP04_A_MEMBER_LINEAGE_REVISION_TIME_MISMATCH");
@@ -125,12 +125,12 @@ export function validateCap04ScenarioSetRecordV1(
   record: Cap04ScenarioSetRecordV1,
   sourceForecastEnvelope: CanonicalObjectEnvelopeV1,
 ): void {
-  validateBaseEnvelopeV1(sourceForecastEnvelope);
+  validateCap04CanonicalEnvelopeV1(sourceForecastEnvelope);
   const sourceForecast = sourceForecastEnvelope.payload as unknown as Cap04ForecastRunPayloadV1;
   validateCap04ForecastRunPayloadV1(sourceForecast);
   if (record.record_set_contract_id !== CAP04_THREE_SCENARIO_SET_CONTRACT_ID_V1) throw new Error("CAP04_B_CONTRACT_ID_MISMATCH");
   validateCap04ScenarioSetPayloadV1(record.scenario_set.payload, sourceForecast);
-  validateBaseEnvelopeV1(record.scenario_set as unknown as CanonicalObjectEnvelopeV1);
+  validateCap04CanonicalEnvelopeV1(record.scenario_set as unknown as CanonicalObjectEnvelopeV1);
   if (record.scenario_set.payload.source_forecast_ref !== sourceForecastEnvelope.object_id || record.scenario_set.payload.source_forecast_hash !== sourceForecastEnvelope.determinism_hash) throw new Error("CAP04_B_SOURCE_FORECAST_MISMATCH");
   const identity = deriveCap04ScenarioSetIdentityV1({
     uniqueness_key: record.scenario_set_uniqueness_key,
