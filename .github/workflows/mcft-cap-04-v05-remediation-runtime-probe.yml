@@ -30,8 +30,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "aee173730f14635abf4b7932e9916ca6ff3b260e"
-          test "$(git rev-parse origin/agent/mcft-cap-04-v05-closure-package-remediation-v1)" = "aee173730f14635abf4b7932e9916ca6ff3b260e"
+          test "$(git rev-parse HEAD)" = "725571c3f918c927b405a3b249e0136dd803fc6d"
+          test "$(git rev-parse origin/agent/mcft-cap-04-v05-closure-package-remediation-v1)" = "725571c3f918c927b405a3b249e0136dd803fc6d"
       - name: Typecheck server and runner
         run: pnpm --filter @geox/server run typecheck
       - name: Execute exact Forecast math entrypoint
