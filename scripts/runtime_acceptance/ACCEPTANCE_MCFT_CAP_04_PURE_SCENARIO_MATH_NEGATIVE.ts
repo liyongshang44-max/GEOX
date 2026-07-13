@@ -64,7 +64,7 @@ expectThrow(() => validateCap04PureThreeScenarioMathResultV1(executedStatus), "C
 
 const horizonDrift = structuredClone(sourceResult);
 horizonDrift.scenario_set_payload.options[1].trajectory_points[1].assumed_irrigation_mm = "1.000000";
-expectThrow(() => validateCap04PureThreeScenarioMathResultV1(horizonDrift), "CAP04_SCENARIO_TRAJECTORY_HASH_MISMATCH", "assumed irrigation after horizon 1 is rejected by trajectory hash authority");
+expectThrow(() => validateCap04PureThreeScenarioMathResultV1(horizonDrift), "CAP04_SCENARIO_OPTION_HASH_MISMATCH", "assumed irrigation after horizon 1 is rejected by option hash authority");
 
 const efficiencyDrift = structuredClone(sourceResult);
 efficiencyDrift.application_efficiency_basis.value = "0.900000";
