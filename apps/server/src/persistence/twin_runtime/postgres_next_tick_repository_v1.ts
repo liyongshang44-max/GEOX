@@ -35,6 +35,14 @@ function isCap04ContinuationReadObjectV1(object: CanonicalObjectEnvelopeV1): boo
       || (typeof payload.record_set_contract_id === "string"
         && payload.record_set_contract_id.startsWith("MCFT_CAP_04_"));
   }
+  if (object.object_type === "twin_forecast_run_v1") {
+    return payload.record_set_contract_id === "MCFT_CAP_04_COMPLETED_FORECAST_CONTINUATION_V1"
+      || payload.record_set_contract_id === "MCFT_CAP_04_BLOCKED_FORECAST_CONTINUATION_V1"
+      || (payload.status === "COMPLETED"
+        && payload.scenario_eligible === true
+        && Array.isArray(payload.points)
+        && payload.points.length === 72);
+  }
   if (object.object_type === "twin_runtime_checkpoint_v1") {
     return typeof payload.successful_forecast_ref === "string"
       && payload.successful_forecast_ref.length > 0;
