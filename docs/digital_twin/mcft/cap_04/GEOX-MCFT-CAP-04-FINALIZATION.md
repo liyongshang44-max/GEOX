@@ -1,17 +1,16 @@
 <!-- docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FINALIZATION.md -->
-# GEOX MCFT-CAP-04 S10B Main Verification Candidate
+# GEOX MCFT-CAP-04 S10C Evidence Reconciliation Candidate
 
-## Subject
+## Frozen S10B evidence
 
 ```text
-verification_subject: S10A_MERGED_MAIN
-verification_subject_commit: e39ac16f83e4f5e5c4762a25589dce275c853f1a
-effectiveness_subject: S10B_FINALIZATION_MERGE
-effectiveness_evidence_location: S10C_REPOSITORY_ARTIFACT
-materialization_gate_run: 29259652644
-materialization_gate_result: SUCCESS
+S10B exact head: f975a2688db56e17d93bb5b21d3e64768e72c5d1
+S10B exact-head CI: 29259744397 SUCCESS
+S10B merge commit: 8603b07c567729a68949cfe2d4c1559a7848ac93
+S10B head-to-merge file delta: 0
+S10B tree equivalence: PASS
+S10B postmerge Finalization Gate: 29260346203 SUCCESS
+S10C materialization Gate: 29260650954 SUCCESS
 ```
 
-S10A head-to-merge file delta is zero and tree equivalence is PASS. S10B prepares conditioned finalization state only. Exactly 24 claims remain pending and zero are effective.
-
-S10C remains unauthorized until S10B is merged and the Finalization Gate passes on the actual S10B merge commit.
+This PR writes S10B evidence into the repository. It does not activate completion. Exactly 24 claims remain pending and zero are effective until this evidence PR is merged and its merged-main reconciliation Gate passes.

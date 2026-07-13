@@ -5,9 +5,9 @@
   "name": "72-Hour Forecast and Three Scenarios",
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A — Deterministic Replay Twin",
-  "status": "S10B_MAIN_VERIFICATION_CANDIDATE",
-  "baseline_main_commit": "e39ac16f83e4f5e5c4762a25589dce275c853f1a",
-  "branch": "agent/mcft-cap-04-s10b-main-verification-v1",
+  "status": "S10C_EVIDENCE_RECONCILIATION_CANDIDATE",
+  "baseline_main_commit": "8603b07c567729a68949cfe2d4c1559a7848ac93",
+  "branch": "agent/mcft-cap-04-s10c-evidence-reconciliation-v1",
   "active_delivery_slice_id": "MCFT-CAP-04.FINALIZATION-MAIN-VERIFICATION-V1",
   "runtime_source_authorized": false,
   "authorization_effective": true,
@@ -900,9 +900,9 @@
       "depends_on_delivery_slice_ids": [
         "MCFT-CAP-04.CLOSURE-CANDIDATE-V1"
       ],
-      "baseline_main_commit": "e39ac16f83e4f5e5c4762a25589dce275c853f1a",
-      "branch": "agent/mcft-cap-04-s10b-main-verification-v1",
-      "status": "S10B_MAIN_VERIFICATION_CANDIDATE",
+      "baseline_main_commit": "8603b07c567729a68949cfe2d4c1559a7848ac93",
+      "branch": "agent/mcft-cap-04-s10c-evidence-reconciliation-v1",
+      "status": "S10C_EVIDENCE_CANDIDATE",
       "activation_fields_status": "FROZEN",
       "runtime_source_authorized": false,
       "allowed_claims": [],
@@ -950,9 +950,10 @@
         "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FINALIZATION-STATUS.json",
         "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FINALIZATION.md",
         "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-MAIN-VERIFICATION.json",
-        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_FINALIZATION.cjs"
+        "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FINALIZATION-EFFECTIVENESS.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_FINALIZATION_EFFECTIVENESS.cjs"
       ],
-      "effectiveness_condition": "S10B_MERGED_AND_POSTMERGE_FINALIZATION_GATE_PASS_AND_S10C_RECONCILED",
+      "effectiveness_condition": "S10C_EVIDENCE_PR_MERGED_AND_MERGED_MAIN_RECONCILIATION_GATE_PASS",
       "effectiveness_condition_satisfied": false,
       "mandatory_lifecycle_stages": [
         "S10A_CANDIDATE",
@@ -986,7 +987,7 @@
         "VERSIONED_CAP_04_RECORD_SET_COMPATIBILITY_ESTABLISHED"
       ],
       "effective_completion_claims": [],
-      "current_lifecycle_stage": "S10B_MAIN_VERIFICATION",
+      "current_lifecycle_stage": "S10C_POSTMERGE_EFFECTIVENESS_RECONCILIATION",
       "s9_closure_effectiveness": {
         "closure_pr_number": 2407,
         "closure_exact_head_commit": "9bffb51b975208b19228e3d305288924a84b698f",
@@ -1013,7 +1014,21 @@
         "effectiveness_condition_satisfied": true
       },
       "verified_subject": "S10A_MERGED_MAIN",
-      "verified_subject_commit": "e39ac16f83e4f5e5c4762a25589dce275c853f1a"
+      "verified_subject_commit": "e39ac16f83e4f5e5c4762a25589dce275c853f1a",
+      "reconciliation_phase": "EVIDENCE_CANDIDATE",
+      "s10b_effectiveness_evidence": {
+        "pr_number": 2413,
+        "exact_head_commit": "f975a2688db56e17d93bb5b21d3e64768e72c5d1",
+        "exact_head_ci_run": 29259744397,
+        "merge_commit": "8603b07c567729a68949cfe2d4c1559a7848ac93",
+        "head_to_merge_file_delta_count": 0,
+        "head_to_merge_tree_equivalence": "PASS",
+        "postmerge_probe_pr_number": 2415,
+        "postmerge_workflow_run": 29260346203,
+        "postmerge_gate": "PASS",
+        "postmerge_gate_subject_commit": "8603b07c567729a68949cfe2d4c1559a7848ac93",
+        "effectiveness_preconditions_satisfied": true
+      }
     }
   ],
   "next_authorized_slice_ids": [],
@@ -1151,5 +1166,18 @@
     "postmerge_workflow_run": 29259503880,
     "postmerge_gate": "PASS",
     "effectiveness_condition_satisfied": true
+  },
+  "s10b_effectiveness_evidence": {
+    "pr_number": 2413,
+    "exact_head_commit": "f975a2688db56e17d93bb5b21d3e64768e72c5d1",
+    "exact_head_ci_run": 29259744397,
+    "merge_commit": "8603b07c567729a68949cfe2d4c1559a7848ac93",
+    "head_to_merge_file_delta_count": 0,
+    "head_to_merge_tree_equivalence": "PASS",
+    "postmerge_probe_pr_number": 2415,
+    "postmerge_workflow_run": 29260346203,
+    "postmerge_gate": "PASS",
+    "postmerge_gate_subject_commit": "8603b07c567729a68949cfe2d4c1559a7848ac93",
+    "effectiveness_preconditions_satisfied": true
   }
 }

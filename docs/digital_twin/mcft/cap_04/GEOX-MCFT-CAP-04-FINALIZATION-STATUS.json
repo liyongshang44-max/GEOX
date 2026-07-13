@@ -6,11 +6,11 @@
   "delivery_slice_id": "MCFT-CAP-04.FINALIZATION-MAIN-VERIFICATION-V1",
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A — Deterministic Replay Twin",
-  "baseline_main_commit": "e39ac16f83e4f5e5c4762a25589dce275c853f1a",
-  "branch": "agent/mcft-cap-04-s10b-main-verification-v1",
-  "lifecycle_stage": "S10B_MAIN_VERIFICATION",
+  "baseline_main_commit": "8603b07c567729a68949cfe2d4c1559a7848ac93",
+  "branch": "agent/mcft-cap-04-s10c-evidence-reconciliation-v1",
+  "lifecycle_stage": "S10C_POSTMERGE_EFFECTIVENESS_RECONCILIATION",
   "status": "VALIDATED_PENDING_MERGE",
-  "implementation_status": "S10B_VALIDATED_PENDING_MERGE",
+  "implementation_status": "S10C_EVIDENCE_VALIDATED_PENDING_MERGE",
   "closure_effective": false,
   "capability_status": "NOT_COMPLETE",
   "active_delivery_slice_id": "MCFT-CAP-04.FINALIZATION-MAIN-VERIFICATION-V1",
@@ -95,12 +95,13 @@
     "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FINALIZATION-STATUS.json",
     "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FINALIZATION.md",
     "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-MAIN-VERIFICATION.json",
-    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_FINALIZATION.cjs"
+    "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FINALIZATION-EFFECTIVENESS.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_FINALIZATION_EFFECTIVENESS.cjs"
   ],
   "s10a_effectiveness_condition": "S10A_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S10A_GATE_PASS",
   "s10a_effectiveness_condition_satisfied": false,
   "s10b_authorized": true,
-  "s10c_authorized": false,
+  "s10c_authorized": true,
   "successor_capability_line_id": "MCFT-CAP-05",
   "successor_authorized": false,
   "s10a_effectiveness": {
@@ -119,6 +120,20 @@
   "verification_subject_commit": "e39ac16f83e4f5e5c4762a25589dce275c853f1a",
   "effectiveness_subject": "S10B_FINALIZATION_MERGE",
   "effectiveness_evidence_location": "S10C_REPOSITORY_ARTIFACT",
-  "effectiveness_condition": "S10B_MERGED_AND_POSTMERGE_FINALIZATION_GATE_PASS_AND_S10C_RECONCILED",
-  "effectiveness_condition_satisfied": false
+  "effectiveness_condition": "S10C_EVIDENCE_PR_MERGED_AND_MERGED_MAIN_RECONCILIATION_GATE_PASS",
+  "effectiveness_condition_satisfied": false,
+  "reconciliation_phase": "EVIDENCE_CANDIDATE",
+  "s10b_effectiveness_evidence": {
+    "pr_number": 2413,
+    "exact_head_commit": "f975a2688db56e17d93bb5b21d3e64768e72c5d1",
+    "exact_head_ci_run": 29259744397,
+    "merge_commit": "8603b07c567729a68949cfe2d4c1559a7848ac93",
+    "head_to_merge_file_delta_count": 0,
+    "head_to_merge_tree_equivalence": "PASS",
+    "postmerge_probe_pr_number": 2415,
+    "postmerge_workflow_run": 29260346203,
+    "postmerge_gate": "PASS",
+    "postmerge_gate_subject_commit": "8603b07c567729a68949cfe2d4c1559a7848ac93",
+    "effectiveness_preconditions_satisfied": true
+  }
 }
