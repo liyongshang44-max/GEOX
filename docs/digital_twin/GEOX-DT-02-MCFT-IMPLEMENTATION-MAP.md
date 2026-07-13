@@ -841,3 +841,21 @@ MCFT-CAP-05 authorized: false
 ```
 
 S9 aggregates merged-main evidence only. It does not activate CAP-04 completion claims.
+
+
+## MCFT-CAP-04 S10A Finalization candidate
+
+```text
+baseline main: a6a07840efe080198233b39ec9a31d26c2e3f4f9
+S9 status: MERGED_EFFECTIVE
+S9 merged-main Closure Gate: 29258021682 SUCCESS
+active delivery slice: MCFT-CAP-04.FINALIZATION-MAIN-VERIFICATION-V1
+lifecycle stage: S10A_CANDIDATE
+pending completion claims: 24
+effective completion claims: 0
+closure effective: false
+capability complete: false
+S10B authorized: false
+S10C authorized: false
+MCFT-CAP-05 authorized: false
+```
