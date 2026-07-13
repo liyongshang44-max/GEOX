@@ -12,6 +12,20 @@ jobs:
   diagnose:
     if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-04-s6-single-tick-integration-v1'
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: landos
+          POSTGRES_PASSWORD: landos
+          POSTGRES_DB: mcft_cap04_s6_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U landos -d mcft_cap04_s6_acceptance"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
     steps:
       - name: Checkout S6 branch
         uses: actions/checkout@v4
@@ -41,6 +55,7 @@ jobs:
           node .cap04-s6/patch_source_time_authority.cjs
           node .cap04-s6/patch_a_builder_source_authority.cjs
           node .cap04-s6/patch_remove_legacy_source_helper.cjs
+          node .cap04-s6/patch_next_tick_cap04_read.cjs
 
       - name: Capture recursive Typecheck
         shell: bash
@@ -69,6 +84,18 @@ jobs:
           echo "${PIPESTATUS[0]}" > .cap04-s6/negative.exit
           exit 0
 
+      - name: Capture PostgreSQL S6 acceptance
+        shell: bash
+        env:
+          DATABASE_URL: postgresql://landos:landos@127.0.0.1:5432/mcft_cap04_s6_acceptance
+          MCFT_CAP_04_SINGLE_TICK_DESTRUCTIVE_ACCEPTANCE: '1'
+        run: |
+          set +e
+          set -o pipefail
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_DB.ts 2>&1 | tee .cap04-s6/db.log
+          echo "${PIPESTATUS[0]}" > .cap04-s6/db.exit
+          exit 0
+
       - name: Persist patches and diagnostics
         env:
           HEAD_BRANCH: ${{ github.head_ref }}
@@ -88,3 +115,4 @@ jobs:
           test "$(cat .cap04-s6/typecheck.exit)" -eq 0
           test "$(cat .cap04-s6/positive.exit)" -eq 0
           test "$(cat .cap04-s6/negative.exit)" -eq 0
+          test "$(cat .cap04-s6/db.exit)" -eq 0
