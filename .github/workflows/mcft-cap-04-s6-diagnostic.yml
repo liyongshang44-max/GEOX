@@ -40,6 +40,7 @@ jobs:
           node .cap04-s6/patch_source_builder.cjs
           node .cap04-s6/patch_source_time_authority.cjs
           node .cap04-s6/patch_a_builder_source_authority.cjs
+          node .cap04-s6/patch_remove_legacy_source_helper.cjs
 
       - name: Capture recursive Typecheck
         shell: bash
