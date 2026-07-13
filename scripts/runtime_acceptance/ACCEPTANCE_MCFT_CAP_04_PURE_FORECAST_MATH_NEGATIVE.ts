@@ -156,8 +156,8 @@ const nonzeroIrrigation = structuredClone(result);
 nonzeroIrrigation.forecast_payload.points[0].assumed_irrigation_mm = "1.000000";
 expectThrow(
   () => validateCap04Pure72hForecastMathResultV1(nonzeroIrrigation),
-  "CAP04_CANONICAL_FORECAST_AGGREGATE_AUTHORITY_MISMATCH",
-  "post hoc baseline irrigation mutation breaks canonical aggregate authority",
+  "CAP04_CANONICAL_FORECAST_POINT_TRACE_HASH_MISMATCH",
+  "post hoc baseline irrigation mutation is rejected at the earliest point-trace authority boundary",
 );
 
 const forgedPointHash = structuredClone(result);
