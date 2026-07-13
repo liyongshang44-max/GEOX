@@ -114,13 +114,13 @@ for (const [file, markers] of Object.entries({
   'apps/server/src/runtime/twin_runtime/forecast_continuation_record_set_builder_v1.ts': [
     'buildCap04CompletedForecastRecordSetV1',
     'buildCap04BlockedForecastRecordSetV1',
-    'A1_COMPLETED',
-    'A2_BLOCKED_FORECAST',
+    'CAP04_A1_OPERATION_VARIANT_V1',
+    'CAP04_A2_OPERATION_VARIANT_V1',
     'stop_after_blocked_forecast',
     'validateCap04ARecordSetV1',
   ],
   'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_A1_A2_RECORD_SET_BUILDERS.ts': [
-    'shared cross-variant terminal tick uniqueness identity',
+    'A1 and A2 share the exact cross-variant terminal tick uniqueness identity',
     '24 standard ticks produce 24 distinct valid A1 record-set candidates',
   ],
   'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_A1_A2_RECORD_SET_BUILDERS_NEGATIVE.ts': [
