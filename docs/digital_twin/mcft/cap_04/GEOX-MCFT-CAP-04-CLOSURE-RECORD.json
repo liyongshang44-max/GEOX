@@ -7,10 +7,10 @@
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A — Deterministic Replay Twin",
   "delivery_slice_id": "MCFT-CAP-04.CLOSURE-CANDIDATE-V1",
-  "status": "MAIN_VERIFICATION_CANDIDATE",
+  "status": "EFFECTIVENESS_RECONCILIATION_CANDIDATE",
   "closure_effective": false,
   "capability_complete": false,
-  "baseline_main_commit": "e39ac16f83e4f5e5c4762a25589dce275c853f1a",
+  "baseline_main_commit": "8603b07c567729a68949cfe2d4c1559a7848ac93",
   "branch": "agent/mcft-cap-04-s9-closure-candidate-v1",
   "authority": {
     "task_ref": "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md",
@@ -451,6 +451,41 @@
       "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FINALIZATION.md",
       "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-MAIN-VERIFICATION.json",
       "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_FINALIZATION.cjs"
+    ]
+  },
+  "s10b_effectiveness_evidence": {
+    "pr_number": 2413,
+    "exact_head_commit": "f975a2688db56e17d93bb5b21d3e64768e72c5d1",
+    "exact_head_ci_run": 29259744397,
+    "merge_commit": "8603b07c567729a68949cfe2d4c1559a7848ac93",
+    "head_to_merge_file_delta_count": 0,
+    "head_to_merge_tree_equivalence": "PASS",
+    "postmerge_probe_pr_number": 2415,
+    "postmerge_workflow_run": 29260346203,
+    "postmerge_gate": "PASS",
+    "postmerge_gate_subject_commit": "8603b07c567729a68949cfe2d4c1559a7848ac93",
+    "effectiveness_preconditions_satisfied": true
+  },
+  "finalization_effectiveness_candidate": {
+    "lifecycle_stage": "S10C_POSTMERGE_EFFECTIVENESS_RECONCILIATION",
+    "phase": "EVIDENCE_CANDIDATE",
+    "baseline_main_commit": "8603b07c567729a68949cfe2d4c1559a7848ac93",
+    "branch": "agent/mcft-cap-04-s10c-evidence-reconciliation-v1",
+    "status": "VALIDATED_PENDING_MERGE",
+    "effectiveness_condition": "S10C_EVIDENCE_PR_MERGED_AND_MERGED_MAIN_RECONCILIATION_GATE_PASS",
+    "effectiveness_condition_satisfied": false,
+    "exact_changed_file_boundary": [
+      "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+      "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+      "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-AUTHORIZATION-STATUS.json",
+      "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-DELIVERY-SLICE-STATUS.json",
+      "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-CLOSURE-STATUS.json",
+      "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-CLOSURE-RECORD.json",
+      "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FINALIZATION-STATUS.json",
+      "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FINALIZATION.md",
+      "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-MAIN-VERIFICATION.json",
+      "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FINALIZATION-EFFECTIVENESS.json",
+      "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_FINALIZATION_EFFECTIVENESS.cjs"
     ]
   }
 }

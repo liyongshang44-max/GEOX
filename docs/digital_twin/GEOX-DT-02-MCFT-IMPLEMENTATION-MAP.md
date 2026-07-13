@@ -874,3 +874,18 @@ effectiveness condition satisfied: false
 S10C authorized: false
 MCFT-CAP-05 authorized: false
 ```
+
+
+## MCFT-CAP-04 S10C Evidence reconciliation
+
+```text
+baseline main: 8603b07c567729a68949cfe2d4c1559a7848ac93
+lifecycle stage: S10C_POSTMERGE_EFFECTIVENESS_RECONCILIATION
+phase: EVIDENCE_CANDIDATE
+S10B tree equivalence: PASS
+S10B postmerge Finalization Gate: 29260346203 SUCCESS
+pending completion claims: 24
+effective completion claims: 0
+effectiveness condition satisfied: false
+MCFT-CAP-05 authorized: false
+```
