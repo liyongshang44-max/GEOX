@@ -1,0 +1,53 @@
+{
+  "schema_version": "geox_mcft_cap_04_forecast_contract_v1",
+  "contract_id": "MCFT_CAP_04_FORECAST_RUN_V1",
+  "capability_line_id": "MCFT-CAP-04",
+  "canonical_object_type": "twin_forecast_run_v1",
+  "runtime_mode": "REPLAY",
+  "variants": {
+    "A1_COMPLETED": {
+      "status": "COMPLETED",
+      "point_count": 72,
+      "first_horizon_hour": 1,
+      "last_horizon_hour": 72,
+      "scenario_eligible": true
+    },
+    "A2_BLOCKED_FORECAST": {
+      "status": "BLOCKED",
+      "point_count": 0,
+      "reason_codes_required": true,
+      "scenario_eligible": false
+    }
+  },
+  "time_contract": {
+    "issued_at": "T",
+    "first_target": "T+1H",
+    "last_target": "T+72H",
+    "target_t_forbidden": true,
+    "utc_hour_alignment_required": true,
+    "gap_duplicate_overlap_forbidden": true
+  },
+  "source_authority": {
+    "same_tick_posterior_ref_hash_required": true,
+    "runtime_config_ref_hash_required": true,
+    "forcing_window_hash_required_for_completed": true,
+    "weather_evidence_source_record_ref_hash_required": true,
+    "et0_evidence_source_record_ref_hash_required": true
+  },
+  "math": {
+    "method_id": "ROOT_ZONE_WATER_BALANCE_72H_FIXED_POINT_V1",
+    "uncertainty_method_id": "ADDITIVE_STORAGE_VARIANCE_ZERO_COVARIANCE_V1",
+    "interval_method_id": "NORMAL_95_PERCENT_Z_1_96_V1",
+    "physical_bounds_required": true,
+    "mass_balance_required": true,
+    "semantic_hash_independently_reproducible": true
+  },
+  "authority": {
+    "canonical_contract_ref": "apps/server/src/domain/twin_runtime/forecast_canonical_authority_v1.ts",
+    "math_contract_ref": "apps/server/src/domain/twin_runtime/forecast_math_contracts_v1.ts",
+    "implementation_ref": "apps/server/src/domain/twin_runtime/pure_72h_forecast_math_v1.ts",
+    "acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_FORECAST_MATH.ts",
+    "expected_fixture_ref": "fixtures/mcft/water_state/expected/MCFT_CAP_04_SINGLE_TICK_FORECAST_EXPECTED.json"
+  },
+  "nonclaims": ["NO_CALIBRATED_PROBABILITY", "NO_RECOMMENDATION", "NO_DECISION", "NO_ACTION"]
+}

@@ -1,0 +1,37 @@
+{
+  "schema_version": "geox_mcft_cap_04_runtime_config_chain_v1",
+  "chain_id": "MCFT_CAP_04_STANDARD_24_CONFIG_CHAIN_V1",
+  "capability_line_id": "MCFT-CAP-04",
+  "runtime_mode": "REPLAY",
+  "config_count": 24,
+  "first_effective_logical_time": "2026-06-03T02:00:00.000Z",
+  "last_effective_logical_time": "2026-06-04T01:00:00.000Z",
+  "step_hours": 1,
+  "predecessor_authority": {
+    "capability_line_id": "MCFT-CAP-03",
+    "checkpoint_sequence": 48,
+    "next_logical_tick": "2026-06-03T02:00:00.000Z",
+    "first_config_parent_is_cap_03_final_config": true
+  },
+  "chain_rules": {
+    "config_1_parent": "MCFT_CAP_03_FINAL_RUNTIME_CONFIG",
+    "config_n_parent": "CONFIG_N_MINUS_1",
+    "gap_forbidden": true,
+    "duplicate_effective_time_forbidden": true,
+    "implicit_latest_selection_forbidden": true,
+    "every_tick_pins_ref_and_hash": true
+  },
+  "authority": {
+    "implementation_ref": "apps/server/src/domain/twin_runtime/forecast_scenario_runtime_config_chain_v1.ts",
+    "fixture_builder_ref": "scripts/runtime_acceptance/mcft_cap_04_contracts_config_fixture_v1.ts",
+    "acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_CONTRACTS_CONFIG.ts",
+    "expected_fixture_ref": "fixtures/mcft/water_state/expected/MCFT_CAP_04_CONFIG_CHAIN_EXPECTED.json"
+  },
+  "canonical_persistence": {
+    "transaction_kind": "D_RUNTIME_CONFIG_COMMIT",
+    "fact_count": 24,
+    "append_only": true,
+    "same_identity_same_hash": "EXISTING_IDEMPOTENT_SUCCESS",
+    "same_identity_different_hash": "IDEMPOTENCY_CONFLICT"
+  }
+}

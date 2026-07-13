@@ -1,0 +1,43 @@
+{
+  "schema_version": "mcft_cap_04_single_tick_forecast_expected_v1",
+  "fixture_id": "MCFT_CAP_04_SINGLE_TICK_FORECAST_EXPECTED",
+  "fixture_builder_ref": "scripts/runtime_acceptance/mcft_cap_04_single_tick_fixture_v1.ts",
+  "acceptance_refs": [
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_FORECAST_MATH.ts"
+  ],
+  "runtime_mode": "REPLAY",
+  "operation_variant": "A1_COMPLETED",
+  "forecast_status": "COMPLETED",
+  "issued_at": "2026-06-03T02:00:00.000Z",
+  "point_count": 72,
+  "first_point": {
+    "horizon_hour": 1,
+    "interval_start": "2026-06-03T02:00:00.000Z",
+    "interval_end": "2026-06-03T03:00:00.000Z",
+    "target_time": "2026-06-03T03:00:00.000Z"
+  },
+  "last_point": {
+    "horizon_hour": 72,
+    "interval_start": "2026-06-06T01:00:00.000Z",
+    "interval_end": "2026-06-06T02:00:00.000Z",
+    "target_time": "2026-06-06T02:00:00.000Z"
+  },
+  "baseline_assumption": "NO_NEW_IRRIGATION",
+  "scenario_eligible": true,
+  "forecast_method_id": "ROOT_ZONE_WATER_BALANCE_72H_FIXED_POINT_V1",
+  "uncertainty_method_id": "ADDITIVE_STORAGE_VARIANCE_ZERO_COVARIANCE_V1",
+  "interval_method_id": "NORMAL_95_PERCENT_Z_1_96_V1",
+  "future_forcing_pair_policy_id": "JOINT_MATCHING_FORCING_CYCLE_V1",
+  "future_forcing_policy_id": "EXACT_72_HOUR_ASSUMPTION_WINDOW_V1",
+  "expected_invariants": {
+    "same_tick_posterior_authority": true,
+    "exact_weather_source_record_ref_hash": true,
+    "exact_et0_source_record_ref_hash": true,
+    "mass_balance_closes_each_point": true,
+    "physical_bounds_hold": true,
+    "semantic_hash_reproducible": true,
+    "recommendation_created": false,
+    "action_created": false
+  }
+}
