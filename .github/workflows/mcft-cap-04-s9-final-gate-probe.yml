@@ -1,0 +1,27 @@
+name: MCFT-CAP-04 S9 closure exact-head Gate
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-04-s9-final-gate-probe-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-04-s9-closure-candidate-v1
+          fetch-depth: 0
+      - name: Verify exact candidate head
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "9bffb51b975208b19228e3d305288924a84b698f"
+          test "$(git rev-parse origin/agent/mcft-cap-04-s9-closure-candidate-v1)" = "9bffb51b975208b19228e3d305288924a84b698f"
+      - name: Run S9 Closure Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_CLOSURE.cjs
