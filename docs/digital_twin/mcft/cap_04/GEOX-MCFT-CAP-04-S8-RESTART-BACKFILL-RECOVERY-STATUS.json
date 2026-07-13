@@ -202,10 +202,11 @@
     "cap04_persistence_uniqueness_and_rebuild_regression": "PASS",
     "runtime_fencing_and_cas_regression": "PASS",
     "shared_postgresql_regression_workflow_run": 29251564080,
-    "governance_final_gate": "PASS_REQUIRED_ON_FINAL_HEAD",
+    "governance_final_gate": "PASS",
     "repository_exact_head_ci": "PASS_REQUIRED_BEFORE_MERGE",
     "temporary_workflow_removed": true,
-    "temporary_trigger_removed": true
+    "temporary_trigger_removed": true,
+    "governance_final_gate_workflow_run": 29252432954
   },
   "allowed_claims": [
     "CAP04_S8_RESTART_RESUME_PROVEN",
