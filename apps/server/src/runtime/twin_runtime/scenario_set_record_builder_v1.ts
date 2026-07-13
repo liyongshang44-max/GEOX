@@ -7,6 +7,7 @@ import {
   deriveSemanticObjectIdV1,
 } from "../../domain/twin_runtime/canonical_identity_v1.js";
 import type { CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
+import { canonicalJsonV1 } from "../../domain/twin_runtime/canonical_json_v1.js";
 import {
   CAP04_B_TRANSACTION_VARIANT_V1,
   CAP04_THREE_SCENARIO_SET_CONTRACT_ID_V1,
@@ -55,7 +56,7 @@ function exactEnvelopeIdentityV1(
   if (math.source_forecast_ref !== envelope.object_id || math.source_forecast_hash !== envelope.determinism_hash) {
     throw new Error("CAP04_B_SCENARIO_MATH_SOURCE_FORECAST_MISMATCH");
   }
-  if (JSON.stringify(math.source_forecast_payload) !== JSON.stringify(payload)) {
+  if (canonicalJsonV1(math.source_forecast_payload) !== canonicalJsonV1(payload)) {
     throw new Error("CAP04_B_SCENARIO_MATH_FORECAST_PAYLOAD_MISMATCH");
   }
   if (math.scenario_set_payload.source_forecast_ref !== envelope.object_id

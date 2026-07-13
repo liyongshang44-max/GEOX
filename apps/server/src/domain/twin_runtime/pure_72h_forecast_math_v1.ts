@@ -1,8 +1,13 @@
 // apps/server/src/domain/twin_runtime/pure_72h_forecast_math_v1.ts
-// Purpose: execute the bounded MCFT-CAP-04 S3 deterministic 72-hour Forecast baseline from one posterior State, one pinned Runtime Config, and one already-selected Future Forcing window.
+// Purpose: execute the bounded MCFT-CAP-04 S3 deterministic 72-hour Forecast baseline from one posterior State, one pinned Runtime Config, and one already-selected Future Forcing window, then materialize the complete result into canonical Forecast authority.
 // Boundary: pure fixed-point Domain math only; no Evidence selection, observation update, Scenario math, persistence, canonical append, migration, projection, route, scheduler, filesystem, network, environment, or wall clock.
 
 import { semanticHashV1 } from "./canonical_identity_v1.js";
+import {
+  attachCap04CanonicalCompletedForecastAuthorityV1,
+  type Cap04ForecastCanonicalAggregatesV1,
+  type Cap04ForecastCanonicalUncertaintyBasisV1,
+} from "./forecast_canonical_authority_v1.js";
 import {
   CAP04_FORECAST_BASELINE_ASSUMPTION_V1,
   type Cap04ForecastPointV1,
@@ -265,7 +270,25 @@ export function executeCap04Pure72hForecastMathV1(
     "NOT_RECOMMENDATION",
     "WEATHER_ENSEMBLE_UNCERTAINTY_NOT_MODELED",
   ]);
-  const forecastPayload: Cap04ForecastRunPayloadV1 = {
+  const trajectoryHash = computeCap04ForecastTrajectoryHashV1(points);
+  const aggregates: Cap04ForecastCanonicalAggregatesV1 = {
+    final_storage_mm: points[71].storage_mean_mm,
+    minimum_available_water_fraction: formatAmount(minimumAwfUnits),
+    total_precipitation_mm: formatAmount(totalPrecipitationUnits),
+    total_crop_et_mm: formatAmount(totalCropEtUnits),
+    total_irrigation_mm: "0.000000",
+    total_runoff_mm: formatAmount(totalRunoffUnits),
+    total_drainage_mm: formatAmount(totalDrainageUnits),
+    total_overflow_mm: formatAmount(totalOverflowUnits),
+  };
+  const uncertaintyBasis: Cap04ForecastCanonicalUncertaintyBasisV1 = {
+    method_id: "ADDITIVE_STORAGE_VARIANCE_ZERO_COVARIANCE_V1",
+    interval_method_id: "NORMAL_95_PERCENT_Z_1_96_V1",
+    interval_semantics: CAP04_FORECAST_INTERVAL_SEMANTICS_V1,
+    source_posterior_storage_variance_authority: "COMPUTATION_BASIS_STORAGE_VARIANCE_MM2_DECIMAL",
+    physical_clipping_reduces_latent_variance: false,
+  };
+  const baseForecastPayload: Cap04ForecastRunPayloadV1 = {
     status: "COMPLETED",
     issued_at: issuedAt,
     source_posterior_ref: sourcePosteriorRef,
@@ -293,29 +316,22 @@ export function executeCap04Pure72hForecastMathV1(
     forecast_interval_method_id: CAP04_FORECAST_INTERVAL_METHOD_ID_V1,
     limitations,
   };
+  const canonicalForecastPayload = attachCap04CanonicalCompletedForecastAuthorityV1({
+    forecast_payload: baseForecastPayload,
+    forcing_window: input.forcing_window,
+    point_traces: pointTraces,
+    trajectory_hash: trajectoryHash,
+    aggregates,
+    uncertainty_basis: uncertaintyBasis,
+  });
   const resultWithoutHash: Omit<Cap04Pure72hForecastMathResultV1, "forecast_math_hash"> = {
     schema_version: "geox_mcft_cap_04_pure_72h_forecast_math_result_v1",
     contract_id: CAP04_PURE_FORECAST_MATH_CONTRACT_ID_V1,
-    forecast_payload: forecastPayload,
+    forecast_payload: canonicalForecastPayload,
     point_traces: pointTraces,
-    trajectory_hash: computeCap04ForecastTrajectoryHashV1(points),
-    aggregates: {
-      final_storage_mm: points[71].storage_mean_mm,
-      minimum_available_water_fraction: formatAmount(minimumAwfUnits),
-      total_precipitation_mm: formatAmount(totalPrecipitationUnits),
-      total_crop_et_mm: formatAmount(totalCropEtUnits),
-      total_irrigation_mm: "0.000000",
-      total_runoff_mm: formatAmount(totalRunoffUnits),
-      total_drainage_mm: formatAmount(totalDrainageUnits),
-      total_overflow_mm: formatAmount(totalOverflowUnits),
-    },
-    uncertainty_basis: {
-      method_id: "ADDITIVE_STORAGE_VARIANCE_ZERO_COVARIANCE_V1",
-      interval_method_id: "NORMAL_95_PERCENT_Z_1_96_V1",
-      interval_semantics: CAP04_FORECAST_INTERVAL_SEMANTICS_V1,
-      source_posterior_storage_variance_authority: "COMPUTATION_BASIS_STORAGE_VARIANCE_MM2_DECIMAL",
-      physical_clipping_reduces_latent_variance: false,
-    },
+    trajectory_hash: trajectoryHash,
+    aggregates,
+    uncertainty_basis: uncertaintyBasis,
     limitations,
   };
   const result: Cap04Pure72hForecastMathResultV1 = {

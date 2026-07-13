@@ -269,8 +269,15 @@ export class PrepareNextTickInputServiceV1 {
         "PREVIOUS_FORECAST_RESULT_HASH_REQUIRED",
       );
     }
-    if (checkpoint.payload.successful_forecast_ref !== null) {
-      throw new Error("SUCCESSFUL_FORECAST_POINTER_UNEXPECTED");
+    const latestSuccessfulForecastRaw = checkpoint.payload.successful_forecast_ref;
+    if (latestSuccessfulForecastRaw !== null
+      && (typeof latestSuccessfulForecastRaw !== "string" || !latestSuccessfulForecastRaw.trim())) {
+      throw new Error("SUCCESSFUL_FORECAST_POINTER_INVALID");
+    }
+    const latestSuccessfulForecastRef = latestSuccessfulForecastRaw as string | null;
+    if (latestSuccessfulForecastRef !== null
+      && latestSuccessfulForecastRef !== previousForecastResultRef) {
+      throw new Error("SUCCESSFUL_FORECAST_POINTER_RESULT_MISMATCH");
     }
 
     return {
@@ -282,7 +289,7 @@ export class PrepareNextTickInputServiceV1 {
       previous_checkpoint_hash: checkpoint.determinism_hash,
       previous_forecast_result_ref: previousForecastResultRef,
       previous_forecast_result_hash: previousForecastResultHash,
-      latest_successful_forecast_ref: null,
+      latest_successful_forecast_ref: latestSuccessfulForecastRef,
       lineage_id: lineageId,
       revision_id: revisionId,
       prior_mean: moments.mean,

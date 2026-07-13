@@ -1,5 +1,5 @@
 // apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.ts
-// Purpose: persist immutable Reality Binding Runtime snapshots and reconstruct one consistent next-tick snapshot from PostgreSQL projections plus canonical facts.
+// Purpose: persist immutable Reality Binding Runtime snapshots and reconstruct one consistent next-tick snapshot from PostgreSQL projections plus canonical facts using exact contract and operation-variant dispatch.
 // Boundary: persistence/read-model adapter only; no propagation, Evidence selection, State equations, scheduler, routes, web, or canonical object construction.
 
 import type { Pool, PoolClient } from "pg";
@@ -7,46 +7,89 @@ import { validateCanonicalObjectV1, type CanonicalObjectEnvelopeV1 } from "../..
 import { ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V1 } from "../../domain/twin_runtime/assimilated_continuation_contracts_v1.js";
 import { ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V2 } from "../../domain/twin_runtime/assimilated_continuation_contracts_v2.js";
 import { validateContinuationMemberV1 } from "../../domain/twin_runtime/continuation_contracts_v1.js";
+import {
+  CAP04_CANONICAL_FORECAST_AUTHORITY_CONTRACT_ID_V1,
+  validateCap04CanonicalForecastRunPayloadV1,
+  type Cap04CanonicalForecastRunPayloadV1,
+} from "../../domain/twin_runtime/forecast_canonical_authority_v1.js";
+import {
+  CAP04_A1_OPERATION_VARIANT_V1,
+  CAP04_A2_OPERATION_VARIANT_V1,
+  CAP04_BLOCKED_FORECAST_CONTRACT_ID_V1,
+  CAP04_COMPLETED_FORECAST_CONTRACT_ID_V1,
+} from "../../domain/twin_runtime/forecast_scenario_contracts_v1.js";
+import { validateCap04CanonicalEnvelopeV1 } from "../../domain/twin_runtime/forecast_scenario_record_set_validator_v1.js";
+import {
+  CAP04_TICK_RECOVERY_AUTHORITY_CONTRACT_ID_V1,
+  readCap04TickRecoveryAuthorityV1,
+} from "../../domain/twin_runtime/forecast_record_set_recovery_authority_v1.js";
 import type { NextTickReadPortV1, PersistedNextTickSnapshotV1, RealityBindingRuntimeSnapshotV1, RuntimeAuthoritySnapshotRepositoryPortV1, TwinScopeKeyV1 } from "../../runtime/twin_runtime/ports.js";
 
 function scopeValuesV1(scope: TwinScopeKeyV1): unknown[] {
   return [scope.tenant_id, scope.project_id, scope.group_id, scope.field_id, scope.season_id, scope.zone_id];
 }
 
-function isAssimilatedContinuationTickV1(object: CanonicalObjectEnvelopeV1): boolean {
-  const contractId =
-    object.payload.record_set_contract_id;
-
-  return object.object_type === "twin_runtime_tick_v1"
-    && (
-      contractId
-        === ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V1
-      || contractId
-        === ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V2
-    );
+function exactCap04TerminalTickV1(object: CanonicalObjectEnvelopeV1): boolean {
+  if (object.object_type !== "twin_runtime_tick_v1") return false;
+  const contractId = object.payload.record_set_contract_id;
+  const variant = object.payload.operation_variant;
+  const authority = object.payload.recovery_authority;
+  const exactVariant = (contractId === CAP04_COMPLETED_FORECAST_CONTRACT_ID_V1 && variant === CAP04_A1_OPERATION_VARIANT_V1)
+    || (contractId === CAP04_BLOCKED_FORECAST_CONTRACT_ID_V1 && variant === CAP04_A2_OPERATION_VARIANT_V1);
+  return exactVariant
+    && Boolean(authority && typeof authority === "object" && !Array.isArray(authority)
+      && (authority as Record<string, unknown>).contract_id === CAP04_TICK_RECOVERY_AUTHORITY_CONTRACT_ID_V1);
 }
 
-function isContinuationReadObjectV1(object: CanonicalObjectEnvelopeV1): boolean {
-  if (object.object_type === "twin_runtime_checkpoint_v1") {
-    return object.payload.checkpoint_kind === "CONTINUATION";
-  }
-  if (object.object_type === "twin_state_estimate_v1") {
-    return Object.prototype.hasOwnProperty.call(object.payload, "computation_basis")
-      || typeof object.payload.previous_posterior_ref === "string";
-  }
-  if (object.object_type === "twin_runtime_tick_v1") {
-    return object.payload.transition_kind === "CONTINUATION";
-  }
-  return false;
+function exactAssimilatedContinuationTickV1(object: CanonicalObjectEnvelopeV1): boolean {
+  if (object.object_type !== "twin_runtime_tick_v1") return false;
+  const contractId = object.payload.record_set_contract_id;
+  return contractId === ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V1
+    || contractId === ASSIMILATED_CONTINUATION_RECORD_SET_CONTRACT_ID_V2;
 }
 
-function parseFactObjectV1(recordJsonValue: unknown): CanonicalObjectEnvelopeV1 {
+function parseFactObjectRawV1(recordJsonValue: unknown): CanonicalObjectEnvelopeV1 {
   const parsed = typeof recordJsonValue === "string" ? JSON.parse(recordJsonValue) : recordJsonValue;
-  const object = (parsed as { payload: CanonicalObjectEnvelopeV1 }).payload;
-  if (isAssimilatedContinuationTickV1(object)) validateCanonicalObjectV1(object);
-  else if (isContinuationReadObjectV1(object)) validateContinuationMemberV1(object);
-  else validateCanonicalObjectV1(object);
+  const object = (parsed as { payload?: CanonicalObjectEnvelopeV1 }).payload;
+  if (!object || typeof object !== "object") throw new Error("PERSISTED_CANONICAL_OBJECT_REQUIRED");
   return object;
+}
+
+function validateExactCap04SnapshotGraphV1(input: {
+  tick: CanonicalObjectEnvelopeV1;
+  checkpoint: CanonicalObjectEnvelopeV1;
+  state: CanonicalObjectEnvelopeV1;
+  forecast: CanonicalObjectEnvelopeV1;
+}): void {
+  if (!exactCap04TerminalTickV1(input.tick)) throw new Error("CAP04_EXACT_TICK_DISPATCH_REQUIRED");
+  readCap04TickRecoveryAuthorityV1(input.tick);
+  for (const member of [input.tick, input.checkpoint, input.state, input.forecast]) validateCap04CanonicalEnvelopeV1(member);
+  if (input.tick.payload.checkpoint_ref !== input.checkpoint.object_id) throw new Error("CAP04_EXACT_CHECKPOINT_REF_MISMATCH");
+  if (input.tick.payload.posterior_state_ref !== input.state.object_id) throw new Error("CAP04_EXACT_STATE_REF_MISMATCH");
+  if (input.tick.payload.forecast_result_ref !== input.forecast.object_id) throw new Error("CAP04_EXACT_FORECAST_REF_MISMATCH");
+  const forecastPayload = input.forecast.payload as unknown as Cap04CanonicalForecastRunPayloadV1;
+  if (forecastPayload.canonical_authority_contract_id !== CAP04_CANONICAL_FORECAST_AUTHORITY_CONTRACT_ID_V1) {
+    throw new Error("CAP04_EXACT_FORECAST_AUTHORITY_CONTRACT_REQUIRED");
+  }
+  validateCap04CanonicalForecastRunPayloadV1(forecastPayload);
+  const variant = input.tick.payload.operation_variant;
+  if ((variant === CAP04_A1_OPERATION_VARIANT_V1 && forecastPayload.status !== "COMPLETED")
+    || (variant === CAP04_A2_OPERATION_VARIANT_V1 && forecastPayload.status !== "BLOCKED")) {
+    throw new Error("CAP04_EXACT_FORECAST_VARIANT_STATUS_MISMATCH");
+  }
+}
+
+function validateNonCap04SnapshotGraphV1(input: {
+  tick: CanonicalObjectEnvelopeV1;
+  checkpoint: CanonicalObjectEnvelopeV1;
+  state: CanonicalObjectEnvelopeV1;
+  forecast: CanonicalObjectEnvelopeV1;
+}): void {
+  if (exactAssimilatedContinuationTickV1(input.tick)) validateCanonicalObjectV1(input.tick);
+  else validateContinuationMemberV1(input.tick);
+  validateContinuationMemberV1(input.checkpoint);
+  validateContinuationMemberV1(input.state);
+  validateCanonicalObjectV1(input.forecast);
 }
 
 function canonicalJsonV1(value: unknown): string {
@@ -103,10 +146,10 @@ export class PostgresNextTickRepositoryV1 implements RuntimeAuthoritySnapshotRep
     }
   }
 
-  private async readCanonicalObjectV1(client: PoolClient, objectId: string, expectedType: CanonicalObjectEnvelopeV1["object_type"]): Promise<CanonicalObjectEnvelopeV1> {
-    const result = await client.query("SELECT record_json FROM facts WHERE record_json->'payload'->>'object_id'=$1 AND record_json->>'type'=$2 LIMIT 1", [objectId, expectedType]);
-    if (result.rows.length !== 1) throw new Error(`PERSISTED_OBJECT_NOT_FOUND:${expectedType}:${objectId}`);
-    const object = parseFactObjectV1(result.rows[0].record_json);
+  private async readCanonicalObjectRawV1(client: PoolClient, objectId: string, expectedType: CanonicalObjectEnvelopeV1["object_type"]): Promise<CanonicalObjectEnvelopeV1> {
+    const result = await client.query("SELECT record_json FROM facts WHERE record_json->'payload'->>'object_id'=$1 AND record_json->>'type'=$2 LIMIT 2", [objectId, expectedType]);
+    if (result.rows.length !== 1) throw new Error(`PERSISTED_OBJECT_CARDINALITY:${expectedType}:${objectId}`);
+    const object = parseFactObjectRawV1(result.rows[0].record_json);
     if (object.object_type !== expectedType) throw new Error(`PERSISTED_OBJECT_TYPE_MISMATCH:${expectedType}:${objectId}`);
     return object;
   }
@@ -125,16 +168,33 @@ export class PostgresNextTickRepositoryV1 implements RuntimeAuthoritySnapshotRep
       if (active.rows.length !== 1 || checkpointPointer.rows.length !== 1 || statePointer.rows.length !== 1) throw new Error("PERSISTED_NEXT_TICK_POINTER_SET_INCOMPLETE");
 
       const activeLineageRef = requiredStringV1(active.rows[0].active_lineage_ref, "ACTIVE_LINEAGE_REF_REQUIRED");
-      const activeLineage = await this.readCanonicalObjectV1(client, activeLineageRef, "twin_runtime_lineage_v1");
+      const activeLineage = await this.readCanonicalObjectRawV1(client, activeLineageRef, "twin_runtime_lineage_v1");
+      validateCanonicalObjectV1(activeLineage);
       const activeLineageId = requiredStringV1(activeLineage.lineage_id, "ACTIVE_LINEAGE_ID_REQUIRED");
-      const checkpoint = await this.readCanonicalObjectV1(client, checkpointPointer.rows[0].checkpoint_object_id, "twin_runtime_checkpoint_v1");
-      const previousPosterior = await this.readCanonicalObjectV1(client, statePointer.rows[0].state_object_id, "twin_state_estimate_v1");
+      const checkpoint = await this.readCanonicalObjectRawV1(client, checkpointPointer.rows[0].checkpoint_object_id, "twin_runtime_checkpoint_v1");
+      const previousPosterior = await this.readCanonicalObjectRawV1(client, statePointer.rows[0].state_object_id, "twin_state_estimate_v1");
       const previousForecastResultRef = requiredStringV1(checkpoint.payload.forecast_result_ref, "PREVIOUS_FORECAST_RESULT_REF_REQUIRED");
-      const previousForecastResult = await this.readCanonicalObjectV1(client, previousForecastResultRef, "twin_forecast_run_v1");
+      const previousForecastResult = await this.readCanonicalObjectRawV1(client, previousForecastResultRef, "twin_forecast_run_v1");
       const lastCompletedTickRef = requiredStringV1(checkpoint.payload.last_completed_tick_ref, "LAST_COMPLETED_TICK_REF_REQUIRED");
-      const lastTerminalTick = await this.readCanonicalObjectV1(client, lastCompletedTickRef, "twin_runtime_tick_v1");
+      const lastTerminalTick = await this.readCanonicalObjectRawV1(client, lastCompletedTickRef, "twin_runtime_tick_v1");
+      if (exactCap04TerminalTickV1(lastTerminalTick)) {
+        validateExactCap04SnapshotGraphV1({
+          tick: lastTerminalTick,
+          checkpoint,
+          state: previousPosterior,
+          forecast: previousForecastResult,
+        });
+      } else {
+        validateNonCap04SnapshotGraphV1({
+          tick: lastTerminalTick,
+          checkpoint,
+          state: previousPosterior,
+          forecast: previousForecastResult,
+        });
+      }
       if (!previousPosterior.runtime_config_ref || checkpoint.runtime_config_ref !== previousPosterior.runtime_config_ref) throw new Error("PERSISTED_RUNTIME_CONFIG_POINTER_MISMATCH");
-      const runtimeConfig = await this.readCanonicalObjectV1(client, previousPosterior.runtime_config_ref, "twin_runtime_config_v1");
+      const runtimeConfig = await this.readCanonicalObjectRawV1(client, previousPosterior.runtime_config_ref, "twin_runtime_config_v1");
+      validateCanonicalObjectV1(runtimeConfig);
       const realityBindingRef = runtimeConfig.payload.reality_binding_ref;
       if (typeof realityBindingRef !== "string" || !realityBindingRef) throw new Error("RUNTIME_CONFIG_REALITY_BINDING_REF_REQUIRED");
       const realityBinding = await this.readRealityBindingSnapshotWithClientV1(client, realityBindingRef);

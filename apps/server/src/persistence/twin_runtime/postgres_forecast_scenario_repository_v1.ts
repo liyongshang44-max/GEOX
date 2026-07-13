@@ -536,6 +536,20 @@ export class PostgresForecastScenarioRepositoryV1 implements Cap04ForecastScenar
     }
   }
 
+  async readScenarioSetBySourceForecast(
+    sourceForecastRef: string,
+    sourceForecastHash: string,
+  ): Promise<Cap04ScenarioSetRecordV1 | null> {
+    const result = await this.pool.query(
+      `SELECT scenario_set_id FROM twin_scenario_set_uniqueness_v1
+       WHERE source_forecast_ref=$1 AND source_forecast_hash=$2 LIMIT 2`,
+      [sourceForecastRef, sourceForecastHash],
+    );
+    if (result.rows.length === 0) return null;
+    if (result.rows.length !== 1) throw new Error("CAP04_B_SOURCE_FORECAST_UNIQUENESS_CORRUPT");
+    return this.readScenarioSet(String(result.rows[0].scenario_set_id));
+  }
+
   async commitScenarioSet(
     input: Parameters<Cap04ForecastScenarioPersistencePortV1["commitScenarioSet"]>[0],
   ): Promise<Awaited<ReturnType<Cap04ForecastScenarioPersistencePortV1["commitScenarioSet"]>>> {

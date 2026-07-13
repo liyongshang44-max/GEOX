@@ -1,7 +1,8 @@
 // scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH.ts
-// Purpose: prove the S3 pure 72-hour Forecast mean, uncertainty, interval, physical-bound, determinism, and 24-tick coverage contracts.
+// Purpose: prove the S3 pure 72-hour Forecast mean, uncertainty, interval, physical-bound, determinism, full canonical authority, and 24-tick coverage contracts.
 // Boundary: pure acceptance only; no persistence, migration, route, scheduler, Scenario math, recommendation, decision, or action.
 
+import { CAP04_CANONICAL_FORECAST_AUTHORITY_CONTRACT_ID_V1 } from "../../apps/server/src/domain/twin_runtime/forecast_canonical_authority_v1.js";
 import { computeCap04ForcingWindowHashV1 } from "../../apps/server/src/domain/twin_runtime/future_forcing_contracts_v1.js";
 import { validateCap04Pure72hForecastMathResultV1 } from "../../apps/server/src/domain/twin_runtime/forecast_math_contracts_v1.js";
 import { executeCap04Pure72hForecastMathV1 } from "../../apps/server/src/domain/twin_runtime/pure_72h_forecast_math_v1.js";
@@ -39,12 +40,33 @@ check(
 );
 
 check(
+  result.forecast_payload.canonical_authority_contract_id === CAP04_CANONICAL_FORECAST_AUTHORITY_CONTRACT_ID_V1
+    && JSON.stringify(result.forecast_payload.forcing_window_authority) === JSON.stringify(input.forcing_window)
+    && JSON.stringify(result.forecast_payload.point_traces) === JSON.stringify(result.point_traces)
+    && result.forecast_payload.trajectory_hash === result.trajectory_hash
+    && JSON.stringify(result.forecast_payload.aggregates) === JSON.stringify(result.aggregates)
+    && JSON.stringify(result.forecast_payload.uncertainty_basis) === JSON.stringify(result.uncertainty_basis),
+  "canonical Forecast embeds the complete forcing, uncertainty, physical-bound, trajectory and aggregate authority",
+);
+
+check(
   result.forecast_payload.points.every((point, index) =>
     point.horizon_hour === index + 1
       && point.interval_start === input.forcing_window.points[index].interval_start
       && point.interval_end === input.forcing_window.points[index].interval_end
       && point.target_time === input.forcing_window.points[index].target_time),
   "Forecast target times and intervals remain exactly forcing-bound",
+);
+
+check(
+  result.forecast_payload.points.every((point, index) => {
+    const forcing = result.forecast_payload.forcing_window_authority.points[index];
+    return point.gross_precipitation_assumption_mm === forcing.precipitation_assumption_mm.toFixed(6)
+      && point.reference_et0_mm === forcing.et0_assumption_mm.toFixed(6)
+      && point.crop_stage_code === forcing.crop_stage_code
+      && point.kc === forcing.kc.toFixed(6);
+  }),
+  "every canonical Forecast point is fully equal to its embedded Future Forcing authority",
 );
 
 check(
@@ -96,8 +118,9 @@ changedForcingInput.forcing_window.forcing_window_hash = computeCap04ForcingWind
 const changedForcingResult = executeCap04Pure72hForecastMathV1(changedForcingInput);
 check(
   changedForcingResult.forecast_math_hash !== result.forecast_math_hash
-    && changedForcingResult.forecast_payload.points[0].determinism_hash !== result.forecast_payload.points[0].determinism_hash,
-  "semantic forcing change changes point and Forecast math determinism",
+    && changedForcingResult.forecast_payload.points[0].determinism_hash !== result.forecast_payload.points[0].determinism_hash
+    && changedForcingResult.forecast_payload.forcing_window_authority.forcing_window_hash !== result.forecast_payload.forcing_window_authority.forcing_window_hash,
+  "semantic forcing change changes canonical forcing, point and Forecast math determinism",
 );
 
 const changedVarianceInput = structuredClone(input);

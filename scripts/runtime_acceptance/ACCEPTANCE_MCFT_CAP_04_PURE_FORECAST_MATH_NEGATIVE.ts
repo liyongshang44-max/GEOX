@@ -1,7 +1,8 @@
 // scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH_NEGATIVE.ts
-// Purpose: prove the S3 pure Forecast math fails closed on missing posterior computation authority, identity drift, malformed config/forcing, physical violations, and forged determinism or trace values.
+// Purpose: prove the S3 pure Forecast math and canonical Forecast authority fail closed on missing posterior authority, forcing drift, malformed inputs, physical violations, and forged determinism or trace values.
 // Boundary: pure negative acceptance only; no persistence, migration, route, scheduler, Scenario math, recommendation, decision, or action.
 
+import { validateCap04CanonicalForecastRunPayloadV1 } from "../../apps/server/src/domain/twin_runtime/forecast_canonical_authority_v1.js";
 import { validateCap04Pure72hForecastMathResultV1 } from "../../apps/server/src/domain/twin_runtime/forecast_math_contracts_v1.js";
 import { executeCap04Pure72hForecastMathV1 } from "../../apps/server/src/domain/twin_runtime/pure_72h_forecast_math_v1.js";
 import { buildCap04PureForecastMathInputV1 } from "./mcft_cap_04_forecast_math_fixture_v1.js";
@@ -124,7 +125,15 @@ brokenVarianceChain.point_traces[1].previous_storage_variance_mm2_decimal = "0.0
 expectThrow(
   () => validateCap04Pure72hForecastMathResultV1(brokenVarianceChain),
   "CAP04_FORECAST_VARIANCE_CHAIN_MISMATCH",
-  "broken internal 10^-12 variance chain is rejected",
+  "broken result-level 10^-12 variance chain is rejected",
+);
+
+const brokenCanonicalVarianceChain = structuredClone(result.forecast_payload);
+brokenCanonicalVarianceChain.point_traces[1].previous_storage_variance_mm2_decimal = "0.000000000000";
+expectThrow(
+  () => validateCap04CanonicalForecastRunPayloadV1(brokenCanonicalVarianceChain),
+  "CAP04_CANONICAL_FORECAST_VARIANCE_CHAIN_MISMATCH",
+  "broken canonical Forecast variance chain is rejected independently of transient math output",
 );
 
 const clippingReducesVariance = structuredClone(result);
@@ -132,23 +141,55 @@ const clippingReducesVariance = structuredClone(result);
 expectThrow(
   () => validateCap04Pure72hForecastMathResultV1(clippingReducesVariance),
   "CAP04_FORECAST_LATENT_VARIANCE_CLIPPING_FORBIDDEN",
-  "physical clipping cannot reduce latent variance",
+  "result-level physical clipping cannot reduce latent variance",
+);
+
+const canonicalClippingReducesVariance = structuredClone(result.forecast_payload);
+(canonicalClippingReducesVariance.point_traces[0] as unknown as Record<string, unknown>).latent_variance_reduced_by_clipping = true;
+expectThrow(
+  () => validateCap04CanonicalForecastRunPayloadV1(canonicalClippingReducesVariance),
+  "CAP04_CANONICAL_FORECAST_LATENT_VARIANCE_CLIPPING_FORBIDDEN",
+  "canonical Forecast physical clipping cannot reduce latent variance",
 );
 
 const nonzeroIrrigation = structuredClone(result);
 nonzeroIrrigation.forecast_payload.points[0].assumed_irrigation_mm = "1.000000";
 expectThrow(
   () => validateCap04Pure72hForecastMathResultV1(nonzeroIrrigation),
-  "CAP04_FORECAST_MATH_HASH_MISMATCH",
-  "post hoc baseline irrigation mutation invalidates Forecast determinism",
+  "CAP04_CANONICAL_FORECAST_POINT_TRACE_HASH_MISMATCH",
+  "post hoc baseline irrigation mutation is rejected at the earliest point-trace authority boundary",
 );
 
 const forgedPointHash = structuredClone(result);
 forgedPointHash.forecast_payload.points[0].determinism_hash = "sha256:forged";
 expectThrow(
   () => validateCap04Pure72hForecastMathResultV1(forgedPointHash),
-  "CAP04_FORECAST_POINT_TRACE_HASH_MISMATCH",
-  "point hash and computation trace cannot diverge",
+  "CAP04_CANONICAL_FORECAST_POINT_TRACE_HASH_MISMATCH",
+  "canonical point hash and computation trace cannot diverge",
+);
+
+const forgedEmbeddedForcingMetadata = structuredClone(result.forecast_payload);
+forgedEmbeddedForcingMetadata.forcing_window_authority.weather_snapshot_hash = "sha256:forged";
+expectThrow(
+  () => validateCap04CanonicalForecastRunPayloadV1(forgedEmbeddedForcingMetadata),
+  "CAP04_FORCING_POINT_WEATHER_IDENTITY_MISMATCH",
+  "embedded forcing metadata cannot diverge from its 72 canonical forcing points",
+);
+
+const forgedForecastForcingLink = structuredClone(result.forecast_payload);
+forgedForecastForcingLink.weather_snapshot_hash = "sha256:forged";
+expectThrow(
+  () => validateCap04CanonicalForecastRunPayloadV1(forgedForecastForcingLink),
+  "CAP04_CANONICAL_FORECAST_WEATHER_AUTHORITY_MISMATCH",
+  "Forecast top-level Weather authority must equal the embedded forcing window",
+);
+
+const forgedForecastForcingPoint = structuredClone(result.forecast_payload);
+forgedForecastForcingPoint.points[0].gross_precipitation_assumption_mm = "999.000000";
+expectThrow(
+  () => validateCap04CanonicalForecastRunPayloadV1(forgedForecastForcingPoint),
+  "CAP04_CANONICAL_FORECAST_PRECIPITATION_AUTHORITY_MISMATCH",
+  "Forecast point precipitation must equal the embedded forcing point",
 );
 
 const nonzeroAggregateIrrigation = structuredClone(result);

@@ -715,3 +715,36 @@ Established in this bounded slice: A1/A2/B atomic persistence, cross-variant ter
 No route, web, scheduler or tick orchestration is introduced.
 
 <!-- MCFT-CAP-04-S5B-PERSISTENCE-END -->
+
+<!-- MCFT-CAP-04-S6-SINGLE-TICK-START -->
+
+## MCFT-CAP-04 S6 single-tick Forecast/Scenario integration candidate
+
+```text
+baseline merged main: 63c8ba7b8dd314c1224ca8de2914b663b3551092
+S5B status: MERGED_EFFECTIVE
+S5B postmerge workflow: 29232760223
+active delivery slice: MCFT-CAP-04.MCFT-04-05-06-07-08-09-10.SINGLE-TICK-FORECAST-SCENARIO-INTEGRATION-V1
+status: IMPLEMENTATION_CANDIDATE
+runtime_source_authorized: true
+next delivery slice: MCFT-CAP-04.MCFT-04-07-09-10.TWENTY-FOUR-TICK-FORECAST-SCENARIO-RANGE-V1
+next delivery slice authorized: false
+```
+
+Established in this bounded slice:
+
+```text
+one explicit persisted-handoff Replay tick
+current Evidence -> Dynamics -> Assimilation -> posterior State
+matching Future Forcing -> successful 72h Forecast -> A1 commit
+three Scenario options -> B commit
+canonical A/B readback
+completed-idempotent zero recomputation
+pending-Scenario B-only recovery
+T+1 handoff with successful Forecast pointer
+real PostgreSQL integration acceptance
+```
+
+The 24-tick range, restart/backfill, route, web and scheduler remain outside S6.
+
+<!-- MCFT-CAP-04-S6-SINGLE-TICK-END -->

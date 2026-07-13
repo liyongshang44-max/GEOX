@@ -55,6 +55,11 @@ export interface Cap04ForecastScenarioPersistencePortV1 {
 
   readScenarioSet(scenarioSetId: string): Promise<Cap04ScenarioSetRecordV1 | null>;
 
+  readScenarioSetBySourceForecast(
+    sourceForecastRef: string,
+    sourceForecastHash: string,
+  ): Promise<Cap04ScenarioSetRecordV1 | null>;
+
   detectPendingScenario(scope: TwinScopeKeyV1): Promise<CanonicalObjectEnvelopeV1 | null>;
 
   rebuildForecastProjections(recordSetId: string): Promise<{
