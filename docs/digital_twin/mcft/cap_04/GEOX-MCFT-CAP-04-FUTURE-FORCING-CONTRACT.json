@@ -1,0 +1,54 @@
+{
+  "schema_version": "geox_mcft_cap_04_future_forcing_contract_v1",
+  "contract_id": "MCFT_CAP_04_FUTURE_FORCING_WINDOW_V1",
+  "delivery_slice_id": "MCFT-CAP-04.MCFT-05-09.FUTURE-FORCING-WINDOW-V1",
+  "pair_policy_id": "JOINT_MATCHING_FORCING_CYCLE_V1",
+  "forcing_policy_id": "EXACT_72_HOUR_ASSUMPTION_WINDOW_V1",
+  "fallback_policy_id": "NO_CROSS_SNAPSHOT_STITCHING_V1",
+  "freshness_policy_id": "LATEST_AVAILABLE_COMPLETE_PAIR_AT_T_V1",
+  "selection_policy_id": "FORECAST_AT_T_SELECTS_LATEST_AVAILABLE_MATCHING_FORCING_CYCLE",
+  "point_count": 72,
+  "step_hours": 1,
+  "valid_interval": "(T,T+72H]",
+  "forcing_cycle_key_fields": [
+    "scope",
+    "issued_at",
+    "available_to_runtime_at",
+    "valid_from",
+    "valid_to"
+  ],
+  "pair_order": [
+    "available_to_runtime_at_desc",
+    "issued_at_desc",
+    "weather_source_record_id_asc",
+    "et0_source_record_id_asc"
+  ],
+  "snapshot_identity_authority": {
+    "snapshot_ref": "Evidence.source_record_id",
+    "snapshot_hash": "Evidence.source_record_hash"
+  },
+  "duplicate_policy": {
+    "identical_semantic_identity_same_payload": "COLLAPSE_DETERMINISTICALLY",
+    "identical_semantic_identity_different_payload": "CONFLICTING_FORCING_SNAPSHOT",
+    "multiple_noncollapsible_same_kind_in_cycle": "CONFLICTING_FORCING_CYCLE"
+  },
+  "incomplete_pair_outcome": "A2_BLOCKED_FORECAST_ELIGIBLE_REASON_NO_COMPLETE_MATCHING_FORCING_CYCLE",
+  "no_future_leakage": true,
+  "forbidden_inputs_after_t": [
+    "observed_rainfall",
+    "ingested_actual_et0",
+    "soil_observation",
+    "weather_forecast_revision",
+    "execution_receipt",
+    "actual_outcome"
+  ],
+  "forcing_window_hash_basis": "COMPLETE_72_POINT_CANONICAL_FORCING_DTO",
+  "standard_fixture": {
+    "first_logical_time": "2026-06-03T02:00:00.000Z",
+    "last_logical_time": "2026-06-04T01:00:00.000Z",
+    "tick_count": 24,
+    "target_union_start": "2026-06-03T03:00:00.000Z",
+    "target_union_end": "2026-06-07T01:00:00.000Z",
+    "target_union_hour_count": 95
+  }
+}
