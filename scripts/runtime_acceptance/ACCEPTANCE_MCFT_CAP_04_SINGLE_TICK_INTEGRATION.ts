@@ -1,8 +1,9 @@
 // scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION.ts
-// Purpose: prove one complete CAP-04 S6 Replay tick, completed-idempotent zero-recompute replay, and A1-persisted/B-missing recovery.
+// Purpose: prove one complete CAP-04 S6 Replay tick, complete canonical Forecast authority, completed-idempotent zero-recompute replay, and A1-persisted/B-missing Forecast-authoritative recovery.
 // Boundary: in-memory acceptance only; no production database, route, scheduler, range, restart/backfill, recommendation, decision, or action.
 
 import type { CanonicalObjectEnvelopeV1 } from "../../apps/server/src/domain/twin_runtime/canonical_object_contracts_v1.js";
+import { CAP04_CANONICAL_FORECAST_AUTHORITY_CONTRACT_ID_V1 } from "../../apps/server/src/domain/twin_runtime/forecast_canonical_authority_v1.js";
 import type { Cap04ARecordSetV1 } from "../../apps/server/src/domain/twin_runtime/forecast_scenario_record_set_identity_v1.js";
 import {
   CAP04_S6_NEXT_TIME_V1,
@@ -44,12 +45,22 @@ async function main(): Promise<void> {
     "A1 contains one successful 72-hour Forecast",
   );
   check(
-    inserted.b_record.scenario_set.payload.options.length === 3
+    forecast.payload.canonical_authority_contract_id === CAP04_CANONICAL_FORECAST_AUTHORITY_CONTRACT_ID_V1
+      && forecast.payload.forcing_window_authority?.points?.length === 72
+      && forecast.payload.point_traces?.length === 72
+      && typeof forecast.payload.trajectory_hash === "string"
+      && forecast.payload.aggregates?.final_storage_mm === forecast.payload.points[71].storage_mean_mm,
+    "canonical Forecast persists complete forcing, uncertainty and physical-bound authority",
+  );
+  check(
+    inserted.b_record !== null
+      && inserted.b_record.scenario_set.payload.options.length === 3
       && inserted.b_record.scenario_set.payload.options.every((option) => option.trajectory_points.length === 72),
     "B contains exactly three ordered 72-point Scenario trajectories",
   );
   check(
-    inserted.b_record.scenario_set.payload.source_forecast_ref === forecast.object_id
+    inserted.b_record !== null
+      && inserted.b_record.scenario_set.payload.source_forecast_ref === forecast.object_id
       && inserted.b_record.scenario_set.payload.source_forecast_hash === forecast.determinism_hash,
     "B is canonically bound to the exact successful Forecast",
   );
@@ -92,7 +103,9 @@ async function main(): Promise<void> {
     "completed replay performs no Evidence, Config, lease, commit or canonical readback work",
   );
   check(
-    replay.a_record_set.aggregate_determinism_hash === inserted.a_record_set.aggregate_determinism_hash
+    replay.b_record !== null
+      && inserted.b_record !== null
+      && replay.a_record_set.aggregate_determinism_hash === inserted.a_record_set.aggregate_determinism_hash
       && replay.b_record.aggregate_determinism_hash === inserted.b_record.aggregate_determinism_hash,
     "completed replay returns the same canonical A1 and B hashes",
   );
@@ -117,6 +130,7 @@ async function main(): Promise<void> {
     "B failure leaves one canonical A1 and an explicit pending Scenario condition",
   );
 
+  const evidenceBeforeRecovery = recovery.runtime.evidenceLoadCount;
   const recovered = await recovery.service.executeOneTick(recovery.input);
   check(recovered.status === "RECOVERED_PENDING_SCENARIO", "rerun recovers B without recommitting A1");
   check(
@@ -126,8 +140,13 @@ async function main(): Promise<void> {
     "pending recovery preserves A1 and uses a new fenced lease only for B",
   );
   check(
-    recovered.b_record.scenario_set.payload.source_forecast_ref
-      === memberV1(recovered.a_record_set, "twin_forecast_run_v1").object_id,
+    recovery.runtime.evidenceLoadCount === evidenceBeforeRecovery,
+    "pending B recovery performs zero Evidence or Future Forcing reselection",
+  );
+  check(
+    recovered.b_record !== null
+      && recovered.b_record.scenario_set.payload.source_forecast_ref
+        === memberV1(recovered.a_record_set, "twin_forecast_run_v1").object_id,
     "recovered B remains bound to the persisted A1 Forecast",
   );
 
