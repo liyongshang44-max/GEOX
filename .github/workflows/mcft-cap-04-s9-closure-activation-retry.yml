@@ -1,0 +1,48 @@
+name: MCFT-CAP-04 S9 closure activation retry
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  retry:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-04-s9-closure-activation-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-04-s9-closure-activation-v1
+          fetch-depth: 0
+      - name: Extract, patch and run materializer
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path('.github/workflows/mcft-cap-04-s9-closure-activation-materializer.yml')
+          text = p.read_text()
+          start_marker = "          node <<'NODE'\n"
+          end_marker = "\n          NODE"
+          start = text.index(start_marker) + len(start_marker)
+          end = text.index(end_marker, start)
+          script = text[start:end]
+          script = '\n'.join(line[10:] if line.startswith('          ') else line for line in script.splitlines()) + '\n'
+          old = r"const changed=git(['diff','--name-only',BASE]).split(/\\r?\\n/).filter(Boolean).sort(); exact(changed,files,'exact changed files');"
+          new = r"const tracked=git(['diff','--name-only',BASE]).split(/\\r?\\n/).filter(Boolean); const untracked=git(['ls-files','--others','--exclude-standard']).split(/\\r?\\n/).filter(Boolean); const changed=[...new Set([...tracked,...untracked])].sort(); exact(changed,files,'exact changed files');"
+          if old not in script:
+              raise SystemExit('PATCH_TARGET_NOT_FOUND')
+          Path('/tmp/mcft-cap04-s9-materializer.js').write_text(script.replace(old, new))
+          PY
+          node /tmp/mcft-cap04-s9-materializer.js
+          rm -f .github/workflows/mcft-cap-04-s9-closure-activation-materializer.yml
+          rm -f .github/workflows/mcft-cap-04-s9-closure-activation-retry.yml
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S9_CLOSURE_ACTIVATION.cjs
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "governance(mcft-cap-04): activate S9 closure candidate"
+          git push origin HEAD:agent/mcft-cap-04-s9-closure-activation-v1
