@@ -48,12 +48,9 @@ import {
   finalizeAssimilatedContinuationEvidenceWindowV2,
   type AssimilatedContinuationEvidenceWindowV2,
 } from "./assimilated_continuation_evidence_window_v2.js";
-import { buildAssimilatedContinuationRecordSetV2 } from "./assimilated_continuation_record_set_builder_v2.js";
+import { buildCap04StateSourceMembersV1 } from "./forecast_scenario_state_source_builder_v1.js";
 import type { ContinuationCropStageConfigurationContextV1 } from "./continuation_evidence_window_service_v1.js";
-import {
-  buildCap04CompletedForecastRecordSetV1,
-  type Cap04ARecordSetBuilderSourceMembersV1,
-} from "./forecast_continuation_record_set_builder_v1.js";
+import { buildCap04CompletedForecastRecordSetV1 } from "./forecast_continuation_record_set_builder_v1.js";
 import type { Cap04ForecastScenarioPersistencePortV1 } from "./forecast_scenario_persistence_ports_v1.js";
 import { selectCap04FutureForcingWindowV1 } from "./future_forcing_selector_v1.js";
 import { PrepareNextTickInputServiceV1 } from "./next_tick_input_service_v1.js";
@@ -404,18 +401,16 @@ export class Cap04ForecastScenarioSingleTickServiceV1 {
         quality_weights: config.observation_assimilation.quality_weights,
       });
       evidenceWindow = finalizeAssimilatedContinuationEvidenceWindowV2({ window: preliminary, assimilation });
-      const sourceCandidate = buildAssimilatedContinuationRecordSetV2({
+      const sources = buildCap04StateSourceMembersV1({
         scope: input.scope,
         logical_time: logicalTime,
         created_at: input.created_at,
         handoff: initialHandoff,
-        previous_forecast_result_hash: requiredStringV1(initialHandoff.previous_forecast_result_hash, "CAP04_SINGLE_TICK_PREDECESSOR_FORECAST_HASH_REQUIRED"),
         runtime_config: runtimeConfig,
         evidence_window: evidenceWindow,
         dynamics,
         assimilation,
       });
-      const sources = sourceMembersV1(sourceCandidate);
       const sourceState = sources.twin_state_estimate_v1;
       const forcing = selectCap04FutureForcingWindowV1({
         scope: input.scope,
