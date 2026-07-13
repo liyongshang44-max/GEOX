@@ -21,11 +21,13 @@ jobs:
           fetch-depth: 0
       - name: Materialize final content boundary
         run: rm .github/workflows/cap04-s6-final-gate.yml
+      - name: Print materialized changed-file boundary
+        run: git diff --name-only 63c8ba7b8dd314c1224ca8de2914b663b3551092 | sort
       - name: Run S6 remediation governance final gate
         shell: bash
         run: |
           set -o pipefail
-          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S6_SINGLE_TICK.cjs --final | tee cap04-s6-final-gate.log
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S6_SINGLE_TICK.cjs --final 2>&1 | tee cap04-s6-final-gate.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
