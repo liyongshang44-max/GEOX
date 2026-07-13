@@ -1,0 +1,120 @@
+name: MCFT-CAP-04 S7 finalization materializer
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-04-s7-twenty-four-tick-range-v1' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-04-s7-twenty-four-tick-range-v1
+          fetch-depth: 0
+
+      - name: Materialize final S7 governance mirrors
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+
+          S7 = 'MCFT-CAP-04.MCFT-04-07-09-10.TWENTY-FOUR-TICK-FORECAST-SCENARIO-RANGE-V1'
+          S8 = 'MCFT-CAP-04.MCFT-03-04-07-09-10.RESTART-BACKFILL-FAILURE-RECOVERY-V1'
+          status_path = Path('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S7-RANGE-STATUS.json')
+          status = json.loads(status_path.read_text(encoding='utf-8'))
+          boundary = sorted(status['exact_changed_file_boundary'])
+          claims = status['allowed_claims']
+          nonclaims = status['preserved_nonclaims']
+          status['candidate_validation']['temporary_workflow_removed'] = True
+          status_path.write_text(json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          auth_path = Path('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-AUTHORIZATION-STATUS.json')
+          auth = json.loads(auth_path.read_text(encoding='utf-8'))
+          auth['implementation_status'] = 'S7_IMPLEMENTATION_CANDIDATE'
+          auth['exact_changed_file_boundary'] = boundary
+          auth['preserved_nonclaims'] = nonclaims
+          auth['s7_candidate_validation'] = status['candidate_validation']
+          auth['s7_corrective_boundary'] = status['corrective_boundary']
+          auth_path.write_text(json.dumps(auth, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          delivery_path = Path('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-DELIVERY-SLICE-STATUS.json')
+          delivery = json.loads(delivery_path.read_text(encoding='utf-8'))
+          delivery['status'] = 'S7_IMPLEMENTATION_CANDIDATE'
+          s7 = next(item for item in delivery['slices'] if item['delivery_slice_id'] == S7)
+          s7['status'] = 'IMPLEMENTATION_CANDIDATE'
+          s7['implementation_status'] = 'VALIDATED_PENDING_MERGE'
+          s7['allowed_claims'] = claims
+          s7['preserved_nonclaims'] = nonclaims
+          s7['exact_changed_file_boundary'] = boundary
+          s7['candidate_validation'] = status['candidate_validation']
+          s7['corrective_boundary'] = status['corrective_boundary']
+          s7['effectiveness_condition_satisfied'] = False
+          s8 = next(item for item in delivery['slices'] if item['delivery_slice_id'] == S8)
+          s8['status'] = 'BLOCKED'
+          s8['runtime_source_authorized'] = False
+          delivery_path.write_text(json.dumps(delivery, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          matrix_path = Path('docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json')
+          matrix = json.loads(matrix_path.read_text(encoding='utf-8'))
+          cap04 = next(line for line in matrix['capability_lines'] if line['capability_line_id'] == 'MCFT-CAP-04')
+          cap04['status'] = 'IN_PROGRESS'
+          cap04['implementation_status'] = 'S7_IMPLEMENTATION_CANDIDATE'
+          cap04['active_delivery_slice_id'] = S7
+          cap04['next_delivery_slice_id'] = S8
+          cap04['next_delivery_slice_authorized'] = False
+          cap04['runtime_source_authorized'] = True
+          cap04['s7_candidate_validation'] = status['candidate_validation']
+          matrix_path.write_text(json.dumps(matrix, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          map_path = Path('docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md')
+          map_text = map_path.read_text(encoding='utf-8').rstrip()
+          marker = '## MCFT-CAP-04 S7 candidate — 24-tick Forecast / Scenario range'
+          section = '''
+
+## MCFT-CAP-04 S7 candidate — 24-tick Forecast / Scenario range
+
+```text
+baseline main: 01be1e85dc409eee30bc3464dad30f7005b135c4
+branch: agent/mcft-cap-04-s7-twenty-four-tick-range-v1
+status: IMPLEMENTATION_CANDIDATE
+standard range: 24 contiguous A1+B ticks
+checkpoint sequence: 49..72
+Forecast points: 1728
+Scenario points: 5184
+PostgreSQL operation facts: 216
+PostgreSQL Config + operation facts: 240
+positive/negative recheck: 29247534180 PASS
+PostgreSQL range acceptance: 29247696055 PASS
+S8 authorized: false
+```
+
+S7 reuses the verified S6 pending-B single-tick entry and does not duplicate State, Forecast, or Scenario mathematics. A legal A2 advances the latest Forecast result while preserving the prior successful-Forecast pointer, returns `BLOCKED`, and stops the range. Malformed forcing writes no terminal tick for the failing hour.
+'''
+          if marker not in map_text:
+            map_text += section
+          map_path.write_text(map_text.rstrip() + '\n', encoding='utf-8')
+
+      - name: Remove all temporary S7 workflows
+        run: |
+          rm -f .github/workflows/cap04-s7-dual-pointer-fix.yml
+          rm -f .github/workflows/cap04-s7-range-diagnostic.yml
+          rm -f .github/workflows/cap04-s7-range-recheck.yml
+          rm -f .github/workflows/cap04-s7-range-db-diagnostic.yml
+          rm -f .github/workflows/cap04-s7-finalize-materializer.yml
+
+      - name: Run final S7 Governance Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S7_RANGE.cjs --final
+
+      - name: Commit final S7 candidate
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "docs(mcft-cap-04): finalize S7 24-tick range candidate"
+          git push origin HEAD:agent/mcft-cap-04-s7-twenty-four-tick-range-v1
