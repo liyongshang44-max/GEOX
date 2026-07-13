@@ -3,6 +3,7 @@
 // Boundary: pure contracts only; no forcing selection, Forecast equations, Scenario equations, persistence, projection, route, scheduler, clock, filesystem or network.
 
 import type { CanonicalObjectEnvelopeV1 } from "./canonical_object_contracts_v1.js";
+import { canonicalJsonV1 } from "./canonical_json_v1.js";
 
 export const CAP04_COMPLETED_FORECAST_CONTRACT_ID_V1 =
   "MCFT_CAP_04_COMPLETED_FORECAST_CONTINUATION_V1" as const;
@@ -273,7 +274,7 @@ export function validateCap04ScenarioOptionV1(
     for (const value of Object.values(option.difference_from_no_action)) {
       if (value !== 0 && value !== "0.000000") throw new Error("CAP04_NO_ACTION_DELTA_NONZERO");
     }
-    if (JSON.stringify(option.trajectory_points) !== JSON.stringify(sourceForecast.points)) throw new Error("CAP04_NO_ACTION_TRAJECTORY_NOT_DEEP_COPY_EQUIVALENT");
+    if (canonicalJsonV1(option.trajectory_points) !== canonicalJsonV1(sourceForecast.points)) throw new Error("CAP04_NO_ACTION_TRAJECTORY_NOT_DEEP_COPY_EQUIVALENT");
   } else {
     const expectedRequested = option.option_id === "IRRIGATE_NOW_15MM" ? "15.000000" : "25.000000";
     if (option.option_kind !== "IMMEDIATE_IRRIGATION" || option.requested_irrigation_mm !== expectedRequested || option.application_horizon !== 1 || !option.application_interval) throw new Error("CAP04_IRRIGATION_OPTION_CONTRACT_MISMATCH");
