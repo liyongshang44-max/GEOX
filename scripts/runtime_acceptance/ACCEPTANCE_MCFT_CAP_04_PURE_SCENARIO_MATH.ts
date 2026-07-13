@@ -34,7 +34,7 @@ check(
 );
 check(
   JSON.stringify(noAction.trajectory_points) === JSON.stringify(result.source_forecast_payload.points)
-    && result.option_trajectory_hashes.NO_ACTION === result.source_forecast.math_result.trajectory_hash,
+    && result.option_trajectory_hashes.NO_ACTION === input.source_forecast.math_result.trajectory_hash,
   "NO_ACTION trajectory is the exact canonical deep copy of source Forecast points",
 );
 check(
