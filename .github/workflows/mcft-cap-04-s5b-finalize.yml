@@ -56,8 +56,32 @@ jobs:
       - name: Run positive Scenario Set builder acceptance
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SCENARIO_SET_BUILDER.ts
 
-      - name: Run negative Scenario Set builder acceptance
-        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SCENARIO_SET_BUILDER_NEGATIVE.ts
+      - name: Capture negative Scenario Set builder acceptance
+        id: negative
+        continue-on-error: true
+        run: |
+          mkdir -p .cap04-s5b
+          set +e
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SCENARIO_SET_BUILDER_NEGATIVE.ts > .cap04-s5b/negative.log 2>&1
+          code=$?
+          cat .cap04-s5b/negative.log
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Persist negative acceptance diagnostics
+        if: steps.negative.outputs.exit_code != '0'
+        env:
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .cap04-s5b/negative.log
+          git commit -m "chore(mcft-cap-04): capture S5B negative acceptance diagnostics"
+          git push origin "HEAD:${HEAD_BRANCH}"
+
+      - name: Require negative Scenario Set builder acceptance
+        if: steps.negative.outputs.exit_code != '0'
+        run: exit 1
 
       - name: Run isolated PostgreSQL persistence acceptance
         env:
