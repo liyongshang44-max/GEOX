@@ -1,0 +1,29 @@
+name: MCFT-CAP-04 final COMPLETE merged-main effectiveness
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-04-final-effectiveness-postmerge-probe-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Verify exact merged main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git branch --show-current)" = "main"
+          test "$(git rev-parse HEAD)" = "4aa3877f80b3864e6bb6a248199c21dafaac115b"
+          test "$(git rev-parse origin/main)" = "4aa3877f80b3864e6bb6a248199c21dafaac115b"
+      - name: Run final COMPLETE effectiveness Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_FINALIZATION_EFFECTIVENESS.cjs --postmerge
