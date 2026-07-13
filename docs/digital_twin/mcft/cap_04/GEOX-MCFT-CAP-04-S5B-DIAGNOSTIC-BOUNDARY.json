@@ -1,0 +1,10 @@
+{
+  "schema_version": "geox_mcft_cap_04_s5b_diagnostic_boundary_v1",
+  "status": "DIAGNOSTIC_ONLY",
+  "temporary_paths": [
+    ".github/workflows/mcft-cap-04-s5b-diagnostic.yml",
+    "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S5B-WIP.md",
+    "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S5B-DIAGNOSTIC-BOUNDARY.json"
+  ],
+  "removal_required_before_final_candidate": true
+}
