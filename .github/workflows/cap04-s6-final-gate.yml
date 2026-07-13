@@ -1,6 +1,9 @@
 name: cap04-s6-final-gate
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - agent/mcft-cap-04-s6-single-tick-integration-v1
