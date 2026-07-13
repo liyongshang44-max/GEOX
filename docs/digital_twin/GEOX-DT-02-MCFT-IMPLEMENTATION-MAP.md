@@ -575,3 +575,36 @@ validator dispatch: explicit contract ID + config purpose only
 Future Forcing selection, Forecast math, Scenario math, A1/A2/B persistence, migration, projection, route and scheduler remain outside S1.
 
 <!-- MCFT-CAP-04-S1-CONTRACTS-CONFIG-END -->
+
+<!-- MCFT-CAP-04-S2-FUTURE-FORCING-START -->
+
+## MCFT-CAP-04 S2 Future Forcing implementation candidate
+
+```text
+baseline merged main: 13f8bf3231cb41c809d235096ca7cfda9e201944
+S1 status: MERGED_EFFECTIVE
+S1 postmerge workflow: 29222992520
+active delivery slice: MCFT-CAP-04.MCFT-05-09.FUTURE-FORCING-WINDOW-V1
+status: IMPLEMENTATION_CANDIDATE
+runtime_source_authorized: true
+next delivery slice: MCFT-CAP-04.MCFT-06-09.PURE-72H-FORECAST-MATH-V1
+next delivery slice authorized: false
+```
+
+Established in this bounded slice:
+
+```text
+joint weather/ET0 matching forcing-cycle selector
+forcing_cycle_key equality and deterministic ordering
+exact 72-point ForecastForcingWindowV1 DTO
+no-future-leakage at logical time T
+identical duplicate collapse
+CONFLICTING_FORCING_SNAPSHOT rejection
+CONFLICTING_FORCING_CYCLE rejection
+forcing_window_hash over complete 72-point DTO
+24-tick / 95-hour controlled Replay fixture
+```
+
+Forecast equations, Scenario equations, persistence, migration, projection, route and scheduler remain outside S2.
+
+<!-- MCFT-CAP-04-S2-FUTURE-FORCING-END -->

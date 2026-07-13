@@ -5,10 +5,10 @@
   "name": "72-Hour Forecast and Three Scenarios",
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A — Deterministic Replay Twin",
-  "status": "S1_IMPLEMENTATION_CANDIDATE",
-  "baseline_main_commit": "870bcc621e8d0495ae5acbedd534068a18d402b9",
-  "branch": "agent/mcft-cap-04-s1-contracts-config-v1",
-  "active_delivery_slice_id": "MCFT-CAP-04.MCFT-02-07-09-10.FORECAST-SCENARIO-CONTRACTS-CONFIG-V1",
+  "status": "S2_IMPLEMENTATION_CANDIDATE",
+  "baseline_main_commit": "13f8bf3231cb41c809d235096ca7cfda9e201944",
+  "branch": "agent/mcft-cap-04-s2-future-forcing-window-v1",
+  "active_delivery_slice_id": "MCFT-CAP-04.MCFT-05-09.FUTURE-FORCING-WINDOW-V1",
   "runtime_source_authorized": true,
   "authorization_effective": true,
   "predecessor_lock_ref": "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-PREDECESSOR-LOCK.json",
@@ -125,7 +125,7 @@
       ],
       "baseline_main_commit": "870bcc621e8d0495ae5acbedd534068a18d402b9",
       "branch": "agent/mcft-cap-04-s1-contracts-config-v1",
-      "status": "IMPLEMENTATION_CANDIDATE",
+      "status": "MERGED_EFFECTIVE",
       "activation_fields_status": "FROZEN",
       "runtime_source_authorized": true,
       "allowed_claims": [
@@ -178,7 +178,13 @@
         "scripts/runtime_acceptance/mcft_cap_04_contracts_config_fixture_v1.ts"
       ],
       "effectiveness_condition": "S1_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S1_GATE_PASS",
-      "effectiveness_condition_satisfied": false
+      "effectiveness_condition_satisfied": true,
+      "exact_head_commit": "7347909b1d922dfd85f56a9967ffa5905778cb6c",
+      "exact_head_ci_run": 29222549931,
+      "merge_commit": "13f8bf3231cb41c809d235096ca7cfda9e201944",
+      "postmerge_probe_pr_number": 2385,
+      "postmerge_workflow_run": 29222992520,
+      "postmerge_gate": "PASS"
     },
     {
       "delivery_slice_id": "MCFT-CAP-04.MCFT-05-09.FUTURE-FORCING-WINDOW-V1",
@@ -186,36 +192,60 @@
       "depends_on_delivery_slice_ids": [
         "MCFT-CAP-04.MCFT-02-07-09-10.FORECAST-SCENARIO-CONTRACTS-CONFIG-V1"
       ],
-      "baseline_main_commit": null,
-      "branch": null,
-      "status": "BLOCKED",
-      "activation_fields_status": "TO_BE_FROZEN_AT_SLICE_ACTIVATION",
-      "runtime_source_authorized": false,
-      "allowed_claims": [],
+      "baseline_main_commit": "13f8bf3231cb41c809d235096ca7cfda9e201944",
+      "branch": "agent/mcft-cap-04-s2-future-forcing-window-v1",
+      "status": "IMPLEMENTATION_CANDIDATE",
+      "activation_fields_status": "FROZEN",
+      "runtime_source_authorized": true,
+      "allowed_claims": [
+        "CAP04_JOINT_MATCHING_FORCING_CYCLE_SELECTOR_IMPLEMENTED",
+        "CAP04_FORCING_CYCLE_KEY_DERIVATION_AND_EQUALITY_IMPLEMENTED",
+        "CAP04_EXACT_72_POINT_FORCING_DTO_IMPLEMENTED",
+        "CAP04_NO_FUTURE_LEAKAGE_IMPLEMENTED",
+        "CAP04_FORCING_DUPLICATE_AND_CONFLICT_RULES_IMPLEMENTED",
+        "CAP04_FORCING_WINDOW_HASH_IMPLEMENTED",
+        "CAP04_24_TICK_95_HOUR_FORCING_FIXTURE_IMPLEMENTED"
+      ],
       "preserved_nonclaims": [
-        "NO_MCFT_CAP_04_RUNTIME_SOURCE_AUTHORIZATION",
-        "NO_SUCCESSFUL_FORECAST_CREATED_BY_CAP_04",
-        "NO_72_HOUR_FORECAST_CREATED_BY_CAP_04",
-        "NO_SCENARIO_CREATED_BY_CAP_04",
+        "NO_FORECAST_EQUATIONS",
+        "NO_SCENARIO_EQUATIONS",
+        "NO_SUCCESSFUL_FORECAST_CREATED_BY_S2",
+        "NO_SCENARIO_CREATED_BY_S2",
+        "NO_A1_A2_B_PERSISTENCE",
+        "NO_MIGRATION",
+        "NO_PROJECTION",
+        "NO_ROUTE",
+        "NO_SCHEDULER",
         "NO_FORECAST_RESIDUAL",
         "NO_RECOMMENDATION",
         "NO_POLICY_EVALUATION",
         "NO_DECISION",
         "NO_AO_ACT",
-        "NO_CALIBRATION_CANDIDATE",
-        "NO_SHADOW_EVALUATION",
         "NO_MODEL_ACTIVATION",
-        "NO_ACTIVE_MODEL_PARAMETER_CHANGE",
-        "NO_LATE_EVIDENCE_REVISION",
         "NO_CONTINUOUS_RUNTIME",
-        "NO_CONTINUOUS_SCHEDULER",
         "NO_LIVE_FIELD_CLAIM",
         "NO_MCFT_GATE_A_CLOSURE",
         "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
       ],
-      "exact_changed_file_boundary": [],
-      "effectiveness_condition": "PREDECESSOR_SLICE_MERGED_AND_MERGED_MAIN_GATE_PASS_AND_EXPLICIT_SLICE_ACTIVATION",
-      "effectiveness_condition_satisfied": false
+      "exact_changed_file_boundary": [
+        "apps/server/src/domain/twin_runtime/future_forcing_contracts_v1.ts",
+        "apps/server/src/runtime/twin_runtime/future_forcing_selector_v1.ts",
+        "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+        "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+        "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-AUTHORIZATION-STATUS.json",
+        "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-DELIVERY-SLICE-STATUS.json",
+        "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FUTURE-FORCING-CONTRACT.json",
+        "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FUTURE-FORCING-WINDOW-V1.md",
+        "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S1-CONTRACTS-CONFIG-STATUS.json",
+        "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S2-FUTURE-FORCING-STATUS.json",
+        "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S2_FUTURE_FORCING.cjs",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_FUTURE_FORCING.ts",
+        "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_FUTURE_FORCING_NEGATIVE.ts",
+        "scripts/runtime_acceptance/mcft_cap_04_future_forcing_fixture_v1.ts"
+      ],
+      "effectiveness_condition": "S2_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S2_GATE_PASS",
+      "effectiveness_condition_satisfied": false,
+      "explicit_activation_authority": "OWNER_EXPLICIT_AUTHORIZATION"
     },
     {
       "delivery_slice_id": "MCFT-CAP-04.MCFT-06-09.PURE-72H-FORECAST-MATH-V1",
@@ -557,7 +587,7 @@
     }
   ],
   "next_authorized_slice_ids": [],
-  "next_authorized_slice_id_after_merge_and_postmerge_gate": "MCFT-CAP-04.MCFT-05-09.FUTURE-FORCING-WINDOW-V1",
+  "next_authorized_slice_id_after_merge_and_postmerge_gate": "MCFT-CAP-04.MCFT-06-09.PURE-72H-FORECAST-MATH-V1",
   "successor_capability_line_id": "MCFT-CAP-05",
   "successor_authorized": false,
   "s0_effectiveness": {
@@ -567,6 +597,16 @@
     "merge_commit": "870bcc621e8d0495ae5acbedd534068a18d402b9",
     "postmerge_probe_pr_number": 2383,
     "postmerge_workflow_run": 29207138083,
+    "postmerge_gate": "PASS",
+    "effectiveness_condition_satisfied": true
+  },
+  "s1_effectiveness": {
+    "pr_number": 2384,
+    "exact_head_commit": "7347909b1d922dfd85f56a9967ffa5905778cb6c",
+    "exact_head_ci_run": 29222549931,
+    "merge_commit": "13f8bf3231cb41c809d235096ca7cfda9e201944",
+    "postmerge_probe_pr_number": 2385,
+    "postmerge_workflow_run": 29222992520,
     "postmerge_gate": "PASS",
     "effectiveness_condition_satisfied": true
   }
