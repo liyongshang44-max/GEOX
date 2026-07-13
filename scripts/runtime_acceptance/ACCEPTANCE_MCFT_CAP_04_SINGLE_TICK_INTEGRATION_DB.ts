@@ -1,5 +1,5 @@
 // scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_DB.ts
-// Purpose: prove one CAP-04 S6 tick and pending-Scenario recovery against the real PostgreSQL next-tick, Runtime Config, A1/B transaction, readback and projection adapters.
+// Purpose: prove one CAP-04 S6 A1/B or legal A2 tick, canonical Forecast authority, facts-based A/B guard recovery, terminal uniqueness after guard loss, and Forecast-authoritative pending-Scenario recovery in real PostgreSQL.
 // Boundary: destructive isolated-database acceptance only; no route, web, scheduler, 24-tick CAP-04 range, restart/backfill mode, recommendation, decision, AO-ACT, live data, or field claim.
 
 import assert from "node:assert/strict";
@@ -8,8 +8,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Pool } from "pg";
 import type { CanonicalObjectEnvelopeV1 } from "../../apps/server/src/domain/twin_runtime/canonical_object_contracts_v1.js";
+import { CAP04_CANONICAL_FORECAST_AUTHORITY_CONTRACT_ID_V1 } from "../../apps/server/src/domain/twin_runtime/forecast_canonical_authority_v1.js";
 import { compileCap04RuntimeConfigV1 } from "../../apps/server/src/domain/twin_runtime/forecast_scenario_runtime_config_v1.js";
-import { PostgresForecastScenarioRepositoryV1 } from "../../apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_repository_v1.js";
+import { PostgresForecastScenarioRecoveryRepositoryV1 } from "../../apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_recovery_repository_v1.js";
 import { PostgresNextTickRepositoryV1 } from "../../apps/server/src/persistence/twin_runtime/postgres_next_tick_repository_v1.js";
 import { PostgresRuntimeRepositoryV1 } from "../../apps/server/src/persistence/twin_runtime/postgres_runtime_repository_v1.js";
 import {
@@ -57,6 +58,12 @@ function recordJsonV1(object: CanonicalObjectEnvelopeV1): string {
   return JSON.stringify({ type: object.object_type, payload: object });
 }
 
+function memberV1(recordSet: { members: CanonicalObjectEnvelopeV1[] }, objectType: string): CanonicalObjectEnvelopeV1 {
+  const matches = recordSet.members.filter((member) => member.object_type === objectType);
+  if (matches.length !== 1) throw new Error(`CAP04_S6_DB_MEMBER_CARDINALITY:${objectType}`);
+  return matches[0];
+}
+
 async function initializeSchemaV1(): Promise<void> {
   await pool.query(readSqlV1("docker/postgres/init/001_schema.sql"));
   await pool.query(readSqlV1("apps/server/db/migrations/2026_07_09_mcft_cap_01_a0_persistence.sql"));
@@ -85,7 +92,7 @@ async function countV1(fromClause: string, values: unknown[] = []): Promise<numb
 
 function persistenceAdapterV1(
   runtimeRepository: PostgresRuntimeRepositoryV1,
-  repository: PostgresForecastScenarioRepositoryV1,
+  repository: PostgresForecastScenarioRecoveryRepositoryV1,
 ): Cap04SingleTickPersistencePortV1 {
   return {
     acquireLease: runtimeRepository.acquireLease.bind(runtimeRepository),
@@ -164,16 +171,21 @@ async function buildControlledAuthorityV1() {
   };
 }
 
-async function seedControlledAuthorityV1(authority: Awaited<ReturnType<typeof buildControlledAuthorityV1>>): Promise<{
+async function seedControlledAuthorityV1(
+  authority: Awaited<ReturnType<typeof buildControlledAuthorityV1>>,
+  initialCandidates: CanonicalReplayEvidenceRecordV1[] = authority.candidates,
+): Promise<{
   runtimeRepository: PostgresRuntimeRepositoryV1;
   nextTickRepository: PostgresNextTickRepositoryV1;
-  repository: PostgresForecastScenarioRepositoryV1;
+  repository: PostgresForecastScenarioRecoveryRepositoryV1;
   service: Cap04ForecastScenarioSingleTickServiceV1;
   input: ExecuteCap04SingleTickInputV1;
+  replaceCandidates: (records: CanonicalReplayEvidenceRecordV1[]) => void;
+  evidenceLoadCount: () => number;
 }> {
   const runtimeRepository = new PostgresRuntimeRepositoryV1(pool);
   const nextTickRepository = new PostgresNextTickRepositoryV1(pool);
-  const repository = new PostgresForecastScenarioRepositoryV1(pool);
+  const repository = new PostgresForecastScenarioRecoveryRepositoryV1(pool);
   await runtimeRepository.commitRuntimeConfig(authority.snapshot.runtime_config);
   await runtimeRepository.commitRuntimeConfig(authority.cap04Config);
   await nextTickRepository.commitRealityBindingSnapshot(authority.snapshot.reality_binding);
@@ -217,11 +229,14 @@ async function seedControlledAuthorityV1(authority: Awaited<ReturnType<typeof bu
      VALUES ($1,$2,$3,$4,$5,$6,'seed_cap04_s6_health','READY',$7::timestamptz,'sha256:seed_cap04_s6_health','seed_cap04_s6_health_fact')`,
     [...values, authority.snapshot.checkpoint.logical_time],
   );
+  let candidates = structuredClone(initialCandidates);
+  let loads = 0;
   const source: ReplayEvidenceSourcePortV1 = {
     async loadCandidateRecords(input) {
+      loads += 1;
       assert.deepEqual(input.scope, authority.scope);
       assert.equal(input.logical_time, authority.logicalTime);
-      return structuredClone(authority.candidates);
+      return structuredClone(candidates);
     },
   };
   const service = new Cap04ForecastScenarioSingleTickServiceV1(
@@ -241,7 +256,21 @@ async function seedControlledAuthorityV1(authority: Awaited<ReturnType<typeof bu
     lease_owner: "mcft-cap04-s6-db-acceptance",
     lease_duration_seconds: 300,
   };
-  return { runtimeRepository, nextTickRepository, repository, service, input };
+  return {
+    runtimeRepository,
+    nextTickRepository,
+    repository,
+    service,
+    input,
+    replaceCandidates(records) { candidates = structuredClone(records); },
+    evidenceLoadCount() { return loads; },
+  };
+}
+
+async function deleteCap04GuardsV1(): Promise<void> {
+  await pool.query("DELETE FROM twin_scenario_set_uniqueness_v1");
+  await pool.query("DELETE FROM twin_terminal_tick_uniqueness_v1");
+  await pool.query("DELETE FROM twin_object_idempotency_index_v1 WHERE identity_kind IN ('A1_RECORD_SET','A2_RECORD_SET','B_SCENARIO_SET')");
 }
 
 async function main(): Promise<void> {
@@ -254,6 +283,11 @@ async function main(): Promise<void> {
     let seeded = await seedControlledAuthorityV1(authority);
     const inserted = await seeded.service.executeOneTick(seeded.input);
     assert.equal(inserted.status, "INSERTED");
+    assert.ok(inserted.b_record);
+    const canonicalForecast = memberV1(inserted.a_record_set, "twin_forecast_run_v1");
+    assert.equal(canonicalForecast.payload.canonical_authority_contract_id, CAP04_CANONICAL_FORECAST_AUTHORITY_CONTRACT_ID_V1);
+    assert.equal(canonicalForecast.payload.point_traces.length, 72);
+    assert.equal(canonicalForecast.payload.forcing_window_authority.points.length, 72);
     assert.equal(await countV1("twin_terminal_tick_uniqueness_v1"), 1);
     assert.equal(await countV1("facts WHERE record_json->>'type'='twin_forecast_run_v1' AND record_json->'payload'->'payload'->>'status'='COMPLETED'"), 1);
     assert.equal(await countV1("twin_forecast_point_projection_v1"), 72);
@@ -261,15 +295,74 @@ async function main(): Promise<void> {
     assert.equal(await countV1("twin_scenario_point_projection_v1"), 216);
     assert.equal(inserted.next_handoff.next_logical_tick_time, "2026-06-03T03:00:00.000Z");
     assert.equal(inserted.next_handoff.latest_successful_forecast_ref, inserted.b_record.scenario_set.payload.source_forecast_ref);
-    ok("real PostgreSQL handoff executes one complete A1 plus B tick and returns exact T+1 authority");
+    ok("real PostgreSQL handoff commits canonical full-authority A1 plus B and returns exact T+1 authority");
 
     const factCount = await countV1("facts");
+    await deleteCap04GuardsV1();
+    assert.equal(await countV1("twin_terminal_tick_uniqueness_v1"), 0);
+    assert.equal(await countV1("twin_scenario_set_uniqueness_v1"), 0);
     const replay = await seeded.service.executeOneTick(seeded.input);
     assert.equal(replay.status, "EXISTING_IDEMPOTENT_SUCCESS");
+    assert.ok(replay.b_record);
     assert.equal(await countV1("facts"), factCount);
+    assert.equal(await countV1("twin_terminal_tick_uniqueness_v1"), 1);
+    assert.equal(await countV1("twin_scenario_set_uniqueness_v1"), 1);
+    assert.equal(await countV1("twin_object_idempotency_index_v1 WHERE identity_kind IN ('A1_RECORD_SET','B_SCENARIO_SET')"), 2);
     assert.equal(replay.a_record_set.aggregate_determinism_hash, inserted.a_record_set.aggregate_determinism_hash);
     assert.equal(replay.b_record.aggregate_determinism_hash, inserted.b_record.aggregate_determinism_hash);
-    ok("completed PostgreSQL replay returns existing A1/B with zero duplicate facts");
+    ok("deleted A/B guards are reconstructed from canonical Tick and Scenario facts with zero duplicate facts");
+
+    await resetSchemaV1();
+    const historicalOnly = authority.candidates.filter((record) => !["future_weather_assumption_v1", "future_et0_assumption_v1"].includes(record.record_type));
+    const blockedSeed = await seedControlledAuthorityV1(authority, historicalOnly);
+    const blocked = await blockedSeed.service.executeOneTick(blockedSeed.input);
+    assert.equal(blocked.status, "BLOCKED_INSERTED");
+    assert.equal(blocked.b_record, null);
+    assert.equal(memberV1(blocked.a_record_set, "twin_forecast_run_v1").payload.status, "BLOCKED");
+    const blockedRecordSet = blocked.a_record_set;
+    ok("complete-pair unavailability commits one legal A2 and does not create B");
+
+    await resetSchemaV1();
+    seeded = await seedControlledAuthorityV1(authority);
+    const successful = await seeded.service.executeOneTick(seeded.input);
+    assert.equal(successful.status, "INSERTED");
+    await deleteCap04GuardsV1();
+    const lease = await seeded.runtimeRepository.acquireLease({
+      ...authority.scope,
+      lease_owner: "mcft-cap04-s6-terminal-conflict",
+      lease_duration_seconds: 300,
+    });
+    await assert.rejects(
+      seeded.repository.commitARecordSet({
+        scope: authority.scope,
+        lease,
+        expected: {
+          active_lineage_ref: authority.lineage.object_id,
+          lineage_id: String(authority.snapshot.previous_posterior.lineage_id),
+          revision_id: String(authority.snapshot.previous_posterior.revision_id),
+          previous_checkpoint_ref: authority.snapshot.checkpoint.object_id,
+          previous_state_ref: authority.snapshot.previous_posterior.object_id,
+          previous_forecast_result_ref: authority.snapshot.previous_forecast_result.object_id,
+          previous_successful_forecast_ref: authority.snapshot.checkpoint.payload.successful_forecast_ref as string | null,
+        },
+        record_set: blockedRecordSet,
+      }),
+      /TERMINAL_TICK_VARIANT_CONFLICT/,
+    );
+    assert.equal(await countV1("facts WHERE record_json->>'type'='twin_runtime_tick_v1' AND record_json->'payload'->>'logical_time'=$1", [authority.logicalTime]), 1);
+    ok("canonical Tick facts reject a second terminal variant after all A guards are deleted");
+
+    assert.ok(successful.b_record);
+    await pool.query("DELETE FROM twin_scenario_set_uniqueness_v1");
+    await pool.query("DELETE FROM twin_object_idempotency_index_v1 WHERE identity_kind='B_SCENARIO_SET'");
+    const conflictingB = structuredClone(successful.b_record);
+    conflictingB.aggregate_determinism_hash = "sha256:forged-conflict";
+    await assert.rejects(
+      seeded.repository.commitScenarioSet({ scope: authority.scope, lease, record: conflictingB }),
+      /SCENARIO_SET_CANONICAL_UNIQUENESS_CONFLICT/,
+    );
+    assert.equal(await countV1("facts WHERE record_json->>'type'='twin_scenario_set_v1'"), 1);
+    ok("canonical Scenario fact rejects a second Scenario Set after B guards are deleted");
 
     await resetSchemaV1();
     seeded = await seedControlledAuthorityV1(authority);
@@ -283,15 +376,17 @@ async function main(): Promise<void> {
     assert.equal(await countV1("twin_terminal_tick_uniqueness_v1"), 1);
     assert.equal(await countV1("facts WHERE record_json->>'type'='twin_scenario_set_v1'"), 0);
     assert.ok(await seeded.repository.detectPendingScenario(authority.scope));
-    ok("real PostgreSQL B failure preserves canonical A1 and exposes pending Scenario recovery");
-
+    const loadsBeforeRecovery = seeded.evidenceLoadCount();
+    seeded.replaceCandidates(historicalOnly);
     const recovered = await seeded.service.executeOneTick(seeded.input);
     assert.equal(recovered.status, "RECOVERED_PENDING_SCENARIO");
+    assert.ok(recovered.b_record);
+    assert.equal(seeded.evidenceLoadCount(), loadsBeforeRecovery);
     assert.equal(await countV1("twin_terminal_tick_uniqueness_v1"), 1);
     assert.equal(await countV1("facts WHERE record_json->>'type'='twin_scenario_set_v1'"), 1);
     assert.equal(await seeded.repository.detectPendingScenario(authority.scope), null);
     assert.equal(recovered.next_handoff.next_logical_tick_time, "2026-06-03T03:00:00.000Z");
-    ok("real PostgreSQL rerun recovers only B and preserves the original A1 terminal tick");
+    ok("pending B recovery consumes canonical Forecast authority with zero forcing reselection");
 
     console.log(`MCFT-CAP-04 single-tick integration DB: ${pass} PASS, 0 FAIL`);
   } finally {
