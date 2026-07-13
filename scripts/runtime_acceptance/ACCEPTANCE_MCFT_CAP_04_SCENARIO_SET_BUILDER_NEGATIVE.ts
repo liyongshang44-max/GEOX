@@ -2,6 +2,7 @@
 // Purpose: prove CAP-04 B Scenario Set validation rejects source-authority drift, option-order drift, identity forgery, aggregate forgery, and a blocked source Forecast.
 // Boundary: pure negative acceptance only; no database, migration, projection mutation, route, scheduler, live data, recommendation, decision, or action.
 
+import { computeMemberDeterminismHashV1 } from "../../apps/server/src/domain/twin_runtime/canonical_identity_v1.js";
 import { validateCap04ScenarioSetRecordV1 } from "../../apps/server/src/domain/twin_runtime/forecast_scenario_record_set_validator_v1.js";
 import type { CanonicalObjectEnvelopeV1 } from "../../apps/server/src/domain/twin_runtime/canonical_object_contracts_v1.js";
 import { buildCap04S5BPersistenceFixtureV1 } from "./mcft_cap_04_persistence_fixture_v1.js";
@@ -35,10 +36,14 @@ if (!sourceForecast || !blockedForecast) throw new Error("CAP04_S5B_FORECAST_MEM
 
 const sourceHashDrift = structuredClone(fixture.b);
 sourceHashDrift.scenario_set.payload.source_forecast_hash = "sha256:forged";
+sourceHashDrift.scenario_set.determinism_hash = computeMemberDeterminismHashV1(
+  sourceHashDrift.scenario_set as unknown as Record<string, unknown>,
+);
+sourceHashDrift.aggregate_determinism_hash = sourceHashDrift.scenario_set.determinism_hash;
 expectThrow(
   () => validateCap04ScenarioSetRecordV1(sourceHashDrift, sourceForecast),
   /CAP04_B_SOURCE_FORECAST_MISMATCH|CAP04_SCENARIO_SOURCE_FORECAST_MISMATCH/,
-  "B validation rejects source Forecast hash drift",
+  "B validation rejects source Forecast hash drift after internal hash recomputation",
 );
 
 const optionOrderDrift = structuredClone(fixture.b);
@@ -78,7 +83,7 @@ expectThrow(
 
 expectThrow(
   () => validateCap04ScenarioSetRecordV1(fixture.b, blockedForecast as CanonicalObjectEnvelopeV1),
-  /CAP04_SCENARIO_SOURCE_FORECAST_STATUS_MISMATCH|CAP04_B_SOURCE_FORECAST_MISMATCH|CAP04_COMPLETED_FORECAST_REQUIRED/,
+  /CAP04_SCENARIO_REQUIRES_COMPLETED_FORECAST|CAP04_B_SOURCE_FORECAST_MISMATCH/,
   "B validation rejects a blocked source Forecast",
 );
 
