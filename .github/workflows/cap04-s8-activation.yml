@@ -18,5 +18,22 @@ jobs:
           ref: agent/mcft-cap-04-s8-activation-v1
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Materialize frozen S8 activation
-        run: python3 .cap04-s8/activate.py
+      - name: Capture frozen S8 activation
+        shell: bash
+        run: |
+          set +e
+          python3 .cap04-s8/activate.py > /tmp/cap04-s8-activation.log 2>&1
+          code=$?
+          cat /tmp/cap04-s8-activation.log
+          echo "$code" > /tmp/cap04-s8-activation-exit.txt
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cap04-s8-activation-diagnostic
+          path: |
+            /tmp/cap04-s8-activation.log
+            /tmp/cap04-s8-activation-exit.txt
+          retention-days: 1
+      - name: Enforce materializer success
+        shell: bash
+        run: test "$(cat /tmp/cap04-s8-activation-exit.txt)" = "0"
