@@ -4,4 +4,8 @@ apps/web typecheck$ pnpm -w exec tsc --noEmit -p apps/web/tsconfig.json
 apps/judge typecheck: Done
 apps/web typecheck: Done
 apps/server typecheck$ pnpm -w exec tsc --noEmit -p apps/server/tsconfig.json
-apps/server typecheck: Done
+apps/server typecheck: apps/server/src/runtime/twin_runtime/forecast_scenario_state_source_builder_v1.ts(84,22): error TS2339: Property 'interval_end_inclusive' does not exist on type 'HourlyWaterBalanceResultV1'.
+apps/server typecheck: Failed
+/home/runner/work/GEOX/GEOX/apps/server:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @geox/server@0.1.0 typecheck: `pnpm -w exec tsc --noEmit -p apps/server/tsconfig.json`
+Exit status 2
