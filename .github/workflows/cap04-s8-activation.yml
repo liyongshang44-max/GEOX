@@ -24,6 +24,12 @@ jobs:
           set +e
           python3 .cap04-s8/activate.py > /tmp/cap04-s8-activation.log 2>&1
           code=$?
+          {
+            echo
+            echo 'ACTUAL_CHANGED_FILES'
+            git diff --name-only 413908eadf1016d879760da3afc968abdee82342
+            echo 'END_ACTUAL_CHANGED_FILES'
+          } >> /tmp/cap04-s8-activation.log
           cat /tmp/cap04-s8-activation.log
           echo "$code" > /tmp/cap04-s8-activation-exit.txt
           exit 0
