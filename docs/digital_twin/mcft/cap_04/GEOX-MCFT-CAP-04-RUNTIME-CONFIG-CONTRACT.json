@@ -1,0 +1,55 @@
+{
+  "schema_version": "geox_mcft_cap_04_runtime_config_contract_v1",
+  "contract_id": "MCFT_CAP_04_RUNTIME_CONFIG_V1",
+  "capability_line_id": "MCFT-CAP-04",
+  "canonical_object_type": "twin_runtime_config_v1",
+  "runtime_mode": "REPLAY",
+  "authority": {
+    "implementation_ref": "apps/server/src/domain/twin_runtime/forecast_scenario_runtime_config_v1.ts",
+    "chain_implementation_ref": "apps/server/src/domain/twin_runtime/forecast_scenario_runtime_config_chain_v1.ts",
+    "acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_CONTRACTS_CONFIG.ts",
+    "task_ref": "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md"
+  },
+  "identity": {
+    "scope_fields": ["tenant_id", "project_id", "group_id", "field_id", "season_id", "zone_id"],
+    "effective_logical_time_required": true,
+    "parent_runtime_config_ref_required": true,
+    "parent_runtime_config_hash_required": true,
+    "implicit_latest_selection_forbidden": true,
+    "same_identity_different_payload": "CONFLICT"
+  },
+  "required_policy_sections": [
+    "forecast_method",
+    "future_forcing_pair_policy",
+    "future_forcing_policy",
+    "future_forcing_fallback_policy",
+    "uncertainty_propagation",
+    "forecast_interval",
+    "scenario_policy",
+    "scenario_options",
+    "scenario_application_efficiency_policy",
+    "stress_threshold_policy",
+    "soil_hydraulic_snapshot",
+    "dynamics_parameters",
+    "process_uncertainty",
+    "observation_assimilation",
+    "crop_stage_context"
+  ],
+  "controlled_parameter_status": {
+    "application_efficiency": "CONTROLLED_SYNTHETIC_NOT_FIELD_CALIBRATED",
+    "stress_threshold": "CONTROLLED_SYNTHETIC_NOT_FIELD_CALIBRATED",
+    "forecast_interval": "UNCALIBRATED_NORMAL_APPROXIMATION"
+  },
+  "determinism": {
+    "semantic_hash_required": true,
+    "created_at_excluded_from_semantic_identity": true,
+    "fixed_decimal_scale": 6,
+    "rounding_mode": "HALF_AWAY_FROM_ZERO"
+  },
+  "nonclaims": [
+    "NO_FIELD_CALIBRATION",
+    "NO_MODEL_ACTIVATION",
+    "NO_RECOMMENDATION",
+    "NO_ACTION_AUTHORITY"
+  ]
+}
