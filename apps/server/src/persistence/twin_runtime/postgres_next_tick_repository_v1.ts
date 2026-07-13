@@ -26,6 +26,26 @@ function isAssimilatedContinuationTickV1(object: CanonicalObjectEnvelopeV1): boo
     );
 }
 
+function isCap04ContinuationReadObjectV1(object: CanonicalObjectEnvelopeV1): boolean {
+  const payload = object.payload;
+  if (object.object_type === "twin_runtime_tick_v1") {
+    return payload.operation_variant === "A1_COMPLETED_FORECAST"
+      || payload.operation_variant === "A2_BLOCKED_FORECAST"
+      || (typeof payload.record_set_contract_id === "string"
+        && payload.record_set_contract_id.startsWith("MCFT_CAP_04_"));
+  }
+  if (object.object_type === "twin_runtime_checkpoint_v1") {
+    return typeof payload.successful_forecast_ref === "string"
+      && payload.successful_forecast_ref.length > 0;
+  }
+  if (object.object_type === "twin_state_estimate_v1") {
+    const basis = payload.computation_basis;
+    return Boolean(basis && typeof basis === "object" && !Array.isArray(basis)
+      && (basis as Record<string, unknown>).basis_origin === "CAP04_CURRENT_TICK_ASSIMILATED_POSTERIOR");
+  }
+  return false;
+}
+
 function isContinuationReadObjectV1(object: CanonicalObjectEnvelopeV1): boolean {
   if (object.object_type === "twin_runtime_checkpoint_v1") {
     return object.payload.checkpoint_kind === "CONTINUATION";
@@ -43,7 +63,8 @@ function isContinuationReadObjectV1(object: CanonicalObjectEnvelopeV1): boolean 
 function parseFactObjectV1(recordJsonValue: unknown): CanonicalObjectEnvelopeV1 {
   const parsed = typeof recordJsonValue === "string" ? JSON.parse(recordJsonValue) : recordJsonValue;
   const object = (parsed as { payload: CanonicalObjectEnvelopeV1 }).payload;
-  if (isAssimilatedContinuationTickV1(object)) validateCanonicalObjectV1(object);
+  if (isCap04ContinuationReadObjectV1(object)) validateCanonicalObjectV1(object);
+  else if (isAssimilatedContinuationTickV1(object)) validateCanonicalObjectV1(object);
   else if (isContinuationReadObjectV1(object)) validateContinuationMemberV1(object);
   else validateCanonicalObjectV1(object);
   return object;
