@@ -823,3 +823,21 @@ MCFT-CAP-05 authorized: false
 ```
 
 S9 is governance-only evidence aggregation. It does not activate CAP-04 completion claims.
+
+
+## MCFT-CAP-04 S9 Closure candidate
+
+```text
+baseline main: 8a4e1b5a92b8b3fcc21ec77a6542743fd3a7b4c3
+activation postmerge Gate: 29257014497 SUCCESS
+active delivery slice: MCFT-CAP-04.CLOSURE-CANDIDATE-V1
+status: CLOSURE_CANDIDATE
+pending completion claims: 24
+effective completion claims: 0
+closure effective: false
+capability complete: false
+S10 status: BLOCKED
+MCFT-CAP-05 authorized: false
+```
+
+S9 aggregates merged-main evidence only. It does not activate CAP-04 completion claims.
