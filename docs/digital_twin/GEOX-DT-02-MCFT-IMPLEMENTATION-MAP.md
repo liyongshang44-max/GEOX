@@ -859,3 +859,18 @@ S10B authorized: false
 S10C authorized: false
 MCFT-CAP-05 authorized: false
 ```
+
+
+## MCFT-CAP-04 S10B Main verification
+
+```text
+baseline main: e39ac16f83e4f5e5c4762a25589dce275c853f1a
+verification subject: S10A_MERGED_MAIN
+S10A tree equivalence: PASS
+lifecycle stage: S10B_MAIN_VERIFICATION
+pending completion claims: 24
+effective completion claims: 0
+effectiveness condition satisfied: false
+S10C authorized: false
+MCFT-CAP-05 authorized: false
+```
