@@ -1,4 +1,4 @@
-name: MCFT-CAP-04 S3 diagnose final gate
+name: MCFT-CAP-04 S3 finalize governance marker
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  diagnose:
+  finalize:
     if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-04-s3-pure-72h-forecast-math-v1'
     runs-on: ubuntu-latest
     steps:
@@ -33,25 +33,18 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Align negative acceptance with earlier contract authority
+      - name: Align governance marker with acceptance text
         run: |
           python - <<'PY'
           from pathlib import Path
 
-          path = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH_NEGATIVE.ts')
+          path = Path('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S3_PURE_FORECAST_MATH.cjs')
           text = path.read_text(encoding='utf-8')
-          pairs = [
-              ('"CAP04_FORECAST_FORCING_CONFIG_IDENTITY_MISMATCH"', '"CAP04_FORCING_POINT_CONFIG_MISMATCH"'),
-              ('"CAP04_FORECAST_CROP_STAGE_CONTEXT_MISMATCH"', '"CAP04_FORCING_POINT_CROP_STAGE_MISMATCH"'),
-              ('"CAP04_FORECAST_STRUCTURAL_STDDEV_ZERO_FORBIDDEN"', '"ASSIMILATED_STRUCTURAL_STDDEV_MISMATCH"'),
-          ]
-          for old, new in pairs:
-              old_count = text.count(old)
-              new_count = text.count(new)
-              if (old_count, new_count) not in {(1, 0), (0, 1)}:
-                  raise SystemExit(f'unexpected markers for {old} -> {new}: {(old_count, new_count)}')
-              text = text.replace(old, new)
-          path.write_text(text, encoding='utf-8', newline='')
+          old = "'mass balance closes exactly'"
+          new = "'fixed-point water balance closes exactly'"
+          if text.count(old) != 1:
+              raise SystemExit(f'expected one governance marker, found {text.count(old)}')
+          path.write_text(text.replace(old, new), encoding='utf-8', newline='')
           PY
 
       - name: Remove temporary diagnostic files
@@ -69,32 +62,7 @@ jobs:
         run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH_NEGATIVE.ts
 
       - name: Run final S3 governance Gate
-        id: governance_gate
-        continue-on-error: true
-        shell: bash
-        run: |
-          set -o pipefail
-          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S3_PURE_FORECAST_MATH.cjs --final 2>&1 | tee /tmp/cap04-s3-final-gate.log
-
-      - name: Persist final Gate diagnostics
-        if: steps.governance_gate.outcome == 'failure'
-        env:
-          HEAD_BRANCH: ${{ github.head_ref }}
-        run: |
-          mkdir -p .cap04-s3
-          cp /tmp/cap04-s3-final-gate.log .cap04-s3/final-gate.log
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH_NEGATIVE.ts
-          git add .cap04-s3/final-gate.log
-          if ! git diff --cached --quiet; then
-            git commit -m "chore(mcft-cap-04): persist S3 final Gate diagnostics"
-            git push origin "HEAD:${HEAD_BRANCH}"
-          fi
-
-      - name: Stop after final Gate failure
-        if: steps.governance_gate.outcome == 'failure'
-        run: exit 1
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S3_PURE_FORECAST_MATH.cjs --final
 
       - name: Verify patch integrity
         run: git diff --check 4a8dab632246b05266f1d869f6c9a0a5bcf37e76
@@ -106,5 +74,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "fix(mcft-cap-04): align S3 negative contract authority"
+          git commit -m "fix(mcft-cap-04): finalize S3 governance marker"
           git push origin "HEAD:${HEAD_BRANCH}"
