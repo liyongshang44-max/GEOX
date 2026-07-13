@@ -1,16 +1,17 @@
 <!-- docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FINALIZATION.md -->
-# GEOX MCFT-CAP-04 S10C Evidence Reconciliation Candidate
+# GEOX MCFT-CAP-04 Finalization Effectiveness
 
-## Frozen S10B evidence
+## Reconciled evidence
 
 ```text
-S10B exact head: f975a2688db56e17d93bb5b21d3e64768e72c5d1
-S10B exact-head CI: 29259744397 SUCCESS
-S10B merge commit: 8603b07c567729a68949cfe2d4c1559a7848ac93
-S10B head-to-merge file delta: 0
-S10B tree equivalence: PASS
-S10B postmerge Finalization Gate: 29260346203 SUCCESS
-S10C materialization Gate: 29260650954 SUCCESS
+S10C evidence PR: #2416
+S10C evidence exact head: 125cc38e7d64b4bb1c4799bc20076fb29412ac91
+S10C evidence exact-head CI: 29260774006 SUCCESS
+S10C evidence merge commit: 89f2d1ccd14cd5ad8f853c1d6da5dd8759bb8fa4
+S10C head-to-merge file delta: 0
+S10C tree equivalence: PASS
+S10C merged-main reconciliation Gate: 29261294502 SUCCESS
+COMPLETE materialization Gate: 29261476179 SUCCESS
 ```
 
-This PR writes S10B evidence into the repository. It does not activate completion. Exactly 24 claims remain pending and zero are effective until this evidence PR is merged and its merged-main reconciliation Gate passes.
+The mandatory S10A, S10B and S10C lifecycle is satisfied. Exactly 24 completion claims are effective, pending claims are empty, closure is effective, and MCFT-CAP-04 is COMPLETE at Level A — Deterministic Replay Twin. MCFT-CAP-05 remains unauthorized.
