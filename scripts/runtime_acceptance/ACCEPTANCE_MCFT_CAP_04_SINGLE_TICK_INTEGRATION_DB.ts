@@ -338,7 +338,7 @@ async function main(): Promise<void> {
     await deleteCap04GuardsV1();
     const lease = await seeded.runtimeRepository.acquireLease({
       ...authority.scope,
-      lease_owner: "mcft-cap04-s6-terminal-conflict",
+      lease_owner: "mcft-cap04-s6-db-acceptance",
       lease_duration_seconds: 300,
     });
     await assert.rejects(
