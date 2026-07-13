@@ -1,0 +1,64 @@
+{
+  "schema_version": "mcft_cap_04_single_tick_scenarios_expected_v1",
+  "fixture_id": "MCFT_CAP_04_SINGLE_TICK_SCENARIOS_EXPECTED",
+  "fixture_builder_ref": "scripts/runtime_acceptance/mcft_cap_04_single_tick_fixture_v1.ts",
+  "acceptance_refs": [
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SCENARIO_MATH.ts"
+  ],
+  "runtime_mode": "REPLAY",
+  "transaction_variant": "B_SCENARIO_COMMIT",
+  "source_forecast_status": "COMPLETED",
+  "scenario_set_count": 1,
+  "option_count": 3,
+  "option_order": ["NO_ACTION", "IRRIGATE_NOW_15MM", "IRRIGATE_NOW_25MM"],
+  "trajectory_point_count_per_option": 72,
+  "scenario_point_count": 216,
+  "options": [
+    {
+      "option_id": "NO_ACTION",
+      "option_kind": "NO_ACTION",
+      "requested_irrigation_mm": "0.000000",
+      "effective_irrigation_mm": "0.000000",
+      "application_horizon": null,
+      "epistemic_status": "ASSUMED",
+      "execution_status": "NOT_EXECUTED",
+      "trajectory_equals_source_forecast": true
+    },
+    {
+      "option_id": "IRRIGATE_NOW_15MM",
+      "option_kind": "IMMEDIATE_IRRIGATION",
+      "requested_irrigation_mm": "15.000000",
+      "application_efficiency_fraction": "1.000000",
+      "effective_irrigation_mm": "15.000000",
+      "application_horizon": 1,
+      "epistemic_status": "ASSUMED",
+      "execution_status": "NOT_EXECUTED"
+    },
+    {
+      "option_id": "IRRIGATE_NOW_25MM",
+      "option_kind": "IMMEDIATE_IRRIGATION",
+      "requested_irrigation_mm": "25.000000",
+      "application_efficiency_fraction": "1.000000",
+      "effective_irrigation_mm": "25.000000",
+      "application_horizon": 1,
+      "epistemic_status": "ASSUMED",
+      "execution_status": "NOT_EXECUTED"
+    }
+  ],
+  "assumption_basis_required_fields": [
+    "source_forecast_ref",
+    "source_forecast_hash",
+    "runtime_config_ref",
+    "runtime_config_hash",
+    "scenario_policy_id",
+    "option_id"
+  ],
+  "expected_invariants": {
+    "forcing_reselection": false,
+    "recommendation_created": false,
+    "decision_created": false,
+    "ao_act_created": false,
+    "execution_evidence_synthesized": false
+  }
+}
