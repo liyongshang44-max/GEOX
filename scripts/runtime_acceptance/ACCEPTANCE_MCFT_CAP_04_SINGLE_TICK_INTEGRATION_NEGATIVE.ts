@@ -1,8 +1,12 @@
 // scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_NEGATIVE.ts
-// Purpose: prove S6 fails closed on time, Runtime Config, crop-stage and forcing authority drift, and rejects a wrong Config pin on the completed-idempotent path.
-// Boundary: in-memory negative acceptance only; no production database, route, scheduler, range, restart/backfill, recommendation, decision, or action.
+// Purpose: prove S6 fails closed on time, Runtime Config, crop-stage and forcing authority drift, distinguishes malformed FAILED from legal unavailable BLOCKED, commits A2 only for BLOCKED, and rejects a wrong Config pin on completed-idempotent paths.
+// Boundary: in-memory negative/degraded-path acceptance only; no production database, route, scheduler, range, restart/backfill, recommendation, decision, or action.
 
-import { buildCap04S6SingleTickFixtureV1 } from "./mcft_cap_04_single_tick_fixture_v1.js";
+import type { CanonicalReplayEvidenceRecordV1 } from "../../apps/server/src/runtime/twin_runtime/ports.js";
+import type { CanonicalObjectEnvelopeV1 } from "../../apps/server/src/domain/twin_runtime/canonical_object_contracts_v1.js";
+import {
+  buildCap04S6SingleTickFixtureV1,
+} from "./mcft_cap_04_single_tick_fixture_v1.js";
 
 let pass = 0;
 let fail = 0;
@@ -28,6 +32,18 @@ async function expectReject(
   } catch (error) {
     check(error instanceof Error && pattern.test(error.message), message);
   }
+}
+
+function candidateAuthorityV1(runtime: unknown): {
+  candidateRecords: CanonicalReplayEvidenceRecordV1[];
+} {
+  return runtime as { candidateRecords: CanonicalReplayEvidenceRecordV1[] };
+}
+
+function memberV1(recordSet: { members: CanonicalObjectEnvelopeV1[] }, objectType: string): CanonicalObjectEnvelopeV1 {
+  const matches = recordSet.members.filter((member) => member.object_type === objectType);
+  if (matches.length !== 1) throw new Error(`CAP04_S6_NEGATIVE_MEMBER_CARDINALITY:${objectType}`);
+  return matches[0];
 }
 
 async function main(): Promise<void> {
@@ -80,6 +96,46 @@ async function main(): Promise<void> {
     wrongCropMatrix.runtime.evidenceLoadCount === 0
       && wrongCropMatrix.runtime.leaseAcquireCount === 0,
     "crop-stage matrix drift fails before Evidence and lease",
+  );
+
+  const blocked = buildCap04S6SingleTickFixtureV1();
+  const blockedCandidates = candidateAuthorityV1(blocked.runtime);
+  blockedCandidates.candidateRecords = blockedCandidates.candidateRecords.filter((record) =>
+    record.record_type !== "future_weather_assumption_v1"
+      && record.record_type !== "future_et0_assumption_v1"
+  );
+  const blockedResult = await blocked.service.executeOneTick(blocked.input);
+  const blockedForecast = memberV1(blockedResult.a_record_set, "twin_forecast_run_v1");
+  check(
+    blockedResult.status === "BLOCKED_INSERTED"
+      && blockedResult.b_record === null
+      && blockedForecast.payload.status === "BLOCKED"
+      && blockedForecast.payload.scenario_eligible === false
+      && blockedForecast.payload.points.length === 0,
+    "legal complete-pair unavailability commits one A2 with no Scenario",
+  );
+  check(
+    blocked.runtime.aCommitCount === 1
+      && blocked.runtime.bCommitCount === 0
+      && blockedResult.next_handoff.latest_successful_forecast_ref === null,
+    "A2 advances terminal handoff while preserving the prior successful-Forecast pointer",
+  );
+
+  const malformed = buildCap04S6SingleTickFixtureV1();
+  const malformedCandidates = candidateAuthorityV1(malformed.runtime);
+  const weather = malformedCandidates.candidateRecords.find((record) => record.record_type === "future_weather_assumption_v1");
+  if (!weather || !Array.isArray(weather.canonical_payload.points)) throw new Error("CAP04_S6_MALFORMED_WEATHER_FIXTURE_MISSING");
+  weather.canonical_payload.points = weather.canonical_payload.points.slice(0, 71);
+  await expectReject(
+    () => malformed.service.executeOneTick(malformed.input),
+    /CAP04_SINGLE_TICK_FORCING_FAILED:MALFORMED_FORCING_RECORD:FORCING_POINTS_NOT_EXACT_72_HOURLY/,
+    "malformed forcing is FAILED rather than degraded to BLOCKED",
+  );
+  check(
+    malformed.runtime.aCommitCount === 0
+      && malformed.runtime.bCommitCount === 0
+      && malformed.runtime.leaseAcquireCount === 0,
+    "malformed forcing creates no A1, A2 or B canonical write",
   );
 
   const completed = buildCap04S6SingleTickFixtureV1();
