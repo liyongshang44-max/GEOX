@@ -58,6 +58,7 @@ jobs:
           node .cap04-s6/patch_next_tick_cap04_read.cjs
           node .cap04-s6/patch_db_migrations.cjs
           node .cap04-s6/patch_scenario_builder_canonical_compare.cjs
+          node .cap04-s6/patch_cap04_member_read_validator.cjs
 
       - name: Capture recursive Typecheck
         shell: bash
