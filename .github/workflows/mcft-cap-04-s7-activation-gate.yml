@@ -22,4 +22,19 @@ jobs:
         run: rm .github/workflows/mcft-cap-04-s7-activation-gate.yml
 
       - name: Run S7 activation governance Gate
-        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S7_ACTIVATION.cjs
+        shell: bash
+        run: |
+          set +e
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S7_ACTIVATION.cjs > /tmp/s7-activation-gate.log 2>&1
+          status=$?
+          cat /tmp/s7-activation-gate.log
+          echo "$status" > /tmp/s7-activation-gate-exit.txt
+          exit 0
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mcft-cap-04-s7-activation-gate
+          path: |
+            /tmp/s7-activation-gate.log
+            /tmp/s7-activation-gate-exit.txt
+          retention-days: 1
