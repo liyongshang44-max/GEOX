@@ -25,5 +25,30 @@ jobs:
           cache: pnpm
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm -r typecheck
-      - run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_RESTART_BACKFILL.ts
-      - run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_FAILURE_RECOVERY.ts
+      - name: Capture S8 runtime acceptance
+        shell: bash
+        run: |
+          set +e
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_RESTART_BACKFILL.ts > /tmp/cap04-s8-restart-backfill.log 2>&1
+          restart_code=$?
+          pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_FAILURE_RECOVERY.ts > /tmp/cap04-s8-failure-recovery.log 2>&1
+          recovery_code=$?
+          echo "$restart_code" > /tmp/cap04-s8-restart-backfill-exit.txt
+          echo "$recovery_code" > /tmp/cap04-s8-failure-recovery-exit.txt
+          cat /tmp/cap04-s8-restart-backfill.log
+          cat /tmp/cap04-s8-failure-recovery.log
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cap04-s8-runtime-diagnostics
+          path: |
+            /tmp/cap04-s8-restart-backfill.log
+            /tmp/cap04-s8-restart-backfill-exit.txt
+            /tmp/cap04-s8-failure-recovery.log
+            /tmp/cap04-s8-failure-recovery-exit.txt
+          retention-days: 1
+      - name: Enforce S8 runtime acceptance
+        shell: bash
+        run: |
+          test "$(cat /tmp/cap04-s8-restart-backfill-exit.txt)" = "0"
+          test "$(cat /tmp/cap04-s8-failure-recovery-exit.txt)" = "0"
