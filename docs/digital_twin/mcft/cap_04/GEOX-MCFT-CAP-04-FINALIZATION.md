@@ -8,6 +8,8 @@ lifecycle_stage: S10A_CANDIDATE
 baseline_main_commit: a6a07840efe080198233b39ec9a31d26c2e3f4f9
 branch: agent/mcft-cap-04-s10a-finalization-candidate-v1
 runtime_mode: REPLAY
+materialization_gate_run: 29258899679
+materialization_gate_result: SUCCESS
 ```
 
 ## Semantics
