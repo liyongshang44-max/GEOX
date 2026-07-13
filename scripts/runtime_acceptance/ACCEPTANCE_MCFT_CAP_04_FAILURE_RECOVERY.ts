@@ -3,6 +3,7 @@
 // Boundary: deterministic in-memory failure acceptance only; stale fencing, SQL CAS and canonical projection rebuild are proven separately in PostgreSQL acceptance.
 
 import assert from "node:assert/strict";
+import { CAP04_CANONICAL_FORECAST_AUTHORITY_CONTRACT_ID_V1 } from "../../apps/server/src/domain/twin_runtime/forecast_canonical_authority_v1.js";
 import type { Cap04SingleTickPersistencePortV1 } from "../../apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.js";
 import { Cap04ForecastScenarioSingleTickServiceV1 } from "../../apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.js";
 import { Cap04ForecastScenarioRangeServiceV1 } from "../../apps/server/src/runtime/twin_runtime/forecast_scenario_range_service_v1.js";
@@ -43,7 +44,13 @@ function basePersistenceV1(runtime: InMemoryCap04SingleTickRuntimeV1): Cap04Sing
     commitScenarioSet: runtime.commitScenarioSet.bind(runtime),
     readScenarioSet: runtime.readScenarioSet.bind(runtime),
     readScenarioSetBySourceForecast: runtime.readScenarioSetBySourceForecast.bind(runtime),
-    detectPendingScenario: runtime.detectPendingScenario.bind(runtime),
+    detectPendingScenario: async (scope) => {
+      const pending = await runtime.detectPendingScenario(scope);
+      if (!pending) return null;
+      return pending.payload.canonical_authority_contract_id === CAP04_CANONICAL_FORECAST_AUTHORITY_CONTRACT_ID_V1
+        ? pending
+        : null;
+    },
     rebuildForecastProjections: runtime.rebuildForecastProjections.bind(runtime),
     rebuildScenarioProjections: runtime.rebuildScenarioProjections.bind(runtime),
   };
