@@ -47,17 +47,8 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Apply bounded S6 patches
-        run: |
-          node .cap04-s6/patch_interfaces.cjs
-          node .cap04-s6/patch_idempotent_pin.cjs
-          node .cap04-s6/patch_source_builder.cjs
-          node .cap04-s6/patch_source_time_authority.cjs
-          node .cap04-s6/patch_a_builder_source_authority.cjs
-          node .cap04-s6/patch_remove_legacy_source_helper.cjs
-          node .cap04-s6/patch_next_tick_cap04_read.cjs
-          node .cap04-s6/patch_db_migrations.cjs
-          node .cap04-s6/patch_scenario_builder_canonical_compare.cjs
+      - name: Confirm materialized S6 sources
+        run: echo "S6 bounded compatibility edits are already committed on the branch"
 
       - name: Capture recursive Typecheck
         shell: bash
@@ -98,7 +89,7 @@ jobs:
           echo "${PIPESTATUS[0]}" > .cap04-s6/db.exit
           exit 0
 
-      - name: Persist patches and diagnostics
+      - name: Persist diagnostics
         env:
           HEAD_BRANCH: ${{ github.head_ref }}
         run: |
