@@ -1,0 +1,50 @@
+name: cap04-remediation-type-fix
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap-04-s6-single-tick-integration-v1
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-actions[bot]'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-04-s6-single-tick-integration-v1
+      - name: Apply exact recovery repository type fixes
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path('apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_recovery_repository_v1.ts')
+          text = path.read_text(encoding='utf-8')
+          old = '''  type Cap04AMemberObjectTypeV1,\n  type Cap04ForecastRunPayloadV1,\n'''
+          new = '''  type Cap04AMemberObjectTypeV1,\n  type Cap04AOperationVariantV1,\n  type Cap04ForecastRunPayloadV1,\n'''
+          if old not in text:
+              raise SystemExit('contracts import anchor missing')
+          text = text.replace(old, new, 1)
+          old = '''  type Cap04AAggregateIdentityInputV1,\n  type Cap04AOperationVariantV1,\n  type Cap04ARecordSetV1,\n'''
+          new = '''  type Cap04AAggregateIdentityInputV1,\n  type Cap04ARecordSetV1,\n'''
+          if old not in text:
+              raise SystemExit('identity import anchor missing')
+          text = text.replace(old, new, 1)
+          text = text.replace('readCanonicalObjectWithClientV1', 'readCanonicalObjectForRecoveryWithClientV1')
+          old = '''      scope: {\n        tenant_id: tick.tenant_id,\n        project_id: tick.project_id,\n        group_id: tick.group_id,\n        field_id: tick.field_id,\n        season_id: tick.season_id,\n        zone_id: tick.zone_id,\n      },\n'''
+          new = '''      scope: {\n        tenant_id: stringFieldV1(tick.tenant_id, "CAP04_RECOVERY_TENANT_REQUIRED"),\n        project_id: stringFieldV1(tick.project_id, "CAP04_RECOVERY_PROJECT_REQUIRED"),\n        group_id: stringFieldV1(tick.group_id, "CAP04_RECOVERY_GROUP_REQUIRED"),\n        field_id: stringFieldV1(tick.field_id, "CAP04_RECOVERY_FIELD_REQUIRED"),\n        season_id: stringFieldV1(tick.season_id, "CAP04_RECOVERY_SEASON_REQUIRED"),\n        zone_id: stringFieldV1(tick.zone_id, "CAP04_RECOVERY_ZONE_REQUIRED"),\n      },\n'''
+          if old not in text:
+              raise SystemExit('scope anchor missing')
+          text = text.replace(old, new, 1)
+          path.write_text(text, encoding='utf-8')
+      - name: Remove temporary patcher
+        run: rm .github/workflows/cap04-remediation-type-fix.yml
+      - name: Commit fixes
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add apps/server/src/persistence/twin_runtime/postgres_forecast_scenario_recovery_repository_v1.ts .github/workflows/cap04-remediation-type-fix.yml
+          git commit -m "fix(mcft-cap-04): align recovery repository types"
+          git push origin HEAD:agent/mcft-cap-04-s6-single-tick-integration-v1
