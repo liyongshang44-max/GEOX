@@ -5,9 +5,9 @@
   "name": "72-Hour Forecast and Three Scenarios",
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A — Deterministic Replay Twin",
-  "status": "S9_CLOSURE_ACTIVATION_CANDIDATE",
-  "baseline_main_commit": "235c832d302a1917dbd557ba0adfe15587a44f50",
-  "branch": "agent/mcft-cap-04-s9-closure-activation-v1",
+  "status": "S9_CLOSURE_CANDIDATE",
+  "baseline_main_commit": "8a4e1b5a92b8b3fcc21ec77a6542743fd3a7b4c3",
+  "branch": "agent/mcft-cap-04-s9-closure-candidate-v1",
   "active_delivery_slice_id": "MCFT-CAP-04.CLOSURE-CANDIDATE-V1",
   "runtime_source_authorized": false,
   "authorization_effective": true,
@@ -779,9 +779,9 @@
       "depends_on_delivery_slice_ids": [
         "MCFT-CAP-04.MCFT-03-04-07-09-10.RESTART-BACKFILL-FAILURE-RECOVERY-V1"
       ],
-      "baseline_main_commit": "235c832d302a1917dbd557ba0adfe15587a44f50",
+      "baseline_main_commit": "8a4e1b5a92b8b3fcc21ec77a6542743fd3a7b4c3",
       "branch": "agent/mcft-cap-04-s9-closure-candidate-v1",
-      "status": "ACTIVATION_CANDIDATE",
+      "status": "CLOSURE_CANDIDATE",
       "activation_fields_status": "FROZEN",
       "runtime_source_authorized": false,
       "allowed_claims": [],
@@ -869,7 +869,23 @@
         "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-CLOSURE.md",
         "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S9_CLOSURE_ACTIVATION.cjs"
       ],
-      "explicit_activation_authority": "OWNER_EXPLICIT_AUTHORIZATION_2026_07_13"
+      "explicit_activation_authority": "OWNER_EXPLICIT_AUTHORIZATION_2026_07_13",
+      "implementation_status": "VALIDATED_PENDING_MERGE",
+      "activation_effective": true,
+      "implementation_authorized": true,
+      "closure_effective": false,
+      "capability_complete": false,
+      "activation_effectiveness": {
+        "activation_pr_number": 2405,
+        "activation_exact_head_commit": "905195609da2d71a683821aa903abff50c802bcb",
+        "activation_exact_head_ci_run": 29256446215,
+        "activation_merge_commit": "8a4e1b5a92b8b3fcc21ec77a6542743fd3a7b4c3",
+        "activation_postmerge_probe_pr_number": 2406,
+        "activation_postmerge_workflow_run": 29257014497,
+        "activation_postmerge_gate": "PASS",
+        "activation_effectiveness_condition_satisfied": true
+      },
+      "closure_record_ref": "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-CLOSURE-RECORD.json"
     },
     {
       "delivery_slice_id": "MCFT-CAP-04.FINALIZATION-MAIN-VERIFICATION-V1",
@@ -1017,5 +1033,15 @@
     "postmerge_workflow_run": 29255291485,
     "postmerge_gate": "PASS",
     "effectiveness_condition_satisfied": true
+  },
+  "s9_activation_effectiveness": {
+    "activation_pr_number": 2405,
+    "activation_exact_head_commit": "905195609da2d71a683821aa903abff50c802bcb",
+    "activation_exact_head_ci_run": 29256446215,
+    "activation_merge_commit": "8a4e1b5a92b8b3fcc21ec77a6542743fd3a7b4c3",
+    "activation_postmerge_probe_pr_number": 2406,
+    "activation_postmerge_workflow_run": 29257014497,
+    "activation_postmerge_gate": "PASS",
+    "activation_effectiveness_condition_satisfied": true
   }
 }

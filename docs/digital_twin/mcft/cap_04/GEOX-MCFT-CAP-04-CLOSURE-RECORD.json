@@ -1,0 +1,365 @@
+{
+  "schema_version": "geox_mcft_cap_04_closure_record_v1",
+  "closure_identity": "GEOX-MCFT-CAP-04-CLOSURE-CANDIDATE-V1",
+  "capability_line_id": "MCFT-CAP-04",
+  "display_alias": "MCFT-4",
+  "name": "72-Hour Forecast and Three Scenarios",
+  "runtime_mode": "REPLAY",
+  "target_completion_level": "Level A — Deterministic Replay Twin",
+  "delivery_slice_id": "MCFT-CAP-04.CLOSURE-CANDIDATE-V1",
+  "status": "CLOSURE_CANDIDATE",
+  "closure_effective": false,
+  "capability_complete": false,
+  "baseline_main_commit": "8a4e1b5a92b8b3fcc21ec77a6542743fd3a7b4c3",
+  "branch": "agent/mcft-cap-04-s9-closure-candidate-v1",
+  "authority": {
+    "task_ref": "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md",
+    "closure_document_ref": "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-CLOSURE.md",
+    "closure_status_ref": "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-CLOSURE-STATUS.json",
+    "delivery_status_ref": "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-DELIVERY-SLICE-STATUS.json",
+    "authorization_status_ref": "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-AUTHORIZATION-STATUS.json",
+    "activation_evidence": {
+      "activation_pr_number": 2405,
+      "activation_exact_head_commit": "905195609da2d71a683821aa903abff50c802bcb",
+      "activation_exact_head_ci_run": 29256446215,
+      "activation_merge_commit": "8a4e1b5a92b8b3fcc21ec77a6542743fd3a7b4c3",
+      "activation_postmerge_probe_pr_number": 2406,
+      "activation_postmerge_workflow_run": 29257014497,
+      "activation_postmerge_gate": "PASS",
+      "activation_effectiveness_condition_satisfied": true
+    }
+  },
+  "accumulated_merged_main_evidence": [
+    {
+      "delivery_slice_id": "MCFT-CAP-04.MCFT-02-07-09-10.FORECAST-SCENARIO-CONTRACTS-CONFIG-V1",
+      "status": "MERGED_EFFECTIVE",
+      "implementation_status": null,
+      "exact_head_commit": "7347909b1d922dfd85f56a9967ffa5905778cb6c",
+      "exact_head_ci_run": 29222549931,
+      "merge_commit": "13f8bf3231cb41c809d235096ca7cfda9e201944",
+      "postmerge_workflow_run": 29222992520,
+      "postmerge_gate": "PASS",
+      "effectiveness_condition_satisfied": true
+    },
+    {
+      "delivery_slice_id": "MCFT-CAP-04.MCFT-05-09.FUTURE-FORCING-WINDOW-V1",
+      "status": "MERGED_EFFECTIVE",
+      "implementation_status": null,
+      "exact_head_commit": "4dae60d9412ec191cec3be0b730fab216474731f",
+      "exact_head_ci_run": 29223459646,
+      "merge_commit": "4a8dab632246b05266f1d869f6c9a0a5bcf37e76",
+      "postmerge_workflow_run": 29223899742,
+      "postmerge_gate": "PASS",
+      "effectiveness_condition_satisfied": true
+    },
+    {
+      "delivery_slice_id": "MCFT-CAP-04.MCFT-06-09.PURE-72H-FORECAST-MATH-V1",
+      "status": "MERGED_EFFECTIVE",
+      "implementation_status": null,
+      "exact_head_commit": "083a47c50130b84dbc5aad18faf5f115b437112d",
+      "exact_head_ci_run": 29225068719,
+      "merge_commit": "4a1c9fde05594c97fb949e062df77375a1a27365",
+      "postmerge_workflow_run": 29225560206,
+      "postmerge_gate": "PASS",
+      "effectiveness_condition_satisfied": true
+    },
+    {
+      "delivery_slice_id": "MCFT-CAP-04.MCFT-06-10.PURE-THREE-SCENARIO-MATH-V1",
+      "status": "MERGED_EFFECTIVE",
+      "implementation_status": null,
+      "exact_head_commit": "02faa691cfa83624e28664fee7b3fbf0ed7dfd36",
+      "exact_head_ci_run": 29226139264,
+      "merge_commit": "f0fc64d487ba6ed34d0c77178fed45e707092a07",
+      "postmerge_workflow_run": 29226613070,
+      "postmerge_gate": "PASS",
+      "effectiveness_condition_satisfied": true
+    },
+    {
+      "delivery_slice_id": "MCFT-CAP-04.MCFT-02-07-08-09.A1-A2-RECORD-SET-BUILDERS-V1",
+      "status": "MERGED_EFFECTIVE",
+      "implementation_status": null,
+      "exact_head_commit": "d8c9feefcf891147692bbcfb223813129578b825",
+      "exact_head_ci_run": 29227610603,
+      "merge_commit": "2c6a0834488f367eb927430a15c9590c1bf348a3",
+      "postmerge_workflow_run": 29228386162,
+      "postmerge_gate": "PASS",
+      "effectiveness_condition_satisfied": true
+    },
+    {
+      "delivery_slice_id": "MCFT-CAP-04.MCFT-03-09-10.A1-A2-B-PERSISTENCE-UNIQUENESS-RECOVERY-V1",
+      "status": "MERGED_EFFECTIVE",
+      "implementation_status": null,
+      "exact_head_commit": "f6e30f3e865ac92bc23158c1ac2c55907ce5200a",
+      "exact_head_ci_run": 29231823745,
+      "merge_commit": "63c8ba7b8dd314c1224ca8de2914b663b3551092",
+      "postmerge_workflow_run": 29232760223,
+      "postmerge_gate": "PASS",
+      "effectiveness_condition_satisfied": true
+    },
+    {
+      "delivery_slice_id": "MCFT-CAP-04.MCFT-04-05-06-07-08-09-10.SINGLE-TICK-FORECAST-SCENARIO-INTEGRATION-V1",
+      "status": "MERGED_EFFECTIVE",
+      "implementation_status": null,
+      "exact_head_commit": "05339ba5d327a73928c075f7c5980e63b5c13933",
+      "exact_head_ci_run": 29244781825,
+      "merge_commit": "ea9ddfeeda88a3bb0a3b8abd3b821b8a3965dac3",
+      "postmerge_workflow_run": 29245469293,
+      "postmerge_gate": "PASS",
+      "effectiveness_condition_satisfied": true
+    },
+    {
+      "delivery_slice_id": "MCFT-CAP-04.MCFT-04-07-09-10.TWENTY-FOUR-TICK-FORECAST-SCENARIO-RANGE-V1",
+      "status": "MERGED_EFFECTIVE",
+      "implementation_status": "MERGED_EFFECTIVE",
+      "exact_head_commit": "9f65b0a1eb12eb92a123bb495bd1ff3701e042fd",
+      "exact_head_ci_run": 29248055931,
+      "merge_commit": "413908eadf1016d879760da3afc968abdee82342",
+      "postmerge_workflow_run": 29248764378,
+      "postmerge_gate": "PASS",
+      "effectiveness_condition_satisfied": true
+    },
+    {
+      "delivery_slice_id": "MCFT-CAP-04.MCFT-03-04-07-09-10.RESTART-BACKFILL-FAILURE-RECOVERY-V1",
+      "status": "MERGED_EFFECTIVE",
+      "implementation_status": "MERGED_EFFECTIVE",
+      "exact_head_commit": "2671e3fe2296f9adfd129688798fe2347e37c757",
+      "exact_head_ci_run": 29252831679,
+      "merge_commit": "235c832d302a1917dbd557ba0adfe15587a44f50",
+      "postmerge_workflow_run": 29255291485,
+      "postmerge_gate": "PASS",
+      "effectiveness_condition_satisfied": true
+    }
+  ],
+  "bounded_runtime_proof": {
+    "runtime_config_fact_count": 24,
+    "a1_operation_fact_count": 192,
+    "scenario_set_fact_count": 24,
+    "operation_fact_count": 216,
+    "config_plus_operation_fact_count": 240,
+    "forecast_point_count": 1728,
+    "scenario_point_count": 5184,
+    "checkpoint_sequence_start": 49,
+    "checkpoint_sequence_end": 72,
+    "global_state_count": 73,
+    "next_logical_tick": "2026-06-04T02:00:00.000Z",
+    "uninterrupted_and_restart_hash_equivalence": true,
+    "bounded_backfill_hash_equivalence": true,
+    "response_loss_recovery": true,
+    "stale_fencing_and_cas_fail_closed": true,
+    "projection_divergence_fail_closed_and_explicit_rebuild": true
+  },
+  "pending_claim_support": [
+    {
+      "claim": "MCFT_CAP_04_COMPLETE",
+      "evidence_status": "CONDITIONED_ON_S10C_FINALIZATION_EFFECTIVENESS",
+      "effective": false
+    },
+    {
+      "claim": "SUCCESSFUL_72_HOUR_FORECAST_RUNTIME_ESTABLISHED",
+      "evidence_status": "SUPPORTED_BY_MERGED_MAIN_EVIDENCE_PENDING_S10C",
+      "effective": false
+    },
+    {
+      "claim": "EXACT_72_POINT_FORECAST_HORIZON_ESTABLISHED",
+      "evidence_status": "SUPPORTED_BY_MERGED_MAIN_EVIDENCE_PENDING_S10C",
+      "effective": false
+    },
+    {
+      "claim": "FORECAST_T_PLUS_1_TO_T_PLUS_72_TIME_CONTRACT_ESTABLISHED",
+      "evidence_status": "SUPPORTED_BY_MERGED_MAIN_EVIDENCE_PENDING_S10C",
+      "effective": false
+    },
+    {
+      "claim": "JOINT_FORECAST_FORCING_CYCLE_PAIR_SELECTION_ESTABLISHED",
+      "evidence_status": "SUPPORTED_BY_MERGED_MAIN_EVIDENCE_PENDING_S10C",
+      "effective": false
+    },
+    {
+      "claim": "FORECAST_FUTURE_FORCING_TRACE_ESTABLISHED",
+      "evidence_status": "SUPPORTED_BY_MERGED_MAIN_EVIDENCE_PENDING_S10C",
+      "effective": false
+    },
+    {
+      "claim": "FORECAST_NO_FUTURE_OBSERVATION_LEAKAGE_ESTABLISHED",
+      "evidence_status": "SUPPORTED_BY_MERGED_MAIN_EVIDENCE_PENDING_S10C",
+      "effective": false
+    },
+    {
+      "claim": "FORECAST_ADDITIVE_UNCERTAINTY_PROPAGATION_ESTABLISHED",
+      "evidence_status": "SUPPORTED_BY_MERGED_MAIN_EVIDENCE_PENDING_S10C",
+      "effective": false
+    },
+    {
+      "claim": "FORECAST_95_PERCENT_INTERVAL_TRACE_ESTABLISHED",
+      "evidence_status": "SUPPORTED_BY_MERGED_MAIN_EVIDENCE_PENDING_S10C",
+      "effective": false
+    },
+    {
+      "claim": "FORECAST_PHYSICAL_BOUND_TRACE_ESTABLISHED",
+      "evidence_status": "SUPPORTED_BY_MERGED_MAIN_EVIDENCE_PENDING_S10C",
+      "effective": false
+    },
+    {
+      "claim": "A1_COMPLETED_CANONICAL_PERSISTENCE_ESTABLISHED",
+      "evidence_status": "SUPPORTED_BY_MERGED_MAIN_EVIDENCE_PENDING_S10C",
+      "effective": false
+    },
+    {
+      "claim": "A2_BLOCKED_FORECAST_DEGRADED_PATH_ESTABLISHED",
+      "evidence_status": "SUPPORTED_BY_MERGED_MAIN_EVIDENCE_PENDING_S10C",
+      "effective": false
+    },
+    {
+      "claim": "A1_A2_CROSS_VARIANT_TERMINAL_UNIQUENESS_ESTABLISHED",
+      "evidence_status": "SUPPORTED_BY_MERGED_MAIN_EVIDENCE_PENDING_S10C",
+      "effective": false
+    },
+    {
+      "claim": "THREE_FIXED_IRRIGATION_SCENARIOS_ESTABLISHED",
+      "evidence_status": "SUPPORTED_BY_MERGED_MAIN_EVIDENCE_PENDING_S10C",
+      "effective": false
+    },
+    {
+      "claim": "NO_ACTION_SCENARIO_BASELINE_EQUIVALENCE_ESTABLISHED",
+      "evidence_status": "SUPPORTED_BY_MERGED_MAIN_EVIDENCE_PENDING_S10C",
+      "effective": false
+    },
+    {
+      "claim": "IRRIGATE_NOW_15MM_SCENARIO_ESTABLISHED",
+      "evidence_status": "SUPPORTED_BY_MERGED_MAIN_EVIDENCE_PENDING_S10C",
+      "effective": false
+    },
+    {
+      "claim": "IRRIGATE_NOW_25MM_SCENARIO_ESTABLISHED",
+      "evidence_status": "SUPPORTED_BY_MERGED_MAIN_EVIDENCE_PENDING_S10C",
+      "effective": false
+    },
+    {
+      "claim": "SCENARIO_RESOURCE_AND_STRESS_SUMMARY_ESTABLISHED",
+      "evidence_status": "SUPPORTED_BY_MERGED_MAIN_EVIDENCE_PENDING_S10C",
+      "effective": false
+    },
+    {
+      "claim": "SCENARIO_SET_CANONICAL_PERSISTENCE_ESTABLISHED",
+      "evidence_status": "SUPPORTED_BY_MERGED_MAIN_EVIDENCE_PENDING_S10C",
+      "effective": false
+    },
+    {
+      "claim": "FORECAST_SCENARIO_IDEMPOTENCY_ESTABLISHED",
+      "evidence_status": "SUPPORTED_BY_MERGED_MAIN_EVIDENCE_PENDING_S10C",
+      "effective": false
+    },
+    {
+      "claim": "MISSING_SCENARIO_RECOVERY_BARRIER_ESTABLISHED",
+      "evidence_status": "SUPPORTED_BY_MERGED_MAIN_EVIDENCE_PENDING_S10C",
+      "effective": false
+    },
+    {
+      "claim": "TWENTY_FOUR_FORECAST_SCENARIO_TICKS_PERSISTED",
+      "evidence_status": "SUPPORTED_BY_MERGED_MAIN_EVIDENCE_PENDING_S10C",
+      "effective": false
+    },
+    {
+      "claim": "FORECAST_SCENARIO_RESTART_BACKFILL_PROVEN",
+      "evidence_status": "SUPPORTED_BY_MERGED_MAIN_EVIDENCE_PENDING_S10C",
+      "effective": false
+    },
+    {
+      "claim": "VERSIONED_CAP_04_RECORD_SET_COMPATIBILITY_ESTABLISHED",
+      "evidence_status": "SUPPORTED_BY_MERGED_MAIN_EVIDENCE_PENDING_S10C",
+      "effective": false
+    }
+  ],
+  "pending_completion_claims": [
+    "MCFT_CAP_04_COMPLETE",
+    "SUCCESSFUL_72_HOUR_FORECAST_RUNTIME_ESTABLISHED",
+    "EXACT_72_POINT_FORECAST_HORIZON_ESTABLISHED",
+    "FORECAST_T_PLUS_1_TO_T_PLUS_72_TIME_CONTRACT_ESTABLISHED",
+    "JOINT_FORECAST_FORCING_CYCLE_PAIR_SELECTION_ESTABLISHED",
+    "FORECAST_FUTURE_FORCING_TRACE_ESTABLISHED",
+    "FORECAST_NO_FUTURE_OBSERVATION_LEAKAGE_ESTABLISHED",
+    "FORECAST_ADDITIVE_UNCERTAINTY_PROPAGATION_ESTABLISHED",
+    "FORECAST_95_PERCENT_INTERVAL_TRACE_ESTABLISHED",
+    "FORECAST_PHYSICAL_BOUND_TRACE_ESTABLISHED",
+    "A1_COMPLETED_CANONICAL_PERSISTENCE_ESTABLISHED",
+    "A2_BLOCKED_FORECAST_DEGRADED_PATH_ESTABLISHED",
+    "A1_A2_CROSS_VARIANT_TERMINAL_UNIQUENESS_ESTABLISHED",
+    "THREE_FIXED_IRRIGATION_SCENARIOS_ESTABLISHED",
+    "NO_ACTION_SCENARIO_BASELINE_EQUIVALENCE_ESTABLISHED",
+    "IRRIGATE_NOW_15MM_SCENARIO_ESTABLISHED",
+    "IRRIGATE_NOW_25MM_SCENARIO_ESTABLISHED",
+    "SCENARIO_RESOURCE_AND_STRESS_SUMMARY_ESTABLISHED",
+    "SCENARIO_SET_CANONICAL_PERSISTENCE_ESTABLISHED",
+    "FORECAST_SCENARIO_IDEMPOTENCY_ESTABLISHED",
+    "MISSING_SCENARIO_RECOVERY_BARRIER_ESTABLISHED",
+    "TWENTY_FOUR_FORECAST_SCENARIO_TICKS_PERSISTED",
+    "FORECAST_SCENARIO_RESTART_BACKFILL_PROVEN",
+    "VERSIONED_CAP_04_RECORD_SET_COMPATIBILITY_ESTABLISHED"
+  ],
+  "effective_completion_claims": [],
+  "preserved_nonclaims": [
+    "NO_MCFT_CAP_04_COMPLETE_CLAIM",
+    "NO_FORECAST_RESIDUAL",
+    "NO_FULL_MCFT_10_FIVE_SCENARIO_CLOSURE",
+    "NO_RECOMMENDATION",
+    "NO_POLICY_EVALUATION",
+    "NO_HUMAN_DECISION",
+    "NO_APPROVAL",
+    "NO_ACTION_PLAN",
+    "NO_AO_ACT",
+    "NO_DISPATCH",
+    "NO_EXECUTION_RECEIPT",
+    "NO_OUTCOME_EVIDENCE",
+    "NO_CALIBRATION_CANDIDATE",
+    "NO_SHADOW_EVALUATION",
+    "NO_MODEL_ACTIVATION",
+    "NO_ACTIVE_MODEL_PARAMETER_CHANGE",
+    "NO_CALIBRATED_FORECAST_PROBABILITY",
+    "NO_CALIBRATED_STRESS_PROBABILITY",
+    "NO_WEATHER_ENSEMBLE_UNCERTAINTY",
+    "NO_SCENARIO_ACTION_COMPLIANCE_PROBABILITY",
+    "NO_FIELD_CALIBRATED_SCENARIO_APPLICATION_EFFICIENCY",
+    "NO_FIELD_CALIBRATED_STRESS_THRESHOLD",
+    "NO_LATE_EVIDENCE_REVISION",
+    "NO_AUTOMATIC_RECOMPUTE_ON_LATE_EVIDENCE",
+    "NO_CONTINUOUS_RUNTIME",
+    "NO_CONTINUOUS_SCHEDULER",
+    "NO_SHADOW_ONLINE_CLAIM",
+    "NO_LIVE_FIELD_CLAIM",
+    "NO_MCFT_GATE_A_CLOSURE",
+    "NO_MCFT_GATE_B_CLOSURE",
+    "NO_MCFT_GATE_C_CLOSURE",
+    "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
+  ],
+  "closure_does_not_change": {
+    "runtime_source": true,
+    "persistence_source": true,
+    "database_schema": true,
+    "routes": true,
+    "scheduler": true,
+    "web": true,
+    "workflows": true,
+    "canonical_facts": true,
+    "active_model_parameters": true,
+    "recommendation_policy_decision_action": true
+  },
+  "exact_changed_file_boundary": [
+    "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+    "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+    "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-AUTHORIZATION-STATUS.json",
+    "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-DELIVERY-SLICE-STATUS.json",
+    "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-CLOSURE-STATUS.json",
+    "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-CLOSURE.md",
+    "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-CLOSURE-RECORD.json",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_CLOSURE.cjs"
+  ],
+  "gate_evidence": {
+    "governance_gate": "PASS_REQUIRED_ON_FINAL_HEAD",
+    "exact_head_ci": "PASS_REQUIRED_BEFORE_MERGE",
+    "git_diff_check": "PASS_REQUIRED_ON_FINAL_HEAD"
+  },
+  "finalization_delivery_slice_id": "MCFT-CAP-04.FINALIZATION-MAIN-VERIFICATION-V1",
+  "finalization_authorized": false,
+  "successor_capability_line_id": "MCFT-CAP-05",
+  "successor_authorized": false
+}
