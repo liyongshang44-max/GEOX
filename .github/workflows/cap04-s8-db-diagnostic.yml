@@ -1,0 +1,116 @@
+name: MCFT-CAP-04 S8 PostgreSQL diagnostics
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  restart-resume-db:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-04-s8-restart-backfill-recovery-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox_mcft_cap04_s8_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox_mcft_cap04_s8_acceptance"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-04-s8-restart-backfill-recovery-v1
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm -r typecheck
+      - name: Run S8 real PostgreSQL restart proof
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/geox_mcft_cap04_s8_acceptance
+          MCFT_CAP_04_S8_DESTRUCTIVE_ACCEPTANCE: "1"
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_RESTART_BACKFILL_DB.ts
+
+  cap04-persistence-regression:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-04-s8-restart-backfill-recovery-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox_mcft_cap04_persistence_acceptance
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox_mcft_cap04_persistence_acceptance"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-04-s8-restart-backfill-recovery-v1
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile
+      - name: Run CAP-04 A/B uniqueness and explicit rebuild regression
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5433/geox_mcft_cap04_persistence_acceptance
+          MCFT_CAP_04_PERSISTENCE_DESTRUCTIVE_ACCEPTANCE: "1"
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PERSISTENCE_DB.ts
+
+  fencing-cas-regression:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-04-s8-restart-backfill-recovery-v1'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: geox_mcft_cap02_acceptance
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d geox_mcft_cap02_acceptance"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-04-s8-restart-backfill-recovery-v1
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile
+      - name: Run shared Runtime fencing and CAS regression
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5434/geox_mcft_cap02_acceptance
+          MCFT_CAP_02_PERSISTENCE_DESTRUCTIVE_ACCEPTANCE: "1"
+        run: pnpm exec tsx scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_02_PERSISTENCE_DB.ts
