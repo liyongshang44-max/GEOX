@@ -21,6 +21,13 @@ jobs:
       - name: Materialize final seven-file boundary
         run: rm .github/workflows/mcft-cap-04-s7-activation-gate.yml
 
+      - name: Capture boundary diagnostics
+        shell: bash
+        run: |
+          git status --short > /tmp/s7-activation-status.txt
+          git diff --name-only ea9ddfeeda88a3bb0a3b8abd3b821b8a3965dac3 > /tmp/s7-activation-files.txt
+          git diff --check ea9ddfeeda88a3bb0a3b8abd3b821b8a3965dac3 > /tmp/s7-activation-diff-check.txt 2>&1 || true
+
       - name: Run S7 activation governance Gate
         shell: bash
         run: |
@@ -37,4 +44,7 @@ jobs:
           path: |
             /tmp/s7-activation-gate.log
             /tmp/s7-activation-gate-exit.txt
+            /tmp/s7-activation-status.txt
+            /tmp/s7-activation-files.txt
+            /tmp/s7-activation-diff-check.txt
           retention-days: 1
