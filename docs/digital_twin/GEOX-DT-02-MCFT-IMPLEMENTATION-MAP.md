@@ -781,3 +781,15 @@ S8 authorized: false
 ```
 
 S7 reuses the verified S6 pending-B single-tick entry and does not duplicate State, Forecast, or Scenario mathematics. A legal A2 advances the latest Forecast result while preserving the prior successful-Forecast pointer, returns `BLOCKED`, and stops the range. Malformed forcing writes no terminal tick for the failing hour.
+
+## MCFT-CAP-04 S8 Activation — Restart, Backfill and Failure Recovery
+
+```text
+S7: MERGED_EFFECTIVE
+S7 merge: 413908eadf1016d879760da3afc968abdee82342
+S7 postmerge Gate: 29248764378 PASS
+S8: IMPLEMENTATION_AUTHORIZED
+S8 baseline: 413908eadf1016d879760da3afc968abdee82342
+S8 implementation branch: agent/mcft-cap-04-s8-restart-backfill-recovery-v1
+S9: BLOCKED
+```
