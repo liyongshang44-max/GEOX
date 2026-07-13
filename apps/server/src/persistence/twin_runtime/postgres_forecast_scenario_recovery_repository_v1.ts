@@ -5,6 +5,11 @@
 import type { Pool, PoolClient } from "pg";
 import type { CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
 import {
+  CAP04_CANONICAL_FORECAST_AUTHORITY_CONTRACT_ID_V1,
+  validateCap04CanonicalForecastRunPayloadV1,
+  type Cap04CanonicalForecastRunPayloadV1,
+} from "../../domain/twin_runtime/forecast_canonical_authority_v1.js";
+import {
   CAP04_A1_OPERATION_VARIANT_V1,
   CAP04_A2_OPERATION_VARIANT_V1,
   CAP04_A_MEMBER_OBJECT_TYPES_V1,
@@ -585,14 +590,19 @@ export class PostgresForecastScenarioRecoveryRepositoryV1 extends PostgresForeca
     );
     if (checkpointResult.rows.length !== 1) throw new Error("PENDING_SCENARIO_CHECKPOINT_CARDINALITY_CONFLICT");
     const checkpoint = parseFactObjectV1(checkpointResult.rows[0].record_json);
-    if (checkpoint.object_type === "twin_scenario_set_v1" || checkpoint.object_type !== "twin_runtime_checkpoint_v1") {
-      throw new Error("PENDING_SCENARIO_CHECKPOINT_TYPE_MISMATCH");
-    }
+    if (checkpoint.object_type !== "twin_runtime_checkpoint_v1") throw new Error("PENDING_SCENARIO_CHECKPOINT_TYPE_MISMATCH");
     const forecastRef = stringFieldV1(checkpoint.payload.forecast_result_ref, "PENDING_SCENARIO_CHECKPOINT_FORECAST_REF_REQUIRED");
-    const forecast = await this.readCanonicalObjectForRecoveryWithClientV1(await this.recoveryPool.connect(), forecastRef).catch((error) => { throw error; });
+    const client = await this.recoveryPool.connect();
+    let forecast: CanonicalObjectEnvelopeV1 | null;
+    try {
+      forecast = await this.readCanonicalObjectForRecoveryWithClientV1(client, forecastRef);
+    } finally {
+      client.release();
+    }
     if (!forecast || forecast.object_type !== "twin_forecast_run_v1") throw new Error("PENDING_SCENARIO_FORECAST_NOT_FOUND");
-    const payload = forecast.payload as unknown as Cap04ForecastRunPayloadV1;
-    validateCap04ForecastRunPayloadV1(payload);
+    if (forecast.payload.canonical_authority_contract_id !== CAP04_CANONICAL_FORECAST_AUTHORITY_CONTRACT_ID_V1) return null;
+    const payload = forecast.payload as unknown as Cap04CanonicalForecastRunPayloadV1;
+    validateCap04CanonicalForecastRunPayloadV1(payload);
     if (payload.status === "BLOCKED" || payload.scenario_eligible !== true) return null;
     return (await this.readScenarioSetBySourceForecast(forecast.object_id, forecast.determinism_hash)) ? null : forecast;
   }
