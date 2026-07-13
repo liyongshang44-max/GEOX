@@ -19,7 +19,10 @@ import {
   type Cap04ARecordSetV1,
   type Cap04ScenarioSetRecordV1,
 } from "../../domain/twin_runtime/forecast_scenario_record_set_identity_v1.js";
-import { validateCap04ARecordSetV1 } from "../../domain/twin_runtime/forecast_scenario_record_set_validator_v1.js";
+import {
+  validateCap04ARecordSetV1,
+  validateCap04ScenarioSetRecordV1,
+} from "../../domain/twin_runtime/forecast_scenario_record_set_validator_v1.js";
 import {
   buildCap04ForecastProjectionRowsV1,
   buildCap04ScenarioProjectionRowsV1,
@@ -283,7 +286,6 @@ export class PostgresForecastScenarioRepositoryV1 implements Cap04ForecastScenar
       }
 
       await this.verifyLeaseV1(client, input.scope, input.lease);
-      await this.verifyAExpectedPointersV1(client, input.scope, input.expected, input.record_set);
       const terminal = await client.query(
         `SELECT record_set_id,aggregate_determinism_hash FROM twin_terminal_tick_uniqueness_v1
          WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 AND season_id=$5 AND zone_id=$6
@@ -291,6 +293,7 @@ export class PostgresForecastScenarioRepositoryV1 implements Cap04ForecastScenar
         [...scopeValuesV1(input.scope), input.record_set.operation_key.lineage_id, input.record_set.operation_key.revision_id, input.record_set.operation_key.logical_time],
       );
       if (terminal.rows.length !== 0) throw new Error("TERMINAL_TICK_VARIANT_CONFLICT");
+      await this.verifyAExpectedPointersV1(client, input.scope, input.expected, input.record_set);
 
       const tick = requireMemberV1(input.record_set, "twin_runtime_tick_v1");
       inject("before_terminal_uniqueness_guard");
@@ -566,6 +569,7 @@ export class PostgresForecastScenarioRepositoryV1 implements Cap04ForecastScenar
       validateCap04ForecastRunPayloadV1(sourceForecast.payload as unknown as Cap04ForecastRunPayloadV1);
       const sourcePayload = sourceForecast.payload as unknown as Cap04ForecastRunPayloadV1;
       if (sourcePayload.status !== "COMPLETED" || sourcePayload.scenario_eligible !== true) throw new Error("CAP04_B_COMPLETED_FORECAST_REQUIRED");
+      validateCap04ScenarioSetRecordV1(input.record, sourceForecast);
       validateCap04ScenarioSetPayloadV1(scenario.payload, sourcePayload);
       await this.verifyRuntimeConfigV1(client, scenario.payload.runtime_config_ref, scenario.payload.runtime_config_hash);
 
