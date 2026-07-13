@@ -7,15 +7,15 @@
   "delivery_slice_id": "MCFT-CAP-04.CLOSURE-CANDIDATE-V1",
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A — Deterministic Replay Twin",
-  "baseline_main_commit": "8603b07c567729a68949cfe2d4c1559a7848ac93",
+  "baseline_main_commit": "89f2d1ccd14cd5ad8f853c1d6da5dd8759bb8fa4",
   "activation_branch": "agent/mcft-cap-04-s9-closure-activation-v1",
   "implementation_branch": "agent/mcft-cap-04-s9-closure-candidate-v1",
-  "status": "EFFECTIVENESS_RECONCILIATION_CANDIDATE",
+  "status": "COMPLETE",
   "activation_effective": true,
-  "implementation_status": "S10C_EVIDENCE_VALIDATED_PENDING_MERGE",
+  "implementation_status": "COMPLETE",
   "implementation_authorized": true,
-  "closure_effective": false,
-  "capability_status": "NOT_COMPLETE",
+  "closure_effective": true,
+  "capability_status": "COMPLETE",
   "predecessor_effectiveness": {
     "delivery_slice_id": "MCFT-CAP-04.MCFT-03-04-07-09-10.RESTART-BACKFILL-FAILURE-RECOVERY-V1",
     "pr_number": 2403,
@@ -40,7 +40,8 @@
     "web_change": false,
     "workflow_change": false
   },
-  "pending_completion_claims": [
+  "pending_completion_claims": [],
+  "effective_completion_claims": [
     "MCFT_CAP_04_COMPLETE",
     "SUCCESSFUL_72_HOUR_FORECAST_RUNTIME_ESTABLISHED",
     "EXACT_72_POINT_FORECAST_HORIZON_ESTABLISHED",
@@ -66,9 +67,7 @@
     "FORECAST_SCENARIO_RESTART_BACKFILL_PROVEN",
     "VERSIONED_CAP_04_RECORD_SET_COMPATIBILITY_ESTABLISHED"
   ],
-  "effective_completion_claims": [],
   "preserved_nonclaims": [
-    "NO_MCFT_CAP_04_COMPLETE_CLAIM",
     "NO_FORECAST_RESIDUAL",
     "NO_FULL_MCFT_10_FIVE_SCENARIO_CLOSURE",
     "NO_RECOMMENDATION",
@@ -124,9 +123,9 @@
   "activation_effectiveness_condition": "S9_ACTIVATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S9_ACTIVATION_GATE_PASS",
   "activation_effectiveness_condition_satisfied": true,
   "implementation_effectiveness_condition": "S9_CLOSURE_CANDIDATE_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_CLOSURE_GATE_PASS",
-  "implementation_effectiveness_condition_satisfied": false,
+  "implementation_effectiveness_condition_satisfied": true,
   "finalization_delivery_slice_id": "MCFT-CAP-04.FINALIZATION-MAIN-VERIFICATION-V1",
-  "finalization_authorized": true,
+  "finalization_authorized": false,
   "successor_capability_line_id": "MCFT-CAP-05",
   "successor_authorized": false,
   "activation_effectiveness": {
@@ -170,7 +169,7 @@
     "postmerge_gate": "PASS",
     "effectiveness_condition_satisfied": true
   },
-  "reconciliation_phase": "EVIDENCE_CANDIDATE",
+  "reconciliation_phase": "EFFECTIVE",
   "s10b_effectiveness_evidence": {
     "pr_number": 2413,
     "exact_head_commit": "f975a2688db56e17d93bb5b21d3e64768e72c5d1",
@@ -182,6 +181,19 @@
     "postmerge_workflow_run": 29260346203,
     "postmerge_gate": "PASS",
     "postmerge_gate_subject_commit": "8603b07c567729a68949cfe2d4c1559a7848ac93",
+    "effectiveness_preconditions_satisfied": true
+  },
+  "s10c_effectiveness": {
+    "evidence_pr_number": 2416,
+    "evidence_exact_head_commit": "125cc38e7d64b4bb1c4799bc20076fb29412ac91",
+    "evidence_exact_head_ci_run": 29260774006,
+    "evidence_merge_commit": "89f2d1ccd14cd5ad8f853c1d6da5dd8759bb8fa4",
+    "head_to_merge_file_delta_count": 0,
+    "head_to_merge_tree_equivalence": "PASS",
+    "reconciliation_probe_pr_number": 2418,
+    "reconciliation_workflow_run": 29261294502,
+    "reconciliation_gate": "PASS",
+    "reconciliation_subject_commit": "89f2d1ccd14cd5ad8f853c1d6da5dd8759bb8fa4",
     "effectiveness_preconditions_satisfied": true
   }
 }
