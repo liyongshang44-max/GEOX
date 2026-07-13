@@ -1,0 +1,264 @@
+name: MCFT-CAP-04 S9 closure activation materializer
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-04-s9-closure-activation-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-04-s9-closure-activation-v1
+          fetch-depth: 0
+      - name: Materialize frozen S9 closure activation
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const BASE = '235c832d302a1917dbd557ba0adfe15587a44f50';
+          const ACT_BRANCH = 'agent/mcft-cap-04-s9-closure-activation-v1';
+          const IMPL_BRANCH = 'agent/mcft-cap-04-s9-closure-candidate-v1';
+          const S8 = 'MCFT-CAP-04.MCFT-03-04-07-09-10.RESTART-BACKFILL-FAILURE-RECOVERY-V1';
+          const S9 = 'MCFT-CAP-04.CLOSURE-CANDIDATE-V1';
+          const S10 = 'MCFT-CAP-04.FINALIZATION-MAIN-VERIFICATION-V1';
+          const activationFiles = [
+            'docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md',
+            'docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json',
+            'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-AUTHORIZATION-STATUS.json',
+            'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-DELIVERY-SLICE-STATUS.json',
+            'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S8-RESTART-BACKFILL-RECOVERY-STATUS.json',
+            'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-CLOSURE-STATUS.json',
+            'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-CLOSURE.md',
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S9_CLOSURE_ACTIVATION.cjs'
+          ];
+          const implementationFiles = [
+            'docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md',
+            'docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json',
+            'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-AUTHORIZATION-STATUS.json',
+            'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-DELIVERY-SLICE-STATUS.json',
+            'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-CLOSURE-STATUS.json',
+            'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-CLOSURE.md',
+            'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-CLOSURE-RECORD.json',
+            'scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_CLOSURE.cjs'
+          ];
+          const claims = [
+            'MCFT_CAP_04_COMPLETE',
+            'SUCCESSFUL_72_HOUR_FORECAST_RUNTIME_ESTABLISHED',
+            'EXACT_72_POINT_FORECAST_HORIZON_ESTABLISHED',
+            'FORECAST_T_PLUS_1_TO_T_PLUS_72_TIME_CONTRACT_ESTABLISHED',
+            'JOINT_FORECAST_FORCING_CYCLE_PAIR_SELECTION_ESTABLISHED',
+            'FORECAST_FUTURE_FORCING_TRACE_ESTABLISHED',
+            'FORECAST_NO_FUTURE_OBSERVATION_LEAKAGE_ESTABLISHED',
+            'FORECAST_ADDITIVE_UNCERTAINTY_PROPAGATION_ESTABLISHED',
+            'FORECAST_95_PERCENT_INTERVAL_TRACE_ESTABLISHED',
+            'FORECAST_PHYSICAL_BOUND_TRACE_ESTABLISHED',
+            'A1_COMPLETED_CANONICAL_PERSISTENCE_ESTABLISHED',
+            'A2_BLOCKED_FORECAST_DEGRADED_PATH_ESTABLISHED',
+            'A1_A2_CROSS_VARIANT_TERMINAL_UNIQUENESS_ESTABLISHED',
+            'THREE_FIXED_IRRIGATION_SCENARIOS_ESTABLISHED',
+            'NO_ACTION_SCENARIO_BASELINE_EQUIVALENCE_ESTABLISHED',
+            'IRRIGATE_NOW_15MM_SCENARIO_ESTABLISHED',
+            'IRRIGATE_NOW_25MM_SCENARIO_ESTABLISHED',
+            'SCENARIO_RESOURCE_AND_STRESS_SUMMARY_ESTABLISHED',
+            'SCENARIO_SET_CANONICAL_PERSISTENCE_ESTABLISHED',
+            'FORECAST_SCENARIO_IDEMPOTENCY_ESTABLISHED',
+            'MISSING_SCENARIO_RECOVERY_BARRIER_ESTABLISHED',
+            'TWENTY_FOUR_FORECAST_SCENARIO_TICKS_PERSISTED',
+            'FORECAST_SCENARIO_RESTART_BACKFILL_PROVEN',
+            'VERSIONED_CAP_04_RECORD_SET_COMPATIBILITY_ESTABLISHED'
+          ];
+          const nonclaims = [
+            'NO_MCFT_CAP_04_COMPLETE_CLAIM',
+            'NO_FORECAST_RESIDUAL',
+            'NO_FULL_MCFT_10_FIVE_SCENARIO_CLOSURE',
+            'NO_RECOMMENDATION',
+            'NO_POLICY_EVALUATION',
+            'NO_HUMAN_DECISION',
+            'NO_APPROVAL',
+            'NO_ACTION_PLAN',
+            'NO_AO_ACT',
+            'NO_DISPATCH',
+            'NO_EXECUTION_RECEIPT',
+            'NO_OUTCOME_EVIDENCE',
+            'NO_CALIBRATION_CANDIDATE',
+            'NO_SHADOW_EVALUATION',
+            'NO_MODEL_ACTIVATION',
+            'NO_ACTIVE_MODEL_PARAMETER_CHANGE',
+            'NO_CALIBRATED_FORECAST_PROBABILITY',
+            'NO_CALIBRATED_STRESS_PROBABILITY',
+            'NO_WEATHER_ENSEMBLE_UNCERTAINTY',
+            'NO_SCENARIO_ACTION_COMPLIANCE_PROBABILITY',
+            'NO_FIELD_CALIBRATED_SCENARIO_APPLICATION_EFFICIENCY',
+            'NO_FIELD_CALIBRATED_STRESS_THRESHOLD',
+            'NO_LATE_EVIDENCE_REVISION',
+            'NO_AUTOMATIC_RECOMPUTE_ON_LATE_EVIDENCE',
+            'NO_CONTINUOUS_RUNTIME',
+            'NO_CONTINUOUS_SCHEDULER',
+            'NO_SHADOW_ONLINE_CLAIM',
+            'NO_LIVE_FIELD_CLAIM',
+            'NO_MCFT_GATE_A_CLOSURE',
+            'NO_MCFT_GATE_B_CLOSURE',
+            'NO_MCFT_GATE_C_CLOSURE',
+            'NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM'
+          ];
+          const readJson = p => JSON.parse(fs.readFileSync(p, 'utf8'));
+          const writeJson = (p, v) => { fs.mkdirSync(path.dirname(p), {recursive:true}); fs.writeFileSync(p, JSON.stringify(v, null, 2) + '\n'); };
+          const s8Evidence = {
+            pr_number: 2403,
+            exact_head_commit: '2671e3fe2296f9adfd129688798fe2347e37c757',
+            exact_head_ci_run: 29252831679,
+            merge_commit: BASE,
+            postmerge_probe_pr_number: 2404,
+            postmerge_workflow_run: 29255291485,
+            postmerge_gate: 'PASS',
+            effectiveness_condition_satisfied: true
+          };
+          const authPath = 'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-AUTHORIZATION-STATUS.json';
+          const auth = readJson(authPath);
+          auth.implementation_status = 'S9_CLOSURE_ACTIVATION_CANDIDATE';
+          auth.runtime_source_authorized = false;
+          auth.baseline_main_commit = BASE;
+          auth.branch = ACT_BRANCH;
+          auth.active_delivery_slice_id = S9;
+          auth.current_blockers = ['MCFT_CAP_04_S9_ACTIVATION_NOT_YET_MERGED','MCFT_CAP_04_S9_MERGED_MAIN_ACTIVATION_GATE_NOT_YET_PASS'];
+          auth.repository_write_scope = 'S9_CLOSURE_GOVERNANCE_ONLY';
+          auth.exact_changed_file_boundary = activationFiles;
+          auth.next_authorized_slice_id_after_effectiveness = S9;
+          auth.s8_effectiveness = s8Evidence;
+          auth.satisfied_conditions = [...new Set([...(auth.satisfied_conditions || []), 'MCFT_CAP_04_S8_IMPLEMENTATION_MERGED_MAIN_EFFECTIVE'])];
+          auth.successor_authorized = false;
+          writeJson(authPath, auth);
+          const deliveryPath = 'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-DELIVERY-SLICE-STATUS.json';
+          const delivery = readJson(deliveryPath);
+          delivery.status = 'S9_CLOSURE_ACTIVATION_CANDIDATE';
+          delivery.baseline_main_commit = BASE;
+          delivery.branch = ACT_BRANCH;
+          delivery.active_delivery_slice_id = S9;
+          delivery.runtime_source_authorized = false;
+          delivery.s8_effectiveness = s8Evidence;
+          const s8 = delivery.slices.find(s => s.delivery_slice_id === S8);
+          Object.assign(s8, {status:'MERGED_EFFECTIVE', effectiveness_condition_satisfied:true, implementation_status:'MERGED_EFFECTIVE', ...s8Evidence});
+          const s9 = delivery.slices.find(s => s.delivery_slice_id === S9);
+          Object.assign(s9, {
+            baseline_main_commit: BASE,
+            activation_branch: ACT_BRANCH,
+            branch: IMPL_BRANCH,
+            status: 'ACTIVATION_CANDIDATE',
+            activation_fields_status: 'FROZEN',
+            runtime_source_authorized: false,
+            allowed_claims: [],
+            pending_completion_claims: claims,
+            effective_completion_claims: [],
+            preserved_nonclaims: nonclaims,
+            exact_activation_changed_file_boundary: activationFiles,
+            exact_changed_file_boundary: implementationFiles,
+            effectiveness_condition: 'S9_CLOSURE_CANDIDATE_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_CLOSURE_GATE_PASS',
+            effectiveness_condition_satisfied: false,
+            explicit_activation_authority: 'OWNER_EXPLICIT_AUTHORIZATION_2026_07_13'
+          });
+          const s10 = delivery.slices.find(s => s.delivery_slice_id === S10);
+          s10.status = 'BLOCKED';
+          s10.baseline_main_commit = null;
+          s10.branch = null;
+          s10.runtime_source_authorized = false;
+          s10.effectiveness_condition_satisfied = false;
+          delivery.next_authorized_slice_ids = [];
+          delivery.next_authorized_slice_id_after_merge_and_postmerge_gate = S9;
+          delivery.successor_authorized = false;
+          writeJson(deliveryPath, delivery);
+          const s8Path = 'docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S8-RESTART-BACKFILL-RECOVERY-STATUS.json';
+          const s8Status = readJson(s8Path);
+          s8Status.status = 'MERGED_EFFECTIVE';
+          s8Status.implementation_status = 'MERGED_EFFECTIVE';
+          s8Status.implementation_effectiveness_condition_satisfied = true;
+          s8Status.implementation_effectiveness = s8Evidence;
+          s8Status.successor_authorized = false;
+          writeJson(s8Path, s8Status);
+          const closureStatus = {
+            schema_version: 'geox_mcft_cap_04_closure_status_v1',
+            status_identity: 'GEOX-MCFT-CAP-04-CLOSURE-STATUS-V1',
+            capability_line_id: 'MCFT-CAP-04',
+            display_alias: 'MCFT-4',
+            name: '72-Hour Forecast and Three Scenarios',
+            delivery_slice_id: S9,
+            runtime_mode: 'REPLAY',
+            target_completion_level: 'Level A — Deterministic Replay Twin',
+            baseline_main_commit: BASE,
+            activation_branch: ACT_BRANCH,
+            implementation_branch: IMPL_BRANCH,
+            status: 'ACTIVATION_CANDIDATE',
+            activation_effective: false,
+            implementation_status: 'BLOCKED_PENDING_ACTIVATION_EFFECTIVENESS',
+            implementation_authorized: false,
+            closure_effective: false,
+            capability_status: 'NOT_COMPLETE',
+            predecessor_effectiveness: {delivery_slice_id:S8, ...s8Evidence},
+            closure_objective: {
+              aggregate_all_merged_main_evidence: 'REQUIRED',
+              freeze_completion_claims_as_pending: 'REQUIRED',
+              freeze_preserved_nonclaims: 'REQUIRED',
+              governance_only: true,
+              runtime_source_change: false,
+              persistence_change: false,
+              schema_migration: false,
+              route_change: false,
+              scheduler_change: false,
+              web_change: false,
+              workflow_change: false
+            },
+            pending_completion_claims: claims,
+            effective_completion_claims: [],
+            preserved_nonclaims: nonclaims,
+            exact_activation_changed_file_boundary: activationFiles,
+            frozen_implementation_changed_file_boundary: implementationFiles,
+            activation_effectiveness_condition: 'S9_ACTIVATION_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S9_ACTIVATION_GATE_PASS',
+            activation_effectiveness_condition_satisfied: false,
+            implementation_effectiveness_condition: 'S9_CLOSURE_CANDIDATE_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_CLOSURE_GATE_PASS',
+            implementation_effectiveness_condition_satisfied: false,
+            finalization_delivery_slice_id: S10,
+            finalization_authorized: false,
+            successor_capability_line_id: 'MCFT-CAP-05',
+            successor_authorized: false
+          };
+          writeJson('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-CLOSURE-STATUS.json', closureStatus);
+          const contract = `<!-- docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-CLOSURE.md -->\n# GEOX MCFT-CAP-04 S9 Closure Candidate Contract\n\n## Identity\n\n\`\`\`text\ndelivery_slice_id: ${S9}\nbaseline_main_commit: ${BASE}\nruntime_mode: REPLAY\nclosure_kind: GOVERNANCE_ONLY_EVIDENCE_AGGREGATION\n\`\`\`\n\n## Objective\n\nS9 aggregates all merged-main CAP-04 evidence from S1 through S8. It freezes the twenty-four completion claims as pending, freezes the preserved nonclaims, and prepares a repository-verifiable closure record.\n\nS9 does not activate completion claims. \`status\` and \`implementation_status\` must not become \`COMPLETE\`; \`closure_effective\` remains false.\n\n## Boundary\n\nNo Runtime source, persistence source, migration, route, scheduler, web, workflow, canonical fact, model parameter, calibration, recommendation, decision or AO-ACT change is authorized.\n\n## Downstream lock\n\nS10 remains blocked until the S9 closure candidate is merged and its merged-main Closure Gate passes. MCFT-CAP-05 remains unauthorized.\n`;
+          fs.writeFileSync('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-CLOSURE.md', contract);
+          const matrixPath = 'docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json';
+          const matrix = readJson(matrixPath);
+          matrix.baseline = {branch:'main', commit:BASE, meaning:'MCFT-CAP-04 S8 merged-main effective; S9 closure activation candidate'};
+          const cap = matrix.capability_lines.find(c => c.capability_line_id === 'MCFT-CAP-04');
+          cap.status = 'S9_CLOSURE_ACTIVATION_CANDIDATE';
+          cap.active_delivery_slice_id = S9;
+          cap.runtime_source_authorized = false;
+          cap.successor_authorized = false;
+          cap.s8_effectiveness = s8Evidence;
+          const ms8 = cap.delivery_slices.find(s => s.delivery_slice_id === S8);
+          if (ms8) Object.assign(ms8, {status:'MERGED_EFFECTIVE', merge_commit:BASE, postmerge_workflow_run:29255291485});
+          const ms9 = cap.delivery_slices.find(s => s.delivery_slice_id === S9);
+          if (ms9) Object.assign(ms9, {status:'ACTIVATION_CANDIDATE', baseline_main_commit:BASE, branch:IMPL_BRANCH, runtime_source_authorized:false});
+          cap.next_authorized_slice_ids = [];
+          writeJson(matrixPath, matrix);
+          const mapPath = 'docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md';
+          let map = fs.readFileSync(mapPath, 'utf8');
+          const marker = '## MCFT-CAP-04 S9 Closure activation';
+          if (!map.includes(marker)) map += `\n\n${marker}\n\n\`\`\`text\nbaseline main: ${BASE}\nS8 status: MERGED_EFFECTIVE\nS8 exact-head CI: 29252831679 SUCCESS\nS8 merged-main Gate: 29255291485 SUCCESS\nactive delivery slice: ${S9}\nS9 status: ACTIVATION_CANDIDATE\nS9 Runtime source authorized: false\nS9 completion claims: PENDING_ONLY\nS10 status: BLOCKED\nMCFT-CAP-05 authorized: false\n\`\`\`\n\nS9 is governance-only evidence aggregation. It does not activate CAP-04 completion claims.\n`;
+          fs.writeFileSync(mapPath, map);
+          const gate = `// scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S9_CLOSURE_ACTIVATION.cjs\n// Purpose: validate the governance-only S9 closure activation freeze, exact boundaries, S8 effectiveness, pending claims, preserved nonclaims, and downstream blocks.\n// Boundary: no Runtime source, persistence source, migration, route, scheduler, web, workflow, completion claim activation, S10 activation, or MCFT-CAP-05 authorization.\n'use strict';\nconst cp=require('node:child_process'); const fs=require('node:fs'); const path=require('node:path');\nconst ROOT=path.resolve(__dirname,'../..'); const BASE='${BASE}'; const S8='${S8}'; const S9='${S9}'; const S10='${S10}'; const MODE=process.argv.includes('--postmerge')?'postmerge':'final';\nconst files=${JSON.stringify(activationFiles)}; const claims=${JSON.stringify(claims)}; const nonclaims=${JSON.stringify(nonclaims)}; let pass=0,fail=0;\nconst check=(v,m)=>{if(v){pass++;console.log('PASS '+m)}else{fail++;console.error('FAIL '+m)}}; const git=a=>cp.execFileSync('git',a,{cwd:ROOT,encoding:'utf8'}).trim(); const j=p=>JSON.parse(fs.readFileSync(path.join(ROOT,p),'utf8')); const exact=(a,b,m)=>check(JSON.stringify([...(a||[])].sort())===JSON.stringify([...b].sort()),m);\nfor(const f of files) check(fs.existsSync(path.join(ROOT,f)),'file exists '+f);\nconst auth=j('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-AUTHORIZATION-STATUS.json'); const d=j('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-DELIVERY-SLICE-STATUS.json'); const s8s=j('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S8-RESTART-BACKFILL-RECOVERY-STATUS.json'); const c=j('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-CLOSURE-STATUS.json'); const s8=d.slices.find(x=>x.delivery_slice_id===S8); const s9=d.slices.find(x=>x.delivery_slice_id===S9); const s10=d.slices.find(x=>x.delivery_slice_id===S10);\ncheck(auth.active_delivery_slice_id===S9,'auth active S9'); check(auth.runtime_source_authorized===false,'Runtime source unauthorized'); check(auth.s8_effectiveness?.merge_commit===BASE,'S8 merge exact'); check(auth.s8_effectiveness?.postmerge_workflow_run===29255291485,'S8 Gate run exact');\ncheck(s8?.status==='MERGED_EFFECTIVE','S8 merged-effective'); check(s8?.effectiveness_condition_satisfied===true,'S8 effectiveness satisfied'); check(s8s.status==='MERGED_EFFECTIVE','S8 status artifact effective');\ncheck(s9?.status==='ACTIVATION_CANDIDATE','S9 activation candidate'); check(s9?.baseline_main_commit===BASE,'S9 baseline exact'); check(s9?.runtime_source_authorized===false,'S9 governance only'); exact(s9?.pending_completion_claims,claims,'S9 pending claims exact'); exact(s9?.preserved_nonclaims,nonclaims,'S9 nonclaims exact'); exact(s9?.exact_activation_changed_file_boundary,files,'S9 activation boundary exact');\ncheck(c.status==='ACTIVATION_CANDIDATE','closure status candidate'); check(c.closure_effective===false,'closure ineffective'); check(c.capability_status==='NOT_COMPLETE','capability not complete'); exact(c.pending_completion_claims,claims,'closure pending claims exact'); check(Array.isArray(c.effective_completion_claims)&&c.effective_completion_claims.length===0,'no effective claims'); exact(c.preserved_nonclaims,nonclaims,'closure nonclaims exact'); exact(c.exact_activation_changed_file_boundary,files,'closure activation boundary exact');\ncheck(s10?.status==='BLOCKED','S10 blocked'); check(s10?.baseline_main_commit===null,'S10 baseline unset'); check(d.successor_authorized===false,'CAP05 unauthorized');\nconst changed=git(['diff','--name-only',BASE]).split(/\\r?\\n/).filter(Boolean).sort(); exact(changed,files,'exact changed files');\nfor(const f of changed){check(!f.startsWith('apps/server/src/'),'no Runtime source '+f);check(!f.startsWith('apps/server/db/migrations/'),'no migration '+f);check(!f.startsWith('apps/web/'),'no web '+f);check(!f.startsWith('.github/workflows/'),'no workflow '+f)}\nif(MODE==='postmerge'){check(git(['branch','--show-current'])==='main','postmerge on main');check(git(['rev-parse','HEAD'])===git(['rev-parse','origin/main']),'postmerge main equals origin/main')}\nconsole.log('MCFT-CAP-04 S9 closure activation '+MODE+': '+pass+' PASS, '+fail+' FAIL'); if(fail) process.exit(1);\n`;
+          fs.writeFileSync('scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S9_CLOSURE_ACTIVATION.cjs', gate);
+          NODE
+          rm -f .github/workflows/mcft-cap-04-s9-closure-activation-materializer.yml
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S9_CLOSURE_ACTIVATION.cjs
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "governance(mcft-cap-04): activate S9 closure candidate"
+          git push origin HEAD:agent/mcft-cap-04-s9-closure-activation-v1
