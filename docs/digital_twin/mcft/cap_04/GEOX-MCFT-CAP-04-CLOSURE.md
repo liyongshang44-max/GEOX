@@ -8,6 +8,8 @@ delivery_slice_id: MCFT-CAP-04.CLOSURE-CANDIDATE-V1
 baseline_main_commit: 235c832d302a1917dbd557ba0adfe15587a44f50
 runtime_mode: REPLAY
 closure_kind: GOVERNANCE_ONLY_EVIDENCE_AGGREGATION
+activation_gate_workflow_run: 29256355374
+activation_gate_result: SUCCESS
 ```
 
 ## Objective
