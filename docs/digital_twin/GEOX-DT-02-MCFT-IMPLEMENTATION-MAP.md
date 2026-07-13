@@ -748,3 +748,17 @@ real PostgreSQL integration acceptance
 The 24-tick range, restart/backfill, route, web and scheduler remain outside S6.
 
 <!-- MCFT-CAP-04-S6-SINGLE-TICK-END -->
+
+## MCFT-CAP-04 S7 activation — 24-tick Forecast / Scenario range
+
+```text
+predecessor S6 merge commit: ea9ddfeeda88a3bb0a3b8abd3b821b8a3965dac3
+predecessor postmerge Gate: PASS (29245469293)
+active slice: MCFT-CAP-04.MCFT-04-07-09-10.TWENTY-FOUR-TICK-FORECAST-SCENARIO-RANGE-V1
+implementation branch: agent/mcft-cap-04-s7-twenty-four-tick-range-v1
+status: IMPLEMENTATION_AUTHORIZED
+Runtime source authorized: true
+S8 authorized: false
+```
+
+S7 is authorized only for the deterministic 24-tick Replay range. It does not authorize restart/backfill, routes, web, scheduler, recommendation, decision, AO-ACT, continuous Runtime or live-field claims.
