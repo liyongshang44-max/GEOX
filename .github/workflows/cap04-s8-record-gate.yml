@@ -1,0 +1,43 @@
+name: MCFT-CAP-04 S8 record Gate evidence
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  record:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-04-s8-restart-backfill-recovery-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-04-s8-restart-backfill-recovery-v1
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Record Gate evidence and remove temporary files
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path('docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S8-RESTART-BACKFILL-RECOVERY-STATUS.json')
+          data = json.loads(path.read_text(encoding='utf-8'))
+          validation = data.setdefault('candidate_validation', {})
+          validation['governance_final_gate'] = 'PASS'
+          validation['governance_final_gate_workflow_run'] = 29252432954
+          validation['repository_exact_head_ci'] = 'PASS_REQUIRED_BEFORE_MERGE'
+          validation['temporary_workflow_removed'] = True
+          validation['temporary_trigger_removed'] = True
+          path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+          PY
+          rm -f .github/workflows/cap04-s8-record-gate.yml
+          rm -f .cap04-s8-record-gate-trigger
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'gov(mcft-cap-04): record final S8 Gate evidence'
+          git push origin HEAD:agent/mcft-cap-04-s8-restart-backfill-recovery-v1
