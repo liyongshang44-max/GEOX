@@ -659,3 +659,36 @@ next delivery slice authorized: false
 Established: exact NO_ACTION Forecast copy; immediate 15/25 mm assumed irrigation; deterministic efficiency, stress, deltas and hashes; 24-tick/95-hour pure Scenario fixture. Canonical append, record-set builders and persistence remain outside S4.
 
 <!-- MCFT-CAP-04-S4-PURE-SCENARIO-MATH-END -->
+
+<!-- MCFT-CAP-04-S5A-A1-A2-BUILDERS-START -->
+
+## MCFT-CAP-04 S5A A1/A2 record-set-builder candidate
+
+```text
+baseline merged main: f0fc64d487ba6ed34d0c77178fed45e707092a07
+S4 status: MERGED_EFFECTIVE
+S4 postmerge workflow: 29226613070
+active delivery slice: MCFT-CAP-04.MCFT-02-07-08-09.A1-A2-RECORD-SET-BUILDERS-V1
+status: IMPLEMENTATION_CANDIDATE
+runtime_source_authorized: true
+next delivery slice: MCFT-CAP-04.MCFT-03-09-10.A1-A2-B-PERSISTENCE-UNIQUENESS-RECOVERY-V1
+next delivery slice authorized: false
+```
+
+Established in this bounded slice:
+
+```text
+pure A1 completed-Forecast eight-member builder
+pure A2 blocked-Forecast eight-member builder
+strict status/variant separation
+complete eight-member cross-reference validation
+shared cross-variant terminal uniqueness identity
+distinct operation and idempotency identities
+member and aggregate deterministic hashes
+Tick six-reference recovery root with no health_ref
+24-tick controlled builder fixture
+```
+
+Database access, persistence, uniqueness queries, recovery transactions, migrations, projections, routes and schedulers remain outside S5A.
+
+<!-- MCFT-CAP-04-S5A-A1-A2-BUILDERS-END -->

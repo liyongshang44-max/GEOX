@@ -5,9 +5,9 @@
   "delivery_slice_id": "MCFT-CAP-04.MCFT-06-10.PURE-THREE-SCENARIO-MATH-V1",
   "baseline_main_commit": "4a1c9fde05594c97fb949e062df77375a1a27365",
   "branch": "agent/mcft-cap-04-s4-pure-three-scenario-math-v1",
-  "status": "IMPLEMENTATION_CANDIDATE",
+  "status": "MERGED_EFFECTIVE",
   "design_status": "DESIGN_FROZEN",
-  "implementation_status": "IMPLEMENTED_PENDING_MERGE",
+  "implementation_status": "MERGED_EFFECTIVE",
   "activation_fields_status": "FROZEN",
   "explicit_activation_authority": "OWNER_EXPLICIT_AUTHORIZATION",
   "authorization_effective": true,
@@ -88,15 +88,28 @@
   ],
   "candidate_validation": {
     "materializer_workflow_run": 29226074731,
-    "recursive_typecheck": "PASS_REQUIRED",
-    "positive_scenario_math_acceptance": "PASS_REQUIRED",
-    "negative_scenario_math_acceptance": "PASS_REQUIRED",
-    "governance_final_gate": "PASS_REQUIRED",
-    "repository_exact_head_ci": "PASS_REQUIRED_BEFORE_MERGE",
-    "temporary_workflow_removed": true
+    "recursive_typecheck": "PASS",
+    "positive_scenario_math_acceptance": "PASS",
+    "negative_scenario_math_acceptance": "PASS",
+    "governance_final_gate": "PASS",
+    "repository_exact_head_ci": "PASS",
+    "temporary_workflow_removed": true,
+    "repository_exact_head_ci_run": 29226139264,
+    "postmerge_governance_gate": "PASS",
+    "postmerge_workflow_run": 29226613070
   },
   "effectiveness_condition": "S4_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S4_GATE_PASS",
-  "effectiveness_condition_satisfied": false,
+  "effectiveness_condition_satisfied": true,
   "next_delivery_slice_id": "MCFT-CAP-04.MCFT-02-07-08-09.A1-A2-RECORD-SET-BUILDERS-V1",
-  "next_delivery_slice_authorized": false
+  "next_delivery_slice_authorized": false,
+  "merge_evidence": {
+    "pr_number": 2390,
+    "exact_head_commit": "02faa691cfa83624e28664fee7b3fbf0ed7dfd36",
+    "exact_head_ci_run": 29226139264,
+    "merge_commit": "f0fc64d487ba6ed34d0c77178fed45e707092a07",
+    "postmerge_probe_pr_number": 2391,
+    "postmerge_workflow_run": 29226613070,
+    "postmerge_gate": "PASS",
+    "effectiveness_condition_satisfied": true
+  }
 }
