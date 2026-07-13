@@ -1,0 +1,48 @@
+name: MCFT-CAP-04 S10C evidence retry
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  retry:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-04-s10c-evidence-reconciliation-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-04-s10c-evidence-reconciliation-v1
+          fetch-depth: 0
+      - name: Extract, patch and run S10C materializer
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          p=Path('.github/workflows/mcft-cap-04-s10c-evidence-materializer.yml')
+          text=p.read_text()
+          start_marker="          node <<'NODE'\n"
+          end_marker="\n          NODE"
+          start=text.index(start_marker)+len(start_marker)
+          end=text.index(end_marker,start)
+          script=text[start:end]
+          script='\n'.join(line[10:] if line.startswith('          ') else line for line in script.splitlines())+'\n'
+          old="check(x.effectiveness_condition_satisfied===false,'effectiveness false')"
+          new="if(Object.prototype.hasOwnProperty.call(x,'effectiveness_condition_satisfied'))check(x.effectiveness_condition_satisfied===false,'effectiveness false')"
+          if old not in script:
+              raise SystemExit('PATCH_TARGET_NOT_FOUND')
+          Path('/tmp/mcft-cap04-s10c-materializer.js').write_text(script.replace(old,new))
+          PY
+          node /tmp/mcft-cap04-s10c-materializer.js
+          rm -f .github/workflows/mcft-cap-04-s10c-evidence-materializer.yml
+          rm -f .github/workflows/mcft-cap-04-s10c-evidence-retry.yml
+          node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_FINALIZATION_EFFECTIVENESS.cjs
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "governance(mcft-cap-04): materialize S10C evidence reconciliation"
+          git push origin HEAD:agent/mcft-cap-04-s10c-evidence-reconciliation-v1
