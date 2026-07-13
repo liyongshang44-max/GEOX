@@ -4,8 +4,8 @@
   "status": "COMPLETE",
   "baseline": {
     "branch": "main",
-    "commit": "13f8bf3231cb41c809d235096ca7cfda9e201944",
-    "meaning": "MCFT-CAP-04 S1 merged-main effective; bounded S2 Future Forcing implementation candidate active"
+    "commit": "4a8dab632246b05266f1d869f6c9a0a5bcf37e76",
+    "meaning": "MCFT-CAP-04 S2 merged-main effective; bounded S3 pure 72-hour Forecast math implementation candidate active"
   },
   "identifier_model": {
     "capability_line_id": "vertical executable capability closure unit",
@@ -1575,8 +1575,8 @@
         "MCFT-17",
         "MCFT-18"
       ],
-      "active_delivery_slice_id": "MCFT-CAP-04.MCFT-05-09.FUTURE-FORCING-WINDOW-V1",
-      "next_delivery_slice_id": "MCFT-CAP-04.MCFT-06-09.PURE-72H-FORECAST-MATH-V1",
+      "active_delivery_slice_id": "MCFT-CAP-04.MCFT-06-09.PURE-72H-FORECAST-MATH-V1",
+      "next_delivery_slice_id": "MCFT-CAP-04.MCFT-06-10.PURE-THREE-SCENARIO-MATH-V1",
       "next_delivery_slice_authorized": false,
       "task_ref": "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-TASK.md",
       "p0_status_ref": "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-P0-STATUS.json",
@@ -1739,7 +1739,7 @@
           ],
           "baseline_main_commit": "13f8bf3231cb41c809d235096ca7cfda9e201944",
           "branch": "agent/mcft-cap-04-s2-future-forcing-window-v1",
-          "status": "IMPLEMENTATION_CANDIDATE",
+          "status": "MERGED_EFFECTIVE",
           "activation_fields_status": "FROZEN",
           "runtime_source_authorized": true,
           "allowed_claims": [],
@@ -1781,7 +1781,10 @@
             "scripts/runtime_acceptance/mcft_cap_04_future_forcing_fixture_v1.ts"
           ],
           "effectiveness_condition": "S2_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S2_GATE_PASS",
-          "effectiveness_condition_satisfied": false
+          "effectiveness_condition_satisfied": true,
+          "merge_commit": "4a8dab632246b05266f1d869f6c9a0a5bcf37e76",
+          "postmerge_workflow_run": 29223899742,
+          "postmerge_gate": "PASS"
         },
         {
           "delivery_slice_id": "MCFT-CAP-04.MCFT-06-09.PURE-72H-FORECAST-MATH-V1",
@@ -1789,11 +1792,11 @@
           "depends_on_delivery_slice_ids": [
             "MCFT-CAP-04.MCFT-05-09.FUTURE-FORCING-WINDOW-V1"
           ],
-          "baseline_main_commit": null,
-          "branch": null,
-          "status": "BLOCKED",
-          "activation_fields_status": "TO_BE_FROZEN_AT_SLICE_ACTIVATION",
-          "runtime_source_authorized": false,
+          "baseline_main_commit": "4a8dab632246b05266f1d869f6c9a0a5bcf37e76",
+          "branch": "agent/mcft-cap-04-s3-pure-72h-forecast-math-v1",
+          "status": "IMPLEMENTATION_CANDIDATE",
+          "activation_fields_status": "FROZEN",
+          "runtime_source_authorized": true,
           "allowed_claims": [],
           "preserved_nonclaims": [
             "NO_MCFT_CAP_04_RUNTIME_SOURCE_AUTHORIZATION",
@@ -1816,8 +1819,23 @@
             "NO_MCFT_GATE_A_CLOSURE",
             "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM"
           ],
-          "exact_changed_file_boundary": [],
-          "effectiveness_condition": "PREDECESSOR_SLICE_MERGED_AND_MERGED_MAIN_GATE_PASS_AND_EXPLICIT_SLICE_ACTIVATION",
+          "exact_changed_file_boundary": [
+            "apps/server/src/domain/twin_runtime/forecast_math_contracts_v1.ts",
+            "apps/server/src/domain/twin_runtime/pure_72h_forecast_math_v1.ts",
+            "docs/digital_twin/GEOX-DT-02-MCFT-IMPLEMENTATION-MAP.md",
+            "docs/digital_twin/GEOX-MCFT-VERTICAL-CAPABILITY-LINE-MATRIX.json",
+            "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-AUTHORIZATION-STATUS.json",
+            "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-DELIVERY-SLICE-STATUS.json",
+            "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-FORECAST-MATH-CONTRACT.json",
+            "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-PURE-72H-FORECAST-MATH-V1.md",
+            "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S2-FUTURE-FORCING-STATUS.json",
+            "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S3-PURE-FORECAST-MATH-STATUS.json",
+            "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_04_S3_PURE_FORECAST_MATH.cjs",
+            "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH.ts",
+            "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_PURE_FORECAST_MATH_NEGATIVE.ts",
+            "scripts/runtime_acceptance/mcft_cap_04_forecast_math_fixture_v1.ts"
+          ],
+          "effectiveness_condition": "S3_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S3_GATE_PASS",
           "effectiveness_condition_satisfied": false
         },
         {
@@ -2159,10 +2177,11 @@
       "authorization_merge_commit": "870bcc621e8d0495ae5acbedd534068a18d402b9",
       "authorization_postmerge_workflow_run": 29207138083,
       "s1_status_ref": "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S1-CONTRACTS-CONFIG-STATUS.json",
-      "latest_effective_slice_id": "MCFT-CAP-04.MCFT-02-07-09-10.FORECAST-SCENARIO-CONTRACTS-CONFIG-V1",
-      "latest_effective_slice_merge_commit": "13f8bf3231cb41c809d235096ca7cfda9e201944",
-      "latest_effective_slice_postmerge_workflow_run": 29222992520,
-      "s2_status_ref": "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S2-FUTURE-FORCING-STATUS.json"
+      "latest_effective_slice_id": "MCFT-CAP-04.MCFT-05-09.FUTURE-FORCING-WINDOW-V1",
+      "latest_effective_slice_merge_commit": "4a8dab632246b05266f1d869f6c9a0a5bcf37e76",
+      "latest_effective_slice_postmerge_workflow_run": 29223899742,
+      "s2_status_ref": "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S2-FUTURE-FORCING-STATUS.json",
+      "s3_status_ref": "docs/digital_twin/mcft/cap_04/GEOX-MCFT-CAP-04-S3-PURE-FORECAST-MATH-STATUS.json"
     }
   ],
   "actual_owner_work_package_statuses": {
@@ -2209,5 +2228,5 @@
     "MCFT-08": "PARTIALLY_ESTABLISHED",
     "MCFT-09": "PARTIALLY_ESTABLISHED"
   },
-  "latest_governance_update": "MCFT-CAP-04.MCFT-05-09.FUTURE-FORCING-WINDOW-V1"
+  "latest_governance_update": "MCFT-CAP-04.MCFT-06-09.PURE-72H-FORECAST-MATH-V1"
 }

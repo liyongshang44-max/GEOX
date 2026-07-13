@@ -608,3 +608,35 @@ forcing_window_hash over complete 72-point DTO
 Forecast equations, Scenario equations, persistence, migration, projection, route and scheduler remain outside S2.
 
 <!-- MCFT-CAP-04-S2-FUTURE-FORCING-END -->
+
+<!-- MCFT-CAP-04-S3-PURE-FORECAST-MATH-START -->
+
+## MCFT-CAP-04 S3 pure 72-hour Forecast math implementation candidate
+
+```text
+baseline merged main: 4a8dab632246b05266f1d869f6c9a0a5bcf37e76
+S2 status: MERGED_EFFECTIVE
+S2 postmerge workflow: 29223899742
+active delivery slice: MCFT-CAP-04.MCFT-06-09.PURE-72H-FORECAST-MATH-V1
+status: IMPLEMENTATION_CANDIDATE
+runtime_source_authorized: true
+next delivery slice: MCFT-CAP-04.MCFT-06-10.PURE-THREE-SCENARIO-MATH-V1
+next delivery slice authorized: false
+```
+
+Established in this bounded slice:
+
+```text
+NO_NEW_IRRIGATION pure Forecast adapter
+72 hourly fixed-point mean propagation
+exact zero mass-balance error
+10^-12 storage variance chain
+controlled uncalibrated 95% storage interval
+physical storage and interval bounds
+point semantic hash, trajectory hash and forecast math hash
+24-tick / 95-hour controlled Replay Forecast-math fixture
+```
+
+Scenario equations, canonical append, persistence, migration, projection, route and scheduler remain outside S3.
+
+<!-- MCFT-CAP-04-S3-PURE-FORECAST-MATH-END -->

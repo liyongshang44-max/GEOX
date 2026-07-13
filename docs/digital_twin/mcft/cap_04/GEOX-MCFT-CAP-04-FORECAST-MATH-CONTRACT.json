@@ -1,0 +1,45 @@
+{
+  "schema_version": "geox_mcft_cap_04_forecast_math_contract_v1",
+  "contract_id": "MCFT_CAP_04_PURE_72H_FORECAST_MATH_V1",
+  "delivery_slice_id": "MCFT-CAP-04.MCFT-06-09.PURE-72H-FORECAST-MATH-V1",
+  "baseline_assumption": "NO_NEW_IRRIGATION",
+  "forecast_method_id": "ROOT_ZONE_WATER_BALANCE_72H_FIXED_POINT_V1",
+  "forecast_method_version": "1",
+  "uncertainty_method_id": "ADDITIVE_STORAGE_VARIANCE_ZERO_COVARIANCE_V1",
+  "interval_method_id": "NORMAL_95_PERCENT_Z_1_96_V1",
+  "interval_semantics": "CONTROLLED_UNCALIBRATED_NORMAL_APPROXIMATION",
+  "point_count": 72,
+  "step_hours": 1,
+  "valid_interval": "(T,T+72H]",
+  "mean_internal_scale": 6,
+  "variance_internal_scale": 12,
+  "published_decimal_places": 6,
+  "rounding_rule": "DECIMAL_HALF_AWAY_FROM_ZERO_V1",
+  "mass_balance_error_required": "0.000000",
+  "source_variance_authority": "SOURCE_POSTERIOR_COMPUTATION_BASIS_STORAGE_VARIANCE_MM2_DECIMAL",
+  "physical_bounds": {
+    "storage_lower_mm": "0.000000",
+    "storage_upper_authority": "RUNTIME_CONFIG_SATURATION_STORAGE_MM",
+    "latent_variance_reduced_by_clipping": false
+  },
+  "hourly_variance_components": [
+    "rainfall_variance_mm2",
+    "crop_et_variance_mm2",
+    "baseline_irrigation_variance_mm2",
+    "structural_variance_mm2"
+  ],
+  "baseline_irrigation_variance_mm2": "0.000000000000",
+  "deterministic_hashes": [
+    "point_semantic_hash",
+    "trajectory_hash",
+    "forecast_math_hash"
+  ],
+  "standard_fixture": {
+    "first_logical_time": "2026-06-03T02:00:00.000Z",
+    "last_logical_time": "2026-06-04T01:00:00.000Z",
+    "tick_count": 24,
+    "target_union_start": "2026-06-03T03:00:00.000Z",
+    "target_union_end": "2026-06-07T01:00:00.000Z",
+    "target_union_hour_count": 95
+  }
+}
