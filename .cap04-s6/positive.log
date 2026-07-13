@@ -1,0 +1,6 @@
+Error: ASSIMILATED_CONFIG_PURPOSE_MISMATCH
+    at exactV1 (/home/runner/work/GEOX/GEOX/apps/server/src/domain/twin_runtime/assimilated_continuation_runtime_config_v2.ts:194:34)
+    at validateAssimilatedContinuationRuntimeConfigPayloadV2 (/home/runner/work/GEOX/GEOX/apps/server/src/domain/twin_runtime/assimilated_continuation_runtime_config_v2.ts:210:3)
+    at buildAssimilatedContinuationRecordSetV2 (/home/runner/work/GEOX/GEOX/apps/server/src/runtime/twin_runtime/assimilated_continuation_record_set_builder_v2.ts:272:3)
+    at Cap04ForecastScenarioSingleTickServiceV1.executeOneTick (/home/runner/work/GEOX/GEOX/apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts:407:31)
+    at async main (/home/runner/work/GEOX/GEOX/scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION.ts:33:20)

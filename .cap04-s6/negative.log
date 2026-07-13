@@ -1,0 +1,14 @@
+PASS requested T must equal the persisted next logical tick
+PASS wrong logical time fails before Evidence, lease and persistence
+PASS new tick rejects a forged Runtime Config hash pin
+PASS forged Runtime Config hash fails before Evidence and lease
+PASS Future Forcing binding authority is mandatory
+PASS missing forcing authority fails before handoff and Config reads
+PASS crop-stage configuration matrix drift is rejected
+PASS crop-stage matrix drift fails before Evidence and lease
+Error: ASSIMILATED_CONFIG_PURPOSE_MISMATCH
+    at exactV1 (/home/runner/work/GEOX/GEOX/apps/server/src/domain/twin_runtime/assimilated_continuation_runtime_config_v2.ts:194:34)
+    at validateAssimilatedContinuationRuntimeConfigPayloadV2 (/home/runner/work/GEOX/GEOX/apps/server/src/domain/twin_runtime/assimilated_continuation_runtime_config_v2.ts:210:3)
+    at buildAssimilatedContinuationRecordSetV2 (/home/runner/work/GEOX/GEOX/apps/server/src/runtime/twin_runtime/assimilated_continuation_record_set_builder_v2.ts:272:3)
+    at Cap04ForecastScenarioSingleTickServiceV1.executeOneTick (/home/runner/work/GEOX/GEOX/apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts:407:31)
+    at async main (/home/runner/work/GEOX/GEOX/scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_SINGLE_TICK_INTEGRATION_NEGATIVE.ts:86:3)

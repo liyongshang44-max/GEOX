@@ -320,6 +320,12 @@ export class Cap04ForecastScenarioSingleTickServiceV1 {
     const aExistedInitially = aRecordSet !== null;
     if (aRecordSet) {
       validateCap04ARecordSetV1(aRecordSet);
+      if (aRecordSet.aggregate_identity_input.runtime_config_ref !== runtimeConfigRef) {
+        throw new Error("CAP04_SINGLE_TICK_RUNTIME_CONFIG_REF_PIN_MISMATCH");
+      }
+      if (aRecordSet.aggregate_identity_input.runtime_config_hash !== runtimeConfigHash) {
+        throw new Error("CAP04_SINGLE_TICK_RUNTIME_CONFIG_HASH_PIN_MISMATCH");
+      }
       const existingForecast = memberV1(aRecordSet, "twin_forecast_run_v1");
       const existingB = await this.persistence.readScenarioSetBySourceForecast(existingForecast.object_id, existingForecast.determinism_hash);
       if (existingB) {
