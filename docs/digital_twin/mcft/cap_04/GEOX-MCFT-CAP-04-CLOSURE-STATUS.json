@@ -7,12 +7,12 @@
   "delivery_slice_id": "MCFT-CAP-04.CLOSURE-CANDIDATE-V1",
   "runtime_mode": "REPLAY",
   "target_completion_level": "Level A — Deterministic Replay Twin",
-  "baseline_main_commit": "a6a07840efe080198233b39ec9a31d26c2e3f4f9",
+  "baseline_main_commit": "e39ac16f83e4f5e5c4762a25589dce275c853f1a",
   "activation_branch": "agent/mcft-cap-04-s9-closure-activation-v1",
   "implementation_branch": "agent/mcft-cap-04-s9-closure-candidate-v1",
-  "status": "FINALIZATION_CANDIDATE",
+  "status": "MAIN_VERIFICATION_CANDIDATE",
   "activation_effective": true,
-  "implementation_status": "S10A_VALIDATED_PENDING_MERGE",
+  "implementation_status": "S10B_VALIDATED_PENDING_MERGE",
   "implementation_authorized": true,
   "closure_effective": false,
   "capability_status": "NOT_COMPLETE",
@@ -157,5 +157,17 @@
     "closure_postmerge_gate": "PASS",
     "closure_effectiveness_condition_satisfied": true
   },
-  "finalization_stage": "S10A_CANDIDATE"
+  "finalization_stage": "S10B_MAIN_VERIFICATION",
+  "s10a_effectiveness": {
+    "pr_number": 2410,
+    "exact_head_commit": "08667e5639462f88f0763c7ec2ec5454dc43d436",
+    "exact_head_ci_run": 29258989024,
+    "merge_commit": "e39ac16f83e4f5e5c4762a25589dce275c853f1a",
+    "head_to_merge_file_delta_count": 0,
+    "head_to_merge_tree_equivalence": "PASS",
+    "postmerge_probe_pr_number": 2412,
+    "postmerge_workflow_run": 29259503880,
+    "postmerge_gate": "PASS",
+    "effectiveness_condition_satisfied": true
+  }
 }
