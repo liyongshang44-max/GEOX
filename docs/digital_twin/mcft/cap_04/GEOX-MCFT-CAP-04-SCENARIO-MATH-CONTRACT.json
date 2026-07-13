@@ -1,0 +1,44 @@
+{
+  "schema_version": "geox_mcft_cap_04_scenario_math_contract_v1",
+  "contract_id": "MCFT_CAP_04_PURE_THREE_SCENARIO_MATH_V1",
+  "delivery_slice_id": "MCFT-CAP-04.MCFT-06-10.PURE-THREE-SCENARIO-MATH-V1",
+  "scenario_policy_id": "THREE_OPTION_IRRIGATION_SCENARIO_POLICY_V1",
+  "option_order": [
+    "NO_ACTION",
+    "IRRIGATE_NOW_15MM",
+    "IRRIGATE_NOW_25MM"
+  ],
+  "trajectory_point_count_per_option": 72,
+  "no_action_mode": "EXACT_SOURCE_FORECAST_POINTS_DEEP_COPY",
+  "irrigation_options_mm": [
+    "15.000000",
+    "25.000000"
+  ],
+  "application_horizon": 1,
+  "application_interval": "(T,T+PT1H]",
+  "epistemic_status": "ASSUMED",
+  "execution_status": "NOT_EXECUTED",
+  "application_efficiency_policy_id": "CONTROLLED_SCENARIO_APPLICATION_EFFICIENCY_V1",
+  "application_efficiency_fraction": "1.000000",
+  "scenario_assumed_irrigation_variance_mm2": "0.000000",
+  "stress_threshold_policy_id": "CONTROLLED_AWF_STRESS_THRESHOLD_V1",
+  "stress_threshold": "0.350000",
+  "stress_comparator": "STRICT_LESS_THAN",
+  "forcing_reselection_forbidden": true,
+  "fake_execution_authority_forbidden": true,
+  "difference_from_no_action_fields": [
+    "final_storage_delta_mm",
+    "minimum_awf_delta",
+    "stress_hour_count_delta",
+    "total_irrigation_delta_mm",
+    "total_drainage_delta_mm",
+    "total_overflow_delta_mm"
+  ],
+  "standard_fixture": {
+    "tick_count": 24,
+    "option_count_per_tick": 3,
+    "target_union_hour_count": 95,
+    "target_union_start": "2026-06-03T03:00:00.000Z",
+    "target_union_end": "2026-06-07T01:00:00.000Z"
+  }
+}
