@@ -1,0 +1,54 @@
+{
+  "schema_version": "geox_mcft_cap_04_persistence_matrix_v1",
+  "delivery_slice_id": "MCFT-CAP-04.MCFT-03-09-10.A1-A2-B-PERSISTENCE-UNIQUENESS-RECOVERY-V1",
+  "canonical_store": {
+    "authority": "public.facts",
+    "append_only": true,
+    "second_canonical_store_forbidden": true
+  },
+  "additive_migration": {
+    "count": 1,
+    "path": "apps/server/db/migrations/2026_07_13_mcft_cap_04_forecast_scenario_persistence.sql"
+  },
+  "transactions": {
+    "A1": {
+      "atomic": true,
+      "canonical_fact_count": 8,
+      "identity_kind": "A1_RECORD_SET"
+    },
+    "A2": {
+      "atomic": true,
+      "canonical_fact_count": 8,
+      "identity_kind": "A2_RECORD_SET"
+    },
+    "B": {
+      "atomic": true,
+      "canonical_fact_count": 1,
+      "identity_kind": "B_SCENARIO_SET"
+    }
+  },
+  "guards": {
+    "cross_variant_terminal_tick_uniqueness": "twin_terminal_tick_uniqueness_v1",
+    "scenario_set_canonical_uniqueness": "twin_scenario_set_uniqueness_v1",
+    "idempotency": "twin_object_idempotency_index_v1",
+    "lease_and_fencing": "twin_runtime_lease_v1"
+  },
+  "projections": {
+    "authoritative_projection_family": "twin_runtime_forecast_scenario_v1",
+    "rebuildable": true,
+    "canonical_truth": false,
+    "tables": [
+      "twin_forecast_run_projection_v1",
+      "twin_forecast_point_projection_v1",
+      "twin_scenario_set_projection_v1",
+      "twin_scenario_point_projection_v1",
+      "twin_scenario_latest_index_v1"
+    ],
+    "legacy_root_zone_irrigation_scenario_set_index_v1": "COMPATIBILITY_ONLY_NOT_WRITE_AUTHORITY"
+  },
+  "recovery": {
+    "a_record_set_root": "twin_runtime_tick_v1 plus idempotency member map",
+    "pending_scenario_detection": "latest successful Forecast without Scenario uniqueness row",
+    "projection_rebuild_source": "append-only canonical facts plus idempotency guards"
+  }
+}

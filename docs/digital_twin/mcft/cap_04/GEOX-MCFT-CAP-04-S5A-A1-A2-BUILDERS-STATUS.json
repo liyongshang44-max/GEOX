@@ -5,9 +5,9 @@
   "delivery_slice_id": "MCFT-CAP-04.MCFT-02-07-08-09.A1-A2-RECORD-SET-BUILDERS-V1",
   "baseline_main_commit": "f0fc64d487ba6ed34d0c77178fed45e707092a07",
   "branch": "agent/mcft-cap-04-s5a-a1-a2-record-set-builders-v1",
-  "status": "IMPLEMENTATION_CANDIDATE",
+  "status": "MERGED_EFFECTIVE",
   "design_status": "DESIGN_FROZEN",
-  "implementation_status": "IMPLEMENTED_PENDING_MERGE",
+  "implementation_status": "MERGED_EFFECTIVE",
   "activation_fields_status": "FROZEN",
   "explicit_activation_authority": "OWNER_EXPLICIT_AUTHORIZATION",
   "authorization_effective": true,
@@ -81,16 +81,29 @@
   ],
   "candidate_validation": {
     "materializer_workflow_run": 29227526346,
-    "recursive_typecheck": "PASS_REQUIRED",
-    "positive_a1_a2_builder_acceptance": "PASS_REQUIRED",
-    "negative_a1_a2_builder_acceptance": "PASS_REQUIRED",
-    "governance_final_gate": "PASS_REQUIRED",
-    "repository_exact_head_ci": "PASS_REQUIRED_BEFORE_MERGE",
+    "recursive_typecheck": "PASS",
+    "positive_a1_a2_builder_acceptance": "PASS",
+    "negative_a1_a2_builder_acceptance": "PASS",
+    "governance_final_gate": "PASS",
+    "repository_exact_head_ci": "PASS",
     "temporary_workflow_removed": true,
-    "temporary_diagnostic_evidence_removed": true
+    "temporary_diagnostic_evidence_removed": true,
+    "repository_exact_head_ci_run": 29227610603,
+    "postmerge_governance_gate": "PASS",
+    "postmerge_workflow_run": 29228386162
   },
   "effectiveness_condition": "S5A_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S5A_GATE_PASS",
-  "effectiveness_condition_satisfied": false,
+  "effectiveness_condition_satisfied": true,
   "next_delivery_slice_id": "MCFT-CAP-04.MCFT-03-09-10.A1-A2-B-PERSISTENCE-UNIQUENESS-RECOVERY-V1",
-  "next_delivery_slice_authorized": false
+  "next_delivery_slice_authorized": true,
+  "merge_evidence": {
+    "pr_number": 2392,
+    "exact_head_commit": "d8c9feefcf891147692bbcfb223813129578b825",
+    "exact_head_ci_run": 29227610603,
+    "merge_commit": "2c6a0834488f367eb927430a15c9590c1bf348a3",
+    "postmerge_probe_pr_number": 2393,
+    "postmerge_workflow_run": 29228386162,
+    "postmerge_gate": "PASS",
+    "effectiveness_condition_satisfied": true
+  }
 }

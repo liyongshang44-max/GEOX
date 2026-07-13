@@ -692,3 +692,26 @@ Tick six-reference recovery root with no health_ref
 Database access, persistence, uniqueness queries, recovery transactions, migrations, projections, routes and schedulers remain outside S5A.
 
 <!-- MCFT-CAP-04-S5A-A1-A2-BUILDERS-END -->
+
+<!-- MCFT-CAP-04-S5B-PERSISTENCE-START -->
+
+## MCFT-CAP-04 S5B persistence candidate
+
+```text
+baseline merged main: 2c6a0834488f367eb927430a15c9590c1bf348a3
+S5A status: MERGED_EFFECTIVE
+S5A postmerge workflow: 29228386162
+active delivery slice: MCFT-CAP-04.MCFT-03-09-10.A1-A2-B-PERSISTENCE-UNIQUENESS-RECOVERY-V1
+status: IMPLEMENTATION_CANDIDATE
+runtime_source_authorized: true
+next delivery slice: MCFT-CAP-04.MCFT-04-05-06-07-08-09-10.SINGLE-TICK-FORECAST-SCENARIO-INTEGRATION-V1
+next delivery slice authorized: false
+canonical store: public.facts
+additive migrations in S5B: 1
+```
+
+Established in this bounded slice: A1/A2/B atomic persistence, cross-variant terminal uniqueness, Scenario canonical uniqueness, idempotent readback, pending Scenario recovery detection, Forecast/Scenario projections, explicit projection rebuild and fault-injection rollback.
+
+No route, web, scheduler or tick orchestration is introduced.
+
+<!-- MCFT-CAP-04-S5B-PERSISTENCE-END -->
