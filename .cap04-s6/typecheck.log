@@ -4,9 +4,4 @@ apps/web typecheck$ pnpm -w exec tsc --noEmit -p apps/web/tsconfig.json
 apps/judge typecheck: Done
 apps/web typecheck: Done
 apps/server typecheck$ pnpm -w exec tsc --noEmit -p apps/server/tsconfig.json
-apps/server typecheck: apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts(147,80): error TS2304: Cannot find name 'Cap04ARecordSetBuilderSourceMembersV1'.
-apps/server typecheck: apps/server/src/runtime/twin_runtime/forecast_scenario_single_tick_service_v1.ts(158,10): error TS2304: Cannot find name 'Cap04ARecordSetBuilderSourceMembersV1'.
-apps/server typecheck: Failed
-/home/runner/work/GEOX/GEOX/apps/server:
- ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @geox/server@0.1.0 typecheck: `pnpm -w exec tsc --noEmit -p apps/server/tsconfig.json`
-Exit status 2
+apps/server typecheck: Done

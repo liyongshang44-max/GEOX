@@ -144,20 +144,6 @@ function memberV1(recordSet: Cap04ARecordSetV1, objectType: string): CanonicalOb
   return matches[0];
 }
 
-function sourceMembersV1(recordSet: { members: CanonicalObjectEnvelopeV1[] }): Cap04ARecordSetBuilderSourceMembersV1 {
-  const required = [
-    "twin_evidence_window_v1",
-    "twin_state_transition_v1",
-    "twin_assimilation_update_v1",
-    "twin_state_estimate_v1",
-  ] as const;
-  return Object.fromEntries(required.map((type) => {
-    const matches = recordSet.members.filter((member) => member.object_type === type);
-    if (matches.length !== 1) throw new Error(`CAP04_SINGLE_TICK_SOURCE_MEMBER_CARDINALITY:${type}`);
-    return [type, matches[0]];
-  })) as Cap04ARecordSetBuilderSourceMembersV1;
-}
-
 function executionCandidatesV1(window: AssimilatedContinuationEvidenceWindowV2): ExecutedIrrigationCandidateV1[] {
   return window.base_continuation_window.irrigation_execution_records.map((record) => ({
     binding_id: record.binding_id,
