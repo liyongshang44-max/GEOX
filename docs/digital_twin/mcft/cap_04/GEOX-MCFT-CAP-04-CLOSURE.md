@@ -11,6 +11,8 @@ runtime_mode: REPLAY
 closure_kind: GOVERNANCE_ONLY_EVIDENCE_AGGREGATION
 activation_merge_commit: 8a4e1b5a92b8b3fcc21ec77a6542743fd3a7b4c3
 activation_postmerge_gate_run: 29257014497
+materialization_closure_gate_run: 29257380586
+materialization_closure_gate_result: SUCCESS
 ```
 
 ## Candidate semantics
