@@ -1,0 +1,36 @@
+{
+  "schema_version": "mcft_cap_04_config_chain_expected_v1",
+  "fixture_id": "MCFT_CAP_04_CONFIG_CHAIN_EXPECTED",
+  "fixture_builder_ref": "scripts/runtime_acceptance/mcft_cap_04_contracts_config_fixture_v1.ts",
+  "acceptance_ref": "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_CONTRACTS_CONFIG.ts",
+  "runtime_mode": "REPLAY",
+  "config_count": 24,
+  "first_effective_logical_time": "2026-06-03T02:00:00.000Z",
+  "last_effective_logical_time": "2026-06-04T01:00:00.000Z",
+  "step_hours": 1,
+  "first_parent_authority": "MCFT_CAP_03_FINAL_RUNTIME_CONFIG",
+  "subsequent_parent_rule": "CONFIG_N_MINUS_1",
+  "expected_invariants": {
+    "same_scope_for_all_configs": true,
+    "same_reality_binding_for_all_configs": true,
+    "same_source_matrix_hash_for_all_configs": true,
+    "same_configuration_matrix_hash_for_all_configs": true,
+    "same_geometry_semantic_hash_for_all_configs": true,
+    "every_tick_pins_config_ref_and_hash": true,
+    "implicit_latest_selection": false,
+    "chain_gap": false,
+    "duplicate_effective_time": false,
+    "same_identity_different_payload": "IDEMPOTENCY_CONFLICT"
+  },
+  "required_policy_components": [
+    "forecast_method",
+    "future_forcing_pair_policy",
+    "future_forcing_policy",
+    "future_forcing_fallback_policy",
+    "uncertainty_propagation",
+    "forecast_interval",
+    "scenario_policy",
+    "scenario_application_efficiency_policy",
+    "stress_threshold_policy"
+  ]
+}
