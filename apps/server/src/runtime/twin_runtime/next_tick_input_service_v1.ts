@@ -1,6 +1,6 @@
 // apps/server/src/runtime/twin_runtime/next_tick_input_service_v1.ts
 // Purpose: reconstruct the next logical tick input exclusively from persisted PostgreSQL read state and immutable Runtime authority snapshots.
-// Boundary: application validation and DTO preparation only; no propagation, Forecast success, scheduler, route, web, filesystem, wall-clock, or canonical writes.
+// Boundary: application validation and DTO preparation only; the latest Forecast result and latest successful Forecast are independent persisted checkpoint pointers; no propagation, scheduler, route, web, filesystem, wall-clock, or canonical writes.
 
 import {
   WATER_AMOUNT_SCALE_V1,
@@ -275,10 +275,6 @@ export class PrepareNextTickInputServiceV1 {
       throw new Error("SUCCESSFUL_FORECAST_POINTER_INVALID");
     }
     const latestSuccessfulForecastRef = latestSuccessfulForecastRaw as string | null;
-    if (latestSuccessfulForecastRef !== null
-      && latestSuccessfulForecastRef !== previousForecastResultRef) {
-      throw new Error("SUCCESSFUL_FORECAST_POINTER_RESULT_MISMATCH");
-    }
 
     return {
       ...scope,
