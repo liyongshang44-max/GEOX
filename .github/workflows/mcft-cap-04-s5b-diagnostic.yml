@@ -33,6 +33,21 @@ jobs:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
 
+      - name: Apply diagnosed uniqueness-order fix
+        env:
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          if [ -f .cap04-s5b/fix_uniqueness_order.cjs ]; then
+            node .cap04-s5b/fix_uniqueness_order.cjs
+            rm -f .cap04-s5b/db.log
+            rmdir .cap04-s5b 2>/dev/null || true
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "fix(mcft-cap-04): enforce terminal uniqueness before predecessor CAS"
+            git push origin "HEAD:${HEAD_BRANCH}"
+          fi
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
