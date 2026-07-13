@@ -113,7 +113,7 @@ check(cap04.active_delivery_slice_id === S2 && cap04.next_delivery_slice_id === 
 
 for (const [file, markers] of Object.entries({
   'apps/server/src/domain/twin_runtime/future_forcing_contracts_v1.ts': ['MCFT_CAP_04_FUTURE_FORCING_WINDOW_V1','FORECAST_AT_T_SELECTS_LATEST_AVAILABLE_MATCHING_FORCING_CYCLE','forcing_window_hash'],
-  'apps/server/src/runtime/twin_runtime/future_forcing_selector_v1.ts': ['CONFLICTING_FORCING_SNAPSHOT','CONFLICTING_FORCING_CYCLE','FORCING_AVAILABLE_AFTER_LOGICAL_TIME','NO_COMPLETE_MATCHING_FORCING_CYCLE'],
+  'apps/server/src/runtime/twin_runtime/future_forcing_selector_v1.ts': ['CONFLICTING_FORCING_SNAPSHOT','CONFLICTING_FORCING_CYCLE','FORCING_AVAILABLE_AFTER_LOGICAL_TIME','CAP04_FUTURE_FORCING_BLOCK_REASON_V1'],
   'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_FUTURE_FORCING.ts': ['95-hour target union','exact Replay fixture'],
   'scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_04_FUTURE_FORCING_NEGATIVE.ts': ['future actual observations','cross-cycle stitching'],
 })) {
