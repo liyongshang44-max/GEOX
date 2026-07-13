@@ -1,0 +1,12 @@
+Scope: 15 of 16 workspace projects
+apps/judge typecheck$ pnpm -w exec tsc --noEmit -p apps/judge/tsconfig.json
+apps/web typecheck$ pnpm -w exec tsc --noEmit -p apps/web/tsconfig.json
+apps/judge typecheck: Done
+apps/web typecheck: Done
+apps/server typecheck$ pnpm -w exec tsc --noEmit -p apps/server/tsconfig.json
+apps/server typecheck: apps/server/src/domain/twin_runtime/pure_72h_forecast_math_v1.ts(116,62): error TS2551: Property 'crop_stage_context_ref' does not exist on type 'Cap04RuntimeConfigPayloadV1'. Did you mean 'crop_stage_context'?
+apps/server typecheck: apps/server/src/domain/twin_runtime/pure_72h_forecast_math_v1.ts(116,144): error TS2551: Property 'crop_stage_context_hash' does not exist on type 'Cap04RuntimeConfigPayloadV1'. Did you mean 'crop_stage_context'?
+apps/server typecheck: Failed
+/home/runner/work/GEOX/GEOX/apps/server:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @geox/server@0.1.0 typecheck: `pnpm -w exec tsc --noEmit -p apps/server/tsconfig.json`
+Exit status 2
