@@ -540,3 +540,38 @@ successor MCFT-CAP-05 authorized: false
 ```
 
 The S0 branch contains governance artifacts and isolated PostgreSQL predecessor proof only. Runtime implementation remains forbidden until S0 merges and its merged-main Authorization Gate passes.
+
+<!-- MCFT-CAP-04-S1-CONTRACTS-CONFIG-START -->
+
+## MCFT-CAP-04 S1 contracts/config implementation candidate
+
+```text
+baseline merged main: 870bcc621e8d0495ae5acbedd534068a18d402b9
+S0 authorization: MERGED_EFFECTIVE
+S0 postmerge workflow: 29207138083
+active delivery slice: MCFT-CAP-04.MCFT-02-07-09-10.FORECAST-SCENARIO-CONTRACTS-CONFIG-V1
+status: IMPLEMENTATION_CANDIDATE
+design_status: DESIGN_FROZEN
+implementation_status: IN_PROGRESS
+authorization_effective: true
+runtime_source_authorized: true
+next delivery slice: MCFT-CAP-04.MCFT-05-09.FUTURE-FORCING-WINDOW-V1
+next delivery slice authorized: false
+```
+
+Established in this bounded slice:
+
+```text
+A1: MCFT_CAP_04_COMPLETED_FORECAST_CONTINUATION_V1
+A2: MCFT_CAP_04_BLOCKED_FORECAST_CONTINUATION_V1
+B: MCFT_CAP_04_THREE_SCENARIO_SET_V1
+Forecast points: exact horizons 1..72
+Scenario options: NO_ACTION, IRRIGATE_NOW_15MM, IRRIGATE_NOW_25MM
+Runtime Config purpose: FORECAST_AND_THREE_SCENARIO_CONTINUATION_RUNTIME_V1
+Runtime Config chain: exactly 24 immutable D transactions
+validator dispatch: explicit contract ID + config purpose only
+```
+
+Future Forcing selection, Forecast math, Scenario math, A1/A2/B persistence, migration, projection, route and scheduler remain outside S1.
+
+<!-- MCFT-CAP-04-S1-CONTRACTS-CONFIG-END -->
