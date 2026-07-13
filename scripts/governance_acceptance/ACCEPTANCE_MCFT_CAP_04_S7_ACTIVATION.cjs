@@ -42,8 +42,8 @@ check(auth.active_delivery_slice_id === S7 && auth.repository_write_scope === 'S
 check(cap04.active_delivery_slice_id === S7 && cap04.implementation_status === 'S7_IMPLEMENTATION_AUTHORIZED', 'matrix active S7');
 check(same(s7.activation_pr_changed_file_boundary, FILES), 'activation boundary frozen');
 const changed = [...new Set([
-  ...git(['diff', '--name-only', BASELINE]),
-  ...git(['ls-files', '--others', '--exclude-standard']),
+  git(['diff', '--name-only', BASELINE]),
+  git(['ls-files', '--others', '--exclude-standard']),
 ].filter(Boolean).flatMap((x) => x.split(/\r?\n/).filter(Boolean)))].sort();
 check(same(changed, FILES), 'activation changed-file boundary exact');
 check(changed.every((f) => f.startsWith('docs/') || f.startsWith('scripts/governance_acceptance/')), 'activation is governance only');

@@ -762,4 +762,3 @@ S8 authorized: false
 ```
 
 S7 is authorized only for the deterministic 24-tick Replay range. It does not authorize restart/backfill, routes, web, scheduler, recommendation, decision, AO-ACT, continuous Runtime or live-field claims.
-
