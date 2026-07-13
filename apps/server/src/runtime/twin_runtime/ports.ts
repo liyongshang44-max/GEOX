@@ -81,7 +81,7 @@ export type PreparedNextTickInputV1 = TwinScopeKeyV1 & {
   previous_checkpoint_hash: string;
   previous_forecast_result_ref: string;
   previous_forecast_result_hash?: string;
-  latest_successful_forecast_ref: null;
+  latest_successful_forecast_ref: string | null;
   lineage_id: string;
   revision_id: string;
   prior_mean: number;

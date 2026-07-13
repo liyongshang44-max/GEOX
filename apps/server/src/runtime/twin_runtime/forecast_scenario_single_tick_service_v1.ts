@@ -17,6 +17,7 @@ import {
   WATER_AMOUNT_SCALE_V1,
 } from "../../domain/soil_water/fixed_point_water_decimal_v1.js";
 import type { CanonicalObjectEnvelopeV1 } from "../../domain/twin_runtime/canonical_object_contracts_v1.js";
+import { canonicalJsonV1 } from "../../domain/twin_runtime/canonical_json_v1.js";
 import {
   CAP04_A1_OPERATION_VARIANT_V1,
   type Cap04ForecastRunPayloadV1,
@@ -226,6 +227,7 @@ function assertConfigV1(input: {
   logical_time: string;
   handoff: PreparedNextTickInputV1;
   crop_stage_context: ContinuationCropStageConfigurationContextV1;
+  require_parent_match: boolean;
 }): Cap04RuntimeConfigPayloadV1 {
   if (input.config.object_id !== input.expected_ref) throw new Error("CAP04_SINGLE_TICK_RUNTIME_CONFIG_REF_PIN_MISMATCH");
   if (input.config.determinism_hash !== input.expected_hash) throw new Error("CAP04_SINGLE_TICK_RUNTIME_CONFIG_HASH_PIN_MISMATCH");
@@ -234,8 +236,9 @@ function assertConfigV1(input: {
   validateCap04RuntimeConfigPayloadV1(input.config.payload);
   const payload = input.config.payload as unknown as Cap04RuntimeConfigPayloadV1;
   if (payload.effective_logical_time !== input.logical_time) throw new Error("CAP04_SINGLE_TICK_RUNTIME_CONFIG_EFFECTIVE_TIME_MISMATCH");
-  if (payload.parent_runtime_config_ref !== input.handoff.previous_state_runtime_config_ref
-    || payload.parent_runtime_config_hash !== input.handoff.previous_state_runtime_config_hash) {
+  if (input.require_parent_match
+    && (payload.parent_runtime_config_ref !== input.handoff.previous_state_runtime_config_ref
+      || payload.parent_runtime_config_hash !== input.handoff.previous_state_runtime_config_hash)) {
     throw new Error("CAP04_SINGLE_TICK_PARENT_RUNTIME_CONFIG_MISMATCH");
   }
   if (payload.reality_binding_ref !== input.handoff.reality_binding_ref
@@ -246,6 +249,17 @@ function assertConfigV1(input: {
     throw new Error("CAP04_SINGLE_TICK_CROP_STAGE_CONFIGURATION_MATRIX_MISMATCH");
   }
   return payload;
+}
+
+function resolveCropStageV1(
+  context: ContinuationCropStageConfigurationContextV1,
+  logicalTime: string,
+): { stage_code: string; kc: number } {
+  const match = context.crop_stage_schedule.filter((entry) =>
+    entry.effective_from <= logicalTime && logicalTime < entry.effective_to
+  );
+  if (match.length !== 1) throw new Error("CAP04_SINGLE_TICK_CROP_STAGE_CARDINALITY");
+  return { stage_code: match[0].stage_code, kc: match[0].kc };
 }
 
 function assertNextHandoffV1(input: {
@@ -303,6 +317,7 @@ export class Cap04ForecastScenarioSingleTickServiceV1 {
       operation_variant: CAP04_A1_OPERATION_VARIANT_V1,
     });
     let aRecordSet = await this.persistence.lookupARecordSet(requestedIdentity.idempotency_key);
+    const aExistedInitially = aRecordSet !== null;
     if (aRecordSet) {
       validateCap04ARecordSetV1(aRecordSet);
       const existingForecast = memberV1(aRecordSet, "twin_forecast_run_v1");
@@ -338,6 +353,7 @@ export class Cap04ForecastScenarioSingleTickServiceV1 {
       logical_time: logicalTime,
       handoff: aRecordSet ? await this.handoffService.prepareNextTickInput(input.scope) : initialHandoff,
       crop_stage_context: input.crop_stage_context,
+      require_parent_match: !aRecordSet,
     });
 
     const candidateRecords = await this.evidenceSource.loadCandidateRecords({ scope: input.scope, logical_time: logicalTime });
@@ -503,6 +519,7 @@ export class Cap04ForecastScenarioSingleTickServiceV1 {
     } else {
       const canonicalState = memberV1(aRecordSet, "twin_state_estimate_v1");
       const existingForecast = memberV1(aRecordSet, "twin_forecast_run_v1");
+      const recoveredCropStage = resolveCropStageV1(input.crop_stage_context, logicalTime);
       const forcing = selectCap04FutureForcingWindowV1({
         scope: input.scope,
         logical_time: logicalTime,
@@ -511,8 +528,8 @@ export class Cap04ForecastScenarioSingleTickServiceV1 {
         crop_stage_context: {
           ref: config.crop_stage_context.context_ref,
           hash: config.crop_stage_context.context_hash,
-          crop_stage_code: input.crop_stage_context.stage_code,
-          kc: input.crop_stage_context.kc,
+          crop_stage_code: recoveredCropStage.stage_code,
+          kc: recoveredCropStage.kc,
         },
         runtime_config: { ref: runtimeConfig.object_id, hash: runtimeConfig.determinism_hash },
       });
@@ -528,7 +545,7 @@ export class Cap04ForecastScenarioSingleTickServiceV1 {
         runtime_config: { ref: runtimeConfig.object_id, hash: runtimeConfig.determinism_hash, payload: config },
         forcing_window: forcingWindow,
       });
-      if (JSON.stringify(forecastMath.forecast_payload) !== JSON.stringify(existingForecast.payload)) {
+      if (canonicalJsonV1(forecastMath.forecast_payload) !== canonicalJsonV1(existingForecast.payload)) {
         throw new Error("CAP04_SINGLE_TICK_RECOVERY_FORECAST_RECOMPUTE_MISMATCH");
       }
     }
@@ -545,7 +562,7 @@ export class Cap04ForecastScenarioSingleTickServiceV1 {
       created_at: input.created_at,
     });
     let bRecord = await this.persistence.lookupScenarioSet(scenarioCandidate.idempotency_key);
-    let recoveredPendingScenario = Boolean(aRecordSet && !bRecord && initialHandoff.next_logical_tick_time !== logicalTime);
+    const recoveredPendingScenario = aExistedInitially && bRecord === null;
     if (bRecord) {
       if (bRecord.aggregate_determinism_hash !== scenarioCandidate.aggregate_determinism_hash) throw new Error("IDEMPOTENCY_CONFLICT");
     } else {
