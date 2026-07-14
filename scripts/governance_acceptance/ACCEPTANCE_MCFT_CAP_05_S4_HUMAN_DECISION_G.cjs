@@ -78,16 +78,16 @@ check(contracts.includes("assumedIrrigationMm") && contracts.includes("CAP05_SCE
 check(contracts.includes("scenario_set_ref: scenarioSet.object_id") && contracts.includes("scenario_set_hash: scenarioSet.determinism_hash"), "option member hash includes exact Scenario ref/hash");
 check(authority.includes("Hashing the entire mutable option representation is not the v1 member-identity authority"), "authority document records cross-slice hash remediation");
 
-for (const rejection of [
-  "forged Evidence hash",
-  "forged selected-option hash",
-  "non-current Scenario",
-  "Evidence unavailable at decided_at",
-  "non-Human actor",
-  "different second Decision",
-  "wrong Reality scope",
-]) check(acceptance.includes(rejection), `PostgreSQL acceptance covers ${rejection}`);
-check(acceptance.includes("downstream_facts: 0") && acceptance.includes("Approval/Plan/Task/Action Feedback/State/checkpoint"), "acceptance proves no inferred downstream writes");
+for (const [needle, label] of [
+  ["forged Decision-request Evidence hash", "forged Evidence hash"],
+  ["forged selected-option hash", "forged selected-option hash"],
+  ["non-current Scenario", "non-current Scenario"],
+  ["Evidence unavailable at decided_at", "Evidence unavailable at decided_at"],
+  ["non-Human actor", "non-Human actor"],
+  ["second Decision with different selected option", "different second Decision"],
+  ["wrong Reality scope", "wrong Reality scope"],
+]) check(acceptance.includes(needle), `PostgreSQL acceptance covers ${label}`);
+check(acceptance.includes("downstream_facts: 0") && acceptance.includes("G commit infers no Approval, Plan, Task, Action Feedback, State or checkpoint write"), "acceptance proves no inferred downstream writes");
 check(acceptance.includes("EXISTING_IDEMPOTENT_SUCCESS") && acceptance.includes("CAP05_DECISION_IMMUTABLE_CONFLICT"), "retry and immutable conflict are tested");
 
 check(cap05?.active_delivery_slice_id === S4 && cap05?.implementation_status === "S4_IMPLEMENTATION_CANDIDATE", "global Matrix activates only S4 candidate");
