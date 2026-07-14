@@ -21,13 +21,13 @@ import {
 import { buildCap05FeedbackCycleProjectionV1 } from "../../apps/server/src/domain/twin_runtime/feedback_cycle_projection_v1.js";
 import {
   CAP05_CONFIG_CHAIN_LENGTH_V1,
-  CAP05_FORECAST_OBSERVATION_PROJECTION_METHOD_ID_V1,
   CAP05_RUNTIME_CONFIG_PURPOSE_V1,
   compileCap05RuntimeConfigChainV1,
   validateCap05RuntimeConfigPayloadV1,
   type Cap05RuntimeConfigPayloadV1,
 } from "../../apps/server/src/domain/twin_runtime/feedback_runtime_config_v1.js";
 import {
+  CAP05_FORECAST_OBSERVATION_PROJECTION_METHOD_ID_V1,
   buildCap05ForecastResidualV1,
   projectCap05ForecastPointToObservationV1,
 } from "../../apps/server/src/domain/twin_runtime/forecast_observation_residual_v1.js";
@@ -136,7 +136,7 @@ function scenarioSetFixture(): Cap04ScenarioSetEnvelopeV1 {
       ] as any,
       limitations: ["CONTROLLED_REPLAY_ONLY"],
     },
-  } as Cap04ScenarioSetEnvelopeV1;
+  } as unknown as Cap04ScenarioSetEnvelopeV1;
 }
 
 function forecastPointFixture(): Cap04ForecastPointV1 {

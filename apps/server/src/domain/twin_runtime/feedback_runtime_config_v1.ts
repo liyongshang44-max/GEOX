@@ -6,6 +6,7 @@ import type { CanonicalObjectEnvelopeV1 } from "./canonical_object_contracts_v1.
 import { computeMemberDeterminismHashV1, deriveSemanticObjectIdV1 } from "./canonical_identity_v1.js";
 import type { ContinuationScopeV1 } from "./continuation_operation_identity_v1.js";
 import {
+  CAP04_CONFIG_SELECTION_MODE_V1,
   CAP04_RUNTIME_CONFIG_PURPOSE_V1,
   compileCap04RuntimeConfigV1,
   type Cap04RuntimeConfigPayloadV1,
@@ -50,8 +51,9 @@ export const CAP05_RUNTIME_CONFIG_LIMITATIONS_V1 = [
   "NO_LIVE_FIELD_CLAIM",
 ] as const;
 
-export type Cap05RuntimeConfigPayloadV1 = Omit<Cap04RuntimeConfigPayloadV1, "config_purpose"> & {
+export type Cap05RuntimeConfigPayloadV1 = Omit<Cap04RuntimeConfigPayloadV1, "config_purpose" | "config_selection_mode"> & {
   config_purpose: typeof CAP05_RUNTIME_CONFIG_PURPOSE_V1;
+  config_selection_mode: typeof CAP05_CONFIG_SELECTION_MODE_V1;
   cap05_contract_ids: {
     human_decision: typeof CAP05_DECISION_CONTRACT_ID_V1;
     action_feedback: typeof CAP05_ACTION_FEEDBACK_CONTRACT_ID_V1;
@@ -138,7 +140,11 @@ export function validateCap05RuntimeConfigPayloadV1(payload: Cap05RuntimeConfigP
     cap05_limitations: _limitations,
     ...inherited
   } = payload;
-  validateCap04RuntimeConfigPayloadV1({ ...inherited, config_purpose: CAP04_RUNTIME_CONFIG_PURPOSE_V1 });
+  validateCap04RuntimeConfigPayloadV1({
+    ...inherited,
+    config_purpose: CAP04_RUNTIME_CONFIG_PURPOSE_V1,
+    config_selection_mode: CAP04_CONFIG_SELECTION_MODE_V1,
+  });
   assertConstantV1(payload.config_purpose, CAP05_RUNTIME_CONFIG_PURPOSE_V1, "CAP05_CONFIG_PURPOSE_MISMATCH");
   assertConstantV1(payload.config_selection_mode, CAP05_CONFIG_SELECTION_MODE_V1, "CAP05_CONFIG_SELECTION_MODE_MISMATCH");
   assertConstantV1(payload.cap05_contract_ids.human_decision, CAP05_DECISION_CONTRACT_ID_V1, "CAP05_DECISION_CONTRACT_ID_MISMATCH");
@@ -178,7 +184,7 @@ export function compileCap05RuntimeConfigV1(input: CompileCap05RuntimeConfigInpu
     geometry_semantic_hash: requiredStringV1(input.geometry_semantic_hash, "CAP05_GEOMETRY_HASH_REQUIRED"),
   });
   const inherited = inheritedConfig.payload as unknown as Cap04RuntimeConfigPayloadV1;
-  const { config_purpose: _purpose, ...inheritedPayload } = inherited;
+  const { config_purpose: _purpose, config_selection_mode: _selectionMode, ...inheritedPayload } = inherited;
   const payload: Cap05RuntimeConfigPayloadV1 = {
     ...inheritedPayload,
     config_purpose: CAP05_RUNTIME_CONFIG_PURPOSE_V1,

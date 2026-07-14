@@ -44,7 +44,7 @@ export function adaptCap05ActionFeedbackToExecutedIrrigationV1(
   }
   if (payload.source_quality === "FAIL") throw new Error("CAP05_ACTION_FEEDBACK_QUALITY_UNUSABLE");
 
-  const normalizedQuality = payload.source_quality === "FAIL" ? "UNUSABLE" : "USABLE";
+  const normalizedQuality: "USABLE" = "USABLE";
   const candidate: ExecutedIrrigationCandidateV1 = {
     binding_id: payload.binding_id,
     origin_source_id: payload.origin_source_id,
