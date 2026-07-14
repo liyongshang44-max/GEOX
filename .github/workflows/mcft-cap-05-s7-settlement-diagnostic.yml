@@ -1,0 +1,63 @@
+name: MCFT-CAP-05 S7 Settlement Diagnostic
+
+on:
+  push:
+    branches:
+      - agent/mcft-cap-05-s7-ssot-settlement-v1
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose-and-materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mcft-cap-05-s7-ssot-settlement-v1
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Extract and execute materializer
+        env:
+          PR_NUMBER: "2469"
+          MATERIALIZATION_WORKFLOW: "29340747976"
+        run: |
+          set -o pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import textwrap
+
+          source = Path('.github/workflows/mcft-cap-05-s7-settlement-materialize.yml').read_text(encoding='utf-8').splitlines()
+          start = next(i for i, line in enumerate(source) if "python - <<'PY'" in line) + 1
+          end = next(i for i in range(start, len(source)) if source[i].strip() == 'PY')
+          code = textwrap.dedent('\n'.join(source[start:end])) + '\n'
+          Path('/tmp/mcft_cap05_s7_materializer.py').write_text(code, encoding='utf-8')
+          PY
+
+          set +e
+          python /tmp/mcft_cap05_s7_materializer.py > /tmp/mcft_cap05_s7_materializer.log 2>&1
+          rc=$?
+          set -e
+
+          if [ "$rc" -ne 0 ]; then
+            git reset --hard HEAD
+            mkdir -p docs/digital_twin/mcft/cap_05
+            cp /tmp/mcft_cap05_s7_materializer.log docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S7-MATERIALIZER-ERROR.log
+            rm .github/workflows/mcft-cap-05-s7-settlement-materialize.yml
+            rm .github/workflows/mcft-cap-05-s7-settlement-diagnostic.yml
+            git config user.name "GEOX Governance Bot"
+            git config user.email "actions@users.noreply.github.com"
+            git add -A
+            git commit -m "chore(mcft-cap-05): record S7 settlement materializer failure"
+            git push origin HEAD:agent/mcft-cap-05-s7-ssot-settlement-v1
+            exit 0
+          fi
+
+          rm .github/workflows/mcft-cap-05-s7-settlement-materialize.yml
+          rm .github/workflows/mcft-cap-05-s7-settlement-diagnostic.yml
+          git config user.name "GEOX Governance Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "docs(mcft-cap-05): settle S7 effective and authorize S8"
+          git push origin HEAD:agent/mcft-cap-05-s7-ssot-settlement-v1
