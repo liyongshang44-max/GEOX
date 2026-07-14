@@ -81,7 +81,8 @@ docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-TASK.md'
           set -euo pipefail
           git rm -f \
             .github/workflows/mcft-cap-05-s6-refresh.yml \
-            .mcft_cap05_s6_refresh.py
+            .mcft_cap05_s6_refresh.py \
+            .mcft_cap05_s6_refresh_trigger
           git add -f \
             apps/server/src/domain/twin_runtime/action_feedback_to_executed_irrigation_v1.ts \
             apps/server/src/evidence/twin_runtime/execution_receipt_evidence_contract_v1.ts \
