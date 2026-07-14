@@ -181,7 +181,7 @@ function main(): void {
   assert.throws(() => validateCap05ForecastResidualV1(forged), /CAP05_RESIDUAL_PROJECTION_TRACE_HASH_MISMATCH/);
   ok("forged projection trace hash fails closed even with a recomputed envelope hash");
 
-  assert.equal(pass, 9);
+  assert.equal(pass, 10);
   console.log(`MCFT-CAP-05 S8 residual contract conformance: ${pass} PASS / 0 FAIL`);
 }
 
