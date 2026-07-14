@@ -1,0 +1,111 @@
+{
+  "schema_version": "geox_mcft_cap_05_persistence_matrix_v1",
+  "capability_line_id": "MCFT-CAP-05",
+  "delivery_slice_id": "MCFT-CAP-05.MCFT-03.PERSISTENCE-IDEMPOTENCY-RECOVERY-V1",
+  "canonical_store": "public.facts",
+  "canonical_store_count": 1,
+  "migration": {
+    "count": 1,
+    "path": "apps/server/db/migrations/2026_07_14_mcft_cap_05_feedback_persistence.sql",
+    "mode": "ADDITIVE",
+    "creates_second_canonical_store": false
+  },
+  "canonical_object_persistence": [
+    {
+      "object_type": "twin_decision_record_v1",
+      "transaction_family": "G_HUMAN_DECISION_LINK_COMMIT",
+      "identity_kind": "G_DECISION_RECORD",
+      "projection": "twin_decision_record_projection_v1"
+    },
+    {
+      "object_type": "twin_action_feedback_v1",
+      "transaction_family": "H_ACTION_FEEDBACK_COMMIT",
+      "identity_kind": "H_ACTION_FEEDBACK",
+      "projection": "twin_action_feedback_projection_v1",
+      "evidence_index": "twin_action_feedback_evidence_index_v1"
+    },
+    {
+      "object_type": "twin_forecast_residual_v1",
+      "transaction_family": "C_FORECAST_RESIDUAL_COMMIT",
+      "identity_kind": "C_FORECAST_RESIDUAL",
+      "projection": "twin_forecast_residual_projection_v1"
+    }
+  ],
+  "idempotency": {
+    "guard_table": "twin_object_idempotency_index_v1",
+    "same_key_same_hash": "EXISTING_IDEMPOTENT_SUCCESS",
+    "same_key_different_hash": "CAP05_IDEMPOTENCY_CONFLICT",
+    "canonical_fact_without_guard": "EXISTING_RECOVERED",
+    "guard_rebuild_source": "public.facts",
+    "fact_identity": "fact_<object_id>"
+  },
+  "rebuildable_projection_tables": [
+    "twin_decision_record_projection_v1",
+    "twin_action_feedback_projection_v1",
+    "twin_action_feedback_evidence_index_v1",
+    "twin_forecast_residual_projection_v1",
+    "twin_approved_plan_binding_projection_v1",
+    "twin_action_feedback_cycle_projection_v1"
+  ],
+  "approved_plan_binding": {
+    "source_record_type": "approved_irrigation_plan_snapshot_v1",
+    "source_store": "public.facts",
+    "projection_is_approval_authority": false,
+    "projection_is_canonical_history": false
+  },
+  "feedback_cycle": {
+    "materialization_rule": "COMPLETE_CANONICAL_GRAPH_ONLY",
+    "partial_cycle_projection_forbidden": true,
+    "required_trace": [
+      "decision",
+      "approval_assertion",
+      "approved_plan",
+      "dispatch_disposition",
+      "action_feedback",
+      "outcome_observation",
+      "forecast_residual",
+      "assimilation_update",
+      "updated_state"
+    ],
+    "causal_effect_authority": false
+  },
+  "transaction_atomicity": {
+    "fact_guard_projection_same_transaction": true,
+    "fault_after_projection_before_guard_rolls_back": true,
+    "projection_failure_rolls_back_fact": true,
+    "guard_failure_rolls_back_fact_and_projection": true
+  },
+  "recovery": {
+    "entrypoint": "PostgresFeedbackPersistenceRepositoryV1.rebuildAllSupportState",
+    "canonical_envelope_validation_required": true,
+    "determinism_hash_validation_required": true,
+    "projection_delete_then_rebuild_supported": true,
+    "guard_delete_then_rebuild_supported": true,
+    "duplicate_canonical_fact_creation": false
+  },
+  "postgresql_acceptance": {
+    "workflow": 29309606079,
+    "result": "SUCCESS",
+    "checks": [
+      "migration applies over inherited schema",
+      "G first write and retry",
+      "Decision semantic conflict rollback",
+      "H first write and Evidence-link projection",
+      "C first write and retry",
+      "fault-injection rollback",
+      "complete cycle projection",
+      "projection and guard deletion",
+      "facts-based full rebuild",
+      "no duplicate canonical facts"
+    ]
+  },
+  "forbidden": [
+    "canonical UPDATE",
+    "projection as historical truth",
+    "projection as approval authority",
+    "projection as causal-effect authority",
+    "second canonical object store",
+    "new DT-02 object type",
+    "new DT-02 transaction family"
+  ]
+}
