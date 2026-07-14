@@ -85,10 +85,8 @@ async function main() {
 
   run('git', ['update-ref', 'refs/remotes/origin/main', 'HEAD']);
   try {
-    // Exact-head-to-merge tree equivalence above is the postmerge-delta authority. Historical lifecycle gates run as static regressions because their own frozen baseline ranges intentionally remain non-empty on later main commits.
+    // Exact-head-to-merge tree equivalence above is the postmerge-delta authority. Earlier lifecycle gates retain their own frozen baseline ranges and are therefore verified through their Runtime regressions below rather than reinterpreted against a later main tree.
     run('node', ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S8_RESIDUAL_CONTRACT_REMEDIATION.cjs', '--auto']);
-    run('node', ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S7_SETTLEMENT.cjs', '--auto']);
-    run('node', ['scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S6_VALIDATION_ORTHOGONALITY_REMEDIATION.cjs', '--auto']);
   } finally {
     run('git', ['update-ref', 'refs/remotes/origin/main', MERGED_MAIN]);
   }
