@@ -2,7 +2,7 @@ name: MCFT-CAP-05 S5 initial validation
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize]
+    types: [opened, reopened, synchronize, ready_for_review]
     branches: [main]
 
 permissions:
@@ -45,70 +45,27 @@ jobs:
 
           repository = Path('apps/server/src/persistence/twin_runtime/postgres_feedback_persistence_repository_v1.ts')
           text = repository.read_text(encoding='utf-8')
-          text = text.replace(
-              '  buildCap05ApprovedPlanBindingProjectionRowV1,\n',
-              '',
-          )
-          text = text.replace(
-              '  type Cap05ApprovedPlanEvidenceV1,\n',
-              '',
-          )
+          text = text.replace('  buildCap05ApprovedPlanBindingProjectionRowV1,\n', '')
+          text = text.replace('  type Cap05ApprovedPlanEvidenceV1,\n', '')
           import_anchor = 'import {\n  buildCap05FeedbackCycleProjectionV1,'
-          new_import = 'import { PostgresApprovedPlanBindingRepositoryV1 } from "./postgres_approved_plan_binding_repository_v1.js";\n' + import_anchor
           if 'PostgresApprovedPlanBindingRepositoryV1' not in text:
               if import_anchor not in text:
                   raise SystemExit('feedback repository import anchor missing')
-              text = text.replace(import_anchor, new_import, 1)
+              text = text.replace(import_anchor, 'import { PostgresApprovedPlanBindingRepositoryV1 } from "./postgres_approved_plan_binding_repository_v1.js";\n' + import_anchor, 1)
 
-          old_plan_block = '''      const planFacts = await client.query(
-        `SELECT fact_id,record_json FROM facts
-         WHERE record_json->>'type'='approved_irrigation_plan_snapshot_v1'
-         ORDER BY fact_id`,
-      );
-      for (const row of planFacts.rows) {
-        const parsed = parseRecordJsonV1(row.fact_id, row.record_json);
-        const projection = buildCap05ApprovedPlanBindingProjectionRowV1(parsed.payload as Cap05ApprovedPlanEvidenceV1, row.fact_id);
-        await client.query(
-          `INSERT INTO twin_approved_plan_binding_projection_v1
-           (approved_plan_evidence_ref,approved_plan_evidence_hash,tenant_id,project_id,group_id,field_id,season_id,zone_id,
-            binding_id,approval_assertion_ref,approval_assertion_hash,decision_request_ref,decision_request_hash,
-            selected_option_ref,selected_option_hash,scenario_amount_mm,approved_amount_mm,plan_effective_from,plan_effective_to,
-            active_for_decision,canonical_evidence,source_fact_id)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18::timestamptz,$19::timestamptz,$20,$21::jsonb,$22)`,
-          [
-            projection.approved_plan_evidence_ref,projection.approved_plan_evidence_hash,projection.tenant_id,projection.project_id,
-            projection.group_id,projection.field_id,projection.season_id,projection.zone_id,projection.binding_id,
-            projection.approval_assertion_ref,projection.approval_assertion_hash,projection.decision_request_ref,projection.decision_request_hash,
-            projection.selected_option_ref,projection.selected_option_hash,projection.scenario_amount_mm,projection.approved_amount_mm,
-            projection.plan_effective_from,projection.plan_effective_to,projection.active_for_decision,
-            JSON.stringify(projection.canonical_evidence),projection.source_fact_id,
-          ],
-        );
-      }
-
-      const cycles = await this.rebuildCompleteFeedbackCyclesWithClientV1(client, objects);'''
-          new_plan_block = '''      const planRecovery = await new PostgresApprovedPlanBindingRepositoryV1(this.pool)
-        .rebuildAllBindingsWithClientV1(client);
-
-      const cycles = await this.rebuildCompleteFeedbackCyclesWithClientV1(client, objects);'''
-          if old_plan_block in text:
-              text = text.replace(old_plan_block, new_plan_block, 1)
+          start = text.find('      const planFacts = await client.query(')
+          end_marker = '      const cycles = await this.rebuildCompleteFeedbackCyclesWithClientV1(client, objects);'
+          end = text.find(end_marker, start)
+          if start >= 0 and end >= 0:
+              replacement = '''      const planRecovery = await new PostgresApprovedPlanBindingRepositoryV1(this.pool)\n        .rebuildAllBindingsWithClientV1(client);\n\n'''
+              text = text[:start] + replacement + text[end:]
           elif 'const planRecovery = await new PostgresApprovedPlanBindingRepositoryV1' not in text:
               raise SystemExit('feedback repository Plan recovery block missing')
+          text = text.replace('        approved_plan_bindings_rebuilt: planFacts.rows.length,', '        approved_plan_bindings_rebuilt: planRecovery.bindings_rebuilt,')
           text = text.replace(
-              '        approved_plan_bindings_rebuilt: planFacts.rows.length,',
-              '        approved_plan_bindings_rebuilt: planRecovery.bindings_rebuilt,',
+              '      const planEvidence = planResult.rows[0].canonical_evidence as Cap05ApprovedPlanEvidenceV1;\n      for (const residual of residuals) {',
+              '      const planCanonical = planResult.rows[0].canonical_evidence as Record<string, unknown>;\n      const validatedBinding = planCanonical.validated_binding as Record<string, unknown> | undefined;\n      if (!validatedBinding) continue;\n      for (const residual of residuals) {',
           )
-          old_cycle = '''      const planEvidence = planResult.rows[0].canonical_evidence as Cap05ApprovedPlanEvidenceV1;
-      for (const residual of residuals) {'''
-          new_cycle = '''      const planCanonical = planResult.rows[0].canonical_evidence as Record<string, unknown>;
-      const validatedBinding = planCanonical.validated_binding as Record<string, unknown> | undefined;
-      if (!validatedBinding) continue;
-      for (const residual of residuals) {'''
-          if old_cycle in text:
-              text = text.replace(old_cycle, new_cycle, 1)
-          elif 'const validatedBinding = planCanonical.validated_binding' not in text:
-              raise SystemExit('feedback repository cycle Plan trace block missing')
           text = text.replace(
               'approval_assertion_ref: requiredStringV1(planEvidence.canonical_payload.approval_assertion_ref, "CAP05_CYCLE_ASSERTION_REF_REQUIRED"),\n          approval_assertion_hash: requiredStringV1(planEvidence.canonical_payload.approval_assertion_hash, "CAP05_CYCLE_ASSERTION_HASH_REQUIRED"),',
               'approval_assertion_ref: requiredStringV1(validatedBinding.approval_assertion_ref, "CAP05_CYCLE_ASSERTION_REF_REQUIRED"),\n          approval_assertion_hash: requiredStringV1(validatedBinding.approval_assertion_hash, "CAP05_CYCLE_ASSERTION_HASH_REQUIRED"),',
@@ -117,18 +74,8 @@ jobs:
 
           regression = Path('scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_PERSISTENCE_RECOVERY_DB.ts')
           text = regression.read_text(encoding='utf-8')
-          old_insert = '''  await pool.query(
-    `INSERT INTO facts (fact_id,occurred_at,source,record_json)
-     VALUES ($1,$2::timestamptz,'mcft_cap05_replay_evidence_v1',$3::jsonb)`,
-    [`fact_${plan.source_record_id}`, plan.available_to_runtime_at, JSON.stringify({ type: plan.record_type, payload: plan })],
-  );'''
-          new_insert = '''  for (const evidence of [approval, plan]) {
-    await pool.query(
-      `INSERT INTO facts (fact_id,occurred_at,source,record_json)
-       VALUES ($1,$2::timestamptz,'mcft_cap05_replay_evidence_v1',$3::jsonb)`,
-      [`fact_${evidence.source_record_id}`, evidence.available_to_runtime_at, JSON.stringify({ type: evidence.record_type, payload: evidence })],
-    );
-  }'''
+          old_insert = '''  await pool.query(\n    `INSERT INTO facts (fact_id,occurred_at,source,record_json)\n     VALUES ($1,$2::timestamptz,'mcft_cap05_replay_evidence_v1',$3::jsonb)`,\n    [`fact_${plan.source_record_id}`, plan.available_to_runtime_at, JSON.stringify({ type: plan.record_type, payload: plan })],\n  );'''
+          new_insert = '''  for (const evidence of [approval, plan]) {\n    await pool.query(\n      `INSERT INTO facts (fact_id,occurred_at,source,record_json)\n       VALUES ($1,$2::timestamptz,'mcft_cap05_replay_evidence_v1',$3::jsonb)`,\n      [`fact_${evidence.source_record_id}`, evidence.available_to_runtime_at, JSON.stringify({ type: evidence.record_type, payload: evidence })],\n    );\n  }'''
           if old_insert in text:
               text = text.replace(old_insert, new_insert, 1)
           elif 'for (const evidence of [approval, plan])' not in text:
