@@ -23,10 +23,10 @@ existing Action / AO-ACT governance boundary
 
 ```text
 architecture_direction:
-CONFORMANT_PENDING_P_MINUS_1_ADJUDICATION
+CONFORMANT
 
 design_status:
-P_MINUS_1_ADJUDICATION_COMPLETE_CANDIDATE
+P_MINUS_1_MERGED_EFFECTIVE
 
 implementation_status:
 NOT_AUTHORIZED
@@ -35,18 +35,18 @@ runtime_source_authorized:
 false
 
 active_delivery_slice_id:
-MCFT-CAP-05.P-1.DT02-OBJECT-TRANSACTION-ADJUDICATION-V1
+MCFT-CAP-05.P0.CAP-04-SETTLEMENT-AND-CAP-05-PROVISIONAL-SSOT-V1
 
 dt02_architecture_amendment_status:
-NOT_REQUIRED_CANDIDATE_PENDING_MERGED_MAIN_EFFECTIVENESS
+NOT_REQUIRED_MERGED_EFFECTIVE
 
 first_permitted_repository_action:
-MCFT-CAP-05.P-1.DT02-OBJECT-TRANSACTION-ADJUDICATION-V1
+MCFT-CAP-05.P0.CAP-04-SETTLEMENT-AND-CAP-05-PROVISIONAL-SSOT-V1
 ```
 
-本文件记录 P-1 架构治理裁决候选；不授权 Runtime source、migration、route、runner、canonical write implementation、P0 或 CAP-06。P0 只有在 P-1 合并且 merged-main Gate PASS 后才可激活。
+P-1 已 merged-effective，裁决结果为 REUSE_WITHOUT_AMENDMENT。当前文件记录 P0 settlement / provisional SSOT candidate；仍不授权 Runtime source、migration、route、runner、canonical write implementation、S0 或 CAP-06。
 
-## P-1 adjudication candidate result
+## P-1 adjudication merged-effective result
 
 ```text
 adjudication_result:
@@ -71,10 +71,10 @@ DT-02 Architecture Amendment 03:
 not required
 
 repository_effectiveness:
-PENDING_P_MINUS_1_MERGE_AND_MERGED_MAIN_GATE
+MERGED_EFFECTIVE
 
-P0_authorized:
-false
+P0_permitted:
+true
 ```
 
 ## v0.4 修订裁决摘要
@@ -421,7 +421,7 @@ canonical_write_authorized:
 false
 ```
 
-P-1 是当前唯一允许的下一步。
+P-1 已 merged-effective；P0 是当前唯一允许的下一步。
 
 ## 3.1 P-1 必须裁决的十六项问题
 
@@ -493,7 +493,7 @@ DT-02 Architecture Amendment:
 NOT REQUIRED
 ```
 
-该结果必须由 P-1 Gate 证明；v0.4 不预先激活该结论。
+该结果已由 P-1 exact-head、tree-equivalence 和 merged-main Gate 证明并生效。
 
 ---
 
@@ -2398,6 +2398,35 @@ Closure and Merged-main Finalization
 delivery_slice_id:
 MCFT-CAP-05.P0.CAP-04-SETTLEMENT-AND-CAP-05-PROVISIONAL-SSOT-V1
 ```
+
+P0 candidate identity：
+
+```text
+baseline_main_commit:
+5391a3a8f811fc166fa187d7da70342ee36ab5fa
+
+P-1 exact head:
+ca83b67241b4df0082e78d3bfdf45e9338d82ad4
+
+P-1 merge commit:
+5391a3a8f811fc166fa187d7da70342ee36ab5fa
+
+P-1 merged-main Gate workflow:
+29305092038 SUCCESS
+
+P-1 adjudication result:
+REUSE_WITHOUT_AMENDMENT
+
+P0 status:
+READY_FOR_MERGE
+
+Runtime source authorized:
+false
+
+S0 authorized:
+false
+```
+
 
 Preconditions：
 
