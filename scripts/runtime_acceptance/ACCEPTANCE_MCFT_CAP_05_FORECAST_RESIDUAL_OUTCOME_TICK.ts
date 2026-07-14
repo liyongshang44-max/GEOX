@@ -55,7 +55,9 @@ async function main(): Promise<void> {
   assert.equal(first.residual.payload.forecast_target_time, CAP05_S8_OUTCOME_TIME_V1);
   ok("historical source is exactly the post-receipt Forecast horizon-1 semantic member targeting the observation time");
 
-  assert.deepEqual(first.forecast_selection_trace.source_posterior_action_feedback_refs, [fixture.action_feedback.object_id]);
+  const selectedTraceEntry = first.forecast_selection_trace.entries.find((entry) => entry.disposition === "SELECTED");
+  assert.ok(selectedTraceEntry);
+  assert.deepEqual(selectedTraceEntry.source_posterior_action_feedback_refs, [fixture.action_feedback.object_id]);
   assert.equal(first.forecast_selection_trace.selected_forecast_run_ref, fixture.historical_forecast.object_id);
   assert.equal(first.forecast_selection_trace.observation_target_time, CAP05_S8_OUTCOME_TIME_V1);
   ok("selection trace proves the source posterior consumed canonical H Action Feedback");
