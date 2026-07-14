@@ -1,0 +1,30 @@
+name: MCFT-CAP-05 S5 merged-main verification
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'agent/mcft-cap-05-s5-postmerge-probe-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ef1c789b15a3e73f93c7e63907519faecb027563
+          fetch-depth: 0
+
+      - name: Verify exact merged main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "ef1c789b15a3e73f93c7e63907519faecb027563"
+          test "$(git rev-parse origin/main)" = "ef1c789b15a3e73f93c7e63907519faecb027563"
+
+      - name: Run MCFT-CAP-05 S5 merged-main Gate
+        run: node scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S5_APPROVAL_PLAN_BINDING.cjs --postmerge
