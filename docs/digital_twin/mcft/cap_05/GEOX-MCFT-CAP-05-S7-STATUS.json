@@ -1,0 +1,123 @@
+{
+  "schema_version": "geox_mcft_cap_05_s7_status_v1",
+  "capability_line_id": "MCFT-CAP-05",
+  "delivery_slice_id": "MCFT-CAP-05.MCFT-04-06-07-08-09-10.RECEIPT-CONSUMING-TICK-V1",
+  "slice_kind": "CANONICAL_ACTION_FEEDBACK_RECEIPT_CONSUMING_A1_TICK",
+  "status": "IMPLEMENTATION_CANDIDATE",
+  "baseline_main_commit": "a9bf75333871ac62021679c1dac756be9e30cebe",
+  "branch": "agent/mcft-cap-05-s7-receipt-consuming-tick-v1",
+  "authorization": {
+    "activation_pr_number": 2463,
+    "activation_id": "MCFT-CAP-05.S6.SSOT-ACTIVATION-V1",
+    "baseline_status": "AUTHORIZED_NOT_STARTED",
+    "runtime_source_authorized": true,
+    "implementation_started_by_this_candidate": true
+  },
+  "s6_effectiveness": {
+    "runtime_pr_number": 2456,
+    "exact_head": "1a4f09278ce8b5ee65af8688f0c4d992a5d10035",
+    "merge_commit": "be8b5ecf061ba5e49c1ae33a7a9d4827aa6b0bbe",
+    "head_to_merge_file_delta_count": 0,
+    "tree_equivalence": "PASS",
+    "merged_main_gate_workflow": 29325686434,
+    "ssot_activation_pr_number": 2463,
+    "ssot_activation_merge_commit": "a9bf75333871ac62021679c1dac756be9e30cebe",
+    "effective": true
+  },
+  "validation": {
+    "state": "PENDING_CANDIDATE_CI",
+    "governance_gate": "PENDING",
+    "in_memory_tick_acceptance": "PENDING",
+    "postgresql_source_acceptance": "PENDING",
+    "cap04_single_tick_regression": "PENDING",
+    "repository_typecheck": "PENDING",
+    "target_in_memory_pass_count": 14,
+    "target_postgresql_pass_count": 5,
+    "required_fail_count": 0
+  },
+  "runtime_composition": {
+    "service_id": "MCFT_CAP_05_RECEIPT_CONSUMING_FORECAST_SCENARIO_TICK_SERVICE_V1",
+    "inner_service": "Cap04ForecastScenarioSingleTickServiceV1",
+    "state_transaction_family": "A_STATE_TICK_COMMIT",
+    "scenario_transaction_family": "B_SCENARIO_COMMIT",
+    "new_transaction_family_delta": 0,
+    "a1_member_count": 8,
+    "forecast_point_count": 72,
+    "scenario_option_count": 3,
+    "scenario_points_per_option": 72
+  },
+  "action_feedback_selection": {
+    "selector_id": "CANONICAL_H_ACTION_FEEDBACK_HOURLY_SELECTOR_V1",
+    "interval_policy_id": "OPEN_START_CLOSED_END_PT1H_V1",
+    "evidence_cutoff_policy_id": "AVAILABLE_TO_RUNTIME_AT_LE_TARGET_LOGICAL_TIME_V1",
+    "late_policy_id": "NO_SHIFT_NO_AUTOMATIC_HISTORY_REWRITE_V1",
+    "multiple_event_policy_id": "EXACTLY_ONE_ELIGIBLE_EXECUTION_EVENT_PER_TICK_V1",
+    "spatial_overlap_policy_id": "NOT_ESTABLISHED",
+    "identical_duplicate": "DETERMINISTIC_COLLAPSE",
+    "conflicting_duplicate": "FAIL_CLOSED",
+    "multiple_distinct_events": "FAIL_CLOSED"
+  },
+  "adapter": {
+    "adapter_id": "CANONICAL_H_TO_DYNAMICS_EXECUTION_RECORD_V1",
+    "canonical_object_created": false,
+    "fact_appended": false,
+    "coverage_applied_by_adapter": false,
+    "volume_conversion_performed": false,
+    "source_record_id_authority": "Action Feedback object_id",
+    "source_record_hash_authority": "Action Feedback determinism_hash"
+  },
+  "standard_amount_and_coverage": {
+    "actual_amount_mm": "13.600000",
+    "spatial_coverage_fraction": "0.910000",
+    "target_scope_equivalent_irrigation_mm": "12.376000",
+    "existing_aggregator_applies_coverage_once": true,
+    "approved_amount_used_as_execution_authority": false
+  },
+  "postgresql_source": {
+    "source_id": "PostgresActionFeedbackTickSourceV1",
+    "projection": "twin_action_feedback_projection_v1",
+    "canonical_store": "public.facts",
+    "read_only": true,
+    "projection_to_fact_identity_verified": true
+  },
+  "canonical_object_type_delta": 0,
+  "transaction_family_delta": 0,
+  "migration_delta": 0,
+  "global_ssot_settlement_included": false,
+  "preserved_nonclaims": [
+    "NO_NEW_CANONICAL_TWIN_OBJECT_TYPE",
+    "NO_NEW_TRANSACTION_FAMILY",
+    "NO_MIGRATION",
+    "NO_PUBLIC_ROUTE",
+    "NO_WEB",
+    "NO_RANGE_LOOP",
+    "NO_RESTART_OR_BACKFILL_MODE",
+    "NO_SCHEDULER",
+    "NO_AUTOMATIC_LATE_HISTORY_REWRITE",
+    "NO_SPATIAL_OVERLAP_INFERENCE",
+    "NO_VOLUME_TO_DEPTH_CONVERSION",
+    "NO_RECOMMENDATION",
+    "NO_AO_ACT_CHANGE",
+    "NO_CALIBRATION_CANDIDATE",
+    "NO_MODEL_ACTIVATION",
+    "NO_FORECAST_RESIDUAL_COMMIT",
+    "NO_OUTCOME_TRACE_CLOSURE",
+    "NO_CAP_06_AUTHORIZATION",
+    "NO_MCFT_GATE_A_CLOSURE",
+    "NO_MINIMUM_COMPLETE_FIELD_TWIN_CLAIM",
+    "NO_GLOBAL_SSOT_SETTLEMENT_IN_RUNTIME_PR"
+  ],
+  "effectiveness_condition": "S7_RUNTIME_PR_MERGED_TO_MAIN_AND_MERGED_MAIN_S7_GATE_PASS_AND_SEPARATE_SSOT_SETTLEMENT",
+  "effectiveness_condition_satisfied": false,
+  "exact_changed_file_boundary": [
+    "apps/server/src/persistence/twin_runtime/postgres_action_feedback_tick_source_v1.ts",
+    "apps/server/src/runtime/twin_runtime/action_feedback_tick_selector_v1.ts",
+    "apps/server/src/runtime/twin_runtime/receipt_consuming_forecast_scenario_tick_service_v1.ts",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S7-RECEIPT-CONSUMING-TICK.md",
+    "docs/digital_twin/mcft/cap_05/GEOX-MCFT-CAP-05-S7-STATUS.json",
+    "scripts/dev/assert_local_pnpm_runtime.cjs",
+    "scripts/governance_acceptance/ACCEPTANCE_MCFT_CAP_05_S7_RECEIPT_CONSUMING_TICK.cjs",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_RECEIPT_CONSUMING_TICK.ts",
+    "scripts/runtime_acceptance/ACCEPTANCE_MCFT_CAP_05_RECEIPT_CONSUMING_TICK_DB.ts"
+  ]
+}
